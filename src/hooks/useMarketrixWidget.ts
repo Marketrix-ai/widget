@@ -1,0 +1,175 @@
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { WidgetState, ChatMessage, MarketrixConfig, ChatMode } from '../types';
+import MarketrixApiService from '../services/api';
+
+interface UseMarketrixWidgetProps {
+  config: MarketrixConfig;
+}
+
+export const useMarketrixWidget = ({ config }: UseMarketrixWidgetProps) => {
+  const [state, setState] = useState<WidgetState>({
+    isOpen: false,
+    isMinimized: false,
+    isLoading: false,
+    messages: [],
+    currentMode: 'tell',
+    agentAvailable: false,
+  });
+
+  const [enabledModes, setEnabledModes] = useState<ChatMode[]>(
+    config.enabledModes || ['tell', 'show', 'do']
+  );
+
+  const apiServiceRef = useRef<MarketrixApiService | null>(null);
+
+  // Initialize API service
+  useEffect(() => {
+    apiServiceRef.current = new MarketrixApiService(config);
+    
+    // Check agent availability on mount
+    checkAgentAvailability();
+    
+    // Get agent info if not provided in config
+    if (!config.agentName || !config.avatarUrl) {
+      getAgentInfo();
+    }
+  }, [config.marketrixId, config.marketrixKey]);
+
+  const checkAgentAvailability = useCallback(async () => {
+    if (!apiServiceRef.current) return;
+    
+    try {
+      const available = await apiServiceRef.current.checkAgentAvailability();
+      setState(prev => ({ ...prev, agentAvailable: available }));
+    } catch (error) {
+      console.error('Failed to check agent availability:', error);
+      setState(prev => ({ ...prev, agentAvailable: false }));
+    }
+  }, []);
+
+  const getAgentInfo = useCallback(async () => {
+    if (!apiServiceRef.current) return;
+    
+    try {
+      const agentInfo = await apiServiceRef.current.getAgentInfo();
+      if (agentInfo) {
+        // Update config with agent info
+        apiServiceRef.current.updateConfig({
+          agentName: agentInfo.name,
+          avatarUrl: agentInfo.avatarUrl,
+        });
+      }
+    } catch (error) {
+      console.error('Failed to get agent info:', error);
+    }
+  }, []);
+
+  const toggleWidget = useCallback(() => {
+    setState(prev => ({ 
+      ...prev, 
+      isOpen: !prev.isOpen,
+      isMinimized: false 
+    }));
+  }, []);
+
+  const minimizeWidget = useCallback(() => {
+    setState(prev => ({ ...prev, isMinimized: true }));
+  }, []);
+
+  const maximizeWidget = useCallback(() => {
+    setState(prev => ({ ...prev, isMinimized: false }));
+  }, []);
+
+  const closeWidget = useCallback(() => {
+    setState(prev => ({ 
+      ...prev, 
+      isOpen: false,
+      isMinimized: false 
+    }));
+  }, []);
+
+  const setMode = useCallback((mode: ChatMode) => {
+    setState(prev => ({ ...prev, currentMode: mode }));
+  }, []);
+
+  const sendMessage = useCallback(async (content: string) => {
+    if (!apiServiceRef.current || !content.trim()) return;
+
+    const messageId = Date.now().toString();
+    const userMessage: ChatMessage = {
+      id: messageId,
+      content: content.trim(),
+      sender: 'user',
+      timestamp: new Date(),
+      mode: state.currentMode,
+    };
+
+    // Add user message immediately
+    setState(prev => ({
+      ...prev,
+      messages: [...prev.messages, userMessage],
+      isLoading: true,
+    }));
+
+    try {
+      const response = await apiServiceRef.current.sendMessage(
+        content.trim(),
+        state.currentMode
+      );
+
+      const agentMessage: ChatMessage = {
+        id: response.messageId,
+        content: response.response,
+        sender: 'agent',
+        timestamp: response.timestamp,
+        mode: response.mode,
+      };
+
+      setState(prev => ({
+        ...prev,
+        messages: [...prev.messages, agentMessage],
+        isLoading: false,
+      }));
+    } catch (error) {
+      console.error('Failed to send message:', error);
+      
+      const errorMessage: ChatMessage = {
+        id: `error-${messageId}`,
+        content: 'Sorry, I encountered an error. Please try again.',
+        sender: 'agent',
+        timestamp: new Date(),
+        mode: state.currentMode,
+      };
+
+      setState(prev => ({
+        ...prev,
+        messages: [...prev.messages, errorMessage],
+        isLoading: false,
+        error: 'Failed to send message',
+      }));
+    }
+  }, [state.currentMode]);
+
+  const clearMessages = useCallback(() => {
+    setState(prev => ({ ...prev, messages: [] }));
+  }, []);
+
+  const clearError = useCallback(() => {
+    setState(prev => ({ ...prev, error: undefined }));
+  }, []);
+
+  return {
+    state,
+    actions: {
+      toggleWidget,
+      minimizeWidget,
+      maximizeWidget,
+      closeWidget,
+      setMode,
+      sendMessage,
+      clearMessages,
+      clearError,
+      checkAgentAvailability,
+    },
+  };
+};
