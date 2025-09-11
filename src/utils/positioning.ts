@@ -23,7 +23,7 @@ export const getWidgetContainerClasses = (position: WidgetPosition): string => {
 
 export const getChatWindowClasses = (position: WidgetPosition): string => {
   const baseClasses = 'bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700';
-  const sizeClasses = 'w-80 max-w-sm';
+  const sizeClasses = 'w-[360px] max-w-sm';
   
   let positionClasses = '';
   switch (position) {

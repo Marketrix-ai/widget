@@ -16,9 +16,6 @@ export const useMarketrixWidget = ({ config }: UseMarketrixWidgetProps) => {
     agentAvailable: false,
   });
 
-  const [enabledModes, setEnabledModes] = useState<ChatMode[]>(
-    config.enabledModes || ['tell', 'show', 'do']
-  );
 
   const apiServiceRef = useRef<MarketrixApiService | null>(null);
 
@@ -92,16 +89,17 @@ export const useMarketrixWidget = ({ config }: UseMarketrixWidgetProps) => {
     setState(prev => ({ ...prev, currentMode: mode }));
   }, []);
 
-  const sendMessage = useCallback(async (content: string) => {
+  const sendMessage = useCallback(async (content: string, mode?: ChatMode) => {
     if (!apiServiceRef.current || !content.trim()) return;
 
+    const messageMode = mode || state.currentMode;
     const messageId = Date.now().toString();
     const userMessage: ChatMessage = {
       id: messageId,
       content: content.trim(),
       sender: 'user',
       timestamp: new Date(),
-      mode: state.currentMode,
+      mode: messageMode,
     };
 
     // Add user message immediately
@@ -114,7 +112,7 @@ export const useMarketrixWidget = ({ config }: UseMarketrixWidgetProps) => {
     try {
       const response = await apiServiceRef.current.sendMessage(
         content.trim(),
-        state.currentMode
+        messageMode
       );
 
       const agentMessage: ChatMessage = {
@@ -138,7 +136,7 @@ export const useMarketrixWidget = ({ config }: UseMarketrixWidgetProps) => {
         content: 'Sorry, I encountered an error. Please try again.',
         sender: 'agent',
         timestamp: new Date(),
-        mode: state.currentMode,
+        mode: messageMode,
       };
 
       setState(prev => ({
