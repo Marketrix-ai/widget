@@ -1,7 +1,6 @@
 import React from 'react';
 import { ChatMode } from '../types';
 import { getModeDisplayName, getModeDescription } from '../utils/formatting';
-import { FiZap, FiMessageCircle, FiCheck } from 'react-icons/fi';
 import { IoChatbubbleEllipsesOutline } from "react-icons/io5";
 import { LuMousePointerClick } from "react-icons/lu";
 import { SiTicktick } from "react-icons/si";
@@ -12,7 +11,6 @@ interface ModeSelectorProps {
   enabledModes: ChatMode[];
   onModeChange: (mode: ChatMode) => void;
   onScreenAccessRequest?: (mode: ChatMode) => void;
-  theme: 'light' | 'dark';
 }
 
 export const ModeSelector: React.FC<ModeSelectorProps> = ({
@@ -20,7 +18,6 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({
   enabledModes,
   onModeChange,
   onScreenAccessRequest,
-  theme,
 }) => {
 
   const getModeIcon = (mode: ChatMode) => {
@@ -54,6 +51,7 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({
                 e.preventDefault();
                 e.stopPropagation();
                 onModeChange(mode);
+                
                 // Show screen access modal for show and do modes
                 if ((mode === 'show' || mode === 'do') && onScreenAccessRequest) {
                   onScreenAccessRequest(mode);

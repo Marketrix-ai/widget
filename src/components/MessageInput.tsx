@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import SendIcon from '../assets/send.png';
-import { LuMousePointerClick } from "react-icons/lu";
-import { IoChatbubbleEllipsesOutline } from "react-icons/io5";
-import { SiTicktick } from "react-icons/si";
+import { useWidgetAtmosphere } from '../hooks/useWidgetAtmosphere';
+import { MarketrixConfig } from '../types';
+import { elementHighlighter } from '../utils/highlighting';
+import { ScreenAccessModal } from './ScreenAccessModal';
+import { LuSquare } from 'react-icons/lu';
 
 interface MessageInputProps {
   value: string;
@@ -10,12 +12,12 @@ interface MessageInputProps {
   onKeyPress: (e: React.KeyboardEvent) => void;
   onSend: () => void;
   isLoading: boolean;
-  theme: 'light' | 'dark';
-  placeholder?: string;
-  currentMode?: string;
+  config?: MarketrixConfig;
   onScreenAccessResponse?: (allowed: boolean) => void;
   triggerScreenAccessModal?: boolean;
   onTriggerReset?: () => void;
+  isStepGuideRunning?: boolean;
+  onStopStepGuide?: () => void;
 }
 
 export const MessageInput: React.FC<MessageInputProps> = ({
@@ -24,14 +26,18 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   onKeyPress,
   onSend,
   isLoading,
-  theme,
-  placeholder = "How can I help you?",
-  currentMode,
+  config,
   onScreenAccessResponse,
   triggerScreenAccessModal = false,
   onTriggerReset,
+  isStepGuideRunning = false,
+  onStopStepGuide,
 }) => {
   const [showScreenAccessModal, setShowScreenAccessModal] = useState(false);
+  
+  // Get atmosphere configuration
+  const { getWidgetText } = useWidgetAtmosphere(config);
+  const widgetText = getWidgetText();
 
   // Trigger modal when prop changes
   useEffect(() => {
@@ -40,37 +46,64 @@ export const MessageInput: React.FC<MessageInputProps> = ({
     }
   }, [triggerScreenAccessModal]);
 
-  const getModeDisplayName = (mode: string) => {
-    switch (mode) {
-      case 'show':
-        return 'Show';
-      case 'tell':
-        return 'Tell';
-      case 'do':
-        return 'Do';
-      default:
-        return mode;
-    }
-  };
-
-  const getModeIcon = (mode: string) => {
-    switch (mode) {
-      case 'show':
-        return <LuMousePointerClick className="w-3 h-3" />;
-      case 'tell':
-        return <IoChatbubbleEllipsesOutline className="w-3 h-3" />;
-      case 'do':
-        return <SiTicktick className="w-3 h-3" />;
-      default:
-        return null;
-    }
-  };
-
   const handleSend = () => {
-    if ((currentMode === 'show' || currentMode === 'do') && value.trim()) {
-      setShowScreenAccessModal(true);
-    } else {
-      onSend();
+    // Process the message for highlighting
+    processMessageForHighlighting(value);
+    // Send the message
+    onSend();
+  };
+
+  const handleStopStepGuide = () => {
+    if (onStopStepGuide) {
+      onStopStepGuide();
+    }
+  };
+
+  const processMessageForHighlighting = (message: string) => {
+    const lowerMessage = message.toLowerCase();
+    
+    // Check for common highlighting patterns
+    if (lowerMessage.includes('highlight') || lowerMessage.includes('show me') || lowerMessage.includes('point to')) {
+      // Look for specific element references
+      if (lowerMessage.includes('h1') || lowerMessage.includes('title') || lowerMessage.includes('heading')) {
+        elementHighlighter.highlightBySelector('h1', {
+          duration: 5000,
+          spotlightColor: 'rgba(255, 255, 0, 0.4)',
+          borderColor: '#ffd700',
+          borderWidth: 4
+        });
+      } else if (lowerMessage.includes('h2')) {
+        elementHighlighter.highlightBySelector('h2', {
+          duration: 5000,
+          spotlightColor: 'rgba(0, 255, 255, 0.4)',
+          borderColor: '#00ffff',
+          borderWidth: 4
+        });
+      } else if (lowerMessage.includes('button')) {
+        elementHighlighter.highlightBySelector('button', {
+          duration: 5000,
+          spotlightColor: 'rgba(0, 255, 0, 0.4)',
+          borderColor: '#00ff00',
+          borderWidth: 4
+        });
+      } else if (lowerMessage.includes('demo') || lowerMessage.includes('widget')) {
+        elementHighlighter.highlightByText('Marketrix In-App Support Widget Demo', {
+          duration: 5000,
+          spotlightColor: 'rgba(255, 0, 255, 0.4)',
+          borderColor: '#ff00ff',
+          borderWidth: 4
+        });
+      }
+    }
+    
+    // Check for specific text content to highlight
+    if (lowerMessage.includes('marketrix') && lowerMessage.includes('demo')) {
+      elementHighlighter.highlightByText('Marketrix In-App Support Widget Demo', {
+        duration: 5000,
+        spotlightColor: 'rgba(255, 255, 0, 0.4)',
+        borderColor: '#ffd700',
+        borderWidth: 4
+      });
     }
   };
 
@@ -88,10 +121,14 @@ export const MessageInput: React.FC<MessageInputProps> = ({
     if (allowed) {
       // Notify parent component about screen access
       onScreenAccessResponse?.(true);
-      // Proceed with sending the message
-      onSend();
+    } else {
+      onScreenAccessResponse?.(false);
     }
-    // If not allowed, just close the modal without sending
+  };
+
+  const handleCloseModal = () => {
+    setShowScreenAccessModal(false);
+    onTriggerReset?.();
   };
 
   // Reset trigger when modal is shown
@@ -101,6 +138,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
       onTriggerReset?.();
     }
   }, [showScreenAccessModal, triggerScreenAccessModal, onTriggerReset]);
+
 
   return (
     <div className={`
@@ -114,7 +152,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
             value={value}
             onChange={(e) => onChange(e.target.value)}
             onKeyPress={handleKeyPress}
-            placeholder="Show me.."
+            placeholder={widgetText.placeholder || "Show me.."}
             disabled={isLoading}
             rows={1}
             className={`
@@ -131,75 +169,45 @@ export const MessageInput: React.FC<MessageInputProps> = ({
           />
         </div>
 
-        {/* Circular Send button */}
+        {/* Circular Send/Stop button */}
         <button
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            handleSend();
+            if (isStepGuideRunning) {
+              handleStopStepGuide();
+            } else {
+              handleSend();
+            }
           }}
-          disabled={!value.trim() || isLoading}
+          disabled={!isStepGuideRunning && (!value.trim() || isLoading)}
           className={`
             w-8 h-8 rounded-full transition-all duration-200 flex items-center justify-center
-            ${value.trim() && !isLoading
+            ${isStepGuideRunning
+              ? 'bg-gradient-to-r from-red-500 to-red-600 text-white shadow-lg hover:from-red-600 hover:to-red-700'
+              : value.trim() && !isLoading
               ? 'bg-gradient-to-r from-[#B398F6] to-[#5CF2B5] text-white shadow-lg'
               : 'bg-gray-200 text-gray-400 cursor-not-allowed'
             }
             focus:outline-none focus:ring-2 focus:ring-green-500/20
           `}
-          aria-label="Send message"
+          aria-label={isStepGuideRunning ? "Stop step guide" : "Send message"}
         >
-          <img src={SendIcon} alt="Send" className="w-4 h-4" />
+          {isStepGuideRunning ? (
+            <LuSquare className="w-4 h-4" />
+          ) : (
+            <img src={SendIcon} alt="Send" className="w-4 h-4" />
+          )}
         </button>
       </div>
 
       {/* Screen Access Modal */}
-      {showScreenAccessModal && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) {
-              handleScreenAccessResponse(false);
-            }
-          }}
-        >
-          <div className="bg-white rounded-lg p-3 max-w-md mx-4 shadow-xl">
-            <div className="text-center">
-              
-              <h3 className="font-inter text-md font-semibold text-gray-900 mb-2">
-                Can I take a look at your screen?
-              </h3>
-              
-              <p className="text-gray-600 mb-6 font-inter text-xs text-left leading-relaxed">
-                By allowing screen access, Marketrix can understand your current context to guide you better and complete tasks on your behalf.
-              </p>
-              
-              <div className="flex gap-3 justify-center">
-              <button
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    handleScreenAccessResponse(true);
-                  }}
-                  className="text-xs px-6 py-1 bg-[#E7DDFF] text-[#6941C6] rounded-3xl hover:opacity-90 transition-opacity"
-                >
-                  Yes
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    handleScreenAccessResponse(false);
-                  }}
-                  className="text-xs px-6 py-1 border bg-[#E7DDFF] text-[#6941C6] rounded-3xl hover:bg-gray-50 transition-colors"
-                >
-                  No
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <ScreenAccessModal
+        isOpen={showScreenAccessModal}
+        onAllow={() => handleScreenAccessResponse(true)}
+        onDeny={() => handleScreenAccessResponse(false)}
+        onClose={handleCloseModal}
+      />
     </div>
   );
 };

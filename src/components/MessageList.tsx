@@ -1,6 +1,7 @@
 import React from "react";
-import { ChatMessage } from "../types";
+import { ChatMessage, MarketrixConfig } from "../types";
 import { formatMessageTime } from "../utils/formatting";
+import { useWidgetAtmosphere } from "../hooks/useWidgetAtmosphere";
 import { LuMousePointerClick } from "react-icons/lu";
 import { IoChatbubbleEllipsesOutline } from "react-icons/io5";
 import { SiTicktick } from "react-icons/si";
@@ -12,6 +13,8 @@ interface MessageListProps {
   messagesEndRef: React.RefObject<HTMLDivElement>;
   onSendMessage?: (message: string, mode?: 'show' | 'tell' | 'do') => void;
   onSetMode?: (mode: 'show' | 'tell' | 'do') => void;
+  config?: MarketrixConfig;
+  onStepGuideStart?: () => void;
 }
 
 export const MessageList: React.FC<MessageListProps> = ({
@@ -20,23 +23,46 @@ export const MessageList: React.FC<MessageListProps> = ({
   messagesEndRef,
   onSendMessage,
   onSetMode,
+  config,
+  onStepGuideStart,
 }) => {
+  // Get atmosphere configuration
+  const { getWidgetText, getActiveAvatar } = useWidgetAtmosphere(config);
+  const widgetText = getWidgetText();
+  const activeAvatar = getActiveAvatar();
   // Suggested actions to show when no messages
   const suggestedActions = [
     {
-      text: "Show me how to create an invoice",
+      id: "show-add-product",
+      text: "Show me how to add a new product",
       icon: <LuMousePointerClick className="w-6 h-6" />,
       type: "show",
       isShow: true,
     },
     {
-      text: "Show me how to set up automated invoice reminders",
+      id: "show-login",
+      text: "Show me how to login",
       icon: <LuMousePointerClick className="w-6 h-6" />,
       type: "show",
       isShow: true,
     },
     {
-      text: "What is deferred revenue and how should I report it in QuickBooks?",
+      id: "do-login",
+      text: "Do the login process for me",
+      icon: <SiTicktick className="w-4 h-4" />,
+      type: "do",
+      isShow: false,
+    },
+    {
+      id: "show-revenue",
+      text: "Show me the revenue metrics",
+      icon: <LuMousePointerClick className="w-6 h-6" />,
+      type: "show",
+      isShow: true,
+    },
+    {
+      id: "tell-conversion-rate",
+      text: "What does my conversion rate mean and how can I improve it?",
       icon: <IoChatbubbleEllipsesOutline className="w-5 h-5" />,
       type: "tell",
       isShow: false,
@@ -53,6 +79,11 @@ export const MessageList: React.FC<MessageListProps> = ({
       onSetMode(action.type as 'show' | 'tell' | 'do');
     }
     
+    // Trigger step guide start for show actions
+    if (action.type === 'show' && onStepGuideStart) {
+      onStepGuideStart();
+    }
+    
     // Send message with the correct mode directly
     if (onSendMessage) {
       console.log('Sending message with mode:', action.type, action.text);
@@ -60,26 +91,25 @@ export const MessageList: React.FC<MessageListProps> = ({
     }
   };
 
-  return (
-    <div
-      className={`
-        h-full overflow-y-auto px-6 space-y-3
-        bg-transparent
-      `}
-    >
-      {messages.length === 0 && !isLoading && (
-        <div className="space-y-3">
+  // Create an array of all elements with proper keys
+  const renderElements = () => {
+    const elements = [];
+
+    // Welcome message
+    if (messages.length === 0 && !isLoading) {
+      elements.push(
+        <div key="welcome-message" className="space-y-3">
           {/* Welcome message */}
           <div className="flex justify-start">
             <div className="w-full ">
               <div className="flex gap-2">
               <img src={MarketrixLogo} alt="Marketrix Logo" className="w-6 h-6 object-cover" />
               <div className=" font-inter font-normal text-sm bg-white text-black px-3 py-2 gradient-border">
-                Hey! 👋 I'm Marketrix AI, How can I help you
+                {widgetText.greeting || "Hey! 👋 I'm Marketrix AI, How can I help you"}
               </div>
               </div>
               <div className="flex items-center justify-between mt-1.5 text-sm font-medium text-[#1D2939]">
-                <span>Marketrix AI</span>
+                <span>{activeAvatar.name || "Marketrix AI"}</span>
                 <span className="text-[#667085] text-xs font-normal">
                   {new Date().toLocaleDateString("en-US", { weekday: "long" })}{" "}
                   {new Date().toLocaleTimeString("en-US", {
@@ -91,13 +121,15 @@ export const MessageList: React.FC<MessageListProps> = ({
             </div>
           </div>
         </div>
-      )}
+      );
+    }
 
-      {/* Suggested actions - always show */}
-      {!isLoading && (
-        <div className="space-y-2">
-          {suggestedActions.map((action, index) => (
-            <div key={index} className="flex justify-start">
+    // Suggested actions
+    if (!isLoading) {
+      elements.push(
+        <div key="suggested-actions" className="space-y-2">
+          {suggestedActions.map((action) => (
+            <div key={action.id} className="flex justify-start">
               <button
                 onClick={(e) => handleSuggestedActionClick(action, e)}
                 className={`
@@ -117,6 +149,11 @@ export const MessageList: React.FC<MessageListProps> = ({
                         <span className="font-bold">Show me</span>
                         {action.text.replace("Show me", "")}
                       </>
+                    ) : action.type === "do" ? (
+                      <>
+                        <span className="font-bold">Do</span>
+                        {action.text.replace("Do the", "")}
+                      </>
                     ) : (
                       action.text
                     )}
@@ -126,9 +163,12 @@ export const MessageList: React.FC<MessageListProps> = ({
             </div>
           ))}
         </div>
-      )}
+      );
+    }
 
-      {messages.map((message) => (
+    // Messages
+    messages.forEach((message) => {
+      elements.push(
         <div
           key={message.id}
           className={`flex flex-col gap-1 ${
@@ -167,36 +207,32 @@ export const MessageList: React.FC<MessageListProps> = ({
             <div className="text-sm font-inter font-normal whitespace-pre-wrap break-words">
               {message.content}
             </div>
-
-            {/* Message metadata */}
-            {/* <div
-              className={`
-              flex items-center justify-between mt-1.5 text-xs
-              ${message.sender === "user" ? "text-purple-100" : "text-gray-500"}
-            `}
-            ></div> */}
           </div>
           <div className="flex items-center justify-between text-xs font-inter font-normal">
             <div className="items-center gap-2">
-              <span>{message.sender === "user" ? "You" : "Marketrix AI"}</span>
+              <span>{message.sender === "user" ? "You" : (activeAvatar.name || "Marketrix AI")}</span>
             </div>
             <span>{formatMessageTime(message.timestamp)}</span>
           </div>
         </div>
-      ))}
+      );
+    });
 
-      {/* Loading indicator */}
-      {isLoading && (
-        <div className="flex justify-start">
+    // Loading indicator
+    if (isLoading) {
+      elements.push(
+        <div key="loading-indicator" className="flex justify-start">
           <div className="w-full px-3 py-2 rounded-2xl bg-white shadow-sm border border-gray-200">
             <div className="flex items-center space-x-2">
               <div className="flex space-x-1">
-                <div className="w-2 h-2 bg-gradient-to-r from-green-400 to-purple-500 rounded-full animate-bounce"></div>
+                <div key="dot-1" className="w-2 h-2 bg-gradient-to-r from-green-400 to-purple-500 rounded-full animate-bounce"></div>
                 <div
+                  key="dot-2"
                   className="w-2 h-2 bg-gradient-to-r from-green-400 to-purple-500 rounded-full animate-bounce"
                   style={{ animationDelay: "0.1s" }}
                 ></div>
                 <div
+                  key="dot-3"
                   className="w-2 h-2 bg-gradient-to-r from-green-400 to-purple-500 rounded-full animate-bounce"
                   style={{ animationDelay: "0.2s" }}
                 ></div>
@@ -205,10 +241,29 @@ export const MessageList: React.FC<MessageListProps> = ({
             </div>
           </div>
         </div>
-      )}
+      );
+    }
 
-      {/* Auto-scroll anchor */}
-      <div ref={messagesEndRef} />
+    // Auto-scroll anchor
+    elements.push(<div key="scroll-anchor" ref={messagesEndRef} />);
+
+    return elements;
+  };
+
+  return (
+    <div
+      className={`
+        h-full overflow-y-auto px-4 space-y-3
+        bg-transparent
+        scrollbar-thin scrollbar-track-[#f6f6f6] scrollbar-thumb-[#b6b6b6]
+      `}
+      style={{
+        scrollbarColor: '#f6f6f6 transparent',
+        scrollbarWidth: 'thin',
+        marginRight: '12px'
+      }}
+    >
+      {renderElements()}
     </div>
   );
 };

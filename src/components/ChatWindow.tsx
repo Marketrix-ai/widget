@@ -1,10 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChatMessage, MarketrixConfig, ChatMode } from '../types';
-import { getChatWindowClasses, getPositionClasses } from '../utils/positioning';
+import { getPositionClasses } from '../utils/positioning';
+import { useWidgetAtmosphere } from '../hooks/useWidgetAtmosphere';
 import { ModeSelector } from './ModeSelector';
 import { MessageList } from './MessageList';
 import { MessageInput } from './MessageInput';
-import MarketrixLogo from '../assets/marketrix-logo.png';
+import { ScreenSharePreview } from './ScreenSharePreview';
+import { IntegrationSettings } from '../services/integrationService';
 
 interface ChatWindowProps {
   config: MarketrixConfig;
@@ -17,6 +19,8 @@ interface ChatWindowProps {
   onClose: () => void;
   onSendMessage: (message: string, mode?: ChatMode) => void;
   onSetMode: (mode: ChatMode) => void;
+  onScreenSharingChange?: (isSharing: boolean) => void;
+  integrationSettings?: IntegrationSettings | null;
 }
 
 export const ChatWindow: React.FC<ChatWindowProps> = ({
@@ -29,12 +33,30 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   onClose,
   onSendMessage,
   onSetMode,
+  onScreenSharingChange,
+  integrationSettings,
 }) => {
   const [inputValue, setInputValue] = useState('');
   const [isScreenAccessActive, setIsScreenAccessActive] = useState(false);
   const [triggerScreenAccessModal, setTriggerScreenAccessModal] = useState(false);
+  const [screenStream, setScreenStream] = useState<MediaStream | null>(null);
+  const [showScreenPreview, setShowScreenPreview] = useState(false);
+  const [isStepGuideRunning, setIsStepGuideRunning] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const theme = config.theme || 'light';
+  
+  // Get atmosphere configuration
+  const { 
+    getWidgetCustomize, 
+    getWidgetPosition,
+    getWidgetSettings
+  } = useWidgetAtmosphere(config);
+  
+  const widgetCustomize = getWidgetCustomize();
+  const widgetPosition = getWidgetPosition();
+  const atmosphereSettings = getWidgetSettings();
+  
+  // Use integration settings if available, otherwise fall back to atmosphere settings
+  const effectiveSettings = integrationSettings || atmosphereSettings;
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -48,8 +70,26 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     };
   }, []);
 
+
   const handleSendMessage = () => {
     if (inputValue.trim() && !isLoading) {
+      // Check if this is a step guide request
+      const message = inputValue.toLowerCase();
+      const isStepGuideRequest = message.includes('show me how to') || 
+                                message.includes('step by step') ||
+                                message.includes('guide me through') ||
+                                message.includes('walk me through') ||
+                                message.includes('tutorial') ||
+                                message.includes('add a new product') ||
+                                message.includes('bulk import') ||
+                                message.includes('setup widget') ||
+                                message.includes('login') ||
+                                message.includes('sign in');
+      
+      if (isStepGuideRequest && currentMode === 'show') {
+        setIsStepGuideRunning(true);
+      }
+      
       onSendMessage(inputValue, currentMode);
       setInputValue('');
     }
@@ -65,21 +105,9 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   const handleScreenAccessResponse = async (allowed: boolean) => {
     if (allowed) {
       await startScreenCapture();
+    } else {
+      console.log('Screen access denied');
     }
-  };
-
-  const handleScreenAccessRequest = (mode: ChatMode) => {
-    // Trigger the screen access modal in MessageInput
-    setTriggerScreenAccessModal(true);
-  };
-
-  const handleTriggerReset = () => {
-    setTriggerScreenAccessModal(false);
-  };
-
-  const handleStopScreenAccess = () => {
-    setIsScreenAccessActive(false);
-    stopScreenCapture();
   };
 
   const startScreenCapture = async () => {
@@ -93,66 +121,28 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         audio: false
       });
 
-      // Create overlay container
-      const overlay = document.createElement('div');
-      overlay.style.position = 'fixed';
-      overlay.style.top = '0';
-      overlay.style.left = '0';
-      overlay.style.width = '100%';
-      overlay.style.height = '100%';
-      overlay.style.zIndex = '9998';
-      overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
-      overlay.style.display = 'flex';
-      overlay.style.flexDirection = 'column';
-      overlay.style.alignItems = 'center';
-      overlay.style.justifyContent = 'center';
-
-      // Create video element to display the screen
-      const video = document.createElement('video');
-      video.srcObject = stream;
-      video.autoplay = true;
-      video.style.width = '80%';
-      video.style.height = '80%';
-      video.style.objectFit = 'contain';
-      video.style.borderRadius = '8px';
-      video.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.5)';
-
-      // Create control bar
-      const controlBar = document.createElement('div');
-      controlBar.style.position = 'absolute';
-      controlBar.style.top = '20px';
-      controlBar.style.right = '20px';
-      controlBar.style.display = 'flex';
-      controlBar.style.gap = '10px';
-      controlBar.style.alignItems = 'center';
-
-      // Create status indicator
+      // Create a minimal status indicator without overlay
       const statusIndicator = document.createElement('div');
+      statusIndicator.id = 'marketrix-screen-status';
+      statusIndicator.style.position = 'fixed';
+      statusIndicator.style.top = '20px';
+      statusIndicator.style.left = '20px';
+      statusIndicator.style.zIndex = '9999';
       statusIndicator.style.display = 'flex';
       statusIndicator.style.alignItems = 'center';
       statusIndicator.style.gap = '8px';
-      statusIndicator.style.backgroundColor = 'rgba(255, 255, 255, 0.9)';
+      statusIndicator.style.backgroundColor = 'rgba(255, 255, 255, 0.95)';
       statusIndicator.style.padding = '8px 16px';
       statusIndicator.style.borderRadius = '20px';
       statusIndicator.style.fontSize = '14px';
       statusIndicator.style.fontWeight = '500';
+      statusIndicator.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+      statusIndicator.style.border = '1px solid rgba(0, 0, 0, 0.1)';
       statusIndicator.innerHTML = `
         <div style="width: 8px; height: 8px; background-color: #ef4444; border-radius: 50%; animation: pulse 2s infinite;"></div>
         Marketrix is monitoring your screen
+        <button id="marketrix-stop-btn" style="background: #ef4444; color: white; border: none; padding: 4px 8px; border-radius: 12px; cursor: pointer; font-size: 12px; margin-left: 8px;">Stop</button>
       `;
-
-      // Create stop button
-      const stopButton = document.createElement('button');
-      stopButton.textContent = 'Stop Monitoring';
-      stopButton.style.backgroundColor = '#ef4444';
-      stopButton.style.color = 'white';
-      stopButton.style.border = 'none';
-      stopButton.style.padding = '8px 16px';
-      stopButton.style.borderRadius = '20px';
-      stopButton.style.cursor = 'pointer';
-      stopButton.style.fontSize = '14px';
-      stopButton.style.fontWeight = '500';
-      stopButton.onclick = handleStopScreenAccess;
 
       // Add pulse animation
       const style = document.createElement('style');
@@ -164,24 +154,35 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       `;
       document.head.appendChild(style);
 
-      // Assemble the overlay
-      controlBar.appendChild(statusIndicator);
-      controlBar.appendChild(stopButton);
-      overlay.appendChild(video);
-      overlay.appendChild(controlBar);
-      document.body.appendChild(overlay);
+      // Add the status indicator to the page
+      document.body.appendChild(statusIndicator);
+
+      // Add click handler for stop button
+      const stopBtn = document.getElementById('marketrix-stop-btn');
+      if (stopBtn) {
+        stopBtn.onclick = () => {
+          stopScreenCapture();
+          setIsScreenAccessActive(false);
+        };
+      }
 
       // Handle when user stops sharing
       stream.getVideoTracks()[0].onended = () => {
-        handleStopScreenAccess();
+        stopScreenCapture();
+        setIsScreenAccessActive(false);
       };
 
       // Store references for cleanup
       (window as any).screenCaptureStream = stream;
-      (window as any).screenCaptureOverlay = overlay;
+      (window as any).screenCaptureOverlay = statusIndicator;
 
-      // Only show status indicator AFTER screen is successfully shared
+      // Set screen stream and show preview
+      setScreenStream(stream);
+      setShowScreenPreview(true);
       setIsScreenAccessActive(true);
+      
+      // Notify parent component about screen sharing state
+      onScreenSharingChange?.(true);
 
     } catch (error) {
       console.error('Error accessing screen:', error);
@@ -199,35 +200,84 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       });
     }
 
-    // Remove overlay
-    if ((window as any).screenCaptureOverlay) {
-      document.body.removeChild((window as any).screenCaptureOverlay);
+    // Remove status indicator
+    const statusIndicator = document.getElementById('marketrix-screen-status');
+    if (statusIndicator) {
+      document.body.removeChild(statusIndicator);
     }
 
-    // Clear references
+    // Clear references and state
     (window as any).screenCaptureStream = null;
     (window as any).screenCaptureOverlay = null;
+    setScreenStream(null);
+    setShowScreenPreview(false);
+    
+    // Notify parent component about screen sharing state
+    onScreenSharingChange?.(false);
   };
+
+  const handleScreenAccessRequest = (_mode: ChatMode) => {
+    // Trigger the screen access modal in MessageInput
+    setTriggerScreenAccessModal(true);
+  };
+
+  const handleTriggerReset = () => {
+    setTriggerScreenAccessModal(false);
+  };
+
+  const handleStopStepGuide = () => {
+    // Import the demo API service to stop the step guide
+    import('../services/demo-api').then(({ default: DemoApiService }) => {
+      // Create a temporary instance to access the stop method
+      const demoApi = new DemoApiService(config);
+      demoApi.stopStepGuide();
+      setIsStepGuideRunning(false);
+    });
+  };
+
+
+
+  // Get widget settings for positioning
+  // Convert underscore to hyphen for position (API returns bottom_right, but CSS expects bottom-right)
+  const rawPosition = effectiveSettings.widget_position || 'bottom-right';
+  const effectivePosition = rawPosition.replace('_', '-') as 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
+  const positionClasses = getPositionClasses(effectivePosition);
 
   if (!isOpen) return null;
 
-  const positionClasses = getPositionClasses(config.position || 'bottom-right');
-  const chatWindowClasses = getChatWindowClasses(config.position || 'bottom-right');
+  // Apply custom styling from integration settings or atmosphere settings
+  const customStyles = {
+    width: effectiveSettings.widget_width || widgetCustomize.sizes?.width || '320px',
+    height: isMinimized ? '48px' : (effectiveSettings.widget_height || widgetCustomize.sizes?.height || '35rem'),
+    borderRadius: effectiveSettings.widget_border_radius || widgetCustomize.sizes?.border_radius || '12px',
+    fontSize: effectiveSettings.widget_font_size || widgetCustomize.sizes?.font_size || '14px',
+    background: effectiveSettings.widget_background_color || widgetCustomize.colors?.background || 'white',
+    color: effectiveSettings.widget_text_color || widgetCustomize.colors?.text || '#333333',
+    borderColor: effectiveSettings.widget_border_color || widgetCustomize.colors?.border || 'rgba(255, 255, 255, 0.2)',
+    boxShadow: effectiveSettings.widget_shadow || '0 10px 25px rgba(0, 0, 0, 0.1)',
+    zIndex: widgetPosition.z_index || 40,
+  } as React.CSSProperties;
 
   return (
-    <div className={`fixed ${positionClasses} z-40`}>
-      <div className={`
-        ${chatWindowClasses} 
-        ${isMinimized ? 'h-12' : 'h-[35rem]'} 
-        transition-all duration-300 ease-in-out flex flex-col
-        ${isOpen ? 'animate-slide-up' : 'animate-slide-down'}
-        transform-gpu
-        bg-gradient-to-br from-[#1BB55B26] to-[#987ADD30]
-        shadow-2xl
-        rounded-lg
-        border border-white/20
-        backdrop-blur-sm
-      `}>
+    <div className={`fixed bg-white rounded-xl ${positionClasses}`} style={{ zIndex: widgetPosition.z_index || 40 }}>
+      <div 
+        className={`
+          bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700
+          w-[360px] max-w-sm
+          ${isMinimized ? 'h-12' : 'h-[35rem]'} 
+          transition-all duration-300 ease-in-out flex flex-col
+          ${isOpen ? 'animate-slide-up' : 'animate-slide-down'}
+          transform-gpu
+          shadow-2xl
+          backdrop-blur-sm
+          scrollbar-thin scrollbar-track-[#f6f6f6] scrollbar-thumb-[#b6b6b6]
+        `}
+        style={{
+          ...customStyles,
+          scrollbarColor: '#f6f6f6 #b6b6b6',
+          scrollbarWidth: 'thin'
+        }}
+      >
         {/* Header with Marketrix branding */}
         <div className={`
           flex justify-end p-2 mb-5
@@ -257,12 +307,14 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                 messagesEndRef={messagesEndRef}
                 onSendMessage={onSendMessage}
                 onSetMode={onSetMode}
+                config={config}
+                onStepGuideStart={() => setIsStepGuideRunning(true)}
               />
             </div>
 
             {/* Screen Access Status Indicator */}
             {isScreenAccessActive && (
-              <div className="flex items-center gap-2 px-2 mx-3 rounded-lg border border-gray-200">
+              <div className="flex items-center gap-2 px-2 mx-3">
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
                   <span className="text-xs text-[#667085] font-inter">
@@ -270,14 +322,16 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                   </span>
                 </div>
                 <button
-                  onClick={handleStopScreenAccess}
+                  onClick={() => {
+                    stopScreenCapture();
+                    setIsScreenAccessActive(false);
+                  }}
                   className="text-xs text-[#667085] font-bold"
                 >
                   Stop
                 </button>
               </div>
             )}
-
 
             {/* Controls Section */}
             <div className="flex-shrink-0 rounded-lg bg-white m-3">
@@ -288,12 +342,12 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                 onKeyPress={handleKeyPress}
                 onSend={handleSendMessage}
                 isLoading={isLoading}
-                theme={theme}
-                placeholder="How can I help you?"
-                currentMode={currentMode}
+                config={config}
                 onScreenAccessResponse={handleScreenAccessResponse}
                 triggerScreenAccessModal={triggerScreenAccessModal}
                 onTriggerReset={handleTriggerReset}
+                isStepGuideRunning={isStepGuideRunning}
+                onStopStepGuide={handleStopStepGuide}
               />
 
               {/* Mode Selector */}
@@ -302,12 +356,21 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                 enabledModes={config.enabledModes || ['tell', 'show', 'do']}
                 onModeChange={onSetMode}
                 onScreenAccessRequest={handleScreenAccessRequest}
-                theme={theme}
               />
             </div>
           </>
         )}
       </div>
+
+      {/* Screen Share Preview */}
+      <ScreenSharePreview
+        stream={screenStream}
+        isVisible={showScreenPreview}
+        onClose={() => {
+          stopScreenCapture();
+          setIsScreenAccessActive(false);
+        }}
+      />
     </div>
   );
 };

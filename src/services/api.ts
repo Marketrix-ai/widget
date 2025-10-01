@@ -15,7 +15,7 @@ class MarketrixApiService {
     
     // Initialize axios instance with base configuration
     this.api = axios.create({
-      baseURL: 'https://api.marketrix.ai', // Replace with actual API base URL
+      baseURL: 'http://localhost:8080', // Local API server
       timeout: 30000,
       headers: {
         'Content-Type': 'application/json',
@@ -101,6 +101,29 @@ class MarketrixApiService {
       return response.data.data || null;
     } catch (error) {
       console.error('Error getting agent info:', error);
+      return null;
+    }
+  }
+
+  async getIntegrationSettings(): Promise<any | null> {
+    try {
+      const response = await this.api.get<ApiResponse<any>>(
+        `/integration/search?marketrix_id=${this.config.marketrixId}&marketrix_key=${this.config.marketrixKey}`
+      );
+
+      if (!response.data.success) {
+        return null;
+      }
+
+      const integrations = response.data.data;
+      if (integrations && integrations.length > 0) {
+        // Return the first integration's settings
+        return integrations[0].settings || null;
+      }
+
+      return null;
+    } catch (error) {
+      console.error('Error getting integration settings:', error);
       return null;
     }
   }

@@ -60,6 +60,103 @@
   }
 }
 
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(30px) translateY(-50%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) translateY(-50%);
+  }
+}
+
 .animate-slide-in-left {
   animation: slide-in-left 0.6s ease-out;
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.6s ease-out;
+}
+
+/* Custom scrollbar styles */
+.marketrix-widget ::-webkit-scrollbar,
+.marketrix-widget * ::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.marketrix-widget ::-webkit-scrollbar-track,
+.marketrix-widget * ::-webkit-scrollbar-track {
+  background: #f6f6f6;
+  border-radius: 3px;
+}
+
+.marketrix-widget ::-webkit-scrollbar-thumb,
+.marketrix-widget * ::-webkit-scrollbar-thumb {
+  background: #b6b6b6;
+  border-radius: 3px;
+}
+
+.marketrix-widget ::-webkit-scrollbar-thumb:hover,
+.marketrix-widget * ::-webkit-scrollbar-thumb:hover {
+  background: #a0a0a0;
+}
+
+/* Firefox scrollbar styles */
+.marketrix-widget {
+  scrollbar-color: #f6f6f6 #b6b6b6;
+  scrollbar-width: thin;
+}
+
+/* Remove scrollbar arrows and edge curves */
+.marketrix-widget ::-webkit-scrollbar-button,
+.marketrix-widget * ::-webkit-scrollbar-button {
+  display: none !important;
+  width: 0;
+  height: 0;
+}
+
+.marketrix-widget ::-webkit-scrollbar-button:start:decrement,
+.marketrix-widget ::-webkit-scrollbar-button:end:increment,
+.marketrix-widget * ::-webkit-scrollbar-button:start:decrement,
+.marketrix-widget * ::-webkit-scrollbar-button:end:increment {
+  display: none !important;
+}
+
+.marketrix-widget ::-webkit-scrollbar-corner,
+.marketrix-widget * ::-webkit-scrollbar-corner {
+  display: none !important;
+}
+
+/* Additional arrow removal for all scrollbar elements */
+.marketrix-widget ::-webkit-scrollbar-button:vertical:start:decrement,
+.marketrix-widget ::-webkit-scrollbar-button:vertical:end:increment,
+.marketrix-widget ::-webkit-scrollbar-button:horizontal:start:decrement,
+.marketrix-widget ::-webkit-scrollbar-button:horizontal:end:increment {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+/* Specifically target up and down arrows */
+.marketrix-widget ::-webkit-scrollbar-button:vertical:start:decrement {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+.marketrix-widget ::-webkit-scrollbar-button:vertical:end:increment {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+/* Ensure all scrollbar buttons are completely hidden */
+.marketrix-widget ::-webkit-scrollbar-button {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  background: transparent !important;
+  border: none !important;
 }

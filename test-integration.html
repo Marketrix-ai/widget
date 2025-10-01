@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Widget Integration Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 4px; overflow-x: auto; }
+        button { 
+            background: #007bff; 
+            color: white; 
+            border: none; 
+            padding: 10px 20px; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Widget Integration Settings Test</h1>
+        
+        <div class="test-section info">
+            <h3>📋 Test Configuration</h3>
+            <p><strong>Marketrix ID:</strong> mLive-jPwrf</p>
+            <p><strong>Marketrix Key:</strong> nOXpK6okO3K7OJGZljJFOirHz7Hdg3YHLyxEeCU8EohjRczKXv</p>
+            <p><strong>API Endpoint:</strong> http://localhost:8080/widget/settings</p>
+        </div>
+
+        <div class="test-section">
+            <h3>🧪 API Test</h3>
+            <button onclick="testAPI()">Test API Endpoint</button>
+            <button onclick="testWidget()">Test Widget Integration</button>
+            <div id="apiResult"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>📊 Integration Settings</h3>
+            <div id="settingsResult"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>🎨 Widget Preview</h3>
+            <p>If the API test is successful, the widget should appear below with the fetched settings applied:</p>
+            <div id="widgetContainer"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:8080';
+        const MARKETRIX_ID = 'mLive-jPwrf';
+        const MARKETRIX_KEY = 'nOXpK6okO3K7OJGZljJFOirHz7Hdg3YHLyxEeCU8EohjRczKXv';
+
+        async function testAPI() {
+            const resultDiv = document.getElementById('apiResult');
+            resultDiv.innerHTML = '<p>🔄 Testing API endpoint...</p>';
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/widget/settings?marketrix_id=${MARKETRIX_ID}&marketrix_key=${MARKETRIX_KEY}`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    resultDiv.innerHTML = `
+                        <div class="test-section success">
+                            <h4>✅ API Test Successful</h4>
+                            <p><strong>Status:</strong> ${response.status}</p>
+                            <p><strong>Response:</strong></p>
+                            <pre>${JSON.stringify(data, null, 2)}</pre>
+                        </div>
+                    `;
+                    
+                    // Display settings
+                    if (data.success && data.data && data.data.settings) {
+                        displaySettings(data.data.settings);
+                    }
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="test-section error">
+                            <h4>❌ API Test Failed</h4>
+                            <p><strong>Status:</strong> ${response.status}</p>
+                            <p><strong>Error:</strong> ${response.statusText}</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="test-section error">
+                        <h4>❌ API Test Error</h4>
+                        <p><strong>Error:</strong> ${error.message}</p>
+                        <p>Make sure the API server is running on port 8080</p>
+                    </div>
+                `;
+            }
+        }
+
+        function displaySettings(settings) {
+            const settingsDiv = document.getElementById('settingsResult');
+            
+            // Parse settings if they're a string
+            let parsedSettings = settings;
+            if (typeof settings === 'string') {
+                try {
+                    parsedSettings = JSON.parse(settings);
+                } catch (e) {
+                    settingsDiv.innerHTML = `<p>❌ Error parsing settings: ${e.message}</p>`;
+                    return;
+                }
+            }
+            
+            settingsDiv.innerHTML = `
+                <div class="test-section success">
+                    <h4>✅ Settings Retrieved Successfully</h4>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div>
+                            <h5>🎨 Appearance</h5>
+                            <p><strong>Enabled:</strong> ${parsedSettings.widget_enabled}</p>
+                            <p><strong>Appearance:</strong> ${parsedSettings.widget_appearance}</p>
+                            <p><strong>Position:</strong> ${parsedSettings.widget_position}</p>
+                            <p><strong>Device:</strong> ${parsedSettings.widget_device}</p>
+                        </div>
+                        <div>
+                            <h5>📝 Content</h5>
+                            <p><strong>Header:</strong> ${parsedSettings.widget_header}</p>
+                            <p><strong>Body:</strong> ${parsedSettings.widget_body}</p>
+                            <p><strong>Greeting:</strong> ${parsedSettings.widget_greeting}</p>
+                        </div>
+                        <div>
+                            <h5>🎯 Features</h5>
+                            <p><strong>Tell:</strong> ${parsedSettings.widget_feature_tell}</p>
+                            <p><strong>Show:</strong> ${parsedSettings.widget_feature_show}</p>
+                            <p><strong>Do:</strong> ${parsedSettings.widget_feature_do}</p>
+                            <p><strong>Human:</strong> ${parsedSettings.widget_feature_request_human}</p>
+                        </div>
+                        <div>
+                            <h5>🎨 Colors</h5>
+                            <p><strong>Background:</strong> <span style="background: ${parsedSettings.widget_background_color}; padding: 2px 6px; border-radius: 3px;">${parsedSettings.widget_background_color}</span></p>
+                            <p><strong>Text:</strong> <span style="color: ${parsedSettings.widget_text_color};">${parsedSettings.widget_text_color}</span></p>
+                            <p><strong>Accent:</strong> <span style="background: ${parsedSettings.widget_accent_color}; color: white; padding: 2px 6px; border-radius: 3px;">${parsedSettings.widget_accent_color}</span></p>
+                        </div>
+                    </div>
+                    <details style="margin-top: 15px;">
+                        <summary>📄 Full Settings JSON</summary>
+                        <pre>${JSON.stringify(parsedSettings, null, 2)}</pre>
+                    </details>
+                </div>
+            `;
+        }
+
+        async function testWidget() {
+            const widgetContainer = document.getElementById('widgetContainer');
+            widgetContainer.innerHTML = '<p>🔄 Loading widget...</p>';
+            
+            try {
+                // Simulate widget initialization
+                const response = await fetch(`${API_BASE_URL}/widget/settings?marketrix_id=${MARKETRIX_ID}&marketrix_key=${MARKETRIX_KEY}`);
+                const data = await response.json();
+                
+                if (data.success && data.data && data.data.settings) {
+                    let settings = data.data.settings;
+                    if (typeof settings === 'string') {
+                        settings = JSON.parse(settings);
+                    }
+                    
+                    widgetContainer.innerHTML = `
+                        <div class="test-section success">
+                            <h4>✅ Widget Integration Test</h4>
+                            <p>The widget would be initialized with these settings:</p>
+                            <div style="border: 2px solid ${settings.widget_border_color}; background: ${settings.widget_background_color}; color: ${settings.widget_text_color}; padding: 20px; border-radius: ${settings.widget_border_radius}; width: ${settings.widget_width}; margin: 20px auto; box-shadow: ${settings.widget_shadow};">
+                                <h3 style="color: ${settings.widget_accent_color}; margin-top: 0;">${settings.widget_header}</h3>
+                                <p>${settings.widget_body}</p>
+                                <p><em>${settings.widget_greeting}</em></p>
+                                <div style="margin-top: 15px;">
+                                    ${settings.widget_feature_tell ? '<span style="background: ' + settings.widget_accent_color + '; color: white; padding: 5px 10px; border-radius: 15px; margin: 2px; display: inline-block;">Tell</span>' : ''}
+                                    ${settings.widget_feature_show ? '<span style="background: ' + settings.widget_secondary_color + '; color: white; padding: 5px 10px; border-radius: 15px; margin: 2px; display: inline-block;">Show</span>' : ''}
+                                    ${settings.widget_feature_do ? '<span style="background: ' + settings.widget_accent_color + '; color: white; padding: 5px 10px; border-radius: 15px; margin: 2px; display: inline-block;">Do</span>' : ''}
+                                </div>
+                            </div>
+                            <p><strong>Widget would be positioned:</strong> ${settings.widget_position}</p>
+                            <p><strong>Target devices:</strong> ${settings.widget_device}</p>
+                        </div>
+                    `;
+                } else {
+                    widgetContainer.innerHTML = '<div class="test-section error"><h4>❌ Failed to load widget settings</h4></div>';
+                }
+            } catch (error) {
+                widgetContainer.innerHTML = `<div class="test-section error"><h4>❌ Widget test error: ${error.message}</h4></div>`;
+            }
+        }
+
+        // Auto-run API test on page load
+        window.addEventListener('load', () => {
+            setTimeout(testAPI, 1000);
+        });
+    </script>
+</body>
+</html>

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { WidgetState, ChatMessage, MarketrixConfig, ChatMode } from '../types';
 import MarketrixApiService from '../services/api';
+import DemoApiService from '../services/demo-api';
 
 interface UseMarketrixWidgetProps {
   config: MarketrixConfig;
@@ -17,11 +18,12 @@ export const useMarketrixWidget = ({ config }: UseMarketrixWidgetProps) => {
   });
 
 
-  const apiServiceRef = useRef<MarketrixApiService | null>(null);
+  const apiServiceRef = useRef<MarketrixApiService | DemoApiService | null>(null);
 
-  // Initialize API service
+  // Initialize API service (use demo service for demo mode)
   useEffect(() => {
-    apiServiceRef.current = new MarketrixApiService(config);
+    const isDemoMode = config.marketrixId === 'demo-marketrix-id' || config.marketrixKey === 'demo-marketrix-key';
+    apiServiceRef.current = isDemoMode ? new DemoApiService(config) : new MarketrixApiService(config);
     
     // Check agent availability on mount
     checkAgentAvailability();
@@ -156,6 +158,19 @@ export const useMarketrixWidget = ({ config }: UseMarketrixWidgetProps) => {
     setState(prev => ({ ...prev, error: undefined }));
   }, []);
 
+  const setDemoContext = useCallback((context: string | null) => {
+    if (apiServiceRef.current && apiServiceRef.current instanceof DemoApiService) {
+      apiServiceRef.current.setCurrentContext(context);
+    }
+  }, []);
+
+  const getDemoContextMessage = useCallback((elementType: string) => {
+    if (apiServiceRef.current && apiServiceRef.current instanceof DemoApiService) {
+      return apiServiceRef.current.getContextMessage(elementType);
+    }
+    return null;
+  }, []);
+
   return {
     state,
     actions: {
@@ -168,6 +183,8 @@ export const useMarketrixWidget = ({ config }: UseMarketrixWidgetProps) => {
       clearMessages,
       clearError,
       checkAgentAvailability,
+      setDemoContext,
+      getDemoContextMessage,
     },
   };
 };

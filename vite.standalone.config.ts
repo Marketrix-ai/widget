@@ -4,32 +4,26 @@ import { resolve } from 'path'
 
 export default defineConfig({
   plugins: [react()],
-  server: {
-    port: 8083,
-    host: true,
-    cors: true
-  },
   build: {
     lib: {
       entry: resolve(__dirname, 'src/index.tsx'),
       name: 'MarketrixInApp',
-      fileName: 'marketrix-inapp',
-      formats: ['es', 'umd']
+      fileName: 'marketrix-inapp-standalone',
+      formats: ['umd']
     },
     rollupOptions: {
-      external: ['react', 'react-dom'],
+      // Don't externalize React - bundle everything together
+      external: [],
       output: {
-        globals: {
-          react: 'React',
-          'react-dom': 'ReactDOM'
-        }
+        globals: {}
       }
     },
     outDir: 'dist',
-    sourcemap: true
+    sourcemap: false,
+    minify: true
   },
   define: {
-    'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV)
+    'process.env.NODE_ENV': JSON.stringify('production')
   },
   esbuild: {
     jsx: 'automatic'
