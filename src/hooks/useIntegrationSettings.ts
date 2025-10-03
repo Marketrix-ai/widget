@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { IntegrationService, IntegrationSettings } from '../services/integrationService';
+import { IntegrationService, IntegrationSettings } from '../sdk/integrationService';
 import { MarketrixConfig } from '../types';
 
 export const useIntegrationSettings = (config: MarketrixConfig) => {
@@ -19,15 +19,13 @@ export const useIntegrationSettings = (config: MarketrixConfig) => {
         setIsLoading(true);
         setError(null);
 
-        // Use the API base URL from the config or default to localhost
-        const baseUrl = config.apiBaseUrl || 'http://localhost:8080';
         const integrationService = new IntegrationService(
-          baseUrl,
           config.marketrixId,
           config.marketrixKey
         );
 
-        const integrationSettings = await integrationService.fetchIntegrationSettings();
+        const integrationData = await integrationService.fetchIntegrationSettings();
+        const integrationSettings = integrationData ? integrationService.getWidgetSettings(integrationData) : null;
         
         if (integrationSettings) {
           setSettings(integrationSettings);

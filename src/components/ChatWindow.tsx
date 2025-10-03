@@ -309,6 +309,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                 onSetMode={onSetMode}
                 config={config}
                 onStepGuideStart={() => setIsStepGuideRunning(true)}
+                integrationSettings={integrationSettings}
               />
             </div>
 

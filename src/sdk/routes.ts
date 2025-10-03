@@ -524,21 +524,6 @@ const contract = c.router({
     },
   },
 
-  widgetSettings: {
-    method: 'GET' as const,
-    summary: 'Get widget settings by marketrix credentials',
-    description: 'Public endpoint to get widget settings using marketrix_id and marketrix_key',
-    path: '/widget/settings',
-    query: z.object({
-      marketrix_id: z.string(),
-      marketrix_key: z.string(),
-    }),
-    responses: {
-      200: R.success(IntegrationEntitySchema),
-      404: R.error,
-      500: R.error,
-    },
-  },
 
   integrationGet: {
     method: 'GET' as const,

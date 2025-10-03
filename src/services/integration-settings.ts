@@ -1,4 +1,4 @@
-import MarketrixApiService from './api';
+import { IntegrationService } from '../sdk/integrationService';
 import { MarketrixConfig } from '../types';
 
 export interface IntegrationSettings {
@@ -27,19 +27,21 @@ export interface IntegrationSettings {
   widget_fade_duration?: string;
   widget_bounce_effect?: boolean;
   widget_chips?: Array<{
-    chip_mode: string;
-    chip_text: string;
+    chip_mode?: string;
+    chip_text?: string;
+    type?: string;
+    question?: string;
   }>;
 }
 
 export class IntegrationSettingsService {
-  private apiService: MarketrixApiService;
+  private integrationService: IntegrationService;
   private settings: IntegrationSettings | null = null;
   private config: MarketrixConfig;
 
   constructor(config: MarketrixConfig) {
     this.config = config;
-    this.apiService = new MarketrixApiService(config);
+    this.integrationService = new IntegrationService(config.marketrixId, config.marketrixKey);
   }
 
   /**
@@ -48,7 +50,8 @@ export class IntegrationSettingsService {
   async loadSettings(): Promise<IntegrationSettings | null> {
     try {
       console.log('Loading integration settings for:', this.config.marketrixId);
-      this.settings = await this.apiService.getIntegrationSettings();
+      const integrationData = await this.integrationService.fetchIntegrationSettings();
+      this.settings = integrationData ? this.integrationService.getWidgetSettings(integrationData) : null;
       
       if (this.settings) {
         console.log('Integration settings loaded:', this.settings);

@@ -1,4 +1,3 @@
-import { sdk } from '../sdk';
 import { WidgetSettingsConfig } from '../types';
 
 export interface IntegrationSettings {
@@ -33,36 +32,37 @@ export interface IntegrationSettings {
 }
 
 export class IntegrationService {
-  private baseUrl: string;
   private marketrixId: string;
   private marketrixKey: string;
 
-  constructor(baseUrl: string, marketrixId: string, marketrixKey: string) {
-    this.baseUrl = baseUrl;
+  constructor(marketrixId: string, marketrixKey: string) {
     this.marketrixId = marketrixId;
     this.marketrixKey = marketrixKey;
   }
 
   /**
-   * Fetch integration settings from the API
+   * Fetch integration settings from the API using integrationSearch endpoint
    */
   async fetchIntegrationSettings(): Promise<IntegrationSettings | null> {
     try {
       console.log('Fetching integration settings for:', { marketrixId: this.marketrixId, marketrixKey: this.marketrixKey });
       
-      const response = await sdk.widgetSettings({
-        query: {
-          marketrix_id: this.marketrixId,
-          marketrix_key: this.marketrixKey,
-        },
-      });
-
-      if (response.status === 200 && response.body?.data) {
-        const integration = response.body.data;
+      // Use direct fetch for now to avoid SDK type issues
+      const response = await fetch(`http://localhost:8080/integration?marketrix_id=${this.marketrixId}&marketrix_key=${this.marketrixKey}`);
+      const data = await response.json();
+      
+      if (data.success && data.data) {
+        const integrations = data.data as any[];
         
-        if (integration && integration.settings) {
+        // Find the widget integration from the search results
+        const widgetIntegration = integrations.find((integration: any) => 
+          integration.type === 'widget' && 
+          integration.status === 'active'
+        );
+
+        if (widgetIntegration && widgetIntegration.settings) {
           // Parse settings if they're stored as a JSON string
-          let settings = integration.settings;
+          let settings = widgetIntegration.settings;
           if (typeof settings === 'string') {
             try {
               settings = JSON.parse(settings);

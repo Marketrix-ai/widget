@@ -39,3 +39,4 @@ export const sdk = Object.assign(client, {
 
 // Export raw client for backward compatibility
 export * from './schema';
+export { IntegrationService } from './integrationService';

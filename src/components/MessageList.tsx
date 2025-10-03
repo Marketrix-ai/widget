@@ -6,6 +6,15 @@ import { LuMousePointerClick } from "react-icons/lu";
 import { IoChatbubbleEllipsesOutline } from "react-icons/io5";
 import { SiTicktick } from "react-icons/si";
 import MarketrixLogo from "../assets/marketrix-icon.png";
+import { IntegrationSettings } from "../services/integrationService";
+
+// Define the chip type to handle both formats
+type ChipData = {
+  chip_mode?: string;
+  chip_text?: string;
+  type?: string;
+  question?: string;
+};
 
 interface MessageListProps {
   messages: ChatMessage[];
@@ -15,6 +24,7 @@ interface MessageListProps {
   onSetMode?: (mode: 'show' | 'tell' | 'do') => void;
   config?: MarketrixConfig;
   onStepGuideStart?: () => void;
+  integrationSettings?: IntegrationSettings | null;
 }
 
 export const MessageList: React.FC<MessageListProps> = ({
@@ -25,49 +35,106 @@ export const MessageList: React.FC<MessageListProps> = ({
   onSetMode,
   config,
   onStepGuideStart,
+  integrationSettings,
 }) => {
   // Get atmosphere configuration
   const { getWidgetText, getActiveAvatar } = useWidgetAtmosphere(config);
   const widgetText = getWidgetText();
   const activeAvatar = getActiveAvatar();
-  // Suggested actions to show when no messages
-  const suggestedActions = [
-    {
-      id: "show-add-product",
-      text: "Show me how to add a new product",
-      icon: <LuMousePointerClick className="w-6 h-6" />,
-      type: "show",
-      isShow: true,
-    },
-    {
-      id: "show-login",
-      text: "Show me how to login",
-      icon: <LuMousePointerClick className="w-6 h-6" />,
-      type: "show",
-      isShow: true,
-    },
-    {
-      id: "do-login",
-      text: "Do the login process for me",
-      icon: <SiTicktick className="w-4 h-4" />,
-      type: "do",
-      isShow: false,
-    },
-    {
-      id: "show-revenue",
-      text: "Show me the revenue metrics",
-      icon: <LuMousePointerClick className="w-6 h-6" />,
-      type: "show",
-      isShow: true,
-    },
-    {
-      id: "tell-conversion-rate",
-      text: "What does my conversion rate mean and how can I improve it?",
-      icon: <IoChatbubbleEllipsesOutline className="w-5 h-5" />,
-      type: "tell",
-      isShow: false,
-    },
-  ];
+  
+  // Debug integration settings
+  console.log('MessageList - Integration settings:', integrationSettings);
+  console.log('MessageList - Widget chips:', integrationSettings?.widget_chips);
+  // Suggested actions to show when no messages - get from integration settings or use defaults
+  const getSuggestedActions = () => {
+    // If integration settings have widget_chips, use those
+    if (integrationSettings?.widget_chips && integrationSettings.widget_chips.length > 0) {
+      console.log('Widget chips from integration settings:', integrationSettings.widget_chips);
+      
+      return integrationSettings.widget_chips.map((chip: ChipData, index) => {
+        // Handle both formats: chip_text (expected) and question (actual backend)
+        const chipText = chip.chip_text || chip.question || '';
+        const chipMode = chip.chip_mode || chip.type || 'tell';
+        const mode = chipMode as 'show' | 'tell' | 'do';
+        
+        console.log(`Processing chip ${index}:`, { chip, chipText, chipMode, mode });
+        
+        let icon;
+        let isShow = false;
+        
+        switch (mode) {
+          case 'do':
+            icon = <SiTicktick className="w-4 h-4" />;
+            isShow = false;
+            break;
+          case 'show':
+            icon = <LuMousePointerClick className="w-6 h-6" />;
+            isShow = true;
+            break;
+          case 'tell':
+            icon = <IoChatbubbleEllipsesOutline className="w-5 h-5" />;
+            isShow = false;
+            break;
+          default:
+            icon = <IoChatbubbleEllipsesOutline className="w-5 h-5" />;
+            isShow = false;
+        }
+        
+        return {
+          id: `chip-${index}`,
+          text: chipText,
+          icon,
+          type: mode,
+          isShow,
+        };
+      });
+    }
+    
+    // Check if there are any chips in a different location or format
+    console.log('No widget_chips found, checking for alternative chip formats...');
+    console.log('Full integration settings structure:', JSON.stringify(integrationSettings, null, 2));
+    
+    // Fallback to default suggested actions if no integration settings
+    return [
+      {
+        id: "show-add-product",
+        text: "Show me how to add a new product",
+        icon: <LuMousePointerClick className="w-6 h-6" />,
+        type: "show" as const,
+        isShow: true,
+      },
+      {
+        id: "show-login",
+        text: "Show me how to login",
+        icon: <LuMousePointerClick className="w-6 h-6" />,
+        type: "show" as const,
+        isShow: true,
+      },
+      {
+        id: "do-login",
+        text: "Do the login process for me",
+        icon: <SiTicktick className="w-4 h-4" />,
+        type: "do" as const,
+        isShow: false,
+      },
+      {
+        id: "show-revenue",
+        text: "Show me the revenue metrics",
+        icon: <LuMousePointerClick className="w-6 h-6" />,
+        type: "show" as const,
+        isShow: true,
+      },
+      {
+        id: "tell-conversion-rate",
+        text: "What does my conversion rate mean and how can I improve it?",
+        icon: <IoChatbubbleEllipsesOutline className="w-5 h-5" />,
+        type: "tell" as const,
+        isShow: false,
+      },
+    ];
+  };
+
+  const suggestedActions = getSuggestedActions();
 
   const handleSuggestedActionClick = (action: (typeof suggestedActions)[0], event: React.MouseEvent) => {
     event.preventDefault();
@@ -146,14 +213,16 @@ export const MessageList: React.FC<MessageListProps> = ({
                   <span className="font-normal">
                     {action.type === "show" ? (
                       <>
-                        <span className="font-bold">Show me</span>
-                        {action.text.replace("Show me", "")}
+                        <span className="font-bold">Show me </span>
+                        {action.text.replace(/^Show me\s*/i, "")}
                       </>
                     ) : action.type === "do" ? (
                       <>
-                        <span className="font-bold">Do</span>
-                        {action.text.replace("Do the", "")}
+                        <span className="font-bold">Do </span>
+                        {action.text.replace(/^Do\s*/i, "")}
                       </>
+                    ) : action.type === "tell" ? (
+                      action.text
                     ) : (
                       action.text
                     )}

@@ -1,21 +1,24 @@
 import { useState, useEffect, useCallback } from 'react';
 import { WidgetAtmosphereConfig, MarketrixConfig } from '../types';
 import { configManager } from '../utils/ConfigManager';
-import { IntegrationSettingsService } from '../services/integration-settings';
+import { IntegrationService } from '../sdk/integrationService';
 
 export const useWidgetAtmosphere = (initialConfig?: MarketrixConfig) => {
   const [atmosphereConfig, setAtmosphereConfig] = useState<WidgetAtmosphereConfig | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [integrationService, setIntegrationService] = useState<IntegrationSettingsService | null>(null);
+  const [integrationService, setIntegrationService] = useState<IntegrationService | null>(null);
 
   // Initialize integration service when config is available
   useEffect(() => {
     if (initialConfig?.marketrixId && initialConfig?.marketrixKey) {
-      const service = new IntegrationSettingsService(initialConfig);
+      const service = new IntegrationService(
+        initialConfig.marketrixId,
+        initialConfig.marketrixKey
+      );
       setIntegrationService(service);
     }
-  }, [initialConfig?.marketrixId, initialConfig?.marketrixKey]);
+  }, [initialConfig?.marketrixId, initialConfig?.marketrixKey, initialConfig?.apiBaseUrl]);
 
   // Load configuration on mount
   useEffect(() => {
@@ -29,16 +32,19 @@ export const useWidgetAtmosphere = (initialConfig?: MarketrixConfig) => {
         
         // Load integration settings if service is available
         if (integrationService) {
-          console.log('Loading integration settings...');
-          const integrationSettings = await integrationService.loadSettings();
+          console.log('Loading integration settings for atmosphere...');
+          const integrationAtmosphereConfig = await integrationService.loadAtmosphereConfig();
           
-          if (integrationSettings) {
-            console.log('Integration settings loaded, updating atmosphere config');
-            // Update atmosphere config with integration settings
-            const updatedConfig = integrationService.updateWidgetAtmosphere(config);
+          if (integrationAtmosphereConfig) {
+            console.log('Integration atmosphere config loaded, merging with base config');
+            // Merge integration settings with base config
+            const updatedConfig = {
+              ...config,
+              ...integrationAtmosphereConfig
+            };
             setAtmosphereConfig(updatedConfig);
           } else {
-            console.log('No integration settings found, using default config');
+            console.log('No integration atmosphere config found, using default config');
             setAtmosphereConfig(config);
           }
         } else {

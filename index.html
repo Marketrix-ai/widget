@@ -1650,16 +1650,88 @@
     }
 
     // Initialize the widget with enhanced demo functionality
-    widgetInstance = initMarketrixWidget({
-      marketrixId: 'mLive-jPwrf',
-      marketrixKey: 'nOXpK6okO3K7OJGZljJFOirHz7Hdg3YHLyxEeCU8EohjRczKXv',
-      apiBaseUrl: 'http://localhost:8080',
-      position: 'bottom-right',
-      theme: 'light',
-      avatarUrl: 'https://via.placeholder.com/64/0ea5e9/ffffff?text=AI',
-      agentName: 'Marketrix Demo Assistant',
-      enabledModes: ['show', 'tell', 'do']
-    });
+    // Fetch integration settings first, then initialize widget
+    async function initializeWidget() {
+      try {
+        console.log('Fetching integration settings...');
+        
+        // Fetch integration settings from the API
+        const response = await fetch('http://localhost:8080/integration?marketrix_id=mLive-jPwrf&marketrix_key=nOXpK6okO3K7OJGZljJFOirHz7Hdg3YHLyxEeCU8EohjRczKXv');
+        const data = await response.json();
+        
+        if (data.success && data.data && data.data.length > 0) {
+          // Find the widget integration
+          const widgetIntegration = data.data.find(integration => 
+            integration.type === 'widget' && 
+            integration.status === 'active'
+          );
+          
+          if (widgetIntegration) {
+            console.log('Found widget integration:', widgetIntegration);
+            
+            // Extract settings
+            let settings = widgetIntegration.settings;
+            if (typeof settings === 'string') {
+              settings = JSON.parse(settings);
+            }
+            
+            // Initialize widget with fetched settings
+            widgetInstance = initMarketrixWidget({
+              marketrixId: widgetIntegration.marketrix_id,
+              marketrixKey: widgetIntegration.marketrix_key,
+              apiBaseUrl: 'http://localhost:8080',
+              position: settings.widget_position?.replace('_', '-') || 'bottom-right',
+              theme: 'light',
+              avatarUrl: 'https://via.placeholder.com/64/0ea5e9/ffffff?text=AI',
+              agentName: settings.widget_header?.replace(/<[^>]*>/g, '') || 'Marketrix Demo Assistant',
+              enabledModes: [
+                ...(settings.widget_feature_show ? ['show'] : []),
+                ...(settings.widget_feature_tell ? ['tell'] : []),
+                ...(settings.widget_feature_do ? ['do'] : []),
+              ]
+            });
+            
+            console.log('Widget initialized with integration settings:', {
+              marketrixId: widgetIntegration.marketrix_id,
+              position: settings.widget_position,
+              agentName: settings.widget_header,
+              enabledModes: [
+                ...(settings.widget_feature_show ? ['show'] : []),
+                ...(settings.widget_feature_tell ? ['tell'] : []),
+                ...(settings.widget_feature_do ? ['do'] : []),
+              ]
+            });
+          } else {
+            console.warn('No widget integration found, using default settings');
+            initializeWithDefaults();
+          }
+        } else {
+          console.warn('No integration data found, using default settings');
+          initializeWithDefaults();
+        }
+      } catch (error) {
+        console.error('Failed to fetch integration settings:', error);
+        console.log('Falling back to default settings');
+        initializeWithDefaults();
+      }
+    }
+    
+    // Fallback function to initialize with default settings
+    function initializeWithDefaults() {
+      widgetInstance = initMarketrixWidget({
+        marketrixId: 'mLive-psKKA',
+        marketrixKey: 'taDkvX7KsSkvYf851AAeQCyhPL1C76SecCNRlXLvhOqZ3pi0Ne',
+        apiBaseUrl: 'http://localhost:8080',
+        position: 'bottom-right',
+        theme: 'light',
+        avatarUrl: 'https://via.placeholder.com/64/0ea5e9/ffffff?text=AI',
+        agentName: 'Marketrix Demo Assistant',
+        enabledModes: ['show', 'tell', 'do']
+      });
+    }
+    
+    // Initialize widget asynchronously
+    initializeWidget();
 
     // Initialize demo highlighting after DOM is loaded
     document.addEventListener('DOMContentLoaded', initDemoHighlighting);
