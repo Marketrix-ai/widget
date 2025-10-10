@@ -91,7 +91,7 @@ export const useMarketrixWidget = ({ config }: UseMarketrixWidgetProps) => {
     setState(prev => ({ ...prev, currentMode: mode }));
   }, []);
 
-  const sendMessage = useCallback(async (content: string, mode?: ChatMode) => {
+  const sendMessage = useCallback(async (content: string, mode?: ChatMode, connectionId?: number, question?: string) => {
     if (!apiServiceRef.current || !content.trim()) return;
 
     const messageMode = mode || state.currentMode;
@@ -114,7 +114,9 @@ export const useMarketrixWidget = ({ config }: UseMarketrixWidgetProps) => {
     try {
       const response = await apiServiceRef.current.sendMessage(
         content.trim(),
-        messageMode
+        messageMode,
+        connectionId,
+        question
       );
 
       const agentMessage: ChatMessage = {

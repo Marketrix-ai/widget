@@ -69,10 +69,12 @@ export interface ApiResponse<T = any> {
 }
 
 export interface SendMessageRequest {
-  message: string;
-  mode: 'show' | 'tell' | 'do';
-  marketrixId: string;
-  marketrixKey: string;
+  message?: string;
+  mode?: 'show' | 'tell' | 'do';
+  marketrixId?: string;
+  marketrixKey?: string;
+  connection_id?: number;
+  question?: string;
 }
 
 export interface SendMessageResponse {

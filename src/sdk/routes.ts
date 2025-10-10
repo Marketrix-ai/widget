@@ -912,6 +912,7 @@ const contract = c.router({
     },
   },
 
+
   tourCreate: {
     method: 'POST' as const,
     summary: 'Create new interactive tour',

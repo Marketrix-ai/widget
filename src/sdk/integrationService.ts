@@ -67,6 +67,11 @@ export class IntegrationService {
 
         if (widgetIntegration) {
           console.log('Found widget integration via direct fetch:', widgetIntegration);
+          console.log('Widget Integration Connection ID:', widgetIntegration.connection_id);
+          
+          // Fetch tour data for this connection_id
+          await this.fetchTourDataForConnection(widgetIntegration.connection_id);
+          
           return widgetIntegration;
         }
       }
@@ -76,6 +81,141 @@ export class IntegrationService {
     } catch (error) {
       console.error('Failed to fetch integration settings via direct fetch:', error);
       return null;
+    }
+  }
+
+  /**
+   * Fetch tour data for a specific connection_id using tourSearch endpoint
+   */
+  async fetchTourDataForConnection(connectionId: number): Promise<void> {
+    try {
+      console.log('=== FETCHING TOUR DATA FOR CONNECTION ID ===');
+      console.log('Connection ID:', connectionId);
+      console.log('Marketrix ID:', this.marketrixId);
+      console.log('Marketrix Key:', this.marketrixKey);
+      
+      // Try different authentication methods
+      const url = `http://localhost:8080/tour?connection_id=${connectionId}`;
+      console.log('Tour Search URL:', url);
+      
+      // First try with Authorization header
+      let response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.marketrixKey}`,
+        },
+      });
+
+      // If that fails, try with X-Marketrix headers
+      if (!response.ok) {
+        console.log('Authorization header failed, trying X-Marketrix headers...');
+        response = await fetch(url, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Marketrix-ID': this.marketrixId,
+            'X-Marketrix-Key': this.marketrixKey,
+          },
+        });
+      }
+
+      // If that fails, try with query parameters
+      if (!response.ok) {
+        console.log('X-Marketrix headers failed, trying query parameters...');
+        const urlWithParams = `http://localhost:8080/tour?connection_id=${connectionId}&tenant_id=2`;
+        console.log('Tour Search URL with params:', urlWithParams);
+        response = await fetch(urlWithParams, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+      }
+
+      console.log('Tour Search Response Status:', response.status);
+      console.log('Tour Search Response Headers:', Object.fromEntries(response.headers.entries()));
+      
+      if (!response.ok) {
+        console.error('Tour Search API Error:', response.status, response.statusText);
+        const errorText = await response.text();
+        console.error('Error Response Body:', errorText);
+        return;
+      }
+
+      const data = await response.json();
+      console.log('Tour Search Response Data:', data);
+
+      if (data.success && data.data) {
+        const tours = data.data;
+        console.log('=== TOUR DATA FOUND FOR CONNECTION ID', connectionId, '===');
+        console.log('Total tours found:', tours.length);
+        
+        if (tours.length === 0) {
+          console.log('No tours found for this connection_id');
+          return;
+        }
+        
+        tours.forEach((tour: any, index: number) => {
+          console.log(`\n=== TOUR ${index + 1} ===`);
+          console.log('Tour ID:', tour.id);
+          console.log('Connection ID:', tour.connection_id);
+          console.log('Question:', tour.question);
+          console.log('Target:', tour.target);
+          console.log('Created At:', tour.created_at);
+          console.log('Updated At:', tour.updated_at);
+          
+          if (tour.answer && tour.answer.steps) {
+            console.log('Answer Steps Count:', tour.answer.steps.length);
+            
+            if (tour.answer.steps.length > 0) {
+              console.log('\n--- TOUR STEPS ---');
+              tour.answer.steps.forEach((step: any, stepIndex: number) => {
+                console.log(`  Step ${stepIndex + 1}:`);
+                console.log('    Step ID:', step.id);
+                console.log('    Step Title:', step.title);
+                console.log('    Step Description:', step.description);
+                console.log('    Step Selector:', step.selector || 'N/A');
+                console.log('    Step XPath:', step.xpath || 'N/A');
+                console.log('    Step Action:', step.action || 'N/A');
+                console.log('    Step Order:', step.order);
+              });
+            } else {
+              console.log('No steps found for this tour');
+            }
+          } else {
+            console.log('No answer or steps found for this tour');
+          }
+        });
+        
+        // Summary
+        console.log('\n=== TOUR DATA SUMMARY ===');
+        console.log('Connection ID:', connectionId);
+        console.log('Total Tours:', tours.length);
+        console.log('Total Steps Across All Tours:', tours.reduce((total: number, tour: any) => {
+          return total + (tour.answer?.steps?.length || 0);
+        }, 0));
+        
+        // Group by target
+        const targetGroups = tours.reduce((groups: Record<string, any[]>, tour: any) => {
+          const target = tour.target || 'No Target';
+          if (!groups[target]) {
+            groups[target] = [];
+          }
+          groups[target].push(tour);
+          return groups;
+        }, {});
+        
+        console.log('\n--- TOURS BY TARGET ---');
+        Object.entries(targetGroups).forEach(([target, tours]) => {
+          console.log(`${target}: ${(tours as any[]).length} tour(s)`);
+        });
+        
+      } else {
+        console.warn('No tour data found or API error:', data.error || data.message);
+      }
+    } catch (error) {
+      console.error('Failed to fetch tour data for connection:', error);
     }
   }
 
@@ -284,6 +424,210 @@ export class IntegrationService {
     } catch (error) {
       console.error('Failed to load atmosphere config from integration:', error);
       return null;
+    }
+  }
+
+  /**
+   * Get tour data for a specific connection ID (public method)
+   */
+  async getTourDataForConnection(connectionId: number): Promise<any[]> {
+    try {
+      console.log('=== GETTING TOUR DATA FOR CONNECTION ID ===');
+      console.log('Connection ID:', connectionId);
+      
+      // Use simplified URL with tenant_id
+      const url = `http://localhost:8080/tour?connection_id=${connectionId}&tenant_id=2`;
+      console.log('Tour Search URL:', url);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      console.log('Tour API Response Status:', response.status);
+      console.log('Tour API Response Headers:', Object.fromEntries(response.headers.entries()));
+
+      if (!response.ok) {
+        console.error('Tour Search API Error:', response.status, response.statusText);
+        const errorText = await response.text();
+        console.error('Error Response Body:', errorText);
+        
+        // If it's a 401 error, the API server might not be restarted yet
+        if (response.status === 401) {
+          console.warn('⚠️ API server may need to be restarted to pick up the updated handler code.');
+          console.warn('Please restart the API server and try again.');
+        }
+        
+        return [];
+      }
+
+      const data = await response.json();
+      console.log('Tour API Raw Response Data:', data);
+      
+      if (data.success && data.data) {
+        const tours = data.data;
+        console.log('=== TOUR DATA RETRIEVED SUCCESSFULLY ===');
+        console.log('Total tours found:', tours.length);
+        
+        // Log each tour in detail
+        tours.forEach((tour: any, index: number) => {
+          console.log(`\n=== TOUR ${index + 1} ===`);
+          console.log('Tour ID:', tour.id);
+          console.log('Connection ID:', tour.connection_id);
+          console.log('Question:', tour.question);
+          console.log('Target:', tour.target);
+          console.log('Created At:', tour.created_at);
+          console.log('Updated At:', tour.updated_at);
+          
+          if (tour.answer && tour.answer.steps) {
+            console.log('Answer Steps Count:', tour.answer.steps.length);
+            console.log('\n--- TOUR STEPS ---');
+            tour.answer.steps.forEach((step: any, stepIndex: number) => {
+              console.log(`  Step ${stepIndex + 1}:`);
+              console.log('    Step ID:', step.id);
+              console.log('    Step Title:', step.title);
+              console.log('    Step Description:', step.description);
+              console.log('    Step Selector:', step.selector || 'N/A');
+              console.log('    Step XPath:', step.xpath || 'N/A');
+              console.log('    Step Action:', step.action || 'N/A');
+              console.log('    Step Order:', step.order);
+            });
+          } else {
+            console.log('No answer steps found for this tour');
+          }
+        });
+        
+        // Summary
+        console.log('\n=== TOUR DATA SUMMARY ===');
+        console.log('Connection ID:', connectionId);
+        console.log('Total Tours:', tours.length);
+        console.log('Total Steps Across All Tours:', tours.reduce((total: number, tour: any) => {
+          return total + (tour.answer?.steps?.length || 0);
+        }, 0));
+        
+        return tours;
+      } else {
+        console.warn('No tour data found or API error:', data.error || data.message);
+        return [];
+      }
+    } catch (error) {
+      console.error('Failed to get tour data for connection:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get all tour data across all connections and tenants (public method)
+   */
+  async getAllTourData(): Promise<any[]> {
+    try {
+      console.log('=== GETTING ALL TOUR DATA ===');
+      
+      // Fetch all tours without connection_id filter
+      const url = `http://localhost:8080/tour?tenant_id=2`;
+      console.log('All Tours URL:', url);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      console.log('All Tours API Response Status:', response.status);
+      console.log('All Tours API Response Headers:', Object.fromEntries(response.headers.entries()));
+
+      if (!response.ok) {
+        console.error('All Tours API Error:', response.status, response.statusText);
+        const errorText = await response.text();
+        console.error('Error Response Body:', errorText);
+        
+        // If it's a 401 error, the API server might not be restarted yet
+        if (response.status === 401) {
+          console.warn('⚠️ API server may need to be restarted to pick up the updated handler code.');
+          console.warn('Please restart the API server and try again.');
+        }
+        
+        return [];
+      }
+
+      const data = await response.json();
+      console.log('All Tours API Raw Response Data:', data);
+      
+      if (data.success && data.data) {
+        const tours = data.data;
+        console.log('=== ALL TOUR DATA RETRIEVED SUCCESSFULLY ===');
+        console.log('Total tours found:', tours.length);
+        
+        // Group by connection_id
+        const toursByConnection = tours.reduce((groups: any, tour: any) => {
+          const connectionId = tour.connection_id;
+          if (!groups[connectionId]) {
+            groups[connectionId] = [];
+          }
+          groups[connectionId].push(tour);
+          return groups;
+        }, {});
+        
+        console.log('\n=== TOURS BY CONNECTION ID ===');
+        Object.entries(toursByConnection).forEach(([connectionId, connectionTours]: [string, any]) => {
+          console.log(`\nConnection ID ${connectionId}: ${connectionTours.length} tour(s)`);
+          connectionTours.forEach((tour: any, index: number) => {
+            console.log(`  Tour ${index + 1}:`);
+            console.log('    Tour ID:', tour.id);
+            console.log('    Question:', tour.question);
+            console.log('    Target:', tour.target);
+            console.log('    Steps Count:', tour.answer?.steps?.length || 0);
+            console.log('    Created At:', tour.created_at);
+          });
+        });
+        
+        // Log each tour in detail
+        tours.forEach((tour: any, index: number) => {
+          console.log(`\n=== TOUR ${index + 1} ===`);
+          console.log('Tour ID:', tour.id);
+          console.log('Connection ID:', tour.connection_id);
+          console.log('Question:', tour.question);
+          console.log('Target:', tour.target);
+          console.log('Created At:', tour.created_at);
+          console.log('Updated At:', tour.updated_at);
+          
+          if (tour.answer && tour.answer.steps) {
+            console.log('Answer Steps Count:', tour.answer.steps.length);
+            console.log('\n--- TOUR STEPS ---');
+            tour.answer.steps.forEach((step: any, stepIndex: number) => {
+              console.log(`  Step ${stepIndex + 1}:`);
+              console.log('    Step ID:', step.id);
+              console.log('    Step Title:', step.title);
+              console.log('    Step Description:', step.description);
+              console.log('    Step Selector:', step.selector || 'N/A');
+              console.log('    Step XPath:', step.xpath || 'N/A');
+              console.log('    Step Action:', step.action || 'N/A');
+              console.log('    Step Order:', step.order);
+            });
+          } else {
+            console.log('No answer steps found for this tour');
+          }
+        });
+        
+        // Summary
+        console.log('\n=== ALL TOUR DATA SUMMARY ===');
+        console.log('Total Tours:', tours.length);
+        console.log('Unique Connection IDs:', Object.keys(toursByConnection).length);
+        console.log('Total Steps Across All Tours:', tours.reduce((total: number, tour: any) => {
+          return total + (tour.answer?.steps?.length || 0);
+        }, 0));
+        
+        return tours;
+      } else {
+        console.warn('No tour data found or API error:', data.error || data.message);
+        return [];
+      }
+    } catch (error) {
+      console.error('Failed to get all tour data:', error);
+      return [];
     }
   }
 }

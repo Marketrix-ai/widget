@@ -814,7 +814,17 @@
       }
     }
 
-    @keyframes stepDescriptionTextSlideIn {
+    /* Tour spotlight and description animations */
+    @keyframes spotlightFadeIn {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
+    }
+
+    @keyframes descriptionSlideIn {
       from {
         opacity: 0;
         transform: translateY(20px) scale(0.95);
@@ -822,6 +832,31 @@
       to {
         opacity: 1;
         transform: translateY(0) scale(1);
+      }
+    }
+
+    /* Tour highlight styles */
+    .tour-highlight {
+      position: relative;
+      z-index: 10001;
+      box-shadow: 0 0 20px rgba(59, 130, 246, 0.8);
+      border: 2px solid #3b82f6;
+      border-radius: 4px;
+      animation: tourHighlightPulse 2s infinite;
+    }
+
+    @keyframes tourHighlightPulse {
+      0% {
+        box-shadow: 0 0 20px rgba(59, 130, 246, 0.8);
+        transform: scale(1);
+      }
+      50% {
+        box-shadow: 0 0 30px rgba(59, 130, 246, 1);
+        transform: scale(1.02);
+      }
+      100% {
+        box-shadow: 0 0 20px rgba(59, 130, 246, 0.8);
+        transform: scale(1);
       }
     }
   </style>
@@ -863,7 +898,7 @@
           <button class="demo-button" data-demo-element="settings" data-demo-description="System configuration and account settings management">
             ⚙️ Settings
           </button>
-          <button class="demo-button" data-demo-element="login-button" data-demo-description="User authentication and account access">
+          <button class="demo-button" data-demo-element="login-button" data-demo-description="User authentication and account access" onclick="showLoginForm()">
             🔐 Login
           </button>
         </div>
@@ -1019,8 +1054,8 @@
           </form>
         </div> -->
         
-        <!-- Login Form Simulation (Hidden by default) -->
-        <div id="login-form-simulation" class="login-form-container" style="display: none;" data-demo-element="login-form">
+        <!-- Login Form Simulation (Visible for tour testing) -->
+        <div class="login-form-container" style="display: none;" id="login-form-simulation" data-demo-element="login-form">
           <div class="login-form-header">
             <h3>🔐 User Login</h3>
             <button class="close-form-btn" onclick="document.getElementById('login-form-simulation').style.display='none'">×</button>
@@ -1170,6 +1205,44 @@
           </button>
           <button class="demo-button primary" onclick="testIPhoneNotifications()">
             🎬 Test All Types
+          </button>
+        </div>
+      </div>
+
+      <!-- Tour Testing -->
+      <div class="demo-section" data-demo-area="tour-test">
+        <h2>🎯 Tour Testing</h2>
+        <p>Test the tour functionality with step-by-step guidance:</p>
+        <div class="nav-demo">
+          <button class="demo-button primary" onclick="testLoginTour()">
+            🔐 Test Login Tour
+          </button>
+          <button class="demo-button success" onclick="testTourWithApiService()">
+            🚀 Test Tour API
+          </button>
+          <button class="demo-button" onclick="testWidgetTour()">
+            🤖 Test Widget Tour
+          </button>
+          <button class="demo-button warning" onclick="stopTour()">
+            ⏹️ Stop Tour
+          </button>
+        </div>
+        <div class="highlight">
+          <strong>Instructions:</strong> 
+          <ol style="margin: 8px 0; padding-left: 20px;">
+            <li>First, click "🔍 Verify Elements" to ensure all tour elements are found</li>
+            <li>Then click "🔐 Test Login Tour" to start the 4-step tour</li>
+            <li>Each step will highlight the relevant element and show instructions</li>
+            <li>Click actions will auto-advance, fill actions require "Done" button</li>
+          </ol>
+        </div>
+        <div class="highlight" style="margin-top: 10px;">
+          <strong>Element Verification:</strong> 
+          <button class="demo-button" onclick="verifyTourElements()" style="margin-left: 10px; padding: 4px 8px; font-size: 12px;">
+            🔍 Verify Elements
+          </button>
+          <button class="demo-button" onclick="testDirectTour()" style="margin-left: 10px; padding: 4px 8px; font-size: 12px;">
+            🎯 Test Direct Tour
           </button>
         </div>
       </div>
@@ -1365,6 +1438,21 @@
       }
     }
 
+    // Show login form
+    function showLoginForm() {
+      const form = document.getElementById('login-form-simulation');
+      if (form) {
+        form.style.display = 'block';
+        form.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        
+        // Add highlight effect to the form
+        form.classList.add('demo-highlight');
+        setTimeout(() => {
+          form.classList.remove('demo-highlight');
+        }, 3000);
+      }
+    }
+
     // Show product form
     function showProductForm() {
       const form = document.getElementById('product-form-simulation');
@@ -1459,7 +1547,6 @@
         left: 50%;
         transform: translate(-50%, -50%);
         background: rgba(0, 0, 0, 0.9);
-        backdrop-filter: blur(20px);
         border-radius: 16px;
         padding: 0;
         box-shadow: 
@@ -1549,7 +1636,6 @@
             font-size: 16px;
             font-weight: bold;
             transition: all 0.2s ease;
-            backdrop-filter: blur(10px);
           }
 
           .iphone-notification-close:hover {
@@ -1691,6 +1777,14 @@
               ]
             });
             
+            // Console log the key identifiers
+            console.log('=== Marketrix Widget Configuration ===');
+            console.log('marketrixId:', widgetIntegration.marketrix_id);
+            console.log('marketrixKey:', widgetIntegration.marketrix_key);
+            console.log('connectionId:', widgetIntegration.id);
+            console.log('integrationId:', widgetIntegration.id);
+            console.log('=====================================');
+            
             console.log('Widget initialized with integration settings:', {
               marketrixId: widgetIntegration.marketrix_id,
               position: settings.widget_position,
@@ -1718,6 +1812,14 @@
     
     // Fallback function to initialize with default settings
     function initializeWithDefaults() {
+      // Console log the default identifiers
+      console.log('=== Marketrix Widget Configuration (Default) ===');
+      console.log('marketrixId: mLive-psKKA');
+      console.log('marketrixKey: taDkvX7KsSkvYf851AAeQCyhPL1C76SecCNRlXLvhOqZ3pi0Ne');
+      console.log('connectionId: default');
+      console.log('integrationId: default');
+      console.log('===============================================');
+      
       widgetInstance = initMarketrixWidget({
         marketrixId: 'mLive-psKKA',
         marketrixKey: 'taDkvX7KsSkvYf851AAeQCyhPL1C76SecCNRlXLvhOqZ3pi0Ne',
@@ -1746,7 +1848,696 @@
     // Add some demo introduction messages
     setTimeout(() => {
       console.log('Demo ready! Try hovering over different elements to see contextual AI assistance.');
+      console.log('=== Tour Data Logging Functions Available ===');
+      console.log('You can log tour data using these functions:');
+      console.log('1. window.logTourDataFromIntegration() - Log tour data from widget integration (RECOMMENDED)');
+      console.log('2. window.logTourDataByConnectionId(1) - Log all tour data for specific connection ID');
+      console.log('3. window.logAllTourData() - Log all tour data across all connection IDs');
+      console.log('4. window.logTourDataForMultipleConnections([1,2,3]) - Log tour data for multiple connection IDs');
+      console.log('5. window.testTourSpotlight() - Test tour spotlight functionality');
+      console.log('6. window.testLoginTour() - Test specific tour: "login tour with 4 steps"');
+      console.log('7. window.testTourWithApiService() - Test tour using API service with URL: tour?question=login%20tour%20with%204%20steps&connection_id=1');
+      console.log('8. window.stopTour() - Stop any running tour');
+      
+      // Auto-show login form for tour testing
+      console.log('Auto-showing login form for tour testing...');
+      showLoginForm();
     }, 2000);
+
+    // New function to fetch tour data through integration service
+    window.logTourDataFromIntegration = async () => {
+      console.log('=== Logging Tour Data from Integration Service ===');
+      
+      try {
+        // Import the integration service
+        const { IntegrationService } = await import('./src/sdk/integrationService.ts');
+        
+        // Get the current widget configuration
+        const marketrixId = 'mLive-jPwrf'; // Use the ID from the integration
+        const marketrixKey = 'nOXpK6okO3K7OJGZljJFOirHz7Hdg3YHLyxEeCU8EohjRczKXv'; // Use the key from the integration
+        
+        const integrationService = new IntegrationService(marketrixId, marketrixKey);
+        
+        // Fetch integration settings (this will automatically fetch tour data)
+        const integration = await integrationService.fetchIntegrationSettings();
+        
+        if (integration) {
+          console.log('=== INTEGRATION FOUND ===');
+          console.log('Integration ID:', integration.id);
+          console.log('Connection ID:', integration.connection_id);
+          console.log('Integration Type:', integration.type);
+          console.log('Integration Status:', integration.status);
+          
+          // Get tour data from the integration
+          const tourData = await integrationService.getTourDataForConnection(integration.connection_id);
+          console.log('Tour data from integration:', tourData);
+          console.log('Number of tours:', tourData.length);
+          
+          if (tourData.length > 0) {
+            console.log('\n=== TOUR DATA SUMMARY FROM INTEGRATION ===');
+            tourData.forEach((tour, index) => {
+              console.log(`Tour ${index + 1}:`);
+              console.log('  ID:', tour.id);
+              console.log('  Question:', tour.question);
+              console.log('  Target:', tour.target);
+              console.log('  Steps Count:', tour.answer?.steps?.length || 0);
+            });
+          }
+        } else {
+          console.log('No integration found');
+        }
+      } catch (error) {
+        console.error('Failed to log tour data from integration:', error);
+      }
+    };
+
+    // Tour data logging functions
+    window.logTourDataByConnectionId = async (connectionId) => {
+      console.log('=== Logging Tour Data by Connection ID ===');
+      console.log('Connection ID:', connectionId);
+      
+      try {
+        // Import the integration service
+        const { default: IntegrationService } = await import('./src/sdk/integrationService.ts');
+        
+        // Create integration service instance
+        const integrationService = new IntegrationService('mLive-jPwrf', 'nOXpK6okO3K7OJGZljJFOirHz7Hdg3YHLyxEeCU8EohjRczKXv');
+        
+        // Fetch tour data for specific connection
+        await integrationService.getTourDataForConnection(connectionId);
+      } catch (error) {
+        console.error('Failed to log tour data by connection ID:', error);
+      }
+    };
+
+    window.logAllTourData = async () => {
+      console.log('=== Logging All Tour Data ===');
+      
+      try {
+        // Import the integration service
+        const { default: IntegrationService } = await import('./src/sdk/integrationService.ts');
+        
+        // Create integration service instance
+        const integrationService = new IntegrationService('mLive-jPwrf', 'nOXpK6okO3K7OJGZljJFOirHz7Hdg3YHLyxEeCU8EohjRczKXv');
+        
+        // Fetch all tour data
+        await integrationService.getAllTourData();
+      } catch (error) {
+        console.error('Failed to log all tour data:', error);
+      }
+    };
+
+    window.logTourDataForMultipleConnections = async (connectionIds) => {
+      console.log('=== Logging Tour Data for Multiple Connection IDs ===');
+      console.log('Connection IDs:', connectionIds);
+      
+      try {
+        // Import the integration service
+        const { default: IntegrationService } = await import('./src/sdk/integrationService.ts');
+        
+        // Create integration service instance
+        const integrationService = new IntegrationService('mLive-jPwrf', 'nOXpK6okO3K7OJGZljJFOirHz7Hdg3YHLyxEeCU8EohjRczKXv');
+        
+        for (const connectionId of connectionIds) {
+          console.log(`\n=== PROCESSING CONNECTION ID: ${connectionId} ===`);
+          await integrationService.getTourDataForConnection(connectionId);
+        }
+        
+        console.log('\n=== COMPLETED PROCESSING ALL CONNECTION IDs ===');
+      } catch (error) {
+        console.error('Failed to log tour data for multiple connection IDs:', error);
+      }
+    };
+
+    // Test tour spotlight functionality
+    window.testTourSpotlight = () => {
+      console.log('=== TESTING TOUR SPOTLIGHT FUNCTIONALITY ===');
+      
+      // Find a demo element to highlight
+      const testElement = document.querySelector('[data-demo-element="dashboard"]');
+      if (!testElement) {
+        console.error('No test element found. Make sure the page is loaded.');
+        return;
+      }
+      
+      console.log('Test element found:', testElement);
+      
+      // Create a mock tour step
+      const mockStep = {
+        id: 'test-step-1',
+        title: 'Test Tour Step',
+        description: 'This is a test tour step to demonstrate the spotlight and description functionality. The element should be highlighted with a spotlight effect and this description should appear next to it.',
+        selector: '[data-demo-element="dashboard"]',
+        action: 'click',
+        order: 1
+      };
+      
+      console.log('Mock step data:', mockStep);
+      
+      // Simulate the spotlight functionality
+      try {
+        // Create spotlight overlay
+        const spotlight = document.createElement('div');
+        spotlight.id = 'test-tour-spotlight';
+        spotlight.style.cssText = `
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100vw;
+          height: 100vh;
+          z-index: 9999;
+          pointer-events: none;
+          background: radial-gradient(ellipse at center, transparent 0%, transparent 40%, rgba(0, 0, 0, 0.6) 100%);
+          animation: spotlightFadeIn 0.3s ease-out;
+        `;
+        
+        // Create description text
+        const descriptionDiv = document.createElement('div');
+        descriptionDiv.id = 'test-tour-description';
+        descriptionDiv.style.cssText = `
+          position: fixed;
+          z-index: 10000;
+          background: rgba(0, 0, 0, 0.9);
+          color: white;
+          padding: 16px 20px;
+          border-radius: 8px;
+          max-width: 300px;
+          font-size: 14px;
+          line-height: 1.4;
+          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+          animation: descriptionSlideIn 0.3s ease-out;
+        `;
+        descriptionDiv.textContent = mockStep.description;
+        
+        // Update spotlight position based on element
+        const updateSpotlightPosition = () => {
+          const rect = testElement.getBoundingClientRect();
+          spotlight.style.background = `radial-gradient(ellipse at ${rect.left + rect.width/2}px ${rect.top + rect.height/2}px, 
+            transparent 0%, 
+            transparent 40%, 
+            rgba(0, 0, 0, 0.6) 100%)`;
+        };
+        
+        // Position description relative to element
+        const updateDescriptionPosition = () => {
+          const rect = testElement.getBoundingClientRect();
+          const descriptionRect = descriptionDiv.getBoundingClientRect();
+          
+          let left = rect.right + 10;
+          let top = rect.top + (rect.height - descriptionRect.height) / 2;
+          
+          if (left + descriptionRect.width > window.innerWidth) {
+            left = rect.left - descriptionRect.width - 10;
+          }
+          
+          if (top < 10) {
+            top = 10;
+          } else if (top + descriptionRect.height > window.innerHeight - 10) {
+            top = window.innerHeight - descriptionRect.height - 10;
+          }
+          
+          descriptionDiv.style.left = `${left}px`;
+          descriptionDiv.style.top = `${top}px`;
+        };
+        
+        updateSpotlightPosition();
+        updateDescriptionPosition();
+        
+        // Add resize and scroll listeners
+        const resizeHandler = () => {
+          updateSpotlightPosition();
+          updateDescriptionPosition();
+        };
+        const scrollHandler = () => {
+          updateSpotlightPosition();
+          updateDescriptionPosition();
+        };
+        
+        window.addEventListener('resize', resizeHandler);
+        window.addEventListener('scroll', scrollHandler, true);
+        
+        document.body.appendChild(spotlight);
+        document.body.appendChild(descriptionDiv);
+        
+        // Add highlight class to element
+        testElement.classList.add('tour-highlight');
+        
+        // Scroll element into view
+        testElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        
+        // Clean up after 10 seconds
+        setTimeout(() => {
+          if (spotlight.parentNode) {
+            spotlight.remove();
+          }
+          if (descriptionDiv.parentNode) {
+            descriptionDiv.remove();
+          }
+          testElement.classList.remove('tour-highlight');
+          window.removeEventListener('resize', resizeHandler);
+          window.removeEventListener('scroll', scrollHandler, true);
+          console.log('Test spotlight cleaned up');
+        }, 10000);
+        
+        console.log('Test spotlight created successfully!');
+        console.log('The spotlight and description will automatically disappear in 10 seconds.');
+        
+      } catch (error) {
+        console.error('Error creating test spotlight:', error);
+      }
+    };
+
+    // Test specific tour question: "login tour with 4 steps"
+    window.testLoginTour = async () => {
+      console.log('=== TESTING LOGIN TOUR WITH 4 STEPS ===');
+      
+      try {
+        const question = 'login tour with 4 steps';
+        const connectionId = 1;
+        const url = `http://localhost:8080/tour?question=${encodeURIComponent(question)}&connection_id=${connectionId}`;
+        
+        console.log('Tour API URL:', url);
+        console.log('Question:', question);
+        console.log('Connection ID:', connectionId);
+        
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        console.log('Response status:', response.status);
+        console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+        
+        if (!response.ok) {
+          console.error('Tour API Error:', response.status, response.statusText);
+          const errorText = await response.text();
+          console.error('Error Response Body:', errorText);
+          return;
+        }
+        
+        const data = await response.json();
+        console.log('=== TOUR API RESPONSE ===');
+        console.log('Full response:', data);
+        
+        if (data.success && data.data) {
+          const tour = data.data;
+          console.log('=== TOUR DATA RECEIVED ===');
+          console.log('Tour ID:', tour.id);
+          console.log('Connection ID:', tour.connection_id);
+          console.log('Question:', tour.question);
+          console.log('Target:', tour.target);
+          console.log('Answer Steps Count:', tour.answer?.steps?.length || 0);
+          
+          // Log answer JSON in detail
+          if (tour.answer) {
+            console.log('=== ANSWER JSON ===');
+            console.log('Answer:', JSON.stringify(tour.answer, null, 2));
+            
+            if (tour.answer.steps) {
+              console.log('\n--- TOUR STEPS DETAILS ---');
+              tour.answer.steps.forEach((step, stepIndex) => {
+                console.log(`  Step ${stepIndex + 1}:`);
+                console.log('    Step ID:', step.id);
+                console.log('    Step Title:', step.title);
+                console.log('    Step Description:', step.description);
+                console.log('    Step Selector:', step.selector || 'N/A');
+                console.log('    Step XPath:', step.xpath || 'N/A');
+                console.log('    Step Action:', step.action || 'N/A');
+                console.log('    Step Order:', step.order);
+              });
+              
+              // Test the tour through the widget if available
+              if (widgetInstance && widgetInstance.startStepGuide) {
+                console.log('\n=== STARTING TOUR THROUGH WIDGET ===');
+                widgetInstance.startStepGuide(tour.answer.steps);
+              } else {
+                console.log('\n=== WIDGET NOT AVAILABLE, USING FALLBACK ===');
+                // Trigger spotlight for the first step
+                if (tour.answer.steps.length > 0) {
+                  const firstStep = tour.answer.steps[0];
+                  console.log('\n=== TRIGGERING SPOTLIGHT FOR FIRST STEP ===');
+                  console.log('First step selector:', firstStep.selector);
+                  console.log('First step description:', firstStep.description);
+                  
+                  // Find and highlight the element
+                  let element = null;
+                  if (firstStep.selector) {
+                    element = document.querySelector(firstStep.selector);
+                    console.log('Element found by selector:', element);
+                  }
+                  
+                  if (element) {
+                    // Create spotlight and description
+                    createTourSpotlight(element, firstStep.description || firstStep.title || 'Tour step');
+                  } else {
+                    console.warn('Element not found for selector:', firstStep.selector);
+                  }
+                }
+              }
+            }
+          }
+        } else {
+          console.log('No tour data found for question:', question);
+        }
+        
+      } catch (error) {
+        console.error('Error testing login tour:', error);
+      }
+    };
+
+    // Test tour using API service
+    window.testTourWithApiService = async () => {
+      console.log('=== TESTING TOUR WITH API SERVICE ===');
+      
+      try {
+        // Import the API service
+        const { MarketrixApiService } = await import('./src/services/api.ts');
+        
+        // Create API service instance
+        const apiService = new MarketrixApiService('http://localhost:8080');
+        
+        // Test the login tour
+        const tourData = await apiService.testLoginTour();
+        console.log('Tour data from API service:', tourData);
+        
+        // If tour data has steps, trigger spotlight for first step
+        if (tourData && tourData.answer && tourData.answer.steps && tourData.answer.steps.length > 0) {
+          const firstStep = tourData.answer.steps[0];
+          console.log('Triggering spotlight for first step:', firstStep);
+          
+          let element = null;
+          if (firstStep.selector) {
+            element = document.querySelector(firstStep.selector);
+            console.log('Element found by selector:', element);
+          }
+          
+          if (element) {
+            createTourSpotlight(element, firstStep.description || firstStep.title || 'Tour step');
+          } else {
+            console.warn('Element not found for selector:', firstStep.selector);
+          }
+        }
+        
+      } catch (error) {
+        console.error('Error testing tour with API service:', error);
+      }
+    };
+
+    // Test widget tour function
+    window.testWidgetTour = async () => {
+      console.log('=== TESTING WIDGET TOUR ===');
+      
+      try {
+        // Check if widget is available
+        if (!widgetInstance) {
+          console.error('Widget not initialized yet. Please wait...');
+          return;
+        }
+        
+        // Trigger tour through widget
+        console.log('Triggering tour through widget...');
+        
+        // Simulate a "show" action that should trigger the tour
+        const tourQuestion = 'login tour with 4 steps';
+        console.log('Sending tour question to widget:', tourQuestion);
+        
+        // If the widget has a method to trigger tours, use it
+        if (widgetInstance.triggerTour) {
+          await widgetInstance.triggerTour(tourQuestion);
+        } else {
+          console.log('Widget does not have triggerTour method, trying alternative approach...');
+          
+          // Try to find the widget's message input and send the tour question
+          const widgetInput = document.querySelector('[data-testid="message-input"]') || 
+                             document.querySelector('input[placeholder*="message"]') ||
+                             document.querySelector('textarea[placeholder*="message"]');
+          
+          if (widgetInput) {
+            console.log('Found widget input, sending tour question...');
+            widgetInput.value = tourQuestion;
+            widgetInput.dispatchEvent(new Event('input', { bubbles: true }));
+            
+            // Try to find and click send button
+            const sendButton = document.querySelector('[data-testid="send-button"]') ||
+                              document.querySelector('button[type="submit"]') ||
+                              document.querySelector('button:has(svg)');
+            
+            if (sendButton) {
+              console.log('Found send button, clicking...');
+              sendButton.click();
+            } else {
+              console.log('Send button not found, trying Enter key...');
+              widgetInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+            }
+          } else {
+            console.log('Widget input not found, cannot send tour question');
+          }
+        }
+        
+      } catch (error) {
+        console.error('Error testing widget tour:', error);
+      }
+    };
+
+    // Verify tour elements function
+    window.verifyTourElements = () => {
+      console.log('=== VERIFYING TOUR ELEMENTS ===');
+      
+      const selectors = [
+        '[data-demo-element="login-button"]',
+        '[data-demo-element="login-email"]',
+        '[data-demo-element="login-password"]',
+        '[data-demo-element="login-submit"]'
+      ];
+      
+      let allFound = true;
+      
+      selectors.forEach((selector, index) => {
+        const element = document.querySelector(selector);
+        if (element) {
+          console.log(`✅ Step ${index + 1}: Found element for selector "${selector}"`);
+          console.log('   Element:', element);
+          console.log('   Tag:', element.tagName);
+          console.log('   Text:', element.textContent || element.value || 'N/A');
+        } else {
+          console.error(`❌ Step ${index + 1}: Element NOT found for selector "${selector}"`);
+          allFound = false;
+        }
+      });
+      
+      if (allFound) {
+        console.log('🎉 All tour elements found! Tour should work properly.');
+      } else {
+        console.log('⚠️ Some tour elements are missing. Please check the selectors.');
+      }
+      
+      return allFound;
+    };
+
+    // Test direct tour function
+    window.testDirectTour = () => {
+      console.log('=== TESTING DIRECT TOUR ===');
+      
+      // Create mock tour steps
+      const mockSteps = [
+        {
+          step_number: 1,
+          action: 'click',
+          element: 'login-button',
+          selector: '[data-demo-element="login-button"]',
+          description: 'First, click on the Login button to access the authentication system. This will open the login form where you can enter your credentials.',
+          text: 'Click me!'
+        },
+        {
+          step_number: 2,
+          action: 'fill',
+          element: 'login-email',
+          selector: '[data-demo-element="login-email"]',
+          description: 'Enter your email address in the email input field. Watch as the text types automatically with animation.',
+          text: 'user@example.com'
+        },
+        {
+          step_number: 3,
+          action: 'fill',
+          element: 'login-password',
+          selector: '[data-demo-element="login-password"]',
+          description: 'Enter your password in the password input field. The text will be typed character by character.',
+          text: 'password123'
+        },
+        {
+          step_number: 4,
+          action: 'click',
+          element: 'login-submit',
+          selector: '[data-demo-element="login-submit"]',
+          description: 'Click the submit button to complete the login process. This final step will complete the tour.',
+          text: 'Submit now!'
+        }
+      ];
+      
+      console.log('Mock tour steps:', mockSteps);
+      
+      // Test through widget if available
+      if (widgetInstance && widgetInstance.startStepGuide) {
+        console.log('Starting tour through widget...');
+        widgetInstance.startStepGuide(mockSteps);
+      } else {
+        console.log('Widget not available, testing individual steps...');
+        
+        // Test first step
+        const firstStep = mockSteps[0];
+        const element = document.querySelector(firstStep.selector);
+        if (element) {
+          console.log('Found first step element:', element);
+          createTourSpotlight(element, firstStep.description);
+        } else {
+          console.error('First step element not found:', firstStep.selector);
+        }
+      }
+    };
+
+    // Stop tour function
+    window.stopTour = () => {
+      console.log('=== STOPPING TOUR ===');
+      
+      // Remove any existing tour elements
+      const existingSpotlight = document.getElementById('login-tour-spotlight');
+      const existingDescription = document.getElementById('login-tour-description');
+      
+      if (existingSpotlight) {
+        existingSpotlight.remove();
+      }
+      if (existingDescription) {
+        existingDescription.remove();
+      }
+      
+      // Remove highlight classes
+      document.querySelectorAll('.tour-highlight').forEach(el => {
+        el.classList.remove('tour-highlight');
+      });
+      
+      console.log('Tour stopped and cleaned up');
+    };
+
+    // Helper function to create tour spotlight
+    const createTourSpotlight = (element, description) => {
+      // Remove existing spotlight
+      const existingSpotlight = document.getElementById('login-tour-spotlight');
+      if (existingSpotlight) {
+        existingSpotlight.remove();
+      }
+      
+      const existingDescription = document.getElementById('login-tour-description');
+      if (existingDescription) {
+        existingDescription.remove();
+      }
+      
+      // Create spotlight overlay
+      const spotlight = document.createElement('div');
+      spotlight.id = 'login-tour-spotlight';
+      spotlight.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        z-index: 9999;
+        pointer-events: none;
+        background: radial-gradient(ellipse at center, transparent 0%, transparent 40%, rgba(0, 0, 0, 0.6) 100%);
+        animation: spotlightFadeIn 0.3s ease-out;
+      `;
+      
+      // Create description text
+      const descriptionDiv = document.createElement('div');
+      descriptionDiv.id = 'login-tour-description';
+      descriptionDiv.style.cssText = `
+        position: fixed;
+        z-index: 10000;
+        background: rgba(0, 0, 0, 0.9);
+        color: white;
+        padding: 16px 20px;
+        border-radius: 8px;
+        max-width: 300px;
+        font-size: 14px;
+        line-height: 1.4;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        animation: descriptionSlideIn 0.3s ease-out;
+      `;
+      descriptionDiv.textContent = description;
+      
+      // Update spotlight position based on element
+      const updateSpotlightPosition = () => {
+        const rect = element.getBoundingClientRect();
+        spotlight.style.background = `radial-gradient(ellipse at ${rect.left + rect.width/2}px ${rect.top + rect.height/2}px, 
+          transparent 0%, 
+          transparent 40%, 
+          rgba(0, 0, 0, 0.6) 100%)`;
+      };
+      
+      // Position description relative to element
+      const updateDescriptionPosition = () => {
+        const rect = element.getBoundingClientRect();
+        const descriptionRect = descriptionDiv.getBoundingClientRect();
+        
+        let left = rect.right + 10;
+        let top = rect.top + (rect.height - descriptionRect.height) / 2;
+        
+        if (left + descriptionRect.width > window.innerWidth) {
+          left = rect.left - descriptionRect.width - 10;
+        }
+        
+        if (top < 10) {
+          top = 10;
+        } else if (top + descriptionRect.height > window.innerHeight - 10) {
+          top = window.innerHeight - descriptionRect.height - 10;
+        }
+        
+        descriptionDiv.style.left = `${left}px`;
+        descriptionDiv.style.top = `${top}px`;
+      };
+      
+      updateSpotlightPosition();
+      updateDescriptionPosition();
+      
+      // Add resize and scroll listeners
+      const resizeHandler = () => {
+        updateSpotlightPosition();
+        updateDescriptionPosition();
+      };
+      const scrollHandler = () => {
+        updateSpotlightPosition();
+        updateDescriptionPosition();
+      };
+      
+      window.addEventListener('resize', resizeHandler);
+      window.addEventListener('scroll', scrollHandler, true);
+      
+      document.body.appendChild(spotlight);
+      document.body.appendChild(descriptionDiv);
+      
+      // Add highlight class to element
+      element.classList.add('tour-highlight');
+      
+      // Scroll element into view
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      
+      // Clean up after 8 seconds
+      setTimeout(() => {
+        if (spotlight.parentNode) {
+          spotlight.remove();
+        }
+        if (descriptionDiv.parentNode) {
+          descriptionDiv.remove();
+        }
+        element.classList.remove('tour-highlight');
+        window.removeEventListener('resize', resizeHandler);
+        window.removeEventListener('scroll', scrollHandler, true);
+        console.log('Login tour spotlight cleaned up');
+      }, 8000);
+      
+      console.log('Login tour spotlight created successfully!');
+    };
 
     // Test responsive spotlight functionality
     function testResponsiveSpotlight() {

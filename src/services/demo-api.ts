@@ -1,6 +1,6 @@
 import { SendMessageResponse, MarketrixConfig } from '../types';
 
-interface DemoContextMessage {
+export interface DemoContextMessage {
   question: string;
   responses: {
     show: string;
