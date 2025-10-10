@@ -4,8 +4,9 @@ import { MarketrixWidget } from './components/MarketrixWidget';
 import { MarketrixConfig } from './types';
 import './index.css';
 
-// Global widget instance
+// Global widget instance and demo functions
 let widgetInstance: any = null;
+let widgetActions: any = null;
 
 // Initialize the widget
 export const initMarketrixWidget = (config: MarketrixConfig): void => {
@@ -14,6 +15,9 @@ export const initMarketrixWidget = (config: MarketrixConfig): void => {
     console.error('Marketrix Widget: marketrixId and marketrixKey are required');
     return;
   }
+
+  // Store current config
+  currentConfig = config;
 
   // Create container if it doesn't exist
   let container = document.getElementById('marketrix-widget-container');
@@ -42,6 +46,7 @@ export const destroyMarketrixWidget = (): void => {
   if (widgetInstance) {
     widgetInstance.unmount();
     widgetInstance = null;
+    currentConfig = null;
     
     // Remove container
     const container = document.getElementById('marketrix-widget-container');
@@ -64,22 +69,25 @@ export const updateMarketrixConfig = (newConfig: Partial<MarketrixConfig>): void
   }
 };
 
-// Get current configuration (placeholder - would need to be implemented with state management)
+// Get current configuration
+let currentConfig: MarketrixConfig | null = null;
+
 export const getCurrentConfig = (): MarketrixConfig => {
-  // This would need to be implemented to return the current config
-  // For now, return a placeholder
-  return {
-    marketrixId: '',
-    marketrixKey: '',
-  };
+  if (!currentConfig) {
+    throw new Error('Widget not initialized');
+  }
+  return currentConfig;
 };
 
 // Auto-initialize if script is loaded with data attributes
 document.addEventListener('DOMContentLoaded', () => {
+
+  console.log('------------------------------ DOMContentLoaded -----------------------------------');
+
   const script = document.currentScript as HTMLScriptElement;
   if (script) {
-    const marketrixId = script.getAttribute('data-marketrix-id');
-    const marketrixKey = script.getAttribute('data-marketrix-key');
+    const marketrixId = script.getAttribute('marketrix-id');
+    const marketrixKey = script.getAttribute('marketrix-key');
     
     if (marketrixId && marketrixKey) {
       const config: MarketrixConfig = {

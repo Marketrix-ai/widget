@@ -15,7 +15,7 @@ class MarketrixApiService {
     
     // Initialize axios instance with base configuration
     this.api = axios.create({
-      baseURL: 'https://api.marketrix.ai', // Replace with actual API base URL
+      baseURL: 'http://localhost:8080', // Local API server
       timeout: 30000,
       headers: {
         'Content-Type': 'application/json',
@@ -46,29 +46,71 @@ class MarketrixApiService {
     );
   }
 
-  async sendMessage(message: string, mode: 'show' | 'tell' | 'do'): Promise<SendMessageResponse> {
+  async sendMessage(
+    message: string, 
+    mode: 'show' | 'tell' | 'do',
+    connectionId?: number,
+    question?: string
+  ): Promise<SendMessageResponse> {
     try {
       const request: SendMessageRequest = {
-        message,
-        mode,
-        marketrixId: this.config.marketrixId,
-        marketrixKey: this.config.marketrixKey,
+        connection_id: connectionId,
+        question: question,
       };
 
-      const response = await this.api.post<ApiResponse<SendMessageResponse>>(
-        '/chat/send',
-        request
+      console.log('=== SENDING MESSAGE WITH TOUR DATA ===');
+      console.log('Message:', message);
+      console.log('Mode:', mode);
+      console.log('Connection ID received:', connectionId);
+      console.log('Question received:', question);
+      console.log('Connection ID type:', typeof connectionId);
+      console.log('Question type:', typeof question);
+      console.log('Request payload:', request);
+
+      const response = await this.api.get<ApiResponse<SendMessageResponse>>(
+        'tour?question=' + encodeURIComponent(question || '') + '&connection_id=' + (connectionId || 1)
       );
 
       if (!response.data.success) {
         throw new Error(response.data.error || 'Failed to send message');
       }
 
+      console.log('Message sent successfully:', response.data.data);
       return response.data.data!;
     } catch (error) {
       console.error('Error sending message:', error);
       throw error;
     }
+  }
+
+  // Direct tour API call with specific question and connection_id
+  async getTourData(question: string, connectionId: number = 1): Promise<any> {
+    try {
+      console.log('=== CALLING TOUR API DIRECTLY ===');
+      console.log('Question:', question);
+      console.log('Connection ID:', connectionId);
+      
+      const url = `tour?question=${encodeURIComponent(question)}&connection_id=${connectionId}`;
+      console.log('Tour API URL:', url);
+      
+      const response = await this.api.get<ApiResponse<any>>(url);
+      
+      if (response.data.success) {
+        console.log('Tour data received successfully:', response.data.data);
+        return response.data.data;
+      } else {
+        console.error('Failed to get tour data:', response.data.error);
+        throw new Error(response.data.error || 'Failed to get tour data');
+      }
+    } catch (error) {
+      console.error('Error getting tour data:', error);
+      throw error;
+    }
+  }
+
+  // Test method for login tour with 4 steps
+  async testLoginTour(): Promise<any> {
+    return this.getTourData('login tour with 4 steps', 1);
   }
 
   async checkAgentAvailability(): Promise<boolean> {
@@ -104,6 +146,7 @@ class MarketrixApiService {
       return null;
     }
   }
+
 
   // Method to update configuration
   updateConfig(newConfig: Partial<MarketrixConfig>): void {

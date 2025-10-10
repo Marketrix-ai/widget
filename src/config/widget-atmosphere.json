@@ -1,0 +1,146 @@
+{
+  "session_time": 0,
+  "sessionActive": true,
+  "recorded_time": 0,
+  "recordActive": false,
+  "widget_text": {
+    "greeting": "🎉 Welcome! I'm your AI assistant!",
+    "placeholder": "Ask me anything...",
+    "header_ai": "🤖 AI Assistant",
+    "header_live": "👨‍💼 Live Agent",
+    "body_ai": "I'm here to help you with any questions or tasks.",
+    "body_live": "A live agent will be with you shortly.",
+    "chat_greeting": "Hi there! How can I help you?",
+    "tour_greeting": "Welcome! Let me show you around."
+  },
+  "widget_settings": {
+    "widget_enabled": true,
+    "widget_appearance": "compact",
+    "widget_position": "bottom-left",
+    "widget_device": "desktop_mobile",
+    "widget_header": "🤖 AI Assistant",
+    "widget_body": "I'm here to help you with any questions or tasks.",
+    "widget_greeting": "🎉 Welcome! I'm your AI assistant!",
+    "widget_feature_tell": true,
+    "widget_feature_show": true,
+    "widget_feature_do": true,
+    "widget_feature_request_human": true,
+    "widget_background_color": "linear-gradient(135deg, #1BB55B55 0%, #987ADD65 100%)",
+    "widget_text_color": "#333333",
+    "widget_border_color": "rgba(255, 255, 255, 0.3)",
+    "widget_accent_color": "#1BB55B",
+    "widget_secondary_color": "#987ADD",
+    "widget_border_radius": "12px",
+    "widget_font_size": "14px",
+    "widget_width": "360px",
+    "widget_height": "35rem",
+    "widget_shadow": "0 10px 25px rgba(0, 0, 0, 0.1)",
+    "widget_animation_duration": "300ms",
+    "widget_fade_duration": "200ms",
+    "widget_bounce_effect": true,
+    "widget_chips": [
+      {
+        "chip_mode": "tell",
+        "chip_text": "Tell me about your services"
+      },
+      {
+        "chip_mode": "show",
+        "chip_text": "Show me pricing"
+      },
+      {
+        "chip_mode": "do",
+        "chip_text": "Schedule a demo"
+      }
+    ]
+  },
+  "widget_type": "hybrid",
+  "widget_visible": true,
+  "widget_customize": {
+    "colors": {
+      "primary": "#1BB55B",
+      "secondary": "#987ADD",
+      "background": "linear-gradient(135deg, #1BB55B26 0%, #987ADD30 100%)",
+      "text": "#333333",
+      "border": "rgba(255, 255, 255, 0.2)"
+    },
+    "sizes": {
+      "width": "360px",
+      "height": "35rem",
+      "border_radius": "12px",
+      "font_size": "14px"
+    },
+    "animations": {
+      "slide_duration": "300ms",
+      "fade_duration": "200ms",
+      "bounce_effect": true
+    }
+  },
+  "active_avatar": {
+    "url": "https://example.com/avatar.png",
+    "name": "Marketrix AI",
+    "status": "online"
+  },
+  "avatar_trigger_time": 5000,
+  "enable_widget_popup": true,
+  "avatar_status": "online",
+  "widget_mode": "ai",
+  "mLive_form": {
+    "enabled": true,
+    "fields": ["name", "email", "message"],
+    "required": ["name", "email"]
+  },
+  "hybrid_agents_on": true,
+  "hybrid_agents_off": false,
+  "widget_visible_device": {
+    "desktop": true,
+    "tablet": true,
+    "mobile": true
+  },
+  "streaming_avatar_status": "idle",
+  "widget_position": {
+    "position": "bottom-right",
+    "offset": {
+      "x": 20,
+      "y": 20
+    },
+    "z_index": 40
+  },
+  "enable_ai_tour": true,
+  "widget_header_ai": "AI Assistant",
+  "widget_body_ai": "I'm here to help you with any questions or tasks.",
+  "widget_header_live": "Live Agent",
+  "widget_body_live": "A live agent will be with you shortly.",
+  "widget_chat_greeting": "Welcome to our chat! How can I assist you?",
+  "widget_tour_greeting": "Welcome! Let me show you around.",
+  "inapp_login_url": "https://app.marketrix.com/login",
+  "inapp_login_id": "user123",
+  "inapp_login_password": "encrypted_password_hash",
+  "advanced_settings": {
+    "auto_open_delay": 0,
+    "session_timeout": 1800000,
+    "max_messages": 100,
+    "typing_indicator": true,
+    "read_receipts": true,
+    "sound_notifications": true,
+    "vibration_enabled": true
+  },
+  "themes": {
+    "light": {
+      "background": "#ffffff",
+      "text": "#333333",
+      "border": "#e5e7eb",
+      "accent": "#1BB55B"
+    },
+    "dark": {
+      "background": "#1f2937",
+      "text": "#f9fafb",
+      "border": "#374151",
+      "accent": "#10b981"
+    }
+  },
+  "responsive_breakpoints": {
+    "mobile": "768px",
+    "tablet": "1024px",
+    "desktop": "1200px"
+  }
+}

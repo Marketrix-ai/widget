@@ -1,17 +1,26 @@
 import { WidgetPosition } from '../types';
 
+// Check if screen sharing is in full-screen mode
+export const isFullScreenMode = (): boolean => {
+  return !!(document.fullscreenElement || 
+           (document as any).webkitFullscreenElement || 
+           (document as any).mozFullScreenElement || 
+           (document as any).msFullscreenElement);
+};
+
 export const getPositionClasses = (position: WidgetPosition): string => {
+  // Use exact positioning for precise widget placement
   switch (position) {
     case 'bottom-right':
-      return 'bottom-4 right-4';
+      return 'bottom-5 right-5';
     case 'bottom-left':
-      return 'bottom-4 left-4';
+      return 'bottom-5 left-5';
     case 'top-right':
-      return 'top-4 right-4';
+      return 'top-5 right-5';
     case 'top-left':
-      return 'top-4 left-4';
+      return 'top-5 left-5';
     default:
-      return 'bottom-4 right-4';
+      return 'bottom-5 right-5';
   }
 };
 
@@ -23,21 +32,22 @@ export const getWidgetContainerClasses = (position: WidgetPosition): string => {
 
 export const getChatWindowClasses = (position: WidgetPosition): string => {
   const baseClasses = 'bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700';
-  const sizeClasses = 'w-80 max-w-sm';
+  const sizeClasses = 'w-[360px] max-w-sm';
   
+  // Use consistent positioning with 5px spacing for full widget display
   let positionClasses = '';
   switch (position) {
     case 'bottom-right':
-      positionClasses = 'bottom-16 right-0';
+      positionClasses = 'bottom-16 right-5';
       break;
     case 'bottom-left':
-      positionClasses = 'bottom-16 left-0';
+      positionClasses = 'bottom-16 left-5';
       break;
     case 'top-right':
-      positionClasses = 'top-16 right-0';
+      positionClasses = 'top-16 right-5';
       break;
     case 'top-left':
-      positionClasses = 'top-16 left-0';
+      positionClasses = 'top-16 left-5';
       break;
   }
   
