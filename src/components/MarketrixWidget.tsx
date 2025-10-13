@@ -5,7 +5,6 @@ import { useWidgetAtmosphere } from '../hooks/useWidgetAtmosphere';
 import { useIntegrationSettings } from '../hooks/useIntegrationSettings';
 import { WidgetButton } from './WidgetButton';
 import { ChatWindow } from './ChatWindow';
-import { IntegrationSettingsDebug } from './IntegrationSettingsDebug';
 
 interface MarketrixWidgetProps {
   config: MarketrixConfig;
@@ -82,17 +81,23 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
     >
       {/* Widget Button */}
       <WidgetButton
-        config={finalConfig}
+        config={{
+          ...finalConfig,
+          position: finalConfig.position as "bottom-right" | "bottom-left" | "top-right" | "top-left" | undefined
+        }}
         onClick={actions.toggleWidget}
         isOpen={state.isOpen}
         agentAvailable={state.agentAvailable}
         isScreenSharing={isScreenSharing}
-        integrationSettings={integrationSettings}
+        integrationSettings={integrationSettings as IntegrationSettings}
       />
 
       {/* Chat Window */}
       <ChatWindow
-        config={finalConfig}
+        config={{
+          ...finalConfig,
+          position: finalConfig.position as "bottom-right" | "bottom-left" | "top-right" | "top-left" | undefined
+        }}
         isOpen={state.isOpen}
         isMinimized={state.isMinimized}
         isLoading={state.isLoading || configLoading || settingsLoading}
@@ -103,14 +108,7 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
         onSendMessage={actions.sendMessage}
         onSetMode={actions.setMode}
         onScreenSharingChange={setIsScreenSharing}
-        integrationSettings={integrationSettings}
-      />
-
-      {/* Integration Settings Debug */}
-      <IntegrationSettingsDebug
-        settings={integrationSettings}
-        isLoading={settingsLoading}
-        error={settingsError}
+        integrationSettings={integrationSettings as IntegrationSettings}
       />
 
       {/* Error Display */}
