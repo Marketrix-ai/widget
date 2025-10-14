@@ -16,6 +16,8 @@ export const ScreenSharePreview: React.FC<ScreenSharePreviewProps> = ({
   useEffect(() => {
     if (videoRef.current && stream) {
       videoRef.current.srcObject = stream;
+      // Ensure the video plays after setting the stream
+      videoRef.current.play().catch(console.error);
     }
   }, [stream]);
 

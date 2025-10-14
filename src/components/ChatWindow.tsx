@@ -110,6 +110,17 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     }
   };
 
+  const handleScreenSharingChange = (isSharing: boolean, stream?: MediaStream | null, showPreview?: boolean) => {
+    setIsScreenAccessActive(isSharing);
+    if (stream !== undefined) {
+      setScreenStream(stream);
+    }
+    if (showPreview !== undefined) {
+      setShowScreenPreview(showPreview);
+    }
+    onScreenSharingChange?.(isSharing);
+  };
+
   const startScreenCapture = async () => {
     try {
       // Request screen capture permission
@@ -310,6 +321,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                 config={config}
                 onStepGuideStart={() => setIsStepGuideRunning(true)}
                 integrationSettings={integrationSettings}
+                onScreenSharingChange={handleScreenSharingChange}
               />
             </div>
 

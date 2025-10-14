@@ -7,6 +7,7 @@ import { IoChatbubbleEllipsesOutline } from "react-icons/io5";
 import { SiTicktick } from "react-icons/si";
 import MarketrixLogo from "../assets/marketrix-icon.png";
 import { IntegrationSettings } from "../services/integrationService";
+import { ScreenAccessModal } from "./ScreenAccessModal";
 
 // Define the chip type to handle both formats
 type ChipData = {
@@ -25,6 +26,7 @@ interface MessageListProps {
   config?: MarketrixConfig;
   onStepGuideStart?: () => void;
   integrationSettings?: IntegrationSettings | null;
+  onScreenSharingChange?: (isSharing: boolean, stream?: MediaStream | null, showPreview?: boolean) => void;
 }
 
 export const MessageList: React.FC<MessageListProps> = ({
@@ -36,6 +38,7 @@ export const MessageList: React.FC<MessageListProps> = ({
   config,
   onStepGuideStart,
   integrationSettings,
+  onScreenSharingChange,
 }) => {
   // Get atmosphere configuration
   const { getWidgetText, getActiveAvatar } = useWidgetAtmosphere(config);
@@ -52,6 +55,11 @@ export const MessageList: React.FC<MessageListProps> = ({
   const [isStepGuideRunning, setIsStepGuideRunning] = useState(false);
   const [currentStepElement, setCurrentStepElement] = useState<HTMLElement | null>(null);
   const [stepTimer, setStepTimer] = useState<number | null>(null);
+  
+  // Screen sharing state
+  const [isScreenAccessActive, setIsScreenAccessActive] = useState(false);
+  const [showScreenAccessModal, setShowScreenAccessModal] = useState(false);
+  const [pendingAction, setPendingAction] = useState<{type: 'show' | 'do', text: string} | null>(null);
   
   // Cache for found elements to prevent duplicate searches
   const elementCache = new Map<string, HTMLElement | null>();
@@ -1293,37 +1301,193 @@ export const MessageList: React.FC<MessageListProps> = ({
       onSetMode(action.type as 'show' | 'tell' | 'do');
     }
     
-    // Handle tour question for show actions
-    if (action.type === 'show') {
-      console.log('Handling show action with tour question:', action.text);
-      await handleTourQuestion(action.text);
+    // Show screen access modal for show and do modes
+    if (action.type === 'show' || action.type === 'do') {
+      console.log(`🎥 Screen access requested for mode: ${action.type}`);
+      setPendingAction({ type: action.type as 'show' | 'do', text: action.text });
+      setShowScreenAccessModal(true);
+      return; // Don't proceed with other actions until modal is handled
     }
     
-    // Trigger step guide start for show actions
-    if (action.type === 'show' && onStepGuideStart) {
-      onStepGuideStart();
-    }
-    
-    // Send message with the correct mode and tour data
-    if (onSendMessage) {
-      console.log('Sending message with mode:', action.type, action.text);
-      // For show actions, pass tour data (connection_id and question)
-      if (action.type === 'show') {
-        console.log('Calling onSendMessage with tour data:', {
-          message: action.text,
-          mode: action.type,
-          connectionId: 1,
-          question: action.text
-        });
-        onSendMessage(action.text, action.type as 'show' | 'tell' | 'do', 1, action.text);
-      } else {
-        console.log('Calling onSendMessage without tour data:', {
-          message: action.text,
-          mode: action.type
-        });
-        onSendMessage(action.text, action.type as 'show' | 'tell' | 'do');
+    // Handle tell mode actions (no screen sharing needed)
+    if (action.type === 'tell') {
+      // Send message for tell mode
+      if (onSendMessage) {
+        console.log('Sending message with mode:', action.type, action.text);
+        onSendMessage(action.text, action.type as 'tell');
       }
     }
+  };
+
+  // Function to handle modal responses
+  const handleModalAllow = async () => {
+    console.log('✅ User allowed screen access');
+    setShowScreenAccessModal(false);
+    await startScreenCapture();
+    
+    // After screen access is granted, proceed with the pending action
+    if (pendingAction) {
+      console.log('🎯 Processing pending action:', pendingAction);
+      
+      // Handle tour question for show actions
+      if (pendingAction.type === 'show') {
+        console.log('Handling show action with tour question:', pendingAction.text);
+        await handleTourQuestion(pendingAction.text);
+      }
+      
+      // Trigger step guide start for show actions
+      if (pendingAction.type === 'show' && onStepGuideStart) {
+        onStepGuideStart();
+      }
+      
+      // Send message with the correct mode and tour data
+      if (onSendMessage) {
+        console.log('Sending message with mode:', pendingAction.type, pendingAction.text);
+        // For show actions, pass tour data (connection_id and question)
+        if (pendingAction.type === 'show') {
+          console.log('Calling onSendMessage with tour data:', {
+            message: pendingAction.text,
+            mode: pendingAction.type,
+            connectionId: 1,
+            question: pendingAction.text
+          });
+          onSendMessage(pendingAction.text, pendingAction.type, 1, pendingAction.text);
+        } else {
+          console.log('Calling onSendMessage without tour data:', {
+            message: pendingAction.text,
+            mode: pendingAction.type
+          });
+          onSendMessage(pendingAction.text, pendingAction.type);
+        }
+      }
+      
+      // Clear pending action
+      setPendingAction(null);
+    }
+  };
+
+  const handleModalDeny = () => {
+    console.log('❌ User denied screen access');
+    setShowScreenAccessModal(false);
+    setPendingAction(null);
+  };
+
+  const handleModalClose = () => {
+    console.log('🚫 Screen access modal closed');
+    setShowScreenAccessModal(false);
+    setPendingAction(null);
+  };
+
+  // Screen sharing functions
+  const startScreenCapture = async () => {
+    try {
+      console.log('🎥 Starting screen capture...');
+      
+      // Request screen capture permission
+      const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: {
+          width: { ideal: 1920 },
+          height: { ideal: 1080 }
+        },
+        audio: false
+      });
+
+      // Create a minimal status indicator
+      const statusIndicator = document.createElement('div');
+      statusIndicator.id = 'marketrix-screen-status';
+      statusIndicator.style.position = 'fixed';
+      statusIndicator.style.top = '20px';
+      statusIndicator.style.left = '20px';
+      statusIndicator.style.zIndex = '9999';
+      statusIndicator.style.display = 'flex';
+      statusIndicator.style.alignItems = 'center';
+      statusIndicator.style.gap = '8px';
+      statusIndicator.style.backgroundColor = 'rgba(255, 255, 255, 0.95)';
+      statusIndicator.style.padding = '8px 16px';
+      statusIndicator.style.borderRadius = '20px';
+      statusIndicator.style.fontSize = '14px';
+      statusIndicator.style.fontWeight = '500';
+      statusIndicator.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+      statusIndicator.style.border = '1px solid rgba(0, 0, 0, 0.1)';
+      statusIndicator.innerHTML = `
+        <div style="width: 8px; height: 8px; background-color: #ef4444; border-radius: 50%; animation: pulse 2s infinite;"></div>
+        Marketrix is monitoring your screen
+        <button id="marketrix-stop-btn" style="background: #ef4444; color: white; border: none; padding: 4px 8px; border-radius: 12px; cursor: pointer; font-size: 12px; margin-left: 8px;">Stop</button>
+      `;
+
+      // Add pulse animation
+      const style = document.createElement('style');
+      style.textContent = `
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.5; }
+        }
+      `;
+      document.head.appendChild(style);
+
+      // Add the status indicator to the page
+      document.body.appendChild(statusIndicator);
+
+      // Add click handler for stop button
+      const stopBtn = document.getElementById('marketrix-stop-btn');
+      if (stopBtn) {
+        stopBtn.onclick = () => {
+          stopScreenCapture();
+          setIsScreenAccessActive(false);
+        };
+      }
+
+      // Handle when user stops sharing
+      stream.getVideoTracks()[0].onended = () => {
+        stopScreenCapture();
+        setIsScreenAccessActive(false);
+      };
+
+      // Store references for cleanup
+      (window as any).screenCaptureStream = stream;
+      (window as any).screenCaptureOverlay = statusIndicator;
+
+      // Set screen access active state
+      setIsScreenAccessActive(true);
+      
+      // Notify parent component about screen sharing state
+      onScreenSharingChange?.(true, stream, true);
+
+      console.log('✅ Screen capture started successfully');
+
+    } catch (error) {
+      console.error('❌ Error accessing screen:', error);
+      setIsScreenAccessActive(false);
+      // Show error message to user
+      alert('Unable to access screen. Please check your permissions.');
+    }
+  };
+
+  const stopScreenCapture = () => {
+    console.log('🛑 Stopping screen capture...');
+    
+    // Stop all video tracks
+    if ((window as any).screenCaptureStream) {
+      (window as any).screenCaptureStream.getTracks().forEach((track: MediaStreamTrack) => {
+        track.stop();
+      });
+    }
+
+    // Remove status indicator
+    const statusIndicator = document.getElementById('marketrix-screen-status');
+    if (statusIndicator) {
+      document.body.removeChild(statusIndicator);
+    }
+
+    // Clear references and state
+    (window as any).screenCaptureStream = null;
+    (window as any).screenCaptureOverlay = null;
+    setIsScreenAccessActive(false);
+    
+    // Notify parent component about screen sharing state
+    onScreenSharingChange?.(false, null, false);
+    
+    console.log('✅ Screen capture stopped');
   };
 
   return (
@@ -1571,6 +1735,14 @@ export const MessageList: React.FC<MessageListProps> = ({
 
       {/* Auto-scroll anchor */}
       <div key="scroll-anchor" ref={messagesEndRef} />
+
+      {/* Screen Access Modal */}
+      <ScreenAccessModal
+        isOpen={showScreenAccessModal}
+        onAllow={handleModalAllow}
+        onDeny={handleModalDeny}
+        onClose={handleModalClose}
+      />
     </div>
   );
 };
