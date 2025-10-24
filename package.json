@@ -1,6 +1,6 @@
 {
   "name": "@marketrix/inapp-react",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Modern React-based In-App Support Widget",
   "type": "module",
   "main": "dist/index.js",
