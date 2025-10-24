@@ -1,0 +1,25 @@
+name: Deploy WIDGET-PROD
+on:
+  release:
+    types: [created]
+jobs:
+  build-and-deploy:
+    runs-on: prod-runner
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+      - name: Install dependencies
+        run: npm ci
+      - name: Build the project
+        run: npm run build-prod
+      - name: Upload to Azure Storage
+        run: |
+          # Workaround for az CLI bug: delete blobs using list + delete loop
+          az storage blob list --container-name widget --prefix "latest/" --account-name marketrix --auth-mode login --query "[].name" -o tsv | while read blob; do
+            if [[ "$blob" == latest/* ]]; then
+              az storage blob delete --container-name widget --name "$blob" --account-name marketrix --auth-mode login
+            fi
+          done
+          az storage blob upload-batch --destination widget/latest --source ./dist/prod --account-name marketrix --overwrite --auth-mode login
+      - name: Clean up build artifacts
+        run: rm -rf ./dist
