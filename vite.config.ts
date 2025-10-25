@@ -52,8 +52,36 @@ document.head.appendChild(style);
   }
 }
 
+// Custom plugin to copy and transform HTML for preview
+const copyHTMLPlugin = () => {
+  return {
+    name: 'copy-html',
+    writeBundle(options) {
+      const sourceHTML = resolve(__dirname, 'index.html')
+      const destHTML = resolve(options.dir, 'index.html')
+      
+      try {
+        // Read the source HTML
+        let htmlContent = readFileSync(sourceHTML, 'utf8')
+        
+        // Transform the script tag from module import to IIFE script
+        htmlContent = htmlContent.replace(
+          /<script type="module">[\s\S]*?<\/script>/,
+          '<script src="./meet.js"></script>'
+        )
+        
+        // Write the transformed HTML to dist
+        writeFileSync(destHTML, htmlContent, 'utf8')
+        console.log('✅ HTML copied and transformed for preview')
+      } catch (error) {
+        console.error('❌ Failed to copy HTML:', error)
+      }
+    }
+  }
+}
+
 export default defineConfig({
-  plugins: [react(), injectCSSPlugin()],
+  plugins: [react(), injectCSSPlugin(), copyHTMLPlugin()],
   build: {
     lib: {
       entry: resolve(__dirname, 'src/index.tsx'),
