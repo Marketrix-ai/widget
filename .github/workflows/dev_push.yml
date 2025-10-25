@@ -12,7 +12,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Build the project
-        run: npm run build-dev
+        run: npm run build:dev
       - name: Upload to Azure Storage
         run: |
           # Delete existing dev files using a more robust approach

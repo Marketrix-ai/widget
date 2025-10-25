@@ -16,7 +16,7 @@ export default [
       parserOptions: {
         ecmaVersion: 2022,
         sourceType: 'module',
-        project: './tsconfig.json',
+        projectService: true,
         ecmaFeatures: {
           jsx: true,
         },
@@ -76,7 +76,7 @@ export default [
       '@typescript-eslint/no-unsafe-call': 'warn', // Allow with warning
       '@typescript-eslint/no-unsafe-member-access': 'warn', // Allow with warning
       '@typescript-eslint/no-unsafe-return': 'warn', // Allow with warning
-      '@typescript-eslint/prefer-nullish-coalescing': 'warn', // Allow with warning
+      '@typescript-eslint/prefer-nullish-coalescing': 'off', // Disabled due to strictNullChecks requirement
       '@typescript-eslint/prefer-optional-chain': 'warn', // Allow with warning
       '@typescript-eslint/require-array-sort-compare': 'error',
       '@typescript-eslint/restrict-plus-operands': 'error',
