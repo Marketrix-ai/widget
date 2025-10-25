@@ -1,4 +1,5 @@
 import type { IntegrationData } from './schema';
+import { API_URL_GLOBAL_SET } from '../config';
 
 export interface IntegrationSettings {
   widget_enabled?: boolean;
@@ -54,7 +55,7 @@ export class IntegrationService {
 
       // Use direct fetch to avoid circular import issues
       const response = await fetch(
-        `http://localhost:8080/integration?marketrix_id=${this.marketrixId}&marketrix_key=${this.marketrixKey}`
+        `${API_URL_GLOBAL_SET.API_END_POINT}/integration?marketrix_id=${this.marketrixId}&marketrix_key=${this.marketrixKey}`
       );
       const data = await response.json();
 
@@ -97,7 +98,7 @@ export class IntegrationService {
       console.log('Marketrix Key:', this.marketrixKey);
 
       // Try different authentication methods
-      const url = `http://localhost:8080/tour?connection_id=${connectionId}`;
+      const url = `${API_URL_GLOBAL_SET.API_END_POINT}/tour?connection_id=${connectionId}`;
       console.log('Tour Search URL:', url);
 
       // First try with Authorization header
@@ -125,7 +126,7 @@ export class IntegrationService {
       // If that fails, try with query parameters
       if (!response.ok) {
         console.log('X-Marketrix headers failed, trying query parameters...');
-        const urlWithParams = `http://localhost:8080/tour?connection_id=${connectionId}&tenant_id=2`;
+        const urlWithParams = `${API_URL_GLOBAL_SET.API_END_POINT}/tour?connection_id=${connectionId}&tenant_id=2`;
         console.log('Tour Search URL with params:', urlWithParams);
         response = await fetch(urlWithParams, {
           method: 'GET',
@@ -445,7 +446,7 @@ export class IntegrationService {
       console.log('Connection ID:', connectionId);
 
       // Use simplified URL with tenant_id
-      const url = `http://localhost:8080/tour?connection_id=${connectionId}&tenant_id=2`;
+      const url = `${API_URL_GLOBAL_SET.API_END_POINT}/tour?connection_id=${connectionId}&tenant_id=2`;
       console.log('Tour Search URL:', url);
 
       const response = await fetch(url, {
@@ -540,7 +541,7 @@ export class IntegrationService {
       console.log('=== GETTING ALL TOUR DATA ===');
 
       // Fetch all tours without connection_id filter
-      const url = `http://localhost:8080/tour?tenant_id=2`;
+      const url = `${API_URL_GLOBAL_SET.API_END_POINT}/tour?tenant_id=2`;
       console.log('All Tours URL:', url);
 
       const response = await fetch(url, {

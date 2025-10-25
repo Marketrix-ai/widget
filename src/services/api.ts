@@ -1,5 +1,6 @@
 import axios, { type AxiosInstance } from 'axios';
 
+import { API_URL_GLOBAL_SET } from '../config';
 import type {
   ApiResponse,
   MarketrixConfig,
@@ -16,7 +17,7 @@ class MarketrixApiService {
 
     // Initialize axios instance with base configuration
     this.api = axios.create({
-      baseURL: 'http://localhost:8080', // Local API server
+      baseURL: API_URL_GLOBAL_SET.API_END_POINT,
       timeout: 30000,
       headers: {
         'Content-Type': 'application/json',

@@ -1,4 +1,5 @@
 import type { WidgetSettingsConfig } from '../types';
+import { API_URL_GLOBAL_SET } from '../config';
 
 export interface IntegrationSettings {
   widget_enabled: boolean;
@@ -52,7 +53,7 @@ export class IntegrationService {
 
       // Use direct fetch for now to avoid SDK type issues
       const response = await fetch(
-        `http://localhost:8080/integration?marketrix_id=${this.marketrixId}&marketrix_key=${this.marketrixKey}`
+        `${API_URL_GLOBAL_SET.API_END_POINT}/integration?marketrix_id=${this.marketrixId}&marketrix_key=${this.marketrixKey}`
       );
       const data = await response.json();
 

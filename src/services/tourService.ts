@@ -1,4 +1,5 @@
 import type { MarketrixConfig } from '../types';
+import { API_URL_GLOBAL_SET } from '../config';
 
 export interface TourStep {
   id: string;
@@ -30,7 +31,7 @@ export class TourService {
 
   constructor(config: MarketrixConfig) {
     this.config = config;
-    this.apiBaseUrl = config.apiBaseUrl || 'http://localhost:8080';
+    this.apiBaseUrl = API_URL_GLOBAL_SET.API_END_POINT;
   }
 
   /**

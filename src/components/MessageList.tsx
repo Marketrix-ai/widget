@@ -4,6 +4,7 @@ import { LuMousePointerClick } from 'react-icons/lu';
 import { SiTicktick } from 'react-icons/si';
 
 import MarketrixLogo from '../assets/marketrix-icon.png';
+import { API_URL_GLOBAL_SET } from '../config';
 import { useWidgetAtmosphere } from '../hooks/useWidgetAtmosphere';
 import type { IntegrationSettings } from '../services/integrationService';
 import type { ChatMessage, MarketrixConfig } from '../types';
@@ -1086,7 +1087,7 @@ export const MessageList: React.FC<MessageListProps> = ({
       console.log('Connection ID:', connectionId);
 
       // Fetch tour data from API
-      const url = `http://localhost:8080/tour?question=${encodeURIComponent(question)}&connection_id=${connectionId}`;
+      const url = `${API_URL_GLOBAL_SET.API_END_POINT}/tour?question=${encodeURIComponent(question)}&connection_id=${connectionId}`;
       console.log('Fetching tour data from:', url);
 
       const response = await fetch(url, {
