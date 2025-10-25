@@ -17,6 +17,6 @@ jobs:
         run: |
           # Clear existing dev files and upload new ones
           az storage blob delete-batch --source widget --pattern "dev/*" --account-name marketrix --auth-mode login
-          az storage blob upload-batch --destination widget/dev --source ./dist/dev --account-name marketrix --overwrite --auth-mode login
+          az storage blob upload-batch --destination widget/dev --source ./dist --account-name marketrix --overwrite --auth-mode login
       - name: Clean up build artifacts
         run: rm -rf ./dist
