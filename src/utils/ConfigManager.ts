@@ -1,6 +1,6 @@
-import { WidgetAtmosphereConfig, MarketrixConfig } from '../types';
-import { WidgetSettingsDataSchema } from '../sdk/schema';
 import { widgetAtmosphereConfig } from '../config/widget-atmosphere';
+import { WidgetSettingsDataSchema } from '../sdk/schema';
+import type { MarketrixConfig, WidgetAtmosphereConfig } from '../types';
 
 export class ConfigManager {
   private static instance: ConfigManager;
@@ -24,7 +24,7 @@ export class ConfigManager {
     try {
       // Use imported config data instead of fetch
       const configData = widgetAtmosphereConfig as WidgetAtmosphereConfig;
-      
+
       // Validate widget_settings if present
       if (configData.widget_settings) {
         const validationResult = WidgetSettingsDataSchema.safeParse(configData.widget_settings);
@@ -37,7 +37,7 @@ export class ConfigManager {
         // Add default widget settings if not present
         configData.widget_settings = this.getDefaultWidgetSettings();
       }
-      
+
       this.config = configData;
       this.notifyListeners();
       return this.config!;
@@ -77,7 +77,7 @@ export class ConfigManager {
       avatarUrl: atmosphereConfig.active_avatar?.url,
       agentName: atmosphereConfig.active_avatar?.name,
       enabledModes: ['show', 'tell', 'do'],
-      
+
       // Map atmosphere config to MarketrixConfig
       session_time: atmosphereConfig.session_time,
       sessionActive: atmosphereConfig.sessionActive,
@@ -119,7 +119,7 @@ export class ConfigManager {
    */
   public subscribe(listener: (config: WidgetAtmosphereConfig) => void): () => void {
     this.listeners.push(listener);
-    
+
     // Return unsubscribe function
     return () => {
       const index = this.listeners.indexOf(listener);
@@ -163,7 +163,9 @@ export class ConfigManager {
   /**
    * Update widget position
    */
-  public updateWidgetPosition(position: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left'): void {
+  public updateWidgetPosition(
+    position: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left'
+  ): void {
     if (this.config?.widget_position) {
       this.config.widget_position.position = position;
       this.notifyListeners();
@@ -245,21 +247,21 @@ export class ConfigManager {
    */
   public shouldShowWidget(): boolean {
     if (!this.config?.widget_visible) return false;
-    
+
     const isMobile = window.innerWidth < 768;
     const isTablet = window.innerWidth >= 768 && window.innerWidth < 1024;
     const isDesktop = window.innerWidth >= 1024;
-    
+
     if (isMobile) return this.isVisibleOnDevice('mobile');
     if (isTablet) return this.isVisibleOnDevice('tablet');
     if (isDesktop) return this.isVisibleOnDevice('desktop');
-    
+
     return true;
   }
 
   private notifyListeners(): void {
     if (this.config) {
-      this.listeners.forEach(listener => listener(this.config!));
+      this.listeners.forEach((listener) => listener(this.config!));
     }
   }
 
@@ -270,8 +272,8 @@ export class ConfigManager {
       widget_position: 'bottom-right' as const,
       widget_device: 'desktop_mobile' as const,
       widget_header: '🤖 AI Assistant',
-      widget_body: 'I\'m here to help you with any questions or tasks.',
-      widget_greeting: '🎉 Welcome! I\'m your AI assistant!',
+      widget_body: "I'm here to help you with any questions or tasks.",
+      widget_greeting: "🎉 Welcome! I'm your AI assistant!",
       widget_feature_tell: true,
       widget_feature_show: true,
       widget_feature_do: true,
@@ -293,17 +295,17 @@ export class ConfigManager {
       widget_chips: [
         {
           chip_mode: 'tell' as const,
-          chip_text: 'Tell me about your services'
+          chip_text: 'Tell me about your services',
         },
         {
           chip_mode: 'show' as const,
-          chip_text: 'Show me pricing'
+          chip_text: 'Show me pricing',
         },
         {
           chip_mode: 'do' as const,
-          chip_text: 'Schedule a demo'
-        }
-      ]
+          chip_text: 'Schedule a demo',
+        },
+      ],
     };
   }
 
@@ -314,75 +316,75 @@ export class ConfigManager {
       recorded_time: 0,
       recordActive: false,
       widget_text: {
-        greeting: "Hello! How can I help you today?",
-        placeholder: "Show me...",
-        header_ai: "AI Assistant",
-        header_live: "Live Agent",
+        greeting: 'Hello! How can I help you today?',
+        placeholder: 'Show me...',
+        header_ai: 'AI Assistant',
+        header_live: 'Live Agent',
         body_ai: "I'm here to help you with any questions or tasks.",
-        body_live: "A live agent will be with you shortly.",
-        chat_greeting: "Welcome to our chat! How can I assist you?",
-        tour_greeting: "Welcome! Let me show you around."
+        body_live: 'A live agent will be with you shortly.',
+        chat_greeting: 'Welcome to our chat! How can I assist you?',
+        tour_greeting: 'Welcome! Let me show you around.',
       },
       widget_settings: this.getDefaultWidgetSettings(),
-      widget_type: "hybrid",
+      widget_type: 'hybrid',
       widget_visible: true,
       widget_customize: {
         colors: {
-          primary: "#1BB55B",
-          secondary: "#987ADD",
-          background: "linear-gradient(135deg, #1BB55B26 0%, #987ADD30 100%)",
-          text: "#333333",
-          border: "rgba(255, 255, 255, 0.2)"
+          primary: '#1BB55B',
+          secondary: '#987ADD',
+          background: 'linear-gradient(135deg, #1BB55B26 0%, #987ADD30 100%)',
+          text: '#333333',
+          border: 'rgba(255, 255, 255, 0.2)',
         },
         sizes: {
-          width: "320px",
-          height: "35rem",
-          border_radius: "12px",
-          font_size: "14px"
+          width: '320px',
+          height: '35rem',
+          border_radius: '12px',
+          font_size: '14px',
         },
         animations: {
-          slide_duration: "300ms",
-          fade_duration: "200ms",
-          bounce_effect: true
-        }
+          slide_duration: '300ms',
+          fade_duration: '200ms',
+          bounce_effect: true,
+        },
       },
       active_avatar: {
-        url: "https://example.com/avatar.png",
-        name: "Marketrix Assistant",
-        status: "online"
+        url: 'https://example.com/avatar.png',
+        name: 'Marketrix Assistant',
+        status: 'online',
       },
       avatar_trigger_time: 5000,
       enable_widget_popup: true,
-      avatar_status: "online",
-      widget_mode: "ai",
+      avatar_status: 'online',
+      widget_mode: 'ai',
       mLive_form: {
         enabled: true,
-        fields: ["name", "email", "message"],
-        required: ["name", "email"]
+        fields: ['name', 'email', 'message'],
+        required: ['name', 'email'],
       },
       hybrid_agents_on: true,
       hybrid_agents_off: false,
       widget_visible_device: {
         desktop: true,
         tablet: true,
-        mobile: true
+        mobile: true,
       },
-      streaming_avatar_status: "idle",
+      streaming_avatar_status: 'idle',
       widget_position: {
-        position: "bottom-right",
+        position: 'bottom-right',
         offset: { x: 20, y: 20 },
-        z_index: 40
+        z_index: 40,
       },
       enable_ai_tour: true,
-      widget_header_ai: "AI Assistant",
+      widget_header_ai: 'AI Assistant',
       widget_body_ai: "I'm here to help you with any questions or tasks.",
-      widget_header_live: "Live Agent",
-      widget_body_live: "A live agent will be with you shortly.",
-      widget_chat_greeting: "Welcome to our chat! How can I assist you?",
-      widget_tour_greeting: "Welcome! Let me show you around.",
-      inapp_login_url: "https://app.marketrix.com/login",
-      inapp_login_id: "user123",
-      inapp_login_password: "encrypted_password_hash",
+      widget_header_live: 'Live Agent',
+      widget_body_live: 'A live agent will be with you shortly.',
+      widget_chat_greeting: 'Welcome to our chat! How can I assist you?',
+      widget_tour_greeting: 'Welcome! Let me show you around.',
+      inapp_login_url: 'https://app.marketrix.com/login',
+      inapp_login_id: 'user123',
+      inapp_login_password: 'encrypted_password_hash',
       advanced_settings: {
         auto_open_delay: 0,
         session_timeout: 1800000,
@@ -390,27 +392,27 @@ export class ConfigManager {
         typing_indicator: true,
         read_receipts: true,
         sound_notifications: true,
-        vibration_enabled: true
+        vibration_enabled: true,
       },
       themes: {
         light: {
-          background: "#ffffff",
-          text: "#333333",
-          border: "#e5e7eb",
-          accent: "#1BB55B"
+          background: '#ffffff',
+          text: '#333333',
+          border: '#e5e7eb',
+          accent: '#1BB55B',
         },
         dark: {
-          background: "#1f2937",
-          text: "#f9fafb",
-          border: "#374151",
-          accent: "#10b981"
-        }
+          background: '#1f2937',
+          text: '#f9fafb',
+          border: '#374151',
+          accent: '#10b981',
+        },
       },
       responsive_breakpoints: {
-        mobile: "768px",
-        tablet: "1024px",
-        desktop: "1200px"
-      }
+        mobile: '768px',
+        tablet: '1024px',
+        desktop: '1200px',
+      },
     };
   }
 }

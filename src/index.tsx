@@ -1,8 +1,10 @@
+import './index.css';
+
 import React from 'react';
 import { createRoot } from 'react-dom/client';
+
 import { MarketrixWidget } from './components/MarketrixWidget';
-import { MarketrixConfig } from './types';
-import './index.css';
+import type { MarketrixConfig } from './types';
 
 // Global widget instance and demo functions
 let widgetInstance: any = null;
@@ -46,13 +48,13 @@ export const destroyMarketrixWidget = (): void => {
     widgetInstance.unmount();
     widgetInstance = null;
     currentConfig = null;
-    
+
     // Remove container
     const container = document.getElementById('marketrix-widget-container');
     if (container) {
       container.remove();
     }
-    
+
     console.log('Marketrix Widget destroyed');
   }
 };
@@ -80,18 +82,20 @@ export const getCurrentConfig = (): MarketrixConfig => {
 
 // Auto-initialize if script is loaded with data attributes
 document.addEventListener('DOMContentLoaded', () => {
-  console.log('------------------------------ DOMContentLoaded -----------------------------------');
+  console.log(
+    '------------------------------ DOMContentLoaded -----------------------------------'
+  );
 
   // Find the script tag with marketrix attributes
   const scripts = document.querySelectorAll('script[marketrix-id][marketrix-key]');
   const script = scripts[scripts.length - 1] as HTMLScriptElement; // Get the last one (most likely the current one)
-  
+
   if (script) {
     const marketrixId = script.getAttribute('marketrix-id');
     const marketrixKey = script.getAttribute('marketrix-key');
-    
+
     console.log('Found script with marketrix attributes:', { marketrixId, marketrixKey });
-    
+
     if (marketrixId && marketrixKey) {
       const config: MarketrixConfig = {
         marketrixId,
@@ -100,9 +104,13 @@ document.addEventListener('DOMContentLoaded', () => {
         theme: (script.getAttribute('data-theme') as any) || 'light',
         avatarUrl: script.getAttribute('data-avatar-url') || undefined,
         agentName: script.getAttribute('data-agent-name') || undefined,
-        enabledModes: script.getAttribute('data-enabled-modes')?.split(',') as any || ['show', 'tell', 'do'],
+        enabledModes: (script.getAttribute('data-enabled-modes')?.split(',') as any) || [
+          'show',
+          'tell',
+          'do',
+        ],
       };
-      
+
       console.log('Auto-initializing widget with config:', config);
       initMarketrixWidget(config);
     }
@@ -112,7 +120,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Export types for external use
-export type { MarketrixConfig, ChatMessage, WidgetState, ChatMode, Theme } from './types';
+export type { ChatMessage, ChatMode, MarketrixConfig, Theme, WidgetState } from './types';
 
 // Export default for ES modules
 export default {

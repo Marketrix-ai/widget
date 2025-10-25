@@ -21,11 +21,11 @@ export const getModeDisplayName = (mode: 'show' | 'tell' | 'do'): string => {
 export const getModeDescription = (mode: 'show' | 'tell' | 'do'): string => {
   switch (mode) {
     case 'show':
-      return 'I\'ll show you how to do this';
+      return "I'll show you how to do this";
     case 'tell':
-      return 'I\'ll explain this to you';
+      return "I'll explain this to you";
     case 'do':
-      return 'I\'ll do this for you';
+      return "I'll do this for you";
     default:
       return '';
   }

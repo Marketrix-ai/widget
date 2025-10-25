@@ -524,7 +524,6 @@ const contract = c.router({
     },
   },
 
-
   integrationGet: {
     method: 'GET' as const,
     summary: 'Get integration by ID',
@@ -911,7 +910,6 @@ const contract = c.router({
       500: R.error,
     },
   },
-
 
   tourCreate: {
     method: 'POST' as const,

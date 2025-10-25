@@ -1,4 +1,4 @@
-import { WidgetSettingsConfig } from '../types';
+import type { WidgetSettingsConfig } from '../types';
 
 export interface IntegrationSettings {
   widget_enabled: boolean;
@@ -45,22 +45,26 @@ export class IntegrationService {
    */
   async fetchIntegrationSettings(): Promise<IntegrationSettings | null> {
     try {
-      console.log('Fetching integration settings for:', { marketrixId: this.marketrixId, marketrixKey: this.marketrixKey });
-      
+      console.log('Fetching integration settings for:', {
+        marketrixId: this.marketrixId,
+        marketrixKey: this.marketrixKey,
+      });
+
       // Use direct fetch for now to avoid SDK type issues
-      const response = await fetch(`http://localhost:8080/integration?marketrix_id=${this.marketrixId}&marketrix_key=${this.marketrixKey}`);
+      const response = await fetch(
+        `http://localhost:8080/integration?marketrix_id=${this.marketrixId}&marketrix_key=${this.marketrixKey}`
+      );
       const data = await response.json();
-      
+
       if (data.success && data.data) {
         const integrations = data.data as any[];
-        
+
         // Find the widget integration from the search results
-        const widgetIntegration = integrations.find((integration: any) => 
-          integration.type === 'widget' && 
-          integration.status === 'active'
+        const widgetIntegration = integrations.find(
+          (integration: any) => integration.type === 'widget' && integration.status === 'active'
         );
 
-        if (widgetIntegration && widgetIntegration.settings) {
+        if (widgetIntegration?.settings) {
           // Parse settings if they're stored as a JSON string
           let settings = widgetIntegration.settings;
           if (typeof settings === 'string') {
@@ -71,7 +75,7 @@ export class IntegrationService {
               return null;
             }
           }
-          
+
           console.log('Found widget integration settings:', settings);
           return settings as IntegrationSettings;
         }

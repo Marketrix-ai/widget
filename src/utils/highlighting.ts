@@ -33,7 +33,7 @@ export class ElementHighlighter {
       borderColor = '#ffd700',
       borderWidth = 3,
       borderRadius = 8,
-      zIndex = 9999
+      zIndex = 9999,
     } = options;
 
     // Clear any existing highlight
@@ -57,7 +57,7 @@ export class ElementHighlighter {
       borderColor,
       borderWidth,
       borderRadius,
-      zIndex
+      zIndex,
     });
 
     // Add highlight class to element
@@ -66,10 +66,10 @@ export class ElementHighlighter {
     element.style.zIndex = (zIndex + 1).toString();
 
     // Scroll element into view
-    element.scrollIntoView({ 
-      behavior: 'smooth', 
-      block: 'center', 
-      inline: 'center' 
+    element.scrollIntoView({
+      behavior: 'smooth',
+      block: 'center',
+      inline: 'center',
     });
 
     // Auto-clear highlight after duration
@@ -92,9 +92,8 @@ export class ElementHighlighter {
     borderRadius: number;
     zIndex: number;
   }): void {
-    const {
-      x, y, width, height, spotlightColor, borderColor, borderWidth, borderRadius, zIndex
-    } = options;
+    const { x, y, width, height, spotlightColor, borderColor, borderWidth, borderRadius, zIndex } =
+      options;
 
     // Create overlay container
     const overlay = document.createElement('div');
@@ -111,7 +110,7 @@ export class ElementHighlighter {
     overlay.style.background = `radial-gradient(ellipse at center, transparent 0%, transparent 40%, ${spotlightColor} 100%)`;
     overlay.style.mask = `
       radial-gradient(
-        ellipse ${width + 40}px ${height + 40}px at ${x + width/2}px ${y + height/2}px,
+        ellipse ${width + 40}px ${height + 40}px at ${x + width / 2}px ${y + height / 2}px,
         transparent 0%,
         transparent 40%,
         black 100%
@@ -193,7 +192,7 @@ export class ElementHighlighter {
     if (element) {
       this.highlightElement({
         element,
-        ...options
+        ...options,
       });
       return true;
     }
@@ -209,7 +208,7 @@ export class ElementHighlighter {
       if (element.textContent?.includes(text)) {
         this.highlightElement({
           element: element as HTMLElement,
-          ...options
+          ...options,
         });
         return true;
       }

@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import { LuSquare } from 'react-icons/lu';
+
 import SendIcon from '../assets/send.png';
 import { useWidgetAtmosphere } from '../hooks/useWidgetAtmosphere';
-import { MarketrixConfig } from '../types';
+import type { MarketrixConfig } from '../types';
 import { elementHighlighter } from '../utils/highlighting';
 import { ScreenAccessModal } from './ScreenAccessModal';
-import { LuSquare } from 'react-icons/lu';
 
 interface MessageInputProps {
   value: string;
@@ -34,7 +35,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   onStopStepGuide,
 }) => {
   const [showScreenAccessModal, setShowScreenAccessModal] = useState(false);
-  
+
   // Get atmosphere configuration
   const { getWidgetText } = useWidgetAtmosphere(config);
   const widgetText = getWidgetText();
@@ -61,48 +62,56 @@ export const MessageInput: React.FC<MessageInputProps> = ({
 
   const processMessageForHighlighting = (message: string) => {
     const lowerMessage = message.toLowerCase();
-    
+
     // Check for common highlighting patterns
-    if (lowerMessage.includes('highlight') || lowerMessage.includes('show me') || lowerMessage.includes('point to')) {
+    if (
+      lowerMessage.includes('highlight') ||
+      lowerMessage.includes('show me') ||
+      lowerMessage.includes('point to')
+    ) {
       // Look for specific element references
-      if (lowerMessage.includes('h1') || lowerMessage.includes('title') || lowerMessage.includes('heading')) {
+      if (
+        lowerMessage.includes('h1') ||
+        lowerMessage.includes('title') ||
+        lowerMessage.includes('heading')
+      ) {
         elementHighlighter.highlightBySelector('h1', {
           duration: 5000,
           spotlightColor: 'rgba(255, 255, 0, 0.4)',
           borderColor: '#ffd700',
-          borderWidth: 4
+          borderWidth: 4,
         });
       } else if (lowerMessage.includes('h2')) {
         elementHighlighter.highlightBySelector('h2', {
           duration: 5000,
           spotlightColor: 'rgba(0, 255, 255, 0.4)',
           borderColor: '#00ffff',
-          borderWidth: 4
+          borderWidth: 4,
         });
       } else if (lowerMessage.includes('button')) {
         elementHighlighter.highlightBySelector('button', {
           duration: 5000,
           spotlightColor: 'rgba(0, 255, 0, 0.4)',
           borderColor: '#00ff00',
-          borderWidth: 4
+          borderWidth: 4,
         });
       } else if (lowerMessage.includes('demo') || lowerMessage.includes('widget')) {
         elementHighlighter.highlightByText('Marketrix In-App Support Widget Demo', {
           duration: 5000,
           spotlightColor: 'rgba(255, 0, 255, 0.4)',
           borderColor: '#ff00ff',
-          borderWidth: 4
+          borderWidth: 4,
         });
       }
     }
-    
+
     // Check for specific text content to highlight
     if (lowerMessage.includes('marketrix') && lowerMessage.includes('demo')) {
       elementHighlighter.highlightByText('Marketrix In-App Support Widget Demo', {
         duration: 5000,
         spotlightColor: 'rgba(255, 255, 0, 0.4)',
         borderColor: '#ffd700',
-        borderWidth: 4
+        borderWidth: 4,
       });
     }
   };
@@ -139,20 +148,21 @@ export const MessageInput: React.FC<MessageInputProps> = ({
     }
   }, [showScreenAccessModal, triggerScreenAccessModal, onTriggerReset]);
 
-
   return (
-    <div className={`
+    <div
+      className={`
       py-2 pr-2
       bg-transparent
-      `}>
-        <div className="flex items-center space-x-2">
+      `}
+    >
+      <div className='flex items-center space-x-2'>
         {/* Textarea */}
-        <div className="flex-1 relative">
+        <div className='flex-1 relative'>
           <textarea
             value={value}
             onChange={(e) => onChange(e.target.value)}
             onKeyPress={handleKeyPress}
-            placeholder={widgetText.placeholder || "Show me.."}
+            placeholder={widgetText.placeholder || 'Show me..'}
             disabled={isLoading}
             rows={1}
             className={`
@@ -183,20 +193,21 @@ export const MessageInput: React.FC<MessageInputProps> = ({
           disabled={!isStepGuideRunning && (!value.trim() || isLoading)}
           className={`
             w-8 h-8 rounded-full transition-all duration-200 flex items-center justify-center
-            ${isStepGuideRunning
-              ? 'bg-gradient-to-r from-red-500 to-red-600 text-white shadow-lg hover:from-red-600 hover:to-red-700'
-              : value.trim() && !isLoading
-              ? 'bg-gradient-to-r from-[#B398F6] to-[#5CF2B5] text-white shadow-lg'
-              : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+            ${
+              isStepGuideRunning
+                ? 'bg-gradient-to-r from-red-500 to-red-600 text-white shadow-lg hover:from-red-600 hover:to-red-700'
+                : value.trim() && !isLoading
+                  ? 'bg-gradient-to-r from-[#B398F6] to-[#5CF2B5] text-white shadow-lg'
+                  : 'bg-gray-200 text-gray-400 cursor-not-allowed'
             }
             focus:outline-none focus:ring-2 focus:ring-green-500/20
           `}
-          aria-label={isStepGuideRunning ? "Stop step guide" : "Send message"}
+          aria-label={isStepGuideRunning ? 'Stop step guide' : 'Send message'}
         >
           {isStepGuideRunning ? (
-            <LuSquare className="w-4 h-4" />
+            <LuSquare className='w-4 h-4' />
           ) : (
-            <img src={SendIcon} alt="Send" className="w-4 h-4" />
+            <img src={SendIcon} alt='Send' className='w-4 h-4' />
           )}
         </button>
       </div>

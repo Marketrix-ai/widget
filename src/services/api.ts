@@ -1,9 +1,10 @@
-import axios, { AxiosInstance } from 'axios';
-import { 
-  ApiResponse, 
-  SendMessageRequest, 
+import axios, { type AxiosInstance } from 'axios';
+
+import type {
+  ApiResponse,
+  MarketrixConfig,
+  SendMessageRequest,
   SendMessageResponse,
-  MarketrixConfig 
 } from '../types';
 
 class MarketrixApiService {
@@ -12,7 +13,7 @@ class MarketrixApiService {
 
   constructor(config: MarketrixConfig) {
     this.config = config;
-    
+
     // Initialize axios instance with base configuration
     this.api = axios.create({
       baseURL: 'http://localhost:8080', // Local API server
@@ -47,7 +48,7 @@ class MarketrixApiService {
   }
 
   async sendMessage(
-    message: string, 
+    message: string,
     mode: 'show' | 'tell' | 'do',
     connectionId?: number,
     question?: string
@@ -55,7 +56,7 @@ class MarketrixApiService {
     try {
       const request: SendMessageRequest = {
         connection_id: connectionId,
-        question: question,
+        question,
       };
 
       console.log('=== SENDING MESSAGE WITH TOUR DATA ===');
@@ -68,7 +69,7 @@ class MarketrixApiService {
       console.log('Request payload:', request);
 
       const response = await this.api.get<ApiResponse<SendMessageResponse>>(
-        'tour?question=' + encodeURIComponent(question || '') + '&connection_id=' + (connectionId || 1)
+        `tour?question=${encodeURIComponent(question || '')}&connection_id=${connectionId || 1}`
       );
 
       if (!response.data.success) {
@@ -89,12 +90,12 @@ class MarketrixApiService {
       console.log('=== CALLING TOUR API DIRECTLY ===');
       console.log('Question:', question);
       console.log('Connection ID:', connectionId);
-      
+
       const url = `tour?question=${encodeURIComponent(question)}&connection_id=${connectionId}`;
       console.log('Tour API URL:', url);
-      
+
       const response = await this.api.get<ApiResponse<any>>(url);
-      
+
       if (response.data.success) {
         console.log('Tour data received successfully:', response.data.data);
         return response.data.data;
@@ -115,9 +116,7 @@ class MarketrixApiService {
 
   async checkAgentAvailability(): Promise<boolean> {
     try {
-      const response = await this.api.get<ApiResponse<{ available: boolean }>>(
-        '/agent/status'
-      );
+      const response = await this.api.get<ApiResponse<{ available: boolean }>>('/agent/status');
 
       if (!response.data.success) {
         return false;
@@ -132,9 +131,8 @@ class MarketrixApiService {
 
   async getAgentInfo(): Promise<{ name: string; avatarUrl: string } | null> {
     try {
-      const response = await this.api.get<ApiResponse<{ name: string; avatarUrl: string }>>(
-        '/agent/info'
-      );
+      const response =
+        await this.api.get<ApiResponse<{ name: string; avatarUrl: string }>>('/agent/info');
 
       if (!response.data.success) {
         return null;
@@ -147,11 +145,10 @@ class MarketrixApiService {
     }
   }
 
-
   // Method to update configuration
   updateConfig(newConfig: Partial<MarketrixConfig>): void {
     this.config = { ...this.config, ...newConfig };
-    
+
     // Update axios headers
     this.api.defaults.headers['X-Marketrix-ID'] = this.config.marketrixId;
     this.api.defaults.headers['X-Marketrix-Key'] = this.config.marketrixKey;

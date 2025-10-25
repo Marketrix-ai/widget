@@ -1,4 +1,4 @@
-import { MarketrixConfig } from '../types';
+import type { MarketrixConfig } from '../types';
 
 export interface TourStep {
   id: string;
@@ -43,11 +43,11 @@ export class TourService {
       console.log('API Base URL:', this.apiBaseUrl);
       console.log('Marketrix ID:', this.config.marketrixId);
       console.log('Marketrix Key:', this.config.marketrixKey);
-      
+
       // Try query parameters first (for public access)
       let url = `${this.apiBaseUrl}/tour?connection_id=${connectionId}&tenant_id=2`;
       console.log('Full URL with params:', url);
-      
+
       let response = await fetch(url, {
         method: 'GET',
         headers: {
@@ -64,7 +64,7 @@ export class TourService {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${this.config.marketrixKey}`,
+            Authorization: `Bearer ${this.config.marketrixKey}`,
           },
         });
       }
@@ -84,7 +84,7 @@ export class TourService {
 
       console.log('Tour API Response Status:', response.status);
       console.log('Tour API Response Headers:', Object.fromEntries(response.headers.entries()));
-      
+
       if (!response.ok) {
         console.error('Tour API Error:', response.status, response.statusText);
         const errorText = await response.text();
@@ -99,12 +99,12 @@ export class TourService {
         const tours = data.data as TourData[];
         console.log('=== ALL TOUR DATA FOUND ===');
         console.log('Total tours found for connection_id', connectionId, ':', tours.length);
-        
+
         if (tours.length === 0) {
           console.log('No tours found for this connection_id');
           return;
         }
-        
+
         tours.forEach((tour, index) => {
           console.log(`\n=== TOUR ${index + 1} ===`);
           console.log('Tour ID:', tour.id);
@@ -114,7 +114,7 @@ export class TourService {
           console.log('Created At:', tour.created_at);
           console.log('Updated At:', tour.updated_at);
           console.log('Answer Steps Count:', tour.answer.steps.length);
-          
+
           if (tour.answer.steps.length > 0) {
             console.log('\n--- TOUR STEPS ---');
             tour.answer.steps.forEach((step, stepIndex) => {
@@ -131,28 +131,33 @@ export class TourService {
             console.log('No steps found for this tour');
           }
         });
-        
+
         // Summary
         console.log('\n=== TOUR DATA SUMMARY ===');
         console.log('Connection ID:', connectionId);
         console.log('Total Tours:', tours.length);
-        console.log('Total Steps Across All Tours:', tours.reduce((total, tour) => total + tour.answer.steps.length, 0));
-        
+        console.log(
+          'Total Steps Across All Tours:',
+          tours.reduce((total, tour) => total + tour.answer.steps.length, 0)
+        );
+
         // Group by target
-        const targetGroups = tours.reduce((groups, tour) => {
-          const target = tour.target || 'No Target';
-          if (!groups[target]) {
-            groups[target] = [];
-          }
-          groups[target].push(tour);
-          return groups;
-        }, {} as Record<string, TourData[]>);
-        
+        const targetGroups = tours.reduce(
+          (groups, tour) => {
+            const target = tour.target || 'No Target';
+            if (!groups[target]) {
+              groups[target] = [];
+            }
+            groups[target].push(tour);
+            return groups;
+          },
+          {} as Record<string, TourData[]>
+        );
+
         console.log('\n--- TOURS BY TARGET ---');
         Object.entries(targetGroups).forEach(([target, tours]) => {
           console.log(`${target}: ${tours.length} tour(s)`);
         });
-        
       } else {
         console.warn('No tour data found or API error:', data.error || data.message);
       }
@@ -170,11 +175,11 @@ export class TourService {
       console.log('API Base URL:', this.apiBaseUrl);
       console.log('Marketrix ID:', this.config.marketrixId);
       console.log('Marketrix Key:', this.config.marketrixKey);
-      
+
       // Try query parameters first (for public access)
       let url = `${this.apiBaseUrl}/tour?tenant_id=2`;
       console.log('Full URL with params:', url);
-      
+
       let response = await fetch(url, {
         method: 'GET',
         headers: {
@@ -191,7 +196,7 @@ export class TourService {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${this.config.marketrixKey}`,
+            Authorization: `Bearer ${this.config.marketrixKey}`,
           },
         });
       }
@@ -211,7 +216,7 @@ export class TourService {
 
       console.log('Tour API Response Status:', response.status);
       console.log('Tour API Response Headers:', Object.fromEntries(response.headers.entries()));
-      
+
       if (!response.ok) {
         console.error('Tour API Error:', response.status, response.statusText);
         const errorText = await response.text();
@@ -226,22 +231,25 @@ export class TourService {
         const tours = data.data as TourData[];
         console.log('=== ALL TOUR DATA FOUND ===');
         console.log('Total tours found:', tours.length);
-        
+
         if (tours.length === 0) {
           console.log('No tours found');
           return;
         }
-        
+
         // Group by connection_id
-        const connectionGroups = tours.reduce((groups, tour) => {
-          const connectionId = tour.connection_id;
-          if (!groups[connectionId]) {
-            groups[connectionId] = [];
-          }
-          groups[connectionId].push(tour);
-          return groups;
-        }, {} as Record<number, TourData[]>);
-        
+        const connectionGroups = tours.reduce(
+          (groups, tour) => {
+            const connectionId = tour.connection_id;
+            if (!groups[connectionId]) {
+              groups[connectionId] = [];
+            }
+            groups[connectionId].push(tour);
+            return groups;
+          },
+          {} as Record<number, TourData[]>
+        );
+
         console.log('\n=== TOURS BY CONNECTION ID ===');
         Object.entries(connectionGroups).forEach(([connectionId, tours]) => {
           console.log(`\nConnection ID ${connectionId}: ${tours.length} tour(s)`);
@@ -253,13 +261,15 @@ export class TourService {
             console.log('    Steps Count:', tour.answer.steps.length);
           });
         });
-        
+
         // Summary
         console.log('\n=== OVERALL SUMMARY ===');
         console.log('Total Tours:', tours.length);
         console.log('Unique Connection IDs:', Object.keys(connectionGroups).length);
-        console.log('Total Steps Across All Tours:', tours.reduce((total, tour) => total + tour.answer.steps.length, 0));
-        
+        console.log(
+          'Total Steps Across All Tours:',
+          tours.reduce((total, tour) => total + tour.answer.steps.length, 0)
+        );
       } else {
         console.warn('No tour data found or API error:', data.error || data.message);
       }

@@ -1,5 +1,5 @@
 import { IntegrationService } from '../sdk/integrationService';
-import { MarketrixConfig } from '../types';
+import type { MarketrixConfig } from '../types';
 
 export interface IntegrationSettings {
   widget_enabled?: boolean;
@@ -51,14 +51,16 @@ export class IntegrationSettingsService {
     try {
       console.log('Loading integration settings for:', this.config.marketrixId);
       const integrationData = await this.integrationService.fetchIntegrationSettings();
-      this.settings = integrationData ? this.integrationService.getWidgetSettings(integrationData) : null;
-      
+      this.settings = integrationData
+        ? this.integrationService.getWidgetSettings(integrationData)
+        : null;
+
       if (this.settings) {
         console.log('Integration settings loaded:', this.settings);
       } else {
         console.warn('No integration settings found');
       }
-      
+
       return this.settings;
     } catch (error) {
       console.error('Failed to load integration settings:', error);
@@ -133,13 +135,15 @@ export class IntegrationSettingsService {
 
     if (this.settings.widget_feature_request_human !== undefined) {
       updatedAtmosphere.widget_settings = updatedAtmosphere.widget_settings || {};
-      updatedAtmosphere.widget_settings.widget_feature_request_human = this.settings.widget_feature_request_human;
+      updatedAtmosphere.widget_settings.widget_feature_request_human =
+        this.settings.widget_feature_request_human;
     }
 
     // Update colors
     if (this.settings.widget_background_color) {
       updatedAtmosphere.widget_settings = updatedAtmosphere.widget_settings || {};
-      updatedAtmosphere.widget_settings.widget_background_color = this.settings.widget_background_color;
+      updatedAtmosphere.widget_settings.widget_background_color =
+        this.settings.widget_background_color;
     }
 
     if (this.settings.widget_text_color) {
@@ -154,7 +158,8 @@ export class IntegrationSettingsService {
 
     if (this.settings.widget_secondary_color) {
       updatedAtmosphere.widget_settings = updatedAtmosphere.widget_settings || {};
-      updatedAtmosphere.widget_settings.widget_secondary_color = this.settings.widget_secondary_color;
+      updatedAtmosphere.widget_settings.widget_secondary_color =
+        this.settings.widget_secondary_color;
     }
 
     // Update sizing
@@ -181,7 +186,8 @@ export class IntegrationSettingsService {
     // Update animations
     if (this.settings.widget_animation_duration) {
       updatedAtmosphere.widget_settings = updatedAtmosphere.widget_settings || {};
-      updatedAtmosphere.widget_settings.widget_animation_duration = this.settings.widget_animation_duration;
+      updatedAtmosphere.widget_settings.widget_animation_duration =
+        this.settings.widget_animation_duration;
     }
 
     if (this.settings.widget_fade_duration) {
@@ -200,7 +206,10 @@ export class IntegrationSettingsService {
       updatedAtmosphere.widget_settings.widget_chips = this.settings.widget_chips;
     }
 
-    console.log('Updated widget atmosphere with integration settings:', updatedAtmosphere.widget_settings);
+    console.log(
+      'Updated widget atmosphere with integration settings:',
+      updatedAtmosphere.widget_settings
+    );
     return updatedAtmosphere;
   }
 

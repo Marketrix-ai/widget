@@ -7,7 +7,7 @@ export interface MarketrixConfig {
   avatarUrl?: string;
   agentName?: string;
   enabledModes?: ('show' | 'tell' | 'do')[];
-  
+
   // Extended atmosphere controls
   session_time?: number;
   sessionActive?: boolean;

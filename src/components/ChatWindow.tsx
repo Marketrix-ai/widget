@@ -1,12 +1,13 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { ChatMessage, MarketrixConfig, ChatMode } from '../types';
-import { getPositionClasses } from '../utils/positioning';
+import React, { useEffect, useRef, useState } from 'react';
+
 import { useWidgetAtmosphere } from '../hooks/useWidgetAtmosphere';
-import { ModeSelector } from './ModeSelector';
-import { MessageList } from './MessageList';
+import type { IntegrationSettings } from '../services/integrationService';
+import type { ChatMessage, ChatMode, MarketrixConfig } from '../types';
+import { getPositionClasses } from '../utils/positioning';
 import { MessageInput } from './MessageInput';
+import { MessageList } from './MessageList';
+import { ModeSelector } from './ModeSelector';
 import { ScreenSharePreview } from './ScreenSharePreview';
-import { IntegrationSettings } from '../services/integrationService';
 
 interface ChatWindowProps {
   config: MarketrixConfig;
@@ -43,18 +44,14 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   const [showScreenPreview, setShowScreenPreview] = useState(false);
   const [isStepGuideRunning, setIsStepGuideRunning] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  
+
   // Get atmosphere configuration
-  const { 
-    getWidgetCustomize, 
-    getWidgetPosition,
-    getWidgetSettings
-  } = useWidgetAtmosphere(config);
-  
+  const { getWidgetCustomize, getWidgetPosition, getWidgetSettings } = useWidgetAtmosphere(config);
+
   const widgetCustomize = getWidgetCustomize();
   const widgetPosition = getWidgetPosition();
   const atmosphereSettings = getWidgetSettings();
-  
+
   // Use integration settings if available, otherwise fall back to atmosphere settings
   const effectiveSettings = integrationSettings || atmosphereSettings;
 
@@ -70,26 +67,26 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     };
   }, []);
 
-
   const handleSendMessage = () => {
     if (inputValue.trim() && !isLoading) {
       // Check if this is a step guide request
       const message = inputValue.toLowerCase();
-      const isStepGuideRequest = message.includes('show me how to') || 
-                                message.includes('step by step') ||
-                                message.includes('guide me through') ||
-                                message.includes('walk me through') ||
-                                message.includes('tutorial') ||
-                                message.includes('add a new product') ||
-                                message.includes('bulk import') ||
-                                message.includes('setup widget') ||
-                                message.includes('login') ||
-                                message.includes('sign in');
-      
+      const isStepGuideRequest =
+        message.includes('show me how to') ||
+        message.includes('step by step') ||
+        message.includes('guide me through') ||
+        message.includes('walk me through') ||
+        message.includes('tutorial') ||
+        message.includes('add a new product') ||
+        message.includes('bulk import') ||
+        message.includes('setup widget') ||
+        message.includes('login') ||
+        message.includes('sign in');
+
       if (isStepGuideRequest && currentMode === 'show') {
         setIsStepGuideRunning(true);
       }
-      
+
       onSendMessage(inputValue, currentMode);
       setInputValue('');
     }
@@ -110,7 +107,11 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     }
   };
 
-  const handleScreenSharingChange = (isSharing: boolean, stream?: MediaStream | null, showPreview?: boolean) => {
+  const handleScreenSharingChange = (
+    isSharing: boolean,
+    stream?: MediaStream | null,
+    showPreview?: boolean
+  ) => {
     setIsScreenAccessActive(isSharing);
     if (stream !== undefined) {
       setScreenStream(stream);
@@ -127,9 +128,9 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       const stream = await navigator.mediaDevices.getDisplayMedia({
         video: {
           width: { ideal: 1920 },
-          height: { ideal: 1080 }
+          height: { ideal: 1080 },
         },
-        audio: false
+        audio: false,
       });
 
       // Create a minimal status indicator without overlay
@@ -191,10 +192,9 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       setScreenStream(stream);
       setShowScreenPreview(true);
       setIsScreenAccessActive(true);
-      
+
       // Notify parent component about screen sharing state
       onScreenSharingChange?.(true);
-
     } catch (error) {
       console.error('Error accessing screen:', error);
       setIsScreenAccessActive(false);
@@ -222,7 +222,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     (window as any).screenCaptureOverlay = null;
     setScreenStream(null);
     setShowScreenPreview(false);
-    
+
     // Notify parent component about screen sharing state
     onScreenSharingChange?.(false);
   };
@@ -246,12 +246,14 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     });
   };
 
-
-
   // Get widget settings for positioning
   // Convert underscore to hyphen for position (API returns bottom_right, but CSS expects bottom-right)
   const rawPosition = effectiveSettings.widget_position || 'bottom-right';
-  const effectivePosition = rawPosition.replace('_', '-') as 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
+  const effectivePosition = rawPosition.replace('_', '-') as
+    | 'bottom-right'
+    | 'bottom-left'
+    | 'top-right'
+    | 'top-left';
   const positionClasses = getPositionClasses(effectivePosition);
 
   if (!isOpen) return null;
@@ -259,19 +261,29 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   // Apply custom styling from integration settings or atmosphere settings
   const customStyles = {
     width: effectiveSettings.widget_width || widgetCustomize.sizes?.width || '320px',
-    height: isMinimized ? '48px' : (effectiveSettings.widget_height || widgetCustomize.sizes?.height || '35rem'),
-    borderRadius: effectiveSettings.widget_border_radius || widgetCustomize.sizes?.border_radius || '12px',
+    height: isMinimized
+      ? '48px'
+      : effectiveSettings.widget_height || widgetCustomize.sizes?.height || '35rem',
+    borderRadius:
+      effectiveSettings.widget_border_radius || widgetCustomize.sizes?.border_radius || '12px',
     fontSize: effectiveSettings.widget_font_size || widgetCustomize.sizes?.font_size || '14px',
-    background: effectiveSettings.widget_background_color || widgetCustomize.colors?.background || 'white',
+    background:
+      effectiveSettings.widget_background_color || widgetCustomize.colors?.background || 'white',
     color: effectiveSettings.widget_text_color || widgetCustomize.colors?.text || '#333333',
-    borderColor: effectiveSettings.widget_border_color || widgetCustomize.colors?.border || 'rgba(255, 255, 255, 0.2)',
+    borderColor:
+      effectiveSettings.widget_border_color ||
+      widgetCustomize.colors?.border ||
+      'rgba(255, 255, 255, 0.2)',
     boxShadow: effectiveSettings.widget_shadow || '0 10px 25px rgba(0, 0, 0, 0.1)',
     zIndex: widgetPosition.z_index || 40,
   } as React.CSSProperties;
 
   return (
-    <div className={`fixed bg-white rounded-xl ${positionClasses}`} style={{ zIndex: widgetPosition.z_index || 40 }}>
-      <div 
+    <div
+      className={`fixed bg-white rounded-xl ${positionClasses}`}
+      style={{ zIndex: widgetPosition.z_index || 40 }}
+    >
+      <div
         className={`
           bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700
           w-[360px] max-w-sm
@@ -286,22 +298,27 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         style={{
           ...customStyles,
           scrollbarColor: '#f6f6f6 #b6b6b6',
-          scrollbarWidth: 'thin'
+          scrollbarWidth: 'thin',
         }}
       >
         {/* Header with Marketrix branding */}
-        <div className={`
+        <div
+          className={`
           flex justify-end p-2 mb-5
-                  `}>
-
-          <div className="flex items-center space-x-1 bg-white rounded-full p-0.5 absolute top-2 right-2">
+                  `}
+        >
+          <div className='flex items-center space-x-1 bg-white rounded-full p-0.5 absolute top-2 right-2'>
             <button
               onClick={onClose}
-              className="p-1 rounded-full hover:bg-white shadow-sm"
-              aria-label="Close chat"
+              className='p-1 rounded-full hover:bg-white shadow-sm'
+              aria-label='Close chat'
             >
-              <svg className="w-3 h-3 text-black" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+              <svg className='w-3 h-3 text-black' fill='currentColor' viewBox='0 0 20 20'>
+                <path
+                  fillRule='evenodd'
+                  d='M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z'
+                  clipRule='evenodd'
+                />
               </svg>
             </button>
           </div>
@@ -311,7 +328,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         {!isMinimized && (
           <>
             {/* Chat Messages Area */}
-            <div className="flex-1 overflow-hidden">
+            <div className='flex-1 overflow-hidden'>
               <MessageList
                 messages={messages}
                 isLoading={isLoading}
@@ -327,10 +344,10 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
 
             {/* Screen Access Status Indicator */}
             {isScreenAccessActive && (
-              <div className="flex items-center gap-2 px-2 mx-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-                  <span className="text-xs text-[#667085] font-inter">
+              <div className='flex items-center gap-2 px-2 mx-3'>
+                <div className='flex items-center gap-2'>
+                  <div className='w-2 h-2 bg-red-500 rounded-full animate-pulse'></div>
+                  <span className='text-xs text-[#667085] font-inter'>
                     Marketrix is looking at your screen
                   </span>
                 </div>
@@ -339,7 +356,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                     stopScreenCapture();
                     setIsScreenAccessActive(false);
                   }}
-                  className="text-xs text-[#667085] font-bold"
+                  className='text-xs text-[#667085] font-bold'
                 >
                   Stop
                 </button>
@@ -347,7 +364,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
             )}
 
             {/* Controls Section */}
-            <div className="flex-shrink-0 rounded-lg bg-white m-3">
+            <div className='flex-shrink-0 rounded-lg bg-white m-3'>
               {/* Input */}
               <MessageInput
                 value={inputValue}

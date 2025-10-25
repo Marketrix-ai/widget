@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
-import { IntegrationService, IntegrationSettings } from '../sdk/integrationService';
-import { MarketrixConfig } from '../types';
+import { useEffect, useState } from 'react';
+
+import { IntegrationService, type IntegrationSettings } from '../sdk/integrationService';
+import type { MarketrixConfig } from '../types';
 
 export const useIntegrationSettings = (config: MarketrixConfig) => {
   const [settings, setSettings] = useState<IntegrationSettings | null>(null);
@@ -19,14 +20,13 @@ export const useIntegrationSettings = (config: MarketrixConfig) => {
         setIsLoading(true);
         setError(null);
 
-        const integrationService = new IntegrationService(
-          config.marketrixId,
-          config.marketrixKey
-        );
+        const integrationService = new IntegrationService(config.marketrixId, config.marketrixKey);
 
         const integrationData = await integrationService.fetchIntegrationSettings();
-        const integrationSettings = integrationData ? integrationService.getWidgetSettings(integrationData) : null;
-        
+        const integrationSettings = integrationData
+          ? integrationService.getWidgetSettings(integrationData)
+          : null;
+
         if (integrationSettings) {
           setSettings(integrationSettings);
           console.log('Integration settings loaded:', integrationSettings);
@@ -34,7 +34,8 @@ export const useIntegrationSettings = (config: MarketrixConfig) => {
           console.warn('No integration settings found, using default configuration');
         }
       } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Failed to fetch integration settings';
+        const errorMessage =
+          err instanceof Error ? err.message : 'Failed to fetch integration settings';
         setError(errorMessage);
         console.error('Error fetching integration settings:', err);
       } finally {
