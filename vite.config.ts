@@ -2,6 +2,8 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { resolve } from 'path'
 import { readFileSync, writeFileSync, unlinkSync } from 'fs'
+import autoprefixer from 'autoprefixer'
+import cssnano from 'cssnano'
 
 // Custom plugin to inject CSS into the JS bundle
 const injectCSSPlugin = () => {
@@ -62,7 +64,6 @@ export default defineConfig({
     rollupOptions: {
       external: [], // Bundle everything including React for standalone use
       output: {
-        globals: {},
         assetFileNames: (assetInfo) => {
           if (assetInfo.name && assetInfo.name.endsWith('.css')) {
             return 'temp.css' // Temporary name for CSS file
@@ -73,14 +74,56 @@ export default defineConfig({
     },
     outDir: 'dist',
     sourcemap: false, // No sourcemap for cleaner output
-    minify: true,
+    minify: 'terser', // Switch from esbuild to terser for better compression
+    terserOptions: {
+      compress: {
+        drop_console: true, // Remove console.log statements
+        drop_debugger: true,
+        pure_funcs: ['console.log', 'console.info', 'console.debug'],
+      },
+      mangle: {
+        safari10: true,
+      },
+      format: {
+        comments: false, // Remove all comments
+      }
+    },
     cssCodeSplit: false, // Include CSS in the JS file
-    assetsInlineLimit: 0 // Don't inline assets
+    cssMinify: true // Enable CSS minification
+  },
+  css: {
+    postcss: {
+      plugins: [
+        autoprefixer,
+        cssnano({
+          preset: ['default', {
+            discardComments: {
+              removeAll: true,
+            },
+            normalizeWhitespace: true,
+            colormin: true,
+            minifySelectors: true,
+            minifyParams: true,
+            minifyGradients: true,
+            convertValues: true,
+            discardDuplicates: true,
+            discardEmpty: true,
+            mergeLonghand: true,
+            mergeRules: true,
+            normalizeUrl: true,
+            orderedValues: true,
+            reduceIdents: true,
+            reduceInitial: true,
+            reduceTransforms: true,
+            svgo: true,
+            uniqueSelectors: true,
+            zindex: false
+          }]
+        })
+      ]
+    }
   },
   define: {
     'process.env.NODE_ENV': JSON.stringify('production')
-  },
-  esbuild: {
-    jsx: 'automatic'
   }
 })
