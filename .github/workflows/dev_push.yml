@@ -15,12 +15,8 @@ jobs:
         run: npm run build:dev
       - name: Upload to Azure Storage
         run: |
-          # Delete existing dev files using a more robust approach
-          az storage blob list --container-name widget --prefix "dev/" --account-name marketrix --auth-mode login --query "[].name" -o tsv | while read blob; do
-            if [[ "$blob" == dev/* ]]; then
-              az storage blob delete --container-name widget --name "$blob" --account-name marketrix --auth-mode login
-            fi
-          done
+          # Clear existing dev files and upload new ones
+          az storage blob delete-batch --source widget --pattern "dev/*" --account-name marketrix --auth-mode login
           az storage blob upload-batch --destination widget/dev --source ./dist/dev --account-name marketrix --overwrite --auth-mode login
       - name: Clean up build artifacts
         run: rm -rf ./dist

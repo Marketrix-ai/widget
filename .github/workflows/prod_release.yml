@@ -14,12 +14,8 @@ jobs:
         run: npm run build:prod
       - name: Upload to Azure Storage
         run: |
-          # Workaround for az CLI bug: delete blobs using list + delete loop
-          az storage blob list --container-name widget --prefix "latest/" --account-name marketrix --auth-mode login --query "[].name" -o tsv | while read blob; do
-            if [[ "$blob" == latest/* ]]; then
-              az storage blob delete --container-name widget --name "$blob" --account-name marketrix --auth-mode login
-            fi
-          done
+          # Clear existing latest files and upload new ones
+          az storage blob delete-batch --source widget --pattern "latest/*" --account-name marketrix --auth-mode login
           az storage blob upload-batch --destination widget/latest --source ./dist/prod --account-name marketrix --overwrite --auth-mode login
       - name: Clean up build artifacts
         run: rm -rf ./dist
