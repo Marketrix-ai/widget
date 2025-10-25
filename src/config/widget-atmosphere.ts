@@ -1,4 +1,4 @@
-{
+export const widgetAtmosphereConfig = {
   "session_time": 0,
   "sessionActive": true,
   "recorded_time": 0,
@@ -143,4 +143,4 @@
     "tablet": "1024px",
     "desktop": "1200px"
   }
-}
+};

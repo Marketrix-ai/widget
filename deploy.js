@@ -74,7 +74,7 @@ function checkBuildFiles() {
     process.exit(1);
   }
   
-  const requiredFiles = ['index.html', 'style.css', 'marketrix-inapp.umd.cjs'];
+  const requiredFiles = ['index.html', 'meet.js'];
   const missingFiles = requiredFiles.filter(file => !fs.existsSync(path.join(distPath, file)));
   
   if (missingFiles.length > 0) {

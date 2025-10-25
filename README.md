@@ -1,6 +1,6 @@
 # Marketrix In-App Support Widget
 
-A modern, React-based in-app support widget for Marketrix that provides Show, Tell, and Do modes without video calling or guided tours support.
+A modern, React-based in-app support widget for Marketrix that provides Show, Tell, and Do modes. Designed for easy integration into any website using a simple script tag.
 
 ## Features
 
@@ -9,58 +9,35 @@ A modern, React-based in-app support widget for Marketrix that provides Show, Te
 - 🌙 **Theme Support**: Light and dark themes
 - 📱 **Responsive Design**: Works on desktop and mobile
 - ⚙️ **Highly Configurable**: Customizable position, avatar, agent name, and modes
-- 🔌 **Easy Integration**: Simple script tag or programmatic initialization
+- 🔌 **Easy Integration**: Simple script tag integration
 - 🚀 **TypeScript**: Full TypeScript support with type definitions
-
-## Installation
-
-### Using npm/yarn
-
-```bash
-npm install @marketrix/inapp-react
-# or
-yarn add @marketrix/inapp-react
-```
-
-### Using CDN
-
-```html
-<script src="https://unpkg.com/@marketrix/inapp-react/dist/marketrix-inapp.umd.js"></script>
-```
+- 📦 **Standalone**: Single file bundle with no external dependencies
 
 ## Quick Start
 
-### Method 1: Script Tag (Recommended)
+### Script Tag Integration (Recommended)
 
-Add the widget to your HTML page using a script tag with data attributes:
+Add the widget to your HTML page using a script tag:
 
 ```html
-<script 
-  src="path/to/marketrix-inapp.umd.js"
-  data-marketrix-id="your-marketrix-id"
-  data-marketrix-key="your-marketrix-key"
-  data-position="bottom-right"
-  data-theme="light"
-  data-avatar-url="https://example.com/avatar.jpg"
-  data-agent-name="Support Agent"
-  data-enabled-modes="show,tell,do">
+<script src="path/to/meet.js" 
+        marketrix-id="your-marketrix-id" 
+        marketrix-key="your-marketrix-key">
 </script>
 ```
 
-### Method 2: Programmatic Initialization
+### Configuration Options
 
-```javascript
-import { initMarketrixWidget } from '@marketrix/inapp-react';
+You can customize the widget using data attributes:
 
-initMarketrixWidget({
-  marketrixId: 'your-marketrix-id',
-  marketrixKey: 'your-marketrix-key',
-  position: 'bottom-right',
-  theme: 'light',
-  avatarUrl: 'https://example.com/avatar.jpg',
-  agentName: 'Support Agent',
-  enabledModes: ['show', 'tell', 'do']
-});
+```html
+<script src="path/to/meet.js" 
+        marketrix-id="your-marketrix-id" 
+        marketrix-key="your-marketrix-key"
+        data-position="bottom-right"
+        data-theme="light"
+        data-agent-name="Support Agent">
+</script>
 ```
 
 ## Configuration Options
@@ -108,7 +85,7 @@ Make sure your API endpoints are properly configured to handle these requests.
 1. Clone the repository:
 ```bash
 git clone <repository-url>
-cd inapp-react
+cd widget
 ```
 
 2. Install dependencies:
@@ -126,28 +103,30 @@ npm run dev
 npm run build
 ```
 
+5. Build with demos and source files:
+```bash
+npm run build:full
+```
+
 ### Project Structure
 
 ```
-src/
-├── components/          # React components
-│   ├── MarketrixWidget.tsx
-│   ├── WidgetButton.tsx
-│   ├── ChatWindow.tsx
-│   ├── ModeSelector.tsx
-│   ├── MessageList.tsx
-│   └── MessageInput.tsx
-├── hooks/              # Custom React hooks
-│   └── useMarketrixWidget.ts
-├── services/           # API services
-│   └── api.ts
-├── types/              # TypeScript type definitions
-│   └── index.ts
-├── utils/              # Utility functions
-│   ├── positioning.ts
-│   └── formatting.ts
-├── index.css           # Global styles
-└── index.ts            # Main entry point
+widget/
+├── src/
+│   ├── components/          # React components
+│   ├── hooks/              # Custom React hooks
+│   ├── services/           # API services
+│   ├── types/              # TypeScript type definitions
+│   ├── utils/              # Utility functions
+│   ├── index.css           # Global styles
+│   └── index.tsx           # Main entry point
+├── vite.config.ts          # Vite configuration
+├── build.js                # Build script
+├── deploy.js               # Deployment script
+└── dist/                   # Build output
+    ├── meet.js             # Main widget bundle
+    ├── index.html          # Demo page
+    └── INTEGRATION_GUIDE.md # Integration guide
 ```
 
 ## API Reference

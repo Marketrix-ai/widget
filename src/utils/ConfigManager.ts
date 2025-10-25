@@ -1,11 +1,12 @@
 import { WidgetAtmosphereConfig, MarketrixConfig } from '../types';
 import { WidgetSettingsDataSchema } from '../sdk/schema';
+import { widgetAtmosphereConfig } from '../config/widget-atmosphere';
 
 export class ConfigManager {
   private static instance: ConfigManager;
   private config: WidgetAtmosphereConfig | null = null;
   private listeners: Array<(config: WidgetAtmosphereConfig) => void> = [];
-  private updateInterval: NodeJS.Timeout | null = null;
+  private updateInterval: number | null = null;
 
   private constructor() {}
 
@@ -17,15 +18,12 @@ export class ConfigManager {
   }
 
   /**
-   * Load configuration from JSON file
+   * Load configuration from imported JSON data
    */
-  public async loadConfig(configPath: string = './src/config/widget-atmosphere.json'): Promise<WidgetAtmosphereConfig> {
+  public async loadConfig(): Promise<WidgetAtmosphereConfig> {
     try {
-      const response = await fetch(configPath);
-      if (!response.ok) {
-        throw new Error(`Failed to load config: ${response.statusText}`);
-      }
-      const configData = await response.json();
+      // Use imported config data instead of fetch
+      const configData = widgetAtmosphereConfig as WidgetAtmosphereConfig;
       
       // Validate widget_settings if present
       if (configData.widget_settings) {
@@ -132,17 +130,11 @@ export class ConfigManager {
   }
 
   /**
-   * Start auto-refreshing configuration from file
+   * Start auto-refreshing configuration (no-op since config is now static)
    */
-  public startAutoRefresh(intervalMs: number = 5000): void {
-    this.stopAutoRefresh();
-    this.updateInterval = setInterval(async () => {
-      try {
-        await this.loadConfig();
-      } catch (error) {
-        console.warn('Auto-refresh config failed:', error);
-      }
-    }, intervalMs);
+  public startAutoRefresh(): void {
+    // No-op since config is now imported statically
+    console.log('Auto-refresh disabled - using static imported config');
   }
 
   /**

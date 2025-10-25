@@ -6,7 +6,6 @@ import './index.css';
 
 // Global widget instance and demo functions
 let widgetInstance: any = null;
-let widgetActions: any = null;
 
 // Initialize the widget
 export const initMarketrixWidget = (config: MarketrixConfig): void => {
@@ -81,13 +80,17 @@ export const getCurrentConfig = (): MarketrixConfig => {
 
 // Auto-initialize if script is loaded with data attributes
 document.addEventListener('DOMContentLoaded', () => {
-
   console.log('------------------------------ DOMContentLoaded -----------------------------------');
 
-  const script = document.currentScript as HTMLScriptElement;
+  // Find the script tag with marketrix attributes
+  const scripts = document.querySelectorAll('script[marketrix-id][marketrix-key]');
+  const script = scripts[scripts.length - 1] as HTMLScriptElement; // Get the last one (most likely the current one)
+  
   if (script) {
     const marketrixId = script.getAttribute('marketrix-id');
     const marketrixKey = script.getAttribute('marketrix-key');
+    
+    console.log('Found script with marketrix attributes:', { marketrixId, marketrixKey });
     
     if (marketrixId && marketrixKey) {
       const config: MarketrixConfig = {
@@ -100,8 +103,11 @@ document.addEventListener('DOMContentLoaded', () => {
         enabledModes: script.getAttribute('data-enabled-modes')?.split(',') as any || ['show', 'tell', 'do'],
       };
       
+      console.log('Auto-initializing widget with config:', config);
       initMarketrixWidget(config);
     }
+  } else {
+    console.log('No script with marketrix attributes found');
   }
 });
 
