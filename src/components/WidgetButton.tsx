@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 
-import MarketrixIcon from '../assets/marketrix-Icon.png';
+import MarketrixIcon from '../assets/marketrix-icon.png';
 import { useWidgetAtmosphere } from '../hooks/useWidgetAtmosphere';
 import type { IntegrationSettings } from '../services/integrationService';
 import type { MarketrixConfig } from '../types';
