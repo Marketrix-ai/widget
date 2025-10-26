@@ -148,7 +148,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           height: { ideal: 1080 },
         },
         audio: false,
-      });
+        preferCurrentTab: true,
+      } as DisplayMediaStreamOptions & { preferCurrentTab: boolean });
 
       // Create a minimal status indicator without overlay
       const statusIndicator = document.createElement('div');

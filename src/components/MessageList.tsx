@@ -1465,7 +1465,8 @@ export const MessageList: React.FC<MessageListProps> = ({
           height: { ideal: 1080 },
         },
         audio: false,
-      });
+        preferCurrentTab: true,
+      } as DisplayMediaStreamOptions & { preferCurrentTab: boolean });
 
       // Create a minimal status indicator
       const statusIndicator = document.createElement('div');
