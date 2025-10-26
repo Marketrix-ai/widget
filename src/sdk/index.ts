@@ -37,6 +37,8 @@ export const sdk = Object.assign(client, {
   parse,
 });
 
-// Export raw client for backward compatibility
-export { IntegrationService } from './integrationService';
+// Export all types from schema
 export * from './schema';
+
+// Export contract from routes
+export { contract } from './routes';

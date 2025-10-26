@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 
-import { IntegrationService, type IntegrationSettings } from '../sdk/integrationService';
+import { IntegrationService } from '../services/integrationService';
+import type { WidgetSettingsData } from '../sdk';
 import type { MarketrixConfig } from '../types';
 
 export const useIntegrationSettings = (config: MarketrixConfig) => {
-  const [settings, setSettings] = useState<IntegrationSettings | null>(null);
+  const [settings, setSettings] = useState<WidgetSettingsData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 

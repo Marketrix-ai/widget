@@ -1,37 +1,11 @@
-import { API_URL_GLOBAL_SET } from '../config';
-import type { MarketrixConfig } from '../types';
-
-export interface TourStep {
-  id: string;
-  title: string;
-  description: string;
-  selector?: string;
-  xpath?: string;
-  action?: string;
-  order: number;
-}
-
-export interface TourAnswer {
-  steps: TourStep[];
-}
-
-export interface TourData {
-  id: number;
-  connection_id: number;
-  question: string;
-  answer: TourAnswer;
-  target: string;
-  created_at: string;
-  updated_at: string;
-}
+import { sdk } from '../sdk';
+import type { MarketrixConfig, TourData, TourStep, TourAnswer } from '../types';
 
 export class TourService {
   private config: MarketrixConfig;
-  private apiBaseUrl: string;
 
   constructor(config: MarketrixConfig) {
     this.config = config;
-    this.apiBaseUrl = API_URL_GLOBAL_SET.API_END_POINT;
   }
 
   /**
@@ -41,63 +15,19 @@ export class TourService {
     try {
       console.log('=== FETCHING ALL TOUR DATA BY CONNECTION ID ===');
       console.log('Connection ID:', connectionId);
-      console.log('API Base URL:', this.apiBaseUrl);
       console.log('Marketrix ID:', this.config.marketrixId);
       console.log('Marketrix Key:', this.config.marketrixKey);
 
-      // Try query parameters first (for public access)
-      let url = `${this.apiBaseUrl}/tour?connection_id=${connectionId}&tenant_id=2`;
-      console.log('Full URL with params:', url);
-
-      let response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
+      const response = await sdk.tourSearch({
+        query: {
+          connection_id: connectionId,
         },
       });
 
-      // If that fails, try with Authorization header
-      if (!response.ok) {
-        console.log('Query parameters failed, trying Authorization header...');
-        url = `${this.apiBaseUrl}/tour?connection_id=${connectionId}`;
-        console.log('Full URL:', url);
-        response = await fetch(url, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${this.config.marketrixKey}`,
-          },
-        });
-      }
-
-      // If that fails, try with X-Marketrix headers
-      if (!response.ok) {
-        console.log('Authorization header failed, trying X-Marketrix headers...');
-        response = await fetch(url, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Marketrix-ID': this.config.marketrixId,
-            'X-Marketrix-Key': this.config.marketrixKey,
-          },
-        });
-      }
-
       console.log('Tour API Response Status:', response.status);
-      console.log('Tour API Response Headers:', Object.fromEntries(response.headers.entries()));
 
-      if (!response.ok) {
-        console.error('Tour API Error:', response.status, response.statusText);
-        const errorText = await response.text();
-        console.error('Error Response Body:', errorText);
-        return;
-      }
-
-      const data = await response.json();
-      console.log('Tour API Response Data:', data);
-
-      if (data.success && data.data) {
-        const tours = data.data as TourData[];
+      if (response.status === 200 && response.body?.success) {
+        const tours = response.body.data as TourData[];
         console.log('=== ALL TOUR DATA FOUND ===');
         console.log('Total tours found for connection_id', connectionId, ':', tours.length);
 
@@ -160,7 +90,7 @@ export class TourService {
           console.log(`${target}: ${tours.length} tour(s)`);
         });
       } else {
-        console.warn('No tour data found or API error:', data.error || data.message);
+        console.warn('No tour data found or API error:', response.body?.error || response.body?.message);
       }
     } catch (error) {
       console.error('Failed to fetch tour data by connection ID:', error);
@@ -173,63 +103,17 @@ export class TourService {
   async logAllTourData(): Promise<void> {
     try {
       console.log('=== FETCHING ALL TOUR DATA ===');
-      console.log('API Base URL:', this.apiBaseUrl);
       console.log('Marketrix ID:', this.config.marketrixId);
       console.log('Marketrix Key:', this.config.marketrixKey);
 
-      // Try query parameters first (for public access)
-      let url = `${this.apiBaseUrl}/tour?tenant_id=2`;
-      console.log('Full URL with params:', url);
-
-      let response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+      const response = await sdk.tourSearch({
+        query: {},
       });
 
-      // If that fails, try with Authorization header
-      if (!response.ok) {
-        console.log('Query parameters failed, trying Authorization header...');
-        url = `${this.apiBaseUrl}/tour`;
-        console.log('Full URL:', url);
-        response = await fetch(url, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${this.config.marketrixKey}`,
-          },
-        });
-      }
-
-      // If that fails, try with X-Marketrix headers
-      if (!response.ok) {
-        console.log('Authorization header failed, trying X-Marketrix headers...');
-        response = await fetch(url, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Marketrix-ID': this.config.marketrixId,
-            'X-Marketrix-Key': this.config.marketrixKey,
-          },
-        });
-      }
-
       console.log('Tour API Response Status:', response.status);
-      console.log('Tour API Response Headers:', Object.fromEntries(response.headers.entries()));
 
-      if (!response.ok) {
-        console.error('Tour API Error:', response.status, response.statusText);
-        const errorText = await response.text();
-        console.error('Error Response Body:', errorText);
-        return;
-      }
-
-      const data = await response.json();
-      console.log('Tour API Response Data:', data);
-
-      if (data.success && data.data) {
-        const tours = data.data as TourData[];
+      if (response.status === 200 && response.body?.success) {
+        const tours = response.body.data as TourData[];
         console.log('=== ALL TOUR DATA FOUND ===');
         console.log('Total tours found:', tours.length);
 
@@ -272,7 +156,7 @@ export class TourService {
           tours.reduce((total, tour) => total + tour.answer.steps.length, 0)
         );
       } else {
-        console.warn('No tour data found or API error:', data.error || data.message);
+        console.warn('No tour data found or API error:', response.body?.error || response.body?.message);
       }
     } catch (error) {
       console.error('Failed to fetch all tour data:', error);

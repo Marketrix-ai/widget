@@ -35,7 +35,7 @@ import { z } from 'zod';
  */
 export const UserRoleSchema = z.enum(['user', 'admin', 'super']);
 export const UserPlanSchema = z.enum(['free', 'pro', 'enterprise']);
-export const EntityStatusSchema = z.enum(['created', 'active', 'suspended']);
+export const EntityStatusSchema = z.enum(['created', 'active', 'suspended', 'pending_approval']);
 export const TenantPackageSchema = z.enum(['free', 'starter', 'pro', 'enterprise']);
 export const AgentTypeSchema = z.enum(['human', 'ai']);
 export const AgentVoiceSchema = z.enum(['male', 'female']);
@@ -44,7 +44,6 @@ export const MeetingStatusSchema = z.enum(['not_started', 'in_progress', 'ended'
 export const ChatRoleSchema = z.enum(['user', 'agent']);
 export const ChatSourceSchema = z.enum(['taskpilot', 'widget', 'app']);
 export const InstructionTypeSchema = z.enum(['tell', 'show', 'do']);
-export const TargetTypeSchema = z.enum(['live', 'app']);
 export const ConnectionTypeSchema = z.enum(['app', 'website']);
 export const IntegrationTypeSchema = z.enum(['widget', 'slack']);
 export const ActionLogTypeSchema = z.enum([
@@ -66,6 +65,9 @@ export const ActionLogTypeSchema = z.enum([
   'create_knowledge',
   'update_knowledge',
   'delete_knowledge',
+  'approve_user',
+  'deny_user',
+  'request_tenant',
 ]);
 
 /**
@@ -94,12 +96,14 @@ export const BaseEntitySchema = z.object({
   created_at: z.string().datetime().optional(),
   updated_at: z.string().datetime().optional(),
 });
+
 export const FileSchema = z.object({
-  file: z.instanceof(File),
+  file: z.custom<Express.Multer.File>(),
   connection_id: z.coerce.number().optional(),
 });
 
 // ============================================================================
+// ROOT ROUTES SCHEMAS - Basic system endpoints
 // ============================================================================
 
 /**
@@ -354,8 +358,10 @@ export const AgentEntitySchema = BaseEntitySchema.extend({
   agent_voice: AgentVoiceSchema,
   agent_description: z.string(),
   instructions: z.string().optional(),
-  logo_url: z.string().optional(),
+  image_url: z.string().optional(),
   vector_store_id: z.string().optional(),
+  pdf_search_index_id: z.string().optional(),
+  json_search_index_id: z.string().optional(),
   tenant: TenantEntitySchema.optional(),
   user: UserEntitySchema.optional(),
   knowledge: z.array(KnowledgeEntitySchema).optional(),
@@ -363,8 +369,8 @@ export const AgentEntitySchema = BaseEntitySchema.extend({
 
 const KnowledgeIdsSchema = z
   .string()
-  .transform((str) => JSON.parse(str))
-  .pipe(z.array(z.number()));
+  .transform(str => JSON.parse(str) as number[])
+  .pipe(z.array(z.coerce.number()));
 
 /**
  * Agent creation schema
@@ -376,7 +382,7 @@ export const AgentCreateSchema = AgentEntitySchema.partial().extend({
   agent_voice: AgentVoiceSchema,
   agent_description: z.string(),
   instructions: z.string(),
-  file: z.instanceof(File),
+  file: z.custom<Express.Multer.File>(),
   knowledge_ids: KnowledgeIdsSchema,
 });
 
@@ -384,8 +390,85 @@ export const AgentCreateSchema = AgentEntitySchema.partial().extend({
  * Agent update schema
  */
 export const AgentUpdateSchema = AgentEntitySchema.partial().extend({
-  file: z.instanceof(File),
+  file: z.custom<Express.Multer.File>(),
   knowledge_ids: KnowledgeIdsSchema,
+});
+
+/**
+ * Agent knowledge search configuration schema
+ */
+export const AgentSearchConfigSchema = z.object({
+  contentType: z.enum(['document', 'video', 'automation_log', 'screenshot', 'all']).optional(),
+  context: z.string().optional(),
+  previousActions: z.array(z.string()).optional(),
+  top: z.coerce.number().min(1).max(100).optional(),
+  minConfidence: z.coerce.number().min(0).max(1).optional(),
+  entities: z.array(z.string()).optional(),
+  useVectorSearch: z.boolean().optional(),
+  vectorThreshold: z.coerce.number().min(0).max(1).optional(),
+});
+
+/**
+ * Search document schema (matches Azure Search document structure)
+ */
+export const SearchDocumentSchema = z.object({
+  id: z.string(),
+  content: z.string(),
+  contentType: z.enum(['document', 'video', 'automation_log', 'screenshot']),
+  sourceFile: z.string(),
+  sourceType: z.string(),
+  metadata: z.string(), // JSON stringified
+  confidence: z.number(),
+  keyPhrases: z.array(z.string()),
+  entities: z.array(z.string()), // Format: "text:category:confidence"
+  sentiment: z.string(), // JSON stringified
+  vectorContent: z.array(z.number()),
+});
+
+/**
+ * Search result schema (Azure Search result wrapper)
+ */
+export const SearchResultSchema = z.object({
+  document: SearchDocumentSchema,
+  score: z.number(),
+  highlights: z.record(z.array(z.string())).optional(),
+});
+
+/**
+ * Agent knowledge search request schema
+ */
+export const AgentKnowledgeSearchRequestSchema = z.object({
+  query: z.string().min(1, 'Search query is required'),
+  searchConfig: AgentSearchConfigSchema.optional(),
+});
+
+/**
+ * Agent knowledge search response schema
+ */
+export const AgentKnowledgeSearchResponseSchema = z.object({
+  results: z.array(SearchResultSchema),
+  totalCount: z.number(),
+  query: z.string(),
+  searchConfig: AgentSearchConfigSchema.optional(),
+});
+
+/**
+ * Agent simulation index request schema
+ */
+export const AgentSimulationIndexRequestSchema = z.object({
+  simulation_id: z.coerce.number().positive('Simulation ID must be a positive number'),
+});
+
+/**
+ * Agent simulation index response schema
+ */
+export const AgentSimulationIndexResponseSchema = z.object({
+  agent: AgentEntitySchema,
+  simulation_id: z.number(),
+  knowledge_id: z.number(),
+  pdf_search_index_id: z.string().optional(),
+  json_search_index_id: z.string().optional(),
+  message: z.string(),
 });
 
 // ============================================================================
@@ -402,6 +485,7 @@ export const ConnectionEntitySchema = BaseEntitySchema.extend({
   url: z.string().optional(),
   username: z.string().optional(),
   password: z.string().optional(),
+  allowed_domains: z.array(z.string()).optional().default([]),
 });
 
 /**
@@ -411,6 +495,7 @@ export const ConnectionCreateSchema = ConnectionEntitySchema.partial().extend({
   type: ConnectionTypeSchema,
   name: z.string().min(1),
   url: z.string(),
+  allowed_domains: z.array(z.string()).optional().default([]),
 });
 
 /**
@@ -431,34 +516,34 @@ export const WidgetChipSchema = z.object({
 });
 
 /**
- * Zod schema for widget settings - All fields are mandatory
+ * Zod schema for widget settings
  */
 export const WidgetSettingsDataSchema = z.object({
   widget_enabled: z.boolean(),
   widget_appearance: z.enum(['default', 'compact', 'full']),
-  widget_position: z.enum(['bottom-left', 'bottom-right']),
+  widget_position: z.enum(['bottom_left', 'bottom_right']),
   widget_device: z.enum(['desktop', 'mobile', 'desktop_mobile']),
-  widget_header: z.string().min(1, 'Widget header is required'),
-  widget_body: z.string().min(1, 'Widget body is required'),
-  widget_greeting: z.string().min(1, 'Widget greeting is required'),
+  widget_header: z.string(),
+  widget_body: z.string(),
+  widget_greeting: z.string(),
   widget_feature_tell: z.boolean(),
   widget_feature_show: z.boolean(),
   widget_feature_do: z.boolean(),
-  widget_feature_request_human: z.boolean(),
-  widget_background_color: z.string().min(1, 'Widget background color is required'),
-  widget_text_color: z.string().min(1, 'Widget text color is required'),
-  widget_border_color: z.string().min(1, 'Widget border color is required'),
-  widget_accent_color: z.string().min(1, 'Widget accent color is required'),
-  widget_secondary_color: z.string().min(1, 'Widget secondary color is required'),
-  widget_border_radius: z.string().min(1, 'Widget border radius is required'),
-  widget_font_size: z.string().min(1, 'Widget font size is required'),
-  widget_width: z.string().min(1, 'Widget width is required'),
-  widget_height: z.string().min(1, 'Widget height is required'),
-  widget_shadow: z.string().min(1, 'Widget shadow is required'),
-  widget_animation_duration: z.string().min(1, 'Widget animation duration is required'),
-  widget_fade_duration: z.string().min(1, 'Widget fade duration is required'),
+  widget_feature_human: z.boolean(),
+  widget_background_color: z.string(),
+  widget_text_color: z.string(),
+  widget_border_color: z.string(),
+  widget_accent_color: z.string(),
+  widget_secondary_color: z.string(),
+  widget_border_radius: z.string(),
+  widget_font_size: z.string(),
+  widget_width: z.string(),
+  widget_height: z.string(),
+  widget_shadow: z.string(),
+  widget_animation_duration: z.string(),
+  widget_fade_duration: z.string(),
   widget_bounce_effect: z.boolean(),
-  widget_chips: z.array(WidgetChipSchema).min(0, 'Widget chips array is required'),
+  widget_chips: z.array(WidgetChipSchema),
 });
 
 /**
@@ -476,6 +561,7 @@ export const SlackSettingsDataSchema = z.object({
  */
 export const IntegrationEntitySchema = BaseEntitySchema.extend({
   connection_id: z.number(),
+  agent_id: z.number(),
   type: IntegrationTypeSchema,
   settings: z.union([WidgetSettingsDataSchema, SlackSettingsDataSchema]),
   status: EntityStatusSchema,
@@ -495,10 +581,19 @@ export const IntegrationInfoSchema = IntegrationEntitySchema.extend({
 });
 
 /**
+ * Connection with integrations schema - matches API response structure
+ */
+export const ConnectionWithIntegrationsSchema = ConnectionEntitySchema.extend({
+  integrations: z.array(IntegrationEntitySchema),
+  agents: z.array(AgentEntitySchema).optional(),
+});
+
+/**
  * Integration creation schema
  */
 export const IntegrationCreateSchema = IntegrationEntitySchema.partial().extend({
   connection_id: z.number().positive(),
+  agent_id: z.number().positive(),
   type: IntegrationTypeSchema,
   settings: z.union([WidgetSettingsDataSchema, SlackSettingsDataSchema]).optional(),
 });
@@ -513,6 +608,193 @@ export const IntegrationUpdateSchema = IntegrationEntitySchema.partial();
 // ============================================================================
 
 /**
+ * Simulation action schemas
+ */
+export const GoToUrlActionSchema = z.object({
+  go_to_url: z.object({
+    url: z.string(),
+    new_tab: z.boolean(),
+  }),
+});
+
+export const ClickElementByIndexActionSchema = z.object({
+  click_element_by_index: z.object({
+    index: z.number(),
+  }),
+});
+
+export const InputTextActionSchema = z.object({
+  input_text: z.object({
+    index: z.number(),
+    text: z.string(),
+    clear_existing: z.boolean(),
+  }),
+});
+
+export const WriteFileActionSchema = z.object({
+  write_file: z.object({
+    file_name: z.string(),
+    content: z.string(),
+    append: z.boolean(),
+    trailing_newline: z.boolean(),
+    leading_newline: z.boolean(),
+  }),
+});
+
+export const GetOtpActionSchema = z.object({
+  get_otp: z.object({
+    question: z.string(),
+  }),
+});
+
+export const DoneActionSchema = z.object({
+  done: z.object({
+    success: z.boolean(),
+    message: z.string().optional(),
+  }),
+});
+
+export const WaitActionSchema = z.object({
+  wait: z.object({
+    seconds: z.number(),
+  }),
+});
+
+export const ReloadPageActionSchema = z.object({
+  reload_page: z.object({}),
+});
+
+export const OpenNewTabActionSchema = z.object({
+  open_new_tab: z.object({
+    url: z.string(),
+  }),
+});
+
+export const NavigateToUrlActionSchema = z.object({
+  navigate_to_url: z.object({
+    url: z.string(),
+  }),
+});
+
+/**
+ * Union schema for all possible simulation actions
+ */
+export const SimulationActionSchema = z.union([
+  GoToUrlActionSchema,
+  ClickElementByIndexActionSchema,
+  InputTextActionSchema,
+  WriteFileActionSchema,
+  GetOtpActionSchema,
+  DoneActionSchema,
+  WaitActionSchema,
+  ReloadPageActionSchema,
+  OpenNewTabActionSchema,
+  NavigateToUrlActionSchema,
+]);
+
+/**
+ * Model output schema for simulation step
+ */
+export const SimulationModelOutputSchema = z.object({
+  evaluation_previous_goal: z.string().optional(),
+  memory: z.string().optional(),
+  next_goal: z.string().optional(),
+  action: z.array(SimulationActionSchema).optional(),
+  thinking: z.string().optional(),
+});
+
+/**
+ * Result schema for simulation step
+ */
+export const SimulationResultSchema = z.object({
+  is_done: z.boolean(),
+  success: z.boolean().optional(),
+  long_term_memory: z.string().optional(),
+  extracted_content: z.string().optional(),
+  include_extracted_content_only_once: z.boolean().optional(),
+  include_in_memory: z.boolean().optional(),
+  error: z.string().optional(),
+  metadata: z
+    .object({
+      click_x: z.number().optional(),
+      click_y: z.number().optional(),
+      new_tab_opened: z.boolean().optional(),
+      input_x: z.number().optional(),
+      input_y: z.number().optional(),
+    })
+    .optional(),
+  attachments: z.array(z.unknown()).optional(),
+});
+
+/**
+ * Browser tab schema
+ */
+export const BrowserTabSchema = z.object({
+  url: z.string(),
+  title: z.string(),
+  target_id: z.string(),
+  parent_target_id: z.string().nullable(),
+});
+
+/**
+ * Interacted element schema
+ */
+export const InteractedElementSchema = z.object({
+  node_id: z.number(),
+  backend_node_id: z.number(),
+  frame_id: z.string().nullable(),
+  node_type: z.number(),
+  node_value: z.string(),
+  node_name: z.string(),
+  attributes: z.record(z.string()),
+  x_path: z.string(),
+  element_hash: z.number(),
+  bounds: z.object({
+    x: z.number(),
+    y: z.number(),
+    width: z.number(),
+    height: z.number(),
+  }),
+});
+
+/**
+ * Browser state schema for simulation step
+ */
+export const SimulationStateSchema = z.object({
+  tabs: z.array(BrowserTabSchema),
+  screenshot_path: z.string().nullable(),
+  interacted_element: z.array(InteractedElementSchema.nullable()),
+  url: z.string(),
+  title: z.string(),
+});
+
+/**
+ * Metadata schema for simulation step
+ */
+export const SimulationStepMetadataSchema = z.object({
+  step_start_time: z.number(),
+  step_end_time: z.number(),
+  step_number: z.number(),
+});
+
+/**
+ * Individual simulation step schema
+ */
+export const SimulationStepSchema = z.object({
+  model_output: SimulationModelOutputSchema.nullable(),
+  result: z.array(SimulationResultSchema),
+  state: SimulationStateSchema,
+  metadata: SimulationStepMetadataSchema,
+});
+
+/**
+ * Complete simulation history schema
+ */
+export const SimulationHistorySchema = z.object({
+  history: z.array(SimulationStepSchema),
+});
+
+/**
  * App simulation schema
  */
 export const SimulationEntitySchema = BaseEntitySchema.extend({
@@ -523,6 +805,7 @@ export const SimulationEntitySchema = BaseEntitySchema.extend({
   status_message: z.string(),
   path: z.string(),
   instructions: z.string(),
+  history: z.array(SimulationStepSchema).optional(),
 });
 
 /**
@@ -538,6 +821,7 @@ export const SimulationCreateSchema = SimulationEntitySchema.partial().extend({
  * Simulation update schema
  */
 export const SimulationUpdateSchema = z.object({
+  job_id: z.string().optional(),
   status: z.string(),
   status_message: z.string(),
 });
@@ -548,18 +832,14 @@ export const SimulationUpdateSchema = z.object({
 
 export const TourStepSchema = z.object({
   step_number: z.number(),
-  description: z.string(),
   action: z.string(),
   element: z.string(),
-  id: z.string().optional(),
-  class: z.string().optional(),
-  style: z.string().optional(),
-  xpath: z.string().optional(),
+  text: z.string(),
+  description: z.string(),
+  selector: z.string(),
 });
 
-export const TourAnswerSchema = z.object({
-  steps: z.array(TourStepSchema),
-});
+export const TourAnswerSchema = z.array(TourStepSchema);
 
 /**
  * Tour entity schema
@@ -568,16 +848,6 @@ export const TourEntitySchema = BaseEntitySchema.extend({
   connection_id: z.number(),
   question: z.string(),
   answer: TourAnswerSchema,
-  target: TargetTypeSchema,
-});
-
-/**
- * Tour creation schema
- */
-export const TourCreateSchema = TourEntitySchema.partial().extend({
-  question: z.string().min(1),
-  answer: TourAnswerSchema,
-  target: TargetTypeSchema,
 });
 
 // ============================================================================
@@ -671,7 +941,7 @@ export const MigrationRunSchema = z.object({
 });
 
 // ============================================================================
-// FILE UPLOAD RESPONSE SCHEMAS - File upload and media handling
+// FILE UPLOAD RESPONSE SCHEMAS - Express.Multer.File upload and media handling
 // ============================================================================
 
 /**
@@ -707,7 +977,7 @@ export const MeetingEndDataSchema = z.object({
  */
 export const UploadUserLogoDataSchema = z.object({
   user_id: z.number(),
-  file: z.instanceof(File),
+  file: z.custom<Express.Multer.File>(),
 });
 
 /**
@@ -796,6 +1066,48 @@ export const INITIAL_PROMPT_LIMIT = 50;
 export const AUTH_SCOPES = ['openid', 'email', 'profile'];
 
 // ============================================================================
+// TASKPILOT SCHEMAS - TaskPilot-specific types
+// ============================================================================
+
+/**
+ * TaskPilot prompt metadata schema
+ */
+export const TaskPilotPromptMetadataSchema = z.object({
+  step_number: z.number().optional(),
+  duration: z.string().optional(),
+  source: z.string().optional(),
+  tags: z.array(z.string()).optional(),
+});
+
+/**
+ * TaskPilot prompt schema
+ */
+export const TaskPilotPromptSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  description: z.string(),
+  created_at: z.string(),
+  user_id: z.string(),
+  user: z.object({
+    email: z.string().optional(),
+    name: z.string().optional(),
+  }),
+  prompt_text: z.string().optional(),
+  response_text: z.string().optional(),
+  status: z.string().optional(),
+  createdAt: z.string().optional(),
+  metadata: TaskPilotPromptMetadataSchema.optional(),
+  taskpilotUser: z
+    .object({
+      name: z.string().optional(),
+      email: z.string().optional(),
+    })
+    .optional(),
+  question: z.string().optional(),
+  response: z.string().optional(),
+});
+
+// ============================================================================
 // TYPE EXPORTS - Essential TypeScript types for external use
 // ============================================================================
 
@@ -813,7 +1125,6 @@ export type MeetingStatus = z.infer<typeof MeetingStatusSchema>;
 export type ChatStatus = z.infer<typeof ChatRoleSchema>;
 export type ChatSource = z.infer<typeof ChatSourceSchema>;
 export type InstructionType = z.infer<typeof InstructionTypeSchema>;
-export type TargetType = z.infer<typeof TargetTypeSchema>;
 export type ConnectionType = z.infer<typeof ConnectionTypeSchema>;
 export type IntegrationType = z.infer<typeof IntegrationTypeSchema>;
 export type ActionLogType = z.infer<typeof ActionLogTypeSchema>;
@@ -847,6 +1158,13 @@ export type MeetingEndData = z.infer<typeof MeetingEndDataSchema>;
 export type MeetingUpdateData = z.infer<typeof MeetingUpdateSchema>;
 export type AgentCreationData = z.infer<typeof AgentCreateSchema>;
 export type AgentUpdateData = z.infer<typeof AgentUpdateSchema>;
+export type AgentSearchConfig = z.infer<typeof AgentSearchConfigSchema>;
+export type SearchDocument = z.infer<typeof SearchDocumentSchema>;
+export type SearchResult = z.infer<typeof SearchResultSchema>;
+export type AgentKnowledgeSearchRequest = z.infer<typeof AgentKnowledgeSearchRequestSchema>;
+export type AgentKnowledgeSearchResponse = z.infer<typeof AgentKnowledgeSearchResponseSchema>;
+export type AgentSimulationIndexRequest = z.infer<typeof AgentSimulationIndexRequestSchema>;
+export type AgentSimulationIndexResponse = z.infer<typeof AgentSimulationIndexResponseSchema>;
 export type FileUploadResponse = z.infer<typeof FileUploadResponseSchema>;
 export type ChatRequest = z.infer<typeof ChatRequestSchema>;
 export type ChatResponseData = z.infer<typeof ChatResponseSchema>;
@@ -868,14 +1186,27 @@ export type KnowledgeData = z.infer<typeof KnowledgeEntitySchema>;
 export type ConnectionData = z.infer<typeof ConnectionEntitySchema>;
 export type ConnectionCreateData = z.infer<typeof ConnectionCreateSchema>;
 export type ConnectionUpdateData = z.infer<typeof ConnectionUpdateSchema>;
+export type ConnectionWithIntegrationsData = z.infer<typeof ConnectionWithIntegrationsSchema>;
 export type IntegrationData = z.infer<typeof IntegrationEntitySchema>;
 export type IntegrationCreateData = z.infer<typeof IntegrationCreateSchema>;
 export type IntegrationUpdateData = z.infer<typeof IntegrationUpdateSchema>;
 export type WidgetSettingsData = z.infer<typeof WidgetSettingsDataSchema>;
 export type SlackSettingsData = z.infer<typeof SlackSettingsDataSchema>;
 export type WidgetSettingsKey = keyof z.infer<typeof WidgetSettingsDataSchema>;
+export type WidgetChip = z.infer<typeof WidgetChipSchema>;
 export type SlackSettingsKey = keyof z.infer<typeof SlackSettingsDataSchema>;
 export type SimulationData = z.infer<typeof SimulationEntitySchema>;
+export type SimulationStepData = z.infer<typeof SimulationStepSchema>;
+export type SimulationHistoryData = z.infer<typeof SimulationHistorySchema>;
+export type SimulationModelOutputData = z.infer<typeof SimulationModelOutputSchema>;
+export type SimulationResultData = z.infer<typeof SimulationResultSchema>;
+export type SimulationStateData = z.infer<typeof SimulationStateSchema>;
+export type SimulationStepMetadataData = z.infer<typeof SimulationStepMetadataSchema>;
+export type SimulationActionData = z.infer<typeof SimulationActionSchema>;
+export type BrowserTabData = z.infer<typeof BrowserTabSchema>;
+export type InteractedElementData = z.infer<typeof InteractedElementSchema>;
+export type TaskPilotPromptMetadataData = z.infer<typeof TaskPilotPromptMetadataSchema>;
+export type TaskPilotPromptData = z.infer<typeof TaskPilotPromptSchema>;
 export type TourData = z.infer<typeof TourEntitySchema>;
 export type TourAnswerData = z.infer<typeof TourAnswerSchema>;
 export type TourStepData = z.infer<typeof TourStepSchema>;

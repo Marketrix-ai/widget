@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import { IntegrationService } from '../sdk/integrationService';
+import { IntegrationService } from '../services/integrationService';
 import type { MarketrixConfig, WidgetAtmosphereConfig } from '../types';
 import { configManager } from '../utils/ConfigManager';
 
@@ -33,13 +33,13 @@ export const useWidgetAtmosphere = (initialConfig?: MarketrixConfig) => {
           console.log('Loading integration settings for atmosphere...');
           const integrationAtmosphereConfig = await integrationService.loadAtmosphereConfig();
 
-          if (integrationAtmosphereConfig) {
+          if (integrationAtmosphereConfig && typeof integrationAtmosphereConfig === 'object') {
             console.log('Integration atmosphere config loaded, merging with base config');
             // Merge integration settings with base config
             const updatedConfig = {
               ...config,
               ...integrationAtmosphereConfig,
-            };
+            } as WidgetAtmosphereConfig;
             setAtmosphereConfig(updatedConfig);
           } else {
             console.log('No integration atmosphere config found, using default config');
@@ -131,8 +131,8 @@ export const useWidgetAtmosphere = (initialConfig?: MarketrixConfig) => {
     return configManager.shouldShowWidget();
   }, []);
 
-  const startAutoRefresh = useCallback((intervalMs: number = 5000) => {
-    configManager.startAutoRefresh(intervalMs);
+  const startAutoRefresh = useCallback(() => {
+    configManager.startAutoRefresh();
   }, []);
 
   const stopAutoRefresh = useCallback(() => {

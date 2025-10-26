@@ -1,0 +1,240 @@
+# Widget Development Rules
+
+## 🚫 **FORBIDDEN PATTERNS**
+
+### Type Definitions
+- ❌ NEVER duplicate type definitions across files
+- ❌ NEVER create custom interfaces when SDK types exist
+- ❌ NEVER use `any` type without explicit justification
+- ❌ NEVER create `IntegrationSettings` - use `WidgetSettingsData` from SDK
+- ❌ NEVER duplicate widget position, mode, or status types
+
+### Default Values
+- ❌ NEVER hardcode default values inline
+- ❌ NEVER duplicate default configurations
+- ❌ NEVER create mock data when API equivalent exists
+- ❌ NEVER use magic strings - use constants
+- ❌ NEVER duplicate color, size, or animation values
+
+### API & Services
+- ❌ NEVER create duplicate axios instances
+- ❌ NEVER duplicate API endpoint definitions
+- ❌ NEVER create custom HTTP clients - extend HttpClient
+- ❌ NEVER duplicate error handling logic
+- ❌ NEVER duplicate retry logic
+
+### Configuration
+- ❌ NEVER create static config files with hardcoded values
+- ❌ NEVER duplicate transformation logic
+- ❌ NEVER inline configuration defaults in components
+- ❌ NEVER duplicate validation logic
+
+## ✅ **REQUIRED PATTERNS**
+
+### Type Safety
+- ✅ ALWAYS import types from SDK when available
+- ✅ ALWAYS use type guards for API responses
+- ✅ ALWAYS use proper SDK types (`WidgetSettingsData`, `IntegrationData`)
+- ✅ ALWAYS extend base component props from `componentProps.ts`
+- ✅ ALWAYS use utility types for prop validation
+
+### Constants & Defaults
+- ✅ ALWAYS use constants from `src/constants/` for defaults
+- ✅ ALWAYS use `useDefaultSettings` hook for component defaults
+- ✅ ALWAYS use enums from constants for type definitions
+- ✅ ALWAYS use centralized color, size, and animation constants
+
+### Services & API
+- ✅ ALWAYS extend `HttpClient` for new API services
+- ✅ ALWAYS use SDK client for API calls
+- ✅ ALWAYS use centralized error handling
+- ✅ ALWAYS use retry configuration from constants
+- ✅ ALWAYS use proper timeout values from constants
+
+### Configuration Management
+- ✅ ALWAYS use `configTransformers` for data transformation
+- ✅ ALWAYS use `ConfigManager` for state management
+- ✅ ALWAYS use constants for default configurations
+- ✅ ALWAYS validate configuration structure
+
+### Component Development
+- ✅ ALWAYS use standardized prop types from `componentProps.ts`
+- ✅ ALWAYS extend base component props
+- ✅ ALWAYS use proper hook return types
+- ✅ ALWAYS use centralized event handling
+
+## 📁 **FILE ORGANIZATION**
+
+### Import Order
+1. React imports
+2. Third-party libraries
+3. Internal utilities (constants, types, utils)
+4. Services and hooks
+5. Components
+6. Relative imports
+
+### File Structure
+```
+src/
+├── constants/          # Single source of truth for all defaults
+├── types/             # Type definitions (re-export from SDK)
+├── utils/             # Pure utility functions
+├── services/          # API services (extend HttpClient)
+├── hooks/             # React hooks
+└── components/        # React components
+```
+
+### Naming Conventions
+- Constants: `UPPER_SNAKE_CASE`
+- Types: `PascalCase`
+- Functions: `camelCase`
+- Files: `camelCase.ts` or `kebab-case.ts`
+- Components: `PascalCase.tsx`
+
+## 🔧 **DEVELOPMENT WORKFLOW**
+
+### Before Creating New Code
+1. Check if type exists in SDK
+2. Check if constant exists in constants/
+3. Check if utility exists in utils/
+4. Check if service pattern exists in services/
+
+### Before Adding Defaults
+1. Add to constants module
+2. Export from constants/index.ts
+3. Use in components via hooks
+4. Never inline defaults
+
+### Before Creating API Service
+1. Extend HttpClient base class
+2. Use constants for endpoints and timeouts
+3. Use SDK client when possible
+4. Follow error handling patterns
+
+### Before Creating Component
+1. Use prop types from componentProps.ts
+2. Extend appropriate base props
+3. Use default settings hook
+4. Follow event handling patterns
+
+## 🧪 **TESTING REQUIREMENTS**
+
+### Unit Tests
+- Test all utility functions
+- Test all transformation functions
+- Test all constants are properly exported
+- Test all hook return types
+
+### Integration Tests
+- Test API service inheritance
+- Test configuration management
+- Test error handling flows
+- Test retry mechanisms
+
+### Type Tests
+- Test all prop type combinations
+- Test all hook return types
+- Test all service method signatures
+- Test all constant type definitions
+
+## 📊 **PERFORMANCE GUIDELINES**
+
+### Bundle Size
+- Use tree-shaking friendly exports
+- Avoid circular dependencies
+- Use dynamic imports for large utilities
+- Minimize duplicate code
+
+### Runtime Performance
+- Use useMemo for expensive computations
+- Use useCallback for event handlers
+- Avoid inline object creation
+- Use proper dependency arrays
+
+## 🚨 **COMMON VIOLATIONS TO AVOID**
+
+### Type Violations
+```typescript
+// ❌ DON'T - Duplicate type definition
+interface WidgetSettings {
+  enabled: boolean;
+  position: string;
+}
+
+// ✅ DO - Use SDK type
+import { WidgetSettingsData } from '../sdk';
+```
+
+### Default Violations
+```typescript
+// ❌ DON'T - Inline defaults
+const defaultSettings = {
+  enabled: true,
+  position: 'bottom-right',
+  color: '#1BB55B'
+};
+
+// ✅ DO - Use constants
+import { DEFAULT_WIDGET_SETTINGS } from '../constants';
+```
+
+### Service Violations
+```typescript
+// ❌ DON'T - Duplicate axios setup
+const api = axios.create({
+  baseURL: 'https://api.example.com',
+  timeout: 10000
+});
+
+// ✅ DO - Extend HttpClient
+class MyService extends HttpClient {
+  constructor() {
+    super({ baseURL: 'https://api.example.com' });
+  }
+}
+```
+
+### Component Violations
+```typescript
+// ❌ DON'T - Inline prop types
+interface MyComponentProps {
+  config: any;
+  settings: any;
+}
+
+// ✅ DO - Use standardized props
+import { WidgetComponentProps } from '../types/componentProps';
+```
+
+## 📝 **DOCUMENTATION REQUIREMENTS**
+
+### Code Documentation
+- Document all public APIs
+- Document all utility functions
+- Document all constants and their usage
+- Document all type definitions
+
+### README Updates
+- Update when adding new constants
+- Update when adding new utilities
+- Update when changing architecture
+- Update when adding new services
+
+## 🔄 **REFACTORING GUIDELINES**
+
+### When Refactoring
+1. Identify duplicate code patterns
+2. Extract to appropriate utility/constant
+3. Update all usages
+4. Remove old duplicate code
+5. Update tests
+6. Update documentation
+
+### Migration Strategy
+1. Create new utility/constant
+2. Update imports gradually
+3. Test each change
+4. Remove old code
+5. Verify no regressions
+
+Remember: **DRY (Don't Repeat Yourself) is not just a principle - it's a requirement!**

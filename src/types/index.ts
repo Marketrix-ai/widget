@@ -179,39 +179,10 @@ export interface ResponsiveBreakpointsConfig {
   desktop?: string;
 }
 
-export interface WidgetChipConfig {
-  chip_mode: 'show' | 'tell' | 'do';
-  chip_text: string;
-}
+// WidgetChipConfig moved to types/widget.ts
 
-export interface WidgetSettingsConfig {
-  widget_enabled: boolean;
-  widget_appearance: 'default' | 'compact' | 'full';
-  widget_position: 'bottom-left' | 'bottom-right';
-  widget_device: 'desktop' | 'mobile' | 'desktop_mobile';
-  widget_header: string;
-  widget_body: string;
-  widget_greeting: string;
-  widget_feature_tell: boolean;
-  widget_feature_show: boolean;
-  widget_feature_do: boolean;
-  widget_feature_request_human: boolean;
-  widget_background_color: string;
-  widget_text_color: string;
-  widget_border_color: string;
-  widget_accent_color: string;
-  widget_secondary_color: string;
-  widget_border_radius: string;
-  widget_font_size: string;
-  widget_width: string;
-  widget_height: string;
-  widget_shadow: string;
-  widget_animation_duration: string;
-  widget_fade_duration: string;
-  widget_bounce_effect: boolean;
-  widget_z_index: number;
-  widget_chips: WidgetChipConfig[];
-}
+// WidgetSettingsConfig is now replaced by WidgetSettingsData from SDK
+// All widget-specific types are now in types/widget.ts
 
 // Widget atmosphere configuration interface
 export interface WidgetAtmosphereConfig {
@@ -220,7 +191,7 @@ export interface WidgetAtmosphereConfig {
   recorded_time: number;
   recordActive: boolean;
   widget_text: WidgetTextConfig;
-  widget_settings: WidgetSettingsConfig;
+  widget_settings: import('../sdk').WidgetSettingsData;
   widget_type: 'ai' | 'live' | 'hybrid';
   widget_visible: boolean;
   widget_customize: WidgetCustomizeConfig;
@@ -249,3 +220,6 @@ export interface WidgetAtmosphereConfig {
   themes: ThemeConfig;
   responsive_breakpoints: ResponsiveBreakpointsConfig;
 }
+
+// Re-export SDK types for convenience
+export type { IntegrationData, WidgetSettingsData, TourData, TourStep, TourAnswer } from '../sdk';
