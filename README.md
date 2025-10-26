@@ -40,7 +40,7 @@ You can customize the widget using data attributes:
 <script src="path/to/meet.js" 
         marketrix-id="your-marketrix-id" 
         marketrix-key="your-marketrix-key"
-        data-position="bottom-right"
+        data-position="bottom_right"
         data-theme="light"
         data-agent-name="Support Agent"
         data-api-base-url="https://api.marketrix.com">
@@ -56,7 +56,7 @@ You can customize the widget using data attributes:
 | `marketrixId` | string | ✅ | - | Your Marketrix account ID |
 | `marketrixKey` | string | ✅ | - | Your Marketrix API key |
 | `apiBaseUrl` | string | ❌ | `http://localhost:8080` | API base URL override |
-| `position` | string | ❌ | `'bottom-right'` | Widget position (`'bottom-right'`, `'bottom-left'`, `'top-right'`, `'top-left'`) |
+| `position` | string | ❌ | `'bottom_right'` | Widget position (`'bottom_right'`, `'bottom_left'`, `'top-right'`, `'top-left'`) |
 | `theme` | string | ❌ | `'light'` | Theme (`'light'` or `'dark'`) |
 | `avatarUrl` | string | ❌ | - | URL to the agent's avatar image |
 | `agentName` | string | ❌ | `'Support Agent'` | Display name for the support agent |
@@ -246,7 +246,7 @@ interface MarketrixConfig {
   marketrixId: string;
   marketrixKey: string;
   apiBaseUrl?: string;
-  position?: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
+  position?: 'bottom_right' | 'bottom_left' | 'top-right' | 'top-left';
   theme?: 'light' | 'dark';
   avatarUrl?: string;
   agentName?: string;

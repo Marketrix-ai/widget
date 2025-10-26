@@ -1,46 +1,37 @@
-export interface MarketrixConfig {
-  marketrixId: string;
-  marketrixKey: string;
-  apiBaseUrl?: string;
-  position?: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
-  theme?: 'light' | 'dark';
-  avatarUrl?: string;
-  agentName?: string;
-  enabledModes?: ('show' | 'tell' | 'do')[];
+// Chat mode type (matches SDK InstructionType)
+export type ChatMode = 'show' | 'tell' | 'do';
 
-  // Extended atmosphere controls
-  session_time?: number;
-  sessionActive?: boolean;
-  recorded_time?: number;
-  recordActive?: boolean;
-  widget_text?: WidgetTextConfig;
-  widget_type?: 'ai' | 'live' | 'hybrid';
-  widget_visible?: boolean;
-  widget_customize?: WidgetCustomizeConfig;
-  active_avatar?: AvatarConfig;
-  avatar_trigger_time?: number;
-  enable_widget_popup?: boolean;
-  avatar_status?: 'online' | 'offline' | 'busy' | 'away';
-  widget_mode?: 'ai' | 'live' | 'hybrid';
-  mLive_form?: LiveFormConfig;
-  hybrid_agents_on?: boolean;
-  hybrid_agents_off?: boolean;
-  widget_visible_device?: DeviceVisibilityConfig;
-  streaming_avatar_status?: 'idle' | 'typing' | 'speaking' | 'listening';
-  widget_position?: WidgetPositionConfig;
-  enable_ai_tour?: boolean;
-  widget_header_ai?: string;
-  widget_body_ai?: string;
-  widget_header_live?: string;
-  widget_body_live?: string;
-  widget_chat_greeting?: string;
-  widget_tour_greeting?: string;
-  inapp_login_url?: string;
-  inapp_login_id?: string;
-  inapp_login_password?: string;
-  advanced_settings?: AdvancedSettingsConfig;
-  themes?: ThemeConfig;
-  responsive_breakpoints?: ResponsiveBreakpointsConfig;
+// Re-export SDK types for proper type usage
+export type {
+  IntegrationData,
+  AgentData,
+  ConnectionData,
+  UserData,
+  TenantData,
+  WidgetSettingsData,
+} from '../sdk';
+
+/**
+ * MarketrixConfig - Based on actual SDK types
+ *
+ * This interface represents the minimal configuration needed to initialize
+ * the widget, using actual SDK entity types where possible.
+ */
+export interface MarketrixConfig {
+  // Core SDK fields (from IntegrationEntitySchema)
+  marketrixId: string; // maps to marketrix_id from SDK
+  marketrixKey: string; // maps to marketrix_key from SDK
+
+  // Optional API configuration
+  apiBaseUrl?: string;
+
+  // Widget-specific configuration (not in SDK, but needed for widget functionality)
+  position?: 'bottom_left' | 'bottom_right';
+  theme?: 'light' | 'dark';
+  enabledModes?: ChatMode[];
+
+  // Atmosphere configuration for widget-specific features not in SDK
+  atmosphere?: WidgetAtmosphereConfig;
 }
 
 export interface ChatMessage {
@@ -48,7 +39,7 @@ export interface ChatMessage {
   content: string;
   sender: 'user' | 'agent';
   timestamp: Date;
-  mode?: 'show' | 'tell' | 'do';
+  mode?: ChatMode;
 }
 
 export interface WidgetState {
@@ -56,7 +47,7 @@ export interface WidgetState {
   isMinimized: boolean;
   isLoading: boolean;
   messages: ChatMessage[];
-  currentMode: 'show' | 'tell' | 'do';
+  currentMode: ChatMode;
   agentAvailable: boolean;
   error?: string;
 }
@@ -70,7 +61,7 @@ export interface ApiResponse<T = any> {
 
 export interface SendMessageRequest {
   message?: string;
-  mode?: 'show' | 'tell' | 'do';
+  mode?: ChatMode;
   marketrixId?: string;
   marketrixKey?: string;
   connection_id?: number;
@@ -80,13 +71,14 @@ export interface SendMessageRequest {
 export interface SendMessageResponse {
   messageId: string;
   response: string;
-  mode: 'show' | 'tell' | 'do';
+  mode: ChatMode;
   timestamp: Date;
 }
 
-export type WidgetPosition = 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
-export type ChatMode = 'show' | 'tell' | 'do';
 export type Theme = 'light' | 'dark';
+
+// Widget position type (derived from SDK schema)
+export type WidgetPosition = 'bottom_left' | 'bottom_right';
 
 // Extended configuration interfaces
 export interface WidgetTextConfig {
@@ -140,7 +132,7 @@ export interface DeviceVisibilityConfig {
 }
 
 export interface WidgetPositionConfig {
-  position?: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
+  position?: 'bottom_left' | 'bottom_right';
   offset?: {
     x?: number;
     y?: number;
@@ -184,42 +176,64 @@ export interface ResponsiveBreakpointsConfig {
 // WidgetSettingsConfig is now replaced by WidgetSettingsData from SDK
 // All widget-specific types are now in types/widget.ts
 
-// Widget atmosphere configuration interface
+/**
+ * WidgetAtmosphereConfig - Widget-specific configuration not in SDK
+ *
+ * This interface contains all the widget-specific configuration that is not
+ * provided by the SDK but is needed for widget functionality.
+ */
 export interface WidgetAtmosphereConfig {
+  // Session and recording controls
   session_time: number;
   sessionActive: boolean;
   recorded_time: number;
   recordActive: boolean;
+
+  // Widget display and behavior
   widget_text: WidgetTextConfig;
-  widget_settings: import('../sdk').WidgetSettingsData;
+  widget_settings: import('../sdk').WidgetSettingsData; // From SDK
   widget_type: 'ai' | 'live' | 'hybrid';
   widget_visible: boolean;
   widget_customize: WidgetCustomizeConfig;
+  widget_mode: 'ai' | 'live' | 'hybrid';
+  widget_position: WidgetPositionConfig;
+  widget_visible_device: DeviceVisibilityConfig;
+
+  // Avatar configuration
   active_avatar: AvatarConfig;
   avatar_trigger_time: number;
-  enable_widget_popup: boolean;
   avatar_status: 'online' | 'offline' | 'busy' | 'away';
-  widget_mode: 'ai' | 'live' | 'hybrid';
+  streaming_avatar_status: 'idle' | 'typing' | 'speaking' | 'listening';
+
+  // Widget interactions
+  enable_widget_popup: boolean;
+  enable_ai_tour: boolean;
+
+  // Live form configuration
   mLive_form: LiveFormConfig;
+
+  // Hybrid agent controls
   hybrid_agents_on: boolean;
   hybrid_agents_off: boolean;
-  widget_visible_device: DeviceVisibilityConfig;
-  streaming_avatar_status: 'idle' | 'typing' | 'speaking' | 'listening';
-  widget_position: WidgetPositionConfig;
-  enable_ai_tour: boolean;
+
+  // Widget text content
   widget_header_ai: string;
   widget_body_ai: string;
   widget_header_live: string;
   widget_body_live: string;
   widget_chat_greeting: string;
   widget_tour_greeting: string;
+
+  // Authentication (for backward compatibility)
   inapp_login_url: string;
   inapp_login_id: string;
   inapp_login_password: string;
+
+  // Advanced configuration
   advanced_settings: AdvancedSettingsConfig;
   themes: ThemeConfig;
   responsive_breakpoints: ResponsiveBreakpointsConfig;
 }
 
 // Re-export SDK types for convenience
-export type { IntegrationData, WidgetSettingsData, TourData, TourStep, TourAnswer } from '../sdk';
+export type { TourData } from '../sdk';

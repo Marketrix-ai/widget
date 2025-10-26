@@ -2,25 +2,27 @@ import React, { useEffect, useState } from 'react';
 
 import MarketrixIcon from '../assets/marketrix-icon.png';
 import { useWidgetAtmosphere } from '../hooks/useWidgetAtmosphere';
-import type { IntegrationSettings } from '../services/integrationService';
-import type { MarketrixConfig } from '../types';
+import type { WidgetSettingsData } from '../sdk';
+import type { MarketrixConfig, WidgetAtmosphereConfig } from '../types';
 import { getPositionClasses } from '../utils/positioning';
 
 interface WidgetButtonProps {
   config: MarketrixConfig;
+  atmosphere?: WidgetAtmosphereConfig | null;
   onClick: () => void;
   isOpen: boolean;
-  agentAvailable: boolean;
-  isScreenSharing?: boolean;
-  integrationSettings?: IntegrationSettings | null;
+  _agentAvailable: boolean;
+  _isScreenSharing?: boolean;
+  integrationSettings?: WidgetSettingsData | null;
 }
 
 export const WidgetButton: React.FC<WidgetButtonProps> = ({
   config,
+  atmosphere,
   onClick,
   isOpen,
-  agentAvailable,
-  isScreenSharing = false,
+  _agentAvailable,
+  _isScreenSharing = false,
   integrationSettings,
 }) => {
   const theme = config.theme || 'light';
@@ -61,13 +63,7 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
   }, [effectiveSettings.widget_appearance]);
 
   // Use integration settings for positioning, fallback to atmosphere settings
-  // Convert underscore to hyphen for position (API returns bottom_right, but CSS expects bottom-right)
-  const rawPosition = effectiveSettings.widget_position || 'bottom-right';
-  const effectivePosition = rawPosition.replace('_', '-') as
-    | 'bottom-right'
-    | 'bottom-left'
-    | 'top-right'
-    | 'top-left';
+  const effectivePosition = effectiveSettings.widget_position || 'bottom_right';
   const effectivePositionClasses = getPositionClasses(effectivePosition);
 
   return (
@@ -87,10 +83,10 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
       >
         {/* Avatar or Logo */}
         <div className='w-full h-full flex items-center'>
-          {activeAvatar.url || config.avatarUrl ? (
+          {activeAvatar.url || atmosphere?.active_avatar?.url ? (
             <img
-              src={activeAvatar.url || config.avatarUrl}
-              alt={activeAvatar.name || config.agentName || 'Support Agent'}
+              src={activeAvatar.url || atmosphere?.active_avatar?.url}
+              alt={activeAvatar.name || atmosphere?.active_avatar?.name || 'Support Agent'}
               className='w-full h-full object-cover'
               onError={(e) => {
                 // Fallback to default icon if image fails to load
@@ -116,7 +112,7 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
           onClick={onClick}
         >
           <div className='flex gap-2'>
-            {/* Close button - show first for bottom-left position */}
+            {/* Close button - show first for bottom_left position */}
             {effectivePosition.includes('left') && (
               <button
                 onClick={(e) => {
@@ -154,7 +150,7 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
               </div>
             </div>
 
-            {/* Close button - show last for bottom-right position */}
+            {/* Close button - show last for bottom_right position */}
             {effectivePosition.includes('right') && (
               <button
                 onClick={(e) => {
@@ -191,7 +187,7 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
         <div
           className={`absolute bottom-16 ${effectivePosition.includes('left') ? 'left-0' : 'right-0'} mb-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg shadow-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200`}
         >
-          {activeAvatar.name || config.agentName || 'Support Agent'}
+          {activeAvatar.name || atmosphere?.active_avatar?.name || 'Support Agent'}
           <div
             className={`absolute top-full ${effectivePosition.includes('left') ? 'left-4' : 'right-4'} w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900`}
           />

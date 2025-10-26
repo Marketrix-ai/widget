@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 
-import { IntegrationService } from '../services/integrationService';
 import type { WidgetSettingsData } from '../sdk';
+import { IntegrationService } from '../services/integrationService';
 import type { MarketrixConfig } from '../types';
 
 export const useIntegrationSettings = (config: MarketrixConfig) => {

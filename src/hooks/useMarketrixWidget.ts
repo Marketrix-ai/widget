@@ -31,10 +31,8 @@ export const useMarketrixWidget = ({ config }: UseMarketrixWidgetProps) => {
     // Check agent availability on mount
     checkAgentAvailability();
 
-    // Get agent info if not provided in config
-    if (!config.agentName || !config.avatarUrl) {
-      getAgentInfo();
-    }
+    // Get agent info from API
+    getAgentInfo();
   }, [config.marketrixId, config.marketrixKey]);
 
   const checkAgentAvailability = useCallback(async () => {
@@ -55,11 +53,8 @@ export const useMarketrixWidget = ({ config }: UseMarketrixWidgetProps) => {
     try {
       const agentInfo = await apiServiceRef.current.getAgentInfo();
       if (agentInfo) {
-        // Update config with agent info
-        apiServiceRef.current.updateConfig({
-          agentName: agentInfo.name,
-          avatarUrl: agentInfo.avatarUrl,
-        });
+        // Agent info is now handled through atmosphere config
+        // No need to update config with agent info
       }
     } catch (error) {
       console.error('Failed to get agent info:', error);
@@ -116,12 +111,12 @@ export const useMarketrixWidget = ({ config }: UseMarketrixWidgetProps) => {
       }));
 
       try {
-        const response = await apiServiceRef.current.sendMessage(
-          content.trim(),
-          messageMode,
-          connectionId,
-          question
-        );
+        const response = await apiServiceRef.current.sendMessage({
+          message: content.trim(),
+          mode: messageMode,
+          connection_id: connectionId,
+          question: question,
+        });
 
         const agentMessage: ChatMessage = {
           id: response.messageId,

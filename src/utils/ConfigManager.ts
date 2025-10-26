@@ -1,12 +1,15 @@
-import { WidgetSettingsDataSchema } from '../sdk/schema';
+// Removed unused import
+import { DEFAULT_WIDGET_ATMOSPHERE } from '../constants';
 import type { MarketrixConfig, WidgetAtmosphereConfig } from '../types';
-import { DEFAULT_WIDGET_ATMOSPHERE, DEFAULT_WIDGET_SETTINGS } from '../constants';
+
+// Type for timer
+type Timer = ReturnType<typeof setTimeout>;
 
 export class ConfigManager {
   private static instance: ConfigManager;
   private config: WidgetAtmosphereConfig | null = null;
   private listeners: Array<(config: WidgetAtmosphereConfig) => void> = [];
-  private autoRefreshInterval: NodeJS.Timeout | null = null;
+  private autoRefreshInterval: Timer | null = null;
 
   private constructor() {}
 
@@ -78,7 +81,6 @@ export class ConfigManager {
     return {
       marketrixId: config.inapp_login_id || 'default_id',
       marketrixKey: config.inapp_login_password || 'default_key',
-      widgetSettings: config.widget_settings,
       atmosphere: config,
     };
   }
@@ -92,7 +94,7 @@ export class ConfigManager {
     }
 
     const c = config as Record<string, unknown>;
-    
+
     // Check required fields
     const requiredFields = ['widget_settings', 'widget_type', 'widget_visible'];
     for (const field of requiredFields) {
@@ -171,18 +173,15 @@ export class ConfigManager {
     return this.config.widget_visible && this.config.widget_settings.widget_enabled;
   }
 
-  /**
-   * Get default widget settings
-   */
-  private getDefaultWidgetSettings() {
-    return { ...DEFAULT_WIDGET_SETTINGS };
-  }
+  // Removed unused method
 
   /**
    * Update widget position
    */
-  updateWidgetPosition(position: string): void {
-    this.updateConfig({ widget_position: { position: position as any, offset: { x: 20, y: 20 }, z_index: 40 } });
+  updateWidgetPosition(position: 'bottom_left' | 'bottom_right'): void {
+    this.updateConfig({
+      widget_position: { position, offset: { x: 20, y: 20 }, z_index: 40 },
+    });
   }
 
   /**
@@ -195,22 +194,22 @@ export class ConfigManager {
   /**
    * Update widget mode
    */
-  updateWidgetMode(mode: string): void {
-    this.updateConfig({ widget_mode: mode as any, widget_type: mode as any });
+  updateWidgetMode(mode: 'ai' | 'live' | 'hybrid'): void {
+    this.updateConfig({ widget_mode: mode, widget_type: mode });
   }
 
   /**
    * Update avatar status
    */
-  updateAvatarStatus(status: string): void {
-    this.updateConfig({ avatar_status: status as any });
+  updateAvatarStatus(status: 'online' | 'offline' | 'busy'): void {
+    this.updateConfig({ avatar_status: status });
   }
 
   /**
    * Update streaming avatar status
    */
-  updateStreamingAvatarStatus(status: string): void {
-    this.updateConfig({ streaming_avatar_status: status as any });
+  updateStreamingAvatarStatus(status: 'idle' | 'typing' | 'speaking' | 'listening'): void {
+    this.updateConfig({ streaming_avatar_status: status });
   }
 
   /**
@@ -249,7 +248,7 @@ export class ConfigManager {
    * Get default configuration
    */
   private getDefaultConfig(): WidgetAtmosphereConfig {
-    return { ...DEFAULT_WIDGET_ATMOSPHERE };
+    return { ...DEFAULT_WIDGET_ATMOSPHERE } as WidgetAtmosphereConfig;
   }
 }
 

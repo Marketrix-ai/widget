@@ -1,6 +1,6 @@
 /**
  * Widget constants and default values
- * 
+ *
  * This file contains all default values, enums, and magic strings
  * used throughout the widget. This is the single source of truth
  * for all widget configuration defaults.
@@ -8,31 +8,31 @@
 
 // Widget mode types
 export const WIDGET_MODES = ['ai', 'live', 'hybrid'] as const;
-export type WidgetMode = typeof WIDGET_MODES[number];
+export type WidgetMode = (typeof WIDGET_MODES)[number];
 
 // Widget position types
-export const WIDGET_POSITIONS = ['bottom-right', 'bottom-left', 'top-right', 'top-left'] as const;
-export type WidgetPosition = typeof WIDGET_POSITIONS[number];
+export const WIDGET_POSITIONS = ['bottom_left', 'bottom_right'] as const;
+export type WidgetPosition = (typeof WIDGET_POSITIONS)[number];
 
 // Widget appearance types
 export const WIDGET_APPEARANCES = ['default', 'compact', 'full'] as const;
-export type WidgetAppearance = typeof WIDGET_APPEARANCES[number];
+export type WidgetAppearance = (typeof WIDGET_APPEARANCES)[number];
 
 // Widget device types
 export const WIDGET_DEVICES = ['desktop', 'mobile', 'desktop_mobile'] as const;
-export type WidgetDevice = typeof WIDGET_DEVICES[number];
+export type WidgetDevice = (typeof WIDGET_DEVICES)[number];
 
 // Avatar status types
 export const AVATAR_STATUSES = ['online', 'offline', 'busy', 'away'] as const;
-export type AvatarStatus = typeof AVATAR_STATUSES[number];
+export type AvatarStatus = (typeof AVATAR_STATUSES)[number];
 
 // Streaming avatar status types
 export const STREAMING_AVATAR_STATUSES = ['idle', 'typing', 'speaking', 'listening'] as const;
-export type StreamingAvatarStatus = typeof STREAMING_AVATAR_STATUSES[number];
+export type StreamingAvatarStatus = (typeof STREAMING_AVATAR_STATUSES)[number];
 
-// Chat mode types
+// Chat mode type (matches SDK InstructionType)
+export type ChatMode = 'show' | 'tell' | 'do';
 export const CHAT_MODES = ['show', 'tell', 'do'] as const;
-export type ChatMode = typeof CHAT_MODES[number];
 
 // Default widget settings
 export const DEFAULT_WIDGET_SETTINGS = {
@@ -73,7 +73,7 @@ export const DEFAULT_WIDGET_SETTINGS = {
       chip_mode: 'do' as ChatMode,
       chip_text: 'Schedule a demo',
     },
-  ],
+  ] as Array<{ chip_mode: ChatMode; chip_text: string }>,
 } as const;
 
 // Default widget text configuration
@@ -119,7 +119,7 @@ export const DEFAULT_AVATAR = {
 
 // Default widget position configuration
 export const DEFAULT_WIDGET_POSITION = {
-  position: 'bottom-right' as WidgetPosition,
+  position: 'bottom_right' as WidgetPosition,
   offset: { x: 20, y: 20 },
   z_index: 40,
 } as const;
@@ -134,8 +134,8 @@ export const DEFAULT_DEVICE_VISIBILITY = {
 // Default live form configuration
 export const DEFAULT_LIVE_FORM = {
   enabled: true,
-  fields: ['name', 'email', 'message'],
-  required: ['name', 'email'],
+  fields: ['name', 'email', 'message'] as string[],
+  required: ['name', 'email'] as string[],
 } as const;
 
 // Default advanced settings

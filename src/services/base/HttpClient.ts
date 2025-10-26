@@ -1,13 +1,20 @@
 /**
  * Base HTTP Client
- * 
+ *
  * This file provides a shared axios setup to eliminate duplication
  * across different API services. All services should extend this
  * base client instead of creating their own axios instances.
  */
 
-import axios, { type AxiosInstance, type AxiosRequestConfig, type AxiosResponse } from 'axios';
-import { TIMEOUTS, HEADERS, CONTENT_TYPES, RETRY_CONFIG } from '../../constants';
+import axios, {
+  type AxiosError,
+  type AxiosInstance,
+  type AxiosRequestConfig,
+  type AxiosResponse,
+  type InternalAxiosRequestConfig,
+} from 'axios';
+
+import { CONTENT_TYPES, HEADERS, RETRY_CONFIG, TIMEOUTS } from '../../constants';
 
 export interface HttpClientConfig {
   baseURL?: string;
@@ -16,13 +23,23 @@ export interface HttpClientConfig {
   retryConfig?: typeof RETRY_CONFIG;
 }
 
+interface RetryableRequestConfig extends AxiosRequestConfig {
+  _retry?: boolean;
+  _retryCount?: number;
+}
+
+interface ApiError extends Error {
+  status?: number;
+  data?: unknown;
+}
+
 export class HttpClient {
   protected client: AxiosInstance;
   private retryConfig: typeof RETRY_CONFIG;
 
   constructor(config: HttpClientConfig = {}) {
     this.retryConfig = config.retryConfig || RETRY_CONFIG;
-    
+
     this.client = axios.create({
       baseURL: config.baseURL,
       timeout: config.timeout || TIMEOUTS.DEFAULT,
@@ -42,12 +59,12 @@ export class HttpClient {
   private setupInterceptors(): void {
     // Request interceptor
     this.client.interceptors.request.use(
-      (config) => {
+      (config: InternalAxiosRequestConfig<unknown>) => {
         // Add request ID for tracking
         config.headers[HEADERS.X_REQUEST_ID] = this.generateRequestId();
-        
+
         // Log request in development
-        if (process.env.NODE_ENV === 'development') {
+        if (import.meta.env.MODE === 'development') {
           console.log(`[HTTP Request] ${config.method?.toUpperCase()} ${config.url}`, {
             headers: config.headers,
             data: config.data,
@@ -64,9 +81,9 @@ export class HttpClient {
 
     // Response interceptor
     this.client.interceptors.response.use(
-      (response: AxiosResponse) => {
+      (response: AxiosResponse<unknown>) => {
         // Log response in development
-        if (process.env.NODE_ENV === 'development') {
+        if (import.meta.env.MODE === 'development') {
           console.log(`[HTTP Response] ${response.status} ${response.config.url}`, {
             data: response.data,
             headers: response.headers,
@@ -75,8 +92,8 @@ export class HttpClient {
 
         return response;
       },
-      async (error) => {
-        const originalRequest = error.config;
+      async (error: AxiosError) => {
+        const originalRequest = error.config as RetryableRequestConfig;
 
         // Retry logic for network errors
         if (this.shouldRetry(error) && !originalRequest._retry) {
@@ -85,9 +102,11 @@ export class HttpClient {
 
           if (originalRequest._retryCount <= this.retryConfig.MAX_ATTEMPTS) {
             const delay = this.calculateRetryDelay(originalRequest._retryCount);
-            
-            console.warn(`[HTTP Retry] Attempt ${originalRequest._retryCount}/${this.retryConfig.MAX_ATTEMPTS} after ${delay}ms`);
-            
+
+            console.warn(
+              `[HTTP Retry] Attempt ${originalRequest._retryCount}/${this.retryConfig.MAX_ATTEMPTS} after ${delay}ms`
+            );
+
             await this.delay(delay);
             return this.client(originalRequest);
           }
@@ -110,7 +129,7 @@ export class HttpClient {
   /**
    * Determine if a request should be retried
    */
-  private shouldRetry(error: any): boolean {
+  private shouldRetry(error: AxiosError): boolean {
     // Retry on network errors or 5xx server errors
     return (
       !error.response || // Network error
@@ -123,7 +142,8 @@ export class HttpClient {
    * Calculate retry delay with exponential backoff
    */
   private calculateRetryDelay(attempt: number): number {
-    const delay = this.retryConfig.INITIAL_DELAY * Math.pow(this.retryConfig.BACKOFF_FACTOR, attempt - 1);
+    const delay =
+      this.retryConfig.INITIAL_DELAY * Math.pow(this.retryConfig.BACKOFF_FACTOR, attempt - 1);
     return Math.min(delay, this.retryConfig.MAX_DELAY);
   }
 
@@ -138,27 +158,32 @@ export class HttpClient {
    * Delay utility for retries
    */
   private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   /**
    * Normalize error response
    */
-  private normalizeError(error: any): Error {
+  private normalizeError(error: AxiosError): ApiError {
     if (error.response) {
       // Server responded with error status
       const { status, data } = error.response;
-      const message = data?.message || data?.error || `HTTP ${status} Error`;
-      const normalizedError = new Error(message);
-      (normalizedError as any).status = status;
-      (normalizedError as any).data = data;
+      const responseData = data as Record<string, unknown>;
+      const message =
+        (responseData?.message as string) ||
+        (responseData?.error as string) ||
+        `HTTP ${status} Error`;
+
+      const normalizedError = new Error(message) as ApiError;
+      normalizedError.status = status;
+      normalizedError.data = data;
       return normalizedError;
     } else if (error.request) {
       // Network error
-      return new Error('Network Error: Unable to reach server');
+      return new Error('Network Error: Unable to reach server') as ApiError;
     } else {
       // Other error
-      return error;
+      return error as ApiError;
     }
   }
 
@@ -200,7 +225,7 @@ export class HttpClient {
   /**
    * Make GET request
    */
-  async get<T = any>(url: string, config?: AxiosRequestConfig): Promise<T> {
+  async get<T = unknown>(url: string, config?: AxiosRequestConfig): Promise<T> {
     const response = await this.client.get<T>(url, config);
     return response.data;
   }
@@ -208,7 +233,7 @@ export class HttpClient {
   /**
    * Make POST request
    */
-  async post<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
+  async post<T = unknown>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> {
     const response = await this.client.post<T>(url, data, config);
     return response.data;
   }
@@ -216,7 +241,7 @@ export class HttpClient {
   /**
    * Make PUT request
    */
-  async put<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
+  async put<T = unknown>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> {
     const response = await this.client.put<T>(url, data, config);
     return response.data;
   }
@@ -224,7 +249,7 @@ export class HttpClient {
   /**
    * Make PATCH request
    */
-  async patch<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
+  async patch<T = unknown>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> {
     const response = await this.client.patch<T>(url, data, config);
     return response.data;
   }
@@ -232,7 +257,7 @@ export class HttpClient {
   /**
    * Make DELETE request
    */
-  async delete<T = any>(url: string, config?: AxiosRequestConfig): Promise<T> {
+  async delete<T = unknown>(url: string, config?: AxiosRequestConfig): Promise<T> {
     const response = await this.client.delete<T>(url, config);
     return response.data;
   }

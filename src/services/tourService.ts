@@ -1,5 +1,5 @@
 import { sdk } from '../sdk';
-import type { MarketrixConfig, TourData, TourStep, TourAnswer } from '../types';
+import type { MarketrixConfig, TourData } from '../types';
 
 export class TourService {
   private config: MarketrixConfig;
@@ -41,14 +41,13 @@ export class TourService {
           console.log('Tour ID:', tour.id);
           console.log('Connection ID:', tour.connection_id);
           console.log('Question:', tour.question);
-          console.log('Target:', tour.target);
           console.log('Created At:', tour.created_at);
           console.log('Updated At:', tour.updated_at);
-          console.log('Answer Steps Count:', tour.answer.steps.length);
+          console.log('Answer Steps Count:', tour.answer.length);
 
-          if (tour.answer.steps.length > 0) {
+          if (tour.answer.length > 0) {
             console.log('\n--- TOUR STEPS ---');
-            tour.answer.steps.forEach((step, stepIndex) => {
+            tour.answer.forEach((step: any, stepIndex: number) => {
               console.log(`  Step ${stepIndex + 1}:`);
               console.log('    Step ID:', step.id);
               console.log('    Step Title:', step.title);
@@ -69,13 +68,13 @@ export class TourService {
         console.log('Total Tours:', tours.length);
         console.log(
           'Total Steps Across All Tours:',
-          tours.reduce((total, tour) => total + tour.answer.steps.length, 0)
+          tours.reduce((total, tour) => total + tour.answer.length, 0)
         );
 
         // Group by target
         const targetGroups = tours.reduce(
           (groups, tour) => {
-            const target = tour.target || 'No Target';
+            const target = 'No Target'; // TourData doesn't have target property
             if (!groups[target]) {
               groups[target] = [];
             }
@@ -90,7 +89,10 @@ export class TourService {
           console.log(`${target}: ${tours.length} tour(s)`);
         });
       } else {
-        console.warn('No tour data found or API error:', response.body?.error || response.body?.message);
+        console.warn(
+          'No tour data found or API error:',
+          (response.body as any)?.error || (response.body as any)?.message
+        );
       }
     } catch (error) {
       console.error('Failed to fetch tour data by connection ID:', error);
@@ -142,8 +144,7 @@ export class TourService {
             console.log(`  Tour ${index + 1}:`);
             console.log('    Tour ID:', tour.id);
             console.log('    Question:', tour.question);
-            console.log('    Target:', tour.target);
-            console.log('    Steps Count:', tour.answer.steps.length);
+            console.log('    Steps Count:', tour.answer.length);
           });
         });
 
@@ -153,10 +154,13 @@ export class TourService {
         console.log('Unique Connection IDs:', Object.keys(connectionGroups).length);
         console.log(
           'Total Steps Across All Tours:',
-          tours.reduce((total, tour) => total + tour.answer.steps.length, 0)
+          tours.reduce((total, tour) => total + tour.answer.length, 0)
         );
       } else {
-        console.warn('No tour data found or API error:', response.body?.error || response.body?.message);
+        console.warn(
+          'No tour data found or API error:',
+          (response.body as any)?.error || (response.body as any)?.message
+        );
       }
     } catch (error) {
       console.error('Failed to fetch all tour data:', error);

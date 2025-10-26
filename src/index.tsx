@@ -100,10 +100,9 @@ document.addEventListener('DOMContentLoaded', () => {
       const config: MarketrixConfig = {
         marketrixId,
         marketrixKey,
-        position: (script.getAttribute('data-position') as any) || 'bottom-right',
+        position: (script.getAttribute('data-position') as any) || 'bottom_right',
         theme: (script.getAttribute('data-theme') as any) || 'light',
-        avatarUrl: script.getAttribute('data-avatar-url') || undefined,
-        agentName: script.getAttribute('data-agent-name') || undefined,
+        // Avatar and agent info are now handled through atmosphere config
         enabledModes: (script.getAttribute('data-enabled-modes')?.split(',') as any) || [
           'show',
           'tell',

@@ -1,34 +1,26 @@
 /**
  * Configuration transformation utilities
- * 
+ *
  * This file contains all transformation logic for converting between
  * different configuration formats. These are pure functions that can
  * be easily tested and reused.
  */
 
-import type { IntegrationData, WidgetSettingsData } from '../sdk';
-import type { WidgetAtmosphereConfig, MarketrixConfig } from '../types';
 import {
   DEFAULT_WIDGET_ATMOSPHERE,
   DEFAULT_WIDGET_SETTINGS,
-  DEFAULT_WIDGET_CUSTOMIZE,
-  DEFAULT_AVATAR,
-  DEFAULT_WIDGET_POSITION,
-  DEFAULT_DEVICE_VISIBILITY,
-  DEFAULT_LIVE_FORM,
-  DEFAULT_ADVANCED_SETTINGS,
-  DEFAULT_THEMES,
-  DEFAULT_RESPONSIVE_BREAKPOINTS,
-  type WidgetPosition,
   type WidgetMode,
-  type AvatarStatus,
-  type StreamingAvatarStatus,
+  type WidgetPosition,
 } from '../constants';
+import type { IntegrationData, WidgetSettingsData } from '../sdk';
+import type { MarketrixConfig, WidgetAtmosphereConfig } from '../types';
 
 /**
  * Convert integration data to widget atmosphere configuration
  */
-export function integrationToAtmosphere(integration: IntegrationData): WidgetAtmosphereConfig | null {
+export function integrationToAtmosphere(
+  integration: IntegrationData
+): WidgetAtmosphereConfig | null {
   if (!integration?.settings) {
     return null;
   }
@@ -43,12 +35,12 @@ export function integrationToAtmosphere(integration: IntegrationData): WidgetAtm
 
   return {
     ...DEFAULT_WIDGET_ATMOSPHERE,
-    
+
     // Widget settings - direct mapping from integration settings
     widget_settings: {
       ...DEFAULT_WIDGET_SETTINGS,
       widget_enabled: settings.widget_enabled ?? true,
-      widget_appearance: mode,
+      widget_appearance: settings.widget_appearance ?? 'default',
       widget_position: position,
       widget_device: settings.widget_device ?? 'desktop_mobile',
       widget_header: settings.widget_header ?? '🤖 AI Assistant',
@@ -58,7 +50,8 @@ export function integrationToAtmosphere(integration: IntegrationData): WidgetAtm
       widget_feature_show: settings.widget_feature_show ?? true,
       widget_feature_do: settings.widget_feature_do ?? true,
       widget_feature_human: settings.widget_feature_human ?? true,
-      widget_background_color: settings.widget_background_color ?? 'linear-gradient(135deg, #1BB55B45 0%, #987ADD45 100%)',
+      widget_background_color:
+        settings.widget_background_color ?? 'linear-gradient(135deg, #1BB55B45 0%, #987ADD45 100%)',
       widget_text_color: settings.widget_text_color ?? '#333333',
       widget_border_color: settings.widget_border_color ?? 'rgba(255, 255, 255, 0.3)',
       widget_accent_color: settings.widget_accent_color ?? '#1BB55B',
@@ -71,7 +64,7 @@ export function integrationToAtmosphere(integration: IntegrationData): WidgetAtm
       widget_animation_duration: settings.widget_animation_duration ?? '300ms',
       widget_fade_duration: settings.widget_fade_duration ?? '200ms',
       widget_bounce_effect: settings.widget_bounce_effect ?? true,
-      widget_chips: settings.widget_chips ?? DEFAULT_WIDGET_SETTINGS.widget_chips,
+      widget_chips: settings.widget_chips ?? [...DEFAULT_WIDGET_SETTINGS.widget_chips],
     },
 
     // Widget text - from integration settings
@@ -91,7 +84,9 @@ export function integrationToAtmosphere(integration: IntegrationData): WidgetAtm
       colors: {
         primary: settings.widget_accent_color ?? '#1BB55B',
         secondary: settings.widget_secondary_color ?? '#987ADD',
-        background: settings.widget_background_color ?? 'linear-gradient(135deg, #1BB55B26 0%, #987ADD30 100%)',
+        background:
+          settings.widget_background_color ??
+          'linear-gradient(135deg, #1BB55B26 0%, #987ADD30 100%)',
         text: settings.widget_text_color ?? '#333333',
         border: settings.widget_border_color ?? 'rgba(255, 255, 255, 0.2)',
       },
@@ -110,7 +105,7 @@ export function integrationToAtmosphere(integration: IntegrationData): WidgetAtm
 
     // Widget position - converted from API format
     widget_position: {
-      position: position,
+      position,
       offset: { x: 20, y: 20 },
       z_index: 40,
     },
@@ -124,7 +119,7 @@ export function integrationToAtmosphere(integration: IntegrationData): WidgetAtm
 
     // Live form - from integration settings
     mLive_form: {
-      enabled: settings.widget_feature_human ?? true,
+      enabled: (settings.widget_feature_human as boolean) ?? true,
       fields: ['name', 'email', 'message'],
       required: ['name', 'email'],
     },
@@ -144,15 +139,15 @@ export function integrationToAtmosphere(integration: IntegrationData): WidgetAtm
     themes: {
       light: {
         background: '#ffffff',
-        text: settings.widget_text_color ?? '#333333',
+        text: (settings.widget_text_color as string) ?? '#333333',
         border: '#e5e7eb',
-        accent: settings.widget_accent_color ?? '#1BB55B',
+        accent: (settings.widget_accent_color as string) ?? '#1BB55B',
       },
       dark: {
         background: '#1f2937',
         text: '#f9fafb',
         border: '#374151',
-        accent: settings.widget_accent_color ?? '#10b981',
+        accent: (settings.widget_accent_color as string) ?? '#10b981',
       },
     },
 
@@ -176,8 +171,7 @@ export function atmosphereToMarketrix(atmosphere: WidgetAtmosphereConfig): Marke
   return {
     marketrixId: atmosphere.inapp_login_id || 'default_id',
     marketrixKey: atmosphere.inapp_login_password || 'default_key',
-    widgetSettings: atmosphere.widget_settings,
-    atmosphere: atmosphere,
+    atmosphere,
   };
 }
 
@@ -200,7 +194,7 @@ export function validateWidgetSettings(settings: unknown): settings is WidgetSet
   }
 
   const s = settings as Record<string, unknown>;
-  
+
   // Check required fields
   const requiredFields = ['widget_enabled', 'widget_appearance', 'widget_position'];
   for (const field of requiredFields) {
@@ -215,22 +209,27 @@ export function validateWidgetSettings(settings: unknown): settings is WidgetSet
 /**
  * Parse integration settings from string or object
  */
-function parseIntegrationSettings(settings: unknown): Record<string, unknown> | null {
+function parseIntegrationSettings(settings: unknown): WidgetSettingsData | null {
   if (!settings) {
     return null;
   }
 
   if (typeof settings === 'string') {
     try {
-      return JSON.parse(settings) as Record<string, unknown>;
+      const parsed: unknown = JSON.parse(settings);
+      // Validate that it has the required widget settings structure
+      if (parsed && typeof parsed === 'object' && parsed !== null && 'widget_enabled' in parsed) {
+        return parsed as WidgetSettingsData;
+      }
+      return null;
     } catch (error) {
       console.error('Failed to parse settings JSON:', error);
       return null;
     }
   }
 
-  if (typeof settings === 'object') {
-    return settings as Record<string, unknown>;
+  if (typeof settings === 'object' && settings !== null && 'widget_enabled' in settings) {
+    return settings as WidgetSettingsData;
   }
 
   return null;
@@ -241,10 +240,9 @@ function parseIntegrationSettings(settings: unknown): Record<string, unknown> | 
  */
 function normalizePosition(position: unknown): WidgetPosition {
   if (typeof position === 'string') {
-    // Convert from API format (bottom-right) to internal format (bottom_right)
-    const normalized = position.replace('-', '_');
-    if (['bottom_right', 'bottom_left', 'top_right', 'top_left'].includes(normalized)) {
-      return normalized as WidgetPosition;
+    // Use position directly (SDK uses underscore format)
+    if (['bottom_left', 'bottom_right'].includes(position)) {
+      return position as WidgetPosition;
     }
   }
   return 'bottom_right';
@@ -266,26 +264,29 @@ function normalizeMode(mode: unknown): WidgetMode {
  * Convert position from internal format to API format
  */
 export function positionToApiFormat(position: WidgetPosition): string {
-  return position.replace('_', '-');
+  return position; // No conversion needed - SDK uses underscore format
 }
 
 /**
  * Convert position from API format to internal format
  */
 export function positionFromApiFormat(position: string): WidgetPosition {
-  return position.replace('-', '_') as WidgetPosition;
+  if (['bottom_left', 'bottom_right'].includes(position)) {
+    return position as WidgetPosition;
+  }
+  return 'bottom_right';
 }
 
 /**
  * Create default atmosphere config
  */
 export function createDefaultAtmosphere(): WidgetAtmosphereConfig {
-  return { ...DEFAULT_WIDGET_ATMOSPHERE };
+  return { ...DEFAULT_WIDGET_ATMOSPHERE } as WidgetAtmosphereConfig;
 }
 
 /**
  * Create default widget settings
  */
 export function createDefaultWidgetSettings(): WidgetSettingsData {
-  return { ...DEFAULT_WIDGET_SETTINGS };
+  return { ...DEFAULT_WIDGET_SETTINGS } as WidgetSettingsData;
 }

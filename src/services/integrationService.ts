@@ -108,13 +108,9 @@ export class IntegrationService {
   convertToWidgetConfig(settings: WidgetSettingsData): Partial<WidgetSettingsData> {
     return {
       widget_enabled: settings.widget_enabled ?? true,
-      widget_appearance:
-        (settings.widget_appearance as 'default' | 'compact' | 'full') ?? 'default',
-      widget_position:
-        (settings.widget_position?.replace('-', '_') as 'bottom_left' | 'bottom_right') ??
-        'bottom_right',
-      widget_device:
-        (settings.widget_device as 'desktop' | 'mobile' | 'desktop_mobile') ?? 'desktop_mobile',
+      widget_appearance: settings.widget_appearance ?? 'default',
+      widget_position: settings.widget_position ?? 'bottom_right',
+      widget_device: settings.widget_device ?? 'desktop_mobile',
       widget_header: settings.widget_header ?? '🤖 AI Assistant',
       widget_body: settings.widget_body ?? "I'm here to help you with any questions or tasks.",
       widget_greeting: settings.widget_greeting ?? "🎉 Welcome! I'm your AI assistant!",

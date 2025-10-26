@@ -1,12 +1,12 @@
 /**
  * Standardized Component Props
- * 
+ *
  * This file provides consistent prop type definitions for all widget components.
  * It ensures uniform prop patterns and eliminates prop drilling issues.
  */
 
-import type { MarketrixConfig, WidgetSettingsData, WidgetAtmosphereConfig } from './index';
-import type { WidgetComponentProps, WidgetHookReturn, WidgetState, WidgetEvents } from './widget';
+import type { MarketrixConfig, WidgetAtmosphereConfig, WidgetSettingsData } from './index';
+import type { WidgetEvents, WidgetHookReturn, WidgetState } from './widget';
 
 // Base component props that all widget components should extend
 export interface BaseComponentProps {
@@ -147,49 +147,37 @@ export interface ListProps<T = any> {
 }
 
 // Combined prop types for common component patterns
-export interface WidgetComponentProps extends 
-  BaseComponentProps,
-  ConfigProps,
-  SettingsProps,
-  LoadingProps,
-  VisibilityProps,
-  WidgetEventProps {}
+export interface WidgetComponentProps
+  extends BaseComponentProps,
+    ConfigProps,
+    SettingsProps,
+    LoadingProps,
+    VisibilityProps,
+    WidgetEventProps {}
 
-export interface ChatComponentProps extends 
-  BaseComponentProps,
-  ConfigProps,
-  SettingsProps,
-  ChatProps,
-  LoadingProps,
-  VisibilityProps {}
+export interface ChatComponentProps
+  extends BaseComponentProps,
+    ConfigProps,
+    SettingsProps,
+    ChatProps,
+    LoadingProps,
+    VisibilityProps {}
 
-export interface AvatarComponentProps extends 
-  BaseComponentProps,
-  AvatarProps,
-  VisibilityProps {}
+export interface AvatarComponentProps extends BaseComponentProps, AvatarProps, VisibilityProps {}
 
-export interface ButtonComponentProps extends 
-  BaseComponentProps,
-  ButtonProps {}
+export interface ButtonComponentProps extends BaseComponentProps, ButtonProps {}
 
-export interface InputComponentProps extends 
-  BaseComponentProps,
-  InputProps {}
+export interface InputComponentProps extends BaseComponentProps, InputProps {}
 
-export interface ModalComponentProps extends 
-  BaseComponentProps,
-  ModalProps,
-  SizeProps,
-  PositionProps {}
+export interface ModalComponentProps
+  extends BaseComponentProps,
+    ModalProps,
+    SizeProps,
+    PositionProps {}
 
-export interface FormComponentProps extends 
-  BaseComponentProps,
-  FormProps {}
+export interface FormComponentProps extends BaseComponentProps, FormProps {}
 
-export interface ListComponentProps<T = any> extends 
-  BaseComponentProps,
-  ListProps<T>,
-  SizeProps {}
+export interface ListComponentProps<T = any> extends BaseComponentProps, ListProps<T>, SizeProps {}
 
 // Hook return types
 export interface UseWidgetReturn extends WidgetHookReturn<WidgetState> {

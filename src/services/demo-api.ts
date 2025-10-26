@@ -1,4 +1,4 @@
-import type { MarketrixConfig, SendMessageResponse } from '../types';
+import type { MarketrixConfig, SendMessageRequest, SendMessageResponse } from '../types';
 
 export interface DemoContextMessage {
   question: string;
@@ -391,7 +391,12 @@ class DemoApiService {
     this.config = config;
   }
 
-  async sendMessage(message: string, mode: 'show' | 'tell' | 'do'): Promise<SendMessageResponse> {
+  async sendMessage(request: SendMessageRequest): Promise<SendMessageResponse> {
+    const { message, mode = 'tell' } = request;
+    
+    if (!message) {
+      throw new Error('Message is required');
+    }
     // Simulate API delay
     await new Promise((resolve) => setTimeout(resolve, 1000 + Math.random() * 1000));
 

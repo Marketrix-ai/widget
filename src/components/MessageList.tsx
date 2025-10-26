@@ -1,4 +1,4 @@
-/// <reference lib="dom" />
+// / <reference lib="dom" />
 import React, { useState } from 'react';
 import { IoChatbubbleEllipsesOutline } from 'react-icons/io5';
 import { LuMousePointerClick } from 'react-icons/lu';
@@ -7,7 +7,7 @@ import { SiTicktick } from 'react-icons/si';
 import MarketrixLogo from '../assets/marketrix-icon.png';
 import { API_URL_GLOBAL_SET } from '../config';
 import { useWidgetAtmosphere } from '../hooks/useWidgetAtmosphere';
-import type { IntegrationSettings } from '../services/integrationService';
+import type { WidgetSettingsData } from '../sdk';
 import type { ChatMessage, MarketrixConfig } from '../types';
 import { formatMessageTime } from '../utils/formatting';
 import { ScreenAccessModal } from './ScreenAccessModal';
@@ -33,7 +33,7 @@ interface MessageListProps {
   onSetMode?: (mode: 'show' | 'tell' | 'do') => void;
   config?: MarketrixConfig;
   onStepGuideStart?: () => void;
-  integrationSettings?: IntegrationSettings | null;
+  integrationSettings?: WidgetSettingsData | null;
   onScreenSharingChange?: (
     isSharing: boolean,
     stream?: MediaStream | null,
@@ -58,8 +58,30 @@ export const MessageList: React.FC<MessageListProps> = ({
   const activeAvatar = getActiveAvatar();
 
   // Tour data state
-  const [tourData, setTourData] = useState<any>(null);
-  const [parsedSteps, setParsedSteps] = useState<any[]>([]);
+  interface TourStep {
+    id: number;
+    title: string;
+    description: string;
+    text?: string;
+    selector?: string;
+    xpath?: string;
+    action?: string;
+    order: number;
+    step_number?: number;
+    element?: HTMLElement;
+  }
+
+  interface TourData {
+    id: number;
+    connection_id: number;
+    question: string;
+    created_at: string;
+    updated_at: string;
+    answer: TourStep[];
+  }
+
+  const [tourData, setTourData] = useState<TourData | null>(null);
+  const [parsedSteps, setParsedSteps] = useState<TourStep[]>([]);
   const [isLoadingTour, setIsLoadingTour] = useState(false);
 
   // Step-by-step tour state
@@ -69,7 +91,7 @@ export const MessageList: React.FC<MessageListProps> = ({
   const [stepTimer, setStepTimer] = useState<number | null>(null);
 
   // Screen sharing state
-  const [isScreenAccessActive, setIsScreenAccessActive] = useState(false);
+  const [_isScreenAccessActive, setIsScreenAccessActive] = useState(false);
   const [showScreenAccessModal, setShowScreenAccessModal] = useState(false);
   const [pendingAction, setPendingAction] = useState<{ type: 'show' | 'do'; text: string } | null>(
     null
@@ -101,7 +123,7 @@ export const MessageList: React.FC<MessageListProps> = ({
   let preventClickHandler: ((e: Event) => void) | null = null;
 
   // Function to start step-by-step tour guide
-  const startStepGuide = (steps: any[]) => {
+  const startStepGuide = (steps: TourStep[]) => {
     console.log('🎯 Starting tour with', steps.length, 'steps');
 
     setIsStepGuideRunning(true);
@@ -133,7 +155,7 @@ export const MessageList: React.FC<MessageListProps> = ({
   };
 
   // Function to show current step with spotlight
-  const showCurrentStep = (steps: any[], stepIndex: number) => {
+  const showCurrentStep = (steps: TourStep[], stepIndex: number) => {
     if (stepIndex >= steps.length) {
       console.log('✅ Tour completed!');
       stopStepGuide();
@@ -160,19 +182,20 @@ export const MessageList: React.FC<MessageListProps> = ({
     }
 
     // Find the element for this step - prioritize selector over element
-    const selector = step.selector || step.element;
+    const selector = step.selector || (typeof step.element === 'string' ? step.element : undefined);
 
-    let element = findElementBySelector(selector);
+    let element = selector ? findElementBySelector(selector) : null;
     if (!element) {
       console.warn(`❌ Element not found for step ${stepIndex + 1}:`, selector);
 
       // Try alternative selectors
+      const elementStr = typeof step.element === 'string' ? step.element : '';
       const alternativeSelectors = [
-        `[data-demo-element="${step.element}"]`,
-        `#${step.element}`,
-        `.${step.element}`,
-        step.element,
-      ];
+        `[data-demo-element="${elementStr}"]`,
+        `#${elementStr}`,
+        `.${elementStr}`,
+        elementStr,
+      ].filter(Boolean);
 
       let foundElement = null;
       for (const altSelector of alternativeSelectors) {
@@ -189,12 +212,12 @@ export const MessageList: React.FC<MessageListProps> = ({
         const timer = setTimeout(() => {
           showCurrentStep(steps, stepIndex + 1);
         }, 2000);
-        setStepTimer(timer);
+        setStepTimer(timer as unknown as number);
         return;
       }
 
       // Use the found element
-      element = foundElement;
+      element = foundElement as HTMLElement;
     }
 
     if (!element) {
@@ -218,10 +241,10 @@ export const MessageList: React.FC<MessageListProps> = ({
   // Function to create step spotlight and description (improved positioning)
   const createStepSpotlight = (
     element: HTMLElement,
-    step: any,
+    step: TourStep,
     stepIndex: number,
     totalSteps: number,
-    steps: any[]
+    steps: TourStep[]
   ) => {
     // Remove existing spotlight elements
     removeStepHighlights();
@@ -403,7 +426,7 @@ export const MessageList: React.FC<MessageListProps> = ({
   };
 
   // Function to execute step action
-  const executeStepAction = (element: HTMLElement, step: any) => {
+  const executeStepAction = (element: HTMLElement, step: TourStep) => {
     const action = step.action || '';
 
     try {
@@ -582,14 +605,14 @@ export const MessageList: React.FC<MessageListProps> = ({
     }, 30); // Faster typing for better UX
 
     // Store the interval so we can clear it later
-    activeTypewriterIntervals.set(stepIndex, typeInterval);
+    activeTypewriterIntervals.set(stepIndex, typeInterval as unknown as number);
   };
 
   // Function to add click action handler (for click actions)
   const addClickActionHandler = (
     element: HTMLElement,
-    step: any,
-    steps: any[],
+    step: TourStep,
+    steps: TourStep[],
     stepIndex: number
   ) => {
     // Add click event listener to the highlighted element
@@ -622,11 +645,12 @@ export const MessageList: React.FC<MessageListProps> = ({
     element.addEventListener('click', clickHandler, true);
 
     // Store the handler for cleanup if needed
-    (element as any)._tourClickHandler = clickHandler;
+    (element as HTMLElement & { _tourClickHandler?: (e: Event) => void })._tourClickHandler =
+      clickHandler;
   };
 
   // Function to add Done button handler (for fill actions only)
-  const addDoneButtonHandler = (steps: any[], currentStepIndex: number) => {
+  const addDoneButtonHandler = (steps: TourStep[], currentStepIndex: number) => {
     setTimeout(() => {
       // Handle Done/Finish button
       const doneBtn = document.getElementById('done-step-btn');
@@ -636,8 +660,10 @@ export const MessageList: React.FC<MessageListProps> = ({
 
           // Execute the step action before moving to next
           const currentStep = steps[currentStepIndex];
-          const selector = currentStep.selector || currentStep.element;
-          const element = findElementBySelector(selector);
+          const selector =
+            currentStep.selector ||
+            (typeof currentStep.element === 'string' ? currentStep.element : undefined);
+          const element = selector ? findElementBySelector(selector) : null;
           if (element) {
             executeStepAction(element, currentStep);
           }
@@ -851,9 +877,12 @@ export const MessageList: React.FC<MessageListProps> = ({
       element.classList.remove('step-highlight');
 
       // Remove any tour click handlers
-      if ((element as any)._tourClickHandler) {
-        element.removeEventListener('click', (element as any)._tourClickHandler, true);
-        delete (element as any)._tourClickHandler;
+      const elementWithHandler = element as HTMLElement & {
+        _tourClickHandler?: (e: Event) => void;
+      };
+      if (elementWithHandler._tourClickHandler) {
+        element.removeEventListener('click', elementWithHandler._tourClickHandler, true);
+        delete elementWithHandler._tourClickHandler;
       }
     });
 
@@ -933,7 +962,7 @@ export const MessageList: React.FC<MessageListProps> = ({
       // Cache the result (even if null)
       elementCache.set(selector, element);
       return element;
-    } catch (error) {
+    } catch {
       elementCache.set(selector, null);
       return null;
     }
@@ -1103,88 +1132,97 @@ export const MessageList: React.FC<MessageListProps> = ({
         return;
       }
 
-      const data = await response.json();
+      const data: unknown = await response.json();
       console.log('=== TOUR API RESPONSE ===');
       console.log('Full response:', data);
 
-      if (data.success && data.data) {
-        const tour = data.data;
-        console.log('=== TOUR DATA ===');
-        console.log('Tour ID:', tour.id);
-        console.log('Connection ID:', tour.connection_id);
-        console.log('Question:', tour.question);
-        console.log('Answer (raw):', tour.answer);
+      if (data && typeof data === 'object' && 'success' in data && 'data' in data) {
+        const responseData = data as { success: boolean; data: unknown };
+        if (responseData.success && responseData.data) {
+          const tour = responseData.data as TourData;
+          console.log('=== TOUR DATA ===');
+          console.log('Tour ID:', tour.id);
+          console.log('Connection ID:', tour.connection_id);
+          console.log('Question:', tour.question);
+          console.log('Answer (raw):', tour.answer);
 
-        // Store tour data
-        setTourData(tour);
+          // Store tour data
+          setTourData(tour);
 
-        // Handle the answer data - it's already a JSON object, not a string
-        if (tour.answer) {
-          try {
-            console.log('=== PROCESSING TOUR ANSWER ===');
-            console.log('Tour answer type:', typeof tour.answer);
-            console.log('Tour answer:', tour.answer);
+          // Handle the answer data - it's already a JSON object, not a string
+          if (tour.answer) {
+            try {
+              console.log('=== PROCESSING TOUR ANSWER ===');
+              console.log('Tour answer type:', typeof tour.answer);
+              console.log('Tour answer:', tour.answer);
 
-            // The answer is already a JSON object (array of steps)
-            let steps = tour.answer;
+              // The answer is already a JSON object (array of steps)
+              let steps = tour.answer;
 
-            // If it's a string, parse it
-            if (typeof tour.answer === 'string') {
-              console.log('Parsing answer string...');
-              steps = JSON.parse(tour.answer);
-            }
+              // If it's a string, parse it
+              if (typeof tour.answer === 'string') {
+                console.log('Parsing answer string...');
+                steps = JSON.parse(tour.answer) as TourStep[];
+              }
 
-            // Handle both array format and object with steps property
-            let parsedSteps = steps;
-            if (steps && typeof steps === 'object' && steps.steps && Array.isArray(steps.steps)) {
-              console.log('Answer has steps property, extracting steps array');
-              parsedSteps = steps.steps;
-            }
+              // Handle both array format and object with steps property
+              let parsedSteps = steps;
+              if (
+                steps &&
+                typeof steps === 'object' &&
+                !Array.isArray(steps) &&
+                'steps' in steps &&
+                Array.isArray((steps as { steps: unknown }).steps)
+              ) {
+                console.log('Answer has steps property, extracting steps array');
+                parsedSteps = (steps as { steps: TourStep[] }).steps;
+              }
 
-            console.log('Final parsed steps:', parsedSteps);
+              console.log('Final parsed steps:', parsedSteps);
 
-            // Store parsed steps
-            if (Array.isArray(parsedSteps) && parsedSteps.length > 0) {
-              console.log('=== TOUR STEPS ===');
-              console.log('Number of steps:', parsedSteps.length);
-              setParsedSteps(parsedSteps);
+              // Store parsed steps
+              if (Array.isArray(parsedSteps) && parsedSteps.length > 0) {
+                console.log('=== TOUR STEPS ===');
+                console.log('Number of steps:', parsedSteps.length);
+                setParsedSteps(parsedSteps);
 
-              // Log each step step by step
-              parsedSteps.forEach((step, index) => {
-                console.log(`\n--- STEP ${index + 1} ---`);
-                console.log('Step Number:', step.step_number);
-                console.log('Action:', step.action);
-                console.log('Element:', step.element);
-                console.log('Text:', step.text);
-                console.log('Description:', step.description);
-                console.log('Selector:', step.selector);
-                console.log('Full Step Object:', step);
-              });
+                // Log each step step by step
+                parsedSteps.forEach((step, index) => {
+                  console.log(`\n--- STEP ${index + 1} ---`);
+                  console.log('Step Number:', step.step_number);
+                  console.log('Action:', step.action);
+                  console.log('Element:', step.element);
+                  console.log('Text:', step.text);
+                  console.log('Description:', step.description);
+                  console.log('Selector:', step.selector);
+                  console.log('Full Step Object:', step);
+                });
 
-              // Add step guide styles
-              addStepGuideStyles();
+                // Add step guide styles
+                addStepGuideStyles();
 
-              // Start step-by-step tour guide
-              console.log('=== STARTING STEP-BY-STEP TOUR ===');
-              startStepGuide(parsedSteps);
-            } else {
-              console.log('No valid steps found in tour answer');
-              console.log('Steps type:', typeof parsedSteps);
-              console.log('Steps value:', parsedSteps);
+                // Start step-by-step tour guide
+                console.log('=== STARTING STEP-BY-STEP TOUR ===');
+                startStepGuide(parsedSteps);
+              } else {
+                console.log('No valid steps found in tour answer');
+                console.log('Steps type:', typeof parsedSteps);
+                console.log('Steps value:', parsedSteps);
+                setParsedSteps([]);
+              }
+            } catch (parseError) {
+              console.error('=== ERROR PROCESSING TOUR ANSWER ===');
+              console.error('Parse error:', parseError);
+              console.error('Raw answer:', tour.answer);
               setParsedSteps([]);
             }
-          } catch (parseError) {
-            console.error('=== ERROR PROCESSING TOUR ANSWER ===');
-            console.error('Parse error:', parseError);
-            console.error('Raw answer:', tour.answer);
+          } else {
+            console.log('No answer field in tour data');
             setParsedSteps([]);
           }
         } else {
-          console.log('No answer field in tour data');
-          setParsedSteps([]);
+          console.log('No tour data found in response');
         }
-      } else {
-        console.log('No tour data found in response');
       }
     } catch (error) {
       console.error('=== ERROR FETCHING TOUR DATA ===');
@@ -1218,7 +1256,7 @@ export const MessageList: React.FC<MessageListProps> = ({
     if (integrationSettings?.widget_chips && integrationSettings.widget_chips.length > 0) {
       console.log('Widget chips from integration settings:', integrationSettings.widget_chips);
 
-      return integrationSettings.widget_chips.map((chip: ChipData, index) => {
+      return integrationSettings.widget_chips.map((chip: ChipData, index: number) => {
         // Handle both formats: chip_text (expected) and question (actual backend)
         const chipText = chip.chip_text || chip.question || '';
         const chipMode = chip.chip_mode || chip.type || 'tell';
@@ -1317,7 +1355,15 @@ export const MessageList: React.FC<MessageListProps> = ({
 
   // Check for duplicate IDs and fix them
   const seenIds = new Set();
-  const uniqueSuggestedActions = suggestedActions.map((action) => {
+  interface SuggestedActionItem {
+    id: string;
+    text: string;
+    icon: JSX.Element;
+    type: 'tell' | 'show' | 'do';
+    isShow: boolean;
+  }
+
+  const uniqueSuggestedActions = suggestedActions.map((action: SuggestedActionItem) => {
     let uniqueId = action.id;
     let counter = 0;
     while (seenIds.has(uniqueId)) {
@@ -1432,7 +1478,7 @@ export const MessageList: React.FC<MessageListProps> = ({
       console.log('🎥 Starting screen capture...');
 
       // Request screen capture permission
-      const stream = await navigator.mediaDevices.getDisplayMedia({
+      const stream = await (navigator as Navigator & { mediaDevices: MediaDevices }).mediaDevices.getDisplayMedia({
         video: {
           width: { ideal: 1920 },
           height: { ideal: 1080 },
@@ -1486,14 +1532,17 @@ export const MessageList: React.FC<MessageListProps> = ({
       }
 
       // Handle when user stops sharing
-      stream.getVideoTracks()[0].onended = () => {
-        stopScreenCapture();
-        setIsScreenAccessActive(false);
-      };
+      const videoTrack = stream.getVideoTracks()[0];
+      if (videoTrack) {
+        videoTrack.onended = () => {
+          stopScreenCapture();
+          setIsScreenAccessActive(false);
+        };
+      }
 
       // Store references for cleanup
-      (window as any).screenCaptureStream = stream;
-      (window as any).screenCaptureOverlay = statusIndicator;
+      (window as Window & { screenCaptureStream?: MediaStream; screenCaptureOverlay?: HTMLElement }).screenCaptureStream = stream;
+      (window as Window & { screenCaptureStream?: MediaStream; screenCaptureOverlay?: HTMLElement }).screenCaptureOverlay = statusIndicator;
 
       // Set screen access active state
       setIsScreenAccessActive(true);
@@ -1580,7 +1629,7 @@ export const MessageList: React.FC<MessageListProps> = ({
       {/* Suggested actions */}
       {!isLoading && (
         <div key='suggested-actions' className='space-y-2'>
-          {uniqueSuggestedActions.map((action, index) => (
+          {uniqueSuggestedActions.map((action: any, index: number) => (
             <div key={`suggested-action-${action.id}-${index}`} className='flex justify-start'>
               <button
                 onClick={(e) => handleSuggestedActionClick(action, e)}

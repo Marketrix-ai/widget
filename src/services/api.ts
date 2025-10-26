@@ -1,4 +1,3 @@
-import { HttpClient } from './base';
 import { API_URL_GLOBAL_SET } from '../config';
 import type {
   ApiResponse,
@@ -6,6 +5,7 @@ import type {
   SendMessageRequest,
   SendMessageResponse,
 } from '../types';
+import { HttpClient } from './base';
 
 class MarketrixApiService extends HttpClient {
   private config: MarketrixConfig;
@@ -19,7 +19,7 @@ class MarketrixApiService extends HttpClient {
         'X-Marketrix-Key': config.marketrixKey,
       },
     });
-    
+
     this.config = config;
   }
 
@@ -28,10 +28,7 @@ class MarketrixApiService extends HttpClient {
    */
   async sendMessage(request: SendMessageRequest): Promise<SendMessageResponse> {
     try {
-      const response = await this.post<ApiResponse<SendMessageResponse>>(
-        '/message/send',
-        request
-      );
+      const response = await this.post<ApiResponse<SendMessageResponse>>('/message/send', request);
 
       if (response.success && response.data) {
         return response.data;
@@ -69,9 +66,8 @@ class MarketrixApiService extends HttpClient {
    */
   async getAgentStatus(): Promise<{ online: boolean; available: boolean }> {
     try {
-      const response = await this.get<ApiResponse<{ online: boolean; available: boolean }>>(
-        '/agent/status'
-      );
+      const response =
+        await this.get<ApiResponse<{ online: boolean; available: boolean }>>('/agent/status');
 
       if (response.success && response.data) {
         return response.data;
@@ -186,6 +182,42 @@ class MarketrixApiService extends HttpClient {
       console.error('Failed to update widget config:', error);
       throw error;
     }
+  }
+
+  /**
+   * Check agent availability
+   */
+  async checkAgentAvailability(): Promise<boolean> {
+    try {
+      const response = await this.get<ApiResponse<{ available: boolean }>>('/agent/availability');
+      return response.success && response.data?.available === true;
+    } catch (error) {
+      console.error('Failed to check agent availability:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Get agent information
+   */
+  async getAgentInfo(): Promise<any> {
+    try {
+      const response = await this.get<ApiResponse<any>>('/agent/info');
+      if (response.success && response.data) {
+        return response.data;
+      }
+      throw new Error(response.error || 'Failed to get agent info');
+    } catch (error) {
+      console.error('Failed to get agent info:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update configuration
+   */
+  updateConfig(newConfig: Partial<MarketrixConfig>): void {
+    this.config = { ...this.config, ...newConfig };
   }
 }
 

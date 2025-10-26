@@ -1,22 +1,23 @@
 /**
  * Widget-specific type definitions
- * 
+ *
  * This file contains widget-specific types that extend or complement
  * the SDK types. All core types should be imported from the SDK.
  */
 
 // Re-export all SDK types for convenience
 export type {
-  IntegrationData,
-  WidgetSettingsData,
-  TourData,
-  TourStep,
-  TourAnswer,
-  ConnectionData,
   AgentData,
-  UserData,
+  ConnectionData,
+  IntegrationData,
   TenantData,
+  TourData,
+  UserData,
+  WidgetSettingsData,
 } from '../sdk';
+
+// Import types from index for local use
+import type { MarketrixConfig, ChatMessage, ChatMode } from './index';
 
 // Widget-specific type extensions
 export interface WidgetChipConfig {
@@ -25,8 +26,8 @@ export interface WidgetChipConfig {
 }
 
 export interface WidgetComponentProps {
-  config: import('./index').MarketrixConfig;
-  settings?: WidgetSettingsData;
+  config: MarketrixConfig;
+  settings?: import('../sdk').WidgetSettingsData;
   isOpen?: boolean;
   isLoading?: boolean;
   error?: string;
@@ -44,8 +45,8 @@ export interface WidgetState {
   isOpen: boolean;
   isMinimized: boolean;
   isLoading: boolean;
-  messages: import('./index').ChatMessage[];
-  currentMode: import('./index').ChatMode;
+  messages: ChatMessage[];
+  currentMode: ChatMode;
   agentAvailable: boolean;
   error?: string;
 }
@@ -63,8 +64,8 @@ export interface WidgetEvents {
   onClose?: () => void;
   onMinimize?: () => void;
   onMaximize?: () => void;
-  onMessage?: (message: string, mode: import('./index').ChatMode) => void;
-  onModeChange?: (mode: import('./index').ChatMode) => void;
+  onMessage?: (message: string, mode: ChatMode) => void;
+  onModeChange?: (mode: ChatMode) => void;
   onError?: (error: string) => void;
 }
 

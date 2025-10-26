@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 
 import { useWidgetAtmosphere } from '../hooks/useWidgetAtmosphere';
+import type { WidgetSettingsData } from '../sdk';
 import DemoApiService from '../services/demo-api';
-import type { IntegrationSettings } from '../services/integrationService';
 import type { ChatMessage, ChatMode, MarketrixConfig } from '../types';
 import { getPositionClasses } from '../utils/positioning';
 import { MessageInput } from './MessageInput';
@@ -33,7 +33,7 @@ interface ChatWindowProps {
   onSendMessage: (message: string, mode?: ChatMode) => void;
   onSetMode: (mode: ChatMode) => void;
   onScreenSharingChange?: (isSharing: boolean) => void;
-  integrationSettings?: IntegrationSettings | null;
+  integrationSettings?: WidgetSettingsData | null;
 }
 
 export const ChatWindow: React.FC<ChatWindowProps> = ({
@@ -261,13 +261,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   };
 
   // Get widget settings for positioning
-  // Convert underscore to hyphen for position (API returns bottom_right, but CSS expects bottom-right)
-  const rawPosition = effectiveSettings.widget_position || 'bottom-right';
-  const effectivePosition = rawPosition.replace('_', '-') as
-    | 'bottom-right'
-    | 'bottom-left'
-    | 'top-right'
-    | 'top-left';
+  // Convert underscore to hyphen for position (API returns bottom_right, but CSS expects bottom_right)
+  const effectivePosition = effectiveSettings.widget_position || 'bottom_right';
   const positionClasses = getPositionClasses(effectivePosition);
 
   if (!isOpen) return null;

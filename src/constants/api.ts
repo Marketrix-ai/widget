@@ -1,6 +1,6 @@
 /**
  * API constants and configuration
- * 
+ *
  * This file contains all API-related constants including endpoints,
  * timeout values, headers, and other API configuration.
  */
@@ -102,5 +102,5 @@ export const API_CONFIG = {
   TIMEOUT: TIMEOUTS.DEFAULT,
   RETRY: RETRY_CONFIG,
   CACHE: CACHE_CONFIG,
-  PAGINATION: PAGINATION,
+  PAGINATION,
 } as const;

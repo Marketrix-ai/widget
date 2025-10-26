@@ -86,7 +86,7 @@ export const useWidgetAtmosphere = (initialConfig?: MarketrixConfig) => {
 
   // Widget control methods
   const updateWidgetPosition = useCallback(
-    (position: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left') => {
+    (position: 'bottom_right' | 'bottom_left') => {
       configManager.updateWidgetPosition(position);
     },
     []
@@ -100,7 +100,7 @@ export const useWidgetAtmosphere = (initialConfig?: MarketrixConfig) => {
     configManager.updateWidgetMode(mode);
   }, []);
 
-  const updateAvatarStatus = useCallback((status: 'online' | 'offline' | 'busy' | 'away') => {
+  const updateAvatarStatus = useCallback((status: 'online' | 'offline' | 'busy') => {
     configManager.updateAvatarStatus(status);
   }, []);
 
@@ -193,7 +193,7 @@ export const useWidgetAtmosphere = (initialConfig?: MarketrixConfig) => {
   const getWidgetPosition = useCallback(() => {
     return (
       atmosphereConfig?.widget_position || {
-        position: 'bottom-right' as const,
+        position: 'bottom_right' as const,
         offset: { x: 20, y: 20 },
         z_index: 40,
       }
@@ -219,7 +219,7 @@ export const useWidgetAtmosphere = (initialConfig?: MarketrixConfig) => {
       atmosphereConfig?.widget_settings || {
         widget_enabled: true,
         widget_appearance: 'default' as const,
-        widget_position: 'bottom-right' as const,
+        widget_position: 'bottom_right' as const,
         widget_device: 'desktop_mobile' as const,
         widget_header: '🤖 AI Assistant',
         widget_body: "I'm here to help you with any questions or tasks.",

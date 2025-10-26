@@ -1,25 +1,26 @@
 /**
  * useDefaultSettings Hook
- * 
+ *
  * This hook provides centralized access to default widget settings
  * and configuration. It eliminates the need for inline defaults
  * throughout the application.
  */
 
 import { useMemo } from 'react';
-import { 
-  DEFAULT_WIDGET_SETTINGS, 
-  DEFAULT_WIDGET_ATMOSPHERE,
-  DEFAULT_WIDGET_CUSTOMIZE,
+
+import {
+  DEFAULT_ADVANCED_SETTINGS,
   DEFAULT_AVATAR,
-  DEFAULT_WIDGET_POSITION,
   DEFAULT_DEVICE_VISIBILITY,
   DEFAULT_LIVE_FORM,
-  DEFAULT_ADVANCED_SETTINGS,
-  DEFAULT_THEMES,
   DEFAULT_RESPONSIVE_BREAKPOINTS,
+  DEFAULT_THEMES,
+  DEFAULT_WIDGET_ATMOSPHERE,
+  DEFAULT_WIDGET_CUSTOMIZE,
+  DEFAULT_WIDGET_POSITION,
+  DEFAULT_WIDGET_SETTINGS,
 } from '../constants';
-import type { WidgetSettingsData, WidgetAtmosphereConfig } from '../types';
+import type { WidgetAtmosphereConfig, WidgetSettingsData } from '../types';
 
 export interface UseDefaultSettingsReturn {
   widgetSettings: WidgetSettingsData;
@@ -38,32 +39,35 @@ export interface UseDefaultSettingsReturn {
  * Hook to get all default widget settings and configurations
  */
 export const useDefaultSettings = (): UseDefaultSettingsReturn => {
-  return useMemo(() => ({
-    widgetSettings: { ...DEFAULT_WIDGET_SETTINGS },
-    atmosphereConfig: { ...DEFAULT_WIDGET_ATMOSPHERE },
-    customizeConfig: { ...DEFAULT_WIDGET_CUSTOMIZE },
-    avatarConfig: { ...DEFAULT_AVATAR },
-    positionConfig: { ...DEFAULT_WIDGET_POSITION },
-    deviceVisibility: { ...DEFAULT_DEVICE_VISIBILITY },
-    liveFormConfig: { ...DEFAULT_LIVE_FORM },
-    advancedSettings: { ...DEFAULT_ADVANCED_SETTINGS },
-    themes: { ...DEFAULT_THEMES },
-    responsiveBreakpoints: { ...DEFAULT_RESPONSIVE_BREAKPOINTS },
-  }), []);
+  return useMemo(
+    () => ({
+      widgetSettings: { ...DEFAULT_WIDGET_SETTINGS } as WidgetSettingsData,
+      atmosphereConfig: { ...DEFAULT_WIDGET_ATMOSPHERE } as WidgetAtmosphereConfig,
+      customizeConfig: { ...DEFAULT_WIDGET_CUSTOMIZE },
+      avatarConfig: { ...DEFAULT_AVATAR },
+      positionConfig: { ...DEFAULT_WIDGET_POSITION },
+      deviceVisibility: { ...DEFAULT_DEVICE_VISIBILITY },
+      liveFormConfig: { ...DEFAULT_LIVE_FORM },
+      advancedSettings: { ...DEFAULT_ADVANCED_SETTINGS },
+      themes: { ...DEFAULT_THEMES },
+      responsiveBreakpoints: { ...DEFAULT_RESPONSIVE_BREAKPOINTS },
+    }),
+    []
+  );
 };
 
 /**
  * Hook to get default widget settings only
  */
 export const useDefaultWidgetSettings = (): WidgetSettingsData => {
-  return useMemo(() => ({ ...DEFAULT_WIDGET_SETTINGS }), []);
+  return useMemo(() => ({ ...DEFAULT_WIDGET_SETTINGS }) as WidgetSettingsData, []);
 };
 
 /**
  * Hook to get default atmosphere configuration only
  */
 export const useDefaultAtmosphereConfig = (): WidgetAtmosphereConfig => {
-  return useMemo(() => ({ ...DEFAULT_WIDGET_ATMOSPHERE }), []);
+  return useMemo(() => ({ ...DEFAULT_WIDGET_ATMOSPHERE }) as WidgetAtmosphereConfig, []);
 };
 
 /**

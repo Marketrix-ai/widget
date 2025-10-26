@@ -170,7 +170,7 @@ import { WidgetSettingsData } from '../sdk';
 // ❌ DON'T - Inline defaults
 const defaultSettings = {
   enabled: true,
-  position: 'bottom-right',
+  position: 'bottom_right',
   color: '#1BB55B'
 };
 

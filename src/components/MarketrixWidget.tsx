@@ -54,7 +54,7 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
           ...(integrationSettings.widget_feature_tell ? ['tell'] : []),
           ...(integrationSettings.widget_feature_do ? ['do'] : []),
         ] as ('show' | 'tell' | 'do')[],
-        agentName: integrationSettings.widget_header || effectiveConfig.agentName,
+        // Agent name is now handled through atmosphere config
       }
     : effectiveConfig;
 
@@ -99,30 +99,21 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
       <WidgetButton
         config={{
           ...finalConfig,
-          position: finalConfig.position as
-            | 'bottom-right'
-            | 'bottom-left'
-            | 'top-right'
-            | 'top-left'
-            | undefined,
+          position: finalConfig.position as 'bottom_left' | 'bottom_right' | undefined,
         }}
+        atmosphere={atmosphereConfig}
         onClick={actions.toggleWidget}
         isOpen={state.isOpen}
-        agentAvailable={state.agentAvailable}
-        isScreenSharing={isScreenSharing}
-        integrationSettings={integrationSettings as IntegrationSettings}
+        _agentAvailable={state.agentAvailable}
+        _isScreenSharing={isScreenSharing}
+        integrationSettings={integrationSettings}
       />
 
       {/* Chat Window */}
       <ChatWindow
         config={{
           ...finalConfig,
-          position: finalConfig.position as
-            | 'bottom-right'
-            | 'bottom-left'
-            | 'top-right'
-            | 'top-left'
-            | undefined,
+          position: finalConfig.position as 'bottom_left' | 'bottom_right' | undefined,
         }}
         isOpen={state.isOpen}
         isMinimized={state.isMinimized}
@@ -134,7 +125,7 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
         onSendMessage={actions.sendMessage}
         onSetMode={actions.setMode}
         onScreenSharingChange={setIsScreenSharing}
-        integrationSettings={integrationSettings as IntegrationSettings}
+        integrationSettings={integrationSettings}
       />
 
       {/* Error Display */}

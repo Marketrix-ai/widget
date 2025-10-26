@@ -1,9 +1,9 @@
 import React from 'react';
 
-import type { IntegrationSettings } from '../services/integrationService';
+import type { WidgetSettingsData } from '../sdk';
 
 interface IntegrationSettingsDebugProps {
-  settings: IntegrationSettings | null;
+  settings: WidgetSettingsData | null;
   isLoading: boolean;
   error: string | null;
 }
