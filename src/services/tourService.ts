@@ -26,8 +26,8 @@ export class TourService {
 
       console.log('Tour API Response Status:', response.status);
 
-      if (response.status === 200 && response.body?.success) {
-        const tours = response.body.data as TourData[];
+      if (response.status === 200 && response.body?.success && response.body.data) {
+        const tours = response.body.data; // SDK types this as TourData[]
         console.log('=== ALL TOUR DATA FOUND ===');
         console.log('Total tours found for connection_id', connectionId, ':', tours.length);
 
@@ -47,7 +47,7 @@ export class TourService {
 
           if (tour.answer.length > 0) {
             console.log('\n--- TOUR STEPS ---');
-            tour.answer.forEach((step: any, stepIndex: number) => {
+            tour.answer.forEach((step, stepIndex: number) => {
               console.log(`  Step ${stepIndex + 1}:`);
               console.log('    Step ID:', step.id);
               console.log('    Step Title:', step.title);
@@ -91,7 +91,7 @@ export class TourService {
       } else {
         console.warn(
           'No tour data found or API error:',
-          (response.body as any)?.error || (response.body as any)?.message
+          response.body?.error || response.body?.message || 'Unknown error'
         );
       }
     } catch (error) {
@@ -114,8 +114,8 @@ export class TourService {
 
       console.log('Tour API Response Status:', response.status);
 
-      if (response.status === 200 && response.body?.success) {
-        const tours = response.body.data as TourData[];
+      if (response.status === 200 && response.body?.success && response.body.data) {
+        const tours = response.body.data; // SDK types this as TourData[]
         console.log('=== ALL TOUR DATA FOUND ===');
         console.log('Total tours found:', tours.length);
 
@@ -159,7 +159,7 @@ export class TourService {
       } else {
         console.warn(
           'No tour data found or API error:',
-          (response.body as any)?.error || (response.body as any)?.message
+          response.body?.error || response.body?.message || 'Unknown error'
         );
       }
     } catch (error) {

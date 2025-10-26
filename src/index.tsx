@@ -1,13 +1,13 @@
 import './index.css';
 
 import React from 'react';
-import { createRoot } from 'react-dom/client';
+import { createRoot, type Root } from 'react-dom/client';
 
 import { MarketrixWidget } from './components/MarketrixWidget';
 import type { MarketrixConfig } from './types';
 
 // Global widget instance and demo functions
-let widgetInstance: any = null;
+let widgetInstance: Root | null = null;
 
 // Initialize the widget
 export const initMarketrixWidget = (config: MarketrixConfig): void => {
@@ -100,14 +100,16 @@ document.addEventListener('DOMContentLoaded', () => {
       const config: MarketrixConfig = {
         marketrixId,
         marketrixKey,
-        position: (script.getAttribute('data-position') as any) || 'bottom_right',
-        theme: (script.getAttribute('data-theme') as any) || 'light',
+        position:
+          (script.getAttribute('data-position') as 'bottom_right' | 'bottom_left') ??
+          'bottom_right',
+        theme: (script.getAttribute('data-theme') as 'light' | 'dark' | null) ?? 'light',
         // Avatar and agent info are now handled through atmosphere config
-        enabledModes: (script.getAttribute('data-enabled-modes')?.split(',') as any) || [
-          'show',
-          'tell',
-          'do',
-        ],
+        enabledModes: (script.getAttribute('data-enabled-modes')?.split(',') as (
+          | 'show'
+          | 'tell'
+          | 'do'
+        )[]) || ['show', 'tell', 'do'],
       };
 
       console.log('Auto-initializing widget with config:', config);

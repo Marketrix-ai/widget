@@ -27,7 +27,7 @@ export class IntegrationService {
       });
 
       if (response.status === 200 && response.body?.success && response.body.data) {
-        const integrations = response.body.data as IntegrationData[];
+        const integrations = response.body.data; // SDK already types this correctly
 
         // Find the widget integration from the search results
         const widgetIntegration = integrations.find(
@@ -75,6 +75,7 @@ export class IntegrationService {
       return null;
     }
 
+    // Type assertion is needed here because we've verified the structure
     return settings as WidgetSettingsData;
   }
 

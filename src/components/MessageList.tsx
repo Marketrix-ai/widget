@@ -1118,8 +1118,8 @@ export const MessageList: React.FC<MessageListProps> = ({
       console.log('Response status:', response.status);
       console.log('Response body:', response.body);
 
-      if (response.status === 200 && response.body) {
-        const tour = response.body as unknown as TourData;
+      if (response.status === 200 && response.body?.success && response.body.data) {
+        const tour = response.body.data; // Already correct type from SDK
         console.log('=== TOUR DATA ===');
         console.log('Tour ID:', tour.id);
         console.log('Connection ID:', tour.connection_id);
