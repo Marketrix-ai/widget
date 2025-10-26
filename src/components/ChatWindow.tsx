@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 
 import { useWidgetAtmosphere } from '../hooks/useWidgetAtmosphere';
+import DemoApiService from '../services/demo-api';
 import type { IntegrationSettings } from '../services/integrationService';
 import type { ChatMessage, ChatMode, MarketrixConfig } from '../types';
 import { getPositionClasses } from '../utils/positioning';
@@ -8,6 +9,17 @@ import { MessageInput } from './MessageInput';
 import { MessageList } from './MessageList';
 import { ModeSelector } from './ModeSelector';
 import { ScreenSharePreview } from './ScreenSharePreview';
+
+// Type declaration for navigator to fix TypeScript errors
+declare const navigator: Navigator;
+
+// Extend Window interface to include custom properties
+declare global {
+  interface Window {
+    screenCaptureStream?: MediaStream;
+    screenCaptureOverlay?: HTMLElement;
+  }
+}
 
 interface ChatWindowProps {
   config: MarketrixConfig;
@@ -124,6 +136,11 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
 
   const startScreenCapture = async () => {
     try {
+      // Check if we're in a browser environment
+      if (typeof window === 'undefined' || !navigator?.mediaDevices?.getDisplayMedia) {
+        throw new Error('Screen capture not supported in this environment');
+      }
+
       // Request screen capture permission
       const stream = await navigator.mediaDevices.getDisplayMedia({
         video: {
@@ -185,8 +202,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       };
 
       // Store references for cleanup
-      (window as any).screenCaptureStream = stream;
-      (window as any).screenCaptureOverlay = statusIndicator;
+      window.screenCaptureStream = stream;
+      window.screenCaptureOverlay = statusIndicator;
 
       // Set screen stream and show preview
       setScreenStream(stream);
@@ -205,8 +222,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
 
   const stopScreenCapture = () => {
     // Stop all video tracks
-    if ((window as any).screenCaptureStream) {
-      (window as any).screenCaptureStream.getTracks().forEach((track: MediaStreamTrack) => {
+    if (window.screenCaptureStream) {
+      window.screenCaptureStream.getTracks().forEach((track: MediaStreamTrack) => {
         track.stop();
       });
     }
@@ -218,8 +235,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     }
 
     // Clear references and state
-    (window as any).screenCaptureStream = null;
-    (window as any).screenCaptureOverlay = null;
+    window.screenCaptureStream = undefined;
+    window.screenCaptureOverlay = undefined;
     setScreenStream(null);
     setShowScreenPreview(false);
 
@@ -237,13 +254,10 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   };
 
   const handleStopStepGuide = () => {
-    // Import the demo API service to stop the step guide
-    import('../services/demo-api').then(({ default: DemoApiService }) => {
-      // Create a temporary instance to access the stop method
-      const demoApi = new DemoApiService(config);
-      demoApi.stopStepGuide();
-      setIsStepGuideRunning(false);
-    });
+    // Create a temporary instance to access the stop method
+    const demoApi = new DemoApiService(config);
+    demoApi.stopStepGuide();
+    setIsStepGuideRunning(false);
   };
 
   // Get widget settings for positioning

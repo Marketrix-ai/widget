@@ -1,3 +1,4 @@
+/// <reference lib="dom" />
 import React, { useState } from 'react';
 import { IoChatbubbleEllipsesOutline } from 'react-icons/io5';
 import { LuMousePointerClick } from 'react-icons/lu';

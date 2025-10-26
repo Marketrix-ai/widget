@@ -1,5 +1,5 @@
-import type { WidgetSettingsConfig } from '../types';
 import { API_URL_GLOBAL_SET } from '../config';
+import type { WidgetSettingsConfig } from '../types';
 
 export interface IntegrationSettings {
   widget_enabled: boolean;

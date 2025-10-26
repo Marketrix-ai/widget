@@ -1,5 +1,5 @@
-import type { MarketrixConfig } from '../types';
 import { API_URL_GLOBAL_SET } from '../config';
+import type { MarketrixConfig } from '../types';
 
 export interface TourStep {
   id: string;

@@ -1,15 +1,24 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Marketrix In-App Support Widget Demo</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
   <style>
     body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-family:
+          'Inter',
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          Roboto,
+          sans-serif;
       margin: 0;
       padding: 20px;
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -228,7 +237,9 @@
       border: 1px solid #d1d5db;
       border-radius: 6px;
       font-size: 14px;
-      transition: border-color 0.2s, box-shadow 0.2s;
+        transition:
+          border-color 0.2s,
+          box-shadow 0.2s;
     }
 
     .form-group input:focus,
@@ -253,7 +264,7 @@
       border-color: #3b82f6;
     }
 
-    .file-upload-area input[type="file"] {
+      .file-upload-area input[type='file'] {
       position: absolute;
       top: 0;
       left: 0;
@@ -379,7 +390,7 @@
       color: #374151;
     }
 
-    .checkbox-label input[type="checkbox"] {
+      .checkbox-label input[type='checkbox'] {
       margin-right: 8px;
     }
 
@@ -400,7 +411,9 @@
       border-radius: 8px;
       font-size: 14px;
       background-color: white;
-      transition: border-color 0.2s, box-shadow 0.2s;
+        transition:
+          border-color 0.2s,
+          box-shadow 0.2s;
     }
 
     .login-form select:focus {
@@ -418,7 +431,9 @@
       font-family: inherit;
       resize: vertical;
       min-height: 80px;
-      transition: border-color 0.2s, box-shadow 0.2s;
+        transition:
+          border-color 0.2s,
+          box-shadow 0.2s;
     }
 
     .login-form textarea:focus {
@@ -497,7 +512,7 @@
     .metric-card:hover {
       transform: translateY(-4px);
       box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-      border-color: #4CAF50;
+        border-color: #4caf50;
     }
 
     .metric-icon {
@@ -569,7 +584,7 @@
 
     .workflow-step.completed {
       background: #e8f5e8;
-      border-color: #4CAF50;
+        border-color: #4caf50;
     }
 
     .workflow-step.completed:hover {
@@ -753,20 +768,33 @@
     }
 
     /* Mouse tracking highlight */
-    .demo-section:hover, .demo-button:hover, .metric-card:hover, 
-    .workflow-step:hover, .insight-card:hover, .tool-card:hover {
+      .demo-section:hover,
+      .demo-button:hover,
+      .metric-card:hover,
+      .workflow-step:hover,
+      .insight-card:hover,
+      .tool-card:hover {
       position: relative;
       overflow: visible;
     }
 
     /* Mouse cursor effects */
-    .demo-section, .demo-button, .metric-card, .workflow-step, .insight-card, .tool-card {
+      .demo-section,
+      .demo-button,
+      .metric-card,
+      .workflow-step,
+      .insight-card,
+      .tool-card {
       cursor: pointer;
       transition: all 0.3s ease;
     }
 
-    .demo-section:hover, .demo-button:hover, .metric-card:hover,
-    .workflow-step:hover, .insight-card:hover, .tool-card:hover {
+      .demo-section:hover,
+      .demo-button:hover,
+      .metric-card:hover,
+      .workflow-step:hover,
+      .insight-card:hover,
+      .tool-card:hover {
       filter: brightness(1.05);
     }
 
@@ -867,23 +895,32 @@
     
     <div class="demo-content">
       <p>
-        Hover over any element to see it highlighted, 
-        and the Marketrix AI assistant will provide contextual help about that feature.
+          Hover over any element to see it highlighted, and the Marketrix AI assistant will provide
+          contextual help about that feature.
       </p>
       
       <div class="highlight">
-        <strong>Interactive Demo:</strong> Try hovering over different elements below - the AI assistant will 
-        ask relevant questions about the highlighted areas and provide helpful guidance!
+          <strong>Interactive Demo:</strong> Try hovering over different elements below - the AI
+          assistant will ask relevant questions about the highlighted areas and provide helpful
+          guidance!
       </div>
       
       <!-- Navigation Bar -->
       <div class="demo-section" data-demo-area="navigation">
         <h2>📊 Dashboard Navigation</h2>
         <div class="nav-demo">
-          <button class="demo-button primary" data-demo-element="dashboard" data-demo-description="Main dashboard overview with key metrics and performance indicators">
+            <button
+              class="demo-button primary"
+              data-demo-element="dashboard"
+              data-demo-description="Main dashboard overview with key metrics and performance indicators"
+            >
             🏠 Dashboard
           </button>
-          <button class="demo-button" data-demo-element="products" data-demo-description="Product catalog management - add, edit, and organize your inventory">
+            <button
+              class="demo-button"
+              data-demo-element="products"
+              data-demo-description="Product catalog management - add, edit, and organize your inventory"
+            >
             📦 Products
           </button>
           <!-- <button class="demo-button" data-demo-element="orders" data-demo-description="Order management system to track and fulfill customer orders">
@@ -895,10 +932,19 @@
           <button class="demo-button" data-demo-element="analytics" data-demo-description="Advanced analytics and reporting tools for business insights">
             📈 Analytics
           </button> -->
-          <button class="demo-button" data-demo-element="settings" data-demo-description="System configuration and account settings management">
+            <button
+              class="demo-button"
+              data-demo-element="settings"
+              data-demo-description="System configuration and account settings management"
+            >
             ⚙️ Settings
           </button>
-          <button class="demo-button" data-demo-element="login-button" data-demo-description="User authentication and account access" onclick="showLoginForm()">
+            <button
+              class="demo-button"
+              data-demo-element="login-button"
+              data-demo-description="User authentication and account access"
+              onclick="showLoginForm()"
+            >
             🔐 Login
           </button>
         </div>
@@ -908,25 +954,41 @@
       <div class="demo-section" data-demo-area="metrics">
         <h2>📈 Key Performance Metrics</h2>
         <div class="metrics-grid">
-          <div class="metric-card" data-demo-element="revenue" data-demo-description="Total revenue generated this month with growth percentage">
+            <div
+              class="metric-card"
+              data-demo-element="revenue"
+              data-demo-description="Total revenue generated this month with growth percentage"
+            >
             <div class="metric-icon">💰</div>
             <div class="metric-value">$24,563</div>
             <div class="metric-label">Monthly Revenue</div>
             <div class="metric-change positive">+12.5%</div>
           </div>
-          <div class="metric-card" data-demo-element="orders-count" data-demo-description="Number of orders processed and their status breakdown">
+            <div
+              class="metric-card"
+              data-demo-element="orders-count"
+              data-demo-description="Number of orders processed and their status breakdown"
+            >
             <div class="metric-icon">📋</div>
             <div class="metric-value">342</div>
             <div class="metric-label">Total Orders</div>
             <div class="metric-change positive">+8.3%</div>
           </div>
-          <div class="metric-card" data-demo-element="customers-count" data-demo-description="Active customer base and new registrations this period">
+            <div
+              class="metric-card"
+              data-demo-element="customers-count"
+              data-demo-description="Active customer base and new registrations this period"
+            >
             <div class="metric-icon">👤</div>
             <div class="metric-value">1,247</div>
             <div class="metric-label">Active Customers</div>
             <div class="metric-change positive">+15.2%</div>
           </div>
-          <div class="metric-card" data-demo-element="conversion" data-demo-description="Conversion rate from visitors to paying customers">
+            <div
+              class="metric-card"
+              data-demo-element="conversion"
+              data-demo-description="Conversion rate from visitors to paying customers"
+            >
             <div class="metric-icon">🎯</div>
             <div class="metric-value">3.8%</div>
             <div class="metric-label">Conversion Rate</div>
@@ -939,16 +1001,32 @@
       <div class="demo-section" data-demo-area="product-management">
         <h2>📦 Product Management</h2>
         <div class="product-actions">
-          <button class="demo-button success" data-demo-element="add-product" data-demo-description="Add new products to your inventory with details, pricing, and images">
+            <button
+              class="demo-button success"
+              data-demo-element="add-product"
+              data-demo-description="Add new products to your inventory with details, pricing, and images"
+            >
             ➕ Add New Product
           </button>
-          <button class="demo-button" data-demo-element="bulk-import" data-demo-description="Import multiple products at once using CSV or Excel files">
+            <button
+              class="demo-button"
+              data-demo-element="bulk-import"
+              data-demo-description="Import multiple products at once using CSV or Excel files"
+            >
             📤 Bulk Import
           </button>
-          <button class="demo-button" data-demo-element="categories" data-demo-description="Organize products into categories and subcategories for better navigation">
+            <button
+              class="demo-button"
+              data-demo-element="categories"
+              data-demo-description="Organize products into categories and subcategories for better navigation"
+            >
             🏷️ Manage Categories
           </button>
-          <button class="demo-button warning" data-demo-element="inventory" data-demo-description="Monitor stock levels and set up low inventory alerts">
+            <button
+              class="demo-button warning"
+              data-demo-element="inventory"
+              data-demo-description="Monitor stock levels and set up low inventory alerts"
+            >
             📊 Inventory Status
           </button>
         </div>
@@ -1055,27 +1133,49 @@
         </div> -->
         
         <!-- Login Form Simulation (Visible for tour testing) -->
-        <div class="login-form-container" style="display: none;" id="login-form-simulation" data-demo-element="login-form">
+          <div
+            class="login-form-container"
+            style="display: none"
+            id="login-form-simulation"
+            data-demo-element="login-form"
+          >
           <div class="login-form-header">
             <h3>🔐 User Login</h3>
-            <button class="close-form-btn" onclick="document.getElementById('login-form-simulation').style.display='none'">×</button>
+              <button
+                class="close-form-btn"
+                onclick="document.getElementById('login-form-simulation').style.display='none'"
+              >
+                ×
+              </button>
           </div>
           <form class="login-form">
             <div class="form-section">
               <h4>Account Credentials</h4>
               <div class="form-group">
                 <label for="login-email">Username/Email *</label>
-                <input type="email" id="login-email" data-demo-element="login-email" placeholder="Enter your username or email (e.g., john.doe@example.com)" required>
+                  <input
+                    type="email"
+                    id="login-email"
+                    data-demo-element="login-email"
+                    placeholder="Enter your username or email (e.g., john.doe@example.com)"
+                    required
+                  />
                 <div class="input-hint">Enter your registered email address or username</div>
               </div>
               <div class="form-group">
                 <label for="login-password">Password *</label>
-                <input type="password" id="login-password" data-demo-element="login-password" placeholder="Enter your password" required>
+                  <input
+                    type="password"
+                    id="login-password"
+                    data-demo-element="login-password"
+                    placeholder="Enter your password"
+                    required
+                  />
                 <div class="input-hint">Password should be at least 8 characters long</div>
               </div>
               <div class="form-options">
                 <label class="checkbox-label">
-                  <input type="checkbox" id="remember-me">
+                    <input type="checkbox" id="remember-me" />
                   <span class="checkmark"></span>
                   Remember me
                 </label>
@@ -1083,8 +1183,16 @@
               </div>
             </div>
             <div class="form-actions">
-              <button type="button" class="btn-secondary" onclick="document.getElementById('login-form-simulation').style.display='none'">Cancel</button>
-              <button type="submit" class="btn-primary" data-demo-element="login-submit">Sign In</button>
+                <button
+                  type="button"
+                  class="btn-secondary"
+                  onclick="document.getElementById('login-form-simulation').style.display='none'"
+                >
+                  Cancel
+                </button>
+                <button type="submit" class="btn-primary" data-demo-element="login-submit">
+                  Sign In
+                </button>
             </div>
           </form>
         </div>
@@ -1094,22 +1202,38 @@
       <div class="demo-section" data-demo-area="order-processing">
         <h2>🛒 Order Processing Workflow</h2>
         <div class="workflow-steps">
-          <div class="workflow-step completed" data-demo-element="order-received" data-demo-description="New orders received from customers through various channels">
+            <div
+              class="workflow-step completed"
+              data-demo-element="order-received"
+              data-demo-description="New orders received from customers through various channels"
+            >
             <div class="step-number">1</div>
             <div class="step-title">Order Received</div>
             <div class="step-status">✅ Completed</div>
           </div>
-          <div class="workflow-step active" data-demo-element="payment-processing" data-demo-description="Payment verification and processing through secure gateways">
+            <div
+              class="workflow-step active"
+              data-demo-element="payment-processing"
+              data-demo-description="Payment verification and processing through secure gateways"
+            >
             <div class="step-number">2</div>
             <div class="step-title">Payment Processing</div>
             <div class="step-status">🔄 In Progress</div>
           </div>
-          <div class="workflow-step pending" data-demo-element="fulfillment" data-demo-description="Order fulfillment including picking, packing, and shipping">
+            <div
+              class="workflow-step pending"
+              data-demo-element="fulfillment"
+              data-demo-description="Order fulfillment including picking, packing, and shipping"
+            >
             <div class="step-number">3</div>
             <div class="step-title">Fulfillment</div>
             <div class="step-status">⏳ Pending</div>
           </div>
-          <div class="workflow-step pending" data-demo-element="delivery" data-demo-description="Shipping and delivery tracking with customer notifications">
+            <div
+              class="workflow-step pending"
+              data-demo-element="delivery"
+              data-demo-description="Shipping and delivery tracking with customer notifications"
+            >
             <div class="step-number">4</div>
             <div class="step-title">Delivery</div>
             <div class="step-status">⏳ Pending</div>
@@ -1121,7 +1245,11 @@
       <div class="demo-section" data-demo-area="customer-insights">
         <h2>👥 Customer Insights</h2>
         <div class="insights-grid">
-          <div class="insight-card" data-demo-element="customer-segments" data-demo-description="Customer segmentation based on behavior, purchase history, and demographics">
+            <div
+              class="insight-card"
+              data-demo-element="customer-segments"
+              data-demo-description="Customer segmentation based on behavior, purchase history, and demographics"
+            >
             <h3>Customer Segments</h3>
             <div class="segment">
               <span class="segment-label">VIP Customers</span>
@@ -1136,7 +1264,11 @@
               <span class="segment-value">32%</span>
             </div>
           </div>
-          <div class="insight-card" data-demo-element="support-tickets" data-demo-description="Customer support ticket management and resolution tracking">
+            <div
+              class="insight-card"
+              data-demo-element="support-tickets"
+              data-demo-description="Customer support ticket management and resolution tracking"
+            >
             <h3>Support Tickets</h3>
             <div class="ticket-stats">
               <div class="stat">
@@ -1160,19 +1292,31 @@
       <div class="demo-section" data-demo-area="marketing">
         <h2>📢 Marketing & Promotions</h2>
         <div class="marketing-tools">
-          <div class="tool-card" data-demo-element="email-campaigns" data-demo-description="Create and manage email marketing campaigns with templates and automation">
+            <div
+              class="tool-card"
+              data-demo-element="email-campaigns"
+              data-demo-description="Create and manage email marketing campaigns with templates and automation"
+            >
             <div class="tool-icon">📧</div>
             <div class="tool-title">Email Campaigns</div>
             <div class="tool-description">Send targeted emails to customer segments</div>
             <button class="tool-button">Launch Campaign</button>
           </div>
-          <div class="tool-card" data-demo-element="discount-codes" data-demo-description="Generate and manage discount codes and promotional offers">
+            <div
+              class="tool-card"
+              data-demo-element="discount-codes"
+              data-demo-description="Generate and manage discount codes and promotional offers"
+            >
             <div class="tool-icon">🎫</div>
             <div class="tool-title">Discount Codes</div>
             <div class="tool-description">Create promotional codes and offers</div>
             <button class="tool-button">Create Code</button>
           </div>
-          <div class="tool-card" data-demo-element="social-media" data-demo-description="Manage social media presence and integrate with marketing campaigns">
+            <div
+              class="tool-card"
+              data-demo-element="social-media"
+              data-demo-description="Manage social media presence and integrate with marketing campaigns"
+            >
             <div class="tool-icon">📱</div>
             <div class="tool-title">Social Media</div>
             <div class="tool-description">Connect with customers on social platforms</div>
@@ -1182,8 +1326,9 @@
       </div>
       
       <div class="highlight">
-        <strong>Try It Out:</strong> Hover over any button, card, or section above to see the Marketrix AI 
-        assistant provide contextual help and ask relevant questions about that feature!
+          <strong>Try It Out:</strong> Hover over any button, card, or section above to see the
+          Marketrix AI assistant provide contextual help and ask relevant questions about that
+          feature!
       </div>
 
       <!-- Test iPhone Notifications -->
@@ -1191,16 +1336,28 @@
         <h2>📱 iPhone-Style Notifications</h2>
         <p>Test the iPhone-style notification system that appears in the center of the screen:</p>
         <div class="nav-demo">
-          <button class="demo-button success" onclick="showIPhoneNotification('Success! 🎉', 'This is a success notification with iPhone styling!', 'success')">
+            <button
+              class="demo-button success"
+              onclick="showIPhoneNotification('Success! 🎉', 'This is a success notification with iPhone styling!', 'success')"
+            >
             ✅ Test Success
           </button>
-          <button class="demo-button" onclick="showIPhoneNotification('Info ℹ️', 'This is an informational notification.', 'info')">
+            <button
+              class="demo-button"
+              onclick="showIPhoneNotification('Info ℹ️', 'This is an informational notification.', 'info')"
+            >
             ℹ️ Test Info
           </button>
-          <button class="demo-button warning" onclick="showIPhoneNotification('Warning ⚠️', 'This is a warning notification.', 'warning')">
+            <button
+              class="demo-button warning"
+              onclick="showIPhoneNotification('Warning ⚠️', 'This is a warning notification.', 'warning')"
+            >
             ⚠️ Test Warning
           </button>
-          <button class="demo-button" onclick="showIPhoneNotification('Error ❌', 'This is an error notification.', 'error')">
+            <button
+              class="demo-button"
+              onclick="showIPhoneNotification('Error ❌', 'This is an error notification.', 'error')"
+            >
             ❌ Test Error
           </button>
           <button class="demo-button primary" onclick="testIPhoneNotifications()">
@@ -1220,28 +1377,32 @@
           <button class="demo-button success" onclick="testTourWithApiService()">
             🚀 Test Tour API
           </button>
-          <button class="demo-button" onclick="testWidgetTour()">
-            🤖 Test Widget Tour
-          </button>
-          <button class="demo-button warning" onclick="stopTour()">
-            ⏹️ Stop Tour
-          </button>
+            <button class="demo-button" onclick="testWidgetTour()">🤖 Test Widget Tour</button>
+            <button class="demo-button warning" onclick="stopTour()">⏹️ Stop Tour</button>
         </div>
         <div class="highlight">
           <strong>Instructions:</strong> 
-          <ol style="margin: 8px 0; padding-left: 20px;">
+            <ol style="margin: 8px 0; padding-left: 20px">
             <li>First, click "🔍 Verify Elements" to ensure all tour elements are found</li>
             <li>Then click "🔐 Test Login Tour" to start the 4-step tour</li>
             <li>Each step will highlight the relevant element and show instructions</li>
             <li>Click actions will auto-advance, fill actions require "Done" button</li>
           </ol>
         </div>
-        <div class="highlight" style="margin-top: 10px;">
+          <div class="highlight" style="margin-top: 10px">
           <strong>Element Verification:</strong> 
-          <button class="demo-button" onclick="verifyTourElements()" style="margin-left: 10px; padding: 4px 8px; font-size: 12px;">
+            <button
+              class="demo-button"
+              onclick="verifyTourElements()"
+              style="margin-left: 10px; padding: 4px 8px; font-size: 12px"
+            >
             🔍 Verify Elements
           </button>
-          <button class="demo-button" onclick="testDirectTour()" style="margin-left: 10px; padding: 4px 8px; font-size: 12px;">
+            <button
+              class="demo-button"
+              onclick="testDirectTour()"
+              style="margin-left: 10px; padding: 4px 8px; font-size: 12px"
+            >
             🎯 Test Direct Tour
           </button>
         </div>
@@ -1252,1431 +1413,37 @@
         <h2>🎯 Responsive Spotlight Test</h2>
         <p>Test the responsive spotlight system that follows elements when the screen resizes:</p>
         <div class="nav-demo">
-          <button class="demo-button primary" id="test-spotlight-btn" data-demo-element="test-spotlight" data-demo-description="This button will be highlighted with a responsive spotlight that follows it when you resize the screen">
+            <button
+              class="demo-button primary"
+              id="test-spotlight-btn"
+              data-demo-element="test-spotlight"
+              data-demo-description="This button will be highlighted with a responsive spotlight that follows it when you resize the screen"
+            >
             🎯 Test Responsive Spotlight
           </button>
           <button class="demo-button success" onclick="testResponsiveSpotlight()">
             🚀 Start Spotlight Demo
           </button>
-          <button class="demo-button warning" onclick="stopSpotlightDemo()">
-            ⏹️ Stop Demo
-          </button>
+            <button class="demo-button warning" onclick="stopSpotlightDemo()">⏹️ Stop Demo</button>
           <button class="demo-button" onclick="updateTextPosition()">
             🔄 Update Text Position
           </button>
         </div>
         <div class="highlight">
-          <strong>Instructions:</strong> Click "Start Spotlight Demo" then try resizing your browser window or scrolling. 
-          The spotlight and border should follow the highlighted element smoothly!
+            <strong>Instructions:</strong> Click "Start Spotlight Demo" then try resizing your
+            browser window or scrolling. The spotlight and border should follow the highlighted
+            element smoothly!
         </div>
       </div>
     </div>
   </div>
 
   <!-- Widget Script (Demo Mode) -->
-  <script type="module">
-    // Import the widget
-    import { initMarketrixWidget } from './src/index.tsx';
-    
-    // Demo interaction system
-    let currentHighlighted = null;
-    let highlightTimeout = null;
-    let widgetInstance = null;
-
-    // Context-aware messages for different elements
-    const contextMessages = {
-      'dashboard': {
-        question: "I see you're looking at the Dashboard button! Would you like me to show you how to navigate to the main dashboard or explain what key metrics you'll find there?",
-        responses: {
-          'show': "Let me highlight the key areas of the dashboard for you! The main dashboard shows your most important business metrics at a glance.",
-          'tell': "The dashboard is your command center! It displays real-time metrics like revenue, orders, customer count, and conversion rates. You can customize which widgets appear based on your business priorities.",
-          'do': "I can help you customize your dashboard layout. Would you like me to add specific widgets or rearrange the current ones to better suit your workflow?"
-        }
-      },
-      'products': {
-        question: "Interested in product management? I can show you how to add new products, manage inventory, or explain the product catalog features!",
-        responses: {
-          'show': "Here's how product management works - I'll walk you through adding a new product step by step!",
-          'tell': "The Products section lets you manage your entire inventory. You can add new items, set pricing, manage stock levels, organize into categories, and track performance metrics for each product.",
-          'do': "I can help you add a new product right now! Just tell me the product details and I'll guide you through the process."
-        }
-      },
-      'orders': {
-        question: "Looking at order management? I can explain the order workflow, show you how to process orders, or help you track specific orders!",
-        responses: {
-          'show': "Let me demonstrate the order processing workflow from receipt to delivery!",
-          'tell': "Order management handles your entire fulfillment process. Orders flow through stages: received → payment processing → fulfillment → delivery. You can track each order's status and manage any issues that arise.",
-          'do': "I can help you process pending orders or update order statuses. Which orders would you like me to help you with?"
-        }
-      },
-      'revenue': {
-        question: "I notice you're checking the revenue metrics! Would you like me to explain what drives this number or show you how to improve revenue growth?",
-        responses: {
-          'show': "Let me break down your revenue sources and show you which products and channels are performing best!",
-          'tell': "Your monthly revenue of $24,563 represents a healthy 12.5% growth! This includes sales from all channels minus returns and refunds. The growth indicates strong business momentum.",
-          'do': "I can help you identify opportunities to increase revenue. Would you like me to analyze your top-performing products or suggest pricing optimizations?"
-        }
-      },
-      'conversion': {
-        question: "I see you're looking at conversion rates. The 3.8% rate with a -2.1% change needs attention! Want me to explain what's happening or suggest improvements?",
-        responses: {
-          'show': "Let me show you the conversion funnel and highlight where visitors are dropping off!",
-          'tell': "A 3.8% conversion rate means about 38 out of every 1,000 visitors make a purchase. The recent 2.1% decline could be due to seasonal factors, website issues, or increased competition. Industry average is typically 2-4%.",
-          'do': "I can help improve your conversion rate! Let me analyze your checkout process, product pages, and suggest A/B tests to optimize conversions."
-        }
-      },
-      'add-product': {
-        question: "Ready to add a new product? I can walk you through the entire process step-by-step or explain what information you'll need!",
-        responses: {
-          'show': "Let me guide you through adding a new product - from basic details to pricing and inventory setup!",
-          'tell': "Adding a product requires: product name, description, category, pricing, inventory count, images, and SEO details. You can also set up variants for different sizes/colors and configure shipping options.",
-          'do': "I'll help you add a new product right now! What type of product are you adding? I'll collect all the necessary information and create the listing for you."
-        }
-      },
-      'payment-processing': {
-        question: "I see you're looking at the payment processing step! Need help understanding how payments work or troubleshooting payment issues?",
-        responses: {
-          'show': "Let me show you how payment processing works and what happens when payments succeed or fail!",
-          'tell': "Payment processing verifies customer payment methods, charges the amount, and confirms the transaction. This step includes fraud detection, currency conversion if needed, and integration with your payment gateway.",
-          'do': "I can help you resolve payment issues or update payment settings. Are there specific payment problems you'd like me to investigate?"
-        }
-      },
-      'customer-segments': {
-        question: "Checking out customer segments? I can explain how these segments are created or show you how to target each group effectively!",
-        responses: {
-          'show': "Let me show you what defines each customer segment and how to create targeted campaigns for each group!",
-          'tell': "Your customers are segmented by purchase behavior: VIP customers (23%) are high-value repeat buyers, Regular buyers (45%) purchase consistently, and New customers (32%) are first-time buyers. Each segment needs different marketing approaches.",
-          'do': "I can help you create targeted campaigns for each segment. Which customer group would you like to focus on first?"
-        }
-      },
-      'email-campaigns': {
-        question: "Interested in email marketing? I can show you how to create campaigns, explain best practices, or help you launch your first campaign!",
-        responses: {
-          'show': "Let me demonstrate how to create an effective email campaign from template selection to sending!",
-          'tell': "Email campaigns let you reach customers with personalized messages, promotional offers, and product updates. You can segment your audience, use templates, track open rates, and automate follow-ups based on customer behavior.",
-          'do': "I can help you create and launch an email campaign right now! What type of campaign would you like to send - promotional, newsletter, or product announcement?"
-        }
-      }
-    };
-
-    // Initialize highlighting system with enhanced mouse tracking
-    function initDemoHighlighting() {
-      const demoElements = document.querySelectorAll('[data-demo-element]');
-      
-      // Initialize mouse tracking system
-      // Mouse tracking removed
-      
-      demoElements.forEach(element => {
-        element.addEventListener('mouseenter', (e) => {
-          if (highlightTimeout) {
-            clearTimeout(highlightTimeout);
-          }
-          
-          // Remove previous highlight
-          if (currentHighlighted) {
-            currentHighlighted.classList.remove('demo-highlight');
-          }
-          
-          // Add subtle highlight to current element (no dramatic effects)
-          currentHighlighted = e.target;
-          e.target.classList.add('demo-highlight');
-          
-          // Get context message
-          const elementType = e.target.getAttribute('data-demo-element');
-          const contextMessage = contextMessages[elementType];
-          
-          if (contextMessage && widgetInstance) {
-            // Set demo context for the widget
-            setWidgetDemoContext(elementType);
-            
-            // Trigger widget with contextual message
-            highlightTimeout = setTimeout(() => {
-              triggerWidgetMessage(contextMessage.question);
-            }, 800); // Delay to avoid overwhelming the user
-          }
-        });
-        
-        element.addEventListener('mouseleave', (e) => {
-          if (highlightTimeout) {
-            clearTimeout(highlightTimeout);
-          }
-          
-          // Remove highlight after a short delay
-          setTimeout(() => {
-            if (currentHighlighted === e.target) {
-              e.target.classList.remove('demo-highlight');
-              currentHighlighted = null;
-            }
-          }, 300);
-        });
-
-        // Mouse tracking removed
-      });
-
-      // Add click handlers for interactive elements
-      addInteractiveHandlers();
-    }
-
-    // Add interactive handlers for demo elements
-    function addInteractiveHandlers() {
-      // Handle Add Product button click
-      const addProductBtn = document.querySelector('[data-demo-element="add-product"]');
-      if (addProductBtn) {
-        addProductBtn.addEventListener('click', (e) => {
-          e.preventDefault();
-          showProductForm();
-        });
-      }
-
-      // Handle form submission
-      const productForm = document.querySelector('.product-form');
-      if (productForm) {
-        productForm.addEventListener('submit', (e) => {
-          e.preventDefault();
-          handleProductFormSubmit();
-        });
-      }
-    }
-
-    // Show login form
-    function showLoginForm() {
-      const form = document.getElementById('login-form-simulation');
-      if (form) {
-        form.style.display = 'block';
-        form.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        
-        // Add highlight effect to the form
-        form.classList.add('demo-highlight');
-        setTimeout(() => {
-          form.classList.remove('demo-highlight');
-        }, 3000);
-      }
-    }
-
-    // Show product form
-    function showProductForm() {
-      const form = document.getElementById('product-form-simulation');
-      if (form) {
-        form.style.display = 'block';
-        form.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        
-        // Add highlight effect to the form
-        form.classList.add('demo-highlight');
-        setTimeout(() => {
-          form.classList.remove('demo-highlight');
-        }, 3000);
-      }
-    }
-
-    // Handle product form submission
-    function handleProductFormSubmit() {
-      const form = document.querySelector('.product-form');
-      const formData = new FormData(form);
-      
-      // Get form values
-      const productData = {
-        name: document.getElementById('product-name').value,
-        sku: document.getElementById('product-sku').value,
-        description: document.getElementById('product-description').value,
-        category: document.getElementById('product-category').value,
-        brand: document.getElementById('product-brand').value,
-        price: document.getElementById('product-price').value,
-        salePrice: document.getElementById('product-sale-price').value,
-        stock: document.getElementById('product-stock').value,
-        weight: document.getElementById('product-weight').value,
-        metaTitle: document.getElementById('product-meta-title').value,
-        slug: document.getElementById('product-slug').value,
-        metaDescription: document.getElementById('product-meta-description').value
-      };
-
-      // Validate required fields
-      if (!productData.name || !productData.price) {
-        alert('Please fill in the required fields (Product Name and Price)');
-        return;
-      }
-
-      // Show success message
-      showProductSuccessMessage(productData);
-      
-      // Reset form
-      form.reset();
-      
-      // Hide form after delay
-      setTimeout(() => {
-        const formContainer = document.getElementById('product-form-simulation');
-        if (formContainer) {
-          formContainer.style.display = 'none';
-        }
-      }, 2000);
-    }
-
-    // Show iPhone-style success notification
-    function showIPhoneNotification(title, message, type = 'success') {
-      // Remove existing notification
-      const existingNotification = document.getElementById('iphone-notification');
-      if (existingNotification) {
-        existingNotification.remove();
-      }
-
-      // Create iPhone-style notification
-      const notification = document.createElement('div');
-      notification.id = 'iphone-notification';
-      
-      // Get icon based on type
-      const icons = {
-        success: '✅',
-        info: 'ℹ️',
-        warning: '⚠️',
-        error: '❌'
-      };
-
-      notification.innerHTML = `
-        <div class="iphone-notification-content">
-          <div class="iphone-notification-icon">${icons[type]}</div>
-          <div class="iphone-notification-text">
-            <div class="iphone-notification-title">${title}</div>
-            <div class="iphone-notification-message">${message}</div>
-          </div>
-          <div class="iphone-notification-close" onclick="this.parentElement.parentElement.remove()">×</div>
-        </div>
-      `;
-
-      notification.style.cssText = `
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background: rgba(0, 0, 0, 0.9);
-        border-radius: 16px;
-        padding: 0;
-        box-shadow: 
-          0 20px 40px rgba(0, 0, 0, 0.3),
-          0 0 0 1px rgba(255, 255, 255, 0.1);
-        z-index: 10000;
-        animation: iphoneNotificationSlideIn 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-        max-width: 320px;
-        min-width: 280px;
-        overflow: hidden;
-        border: 1px solid rgba(255, 255, 255, 0.2);
-      `;
-
-      // Add iPhone notification styles
-      addIPhoneNotificationStyles();
-
-      document.body.appendChild(notification);
-
-      // Auto-remove after 3 seconds
-      setTimeout(() => {
-        if (notification.parentNode) {
-          notification.style.animation = 'iphoneNotificationSlideOut 0.3s ease-in forwards';
-          setTimeout(() => {
-            if (notification.parentNode) {
-              notification.remove();
-            }
-          }, 300);
-        }
-      }, 3000);
-    }
-
-    // Add iPhone notification styles
-    function addIPhoneNotificationStyles() {
-      if (!document.getElementById('iphone-notification-styles')) {
-        const style = document.createElement('style');
-        style.id = 'iphone-notification-styles';
-        style.textContent = `
-          .iphone-notification-content {
-            display: flex;
-            align-items: center;
-            padding: 16px 20px;
-            gap: 12px;
-            color: white;
-            position: relative;
-          }
-
-          .iphone-notification-icon {
-            font-size: 24px;
-            flex-shrink: 0;
-            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
-          }
-
-          .iphone-notification-text {
-            flex: 1;
-            min-width: 0;
-          }
-
-          .iphone-notification-title {
-            font-size: 16px;
-            font-weight: 600;
-            margin-bottom: 4px;
-            line-height: 1.2;
-            color: white;
-            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-          }
-
-          .iphone-notification-message {
-            font-size: 14px;
-            opacity: 0.9;
-            line-height: 1.3;
-            color: rgba(255, 255, 255, 0.9);
-          }
-
-          .iphone-notification-close {
-            position: absolute;
-            top: 8px;
-            right: 8px;
-            width: 24px;
-            height: 24px;
-            border-radius: 12px;
-            background: rgba(255, 255, 255, 0.2);
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            font-size: 16px;
-            font-weight: bold;
-            transition: all 0.2s ease;
-          }
-
-          .iphone-notification-close:hover {
-            background: rgba(255, 255, 255, 0.3);
-            transform: scale(1.1);
-          }
-
-          @keyframes iphoneNotificationSlideIn {
-            0% {
-              opacity: 0;
-              transform: translate(-50%, -50%) scale(0.8);
-            }
-            50% {
-              opacity: 1;
-              transform: translate(-50%, -50%) scale(1.05);
-            }
-            100% {
-              opacity: 1;
-              transform: translate(-50%, -50%) scale(1);
-            }
-          }
-
-          @keyframes iphoneNotificationSlideOut {
-            0% {
-              opacity: 1;
-              transform: translate(-50%, -50%) scale(1);
-            }
-            100% {
-              opacity: 0;
-              transform: translate(-50%, -50%) scale(0.8);
-            }
-          }
-        `;
-        document.head.appendChild(style);
-      }
-    }
-
-    // Show product success message using iPhone notification
-    function showProductSuccessMessage(productData) {
-      showIPhoneNotification(
-        'Product Added Successfully! 🎉',
-        `${productData.name} has been added to your catalog. Price: $${productData.price} | SKU: ${productData.sku || 'Auto-generated'}`,
-        'success'
-      );
-    }
-
-
-    // Mouse tracking system removed - no cursor movement animations
-
-
-    // Function to trigger widget messages
-    function triggerWidgetMessage(message) {
-      console.log('Widget would ask:', message);
-      
-      // Show a notification or highlight that the AI is ready to help
-      showDemoNotification(message);
-    }
-
-    // Function to show demo notification using iPhone style
-    function showDemoNotification(message) {
-      showIPhoneNotification(
-        'AI Assistant Ready! 🤖',
-        message,
-        'info'
-      );
-    }
-
-    // Demo function to test iPhone notifications
-    function testIPhoneNotifications() {
-      const notifications = [
-        { title: 'Success! 🎉', message: 'Your action was completed successfully!', type: 'success' },
-        { title: 'Information ℹ️', message: 'Here is some helpful information for you.', type: 'info' },
-        { title: 'Warning ⚠️', message: 'Please be careful with this action.', type: 'warning' },
-        { title: 'Error ❌', message: 'Something went wrong. Please try again.', type: 'error' }
-      ];
-
-      let index = 0;
-      const showNext = () => {
-        if (index < notifications.length) {
-          const notif = notifications[index];
-          showIPhoneNotification(notif.title, notif.message, notif.type);
-          index++;
-          setTimeout(showNext, 4000); // Show next notification after 4 seconds
-        }
-      };
-
-      showNext();
-    }
-
-    // Function to set demo context when elements are highlighted
-    function setWidgetDemoContext(elementType) {
-      // This will be called when elements are highlighted
-      // The widget's demo service will use this context to provide relevant responses
-      console.log('Setting demo context:', elementType);
-      
-      // Store the current context globally so the widget can access it
-      window.currentDemoContext = elementType;
-    }
-
-    // Initialize the widget with enhanced demo functionality
-    // Fetch integration settings first, then initialize widget
-    async function initializeWidget() {
-      try {
-        console.log('Fetching integration settings...');
-        
-        // Fetch integration settings from the API
-        const response = await fetch('http://localhost:8080/integration?marketrix_id=mLive-jPwrf&marketrix_key=nOXpK6okO3K7OJGZljJFOirHz7Hdg3YHLyxEeCU8EohjRczKXv');
-        const data = await response.json();
-        
-        if (data.success && data.data && data.data.length > 0) {
-          // Find the widget integration
-          const widgetIntegration = data.data.find(integration => 
-            integration.type === 'widget' && 
-            integration.status === 'active'
-          );
-          
-          if (widgetIntegration) {
-            console.log('Found widget integration:', widgetIntegration);
-            
-            // Extract settings
-            let settings = widgetIntegration.settings;
-            if (typeof settings === 'string') {
-              settings = JSON.parse(settings);
-            }
-            
-            // Initialize widget with fetched settings
-            widgetInstance = initMarketrixWidget({
-              marketrixId: widgetIntegration.marketrix_id,
-              marketrixKey: widgetIntegration.marketrix_key,
-              apiBaseUrl: 'http://localhost:8080',
-              position: settings.widget_position?.replace('_', '-') || 'bottom-right',
-              theme: 'light',
-              avatarUrl: 'https://via.placeholder.com/64/0ea5e9/ffffff?text=AI',
-              agentName: settings.widget_header?.replace(/<[^>]*>/g, '') || 'Marketrix Demo Assistant',
-              enabledModes: [
-                ...(settings.widget_feature_show ? ['show'] : []),
-                ...(settings.widget_feature_tell ? ['tell'] : []),
-                ...(settings.widget_feature_do ? ['do'] : []),
-              ]
-            });
-            
-            // Console log the key identifiers
-            console.log('=== Marketrix Widget Configuration ===');
-            console.log('marketrixId:', widgetIntegration.marketrix_id);
-            console.log('marketrixKey:', widgetIntegration.marketrix_key);
-            console.log('connectionId:', widgetIntegration.id);
-            console.log('integrationId:', widgetIntegration.id);
-            console.log('=====================================');
-            
-            console.log('Widget initialized with integration settings:', {
-              marketrixId: widgetIntegration.marketrix_id,
-              position: settings.widget_position,
-              agentName: settings.widget_header,
-              enabledModes: [
-                ...(settings.widget_feature_show ? ['show'] : []),
-                ...(settings.widget_feature_tell ? ['tell'] : []),
-                ...(settings.widget_feature_do ? ['do'] : []),
-              ]
-            });
-          } else {
-            console.warn('No widget integration found, using default settings');
-            initializeWithDefaults();
-          }
-        } else {
-          console.warn('No integration data found, using default settings');
-          initializeWithDefaults();
-        }
-      } catch (error) {
-        console.error('Failed to fetch integration settings:', error);
-        console.log('Falling back to default settings');
-        initializeWithDefaults();
-      }
-    }
-    
-    // Fallback function to initialize with default settings
-    function initializeWithDefaults() {
-      // Console log the default identifiers
-      console.log('=== Marketrix Widget Configuration (Default) ===');
-      console.log('marketrixId: mLive-psKKA');
-      console.log('marketrixKey: taDkvX7KsSkvYf851AAeQCyhPL1C76SecCNRlXLvhOqZ3pi0Ne');
-      console.log('connectionId: default');
-      console.log('integrationId: default');
-      console.log('===============================================');
-      
-      widgetInstance = initMarketrixWidget({
-        marketrixId: 'mLive-psKKA',
-        marketrixKey: 'taDkvX7KsSkvYf851AAeQCyhPL1C76SecCNRlXLvhOqZ3pi0Ne',
-        apiBaseUrl: 'http://localhost:8080',
-        position: 'bottom-right',
-        theme: 'light',
-        avatarUrl: 'https://via.placeholder.com/64/0ea5e9/ffffff?text=AI',
-        agentName: 'Marketrix Demo Assistant',
-        enabledModes: ['show', 'tell', 'do']
-      });
-    }
-    
-    // Initialize widget asynchronously
-    initializeWidget();
-
-    // Initialize demo highlighting after DOM is loaded
-    document.addEventListener('DOMContentLoaded', initDemoHighlighting);
-    
-    // If DOM is already loaded, initialize immediately
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', initDemoHighlighting);
-    } else {
-      initDemoHighlighting();
-    }
-
-    // Add some demo introduction messages
-    setTimeout(() => {
-      console.log('Demo ready! Try hovering over different elements to see contextual AI assistance.');
-      console.log('=== Tour Data Logging Functions Available ===');
-      console.log('You can log tour data using these functions:');
-      console.log('1. window.logTourDataFromIntegration() - Log tour data from widget integration (RECOMMENDED)');
-      console.log('2. window.logTourDataByConnectionId(1) - Log all tour data for specific connection ID');
-      console.log('3. window.logAllTourData() - Log all tour data across all connection IDs');
-      console.log('4. window.logTourDataForMultipleConnections([1,2,3]) - Log tour data for multiple connection IDs');
-      console.log('5. window.testTourSpotlight() - Test tour spotlight functionality');
-      console.log('6. window.testLoginTour() - Test specific tour: "login tour with 4 steps"');
-      console.log('7. window.testTourWithApiService() - Test tour using API service with URL: tour?question=login%20tour%20with%204%20steps&connection_id=1');
-      console.log('8. window.stopTour() - Stop any running tour');
-      
-      // Auto-show login form for tour testing
-      console.log('Auto-showing login form for tour testing...');
-      showLoginForm();
-    }, 2000);
-
-    // New function to fetch tour data through integration service
-    window.logTourDataFromIntegration = async () => {
-      console.log('=== Logging Tour Data from Integration Service ===');
-      
-      try {
-        // Import the integration service
-        const { IntegrationService } = await import('./src/sdk/integrationService.ts');
-        
-        // Get the current widget configuration
-        const marketrixId = 'mLive-jPwrf'; // Use the ID from the integration
-        const marketrixKey = 'nOXpK6okO3K7OJGZljJFOirHz7Hdg3YHLyxEeCU8EohjRczKXv'; // Use the key from the integration
-        
-        const integrationService = new IntegrationService(marketrixId, marketrixKey);
-        
-        // Fetch integration settings (this will automatically fetch tour data)
-        const integration = await integrationService.fetchIntegrationSettings();
-        
-        if (integration) {
-          console.log('=== INTEGRATION FOUND ===');
-          console.log('Integration ID:', integration.id);
-          console.log('Connection ID:', integration.connection_id);
-          console.log('Integration Type:', integration.type);
-          console.log('Integration Status:', integration.status);
-          
-          // Get tour data from the integration
-          const tourData = await integrationService.getTourDataForConnection(integration.connection_id);
-          console.log('Tour data from integration:', tourData);
-          console.log('Number of tours:', tourData.length);
-          
-          if (tourData.length > 0) {
-            console.log('\n=== TOUR DATA SUMMARY FROM INTEGRATION ===');
-            tourData.forEach((tour, index) => {
-              console.log(`Tour ${index + 1}:`);
-              console.log('  ID:', tour.id);
-              console.log('  Question:', tour.question);
-              console.log('  Target:', tour.target);
-              console.log('  Steps Count:', tour.answer?.steps?.length || 0);
-            });
-          }
-        } else {
-          console.log('No integration found');
-        }
-      } catch (error) {
-        console.error('Failed to log tour data from integration:', error);
-      }
-    };
-
-    // Tour data logging functions
-    window.logTourDataByConnectionId = async (connectionId) => {
-      console.log('=== Logging Tour Data by Connection ID ===');
-      console.log('Connection ID:', connectionId);
-      
-      try {
-        // Import the integration service
-        const { default: IntegrationService } = await import('./src/sdk/integrationService.ts');
-        
-        // Create integration service instance
-        const integrationService = new IntegrationService('mLive-jPwrf', 'nOXpK6okO3K7OJGZljJFOirHz7Hdg3YHLyxEeCU8EohjRczKXv');
-        
-        // Fetch tour data for specific connection
-        await integrationService.getTourDataForConnection(connectionId);
-      } catch (error) {
-        console.error('Failed to log tour data by connection ID:', error);
-      }
-    };
-
-    window.logAllTourData = async () => {
-      console.log('=== Logging All Tour Data ===');
-      
-      try {
-        // Import the integration service
-        const { default: IntegrationService } = await import('./src/sdk/integrationService.ts');
-        
-        // Create integration service instance
-        const integrationService = new IntegrationService('mLive-jPwrf', 'nOXpK6okO3K7OJGZljJFOirHz7Hdg3YHLyxEeCU8EohjRczKXv');
-        
-        // Fetch all tour data
-        await integrationService.getAllTourData();
-      } catch (error) {
-        console.error('Failed to log all tour data:', error);
-      }
-    };
-
-    window.logTourDataForMultipleConnections = async (connectionIds) => {
-      console.log('=== Logging Tour Data for Multiple Connection IDs ===');
-      console.log('Connection IDs:', connectionIds);
-      
-      try {
-        // Import the integration service
-        const { default: IntegrationService } = await import('./src/sdk/integrationService.ts');
-        
-        // Create integration service instance
-        const integrationService = new IntegrationService('mLive-jPwrf', 'nOXpK6okO3K7OJGZljJFOirHz7Hdg3YHLyxEeCU8EohjRczKXv');
-        
-        for (const connectionId of connectionIds) {
-          console.log(`\n=== PROCESSING CONNECTION ID: ${connectionId} ===`);
-          await integrationService.getTourDataForConnection(connectionId);
-        }
-        
-        console.log('\n=== COMPLETED PROCESSING ALL CONNECTION IDs ===');
-      } catch (error) {
-        console.error('Failed to log tour data for multiple connection IDs:', error);
-      }
-    };
-
-    // Test tour spotlight functionality
-    window.testTourSpotlight = () => {
-      console.log('=== TESTING TOUR SPOTLIGHT FUNCTIONALITY ===');
-      
-      // Find a demo element to highlight
-      const testElement = document.querySelector('[data-demo-element="dashboard"]');
-      if (!testElement) {
-        console.error('No test element found. Make sure the page is loaded.');
-        return;
-      }
-      
-      console.log('Test element found:', testElement);
-      
-      // Create a mock tour step
-      const mockStep = {
-        id: 'test-step-1',
-        title: 'Test Tour Step',
-        description: 'This is a test tour step to demonstrate the spotlight and description functionality. The element should be highlighted with a spotlight effect and this description should appear next to it.',
-        selector: '[data-demo-element="dashboard"]',
-        action: 'click',
-        order: 1
-      };
-      
-      console.log('Mock step data:', mockStep);
-      
-      // Simulate the spotlight functionality
-      try {
-        // Create spotlight overlay
-        const spotlight = document.createElement('div');
-        spotlight.id = 'test-tour-spotlight';
-        spotlight.style.cssText = `
-          position: fixed;
-          top: 0;
-          left: 0;
-          width: 100vw;
-          height: 100vh;
-          z-index: 9999;
-          pointer-events: none;
-          background: radial-gradient(ellipse at center, transparent 0%, transparent 40%, rgba(0, 0, 0, 0.6) 100%);
-          animation: spotlightFadeIn 0.3s ease-out;
-        `;
-        
-        // Create description text
-        const descriptionDiv = document.createElement('div');
-        descriptionDiv.id = 'test-tour-description';
-        descriptionDiv.style.cssText = `
-          position: fixed;
-          z-index: 10000;
-          background: rgba(0, 0, 0, 0.9);
-          color: white;
-          padding: 16px 20px;
-          border-radius: 8px;
-          max-width: 300px;
-          font-size: 14px;
-          line-height: 1.4;
-          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-          animation: descriptionSlideIn 0.3s ease-out;
-        `;
-        descriptionDiv.textContent = mockStep.description;
-        
-        // Update spotlight position based on element
-        const updateSpotlightPosition = () => {
-          const rect = testElement.getBoundingClientRect();
-          spotlight.style.background = `radial-gradient(ellipse at ${rect.left + rect.width/2}px ${rect.top + rect.height/2}px, 
-            transparent 0%, 
-            transparent 40%, 
-            rgba(0, 0, 0, 0.6) 100%)`;
-        };
-        
-        // Position description relative to element
-        const updateDescriptionPosition = () => {
-          const rect = testElement.getBoundingClientRect();
-          const descriptionRect = descriptionDiv.getBoundingClientRect();
-          
-          let left = rect.right + 10;
-          let top = rect.top + (rect.height - descriptionRect.height) / 2;
-          
-          if (left + descriptionRect.width > window.innerWidth) {
-            left = rect.left - descriptionRect.width - 10;
-          }
-          
-          if (top < 10) {
-            top = 10;
-          } else if (top + descriptionRect.height > window.innerHeight - 10) {
-            top = window.innerHeight - descriptionRect.height - 10;
-          }
-          
-          descriptionDiv.style.left = `${left}px`;
-          descriptionDiv.style.top = `${top}px`;
-        };
-        
-        updateSpotlightPosition();
-        updateDescriptionPosition();
-        
-        // Add resize and scroll listeners
-        const resizeHandler = () => {
-          updateSpotlightPosition();
-          updateDescriptionPosition();
-        };
-        const scrollHandler = () => {
-          updateSpotlightPosition();
-          updateDescriptionPosition();
-        };
-        
-        window.addEventListener('resize', resizeHandler);
-        window.addEventListener('scroll', scrollHandler, true);
-        
-        document.body.appendChild(spotlight);
-        document.body.appendChild(descriptionDiv);
-        
-        // Add highlight class to element
-        testElement.classList.add('tour-highlight');
-        
-        // Scroll element into view
-        testElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        
-        // Clean up after 10 seconds
-        setTimeout(() => {
-          if (spotlight.parentNode) {
-            spotlight.remove();
-          }
-          if (descriptionDiv.parentNode) {
-            descriptionDiv.remove();
-          }
-          testElement.classList.remove('tour-highlight');
-          window.removeEventListener('resize', resizeHandler);
-          window.removeEventListener('scroll', scrollHandler, true);
-          console.log('Test spotlight cleaned up');
-        }, 10000);
-        
-        console.log('Test spotlight created successfully!');
-        console.log('The spotlight and description will automatically disappear in 10 seconds.');
-        
-      } catch (error) {
-        console.error('Error creating test spotlight:', error);
-      }
-    };
-
-    // Test specific tour question: "login tour with 4 steps"
-    window.testLoginTour = async () => {
-      console.log('=== TESTING LOGIN TOUR WITH 4 STEPS ===');
-      
-      try {
-        const question = 'login tour with 4 steps';
-        const connectionId = 1;
-        const url = `http://localhost:8080/tour?question=${encodeURIComponent(question)}&connection_id=${connectionId}`;
-        
-        console.log('Tour API URL:', url);
-        console.log('Question:', question);
-        console.log('Connection ID:', connectionId);
-        
-        const response = await fetch(url, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
-        
-        console.log('Response status:', response.status);
-        console.log('Response headers:', Object.fromEntries(response.headers.entries()));
-        
-        if (!response.ok) {
-          console.error('Tour API Error:', response.status, response.statusText);
-          const errorText = await response.text();
-          console.error('Error Response Body:', errorText);
-          return;
-        }
-        
-        const data = await response.json();
-        console.log('=== TOUR API RESPONSE ===');
-        console.log('Full response:', data);
-        
-        if (data.success && data.data) {
-          const tour = data.data;
-          console.log('=== TOUR DATA RECEIVED ===');
-          console.log('Tour ID:', tour.id);
-          console.log('Connection ID:', tour.connection_id);
-          console.log('Question:', tour.question);
-          console.log('Target:', tour.target);
-          console.log('Answer Steps Count:', tour.answer?.steps?.length || 0);
-          
-          // Log answer JSON in detail
-          if (tour.answer) {
-            console.log('=== ANSWER JSON ===');
-            console.log('Answer:', JSON.stringify(tour.answer, null, 2));
-            
-            if (tour.answer.steps) {
-              console.log('\n--- TOUR STEPS DETAILS ---');
-              tour.answer.steps.forEach((step, stepIndex) => {
-                console.log(`  Step ${stepIndex + 1}:`);
-                console.log('    Step ID:', step.id);
-                console.log('    Step Title:', step.title);
-                console.log('    Step Description:', step.description);
-                console.log('    Step Selector:', step.selector || 'N/A');
-                console.log('    Step XPath:', step.xpath || 'N/A');
-                console.log('    Step Action:', step.action || 'N/A');
-                console.log('    Step Order:', step.order);
-              });
-              
-              // Test the tour through the widget if available
-              if (widgetInstance && widgetInstance.startStepGuide) {
-                console.log('\n=== STARTING TOUR THROUGH WIDGET ===');
-                widgetInstance.startStepGuide(tour.answer.steps);
-              } else {
-                console.log('\n=== WIDGET NOT AVAILABLE, USING FALLBACK ===');
-                // Trigger spotlight for the first step
-                if (tour.answer.steps.length > 0) {
-                  const firstStep = tour.answer.steps[0];
-                  console.log('\n=== TRIGGERING SPOTLIGHT FOR FIRST STEP ===');
-                  console.log('First step selector:', firstStep.selector);
-                  console.log('First step description:', firstStep.description);
-                  
-                  // Find and highlight the element
-                  let element = null;
-                  if (firstStep.selector) {
-                    element = document.querySelector(firstStep.selector);
-                    console.log('Element found by selector:', element);
-                  }
-                  
-                  if (element) {
-                    // Create spotlight and description
-                    createTourSpotlight(element, firstStep.description || firstStep.title || 'Tour step');
-                  } else {
-                    console.warn('Element not found for selector:', firstStep.selector);
-                  }
-                }
-              }
-            }
-          }
-        } else {
-          console.log('No tour data found for question:', question);
-        }
-        
-      } catch (error) {
-        console.error('Error testing login tour:', error);
-      }
-    };
-
-    // Test tour using API service
-    window.testTourWithApiService = async () => {
-      console.log('=== TESTING TOUR WITH API SERVICE ===');
-      
-      try {
-        // Import the API service
-        const { MarketrixApiService } = await import('./src/services/api.ts');
-        
-        // Create API service instance
-        const apiService = new MarketrixApiService('http://localhost:8080');
-        
-        // Test the login tour
-        const tourData = await apiService.testLoginTour();
-        console.log('Tour data from API service:', tourData);
-        
-        // If tour data has steps, trigger spotlight for first step
-        if (tourData && tourData.answer && tourData.answer.steps && tourData.answer.steps.length > 0) {
-          const firstStep = tourData.answer.steps[0];
-          console.log('Triggering spotlight for first step:', firstStep);
-          
-          let element = null;
-          if (firstStep.selector) {
-            element = document.querySelector(firstStep.selector);
-            console.log('Element found by selector:', element);
-          }
-          
-          if (element) {
-            createTourSpotlight(element, firstStep.description || firstStep.title || 'Tour step');
-          } else {
-            console.warn('Element not found for selector:', firstStep.selector);
-          }
-        }
-        
-      } catch (error) {
-        console.error('Error testing tour with API service:', error);
-      }
-    };
-
-    // Test widget tour function
-    window.testWidgetTour = async () => {
-      console.log('=== TESTING WIDGET TOUR ===');
-      
-      try {
-        // Check if widget is available
-        if (!widgetInstance) {
-          console.error('Widget not initialized yet. Please wait...');
-          return;
-        }
-        
-        // Trigger tour through widget
-        console.log('Triggering tour through widget...');
-        
-        // Simulate a "show" action that should trigger the tour
-        const tourQuestion = 'login tour with 4 steps';
-        console.log('Sending tour question to widget:', tourQuestion);
-        
-        // If the widget has a method to trigger tours, use it
-        if (widgetInstance.triggerTour) {
-          await widgetInstance.triggerTour(tourQuestion);
-        } else {
-          console.log('Widget does not have triggerTour method, trying alternative approach...');
-          
-          // Try to find the widget's message input and send the tour question
-          const widgetInput = document.querySelector('[data-testid="message-input"]') || 
-                             document.querySelector('input[placeholder*="message"]') ||
-                             document.querySelector('textarea[placeholder*="message"]');
-          
-          if (widgetInput) {
-            console.log('Found widget input, sending tour question...');
-            widgetInput.value = tourQuestion;
-            widgetInput.dispatchEvent(new Event('input', { bubbles: true }));
-            
-            // Try to find and click send button
-            const sendButton = document.querySelector('[data-testid="send-button"]') ||
-                              document.querySelector('button[type="submit"]') ||
-                              document.querySelector('button:has(svg)');
-            
-            if (sendButton) {
-              console.log('Found send button, clicking...');
-              sendButton.click();
-            } else {
-              console.log('Send button not found, trying Enter key...');
-              widgetInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
-            }
-          } else {
-            console.log('Widget input not found, cannot send tour question');
-          }
-        }
-        
-      } catch (error) {
-        console.error('Error testing widget tour:', error);
-      }
-    };
-
-    // Verify tour elements function
-    window.verifyTourElements = () => {
-      console.log('=== VERIFYING TOUR ELEMENTS ===');
-      
-      const selectors = [
-        '[data-demo-element="login-button"]',
-        '[data-demo-element="login-email"]',
-        '[data-demo-element="login-password"]',
-        '[data-demo-element="login-submit"]'
-      ];
-      
-      let allFound = true;
-      
-      selectors.forEach((selector, index) => {
-        const element = document.querySelector(selector);
-        if (element) {
-          console.log(`✅ Step ${index + 1}: Found element for selector "${selector}"`);
-          console.log('   Element:', element);
-          console.log('   Tag:', element.tagName);
-          console.log('   Text:', element.textContent || element.value || 'N/A');
-        } else {
-          console.error(`❌ Step ${index + 1}: Element NOT found for selector "${selector}"`);
-          allFound = false;
-        }
-      });
-      
-      if (allFound) {
-        console.log('🎉 All tour elements found! Tour should work properly.');
-      } else {
-        console.log('⚠️ Some tour elements are missing. Please check the selectors.');
-      }
-      
-      return allFound;
-    };
-
-    // Test direct tour function
-    window.testDirectTour = () => {
-      console.log('=== TESTING DIRECT TOUR ===');
-      
-      // Create mock tour steps
-      const mockSteps = [
-        {
-          step_number: 1,
-          action: 'click',
-          element: 'login-button',
-          selector: '[data-demo-element="login-button"]',
-          description: 'First, click on the Login button to access the authentication system. This will open the login form where you can enter your credentials.',
-          text: 'Click me!'
-        },
-        {
-          step_number: 2,
-          action: 'fill',
-          element: 'login-email',
-          selector: '[data-demo-element="login-email"]',
-          description: 'Enter your email address in the email input field. Watch as the text types automatically with animation.',
-          text: 'user@example.com'
-        },
-        {
-          step_number: 3,
-          action: 'fill',
-          element: 'login-password',
-          selector: '[data-demo-element="login-password"]',
-          description: 'Enter your password in the password input field. The text will be typed character by character.',
-          text: 'password123'
-        },
-        {
-          step_number: 4,
-          action: 'click',
-          element: 'login-submit',
-          selector: '[data-demo-element="login-submit"]',
-          description: 'Click the submit button to complete the login process. This final step will complete the tour.',
-          text: 'Submit now!'
-        }
-      ];
-      
-      console.log('Mock tour steps:', mockSteps);
-      
-      // Test through widget if available
-      if (widgetInstance && widgetInstance.startStepGuide) {
-        console.log('Starting tour through widget...');
-        widgetInstance.startStepGuide(mockSteps);
-      } else {
-        console.log('Widget not available, testing individual steps...');
-        
-        // Test first step
-        const firstStep = mockSteps[0];
-        const element = document.querySelector(firstStep.selector);
-        if (element) {
-          console.log('Found first step element:', element);
-          createTourSpotlight(element, firstStep.description);
-        } else {
-          console.error('First step element not found:', firstStep.selector);
-        }
-      }
-    };
-
-    // Stop tour function
-    window.stopTour = () => {
-      console.log('=== STOPPING TOUR ===');
-      
-      // Remove any existing tour elements
-      const existingSpotlight = document.getElementById('login-tour-spotlight');
-      const existingDescription = document.getElementById('login-tour-description');
-      
-      if (existingSpotlight) {
-        existingSpotlight.remove();
-      }
-      if (existingDescription) {
-        existingDescription.remove();
-      }
-      
-      // Remove highlight classes
-      document.querySelectorAll('.tour-highlight').forEach(el => {
-        el.classList.remove('tour-highlight');
-      });
-      
-      console.log('Tour stopped and cleaned up');
-    };
-
-    // Helper function to create tour spotlight
-    const createTourSpotlight = (element, description) => {
-      // Remove existing spotlight
-      const existingSpotlight = document.getElementById('login-tour-spotlight');
-      if (existingSpotlight) {
-        existingSpotlight.remove();
-      }
-      
-      const existingDescription = document.getElementById('login-tour-description');
-      if (existingDescription) {
-        existingDescription.remove();
-      }
-      
-      // Create spotlight overlay
-      const spotlight = document.createElement('div');
-      spotlight.id = 'login-tour-spotlight';
-      spotlight.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100vh;
-        z-index: 9999;
-        pointer-events: none;
-        background: radial-gradient(ellipse at center, transparent 0%, transparent 40%, rgba(0, 0, 0, 0.6) 100%);
-        animation: spotlightFadeIn 0.3s ease-out;
-      `;
-      
-      // Create description text
-      const descriptionDiv = document.createElement('div');
-      descriptionDiv.id = 'login-tour-description';
-      descriptionDiv.style.cssText = `
-        position: fixed;
-        z-index: 10000;
-        background: rgba(0, 0, 0, 0.9);
-        color: white;
-        padding: 16px 20px;
-        border-radius: 8px;
-        max-width: 300px;
-        font-size: 14px;
-        line-height: 1.4;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-        animation: descriptionSlideIn 0.3s ease-out;
-      `;
-      descriptionDiv.textContent = description;
-      
-      // Update spotlight position based on element
-      const updateSpotlightPosition = () => {
-        const rect = element.getBoundingClientRect();
-        spotlight.style.background = `radial-gradient(ellipse at ${rect.left + rect.width/2}px ${rect.top + rect.height/2}px, 
-          transparent 0%, 
-          transparent 40%, 
-          rgba(0, 0, 0, 0.6) 100%)`;
-      };
-      
-      // Position description relative to element
-      const updateDescriptionPosition = () => {
-        const rect = element.getBoundingClientRect();
-        const descriptionRect = descriptionDiv.getBoundingClientRect();
-        
-        let left = rect.right + 10;
-        let top = rect.top + (rect.height - descriptionRect.height) / 2;
-        
-        if (left + descriptionRect.width > window.innerWidth) {
-          left = rect.left - descriptionRect.width - 10;
-        }
-        
-        if (top < 10) {
-          top = 10;
-        } else if (top + descriptionRect.height > window.innerHeight - 10) {
-          top = window.innerHeight - descriptionRect.height - 10;
-        }
-        
-        descriptionDiv.style.left = `${left}px`;
-        descriptionDiv.style.top = `${top}px`;
-      };
-      
-      updateSpotlightPosition();
-      updateDescriptionPosition();
-      
-      // Add resize and scroll listeners
-      const resizeHandler = () => {
-        updateSpotlightPosition();
-        updateDescriptionPosition();
-      };
-      const scrollHandler = () => {
-        updateSpotlightPosition();
-        updateDescriptionPosition();
-      };
-      
-      window.addEventListener('resize', resizeHandler);
-      window.addEventListener('scroll', scrollHandler, true);
-      
-      document.body.appendChild(spotlight);
-      document.body.appendChild(descriptionDiv);
-      
-      // Add highlight class to element
-      element.classList.add('tour-highlight');
-      
-      // Scroll element into view
-      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      
-      // Clean up after 8 seconds
-      setTimeout(() => {
-        if (spotlight.parentNode) {
-          spotlight.remove();
-        }
-        if (descriptionDiv.parentNode) {
-          descriptionDiv.remove();
-        }
-        element.classList.remove('tour-highlight');
-        window.removeEventListener('resize', resizeHandler);
-        window.removeEventListener('scroll', scrollHandler, true);
-        console.log('Login tour spotlight cleaned up');
-      }, 8000);
-      
-      console.log('Login tour spotlight created successfully!');
-    };
-
-    // Test responsive spotlight functionality
-    function testResponsiveSpotlight() {
-      const testButton = document.getElementById('test-spotlight-btn');
-      if (!testButton) {
-        console.error('Test button not found');
-        return;
-      }
-
-      // Create a simple step guide for testing
-      const testStepGuide = [
-        {
-          selector: '#test-spotlight-btn',
-          description: 'This is a test button with responsive spotlight and description text! Try resizing your browser window or scrolling - both the spotlight and description text should follow this button smoothly. The description text should always stay positioned relative to the highlighted element.',
-          action: 'click'
-        }
-      ];
-
-      // Simulate the step guide highlighting
-      if (window.widgetInstance && window.widgetInstance.demoService) {
-        window.widgetInstance.demoService.startStepGuide(testStepGuide);
-      } else {
-        // Fallback: create spotlight manually for testing
-        createTestSpotlight(testButton);
-      }
-    }
-
-    function createTestSpotlight(element) {
-      // Remove any existing test spotlight
-      removeTestSpotlight();
-
-      // Create spotlight overlay
-      const spotlight = document.createElement('div');
-      spotlight.id = 'test-spotlight';
-      spotlight.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100vh;
-        z-index: 9999;
-        pointer-events: none;
-        animation: spotlightFadeIn 0.3s ease-out;
-      `;
-
-      // Create pulsing border
-      const border = document.createElement('div');
-      border.id = 'test-border';
-      border.style.cssText = `
-        position: fixed;
-        border: 3px solid #3b82f6;
-        border-radius: 8px;
-        box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
-        z-index: 10000;
-        pointer-events: none;
-        animation: stepPulse 2s infinite;
-      `;
-
-      // Function to update positions based on current element position
-      const updatePositions = () => {
-        const rect = element.getBoundingClientRect();
-        
-        // Update spotlight gradient to follow element
-        spotlight.style.background = `radial-gradient(ellipse at ${rect.left + rect.width/2}px ${rect.top + rect.height/2}px, 
-          transparent 0%, 
-          transparent 40%, 
-          rgba(0, 0, 0, 0.6) 100%)`;
-        
-        // Update border position and size
-        border.style.left = `${rect.left - 4}px`;
-        border.style.top = `${rect.top - 4}px`;
-        border.style.width = `${rect.width + 8}px`;
-        border.style.height = `${rect.height + 8}px`;
-      };
-
-      // Initial position update
-      updatePositions();
-
-      // Add resize and scroll listeners to keep spotlight in sync
-      const resizeHandler = () => updatePositions();
-      const scrollHandler = () => updatePositions();
-
-      window.addEventListener('resize', resizeHandler);
-      window.addEventListener('scroll', scrollHandler, true);
-
-      document.body.appendChild(spotlight);
-      document.body.appendChild(border);
-
-      // Store references for cleanup
-      window.testSpotlight = spotlight;
-      window.testBorder = border;
-      window.testResizeHandler = resizeHandler;
-      window.testScrollHandler = scrollHandler;
-
-      console.log('Test spotlight created with responsive positioning');
-    }
-
-    function stopSpotlightDemo() {
-      // Remove step guide if active
-      if (window.widgetInstance && window.widgetInstance.demoService) {
-        window.widgetInstance.demoService.stopStepGuide();
-      }
-      
-      // Remove test spotlight
-      removeTestSpotlight();
-    }
-
-    function updateTextPosition() {
-      // Try to update text position through the widget service
-      if (window.widgetInstance && window.widgetInstance.demoService) {
-        window.widgetInstance.demoService.updateDescriptionTextPosition();
-      } else {
-        console.log('Widget service not available for manual text position update');
-      }
-    }
-
-    function removeTestSpotlight() {
-      // Remove spotlight elements
-      if (window.testSpotlight) {
-        window.testSpotlight.remove();
-        window.testSpotlight = null;
-      }
-      
-      if (window.testBorder) {
-        window.testBorder.remove();
-        window.testBorder = null;
-      }
-
-      // Remove event listeners
-      if (window.testResizeHandler) {
-        window.removeEventListener('resize', window.testResizeHandler);
-        window.testResizeHandler = null;
-      }
-      
-      if (window.testScrollHandler) {
-        window.removeEventListener('scroll', window.testScrollHandler, true);
-        window.testScrollHandler = null;
-      }
-    }
-  </script>
+    <script
+      type="module"
+      src="./meet.js"
+      marketrix-id="mLive-psKKA"
+      marketrix-key="taDkvX7KsSkvYf851AAeQCyhPL1C76SecCNRlXLvhOqZ3pi0Ne"
+    ></script>
 </body>
 </html>

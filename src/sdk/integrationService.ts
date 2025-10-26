@@ -1,5 +1,5 @@
-import type { IntegrationData } from './schema';
 import { API_URL_GLOBAL_SET } from '../config';
+import type { IntegrationData } from './schema';
 
 export interface IntegrationSettings {
   widget_enabled?: boolean;
