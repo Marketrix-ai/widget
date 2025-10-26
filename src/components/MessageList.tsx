@@ -1,13 +1,21 @@
 // / <reference lib="dom" />
 import React, { useState } from 'react';
+
+// Declare navigator for TypeScript
+declare const navigator: Navigator & { mediaDevices: MediaDevices };
+
+// Declare window extensions for screen capture
+interface WindowWithScreenCapture extends Window {
+  screenCaptureStream?: MediaStream;
+  screenCaptureOverlay?: HTMLElement;
+}
 import { IoChatbubbleEllipsesOutline } from 'react-icons/io5';
 import { LuMousePointerClick } from 'react-icons/lu';
 import { SiTicktick } from 'react-icons/si';
 
 import MarketrixLogo from '../assets/marketrix-icon.png';
-import { API_URL_GLOBAL_SET } from '../config';
 import { useWidgetAtmosphere } from '../hooks/useWidgetAtmosphere';
-import type { WidgetSettingsData } from '../sdk';
+import { sdk, type TourData, type TourStepData, type WidgetSettingsData } from '../sdk';
 import type { ChatMessage, MarketrixConfig } from '../types';
 import { formatMessageTime } from '../utils/formatting';
 import { ScreenAccessModal } from './ScreenAccessModal';
@@ -57,28 +65,8 @@ export const MessageList: React.FC<MessageListProps> = ({
   const widgetText = getWidgetText();
   const activeAvatar = getActiveAvatar();
 
-  // Tour data state
-  interface TourStep {
-    id: number;
-    title: string;
-    description: string;
-    text?: string;
-    selector?: string;
-    xpath?: string;
-    action?: string;
-    order: number;
-    step_number?: number;
-    element?: HTMLElement;
-  }
-
-  interface TourData {
-    id: number;
-    connection_id: number;
-    question: string;
-    created_at: string;
-    updated_at: string;
-    answer: TourStep[];
-  }
+  // Use SDK types
+  type TourStep = TourStepData;
 
   const [tourData, setTourData] = useState<TourData | null>(null);
   const [parsedSteps, setParsedSteps] = useState<TourStep[]>([]);
@@ -523,7 +511,8 @@ export const MessageList: React.FC<MessageListProps> = ({
     // Clear any existing typewriter interval for this step
     if (activeTypewriterIntervals.has(stepIndex)) {
       console.log(`🛑 Clearing existing typewriter for step ${stepIndex + 1}`);
-      clearInterval(activeTypewriterIntervals.get(stepIndex)!);
+      const interval = activeTypewriterIntervals.get(stepIndex);
+      if (interval) clearInterval(interval);
       activeTypewriterIntervals.delete(stepIndex);
     }
 
@@ -588,7 +577,7 @@ export const MessageList: React.FC<MessageListProps> = ({
         // Remove the cursor after typing is complete
         setTimeout(() => {
           // Update the style to hide the cursor
-          if (style && style.parentNode) {
+          if (style?.parentNode) {
             style.textContent = `
               #step-description-text::after {
                 content: '';
@@ -856,7 +845,8 @@ export const MessageList: React.FC<MessageListProps> = ({
 
     // Clear any active typewriter interval for current step
     if (activeTypewriterIntervals.has(currentStepIndex)) {
-      clearInterval(activeTypewriterIntervals.get(currentStepIndex)!);
+      const interval = activeTypewriterIntervals.get(currentStepIndex);
+      if (interval) clearInterval(interval);
       activeTypewriterIntervals.delete(currentStepIndex);
     }
 
@@ -1116,113 +1106,102 @@ export const MessageList: React.FC<MessageListProps> = ({
       console.log('Question:', question);
       console.log('Connection ID:', connectionId);
 
-      // Fetch tour data from API
-      const url = `${API_URL_GLOBAL_SET.API_END_POINT}/tour?question=${encodeURIComponent(question)}&connection_id=${connectionId}`;
-      console.log('Fetching tour data from:', url);
-
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
+      // Use SDK to fetch tour data
+      const response = await sdk.tourGet({
+        query: {
+          question,
+          connection_id: connectionId,
         },
       });
 
-      if (!response.ok) {
-        console.error('Tour API Error:', response.status, response.statusText);
-        return;
-      }
-
-      const data: unknown = await response.json();
       console.log('=== TOUR API RESPONSE ===');
-      console.log('Full response:', data);
+      console.log('Response status:', response.status);
+      console.log('Response body:', response.body);
 
-      if (data && typeof data === 'object' && 'success' in data && 'data' in data) {
-        const responseData = data as { success: boolean; data: unknown };
-        if (responseData.success && responseData.data) {
-          const tour = responseData.data as TourData;
-          console.log('=== TOUR DATA ===');
-          console.log('Tour ID:', tour.id);
-          console.log('Connection ID:', tour.connection_id);
-          console.log('Question:', tour.question);
-          console.log('Answer (raw):', tour.answer);
+      if (response.status === 200 && response.body) {
+        const tour = response.body as unknown as TourData;
+        console.log('=== TOUR DATA ===');
+        console.log('Tour ID:', tour.id);
+        console.log('Connection ID:', tour.connection_id);
+        console.log('Question:', tour.question);
+        console.log('Answer (raw):', tour.answer);
 
-          // Store tour data
-          setTourData(tour);
+        // Store tour data
+        setTourData(tour);
 
-          // Handle the answer data - it's already a JSON object, not a string
-          if (tour.answer) {
-            try {
-              console.log('=== PROCESSING TOUR ANSWER ===');
-              console.log('Tour answer type:', typeof tour.answer);
-              console.log('Tour answer:', tour.answer);
+        // Handle the answer data - it's already a JSON object, not a string
+        if (tour.answer) {
+          try {
+            console.log('=== PROCESSING TOUR ANSWER ===');
+            console.log('Tour answer type:', typeof tour.answer);
+            console.log('Tour answer:', tour.answer);
 
-              // The answer is already a JSON object (array of steps)
-              let steps = tour.answer;
+            // The answer is already a JSON object (array of steps)
+            let steps = tour.answer;
 
-              // If it's a string, parse it
-              if (typeof tour.answer === 'string') {
-                console.log('Parsing answer string...');
-                steps = JSON.parse(tour.answer) as TourStep[];
-              }
+            // If it's a string, parse it
+            if (typeof tour.answer === 'string') {
+              console.log('Parsing answer string...');
+              steps = JSON.parse(tour.answer) as TourStep[];
+            }
 
-              // Handle both array format and object with steps property
-              let parsedSteps = steps;
-              if (
-                steps &&
-                typeof steps === 'object' &&
-                !Array.isArray(steps) &&
-                'steps' in steps &&
-                Array.isArray((steps as { steps: unknown }).steps)
-              ) {
-                console.log('Answer has steps property, extracting steps array');
-                parsedSteps = (steps as { steps: TourStep[] }).steps;
-              }
+            // Handle both array format and object with steps property
+            let parsedSteps = steps;
+            if (
+              steps &&
+              typeof steps === 'object' &&
+              !Array.isArray(steps) &&
+              'steps' in steps &&
+              Array.isArray((steps as { steps: unknown }).steps)
+            ) {
+              console.log('Answer has steps property, extracting steps array');
+              parsedSteps = (steps as { steps: TourStep[] }).steps;
+            }
 
-              console.log('Final parsed steps:', parsedSteps);
+            console.log('Final parsed steps:', parsedSteps);
 
-              // Store parsed steps
-              if (Array.isArray(parsedSteps) && parsedSteps.length > 0) {
-                console.log('=== TOUR STEPS ===');
-                console.log('Number of steps:', parsedSteps.length);
-                setParsedSteps(parsedSteps);
+            // Store parsed steps
+            if (Array.isArray(parsedSteps) && parsedSteps.length > 0) {
+              console.log('=== TOUR STEPS ===');
+              console.log('Number of steps:', parsedSteps.length);
+              setParsedSteps(parsedSteps);
 
-                // Log each step step by step
-                parsedSteps.forEach((step, index) => {
-                  console.log(`\n--- STEP ${index + 1} ---`);
-                  console.log('Step Number:', step.step_number);
-                  console.log('Action:', step.action);
-                  console.log('Element:', step.element);
-                  console.log('Text:', step.text);
-                  console.log('Description:', step.description);
-                  console.log('Selector:', step.selector);
-                  console.log('Full Step Object:', step);
-                });
+              // Log each step step by step
+              parsedSteps.forEach((step, index) => {
+                console.log(`\n--- STEP ${index + 1} ---`);
+                console.log('Step Number:', step.step_number);
+                console.log('Action:', step.action);
+                console.log('Element:', step.element);
+                console.log('Text:', step.text);
+                console.log('Description:', step.description);
+                console.log('Selector:', step.selector);
+                console.log('Full Step Object:', step);
+              });
 
-                // Add step guide styles
-                addStepGuideStyles();
+              // Add step guide styles
+              addStepGuideStyles();
 
-                // Start step-by-step tour guide
-                console.log('=== STARTING STEP-BY-STEP TOUR ===');
-                startStepGuide(parsedSteps);
-              } else {
-                console.log('No valid steps found in tour answer');
-                console.log('Steps type:', typeof parsedSteps);
-                console.log('Steps value:', parsedSteps);
-                setParsedSteps([]);
-              }
-            } catch (parseError) {
-              console.error('=== ERROR PROCESSING TOUR ANSWER ===');
-              console.error('Parse error:', parseError);
-              console.error('Raw answer:', tour.answer);
+              // Start step-by-step tour guide
+              console.log('=== STARTING STEP-BY-STEP TOUR ===');
+              startStepGuide(parsedSteps);
+            } else {
+              console.log('No valid steps found in tour answer');
+              console.log('Steps type:', typeof parsedSteps);
+              console.log('Steps value:', parsedSteps);
               setParsedSteps([]);
             }
-          } else {
-            console.log('No answer field in tour data');
+          } catch (parseError) {
+            console.error('=== ERROR PROCESSING TOUR ANSWER ===');
+            console.error('Parse error:', parseError);
+            console.error('Raw answer:', tour.answer);
             setParsedSteps([]);
           }
         } else {
-          console.log('No tour data found in response');
+          console.log('No answer field in tour data');
+          setParsedSteps([]);
         }
+      } else {
+        console.error('Tour API Error:', response.status, response.body);
       }
     } catch (error) {
       console.error('=== ERROR FETCHING TOUR DATA ===');
@@ -1478,7 +1457,9 @@ export const MessageList: React.FC<MessageListProps> = ({
       console.log('🎥 Starting screen capture...');
 
       // Request screen capture permission
-      const stream = await (navigator as Navigator & { mediaDevices: MediaDevices }).mediaDevices.getDisplayMedia({
+      const stream = await (
+        navigator as Navigator & { mediaDevices: MediaDevices }
+      ).mediaDevices.getDisplayMedia({
         video: {
           width: { ideal: 1920 },
           height: { ideal: 1080 },
@@ -1541,8 +1522,12 @@ export const MessageList: React.FC<MessageListProps> = ({
       }
 
       // Store references for cleanup
-      (window as Window & { screenCaptureStream?: MediaStream; screenCaptureOverlay?: HTMLElement }).screenCaptureStream = stream;
-      (window as Window & { screenCaptureStream?: MediaStream; screenCaptureOverlay?: HTMLElement }).screenCaptureOverlay = statusIndicator;
+      (
+        window as Window & { screenCaptureStream?: MediaStream; screenCaptureOverlay?: HTMLElement }
+      ).screenCaptureStream = stream;
+      (
+        window as Window & { screenCaptureStream?: MediaStream; screenCaptureOverlay?: HTMLElement }
+      ).screenCaptureOverlay = statusIndicator;
 
       // Set screen access active state
       setIsScreenAccessActive(true);
@@ -1563,8 +1548,9 @@ export const MessageList: React.FC<MessageListProps> = ({
     console.log('🛑 Stopping screen capture...');
 
     // Stop all video tracks
-    if ((window as any).screenCaptureStream) {
-      (window as any).screenCaptureStream.getTracks().forEach((track: MediaStreamTrack) => {
+    const windowWithCapture = window as WindowWithScreenCapture;
+    if (windowWithCapture.screenCaptureStream) {
+      windowWithCapture.screenCaptureStream.getTracks().forEach((track: MediaStreamTrack) => {
         track.stop();
       });
     }
@@ -1576,8 +1562,8 @@ export const MessageList: React.FC<MessageListProps> = ({
     }
 
     // Clear references and state
-    (window as any).screenCaptureStream = null;
-    (window as any).screenCaptureOverlay = null;
+    windowWithCapture.screenCaptureStream = undefined;
+    windowWithCapture.screenCaptureOverlay = undefined;
     setIsScreenAccessActive(false);
 
     // Notify parent component about screen sharing state
@@ -1629,7 +1615,7 @@ export const MessageList: React.FC<MessageListProps> = ({
       {/* Suggested actions */}
       {!isLoading && (
         <div key='suggested-actions' className='space-y-2'>
-          {uniqueSuggestedActions.map((action: any, index: number) => (
+          {uniqueSuggestedActions.map((action: SuggestedActionItem, index: number) => (
             <div key={`suggested-action-${action.id}-${index}`} className='flex justify-start'>
               <button
                 onClick={(e) => handleSuggestedActionClick(action, e)}
