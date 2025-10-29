@@ -343,6 +343,230 @@ export const KnowledgeEntitySchema = BaseEntitySchema.extend({
 });
 
 // ============================================================================
+// SIMULATION SCHEMAS - Application simulation and testing
+// ============================================================================
+
+/**
+ * Simulation action schemas
+ */
+export const GoToUrlActionSchema = z.object({
+  go_to_url: z.object({
+    url: z.string(),
+    new_tab: z.boolean(),
+  }),
+});
+
+export const ClickElementByIndexActionSchema = z.object({
+  click_element_by_index: z.object({
+    index: z.number(),
+  }),
+});
+
+export const InputTextActionSchema = z.object({
+  input_text: z.object({
+    index: z.number(),
+    text: z.string(),
+    clear_existing: z.boolean(),
+  }),
+});
+
+export const WriteFileActionSchema = z.object({
+  write_file: z.object({
+    file_name: z.string(),
+    content: z.string(),
+    append: z.boolean(),
+    trailing_newline: z.boolean(),
+    leading_newline: z.boolean(),
+  }),
+});
+
+export const GetOtpActionSchema = z.object({
+  get_otp: z.object({
+    question: z.string(),
+  }),
+});
+
+export const DoneActionSchema = z.object({
+  done: z.object({
+    success: z.boolean(),
+    message: z.string().optional(),
+  }),
+});
+
+export const WaitActionSchema = z.object({
+  wait: z.object({
+    seconds: z.number(),
+  }),
+});
+
+export const ReloadPageActionSchema = z.object({
+  reload_page: z.object({}),
+});
+
+export const OpenNewTabActionSchema = z.object({
+  open_new_tab: z.object({
+    url: z.string(),
+  }),
+});
+
+export const NavigateToUrlActionSchema = z.object({
+  navigate_to_url: z.object({
+    url: z.string(),
+  }),
+});
+
+/**
+ * Union schema for all possible simulation actions
+ */
+export const SimulationActionSchema = z.union([
+  GoToUrlActionSchema,
+  ClickElementByIndexActionSchema,
+  InputTextActionSchema,
+  WriteFileActionSchema,
+  GetOtpActionSchema,
+  DoneActionSchema,
+  WaitActionSchema,
+  ReloadPageActionSchema,
+  OpenNewTabActionSchema,
+  NavigateToUrlActionSchema,
+]);
+
+/**
+ * Model output schema for simulation step
+ */
+export const SimulationModelOutputSchema = z.object({
+  evaluation_previous_goal: z.string().optional(),
+  memory: z.string().optional(),
+  next_goal: z.string().optional(),
+  action: z.array(SimulationActionSchema).optional(),
+  thinking: z.string().optional(),
+});
+
+/**
+ * Result schema for simulation step
+ */
+export const SimulationResultSchema = z.object({
+  is_done: z.boolean(),
+  success: z.boolean().optional(),
+  long_term_memory: z.string().optional(),
+  extracted_content: z.string().optional(),
+  include_extracted_content_only_once: z.boolean().optional(),
+  include_in_memory: z.boolean().optional(),
+  error: z.string().optional(),
+  metadata: z
+    .object({
+      click_x: z.number().optional(),
+      click_y: z.number().optional(),
+      new_tab_opened: z.boolean().optional(),
+      input_x: z.number().optional(),
+      input_y: z.number().optional(),
+    })
+    .optional(),
+  attachments: z.array(z.unknown()).optional(),
+});
+
+/**
+ * Browser tab schema
+ */
+export const BrowserTabSchema = z.object({
+  url: z.string(),
+  title: z.string(),
+  target_id: z.string(),
+  parent_target_id: z.string().nullable(),
+});
+
+/**
+ * Interacted element schema
+ */
+export const InteractedElementSchema = z.object({
+  node_id: z.number(),
+  backend_node_id: z.number(),
+  frame_id: z.string().nullable(),
+  node_type: z.number(),
+  node_value: z.string(),
+  node_name: z.string(),
+  attributes: z.record(z.string()),
+  x_path: z.string(),
+  element_hash: z.number(),
+  bounds: z.object({
+    x: z.number(),
+    y: z.number(),
+    width: z.number(),
+    height: z.number(),
+  }),
+});
+
+/**
+ * Browser state schema for simulation step
+ */
+export const SimulationStateSchema = z.object({
+  tabs: z.array(BrowserTabSchema),
+  screenshot_path: z.string().nullable(),
+  interacted_element: z.array(InteractedElementSchema.nullable()),
+  url: z.string(),
+  title: z.string(),
+});
+
+/**
+ * Metadata schema for simulation step
+ */
+export const SimulationStepMetadataSchema = z.object({
+  step_start_time: z.number(),
+  step_end_time: z.number(),
+  step_number: z.number(),
+});
+
+/**
+ * Individual simulation step schema
+ */
+export const SimulationStepSchema = z.object({
+  model_output: SimulationModelOutputSchema.nullable(),
+  result: z.array(SimulationResultSchema),
+  state: SimulationStateSchema,
+  metadata: SimulationStepMetadataSchema,
+});
+
+/**
+ * Complete simulation history schema
+ */
+export const SimulationHistorySchema = z.object({
+  history: z.array(SimulationStepSchema),
+});
+
+/**
+ * App simulation schema
+ */
+export const SimulationEntitySchema = BaseEntitySchema.extend({
+  connection_id: z.number(),
+  agent_id: z.number(),
+  job_id: z.string(),
+  status: z.string(),
+  status_message: z.string(),
+  path: z.string(),
+  instructions: z.string(),
+  agent_name: z.string().optional(),
+  history: z.array(SimulationStepSchema).optional(),
+});
+
+/**
+ * Simulation creation schema
+ */
+export const SimulationCreateSchema = SimulationEntitySchema.partial().extend({
+  connection_id: z.number(),
+  agent_id: z.number(),
+  instructions: z.string(),
+});
+
+/**
+ * Simulation update schema
+ */
+export const SimulationUpdateSchema = z.object({
+  job_id: z.string().optional(),
+  status: z.string(),
+  status_message: z.string(),
+});
+
+// ============================================================================
 // AGENT SCHEMAS - AI agent creation and management
 // ============================================================================
 
@@ -365,9 +589,15 @@ export const AgentEntitySchema = BaseEntitySchema.extend({
   tenant: TenantEntitySchema.optional(),
   user: UserEntitySchema.optional(),
   knowledge: z.array(KnowledgeEntitySchema).optional(),
+  simulations: z.array(SimulationEntitySchema).optional(),
 });
 
 const KnowledgeIdsSchema = z
+  .string()
+  .transform(str => JSON.parse(str) as number[])
+  .pipe(z.array(z.coerce.number()));
+
+const SimulationIdsSchema = z
   .string()
   .transform(str => JSON.parse(str) as number[])
   .pipe(z.array(z.coerce.number()));
@@ -384,6 +614,7 @@ export const AgentCreateSchema = AgentEntitySchema.partial().extend({
   instructions: z.string(),
   file: z.custom<Express.Multer.File>(),
   knowledge_ids: KnowledgeIdsSchema,
+  simulation_ids: SimulationIdsSchema,
 });
 
 /**
@@ -392,6 +623,7 @@ export const AgentCreateSchema = AgentEntitySchema.partial().extend({
 export const AgentUpdateSchema = AgentEntitySchema.partial().extend({
   file: z.custom<Express.Multer.File>(),
   knowledge_ids: KnowledgeIdsSchema,
+  simulation_ids: SimulationIdsSchema,
 });
 
 /**
@@ -602,229 +834,6 @@ export const IntegrationCreateSchema = IntegrationEntitySchema.partial().extend(
  * Integration update schema
  */
 export const IntegrationUpdateSchema = IntegrationEntitySchema.partial();
-
-// ============================================================================
-// SIMULATION SCHEMAS - Application simulation and testing
-// ============================================================================
-
-/**
- * Simulation action schemas
- */
-export const GoToUrlActionSchema = z.object({
-  go_to_url: z.object({
-    url: z.string(),
-    new_tab: z.boolean(),
-  }),
-});
-
-export const ClickElementByIndexActionSchema = z.object({
-  click_element_by_index: z.object({
-    index: z.number(),
-  }),
-});
-
-export const InputTextActionSchema = z.object({
-  input_text: z.object({
-    index: z.number(),
-    text: z.string(),
-    clear_existing: z.boolean(),
-  }),
-});
-
-export const WriteFileActionSchema = z.object({
-  write_file: z.object({
-    file_name: z.string(),
-    content: z.string(),
-    append: z.boolean(),
-    trailing_newline: z.boolean(),
-    leading_newline: z.boolean(),
-  }),
-});
-
-export const GetOtpActionSchema = z.object({
-  get_otp: z.object({
-    question: z.string(),
-  }),
-});
-
-export const DoneActionSchema = z.object({
-  done: z.object({
-    success: z.boolean(),
-    message: z.string().optional(),
-  }),
-});
-
-export const WaitActionSchema = z.object({
-  wait: z.object({
-    seconds: z.number(),
-  }),
-});
-
-export const ReloadPageActionSchema = z.object({
-  reload_page: z.object({}),
-});
-
-export const OpenNewTabActionSchema = z.object({
-  open_new_tab: z.object({
-    url: z.string(),
-  }),
-});
-
-export const NavigateToUrlActionSchema = z.object({
-  navigate_to_url: z.object({
-    url: z.string(),
-  }),
-});
-
-/**
- * Union schema for all possible simulation actions
- */
-export const SimulationActionSchema = z.union([
-  GoToUrlActionSchema,
-  ClickElementByIndexActionSchema,
-  InputTextActionSchema,
-  WriteFileActionSchema,
-  GetOtpActionSchema,
-  DoneActionSchema,
-  WaitActionSchema,
-  ReloadPageActionSchema,
-  OpenNewTabActionSchema,
-  NavigateToUrlActionSchema,
-]);
-
-/**
- * Model output schema for simulation step
- */
-export const SimulationModelOutputSchema = z.object({
-  evaluation_previous_goal: z.string().optional(),
-  memory: z.string().optional(),
-  next_goal: z.string().optional(),
-  action: z.array(SimulationActionSchema).optional(),
-  thinking: z.string().optional(),
-});
-
-/**
- * Result schema for simulation step
- */
-export const SimulationResultSchema = z.object({
-  is_done: z.boolean(),
-  success: z.boolean().optional(),
-  long_term_memory: z.string().optional(),
-  extracted_content: z.string().optional(),
-  include_extracted_content_only_once: z.boolean().optional(),
-  include_in_memory: z.boolean().optional(),
-  error: z.string().optional(),
-  metadata: z
-    .object({
-      click_x: z.number().optional(),
-      click_y: z.number().optional(),
-      new_tab_opened: z.boolean().optional(),
-      input_x: z.number().optional(),
-      input_y: z.number().optional(),
-    })
-    .optional(),
-  attachments: z.array(z.unknown()).optional(),
-});
-
-/**
- * Browser tab schema
- */
-export const BrowserTabSchema = z.object({
-  url: z.string(),
-  title: z.string(),
-  target_id: z.string(),
-  parent_target_id: z.string().nullable(),
-});
-
-/**
- * Interacted element schema
- */
-export const InteractedElementSchema = z.object({
-  node_id: z.number(),
-  backend_node_id: z.number(),
-  frame_id: z.string().nullable(),
-  node_type: z.number(),
-  node_value: z.string(),
-  node_name: z.string(),
-  attributes: z.record(z.string()),
-  x_path: z.string(),
-  element_hash: z.number(),
-  bounds: z.object({
-    x: z.number(),
-    y: z.number(),
-    width: z.number(),
-    height: z.number(),
-  }),
-});
-
-/**
- * Browser state schema for simulation step
- */
-export const SimulationStateSchema = z.object({
-  tabs: z.array(BrowserTabSchema),
-  screenshot_path: z.string().nullable(),
-  interacted_element: z.array(InteractedElementSchema.nullable()),
-  url: z.string(),
-  title: z.string(),
-});
-
-/**
- * Metadata schema for simulation step
- */
-export const SimulationStepMetadataSchema = z.object({
-  step_start_time: z.number(),
-  step_end_time: z.number(),
-  step_number: z.number(),
-});
-
-/**
- * Individual simulation step schema
- */
-export const SimulationStepSchema = z.object({
-  model_output: SimulationModelOutputSchema.nullable(),
-  result: z.array(SimulationResultSchema),
-  state: SimulationStateSchema,
-  metadata: SimulationStepMetadataSchema,
-});
-
-/**
- * Complete simulation history schema
- */
-export const SimulationHistorySchema = z.object({
-  history: z.array(SimulationStepSchema),
-});
-
-/**
- * App simulation schema
- */
-export const SimulationEntitySchema = BaseEntitySchema.extend({
-  connection_id: z.number(),
-  agent_id: z.number(),
-  job_id: z.string(),
-  status: z.string(),
-  status_message: z.string(),
-  path: z.string(),
-  instructions: z.string(),
-  history: z.array(SimulationStepSchema).optional(),
-});
-
-/**
- * Simulation creation schema
- */
-export const SimulationCreateSchema = SimulationEntitySchema.partial().extend({
-  connection_id: z.number(),
-  agent_id: z.number(),
-  instructions: z.string(),
-});
-
-/**
- * Simulation update schema
- */
-export const SimulationUpdateSchema = z.object({
-  job_id: z.string().optional(),
-  status: z.string(),
-  status_message: z.string(),
-});
 
 // ============================================================================
 // TOUR SCHEMAS - Interactive tour and guidance system
