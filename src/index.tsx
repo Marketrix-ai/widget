@@ -1,4 +1,5 @@
 import './index.css';
+import shadowStyles from './index.css?inline';
 
 import React from 'react';
 import { createRoot, type Root } from 'react-dom/client';
@@ -17,6 +18,12 @@ export const initMarketrixWidget = (config: MarketrixConfig): void => {
     return;
   }
 
+  // Prevent double initialization
+  if (widgetInstance) {
+    console.warn('Marketrix Widget: already initialized');
+    return;
+  }
+
   // Store current config
   currentConfig = config;
 
@@ -29,8 +36,22 @@ export const initMarketrixWidget = (config: MarketrixConfig): void => {
     document.body.appendChild(container);
   }
 
-  // Create React root and render widget
-  const root = createRoot(container);
+  // Attach Shadow DOM (closed) and mount point
+  // Note: closed shadow root is not accessible later; we keep references locally only during init
+  const shadowRoot = (container as HTMLElement).attachShadow({ mode: 'closed' });
+
+  // Inject styles into shadow root so the widget is fully encapsulated
+  const styleEl = document.createElement('style');
+  styleEl.textContent = shadowStyles;
+  shadowRoot.appendChild(styleEl);
+
+  // Create a mount element inside the shadow root for React
+  const mountEl = document.createElement('div');
+  mountEl.id = 'marketrix-widget-root';
+  shadowRoot.appendChild(mountEl);
+
+  // Create React root and render widget within the shadow root
+  const root = createRoot(mountEl);
   widgetInstance = root;
 
   root.render(
