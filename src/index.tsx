@@ -33,7 +33,12 @@ export const initMarketrixWidget = (config: MarketrixConfig): void => {
     container = document.createElement('div');
     container.id = 'marketrix-widget-container';
     container.className = 'marketrix-widget-container';
+    // Ensure container can receive pointer events
+    (container as HTMLElement).style.pointerEvents = 'auto';
     document.body.appendChild(container);
+  } else {
+    // Ensure existing container has pointer events enabled
+    (container as HTMLElement).style.pointerEvents = 'auto';
   }
 
   // Attach Shadow DOM (closed) and mount point
@@ -48,6 +53,8 @@ export const initMarketrixWidget = (config: MarketrixConfig): void => {
   // Create a mount element inside the shadow root for React
   const mountEl = document.createElement('div');
   mountEl.id = 'marketrix-widget-root';
+  // Ensure mount element can receive pointer events
+  mountEl.style.pointerEvents = 'auto';
   shadowRoot.appendChild(mountEl);
 
   // Create React root and render widget within the shadow root
