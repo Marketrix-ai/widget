@@ -12,6 +12,15 @@ export const useIntegrationSettings = (config: MarketrixConfig) => {
   useEffect(() => {
     const fetchSettings = async () => {
       if (!config.marketrixId || !config.marketrixKey) {
+        // Check if default settings are provided in atmosphere config
+        if (config.atmosphere?.widget_settings) {
+          console.log('Using default widget settings from atmosphere config');
+          setSettings(config.atmosphere.widget_settings as WidgetSettingsData);
+          setIsLoading(false);
+          return;
+        }
+
+        // No default settings available
         setError('Missing marketrixId or marketrixKey');
         setIsLoading(false);
         return;
@@ -45,7 +54,7 @@ export const useIntegrationSettings = (config: MarketrixConfig) => {
     };
 
     fetchSettings();
-  }, [config.marketrixId, config.marketrixKey, config.apiBaseUrl]);
+  }, [config.marketrixId, config.marketrixKey, config.apiBaseUrl, config.atmosphere?.widget_settings]);
 
   return {
     settings,

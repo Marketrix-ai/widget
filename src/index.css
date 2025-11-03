@@ -15,7 +15,6 @@
 .marketrix-widget-container {
   position: fixed;
   z-index: 999999;
-  pointer-events: none;
 }
 
 .marketrix-widget-container * {

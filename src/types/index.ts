@@ -19,8 +19,13 @@ export type {
  */
 export interface MarketrixConfig {
   // Core SDK fields (from IntegrationEntitySchema)
-  marketrixId: string; // maps to marketrix_id from SDK
-  marketrixKey: string; // maps to marketrix_key from SDK
+  // Either marketrixId/marketrixKey OR agentId/connectionId must be provided
+  marketrixId?: string; // maps to marketrix_id from SDK
+  marketrixKey?: string; // maps to marketrix_key from SDK
+  
+  // Alternative: Direct agent and connection IDs (when marketrixId/marketrixKey not available)
+  agentId?: number; // Direct agent ID from agent table
+  connectionId?: number; // Direct connection ID from connection table
 
   // Optional API configuration
   apiBaseUrl?: string;
