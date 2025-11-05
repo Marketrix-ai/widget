@@ -324,6 +324,7 @@ export class WidgetValidationService {
   /**
    * Validate by marketrix-agent and marketrix-connection-id directly
    * Used when marketrix_id and marketrix_key are not available
+   * Also compares connection ID from connectionSearch API with provided connection ID
    */
   async validateByAgentAndConnection(
     agentId: number,
@@ -331,6 +332,37 @@ export class WidgetValidationService {
   ): Promise<FallbackValidationResult> {
     try {
       console.log('Validating agent and connection by ID...', { agentId, connectionId });
+
+      // Step 0: Fetch all connections using connectionSearch to compare IDs
+      console.log('📡 Fetching connections from connectionSearch API...');
+      const connectionSearchResponse = await sdk.connectionSearch({});
+      
+      if (connectionSearchResponse.status === 200 && connectionSearchResponse.body?.success) {
+        const connections = connectionSearchResponse.body.data as ConnectionData[];
+        
+        console.log('✅ Connections fetched from connectionSearch:', connections.length);
+        
+        // Find connection that matches the provided connectionId
+        const matchingConnection = connections.find((conn) => conn.id === connectionId);
+        
+        if (matchingConnection) {
+          console.log('✅ Connection ID match found!', {
+            provided_connection_id: connectionId,
+            api_connection_id: matchingConnection.id,
+            connection_name: matchingConnection.name,
+            connection_type: matchingConnection.type,
+            match: true,
+          });
+          console.log('🎯 Will use default widget settings since connection IDs match');
+        } else {
+          console.warn('⚠️ Connection ID from API does not match provided connection ID', {
+            provided_connection_id: connectionId,
+            available_connection_ids: connections.map((c) => c.id),
+          });
+        }
+      } else {
+        console.warn('⚠️ Failed to fetch connections from connectionSearch:', connectionSearchResponse.body);
+      }
 
       // Step 1: Validate connection exists
       const connectionResponse = await sdk.connectionGet({
@@ -439,6 +471,25 @@ export class WidgetValidationService {
           connection_id: agent.connection_id,
         },
       });
+
+      // Final check: Verify connection ID matches (from connectionSearch)
+      let connectionIdMatches = false;
+      try {
+        const finalConnectionSearchResponse = await sdk.connectionSearch({});
+        if (finalConnectionSearchResponse.status === 200 && finalConnectionSearchResponse.body?.success) {
+          const allConnections = finalConnectionSearchResponse.body.data as ConnectionData[];
+          connectionIdMatches = allConnections.some((conn) => conn.id === connectionId);
+          
+          if (connectionIdMatches) {
+            console.log('✅ Connection ID verification: TRUE - Connection IDs match!');
+            console.log('🎯 Default widget settings will be applied');
+          } else {
+            console.warn('⚠️ Connection ID verification: FALSE - Connection IDs do not match');
+          }
+        }
+      } catch (verifyError) {
+        console.warn('⚠️ Could not verify connection ID match:', verifyError);
+      }
 
       return {
         isValid: true,

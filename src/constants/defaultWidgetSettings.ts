@@ -9,7 +9,7 @@ import type { WidgetSettingsData } from '../sdk';
 
 export const DEFAULT_FALLBACK_WIDGET_SETTINGS: WidgetSettingsData = {
   widget_enabled: true,
-  widget_appearance: 'default',
+  widget_appearance: 'compact',
   widget_position: 'bottom_left',
   widget_device: 'desktop_mobile',
   widget_header: 'AI Assistant',

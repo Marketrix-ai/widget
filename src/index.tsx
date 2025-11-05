@@ -132,8 +132,41 @@ export const initMarketrixWidget = async (config: MarketrixConfig): Promise<void
         },
       });
 
-      // Use default settings when validation succeeds
+      // Verify connection ID match from connectionSearch API
+      let connectionIdMatches = false;
+      try {
+        console.log('📡 Verifying connection ID match with connectionSearch API...');
+        const verifyConnectionSearchResponse = await sdk.connectionSearch({});
+        
+        if (verifyConnectionSearchResponse.status === 200 && verifyConnectionSearchResponse.body?.success) {
+          const allConnections = verifyConnectionSearchResponse.body.data as ConnectionData[];
+          const providedConnectionId = config.connectionId;
+          
+          connectionIdMatches = allConnections.some((conn) => conn.id === providedConnectionId);
+          
+          if (connectionIdMatches) {
+            console.log('✅ Connection ID Match: TRUE');
+            console.log('📋 Provided connection ID:', providedConnectionId);
+            console.log('📋 API connection IDs:', allConnections.map((c) => c.id));
+            console.log('🎯 Connection IDs are equal - Default widget settings will be applied!');
+            console.log('📦 Default Widget Settings:', DEFAULT_FALLBACK_WIDGET_SETTINGS);
+          } else {
+            console.warn('⚠️ Connection ID Match: FALSE');
+            console.warn('📋 Provided connection ID:', providedConnectionId);
+            console.warn('📋 Available API connection IDs:', allConnections.map((c) => c.id));
+          }
+        }
+      } catch (verifyError) {
+        console.warn('⚠️ Could not verify connection ID match:', verifyError);
+      }
+
+      // Use default settings when validation succeeds and connection IDs match
       shouldUseDefaultSettings = true;
+      
+      if (connectionIdMatches) {
+        console.log('✅ Applying default widget settings because connection IDs match');
+      }
+      
       hideWidgetSettingsLoader();
     } else {
       // Show loader during fallback validation
