@@ -92,9 +92,9 @@ export const initMarketrixWidget = async (config: MarketrixConfig): Promise<void
       'Marketrix Widget: marketrixId and marketrixKey are not available. Attempting fallback validation...'
     );
 
-    // Check if agent-id and connection-id are provided
+    // Check if marketrix-agent and marketrix-connection-id are provided
     if (config.agentId && config.connectionId) {
-      console.log('📋 Using agent-id and connection-id for validation:', {
+      console.log('📋 Using marketrix-agent and marketrix-connection-id for validation:', {
         agentId: config.agentId,
         connectionId: config.connectionId,
       });
@@ -102,7 +102,7 @@ export const initMarketrixWidget = async (config: MarketrixConfig): Promise<void
       // Show loader during validation
       showWidgetSettingsLoader('Validating agent and connection...');
 
-      // Validate by agent-id and connection-id
+      // Validate by marketrix-agent and marketrix-connection-id
       fallbackValidationResult = await validationService.validateByAgentAndConnection(
         config.agentId,
         config.connectionId
@@ -179,7 +179,7 @@ export const initMarketrixWidget = async (config: MarketrixConfig): Promise<void
         console.error('Fallback validation failed:', fallbackValidationResult.error);
         showWidgetSettingsLoader(
           fallbackValidationResult.error ||
-            'Unable to validate connection and agent. Please configure marketrix_id and marketrix_key, or provide agent-id and connection-id.'
+            'Unable to validate connection and agent. Please configure marketrix_id and marketrix_key, or provide marketrix-agent and marketrix-connection-id.'
         );
         return;
       }
@@ -330,15 +330,15 @@ document.addEventListener('DOMContentLoaded', () => {
     '------------------------------ DOMContentLoaded -----------------------------------'
   );
 
-  // Find the script tag with marketrix attributes (check for either marketrix-id/key or agent-id/connection-id)
-  const scripts = document.querySelectorAll('script[marketrix-id], script[agent-id]');
+  // Find the script tag with marketrix attributes (check for either marketrix-id/key or marketrix-agent/marketrix-connection-id)
+  const scripts = document.querySelectorAll('script[marketrix-id], script[marketrix-agent]');
   const script = scripts[scripts.length - 1] as HTMLScriptElement; // Get the last one (most likely the current one)
 
   if (script) {
     const marketrixId = script.getAttribute('marketrix-id');
     const marketrixKey = script.getAttribute('marketrix-key');
-    const agentId = script.getAttribute('agent-id');
-    const connectionId = script.getAttribute('connection-id');
+    const agentId = script.getAttribute('marketrix-agent');
+    const connectionId = script.getAttribute('marketrix-connection-id');
 
     console.log('Found script with attributes:', { 
       marketrixId, 
@@ -370,7 +370,7 @@ document.addEventListener('DOMContentLoaded', () => {
         console.error('Failed to initialize widget:', error);
       });
     } else if (agentId && connectionId) {
-      // Use agent-id and connection-id
+      // Use marketrix-agent and marketrix-connection-id
       const config: MarketrixConfig = {
         agentId: Number.parseInt(agentId, 10),
         connectionId: Number.parseInt(connectionId, 10),
@@ -385,19 +385,19 @@ document.addEventListener('DOMContentLoaded', () => {
         )[]) || ['show', 'tell', 'do'],
       };
 
-      console.log('Auto-initializing widget with agent-id and connection-id:', config);
+      console.log('Auto-initializing widget with marketrix-agent and marketrix-connection-id:', config);
       initMarketrixWidget(config).catch((error) => {
         console.error('Failed to initialize widget:', error);
       });
     } else {
       // Show loader if credentials are missing
-      console.warn('Marketrix Widget: Please provide either (marketrix-id + marketrix-key) OR (agent-id + connection-id)');
-      showWidgetSettingsLoader('Please configure marketrix_id and marketrix_key, or agent-id and connection-id');
+      console.warn('Marketrix Widget: Please provide either (marketrix-id + marketrix-key) OR (marketrix-agent + marketrix-connection-id)');
+      showWidgetSettingsLoader('Please configure marketrix_id and marketrix_key, or marketrix-agent and marketrix-connection-id');
     }
   } else {
-    console.log('No script with marketrix or agent-id attributes found');
+    console.log('No script with marketrix or marketrix-agent attributes found');
     // Show loader if no script attributes found
-    showWidgetSettingsLoader('Please configure marketrix_id and marketrix_key, or agent-id and connection-id');
+    showWidgetSettingsLoader('Please configure marketrix_id and marketrix_key, or marketrix-agent and marketrix-connection-id');
   }
 });
 

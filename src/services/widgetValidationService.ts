@@ -322,7 +322,7 @@ export class WidgetValidationService {
   }
 
   /**
-   * Validate by agent-id and connection-id directly
+   * Validate by marketrix-agent and marketrix-connection-id directly
    * Used when marketrix_id and marketrix_key are not available
    */
   async validateByAgentAndConnection(
@@ -407,16 +407,17 @@ export class WidgetValidationService {
       console.log('   image_url:', agent.image_url);
       console.log('   instructions:', agent.instructions);
       console.log('   vector_store_id:', agent.vector_store_id);
-      console.log('   search_index_id:', agent.search_index_id);
+      console.log('   pdf_search_index_id:', agent.pdf_search_index_id);
+      console.log('   json_search_index_id:', agent.json_search_index_id);
       console.log('   created_at:', agent.created_at);
       console.log('   updated_at:', agent.updated_at);
       console.log('📊 ============================================================');
 
-      // Step 3: Validate that agent's connection_id matches the provided connection-id
+      // Step 3: Validate that agent's connection_id matches the provided marketrix-connection-id
       if (agent.connection_id !== connectionId) {
         return {
           isValid: false,
-          error: `Agent ID ${agentId} belongs to connection ID ${agent.connection_id}, but provided connection ID is ${connectionId}. Please verify the connection-id matches the agent's connection_id.`,
+          error: `Agent ID ${agentId} belongs to connection ID ${agent.connection_id}, but provided connection ID is ${connectionId}. Please verify the marketrix-connection-id matches the agent's connection_id.`,
           connection,
           agent,
           connectionId,
