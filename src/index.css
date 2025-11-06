@@ -15,9 +15,12 @@
 .marketrix-widget-container {
   position: fixed;
   z-index: 999999;
+  pointer-events: auto;
 }
 
-.marketrix-widget-container * {
+/* Ensure all elements inside the widget can receive pointer events */
+.marketrix-widget,
+.marketrix-widget * {
   pointer-events: auto;
 }
 
