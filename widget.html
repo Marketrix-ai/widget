@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Marketrix Widget</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100vh;
+        overflow: hidden;
+        background: transparent;
+      }
+    </style>
+</head>
+<body>
+  <!-- Widget Script - Parameters injected from URL -->
+  <script
+    type="module"
+    src="./meet.js"
+    id="marketrix-widget-script"
+  ></script>
+
+  <script>
+    // Read URL parameters and inject them into the script tag
+    (function() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const script = document.getElementById('marketrix-widget-script');
+      
+      // Get parameters from URL
+      const marketrixId = urlParams.get('marketrix-id');
+      const marketrixKey = urlParams.get('marketrix-key');
+      const marketrixAgent = urlParams.get('marketrix-agent');
+      const marketrixConnectionId = urlParams.get('marketrix-connection-id');
+      
+      console.log('📋 Widget HTML - URL Parameters:', {
+        marketrixId,
+        marketrixKey: marketrixKey ? '***' : null,
+        marketrixAgent,
+        marketrixConnectionId
+      });
+
+      // Set attributes on script tag
+      if (marketrixId) {
+        script.setAttribute('marketrix-id', marketrixId);
+      }
+      if (marketrixKey) {
+        script.setAttribute('marketrix-key', marketrixKey);
+      }
+      if (marketrixAgent) {
+        script.setAttribute('marketrix-agent', marketrixAgent);
+      }
+      if (marketrixConnectionId) {
+        script.setAttribute('marketrix-connection-id', marketrixConnectionId);
+      }
+
+      console.log('✅ Widget script attributes set:', {
+        'marketrix-id': script.getAttribute('marketrix-id'),
+        'marketrix-key': script.getAttribute('marketrix-key') ? '***' : null,
+        'marketrix-agent': script.getAttribute('marketrix-agent'),
+        'marketrix-connection-id': script.getAttribute('marketrix-connection-id')
+      });
+    })();
+  </script>
+</body>
+</html>
+
