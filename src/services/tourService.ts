@@ -1,5 +1,7 @@
 import { sdk } from '../sdk';
 import type { MarketrixConfig, TourData } from '../types';
+import { extractApiData } from '../utils/apiHelpers';
+import { extractErrorMessage } from '../utils/errorHandling';
 import { isErrorResponseBody, isTourDataArray } from '../utils/typeGuards';
 
 export class TourService {
@@ -27,13 +29,9 @@ export class TourService {
 
       console.log('Tour API Response Status:', response.status);
 
-      if (
-        response.status === 200 &&
-        response.body?.success &&
-        response.body.data &&
-        isTourDataArray(response.body.data)
-      ) {
-        const tours = response.body.data;
+      const toursData = extractApiData(response);
+      if (toursData && isTourDataArray(toursData)) {
+        const tours = toursData;
         console.log('=== ALL TOUR DATA FOUND ===');
         console.log('Total tours found for connection_id', connectionId, ':', tours.length);
 
@@ -102,7 +100,7 @@ export class TourService {
         }
       }
     } catch (error) {
-      console.error('Failed to fetch tour data by connection ID:', error);
+      console.error('Failed to fetch tour data by connection ID:', extractErrorMessage(error));
     }
   }
 
@@ -121,13 +119,9 @@ export class TourService {
 
       console.log('Tour API Response Status:', response.status);
 
-      if (
-        response.status === 200 &&
-        response.body?.success &&
-        response.body.data &&
-        isTourDataArray(response.body.data)
-      ) {
-        const tours = response.body.data;
+      const toursData = extractApiData(response);
+      if (toursData && isTourDataArray(toursData)) {
+        const tours = toursData;
         console.log('=== ALL TOUR DATA FOUND ===');
         console.log('Total tours found:', tours.length);
 
@@ -177,7 +171,7 @@ export class TourService {
         }
       }
     } catch (error) {
-      console.error('Failed to fetch all tour data:', error);
+      console.error('Failed to fetch all tour data:', extractErrorMessage(error));
     }
   }
 }

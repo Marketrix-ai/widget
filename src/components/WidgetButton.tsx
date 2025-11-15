@@ -3,12 +3,11 @@ import React, { useEffect, useState } from 'react';
 import MarketrixIcon from '../assets/marketrix-icon.png';
 import { useWidgetAtmosphere } from '../hooks/useWidgetAtmosphere';
 import type { WidgetSettingsData } from '../sdk';
-import type { MarketrixConfig, WidgetAtmosphereConfig } from '../types';
+import type { MarketrixConfig } from '../types';
 import { getPositionClasses } from '../utils/positioning';
 
 interface WidgetButtonProps {
   config: MarketrixConfig;
-  atmosphere?: WidgetAtmosphereConfig | null;
   onClick: () => void;
   isOpen: boolean;
   _agentAvailable: boolean;
@@ -18,7 +17,6 @@ interface WidgetButtonProps {
 
 export const WidgetButton: React.FC<WidgetButtonProps> = ({
   config,
-  atmosphere,
   onClick,
   isOpen,
   integrationSettings,
@@ -27,10 +25,8 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
   const [showWelcomeText, setShowWelcomeText] = useState(false);
 
   // Get atmosphere configuration
-  const { getWidgetText, getActiveAvatar, getWidgetPosition, getWidgetSettings } =
-    useWidgetAtmosphere(config);
+  const { getWidgetText, getWidgetPosition, getWidgetSettings } = useWidgetAtmosphere(config);
   const widgetText = getWidgetText();
-  const activeAvatar = getActiveAvatar();
   const widgetPosition = getWidgetPosition();
   const widgetSettings = getWidgetSettings();
 
@@ -79,27 +75,8 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
         `}
         aria-label='Open Marketrix support chat'
       >
-        {/* Avatar or Logo */}
-        <div className='w-full h-full flex items-center'>
-          {activeAvatar.url || atmosphere?.active_avatar?.url ? (
-            <img
-              src={activeAvatar.url || atmosphere?.active_avatar?.url}
-              alt={activeAvatar.name || atmosphere?.active_avatar?.name || 'Support Agent'}
-              className='w-full h-full object-cover'
-              onError={(e) => {
-                // Fallback to default icon if image fails to load
-                const target = e.target;
-                if (!(target instanceof HTMLImageElement)) {
-                  return;
-                }
-                target.style.display = 'none';
-                target.nextElementSibling?.classList.remove('hidden');
-              }}
-            />
-          ) : null}
-
-          {/* Default Marketrix icon */}
-
+        {/* Logo/Icon */}
+        <div className='w-full h-full flex items-center justify-center'>
           <div className='w-full h-full bg-[#101828] rounded flex items-center justify-center'>
             <img src={MarketrixIcon} alt='Marketrix Icon' className='w-fit h-12' />
           </div>
@@ -188,7 +165,7 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
         <div
           className={`absolute bottom-16 ${effectivePosition.includes('left') ? 'left-0' : 'right-0'} mb-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg shadow-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200`}
         >
-          {activeAvatar.name || atmosphere?.active_avatar?.name || 'Support Agent'}
+          {'Support Agent'}
           <div
             className={`absolute top-full ${effectivePosition.includes('left') ? 'left-4' : 'right-4'} w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900`}
           />

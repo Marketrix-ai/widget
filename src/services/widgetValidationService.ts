@@ -1,11 +1,7 @@
-import { VITE_API_URL } from '../config';
 import { type AgentData, type ConnectionData, type IntegrationData, sdk } from '../sdk';
-import {
-  isAgentData,
-  isAgentDataArray,
-  isConnectionData,
-  isIntegrationDataArray,
-} from '../utils/typeGuards';
+import { extractApiData, isValidApiResponse } from '../utils/apiHelpers';
+import { handleApiError } from '../utils/errorHandling';
+import { isAgentData, isConnectionData, isIntegrationDataArray } from '../utils/typeGuards';
 
 export interface WidgetValidationResult {
   isValid: boolean;
@@ -51,21 +47,22 @@ export class WidgetValidationService {
         },
       });
 
-      if (integrationResponse.status !== 200 || !integrationResponse.body?.success) {
+      if (!isValidApiResponse(integrationResponse)) {
         return {
           isValid: false,
           error: 'Integration not found or invalid credentials',
         };
       }
 
-      if (!isIntegrationDataArray(integrationResponse.body.data)) {
+      const integrationsData = extractApiData(integrationResponse);
+      if (!integrationsData || !isIntegrationDataArray(integrationsData)) {
         return {
           isValid: false,
           error: 'Invalid integration data format',
         };
       }
 
-      const integrations = integrationResponse.body.data;
+      const integrations = integrationsData;
 
       // Debug: Log what integrations were found
       console.log(
@@ -132,23 +129,18 @@ export class WidgetValidationService {
           params: { agent_id: widgetIntegration.agent_id },
         });
 
-        if (agentResponse.status !== 200 || !agentResponse.body?.success) {
+        const agentData = extractApiData(agentResponse);
+        if (!agentData || !isAgentData(agentData)) {
           return {
             isValid: false,
-            error: `Agent with ID ${widgetIntegration.agent_id} not found`,
+            error: agentData
+              ? 'Invalid agent data format'
+              : `Agent with ID ${widgetIntegration.agent_id} not found`,
             integration: widgetIntegration,
           };
         }
 
-        if (!isAgentData(agentResponse.body.data)) {
-          return {
-            isValid: false,
-            error: 'Invalid agent data format',
-            integration: widgetIntegration,
-          };
-        }
-
-        const agent = agentResponse.body.data;
+        const agent = agentData;
 
         // Step 3: Validate connection ID exists
         if (!widgetIntegration.connection_id) {
@@ -166,25 +158,19 @@ export class WidgetValidationService {
           params: { connection_id: widgetIntegration.connection_id },
         });
 
-        if (connectionResponse.status !== 200 || !connectionResponse.body?.success) {
+        const connectionData = extractApiData(connectionResponse);
+        if (!connectionData || !isConnectionData(connectionData)) {
           return {
             isValid: false,
-            error: `Connection with ID ${widgetIntegration.connection_id} not found`,
+            error: connectionData
+              ? 'Invalid connection data format'
+              : `Connection with ID ${widgetIntegration.connection_id} not found`,
             integration: widgetIntegration,
             agent,
           };
         }
 
-        if (!isConnectionData(connectionResponse.body.data)) {
-          return {
-            isValid: false,
-            error: 'Invalid connection data format',
-            integration: widgetIntegration,
-            agent,
-          };
-        }
-
-        const connection = connectionResponse.body.data;
+        const connection = connectionData;
 
         console.log('Widget validation successful', {
           integration: widgetIntegration.id,
@@ -208,164 +194,7 @@ export class WidgetValidationService {
       }
     } catch (error) {
       console.error('Widget validation error:', error);
-
-      // Check if it's a network/connection error
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      const isConnectionError =
-        errorMessage.includes('Failed to fetch') ||
-        errorMessage.includes('ERR_CONNECTION_REFUSED') ||
-        errorMessage.includes('NetworkError') ||
-        errorMessage.includes('Network request failed');
-
-      if (isConnectionError) {
-        return {
-          isValid: false,
-          error: `Cannot connect to API server. Please ensure the API server is running at ${VITE_API_URL}. Error: ${errorMessage}`,
-        };
-      }
-
-      return {
-        isValid: false,
-        error: `Validation failed: ${errorMessage}`,
-      };
-    }
-  }
-
-  /**
-   * Fallback validation when marketrix_id and marketrix_key are missing
-   * Uses connectionGet with provided connectionId instead of connectionSearch
-   */
-  async validateWithFallback(connectionId?: number): Promise<FallbackValidationResult> {
-    try {
-      console.log('Starting fallback validation...');
-
-      // Skip connectionSearch - use connectionGet with provided connectionId if available
-      // If no connectionId provided, validation will fail
-      if (!connectionId) {
-        return {
-          isValid: false,
-          error: 'Connection ID is required for validation',
-        };
-      }
-
-      // Get connection by ID (using connectionGet instead of connectionSearch)
-      const connectionResponse = await sdk.connectionGet({
-        params: { connection_id: connectionId },
-      });
-
-      if (connectionResponse.status !== 200 || !connectionResponse.body?.success) {
-        return {
-          isValid: false,
-          error: 'Failed to fetch connection',
-        };
-      }
-
-      if (!isConnectionData(connectionResponse.body.data)) {
-        return {
-          isValid: false,
-          error: 'Invalid connection data format',
-        };
-      }
-
-      const connection = connectionResponse.body.data;
-
-      if (!connection.id) {
-        return {
-          isValid: false,
-          error: 'Connection missing ID',
-          connection,
-        };
-      }
-
-      console.log('Found connection:', connection.id);
-
-      // Step 2: Fetch agents for this connection
-      const agentResponse = await sdk.agentSearch({
-        query: {
-          connection_id: connection.id,
-        },
-      });
-
-      if (agentResponse.status !== 200 || !agentResponse.body?.success) {
-        return {
-          isValid: false,
-          error: 'Failed to fetch agents',
-          connection,
-          connectionId,
-        };
-      }
-
-      if (!isAgentDataArray(agentResponse.body.data)) {
-        return {
-          isValid: false,
-          error: 'Invalid agents data format',
-          connection,
-          connectionId,
-        };
-      }
-
-      const agents = agentResponse.body.data;
-
-      if (!agents || agents.length === 0) {
-        return {
-          isValid: false,
-          error: 'No agents found for connection',
-          connection,
-          connectionId,
-        };
-      }
-
-      // Get first agent
-      const agent = agents[0];
-      const agentId = agent.id;
-
-      if (!agentId) {
-        return {
-          isValid: false,
-          error: 'Agent missing ID',
-          connection,
-          agent,
-          connectionId,
-        };
-      }
-
-      console.log('Found agent:', agentId);
-
-      // Validation successful
-      console.log('Fallback validation successful', {
-        connection_id: connectionId,
-        agent_id: agentId,
-      });
-
-      return {
-        isValid: true,
-        connection,
-        agent,
-        connectionId,
-        agentId,
-      };
-    } catch (error) {
-      console.error('Fallback validation error:', error);
-
-      // Check if it's a network/connection error
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      const isConnectionError =
-        errorMessage.includes('Failed to fetch') ||
-        errorMessage.includes('ERR_CONNECTION_REFUSED') ||
-        errorMessage.includes('NetworkError') ||
-        errorMessage.includes('Network request failed');
-
-      if (isConnectionError) {
-        return {
-          isValid: false,
-          error: `Cannot connect to API server. Please ensure the API server is running at ${VITE_API_URL}. Error: ${errorMessage}`,
-        };
-      }
-
-      return {
-        isValid: false,
-        error: `Fallback validation failed: ${errorMessage}`,
-      };
+      return handleApiError(error, 'Widget validation');
     }
   }
 
@@ -386,21 +215,17 @@ export class WidgetValidationService {
         params: { connection_id: connectionId },
       });
 
-      if (connectionResponse.status !== 200 || !connectionResponse.body?.success) {
+      const connectionData = extractApiData(connectionResponse);
+      if (!connectionData || !isConnectionData(connectionData)) {
         return {
           isValid: false,
-          error: `Connection with ID ${connectionId} not found`,
+          error: connectionData
+            ? 'Invalid connection data format'
+            : `Connection with ID ${connectionId} not found`,
         };
       }
 
-      if (!isConnectionData(connectionResponse.body.data)) {
-        return {
-          isValid: false,
-          error: 'Invalid connection data format',
-        };
-      }
-
-      const connection = connectionResponse.body.data;
+      const connection = connectionData;
 
       // Log all connection table values from the database
       console.log('📊 ========== CONNECTION TABLE VALUES (marketrix database) ==========');
@@ -422,25 +247,17 @@ export class WidgetValidationService {
         params: { agent_id: agentId },
       });
 
-      if (agentResponse.status !== 200 || !agentResponse.body?.success) {
+      const agentData = extractApiData(agentResponse);
+      if (!agentData || !isAgentData(agentData)) {
         return {
           isValid: false,
-          error: `Agent with ID ${agentId} not found`,
+          error: agentData ? 'Invalid agent data format' : `Agent with ID ${agentId} not found`,
           connection,
           connectionId,
         };
       }
 
-      if (!isAgentData(agentResponse.body.data)) {
-        return {
-          isValid: false,
-          error: 'Invalid agent data format',
-          connection,
-          connectionId,
-        };
-      }
-
-      const agent = agentResponse.body.data;
+      const agent = agentData;
 
       // Log all agent table values from the database
       console.log('📊 ========== AGENT TABLE VALUES (marketrix database) ==========');
@@ -495,11 +312,8 @@ export class WidgetValidationService {
         const finalConnectionResponse = await sdk.connectionGet({
           params: { connection_id: connectionId },
         });
-        if (
-          finalConnectionResponse.status === 200 &&
-          finalConnectionResponse.body?.success &&
-          isConnectionData(finalConnectionResponse.body.data)
-        ) {
+        const finalConnectionData = extractApiData(finalConnectionResponse);
+        if (finalConnectionData && isConnectionData(finalConnectionData)) {
           connectionIdMatches = true;
 
           if (connectionIdMatches) {
@@ -522,26 +336,7 @@ export class WidgetValidationService {
       };
     } catch (error) {
       console.error('Agent and Connection validation error:', error);
-
-      // Check if it's a network/connection error
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      const isConnectionError =
-        errorMessage.includes('Failed to fetch') ||
-        errorMessage.includes('ERR_CONNECTION_REFUSED') ||
-        errorMessage.includes('NetworkError') ||
-        errorMessage.includes('Network request failed');
-
-      if (isConnectionError) {
-        return {
-          isValid: false,
-          error: `Cannot connect to API server. Please ensure the API server is running at ${VITE_API_URL}. Error: ${errorMessage}`,
-        };
-      }
-
-      return {
-        isValid: false,
-        error: `Validation failed: ${errorMessage}`,
-      };
+      return handleApiError(error, 'Agent and Connection validation');
     }
   }
 }

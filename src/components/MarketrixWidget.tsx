@@ -14,14 +14,8 @@ interface MarketrixWidgetProps {
 
 export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
   const { state, actions } = useMarketrixWidget({ config });
-  const {
-    atmosphereConfig,
-    marketrixConfig,
-    shouldShow,
-    getWidgetCustomize,
-    getWidgetPosition,
-    isLoading: configLoading,
-  } = useWidgetAtmosphere(config);
+  const { atmosphereConfig, marketrixConfig, shouldShow, getWidgetCustomize, getWidgetPosition } =
+    useWidgetAtmosphere(config);
 
   // Fetch integration settings from API
   const {
@@ -33,9 +27,13 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
   // Track screen sharing state
   const [isScreenSharing, setIsScreenSharing] = useState(false);
 
-  // Don't render if widget should not be visible or if integration settings say it's disabled
-  if (!shouldShow || (integrationSettings && !integrationSettings.widget_enabled)) {
-    return null;
+  // Don't return null while settings are loading - show widget during loading
+  // Only check visibility and enabled state after settings are loaded
+  if (!settingsLoading) {
+    // After settings are loaded, check if widget should be visible
+    if (!shouldShow || (integrationSettings && !integrationSettings.widget_enabled)) {
+      return null;
+    }
   }
 
   // Use atmosphere config if available, otherwise fall back to original config
@@ -107,7 +105,6 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
           ...finalConfig,
           position: finalConfig.position,
         }}
-        atmosphere={atmosphereConfig}
         onClick={actions.toggleWidget}
         isOpen={state.isOpen}
         _agentAvailable={state.agentAvailable}
@@ -123,7 +120,7 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
         }}
         isOpen={state.isOpen}
         isMinimized={state.isMinimized}
-        isLoading={state.isLoading || configLoading || settingsLoading}
+        isLoading={state.isLoading || settingsLoading}
         messages={state.messages}
         currentMode={state.currentMode}
         agentAvailable={state.agentAvailable}

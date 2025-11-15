@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 
+import { DEFAULT_WIDGET_SETTINGS } from '../config';
 import type { WidgetSettingsData } from '../sdk';
 import { IntegrationService } from '../services/integrationService';
 import type { MarketrixConfig } from '../types';
@@ -12,8 +13,43 @@ export const useIntegrationSettings = (config: MarketrixConfig) => {
 
   useEffect(() => {
     const fetchSettings = async () => {
-      if (!config.marketrixId || !config.marketrixKey) {
-        // Check if default settings are provided in atmosphere config
+      // Path 1: marketrixId + marketrixKey
+      if (config.marketrixId && config.marketrixKey) {
+        try {
+          setIsLoading(true);
+          setError(null);
+
+          const integrationService = new IntegrationService(
+            config.marketrixId,
+            config.marketrixKey
+          );
+
+          const integrationData = await integrationService.fetchIntegrationSettings();
+          const integrationSettings = integrationData
+            ? integrationService.getWidgetSettings(integrationData)
+            : null;
+
+          if (integrationSettings) {
+            setSettings(integrationSettings);
+            console.log('Integration settings loaded from API:', integrationSettings);
+          } else {
+            // API returned no settings, use defaults
+            console.log('No integration settings found in API, using default settings');
+            setSettings(DEFAULT_WIDGET_SETTINGS);
+          }
+        } catch (err) {
+          const errorMessage =
+            err instanceof Error ? err.message : 'Failed to fetch integration settings';
+          setError(errorMessage);
+          console.error('Error fetching integration settings:', err);
+          // On error, still provide defaults
+          setSettings(DEFAULT_WIDGET_SETTINGS);
+        } finally {
+          setIsLoading(false);
+        }
+      }
+      // Path 2: connectionId + agentId (default settings from atmosphere)
+      else if (config.connectionId && config.agentId) {
         if (config.atmosphere?.widget_settings) {
           const widgetSettings = config.atmosphere.widget_settings;
           if (isWidgetSettingsData(widgetSettings)) {
@@ -23,36 +59,12 @@ export const useIntegrationSettings = (config: MarketrixConfig) => {
             return;
           }
         }
-
-        // No default settings available
-        setError('Missing marketrixId or marketrixKey');
+        // No settings in atmosphere (shouldn't happen, but handle gracefully)
+        setError('Missing widget settings in atmosphere config');
         setIsLoading(false);
-        return;
-      }
-
-      try {
-        setIsLoading(true);
-        setError(null);
-
-        const integrationService = new IntegrationService(config.marketrixId, config.marketrixKey);
-
-        const integrationData = await integrationService.fetchIntegrationSettings();
-        const integrationSettings = integrationData
-          ? integrationService.getWidgetSettings(integrationData)
-          : null;
-
-        if (integrationSettings) {
-          setSettings(integrationSettings);
-          console.log('Integration settings loaded:', integrationSettings);
-        } else {
-          console.warn('No integration settings found, using default configuration');
-        }
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : 'Failed to fetch integration settings';
-        setError(errorMessage);
-        console.error('Error fetching integration settings:', err);
-      } finally {
+      } else {
+        // Neither path is valid
+        setError('Missing marketrixId/marketrixKey or connectionId/agentId');
         setIsLoading(false);
       }
     };
@@ -61,6 +73,8 @@ export const useIntegrationSettings = (config: MarketrixConfig) => {
   }, [
     config.marketrixId,
     config.marketrixKey,
+    config.connectionId,
+    config.agentId,
     config.apiBaseUrl,
     config.atmosphere?.widget_settings,
   ]);

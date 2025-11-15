@@ -1,5 +1,4 @@
-// Removed unused import
-import { DEFAULT_WIDGET_ATMOSPHERE } from '../constants';
+import { DEFAULT_WIDGET_POSITION, getDefaultWidgetConfig } from '../config';
 import type { MarketrixConfig, WidgetAtmosphereConfig } from '../types';
 import { hasProperty } from './typeGuards';
 
@@ -28,7 +27,7 @@ export class ConfigManager {
     try {
       const stored = localStorage.getItem('marketrix_widget_config');
       if (stored) {
-        const parsed = JSON.parse(stored);
+        const parsed: unknown = JSON.parse(stored);
         if (this.validateConfig(parsed)) {
           this.config = parsed;
           return parsed;
@@ -76,12 +75,10 @@ export class ConfigManager {
   }
 
   /**
-   * Convert MarketrixConfig to WidgetAtmosphereConfig
+   * Convert WidgetAtmosphereConfig to MarketrixConfig
    */
   toMarketrixConfig(config: WidgetAtmosphereConfig): MarketrixConfig {
     return {
-      marketrixId: config.inapp_login_id || 'default_id',
-      marketrixKey: config.inapp_login_password || 'default_key',
       atmosphere: config,
     };
   }
@@ -95,7 +92,7 @@ export class ConfigManager {
     }
 
     // Check required fields
-    const requiredFields = ['widget_settings', 'widget_type', 'widget_visible'] as const;
+    const requiredFields = ['widget_settings', 'widget_visible', 'widget_mode'] as const;
     for (const field of requiredFields) {
       if (!hasProperty(config, field)) {
         return false;
@@ -133,8 +130,9 @@ export class ConfigManager {
    * Notify all listeners of configuration changes
    */
   private notifyListeners(): void {
-    if (this.config) {
-      this.listeners.forEach((listener) => listener(this.config!));
+    const config = this.config;
+    if (config) {
+      this.listeners.forEach((listener) => listener(config));
     }
   }
 
@@ -179,7 +177,11 @@ export class ConfigManager {
    */
   updateWidgetPosition(position: 'bottom_left' | 'bottom_right'): void {
     this.updateConfig({
-      widget_position: { position, offset: { x: 20, y: 20 }, z_index: 40 },
+      widget_position: {
+        position,
+        offset: DEFAULT_WIDGET_POSITION.offset,
+        z_index: DEFAULT_WIDGET_POSITION.z_index,
+      },
     });
   }
 
@@ -194,7 +196,7 @@ export class ConfigManager {
    * Update widget mode
    */
   updateWidgetMode(mode: 'ai' | 'live' | 'hybrid'): void {
-    this.updateConfig({ widget_mode: mode, widget_type: mode });
+    this.updateConfig({ widget_mode: mode });
   }
 
   /**
@@ -247,7 +249,7 @@ export class ConfigManager {
    * Get default configuration
    */
   private getDefaultConfig(): WidgetAtmosphereConfig {
-    return { ...DEFAULT_WIDGET_ATMOSPHERE };
+    return getDefaultWidgetConfig();
   }
 }
 

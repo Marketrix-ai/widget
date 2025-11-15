@@ -8,13 +8,27 @@
 
 import {
   DEFAULT_WIDGET_ATMOSPHERE,
-  DEFAULT_WIDGET_SETTINGS,
-  type WidgetMode,
-  type WidgetPosition,
-} from '../constants';
+  DEFAULT_WIDGET_POSITION,
+  getDefaultWidgetSettings,
+} from '../config';
+import type { WidgetMode, WidgetPosition } from '../constants/widget';
 import type { IntegrationData, WidgetSettingsData } from '../sdk';
 import type { MarketrixConfig, WidgetAtmosphereConfig } from '../types';
 import { hasProperty, isWidgetMode, isWidgetPosition } from './typeGuards';
+
+/**
+ * Merge widget settings with defaults, reducing repetition
+ */
+function mergeWidgetSettingsWithDefaults(
+  settings: Partial<WidgetSettingsData>
+): WidgetSettingsData {
+  const defaults = getDefaultWidgetSettings();
+  return {
+    ...defaults,
+    ...settings,
+    widget_chips: settings.widget_chips ?? [...defaults.widget_chips],
+  };
+}
 
 /**
  * Convert integration data to widget atmosphere configuration
@@ -37,139 +51,21 @@ export function integrationToAtmosphere(
   return {
     ...DEFAULT_WIDGET_ATMOSPHERE,
 
-    // Widget settings - direct mapping from integration settings
-    widget_settings: {
-      ...DEFAULT_WIDGET_SETTINGS,
-      widget_enabled: settings.widget_enabled ?? true,
-      widget_appearance: settings.widget_appearance ?? 'default',
+    // Widget settings - merge with defaults
+    widget_settings: mergeWidgetSettingsWithDefaults({
+      ...settings,
       widget_position: position,
-      widget_device: settings.widget_device ?? 'desktop_mobile',
-      widget_header: settings.widget_header ?? '🤖 AI Assistant',
-      widget_body: settings.widget_body ?? "I'm here to help you with any questions or tasks.",
-      widget_greeting: settings.widget_greeting ?? "🎉 Welcome! I'm your AI assistant!",
-      widget_feature_tell: settings.widget_feature_tell ?? true,
-      widget_feature_show: settings.widget_feature_show ?? true,
-      widget_feature_do: settings.widget_feature_do ?? true,
-      widget_feature_human: settings.widget_feature_human ?? true,
-      widget_background_color:
-        settings.widget_background_color ?? 'linear-gradient(135deg, #1BB55B45 0%, #987ADD45 100%)',
-      widget_text_color: settings.widget_text_color ?? '#333333',
-      widget_border_color: settings.widget_border_color ?? 'rgba(255, 255, 255, 0.3)',
-      widget_accent_color: settings.widget_accent_color ?? '#1BB55B',
-      widget_secondary_color: settings.widget_secondary_color ?? '#987ADD',
-      widget_border_radius: settings.widget_border_radius ?? '12px',
-      widget_font_size: settings.widget_font_size ?? '14px',
-      widget_width: settings.widget_width ?? '360px',
-      widget_height: settings.widget_height ?? '35rem',
-      widget_shadow: settings.widget_shadow ?? '0 10px 25px rgba(0, 0, 0, 0.1)',
-      widget_animation_duration: settings.widget_animation_duration ?? '300ms',
-      widget_fade_duration: settings.widget_fade_duration ?? '200ms',
-      widget_bounce_effect: settings.widget_bounce_effect ?? true,
-      widget_chips: settings.widget_chips ?? [...DEFAULT_WIDGET_SETTINGS.widget_chips],
-    },
+    }),
 
-    // Widget text - from integration settings
-    widget_text: {
-      greeting: settings.widget_greeting ?? 'Hello! How can I help you today?',
-      placeholder: 'Show me...',
-      header_ai: settings.widget_header ?? 'AI Assistant',
-      header_live: 'Live Agent',
-      body_ai: settings.widget_body ?? "I'm here to help you with any questions or tasks.",
-      body_live: 'A live agent will be with you shortly.',
-      chat_greeting: 'Welcome to our chat! How can I assist you?',
-      tour_greeting: 'Welcome! Let me show you around.',
-    },
-
-    // Widget customization - from integration settings
-    widget_customize: {
-      colors: {
-        primary: settings.widget_accent_color ?? '#1BB55B',
-        secondary: settings.widget_secondary_color ?? '#987ADD',
-        background:
-          settings.widget_background_color ??
-          'linear-gradient(135deg, #1BB55B26 0%, #987ADD30 100%)',
-        text: settings.widget_text_color ?? '#333333',
-        border: settings.widget_border_color ?? 'rgba(255, 255, 255, 0.2)',
-      },
-      sizes: {
-        width: settings.widget_width ?? '320px',
-        height: settings.widget_height ?? '35rem',
-        border_radius: settings.widget_border_radius ?? '12px',
-        font_size: settings.widget_font_size ?? '14px',
-      },
-      animations: {
-        slide_duration: settings.widget_animation_duration ?? '300ms',
-        fade_duration: settings.widget_fade_duration ?? '200ms',
-        bounce_effect: settings.widget_bounce_effect ?? true,
-      },
-    },
-
-    // Widget position - converted from API format
+    // Widget position - position from API, offset/z_index from local defaults
     widget_position: {
       position,
-      offset: { x: 20, y: 20 },
-      z_index: 40,
-    },
-
-    // Widget visibility - from integration settings
-    widget_visible_device: {
-      desktop: settings.widget_device === 'desktop' || settings.widget_device === 'desktop_mobile',
-      tablet: settings.widget_device === 'desktop_mobile',
-      mobile: settings.widget_device === 'mobile' || settings.widget_device === 'desktop_mobile',
-    },
-
-    // Live form - from integration settings
-    mLive_form: {
-      enabled:
-        typeof settings.widget_feature_human === 'boolean' ? settings.widget_feature_human : true,
-      fields: ['name', 'email', 'message'],
-      required: ['name', 'email'],
-    },
-
-    // Advanced settings - from integration settings
-    advanced_settings: {
-      auto_open_delay: 0,
-      session_timeout: 1800000, // 30 minutes
-      max_messages: 100,
-      typing_indicator: true,
-      read_receipts: true,
-      sound_notifications: true,
-      vibration_enabled: true,
-    },
-
-    // Themes - from integration settings
-    themes: {
-      light: {
-        background: '#ffffff',
-        text:
-          typeof settings.widget_text_color === 'string' ? settings.widget_text_color : '#333333',
-        border: '#e5e7eb',
-        accent:
-          typeof settings.widget_accent_color === 'string'
-            ? settings.widget_accent_color
-            : '#1BB55B',
-      },
-      dark: {
-        background: '#1f2937',
-        text: '#f9fafb',
-        border: '#374151',
-        accent:
-          typeof settings.widget_accent_color === 'string'
-            ? settings.widget_accent_color
-            : '#10b981',
-      },
-    },
-
-    // Responsive breakpoints - default values
-    responsive_breakpoints: {
-      mobile: '768px',
-      tablet: '1024px',
-      desktop: '1200px',
+      offset: DEFAULT_WIDGET_POSITION.offset,
+      z_index: DEFAULT_WIDGET_POSITION.z_index,
     },
 
     // Widget mode - from integration settings
     widget_mode: mode,
-    widget_type: mode,
   };
 }
 
@@ -178,20 +74,8 @@ export function integrationToAtmosphere(
  */
 export function atmosphereToMarketrix(atmosphere: WidgetAtmosphereConfig): MarketrixConfig {
   return {
-    marketrixId: atmosphere.inapp_login_id || 'default_id',
-    marketrixKey: atmosphere.inapp_login_password || 'default_key',
     atmosphere,
   };
-}
-
-/**
- * Merge configuration with defaults
- */
-export function mergeWithDefaults<T extends Record<string, unknown>>(
-  config: Partial<T>,
-  defaults: T
-): T {
-  return { ...defaults, ...config };
 }
 
 /**
@@ -260,35 +144,4 @@ function normalizeMode(mode: unknown): WidgetMode {
     return mode;
   }
   return 'hybrid';
-}
-
-/**
- * Convert position from internal format to API format
- */
-export function positionToApiFormat(position: WidgetPosition): string {
-  return position; // No conversion needed - SDK uses underscore format
-}
-
-/**
- * Convert position from API format to internal format
- */
-export function positionFromApiFormat(position: string): WidgetPosition {
-  if (isWidgetPosition(position)) {
-    return position;
-  }
-  return 'bottom_right';
-}
-
-/**
- * Create default atmosphere config
- */
-export function createDefaultAtmosphere(): WidgetAtmosphereConfig {
-  return { ...DEFAULT_WIDGET_ATMOSPHERE };
-}
-
-/**
- * Create default widget settings
- */
-export function createDefaultWidgetSettings(): WidgetSettingsData {
-  return { ...DEFAULT_WIDGET_SETTINGS };
 }

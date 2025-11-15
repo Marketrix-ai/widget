@@ -186,60 +186,25 @@ export interface ResponsiveBreakpointsConfig {
 /**
  * WidgetAtmosphereConfig - Widget-specific configuration not in SDK
  *
- * This interface contains all the widget-specific configuration that is not
- * provided by the SDK but is needed for widget functionality.
+ * This interface contains only API settings (widget_settings) and essential runtime state.
+ * All styling comes from widget_settings (from API).
  */
 export interface WidgetAtmosphereConfig {
-  // Session and recording controls
+  // Widget settings from API (or defaults for connectionId/agentId path)
+  widget_settings: WidgetSettingsData;
+
+  // Essential runtime state
   session_time: number;
   sessionActive: boolean;
   recorded_time: number;
   recordActive: boolean;
-
-  // Widget display and behavior
-  widget_text: WidgetTextConfig;
-  widget_settings: WidgetSettingsData;
-  widget_type: 'ai' | 'live' | 'hybrid';
   widget_visible: boolean;
-  widget_customize: WidgetCustomizeConfig;
   widget_mode: 'ai' | 'live' | 'hybrid';
-  widget_position: WidgetPositionConfig;
-  widget_visible_device: DeviceVisibilityConfig;
-
-  // Avatar configuration
-  active_avatar: AvatarConfig;
-  avatar_trigger_time: number;
   avatar_status: 'online' | 'offline' | 'busy' | 'away';
   streaming_avatar_status: 'idle' | 'typing' | 'speaking' | 'listening';
 
-  // Widget interactions
-  enable_widget_popup: boolean;
-  enable_ai_tour: boolean;
-
-  // Live form configuration
-  mLive_form: LiveFormConfig;
-
-  // Hybrid agent controls
-  hybrid_agents_on: boolean;
-  hybrid_agents_off: boolean;
-
-  // Widget text content
-  widget_header_ai: string;
-  widget_body_ai: string;
-  widget_header_live: string;
-  widget_body_live: string;
-  widget_chat_greeting: string;
-  widget_tour_greeting: string;
-
-  // Authentication (for backward compatibility)
-  inapp_login_url: string;
-  inapp_login_id: string;
-  inapp_login_password: string;
-
-  // Advanced configuration
-  advanced_settings: AdvancedSettingsConfig;
-  themes: ThemeConfig;
-  responsive_breakpoints: ResponsiveBreakpointsConfig;
+  // Local-only styling (offset/z_index only, position value comes from widget_settings.widget_position)
+  widget_position: WidgetPositionConfig;
 }
 
 // Re-export SDK types for convenience

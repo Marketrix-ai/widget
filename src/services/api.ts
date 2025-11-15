@@ -1,6 +1,8 @@
 import { sdk } from '../sdk';
 import type { MarketrixConfig, SendMessageRequest, SendMessageResponse } from '../types';
+import { extractApiData } from '../utils/apiHelpers';
 import { getStoredChatId, storeChatId } from '../utils/chatStorage';
+import { extractErrorMessage } from '../utils/errorHandling';
 import { isChatResponseData } from '../utils/typeGuards';
 
 class MarketrixApiService {
@@ -40,8 +42,9 @@ class MarketrixApiService {
     // Create a new chat session
     try {
       const chatResponse = await sdk.chatCreate({ body: undefined });
-      if (chatResponse.status === 200 && chatResponse.body?.success && chatResponse.body.data) {
-        this.chatId = chatResponse.body.data;
+      const chatIdData = extractApiData(chatResponse);
+      if (chatIdData && typeof chatIdData === 'string') {
+        this.chatId = chatIdData;
         // Store in localStorage for persistence
         storeChatId(this.chatId);
         console.log('[API Service] Created and stored chat_id:', this.chatId);
@@ -135,7 +138,8 @@ class MarketrixApiService {
         }
       }
 
-      if (response.status === 200 && response.body?.success && response.body.data) {
+      const responseData = extractApiData(response);
+      if (responseData) {
         // Map the response to our expected format
         if (mode === 'do') {
           // chatDo returns UsageStatsData, not ChatResponseData
@@ -147,11 +151,11 @@ class MarketrixApiService {
           };
         } else {
           // chatTell and chatShow return ChatResponseData
-          if (!isChatResponseData(response.body.data)) {
+          if (!isChatResponseData(responseData)) {
             throw new Error('Invalid chat response data format');
           }
 
-          const chatResponse = response.body.data;
+          const chatResponse = responseData;
           return {
             messageId: Date.now().toString(),
             response: chatResponse.text || 'Response received',
@@ -163,7 +167,7 @@ class MarketrixApiService {
 
       throw new Error('Failed to send message');
     } catch (error) {
-      console.error('Failed to send message:', error);
+      console.error('Failed to send message:', extractErrorMessage(error));
       throw error;
     }
   }

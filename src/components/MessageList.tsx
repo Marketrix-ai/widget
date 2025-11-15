@@ -62,9 +62,8 @@ export const MessageList: React.FC<MessageListProps> = ({
   onScreenSharingChange,
 }) => {
   // Get atmosphere configuration
-  const { getWidgetText, getActiveAvatar } = useWidgetAtmosphere(config);
+  const { getWidgetText } = useWidgetAtmosphere(config);
   const widgetText = getWidgetText();
-  const activeAvatar = getActiveAvatar();
 
   // Use SDK types
   type TourStep = TourStepData;
@@ -1624,7 +1623,7 @@ export const MessageList: React.FC<MessageListProps> = ({
                 </div>
               </div>
               <div className='flex items-center justify-between mt-1.5 text-sm font-medium text-[#1D2939]'>
-                <span>{activeAvatar.name || 'Marketrix AI'}</span>
+                <span>{'Marketrix AI'}</span>
                 <span className='text-[#667085] text-xs font-normal'>
                   {new Date().toLocaleDateString('en-US', { weekday: 'long' })}{' '}
                   {new Date().toLocaleTimeString('en-US', {
@@ -1729,9 +1728,7 @@ export const MessageList: React.FC<MessageListProps> = ({
             </div>
             <div className='flex items-center justify-between text-xs font-inter font-normal'>
               <div className='items-center gap-2'>
-                <span>
-                  {message.sender === 'user' ? 'You' : activeAvatar.name || 'Marketrix AI'}
-                </span>
+                <span>{message.sender === 'user' ? 'You' : 'Marketrix AI'}</span>
               </div>
               <span>{formatMessageTime(message.timestamp)}</span>
             </div>
