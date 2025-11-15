@@ -63,6 +63,7 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     cssCodeSplit: false,
+    chunkSizeWarningLimit: 600, // Widget is intentionally a single bundle
     assetsInlineLimit: 100000000, // Inline all assets as base64
     rollupOptions: {
       input: 'src/index.tsx',

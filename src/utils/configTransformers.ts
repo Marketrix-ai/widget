@@ -14,6 +14,7 @@ import {
 } from '../constants';
 import type { IntegrationData, WidgetSettingsData } from '../sdk';
 import type { MarketrixConfig, WidgetAtmosphereConfig } from '../types';
+import { hasProperty, isWidgetMode, isWidgetPosition } from './typeGuards';
 
 /**
  * Convert integration data to widget atmosphere configuration
@@ -119,7 +120,8 @@ export function integrationToAtmosphere(
 
     // Live form - from integration settings
     mLive_form: {
-      enabled: (settings.widget_feature_human as boolean) ?? true,
+      enabled:
+        typeof settings.widget_feature_human === 'boolean' ? settings.widget_feature_human : true,
       fields: ['name', 'email', 'message'],
       required: ['name', 'email'],
     },
@@ -139,15 +141,22 @@ export function integrationToAtmosphere(
     themes: {
       light: {
         background: '#ffffff',
-        text: (settings.widget_text_color as string) ?? '#333333',
+        text:
+          typeof settings.widget_text_color === 'string' ? settings.widget_text_color : '#333333',
         border: '#e5e7eb',
-        accent: (settings.widget_accent_color as string) ?? '#1BB55B',
+        accent:
+          typeof settings.widget_accent_color === 'string'
+            ? settings.widget_accent_color
+            : '#1BB55B',
       },
       dark: {
         background: '#1f2937',
         text: '#f9fafb',
         border: '#374151',
-        accent: (settings.widget_accent_color as string) ?? '#10b981',
+        accent:
+          typeof settings.widget_accent_color === 'string'
+            ? settings.widget_accent_color
+            : '#10b981',
       },
     },
 
@@ -193,12 +202,10 @@ export function validateWidgetSettings(settings: unknown): settings is WidgetSet
     return false;
   }
 
-  const s = settings as Record<string, unknown>;
-
   // Check required fields
-  const requiredFields = ['widget_enabled', 'widget_appearance', 'widget_position'];
+  const requiredFields = ['widget_enabled', 'widget_appearance', 'widget_position'] as const;
   for (const field of requiredFields) {
-    if (!(field in s)) {
+    if (!hasProperty(settings, field)) {
       return false;
     }
   }
@@ -218,8 +225,8 @@ function parseIntegrationSettings(settings: unknown): WidgetSettingsData | null 
     try {
       const parsed: unknown = JSON.parse(settings);
       // Validate that it has the required widget settings structure
-      if (parsed && typeof parsed === 'object' && parsed !== null && 'widget_enabled' in parsed) {
-        return parsed as WidgetSettingsData;
+      if (validateWidgetSettings(parsed)) {
+        return parsed;
       }
       return null;
     } catch (error) {
@@ -228,8 +235,8 @@ function parseIntegrationSettings(settings: unknown): WidgetSettingsData | null 
     }
   }
 
-  if (typeof settings === 'object' && settings !== null && 'widget_enabled' in settings) {
-    return settings as WidgetSettingsData;
+  if (validateWidgetSettings(settings)) {
+    return settings;
   }
 
   return null;
@@ -239,11 +246,8 @@ function parseIntegrationSettings(settings: unknown): WidgetSettingsData | null 
  * Normalize position format (convert from API format to internal format)
  */
 function normalizePosition(position: unknown): WidgetPosition {
-  if (typeof position === 'string') {
-    // Use position directly (SDK uses underscore format)
-    if (['bottom_left', 'bottom_right'].includes(position)) {
-      return position as WidgetPosition;
-    }
+  if (isWidgetPosition(position)) {
+    return position;
   }
   return 'bottom_right';
 }
@@ -252,10 +256,8 @@ function normalizePosition(position: unknown): WidgetPosition {
  * Normalize mode format
  */
 function normalizeMode(mode: unknown): WidgetMode {
-  if (typeof mode === 'string') {
-    if (['ai', 'live', 'hybrid'].includes(mode)) {
-      return mode as WidgetMode;
-    }
+  if (isWidgetMode(mode)) {
+    return mode;
   }
   return 'hybrid';
 }
@@ -271,8 +273,8 @@ export function positionToApiFormat(position: WidgetPosition): string {
  * Convert position from API format to internal format
  */
 export function positionFromApiFormat(position: string): WidgetPosition {
-  if (['bottom_left', 'bottom_right'].includes(position)) {
-    return position as WidgetPosition;
+  if (isWidgetPosition(position)) {
+    return position;
   }
   return 'bottom_right';
 }
@@ -281,12 +283,12 @@ export function positionFromApiFormat(position: string): WidgetPosition {
  * Create default atmosphere config
  */
 export function createDefaultAtmosphere(): WidgetAtmosphereConfig {
-  return { ...DEFAULT_WIDGET_ATMOSPHERE } as WidgetAtmosphereConfig;
+  return { ...DEFAULT_WIDGET_ATMOSPHERE };
 }
 
 /**
  * Create default widget settings
  */
 export function createDefaultWidgetSettings(): WidgetSettingsData {
-  return { ...DEFAULT_WIDGET_SETTINGS } as WidgetSettingsData;
+  return { ...DEFAULT_WIDGET_SETTINGS };
 }

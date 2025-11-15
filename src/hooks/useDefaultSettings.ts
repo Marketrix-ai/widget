@@ -41,8 +41,8 @@ export interface UseDefaultSettingsReturn {
 export const useDefaultSettings = (): UseDefaultSettingsReturn => {
   return useMemo(
     () => ({
-      widgetSettings: { ...DEFAULT_WIDGET_SETTINGS } as WidgetSettingsData,
-      atmosphereConfig: { ...DEFAULT_WIDGET_ATMOSPHERE } as WidgetAtmosphereConfig,
+      widgetSettings: { ...DEFAULT_WIDGET_SETTINGS },
+      atmosphereConfig: { ...DEFAULT_WIDGET_ATMOSPHERE },
       customizeConfig: { ...DEFAULT_WIDGET_CUSTOMIZE },
       avatarConfig: { ...DEFAULT_AVATAR },
       positionConfig: { ...DEFAULT_WIDGET_POSITION },
@@ -60,14 +60,14 @@ export const useDefaultSettings = (): UseDefaultSettingsReturn => {
  * Hook to get default widget settings only
  */
 export const useDefaultWidgetSettings = (): WidgetSettingsData => {
-  return useMemo(() => ({ ...DEFAULT_WIDGET_SETTINGS }) as WidgetSettingsData, []);
+  return useMemo(() => ({ ...DEFAULT_WIDGET_SETTINGS }), []);
 };
 
 /**
  * Hook to get default atmosphere configuration only
  */
 export const useDefaultAtmosphereConfig = (): WidgetAtmosphereConfig => {
-  return useMemo(() => ({ ...DEFAULT_WIDGET_ATMOSPHERE }) as WidgetAtmosphereConfig, []);
+  return useMemo(() => ({ ...DEFAULT_WIDGET_ATMOSPHERE }), []);
 };
 
 /**

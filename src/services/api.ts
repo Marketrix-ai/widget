@@ -1,6 +1,7 @@
-import { type ChatResponseData, sdk } from '../sdk';
+import { sdk } from '../sdk';
 import type { MarketrixConfig, SendMessageRequest, SendMessageResponse } from '../types';
 import { getStoredChatId, storeChatId } from '../utils/chatStorage';
+import { isChatResponseData } from '../utils/typeGuards';
 
 class MarketrixApiService {
   private config: MarketrixConfig;
@@ -146,7 +147,11 @@ class MarketrixApiService {
           };
         } else {
           // chatTell and chatShow return ChatResponseData
-          const chatResponse = response.body.data as ChatResponseData;
+          if (!isChatResponseData(response.body.data)) {
+            throw new Error('Invalid chat response data format');
+          }
+
+          const chatResponse = response.body.data;
           return {
             messageId: Date.now().toString(),
             response: chatResponse.text || 'Response received',

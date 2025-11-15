@@ -1,6 +1,7 @@
 // Removed unused import
 import { DEFAULT_WIDGET_ATMOSPHERE } from '../constants';
 import type { MarketrixConfig, WidgetAtmosphereConfig } from '../types';
+import { hasProperty } from './typeGuards';
 
 // Type for timer
 type Timer = ReturnType<typeof setTimeout>;
@@ -93,12 +94,10 @@ export class ConfigManager {
       return false;
     }
 
-    const c = config as Record<string, unknown>;
-
     // Check required fields
-    const requiredFields = ['widget_settings', 'widget_type', 'widget_visible'];
+    const requiredFields = ['widget_settings', 'widget_type', 'widget_visible'] as const;
     for (const field of requiredFields) {
-      if (!(field in c)) {
+      if (!hasProperty(config, field)) {
         return false;
       }
     }
@@ -248,7 +247,7 @@ export class ConfigManager {
    * Get default configuration
    */
   private getDefaultConfig(): WidgetAtmosphereConfig {
-    return { ...DEFAULT_WIDGET_ATMOSPHERE } as WidgetAtmosphereConfig;
+    return { ...DEFAULT_WIDGET_ATMOSPHERE };
   }
 }
 

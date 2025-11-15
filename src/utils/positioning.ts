@@ -1,20 +1,12 @@
 import type { WidgetPosition } from '../types';
 
-// Type for document with vendor-specific fullscreen properties
-type DocumentWithVendorFullscreen = Document & {
-  webkitFullscreenElement?: Element;
-  mozFullScreenElement?: Element;
-  msFullscreenElement?: Element;
-};
-
 // Check if screen sharing is in full-screen mode
 export const isFullScreenMode = (): boolean => {
-  const doc = document as DocumentWithVendorFullscreen;
   return !!(
     document.fullscreenElement ||
-    doc.webkitFullscreenElement ||
-    doc.mozFullScreenElement ||
-    doc.msFullscreenElement
+    document.webkitFullscreenElement ||
+    document.mozFullScreenElement ||
+    document.msFullscreenElement
   );
 };
 

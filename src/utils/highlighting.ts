@@ -1,5 +1,7 @@
 // Utility functions for highlighting elements and creating spotlight effects
 
+import { isHTMLElement } from './typeGuards';
+
 export interface HighlightOptions {
   element: HTMLElement;
   duration?: number;
@@ -188,8 +190,8 @@ export class ElementHighlighter {
    * Find and highlight element by selector
    */
   highlightBySelector(selector: string, options?: Partial<HighlightOptions>): boolean {
-    const element = document.querySelector(selector) as HTMLElement;
-    if (element) {
+    const element = document.querySelector(selector);
+    if (isHTMLElement(element)) {
       this.highlightElement({
         element,
         ...options,
@@ -205,9 +207,9 @@ export class ElementHighlighter {
   highlightByText(text: string, options?: Partial<HighlightOptions>): boolean {
     const elements = document.querySelectorAll('h1, h2, h3, h4, h5, h6, p, span, div');
     for (const element of elements) {
-      if (element.textContent?.includes(text)) {
+      if (isHTMLElement(element) && element.textContent?.includes(text)) {
         this.highlightElement({
-          element: element as HTMLElement,
+          element,
           ...options,
         });
         return true;

@@ -4,6 +4,7 @@ import { useIntegrationSettings } from '../hooks/useIntegrationSettings';
 import { useMarketrixWidget } from '../hooks/useMarketrixWidget';
 import { useWidgetAtmosphere } from '../hooks/useWidgetAtmosphere';
 import type { MarketrixConfig } from '../types';
+import { isWidgetPosition } from '../utils/typeGuards';
 import { ChatWindow } from './ChatWindow';
 import { WidgetButton } from './WidgetButton';
 
@@ -47,13 +48,18 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
     ? {
         ...effectiveConfig,
         // Override with integration settings - convert underscore to hyphen for position
-        position:
-          integrationSettings.widget_position?.replace('_', '-') || effectiveConfig.position,
+        position: (() => {
+          const pos = integrationSettings.widget_position?.replace('_', '-');
+          if (pos && isWidgetPosition(pos)) {
+            return pos;
+          }
+          return effectiveConfig.position;
+        })(),
         enabledModes: [
-          ...(integrationSettings.widget_feature_show ? ['show'] : []),
-          ...(integrationSettings.widget_feature_tell ? ['tell'] : []),
-          ...(integrationSettings.widget_feature_do ? ['do'] : []),
-        ] as ('show' | 'tell' | 'do')[],
+          ...(integrationSettings.widget_feature_show ? ['show' as const] : []),
+          ...(integrationSettings.widget_feature_tell ? ['tell' as const] : []),
+          ...(integrationSettings.widget_feature_do ? ['do' as const] : []),
+        ],
         // Agent name is now handled through atmosphere config
       }
     : effectiveConfig;
@@ -99,7 +105,7 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
       <WidgetButton
         config={{
           ...finalConfig,
-          position: finalConfig.position as 'bottom_left' | 'bottom_right' | undefined,
+          position: finalConfig.position,
         }}
         atmosphere={atmosphereConfig}
         onClick={actions.toggleWidget}
@@ -113,7 +119,7 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
       <ChatWindow
         config={{
           ...finalConfig,
-          position: finalConfig.position as 'bottom_left' | 'bottom_right' | undefined,
+          position: finalConfig.position,
         }}
         isOpen={state.isOpen}
         isMinimized={state.isMinimized}

@@ -1,5 +1,6 @@
-import { type IntegrationData, sdk, type WidgetSettingsData } from '../sdk';
+import { type IntegrationData, sdk, type SlackSettingsData, type WidgetSettingsData } from '../sdk';
 import { integrationToAtmosphere } from '../utils/configTransformers';
+import { isString, isWidgetSettingsData } from '../utils/typeGuards';
 
 export class IntegrationService {
   private marketrixId: string;
@@ -59,24 +60,29 @@ export class IntegrationService {
     }
 
     // Parse settings if they're stored as a JSON string
-    let settings: unknown = integration.settings;
-    if (typeof settings === 'string') {
+    let settings: WidgetSettingsData | SlackSettingsData = integration.settings;
+    if (isString(settings)) {
       try {
-        settings = JSON.parse(settings);
+        const parsed: unknown = JSON.parse(settings);
+        if (isWidgetSettingsData(parsed)) {
+          settings = parsed;
+        } else {
+          console.warn('Parsed settings are not widget settings');
+          return null;
+        }
       } catch (error) {
         console.error('Failed to parse settings JSON:', error);
         return null;
       }
     }
 
-    // Type guard to check if this is widget settings
-    if (!settings || typeof settings !== 'object' || !('widget_enabled' in settings)) {
-      console.warn('Settings are not widget settings');
-      return null;
+    // Type guard to check if this is widget settings (not Slack settings)
+    if (isWidgetSettingsData(settings)) {
+      return settings;
     }
 
-    // Type assertion is needed here because we've verified the structure
-    return settings as WidgetSettingsData;
+    console.warn('Settings are not widget settings');
+    return null;
   }
 
   /**
@@ -84,7 +90,12 @@ export class IntegrationService {
    */
   convertToAtmosphereConfig(integration: IntegrationData): Record<string, unknown> | null {
     const result = integrationToAtmosphere(integration);
-    return result as Record<string, unknown> | null;
+    if (result === null) {
+      return null;
+    }
+    // integrationToAtmosphere returns WidgetAtmosphereConfig, convert to Record<string, unknown>
+    // Spread to create a new object that satisfies Record<string, unknown>
+    return { ...result };
   }
 
   /**
@@ -118,7 +129,8 @@ export class IntegrationService {
       widget_feature_tell: settings.widget_feature_tell ?? true,
       widget_feature_show: settings.widget_feature_show ?? true,
       widget_feature_do: settings.widget_feature_do ?? true,
-      widget_feature_human: (settings.widget_feature_human as boolean) ?? true,
+      widget_feature_human:
+        typeof settings.widget_feature_human === 'boolean' ? settings.widget_feature_human : true,
       widget_background_color:
         settings.widget_background_color ?? 'linear-gradient(135deg, #1BB55B45 0%, #987ADD45 100%)',
       widget_text_color: settings.widget_text_color ?? '#333333',

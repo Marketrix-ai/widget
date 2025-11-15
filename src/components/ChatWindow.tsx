@@ -149,7 +149,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         },
         audio: false,
         preferCurrentTab: true,
-      } as DisplayMediaStreamOptions & { preferCurrentTab: boolean });
+      } satisfies DisplayMediaStreamOptions);
 
       // Create a minimal status indicator without overlay
       const statusIndicator = document.createElement('div');
@@ -286,7 +286,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       'rgba(255, 255, 255, 0.2)',
     boxShadow: effectiveSettings.widget_shadow || '0 10px 25px rgba(0, 0, 0, 0.1)',
     zIndex: widgetPosition.z_index || 40,
-  } as React.CSSProperties;
+  } satisfies React.CSSProperties;
 
   return (
     <div

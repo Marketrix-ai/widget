@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { IntegrationService } from '../services/integrationService';
 import type { MarketrixConfig, WidgetAtmosphereConfig } from '../types';
 import { configManager } from '../utils/ConfigManager';
+import { isObject } from '../utils/typeGuards';
 
 export const useWidgetAtmosphere = (initialConfig?: MarketrixConfig) => {
   const [atmosphereConfig, setAtmosphereConfig] = useState<WidgetAtmosphereConfig | null>(null);
@@ -33,13 +34,13 @@ export const useWidgetAtmosphere = (initialConfig?: MarketrixConfig) => {
           console.log('Loading integration settings for atmosphere...');
           const integrationAtmosphereConfig = await integrationService.loadAtmosphereConfig();
 
-          if (integrationAtmosphereConfig && typeof integrationAtmosphereConfig === 'object') {
+          if (integrationAtmosphereConfig && isObject(integrationAtmosphereConfig)) {
             console.log('Integration atmosphere config loaded, merging with base config');
             // Merge integration settings with base config
             const updatedConfig = {
               ...config,
               ...integrationAtmosphereConfig,
-            } as WidgetAtmosphereConfig;
+            };
             setAtmosphereConfig(updatedConfig);
           } else {
             console.log('No integration atmosphere config found, using default config');

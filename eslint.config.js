@@ -29,6 +29,7 @@ export default [
         confirm: 'readonly',
         window: 'readonly',
         document: 'readonly',
+        navigator: 'readonly',
         process: 'readonly',
         fetch: 'readonly',
         FormData: 'readonly',

@@ -12,15 +12,58 @@ const client = initClient(contract, {
   jsonQuery: true,
 });
 
-type ResBody = { success: boolean; data?: unknown; error?: string; message?: string };
-type Res = { status: number; body?: ResBody | unknown };
+interface ResBody {
+  success: boolean;
+  data?: unknown;
+  error?: string;
+  message?: string;
+}
 
-const parse = <T extends Res>(res: T): T extends { body: { data?: infer D } } ? D : never => {
-  const b = res.body as ResBody;
-  if (res.status >= 200 && res.status < 400 && b?.success) {
-    return b.data as T extends { body: { data?: infer D } } ? D : never;
+interface Res {
+  status: number;
+  body?: ResBody | unknown;
+}
+
+// Helper type to extract data type from response
+type ExtractData<T extends Res> = T extends { body: { data?: infer D } } ? D : never;
+
+function hasProperty<K extends string>(obj: unknown, key: K): obj is Record<K, unknown> {
+  return typeof obj === 'object' && obj !== null && key in obj;
+}
+
+function isResBody(body: unknown): body is ResBody {
+  if (!hasProperty(body, 'success')) {
+    return false;
   }
-  const err = b?.error ?? b?.message ?? 'Request failed';
+
+  if (typeof body.success !== 'boolean') {
+    return false;
+  }
+
+  if (hasProperty(body, 'error') && typeof body.error !== 'string') {
+    return false;
+  }
+
+  if (hasProperty(body, 'message') && typeof body.message !== 'string') {
+    return false;
+  }
+
+  return true;
+}
+
+const parse = <T extends Res>(res: T): ExtractData<T> => {
+  if (!isResBody(res.body)) {
+    throw new Error('Invalid response body structure');
+  }
+
+  if (res.status >= 200 && res.status < 400 && res.body.success) {
+    // Type assertion needed for conditional type inference
+    // TypeScript cannot infer conditional types from runtime checks
+    // but we've validated the structure with isResBody
+    return res.body.data as ExtractData<T>;
+  }
+
+  const err = res.body.error ?? res.body.message ?? 'Request failed';
   console.error('API Error:', err);
   throw new Error(err);
 };

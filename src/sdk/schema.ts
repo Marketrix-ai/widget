@@ -648,12 +648,24 @@ export const AgentEntitySchema = BaseEntitySchema.extend({
 
 const KnowledgeIdsSchema = z
   .string()
-  .transform((str) => JSON.parse(str) as number[])
+  .transform((str): number[] => {
+    const parsed = JSON.parse(str);
+    if (Array.isArray(parsed) && parsed.every((item) => typeof item === 'number')) {
+      return parsed;
+    }
+    throw new Error('Invalid number array format');
+  })
   .pipe(z.array(z.coerce.number()));
 
 const SimulationIdsSchema = z
   .string()
-  .transform((str) => JSON.parse(str) as number[])
+  .transform((str): number[] => {
+    const parsed = JSON.parse(str);
+    if (Array.isArray(parsed) && parsed.every((item) => typeof item === 'number')) {
+      return parsed;
+    }
+    throw new Error('Invalid number array format');
+  })
   .pipe(z.array(z.coerce.number()));
 
 /**

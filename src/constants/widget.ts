@@ -6,6 +6,9 @@
  * for all widget configuration defaults.
  */
 
+import type { WidgetSettingsData } from '../sdk';
+import type { LiveFormConfig, WidgetAtmosphereConfig } from '../types';
+
 // Widget mode types
 export const WIDGET_MODES = ['ai', 'live', 'hybrid'] as const;
 export type WidgetMode = (typeof WIDGET_MODES)[number];
@@ -35,11 +38,11 @@ export type ChatMode = 'show' | 'tell' | 'do';
 export const CHAT_MODES = ['show', 'tell', 'do'] as const;
 
 // Default widget settings
-export const DEFAULT_WIDGET_SETTINGS = {
+export const DEFAULT_WIDGET_SETTINGS: WidgetSettingsData = {
   widget_enabled: true,
-  widget_appearance: 'default' as WidgetAppearance,
-  widget_position: 'bottom_right' as const,
-  widget_device: 'desktop_mobile' as WidgetDevice,
+  widget_appearance: 'default',
+  widget_position: 'bottom_right',
+  widget_device: 'desktop_mobile',
   widget_header: '🤖 AI Assistant',
   widget_body: "I'm here to help you with any questions or tasks.",
   widget_greeting: "🎉 Welcome! I'm your AI assistant!",
@@ -62,19 +65,19 @@ export const DEFAULT_WIDGET_SETTINGS = {
   widget_bounce_effect: true,
   widget_chips: [
     {
-      chip_mode: 'tell' as ChatMode,
+      chip_mode: 'tell',
       chip_text: 'Tell me about your services',
     },
     {
-      chip_mode: 'show' as ChatMode,
+      chip_mode: 'show',
       chip_text: 'Show me pricing',
     },
     {
-      chip_mode: 'do' as ChatMode,
+      chip_mode: 'do',
       chip_text: 'Schedule a demo',
     },
-  ] as Array<{ chip_mode: ChatMode; chip_text: string }>,
-} as const;
+  ],
+};
 
 // Default widget text configuration
 export const DEFAULT_WIDGET_TEXT = {
@@ -114,12 +117,12 @@ export const DEFAULT_WIDGET_CUSTOMIZE = {
 export const DEFAULT_AVATAR = {
   url: 'https://example.com/avatar.png',
   name: 'Marketrix Assistant',
-  status: 'online' as AvatarStatus,
+  status: 'online' as const,
 } as const;
 
 // Default widget position configuration
 export const DEFAULT_WIDGET_POSITION = {
-  position: 'bottom_right' as WidgetPosition,
+  position: 'bottom_right' as const,
   offset: { x: 20, y: 20 },
   z_index: 40,
 } as const;
@@ -132,11 +135,11 @@ export const DEFAULT_DEVICE_VISIBILITY = {
 } as const;
 
 // Default live form configuration
-export const DEFAULT_LIVE_FORM = {
+export const DEFAULT_LIVE_FORM: LiveFormConfig = {
   enabled: true,
-  fields: ['name', 'email', 'message'] as string[],
-  required: ['name', 'email'] as string[],
-} as const;
+  fields: ['name', 'email', 'message'],
+  required: ['name', 'email'],
+};
 
 // Default advanced settings
 export const DEFAULT_ADVANCED_SETTINGS = {
@@ -173,26 +176,26 @@ export const DEFAULT_RESPONSIVE_BREAKPOINTS = {
 } as const;
 
 // Default widget atmosphere configuration
-export const DEFAULT_WIDGET_ATMOSPHERE = {
+export const DEFAULT_WIDGET_ATMOSPHERE: WidgetAtmosphereConfig = {
   session_time: 0,
   sessionActive: true,
   recorded_time: 0,
   recordActive: false,
   widget_text: DEFAULT_WIDGET_TEXT,
   widget_settings: DEFAULT_WIDGET_SETTINGS,
-  widget_type: 'hybrid' as WidgetMode,
+  widget_type: 'hybrid',
   widget_visible: true,
   widget_customize: DEFAULT_WIDGET_CUSTOMIZE,
   active_avatar: DEFAULT_AVATAR,
   avatar_trigger_time: 5000,
   enable_widget_popup: true,
-  avatar_status: 'online' as AvatarStatus,
-  widget_mode: 'ai' as WidgetMode,
+  avatar_status: 'online',
+  widget_mode: 'ai',
   mLive_form: DEFAULT_LIVE_FORM,
   hybrid_agents_on: true,
   hybrid_agents_off: false,
   widget_visible_device: DEFAULT_DEVICE_VISIBILITY,
-  streaming_avatar_status: 'idle' as StreamingAvatarStatus,
+  streaming_avatar_status: 'idle',
   widget_position: DEFAULT_WIDGET_POSITION,
   enable_ai_tour: true,
   widget_header_ai: 'AI Assistant',
@@ -207,7 +210,7 @@ export const DEFAULT_WIDGET_ATMOSPHERE = {
   advanced_settings: DEFAULT_ADVANCED_SETTINGS,
   themes: DEFAULT_THEMES,
   responsive_breakpoints: DEFAULT_RESPONSIVE_BREAKPOINTS,
-} as const;
+};
 
 // Color constants
 export const COLORS = {

@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import type { WidgetSettingsData } from '../sdk';
 import { IntegrationService } from '../services/integrationService';
 import type { MarketrixConfig } from '../types';
+import { isWidgetSettingsData } from '../utils/typeGuards';
 
 export const useIntegrationSettings = (config: MarketrixConfig) => {
   const [settings, setSettings] = useState<WidgetSettingsData | null>(null);
@@ -14,10 +15,13 @@ export const useIntegrationSettings = (config: MarketrixConfig) => {
       if (!config.marketrixId || !config.marketrixKey) {
         // Check if default settings are provided in atmosphere config
         if (config.atmosphere?.widget_settings) {
-          console.log('Using default widget settings from atmosphere config');
-          setSettings(config.atmosphere.widget_settings as WidgetSettingsData);
-          setIsLoading(false);
-          return;
+          const widgetSettings = config.atmosphere.widget_settings;
+          if (isWidgetSettingsData(widgetSettings)) {
+            console.log('Using default widget settings from atmosphere config');
+            setSettings(widgetSettings);
+            setIsLoading(false);
+            return;
+          }
         }
 
         // No default settings available

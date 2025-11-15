@@ -1,4 +1,11 @@
 import type { MarketrixConfig, SendMessageRequest, SendMessageResponse } from '../types';
+import {
+  isHTMLButtonElement,
+  isHTMLElement,
+  isHTMLElementEventTarget,
+  isHTMLInputElement,
+  isHTMLTextAreaElement,
+} from '../utils/typeGuards';
 
 export interface DemoContextMessage {
   question: string;
@@ -406,11 +413,13 @@ class DemoApiService {
     }
 
     // Check if we have context from highlighted element (from global context or local context)
-    let currentContext = this.currentContext || (window as any).currentDemoContext;
+    let currentContext: string | undefined =
+      this.currentContext || window.currentDemoContext || undefined;
 
     // If no current context, try to determine context from the message content
     if (!currentContext) {
-      currentContext = this.analyzeMessageForContext(message);
+      const analyzedContext = this.analyzeMessageForContext(message);
+      currentContext = analyzedContext ?? undefined;
     }
 
     if (currentContext && this.contextMessages[currentContext]) {
@@ -511,8 +520,8 @@ class DemoApiService {
 
     // Remove global functions
     if (typeof window !== 'undefined') {
-      delete (window as any).stepGuideNext;
-      delete (window as any).stepGuidePrev;
+      delete window.stepGuideNext;
+      delete window.stepGuidePrev;
     }
 
     // Remove all step-related event listeners
@@ -581,10 +590,12 @@ class DemoApiService {
         });
 
         // Add highlighting effect
-        this.highlightElement(element as HTMLElement);
+        if (isHTMLElement(element)) {
+          this.highlightElement(element);
+        }
 
         // Set global context
-        (window as any).currentDemoContext = elementType;
+        window.currentDemoContext = elementType;
       }
     } catch (error) {
       console.error('Error navigating to element:', error);
@@ -1028,14 +1039,14 @@ class DemoApiService {
     this.removeStepGuideUI();
 
     // Add global functions for navigation (but they won't be used in auto mode)
-    (window as any).stepGuideNext = (event?: Event) => {
+    window.stepGuideNext = (event?: Event) => {
       if (event) {
         event.preventDefault();
         event.stopPropagation();
       }
       // Auto mode - this won't be called by user
     };
-    (window as any).stepGuidePrev = (event?: Event) => {
+    window.stepGuidePrev = (event?: Event) => {
       if (event) {
         event.preventDefault();
         event.stopPropagation();
@@ -1102,9 +1113,9 @@ class DemoApiService {
       statusElement.textContent = status;
     }
 
-    if (dotElement) {
+    if (dotElement && isHTMLElement(dotElement)) {
       // Update dot color based on status
-      const dot = dotElement as HTMLElement;
+      const dot = dotElement;
       switch (type) {
         case 'preparing':
           dot.style.background = '#60a5fa';
@@ -1179,9 +1190,9 @@ class DemoApiService {
   // Execute step action automatically
   private async executeStepAction(step: StepGuide): Promise<void> {
     const selector = step.selector || `[data-demo-element="${step.element}"]`;
-    const element = document.querySelector(selector) as HTMLElement;
+    const element = document.querySelector(selector);
 
-    if (!element) {
+    if (!isHTMLElement(element)) {
       console.warn('Element not found for action execution:', selector);
       return;
     }
@@ -1312,7 +1323,7 @@ class DemoApiService {
     this.removeStepGuideUI();
 
     // Add global functions for navigation
-    (window as any).stepGuideNext = (event?: Event) => {
+    window.stepGuideNext = (event?: Event) => {
       if (event) {
         event.preventDefault();
         event.stopPropagation();
@@ -1327,7 +1338,7 @@ class DemoApiService {
         this.nextStep();
       }, 100);
     };
-    (window as any).stepGuidePrev = (event?: Event) => {
+    window.stepGuidePrev = (event?: Event) => {
       if (event) {
         event.preventDefault();
         event.stopPropagation();
@@ -1359,14 +1370,14 @@ class DemoApiService {
     }
 
     const selector = currentStep.selector || `[data-demo-element="${currentStep.element}"]`;
-    const element = document.querySelector(selector) as HTMLElement;
+    const element = document.querySelector(selector);
 
     console.log(
       `Current step ${this.currentStepIndex + 1}: Looking for element with selector:`,
       selector
     );
 
-    if (element) {
+    if (isHTMLElement(element)) {
       console.log(`Current step ${this.currentStepIndex + 1}: Element found:`, element);
       // Store step index as data attribute
       element.setAttribute('data-step-index', this.currentStepIndex.toString());
@@ -1393,7 +1404,11 @@ class DemoApiService {
 
     if (!this.currentStepGuide) return;
 
-    const target = event.target as HTMLElement;
+    if (!isHTMLElementEventTarget(event.target)) {
+      return;
+    }
+
+    const target = event.target;
     const stepIndex = parseInt(target.getAttribute('data-step-index') || '0');
 
     // Only handle clicks for the current step
@@ -1468,13 +1483,23 @@ class DemoApiService {
     inputElement.addEventListener('blur', this.handleInputBlur);
 
     // Store step reference on the element
-    (inputElement as any).currentStep = step;
+    inputElement.currentStep = {
+      step_number: step.step_number,
+      action: step.action,
+      element: step.element,
+      text: step.text ?? '',
+    };
   }
 
   // Handle input validation
   private handleInputValidation = (event: Event): void => {
-    const input = event.target as HTMLInputElement | HTMLTextAreaElement;
-    const step = (input as any).currentStep;
+    const target = event.target;
+    if (!target || (!isHTMLInputElement(target) && !isHTMLTextAreaElement(target))) {
+      return;
+    }
+
+    const input = target;
+    const step = input.currentStep;
 
     if (!step) return;
 
@@ -1487,8 +1512,13 @@ class DemoApiService {
 
   // Handle input blur
   private handleInputBlur = (event: Event): void => {
-    const input = event.target as HTMLInputElement | HTMLTextAreaElement;
-    const step = (input as any).currentStep;
+    const target = event.target;
+    if (!target || (!isHTMLInputElement(target) && !isHTMLTextAreaElement(target))) {
+      return;
+    }
+
+    const input = target;
+    const step = input.currentStep;
 
     if (!step) return;
 
@@ -1506,7 +1536,11 @@ class DemoApiService {
 
   // Update tick button state based on input validation
   private updateTickButtonState(isValid: boolean): void {
-    const tickButton = document.querySelector('.step-tick-button') as HTMLButtonElement;
+    const tickButtonElement = document.querySelector('.step-tick-button');
+    if (!isHTMLButtonElement(tickButtonElement)) {
+      return;
+    }
+    const tickButton = tickButtonElement;
     if (tickButton) {
       tickButton.disabled = !isValid;
       tickButton.style.opacity = isValid ? '1' : '0.5';
@@ -1674,42 +1708,21 @@ class DemoApiService {
     const selector = currentStep.selector || `[data-demo-element="${currentStep.element}"]`;
     console.log('Looking for element with selector:', selector);
 
-    const element = document.querySelector(selector) as HTMLElement;
-    if (element) {
-      console.log('Element found:', element);
-      // Scroll to element
-      element.scrollIntoView({
-        behavior: 'smooth',
-        block: 'center',
-        inline: 'center',
-      });
-
-      // Highlight element with enhanced effect
-      this.highlightStepElement(element);
-    } else {
-      console.warn('Element not found for selector:', selector);
-      // Try alternative selectors
-      const altSelectors = [
-        `#${currentStep.element}`,
-        `.${currentStep.element}`,
-        `[id="${currentStep.element}"]`,
-        `[class*="${currentStep.element}"]`,
-      ];
-
-      for (const altSelector of altSelectors) {
-        const altElement = document.querySelector(altSelector) as HTMLElement;
-        if (altElement) {
-          console.log('Found element with alternative selector:', altSelector, altElement);
-          altElement.scrollIntoView({
-            behavior: 'smooth',
-            block: 'center',
-            inline: 'center',
-          });
-          this.highlightStepElement(altElement);
-          return;
-        }
-      }
+    const element = document.querySelector(selector);
+    if (!isHTMLElement(element)) {
+      return;
     }
+
+    console.log('Element found:', element);
+    // Scroll to element
+    element.scrollIntoView({
+      behavior: 'smooth',
+      block: 'center',
+      inline: 'center',
+    });
+
+    // Highlight element with enhanced effect
+    this.highlightStepElement(element);
   }
 
   // Enhanced highlighting for step elements
@@ -1790,10 +1803,10 @@ class DemoApiService {
     document.body.appendChild(border);
 
     // Store references for cleanup
-    (element as any).stepSpotlight = spotlight;
-    (element as any).stepBorder = border;
-    (element as any).spotlightResizeHandler = resizeHandler;
-    (element as any).spotlightScrollHandler = scrollHandler;
+    element.stepSpotlight = spotlight;
+    element.stepBorder = border;
+    element.spotlightResizeHandler = resizeHandler;
+    element.spotlightScrollHandler = scrollHandler;
 
     console.log('Spotlight and border created with responsive positioning');
   }
@@ -1930,7 +1943,7 @@ class DemoApiService {
         updateTextPosition();
       });
       resizeObserver.observe(document.body);
-      (element as any).textResizeObserver = resizeObserver;
+      element.textResizeObserver = resizeObserver;
     }
 
     document.body.appendChild(descriptionText);
@@ -1939,12 +1952,12 @@ class DemoApiService {
     this.startTypingAnimation(currentStep.description, this.currentStepIndex);
 
     // Store references for cleanup
-    (element as any).stepDescriptionText = descriptionText;
-    (element as any).textResizeHandler = textResizeHandler;
-    (element as any).textScrollHandler = textScrollHandler;
+    element.stepDescriptionText = descriptionText;
+    element.textResizeHandler = textResizeHandler;
+    element.textScrollHandler = textScrollHandler;
 
     // Also store the update function for manual triggering
-    (element as any).updateTextPosition = updateTextPosition;
+    element.updateTextPosition = updateTextPosition;
 
     // Set up a periodic check to ensure text stays in sync (fallback)
     const periodicCheck = setInterval(() => {
@@ -1955,17 +1968,17 @@ class DemoApiService {
       updateTextPosition();
     }, 1000); // Check every second
 
-    (element as any).textPeriodicCheck = periodicCheck;
+    element.textPeriodicCheck = periodicCheck;
 
     console.log('Description text created with enhanced positioning system');
   }
 
   // Method to manually update description text position (useful for debugging)
   public updateDescriptionTextPosition(): void {
-    const currentElement = document.querySelector('.step-guide-highlight') as HTMLElement;
-    if (currentElement && (currentElement as any).updateTextPosition) {
+    const currentElement = document.querySelector('.step-guide-highlight');
+    if (isHTMLElement(currentElement) && currentElement.updateTextPosition) {
       console.log('Manually updating description text position');
-      (currentElement as any).updateTextPosition();
+      currentElement.updateTextPosition();
     }
   }
 
@@ -1996,8 +2009,8 @@ class DemoApiService {
           const typingElement = document.querySelector(`#typing-text-${stepIndex}`);
           if (typingElement) {
             const cursor = typingElement.nextElementSibling;
-            if (cursor) {
-              (cursor as HTMLElement).style.opacity = '0';
+            if (isHTMLElement(cursor)) {
+              cursor.style.opacity = '0';
             }
           }
         }, 1000);
@@ -2015,17 +2028,17 @@ class DemoApiService {
 
     // Find the actions container
     const actionsContainer = descriptionText.querySelector('.step-description-text-actions');
-    if (actionsContainer) {
+    if (isHTMLElement(actionsContainer)) {
       // Show the Done button with animation
-      (actionsContainer as HTMLElement).style.display = 'flex';
-      (actionsContainer as HTMLElement).style.opacity = '0';
-      (actionsContainer as HTMLElement).style.transform = 'translateY(10px)';
+      actionsContainer.style.display = 'flex';
+      actionsContainer.style.opacity = '0';
+      actionsContainer.style.transform = 'translateY(10px)';
 
       // Animate in
       setTimeout(() => {
-        (actionsContainer as HTMLElement).style.transition = 'all 0.3s ease-out';
-        (actionsContainer as HTMLElement).style.opacity = '1';
-        (actionsContainer as HTMLElement).style.transform = 'translateY(0)';
+        actionsContainer.style.transition = 'all 0.3s ease-out';
+        actionsContainer.style.opacity = '1';
+        actionsContainer.style.transform = 'translateY(0)';
       }, 100);
     }
   }
@@ -2054,31 +2067,34 @@ class DemoApiService {
 
     // Clean up event listeners from any elements that had spotlight or text positioning
     document.querySelectorAll('[data-step-index]').forEach((el) => {
-      const element = el as any;
+      if (!isHTMLElement(el)) {
+        return;
+      }
+      const element = el;
       if (element.spotlightResizeHandler) {
         window.removeEventListener('resize', element.spotlightResizeHandler);
-        element.spotlightResizeHandler = null;
+        element.spotlightResizeHandler = undefined;
       }
       if (element.spotlightScrollHandler) {
         window.removeEventListener('scroll', element.spotlightScrollHandler, true);
-        element.spotlightScrollHandler = null;
+        element.spotlightScrollHandler = undefined;
       }
       if (element.textResizeHandler) {
         window.removeEventListener('resize', element.textResizeHandler);
-        element.textResizeHandler = null;
+        element.textResizeHandler = undefined;
       }
       if (element.textScrollHandler) {
         window.removeEventListener('scroll', element.textScrollHandler, true);
         document.removeEventListener('scroll', element.textScrollHandler, true);
-        element.textScrollHandler = null;
+        element.textScrollHandler = undefined;
       }
       if (element.textResizeObserver) {
         element.textResizeObserver.disconnect();
-        element.textResizeObserver = null;
+        element.textResizeObserver = undefined;
       }
       if (element.textPeriodicCheck) {
         clearInterval(element.textPeriodicCheck);
-        element.textPeriodicCheck = null;
+        element.textPeriodicCheck = undefined;
       }
     });
 
@@ -2103,7 +2119,9 @@ class DemoApiService {
 
     // Remove any pulsing borders
     document.querySelectorAll('[style*="animation: stepPulse"]').forEach((el) => {
-      (el as HTMLElement).style.animation = 'none';
+      if (isHTMLElement(el)) {
+        el.style.animation = 'none';
+      }
     });
 
     // Force remove any elements with step-related classes
@@ -2131,7 +2149,10 @@ class DemoApiService {
 
     // Clean up any remaining step-related elements
     document.querySelectorAll('*').forEach((el) => {
-      const element = el as HTMLElement;
+      if (!isHTMLElement(el)) {
+        return;
+      }
+      const element = el;
       if (
         element.style &&
         element.style.animation &&

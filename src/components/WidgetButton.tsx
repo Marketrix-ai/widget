@@ -88,7 +88,10 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
               className='w-full h-full object-cover'
               onError={(e) => {
                 // Fallback to default icon if image fails to load
-                const target = e.target as HTMLImageElement;
+                const target = e.target;
+                if (!(target instanceof HTMLImageElement)) {
+                  return;
+                }
                 target.style.display = 'none';
                 target.nextElementSibling?.classList.remove('hidden');
               }}

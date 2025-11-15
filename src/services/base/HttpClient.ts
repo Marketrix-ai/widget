@@ -15,6 +15,7 @@ import axios, {
 } from 'axios';
 
 import { CONTENT_TYPES, HEADERS, RETRY_CONFIG, TIMEOUTS } from '../../constants';
+import { hasProperty, isObject, isString } from '../../utils/typeGuards';
 
 export interface HttpClientConfig {
   baseURL?: string;
@@ -28,9 +29,23 @@ interface RetryableRequestConfig extends AxiosRequestConfig {
   _retryCount?: number;
 }
 
-interface ApiError extends Error {
+class ApiError extends Error {
   status?: number;
-  data?: unknown;
+  data?: Record<string, unknown> | string | unknown;
+
+  constructor(message: string, status?: number, data?: unknown) {
+    super(message);
+    this.status = status;
+    this.data = data;
+    this.name = 'ApiError';
+  }
+}
+
+/**
+ * Helper function to create properly typed ApiError
+ */
+function createApiError(message: string, status: number, data?: unknown): ApiError {
+  return new ApiError(message, status, data);
 }
 
 export class HttpClient {
@@ -89,6 +104,13 @@ export class HttpClient {
         return response;
       },
       async (error: AxiosError) => {
+        if (!error.config) {
+          return Promise.reject(error);
+        }
+        // We mutate the original config object to add retry properties
+        // Type assertion needed because AxiosRequestConfig doesn't include our custom properties
+        // but we know we can safely add them at runtime
+        // Using a helper would create a new object, but we need to mutate the original
         const originalRequest = error.config as RetryableRequestConfig;
 
         // Retry logic for network errors
@@ -164,22 +186,29 @@ export class HttpClient {
     if (error.response) {
       // Server responded with error status
       const { status, data } = error.response;
-      const responseData = data as Record<string, unknown>;
-      const message =
-        (responseData?.message as string) ||
-        (responseData?.error as string) ||
-        `HTTP ${status} Error`;
+      let message = `HTTP ${status} Error`;
 
-      const normalizedError = new Error(message) as ApiError;
-      normalizedError.status = status;
-      normalizedError.data = data;
-      return normalizedError;
+      // Safely extract message from response data
+      if (isObject(data)) {
+        if (hasProperty(data, 'message') && isString(data.message)) {
+          message = data.message;
+        } else if (hasProperty(data, 'error') && isString(data.error)) {
+          message = data.error;
+        }
+      } else if (isString(data)) {
+        message = data;
+      }
+
+      return createApiError(message, status, data);
     } else if (error.request) {
       // Network error
-      return new Error('Network Error: Unable to reach server') as ApiError;
+      return createApiError('Network Error: Unable to reach server', 0);
     } else {
-      // Other error
-      return error as ApiError;
+      // Other error - preserve original error structure
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorStatus = 'status' in error && typeof error.status === 'number' ? error.status : 0;
+      const errorData = 'data' in error ? error.data : undefined;
+      return createApiError(errorMessage, errorStatus, errorData);
     }
   }
 

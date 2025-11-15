@@ -5,6 +5,8 @@
  * Connects to ws://localhost:8765/widget with chat_id for registration.
  */
 
+import { isMCPMessage, isMCPToolCall, isString } from '../utils/typeGuards';
+
 export interface MCPMessage {
   jsonrpc: '2.0';
   id?: string | number;
@@ -92,7 +94,13 @@ export class MCPClient {
 
         ws.onmessage = (event) => {
           try {
-            const message: MCPMessage = JSON.parse(event.data as string) as MCPMessage;
+            const data = isString(event.data) ? event.data : String(event.data);
+            const parsed: unknown = JSON.parse(data);
+            if (!isMCPMessage(parsed)) {
+              console.error('[MCP Client] Invalid message format');
+              return;
+            }
+            const message = parsed;
             this.handleMessage(message);
 
             // Resolve promise when registration is confirmed
@@ -155,38 +163,42 @@ export class MCPClient {
     }
 
     if (message.method === 'tools/call' && message.params) {
-      const params = message.params as unknown as MCPToolCall;
-      const { name, arguments: args } = params;
-      const requestId = message.id;
+      // Validate params structure using type guard
+      if (isMCPToolCall(message.params)) {
+        const { name, arguments: args } = message.params;
+        const requestId = message.id;
 
-      if (!requestId) {
-        console.error('[MCP Client] Received tool call without request ID');
-        return;
-      }
+        if (!requestId) {
+          console.error('[MCP Client] Received tool call without request ID');
+          return;
+        }
 
-      // Find handler for this tool
-      const handler = this.toolHandlers.get(name);
-      if (!handler) {
-        console.error(`[MCP Client] No handler registered for tool: ${name}`);
-        this.sendToolResponse(requestId, null, {
-          code: -32601,
-          message: `Tool handler not found: ${name}`,
-        });
-        return;
-      }
-
-      // Execute tool handler
-      handler(name, args)
-        .then((result) => {
-          this.sendToolResponse(requestId, result, null);
-        })
-        .catch((error: unknown) => {
-          console.error(`[MCP Client] Tool execution error for ${name}:`, error);
+        // Find handler for this tool
+        const handler = this.toolHandlers.get(name);
+        if (!handler) {
+          console.error(`[MCP Client] No handler registered for tool: ${name}`);
           this.sendToolResponse(requestId, null, {
-            code: -32603,
-            message: error instanceof Error ? error.message : 'Internal error',
+            code: -32601,
+            message: `Tool handler not found: ${name}`,
           });
-        });
+          return;
+        }
+
+        // Execute tool handler
+        handler(name, args)
+          .then((result) => {
+            this.sendToolResponse(requestId, result, null);
+          })
+          .catch((error: Error | unknown) => {
+            console.error(`[MCP Client] Tool execution error for ${name}:`, error);
+            this.sendToolResponse(requestId, null, {
+              code: -32603,
+              message: error instanceof Error ? error.message : 'Internal error',
+            });
+          });
+      } else {
+        console.error('[MCP Client] Invalid tool call params structure');
+      }
     }
   }
 

@@ -129,14 +129,14 @@ export interface ModalProps {
 
 // Form-specific props
 export interface FormProps {
-  onSubmit?: (data: Record<string, any>) => void;
+  onSubmit?: (data: Record<string, unknown>) => void;
   onReset?: () => void;
-  validation?: Record<string, (value: any) => string | null>;
-  initialValues?: Record<string, any>;
+  validation?: Record<string, (value: unknown) => string | null>;
+  initialValues?: Record<string, unknown>;
 }
 
 // List-specific props
-export interface ListProps<T = any> {
+export interface ListProps<T = unknown> {
   items: T[];
   renderItem: (item: T, index: number) => React.ReactNode;
   keyExtractor?: (item: T, index: number) => string;
@@ -177,7 +177,10 @@ export interface ModalComponentProps
 
 export interface FormComponentProps extends BaseComponentProps, FormProps {}
 
-export interface ListComponentProps<T = any> extends BaseComponentProps, ListProps<T>, SizeProps {}
+export interface ListComponentProps<T = unknown>
+  extends BaseComponentProps,
+    ListProps<T>,
+    SizeProps {}
 
 // Hook return types
 export interface UseWidgetReturn extends WidgetHookReturn<WidgetState> {

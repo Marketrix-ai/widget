@@ -1,5 +1,6 @@
 import { sdk } from '../sdk';
 import type { MarketrixConfig, TourData } from '../types';
+import { isErrorResponseBody, isTourDataArray } from '../utils/typeGuards';
 
 export class TourService {
   private config: MarketrixConfig;
@@ -26,8 +27,13 @@ export class TourService {
 
       console.log('Tour API Response Status:', response.status);
 
-      if (response.status === 200 && response.body?.success && response.body.data) {
-        const tours = response.body.data; // SDK types this as TourData[]
+      if (
+        response.status === 200 &&
+        response.body?.success &&
+        response.body.data &&
+        isTourDataArray(response.body.data)
+      ) {
+        const tours = response.body.data;
         console.log('=== ALL TOUR DATA FOUND ===');
         console.log('Total tours found for connection_id', connectionId, ':', tours.length);
 
@@ -71,28 +77,29 @@ export class TourService {
         );
 
         // Group by target
-        const targetGroups = tours.reduce(
-          (groups, tour) => {
-            const target = 'No Target'; // TourData doesn't have target property
-            if (!groups[target]) {
-              groups[target] = [];
-            }
-            groups[target].push(tour);
-            return groups;
-          },
-          {} as Record<string, TourData[]>
-        );
+        const targetGroups: Record<string, TourData[]> = {};
+        tours.forEach((tour) => {
+          const target = 'No Target'; // TourData doesn't have target property
+          if (!targetGroups[target]) {
+            targetGroups[target] = [];
+          }
+          targetGroups[target].push(tour);
+        });
 
         console.log('\n--- TOURS BY TARGET ---');
         Object.entries(targetGroups).forEach(([target, tours]) => {
           console.log(`${target}: ${tours.length} tour(s)`);
         });
       } else {
-        const body = response.body as { error?: string; message?: string } | undefined;
-        console.warn(
-          'No tour data found or API error:',
-          body?.error || body?.message || 'Unknown error'
-        );
+        const body = response.body;
+        if (isErrorResponseBody(body)) {
+          console.warn(
+            'No tour data found or API error:',
+            body.error || body.message || 'Unknown error'
+          );
+        } else {
+          console.warn('No tour data found or API error: Unknown error');
+        }
       }
     } catch (error) {
       console.error('Failed to fetch tour data by connection ID:', error);
@@ -114,8 +121,13 @@ export class TourService {
 
       console.log('Tour API Response Status:', response.status);
 
-      if (response.status === 200 && response.body?.success && response.body.data) {
-        const tours = response.body.data; // SDK types this as TourData[]
+      if (
+        response.status === 200 &&
+        response.body?.success &&
+        response.body.data &&
+        isTourDataArray(response.body.data)
+      ) {
+        const tours = response.body.data;
         console.log('=== ALL TOUR DATA FOUND ===');
         console.log('Total tours found:', tours.length);
 
@@ -125,17 +137,14 @@ export class TourService {
         }
 
         // Group by connection_id
-        const connectionGroups = tours.reduce(
-          (groups, tour) => {
-            const connectionId = tour.connection_id;
-            if (!groups[connectionId]) {
-              groups[connectionId] = [];
-            }
-            groups[connectionId].push(tour);
-            return groups;
-          },
-          {} as Record<number, TourData[]>
-        );
+        const connectionGroups: Record<number, TourData[]> = {};
+        tours.forEach((tour) => {
+          const connectionId = tour.connection_id;
+          if (!connectionGroups[connectionId]) {
+            connectionGroups[connectionId] = [];
+          }
+          connectionGroups[connectionId].push(tour);
+        });
 
         console.log('\n=== TOURS BY CONNECTION ID ===');
         Object.entries(connectionGroups).forEach(([connectionId, tours]) => {
@@ -157,11 +166,15 @@ export class TourService {
           tours.reduce((total, tour) => total + tour.answer.length, 0)
         );
       } else {
-        const body = response.body as { error?: string; message?: string } | undefined;
-        console.warn(
-          'No tour data found or API error:',
-          body?.error || body?.message || 'Unknown error'
-        );
+        const body = response.body;
+        if (isErrorResponseBody(body)) {
+          console.warn(
+            'No tour data found or API error:',
+            body.error || body.message || 'Unknown error'
+          );
+        } else {
+          console.warn('No tour data found or API error: Unknown error');
+        }
       }
     } catch (error) {
       console.error('Failed to fetch all tour data:', error);

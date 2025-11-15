@@ -5,6 +5,11 @@
  * These tools interact with the browser DOM to perform actions.
  */
 
+import {
+  isHTMLInputElement,
+  isHTMLSelectElement,
+  isHTMLTextAreaElement,
+} from '../utils/typeGuards';
 import type { MCPClient, MCPToolHandler } from './mcpClient';
 
 /**
@@ -191,12 +196,12 @@ export const typeTextTool: MCPToolHandler = async (_toolName, args) => {
     throw new Error('Text parameter is required and must be a string');
   }
 
-  const element = getElementByIndex(index) as HTMLInputElement | HTMLTextAreaElement | null;
+  const element = getElementByIndex(index);
   if (!element) {
     throw new Error(`Element at index ${index} not found`);
   }
 
-  const isInput = element.tagName === 'INPUT' || element.tagName === 'TEXTAREA';
+  const isInput = isHTMLInputElement(element) || isHTMLTextAreaElement(element);
   const isContentEditable = 'isContentEditable' in element && element.isContentEditable;
 
   if (!isInput && !isContentEditable) {
@@ -210,15 +215,23 @@ export const typeTextTool: MCPToolHandler = async (_toolName, args) => {
   await new Promise((resolve) => setTimeout(resolve, 50));
 
   // Clear existing value
-  if (isInput && 'value' in element) {
-    (element as HTMLInputElement | HTMLTextAreaElement).value = '';
+  if (isInput) {
+    if (isHTMLInputElement(element)) {
+      element.value = '';
+    } else if (isHTMLTextAreaElement(element)) {
+      element.value = '';
+    }
   } else if (isContentEditable && 'textContent' in element) {
     element.textContent = '';
   }
 
   // Type the text
-  if (isInput && 'value' in element) {
-    (element as HTMLInputElement | HTMLTextAreaElement).value = text;
+  if (isInput) {
+    if (isHTMLInputElement(element)) {
+      element.value = text;
+    } else if (isHTMLTextAreaElement(element)) {
+      element.value = text;
+    }
     // Trigger input event
     element.dispatchEvent(new Event('input', { bubbles: true }));
     element.dispatchEvent(new Event('change', { bubbles: true }));
@@ -384,8 +397,8 @@ export const uploadFileTool: MCPToolHandler = async (_toolName, args) => {
     throw new Error('Path parameter is required');
   }
 
-  const element = getElementByIndex(index) as HTMLInputElement | null;
-  if (element?.tagName !== 'INPUT' || element.type !== 'file') {
+  const element = getElementByIndex(index);
+  if (!isHTMLInputElement(element) || element.type !== 'file') {
     throw new Error(`Element at index ${index} is not a file input`);
   }
 
@@ -435,8 +448,8 @@ export const selectDropdownOptionTool: MCPToolHandler = async (_toolName, args) 
     throw new Error('Option parameter is required');
   }
 
-  const element = getElementByIndex(index) as HTMLSelectElement | null;
-  if (element?.tagName !== 'SELECT') {
+  const element = getElementByIndex(index);
+  if (!isHTMLSelectElement(element)) {
     throw new Error(`Element at index ${index} is not a select element`);
   }
 
@@ -471,8 +484,8 @@ export const getDropdownOptionsTool: MCPToolHandler = async (_toolName, args) =>
     throw new Error('Index parameter is required and must be a number');
   }
 
-  const element = getElementByIndex(index) as HTMLSelectElement | null;
-  if (element?.tagName !== 'SELECT') {
+  const element = getElementByIndex(index);
+  if (!isHTMLSelectElement(element)) {
     throw new Error(`Element at index ${index} is not a select element`);
   }
 

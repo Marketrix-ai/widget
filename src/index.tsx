@@ -6,14 +6,55 @@ import { createRoot, type Root } from 'react-dom/client';
 import { MarketrixWidget } from './components/MarketrixWidget';
 import { WidgetSettingsLoader } from './components/WidgetSettingsLoader';
 import { DEFAULT_FALLBACK_WIDGET_SETTINGS } from './constants/defaultWidgetSettings';
+import { DEFAULT_WIDGET_ATMOSPHERE } from './constants/widget';
 import shadowStyles from './index.css?inline';
-import { type ConnectionData, sdk } from './sdk';
 import { WidgetValidationService } from './services/widgetValidationService';
 import type { MarketrixConfig } from './types';
+import { isHTMLElement, isHTMLScriptElement } from './utils/typeGuards';
 
 // Global widget instance and demo functions
 let widgetInstance: Root | null = null;
 let loaderInstance: Root | null = null;
+
+/**
+ * Parse position attribute from script tag
+ */
+function parsePositionAttribute(value: string | null): 'bottom_right' | 'bottom_left' {
+  if (value === 'bottom_left' || value === 'bottom_right') {
+    return value;
+  }
+  return 'bottom_right';
+}
+
+/**
+ * Parse theme attribute from script tag
+ */
+function parseThemeAttribute(value: string | null): 'light' | 'dark' {
+  if (value === 'light' || value === 'dark') {
+    return value;
+  }
+  return 'light';
+}
+
+/**
+ * Parse enabled modes attribute from script tag
+ */
+function parseEnabledModesAttribute(value: string | null): ('show' | 'tell' | 'do')[] {
+  if (!value) {
+    return ['show', 'tell', 'do'];
+  }
+
+  const modes = value.split(',').map((m) => m.trim());
+  const validModes: ('show' | 'tell' | 'do')[] = [];
+
+  for (const mode of modes) {
+    if (mode === 'show' || mode === 'tell' || mode === 'do') {
+      validModes.push(mode);
+    }
+  }
+
+  return validModes.length > 0 ? validModes : ['show', 'tell', 'do'];
+}
 
 /**
  * Show default widget settings loader
@@ -131,90 +172,17 @@ export const initMarketrixWidget = async (config: MarketrixConfig): Promise<void
         },
       });
 
-      // Verify connection ID match from connectionSearch API
-      let connectionIdMatches = false;
-      try {
-        console.log('📡 Verifying connection ID match with connectionSearch API...');
-        const verifyConnectionSearchResponse = await sdk.connectionSearch({});
-
-        if (
-          verifyConnectionSearchResponse.status === 200 &&
-          verifyConnectionSearchResponse.body?.success
-        ) {
-          const allConnections = verifyConnectionSearchResponse.body.data as ConnectionData[];
-          const providedConnectionId = config.connectionId;
-
-          connectionIdMatches = allConnections.some((conn) => conn.id === providedConnectionId);
-
-          if (connectionIdMatches) {
-            console.log('✅ Connection ID Match: TRUE');
-            console.log('📋 Provided connection ID:', providedConnectionId);
-            console.log(
-              '📋 API connection IDs:',
-              allConnections.map((c) => c.id)
-            );
-            console.log('🎯 Connection IDs are equal - Default widget settings will be applied!');
-            console.log('📦 Default Widget Settings:', DEFAULT_FALLBACK_WIDGET_SETTINGS);
-          } else {
-            console.warn('⚠️ Connection ID Match: FALSE');
-            console.warn('📋 Provided connection ID:', providedConnectionId);
-            console.warn(
-              '📋 Available API connection IDs:',
-              allConnections.map((c) => c.id)
-            );
-          }
-        }
-      } catch (verifyError) {
-        console.warn('⚠️ Could not verify connection ID match:', verifyError);
-      }
-
-      // Use default settings when validation succeeds and connection IDs match
+      // Use default settings when validation succeeds
       shouldUseDefaultSettings = true;
-
-      if (connectionIdMatches) {
-        console.log('✅ Applying default widget settings because connection IDs match');
-      }
+      console.log('✅ Applying default widget settings');
 
       hideWidgetSettingsLoader();
     } else {
       // Show loader during fallback validation
       showWidgetSettingsLoader('Validating connection and agent...');
 
-      // Fetch and display all connections from API
-      try {
-        console.log('📡 Fetching connections from API...');
-        const connectionSearchResponse = await sdk.connectionSearch({});
-
-        if (connectionSearchResponse.status === 200 && connectionSearchResponse.body?.success) {
-          const connections = connectionSearchResponse.body.data as ConnectionData[];
-
-          console.log('✅ Connections fetched successfully!');
-          console.log('📊 Total connections found:', connections.length);
-          console.log('📋 All Connections:', connections);
-
-          // Log each connection with details
-          connections.forEach((connection, index) => {
-            console.log(`\n🔗 Connection #${index + 1}:`, {
-              id: connection.id,
-              name: connection.name,
-              type: connection.type,
-              url: connection.url,
-              tenant_id: connection.tenant_id,
-              allowed_domains: connection.allowed_domains,
-              created_at: connection.created_at,
-              updated_at: connection.updated_at,
-              integrations: (connection as any).integrations || [],
-            });
-          });
-        } else {
-          console.warn('⚠️ Failed to fetch connections:', connectionSearchResponse.body);
-        }
-      } catch (connectionError) {
-        console.error('❌ Error fetching connections:', connectionError);
-      }
-
       // Use fallback validation: fetch connection and agent
-      fallbackValidationResult = await validationService.validateWithFallback();
+      fallbackValidationResult = await validationService.validateWithFallback(config.connectionId);
 
       if (!fallbackValidationResult.isValid) {
         console.error('Fallback validation failed:', fallbackValidationResult.error);
@@ -269,9 +237,12 @@ export const initMarketrixWidget = async (config: MarketrixConfig): Promise<void
       ...config,
       // Add default settings to config for widget to use
       atmosphere: {
+        ...DEFAULT_WIDGET_ATMOSPHERE,
         ...config.atmosphere,
         widget_settings: DEFAULT_FALLBACK_WIDGET_SETTINGS,
-      } as any,
+        session_time: config.atmosphere?.session_time ?? 0,
+        recorded_time: config.atmosphere?.recorded_time ?? 0,
+      },
     };
 
     console.log('Using default widget settings:', DEFAULT_FALLBACK_WIDGET_SETTINGS);
@@ -287,16 +258,23 @@ export const initMarketrixWidget = async (config: MarketrixConfig): Promise<void
     container.id = 'marketrix-widget-container';
     container.className = 'marketrix-widget-container';
     // Ensure container can receive pointer events
-    (container as HTMLElement).style.pointerEvents = 'auto';
+    if (isHTMLElement(container)) {
+      container.style.pointerEvents = 'auto';
+    }
     document.body.appendChild(container);
   } else {
     // Ensure existing container has pointer events enabled
-    (container as HTMLElement).style.pointerEvents = 'auto';
+    if (isHTMLElement(container)) {
+      container.style.pointerEvents = 'auto';
+    }
   }
 
   // Attach Shadow DOM (closed) and mount point
   // Note: closed shadow root is not accessible later; we keep references locally only during init
-  const shadowRoot = (container as HTMLElement).attachShadow({ mode: 'closed' });
+  if (!isHTMLElement(container)) {
+    throw new Error('Container is not an HTMLElement');
+  }
+  const shadowRoot = container.attachShadow({ mode: 'closed' });
 
   // Inject styles into shadow root so the widget is fully encapsulated
   const styleEl = document.createElement('style');
@@ -380,9 +358,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Find the script tag with marketrix attributes (check for either marketrix-id/key or marketrix-agent/marketrix-connection-id)
   const scripts = document.querySelectorAll('script[marketrix-id], script[marketrix-agent]');
-  const script = scripts[scripts.length - 1] as HTMLScriptElement; // Get the last one (most likely the current one)
+  const scriptElement = scripts[scripts.length - 1]; // Get the last one (most likely the current one)
 
-  if (script) {
+  if (scriptElement && isHTMLScriptElement(scriptElement)) {
+    const script = scriptElement;
     const marketrixId = script.getAttribute('marketrix-id');
     const marketrixKey = script.getAttribute('marketrix-key');
     const agentId = script.getAttribute('marketrix-agent');
@@ -401,16 +380,10 @@ document.addEventListener('DOMContentLoaded', () => {
       const config: MarketrixConfig = {
         marketrixId,
         marketrixKey,
-        position:
-          (script.getAttribute('data-position') as 'bottom_right' | 'bottom_left') ??
-          'bottom_right',
-        theme: (script.getAttribute('data-theme') as 'light' | 'dark' | null) ?? 'light',
+        position: parsePositionAttribute(script.getAttribute('data-position')),
+        theme: parseThemeAttribute(script.getAttribute('data-theme')),
         // Avatar and agent info are now handled through atmosphere config
-        enabledModes: (script.getAttribute('data-enabled-modes')?.split(',') as (
-          | 'show'
-          | 'tell'
-          | 'do'
-        )[]) || ['show', 'tell', 'do'],
+        enabledModes: parseEnabledModesAttribute(script.getAttribute('data-enabled-modes')),
       };
 
       console.log('Auto-initializing widget with marketrix credentials:', config);
@@ -422,15 +395,9 @@ document.addEventListener('DOMContentLoaded', () => {
       const config: MarketrixConfig = {
         agentId: Number.parseInt(agentId, 10),
         connectionId: Number.parseInt(connectionId, 10),
-        position:
-          (script.getAttribute('data-position') as 'bottom_right' | 'bottom_left') ??
-          'bottom_right',
-        theme: (script.getAttribute('data-theme') as 'light' | 'dark' | null) ?? 'light',
-        enabledModes: (script.getAttribute('data-enabled-modes')?.split(',') as (
-          | 'show'
-          | 'tell'
-          | 'do'
-        )[]) || ['show', 'tell', 'do'],
+        position: parsePositionAttribute(script.getAttribute('data-position')),
+        theme: parseThemeAttribute(script.getAttribute('data-theme')),
+        enabledModes: parseEnabledModesAttribute(script.getAttribute('data-enabled-modes')),
       };
 
       console.log(

@@ -1,5 +1,11 @@
 import { VITE_API_URL } from '../config';
 import { type AgentData, type ConnectionData, type IntegrationData, sdk } from '../sdk';
+import {
+  isAgentData,
+  isAgentDataArray,
+  isConnectionData,
+  isIntegrationDataArray,
+} from '../utils/typeGuards';
 
 export interface WidgetValidationResult {
   isValid: boolean;
@@ -52,7 +58,14 @@ export class WidgetValidationService {
         };
       }
 
-      const integrations = integrationResponse.body.data as IntegrationData[];
+      if (!isIntegrationDataArray(integrationResponse.body.data)) {
+        return {
+          isValid: false,
+          error: 'Invalid integration data format',
+        };
+      }
+
+      const integrations = integrationResponse.body.data;
 
       // Debug: Log what integrations were found
       console.log(
@@ -127,7 +140,15 @@ export class WidgetValidationService {
           };
         }
 
-        const agent = agentResponse.body.data as AgentData;
+        if (!isAgentData(agentResponse.body.data)) {
+          return {
+            isValid: false,
+            error: 'Invalid agent data format',
+            integration: widgetIntegration,
+          };
+        }
+
+        const agent = agentResponse.body.data;
 
         // Step 3: Validate connection ID exists
         if (!widgetIntegration.connection_id) {
@@ -154,7 +175,16 @@ export class WidgetValidationService {
           };
         }
 
-        const connection = connectionResponse.body.data as ConnectionData;
+        if (!isConnectionData(connectionResponse.body.data)) {
+          return {
+            isValid: false,
+            error: 'Invalid connection data format',
+            integration: widgetIntegration,
+            agent,
+          };
+        }
+
+        const connection = connectionResponse.body.data;
 
         console.log('Widget validation successful', {
           integration: widgetIntegration.id,
@@ -203,36 +233,43 @@ export class WidgetValidationService {
 
   /**
    * Fallback validation when marketrix_id and marketrix_key are missing
-   * Fetches connection_id from connectionSearch and agent_id from agentSearch
+   * Uses connectionGet with provided connectionId instead of connectionSearch
    */
-  async validateWithFallback(): Promise<FallbackValidationResult> {
+  async validateWithFallback(connectionId?: number): Promise<FallbackValidationResult> {
     try {
-      console.log('Starting fallback validation - fetching connections...');
+      console.log('Starting fallback validation...');
 
-      // Step 1: Fetch connections
-      const connectionResponse = await sdk.connectionSearch({});
+      // Skip connectionSearch - use connectionGet with provided connectionId if available
+      // If no connectionId provided, validation will fail
+      if (!connectionId) {
+        return {
+          isValid: false,
+          error: 'Connection ID is required for validation',
+        };
+      }
+
+      // Get connection by ID (using connectionGet instead of connectionSearch)
+      const connectionResponse = await sdk.connectionGet({
+        params: { connection_id: connectionId },
+      });
 
       if (connectionResponse.status !== 200 || !connectionResponse.body?.success) {
         return {
           isValid: false,
-          error: 'Failed to fetch connections',
+          error: 'Failed to fetch connection',
         };
       }
 
-      const connections = connectionResponse.body.data as ConnectionData[];
-
-      if (!connections || connections.length === 0) {
+      if (!isConnectionData(connectionResponse.body.data)) {
         return {
           isValid: false,
-          error: 'No connections found',
+          error: 'Invalid connection data format',
         };
       }
 
-      // Get first connection
-      const connection = connections[0];
-      const connectionId = connection.id;
+      const connection = connectionResponse.body.data;
 
-      if (!connectionId) {
+      if (!connection.id) {
         return {
           isValid: false,
           error: 'Connection missing ID',
@@ -240,12 +277,12 @@ export class WidgetValidationService {
         };
       }
 
-      console.log('Found connection:', connectionId);
+      console.log('Found connection:', connection.id);
 
       // Step 2: Fetch agents for this connection
       const agentResponse = await sdk.agentSearch({
         query: {
-          connection_id: connectionId,
+          connection_id: connection.id,
         },
       });
 
@@ -258,7 +295,16 @@ export class WidgetValidationService {
         };
       }
 
-      const agents = agentResponse.body.data as AgentData[];
+      if (!isAgentDataArray(agentResponse.body.data)) {
+        return {
+          isValid: false,
+          error: 'Invalid agents data format',
+          connection,
+          connectionId,
+        };
+      }
+
+      const agents = agentResponse.body.data;
 
       if (!agents || agents.length === 0) {
         return {
@@ -326,7 +372,7 @@ export class WidgetValidationService {
   /**
    * Validate by marketrix-agent and marketrix-connection-id directly
    * Used when marketrix_id and marketrix_key are not available
-   * Also compares connection ID from connectionSearch API with provided connection ID
+   * Validates connection and agent by ID
    */
   async validateByAgentAndConnection(
     agentId: number,
@@ -335,41 +381,7 @@ export class WidgetValidationService {
     try {
       console.log('Validating agent and connection by ID...', { agentId, connectionId });
 
-      // Step 0: Fetch all connections using connectionSearch to compare IDs
-      console.log('📡 Fetching connections from connectionSearch API...');
-      const connectionSearchResponse = await sdk.connectionSearch({});
-
-      if (connectionSearchResponse.status === 200 && connectionSearchResponse.body?.success) {
-        const connections = connectionSearchResponse.body.data as ConnectionData[];
-
-        console.log('✅ Connections fetched from connectionSearch:', connections.length);
-
-        // Find connection that matches the provided connectionId
-        const matchingConnection = connections.find((conn) => conn.id === connectionId);
-
-        if (matchingConnection) {
-          console.log('✅ Connection ID match found!', {
-            provided_connection_id: connectionId,
-            api_connection_id: matchingConnection.id,
-            connection_name: matchingConnection.name,
-            connection_type: matchingConnection.type,
-            match: true,
-          });
-          console.log('🎯 Will use default widget settings since connection IDs match');
-        } else {
-          console.warn('⚠️ Connection ID from API does not match provided connection ID', {
-            provided_connection_id: connectionId,
-            available_connection_ids: connections.map((c) => c.id),
-          });
-        }
-      } else {
-        console.warn(
-          '⚠️ Failed to fetch connections from connectionSearch:',
-          connectionSearchResponse.body
-        );
-      }
-
-      // Step 1: Validate connection exists
+      // Step 1: Validate connection exists (using connectionGet instead of connectionSearch)
       const connectionResponse = await sdk.connectionGet({
         params: { connection_id: connectionId },
       });
@@ -381,14 +393,14 @@ export class WidgetValidationService {
         };
       }
 
-      const connection = connectionResponse.body.data as ConnectionData | null;
-
-      if (!connection) {
+      if (!isConnectionData(connectionResponse.body.data)) {
         return {
           isValid: false,
-          error: `Connection with ID ${connectionId} not found`,
+          error: 'Invalid connection data format',
         };
       }
+
+      const connection = connectionResponse.body.data;
 
       // Log all connection table values from the database
       console.log('📊 ========== CONNECTION TABLE VALUES (marketrix database) ==========');
@@ -419,16 +431,16 @@ export class WidgetValidationService {
         };
       }
 
-      const agent = agentResponse.body.data as AgentData | null;
-
-      if (!agent) {
+      if (!isAgentData(agentResponse.body.data)) {
         return {
           isValid: false,
-          error: `Agent with ID ${agentId} not found`,
+          error: 'Invalid agent data format',
           connection,
           connectionId,
         };
       }
+
+      const agent = agentResponse.body.data;
 
       // Log all agent table values from the database
       console.log('📊 ========== AGENT TABLE VALUES (marketrix database) ==========');
@@ -477,26 +489,28 @@ export class WidgetValidationService {
         },
       });
 
-      // Final check: Verify connection ID matches (from connectionSearch)
+      // Final check: Verify connection exists (using connectionGet instead of connectionSearch)
       let connectionIdMatches = false;
       try {
-        const finalConnectionSearchResponse = await sdk.connectionSearch({});
+        const finalConnectionResponse = await sdk.connectionGet({
+          params: { connection_id: connectionId },
+        });
         if (
-          finalConnectionSearchResponse.status === 200 &&
-          finalConnectionSearchResponse.body?.success
+          finalConnectionResponse.status === 200 &&
+          finalConnectionResponse.body?.success &&
+          isConnectionData(finalConnectionResponse.body.data)
         ) {
-          const allConnections = finalConnectionSearchResponse.body.data as ConnectionData[];
-          connectionIdMatches = allConnections.some((conn) => conn.id === connectionId);
+          connectionIdMatches = true;
 
           if (connectionIdMatches) {
-            console.log('✅ Connection ID verification: TRUE - Connection IDs match!');
+            console.log('✅ Connection ID verification: TRUE - Connection exists!');
             console.log('🎯 Default widget settings will be applied');
           } else {
-            console.warn('⚠️ Connection ID verification: FALSE - Connection IDs do not match');
+            console.warn('⚠️ Connection ID verification: FALSE - Connection not found');
           }
         }
       } catch (verifyError) {
-        console.warn('⚠️ Could not verify connection ID match:', verifyError);
+        console.warn('⚠️ Could not verify connection:', verifyError);
       }
 
       return {

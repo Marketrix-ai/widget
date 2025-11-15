@@ -1,14 +1,5 @@
 // / <reference lib="dom" />
 import React, { useState } from 'react';
-
-// Declare navigator for TypeScript
-declare const navigator: Navigator & { mediaDevices: MediaDevices };
-
-// Declare window extensions for screen capture
-interface WindowWithScreenCapture extends Window {
-  screenCaptureStream?: MediaStream;
-  screenCaptureOverlay?: HTMLElement;
-}
 import { IoChatbubbleEllipsesOutline } from 'react-icons/io5';
 import { LuMousePointerClick } from 'react-icons/lu';
 import { SiTicktick } from 'react-icons/si';
@@ -18,13 +9,23 @@ import { useWidgetAtmosphere } from '../hooks/useWidgetAtmosphere';
 import { sdk, type TourData, type TourStepData, type WidgetSettingsData } from '../sdk';
 import type { ChatMessage, MarketrixConfig } from '../types';
 import { formatMessageTime } from '../utils/formatting';
+import {
+  isHTMLButtonElement,
+  isHTMLElement,
+  isHTMLElementEventTarget,
+  isHTMLInputElement,
+  isHTMLSelectElement,
+  isString,
+  isTourAnswerWithSteps,
+  isTourStepDataArray,
+} from '../utils/typeGuards';
 import { ScreenAccessModal } from './ScreenAccessModal';
 
 // Define the chip type to handle both formats
 type ChipData = {
-  chip_mode?: string;
+  chip_mode?: 'show' | 'tell' | 'do' | string;
   chip_text?: string;
-  type?: string;
+  type?: 'show' | 'tell' | 'do' | string;
   question?: string;
 };
 
@@ -76,7 +77,7 @@ export const MessageList: React.FC<MessageListProps> = ({
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [isStepGuideRunning, setIsStepGuideRunning] = useState(false);
   const [currentStepElement, setCurrentStepElement] = useState<HTMLElement | null>(null);
-  const [stepTimer, setStepTimer] = useState<number | null>(null);
+  const [stepTimer, setStepTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
 
   // Screen sharing state
   const [_isScreenAccessActive, setIsScreenAccessActive] = useState(false);
@@ -95,7 +96,7 @@ export const MessageList: React.FC<MessageListProps> = ({
   const typewriterRunning = new Map<number, boolean>();
 
   // Store active typewriter intervals to clear them
-  const activeTypewriterIntervals = new Map<number, number>();
+  const activeTypewriterIntervals = new Map<number, ReturnType<typeof setInterval>>();
 
   // Cleanup effect for timer
   React.useEffect(() => {
@@ -125,10 +126,13 @@ export const MessageList: React.FC<MessageListProps> = ({
     };
 
     preventClickHandler = (e: Event) => {
-      const target = e.target as HTMLElement;
+      if (!isHTMLElementEventTarget(e.target)) {
+        return;
+      }
+      const target = e.target;
       if (
         target.tagName === 'A' ||
-        (target.tagName === 'BUTTON' && (target as HTMLButtonElement).type === 'submit')
+        (target.tagName === 'BUTTON' && isHTMLButtonElement(target) && target.type === 'submit')
       ) {
         e.preventDefault();
       }
@@ -170,14 +174,14 @@ export const MessageList: React.FC<MessageListProps> = ({
     }
 
     // Find the element for this step - prioritize selector over element
-    const selector = step.selector || (typeof step.element === 'string' ? step.element : undefined);
+    const selector = step.selector || (isString(step.element) ? step.element : undefined);
 
     let element = selector ? findElementBySelector(selector) : null;
     if (!element) {
       console.warn(`❌ Element not found for step ${stepIndex + 1}:`, selector);
 
       // Try alternative selectors
-      const elementStr = typeof step.element === 'string' ? step.element : '';
+      const elementStr = isString(step.element) ? step.element : '';
       const alternativeSelectors = [
         `[data-demo-element="${elementStr}"]`,
         `#${elementStr}`,
@@ -200,12 +204,15 @@ export const MessageList: React.FC<MessageListProps> = ({
         const timer = setTimeout(() => {
           showCurrentStep(steps, stepIndex + 1);
         }, 2000);
-        setStepTimer(timer as unknown as number);
+        setStepTimer(timer);
         return;
       }
 
       // Use the found element
-      element = foundElement as HTMLElement;
+      if (!isHTMLElement(foundElement)) {
+        return;
+      }
+      element = foundElement;
     }
 
     if (!element) {
@@ -397,7 +404,10 @@ export const MessageList: React.FC<MessageListProps> = ({
 
     // Fallback: If typewriter doesn't start after 500ms, try again
     setTimeout(() => {
-      const textElement = descriptionDiv.querySelector('#step-description-text') as HTMLElement;
+      const textElement = descriptionDiv.querySelector('#step-description-text');
+      if (!isHTMLElement(textElement)) {
+        return;
+      }
       if (textElement && (!textElement.textContent || textElement.textContent.trim() === '')) {
         console.log(`🔄 Fallback: Retrying typewriter for step ${stepIndex + 1}`);
         addTypewriterAnimation(descriptionDiv, stepDescription, stepIndex, () => {
@@ -426,7 +436,11 @@ export const MessageList: React.FC<MessageListProps> = ({
             element.style.transform = 'scale(1)';
 
             // Prevent page reload for form submissions and navigation
-            if (element.tagName === 'BUTTON' && (element as HTMLButtonElement).type === 'submit') {
+            if (
+              element.tagName === 'BUTTON' &&
+              isHTMLButtonElement(element) &&
+              element.type === 'submit'
+            ) {
               // For submit buttons, prevent form submission
               const form = element.closest('form');
               if (form) {
@@ -453,7 +467,10 @@ export const MessageList: React.FC<MessageListProps> = ({
         case 'fill':
           // Focus input fields for manual filling
           if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') {
-            const input = element as HTMLInputElement;
+            if (!isHTMLInputElement(element)) {
+              break;
+            }
+            const input = element;
 
             // Focus the input for user to fill manually
             input.focus();
@@ -465,7 +482,10 @@ export const MessageList: React.FC<MessageListProps> = ({
         case 'select':
           // Handle select elements
           if (element.tagName === 'SELECT') {
-            const select = element as HTMLSelectElement;
+            if (!isHTMLSelectElement(element)) {
+              break;
+            }
+            const select = element;
             select.focus();
 
             // Select first option if available
@@ -502,7 +522,10 @@ export const MessageList: React.FC<MessageListProps> = ({
     stepIndex: number,
     onComplete?: () => void
   ) => {
-    const textElement = descriptionDiv.querySelector('#step-description-text') as HTMLElement;
+    const textElement = descriptionDiv.querySelector('#step-description-text');
+    if (!isHTMLElement(textElement)) {
+      return;
+    }
     if (!textElement) {
       console.log('⚠️ Text element not found');
       return;
@@ -594,7 +617,7 @@ export const MessageList: React.FC<MessageListProps> = ({
     }, 30); // Faster typing for better UX
 
     // Store the interval so we can clear it later
-    activeTypewriterIntervals.set(stepIndex, typeInterval as unknown as number);
+    activeTypewriterIntervals.set(stepIndex, typeInterval);
   };
 
   // Function to add click action handler (for click actions)
@@ -634,8 +657,7 @@ export const MessageList: React.FC<MessageListProps> = ({
     element.addEventListener('click', clickHandler, true);
 
     // Store the handler for cleanup if needed
-    (element as HTMLElement & { _tourClickHandler?: (e: Event) => void })._tourClickHandler =
-      clickHandler;
+    element._tourClickHandler = clickHandler;
   };
 
   // Function to add Done button handler (for fill actions only)
@@ -651,7 +673,7 @@ export const MessageList: React.FC<MessageListProps> = ({
           const currentStep = steps[currentStepIndex];
           const selector =
             currentStep.selector ||
-            (typeof currentStep.element === 'string' ? currentStep.element : undefined);
+            (isString(currentStep.element) ? currentStep.element : undefined);
           const element = selector ? findElementBySelector(selector) : null;
           if (element) {
             executeStepAction(element, currentStep);
@@ -867,12 +889,9 @@ export const MessageList: React.FC<MessageListProps> = ({
       element.classList.remove('step-highlight');
 
       // Remove any tour click handlers
-      const elementWithHandler = element as HTMLElement & {
-        _tourClickHandler?: (e: Event) => void;
-      };
-      if (elementWithHandler._tourClickHandler) {
-        element.removeEventListener('click', elementWithHandler._tourClickHandler, true);
-        delete elementWithHandler._tourClickHandler;
+      if (isHTMLElement(element) && element._tourClickHandler) {
+        element.removeEventListener('click', element._tourClickHandler, true);
+        delete element._tourClickHandler;
       }
     });
 
@@ -941,7 +960,11 @@ export const MessageList: React.FC<MessageListProps> = ({
         const match = selector.match(/\[data-demo-element=['"]([^'"]+)['"]\]/);
         if (match) {
           const elementValue = match[1];
-          element = document.querySelector(`[data-demo-element="${elementValue}"]`) as HTMLElement;
+          const foundElement = document.querySelector(`[data-demo-element="${elementValue}"]`);
+          if (!isHTMLElement(foundElement)) {
+            return null;
+          }
+          element = foundElement;
           if (element) {
             elementCache.set(selector, element);
             return element;
@@ -1136,26 +1159,34 @@ export const MessageList: React.FC<MessageListProps> = ({
             console.log('Tour answer type:', typeof tour.answer);
             console.log('Tour answer:', tour.answer);
 
-            // The answer is already a JSON object (array of steps)
-            let steps = tour.answer;
-
             // If it's a string, parse it
-            if (typeof tour.answer === 'string') {
+            let parsedSteps: TourStepData[] = [];
+            if (isString(tour.answer)) {
               console.log('Parsing answer string...');
-              steps = JSON.parse(tour.answer) as TourStep[];
-            }
-
-            // Handle both array format and object with steps property
-            let parsedSteps = steps;
-            if (
-              steps &&
-              typeof steps === 'object' &&
-              !Array.isArray(steps) &&
-              'steps' in steps &&
-              Array.isArray((steps as { steps: unknown }).steps)
-            ) {
-              console.log('Answer has steps property, extracting steps array');
-              parsedSteps = (steps as { steps: TourStep[] }).steps;
+              const parsed: unknown = JSON.parse(tour.answer);
+              if (isTourStepDataArray(parsed)) {
+                parsedSteps = parsed;
+              } else {
+                console.error('Parsed answer is not a valid TourStepData array');
+                return;
+              }
+            } else if (Array.isArray(tour.answer) && isTourStepDataArray(tour.answer)) {
+              parsedSteps = tour.answer;
+            } else {
+              // Handle case where answer is an object with steps property
+              const answerValue: unknown = tour.answer;
+              if (isTourAnswerWithSteps(answerValue)) {
+                if (isTourStepDataArray(answerValue.steps)) {
+                  console.log('Answer has steps property, extracting steps array');
+                  parsedSteps = answerValue.steps;
+                } else {
+                  console.error('Steps property is not a valid TourStepData array');
+                  return;
+                }
+              } else {
+                console.error('Invalid tour answer format');
+                return;
+              }
             }
 
             console.log('Final parsed steps:', parsedSteps);
@@ -1239,7 +1270,8 @@ export const MessageList: React.FC<MessageListProps> = ({
         // Handle both formats: chip_text (expected) and question (actual backend)
         const chipText = chip.chip_text || chip.question || '';
         const chipMode = chip.chip_mode || chip.type || 'tell';
-        const mode = chipMode as 'show' | 'tell' | 'do';
+        const mode: 'show' | 'tell' | 'do' =
+          chipMode === 'show' || chipMode === 'tell' || chipMode === 'do' ? chipMode : 'tell';
 
         console.log(`Processing chip ${index}:`, { chip, chipText, chipMode, mode });
 
@@ -1371,13 +1403,13 @@ export const MessageList: React.FC<MessageListProps> = ({
     // Set the mode based on action type FIRST
     if (onSetMode && action.type) {
       console.log('Setting mode to:', action.type);
-      onSetMode(action.type as 'show' | 'tell' | 'do');
+      onSetMode(action.type);
     }
 
     // Show screen access modal for show and do modes
     if (action.type === 'show' || action.type === 'do') {
       console.log(`🎥 Screen access requested for mode: ${action.type}`);
-      setPendingAction({ type: action.type as 'show' | 'do', text: action.text });
+      setPendingAction({ type: action.type, text: action.text });
       setShowScreenAccessModal(true);
       return; // Don't proceed with other actions until modal is handled
     }
@@ -1387,7 +1419,7 @@ export const MessageList: React.FC<MessageListProps> = ({
       // Send message for tell mode
       if (onSendMessage) {
         console.log('Sending message with mode:', action.type, action.text);
-        onSendMessage(action.text, action.type as 'tell');
+        onSendMessage(action.text, action.type);
       }
     }
   };
@@ -1457,16 +1489,14 @@ export const MessageList: React.FC<MessageListProps> = ({
       console.log('🎥 Starting screen capture...');
 
       // Request screen capture permission
-      const stream = await (
-        navigator as Navigator & { mediaDevices: MediaDevices }
-      ).mediaDevices.getDisplayMedia({
+      const stream = await navigator.mediaDevices.getDisplayMedia({
         video: {
           width: { ideal: 1920 },
           height: { ideal: 1080 },
         },
         audio: false,
         preferCurrentTab: true,
-      } as DisplayMediaStreamOptions & { preferCurrentTab: boolean });
+      } satisfies DisplayMediaStreamOptions);
 
       // Create a minimal status indicator
       const statusIndicator = document.createElement('div');
@@ -1523,12 +1553,8 @@ export const MessageList: React.FC<MessageListProps> = ({
       }
 
       // Store references for cleanup
-      (
-        window as Window & { screenCaptureStream?: MediaStream; screenCaptureOverlay?: HTMLElement }
-      ).screenCaptureStream = stream;
-      (
-        window as Window & { screenCaptureStream?: MediaStream; screenCaptureOverlay?: HTMLElement }
-      ).screenCaptureOverlay = statusIndicator;
+      window.screenCaptureStream = stream;
+      window.screenCaptureOverlay = statusIndicator;
 
       // Set screen access active state
       setIsScreenAccessActive(true);
@@ -1549,9 +1575,8 @@ export const MessageList: React.FC<MessageListProps> = ({
     console.log('🛑 Stopping screen capture...');
 
     // Stop all video tracks
-    const windowWithCapture = window as WindowWithScreenCapture;
-    if (windowWithCapture.screenCaptureStream) {
-      windowWithCapture.screenCaptureStream.getTracks().forEach((track: MediaStreamTrack) => {
+    if (window.screenCaptureStream) {
+      window.screenCaptureStream.getTracks().forEach((track: MediaStreamTrack) => {
         track.stop();
       });
     }
@@ -1563,8 +1588,8 @@ export const MessageList: React.FC<MessageListProps> = ({
     }
 
     // Clear references and state
-    windowWithCapture.screenCaptureStream = undefined;
-    windowWithCapture.screenCaptureOverlay = undefined;
+    window.screenCaptureStream = undefined;
+    window.screenCaptureOverlay = undefined;
     setIsScreenAccessActive(false);
 
     // Notify parent component about screen sharing state
