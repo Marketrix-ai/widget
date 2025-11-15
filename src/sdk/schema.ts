@@ -39,6 +39,7 @@ export const EntityStatusSchema = z.enum(['created', 'active', 'suspended', 'pen
 export const TenantPackageSchema = z.enum(['free', 'starter', 'pro', 'enterprise']);
 export const AgentTypeSchema = z.enum(['human', 'ai']);
 export const AgentVoiceSchema = z.enum(['male', 'female']);
+export const AgentStatusSchema = z.enum(['active', 'learning', 'error']);
 export const KnowledgeTypeSchema = z.enum(['document', 'video']);
 export const MeetingStatusSchema = z.enum(['not_started', 'in_progress', 'ended', 'cancelled']);
 export const ChatRoleSchema = z.enum(['user', 'agent']);
@@ -544,8 +545,8 @@ export const SimulationEntitySchema = BaseEntitySchema.extend({
   status_message: z.string(),
   path: z.string(),
   instructions: z.string(),
+  num_steps: z.number().int().nonnegative(),
   agent_name: z.string().optional(),
-  history: z.array(SimulationStepSchema).optional(),
 });
 
 /**
@@ -555,6 +556,8 @@ export const SimulationCreateSchema = SimulationEntitySchema.partial().extend({
   connection_id: z.number(),
   agent_id: z.number(),
   instructions: z.string(),
+  max_steps: z.number().int().positive().max(1000).optional(),
+  timeout: z.number().positive().max(360).optional(), // Max 6 hours in minutes
 });
 
 /**
@@ -564,6 +567,55 @@ export const SimulationUpdateSchema = z.object({
   job_id: z.string().optional(),
   status: z.string(),
   status_message: z.string(),
+  num_steps: z.number().int().nonnegative().optional(),
+});
+
+/**
+ * Simulation answer submission schema
+ */
+export const SimulationAnswerSchema = z.object({
+  answer: z.string().min(1),
+});
+
+/**
+ * Simulation progress entry schema
+ */
+export const SimulationProgressEntitySchema = z.object({
+  id: z.number(),
+  simulation_id: z.number(),
+  status: z.string(),
+  status_message: z.string().nullable(),
+  num_steps: z.number().int().nonnegative().nullable(),
+  created_at: z.string(),
+});
+
+/**
+ * Mindmap edge schema - transition from one node to another via an action
+ */
+export const MindMapEdgeSchema = z.object({
+  start: z.string(),
+  end: z.string(),
+  action: z.string(),
+});
+
+/**
+ * Mindmap node schema - unique web state (page + situation) during simulation
+ */
+export const MindMapNodeSchema = z.object({
+  id: z.string(),
+  screenshots: z.array(z.string()),
+  title: z.string(),
+  url: z.string(),
+  state: z.array(z.string()),
+  mentions: z.array(z.string()),
+});
+
+/**
+ * Mindmap schema - knowledge graph showing nodes and edges from simulation
+ */
+export const MindMapSchema = z.object({
+  nodes: z.array(MindMapNodeSchema),
+  edges: z.array(MindMapEdgeSchema),
 });
 
 // ============================================================================
@@ -586,6 +638,8 @@ export const AgentEntitySchema = BaseEntitySchema.extend({
   vector_store_id: z.string().optional(),
   pdf_search_index_id: z.string().optional(),
   json_search_index_id: z.string().optional(),
+  status: AgentStatusSchema,
+  status_message: z.string().optional(),
   tenant: TenantEntitySchema.optional(),
   user: UserEntitySchema.optional(),
   knowledge: z.array(KnowledgeEntitySchema).optional(),
@@ -594,12 +648,12 @@ export const AgentEntitySchema = BaseEntitySchema.extend({
 
 const KnowledgeIdsSchema = z
   .string()
-  .transform(str => JSON.parse(str) as number[])
+  .transform((str) => JSON.parse(str) as number[])
   .pipe(z.array(z.coerce.number()));
 
 const SimulationIdsSchema = z
   .string()
-  .transform(str => JSON.parse(str) as number[])
+  .transform((str) => JSON.parse(str) as number[])
   .pipe(z.array(z.coerce.number()));
 
 /**
@@ -700,6 +754,25 @@ export const AgentSimulationIndexResponseSchema = z.object({
   knowledge_id: z.number(),
   pdf_search_index_id: z.string().optional(),
   json_search_index_id: z.string().optional(),
+  message: z.string(),
+});
+
+/**
+ * Agent index callback request schema
+ */
+export const AgentIndexCallbackRequestSchema = z.object({
+  agent_id: z.coerce.number().positive('Agent ID must be a positive number'),
+  index_name: z.string().min(1, 'Index name is required'),
+  index_type: z.enum(['pdf', 'json'], { required_error: 'Index type must be pdf or json' }),
+  status: z.enum(['success', 'failed'], { required_error: 'Status must be success or failed' }),
+  status_message: z.string(),
+});
+
+/**
+ * Agent index callback response schema
+ */
+export const AgentIndexCallbackResponseSchema = z.object({
+  success: z.boolean(),
   message: z.string(),
 });
 
@@ -1129,6 +1202,7 @@ export type EntityStatus = z.infer<typeof EntityStatusSchema>;
 export type TenantPackage = z.infer<typeof TenantPackageSchema>;
 export type AgentType = z.infer<typeof AgentTypeSchema>;
 export type AgentVoice = z.infer<typeof AgentVoiceSchema>;
+export type AgentStatus = z.infer<typeof AgentStatusSchema>;
 export type KnowledgeType = z.infer<typeof KnowledgeTypeSchema>;
 export type MeetingStatus = z.infer<typeof MeetingStatusSchema>;
 export type ChatStatus = z.infer<typeof ChatRoleSchema>;
@@ -1174,6 +1248,8 @@ export type AgentKnowledgeSearchRequest = z.infer<typeof AgentKnowledgeSearchReq
 export type AgentKnowledgeSearchResponse = z.infer<typeof AgentKnowledgeSearchResponseSchema>;
 export type AgentSimulationIndexRequest = z.infer<typeof AgentSimulationIndexRequestSchema>;
 export type AgentSimulationIndexResponse = z.infer<typeof AgentSimulationIndexResponseSchema>;
+export type AgentIndexCallbackRequest = z.infer<typeof AgentIndexCallbackRequestSchema>;
+export type AgentIndexCallbackResponse = z.infer<typeof AgentIndexCallbackResponseSchema>;
 export type FileUploadResponse = z.infer<typeof FileUploadResponseSchema>;
 export type ChatRequest = z.infer<typeof ChatRequestSchema>;
 export type ChatResponseData = z.infer<typeof ChatResponseSchema>;
@@ -1223,3 +1299,7 @@ export type InstructionData = z.infer<typeof InstructionEntitySchema>;
 export type PasswordResetData = z.infer<typeof PasswordResetEntitySchema>;
 export type ChatData = z.infer<typeof ChatEntitySchema>;
 export type UsageStatsData = z.infer<typeof UsageStatsSchema>;
+export type SimulationProgressData = z.infer<typeof SimulationProgressEntitySchema>;
+export type MindMapEdgeData = z.infer<typeof MindMapEdgeSchema>;
+export type MindMapNodeData = z.infer<typeof MindMapNodeSchema>;
+export type MindMapData = z.infer<typeof MindMapSchema>;

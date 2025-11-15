@@ -54,7 +54,12 @@ export const useIntegrationSettings = (config: MarketrixConfig) => {
     };
 
     fetchSettings();
-  }, [config.marketrixId, config.marketrixKey, config.apiBaseUrl, config.atmosphere?.widget_settings]);
+  }, [
+    config.marketrixId,
+    config.marketrixKey,
+    config.apiBaseUrl,
+    config.atmosphere?.widget_settings,
+  ]);
 
   return {
     settings,

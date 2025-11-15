@@ -1,5 +1,6 @@
 import { type ChatResponseData, sdk } from '../sdk';
 import type { MarketrixConfig, SendMessageRequest, SendMessageResponse } from '../types';
+import { getStoredChatId, storeChatId } from '../utils/chatStorage';
 
 class MarketrixApiService {
   private config: MarketrixConfig;
@@ -7,6 +8,50 @@ class MarketrixApiService {
 
   constructor(config: MarketrixConfig) {
     this.config = config;
+    // Load chat_id from storage on initialization
+    this.chatId = getStoredChatId();
+  }
+
+  /**
+   * Get the current chat ID
+   */
+  getChatId(): string | null {
+    return this.chatId;
+  }
+
+  /**
+   * Initialize chat_id by creating a new chat session
+   * This should be called when the widget first loads
+   */
+  async initializeChatId(): Promise<string> {
+    // If we already have a chat_id, return it
+    if (this.chatId) {
+      return this.chatId;
+    }
+
+    // Try to get from storage first
+    const storedChatId = getStoredChatId();
+    if (storedChatId) {
+      this.chatId = storedChatId;
+      return this.chatId;
+    }
+
+    // Create a new chat session
+    try {
+      const chatResponse = await sdk.chatCreate({ body: undefined });
+      if (chatResponse.status === 200 && chatResponse.body?.success && chatResponse.body.data) {
+        this.chatId = chatResponse.body.data;
+        // Store in localStorage for persistence
+        storeChatId(this.chatId);
+        console.log('[API Service] Created and stored chat_id:', this.chatId);
+        return this.chatId;
+      } else {
+        throw new Error('Failed to create chat session');
+      }
+    } catch (error) {
+      console.error('[API Service] Failed to initialize chat_id:', error);
+      throw error;
+    }
   }
 
   /**
@@ -14,51 +59,74 @@ class MarketrixApiService {
    */
   async sendMessage(request: SendMessageRequest): Promise<SendMessageResponse> {
     try {
-      // Create a chat if we don't have one
+      // Ensure chat_id is initialized (should already be done on widget load)
       if (!this.chatId) {
-        const chatResponse = await sdk.chatCreate({ body: undefined });
-        if (chatResponse.status === 200 && chatResponse.body?.success && chatResponse.body.data) {
-          this.chatId = chatResponse.body.data;
-        } else {
-          throw new Error('Failed to create chat session');
-        }
+        await this.initializeChatId();
       }
 
       // Map the mode to the appropriate chat endpoint
       const mode = request.mode || 'tell';
       let response;
 
+      if (!this.config.marketrixId) {
+        throw new Error('marketrixId is required');
+      }
+      if (!this.chatId) {
+        throw new Error('chatId is required');
+      }
+
+      const integrationId = this.config.marketrixId;
+      const chatId = this.chatId;
+
       switch (mode) {
-        case 'tell':
+        case 'tell': {
+          const body: {
+            integration_id: string;
+            chat_id: string;
+            content: string;
+          } = {
+            integration_id: integrationId,
+            chat_id: chatId,
+            content: request.message || '',
+          };
           response = await sdk.chatTell({
-            params: { chat_id: Number(this.chatId) },
-            body: {
-              integration_id: this.config.marketrixId,
-              chat_id: this.chatId,
-              content: request.message || '',
-            },
+            params: { chat_id: Number(chatId) },
+            body,
           });
           break;
-        case 'show':
+        }
+        case 'show': {
+          const body: {
+            integration_id: string;
+            chat_id: string;
+            content: string;
+          } = {
+            integration_id: integrationId,
+            chat_id: chatId,
+            content: request.message || '',
+          };
           response = await sdk.chatShow({
-            params: { chat_id: Number(this.chatId) },
-            body: {
-              integration_id: this.config.marketrixId,
-              chat_id: this.chatId,
-              content: request.message || '',
-            },
+            params: { chat_id: Number(chatId) },
+            body,
           });
           break;
-        case 'do':
+        }
+        case 'do': {
+          const body: {
+            integration_id: string;
+            chat_id: string;
+            content: string;
+          } = {
+            integration_id: integrationId,
+            chat_id: chatId,
+            content: request.message || '',
+          };
           response = await sdk.chatDo({
-            params: { chat_id: this.chatId },
-            body: {
-              integration_id: this.config.marketrixId,
-              chat_id: this.chatId,
-              content: request.message || '',
-            },
+            params: { chat_id: chatId },
+            body,
           });
           break;
+        }
         default: {
           // This should never happen due to TypeScript's exhaustive checking
           const _exhaustiveCheck: never = mode;
@@ -98,13 +166,13 @@ class MarketrixApiService {
   /**
    * Check agent availability - simplified implementation
    * Since there's no dedicated endpoint, we'll assume agent is available
-   * if we can successfully create a chat
+   * if we can successfully initialize chat_id
    */
   async checkAgentAvailability(): Promise<boolean> {
     try {
-      // Try to create a chat to test availability
-      const response = await sdk.chatCreate({ body: undefined });
-      return response.status === 200 && response.body?.success === true;
+      // Try to initialize chat_id to test availability
+      await this.initializeChatId();
+      return true;
     } catch (error) {
       console.error('Failed to check agent availability:', error);
       return false;

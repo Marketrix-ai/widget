@@ -1,11 +1,11 @@
 import { type FetchApiOptions, initClient } from '@ts-rest/core';
 
-import { API_URL_GLOBAL_SET } from '../config';
+import { VITE_API_URL } from '../config';
 import { contract } from './routes';
 
 let authToken: string | null = null;
 const client = initClient(contract, {
-  baseUrl: API_URL_GLOBAL_SET.API_END_POINT,
+  baseUrl: VITE_API_URL,
   baseHeaders: {
     Authorization: (_options: FetchApiOptions) => (authToken ? `Bearer ${authToken}` : ''),
   },

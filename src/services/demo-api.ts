@@ -393,7 +393,7 @@ class DemoApiService {
 
   async sendMessage(request: SendMessageRequest): Promise<SendMessageResponse> {
     const { message, mode = 'tell' } = request;
-    
+
     if (!message) {
       throw new Error('Message is required');
     }

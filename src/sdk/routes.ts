@@ -41,6 +41,8 @@ import {
   ActionLogTypeSchema,
   AgentCreateSchema,
   AgentEntitySchema,
+  AgentIndexCallbackRequestSchema,
+  AgentIndexCallbackResponseSchema,
   AgentKnowledgeSearchRequestSchema,
   AgentKnowledgeSearchResponseSchema,
   AgentSimulationIndexRequestSchema,
@@ -74,11 +76,15 @@ import {
   MeetingUpdateSchema,
   MigrationPrepareSchema,
   MigrationRunSchema,
+  MindMapSchema,
   PasswordResetRequestSchema,
   PasswordUpdateSchema,
   R,
+  SimulationAnswerSchema,
   SimulationCreateSchema,
   SimulationEntitySchema,
+  SimulationProgressEntitySchema,
+  SimulationStepSchema,
   SimulationUpdateSchema,
   TenantCreateSchema,
   TenantEntitySchema,
@@ -212,7 +218,13 @@ const contract = c.router({
     description: 'Creates meeting room with specified settings and returns meeting details',
     path: '/meeting',
     body: MeetingCreateSchema,
-    responses: { 200: R.success(MeetingEntitySchema), 400: R.error, 401: R.error, 403: R.error, 500: R.error },
+    responses: {
+      200: R.success(MeetingEntitySchema),
+      400: R.error,
+      401: R.error,
+      403: R.error,
+      500: R.error,
+    },
   },
 
   meetingSearch: {
@@ -225,7 +237,13 @@ const contract = c.router({
       client_id: z.coerce.number().optional(),
       user_id: z.coerce.number().optional(),
     }),
-    responses: { 200: R.success(z.array(MeetingEntitySchema)), 400: R.error, 401: R.error, 403: R.error, 500: R.error },
+    responses: {
+      200: R.success(z.array(MeetingEntitySchema)),
+      400: R.error,
+      401: R.error,
+      403: R.error,
+      500: R.error,
+    },
   },
 
   meetingCount: {
@@ -234,7 +252,13 @@ const contract = c.router({
     description: 'Returns number of meetings associated with specified tenant',
     path: '/meeting/count',
     query: z.object({ tenant_id: z.coerce.number().optional() }),
-    responses: { 200: R.success(z.number()), 400: R.error, 401: R.error, 403: R.error, 500: R.error },
+    responses: {
+      200: R.success(z.number()),
+      400: R.error,
+      401: R.error,
+      403: R.error,
+      500: R.error,
+    },
   },
 
   meetingGet: {
@@ -243,7 +267,13 @@ const contract = c.router({
     description: 'Returns complete meeting information including participants and settings',
     path: '/meeting/:meeting_id',
     pathParams: z.object({ meeting_id: z.string() }),
-    responses: { 200: R.success(MeetingEntitySchema), 400: R.error, 401: R.error, 403: R.error, 500: R.error },
+    responses: {
+      200: R.success(MeetingEntitySchema),
+      400: R.error,
+      401: R.error,
+      403: R.error,
+      500: R.error,
+    },
   },
 
   meetingUpdate: {
@@ -253,7 +283,13 @@ const contract = c.router({
     path: '/meeting/:meeting_id',
     pathParams: z.object({ meeting_id: z.string() }),
     body: MeetingUpdateSchema,
-    responses: { 200: R.success(MeetingEntitySchema), 400: R.error, 401: R.error, 403: R.error, 500: R.error },
+    responses: {
+      200: R.success(MeetingEntitySchema),
+      400: R.error,
+      401: R.error,
+      403: R.error,
+      500: R.error,
+    },
   },
 
   meetingDelete: {
@@ -272,7 +308,13 @@ const contract = c.router({
     path: '/meeting/:meeting_id/join',
     pathParams: z.object({ meeting_id: z.string() }),
     body: MeetingJoinRequestSchema,
-    responses: { 200: R.success(TokenSchema), 400: R.error, 401: R.error, 403: R.error, 500: R.error },
+    responses: {
+      200: R.success(TokenSchema),
+      400: R.error,
+      401: R.error,
+      403: R.error,
+      500: R.error,
+    },
   },
 
   meetingEnd: {
@@ -295,7 +337,13 @@ const contract = c.router({
     description: 'Creates new tenant with specified settings and returns tenant entity',
     path: '/tenant',
     body: TenantCreateSchema,
-    responses: { 200: R.success(TenantEntitySchema), 400: R.error, 401: R.error, 403: R.error, 500: R.error },
+    responses: {
+      200: R.success(TenantEntitySchema),
+      400: R.error,
+      401: R.error,
+      403: R.error,
+      500: R.error,
+    },
   },
 
   tenantSearch: {
@@ -311,7 +359,13 @@ const contract = c.router({
       tenant_id: z.coerce.number().optional(),
       user_id: z.coerce.number().optional(),
     }),
-    responses: { 200: R.success(z.array(TenantEntitySchema)), 400: R.error, 401: R.error, 403: R.error, 500: R.error },
+    responses: {
+      200: R.success(z.array(TenantEntitySchema)),
+      400: R.error,
+      401: R.error,
+      403: R.error,
+      500: R.error,
+    },
   },
 
   tenantGet: {
@@ -320,7 +374,13 @@ const contract = c.router({
     description: 'Returns complete tenant information including settings and configuration',
     path: '/tenant/:tenant_id',
     pathParams: z.object({ tenant_id: z.coerce.number() }),
-    responses: { 200: R.success(TenantEntitySchema), 400: R.error, 401: R.error, 403: R.error, 500: R.error },
+    responses: {
+      200: R.success(TenantEntitySchema),
+      400: R.error,
+      401: R.error,
+      403: R.error,
+      500: R.error,
+    },
   },
 
   tenantUpdate: {
@@ -330,7 +390,13 @@ const contract = c.router({
     path: '/tenant/:tenant_id',
     pathParams: z.object({ tenant_id: z.coerce.number() }),
     body: TenantUpdateSchema,
-    responses: { 200: R.success(TenantEntitySchema), 400: R.error, 401: R.error, 403: R.error, 500: R.error },
+    responses: {
+      200: R.success(TenantEntitySchema),
+      400: R.error,
+      401: R.error,
+      403: R.error,
+      500: R.error,
+    },
   },
 
   tenantDelete: {
@@ -352,7 +418,13 @@ const contract = c.router({
     description: 'Creates a new app or website connection for a tenant',
     path: '/connection',
     body: ConnectionCreateSchema,
-    responses: { 200: R.success(ConnectionEntitySchema), 400: R.error, 401: R.error, 403: R.error, 500: R.error },
+    responses: {
+      200: R.success(ConnectionEntitySchema),
+      400: R.error,
+      401: R.error,
+      403: R.error,
+      500: R.error,
+    },
   },
 
   connectionSearch: {
@@ -369,8 +441,8 @@ const contract = c.router({
         z.array(
           ConnectionEntitySchema.extend({
             integrations: z.array(IntegrationEntitySchema),
-          }),
-        ),
+          })
+        )
       ),
       401: R.error,
       403: R.error,
@@ -381,14 +453,15 @@ const contract = c.router({
   connectionGet: {
     method: 'GET' as const,
     summary: 'Get connection by ID',
-    description: 'Returns specific connection details by connection ID, always includes integrations',
+    description:
+      'Returns specific connection details by connection ID, always includes integrations',
     path: '/connection/:connection_id',
     pathParams: z.object({ connection_id: z.coerce.number() }),
     responses: {
       200: R.success(
         ConnectionEntitySchema.extend({
           integrations: z.array(IntegrationEntitySchema),
-        }),
+        })
       ),
       404: R.error,
       401: R.error,
@@ -433,7 +506,13 @@ const contract = c.router({
     description: 'Creates a new integration (widget, slack, etc.) for a connection',
     path: '/integration',
     body: IntegrationCreateSchema,
-    responses: { 200: R.success(IntegrationEntitySchema), 400: R.error, 401: R.error, 403: R.error, 500: R.error },
+    responses: {
+      200: R.success(IntegrationEntitySchema),
+      400: R.error,
+      401: R.error,
+      403: R.error,
+      500: R.error,
+    },
   },
 
   integrationSearch: {
@@ -447,7 +526,12 @@ const contract = c.router({
       marketrix_id: z.string().optional(),
       marketrix_key: z.string().optional(),
     }),
-    responses: { 200: R.success(z.array(IntegrationEntitySchema)), 401: R.error, 403: R.error, 500: R.error },
+    responses: {
+      200: R.success(z.array(IntegrationEntitySchema)),
+      401: R.error,
+      403: R.error,
+      500: R.error,
+    },
   },
 
   integrationGet: {
@@ -456,7 +540,13 @@ const contract = c.router({
     description: 'Returns specific integration details by integration ID including snippet code',
     path: '/integration/:integration_id',
     pathParams: z.object({ integration_id: z.coerce.number() }),
-    responses: { 200: R.success(IntegrationEntitySchema), 404: R.error, 401: R.error, 403: R.error, 500: R.error },
+    responses: {
+      200: R.success(IntegrationEntitySchema),
+      404: R.error,
+      401: R.error,
+      403: R.error,
+      500: R.error,
+    },
   },
 
   integrationUpdate: {
@@ -495,7 +585,13 @@ const contract = c.router({
     description: 'Initializes new chat thread and returns session id',
     path: '/chat',
     body: z.void(),
-    responses: { 200: R.success(z.string()), 400: R.error, 401: R.error, 403: R.error, 500: R.error },
+    responses: {
+      200: R.success(z.string()),
+      400: R.error,
+      401: R.error,
+      403: R.error,
+      500: R.error,
+    },
   },
 
   chatSearch: {
@@ -507,7 +603,13 @@ const contract = c.router({
       user_id: z.coerce.number().optional(),
       chat_id: z.coerce.number().optional(),
     }),
-    responses: { 200: R.success(UsageStatsSchema), 400: R.error, 401: R.error, 403: R.error, 500: R.error },
+    responses: {
+      200: R.success(UsageStatsSchema),
+      400: R.error,
+      401: R.error,
+      403: R.error,
+      500: R.error,
+    },
   },
 
   chatTell: {
@@ -517,7 +619,13 @@ const contract = c.router({
     path: '/chat/:chat_id/tell',
     body: ChatRequestSchema,
     pathParams: z.object({ chat_id: z.coerce.number() }),
-    responses: { 200: R.success(ChatResponseSchema), 400: R.error, 401: R.error, 403: R.error, 500: R.error },
+    responses: {
+      200: R.success(ChatResponseSchema),
+      400: R.error,
+      401: R.error,
+      403: R.error,
+      500: R.error,
+    },
   },
 
   chatShow: {
@@ -527,7 +635,13 @@ const contract = c.router({
     path: '/chat/:chat_id/show',
     body: ChatRequestSchema,
     pathParams: z.object({ chat_id: z.coerce.number() }),
-    responses: { 200: R.success(ChatResponseSchema), 400: R.error, 401: R.error, 403: R.error, 500: R.error },
+    responses: {
+      200: R.success(ChatResponseSchema),
+      400: R.error,
+      401: R.error,
+      403: R.error,
+      500: R.error,
+    },
   },
 
   chatDo: {
@@ -536,7 +650,13 @@ const contract = c.router({
     description: 'Creates prompt with specified configuration and returns creation response',
     path: '/chat/:chat_id/do',
     body: ChatRequestSchema,
-    responses: { 200: R.success(UsageStatsSchema), 400: R.error, 401: R.error, 403: R.error, 500: R.error },
+    responses: {
+      200: R.success(UsageStatsSchema),
+      400: R.error,
+      401: R.error,
+      403: R.error,
+      500: R.error,
+    },
   },
 
   // ============================================================================
@@ -552,7 +672,13 @@ const contract = c.router({
       tenant_id: z.coerce.number().optional(),
       status: EntityStatusSchema.optional(),
     }),
-    responses: { 200: R.success(z.array(UserEntitySchema)), 400: R.error, 401: R.error, 403: R.error, 500: R.error },
+    responses: {
+      200: R.success(z.array(UserEntitySchema)),
+      400: R.error,
+      401: R.error,
+      403: R.error,
+      500: R.error,
+    },
   },
 
   userCreateBatch: {
@@ -576,7 +702,13 @@ const contract = c.router({
     description: 'Returns complete user information including profile and settings',
     path: '/user/:user_id',
     pathParams: z.object({ user_id: z.coerce.number() }),
-    responses: { 200: R.success(UserEntitySchema), 400: R.error, 401: R.error, 403: R.error, 500: R.error },
+    responses: {
+      200: R.success(UserEntitySchema),
+      400: R.error,
+      401: R.error,
+      403: R.error,
+      500: R.error,
+    },
   },
 
   userUpdate: {
@@ -586,7 +718,13 @@ const contract = c.router({
     path: '/user/:user_id',
     pathParams: z.object({ user_id: z.coerce.number() }),
     body: UserUpdateSchema,
-    responses: { 200: R.success(UserEntitySchema), 400: R.error, 401: R.error, 403: R.error, 500: R.error },
+    responses: {
+      200: R.success(UserEntitySchema),
+      400: R.error,
+      401: R.error,
+      403: R.error,
+      500: R.error,
+    },
   },
 
   userUpdateImage: {
@@ -597,7 +735,13 @@ const contract = c.router({
     pathParams: z.object({ user_id: z.coerce.number() }),
     contentType: 'multipart/form-data' as const,
     body: FileSchema,
-    responses: { 200: R.success(FileUploadResponseSchema), 400: R.error, 401: R.error, 403: R.error, 500: R.error },
+    responses: {
+      200: R.success(FileUploadResponseSchema),
+      400: R.error,
+      401: R.error,
+      403: R.error,
+      500: R.error,
+    },
   },
 
   userDelete: {
@@ -632,7 +776,13 @@ const contract = c.router({
     path: '/agent',
     contentType: 'multipart/form-data' as const,
     body: AgentCreateSchema,
-    responses: { 200: R.success(AgentEntitySchema), 400: R.error, 401: R.error, 403: R.error, 500: R.error },
+    responses: {
+      200: R.success(AgentEntitySchema),
+      400: R.error,
+      401: R.error,
+      403: R.error,
+      500: R.error,
+    },
   },
 
   agentSearch: {
@@ -645,7 +795,13 @@ const contract = c.router({
       user_id: z.coerce.number().optional(),
       connection_id: z.coerce.number().optional(),
     }),
-    responses: { 200: R.success(z.array(AgentEntitySchema)), 400: R.error, 401: R.error, 403: R.error, 500: R.error },
+    responses: {
+      200: R.success(z.array(AgentEntitySchema)),
+      400: R.error,
+      401: R.error,
+      403: R.error,
+      500: R.error,
+    },
   },
 
   agentGet: {
@@ -654,7 +810,13 @@ const contract = c.router({
     description: 'Returns complete agent information including configuration and settings',
     path: '/agent/:agent_id',
     pathParams: z.object({ agent_id: z.coerce.number() }),
-    responses: { 200: R.success(AgentEntitySchema), 400: R.error, 401: R.error, 403: R.error, 500: R.error },
+    responses: {
+      200: R.success(AgentEntitySchema),
+      400: R.error,
+      401: R.error,
+      403: R.error,
+      500: R.error,
+    },
   },
 
   agentUpdate: {
@@ -665,7 +827,13 @@ const contract = c.router({
     pathParams: z.object({ agent_id: z.coerce.number() }),
     contentType: 'multipart/form-data' as const,
     body: AgentUpdateSchema,
-    responses: { 200: R.success(AgentEntitySchema), 400: R.error, 401: R.error, 403: R.error, 500: R.error },
+    responses: {
+      200: R.success(AgentEntitySchema),
+      400: R.error,
+      401: R.error,
+      403: R.error,
+      500: R.error,
+    },
   },
 
   agentDelete: {
@@ -696,7 +864,8 @@ const contract = c.router({
   agentIndexSimulation: {
     method: 'POST' as const,
     summary: 'Index simulation document into agent knowledge base',
-    description: "Adds a simulation document to an agent's knowledge base and refreshes the search index",
+    description:
+      "Adds a simulation document to an agent's knowledge base and refreshes the search index",
     path: '/agent/:agent_id/index',
     pathParams: z.object({ agent_id: z.coerce.number() }),
     body: AgentSimulationIndexRequestSchema,
@@ -705,6 +874,19 @@ const contract = c.router({
       400: R.error,
       401: R.error,
       403: R.error,
+      500: R.error,
+    },
+  },
+
+  agentIndexCallback: {
+    method: 'POST' as const,
+    summary: 'Callback endpoint for agent index creation completion',
+    description: 'Called by agent service when PDF or JSON index creation completes',
+    path: '/agent/index/callback',
+    body: AgentIndexCallbackRequestSchema,
+    responses: {
+      200: R.success(AgentIndexCallbackResponseSchema),
+      400: R.error,
       500: R.error,
     },
   },
@@ -719,7 +901,13 @@ const contract = c.router({
     description: 'Records user or system action for auditing and tracking purposes',
     path: '/log',
     body: ActionLogCreateSchema,
-    responses: { 200: R.success(ActionLogEntitySchema), 400: R.error, 401: R.error, 403: R.error, 500: R.error },
+    responses: {
+      200: R.success(ActionLogEntitySchema),
+      400: R.error,
+      401: R.error,
+      403: R.error,
+      500: R.error,
+    },
   },
 
   logSearch: {
@@ -753,7 +941,13 @@ const contract = c.router({
       connection_id: z.coerce.number().optional(),
       question: z.string().min(1),
     }),
-    responses: { 200: R.success(TourEntitySchema), 400: R.error, 401: R.error, 403: R.error, 500: R.error },
+    responses: {
+      200: R.success(TourEntitySchema),
+      400: R.error,
+      401: R.error,
+      403: R.error,
+      500: R.error,
+    },
   },
 
   tourSearch: {
@@ -765,7 +959,13 @@ const contract = c.router({
       tenant_id: z.coerce.number().optional(),
       connection_id: z.coerce.number().optional(),
     }),
-    responses: { 200: R.success(z.array(TourEntitySchema)), 400: R.error, 401: R.error, 403: R.error, 500: R.error },
+    responses: {
+      200: R.success(z.array(TourEntitySchema)),
+      400: R.error,
+      401: R.error,
+      403: R.error,
+      500: R.error,
+    },
   },
 
   tourCreate: {
@@ -774,7 +974,40 @@ const contract = c.router({
     description: 'Creates tour with specified steps and configuration',
     path: '/tour',
     body: TourEntitySchema,
-    responses: { 200: R.success(TourEntitySchema), 400: R.error, 401: R.error, 403: R.error, 500: R.error },
+    responses: {
+      200: R.success(TourEntitySchema),
+      400: R.error,
+      401: R.error,
+      403: R.error,
+      500: R.error,
+    },
+  },
+
+  tourShow: {
+    method: 'POST' as const,
+    summary: 'Show tour spotlight and description',
+    description: 'Triggers tour spotlight for a specific step and element',
+    path: '/tour/show',
+    body: z.object({
+      step: z.any(),
+      element_selector: z.string().optional(),
+    }),
+    responses: {
+      200: R.success(
+        z.object({
+          success: z.boolean(),
+          message: z.string(),
+          spotlight_created: z.boolean(),
+          description_created: z.boolean(),
+          step_id: z.number(),
+          element_found: z.boolean(),
+        })
+      ),
+      400: R.error,
+      401: R.error,
+      403: R.error,
+      500: R.error,
+    },
   },
 
   // ============================================================================
@@ -805,7 +1038,13 @@ const contract = c.router({
     description: 'Creates and initializes simulation with specified parameters',
     path: '/simulation/start',
     body: SimulationCreateSchema,
-    responses: { 200: R.success(SimulationEntitySchema), 400: R.error, 401: R.error, 403: R.error, 500: R.error },
+    responses: {
+      200: R.success(SimulationEntitySchema),
+      400: R.error,
+      401: R.error,
+      403: R.error,
+      500: R.error,
+    },
   },
 
   simulationUpdate: {
@@ -815,7 +1054,28 @@ const contract = c.router({
     path: '/simulation/:simulation_id',
     pathParams: z.object({ simulation_id: z.coerce.number() }),
     body: SimulationUpdateSchema,
-    responses: { 200: R.success(SimulationEntitySchema), 400: R.error, 401: R.error, 403: R.error, 500: R.error },
+    responses: {
+      200: R.success(SimulationEntitySchema),
+      400: R.error,
+      401: R.error,
+      403: R.error,
+      500: R.error,
+    },
+  },
+
+  simulationProgress: {
+    method: 'GET' as const,
+    summary: 'Get simulation progress history as chat transcript',
+    description: 'Returns all progress updates for a simulation ordered chronologically',
+    path: '/simulation/:simulation_id/progress',
+    pathParams: z.object({ simulation_id: z.coerce.number() }),
+    responses: {
+      200: R.success(z.array(SimulationProgressEntitySchema)),
+      400: R.error,
+      401: R.error,
+      403: R.error,
+      500: R.error,
+    },
   },
 
   simulationLiveView: {
@@ -830,7 +1090,126 @@ const contract = c.router({
           job_id: z.string(),
           live_view_url: z.string(),
           status: z.string(),
-        }),
+        })
+      ),
+      400: R.error,
+      401: R.error,
+      403: R.error,
+      404: R.error,
+      500: R.error,
+    },
+  },
+
+  simulationHistory: {
+    method: 'GET' as const,
+    summary: 'Get simulation history by ID',
+    description: 'Returns the history array for the specified simulation',
+    path: '/simulation/:simulation_id/history',
+    pathParams: z.object({ simulation_id: z.coerce.number() }),
+    responses: {
+      200: R.success(z.object({ history: z.array(SimulationStepSchema) })),
+      400: R.error,
+      401: R.error,
+      403: R.error,
+      500: R.error,
+    },
+  },
+
+  simulationMindmap: {
+    method: 'GET' as const,
+    summary: 'Get simulation mindmap by ID',
+    description: 'Returns the mindmap knowledge graph for the specified simulation',
+    path: '/simulation/:simulation_id/mindmap',
+    pathParams: z.object({ simulation_id: z.coerce.number() }),
+    responses: {
+      200: R.success(MindMapSchema),
+      400: R.error,
+      401: R.error,
+      403: R.error,
+      500: R.error,
+    },
+  },
+
+  simulationStop: {
+    method: 'POST' as const,
+    summary: 'Stop running simulation',
+    description: 'Terminates the simulation session',
+    path: '/simulation/:simulation_id/stop',
+    pathParams: z.object({ simulation_id: z.coerce.number() }),
+    body: z.object({}),
+    responses: {
+      200: R.success(
+        z.object({
+          success: z.boolean(),
+          message: z.string(),
+        })
+      ),
+      400: R.error,
+      401: R.error,
+      403: R.error,
+      404: R.error,
+      500: R.error,
+    },
+  },
+
+  simulationAnswer: {
+    method: 'POST' as const,
+    summary: 'Submit answer to simulation question',
+    description: 'Submits an answer to a pending question from the simulation agent',
+    path: '/simulation/:simulation_id/answer',
+    pathParams: z.object({ simulation_id: z.coerce.number() }),
+    body: SimulationAnswerSchema,
+    responses: {
+      200: R.success(
+        z.object({
+          success: z.boolean(),
+          message: z.string(),
+        })
+      ),
+      400: R.error,
+      401: R.error,
+      403: R.error,
+      404: R.error,
+      500: R.error,
+    },
+  },
+
+  browserSessionCreate: {
+    method: 'POST' as const,
+    summary: 'Create browser session for connection',
+    description: 'Creates a browser session and navigates to the connection URL',
+    path: '/browser-session/create',
+    body: z.object({
+      connection_id: z.number(),
+      agent_id: z.number(),
+    }),
+    responses: {
+      200: R.success(
+        z.object({
+          session_id: z.string(),
+          live_view_url: z.string(),
+        })
+      ),
+      400: R.error,
+      401: R.error,
+      403: R.error,
+      500: R.error,
+    },
+  },
+
+  browserSessionStop: {
+    method: 'POST' as const,
+    summary: 'Stop browser session',
+    description: 'Terminates the browser session',
+    path: '/browser-session/:session_id/stop',
+    pathParams: z.object({ session_id: z.string() }),
+    body: z.object({}),
+    responses: {
+      200: R.success(
+        z.object({
+          success: z.boolean(),
+          message: z.string(),
+        })
       ),
       400: R.error,
       401: R.error,
@@ -872,7 +1251,13 @@ const contract = c.router({
     body: FileSchema.extend({
       connection_id: z.coerce.number(),
     }),
-    responses: { 200: R.success(KnowledgeEntitySchema), 400: R.error, 401: R.error, 403: R.error, 500: R.error },
+    responses: {
+      200: R.success(KnowledgeEntitySchema),
+      400: R.error,
+      401: R.error,
+      403: R.error,
+      500: R.error,
+    },
   },
 
   knowledgeGet: {
@@ -881,7 +1266,13 @@ const contract = c.router({
     description: 'Returns complete knowledge document information and content',
     path: '/knowledge/:id',
     pathParams: z.object({ id: z.coerce.number() }),
-    responses: { 200: R.success(KnowledgeEntitySchema), 400: R.error, 401: R.error, 403: R.error, 500: R.error },
+    responses: {
+      200: R.success(KnowledgeEntitySchema),
+      400: R.error,
+      401: R.error,
+      403: R.error,
+      500: R.error,
+    },
   },
 
   // ============================================================================
@@ -911,7 +1302,13 @@ const contract = c.router({
     description: 'Creates instruction with specified conditions and actions',
     path: '/instruction',
     body: InstructionEntitySchema,
-    responses: { 200: R.success(InstructionEntitySchema), 400: R.error, 401: R.error, 403: R.error, 500: R.error },
+    responses: {
+      200: R.success(InstructionEntitySchema),
+      400: R.error,
+      401: R.error,
+      403: R.error,
+      500: R.error,
+    },
   },
 
   // ============================================================================

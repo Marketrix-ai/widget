@@ -86,4 +86,3 @@ export const WidgetSettingsLoader: React.FC<WidgetSettingsLoaderProps> = ({
 };
 
 export default WidgetSettingsLoader;
-

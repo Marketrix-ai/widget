@@ -31,7 +31,7 @@ type ChipData = {
 interface MessageListProps {
   messages: ChatMessage[];
   isLoading: boolean;
-  messagesEndRef: React.RefObject<HTMLDivElement>;
+  messagesEndRef: React.RefObject<HTMLDivElement | null>;
   onSendMessage?: (
     message: string,
     mode?: 'show' | 'tell' | 'do',
@@ -1337,7 +1337,7 @@ export const MessageList: React.FC<MessageListProps> = ({
   interface SuggestedActionItem {
     id: string;
     text: string;
-    icon: JSX.Element;
+    icon: React.ReactElement;
     type: 'tell' | 'show' | 'do';
     isShow: boolean;
   }

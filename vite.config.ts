@@ -1,4 +1,7 @@
+import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
+import { copyFileSync } from 'fs';
+import { resolve } from 'path';
 import { defineConfig, type ViteDevServer } from 'vite';
 import cssInjectedByJsPlugin from 'vite-plugin-css-injected-by-js';
 
@@ -30,8 +33,31 @@ const devMeetPlugin = () => {
   };
 };
 
+// Plugin to copy index.html to dist after build
+const copyIndexHtmlPlugin = () => {
+  return {
+    name: 'copy-index-html',
+    buildEnd() {
+      const srcPath = resolve(process.cwd(), 'index.html');
+      const destPath = resolve(process.cwd(), 'dist', 'index.html');
+      try {
+        copyFileSync(srcPath, destPath);
+        console.log('✓ Copied index.html to dist/');
+      } catch (error) {
+        console.error('Error copying index.html:', error);
+      }
+    },
+  };
+};
+
 export default defineConfig({
-  plugins: [react(), devMeetPlugin(), cssInjectedByJsPlugin()],
+  plugins: [
+    react(),
+    tailwindcss(),
+    devMeetPlugin(),
+    cssInjectedByJsPlugin(),
+    copyIndexHtmlPlugin(),
+  ],
   root: '.',
   publicDir: false,
   build: {
@@ -62,10 +88,5 @@ export default defineConfig({
         comments: false,
       },
     },
-  },
-  define: {
-    'import.meta.env.VITE_API_URL': JSON.stringify(
-      process.env.VITE_API_URL ?? 'http://localhost:8080'
-    ),
   },
 });

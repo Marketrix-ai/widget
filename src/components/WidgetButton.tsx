@@ -21,8 +21,6 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
   atmosphere,
   onClick,
   isOpen,
-  _agentAvailable,
-  _isScreenSharing = false,
   integrationSettings,
 }) => {
   const theme = config.theme || 'light';

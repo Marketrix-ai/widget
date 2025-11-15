@@ -1,16 +1,15 @@
 import './index.css';
-import shadowStyles from './index.css?inline';
 
 import React from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 
-import { DEFAULT_FALLBACK_WIDGET_SETTINGS } from './constants/defaultWidgetSettings';
 import { MarketrixWidget } from './components/MarketrixWidget';
 import { WidgetSettingsLoader } from './components/WidgetSettingsLoader';
-import { sdk } from './sdk';
+import { DEFAULT_FALLBACK_WIDGET_SETTINGS } from './constants/defaultWidgetSettings';
+import shadowStyles from './index.css?inline';
+import { type ConnectionData, sdk } from './sdk';
 import { WidgetValidationService } from './services/widgetValidationService';
 import type { MarketrixConfig } from './types';
-import type { ConnectionData } from './sdk';
 
 // Global widget instance and demo functions
 let widgetInstance: Root | null = null;
@@ -137,23 +136,32 @@ export const initMarketrixWidget = async (config: MarketrixConfig): Promise<void
       try {
         console.log('📡 Verifying connection ID match with connectionSearch API...');
         const verifyConnectionSearchResponse = await sdk.connectionSearch({});
-        
-        if (verifyConnectionSearchResponse.status === 200 && verifyConnectionSearchResponse.body?.success) {
+
+        if (
+          verifyConnectionSearchResponse.status === 200 &&
+          verifyConnectionSearchResponse.body?.success
+        ) {
           const allConnections = verifyConnectionSearchResponse.body.data as ConnectionData[];
           const providedConnectionId = config.connectionId;
-          
+
           connectionIdMatches = allConnections.some((conn) => conn.id === providedConnectionId);
-          
+
           if (connectionIdMatches) {
             console.log('✅ Connection ID Match: TRUE');
             console.log('📋 Provided connection ID:', providedConnectionId);
-            console.log('📋 API connection IDs:', allConnections.map((c) => c.id));
+            console.log(
+              '📋 API connection IDs:',
+              allConnections.map((c) => c.id)
+            );
             console.log('🎯 Connection IDs are equal - Default widget settings will be applied!');
             console.log('📦 Default Widget Settings:', DEFAULT_FALLBACK_WIDGET_SETTINGS);
           } else {
             console.warn('⚠️ Connection ID Match: FALSE');
             console.warn('📋 Provided connection ID:', providedConnectionId);
-            console.warn('📋 Available API connection IDs:', allConnections.map((c) => c.id));
+            console.warn(
+              '📋 Available API connection IDs:',
+              allConnections.map((c) => c.id)
+            );
           }
         }
       } catch (verifyError) {
@@ -162,11 +170,11 @@ export const initMarketrixWidget = async (config: MarketrixConfig): Promise<void
 
       // Use default settings when validation succeeds and connection IDs match
       shouldUseDefaultSettings = true;
-      
+
       if (connectionIdMatches) {
         console.log('✅ Applying default widget settings because connection IDs match');
       }
-      
+
       hideWidgetSettingsLoader();
     } else {
       // Show loader during fallback validation
@@ -179,11 +187,11 @@ export const initMarketrixWidget = async (config: MarketrixConfig): Promise<void
 
         if (connectionSearchResponse.status === 200 && connectionSearchResponse.body?.success) {
           const connections = connectionSearchResponse.body.data as ConnectionData[];
-          
+
           console.log('✅ Connections fetched successfully!');
           console.log('📊 Total connections found:', connections.length);
           console.log('📋 All Connections:', connections);
-          
+
           // Log each connection with details
           connections.forEach((connection, index) => {
             console.log(`\n🔗 Connection #${index + 1}:`, {
@@ -380,11 +388,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const agentId = script.getAttribute('marketrix-agent');
     const connectionId = script.getAttribute('marketrix-connection-id');
 
-    console.log('Found script with attributes:', { 
-      marketrixId, 
-      marketrixKey, 
-      agentId, 
-      connectionId 
+    console.log('Found script with attributes:', {
+      marketrixId,
+      marketrixKey,
+      agentId,
+      connectionId,
     });
 
     // Check if we have marketrix credentials or agent/connection IDs
@@ -425,19 +433,28 @@ document.addEventListener('DOMContentLoaded', () => {
         )[]) || ['show', 'tell', 'do'],
       };
 
-      console.log('Auto-initializing widget with marketrix-agent and marketrix-connection-id:', config);
+      console.log(
+        'Auto-initializing widget with marketrix-agent and marketrix-connection-id:',
+        config
+      );
       initMarketrixWidget(config).catch((error) => {
         console.error('Failed to initialize widget:', error);
       });
     } else {
       // Show loader if credentials are missing
-      console.warn('Marketrix Widget: Please provide either (marketrix-id + marketrix-key) OR (marketrix-agent + marketrix-connection-id)');
-      showWidgetSettingsLoader('Please configure marketrix_id and marketrix_key, or marketrix-agent and marketrix-connection-id');
+      console.warn(
+        'Marketrix Widget: Please provide either (marketrix-id + marketrix-key) OR (marketrix-agent + marketrix-connection-id)'
+      );
+      showWidgetSettingsLoader(
+        'Please configure marketrix_id and marketrix_key, or marketrix-agent and marketrix-connection-id'
+      );
     }
   } else {
     console.log('No script with marketrix or marketrix-agent attributes found');
     // Show loader if no script attributes found
-    showWidgetSettingsLoader('Please configure marketrix_id and marketrix_key, or marketrix-agent and marketrix-connection-id');
+    showWidgetSettingsLoader(
+      'Please configure marketrix_id and marketrix_key, or marketrix-agent and marketrix-connection-id'
+    );
   }
 });
 

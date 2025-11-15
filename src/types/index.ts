@@ -1,13 +1,15 @@
+import type { WidgetSettingsData } from '../sdk';
+
 // Chat mode type (matches SDK InstructionType)
 export type ChatMode = 'show' | 'tell' | 'do';
 
 // Re-export SDK types for proper type usage
 export type {
-  IntegrationData,
   AgentData,
   ConnectionData,
-  UserData,
+  IntegrationData,
   TenantData,
+  UserData,
   WidgetSettingsData,
 } from '../sdk';
 
@@ -22,7 +24,7 @@ export interface MarketrixConfig {
   // Either marketrixId/marketrixKey OR agentId/connectionId must be provided
   marketrixId?: string; // maps to marketrix_id from SDK
   marketrixKey?: string; // maps to marketrix_key from SDK
-  
+
   // Alternative: Direct agent and connection IDs (when marketrixId/marketrixKey not available)
   agentId?: number; // Direct agent ID from agent table
   connectionId?: number; // Direct connection ID from connection table
@@ -57,7 +59,7 @@ export interface WidgetState {
   error?: string;
 }
 
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean;
   data?: T;
   error?: string;
@@ -196,7 +198,7 @@ export interface WidgetAtmosphereConfig {
 
   // Widget display and behavior
   widget_text: WidgetTextConfig;
-  widget_settings: import('../sdk').WidgetSettingsData; // From SDK
+  widget_settings: WidgetSettingsData;
   widget_type: 'ai' | 'live' | 'hybrid';
   widget_visible: boolean;
   widget_customize: WidgetCustomizeConfig;

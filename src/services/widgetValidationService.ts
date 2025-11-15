@@ -1,5 +1,5 @@
-import type { AgentData, ConnectionData, IntegrationData } from '../sdk';
-import { sdk } from '../sdk';
+import { VITE_API_URL } from '../config';
+import { type AgentData, type ConnectionData, type IntegrationData, sdk } from '../sdk';
 
 export interface WidgetValidationResult {
   isValid: boolean;
@@ -33,10 +33,7 @@ export class WidgetValidationService {
   /**
    * Validate widget configuration
    */
-  async validateWidget(
-    marketrixId: string,
-    marketrixKey: string
-  ): Promise<WidgetValidationResult> {
+  async validateWidget(marketrixId: string, marketrixKey: string): Promise<WidgetValidationResult> {
     try {
       // Step 1: Fetch integration by marketrix_id and marketrix_key
       console.log('Validating widget - fetching integration...', { marketrixId, marketrixKey });
@@ -58,12 +55,16 @@ export class WidgetValidationService {
       const integrations = integrationResponse.body.data as IntegrationData[];
 
       // Debug: Log what integrations were found
-      console.log('Found integrations:', integrations.length, integrations.map(i => ({
-        id: i.id,
-        type: i.type,
-        status: i.status,
-        marketrix_id: i.marketrix_id,
-      })));
+      console.log(
+        'Found integrations:',
+        integrations.length,
+        integrations.map((i) => ({
+          id: i.id,
+          type: i.type,
+          status: i.status,
+          marketrix_id: i.marketrix_id,
+        }))
+      );
 
       // Find the widget integration
       const widgetIntegration = integrations.find(
@@ -76,25 +77,26 @@ export class WidgetValidationService {
         const widgetIntegrations = integrations.filter(
           (integration: IntegrationData) => integration.type === 'widget'
         );
-        
+
         if (widgetIntegrations.length > 0) {
-          const statuses = widgetIntegrations.map(i => i.status).join(', ');
+          const statuses = widgetIntegrations.map((i) => i.status).join(', ');
           return {
             isValid: false,
             error: `Found widget integration(s) but none are active. Current status(es): ${statuses}. Please activate the integration in the dashboard.`,
           };
         }
-        
+
         // Check if there are any integrations at all
         if (integrations.length === 0) {
           return {
             isValid: false,
-            error: 'No integrations found for the provided marketrix_id and marketrix_key. Please verify your credentials.',
+            error:
+              'No integrations found for the provided marketrix_id and marketrix_key. Please verify your credentials.',
           };
         }
-        
+
         // There are integrations but no widget type
-        const types = integrations.map(i => i.type).join(', ');
+        const types = integrations.map((i) => i.type).join(', ');
         return {
           isValid: false,
           error: `No widget integration found. Found integration type(s): ${types}. Please create a widget integration.`,
@@ -176,22 +178,22 @@ export class WidgetValidationService {
       }
     } catch (error) {
       console.error('Widget validation error:', error);
-      
+
       // Check if it's a network/connection error
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      const isConnectionError = 
+      const isConnectionError =
         errorMessage.includes('Failed to fetch') ||
         errorMessage.includes('ERR_CONNECTION_REFUSED') ||
         errorMessage.includes('NetworkError') ||
         errorMessage.includes('Network request failed');
-      
+
       if (isConnectionError) {
         return {
           isValid: false,
-          error: `Cannot connect to API server. Please ensure the API server is running at ${import.meta.env.VITE_API_URL || 'http://localhost:8080'}. Error: ${errorMessage}`,
+          error: `Cannot connect to API server. Please ensure the API server is running at ${VITE_API_URL}. Error: ${errorMessage}`,
         };
       }
-      
+
       return {
         isValid: false,
         error: `Validation failed: ${errorMessage}`,
@@ -298,22 +300,22 @@ export class WidgetValidationService {
       };
     } catch (error) {
       console.error('Fallback validation error:', error);
-      
+
       // Check if it's a network/connection error
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      const isConnectionError = 
+      const isConnectionError =
         errorMessage.includes('Failed to fetch') ||
         errorMessage.includes('ERR_CONNECTION_REFUSED') ||
         errorMessage.includes('NetworkError') ||
         errorMessage.includes('Network request failed');
-      
+
       if (isConnectionError) {
         return {
           isValid: false,
-          error: `Cannot connect to API server. Please ensure the API server is running at ${import.meta.env.VITE_API_URL || 'http://localhost:8080'}. Error: ${errorMessage}`,
+          error: `Cannot connect to API server. Please ensure the API server is running at ${VITE_API_URL}. Error: ${errorMessage}`,
         };
       }
-      
+
       return {
         isValid: false,
         error: `Fallback validation failed: ${errorMessage}`,
@@ -336,15 +338,15 @@ export class WidgetValidationService {
       // Step 0: Fetch all connections using connectionSearch to compare IDs
       console.log('📡 Fetching connections from connectionSearch API...');
       const connectionSearchResponse = await sdk.connectionSearch({});
-      
+
       if (connectionSearchResponse.status === 200 && connectionSearchResponse.body?.success) {
         const connections = connectionSearchResponse.body.data as ConnectionData[];
-        
+
         console.log('✅ Connections fetched from connectionSearch:', connections.length);
-        
+
         // Find connection that matches the provided connectionId
         const matchingConnection = connections.find((conn) => conn.id === connectionId);
-        
+
         if (matchingConnection) {
           console.log('✅ Connection ID match found!', {
             provided_connection_id: connectionId,
@@ -361,7 +363,10 @@ export class WidgetValidationService {
           });
         }
       } else {
-        console.warn('⚠️ Failed to fetch connections from connectionSearch:', connectionSearchResponse.body);
+        console.warn(
+          '⚠️ Failed to fetch connections from connectionSearch:',
+          connectionSearchResponse.body
+        );
       }
 
       // Step 1: Validate connection exists
@@ -377,14 +382,14 @@ export class WidgetValidationService {
       }
 
       const connection = connectionResponse.body.data as ConnectionData | null;
-      
+
       if (!connection) {
         return {
           isValid: false,
           error: `Connection with ID ${connectionId} not found`,
         };
       }
-      
+
       // Log all connection table values from the database
       console.log('📊 ========== CONNECTION TABLE VALUES (marketrix database) ==========');
       console.log('✅ Connection found in database with all values:');
@@ -415,7 +420,7 @@ export class WidgetValidationService {
       }
 
       const agent = agentResponse.body.data as AgentData | null;
-      
+
       if (!agent) {
         return {
           isValid: false,
@@ -424,7 +429,7 @@ export class WidgetValidationService {
           connectionId,
         };
       }
-      
+
       // Log all agent table values from the database
       console.log('📊 ========== AGENT TABLE VALUES (marketrix database) ==========');
       console.log('✅ Agent found in database with all values:');
@@ -476,10 +481,13 @@ export class WidgetValidationService {
       let connectionIdMatches = false;
       try {
         const finalConnectionSearchResponse = await sdk.connectionSearch({});
-        if (finalConnectionSearchResponse.status === 200 && finalConnectionSearchResponse.body?.success) {
+        if (
+          finalConnectionSearchResponse.status === 200 &&
+          finalConnectionSearchResponse.body?.success
+        ) {
           const allConnections = finalConnectionSearchResponse.body.data as ConnectionData[];
           connectionIdMatches = allConnections.some((conn) => conn.id === connectionId);
-          
+
           if (connectionIdMatches) {
             console.log('✅ Connection ID verification: TRUE - Connection IDs match!');
             console.log('🎯 Default widget settings will be applied');
@@ -500,22 +508,22 @@ export class WidgetValidationService {
       };
     } catch (error) {
       console.error('Agent and Connection validation error:', error);
-      
+
       // Check if it's a network/connection error
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      const isConnectionError = 
+      const isConnectionError =
         errorMessage.includes('Failed to fetch') ||
         errorMessage.includes('ERR_CONNECTION_REFUSED') ||
         errorMessage.includes('NetworkError') ||
         errorMessage.includes('Network request failed');
-      
+
       if (isConnectionError) {
         return {
           isValid: false,
-          error: `Cannot connect to API server. Please ensure the API server is running at ${import.meta.env.VITE_API_URL || 'http://localhost:8080'}. Error: ${errorMessage}`,
+          error: `Cannot connect to API server. Please ensure the API server is running at ${VITE_API_URL}. Error: ${errorMessage}`,
         };
       }
-      
+
       return {
         isValid: false,
         error: `Validation failed: ${errorMessage}`,
@@ -525,4 +533,3 @@ export class WidgetValidationService {
 }
 
 export default WidgetValidationService;
-

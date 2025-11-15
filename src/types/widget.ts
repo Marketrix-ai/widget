@@ -17,7 +17,7 @@ export type {
 } from '../sdk';
 
 // Import types from index for local use
-import type { MarketrixConfig, ChatMessage, ChatMode } from './index';
+import type { ChatMessage, ChatMode, MarketrixConfig, WidgetSettingsData } from './index';
 
 // Widget-specific type extensions
 export interface WidgetChipConfig {
@@ -27,7 +27,7 @@ export interface WidgetChipConfig {
 
 export interface WidgetComponentProps {
   config: MarketrixConfig;
-  settings?: import('../sdk').WidgetSettingsData;
+  settings?: WidgetSettingsData;
   isOpen?: boolean;
   isLoading?: boolean;
   error?: string;

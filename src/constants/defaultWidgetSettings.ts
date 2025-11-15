@@ -34,4 +34,3 @@ export const DEFAULT_FALLBACK_WIDGET_SETTINGS: WidgetSettingsData = {
   widget_bounce_effect: true,
   widget_chips: [],
 };
-

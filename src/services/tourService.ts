@@ -49,13 +49,12 @@ export class TourService {
             console.log('\n--- TOUR STEPS ---');
             tour.answer.forEach((step, stepIndex: number) => {
               console.log(`  Step ${stepIndex + 1}:`);
-              console.log('    Step ID:', step.id);
-              console.log('    Step Title:', step.title);
+              console.log('    Step Number:', step.step_number);
               console.log('    Step Description:', step.description);
               console.log('    Step Selector:', step.selector || 'N/A');
-              console.log('    Step XPath:', step.xpath || 'N/A');
               console.log('    Step Action:', step.action || 'N/A');
-              console.log('    Step Order:', step.order);
+              console.log('    Step Element:', step.element || 'N/A');
+              console.log('    Step Text:', step.text || 'N/A');
             });
           } else {
             console.log('No steps found for this tour');
@@ -89,9 +88,10 @@ export class TourService {
           console.log(`${target}: ${tours.length} tour(s)`);
         });
       } else {
+        const body = response.body as { error?: string; message?: string } | undefined;
         console.warn(
           'No tour data found or API error:',
-          response.body?.error || response.body?.message || 'Unknown error'
+          body?.error || body?.message || 'Unknown error'
         );
       }
     } catch (error) {
@@ -157,9 +157,10 @@ export class TourService {
           tours.reduce((total, tour) => total + tour.answer.length, 0)
         );
       } else {
+        const body = response.body as { error?: string; message?: string } | undefined;
         console.warn(
           'No tour data found or API error:',
-          response.body?.error || response.body?.message || 'Unknown error'
+          body?.error || body?.message || 'Unknown error'
         );
       }
     } catch (error) {

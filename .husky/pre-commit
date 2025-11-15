@@ -1,2 +1,37 @@
 echo "🔍 Running pre-commit checks..."
-# npx lint-staged
+
+# Run TypeScript type checking first (fastest check)
+echo "📝 Checking TypeScript types..."
+npm run type-check
+
+if [ $? -ne 0 ]; then
+    echo "❌ TypeScript type check failed! Please fix the type errors before committing."
+    exit 1
+fi
+
+echo "✅ TypeScript type check passed!"
+
+# Run lint-staged to apply formatting and linting fixes to staged files
+# This will automatically stage the reformatted code
+echo "🧹 Running lint-staged to apply formatting and fixes..."
+npx lint-staged
+
+if [ $? -ne 0 ]; then
+    echo "❌ Lint-staged failed! Please fix the linting issues before committing."
+    exit 1
+fi
+
+echo "✅ Lint-staged passed! All formatting and fixes applied to the same commit."
+
+# Run build check to ensure code builds successfully
+echo "🔨 Building project to verify it compiles..."
+npm run build
+
+if [ $? -ne 0 ]; then
+    echo "❌ Build failed! Please fix the build errors before committing."
+    exit 1
+fi
+
+echo "✅ Build check passed!"
+
+echo "🎉 All pre-commit checks passed! Proceeding with commit..."

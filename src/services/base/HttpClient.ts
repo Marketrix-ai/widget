@@ -63,13 +63,11 @@ export class HttpClient {
         // Add request ID for tracking
         config.headers[HEADERS.X_REQUEST_ID] = this.generateRequestId();
 
-        // Log request in development
-        if (import.meta.env.MODE === 'development') {
-          console.log(`[HTTP Request] ${config.method?.toUpperCase()} ${config.url}`, {
-            headers: config.headers,
-            data: config.data,
-          });
-        }
+        // Log request
+        console.log(`[HTTP Request] ${config.method?.toUpperCase()} ${config.url}`, {
+          headers: config.headers,
+          data: config.data,
+        });
 
         return config;
       },
@@ -82,13 +80,11 @@ export class HttpClient {
     // Response interceptor
     this.client.interceptors.response.use(
       (response: AxiosResponse<unknown>) => {
-        // Log response in development
-        if (import.meta.env.MODE === 'development') {
-          console.log(`[HTTP Response] ${response.status} ${response.config.url}`, {
-            data: response.data,
-            headers: response.headers,
-          });
-        }
+        // Log response
+        console.log(`[HTTP Response] ${response.status} ${response.config.url}`, {
+          data: response.data,
+          headers: response.headers,
+        });
 
         return response;
       },

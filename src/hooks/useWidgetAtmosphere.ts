@@ -85,12 +85,9 @@ export const useWidgetAtmosphere = (initialConfig?: MarketrixConfig) => {
   }, [atmosphereConfig, initialConfig]);
 
   // Widget control methods
-  const updateWidgetPosition = useCallback(
-    (position: 'bottom_right' | 'bottom_left') => {
-      configManager.updateWidgetPosition(position);
-    },
-    []
-  );
+  const updateWidgetPosition = useCallback((position: 'bottom_right' | 'bottom_left') => {
+    configManager.updateWidgetPosition(position);
+  }, []);
 
   const updateWidgetVisibility = useCallback((visible: boolean) => {
     configManager.updateWidgetVisibility(visible);
