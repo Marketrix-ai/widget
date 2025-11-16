@@ -9,7 +9,26 @@ import MarketrixIcon from '../assets/marketrix-icon.png';
 import { useWidget } from '../hooks/useWidget';
 import { sdk, type TourData, type TourStepData } from '../sdk';
 import type { ChatMessage, MarketrixConfig } from '../types';
+import {
+  addOpacity,
+  darkenColor,
+  extractColorFromGradient,
+  getContrastingColor,
+  lightenColor,
+} from '../utils/colorUtils';
 import { formatMessageTime } from '../utils/textFormatting';
+
+// Helper function to convert hex to RGB (duplicated here for use in dynamic HTML)
+function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result
+    ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16),
+      }
+    : null;
+}
 import {
   isHTMLButtonElement,
   isHTMLElement,
@@ -61,9 +80,8 @@ export const MessageList: React.FC<MessageListProps> = ({
   onScreenAccessAllow,
   onScreenAccessDeny,
 }) => {
-  // Get atmosphere configuration
-  const { getWidgetText, settings } = useWidget(config ? { config } : {});
-  const widgetText = getWidgetText();
+  // Get widget settings
+  const { settings } = useWidget(config ? { config } : {});
 
   // Use SDK types
   type TourStep = TourStepData;
@@ -257,19 +275,35 @@ export const MessageList: React.FC<MessageListProps> = ({
     // Create step description text with improved positioning
     const descriptionDiv = document.createElement('div');
     descriptionDiv.id = 'step-description';
+    const accentColor = extractColorFromGradient(settings.widget_accent_color);
+    const secondaryColor = extractColorFromGradient(settings.widget_secondary_color);
+    const accentRgb = hexToRgb(accentColor);
+    const secondaryRgb = hexToRgb(secondaryColor);
+    const accentRgba = accentRgb
+      ? `rgba(${accentRgb.r}, ${accentRgb.g}, ${accentRgb.b}, 0.95)`
+      : 'rgba(15, 23, 42, 0.95)';
+    const secondaryRgba = secondaryRgb
+      ? `rgba(${secondaryRgb.r}, ${secondaryRgb.g}, ${secondaryRgb.b}, 0.95)`
+      : 'rgba(30, 41, 59, 0.95)';
+    const borderRgba = accentRgb
+      ? `rgba(${accentRgb.r}, ${accentRgb.g}, ${accentRgb.b}, 0.4)`
+      : 'rgba(59, 130, 246, 0.4)';
+    const borderLightRgba = accentRgb
+      ? `rgba(${accentRgb.r}, ${accentRgb.g}, ${accentRgb.b}, 0.3)`
+      : 'rgba(59, 130, 246, 0.3)';
     descriptionDiv.style.cssText = `
       position: fixed;
       z-index: 10000;
-      background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.95));
-      color: white;
+      background: linear-gradient(135deg, ${accentRgba}, ${secondaryRgba});
+      color: ${getContrastingColor(accentColor)};
       padding: 16px;
       border-radius: 8px;
       max-width: 350px;
       min-width: 350px;
       font-size: 14px;
       line-height: 1.6;
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(59, 130, 246, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
-      border: 2px solid rgba(59, 130, 246, 0.4);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6), 0 0 0 1px ${borderLightRgba}, inset 0 1px 0 rgba(255, 255, 255, 0.1);
+      border: 2px solid ${borderRgba};
       backdrop-filter: blur(15px);
       display: block;
       visibility: visible;
@@ -288,7 +322,7 @@ export const MessageList: React.FC<MessageListProps> = ({
         <div style="display: flex; justify-content: center; align-items: center;">
           ${
             needsDoneButton
-              ? `<button id="done-step-btn" style="background: #10b981; border: none; color: white; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500;">
+              ? `<button id="done-step-btn" style="background: ${settings.widget_accent_color}; border: none; color: ${getContrastingColor(settings.widget_accent_color)}; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500;">
               ${stepIndex < totalSteps - 1 ? 'Done' : 'Finish'}
             </button>`
               : ''
@@ -729,9 +763,11 @@ export const MessageList: React.FC<MessageListProps> = ({
 
     // Create success message box
     const successBox = document.createElement('div');
+    const accentColor = extractColorFromGradient(settings.widget_accent_color);
+    const darkenAccent = darkenColor(accentColor, 0.1);
     successBox.style.cssText = `
-      background: linear-gradient(135deg, #10b981, #059669);
-      color: white;
+      background: linear-gradient(135deg, ${accentColor}, ${darkenAccent});
+      color: ${getContrastingColor(accentColor)};
       padding: 40px;
       border-radius: 16px;
       text-align: center;
@@ -763,7 +799,7 @@ export const MessageList: React.FC<MessageListProps> = ({
         <button id="close-success-btn" style="
           background: rgba(255, 255, 255, 0.9);
           border: none;
-          color: #059669;
+          color: ${darkenAccent};
           padding: 12px 24px;
           border-radius: 8px;
           cursor: pointer;
@@ -974,6 +1010,36 @@ export const MessageList: React.FC<MessageListProps> = ({
     if (!document.getElementById('step-guide-styles')) {
       const style = document.createElement('style');
       style.id = 'step-guide-styles';
+      const accentColor = extractColorFromGradient(settings.widget_accent_color);
+      const secondaryColor = extractColorFromGradient(settings.widget_secondary_color);
+      const accentRgb = hexToRgb(accentColor);
+      const secondaryRgb = hexToRgb(secondaryColor);
+      const accentRgba = accentRgb
+        ? `rgba(${accentRgb.r}, ${accentRgb.g}, ${accentRgb.b}, 0.6)`
+        : 'rgba(59, 130, 246, 0.6)';
+      const accentRgbaLight = accentRgb
+        ? `rgba(${accentRgb.r}, ${accentRgb.g}, ${accentRgb.b}, 0.3)`
+        : 'rgba(59, 130, 246, 0.3)';
+      const accentRgbaDark = accentRgb
+        ? `rgba(${accentRgb.r}, ${accentRgb.g}, ${accentRgb.b}, 0.9)`
+        : 'rgba(59, 130, 246, 0.9)';
+      const accentRgbaInset = accentRgb
+        ? `rgba(${accentRgb.r}, ${accentRgb.g}, ${accentRgb.b}, 0.1)`
+        : 'rgba(59, 130, 246, 0.1)';
+      const accentRgbaInsetDark = accentRgb
+        ? `rgba(${accentRgb.r}, ${accentRgb.g}, ${accentRgb.b}, 0.2)`
+        : 'rgba(59, 130, 246, 0.2)';
+      const secondaryRgba = secondaryRgb
+        ? `rgba(${secondaryRgb.r}, ${secondaryRgb.g}, ${secondaryRgb.b}, 0.5)`
+        : 'rgba(59, 130, 246, 0.5)';
+      const darkenAccent = darkenColor(accentColor, 0.1);
+      const darkenAccentRgb = hexToRgb(darkenAccent);
+      const darkenAccentRgba = darkenAccentRgb
+        ? `rgba(${darkenAccentRgb.r}, ${darkenAccentRgb.g}, ${darkenAccentRgb.b}, 0.3)`
+        : 'rgba(16, 185, 129, 0.3)';
+      const darkenAccentRgbaHover = darkenAccentRgb
+        ? `rgba(${darkenAccentRgb.r}, ${darkenAccentRgb.g}, ${darkenAccentRgb.b}, 0.4)`
+        : 'rgba(16, 185, 129, 0.4)';
       style.textContent = `
         @keyframes stepSpotlightFadeIn {
           from {
@@ -998,41 +1064,41 @@ export const MessageList: React.FC<MessageListProps> = ({
         .step-highlight {
           position: relative;
           z-index: 10001;
-          border: 3px solid #3b82f6 !important;
+          border: 3px solid ${accentColor} !important;
           border-radius: 8px;
           animation: stepHighlightPulse 2s infinite, stepHighlightGlow 3s infinite;
-          box-shadow: 0 0 25px rgba(59, 130, 246, 0.6), 0 0 50px rgba(59, 130, 246, 0.3), inset 0 0 20px rgba(59, 130, 246, 0.1);
+          box-shadow: 0 0 25px ${accentRgba}, 0 0 50px ${accentRgbaLight}, inset 0 0 20px ${accentRgbaInset};
           transform: scale(1.02);
           transition: all 0.3s ease;
         }
 
         @keyframes stepHighlightPulse {
           0% {
-            box-shadow: 0 0 25px rgba(59, 130, 246, 0.6), 0 0 50px rgba(59, 130, 246, 0.3), inset 0 0 20px rgba(59, 130, 246, 0.1);
+            box-shadow: 0 0 25px ${accentRgba}, 0 0 50px ${accentRgbaLight}, inset 0 0 20px ${accentRgbaInset};
             transform: scale(1.02);
           }
           50% {
-            box-shadow: 0 0 35px rgba(59, 130, 246, 0.9), 0 0 70px rgba(59, 130, 246, 0.5), inset 0 0 30px rgba(59, 130, 246, 0.2);
+            box-shadow: 0 0 35px ${accentRgbaDark}, 0 0 70px ${secondaryRgba}, inset 0 0 30px ${accentRgbaInsetDark};
             transform: scale(1.03);
           }
           100% {
-            box-shadow: 0 0 25px rgba(59, 130, 246, 0.6), 0 0 50px rgba(59, 130, 246, 0.3), inset 0 0 20px rgba(59, 130, 246, 0.1);
+            box-shadow: 0 0 25px ${accentRgba}, 0 0 50px ${accentRgbaLight}, inset 0 0 20px ${accentRgbaInset};
             transform: scale(1.02);
           }
         }
 
         @keyframes stepHighlightGlow {
           0%, 100% {
-            border-color: #3b82f6;
+            border-color: ${accentColor};
           }
           25% {
-            border-color: #8b5cf6;
+            border-color: ${secondaryColor};
           }
           50% {
-            border-color: #06b6d4;
+            border-color: ${lightenColor(accentColor, 0.2)};
           }
           75% {
-            border-color: #10b981;
+            border-color: ${darkenColor(accentColor, 0.1)};
           }
         }
 
@@ -1050,21 +1116,21 @@ export const MessageList: React.FC<MessageListProps> = ({
         }
 
         #done-step-btn {
-          background: linear-gradient(135deg, #10b981, #059669) !important;
+          background: linear-gradient(135deg, ${accentColor}, ${darkenColor(accentColor, 0.1)}) !important;
           border: none !important;
-          color: white !important;
+          color: ${getContrastingColor(accentColor)} !important;
           padding: 10px 20px !important;
           border-radius: 8px !important;
           cursor: pointer !important;
           font-size: 13px !important;
           font-weight: 600 !important;
           margin-top: 10px !important;
-          box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3) !important;
+          box-shadow: 0 4px 12px ${darkenAccentRgba} !important;
         }
 
         #done-step-btn:hover {
-          background: linear-gradient(135deg, #059669, #047857) !important;
-          box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4) !important;
+          background: linear-gradient(135deg, ${darkenColor(accentColor, 0.1)}, ${darkenColor(accentColor, 0.2)}) !important;
+          box-shadow: 0 6px 16px ${darkenAccentRgbaHover} !important;
         }
 
         #prev-step-btn:hover {
@@ -1072,12 +1138,7 @@ export const MessageList: React.FC<MessageListProps> = ({
         }
 
         #next-step-btn:hover {
-          background: #2563eb !important;
-        }
-
-        #done-step-btn:hover {
-          background: #059669 !important;
-          transform: translateY(-1px);
+          background: ${accentColor} !important;
         }
 
         #step-description-text {
@@ -1087,7 +1148,7 @@ export const MessageList: React.FC<MessageListProps> = ({
         #step-description-text::after {
           content: '|';
           animation: blink 1s infinite;
-          color: #3b82f6;
+          color: ${accentColor};
           font-weight: bold;
           margin-left: 2px;
         }
@@ -1452,21 +1513,58 @@ export const MessageList: React.FC<MessageListProps> = ({
       key='message-list-container'
       className={`
             h-full overflow-y-auto px-2 space-y-0.5
-            bg-transparent
             scrollbar-thin scrollbar-track-[#f6f6f6] scrollbar-thumb-[#b6b6b6]
           `}
       style={{
-        scrollbarColor: '#f6f6f6 transparent',
+        backgroundColor: '#ffffff',
+        backgroundImage: settings.widget_background_color.includes('gradient')
+          ? settings.widget_background_color
+          : `linear-gradient(135deg, ${settings.widget_background_color} 0%, ${settings.widget_background_color} 100%)`,
+        scrollbarColor: `${addOpacity(settings.widget_border_color, 0.3)} ${addOpacity(settings.widget_border_color, 0.1)}`,
         scrollbarWidth: 'thin',
       }}
     >
       {/* Welcome message - always show */}
       {!isLoading && (
         <div key='welcome-message' className='group flex flex-col justify-start mt-2'>
+          <style>{`
+            .agent-logo-img {
+              border: none !important;
+              outline: none !important;
+              box-shadow: ${settings.widget_shadow} !important;
+              background-color: transparent !important;
+              border-radius: ${settings.widget_border_radius} !important;
+            }
+            .agent-logo-img-container {
+              background-color: transparent !important;
+            }
+          `}</style>
           <div className='flex items-start gap-1 flex-row'>
             {/* Agent Logo */}
-            <div className='flex-shrink-0 w-8 h-8 self-start'>
-              <img src={MarketrixIcon} alt='Marketrix AI' className='w-8 h-8 object-cover' />
+            <div
+              className='flex-shrink-0 agent-logo-img-container'
+              style={{
+                backgroundColor: 'transparent',
+                width: '32px',
+                height: '32px',
+              }}
+            >
+              <img
+                src={MarketrixIcon}
+                alt='Marketrix AI'
+                className='agent-logo-img'
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  boxShadow: settings.widget_shadow,
+                  borderRadius: settings.widget_border_radius,
+                  border: 'none',
+                  outline: 'none',
+                  display: 'block',
+                  objectFit: 'cover',
+                  backgroundColor: 'transparent',
+                }}
+              />
             </div>
 
             {/* Message bubble */}
@@ -1474,12 +1572,17 @@ export const MessageList: React.FC<MessageListProps> = ({
               className={`
                 flex flex-col flex-1
                 px-2.5 py-2 rounded-r-lg rounded-tl-lg rounded-bl-lg shadow-sm border
-                bg-white text-black border-gray-200
               `}
+              style={{
+                backgroundColor: '#ffffff',
+                backgroundImage: 'none',
+                color: settings.widget_text_color,
+                borderColor: settings.widget_border_color,
+              }}
             >
               {/* Message content */}
               <div className='text-xs font-inter font-medium leading-tight whitespace-pre-wrap break-words'>
-                {widgetText.greeting || 'Hello! How can I assist you?'}
+                {settings.widget_greeting}
               </div>
 
               {/* Chips inside the greeting message bubble */}
@@ -1492,27 +1595,68 @@ export const MessageList: React.FC<MessageListProps> = ({
                       className={`
                       w-full flex items-center gap-1 font-inter font-normal text-xs px-2.5 py-2 rounded-lg cursor-pointer 
                       transition-all duration-200 text-left hover:shadow-md hover:scale-[1.01] active:scale-100
-                      bg-purple-100 border border-purple-200
-                      hover:border-purple-300 hover:bg-purple-200
-                      text-black group
+                      group
                       leading-tight
                     `}
+                      style={{
+                        backgroundColor: addOpacity(settings.widget_secondary_color, 0.2),
+                        borderColor: addOpacity(settings.widget_secondary_color, 0.3),
+                        color: settings.widget_text_color,
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = addOpacity(
+                          settings.widget_secondary_color,
+                          0.3
+                        );
+                        e.currentTarget.style.borderColor = addOpacity(
+                          settings.widget_secondary_color,
+                          0.4
+                        );
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = addOpacity(
+                          settings.widget_secondary_color,
+                          0.2
+                        );
+                        e.currentTarget.style.borderColor = addOpacity(
+                          settings.widget_secondary_color,
+                          0.3
+                        );
+                      }}
                     >
                       <span
-                        className='text-purple-600 flex-shrink-0 flex items-center justify-center group-hover:text-purple-700'
-                        style={{ width: '0.75rem', height: '0.75rem', lineHeight: '0.75rem' }}
+                        className='flex-shrink-0 flex items-center justify-center'
+                        style={{
+                          width: '0.75rem',
+                          height: '0.75rem',
+                          lineHeight: '0.75rem',
+                          color: settings.widget_secondary_color,
+                        }}
                       >
                         {action.icon}
                       </span>
-                      <span className='font-normal leading-none text-black group-hover:text-gray-900'>
+                      <span
+                        className='font-normal leading-none'
+                        style={{ color: settings.widget_text_color }}
+                      >
                         {action.type === 'show' ? (
                           <>
-                            <span className='font-semibold text-purple-600'>Show me </span>
+                            <span
+                              className='font-semibold'
+                              style={{ color: settings.widget_secondary_color }}
+                            >
+                              Show me{' '}
+                            </span>
                             {action.text.replace(/^Show me\s*/i, '')}
                           </>
                         ) : action.type === 'do' ? (
                           <>
-                            <span className='font-semibold text-purple-600'>Do </span>
+                            <span
+                              className='font-semibold'
+                              style={{ color: settings.widget_secondary_color }}
+                            >
+                              Do{' '}
+                            </span>
                             {action.text.replace(/^Do\s*/i, '')}
                           </>
                         ) : action.type === 'tell' ? (
@@ -1529,7 +1673,10 @@ export const MessageList: React.FC<MessageListProps> = ({
           </div>
           {/* Timestamp below card */}
           <div className='flex justify-end mt-0.5'>
-            <span className='text-[10px] text-gray-400 font-inter font-normal'>
+            <span
+              className='text-[10px] font-inter font-normal'
+              style={{ color: addOpacity(settings.widget_text_color, 0.6) }}
+            >
               {formatMessageTime(new Date())}
             </span>
           </div>
@@ -1551,7 +1698,10 @@ export const MessageList: React.FC<MessageListProps> = ({
               key={`message-${message.id}-${index}`}
               className='flex justify-center items-center py-0'
             >
-              <span className='text-[10px] text-gray-400 font-inter font-normal'>
+              <span
+                className='text-[10px] font-inter font-normal'
+                style={{ color: addOpacity(settings.widget_text_color, 0.6) }}
+              >
                 {message.content}
               </span>
             </div>
@@ -1569,12 +1719,40 @@ export const MessageList: React.FC<MessageListProps> = ({
               className={`flex items-start gap-1 ${message.sender === 'user' ? 'flex-row-reverse' : 'flex-row'}`}
             >
               {/* Logo */}
-              <div className='flex-shrink-0 w-8 h-8'>
+              <div
+                className='flex-shrink-0 agent-logo-img-container'
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  backgroundColor: 'transparent',
+                }}
+              >
                 {message.sender === 'agent' ? (
-                  <img src={MarketrixIcon} alt='Marketrix AI' className='w-8 h-8 object-cover' />
+                  <img
+                    src={MarketrixIcon}
+                    alt='Marketrix AI'
+                    className='agent-logo-img'
+                    style={{
+                      width: '32px',
+                      height: '32px',
+                      boxShadow: settings.widget_shadow,
+                      borderRadius: settings.widget_border_radius,
+                      border: 'none',
+                      outline: 'none',
+                      display: 'block',
+                      objectFit: 'cover',
+                      backgroundColor: 'transparent',
+                    }}
+                  />
                 ) : (
-                  <div className='w-8 h-8 bg-gray-400 flex items-center justify-center rounded-lg'>
-                    <HiUser className='w-5 h-5 text-white' />
+                  <div
+                    className='w-8 h-8 flex items-center justify-center rounded-lg'
+                    style={{ backgroundColor: settings.widget_accent_color }}
+                  >
+                    <HiUser
+                      className='w-5 h-5'
+                      style={{ color: getContrastingColor(settings.widget_accent_color) }}
+                    />
                   </div>
                 )}
               </div>
@@ -1585,10 +1763,15 @@ export const MessageList: React.FC<MessageListProps> = ({
                 ${message.videoStream ? 'p-0' : 'px-2.5 py-2'} shadow-sm border
                 ${
                   message.sender === 'user'
-                    ? 'bg-white text-black border-gray-200 rounded-l-lg rounded-tr-lg rounded-br-lg'
-                    : 'bg-white text-black border-gray-200 rounded-r-lg rounded-tl-lg rounded-bl-lg'
+                    ? 'rounded-l-lg rounded-tr-lg rounded-br-lg'
+                    : 'rounded-r-lg rounded-tl-lg rounded-bl-lg'
                 }
               `}
+                style={{
+                  backgroundColor: '#ffffff',
+                  color: settings.widget_text_color,
+                  borderColor: settings.widget_border_color,
+                }}
               >
                 {/* Video stream display - edge-to-edge */}
                 {message.videoStream && (
@@ -1773,16 +1956,44 @@ const VideoStreamDisplay: React.FC<VideoStreamDisplayProps> = ({
   isUserMessage = false,
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const playPromiseRef = useRef<Promise<void> | null>(null);
 
   useEffect(() => {
     if (videoRef.current && stream) {
-      videoRef.current.srcObject = stream;
-      videoRef.current.play().catch((error) => {
-        console.error('Error playing video stream:', error);
+      const video = videoRef.current;
+
+      // Cancel any pending play() request
+      if (playPromiseRef.current) {
+        playPromiseRef.current.catch(() => {
+          // Ignore errors from cancelled play requests
+        });
+        playPromiseRef.current = null;
+      }
+
+      // Set the stream source
+      video.srcObject = stream;
+
+      // Attempt to play, handling AbortError gracefully
+      const playPromise = video.play();
+      playPromiseRef.current = playPromise;
+
+      playPromise.catch((error) => {
+        // AbortError is expected when a new stream loads - don't log it as an error
+        if (error instanceof Error && error.name !== 'AbortError') {
+          console.error('Error playing video stream:', error);
+        }
+        playPromiseRef.current = null;
       });
     }
 
     return () => {
+      // Clean up: cancel any pending play() and clear srcObject
+      if (playPromiseRef.current) {
+        playPromiseRef.current.catch(() => {
+          // Ignore errors from cancelled play requests
+        });
+        playPromiseRef.current = null;
+      }
       if (videoRef.current) {
         videoRef.current.srcObject = null;
       }

@@ -4,7 +4,9 @@ import { LuMousePointerClick } from 'react-icons/lu';
 import { SiTicktick } from 'react-icons/si';
 
 import MarketrixLogo from '../assets/marktrix-footer.png';
-import type { ChatMode } from '../types';
+import { useWidget } from '../hooks/useWidget';
+import type { ChatMode, MarketrixConfig } from '../types';
+import { addOpacity, getContrastingColor } from '../utils/colorUtils';
 import { getModeDescription, getModeDisplayName } from '../utils/textFormatting';
 
 interface ModeSelectorProps {
@@ -12,6 +14,7 @@ interface ModeSelectorProps {
   enabledModes: ChatMode[];
   onModeChange: (mode: ChatMode) => void;
   isScreenSharing?: boolean;
+  config?: MarketrixConfig;
 }
 
 export const ModeSelector: React.FC<ModeSelectorProps> = ({
@@ -19,7 +22,9 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({
   enabledModes,
   onModeChange,
   isScreenSharing = false,
+  config,
 }) => {
+  const { settings } = useWidget(config ? { config } : {});
   const getModeIcon = (mode: ChatMode) => {
     switch (mode) {
       case 'show':
@@ -56,11 +61,7 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({
             }}
             className={`
                 flex items-center justify-center gap-1 text-sm font-medium transition-all duration-200 relative
-                ${
-                  currentMode === mode
-                    ? 'bg-purple-600 text-white shadow-lg'
-                    : 'bg-purple-100 text-black hover:bg-purple-200 border border-purple-200'
-                }
+                ${currentMode === mode ? 'shadow-lg' : ''}
                 ${
                   isScreenSharing && currentMode === mode
                     ? 'border-2'
@@ -74,12 +75,46 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({
               height: '26px',
               borderRadius: '22px',
               opacity: 1,
+              ...(currentMode === mode
+                ? {
+                    backgroundColor: settings.widget_accent_color,
+                    color: getContrastingColor(settings.widget_accent_color),
+                  }
+                : {
+                    backgroundColor: addOpacity(settings.widget_secondary_color, 0.2),
+                    color: settings.widget_text_color,
+                    borderColor: addOpacity(settings.widget_secondary_color, 0.3),
+                  }),
               ...(isScreenSharing && currentMode === mode
                 ? {
                     animation: 'glow-border-pulse 2s ease-in-out infinite',
                     borderColor: 'rgba(255, 255, 255, 0.6)',
                   }
                 : {}),
+            }}
+            onMouseEnter={(e) => {
+              if (currentMode !== mode) {
+                e.currentTarget.style.backgroundColor = addOpacity(
+                  settings.widget_secondary_color,
+                  0.3
+                );
+                e.currentTarget.style.borderColor = addOpacity(
+                  settings.widget_secondary_color,
+                  0.4
+                );
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (currentMode !== mode) {
+                e.currentTarget.style.backgroundColor = addOpacity(
+                  settings.widget_secondary_color,
+                  0.2
+                );
+                e.currentTarget.style.borderColor = addOpacity(
+                  settings.widget_secondary_color,
+                  0.3
+                );
+              }
             }}
             title={getModeDescription(mode)}
           >

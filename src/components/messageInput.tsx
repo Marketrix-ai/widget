@@ -3,6 +3,7 @@ import React from 'react';
 import SendIcon from '../assets/send.png';
 import { useWidget } from '../hooks/useWidget';
 import type { MarketrixConfig } from '../types';
+import { addOpacity, getContrastingColor } from '../utils/colorUtils';
 
 interface MessageInputProps {
   value: string;
@@ -22,7 +23,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   config,
 }) => {
   // Get atmosphere configuration
-  const { getWidgetText } = useWidget(config ? { config } : {});
+  const { getWidgetText, settings } = useWidget(config ? { config } : {});
   const widgetText = getWidgetText();
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -34,6 +35,8 @@ export const MessageInput: React.FC<MessageInputProps> = ({
     }
   };
 
+  const placeholderColor = addOpacity(settings.widget_text_color, 0.6);
+
   return (
     <div
       className={`
@@ -41,6 +44,11 @@ export const MessageInput: React.FC<MessageInputProps> = ({
       bg-transparent
       `}
     >
+      <style>{`
+        textarea::placeholder {
+          color: ${placeholderColor} !important;
+        }
+      `}</style>
       <div className='flex items-center space-x-2'>
         {/* Textarea */}
         <div className='flex-1 relative'>
@@ -48,19 +56,21 @@ export const MessageInput: React.FC<MessageInputProps> = ({
             value={value}
             onChange={(e) => onChange(e.target.value)}
             onKeyPress={handleKeyPress}
-            placeholder={widgetText.placeholder || 'Show me..'}
+            placeholder={widgetText.placeholder}
             disabled={isLoading}
             rows={1}
             className={`
               w-full px-3 py-2 text-sm resize-none
               focus:outline-none
               disabled:opacity-50 disabled:cursor-not-allowed
-              bg-white border-gray-200 text-gray-900 placeholder-gray-400
               shadow-sm
             `}
             style={{
               minHeight: '40px',
               maxHeight: '120px',
+              backgroundColor: settings.widget_background_color,
+              borderColor: settings.widget_border_color,
+              color: settings.widget_text_color,
             }}
           />
         </div>
@@ -75,13 +85,20 @@ export const MessageInput: React.FC<MessageInputProps> = ({
           disabled={!value.trim() || isLoading}
           className={`
             w-8 h-8 rounded-full transition-all duration-200 flex items-center justify-center
-            ${
-              value.trim() && !isLoading
-                ? 'bg-gradient-to-r from-[#B398F6] to-[#5CF2B5] text-white shadow-lg'
-                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-            }
-            focus:outline-none focus:ring-2 focus:ring-green-500/20
+            ${value.trim() && !isLoading ? 'shadow-lg' : 'cursor-not-allowed'}
+            focus:outline-none
           `}
+          style={
+            value.trim() && !isLoading
+              ? {
+                  background: `linear-gradient(to right, ${settings.widget_secondary_color}, ${settings.widget_accent_color})`,
+                  color: getContrastingColor(settings.widget_accent_color),
+                }
+              : {
+                  backgroundColor: addOpacity(settings.widget_border_color, 0.2),
+                  color: addOpacity(settings.widget_text_color, 0.4),
+                }
+          }
           aria-label='Send message'
         >
           <img src={SendIcon} alt='Send' className='w-4 h-4' />

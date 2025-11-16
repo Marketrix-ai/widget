@@ -63,8 +63,8 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
         onClose={actions.closeWidget}
         onSendMessage={actions.sendMessage}
         onSetMode={actions.setMode}
-        onAddMessage={actions.addMessage!}
-        onUpdateMessage={actions.updateMessage!}
+        onAddMessage={actions.addMessage}
+        onUpdateMessage={actions.updateMessage}
         onScreenSharingChange={setIsScreenSharing}
       />
 

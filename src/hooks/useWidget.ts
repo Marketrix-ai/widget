@@ -38,12 +38,10 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
       },
       marketrixConfig: null,
       settings: defaultSettings,
-      isLoading: false,
-      error: null,
       shouldShow: false,
       getWidgetText: () => ({
         greeting: defaultSettings.widget_greeting,
-        placeholder: 'Show me...',
+        placeholder: 'Ask anything',
         header_ai: defaultSettings.widget_header,
         header_live: 'Live Agent',
         body_ai: defaultSettings.widget_body,
@@ -267,13 +265,13 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
     const settings = extractWidgetSettingsFromConfig(marketrixConfig);
     return {
       greeting: settings.widget_greeting,
-      placeholder: 'Show me...',
+      placeholder: 'Ask anything', // Default placeholder (not in settings schema)
       header_ai: settings.widget_header,
-      header_live: 'Live Agent',
+      header_live: 'Live Agent', // Default live header (not in settings schema)
       body_ai: settings.widget_body,
-      body_live: 'A live agent will be with you shortly.',
-      chat_greeting: 'Welcome to our chat! How can I assist you?',
-      tour_greeting: 'Welcome! Let me show you around.',
+      body_live: 'A live agent will be with you shortly.', // Default live body (not in settings schema)
+      chat_greeting: settings.widget_body, // Use widget_body as chat greeting
+      tour_greeting: settings.widget_greeting, // Use widget_greeting as tour greeting
     };
   }, [marketrixConfig]);
 

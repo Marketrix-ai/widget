@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import MarketrixIcon from '../assets/marketrix-icon.png';
 import { useWidget } from '../hooks/useWidget';
 import type { MarketrixConfig } from '../types';
+import { addOpacity, darkenColor, getContrastingColor } from '../utils/colorUtils';
 import { getPositionClasses } from '../utils/widgetPositioning';
 
 interface WidgetButtonProps {
@@ -20,11 +21,8 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
   isScreenSharing = false,
 }) => {
   const [showWelcomeText, setShowWelcomeText] = useState(false);
-  const { getWidgetText, getWidgetPosition, settings } = useWidget({ config });
-  const widgetText = getWidgetText();
+  const { getWidgetPosition, settings } = useWidget({ config });
   const widgetPosition = getWidgetPosition();
-
-  const isDark = false;
 
   useEffect(() => {
     setShowWelcomeText(false);
@@ -58,16 +56,32 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
         onClick={onClick}
         className={`
           relative w-14 h-14 rounded-[27px] transition-all duration-300 ease-in-out
-          ${isDark ? 'bg-[#101828] text-white' : 'text-gray-800'}
           ${isOpen ? 'scale-0 opacity-0 pointer-events-none' : 'scale-100 opacity-100 hover:scale-110'}
-          border-2 ${isDark ? 'border-gray-600' : 'border-transparent'}
+          border-2 border-transparent
         `}
+        style={{
+          color: getContrastingColor(settings.widget_accent_color),
+        }}
         aria-label='Open Marketrix support chat'
       >
         {/* Logo/Icon */}
         <div className='w-full h-full flex items-center justify-center relative'>
-          <div className='w-full h-full bg-[#101828] rounded flex items-center justify-center'>
-            <img src={MarketrixIcon} alt='Marketrix Icon' className='w-fit h-12' />
+          <div
+            className='w-full h-full rounded flex items-center justify-center'
+            style={{ backgroundColor: 'transparent' }}
+          >
+            <img
+              src={MarketrixIcon}
+              alt='Marketrix Icon'
+              className='w-fit h-12'
+              style={{
+                boxShadow: settings.widget_shadow,
+                borderRadius: settings.widget_border_radius,
+                border: 'none',
+                outline: 'none',
+                backgroundColor: 'transparent',
+              }}
+            />
           </div>
           {/* Live indicator dot - show when screensharing and chat is closed */}
           {!isOpen && isScreenSharing && (
@@ -79,7 +93,15 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
       {/* Welcome Text - appears after 2 seconds (only for default appearance) */}
       {!isOpen && showWelcomeText && settings.widget_appearance === 'default' && (
         <div
-          className={`absolute ${effectivePosition.includes('left') ? 'right-16' : 'left-16'} bottom-0 px-4 py-3 bg-white text-gray-800 text-sm rounded-lg shadow-lg w-64 gradient-border ${effectivePosition.includes('left') ? 'animate-slide-in-right' : 'animate-slide-in-left'} cursor-pointer`}
+          className={`absolute ${effectivePosition.includes('left') ? 'right-16' : 'left-16'} bottom-0 px-4 py-3 text-sm rounded-lg shadow-lg w-64 ${effectivePosition.includes('left') ? 'animate-slide-in-right' : 'animate-slide-in-left'} cursor-pointer`}
+          style={{
+            backgroundColor: '#ffffff',
+            backgroundImage: 'none',
+            color: settings.widget_text_color,
+            borderColor: settings.widget_border_color,
+            borderWidth: '1px',
+            borderStyle: 'solid',
+          }}
           onClick={onClick}
         >
           <div className='flex gap-2'>
@@ -111,11 +133,9 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
 
             {/* greeting text */}
             <div className='flex-1'>
-              <div className='font-medium'>
-                {settings.widget_greeting || widgetText.greeting || "Hey! 👋 I'm Marketrix AI"}
-              </div>
-              <div className='text-gray-600'>
-                {settings.widget_body || widgetText.chat_greeting || 'How can I help you?'}
+              <div className='font-medium'>{settings.widget_greeting}</div>
+              <div style={{ color: addOpacity(settings.widget_text_color, 0.7) }}>
+                {settings.widget_body}
               </div>
             </div>
 
@@ -146,7 +166,15 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
             )}
           </div>
           <div
-            className={`absolute bottom-0 ${effectivePosition.includes('left') ? 'left-full' : 'right-full'} transform translate-y-1/2 w-0 h-0 border-t-4 border-b-4 ${effectivePosition.includes('left') ? 'border-l-4 border-transparent border-l-white' : 'border-r-4 border-transparent border-r-white'}`}
+            className={`absolute bottom-0 ${effectivePosition.includes('left') ? 'left-full' : 'right-full'} transform translate-y-1/2 w-0 h-0 border-t-4 border-b-4`}
+            style={{
+              [effectivePosition.includes('left') ? 'borderLeftColor' : 'borderRightColor']:
+                settings.widget_background_color,
+              [effectivePosition.includes('left') ? 'borderRightColor' : 'borderLeftColor']:
+                'transparent',
+              borderTopColor: 'transparent',
+              borderBottomColor: 'transparent',
+            }}
           />
         </div>
       )}
@@ -154,11 +182,18 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
       {/* Tooltip - show when welcome text is not displayed */}
       {!isOpen && (!showWelcomeText || settings.widget_appearance === 'compact') && (
         <div
-          className={`absolute bottom-16 ${effectivePosition.includes('left') ? 'left-0' : 'right-0'} mb-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg shadow-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200`}
+          className={`absolute bottom-16 ${effectivePosition.includes('left') ? 'left-0' : 'right-0'} mb-2 px-3 py-2 text-sm rounded-lg shadow-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200`}
+          style={{
+            backgroundColor: darkenColor(settings.widget_accent_color, 0.3),
+            color: getContrastingColor(darkenColor(settings.widget_accent_color, 0.3)),
+          }}
         >
           {'Support Agent'}
           <div
-            className={`absolute top-full ${effectivePosition.includes('left') ? 'left-4' : 'right-4'} w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900`}
+            className={`absolute top-full ${effectivePosition.includes('left') ? 'left-4' : 'right-4'} w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent`}
+            style={{
+              borderTopColor: darkenColor(settings.widget_accent_color, 0.3),
+            }}
           />
         </div>
       )}

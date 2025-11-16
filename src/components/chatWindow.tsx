@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 
 import { useWidget } from '../hooks/useWidget';
 import type { ChatMessage, ChatMode, MarketrixConfig } from '../types';
+import { addOpacity, getContrastingColor } from '../utils/colorUtils';
 import { getPositionClasses } from '../utils/widgetPositioning';
 import { MessageInput } from './messageInput';
 import { MessageList } from './messageList';
@@ -94,7 +95,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         requestScreenAccess(currentMode);
       } else {
         // Send message directly (message already added above, so skip adding it again)
-        // @ts-ignore - skipUserMessage parameter exists but not in type definition
         onSendMessage(messageContent, currentMode, undefined, undefined, true);
       }
     }
@@ -211,7 +211,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       if (pendingMessage) {
         const message = pendingMessage;
         setPendingMessage(null);
-        // @ts-ignore - skipUserMessage parameter exists but not in type definition
         onSendMessage(
           message.content,
           message.mode,
@@ -304,66 +303,113 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     height: isMinimized ? '48px' : settings.widget_height,
     borderRadius: settings.widget_border_radius,
     fontSize: settings.widget_font_size,
-    background: settings.widget_background_color,
+    backgroundColor: '#ffffff',
+    backgroundImage: settings.widget_background_color.includes('gradient')
+      ? settings.widget_background_color
+      : `linear-gradient(135deg, ${settings.widget_background_color} 0%, ${settings.widget_background_color} 100%)`,
     color: settings.widget_text_color,
     borderColor: settings.widget_border_color,
     boxShadow: settings.widget_shadow,
     zIndex: widgetPosition.z_index ?? 40,
   } satisfies React.CSSProperties;
 
+  // Derive scrollbar colors from border color
+  const scrollbarTrackColor = addOpacity(settings.widget_border_color, 0.1);
+  const scrollbarThumbColor = addOpacity(settings.widget_border_color, 0.3);
+
   return (
     <div
-      className={`fixed bg-white rounded-xl ${positionClasses}`}
-      style={{ zIndex: widgetPosition.z_index || 40 }}
+      className={`fixed rounded-xl ${positionClasses}`}
+      style={{
+        zIndex: widgetPosition.z_index || 40,
+        backgroundColor: '#ffffff',
+        backgroundImage: settings.widget_background_color.includes('gradient')
+          ? settings.widget_background_color
+          : `linear-gradient(135deg, ${settings.widget_background_color} 0%, ${settings.widget_background_color} 100%)`,
+      }}
     >
       <div
         className={`
-          bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700
+          rounded-lg shadow-xl border
           w-[360px] max-w-sm
           ${isMinimized ? 'h-12' : 'h-[35rem]'} 
           transition-all duration-300 ease-in-out flex flex-col relative overflow-hidden
           ${isOpen ? 'animate-slide-up' : 'animate-slide-down'}
           transform-gpu
           shadow-2xl
-          scrollbar-thin scrollbar-track-[#f6f6f6] scrollbar-thumb-[#b6b6b6]
         `}
         style={{
           ...customStyles,
-          scrollbarColor: '#f6f6f6 #b6b6b6',
+          scrollbarColor: `${scrollbarThumbColor} ${scrollbarTrackColor}`,
           scrollbarWidth: 'thin',
         }}
       >
         {/* Header with Marketrix branding */}
         <div
-          className={`
-              flex justify-between items-center px-3 py-2 relative border-b border-gray-800
-              bg-gray-800 rounded-t-lg
-                      `}
+          className='flex justify-between items-center px-3 py-2 relative border-b rounded-t-lg'
+          style={{
+            backgroundColor: settings.widget_accent_color,
+            borderColor: settings.widget_border_color,
+          }}
         >
           {/* Left side: Text and live button */}
           <div className='flex items-center gap-2'>
-            <span className='text-sm font-semibold text-white leading-none'>Marketrix AI</span>
+            <span
+              className='text-sm font-semibold leading-none'
+              style={{ color: getContrastingColor(settings.widget_accent_color) }}
+            >
+              {settings.widget_header}
+            </span>
             {isScreenSharing && (
               <button
                 onClick={stopScreenSharing}
-                className='flex items-center justify-center gap-1 px-2 py-0.5 rounded-full bg-purple-600 text-white text-xs font-medium transition-all shadow-sm hover:opacity-90'
+                className='flex items-center justify-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium transition-all shadow-sm hover:opacity-90'
+                style={{
+                  backgroundColor: settings.widget_secondary_color,
+                  color: getContrastingColor(settings.widget_secondary_color),
+                }}
                 aria-label='Stop screen sharing'
                 title='Stop screen sharing'
               >
-                <div className='w-2 h-2 rounded-full bg-white animate-pulse' />
+                <div
+                  className='w-2 h-2 rounded-full animate-pulse'
+                  style={{ backgroundColor: getContrastingColor(settings.widget_secondary_color) }}
+                />
                 <span>Live</span>
               </button>
             )}
           </div>
 
           {/* Right side: Close button */}
-          <div className='flex items-center space-x-1 bg-white/10 rounded-full p-0.5 shadow-sm'>
+          <div
+            className='flex items-center space-x-1 rounded-full p-0.5 shadow-sm'
+            style={{
+              backgroundColor: addOpacity(getContrastingColor(settings.widget_accent_color), 0.1),
+            }}
+          >
             <button
               onClick={onClose}
-              className='p-1 rounded-full hover:bg-white/20 transition-colors'
+              className='p-1 rounded-full transition-colors'
+              style={{
+                backgroundColor: 'transparent',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = addOpacity(
+                  getContrastingColor(settings.widget_accent_color),
+                  0.2
+                );
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+              }}
               aria-label='Close chat'
             >
-              <svg className='w-3 h-3 text-white' fill='currentColor' viewBox='0 0 20 20'>
+              <svg
+                className='w-3 h-3'
+                style={{ color: getContrastingColor(settings.widget_accent_color) }}
+                fill='currentColor'
+                viewBox='0 0 20 20'
+              >
                 <path
                   fillRule='evenodd'
                   d='M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z'
@@ -402,7 +448,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                     requestScreenAccess(mode || currentMode);
                   } else {
                     // Send message directly (chip message already added, so skip adding it again)
-                    // @ts-ignore - skipUserMessage parameter exists but not in type definition
                     onSendMessage(content, mode, connectionId, question, true);
                   }
                 }}
@@ -416,7 +461,15 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
             </div>
 
             {/* Controls Section */}
-            <div className='flex-shrink-0 rounded-lg bg-white m-2'>
+            <div
+              className='flex-shrink-0 rounded-lg m-2'
+              style={{
+                backgroundColor: '#ffffff',
+                backgroundImage: settings.widget_background_color.includes('gradient')
+                  ? settings.widget_background_color
+                  : `linear-gradient(135deg, ${settings.widget_background_color} 0%, ${settings.widget_background_color} 100%)`,
+              }}
+            >
               {/* Input */}
               <MessageInput
                 value={inputValue}
@@ -437,6 +490,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                 ]}
                 onModeChange={handleModeChange}
                 isScreenSharing={isScreenSharing}
+                config={config}
               />
             </div>
           </>
