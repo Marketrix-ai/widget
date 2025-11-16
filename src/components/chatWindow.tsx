@@ -59,10 +59,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     alreadyAdded?: boolean;
   } | null>(null);
 
-  // Get atmosphere configuration
-  const { getWidgetCustomize, getWidgetPosition, settings } = useWidget({ config });
-
-  const widgetCustomize = getWidgetCustomize();
+  const { getWidgetPosition, settings } = useWidget({ config });
   const widgetPosition = getWidgetPosition();
 
   // Auto-scroll to bottom when new messages arrive
@@ -302,20 +299,16 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
 
   if (!isOpen) return null;
 
-  // Apply custom styling from settings
   const customStyles = {
-    width: settings.widget_width || widgetCustomize.sizes?.width || '320px',
-    height: isMinimized
-      ? '48px'
-      : settings.widget_height || widgetCustomize.sizes?.height || '35rem',
-    borderRadius: settings.widget_border_radius || widgetCustomize.sizes?.border_radius || '12px',
-    fontSize: settings.widget_font_size || widgetCustomize.sizes?.font_size || '14px',
-    background: settings.widget_background_color || widgetCustomize.colors?.background || 'white',
-    color: settings.widget_text_color || widgetCustomize.colors?.text || '#333333',
-    borderColor:
-      settings.widget_border_color || widgetCustomize.colors?.border || 'rgba(255, 255, 255, 0.2)',
-    boxShadow: settings.widget_shadow || '0 10px 25px rgba(0, 0, 0, 0.1)',
-    zIndex: widgetPosition.z_index || 40,
+    width: settings.widget_width,
+    height: isMinimized ? '48px' : settings.widget_height,
+    borderRadius: settings.widget_border_radius,
+    fontSize: settings.widget_font_size,
+    background: settings.widget_background_color,
+    color: settings.widget_text_color,
+    borderColor: settings.widget_border_color,
+    boxShadow: settings.widget_shadow,
+    zIndex: widgetPosition.z_index ?? 40,
   } satisfies React.CSSProperties;
 
   return (
@@ -344,7 +337,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         <div
           className={`
               flex justify-between items-center px-3 py-2 relative border-b border-gray-800
-              bg-black rounded-t-lg
+              bg-gray-800 rounded-t-lg
                       `}
         >
           {/* Left side: Text and live button */}
@@ -437,7 +430,11 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
               {/* Mode Selector */}
               <ModeSelector
                 currentMode={currentMode}
-                enabledModes={config.enabledModes || ['tell', 'show', 'do']}
+                enabledModes={[
+                  ...(settings.widget_feature_show ? ['show' as const] : []),
+                  ...(settings.widget_feature_tell ? ['tell' as const] : []),
+                  ...(settings.widget_feature_do ? ['do' as const] : []),
+                ]}
                 onModeChange={handleModeChange}
                 isScreenSharing={isScreenSharing}
               />

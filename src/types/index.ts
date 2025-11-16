@@ -16,12 +16,15 @@ export type {
 export type ChatMode = InstructionType;
 
 /**
- * MarketrixConfig - Based on actual SDK types
+ * MarketrixConfig - Flat superset type extending WidgetSettingsData
  *
- * This interface represents the minimal configuration needed to initialize
- * the widget, using actual SDK entity types where possible.
+ * This type extends WidgetSettingsData (with all fields optional) with additional
+ * widget-specific fields, allowing API settings to be spread directly:
+ * { ...config, ...apiSettings }
+ *
+ * All fields are at the top level for easy merging and access.
  */
-export interface MarketrixConfig {
+export type MarketrixConfig = Partial<WidgetSettingsData> & {
   // Core SDK fields (from IntegrationEntitySchema)
   // Either marketrixId/marketrixKey OR agentId/connectionId must be provided
   marketrixId?: string; // maps to marketrix_id from SDK
@@ -34,14 +37,13 @@ export interface MarketrixConfig {
   // Optional API configuration
   apiBaseUrl?: string;
 
-  // Widget-specific configuration (not in SDK, but needed for widget functionality)
-  position?: WidgetPosition;
-  theme?: 'light' | 'dark';
-  enabledModes?: ChatMode[];
-
-  // Atmosphere configuration for widget-specific features not in SDK
-  atmosphere?: WidgetAtmosphereConfig;
-}
+  // Widget position config fields (offset/z_index) - local-only styling, not from API
+  widget_position_offset?: {
+    x?: number;
+    y?: number;
+  };
+  widget_position_z_index?: number;
+};
 
 export interface ChatMessage {
   id: string;
@@ -80,41 +82,7 @@ export interface SendMessageResponse {
   timestamp: Date;
 }
 
-// Widget position type (derived from SDK schema)
 export type WidgetPosition = WidgetSettingsData['widget_position'];
-
-export interface WidgetPositionConfig {
-  position?: WidgetPosition;
-  offset?: {
-    x?: number;
-    y?: number;
-  };
-  z_index?: number;
-}
-
-/**
- * WidgetAtmosphereConfig - Widget-specific configuration not in SDK
- *
- * This interface contains only API settings (widget_settings) and essential runtime state.
- * All styling comes from widget_settings (from API).
- */
-export interface WidgetAtmosphereConfig {
-  // Widget settings from API (or defaults for connectionId/agentId path)
-  widget_settings: WidgetSettingsData;
-
-  // Essential runtime state
-  session_time: number;
-  sessionActive: boolean;
-  recorded_time: number;
-  recordActive: boolean;
-  widget_visible: boolean;
-  widget_mode: 'ai' | 'live' | 'hybrid';
-  avatar_status: 'online' | 'offline' | 'busy' | 'away';
-  streaming_avatar_status: 'idle' | 'typing' | 'speaking' | 'listening';
-
-  // Local-only styling (offset/z_index only, position value comes from widget_settings.widget_position)
-  widget_position: WidgetPositionConfig;
-}
 
 // Re-export SDK types for convenience
 export type { TourData } from '../sdk';

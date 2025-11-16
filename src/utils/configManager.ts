@@ -1,14 +1,11 @@
-import {
-  DEFAULT_FALLBACK_WIDGET_SETTINGS,
-  DEFAULT_WIDGET_ATMOSPHERE,
-  getDefaultWidgetConfig,
-} from '../constants/config';
-import type { MarketrixConfig, WidgetAtmosphereConfig } from '../types';
+import { DEFAULT_MARKETRIX_CONFIG } from '../constants/config';
+import type { WidgetSettingsData } from '../sdk';
+import type { MarketrixConfig } from '../types';
 import { hasProperty } from './typeGuards';
 
 export class ConfigManager {
   private static instance: ConfigManager;
-  private config: WidgetAtmosphereConfig | null = null;
+  private config: MarketrixConfig | null = null;
 
   private constructor() {}
 
@@ -19,7 +16,7 @@ export class ConfigManager {
     return ConfigManager.instance;
   }
 
-  loadConfig(): WidgetAtmosphereConfig {
+  loadConfig(): MarketrixConfig {
     try {
       const stored = localStorage.getItem('marketrix_widget_config');
       if (stored) {
@@ -37,7 +34,7 @@ export class ConfigManager {
     return this.config;
   }
 
-  saveConfig(config: WidgetAtmosphereConfig): void {
+  saveConfig(config: MarketrixConfig): void {
     try {
       localStorage.setItem('marketrix_widget_config', JSON.stringify(config));
       this.config = config;
@@ -46,7 +43,7 @@ export class ConfigManager {
     }
   }
 
-  updateConfig(updates: Partial<WidgetAtmosphereConfig>): void {
+  updateConfig(updates: Partial<MarketrixConfig>): void {
     if (!this.config) {
       this.config = this.getDefaultConfig();
     }
@@ -55,54 +52,45 @@ export class ConfigManager {
     this.saveConfig(this.config);
   }
 
-  getConfig(): WidgetAtmosphereConfig | null {
+  getConfig(): MarketrixConfig | null {
     return this.config;
   }
 
-  private validateConfig(config: unknown): config is WidgetAtmosphereConfig {
+  private validateConfig(config: unknown): config is MarketrixConfig {
     if (!config || typeof config !== 'object') {
       return false;
     }
-
-    const requiredFields = ['widget_settings', 'widget_visible', 'widget_mode'] as const;
-    for (const field of requiredFields) {
-      if (!hasProperty(config, field)) {
-        return false;
-      }
-    }
-
-    return true;
+    return hasProperty(config, 'widget_enabled');
   }
 
   shouldShowWidget(): boolean {
     if (!this.config) {
       return false;
     }
-
-    return this.config.widget_visible && this.config.widget_settings.widget_enabled;
+    return this.config.widget_enabled ?? false;
   }
 
-  private getDefaultConfig(): WidgetAtmosphereConfig {
-    return getDefaultWidgetConfig();
+  private getDefaultConfig(): MarketrixConfig {
+    return { ...DEFAULT_MARKETRIX_CONFIG };
   }
 }
 
 export const configManager = ConfigManager.getInstance();
 
-export function mergeConfigWithDefaultAtmosphere(
-  config: MarketrixConfig,
-  useFallbackSettings = false
+export function createConfigFromSettings(
+  widgetSettings: WidgetSettingsData,
+  baseConfig: Partial<MarketrixConfig> = {}
 ): MarketrixConfig {
   return {
+    ...DEFAULT_MARKETRIX_CONFIG,
+    ...baseConfig,
+    ...widgetSettings, // API settings override defaults and base config
+  };
+}
+
+export function mergeConfigWithDefaultAtmosphere(config: MarketrixConfig): MarketrixConfig {
+  return {
+    ...DEFAULT_MARKETRIX_CONFIG,
     ...config,
-    atmosphere: {
-      ...DEFAULT_WIDGET_ATMOSPHERE,
-      ...config.atmosphere,
-      widget_settings: useFallbackSettings
-        ? DEFAULT_FALLBACK_WIDGET_SETTINGS
-        : (config.atmosphere?.widget_settings ?? DEFAULT_FALLBACK_WIDGET_SETTINGS),
-      session_time: config.atmosphere?.session_time ?? 0,
-      recorded_time: config.atmosphere?.recorded_time ?? 0,
-    },
   };
 }

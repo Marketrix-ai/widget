@@ -1,16 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { DEFAULT_WIDGET_POSITION, DEFAULT_WIDGET_SETTINGS } from '../constants/config';
+import {
+  DEFAULT_MARKETRIX_CONFIG,
+  DEFAULT_WIDGET_SETTINGS,
+  extractWidgetSettingsFromConfig,
+} from '../constants/config';
 import type { WidgetSettingsData } from '../sdk';
 import { IntegrationService } from '../services/integrationService';
 import MarketrixApiService from '../services/marketrixApiService';
-import type {
-  ChatMessage,
-  ChatMode,
-  MarketrixConfig,
-  WidgetAtmosphereConfig,
-  WidgetState,
-} from '../types';
+import type { ChatMessage, ChatMode, MarketrixConfig, WidgetState } from '../types';
 import { configManager } from '../utils/configManager';
 
 interface UseWidgetProps {
@@ -19,7 +17,6 @@ interface UseWidgetProps {
 
 export const useWidget = ({ config }: UseWidgetProps = {}) => {
   if (!config) {
-    // Return minimal defaults if no config provided
     const defaultSettings = DEFAULT_WIDGET_SETTINGS;
     return {
       state: {
@@ -40,11 +37,10 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
         addMessage: () => {},
         updateMessage: () => {},
       },
-      atmosphereConfig: null,
+      marketrixConfig: null,
       settings: defaultSettings,
       isLoading: false,
       error: null,
-      marketrixConfig: null,
       shouldShow: false,
       getWidgetText: () => ({
         greeting: defaultSettings.widget_greeting,
@@ -78,7 +74,8 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
       }),
       getWidgetPosition: () => ({
         position: defaultSettings.widget_position,
-        ...DEFAULT_WIDGET_POSITION,
+        offset: DEFAULT_MARKETRIX_CONFIG.widget_position_offset,
+        z_index: DEFAULT_MARKETRIX_CONFIG.widget_position_z_index,
       }),
     };
   }
@@ -100,8 +97,16 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
   const apiServiceRef = useRef<MarketrixApiService | null>(null);
 
   // Fetch integration settings from API if marketrixId/marketrixKey provided
+  // Skip if settings are already loaded in config (check for widget_enabled as indicator)
   useEffect(() => {
     const fetchSettings = async () => {
+      // If widget settings are already in config (flat structure), skip fetching
+      if (config.widget_enabled !== undefined) {
+        console.log('Integration settings already loaded in config, skipping fetch');
+        setSettingsLoaded(true);
+        return;
+      }
+
       if (config.marketrixId && config.marketrixKey) {
         try {
           setSettingsLoading(true);
@@ -118,9 +123,9 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
             : null;
 
           if (integrationSettings) {
-            // Update atmosphere config with fetched settings
+            // Update config with fetched settings (spread flat structure)
             configManager.updateConfig({
-              widget_settings: integrationSettings,
+              ...integrationSettings,
             });
             console.log('Integration settings loaded from API:', integrationSettings);
             setSettingsLoaded(true);
@@ -144,31 +149,39 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
     };
 
     fetchSettings();
-  }, [config.marketrixId, config.marketrixKey]);
+  }, [config.marketrixId, config.marketrixKey, config.widget_enabled]);
 
-  // Use atmosphere from config or load from configManager
-  // Re-compute when settings are loaded to pick up API settings
-  // Priority: configManager (may have API settings) > config.atmosphere > defaults
-  const atmosphereConfig = useMemo<WidgetAtmosphereConfig | null>(() => {
-    // First check configManager (may have been updated with API settings)
+  // Merge config with ConfigManager settings (API settings may have been loaded)
+  // Priority: config (with API settings) > configManager (localStorage) > defaults
+  const marketrixConfig = useMemo<MarketrixConfig>(() => {
+    // Start with defaults
+    let mergedConfig = { ...DEFAULT_MARKETRIX_CONFIG };
+
+    // Merge with ConfigManager (may have old settings from localStorage)
     const managerConfig = configManager.getConfig();
     if (managerConfig) {
-      return managerConfig;
+      mergedConfig = { ...mergedConfig, ...managerConfig };
     }
 
-    // If config.atmosphere is provided, save it to ConfigManager and use it
-    if (config.atmosphere) {
-      configManager.saveConfig(config.atmosphere);
-      return config.atmosphere;
+    // Config (with API settings from index.tsx) overrides everything
+    mergedConfig = { ...mergedConfig, ...config };
+
+    // If config has widget settings from API, save to ConfigManager for persistence
+    if (config.widget_enabled !== undefined) {
+      configManager.saveConfig(mergedConfig);
     }
 
-    // If no config exists, load default from ConfigManager
-    return configManager.loadConfig();
+    return mergedConfig;
   }, [config, settingsLoaded]);
 
   // Initialize API service
   useEffect(() => {
-    apiServiceRef.current = new MarketrixApiService(config);
+    if (!apiServiceRef.current) {
+      apiServiceRef.current = new MarketrixApiService(config);
+    } else {
+      // Update config if service already exists (merge with existing config)
+      apiServiceRef.current.updateConfig(config);
+    }
 
     // Initialize chat_id
     const initializeChat = async () => {
@@ -198,7 +211,7 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
     };
 
     checkAgentAvailability();
-  }, [config.marketrixId, config.marketrixKey, config.apiBaseUrl]);
+  }, [config]);
 
   // Widget UI actions
   const toggleWidget = useCallback(() => {
@@ -319,24 +332,14 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
     }));
   }, []);
 
-  // Convert atmosphere config to MarketrixConfig
-  const getMarketrixConfig = useCallback((): MarketrixConfig | null => {
-    if (!atmosphereConfig) return null;
-
-    return {
-      ...config,
-      atmosphere: atmosphereConfig,
-    };
-  }, [atmosphereConfig, config]);
-
   const shouldShowWidget = useCallback(() => {
     return configManager.shouldShowWidget();
   }, []);
 
   // Get specific configuration values
   const getWidgetText = useCallback(() => {
-    // Text content comes from widget_settings (from API)
-    const settings = atmosphereConfig?.widget_settings || DEFAULT_WIDGET_SETTINGS;
+    // Text content comes from flat config (from API)
+    const settings = extractWidgetSettingsFromConfig(marketrixConfig);
     return {
       greeting: settings.widget_greeting,
       placeholder: 'Show me...',
@@ -347,11 +350,11 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
       chat_greeting: 'Welcome to our chat! How can I assist you?',
       tour_greeting: 'Welcome! Let me show you around.',
     };
-  }, [atmosphereConfig]);
+  }, [marketrixConfig]);
 
-  // Derive customize from widget_settings (all styling comes from API)
+  // Derive customize from flat config (all styling comes from API)
   const getWidgetCustomize = useCallback(() => {
-    const settings = atmosphereConfig?.widget_settings || DEFAULT_WIDGET_SETTINGS;
+    const settings = extractWidgetSettingsFromConfig(marketrixConfig);
     return {
       colors: {
         primary: settings.widget_accent_color,
@@ -372,22 +375,23 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
         bounce_effect: settings.widget_bounce_effect,
       },
     };
-  }, [atmosphereConfig]);
+  }, [marketrixConfig]);
 
   const getWidgetPosition = useCallback(() => {
-    const settings = atmosphereConfig?.widget_settings || DEFAULT_WIDGET_SETTINGS;
-    return (
-      atmosphereConfig?.widget_position || {
-        position: settings.widget_position,
-        ...DEFAULT_WIDGET_POSITION,
-      }
-    );
-  }, [atmosphereConfig]);
+    const settings = extractWidgetSettingsFromConfig(marketrixConfig);
+    return {
+      position: settings.widget_position,
+      offset:
+        marketrixConfig.widget_position_offset ?? DEFAULT_MARKETRIX_CONFIG.widget_position_offset,
+      z_index:
+        marketrixConfig.widget_position_z_index ?? DEFAULT_MARKETRIX_CONFIG.widget_position_z_index,
+    };
+  }, [marketrixConfig]);
 
-  // Get effective settings (from API or atmosphere config)
+  // Get effective settings (from flat config)
   const effectiveSettings = useMemo<WidgetSettingsData>(() => {
-    return atmosphereConfig?.widget_settings || DEFAULT_WIDGET_SETTINGS;
-  }, [atmosphereConfig]);
+    return extractWidgetSettingsFromConfig(marketrixConfig);
+  }, [marketrixConfig]);
 
   return {
     // Widget UI state
@@ -402,14 +406,13 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
       updateMessage,
     },
 
-    // Atmosphere/config state
-    atmosphereConfig,
+    // Config state
+    marketrixConfig,
     settings: effectiveSettings,
     isLoading: settingsLoading,
     error: settingsError,
 
     // Computed values
-    marketrixConfig: getMarketrixConfig(),
     shouldShow: shouldShowWidget(),
 
     // Getter methods (styling-related)

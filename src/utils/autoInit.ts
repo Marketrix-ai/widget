@@ -11,11 +11,7 @@
  */
 
 import type { MarketrixConfig } from '../types';
-import {
-  parseEnabledModesAttribute,
-  parsePositionAttribute,
-  parseThemeAttribute,
-} from './attributeParsers';
+import { parsePositionAttribute } from './attributeParsers';
 import { isHTMLScriptElement } from './typeGuards';
 import { showWidgetSettingsLoader } from './widgetInitializer';
 
@@ -61,9 +57,7 @@ const autoInitializeWidget = (): void => {
       const config: MarketrixConfig = {
         marketrixId,
         marketrixKey,
-        position: parsePositionAttribute(script.getAttribute('data-position')),
-        theme: parseThemeAttribute(script.getAttribute('data-theme')),
-        enabledModes: parseEnabledModesAttribute(script.getAttribute('data-enabled-modes')),
+        widget_position: parsePositionAttribute(script.getAttribute('data-position')),
       };
 
       console.log('Auto-initializing widget with marketrix credentials:', config);
@@ -75,9 +69,7 @@ const autoInitializeWidget = (): void => {
       const config: MarketrixConfig = {
         agentId: Number.parseInt(agentId, 10),
         connectionId: Number.parseInt(connectionId, 10),
-        position: parsePositionAttribute(script.getAttribute('data-position')),
-        theme: parseThemeAttribute(script.getAttribute('data-theme')),
-        enabledModes: parseEnabledModesAttribute(script.getAttribute('data-enabled-modes')),
+        widget_position: parsePositionAttribute(script.getAttribute('data-position')),
       };
 
       console.log(

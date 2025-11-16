@@ -505,8 +505,6 @@ export const MessageList: React.FC<MessageListProps> = ({
     }
   };
 
-  // Note: Sample text and type animation functions removed - users now fill fields manually
-
   // Function to add smooth typewriter animation to description
   const addTypewriterAnimation = (
     descriptionDiv: HTMLElement,
@@ -928,8 +926,6 @@ export const MessageList: React.FC<MessageListProps> = ({
 
     // Clear element cache
     elementCache.clear();
-
-    // Note: We don't clear parsedSteps and tourData here so they can be reused for restart
   };
 
   // Function to find element by selector
@@ -1321,11 +1317,6 @@ export const MessageList: React.FC<MessageListProps> = ({
       });
     }
 
-    // Check if there are any chips in a different location or format
-    console.log('No widget_chips found, checking for alternative chip formats...');
-    console.log('Full settings structure:', JSON.stringify(settings, null, 2));
-
-    // Fallback to default suggested actions if no integration settings
     return [
       {
         id: 'show-add-product',
@@ -1366,14 +1357,6 @@ export const MessageList: React.FC<MessageListProps> = ({
   };
 
   const suggestedActions = getSuggestedActions();
-
-  // Debug: Log suggested actions to check for duplicate keys
-  console.log(
-    'Suggested actions:',
-    suggestedActions.map((action) => ({ id: action.id, text: action.text }))
-  );
-
-  // Check for duplicate IDs and fix them
   const seenIds = new Set();
   interface SuggestedActionItem {
     id: string;
@@ -1427,7 +1410,6 @@ export const MessageList: React.FC<MessageListProps> = ({
     }
 
     // THEN: Add the chip message as a user message in the chat (like user typed it)
-    // NOTE: This only ADDS a new message - it does NOT modify any existing messages
     // The greeting message and all existing messages remain unchanged
     if (onAddMessage) {
       const userMessage: ChatMessage = {

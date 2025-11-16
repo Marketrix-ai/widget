@@ -71,27 +71,47 @@ export class MarketrixApiService {
       const mode = request.mode || 'tell';
       let response;
 
-      if (!this.config.marketrixId) {
-        throw new Error('marketrixId is required');
-      }
       if (!this.chatId) {
         throw new Error('chatId is required');
       }
 
-      const integrationId = this.config.marketrixId;
+      // Support both marketrixId/marketrixKey and agentId/connectionId paths
+      if (
+        !(this.config.marketrixId && this.config.marketrixKey) &&
+        (!this.config.agentId || !this.config.connectionId)
+      ) {
+        throw new Error(
+          'Either marketrixId + marketrixKey or both agentId + connectionId are required'
+        );
+      }
+
       const chatId = this.chatId;
+
+      // Build request body with available identifiers
+      const body: {
+        marketrix_id?: string;
+        marketrix_key?: string;
+        agent_id?: number;
+        connection_id?: number;
+        chat_id: string;
+        content: string;
+      } = {
+        chat_id: chatId,
+        content: request.message || '',
+      };
+
+      if (this.config.marketrixId && this.config.marketrixKey) {
+        // Use marketrixId + marketrixKey - API will validate credentials
+        body.marketrix_id = this.config.marketrixId;
+        body.marketrix_key = this.config.marketrixKey;
+      } else if (this.config.agentId && this.config.connectionId) {
+        // Use agentId and connectionId
+        body.agent_id = this.config.agentId;
+        body.connection_id = this.config.connectionId;
+      }
 
       switch (mode) {
         case 'tell': {
-          const body: {
-            integration_id: string;
-            chat_id: string;
-            content: string;
-          } = {
-            integration_id: integrationId,
-            chat_id: chatId,
-            content: request.message || '',
-          };
           response = await sdk.chatTell({
             params: { chat_id: Number(chatId) },
             body,
@@ -99,15 +119,6 @@ export class MarketrixApiService {
           break;
         }
         case 'show': {
-          const body: {
-            integration_id: string;
-            chat_id: string;
-            content: string;
-          } = {
-            integration_id: integrationId,
-            chat_id: chatId,
-            content: request.message || '',
-          };
           response = await sdk.chatShow({
             params: { chat_id: Number(chatId) },
             body,
@@ -115,15 +126,6 @@ export class MarketrixApiService {
           break;
         }
         case 'do': {
-          const body: {
-            integration_id: string;
-            chat_id: string;
-            content: string;
-          } = {
-            integration_id: integrationId,
-            chat_id: chatId,
-            content: request.message || '',
-          };
           response = await sdk.chatDo({
             params: { chat_id: Number(chatId) },
             body,

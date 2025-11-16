@@ -2,7 +2,6 @@ import React from 'react';
 
 import { useWidget } from '../hooks/useWidget';
 import type { MarketrixConfig } from '../types';
-import { isWidgetPosition } from '../utils/typeGuards';
 import { ChatWindow } from './chatWindow';
 import { WidgetButton } from './widgetButton';
 
@@ -16,98 +15,52 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
   const {
     state,
     actions,
-    atmosphereConfig,
     marketrixConfig,
     shouldShow,
-    getWidgetCustomize,
     getWidgetPosition,
     settings,
     isLoading: settingsLoading,
     error: settingsError,
   } = useWidget({ config });
 
-  // Don't return null while settings are loading - show widget during loading
-  // Only check visibility and enabled state after settings are loaded
-  if (!settingsLoading) {
-    // After settings are loaded, check if widget should be visible
-    if (!shouldShow || !settings.widget_enabled) {
-      return null;
-    }
+  if (!settingsLoading && (!shouldShow || !settings.widget_enabled)) {
+    return null;
   }
 
-  // Use atmosphere config if available, otherwise fall back to original config
   const effectiveConfig = marketrixConfig || config;
-  const widgetCustomize = getWidgetCustomize();
   const widgetPosition = getWidgetPosition();
-
-  // Apply settings to the effective config
-  const finalConfig = {
-    ...effectiveConfig,
-    // Override with settings - convert underscore to hyphen for position
-    position: (() => {
-      const pos = settings.widget_position?.replace('_', '-');
-      if (pos && isWidgetPosition(pos)) {
-        return pos;
-      }
-      return effectiveConfig.position;
-    })(),
-    enabledModes: [
-      ...(settings.widget_feature_show ? ['show' as const] : []),
-      ...(settings.widget_feature_tell ? ['tell' as const] : []),
-      ...(settings.widget_feature_do ? ['do' as const] : []),
-    ],
-  };
-
-  // Apply custom styling from settings (settings already come from API or atmosphere)
   const customStyles = {
-    '--widget-width': settings.widget_width || widgetCustomize.sizes?.width || '320px',
-    '--widget-height': settings.widget_height || widgetCustomize.sizes?.height || '35rem',
-    '--widget-border-radius':
-      settings.widget_border_radius || widgetCustomize.sizes?.border_radius || '12px',
-    '--widget-font-size': settings.widget_font_size || widgetCustomize.sizes?.font_size || '14px',
-    '--widget-primary-color':
-      settings.widget_accent_color || widgetCustomize.colors?.primary || '#1BB55B',
-    '--widget-secondary-color':
-      settings.widget_secondary_color || widgetCustomize.colors?.secondary || '#987ADD',
-    '--widget-background':
-      settings.widget_background_color ||
-      widgetCustomize.colors?.background ||
-      'linear-gradient(135deg, #1BB55B26 0%, #987ADD30 100%)',
-    '--widget-text-color': settings.widget_text_color || widgetCustomize.colors?.text || '#333333',
-    '--widget-border-color':
-      settings.widget_border_color || widgetCustomize.colors?.border || 'rgba(255, 255, 255, 0.2)',
-    '--widget-z-index': widgetPosition.z_index || 40,
-    '--widget-shadow': settings.widget_shadow || '0 4px 20px rgba(0, 0, 0, 0.15)',
-    '--widget-animation-duration': settings.widget_animation_duration || '0.3s',
-    '--widget-fade-duration': settings.widget_fade_duration || '0.2s',
+    '--widget-width': settings.widget_width,
+    '--widget-height': settings.widget_height,
+    '--widget-border-radius': settings.widget_border_radius,
+    '--widget-font-size': settings.widget_font_size,
+    '--widget-primary-color': settings.widget_accent_color,
+    '--widget-secondary-color': settings.widget_secondary_color,
+    '--widget-background': settings.widget_background_color,
+    '--widget-text-color': settings.widget_text_color,
+    '--widget-border-color': settings.widget_border_color,
+    '--widget-z-index': widgetPosition.z_index ?? 40,
+    '--widget-shadow': settings.widget_shadow,
+    '--widget-animation-duration': settings.widget_animation_duration,
+    '--widget-fade-duration': settings.widget_fade_duration,
   } as React.CSSProperties;
 
   return (
     <div
       className='marketrix-widget'
       style={customStyles}
-      data-widget-mode={atmosphereConfig?.widget_mode || 'ai'}
-      data-avatar-status={atmosphereConfig?.avatar_status || 'online'}
-      data-streaming-status={atmosphereConfig?.streaming_avatar_status || 'idle'}
+      data-widget-mode={settings?.widget_feature_human ? 'hybrid' : 'ai'}
     >
-      {/* Widget Button */}
       <WidgetButton
-        config={{
-          ...finalConfig,
-          position: finalConfig.position,
-        }}
+        config={effectiveConfig}
         onClick={actions.toggleWidget}
         isOpen={state.isOpen}
         _agentAvailable={state.agentAvailable}
         isScreenSharing={isScreenSharing}
       />
 
-      {/* Chat Window */}
       <ChatWindow
-        config={{
-          ...finalConfig,
-          position: finalConfig.position,
-        }}
+        config={effectiveConfig}
         isOpen={state.isOpen}
         isMinimized={state.isMinimized}
         isLoading={state.isLoading || settingsLoading}
@@ -122,7 +75,6 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
         onScreenSharingChange={setIsScreenSharing}
       />
 
-      {/* Error Display */}
       {('error' in state ? state.error : undefined) || settingsError ? (
         <div className='fixed top-4 right-4 z-50 max-w-sm'>
           <div className='bg-red-500 text-white px-4 py-3 rounded-lg shadow-lg'>
@@ -131,10 +83,7 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
                 {('error' in state ? state.error : undefined) || settingsError}
               </span>
               <button
-                onClick={() => {
-                  actions.clearError();
-                  // Note: settingsError doesn't have a clear function, but we can ignore it
-                }}
+                onClick={() => actions.clearError()}
                 className='ml-4 text-white hover:text-red-100'
               >
                 <svg className='w-4 h-4' fill='currentColor' viewBox='0 0 20 20'>

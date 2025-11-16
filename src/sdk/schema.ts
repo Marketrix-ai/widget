@@ -938,12 +938,24 @@ export const TourEntitySchema = BaseEntitySchema.extend({
 
 /**
  * Chat request schema
+ * Requires either: marketrix_id + marketrix_key OR agent_id + connection_id
  */
-export const ChatRequestSchema = z.object({
-  integration_id: z.string(),
-  chat_id: z.string(),
-  content: z.string(),
-});
+export const ChatRequestSchema = z
+  .object({
+    marketrix_id: z.string().optional(),
+    marketrix_key: z.string().optional(),
+    agent_id: z.number().positive().optional(),
+    connection_id: z.number().positive().optional(),
+    chat_id: z.string(),
+    content: z.string(),
+  })
+  .refine(
+    (data) => (data.marketrix_id && data.marketrix_key) ?? (data.agent_id && data.connection_id),
+    {
+      message:
+        'Either marketrix_id + marketrix_key or both agent_id + connection_id must be provided',
+    }
+  );
 
 /**
  * Chat response entity schema
