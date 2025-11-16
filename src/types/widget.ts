@@ -17,7 +17,7 @@ export type {
 } from '../sdk';
 
 // Import types from index for local use
-import type { ChatMessage, ChatMode, MarketrixConfig, WidgetSettingsData } from './index';
+import type { ChatMode, MarketrixConfig, WidgetSettingsData } from './index';
 
 // Widget-specific type extensions
 export interface WidgetChipConfig {
@@ -41,15 +41,8 @@ export interface WidgetHookReturn<T = unknown> {
 }
 
 // Widget state management types
-export interface WidgetState {
-  isOpen: boolean;
-  isMinimized: boolean;
-  isLoading: boolean;
-  messages: ChatMessage[];
-  currentMode: ChatMode;
-  agentAvailable: boolean;
-  error?: string;
-}
+// WidgetState is defined in types/index.ts - import it from there
+export type { WidgetState } from './index';
 
 // Widget configuration validation types
 export interface WidgetConfigValidation {

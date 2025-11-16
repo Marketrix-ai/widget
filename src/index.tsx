@@ -3,22 +3,20 @@ import './index.css';
 import { WidgetValidationService } from './services/widgetValidationService';
 import type { MarketrixConfig } from './types';
 import { registerAutoInit } from './utils/autoInit';
-import { mergeConfigWithDefaultAtmosphere } from './utils/configHelpers';
-import { configManager } from './utils/ConfigManager';
-import {
-  createWidgetContainer,
-  destroyWidgetContainer,
-  mountWidget,
-} from './utils/widgetInitializer';
+import { configManager, mergeConfigWithDefaultAtmosphere } from './utils/configManager';
 import {
   clearWidgetState,
+  createWidgetContainer,
+  destroyWidgetContainer,
   getCurrentConfig as getCurrentConfigFromLifecycle,
   getWidgetInstance,
+  hideWidgetSettingsLoader,
   isWidgetInitialized,
+  mountWidget,
   setCurrentConfig,
   setWidgetInstance,
-} from './utils/widgetLifecycle';
-import { hideWidgetSettingsLoader, showWidgetSettingsLoader } from './utils/widgetLoader';
+  showWidgetSettingsLoader,
+} from './utils/widgetInitializer';
 
 // Initialize the widget
 export const initMarketrixWidget = async (config: MarketrixConfig): Promise<void> => {

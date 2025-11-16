@@ -5,7 +5,7 @@ import { SiTicktick } from 'react-icons/si';
 
 import MarketrixLogo from '../assets/marktrix-footer.png';
 import type { ChatMode } from '../types';
-import { getModeDescription, getModeDisplayName } from '../utils/formatting';
+import { getModeDescription, getModeDisplayName } from '../utils/textFormatting';
 
 interface ModeSelectorProps {
   currentMode: ChatMode;

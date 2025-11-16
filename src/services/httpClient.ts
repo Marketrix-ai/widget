@@ -14,8 +14,8 @@ import axios, {
   type InternalAxiosRequestConfig,
 } from 'axios';
 
-import { CONTENT_TYPES, HEADERS, RETRY_CONFIG, TIMEOUTS } from '../../constants';
-import { hasProperty, isObject, isString } from '../../utils/typeGuards';
+import { CONTENT_TYPES, HEADERS, RETRY_CONFIG, TIMEOUTS } from '../constants';
+import { hasProperty, isObject, isString } from '../utils/typeGuards';
 
 export interface HttpClientConfig {
   baseURL?: string;

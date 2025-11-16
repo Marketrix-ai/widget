@@ -1,7 +1,6 @@
 import { sdk } from '../sdk';
 import type { MarketrixConfig, TourData } from '../types';
-import { extractApiData } from '../utils/apiHelpers';
-import { extractErrorMessage } from '../utils/errorHandling';
+import { extractApiData, extractErrorMessage } from '../utils/apiUtils';
 import { isErrorResponseBody, isTourDataArray } from '../utils/typeGuards';
 
 export class TourService {

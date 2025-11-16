@@ -4,7 +4,7 @@ import MarketrixIcon from '../assets/marketrix-icon.png';
 import { useWidgetAtmosphere } from '../hooks/useWidgetAtmosphere';
 import type { WidgetSettingsData } from '../sdk';
 import type { MarketrixConfig } from '../types';
-import { getPositionClasses } from '../utils/positioning';
+import { getPositionClasses } from '../utils/widgetPositioning';
 
 interface WidgetButtonProps {
   config: MarketrixConfig;

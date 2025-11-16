@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import MarketrixApiService from '../services/api';
-import DemoApiService from '../services/demo-api';
+import DemoApiService from '../services/demoApiService';
+import MarketrixApiService from '../services/marketrixApiService';
 import { MCPClient } from '../services/mcpClient';
 import { registerAllTools } from '../services/mcpTools';
 import type { ChatMessage, ChatMode, MarketrixConfig, WidgetState } from '../types';

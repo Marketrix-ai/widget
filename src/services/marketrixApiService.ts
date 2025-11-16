@@ -1,11 +1,10 @@
 import { sdk } from '../sdk';
 import type { MarketrixConfig, SendMessageRequest, SendMessageResponse } from '../types';
-import { extractApiData } from '../utils/apiHelpers';
+import { extractApiData, extractErrorMessage } from '../utils/apiUtils';
 import { getStoredChatId, storeChatId } from '../utils/chatStorage';
-import { extractErrorMessage } from '../utils/errorHandling';
 import { isChatResponseData } from '../utils/typeGuards';
 
-class MarketrixApiService {
+export class MarketrixApiService {
   private config: MarketrixConfig;
   private chatId: string | null = null;
 

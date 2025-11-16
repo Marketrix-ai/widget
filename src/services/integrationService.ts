@@ -1,6 +1,5 @@
 import { type IntegrationData, sdk, type SlackSettingsData, type WidgetSettingsData } from '../sdk';
-import { extractApiData } from '../utils/apiHelpers';
-import { extractErrorMessage } from '../utils/errorHandling';
+import { extractApiData, extractErrorMessage } from '../utils/apiUtils';
 import { isString, isWidgetSettingsData } from '../utils/typeGuards';
 
 export class IntegrationService {

@@ -1,66 +1,9 @@
 /**
  * Type Guard Utilities
  *
- * Reusable type guard functions for DOM elements, data validation, and type checking.
- * These functions replace the need for type assertions (as casts) throughout the codebase.
+ * Generic type guard functions for data validation and type checking.
+ * These are shared utilities used across the codebase.
  */
-
-// ============================================================================
-// DOM Element Type Guards
-// ============================================================================
-
-/**
- * Type guard for HTMLElement
- */
-export function isHTMLElement(element: Element | null): element is HTMLElement {
-  return element !== null && element instanceof HTMLElement;
-}
-
-/**
- * Type guard for HTMLInputElement
- */
-export function isHTMLInputElement(
-  element: Element | EventTarget | null
-): element is HTMLInputElement {
-  return element !== null && element instanceof HTMLInputElement;
-}
-
-/**
- * Type guard for HTMLTextAreaElement
- */
-export function isHTMLTextAreaElement(
-  element: Element | EventTarget | null
-): element is HTMLTextAreaElement {
-  return element !== null && element instanceof HTMLTextAreaElement;
-}
-
-/**
- * Type guard for HTMLButtonElement
- */
-export function isHTMLButtonElement(element: Element | null): element is HTMLButtonElement {
-  return element !== null && element instanceof HTMLButtonElement;
-}
-
-/**
- * Type guard for HTMLSelectElement
- */
-export function isHTMLSelectElement(element: Element | null): element is HTMLSelectElement {
-  return element !== null && element instanceof HTMLSelectElement;
-}
-
-/**
- * Type guard for HTMLScriptElement
- */
-export function isHTMLScriptElement(element: Element | null): element is HTMLScriptElement {
-  return element !== null && element instanceof HTMLScriptElement;
-}
-
-/**
- * Type guard for EventTarget as HTMLElement
- */
-export function isHTMLElementEventTarget(target: EventTarget | null): target is HTMLElement {
-  return target !== null && target instanceof HTMLElement;
-}
 
 // ============================================================================
 // Generic Type Guards
@@ -437,4 +380,61 @@ export function isErrorResponseBody(body: unknown): body is ErrorResponseBody {
     (!hasProperty(body, 'error') || typeof body.error === 'string') &&
     (!hasProperty(body, 'message') || typeof body.message === 'string')
   );
+}
+
+// ============================================================================
+// DOM Element Type Guards
+// ============================================================================
+
+/**
+ * Type guard for HTMLElement
+ */
+export function isHTMLElement(element: Element | null): element is HTMLElement {
+  return element !== null && element instanceof HTMLElement;
+}
+
+/**
+ * Type guard for HTMLInputElement
+ */
+export function isHTMLInputElement(
+  element: Element | EventTarget | null
+): element is HTMLInputElement {
+  return element !== null && element instanceof HTMLInputElement;
+}
+
+/**
+ * Type guard for HTMLTextAreaElement
+ */
+export function isHTMLTextAreaElement(
+  element: Element | EventTarget | null
+): element is HTMLTextAreaElement {
+  return element !== null && element instanceof HTMLTextAreaElement;
+}
+
+/**
+ * Type guard for HTMLButtonElement
+ */
+export function isHTMLButtonElement(element: Element | null): element is HTMLButtonElement {
+  return element !== null && element instanceof HTMLButtonElement;
+}
+
+/**
+ * Type guard for HTMLSelectElement
+ */
+export function isHTMLSelectElement(element: Element | null): element is HTMLSelectElement {
+  return element !== null && element instanceof HTMLSelectElement;
+}
+
+/**
+ * Type guard for HTMLScriptElement
+ */
+export function isHTMLScriptElement(element: Element | null): element is HTMLScriptElement {
+  return element !== null && element instanceof HTMLScriptElement;
+}
+
+/**
+ * Type guard for EventTarget as HTMLElement
+ */
+export function isHTMLElementEventTarget(target: EventTarget | null): target is HTMLElement {
+  return target !== null && target instanceof HTMLElement;
 }

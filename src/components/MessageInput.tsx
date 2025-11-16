@@ -4,8 +4,8 @@ import { LuSquare } from 'react-icons/lu';
 import SendIcon from '../assets/send.png';
 import { useWidgetAtmosphere } from '../hooks/useWidgetAtmosphere';
 import type { MarketrixConfig } from '../types';
-import { elementHighlighter } from '../utils/highlighting';
-import { ScreenAccessModal } from './ScreenAccessModal';
+import { elementHighlighter } from '../utils/elementHighlighting';
+import { ScreenAccessModal } from './screenAccessModal';
 
 interface MessageInputProps {
   value: string;

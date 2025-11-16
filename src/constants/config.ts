@@ -8,11 +8,8 @@
 // Re-export environment variables
 export const VITE_API_URL = import.meta.env.VITE_API_URL || '';
 
-// Re-export types from constants for convenience
-export type { WidgetMode, WidgetPosition } from './constants/widget';
-
-import type { WidgetSettingsData } from './sdk';
-import type { WidgetAtmosphereConfig, WidgetPositionConfig } from './types';
+import type { WidgetSettingsData } from '../sdk';
+import type { WidgetAtmosphereConfig, WidgetPositionConfig } from '../types';
 
 // ============================================================================
 // DEFAULT WIDGET SETTINGS

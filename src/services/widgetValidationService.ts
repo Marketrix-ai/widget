@@ -1,6 +1,5 @@
 import { type AgentData, type ConnectionData, type IntegrationData, sdk } from '../sdk';
-import { extractApiData, isValidApiResponse } from '../utils/apiHelpers';
-import { handleApiError } from '../utils/errorHandling';
+import { extractApiData, handleApiError, isValidApiResponse } from '../utils/apiUtils';
 import { isAgentData, isConnectionData, isIntegrationDataArray } from '../utils/typeGuards';
 
 export interface WidgetValidationResult {

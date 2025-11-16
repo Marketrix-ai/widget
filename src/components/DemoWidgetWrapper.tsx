@@ -1,7 +1,7 @@
 import React from 'react';
 
 import type { MarketrixConfig } from '../types';
-import { MarketrixWidget } from './MarketrixWidget';
+import { MarketrixWidget } from './marketrixWidget';
 
 interface DemoWidgetWrapperProps {
   config: MarketrixConfig;

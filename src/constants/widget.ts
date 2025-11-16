@@ -5,7 +5,7 @@
  * All default values are in config.ts - this file re-exports them for backward compatibility.
  */
 
-// Re-export all defaults from config.ts
+// Re-export all defaults from config.ts (now in same folder)
 export {
   DEFAULT_FALLBACK_WIDGET_SETTINGS,
   DEFAULT_WIDGET_ATMOSPHERE,
@@ -14,15 +14,14 @@ export {
   getDefaultFallbackSettings,
   getDefaultWidgetConfig,
   getDefaultWidgetSettings,
-} from '../config';
+} from './config';
 
 // Widget mode types
 export const WIDGET_MODES = ['ai', 'live', 'hybrid'] as const;
 export type WidgetMode = (typeof WIDGET_MODES)[number];
 
-// Widget position types
+// Widget position constants (type is defined in types/index.ts)
 export const WIDGET_POSITIONS = ['bottom_left', 'bottom_right'] as const;
-export type WidgetPosition = (typeof WIDGET_POSITIONS)[number];
 
 // Widget appearance types
 export const WIDGET_APPEARANCES = ['default', 'compact', 'full'] as const;
@@ -40,6 +39,5 @@ export type AvatarStatus = (typeof AVATAR_STATUSES)[number];
 export const STREAMING_AVATAR_STATUSES = ['idle', 'typing', 'speaking', 'listening'] as const;
 export type StreamingAvatarStatus = (typeof STREAMING_AVATAR_STATUSES)[number];
 
-// Chat mode type (matches SDK InstructionType)
-export type ChatMode = 'show' | 'tell' | 'do';
+// Chat mode constants (type is defined in types/index.ts)
 export const CHAT_MODES = ['show', 'tell', 'do'] as const;

@@ -1,8 +1,8 @@
 import { useCallback, useMemo } from 'react';
 
-import { DEFAULT_WIDGET_POSITION, DEFAULT_WIDGET_SETTINGS } from '../config';
+import { DEFAULT_WIDGET_POSITION, DEFAULT_WIDGET_SETTINGS } from '../constants/config';
 import type { MarketrixConfig, WidgetAtmosphereConfig } from '../types';
-import { configManager } from '../utils/ConfigManager';
+import { configManager } from '../utils/configManager';
 
 export const useWidgetAtmosphere = (initialConfig?: MarketrixConfig) => {
   // Use atmosphere from config or load from configManager

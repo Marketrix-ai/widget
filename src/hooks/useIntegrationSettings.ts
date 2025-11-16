@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-import { DEFAULT_WIDGET_SETTINGS } from '../config';
+import { DEFAULT_WIDGET_SETTINGS } from '../constants/config';
 import type { WidgetSettingsData } from '../sdk';
 import { IntegrationService } from '../services/integrationService';
 import type { MarketrixConfig } from '../types';

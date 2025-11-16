@@ -8,7 +8,7 @@ import MarketrixLogo from '../assets/marketrix-icon.png';
 import { useWidgetAtmosphere } from '../hooks/useWidgetAtmosphere';
 import { sdk, type TourData, type TourStepData, type WidgetSettingsData } from '../sdk';
 import type { ChatMessage, MarketrixConfig } from '../types';
-import { formatMessageTime } from '../utils/formatting';
+import { formatMessageTime } from '../utils/textFormatting';
 import {
   isHTMLButtonElement,
   isHTMLElement,
@@ -19,7 +19,7 @@ import {
   isTourAnswerWithSteps,
   isTourStepDataArray,
 } from '../utils/typeGuards';
-import { ScreenAccessModal } from './ScreenAccessModal';
+import { ScreenAccessModal } from './screenAccessModal';
 
 // Define the chip type to handle both formats
 type ChipData = {

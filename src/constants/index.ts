@@ -10,3 +10,6 @@ export * from './widget';
 
 // API constants
 export * from './api';
+
+// Config constants (defaults)
+export * from './config';

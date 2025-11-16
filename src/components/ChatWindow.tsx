@@ -2,13 +2,13 @@ import React, { useEffect, useRef, useState } from 'react';
 
 import { useWidgetAtmosphere } from '../hooks/useWidgetAtmosphere';
 import type { WidgetSettingsData } from '../sdk';
-import DemoApiService from '../services/demo-api';
+import DemoApiService from '../services/demoApiService';
 import type { ChatMessage, ChatMode, MarketrixConfig } from '../types';
-import { getPositionClasses } from '../utils/positioning';
-import { MessageInput } from './MessageInput';
-import { MessageList } from './MessageList';
-import { ModeSelector } from './ModeSelector';
-import { ScreenSharePreview } from './ScreenSharePreview';
+import { getPositionClasses } from '../utils/widgetPositioning';
+import { MessageInput } from './messageInput';
+import { MessageList } from './messageList';
+import { ModeSelector } from './modeSelector';
+import { ScreenSharePreview } from './screenSharePreview';
 
 // Type declaration for navigator to fix TypeScript errors
 declare const navigator: Navigator;

@@ -5,8 +5,8 @@ import { useMarketrixWidget } from '../hooks/useMarketrixWidget';
 import { useWidgetAtmosphere } from '../hooks/useWidgetAtmosphere';
 import type { MarketrixConfig } from '../types';
 import { isWidgetPosition } from '../utils/typeGuards';
-import { ChatWindow } from './ChatWindow';
-import { WidgetButton } from './WidgetButton';
+import { ChatWindow } from './chatWindow';
+import { WidgetButton } from './widgetButton';
 
 interface MarketrixWidgetProps {
   config: MarketrixConfig;

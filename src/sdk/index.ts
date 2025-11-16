@@ -1,6 +1,6 @@
 import { type FetchApiOptions, initClient } from '@ts-rest/core';
 
-import { VITE_API_URL } from '../config';
+import { VITE_API_URL } from '../constants/config';
 import { contract } from './routes';
 
 let authToken: string | null = null;

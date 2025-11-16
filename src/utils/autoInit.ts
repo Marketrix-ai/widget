@@ -17,7 +17,7 @@ import {
   parseThemeAttribute,
 } from './attributeParsers';
 import { isHTMLScriptElement } from './typeGuards';
-import { showWidgetSettingsLoader } from './widgetLoader';
+import { showWidgetSettingsLoader } from './widgetInitializer';
 
 // Store the init function - set synchronously during registration
 let initWidgetFunction: ((config: MarketrixConfig) => Promise<void>) | null = null;

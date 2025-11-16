@@ -1,6 +1,9 @@
 # Marketrix In-App Support Widget
 
-A modern, React-based in-app support widget for Marketrix that provides Show, Tell, and Do modes with advanced features like screen sharing, tour functionality, and API-driven configuration. Designed for easy integration into any website using a simple script tag.
+A modern, React-based in-app support widget for Marketrix that provides Show,
+Tell, and Do modes with advanced features like screen sharing, tour
+functionality, and API-driven configuration. Designed for easy integration into
+any website using a simple script tag.
 
 ## Features
 
@@ -26,10 +29,11 @@ A modern, React-based in-app support widget for Marketrix that provides Show, Te
 Add the widget to your HTML page using a script tag:
 
 ```html
-<script src="path/to/meet.js" 
-        marketrix-id="your-marketrix-id" 
-        marketrix-key="your-marketrix-key">
-</script>
+<script
+  src="path/to/meet.js"
+  marketrix-id="your-marketrix-id"
+  marketrix-key="your-marketrix-key"
+></script>
 ```
 
 ### Configuration Options
@@ -37,36 +41,39 @@ Add the widget to your HTML page using a script tag:
 You can customize the widget using data attributes:
 
 ```html
-<script src="path/to/meet.js" 
-        marketrix-id="your-marketrix-id" 
-        marketrix-key="your-marketrix-key"
-        data-position="bottom_right"
-        data-theme="light"
-        data-agent-name="Support Agent"
-        data-api-base-url="https://api.marketrix.com">
-</script>
+<script
+  src="path/to/meet.js"
+  marketrix-id="your-marketrix-id"
+  marketrix-key="your-marketrix-key"
+  data-position="bottom_right"
+  data-theme="light"
+  data-agent-name="Support Agent"
+  data-api-base-url="https://api.marketrix.com"
+></script>
 ```
 
 ## Configuration Options
 
 ### Basic Configuration
 
-| Option | Type | Required | Default | Description |
-|--------|------|----------|---------|-------------|
-| `marketrixId` | string | ✅ | - | Your Marketrix account ID |
-| `marketrixKey` | string | ✅ | - | Your Marketrix API key |
-| `apiBaseUrl` | string | ❌ | `http://localhost:8080` | API base URL override |
-| `position` | string | ❌ | `'bottom_right'` | Widget position (`'bottom_right'`, `'bottom_left'`, `'top-right'`, `'top-left'`) |
-| `theme` | string | ❌ | `'light'` | Theme (`'light'` or `'dark'`) |
-| `avatarUrl` | string | ❌ | - | URL to the agent's avatar image |
-| `agentName` | string | ❌ | `'Support Agent'` | Display name for the support agent |
-| `enabledModes` | array | ❌ | `['show', 'tell', 'do']` | Array of enabled modes |
+| Option         | Type   | Required | Default                  | Description                                                                      |
+| -------------- | ------ | -------- | ------------------------ | -------------------------------------------------------------------------------- |
+| `marketrixId`  | string | ✅       | -                        | Your Marketrix account ID                                                        |
+| `marketrixKey` | string | ✅       | -                        | Your Marketrix API key                                                           |
+| `apiBaseUrl`   | string | ❌       | `http://localhost:8080`  | API base URL override                                                            |
+| `position`     | string | ❌       | `'bottom_right'`         | Widget position (`'bottom_right'`, `'bottom_left'`, `'top-right'`, `'top-left'`) |
+| `theme`        | string | ❌       | `'light'`                | Theme (`'light'` or `'dark'`)                                                    |
+| `avatarUrl`    | string | ❌       | -                        | URL to the agent's avatar image                                                  |
+| `agentName`    | string | ❌       | `'Support Agent'`        | Display name for the support agent                                               |
+| `enabledModes` | array  | ❌       | `['show', 'tell', 'do']` | Array of enabled modes                                                           |
 
 ### Advanced Configuration
 
-The widget supports extensive configuration through the atmosphere system and integration service:
+The widget supports extensive configuration through the atmosphere system and
+integration service:
 
 #### Widget Customization
+
 - **Colors**: Primary, secondary, background, text, border colors
 - **Sizes**: Width, height, border radius, font size
 - **Animations**: Slide duration, fade duration, bounce effects
@@ -74,11 +81,13 @@ The widget supports extensive configuration through the atmosphere system and in
 - **Z-index**: Layering control
 
 #### Device Visibility
+
 - **Desktop**: Show/hide on desktop
-- **Tablet**: Show/hide on tablet  
+- **Tablet**: Show/hide on tablet
 - **Mobile**: Show/hide on mobile
 
 #### Advanced Settings
+
 - **Auto-open delay**: Delay before auto-opening
 - **Session timeout**: Session timeout duration
 - **Max messages**: Maximum message history
@@ -88,7 +97,9 @@ The widget supports extensive configuration through the atmosphere system and in
 - **Vibration**: Haptic feedback
 
 #### Widget Chips
+
 Quick action chips for common tasks:
+
 ```typescript
 interface WidgetChipConfig {
   chip_mode: 'show' | 'tell' | 'do';
@@ -101,26 +112,36 @@ interface WidgetChipConfig {
 ## Interaction Modes
 
 ### Show Mode
-The agent will demonstrate how to perform a task or show you the steps to accomplish something. Includes interactive tour functionality with step-by-step guidance.
+
+The agent will demonstrate how to perform a task or show you the steps to
+accomplish something. Includes interactive tour functionality with step-by-step
+guidance.
 
 ### Tell Mode
-The agent will explain concepts, provide information, or answer questions with detailed explanations.
+
+The agent will explain concepts, provide information, or answer questions with
+detailed explanations.
 
 ### Do Mode
-The agent will perform actions on your behalf or execute tasks for you, including screen sharing capabilities for remote assistance.
+
+The agent will perform actions on your behalf or execute tasks for you,
+including screen sharing capabilities for remote assistance.
 
 ## API Integration
 
 The widget communicates with the Marketrix API using the following endpoints:
 
 ### Core Endpoints
+
 - `GET /integration` - Fetch integration settings and widget configuration
 - `GET /tour` - Fetch tour data for specific connections
 - `GET /agent/status` - Check agent availability
 - `GET /agent/info` - Get agent information
 
 ### Integration Service
+
 The widget includes a comprehensive integration service that:
+
 - Fetches widget configuration from the API
 - Converts integration settings to atmosphere configuration
 - Manages tour data for connections
@@ -128,7 +149,9 @@ The widget includes a comprehensive integration service that:
 - Supports dynamic configuration updates
 
 ### Authentication
+
 The widget supports multiple authentication methods:
+
 - URL parameters: `marketrix_id` and `marketrix_key`
 - Headers: `X-Marketrix-ID` and `X-Marketrix-Key`
 - Authorization: `Bearer` token
@@ -136,28 +159,33 @@ The widget supports multiple authentication methods:
 ## Development
 
 ### Prerequisites
+
 - Node.js 16+
 - npm or yarn
 
 ### Setup
 
 1. Clone the repository:
+
 ```bash
 git clone <repository-url>
 cd widget
 ```
 
 2. Install dependencies:
+
 ```bash
 npm install
 ```
 
 3. Start development server:
+
 ```bash
 npm run dev
 ```
 
 4. Build for production:
+
 ```bash
 npm run build
 ```
@@ -217,6 +245,7 @@ widget/
 ## Build System
 
 The widget uses Vite with a custom CSS injection plugin that:
+
 - Bundles all dependencies (React, etc.) into a single file
 - Injects CSS directly into the JavaScript bundle
 - Outputs an IIFE (Immediately Invoked Function Expression) format
@@ -227,20 +256,25 @@ The widget uses Vite with a custom CSS injection plugin that:
 ### Functions
 
 #### `initMarketrixWidget(config: MarketrixConfig)`
+
 Initializes the widget with the provided configuration.
 
 #### `destroyMarketrixWidget()`
+
 Destroys the widget and removes it from the DOM.
 
 #### `updateMarketrixConfig(newConfig: Partial<MarketrixConfig>)`
+
 Updates the widget configuration dynamically.
 
 #### `getCurrentConfig(): MarketrixConfig`
+
 Returns the current widget configuration.
 
 ### Types
 
 #### `MarketrixConfig`
+
 ```typescript
 interface MarketrixConfig {
   marketrixId: string;
@@ -251,7 +285,7 @@ interface MarketrixConfig {
   avatarUrl?: string;
   agentName?: string;
   enabledModes?: ('show' | 'tell' | 'do')[];
-  
+
   // Extended atmosphere controls
   session_time?: number;
   sessionActive?: boolean;
@@ -289,6 +323,7 @@ interface MarketrixConfig {
 ```
 
 #### `WidgetAtmosphereConfig`
+
 ```typescript
 interface WidgetAtmosphereConfig {
   session_time: number;
@@ -328,6 +363,7 @@ interface WidgetAtmosphereConfig {
 ```
 
 #### `IntegrationSettings`
+
 ```typescript
 interface IntegrationSettings {
   widget_enabled?: boolean;
@@ -364,6 +400,7 @@ interface IntegrationSettings {
 ```
 
 #### `ChatMessage`
+
 ```typescript
 interface ChatMessage {
   id: string;
@@ -377,14 +414,18 @@ interface ChatMessage {
 ## Advanced Features
 
 ### Screen Sharing
+
 The widget includes built-in screen sharing capabilities:
+
 - Screen access modal for permissions
 - Screen share preview component
 - Recording functionality
 - Integration with tour system
 
 ### Tour System
+
 Interactive tour functionality with:
+
 - Step-by-step guidance
 - Element targeting with selectors
 - Action execution
@@ -392,14 +433,18 @@ Interactive tour functionality with:
 - Connection-based tours
 
 ### Demo Mode
+
 Built-in demo mode for testing:
+
 - Use `demo-marketrix-id` and `demo-marketrix-key`
 - Simulated API responses
 - Context-aware demo messages
 - No real API calls required
 
 ### Atmosphere Configuration
+
 Advanced widget atmosphere control:
+
 - Dynamic configuration updates
 - Auto-refresh capability
 - Session and recording management
@@ -409,6 +454,7 @@ Advanced widget atmosphere control:
 ## Styling
 
 The widget uses Tailwind CSS with custom animations and theming:
+
 - Custom color palette with Marketrix branding
 - Smooth animations (fade, slide, genie effects)
 - Responsive design with breakpoints
@@ -436,4 +482,5 @@ MIT License - see LICENSE file for details.
 
 ## Support
 
-For support and questions, please contact the Marketrix team or create an issue in the repository.
+For support and questions, please contact the Marketrix team or create an issue
+in the repository.
