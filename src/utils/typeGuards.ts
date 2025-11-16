@@ -129,7 +129,6 @@ import type {
   ConnectionData,
   ConnectionWithIntegrationsData,
   IntegrationData,
-  SlackSettingsData,
   TourData,
   TourStepData,
   WidgetSettingsData,
@@ -241,26 +240,6 @@ export function isWidgetSettingsData(data: unknown): data is WidgetSettingsData 
 }
 
 /**
- * Type guard for SlackSettingsData
- */
-export function isSlackSettingsData(data: unknown): data is SlackSettingsData {
-  if (!isNonNullObject(data)) {
-    return false;
-  }
-
-  return (
-    hasProperty(data, 'webhook_url') &&
-    typeof data.webhook_url === 'string' &&
-    hasProperty(data, 'channel') &&
-    typeof data.channel === 'string' &&
-    hasProperty(data, 'bot_token') &&
-    typeof data.bot_token === 'string' &&
-    hasProperty(data, 'notifications_enabled') &&
-    typeof data.notifications_enabled === 'boolean'
-  );
-}
-
-/**
  * Type guard for TourStepData
  */
 export function isTourStepData(data: unknown): data is TourStepData {
@@ -281,33 +260,10 @@ export function isTourStepData(data: unknown): data is TourStepData {
 }
 
 /**
- * Type guard for array of ConnectionData
- */
-export function isConnectionDataArray(data: unknown): data is ConnectionData[] {
-  return Array.isArray(data) && data.every((item) => isConnectionData(item));
-}
-
-/**
- * Type guard for array of ConnectionWithIntegrationsData
- */
-export function isConnectionWithIntegrationsDataArray(
-  data: unknown
-): data is ConnectionWithIntegrationsData[] {
-  return Array.isArray(data) && data.every((item) => isConnectionWithIntegrationsData(item));
-}
-
-/**
  * Type guard for array of IntegrationData
  */
 export function isIntegrationDataArray(data: unknown): data is IntegrationData[] {
   return Array.isArray(data) && data.every((item) => isIntegrationData(item));
-}
-
-/**
- * Type guard for array of AgentData
- */
-export function isAgentDataArray(data: unknown): data is AgentData[] {
-  return Array.isArray(data) && data.every((item) => isAgentData(item));
 }
 
 /**
@@ -437,4 +393,11 @@ export function isHTMLScriptElement(element: Element | null): element is HTMLScr
  */
 export function isHTMLElementEventTarget(target: EventTarget | null): target is HTMLElement {
   return target !== null && target instanceof HTMLElement;
+}
+
+/**
+ * Check if code is running in a browser environment
+ */
+export function isBrowser(): boolean {
+  return typeof window !== 'undefined';
 }

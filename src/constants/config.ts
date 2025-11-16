@@ -142,17 +142,3 @@ export const DEFAULT_WIDGET_ATMOSPHERE: WidgetAtmosphereConfig = {
 export function getDefaultWidgetConfig(): WidgetAtmosphereConfig {
   return { ...DEFAULT_WIDGET_ATMOSPHERE };
 }
-
-/**
- * Get default widget settings
- */
-export function getDefaultWidgetSettings(): WidgetSettingsData {
-  return { ...DEFAULT_WIDGET_SETTINGS };
-}
-
-/**
- * Get default fallback widget settings (for connectionId/agentId path)
- */
-export function getDefaultFallbackSettings(): WidgetSettingsData {
-  return { ...DEFAULT_FALLBACK_WIDGET_SETTINGS };
-}

@@ -1,6 +1,7 @@
 import { type FetchApiOptions, initClient } from '@ts-rest/core';
 
 import { VITE_API_URL } from '../constants/config';
+import { hasProperty } from '../utils/typeGuards';
 import { contract } from './routes';
 
 let authToken: string | null = null;
@@ -26,10 +27,6 @@ interface Res {
 
 // Helper type to extract data type from response
 type ExtractData<T extends Res> = T extends { body: { data?: infer D } } ? D : never;
-
-function hasProperty<K extends string>(obj: unknown, key: K): obj is Record<K, unknown> {
-  return typeof obj === 'object' && obj !== null && key in obj;
-}
 
 function isResBody(body: unknown): body is ResBody {
   if (!hasProperty(body, 'success')) {

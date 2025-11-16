@@ -61,13 +61,6 @@ export interface WidgetState {
   error?: string;
 }
 
-export interface ApiResponse<T = unknown> {
-  success: boolean;
-  data?: T;
-  error?: string;
-  message?: string;
-}
-
 export interface SendMessageRequest {
   message?: string;
   mode?: ChatMode;
