@@ -20,13 +20,10 @@ declare global {
     }
   }
 
-  // Window extensions for demo API and screen capture
+  // Window extensions for step guide functionality
   interface Window {
-    currentDemoContext?: string;
     stepGuideNext?: (event?: Event) => void;
     stepGuidePrev?: (event?: Event) => void;
-    screenCaptureStream?: MediaStream;
-    screenCaptureOverlay?: HTMLElement;
   }
 
   // Navigator extensions for media devices

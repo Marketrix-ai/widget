@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React from 'react';
 
 import { useWidget } from '../hooks/useWidget';
 import type { MarketrixConfig } from '../types';
 import { isWidgetPosition } from '../utils/typeGuards';
-import { ChatWindow } from './chatWindow';
+import { ChatWindow } from './ChatWindow';
 import { WidgetButton } from './widgetButton';
 
 interface MarketrixWidgetProps {
@@ -23,9 +23,6 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
     isLoading: settingsLoading,
     error: settingsError,
   } = useWidget({ config });
-
-  // Track screen sharing state
-  const [isScreenSharing, setIsScreenSharing] = useState(false);
 
   // Don't return null while settings are loading - show widget during loading
   // Only check visibility and enabled state after settings are loaded
@@ -100,7 +97,6 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
         onClick={actions.toggleWidget}
         isOpen={state.isOpen}
         _agentAvailable={state.agentAvailable}
-        _isScreenSharing={isScreenSharing}
       />
 
       {/* Chat Window */}
@@ -118,7 +114,6 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
         onClose={actions.closeWidget}
         onSendMessage={actions.sendMessage}
         onSetMode={actions.setMode}
-        onScreenSharingChange={setIsScreenSharing}
       />
 
       {/* Error Display */}

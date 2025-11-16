@@ -127,7 +127,6 @@ import type {
   AgentData,
   ChatResponseData,
   ConnectionData,
-  ConnectionWithIntegrationsData,
   IntegrationData,
   TourData,
   TourStepData,
@@ -149,23 +148,6 @@ export function isConnectionData(data: unknown): data is ConnectionData {
     typeof data.name === 'string' &&
     hasProperty(data, 'type') &&
     (data.type === 'app' || data.type === 'website')
-  );
-}
-
-/**
- * Type guard for ConnectionWithIntegrationsData
- */
-export function isConnectionWithIntegrationsData(
-  data: unknown
-): data is ConnectionWithIntegrationsData {
-  if (!isConnectionData(data)) {
-    return false;
-  }
-
-  return (
-    hasProperty(data, 'integrations') &&
-    Array.isArray(data.integrations) &&
-    data.integrations.every((item) => isIntegrationData(item))
   );
 }
 

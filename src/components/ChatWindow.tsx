@@ -1,24 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 
 import { useWidget } from '../hooks/useWidget';
-import DemoApiService from '../services/demoApiService';
 import type { ChatMessage, ChatMode, MarketrixConfig } from '../types';
 import { getPositionClasses } from '../utils/widgetPositioning';
-import { MessageInput } from './messageInput';
-import { MessageList } from './messageList';
+import { MessageInput } from './MessageInput';
+import { MessageList } from './MessageList';
 import { ModeSelector } from './modeSelector';
-import { ScreenSharePreview } from './screenSharePreview';
-
-// Type declaration for navigator to fix TypeScript errors
-declare const navigator: Navigator;
-
-// Extend Window interface to include custom properties
-declare global {
-  interface Window {
-    screenCaptureStream?: MediaStream;
-    screenCaptureOverlay?: HTMLElement;
-  }
-}
 
 interface ChatWindowProps {
   config: MarketrixConfig;
@@ -31,7 +18,6 @@ interface ChatWindowProps {
   onClose: () => void;
   onSendMessage: (message: string, mode?: ChatMode) => void;
   onSetMode: (mode: ChatMode) => void;
-  onScreenSharingChange?: (isSharing: boolean) => void;
 }
 
 export const ChatWindow: React.FC<ChatWindowProps> = ({
@@ -44,14 +30,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   onClose,
   onSendMessage,
   onSetMode,
-  onScreenSharingChange,
 }) => {
   const [inputValue, setInputValue] = useState('');
-  const [isScreenAccessActive, setIsScreenAccessActive] = useState(false);
-  const [triggerScreenAccessModal, setTriggerScreenAccessModal] = useState(false);
-  const [screenStream, setScreenStream] = useState<MediaStream | null>(null);
-  const [showScreenPreview, setShowScreenPreview] = useState(false);
-  const [isStepGuideRunning, setIsStepGuideRunning] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Get atmosphere configuration
@@ -65,33 +45,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Cleanup screen capture when component unmounts
-  useEffect(() => {
-    return () => {
-      stopScreenCapture();
-    };
-  }, []);
-
   const handleSendMessage = () => {
     if (inputValue.trim() && !isLoading) {
-      // Check if this is a step guide request
-      const message = inputValue.toLowerCase();
-      const isStepGuideRequest =
-        message.includes('show me how to') ||
-        message.includes('step by step') ||
-        message.includes('guide me through') ||
-        message.includes('walk me through') ||
-        message.includes('tutorial') ||
-        message.includes('add a new product') ||
-        message.includes('bulk import') ||
-        message.includes('setup widget') ||
-        message.includes('login') ||
-        message.includes('sign in');
-
-      if (isStepGuideRequest && currentMode === 'show') {
-        setIsStepGuideRunning(true);
-      }
-
       onSendMessage(inputValue, currentMode);
       setInputValue('');
     }
@@ -104,158 +59,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     }
   };
 
-  const handleScreenAccessResponse = async (allowed: boolean) => {
-    if (allowed) {
-      await startScreenCapture();
-    } else {
-      console.log('Screen access denied');
-    }
-  };
-
-  const handleScreenSharingChange = (
-    isSharing: boolean,
-    stream?: MediaStream | null,
-    showPreview?: boolean
-  ) => {
-    setIsScreenAccessActive(isSharing);
-    if (stream !== undefined) {
-      setScreenStream(stream);
-    }
-    if (showPreview !== undefined) {
-      setShowScreenPreview(showPreview);
-    }
-    onScreenSharingChange?.(isSharing);
-  };
-
-  const startScreenCapture = async () => {
-    try {
-      // Check if we're in a browser environment
-      if (typeof window === 'undefined' || !navigator?.mediaDevices?.getDisplayMedia) {
-        throw new Error('Screen capture not supported in this environment');
-      }
-
-      // Request screen capture permission
-      const stream = await navigator.mediaDevices.getDisplayMedia({
-        video: {
-          width: { ideal: 1920 },
-          height: { ideal: 1080 },
-        },
-        audio: false,
-        preferCurrentTab: true,
-      } satisfies DisplayMediaStreamOptions);
-
-      // Create a minimal status indicator without overlay
-      const statusIndicator = document.createElement('div');
-      statusIndicator.id = 'marketrix-screen-status';
-      statusIndicator.style.position = 'fixed';
-      statusIndicator.style.top = '20px';
-      statusIndicator.style.left = '20px';
-      statusIndicator.style.zIndex = '9999';
-      statusIndicator.style.display = 'flex';
-      statusIndicator.style.alignItems = 'center';
-      statusIndicator.style.gap = '8px';
-      statusIndicator.style.backgroundColor = 'rgba(255, 255, 255, 0.95)';
-      statusIndicator.style.padding = '8px 16px';
-      statusIndicator.style.borderRadius = '20px';
-      statusIndicator.style.fontSize = '14px';
-      statusIndicator.style.fontWeight = '500';
-      statusIndicator.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
-      statusIndicator.style.border = '1px solid rgba(0, 0, 0, 0.1)';
-      statusIndicator.innerHTML = `
-        <div style="width: 8px; height: 8px; background-color: #ef4444; border-radius: 50%; animation: pulse 2s infinite;"></div>
-        Marketrix is monitoring your screen
-        <button id="marketrix-stop-btn" style="background: #ef4444; color: white; border: none; padding: 4px 8px; border-radius: 12px; cursor: pointer; font-size: 12px; margin-left: 8px;">Stop</button>
-      `;
-
-      // Add pulse animation
-      const style = document.createElement('style');
-      style.textContent = `
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.5; }
-        }
-      `;
-      document.head.appendChild(style);
-
-      // Add the status indicator to the page
-      document.body.appendChild(statusIndicator);
-
-      // Add click handler for stop button
-      const stopBtn = document.getElementById('marketrix-stop-btn');
-      if (stopBtn) {
-        stopBtn.onclick = () => {
-          stopScreenCapture();
-          setIsScreenAccessActive(false);
-        };
-      }
-
-      // Handle when user stops sharing
-      stream.getVideoTracks()[0].onended = () => {
-        stopScreenCapture();
-        setIsScreenAccessActive(false);
-      };
-
-      // Store references for cleanup
-      window.screenCaptureStream = stream;
-      window.screenCaptureOverlay = statusIndicator;
-
-      // Set screen stream and show preview
-      setScreenStream(stream);
-      setShowScreenPreview(true);
-      setIsScreenAccessActive(true);
-
-      // Notify parent component about screen sharing state
-      onScreenSharingChange?.(true);
-    } catch (error) {
-      console.error('Error accessing screen:', error);
-      setIsScreenAccessActive(false);
-      // Show error message to user
-      alert('Unable to access screen. Please check your permissions.');
-    }
-  };
-
-  const stopScreenCapture = () => {
-    // Stop all video tracks
-    if (window.screenCaptureStream) {
-      window.screenCaptureStream.getTracks().forEach((track: MediaStreamTrack) => {
-        track.stop();
-      });
-    }
-
-    // Remove status indicator
-    const statusIndicator = document.getElementById('marketrix-screen-status');
-    if (statusIndicator) {
-      document.body.removeChild(statusIndicator);
-    }
-
-    // Clear references and state
-    window.screenCaptureStream = undefined;
-    window.screenCaptureOverlay = undefined;
-    setScreenStream(null);
-    setShowScreenPreview(false);
-
-    // Notify parent component about screen sharing state
-    onScreenSharingChange?.(false);
-  };
-
-  const handleScreenAccessRequest = (_mode: ChatMode) => {
-    // Trigger the screen access modal in MessageInput
-    setTriggerScreenAccessModal(true);
-  };
-
-  const handleTriggerReset = () => {
-    setTriggerScreenAccessModal(false);
-  };
-
-  const handleStopStepGuide = () => {
-    // Create a temporary instance to access the stop method
-    const demoApi = new DemoApiService(config);
-    demoApi.stopStepGuide();
-    setIsStepGuideRunning(false);
-  };
-
   // Get widget settings for positioning
-  // Convert underscore to hyphen for position (API returns bottom_right, but CSS expects bottom_right)
   const effectivePosition = widgetPosition.position || settings.widget_position || 'bottom_right';
   const positionClasses = getPositionClasses(effectivePosition);
 
@@ -335,31 +139,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                 onSendMessage={onSendMessage}
                 onSetMode={onSetMode}
                 config={config}
-                onStepGuideStart={() => setIsStepGuideRunning(true)}
-                onScreenSharingChange={handleScreenSharingChange}
               />
             </div>
-
-            {/* Screen Access Status Indicator */}
-            {isScreenAccessActive && (
-              <div className='flex items-center gap-2 px-2 mx-3'>
-                <div className='flex items-center gap-2'>
-                  <div className='w-2 h-2 bg-red-500 rounded-full animate-pulse'></div>
-                  <span className='text-xs text-[#667085] font-inter'>
-                    Marketrix is looking at your screen
-                  </span>
-                </div>
-                <button
-                  onClick={() => {
-                    stopScreenCapture();
-                    setIsScreenAccessActive(false);
-                  }}
-                  className='text-xs text-[#667085] font-bold'
-                >
-                  Stop
-                </button>
-              </div>
-            )}
 
             {/* Controls Section */}
             <div className='flex-shrink-0 rounded-lg bg-white m-3'>
@@ -371,11 +152,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                 onSend={handleSendMessage}
                 isLoading={isLoading}
                 config={config}
-                onScreenAccessResponse={handleScreenAccessResponse}
-                triggerScreenAccessModal={triggerScreenAccessModal}
-                onTriggerReset={handleTriggerReset}
-                isStepGuideRunning={isStepGuideRunning}
-                onStopStepGuide={handleStopStepGuide}
               />
 
               {/* Mode Selector */}
@@ -383,22 +159,11 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                 currentMode={currentMode}
                 enabledModes={config.enabledModes || ['tell', 'show', 'do']}
                 onModeChange={onSetMode}
-                onScreenAccessRequest={handleScreenAccessRequest}
               />
             </div>
           </>
         )}
       </div>
-
-      {/* Screen Share Preview */}
-      <ScreenSharePreview
-        stream={screenStream}
-        isVisible={showScreenPreview}
-        onClose={() => {
-          stopScreenCapture();
-          setIsScreenAccessActive(false);
-        }}
-      />
     </div>
   );
 };

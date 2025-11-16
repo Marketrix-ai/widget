@@ -8,7 +8,7 @@
 import React from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 
-import { MarketrixWidget } from '../components/marketrixWidget';
+import { MarketrixWidget } from '../components/MarketrixWidget';
 import { WidgetSettingsLoader } from '../components/widgetSettingsLoader';
 import shadowStyles from '../index.css?inline';
 import type { MarketrixConfig } from '../types';

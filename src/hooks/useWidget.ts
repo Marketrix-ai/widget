@@ -2,11 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { DEFAULT_WIDGET_POSITION, DEFAULT_WIDGET_SETTINGS } from '../constants/config';
 import type { WidgetSettingsData } from '../sdk';
-import DemoApiService from '../services/demoApiService';
 import { IntegrationService } from '../services/integrationService';
 import MarketrixApiService from '../services/marketrixApiService';
-import { MCPClient } from '../services/mcpClient';
-import { registerAllTools } from '../services/mcpTools';
 import type {
   ChatMessage,
   ChatMode,
@@ -96,8 +93,7 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
   const [settingsLoading, setSettingsLoading] = useState(false);
   const [settingsError, setSettingsError] = useState<string | null>(null);
 
-  const apiServiceRef = useRef<MarketrixApiService | DemoApiService | null>(null);
-  const mcpClientRef = useRef<MCPClient | null>(null);
+  const apiServiceRef = useRef<MarketrixApiService | null>(null);
 
   // Fetch integration settings from API if marketrixId/marketrixKey provided
   useEffect(() => {
@@ -156,52 +152,23 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
     return configManager.loadConfig();
   }, [config]);
 
-  // Initialize API service and MCP connection (use demo service for demo mode)
+  // Initialize API service
   useEffect(() => {
-    const isDemoMode =
-      config.marketrixId === 'demo-marketrix-id' || config.marketrixKey === 'demo-marketrix-key';
-    apiServiceRef.current = isDemoMode
-      ? new DemoApiService(config)
-      : new MarketrixApiService(config);
+    apiServiceRef.current = new MarketrixApiService(config);
 
-    // Initialize chat_id and MCP connection for non-demo mode
-    if (!isDemoMode && apiServiceRef.current instanceof MarketrixApiService) {
-      const apiService = apiServiceRef.current; // Type narrowing
-      const agentServerUrl = config.apiBaseUrl || 'http://localhost:8765';
-      const mcpClient = new MCPClient(agentServerUrl);
+    // Initialize chat_id
+    const initializeChat = async () => {
+      if (!apiServiceRef.current) return;
 
-      // Register all MCP tools
-      registerAllTools(mcpClient);
+      try {
+        const chatId = await apiServiceRef.current.initializeChatId();
+        console.log('[Widget] Chat ID initialized:', chatId);
+      } catch (error) {
+        console.error('[Widget] Failed to initialize chat_id:', error);
+      }
+    };
 
-      // Handle chat_id registration confirmation
-      mcpClient.onChatId((chatId) => {
-        console.log('[Widget] Chat ID registered with agent server:', chatId);
-      });
-
-      // Initialize chat_id and connect MCP
-      const initializeAndConnect = async () => {
-        try {
-          // Initialize chat_id (will create new or retrieve from storage)
-          const chatId = await apiService.initializeChatId();
-          console.log('[Widget] Chat ID initialized:', chatId);
-
-          // Connect to MCP server with chat_id
-          await mcpClient.connect(chatId);
-          mcpClientRef.current = mcpClient;
-          console.log('[Widget] Connected to MCP server with chat_id:', chatId);
-        } catch (error) {
-          console.error('[Widget] Failed to initialize chat_id or connect to MCP server:', error);
-        }
-      };
-
-      // Initialize and connect
-      initializeAndConnect();
-
-      // Cleanup on unmount
-      return () => {
-        mcpClient.disconnect();
-      };
-    }
+    initializeChat();
 
     // Check agent availability on mount
     const checkAgentAvailability = async () => {
