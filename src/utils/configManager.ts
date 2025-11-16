@@ -87,10 +87,3 @@ export function createConfigFromSettings(
     ...widgetSettings, // API settings override defaults and base config
   };
 }
-
-export function mergeConfigWithDefaultAtmosphere(config: MarketrixConfig): MarketrixConfig {
-  return {
-    ...DEFAULT_MARKETRIX_CONFIG,
-    ...config,
-  };
-}

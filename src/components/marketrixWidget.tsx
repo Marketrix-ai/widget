@@ -12,18 +12,11 @@ interface MarketrixWidgetProps {
 export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
   const [isScreenSharing, setIsScreenSharing] = React.useState(false);
 
-  const {
-    state,
-    actions,
-    marketrixConfig,
-    shouldShow,
-    getWidgetPosition,
-    settings,
-    isLoading: settingsLoading,
-    error: settingsError,
-  } = useWidget({ config });
+  const { state, actions, marketrixConfig, shouldShow, getWidgetPosition, settings } = useWidget({
+    config,
+  });
 
-  if (!settingsLoading && (!shouldShow || !settings.widget_enabled)) {
+  if (!shouldShow || !settings.widget_enabled) {
     return null;
   }
 
@@ -63,7 +56,7 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
         config={effectiveConfig}
         isOpen={state.isOpen}
         isMinimized={state.isMinimized}
-        isLoading={state.isLoading || settingsLoading}
+        isLoading={state.isLoading}
         messages={state.messages}
         currentMode={state.currentMode}
         agentAvailable={state.agentAvailable}
@@ -75,13 +68,11 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
         onScreenSharingChange={setIsScreenSharing}
       />
 
-      {('error' in state ? state.error : undefined) || settingsError ? (
+      {state.error ? (
         <div className='fixed top-4 right-4 z-50 max-w-sm'>
           <div className='bg-red-500 text-white px-4 py-3 rounded-lg shadow-lg'>
             <div className='flex items-center justify-between'>
-              <span className='text-sm'>
-                {('error' in state ? state.error : undefined) || settingsError}
-              </span>
+              <span className='text-sm'>{state.error}</span>
               <button
                 onClick={() => actions.clearError()}
                 className='ml-4 text-white hover:text-red-100'

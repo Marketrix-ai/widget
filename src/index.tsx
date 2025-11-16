@@ -1,10 +1,11 @@
 import './index.css';
 
+import type { WidgetSettingsData } from './sdk';
 import { IntegrationService } from './services/integrationService';
 import { WidgetValidationService } from './services/widgetValidationService';
 import type { MarketrixConfig } from './types';
 import { registerAutoInit } from './utils/autoInit';
-import { createConfigFromSettings, mergeConfigWithDefaultAtmosphere } from './utils/configManager';
+import { createConfigFromSettings } from './utils/configManager';
 import {
   clearWidgetState,
   createWidgetContainer,
@@ -47,7 +48,6 @@ export const initMarketrixWidget = async (config: MarketrixConfig): Promise<void
       return;
     }
 
-    // Fetch integration settings from API
     showWidgetSettingsLoader('Loading widget settings...');
     try {
       const integrationService = new IntegrationService(config.marketrixId, config.marketrixKey);
@@ -58,19 +58,13 @@ export const initMarketrixWidget = async (config: MarketrixConfig): Promise<void
         : null;
 
       if (integrationSettings) {
-        // Spread API settings directly into flat config structure
         finalConfig = createConfigFromSettings(integrationSettings, config);
-        console.log('✅ Integration settings loaded from API');
       } else {
-        // Fall back to defaults if no settings found
-        finalConfig = mergeConfigWithDefaultAtmosphere(config);
-        console.log('✅ Using default widget settings (no integration settings found)');
+        finalConfig = createConfigFromSettings({} as WidgetSettingsData, config);
       }
     } catch (err) {
       console.error('Error fetching integration settings:', err);
-      // Fall back to defaults on error
-      finalConfig = mergeConfigWithDefaultAtmosphere(config);
-      console.log('✅ Using default widget settings (error fetching integration settings)');
+      finalConfig = createConfigFromSettings({} as WidgetSettingsData, config);
     }
 
     hideWidgetSettingsLoader();
@@ -93,29 +87,37 @@ export const initMarketrixWidget = async (config: MarketrixConfig): Promise<void
       return;
     }
 
+    showWidgetSettingsLoader('Loading widget settings...');
+    try {
+      const integrationService = new IntegrationService(undefined, undefined, config.connectionId);
+
+      const integrationData = await integrationService.fetchIntegrationSettings();
+      const integrationSettings = integrationData
+        ? integrationService.getWidgetSettings(integrationData)
+        : null;
+
+      if (integrationSettings) {
+        finalConfig = createConfigFromSettings(integrationSettings, config);
+      } else {
+        finalConfig = createConfigFromSettings({} as WidgetSettingsData, config);
+      }
+    } catch (err) {
+      console.error('Error fetching integration settings:', err);
+      finalConfig = createConfigFromSettings({} as WidgetSettingsData, config);
+    }
+
     hideWidgetSettingsLoader();
-
-    // Use default settings for connectionId/agentId path
-    finalConfig = mergeConfigWithDefaultAtmosphere(config);
-
-    console.log('✅ Using default widget settings for connectionId/agentId path');
   } else {
-    // Neither path is valid
     showWidgetSettingsLoader(
       'Please provide either (marketrix-id + marketrix-key) OR (marketrix-agent + marketrix-connection-id)'
     );
     return;
   }
 
-  // Store current config (flat structure, no atmosphere nesting)
   setCurrentConfig(finalConfig);
-
-  // Create container and mount widget
   const { mountEl } = createWidgetContainer();
   const instance = mountWidget(mountEl, finalConfig);
   setWidgetInstance(instance);
-
-  console.log('Marketrix Widget initialized successfully');
 };
 
 // Register auto-initialization immediately after function definition

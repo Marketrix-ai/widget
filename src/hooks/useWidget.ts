@@ -6,7 +6,6 @@ import {
   extractWidgetSettingsFromConfig,
 } from '../constants/config';
 import type { WidgetSettingsData } from '../sdk';
-import { IntegrationService } from '../services/integrationService';
 import MarketrixApiService from '../services/marketrixApiService';
 import type { ChatMessage, ChatMode, MarketrixConfig, WidgetState } from '../types';
 import { configManager } from '../utils/configManager';
@@ -89,90 +88,16 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
     agentAvailable: false,
   });
 
-  // Settings loading state
-  const [settingsLoading, setSettingsLoading] = useState(false);
-  const [settingsError, setSettingsError] = useState<string | null>(null);
-  const [settingsLoaded, setSettingsLoaded] = useState(false);
-
   const apiServiceRef = useRef<MarketrixApiService | null>(null);
 
-  // Fetch integration settings from API if marketrixId/marketrixKey provided
-  // Skip if settings are already loaded in config (check for widget_enabled as indicator)
-  useEffect(() => {
-    const fetchSettings = async () => {
-      // If widget settings are already in config (flat structure), skip fetching
-      if (config.widget_enabled !== undefined) {
-        console.log('Integration settings already loaded in config, skipping fetch');
-        setSettingsLoaded(true);
-        return;
-      }
-
-      if (config.marketrixId && config.marketrixKey) {
-        try {
-          setSettingsLoading(true);
-          setSettingsError(null);
-
-          const integrationService = new IntegrationService(
-            config.marketrixId,
-            config.marketrixKey
-          );
-
-          const integrationData = await integrationService.fetchIntegrationSettings();
-          const integrationSettings = integrationData
-            ? integrationService.getWidgetSettings(integrationData)
-            : null;
-
-          if (integrationSettings) {
-            // Update config with fetched settings (spread flat structure)
-            configManager.updateConfig({
-              ...integrationSettings,
-            });
-            console.log('Integration settings loaded from API:', integrationSettings);
-            setSettingsLoaded(true);
-          } else {
-            console.log('No integration settings found in API, using default settings');
-            setSettingsLoaded(true);
-          }
-        } catch (err) {
-          const errorMessage =
-            err instanceof Error ? err.message : 'Failed to fetch integration settings';
-          setSettingsError(errorMessage);
-          console.error('Error fetching integration settings:', err);
-          setSettingsLoaded(true);
-        } finally {
-          setSettingsLoading(false);
-        }
-      } else {
-        // If no marketrixId/marketrixKey, mark as loaded immediately
-        setSettingsLoaded(true);
-      }
-    };
-
-    fetchSettings();
-  }, [config.marketrixId, config.marketrixKey, config.widget_enabled]);
-
-  // Merge config with ConfigManager settings (API settings may have been loaded)
-  // Priority: config (with API settings) > configManager (localStorage) > defaults
   const marketrixConfig = useMemo<MarketrixConfig>(() => {
-    // Start with defaults
-    let mergedConfig = { ...DEFAULT_MARKETRIX_CONFIG };
-
-    // Merge with ConfigManager (may have old settings from localStorage)
-    const managerConfig = configManager.getConfig();
-    if (managerConfig) {
-      mergedConfig = { ...mergedConfig, ...managerConfig };
-    }
-
-    // Config (with API settings from index.tsx) overrides everything
-    mergedConfig = { ...mergedConfig, ...config };
-
-    // If config has widget settings from API, save to ConfigManager for persistence
-    if (config.widget_enabled !== undefined) {
-      configManager.saveConfig(mergedConfig);
-    }
-
+    const mergedConfig = {
+      ...DEFAULT_MARKETRIX_CONFIG,
+      ...config, // Config from index.tsx overrides defaults
+    };
+    configManager.saveConfig(mergedConfig);
     return mergedConfig;
-  }, [config, settingsLoaded]);
+  }, [config]);
 
   // Initialize API service
   useEffect(() => {
@@ -409,8 +334,6 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
     // Config state
     marketrixConfig,
     settings: effectiveSettings,
-    isLoading: settingsLoading,
-    error: settingsError,
 
     // Computed values
     shouldShow: shouldShowWidget(),

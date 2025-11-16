@@ -3,12 +3,14 @@ import { extractApiData, extractErrorMessage } from '../utils/apiUtils';
 import { isString, isWidgetSettingsData } from '../utils/typeGuards';
 
 export class IntegrationService {
-  private marketrixId: string;
-  private marketrixKey: string;
+  private marketrixId?: string;
+  private marketrixKey?: string;
+  private connectionId?: number;
 
-  constructor(marketrixId: string, marketrixKey: string) {
+  constructor(marketrixId?: string, marketrixKey?: string, connectionId?: number) {
     this.marketrixId = marketrixId;
     this.marketrixKey = marketrixKey;
+    this.connectionId = connectionId;
   }
 
   /**
@@ -16,63 +18,74 @@ export class IntegrationService {
    */
   async fetchIntegrationSettings(): Promise<IntegrationData | null> {
     try {
-      console.log('Fetching integration settings via SDK...');
-      console.log('Marketrix ID:', this.marketrixId);
-      console.log('Marketrix Key:', this.marketrixKey);
+      let response;
 
-      const response = await sdk.integrationSearch({
-        query: {
-          marketrix_id: this.marketrixId,
-          marketrix_key: this.marketrixKey,
-        },
-      });
-
-      const integrationsData = extractApiData<IntegrationData[]>(response);
-      if (integrationsData && Array.isArray(integrationsData)) {
-        // Find the widget integration from the search results
-        const widgetIntegration = integrationsData.find(
-          (integration: IntegrationData) =>
-            integration.type === 'widget' && integration.status === 'active'
-        );
-
-        if (widgetIntegration) {
-          console.log('Found widget integration via SDK:', widgetIntegration);
-          console.log('Widget Integration Connection ID:', widgetIntegration.connection_id);
-          return widgetIntegration;
-        }
+      if (this.marketrixId && this.marketrixKey) {
+        response = await sdk.integrationSearch({
+          query: {
+            type: 'widget',
+            marketrix_id: this.marketrixId,
+            marketrix_key: this.marketrixKey,
+          },
+        });
+      } else if (this.connectionId) {
+        response = await sdk.integrationSearch({
+          query: {
+            type: 'widget',
+            connection_id: this.connectionId,
+          },
+        });
+      } else {
+        return null;
       }
 
-      console.warn('No widget integration found for the provided credentials');
-      return null;
+      // Extract data from response: { success: true, data: [...] }
+      const integrationsData = extractApiData<IntegrationData[]>(response);
+
+      if (!integrationsData || !Array.isArray(integrationsData) || integrationsData.length === 0) {
+        return null;
+      }
+
+      // Find active widget integration
+      const widgetIntegration = integrationsData.find(
+        (integration: IntegrationData) =>
+          integration.status === 'active' && integration.type === 'widget'
+      );
+
+      return widgetIntegration || null;
     } catch (error) {
-      console.error('Failed to fetch integration settings via SDK:', error);
+      console.error('Failed to fetch integration settings:', error);
       return null;
     }
   }
 
   /**
    * Get widget settings from integration data
+   * Handles both object format (from API) and JSON string format (from database)
    */
   getWidgetSettings(integration: IntegrationData): WidgetSettingsData | null {
     if (!integration?.settings) {
       return null;
     }
 
-    // Parse settings if they're stored as a JSON string
-    let settings: WidgetSettingsData | SlackSettingsData = integration.settings;
-    if (isString(settings)) {
+    let settings: WidgetSettingsData | SlackSettingsData;
+
+    // API returns settings as an object, but database might store as JSON string
+    if (isString(integration.settings)) {
       try {
-        const parsed: unknown = JSON.parse(settings);
-        if (isWidgetSettingsData(parsed)) {
-          settings = parsed;
-        } else {
+        const parsed: unknown = JSON.parse(integration.settings);
+        if (!isWidgetSettingsData(parsed)) {
           console.warn('Parsed settings are not widget settings');
           return null;
         }
+        settings = parsed;
       } catch (error) {
         console.error('Failed to parse settings JSON:', extractErrorMessage(error));
         return null;
       }
+    } else {
+      // Settings is already an object
+      settings = integration.settings;
     }
 
     // Type guard to check if this is widget settings (not Slack settings)
