@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
 
-import MarketrixIcon from '../assets/marketrix-icon.png';
 import { useWidget } from '../hooks/useWidget';
 import type { ChatMessage, ChatMode, MarketrixConfig } from '../types';
 import { getPositionClasses } from '../utils/widgetPositioning';
@@ -344,35 +343,34 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         {/* Header with Marketrix branding */}
         <div
           className={`
-              flex justify-between items-center px-3 py-1.5 relative border-b border-purple-200
-              bg-purple-100 rounded-t-lg
+              flex justify-between items-center px-3 py-2 relative border-b border-gray-800
+              bg-black rounded-t-lg
                       `}
         >
-          {/* Left side: Agent icon / Watching icon */}
+          {/* Left side: Text and live button */}
           <div className='flex items-center gap-2'>
-            {isScreenSharing ? (
+            <span className='text-sm font-semibold text-white leading-none'>Marketrix AI</span>
+            {isScreenSharing && (
               <button
                 onClick={stopScreenSharing}
-                className='flex items-center justify-center w-5 h-5 rounded-full transition-all shadow-sm hover:opacity-90'
+                className='flex items-center justify-center gap-1 px-2 py-0.5 rounded-full bg-purple-600 text-white text-xs font-medium transition-all shadow-sm hover:opacity-90'
                 aria-label='Stop screen sharing'
                 title='Stop screen sharing'
               >
-                <div className='w-2 h-2 rounded-full bg-red-500 animate-pulse' />
+                <div className='w-2 h-2 rounded-full bg-white animate-pulse' />
+                <span>Live</span>
               </button>
-            ) : (
-              <img src={MarketrixIcon} alt='Marketrix AI' className='w-5 h-5 object-cover' />
             )}
-            <span className='text-sm font-semibold text-black leading-none'>Marketrix AI</span>
           </div>
 
           {/* Right side: Close button */}
-          <div className='flex items-center space-x-1 bg-white/80 rounded-full p-0.5 shadow-sm'>
+          <div className='flex items-center space-x-1 bg-white/10 rounded-full p-0.5 shadow-sm'>
             <button
               onClick={onClose}
-              className='p-1 rounded-full hover:bg-gray-100 transition-colors'
+              className='p-1 rounded-full hover:bg-white/20 transition-colors'
               aria-label='Close chat'
             >
-              <svg className='w-3 h-3 text-gray-600' fill='currentColor' viewBox='0 0 20 20'>
+              <svg className='w-3 h-3 text-white' fill='currentColor' viewBox='0 0 20 20'>
                 <path
                   fillRule='evenodd'
                   d='M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z'

@@ -23,11 +23,11 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({
   const getModeIcon = (mode: ChatMode) => {
     switch (mode) {
       case 'show':
-        return <LuMousePointerClick className='w-4 h-4' />;
+        return <LuMousePointerClick className='w-4 h-4 text-base' />;
       case 'tell':
-        return <IoChatbubbleEllipsesOutline className='w-4 h-4' />;
+        return <IoChatbubbleEllipsesOutline className='w-4 h-4 text-base' />;
       case 'do':
-        return <SiTicktick className='w-4 h-4' />;
+        return <SiTicktick className='w-4 h-4 text-base' />;
       default:
         return null;
     }

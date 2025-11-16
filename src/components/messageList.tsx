@@ -1480,7 +1480,7 @@ export const MessageList: React.FC<MessageListProps> = ({
     >
       {/* Welcome message - always show */}
       {!isLoading && (
-        <div key='welcome-message' className='group flex flex-col justify-start'>
+        <div key='welcome-message' className='group flex flex-col justify-start mt-2'>
           <div className='flex items-start gap-1 flex-row'>
             {/* Agent Logo */}
             <div className='flex-shrink-0 w-8 h-8 self-start'>
@@ -1502,13 +1502,13 @@ export const MessageList: React.FC<MessageListProps> = ({
 
               {/* Chips inside the greeting message bubble */}
               {uniqueSuggestedActions.length > 0 && (
-                <div className='mt-1.5 pt-0.5 flex flex-col gap-1'>
+                <div className='mt-2.5 mb-1.5 p-0 flex flex-col gap-1'>
                   {uniqueSuggestedActions.map((action: SuggestedActionItem, chipIndex: number) => (
                     <button
                       key={`welcome-chip-${action.id}-${chipIndex}`}
                       onClick={(e) => handleSuggestedActionClick(action, e)}
                       className={`
-                      w-full flex items-center gap-1 font-inter font-normal text-xs px-2.5 py-1.5 rounded-lg cursor-pointer 
+                      w-full flex items-center gap-1 font-inter font-normal text-xs px-2.5 py-2 rounded-lg cursor-pointer 
                       transition-all duration-200 text-left hover:shadow-md hover:scale-[1.01] active:scale-100
                       bg-purple-100 border border-purple-200
                       hover:border-purple-300 hover:bg-purple-200
