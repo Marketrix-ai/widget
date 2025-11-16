@@ -125,7 +125,7 @@ export class MarketrixApiService {
             content: request.message || '',
           };
           response = await sdk.chatDo({
-            params: { chat_id: chatId },
+            params: { chat_id: Number(chatId) },
             body,
           });
           break;

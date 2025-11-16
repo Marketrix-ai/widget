@@ -650,6 +650,7 @@ const contract = c.router({
     description: 'Creates prompt with specified configuration and returns creation response',
     path: '/chat/:chat_id/do',
     body: ChatRequestSchema,
+    pathParams: z.object({ chat_id: z.coerce.number() }),
     responses: {
       200: R.success(UsageStatsSchema),
       400: R.error,
