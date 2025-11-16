@@ -2,7 +2,7 @@ import './index.css';
 
 import { WidgetValidationService } from './services/widgetValidationService';
 import type { MarketrixConfig } from './types';
-import { setupAutoInit } from './utils/autoInit';
+import { registerAutoInit } from './utils/autoInit';
 import { mergeConfigWithDefaultAtmosphere } from './utils/configHelpers';
 import { configManager } from './utils/ConfigManager';
 import {
@@ -100,6 +100,10 @@ export const initMarketrixWidget = async (config: MarketrixConfig): Promise<void
   console.log('Marketrix Widget initialized successfully');
 };
 
+// Register auto-initialization immediately after function definition
+// This ensures the function is available when DOM becomes ready
+registerAutoInit(initMarketrixWidget);
+
 // Destroy the widget
 export const destroyMarketrixWidget = (): void => {
   const instance = getWidgetInstance();
@@ -139,25 +143,6 @@ export const getCurrentConfig = (): MarketrixConfig => {
   }
   return config;
 };
-
-// Auto-initialize if script is loaded with data attributes
-// Pass initMarketrixWidget to avoid circular dependency
-// Use setTimeout to ensure initMarketrixWidget is fully defined
-if (typeof window !== 'undefined') {
-  // Ensure initMarketrixWidget is defined before calling setupAutoInit
-  if (typeof initMarketrixWidget === 'function') {
-    setupAutoInit(initMarketrixWidget);
-  } else {
-    // If not ready yet, wait a bit and try again
-    setTimeout(() => {
-      if (typeof initMarketrixWidget === 'function') {
-        setupAutoInit(initMarketrixWidget);
-      } else {
-        console.error('initMarketrixWidget is not a function when setupAutoInit is called');
-      }
-    }, 0);
-  }
-}
 
 // Export types for external use
 export type { ChatMessage, ChatMode, MarketrixConfig, Theme, WidgetState } from './types';
