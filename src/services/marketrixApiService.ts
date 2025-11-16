@@ -69,7 +69,6 @@ export class MarketrixApiService {
 
       // Map the mode to the appropriate chat endpoint
       const mode = request.mode || 'tell';
-      let response;
 
       // Validate chat_id after initialization
       if (!this.chatId) {
@@ -136,36 +135,49 @@ export class MarketrixApiService {
         throw new Error(`Invalid chat_id format: ${chatId}. Expected numeric chat_id.`);
       }
 
-      switch (mode) {
-        case 'tell': {
-          response = await sdk.chatTell({
-            params: { chat_id: chatIdNum },
-            body,
-          });
-          break;
+      let apiResponse;
+      try {
+        switch (mode) {
+          case 'tell': {
+            apiResponse = await sdk.chatTell({
+              params: { chat_id: chatIdNum },
+              body,
+            });
+            break;
+          }
+          case 'show': {
+            apiResponse = await sdk.chatShow({
+              params: { chat_id: chatIdNum },
+              body,
+            });
+            break;
+          }
+          case 'do': {
+            apiResponse = await sdk.chatDo({
+              params: { chat_id: chatIdNum },
+              body,
+            });
+            break;
+          }
+          default: {
+            // This should never happen due to TypeScript's exhaustive checking
+            const _exhaustiveCheck: never = mode;
+            throw new Error(`Unsupported mode: ${String(_exhaustiveCheck)}`);
+          }
         }
-        case 'show': {
-          response = await sdk.chatShow({
-            params: { chat_id: chatIdNum },
-            body,
-          });
-          break;
-        }
-        case 'do': {
-          response = await sdk.chatDo({
-            params: { chat_id: chatIdNum },
-            body,
-          });
-          break;
-        }
-        default: {
-          // This should never happen due to TypeScript's exhaustive checking
-          const _exhaustiveCheck: never = mode;
-          throw new Error(`Unsupported mode: ${String(_exhaustiveCheck)}`);
-        }
+      } catch (sdkError) {
+        // SDK throws errors for failed requests - rethrow with better context
+        const errorMessage = extractErrorMessage(sdkError);
+        console.error('[API Service] SDK error:', {
+          mode,
+          chatId: chatIdNum,
+          error: sdkError,
+          errorMessage,
+        });
+        throw new Error(`API request failed: ${errorMessage}`);
       }
 
-      const responseData = extractApiData(response);
+      const responseData = extractApiData(apiResponse);
       if (responseData) {
         // Map the response to our expected format
         if (mode === 'do') {
@@ -179,6 +191,7 @@ export class MarketrixApiService {
         } else {
           // chatTell and chatShow return ChatResponseData
           if (!isChatResponseData(responseData)) {
+            console.error('[API Service] Invalid chat response data format:', responseData);
             throw new Error('Invalid chat response data format');
           }
 
@@ -192,7 +205,19 @@ export class MarketrixApiService {
         }
       }
 
-      throw new Error('Failed to send message');
+      // Log the actual response for debugging
+      const errorBody =
+        apiResponse.body && typeof apiResponse.body === 'object' && 'error' in apiResponse.body
+          ? String(apiResponse.body.error)
+          : 'Unknown error';
+      console.error('[API Service] Failed to extract data from response:', {
+        status: apiResponse.status,
+        body: apiResponse.body,
+        response: apiResponse,
+      });
+      throw new Error(
+        `Failed to send message. API returned status ${apiResponse.status}. ${errorBody}`
+      );
     } catch (error) {
       console.error('Failed to send message:', extractErrorMessage(error));
       throw error;

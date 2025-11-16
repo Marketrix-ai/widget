@@ -62,8 +62,6 @@ import {
   GoogleLoginCallbackSchema,
   HealthResponseSchema,
   IndexResponseSchema,
-  InstructionEntitySchema,
-  InstructionTypeSchema,
   IntegrationCreateSchema,
   IntegrationEntitySchema,
   IntegrationTypeSchema,
@@ -91,6 +89,7 @@ import {
   TenantUpdateSchema,
   TokenSchema,
   TourEntitySchema,
+  TourStepSchema,
   UsageStatsSchema,
   UserEntitySchema,
   UserLoginSchema,
@@ -615,7 +614,7 @@ const contract = c.router({
   chatTell: {
     method: 'POST' as const,
     summary: 'Request tell mode response for given content',
-    description: 'Processes explanation request and returns AI response (voice+text) as a data url',
+    description: 'Processes explanation request and returns AI response as text',
     path: '/chat/:chat_id/tell',
     body: ChatRequestSchema,
     pathParams: z.object({ chat_id: z.coerce.number() }),
@@ -631,7 +630,7 @@ const contract = c.router({
   chatShow: {
     method: 'POST' as const,
     summary: 'Request show mode response for given content',
-    description: 'Processes user introduction and returns AI response (voice+text) as a data url',
+    description: 'Processes user introduction and returns AI response as text',
     path: '/chat/:chat_id/show',
     body: ChatRequestSchema,
     pathParams: z.object({ chat_id: z.coerce.number() }),
@@ -990,7 +989,7 @@ const contract = c.router({
     description: 'Triggers tour spotlight for a specific step and element',
     path: '/tour/show',
     body: z.object({
-      step: z.any(),
+      step: TourStepSchema,
       element_selector: z.string().optional(),
     }),
     responses: {
@@ -1269,42 +1268,6 @@ const contract = c.router({
     pathParams: z.object({ id: z.coerce.number() }),
     responses: {
       200: R.success(KnowledgeEntitySchema),
-      400: R.error,
-      401: R.error,
-      403: R.error,
-      500: R.error,
-    },
-  },
-
-  // ============================================================================
-  // INSTRUCTION ROUTES - Business rule and automation rule management
-  // ============================================================================
-
-  instructionSearch: {
-    method: 'GET' as const,
-    summary: 'Search instructions by type',
-    description: 'Returns matching instructions by type',
-    path: '/instruction',
-    query: z.object({
-      type: InstructionTypeSchema.optional(),
-    }),
-    responses: {
-      200: R.success(z.array(InstructionEntitySchema)),
-      400: R.error,
-      401: R.error,
-      403: R.error,
-      500: R.error,
-    },
-  },
-
-  instructionCreate: {
-    method: 'POST' as const,
-    summary: 'Create new instruction',
-    description: 'Creates instruction with specified conditions and actions',
-    path: '/instruction',
-    body: InstructionEntitySchema,
-    responses: {
-      200: R.success(InstructionEntitySchema),
       400: R.error,
       401: R.error,
       403: R.error,

@@ -218,9 +218,39 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
       } catch (error) {
         console.error('Failed to send message:', error);
 
+        // Extract error message - prefer API error details if available
+        let userFriendlyError = 'Sorry, I encountered an error. Please try again.';
+        const errorMsg = error instanceof Error ? error.message : String(error);
+
+        // If error contains API error details, use them
+        if (errorMsg.includes('API returned status')) {
+          // Extract the actual error message after the status
+          // Format: "API returned status 500. No tell-mode rule found!"
+          const apiErrorMatch = errorMsg.match(/API returned status \d+\. (.+?)(?:\.|$)/);
+          if (apiErrorMatch && apiErrorMatch[1]) {
+            const apiError = apiErrorMatch[1].trim();
+            // Make it more user-friendly
+            if (apiError.includes('No tell-mode rule found')) {
+              userFriendlyError = 'Sorry, the tell mode is not configured. Please contact support.';
+            } else if (apiError.includes('No show-mode rule found')) {
+              userFriendlyError = 'Sorry, the show mode is not configured. Please contact support.';
+            } else if (apiError.includes('No do-mode rule found')) {
+              userFriendlyError = 'Sorry, the do mode is not configured. Please contact support.';
+            } else {
+              userFriendlyError = `Sorry, ${apiError.toLowerCase()}`;
+            }
+          }
+        } else if (errorMsg.includes('API request failed')) {
+          // Extract the actual error from "API request failed: <error>"
+          const actualError = errorMsg.replace('API request failed: ', '').trim();
+          if (actualError) {
+            userFriendlyError = `Sorry, ${actualError.toLowerCase()}`;
+          }
+        }
+
         const errorMessage: ChatMessage = {
           id: `error-${messageId}`,
-          content: 'Sorry, I encountered an error. Please try again.',
+          content: userFriendlyError,
           sender: 'agent',
           timestamp: new Date(),
           mode: messageMode,

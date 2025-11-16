@@ -962,7 +962,6 @@ export const ChatRequestSchema = z
  */
 export const ChatResponseSchema = z.object({
   text: z.string(),
-  audio: z.string().url(),
 });
 
 // ============================================================================
@@ -984,18 +983,6 @@ export const ActionLogEntitySchema = z.object({
  */
 export const ActionLogCreateSchema = ActionLogEntitySchema.partial().extend({
   type: ActionLogTypeSchema,
-});
-
-// ============================================================================
-// INSTRUCTION SCHEMAS - Business rule and automation rule management
-// ============================================================================
-
-/**
- * Instruction entity schema
- */
-export const InstructionEntitySchema = BaseEntitySchema.extend({
-  type: InstructionTypeSchema,
-  message: z.string(),
 });
 
 // ============================================================================
@@ -1307,7 +1294,6 @@ export type TaskPilotPromptData = z.infer<typeof TaskPilotPromptSchema>;
 export type TourData = z.infer<typeof TourEntitySchema>;
 export type TourAnswerData = z.infer<typeof TourAnswerSchema>;
 export type TourStepData = z.infer<typeof TourStepSchema>;
-export type InstructionData = z.infer<typeof InstructionEntitySchema>;
 export type PasswordResetData = z.infer<typeof PasswordResetEntitySchema>;
 export type ChatData = z.infer<typeof ChatEntitySchema>;
 export type UsageStatsData = z.infer<typeof UsageStatsSchema>;
