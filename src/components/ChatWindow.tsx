@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 
-import { useWidgetAtmosphere } from '../hooks/useWidgetAtmosphere';
-import type { WidgetSettingsData } from '../sdk';
+import { useWidget } from '../hooks/useWidget';
 import DemoApiService from '../services/demoApiService';
 import type { ChatMessage, ChatMode, MarketrixConfig } from '../types';
 import { getPositionClasses } from '../utils/widgetPositioning';
@@ -33,7 +32,6 @@ interface ChatWindowProps {
   onSendMessage: (message: string, mode?: ChatMode) => void;
   onSetMode: (mode: ChatMode) => void;
   onScreenSharingChange?: (isSharing: boolean) => void;
-  integrationSettings?: WidgetSettingsData | null;
 }
 
 export const ChatWindow: React.FC<ChatWindowProps> = ({
@@ -47,7 +45,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   onSendMessage,
   onSetMode,
   onScreenSharingChange,
-  integrationSettings,
 }) => {
   const [inputValue, setInputValue] = useState('');
   const [isScreenAccessActive, setIsScreenAccessActive] = useState(false);
@@ -58,14 +55,10 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Get atmosphere configuration
-  const { getWidgetCustomize, getWidgetPosition, getWidgetSettings } = useWidgetAtmosphere(config);
+  const { getWidgetCustomize, getWidgetPosition, settings } = useWidget({ config });
 
   const widgetCustomize = getWidgetCustomize();
   const widgetPosition = getWidgetPosition();
-  const atmosphereSettings = getWidgetSettings();
-
-  // Use integration settings if available, otherwise fall back to atmosphere settings
-  const effectiveSettings = integrationSettings || atmosphereSettings;
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -263,28 +256,24 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
 
   // Get widget settings for positioning
   // Convert underscore to hyphen for position (API returns bottom_right, but CSS expects bottom_right)
-  const effectivePosition = effectiveSettings.widget_position || 'bottom_right';
+  const effectivePosition = widgetPosition.position || settings.widget_position || 'bottom_right';
   const positionClasses = getPositionClasses(effectivePosition);
 
   if (!isOpen) return null;
 
-  // Apply custom styling from integration settings or atmosphere settings
+  // Apply custom styling from settings
   const customStyles = {
-    width: effectiveSettings.widget_width || widgetCustomize.sizes?.width || '320px',
+    width: settings.widget_width || widgetCustomize.sizes?.width || '320px',
     height: isMinimized
       ? '48px'
-      : effectiveSettings.widget_height || widgetCustomize.sizes?.height || '35rem',
-    borderRadius:
-      effectiveSettings.widget_border_radius || widgetCustomize.sizes?.border_radius || '12px',
-    fontSize: effectiveSettings.widget_font_size || widgetCustomize.sizes?.font_size || '14px',
-    background:
-      effectiveSettings.widget_background_color || widgetCustomize.colors?.background || 'white',
-    color: effectiveSettings.widget_text_color || widgetCustomize.colors?.text || '#333333',
+      : settings.widget_height || widgetCustomize.sizes?.height || '35rem',
+    borderRadius: settings.widget_border_radius || widgetCustomize.sizes?.border_radius || '12px',
+    fontSize: settings.widget_font_size || widgetCustomize.sizes?.font_size || '14px',
+    background: settings.widget_background_color || widgetCustomize.colors?.background || 'white',
+    color: settings.widget_text_color || widgetCustomize.colors?.text || '#333333',
     borderColor:
-      effectiveSettings.widget_border_color ||
-      widgetCustomize.colors?.border ||
-      'rgba(255, 255, 255, 0.2)',
-    boxShadow: effectiveSettings.widget_shadow || '0 10px 25px rgba(0, 0, 0, 0.1)',
+      settings.widget_border_color || widgetCustomize.colors?.border || 'rgba(255, 255, 255, 0.2)',
+    boxShadow: settings.widget_shadow || '0 10px 25px rgba(0, 0, 0, 0.1)',
     zIndex: widgetPosition.z_index || 40,
   } satisfies React.CSSProperties;
 
@@ -347,7 +336,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                 onSetMode={onSetMode}
                 config={config}
                 onStepGuideStart={() => setIsStepGuideRunning(true)}
-                integrationSettings={integrationSettings}
                 onScreenSharingChange={handleScreenSharingChange}
               />
             </div>

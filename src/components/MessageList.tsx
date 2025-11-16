@@ -5,8 +5,8 @@ import { LuMousePointerClick } from 'react-icons/lu';
 import { SiTicktick } from 'react-icons/si';
 
 import MarketrixLogo from '../assets/marketrix-icon.png';
-import { useWidgetAtmosphere } from '../hooks/useWidgetAtmosphere';
-import { sdk, type TourData, type TourStepData, type WidgetSettingsData } from '../sdk';
+import { useWidget } from '../hooks/useWidget';
+import { sdk, type TourData, type TourStepData } from '../sdk';
 import type { ChatMessage, MarketrixConfig } from '../types';
 import { formatMessageTime } from '../utils/textFormatting';
 import {
@@ -42,7 +42,6 @@ interface MessageListProps {
   onSetMode?: (mode: 'show' | 'tell' | 'do') => void;
   config?: MarketrixConfig;
   onStepGuideStart?: () => void;
-  integrationSettings?: WidgetSettingsData | null;
   onScreenSharingChange?: (
     isSharing: boolean,
     stream?: MediaStream | null,
@@ -58,11 +57,10 @@ export const MessageList: React.FC<MessageListProps> = ({
   onSetMode,
   config,
   onStepGuideStart,
-  integrationSettings,
   onScreenSharingChange,
 }) => {
   // Get atmosphere configuration
-  const { getWidgetText } = useWidgetAtmosphere(config);
+  const { getWidgetText, settings } = useWidget(config ? { config } : {});
   const widgetText = getWidgetText();
 
   // Use SDK types
@@ -1259,13 +1257,13 @@ export const MessageList: React.FC<MessageListProps> = ({
     }
   };
 
-  // Suggested actions to show when no messages - get from integration settings or use defaults
+  // Suggested actions to show when no messages - get from settings or use defaults
   const getSuggestedActions = () => {
-    // If integration settings have widget_chips, use those
-    if (integrationSettings?.widget_chips && integrationSettings.widget_chips.length > 0) {
-      console.log('Widget chips from integration settings:', integrationSettings.widget_chips);
+    // If settings have widget_chips, use those
+    if (settings?.widget_chips && settings.widget_chips.length > 0) {
+      console.log('Widget chips from settings:', settings.widget_chips);
 
-      return integrationSettings.widget_chips.map((chip: ChipData, index: number) => {
+      return settings.widget_chips.map((chip: ChipData, index: number) => {
         // Handle both formats: chip_text (expected) and question (actual backend)
         const chipText = chip.chip_text || chip.question || '';
         const chipMode = chip.chip_mode || chip.type || 'tell';
@@ -1310,10 +1308,7 @@ export const MessageList: React.FC<MessageListProps> = ({
 
     // Check if there are any chips in a different location or format
     console.log('No widget_chips found, checking for alternative chip formats...');
-    console.log(
-      'Full integration settings structure:',
-      JSON.stringify(integrationSettings, null, 2)
-    );
+    console.log('Full settings structure:', JSON.stringify(settings, null, 2));
 
     // Fallback to default suggested actions if no integration settings
     return [

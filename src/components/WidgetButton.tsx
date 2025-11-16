@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 
 import MarketrixIcon from '../assets/marketrix-icon.png';
-import { useWidgetAtmosphere } from '../hooks/useWidgetAtmosphere';
-import type { WidgetSettingsData } from '../sdk';
+import { useWidget } from '../hooks/useWidget';
 import type { MarketrixConfig } from '../types';
 import { getPositionClasses } from '../utils/widgetPositioning';
 
@@ -12,26 +11,16 @@ interface WidgetButtonProps {
   isOpen: boolean;
   _agentAvailable: boolean;
   _isScreenSharing?: boolean;
-  integrationSettings?: WidgetSettingsData | null;
 }
 
-export const WidgetButton: React.FC<WidgetButtonProps> = ({
-  config,
-  onClick,
-  isOpen,
-  integrationSettings,
-}) => {
+export const WidgetButton: React.FC<WidgetButtonProps> = ({ config, onClick, isOpen }) => {
   const theme = config.theme || 'light';
   const [showWelcomeText, setShowWelcomeText] = useState(false);
 
   // Get atmosphere configuration
-  const { getWidgetText, getWidgetPosition, getWidgetSettings } = useWidgetAtmosphere(config);
+  const { getWidgetText, getWidgetPosition, settings } = useWidget({ config });
   const widgetText = getWidgetText();
   const widgetPosition = getWidgetPosition();
-  const widgetSettings = getWidgetSettings();
-
-  // Use integration settings if available, otherwise fall back to atmosphere settings
-  const effectiveSettings = integrationSettings || widgetSettings;
 
   const isDark = theme === 'dark';
 
@@ -41,7 +30,7 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
     setShowWelcomeText(false);
 
     // Only show welcome text for default appearance, not compact
-    if (effectiveSettings.widget_appearance === 'default') {
+    if (settings.widget_appearance === 'default') {
       // Add a small delay to ensure button renders first
       const buttonTimer = setTimeout(() => {
         // Button is now visible, start welcome text timer
@@ -54,10 +43,10 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
 
       return () => clearTimeout(buttonTimer);
     }
-  }, [effectiveSettings.widget_appearance]);
+  }, [settings.widget_appearance]);
 
-  // Use integration settings for positioning, fallback to atmosphere settings
-  const effectivePosition = effectiveSettings.widget_position || 'bottom_right';
+  // Use position from widget position config or settings
+  const effectivePosition = widgetPosition.position || settings.widget_position || 'bottom_right';
   const effectivePositionClasses = getPositionClasses(effectivePosition);
 
   return (
@@ -84,7 +73,7 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
       </button>
 
       {/* Welcome Text - appears after 2 seconds (only for default appearance) */}
-      {!isOpen && showWelcomeText && effectiveSettings.widget_appearance === 'default' && (
+      {!isOpen && showWelcomeText && settings.widget_appearance === 'default' && (
         <div
           className={`absolute ${effectivePosition.includes('left') ? 'right-16' : 'left-16'} top-1/2 transform -translate-y-1/2 px-4 py-3 bg-white text-gray-800 text-sm rounded-lg shadow-lg w-64 gradient-border ${effectivePosition.includes('left') ? 'animate-slide-in-right' : 'animate-slide-in-left'} cursor-pointer`}
           onClick={onClick}
@@ -119,12 +108,10 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
             {/* greeting text */}
             <div className='flex-1'>
               <div className='font-medium'>
-                {effectiveSettings.widget_greeting ||
-                  widgetText.greeting ||
-                  "Hey! 👋 I'm Marketrix AI"}
+                {settings.widget_greeting || widgetText.greeting || "Hey! 👋 I'm Marketrix AI"}
               </div>
               <div className='text-gray-600'>
-                {effectiveSettings.widget_body || widgetText.chat_greeting || 'How can I help you?'}
+                {settings.widget_body || widgetText.chat_greeting || 'How can I help you?'}
               </div>
             </div>
 
@@ -161,7 +148,7 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
       )}
 
       {/* Tooltip - show when welcome text is not displayed */}
-      {!isOpen && (!showWelcomeText || effectiveSettings.widget_appearance === 'compact') && (
+      {!isOpen && (!showWelcomeText || settings.widget_appearance === 'compact') && (
         <div
           className={`absolute bottom-16 ${effectivePosition.includes('left') ? 'left-0' : 'right-0'} mb-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg shadow-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200`}
         >

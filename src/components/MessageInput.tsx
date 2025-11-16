@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { LuSquare } from 'react-icons/lu';
 
 import SendIcon from '../assets/send.png';
-import { useWidgetAtmosphere } from '../hooks/useWidgetAtmosphere';
+import { useWidget } from '../hooks/useWidget';
 import type { MarketrixConfig } from '../types';
 import { elementHighlighter } from '../utils/elementHighlighting';
 import { ScreenAccessModal } from './screenAccessModal';
@@ -37,7 +37,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   const [showScreenAccessModal, setShowScreenAccessModal] = useState(false);
 
   // Get atmosphere configuration
-  const { getWidgetText } = useWidgetAtmosphere(config);
+  const { getWidgetText } = useWidget(config ? { config } : {});
   const widgetText = getWidgetText();
 
   // Trigger modal when prop changes

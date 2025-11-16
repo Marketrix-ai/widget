@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
 
-import { useIntegrationSettings } from '../hooks/useIntegrationSettings';
-import { useMarketrixWidget } from '../hooks/useMarketrixWidget';
-import { useWidgetAtmosphere } from '../hooks/useWidgetAtmosphere';
+import { useWidget } from '../hooks/useWidget';
 import type { MarketrixConfig } from '../types';
 import { isWidgetPosition } from '../utils/typeGuards';
 import { ChatWindow } from './chatWindow';
@@ -13,16 +11,18 @@ interface MarketrixWidgetProps {
 }
 
 export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
-  const { state, actions } = useMarketrixWidget({ config });
-  const { atmosphereConfig, marketrixConfig, shouldShow, getWidgetCustomize, getWidgetPosition } =
-    useWidgetAtmosphere(config);
-
-  // Fetch integration settings from API
   const {
-    settings: integrationSettings,
+    state,
+    actions,
+    atmosphereConfig,
+    marketrixConfig,
+    shouldShow,
+    getWidgetCustomize,
+    getWidgetPosition,
+    settings,
     isLoading: settingsLoading,
     error: settingsError,
-  } = useIntegrationSettings(config);
+  } = useWidget({ config });
 
   // Track screen sharing state
   const [isScreenSharing, setIsScreenSharing] = useState(false);
@@ -31,7 +31,7 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
   // Only check visibility and enabled state after settings are loaded
   if (!settingsLoading) {
     // After settings are loaded, check if widget should be visible
-    if (!shouldShow || (integrationSettings && !integrationSettings.widget_enabled)) {
+    if (!shouldShow || !settings.widget_enabled) {
       return null;
     }
   }
@@ -41,54 +41,46 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
   const widgetCustomize = getWidgetCustomize();
   const widgetPosition = getWidgetPosition();
 
-  // Apply integration settings to the effective config
-  const finalConfig = integrationSettings
-    ? {
-        ...effectiveConfig,
-        // Override with integration settings - convert underscore to hyphen for position
-        position: (() => {
-          const pos = integrationSettings.widget_position?.replace('_', '-');
-          if (pos && isWidgetPosition(pos)) {
-            return pos;
-          }
-          return effectiveConfig.position;
-        })(),
-        enabledModes: [
-          ...(integrationSettings.widget_feature_show ? ['show' as const] : []),
-          ...(integrationSettings.widget_feature_tell ? ['tell' as const] : []),
-          ...(integrationSettings.widget_feature_do ? ['do' as const] : []),
-        ],
-        // Agent name is now handled through atmosphere config
+  // Apply settings to the effective config
+  const finalConfig = {
+    ...effectiveConfig,
+    // Override with settings - convert underscore to hyphen for position
+    position: (() => {
+      const pos = settings.widget_position?.replace('_', '-');
+      if (pos && isWidgetPosition(pos)) {
+        return pos;
       }
-    : effectiveConfig;
+      return effectiveConfig.position;
+    })(),
+    enabledModes: [
+      ...(settings.widget_feature_show ? ['show' as const] : []),
+      ...(settings.widget_feature_tell ? ['tell' as const] : []),
+      ...(settings.widget_feature_do ? ['do' as const] : []),
+    ],
+  };
 
-  // Apply custom styling from atmosphere config and integration settings
+  // Apply custom styling from settings (settings already come from API or atmosphere)
   const customStyles = {
-    '--widget-width': integrationSettings?.widget_width || widgetCustomize.sizes?.width || '320px',
-    '--widget-height':
-      integrationSettings?.widget_height || widgetCustomize.sizes?.height || '35rem',
+    '--widget-width': settings.widget_width || widgetCustomize.sizes?.width || '320px',
+    '--widget-height': settings.widget_height || widgetCustomize.sizes?.height || '35rem',
     '--widget-border-radius':
-      integrationSettings?.widget_border_radius || widgetCustomize.sizes?.border_radius || '12px',
-    '--widget-font-size':
-      integrationSettings?.widget_font_size || widgetCustomize.sizes?.font_size || '14px',
+      settings.widget_border_radius || widgetCustomize.sizes?.border_radius || '12px',
+    '--widget-font-size': settings.widget_font_size || widgetCustomize.sizes?.font_size || '14px',
     '--widget-primary-color':
-      integrationSettings?.widget_accent_color || widgetCustomize.colors?.primary || '#1BB55B',
+      settings.widget_accent_color || widgetCustomize.colors?.primary || '#1BB55B',
     '--widget-secondary-color':
-      integrationSettings?.widget_secondary_color || widgetCustomize.colors?.secondary || '#987ADD',
+      settings.widget_secondary_color || widgetCustomize.colors?.secondary || '#987ADD',
     '--widget-background':
-      integrationSettings?.widget_background_color ||
+      settings.widget_background_color ||
       widgetCustomize.colors?.background ||
       'linear-gradient(135deg, #1BB55B26 0%, #987ADD30 100%)',
-    '--widget-text-color':
-      integrationSettings?.widget_text_color || widgetCustomize.colors?.text || '#333333',
+    '--widget-text-color': settings.widget_text_color || widgetCustomize.colors?.text || '#333333',
     '--widget-border-color':
-      integrationSettings?.widget_border_color ||
-      widgetCustomize.colors?.border ||
-      'rgba(255, 255, 255, 0.2)',
+      settings.widget_border_color || widgetCustomize.colors?.border || 'rgba(255, 255, 255, 0.2)',
     '--widget-z-index': widgetPosition.z_index || 40,
-    '--widget-shadow': integrationSettings?.widget_shadow || '0 4px 20px rgba(0, 0, 0, 0.15)',
-    '--widget-animation-duration': integrationSettings?.widget_animation_duration || '0.3s',
-    '--widget-fade-duration': integrationSettings?.widget_fade_duration || '0.2s',
+    '--widget-shadow': settings.widget_shadow || '0 4px 20px rgba(0, 0, 0, 0.15)',
+    '--widget-animation-duration': settings.widget_animation_duration || '0.3s',
+    '--widget-fade-duration': settings.widget_fade_duration || '0.2s',
   } as React.CSSProperties;
 
   return (
@@ -109,7 +101,6 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
         isOpen={state.isOpen}
         _agentAvailable={state.agentAvailable}
         _isScreenSharing={isScreenSharing}
-        integrationSettings={integrationSettings}
       />
 
       {/* Chat Window */}
@@ -128,7 +119,6 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
         onSendMessage={actions.sendMessage}
         onSetMode={actions.setMode}
         onScreenSharingChange={setIsScreenSharing}
-        integrationSettings={integrationSettings}
       />
 
       {/* Error Display */}
