@@ -73,53 +73,6 @@ export function isObject(value: unknown): value is Record<string, unknown> {
 }
 
 // ============================================================================
-// MCP Protocol Type Guards
-// ============================================================================
-
-/**
- * Type guard for MCPMessage
- */
-export function isMCPMessage(value: unknown): value is {
-  jsonrpc: '2.0';
-  id?: string | number;
-  method?: string;
-  params?: Record<string, unknown>;
-  result?: Record<string, unknown>;
-  error?: {
-    code: number;
-    message: string;
-  };
-} {
-  if (!isObject(value)) {
-    return false;
-  }
-  return (
-    value.jsonrpc === '2.0' &&
-    (value.id === undefined || typeof value.id === 'string' || typeof value.id === 'number') &&
-    (value.method === undefined || typeof value.method === 'string') &&
-    (value.params === undefined || isObject(value.params)) &&
-    (value.result === undefined || isObject(value.result)) &&
-    (value.error === undefined ||
-      (isObject(value.error) &&
-        typeof value.error.code === 'number' &&
-        typeof value.error.message === 'string'))
-  );
-}
-
-/**
- * Type guard for MCPToolCall
- */
-export function isMCPToolCall(value: unknown): value is {
-  name: string;
-  arguments: Record<string, unknown>;
-} {
-  if (!isObject(value)) {
-    return false;
-  }
-  return typeof value.name === 'string' && isObject(value.arguments) && 'arguments' in value;
-}
-
-// ============================================================================
 // API Response Type Guards
 // ============================================================================
 

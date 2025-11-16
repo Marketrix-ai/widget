@@ -49,6 +49,9 @@ export interface ChatMessage {
   sender: 'user' | 'agent';
   timestamp: Date;
   mode?: ChatMode;
+  videoStream?: MediaStream;
+  isScreenAccessRequest?: boolean;
+  isSystemMessage?: boolean;
 }
 
 export interface WidgetState {

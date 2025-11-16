@@ -11,14 +11,14 @@ interface ModeSelectorProps {
   currentMode: ChatMode;
   enabledModes: ChatMode[];
   onModeChange: (mode: ChatMode) => void;
-  onScreenAccessRequest?: (mode: ChatMode) => void;
+  isScreenSharing?: boolean;
 }
 
 export const ModeSelector: React.FC<ModeSelectorProps> = ({
   currentMode,
   enabledModes,
   onModeChange,
-  onScreenAccessRequest,
+  isScreenSharing = false,
 }) => {
   const getModeIcon = (mode: ChatMode) => {
     switch (mode) {
@@ -42,10 +42,10 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({
     <div
       className={`
         px-3 pb-2
-        bg-transparent flex items-center justify-between
+        bg-transparent flex items-center justify-between gap-2
       `}
     >
-      <div className='flex space-x-2'>
+      <div className='flex space-x-2 flex-shrink-0'>
         {orderedModes.map((mode: ChatMode) => (
           <button
             key={mode}
@@ -53,18 +53,20 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({
               e.preventDefault();
               e.stopPropagation();
               onModeChange(mode);
-
-              // Show screen access modal for show and do modes
-              if ((mode === 'show' || mode === 'do') && onScreenAccessRequest) {
-                onScreenAccessRequest(mode);
-              }
             }}
             className={`
-                flex items-center justify-center gap-1 text-sm font-medium transition-all duration-200
+                flex items-center justify-center gap-1 text-sm font-medium transition-all duration-200 relative
                 ${
                   currentMode === mode
                     ? 'bg-purple-600 text-white shadow-lg'
                     : 'bg-purple-100 text-black hover:bg-purple-200 border border-purple-200'
+                }
+                ${
+                  isScreenSharing && currentMode === mode
+                    ? 'border-2'
+                    : currentMode === mode
+                      ? 'border-2 border-transparent'
+                      : ''
                 }
               `}
             style={{
@@ -72,6 +74,12 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({
               height: '26px',
               borderRadius: '22px',
               opacity: 1,
+              ...(isScreenSharing && currentMode === mode
+                ? {
+                    animation: 'glow-border-pulse 2s ease-in-out infinite',
+                    borderColor: 'rgba(255, 255, 255, 0.6)',
+                  }
+                : {}),
             }}
             title={getModeDescription(mode)}
           >
@@ -80,7 +88,12 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({
           </button>
         ))}
       </div>
-      <img src={MarketrixLogo} alt='Marketrix Logo' className='w-18 h-5 object-cover' />
+      <img
+        src={MarketrixLogo}
+        alt='Marketrix Logo'
+        className='h-5 w-auto object-contain flex-shrink-0'
+        style={{ maxWidth: '100px' }}
+      />
     </div>
   );
 };

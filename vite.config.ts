@@ -37,7 +37,7 @@ const devMeetPlugin = () => {
 const copyIndexHtmlPlugin = () => {
   return {
     name: 'copy-index-html',
-    buildEnd() {
+    writeBundle() {
       const srcPath = resolve(process.cwd(), 'index.html');
       const destPath = resolve(process.cwd(), 'dist', 'index.html');
       try {

@@ -1,10 +1,11 @@
 // / <reference lib="dom" />
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { HiUser } from 'react-icons/hi2';
 import { IoChatbubbleEllipsesOutline } from 'react-icons/io5';
 import { LuMousePointerClick } from 'react-icons/lu';
 import { SiTicktick } from 'react-icons/si';
 
-import MarketrixLogo from '../assets/marketrix-icon.png';
+import MarketrixIcon from '../assets/marketrix-icon.png';
 import { useWidget } from '../hooks/useWidget';
 import { sdk, type TourData, type TourStepData } from '../sdk';
 import type { ChatMessage, MarketrixConfig } from '../types';
@@ -39,8 +40,12 @@ interface MessageListProps {
     question?: string
   ) => void;
   onSetMode?: (mode: 'show' | 'tell' | 'do') => void;
+  onModeChange?: (mode: 'show' | 'tell' | 'do') => void;
+  onAddMessage?: (message: ChatMessage) => void;
   config?: MarketrixConfig;
   onStepGuideStart?: () => void;
+  onScreenAccessAllow?: () => void;
+  onScreenAccessDeny?: () => void;
 }
 
 export const MessageList: React.FC<MessageListProps> = ({
@@ -49,8 +54,12 @@ export const MessageList: React.FC<MessageListProps> = ({
   messagesEndRef,
   onSendMessage,
   onSetMode,
+  onModeChange,
+  onAddMessage,
   config,
   onStepGuideStart,
+  onScreenAccessAllow,
+  onScreenAccessDeny,
 }) => {
   // Get atmosphere configuration
   const { getWidgetText, settings } = useWidget(config ? { config } : {});
@@ -1263,19 +1272,39 @@ export const MessageList: React.FC<MessageListProps> = ({
 
         switch (mode) {
           case 'do':
-            icon = <SiTicktick className='w-4 h-4' />;
+            icon = (
+              <SiTicktick
+                className='w-3 h-3 text-xs'
+                style={{ fontSize: '0.75rem', width: '0.75rem', height: '0.75rem' }}
+              />
+            );
             isShow = false;
             break;
           case 'show':
-            icon = <LuMousePointerClick className='w-6 h-6' />;
+            icon = (
+              <LuMousePointerClick
+                className='w-3 h-3 text-xs'
+                style={{ fontSize: '0.75rem', width: '0.75rem', height: '0.75rem' }}
+              />
+            );
             isShow = true;
             break;
           case 'tell':
-            icon = <IoChatbubbleEllipsesOutline className='w-5 h-5' />;
+            icon = (
+              <IoChatbubbleEllipsesOutline
+                className='w-3 h-3 text-xs'
+                style={{ fontSize: '0.75rem', width: '0.75rem', height: '0.75rem' }}
+              />
+            );
             isShow = false;
             break;
           default:
-            icon = <IoChatbubbleEllipsesOutline className='w-5 h-5' />;
+            icon = (
+              <IoChatbubbleEllipsesOutline
+                className='w-3 h-3 text-xs'
+                style={{ fontSize: '0.75rem', width: '0.75rem', height: '0.75rem' }}
+              />
+            );
             isShow = false;
         }
 
@@ -1380,13 +1409,39 @@ export const MessageList: React.FC<MessageListProps> = ({
     event.preventDefault();
     event.stopPropagation();
 
-    // Set the mode based on action type FIRST
-    if (onSetMode && action.type) {
-      console.log('Setting mode to:', action.type);
-      onSetMode(action.type);
+    // FIRST: Switch to the chip's mode if not already in that mode
+    // Use onModeChange if available (adds system message), otherwise fall back to onSetMode
+    if (action.type) {
+      if (onModeChange) {
+        // onModeChange adds system message and switches mode
+        console.log('Changing mode to:', action.type);
+        onModeChange(action.type);
+      } else if (onSetMode) {
+        // Fallback to direct mode set
+        console.log('Setting mode to:', action.type);
+        onSetMode(action.type);
+      }
+
+      // Wait a tick to ensure mode change is processed and UI updates
+      await new Promise((resolve) => setTimeout(resolve, 0));
     }
 
-    // Handle all action types directly
+    // THEN: Add the chip message as a user message in the chat (like user typed it)
+    // NOTE: This only ADDS a new message - it does NOT modify any existing messages
+    // The greeting message and all existing messages remain unchanged
+    if (onAddMessage) {
+      const userMessage: ChatMessage = {
+        id: `chip-message-${Date.now()}`,
+        content: action.text,
+        sender: 'user',
+        timestamp: new Date(),
+        mode: action.type,
+      };
+      onAddMessage(userMessage);
+    }
+
+    // Send message through normal flow (will check for screen access if needed)
+    // This ensures chips get the same treatment as typing a message
     if (onSendMessage) {
       console.log('Sending message with mode:', action.type, action.text);
 
@@ -1401,8 +1456,10 @@ export const MessageList: React.FC<MessageListProps> = ({
         }
 
         // For show actions, pass tour data (connection_id and question)
+        // The wrapper in ChatWindow will handle screen access check
         onSendMessage(action.text, action.type, 1, action.text);
       } else {
+        // The wrapper in ChatWindow will handle screen access check
         onSendMessage(action.text, action.type);
       }
     }
@@ -1412,130 +1469,205 @@ export const MessageList: React.FC<MessageListProps> = ({
     <div
       key='message-list-container'
       className={`
-        h-full overflow-y-auto px-4 space-y-3
-        bg-transparent
-        scrollbar-thin scrollbar-track-[#f6f6f6] scrollbar-thumb-[#b6b6b6]
-      `}
+            h-full overflow-y-auto px-2 space-y-0.5
+            bg-transparent
+            scrollbar-thin scrollbar-track-[#f6f6f6] scrollbar-thumb-[#b6b6b6]
+          `}
       style={{
         scrollbarColor: '#f6f6f6 transparent',
         scrollbarWidth: 'thin',
-        marginRight: '12px',
       }}
     >
-      {/* Welcome message */}
-      {messages.length === 0 && !isLoading && (
-        <div key='welcome-message' className='space-y-3'>
-          <div className='flex justify-start'>
-            <div className='w-full '>
-              <div className='flex gap-2'>
-                <img src={MarketrixLogo} alt='Marketrix Logo' className='w-6 h-6 object-cover' />
-                <div className=' font-inter font-normal text-sm bg-white text-black px-3 py-2 gradient-border'>
-                  {widgetText.greeting || "Hey! 👋 I'm Marketrix AI, How can I help you"}
+      {/* Welcome message - always show */}
+      {!isLoading && (
+        <div key='welcome-message' className='group flex flex-col justify-start'>
+          <div className='flex items-start gap-1 flex-row'>
+            {/* Agent Logo */}
+            <div className='flex-shrink-0 w-8 h-8 self-start'>
+              <img src={MarketrixIcon} alt='Marketrix AI' className='w-8 h-8 object-cover' />
+            </div>
+
+            {/* Message bubble */}
+            <div
+              className={`
+                flex flex-col flex-1
+                px-2.5 py-2 rounded-r-lg rounded-tl-lg rounded-bl-lg shadow-sm border
+                bg-white text-black border-gray-200
+              `}
+            >
+              {/* Message content */}
+              <div className='text-xs font-inter font-medium leading-tight whitespace-pre-wrap break-words'>
+                {widgetText.greeting || 'Hello! How can I assist you?'}
+              </div>
+
+              {/* Chips inside the greeting message bubble */}
+              {uniqueSuggestedActions.length > 0 && (
+                <div className='mt-1.5 pt-0.5 flex flex-col gap-1'>
+                  {uniqueSuggestedActions.map((action: SuggestedActionItem, chipIndex: number) => (
+                    <button
+                      key={`welcome-chip-${action.id}-${chipIndex}`}
+                      onClick={(e) => handleSuggestedActionClick(action, e)}
+                      className={`
+                      w-full flex items-center gap-1 font-inter font-normal text-xs px-2.5 py-1.5 rounded-lg cursor-pointer 
+                      transition-all duration-200 text-left hover:shadow-md hover:scale-[1.01] active:scale-100
+                      bg-purple-100 border border-purple-200
+                      hover:border-purple-300 hover:bg-purple-200
+                      text-black group
+                      leading-tight
+                    `}
+                    >
+                      <span
+                        className='text-purple-600 flex-shrink-0 flex items-center justify-center group-hover:text-purple-700'
+                        style={{ width: '0.75rem', height: '0.75rem', lineHeight: '0.75rem' }}
+                      >
+                        {action.icon}
+                      </span>
+                      <span className='font-normal leading-none text-black group-hover:text-gray-900'>
+                        {action.type === 'show' ? (
+                          <>
+                            <span className='font-semibold text-purple-600'>Show me </span>
+                            {action.text.replace(/^Show me\s*/i, '')}
+                          </>
+                        ) : action.type === 'do' ? (
+                          <>
+                            <span className='font-semibold text-purple-600'>Do </span>
+                            {action.text.replace(/^Do\s*/i, '')}
+                          </>
+                        ) : action.type === 'tell' ? (
+                          action.text
+                        ) : (
+                          action.text
+                        )}
+                      </span>
+                    </button>
+                  ))}
                 </div>
-              </div>
-              <div className='flex items-center justify-between mt-1.5 text-sm font-medium text-[#1D2939]'>
-                <span>{'Marketrix AI'}</span>
-                <span className='text-[#667085] text-xs font-normal'>
-                  {new Date().toLocaleDateString('en-US', { weekday: 'long' })}{' '}
-                  {new Date().toLocaleTimeString('en-US', {
-                    hour: 'numeric',
-                    minute: '2-digit',
-                  })}
-                </span>
-              </div>
+              )}
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Suggested actions */}
-      {!isLoading && (
-        <div key='suggested-actions' className='space-y-2'>
-          {uniqueSuggestedActions.map((action: SuggestedActionItem, index: number) => (
-            <div key={`suggested-action-${action.id}-${index}`} className='flex justify-start'>
-              <button
-                onClick={(e) => handleSuggestedActionClick(action, e)}
-                className={`
-                  w-full font-inter font-normal text-sm px-3 py-2 rounded-lg cursor-pointer transition-all duration-200 text-left hover:shadow-md
-                  ${
-                    action.isShow
-                      ? 'bg-white border border-gray-200 hover:bg-gray-50'
-                      : 'bg-white border border-gray-200 hover:bg-gray-50'
-                  }
-                `}
-              >
-                <div className='text-sm text-black flex items-center space-x-2'>
-                  <span className='text-black'>{action.icon}</span>
-                  <span className='font-normal'>
-                    {action.type === 'show' ? (
-                      <>
-                        <span className='font-bold'>Show me </span>
-                        {action.text.replace(/^Show me\s*/i, '')}
-                      </>
-                    ) : action.type === 'do' ? (
-                      <>
-                        <span className='font-bold'>Do </span>
-                        {action.text.replace(/^Do\s*/i, '')}
-                      </>
-                    ) : action.type === 'tell' ? (
-                      action.text
-                    ) : (
-                      action.text
-                    )}
-                  </span>
-                </div>
-              </button>
-            </div>
-          ))}
+          {/* Timestamp below card */}
+          <div className='flex justify-end mt-0.5'>
+            <span className='text-[10px] text-gray-400 font-inter font-normal'>
+              {formatMessageTime(new Date())}
+            </span>
+          </div>
         </div>
       )}
 
       {/* Messages */}
       {messages.map((message, index) => {
+        // Debug: Log message keys to check for duplicates
+        console.log(`Message ${index}:`, {
+          id: message.id,
+          content: message.content ? message.content.substring(0, 50) : 'No content',
+        });
+
+        // Render system messages differently (muted, centered)
+        if (message.isSystemMessage) {
+          return (
+            <div
+              key={`message-${message.id}-${index}`}
+              className='flex justify-center items-center py-0'
+            >
+              <span className='text-[10px] text-gray-400 font-inter font-normal'>
+                {message.content}
+              </span>
+            </div>
+          );
+        }
+
         return (
           <div
             key={`message-${message.id}-${index}`}
-            className={`flex flex-col gap-1 ${
+            className={`group flex flex-col ${
               message.sender === 'user' ? 'justify-end' : 'justify-start'
-            }`}
+            } mt-[10px]`}
           >
             <div
-              className={`flex flex-col gap-2 justify-between
-              w-full px-3 py-3 rounded-l-md rounded-b-md shadow-sm border
-              ${
-                message.sender === 'user'
-                  ? 'bg-[#101828] text-white'
-                  : 'bg-white text-black border-gray-200'
-              }
-            `}
+              className={`flex items-start gap-1 ${message.sender === 'user' ? 'flex-row-reverse' : 'flex-row'}`}
             >
-              {message.sender === 'user' && message.mode && (
-                <span className='inline-flex items-center gap-1 px-2 py-0.5 bg-[#6941C6] text-white text-xs font-medium rounded-2xl w-fit'>
-                  {message.mode === 'show' ? (
-                    <LuMousePointerClick className='w-3 h-3' />
-                  ) : message.mode === 'tell' ? (
-                    <IoChatbubbleEllipsesOutline className='w-3 h-3' />
-                  ) : message.mode === 'do' ? (
-                    <SiTicktick className='w-3 h-3' />
-                  ) : null}
-                  {message.mode === 'show'
-                    ? 'Show'
-                    : message.mode === 'tell'
-                      ? 'Tell'
-                      : message.mode === 'do'
-                        ? 'Do'
-                        : message.mode}
-                </span>
-              )}
-              <div className='text-sm font-inter font-normal whitespace-pre-wrap break-words'>
-                {message.content || 'No content available'}
+              {/* Logo */}
+              <div className='flex-shrink-0 w-8 h-8'>
+                {message.sender === 'agent' ? (
+                  <img src={MarketrixIcon} alt='Marketrix AI' className='w-8 h-8 object-cover' />
+                ) : (
+                  <div className='w-8 h-8 bg-gray-400 flex items-center justify-center rounded-lg'>
+                    <HiUser className='w-5 h-5 text-white' />
+                  </div>
+                )}
+              </div>
+
+              {/* Message bubble */}
+              <div
+                className={`flex flex-col flex-1
+                ${message.videoStream ? 'p-0' : 'px-2.5 py-2'} shadow-sm border
+                ${
+                  message.sender === 'user'
+                    ? 'bg-white text-black border-gray-200 rounded-l-lg rounded-tr-lg rounded-br-lg'
+                    : 'bg-white text-black border-gray-200 rounded-r-lg rounded-tl-lg rounded-bl-lg'
+                }
+              `}
+              >
+                {/* Video stream display - edge-to-edge */}
+                {message.videoStream && (
+                  <VideoStreamDisplay
+                    stream={message.videoStream}
+                    isUserMessage={message.sender === 'user'}
+                  />
+                )}
+                {/* Message content */}
+                <div
+                  className={`text-xs font-inter font-medium leading-tight whitespace-pre-wrap break-words ${message.videoStream ? 'px-2.5 pb-1.5 pt-0.5' : ''}`}
+                >
+                  {message.content || 'No content available'}
+                </div>
+
+                {/* Screen access request action buttons - only show if not yet handled */}
+                {message.isScreenAccessRequest &&
+                  !message.content.includes('✓') &&
+                  !message.content.includes('✗') && (
+                    <div className='mt-1.5 pt-0.5 flex gap-2'>
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          onScreenAccessAllow?.();
+                        }}
+                        className='flex items-center justify-center text-sm font-medium transition-all duration-200 bg-purple-600 text-white shadow-lg border-2 border-transparent'
+                        style={{
+                          width: '65px',
+                          height: '26px',
+                          borderRadius: '22px',
+                        }}
+                      >
+                        <span className='text-xs font-medium'>Yes</span>
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          onScreenAccessDeny?.();
+                        }}
+                        className='flex items-center justify-center text-sm font-medium transition-all duration-200 bg-purple-100 text-black hover:bg-purple-200 border border-purple-200'
+                        style={{
+                          width: '65px',
+                          height: '26px',
+                          borderRadius: '22px',
+                        }}
+                      >
+                        <span className='text-xs font-medium'>No</span>
+                      </button>
+                    </div>
+                  )}
               </div>
             </div>
-            <div className='flex items-center justify-between text-xs font-inter font-normal'>
-              <div className='items-center gap-2'>
-                <span>{message.sender === 'user' ? 'You' : 'Marketrix AI'}</span>
-              </div>
-              <span>{formatMessageTime(message.timestamp)}</span>
+            {/* Timestamp below card */}
+            <div
+              className={`flex ${message.sender === 'user' ? 'justify-start' : 'justify-end'} mt-0.5`}
+            >
+              <span className='text-[10px] text-gray-400 font-inter font-normal'>
+                {formatMessageTime(message.timestamp)}
+              </span>
             </div>
           </div>
         );
@@ -1572,6 +1704,8 @@ export const MessageList: React.FC<MessageListProps> = ({
                 <LuMousePointerClick className='w-4 h-4 text-black' />
                 <span className='text-sm font-medium text-black'>{tourData.question}</span>
               </div>
+
+              {/* Display tour steps */}
               <div className='space-y-2'>
                 {parsedSteps.map((step, index) => (
                   <div
@@ -1642,6 +1776,54 @@ export const MessageList: React.FC<MessageListProps> = ({
 
       {/* Auto-scroll anchor */}
       <div key='scroll-anchor' ref={messagesEndRef} />
+    </div>
+  );
+};
+
+// Video Stream Display Component
+interface VideoStreamDisplayProps {
+  stream: MediaStream | null;
+  isUserMessage?: boolean;
+}
+
+const VideoStreamDisplay: React.FC<VideoStreamDisplayProps> = ({
+  stream,
+  isUserMessage = false,
+}) => {
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    if (videoRef.current && stream) {
+      videoRef.current.srcObject = stream;
+      videoRef.current.play().catch((error) => {
+        console.error('Error playing video stream:', error);
+      });
+    }
+
+    return () => {
+      if (videoRef.current) {
+        videoRef.current.srcObject = null;
+      }
+    };
+  }, [stream]);
+
+  if (!stream) return null;
+
+  // Match message bubble border radius: user messages have rounded-l-lg rounded-tr-lg rounded-br-lg
+  // So top corners should be rounded: top-left and top-right
+  const borderRadiusClass = isUserMessage
+    ? 'rounded-tl-lg rounded-tr-lg'
+    : 'rounded-tr-lg rounded-tl-lg';
+
+  return (
+    <div className={`w-full overflow-hidden mb-1 ${borderRadiusClass}`}>
+      <video
+        ref={videoRef}
+        autoPlay
+        muted
+        playsInline
+        className={`w-full h-auto max-h-48 object-contain ${borderRadiusClass}`}
+      />
     </div>
   );
 };

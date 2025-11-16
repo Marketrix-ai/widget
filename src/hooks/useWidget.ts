@@ -29,6 +29,7 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
         messages: [],
         currentMode: 'tell' as ChatMode,
         agentAvailable: false,
+        error: undefined,
       },
       actions: {
         toggleWidget: () => {},
@@ -36,6 +37,8 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
         setMode: () => {},
         sendMessage: async () => {},
         clearError: () => {},
+        addMessage: () => {},
+        updateMessage: () => {},
       },
       atmosphereConfig: null,
       settings: defaultSettings,
@@ -92,6 +95,7 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
   // Settings loading state
   const [settingsLoading, setSettingsLoading] = useState(false);
   const [settingsError, setSettingsError] = useState<string | null>(null);
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
 
   const apiServiceRef = useRef<MarketrixApiService | null>(null);
 
@@ -119,17 +123,23 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
               widget_settings: integrationSettings,
             });
             console.log('Integration settings loaded from API:', integrationSettings);
+            setSettingsLoaded(true);
           } else {
             console.log('No integration settings found in API, using default settings');
+            setSettingsLoaded(true);
           }
         } catch (err) {
           const errorMessage =
             err instanceof Error ? err.message : 'Failed to fetch integration settings';
           setSettingsError(errorMessage);
           console.error('Error fetching integration settings:', err);
+          setSettingsLoaded(true);
         } finally {
           setSettingsLoading(false);
         }
+      } else {
+        // If no marketrixId/marketrixKey, mark as loaded immediately
+        setSettingsLoaded(true);
       }
     };
 
@@ -137,20 +147,24 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
   }, [config.marketrixId, config.marketrixKey]);
 
   // Use atmosphere from config or load from configManager
+  // Re-compute when settings are loaded to pick up API settings
+  // Priority: configManager (may have API settings) > config.atmosphere > defaults
   const atmosphereConfig = useMemo<WidgetAtmosphereConfig | null>(() => {
-    if (config.atmosphere) {
-      // Save to ConfigManager for runtime updates
-      configManager.saveConfig(config.atmosphere);
-      return config.atmosphere;
-    }
-    // Try to get from configManager (for runtime updates)
+    // First check configManager (may have been updated with API settings)
     const managerConfig = configManager.getConfig();
     if (managerConfig) {
       return managerConfig;
     }
+
+    // If config.atmosphere is provided, save it to ConfigManager and use it
+    if (config.atmosphere) {
+      configManager.saveConfig(config.atmosphere);
+      return config.atmosphere;
+    }
+
     // If no config exists, load default from ConfigManager
     return configManager.loadConfig();
-  }, [config]);
+  }, [config, settingsLoaded]);
 
   // Initialize API service
   useEffect(() => {
@@ -208,25 +222,41 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
   }, []);
 
   const sendMessage = useCallback(
-    async (content: string, mode?: ChatMode, connectionId?: number, question?: string) => {
+    async (
+      content: string,
+      mode?: ChatMode,
+      connectionId?: number,
+      question?: string,
+      skipUserMessage?: boolean
+    ) => {
       if (!apiServiceRef.current || !content.trim()) return;
 
       const messageMode = mode || state.currentMode;
       const messageId = Date.now().toString();
-      const userMessage: ChatMessage = {
-        id: messageId,
-        content: content.trim(),
-        sender: 'user',
-        timestamp: new Date(),
-        mode: messageMode,
-      };
 
-      // Add user message immediately
-      setState((prev) => ({
-        ...prev,
-        messages: [...prev.messages, userMessage],
-        isLoading: true,
-      }));
+      // Only add user message if it wasn't already added (e.g., from chip click)
+      if (!skipUserMessage) {
+        const userMessage: ChatMessage = {
+          id: messageId,
+          content: content.trim(),
+          sender: 'user',
+          timestamp: new Date(),
+          mode: messageMode,
+        };
+
+        // Add user message immediately
+        setState((prev) => ({
+          ...prev,
+          messages: [...prev.messages, userMessage],
+          isLoading: true,
+        }));
+      } else {
+        // Message already added, just set loading state
+        setState((prev) => ({
+          ...prev,
+          isLoading: true,
+        }));
+      }
 
       try {
         const response = await apiServiceRef.current.sendMessage({
@@ -273,6 +303,20 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
 
   const clearError = useCallback(() => {
     setState((prev) => ({ ...prev, error: undefined }));
+  }, []);
+
+  const addMessage = useCallback((message: ChatMessage) => {
+    setState((prev) => ({
+      ...prev,
+      messages: [...prev.messages, message],
+    }));
+  }, []);
+
+  const updateMessage = useCallback((messageId: string, updates: Partial<ChatMessage>) => {
+    setState((prev) => ({
+      ...prev,
+      messages: prev.messages.map((msg) => (msg.id === messageId ? { ...msg, ...updates } : msg)),
+    }));
   }, []);
 
   // Convert atmosphere config to MarketrixConfig
@@ -354,6 +398,8 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
       setMode,
       sendMessage,
       clearError,
+      addMessage,
+      updateMessage,
     },
 
     // Atmosphere/config state

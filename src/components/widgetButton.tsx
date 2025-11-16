@@ -10,10 +10,15 @@ interface WidgetButtonProps {
   onClick: () => void;
   isOpen: boolean;
   _agentAvailable: boolean;
-  _isScreenSharing?: boolean;
+  isScreenSharing?: boolean;
 }
 
-export const WidgetButton: React.FC<WidgetButtonProps> = ({ config, onClick, isOpen }) => {
+export const WidgetButton: React.FC<WidgetButtonProps> = ({
+  config,
+  onClick,
+  isOpen,
+  isScreenSharing = false,
+}) => {
   const theme = config.theme || 'light';
   const [showWelcomeText, setShowWelcomeText] = useState(false);
 
@@ -65,10 +70,14 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({ config, onClick, isO
         aria-label='Open Marketrix support chat'
       >
         {/* Logo/Icon */}
-        <div className='w-full h-full flex items-center justify-center'>
+        <div className='w-full h-full flex items-center justify-center relative'>
           <div className='w-full h-full bg-[#101828] rounded flex items-center justify-center'>
             <img src={MarketrixIcon} alt='Marketrix Icon' className='w-fit h-12' />
           </div>
+          {/* Live indicator dot - show when screensharing and chat is closed */}
+          {!isOpen && isScreenSharing && (
+            <div className='absolute top-1 right-1 w-3 h-3 rounded-full bg-red-500 animate-pulse border-2 border-white' />
+          )}
         </div>
       </button>
 

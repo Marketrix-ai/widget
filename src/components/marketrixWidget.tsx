@@ -3,7 +3,7 @@ import React from 'react';
 import { useWidget } from '../hooks/useWidget';
 import type { MarketrixConfig } from '../types';
 import { isWidgetPosition } from '../utils/typeGuards';
-import { ChatWindow } from './ChatWindow';
+import { ChatWindow } from './chatWindow';
 import { WidgetButton } from './widgetButton';
 
 interface MarketrixWidgetProps {
@@ -11,6 +11,8 @@ interface MarketrixWidgetProps {
 }
 
 export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
+  const [isScreenSharing, setIsScreenSharing] = React.useState(false);
+
   const {
     state,
     actions,
@@ -97,6 +99,7 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
         onClick={actions.toggleWidget}
         isOpen={state.isOpen}
         _agentAvailable={state.agentAvailable}
+        isScreenSharing={isScreenSharing}
       />
 
       {/* Chat Window */}
@@ -114,14 +117,19 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
         onClose={actions.closeWidget}
         onSendMessage={actions.sendMessage}
         onSetMode={actions.setMode}
+        onAddMessage={actions.addMessage!}
+        onUpdateMessage={actions.updateMessage!}
+        onScreenSharingChange={setIsScreenSharing}
       />
 
       {/* Error Display */}
-      {(state.error || settingsError) && (
+      {('error' in state ? state.error : undefined) || settingsError ? (
         <div className='fixed top-4 right-4 z-50 max-w-sm'>
           <div className='bg-red-500 text-white px-4 py-3 rounded-lg shadow-lg'>
             <div className='flex items-center justify-between'>
-              <span className='text-sm'>{state.error || settingsError}</span>
+              <span className='text-sm'>
+                {('error' in state ? state.error : undefined) || settingsError}
+              </span>
               <button
                 onClick={() => {
                   actions.clearError();
@@ -140,7 +148,7 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
             </div>
           </div>
         </div>
-      )}
+      ) : null}
     </div>
   );
 };
