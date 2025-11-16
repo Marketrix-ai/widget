@@ -1,17 +1,19 @@
-import type { WidgetSettingsData } from '../sdk';
-
-// Chat mode type (matches SDK InstructionType)
-export type ChatMode = 'show' | 'tell' | 'do';
+import type { InstructionType, WidgetSettingsData } from '../sdk';
 
 // Re-export SDK types for proper type usage
 export type {
   AgentData,
   ConnectionData,
+  InstructionType,
   IntegrationData,
   TenantData,
   UserData,
+  WidgetChip,
   WidgetSettingsData,
 } from '../sdk';
+
+// Alias for backward compatibility (ChatMode is the same as InstructionType)
+export type ChatMode = InstructionType;
 
 /**
  * MarketrixConfig - Based on actual SDK types
@@ -33,7 +35,7 @@ export interface MarketrixConfig {
   apiBaseUrl?: string;
 
   // Widget-specific configuration (not in SDK, but needed for widget functionality)
-  position?: 'bottom_left' | 'bottom_right';
+  position?: WidgetPosition;
   theme?: 'light' | 'dark';
   enabledModes?: ChatMode[];
 
@@ -82,106 +84,17 @@ export interface SendMessageResponse {
   timestamp: Date;
 }
 
-export type Theme = 'light' | 'dark';
-
 // Widget position type (derived from SDK schema)
-export type WidgetPosition = 'bottom_left' | 'bottom_right';
-
-// Extended configuration interfaces
-export interface WidgetTextConfig {
-  greeting?: string;
-  placeholder?: string;
-  header_ai?: string;
-  header_live?: string;
-  body_ai?: string;
-  body_live?: string;
-  chat_greeting?: string;
-  tour_greeting?: string;
-}
-
-export interface WidgetCustomizeConfig {
-  colors?: {
-    primary?: string;
-    secondary?: string;
-    background?: string;
-    text?: string;
-    border?: string;
-  };
-  sizes?: {
-    width?: string;
-    height?: string;
-    border_radius?: string;
-    font_size?: string;
-  };
-  animations?: {
-    slide_duration?: string;
-    fade_duration?: string;
-    bounce_effect?: boolean;
-  };
-}
-
-export interface AvatarConfig {
-  url?: string;
-  name?: string;
-  status?: 'online' | 'offline' | 'busy' | 'away';
-}
-
-export interface LiveFormConfig {
-  enabled?: boolean;
-  fields?: string[];
-  required?: string[];
-}
-
-export interface DeviceVisibilityConfig {
-  desktop?: boolean;
-  tablet?: boolean;
-  mobile?: boolean;
-}
+export type WidgetPosition = WidgetSettingsData['widget_position'];
 
 export interface WidgetPositionConfig {
-  position?: 'bottom_left' | 'bottom_right';
+  position?: WidgetPosition;
   offset?: {
     x?: number;
     y?: number;
   };
   z_index?: number;
 }
-
-export interface AdvancedSettingsConfig {
-  auto_open_delay?: number;
-  session_timeout?: number;
-  max_messages?: number;
-  typing_indicator?: boolean;
-  read_receipts?: boolean;
-  sound_notifications?: boolean;
-  vibration_enabled?: boolean;
-}
-
-export interface ThemeConfig {
-  light?: {
-    background?: string;
-    text?: string;
-    border?: string;
-    accent?: string;
-  };
-  dark?: {
-    background?: string;
-    text?: string;
-    border?: string;
-    accent?: string;
-  };
-}
-
-export interface ResponsiveBreakpointsConfig {
-  mobile?: string;
-  tablet?: string;
-  desktop?: string;
-}
-
-// WidgetChipConfig moved to types/widget.ts
-
-// WidgetSettingsConfig is now replaced by WidgetSettingsData from SDK
-// All widget-specific types are now in types/widget.ts
 
 /**
  * WidgetAtmosphereConfig - Widget-specific configuration not in SDK

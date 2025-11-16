@@ -6,7 +6,7 @@
  */
 
 import type { MarketrixConfig, WidgetAtmosphereConfig, WidgetSettingsData } from './index';
-import type { WidgetEvents, WidgetHookReturn, WidgetState } from './widget';
+import type { WidgetEvents, WidgetState } from './widget';
 
 // Base component props that all widget components should extend
 export interface BaseComponentProps {
@@ -181,49 +181,3 @@ export interface ListComponentProps<T = unknown>
   extends BaseComponentProps,
     ListProps<T>,
     SizeProps {}
-
-// Hook return types
-export interface UseWidgetReturn extends WidgetHookReturn<WidgetState> {
-  config: MarketrixConfig;
-  settings: WidgetSettingsData | null;
-  atmosphere: WidgetAtmosphereConfig | null;
-  actions: {
-    open: () => void;
-    close: () => void;
-    minimize: () => void;
-    maximize: () => void;
-    sendMessage: (message: string) => void;
-    updateSettings: (settings: Partial<WidgetSettingsData>) => void;
-    updateAtmosphere: (atmosphere: Partial<WidgetAtmosphereConfig>) => void;
-  };
-}
-
-export interface UseChatReturn extends WidgetHookReturn {
-  messages: ChatProps['messages'];
-  isTyping: boolean;
-  actions: {
-    sendMessage: (message: string) => void;
-    clearMessages: () => void;
-    startTyping: () => void;
-    stopTyping: () => void;
-  };
-}
-
-export interface UseAvatarReturn extends WidgetHookReturn {
-  avatar: {
-    url: string;
-    name: string;
-    status: AvatarProps['avatarStatus'];
-  };
-  actions: {
-    updateStatus: (status: AvatarProps['avatarStatus']) => void;
-    updateAvatar: (url: string, name: string) => void;
-  };
-}
-
-// Utility types for prop validation
-export type RequiredProps<T, K extends keyof T> = T & Required<Pick<T, K>>;
-export type OptionalProps<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
-export type PartialProps<T> = Partial<T>;
-export type PickProps<T, K extends keyof T> = Pick<T, K>;
-export type OmitProps<T, K extends keyof T> = Omit<T, K>;
