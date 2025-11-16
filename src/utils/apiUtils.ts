@@ -55,13 +55,6 @@ export function extractApiData<T>(response: ApiResponse<T>): T | null {
   return null;
 }
 
-/**
- * Check if response has error
- */
-export function hasApiError<T>(response: ApiResponse<T>): boolean {
-  return !isValidApiResponse(response);
-}
-
 // ============================================================================
 // Error Handling Utilities
 // ============================================================================
@@ -95,15 +88,6 @@ export function extractErrorMessage(error: unknown, fallback = 'Unknown error'):
 }
 
 /**
- * Create connection error message
- * Consolidates the repeated connection error message pattern
- */
-export function createConnectionErrorMessage(error: unknown): string {
-  const errorMessage = extractErrorMessage(error);
-  return `Cannot connect to API server. Please ensure the API server is running at ${VITE_API_URL}. Error: ${errorMessage}`;
-}
-
-/**
  * Handle API error with consistent error message extraction
  */
 export function handleApiError(
@@ -116,9 +100,10 @@ export function handleApiError(
   const errorMessage = extractErrorMessage(error);
 
   if (isConnectionError(error)) {
+    const connectionErrorMessage = `Cannot connect to API server. Please ensure the API server is running at ${VITE_API_URL}. Error: ${errorMessage}`;
     return {
       isValid: false,
-      error: createConnectionErrorMessage(error),
+      error: connectionErrorMessage,
     };
   }
 

@@ -39,19 +39,3 @@ export function storeChatId(chatId: string): void {
     console.warn('[Chat Storage] Failed to store chat_id in localStorage:', error);
   }
 }
-
-/**
- * Clear chat_id from localStorage
- */
-export function clearStoredChatId(): void {
-  if (typeof window === 'undefined') {
-    return;
-  }
-
-  try {
-    localStorage.removeItem(CHAT_ID_STORAGE_KEY);
-    console.log('[Chat Storage] Cleared chat_id from localStorage');
-  } catch (error) {
-    console.warn('[Chat Storage] Failed to clear chat_id from localStorage:', error);
-  }
-}
