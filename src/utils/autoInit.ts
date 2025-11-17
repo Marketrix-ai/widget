@@ -11,7 +11,6 @@
  */
 
 import type { MarketrixConfig } from '../types';
-import { parsePositionAttribute } from './attributeParsers';
 import { isHTMLScriptElement } from './typeGuards';
 import { showWidgetSettingsLoader } from './widgetInitializer';
 
@@ -42,16 +41,14 @@ const autoInitializeWidget = (): void => {
       const config: MarketrixConfig = {
         marketrixId,
         marketrixKey,
-        widget_position: parsePositionAttribute(script.getAttribute('data-position')),
       };
       initWidgetFunction(config).catch((error) => {
         console.error('Failed to initialize widget:', error);
       });
     } else if (agentId && connectionId) {
       const config: MarketrixConfig = {
-        agentId: Number.parseInt(agentId, 10),
-        connectionId: Number.parseInt(connectionId, 10),
-        widget_position: parsePositionAttribute(script.getAttribute('data-position')),
+        agentId: Number.parseInt(agentId),
+        connectionId: Number.parseInt(connectionId),
       };
       initWidgetFunction(config).catch((error) => {
         console.error('Failed to initialize widget:', error);
