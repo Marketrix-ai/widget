@@ -67,7 +67,7 @@ interface MessageListProps {
   onScreenAccessDeny?: () => void;
 }
 
-export const MessageList: React.FC<MessageListProps> = ({
+export const MessageList = ({
   messages,
   isLoading,
   messagesEndRef,
@@ -79,7 +79,7 @@ export const MessageList: React.FC<MessageListProps> = ({
   onStepGuideStart,
   onScreenAccessAllow,
   onScreenAccessDeny,
-}) => {
+}: MessageListProps) => {
   // Get widget settings
   const { settings } = useWidget(config ? { config } : {});
 
@@ -1170,60 +1170,146 @@ export const MessageList: React.FC<MessageListProps> = ({
     }
   };
 
-  // Function to fetch tour data from API
+  // Function to fetch tour data from API using tourSearch
   const fetchTourData = async (question: string, connectionId?: number) => {
     try {
       setIsLoadingTour(true);
-      console.log('=== FETCHING TOUR DATA ===');
+      console.log('=== FETCHING TOUR DATA USING tourSearch ===');
       console.log('Question:', question);
       console.log('Connection ID:', connectionId);
 
-      // Use SDK to fetch tour data
-      const response = await sdk.tourGet({
+      // Use SDK to search all tours for the connection
+      const response = await sdk.tourSearch({
         query: {
-          question,
           connection_id: connectionId,
         },
       });
 
-      console.log('=== TOUR API RESPONSE ===');
+      console.log('=== TOUR SEARCH API RESPONSE ===');
       console.log('Response status:', response.status);
       console.log('Response body:', response.body);
+      console.log('Response body type:', typeof response.body);
+      console.log('Response body keys:', response.body ? Object.keys(response.body) : 'null/undefined');
 
-      if (response.status === 200 && response.body?.success && response.body.data) {
-        const tour = response.body.data; // Already correct type from SDK
-        console.log('=== TOUR DATA ===');
+      // Check if response is successful
+      if (response.status !== 200) {
+        console.error('Tour Search API returned non-200 status:', response.status);
+        console.error('Response body:', response.body);
+        return;
+      }
+
+      // Handle different response body structures
+      let tours: TourData[] = [];
+
+      // Check if body has success property (standard API response format)
+      if (response.body && typeof response.body === 'object' && 'success' in response.body) {
+        const body = response.body as { success: boolean; data?: TourData[]; error?: string };
+        if (body.success && body.data && Array.isArray(body.data)) {
+          tours = body.data;
+          console.log('✅ Tour array extracted from response.body.data');
+        } else {
+          console.error('❌ Response body.success is false or data is missing');
+          console.error('Response body:', body);
+          if (body.error) {
+            console.error('Error message:', body.error);
+          }
+          return;
+        }
+      }
+      // Check if body is directly an array of tours
+      else if (response.body && Array.isArray(response.body)) {
+        tours = response.body as TourData[];
+        console.log('✅ Tour array is directly in response.body');
+      } else {
+        console.error('❌ Invalid response body structure');
+        console.error('Response body:', response.body);
+        return;
+      }
+
+      if (!tours || tours.length === 0) {
+        console.log('⚠️ No tours found for connection ID:', connectionId);
+        return;
+      }
+
+      console.log('=== ALL TOURS FOUND ===');
+      console.log('Total tours:', tours.length);
+
+      // Log each tour's question and answer
+      tours.forEach((tour, index) => {
+        console.log(`\n--- TOUR ${index + 1} ---`);
         console.log('Tour ID:', tour.id);
         console.log('Connection ID:', tour.connection_id);
         console.log('Question:', tour.question);
         console.log('Answer (raw):', tour.answer);
+        console.log('Answer type:', typeof tour.answer);
+        console.log('Answer (stringified):', JSON.stringify(tour.answer, null, 2));
+      });
+
+      // Find the tour that matches the question (case-insensitive partial match)
+      const matchingTour = tours.find(
+        (tour) => tour.question.toLowerCase().includes(question.toLowerCase()) || question.toLowerCase().includes(tour.question.toLowerCase())
+      );
+
+      if (!matchingTour) {
+        console.log('⚠️ No matching tour found for question:', question);
+        console.log('Available questions:', tours.map((t) => t.question));
+        return;
+      }
+
+      console.log('\n=== MATCHING TOUR FOUND ===');
+      console.log('Tour ID:', matchingTour.id);
+      console.log('Connection ID:', matchingTour.connection_id);
+      console.log('Question:', matchingTour.question);
+      console.log('Answer (raw):', matchingTour.answer);
+      console.log('Answer type:', typeof matchingTour.answer);
+
+      const tour = matchingTour;
 
         // Store tour data
         setTourData(tour);
 
-        // Handle the answer data - it's already a JSON object, not a string
+        // Handle the answer data - convert to JSON value
         if (tour.answer) {
           try {
             console.log('=== PROCESSING TOUR ANSWER ===');
             console.log('Tour answer type:', typeof tour.answer);
-            console.log('Tour answer:', tour.answer);
+            console.log('Tour answer (raw):', tour.answer);
+            console.log('Tour answer (stringified):', JSON.stringify(tour.answer, null, 2));
 
-            // If it's a string, parse it
+            // Convert answer to JSON value - handle all possible formats
             let parsedSteps: TourStepData[] = [];
-            if (isString(tour.answer)) {
-              console.log('Parsing answer string...');
-              const parsed: unknown = JSON.parse(tour.answer);
-              if (isTourStepDataArray(parsed)) {
-                parsedSteps = parsed;
-              } else {
-                console.error('Parsed answer is not a valid TourStepData array');
+            let answerValue: unknown = tour.answer;
+
+            // Step 1: If it's a string, parse it to JSON
+            if (isString(answerValue)) {
+              console.log('Answer is a string, parsing to JSON...');
+              try {
+                answerValue = JSON.parse(answerValue);
+                console.log('Parsed JSON:', answerValue);
+              } catch (parseError) {
+                console.error('Failed to parse answer string as JSON:', parseError);
+                console.error('Raw string value:', answerValue);
                 return;
               }
-            } else if (Array.isArray(tour.answer) && isTourStepDataArray(tour.answer)) {
-              parsedSteps = tour.answer;
-            } else {
-              // Handle case where answer is an object with steps property
-              const answerValue: unknown = tour.answer;
+            }
+
+            // Step 2: If it's already an array, use it directly
+            if (Array.isArray(answerValue)) {
+              console.log('Answer is already an array');
+              if (isTourStepDataArray(answerValue)) {
+                parsedSteps = answerValue;
+                console.log('Array is valid TourStepData array');
+              } else {
+                console.error('Array is not a valid TourStepData array');
+                console.error('Array contents:', answerValue);
+                return;
+              }
+            }
+            // Step 3: If it's an object, check for steps property or try to convert
+            else if (typeof answerValue === 'object' && answerValue !== null) {
+              console.log('Answer is an object, checking structure...');
+              
+              // Check if it has a steps property
               if (isTourAnswerWithSteps(answerValue)) {
                 if (isTourStepDataArray(answerValue.steps)) {
                   console.log('Answer has steps property, extracting steps array');
@@ -1232,10 +1318,33 @@ export const MessageList: React.FC<MessageListProps> = ({
                   console.error('Steps property is not a valid TourStepData array');
                   return;
                 }
-              } else {
-                console.error('Invalid tour answer format');
-                return;
               }
+              // Try to convert object to array if it looks like a single step
+              else if ('step_number' in answerValue || 'action' in answerValue) {
+                console.log('Answer appears to be a single step object, converting to array');
+                parsedSteps = [answerValue as TourStepData];
+              }
+              // Try to extract array from object values
+              else {
+                const obj = answerValue as Record<string, unknown>;
+                const values = Object.values(obj);
+                const arrayValue = values.find((v) => Array.isArray(v));
+                if (arrayValue && isTourStepDataArray(arrayValue)) {
+                  console.log('Found array in object values');
+                  parsedSteps = arrayValue;
+                } else {
+                  console.error('Could not extract valid steps array from object');
+                  console.error('Object keys:', Object.keys(obj));
+                  console.error('Object values:', values);
+                  return;
+                }
+              }
+            }
+            else {
+              console.error('Invalid tour answer format - not string, array, or object');
+              console.error('Answer value:', answerValue);
+              console.error('Answer type:', typeof answerValue);
+              return;
             }
 
             console.log('Final parsed steps:', parsedSteps);
@@ -1280,9 +1389,6 @@ export const MessageList: React.FC<MessageListProps> = ({
           console.log('No answer field in tour data');
           setParsedSteps([]);
         }
-      } else {
-        console.error('Tour API Error:', response.status, response.body);
-      }
     } catch (error) {
       console.error('=== ERROR FETCHING TOUR DATA ===');
       console.error('Error:', error);
@@ -1313,7 +1419,7 @@ export const MessageList: React.FC<MessageListProps> = ({
   const getSuggestedActions = () => {
     // If settings have widget_chips, use those
     if (settings?.widget_chips && settings.widget_chips.length > 0) {
-      console.log('Widget chips from settings:', settings.widget_chips);
+      // console.log('Widget chips from settings:', settings.widget_chips);
 
       return settings.widget_chips.map((chip: ChipData, index: number) => {
         // Handle both formats: chip_text (expected) and question (actual backend)
@@ -1322,7 +1428,7 @@ export const MessageList: React.FC<MessageListProps> = ({
         const mode: 'show' | 'tell' | 'do' =
           chipMode === 'show' || chipMode === 'tell' || chipMode === 'do' ? chipMode : 'tell';
 
-        console.log(`Processing chip ${index}:`, { chip, chipText, chipMode, mode });
+        // console.log(`Processing chip ${index}:`, { chip, chipText, chipMode, mode });
 
         let icon;
         let isShow = false;
@@ -1684,12 +1790,12 @@ export const MessageList: React.FC<MessageListProps> = ({
       )}
 
       {/* Messages */}
-      {messages.map((message, index) => {
+      {messages.map((message: ChatMessage, index: number) => {
         // Debug: Log message keys to check for duplicates
-        console.log(`Message ${index}:`, {
-          id: message.id,
-          content: message.content ? message.content.substring(0, 50) : 'No content',
-        });
+        // console.log(`Message ${index}:`, {
+        //   id: message.id,
+        //   content: message.content ? message.content.substring(0, 50) : 'No content',
+        // });
 
         // Render system messages differently (muted, centered)
         if (message.isSystemMessage) {
