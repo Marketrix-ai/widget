@@ -617,7 +617,7 @@ const contract = c.router({
     description: 'Processes explanation request and returns AI response as text',
     path: '/chat/:chat_id/tell',
     body: ChatRequestSchema,
-    pathParams: z.object({ chat_id: z.coerce.number() }),
+    pathParams: z.object({ chat_id: z.string() }),
     responses: {
       200: R.success(ChatResponseSchema),
       400: R.error,
@@ -633,7 +633,7 @@ const contract = c.router({
     description: 'Processes user introduction and returns AI response as text',
     path: '/chat/:chat_id/show',
     body: ChatRequestSchema,
-    pathParams: z.object({ chat_id: z.coerce.number() }),
+    pathParams: z.object({ chat_id: z.string() }),
     responses: {
       200: R.success(ChatResponseSchema),
       400: R.error,
@@ -649,7 +649,7 @@ const contract = c.router({
     description: 'Creates prompt with specified configuration and returns creation response',
     path: '/chat/:chat_id/do',
     body: ChatRequestSchema,
-    pathParams: z.object({ chat_id: z.coerce.number() }),
+    pathParams: z.object({ chat_id: z.string() }),
     responses: {
       200: R.success(UsageStatsSchema),
       400: R.error,

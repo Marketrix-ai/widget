@@ -37,6 +37,9 @@ export type MarketrixConfig = Partial<WidgetSettingsData> & {
   // Optional API configuration
   apiBaseUrl?: string;
 
+  // Optional Agent Server URL for websocket connection
+  agentServerUrl?: string;
+
   // Widget position config fields (offset/z_index) - local-only styling, not from API
   widget_position_offset?: {
     x?: number;

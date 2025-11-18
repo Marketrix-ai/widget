@@ -115,46 +115,26 @@ export class MarketrixApiService {
         throw new Error('Invalid chat_id. Please ensure chat session is initialized.');
       }
 
-      // Try to parse chat_id as number (API expects numeric chat_id in path)
-      // If chat_id is a string like "chat_1234567890_abc123", extract numeric part or use as-is
-      let chatIdNum: number;
-      if (chatId.startsWith('chat_')) {
-        // Extract numeric part from "chat_timestamp_nonce" format
-        const numericPart = chatId.split('_')[1];
-        chatIdNum = Number(numericPart);
-        if (isNaN(chatIdNum) || chatIdNum <= 0) {
-          // Fallback: try to parse the entire string as number (will fail but gives better error)
-          chatIdNum = Number(chatId);
-        }
-      } else {
-        chatIdNum = Number(chatId);
-      }
-
-      if (isNaN(chatIdNum) || chatIdNum <= 0) {
-        console.error('[API Service] Invalid chat_id format:', chatId);
-        throw new Error(`Invalid chat_id format: ${chatId}. Expected numeric chat_id.`);
-      }
-
       let apiResponse;
       try {
         switch (mode) {
           case 'tell': {
             apiResponse = await sdk.chatTell({
-              params: { chat_id: chatIdNum },
+              params: { chat_id: chatId },
               body,
             });
             break;
           }
           case 'show': {
             apiResponse = await sdk.chatShow({
-              params: { chat_id: chatIdNum },
+              params: { chat_id: chatId },
               body,
             });
             break;
           }
           case 'do': {
             apiResponse = await sdk.chatDo({
-              params: { chat_id: chatIdNum },
+              params: { chat_id: chatId },
               body,
             });
             break;
@@ -170,7 +150,7 @@ export class MarketrixApiService {
         const errorMessage = extractErrorMessage(sdkError);
         console.error('[API Service] SDK error:', {
           mode,
-          chatId: chatIdNum,
+          chatId,
           error: sdkError,
           errorMessage,
         });

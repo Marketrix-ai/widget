@@ -7,6 +7,7 @@ import {
 } from '../constants/config';
 import type { WidgetSettingsData } from '../sdk';
 import MarketrixApiService from '../services/marketrixApiService';
+import { type WebSocketMessage, WebSocketService } from '../services/websocketService';
 import type { ChatMessage, ChatMode, MarketrixConfig, WidgetState } from '../types';
 import { configManager } from '../utils/configManager';
 
@@ -87,6 +88,10 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
   });
 
   const apiServiceRef = useRef<MarketrixApiService | null>(null);
+  const websocketServiceRef = useRef<WebSocketService | null>(null);
+  const initializationInProgressRef = useRef<boolean>(false);
+  const initializedChatIdRef = useRef<string | null>(null);
+  const hasInitializedRef = useRef<boolean>(false);
 
   const marketrixConfig = useMemo<MarketrixConfig>(() => {
     const mergedConfig = {
@@ -97,8 +102,52 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
     return mergedConfig;
   }, [config]);
 
-  // Initialize API service
+  // Initialize API service and websocket connection (only once on mount)
   useEffect(() => {
+    // If we've already initialized, only handle reconnection if needed
+    if (hasInitializedRef.current) {
+      // If websocket exists but is disconnected, try to reconnect
+      if (
+        websocketServiceRef.current &&
+        initializedChatIdRef.current &&
+        !websocketServiceRef.current.isConnected() &&
+        !initializationInProgressRef.current
+      ) {
+        const chatId = initializedChatIdRef.current;
+        console.log('[Widget] WebSocket disconnected, attempting to reconnect...');
+        initializationInProgressRef.current = true;
+        websocketServiceRef.current
+          .connect(chatId)
+          .finally(() => {
+            initializationInProgressRef.current = false;
+          })
+          .catch((error) => {
+            console.error('[Widget] Reconnection failed:', error);
+          });
+      }
+      return;
+    }
+
+    // Prevent multiple simultaneous initializations
+    if (initializationInProgressRef.current) {
+      console.log('[Widget] Initialization already in progress, skipping...');
+      return;
+    }
+
+    // If already initialized with the same chat_id and websocket is connected, skip
+    if (
+      websocketServiceRef.current &&
+      initializedChatIdRef.current &&
+      websocketServiceRef.current.isConnected() &&
+      websocketServiceRef.current.getChatId() === initializedChatIdRef.current
+    ) {
+      console.log('[Widget] Already initialized and connected, skipping re-initialization');
+      hasInitializedRef.current = true;
+      return;
+    }
+
+    initializationInProgressRef.current = true;
+
     if (!apiServiceRef.current) {
       apiServiceRef.current = new MarketrixApiService(config);
     } else {
@@ -106,15 +155,112 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
       apiServiceRef.current.updateConfig(config);
     }
 
-    // Initialize chat_id
+    // Initialize chat_id and websocket connection
     const initializeChat = async () => {
-      if (!apiServiceRef.current) return;
+      if (!apiServiceRef.current) {
+        initializationInProgressRef.current = false;
+        return;
+      }
 
       try {
         const chatId = await apiServiceRef.current.initializeChatId();
         console.log('[Widget] Chat ID initialized:', chatId);
+
+        // Skip if we already have a connection with this chat_id
+        if (
+          websocketServiceRef.current &&
+          websocketServiceRef.current.getChatId() === chatId &&
+          websocketServiceRef.current.isConnected()
+        ) {
+          console.log('[Widget] WebSocket already connected with this chat_id, skipping');
+          initializedChatIdRef.current = chatId;
+          initializationInProgressRef.current = false;
+          return;
+        }
+
+        // Initialize websocket service if it doesn't exist (use singleton)
+        if (!websocketServiceRef.current) {
+          websocketServiceRef.current = WebSocketService.getInstance(config, {
+            onStatusChange: (status) => {
+              console.log('[Widget] WebSocket status changed:', status);
+              // Update agent availability based on websocket status
+              setState((prev) => ({
+                ...prev,
+                agentAvailable: status === 'registered' || status === 'connected',
+              }));
+            },
+            onMessage: (message: WebSocketMessage) => {
+              console.log('[Widget] WebSocket message received:', message);
+              // Handle incoming websocket messages here if needed
+              // For now, we'll just log them
+            },
+            onError: (error) => {
+              console.error('[Widget] WebSocket error:', error);
+              setState((prev) => ({
+                ...prev,
+                agentAvailable: false,
+                error: error.message,
+              }));
+            },
+          });
+        } else {
+          // Add callbacks if service already exists (singleton, so add instead of replace)
+          websocketServiceRef.current.addCallbacks({
+            onStatusChange: (status) => {
+              console.log('[Widget] WebSocket status changed:', status);
+              setState((prev) => ({
+                ...prev,
+                agentAvailable: status === 'registered' || status === 'connected',
+              }));
+            },
+            onMessage: (message: WebSocketMessage) => {
+              console.log('[Widget] WebSocket message received:', message);
+            },
+            onError: (error) => {
+              console.error('[Widget] WebSocket error:', error);
+              setState((prev) => ({
+                ...prev,
+                agentAvailable: false,
+                error: error.message,
+              }));
+            },
+          });
+        }
+
+        // Connect websocket with the chat_id
+        if (chatId) {
+          const currentChatId = websocketServiceRef.current.getChatId();
+          if (currentChatId !== chatId) {
+            // Only reconnect if chat_id changed
+            if (currentChatId) {
+              console.log('[Widget] Chat ID changed, reconnecting websocket...');
+              websocketServiceRef.current.disconnect();
+            }
+            try {
+              await websocketServiceRef.current.connect(chatId);
+              initializedChatIdRef.current = chatId;
+              console.log('[Widget] WebSocket connection initiated');
+            } catch (wsError) {
+              console.error('[Widget] Failed to connect websocket:', wsError);
+            }
+          } else if (!websocketServiceRef.current.isConnected()) {
+            // If same chat_id but not connected, try to connect
+            try {
+              await websocketServiceRef.current.connect(chatId);
+              initializedChatIdRef.current = chatId;
+              console.log('[Widget] WebSocket reconnection initiated');
+            } catch (wsError) {
+              console.error('[Widget] Failed to reconnect websocket:', wsError);
+            }
+          } else {
+            initializedChatIdRef.current = chatId;
+          }
+        }
       } catch (error) {
         console.error('[Widget] Failed to initialize chat_id:', error);
+      } finally {
+        initializationInProgressRef.current = false;
+        hasInitializedRef.current = true;
       }
     };
 
@@ -134,7 +280,27 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
     };
 
     checkAgentAvailability();
+
+    // Cleanup websocket only on unmount (not on config change)
+    return () => {
+      // Only cleanup on actual unmount, not on every config change
+      // The websocket should persist across config updates
+    };
   }, [config]);
+
+  // Separate cleanup effect that only runs on unmount
+  useEffect(() => {
+    return () => {
+      if (websocketServiceRef.current) {
+        console.log('[Widget] Cleaning up websocket connection on unmount');
+        websocketServiceRef.current.disconnect();
+        websocketServiceRef.current = null;
+      }
+      initializedChatIdRef.current = null;
+      initializationInProgressRef.current = false;
+      hasInitializedRef.current = false;
+    };
+  }, []);
 
   // Widget UI actions
   const toggleWidget = useCallback(() => {
@@ -227,7 +393,7 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
           // Extract the actual error message after the status
           // Format: "API returned status 500. No tell-mode rule found!"
           const apiErrorMatch = errorMsg.match(/API returned status \d+\. (.+?)(?:\.|$)/);
-          if (apiErrorMatch && apiErrorMatch[1]) {
+          if (apiErrorMatch && apiErrorMatch.length > 1) {
             const apiError = apiErrorMatch[1].trim();
             // Make it more user-friendly
             if (apiError.includes('No tell-mode rule found')) {
