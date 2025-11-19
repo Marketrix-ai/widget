@@ -1,5 +1,6 @@
 import { getAgentWebSocketUrl } from '../constants/config';
 import type { MarketrixConfig } from '../types';
+import { executeTool } from './toolExecutor';
 
 export type WebSocketStatus = 'disconnected' | 'connecting' | 'connected' | 'registered' | 'error';
 
@@ -431,6 +432,12 @@ export class WebSocketService {
       }
     }
 
+    // Handle tools/call messages - execute tool and send response back
+    if (message.method === 'tools/call' && message.id !== undefined) {
+      this.handleToolCall(message);
+      return; // Don't forward tool call messages to callbacks
+    }
+
     // Any message received indicates the connection is alive
     // TCP/WebSocket transport handles keepalive automatically
 
@@ -438,6 +445,93 @@ export class WebSocketService {
     if (this.callbacks.onMessage) {
       this.callbacks.onMessage(message);
     }
+  }
+
+  /**
+   * Handle a tool call message from the agent.
+   * Executes the tool and sends the result back via websocket.
+   */
+  private async handleToolCall(message: WebSocketMessage): Promise<void> {
+    const requestId = message.id;
+    const params = message.params as
+      | {
+          name?: string;
+          arguments?: Record<string, unknown>;
+        }
+      | undefined;
+
+    if (!params?.name) {
+      console.error('[WebSocket] Invalid tools/call message: missing name');
+      this.sendErrorResponse(requestId, -32602, 'Invalid params: name is required');
+      return;
+    }
+
+    const toolName = params.name;
+    const arguments_ = params.arguments || {};
+
+    console.log(`[WebSocket] Executing tool call: ${toolName}`, arguments_);
+
+    try {
+      // Execute the tool
+      const result = await executeTool(toolName, arguments_);
+
+      // Send success response
+      // Note: Agent expects method: "tools/call" in response to identify it as a tool call response
+      if (result.success) {
+        const response: WebSocketMessage = {
+          jsonrpc: '2.0',
+          method: 'tools/call', // Agent checks for this to identify tool call responses
+          id: requestId,
+          result: {
+            content: [
+              {
+                type: 'text',
+                text: result.result,
+              },
+            ],
+          },
+        };
+        this.send(response);
+        console.log(`[WebSocket] Tool ${toolName} executed successfully`);
+      } else {
+        // Send error response
+        this.sendErrorResponse(requestId, -32603, result.error || 'Tool execution failed');
+        console.error(`[WebSocket] Tool ${toolName} execution failed:`, result.error);
+      }
+    } catch (error) {
+      // Send error response for unexpected errors
+      // Only send if websocket is still open
+      if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        try {
+          this.sendErrorResponse(requestId, -32603, `Internal error: ${errorMessage}`);
+        } catch (sendError) {
+          console.error(`[WebSocket] Failed to send error response:`, sendError);
+        }
+      }
+      console.error(`[WebSocket] Error executing tool ${toolName}:`, error);
+    }
+  }
+
+  /**
+   * Send an error response in MCP JSON-RPC format.
+   * Note: Agent expects method: "tools/call" in response to identify it as a tool call response
+   */
+  private sendErrorResponse(
+    requestId: string | number | undefined,
+    code: number,
+    message: string
+  ): void {
+    const response: WebSocketMessage = {
+      jsonrpc: '2.0',
+      method: 'tools/call', // Agent checks for this to identify tool call responses
+      id: requestId,
+      error: {
+        code,
+        message,
+      },
+    };
+    this.send(response);
   }
 
   private scheduleReconnect(): void {

@@ -249,4 +249,3 @@ export const BROWSER_TOOLS: BrowserToolMetadata[] = [
     actionType: 'structured_output',
   },
 ];
-
