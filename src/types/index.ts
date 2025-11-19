@@ -89,3 +89,26 @@ export type WidgetPosition = WidgetSettingsData['widget_position'];
 
 // Re-export SDK types for convenience
 export type { TourData } from '../sdk';
+
+// Re-export browser tools types
+export type {
+  BrowserAction,
+  BrowserToolMetadata,
+  ExtractAction,
+  SearchAction,
+  NavigateAction,
+  ClickElementAction,
+  InputTextAction,
+  DoneAction,
+  StructuredOutputAction,
+  SwitchTabAction,
+  CloseTabAction,
+  ScrollAction,
+  SendKeysAction,
+  UploadFileAction,
+  NoParamsAction,
+  GetDropdownOptionsAction,
+  SelectDropdownOptionAction,
+} from './browserTools';
+
+export { BROWSER_TOOLS, BROWSER_TOOL_CATEGORIES } from './browserTools';

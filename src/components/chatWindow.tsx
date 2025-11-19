@@ -4,6 +4,7 @@ import { useWidget } from '../hooks/useWidget';
 import type { ChatMessage, ChatMode, MarketrixConfig } from '../types';
 import { addOpacity, getContrastingColor } from '../utils/colorUtils';
 import { getPositionClasses } from '../utils/widgetPositioning';
+import { BrowserTools } from './browserTools';
 import { MessageInput } from './messageInput';
 import { MessageList } from './messageList';
 import { ModeSelector } from './modeSelector';
@@ -492,6 +493,34 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                 isScreenSharing={isScreenSharing}
                 config={config}
               />
+
+              {/* Browser Tools */}
+              <div className='px-3 pb-2'>
+                <BrowserTools
+                  config={config}
+                  width='100%'
+                  onToolSelect={(tool, action) => {
+                    // Handle tool selection - you can customize this behavior
+                    console.log('Browser tool selected:', tool.name, action);
+                    
+                    // Example: Send tool action as a message
+                    const toolMessage = `Use ${tool.name} tool: ${JSON.stringify(action)}`;
+                    
+                    // Add user message
+                    const userMessage: ChatMessage = {
+                      id: `tool-message-${Date.now()}`,
+                      content: toolMessage,
+                      sender: 'user',
+                      timestamp: new Date(),
+                      mode: currentMode,
+                    };
+                    onAddMessage(userMessage);
+                    
+                    // Send the tool action
+                    onSendMessage(toolMessage, currentMode, undefined, undefined, true);
+                  }}
+                />
+              </div>
             </div>
           </>
         )}
