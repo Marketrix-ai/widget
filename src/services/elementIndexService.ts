@@ -40,6 +40,8 @@ export function indexInteractableElements(): Array<[number, Element]> {
 
     const indexedElements: Array<[number, Element]> = [];
     let sequenceNumber = 0;
+    let buttonsFound = 0;
+    let buttonsIndexed = 0;
 
     // Traverse LIVE DOM using TreeWalker in document order
     const walker = document.createTreeWalker(document.documentElement, NodeFilter.SHOW_ELEMENT, {
@@ -106,12 +108,21 @@ export function indexInteractableElements(): Array<[number, Element]> {
     let node: Element | null = walker.nextNode() as Element | null;
     while (node) {
       try {
+        // Track button statistics
+        const isButton = node.tagName.toLowerCase() === 'button';
+        if (isButton) {
+          buttonsFound++;
+        }
+
         // Check if element is interactable on LIVE DOM
         if (isInteractable(node)) {
           // Assign sequence number and store in both maps
           _elementMap.set(sequenceNumber, node);
           _elementToSequence.set(node, sequenceNumber);
           indexedElements.push([sequenceNumber, node]);
+          if (isButton) {
+            buttonsIndexed++;
+          }
           sequenceNumber++;
         }
 
@@ -138,7 +149,14 @@ export function indexInteractableElements(): Array<[number, Element]> {
     }
 
     _isIndexed = true;
-    console.log(`[ElementIndex] Indexed ${indexedElements.length} interactable elements`);
+    console.log(
+      `[ElementIndex] Indexed ${indexedElements.length} interactable elements (${buttonsIndexed}/${buttonsFound} buttons indexed)`
+    );
+    if (buttonsFound > 0 && buttonsIndexed < buttonsFound) {
+      console.warn(
+        `[ElementIndex] ${buttonsFound - buttonsIndexed} buttons were found but not indexed (may have failed interactability checks)`
+      );
+    }
     return indexedElements;
   } catch (error) {
     console.error('[ElementIndex] Error during indexing:', error);

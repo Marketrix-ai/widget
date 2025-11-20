@@ -1174,21 +1174,63 @@ function executeGetHtml(_args: Record<string, unknown>): ToolExecutionResult {
 
     // Step 5: Add data-id attributes to clone elements
     let matchedCount = 0;
+    let buttonsIndexed = 0;
+    let buttonsMatched = 0;
+    const unmatchedElements: Array<{ seq: number; tag: string; id?: string }> = [];
+
     for (const [sequenceNumber, liveElement] of indexedElements) {
+      const isButton = liveElement.tagName.toLowerCase() === 'button';
+      if (isButton) {
+        buttonsIndexed++;
+      }
+
       const cloneElement = correspondence.get(liveElement);
       if (cloneElement) {
         cloneElement.setAttribute('data-id', sequenceNumber.toString());
         matchedCount++;
+        if (isButton) {
+          buttonsMatched++;
+        }
       } else {
+        // Track unmatched elements for debugging
+        unmatchedElements.push({
+          seq: sequenceNumber,
+          tag: liveElement.tagName,
+          id: liveElement.id || undefined,
+        });
         // Fallback: try to find by path if correspondence failed
-        console.warn(`[ElementIndex] Could not find clone element for sequence ${sequenceNumber}`);
+        console.warn(
+          `[ElementIndex] Could not find clone element for sequence ${sequenceNumber} (${liveElement.tagName}${liveElement.id ? `#${liveElement.id}` : ''})`
+        );
       }
     }
 
     if (matchedCount < indexedElements.length) {
+      const matchRate = ((matchedCount / indexedElements.length) * 100).toFixed(1);
       console.warn(
-        `[ElementIndex] Only matched ${matchedCount} of ${indexedElements.length} elements`
+        `[ElementIndex] Only matched ${matchedCount} of ${indexedElements.length} elements (${matchRate}% match rate)`
       );
+      if (buttonsIndexed > 0) {
+        const buttonMatchRate = ((buttonsMatched / buttonsIndexed) * 100).toFixed(1);
+        console.warn(
+          `[ElementIndex] Button matching: ${buttonsMatched}/${buttonsIndexed} buttons matched (${buttonMatchRate}%)`
+        );
+      }
+      if (unmatchedElements.length > 0 && unmatchedElements.length <= 10) {
+        console.warn(
+          `[ElementIndex] Unmatched elements:`,
+          unmatchedElements.map((e) => `${e.seq}:${e.tag}${e.id ? `#${e.id}` : ''}`).join(', ')
+        );
+      }
+    } else {
+      console.log(
+        `[ElementIndex] Successfully matched all ${matchedCount} indexed elements to clone`
+      );
+      if (buttonsIndexed > 0) {
+        console.log(
+          `[ElementIndex] Button matching: all ${buttonsMatched}/${buttonsIndexed} buttons successfully matched`
+        );
+      }
     }
 
     // Step 6: Clean up HTML (remove unnecessary elements and attributes)

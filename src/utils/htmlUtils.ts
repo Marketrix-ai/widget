@@ -1,105 +1,215 @@
 export function isInteractable(el: Element | null): boolean {
   if (!el || !(el instanceof Element)) return false;
 
-  // ---- 1. Disabled or inert state ----
-  // Covers <button disabled>, <input disabled>, aria-disabled, and inert subtree.
-  if ((el as HTMLButtonElement).disabled === true) return false;
-  if (el.getAttribute('aria-disabled') === 'true') return false;
+  try {
+    // ---- 0. Interactive element type check ----
+    // First verify this is actually an interactive element type before doing expensive checks
+    const tagName = el.tagName.toLowerCase();
+    const isButton = tagName === 'button';
+    const isInteractiveType =
+      // Standard interactive elements
+      isButton ||
+      tagName === 'input' ||
+      tagName === 'textarea' ||
+      tagName === 'select' ||
+      // Anchor tags with href (including href="#")
+      (tagName === 'a' && el.hasAttribute('href')) ||
+      // Elements with interactive ARIA roles
+      el.getAttribute('role') === 'button' ||
+      el.getAttribute('role') === 'link' ||
+      el.getAttribute('role') === 'textbox' ||
+      el.getAttribute('role') === 'checkbox' ||
+      el.getAttribute('role') === 'radio' ||
+      el.getAttribute('role') === 'switch' ||
+      el.getAttribute('role') === 'tab' ||
+      el.getAttribute('role') === 'menuitem' ||
+      // Contenteditable elements
+      el.getAttribute('contenteditable') === 'true' ||
+      // Elements with onclick handlers (may be interactive)
+      el.hasAttribute('onclick') ||
+      // Elements with positive tabindex (focusable)
+      (el.hasAttribute('tabindex') && parseInt(el.getAttribute('tabindex') || '-1', 10) >= 0);
 
-  // Check inert on ancestors, including shadow hosts
-  {
-    let p: Element | null | ShadowRoot = el;
-    while (p) {
-      if (p instanceof HTMLElement && p.inert) return false;
-      const root: Node | null = p instanceof Element ? p.getRootNode() : null;
-      p =
-        p instanceof Element
-          ? p.parentElement || (root instanceof ShadowRoot ? root.host : null)
-          : null;
+    if (!isInteractiveType) {
+      return false;
     }
-  }
 
-  const style = window.getComputedStyle(el);
-
-  // ---- 2. Visibility and pointer checks ----
-  if (style.display === 'none') return false;
-  if (style.visibility !== 'visible') return false;
-  if (style.opacity === '0') return false;
-  if (style.pointerEvents === 'none') return false;
-
-  // ---- 3. Layout presence ----
-  const rect = el.getBoundingClientRect();
-
-  if (rect.width <= 0 || rect.height <= 0) return false;
-
-  // off-screen due to transforms or position
-  if (
-    rect.bottom < 0 ||
-    rect.top > window.innerHeight ||
-    rect.right < 0 ||
-    rect.left > window.innerWidth
-  ) {
-    return false;
-  }
-
-  // ---- 4. Overflow clipping by ancestors ----
-  {
-    let node: Element | null = el;
-    while (node && node !== document.body) {
-      const rootNode = node.getRootNode();
-      const parent: Element | null =
-        node.parentElement ||
-        (rootNode instanceof ShadowRoot ? (rootNode as ShadowRoot).host : null);
-
-      if (!parent) break;
-
-      const parentStyle = window.getComputedStyle(parent);
-      const pr: DOMRect = parent.getBoundingClientRect();
-
-      if (
-        (parentStyle.overflow === 'hidden' || parentStyle.overflow === 'clip') &&
-        (rect.right < pr.left ||
-          rect.left > pr.right ||
-          rect.bottom < pr.top ||
-          rect.top > pr.bottom)
-      ) {
-        return false; // clipped out
+    // Helper function for diagnostic logging (only for buttons to avoid noise)
+    const logButtonFailure = (checkName: string, reason?: string): void => {
+      if (isButton) {
+        const buttonInfo = {
+          tag: el.tagName,
+          id: el.id || '(no id)',
+          class: el.className || '(no class)',
+          check: checkName,
+          reason: reason || '',
+        };
+        console.debug('[isInteractable] Button failed check:', buttonInfo);
       }
+    };
 
-      node = parent;
+    // ---- 1. Disabled or inert state ----
+    // Covers <button disabled>, <input disabled>, aria-disabled, and inert subtree.
+    if ((el as HTMLButtonElement).disabled === true) {
+      logButtonFailure('disabled', 'button is disabled');
+      return false;
     }
-  }
+    if (el.getAttribute('aria-disabled') === 'true') {
+      logButtonFailure('aria-disabled', 'aria-disabled is true');
+      return false;
+    }
 
-  // ---- 5. Occlusion (covered element) ----
-  // Probe center + 4 edges.
-  const probePoints: Array<[number, number]> = [
-    [rect.left + rect.width / 2, rect.top + rect.height / 2], // center
-    [rect.left + 1, rect.top + rect.height / 2], // left edge
-    [rect.right - 1, rect.top + rect.height / 2], // right edge
-    [rect.left + rect.width / 2, rect.top + 1], // top edge
-    [rect.left + rect.width / 2, rect.bottom - 1], // bottom edge
-  ];
+    // Check inert on ancestors, including shadow hosts
+    try {
+      let p: Element | null | ShadowRoot = el;
+      while (p) {
+        if (p instanceof HTMLElement && p.inert) {
+          logButtonFailure('inert', 'ancestor is inert');
+          return false;
+        }
+        const root: Node | null = p instanceof Element ? p.getRootNode() : null;
+        p =
+          p instanceof Element
+            ? p.parentElement || (root instanceof ShadowRoot ? root.host : null)
+            : null;
+      }
+    } catch (error) {
+      // If inert check fails, continue (don't block on this)
+      console.warn('[isInteractable] Error checking inert:', error);
+    }
 
-  const isCovered = probePoints.every(([x, y]) => {
-    if (x < 0 || y < 0 || x > window.innerWidth || y > window.innerHeight) return true;
-    const top = document.elementFromPoint(x, y);
-    if (!top) return true; // off-screen or overlay root
-    if (top !== el && !el.contains(top)) return true;
+    // ---- SPECIAL CASE: Buttons with onclick handlers ----
+    // Skip ALL visibility/occlusion checks for buttons with onclick (they're definitely interactive)
+    // Only check disabled/inert state (already done above)
+    const hasOnclick = el.hasAttribute('onclick');
+    if (isButton && hasOnclick) {
+      return true; // Early return - skip all other checks
+    }
+
+    let style: CSSStyleDeclaration;
+    try {
+      style = window.getComputedStyle(el);
+    } catch (error) {
+      // If computed style fails, assume element is not interactable
+      logButtonFailure('computed-style', 'failed to get computed style');
+      console.warn('[isInteractable] Error getting computed style:', error);
+      return false;
+    }
+
+    // ---- 2. Visibility and pointer checks ----
+    // Only check display: none (element removed from layout) and pointer-events: none (explicitly non-interactable)
+    // We don't check opacity or visibility because elements with opacity: 0 or visibility: hidden
+    // can still be made visible through user interaction (expanding sections, opening modals, etc.)
+    if (style.display === 'none') {
+      logButtonFailure('display', 'display is none');
+      return false;
+    }
+    if (style.pointerEvents === 'none') {
+      logButtonFailure('pointer-events', 'pointer-events is none');
+      return false;
+    }
+
+    // ---- 3. Layout presence ----
+    let rect: DOMRect;
+    try {
+      rect = el.getBoundingClientRect();
+    } catch (error) {
+      logButtonFailure('bounding-rect', 'failed to get bounding rect');
+      console.warn('[isInteractable] Error getting bounding rect:', error);
+      return false;
+    }
+
+    if (rect.width <= 0 || rect.height <= 0) {
+      logButtonFailure('dimensions', `width=${rect.width}, height=${rect.height}`);
+      return false;
+    }
+
+    // Off-screen check removed: elements outside viewport are still interactable
+    // if they can be scrolled to, so we index them regardless of viewport position
+
+    // ---- 4. Overflow clipping by ancestors ----
+    // For buttons: only fail if completely outside parent bounds (more lenient)
+    // For other elements: use original stricter check
+    try {
+      let node: Element | null = el;
+      while (node && node !== document.body) {
+        const rootNode = node.getRootNode();
+        const parent: Element | null =
+          node.parentElement ||
+          (rootNode instanceof ShadowRoot ? (rootNode as ShadowRoot).host : null);
+
+        if (!parent) break;
+
+        let parentStyle: CSSStyleDeclaration;
+        let pr: DOMRect;
+        try {
+          parentStyle = window.getComputedStyle(parent);
+          pr = parent.getBoundingClientRect();
+        } catch {
+          // If we can't get parent style/rect, continue (don't block)
+          node = parent;
+          continue;
+        }
+
+        if (parentStyle.overflow === 'hidden' || parentStyle.overflow === 'clip') {
+          // For buttons: only fail if completely outside (all edges outside)
+          // For other elements: fail if any edge is outside (stricter)
+          const isCompletelyOutside =
+            rect.right < pr.left ||
+            rect.left > pr.right ||
+            rect.bottom < pr.top ||
+            rect.top > pr.bottom;
+
+          if (isButton) {
+            // Button: only fail if completely outside parent bounds
+            if (isCompletelyOutside) {
+              logButtonFailure('overflow-clipping', 'completely outside parent bounds');
+              return false;
+            }
+          } else {
+            // Other elements: use original stricter check
+            if (isCompletelyOutside) {
+              return false; // clipped out
+            }
+          }
+        }
+
+        node = parent;
+      }
+    } catch (error) {
+      // If overflow check fails, continue (don't block on this)
+      console.warn('[isInteractable] Error checking overflow:', error);
+    }
+
+    // ---- 5. Occlusion check removed ----
+    // We don't check occlusion because the goal is to find ALL interactable elements,
+    // even if they're occluded or off-screen. If they can be scrolled to and interacted with,
+    // they should be indexed.
+
+    // ---- 6. Shadow DOM host visibility ----
+    try {
+      let root: Node | null = el.getRootNode();
+      while (root instanceof ShadowRoot) {
+        const host: Element = root.host;
+        let hostRect: DOMRect;
+        try {
+          hostRect = host.getBoundingClientRect();
+        } catch {
+          // If we can't get host rect, continue (don't block)
+          break;
+        }
+        if (hostRect.width <= 0 || hostRect.height <= 0) return false;
+        root = host.getRootNode();
+      }
+    } catch (error) {
+      // If shadow DOM check fails, continue (don't block on this)
+      console.warn('[isInteractable] Error checking shadow DOM:', error);
+    }
+
+    return true;
+  } catch (error) {
+    // If any critical error occurs, log and return false
+    console.error('[isInteractable] Unexpected error:', error);
     return false;
-  });
-
-  if (isCovered) return false;
-
-  // ---- 6. Shadow DOM host visibility ----
-  {
-    let root: Node | null = el.getRootNode();
-    while (root instanceof ShadowRoot) {
-      const host: Element = root.host;
-      const hostRect: DOMRect = host.getBoundingClientRect();
-      if (hostRect.width <= 0 || hostRect.height <= 0) return false;
-      root = host.getRootNode();
-    }
   }
-
-  return true;
 }
