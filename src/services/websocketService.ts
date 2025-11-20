@@ -39,7 +39,7 @@ export class WebSocketService {
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private isIntentionallyDisconnected = false;
   private heartbeatInterval: ReturnType<typeof setInterval> | null = null;
-  private readonly heartbeatIntervalMs = 12000; // 12 seconds - send ping to prevent 20s timeout
+  private readonly heartbeatIntervalMs = 20000; // 20 seconds - send ping to prevent 20s timeout
 
   constructor(config?: Partial<MarketrixConfig>, callbacks?: WebSocketServiceCallbacks) {
     // Warn if constructor is called directly instead of using getInstance
