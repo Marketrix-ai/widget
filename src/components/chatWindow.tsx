@@ -1,6 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 
 import { useWidget } from '../hooks/useWidget';
+import {
+  isScreenSharing as isScreenSharingActive,
+  startScreenShare,
+  stopScreenShare,
+} from '../services/screenShareService';
 import type { ChatMessage, ChatMode, MarketrixConfig } from '../types';
 import { addOpacity, getContrastingColor } from '../utils/colorUtils';
 import { getPositionClasses } from '../utils/widgetPositioning';
@@ -46,7 +51,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
 }) => {
   const [inputValue, setInputValue] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [screenStream, setScreenStream] = useState<MediaStream | null>(null);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [screenShareMessageId, setScreenShareMessageId] = useState<string | null>(null);
   const [screenAccessRequestMessageId, setScreenAccessRequestMessageId] = useState<string | null>(
@@ -67,6 +71,23 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // Sync isScreenSharing state with service
+  useEffect(() => {
+    const checkScreenSharing = () => {
+      const isSharing = isScreenSharingActive();
+      setIsScreenSharing(isSharing);
+      onScreenSharingChange?.(isSharing);
+    };
+
+    // Check initially
+    checkScreenSharing();
+
+    // Set up interval to check periodically (in case stream ends externally)
+    const interval = setInterval(checkScreenSharing, 1000);
+
+    return () => clearInterval(interval);
+  }, [onScreenSharingChange]);
 
   const handleSendMessage = () => {
     if (inputValue.trim() && !isLoading) {
@@ -155,29 +176,10 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
 
   const handleScreenAccessAllow = async () => {
     try {
-      // Request screen share with preferCurrentTab option - WAIT for permission first
-      const stream = await navigator.mediaDevices.getDisplayMedia({
-        video: true,
-        audio: false,
-        preferCurrentTab: true,
-      } as DisplayMediaStreamOptions);
-
-      // Only proceed if permission was granted (stream exists)
-      if (!stream || stream.getVideoTracks().length === 0) {
-        // No permission granted
-        if (screenAccessRequestMessageId) {
-          onUpdateMessage(screenAccessRequestMessageId, {
-            content: 'Can I take a look at your screen? ✗ No permission',
-          });
-          setScreenAccessRequestMessageId(null);
-        }
-        // Clear pending message
-        setPendingMessage(null);
-        return;
-      }
+      // Use screenShareService to start screen sharing
+      const stream = await startScreenShare();
 
       // Permission granted - update UI and proceed
-      setScreenStream(stream);
       setIsScreenSharing(true);
       onScreenSharingChange?.(true);
 
@@ -219,11 +221,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           message.alreadyAdded
         );
       }
-
-      // Handle stream end (user stops sharing)
-      stream.getVideoTracks()[0].addEventListener('ended', () => {
-        stopScreenSharing();
-      });
     } catch (error) {
       console.error('Failed to start screen sharing:', error);
       setIsScreenSharing(false);
@@ -255,10 +252,9 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   };
 
   const stopScreenSharing = () => {
-    if (screenStream) {
-      screenStream.getTracks().forEach((track) => track.stop());
-      setScreenStream(null);
-    }
+    // Use screenShareService to stop screen sharing
+    stopScreenShare();
+
     setIsScreenSharing(false);
     onScreenSharingChange?.(false);
 
@@ -282,15 +278,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     setScreenShareMessageId(null);
     // Keep the current mode selection - don't change it
   };
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (screenStream) {
-        screenStream.getTracks().forEach((track) => track.stop());
-      }
-    };
-  }, [screenStream]);
 
   // Get widget settings for positioning
   const effectivePosition = widgetPosition.position || settings.widget_position || 'bottom_right';

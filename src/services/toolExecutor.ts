@@ -9,6 +9,7 @@ import {
   getFileInputByIndex,
   getSelectElementByIndex,
 } from '../utils/elementFinder';
+import { startScreenShare } from './screenShareService';
 
 export interface ToolExecutionResult {
   success: boolean;
@@ -62,6 +63,10 @@ export async function executeTool(
         return executeSwitchTab(arguments_);
       case 'done':
         return executeDone(arguments_);
+      case 'get_html':
+        return executeGetHtml(arguments_);
+      case 'get_screenshot':
+        return await executeGetScreenshot(arguments_);
       default:
         return {
           success: false,
@@ -836,4 +841,114 @@ function executeDone(args: Record<string, unknown>): ToolExecutionResult {
       ? `Task completed successfully. ${message}`.trim()
       : `Task completed with failure. ${message}`.trim(),
   };
+}
+
+/**
+ * Get a complete HTML snapshot of the current page
+ */
+function executeGetHtml(_args: Record<string, unknown>): ToolExecutionResult {
+  try {
+    if (!document?.documentElement) {
+      return {
+        success: false,
+        result: '',
+        error: 'Document is not available',
+      };
+    }
+
+    const html = document.documentElement.outerHTML;
+    return {
+      success: true,
+      result: html,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      result: '',
+      error: `Failed to get HTML: ${error instanceof Error ? error.message : String(error)}`,
+    };
+  }
+}
+
+/**
+ * Get a screenshot of the current page via screensharing
+ */
+async function executeGetScreenshot(_args: Record<string, unknown>): Promise<ToolExecutionResult> {
+  try {
+    // Ensure screensharing is active
+    const stream = await startScreenShare();
+
+    if (!stream || stream.getVideoTracks().length === 0) {
+      return {
+        success: false,
+        result: '',
+        error: 'Failed to get screenshare stream',
+      };
+    }
+
+    // Create a hidden video element
+    const video = document.createElement('video');
+    video.srcObject = stream;
+    video.autoplay = true;
+    video.playsInline = true;
+    video.style.display = 'none';
+    document.body.appendChild(video);
+
+    // Wait for video to load and play
+    await new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        reject(new Error('Video load timeout'));
+      }, 5000);
+
+      video.onloadeddata = () => {
+        clearTimeout(timeout);
+        video
+          .play()
+          .then(() => {
+            // Wait a bit for the frame to be ready
+            setTimeout(resolve, 100);
+          })
+          .catch(reject);
+      };
+
+      video.onerror = () => {
+        clearTimeout(timeout);
+        reject(new Error('Video load error'));
+      };
+    });
+
+    // Create canvas and draw video frame
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+
+    if (!ctx) {
+      document.body.removeChild(video);
+      return {
+        success: false,
+        result: '',
+        error: 'Failed to get canvas context',
+      };
+    }
+
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    // Convert canvas to base64 PNG
+    const base64 = canvas.toDataURL('image/png');
+
+    // Clean up video element (but keep stream active)
+    document.body.removeChild(video);
+
+    return {
+      success: true,
+      result: base64,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      result: '',
+      error: `Failed to get screenshot: ${error instanceof Error ? error.message : String(error)}`,
+    };
+  }
 }
