@@ -934,8 +934,16 @@ async function executeGetScreenshot(_args: Record<string, unknown>): Promise<Too
 
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    // Convert canvas to base64 PNG
-    const base64 = canvas.toDataURL('image/png');
+    // Convert canvas to base64 JPEG with compression (quality 0.75 for good balance)
+    // JPEG significantly reduces file size compared to PNG (70-90% reduction)
+    let base64: string;
+    try {
+      base64 = canvas.toDataURL('image/jpeg', 0.75);
+    } catch (error) {
+      // Fallback to PNG if JPEG conversion fails
+      console.warn('JPEG conversion failed, falling back to PNG:', error);
+      base64 = canvas.toDataURL('image/png');
+    }
 
     // Clean up video element (but keep stream active)
     document.body.removeChild(video);
