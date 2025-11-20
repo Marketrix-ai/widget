@@ -39,8 +39,7 @@ export class WebSocketService {
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private isIntentionallyDisconnected = false;
   private heartbeatInterval: ReturnType<typeof setInterval> | null = null;
-  private readonly heartbeatIntervalMs = 60000; // 60 seconds - just monitor connection health
-  private lastPongTime: number = 0;
+  private readonly heartbeatIntervalMs = 12000; // 12 seconds - send ping to prevent 20s timeout
 
   constructor(config?: Partial<MarketrixConfig>, callbacks?: WebSocketServiceCallbacks) {
     // Warn if constructor is called directly instead of using getInstance
@@ -412,10 +411,6 @@ export class WebSocketService {
 
   private handleMessage(message: WebSocketMessage): void {
     console.log('[WebSocket] Received message:', message.method || 'unknown');
-
-    // Update last activity time on any message received
-    this.lastPongTime = Date.now();
-
     // Handle registration confirmation
     if (message.method === 'widget/registered') {
       const chatId = message.params?.chat_id as string | undefined;
@@ -430,6 +425,11 @@ export class WebSocketService {
       } else {
         console.warn('[WebSocket] Registration confirmation with mismatched chat_id');
       }
+    }
+
+    // Handle pong response to ping
+    if (message.method === 'pong') {
+      console.log('[WebSocket] Received pong');
     }
 
     // Handle tools/call messages - execute tool and send response back
@@ -597,35 +597,22 @@ export class WebSocketService {
 
   private startHeartbeat(): void {
     this.stopHeartbeat();
-    this.lastPongTime = Date.now();
 
-    // Monitor connection health without sending custom ping messages
-    // Rely on TCP/WebSocket transport-level keepalive mechanisms
+    // Send periodic ping messages to prevent proxy/load balancer timeout (20s)
     this.heartbeatInterval = setInterval(() => {
       if (this.websocket?.readyState === WebSocket.OPEN) {
         try {
-          // Check if connection is still responsive by monitoring state
-          // TCP/WebSocket protocol handles keepalive at transport level
-          const timeSinceLastActivity = Date.now() - this.lastPongTime;
-
-          // Just verify the connection state is still OPEN
-          // The WebSocket protocol itself maintains the connection
-          if (this.websocket.readyState !== WebSocket.OPEN) {
-            console.warn('[WebSocket] WebSocket state is not OPEN, stopping heartbeat');
-            this.stopHeartbeat();
-            return;
-          }
-
-          // Connection appears healthy - TCP keepalive is handling connection maintenance
-          // Only log if there's been no activity for a very long time (5+ minutes)
-          if (timeSinceLastActivity > 300000) {
-            console.warn(
-              `[WebSocket] No application-level activity for ${Math.round(timeSinceLastActivity / 1000)}s, but connection state is OPEN`
-            );
-          }
+          // Send JSON-RPC ping message to keep connection alive
+          const pingMessage: WebSocketMessage = {
+            jsonrpc: '2.0',
+            method: 'ping',
+            params: { timestamp: Date.now() },
+          };
+          this.send(pingMessage);
+          console.log('[WebSocket] Sent ping');
         } catch (error) {
-          console.error('[WebSocket] Heartbeat check failed:', error);
-          // If check fails, connection is likely dead, let onclose handle it
+          console.error('[WebSocket] Failed to send ping:', error);
+          // If ping fails, connection is likely dead, let onclose handle it
           this.stopHeartbeat();
         }
       } else if (
