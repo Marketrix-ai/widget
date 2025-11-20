@@ -9,6 +9,7 @@ import {
   getFileInputByIndex,
   getSelectElementByIndex,
 } from '../utils/elementFinder';
+import { clearIndex, indexInteractableElements } from './elementIndexService';
 import { startScreenShare } from './screenShareService';
 
 export interface ToolExecutionResult {
@@ -844,7 +845,301 @@ function executeDone(args: Record<string, unknown>): ToolExecutionResult {
 }
 
 /**
- * Get a complete HTML snapshot of the current page
+ * Clean up HTML by removing unnecessary elements and attributes.
+ * Based on Python HTMLSerializer logic.
+ * @param root The root element to clean up
+ */
+function cleanupHtml(root: Element): void {
+  try {
+    // Elements to skip entirely
+    const skipElements = new Set(['style', 'script', 'head', 'meta', 'link', 'title']);
+
+    // Collect nodes to remove (can't remove while traversing)
+    const nodesToRemove: Node[] = [];
+    const attributesToRemove: Array<{ element: Element; attr: string }> = [];
+
+    // Use the root's ownerDocument for TreeWalker (clone may be in different document context)
+    const doc = root.ownerDocument || document;
+
+    // Traverse and mark elements/attributes for removal
+    const walker = doc.createTreeWalker(
+      root,
+      NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_COMMENT,
+      null
+    );
+
+    let node: Node | null = walker.nextNode();
+    while (node) {
+      if (node.nodeType === Node.COMMENT_NODE) {
+        // Remove comments
+        nodesToRemove.push(node);
+        node = walker.nextNode();
+        continue;
+      }
+
+      if (node.nodeType === Node.ELEMENT_NODE) {
+        const element = node as Element;
+        const tagName = element.tagName.toLowerCase();
+
+        // Remove unwanted elements (but preserve noscript content for accessibility)
+        if (skipElements.has(tagName)) {
+          // Preserve noscript content - it's important for accessibility
+          if (tagName === 'noscript') {
+            node = walker.nextNode();
+            continue;
+          }
+          nodesToRemove.push(element);
+          node = walker.nextNode();
+          continue;
+        }
+
+        // Remove code elements with display:none (often JSON state for SPAs)
+        if (tagName === 'code') {
+          const style = element.getAttribute('style') || '';
+          const normalizedStyle = style.replace(/\s/g, '');
+          if (normalizedStyle.includes('display:none')) {
+            nodesToRemove.push(element);
+            node = walker.nextNode();
+            continue;
+          }
+
+          // Also check for common JSON data patterns in IDs
+          const id = element.getAttribute('id') || '';
+          if (id.includes('bpr-guid') || id.includes('data') || id.includes('state')) {
+            nodesToRemove.push(element);
+            node = walker.nextNode();
+            continue;
+          }
+        }
+
+        // Remove base64 inline images, but preserve legitimate ones
+        // Legitimate images are typically larger (>1KB) or have meaningful dimensions
+        if (tagName === 'img') {
+          const src = element.getAttribute('src') || '';
+          if (src.startsWith('data:image/')) {
+            // Check if it's a small placeholder/tracking pixel
+            // Base64 data URLs: data:image/type;base64,<data>
+            const base64Data = src.split(',')[1] || '';
+            const sizeInBytes = (base64Data.length * 3) / 4; // Approximate size
+
+            // Remove if very small (<1KB) - likely placeholder/tracking pixel
+            // Also check dimensions if available
+            const width = element.getAttribute('width');
+            const height = element.getAttribute('height');
+            const isSmall = sizeInBytes < 1024;
+            const isTinyDimension =
+              (width && parseInt(width, 10) <= 1) || (height && parseInt(height, 10) <= 1);
+
+            if (isSmall || isTinyDimension) {
+              nodesToRemove.push(element);
+              node = walker.nextNode();
+              continue;
+            }
+            // Otherwise preserve - might be legitimate inline image
+          }
+        }
+
+        // Preserve SVG elements and their children
+        if (tagName === 'svg' || element.closest('svg')) {
+          // Skip cleanup for SVG content - preserve structure
+          node = walker.nextNode();
+          continue;
+        }
+
+        // Preserve custom elements (web components)
+        // Custom elements typically have hyphens in tag name
+        if (tagName.includes('-')) {
+          // Don't remove custom elements, but still clean their attributes
+          // (continue to attribute cleanup below)
+        }
+
+        // Clean up attributes
+        const attrsToRemove: string[] = [];
+        for (let i = 0; i < element.attributes.length; i++) {
+          const attr = element.attributes[i];
+          const attrName = attr.name;
+
+          // Remove href attributes (unless we want to keep them)
+          if (attrName === 'href') {
+            attrsToRemove.push(attrName);
+          }
+
+          // Remove data-* attributes EXCEPT data-id (which we need)
+          if (attrName.startsWith('data-') && attrName !== 'data-id') {
+            attrsToRemove.push(attrName);
+          }
+        }
+
+        // Mark attributes for removal
+        for (const attrName of attrsToRemove) {
+          attributesToRemove.push({ element, attr: attrName });
+        }
+      }
+
+      node = walker.nextNode();
+    }
+
+    // Remove marked attributes
+    for (const { element, attr } of attributesToRemove) {
+      element.removeAttribute(attr);
+    }
+
+    // Remove marked nodes (elements and comments)
+    for (const nodeToRemove of nodesToRemove) {
+      try {
+        const parent = nodeToRemove.parentNode;
+        if (parent) {
+          parent.removeChild(nodeToRemove);
+        }
+      } catch (error) {
+        // Continue on individual node removal errors
+        console.warn('[CleanupHtml] Error removing node:', error);
+      }
+    }
+  } catch (error) {
+    // If cleanup fails completely, log but don't throw (HTML is still usable)
+    console.error('[CleanupHtml] Error during HTML cleanup:', error);
+  }
+}
+
+/**
+ * Build element correspondence map between live DOM and clone.
+ * Uses enhanced matching algorithm: position + tagName + id + classes + attributes.
+ */
+function buildElementCorrespondence(liveRoot: Element, cloneRoot: Element): Map<Element, Element> {
+  const correspondence = new Map<Element, Element>();
+
+  try {
+    const liveElements: Element[] = [];
+    const cloneElements: Element[] = [];
+
+    // Helper to get element signature for matching
+    const getElementSignature = (el: Element): string => {
+      const parts: string[] = [el.tagName];
+      const id = el.getAttribute('id');
+      if (id) parts.push(`#${id}`);
+      const className = el.getAttribute('class');
+      if (className) parts.push(`.${className.split(/\s+/).sort().join('.')}`);
+      // Add data-id if present (for indexed elements)
+      const dataId = el.getAttribute('data-id');
+      if (dataId) parts.push(`[data-id="${dataId}"]`);
+      return parts.join('');
+    };
+
+    // Traverse live DOM and collect elements
+    const liveWalker = document.createTreeWalker(liveRoot, NodeFilter.SHOW_ELEMENT, {
+      acceptNode: (node: Node) => {
+        if (node instanceof HTMLIFrameElement) {
+          return NodeFilter.FILTER_REJECT;
+        }
+        return NodeFilter.FILTER_ACCEPT;
+      },
+    });
+
+    let liveNode: Element | null = liveWalker.nextNode() as Element | null;
+    while (liveNode) {
+      liveElements.push(liveNode);
+      liveNode = liveWalker.nextNode() as Element | null;
+    }
+
+    // Traverse clone and collect elements (same order)
+    const cloneDoc = cloneRoot.ownerDocument || document;
+    const cloneWalker = cloneDoc.createTreeWalker(cloneRoot, NodeFilter.SHOW_ELEMENT, {
+      acceptNode: (node: Node) => {
+        if (node instanceof HTMLIFrameElement) {
+          return NodeFilter.FILTER_REJECT;
+        }
+        return NodeFilter.FILTER_ACCEPT;
+      },
+    });
+
+    let cloneNode: Element | null = cloneWalker.nextNode() as Element | null;
+    while (cloneNode) {
+      cloneElements.push(cloneNode);
+      cloneNode = cloneWalker.nextNode() as Element | null;
+    }
+
+    // Enhanced matching: try position + signature first, then fallback to signature-only
+    const minLength = Math.min(liveElements.length, cloneElements.length);
+    const usedCloneIndices = new Set<number>();
+
+    // First pass: match by position and signature
+    for (let i = 0; i < minLength; i++) {
+      const liveEl = liveElements[i];
+      const cloneEl = cloneElements[i];
+
+      // Strong match: tagName + id (if present) + classes
+      if (liveEl.tagName === cloneEl.tagName) {
+        const liveId = liveEl.getAttribute('id');
+        const cloneId = cloneEl.getAttribute('id');
+        const liveClasses = liveEl.getAttribute('class') || '';
+        const cloneClasses = cloneEl.getAttribute('class') || '';
+
+        // If both have IDs, they must match
+        if (liveId && cloneId && liveId !== cloneId) {
+          continue;
+        }
+
+        // If both have classes, they should match (order-independent)
+        if (liveClasses && cloneClasses) {
+          const liveClassSet = new Set(liveClasses.split(/\s+/).filter(Boolean));
+          const cloneClassSet = new Set(cloneClasses.split(/\s+/).filter(Boolean));
+          if (liveClassSet.size !== cloneClassSet.size) {
+            continue;
+          }
+          for (const cls of liveClassSet) {
+            if (!cloneClassSet.has(cls)) {
+              continue;
+            }
+          }
+        }
+
+        // Match found
+        correspondence.set(liveEl, cloneEl);
+        usedCloneIndices.add(i);
+      }
+    }
+
+    // Second pass: match remaining elements by signature only (for elements that moved)
+    for (let i = 0; i < liveElements.length; i++) {
+      if (correspondence.has(liveElements[i])) {
+        continue; // Already matched
+      }
+
+      const liveEl = liveElements[i];
+      const liveSig = getElementSignature(liveEl);
+
+      // Find best match in clone by signature
+      for (let j = 0; j < cloneElements.length; j++) {
+        if (usedCloneIndices.has(j)) {
+          continue; // Already used
+        }
+
+        const cloneEl = cloneElements[j];
+        if (liveEl.tagName !== cloneEl.tagName) {
+          continue;
+        }
+
+        const cloneSig = getElementSignature(cloneEl);
+        if (liveSig === cloneSig) {
+          correspondence.set(liveEl, cloneEl);
+          usedCloneIndices.add(j);
+          break;
+        }
+      }
+    }
+
+    return correspondence;
+  } catch (error) {
+    console.error('[BuildCorrespondence] Error building element correspondence:', error);
+    // Return empty map on error - get_html will still work, just without data-id attributes
+    return correspondence;
+  }
+}
+
+/**
+ * Get a complete HTML snapshot of the current page with data-id attributes
+ * on interactable elements.
  */
 function executeGetHtml(_args: Record<string, unknown>): ToolExecutionResult {
   try {
@@ -856,17 +1151,71 @@ function executeGetHtml(_args: Record<string, unknown>): ToolExecutionResult {
       };
     }
 
-    const html = document.documentElement.outerHTML;
+    // Step 1: ALWAYS clear previous index first (fresh start)
+    clearIndex();
+
+    // Step 2: Index interactable elements on LIVE DOM
+    const indexedElements = indexInteractableElements();
+
+    // If indexing failed or no elements found, return HTML without data-id
+    if (indexedElements.length === 0) {
+      const html = document.documentElement.outerHTML;
+      return {
+        success: true,
+        result: html,
+      };
+    }
+
+    // Step 3: Clone document.documentElement (deep clone)
+    const clone = document.documentElement.cloneNode(true) as Element;
+
+    // Step 4: Build element correspondence map (live -> clone)
+    const correspondence = buildElementCorrespondence(document.documentElement, clone);
+
+    // Step 5: Add data-id attributes to clone elements
+    let matchedCount = 0;
+    for (const [sequenceNumber, liveElement] of indexedElements) {
+      const cloneElement = correspondence.get(liveElement);
+      if (cloneElement) {
+        cloneElement.setAttribute('data-id', sequenceNumber.toString());
+        matchedCount++;
+      } else {
+        // Fallback: try to find by path if correspondence failed
+        console.warn(`[ElementIndex] Could not find clone element for sequence ${sequenceNumber}`);
+      }
+    }
+
+    if (matchedCount < indexedElements.length) {
+      console.warn(
+        `[ElementIndex] Only matched ${matchedCount} of ${indexedElements.length} elements`
+      );
+    }
+
+    // Step 6: Clean up HTML (remove unnecessary elements and attributes)
+    cleanupHtml(clone);
+
+    // Step 7: Return clone.outerHTML
+    const html = clone.outerHTML;
     return {
       success: true,
       result: html,
     };
   } catch (error) {
-    return {
-      success: false,
-      result: '',
-      error: `Failed to get HTML: ${error instanceof Error ? error.message : String(error)}`,
-    };
+    // On error, clear index and return HTML without data-id
+    clearIndex();
+    try {
+      const html = document.documentElement.outerHTML;
+      return {
+        success: true,
+        result: html,
+      };
+    } catch {
+      return {
+        success: false,
+        result: '',
+        error: `Failed to get HTML: ${error instanceof Error ? error.message : String(error)}`,
+      };
+    }
   }
 }
 
@@ -874,6 +1223,7 @@ function executeGetHtml(_args: Record<string, unknown>): ToolExecutionResult {
  * Get a screenshot of the current page via screensharing
  */
 async function executeGetScreenshot(_args: Record<string, unknown>): Promise<ToolExecutionResult> {
+  let video: HTMLVideoElement | null = null;
   try {
     // Ensure screensharing is active
     const stream = await startScreenShare();
@@ -886,8 +1236,18 @@ async function executeGetScreenshot(_args: Record<string, unknown>): Promise<Too
       };
     }
 
+    // Check if stream is still active
+    const videoTrack = stream.getVideoTracks()[0];
+    if (videoTrack.readyState === 'ended') {
+      return {
+        success: false,
+        result: '',
+        error: 'Screenshare stream has ended',
+      };
+    }
+
     // Create a hidden video element
-    const video = document.createElement('video');
+    video = document.createElement('video');
     video.srcObject = stream;
     video.autoplay = true;
     video.playsInline = true;
@@ -896,13 +1256,20 @@ async function executeGetScreenshot(_args: Record<string, unknown>): Promise<Too
 
     // Wait for video to load and play
     await new Promise<void>((resolve, reject) => {
+      if (!video) {
+        reject(new Error('Video element not created'));
+        return;
+      }
+
       const timeout = setTimeout(() => {
         reject(new Error('Video load timeout'));
       }, 5000);
 
-      video.onloadeddata = () => {
+      const currentVideo = video; // Capture for closure
+
+      currentVideo.onloadeddata = () => {
         clearTimeout(timeout);
-        video
+        currentVideo
           .play()
           .then(() => {
             // Wait a bit for the frame to be ready
@@ -911,20 +1278,50 @@ async function executeGetScreenshot(_args: Record<string, unknown>): Promise<Too
           .catch(reject);
       };
 
-      video.onerror = () => {
+      currentVideo.onerror = () => {
         clearTimeout(timeout);
         reject(new Error('Video load error'));
       };
     });
 
+    // Check for zero dimensions
+    if (video.videoWidth === 0 || video.videoHeight === 0) {
+      if (video.parentNode) {
+        video.parentNode.removeChild(video);
+      }
+      return {
+        success: false,
+        result: '',
+        error: 'Video has zero dimensions - stream may not be ready',
+      };
+    }
+
+    // Browser canvas size limits (typically 16,384px per dimension)
+    const MAX_CANVAS_SIZE = 16384;
+    let canvasWidth = video.videoWidth;
+    let canvasHeight = video.videoHeight;
+    let scale = 1.0;
+
+    // Scale down if exceeds browser limits
+    if (canvasWidth > MAX_CANVAS_SIZE || canvasHeight > MAX_CANVAS_SIZE) {
+      scale = Math.min(MAX_CANVAS_SIZE / canvasWidth, MAX_CANVAS_SIZE / canvasHeight);
+      canvasWidth = Math.floor(canvasWidth * scale);
+      canvasHeight = Math.floor(canvasHeight * scale);
+      console.warn(
+        `[Screenshot] Scaling down from ${video.videoWidth}x${video.videoHeight} to ${canvasWidth}x${canvasHeight}`
+      );
+    }
+
     // Create canvas and draw video frame
     const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+    canvas.width = canvasWidth;
+    canvas.height = canvasHeight;
     const ctx = canvas.getContext('2d');
 
     if (!ctx) {
-      document.body.removeChild(video);
+      if (video.parentNode) {
+        video.parentNode.removeChild(video);
+      }
       return {
         success: false,
         result: '',
@@ -932,7 +1329,12 @@ async function executeGetScreenshot(_args: Record<string, unknown>): Promise<Too
       };
     }
 
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    // Draw video frame (with scaling if needed)
+    if (scale < 1.0) {
+      ctx.drawImage(video, 0, 0, canvasWidth, canvasHeight);
+    } else {
+      ctx.drawImage(video, 0, 0);
+    }
 
     // Convert canvas to base64 JPEG with compression (quality 0.75 for good balance)
     // JPEG significantly reduces file size compared to PNG (70-90% reduction)
@@ -942,17 +1344,38 @@ async function executeGetScreenshot(_args: Record<string, unknown>): Promise<Too
     } catch (error) {
       // Fallback to PNG if JPEG conversion fails
       console.warn('JPEG conversion failed, falling back to PNG:', error);
-      base64 = canvas.toDataURL('image/png');
+      try {
+        base64 = canvas.toDataURL('image/png');
+      } catch (pngError) {
+        if (video.parentNode) {
+          video.parentNode.removeChild(video);
+        }
+        return {
+          success: false,
+          result: '',
+          error: `Failed to convert canvas to image: ${pngError instanceof Error ? pngError.message : String(pngError)}`,
+        };
+      }
     }
 
     // Clean up video element (but keep stream active)
-    document.body.removeChild(video);
+    if (video.parentNode) {
+      video.parentNode.removeChild(video);
+    }
 
     return {
       success: true,
       result: base64,
     };
   } catch (error) {
+    // Ensure video cleanup in error path
+    if (video?.parentNode) {
+      try {
+        video.parentNode.removeChild(video);
+      } catch (cleanupError) {
+        console.warn('[Screenshot] Error cleaning up video element:', cleanupError);
+      }
+    }
     return {
       success: false,
       result: '',

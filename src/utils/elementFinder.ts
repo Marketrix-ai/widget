@@ -3,6 +3,8 @@
  * Used by browser tools to locate interactive elements on the page.
  */
 
+import { getElementByDataId, isIndexed } from '../services/elementIndexService';
+
 /**
  * Get all interactive elements on the page, ordered by DOM position.
  * Interactive elements include: buttons, inputs, links, select elements, etc.
@@ -53,10 +55,22 @@ export function getAllInteractiveElements(): HTMLElement[] {
 
 /**
  * Get an interactive element by its index.
+ * First tries to use data-id from get_html indexing, then falls back to current behavior.
  * @param index The zero-based index of the element
  * @returns The element at the given index, or null if not found
  */
 export function getElementByIndex(index: number): HTMLElement | null {
+  // Step 1: Check if indexing is active (get_html was called)
+  if (isIndexed()) {
+    // Step 2: Try to get element by data-id from indexing service
+    const element = getElementByDataId(index);
+    if (element && element instanceof HTMLElement) {
+      return element;
+    }
+    // If not found or invalid, fall through to fallback
+  }
+
+  // Step 3: Fallback to current behavior (for backward compatibility)
   const elements = getAllInteractiveElements();
   if (index < 0 || index >= elements.length) {
     return null;
