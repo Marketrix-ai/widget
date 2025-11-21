@@ -946,7 +946,7 @@ export const ChatRequestSchema = z
     marketrix_key: z.string().optional(),
     agent_id: z.number().positive().optional(),
     connection_id: z.number().positive().optional(),
-    chat_id: z.string(),
+    chat_id: z.string().optional(), // Optional since it comes from path params in some routes
     content: z.string(),
   })
   .refine(

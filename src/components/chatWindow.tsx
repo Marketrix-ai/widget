@@ -1,12 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
 
 import { useWidget } from '../hooks/useWidget';
+import type { InstructionType } from '../sdk';
 import {
   isScreenSharing as isScreenSharingActive,
   startScreenShare,
   stopScreenShare,
 } from '../services/screenShareService';
-import type { ChatMessage, ChatMode, MarketrixConfig, TaskProgress } from '../types';
+import type { ChatMessage, MarketrixConfig, TaskProgress } from '../types';
 import { addOpacity, getContrastingColor } from '../utils/colorUtils';
 import { getPositionClasses } from '../utils/widgetPositioning';
 import { MessageInput } from './messageInput';
@@ -19,19 +20,19 @@ interface ChatWindowProps {
   isMinimized: boolean;
   isLoading: boolean;
   messages: ChatMessage[];
-  currentMode: ChatMode;
+  currentMode: InstructionType;
   agentAvailable: boolean;
   isTaskRunning?: boolean;
   taskProgress?: TaskProgress[];
   onClose: () => void;
   onSendMessage: (
     message: string,
-    mode?: ChatMode,
+    mode?: InstructionType,
     connectionId?: number,
     question?: string,
     skipUserMessage?: boolean
   ) => void;
-  onSetMode: (mode: ChatMode) => void;
+  onSetMode: (mode: InstructionType) => void;
   onAddMessage: (message: ChatMessage) => void;
   onUpdateMessage: (messageId: string, updates: Partial<ChatMessage>) => void;
   onStopTask?: () => void;
@@ -64,7 +65,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   );
   const [pendingMessage, setPendingMessage] = useState<{
     content: string;
-    mode?: ChatMode;
+    mode?: InstructionType;
     connectionId?: number;
     question?: string;
     alreadyAdded?: boolean;
@@ -127,7 +128,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     }
   };
 
-  const requestScreenAccess = (mode: ChatMode) => {
+  const requestScreenAccess = (mode: InstructionType) => {
     if (screenAccessRequestMessageId) return; // Already requesting
 
     const requestMessageId = `screen-access-request-${Date.now()}`;
@@ -152,14 +153,14 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     }
   };
 
-  const handleModeChange = (mode: ChatMode) => {
+  const handleModeChange = (mode: InstructionType) => {
     // If clicking the same mode, preserve current selection (don't toggle off screen sharing)
     if (mode === currentMode) {
       return;
     }
 
     // Add system message for mode change
-    const modeDisplayNames: Record<ChatMode, string> = {
+    const modeDisplayNames: Record<InstructionType, string> = {
       show: 'Show',
       tell: 'Tell',
       do: 'Do',

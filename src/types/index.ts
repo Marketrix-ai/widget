@@ -12,9 +12,6 @@ export type {
   WidgetSettingsData,
 } from '../sdk';
 
-// Alias for backward compatibility (ChatMode is the same as InstructionType)
-export type ChatMode = InstructionType;
-
 /**
  * MarketrixConfig - Flat superset type extending WidgetSettingsData
  *
@@ -53,7 +50,7 @@ export interface ChatMessage {
   content: string;
   sender: 'user' | 'agent';
   timestamp: Date;
-  mode?: ChatMode;
+  mode?: InstructionType;
   videoStream?: MediaStream;
   isScreenAccessRequest?: boolean;
   isSystemMessage?: boolean;
@@ -63,6 +60,8 @@ export interface TaskProgress {
   tool_name: string;
   tool_params: any;
   step: number;
+  explanation: string;
+  mode: string;
   timestamp: number;
 }
 
@@ -71,7 +70,7 @@ export interface WidgetState {
   isMinimized: boolean;
   isLoading: boolean;
   messages: ChatMessage[];
-  currentMode: ChatMode;
+  currentMode: InstructionType;
   agentAvailable: boolean;
   error?: string;
   activeTaskId: string | null;
@@ -81,7 +80,7 @@ export interface WidgetState {
 
 export interface SendMessageRequest {
   message?: string;
-  mode?: ChatMode;
+  mode?: InstructionType;
   marketrixId?: string;
   marketrixKey?: string;
   connection_id?: number;
@@ -91,7 +90,7 @@ export interface SendMessageRequest {
 export interface SendMessageResponse {
   messageId: string;
   response: string;
-  mode: ChatMode;
+  mode: InstructionType;
   timestamp: Date;
 }
 

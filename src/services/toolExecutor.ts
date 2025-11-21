@@ -11,6 +11,7 @@ import {
 } from '../utils/elementFinder';
 import { clearIndex, indexInteractableElements } from './elementIndexService';
 import { startScreenShare } from './screenShareService';
+import { cleanup, showToolAction } from './showModeService';
 
 export interface ToolExecutionResult {
   success: boolean;
@@ -22,15 +23,57 @@ export interface ToolExecutionResult {
  * Execute a browser tool by name with given arguments.
  * @param toolName The name of the tool (must match MCP tool name)
  * @param arguments_ The tool arguments (without chat_id)
+ * @param mode Execution mode - 'show' or 'do'
+ * @param explanation Optional explanation for show mode
  * @returns Promise resolving to execution result
  */
+
 export async function executeTool(
   toolName: string,
-  arguments_: Record<string, unknown>
+  arguments_: Record<string, unknown>,
+  mode: string = 'do',
+  explanation: string = ''
 ): Promise<ToolExecutionResult> {
   try {
-    console.log(`[ToolExecutor] Executing tool: ${toolName}`, arguments_);
+    console.log(`[ToolExecutor] Executing tool: ${toolName} (mode: ${mode})`, arguments_);
 
+    // For show mode, check if tool needs element highlighting
+    const needsHighlighting = [
+      'click_element',
+      'type_text',
+      'select_dropdown_option',
+      'send_keys',
+      'upload_file',
+    ].includes(toolName);
+    const isClickAction = toolName === 'click_element';
+
+    if (mode === 'show' && needsHighlighting) {
+      // Get element for highlighting
+      const index = arguments_.index as number | undefined;
+      if (index !== undefined) {
+        const element = getElementByIndex(index);
+        if (element) {
+          // Show overlay and wait for user action
+          const userConfirmed = await showToolAction({
+            element,
+            explanation: explanation || `Execute ${toolName}`,
+            toolName,
+            toolParams: arguments_,
+            isClickAction,
+          });
+
+          if (!userConfirmed) {
+            return {
+              success: false,
+              result: '',
+              error: 'User cancelled action',
+            };
+          }
+        }
+      }
+    }
+
+    // Execute the tool
     switch (toolName) {
       case 'navigate':
         return executeNavigate(arguments_);
@@ -77,6 +120,7 @@ export async function executeTool(
     }
   } catch (error) {
     console.error(`[ToolExecutor] Error executing tool ${toolName}:`, error);
+    cleanup(); // Clean up any show mode UI on error
     return {
       success: false,
       result: '',

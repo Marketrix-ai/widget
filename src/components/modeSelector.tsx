@@ -5,14 +5,15 @@ import { SiTicktick } from 'react-icons/si';
 
 import MarketrixLogo from '../assets/marktrix-footer.png';
 import { useWidget } from '../hooks/useWidget';
-import type { ChatMode, MarketrixConfig } from '../types';
+import type { InstructionType } from '../sdk';
+import type { MarketrixConfig } from '../types';
 import { addOpacity, getContrastingColor } from '../utils/colorUtils';
 import { getModeDescription, getModeDisplayName } from '../utils/textFormatting';
 
 interface ModeSelectorProps {
-  currentMode: ChatMode;
-  enabledModes: ChatMode[];
-  onModeChange: (mode: ChatMode) => void;
+  currentMode: InstructionType;
+  enabledModes: InstructionType[];
+  onModeChange: (mode: InstructionType) => void;
   isScreenSharing?: boolean;
   config?: MarketrixConfig;
 }
@@ -25,7 +26,7 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({
   config,
 }) => {
   const { settings } = useWidget(config ? { config } : {});
-  const getModeIcon = (mode: ChatMode) => {
+  const getModeIcon = (mode: InstructionType) => {
     switch (mode) {
       case 'show':
         return <LuMousePointerClick className='w-4 h-4 text-base' />;
@@ -39,7 +40,7 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({
   };
 
   // Reorder modes to: Tell, Show, Do
-  const orderedModes: ChatMode[] = (['tell', 'show', 'do'] as const).filter((mode) =>
+  const orderedModes: InstructionType[] = (['tell', 'show', 'do'] as const).filter((mode) =>
     enabledModes.includes(mode)
   );
 
@@ -51,7 +52,7 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({
       `}
     >
       <div className='flex space-x-2 flex-shrink-0'>
-        {orderedModes.map((mode: ChatMode) => (
+        {orderedModes.map((mode: InstructionType) => (
           <button
             key={mode}
             onClick={(e) => {

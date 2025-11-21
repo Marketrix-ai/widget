@@ -165,7 +165,8 @@ export const getCurrentConfig = (): MarketrixConfig => {
 };
 
 // Export types for external use
-export type { ChatMessage, ChatMode, MarketrixConfig, WidgetState } from './types';
+export type { InstructionType } from './sdk';
+export type { ChatMessage, MarketrixConfig, WidgetState } from './types';
 
 // Export default for ES modules
 export default {

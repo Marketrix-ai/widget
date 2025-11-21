@@ -5,10 +5,10 @@ import {
   DEFAULT_WIDGET_SETTINGS,
   extractWidgetSettingsFromConfig,
 } from '../constants/config';
-import type { WidgetSettingsData } from '../sdk';
+import type { InstructionType, WidgetSettingsData } from '../sdk';
 import MarketrixApiService from '../services/marketrixApiService';
 import { type WebSocketMessage, WebSocketService } from '../services/websocketService';
-import type { ChatMessage, ChatMode, MarketrixConfig, WidgetState } from '../types';
+import type { ChatMessage, MarketrixConfig, WidgetState } from '../types';
 import { configManager } from '../utils/configManager';
 
 interface UseWidgetProps {
@@ -24,7 +24,7 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
         isMinimized: false,
         isLoading: false,
         messages: [],
-        currentMode: 'tell' as ChatMode,
+        currentMode: 'tell' as InstructionType,
         agentAvailable: false,
         error: undefined,
         activeTaskId: null,
@@ -220,30 +220,43 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
                 agentAvailable: status === 'registered' || status === 'connected',
               }));
             },
+            onToolCallProgress: (toolName: string, explanation: string, mode: string) => {
+              // Non-interactive tools: just log, don't show prominently in chat
+              const NON_INTERACTIVE_TOOLS = [
+                'get_html',
+                'extract',
+                'get_dropdown_options',
+                'get_screenshot',
+              ];
+              const isNonInteractive = NON_INTERACTIVE_TOOLS.includes(toolName);
+
+              // Add tool call as progress message in chat (for transparency)
+              const progressMessage: ChatMessage = {
+                id: `tool-progress-${Date.now()}-${Math.random()}`,
+                content: explanation || `Executing ${toolName}...`,
+                sender: 'agent',
+                timestamp: new Date(),
+                mode: mode as InstructionType,
+                isSystemMessage: isNonInteractive,
+              };
+              setState((prev) => ({
+                ...prev,
+                messages: [...prev.messages, progressMessage],
+                taskProgress: [
+                  ...prev.taskProgress,
+                  {
+                    tool_name: toolName,
+                    tool_params: {},
+                    step: prev.taskProgress.length + 1,
+                    explanation,
+                    mode,
+                    timestamp: Date.now(),
+                  },
+                ],
+              }));
+            },
             onMessage: (message: WebSocketMessage) => {
               console.log('[Widget] WebSocket message received:', message);
-
-              // Handle task progress updates
-              if (message.method === 'task/progress' && message.params) {
-                const params = message.params as {
-                  tool_name: string;
-                  tool_params: any;
-                  step: number;
-                  timestamp: string;
-                };
-                setState((prev) => ({
-                  ...prev,
-                  taskProgress: [
-                    ...prev.taskProgress,
-                    {
-                      tool_name: params.tool_name,
-                      tool_params: params.tool_params,
-                      step: params.step,
-                      timestamp: new Date(params.timestamp).getTime(),
-                    },
-                  ],
-                }));
-              }
 
               // Handle task status updates
               if (message.method === 'task/status' && message.params) {
@@ -367,14 +380,14 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
     }));
   }, []);
 
-  const setMode = useCallback((mode: ChatMode) => {
+  const setMode = useCallback((mode: InstructionType) => {
     setState((prev) => ({ ...prev, currentMode: mode }));
   }, []);
 
   const sendMessage = useCallback(
     async (
       content: string,
-      mode?: ChatMode,
+      mode?: InstructionType,
       connectionId?: number,
       question?: string,
       skipUserMessage?: boolean

@@ -23,6 +23,7 @@ export interface WebSocketServiceCallbacks {
   onStatusChange?: (status: WebSocketStatus) => void;
   onMessage?: (message: WebSocketMessage) => void;
   onError?: (error: Error) => void;
+  onToolCallProgress?: (toolName: string, explanation: string, mode: string) => void;
 }
 
 export class WebSocketService {
@@ -457,6 +458,8 @@ export class WebSocketService {
       | {
           name?: string;
           arguments?: Record<string, unknown>;
+          mode?: string;
+          explanation?: string;
         }
       | undefined;
 
@@ -468,12 +471,19 @@ export class WebSocketService {
 
     const toolName = params.name;
     const arguments_ = params.arguments || {};
+    const mode = params.mode || 'do'; // Default to 'do' mode if not specified
+    const explanation = params.explanation || ''; // Get explanation from tool call params
 
-    console.log(`[WebSocket] Executing tool call: ${toolName}`, arguments_);
+    console.log(`[WebSocket] Executing tool call: ${toolName} (mode: ${mode})`, arguments_);
+
+    // Notify callbacks about tool call progress (for chat display)
+    if (this.callbacks.onToolCallProgress) {
+      this.callbacks.onToolCallProgress(toolName, explanation, mode);
+    }
 
     try {
-      // Execute the tool
-      const result = await executeTool(toolName, arguments_);
+      // Execute the tool with mode and explanation
+      const result = await executeTool(toolName, arguments_, mode, explanation);
 
       // Send success response
       // Note: Agent expects method: "tools/call" in response to identify it as a tool call response
