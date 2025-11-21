@@ -659,6 +659,24 @@ const contract = c.router({
     },
   },
 
+  chatStop: {
+    method: 'POST' as const,
+    summary: 'Stop a running show/do mode task',
+    description: 'Stops an ongoing task for the given chat_id',
+    path: '/chat/:chat_id/stop',
+    body: z.object({
+      task_id: z.string().optional(),
+    }),
+    pathParams: z.object({ chat_id: z.string() }),
+    responses: {
+      200: R.success(z.object({ status: z.string(), message: z.string() })),
+      400: R.error,
+      401: R.error,
+      403: R.error,
+      500: R.error,
+    },
+  },
+
   // ============================================================================
   // USER ROUTES - User account management and operations
   // ============================================================================

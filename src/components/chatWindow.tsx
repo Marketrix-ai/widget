@@ -6,7 +6,7 @@ import {
   startScreenShare,
   stopScreenShare,
 } from '../services/screenShareService';
-import type { ChatMessage, ChatMode, MarketrixConfig } from '../types';
+import type { ChatMessage, ChatMode, MarketrixConfig, TaskProgress } from '../types';
 import { addOpacity, getContrastingColor } from '../utils/colorUtils';
 import { getPositionClasses } from '../utils/widgetPositioning';
 import { MessageInput } from './messageInput';
@@ -21,6 +21,8 @@ interface ChatWindowProps {
   messages: ChatMessage[];
   currentMode: ChatMode;
   agentAvailable: boolean;
+  isTaskRunning?: boolean;
+  taskProgress?: TaskProgress[];
   onClose: () => void;
   onSendMessage: (
     message: string,
@@ -32,6 +34,7 @@ interface ChatWindowProps {
   onSetMode: (mode: ChatMode) => void;
   onAddMessage: (message: ChatMessage) => void;
   onUpdateMessage: (messageId: string, updates: Partial<ChatMessage>) => void;
+  onStopTask?: () => void;
   onScreenSharingChange?: (isSharing: boolean) => void;
 }
 
@@ -42,11 +45,14 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   isLoading,
   messages,
   currentMode,
+  isTaskRunning = false,
+  taskProgress = [],
   onClose,
   onSendMessage,
   onSetMode,
   onAddMessage,
   onUpdateMessage,
+  onStopTask,
   onScreenSharingChange,
 }) => {
   const [inputValue, setInputValue] = useState('');
@@ -457,6 +463,40 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                   : `linear-gradient(135deg, ${settings.widget_background_color} 0%, ${settings.widget_background_color} 100%)`,
               }}
             >
+              {/* Task Progress Display */}
+              {isTaskRunning && taskProgress.length > 0 && (
+                <div
+                  className='mx-2 mb-2 p-2 rounded text-xs max-h-32 overflow-y-auto'
+                  style={{
+                    backgroundColor: addOpacity(settings.widget_background_color, 0.8),
+                    borderColor: settings.widget_border_color,
+                    borderWidth: '1px',
+                    borderStyle: 'solid',
+                  }}
+                >
+                  <div className='font-semibold mb-1' style={{ color: settings.widget_text_color }}>
+                    Task Progress ({taskProgress.length} steps)
+                  </div>
+                  <div className='space-y-1'>
+                    {taskProgress.map((progress, idx) => (
+                      <div
+                        key={idx}
+                        className='text-xs opacity-80'
+                        style={{ color: settings.widget_text_color }}
+                      >
+                        <span className='font-medium'>Step {progress.step}:</span>{' '}
+                        {progress.tool_name}
+                        {progress.tool_params && Object.keys(progress.tool_params).length > 0 && (
+                          <span className='opacity-70 ml-1'>
+                            ({Object.keys(progress.tool_params).join(', ')})
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Input */}
               <MessageInput
                 value={inputValue}
@@ -464,6 +504,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                 onKeyPress={handleKeyPress}
                 onSend={handleSendMessage}
                 isLoading={isLoading}
+                isTaskRunning={isTaskRunning}
+                onStop={onStopTask}
                 config={config}
               />
 

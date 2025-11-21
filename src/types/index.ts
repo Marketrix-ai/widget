@@ -59,6 +59,13 @@ export interface ChatMessage {
   isSystemMessage?: boolean;
 }
 
+export interface TaskProgress {
+  tool_name: string;
+  tool_params: any;
+  step: number;
+  timestamp: number;
+}
+
 export interface WidgetState {
   isOpen: boolean;
   isMinimized: boolean;
@@ -67,6 +74,9 @@ export interface WidgetState {
   currentMode: ChatMode;
   agentAvailable: boolean;
   error?: string;
+  activeTaskId: string | null;
+  isTaskRunning: boolean;
+  taskProgress: TaskProgress[];
 }
 
 export interface SendMessageRequest {
@@ -94,21 +104,20 @@ export type { TourData } from '../sdk';
 export type {
   BrowserAction,
   BrowserToolMetadata,
-  ExtractAction,
-  SearchAction,
-  NavigateAction,
   ClickElementAction,
-  InputTextAction,
+  CloseTabAction,
   DoneAction,
+  ExtractAction,
+  GetDropdownOptionsAction,
+  InputTextAction,
+  NavigateAction,
+  NoParamsAction,
+  ScrollAction,
+  SearchAction,
+  SelectDropdownOptionAction,
+  SendKeysAction,
   StructuredOutputAction,
   SwitchTabAction,
-  CloseTabAction,
-  ScrollAction,
-  SendKeysAction,
   UploadFileAction,
-  NoParamsAction,
-  GetDropdownOptionsAction,
-  SelectDropdownOptionAction,
 } from './browserTools';
-
-export { BROWSER_TOOLS, BROWSER_TOOL_CATEGORIES } from './browserTools';
+export { BROWSER_TOOL_CATEGORIES, BROWSER_TOOLS } from './browserTools';

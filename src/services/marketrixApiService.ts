@@ -162,12 +162,17 @@ export class MarketrixApiService {
         // Map the response to our expected format
         if (mode === 'do') {
           // chatDo returns UsageStatsData, not ChatResponseData
-          return {
+          // But we also get task_id for show/do modes
+          const result: any = {
             messageId: Date.now().toString(),
             response: 'Action completed successfully',
             mode,
             timestamp: new Date(),
           };
+          if (responseData && typeof responseData === 'object' && 'task_id' in responseData) {
+            result.task_id = responseData.task_id;
+          }
+          return result;
         } else {
           // chatTell and chatShow return ChatResponseData
           if (!isChatResponseData(responseData)) {
@@ -176,12 +181,17 @@ export class MarketrixApiService {
           }
 
           const chatResponse = responseData;
-          return {
+          const result: any = {
             messageId: Date.now().toString(),
             response: chatResponse.text || 'Response received',
             mode,
             timestamp: new Date(),
           };
+          // Include task_id if available (for show mode)
+          if (responseData && typeof responseData === 'object' && 'task_id' in responseData) {
+            result.task_id = (responseData as any).task_id;
+          }
+          return result;
         }
       }
 
@@ -230,6 +240,46 @@ export class MarketrixApiService {
       status: 'online',
       // Add any other basic info that might be needed
     };
+  }
+
+  /**
+   * Stop a running task
+   */
+  async stopTask(taskId?: string): Promise<{ status: string; message: string }> {
+    try {
+      // Ensure chat_id is initialized
+      if (!this.chatId) {
+        this.chatId = await this.initializeChatId();
+      }
+
+      if (!this.chatId) {
+        throw new Error('Failed to initialize chat session. Please try again.');
+      }
+
+      const chatId = this.chatId;
+
+      // Call the stop endpoint
+      const apiResponse = await sdk.chatStop({
+        params: { chat_id: chatId },
+        body: {
+          task_id: taskId,
+        },
+      });
+
+      const responseData = extractApiData(apiResponse);
+      if (responseData && typeof responseData === 'object' && 'status' in responseData) {
+        const data = responseData as { status: unknown; message?: unknown };
+        return {
+          status: String(data.status),
+          message: String(data.message || 'Task stopped'),
+        };
+      }
+
+      throw new Error('Invalid response from stop endpoint');
+    } catch (error) {
+      console.error('Failed to stop task:', extractErrorMessage(error));
+      throw error;
+    }
   }
 
   /**

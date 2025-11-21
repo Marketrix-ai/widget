@@ -60,11 +60,14 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
         messages={state.messages}
         currentMode={state.currentMode}
         agentAvailable={state.agentAvailable}
+        isTaskRunning={state.isTaskRunning}
+        taskProgress={state.taskProgress}
         onClose={actions.closeWidget}
         onSendMessage={actions.sendMessage}
         onSetMode={actions.setMode}
         onAddMessage={actions.addMessage}
         onUpdateMessage={actions.updateMessage}
+        onStopTask={actions.stopTask}
         onScreenSharingChange={setIsScreenSharing}
       />
 

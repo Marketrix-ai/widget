@@ -27,12 +27,16 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
         currentMode: 'tell' as ChatMode,
         agentAvailable: false,
         error: undefined,
+        activeTaskId: null,
+        isTaskRunning: false,
+        taskProgress: [],
       },
       actions: {
         toggleWidget: () => {},
         closeWidget: () => {},
         setMode: () => {},
         sendMessage: async () => {},
+        stopTask: async () => {},
         clearError: () => {},
         addMessage: () => {},
         updateMessage: () => {},
@@ -85,6 +89,9 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
     messages: [],
     currentMode: 'tell',
     agentAvailable: false,
+    activeTaskId: null,
+    isTaskRunning: false,
+    taskProgress: [],
   });
 
   const apiServiceRef = useRef<MarketrixApiService | null>(null);
@@ -215,6 +222,47 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
             },
             onMessage: (message: WebSocketMessage) => {
               console.log('[Widget] WebSocket message received:', message);
+
+              // Handle task progress updates
+              if (message.method === 'task/progress' && message.params) {
+                const params = message.params as {
+                  tool_name: string;
+                  tool_params: any;
+                  step: number;
+                  timestamp: string;
+                };
+                setState((prev) => ({
+                  ...prev,
+                  taskProgress: [
+                    ...prev.taskProgress,
+                    {
+                      tool_name: params.tool_name,
+                      tool_params: params.tool_params,
+                      step: params.step,
+                      timestamp: new Date(params.timestamp).getTime(),
+                    },
+                  ],
+                }));
+              }
+
+              // Handle task status updates
+              if (message.method === 'task/status' && message.params) {
+                const params = message.params as {
+                  status: string;
+                  message: string;
+                  timestamp: string;
+                };
+                const status = params.status;
+
+                if (status === 'stopped' || status === 'completed' || status === 'failed') {
+                  setState((prev) => ({
+                    ...prev,
+                    activeTaskId: null,
+                    isTaskRunning: false,
+                    isLoading: false,
+                  }));
+                }
+              }
             },
             onError: (error) => {
               console.error('[Widget] WebSocket error:', error);
@@ -368,6 +416,15 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
           question,
         });
 
+        // For show/do modes, check if task_id is in response and start tracking
+        const isTaskMode = messageMode === 'show' || messageMode === 'do';
+        let taskId: string | null = null;
+
+        // Try to extract task_id from response if available
+        if (isTaskMode && response && typeof response === 'object' && 'task_id' in response) {
+          taskId = (response as any).task_id;
+        }
+
         const agentMessage: ChatMessage = {
           id: response.messageId,
           content: response.response,
@@ -380,6 +437,14 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
           ...prev,
           messages: [...prev.messages, agentMessage],
           isLoading: false,
+          // Set task state for show/do modes
+          ...(isTaskMode && taskId
+            ? {
+                activeTaskId: taskId,
+                isTaskRunning: true,
+                taskProgress: [],
+              }
+            : {}),
         }));
       } catch (error) {
         console.error('Failed to send message:', error);
@@ -432,6 +497,26 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
     },
     [state.currentMode]
   );
+
+  const stopTask = useCallback(async () => {
+    if (!apiServiceRef.current || !state.activeTaskId) return;
+
+    try {
+      await apiServiceRef.current.stopTask(state.activeTaskId);
+      setState((prev) => ({
+        ...prev,
+        activeTaskId: null,
+        isTaskRunning: false,
+        isLoading: false,
+      }));
+    } catch (error) {
+      console.error('Failed to stop task:', error);
+      setState((prev) => ({
+        ...prev,
+        error: 'Failed to stop task',
+      }));
+    }
+  }, [state.activeTaskId]);
 
   const clearError = useCallback(() => {
     setState((prev) => ({ ...prev, error: undefined }));
@@ -520,6 +605,7 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
       closeWidget,
       setMode,
       sendMessage,
+      stopTask,
       clearError,
       addMessage,
       updateMessage,
