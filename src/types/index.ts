@@ -92,6 +92,7 @@ export interface SendMessageResponse {
   response: string;
   mode: InstructionType;
   timestamp: Date;
+  task_id?: string;
 }
 
 export type WidgetPosition = WidgetSettingsData['widget_position'];

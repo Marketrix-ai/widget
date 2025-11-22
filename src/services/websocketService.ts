@@ -346,6 +346,9 @@ export class WebSocketService {
       if (cb.onError && !merged.onError) {
         merged.onError = cb.onError;
       }
+      if (cb.onToolCallProgress && !merged.onToolCallProgress) {
+        merged.onToolCallProgress = cb.onToolCallProgress;
+      }
     }
     this.callbacks = merged;
   }
@@ -366,6 +369,9 @@ export class WebSocketService {
       }
       if (cb.onError && !merged.onError) {
         merged.onError = cb.onError;
+      }
+      if (cb.onToolCallProgress && !merged.onToolCallProgress) {
+        merged.onToolCallProgress = cb.onToolCallProgress;
       }
     }
     this.callbacks = merged;
@@ -435,6 +441,28 @@ export class WebSocketService {
 
     // Handle tools/call messages - execute tool and send response back
     if (message.method === 'tools/call' && message.id !== undefined) {
+      // Show progress immediately when tool call is received (before execution)
+      const params = message.params as
+        | {
+            name?: string;
+            arguments?: Record<string, unknown>;
+            mode?: string;
+            explanation?: string;
+          }
+        | undefined;
+
+      if (params?.name && this.callbacks.onToolCallProgress) {
+        const toolName = params.name;
+        const mode = params.mode || 'do';
+        const explanation = params.explanation || '';
+        const progressText = explanation || `Executing ${toolName}...`;
+        console.log(
+          `[WebSocket] Tool call received, showing initial progress: ${toolName} - "${progressText}"`
+        );
+        this.callbacks.onToolCallProgress(toolName, progressText, mode);
+      }
+
+      // Execute the tool (this will also call onToolCallProgress for result)
       this.handleToolCall(message);
       return; // Don't forward tool call messages to callbacks
     }
@@ -478,16 +506,8 @@ export class WebSocketService {
     console.log(`[WebSocket] Explanation: "${explanation}"`);
     console.log(`[WebSocket] Callback available: ${!!this.callbacks.onToolCallProgress}`);
 
-    // Show initial progress when tool starts (always call, even if no explanation)
-    if (this.callbacks.onToolCallProgress) {
-      const progressText = explanation || `Executing ${toolName}...`;
-      console.log(
-        `[WebSocket] Calling onToolCallProgress (initial): ${toolName} - "${progressText}"`
-      );
-      this.callbacks.onToolCallProgress(toolName, progressText, mode);
-    } else {
-      console.warn(`[WebSocket] onToolCallProgress callback not available!`);
-    }
+    // Note: Initial progress is already shown in handleMessage when the tool call is received
+    // This avoids duplicate progress entries
 
     try {
       // Execute the tool with mode and explanation
@@ -502,6 +522,7 @@ export class WebSocketService {
         console.log(
           `[WebSocket] Calling onToolCallProgress (result): ${toolName} - "${resultText}"`
         );
+        // Update the progress line with the result
         this.callbacks.onToolCallProgress(toolName, resultText, mode);
       } else {
         console.warn(`[WebSocket] onToolCallProgress callback not available for result!`);

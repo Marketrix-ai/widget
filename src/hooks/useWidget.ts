@@ -269,8 +269,17 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
 
                 // Find the most recent agent message (should be the task message)
                 // When task is running, the last agent message is the task message
+                console.log(
+                  `[Widget] Searching for task message. Total messages: ${messages.length}`
+                );
                 for (let i = messages.length - 1; i >= 0; i--) {
                   const msg = messages[i];
+                  console.log(`[Widget] Checking message ${i}:`, {
+                    sender: msg.sender,
+                    isSystemMessage: msg.isSystemMessage,
+                    isScreenAccessRequest: msg.isScreenAccessRequest,
+                    content: `${msg.content.substring(0, 50)}...`,
+                  });
                   // Find the last agent message that's not a system message or screen access request
                   if (
                     msg.sender === 'agent' &&
@@ -279,7 +288,7 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
                   ) {
                     taskMessageIndex = i;
                     console.log(
-                      `[Widget] Found task message at index ${i}: "${msg.content.substring(0, 50)}..."`
+                      `[Widget] ✓ Found task message at index ${i}: "${msg.content.substring(0, 50)}..."`
                     );
                     break;
                   }
@@ -287,14 +296,30 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
 
                 if (taskMessageIndex === -1) {
                   console.warn(
-                    `[Widget] No task message found to update. Messages count: ${messages.length}`
+                    `[Widget] ✗ No task message found to update. Messages count: ${messages.length}`
+                  );
+                  console.warn(
+                    `[Widget] All messages:`,
+                    messages.map((m, i) => ({
+                      index: i,
+                      sender: m.sender,
+                      isSystemMessage: m.isSystemMessage,
+                      isScreenAccessRequest: m.isScreenAccessRequest,
+                      content: m.content.substring(0, 30),
+                    }))
                   );
                 }
 
                 if (taskMessageIndex >= 0) {
                   // Update existing message with progress in thread form
                   const existingMessage = messages[taskMessageIndex];
+                  console.log(
+                    `[Widget] Existing message content before update:`,
+                    existingMessage.content
+                  );
+
                   const progressLine = `• ${explanation || toolName}`;
+                  console.log(`[Widget] Adding progress line:`, progressLine);
 
                   // Split message into main content and progress lines
                   const parts = existingMessage.content.split('\n\n');
@@ -302,6 +327,9 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
                   const existingProgressLines = parts
                     .slice(1)
                     .filter((line) => line.trim().length > 0);
+
+                  console.log(`[Widget] Main content:`, mainContent);
+                  console.log(`[Widget] Existing progress lines:`, existingProgressLines);
 
                   // Check if we're updating an existing progress line for this tool
                   // We match by checking if this is an update to existing progress (same tool, recent timestamp)
@@ -320,9 +348,17 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
                     });
                   } else {
                     // New tool call - check if tool name already exists in any line
-                    toolProgressIndex = updatedProgressLines.findIndex(
-                      (line) => line.trim().startsWith('•') && line.includes(toolName)
-                    );
+                    // Look for lines that mention this tool (either by name or by checking if it's a recent addition)
+                    toolProgressIndex = updatedProgressLines.findIndex((line) => {
+                      const trimmed = line.trim();
+                      if (!trimmed.startsWith('•')) return false;
+                      // Check if line contains tool name or if it's the most recent line (likely the same tool)
+                      return (
+                        trimmed.includes(toolName) ||
+                        (updatedProgressLines.length > 0 &&
+                          line === updatedProgressLines[updatedProgressLines.length - 1])
+                      );
+                    });
                   }
 
                   if (toolProgressIndex >= 0) {
@@ -339,17 +375,54 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
                       ? [mainContent, ...updatedProgressLines].join('\n\n')
                       : mainContent;
 
-                  // Create new message object to ensure React detects the change
-                  // Use a new object reference to force React re-render
+                  console.log(`[Widget] Updated content (full):`, updatedContent);
+                  console.log(`[Widget] Updated content length:`, updatedContent.length);
+                  console.log(`[Widget] Number of progress lines:`, updatedProgressLines.length);
+
+                  // Create new message object and new messages array to ensure React detects the change
                   const updatedMessage: ChatMessage = {
                     ...existingMessage,
                     content: updatedContent,
                   };
-                  messages[taskMessageIndex] = updatedMessage;
+                  // Create a completely new array to ensure React detects the change
+                  const updatedMessages = [...messages];
+                  updatedMessages[taskMessageIndex] = updatedMessage;
                   console.log(
                     `[Widget] Updated message at index ${taskMessageIndex} with content:`,
-                    `${updatedContent.substring(0, 100)}...`
+                    `${updatedContent.substring(0, 200)}...`
                   );
+                  console.log(
+                    `[Widget] Message object reference changed:`,
+                    updatedMessage !== existingMessage
+                  );
+                  console.log(
+                    `[Widget] Messages array reference changed:`,
+                    updatedMessages !== messages
+                  );
+
+                  // Update task progress array
+                  const updatedTaskProgress =
+                    existingProgressIndex >= 0
+                      ? prev.taskProgress.map((p, idx) =>
+                          idx === existingProgressIndex ? newProgress : p
+                        )
+                      : [...prev.taskProgress, newProgress];
+
+                  console.log(
+                    `[Widget] Returning updated state with ${updatedMessages.length} messages and ${updatedTaskProgress.length} progress entries`
+                  );
+                  if (taskMessageIndex >= 0) {
+                    console.log(
+                      `[Widget] Updated message content preview:`,
+                      updatedMessages[taskMessageIndex].content.substring(0, 100)
+                    );
+                  }
+
+                  return {
+                    ...prev,
+                    messages: updatedMessages,
+                    taskProgress: updatedTaskProgress,
+                  };
                 } else {
                   // Fallback: add as new message if no agent message found
                   console.warn(`[Widget] No task message found, creating new progress message`);
@@ -361,26 +434,21 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
                     mode: mode as InstructionType,
                     isSystemMessage: isNonInteractive,
                   };
-                  messages.push(progressMessage);
+                  const updatedMessages = [...messages, progressMessage];
+
+                  // Update task progress array
+                  const updatedTaskProgress = [...prev.taskProgress, newProgress];
+
+                  console.log(
+                    `[Widget] Returning updated state with ${updatedMessages.length} messages and ${updatedTaskProgress.length} progress entries (fallback)`
+                  );
+
+                  return {
+                    ...prev,
+                    messages: updatedMessages,
+                    taskProgress: updatedTaskProgress,
+                  };
                 }
-
-                // Update task progress array
-                const updatedTaskProgress =
-                  existingProgressIndex >= 0
-                    ? prev.taskProgress.map((p, idx) =>
-                        idx === existingProgressIndex ? newProgress : p
-                      )
-                    : [...prev.taskProgress, newProgress];
-
-                console.log(
-                  `[Widget] Returning updated state with ${messages.length} messages and ${updatedTaskProgress.length} progress entries`
-                );
-
-                return {
-                  ...prev,
-                  messages,
-                  taskProgress: updatedTaskProgress,
-                };
               });
             },
             onMessage: (message: WebSocketMessage) => {
@@ -562,8 +630,13 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
         let taskId: string | null = null;
 
         // Try to extract task_id from response if available
-        if (isTaskMode && response && typeof response === 'object' && 'task_id' in response) {
-          taskId = (response as any).task_id;
+        if (
+          isTaskMode &&
+          response &&
+          'task_id' in response &&
+          typeof response.task_id === 'string'
+        ) {
+          taskId = response.task_id;
         }
 
         // For show/do modes, log the response to console
@@ -579,19 +652,29 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
           mode: response.mode,
         };
 
-        setState((prev) => ({
-          ...prev,
-          messages: [...prev.messages, agentMessage],
-          isLoading: false,
-          // Set task state for show/do modes
-          ...(isTaskMode && taskId
-            ? {
-                activeTaskId: taskId,
-                isTaskRunning: true,
-                taskProgress: [],
-              }
-            : {}),
-        }));
+        console.log(
+          `[Widget] Adding agent message: "${agentMessage.content}" (id: ${agentMessage.id})`
+        );
+
+        setState((prev) => {
+          const newMessages = [...prev.messages, agentMessage];
+          console.log(
+            `[Widget] State updated with ${newMessages.length} messages. Last message: "${newMessages[newMessages.length - 1].content}"`
+          );
+          return {
+            ...prev,
+            messages: newMessages,
+            isLoading: false,
+            // Set task state for show/do modes
+            ...(isTaskMode && taskId
+              ? {
+                  activeTaskId: taskId,
+                  isTaskRunning: true,
+                  taskProgress: [],
+                }
+              : {}),
+          };
+        });
       } catch (error) {
         console.error('Failed to send message:', error);
 
