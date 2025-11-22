@@ -221,6 +221,11 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
               }));
             },
             onToolCallProgress: (toolName: string, explanation: string, mode: string) => {
+              // Log to console
+              console.log(
+                `[Widget] Tool call progress callback received: ${toolName} - "${explanation}" (mode: ${mode})`
+              );
+
               // Non-interactive tools: just log, don't show prominently in chat
               const NON_INTERACTIVE_TOOLS = [
                 'get_html',
@@ -230,30 +235,153 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
               ];
               const isNonInteractive = NON_INTERACTIVE_TOOLS.includes(toolName);
 
-              // Add tool call as progress message in chat (for transparency)
-              const progressMessage: ChatMessage = {
-                id: `tool-progress-${Date.now()}-${Math.random()}`,
-                content: explanation || `Executing ${toolName}...`,
-                sender: 'agent',
-                timestamp: new Date(),
-                mode: mode as InstructionType,
-                isSystemMessage: isNonInteractive,
-              };
-              setState((prev) => ({
-                ...prev,
-                messages: [...prev.messages, progressMessage],
-                taskProgress: [
-                  ...prev.taskProgress,
-                  {
+              // Update task progress
+              setState((prev) => {
+                // Check if this is an update to existing progress (same tool name, recent timestamp)
+                const existingProgressIndex = prev.taskProgress.findIndex(
+                  (p) => p.tool_name === toolName && Date.now() - p.timestamp < 5000
+                );
+
+                let newProgress;
+                if (existingProgressIndex >= 0) {
+                  // Update existing progress
+                  newProgress = {
+                    ...prev.taskProgress[existingProgressIndex],
+                    explanation,
+                    timestamp: Date.now(),
+                  };
+                } else {
+                  // Create new progress entry
+                  newProgress = {
                     tool_name: toolName,
                     tool_params: {},
                     step: prev.taskProgress.length + 1,
                     explanation,
                     mode,
                     timestamp: Date.now(),
-                  },
-                ],
-              }));
+                  };
+                }
+
+                // Find the last agent message (task message) and update it with progress
+                // Look for messages that are part of an active task (show/do mode)
+                const messages = [...prev.messages];
+                let taskMessageIndex = -1;
+
+                // Find the most recent agent message (should be the task message)
+                // When task is running, the last agent message is the task message
+                for (let i = messages.length - 1; i >= 0; i--) {
+                  const msg = messages[i];
+                  // Find the last agent message that's not a system message or screen access request
+                  if (
+                    msg.sender === 'agent' &&
+                    !msg.isSystemMessage &&
+                    !msg.isScreenAccessRequest
+                  ) {
+                    taskMessageIndex = i;
+                    console.log(
+                      `[Widget] Found task message at index ${i}: "${msg.content.substring(0, 50)}..."`
+                    );
+                    break;
+                  }
+                }
+
+                if (taskMessageIndex === -1) {
+                  console.warn(
+                    `[Widget] No task message found to update. Messages count: ${messages.length}`
+                  );
+                }
+
+                if (taskMessageIndex >= 0) {
+                  // Update existing message with progress in thread form
+                  const existingMessage = messages[taskMessageIndex];
+                  const progressLine = `• ${explanation || toolName}`;
+
+                  // Split message into main content and progress lines
+                  const parts = existingMessage.content.split('\n\n');
+                  const mainContent = parts[0];
+                  const existingProgressLines = parts
+                    .slice(1)
+                    .filter((line) => line.trim().length > 0);
+
+                  // Check if we're updating an existing progress line for this tool
+                  // We match by checking if this is an update to existing progress (same tool, recent timestamp)
+                  const updatedProgressLines = [...existingProgressLines];
+                  let toolProgressIndex = -1;
+
+                  // If we found existing progress for this tool (within 5 seconds), update that line
+                  if (existingProgressIndex >= 0) {
+                    // Find the progress line that corresponds to this tool
+                    // We'll match by position (existingProgressIndex) or by tool name
+                    toolProgressIndex = updatedProgressLines.findIndex((line, idx) => {
+                      // Match by index if we have a recent progress entry
+                      if (idx === existingProgressIndex) return true;
+                      // Also try to match by tool name in the line
+                      return line.trim().startsWith('•') && line.includes(toolName);
+                    });
+                  } else {
+                    // New tool call - check if tool name already exists in any line
+                    toolProgressIndex = updatedProgressLines.findIndex(
+                      (line) => line.trim().startsWith('•') && line.includes(toolName)
+                    );
+                  }
+
+                  if (toolProgressIndex >= 0) {
+                    // Update existing progress line for this tool
+                    updatedProgressLines[toolProgressIndex] = progressLine;
+                  } else {
+                    // Add new progress line
+                    updatedProgressLines.push(progressLine);
+                  }
+
+                  // Reconstruct message with updated progress
+                  const updatedContent =
+                    updatedProgressLines.length > 0
+                      ? [mainContent, ...updatedProgressLines].join('\n\n')
+                      : mainContent;
+
+                  // Create new message object to ensure React detects the change
+                  // Use a new object reference to force React re-render
+                  const updatedMessage: ChatMessage = {
+                    ...existingMessage,
+                    content: updatedContent,
+                  };
+                  messages[taskMessageIndex] = updatedMessage;
+                  console.log(
+                    `[Widget] Updated message at index ${taskMessageIndex} with content:`,
+                    `${updatedContent.substring(0, 100)}...`
+                  );
+                } else {
+                  // Fallback: add as new message if no agent message found
+                  console.warn(`[Widget] No task message found, creating new progress message`);
+                  const progressMessage: ChatMessage = {
+                    id: `tool-progress-${Date.now()}-${Math.random()}`,
+                    content: explanation || `Executing ${toolName}...`,
+                    sender: 'agent',
+                    timestamp: new Date(),
+                    mode: mode as InstructionType,
+                    isSystemMessage: isNonInteractive,
+                  };
+                  messages.push(progressMessage);
+                }
+
+                // Update task progress array
+                const updatedTaskProgress =
+                  existingProgressIndex >= 0
+                    ? prev.taskProgress.map((p, idx) =>
+                        idx === existingProgressIndex ? newProgress : p
+                      )
+                    : [...prev.taskProgress, newProgress];
+
+                console.log(
+                  `[Widget] Returning updated state with ${messages.length} messages and ${updatedTaskProgress.length} progress entries`
+                );
+
+                return {
+                  ...prev,
+                  messages,
+                  taskProgress: updatedTaskProgress,
+                };
+              });
             },
             onMessage: (message: WebSocketMessage) => {
               console.log('[Widget] WebSocket message received:', message);
@@ -436,6 +564,11 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
         // Try to extract task_id from response if available
         if (isTaskMode && response && typeof response === 'object' && 'task_id' in response) {
           taskId = (response as any).task_id;
+        }
+
+        // For show/do modes, log the response to console
+        if (isTaskMode) {
+          console.log(`[Widget] Task started: ${response.response}`);
         }
 
         const agentMessage: ChatMessage = {

@@ -69,6 +69,19 @@ export async function executeTool(
               error: 'User cancelled action',
             };
           }
+
+          // For keyboard actions, user has done the action manually - return success
+          // For click actions, the user's click already happened, but we still need to
+          // execute it programmatically to ensure it's registered properly
+          if (!isClickAction) {
+            return {
+              success: true,
+              result: 'User completed the action',
+            };
+          }
+          // For click actions, continue to execute the click below
+          // The user's click may have already happened, but we'll trigger it again
+          // programmatically to ensure it's properly registered
         }
       }
     }
@@ -80,7 +93,7 @@ export async function executeTool(
       case 'search':
         return executeSearch(arguments_);
       case 'click_element':
-        return executeClickElement(arguments_);
+        return await executeClickElement(arguments_);
       case 'type_text':
         return executeTypeText(arguments_);
       case 'scroll':
@@ -216,7 +229,7 @@ function executeSearch(args: Record<string, unknown>): ToolExecutionResult {
 /**
  * Click on an element by index
  */
-function executeClickElement(args: Record<string, unknown>): ToolExecutionResult {
+async function executeClickElement(args: Record<string, unknown>): Promise<ToolExecutionResult> {
   const index = args.index as number | undefined;
 
   if (index === undefined) {
@@ -241,9 +254,13 @@ function executeClickElement(args: Record<string, unknown>): ToolExecutionResult
     element.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
     // Wait a bit for scroll to complete, then click
-    setTimeout(() => {
-      element.click();
-    }, 100);
+    // Use a promise to ensure click completes before returning
+    await new Promise<void>((resolve) => {
+      setTimeout(() => {
+        element.click();
+        resolve();
+      }, 100);
+    });
 
     return {
       success: true,

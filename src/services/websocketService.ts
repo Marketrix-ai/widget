@@ -475,15 +475,37 @@ export class WebSocketService {
     const explanation = params.explanation || ''; // Get explanation from tool call params
 
     console.log(`[WebSocket] Executing tool call: ${toolName} (mode: ${mode})`, arguments_);
+    console.log(`[WebSocket] Explanation: "${explanation}"`);
+    console.log(`[WebSocket] Callback available: ${!!this.callbacks.onToolCallProgress}`);
 
-    // Notify callbacks about tool call progress (for chat display)
+    // Show initial progress when tool starts (always call, even if no explanation)
     if (this.callbacks.onToolCallProgress) {
-      this.callbacks.onToolCallProgress(toolName, explanation, mode);
+      const progressText = explanation || `Executing ${toolName}...`;
+      console.log(
+        `[WebSocket] Calling onToolCallProgress (initial): ${toolName} - "${progressText}"`
+      );
+      this.callbacks.onToolCallProgress(toolName, progressText, mode);
+    } else {
+      console.warn(`[WebSocket] onToolCallProgress callback not available!`);
     }
 
     try {
       // Execute the tool with mode and explanation
       const result = await executeTool(toolName, arguments_, mode, explanation);
+      console.log(`[WebSocket] Tool execution result:`, result);
+
+      // Update progress AFTER tool execution completes with result
+      if (this.callbacks.onToolCallProgress) {
+        const resultText = result.success
+          ? result.result || `${toolName} completed`
+          : result.error || `${toolName} failed`;
+        console.log(
+          `[WebSocket] Calling onToolCallProgress (result): ${toolName} - "${resultText}"`
+        );
+        this.callbacks.onToolCallProgress(toolName, resultText, mode);
+      } else {
+        console.warn(`[WebSocket] onToolCallProgress callback not available for result!`);
+      }
 
       // Send success response
       // Note: Agent expects method: "tools/call" in response to identify it as a tool call response
@@ -502,7 +524,7 @@ export class WebSocketService {
           },
         };
         this.send(response);
-        console.log(`[WebSocket] Tool ${toolName} executed successfully`);
+        console.log(`[WebSocket] Tool ${toolName} executed successfully: ${result.result}`);
       } else {
         // Send error response
         this.sendErrorResponse(requestId, -32603, result.error || 'Tool execution failed');

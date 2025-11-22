@@ -40,7 +40,7 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
 
   return (
     <div
-      className='marketrix-widget'
+      className='marketrix-widget relative'
       style={customStyles}
       data-widget-mode={settings?.widget_feature_human ? 'hybrid' : 'ai'}
     >
@@ -72,7 +72,15 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
       />
 
       {state.error ? (
-        <div className='fixed top-4 right-4 z-50 max-w-sm'>
+        <div
+          className='absolute max-w-sm z-50'
+          style={{
+            top: '-60px',
+            ...(widgetPosition.position === 'bottom_left' || !widgetPosition.position
+              ? { left: '0' }
+              : { right: '0' }),
+          }}
+        >
           <div className='bg-red-500 text-white px-4 py-3 rounded-lg shadow-lg'>
             <div className='flex items-center justify-between'>
               <span className='text-sm'>{state.error}</span>
