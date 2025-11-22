@@ -15,6 +15,7 @@ import {
 } from '../utils/chatStorage';
 import { createLogger } from '../utils/logger';
 import {
+  addThinkingMarker,
   parseProgressLines,
   reconstructMessageContent,
   removeThinkingMarkers,
@@ -40,12 +41,23 @@ export interface RestoredState {
 function cleanRestoredMessages(storedContext: StoredChatContext): ChatMessage[] {
   const restoredMessages = restoreMessagesFromContext(storedContext);
 
-  // Clean up messages: remove thinking markers and validate progress lines
+  // Clean up messages: validate progress lines and ensure thinking markers are added for active tasks
   return restoredMessages.map((msg) => {
     const cleanContent = removeThinkingMarkers(msg.content);
     const { mainContent, progressLines } = parseProgressLines(cleanContent);
     const validProgressLines = progressLines.filter((line) => line.trim().length > 0);
-    const finalContent = reconstructMessageContent(mainContent, validProgressLines);
+    let finalContent = reconstructMessageContent(mainContent, validProgressLines);
+
+    // If this is a placeholder with progress lines and task was running, add thinking marker
+    if (
+      msg.isPlaceholder &&
+      validProgressLines.length > 0 &&
+      storedContext.isTaskRunning &&
+      (storedContext.currentMode === 'show' || storedContext.currentMode === 'do')
+    ) {
+      // Add thinking marker to show agent is still processing
+      finalContent = addThinkingMarker(finalContent);
+    }
 
     return {
       ...msg,

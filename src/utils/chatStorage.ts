@@ -85,12 +85,22 @@ export function storeChatContext(
 
   try {
     // Serialize messages, excluding videoStream and converting Date to ISO string
-    // Also exclude placeholder messages from storage
+    // IMPORTANT: Preserve placeholder messages that have content or progress lines
+    // (these represent active tasks that need to be restored)
+    // Exclude empty placeholders (just "Thinking..." without content or progress)
     // IMPORTANT: System messages (like "Switched to Show mode") ARE preserved
     // Exclude "Chat context changed" messages - they're transient and will be re-added if needed
     // Remove __THINKING__ markers from content (they shouldn't be persisted)
     const serializedMessages = messages
-      .filter((msg) => !msg.isPlaceholder)
+      .filter((msg) => {
+        // Keep all non-placeholder messages
+        if (!msg.isPlaceholder) return true;
+        // For placeholders: keep if they have content (agent response) or progress lines
+        const hasContent = msg.content.trim().length > 0;
+        const hasProgress = msg.content.includes('\n\n○') || msg.content.includes('\n\n●');
+        // Keep placeholder if it has meaningful content or progress
+        return hasContent || hasProgress;
+      })
       .filter((msg) => !(msg.isSystemMessage && msg.content === 'Chat context changed'))
       .map((msg) => {
         // Clean __THINKING__ markers from content before storing
@@ -103,6 +113,7 @@ export function storeChatContext(
           mode: msg.mode,
           isScreenAccessRequest: msg.isScreenAccessRequest,
           isSystemMessage: msg.isSystemMessage, // Preserve system messages (mode changes, etc.)
+          isPlaceholder: msg.isPlaceholder, // Preserve placeholder flag for restoration
         };
       });
 
@@ -312,6 +323,7 @@ export function restoreMessagesFromContext(context: StoredChatContext): ChatMess
         mode: msg.mode,
         isScreenAccessRequest: msg.isScreenAccessRequest,
         isSystemMessage: msg.isSystemMessage, // Preserve system messages (mode changes, etc.)
+        isPlaceholder: msg.isPlaceholder ?? false, // Restore placeholder flag if it was saved
       };
     });
 

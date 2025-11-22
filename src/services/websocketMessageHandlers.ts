@@ -171,6 +171,35 @@ export function createToolCallProgressHandler(
             // ALWAYS check prev.messages (current state) not the stale messages array
             const currentMessages = prev.messages;
 
+            // Try finding message again with current state (not stale messages array)
+            const retryFoundMessage = findMessageForProgress({
+              messages: currentMessages,
+              isTaskRunning,
+              currentMode,
+              preferPlaceholder: true,
+              requireContent: false,
+            });
+
+            if (retryFoundMessage) {
+              const taskMessageIndex = retryFoundMessage.index;
+              const existingMessage = currentMessages[taskMessageIndex];
+              const updatedMessage = addProgressLine(existingMessage, toolName, progressText);
+              const updatedMessages = [...currentMessages];
+              updatedMessages[taskMessageIndex] = updatedMessage;
+
+              log.info('Progress handler: Found message on retry and updated with progress line', {
+                messageId: updatedMessage.id,
+                toolName,
+                progressText,
+                updatedContent: updatedMessage.content.substring(0, 200),
+              });
+
+              return {
+                ...prev,
+                messages: updatedMessages,
+              };
+            }
+
             // Check if a placeholder already exists in the current state using utility
             const existingPlaceholderResult = findPlaceholderMessage(currentMessages, currentMode);
 
@@ -205,6 +234,11 @@ export function createToolCallProgressHandler(
                 currentMode,
                 isTaskRunning,
                 currentMessagesCount: currentMessages.length,
+                messageIds: currentMessages.map((m) => ({
+                  id: m.id,
+                  isPlaceholder: m.isPlaceholder,
+                  sender: m.sender,
+                })),
               });
 
               const placeholderMessage = createPlaceholderMessage(currentMode);

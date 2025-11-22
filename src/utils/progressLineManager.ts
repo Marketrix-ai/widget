@@ -205,19 +205,24 @@ export function updateThinkingMarker(
   const hasProgress = hasProgressLines(cleanContent);
   const hasThinking = hasThinkingMarker(message.content);
 
+  // For show/do modes with task running:
+  // - If there are progress lines, show both progress AND thinking (agent is still processing)
+  // - If no progress lines yet, show thinking marker
+  // - Only remove thinking when task completes (handled by the outer condition)
   if (!hasProgress && !hasThinking) {
     // Add thinking marker if no progress lines and no marker exists
     return {
       ...message,
       content: addThinkingMarker(message.content),
     };
-  } else if (hasProgress && hasThinking) {
-    // Remove thinking marker if progress lines exist
+  } else if (hasProgress && !hasThinking) {
+    // Add thinking marker alongside progress lines (agent is still processing)
     return {
       ...message,
-      content: message.content.replace(/\n\n__THINKING__$/, '').replace(/__THINKING__/g, ''),
+      content: addThinkingMarker(message.content),
     };
   }
+  // If hasThinking is already true, keep it (whether or not progress exists)
 
   return message;
 }
