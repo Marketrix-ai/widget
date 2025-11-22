@@ -148,6 +148,12 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
     taskProgress: [],
   });
 
+  // Ref to store latest state for synchronous access (e.g., in page unload handlers)
+  const stateRef = useRef<WidgetState>(state);
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
+
   // Service references
   const apiServiceRef = useRef<MarketrixApiService | null>(null);
   const websocketServiceRef = useRef<WebSocketService | null>(null);
@@ -523,7 +529,7 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
 
   /**
    * Auto-save chat context to localStorage when state changes
-   * Debounced to avoid excessive writes
+   * Uses shorter debounce for critical updates (task progress) and longer for UI state
    */
   useEffect(() => {
     const chatId = initializedChatIdRef.current;
@@ -531,7 +537,12 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
       return;
     }
 
-    // Debounce saves to avoid excessive localStorage writes
+    // Use shorter debounce for critical state changes (task progress, messages)
+    // and longer debounce for UI state changes (isOpen, isMinimized)
+    const isCriticalUpdate =
+      state.messages.length > 0 || state.isTaskRunning || state.taskProgress.length > 0;
+    const debounceMs = isCriticalUpdate ? 200 : 500;
+
     const timeoutId = setTimeout(() => {
       storeChatContext(
         chatId,
@@ -543,7 +554,7 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
         state.isOpen,
         state.isMinimized
       );
-    }, 500);
+    }, debounceMs);
 
     return () => clearTimeout(timeoutId);
   }, [
@@ -561,11 +572,37 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
   // ============================================================================
 
   /**
-   * Handle page unload/visibility changes to stop screen sharing
-   * Ensures screen sharing is properly stopped when page is hidden or unloaded
+   * Handle page unload/visibility changes to stop screen sharing and save context
+   * Ensures screen sharing is properly stopped and chat context is saved before page unloads
    */
   useEffect(() => {
     const handlePageUnload = () => {
+      const chatId = initializedChatIdRef.current;
+      if (!chatId) {
+        return;
+      }
+
+      // Always save chat context synchronously on page unload to prevent data loss
+      // This ensures task progress and chat history are preserved even if debounced save hasn't fired
+      try {
+        // Get current state synchronously using ref to access latest state
+        // Since setState is async, we use the ref to get the most recent state
+        const currentState = stateRef.current;
+        storeChatContext(
+          chatId,
+          currentState.messages,
+          currentState.isTaskRunning,
+          currentState.activeTaskId,
+          currentState.taskProgress,
+          currentState.currentMode,
+          currentState.isOpen,
+          currentState.isMinimized
+        );
+        log.debug('Saved chat context on page unload');
+      } catch (error) {
+        log.warn('Failed to save chat context on page unload:', error);
+      }
+
       // Check if screen sharing is active
       if (isScreenSharing()) {
         log.debug('Page unloading, stopping screen share and adding message');
@@ -573,27 +610,36 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
         // Stop screen sharing
         stopScreenShare();
 
-        // Remove any screenshare messages (with videoStream) from chat history
+        // Append "Stopped screenshare" message to existing chat history
         // Get current state synchronously and update immediately
         setState((prev) => {
-          // Remove screenshare messages (messages with videoStream)
+          // Remove screenshare messages (with videoStream) but keep ALL other messages
           const messagesWithoutScreenshare = prev.messages.filter((msg) => !msg.videoStream);
 
-          // Add "Stopped screenshare" message to chat history
-          const stoppedMessage = createSystemMessage(
-            'Stopped screenshare',
-            'show',
-            'user',
-            'screenshare-stopped'
+          // Check if "Stopped screenshare" message already exists to avoid duplicates
+          const hasStoppedMessage = messagesWithoutScreenshare.some(
+            (msg) =>
+              msg.id === 'screenshare-stopped' ||
+              (msg.isSystemMessage && msg.content === 'Stopped screenshare')
           );
 
-          const updatedMessages = [...messagesWithoutScreenshare, stoppedMessage];
+          // Only add the message if it doesn't already exist
+          let updatedMessages = messagesWithoutScreenshare;
+          if (!hasStoppedMessage) {
+            // Add "Stopped screenshare" message to chat history (append, don't replace)
+            const stoppedMessage = createSystemMessage(
+              'Stopped screenshare',
+              'show',
+              'user',
+              'screenshare-stopped'
+            );
+            updatedMessages = [...messagesWithoutScreenshare, stoppedMessage];
+          }
 
-          // Immediately save to storage to ensure it's persisted before page unloads
-          const chatId = initializedChatIdRef.current;
+          // Immediately save to storage again with updated messages
           if (chatId) {
             try {
-              // Save synchronously to localStorage
+              // Save synchronously to localStorage - this preserves ALL chat history
               storeChatContext(
                 chatId,
                 updatedMessages,

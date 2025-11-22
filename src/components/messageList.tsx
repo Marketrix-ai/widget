@@ -52,7 +52,6 @@ type ChipData = {
 
 interface MessageListProps {
   messages: ChatMessage[];
-  isLoading: boolean;
   messagesEndRef: React.RefObject<HTMLDivElement | null>;
   onSendMessage?: (
     message: string,
@@ -73,7 +72,6 @@ interface MessageListProps {
 
 export const MessageList = ({
   messages,
-  isLoading,
   messagesEndRef,
   onSendMessage,
   onSetMode,
@@ -1947,9 +1945,13 @@ export const MessageList = ({
                                   const isPending = trimmedLine.startsWith('○') && !isCompleted;
 
                                   // Extract text after the status indicator
+                                  // Handle "●✓" as a sequence first, then individual characters
                                   const text = trimmedLine
-                                    .replace(/^[○●✓]\s*/, '')
-                                    .replace(/\s*✗\s*\([^)]*\)$/, '')
+                                    .replace(/^●✓\s*/, '') // Remove "●✓" sequence first
+                                    .replace(/^○\s*/, '') // Then remove "○"
+                                    .replace(/^●\s*/, '') // Then remove "●" if any
+                                    .replace(/^✓\s*/, '') // Then remove "✓" if any
+                                    .replace(/\s*✗\s*\([^)]*\)$/, '') // Remove error markers
                                     .trim();
 
                                   return (
@@ -1983,70 +1985,6 @@ export const MessageList = ({
                           </div>
                         );
                       })()}
-                    {/* Show Thinking indicator for active task messages when waiting */}
-                    {isTaskRunning &&
-                      (currentMode === 'show' || currentMode === 'do') &&
-                      message.sender === 'agent' &&
-                      !message.isSystemMessage &&
-                      !message.isScreenAccessRequest &&
-                      !message.isPlaceholder &&
-                      index === messages.length - 1 &&
-                      hasThinkingMarker(message.content) && (
-                        <div
-                          className='flex flex-col gap-1.5 mt-2 pt-1 border-t'
-                          style={{ borderColor: addOpacity(settings.widget_border_color, 0.2) }}
-                        >
-                          {/* Subtle Facebook Messenger-style loading dots */}
-                          <div className='flex items-center gap-1 py-0.5'>
-                            <span className='messenger-dot' style={{ animationDelay: '0s' }} />
-                            <span className='messenger-dot' style={{ animationDelay: '0.15s' }} />
-                            <span className='messenger-dot' style={{ animationDelay: '0.3s' }} />
-                          </div>
-                          {/* Thinking text with subtle ellipsis at bottom */}
-                          <div className='flex items-center'>
-                            <span
-                              className='text-[10px] font-inter font-normal'
-                              style={{ color: addOpacity(settings.widget_text_color, 0.5) }}
-                            >
-                              Thinking
-                              <span className='thinking-dots'>
-                                <span style={{ animationDelay: '0s' }}>.</span>
-                                <span style={{ animationDelay: '0.2s' }}>.</span>
-                                <span style={{ animationDelay: '0.4s' }}>.</span>
-                              </span>
-                            </span>
-                          </div>
-                          <style>{`
-                            @keyframes messenger-bounce {
-                              0%, 60%, 100% {
-                                transform: translateY(0);
-                                opacity: 0.4;
-                              }
-                              30% {
-                                transform: translateY(-4px);
-                                opacity: 0.7;
-                              }
-                            }
-                            .messenger-dot {
-                              width: 4px;
-                              height: 4px;
-                              border-radius: 50%;
-                              background-color: ${addOpacity(settings.widget_text_color, 0.35)};
-                              animation: messenger-bounce 1.2s ease-in-out infinite;
-                              display: inline-block;
-                            }
-                            @keyframes thinking-dot {
-                              0%, 20% { opacity: 0; }
-                              50% { opacity: 1; }
-                              100% { opacity: 0; }
-                            }
-                            .thinking-dots span {
-                              animation: thinking-dot 1.4s infinite;
-                              margin-left: 1px;
-                            }
-                          `}</style>
-                        </div>
-                      )}
                   </>
                 )}
 
@@ -2089,11 +2027,39 @@ export const MessageList = ({
                   )}
               </div>
             </div>
-            {/* Timestamp below card */}
+            {/* Timestamp and Thinking indicator below card */}
             {!message.isPlaceholder && (
               <div
-                className={`flex ${message.sender === 'user' ? 'justify-start' : 'justify-end'} mt-0.5`}
+                className={`flex ${message.sender === 'user' ? 'justify-start' : 'justify-end'} mt-0.5 items-center gap-2`}
               >
+                {/* Show Thinking indicator for active task messages when waiting */}
+                {isTaskRunning &&
+                  (currentMode === 'show' || currentMode === 'do') &&
+                  message.sender === 'agent' &&
+                  !message.isSystemMessage &&
+                  !message.isScreenAccessRequest &&
+                  index === messages.length - 1 &&
+                  hasThinkingMarker(message.content) && (
+                    <span className='text-[10px] text-gray-400 font-inter font-normal'>
+                      Thinking
+                      <span className='thinking-dots'>
+                        <span style={{ animationDelay: '0s' }}>.</span>
+                        <span style={{ animationDelay: '0.2s' }}>.</span>
+                        <span style={{ animationDelay: '0.4s' }}>.</span>
+                      </span>
+                      <style>{`
+                        @keyframes thinking-dot {
+                          0%, 20% { opacity: 0; }
+                          50% { opacity: 1; }
+                          100% { opacity: 0; }
+                        }
+                        .thinking-dots span {
+                          animation: thinking-dot 1.4s infinite;
+                          margin-left: 1px;
+                        }
+                      `}</style>
+                    </span>
+                  )}
                 <span className='text-[10px] text-gray-400 font-inter font-normal'>
                   {formatMessageTime(message.timestamp)}
                 </span>
@@ -2179,30 +2145,6 @@ export const MessageList = ({
               </div>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Thinking indicator for show/do mode when task is running */}
-      {isTaskRunning && (currentMode === 'show' || currentMode === 'do') && !isLoading && (
-        <div key='thinking-indicator' className='flex justify-start px-3 py-1'>
-          <span className='text-xs text-gray-400'>
-            Thinking
-            <span className='thinking-dots'>
-              <span style={{ animationDelay: '0s' }}>.</span>
-              <span style={{ animationDelay: '0.2s' }}>.</span>
-              <span style={{ animationDelay: '0.4s' }}>.</span>
-            </span>
-          </span>
-          <style>{`
-            @keyframes thinking-dot {
-              0%, 20% { opacity: 0; }
-              50% { opacity: 1; }
-              100% { opacity: 0; }
-            }
-            .thinking-dots span {
-              animation: thinking-dot 1.4s infinite;
-            }
-          `}</style>
         </div>
       )}
 

@@ -494,7 +494,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
             <div className='flex-1 overflow-hidden pt-3'>
               <MessageList
                 messages={messages}
-                isLoading={isLoading}
                 messagesEndRef={messagesEndRef}
                 isTaskRunning={isTaskRunning}
                 currentMode={currentMode}

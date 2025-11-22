@@ -85,7 +85,24 @@ export function createToolCallProgressHandler(
         // Update progress immediately when tool call is received
         setState((prev) => {
           const messages = [...prev.messages];
-          const taskMessageIndex = findTaskMessageIndex(messages);
+
+          // First try to find a task message (non-placeholder agent message)
+          let taskMessageIndex = findTaskMessageIndex(messages);
+
+          // If no task message found, check if the last message is a placeholder
+          // Placeholders can also receive progress updates
+          if (taskMessageIndex < 0 && messages.length > 0) {
+            const lastMessage = messages[messages.length - 1];
+            if (
+              lastMessage.sender === 'agent' &&
+              lastMessage.isPlaceholder &&
+              !lastMessage.isSystemMessage &&
+              !lastMessage.isScreenAccessRequest
+            ) {
+              taskMessageIndex = messages.length - 1;
+              log.debug('Using placeholder message for progress update');
+            }
+          }
 
           if (taskMessageIndex >= 0) {
             log.debug(`Found task message at index ${taskMessageIndex}`);
@@ -103,6 +120,15 @@ export function createToolCallProgressHandler(
             };
           } else {
             log.warn(`No task message found! Messages count: ${messages.length}`);
+            // Log message details for debugging
+            if (messages.length > 0) {
+              log.warn('Last message:', {
+                sender: messages[messages.length - 1].sender,
+                isPlaceholder: messages[messages.length - 1].isPlaceholder,
+                isSystemMessage: messages[messages.length - 1].isSystemMessage,
+                isScreenAccessRequest: messages[messages.length - 1].isScreenAccessRequest,
+              });
+            }
           }
 
           return prev;
@@ -142,7 +168,24 @@ export function createToolCallResultHandler(
         // Update progress to mark the most recent incomplete tool as done
         setState((prev) => {
           const messages = [...prev.messages];
-          const taskMessageIndex = findTaskMessageIndex(messages);
+
+          // First try to find a task message (non-placeholder agent message)
+          let taskMessageIndex = findTaskMessageIndex(messages);
+
+          // If no task message found, check if the last message is a placeholder
+          // Placeholders can also receive progress updates
+          if (taskMessageIndex < 0 && messages.length > 0) {
+            const lastMessage = messages[messages.length - 1];
+            if (
+              lastMessage.sender === 'agent' &&
+              lastMessage.isPlaceholder &&
+              !lastMessage.isSystemMessage &&
+              !lastMessage.isScreenAccessRequest
+            ) {
+              taskMessageIndex = messages.length - 1;
+              log.debug('Using placeholder message for progress completion');
+            }
+          }
 
           if (taskMessageIndex >= 0) {
             const existingMessage = messages[taskMessageIndex];
@@ -204,7 +247,24 @@ export function createToolCallErrorHandler(
         // Update progress to mark the most recent incomplete tool as failed
         setState((prev) => {
           const messages = [...prev.messages];
-          const taskMessageIndex = findTaskMessageIndex(messages);
+
+          // First try to find a task message (non-placeholder agent message)
+          let taskMessageIndex = findTaskMessageIndex(messages);
+
+          // If no task message found, check if the last message is a placeholder
+          // Placeholders can also receive progress updates
+          if (taskMessageIndex < 0 && messages.length > 0) {
+            const lastMessage = messages[messages.length - 1];
+            if (
+              lastMessage.sender === 'agent' &&
+              lastMessage.isPlaceholder &&
+              !lastMessage.isSystemMessage &&
+              !lastMessage.isScreenAccessRequest
+            ) {
+              taskMessageIndex = messages.length - 1;
+              log.debug('Using placeholder message for progress error');
+            }
+          }
 
           if (taskMessageIndex >= 0) {
             const existingMessage = messages[taskMessageIndex];
@@ -216,7 +276,8 @@ export function createToolCallErrorHandler(
             if (lastIncompleteIndex >= 0) {
               const lastLine = progressLines[lastIncompleteIndex];
               // Extract tool name from progress line (text after ○ or ●✓)
-              const toolNameMatch = lastLine.match(/^[○●✓]\s*(.+?)(?:\s*✗|$)/);
+              // Handle "●✓" as a sequence first
+              const toolNameMatch = lastLine.match(/^(?:●✓|○|●|✓)\s*(.+?)(?:\s*✗|$)/);
               const toolName = toolNameMatch ? toolNameMatch[1].split(' ')[0] : 'tool';
 
               const updatedMessage = markProgressLineFailed(existingMessage, toolName, errorText);

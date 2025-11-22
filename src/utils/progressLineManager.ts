@@ -65,9 +65,13 @@ export function updateProgressLine(
   if (toolIndex >= 0) {
     const existingLine = progressLines[toolIndex];
     // Extract explanation from existing line (remove status indicators)
+    // Handle "●✓" as a sequence first, then individual characters
     const explanation = existingLine
-      .replace(/^[○●✓]\s*/, '')
-      .replace(/\s*✗\s*\([^)]*\)$/, '')
+      .replace(/^●✓\s*/, '') // Remove "●✓" sequence first
+      .replace(/^○\s*/, '') // Then remove "○"
+      .replace(/^●\s*/, '') // Then remove "●" if any
+      .replace(/^✓\s*/, '') // Then remove "✓" if any
+      .replace(/\s*✗\s*\([^)]*\)$/, '') // Remove error markers
       .trim();
 
     const updatedProgressLines = [...progressLines];
@@ -108,9 +112,13 @@ export function markProgressLineComplete(message: ChatMessage, toolName?: string
   if (indexToUpdate >= 0) {
     const lastLine = progressLines[indexToUpdate];
     // Extract explanation from existing line
+    // Handle "●✓" as a sequence first, then individual characters
     const explanation = lastLine
-      .replace(/^[○●✓]\s*/, '')
-      .replace(/\s*✗\s*\([^)]*\)$/, '')
+      .replace(/^●✓\s*/, '') // Remove "●✓" sequence first
+      .replace(/^○\s*/, '') // Then remove "○"
+      .replace(/^●\s*/, '') // Then remove "●" if any
+      .replace(/^✓\s*/, '') // Then remove "✓" if any
+      .replace(/\s*✗\s*\([^)]*\)$/, '') // Remove error markers
       .trim();
 
     // Replace ○ with ●✓
