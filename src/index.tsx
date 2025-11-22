@@ -20,6 +20,41 @@ import {
   showWidgetSettingsLoader,
 } from './utils/widgetInitializer';
 
+/**
+ * Initialize widget with validated configuration
+ */
+async function initializeWidgetWithConfig(
+  config: MarketrixConfig,
+  validationResult: { isValid: boolean; error?: string }
+): Promise<MarketrixConfig> {
+  if (!validationResult.isValid) {
+    throw new Error(validationResult.error || 'Widget validation failed');
+  }
+
+  showWidgetSettingsLoader('Loading widget settings...');
+  try {
+    const integrationService = new IntegrationService(
+      config.marketrixId,
+      config.marketrixKey,
+      config.connectionId
+    );
+
+    const integrationData = await integrationService.fetchIntegrationSettings();
+    const integrationSettings = integrationData
+      ? integrationService.getWidgetSettings(integrationData)
+      : null;
+
+    return integrationSettings
+      ? createConfigFromSettings(integrationSettings, config)
+      : createConfigFromSettings({} as WidgetSettingsData, config);
+  } catch (err) {
+    console.error('Error fetching integration settings:', err);
+    return createConfigFromSettings({} as WidgetSettingsData, config);
+  } finally {
+    hideWidgetSettingsLoader();
+  }
+}
+
 // Initialize the widget
 export const initMarketrixWidget = async (config: MarketrixConfig): Promise<void> => {
   // Prevent double initialization
@@ -28,89 +63,26 @@ export const initMarketrixWidget = async (config: MarketrixConfig): Promise<void
     return;
   }
 
+  // Validate configuration
+  showWidgetSettingsLoader('Validating widget configuration...');
   const validationService = new WidgetValidationService();
-  let finalConfig: MarketrixConfig;
+  const validationResult = await validationService.validateConfig(config);
 
-  // Path 1: marketrixId + marketrixKey
-  if (config.marketrixId && config.marketrixKey) {
-    showWidgetSettingsLoader('Validating widget configuration...');
-
-    const validationResult = await validationService.validateWidget(
-      config.marketrixId,
-      config.marketrixKey
-    );
-
-    if (!validationResult.isValid) {
-      console.error('Marketrix Widget validation failed:', validationResult.error);
-      showWidgetSettingsLoader(
-        validationResult.error || 'Widget validation failed. Please check your configuration.'
-      );
-      return;
-    }
-
-    showWidgetSettingsLoader('Loading widget settings...');
-    try {
-      const integrationService = new IntegrationService(config.marketrixId, config.marketrixKey);
-
-      const integrationData = await integrationService.fetchIntegrationSettings();
-      const integrationSettings = integrationData
-        ? integrationService.getWidgetSettings(integrationData)
-        : null;
-
-      if (integrationSettings) {
-        finalConfig = createConfigFromSettings(integrationSettings, config);
-      } else {
-        finalConfig = createConfigFromSettings({} as WidgetSettingsData, config);
-      }
-    } catch (err) {
-      console.error('Error fetching integration settings:', err);
-      finalConfig = createConfigFromSettings({} as WidgetSettingsData, config);
-    }
-
-    hideWidgetSettingsLoader();
-  }
-  // Path 2: connectionId + agentId
-  else if (config.connectionId && config.agentId) {
-    showWidgetSettingsLoader('Validating agent and connection...');
-
-    const validationResult = await validationService.validateByAgentAndConnection(
-      config.agentId,
-      config.connectionId
-    );
-
-    if (!validationResult.isValid) {
-      console.error('Agent and Connection validation failed:', validationResult.error);
-      showWidgetSettingsLoader(
-        validationResult.error ||
-          'Unable to validate agent and connection. Please check the provided IDs.'
-      );
-      return;
-    }
-
-    showWidgetSettingsLoader('Loading widget settings...');
-    try {
-      const integrationService = new IntegrationService(undefined, undefined, config.connectionId);
-
-      const integrationData = await integrationService.fetchIntegrationSettings();
-      const integrationSettings = integrationData
-        ? integrationService.getWidgetSettings(integrationData)
-        : null;
-
-      if (integrationSettings) {
-        finalConfig = createConfigFromSettings(integrationSettings, config);
-      } else {
-        finalConfig = createConfigFromSettings({} as WidgetSettingsData, config);
-      }
-    } catch (err) {
-      console.error('Error fetching integration settings:', err);
-      finalConfig = createConfigFromSettings({} as WidgetSettingsData, config);
-    }
-
-    hideWidgetSettingsLoader();
-  } else {
+  if (!validationResult.isValid) {
+    console.error('Marketrix Widget validation failed:', validationResult.error);
     showWidgetSettingsLoader(
-      'Please provide either (marketrix-id + marketrix-key) OR (marketrix-agent + marketrix-connection-id)'
+      validationResult.error || 'Widget validation failed. Please check your configuration.'
     );
+    return;
+  }
+
+  // Initialize with validated config
+  let finalConfig: MarketrixConfig;
+  try {
+    finalConfig = await initializeWidgetWithConfig(config, validationResult);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Failed to initialize widget';
+    showWidgetSettingsLoader(errorMessage);
     return;
   }
 

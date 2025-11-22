@@ -7,11 +7,7 @@
 
 import type { ChatMessage, InstructionType, TaskProgress } from '../types';
 import { createLogger } from './logger';
-import {
-  parseProgressLines,
-  reconstructMessageContent,
-  removeThinkingMarkers,
-} from './messageContentUtils';
+import { removeThinkingMarkers } from './messageContentUtils';
 import { isBrowser } from './typeGuards';
 
 const log = createLogger('ChatStorage');
@@ -19,12 +15,10 @@ const log = createLogger('ChatStorage');
 const CHAT_ID_STORAGE_KEY = 'marketrix_chat_id';
 export const CHAT_CONTEXT_STORAGE_KEY = 'marketrix_chat_context';
 const PENDING_TOOL_CALL_STORAGE_KEY = 'marketrix_pending_tool_call';
-const CONTEXT_VERSION = 2; // Incremented to include isOpen and isMinimized
 const CONTEXT_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 const PENDING_TOOL_CALL_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
 
 export interface StoredChatContext {
-  version: number;
   chat_id: string;
   messages: Array<Omit<ChatMessage, 'videoStream' | 'timestamp'> & { timestamp: string }>;
   isTaskRunning: boolean;
@@ -130,7 +124,6 @@ export function storeChatContext(
     }
 
     const context: StoredChatContext = {
-      version: CONTEXT_VERSION,
       chat_id: chatId,
       messages: serializedMessages,
       isTaskRunning,
@@ -205,10 +198,11 @@ export function storeChatContext(
 }
 
 /**
- * Get stored chat context without requiring a chat ID
- * Returns the most recent stored context regardless of chat ID
+ * Get stored chat context
+ * Returns stored context regardless of chat ID (to preserve history across chat ID changes)
+ * @param chatId - Optional chat ID for logging purposes
  */
-export function getAnyStoredChatContext(): StoredChatContext | null {
+export function getStoredChatContext(chatId?: string): StoredChatContext | null {
   if (!isBrowser()) {
     return null;
   }
@@ -227,18 +221,23 @@ export function getAnyStoredChatContext(): StoredChatContext | null {
       return null;
     }
 
-    // Check version compatibility
-    if (context.version !== CONTEXT_VERSION) {
-      console.warn('[Chat Storage] Context version mismatch, ignoring stored context');
-      return null;
-    }
-
     // Check expiration (7 days)
     const age = Date.now() - context.timestamp;
     if (age > CONTEXT_EXPIRY_MS) {
       console.log('[Chat Storage] Context expired, ignoring stored context');
       clearChatContext();
       return null;
+    }
+
+    // Log if chat ID differs (for debugging)
+    if (chatId && context.chat_id !== chatId) {
+      console.log(
+        '[Chat Storage] Context chat_id mismatch, but returning context to preserve history',
+        {
+          storedChatId: context.chat_id,
+          currentChatId: chatId,
+        }
+      );
     }
 
     return context;
@@ -259,31 +258,6 @@ export function getAnyStoredChatContext(): StoredChatContext | null {
 }
 
 /**
- * Get stored chat context
- * Returns stored context even if chat ID differs (to preserve history across chat ID changes)
- */
-export function getStoredChatContext(chatId: string): StoredChatContext | null {
-  const context = getAnyStoredChatContext();
-  if (!context) {
-    return null;
-  }
-
-  // Note: We no longer require chat_id match - this allows preserving history when chat ID changes
-  // The caller (restoreChatContext) will handle chat ID differences by appending a system message
-  if (context.chat_id !== chatId) {
-    console.log(
-      '[Chat Storage] Context chat_id mismatch, but returning context to preserve history',
-      {
-        storedChatId: context.chat_id,
-        currentChatId: chatId,
-      }
-    );
-  }
-
-  return context;
-}
-
-/**
  * Clear stored chat context
  */
 export function clearChatContext(): void {
@@ -296,60 +270,6 @@ export function clearChatContext(): void {
     console.log('[Chat Storage] Cleared chat context');
   } catch (error) {
     console.warn('[Chat Storage] Failed to clear chat context:', error);
-  }
-}
-
-/**
- * Restore messages from stored context
- * Cleans __THINKING__ markers and validates progress line format
- */
-export function restoreMessagesFromContext(context: StoredChatContext): ChatMessage[] {
-  try {
-    const restored = context.messages.map((msg) => {
-      // Remove any __THINKING__ markers that might have been stored
-      let cleanContent = removeThinkingMarkers(msg.content);
-
-      // Validate and clean progress lines using utility functions
-      const { mainContent, progressLines } = parseProgressLines(cleanContent);
-
-      // Filter progress lines to keep only valid ones (starting with ○ or ●✓)
-      // or lines that are part of the main content (not progress lines)
-      const validProgressLines = progressLines.filter((line) => {
-        const trimmed = line.trim();
-        return (
-          trimmed.length > 0 &&
-          (trimmed.startsWith('○') || trimmed.startsWith('●✓') || !trimmed.match(/^[○●✓]/))
-        );
-      });
-
-      // Reconstruct content with validated progress lines
-      cleanContent = reconstructMessageContent(mainContent, validProgressLines);
-
-      return {
-        id: msg.id,
-        content: cleanContent,
-        sender: msg.sender,
-        timestamp: new Date(msg.timestamp),
-        mode: msg.mode,
-        isScreenAccessRequest: msg.isScreenAccessRequest,
-        isSystemMessage: msg.isSystemMessage, // Preserve system messages (mode changes, etc.)
-        isPlaceholder: msg.isPlaceholder ?? false, // Restore placeholder flag if it was saved
-      };
-    });
-
-    // Log system messages being restored for verification
-    const systemMessages = restored.filter((msg) => msg.isSystemMessage);
-    if (systemMessages.length > 0) {
-      console.log('[Chat Storage] Restoring system messages:', {
-        count: systemMessages.length,
-        messages: systemMessages.map((m) => ({ id: m.id, content: m.content })),
-      });
-    }
-
-    return restored;
-  } catch (error) {
-    console.warn('[Chat Storage] Failed to restore messages:', error);
-    return [];
   }
 }
 

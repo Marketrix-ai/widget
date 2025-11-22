@@ -1,4 +1,5 @@
 import { type AgentData, type ConnectionData, type IntegrationData, sdk } from '../sdk';
+import type { MarketrixConfig } from '../types';
 import { extractApiData, handleApiError, isValidApiResponse } from '../utils/apiUtils';
 import { isAgentData, isConnectionData, isIntegrationDataArray } from '../utils/typeGuards';
 
@@ -10,31 +11,38 @@ export interface WidgetValidationResult {
   connection?: ConnectionData;
 }
 
-export interface FallbackValidationResult {
-  isValid: boolean;
-  error?: string;
-  connection?: ConnectionData;
-  agent?: AgentData;
-  connectionId?: number;
-  agentId?: number;
-}
-
 /**
  * WidgetValidationService
  *
  * Validates widget configuration by checking:
- * 1. Integration exists (via marketrix_id and marketrix_key)
- * 2. Agent ID exists in agent table
- * 3. Connection ID exists in connection table
- *
- * Also provides fallback validation when marketrix_id/key are missing:
- * - Fetches connections and agents to validate they exist
+ * 1. Integration exists (via marketrix_id and marketrix_key) OR
+ * 2. Agent ID and Connection ID exist and match
  */
 export class WidgetValidationService {
   /**
    * Validate widget configuration
+   * Handles both marketrixId+marketrixKey and agentId+connectionId cases
    */
-  async validateWidget(marketrixId: string, marketrixKey: string): Promise<WidgetValidationResult> {
+  async validateConfig(config: MarketrixConfig): Promise<WidgetValidationResult> {
+    if (config.marketrixId && config.marketrixKey) {
+      return this.validateByMarketrixId(config.marketrixId, config.marketrixKey);
+    }
+    if (config.agentId && config.connectionId) {
+      return this.validateByAgentAndConnection(config.agentId, config.connectionId);
+    }
+    return {
+      isValid: false,
+      error: 'Please provide either (marketrixId + marketrixKey) OR (agentId + connectionId)',
+    };
+  }
+
+  /**
+   * Validate by marketrixId and marketrixKey
+   */
+  private async validateByMarketrixId(
+    marketrixId: string,
+    marketrixKey: string
+  ): Promise<WidgetValidationResult> {
     try {
       // Step 1: Fetch integration by marketrix_id and marketrix_key
       console.log('Validating widget - fetching integration...', { marketrixId, marketrixKey });
@@ -198,14 +206,13 @@ export class WidgetValidationService {
   }
 
   /**
-   * Validate by marketrix-agent and marketrix-connection-id directly
-   * Used when marketrix_id and marketrix_key are not available
+   * Validate by agentId and connectionId directly
    * Validates connection and agent by ID
    */
-  async validateByAgentAndConnection(
+  private async validateByAgentAndConnection(
     agentId: number,
     connectionId: number
-  ): Promise<FallbackValidationResult> {
+  ): Promise<WidgetValidationResult> {
     try {
       console.log('Validating agent and connection by ID...', { agentId, connectionId });
 
@@ -252,7 +259,6 @@ export class WidgetValidationService {
           isValid: false,
           error: agentData ? 'Invalid agent data format' : `Agent with ID ${agentId} not found`,
           connection,
-          connectionId,
         };
       }
 
@@ -282,10 +288,9 @@ export class WidgetValidationService {
       if (agent.connection_id !== connectionId) {
         return {
           isValid: false,
-          error: `Agent ID ${agentId} belongs to connection ID ${agent.connection_id}, but provided connection ID is ${connectionId}. Please verify the marketrix-connection-id matches the agent's connection_id.`,
+          error: `Agent ID ${agentId} belongs to connection ID ${agent.connection_id}, but provided connection ID is ${connectionId}. Please verify the connection ID matches the agent's connection_id.`,
           connection,
           agent,
-          connectionId,
         };
       }
 
@@ -330,8 +335,6 @@ export class WidgetValidationService {
         isValid: true,
         connection,
         agent,
-        connectionId,
-        agentId,
       };
     } catch (error) {
       console.error('Agent and Connection validation error:', error);
