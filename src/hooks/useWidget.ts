@@ -56,6 +56,10 @@ import { isBrowser } from '../utils/typeGuards';
 
 const log = createLogger('Widget');
 
+// Module-level flag to prevent early restoration from running multiple times
+// This persists across component remounts
+let earlyRestorationDone = false;
+
 interface UseWidgetProps {
   config?: MarketrixConfig;
 }
@@ -170,6 +174,8 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
   const initializationInProgressRef = useRef<boolean>(false);
   const initializedChatIdRef = useRef<string | null>(null);
   const hasInitializedRef = useRef<boolean>(false);
+  const isRestoringContextRef = useRef<boolean>(false);
+  const earlyRestorationDoneRef = useRef<boolean>(false);
 
   /**
    * Merged configuration with defaults
@@ -237,6 +243,9 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
       currentChatId: chatId,
     });
 
+    // Set flag to prevent saves during restoration
+    isRestoringContextRef.current = true;
+
     // Check if messages were already restored early
     setState((prev) => {
       const alreadyHasMessages = prev.messages.length > 0;
@@ -244,6 +253,7 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
       // If messages already exist and chat ID hasn't changed, don't overwrite
       if (alreadyHasMessages && !chatIdChanged) {
         log.debug('Messages already restored, skipping restoration');
+        isRestoringContextRef.current = false;
         return prev;
       }
 
@@ -291,6 +301,11 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
           log.debug('Chat ID changed, but context change message already exists, skipping');
         }
       }
+
+      // Clear restoration flag after state update
+      setTimeout(() => {
+        isRestoringContextRef.current = false;
+      }, 100);
 
       // When chat ID changes, reset task state (tasks are tied to specific chat IDs)
       // But preserve messages and mode
@@ -418,13 +433,40 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
       return;
     }
 
+    // Prevent multiple simultaneous initializations
+    if (initializationInProgressRef.current) {
+      log.debug('Initialization already in progress, skipping initializeChatSession');
+      return;
+    }
+
+    // Check if already initialized with a chat ID
+    if (initializedChatIdRef.current && hasInitializedRef.current) {
+      log.debug('Already initialized, skipping initializeChatSession');
+      return;
+    }
+
+    initializationInProgressRef.current = true;
+
     try {
       // Initialize chat ID
       const chatId = await apiServiceRef.current.initializeChatId();
-      log.info('Chat ID initialized:', chatId);
 
-      // Restore context from storage if available
-      restoreChatContext(chatId);
+      // Check if we already have this chat ID initialized
+      if (initializedChatIdRef.current === chatId && hasInitializedRef.current) {
+        log.debug('Chat ID already initialized, skipping');
+        initializationInProgressRef.current = false;
+        return;
+      }
+
+      log.info('Chat ID initialized:', chatId);
+      initializedChatIdRef.current = chatId;
+
+      // Only restore context if we haven't already (early restoration may have done this)
+      if (!earlyRestorationDoneRef.current) {
+        restoreChatContext(chatId);
+      } else {
+        log.debug('Early restoration already done, skipping restoreChatContext');
+      }
 
       // Skip if already connected with this chat_id
       if (
@@ -433,8 +475,8 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
         websocketServiceRef.current.isConnected()
       ) {
         log.debug('WebSocket already connected with this chat_id, skipping');
-        initializedChatIdRef.current = chatId;
         initializationInProgressRef.current = false;
+        hasInitializedRef.current = true;
         return;
       }
 
@@ -460,6 +502,15 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
    * Handles chat ID initialization, context restoration, and WebSocket setup
    */
   useEffect(() => {
+    // Prevent early restoration from running multiple times
+    // Use module-level flag to persist across component remounts
+    if (earlyRestorationDone) {
+      return;
+    }
+    // Set flag immediately to prevent concurrent executions
+    earlyRestorationDone = true;
+    earlyRestorationDoneRef.current = true;
+
     // Try to restore FULL context (including messages) early, before chat ID initialization
     // This ensures the widget appears in the correct state immediately on page load
     // We get the stored context directly without requiring a chat ID match
@@ -493,6 +544,9 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
         (msg) => !(msg.isSystemMessage && msg.content === 'Chat context changed')
       );
 
+      // Set flag to prevent saves during restoration
+      isRestoringContextRef.current = true;
+
       // Restore full state immediately (synchronously) if available
       setState((prev) => ({
         ...prev,
@@ -514,10 +568,19 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
         systemMessages: systemMessages.map((m) => ({ id: m.id, content: m.content })),
         filteredContextChangeMessages: cleanedMessages.length - messagesWithoutContextChange.length,
       });
+
+      // Clear restoration flag after a short delay to allow state to settle
+      setTimeout(() => {
+        isRestoringContextRef.current = false;
+      }, 100);
     } else {
       log.debug('No stored context found for early restoration');
     }
+    // Note: earlyRestorationDoneRef is already set at the top of the effect
+  }, []); // Empty dependency array - only run once on mount
 
+  // Separate effect for handling reconnection and initialization
+  useEffect(() => {
     // Handle reconnection if already initialized
     if (hasInitializedRef.current) {
       if (
@@ -688,9 +751,24 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
       return;
     }
 
+    // Skip saves during context restoration
+    if (isRestoringContextRef.current) {
+      return;
+    }
+
     // Track previous state to detect changes
     const taskJustCompleted = prevIsTaskRunningRef.current && !state.isTaskRunning;
-    const newMessagesAdded = state.messages.length > prevMessagesRef.current.length;
+
+    // Check if messages actually changed (not just length, but content)
+    const messagesChanged =
+      state.messages.length !== prevMessagesRef.current.length ||
+      state.messages.some((msg, idx) => {
+        const prevMsg = prevMessagesRef.current[idx];
+        return !prevMsg || msg.id !== prevMsg.id || msg.content !== prevMsg.content;
+      });
+
+    const newMessagesAdded =
+      state.messages.length > prevMessagesRef.current.length && messagesChanged;
 
     // Update refs for next comparison
     prevIsTaskRunningRef.current = state.isTaskRunning;

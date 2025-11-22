@@ -1901,7 +1901,7 @@ export const MessageList = ({
 
                           {/* Show progress lines if available */}
                           {progressLines.length > 0 && (
-                            <div className='flex flex-col gap-1.5 mt-2'>
+                            <div className='flex flex-col gap-1 mt-2'>
                               {progressLines.map((line, idx) => {
                                 const trimmedLine = line.trim();
                                 const isCompleted =
@@ -1983,7 +1983,9 @@ export const MessageList = ({
                                         />
                                       )
                                     ) : null}
-                                    <span className='flex-1 whitespace-pre-wrap'>{text}</span>
+                                    <span className='flex-1 whitespace-pre-wrap text-xs font-inter font-medium leading-tight'>
+                                      {text}
+                                    </span>
                                   </div>
                                 );
                               })}
@@ -2073,7 +2075,7 @@ export const MessageList = ({
                             )}
                             {/* Progress lines with icons */}
                             {progressLines.length > 0 && (
-                              <div className='flex flex-col gap-1.5 mt-2'>
+                              <div className='flex flex-col gap-1 mt-2'>
                                 {progressLines.map((line, idx) => {
                                   const trimmedLine = line.trim();
                                   const isCompleted =
@@ -2151,7 +2153,9 @@ export const MessageList = ({
                                           />
                                         )
                                       ) : null}
-                                      <span className='flex-1 whitespace-pre-wrap'>{text}</span>
+                                      <span className='flex-1 whitespace-pre-wrap text-xs font-inter font-medium leading-tight'>
+                                        {text}
+                                      </span>
                                     </div>
                                   );
                                 })}

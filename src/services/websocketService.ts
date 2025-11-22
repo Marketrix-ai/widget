@@ -563,14 +563,19 @@ export class WebSocketService {
       const result = await executeTool(toolName, arguments_, mode, explanation);
       console.log(`[WebSocket] Tool execution result:`, result);
 
-      // Clear pending tool call on completion
-      clearPendingToolCall();
-
       // Handle success or failure
       if (result.success) {
         const response = this.createSuccessResponse(requestId, result.result);
+        console.log(`[WebSocket] Tool ${toolName} executed successfully, sending response:`, {
+          requestId,
+          toolName,
+          resultLength: result.result.length,
+          resultPreview: result.result.substring(0, 100),
+        });
+        // Forward result BEFORE clearing pending tool call so result handler can match by requestId
         this.sendAndForwardResponse(response);
-        console.log(`[WebSocket] Tool ${toolName} executed successfully: ${result.result}`);
+        // Clear pending tool call AFTER forwarding so result handler can still access it
+        clearPendingToolCall();
       } else {
         this.handleToolCallError(
           requestId,
@@ -578,10 +583,12 @@ export class WebSocketService {
           -32603,
           result.error || 'Tool execution failed'
         );
+        // Clear pending tool call after forwarding error
+        clearPendingToolCall();
         console.error(`[WebSocket] Tool ${toolName} execution failed:`, result.error);
       }
     } catch (error) {
-      // Clear pending tool call on error
+      // Clear pending tool call on error (after forwarding if possible)
       clearPendingToolCall();
 
       // Handle unexpected errors
@@ -630,16 +637,27 @@ export class WebSocketService {
       error: undefined,
     };
     if (this.callbacks.onMessage) {
+      const resultContent = resultMessage.result as
+        | { content?: Array<{ type?: string; text?: string }> }
+        | undefined;
+      const resultText = resultContent?.content?.[0]?.text || 'No result text';
+
       console.log('[WebSocket] Forwarding result message to onMessage callback:', {
         method: resultMessage.method,
+        messageId: resultMessage.id,
         hasId: !!resultMessage.id,
         hasResult: !!resultMessage.result,
+        resultText: resultText.substring(0, 100),
         hasParams: resultMessage.params !== undefined,
         paramsIsUndefined: resultMessage.params === undefined,
         hasError: resultMessage.error !== undefined,
         errorIsUndefined: resultMessage.error === undefined,
       });
       this.callbacks.onMessage(resultMessage);
+    } else {
+      console.error(
+        '[WebSocket] No onMessage callback registered, cannot forward result for progress update!'
+      );
     }
   }
 
@@ -667,10 +685,13 @@ export class WebSocketService {
             params: undefined,
             result: undefined,
           };
+          const errorText = errorResponse.error?.message || 'Unknown error';
           console.log('[WebSocket] Forwarding error message to onMessage callback:', {
             method: errorMessage.method,
+            messageId: errorMessage.id,
             hasId: !!errorMessage.id,
             hasError: !!errorMessage.error,
+            errorText: errorText.substring(0, 100),
             hasParams: errorMessage.params !== undefined,
             paramsIsUndefined: errorMessage.params === undefined,
             hasResult: errorMessage.result !== undefined,
