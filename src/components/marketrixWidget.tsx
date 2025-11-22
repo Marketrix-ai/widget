@@ -48,6 +48,7 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
         config={effectiveConfig}
         onClick={actions.toggleWidget}
         isOpen={state.isOpen}
+        isMinimized={state.isMinimized}
         _agentAvailable={state.agentAvailable}
         isScreenSharing={isScreenSharing}
       />
@@ -67,7 +68,9 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
         onSetMode={actions.setMode}
         onAddMessage={actions.addMessage}
         onUpdateMessage={actions.updateMessage}
+        onRemoveMessage={actions.removeMessage}
         onStopTask={actions.stopTask}
+        onClearChat={actions.clearChatHistory}
         onScreenSharingChange={setIsScreenSharing}
       />
 

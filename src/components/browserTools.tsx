@@ -14,9 +14,9 @@ import { useWidget } from '../hooks/useWidget';
 import type { MarketrixConfig } from '../types';
 import {
   BROWSER_TOOL_CATEGORIES,
+  BROWSER_TOOLS,
   type BrowserAction,
   type BrowserToolMetadata,
-  BROWSER_TOOLS,
 } from '../types/browserTools';
 import { addOpacity, getContrastingColor } from '../utils/colorUtils';
 
@@ -165,15 +165,9 @@ export const BrowserTools: React.FC<BrowserToolsProps> = ({
               onClick={() => setActiveTab(key as keyof typeof BROWSER_TOOL_CATEGORIES)}
               className='flex-1 px-3 py-2 text-xs font-medium transition-all duration-200'
               style={{
-                backgroundColor: isActive
-                  ? accentColor
-                  : addOpacity(secondaryColor, 0.05),
-                color: isActive
-                  ? getContrastingColor(accentColor)
-                  : textColor,
-                borderBottom: isActive
-                  ? `2px solid ${accentColor}`
-                  : `2px solid transparent`,
+                backgroundColor: isActive ? accentColor : addOpacity(secondaryColor, 0.05),
+                color: isActive ? getContrastingColor(accentColor) : textColor,
+                borderBottom: isActive ? `2px solid ${accentColor}` : `2px solid transparent`,
               }}
               onMouseEnter={(e) => {
                 if (!isActive) {
@@ -233,16 +227,10 @@ export const BrowserTools: React.FC<BrowserToolsProps> = ({
                 {getToolIcon(tool)}
               </div>
               <div className='flex-1 min-w-0'>
-                <div
-                  className='text-sm font-medium'
-                  style={{ color: textColor }}
-                >
+                <div className='text-sm font-medium' style={{ color: textColor }}>
                   {tool.name}
                 </div>
-                <div
-                  className='text-xs mt-0.5'
-                  style={{ color: addOpacity(textColor, 0.7) }}
-                >
+                <div className='text-xs mt-0.5' style={{ color: addOpacity(textColor, 0.7) }}>
                   {tool.description}
                 </div>
               </div>
@@ -266,4 +254,3 @@ export const BrowserTools: React.FC<BrowserToolsProps> = ({
     </div>
   );
 };
-

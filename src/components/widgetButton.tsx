@@ -10,6 +10,7 @@ interface WidgetButtonProps {
   config: MarketrixConfig;
   onClick: () => void;
   isOpen: boolean;
+  isMinimized?: boolean;
   _agentAvailable: boolean;
   isScreenSharing?: boolean;
 }
@@ -18,6 +19,7 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
   config,
   onClick,
   isOpen,
+  isMinimized = false,
   isScreenSharing = false,
 }) => {
   const [showWelcomeText, setShowWelcomeText] = useState(false);
@@ -26,6 +28,11 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
 
   useEffect(() => {
     setShowWelcomeText(false);
+
+    // Don't show welcome text if widget is minimized
+    if (isMinimized) {
+      return;
+    }
 
     // Only show welcome text for default appearance, not compact
     if (settings.widget_appearance === 'default') {
@@ -41,7 +48,7 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
 
       return () => clearTimeout(buttonTimer);
     }
-  }, [settings.widget_appearance]);
+  }, [settings.widget_appearance, isMinimized]);
 
   // Use position from widget position config or settings
   const effectivePosition = widgetPosition.position || settings.widget_position || 'bottom_right';

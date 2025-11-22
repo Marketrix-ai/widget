@@ -10,25 +10,21 @@ import { useWidget } from '../hooks/useWidget';
 import { sdk, type TourData, type TourStepData } from '../sdk';
 import type { ChatMessage, MarketrixConfig } from '../types';
 import {
+  cleanupAllWidgetElements,
+  cleanupStepHighlights,
+  cleanupTypewriterStyles,
+} from '../utils/cleanupUtils';
+import {
   addOpacity,
   darkenColor,
   extractColorFromGradient,
   getContrastingColor,
+  hexToRgb,
   lightenColor,
 } from '../utils/colorUtils';
+import { removeTourClickHandler } from '../utils/domUtils';
+import { createUserMessage } from '../utils/messageFactory';
 import { formatMessageTime } from '../utils/textFormatting';
-
-// Helper function to convert hex to RGB (duplicated here for use in dynamic HTML)
-function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
-  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  return result
-    ? {
-        r: parseInt(result[1], 16),
-        g: parseInt(result[2], 16),
-        b: parseInt(result[3], 16),
-      }
-    : null;
-}
 import {
   isHTMLButtonElement,
   isHTMLElement,
@@ -65,6 +61,8 @@ interface MessageListProps {
   onStepGuideStart?: () => void;
   onScreenAccessAllow?: () => void;
   onScreenAccessDeny?: () => void;
+  isTaskRunning?: boolean;
+  currentMode?: 'show' | 'tell' | 'do';
 }
 
 export const MessageList = ({
@@ -79,9 +77,16 @@ export const MessageList = ({
   onStepGuideStart,
   onScreenAccessAllow,
   onScreenAccessDeny,
+  isTaskRunning = false,
+  currentMode,
 }: MessageListProps) => {
   // Get widget settings
   const { settings } = useWidget(config ? { config } : {});
+
+  // Helper function to get connection ID from config with fallback
+  const getConnectionId = (): number => {
+    return config?.connectionId ?? 1;
+  };
 
   // Use SDK types
   type TourStep = TourStepData;
@@ -878,15 +883,6 @@ export const MessageList = ({
 
   // Function to remove step highlights
   const removeStepHighlights = () => {
-    const spotlight = document.getElementById('step-spotlight');
-    const description = document.getElementById('step-description');
-
-    if (spotlight) spotlight.remove();
-    if (description) description.remove();
-
-    // Reset flags
-    // (typewriter state is now tracked per step via typewriterLogCounts)
-
     // Clear processed steps for current step only
     stepLogCounts.delete(currentStepIndex);
     typewriterRunning.delete(currentStepIndex);
@@ -898,30 +894,17 @@ export const MessageList = ({
       activeTypewriterIntervals.delete(currentStepIndex);
     }
 
-    // Clean up any existing typewriter styles
-    const existingStyle = document.getElementById('typewriter-cursor-style');
-    if (existingStyle) {
-      existingStyle.remove();
-    }
+    // Clean up typewriter styles using utility
+    cleanupTypewriterStyles();
 
     // Remove highlight class from current element
     if (currentStepElement) {
       currentStepElement.classList.remove('step-highlight');
+      removeTourClickHandler(currentStepElement);
     }
 
-    // Remove highlight class from ALL elements to ensure no pulsing remains
-    const allHighlightedElements = document.querySelectorAll('.step-highlight');
-    allHighlightedElements.forEach((element) => {
-      element.classList.remove('step-highlight');
-
-      // Remove any tour click handlers
-      if (isHTMLElement(element) && element._tourClickHandler) {
-        element.removeEventListener('click', element._tourClickHandler, true);
-        delete element._tourClickHandler;
-      }
-    });
-
-    // All step highlights, animations, and click handlers removed
+    // Remove all step highlights using utility
+    cleanupStepHighlights();
   };
 
   // Function to stop step guide
@@ -945,7 +928,12 @@ export const MessageList = ({
       preventClickHandler = null;
     }
 
+    // Use consolidated cleanup utility
+    cleanupAllWidgetElements();
+
+    // Remove step highlights (includes step-specific cleanup)
     removeStepHighlights();
+
     setIsStepGuideRunning(false);
     setCurrentStepIndex(0);
     setCurrentStepElement(null);
@@ -1189,7 +1177,10 @@ export const MessageList = ({
       console.log('Response status:', response.status);
       console.log('Response body:', response.body);
       console.log('Response body type:', typeof response.body);
-      console.log('Response body keys:', response.body ? Object.keys(response.body) : 'null/undefined');
+      console.log(
+        'Response body keys:',
+        response.body ? Object.keys(response.body) : 'null/undefined'
+      );
 
       // Check if response is successful
       if (response.status !== 200) {
@@ -1247,12 +1238,17 @@ export const MessageList = ({
 
       // Find the tour that matches the question (case-insensitive partial match)
       const matchingTour = tours.find(
-        (tour) => tour.question.toLowerCase().includes(question.toLowerCase()) || question.toLowerCase().includes(tour.question.toLowerCase())
+        (tour) =>
+          tour.question.toLowerCase().includes(question.toLowerCase()) ||
+          question.toLowerCase().includes(tour.question.toLowerCase())
       );
 
       if (!matchingTour) {
         console.log('⚠️ No matching tour found for question:', question);
-        console.log('Available questions:', tours.map((t) => t.question));
+        console.log(
+          'Available questions:',
+          tours.map((t) => t.question)
+        );
         return;
       }
 
@@ -1265,130 +1261,129 @@ export const MessageList = ({
 
       const tour = matchingTour;
 
-        // Store tour data
-        setTourData(tour);
+      // Store tour data
+      setTourData(tour);
 
-        // Handle the answer data - convert to JSON value
-        if (tour.answer) {
-          try {
-            console.log('=== PROCESSING TOUR ANSWER ===');
-            console.log('Tour answer type:', typeof tour.answer);
-            console.log('Tour answer (raw):', tour.answer);
-            console.log('Tour answer (stringified):', JSON.stringify(tour.answer, null, 2));
+      // Handle the answer data - convert to JSON value
+      if (tour.answer) {
+        try {
+          console.log('=== PROCESSING TOUR ANSWER ===');
+          console.log('Tour answer type:', typeof tour.answer);
+          console.log('Tour answer (raw):', tour.answer);
+          console.log('Tour answer (stringified):', JSON.stringify(tour.answer, null, 2));
 
-            // Convert answer to JSON value - handle all possible formats
-            let parsedSteps: TourStepData[] = [];
-            let answerValue: unknown = tour.answer;
+          // Convert answer to JSON value - handle all possible formats
+          let parsedSteps: TourStepData[] = [];
+          let answerValue: unknown = tour.answer;
 
-            // Step 1: If it's a string, parse it to JSON
-            if (isString(answerValue)) {
-              console.log('Answer is a string, parsing to JSON...');
-              try {
-                answerValue = JSON.parse(answerValue);
-                console.log('Parsed JSON:', answerValue);
-              } catch (parseError) {
-                console.error('Failed to parse answer string as JSON:', parseError);
-                console.error('Raw string value:', answerValue);
-                return;
-              }
-            }
-
-            // Step 2: If it's already an array, use it directly
-            if (Array.isArray(answerValue)) {
-              console.log('Answer is already an array');
-              if (isTourStepDataArray(answerValue)) {
-                parsedSteps = answerValue;
-                console.log('Array is valid TourStepData array');
-              } else {
-                console.error('Array is not a valid TourStepData array');
-                console.error('Array contents:', answerValue);
-                return;
-              }
-            }
-            // Step 3: If it's an object, check for steps property or try to convert
-            else if (typeof answerValue === 'object' && answerValue !== null) {
-              console.log('Answer is an object, checking structure...');
-              
-              // Check if it has a steps property
-              if (isTourAnswerWithSteps(answerValue)) {
-                if (isTourStepDataArray(answerValue.steps)) {
-                  console.log('Answer has steps property, extracting steps array');
-                  parsedSteps = answerValue.steps;
-                } else {
-                  console.error('Steps property is not a valid TourStepData array');
-                  return;
-                }
-              }
-              // Try to convert object to array if it looks like a single step
-              else if ('step_number' in answerValue || 'action' in answerValue) {
-                console.log('Answer appears to be a single step object, converting to array');
-                parsedSteps = [answerValue as TourStepData];
-              }
-              // Try to extract array from object values
-              else {
-                const obj = answerValue as Record<string, unknown>;
-                const values = Object.values(obj);
-                const arrayValue = values.find((v) => Array.isArray(v));
-                if (arrayValue && isTourStepDataArray(arrayValue)) {
-                  console.log('Found array in object values');
-                  parsedSteps = arrayValue;
-                } else {
-                  console.error('Could not extract valid steps array from object');
-                  console.error('Object keys:', Object.keys(obj));
-                  console.error('Object values:', values);
-                  return;
-                }
-              }
-            }
-            else {
-              console.error('Invalid tour answer format - not string, array, or object');
-              console.error('Answer value:', answerValue);
-              console.error('Answer type:', typeof answerValue);
+          // Step 1: If it's a string, parse it to JSON
+          if (isString(answerValue)) {
+            console.log('Answer is a string, parsing to JSON...');
+            try {
+              answerValue = JSON.parse(answerValue);
+              console.log('Parsed JSON:', answerValue);
+            } catch (parseError) {
+              console.error('Failed to parse answer string as JSON:', parseError);
+              console.error('Raw string value:', answerValue);
               return;
             }
+          }
 
-            console.log('Final parsed steps:', parsedSteps);
-
-            // Store parsed steps
-            if (Array.isArray(parsedSteps) && parsedSteps.length > 0) {
-              console.log('=== TOUR STEPS ===');
-              console.log('Number of steps:', parsedSteps.length);
-              setParsedSteps(parsedSteps);
-
-              // Log each step step by step
-              parsedSteps.forEach((step, index) => {
-                console.log(`\n--- STEP ${index + 1} ---`);
-                console.log('Step Number:', step.step_number);
-                console.log('Action:', step.action);
-                console.log('Element:', step.element);
-                console.log('Text:', step.text);
-                console.log('Description:', step.description);
-                console.log('Selector:', step.selector);
-                console.log('Full Step Object:', step);
-              });
-
-              // Add step guide styles
-              addStepGuideStyles();
-
-              // Start step-by-step tour guide
-              console.log('=== STARTING STEP-BY-STEP TOUR ===');
-              startStepGuide(parsedSteps);
+          // Step 2: If it's already an array, use it directly
+          if (Array.isArray(answerValue)) {
+            console.log('Answer is already an array');
+            if (isTourStepDataArray(answerValue)) {
+              parsedSteps = answerValue;
+              console.log('Array is valid TourStepData array');
             } else {
-              console.log('No valid steps found in tour answer');
-              console.log('Steps type:', typeof parsedSteps);
-              console.log('Steps value:', parsedSteps);
-              setParsedSteps([]);
+              console.error('Array is not a valid TourStepData array');
+              console.error('Array contents:', answerValue);
+              return;
             }
-          } catch (parseError) {
-            console.error('=== ERROR PROCESSING TOUR ANSWER ===');
-            console.error('Parse error:', parseError);
-            console.error('Raw answer:', tour.answer);
+          }
+          // Step 3: If it's an object, check for steps property or try to convert
+          else if (typeof answerValue === 'object' && answerValue !== null) {
+            console.log('Answer is an object, checking structure...');
+
+            // Check if it has a steps property
+            if (isTourAnswerWithSteps(answerValue)) {
+              if (isTourStepDataArray(answerValue.steps)) {
+                console.log('Answer has steps property, extracting steps array');
+                parsedSteps = answerValue.steps;
+              } else {
+                console.error('Steps property is not a valid TourStepData array');
+                return;
+              }
+            }
+            // Try to convert object to array if it looks like a single step
+            else if ('step_number' in answerValue || 'action' in answerValue) {
+              console.log('Answer appears to be a single step object, converting to array');
+              parsedSteps = [answerValue as TourStepData];
+            }
+            // Try to extract array from object values
+            else {
+              const obj = answerValue as Record<string, unknown>;
+              const values = Object.values(obj);
+              const arrayValue = values.find((v) => Array.isArray(v));
+              if (arrayValue && isTourStepDataArray(arrayValue)) {
+                console.log('Found array in object values');
+                parsedSteps = arrayValue;
+              } else {
+                console.error('Could not extract valid steps array from object');
+                console.error('Object keys:', Object.keys(obj));
+                console.error('Object values:', values);
+                return;
+              }
+            }
+          } else {
+            console.error('Invalid tour answer format - not string, array, or object');
+            console.error('Answer value:', answerValue);
+            console.error('Answer type:', typeof answerValue);
+            return;
+          }
+
+          console.log('Final parsed steps:', parsedSteps);
+
+          // Store parsed steps
+          if (Array.isArray(parsedSteps) && parsedSteps.length > 0) {
+            console.log('=== TOUR STEPS ===');
+            console.log('Number of steps:', parsedSteps.length);
+            setParsedSteps(parsedSteps);
+
+            // Log each step step by step
+            parsedSteps.forEach((step, index) => {
+              console.log(`\n--- STEP ${index + 1} ---`);
+              console.log('Step Number:', step.step_number);
+              console.log('Action:', step.action);
+              console.log('Element:', step.element);
+              console.log('Text:', step.text);
+              console.log('Description:', step.description);
+              console.log('Selector:', step.selector);
+              console.log('Full Step Object:', step);
+            });
+
+            // Add step guide styles
+            addStepGuideStyles();
+
+            // Start step-by-step tour guide
+            console.log('=== STARTING STEP-BY-STEP TOUR ===');
+            startStepGuide(parsedSteps);
+          } else {
+            console.log('No valid steps found in tour answer');
+            console.log('Steps type:', typeof parsedSteps);
+            console.log('Steps value:', parsedSteps);
             setParsedSteps([]);
           }
-        } else {
-          console.log('No answer field in tour data');
+        } catch (parseError) {
+          console.error('=== ERROR PROCESSING TOUR ANSWER ===');
+          console.error('Parse error:', parseError);
+          console.error('Raw answer:', tour.answer);
           setParsedSteps([]);
         }
+      } else {
+        console.log('No answer field in tour data');
+        setParsedSteps([]);
+      }
     } catch (error) {
       console.error('=== ERROR FETCHING TOUR DATA ===');
       console.error('Error:', error);
@@ -1402,8 +1397,8 @@ export const MessageList = ({
     console.log('=== HANDLING TOUR QUESTION ===');
     console.log('Question:', question);
 
-    // Use default connection ID for tour queries
-    const connectionId = 1;
+    // Use connection ID from config with fallback
+    const connectionId = getConnectionId();
     console.log('Using connection ID:', connectionId);
 
     // Fetch tour data
@@ -1579,13 +1574,7 @@ export const MessageList = ({
     // THEN: Add the chip message as a user message in the chat (like user typed it)
     // The greeting message and all existing messages remain unchanged
     if (onAddMessage) {
-      const userMessage: ChatMessage = {
-        id: `chip-message-${Date.now()}`,
-        content: action.text,
-        sender: 'user',
-        timestamp: new Date(),
-        mode: action.type,
-      };
+      const userMessage = createUserMessage(action.text, action.type, 'chip-message');
       onAddMessage(userMessage);
     }
 
@@ -1606,7 +1595,7 @@ export const MessageList = ({
 
         // For show actions, pass tour data (connection_id and question)
         // The wrapper in ChatWindow will handle screen access check
-        onSendMessage(action.text, action.type, 1, action.text);
+        onSendMessage(action.text, action.type, getConnectionId(), action.text);
       } else {
         // The wrapper in ChatWindow will handle screen access check
         onSendMessage(action.text, action.type);
@@ -1631,9 +1620,8 @@ export const MessageList = ({
       }}
     >
       {/* Welcome message - always show */}
-      {!isLoading && (
-        <div key='welcome-message' className='group flex flex-col justify-start mt-2'>
-          <style>{`
+      <div key='welcome-message' className='group flex flex-col justify-start mt-2'>
+        <style>{`
             .agent-logo-img {
               border: none !important;
               outline: none !important;
@@ -1645,149 +1633,148 @@ export const MessageList = ({
               background-color: transparent !important;
             }
           `}</style>
-          <div className='flex items-start gap-1 flex-row'>
-            {/* Agent Logo */}
-            <div
-              className='flex-shrink-0 agent-logo-img-container'
+        <div className='flex items-start gap-1 flex-row'>
+          {/* Agent Logo */}
+          <div
+            className='flex-shrink-0 agent-logo-img-container'
+            style={{
+              backgroundColor: 'transparent',
+              width: '32px',
+              height: '32px',
+            }}
+          >
+            <img
+              src={MarketrixIcon}
+              alt='Marketrix AI'
+              className='agent-logo-img'
               style={{
-                backgroundColor: 'transparent',
                 width: '32px',
                 height: '32px',
+                boxShadow: settings.widget_shadow,
+                borderRadius: settings.widget_border_radius,
+                border: 'none',
+                outline: 'none',
+                display: 'block',
+                objectFit: 'cover',
+                backgroundColor: 'transparent',
               }}
-            >
-              <img
-                src={MarketrixIcon}
-                alt='Marketrix AI'
-                className='agent-logo-img'
-                style={{
-                  width: '32px',
-                  height: '32px',
-                  boxShadow: settings.widget_shadow,
-                  borderRadius: settings.widget_border_radius,
-                  border: 'none',
-                  outline: 'none',
-                  display: 'block',
-                  objectFit: 'cover',
-                  backgroundColor: 'transparent',
-                }}
-              />
-            </div>
+            />
+          </div>
 
-            {/* Message bubble */}
-            <div
-              className={`
+          {/* Message bubble */}
+          <div
+            className={`
                 flex flex-col flex-1
                 px-2.5 py-2 rounded-r-lg rounded-tl-lg rounded-bl-lg shadow-sm border
               `}
-              style={{
-                backgroundColor: '#ffffff',
-                backgroundImage: 'none',
-                color: settings.widget_text_color,
-                borderColor: settings.widget_border_color,
-              }}
-            >
-              {/* Message content */}
-              <div className='text-xs font-inter font-medium leading-tight whitespace-pre-wrap break-words'>
-                {settings.widget_greeting}
-              </div>
+            style={{
+              backgroundColor: '#ffffff',
+              backgroundImage: 'none',
+              color: settings.widget_text_color,
+              borderColor: settings.widget_border_color,
+            }}
+          >
+            {/* Message content */}
+            <div className='text-xs font-inter font-medium leading-tight whitespace-pre-wrap break-words'>
+              {settings.widget_greeting}
+            </div>
 
-              {/* Chips inside the greeting message bubble */}
-              {uniqueSuggestedActions.length > 0 && (
-                <div className='mt-2.5 mb-1.5 p-0 flex flex-col gap-1'>
-                  {uniqueSuggestedActions.map((action: SuggestedActionItem, chipIndex: number) => (
-                    <button
-                      key={`welcome-chip-${action.id}-${chipIndex}`}
-                      onClick={(e) => handleSuggestedActionClick(action, e)}
-                      className={`
+            {/* Chips inside the greeting message bubble */}
+            {uniqueSuggestedActions.length > 0 && (
+              <div className='mt-2.5 mb-1.5 p-0 flex flex-col gap-1'>
+                {uniqueSuggestedActions.map((action: SuggestedActionItem, chipIndex: number) => (
+                  <button
+                    key={`welcome-chip-${action.id}-${chipIndex}`}
+                    onClick={(e) => handleSuggestedActionClick(action, e)}
+                    className={`
                       w-full flex items-center gap-1 font-inter font-normal text-xs px-2.5 py-2 rounded-lg cursor-pointer 
                       transition-all duration-200 text-left hover:shadow-md hover:scale-[1.01] active:scale-100
                       group
                       leading-tight
                     `}
+                    style={{
+                      backgroundColor: addOpacity(settings.widget_secondary_color, 0.2),
+                      borderColor: addOpacity(settings.widget_secondary_color, 0.3),
+                      color: settings.widget_text_color,
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = addOpacity(
+                        settings.widget_secondary_color,
+                        0.3
+                      );
+                      e.currentTarget.style.borderColor = addOpacity(
+                        settings.widget_secondary_color,
+                        0.4
+                      );
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = addOpacity(
+                        settings.widget_secondary_color,
+                        0.2
+                      );
+                      e.currentTarget.style.borderColor = addOpacity(
+                        settings.widget_secondary_color,
+                        0.3
+                      );
+                    }}
+                  >
+                    <span
+                      className='flex-shrink-0 flex items-center justify-center'
                       style={{
-                        backgroundColor: addOpacity(settings.widget_secondary_color, 0.2),
-                        borderColor: addOpacity(settings.widget_secondary_color, 0.3),
-                        color: settings.widget_text_color,
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = addOpacity(
-                          settings.widget_secondary_color,
-                          0.3
-                        );
-                        e.currentTarget.style.borderColor = addOpacity(
-                          settings.widget_secondary_color,
-                          0.4
-                        );
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = addOpacity(
-                          settings.widget_secondary_color,
-                          0.2
-                        );
-                        e.currentTarget.style.borderColor = addOpacity(
-                          settings.widget_secondary_color,
-                          0.3
-                        );
+                        width: '0.75rem',
+                        height: '0.75rem',
+                        lineHeight: '0.75rem',
+                        color: settings.widget_secondary_color,
                       }}
                     >
-                      <span
-                        className='flex-shrink-0 flex items-center justify-center'
-                        style={{
-                          width: '0.75rem',
-                          height: '0.75rem',
-                          lineHeight: '0.75rem',
-                          color: settings.widget_secondary_color,
-                        }}
-                      >
-                        {action.icon}
-                      </span>
-                      <span
-                        className='font-normal leading-none'
-                        style={{ color: settings.widget_text_color }}
-                      >
-                        {action.type === 'show' ? (
-                          <>
-                            <span
-                              className='font-semibold'
-                              style={{ color: settings.widget_secondary_color }}
-                            >
-                              Show me{' '}
-                            </span>
-                            {action.text.replace(/^Show me\s*/i, '')}
-                          </>
-                        ) : action.type === 'do' ? (
-                          <>
-                            <span
-                              className='font-semibold'
-                              style={{ color: settings.widget_secondary_color }}
-                            >
-                              Do{' '}
-                            </span>
-                            {action.text.replace(/^Do\s*/i, '')}
-                          </>
-                        ) : action.type === 'tell' ? (
-                          action.text
-                        ) : (
-                          action.text
-                        )}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-          {/* Timestamp below card */}
-          <div className='flex justify-end mt-0.5'>
-            <span
-              className='text-[10px] font-inter font-normal'
-              style={{ color: addOpacity(settings.widget_text_color, 0.6) }}
-            >
-              {formatMessageTime(new Date())}
-            </span>
+                      {action.icon}
+                    </span>
+                    <span
+                      className='font-normal leading-none'
+                      style={{ color: settings.widget_text_color }}
+                    >
+                      {action.type === 'show' ? (
+                        <>
+                          <span
+                            className='font-semibold'
+                            style={{ color: settings.widget_secondary_color }}
+                          >
+                            Show me{' '}
+                          </span>
+                          {action.text.replace(/^Show me\s*/i, '')}
+                        </>
+                      ) : action.type === 'do' ? (
+                        <>
+                          <span
+                            className='font-semibold'
+                            style={{ color: settings.widget_secondary_color }}
+                          >
+                            Do{' '}
+                          </span>
+                          {action.text.replace(/^Do\s*/i, '')}
+                        </>
+                      ) : action.type === 'tell' ? (
+                        action.text
+                      ) : (
+                        action.text
+                      )}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
-      )}
+        {/* Timestamp below card - agent message, so right-aligned */}
+        <div className='flex justify-end mt-0.5'>
+          <span
+            className='text-[10px] font-inter font-normal'
+            style={{ color: addOpacity(settings.widget_text_color, 0.6) }}
+          >
+            {formatMessageTime(new Date())}
+          </span>
+        </div>
+      </div>
 
       {/* Messages */}
       {messages.map((message: ChatMessage, index: number) => {
@@ -1886,12 +1873,135 @@ export const MessageList = ({
                     isUserMessage={message.sender === 'user'}
                   />
                 )}
-                {/* Message content */}
-                <div
-                  className={`text-xs font-inter font-medium leading-tight whitespace-pre-wrap break-words ${message.videoStream ? 'px-2.5 pb-1.5 pt-0.5' : ''}`}
-                >
-                  {message.content || 'No content available'}
-                </div>
+                {/* Message content or placeholder loading animation */}
+                {message.isPlaceholder ? (
+                  <div className='flex flex-col gap-1.5'>
+                    {/* Subtle Facebook Messenger-style loading dots */}
+                    <div className='flex items-center gap-1 py-0.5'>
+                      <span className='messenger-dot' style={{ animationDelay: '0s' }} />
+                      <span className='messenger-dot' style={{ animationDelay: '0.15s' }} />
+                      <span className='messenger-dot' style={{ animationDelay: '0.3s' }} />
+                    </div>
+                    {/* Thinking text with subtle ellipsis at bottom */}
+                    <div className='flex items-center'>
+                      <span
+                        className='text-[10px] font-inter font-normal'
+                        style={{ color: addOpacity(settings.widget_text_color, 0.5) }}
+                      >
+                        Thinking
+                        <span className='thinking-dots'>
+                          <span style={{ animationDelay: '0s' }}>.</span>
+                          <span style={{ animationDelay: '0.2s' }}>.</span>
+                          <span style={{ animationDelay: '0.4s' }}>.</span>
+                        </span>
+                      </span>
+                    </div>
+                    <style>{`
+                      @keyframes messenger-bounce {
+                        0%, 60%, 100% {
+                          transform: translateY(0);
+                          opacity: 0.4;
+                        }
+                        30% {
+                          transform: translateY(-4px);
+                          opacity: 0.7;
+                        }
+                      }
+                      .messenger-dot {
+                        width: 4px;
+                        height: 4px;
+                        border-radius: 50%;
+                        background-color: ${addOpacity(settings.widget_text_color, 0.35)};
+                        animation: messenger-bounce 1.2s ease-in-out infinite;
+                        display: inline-block;
+                      }
+                      @keyframes thinking-dot {
+                        0%, 20% { opacity: 0; }
+                        50% { opacity: 1; }
+                        100% { opacity: 0; }
+                      }
+                      .thinking-dots span {
+                        animation: thinking-dot 1.4s infinite;
+                        margin-left: 1px;
+                      }
+                    `}</style>
+                  </div>
+                ) : (
+                  <>
+                    {/* Only show text content if there is content and no video stream */}
+                    {message.content && !message.videoStream && (
+                      <div className='text-xs font-inter font-medium leading-tight whitespace-pre-wrap break-words'>
+                        {message.content
+                          .replace(/\n\n__THINKING__$/, '')
+                          .replace(/__THINKING__/g, '') || 'No content available'}
+                      </div>
+                    )}
+                    {/* Show Thinking indicator for active task messages when waiting */}
+                    {isTaskRunning &&
+                      (currentMode === 'show' || currentMode === 'do') &&
+                      message.sender === 'agent' &&
+                      !message.isSystemMessage &&
+                      !message.isScreenAccessRequest &&
+                      !message.isPlaceholder &&
+                      index === messages.length - 1 &&
+                      message.content.includes('__THINKING__') && (
+                        <div
+                          className='flex flex-col gap-1.5 mt-2 pt-1 border-t'
+                          style={{ borderColor: addOpacity(settings.widget_border_color, 0.2) }}
+                        >
+                          {/* Subtle Facebook Messenger-style loading dots */}
+                          <div className='flex items-center gap-1 py-0.5'>
+                            <span className='messenger-dot' style={{ animationDelay: '0s' }} />
+                            <span className='messenger-dot' style={{ animationDelay: '0.15s' }} />
+                            <span className='messenger-dot' style={{ animationDelay: '0.3s' }} />
+                          </div>
+                          {/* Thinking text with subtle ellipsis at bottom */}
+                          <div className='flex items-center'>
+                            <span
+                              className='text-[10px] font-inter font-normal'
+                              style={{ color: addOpacity(settings.widget_text_color, 0.5) }}
+                            >
+                              Thinking
+                              <span className='thinking-dots'>
+                                <span style={{ animationDelay: '0s' }}>.</span>
+                                <span style={{ animationDelay: '0.2s' }}>.</span>
+                                <span style={{ animationDelay: '0.4s' }}>.</span>
+                              </span>
+                            </span>
+                          </div>
+                          <style>{`
+                            @keyframes messenger-bounce {
+                              0%, 60%, 100% {
+                                transform: translateY(0);
+                                opacity: 0.4;
+                              }
+                              30% {
+                                transform: translateY(-4px);
+                                opacity: 0.7;
+                              }
+                            }
+                            .messenger-dot {
+                              width: 4px;
+                              height: 4px;
+                              border-radius: 50%;
+                              background-color: ${addOpacity(settings.widget_text_color, 0.35)};
+                              animation: messenger-bounce 1.2s ease-in-out infinite;
+                              display: inline-block;
+                            }
+                            @keyframes thinking-dot {
+                              0%, 20% { opacity: 0; }
+                              50% { opacity: 1; }
+                              100% { opacity: 0; }
+                            }
+                            .thinking-dots span {
+                              animation: thinking-dot 1.4s infinite;
+                              margin-left: 1px;
+                            }
+                          `}</style>
+                        </div>
+                      )}
+                  </>
+                )}
 
                 {/* Screen access request action buttons - only show if not yet handled */}
                 {message.isScreenAccessRequest &&
@@ -1933,13 +2043,15 @@ export const MessageList = ({
               </div>
             </div>
             {/* Timestamp below card */}
-            <div
-              className={`flex ${message.sender === 'user' ? 'justify-start' : 'justify-end'} mt-0.5`}
-            >
-              <span className='text-[10px] text-gray-400 font-inter font-normal'>
-                {formatMessageTime(message.timestamp)}
-              </span>
-            </div>
+            {!message.isPlaceholder && (
+              <div
+                className={`flex ${message.sender === 'user' ? 'justify-start' : 'justify-end'} mt-0.5`}
+              >
+                <span className='text-[10px] text-gray-400 font-inter font-normal'>
+                  {formatMessageTime(message.timestamp)}
+                </span>
+              </div>
+            )}
           </div>
         );
       })}
@@ -2023,25 +2135,27 @@ export const MessageList = ({
         </div>
       )}
 
-      {/* Loading indicator */}
-      {isLoading && (
-        <div key='loading-indicator' className='flex justify-start'>
-          <div className='w-full px-3 py-2 rounded-2xl bg-white shadow-sm border border-gray-200'>
-            <div className='flex items-center space-x-2'>
-              <div className='flex space-x-1'>
-                <div className='w-2 h-2 bg-gradient-to-r from-green-400 to-purple-500 rounded-full animate-bounce'></div>
-                <div
-                  className='w-2 h-2 bg-gradient-to-r from-green-400 to-purple-500 rounded-full animate-bounce'
-                  style={{ animationDelay: '0.1s' }}
-                ></div>
-                <div
-                  className='w-2 h-2 bg-gradient-to-r from-green-400 to-purple-500 rounded-full animate-bounce'
-                  style={{ animationDelay: '0.2s' }}
-                ></div>
-              </div>
-              <span className='text-xs text-gray-500'>Typing...</span>
-            </div>
-          </div>
+      {/* Thinking indicator for show/do mode when task is running */}
+      {isTaskRunning && (currentMode === 'show' || currentMode === 'do') && !isLoading && (
+        <div key='thinking-indicator' className='flex justify-start px-3 py-1'>
+          <span className='text-xs text-gray-400'>
+            Thinking
+            <span className='thinking-dots'>
+              <span style={{ animationDelay: '0s' }}>.</span>
+              <span style={{ animationDelay: '0.2s' }}>.</span>
+              <span style={{ animationDelay: '0.4s' }}>.</span>
+            </span>
+          </span>
+          <style>{`
+            @keyframes thinking-dot {
+              0%, 20% { opacity: 0; }
+              50% { opacity: 1; }
+              100% { opacity: 0; }
+            }
+            .thinking-dots span {
+              animation: thinking-dot 1.4s infinite;
+            }
+          `}</style>
         </div>
       )}
 

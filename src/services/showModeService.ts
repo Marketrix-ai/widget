@@ -18,6 +18,8 @@ let currentElement: HTMLElement | null = null;
 let resolvePromise: ((value: boolean) => void) | null = null;
 let clickHandler: ((e: MouseEvent) => void) | null = null;
 let updateHighlightPosition: (() => void) | null = null;
+let scrollHandler: (() => void) | null = null;
+let rafId: number | null = null;
 
 /**
  * Calculate a score for a popup position based on how much of it is visible on screen.
@@ -71,11 +73,8 @@ export async function showToolAction(options: ShowModeOptions): Promise<boolean>
   // Store element reference
   currentElement = element;
 
-  // Scroll element into view
-  element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-
-  // Wait for scroll to complete
-  await new Promise((resolve) => setTimeout(resolve, 300));
+  // Scroll element into view (instant, no animation)
+  element.scrollIntoView({ behavior: 'auto', block: 'center' });
 
   // Get element position
   const rect = element.getBoundingClientRect();
@@ -94,7 +93,7 @@ export async function showToolAction(options: ShowModeOptions): Promise<boolean>
     box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2), 0 0 20px rgba(59, 130, 246, 0.4);
     z-index: 2147483646;
     pointer-events: none;
-    transition: all 0.2s ease;
+    transition: none;
   `;
   document.body.appendChild(highlight);
   currentHighlight = highlight;
@@ -103,6 +102,8 @@ export async function showToolAction(options: ShowModeOptions): Promise<boolean>
   updateHighlightPosition = () => {
     if (!currentElement || !currentHighlight) return;
     const newRect = currentElement.getBoundingClientRect();
+    // Update instantly without transition
+    currentHighlight.style.transition = 'none';
     currentHighlight.style.top = `${newRect.top}px`;
     currentHighlight.style.left = `${newRect.left}px`;
     currentHighlight.style.width = `${newRect.width}px`;
@@ -158,6 +159,8 @@ export async function showToolAction(options: ShowModeOptions): Promise<boolean>
         Math.min(bestOption.top, window.innerHeight - popupHeight - padding)
       );
 
+      // Update popup position instantly without transition
+      currentPopup.style.transition = 'none';
       currentPopup.style.top = `${popupTop}px`;
       currentPopup.style.left = `${popupLeft}px`;
 
@@ -228,8 +231,27 @@ export async function showToolAction(options: ShowModeOptions): Promise<boolean>
     }
   };
 
-  window.addEventListener('scroll', updateHighlightPosition, true);
-  window.addEventListener('resize', updateHighlightPosition);
+  // Update position instantly on scroll/resize (no RAF delay)
+  const handleScroll = () => {
+    // Cancel any pending RAF to avoid delays
+    if (rafId !== null) {
+      window.cancelAnimationFrame(rafId);
+      rafId = null;
+    }
+    // Update immediately
+    if (updateHighlightPosition) {
+      updateHighlightPosition();
+    }
+  };
+
+  scrollHandler = handleScroll;
+  // Listen to scroll events with capture phase for immediate updates
+  window.addEventListener('scroll', handleScroll, { capture: true, passive: true });
+  window.addEventListener('resize', handleScroll, { passive: true });
+  // Also listen to touchmove for touch scrolling
+  window.addEventListener('touchmove', handleScroll, { passive: true });
+  // Listen to wheel events for mouse wheel scrolling
+  window.addEventListener('wheel', handleScroll, { passive: true });
 
   // Create popup
   const popup = document.createElement('div');
@@ -392,6 +414,7 @@ export async function showToolAction(options: ShowModeOptions): Promise<boolean>
     line-height: 1.5;
     color: #333;
     pointer-events: auto;
+    transition: none;
   `;
 
   // Popup content - different for click vs keyboard actions
@@ -450,30 +473,33 @@ export async function showToolAction(options: ShowModeOptions): Promise<boolean>
     }
   }
 
-  // Use event capturing on document to catch clicks regardless of z-index
-  // This makes it robust against page-side z-index changes
-  const handleDocumentClick = (e: MouseEvent) => {
-    const target = e.target as Node;
-    // Check if click is on the element or its children
-    if (element.contains(target) || element === target) {
-      // For click actions, prevent the natural click - we'll trigger it programmatically
-      // after cleanup to ensure proper tool execution
-      if (isClickAction) {
+  // Only register click handler for click actions
+  // For non-click actions (like typing in input fields), user should interact freely
+  // and then click Continue button
+  if (isClickAction) {
+    // Use event capturing on document to catch clicks regardless of z-index
+    // This makes it robust against page-side z-index changes
+    const handleDocumentClick = (e: MouseEvent) => {
+      const target = e.target as Node;
+      // Check if click is on the element or its children
+      if (element.contains(target) || element === target) {
+        // For click actions, prevent the natural click - we'll trigger it programmatically
+        // after cleanup to ensure proper tool execution
         e.stopPropagation();
         e.preventDefault();
+        // Mark that user confirmed the action
+        if (resolvePromise) {
+          const promise = resolvePromise;
+          resolvePromise = null;
+          promise(true);
+        }
       }
-      // Mark that user confirmed the action
-      if (resolvePromise) {
-        const promise = resolvePromise;
-        resolvePromise = null;
-        promise(true);
-      }
-    }
-  };
+    };
 
-  // Use capture phase to intercept before other handlers
-  document.addEventListener('click', handleDocumentClick, { capture: true, once: true });
-  clickHandler = handleDocumentClick;
+    // Use capture phase to intercept before other handlers
+    document.addEventListener('click', handleDocumentClick, { capture: true, once: true });
+    clickHandler = handleDocumentClick;
+  }
 
   // Wait for user action
   return new Promise<boolean>((resolve) => {
@@ -493,9 +519,18 @@ export function cleanup(): void {
     document.removeEventListener('click', clickHandler, { capture: true });
     clickHandler = null;
   }
+  if (scrollHandler) {
+    window.removeEventListener('scroll', scrollHandler, { capture: true });
+    window.removeEventListener('resize', scrollHandler);
+    window.removeEventListener('touchmove', scrollHandler);
+    window.removeEventListener('wheel', scrollHandler);
+    scrollHandler = null;
+  }
+  if (rafId !== null) {
+    window.cancelAnimationFrame(rafId);
+    rafId = null;
+  }
   if (updateHighlightPosition) {
-    window.removeEventListener('scroll', updateHighlightPosition, true);
-    window.removeEventListener('resize', updateHighlightPosition);
     updateHighlightPosition = null;
   }
   if (currentPopup) {

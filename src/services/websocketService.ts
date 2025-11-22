@@ -1,5 +1,6 @@
 import { getAgentWebSocketUrl } from '../constants/config';
 import type { MarketrixConfig } from '../types';
+import { clearPendingToolCall, storePendingToolCall } from '../utils/chatStorage';
 import { executeTool } from './toolExecutor';
 
 export type WebSocketStatus = 'disconnected' | 'connecting' | 'connected' | 'registered' | 'error';
@@ -310,23 +311,13 @@ export class WebSocketService {
   }
 
   /**
-   * Update callbacks (replaces existing callbacks)
+   * Update callbacks (replaces existing callbacks completely)
    */
   setCallbacks(callbacks: WebSocketServiceCallbacks): void {
-    this.callbacks = { ...this.callbacks, ...callbacks };
-    // Also update in allCallbacks if it exists
-    if (this.allCallbacks.size > 0) {
-      // Merge with existing callbacks from allCallbacks
-      const mergedCallbacks: WebSocketServiceCallbacks = {};
-      for (const cb of this.allCallbacks) {
-        if (cb.onStatusChange) mergedCallbacks.onStatusChange = cb.onStatusChange;
-        if (cb.onMessage) mergedCallbacks.onMessage = cb.onMessage;
-        if (cb.onError) mergedCallbacks.onError = cb.onError;
-      }
-      // Override with new callbacks
-      Object.assign(mergedCallbacks, callbacks);
-      this.callbacks = mergedCallbacks;
-    }
+    // Clear all existing callbacks and set new ones
+    this.allCallbacks.clear();
+    this.allCallbacks.add(callbacks);
+    this.callbacks = { ...callbacks };
   }
 
   /**
@@ -382,6 +373,32 @@ export class WebSocketService {
    */
   getChatId(): string | null {
     return this.chatId;
+  }
+
+  /**
+   * Retry a pending tool call (used after page refresh)
+   */
+  async retryToolCall(
+    requestId: string | number,
+    toolName: string,
+    arguments_: Record<string, unknown>,
+    mode: string,
+    explanation: string
+  ): Promise<void> {
+    console.log(
+      `[WebSocket] Retrying tool call after refresh: ${toolName} (mode: ${mode})`,
+      arguments_
+    );
+
+    // Execute without storing pending (already stored before refresh)
+    await this.executeToolCallInternal(
+      requestId,
+      toolName,
+      arguments_,
+      mode,
+      explanation,
+      false // Don't store pending tool call (already stored)
+    );
   }
 
   private setStatus(status: WebSocketStatus): void {
@@ -441,30 +458,14 @@ export class WebSocketService {
 
     // Handle tools/call messages - execute tool and send response back
     if (message.method === 'tools/call' && message.id !== undefined) {
-      // Show progress immediately when tool call is received (before execution)
-      const params = message.params as
-        | {
-            name?: string;
-            arguments?: Record<string, unknown>;
-            mode?: string;
-            explanation?: string;
-          }
-        | undefined;
-
-      if (params?.name && this.callbacks.onToolCallProgress) {
-        const toolName = params.name;
-        const mode = params.mode || 'do';
-        const explanation = params.explanation || '';
-        const progressText = explanation || `Executing ${toolName}...`;
-        console.log(
-          `[WebSocket] Tool call received, showing initial progress: ${toolName} - "${progressText}"`
-        );
-        this.callbacks.onToolCallProgress(toolName, progressText, mode);
+      // Forward the tool call message to onMessage callback FIRST so widget can update progress
+      if (this.callbacks.onMessage) {
+        console.log('[WebSocket] Forwarding tool call message to onMessage callback');
+        this.callbacks.onMessage(message);
       }
-
-      // Execute the tool (this will also call onToolCallProgress for result)
+      // Then execute the tool
       this.handleToolCall(message);
-      return; // Don't forward tool call messages to callbacks
+      return; // Don't forward again after handleToolCall
     }
 
     // Any message received indicates the connection is alive
@@ -509,72 +510,133 @@ export class WebSocketService {
     // Note: Initial progress is already shown in handleMessage when the tool call is received
     // This avoids duplicate progress entries
 
+    // Execute with storing pending tool call (for retry after refresh)
+    await this.executeToolCallInternal(
+      requestId,
+      toolName,
+      arguments_,
+      mode,
+      explanation,
+      true // Store pending tool call for retry after refresh
+    );
+  }
+
+  /**
+   * Internal method to execute a tool call.
+   * Handles execution, response creation, sending, and error handling.
+   */
+  private async executeToolCallInternal(
+    requestId: string | number | undefined,
+    toolName: string,
+    arguments_: Record<string, unknown>,
+    mode: string,
+    explanation: string,
+    shouldStorePending: boolean
+  ): Promise<void> {
+    // Store pending tool call if requested (for normal tool calls, not retries)
+    if (shouldStorePending && this.chatId && requestId !== undefined) {
+      storePendingToolCall(this.chatId, requestId, toolName, arguments_, mode, explanation);
+    }
+
     try {
       // Execute the tool with mode and explanation
       const result = await executeTool(toolName, arguments_, mode, explanation);
       console.log(`[WebSocket] Tool execution result:`, result);
 
-      // Update progress AFTER tool execution completes with result
-      if (this.callbacks.onToolCallProgress) {
-        const resultText = result.success
-          ? result.result || `${toolName} completed`
-          : result.error || `${toolName} failed`;
-        console.log(
-          `[WebSocket] Calling onToolCallProgress (result): ${toolName} - "${resultText}"`
-        );
-        // Update the progress line with the result
-        this.callbacks.onToolCallProgress(toolName, resultText, mode);
-      } else {
-        console.warn(`[WebSocket] onToolCallProgress callback not available for result!`);
-      }
+      // Clear pending tool call on completion
+      clearPendingToolCall();
 
-      // Send success response
-      // Note: Agent expects method: "tools/call" in response to identify it as a tool call response
+      // Handle success or failure
       if (result.success) {
-        const response: WebSocketMessage = {
-          jsonrpc: '2.0',
-          method: 'tools/call', // Agent checks for this to identify tool call responses
-          id: requestId,
-          result: {
-            content: [
-              {
-                type: 'text',
-                text: result.result,
-              },
-            ],
-          },
-        };
-        this.send(response);
+        const response = this.createSuccessResponse(requestId, result.result);
+        this.sendAndForwardResponse(response);
         console.log(`[WebSocket] Tool ${toolName} executed successfully: ${result.result}`);
       } else {
-        // Send error response
-        this.sendErrorResponse(requestId, -32603, result.error || 'Tool execution failed');
+        this.handleToolCallError(
+          requestId,
+          toolName,
+          -32603,
+          result.error || 'Tool execution failed'
+        );
         console.error(`[WebSocket] Tool ${toolName} execution failed:`, result.error);
       }
     } catch (error) {
-      // Send error response for unexpected errors
-      // Only send if websocket is still open
-      if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        try {
-          this.sendErrorResponse(requestId, -32603, `Internal error: ${errorMessage}`);
-        } catch (sendError) {
-          console.error(`[WebSocket] Failed to send error response:`, sendError);
-        }
-      }
+      // Clear pending tool call on error
+      clearPendingToolCall();
+
+      // Handle unexpected errors
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.handleToolCallError(requestId, toolName, -32603, `Internal error: ${errorMessage}`);
       console.error(`[WebSocket] Error executing tool ${toolName}:`, error);
+    }
+  }
+
+  /**
+   * Create a success response message for tool execution.
+   */
+  private createSuccessResponse(
+    requestId: string | number | undefined,
+    resultText: string
+  ): WebSocketMessage {
+    return {
+      jsonrpc: '2.0',
+      method: 'tools/call', // Agent checks for this to identify tool call responses
+      id: requestId,
+      result: {
+        content: [
+          {
+            type: 'text',
+            text: resultText,
+          },
+        ],
+      },
+    };
+  }
+
+  /**
+   * Send a response and forward it to the onMessage callback.
+   */
+  private sendAndForwardResponse(response: WebSocketMessage): void {
+    this.send(response);
+    // Forward the result message to onMessage callback so it can update progress
+    if (this.callbacks.onMessage) {
+      this.callbacks.onMessage(response);
+    }
+  }
+
+  /**
+   * Handle tool call errors by sending error response and forwarding to callbacks.
+   */
+  private handleToolCallError(
+    requestId: string | number | undefined,
+    toolName: string,
+    code: number,
+    message: string
+  ): void {
+    // Only send if websocket is still open
+    if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
+      try {
+        const errorResponse = this.sendErrorResponse(requestId, code, message);
+        // Forward the error response to onMessage callback so it can update progress
+        if (this.callbacks.onMessage && errorResponse) {
+          this.callbacks.onMessage(errorResponse);
+        }
+      } catch (sendError) {
+        console.error(`[WebSocket] Failed to send error response for tool ${toolName}:`, sendError);
+      }
     }
   }
 
   /**
    * Send an error response in MCP JSON-RPC format.
    * Note: Agent expects method: "tools/call" in response to identify it as a tool call response
+   * Returns the response message so it can be forwarded to onMessage callback
    */
   private sendErrorResponse(
     requestId: string | number | undefined,
     code: number,
     message: string
-  ): void {
+  ): WebSocketMessage | null {
     const response: WebSocketMessage = {
       jsonrpc: '2.0',
       method: 'tools/call', // Agent checks for this to identify tool call responses
@@ -584,7 +646,13 @@ export class WebSocketService {
         message,
       },
     };
-    this.send(response);
+    try {
+      this.send(response);
+      return response;
+    } catch (error) {
+      console.error('[WebSocket] Failed to send error response:', error);
+      return null;
+    }
   }
 
   private scheduleReconnect(): void {

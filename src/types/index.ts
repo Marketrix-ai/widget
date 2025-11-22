@@ -54,6 +54,7 @@ export interface ChatMessage {
   videoStream?: MediaStream;
   isScreenAccessRequest?: boolean;
   isSystemMessage?: boolean;
+  isPlaceholder?: boolean; // Indicates this is a placeholder message with progress bar
 }
 
 export interface TaskProgress {

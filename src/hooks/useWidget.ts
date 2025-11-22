@@ -7,9 +7,34 @@ import {
 } from '../constants/config';
 import type { InstructionType, WidgetSettingsData } from '../sdk';
 import MarketrixApiService from '../services/marketrixApiService';
-import { type WebSocketMessage, WebSocketService } from '../services/websocketService';
+import { isScreenSharing, stopScreenShare } from '../services/screenShareService';
+import { cleanup } from '../services/showModeService';
+import {
+  type WebSocketMessage,
+  WebSocketService,
+  type WebSocketStatus,
+} from '../services/websocketService';
 import type { ChatMessage, MarketrixConfig, WidgetState } from '../types';
+import {
+  clearChatContext,
+  clearPendingToolCall,
+  getPendingToolCall,
+  getStoredChatContext,
+  restoreMessagesFromContext,
+  storeChatContext,
+} from '../utils/chatStorage';
+import { cleanupAllWidgetElements } from '../utils/cleanupUtils';
 import { configManager } from '../utils/configManager';
+import { logError, safeExecute, safeExecuteAsync } from '../utils/errorUtils';
+import {
+  createAgentMessage,
+  createErrorMessage,
+  createPlaceholderMessage,
+  createSystemMessage,
+  createUserMessage,
+} from '../utils/messageFactory';
+import { addMessage, removeMessage, updateMessage } from '../utils/stateUtils';
+import { isBrowser } from '../utils/typeGuards';
 
 interface UseWidgetProps {
   config?: MarketrixConfig;
@@ -40,6 +65,7 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
         clearError: () => {},
         addMessage: () => {},
         updateMessage: () => {},
+        removeMessage: () => {},
       },
       marketrixConfig: null,
       settings: defaultSettings,
@@ -173,6 +199,58 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
         const chatId = await apiServiceRef.current.initializeChatId();
         console.log('[Widget] Chat ID initialized:', chatId);
 
+        // Restore context from storage if available
+        const storedContext = getStoredChatContext(chatId);
+        if (storedContext) {
+          console.log('[Widget] Restoring context from storage:', {
+            messageCount: storedContext.messages.length,
+            isTaskRunning: storedContext.isTaskRunning,
+            activeTaskId: storedContext.activeTaskId,
+            currentMode: storedContext.currentMode,
+          });
+
+          const restoredMessages = restoreMessagesFromContext(storedContext);
+
+          // Additional cleanup: ensure __THINKING__ markers are removed and progress lines are valid
+          const cleanedMessages = restoredMessages.map((msg) => {
+            // Remove any remaining __THINKING__ markers
+            let cleanContent = msg.content.replace(/__THINKING__/g, '');
+
+            // Validate progress line format (should start with ○ or ●✓)
+            const parts = cleanContent.split('\n\n');
+            if (parts.length > 1) {
+              const mainContent = parts[0];
+              const progressLines = parts.slice(1).filter((line) => {
+                const trimmed = line.trim();
+                // Keep valid progress lines or non-progress content
+                return trimmed.length > 0;
+              });
+
+              cleanContent =
+                progressLines.length > 0
+                  ? [mainContent, ...progressLines].join('\n\n')
+                  : mainContent;
+            }
+
+            return {
+              ...msg,
+              content: cleanContent,
+            };
+          });
+
+          setState((prev) => ({
+            ...prev,
+            messages: cleanedMessages,
+            isTaskRunning: storedContext.isTaskRunning,
+            activeTaskId: storedContext.activeTaskId,
+            taskProgress: storedContext.taskProgress,
+            currentMode: storedContext.currentMode,
+            // Restore widget UI state if available (for backward compatibility, default to false)
+            isOpen: storedContext.isOpen ?? false,
+            isMinimized: storedContext.isMinimized ?? false,
+          }));
+        }
+
         // Skip if we already have a connection with this chat_id
         if (
           websocketServiceRef.current &&
@@ -185,303 +263,437 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
           return;
         }
 
+        // Helper function to retry pending tool call if needed
+        const retryPendingToolCallIfNeeded = (
+          chatId: string | null,
+          websocketService: WebSocketService | null
+        ): void => {
+          if (!chatId) {
+            return;
+          }
+
+          if (!websocketService) {
+            return;
+          }
+
+          if (!websocketService.isConnected()) {
+            return;
+          }
+
+          const pendingToolCall = getPendingToolCall(chatId);
+          if (!pendingToolCall) {
+            return;
+          }
+
+          console.log('[Widget] Found pending tool call, retrying after refresh:', {
+            toolName: pendingToolCall.toolName,
+            requestId: pendingToolCall.requestId,
+            mode: pendingToolCall.mode,
+          });
+
+          // Retry the tool call - websocketService is guaranteed to be non-null here
+          websocketService
+            .retryToolCall(
+              pendingToolCall.requestId,
+              pendingToolCall.toolName,
+              pendingToolCall.arguments,
+              pendingToolCall.mode,
+              pendingToolCall.explanation
+            )
+            .catch((retryError: unknown) => {
+              console.error('[Widget] Failed to retry pending tool call:', retryError);
+            });
+        };
+
+        // Define the full callback set with progress update logic
+        const fullCallbacks = {
+          onStatusChange: (status: WebSocketStatus) => {
+            console.log('[Widget] WebSocket status changed:', status);
+            setState((prev) => ({
+              ...prev,
+              agentAvailable: status === 'registered' || status === 'connected',
+            }));
+
+            // When websocket is fully connected/registered, check for pending tool call to retry
+            if (status === 'registered' || status === 'connected') {
+              retryPendingToolCallIfNeeded(
+                initializedChatIdRef.current,
+                websocketServiceRef.current
+              );
+            }
+          },
+          onToolCallProgress: (toolName: string, explanation: string, mode: string) => {
+            // Log to console only - progress updates are now handled in onMessage callback
+            console.log(
+              `[Widget] Tool call progress callback received: ${toolName} - "${explanation}" (mode: ${mode})`
+            );
+          },
+          onMessage: (message: WebSocketMessage) => {
+            console.log('[Widget] WebSocket message received:', message);
+            console.log('[Widget] Message method:', message.method);
+            console.log('[Widget] Message has id:', !!message.id);
+            console.log('[Widget] Message has params:', !!message.params);
+            console.log('[Widget] Message has result:', !!message.result);
+            console.log('[Widget] Message has error:', !!message.error);
+
+            // Handle tool call messages - update progress when tool calls are received
+            if (message.method === 'tools/call' && message.id && message.params) {
+              console.log('[Widget] ✓ Detected tool call message with params');
+              const params = message.params as
+                | {
+                    name?: string;
+                    arguments?: Record<string, unknown>;
+                    mode?: string;
+                    explanation?: string;
+                  }
+                | undefined;
+
+              if (params?.name) {
+                const toolName = params.name;
+                const explanation = params.explanation || '';
+                const progressText = explanation || `Executing ${toolName}...`;
+
+                console.log(
+                  `[Widget] Tool call received via onMessage: ${toolName} - "${progressText}"`
+                );
+
+                // Update progress immediately when tool call is received
+                setState((prev) => {
+                  const messages = [...prev.messages];
+                  let taskMessageIndex = -1;
+
+                  // Find the last agent message (task message)
+                  // Exclude placeholder messages, system messages, and screen access requests
+                  for (let i = messages.length - 1; i >= 0; i--) {
+                    const msg = messages[i];
+                    if (
+                      msg.sender === 'agent' &&
+                      !msg.isSystemMessage &&
+                      !msg.isScreenAccessRequest &&
+                      !msg.isPlaceholder
+                    ) {
+                      taskMessageIndex = i;
+                      break;
+                    }
+                  }
+
+                  if (taskMessageIndex >= 0) {
+                    console.log(`[Widget] ✓ Found task message at index ${taskMessageIndex}`);
+                    const existingMessage = messages[taskMessageIndex];
+                    const progressLine = `○ ${progressText}`;
+
+                    // Remove __THINKING__ marker from content before processing
+                    const cleanContent = existingMessage.content.replace(/__THINKING__/g, '');
+
+                    // Split message into main content and progress lines
+                    const parts = cleanContent.split('\n\n');
+                    const mainContent = parts[0];
+                    const existingProgressLines = parts
+                      .slice(1)
+                      .filter(
+                        (line) => line.trim().length > 0 && !line.trim().includes('__THINKING__')
+                      );
+
+                    // Check if this tool already has a progress line (by tool name)
+                    const toolProgressIndex = existingProgressLines.findIndex(
+                      (line) =>
+                        (line.trim().startsWith('○') || line.trim().startsWith('●✓')) &&
+                        line.includes(toolName)
+                    );
+
+                    const updatedProgressLines = [...existingProgressLines];
+                    if (toolProgressIndex >= 0) {
+                      // Update existing line
+                      console.log(
+                        `[Widget] Updating existing progress line at index ${toolProgressIndex}`
+                      );
+                      updatedProgressLines[toolProgressIndex] = progressLine;
+                    } else {
+                      // Add new line
+                      console.log(`[Widget] Adding new progress line: ${progressLine}`);
+                      updatedProgressLines.push(progressLine);
+                    }
+
+                    // Ensure main content doesn't have __THINKING__ marker
+                    const cleanMainContent = mainContent.replace(/__THINKING__/g, '').trim();
+
+                    const updatedContent =
+                      updatedProgressLines.length > 0
+                        ? [cleanMainContent, ...updatedProgressLines].join('\n\n')
+                        : cleanMainContent;
+
+                    console.log(`[Widget] Updated content:`, updatedContent.substring(0, 150));
+
+                    const updatedMessage: ChatMessage = {
+                      ...existingMessage,
+                      content: updatedContent,
+                    };
+                    const updatedMessages = [...messages];
+                    updatedMessages[taskMessageIndex] = updatedMessage;
+
+                    return {
+                      ...prev,
+                      messages: updatedMessages,
+                    };
+                  } else {
+                    console.warn(
+                      `[Widget] ✗ No task message found! Messages count: ${messages.length}`
+                    );
+                  }
+
+                  return prev;
+                });
+              }
+            }
+
+            // Handle tool call results - mark tool as done when result is received
+            if (
+              message.method === 'tools/call' &&
+              message.id &&
+              message.result &&
+              !message.params &&
+              !message.error
+            ) {
+              // This is a result message (has result but no params and no error)
+              const result = message.result as
+                | {
+                    content?: Array<{ type?: string; text?: string }>;
+                  }
+                | undefined;
+
+              if (result?.content && result.content.length > 0) {
+                const resultText = result.content[0]?.text || 'Tool execution completed';
+                console.log(`[Widget] Tool call result received: ${resultText}`);
+
+                // Update progress to mark the most recent incomplete tool as done
+                setState((prev) => {
+                  const messages = [...prev.messages];
+                  let taskMessageIndex = -1;
+
+                  // Find the last agent message (task message)
+                  // Exclude placeholder messages, system messages, and screen access requests
+                  for (let i = messages.length - 1; i >= 0; i--) {
+                    const msg = messages[i];
+                    if (
+                      msg.sender === 'agent' &&
+                      !msg.isSystemMessage &&
+                      !msg.isScreenAccessRequest &&
+                      !msg.isPlaceholder
+                    ) {
+                      taskMessageIndex = i;
+                      break;
+                    }
+                  }
+
+                  if (taskMessageIndex >= 0) {
+                    const existingMessage = messages[taskMessageIndex];
+
+                    // Remove __THINKING__ marker from content before processing
+                    const cleanContent = existingMessage.content.replace(/__THINKING__/g, '');
+
+                    const parts = cleanContent.split('\n\n');
+                    const mainContent = parts[0];
+                    const existingProgressLines = parts
+                      .slice(1)
+                      .filter(
+                        (line) => line.trim().length > 0 && !line.trim().includes('__THINKING__')
+                      );
+
+                    // Find the last incomplete progress line and mark it as done
+                    if (existingProgressLines.length > 0) {
+                      // Find the last line that doesn't have a filled circle with tick (completed indicator)
+                      let lastIncompleteIndex = -1;
+                      for (let i = existingProgressLines.length - 1; i >= 0; i--) {
+                        const line = existingProgressLines[i];
+                        // Only look for lines that start with ○ (pending, not completed)
+                        if (line.trim().startsWith('○') && !line.trim().startsWith('●✓')) {
+                          lastIncompleteIndex = i;
+                          break;
+                        }
+                      }
+
+                      if (lastIncompleteIndex >= 0) {
+                        const lastLine = existingProgressLines[lastIncompleteIndex];
+                        // Replace ○ (empty circle) with ●✓ (filled circle with tick) when completed
+                        // Ensure consistent formatting: ○ becomes ●✓
+                        const updatedLastLine = lastLine.trim().startsWith('○')
+                          ? lastLine.replace(/^○\s*/, '●✓ ')
+                          : lastLine;
+                        const updatedProgressLines = [
+                          ...existingProgressLines.slice(0, lastIncompleteIndex),
+                          updatedLastLine,
+                          ...existingProgressLines.slice(lastIncompleteIndex + 1),
+                        ];
+
+                        // Ensure main content doesn't have __THINKING__ marker
+                        const cleanMainContent = mainContent.replace(/__THINKING__/g, '').trim();
+
+                        const updatedContent =
+                          updatedProgressLines.length > 0
+                            ? [cleanMainContent, ...updatedProgressLines].join('\n\n')
+                            : cleanMainContent;
+
+                        const updatedMessage: ChatMessage = {
+                          ...existingMessage,
+                          content: updatedContent,
+                        };
+                        const updatedMessages = [...messages];
+                        updatedMessages[taskMessageIndex] = updatedMessage;
+
+                        console.log(
+                          `[Widget] Marked tool call as done. Updated line: ${updatedLastLine}`
+                        );
+
+                        return {
+                          ...prev,
+                          messages: updatedMessages,
+                        };
+                      }
+                    }
+                  }
+
+                  return prev;
+                });
+              }
+            }
+
+            // Handle tool call errors - mark tool as failed when error is received
+            if (message.method === 'tools/call' && message.id && message.error && !message.params) {
+              // This is an error message (has error but no params)
+              const error = message.error as
+                | {
+                    code?: number;
+                    message?: string;
+                  }
+                | undefined;
+
+              if (error?.message) {
+                const errorText = error.message || 'Tool execution failed';
+                console.log(`[Widget] Tool call error received: ${errorText}`);
+
+                // Update progress to mark the most recent incomplete tool as failed
+                setState((prev) => {
+                  const messages = [...prev.messages];
+                  let taskMessageIndex = -1;
+
+                  // Find the last agent message (task message)
+                  // Exclude placeholder messages, system messages, and screen access requests
+                  for (let i = messages.length - 1; i >= 0; i--) {
+                    const msg = messages[i];
+                    if (
+                      msg.sender === 'agent' &&
+                      !msg.isSystemMessage &&
+                      !msg.isScreenAccessRequest &&
+                      !msg.isPlaceholder
+                    ) {
+                      taskMessageIndex = i;
+                      break;
+                    }
+                  }
+
+                  if (taskMessageIndex >= 0) {
+                    const existingMessage = messages[taskMessageIndex];
+
+                    // Remove __THINKING__ marker from content before processing
+                    const cleanContent = existingMessage.content.replace(/__THINKING__/g, '');
+
+                    const parts = cleanContent.split('\n\n');
+                    const mainContent = parts[0];
+                    const existingProgressLines = parts
+                      .slice(1)
+                      .filter(
+                        (line) => line.trim().length > 0 && !line.trim().includes('__THINKING__')
+                      );
+
+                    // Find the last incomplete progress line and mark it as failed
+                    if (existingProgressLines.length > 0) {
+                      // Find the last line that starts with ○ (pending, not completed)
+                      let lastIncompleteIndex = -1;
+                      for (let i = existingProgressLines.length - 1; i >= 0; i--) {
+                        const line = existingProgressLines[i];
+                        // Only look for lines that start with ○ (pending, not completed)
+                        if (line.trim().startsWith('○') && !line.trim().startsWith('●✓')) {
+                          lastIncompleteIndex = i;
+                          break;
+                        }
+                      }
+
+                      if (lastIncompleteIndex >= 0) {
+                        const lastLine = existingProgressLines[lastIncompleteIndex];
+                        const updatedLastLine = `${lastLine} ✗ (${errorText})`;
+                        const updatedProgressLines = [
+                          ...existingProgressLines.slice(0, lastIncompleteIndex),
+                          updatedLastLine,
+                          ...existingProgressLines.slice(lastIncompleteIndex + 1),
+                        ];
+
+                        // Ensure main content doesn't have __THINKING__ marker
+                        const cleanMainContent = mainContent.replace(/__THINKING__/g, '').trim();
+
+                        const updatedContent =
+                          updatedProgressLines.length > 0
+                            ? [cleanMainContent, ...updatedProgressLines].join('\n\n')
+                            : cleanMainContent;
+
+                        const updatedMessage: ChatMessage = {
+                          ...existingMessage,
+                          content: updatedContent,
+                        };
+                        const updatedMessages = [...messages];
+                        updatedMessages[taskMessageIndex] = updatedMessage;
+
+                        console.log(
+                          `[Widget] Marked tool call as failed. Updated line: ${updatedLastLine}`
+                        );
+
+                        return {
+                          ...prev,
+                          messages: updatedMessages,
+                        };
+                      }
+                    }
+                  }
+
+                  return prev;
+                });
+              }
+            }
+
+            // Handle task status updates
+            if (message.method === 'task/status' && message.params) {
+              const params = message.params as {
+                status: string;
+                message: string;
+                timestamp: string;
+              };
+              const status = params.status;
+
+              if (status === 'stopped' || status === 'completed' || status === 'failed') {
+                setState((prev) => ({
+                  ...prev,
+                  activeTaskId: null,
+                  isTaskRunning: false,
+                  isLoading: false,
+                }));
+              }
+            }
+          },
+          onError: (error: Error) => {
+            console.error('[Widget] WebSocket error:', error);
+            setState((prev) => ({
+              ...prev,
+              agentAvailable: false,
+              error: error.message,
+            }));
+          },
+        };
+
         // Initialize websocket service if it doesn't exist (use singleton)
         if (!websocketServiceRef.current) {
-          websocketServiceRef.current = WebSocketService.getInstance(config, {
-            onStatusChange: (status) => {
-              console.log('[Widget] WebSocket status changed:', status);
-              // Update agent availability based on websocket status
-              setState((prev) => ({
-                ...prev,
-                agentAvailable: status === 'registered' || status === 'connected',
-              }));
-            },
-            onMessage: (message: WebSocketMessage) => {
-              console.log('[Widget] WebSocket message received:', message);
-              // Handle incoming websocket messages here if needed
-              // For now, we'll just log them
-            },
-            onError: (error) => {
-              console.error('[Widget] WebSocket error:', error);
-              setState((prev) => ({
-                ...prev,
-                agentAvailable: false,
-                error: error.message,
-              }));
-            },
-          });
+          websocketServiceRef.current = WebSocketService.getInstance(config, fullCallbacks);
         } else {
-          // Add callbacks if service already exists (singleton, so add instead of replace)
-          websocketServiceRef.current.addCallbacks({
-            onStatusChange: (status) => {
-              console.log('[Widget] WebSocket status changed:', status);
-              setState((prev) => ({
-                ...prev,
-                agentAvailable: status === 'registered' || status === 'connected',
-              }));
-            },
-            onToolCallProgress: (toolName: string, explanation: string, mode: string) => {
-              // Log to console
-              console.log(
-                `[Widget] Tool call progress callback received: ${toolName} - "${explanation}" (mode: ${mode})`
-              );
-
-              // Non-interactive tools: just log, don't show prominently in chat
-              const NON_INTERACTIVE_TOOLS = [
-                'get_html',
-                'extract',
-                'get_dropdown_options',
-                'get_screenshot',
-              ];
-              const isNonInteractive = NON_INTERACTIVE_TOOLS.includes(toolName);
-
-              // Update task progress
-              setState((prev) => {
-                // Check if this is an update to existing progress (same tool name, recent timestamp)
-                const existingProgressIndex = prev.taskProgress.findIndex(
-                  (p) => p.tool_name === toolName && Date.now() - p.timestamp < 5000
-                );
-
-                let newProgress;
-                if (existingProgressIndex >= 0) {
-                  // Update existing progress
-                  newProgress = {
-                    ...prev.taskProgress[existingProgressIndex],
-                    explanation,
-                    timestamp: Date.now(),
-                  };
-                } else {
-                  // Create new progress entry
-                  newProgress = {
-                    tool_name: toolName,
-                    tool_params: {},
-                    step: prev.taskProgress.length + 1,
-                    explanation,
-                    mode,
-                    timestamp: Date.now(),
-                  };
-                }
-
-                // Find the last agent message (task message) and update it with progress
-                // Look for messages that are part of an active task (show/do mode)
-                const messages = [...prev.messages];
-                let taskMessageIndex = -1;
-
-                // Find the most recent agent message (should be the task message)
-                // When task is running, the last agent message is the task message
-                console.log(
-                  `[Widget] Searching for task message. Total messages: ${messages.length}`
-                );
-                for (let i = messages.length - 1; i >= 0; i--) {
-                  const msg = messages[i];
-                  console.log(`[Widget] Checking message ${i}:`, {
-                    sender: msg.sender,
-                    isSystemMessage: msg.isSystemMessage,
-                    isScreenAccessRequest: msg.isScreenAccessRequest,
-                    content: `${msg.content.substring(0, 50)}...`,
-                  });
-                  // Find the last agent message that's not a system message or screen access request
-                  if (
-                    msg.sender === 'agent' &&
-                    !msg.isSystemMessage &&
-                    !msg.isScreenAccessRequest
-                  ) {
-                    taskMessageIndex = i;
-                    console.log(
-                      `[Widget] ✓ Found task message at index ${i}: "${msg.content.substring(0, 50)}..."`
-                    );
-                    break;
-                  }
-                }
-
-                if (taskMessageIndex === -1) {
-                  console.warn(
-                    `[Widget] ✗ No task message found to update. Messages count: ${messages.length}`
-                  );
-                  console.warn(
-                    `[Widget] All messages:`,
-                    messages.map((m, i) => ({
-                      index: i,
-                      sender: m.sender,
-                      isSystemMessage: m.isSystemMessage,
-                      isScreenAccessRequest: m.isScreenAccessRequest,
-                      content: m.content.substring(0, 30),
-                    }))
-                  );
-                }
-
-                if (taskMessageIndex >= 0) {
-                  // Update existing message with progress in thread form
-                  const existingMessage = messages[taskMessageIndex];
-                  console.log(
-                    `[Widget] Existing message content before update:`,
-                    existingMessage.content
-                  );
-
-                  const progressLine = `• ${explanation || toolName}`;
-                  console.log(`[Widget] Adding progress line:`, progressLine);
-
-                  // Split message into main content and progress lines
-                  const parts = existingMessage.content.split('\n\n');
-                  const mainContent = parts[0];
-                  const existingProgressLines = parts
-                    .slice(1)
-                    .filter((line) => line.trim().length > 0);
-
-                  console.log(`[Widget] Main content:`, mainContent);
-                  console.log(`[Widget] Existing progress lines:`, existingProgressLines);
-
-                  // Check if we're updating an existing progress line for this tool
-                  // We match by checking if this is an update to existing progress (same tool, recent timestamp)
-                  const updatedProgressLines = [...existingProgressLines];
-                  let toolProgressIndex = -1;
-
-                  // If we found existing progress for this tool (within 5 seconds), update that line
-                  if (existingProgressIndex >= 0) {
-                    // Find the progress line that corresponds to this tool
-                    // We'll match by position (existingProgressIndex) or by tool name
-                    toolProgressIndex = updatedProgressLines.findIndex((line, idx) => {
-                      // Match by index if we have a recent progress entry
-                      if (idx === existingProgressIndex) return true;
-                      // Also try to match by tool name in the line
-                      return line.trim().startsWith('•') && line.includes(toolName);
-                    });
-                  } else {
-                    // New tool call - check if tool name already exists in any line
-                    // Look for lines that mention this tool (either by name or by checking if it's a recent addition)
-                    toolProgressIndex = updatedProgressLines.findIndex((line) => {
-                      const trimmed = line.trim();
-                      if (!trimmed.startsWith('•')) return false;
-                      // Check if line contains tool name or if it's the most recent line (likely the same tool)
-                      return (
-                        trimmed.includes(toolName) ||
-                        (updatedProgressLines.length > 0 &&
-                          line === updatedProgressLines[updatedProgressLines.length - 1])
-                      );
-                    });
-                  }
-
-                  if (toolProgressIndex >= 0) {
-                    // Update existing progress line for this tool
-                    updatedProgressLines[toolProgressIndex] = progressLine;
-                  } else {
-                    // Add new progress line
-                    updatedProgressLines.push(progressLine);
-                  }
-
-                  // Reconstruct message with updated progress
-                  const updatedContent =
-                    updatedProgressLines.length > 0
-                      ? [mainContent, ...updatedProgressLines].join('\n\n')
-                      : mainContent;
-
-                  console.log(`[Widget] Updated content (full):`, updatedContent);
-                  console.log(`[Widget] Updated content length:`, updatedContent.length);
-                  console.log(`[Widget] Number of progress lines:`, updatedProgressLines.length);
-
-                  // Create new message object and new messages array to ensure React detects the change
-                  const updatedMessage: ChatMessage = {
-                    ...existingMessage,
-                    content: updatedContent,
-                  };
-                  // Create a completely new array to ensure React detects the change
-                  const updatedMessages = [...messages];
-                  updatedMessages[taskMessageIndex] = updatedMessage;
-                  console.log(
-                    `[Widget] Updated message at index ${taskMessageIndex} with content:`,
-                    `${updatedContent.substring(0, 200)}...`
-                  );
-                  console.log(
-                    `[Widget] Message object reference changed:`,
-                    updatedMessage !== existingMessage
-                  );
-                  console.log(
-                    `[Widget] Messages array reference changed:`,
-                    updatedMessages !== messages
-                  );
-
-                  // Update task progress array
-                  const updatedTaskProgress =
-                    existingProgressIndex >= 0
-                      ? prev.taskProgress.map((p, idx) =>
-                          idx === existingProgressIndex ? newProgress : p
-                        )
-                      : [...prev.taskProgress, newProgress];
-
-                  console.log(
-                    `[Widget] Returning updated state with ${updatedMessages.length} messages and ${updatedTaskProgress.length} progress entries`
-                  );
-                  if (taskMessageIndex >= 0) {
-                    console.log(
-                      `[Widget] Updated message content preview:`,
-                      updatedMessages[taskMessageIndex].content.substring(0, 100)
-                    );
-                  }
-
-                  return {
-                    ...prev,
-                    messages: updatedMessages,
-                    taskProgress: updatedTaskProgress,
-                  };
-                } else {
-                  // Fallback: add as new message if no agent message found
-                  console.warn(`[Widget] No task message found, creating new progress message`);
-                  const progressMessage: ChatMessage = {
-                    id: `tool-progress-${Date.now()}-${Math.random()}`,
-                    content: explanation || `Executing ${toolName}...`,
-                    sender: 'agent',
-                    timestamp: new Date(),
-                    mode: mode as InstructionType,
-                    isSystemMessage: isNonInteractive,
-                  };
-                  const updatedMessages = [...messages, progressMessage];
-
-                  // Update task progress array
-                  const updatedTaskProgress = [...prev.taskProgress, newProgress];
-
-                  console.log(
-                    `[Widget] Returning updated state with ${updatedMessages.length} messages and ${updatedTaskProgress.length} progress entries (fallback)`
-                  );
-
-                  return {
-                    ...prev,
-                    messages: updatedMessages,
-                    taskProgress: updatedTaskProgress,
-                  };
-                }
-              });
-            },
-            onMessage: (message: WebSocketMessage) => {
-              console.log('[Widget] WebSocket message received:', message);
-
-              // Handle task status updates
-              if (message.method === 'task/status' && message.params) {
-                const params = message.params as {
-                  status: string;
-                  message: string;
-                  timestamp: string;
-                };
-                const status = params.status;
-
-                if (status === 'stopped' || status === 'completed' || status === 'failed') {
-                  setState((prev) => ({
-                    ...prev,
-                    activeTaskId: null,
-                    isTaskRunning: false,
-                    isLoading: false,
-                  }));
-                }
-              }
-            },
-            onError: (error) => {
-              console.error('[Widget] WebSocket error:', error);
-              setState((prev) => ({
-                ...prev,
-                agentAvailable: false,
-                error: error.message,
-              }));
-            },
-          });
+          // Replace callbacks if service already exists (use setCallbacks to replace, not add)
+          websocketServiceRef.current.setCallbacks(fullCallbacks);
         }
 
         // Connect websocket with the chat_id
@@ -512,6 +724,9 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
           } else {
             initializedChatIdRef.current = chatId;
           }
+
+          // After websocket is connected, check for pending tool call to retry
+          retryPendingToolCallIfNeeded(chatId, websocketServiceRef.current);
         }
       } catch (error) {
         console.error('[Widget] Failed to initialize chat_id:', error);
@@ -545,6 +760,202 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
     };
   }, [config]);
 
+  // Monitor task state and add/remove "Thinking..." indicator when waiting
+  useEffect(() => {
+    if (!state.isTaskRunning || (state.currentMode !== 'show' && state.currentMode !== 'do')) {
+      // Remove thinking indicator if task is not running or not in show/do mode
+      setState((prev) => {
+        const hasThinkingMessages = prev.messages.some(
+          (msg) =>
+            msg.sender === 'agent' &&
+            !msg.isSystemMessage &&
+            !msg.isScreenAccessRequest &&
+            !msg.isPlaceholder &&
+            msg.content.includes('__THINKING__')
+        );
+        if (!hasThinkingMessages) return prev;
+
+        const updatedMessages = prev.messages.map((msg) => {
+          if (
+            msg.sender === 'agent' &&
+            !msg.isSystemMessage &&
+            !msg.isScreenAccessRequest &&
+            !msg.isPlaceholder &&
+            msg.content.includes('__THINKING__')
+          ) {
+            return {
+              ...msg,
+              content: msg.content.replace(/\n\n__THINKING__$/, ''),
+            };
+          }
+          return msg;
+        });
+        return { ...prev, messages: updatedMessages };
+      });
+      return;
+    }
+
+    // Find the last agent message (task message) and check if we need to add/remove thinking indicator
+    setState((prev) => {
+      const messages = [...prev.messages];
+      let taskMessageIndex = -1;
+
+      for (let i = messages.length - 1; i >= 0; i--) {
+        const msg = messages[i];
+        if (
+          msg.sender === 'agent' &&
+          !msg.isSystemMessage &&
+          !msg.isScreenAccessRequest &&
+          !msg.isPlaceholder
+        ) {
+          taskMessageIndex = i;
+          break;
+        }
+      }
+
+      if (taskMessageIndex >= 0) {
+        const taskMessage = messages[taskMessageIndex];
+        // Remove __THINKING__ marker from content check (should not be displayed)
+        const cleanContent = taskMessage.content.replace(/__THINKING__/g, '');
+        const hasProgressLines = cleanContent.includes('○') || cleanContent.includes('●✓');
+        const hasThinkingMarker = taskMessage.content.includes('__THINKING__');
+
+        // Add thinking marker if no progress lines and no marker exists
+        if (!hasProgressLines && !hasThinkingMarker) {
+          const updatedMessage = {
+            ...taskMessage,
+            content: `${taskMessage.content}\n\n__THINKING__`,
+          };
+          const updatedMessages = [...messages];
+          updatedMessages[taskMessageIndex] = updatedMessage;
+          return { ...prev, messages: updatedMessages };
+        }
+        // Remove thinking marker if progress lines exist
+        else if (hasProgressLines && hasThinkingMarker) {
+          const updatedMessage = {
+            ...taskMessage,
+            content: taskMessage.content
+              .replace(/\n\n__THINKING__$/, '')
+              .replace(/__THINKING__/g, ''),
+          };
+          const updatedMessages = [...messages];
+          updatedMessages[taskMessageIndex] = updatedMessage;
+          return { ...prev, messages: updatedMessages };
+        }
+      }
+
+      return prev;
+    });
+  }, [state.isTaskRunning, state.currentMode]);
+
+  // Auto-save context when state changes (debounced)
+  useEffect(() => {
+    const chatId = initializedChatIdRef.current;
+    if (!chatId || !hasInitializedRef.current) {
+      return;
+    }
+
+    // Debounce saves to avoid excessive localStorage writes
+    const timeoutId = setTimeout(() => {
+      storeChatContext(
+        chatId,
+        state.messages,
+        state.isTaskRunning,
+        state.activeTaskId,
+        state.taskProgress,
+        state.currentMode,
+        state.isOpen,
+        state.isMinimized
+      );
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [
+    state.messages,
+    state.isTaskRunning,
+    state.activeTaskId,
+    state.taskProgress,
+    state.currentMode,
+    state.isOpen,
+    state.isMinimized,
+  ]);
+
+  // Handle page lifecycle events to stop screen sharing and add message
+  useEffect(() => {
+    const handlePageUnload = () => {
+      // Check if screen sharing is active
+      if (isScreenSharing()) {
+        console.log('[Widget] Page unloading, stopping screen share and adding message');
+
+        // Stop screen sharing
+        stopScreenShare();
+
+        // Remove any screenshare messages (with videoStream) from chat history
+        // Get current state synchronously and update immediately
+        setState((prev) => {
+          // Remove screenshare messages (messages with videoStream)
+          const messagesWithoutScreenshare = prev.messages.filter((msg) => !msg.videoStream);
+
+          // Add "Stopped screenshare" message to chat history
+          const stoppedMessage = createSystemMessage(
+            'Stopped screenshare',
+            'show',
+            'user',
+            'screenshare-stopped'
+          );
+
+          const updatedMessages = [...messagesWithoutScreenshare, stoppedMessage];
+
+          // Immediately save to storage to ensure it's persisted before page unloads
+          const chatId = initializedChatIdRef.current;
+          if (chatId) {
+            try {
+              // Save synchronously to localStorage
+              storeChatContext(
+                chatId,
+                updatedMessages,
+                prev.isTaskRunning,
+                prev.activeTaskId,
+                prev.taskProgress,
+                prev.currentMode,
+                prev.isOpen,
+                prev.isMinimized
+              );
+            } catch (error) {
+              console.warn('[Widget] Failed to save stopped screenshare message:', error);
+            }
+          }
+
+          return {
+            ...prev,
+            messages: updatedMessages,
+          };
+        });
+      }
+    };
+
+    // Listen to page lifecycle events
+    // Use pagehide for better reliability (fires even when page is cached)
+    // pagehide is more reliable than beforeunload for saving state
+    window.addEventListener('pagehide', handlePageUnload);
+
+    // Also handle visibility change (when tab becomes hidden)
+    // This catches cases where the page is hidden but not unloaded
+    const handleVisibilityChange = () => {
+      if (document.hidden && isScreenSharing()) {
+        console.log('[Widget] Page hidden, stopping screen share and adding message');
+        handlePageUnload();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('pagehide', handlePageUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
+
   // Separate cleanup effect that only runs on unmount
   useEffect(() => {
     return () => {
@@ -561,18 +972,22 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
 
   // Widget UI actions
   const toggleWidget = useCallback(() => {
-    setState((prev) => ({
-      ...prev,
-      isOpen: !prev.isOpen,
-      isMinimized: false,
-    }));
+    setState((prev) => {
+      // If opening from minimized state, clear minimized
+      // If closing, keep minimized state
+      return {
+        ...prev,
+        isOpen: !prev.isOpen,
+        isMinimized: prev.isOpen ? prev.isMinimized : false,
+      };
+    });
   }, []);
 
   const closeWidget = useCallback(() => {
     setState((prev) => ({
       ...prev,
       isOpen: false,
-      isMinimized: false,
+      isMinimized: true, // Set minimized when closed
     }));
   }, []);
 
@@ -593,26 +1008,25 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
       const messageMode = mode || state.currentMode;
       const messageId = Date.now().toString();
 
+      // Create placeholder message for thinking state
+      const placeholderMessage = createPlaceholderMessage(messageMode);
+      const placeholderMessageId = placeholderMessage.id;
+
       // Only add user message if it wasn't already added (e.g., from chip click)
       if (!skipUserMessage) {
-        const userMessage: ChatMessage = {
-          id: messageId,
-          content: content.trim(),
-          sender: 'user',
-          timestamp: new Date(),
-          mode: messageMode,
-        };
+        const userMessage = createUserMessage(content, messageMode);
 
-        // Add user message immediately
+        // Add user message and placeholder immediately
         setState((prev) => ({
           ...prev,
-          messages: [...prev.messages, userMessage],
+          messages: [...prev.messages, userMessage, placeholderMessage],
           isLoading: true,
         }));
       } else {
-        // Message already added, just set loading state
+        // Message already added, just add placeholder and set loading state
         setState((prev) => ({
           ...prev,
+          messages: [...prev.messages, placeholderMessage],
           isLoading: true,
         }));
       }
@@ -644,20 +1058,42 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
           console.log(`[Widget] Task started: ${response.response}`);
         }
 
-        const agentMessage: ChatMessage = {
-          id: response.messageId,
-          content: response.response,
-          sender: 'agent',
-          timestamp: response.timestamp,
-          mode: response.mode,
-        };
+        const agentMessage = createAgentMessage(
+          response.response,
+          response.mode,
+          response.messageId
+        );
+
+        // Override timestamp from API response if provided
+        if (response.timestamp) {
+          agentMessage.timestamp = response.timestamp;
+        }
 
         console.log(
           `[Widget] Adding agent message: "${agentMessage.content}" (id: ${agentMessage.id})`
         );
 
+        // Replace placeholder message with actual response
+        // Preserve any progress lines that were added to the placeholder
         setState((prev) => {
-          const newMessages = [...prev.messages, agentMessage];
+          const placeholderMsg = prev.messages.find((msg) => msg.id === placeholderMessageId);
+          let finalAgentMessage = agentMessage;
+
+          // If placeholder has progress lines (content with \n\n), preserve them
+          if (placeholderMsg?.content.includes('\n\n')) {
+            const parts = placeholderMsg.content.split('\n\n');
+            if (parts.length > 1) {
+              const progressLines = parts.slice(1);
+              finalAgentMessage = {
+                ...agentMessage,
+                content: [agentMessage.content, ...progressLines].join('\n\n'),
+              };
+            }
+          }
+
+          const newMessages = prev.messages.map((msg) =>
+            msg.id === placeholderMessageId ? finalAgentMessage : msg
+          );
           console.log(
             `[Widget] State updated with ${newMessages.length} messages. Last message: "${newMessages[newMessages.length - 1].content}"`
           );
@@ -708,20 +1144,20 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
           }
         }
 
-        const errorMessage: ChatMessage = {
-          id: `error-${messageId}`,
-          content: userFriendlyError,
-          sender: 'agent',
-          timestamp: new Date(),
-          mode: messageMode,
-        };
+        const errorMessage = createErrorMessage(userFriendlyError, messageMode, messageId);
 
-        setState((prev) => ({
-          ...prev,
-          messages: [...prev.messages, errorMessage],
-          isLoading: false,
-          error: 'Failed to send message',
-        }));
+        // Remove placeholder message on error
+        setState((prev) => {
+          const newMessages = prev.messages.filter(
+            (msg) => !(msg.isPlaceholder && msg.id.startsWith('placeholder-'))
+          );
+          return {
+            ...prev,
+            messages: [...newMessages, errorMessage],
+            isLoading: false,
+            error: 'Failed to send message',
+          };
+        });
       }
     },
     [state.currentMode]
@@ -739,7 +1175,7 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
         isLoading: false,
       }));
     } catch (error) {
-      console.error('Failed to stop task:', error);
+      logError('stopTask', error);
       setState((prev) => ({
         ...prev,
         error: 'Failed to stop task',
@@ -751,19 +1187,83 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
     setState((prev) => ({ ...prev, error: undefined }));
   }, []);
 
-  const addMessage = useCallback((message: ChatMessage) => {
-    setState((prev) => ({
-      ...prev,
-      messages: [...prev.messages, message],
-    }));
+  const addMessageCallback = useCallback((message: ChatMessage) => {
+    addMessage(setState, message);
   }, []);
 
-  const updateMessage = useCallback((messageId: string, updates: Partial<ChatMessage>) => {
+  const updateMessageCallback = useCallback((messageId: string, updates: Partial<ChatMessage>) => {
+    updateMessage(setState, messageId, updates);
+  }, []);
+
+  const removeMessageCallback = useCallback((messageId: string) => {
+    removeMessage(setState, messageId);
+  }, []);
+
+  const clearChatHistory = useCallback(async () => {
+    const chatId = initializedChatIdRef.current;
+
+    // Stop any running tasks before clearing state
+    if (chatId && apiServiceRef.current && (state.isTaskRunning || state.activeTaskId)) {
+      const apiService = apiServiceRef.current;
+      await safeExecuteAsync(
+        async () => {
+          console.log('[Widget] Stopping active task before clearing');
+          // Stop task without taskId to stop all tasks for this chat_id
+          await apiService.stopTask();
+        },
+        'Failed to stop task during clear (continuing anyway)',
+        undefined
+      );
+    }
+
+    // Stop screenshare if active
+    if (isScreenSharing()) {
+      console.log('[Widget] Stopping screenshare on reset');
+      stopScreenShare();
+    }
+
+    // Clean up any pending tool call overlays
+    cleanup();
+
+    // Clean up all widget DOM elements using consolidated utility
+    cleanupAllWidgetElements();
+
+    // Clear all stored state
+    if (chatId) {
+      clearChatContext();
+      clearPendingToolCall();
+    }
+
+    // Clear chat ID storage as well to force a fresh chat ID on next initialization
+    if (isBrowser()) {
+      safeExecute(
+        () => {
+          localStorage.removeItem('marketrix_chat_id');
+        },
+        'Failed to clear chat ID from localStorage',
+        undefined
+      );
+    }
+
+    // Reset widget state to initial values
+    // Keep isOpen and isMinimized to preserve the widget's expanded state
     setState((prev) => ({
       ...prev,
-      messages: prev.messages.map((msg) => (msg.id === messageId ? { ...msg, ...updates } : msg)),
+      messages: [],
+      isTaskRunning: false,
+      activeTaskId: null,
+      taskProgress: [],
+      // Preserve widget UI state (isOpen and isMinimized)
+      currentMode: 'tell',
+      error: undefined,
     }));
-  }, []);
+
+    // Reset initialization flags to force re-initialization
+    initializedChatIdRef.current = null;
+    hasInitializedRef.current = false;
+
+    console.log('[Widget] Widget reset - all stored state cleared');
+  }, [state.isTaskRunning, state.activeTaskId]);
 
   const shouldShowWidget = useCallback(() => {
     return configManager.shouldShowWidget();
@@ -836,8 +1336,10 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
       sendMessage,
       stopTask,
       clearError,
-      addMessage,
-      updateMessage,
+      addMessage: addMessageCallback,
+      updateMessage: updateMessageCallback,
+      removeMessage: removeMessageCallback,
+      clearChatHistory,
     },
 
     // Config state

@@ -9,6 +9,13 @@ import {
 } from '../services/screenShareService';
 import type { ChatMessage, MarketrixConfig, TaskProgress } from '../types';
 import { addOpacity, getContrastingColor } from '../utils/colorUtils';
+import {
+  createScreenAccessRequestMessage,
+  createScreenshareMessage,
+  createStartedScreenshareMessage,
+  createSystemMessage,
+  createUserMessage,
+} from '../utils/messageFactory';
 import { getPositionClasses } from '../utils/widgetPositioning';
 import { MessageInput } from './messageInput';
 import { MessageList } from './messageList';
@@ -35,7 +42,9 @@ interface ChatWindowProps {
   onSetMode: (mode: InstructionType) => void;
   onAddMessage: (message: ChatMessage) => void;
   onUpdateMessage: (messageId: string, updates: Partial<ChatMessage>) => void;
+  onRemoveMessage?: (messageId: string) => void;
   onStopTask?: () => void;
+  onClearChat?: () => void | Promise<void>;
   onScreenSharingChange?: (isSharing: boolean) => void;
 }
 
@@ -53,7 +62,9 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   onSetMode,
   onAddMessage,
   onUpdateMessage,
+  onRemoveMessage,
   onStopTask,
+  onClearChat,
   onScreenSharingChange,
 }) => {
   const [inputValue, setInputValue] = useState('');
@@ -79,12 +90,53 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Sync isScreenSharing state with service
+  // Track previous screenshare state to detect external stops
+  const wasSharingRef = useRef(isScreenSharing);
+  const screenShareMessageIdRef = useRef(screenShareMessageId);
+
+  // Update refs when state changes
+  useEffect(() => {
+    wasSharingRef.current = isScreenSharing;
+  }, [isScreenSharing]);
+
+  useEffect(() => {
+    screenShareMessageIdRef.current = screenShareMessageId;
+  }, [screenShareMessageId]);
+
+  // Sync isScreenSharing state with service and handle external stops
   useEffect(() => {
     const checkScreenSharing = () => {
       const isSharing = isScreenSharingActive();
+      const wasSharing = wasSharingRef.current;
+      const currentMessageId = screenShareMessageIdRef.current;
+
+      wasSharingRef.current = isSharing;
       setIsScreenSharing(isSharing);
       onScreenSharingChange?.(isSharing);
+
+      // If screenshare stopped externally (was sharing, now not)
+      if (wasSharing && !isSharing && currentMessageId) {
+        // Only handle this if we have messages (not during a reset)
+        // During reset, messages are cleared, so we don't want to add a "Stopped screenshare" message
+        if (messages.length > 0) {
+          // Remove the screenshare message
+          if (onRemoveMessage) {
+            onRemoveMessage(currentMessageId);
+          }
+
+          // Add a muted "Stopped screenshare" message
+          const stoppedMessage = createSystemMessage(
+            'Stopped screenshare',
+            'show',
+            'user',
+            'stopped-sharing'
+          );
+          onAddMessage(stoppedMessage);
+        }
+
+        // Always clear the message ID reference
+        setScreenShareMessageId(null);
+      }
     };
 
     // Check initially
@@ -94,7 +146,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     const interval = setInterval(checkScreenSharing, 1000);
 
     return () => clearInterval(interval);
-  }, [onScreenSharingChange]);
+  }, [messages.length]);
 
   const handleSendMessage = () => {
     if (inputValue.trim() && !isLoading) {
@@ -102,13 +154,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       setInputValue('');
 
       // Add user message immediately (like user typed it)
-      const userMessage: ChatMessage = {
-        id: `user-message-${Date.now()}`,
-        content: messageContent,
-        sender: 'user',
-        timestamp: new Date(),
-        mode: currentMode,
-      };
+      const userMessage = createUserMessage(messageContent, currentMode);
       onAddMessage(userMessage);
 
       // Check if screen sharing is needed for show/do modes
@@ -131,17 +177,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   const requestScreenAccess = (mode: InstructionType) => {
     if (screenAccessRequestMessageId) return; // Already requesting
 
-    const requestMessageId = `screen-access-request-${Date.now()}`;
-    setScreenAccessRequestMessageId(requestMessageId);
-
-    const screenAccessRequestMessage: ChatMessage = {
-      id: requestMessageId,
-      content: 'Can I take a look at your screen?',
-      sender: 'agent',
-      timestamp: new Date(),
-      mode,
-      isScreenAccessRequest: true,
-    };
+    const screenAccessRequestMessage = createScreenAccessRequestMessage(mode);
+    setScreenAccessRequestMessageId(screenAccessRequestMessage.id);
 
     onAddMessage(screenAccessRequestMessage);
   };
@@ -166,14 +203,12 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       do: 'Do',
     };
 
-    const systemMessage: ChatMessage = {
-      id: `mode-change-${Date.now()}`,
-      content: `Switched to ${modeDisplayNames[mode]} mode`,
-      sender: 'agent',
-      timestamp: new Date(),
+    const systemMessage = createSystemMessage(
+      `Switched to ${modeDisplayNames[mode]} mode`,
       mode,
-      isSystemMessage: true,
-    };
+      'agent',
+      'mode-change'
+    );
 
     onAddMessage(systemMessage);
 
@@ -192,27 +227,24 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
 
       // Mark the screen access request as handled (but keep it as a screen access request so greeting stays)
       if (screenAccessRequestMessageId) {
+        console.log('[ChatWindow] Updating screen access message:', screenAccessRequestMessageId);
         onUpdateMessage(screenAccessRequestMessageId, {
           content: 'Can I take a look at your screen? ✓',
         });
         setScreenAccessRequestMessageId(null);
+      } else {
+        console.warn('[ChatWindow] No screenAccessRequestMessageId set when trying to update');
       }
 
-      // Create a screenshare message
-      const messageId = `screenshare-${Date.now()}`;
-      setScreenShareMessageId(messageId);
+      // Add muted "started screenshare" message
+      const startedMessage = createStartedScreenshareMessage('show');
+      onAddMessage(startedMessage);
 
-      // Add screenshare message to messages
-      const screenshareMessage: ChatMessage = {
-        id: messageId,
-        content: 'Started screenshare',
-        sender: 'user',
-        timestamp: new Date(),
-        mode: 'show',
-        videoStream: stream,
-      };
+      // Create a screenshare message with just the video stream
+      const screenshareMessage = createScreenshareMessage(stream, 'show');
+      setScreenShareMessageId(screenshareMessage.id);
 
-      // Add message using the callback
+      // Add screenshare message using the callback
       onAddMessage(screenshareMessage);
 
       // Send pending message if there is one (only after permission is granted)
@@ -265,21 +297,18 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     setIsScreenSharing(false);
     onScreenSharingChange?.(false);
 
-    // Remove video preview from the previous "Sharing screen" message
-    if (screenShareMessageId) {
-      onUpdateMessage(screenShareMessageId, {
-        videoStream: undefined,
-      });
+    // Remove the screenshare message (the one with video stream)
+    if (screenShareMessageId && onRemoveMessage) {
+      onRemoveMessage(screenShareMessageId);
     }
 
-    // Add a new "Stopped screenshare" message
-    const stoppedMessage: ChatMessage = {
-      id: `stopped-sharing-${Date.now()}`,
-      content: 'Stopped screenshare',
-      sender: 'user',
-      timestamp: new Date(),
-      mode: 'show',
-    };
+    // Add a muted "Stopped screenshare" message
+    const stoppedMessage = createSystemMessage(
+      'Stopped screenshare',
+      'show',
+      'user',
+      'stopped-sharing'
+    );
     onAddMessage(stoppedMessage);
 
     setScreenShareMessageId(null);
@@ -374,13 +403,55 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
             )}
           </div>
 
-          {/* Right side: Close button */}
+          {/* Right side: Reset and Close buttons */}
           <div
             className='flex items-center space-x-1 rounded-full p-0.5 shadow-sm'
             style={{
               backgroundColor: addOpacity(getContrastingColor(settings.widget_accent_color), 0.1),
             }}
           >
+            {onClearChat && (
+              <button
+                onClick={() => {
+                  const result = onClearChat();
+                  if (result instanceof Promise) {
+                    result.catch((error) => {
+                      console.error('Error clearing chat:', error);
+                    });
+                  }
+                }}
+                className='p-1 rounded-full transition-colors'
+                style={{
+                  backgroundColor: 'transparent',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = addOpacity(
+                    getContrastingColor(settings.widget_accent_color),
+                    0.2
+                  );
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }}
+                aria-label='Reset widget'
+                title='Reset widget (clear all stored state)'
+              >
+                <svg
+                  className='w-3 h-3'
+                  style={{ color: getContrastingColor(settings.widget_accent_color) }}
+                  fill='none'
+                  stroke='currentColor'
+                  viewBox='0 0 24 24'
+                >
+                  <path
+                    strokeLinecap='round'
+                    strokeLinejoin='round'
+                    strokeWidth={2}
+                    d='M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15'
+                  />
+                </svg>
+              </button>
+            )}
             <button
               onClick={onClose}
               className='p-1 rounded-full transition-colors'
@@ -423,6 +494,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                 messages={messages}
                 isLoading={isLoading}
                 messagesEndRef={messagesEndRef}
+                isTaskRunning={isTaskRunning}
+                currentMode={currentMode}
                 onSendMessage={(content, mode, connectionId, question) => {
                   // Check if screen sharing is needed for show/do modes
                   if (
