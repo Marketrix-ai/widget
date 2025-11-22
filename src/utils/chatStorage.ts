@@ -6,12 +6,15 @@
  */
 
 import type { ChatMessage, InstructionType, TaskProgress } from '../types';
+import { createLogger } from './logger';
 import {
   parseProgressLines,
   reconstructMessageContent,
   removeThinkingMarkers,
 } from './messageContentUtils';
 import { isBrowser } from './typeGuards';
+
+const log = createLogger('ChatStorage');
 
 const CHAT_ID_STORAGE_KEY = 'marketrix_chat_id';
 export const CHAT_CONTEXT_STORAGE_KEY = 'marketrix_chat_context';
@@ -141,8 +144,15 @@ export function storeChatContext(
 
     try {
       localStorage.setItem(CHAT_CONTEXT_STORAGE_KEY, JSON.stringify(context));
-      // Only log on meaningful changes (not every state update)
-      // Verification removed to reduce log noise - localStorage.setItem is reliable
+      // Log when messages are actually saved (for debugging)
+      log.debug('Stored chat context:', {
+        messageCount: serializedMessages.length,
+        isTaskRunning,
+        activeTaskId,
+        taskProgressLength: taskProgress.length,
+        currentMode,
+        hasMessages: serializedMessages.length > 0,
+      });
     } catch (storageError: any) {
       // Handle storage quota exceeded
       if (

@@ -227,7 +227,7 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
         isRestoringContextRef.current = false;
       }, 100);
 
-      return {
+      const restored = {
         ...prev,
         messages: restoredState.messages,
         isTaskRunning: restoredState.isTaskRunning,
@@ -237,6 +237,26 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
         isOpen: restoredState.isOpen ?? prev.isOpen,
         isMinimized: restoredState.isMinimized ?? prev.isMinimized,
       };
+
+      // Update refs immediately to prevent false change detection
+      prevIsTaskRunningRef.current = restored.isTaskRunning;
+      prevMessagesRef.current = restored.messages;
+      lastSavedStateRef.current = {
+        isOpen: restored.isOpen,
+        isMinimized: restored.isMinimized,
+        messageCount: restored.messages.length,
+        isTaskRunning: restored.isTaskRunning,
+        activeTaskId: restored.activeTaskId,
+        taskProgressLength: restored.taskProgress.length,
+        taskProgressHash: JSON.stringify(restored.taskProgress),
+      };
+
+      // Clear restoration flag after state update
+      setTimeout(() => {
+        isRestoringContextRef.current = false;
+      }, 100);
+
+      return restored;
     });
   }, []);
 
@@ -433,16 +453,33 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
       isRestoringContextRef.current = true;
 
       // Restore full state immediately (synchronously) if available
-      setState((prev) => ({
-        ...prev,
-        messages: restoredState.messages,
-        isTaskRunning: restoredState.isTaskRunning,
-        activeTaskId: restoredState.activeTaskId,
-        taskProgress: restoredState.taskProgress,
-        currentMode: restoredState.currentMode,
-        isOpen: restoredState.isOpen ?? prev.isOpen,
-        isMinimized: restoredState.isMinimized ?? prev.isMinimized,
-      }));
+      setState((prev) => {
+        const restored = {
+          ...prev,
+          messages: restoredState.messages,
+          isTaskRunning: restoredState.isTaskRunning,
+          activeTaskId: restoredState.activeTaskId,
+          taskProgress: restoredState.taskProgress,
+          currentMode: restoredState.currentMode,
+          isOpen: restoredState.isOpen ?? prev.isOpen,
+          isMinimized: restoredState.isMinimized ?? prev.isMinimized,
+        };
+
+        // Update refs immediately to prevent false change detection
+        prevIsTaskRunningRef.current = restored.isTaskRunning;
+        prevMessagesRef.current = restored.messages;
+        lastSavedStateRef.current = {
+          isOpen: restored.isOpen,
+          isMinimized: restored.isMinimized,
+          messageCount: restored.messages.length,
+          isTaskRunning: restored.isTaskRunning,
+          activeTaskId: restored.activeTaskId,
+          taskProgressLength: restored.taskProgress.length,
+          taskProgressHash: JSON.stringify(restored.taskProgress),
+        };
+
+        return restored;
+      });
 
       // Clear restoration flag after a short delay to allow state to settle
       setTimeout(() => {
@@ -660,11 +697,17 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
       lastSaved.isMinimized !== state.isMinimized;
 
     // Check if task progress changed (by comparing hash)
+    // Only consider it changed if:
+    // 1. We have progress (length > 0) and it actually changed
+    // 2. Progress went from non-empty to empty (task completed)
+    // 3. This is the first save (lastSaved is null) and we have progress
     const taskProgressHash = JSON.stringify(state.taskProgress);
+    const hasProgress = state.taskProgress.length > 0;
+    const hadProgress = lastSaved ? lastSaved.taskProgressLength > 0 : false;
     const taskProgressChanged =
-      !lastSaved ||
-      lastSaved.taskProgressLength !== state.taskProgress.length ||
-      lastSaved.taskProgressHash !== taskProgressHash;
+      (!lastSaved && hasProgress) || // First save with progress
+      (hasProgress && lastSaved?.taskProgressHash !== taskProgressHash) || // Progress changed
+      (hadProgress && !hasProgress); // Progress cleared (task completed)
 
     // Check if critical state changed
     const criticalStateChanged =
@@ -683,14 +726,23 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
     // 2. Task just completed/failed (transition from running to not running)
     // 3. New messages were added (important for tell mode and all modes)
     // 4. Task progress changed (important for ongoing tasks)
-    if (
+    // BUT: Don't save if we have no messages and no meaningful state (prevents overwriting good saves)
+    const shouldSaveImmediately =
       (isScreenSharing() && state.isTaskRunning) ||
       taskJustCompleted ||
       newMessagesAdded ||
-      taskProgressChanged
-    ) {
-      // Only save if state actually changed
-      if (criticalStateChanged || uiStateChanged) {
+      taskProgressChanged;
+
+    if (shouldSaveImmediately) {
+      // Only save if state actually changed AND we have messages or meaningful state
+      // This prevents empty saves from overwriting good saves
+      const hasMeaningfulState =
+        state.messages.length > 0 ||
+        state.isTaskRunning ||
+        state.taskProgress.length > 0 ||
+        state.activeTaskId !== null;
+
+      if ((criticalStateChanged || uiStateChanged) && hasMeaningfulState) {
         storeChatContext(
           chatId,
           state.messages,
@@ -733,8 +785,15 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
     const debounceMs = isCriticalUpdate ? 200 : 500;
 
     const timeoutId = setTimeout(() => {
-      // Only save if state actually changed
-      if (criticalStateChanged || uiStateChanged) {
+      // Only save if state actually changed AND we have messages or meaningful state
+      // This prevents empty saves from overwriting good saves
+      const hasMeaningfulState =
+        state.messages.length > 0 ||
+        state.isTaskRunning ||
+        state.taskProgress.length > 0 ||
+        state.activeTaskId !== null;
+
+      if ((criticalStateChanged || uiStateChanged) && hasMeaningfulState) {
         storeChatContext(
           chatId,
           state.messages,
