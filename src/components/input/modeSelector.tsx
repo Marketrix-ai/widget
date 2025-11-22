@@ -3,12 +3,12 @@ import { IoChatbubbleEllipsesOutline } from 'react-icons/io5';
 import { LuMousePointerClick } from 'react-icons/lu';
 import { SiTicktick } from 'react-icons/si';
 
-import MarketrixLogo from '../assets/marktrix-footer.png';
-import { useWidget } from '../hooks/useWidget';
-import type { InstructionType } from '../sdk';
-import type { MarketrixConfig } from '../types';
-import { addOpacity, getContrastingColor } from '../utils/colorUtils';
-import { getModeDescription, getModeDisplayName } from '../utils/textFormatting';
+import MarketrixLogo from '../../assets/marktrix-footer.png';
+import { useWidget } from '../../hooks/useWidget';
+import type { InstructionType } from '../../sdk';
+import type { MarketrixConfig } from '../../types';
+import { addOpacity, getContrastingColor } from '../../utils/colorUtils';
+import { getModeDescription, getModeDisplayName } from '../../utils/textFormatting';
 
 interface ModeSelectorProps {
   currentMode: InstructionType;

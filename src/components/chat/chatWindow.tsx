@@ -1,25 +1,25 @@
 import React, { useEffect, useRef, useState } from 'react';
 
-import { useWidget } from '../hooks/useWidget';
-import type { InstructionType } from '../sdk';
+import { useWidget } from '../../hooks/useWidget';
+import type { InstructionType } from '../../sdk';
 import {
   isScreenSharing as isScreenSharingActive,
   startScreenShare,
   stopScreenShare,
-} from '../services/screenShareService';
-import type { ChatMessage, MarketrixConfig, TaskProgress } from '../types';
-import { addOpacity, getContrastingColor } from '../utils/colorUtils';
+} from '../../services/screenShareService';
+import type { ChatMessage, MarketrixConfig, TaskProgress } from '../../types';
+import { addOpacity, getContrastingColor } from '../../utils/colorUtils';
 import {
   createScreenAccessRequestMessage,
   createScreenshareMessage,
   createStartedScreenshareMessage,
   createSystemMessage,
   createUserMessage,
-} from '../utils/messageFactory';
-import { getPositionClasses } from '../utils/widgetPositioning';
-import { MessageList } from './chat/messageList';
-import { MessageInput } from './input/messageInput';
-import { ModeSelector } from './input/modeSelector';
+} from '../../utils/messageFactory';
+import { getPositionClasses } from '../../utils/widgetPositioning';
+import { MessageInput } from '../input/messageInput';
+import { ModeSelector } from '../input/modeSelector';
+import { MessageList } from './messageList';
 
 interface ChatWindowProps {
   config: MarketrixConfig;

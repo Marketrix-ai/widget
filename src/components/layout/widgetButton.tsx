@@ -1,17 +1,16 @@
 import React, { useEffect, useState } from 'react';
 
-import MarketrixIcon from '../assets/marketrix-icon.png';
-import { useWidget } from '../hooks/useWidget';
-import type { MarketrixConfig } from '../types';
-import { addOpacity, darkenColor, getContrastingColor } from '../utils/colorUtils';
-import { getPositionClasses } from '../utils/widgetPositioning';
+import MarketrixIcon from '../../assets/marketrix-icon.png';
+import { useWidget } from '../../hooks/useWidget';
+import type { MarketrixConfig } from '../../types';
+import { addOpacity, darkenColor, getContrastingColor } from '../../utils/colorUtils';
+import { getPositionClasses } from '../../utils/widgetPositioning';
 
 interface WidgetButtonProps {
   config: MarketrixConfig;
   onClick: () => void;
   isOpen: boolean;
   isMinimized?: boolean;
-  _agentAvailable: boolean;
   isScreenSharing?: boolean;
 }
 

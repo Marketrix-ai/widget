@@ -30,8 +30,8 @@ export interface RestoredState {
   activeTaskId: string | null;
   taskProgress: TaskProgress[];
   currentMode: InstructionType;
-  isOpen?: boolean;
-  isMinimized?: boolean;
+  isOpen: boolean;
+  isMinimized: boolean;
   chatIdChanged: boolean;
 }
 
@@ -197,8 +197,8 @@ export function restoreStateForChatId(
     activeTaskId: chatIdChanged ? null : storedContext.activeTaskId,
     taskProgress: chatIdChanged ? [] : storedContext.taskProgress,
     currentMode: storedContext.currentMode,
-    isOpen: storedContext.isOpen ?? currentState.isOpen, // Preserve current state if not stored
-    isMinimized: storedContext.isMinimized ?? currentState.isMinimized, // Preserve current state if not stored
+    isOpen: storedContext.isOpen,
+    isMinimized: storedContext.isMinimized,
     chatIdChanged,
   };
 }

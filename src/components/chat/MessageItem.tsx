@@ -4,8 +4,8 @@ import { HiUser } from 'react-icons/hi2';
 import type { ChatMessage, WidgetState } from '../../types';
 import { getContrastingColor } from '../../utils/colorUtils';
 import { formatMessageTime } from '../../utils/textFormatting';
-import { MessageContent } from './MessageContent';
-import { VideoStreamDisplay } from './VideoStreamDisplay';
+import { MessageContent } from './messageContent';
+import { VideoStreamDisplay } from './videoStreamDisplay';
 
 interface MessageItemProps {
   message: ChatMessage;

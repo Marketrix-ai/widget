@@ -1,7 +1,7 @@
 import React from 'react';
 
 import { formatMessageTime } from '../../utils/textFormatting';
-import { SuggestedActions } from './SuggestedActions';
+import { SuggestedActions } from './suggestedActions';
 
 interface WelcomeMessageProps {
   greeting: string;

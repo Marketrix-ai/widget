@@ -1,16 +1,17 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 import { useWidget } from '../hooks/useWidget';
 import type { MarketrixConfig } from '../types';
-import { ChatWindow } from './chatWindow';
-import { WidgetButton } from './widgetButton';
+import { ChatWindow } from './chat/chatWindow';
+import { WidgetButton } from './layout/widgetButton';
+import { ErrorDisplay } from './ui/errorDisplay';
 
 interface MarketrixWidgetProps {
   config: MarketrixConfig;
 }
 
 export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
-  const [isScreenSharing, setIsScreenSharing] = React.useState(false);
+  const [isScreenSharing, setIsScreenSharing] = useState(false);
 
   const { state, actions, marketrixConfig, shouldShow, getWidgetPosition, settings } = useWidget({
     config,
@@ -49,7 +50,6 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
         onClick={actions.toggleWidget}
         isOpen={state.isOpen}
         isMinimized={state.isMinimized}
-        _agentAvailable={state.agentAvailable}
         isScreenSharing={isScreenSharing}
       />
 
@@ -74,35 +74,20 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
         onScreenSharingChange={setIsScreenSharing}
       />
 
-      {state.error ? (
-        <div
-          className='absolute max-w-sm z-50'
-          style={{
-            top: '-60px',
-            ...(widgetPosition.position === 'bottom_left' || !widgetPosition.position
-              ? { left: '0' }
-              : { right: '0' }),
-          }}
-        >
-          <div className='bg-red-500 text-white px-4 py-3 rounded-lg shadow-lg'>
-            <div className='flex items-center justify-between'>
-              <span className='text-sm'>{state.error}</span>
-              <button
-                onClick={() => actions.clearError()}
-                className='ml-4 text-white hover:text-red-100'
-              >
-                <svg className='w-4 h-4' fill='currentColor' viewBox='0 0 20 20'>
-                  <path
-                    fillRule='evenodd'
-                    d='M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z'
-                    clipRule='evenodd'
-                  />
-                </svg>
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
+      {state.error && (
+        <ErrorDisplay
+          error={state.error}
+          onClose={() => actions.clearError()}
+          position={
+            widgetPosition.position as
+              | 'bottom_left'
+              | 'bottom_right'
+              | 'top_left'
+              | 'top_right'
+              | undefined
+          }
+        />
+      )}
     </div>
   );
 };

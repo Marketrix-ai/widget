@@ -4,14 +4,14 @@ import { IoChatbubbleEllipsesOutline } from 'react-icons/io5';
 import { LuMousePointerClick } from 'react-icons/lu';
 import { SiTicktick } from 'react-icons/si';
 
-import MarketrixIcon from '../assets/marketrix-icon.png';
-import { useWidget } from '../hooks/useWidget';
-import type { ChatMessage, MarketrixConfig } from '../types';
-import { addOpacity } from '../utils/colorUtils';
-import { parseProgressLines } from '../utils/messageContentUtils';
-import { createUserMessage } from '../utils/messageFactory';
-import { MessageItem } from './chat/MessageItem';
-import { WelcomeMessage } from './chat/WelcomeMessage';
+import MarketrixIcon from '../../assets/marketrix-icon.png';
+import { useWidget } from '../../hooks/useWidget';
+import type { ChatMessage, MarketrixConfig } from '../../types';
+import { addOpacity } from '../../utils/colorUtils';
+import { parseProgressLines } from '../../utils/messageContentUtils';
+import { createUserMessage } from '../../utils/messageFactory';
+import { MessageItem } from './messageItem';
+import { WelcomeMessage } from './welcomeMessage';
 
 // Define the chip type to handle both formats
 type ChipData = {

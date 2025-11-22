@@ -2,8 +2,8 @@ import React from 'react';
 
 import type { ChatMessage, WidgetState } from '../../types';
 import { parseProgressLines, removeThinkingMarkerFromEnd } from '../../utils/messageContentUtils';
-import { ProgressLine } from './ProgressLine';
-import { ThinkingIndicator } from './ThinkingIndicator';
+import { ProgressLine } from './progressLine';
+import { ThinkingIndicator } from './thinkingIndicator';
 
 interface MessageContentProps {
   message: ChatMessage;

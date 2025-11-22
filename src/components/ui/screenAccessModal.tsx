@@ -1,6 +1,6 @@
 import React from 'react';
 
-import MarketrixIcon from '../assets/marketrix-icon.png';
+import MarketrixIcon from '../../assets/marketrix-icon.png';
 
 interface ScreenAccessModalProps {
   isOpen: boolean;

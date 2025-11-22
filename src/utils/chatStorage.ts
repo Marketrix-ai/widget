@@ -31,8 +31,8 @@ export interface StoredChatContext {
   activeTaskId: string | null;
   taskProgress: TaskProgress[];
   currentMode: InstructionType;
-  isOpen?: boolean; // Optional for backward compatibility
-  isMinimized?: boolean; // Optional for backward compatibility
+  isOpen: boolean;
+  isMinimized: boolean;
   timestamp: number;
 }
 
@@ -79,8 +79,8 @@ export function storeChatContext(
   activeTaskId: string | null,
   taskProgress: TaskProgress[],
   currentMode: InstructionType,
-  isOpen?: boolean,
-  isMinimized?: boolean
+  isOpen: boolean,
+  isMinimized: boolean
 ): void {
   if (!isBrowser()) {
     return;
@@ -227,8 +227,8 @@ export function getAnyStoredChatContext(): StoredChatContext | null {
       return null;
     }
 
-    // Check version compatibility (allow version 1 for backward compatibility)
-    if (context.version !== CONTEXT_VERSION && context.version !== 1) {
+    // Check version compatibility
+    if (context.version !== CONTEXT_VERSION) {
       console.warn('[Chat Storage] Context version mismatch, ignoring stored context');
       return null;
     }

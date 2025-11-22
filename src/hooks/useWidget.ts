@@ -177,6 +177,9 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
   // Ref for chat ID (for status change handler compatibility)
   const chatIdRef = useRef<string | null>(null);
 
+  // Ref to track the active message that should receive tool call progress updates
+  const activeMessageRef = useRef<ChatMessage | null>(null);
+
   // Restoration state tracking (local to this hook instance)
   const isRestoringContextRef = useRef<boolean>(false);
 
@@ -310,7 +313,7 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
           websocketServiceRef
         ),
         onToolCallProgress: createToolCallProgressCallback(),
-        onMessage: createMessageHandler(setState),
+        onMessage: createMessageHandler(setState, activeMessageRef),
         onError: createErrorHandler(setState),
       };
 
@@ -1074,6 +1077,9 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
       const placeholderMessage = createPlaceholderMessage(messageMode);
       const placeholderMessageId = placeholderMessage.id;
 
+      // Set active message ref to track which message should receive progress updates
+      activeMessageRef.current = placeholderMessage;
+
       // Only add user message if it wasn't already added (e.g., from chip click)
       if (!skipUserMessage) {
         const userMessage = createUserMessage(content, messageMode);
@@ -1106,6 +1112,8 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
           await initializeChatSession();
         } catch (initError) {
           log.error('Failed to initialize chat session:', initError);
+          // Clear active message ref on initialization error
+          activeMessageRef.current = null;
           // Remove placeholder and show error
           setState((prev) => {
             const newMessages = prev.messages.filter((msg) => msg.id !== placeholderMessageId);
@@ -1127,6 +1135,8 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
       // Double-check after initialization
       if (!apiServiceRef.current) {
         log.error('Failed to initialize API service');
+        // Clear active message ref on API service error
+        activeMessageRef.current = null;
         setState((prev) => {
           const newMessages = prev.messages.filter((msg) => msg.id !== placeholderMessageId);
           const errorMessage = createErrorMessage(
@@ -1152,6 +1162,8 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
         }
       } catch (chatIdError) {
         log.error('Failed to get or create chat ID:', chatIdError);
+        // Clear active message ref on chat ID error
+        activeMessageRef.current = null;
         setState((prev) => {
           const newMessages = prev.messages.filter((msg) => msg.id !== placeholderMessageId);
           const errorMessage = createErrorMessage(
@@ -1234,6 +1246,14 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
                   : msg
               );
 
+              // Update active message ref to point to the updated placeholder
+              const updatedPlaceholder = updatedMessages.find(
+                (msg) => msg.id === placeholderMessageId
+              );
+              if (updatedPlaceholder) {
+                activeMessageRef.current = updatedPlaceholder;
+              }
+
               log.debug(
                 `Updated placeholder with agent message content. Message count: ${updatedMessages.length}`
               );
@@ -1257,6 +1277,8 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
             const newMessages = prev.messages.map((msg) =>
               msg.id === placeholderMessageId ? agentMessage : msg
             );
+            // Update active message ref to point to the agent message
+            activeMessageRef.current = agentMessage;
             return {
               ...prev,
               messages: newMessages,
@@ -1287,6 +1309,9 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
                 };
               }
             }
+
+            // Update active message ref to point to the agent message
+            activeMessageRef.current = finalAgentMessage;
 
             const newMessages = prev.messages.map((msg) =>
               msg.id === placeholderMessageId ? finalAgentMessage : msg
@@ -1335,6 +1360,9 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
         }
 
         const errorMessage = createErrorMessage(userFriendlyError, messageMode, messageId);
+
+        // Clear active message ref on error
+        activeMessageRef.current = null;
 
         // Remove placeholder message on error
         setState((prev) => {
@@ -1398,6 +1426,9 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
 
         return msg;
       });
+
+      // Clear active message ref when task stops
+      activeMessageRef.current = null;
 
       return {
         ...prev,
