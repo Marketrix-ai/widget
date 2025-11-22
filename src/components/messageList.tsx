@@ -1,5 +1,6 @@
 // / <reference lib="dom" />
 import React, { useEffect, useRef, useState } from 'react';
+import { FaCheckCircle, FaCircle } from 'react-icons/fa';
 import { HiUser } from 'react-icons/hi2';
 import { IoChatbubbleEllipsesOutline } from 'react-icons/io5';
 import { LuMousePointerClick } from 'react-icons/lu';
@@ -23,6 +24,11 @@ import {
   lightenColor,
 } from '../utils/colorUtils';
 import { removeTourClickHandler } from '../utils/domUtils';
+import {
+  hasThinkingMarker,
+  parseProgressLines,
+  removeThinkingMarkerFromEnd,
+} from '../utils/messageContentUtils';
 import { createUserMessage } from '../utils/messageFactory';
 import { formatMessageTime } from '../utils/textFormatting';
 import {
@@ -1414,16 +1420,12 @@ export const MessageList = ({
   const getSuggestedActions = () => {
     // If settings have widget_chips, use those
     if (settings?.widget_chips && settings.widget_chips.length > 0) {
-      // console.log('Widget chips from settings:', settings.widget_chips);
-
       return settings.widget_chips.map((chip: ChipData, index: number) => {
         // Handle both formats: chip_text (expected) and question (actual backend)
         const chipText = chip.chip_text || chip.question || '';
         const chipMode = chip.chip_mode || chip.type || 'tell';
         const mode: 'show' | 'tell' | 'do' =
           chipMode === 'show' || chipMode === 'tell' || chipMode === 'do' ? chipMode : 'tell';
-
-        // console.log(`Processing chip ${index}:`, { chip, chipText, chipMode, mode });
 
         let icon;
         let isShow = false;
@@ -1778,12 +1780,6 @@ export const MessageList = ({
 
       {/* Messages */}
       {messages.map((message: ChatMessage, index: number) => {
-        // Debug: Log message keys to check for duplicates
-        // console.log(`Message ${index}:`, {
-        //   id: message.id,
-        //   content: message.content ? message.content.substring(0, 50) : 'No content',
-        // });
-
         // Render system messages differently (muted, centered)
         if (message.isSystemMessage) {
           return (
@@ -1929,13 +1925,64 @@ export const MessageList = ({
                 ) : (
                   <>
                     {/* Only show text content if there is content and no video stream */}
-                    {message.content && !message.videoStream && (
-                      <div className='text-xs font-inter font-medium leading-tight whitespace-pre-wrap break-words'>
-                        {message.content
-                          .replace(/\n\n__THINKING__$/, '')
-                          .replace(/__THINKING__/g, '') || 'No content available'}
-                      </div>
-                    )}
+                    {message.content &&
+                      !message.videoStream &&
+                      (() => {
+                        const cleanContent = removeThinkingMarkerFromEnd(message.content);
+                        const { mainContent, progressLines } = parseProgressLines(cleanContent);
+
+                        return (
+                          <div className='text-xs font-inter font-medium leading-tight break-words'>
+                            {/* Main content */}
+                            {mainContent && (
+                              <div className='whitespace-pre-wrap mb-2'>{mainContent}</div>
+                            )}
+                            {/* Progress lines with icons */}
+                            {progressLines.length > 0 && (
+                              <div className='flex flex-col gap-1.5 mt-2'>
+                                {progressLines.map((line, idx) => {
+                                  const trimmedLine = line.trim();
+                                  const isCompleted =
+                                    trimmedLine.startsWith('●✓') || trimmedLine.startsWith('✓');
+                                  const isPending = trimmedLine.startsWith('○') && !isCompleted;
+
+                                  // Extract text after the status indicator
+                                  const text = trimmedLine
+                                    .replace(/^[○●✓]\s*/, '')
+                                    .replace(/\s*✗\s*\([^)]*\)$/, '')
+                                    .trim();
+
+                                  return (
+                                    <div key={idx} className='flex items-start gap-2'>
+                                      {isCompleted ? (
+                                        <FaCheckCircle
+                                          className='flex-shrink-0 mt-0.5'
+                                          style={{
+                                            color: settings.widget_accent_color || '#10b981',
+                                          }}
+                                          size={16}
+                                        />
+                                      ) : isPending ? (
+                                        <FaCircle
+                                          className='flex-shrink-0 mt-0.5'
+                                          style={{
+                                            color: addOpacity(settings.widget_text_color, 0.5),
+                                          }}
+                                          size={16}
+                                        />
+                                      ) : null}
+                                      <span className='flex-1 whitespace-pre-wrap'>{text}</span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+                            {!mainContent && progressLines.length === 0 && (
+                              <div>No content available</div>
+                            )}
+                          </div>
+                        );
+                      })()}
                     {/* Show Thinking indicator for active task messages when waiting */}
                     {isTaskRunning &&
                       (currentMode === 'show' || currentMode === 'do') &&
@@ -1944,7 +1991,7 @@ export const MessageList = ({
                       !message.isScreenAccessRequest &&
                       !message.isPlaceholder &&
                       index === messages.length - 1 &&
-                      message.content.includes('__THINKING__') && (
+                      hasThinkingMarker(message.content) && (
                         <div
                           className='flex flex-col gap-1.5 mt-2 pt-1 border-t'
                           style={{ borderColor: addOpacity(settings.widget_border_color, 0.2) }}

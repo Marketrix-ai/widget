@@ -51,7 +51,9 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
   }, [settings.widget_appearance, isMinimized]);
 
   // Use position from widget position config or settings
-  const effectivePosition = widgetPosition.position || settings.widget_position || 'bottom_right';
+  const effectivePosition = (widgetPosition.position ||
+    settings.widget_position ||
+    'bottom_right') as 'bottom_left' | 'bottom_right';
   const effectivePositionClasses = getPositionClasses(effectivePosition);
 
   return (

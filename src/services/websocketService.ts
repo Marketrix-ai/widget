@@ -599,8 +599,24 @@ export class WebSocketService {
   private sendAndForwardResponse(response: WebSocketMessage): void {
     this.send(response);
     // Forward the result message to onMessage callback so it can update progress
+    // Ensure the message has the correct format for routing
+    const resultMessage: WebSocketMessage = {
+      ...response,
+      method: 'tools/call', // Ensure method is set for routing
+      id: response.id,
+      result: response.result,
+      params: undefined, // Explicitly set to undefined to ensure routing works
+      error: undefined, // Explicitly set to undefined to ensure routing works
+    };
     if (this.callbacks.onMessage) {
-      this.callbacks.onMessage(response);
+      console.log('[WebSocket] Forwarding result message to onMessage callback:', {
+        method: resultMessage.method,
+        hasId: !!resultMessage.id,
+        hasResult: !!resultMessage.result,
+        hasParams: !!resultMessage.params,
+        hasError: !!resultMessage.error,
+      });
+      this.callbacks.onMessage(resultMessage);
     }
   }
 
@@ -619,7 +635,16 @@ export class WebSocketService {
         const errorResponse = this.sendErrorResponse(requestId, code, message);
         // Forward the error response to onMessage callback so it can update progress
         if (this.callbacks.onMessage && errorResponse) {
-          this.callbacks.onMessage(errorResponse);
+          const errorMessage: WebSocketMessage = {
+            ...errorResponse,
+            method: 'tools/call', // Ensure method is set for routing
+            id: errorResponse.id,
+            error: errorResponse.error,
+            params: undefined, // Explicitly set to undefined
+            result: undefined, // Explicitly set to undefined
+          };
+          console.log('[WebSocket] Forwarding error message to onMessage callback');
+          this.callbacks.onMessage(errorMessage);
         }
       } catch (sendError) {
         console.error(`[WebSocket] Failed to send error response for tool ${toolName}:`, sendError);

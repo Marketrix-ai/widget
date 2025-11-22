@@ -5,6 +5,10 @@
  * and ensure consistent error handling patterns across the widget.
  */
 
+import { createLogger } from './logger';
+
+const log = createLogger('ErrorUtils');
+
 /**
  * Execute a function safely with error handling
  * Returns the result or undefined if an error occurs
@@ -46,7 +50,7 @@ export function logError(
   const errorMessage = error instanceof Error ? error.message : String(error);
   const errorStack = error instanceof Error ? error.stack : undefined;
 
-  console.error(`[${context}] Error:`, errorMessage, {
+  log.error(`${context}: ${errorMessage}`, {
     ...additionalInfo,
     stack: errorStack,
   });
@@ -60,7 +64,7 @@ export function logWarning(
   message: string,
   additionalInfo?: Record<string, unknown>
 ): void {
-  console.warn(`[${context}] Warning:`, message, additionalInfo || {});
+  log.warn(`${context}: ${message}`, additionalInfo || {});
 }
 
 /**

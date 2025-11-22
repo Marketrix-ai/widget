@@ -316,7 +316,9 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   };
 
   // Get widget settings for positioning
-  const effectivePosition = widgetPosition.position || settings.widget_position || 'bottom_right';
+  const effectivePosition = (widgetPosition.position ||
+    settings.widget_position ||
+    'bottom_right') as 'bottom_left' | 'bottom_right';
   const positionClasses = getPositionClasses(effectivePosition);
 
   if (!isOpen) return null;

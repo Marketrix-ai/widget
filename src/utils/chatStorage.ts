@@ -6,6 +6,11 @@
  */
 
 import type { ChatMessage, InstructionType, TaskProgress } from '../types';
+import {
+  parseProgressLines,
+  reconstructMessageContent,
+  removeThinkingMarkers,
+} from './messageContentUtils';
 import { isBrowser } from './typeGuards';
 
 const CHAT_ID_STORAGE_KEY = 'marketrix_chat_id';
@@ -86,7 +91,7 @@ export function storeChatContext(
       .filter((msg) => !msg.isPlaceholder)
       .map((msg) => {
         // Clean __THINKING__ markers from content before storing
-        const cleanContent = msg.content.replace(/__THINKING__/g, '');
+        const cleanContent = removeThinkingMarkers(msg.content);
         return {
           id: msg.id,
           content: cleanContent,
@@ -196,27 +201,23 @@ export function restoreMessagesFromContext(context: StoredChatContext): ChatMess
   try {
     return context.messages.map((msg) => {
       // Remove any __THINKING__ markers that might have been stored
-      let cleanContent = msg.content.replace(/__THINKING__/g, '');
+      let cleanContent = removeThinkingMarkers(msg.content);
 
-      // Validate and clean progress lines
-      // Progress lines should be separated by \n\n and start with ○ or ●✓
-      const parts = cleanContent.split('\n\n');
-      if (parts.length > 1) {
-        const mainContent = parts[0];
-        const progressLines = parts.slice(1).filter((line) => {
-          const trimmed = line.trim();
-          // Keep only valid progress lines (starting with ○ or ●✓)
-          // or lines that are part of the main content (not progress lines)
-          return (
-            trimmed.length > 0 &&
-            (trimmed.startsWith('○') || trimmed.startsWith('●✓') || !trimmed.match(/^[○●✓]/))
-          ); // Keep non-progress lines
-        });
+      // Validate and clean progress lines using utility functions
+      const { mainContent, progressLines } = parseProgressLines(cleanContent);
 
-        // Reconstruct content with validated progress lines
-        cleanContent =
-          progressLines.length > 0 ? [mainContent, ...progressLines].join('\n\n') : mainContent;
-      }
+      // Filter progress lines to keep only valid ones (starting with ○ or ●✓)
+      // or lines that are part of the main content (not progress lines)
+      const validProgressLines = progressLines.filter((line) => {
+        const trimmed = line.trim();
+        return (
+          trimmed.length > 0 &&
+          (trimmed.startsWith('○') || trimmed.startsWith('●✓') || !trimmed.match(/^[○●✓]/))
+        );
+      });
+
+      // Reconstruct content with validated progress lines
+      cleanContent = reconstructMessageContent(mainContent, validProgressLines);
 
       return {
         id: msg.id,
