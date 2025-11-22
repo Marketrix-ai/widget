@@ -9,6 +9,7 @@ import type { InstructionType, WidgetSettingsData } from '../sdk';
 import MarketrixApiService from '../services/marketrixApiService';
 import { isScreenSharing, stopScreenShare } from '../services/screenShareService';
 import { cleanup } from '../services/showModeService';
+import { restoreEarlyState, restoreStateForChatId } from '../services/stateRestorationService';
 import {
   createErrorHandler,
   createMessageHandler,
@@ -18,13 +19,10 @@ import {
 import { WebSocketService } from '../services/websocketService';
 import type { ChatMessage, MarketrixConfig, WidgetState } from '../types';
 import {
+  CHAT_CONTEXT_STORAGE_KEY,
   clearChatContext,
   clearPendingToolCall,
-  getAnyStoredChatContext,
   getPendingToolCall,
-  getStoredChatContext,
-  getStoredChatId,
-  restoreMessagesFromContext,
   storeChatContext,
 } from '../utils/chatStorage';
 import { cleanupAllWidgetElements } from '../utils/cleanupUtils';
@@ -35,13 +33,13 @@ import {
 } from '../utils/configGetters';
 import { configManager } from '../utils/configManager';
 import { logError, safeExecute, safeExecuteAsync } from '../utils/errorUtils';
+import { initializationState } from '../utils/initializationState';
 import { createLogger } from '../utils/logger';
 import {
   findTaskMessageIndex,
   hasProgressLines,
   parseProgressLines,
   reconstructMessageContent,
-  removeThinkingMarkers,
 } from '../utils/messageContentUtils';
 import {
   createAgentMessage,
@@ -55,10 +53,6 @@ import { addMessage, removeMessage, updateMessage } from '../utils/stateUtils';
 import { isBrowser } from '../utils/typeGuards';
 
 const log = createLogger('Widget');
-
-// Module-level flag to prevent early restoration from running multiple times
-// This persists across component remounts
-let earlyRestorationDone = false;
 
 interface UseWidgetProps {
   config?: MarketrixConfig;
@@ -165,17 +159,29 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
   const prevIsTaskRunningRef = useRef<boolean>(state.isTaskRunning);
   // Ref to track previous messages to detect when new messages are added
   const prevMessagesRef = useRef<ChatMessage[]>(state.messages);
+  // Ref to track last saved state to prevent duplicate saves
+  const lastSavedStateRef = useRef<{
+    isOpen: boolean;
+    isMinimized: boolean;
+    messageCount: number;
+    isTaskRunning: boolean;
+    activeTaskId: string | null;
+    taskProgressLength: number;
+    taskProgressHash: string; // Hash of taskProgress to detect changes
+  } | null>(null);
 
   // Service references
   const apiServiceRef = useRef<MarketrixApiService | null>(null);
   const websocketServiceRef = useRef<WebSocketService | null>(null);
 
-  // Initialization state tracking
-  const initializationInProgressRef = useRef<boolean>(false);
-  const initializedChatIdRef = useRef<string | null>(null);
-  const hasInitializedRef = useRef<boolean>(false);
+  // Ref for chat ID (for status change handler compatibility)
+  const chatIdRef = useRef<string | null>(null);
+
+  // Restoration state tracking (local to this hook instance)
   const isRestoringContextRef = useRef<boolean>(false);
-  const earlyRestorationDoneRef = useRef<boolean>(false);
+
+  // Ref to track if initialization has been attempted (prevents multiple effect runs)
+  const initializationAttemptedRef = useRef<boolean>(false);
 
   /**
    * Merged configuration with defaults
@@ -190,116 +196,30 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
   }, [config]);
 
   /**
-   * Check if initialization should be skipped
+   * Check if initialization should be skipped (silent version)
+   * Used internally to avoid logging on every check
    */
-  const shouldSkipInitialization = useCallback((): boolean => {
-    // If already initialized with the same chat_id and websocket is connected, skip
-    if (
-      websocketServiceRef.current &&
-      initializedChatIdRef.current &&
-      websocketServiceRef.current.isConnected() &&
-      websocketServiceRef.current.getChatId() === initializedChatIdRef.current
-    ) {
-      log.debug('Already initialized and connected, skipping re-initialization');
-      hasInitializedRef.current = true;
-      return true;
-    }
-
-    // Prevent multiple simultaneous initializations
-    if (initializationInProgressRef.current) {
-      log.debug('Initialization already in progress, skipping...');
-      return true;
-    }
-
-    return false;
+  const shouldSkipInitializationSilent = useCallback((): boolean => {
+    return initializationState.shouldSkipInitializationSilent(
+      () => websocketServiceRef.current?.getChatId() ?? null,
+      () => websocketServiceRef.current?.isConnected() ?? false
+    );
   }, []);
 
   /**
-   * Restore chat context from storage
-   * Handles chat ID changes gracefully by preserving history and appending a system message
-   * Note: This may be called after early restoration, so we check if messages already exist
+   * Restore chat context from storage using restoration service
    */
   const restoreChatContext = useCallback((chatId: string): void => {
-    const storedContext = getStoredChatContext(chatId);
-    if (!storedContext) {
-      log.debug('No stored context found for restoration');
-      return;
-    }
-
-    const chatIdChanged = storedContext.chat_id !== chatId;
-
-    // Count system messages for logging
-    const systemMessageCount = storedContext.messages.filter((m) => m.isSystemMessage).length;
-    log.debug('Restoring context from storage:', {
-      messageCount: storedContext.messages.length,
-      systemMessageCount,
-      isTaskRunning: storedContext.isTaskRunning,
-      activeTaskId: storedContext.activeTaskId,
-      currentMode: storedContext.currentMode,
-      isOpen: storedContext.isOpen,
-      isMinimized: storedContext.isMinimized,
-      chatIdChanged,
-      storedChatId: storedContext.chat_id,
-      currentChatId: chatId,
-    });
-
     // Set flag to prevent saves during restoration
     isRestoringContextRef.current = true;
 
-    // Check if messages were already restored early
     setState((prev) => {
-      const alreadyHasMessages = prev.messages.length > 0;
+      const restoredState = restoreStateForChatId(chatId, prev);
 
-      // If messages already exist and chat ID hasn't changed, don't overwrite
-      if (alreadyHasMessages && !chatIdChanged) {
-        log.debug('Messages already restored, skipping restoration');
+      if (!restoredState) {
+        // No restoration needed
         isRestoringContextRef.current = false;
         return prev;
-      }
-
-      const restoredMessages = restoreMessagesFromContext(storedContext);
-
-      // Clean up messages: remove thinking markers and validate progress lines
-      const cleanedMessages = restoredMessages.map((msg) => {
-        const cleanContent = removeThinkingMarkers(msg.content);
-        const { mainContent, progressLines } = parseProgressLines(cleanContent);
-        const validProgressLines = progressLines.filter((line) => line.trim().length > 0);
-        const finalContent = reconstructMessageContent(mainContent, validProgressLines);
-
-        return {
-          ...msg,
-          content: finalContent,
-        };
-      });
-
-      // If chat ID changed, append context change message (but only if one doesn't already exist)
-      // Filter out any existing "Chat context changed" messages first to avoid duplicates
-      let finalMessages = cleanedMessages;
-      if (chatIdChanged) {
-        // Remove any existing "Chat context changed" messages to avoid duplicates
-        const messagesWithoutContextChange = (
-          alreadyHasMessages ? prev.messages : cleanedMessages
-        ).filter((msg) => !(msg.isSystemMessage && msg.content === 'Chat context changed'));
-
-        // Check if a context change message already exists
-        const hasContextChangeMessage = messagesWithoutContextChange.some(
-          (msg) => msg.isSystemMessage && msg.content === 'Chat context changed'
-        );
-
-        if (!hasContextChangeMessage) {
-          // Append context change message only if one doesn't exist
-          const contextChangeMessage = createSystemMessage(
-            'Chat context changed',
-            storedContext.currentMode,
-            'agent',
-            'context-changed'
-          );
-          finalMessages = [...messagesWithoutContextChange, contextChangeMessage];
-          log.debug('Chat ID changed, appended context change message');
-        } else {
-          finalMessages = messagesWithoutContextChange;
-          log.debug('Chat ID changed, but context change message already exists, skipping');
-        }
       }
 
       // Clear restoration flag after state update
@@ -307,18 +227,15 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
         isRestoringContextRef.current = false;
       }, 100);
 
-      // When chat ID changes, reset task state (tasks are tied to specific chat IDs)
-      // But preserve messages and mode
       return {
         ...prev,
-        messages: finalMessages,
-        // Only restore task state if chat ID hasn't changed (tasks are chat-specific)
-        isTaskRunning: chatIdChanged ? false : storedContext.isTaskRunning,
-        activeTaskId: chatIdChanged ? null : storedContext.activeTaskId,
-        taskProgress: chatIdChanged ? [] : storedContext.taskProgress,
-        currentMode: storedContext.currentMode,
-        isOpen: storedContext.isOpen ?? prev.isOpen, // Preserve current state if not stored
-        isMinimized: storedContext.isMinimized ?? prev.isMinimized, // Preserve current state if not stored
+        messages: restoredState.messages,
+        isTaskRunning: restoredState.isTaskRunning,
+        activeTaskId: restoredState.activeTaskId,
+        taskProgress: restoredState.taskProgress,
+        currentMode: restoredState.currentMode,
+        isOpen: restoredState.isOpen ?? prev.isOpen,
+        isMinimized: restoredState.isMinimized ?? prev.isMinimized,
       };
     });
   }, []);
@@ -369,7 +286,7 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
             chatId: string | null,
             websocketService: unknown
           ) => void,
-          initializedChatIdRef,
+          chatIdRef,
           websocketServiceRef
         ),
         onToolCallProgress: createToolCallProgressCallback(),
@@ -400,7 +317,7 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
     // Skip if already connected with same chat_id
     if (currentChatId === chatId && websocketServiceRef.current.isConnected()) {
       log.debug('WebSocket already connected with this chat_id, skipping');
-      initializedChatIdRef.current = chatId;
+      initializationState.setChatId(chatId);
       return;
     }
 
@@ -414,13 +331,15 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
     if (!websocketServiceRef.current.isConnected()) {
       try {
         await websocketServiceRef.current.connect(chatId);
-        initializedChatIdRef.current = chatId;
+        initializationState.setChatId(chatId);
+        chatIdRef.current = chatId;
         log.info('WebSocket connection initiated');
       } catch (wsError) {
         log.error('Failed to connect websocket:', wsError);
       }
     } else {
-      initializedChatIdRef.current = chatId;
+      initializationState.setChatId(chatId);
+      chatIdRef.current = chatId;
     }
   }, []);
 
@@ -429,40 +348,39 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
    */
   const initializeChatSession = useCallback(async (): Promise<void> => {
     if (!apiServiceRef.current) {
-      initializationInProgressRef.current = false;
+      initializationState.markComplete();
       return;
     }
 
     // Prevent multiple simultaneous initializations
-    if (initializationInProgressRef.current) {
+    if (!initializationState.markInProgress()) {
       log.debug('Initialization already in progress, skipping initializeChatSession');
       return;
     }
 
     // Check if already initialized with a chat ID
-    if (initializedChatIdRef.current && hasInitializedRef.current) {
+    if (initializationState.getComplete() && initializationState.getChatId()) {
       log.debug('Already initialized, skipping initializeChatSession');
       return;
     }
 
-    initializationInProgressRef.current = true;
-
     try {
-      // Initialize chat ID
-      const chatId = await apiServiceRef.current.initializeChatId();
+      // Get or create chat ID using centralized manager (prevents concurrent creation)
+      const chatId = await apiServiceRef.current.getOrCreateChatId();
 
       // Check if we already have this chat ID initialized
-      if (initializedChatIdRef.current === chatId && hasInitializedRef.current) {
+      if (initializationState.getChatId() === chatId && initializationState.getComplete()) {
         log.debug('Chat ID already initialized, skipping');
-        initializationInProgressRef.current = false;
+        initializationState.markComplete();
         return;
       }
 
       log.info('Chat ID initialized:', chatId);
-      initializedChatIdRef.current = chatId;
+      initializationState.setChatId(chatId);
+      chatIdRef.current = chatId;
 
       // Only restore context if we haven't already (early restoration may have done this)
-      if (!earlyRestorationDoneRef.current) {
+      if (!initializationState.getEarlyRestorationDone()) {
         restoreChatContext(chatId);
       } else {
         log.debug('Early restoration already done, skipping restoreChatContext');
@@ -475,8 +393,7 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
         websocketServiceRef.current.isConnected()
       ) {
         log.debug('WebSocket already connected with this chat_id, skipping');
-        initializationInProgressRef.current = false;
-        hasInitializedRef.current = true;
+        initializationState.markComplete();
         return;
       }
 
@@ -488,8 +405,7 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
     } catch (error) {
       log.error('Failed to initialize chat_id:', error);
     } finally {
-      initializationInProgressRef.current = false;
-      hasInitializedRef.current = true;
+      initializationState.markComplete();
     }
   }, [restoreChatContext, setupWebSocketConnection, connectWebSocket]);
 
@@ -503,113 +419,77 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
    */
   useEffect(() => {
     // Prevent early restoration from running multiple times
-    // Use module-level flag to persist across component remounts
-    if (earlyRestorationDone) {
+    if (initializationState.getEarlyRestorationDone()) {
       return;
     }
     // Set flag immediately to prevent concurrent executions
-    earlyRestorationDone = true;
-    earlyRestorationDoneRef.current = true;
+    initializationState.markEarlyRestorationDone();
 
     // Try to restore FULL context (including messages) early, before chat ID initialization
     // This ensures the widget appears in the correct state immediately on page load
-    // We get the stored context directly without requiring a chat ID match
-    const storedContext = getAnyStoredChatContext();
-    if (storedContext) {
-      log.info('Restoring FULL context early from storage:', {
-        messageCount: storedContext.messages.length,
-        isOpen: storedContext.isOpen,
-        isMinimized: storedContext.isMinimized,
-        storedChatId: storedContext.chat_id,
-        isTaskRunning: storedContext.isTaskRunning,
-        currentMode: storedContext.currentMode,
-      });
-
-      // Restore messages immediately
-      const restoredMessages = restoreMessagesFromContext(storedContext);
-      const cleanedMessages = restoredMessages.map((msg) => {
-        const cleanContent = removeThinkingMarkers(msg.content);
-        const { mainContent, progressLines } = parseProgressLines(cleanContent);
-        const validProgressLines = progressLines.filter((line) => line.trim().length > 0);
-        const finalContent = reconstructMessageContent(mainContent, validProgressLines);
-        return {
-          ...msg,
-          content: finalContent,
-        };
-      });
-
-      // Filter out "Chat context changed" messages from early restoration
-      // These are transient and will be re-added by restoreChatContext if needed
-      const messagesWithoutContextChange = cleanedMessages.filter(
-        (msg) => !(msg.isSystemMessage && msg.content === 'Chat context changed')
-      );
-
+    const restoredState = restoreEarlyState();
+    if (restoredState) {
       // Set flag to prevent saves during restoration
       isRestoringContextRef.current = true;
 
       // Restore full state immediately (synchronously) if available
       setState((prev) => ({
         ...prev,
-        messages: messagesWithoutContextChange,
-        isTaskRunning: storedContext.isTaskRunning,
-        activeTaskId: storedContext.activeTaskId,
-        taskProgress: storedContext.taskProgress,
-        currentMode: storedContext.currentMode,
-        isOpen: storedContext.isOpen ?? prev.isOpen,
-        isMinimized: storedContext.isMinimized ?? prev.isMinimized,
+        messages: restoredState.messages,
+        isTaskRunning: restoredState.isTaskRunning,
+        activeTaskId: restoredState.activeTaskId,
+        taskProgress: restoredState.taskProgress,
+        currentMode: restoredState.currentMode,
+        isOpen: restoredState.isOpen ?? prev.isOpen,
+        isMinimized: restoredState.isMinimized ?? prev.isMinimized,
       }));
-
-      // Log system messages for verification
-      const systemMessages = messagesWithoutContextChange.filter((m) => m.isSystemMessage);
-      log.info('Early context restoration complete', {
-        messageCount: messagesWithoutContextChange.length,
-        systemMessageCount: systemMessages.length,
-        restoredMessageIds: messagesWithoutContextChange.map((m) => m.id).slice(0, 5),
-        systemMessages: systemMessages.map((m) => ({ id: m.id, content: m.content })),
-        filteredContextChangeMessages: cleanedMessages.length - messagesWithoutContextChange.length,
-      });
 
       // Clear restoration flag after a short delay to allow state to settle
       setTimeout(() => {
         isRestoringContextRef.current = false;
       }, 100);
-    } else {
-      log.debug('No stored context found for early restoration');
     }
-    // Note: earlyRestorationDoneRef is already set at the top of the effect
   }, []); // Empty dependency array - only run once on mount
 
   // Separate effect for handling reconnection and initialization
   useEffect(() => {
+    // Early return: if initialization has already been attempted, don't run again
+    // This prevents React.StrictMode double-invocation from causing duplicate attempts
+    if (initializationAttemptedRef.current) {
+      return;
+    }
+
     // Handle reconnection if already initialized
-    if (hasInitializedRef.current) {
+    if (initializationState.getComplete()) {
       if (
         websocketServiceRef.current &&
-        initializedChatIdRef.current &&
+        initializationState.getChatId() &&
         !websocketServiceRef.current.isConnected() &&
-        !initializationInProgressRef.current
+        !initializationState.getInProgress()
       ) {
-        const chatId = initializedChatIdRef.current;
+        const chatId = initializationState.getChatId();
         log.debug('WebSocket disconnected, attempting to reconnect...');
-        initializationInProgressRef.current = true;
-        websocketServiceRef.current
-          .connect(chatId)
-          .finally(() => {
-            initializationInProgressRef.current = false;
-          })
-          .catch((error) => {
-            log.error('Reconnection failed:', error);
-          });
+        if (initializationState.markInProgress() && chatId) {
+          websocketServiceRef.current
+            .connect(chatId)
+            .finally(() => {
+              initializationState.markComplete();
+            })
+            .catch((error) => {
+              log.error('Reconnection failed:', error);
+            });
+        }
       }
       return;
     }
 
-    // Skip initialization if conditions are met
-    if (shouldSkipInitialization()) {
+    // Skip initialization if conditions are met (silent check to avoid logging)
+    if (shouldSkipInitializationSilent()) {
       return;
     }
 
-    initializationInProgressRef.current = true;
+    // Mark that we've attempted initialization (prevents duplicate runs)
+    initializationAttemptedRef.current = true;
 
     // Initialize or update API service
     if (!apiServiceRef.current) {
@@ -621,7 +501,7 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
     // Initialize chat session and WebSocket connection
     initializeChatSession();
 
-    // Check agent availability on mount
+    // Check agent availability on mount (doesn't create chat ID)
     const checkAgentAvailability = async () => {
       if (!apiServiceRef.current) return;
 
@@ -640,8 +520,9 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
     return () => {
       // Only cleanup on actual unmount, not on every config change
       // The websocket should persist across config updates
+      // Note: Don't reset initializationAttemptedRef here as it should persist
     };
-  }, [config]);
+  }, [config]); // Only depend on config - callbacks are stable
 
   // ============================================================================
   // Task State Monitoring
@@ -744,10 +625,11 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
    * Uses shorter debounce for critical updates (task progress) and longer for UI state
    * Saves immediately when screenshare is active and task is running, when task just completed/failed,
    * or when new messages are added (especially important for tell mode)
+   * Prevents duplicate saves by tracking last saved state
    */
   useEffect(() => {
-    const chatId = initializedChatIdRef.current;
-    if (!chatId || !hasInitializedRef.current) {
+    const chatId = initializationState.getChatId();
+    if (!chatId || !initializationState.getComplete()) {
       return;
     }
 
@@ -770,6 +652,28 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
     const newMessagesAdded =
       state.messages.length > prevMessagesRef.current.length && messagesChanged;
 
+    // Check if UI state actually changed
+    const lastSaved = lastSavedStateRef.current;
+    const uiStateChanged =
+      !lastSaved ||
+      lastSaved.isOpen !== state.isOpen ||
+      lastSaved.isMinimized !== state.isMinimized;
+
+    // Check if task progress changed (by comparing hash)
+    const taskProgressHash = JSON.stringify(state.taskProgress);
+    const taskProgressChanged =
+      !lastSaved ||
+      lastSaved.taskProgressLength !== state.taskProgress.length ||
+      lastSaved.taskProgressHash !== taskProgressHash;
+
+    // Check if critical state changed
+    const criticalStateChanged =
+      !lastSaved ||
+      lastSaved.messageCount !== state.messages.length ||
+      lastSaved.isTaskRunning !== state.isTaskRunning ||
+      lastSaved.activeTaskId !== state.activeTaskId ||
+      taskProgressChanged;
+
     // Update refs for next comparison
     prevIsTaskRunningRef.current = state.isTaskRunning;
     prevMessagesRef.current = state.messages;
@@ -778,27 +682,47 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
     // 1. Screenshare is active and task is running
     // 2. Task just completed/failed (transition from running to not running)
     // 3. New messages were added (important for tell mode and all modes)
-    if ((isScreenSharing() && state.isTaskRunning) || taskJustCompleted || newMessagesAdded) {
-      storeChatContext(
-        chatId,
-        state.messages,
-        state.isTaskRunning,
-        state.activeTaskId,
-        state.taskProgress,
-        state.currentMode,
-        state.isOpen,
-        state.isMinimized
-      );
-      log.debug('Immediate save:', {
-        reason: taskJustCompleted
-          ? 'task completed/failed'
-          : newMessagesAdded
-            ? 'new messages added'
-            : 'screenshare active and task running',
-        isTaskRunning: state.isTaskRunning,
-        messageCount: state.messages.length,
-        previousMessageCount: prevMessagesRef.current.length,
-      });
+    // 4. Task progress changed (important for ongoing tasks)
+    if (
+      (isScreenSharing() && state.isTaskRunning) ||
+      taskJustCompleted ||
+      newMessagesAdded ||
+      taskProgressChanged
+    ) {
+      // Only save if state actually changed
+      if (criticalStateChanged || uiStateChanged) {
+        storeChatContext(
+          chatId,
+          state.messages,
+          state.isTaskRunning,
+          state.activeTaskId,
+          state.taskProgress,
+          state.currentMode,
+          state.isOpen,
+          state.isMinimized
+        );
+        lastSavedStateRef.current = {
+          isOpen: state.isOpen,
+          isMinimized: state.isMinimized,
+          messageCount: state.messages.length,
+          isTaskRunning: state.isTaskRunning,
+          activeTaskId: state.activeTaskId,
+          taskProgressLength: state.taskProgress.length,
+          taskProgressHash,
+        };
+        log.debug('Immediate save:', {
+          reason: taskJustCompleted
+            ? 'task completed/failed'
+            : newMessagesAdded
+              ? 'new messages added'
+              : taskProgressChanged
+                ? 'task progress changed'
+                : 'screenshare active and task running',
+          isTaskRunning: state.isTaskRunning,
+          messageCount: state.messages.length,
+          taskProgressLength: state.taskProgress.length,
+        });
+      }
       return;
     }
 
@@ -809,16 +733,28 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
     const debounceMs = isCriticalUpdate ? 200 : 500;
 
     const timeoutId = setTimeout(() => {
-      storeChatContext(
-        chatId,
-        state.messages,
-        state.isTaskRunning,
-        state.activeTaskId,
-        state.taskProgress,
-        state.currentMode,
-        state.isOpen,
-        state.isMinimized
-      );
+      // Only save if state actually changed
+      if (criticalStateChanged || uiStateChanged) {
+        storeChatContext(
+          chatId,
+          state.messages,
+          state.isTaskRunning,
+          state.activeTaskId,
+          state.taskProgress,
+          state.currentMode,
+          state.isOpen,
+          state.isMinimized
+        );
+        lastSavedStateRef.current = {
+          isOpen: state.isOpen,
+          isMinimized: state.isMinimized,
+          messageCount: state.messages.length,
+          isTaskRunning: state.isTaskRunning,
+          activeTaskId: state.activeTaskId,
+          taskProgressLength: state.taskProgress.length,
+          taskProgressHash: JSON.stringify(state.taskProgress),
+        };
+      }
     }, debounceMs);
 
     return () => clearTimeout(timeoutId);
@@ -842,7 +778,7 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
    */
   useEffect(() => {
     const handlePageUnload = () => {
-      const chatId = initializedChatIdRef.current;
+      const chatId = initializationState.getChatId();
       if (!chatId) {
         return;
       }
@@ -936,7 +872,7 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
     const handleVisibilityChange = () => {
       if (document.hidden) {
         // Save state when page becomes hidden (especially important for screenshare tasks)
-        const chatId = initializedChatIdRef.current;
+        const chatId = initializationState.getChatId();
         if (chatId) {
           try {
             const currentState = stateRef.current;
@@ -966,12 +902,35 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
+    // Handle storage events from other tabs/windows
+    // This allows state to be synchronized across multiple tabs
+    const handleStorageChange = (e: StorageEvent) => {
+      // Only handle our storage key
+      if (e.key === CHAT_CONTEXT_STORAGE_KEY && e.newValue) {
+        try {
+          const updatedContext = JSON.parse(e.newValue);
+          const currentChatId = initializationState.getChatId();
+
+          // If the updated context is for the same chat ID, restore it
+          if (updatedContext.chat_id === currentChatId && currentChatId) {
+            log.debug('Storage updated from another tab, restoring context');
+            restoreChatContext(currentChatId);
+          }
+        } catch (error) {
+          log.warn('Failed to parse storage event data:', error);
+        }
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+
     return () => {
       window.removeEventListener('beforeunload', handlePageUnload);
       window.removeEventListener('pagehide', handlePageUnload);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('storage', handleStorageChange);
     };
-  }, []);
+  }, [restoreChatContext]);
 
   /**
    * Cleanup effect that runs only on unmount
@@ -984,9 +943,8 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
         websocketServiceRef.current.disconnect();
         websocketServiceRef.current = null;
       }
-      initializedChatIdRef.current = null;
-      initializationInProgressRef.current = false;
-      hasInitializedRef.current = false;
+      // Note: Don't reset initializationState here as it's a singleton
+      // that should persist across component remounts
     };
   }, []);
 
@@ -996,52 +954,17 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
 
   /**
    * Toggle widget open/closed state
+   * State persistence is handled by the context persistence useEffect
    */
   const toggleWidget = useCallback(() => {
     setState((prev) => {
       // If opening from minimized state, clear minimized
       // If closing, keep minimized state
-      const newState = {
+      return {
         ...prev,
         isOpen: !prev.isOpen,
         isMinimized: prev.isOpen ? prev.isMinimized : false,
       };
-
-      // Save state immediately when toggled to ensure it's persisted
-      // Try to get chatId from ref first, then from storage if not available
-      let chatId = initializedChatIdRef.current;
-      if (!chatId) {
-        chatId = getStoredChatId();
-      }
-
-      // Save state even if widget isn't fully initialized yet
-      // This ensures state is persisted when clicking description card before initialization
-      if (chatId) {
-        try {
-          storeChatContext(
-            chatId,
-            newState.messages,
-            newState.isTaskRunning,
-            newState.activeTaskId,
-            newState.taskProgress,
-            newState.currentMode,
-            newState.isOpen,
-            newState.isMinimized
-          );
-          log.debug('Saved widget state immediately after toggle', {
-            chatId,
-            isOpen: newState.isOpen,
-            isMinimized: newState.isMinimized,
-            wasInitialized: hasInitializedRef.current,
-          });
-        } catch (error) {
-          log.warn('Failed to save widget state after toggle:', error);
-        }
-      } else {
-        log.debug('Cannot save widget state: no chatId available yet');
-      }
-
-      return newState;
     });
   }, []);
 
@@ -1080,7 +1003,10 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
       question?: string,
       skipUserMessage?: boolean
     ) => {
-      if (!apiServiceRef.current || !content.trim()) return;
+      if (!content.trim()) {
+        log.warn('Attempted to send empty message');
+        return;
+      }
 
       const messageMode = mode || state.currentMode;
       const messageId = Date.now().toString();
@@ -1093,7 +1019,7 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
       if (!skipUserMessage) {
         const userMessage = createUserMessage(content, messageMode);
 
-        // Add user message and placeholder immediately
+        // Add user message and placeholder immediately for immediate feedback
         setState((prev) => ({
           ...prev,
           messages: [...prev.messages, userMessage, placeholderMessage],
@@ -1106,6 +1032,81 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
           messages: [...prev.messages, placeholderMessage],
           isLoading: true,
         }));
+      }
+
+      // Ensure API service is initialized
+      if (!apiServiceRef.current) {
+        log.warn('API service not initialized, initializing now...');
+        apiServiceRef.current = new MarketrixApiService(config);
+      }
+
+      // Ensure chat session is initialized
+      if (!initializationState.getComplete() || !initializationState.getChatId()) {
+        log.info('Chat session not initialized, initializing now...');
+        try {
+          await initializeChatSession();
+        } catch (initError) {
+          log.error('Failed to initialize chat session:', initError);
+          // Remove placeholder and show error
+          setState((prev) => {
+            const newMessages = prev.messages.filter((msg) => msg.id !== placeholderMessageId);
+            const errorMessage = createErrorMessage(
+              'Failed to initialize chat. Please try again.',
+              messageMode,
+              messageId
+            );
+            return {
+              ...prev,
+              messages: [...newMessages, errorMessage],
+              isLoading: false,
+            };
+          });
+          return;
+        }
+      }
+
+      // Double-check after initialization
+      if (!apiServiceRef.current) {
+        log.error('Failed to initialize API service');
+        setState((prev) => {
+          const newMessages = prev.messages.filter((msg) => msg.id !== placeholderMessageId);
+          const errorMessage = createErrorMessage(
+            'Failed to initialize chat. Please try again.',
+            messageMode,
+            messageId
+          );
+          return {
+            ...prev,
+            messages: [...newMessages, errorMessage],
+            isLoading: false,
+          };
+        });
+        return;
+      }
+
+      // Ensure chat ID is available
+      let chatId: string;
+      try {
+        chatId = await apiServiceRef.current.getOrCreateChatId();
+        if (!chatId) {
+          throw new Error('Failed to get or create chat ID');
+        }
+      } catch (chatIdError) {
+        log.error('Failed to get or create chat ID:', chatIdError);
+        setState((prev) => {
+          const newMessages = prev.messages.filter((msg) => msg.id !== placeholderMessageId);
+          const errorMessage = createErrorMessage(
+            'Failed to initialize chat session. Please try again.',
+            messageMode,
+            messageId
+          );
+          return {
+            ...prev,
+            messages: [...newMessages, errorMessage],
+            isLoading: false,
+          };
+        });
+        return;
       }
 
       try {
@@ -1289,7 +1290,7 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
         });
       }
     },
-    [state.currentMode]
+    [state.currentMode, config, initializeChatSession]
   );
 
   /**
@@ -1339,7 +1340,7 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
    * Stops running tasks, screen sharing, and clears all stored state
    */
   const clearChatHistory = useCallback(async () => {
-    const chatId = initializedChatIdRef.current;
+    const chatId = initializationState.getChatId();
 
     // Stop any running tasks before clearing state
     if (chatId && apiServiceRef.current && (state.isTaskRunning || state.activeTaskId)) {
@@ -1398,8 +1399,7 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
     }));
 
     // Reset initialization flags to force re-initialization
-    initializedChatIdRef.current = null;
-    hasInitializedRef.current = false;
+    initializationState.reset();
 
     log.info('Widget reset - all stored state cleared');
   }, [state.isTaskRunning, state.activeTaskId]);

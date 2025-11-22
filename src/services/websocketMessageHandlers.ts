@@ -12,10 +12,10 @@ import { getPendingToolCall, getStoredChatId } from '../utils/chatStorage';
 import { createLogger } from '../utils/logger';
 import {
   findLastIncompleteProgressLineIndex,
-  findTaskMessageIndex,
   parseProgressLines,
 } from '../utils/messageContentUtils';
 import { createPlaceholderMessage } from '../utils/messageFactory';
+import { findMessageForProgress, findPlaceholderMessage } from '../utils/messageFinder';
 import {
   addProgressLine,
   markProgressLineComplete,
@@ -98,146 +98,17 @@ export function createToolCallProgressHandler(
           const isTaskRunning = prev.isTaskRunning;
           const currentMode = prev.currentMode;
 
-          // Find the message that should receive progress updates
-          // Priority order for active show/do tasks:
-          // 1. Placeholder message in show/do mode that has content (the "Let me try this" message)
-          // 2. Placeholder message in show/do mode (even without content yet)
-          // 3. Non-placeholder agent message in show/do mode
-          // For other cases:
-          // 4. Last placeholder message
-          // 5. Last task message
-          // 6. Any agent message as fallback
-          let taskMessageIndex = -1;
+          // Find the message that should receive progress updates using centralized utility
+          const foundMessage = findMessageForProgress({
+            messages,
+            isTaskRunning,
+            currentMode,
+            preferPlaceholder: true,
+            requireContent: false,
+          });
 
-          // For active show/do tasks, find the message that matches the current mode and task state
-          if (isTaskRunning && (currentMode === 'show' || currentMode === 'do')) {
-            // Priority 1: Find placeholder with content in matching mode (the active task message)
-            for (let i = messages.length - 1; i >= 0; i--) {
-              const msg = messages[i];
-              if (
-                msg.sender === 'agent' &&
-                msg.isPlaceholder &&
-                !msg.isSystemMessage &&
-                !msg.isScreenAccessRequest &&
-                msg.mode === currentMode &&
-                msg.content.trim().length > 0
-              ) {
-                taskMessageIndex = i;
-                log.info('Using active task placeholder with content for progress update', {
-                  messageId: msg.id,
-                  content: msg.content.substring(0, 50),
-                  mode: msg.mode,
-                  index: i,
-                  totalMessages: messages.length,
-                });
-                break;
-              }
-            }
-
-            // Priority 2: Find placeholder in matching mode (even without content)
-            if (taskMessageIndex < 0) {
-              for (let i = messages.length - 1; i >= 0; i--) {
-                const msg = messages[i];
-                if (
-                  msg.sender === 'agent' &&
-                  msg.isPlaceholder &&
-                  !msg.isSystemMessage &&
-                  !msg.isScreenAccessRequest &&
-                  msg.mode === currentMode
-                ) {
-                  taskMessageIndex = i;
-                  log.info('Using active task placeholder for progress update', {
-                    messageId: msg.id,
-                    content: msg.content.substring(0, 50),
-                    mode: msg.mode,
-                    index: i,
-                    totalMessages: messages.length,
-                  });
-                  break;
-                }
-              }
-            }
-
-            // Priority 3: Find non-placeholder agent message in matching mode
-            if (taskMessageIndex < 0) {
-              for (let i = messages.length - 1; i >= 0; i--) {
-                const msg = messages[i];
-                if (
-                  msg.sender === 'agent' &&
-                  !msg.isPlaceholder &&
-                  !msg.isSystemMessage &&
-                  !msg.isScreenAccessRequest &&
-                  msg.mode === currentMode
-                ) {
-                  taskMessageIndex = i;
-                  log.info('Using active task message for progress update', {
-                    messageId: msg.id,
-                    content: msg.content.substring(0, 50),
-                    mode: msg.mode,
-                    index: i,
-                    totalMessages: messages.length,
-                  });
-                  break;
-                }
-              }
-            }
-          }
-
-          // Fallback: If not in active task or no matching message found, use general logic
-          if (taskMessageIndex < 0) {
-            // Check ALL placeholder messages (not just last one)
-            for (let i = messages.length - 1; i >= 0; i--) {
-              const msg = messages[i];
-              if (
-                msg.sender === 'agent' &&
-                msg.isPlaceholder &&
-                !msg.isSystemMessage &&
-                !msg.isScreenAccessRequest
-              ) {
-                taskMessageIndex = i;
-                log.info('Using placeholder message for progress update (fallback)', {
-                  messageId: msg.id,
-                  content: msg.content.substring(0, 50),
-                  index: i,
-                  totalMessages: messages.length,
-                });
-                break;
-              }
-            }
-          }
-
-          // If still not found, try to find a task message (non-placeholder agent message)
-          if (taskMessageIndex < 0) {
-            taskMessageIndex = findTaskMessageIndex(messages);
-            if (taskMessageIndex >= 0) {
-              log.info('Using task message for progress update (fallback)', {
-                messageId: messages[taskMessageIndex].id,
-                content: messages[taskMessageIndex].content.substring(0, 50),
-                index: taskMessageIndex,
-                totalMessages: messages.length,
-              });
-            }
-          }
-
-          // Last resort: try to find ANY agent message as fallback
-          if (taskMessageIndex < 0) {
-            for (let i = messages.length - 1; i >= 0; i--) {
-              const msg = messages[i];
-              if (msg.sender === 'agent' && !msg.isSystemMessage && !msg.isScreenAccessRequest) {
-                taskMessageIndex = i;
-                log.warn('Using any agent message for progress update (last resort)', {
-                  messageId: msg.id,
-                  content: msg.content.substring(0, 50),
-                  isPlaceholder: msg.isPlaceholder,
-                  mode: msg.mode,
-                  index: i,
-                });
-                break;
-              }
-            }
-          }
-
-          if (taskMessageIndex >= 0) {
+          if (foundMessage) {
+            const taskMessageIndex = foundMessage.index;
             log.info(`Found message for progress update at index ${taskMessageIndex}`, {
               messageId: messages[taskMessageIndex].id,
               isPlaceholder: messages[taskMessageIndex].isPlaceholder,
@@ -300,120 +171,58 @@ export function createToolCallProgressHandler(
             // ALWAYS check prev.messages (current state) not the stale messages array
             const currentMessages = prev.messages;
 
-            if (currentMessages.length === 0 || taskMessageIndex < 0) {
-              // Check if a placeholder already exists in the current state (even if messages array was empty)
-              let existingPlaceholderIndex = -1;
+            // Check if a placeholder already exists in the current state using utility
+            const existingPlaceholderResult = findPlaceholderMessage(currentMessages, currentMode);
 
-              // First, try to find a placeholder matching the current mode
-              for (let i = currentMessages.length - 1; i >= 0; i--) {
-                const msg = currentMessages[i];
-                if (
-                  msg.sender === 'agent' &&
-                  msg.isPlaceholder &&
-                  !msg.isSystemMessage &&
-                  !msg.isScreenAccessRequest &&
-                  (msg.mode === currentMode || (!msg.mode && currentMode))
-                ) {
-                  existingPlaceholderIndex = i;
-                  log.info('Progress handler: Found existing placeholder in current state', {
-                    messageId: msg.id,
-                    mode: msg.mode,
-                    currentMode,
-                    index: i,
-                    totalMessages: currentMessages.length,
-                  });
-                  break;
-                }
-              }
-
-              // If no mode match, find ANY placeholder
-              if (existingPlaceholderIndex < 0) {
-                for (let i = currentMessages.length - 1; i >= 0; i--) {
-                  const msg = currentMessages[i];
-                  if (
-                    msg.sender === 'agent' &&
-                    msg.isPlaceholder &&
-                    !msg.isSystemMessage &&
-                    !msg.isScreenAccessRequest
-                  ) {
-                    existingPlaceholderIndex = i;
-                    log.info('Progress handler: Found any placeholder in current state', {
-                      messageId: msg.id,
-                      mode: msg.mode,
-                      currentMode,
-                      index: i,
-                      totalMessages: currentMessages.length,
-                    });
-                    break;
-                  }
-                }
-              }
-
-              if (existingPlaceholderIndex >= 0) {
-                // Placeholder exists, update it
-                const existingPlaceholder = currentMessages[existingPlaceholderIndex];
-                const updatedMessage = addProgressLine(existingPlaceholder, toolName, progressText);
-                const updatedMessages = [...currentMessages];
-                updatedMessages[existingPlaceholderIndex] = updatedMessage;
-
-                log.info('Progress handler: Updated existing placeholder with progress line', {
-                  messageId: updatedMessage.id,
-                  toolName,
-                  progressText,
-                  updatedContent: updatedMessage.content.substring(0, 200),
-                });
-
-                return {
-                  ...prev,
-                  messages: updatedMessages,
-                };
-              } else {
-                // No placeholder exists, create a new one
-                log.warn('Progress handler: No placeholder found, creating new one on the fly', {
-                  toolName,
-                  progressText,
-                  currentMode,
-                  isTaskRunning,
-                  currentMessagesCount: currentMessages.length,
-                });
-
-                const placeholderMessage = createPlaceholderMessage(currentMode);
-                const updatedMessage = addProgressLine(placeholderMessage, toolName, progressText);
-
-                log.info('Progress handler: Created new placeholder and added progress line', {
-                  messageId: updatedMessage.id,
-                  toolName,
-                  progressText,
-                  updatedContent: updatedMessage.content.substring(0, 200),
-                });
-
-                return {
-                  ...prev,
-                  messages: [...currentMessages, updatedMessage],
-                };
-              }
-            } else {
-              log.error(
-                `Progress handler: No task message or placeholder found for progress update! Messages count: ${messages.length}`,
-                {
-                  messages: messages.map((msg, idx) => ({
-                    index: idx,
-                    id: msg.id,
-                    sender: msg.sender,
-                    isPlaceholder: msg.isPlaceholder,
-                    isSystemMessage: msg.isSystemMessage,
-                    isScreenAccessRequest: msg.isScreenAccessRequest,
-                    contentPreview: msg.content.substring(0, 50),
-                    mode: msg.mode,
-                  })),
-                  toolName,
-                  progressText,
-                }
+            if (existingPlaceholderResult) {
+              const existingPlaceholderIndex = existingPlaceholderResult.index;
+              // Placeholder exists, update it
+              const existingPlaceholderMessage = currentMessages[existingPlaceholderIndex];
+              const updatedMessage = addProgressLine(
+                existingPlaceholderMessage,
+                toolName,
+                progressText
               );
+              const updatedMessages = [...currentMessages];
+              updatedMessages[existingPlaceholderIndex] = updatedMessage;
+
+              log.info('Progress handler: Updated existing placeholder with progress line', {
+                messageId: updatedMessage.id,
+                toolName,
+                progressText,
+                updatedContent: updatedMessage.content.substring(0, 200),
+              });
+
+              return {
+                ...prev,
+                messages: updatedMessages,
+              };
+            } else {
+              // No placeholder exists, create a new one
+              log.warn('Progress handler: No placeholder found, creating new one on the fly', {
+                toolName,
+                progressText,
+                currentMode,
+                isTaskRunning,
+                currentMessagesCount: currentMessages.length,
+              });
+
+              const placeholderMessage = createPlaceholderMessage(currentMode);
+              const updatedMessage = addProgressLine(placeholderMessage, toolName, progressText);
+
+              log.info('Progress handler: Created new placeholder and added progress line', {
+                messageId: updatedMessage.id,
+                toolName,
+                progressText,
+                updatedContent: updatedMessage.content.substring(0, 200),
+              });
+
+              return {
+                ...prev,
+                messages: [...currentMessages, updatedMessage],
+              };
             }
           }
-
-          return prev;
         });
       } else {
         log.warn('Progress handler: Tool call message missing name', {
@@ -483,32 +292,19 @@ export function createToolCallResultHandler(
         // Update progress to mark the most recent incomplete tool as done
         setState((prev) => {
           const messages = [...prev.messages];
+          const isTaskRunning = prev.isTaskRunning;
+          const currentMode = prev.currentMode;
 
-          // First check if the last message is a placeholder (tool calls often come when message is still a placeholder)
-          // Placeholders should receive progress updates
-          let taskMessageIndex = -1;
-          if (messages.length > 0) {
-            const lastMessage = messages[messages.length - 1];
-            if (
-              lastMessage.sender === 'agent' &&
-              lastMessage.isPlaceholder &&
-              !lastMessage.isSystemMessage &&
-              !lastMessage.isScreenAccessRequest
-            ) {
-              taskMessageIndex = messages.length - 1;
-              log.info('Using placeholder message for progress completion');
-            }
-          }
+          // Find the message that should receive progress completion using centralized utility
+          const foundMessage = findMessageForProgress({
+            messages,
+            isTaskRunning,
+            currentMode,
+            preferPlaceholder: true,
+          });
 
-          // If no placeholder found, try to find a task message (non-placeholder agent message)
-          if (taskMessageIndex < 0) {
-            taskMessageIndex = findTaskMessageIndex(messages);
-            if (taskMessageIndex >= 0) {
-              log.info('Using task message for progress completion');
-            }
-          }
-
-          if (taskMessageIndex >= 0) {
+          if (foundMessage) {
+            const taskMessageIndex = foundMessage.index;
             const existingMessage = messages[taskMessageIndex];
 
             log.info('Attempting to mark progress complete', {
@@ -650,86 +446,17 @@ export function createToolCallErrorHandler(
           const isTaskRunning = prev.isTaskRunning;
           const currentMode = prev.currentMode;
 
-          // Find the message that should receive progress error updates
-          // Use same logic as progress handler to ensure consistency
-          let taskMessageIndex = -1;
+          // Find the message that should receive progress error updates using centralized utility
+          const foundMessage = findMessageForProgress({
+            messages,
+            isTaskRunning,
+            currentMode,
+            preferPlaceholder: true,
+            requireContent: true,
+          });
 
-          // For active show/do tasks, find the message that matches the current mode
-          if (isTaskRunning && (currentMode === 'show' || currentMode === 'do')) {
-            // Priority 1: Find placeholder with content in matching mode
-            for (let i = messages.length - 1; i >= 0; i--) {
-              const msg = messages[i];
-              if (
-                msg.sender === 'agent' &&
-                msg.isPlaceholder &&
-                !msg.isSystemMessage &&
-                !msg.isScreenAccessRequest &&
-                msg.mode === currentMode &&
-                msg.content.trim().length > 0
-              ) {
-                taskMessageIndex = i;
-                log.info('Using active task placeholder with content for progress error');
-                break;
-              }
-            }
-
-            // Priority 2: Find placeholder in matching mode
-            if (taskMessageIndex < 0) {
-              for (let i = messages.length - 1; i >= 0; i--) {
-                const msg = messages[i];
-                if (
-                  msg.sender === 'agent' &&
-                  msg.isPlaceholder &&
-                  !msg.isSystemMessage &&
-                  !msg.isScreenAccessRequest &&
-                  msg.mode === currentMode
-                ) {
-                  taskMessageIndex = i;
-                  log.info('Using active task placeholder for progress error');
-                  break;
-                }
-              }
-            }
-
-            // Priority 3: Find non-placeholder agent message in matching mode
-            if (taskMessageIndex < 0) {
-              for (let i = messages.length - 1; i >= 0; i--) {
-                const msg = messages[i];
-                if (
-                  msg.sender === 'agent' &&
-                  !msg.isPlaceholder &&
-                  !msg.isSystemMessage &&
-                  !msg.isScreenAccessRequest &&
-                  msg.mode === currentMode
-                ) {
-                  taskMessageIndex = i;
-                  log.info('Using active task message for progress error');
-                  break;
-                }
-              }
-            }
-          }
-
-          // Fallback: Try to find a task message (non-placeholder agent message)
-          if (taskMessageIndex < 0) {
-            taskMessageIndex = findTaskMessageIndex(messages);
-          }
-
-          // If no task message found, check if the last message is a placeholder
-          if (taskMessageIndex < 0 && messages.length > 0) {
-            const lastMessage = messages[messages.length - 1];
-            if (
-              lastMessage.sender === 'agent' &&
-              lastMessage.isPlaceholder &&
-              !lastMessage.isSystemMessage &&
-              !lastMessage.isScreenAccessRequest
-            ) {
-              taskMessageIndex = messages.length - 1;
-              log.info('Using placeholder message for progress error (fallback)');
-            }
-          }
-
-          if (taskMessageIndex >= 0) {
+          if (foundMessage) {
+            const taskMessageIndex = foundMessage.index;
             const existingMessage = messages[taskMessageIndex];
 
             // Extract tool name from the last incomplete progress line

@@ -14,7 +14,7 @@ import {
 import { isBrowser } from './typeGuards';
 
 const CHAT_ID_STORAGE_KEY = 'marketrix_chat_id';
-const CHAT_CONTEXT_STORAGE_KEY = 'marketrix_chat_context';
+export const CHAT_CONTEXT_STORAGE_KEY = 'marketrix_chat_context';
 const PENDING_TOOL_CALL_STORAGE_KEY = 'marketrix_pending_tool_call';
 const CONTEXT_VERSION = 2; // Incremented to include isOpen and isMinimized
 const CONTEXT_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
@@ -128,27 +128,55 @@ export function storeChatContext(
       timestamp: Date.now(),
     };
 
-    localStorage.setItem(CHAT_CONTEXT_STORAGE_KEY, JSON.stringify(context));
-    console.log('[Chat Storage] Stored chat context:', {
-      chatId,
-      messageCount: messages.length,
-      isTaskRunning,
-      activeTaskId,
-      currentMode,
-      isOpen,
-      isMinimized,
-      timestamp: context.timestamp,
-    });
-    // Verify it was actually stored
-    const verify = localStorage.getItem(CHAT_CONTEXT_STORAGE_KEY);
-    if (verify) {
-      const parsed = JSON.parse(verify);
-      console.log('[Chat Storage] Verification - context stored successfully:', {
-        storedMessageCount: parsed.messages?.length || 0,
-        storedChatId: parsed.chat_id,
-      });
-    } else {
-      console.error('[Chat Storage] ERROR - context was not stored!');
+    try {
+      localStorage.setItem(CHAT_CONTEXT_STORAGE_KEY, JSON.stringify(context));
+      // Only log on meaningful changes (not every state update)
+      // Verification removed to reduce log noise - localStorage.setItem is reliable
+    } catch (storageError: any) {
+      // Handle storage quota exceeded
+      if (
+        storageError &&
+        (storageError.name === 'QuotaExceededError' ||
+          (typeof storageError === 'object' && 'code' in storageError && storageError.code === 22))
+      ) {
+        console.warn('[Chat Storage] Storage quota exceeded, attempting to clear old data');
+        try {
+          // Try to clear expired contexts and retry
+          const allKeys = Object.keys(localStorage);
+          const contextKeys = allKeys.filter((key) => key.startsWith('marketrix_chat_context_'));
+          // Remove oldest contexts first
+          const contexts = contextKeys
+            .map((key) => {
+              try {
+                const data = localStorage.getItem(key);
+                if (data) {
+                  const parsed = JSON.parse(data);
+                  return { key, timestamp: parsed.timestamp || 0 };
+                }
+              } catch {
+                // Ignore corrupted entries
+              }
+              return null;
+            })
+            .filter((item): item is { key: string; timestamp: number } => item !== null)
+            .sort((a, b) => a.timestamp - b.timestamp);
+
+          // Remove oldest 50% of contexts
+          const toRemove = Math.floor(contexts.length / 2);
+          for (let i = 0; i < toRemove; i++) {
+            localStorage.removeItem(contexts[i].key);
+          }
+
+          // Retry saving
+          localStorage.setItem(CHAT_CONTEXT_STORAGE_KEY, JSON.stringify(context));
+          console.log('[Chat Storage] Successfully saved after clearing old data');
+        } catch (retryError) {
+          console.error('[Chat Storage] Failed to save even after clearing old data:', retryError);
+          throw retryError;
+        }
+      } else {
+        throw storageError;
+      }
     }
   } catch (error) {
     console.warn('[Chat Storage] Failed to store chat context:', error);
@@ -194,7 +222,17 @@ export function getAnyStoredChatContext(): StoredChatContext | null {
 
     return context;
   } catch (error) {
-    console.warn('[Chat Storage] Failed to get chat context:', error);
+    // Handle corrupted data gracefully
+    if (error instanceof SyntaxError) {
+      console.warn('[Chat Storage] Corrupted context data, clearing storage');
+      try {
+        localStorage.removeItem(CHAT_CONTEXT_STORAGE_KEY);
+      } catch (clearError) {
+        console.error('[Chat Storage] Failed to clear corrupted data:', clearError);
+      }
+    } else {
+      console.warn('[Chat Storage] Failed to get chat context:', error);
+    }
     return null;
   }
 }
