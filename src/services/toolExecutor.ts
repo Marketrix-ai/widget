@@ -74,6 +74,9 @@ export async function executeTool(
           // For click actions, the user's click already happened, but we still need to
           // execute it programmatically to ensure it's registered properly
           if (!isClickAction) {
+            console.log(
+              '[ToolExecutor] User confirmed keyboard action in show mode, returning success'
+            );
             return {
               success: true,
               result: 'User completed the action',

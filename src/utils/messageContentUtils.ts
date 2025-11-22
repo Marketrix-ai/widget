@@ -39,6 +39,19 @@ export function parseProgressLines(content: string): {
     .slice(1)
     .filter((line) => line.trim().length > 0 && !line.trim().includes('__THINKING__'));
 
+  // Debug logging
+  if (progressLines.length > 0 || content.includes('○') || content.includes('●✓')) {
+    console.log('[MessageContentUtils] [FLOW] parseProgressLines', {
+      originalContent: content,
+      cleanContent,
+      partsCount: parts.length,
+      mainContent: mainContent.trim(),
+      progressLineCount: progressLines.length,
+      progressLines,
+      hasProgressIndicators: content.includes('○') || content.includes('●✓'),
+    });
+  }
+
   return {
     mainContent: mainContent.trim(),
     progressLines,
@@ -56,16 +69,33 @@ export function formatProgressLine(
 ): string {
   const progressText = explanation || `Executing ${toolName}...`;
 
+  let formattedLine: string;
   switch (status) {
     case 'pending':
-      return `○ ${progressText}`;
+      formattedLine = `○ ${progressText}`;
+      break;
     case 'completed':
-      return `●✓ ${progressText}`;
+      formattedLine = `●✓ ${progressText}`;
+      break;
     case 'failed':
-      return `○ ${progressText} ✗ (${error || 'Tool execution failed'})`;
+      formattedLine = `○ ${progressText} ✗ (${error || 'Tool execution failed'})`;
+      break;
     default:
-      return `○ ${progressText}`;
+      formattedLine = `○ ${progressText}`;
   }
+
+  console.log('[MessageContentUtils] [FORMAT] formatProgressLine', {
+    toolName,
+    explanation,
+    status,
+    progressText,
+    formattedLine,
+    startsWithCircle: formattedLine.trim().startsWith('○'),
+    startsWithCompleted: formattedLine.trim().startsWith('●✓'),
+    length: formattedLine.length,
+  });
+
+  return formattedLine;
 }
 
 /**
@@ -73,10 +103,28 @@ export function formatProgressLine(
  */
 export function reconstructMessageContent(mainContent: string, progressLines: string[]): string {
   const cleanMainContent = removeThinkingMarkers(mainContent).trim();
+  let reconstructed: string;
+
   if (progressLines.length > 0) {
-    return [cleanMainContent, ...progressLines].join('\n\n');
+    reconstructed = [cleanMainContent, ...progressLines].join('\n\n');
+    console.log('[MessageContentUtils] [FORMAT] reconstructMessageContent', {
+      mainContent: cleanMainContent,
+      progressLineCount: progressLines.length,
+      progressLines,
+      reconstructed,
+      hasDoubleNewline: reconstructed.includes('\n\n'),
+      doubleNewlineCount: (reconstructed.match(/\n\n/g) || []).length,
+      length: reconstructed.length,
+    });
+  } else {
+    reconstructed = cleanMainContent;
+    console.log('[MessageContentUtils] [FORMAT] reconstructMessageContent (no progress lines)', {
+      mainContent: cleanMainContent,
+      reconstructed,
+    });
   }
-  return cleanMainContent;
+
+  return reconstructed;
 }
 
 /**

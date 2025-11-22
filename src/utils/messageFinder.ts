@@ -7,10 +7,7 @@
  */
 
 import type { ChatMessage, InstructionType } from '../types';
-import { createLogger } from './logger';
 import { findTaskMessageIndex } from './messageContentUtils';
-
-const log = createLogger('MessageFinder');
 
 export interface FindMessageOptions {
   messages: ChatMessage[];
@@ -21,7 +18,51 @@ export interface FindMessageOptions {
 }
 
 /**
+ * Helper function to check if a message matches the criteria for progress updates
+ */
+function matchesProgressCriteria(
+  msg: ChatMessage,
+  isTaskRunning: boolean,
+  currentMode: InstructionType,
+  _preferPlaceholder: boolean | undefined,
+  requireContent: boolean | undefined,
+  checkMode: boolean
+): boolean {
+  // Basic sender and type checks
+  if (msg.sender !== 'agent' || msg.isSystemMessage || msg.isScreenAccessRequest) {
+    return false;
+  }
+
+  // For active show/do tasks, check mode matching
+  // BUT: Be lenient for placeholders - allow mode mismatch if placeholder mode is undefined
+  // This handles race conditions where tool calls arrive before mode is set
+  if (checkMode && isTaskRunning && (currentMode === 'show' || currentMode === 'do')) {
+    // For placeholders, allow mode mismatch if mode is undefined (will be set later)
+    // For non-placeholders, require strict mode matching
+    if (msg.isPlaceholder) {
+      // Placeholder: allow if mode matches OR mode is undefined
+      if (msg.mode !== undefined && msg.mode !== currentMode) {
+        return false;
+      }
+    } else {
+      // Non-placeholder: require strict mode matching
+      if (msg.mode !== currentMode) {
+        return false;
+      }
+    }
+  }
+
+  // Content requirement check
+  if (requireContent && msg.content.trim().length === 0) {
+    return false;
+  }
+
+  return true;
+}
+
+/**
  * Find the message that should receive progress updates
+ * ALWAYS returns the LAST (most recent) matching message by searching backwards.
  * Priority order for active show/do tasks:
  * 1. Placeholder message in show/do mode that has content (the "Let me try this" message)
  * 2. Placeholder message in show/do mode (even without content yet)
@@ -36,70 +77,142 @@ export function findMessageForProgress(options: FindMessageOptions): {
   message: ChatMessage;
 } | null {
   const { messages, isTaskRunning, currentMode, preferPlaceholder, requireContent } = options;
+  console.log('[MessageFinder] [FLOW] findMessageForProgress called', {
+    totalMessages: messages.length,
+    isTaskRunning,
+    currentMode,
+    preferPlaceholder,
+    requireContent,
+    messageIds: messages.map((m, i) => ({
+      index: i,
+      id: m.id,
+      isPlaceholder: m.isPlaceholder,
+      sender: m.sender,
+      mode: m.mode,
+    })),
+  });
   let taskMessageIndex = -1;
+  let checkMode = false;
 
   // For active show/do tasks, find the message that matches the current mode and task state
   if (isTaskRunning && (currentMode === 'show' || currentMode === 'do')) {
-    // Priority 1: Find placeholder with content in matching mode (the active task message)
+    checkMode = true;
+
+    // Priority 1: Find LAST placeholder with content in matching mode
+    console.log(
+      '[MessageFinder] [FLOW] Searching Priority 1: Placeholder with content in matching mode'
+    );
     for (let i = messages.length - 1; i >= 0; i--) {
       const msg = messages[i];
-      if (
-        msg.sender === 'agent' &&
-        msg.isPlaceholder &&
-        !msg.isSystemMessage &&
-        !msg.isScreenAccessRequest &&
-        msg.mode === currentMode &&
-        (!requireContent || msg.content.trim().length > 0)
-      ) {
+      const matchesCriteria = matchesProgressCriteria(
+        msg,
+        isTaskRunning,
+        currentMode,
+        preferPlaceholder,
+        requireContent,
+        checkMode
+      );
+      const isPlaceholder = msg.isPlaceholder;
+      const hasContent = !requireContent || msg.content.trim().length > 0;
+
+      console.log('[MessageFinder] [FLOW] Checking message (Priority 1)', {
+        index: i,
+        messageId: msg.id,
+        sender: msg.sender,
+        isPlaceholder,
+        mode: msg.mode,
+        currentMode,
+        matchesCriteria,
+        hasContent,
+        contentLength: msg.content.trim().length,
+        willMatch: matchesCriteria && isPlaceholder && hasContent,
+      });
+
+      if (matchesCriteria && isPlaceholder && hasContent) {
         taskMessageIndex = i;
-        log.debug('Found active task placeholder with content for progress update', {
+        console.log('[MessageFinder] [FLOW] SELECTED message (Priority 1)', {
+          index: taskMessageIndex,
           messageId: msg.id,
-          content: msg.content.substring(0, 50),
-          mode: msg.mode,
-          index: i,
+          reason: 'Placeholder with content in matching mode',
         });
         break;
       }
     }
 
-    // Priority 2: Find placeholder in matching mode (even without content)
+    // Priority 2: Find LAST placeholder in matching mode (even without content)
     if (taskMessageIndex < 0 && !requireContent) {
+      console.log(
+        '[MessageFinder] [FLOW] Searching Priority 2: Placeholder in matching mode (no content requirement)'
+      );
       for (let i = messages.length - 1; i >= 0; i--) {
         const msg = messages[i];
-        if (
-          msg.sender === 'agent' &&
-          msg.isPlaceholder &&
-          !msg.isSystemMessage &&
-          !msg.isScreenAccessRequest &&
-          msg.mode === currentMode
-        ) {
+        const matchesCriteria = matchesProgressCriteria(
+          msg,
+          isTaskRunning,
+          currentMode,
+          preferPlaceholder,
+          requireContent,
+          checkMode
+        );
+        const isPlaceholder = msg.isPlaceholder;
+
+        console.log('[MessageFinder] [FLOW] Checking message (Priority 2)', {
+          index: i,
+          messageId: msg.id,
+          sender: msg.sender,
+          isPlaceholder,
+          mode: msg.mode,
+          currentMode,
+          matchesCriteria,
+          willMatch: matchesCriteria && isPlaceholder,
+        });
+
+        if (matchesCriteria && isPlaceholder) {
           taskMessageIndex = i;
-          log.debug('Found active task placeholder for progress update', {
+          console.log('[MessageFinder] [FLOW] SELECTED message (Priority 2)', {
+            index: taskMessageIndex,
             messageId: msg.id,
-            mode: msg.mode,
-            index: i,
+            reason: 'Placeholder in matching mode',
           });
           break;
         }
       }
     }
 
-    // Priority 3: Find non-placeholder agent message in matching mode
+    // Priority 3: Find LAST non-placeholder agent message in matching mode
     if (taskMessageIndex < 0) {
+      console.log(
+        '[MessageFinder] [FLOW] Searching Priority 3: Non-placeholder agent message in matching mode'
+      );
       for (let i = messages.length - 1; i >= 0; i--) {
         const msg = messages[i];
-        if (
-          msg.sender === 'agent' &&
-          !msg.isPlaceholder &&
-          !msg.isSystemMessage &&
-          !msg.isScreenAccessRequest &&
-          msg.mode === currentMode
-        ) {
+        const matchesCriteria = matchesProgressCriteria(
+          msg,
+          isTaskRunning,
+          currentMode,
+          preferPlaceholder,
+          requireContent,
+          checkMode
+        );
+        const isPlaceholder = msg.isPlaceholder;
+
+        console.log('[MessageFinder] [FLOW] Checking message (Priority 3)', {
+          index: i,
+          messageId: msg.id,
+          sender: msg.sender,
+          isPlaceholder,
+          mode: msg.mode,
+          currentMode,
+          matchesCriteria,
+          willMatch: matchesCriteria && !isPlaceholder,
+        });
+
+        if (matchesCriteria && !isPlaceholder) {
           taskMessageIndex = i;
-          log.debug('Found active task message for progress update', {
+          console.log('[MessageFinder] [FLOW] SELECTED message (Priority 3)', {
+            index: taskMessageIndex,
             messageId: msg.id,
-            mode: msg.mode,
-            index: i,
+            reason: 'Non-placeholder agent message in matching mode',
           });
           break;
         }
@@ -108,9 +221,49 @@ export function findMessageForProgress(options: FindMessageOptions): {
   }
 
   // Fallback: If not in active task or no matching message found, use general logic
+  // This is critical - tool calls can arrive before isTaskRunning is set to true
   if (taskMessageIndex < 0) {
-    // Check ALL placeholder messages (not just last one) if preferPlaceholder is true
-    if (preferPlaceholder !== false) {
+    console.log('[MessageFinder] [FLOW] Using fallback logic (task not running or no match found)');
+    // Priority 1: Check LAST placeholder message (preferred for progress updates)
+    // Don't require mode matching or content when task isn't running yet
+    // ALWAYS check for placeholders first, regardless of preferPlaceholder flag
+    // This ensures we find existing placeholders before creating new ones
+    console.log('[MessageFinder] [FLOW] Searching Fallback Priority 1: Placeholder with content');
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const msg = messages[i];
+      const isAgent = msg.sender === 'agent';
+      const isPlaceholder = msg.isPlaceholder;
+      const notSystem = !msg.isSystemMessage;
+      const notScreenAccess = !msg.isScreenAccessRequest;
+      const hasContent = !requireContent || msg.content.trim().length > 0;
+
+      console.log('[MessageFinder] [FLOW] Checking message (Fallback Priority 1)', {
+        index: i,
+        messageId: msg.id,
+        isAgent,
+        isPlaceholder,
+        notSystem,
+        notScreenAccess,
+        hasContent,
+        contentLength: msg.content.trim().length,
+        willMatch: isAgent && isPlaceholder && notSystem && notScreenAccess && hasContent,
+      });
+
+      if (isAgent && isPlaceholder && notSystem && notScreenAccess && hasContent) {
+        taskMessageIndex = i;
+        console.log('[MessageFinder] [FLOW] SELECTED message (Fallback Priority 1)', {
+          index: taskMessageIndex,
+          messageId: msg.id,
+          mode: msg.mode,
+          currentMode,
+          reason: 'Placeholder with content in fallback',
+        });
+        break;
+      }
+    }
+
+    // Priority 2: If still not found, try placeholder without content requirement
+    if (taskMessageIndex < 0 && !requireContent) {
       for (let i = messages.length - 1; i >= 0; i--) {
         const msg = messages[i];
         if (
@@ -120,37 +273,37 @@ export function findMessageForProgress(options: FindMessageOptions): {
           !msg.isScreenAccessRequest
         ) {
           taskMessageIndex = i;
-          log.debug('Found placeholder message for progress update (fallback)', {
+          console.log('[MessageFinder] [FLOW] Found placeholder in fallback (Priority 2)', {
+            index: taskMessageIndex,
             messageId: msg.id,
-            index: i,
+            mode: msg.mode,
+            currentMode,
           });
           break;
         }
       }
     }
 
-    // If still not found, try to find a task message (non-placeholder agent message)
+    // Priority 3: Try to find the last task message (non-placeholder agent message)
     if (taskMessageIndex < 0) {
       taskMessageIndex = findTaskMessageIndex(messages);
       if (taskMessageIndex >= 0) {
-        log.debug('Found task message for progress update (fallback)', {
-          messageId: messages[taskMessageIndex].id,
+        console.log('[MessageFinder] [FLOW] Found task message in fallback (Priority 3)', {
           index: taskMessageIndex,
+          messageId: messages[taskMessageIndex].id,
         });
       }
     }
 
-    // Last resort: try to find ANY agent message as fallback
+    // Priority 4: Last resort - find ANY agent message (ensures we always find something if possible)
     if (taskMessageIndex < 0) {
       for (let i = messages.length - 1; i >= 0; i--) {
         const msg = messages[i];
         if (msg.sender === 'agent' && !msg.isSystemMessage && !msg.isScreenAccessRequest) {
           taskMessageIndex = i;
-          log.warn('Using any agent message for progress update (last resort)', {
+          console.log('[MessageFinder] [FLOW] Found any agent message in fallback (Priority 4)', {
+            index: taskMessageIndex,
             messageId: msg.id,
-            isPlaceholder: msg.isPlaceholder,
-            mode: msg.mode,
-            index: i,
           });
           break;
         }
@@ -159,12 +312,27 @@ export function findMessageForProgress(options: FindMessageOptions): {
   }
 
   if (taskMessageIndex >= 0) {
-    return {
+    const found = {
       index: taskMessageIndex,
       message: messages[taskMessageIndex],
     };
+    console.log('[MessageFinder] [FLOW] Found message', {
+      index: found.index,
+      messageId: found.message.id,
+      isPlaceholder: found.message.isPlaceholder,
+      sender: found.message.sender,
+      mode: found.message.mode,
+      contentPreview: found.message.content.substring(0, 100),
+    });
+    return found;
   }
 
+  console.warn('[MessageFinder] [FLOW] No message found for progress update', {
+    totalMessages: messages.length,
+    isTaskRunning,
+    currentMode,
+    preferPlaceholder,
+  });
   return null;
 }
 
@@ -210,13 +378,3 @@ export function findPlaceholderMessage(
 /**
  * Find the task message (non-placeholder agent message)
  */
-export function findTaskMessage(messages: ChatMessage[]): {
-  index: number;
-  message: ChatMessage;
-} | null {
-  const index = findTaskMessageIndex(messages);
-  if (index >= 0) {
-    return { index, message: messages[index] };
-  }
-  return null;
-}

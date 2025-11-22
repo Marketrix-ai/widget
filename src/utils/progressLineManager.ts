@@ -26,28 +26,71 @@ export function addProgressLine(
   toolName: string,
   explanation: string
 ): ChatMessage {
+  console.log('[ProgressLineManager] [FLOW] addProgressLine called', {
+    messageId: message.id,
+    toolName,
+    explanation,
+    originalContent: message.content,
+  });
+
   const { mainContent, progressLines } = parseProgressLines(message.content);
+  console.log('[ProgressLineManager] [FLOW] Parsed content', {
+    mainContent,
+    progressLineCount: progressLines.length,
+    progressLines,
+  });
 
   // Check if this tool already has a progress line
   const existingIndex = findProgressLineIndexByToolName(progressLines, toolName);
+  console.log('[ProgressLineManager] [FLOW] Existing progress line check', {
+    existingIndex,
+    toolName,
+  });
 
   const progressLine = formatProgressLine(toolName, explanation, 'pending');
+  console.log('[ProgressLineManager] [FLOW] Formatted progress line', {
+    progressLine,
+    startsWithCircle: progressLine.trim().startsWith('○'),
+  });
+
   const updatedProgressLines = [...progressLines];
 
   if (existingIndex >= 0) {
     // Update existing line
     updatedProgressLines[existingIndex] = progressLine;
+    console.log('[ProgressLineManager] [FLOW] Updated existing progress line', {
+      index: existingIndex,
+      oldLine: progressLines[existingIndex],
+      newLine: progressLine,
+    });
   } else {
     // Add new line
     updatedProgressLines.push(progressLine);
+    console.log('[ProgressLineManager] [FLOW] Added new progress line', {
+      newLine: progressLine,
+      totalProgressLines: updatedProgressLines.length,
+    });
   }
 
   const updatedContent = reconstructMessageContent(mainContent, updatedProgressLines);
+  console.log('[ProgressLineManager] [FLOW] Reconstructed content', {
+    updatedContent,
+    hasNewline: updatedContent.includes('\n\n'),
+    contentLength: updatedContent.length,
+  });
 
-  return {
+  const result = {
     ...message,
     content: updatedContent,
   };
+
+  console.log('[ProgressLineManager] [FLOW] Returning updated message', {
+    messageId: result.id,
+    content: result.content,
+    contentChanged: result.content !== message.content,
+  });
+
+  return result;
 }
 
 /**

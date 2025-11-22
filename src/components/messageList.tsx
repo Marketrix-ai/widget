@@ -1789,6 +1789,25 @@ export const MessageList = ({
       </div>
 
       {/* Messages */}
+      {(() => {
+        // Debug: Log messages being rendered
+        const messagesWithProgress = messages.filter((msg) => {
+          const { progressLines } = parseProgressLines(msg.content);
+          return progressLines.length > 0;
+        });
+        if (messagesWithProgress.length > 0) {
+          console.log('[MessageList] [FLOW] Rendering messages with progress', {
+            totalMessages: messages.length,
+            messagesWithProgress: messagesWithProgress.length,
+            progressMessages: messagesWithProgress.map((msg) => ({
+              id: msg.id,
+              content: msg.content,
+              progressLines: parseProgressLines(msg.content).progressLines,
+            })),
+          });
+        }
+        return null;
+      })()}
       {messages.map((message: ChatMessage, index: number) => {
         // Render system messages differently (muted, centered)
         if (message.isSystemMessage) {
@@ -1885,10 +1904,35 @@ export const MessageList = ({
                     {/* Show content if placeholder has been updated with agent message */}
                     {(() => {
                       const cleanContent = removeThinkingMarkerFromEnd(message.content);
+                      console.log('[MessageList] [RENDER] Parsing progress lines for placeholder', {
+                        messageId: message.id,
+                        originalContent: message.content,
+                        cleanContent,
+                        contentLength: cleanContent.length,
+                        hasDoubleNewline: cleanContent.includes('\n\n'),
+                      });
                       const { mainContent, progressLines } = parseProgressLines(cleanContent);
+                      console.log('[MessageList] [RENDER] Parsed progress lines result', {
+                        messageId: message.id,
+                        mainContent,
+                        mainContentLength: mainContent.trim().length,
+                        progressLineCount: progressLines.length,
+                        progressLines,
+                        hasProgressIndicators:
+                          cleanContent.includes('○') || cleanContent.includes('●✓'),
+                      });
                       const placeholderState = message.placeholderState || 'thinking';
                       const isWaitingForUser = placeholderState === 'waiting-for-user';
                       const hasContent = mainContent.trim().length > 0 || progressLines.length > 0;
+                      console.log('[MessageList] [RENDER] Rendering conditions', {
+                        messageId: message.id,
+                        placeholderState,
+                        isWaitingForUser,
+                        hasContent,
+                        hasProgressLines: progressLines.length > 0,
+                        willShowProgress: progressLines.length > 0,
+                        willShowMainContent: mainContent.trim().length > 0,
+                      });
 
                       return (
                         <>
@@ -1914,6 +1958,19 @@ export const MessageList = ({
                                   (isPending &&
                                     widgetState.isTaskRunning &&
                                     (message.mode === 'show' || message.mode === 'do'));
+
+                                // Debug logging for each progress line
+                                console.log('[MessageList] [FLOW] Rendering progress line', {
+                                  messageId: message.id,
+                                  lineIndex: idx,
+                                  trimmedLine,
+                                  isCompleted,
+                                  isPending,
+                                  isWaitingForUser,
+                                  widgetStateIsTaskRunning: widgetState.isTaskRunning,
+                                  messageMode: message.mode,
+                                  isWaitingForUserAction,
+                                });
 
                                 // Extract text after the status indicator
                                 const text = trimmedLine
@@ -2065,7 +2122,61 @@ export const MessageList = ({
                       !message.videoStream &&
                       (() => {
                         const cleanContent = removeThinkingMarkerFromEnd(message.content);
+                        console.log(
+                          '[MessageList] [RENDER] Parsing progress lines for non-placeholder',
+                          {
+                            messageId: message.id,
+                            originalContent: message.content,
+                            cleanContent,
+                            contentLength: cleanContent.length,
+                            hasDoubleNewline: cleanContent.includes('\n\n'),
+                            hasProgressIndicators:
+                              cleanContent.includes('○') || cleanContent.includes('●✓'),
+                          }
+                        );
                         const { mainContent, progressLines } = parseProgressLines(cleanContent);
+                        console.log(
+                          '[MessageList] [RENDER] Parsed progress lines result (non-placeholder)',
+                          {
+                            messageId: message.id,
+                            mainContent,
+                            mainContentLength: mainContent.trim().length,
+                            progressLineCount: progressLines.length,
+                            progressLines,
+                            messageMode: message.mode,
+                            isPlaceholder: message.isPlaceholder,
+                            placeholderState: message.placeholderState,
+                            widgetStateIsTaskRunning: widgetState.isTaskRunning,
+                            widgetStateCurrentMode: widgetState.currentMode,
+                            shouldShowProgress: progressLines.length > 0,
+                          }
+                        );
+
+                        // Debug logging for progress lines
+                        if (progressLines.length > 0) {
+                          console.log('[MessageList] [FLOW] Parsing progress lines', {
+                            messageId: message.id,
+                            originalContent: message.content,
+                            cleanContent,
+                            mainContent,
+                            progressLineCount: progressLines.length,
+                            progressLines,
+                            messageMode: message.mode,
+                            isPlaceholder: message.isPlaceholder,
+                            placeholderState: message.placeholderState,
+                            widgetStateIsTaskRunning: widgetState.isTaskRunning,
+                            widgetStateCurrentMode: widgetState.currentMode,
+                            shouldShowProgress: progressLines.length > 0,
+                            shouldShowWaitingSpinner:
+                              !message.isPlaceholder &&
+                              progressLines.some((line) => {
+                                const trimmed = line.trim();
+                                return trimmed.startsWith('○') && !trimmed.startsWith('●✓');
+                              }) &&
+                              widgetState.isTaskRunning &&
+                              (message.mode === 'show' || message.mode === 'do'),
+                          });
+                        }
 
                         return (
                           <div className='text-xs font-inter font-medium leading-tight break-words'>

@@ -22,46 +22,9 @@ export function removeElementById(id: string): void {
 }
 
 /**
- * Remove all elements matching a selector
- */
-export function removeElementsBySelector(selector: string): void {
-  try {
-    const elements = document.querySelectorAll(selector);
-    elements.forEach((element) => {
-      try {
-        element.remove();
-      } catch (error) {
-        console.warn(`[DOM Utils] Failed to remove element:`, error);
-      }
-    });
-  } catch (error) {
-    console.warn(`[DOM Utils] Failed to query elements with selector "${selector}":`, error);
-  }
-}
-
-/**
- * Remove a class from all elements matching a selector
- */
-export function removeClassFromElements(selector: string, className: string): void {
-  try {
-    const elements = document.querySelectorAll(selector);
-    elements.forEach((element) => {
-      if (isHTMLElement(element)) {
-        element.classList.remove(className);
-      }
-    });
-  } catch (error) {
-    console.warn(
-      `[DOM Utils] Failed to remove class "${className}" from elements with selector "${selector}":`,
-      error
-    );
-  }
-}
-
-/**
  * Safely remove an event listener from an element
  */
-export function removeEventListenerSafely(
+function removeEventListenerSafely(
   element: EventTarget,
   event: string,
   handler: EventListener,

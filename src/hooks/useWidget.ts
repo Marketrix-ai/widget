@@ -1228,6 +1228,7 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
                   ? {
                       ...msg,
                       content: updatedContent,
+                      mode: msg.mode || messageMode, // Preserve mode or set from messageMode
                       // Keep as placeholder so tool calls can update it
                     }
                   : msg
@@ -1356,23 +1357,56 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
    * Stop the currently running task
    */
   const stopTask = useCallback(async () => {
-    if (!apiServiceRef.current || !state.activeTaskId) return;
+    if (!apiServiceRef.current) return;
 
-    try {
-      await apiServiceRef.current.stopTask(state.activeTaskId);
-      setState((prev) => ({
+    // Try to stop the task if we have an activeTaskId
+    if (state.activeTaskId) {
+      try {
+        await apiServiceRef.current.stopTask(state.activeTaskId);
+      } catch (error) {
+        logError('stopTask', error);
+        // Continue to clean up messages even if API call fails
+      }
+    }
+
+    // Always clean up messages and state when stopping
+    setState((prev) => {
+      // Update messages: remove thinking markers and convert placeholders to regular messages
+      const updatedMessages = prev.messages.map((msg) => {
+        // Remove thinking marker from content
+        const contentWithoutThinking = msg.content
+          .replace(/\n\n__THINKING__$/, '')
+          .replace(/__THINKING__/g, '');
+
+        // If this is a placeholder message, convert it to a regular message
+        if (msg.isPlaceholder) {
+          return {
+            ...msg,
+            content: contentWithoutThinking,
+            isPlaceholder: false,
+            placeholderState: undefined,
+          };
+        }
+
+        // For regular messages, just remove thinking marker
+        if (contentWithoutThinking !== msg.content) {
+          return {
+            ...msg,
+            content: contentWithoutThinking,
+          };
+        }
+
+        return msg;
+      });
+
+      return {
         ...prev,
         activeTaskId: null,
         isTaskRunning: false,
         isLoading: false,
-      }));
-    } catch (error) {
-      logError('stopTask', error);
-      setState((prev) => ({
-        ...prev,
-        error: 'Failed to stop task',
-      }));
-    }
+        messages: updatedMessages,
+      };
+    });
   }, [state.activeTaskId]);
 
   /**

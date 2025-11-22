@@ -147,4 +147,3 @@ class InitializationStateManager {
 
 // Export singleton instance
 export const initializationState = new InitializationStateManager();
-export default InitializationStateManager;

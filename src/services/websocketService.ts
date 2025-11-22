@@ -296,16 +296,30 @@ export class WebSocketService {
    */
   send(message: WebSocketMessage): void {
     if (!this.websocket || this.websocket.readyState !== WebSocket.OPEN) {
-      console.warn('[WebSocket] Cannot send message, websocket not open');
+      console.error('[WebSocket] Cannot send message, websocket not open', {
+        hasWebsocket: !!this.websocket,
+        readyState: this.websocket?.readyState,
+        messageMethod: message.method,
+        messageId: message.id,
+      });
       throw new Error('WebSocket is not connected');
     }
 
     try {
       const jsonMessage = JSON.stringify(message);
       this.websocket.send(jsonMessage);
-      console.log('[WebSocket] Sent message:', message.method || 'unknown');
+      console.log('[WebSocket] Sent message:', {
+        method: message.method || 'unknown',
+        id: message.id,
+        hasResult: !!message.result,
+        hasError: !!message.error,
+        messageLength: jsonMessage.length,
+      });
     } catch (error) {
-      console.error('[WebSocket] Failed to send message:', error);
+      console.error('[WebSocket] Failed to send message:', error, {
+        method: message.method,
+        id: message.id,
+      });
       throw error;
     }
   }
@@ -434,6 +448,51 @@ export class WebSocketService {
   }
 
   private handleMessage(message: WebSocketMessage): void {
+    // Detailed message structure logging for verification
+    console.log('[WebSocket] [STRUCTURE] Received message structure:', {
+      method: message.method,
+      hasId: message.id !== undefined,
+      id: message.id,
+      idType: typeof message.id,
+      hasParams: message.params !== undefined,
+      paramsType: typeof message.params,
+      paramsIsNull: message.params === null,
+      paramsIsObject: message.params !== null && typeof message.params === 'object',
+      paramsKeys:
+        message.params && typeof message.params === 'object'
+          ? Object.keys(message.params as Record<string, unknown>)
+          : [],
+      paramsValue: message.params,
+      hasResult: message.result !== undefined,
+      resultType: typeof message.result,
+      hasError: message.error !== undefined,
+      errorValue: message.error,
+      jsonrpc: message.jsonrpc,
+      fullMessage: JSON.stringify(message, null, 2),
+    });
+
+    // For tools/call messages, log detailed params structure
+    if (message.method === 'tools/call') {
+      const params = message.params as
+        | {
+            name?: string;
+            arguments?: Record<string, unknown>;
+            mode?: string;
+            explanation?: string;
+          }
+        | undefined;
+      console.log('[WebSocket] [STRUCTURE] tools/call message details:', {
+        hasParams: !!message.params,
+        paramsExists: message.params !== undefined && message.params !== null,
+        paramsName: params?.name,
+        paramsMode: params?.mode,
+        paramsExplanation: params?.explanation,
+        paramsArguments: params?.arguments,
+        paramsStructure: params,
+        hasParamsWithName: !!params?.name,
+      });
+    }
+
     console.log('[WebSocket] Received message:', message.method || 'unknown');
     // Handle registration confirmation
     if (message.method === 'widget/registered') {
@@ -469,18 +528,28 @@ export class WebSocketService {
 
       // Forward the tool call message to onMessage callback FIRST so widget can update progress
       if (this.callbacks.onMessage) {
-        console.log('[WebSocket] Forwarding tool call message to onMessage callback', {
+        console.log('[WebSocket] [FLOW] Forwarding tool call message to onMessage callback', {
           messageId: message.id,
           toolName: params?.name,
           explanation: params?.explanation,
           hasParams: !!message.params,
           hasResult: !!message.result,
           hasError: !!message.error,
+          paramsKeys:
+            message.params && typeof message.params === 'object'
+              ? Object.keys(message.params as Record<string, unknown>)
+              : [],
+          fullParams: message.params,
         });
-        this.callbacks.onMessage(message);
+        try {
+          this.callbacks.onMessage(message);
+          console.log('[WebSocket] [FLOW] Successfully called onMessage callback');
+        } catch (error) {
+          console.error('[WebSocket] [FLOW] Error in onMessage callback:', error);
+        }
       } else {
-        console.warn(
-          '[WebSocket] No onMessage callback registered, cannot forward tool call for progress update'
+        console.error(
+          '[WebSocket] [FLOW] CRITICAL: No onMessage callback registered, cannot forward tool call for progress update'
         );
       }
       // Then execute the tool
@@ -560,20 +629,43 @@ export class WebSocketService {
 
     try {
       // Execute the tool with mode and explanation
+      console.log(`[WebSocket] Starting tool execution: ${toolName} (mode: ${mode})`, {
+        requestId,
+        arguments_,
+        explanation,
+      });
       const result = await executeTool(toolName, arguments_, mode, explanation);
       console.log(`[WebSocket] Tool execution result:`, result);
 
       // Handle success or failure
       if (result.success) {
         const response = this.createSuccessResponse(requestId, result.result);
-        console.log(`[WebSocket] Tool ${toolName} executed successfully, sending response:`, {
-          requestId,
-          toolName,
-          resultLength: result.result.length,
-          resultPreview: result.result.substring(0, 100),
-        });
-        // Forward result BEFORE clearing pending tool call so result handler can match by requestId
-        this.sendAndForwardResponse(response);
+        console.log(
+          `[WebSocket] Tool ${toolName} executed successfully, preparing to send response:`,
+          {
+            requestId,
+            toolName,
+            resultLength: result.result.length,
+            resultPreview: result.result.substring(0, 100),
+            responseMethod: response.method,
+            responseId: response.id,
+            websocketState: this.websocket?.readyState,
+            isConnected: this.isConnected(),
+          }
+        );
+        try {
+          // Forward result BEFORE clearing pending tool call so result handler can match by requestId
+          this.sendAndForwardResponse(response);
+          console.log(`[WebSocket] Successfully sent and forwarded response for tool ${toolName}`);
+        } catch (sendError) {
+          console.error(`[WebSocket] Failed to send response for tool ${toolName}:`, sendError, {
+            requestId,
+            toolName,
+            websocketState: this.websocket?.readyState,
+            isConnected: this.isConnected(),
+          });
+          // Still clear pending tool call even if send failed
+        }
         // Clear pending tool call AFTER forwarding so result handler can still access it
         clearPendingToolCall();
       } else {
@@ -624,7 +716,26 @@ export class WebSocketService {
    * Send a response and forward it to the onMessage callback.
    */
   private sendAndForwardResponse(response: WebSocketMessage): void {
-    this.send(response);
+    try {
+      // CRITICAL: Send the response to the server FIRST
+      // This must happen even if forwarding fails
+      console.log('[WebSocket] Sending tool call response to server:', {
+        method: response.method,
+        id: response.id,
+        hasResult: !!response.result,
+        hasError: !!response.error,
+      });
+      this.send(response);
+      console.log('[WebSocket] Successfully sent tool call response to server');
+    } catch (sendError) {
+      // Log error but continue to forward to callback for UI update
+      console.error('[WebSocket] Failed to send tool call response to server:', sendError, {
+        method: response.method,
+        id: response.id,
+      });
+      // Don't throw - still forward to callback so UI can update
+    }
+
     // Forward the result message to onMessage callback so it can update progress
     // Ensure the message has the correct format for routing
     const resultMessage: WebSocketMessage = {
@@ -655,7 +766,7 @@ export class WebSocketService {
       });
       this.callbacks.onMessage(resultMessage);
     } else {
-      console.error(
+      console.warn(
         '[WebSocket] No onMessage callback registered, cannot forward result for progress update!'
       );
     }

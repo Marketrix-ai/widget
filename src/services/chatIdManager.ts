@@ -122,4 +122,3 @@ class ChatIdManager {
 }
 
 export const chatIdManager = ChatIdManager.getInstance();
-export default ChatIdManager;
