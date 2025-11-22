@@ -86,9 +86,12 @@ export function storeChatContext(
   try {
     // Serialize messages, excluding videoStream and converting Date to ISO string
     // Also exclude placeholder messages from storage
+    // IMPORTANT: System messages (like "Switched to Show mode") ARE preserved
+    // Exclude "Chat context changed" messages - they're transient and will be re-added if needed
     // Remove __THINKING__ markers from content (they shouldn't be persisted)
     const serializedMessages = messages
       .filter((msg) => !msg.isPlaceholder)
+      .filter((msg) => !(msg.isSystemMessage && msg.content === 'Chat context changed'))
       .map((msg) => {
         // Clean __THINKING__ markers from content before storing
         const cleanContent = removeThinkingMarkers(msg.content);
@@ -99,9 +102,18 @@ export function storeChatContext(
           timestamp: msg.timestamp.toISOString(),
           mode: msg.mode,
           isScreenAccessRequest: msg.isScreenAccessRequest,
-          isSystemMessage: msg.isSystemMessage,
+          isSystemMessage: msg.isSystemMessage, // Preserve system messages (mode changes, etc.)
         };
       });
+
+    // Log system messages being stored for verification
+    const systemMessages = serializedMessages.filter((msg) => msg.isSystemMessage);
+    if (systemMessages.length > 0) {
+      console.log('[Chat Storage] Storing system messages:', {
+        count: systemMessages.length,
+        messages: systemMessages.map((m) => ({ id: m.id, content: m.content })),
+      });
+    }
 
     const context: StoredChatContext = {
       version: CONTEXT_VERSION,
@@ -122,16 +134,32 @@ export function storeChatContext(
       messageCount: messages.length,
       isTaskRunning,
       activeTaskId,
+      currentMode,
+      isOpen,
+      isMinimized,
+      timestamp: context.timestamp,
     });
+    // Verify it was actually stored
+    const verify = localStorage.getItem(CHAT_CONTEXT_STORAGE_KEY);
+    if (verify) {
+      const parsed = JSON.parse(verify);
+      console.log('[Chat Storage] Verification - context stored successfully:', {
+        storedMessageCount: parsed.messages?.length || 0,
+        storedChatId: parsed.chat_id,
+      });
+    } else {
+      console.error('[Chat Storage] ERROR - context was not stored!');
+    }
   } catch (error) {
     console.warn('[Chat Storage] Failed to store chat context:', error);
   }
 }
 
 /**
- * Get stored chat context
+ * Get stored chat context without requiring a chat ID
+ * Returns the most recent stored context regardless of chat ID
  */
-export function getStoredChatContext(chatId: string): StoredChatContext | null {
+export function getAnyStoredChatContext(): StoredChatContext | null {
   if (!isBrowser()) {
     return null;
   }
@@ -147,12 +175,6 @@ export function getStoredChatContext(chatId: string): StoredChatContext | null {
     // Validate context
     if (!context || typeof context !== 'object') {
       console.warn('[Chat Storage] Invalid context format');
-      return null;
-    }
-
-    // Check if context matches current chat_id
-    if (context.chat_id !== chatId) {
-      console.log('[Chat Storage] Context chat_id mismatch, ignoring stored context');
       return null;
     }
 
@@ -178,6 +200,31 @@ export function getStoredChatContext(chatId: string): StoredChatContext | null {
 }
 
 /**
+ * Get stored chat context
+ * Returns stored context even if chat ID differs (to preserve history across chat ID changes)
+ */
+export function getStoredChatContext(chatId: string): StoredChatContext | null {
+  const context = getAnyStoredChatContext();
+  if (!context) {
+    return null;
+  }
+
+  // Note: We no longer require chat_id match - this allows preserving history when chat ID changes
+  // The caller (restoreChatContext) will handle chat ID differences by appending a system message
+  if (context.chat_id !== chatId) {
+    console.log(
+      '[Chat Storage] Context chat_id mismatch, but returning context to preserve history',
+      {
+        storedChatId: context.chat_id,
+        currentChatId: chatId,
+      }
+    );
+  }
+
+  return context;
+}
+
+/**
  * Clear stored chat context
  */
 export function clearChatContext(): void {
@@ -199,7 +246,7 @@ export function clearChatContext(): void {
  */
 export function restoreMessagesFromContext(context: StoredChatContext): ChatMessage[] {
   try {
-    return context.messages.map((msg) => {
+    const restored = context.messages.map((msg) => {
       // Remove any __THINKING__ markers that might have been stored
       let cleanContent = removeThinkingMarkers(msg.content);
 
@@ -226,9 +273,20 @@ export function restoreMessagesFromContext(context: StoredChatContext): ChatMess
         timestamp: new Date(msg.timestamp),
         mode: msg.mode,
         isScreenAccessRequest: msg.isScreenAccessRequest,
-        isSystemMessage: msg.isSystemMessage,
+        isSystemMessage: msg.isSystemMessage, // Preserve system messages (mode changes, etc.)
       };
     });
+
+    // Log system messages being restored for verification
+    const systemMessages = restored.filter((msg) => msg.isSystemMessage);
+    if (systemMessages.length > 0) {
+      console.log('[Chat Storage] Restoring system messages:', {
+        count: systemMessages.length,
+        messages: systemMessages.map((m) => ({ id: m.id, content: m.content })),
+      });
+    }
+
+    return restored;
   } catch (error) {
     console.warn('[Chat Storage] Failed to restore messages:', error);
     return [];

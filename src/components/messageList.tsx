@@ -24,11 +24,7 @@ import {
   lightenColor,
 } from '../utils/colorUtils';
 import { removeTourClickHandler } from '../utils/domUtils';
-import {
-  hasThinkingMarker,
-  parseProgressLines,
-  removeThinkingMarkerFromEnd,
-} from '../utils/messageContentUtils';
+import { parseProgressLines, removeThinkingMarkerFromEnd } from '../utils/messageContentUtils';
 import { createUserMessage } from '../utils/messageFactory';
 import { formatMessageTime } from '../utils/textFormatting';
 import {
@@ -66,8 +62,6 @@ interface MessageListProps {
   onStepGuideStart?: () => void;
   onScreenAccessAllow?: () => void;
   onScreenAccessDeny?: () => void;
-  isTaskRunning?: boolean;
-  currentMode?: 'show' | 'tell' | 'do';
 }
 
 export const MessageList = ({
@@ -81,11 +75,12 @@ export const MessageList = ({
   onStepGuideStart,
   onScreenAccessAllow,
   onScreenAccessDeny,
-  isTaskRunning = false,
-  currentMode,
 }: MessageListProps) => {
-  // Get widget settings
-  const { settings } = useWidget(config ? { config } : {});
+  // Get widget settings and state
+  const { settings, state: widgetState } = useWidget(config ? { config } : {});
+
+  // Check if there's a pending message (placeholder exists or isLoading)
+  const hasPendingMessage = widgetState.isLoading || messages.some((msg) => msg.isPlaceholder);
 
   // Helper function to get connection ID from config with fallback
   const getConnectionId = (): number => {
@@ -1554,6 +1549,11 @@ export const MessageList = ({
     event.preventDefault();
     event.stopPropagation();
 
+    // Don't allow clicking chips when there's a pending message
+    if (hasPendingMessage) {
+      return;
+    }
+
     // FIRST: Switch to the chip's mode if not already in that mode
     // Use onModeChange if available (adds system message), otherwise fall back to onSetMode
     if (action.type) {
@@ -1686,36 +1686,48 @@ export const MessageList = ({
                   <button
                     key={`welcome-chip-${action.id}-${chipIndex}`}
                     onClick={(e) => handleSuggestedActionClick(action, e)}
+                    disabled={hasPendingMessage}
                     className={`
-                      w-full flex items-center gap-1 font-inter font-normal text-xs px-2.5 py-2 rounded-lg cursor-pointer 
-                      transition-all duration-200 text-left hover:shadow-md hover:scale-[1.01] active:scale-100
+                      w-full flex items-center gap-1 font-inter font-normal text-xs px-2.5 py-2 rounded-lg
+                      transition-all duration-200 text-left
                       group
                       leading-tight
+                      ${hasPendingMessage ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:shadow-md hover:scale-[1.01] active:scale-100'}
                     `}
                     style={{
-                      backgroundColor: addOpacity(settings.widget_secondary_color, 0.2),
-                      borderColor: addOpacity(settings.widget_secondary_color, 0.3),
-                      color: settings.widget_text_color,
+                      backgroundColor: hasPendingMessage
+                        ? addOpacity(settings.widget_secondary_color, 0.1)
+                        : addOpacity(settings.widget_secondary_color, 0.2),
+                      borderColor: hasPendingMessage
+                        ? addOpacity(settings.widget_secondary_color, 0.15)
+                        : addOpacity(settings.widget_secondary_color, 0.3),
+                      color: hasPendingMessage
+                        ? addOpacity(settings.widget_text_color, 0.5)
+                        : settings.widget_text_color,
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = addOpacity(
-                        settings.widget_secondary_color,
-                        0.3
-                      );
-                      e.currentTarget.style.borderColor = addOpacity(
-                        settings.widget_secondary_color,
-                        0.4
-                      );
+                      if (!hasPendingMessage) {
+                        e.currentTarget.style.backgroundColor = addOpacity(
+                          settings.widget_secondary_color,
+                          0.3
+                        );
+                        e.currentTarget.style.borderColor = addOpacity(
+                          settings.widget_secondary_color,
+                          0.4
+                        );
+                      }
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = addOpacity(
-                        settings.widget_secondary_color,
-                        0.2
-                      );
-                      e.currentTarget.style.borderColor = addOpacity(
-                        settings.widget_secondary_color,
-                        0.3
-                      );
+                      if (!hasPendingMessage) {
+                        e.currentTarget.style.backgroundColor = addOpacity(
+                          settings.widget_secondary_color,
+                          0.2
+                        );
+                        e.currentTarget.style.borderColor = addOpacity(
+                          settings.widget_secondary_color,
+                          0.3
+                        );
+                      }
                     }}
                   >
                     <span
@@ -1870,55 +1882,179 @@ export const MessageList = ({
                 {/* Message content or placeholder loading animation */}
                 {message.isPlaceholder ? (
                   <div className='flex flex-col gap-1.5'>
-                    {/* Subtle Facebook Messenger-style loading dots */}
-                    <div className='flex items-center gap-1 py-0.5'>
-                      <span className='messenger-dot' style={{ animationDelay: '0s' }} />
-                      <span className='messenger-dot' style={{ animationDelay: '0.15s' }} />
-                      <span className='messenger-dot' style={{ animationDelay: '0.3s' }} />
-                    </div>
-                    {/* Thinking text with subtle ellipsis at bottom */}
-                    <div className='flex items-center'>
-                      <span
-                        className='text-[10px] font-inter font-normal'
-                        style={{ color: addOpacity(settings.widget_text_color, 0.5) }}
-                      >
-                        Thinking
-                        <span className='thinking-dots'>
-                          <span style={{ animationDelay: '0s' }}>.</span>
-                          <span style={{ animationDelay: '0.2s' }}>.</span>
-                          <span style={{ animationDelay: '0.4s' }}>.</span>
-                        </span>
-                      </span>
-                    </div>
-                    <style>{`
-                      @keyframes messenger-bounce {
-                        0%, 60%, 100% {
-                          transform: translateY(0);
-                          opacity: 0.4;
-                        }
-                        30% {
-                          transform: translateY(-4px);
-                          opacity: 0.7;
-                        }
-                      }
-                      .messenger-dot {
-                        width: 4px;
-                        height: 4px;
-                        border-radius: 50%;
-                        background-color: ${addOpacity(settings.widget_text_color, 0.35)};
-                        animation: messenger-bounce 1.2s ease-in-out infinite;
-                        display: inline-block;
-                      }
-                      @keyframes thinking-dot {
-                        0%, 20% { opacity: 0; }
-                        50% { opacity: 1; }
-                        100% { opacity: 0; }
-                      }
-                      .thinking-dots span {
-                        animation: thinking-dot 1.4s infinite;
-                        margin-left: 1px;
-                      }
-                    `}</style>
+                    {/* Show content if placeholder has been updated with agent message */}
+                    {(() => {
+                      const cleanContent = removeThinkingMarkerFromEnd(message.content);
+                      const { mainContent, progressLines } = parseProgressLines(cleanContent);
+                      const placeholderState = message.placeholderState || 'thinking';
+                      const isWaitingForUser = placeholderState === 'waiting-for-user';
+                      const hasContent = mainContent.trim().length > 0 || progressLines.length > 0;
+
+                      return (
+                        <>
+                          {/* Show main content if available */}
+                          {mainContent && (
+                            <div className='text-xs font-inter font-medium leading-tight break-words whitespace-pre-wrap mb-2'>
+                              {mainContent}
+                            </div>
+                          )}
+
+                          {/* Show progress lines if available */}
+                          {progressLines.length > 0 && (
+                            <div className='flex flex-col gap-1.5 mt-2'>
+                              {progressLines.map((line, idx) => {
+                                const trimmedLine = line.trim();
+                                const isCompleted =
+                                  trimmedLine.startsWith('●✓') || trimmedLine.startsWith('✓');
+                                const isPending = trimmedLine.startsWith('○') && !isCompleted;
+
+                                // Determine if we're waiting for user action
+                                const isWaitingForUserAction =
+                                  isWaitingForUser ||
+                                  (isPending &&
+                                    widgetState.isTaskRunning &&
+                                    (message.mode === 'show' || message.mode === 'do'));
+
+                                // Extract text after the status indicator
+                                const text = trimmedLine
+                                  .replace(/^●✓\s*/, '')
+                                  .replace(/^○\s*/, '')
+                                  .replace(/^●\s*/, '')
+                                  .replace(/^✓\s*/, '')
+                                  .replace(/\s*✗\s*\([^)]*\)$/, '')
+                                  .trim();
+
+                                return (
+                                  <div key={idx} className='flex items-start gap-2'>
+                                    {isCompleted ? (
+                                      <FaCheckCircle
+                                        className='flex-shrink-0 mt-0.5'
+                                        style={{
+                                          color: settings.widget_accent_color || '#10b981',
+                                        }}
+                                        size={16}
+                                      />
+                                    ) : isPending ? (
+                                      isWaitingForUserAction ? (
+                                        // Spinner animation for waiting-for-user state
+                                        <div
+                                          className='flex-shrink-0 mt-0.5 spinner-container'
+                                          style={{
+                                            width: '16px',
+                                            height: '16px',
+                                            position: 'relative',
+                                          }}
+                                        >
+                                          <div
+                                            className='spinner'
+                                            style={{
+                                              borderColor: addOpacity(
+                                                settings.widget_text_color,
+                                                0.5
+                                              ),
+                                              borderTopColor:
+                                                settings.widget_accent_color || '#10b981',
+                                            }}
+                                          />
+                                          <style>{`
+                                            @keyframes spin {
+                                              0% { transform: rotate(0deg); }
+                                              100% { transform: rotate(360deg); }
+                                            }
+                                            .spinner-container .spinner {
+                                              border: 2px solid;
+                                              border-radius: 50%;
+                                              width: 16px;
+                                              height: 16px;
+                                              animation: spin 1s linear infinite;
+                                              position: absolute;
+                                              top: 0;
+                                              left: 0;
+                                            }
+                                          `}</style>
+                                        </div>
+                                      ) : (
+                                        <FaCircle
+                                          className='flex-shrink-0 mt-0.5'
+                                          style={{
+                                            color: addOpacity(settings.widget_text_color, 0.5),
+                                          }}
+                                          size={16}
+                                        />
+                                      )
+                                    ) : null}
+                                    <span className='flex-1 whitespace-pre-wrap'>{text}</span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+
+                          {/* Show thinking/waiting indicator if no content yet or after content */}
+                          {(!hasContent || mainContent) && (
+                            <>
+                              {/* Subtle Facebook Messenger-style loading dots */}
+                              <div className='flex items-center gap-1 py-0.5'>
+                                <span className='messenger-dot' style={{ animationDelay: '0s' }} />
+                                <span
+                                  className='messenger-dot'
+                                  style={{ animationDelay: '0.15s' }}
+                                />
+                                <span
+                                  className='messenger-dot'
+                                  style={{ animationDelay: '0.3s' }}
+                                />
+                              </div>
+                              {/* State text with subtle ellipsis */}
+                              <div className='flex items-center'>
+                                <span
+                                  className='text-[10px] font-inter font-normal'
+                                  style={{ color: addOpacity(settings.widget_text_color, 0.5) }}
+                                >
+                                  {isWaitingForUser
+                                    ? 'Waiting for you to complete the action'
+                                    : 'Thinking'}
+                                  <span className='thinking-dots'>
+                                    <span style={{ animationDelay: '0s' }}>.</span>
+                                    <span style={{ animationDelay: '0.2s' }}>.</span>
+                                    <span style={{ animationDelay: '0.4s' }}>.</span>
+                                  </span>
+                                </span>
+                              </div>
+                              <style>{`
+                                @keyframes messenger-bounce {
+                                  0%, 60%, 100% {
+                                    transform: translateY(0);
+                                    opacity: 0.4;
+                                  }
+                                  30% {
+                                    transform: translateY(-4px);
+                                    opacity: 0.7;
+                                  }
+                                }
+                                .messenger-dot {
+                                  width: 4px;
+                                  height: 4px;
+                                  border-radius: 50%;
+                                  background-color: ${addOpacity(settings.widget_text_color, 0.35)};
+                                  animation: messenger-bounce 1.2s ease-in-out infinite;
+                                  display: inline-block;
+                                }
+                                @keyframes thinking-dot {
+                                  0%, 20% { opacity: 0; }
+                                  50% { opacity: 1; }
+                                  100% { opacity: 0; }
+                                }
+                                .thinking-dots span {
+                                  animation: thinking-dot 1.4s infinite;
+                                  margin-left: 1px;
+                                }
+                              `}</style>
+                            </>
+                          )}
+                        </>
+                      );
+                    })()}
                   </div>
                 ) : (
                   <>
@@ -1944,6 +2080,18 @@ export const MessageList = ({
                                     trimmedLine.startsWith('●✓') || trimmedLine.startsWith('✓');
                                   const isPending = trimmedLine.startsWith('○') && !isCompleted;
 
+                                  // Determine if we're waiting for user action
+                                  // This happens when:
+                                  // 1. Message is a placeholder in waiting-for-user state, OR
+                                  // 2. Message has pending progress lines in show/do mode with task running
+                                  const isWaitingForUser =
+                                    (message.isPlaceholder &&
+                                      message.placeholderState === 'waiting-for-user') ||
+                                    (!message.isPlaceholder &&
+                                      isPending &&
+                                      widgetState.isTaskRunning &&
+                                      (message.mode === 'show' || message.mode === 'do'));
+
                                   // Extract text after the status indicator
                                   // Handle "●✓" as a sequence first, then individual characters
                                   const text = trimmedLine
@@ -1965,13 +2113,43 @@ export const MessageList = ({
                                           size={16}
                                         />
                                       ) : isPending ? (
-                                        <FaCircle
-                                          className='flex-shrink-0 mt-0.5'
-                                          style={{
-                                            color: addOpacity(settings.widget_text_color, 0.5),
-                                          }}
-                                          size={16}
-                                        />
+                                        isWaitingForUser ? (
+                                          // Spinner animation for waiting-for-user state
+                                          <div
+                                            className='flex-shrink-0 mt-0.5 spinner-container'
+                                            style={{
+                                              width: '16px',
+                                              height: '16px',
+                                              position: 'relative',
+                                            }}
+                                          >
+                                            <div
+                                              className='spinner'
+                                              style={{
+                                                width: '16px',
+                                                height: '16px',
+                                                border: `2px solid ${addOpacity(settings.widget_text_color, 0.2)}`,
+                                                borderTop: `2px solid ${settings.widget_accent_color || '#10b981'}`,
+                                                borderRadius: '50%',
+                                                animation: 'spin 1s linear infinite',
+                                              }}
+                                            />
+                                            <style>{`
+                                              @keyframes spin {
+                                                0% { transform: rotate(0deg); }
+                                                100% { transform: rotate(360deg); }
+                                              }
+                                            `}</style>
+                                          </div>
+                                        ) : (
+                                          <FaCircle
+                                            className='flex-shrink-0 mt-0.5'
+                                            style={{
+                                              color: addOpacity(settings.widget_text_color, 0.5),
+                                            }}
+                                            size={16}
+                                          />
+                                        )
                                       ) : null}
                                       <span className='flex-1 whitespace-pre-wrap'>{text}</span>
                                     </div>
@@ -2027,39 +2205,11 @@ export const MessageList = ({
                   )}
               </div>
             </div>
-            {/* Timestamp and Thinking indicator below card */}
+            {/* Timestamp below card */}
             {!message.isPlaceholder && (
               <div
-                className={`flex ${message.sender === 'user' ? 'justify-start' : 'justify-end'} mt-0.5 items-center gap-2`}
+                className={`flex ${message.sender === 'user' ? 'justify-start' : 'justify-end'} mt-0.5`}
               >
-                {/* Show Thinking indicator for active task messages when waiting */}
-                {isTaskRunning &&
-                  (currentMode === 'show' || currentMode === 'do') &&
-                  message.sender === 'agent' &&
-                  !message.isSystemMessage &&
-                  !message.isScreenAccessRequest &&
-                  index === messages.length - 1 &&
-                  hasThinkingMarker(message.content) && (
-                    <span className='text-[10px] text-gray-400 font-inter font-normal'>
-                      Thinking
-                      <span className='thinking-dots'>
-                        <span style={{ animationDelay: '0s' }}>.</span>
-                        <span style={{ animationDelay: '0.2s' }}>.</span>
-                        <span style={{ animationDelay: '0.4s' }}>.</span>
-                      </span>
-                      <style>{`
-                        @keyframes thinking-dot {
-                          0%, 20% { opacity: 0; }
-                          50% { opacity: 1; }
-                          100% { opacity: 0; }
-                        }
-                        .thinking-dots span {
-                          animation: thinking-dot 1.4s infinite;
-                          margin-left: 1px;
-                        }
-                      `}</style>
-                    </span>
-                  )}
                 <span className='text-[10px] text-gray-400 font-inter font-normal'>
                   {formatMessageTime(message.timestamp)}
                 </span>

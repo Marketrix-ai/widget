@@ -149,7 +149,10 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   }, [messages.length]);
 
   const handleSendMessage = () => {
-    if (inputValue.trim() && !isLoading) {
+    // Check if there's a pending message (placeholder exists)
+    const hasPendingMessage = isLoading || messages.some((msg) => msg.isPlaceholder);
+
+    if (inputValue.trim() && !isLoading && !hasPendingMessage) {
       const messageContent = inputValue.trim();
       setInputValue('');
 
@@ -495,8 +498,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
               <MessageList
                 messages={messages}
                 messagesEndRef={messagesEndRef}
-                isTaskRunning={isTaskRunning}
-                currentMode={currentMode}
                 onSendMessage={(content, mode, connectionId, question) => {
                   // Check if screen sharing is needed for show/do modes
                   if (
@@ -578,7 +579,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                 onChange={setInputValue}
                 onKeyPress={handleKeyPress}
                 onSend={handleSendMessage}
-                isLoading={isLoading}
+                isLoading={isLoading || messages.some((msg) => msg.isPlaceholder)}
                 isTaskRunning={isTaskRunning}
                 onStop={onStopTask}
                 config={config}

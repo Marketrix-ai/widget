@@ -20,8 +20,10 @@ import type { ChatMessage, MarketrixConfig, WidgetState } from '../types';
 import {
   clearChatContext,
   clearPendingToolCall,
+  getAnyStoredChatContext,
   getPendingToolCall,
   getStoredChatContext,
+  getStoredChatId,
   restoreMessagesFromContext,
   storeChatContext,
 } from '../utils/chatStorage';
@@ -36,6 +38,7 @@ import { logError, safeExecute, safeExecuteAsync } from '../utils/errorUtils';
 import { createLogger } from '../utils/logger';
 import {
   findTaskMessageIndex,
+  hasProgressLines,
   parseProgressLines,
   reconstructMessageContent,
   removeThinkingMarkers,
@@ -154,6 +157,11 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
     stateRef.current = state;
   }, [state]);
 
+  // Ref to track previous task running state to detect task completion
+  const prevIsTaskRunningRef = useRef<boolean>(state.isTaskRunning);
+  // Ref to track previous messages to detect when new messages are added
+  const prevMessagesRef = useRef<ChatMessage[]>(state.messages);
+
   // Service references
   const apiServiceRef = useRef<MarketrixApiService | null>(null);
   const websocketServiceRef = useRef<WebSocketService | null>(null);
@@ -202,45 +210,102 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
 
   /**
    * Restore chat context from storage
+   * Handles chat ID changes gracefully by preserving history and appending a system message
+   * Note: This may be called after early restoration, so we check if messages already exist
    */
   const restoreChatContext = useCallback((chatId: string): void => {
     const storedContext = getStoredChatContext(chatId);
     if (!storedContext) {
+      log.debug('No stored context found for restoration');
       return;
     }
 
+    const chatIdChanged = storedContext.chat_id !== chatId;
+
+    // Count system messages for logging
+    const systemMessageCount = storedContext.messages.filter((m) => m.isSystemMessage).length;
     log.debug('Restoring context from storage:', {
       messageCount: storedContext.messages.length,
+      systemMessageCount,
       isTaskRunning: storedContext.isTaskRunning,
       activeTaskId: storedContext.activeTaskId,
       currentMode: storedContext.currentMode,
+      isOpen: storedContext.isOpen,
+      isMinimized: storedContext.isMinimized,
+      chatIdChanged,
+      storedChatId: storedContext.chat_id,
+      currentChatId: chatId,
     });
 
-    const restoredMessages = restoreMessagesFromContext(storedContext);
+    // Check if messages were already restored early
+    setState((prev) => {
+      const alreadyHasMessages = prev.messages.length > 0;
 
-    // Clean up messages: remove thinking markers and validate progress lines
-    const cleanedMessages = restoredMessages.map((msg) => {
-      const cleanContent = removeThinkingMarkers(msg.content);
-      const { mainContent, progressLines } = parseProgressLines(cleanContent);
-      const validProgressLines = progressLines.filter((line) => line.trim().length > 0);
-      const finalContent = reconstructMessageContent(mainContent, validProgressLines);
+      // If messages already exist and chat ID hasn't changed, don't overwrite
+      if (alreadyHasMessages && !chatIdChanged) {
+        log.debug('Messages already restored, skipping restoration');
+        return prev;
+      }
 
+      const restoredMessages = restoreMessagesFromContext(storedContext);
+
+      // Clean up messages: remove thinking markers and validate progress lines
+      const cleanedMessages = restoredMessages.map((msg) => {
+        const cleanContent = removeThinkingMarkers(msg.content);
+        const { mainContent, progressLines } = parseProgressLines(cleanContent);
+        const validProgressLines = progressLines.filter((line) => line.trim().length > 0);
+        const finalContent = reconstructMessageContent(mainContent, validProgressLines);
+
+        return {
+          ...msg,
+          content: finalContent,
+        };
+      });
+
+      // If chat ID changed, append context change message (but only if one doesn't already exist)
+      // Filter out any existing "Chat context changed" messages first to avoid duplicates
+      let finalMessages = cleanedMessages;
+      if (chatIdChanged) {
+        // Remove any existing "Chat context changed" messages to avoid duplicates
+        const messagesWithoutContextChange = (
+          alreadyHasMessages ? prev.messages : cleanedMessages
+        ).filter((msg) => !(msg.isSystemMessage && msg.content === 'Chat context changed'));
+
+        // Check if a context change message already exists
+        const hasContextChangeMessage = messagesWithoutContextChange.some(
+          (msg) => msg.isSystemMessage && msg.content === 'Chat context changed'
+        );
+
+        if (!hasContextChangeMessage) {
+          // Append context change message only if one doesn't exist
+          const contextChangeMessage = createSystemMessage(
+            'Chat context changed',
+            storedContext.currentMode,
+            'agent',
+            'context-changed'
+          );
+          finalMessages = [...messagesWithoutContextChange, contextChangeMessage];
+          log.debug('Chat ID changed, appended context change message');
+        } else {
+          finalMessages = messagesWithoutContextChange;
+          log.debug('Chat ID changed, but context change message already exists, skipping');
+        }
+      }
+
+      // When chat ID changes, reset task state (tasks are tied to specific chat IDs)
+      // But preserve messages and mode
       return {
-        ...msg,
-        content: finalContent,
+        ...prev,
+        messages: finalMessages,
+        // Only restore task state if chat ID hasn't changed (tasks are chat-specific)
+        isTaskRunning: chatIdChanged ? false : storedContext.isTaskRunning,
+        activeTaskId: chatIdChanged ? null : storedContext.activeTaskId,
+        taskProgress: chatIdChanged ? [] : storedContext.taskProgress,
+        currentMode: storedContext.currentMode,
+        isOpen: storedContext.isOpen ?? prev.isOpen, // Preserve current state if not stored
+        isMinimized: storedContext.isMinimized ?? prev.isMinimized, // Preserve current state if not stored
       };
     });
-
-    setState((prev) => ({
-      ...prev,
-      messages: cleanedMessages,
-      isTaskRunning: storedContext.isTaskRunning,
-      activeTaskId: storedContext.activeTaskId,
-      taskProgress: storedContext.taskProgress,
-      currentMode: storedContext.currentMode,
-      isOpen: storedContext.isOpen ?? false,
-      isMinimized: storedContext.isMinimized ?? false,
-    }));
   }, []);
 
   /**
@@ -395,6 +460,64 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
    * Handles chat ID initialization, context restoration, and WebSocket setup
    */
   useEffect(() => {
+    // Try to restore FULL context (including messages) early, before chat ID initialization
+    // This ensures the widget appears in the correct state immediately on page load
+    // We get the stored context directly without requiring a chat ID match
+    const storedContext = getAnyStoredChatContext();
+    if (storedContext) {
+      log.info('Restoring FULL context early from storage:', {
+        messageCount: storedContext.messages.length,
+        isOpen: storedContext.isOpen,
+        isMinimized: storedContext.isMinimized,
+        storedChatId: storedContext.chat_id,
+        isTaskRunning: storedContext.isTaskRunning,
+        currentMode: storedContext.currentMode,
+      });
+
+      // Restore messages immediately
+      const restoredMessages = restoreMessagesFromContext(storedContext);
+      const cleanedMessages = restoredMessages.map((msg) => {
+        const cleanContent = removeThinkingMarkers(msg.content);
+        const { mainContent, progressLines } = parseProgressLines(cleanContent);
+        const validProgressLines = progressLines.filter((line) => line.trim().length > 0);
+        const finalContent = reconstructMessageContent(mainContent, validProgressLines);
+        return {
+          ...msg,
+          content: finalContent,
+        };
+      });
+
+      // Filter out "Chat context changed" messages from early restoration
+      // These are transient and will be re-added by restoreChatContext if needed
+      const messagesWithoutContextChange = cleanedMessages.filter(
+        (msg) => !(msg.isSystemMessage && msg.content === 'Chat context changed')
+      );
+
+      // Restore full state immediately (synchronously) if available
+      setState((prev) => ({
+        ...prev,
+        messages: messagesWithoutContextChange,
+        isTaskRunning: storedContext.isTaskRunning,
+        activeTaskId: storedContext.activeTaskId,
+        taskProgress: storedContext.taskProgress,
+        currentMode: storedContext.currentMode,
+        isOpen: storedContext.isOpen ?? prev.isOpen,
+        isMinimized: storedContext.isMinimized ?? prev.isMinimized,
+      }));
+
+      // Log system messages for verification
+      const systemMessages = messagesWithoutContextChange.filter((m) => m.isSystemMessage);
+      log.info('Early context restoration complete', {
+        messageCount: messagesWithoutContextChange.length,
+        systemMessageCount: systemMessages.length,
+        restoredMessageIds: messagesWithoutContextChange.map((m) => m.id).slice(0, 5),
+        systemMessages: systemMessages.map((m) => ({ id: m.id, content: m.content })),
+        filteredContextChangeMessages: cleanedMessages.length - messagesWithoutContextChange.length,
+      });
+    } else {
+      log.debug('No stored context found for early restoration');
+    }
+
     // Handle reconnection if already initialized
     if (hasInitializedRef.current) {
       if (
@@ -462,14 +585,45 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
   // ============================================================================
 
   /**
-   * Monitor task state and add/remove "Thinking..." indicator
-   * Only shows thinking indicator for show/do modes when task is running
+   * Monitor task state and update placeholder state
+   * Switches placeholder between 'thinking' and 'waiting-for-user' states
    */
   useEffect(() => {
-    if (!state.isTaskRunning || (state.currentMode !== 'show' && state.currentMode !== 'do')) {
-      // Remove thinking indicator if task is not running or not in show/do mode
-      setState((prev) => {
-        const hasThinkingMessages = prev.messages.some(
+    setState((prev) => {
+      const messages = [...prev.messages];
+      let updated = false;
+
+      // Find placeholder messages and update their state
+      for (let i = 0; i < messages.length; i++) {
+        const msg = messages[i];
+        if (msg.isPlaceholder && msg.sender === 'agent' && !msg.isSystemMessage) {
+          // Determine placeholder state based on:
+          // - 'waiting-for-user': task is running in show/do mode and has progress lines
+          // - 'thinking': otherwise (agent is processing)
+          const hasProgress = hasProgressLines(msg.content);
+          const shouldBeWaitingForUser =
+            prev.isTaskRunning &&
+            (prev.currentMode === 'show' || prev.currentMode === 'do') &&
+            hasProgress;
+
+          const newState: 'thinking' | 'waiting-for-user' = shouldBeWaitingForUser
+            ? 'waiting-for-user'
+            : 'thinking';
+
+          if (msg.placeholderState !== newState) {
+            messages[i] = {
+              ...msg,
+              placeholderState: newState,
+            };
+            updated = true;
+          }
+        }
+      }
+
+      // Also handle non-placeholder messages with thinking markers
+      if (!prev.isTaskRunning || (prev.currentMode !== 'show' && prev.currentMode !== 'do')) {
+        // Remove thinking indicator if task is not running or not in show/do mode
+        const hasThinkingMessages = messages.some(
           (msg) =>
             msg.sender === 'agent' &&
             !msg.isSystemMessage &&
@@ -477,51 +631,46 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
             !msg.isPlaceholder &&
             msg.content.includes('__THINKING__')
         );
-        if (!hasThinkingMessages) return prev;
-
-        const updatedMessages = prev.messages.map((msg) => {
-          if (
-            msg.sender === 'agent' &&
-            !msg.isSystemMessage &&
-            !msg.isScreenAccessRequest &&
-            !msg.isPlaceholder &&
-            msg.content.includes('__THINKING__')
-          ) {
-            return {
-              ...msg,
-              content: msg.content.replace(/\n\n__THINKING__$/, ''),
-            };
+        if (hasThinkingMessages) {
+          for (let i = 0; i < messages.length; i++) {
+            const msg = messages[i];
+            if (
+              msg.sender === 'agent' &&
+              !msg.isSystemMessage &&
+              !msg.isScreenAccessRequest &&
+              !msg.isPlaceholder &&
+              msg.content.includes('__THINKING__')
+            ) {
+              messages[i] = {
+                ...msg,
+                content: msg.content.replace(/\n\n__THINKING__$/, ''),
+              };
+              updated = true;
+            }
           }
-          return msg;
-        });
-        return { ...prev, messages: updatedMessages };
-      });
-      return;
-    }
+        }
+      } else {
+        // Find the last agent message (task message) and update thinking marker
+        const taskMessageIndex = findTaskMessageIndex(messages);
 
-    // Find the last agent message (task message) and update thinking marker
-    setState((prev) => {
-      const messages = [...prev.messages];
-      const taskMessageIndex = findTaskMessageIndex(messages);
+        if (taskMessageIndex >= 0) {
+          const taskMessage = messages[taskMessageIndex];
+          const updatedMessage = updateThinkingMarker(
+            taskMessage,
+            prev.isTaskRunning,
+            prev.currentMode
+          );
 
-      if (taskMessageIndex >= 0) {
-        const taskMessage = messages[taskMessageIndex];
-        const updatedMessage = updateThinkingMarker(
-          taskMessage,
-          state.isTaskRunning,
-          state.currentMode
-        );
-
-        if (updatedMessage !== taskMessage) {
-          const updatedMessages = [...messages];
-          updatedMessages[taskMessageIndex] = updatedMessage;
-          return { ...prev, messages: updatedMessages };
+          if (updatedMessage !== taskMessage) {
+            messages[taskMessageIndex] = updatedMessage;
+            updated = true;
+          }
         }
       }
 
-      return prev;
+      return updated ? { ...prev, messages } : prev;
     });
-  }, [state.isTaskRunning, state.currentMode]);
+  }, [state.isTaskRunning, state.currentMode, state.messages]);
 
   // ============================================================================
   // Context Persistence
@@ -530,10 +679,48 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
   /**
    * Auto-save chat context to localStorage when state changes
    * Uses shorter debounce for critical updates (task progress) and longer for UI state
+   * Saves immediately when screenshare is active and task is running, when task just completed/failed,
+   * or when new messages are added (especially important for tell mode)
    */
   useEffect(() => {
     const chatId = initializedChatIdRef.current;
     if (!chatId || !hasInitializedRef.current) {
+      return;
+    }
+
+    // Track previous state to detect changes
+    const taskJustCompleted = prevIsTaskRunningRef.current && !state.isTaskRunning;
+    const newMessagesAdded = state.messages.length > prevMessagesRef.current.length;
+
+    // Update refs for next comparison
+    prevIsTaskRunningRef.current = state.isTaskRunning;
+    prevMessagesRef.current = state.messages;
+
+    // Save immediately (no debounce) in these critical cases:
+    // 1. Screenshare is active and task is running
+    // 2. Task just completed/failed (transition from running to not running)
+    // 3. New messages were added (important for tell mode and all modes)
+    if ((isScreenSharing() && state.isTaskRunning) || taskJustCompleted || newMessagesAdded) {
+      storeChatContext(
+        chatId,
+        state.messages,
+        state.isTaskRunning,
+        state.activeTaskId,
+        state.taskProgress,
+        state.currentMode,
+        state.isOpen,
+        state.isMinimized
+      );
+      log.debug('Immediate save:', {
+        reason: taskJustCompleted
+          ? 'task completed/failed'
+          : newMessagesAdded
+            ? 'new messages added'
+            : 'screenshare active and task running',
+        isTaskRunning: state.isTaskRunning,
+        messageCount: state.messages.length,
+        previousMessageCount: prevMessagesRef.current.length,
+      });
       return;
     }
 
@@ -582,104 +769,127 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
         return;
       }
 
-      // Always save chat context synchronously on page unload to prevent data loss
-      // This ensures task progress and chat history are preserved even if debounced save hasn't fired
-      try {
-        // Get current state synchronously using ref to access latest state
-        // Since setState is async, we use the ref to get the most recent state
-        const currentState = stateRef.current;
-        storeChatContext(
-          chatId,
-          currentState.messages,
-          currentState.isTaskRunning,
-          currentState.activeTaskId,
-          currentState.taskProgress,
-          currentState.currentMode,
-          currentState.isOpen,
-          currentState.isMinimized
-        );
-        log.debug('Saved chat context on page unload');
-      } catch (error) {
-        log.warn('Failed to save chat context on page unload:', error);
-      }
+      // Get current state synchronously using ref to access latest state
+      // Since setState is async, we use the ref to get the most recent state
+      const currentState = stateRef.current;
 
       // Check if screen sharing is active
       if (isScreenSharing()) {
-        log.debug('Page unloading, stopping screen share and adding message');
+        log.debug('Page unloading, stopping screen share and preserving chat history');
 
         // Stop screen sharing
         stopScreenShare();
 
-        // Append "Stopped screenshare" message to existing chat history
-        // Get current state synchronously and update immediately
-        setState((prev) => {
-          // Remove screenshare messages (with videoStream) but keep ALL other messages
-          const messagesWithoutScreenshare = prev.messages.filter((msg) => !msg.videoStream);
+        // Remove screenshare messages (with videoStream) but keep ALL other messages
+        const messagesWithoutScreenshare = currentState.messages.filter((msg) => !msg.videoStream);
 
-          // Check if "Stopped screenshare" message already exists to avoid duplicates
-          const hasStoppedMessage = messagesWithoutScreenshare.some(
-            (msg) =>
-              msg.id === 'screenshare-stopped' ||
-              (msg.isSystemMessage && msg.content === 'Stopped screenshare')
+        // Check if "Stopped screenshare" message already exists to avoid duplicates
+        const hasStoppedMessage = messagesWithoutScreenshare.some(
+          (msg) =>
+            msg.id === 'screenshare-stopped' ||
+            (msg.isSystemMessage && msg.content === 'Stopped screenshare')
+        );
+
+        // Only add the message if it doesn't already exist
+        let updatedMessages = messagesWithoutScreenshare;
+        if (!hasStoppedMessage) {
+          // Add "Stopped screenshare" message to chat history (append, don't replace)
+          const stoppedMessage = createSystemMessage(
+            'Stopped screenshare',
+            'show',
+            'user',
+            'screenshare-stopped'
           );
+          updatedMessages = [...messagesWithoutScreenshare, stoppedMessage];
+        }
 
-          // Only add the message if it doesn't already exist
-          let updatedMessages = messagesWithoutScreenshare;
-          if (!hasStoppedMessage) {
-            // Add "Stopped screenshare" message to chat history (append, don't replace)
-            const stoppedMessage = createSystemMessage(
-              'Stopped screenshare',
-              'show',
-              'user',
-              'screenshare-stopped'
-            );
-            updatedMessages = [...messagesWithoutScreenshare, stoppedMessage];
-          }
+        // Save the updated state synchronously BEFORE page unloads
+        // This is critical for form submits which navigate very quickly
+        try {
+          storeChatContext(
+            chatId,
+            updatedMessages,
+            currentState.isTaskRunning,
+            currentState.activeTaskId,
+            currentState.taskProgress,
+            currentState.currentMode,
+            currentState.isOpen,
+            currentState.isMinimized
+          );
+          log.debug('Saved chat context with stopped screenshare message on page unload');
+        } catch (error) {
+          log.warn('Failed to save chat context on page unload:', error);
+        }
 
-          // Immediately save to storage again with updated messages
-          if (chatId) {
-            try {
-              // Save synchronously to localStorage - this preserves ALL chat history
-              storeChatContext(
-                chatId,
-                updatedMessages,
-                prev.isTaskRunning,
-                prev.activeTaskId,
-                prev.taskProgress,
-                prev.currentMode,
-                prev.isOpen,
-                prev.isMinimized
-              );
-            } catch (error) {
-              log.warn('Failed to save stopped screenshare message:', error);
-            }
-          }
-
-          return {
-            ...prev,
-            messages: updatedMessages,
-          };
-        });
+        // Also update stateRef so if there's any delay, the ref has the latest state
+        stateRef.current = {
+          ...currentState,
+          messages: updatedMessages,
+        };
+      } else {
+        // No screenshare active, just save current state
+        try {
+          storeChatContext(
+            chatId,
+            currentState.messages,
+            currentState.isTaskRunning,
+            currentState.activeTaskId,
+            currentState.taskProgress,
+            currentState.currentMode,
+            currentState.isOpen,
+            currentState.isMinimized
+          );
+          log.debug('Saved chat context on page unload');
+        } catch (error) {
+          log.warn('Failed to save chat context on page unload:', error);
+        }
       }
     };
 
     // Listen to page lifecycle events
-    // Use pagehide for better reliability (fires even when page is cached)
-    // pagehide is more reliable than beforeunload for saving state
+    // Use both beforeunload (fires earlier, gives more time) and pagehide (more reliable for cached pages)
+    // beforeunload fires when navigation starts, giving us time to save before page unloads
+    // pagehide is more reliable for cached pages and mobile browsers
+    window.addEventListener('beforeunload', handlePageUnload);
     window.addEventListener('pagehide', handlePageUnload);
 
     // Also handle visibility change (when tab becomes hidden)
     // This catches cases where the page is hidden but not unloaded
     const handleVisibilityChange = () => {
-      if (document.hidden && isScreenSharing()) {
-        log.debug('Page hidden, stopping screen share and adding message');
-        handlePageUnload();
+      if (document.hidden) {
+        // Save state when page becomes hidden (especially important for screenshare tasks)
+        const chatId = initializedChatIdRef.current;
+        if (chatId) {
+          try {
+            const currentState = stateRef.current;
+            storeChatContext(
+              chatId,
+              currentState.messages,
+              currentState.isTaskRunning,
+              currentState.activeTaskId,
+              currentState.taskProgress,
+              currentState.currentMode,
+              currentState.isOpen,
+              currentState.isMinimized
+            );
+            log.debug('Saved chat context on visibility change (page hidden)');
+          } catch (error) {
+            log.warn('Failed to save chat context on visibility change:', error);
+          }
+        }
+
+        // If screenshare is active, also handle stopping it
+        if (isScreenSharing()) {
+          log.debug('Page hidden, stopping screen share and adding message');
+          handlePageUnload();
+        }
       }
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
+      window.removeEventListener('beforeunload', handlePageUnload);
       window.removeEventListener('pagehide', handlePageUnload);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
@@ -713,11 +923,47 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
     setState((prev) => {
       // If opening from minimized state, clear minimized
       // If closing, keep minimized state
-      return {
+      const newState = {
         ...prev,
         isOpen: !prev.isOpen,
         isMinimized: prev.isOpen ? prev.isMinimized : false,
       };
+
+      // Save state immediately when toggled to ensure it's persisted
+      // Try to get chatId from ref first, then from storage if not available
+      let chatId = initializedChatIdRef.current;
+      if (!chatId) {
+        chatId = getStoredChatId();
+      }
+
+      // Save state even if widget isn't fully initialized yet
+      // This ensures state is persisted when clicking description card before initialization
+      if (chatId) {
+        try {
+          storeChatContext(
+            chatId,
+            newState.messages,
+            newState.isTaskRunning,
+            newState.activeTaskId,
+            newState.taskProgress,
+            newState.currentMode,
+            newState.isOpen,
+            newState.isMinimized
+          );
+          log.debug('Saved widget state immediately after toggle', {
+            chatId,
+            isOpen: newState.isOpen,
+            isMinimized: newState.isMinimized,
+            wasInitialized: hasInitializedRef.current,
+          });
+        } catch (error) {
+          log.warn('Failed to save widget state after toggle:', error);
+        }
+      } else {
+        log.debug('Cannot save widget state: no chatId available yet');
+      }
+
+      return newState;
     });
   }, []);
 
@@ -824,44 +1070,98 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
 
         log.debug(`Adding agent message: "${agentMessage.content}" (id: ${agentMessage.id})`);
 
-        // Replace placeholder message with actual response
-        // Preserve any progress lines that were added to the placeholder
-        setState((prev) => {
-          const placeholderMsg = prev.messages.find((msg) => msg.id === placeholderMessageId);
-          let finalAgentMessage = agentMessage;
+        // For show/do modes, update the placeholder with the agent message content
+        // but keep it as a placeholder so tool calls can update it
+        // For tell mode, replace the placeholder immediately
+        if (isTaskMode) {
+          // Keep placeholder but update its content with the agent message
+          setState((prev) => {
+            const placeholderMsg = prev.messages.find((msg) => msg.id === placeholderMessageId);
+            if (placeholderMsg) {
+              // Update placeholder with agent message content, preserving any existing progress lines
+              const existingContent = placeholderMsg.content || '';
+              const { progressLines } = parseProgressLines(existingContent);
 
-          // If placeholder has progress lines (content with \n\n), preserve them
-          if (placeholderMsg?.content.includes('\n\n')) {
-            const parts = placeholderMsg.content.split('\n\n');
-            if (parts.length > 1) {
-              const progressLines = parts.slice(1);
-              finalAgentMessage = {
-                ...agentMessage,
-                content: [agentMessage.content, ...progressLines].join('\n\n'),
+              // Use agent message content as main content, keep existing progress lines
+              const updatedContent = reconstructMessageContent(agentMessage.content, progressLines);
+
+              const updatedMessages = prev.messages.map((msg) =>
+                msg.id === placeholderMessageId
+                  ? {
+                      ...msg,
+                      content: updatedContent,
+                      // Keep as placeholder so tool calls can update it
+                    }
+                  : msg
+              );
+
+              log.debug(
+                `Updated placeholder with agent message content. Message count: ${updatedMessages.length}`
+              );
+
+              return {
+                ...prev,
+                messages: updatedMessages,
+                isLoading: false,
+                // Set task state for show/do modes
+                ...(taskId
+                  ? {
+                      activeTaskId: taskId,
+                      isTaskRunning: true,
+                      taskProgress: [],
+                    }
+                  : {}),
               };
             }
-          }
 
-          const newMessages = prev.messages.map((msg) =>
-            msg.id === placeholderMessageId ? finalAgentMessage : msg
-          );
-          log.debug(
-            `State updated with ${newMessages.length} messages. Last message: "${newMessages[newMessages.length - 1].content}"`
-          );
-          return {
-            ...prev,
-            messages: newMessages,
-            isLoading: false,
-            // Set task state for show/do modes
-            ...(isTaskMode && taskId
-              ? {
-                  activeTaskId: taskId,
-                  isTaskRunning: true,
-                  taskProgress: [],
-                }
-              : {}),
-          };
-        });
+            // Fallback: if placeholder not found, replace it
+            const newMessages = prev.messages.map((msg) =>
+              msg.id === placeholderMessageId ? agentMessage : msg
+            );
+            return {
+              ...prev,
+              messages: newMessages,
+              isLoading: false,
+              ...(taskId
+                ? {
+                    activeTaskId: taskId,
+                    isTaskRunning: true,
+                    taskProgress: [],
+                  }
+                : {}),
+            };
+          });
+        } else {
+          // For tell mode, replace placeholder immediately
+          setState((prev) => {
+            const placeholderMsg = prev.messages.find((msg) => msg.id === placeholderMessageId);
+            let finalAgentMessage = agentMessage;
+
+            // If placeholder has progress lines (content with \n\n), preserve them
+            if (placeholderMsg?.content.includes('\n\n')) {
+              const parts = placeholderMsg.content.split('\n\n');
+              if (parts.length > 1) {
+                const progressLines = parts.slice(1);
+                finalAgentMessage = {
+                  ...agentMessage,
+                  content: [agentMessage.content, ...progressLines].join('\n\n'),
+                };
+              }
+            }
+
+            const newMessages = prev.messages.map((msg) =>
+              msg.id === placeholderMessageId ? finalAgentMessage : msg
+            );
+            log.debug(
+              `State updated with ${newMessages.length} messages. Last message: "${newMessages[newMessages.length - 1].content}"`
+            );
+            return {
+              ...prev,
+              messages: newMessages,
+              isLoading: false,
+            };
+          });
+        }
       } catch (error) {
         log.error('Failed to send message:', error);
 

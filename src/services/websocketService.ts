@@ -458,10 +458,30 @@ export class WebSocketService {
 
     // Handle tools/call messages - execute tool and send response back
     if (message.method === 'tools/call' && message.id !== undefined) {
+      const params = message.params as
+        | {
+            name?: string;
+            arguments?: Record<string, unknown>;
+            mode?: string;
+            explanation?: string;
+          }
+        | undefined;
+
       // Forward the tool call message to onMessage callback FIRST so widget can update progress
       if (this.callbacks.onMessage) {
-        console.log('[WebSocket] Forwarding tool call message to onMessage callback');
+        console.log('[WebSocket] Forwarding tool call message to onMessage callback', {
+          messageId: message.id,
+          toolName: params?.name,
+          explanation: params?.explanation,
+          hasParams: !!message.params,
+          hasResult: !!message.result,
+          hasError: !!message.error,
+        });
         this.callbacks.onMessage(message);
+      } else {
+        console.warn(
+          '[WebSocket] No onMessage callback registered, cannot forward tool call for progress update'
+        );
       }
       // Then execute the tool
       this.handleToolCall(message);
@@ -601,20 +621,23 @@ export class WebSocketService {
     // Forward the result message to onMessage callback so it can update progress
     // Ensure the message has the correct format for routing
     const resultMessage: WebSocketMessage = {
-      ...response,
+      jsonrpc: response.jsonrpc || '2.0',
       method: 'tools/call', // Ensure method is set for routing
       id: response.id,
       result: response.result,
-      params: undefined, // Explicitly set to undefined to ensure routing works
-      error: undefined, // Explicitly set to undefined to ensure routing works
+      // Explicitly set params and error to undefined (not null or empty object) to ensure routing works
+      params: undefined,
+      error: undefined,
     };
     if (this.callbacks.onMessage) {
       console.log('[WebSocket] Forwarding result message to onMessage callback:', {
         method: resultMessage.method,
         hasId: !!resultMessage.id,
         hasResult: !!resultMessage.result,
-        hasParams: !!resultMessage.params,
-        hasError: !!resultMessage.error,
+        hasParams: resultMessage.params !== undefined,
+        paramsIsUndefined: resultMessage.params === undefined,
+        hasError: resultMessage.error !== undefined,
+        errorIsUndefined: resultMessage.error === undefined,
       });
       this.callbacks.onMessage(resultMessage);
     }
@@ -636,14 +659,23 @@ export class WebSocketService {
         // Forward the error response to onMessage callback so it can update progress
         if (this.callbacks.onMessage && errorResponse) {
           const errorMessage: WebSocketMessage = {
-            ...errorResponse,
+            jsonrpc: errorResponse.jsonrpc || '2.0',
             method: 'tools/call', // Ensure method is set for routing
             id: errorResponse.id,
             error: errorResponse.error,
-            params: undefined, // Explicitly set to undefined
-            result: undefined, // Explicitly set to undefined
+            // Explicitly set params and result to undefined (not null or empty object) to ensure routing works
+            params: undefined,
+            result: undefined,
           };
-          console.log('[WebSocket] Forwarding error message to onMessage callback');
+          console.log('[WebSocket] Forwarding error message to onMessage callback:', {
+            method: errorMessage.method,
+            hasId: !!errorMessage.id,
+            hasError: !!errorMessage.error,
+            hasParams: errorMessage.params !== undefined,
+            paramsIsUndefined: errorMessage.params === undefined,
+            hasResult: errorMessage.result !== undefined,
+            resultIsUndefined: errorMessage.result === undefined,
+          });
           this.callbacks.onMessage(errorMessage);
         }
       } catch (sendError) {

@@ -55,6 +55,7 @@ export interface ChatMessage {
   isScreenAccessRequest?: boolean;
   isSystemMessage?: boolean;
   isPlaceholder?: boolean; // Indicates this is a placeholder message with progress bar
+  placeholderState?: 'thinking' | 'waiting-for-user'; // State of placeholder: thinking or waiting for user action
 }
 
 export interface TaskProgress {

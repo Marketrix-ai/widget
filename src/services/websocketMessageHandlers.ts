@@ -86,12 +86,10 @@ export function createToolCallProgressHandler(
         setState((prev) => {
           const messages = [...prev.messages];
 
-          // First try to find a task message (non-placeholder agent message)
-          let taskMessageIndex = findTaskMessageIndex(messages);
-
-          // If no task message found, check if the last message is a placeholder
-          // Placeholders can also receive progress updates
-          if (taskMessageIndex < 0 && messages.length > 0) {
+          // First check if the last message is a placeholder (tool calls often come when message is still a placeholder)
+          // Placeholders should receive progress updates
+          let taskMessageIndex = -1;
+          if (messages.length > 0) {
             const lastMessage = messages[messages.length - 1];
             if (
               lastMessage.sender === 'agent' &&
@@ -104,31 +102,58 @@ export function createToolCallProgressHandler(
             }
           }
 
+          // If no placeholder found, try to find a task message (non-placeholder agent message)
+          if (taskMessageIndex < 0) {
+            taskMessageIndex = findTaskMessageIndex(messages);
+            if (taskMessageIndex >= 0) {
+              log.debug('Using task message for progress update');
+            }
+          }
+
           if (taskMessageIndex >= 0) {
-            log.debug(`Found task message at index ${taskMessageIndex}`);
+            log.info(`Found message for progress update at index ${taskMessageIndex}`, {
+              messageId: messages[taskMessageIndex].id,
+              isPlaceholder: messages[taskMessageIndex].isPlaceholder,
+              toolName,
+              progressText,
+              currentContent: messages[taskMessageIndex].content.substring(0, 100),
+            });
             const existingMessage = messages[taskMessageIndex];
             const updatedMessage = addProgressLine(existingMessage, toolName, progressText);
 
             const updatedMessages = [...messages];
             updatedMessages[taskMessageIndex] = updatedMessage;
 
-            log.debug(`Updated content:`, updatedMessage.content.substring(0, 150));
+            log.info(`Progress line added successfully`, {
+              toolName,
+              progressText,
+              messageId: updatedMessage.id,
+              updatedContent: updatedMessage.content.substring(0, 200),
+              hasProgressLines: updatedMessage.content.includes('\n\n'),
+              progressLineCount: (updatedMessage.content.match(/\n\n/g) || []).length,
+            });
 
             return {
               ...prev,
               messages: updatedMessages,
             };
           } else {
-            log.warn(`No task message found! Messages count: ${messages.length}`);
-            // Log message details for debugging
-            if (messages.length > 0) {
-              log.warn('Last message:', {
-                sender: messages[messages.length - 1].sender,
-                isPlaceholder: messages[messages.length - 1].isPlaceholder,
-                isSystemMessage: messages[messages.length - 1].isSystemMessage,
-                isScreenAccessRequest: messages[messages.length - 1].isScreenAccessRequest,
-              });
-            }
+            log.error(
+              `No task message or placeholder found for progress update! Messages count: ${messages.length}`,
+              {
+                messages: messages.map((msg, idx) => ({
+                  index: idx,
+                  id: msg.id,
+                  sender: msg.sender,
+                  isPlaceholder: msg.isPlaceholder,
+                  isSystemMessage: msg.isSystemMessage,
+                  isScreenAccessRequest: msg.isScreenAccessRequest,
+                  contentPreview: msg.content.substring(0, 50),
+                })),
+                toolName,
+                progressText,
+              }
+            );
           }
 
           return prev;
@@ -378,30 +403,85 @@ export function createMessageHandler(setState: React.Dispatch<React.SetStateActi
 
     // Route to appropriate handler based on message type
     if (message.method === 'tools/call') {
-      // Tool call messages can be progress (params), result (result), or error (error)
+      // Tool call messages can be progress (params with name), result (result), or error (error)
+      const params = message.params as
+        | {
+            name?: string;
+            arguments?: Record<string, unknown>;
+            mode?: string;
+            explanation?: string;
+          }
+        | undefined;
+      // Check if params exists and has a name (indicates progress)
+      // params can be undefined, null, empty object, or object with name
+      const hasParamsWithName = !!params?.name;
+      // Check if params exists as a non-empty object (not undefined, null, or empty)
       const hasParams =
-        !!message.params && Object.keys(message.params as Record<string, unknown>).length > 0;
+        message.params !== undefined &&
+        message.params !== null &&
+        typeof message.params === 'object' &&
+        Object.keys(message.params as Record<string, unknown>).length > 0;
       const hasResult = !!message.result;
       const hasError = !!message.error;
 
-      if (message.id && hasParams) {
-        // Progress: tool call with params
-        log.debug('Routing to progress handler');
+      log.info('Routing tool call message:', {
+        hasId: !!message.id,
+        messageId: message.id,
+        hasParamsWithName,
+        hasParams,
+        hasResult,
+        hasError,
+        paramsType: typeof message.params,
+        paramsIsUndefined: message.params === undefined,
+        paramsIsNull: message.params === null,
+        paramsValue: message.params,
+        paramsKeys:
+          message.params && typeof message.params === 'object'
+            ? Object.keys(message.params as Record<string, unknown>)
+            : [],
+        toolName: params?.name,
+        explanation: params?.explanation,
+      });
+
+      if (message.id && hasParamsWithName) {
+        // Progress: tool call with params that has a name
+        log.info('Routing to progress handler', {
+          toolName: params?.name,
+          explanation: params?.explanation,
+          messageId: message.id,
+        });
         progressHandler(message);
       } else if (message.id && hasResult && !hasParams && !hasError) {
         // Result: tool call completed successfully
-        log.debug('Routing to result handler');
+        // Check !hasParams (not just !hasParamsWithName) to ensure params is truly empty/undefined
+        log.debug('Routing to result handler', {
+          hasResult,
+          hasParams,
+          hasError,
+          paramsValue: message.params,
+        });
         resultHandler(message);
       } else if (message.id && hasError && !hasParams) {
         // Error: tool call failed
-        log.debug('Routing to error handler');
+        // Check !hasParams to ensure params is truly empty/undefined
+        log.debug('Routing to error handler', {
+          hasError,
+          hasParams,
+        });
         errorHandler(message);
       } else {
         log.debug('Tool call message did not match any handler conditions', {
           hasId: !!message.id,
+          hasParamsWithName,
           hasParams,
           hasResult,
           hasError,
+          paramsType: typeof message.params,
+          paramsValue: message.params,
+          paramsKeys:
+            message.params && typeof message.params === 'object'
+              ? Object.keys(message.params as Record<string, unknown>)
+              : [],
         });
       }
     } else if (message.method === 'task/status') {

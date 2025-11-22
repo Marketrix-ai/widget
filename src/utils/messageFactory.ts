@@ -55,7 +55,10 @@ export function createAgentMessage(
 /**
  * Create a placeholder message for loading state
  */
-export function createPlaceholderMessage(mode?: InstructionType): ChatMessage {
+export function createPlaceholderMessage(
+  mode?: InstructionType,
+  placeholderState: 'thinking' | 'waiting-for-user' = 'thinking'
+): ChatMessage {
   return {
     id: generateMessageId('placeholder'),
     content: '', // Empty content, will show progress bar
@@ -63,6 +66,7 @@ export function createPlaceholderMessage(mode?: InstructionType): ChatMessage {
     timestamp: getCurrentTimestamp(),
     mode,
     isPlaceholder: true,
+    placeholderState,
   };
 }
 
