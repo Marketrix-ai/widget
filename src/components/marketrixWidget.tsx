@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 
 import { useWidget } from '../hooks/useWidget';
 import type { MarketrixConfig } from '../types';
-import { ChatWindow } from './chat/chatWindow';
-import { WidgetButton } from './layout/widgetButton';
-import { ErrorDisplay } from './ui/errorDisplay';
+import { ChatWindow } from './chat/ChatWindow';
+import { WidgetButton } from './layout/WidgetButton';
+import { ErrorDisplay } from './ui/ErrorDisplay';
 
 interface MarketrixWidgetProps {
   config: MarketrixConfig;

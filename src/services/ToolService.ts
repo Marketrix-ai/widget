@@ -1,6 +1,6 @@
-import { domService } from './DOMService';
-import { startScreenShare } from './screenShareService';
-import { showModeService } from './showModeService';
+import { domService } from './DomService';
+import { startScreenShare } from './ScreenShareService';
+import { showModeService } from './ShowModeService';
 
 export interface ToolExecutionResult {
   success: boolean;

@@ -1,8 +1,8 @@
-import { sdk } from '../../sdk';
-import type { MarketrixConfig, SendMessageRequest, SendMessageResponse } from '../../types';
-import { extractApiData, extractErrorMessage } from '../../utils/apiUtils';
-import { isChatResponseData, isNonNullObject } from '../../utils/validation/typeGuards';
-import { chatIdManager } from '../chatIdManager';
+import { sdk } from '../sdk';
+import type { MarketrixConfig, SendMessageRequest, SendMessageResponse } from '../types';
+import { extractApiData, extractErrorMessage } from '../utils/apiUtils';
+import { isChatResponseData, isNonNullObject } from '../utils/validation';
+import { sessionManager } from './SessionManager';
 
 interface TaskResponse {
   task_id?: string;
@@ -21,7 +21,7 @@ export class MarketrixApiService {
    * Get the current chat ID (does not create if missing)
    */
   getChatId(): string | null {
-    return chatIdManager.getChatId();
+    return sessionManager.getChatId();
   }
 
   /**
@@ -29,7 +29,7 @@ export class MarketrixApiService {
    * This ensures only one chat ID is created even with concurrent calls
    */
   async getOrCreateChatId(): Promise<string> {
-    return chatIdManager.getOrCreateChatId();
+    return sessionManager.getOrCreateChatId();
   }
 
   /**
@@ -38,7 +38,7 @@ export class MarketrixApiService {
   async sendMessage(request: SendMessageRequest): Promise<SendMessageResponse> {
     try {
       // Get or create chat ID using centralized manager
-      const chatId = await chatIdManager.getOrCreateChatId();
+      const chatId = await sessionManager.getOrCreateChatId();
 
       // Map the mode to the appropriate chat endpoint
       const mode = request.mode || 'tell';
@@ -154,9 +154,12 @@ export class MarketrixApiService {
           }
 
           const chatResponse = responseData;
+          // Fix for missing property access by type checking or casting
+          const responseText = chatResponse.text || 'Response received';
+
           const result: SendMessageResponse = {
             messageId: Date.now().toString(),
-            response: chatResponse.text || 'Response received',
+            response: responseText,
             mode,
             timestamp: new Date(),
           };
@@ -199,7 +202,7 @@ export class MarketrixApiService {
     try {
       // Just check if we have a chat ID, don't create one
       // This prevents unnecessary chat ID creation during availability checks
-      const chatId = chatIdManager.getChatId();
+      const chatId = sessionManager.getChatId();
       return chatId !== null;
     } catch (error) {
       console.error('Failed to check agent availability:', error);
@@ -225,7 +228,7 @@ export class MarketrixApiService {
   async stopTask(taskId?: string): Promise<{ status: string; message: string }> {
     try {
       // Get or create chat ID using centralized manager
-      const chatId = await chatIdManager.getOrCreateChatId();
+      const chatId = await sessionManager.getOrCreateChatId();
 
       if (!chatId) {
         throw new Error('Failed to initialize chat session. Please try again.');

@@ -1,4 +1,59 @@
 /**
+ * Message Content Utilities
+ *
+ * Centralized utilities for message content transformation, including:
+ * - Removing thinking markers
+ */
+
+import type { ChatMessage, InstructionType } from '../types';
+
+/**
+ * Remove all __THINKING__ markers from message content
+ */
+export function removeThinkingMarkers(content: string): string {
+  return content.replace(/__THINKING__/g, '');
+}
+
+/**
+ * Remove thinking marker from end of content (for display)
+ */
+export function removeThinkingMarkerFromEnd(content: string): string {
+  return content.replace(/\n\n__THINKING__$/, '').replace(/__THINKING__/g, '');
+}
+
+/**
+ * Check if content has thinking marker
+ */
+export function hasThinkingMarker(content: string): boolean {
+  return content.includes('__THINKING__');
+}
+
+/**
+ * Add thinking marker to content
+ */
+export function addThinkingMarker(content: string): string {
+  if (hasThinkingMarker(content)) return content;
+  return `${content}\n\n__THINKING__`;
+}
+
+/**
+ * Find the index of the last task message (agent message that's not system/placeholder/screen access)
+ */
+export function findTaskMessageIndex(messages: ChatMessage[]): number {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const msg = messages[i];
+    if (
+      msg.sender === 'agent' &&
+      !msg.isSystemMessage &&
+      !msg.isScreenAccessRequest &&
+      !msg.isPlaceholder
+    ) {
+      return i;
+    }
+  }
+  return -1;
+}
+/**
  * Message Finder Utility
  *
  * Centralized logic for finding messages in the chat that should receive
@@ -6,8 +61,9 @@
  * message finding code across websocket handlers.
  */
 
-import type { ChatMessage, InstructionType } from '../types';
-import { findTaskMessageIndex } from './messageContentUtils';
+// import type { InstructionType } from '../types';
+// Remove self import
+// // import { findTaskMessageIndex } from './messageContentUtils';
 
 export interface FindMessageOptions {
   messages: ChatMessage[];
@@ -384,6 +440,261 @@ export function findPlaceholderMessage(
 }
 
 /**
- * Find the task message (non-placeholder agent message)
+ * Ensure message has initialized parts
  */
-export { findTaskMessageIndex } from './messageContentUtils';
+function ensureMessageStructure(message: ChatMessage): ChatMessage {
+  const msg = { ...message };
+
+  // Ensure parts exist
+  if (!msg.parts) {
+    msg.parts = [];
+
+    // Check if content needs to be treated as a text part
+    const cleanContent = msg.content.replace(/\n\n__THINKING__$/, '').trim();
+    if (cleanContent) {
+      msg.parts.push({
+        type: 'text',
+        content: cleanContent,
+      });
+    }
+  }
+
+  return msg;
+}
+
+/**
+ * Add a new progress step to a message
+ */
+export function addProgressLine(
+  message: ChatMessage,
+  toolName: string,
+  explanation: string
+): ChatMessage {
+  const msg = ensureMessageStructure(message);
+  const parts = msg.parts || [];
+
+  // Update Parts
+  const newParts = [...parts];
+  const existingPartIndex = parts.findIndex(
+    (part) => part.type === 'progress' && part.toolName === toolName && part.status === 'running'
+  );
+
+  if (existingPartIndex >= 0) {
+    newParts[existingPartIndex] = {
+      ...newParts[existingPartIndex],
+      content: explanation,
+    };
+  } else {
+    newParts.push({
+      type: 'progress',
+      content: explanation,
+      status: 'running',
+      toolName,
+    });
+  }
+
+  return {
+    ...msg,
+    parts: newParts,
+  };
+}
+
+/**
+ * Update an existing progress step for a tool
+ */
+export function updateProgressLine(
+  message: ChatMessage,
+  toolName: string,
+  status: 'pending' | 'completed' | 'failed',
+  error?: string
+): ChatMessage {
+  const msg = ensureMessageStructure(message);
+  const parts = msg.parts || [];
+
+  // Update Parts
+  const newParts = [...parts];
+  const partIndex = parts
+    .map((p) => (p.type === 'progress' ? p.toolName : ''))
+    .lastIndexOf(toolName);
+
+  const mappedStatus = status === 'pending' ? 'running' : status;
+
+  if (partIndex >= 0) {
+    newParts[partIndex] = {
+      ...newParts[partIndex],
+      status: mappedStatus,
+    };
+
+    if (status === 'failed' && error) {
+      newParts[partIndex] = {
+        ...newParts[partIndex],
+        content: `${newParts[partIndex].content} (${error})`,
+      };
+    }
+  } else {
+    newParts.push({
+      type: 'progress',
+      content: `Executing ${toolName}...`,
+      status: mappedStatus,
+      toolName,
+    });
+  }
+
+  return { ...msg, parts: newParts };
+}
+
+/**
+ * Mark the last incomplete progress step as completed
+ */
+export function markProgressLineComplete(message: ChatMessage, toolName?: string): ChatMessage {
+  const msg = ensureMessageStructure(message);
+  const parts = msg.parts || [];
+
+  // Update Parts
+  const newParts = [...parts];
+  let partIndex = -1;
+  if (toolName) {
+    partIndex = parts.map((p) => (p.type === 'progress' ? p.toolName : '')).lastIndexOf(toolName);
+  } else {
+    for (let i = parts.length - 1; i >= 0; i--) {
+      if (parts[i].type === 'progress' && parts[i].status === 'running') {
+        partIndex = i;
+        break;
+      }
+    }
+  }
+
+  if (partIndex >= 0) {
+    newParts[partIndex] = { ...newParts[partIndex], status: 'completed' };
+  }
+
+  return { ...msg, parts: newParts };
+}
+
+/**
+ * Mark the last incomplete progress step as failed
+ */
+export function markProgressLineFailed(
+  message: ChatMessage,
+  toolName: string,
+  error: string
+): ChatMessage {
+  const msg = ensureMessageStructure(message);
+  const parts = msg.parts || [];
+
+  // Update Parts
+  const newParts = [...parts];
+  let partIndex = parts.map((p) => (p.type === 'progress' ? p.toolName : '')).lastIndexOf(toolName);
+  if (partIndex === -1) {
+    for (let i = parts.length - 1; i >= 0; i--) {
+      if (parts[i].type === 'progress' && parts[i].status === 'running') {
+        partIndex = i;
+        break;
+      }
+    }
+  }
+
+  if (partIndex >= 0) {
+    newParts[partIndex] = {
+      ...newParts[partIndex],
+      status: 'failed',
+      content: `${newParts[partIndex].content} (${error})`,
+    };
+  }
+
+  return { ...msg, parts: newParts };
+}
+
+/**
+ * Add or remove thinking marker based on task state
+ */
+export function updateThinkingMarker(
+  message: ChatMessage,
+  isTaskRunning: boolean,
+  currentMode: 'show' | 'tell' | 'do'
+): ChatMessage {
+  const msg = ensureMessageStructure(message);
+
+  if (!isTaskRunning || (currentMode !== 'show' && currentMode !== 'do')) {
+    // Remove thinking marker
+    if (hasThinkingMarker(msg.content)) {
+      return {
+        ...msg,
+        content: msg.content.replace(/\n\n__THINKING__$/, '').replace(/__THINKING__/g, ''),
+      };
+    }
+    return msg;
+  }
+
+  // Add thinking marker if not present
+  if (!hasThinkingMarker(msg.content)) {
+    return {
+      ...msg,
+      content: addThinkingMarker(msg.content),
+    };
+  }
+
+  return msg;
+}
+/**
+ * Tool Name Mapping Utility
+ *
+ * Provides friendly display names for technical tool names.
+ * Used for showing user-friendly progress updates in the chat.
+ */
+
+export const TOOL_NAME_MAPPING: Record<string, string> = {
+  // Navigation & Browser
+  navigate_to_url: 'Navigating to URL',
+  go_back: 'Going back',
+  go_forward: 'Going forward',
+  refresh_page: 'Refreshing page',
+
+  // Interaction
+  click_element: 'Clicking element',
+  hover_element: 'Hovering element',
+  type_text: 'Typing text',
+  press_key: 'Pressing key',
+  select_option: 'Selecting option',
+  scroll_to_element: 'Scrolling to element',
+
+  // Information Retrieval
+  get_page_content: 'Reading page content',
+  get_element_text: 'Reading element text',
+  get_element_attribute: 'Reading element attribute',
+  take_screenshot: 'Taking screenshot',
+
+  // Logic & Flow
+  wait_for_element: 'Waiting for element',
+  sleep: 'Waiting',
+
+  // Default fallback pattern handling in getFriendlyToolName
+};
+
+/**
+ * Get a friendly display name for a tool
+ * Converts snake_case to Title Case if no mapping exists
+ */
+export function getFriendlyToolName(toolName: string): string {
+  // Check explicit mapping first
+  if (TOOL_NAME_MAPPING[toolName]) {
+    return TOOL_NAME_MAPPING[toolName];
+  }
+
+  // Fallback: Convert snake_case or camelCase to Title Case
+  // e.g. "my_custom_tool" -> "My Custom Tool"
+  // e.g. "myCustomTool" -> "My Custom Tool"
+  return (
+    toolName
+      // Insert space before capital letters (camelCase)
+      .replace(/([A-Z])/g, ' $1')
+      // Replace underscores with spaces (snake_case)
+      .replace(/_/g, ' ')
+      // Trim extra spaces
+      .trim()
+      // Capitalize first letter of each word
+      .split(' ')
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ')
+  );
+}

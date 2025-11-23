@@ -6,11 +6,11 @@ import { SiTicktick } from 'react-icons/si';
 
 import MarketrixIcon from '../../assets/marketrix-icon.png';
 import { useWidget } from '../../hooks/useWidget';
-import { createUserMessage } from '../../services/features/ChatService';
+import { createUserMessage } from '../../services/ChatService';
 import type { ChatMessage, MarketrixConfig } from '../../types';
-import { addOpacity } from '../../utils/format/colorUtils';
-import { MessageItem } from './messageItem';
-import { WelcomeMessage } from './welcomeMessage';
+import { addOpacity } from '../../utils/format';
+import { MessageItem } from './MessageItem';
+import { WelcomeMessage } from './WelcomeMessage';
 
 // Define the chip type to handle both formats
 type ChipData = {

@@ -1,5 +1,5 @@
-import type { ChatMessage, InstructionType, TaskProgress } from '../../types';
-import { removeThinkingMarkers } from '../../utils/messageContentUtils';
+import type { ChatMessage, InstructionType, TaskProgress } from '../types';
+import { removeThinkingMarkers } from '../utils/chat';
 
 interface StoredChatContext {
   chat_id: string;

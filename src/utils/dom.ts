@@ -1,3 +1,223 @@
+/**
+ * DOM Manipulation Utilities
+ *
+ * Centralized utilities for common DOM operations to reduce code duplication
+ * and ensure consistent error handling.
+ */
+
+import { isHTMLElement } from './validation';
+
+interface TourElement extends HTMLElement {
+  _tourClickHandler?: EventListener;
+}
+
+/**
+ * Safely remove an element by ID
+ */
+export function removeElementById(id: string): void {
+  try {
+    const element = document.getElementById(id);
+    if (element) {
+      element.remove();
+    }
+  } catch (error) {
+    console.warn(`[DOM Utils] Failed to remove element with id "${id}":`, error);
+  }
+}
+
+/**
+ * Safely remove an event listener from an element
+ */
+function removeEventListenerSafely(
+  element: EventTarget,
+  event: string,
+  handler: EventListener,
+  options?: boolean | AddEventListenerOptions
+): void {
+  try {
+    element.removeEventListener(event, handler, options);
+  } catch (error) {
+    console.warn(`[DOM Utils] Failed to remove event listener "${event}" from element:`, error);
+  }
+}
+
+/**
+ * Remove tour click handlers from an element
+ */
+export function removeTourClickHandler(element: HTMLElement): void {
+  if (isHTMLElement(element)) {
+    const tourElement = element as TourElement;
+    if (tourElement._tourClickHandler) {
+      removeEventListenerSafely(tourElement, 'click', tourElement._tourClickHandler, true);
+      delete tourElement._tourClickHandler;
+    }
+  }
+}
+
+/**
+ * Remove all step highlight classes and their associated handlers
+ */
+export function removeStepHighlights(): void {
+  try {
+    const allHighlightedElements = document.querySelectorAll('.step-highlight');
+    allHighlightedElements.forEach((element) => {
+      if (isHTMLElement(element)) {
+        element.classList.remove('step-highlight');
+        removeTourClickHandler(element);
+      }
+    });
+  } catch (error) {
+    console.warn('[DOM Utils] Failed to remove step highlights:', error);
+  }
+}
+/**
+ * Utility for finding DOM elements by index.
+ * Used by browser tools to locate interactive elements on the page.
+ */
+
+import { domService } from '../services/DomService';
+
+/**
+ * Get all interactive elements on the page, ordered by DOM position.
+ * Interactive elements include: buttons, inputs, links, select elements, etc.
+ */
+export function getAllInteractiveElements(): HTMLElement[] {
+  const selectors = [
+    'button',
+    'input',
+    'textarea',
+    'select',
+    'a[href]',
+    '[role="button"]',
+    '[role="link"]',
+    '[role="textbox"]',
+    '[contenteditable="true"]',
+    '[onclick]',
+    '[tabindex]:not([tabindex="-1"])',
+  ];
+
+  const elements: HTMLElement[] = [];
+  const seen = new Set<HTMLElement>();
+
+  // Collect all interactive elements
+  for (const selector of selectors) {
+    const matches = document.querySelectorAll<HTMLElement>(selector);
+    for (const el of matches) {
+      // Skip hidden elements and elements that are not visible
+      if (!seen.has(el) && isElementVisible(el) && isElementInteractive(el)) {
+        elements.push(el);
+        seen.add(el);
+      }
+    }
+  }
+
+  // Sort by DOM position (top to bottom, left to right)
+  return elements.sort((a, b) => {
+    const rectA = a.getBoundingClientRect();
+    const rectB = b.getBoundingClientRect();
+
+    // First compare by vertical position
+    if (Math.abs(rectA.top - rectB.top) > 10) {
+      return rectA.top - rectB.top;
+    }
+    // Then by horizontal position
+    return rectA.left - rectB.left;
+  });
+}
+
+/**
+ * Get an interactive element by its index.
+ * First tries to use data-id from get_html indexing, then falls back to current behavior.
+ * @param index The zero-based index of the element
+ * @returns The element at the given index, or null if not found
+ */
+export function getElementByIndex(index: number): HTMLElement | null {
+  // Step 1: Check if indexing is active (get_html was called)
+  if (domService.isIndexActive()) {
+    // Step 2: Try to get element by data-id from indexing service
+    const element = domService.getElementByDataId(index);
+    if (element && element instanceof HTMLElement) {
+      return element;
+    }
+    // If not found or invalid, fall through to fallback
+  }
+
+  // Step 3: Fallback to current behavior (for backward compatibility)
+  const elements = getAllInteractiveElements();
+  if (index < 0 || index >= elements.length) {
+    return null;
+  }
+  return elements[index];
+}
+
+/**
+ * Check if an element is visible on the page.
+ */
+function isElementVisible(element: HTMLElement): boolean {
+  const style = window.getComputedStyle(element);
+  if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') {
+    return false;
+  }
+
+  const rect = element.getBoundingClientRect();
+  return rect.width > 0 && rect.height > 0;
+}
+
+/**
+ * Check if an element is actually interactive (not disabled, etc.).
+ */
+function isElementInteractive(element: HTMLElement): boolean {
+  // Skip disabled elements
+  if ((element as HTMLInputElement | HTMLButtonElement | HTMLSelectElement).disabled) {
+    return false;
+  }
+
+  // Skip elements that are not in the viewport (optional - you might want to include these)
+  // const rect = element.getBoundingClientRect();
+  // if (rect.bottom < 0 || rect.top > window.innerHeight) {
+  //   return false;
+  // }
+
+  return true;
+}
+
+/**
+ * Get all file input elements on the page, ordered by DOM position.
+ */
+export function getAllFileInputs(): HTMLInputElement[] {
+  const inputs = Array.from(document.querySelectorAll<HTMLInputElement>('input[type="file"]'));
+  return inputs.filter((input) => isElementVisible(input) && !input.disabled);
+}
+
+/**
+ * Get a file input element by its index.
+ */
+export function getFileInputByIndex(index: number): HTMLInputElement | null {
+  const inputs = getAllFileInputs();
+  if (index < 0 || index >= inputs.length) {
+    return null;
+  }
+  return inputs[index];
+}
+
+/**
+ * Get all select/dropdown elements on the page, ordered by DOM position.
+ */
+export function getAllSelectElements(): HTMLSelectElement[] {
+  const selects = Array.from(document.querySelectorAll<HTMLSelectElement>('select'));
+  return selects.filter((select) => isElementVisible(select) && !select.disabled);
+}
+
+/**
+ * Get a select element by its index.
+ */
+export function getSelectElementByIndex(index: number): HTMLSelectElement | null {
+  const selects = getAllSelectElements();
+  if (index < 0 || index >= selects.length) {
+    return null;
+  }
+  return selects[index];
+}
 export function isInteractable(el: Element | null): boolean {
   if (!el || !(el instanceof Element)) return false;
 
@@ -212,4 +432,50 @@ export function isInteractable(el: Element | null): boolean {
     console.error('[isInteractable] Unexpected error:', error);
     return false;
   }
+}
+/**
+ * Attribute Parsing Utilities
+ *
+ * Pure utility functions for parsing script tag data attributes.
+ * These functions validate and normalize attribute values.
+ */
+
+/**
+ * Parse position attribute from script tag
+ */
+export function parsePositionAttribute(value: string | null): 'bottom_right' | 'bottom_left' {
+  if (value === 'bottom_left' || value === 'bottom_right') {
+    return value;
+  }
+  return 'bottom_right';
+}
+
+/**
+ * Parse theme attribute from script tag
+ */
+export function parseThemeAttribute(value: string | null): 'light' | 'dark' {
+  if (value === 'light' || value === 'dark') {
+    return value;
+  }
+  return 'light';
+}
+
+/**
+ * Parse enabled modes attribute from script tag
+ */
+export function parseEnabledModesAttribute(value: string | null): ('show' | 'tell' | 'do')[] {
+  if (!value) {
+    return ['show', 'tell', 'do'];
+  }
+
+  const modes = value.split(',').map((m) => m.trim());
+  const validModes: ('show' | 'tell' | 'do')[] = [];
+
+  for (const mode of modes) {
+    if (mode === 'show' || mode === 'tell' || mode === 'do') {
+      validModes.push(mode);
+    }
+  }
+
+  return validModes.length > 0 ? validModes : ['show', 'tell', 'do'];
 }

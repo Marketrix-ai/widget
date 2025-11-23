@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { addOpacity } from '../../utils/format/colorUtils';
+import { addOpacity } from '../../utils/format';
 
 interface ThinkingIndicatorProps {
   isWaitingForUser: boolean;

@@ -1,4 +1,4 @@
-import { isInteractable } from '../../utils/dom/htmlUtils';
+import { isInteractable } from '../utils/dom';
 
 export class DOMService {
   private static instance: DOMService;

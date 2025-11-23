@@ -7,8 +7,8 @@
 
 import { useEffect } from 'react';
 
-import { chatService, createSystemMessage } from '../services/features/ChatService';
-import { isScreenSharing, stopScreenShare } from '../services/features/screenShareService';
+import { chatService, createSystemMessage } from '../services/ChatService';
+import { isScreenSharing, stopScreenShare } from '../services/ScreenShareService';
 import type { WidgetState } from '../types';
 
 /**

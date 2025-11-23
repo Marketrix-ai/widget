@@ -7,13 +7,13 @@
 
 import { sdk } from '../sdk';
 import { extractApiData } from '../utils/apiUtils';
-import { createLogger } from '../utils/logger';
+import { createLogger } from '../utils/common';
 
 const log = createLogger('ChatIdManager');
 const CHAT_ID_STORAGE_KEY = 'marketrix_chat_id';
 
-class ChatIdManager {
-  private static instance: ChatIdManager | null = null;
+class SessionManager {
+  private static instance: SessionManager | null = null;
   private chatId: string | null = null;
   private initializationPromise: Promise<string> | null = null;
 
@@ -28,11 +28,11 @@ class ChatIdManager {
   /**
    * Get singleton instance
    */
-  static getInstance(): ChatIdManager {
-    if (!ChatIdManager.instance) {
-      ChatIdManager.instance = new ChatIdManager();
+  static getInstance(): SessionManager {
+    if (!SessionManager.instance) {
+      SessionManager.instance = new SessionManager();
     }
-    return ChatIdManager.instance;
+    return SessionManager.instance;
   }
 
   /**
@@ -117,7 +117,7 @@ class ChatIdManager {
    * Reset the singleton instance (for testing purposes)
    */
   static resetInstance(): void {
-    ChatIdManager.instance = null;
+    SessionManager.instance = null;
   }
 
   private getStoredChatId(): string | null {
@@ -131,4 +131,4 @@ class ChatIdManager {
   }
 }
 
-export const chatIdManager = ChatIdManager.getInstance();
+export const sessionManager = SessionManager.getInstance();

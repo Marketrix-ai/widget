@@ -84,7 +84,7 @@ import type {
   TourData,
   TourStepData,
   WidgetSettingsData,
-} from '../../sdk';
+} from '../sdk';
 
 /**
  * Type guard for ConnectionData

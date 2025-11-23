@@ -1,11 +1,10 @@
 import './index.css';
 
 import type { WidgetSettingsData } from './sdk';
-import { createConfigFromSettings } from './services/core/ConfigManager';
-import { WidgetValidationService } from './services/core/WidgetValidationService';
-import { IntegrationService } from './services/integrationService';
+import { createConfigFromSettings } from './services/ConfigManager';
+import { IntegrationService } from './services/IntegrationService';
+import { WidgetValidationService } from './services/ValidationService';
 import type { MarketrixConfig } from './types';
-import { registerAutoInit } from './utils/autoInit';
 import {
   clearWidgetState,
   createWidgetContainer,
@@ -15,10 +14,11 @@ import {
   hideWidgetSettingsLoader,
   isWidgetInitialized,
   mountWidget,
+  registerAutoInit,
   setCurrentConfig,
   setWidgetInstance,
   showWidgetSettingsLoader,
-} from './utils/widgetInitializer';
+} from './utils/bootstrap';
 
 /**
  * Initialize widget with validated configuration

@@ -5,8 +5,8 @@
  * Reduces code duplication across components.
  */
 
-import { removeElementById, removeStepHighlights } from './dom/domUtils';
-import { isBrowser } from './validation/typeGuards';
+import { removeElementById, removeStepHighlights } from './dom';
+import { isBrowser } from './validation';
 
 /**
  * Remove tour spotlight and description overlays

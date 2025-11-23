@@ -8,18 +8,18 @@ import {
   createStartedScreenshareMessage,
   createSystemMessage,
   createUserMessage,
-} from '../../services/features/ChatService';
+} from '../../services/ChatService';
 import {
   isScreenSharing as isScreenSharingActive,
   startScreenShare,
   stopScreenShare,
-} from '../../services/features/screenShareService';
+} from '../../services/ScreenShareService';
 import type { ChatMessage, MarketrixConfig, TaskProgress } from '../../types';
-import { addOpacity, getContrastingColor } from '../../utils/format/colorUtils';
+import { addOpacity, getContrastingColor } from '../../utils/format';
 import { getPositionClasses } from '../../utils/widgetPositioning';
-import { MessageInput } from '../input/messageInput';
-import { ModeSelector } from '../input/modeSelector';
-import { MessageList } from './messageList';
+import { MessageInput } from '../input/MessageInput';
+import { ModeSelector } from '../input/ModeSelector';
+import { MessageList } from './MessageList';
 
 interface ChatWindowProps {
   config: MarketrixConfig;

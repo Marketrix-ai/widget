@@ -1,5 +1,5 @@
-import { getAgentWebSocketUrl } from '../../constants/config';
-import type { MarketrixConfig } from '../../types';
+import { getAgentWebSocketUrl } from '../constants/config';
+import type { MarketrixConfig } from '../types';
 
 export type WebSocketStatus = 'disconnected' | 'connecting' | 'connected' | 'registered' | 'error';
 

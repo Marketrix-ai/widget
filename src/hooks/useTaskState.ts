@@ -1,8 +1,7 @@
 import { useEffect } from 'react';
 
 import type { WidgetState } from '../types';
-import { findTaskMessageIndex } from '../utils/messageContentUtils';
-import { updateThinkingMarker } from '../utils/progressLineManager';
+import { findTaskMessageIndex, updateThinkingMarker } from '../utils/chat';
 
 /**
  * Hook for managing task state and placeholder updates

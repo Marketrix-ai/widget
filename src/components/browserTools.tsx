@@ -18,7 +18,7 @@ import {
   type BrowserAction,
   type BrowserToolMetadata,
 } from '../types/browserTools';
-import { addOpacity, getContrastingColor } from '../utils/format/colorUtils';
+import { addOpacity, getContrastingColor } from '../utils/format';
 
 interface BrowserToolsProps {
   config?: MarketrixConfig;

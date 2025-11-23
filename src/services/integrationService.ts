@@ -1,6 +1,6 @@
 import { type IntegrationData, sdk, type WidgetSettingsData } from '../sdk';
 import { extractApiData, extractErrorMessage } from '../utils/apiUtils';
-import { isString, isWidgetSettingsData } from '../utils/validation/typeGuards';
+import { isString, isWidgetSettingsData } from '../utils/validation';
 
 export class IntegrationService {
   private marketrixId?: string;
@@ -65,7 +65,10 @@ export class IntegrationService {
   getWidgetSettings(integration: IntegrationData): WidgetSettingsData | null {
     if (!integration?.settings) return null;
 
-    let settings = integration.settings;
+    // API returns settings as an object, but database might store as JSON string
+    // The integration type defines settings as WidgetSettingsData | SlackSettingsData (union)
+    // But at runtime it could be a string or a partial object
+    let settings: unknown = integration.settings;
 
     if (isString(settings)) {
       try {
@@ -78,6 +81,17 @@ export class IntegrationService {
 
     if (isWidgetSettingsData(settings)) {
       return settings;
+    }
+
+    // Try to partially match if it's an object but missing some optional fields
+    // This is a fallback for when the type guard is too strict but the data is usable
+    if (
+      typeof settings === 'object' &&
+      settings !== null &&
+      'widget_enabled' in settings &&
+      typeof (settings as Record<string, unknown>).widget_enabled === 'boolean'
+    ) {
+      return settings as unknown as WidgetSettingsData;
     }
 
     console.warn('Settings are not widget settings');

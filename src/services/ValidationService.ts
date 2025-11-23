@@ -1,11 +1,7 @@
-import { type AgentData, type ConnectionData, type IntegrationData, sdk } from '../../sdk';
-import type { MarketrixConfig } from '../../types';
-import { extractApiData, handleApiError, isValidApiResponse } from '../../utils/apiUtils';
-import {
-  isAgentData,
-  isConnectionData,
-  isIntegrationDataArray,
-} from '../../utils/validation/typeGuards';
+import { type AgentData, type ConnectionData, type IntegrationData, sdk } from '../sdk';
+import type { MarketrixConfig } from '../types';
+import { extractApiData, handleApiError, isValidApiResponse } from '../utils/apiUtils';
+import { isAgentData, isConnectionData, isIntegrationDataArray } from '../utils/validation';
 
 export interface WidgetValidationResult {
   isValid: boolean;

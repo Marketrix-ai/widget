@@ -1,28 +1,24 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
-import { chatIdManager } from '../services/chatIdManager';
-import { MarketrixApiService } from '../services/communication/marketrixApiService';
-import { configManager } from '../services/core/ConfigManager';
+import { MarketrixApiService } from '../services/ApiService';
+import { chatService, createAgentMessage, createUserMessage } from '../services/ChatService';
+import { configManager } from '../services/ConfigManager';
+import { sessionManager } from '../services/SessionManager';
+import { toolExecutionService } from '../services/ToolService';
 import {
   WebSocketClient,
   type WebSocketMessage,
   type WebSocketStatus,
-} from '../services/core/WebSocketClient';
-import {
-  chatService,
-  createAgentMessage,
-  createUserMessage,
-} from '../services/features/ChatService';
-import { toolExecutionService } from '../services/features/ToolExecutionService';
+} from '../services/WebSocketClient';
 import type { ChatMessage, InstructionType, TaskProgress, WidgetState } from '../types';
-import { findMessageForProgress } from '../utils/messageFinder';
 import {
   addProgressLine,
+  findMessageForProgress,
+  getFriendlyToolName,
   markProgressLineComplete,
   markProgressLineFailed,
   updateThinkingMarker,
-} from '../utils/progressLineManager';
-import { getFriendlyToolName } from '../utils/toolNames';
+} from '../utils/chat';
 
 // Define Context Interface
 interface WidgetContextType {
@@ -89,7 +85,7 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }));
 
     // Connect WebSocket if chat ID exists
-    const chatId = chatIdManager.getChatId();
+    const chatId = sessionManager.getChatId();
     if (chatId) {
       // Ensure config is loaded before initializing WebSocket
       const config = configManager.getConfig();

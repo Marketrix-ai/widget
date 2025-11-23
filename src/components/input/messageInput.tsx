@@ -3,7 +3,7 @@ import React from 'react';
 import SendIcon from '../../assets/send.png';
 import { useWidget } from '../../hooks/useWidget';
 import type { MarketrixConfig } from '../../types';
-import { addOpacity, getContrastingColor } from '../../utils/format/colorUtils';
+import { addOpacity, getContrastingColor } from '../../utils/format';
 
 interface MessageInputProps {
   value: string;

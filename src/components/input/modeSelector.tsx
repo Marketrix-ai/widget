@@ -7,8 +7,12 @@ import MarketrixLogo from '../../assets/marktrix-footer.png';
 import { useWidget } from '../../hooks/useWidget';
 import type { InstructionType } from '../../sdk';
 import type { MarketrixConfig } from '../../types';
-import { addOpacity, getContrastingColor } from '../../utils/format/colorUtils';
-import { getModeDescription, getModeDisplayName } from '../../utils/format/textFormatting';
+import {
+  addOpacity,
+  getContrastingColor,
+  getModeDescription,
+  getModeDisplayName,
+} from '../../utils/format';
 
 interface ModeSelectorProps {
   currentMode: InstructionType;

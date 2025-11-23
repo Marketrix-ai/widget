@@ -1,7 +1,7 @@
-import { DEFAULT_MARKETRIX_CONFIG } from '../../constants/config';
-import type { WidgetSettingsData } from '../../sdk';
-import type { MarketrixConfig } from '../../types';
-import { hasProperty } from '../../utils/validation/typeGuards';
+import { DEFAULT_MARKETRIX_CONFIG } from '../constants/config';
+import type { WidgetSettingsData } from '../sdk';
+import type { MarketrixConfig } from '../types';
+import { hasProperty } from '../utils/validation';
 
 export class ConfigManager {
   private static instance: ConfigManager;

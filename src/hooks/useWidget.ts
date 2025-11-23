@@ -6,13 +6,13 @@ import {
   extractWidgetSettingsFromConfig,
 } from '../constants/config';
 import { useWidgetContext } from '../context/WidgetContext';
-import { configManager } from '../services/core/ConfigManager';
+import { configManager } from '../services/ConfigManager';
 import type { MarketrixConfig, WidgetSettingsData } from '../types';
 import {
   getWidgetCustomize as getWidgetCustomizeConfig,
   getWidgetPosition as getWidgetPositionConfig,
   getWidgetText as getWidgetTextConfig,
-} from '../utils/configGetters';
+} from '../utils/config';
 
 interface UseWidgetProps {
   config?: MarketrixConfig;
