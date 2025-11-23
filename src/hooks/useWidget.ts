@@ -6,6 +6,7 @@ import {
   extractWidgetSettingsFromConfig,
 } from '../constants/config';
 import { useWidgetContext } from '../context/WidgetContext';
+import { configManager } from '../services/core/ConfigManager';
 import type { MarketrixConfig, WidgetSettingsData } from '../types';
 import {
   getWidgetCustomize as getWidgetCustomizeConfig,
@@ -22,10 +23,13 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
 
   // Memoize settings
   const marketrixConfig = useMemo<MarketrixConfig>(() => {
-    return {
+    const mergedConfig = {
       ...DEFAULT_MARKETRIX_CONFIG,
       ...config,
     };
+    // Update ConfigManager whenever config changes
+    configManager.saveConfig(mergedConfig);
+    return mergedConfig;
   }, [config]);
 
   // Effective settings

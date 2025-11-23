@@ -30,7 +30,7 @@ export function useTaskState(
           // Determine placeholder state based on:
           // - 'waiting-for-user': task is running in show/do mode and has progress lines
           // - 'thinking': otherwise (agent is processing)
-          const hasProgress = hasProgressLines(msg.content);
+          const hasProgress = hasProgressLines(msg);
           const shouldBeWaitingForUser =
             prev.isTaskRunning &&
             (prev.currentMode === 'show' || prev.currentMode === 'do') &&

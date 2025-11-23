@@ -1,5 +1,5 @@
 import type { ChatMessage, InstructionType, TaskProgress } from '../../types';
-import { removeThinkingMarkers } from '../../utils/messageContentUtils';
+import { parseProgressSteps, removeThinkingMarkers } from '../../utils/messageContentUtils';
 
 interface StoredChatContext {
   chat_id: string;
@@ -112,11 +112,23 @@ export class ChatService {
         console.log('[ChatService] Chat ID mismatch but restoring history');
       }
 
-      this.messages = context.messages.map((msg) => ({
-        ...msg,
-        timestamp: new Date(msg.timestamp),
-        videoStream: undefined,
-      })) as ChatMessage[];
+      this.messages = context.messages.map((msg) => {
+        const restoredMsg: ChatMessage = {
+          ...msg,
+          timestamp: new Date(msg.timestamp),
+          videoStream: undefined,
+        };
+
+        // Migration: If progressSteps is missing, parse from content
+        if (!restoredMsg.progressSteps) {
+          const { mainContent, progressSteps } = parseProgressSteps(restoredMsg.content);
+          if (progressSteps.length > 0) {
+            restoredMsg.content = mainContent;
+            restoredMsg.progressSteps = progressSteps;
+          }
+        }
+        return restoredMsg;
+      });
 
       this.isTaskRunning = context.isTaskRunning;
       this.activeTaskId = context.activeTaskId;
@@ -137,7 +149,7 @@ export class ChatService {
         .filter((msg) => {
           if (!msg.isPlaceholder) return true;
           const hasContent = msg.content.trim().length > 0;
-          const hasProgress = msg.content.includes('\n\n○') || msg.content.includes('\n\n●');
+          const hasProgress = msg.progressSteps && msg.progressSteps.length > 0;
           return hasContent || hasProgress;
         })
         .filter((msg) => !(msg.isSystemMessage && msg.content === 'Chat context changed'))
@@ -150,6 +162,7 @@ export class ChatService {
           isScreenAccessRequest: msg.isScreenAccessRequest,
           isSystemMessage: msg.isSystemMessage,
           isPlaceholder: msg.isPlaceholder,
+          progressSteps: msg.progressSteps,
         }));
 
       const context: StoredChatContext = {

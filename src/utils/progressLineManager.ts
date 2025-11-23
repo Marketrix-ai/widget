@@ -1,100 +1,126 @@
 /**
  * Progress Line Manager
  *
- * Utilities for managing progress lines in chat messages.
- * Progress lines show tool execution status with ○ (pending) and ●✓ (completed) indicators.
+ * Utilities for managing progress steps in chat messages using structured objects.
  */
 
 import type { ChatMessage } from '../types';
-import {
-  addThinkingMarker,
-  findLastIncompleteProgressLineIndex,
-  findProgressLineIndexByToolName,
-  formatProgressLine,
-  hasProgressLines,
-  hasThinkingMarker,
-  parseProgressLines,
-  reconstructMessageContent,
-  removeThinkingMarkers,
-} from './messageContentUtils';
+import { addThinkingMarker, hasThinkingMarker, parseProgressSteps } from './messageContentUtils';
 
 /**
- * Add a new progress line to a message
+ * Ensure message has initialized progressSteps and parts
+ */
+function ensureMessageStructure(message: ChatMessage): ChatMessage {
+  let msg = { ...message };
+
+  // Ensure progressSteps
+  if (!msg.progressSteps) {
+    const { mainContent, progressSteps } = parseProgressSteps(msg.content);
+    msg = {
+      ...msg,
+      content: mainContent + (hasThinkingMarker(msg.content) ? '\n\n__THINKING__' : ''),
+      progressSteps,
+    };
+  }
+
+  // Ensure parts
+  if (!msg.parts) {
+    msg.parts = [];
+    // If we have progressSteps but no parts, migrate them
+    if (msg.progressSteps && msg.progressSteps.length > 0) {
+      // Add initial text content as a part if exists
+      const cleanContent = msg.content.replace(/\n\n__THINKING__$/, '').trim();
+      if (cleanContent) {
+        msg.parts.push({
+          type: 'text',
+          content: cleanContent,
+        });
+      }
+      // Add progress steps as parts
+      msg.progressSteps.forEach((step) => {
+        if (msg.parts) {
+          msg.parts.push({
+            type: 'progress',
+            content: step.explanation || `Executing ${step.tool}...`,
+            status: step.status === 'pending' ? 'running' : step.status,
+            toolName: step.tool,
+          });
+        }
+      });
+    } else if (msg.content) {
+      const cleanContent = msg.content.replace(/\n\n__THINKING__$/, '').trim();
+      if (cleanContent) {
+        msg.parts.push({
+          type: 'text',
+          content: cleanContent,
+        });
+      }
+    }
+  }
+
+  return msg;
+}
+
+/**
+ * Add a new progress step to a message
  */
 export function addProgressLine(
   message: ChatMessage,
   toolName: string,
   explanation: string
 ): ChatMessage {
-  console.log('[ProgressLineManager] [FLOW] addProgressLine called', {
-    messageId: message.id,
-    toolName,
-    explanation,
-    originalContent: message.content,
-  });
+  const msg = ensureMessageStructure(message);
+  const steps = msg.progressSteps || [];
+  const parts = msg.parts || [];
 
-  const { mainContent, progressLines } = parseProgressLines(message.content);
-  console.log('[ProgressLineManager] [FLOW] Parsed content', {
-    mainContent,
-    progressLineCount: progressLines.length,
-    progressLines,
-  });
+  // Update ProgressSteps (Legacy)
+  const newSteps = [...steps];
+  const existingStepIndex = steps.findIndex(
+    (step) => step.tool === toolName && step.status === 'pending'
+  );
 
-  // Check if this tool already has a progress line
-  const existingIndex = findProgressLineIndexByToolName(progressLines, toolName);
-  console.log('[ProgressLineManager] [FLOW] Existing progress line check', {
-    existingIndex,
-    toolName,
-  });
-
-  const progressLine = formatProgressLine(toolName, explanation, 'pending');
-  console.log('[ProgressLineManager] [FLOW] Formatted progress line', {
-    progressLine,
-    startsWithCircle: progressLine.trim().startsWith('○'),
-  });
-
-  const updatedProgressLines = [...progressLines];
-
-  if (existingIndex >= 0) {
-    // Update existing line
-    updatedProgressLines[existingIndex] = progressLine;
-    console.log('[ProgressLineManager] [FLOW] Updated existing progress line', {
-      index: existingIndex,
-      oldLine: progressLines[existingIndex],
-      newLine: progressLine,
-    });
+  if (existingStepIndex >= 0) {
+    newSteps[existingStepIndex] = {
+      ...newSteps[existingStepIndex],
+      explanation,
+    };
   } else {
-    // Add new line
-    updatedProgressLines.push(progressLine);
-    console.log('[ProgressLineManager] [FLOW] Added new progress line', {
-      newLine: progressLine,
-      totalProgressLines: updatedProgressLines.length,
+    newSteps.push({
+      tool: toolName,
+      status: 'pending',
+      explanation,
     });
   }
 
-  const updatedContent = reconstructMessageContent(mainContent, updatedProgressLines);
-  console.log('[ProgressLineManager] [FLOW] Reconstructed content', {
-    updatedContent,
-    hasNewline: updatedContent.includes('\n\n'),
-    contentLength: updatedContent.length,
-  });
+  // Update Parts (New)
+  const newParts = [...parts];
+  const existingPartIndex = parts.findIndex(
+    (part) => part.type === 'progress' && part.toolName === toolName && part.status === 'running'
+  );
 
-  const result = {
-    ...message,
-    content: updatedContent,
+  if (existingPartIndex >= 0) {
+    newParts[existingPartIndex] = {
+      ...newParts[existingPartIndex],
+      content: explanation,
+    };
+  } else {
+    newParts.push({
+      type: 'progress',
+      content: explanation,
+      status: 'running',
+      toolName,
+    });
+  }
+
+  return {
+    ...msg,
+    progressSteps: newSteps,
+    parts: newParts,
   };
-
-  console.log('[ProgressLineManager] [FLOW] Returning updated message', {
-    messageId: result.id,
-    content: result.content,
-    contentChanged: result.content !== message.content,
-  });
-
-  return result;
 }
 
 /**
- * Update an existing progress line for a tool
+ * Update an existing progress step for a tool
  */
 export function updateProgressLine(
   message: ChatMessage,
@@ -102,170 +128,194 @@ export function updateProgressLine(
   status: 'pending' | 'completed' | 'failed',
   error?: string
 ): ChatMessage {
-  const { mainContent, progressLines } = parseProgressLines(message.content);
-  const toolIndex = findProgressLineIndexByToolName(progressLines, toolName);
+  const msg = ensureMessageStructure(message);
+  const steps = msg.progressSteps || [];
+  const parts = msg.parts || [];
 
-  if (toolIndex >= 0) {
-    const existingLine = progressLines[toolIndex];
-    // Extract explanation from existing line (remove status indicators)
-    // Handle "●✓" as a sequence first, then individual characters
-    const explanation = existingLine
-      .replace(/^●✓\s*/, '') // Remove "●✓" sequence first
-      .replace(/^○\s*/, '') // Then remove "○"
-      .replace(/^●\s*/, '') // Then remove "●" if any
-      .replace(/^✓\s*/, '') // Then remove "✓" if any
-      .replace(/\s*✗\s*\([^)]*\)$/, '') // Remove error markers
-      .trim();
+  // Update ProgressSteps (Legacy)
+  const newSteps = [...steps];
+  const stepIndex = steps.map((s) => s.tool).lastIndexOf(toolName);
 
-    const updatedProgressLines = [...progressLines];
-    updatedProgressLines[toolIndex] = formatProgressLine(toolName, explanation, status, error);
-
-    const updatedContent = reconstructMessageContent(mainContent, updatedProgressLines);
-
-    return {
-      ...message,
-      content: updatedContent,
+  if (stepIndex >= 0) {
+    newSteps[stepIndex] = {
+      ...newSteps[stepIndex],
+      status,
+      error,
     };
+  } else {
+    // If not found, add it (fallback)
+    newSteps.push({
+      tool: toolName,
+      status,
+      explanation: `Executing ${toolName}...`,
+      error,
+    });
   }
 
-  // If tool not found, add it as pending
-  return addProgressLine(message, toolName, `Executing ${toolName}...`);
+  // Update Parts (New)
+  const newParts = [...parts];
+  const partIndex = parts
+    .map((p) => (p.type === 'progress' ? p.toolName : ''))
+    .lastIndexOf(toolName);
+
+  const mappedStatus = status === 'pending' ? 'running' : status;
+
+  if (partIndex >= 0) {
+    newParts[partIndex] = {
+      ...newParts[partIndex],
+      status: mappedStatus,
+    };
+    // Append error to content if failed? Or keep separate?
+    // MessagePart doesn't have error field in previous step definition, let's verify.
+    // I defined MessagePart with status, content, toolName.
+    // Error is usually part of content for failed steps in UI display logic often.
+    // But let's check if I should update content to include error.
+    if (status === 'failed' && error) {
+      // Append error to content if not already there?
+      // Actually, the UI usually handles display.
+      // But for `parts`, let's append it to content for now as simple solution
+      // or rely on the UI to handle failed status.
+      // The previous implementation of `markProgressLineFailed` added error to legacy string.
+    }
+  } else {
+    newParts.push({
+      type: 'progress',
+      content: `Executing ${toolName}...`,
+      status: mappedStatus,
+      toolName,
+    });
+  }
+
+  return { ...msg, progressSteps: newSteps, parts: newParts };
 }
 
 /**
- * Mark the last incomplete progress line as completed
+ * Mark the last incomplete progress step as completed
  */
 export function markProgressLineComplete(message: ChatMessage, toolName?: string): ChatMessage {
-  const { mainContent, progressLines } = parseProgressLines(message.content);
+  const msg = ensureMessageStructure(message);
+  const steps = msg.progressSteps || [];
+  const parts = msg.parts || [];
 
-  if (progressLines.length === 0) {
-    return message;
-  }
-
-  let indexToUpdate = -1;
-
+  // Update ProgressSteps (Legacy)
+  const newSteps = [...steps];
+  let stepIndex = -1;
   if (toolName) {
-    // Find by tool name
-    indexToUpdate = findProgressLineIndexByToolName(progressLines, toolName);
+    stepIndex = steps.map((s) => s.tool).lastIndexOf(toolName);
   } else {
-    // Find last incomplete line
-    indexToUpdate = findLastIncompleteProgressLineIndex(progressLines);
+    for (let i = steps.length - 1; i >= 0; i--) {
+      if (steps[i].status === 'pending') {
+        stepIndex = i;
+        break;
+      }
+    }
   }
 
-  if (indexToUpdate >= 0) {
-    const lastLine = progressLines[indexToUpdate];
-    // Extract explanation from existing line
-    // Handle "●✓" as a sequence first, then individual characters
-    const explanation = lastLine
-      .replace(/^●✓\s*/, '') // Remove "●✓" sequence first
-      .replace(/^○\s*/, '') // Then remove "○"
-      .replace(/^●\s*/, '') // Then remove "●" if any
-      .replace(/^✓\s*/, '') // Then remove "✓" if any
-      .replace(/\s*✗\s*\([^)]*\)$/, '') // Remove error markers
-      .trim();
-
-    // Replace ○ with ●✓
-    const updatedLastLine = lastLine.trim().startsWith('○')
-      ? lastLine.replace(/^○\s*/, '●✓ ')
-      : `●✓ ${explanation}`;
-
-    const updatedProgressLines = [
-      ...progressLines.slice(0, indexToUpdate),
-      updatedLastLine,
-      ...progressLines.slice(indexToUpdate + 1),
-    ];
-
-    const updatedContent = reconstructMessageContent(mainContent, updatedProgressLines);
-
-    return {
-      ...message,
-      content: updatedContent,
-    };
+  if (stepIndex >= 0) {
+    newSteps[stepIndex] = { ...newSteps[stepIndex], status: 'completed' };
   }
 
-  return message;
+  // Update Parts (New)
+  const newParts = [...parts];
+  let partIndex = -1;
+  if (toolName) {
+    partIndex = parts.map((p) => (p.type === 'progress' ? p.toolName : '')).lastIndexOf(toolName);
+  } else {
+    for (let i = parts.length - 1; i >= 0; i--) {
+      if (parts[i].type === 'progress' && parts[i].status === 'running') {
+        partIndex = i;
+        break;
+      }
+    }
+  }
+
+  if (partIndex >= 0) {
+    newParts[partIndex] = { ...newParts[partIndex], status: 'completed' };
+  }
+
+  return { ...msg, progressSteps: newSteps, parts: newParts };
 }
 
 /**
- * Mark the last incomplete progress line as failed
+ * Mark the last incomplete progress step as failed
  */
 export function markProgressLineFailed(
   message: ChatMessage,
   toolName: string,
   error: string
 ): ChatMessage {
-  const { mainContent, progressLines } = parseProgressLines(message.content);
+  const msg = ensureMessageStructure(message);
+  const steps = msg.progressSteps || [];
+  const parts = msg.parts || [];
 
-  if (progressLines.length === 0) {
-    return message;
+  // Update ProgressSteps (Legacy)
+  const newSteps = [...steps];
+  let stepIndex = steps.map((s) => s.tool).lastIndexOf(toolName);
+  if (stepIndex === -1) {
+    for (let i = steps.length - 1; i >= 0; i--) {
+      if (steps[i].status === 'pending') {
+        stepIndex = i;
+        break;
+      }
+    }
   }
 
-  const indexToUpdate = findProgressLineIndexByToolName(progressLines, toolName);
+  if (stepIndex >= 0) {
+    newSteps[stepIndex] = { ...newSteps[stepIndex], status: 'failed', error };
+  }
 
-  if (indexToUpdate >= 0) {
-    const lastLine = progressLines[indexToUpdate];
-    const updatedLastLine = `${lastLine} ✗ (${error})`;
+  // Update Parts (New)
+  const newParts = [...parts];
+  let partIndex = parts.map((p) => (p.type === 'progress' ? p.toolName : '')).lastIndexOf(toolName);
+  if (partIndex === -1) {
+    for (let i = parts.length - 1; i >= 0; i--) {
+      if (parts[i].type === 'progress' && parts[i].status === 'running') {
+        partIndex = i;
+        break;
+      }
+    }
+  }
 
-    const updatedProgressLines = [
-      ...progressLines.slice(0, indexToUpdate),
-      updatedLastLine,
-      ...progressLines.slice(indexToUpdate + 1),
-    ];
-
-    const updatedContent = reconstructMessageContent(mainContent, updatedProgressLines);
-
-    return {
-      ...message,
-      content: updatedContent,
+  if (partIndex >= 0) {
+    newParts[partIndex] = {
+      ...newParts[partIndex],
+      status: 'failed',
+      // Append error to content for visibility if needed, or rely on UI
+      content: `${newParts[partIndex].content} (${error})`,
     };
   }
 
-  return message;
+  return { ...msg, progressSteps: newSteps, parts: newParts };
 }
 
 /**
- * Add or remove thinking marker based on task state and progress lines
+ * Add or remove thinking marker based on task state
  */
 export function updateThinkingMarker(
   message: ChatMessage,
   isTaskRunning: boolean,
   currentMode: 'show' | 'tell' | 'do'
 ): ChatMessage {
-  // Only add thinking marker for show/do modes when task is running
+  const msg = ensureMessageStructure(message);
+
   if (!isTaskRunning || (currentMode !== 'show' && currentMode !== 'do')) {
-    // Remove thinking marker if present
-    if (hasThinkingMarker(message.content)) {
+    // Remove thinking marker
+    if (hasThinkingMarker(msg.content)) {
       return {
-        ...message,
-        content: message.content.replace(/\n\n__THINKING__$/, '').replace(/__THINKING__/g, ''),
+        ...msg,
+        content: msg.content.replace(/\n\n__THINKING__$/, '').replace(/__THINKING__/g, ''),
       };
     }
-    return message;
+    return msg;
   }
 
-  // Check if we need to add or remove thinking marker
-  const cleanContent = removeThinkingMarkers(message.content);
-  const hasProgress = hasProgressLines(cleanContent);
-  const hasThinking = hasThinkingMarker(message.content);
-
-  // For show/do modes with task running:
-  // - If there are progress lines, show both progress AND thinking (agent is still processing)
-  // - If no progress lines yet, show thinking marker
-  // - Only remove thinking when task completes (handled by the outer condition)
-  if (!hasProgress && !hasThinking) {
-    // Add thinking marker if no progress lines and no marker exists
+  // Add thinking marker if not present
+  if (!hasThinkingMarker(msg.content)) {
     return {
-      ...message,
-      content: addThinkingMarker(message.content),
-    };
-  } else if (hasProgress && !hasThinking) {
-    // Add thinking marker alongside progress lines (agent is still processing)
-    return {
-      ...message,
-      content: addThinkingMarker(message.content),
+      ...msg,
+      content: addThinkingMarker(msg.content),
     };
   }
-  // If hasThinking is already true, keep it (whether or not progress exists)
 
-  return message;
+  return msg;
 }

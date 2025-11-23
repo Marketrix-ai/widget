@@ -1,80 +1,114 @@
 import React from 'react';
-import { FaCheckCircle, FaCircle } from 'react-icons/fa';
+import { FaBan, FaCheckCircle, FaCircle, FaSpinner, FaTimesCircle } from 'react-icons/fa';
 
 import { addOpacity } from '../../utils/format/colorUtils';
 
 interface ProgressLineProps {
-  line: string;
+  content: string;
+  status?: 'running' | 'completed' | 'failed' | 'canceled' | 'pending';
   isWaitingForUser: boolean;
   accentColor: string;
   textColor: string;
 }
 
 export const ProgressLine: React.FC<ProgressLineProps> = ({
-  line,
+  content,
+  status = 'pending',
   isWaitingForUser,
   accentColor,
   textColor,
 }) => {
-  const trimmedLine = line.trim();
-  const isCompleted = trimmedLine.startsWith('●✓') || trimmedLine.startsWith('✓');
-  const isPending = trimmedLine.startsWith('○') && !isCompleted;
+  // Normalize status for display
+  // Legacy 'pending' maps to 'running' visually if we want spinner,
+  // but originally it was just a circle.
+  // If status is 'running', show spinner.
+  // If status is 'pending' (legacy), show circle.
 
-  // Extract text after the status indicator
-  const text = trimmedLine
-    .replace(/^●✓\s*/, '')
-    .replace(/^○\s*/, '')
-    .replace(/^●\s*/, '')
-    .replace(/^✓\s*/, '')
-    .replace(/\s*✗\s*\([^)]*\)$/, '')
-    .trim();
-
-  return (
-    <div className='flex items-start gap-2'>
-      {isCompleted ? (
-        <FaCheckCircle
-          className='flex-shrink-0 mt-0.5'
-          style={{ color: accentColor || '#10b981' }}
-          size={16}
-        />
-      ) : isPending ? (
-        isWaitingForUser ? (
-          <div
-            className='flex-shrink-0 mt-0.5 spinner-container'
-            style={{
-              width: '16px',
-              height: '16px',
-              position: 'relative',
-            }}
-          >
+  const renderIcon = () => {
+    switch (status) {
+      case 'completed':
+        return (
+          <FaCheckCircle
+            className='flex-shrink-0 mt-0.5'
+            style={{ color: accentColor || '#10b981' }}
+            size={16}
+          />
+        );
+      case 'failed':
+        return (
+          <FaTimesCircle
+            className='flex-shrink-0 mt-0.5'
+            style={{ color: '#ef4444' }} // Red for error
+            size={16}
+          />
+        );
+      case 'canceled':
+        return (
+          <FaBan
+            className='flex-shrink-0 mt-0.5'
+            style={{ color: addOpacity(textColor, 0.5) }}
+            size={16}
+          />
+        );
+      case 'running':
+        // If waiting for user, we might want a different icon or just spinner?
+        // The original code had specific logic for waiting for user.
+        if (isWaitingForUser) {
+          return (
             <div
-              className='spinner'
+              className='flex-shrink-0 mt-0.5 spinner-container'
               style={{
                 width: '16px',
                 height: '16px',
-                border: `2px solid ${addOpacity(textColor, 0.2)}`,
-                borderTop: `2px solid ${accentColor || '#10b981'}`,
-                borderRadius: '50%',
-                animation: 'spin 1s linear infinite',
+                position: 'relative',
               }}
-            />
-            <style>{`
-              @keyframes spin {
-                0% { transform: rotate(0deg); }
-                100% { transform: rotate(360deg); }
-              }
-            `}</style>
-          </div>
-        ) : (
+            >
+              <div
+                className='spinner'
+                style={{
+                  width: '16px',
+                  height: '16px',
+                  border: `2px solid ${addOpacity(textColor, 0.2)}`,
+                  borderTop: `2px solid ${accentColor || '#10b981'}`,
+                  borderRadius: '50%',
+                  animation: 'spin 1s linear infinite',
+                }}
+              />
+              <style>{`
+                @keyframes spin {
+                  0% { transform: rotate(0deg); }
+                  100% { transform: rotate(360deg); }
+                }
+              `}</style>
+            </div>
+          );
+        }
+        // Standard running spinner
+        return (
+          <FaSpinner
+            className='flex-shrink-0 mt-0.5 animate-spin'
+            style={{ color: accentColor || '#10b981' }}
+            size={16}
+          />
+        );
+      case 'pending':
+      default:
+        // Static circle for pending/queued
+        return (
           <FaCircle
             className='flex-shrink-0 mt-0.5'
             style={{ color: addOpacity(textColor, 0.5) }}
             size={16}
           />
-        )
-      ) : null}
+        );
+    }
+  };
+
+  return (
+    <div className='flex items-start gap-2'>
+      {renderIcon()}
       <span className='flex-1 whitespace-pre-wrap text-xs font-inter font-medium leading-tight'>
-        {text}
+        {content}
       </span>
     </div>
   );

@@ -45,6 +45,13 @@ export type MarketrixConfig = Partial<WidgetSettingsData> & {
   widget_position_z_index?: number;
 };
 
+export interface ProgressStep {
+  tool: string;
+  status: 'pending' | 'completed' | 'failed';
+  explanation?: string;
+  error?: string;
+}
+
 export interface ChatMessage {
   id: string;
   content: string;
@@ -56,6 +63,15 @@ export interface ChatMessage {
   isSystemMessage?: boolean;
   isPlaceholder?: boolean; // Indicates this is a placeholder message with progress bar
   placeholderState?: 'thinking' | 'waiting-for-user'; // State of placeholder: thinking or waiting for user action
+  progressSteps?: ProgressStep[];
+  parts?: MessagePart[];
+}
+
+export interface MessagePart {
+  type: 'text' | 'progress';
+  content: string;
+  status?: 'running' | 'completed' | 'failed' | 'canceled';
+  toolName?: string;
 }
 
 export interface TaskProgress {

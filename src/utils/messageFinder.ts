@@ -53,8 +53,13 @@ function matchesProgressCriteria(
   }
 
   // Content requirement check
-  if (requireContent && msg.content.trim().length === 0) {
-    return false;
+  // With object-based progress, content might be empty but progressSteps present
+  if (requireContent) {
+    const hasText = msg.content.trim().length > 0;
+    const hasProgress = msg.progressSteps && msg.progressSteps.length > 0;
+    if (!hasText && !hasProgress) {
+      return false;
+    }
   }
 
   return true;
@@ -113,7 +118,10 @@ export function findMessageForProgress(options: FindMessageOptions): {
         checkMode
       );
       const isPlaceholder = msg.isPlaceholder;
-      const hasContent = !requireContent || msg.content.trim().length > 0;
+      const hasContent =
+        !requireContent ||
+        msg.content.trim().length > 0 ||
+        (msg.progressSteps && msg.progressSteps.length > 0);
 
       console.log('[MessageFinder] [FLOW] Checking message (Priority 1)', {
         index: i,
@@ -125,6 +133,7 @@ export function findMessageForProgress(options: FindMessageOptions): {
         matchesCriteria,
         hasContent,
         contentLength: msg.content.trim().length,
+        progressStepsCount: msg.progressSteps?.length,
         willMatch: matchesCriteria && isPlaceholder && hasContent,
       });
 
@@ -235,7 +244,10 @@ export function findMessageForProgress(options: FindMessageOptions): {
       const isPlaceholder = msg.isPlaceholder;
       const notSystem = !msg.isSystemMessage;
       const notScreenAccess = !msg.isScreenAccessRequest;
-      const hasContent = !requireContent || msg.content.trim().length > 0;
+      const hasContent =
+        !requireContent ||
+        msg.content.trim().length > 0 ||
+        (msg.progressSteps && msg.progressSteps.length > 0);
 
       console.log('[MessageFinder] [FLOW] Checking message (Fallback Priority 1)', {
         index: i,
@@ -378,3 +390,4 @@ export function findPlaceholderMessage(
 /**
  * Find the task message (non-placeholder agent message)
  */
+export { findTaskMessageIndex } from './messageContentUtils';

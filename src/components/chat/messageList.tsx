@@ -9,7 +9,6 @@ import { useWidget } from '../../hooks/useWidget';
 import { createUserMessage } from '../../services/features/ChatService';
 import type { ChatMessage, MarketrixConfig } from '../../types';
 import { addOpacity } from '../../utils/format/colorUtils';
-import { parseProgressLines } from '../../utils/messageContentUtils';
 import { MessageItem } from './messageItem';
 import { WelcomeMessage } from './welcomeMessage';
 
@@ -263,10 +262,9 @@ export const MessageList = ({
       {/* Messages */}
       {(() => {
         // Debug: Log messages being rendered
-        const messagesWithProgress = messages.filter((msg) => {
-          const { progressLines } = parseProgressLines(msg.content);
-          return progressLines.length > 0;
-        });
+        const messagesWithProgress = messages.filter(
+          (msg) => msg.progressSteps && msg.progressSteps.length > 0
+        );
         if (messagesWithProgress.length > 0) {
           console.log('[MessageList] [FLOW] Rendering messages with progress', {
             totalMessages: messages.length,
@@ -274,7 +272,7 @@ export const MessageList = ({
             progressMessages: messagesWithProgress.map((msg) => ({
               id: msg.id,
               content: msg.content,
-              progressLines: parseProgressLines(msg.content).progressLines,
+              progressSteps: msg.progressSteps,
             })),
           });
         }

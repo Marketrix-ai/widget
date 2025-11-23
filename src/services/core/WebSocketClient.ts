@@ -46,6 +46,17 @@ export class WebSocketClient {
   static getInstance(config?: Partial<MarketrixConfig>): WebSocketClient {
     if (!WebSocketClient.instance) {
       WebSocketClient.instance = new WebSocketClient(config);
+    } else if (config) {
+      // If config is provided, ensure we update the URL if not connected or force update logic if needed
+      // But typically we don't want to change the URL mid-flight unless disconnected.
+      // We can check if the new config would result in a different URL.
+      const newUrl = getAgentWebSocketUrl(config);
+      if (newUrl !== WebSocketClient.instance.url) {
+        WebSocketClient.instance.url = newUrl;
+        // If disconnected, the next connect() will use the new URL.
+        // If connected, we might want to reconnect?
+        // For now, assume URL changes only happen before connection or require explicit reconnect.
+      }
     }
     return WebSocketClient.instance;
   }
@@ -68,7 +79,8 @@ export class WebSocketClient {
 
   async connect(chatId: string): Promise<void> {
     if (this.isIntentionallyDisconnected) {
-      return;
+      // Reset intentional disconnect flag if explicitly called to connect
+      this.isIntentionallyDisconnected = false;
     }
 
     if (this.isConnected() && this.chatId === chatId) {
@@ -76,7 +88,10 @@ export class WebSocketClient {
     }
 
     // Handle existing connection
-    if (this.websocket && this.chatId !== chatId) {
+    if (
+      this.websocket &&
+      (this.chatId !== chatId || this.websocket.readyState !== WebSocket.CONNECTING)
+    ) {
       this.disconnect();
       await new Promise((resolve) => setTimeout(resolve, 100));
     }

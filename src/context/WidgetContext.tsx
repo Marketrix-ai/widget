@@ -87,10 +87,12 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     // Connect WebSocket if chat ID exists
     const chatId = chatIdManager.getChatId();
     if (chatId) {
-      const wsClient = WebSocketClient.getInstance(configManager.getConfig() || undefined);
+      // Ensure config is loaded before initializing WebSocket
+      const config = configManager.getConfig();
+      const wsClient = WebSocketClient.getInstance(config || undefined);
       wsClient
         .connect(chatId)
-        .catch((err) => console.error('Initial WebSocket connection failed:', err));
+        .catch((err: unknown) => console.error('Initial WebSocket connection failed:', err));
     }
   }, []);
 
@@ -142,7 +144,9 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   // WebSocket Setup
   useEffect(() => {
-    const wsClient = WebSocketClient.getInstance(configManager.getConfig() || undefined);
+    // Ensure config is loaded before initializing WebSocket
+    const config = configManager.getConfig();
+    const wsClient = WebSocketClient.getInstance(config || undefined);
 
     const handleStatusChange = (status: WebSocketStatus) => {
       setState((prev) => ({ ...prev, agentAvailable: status === 'registered' }));
@@ -249,9 +253,19 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       question?: string,
       skipUserMessage?: boolean
     ) => {
-      const config = configManager.getConfig();
+      // Attempt to reload config if missing (e.g. from localStorage)
+      let config = configManager.getConfig();
       if (!config) {
-        console.error('Config not loaded');
+        config = configManager.loadConfig();
+      }
+
+      if (!config || (!config.marketrixId && !config.marketrixKey && !config.agentId)) {
+        console.error('Config not loaded or incomplete');
+        // We could fallback to throwing error or showing UI error here
+        const errorMsg = chatService.createAgentMessage(
+          'Configuration error: Missing API credentials. Please check your widget settings.'
+        );
+        addMessage(errorMsg);
         return;
       }
 
@@ -261,18 +275,26 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         addMessage(userMsg);
       }
 
+      // Create placeholder message
+      const placeholderId = `temp-${Date.now()}`;
+      const placeholderMsg: ChatMessage = {
+        id: placeholderId,
+        content: '',
+        sender: 'agent',
+        timestamp: new Date(),
+        mode: mode || state.currentMode,
+        isPlaceholder: true,
+        placeholderState: 'thinking',
+        parts: [],
+        progressSteps: [],
+      };
+      addMessage(placeholderMsg);
+
       setState((prev) => ({ ...prev, isLoading: true }));
 
       // Send to API
       const apiService = new MarketrixApiService(config);
       try {
-        // Prepare request
-        // Note: connectionId and question can be passed if the API service supports it in config overrides
-        // But the current MarketrixApiService takes config in constructor.
-        // We might need to merge connectionId into config if it overrides default?
-        // Or just pass it in request body if supported.
-        // Current MarketrixApiService sendMessage uses config credentials.
-
         // Override config if connectionId is provided (for chips with specific connection)
         if (connectionId) {
           apiService.updateConfig({ connectionId });
@@ -295,13 +317,34 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           }
         }
 
-        // Add agent response
-        const agentMsg = chatService.createAgentMessage(
-          response.response,
-          response.mode,
-          response.messageId
-        );
-        addMessage(agentMsg);
+        // Update placeholder with final response
+        setState((prev) => {
+          const newMessages = prev.messages.map((msg) => {
+            if (msg.id === placeholderId) {
+              const currentParts = msg.parts || [];
+              // Append response as a text part
+              const newParts = [
+                ...currentParts,
+                { type: 'text' as const, content: response.response },
+              ];
+
+              return {
+                ...msg,
+                id: response.messageId, // Update to real ID
+                content: response.response,
+                mode: response.mode,
+                timestamp: response.timestamp,
+                isPlaceholder: false,
+                placeholderState: undefined,
+                parts: newParts,
+              };
+            }
+            return msg;
+          });
+
+          chatService.setMessages(newMessages);
+          return { ...prev, messages: newMessages };
+        });
 
         // If task started (task_id present), update state
         if (response.task_id) {
@@ -313,10 +356,29 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         }
       } catch (error) {
         console.error('Failed to send message:', error);
-        const errorMsg = chatService.createAgentMessage(
-          "I'm sorry, I encountered an error processing your request. Please try again."
-        );
-        addMessage(errorMsg);
+
+        // Update placeholder to show error
+        setState((prev) => {
+          const newMessages = prev.messages.map((msg) => {
+            if (msg.id === placeholderId) {
+              const errorMessage =
+                "I'm sorry, I encountered an error processing your request. Please try again.";
+              const currentParts = msg.parts || [];
+              const newParts = [...currentParts, { type: 'text' as const, content: errorMessage }];
+
+              return {
+                ...msg,
+                isPlaceholder: false,
+                parts: newParts,
+                content: errorMessage,
+              };
+            }
+            return msg;
+          });
+
+          chatService.setMessages(newMessages);
+          return { ...prev, messages: newMessages };
+        });
       } finally {
         setState((prev) => ({ ...prev, isLoading: false }));
       }

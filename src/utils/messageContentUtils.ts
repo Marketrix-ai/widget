@@ -3,12 +3,10 @@
  *
  * Centralized utilities for message content transformation, including:
  * - Removing thinking markers
- * - Parsing and formatting progress lines
- * - Reconstructing message content
- * - Finding task messages
+ * - Migrating legacy content string to structured progress steps
  */
 
-import type { ChatMessage } from '../types';
+import type { ChatMessage, ProgressStep } from '../types';
 
 /**
  * Remove all __THINKING__ markers from message content
@@ -25,115 +23,89 @@ export function removeThinkingMarkerFromEnd(content: string): string {
 }
 
 /**
- * Parse message content into main content and progress lines
- * Progress lines are separated by \n\n and start with ○ or ●✓
+ * Parse progress lines from legacy string content
  */
-export function parseProgressLines(content: string): {
+export function parseProgressSteps(content: string): {
   mainContent: string;
-  progressLines: string[];
+  progressSteps: ProgressStep[];
 } {
   const cleanContent = removeThinkingMarkers(content);
   const parts = cleanContent.split('\n\n');
-  const mainContent = parts[0] || '';
-  const progressLines = parts
-    .slice(1)
-    .filter((line) => line.trim().length > 0 && !line.trim().includes('__THINKING__'));
+  const mainContentParts: string[] = [];
+  const progressSteps: ProgressStep[] = [];
 
-  // Always log parsing for debugging (can be filtered in console)
-  console.log('[MessageContentUtils] [FLOW] parseProgressLines', {
-    originalContent: content,
-    originalContentLength: content.length,
-    cleanContent,
-    cleanContentLength: cleanContent.length,
-    partsCount: parts.length,
-    mainContent: mainContent.trim(),
-    mainContentLength: mainContent.trim().length,
-    progressLineCount: progressLines.length,
-    progressLines,
-    hasProgressIndicators: content.includes('○') || content.includes('●✓'),
-    hasPendingIndicator: content.includes('○'),
-    hasCompletedIndicator: content.includes('●✓'),
-    parts: parts.map((p, i) => ({ index: i, content: p, length: p.length })),
+  parts.forEach((part) => {
+    const trimmed = part.trim();
+    if (!trimmed) return;
+
+    // Check for progress indicators
+    if (trimmed.startsWith('○') || trimmed.startsWith('●✓')) {
+      const isPending = trimmed.startsWith('○');
+      // Remove indicators
+      let text = trimmed
+        .replace(/^●✓\s*/, '')
+        .replace(/^○\s*/, '')
+        .replace(/^●\s*/, '')
+        .replace(/^✓\s*/, '')
+        .trim();
+
+      // Extract error if present: "text ✗ (error)"
+      let error: string | undefined;
+      const errorMatch = text.match(/(.*)\s*✗\s*\((.*)\)$/);
+
+      let status: 'pending' | 'completed' | 'failed' = isPending ? 'pending' : 'completed';
+
+      if (errorMatch) {
+        text = errorMatch[1].trim();
+        error = errorMatch[2].trim();
+        status = 'failed';
+      }
+
+      // Extract tool name and explanation
+      let tool = 'unknown';
+      const explanation = text;
+
+      const execMatch = text.match(/^Executing\s+(.+?)\.\.\.$/);
+      if (execMatch) {
+        tool = execMatch[1];
+      } else {
+        tool = text.split(' ')[0] || 'tool';
+      }
+
+      progressSteps.push({
+        tool,
+        status,
+        explanation,
+        error,
+      });
+    } else {
+      mainContentParts.push(part);
+    }
   });
 
   return {
-    mainContent: mainContent.trim(),
-    progressLines,
+    mainContent: mainContentParts.join('\n\n').trim(),
+    progressSteps,
   };
 }
 
 /**
- * Format a progress line with the appropriate status indicator
+ * Check if content has thinking marker
  */
-export function formatProgressLine(
-  toolName: string,
-  explanation: string,
-  status: 'pending' | 'completed' | 'failed',
-  error?: string
-): string {
-  const progressText = explanation || `Executing ${toolName}...`;
-
-  let formattedLine: string;
-  switch (status) {
-    case 'pending':
-      formattedLine = `○ ${progressText}`;
-      break;
-    case 'completed':
-      formattedLine = `●✓ ${progressText}`;
-      break;
-    case 'failed':
-      formattedLine = `○ ${progressText} ✗ (${error || 'Tool execution failed'})`;
-      break;
-    default:
-      formattedLine = `○ ${progressText}`;
-  }
-
-  console.log('[MessageContentUtils] [FORMAT] formatProgressLine', {
-    toolName,
-    explanation,
-    status,
-    progressText,
-    formattedLine,
-    startsWithCircle: formattedLine.trim().startsWith('○'),
-    startsWithCompleted: formattedLine.trim().startsWith('●✓'),
-    length: formattedLine.length,
-  });
-
-  return formattedLine;
+export function hasThinkingMarker(content: string): boolean {
+  return content.includes('__THINKING__');
 }
 
 /**
- * Reconstruct message content from main content and progress lines
+ * Add thinking marker to content
  */
-export function reconstructMessageContent(mainContent: string, progressLines: string[]): string {
-  const cleanMainContent = removeThinkingMarkers(mainContent).trim();
-  let reconstructed: string;
-
-  if (progressLines.length > 0) {
-    reconstructed = [cleanMainContent, ...progressLines].join('\n\n');
-    console.log('[MessageContentUtils] [FORMAT] reconstructMessageContent', {
-      mainContent: cleanMainContent,
-      progressLineCount: progressLines.length,
-      progressLines,
-      reconstructed,
-      hasDoubleNewline: reconstructed.includes('\n\n'),
-      doubleNewlineCount: (reconstructed.match(/\n\n/g) || []).length,
-      length: reconstructed.length,
-    });
-  } else {
-    reconstructed = cleanMainContent;
-    console.log('[MessageContentUtils] [FORMAT] reconstructMessageContent (no progress lines)', {
-      mainContent: cleanMainContent,
-      reconstructed,
-    });
-  }
-
-  return reconstructed;
+export function addThinkingMarker(content: string): string {
+  if (hasThinkingMarker(content)) return content;
+  return `${content}\n\n__THINKING__`;
 }
 
 /**
  * Find the index of the last task message (agent message that's not system/placeholder/screen access)
- * Returns -1 if not found
  */
 export function findTaskMessageIndex(messages: ChatMessage[]): number {
   for (let i = messages.length - 1; i >= 0; i--) {
@@ -151,46 +123,21 @@ export function findTaskMessageIndex(messages: ChatMessage[]): number {
 }
 
 /**
- * Check if content has progress lines (○ or ●✓ indicators)
+ * Check if message has progress lines (either structured or legacy string)
+ * Modified to accept ChatMessage or string for backward compatibility
  */
-export function hasProgressLines(content: string): boolean {
-  const cleanContent = removeThinkingMarkers(content);
-  return cleanContent.includes('○') || cleanContent.includes('●✓');
-}
-
-/**
- * Check if content has thinking marker
- */
-export function hasThinkingMarker(content: string): boolean {
-  return content.includes('__THINKING__');
-}
-
-/**
- * Add thinking marker to content
- */
-export function addThinkingMarker(content: string): string {
-  return `${content}\n\n__THINKING__`;
-}
-
-/**
- * Find the last incomplete progress line index (starts with ○ but not ●✓)
- */
-export function findLastIncompleteProgressLineIndex(progressLines: string[]): number {
-  for (let i = progressLines.length - 1; i >= 0; i--) {
-    const line = progressLines[i];
-    if (line.trim().startsWith('○') && !line.trim().startsWith('●✓')) {
-      return i;
-    }
+export function hasProgressLines(contentOrMessage: string | ChatMessage): boolean {
+  if (typeof contentOrMessage === 'string') {
+    const cleanContent = removeThinkingMarkers(contentOrMessage);
+    return cleanContent.includes('○') || cleanContent.includes('●✓');
   }
-  return -1;
-}
 
-/**
- * Find progress line index by tool name
- */
-export function findProgressLineIndexByToolName(progressLines: string[], toolName: string): number {
-  return progressLines.findIndex(
-    (line) =>
-      (line.trim().startsWith('○') || line.trim().startsWith('●✓')) && line.includes(toolName)
-  );
+  // If ChatMessage, check progressSteps
+  if (contentOrMessage.progressSteps && contentOrMessage.progressSteps.length > 0) {
+    return true;
+  }
+
+  // Fallback to checking content string
+  const cleanContent = removeThinkingMarkers(contentOrMessage.content);
+  return cleanContent.includes('○') || cleanContent.includes('●✓');
 }
