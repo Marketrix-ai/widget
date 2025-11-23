@@ -1,5 +1,6 @@
 import type { ChatMessage, InstructionType, TaskProgress } from '../types';
 import { removeThinkingMarkers } from '../utils/chat';
+import { domService } from './DomService';
 
 interface StoredChatContext {
   chat_id: string;
@@ -12,6 +13,7 @@ interface StoredChatContext {
   isMinimized: boolean;
   isLoading: boolean;
   timestamp: number;
+  domState?: Array<[number, string]>;
 }
 
 const CHAT_CONTEXT_STORAGE_KEY = 'marketrix_chat_context';
@@ -147,6 +149,11 @@ export class ChatService {
         console.log('[ChatService] Chat ID mismatch but restoring history');
       }
 
+      // Restore DOM state if available
+      if (context.domState) {
+        domService.importState(context.domState);
+      }
+
       this.messages = context.messages.map((msg) => {
         // Handle restored screenshare messages
         // If a message was a screenshare stream (id starts with 'screenshare-'),
@@ -238,6 +245,7 @@ export class ChatService {
         isMinimized: this.isMinimized,
         isLoading: this.isLoading,
         timestamp: Date.now(),
+        domState: domService.exportState(),
       };
 
       localStorage.setItem(CHAT_CONTEXT_STORAGE_KEY, JSON.stringify(context));

@@ -8,10 +8,10 @@ export class DOMService {
   private isIndexed: boolean = false;
   private indexingInProgress: boolean = false;
   private indexVersion: number = 0;
-  private readonly STORAGE_KEY = 'marketrix_dom_index';
+  // Removed STORAGE_KEY as we now persist state via ChatService
 
   private constructor() {
-    this.restoreState();
+    // No longer restoring state internally
   }
 
   static getInstance(): DOMService {
@@ -62,33 +62,25 @@ export class DOMService {
   }
 
   /**
-   * Save selector mapping to local storage
+   * Export selector mapping for external persistence
    */
-  private saveState(): void {
-    try {
-      const serialized = JSON.stringify(Array.from(this.selectorMap.entries()));
-      localStorage.setItem(this.STORAGE_KEY, serialized);
-    } catch (e) {
-      console.warn('[DOMService] Failed to save state:', e);
-    }
+  exportState(): Array<[number, string]> {
+    return Array.from(this.selectorMap.entries());
   }
 
   /**
-   * Restore selector mapping from local storage
+   * Import selector mapping from external persistence
    */
-  private restoreState(): void {
+  importState(state: Array<[number, string]>): void {
+    if (!state || !Array.isArray(state)) return;
     try {
-      const stored = localStorage.getItem(this.STORAGE_KEY);
-      if (stored) {
-        const entries = JSON.parse(stored);
-        this.selectorMap = new Map(entries);
-        if (this.selectorMap.size > 0) {
-          this.isIndexed = true; // Treat as indexed if we have selectors
-          console.log(`[DOMService] Restored ${this.selectorMap.size} element mappings`);
-        }
+      this.selectorMap = new Map(state);
+      if (this.selectorMap.size > 0) {
+        this.isIndexed = true; // Treat as indexed if we have selectors
+        console.log(`[DOMService] Restored ${this.selectorMap.size} element mappings`);
       }
     } catch (e) {
-      console.warn('[DOMService] Failed to restore state:', e);
+      console.warn('[DOMService] Failed to import state:', e);
     }
   }
 
@@ -143,7 +135,7 @@ export class DOMService {
 
       this.isIndexed = true;
       this.indexVersion++;
-      this.saveState(); // Persist the new mapping
+      // State persistence is now handled by ChatService/WidgetContext via exportState()
       console.log(`[DOMService] Indexed ${sequenceNumber} elements (version ${this.indexVersion})`);
 
       return indexedElements;
