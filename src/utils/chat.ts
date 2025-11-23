@@ -479,10 +479,16 @@ export function addProgressLine(
     (part) => part.type === 'progress' && part.toolName === toolName && part.status === 'running'
   );
 
+  const isGetHtml = toolName === 'get_html';
+  const hideIcon = isGetHtml;
+  const textStyle = isGetHtml ? 'muted' : 'default';
+
   if (existingPartIndex >= 0) {
     newParts[existingPartIndex] = {
       ...newParts[existingPartIndex],
       content: explanation,
+      hideIcon,
+      textStyle,
     };
   } else {
     newParts.push({
@@ -490,6 +496,8 @@ export function addProgressLine(
       content: explanation,
       status: 'running',
       toolName,
+      hideIcon,
+      textStyle,
     });
   }
 
@@ -519,10 +527,16 @@ export function updateProgressLine(
 
   const mappedStatus = status === 'pending' ? 'running' : status;
 
+  const isGetHtml = toolName === 'get_html';
+  const hideIcon = isGetHtml;
+  const textStyle = isGetHtml ? 'muted' : 'default';
+
   if (partIndex >= 0) {
     newParts[partIndex] = {
       ...newParts[partIndex],
       status: mappedStatus,
+      hideIcon,
+      textStyle,
     };
 
     if (status === 'failed' && error) {
@@ -537,6 +551,8 @@ export function updateProgressLine(
       content: `Executing ${toolName}...`,
       status: mappedStatus,
       toolName,
+      hideIcon,
+      textStyle,
     });
   }
 
@@ -663,6 +679,7 @@ export const TOOL_NAME_MAPPING: Record<string, string> = {
   get_element_text: 'Reading element text',
   get_element_attribute: 'Reading element attribute',
   take_screenshot: 'Taking screenshot',
+  get_html: 'Viewed your Screen',
 
   // Logic & Flow
   wait_for_element: 'Waiting for element',

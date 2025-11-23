@@ -64,6 +64,8 @@ export interface MessagePart {
   content: string;
   status?: 'running' | 'completed' | 'failed' | 'canceled';
   toolName?: string;
+  hideIcon?: boolean;
+  textStyle?: 'default' | 'muted';
 }
 
 export interface TaskProgress {

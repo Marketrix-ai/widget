@@ -9,6 +9,8 @@ interface ProgressLineProps {
   isWaitingForUser: boolean;
   accentColor: string;
   textColor: string;
+  hideIcon?: boolean;
+  textStyle?: 'default' | 'muted';
 }
 
 export const ProgressLine: React.FC<ProgressLineProps> = ({
@@ -17,6 +19,8 @@ export const ProgressLine: React.FC<ProgressLineProps> = ({
   isWaitingForUser,
   accentColor,
   textColor,
+  hideIcon = false,
+  textStyle = 'default',
 }) => {
   // Normalize status for display
   // Legacy 'pending' maps to 'running' visually if we want spinner,
@@ -106,8 +110,13 @@ export const ProgressLine: React.FC<ProgressLineProps> = ({
 
   return (
     <div className='flex items-start gap-2'>
-      {renderIcon()}
-      <span className='flex-1 whitespace-pre-wrap text-xs font-inter font-medium leading-tight'>
+      {!hideIcon && renderIcon()}
+      <span
+        className='flex-1 whitespace-pre-wrap text-xs font-inter font-medium leading-tight'
+        style={{
+          color: textStyle === 'muted' ? addOpacity(textColor, 0.5) : textColor,
+        }}
+      >
         {content}
       </span>
     </div>

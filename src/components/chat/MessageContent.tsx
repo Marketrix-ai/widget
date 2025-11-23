@@ -56,6 +56,8 @@ export const MessageContent: React.FC<MessageContentProps> = ({
                 isWaitingForUser={isWaitingForUserAction}
                 accentColor={accentColor}
                 textColor={textColor}
+                hideIcon={part.hideIcon}
+                textStyle={part.textStyle}
               />
             );
           }
