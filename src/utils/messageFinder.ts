@@ -56,7 +56,7 @@ function matchesProgressCriteria(
   // With object-based progress, content might be empty but progressSteps present
   if (requireContent) {
     const hasText = msg.content.trim().length > 0;
-    const hasProgress = msg.progressSteps && msg.progressSteps.length > 0;
+    const hasProgress = msg.parts && msg.parts.length > 0;
     if (!hasText && !hasProgress) {
       return false;
     }
@@ -119,9 +119,7 @@ export function findMessageForProgress(options: FindMessageOptions): {
       );
       const isPlaceholder = msg.isPlaceholder;
       const hasContent =
-        !requireContent ||
-        msg.content.trim().length > 0 ||
-        (msg.progressSteps && msg.progressSteps.length > 0);
+        !requireContent || msg.content.trim().length > 0 || (msg.parts && msg.parts.length > 0);
 
       console.log('[MessageFinder] [FLOW] Checking message (Priority 1)', {
         index: i,
@@ -133,7 +131,7 @@ export function findMessageForProgress(options: FindMessageOptions): {
         matchesCriteria,
         hasContent,
         contentLength: msg.content.trim().length,
-        progressStepsCount: msg.progressSteps?.length,
+        partsCount: msg.parts?.length,
         willMatch: matchesCriteria && isPlaceholder && hasContent,
       });
 
@@ -245,9 +243,7 @@ export function findMessageForProgress(options: FindMessageOptions): {
       const notSystem = !msg.isSystemMessage;
       const notScreenAccess = !msg.isScreenAccessRequest;
       const hasContent =
-        !requireContent ||
-        msg.content.trim().length > 0 ||
-        (msg.progressSteps && msg.progressSteps.length > 0);
+        !requireContent || msg.content.trim().length > 0 || (msg.parts && msg.parts.length > 0);
 
       console.log('[MessageFinder] [FLOW] Checking message (Fallback Priority 1)', {
         index: i,

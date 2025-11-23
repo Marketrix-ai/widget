@@ -39,11 +39,9 @@ export const MessageContent: React.FC<MessageContentProps> = ({
               </div>
             );
           } else if (part.type === 'progress') {
-            const isPending = part.status === 'running' || !part.status; // default to running/pending if undefined or 'running'
+            const isPending = part.status === 'running' || !part.status;
 
             // For waiting state:
-            // If message is placeholder and waiting state -> global waiting
-            // OR if specific step is running/pending and task is running in interactive mode
             const isWaitingForUserAction =
               isWaitingForUser ||
               (isPending &&
@@ -70,19 +68,6 @@ export const MessageContent: React.FC<MessageContentProps> = ({
         )}
       </div>
     );
-  }
-
-  // Fallback for empty/uninitialized messages (should be rare with restoreState fixes)
-  // If no parts but we have content, treat as text
-  if (message.content) {
-    const text = removeThinkingMarkerFromEnd(message.content).trim();
-    if (text) {
-      return (
-        <div className='text-xs font-inter font-medium leading-tight break-words whitespace-pre-wrap mb-1'>
-          {text}
-        </div>
-      );
-    }
   }
 
   // Default empty state or if pure placeholder

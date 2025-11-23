@@ -1,14 +1,7 @@
-/**
- * Task State Hook
- *
- * Monitors task state and updates placeholder messages accordingly.
- * Handles thinking indicators and placeholder state transitions.
- */
-
 import { useEffect } from 'react';
 
 import type { WidgetState } from '../types';
-import { findTaskMessageIndex, hasProgressLines } from '../utils/messageContentUtils';
+import { findTaskMessageIndex } from '../utils/messageContentUtils';
 import { updateThinkingMarker } from '../utils/progressLineManager';
 
 /**
@@ -30,7 +23,7 @@ export function useTaskState(
           // Determine placeholder state based on:
           // - 'waiting-for-user': task is running in show/do mode and has progress lines
           // - 'thinking': otherwise (agent is processing)
-          const hasProgress = hasProgressLines(msg);
+          const hasProgress = msg.parts?.some((p) => p.type === 'progress') ?? false;
           const shouldBeWaitingForUser =
             prev.isTaskRunning &&
             (prev.currentMode === 'show' || prev.currentMode === 'do') &&

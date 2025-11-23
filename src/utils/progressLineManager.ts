@@ -6,11 +6,10 @@
  */
 
 import type { ChatMessage } from '../types';
-import { addThinkingMarker, hasThinkingMarker, parseProgressSteps } from './messageContentUtils';
+import { addThinkingMarker, hasThinkingMarker } from './messageContentUtils';
 
 /**
- * Ensure message has initialized parts, migrating legacy formats if needed.
- * This is a read-only migration helper.
+ * Ensure message has initialized parts
  */
 function ensureMessageStructure(message: ChatMessage): ChatMessage {
   const msg = { ...message };
@@ -19,53 +18,13 @@ function ensureMessageStructure(message: ChatMessage): ChatMessage {
   if (!msg.parts) {
     msg.parts = [];
 
-    // Migration: If we have progressSteps but no parts, migrate them
-    if (msg.progressSteps && msg.progressSteps.length > 0) {
-      // Add initial text content as a part if exists
-      const cleanContent = msg.content.replace(/\n\n__THINKING__$/, '').trim();
-      if (cleanContent) {
-        msg.parts.push({
-          type: 'text',
-          content: cleanContent,
-        });
-      }
-      // Add progress steps as parts
-      msg.progressSteps.forEach((step) => {
-        msg.parts!.push({
-          type: 'progress',
-          content: step.explanation || `Executing ${step.tool}...`,
-          status: step.status === 'pending' ? 'running' : step.status,
-          toolName: step.tool,
-        });
+    // Check if content needs to be treated as a text part
+    const cleanContent = msg.content.replace(/\n\n__THINKING__$/, '').trim();
+    if (cleanContent) {
+      msg.parts.push({
+        type: 'text',
+        content: cleanContent,
       });
-    } else if (msg.content) {
-      // If just content string, verify if it needs parsing (legacy string format)
-      // or just treat as text
-      const { mainContent, progressSteps } = parseProgressSteps(msg.content);
-
-      if (progressSteps.length > 0) {
-        // Was legacy string format
-        if (mainContent) {
-          msg.parts.push({ type: 'text', content: mainContent });
-        }
-        progressSteps.forEach((step) => {
-          msg.parts!.push({
-            type: 'progress',
-            content: step.explanation || `Executing ${step.tool}...`,
-            status: step.status === 'pending' ? 'running' : step.status,
-            toolName: step.tool,
-          });
-        });
-      } else {
-        // Just plain text
-        const cleanContent = msg.content.replace(/\n\n__THINKING__$/, '').trim();
-        if (cleanContent) {
-          msg.parts.push({
-            type: 'text',
-            content: cleanContent,
-          });
-        }
-      }
     }
   }
 
@@ -106,9 +65,6 @@ export function addProgressLine(
   return {
     ...msg,
     parts: newParts,
-    // Keep progressSteps in sync for now if needed by other consumers,
-    // but ideally we stop updating it if we fully switch.
-    // Based on plan, we remove write logic for progressSteps.
   };
 }
 

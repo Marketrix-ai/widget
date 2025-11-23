@@ -1,4 +1,4 @@
-import { type IntegrationData, sdk, type SlackSettingsData, type WidgetSettingsData } from '../sdk';
+import { type IntegrationData, sdk, type WidgetSettingsData } from '../sdk';
 import { extractApiData, extractErrorMessage } from '../utils/apiUtils';
 import { isString, isWidgetSettingsData } from '../utils/validation/typeGuards';
 
@@ -61,34 +61,21 @@ export class IntegrationService {
 
   /**
    * Get widget settings from integration data
-   * Handles both object format (from API) and JSON string format (from database)
    */
   getWidgetSettings(integration: IntegrationData): WidgetSettingsData | null {
-    if (!integration?.settings) {
-      return null;
-    }
+    if (!integration?.settings) return null;
 
-    let settings: WidgetSettingsData | SlackSettingsData;
+    let settings = integration.settings;
 
-    // API returns settings as an object, but database might store as JSON string
-    if (isString(integration.settings)) {
+    if (isString(settings)) {
       try {
-        const parsed: unknown = JSON.parse(integration.settings);
-        if (!isWidgetSettingsData(parsed)) {
-          console.warn('Parsed settings are not widget settings');
-          return null;
-        }
-        settings = parsed;
+        settings = JSON.parse(settings);
       } catch (error) {
         console.error('Failed to parse settings JSON:', extractErrorMessage(error));
         return null;
       }
-    } else {
-      // Settings is already an object
-      settings = integration.settings;
     }
 
-    // Type guard to check if this is widget settings (not Slack settings)
     if (isWidgetSettingsData(settings)) {
       return settings;
     }

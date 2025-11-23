@@ -104,6 +104,7 @@ export const MessageList = ({
               />
             );
             isShow = false;
+            break;
         }
 
         // Create a unique ID using the chip content and index
@@ -260,24 +261,6 @@ export const MessageList = ({
       />
 
       {/* Messages */}
-      {(() => {
-        // Debug: Log messages being rendered
-        const messagesWithProgress = messages.filter(
-          (msg) => msg.progressSteps && msg.progressSteps.length > 0
-        );
-        if (messagesWithProgress.length > 0) {
-          console.log('[MessageList] [FLOW] Rendering messages with progress', {
-            totalMessages: messages.length,
-            messagesWithProgress: messagesWithProgress.length,
-            progressMessages: messagesWithProgress.map((msg) => ({
-              id: msg.id,
-              content: msg.content,
-              progressSteps: msg.progressSteps,
-            })),
-          });
-        }
-        return null;
-      })()}
       {messages.map((message: ChatMessage, index: number) => (
         <MessageItem
           key={`message-${message.id}-${index}`}

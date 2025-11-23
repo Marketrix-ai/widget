@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 
 import {
   DEFAULT_MARKETRIX_CONFIG,
@@ -23,14 +23,16 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
 
   // Memoize settings
   const marketrixConfig = useMemo<MarketrixConfig>(() => {
-    const mergedConfig = {
+    return {
       ...DEFAULT_MARKETRIX_CONFIG,
       ...config,
     };
-    // Update ConfigManager whenever config changes
-    configManager.saveConfig(mergedConfig);
-    return mergedConfig;
   }, [config]);
+
+  // Update ConfigManager whenever config changes
+  useEffect(() => {
+    configManager.saveConfig(marketrixConfig);
+  }, [marketrixConfig]);
 
   // Effective settings
   const effectiveSettings = useMemo<WidgetSettingsData>(() => {

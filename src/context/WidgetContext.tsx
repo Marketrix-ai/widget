@@ -8,7 +8,11 @@ import {
   type WebSocketMessage,
   type WebSocketStatus,
 } from '../services/core/WebSocketClient';
-import { chatService } from '../services/features/ChatService';
+import {
+  chatService,
+  createAgentMessage,
+  createUserMessage,
+} from '../services/features/ChatService';
 import { toolExecutionService } from '../services/features/ToolExecutionService';
 import type { ChatMessage, InstructionType, TaskProgress, WidgetState } from '../types';
 import { findMessageForProgress } from '../utils/messageFinder';
@@ -262,7 +266,7 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       if (!config || (!config.marketrixId && !config.marketrixKey && !config.agentId)) {
         console.error('Config not loaded or incomplete');
         // We could fallback to throwing error or showing UI error here
-        const errorMsg = chatService.createAgentMessage(
+        const errorMsg = createAgentMessage(
           'Configuration error: Missing API credentials. Please check your widget settings.'
         );
         addMessage(errorMsg);
@@ -271,7 +275,7 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
       // Add user message if not skipped
       if (!skipUserMessage) {
-        const userMsg = chatService.createUserMessage(content, mode || state.currentMode);
+        const userMsg = createUserMessage(content, mode || state.currentMode);
         addMessage(userMsg);
       }
 
@@ -286,7 +290,6 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         isPlaceholder: true,
         placeholderState: 'thinking',
         parts: [],
-        progressSteps: [],
       };
       addMessage(placeholderMsg);
 

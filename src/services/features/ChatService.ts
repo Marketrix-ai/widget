@@ -1,5 +1,5 @@
 import type { ChatMessage, InstructionType, TaskProgress } from '../../types';
-import { parseProgressSteps, removeThinkingMarkers } from '../../utils/messageContentUtils';
+import { removeThinkingMarkers } from '../../utils/messageContentUtils';
 
 interface StoredChatContext {
   chat_id: string;
@@ -117,63 +117,19 @@ export class ChatService {
           ...msg,
           timestamp: new Date(msg.timestamp),
           videoStream: undefined,
+          parts: msg.parts || [], // Use stored parts or default to empty
         };
 
-        // Migration: Ensure parts exist
-        if (!restoredMsg.parts) {
-          restoredMsg.parts = [];
-
-          // Migrate progressSteps if present
-          if (restoredMsg.progressSteps && restoredMsg.progressSteps.length > 0) {
-            // Add initial text content if exists
-            const cleanContent = restoredMsg.content.replace(/\n\n__THINKING__$/, '').trim();
-            if (cleanContent) {
-              restoredMsg.parts.push({
-                type: 'text',
-                content: cleanContent,
-              });
-            }
-            // Add progress steps
-            restoredMsg.progressSteps.forEach((step) => {
-              restoredMsg.parts!.push({
-                type: 'progress',
-                content: step.explanation || `Executing ${step.tool}...`,
-                status: step.status === 'pending' ? 'running' : step.status,
-                toolName: step.tool,
-              });
+        // If no parts, create default text part from content (if any)
+        // @ts-ignore - parts is possibly undefined if ChatMessage type was strict but we ensure it above
+        if (restoredMsg.parts.length === 0 && restoredMsg.content) {
+          const cleanContent = restoredMsg.content.replace(/\n\n__THINKING__$/, '').trim();
+          if (cleanContent) {
+            // @ts-ignore - parts is safe here
+            restoredMsg.parts.push({
+              type: 'text',
+              content: cleanContent,
             });
-          } else {
-            // Check if legacy content string needs migration
-            const { mainContent, progressSteps } = parseProgressSteps(restoredMsg.content);
-
-            if (progressSteps.length > 0) {
-              // Was legacy string format
-              if (mainContent) {
-                restoredMsg.parts.push({ type: 'text', content: mainContent });
-              }
-              progressSteps.forEach((step) => {
-                restoredMsg.parts!.push({
-                  type: 'progress',
-                  content: step.explanation || `Executing ${step.tool}...`,
-                  status: step.status === 'pending' ? 'running' : step.status,
-                  toolName: step.tool,
-                });
-              });
-
-              // Update content to mainContent only to avoid reparsing
-              restoredMsg.content = mainContent;
-              // We can optionally set progressSteps for legacy compatibility or leave it
-              restoredMsg.progressSteps = progressSteps;
-            } else {
-              // Just plain text
-              const cleanContent = restoredMsg.content.replace(/\n\n__THINKING__$/, '').trim();
-              if (cleanContent) {
-                restoredMsg.parts.push({
-                  type: 'text',
-                  content: cleanContent,
-                });
-              }
-            }
           }
         }
 
@@ -212,7 +168,6 @@ export class ChatService {
           isScreenAccessRequest: msg.isScreenAccessRequest,
           isSystemMessage: msg.isSystemMessage,
           isPlaceholder: msg.isPlaceholder,
-          progressSteps: msg.progressSteps,
           parts: msg.parts, // Save parts
         }));
 
@@ -232,24 +187,6 @@ export class ChatService {
     } catch (error) {
       console.warn('[ChatService] Failed to persist state:', error);
     }
-  }
-
-  // Message Factory Methods
-  createUserMessage(content: string, mode?: InstructionType): ChatMessage {
-    return createUserMessage(content, mode);
-  }
-
-  createAgentMessage(content: string, mode?: InstructionType, messageId?: string): ChatMessage {
-    return createAgentMessage(content, mode, messageId);
-  }
-
-  createSystemMessage(
-    content: string,
-    mode?: InstructionType,
-    sender: 'user' | 'agent' = 'agent',
-    idPrefix: string = 'system-message'
-  ): ChatMessage {
-    return createSystemMessage(content, mode, sender, idPrefix);
   }
 }
 
