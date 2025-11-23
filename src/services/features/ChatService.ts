@@ -119,14 +119,64 @@ export class ChatService {
           videoStream: undefined,
         };
 
-        // Migration: If progressSteps is missing, parse from content
-        if (!restoredMsg.progressSteps) {
-          const { mainContent, progressSteps } = parseProgressSteps(restoredMsg.content);
-          if (progressSteps.length > 0) {
-            restoredMsg.content = mainContent;
-            restoredMsg.progressSteps = progressSteps;
+        // Migration: Ensure parts exist
+        if (!restoredMsg.parts) {
+          restoredMsg.parts = [];
+
+          // Migrate progressSteps if present
+          if (restoredMsg.progressSteps && restoredMsg.progressSteps.length > 0) {
+            // Add initial text content if exists
+            const cleanContent = restoredMsg.content.replace(/\n\n__THINKING__$/, '').trim();
+            if (cleanContent) {
+              restoredMsg.parts.push({
+                type: 'text',
+                content: cleanContent,
+              });
+            }
+            // Add progress steps
+            restoredMsg.progressSteps.forEach((step) => {
+              restoredMsg.parts!.push({
+                type: 'progress',
+                content: step.explanation || `Executing ${step.tool}...`,
+                status: step.status === 'pending' ? 'running' : step.status,
+                toolName: step.tool,
+              });
+            });
+          } else {
+            // Check if legacy content string needs migration
+            const { mainContent, progressSteps } = parseProgressSteps(restoredMsg.content);
+
+            if (progressSteps.length > 0) {
+              // Was legacy string format
+              if (mainContent) {
+                restoredMsg.parts.push({ type: 'text', content: mainContent });
+              }
+              progressSteps.forEach((step) => {
+                restoredMsg.parts!.push({
+                  type: 'progress',
+                  content: step.explanation || `Executing ${step.tool}...`,
+                  status: step.status === 'pending' ? 'running' : step.status,
+                  toolName: step.tool,
+                });
+              });
+
+              // Update content to mainContent only to avoid reparsing
+              restoredMsg.content = mainContent;
+              // We can optionally set progressSteps for legacy compatibility or leave it
+              restoredMsg.progressSteps = progressSteps;
+            } else {
+              // Just plain text
+              const cleanContent = restoredMsg.content.replace(/\n\n__THINKING__$/, '').trim();
+              if (cleanContent) {
+                restoredMsg.parts.push({
+                  type: 'text',
+                  content: cleanContent,
+                });
+              }
+            }
           }
         }
+
         return restoredMsg;
       });
 
@@ -148,9 +198,9 @@ export class ChatService {
       const serializedMessages = this.messages
         .filter((msg) => {
           if (!msg.isPlaceholder) return true;
-          const hasContent = msg.content.trim().length > 0;
-          const hasProgress = msg.progressSteps && msg.progressSteps.length > 0;
-          return hasContent || hasProgress;
+          // Only keep placeholders if they have content or progress parts
+          const parts = msg.parts || [];
+          return parts.length > 0;
         })
         .filter((msg) => !(msg.isSystemMessage && msg.content === 'Chat context changed'))
         .map((msg) => ({
@@ -163,6 +213,7 @@ export class ChatService {
           isSystemMessage: msg.isSystemMessage,
           isPlaceholder: msg.isPlaceholder,
           progressSteps: msg.progressSteps,
+          parts: msg.parts, // Save parts
         }));
 
       const context: StoredChatContext = {
@@ -210,12 +261,19 @@ export function createUserMessage(
   mode?: InstructionType,
   idPrefix: string = 'user-message'
 ): ChatMessage {
+  const parts = [];
+  const cleanContent = content.trim();
+  if (cleanContent) {
+    parts.push({ type: 'text' as const, content: cleanContent });
+  }
+
   return {
     id: `${idPrefix}-${Date.now()}`,
-    content: content.trim(),
+    content: cleanContent,
     sender: 'user',
     timestamp: new Date(),
     mode,
+    parts,
   };
 }
 
@@ -225,12 +283,19 @@ export function createAgentMessage(
   messageId?: string,
   idPrefix: string = 'agent-message'
 ): ChatMessage {
+  const parts = [];
+  const cleanContent = content.trim();
+  if (cleanContent) {
+    parts.push({ type: 'text' as const, content: cleanContent });
+  }
+
   return {
     id: messageId || `${idPrefix}-${Date.now()}`,
     content,
     sender: 'agent',
     timestamp: new Date(),
     mode,
+    parts,
   };
 }
 
@@ -240,6 +305,11 @@ export function createSystemMessage(
   sender: 'user' | 'agent' = 'agent',
   idPrefix: string = 'system-message'
 ): ChatMessage {
+  const parts = [];
+  if (content) {
+    parts.push({ type: 'text' as const, content });
+  }
+
   return {
     id: `${idPrefix}-${Date.now()}`,
     content,
@@ -247,6 +317,7 @@ export function createSystemMessage(
     timestamp: new Date(),
     mode,
     isSystemMessage: true,
+    parts,
   };
 }
 
@@ -262,28 +333,33 @@ export function createPlaceholderMessage(
     mode,
     isPlaceholder: true,
     placeholderState,
+    parts: [],
   };
 }
 
 export function createScreenAccessRequestMessage(mode?: InstructionType): ChatMessage {
+  const content = 'Can I take a look at your screen?';
   return {
     id: `screen-access-request-${Date.now()}`,
-    content: 'Can I take a look at your screen?',
+    content,
     sender: 'agent',
     timestamp: new Date(),
     mode,
     isScreenAccessRequest: true,
+    parts: [{ type: 'text', content }],
   };
 }
 
 export function createStartedScreenshareMessage(mode: InstructionType = 'show'): ChatMessage {
+  const content = 'Started screenshare';
   return {
     id: `started-screenshare-${Date.now()}`,
-    content: 'Started screenshare',
+    content,
     sender: 'user',
     timestamp: new Date(),
     mode,
     isSystemMessage: true,
+    parts: [{ type: 'text', content }],
   };
 }
 
@@ -298,6 +374,7 @@ export function createScreenshareMessage(
     timestamp: new Date(),
     mode,
     videoStream: stream,
+    parts: [],
   };
 }
 
@@ -312,5 +389,6 @@ export function createErrorMessage(
     sender: 'agent',
     timestamp: new Date(),
     mode,
+    parts: [{ type: 'text', content }],
   };
 }

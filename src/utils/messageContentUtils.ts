@@ -3,7 +3,7 @@
  *
  * Centralized utilities for message content transformation, including:
  * - Removing thinking markers
- * - Migrating legacy content string to structured progress steps
+ * - Migrating legacy content string to structured progress steps (Legacy Support)
  */
 
 import type { ChatMessage, ProgressStep } from '../types';
@@ -24,6 +24,7 @@ export function removeThinkingMarkerFromEnd(content: string): string {
 
 /**
  * Parse progress lines from legacy string content
+ * @deprecated Only used for migration of old messages in ensureMessageStructure
  */
 export function parseProgressSteps(content: string): {
   mainContent: string;
@@ -124,7 +125,7 @@ export function findTaskMessageIndex(messages: ChatMessage[]): number {
 
 /**
  * Check if message has progress lines (either structured or legacy string)
- * Modified to accept ChatMessage or string for backward compatibility
+ * @deprecated Use message.parts structure check instead
  */
 export function hasProgressLines(contentOrMessage: string | ChatMessage): boolean {
   if (typeof contentOrMessage === 'string') {
@@ -132,7 +133,12 @@ export function hasProgressLines(contentOrMessage: string | ChatMessage): boolea
     return cleanContent.includes('○') || cleanContent.includes('●✓');
   }
 
-  // If ChatMessage, check progressSteps
+  // If ChatMessage, check parts first
+  if (contentOrMessage.parts?.some((p) => p.type === 'progress')) {
+    return true;
+  }
+
+  // Fallback to progressSteps
   if (contentOrMessage.progressSteps && contentOrMessage.progressSteps.length > 0) {
     return true;
   }
