@@ -266,6 +266,7 @@ export const MessageList = ({
           key={`message-${message.id}-${index}`}
           message={message}
           index={index}
+          isLastMessage={index === messages.length - 1}
           widgetState={widgetState}
           settings={settings}
           marketrixIcon={MarketrixIcon}

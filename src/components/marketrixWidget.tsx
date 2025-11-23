@@ -10,6 +10,33 @@ interface MarketrixWidgetProps {
   config: MarketrixConfig;
 }
 
+// Error Boundary for ChatWindow
+class WidgetErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean }
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error('Widget Error Boundary caught error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return null; // Fail gracefully by rendering nothing instead of crashing
+    }
+
+    return this.props.children;
+  }
+}
+
 export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
   const [isScreenSharing, setIsScreenSharing] = useState(false);
 
@@ -53,26 +80,28 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
         isScreenSharing={isScreenSharing}
       />
 
-      <ChatWindow
-        config={effectiveConfig}
-        isOpen={state.isOpen}
-        isMinimized={state.isMinimized}
-        isLoading={state.isLoading}
-        messages={state.messages}
-        currentMode={state.currentMode}
-        agentAvailable={state.agentAvailable}
-        isTaskRunning={state.isTaskRunning}
-        taskProgress={state.taskProgress}
-        onClose={actions.closeWidget}
-        onSendMessage={actions.sendMessage}
-        onSetMode={actions.setMode}
-        onAddMessage={actions.addMessage}
-        onUpdateMessage={actions.updateMessage}
-        onRemoveMessage={actions.removeMessage}
-        onStopTask={actions.stopTask}
-        onClearChat={actions.clearChatHistory}
-        onScreenSharingChange={setIsScreenSharing}
-      />
+      <WidgetErrorBoundary>
+        <ChatWindow
+          config={effectiveConfig}
+          isOpen={state.isOpen}
+          isMinimized={state.isMinimized}
+          isLoading={state.isLoading}
+          messages={state.messages}
+          currentMode={state.currentMode}
+          agentAvailable={state.agentAvailable}
+          isTaskRunning={state.isTaskRunning}
+          taskProgress={state.taskProgress}
+          onClose={actions.closeWidget}
+          onSendMessage={actions.sendMessage}
+          onSetMode={actions.setMode}
+          onAddMessage={actions.addMessage}
+          onUpdateMessage={actions.updateMessage}
+          onRemoveMessage={actions.removeMessage}
+          onStopTask={actions.stopTask}
+          onClearChat={actions.clearChatHistory}
+          onScreenSharingChange={setIsScreenSharing}
+        />
+      </WidgetErrorBoundary>
 
       {state.error && (
         <ErrorDisplay

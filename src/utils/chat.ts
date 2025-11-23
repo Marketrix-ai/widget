@@ -637,16 +637,27 @@ export function updateThinkingMarker(
       return {
         ...msg,
         content: msg.content.replace(/\n\n__THINKING__$/, '').replace(/__THINKING__/g, ''),
+        placeholderState: undefined, // Clear placeholder state when not thinking
       };
     }
     return msg;
   }
 
-  // Add thinking marker if not present
+  // Add thinking marker if not present and it is the latest message
+  // Note: The "latest message" check should be done by the caller or we assume this IS the active message
+  // But to be safe, we can check if it's a placeholder or the last agent message.
+  // Here we just ensure the marker exists if the caller decided to update this message.
   if (!hasThinkingMarker(msg.content)) {
     return {
       ...msg,
       content: addThinkingMarker(msg.content),
+      placeholderState: 'thinking',
+    };
+  } else if (msg.placeholderState !== 'thinking') {
+    // Ensure state aligns with marker presence if needed
+    return {
+      ...msg,
+      placeholderState: 'thinking',
     };
   }
 

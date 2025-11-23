@@ -5,11 +5,13 @@ import { addOpacity } from '../../utils/format';
 interface ThinkingIndicatorProps {
   isWaitingForUser: boolean;
   textColor: string;
+  customText?: string;
 }
 
 export const ThinkingIndicator: React.FC<ThinkingIndicatorProps> = ({
   isWaitingForUser,
   textColor,
+  customText,
 }) => {
   return (
     <>
@@ -25,7 +27,7 @@ export const ThinkingIndicator: React.FC<ThinkingIndicatorProps> = ({
           className='text-[10px] font-inter font-normal'
           style={{ color: addOpacity(textColor, 0.5) }}
         >
-          {isWaitingForUser ? 'Waiting for you to complete the action' : 'Thinking'}
+          {customText || (isWaitingForUser ? 'Waiting for you to complete the action' : 'Thinking')}
           <span className='thinking-dots'>
             <span style={{ animationDelay: '0s' }}>.</span>
             <span style={{ animationDelay: '0.2s' }}>.</span>

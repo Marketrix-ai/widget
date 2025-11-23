@@ -10,6 +10,7 @@ interface StoredChatContext {
   currentMode: InstructionType;
   isOpen: boolean;
   isMinimized: boolean;
+  isLoading: boolean;
   timestamp: number;
 }
 
@@ -26,6 +27,7 @@ export class ChatService {
   private currentMode: InstructionType = 'tell';
   private isOpen: boolean = false;
   private isMinimized: boolean = false;
+  private isLoading: boolean = false;
 
   private constructor() {}
 
@@ -43,6 +45,34 @@ export class ChatService {
 
   getMessages(): ChatMessage[] {
     return this.messages;
+  }
+
+  getIsLoading(): boolean {
+    return this.isLoading;
+  }
+
+  getIsTaskRunning(): boolean {
+    return this.isTaskRunning;
+  }
+
+  getActiveTaskId(): string | null {
+    return this.activeTaskId;
+  }
+
+  getTaskProgress(): TaskProgress[] {
+    return this.taskProgress;
+  }
+
+  getCurrentMode(): InstructionType {
+    return this.currentMode;
+  }
+
+  getIsOpen(): boolean {
+    return this.isOpen;
+  }
+
+  getIsMinimized(): boolean {
+    return this.isMinimized;
   }
 
   addMessage(message: ChatMessage): void {
@@ -87,6 +117,11 @@ export class ChatService {
   setWidgetState(isOpen: boolean, isMinimized: boolean): void {
     this.isOpen = isOpen;
     this.isMinimized = isMinimized;
+    this.persistState();
+  }
+
+  setIsLoading(loading: boolean): void {
+    this.isLoading = loading;
     this.persistState();
   }
 
@@ -142,6 +177,7 @@ export class ChatService {
       this.currentMode = context.currentMode;
       this.isOpen = context.isOpen;
       this.isMinimized = context.isMinimized;
+      this.isLoading = context.isLoading ?? false;
     } catch (error) {
       console.warn('[ChatService] Failed to restore state:', error);
     }
@@ -154,7 +190,12 @@ export class ChatService {
       const serializedMessages = this.messages
         .filter((msg) => {
           if (!msg.isPlaceholder) return true;
-          // Only keep placeholders if they have content or progress parts
+          // Keep placeholders if they have content, progress parts, OR are thinking/waiting
+          if (msg.placeholderState === 'thinking' || msg.placeholderState === 'waiting-for-user') {
+            return true;
+          }
+
+          // Only keep other placeholders if they have content or progress parts
           const parts = msg.parts || [];
           return parts.length > 0;
         })
@@ -180,6 +221,7 @@ export class ChatService {
         currentMode: this.currentMode,
         isOpen: this.isOpen,
         isMinimized: this.isMinimized,
+        isLoading: this.isLoading,
         timestamp: Date.now(),
       };
 

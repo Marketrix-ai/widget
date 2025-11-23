@@ -2,13 +2,14 @@ import React from 'react';
 import { HiUser } from 'react-icons/hi2';
 
 import type { ChatMessage, WidgetState } from '../../types';
-import { formatMessageTime, getContrastingColor } from '../../utils/format';
+import { addOpacity, formatMessageTime, getContrastingColor } from '../../utils/format';
 import { MessageContent } from './MessageContent';
 import { VideoStreamDisplay } from './VideoStreamDisplay';
 
 interface MessageItemProps {
   message: ChatMessage;
   index: number;
+  isLastMessage: boolean;
   widgetState: WidgetState;
   settings: {
     widget_accent_color: string;
@@ -25,6 +26,7 @@ interface MessageItemProps {
 export const MessageItem: React.FC<MessageItemProps> = ({
   message,
   index,
+  isLastMessage,
   widgetState,
   settings,
   marketrixIcon,
@@ -121,49 +123,66 @@ export const MessageItem: React.FC<MessageItemProps> = ({
           {!message.videoStream && (
             <MessageContent
               message={message}
+              isLastMessage={isLastMessage}
               widgetState={widgetState}
               accentColor={settings.widget_accent_color}
               textColor={settings.widget_text_color}
             />
           )}
 
-          {/* Screen access request action buttons - only show if not yet handled */}
-          {message.isScreenAccessRequest &&
-            !message.content.includes('✓') &&
-            !message.content.includes('✗') && (
-              <div className='mt-1.5 pt-0.5 flex gap-2'>
-                <button
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    onScreenAccessAllow?.();
-                  }}
-                  className='flex items-center justify-center text-sm font-medium transition-all duration-200 bg-purple-600 text-white shadow-lg border-2 border-transparent'
-                  style={{
-                    width: '65px',
-                    height: '26px',
-                    borderRadius: '22px',
-                  }}
-                >
-                  <span className='text-xs font-medium'>Yes</span>
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    onScreenAccessDeny?.();
-                  }}
-                  className='flex items-center justify-center text-sm font-medium transition-all duration-200 bg-purple-100 text-black hover:bg-purple-200 border border-purple-200'
-                  style={{
-                    width: '65px',
-                    height: '26px',
-                    borderRadius: '22px',
-                  }}
-                >
-                  <span className='text-xs font-medium'>No</span>
-                </button>
-              </div>
-            )}
+          {/* Screen access request action buttons - show if not yet handled */}
+          {message.isScreenAccessRequest && !message.screenShareStatus && (
+            <div className='mt-1.5 pt-0.5 flex gap-2'>
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onScreenAccessAllow?.();
+                }}
+                className='flex items-center justify-center text-sm font-medium transition-all duration-200 bg-purple-600 text-white shadow-lg border-2 border-transparent'
+                style={{
+                  width: '65px',
+                  height: '26px',
+                  borderRadius: '22px',
+                }}
+              >
+                <span className='text-xs font-medium'>Yes</span>
+              </button>
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onScreenAccessDeny?.();
+                }}
+                className='flex items-center justify-center text-sm font-medium transition-all duration-200 bg-purple-100 text-black hover:bg-purple-200 border border-purple-200'
+                style={{
+                  width: '65px',
+                  height: '26px',
+                  borderRadius: '22px',
+                }}
+              >
+                <span className='text-xs font-medium'>No</span>
+              </button>
+            </div>
+          )}
+
+          {/* Screen access request handled state - show decision */}
+          {message.isScreenAccessRequest && message.screenShareStatus === 'allowed' && (
+            <div
+              className='mt-0.5 text-xs font-medium italic'
+              style={{ color: addOpacity(settings.widget_text_color, 0.5) }}
+            >
+              Sure
+            </div>
+          )}
+          {message.isScreenAccessRequest && message.screenShareStatus === 'denied' && (
+            <div
+              className='mt-0.5 text-xs font-medium italic'
+              style={{ color: addOpacity(settings.widget_text_color, 0.5) }}
+            >
+              Check HTML Instead
+            </div>
+          )}
         </div>
       </div>
       {/* Timestamp below card */}

@@ -176,9 +176,12 @@ export class MarketrixApiService {
 
       // Log the actual response for debugging
       const errorBody =
-        apiResponse.body && typeof apiResponse.body === 'object' && 'error' in apiResponse.body
+        apiResponse.body &&
+        typeof apiResponse.body === 'object' &&
+        apiResponse.body !== null &&
+        'error' in apiResponse.body
           ? String(apiResponse.body.error)
-          : 'Unknown error';
+          : JSON.stringify(apiResponse.body || 'Unknown error');
       console.error('[API Service] Failed to extract data from response:', {
         status: apiResponse.status,
         body: apiResponse.body,

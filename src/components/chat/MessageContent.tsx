@@ -7,6 +7,7 @@ import { ThinkingIndicator } from './ThinkingIndicator';
 
 interface MessageContentProps {
   message: ChatMessage;
+  isLastMessage: boolean;
   widgetState: WidgetState;
   accentColor: string;
   textColor: string;
@@ -14,12 +15,14 @@ interface MessageContentProps {
 
 export const MessageContent: React.FC<MessageContentProps> = ({
   message,
+  isLastMessage,
   widgetState,
   accentColor,
   textColor,
 }) => {
   const placeholderState = message.placeholderState || 'thinking';
   const isWaitingForUser = placeholderState === 'waiting-for-user';
+  const customText = !isWaitingForUser && message.mode === 'show' ? 'Waiting' : undefined;
 
   // Render using structured parts
   if (message.parts && message.parts.length > 0) {
@@ -65,16 +68,34 @@ export const MessageContent: React.FC<MessageContentProps> = ({
         })}
 
         {/* Show thinking/waiting indicator at the bottom if task is running or it's a placeholder */}
-        {(message.isPlaceholder || widgetState.isTaskRunning) && (
-          <ThinkingIndicator isWaitingForUser={isWaitingForUser} textColor={textColor} />
+        {((message.isPlaceholder && !message.parts.some((p) => p.type === 'text')) ||
+          (widgetState.isTaskRunning &&
+            isLastMessage &&
+            (message.mode === 'show' || message.mode === 'do'))) && (
+          <ThinkingIndicator
+            isWaitingForUser={isWaitingForUser}
+            textColor={textColor}
+            customText={customText}
+          />
         )}
       </div>
     );
   }
 
   // Default empty state or if pure placeholder
-  if (message.isPlaceholder || widgetState.isTaskRunning) {
-    return <ThinkingIndicator isWaitingForUser={isWaitingForUser} textColor={textColor} />;
+  if (
+    message.isPlaceholder ||
+    (widgetState.isTaskRunning &&
+      isLastMessage &&
+      (message.mode === 'show' || message.mode === 'do'))
+  ) {
+    return (
+      <ThinkingIndicator
+        isWaitingForUser={isWaitingForUser}
+        textColor={textColor}
+        customText={customText}
+      />
+    );
   }
 
   return <div />;

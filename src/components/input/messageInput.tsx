@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import { IoSend, IoStop } from 'react-icons/io5';
 
 import { useWidget } from '../../hooks/useWidget';
 import type { MarketrixConfig } from '../../types';
@@ -126,9 +127,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
             }}
             aria-label='Stop task'
           >
-            <svg className='w-4 h-4' fill='currentColor' viewBox='0 0 20 20'>
-              <rect x='6' y='6' width='8' height='8' rx='1' />
-            </svg>
+            <IoStop className='w-4 h-4' />
           </button>
         ) : (
           <button
@@ -157,18 +156,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
             }
             aria-label='Send message'
           >
-            <svg
-              className='w-4 h-4'
-              fill='none'
-              stroke='currentColor'
-              strokeWidth='2'
-              strokeLinecap='round'
-              strokeLinejoin='round'
-              viewBox='0 0 24 24'
-            >
-              <line x1='5' y1='12' x2='19' y2='12' />
-              <polyline points='12 5 19 12 12 19' />
-            </svg>
+            <IoSend className={`w-4 h-4 ${!value.trim() || isLoading ? 'ml-0.5' : ''}`} />
           </button>
         )}
       </div>

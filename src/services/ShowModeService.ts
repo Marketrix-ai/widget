@@ -13,6 +13,7 @@ export class ShowModeService {
   private currentHighlight: HTMLElement | null = null;
   private currentElement: HTMLElement | null = null;
   private resolvePromise: ((value: boolean) => void) | null = null;
+  private rejectPromise: ((reason?: unknown) => void) | null = null;
   private clickHandler: ((e: MouseEvent) => void) | null = null;
   private scrollHandler: (() => void) | null = null;
   private updateHighlightPosition: (() => void) | null = null;
@@ -43,14 +44,21 @@ export class ShowModeService {
       this.setupClickHandler();
     }
 
-    return new Promise<boolean>((resolve) => {
+    return new Promise<boolean>((resolve, reject) => {
       this.resolvePromise = resolve;
+      this.rejectPromise = reject;
     }).finally(() => {
       this.cleanup();
     });
   }
 
   cleanup(): void {
+    if (this.rejectPromise) {
+      this.rejectPromise('Cancelled by cleanup');
+      this.rejectPromise = null;
+    }
+    this.resolvePromise = null;
+
     if (this.clickHandler) {
       document.removeEventListener('click', this.clickHandler, { capture: true });
       this.clickHandler = null;
@@ -74,6 +82,7 @@ export class ShowModeService {
     this.currentHighlight = null;
     this.currentElement = null;
     this.resolvePromise = null;
+    this.rejectPromise = null;
   }
 
   private createHighlight(element: HTMLElement): void {
@@ -219,6 +228,7 @@ export class ShowModeService {
 
         const resolve = this.resolvePromise;
         this.resolvePromise = null;
+        this.rejectPromise = null;
         setTimeout(() => resolve(true), 0);
       }
     };
@@ -235,6 +245,7 @@ export class ShowModeService {
           if (this.resolvePromise) {
             const resolve = this.resolvePromise;
             this.resolvePromise = null;
+            this.rejectPromise = null;
             setTimeout(() => resolve(true), 0);
           }
         });

@@ -232,7 +232,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       if (screenAccessRequestMessageId) {
         console.log('[ChatWindow] Updating screen access message:', screenAccessRequestMessageId);
         onUpdateMessage(screenAccessRequestMessageId, {
-          content: 'Can I take a look at your screen? ✓',
+          screenShareStatus: 'allowed',
         });
         setScreenAccessRequestMessageId(null);
       } else {
@@ -271,12 +271,22 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       // Permission denied or error - update message and clear pending
       if (screenAccessRequestMessageId) {
         onUpdateMessage(screenAccessRequestMessageId, {
-          content: 'Can I take a look at your screen? ✗ No permission',
+          screenShareStatus: 'denied',
         });
         setScreenAccessRequestMessageId(null);
       }
-      // Clear pending message
-      setPendingMessage(null);
+      // Proceed with pending message anyway (without screen share)
+      if (pendingMessage) {
+        const message = pendingMessage;
+        setPendingMessage(null);
+        onSendMessage(
+          message.content,
+          message.mode,
+          message.connectionId,
+          message.question,
+          message.alreadyAdded
+        );
+      }
     }
   };
 
@@ -284,13 +294,23 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     // Mark the screen access request as handled (but keep it as a screen access request so greeting stays)
     if (screenAccessRequestMessageId) {
       onUpdateMessage(screenAccessRequestMessageId, {
-        content: 'Can I take a look at your screen? ✗',
+        screenShareStatus: 'denied',
       });
       setScreenAccessRequestMessageId(null);
     }
 
-    // Clear pending message if user denies screen access
-    setPendingMessage(null);
+    // Proceed with pending message if user denies screen access (using HTML only)
+    if (pendingMessage) {
+      const message = pendingMessage;
+      setPendingMessage(null);
+      onSendMessage(
+        message.content,
+        message.mode,
+        message.connectionId,
+        message.question,
+        message.alreadyAdded
+      );
+    }
   };
 
   const stopScreenSharing = () => {
@@ -341,9 +361,36 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     zIndex: widgetPosition.z_index ?? 40,
   } satisfies React.CSSProperties;
 
-  // Derive scrollbar colors from border color
-  const scrollbarTrackColor = addOpacity(settings.widget_border_color, 0.1);
-  const scrollbarThumbColor = addOpacity(settings.widget_border_color, 0.3);
+  // Error Boundary for chat messages
+  class ChatErrorBoundary extends React.Component<
+    { children: React.ReactNode },
+    { hasError: boolean }
+  > {
+    constructor(props: { children: React.ReactNode }) {
+      super(props);
+      this.state = { hasError: false };
+    }
+
+    static getDerivedStateFromError() {
+      return { hasError: true };
+    }
+
+    componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+      console.error('Chat Error Boundary caught error:', error, errorInfo);
+    }
+
+    render() {
+      if (this.state.hasError) {
+        return (
+          <div className='p-4 text-center text-xs text-gray-500'>
+            Something went wrong displaying messages. Please refresh.
+          </div>
+        );
+      }
+
+      return this.props.children;
+    }
+  }
 
   return (
     <div
@@ -368,7 +415,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         `}
         style={{
           ...customStyles,
-          scrollbarColor: `${scrollbarThumbColor} ${scrollbarTrackColor}`,
+          scrollbarColor: `${addOpacity(settings.widget_border_color, 0.3)} ${addOpacity(settings.widget_border_color, 0.1)}`,
           scrollbarWidth: 'thin',
         }}
       >
@@ -495,38 +542,40 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           <>
             {/* Chat Messages Area */}
             <div className='flex-1 overflow-hidden pt-3'>
-              <MessageList
-                messages={messages}
-                messagesEndRef={messagesEndRef}
-                onSendMessage={(content, mode, connectionId, question) => {
-                  // Check if screen sharing is needed for show/do modes
-                  if (
-                    (mode === 'show' || mode === 'do') &&
-                    !isScreenSharing &&
-                    !screenAccessRequestMessageId
-                  ) {
-                    // Store the pending message and show screen access request
-                    // alreadyAdded=true because chip messages are already added to chat
-                    setPendingMessage({
-                      content,
-                      mode,
-                      connectionId,
-                      question,
-                      alreadyAdded: true,
-                    });
-                    requestScreenAccess(mode || currentMode);
-                  } else {
-                    // Send message directly (chip message already added, so skip adding it again)
-                    onSendMessage(content, mode, connectionId, question, true);
-                  }
-                }}
-                onSetMode={onSetMode}
-                onModeChange={handleModeChange}
-                onAddMessage={onAddMessage}
-                config={config}
-                onScreenAccessAllow={handleScreenAccessAllow}
-                onScreenAccessDeny={handleScreenAccessDeny}
-              />
+              <ChatErrorBoundary>
+                <MessageList
+                  messages={messages}
+                  messagesEndRef={messagesEndRef}
+                  onSendMessage={(content, mode, connectionId, question) => {
+                    // Check if screen sharing is needed for show/do modes
+                    if (
+                      (mode === 'show' || mode === 'do') &&
+                      !isScreenSharing &&
+                      !screenAccessRequestMessageId
+                    ) {
+                      // Store the pending message and show screen access request
+                      // alreadyAdded=true because chip messages are already added to chat
+                      setPendingMessage({
+                        content,
+                        mode,
+                        connectionId,
+                        question,
+                        alreadyAdded: true,
+                      });
+                      requestScreenAccess(mode || currentMode);
+                    } else {
+                      // Send message directly (chip message already added, so skip adding it again)
+                      onSendMessage(content, mode, connectionId, question, true);
+                    }
+                  }}
+                  onSetMode={onSetMode}
+                  onModeChange={handleModeChange}
+                  onAddMessage={onAddMessage}
+                  config={config}
+                  onScreenAccessAllow={handleScreenAccessAllow}
+                  onScreenAccessDeny={handleScreenAccessDeny}
+                />
+              </ChatErrorBoundary>
             </div>
 
             {/* Controls Section */}

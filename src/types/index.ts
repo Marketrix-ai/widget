@@ -53,6 +53,7 @@ export interface ChatMessage {
   mode?: InstructionType;
   videoStream?: MediaStream;
   isScreenAccessRequest?: boolean;
+  screenShareStatus?: 'allowed' | 'denied';
   isSystemMessage?: boolean;
   isPlaceholder?: boolean; // Indicates this is a placeholder message with progress bar
   placeholderState?: 'thinking' | 'waiting-for-user'; // State of placeholder: thinking or waiting for user action

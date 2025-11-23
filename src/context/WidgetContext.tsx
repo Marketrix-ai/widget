@@ -13,6 +13,7 @@ import {
 import type { ChatMessage, InstructionType, TaskProgress, WidgetState } from '../types';
 import {
   addProgressLine,
+  addThinkingMarker,
   findMessageForProgress,
   getFriendlyToolName,
   markProgressLineComplete,
@@ -78,14 +79,22 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   // Initialize ChatService on mount
   useEffect(() => {
-    chatService.initialize(null);
+    // Get stored chat ID first
+    const chatId = sessionManager.getChatId();
+    chatService.initialize(chatId);
     setState((prev) => ({
       ...prev,
       messages: chatService.getMessages(),
+      isLoading: chatService.getIsLoading(),
+      isTaskRunning: chatService.getIsTaskRunning(),
+      activeTaskId: chatService.getActiveTaskId(),
+      taskProgress: chatService.getTaskProgress(),
+      currentMode: chatService.getCurrentMode(),
+      isOpen: chatService.getIsOpen(),
+      isMinimized: chatService.getIsMinimized(),
     }));
 
     // Connect WebSocket if chat ID exists
-    const chatId = sessionManager.getChatId();
     if (chatId) {
       // Ensure config is loaded before initializing WebSocket
       const config = configManager.getConfig();
@@ -287,6 +296,8 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         placeholderState: 'thinking',
         parts: [],
       };
+      // Add thinking marker for the active message logic to work
+      placeholderMsg.content = addThinkingMarker('');
       addMessage(placeholderMsg);
 
       setState((prev) => ({ ...prev, isLoading: true }));
@@ -409,7 +420,10 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           chatService.setMode(mode);
           return { ...prev, currentMode: mode };
         }),
-      setLoading: (loading: boolean) => setState((prev) => ({ ...prev, isLoading: loading })),
+      setLoading: (loading: boolean) => {
+        chatService.setIsLoading(loading);
+        setState((prev) => ({ ...prev, isLoading: loading }));
+      },
       setAgentAvailable: (available: boolean) =>
         setState((prev) => ({ ...prev, agentAvailable: available })),
       setError: (error: string | undefined) => setState((prev) => ({ ...prev, error })),

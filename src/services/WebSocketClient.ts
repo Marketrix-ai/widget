@@ -87,6 +87,14 @@ export class WebSocketClient {
       return;
     }
 
+    if (
+      this.status === 'connecting' &&
+      this.chatId === chatId &&
+      this.websocket?.readyState === WebSocket.CONNECTING
+    ) {
+      return;
+    }
+
     // Handle existing connection
     if (
       this.websocket &&
@@ -101,9 +109,11 @@ export class WebSocketClient {
     this.setStatus('connecting');
 
     try {
-      this.websocket = new WebSocket(this.url);
+      const ws = new WebSocket(this.url);
+      this.websocket = ws;
 
-      this.websocket.onopen = () => {
+      ws.onopen = () => {
+        if (this.websocket !== ws) return;
         this.setStatus('connected');
         this.reconnectAttempts = 0;
         this.reconnectDelay = 1000;
@@ -112,7 +122,8 @@ export class WebSocketClient {
         this.startHeartbeat();
       };
 
-      this.websocket.onmessage = (event) => {
+      ws.onmessage = (event) => {
+        if (this.websocket !== ws) return;
         try {
           const message = JSON.parse(event.data) as WebSocketMessage;
           this.handleMessage(message);
@@ -121,13 +132,15 @@ export class WebSocketClient {
         }
       };
 
-      this.websocket.onerror = (error) => {
+      ws.onerror = (error) => {
+        if (this.websocket !== ws) return;
         console.error('[WebSocket] Error:', error);
         this.setStatus('error');
         this.notifyError(new Error('WebSocket connection error'));
       };
 
-      this.websocket.onclose = () => {
+      ws.onclose = () => {
+        if (this.websocket !== ws) return;
         this.setStatus('disconnected');
         this.stopHeartbeat();
         this.websocket = null;
@@ -190,6 +203,10 @@ export class WebSocketClient {
 
   private sendRegistration(): void {
     if (!this.chatId) return;
+    if (this.status !== 'connected' && this.status !== 'registered') {
+      // Wait for connection
+      return;
+    }
     this.send({
       jsonrpc: '2.0',
       method: 'widget/register',
