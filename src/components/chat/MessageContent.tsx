@@ -22,7 +22,7 @@ export const MessageContent: React.FC<MessageContentProps> = ({
 }) => {
   const placeholderState = message.placeholderState || 'thinking';
   const isWaitingForUser = placeholderState === 'waiting-for-user';
-  const customText = !isWaitingForUser && message.mode === 'show' ? 'Waiting' : undefined;
+  const customText = undefined;
 
   // Render using structured parts
   if (message.parts && message.parts.length > 0) {

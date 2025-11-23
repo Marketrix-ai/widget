@@ -249,16 +249,15 @@ export class ShowModeService {
       const isClickOnElement = path.includes(this.currentElement);
 
       if (isClickOnElement) {
-        // Do NOT stop propagation for click actions on the element itself
-        // e.stopPropagation();
-        // e.preventDefault();
+        // Intercept the click to prevent immediate navigation/action before we can process the tool result
+        e.preventDefault();
+        e.stopPropagation();
 
         console.log('[ShowModeService] Click detected on element, resolving promise');
         const resolve = this.resolvePromise;
         this.resolvePromise = null;
         this.rejectPromise = null;
-        // Use a longer timeout to ensure click propagates
-        setTimeout(() => resolve(true), 50);
+        resolve(true);
       }
     };
 
@@ -273,10 +272,11 @@ export class ShowModeService {
         btn.addEventListener('click', (e) => {
           e.stopPropagation();
           if (this.resolvePromise) {
+            console.log('[ShowModeService] Continue clicked, resolving promise immediately');
             const resolve = this.resolvePromise;
             this.resolvePromise = null;
             this.rejectPromise = null;
-            setTimeout(() => resolve(true), 0);
+            resolve(true);
           }
         });
       }

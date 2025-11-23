@@ -43,7 +43,7 @@ interface WidgetContextType {
     removeMessage: (messageId: string) => void;
     setMessages: (messages: ChatMessage[]) => void;
     resetState: () => void;
-    stopTask: () => void;
+    stopTask: () => Promise<void>;
     clearChatHistory: () => void;
     sendMessage: (
       content: string,
@@ -126,15 +126,51 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         if (!found) return prev;
 
         let updatedMsg = found.message;
+
+        // Determine if this tool interaction requires user waiting
+        // Matches ToolService.requiresHighlight logic + show mode
+        const isInteractiveTool = [
+          'click_element',
+          'type_text',
+          'select_dropdown_option',
+          'send_keys',
+          'upload_file',
+        ].includes(toolName);
+
+        const shouldWait = prev.isTaskRunning && prev.currentMode === 'show' && isInteractiveTool;
+
         if (status === 'running') {
           updatedMsg = addProgressLine(updatedMsg, friendlyName, explanation || friendlyName);
           if (prev.isTaskRunning && (prev.currentMode === 'show' || prev.currentMode === 'do')) {
-            updatedMsg = updateThinkingMarker(updatedMsg, prev.isTaskRunning, prev.currentMode);
+            updatedMsg = updateThinkingMarker(
+              updatedMsg,
+              prev.isTaskRunning,
+              prev.currentMode,
+              shouldWait
+            );
           }
         } else if (status === 'completed') {
           updatedMsg = markProgressLineComplete(updatedMsg);
+          // When tool completes, revert to 'thinking' state (not waiting)
+          if (prev.isTaskRunning && (prev.currentMode === 'show' || prev.currentMode === 'do')) {
+            updatedMsg = updateThinkingMarker(
+              updatedMsg,
+              prev.isTaskRunning,
+              prev.currentMode,
+              false
+            );
+          }
         } else {
           updatedMsg = markProgressLineFailed(updatedMsg, friendlyName, error || '');
+          // On failure, we might also want to revert to thinking or just leave it (likely task will stop soon)
+          if (prev.isTaskRunning && (prev.currentMode === 'show' || prev.currentMode === 'do')) {
+            updatedMsg = updateThinkingMarker(
+              updatedMsg,
+              prev.isTaskRunning,
+              prev.currentMode,
+              false
+            );
+          }
         }
 
         const newMessages = [...prev.messages];
@@ -213,18 +249,16 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setState((prev) => ({ ...prev, error: error.message }));
     };
 
-    wsClient.addCallbacks({
+    const callbacks = {
       onStatusChange: handleStatusChange,
       onMessage: handleMessage,
       onError: handleError,
-    });
+    };
+
+    wsClient.addCallbacks(callbacks);
 
     return () => {
-      wsClient.removeCallbacks({
-        onStatusChange: handleStatusChange,
-        onMessage: handleMessage,
-        onError: handleError,
-      });
+      wsClient.removeCallbacks(callbacks);
     };
   }, [updateProgressForTool]);
 
@@ -464,8 +498,24 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           return { ...prev, messages };
         }),
       resetState,
-      stopTask: () => {
+      stopTask: async () => {
+        const taskId = state.activeTaskId;
         setTaskState({ isTaskRunning: false, activeTaskId: null });
+
+        // Attempt to reload config if missing
+        let config = configManager.getConfig();
+        if (!config) {
+          config = configManager.loadConfig();
+        }
+
+        if (config) {
+          try {
+            const apiService = new MarketrixApiService(config);
+            await apiService.stopTask(taskId || undefined);
+          } catch (error) {
+            console.error('Failed to stop task remotely:', error);
+          }
+        }
       },
       clearChatHistory: resetState,
       sendMessage,

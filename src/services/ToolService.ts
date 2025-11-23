@@ -161,31 +161,24 @@ export class ToolExecutionService {
 
     element.scrollIntoView({ behavior: 'smooth', block: 'center' });
     await new Promise((resolve) => setTimeout(resolve, 100));
-    // Removed explicit element.click() as it might be causing issues if the element has handlers that assume global scope or if it triggers navigation before the tool returns.
-    // But we need to click it.
-    // The error 'showLoginForm is not defined' suggests an inline onclick handler on the page is failing.
-    // This is an issue with the target page's JS context, not our widget code directly,
-    // BUT our click triggers it. We should wrap the click in a try-catch to prevent crashing the widget.
-    try {
-      if (element instanceof HTMLElement) {
-        element.click();
-      } else {
-        // Fallback for SVG/other elements
-        const clickEvent = new MouseEvent('click', {
-          bubbles: true,
-          cancelable: true,
-          view: window,
-        });
-        (element as any).dispatchEvent(clickEvent);
+    // Defer the click to allow the tool response to be sent first
+    setTimeout(() => {
+      try {
+        if (element instanceof HTMLElement) {
+          element.click();
+        } else {
+          // Fallback for SVG/other elements
+          const clickEvent = new MouseEvent('click', {
+            bubbles: true,
+            cancelable: true,
+            view: window,
+          });
+          (element as any).dispatchEvent(clickEvent);
+        }
+      } catch (e) {
+        console.warn('[ToolExecutionService] Click triggered an error on the page:', e);
       }
-    } catch (e) {
-      console.warn('[ToolExecutionService] Click triggered an error on the page:', e);
-      // We still consider it a success from our side as we performed the action
-      return {
-        success: true,
-        result: `Clicked element ${index}, but page threw error: ${e instanceof Error ? e.message : String(e)}`,
-      };
-    }
+    }, 50);
 
     return { success: true, result: `Clicked element ${index}` };
   }

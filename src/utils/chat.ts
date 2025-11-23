@@ -641,7 +641,8 @@ export function markProgressLineFailed(
 export function updateThinkingMarker(
   message: ChatMessage,
   isTaskRunning: boolean,
-  currentMode: 'show' | 'tell' | 'do'
+  currentMode: 'show' | 'tell' | 'do',
+  isWaitingForUser: boolean = false
 ): ChatMessage {
   const msg = ensureMessageStructure(message);
 
@@ -657,6 +658,8 @@ export function updateThinkingMarker(
     return msg;
   }
 
+  const targetState = isWaitingForUser ? 'waiting-for-user' : 'thinking';
+
   // Add thinking marker if not present and it is the latest message
   // Note: The "latest message" check should be done by the caller or we assume this IS the active message
   // But to be safe, we can check if it's a placeholder or the last agent message.
@@ -665,13 +668,13 @@ export function updateThinkingMarker(
     return {
       ...msg,
       content: addThinkingMarker(msg.content),
-      placeholderState: 'thinking',
+      placeholderState: targetState,
     };
-  } else if (msg.placeholderState !== 'thinking') {
+  } else if (msg.placeholderState !== targetState) {
     // Ensure state aligns with marker presence if needed
     return {
       ...msg,
-      placeholderState: 'thinking',
+      placeholderState: targetState,
     };
   }
 
