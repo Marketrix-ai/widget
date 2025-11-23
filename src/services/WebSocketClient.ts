@@ -171,10 +171,23 @@ export class WebSocketClient {
   }
 
   send(message: WebSocketMessage): void {
-    if (!this.websocket || this.websocket.readyState !== WebSocket.OPEN) {
-      throw new Error('WebSocket is not connected');
+    if (!this.websocket) {
+      console.warn('[WebSocket] Cannot send message: WebSocket is null');
+      return;
     }
-    this.websocket.send(JSON.stringify(message));
+    if (this.websocket.readyState !== WebSocket.OPEN) {
+      console.warn(
+        `[WebSocket] Cannot send message: WebSocket state is ${this.websocket.readyState} (not OPEN)`
+      );
+      return;
+    }
+    try {
+      this.websocket.send(JSON.stringify(message));
+    } catch (error) {
+      console.error('[WebSocket] Failed to send message:', error);
+      // We could re-throw or notify error listener
+      this.notifyError(new Error(`Failed to send message: ${String(error)}`));
+    }
   }
 
   private setStatus(status: WebSocketStatus): void {

@@ -12,6 +12,8 @@ export class ShowModeService {
   private currentPopup: HTMLElement | null = null;
   private currentHighlight: HTMLElement | null = null;
   private currentElement: HTMLElement | null = null;
+  private currentOptions: ShowModeOptions | null = null;
+  private currentPromise: Promise<boolean> | null = null;
   private resolvePromise: ((value: boolean) => void) | null = null;
   private rejectPromise: ((reason?: unknown) => void) | null = null;
   private clickHandler: ((e: MouseEvent) => void) | null = null;
@@ -29,9 +31,20 @@ export class ShowModeService {
   }
 
   async showToolAction(options: ShowModeOptions): Promise<boolean> {
-    const { element, explanation, isClickAction = false } = options;
+    const { element, explanation, isClickAction = false, toolName } = options;
+
+    if (
+      this.currentOptions?.element === element &&
+      this.currentOptions.explanation === explanation &&
+      this.currentOptions.toolName === toolName &&
+      this.currentPromise
+    ) {
+      console.log('[ShowModeService] Duplicate tool action detected, returning existing promise');
+      return this.currentPromise;
+    }
 
     this.cleanup();
+    this.currentOptions = options;
     this.currentElement = element;
 
     element.scrollIntoView({ behavior: 'auto', block: 'center' });
@@ -41,15 +54,26 @@ export class ShowModeService {
     this.setupPositionUpdates();
 
     if (isClickAction) {
+      // For click actions, we let the event propagate first (to trigger the actual click)
+      // and then we resolve. But the overlay is in the way.
+      // We used pointer-events: none on highlight, but the popup might be blocking?
+      // Or we want the overlay to catch the click (as confirmation) and THEN we click the element?
+      // The 'isClickAction' implies the user is clicking the element THROUGH the highlight.
+      // But highlight has pointer-events: none. So the click goes to the element directly?
+      // If the click goes to the element directly, our document listener catches it.
+      // But if the element has stopPropagation, our listener might not catch it in bubble phase.
+      // We use capture: true, so we catch it first.
       this.setupClickHandler();
     }
 
-    return new Promise<boolean>((resolve, reject) => {
+    this.currentPromise = new Promise<boolean>((resolve, reject) => {
       this.resolvePromise = resolve;
       this.rejectPromise = reject;
     }).finally(() => {
       this.cleanup();
     });
+
+    return this.currentPromise;
   }
 
   cleanup(): void {
@@ -81,6 +105,8 @@ export class ShowModeService {
     this.currentHighlight?.remove();
     this.currentHighlight = null;
     this.currentElement = null;
+    this.currentOptions = null;
+    this.currentPromise = null;
     this.resolvePromise = null;
     this.rejectPromise = null;
   }
@@ -218,21 +244,25 @@ export class ShowModeService {
     this.clickHandler = (e: MouseEvent) => {
       if (!this.currentElement || !this.resolvePromise) return;
 
-      const target = e.target as Node;
-      const isClickOnElement =
-        this.currentElement.contains(target) || this.currentElement === target;
+      // Use composedPath to handle Shadow DOM retargeting and event bubbling properly
+      const path = e.composedPath();
+      const isClickOnElement = path.includes(this.currentElement);
 
       if (isClickOnElement) {
-        e.stopPropagation();
-        e.preventDefault();
+        // Do NOT stop propagation for click actions on the element itself
+        // e.stopPropagation();
+        // e.preventDefault();
 
+        console.log('[ShowModeService] Click detected on element, resolving promise');
         const resolve = this.resolvePromise;
         this.resolvePromise = null;
         this.rejectPromise = null;
-        setTimeout(() => resolve(true), 0);
+        // Use a longer timeout to ensure click propagates
+        setTimeout(() => resolve(true), 50);
       }
     };
 
+    // Attach with capture to ensure we see it, but we must be careful not to stop propagation if we want the click to happen
     document.addEventListener('click', this.clickHandler, { capture: true });
   }
 

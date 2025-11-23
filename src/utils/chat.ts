@@ -463,6 +463,20 @@ function ensureMessageStructure(message: ChatMessage): ChatMessage {
 }
 
 /**
+ * Tools that should show an icon and standard text style.
+ * These are "mouse and keyboard" interactions.
+ * All other tools will have hidden icons and muted text.
+ */
+const INTERACTIVE_TOOLS = new Set([
+  'click_element',
+  'type_text',
+  'press_key',
+  'send_keys',
+  'select_option',
+  'hover_element',
+]);
+
+/**
  * Add a new progress step to a message
  */
 export function addProgressLine(
@@ -479,9 +493,9 @@ export function addProgressLine(
     (part) => part.type === 'progress' && part.toolName === toolName && part.status === 'running'
   );
 
-  const isGetHtml = toolName === 'get_html';
-  const hideIcon = isGetHtml;
-  const textStyle = isGetHtml ? 'muted' : 'default';
+  const isInteractive = INTERACTIVE_TOOLS.has(toolName);
+  const hideIcon = !isInteractive;
+  const textStyle = 'default';
 
   if (existingPartIndex >= 0) {
     newParts[existingPartIndex] = {
@@ -527,9 +541,9 @@ export function updateProgressLine(
 
   const mappedStatus = status === 'pending' ? 'running' : status;
 
-  const isGetHtml = toolName === 'get_html';
-  const hideIcon = isGetHtml;
-  const textStyle = isGetHtml ? 'muted' : 'default';
+  const isInteractive = INTERACTIVE_TOOLS.has(toolName);
+  const hideIcon = !isInteractive;
+  const textStyle = 'default';
 
   if (partIndex >= 0) {
     newParts[partIndex] = {
@@ -548,7 +562,7 @@ export function updateProgressLine(
   } else {
     newParts.push({
       type: 'progress',
-      content: `Executing ${toolName}...`,
+      content: `${getFriendlyToolName(toolName)}...`,
       status: mappedStatus,
       toolName,
       hideIcon,
@@ -684,13 +698,14 @@ export const TOOL_NAME_MAPPING: Record<string, string> = {
   press_key: 'Pressing key',
   select_option: 'Selecting option',
   scroll_to_element: 'Scrolling to element',
+  scroll: 'Scrolling',
 
   // Information Retrieval
   get_page_content: 'Reading page content',
   get_element_text: 'Reading element text',
   get_element_attribute: 'Reading element attribute',
   take_screenshot: 'Taking screenshot',
-  get_html: 'Viewed your Screen',
+  get_html: 'Viewed your screen',
 
   // Logic & Flow
   wait_for_element: 'Waiting for element',

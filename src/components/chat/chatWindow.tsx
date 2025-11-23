@@ -541,7 +541,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         {!isMinimized && (
           <>
             {/* Chat Messages Area */}
-            <div className='flex-1 overflow-hidden pt-3'>
+            <div className='flex-1 overflow-hidden py-2'>
               <ChatErrorBoundary>
                 <MessageList
                   messages={messages}

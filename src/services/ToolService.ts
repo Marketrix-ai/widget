@@ -34,7 +34,6 @@ export class ToolExecutionService {
         if (index !== undefined) {
           const element = domService.getElementByIndex(index);
           if (element) {
-            // @ts-ignore - showModeService might have typing issues in some envs, but it's valid
             const confirmed = await (showModeService as any).showToolAction({
               element,
               explanation: explanation || `Execute ${toolName}`,
@@ -47,9 +46,18 @@ export class ToolExecutionService {
               return { success: false, result: '', error: 'User cancelled action' };
             }
 
-            // If it was a keyboard action, we assume the user did it.
-            if (toolName !== 'click_element') {
-              return { success: true, result: 'User completed the action' };
+            if (toolName === 'click_element') {
+              // Execute the click after confirmation
+              // We proceed to the switch case below to actually execute the click
+            } else if (
+              toolName === 'type_text' ||
+              toolName === 'select_dropdown_option' ||
+              toolName === 'send_keys'
+            ) {
+              // Execute the action after confirmation
+              // We proceed to the switch case below to actually execute the action
+            } else {
+              // For other tools, proceed to execute as well if they were highlighted
             }
           }
         }

@@ -16,17 +16,25 @@ export const ThinkingIndicator: React.FC<ThinkingIndicatorProps> = ({
   return (
     <>
       {/* Subtle Facebook Messenger-style loading dots */}
-      <div className='flex items-center gap-1 py-0.5'>
-        <span className='messenger-dot' style={{ animationDelay: '0s' }} />
-        <span className='messenger-dot' style={{ animationDelay: '0.15s' }} />
-        <span className='messenger-dot' style={{ animationDelay: '0.3s' }} />
-      </div>
+      {customText !== 'Waiting' && (
+        <div className='flex items-center gap-1 py-0.5'>
+          <span className='messenger-dot' style={{ animationDelay: '0s' }} />
+          <span className='messenger-dot' style={{ animationDelay: '0.15s' }} />
+          <span className='messenger-dot' style={{ animationDelay: '0.3s' }} />
+        </div>
+      )}
       {/* State text with subtle ellipsis */}
       <div className='flex items-center'>
         <span
-          className='text-[10px] font-inter font-normal'
+          className='text-[10px] font-inter font-normal inline-flex items-center gap-1.5'
           style={{ color: addOpacity(textColor, 0.5) }}
         >
+          {customText === 'Waiting' && (
+            <span
+              className='inline-block w-2 h-2 border-2 rounded-full border-t-transparent animate-spin'
+              style={{ borderColor: addOpacity(textColor, 0.5), borderTopColor: 'transparent' }}
+            />
+          )}
           {customText || (isWaitingForUser ? 'Waiting for you to complete the action' : 'Thinking')}
           <span className='thinking-dots'>
             <span style={{ animationDelay: '0s' }}>.</span>

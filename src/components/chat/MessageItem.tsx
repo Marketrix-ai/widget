@@ -1,5 +1,4 @@
 import React from 'react';
-import { HiUser } from 'react-icons/hi2';
 
 import type { ChatMessage, WidgetState } from '../../types';
 import { addOpacity, formatMessageTime, getContrastingColor } from '../../utils/format';
@@ -47,17 +46,12 @@ export const MessageItem: React.FC<MessageItemProps> = ({
     );
   }
 
+  const isUser = message.sender === 'user';
+
   return (
-    <div
-      key={`message-${message.id}-${index}`}
-      className={`group flex flex-col ${
-        message.sender === 'user' ? 'justify-end' : 'justify-start'
-      } mt-[10px]`}
-    >
-      <div
-        className={`flex items-start gap-1 ${message.sender === 'user' ? 'flex-row-reverse' : 'flex-row'}`}
-      >
-        {/* Logo */}
+    <div key={`message-${message.id}-${index}`} className='group flex flex-col mt-[10px]'>
+      <div className='flex items-start gap-1 w-full flex-row'>
+        {/* Logo or Spacer - Always on left */}
         <div
           className='flex-shrink-0 agent-logo-img-container'
           style={{
@@ -66,7 +60,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
             backgroundColor: 'transparent',
           }}
         >
-          {message.sender === 'agent' ? (
+          {!isUser && (
             <img
               src={marketrixIcon}
               alt='Marketrix AI'
@@ -83,16 +77,6 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                 backgroundColor: 'transparent',
               }}
             />
-          ) : (
-            <div
-              className='w-8 h-8 flex items-center justify-center rounded-lg'
-              style={{ backgroundColor: settings.widget_accent_color }}
-            >
-              <HiUser
-                className='w-5 h-5'
-                style={{ color: getContrastingColor(settings.widget_accent_color) }}
-              />
-            </div>
           )}
         </div>
 
@@ -101,23 +85,23 @@ export const MessageItem: React.FC<MessageItemProps> = ({
           className={`flex flex-col flex-1
           ${message.videoStream ? 'p-0' : 'px-2.5 py-2'} shadow-sm border
           ${
-            message.sender === 'user'
+            isUser
               ? 'rounded-l-lg rounded-tr-lg rounded-br-lg'
               : 'rounded-r-lg rounded-tl-lg rounded-bl-lg'
           }
         `}
           style={{
-            backgroundColor: '#ffffff',
-            color: settings.widget_text_color,
-            borderColor: settings.widget_border_color,
+            backgroundColor: isUser ? settings.widget_accent_color : '#ffffff',
+            color: isUser
+              ? getContrastingColor(settings.widget_accent_color)
+              : settings.widget_text_color,
+            borderColor: isUser ? settings.widget_accent_color : settings.widget_border_color,
+            maxWidth: 'calc(100% - 40px)', // Leave space for logo space on left
           }}
         >
           {/* Video stream display - edge-to-edge */}
           {message.videoStream && (
-            <VideoStreamDisplay
-              stream={message.videoStream}
-              isUserMessage={message.sender === 'user'}
-            />
+            <VideoStreamDisplay stream={message.videoStream} isUserMessage={isUser} />
           )}
           {/* Message content */}
           {!message.videoStream && (
@@ -126,7 +110,11 @@ export const MessageItem: React.FC<MessageItemProps> = ({
               isLastMessage={isLastMessage}
               widgetState={widgetState}
               accentColor={settings.widget_accent_color}
-              textColor={settings.widget_text_color}
+              textColor={
+                isUser
+                  ? getContrastingColor(settings.widget_accent_color)
+                  : settings.widget_text_color
+              }
             />
           )}
 
@@ -187,9 +175,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
       </div>
       {/* Timestamp below card */}
       {!message.isPlaceholder && (
-        <div
-          className={`flex ${message.sender === 'user' ? 'justify-start' : 'justify-end'} mt-0.5`}
-        >
+        <div className='flex justify-end mt-0.5 mr-1'>
           <span className='text-[10px] text-gray-400 font-inter font-normal'>
             {formatMessageTime(message.timestamp)}
           </span>

@@ -127,11 +127,7 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
         let updatedMsg = found.message;
         if (status === 'running') {
-          updatedMsg = addProgressLine(
-            updatedMsg,
-            friendlyName,
-            explanation || `Executing ${friendlyName}...`
-          );
+          updatedMsg = addProgressLine(updatedMsg, friendlyName, explanation || friendlyName);
           if (prev.isTaskRunning && (prev.currentMode === 'show' || prev.currentMode === 'do')) {
             updatedMsg = updateThinkingMarker(updatedMsg, prev.isTaskRunning, prev.currentMode);
           }
@@ -175,20 +171,37 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         const result = await toolExecutionService.executeTool(toolName, args, mode, explanation);
 
         if (result.success) {
-          wsClient.send({
-            jsonrpc: '2.0',
-            method: 'tools/call',
-            id: requestId,
-            result: { content: [{ type: 'text', text: result.result }] },
-          });
-          updateProgressForTool(toolName, explanation, 'completed');
+          try {
+            // If result is a waiting message (from Show Mode user confirmation),
+            // we don't complete the tool yet. We might want to send a status update?
+            // But currently the agent expects a tool result to proceed.
+            // If we send "Waiting...", the agent might think that's the output.
+            // For interactive tools in Show Mode, we really want to tell the agent "Action Performed".
+            // The ToolExecutionService returned "User completed the action" or similar.
+            wsClient.send({
+              jsonrpc: '2.0',
+              method: 'tools/call',
+              id: requestId,
+              result: { content: [{ type: 'text', text: result.result }] },
+            });
+            updateProgressForTool(toolName, explanation, 'completed');
+          } catch (error) {
+            console.error('Failed to send tool result:', error);
+            // Even if send fails, we mark as completed locally so UI doesn't hang?
+            // Or failed? If agent doesn't get it, task is stuck.
+            updateProgressForTool(toolName, explanation, 'failed', 'Connection error');
+          }
         } else {
-          wsClient.send({
-            jsonrpc: '2.0',
-            method: 'tools/call',
-            id: requestId,
-            error: { code: -32603, message: result.error || 'Unknown error' },
-          });
+          try {
+            wsClient.send({
+              jsonrpc: '2.0',
+              method: 'tools/call',
+              id: requestId,
+              error: { code: -32603, message: result.error || 'Unknown error' },
+            });
+          } catch (error) {
+            console.error('Failed to send tool error:', error);
+          }
           updateProgressForTool(toolName, explanation, 'failed', result.error);
         }
       } else if (message.method === 'task_status') {

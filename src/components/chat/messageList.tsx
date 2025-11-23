@@ -1,5 +1,6 @@
 // / <reference lib="dom" />
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { FaArrowDown, FaArrowUp } from 'react-icons/fa';
 import { IoChatbubbleEllipsesOutline } from 'react-icons/io5';
 import { LuMousePointerClick } from 'react-icons/lu';
 import { SiTicktick } from 'react-icons/si';
@@ -50,6 +51,47 @@ export const MessageList = ({
 }: MessageListProps) => {
   // Get widget settings and state
   const { settings, state: widgetState } = useWidget(config ? { config } : {});
+  const [showScrollTop, setShowScrollTop] = useState(false);
+  const [showScrollBottom, setShowScrollBottom] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Handle scroll visibility
+  const handleScroll = () => {
+    if (containerRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
+      // Show top button if scrolled down more than 200px
+      setShowScrollTop(scrollTop > 200);
+
+      // Show bottom button if not at the bottom (with 50px threshold)
+      const isAtBottom = Math.abs(scrollHeight - scrollTop - clientHeight) < 50;
+      setShowScrollBottom(!isAtBottom && scrollHeight > clientHeight);
+    }
+  };
+
+  // Scroll to top handler
+  const scrollToTop = () => {
+    containerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Scroll to bottom handler
+  const scrollToBottom = () => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  // Force scroll to bottom on mount (restoring history)
+  useEffect(() => {
+    // Use requestAnimationFrame to ensure DOM is fully rendered
+    // and scroll height is calculated correctly
+    window.requestAnimationFrame(() => {
+      if (messagesEndRef.current) {
+        messagesEndRef.current.scrollIntoView({ behavior: 'auto' });
+        // Force update scroll state
+        handleScroll();
+      }
+    });
+  }, [messages.length]); // Run when messages length changes to handle history loading
 
   // Check if there's a pending message (placeholder exists or isLoading)
   const hasPendingMessage = widgetState.isLoading || messages.some((msg) => msg.isPlaceholder);
@@ -235,48 +277,84 @@ export const MessageList = ({
   };
 
   return (
-    <div
-      key='message-list-container'
-      className={`
-            h-full overflow-y-auto px-2 space-y-0.5
+    <div className='relative h-full'>
+      <div
+        key='message-list-container'
+        ref={containerRef}
+        onScroll={handleScroll}
+        className={`
+            h-full overflow-y-auto px-2 space-y-0.5 pt-0
             scrollbar-thin scrollbar-track-[#f6f6f6] scrollbar-thumb-[#b6b6b6]
           `}
-      style={{
-        backgroundColor: '#ffffff',
-        backgroundImage: settings.widget_background_color.includes('gradient')
-          ? settings.widget_background_color
-          : `linear-gradient(135deg, ${settings.widget_background_color} 0%, ${settings.widget_background_color} 100%)`,
-        scrollbarColor: `${addOpacity(settings.widget_border_color, 0.3)} ${addOpacity(settings.widget_border_color, 0.1)}`,
-        scrollbarWidth: 'thin',
-      }}
-    >
-      {/* Welcome message - always show */}
-      <WelcomeMessage
-        greeting={settings.widget_greeting}
-        settings={settings}
-        marketrixIcon={MarketrixIcon}
-        suggestedActions={uniqueSuggestedActions}
-        hasPendingMessage={hasPendingMessage}
-        onActionClick={handleSuggestedActionClick}
-      />
-
-      {/* Messages */}
-      {messages.map((message: ChatMessage, index: number) => (
-        <MessageItem
-          key={`message-${message.id}-${index}`}
-          message={message}
-          index={index}
-          isLastMessage={index === messages.length - 1}
-          widgetState={widgetState}
+        style={{
+          backgroundColor: '#ffffff',
+          backgroundImage: settings.widget_background_color.includes('gradient')
+            ? settings.widget_background_color
+            : `linear-gradient(135deg, ${settings.widget_background_color} 0%, ${settings.widget_background_color} 100%)`,
+          scrollbarColor: `${addOpacity(settings.widget_border_color, 0.3)} ${addOpacity(settings.widget_border_color, 0.1)}`,
+          scrollbarWidth: 'thin',
+        }}
+      >
+        {/* Welcome message - always show */}
+        <WelcomeMessage
+          greeting={settings.widget_greeting}
           settings={settings}
           marketrixIcon={MarketrixIcon}
-          onScreenAccessAllow={onScreenAccessAllow}
-          onScreenAccessDeny={onScreenAccessDeny}
+          suggestedActions={uniqueSuggestedActions}
+          hasPendingMessage={hasPendingMessage}
+          onActionClick={handleSuggestedActionClick}
         />
-      ))}
 
-      {/* Auto-scroll anchor */}
-      <div key='scroll-anchor' ref={messagesEndRef} />
+        {/* Messages */}
+        {messages.map((message: ChatMessage, index: number) => (
+          <MessageItem
+            key={`message-${message.id}-${index}`}
+            message={message}
+            index={index}
+            isLastMessage={index === messages.length - 1}
+            widgetState={widgetState}
+            settings={settings}
+            marketrixIcon={MarketrixIcon}
+            onScreenAccessAllow={onScreenAccessAllow}
+            onScreenAccessDeny={onScreenAccessDeny}
+          />
+        ))}
+
+        {/* Auto-scroll anchor */}
+        <div key='scroll-anchor' ref={messagesEndRef} />
+      </div>
+
+      {/* Scroll to Top Button */}
+      {showScrollTop && (
+        <div className='absolute top-2 left-0 right-0 flex justify-center z-10 pointer-events-none'>
+          <button
+            onClick={scrollToTop}
+            className='p-1.5 rounded-full shadow-md bg-white/90 hover:bg-white transition-all duration-200 border border-gray-200 group backdrop-blur-sm pointer-events-auto'
+            title='Scroll to top'
+          >
+            <FaArrowUp
+              className='w-2.5 h-2.5 text-gray-500 group-hover:text-gray-700'
+              style={{ color: settings.widget_accent_color }}
+            />
+          </button>
+        </div>
+      )}
+
+      {/* Scroll to Bottom Button */}
+      {showScrollBottom && (
+        <div className='absolute bottom-2 left-0 right-0 flex justify-center z-10 pointer-events-none'>
+          <button
+            onClick={scrollToBottom}
+            className='p-1.5 rounded-full shadow-md bg-white/90 hover:bg-white transition-all duration-200 border border-gray-200 group backdrop-blur-sm pointer-events-auto'
+            title='Scroll to bottom'
+          >
+            <FaArrowDown
+              className='w-2.5 h-2.5 text-gray-500 group-hover:text-gray-700'
+              style={{ color: settings.widget_accent_color }}
+            />
+          </button>
+        </div>
+      )}
     </div>
   );
 };

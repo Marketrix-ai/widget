@@ -148,6 +148,20 @@ export class ChatService {
       }
 
       this.messages = context.messages.map((msg) => {
+        // Handle restored screenshare messages
+        // If a message was a screenshare stream (id starts with 'screenshare-'),
+        // replace it with a "Screenshare ended" message since the stream is lost on refresh.
+        if (msg.id.startsWith('screenshare-')) {
+          return {
+            ...msg,
+            content: 'Screenshare ended',
+            videoStream: undefined,
+            isSystemMessage: true, // Treat as system message now
+            timestamp: new Date(msg.timestamp),
+            parts: [{ type: 'text', content: 'Screenshare ended' }],
+          };
+        }
+
         const restoredMsg: ChatMessage = {
           ...msg,
           timestamp: new Date(msg.timestamp),
@@ -207,6 +221,7 @@ export class ChatService {
           timestamp: msg.timestamp.toISOString(),
           mode: msg.mode,
           isScreenAccessRequest: msg.isScreenAccessRequest,
+          screenShareStatus: msg.screenShareStatus,
           isSystemMessage: msg.isSystemMessage,
           isPlaceholder: msg.isPlaceholder,
           parts: msg.parts, // Save parts
