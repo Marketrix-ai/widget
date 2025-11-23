@@ -1,6 +1,6 @@
 import { type IntegrationData, sdk, type SlackSettingsData, type WidgetSettingsData } from '../sdk';
 import { extractApiData, extractErrorMessage } from '../utils/apiUtils';
-import { isString, isWidgetSettingsData } from '../utils/typeGuards';
+import { isString, isWidgetSettingsData } from '../utils/validation/typeGuards';
 
 export class IntegrationService {
   private marketrixId?: string;

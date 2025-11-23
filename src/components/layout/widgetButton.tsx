@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import MarketrixIcon from '../../assets/marketrix-icon.png';
 import { useWidget } from '../../hooks/useWidget';
 import type { MarketrixConfig } from '../../types';
-import { addOpacity, darkenColor, getContrastingColor } from '../../utils/colorUtils';
+import { addOpacity, darkenColor, getContrastingColor } from '../../utils/format/colorUtils';
 import { getPositionClasses } from '../../utils/widgetPositioning';
 
 interface WidgetButtonProps {

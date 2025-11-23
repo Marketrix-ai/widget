@@ -1,7 +1,7 @@
 import React from 'react';
 import { FaCheckCircle, FaCircle } from 'react-icons/fa';
 
-import { addOpacity } from '../../utils/colorUtils';
+import { addOpacity } from '../../utils/format/colorUtils';
 
 interface ProgressLineProps {
   line: string;

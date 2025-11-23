@@ -24,6 +24,23 @@ export const MessageContent: React.FC<MessageContentProps> = ({
   const isWaitingForUser = placeholderState === 'waiting-for-user';
   const hasContent = mainContent.trim().length > 0 || progressLines.length > 0;
 
+  // Debug logging for progress display
+  if (message.isPlaceholder) {
+    console.log('[MessageContent] [FLOW] Rendering placeholder message', {
+      messageId: message.id,
+      progressLineCount: progressLines.length,
+      mainContentLength: mainContent.trim().length,
+      hasContent,
+      placeholderState,
+      isWaitingForUser,
+      contentPreview: message.content.substring(0, 200),
+      fullContent: message.content,
+      parsedProgressLines: progressLines,
+      willShowProgressLines: progressLines.length > 0,
+      willShowThinking: !hasContent || (progressLines.length > 0 && !mainContent) || mainContent,
+    });
+  }
+
   if (message.isPlaceholder) {
     return (
       <div className='flex flex-col gap-1.5'>
@@ -59,8 +76,12 @@ export const MessageContent: React.FC<MessageContentProps> = ({
           </div>
         )}
 
-        {/* Show thinking/waiting indicator if no content yet or after content */}
-        {(!hasContent || mainContent) && (
+        {/* Show thinking/waiting indicator when:
+            - No content at all (no main content and no progress lines), OR
+            - Has progress lines but no main content (still processing), OR
+            - Has main content (show indicator after content)
+            This ensures progress lines are always visible and thinking indicator doesn't hide them */}
+        {(!hasContent || (progressLines.length > 0 && !mainContent) || mainContent) && (
           <ThinkingIndicator isWaitingForUser={isWaitingForUser} textColor={textColor} />
         )}
       </div>

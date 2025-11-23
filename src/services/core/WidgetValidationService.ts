@@ -1,7 +1,11 @@
-import { type AgentData, type ConnectionData, type IntegrationData, sdk } from '../sdk';
-import type { MarketrixConfig } from '../types';
-import { extractApiData, handleApiError, isValidApiResponse } from '../utils/apiUtils';
-import { isAgentData, isConnectionData, isIntegrationDataArray } from '../utils/typeGuards';
+import { type AgentData, type ConnectionData, type IntegrationData, sdk } from '../../sdk';
+import type { MarketrixConfig } from '../../types';
+import { extractApiData, handleApiError, isValidApiResponse } from '../../utils/apiUtils';
+import {
+  isAgentData,
+  isConnectionData,
+  isIntegrationDataArray,
+} from '../../utils/validation/typeGuards';
 
 export interface WidgetValidationResult {
   isValid: boolean;
@@ -233,20 +237,14 @@ export class WidgetValidationService {
 
       const connection = connectionData;
 
-      // Log all connection table values from the database
-      console.log('📊 ========== CONNECTION TABLE VALUES (marketrix database) ==========');
-      console.log('✅ Connection found in database with all values:');
-      console.log('   id:', connection.id);
-      console.log('   tenant_id:', connection.tenant_id);
-      console.log('   name:', connection.name);
-      console.log('   type:', connection.type);
-      console.log('   url:', connection.url);
-      console.log('   username:', connection.username);
-      console.log('   password:', connection.password ? '***hidden***' : null);
-      console.log('   allowed_domains:', connection.allowed_domains);
-      console.log('   created_at:', connection.created_at);
-      console.log('   updated_at:', connection.updated_at);
-      console.log('📊 =================================================================');
+      // Log connection data as object
+      console.log('✅ Connection found:', {
+        id: connection.id,
+        name: connection.name,
+        type: connection.type,
+        url: connection.url,
+        allowed_domains: connection.allowed_domains,
+      });
 
       // Step 2: Validate agent exists
       const agentResponse = await sdk.agentGet({
@@ -264,25 +262,13 @@ export class WidgetValidationService {
 
       const agent = agentData;
 
-      // Log all agent table values from the database
-      console.log('📊 ========== AGENT TABLE VALUES (marketrix database) ==========');
-      console.log('✅ Agent found in database with all values:');
-      console.log('   id:', agent.id);
-      console.log('   tenant_id:', agent.tenant_id);
-      console.log('   user_id:', agent.user_id);
-      console.log('   connection_id:', agent.connection_id);
-      console.log('   agent_name:', agent.agent_name);
-      console.log('   agent_type:', agent.agent_type);
-      console.log('   agent_voice:', agent.agent_voice);
-      console.log('   agent_description:', agent.agent_description);
-      console.log('   image_url:', agent.image_url);
-      console.log('   instructions:', agent.instructions);
-      console.log('   vector_store_id:', agent.vector_store_id);
-      console.log('   pdf_search_index_id:', agent.pdf_search_index_id);
-      console.log('   json_search_index_id:', agent.json_search_index_id);
-      console.log('   created_at:', agent.created_at);
-      console.log('   updated_at:', agent.updated_at);
-      console.log('📊 ============================================================');
+      // Log agent data as object
+      console.log('✅ Agent found:', {
+        id: agent.id,
+        agent_name: agent.agent_name,
+        connection_id: agent.connection_id,
+        agent_type: agent.agent_type,
+      });
 
       // Step 3: Validate that agent's connection_id matches the provided marketrix-connection-id
       if (agent.connection_id !== connectionId) {
@@ -295,41 +281,7 @@ export class WidgetValidationService {
       }
 
       // Validation successful
-      console.log('✅ Agent and Connection validation successful!', {
-        connection_id: connectionId,
-        agent_id: agentId,
-        connection: {
-          id: connection.id,
-          name: connection.name,
-          type: connection.type,
-        },
-        agent: {
-          id: agent.id,
-          agent_name: agent.agent_name,
-          connection_id: agent.connection_id,
-        },
-      });
-
-      // Final check: Verify connection exists (using connectionGet instead of connectionSearch)
-      let connectionIdMatches = false;
-      try {
-        const finalConnectionResponse = await sdk.connectionGet({
-          params: { connection_id: connectionId },
-        });
-        const finalConnectionData = extractApiData(finalConnectionResponse);
-        if (finalConnectionData && isConnectionData(finalConnectionData)) {
-          connectionIdMatches = true;
-
-          if (connectionIdMatches) {
-            console.log('✅ Connection ID verification: TRUE - Connection exists!');
-            console.log('🎯 Default widget settings will be applied');
-          } else {
-            console.warn('⚠️ Connection ID verification: FALSE - Connection not found');
-          }
-        }
-      } catch (verifyError) {
-        console.warn('⚠️ Could not verify connection:', verifyError);
-      }
+      console.log('✅ Validation successful:', { connection_id: connectionId, agent_id: agentId });
 
       return {
         isValid: true,

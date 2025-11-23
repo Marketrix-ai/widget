@@ -3,7 +3,7 @@
  * Used by browser tools to locate interactive elements on the page.
  */
 
-import { getElementByDataId, isIndexed } from '../services/elementIndexService';
+import { domService } from '../../services/features/DOMService';
 
 /**
  * Get all interactive elements on the page, ordered by DOM position.
@@ -61,9 +61,9 @@ export function getAllInteractiveElements(): HTMLElement[] {
  */
 export function getElementByIndex(index: number): HTMLElement | null {
   // Step 1: Check if indexing is active (get_html was called)
-  if (isIndexed()) {
+  if (domService.isIndexActive()) {
     // Step 2: Try to get element by data-id from indexing service
-    const element = getElementByDataId(index);
+    const element = domService.getElementByDataId(index);
     if (element && element instanceof HTMLElement) {
       return element;
     }

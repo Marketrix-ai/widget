@@ -5,7 +5,11 @@
  * and ensure consistent error handling.
  */
 
-import { isHTMLElement } from './typeGuards';
+import { isHTMLElement } from '../validation/typeGuards';
+
+interface TourElement extends HTMLElement {
+  _tourClickHandler?: EventListener;
+}
 
 /**
  * Safely remove an element by ID
@@ -41,9 +45,12 @@ function removeEventListenerSafely(
  * Remove tour click handlers from an element
  */
 export function removeTourClickHandler(element: HTMLElement): void {
-  if (isHTMLElement(element) && (element as any)._tourClickHandler) {
-    removeEventListenerSafely(element, 'click', (element as any)._tourClickHandler, true);
-    delete (element as any)._tourClickHandler;
+  if (isHTMLElement(element)) {
+    const tourElement = element as TourElement;
+    if (tourElement._tourClickHandler) {
+      removeEventListenerSafely(tourElement, 'click', tourElement._tourClickHandler, true);
+      delete tourElement._tourClickHandler;
+    }
   }
 }
 

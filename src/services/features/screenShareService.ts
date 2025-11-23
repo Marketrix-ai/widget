@@ -12,7 +12,7 @@ let activeStream: MediaStream | null = null;
  */
 export async function startScreenShare(): Promise<MediaStream> {
   // Check if stream already exists and is active
-  if (activeStream && activeStream.active) {
+  if (activeStream?.active) {
     const videoTracks = activeStream.getVideoTracks();
     if (videoTracks.length > 0 && videoTracks[0].readyState === 'live') {
       return activeStream;
@@ -48,7 +48,7 @@ export async function startScreenShare(): Promise<MediaStream> {
  */
 export function getActiveStream(): MediaStream | null {
   // Check if stream is still active
-  if (activeStream && activeStream.active) {
+  if (activeStream?.active) {
     const videoTracks = activeStream.getVideoTracks();
     if (videoTracks.length > 0 && videoTracks[0].readyState === 'live') {
       return activeStream;

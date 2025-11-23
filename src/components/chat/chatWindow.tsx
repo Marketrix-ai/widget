@@ -3,19 +3,19 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useWidget } from '../../hooks/useWidget';
 import type { InstructionType } from '../../sdk';
 import {
-  isScreenSharing as isScreenSharingActive,
-  startScreenShare,
-  stopScreenShare,
-} from '../../services/screenShareService';
-import type { ChatMessage, MarketrixConfig, TaskProgress } from '../../types';
-import { addOpacity, getContrastingColor } from '../../utils/colorUtils';
-import {
   createScreenAccessRequestMessage,
   createScreenshareMessage,
   createStartedScreenshareMessage,
   createSystemMessage,
   createUserMessage,
-} from '../../utils/messageFactory';
+} from '../../services/features/ChatService';
+import {
+  isScreenSharing as isScreenSharingActive,
+  startScreenShare,
+  stopScreenShare,
+} from '../../services/features/screenShareService';
+import type { ChatMessage, MarketrixConfig, TaskProgress } from '../../types';
+import { addOpacity, getContrastingColor } from '../../utils/format/colorUtils';
 import { getPositionClasses } from '../../utils/widgetPositioning';
 import { MessageInput } from '../input/messageInput';
 import { ModeSelector } from '../input/modeSelector';

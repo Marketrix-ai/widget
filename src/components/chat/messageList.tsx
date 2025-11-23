@@ -6,10 +6,10 @@ import { SiTicktick } from 'react-icons/si';
 
 import MarketrixIcon from '../../assets/marketrix-icon.png';
 import { useWidget } from '../../hooks/useWidget';
+import { createUserMessage } from '../../services/features/ChatService';
 import type { ChatMessage, MarketrixConfig } from '../../types';
-import { addOpacity } from '../../utils/colorUtils';
+import { addOpacity } from '../../utils/format/colorUtils';
 import { parseProgressLines } from '../../utils/messageContentUtils';
-import { createUserMessage } from '../../utils/messageFactory';
 import { MessageItem } from './messageItem';
 import { WelcomeMessage } from './welcomeMessage';
 
@@ -220,6 +220,7 @@ export const MessageList = ({
     // THEN: Add the chip message as a user message in the chat (like user typed it)
     // The greeting message and all existing messages remain unchanged
     if (onAddMessage) {
+      // We import createUserMessage from ChatService now (exported function)
       const userMessage = createUserMessage(action.text, action.type, 'chip-message');
       onAddMessage(userMessage);
     }

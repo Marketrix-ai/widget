@@ -1,8 +1,14 @@
-import { sdk } from '../sdk';
-import type { MarketrixConfig, SendMessageRequest, SendMessageResponse } from '../types';
-import { extractApiData, extractErrorMessage } from '../utils/apiUtils';
-import { isChatResponseData } from '../utils/typeGuards';
-import { chatIdManager } from './chatIdManager';
+import { sdk } from '../../sdk';
+import type { MarketrixConfig, SendMessageRequest, SendMessageResponse } from '../../types';
+import { extractApiData, extractErrorMessage } from '../../utils/apiUtils';
+import { isChatResponseData, isNonNullObject } from '../../utils/validation/typeGuards';
+import { chatIdManager } from '../chatIdManager';
+
+interface TaskResponse {
+  task_id?: string;
+  status?: string;
+  message?: string;
+}
 
 export class MarketrixApiService {
   private config: MarketrixConfig;
@@ -128,15 +134,17 @@ export class MarketrixApiService {
         if (mode === 'do') {
           // chatDo returns UsageStatsData, not ChatResponseData
           // But we also get task_id for show/do modes
-          const result: any = {
+          const result: SendMessageResponse = {
             messageId: Date.now().toString(),
             response: 'Action completed successfully',
             mode,
             timestamp: new Date(),
           };
-          if (responseData && typeof responseData === 'object' && 'task_id' in responseData) {
+
+          if (isNonNullObject(responseData) && typeof responseData.task_id === 'string') {
             result.task_id = responseData.task_id;
           }
+
           return result;
         } else {
           // chatTell and chatShow return ChatResponseData
@@ -146,15 +154,18 @@ export class MarketrixApiService {
           }
 
           const chatResponse = responseData;
-          const result: any = {
+          const result: SendMessageResponse = {
             messageId: Date.now().toString(),
             response: chatResponse.text || 'Response received',
             mode,
             timestamp: new Date(),
           };
           // Include task_id if available (for show mode)
-          if (responseData && typeof responseData === 'object' && 'task_id' in responseData) {
-            result.task_id = (responseData as any).task_id;
+          // We need to check if responseData has task_id property (it might if it's a union type)
+          // Or we can cast to TaskResponse
+          const taskResponse = responseData as unknown as TaskResponse;
+          if (taskResponse.task_id) {
+            result.task_id = taskResponse.task_id;
           }
           return result;
         }

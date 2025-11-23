@@ -11,7 +11,7 @@
  */
 
 import type { MarketrixConfig } from '../types';
-import { isHTMLScriptElement } from './typeGuards';
+import { isHTMLScriptElement } from './validation/typeGuards';
 import { showWidgetSettingsLoader } from './widgetInitializer';
 
 // Store the init function - set synchronously during registration

@@ -1,11 +1,11 @@
 import './index.css';
 
 import type { WidgetSettingsData } from './sdk';
+import { createConfigFromSettings } from './services/core/ConfigManager';
+import { WidgetValidationService } from './services/core/WidgetValidationService';
 import { IntegrationService } from './services/integrationService';
-import { WidgetValidationService } from './services/widgetValidationService';
 import type { MarketrixConfig } from './types';
 import { registerAutoInit } from './utils/autoInit';
-import { createConfigFromSettings } from './utils/configManager';
 import {
   clearWidgetState,
   createWidgetContainer,

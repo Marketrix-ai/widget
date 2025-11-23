@@ -10,9 +10,10 @@ import { createRoot, type Root } from 'react-dom/client';
 
 import { MarketrixWidget } from '../components/marketrixWidget';
 import { WidgetSettingsLoader } from '../components/ui/widgetSettingsLoader';
+import { WidgetProvider } from '../context/WidgetContext';
 import shadowStyles from '../index.css?inline';
 import type { MarketrixConfig } from '../types';
-import { isHTMLElement } from './typeGuards';
+import { isHTMLElement } from './validation/typeGuards';
 
 // ============================================================================
 // Widget Lifecycle State
@@ -84,7 +85,9 @@ export const mountWidget = (mountEl: HTMLElement, config: MarketrixConfig): Root
 
   root.render(
     <React.StrictMode>
-      <MarketrixWidget config={config} />
+      <WidgetProvider>
+        <MarketrixWidget config={config} />
+      </WidgetProvider>
     </React.StrictMode>
   );
 

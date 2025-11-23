@@ -39,18 +39,22 @@ export function parseProgressLines(content: string): {
     .slice(1)
     .filter((line) => line.trim().length > 0 && !line.trim().includes('__THINKING__'));
 
-  // Debug logging
-  if (progressLines.length > 0 || content.includes('○') || content.includes('●✓')) {
-    console.log('[MessageContentUtils] [FLOW] parseProgressLines', {
-      originalContent: content,
-      cleanContent,
-      partsCount: parts.length,
-      mainContent: mainContent.trim(),
-      progressLineCount: progressLines.length,
-      progressLines,
-      hasProgressIndicators: content.includes('○') || content.includes('●✓'),
-    });
-  }
+  // Always log parsing for debugging (can be filtered in console)
+  console.log('[MessageContentUtils] [FLOW] parseProgressLines', {
+    originalContent: content,
+    originalContentLength: content.length,
+    cleanContent,
+    cleanContentLength: cleanContent.length,
+    partsCount: parts.length,
+    mainContent: mainContent.trim(),
+    mainContentLength: mainContent.trim().length,
+    progressLineCount: progressLines.length,
+    progressLines,
+    hasProgressIndicators: content.includes('○') || content.includes('●✓'),
+    hasPendingIndicator: content.includes('○'),
+    hasCompletedIndicator: content.includes('●✓'),
+    parts: parts.map((p, i) => ({ index: i, content: p, length: p.length })),
+  });
 
   return {
     mainContent: mainContent.trim(),

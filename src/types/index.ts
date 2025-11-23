@@ -60,7 +60,7 @@ export interface ChatMessage {
 
 export interface TaskProgress {
   tool_name: string;
-  tool_params: any;
+  tool_params: Record<string, unknown>;
   step: number;
   explanation: string;
   mode: string;

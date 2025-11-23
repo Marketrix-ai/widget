@@ -7,10 +7,10 @@
 
 import { sdk } from '../sdk';
 import { extractApiData } from '../utils/apiUtils';
-import { getStoredChatId, storeChatId } from '../utils/chatStorage';
 import { createLogger } from '../utils/logger';
 
 const log = createLogger('ChatIdManager');
+const CHAT_ID_STORAGE_KEY = 'marketrix_chat_id';
 
 class ChatIdManager {
   private static instance: ChatIdManager | null = null;
@@ -19,7 +19,7 @@ class ChatIdManager {
 
   private constructor() {
     // Load existing chat ID from storage
-    this.chatId = getStoredChatId();
+    this.chatId = this.getStoredChatId();
     if (this.chatId) {
       log.debug('Loaded existing chat ID from storage:', this.chatId);
     }
@@ -60,7 +60,7 @@ class ChatIdManager {
     }
 
     // Check storage one more time (in case it was set by another instance)
-    const storedChatId = getStoredChatId();
+    const storedChatId = this.getStoredChatId();
     if (storedChatId) {
       this.chatId = storedChatId;
       log.debug('Found chat ID in storage:', this.chatId);
@@ -90,7 +90,7 @@ class ChatIdManager {
 
       if (chatIdData && typeof chatIdData === 'string') {
         this.chatId = chatIdData;
-        storeChatId(this.chatId);
+        this.storeChatId(this.chatId);
         log.info('Created and stored new chat ID:', this.chatId);
         return this.chatId;
       } else {
@@ -118,6 +118,16 @@ class ChatIdManager {
    */
   static resetInstance(): void {
     ChatIdManager.instance = null;
+  }
+
+  private getStoredChatId(): string | null {
+    if (typeof window === 'undefined') return null;
+    return localStorage.getItem(CHAT_ID_STORAGE_KEY);
+  }
+
+  private storeChatId(id: string): void {
+    if (typeof window === 'undefined') return;
+    localStorage.setItem(CHAT_ID_STORAGE_KEY, id);
   }
 }
 
