@@ -531,12 +531,9 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
 
             {/* Controls Section */}
             <div
-              className='flex-shrink-0 rounded-lg m-2'
+              className='flex-shrink-0 rounded-lg m-2 mt-auto'
               style={{
                 backgroundColor: '#ffffff',
-                backgroundImage: settings.widget_background_color.includes('gradient')
-                  ? settings.widget_background_color
-                  : `linear-gradient(135deg, ${settings.widget_background_color} 0%, ${settings.widget_background_color} 100%)`,
               }}
             >
               {/* Task Progress Display */}

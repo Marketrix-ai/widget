@@ -1,6 +1,5 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 
-import SendIcon from '../../assets/send.png';
 import { useWidget } from '../../hooks/useWidget';
 import type { MarketrixConfig } from '../../types';
 import { addOpacity, getContrastingColor } from '../../utils/format';
@@ -29,6 +28,19 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   // Get atmosphere configuration
   const { getWidgetText, settings } = useWidget(config ? { config } : {});
   const widgetText = getWidgetText();
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Auto-resize textarea - shrink and grow with content
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      // Reset height to auto to get accurate scrollHeight
+      textarea.style.height = 'auto';
+      const scrollHeight = textarea.scrollHeight;
+      // Set height to match content exactly
+      textarea.style.height = `${scrollHeight}px`;
+    }
+  }, [value]);
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -53,28 +65,44 @@ export const MessageInput: React.FC<MessageInputProps> = ({
           color: ${placeholderColor} !important;
         }
       `}</style>
-      <div className='flex items-center space-x-2'>
+      <div className='flex items-start space-x-2'>
         {/* Textarea */}
         <div className='flex-1 relative'>
           <textarea
+            ref={textareaRef}
             value={value}
-            onChange={(e) => onChange(e.target.value)}
+            onChange={(e) => {
+              onChange(e.target.value);
+              // Auto-resize on change - shrink and grow with content
+              const textarea = e.target;
+              // Reset height to auto to get accurate scrollHeight
+              textarea.style.height = 'auto';
+              const scrollHeight = textarea.scrollHeight;
+              // Set height to match content exactly
+              textarea.style.height = `${scrollHeight}px`;
+            }}
             onKeyPress={handleKeyPress}
             placeholder={widgetText.placeholder}
             disabled={isLoading}
             rows={1}
             className={`
-              w-full px-3 py-2 text-sm resize-none
+              w-full px-3 text-sm resize-none
               focus:outline-none
               disabled:opacity-50 disabled:cursor-not-allowed
-              shadow-sm
+              border rounded-none
             `}
             style={{
-              minHeight: '40px',
-              maxHeight: '120px',
-              backgroundColor: settings.widget_background_color,
+              backgroundColor: addOpacity('#ffffff', 0.7),
+              backdropFilter: 'blur(10px)',
+              WebkitBackdropFilter: 'blur(10px)',
               borderColor: settings.widget_border_color,
               color: settings.widget_text_color,
+              lineHeight: '20px',
+              paddingTop: '6px',
+              paddingBottom: '6px',
+              verticalAlign: 'middle',
+              overflow: 'hidden',
+              resize: 'none',
             }}
           />
         </div>
@@ -88,8 +116,9 @@ export const MessageInput: React.FC<MessageInputProps> = ({
               onStop();
             }}
             className={`
-              w-8 h-8 rounded-full transition-all duration-200 flex items-center justify-center
+              w-8 h-8 rounded-full transition-all duration-200 flex items-center justify-center flex-shrink-0
               shadow-lg focus:outline-none
+              mt-0.5
             `}
             style={{
               background: `linear-gradient(to right, #ef4444, #dc2626)`,
@@ -110,14 +139,15 @@ export const MessageInput: React.FC<MessageInputProps> = ({
             }}
             disabled={!value.trim() || isLoading}
             className={`
-              w-8 h-8 rounded-full transition-all duration-200 flex items-center justify-center
+              w-8 h-8 rounded-full transition-all duration-200 flex items-center justify-center flex-shrink-0
               ${value.trim() && !isLoading ? 'shadow-lg' : 'cursor-not-allowed'}
               focus:outline-none
+              mt-0.5
             `}
             style={
               value.trim() && !isLoading
                 ? {
-                    background: `linear-gradient(to right, ${settings.widget_secondary_color}, ${settings.widget_accent_color})`,
+                    backgroundColor: settings.widget_accent_color,
                     color: getContrastingColor(settings.widget_accent_color),
                   }
                 : {
@@ -127,7 +157,18 @@ export const MessageInput: React.FC<MessageInputProps> = ({
             }
             aria-label='Send message'
           >
-            <img src={SendIcon} alt='Send' className='w-4 h-4' />
+            <svg
+              className='w-4 h-4'
+              fill='none'
+              stroke='currentColor'
+              strokeWidth='2'
+              strokeLinecap='round'
+              strokeLinejoin='round'
+              viewBox='0 0 24 24'
+            >
+              <line x1='5' y1='12' x2='19' y2='12' />
+              <polyline points='12 5 19 12 12 19' />
+            </svg>
           </button>
         )}
       </div>
