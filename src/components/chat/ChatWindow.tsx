@@ -394,7 +394,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
 
   return (
     <div
-      className={`fixed rounded-xl ${positionClasses}`}
+      className={`fixed rounded-xl ${positionClasses} pointer-events-auto`}
       style={{
         zIndex: widgetPosition.z_index || 40,
         backgroundColor: '#ffffff',

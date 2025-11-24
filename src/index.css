@@ -22,7 +22,7 @@
 /* Ensure widget appears above other content */
 .marketrix-widget-container {
   position: fixed;
-  z-index: 999999;
+  z-index: 2147483647;
   pointer-events: auto;
 }
 
@@ -201,4 +201,19 @@
       0 0 0 2px rgba(255, 255, 255, 0.6),
       0 0 0 4px rgba(139, 92, 246, 0.3);
   }
+}
+
+/* Screen edge glow animation */
+@keyframes screen-edge-glow {
+  0%,
+  100% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.animate-screen-edge-glow {
+  animation: screen-edge-glow 1.5s ease-in-out infinite;
 }

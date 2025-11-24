@@ -47,7 +47,7 @@ export class ShowModeService {
     this.currentOptions = options;
     this.currentElement = element;
 
-    element.scrollIntoView({ behavior: 'auto', block: 'center' });
+    element.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
 
     this.createHighlight(element);
     this.createPopup(explanation, isClickAction);
@@ -124,7 +124,7 @@ export class ShowModeService {
     border: 3px solid #3b82f6;
     border-radius: 4px;
     box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2), 0 0 20px rgba(59, 130, 246, 0.4);
-    z-index: 2147483646;
+    z-index: 2147483645;
     pointer-events: none;
     transition: none;
   `;
@@ -235,7 +235,7 @@ export class ShowModeService {
     background: white;
     border-radius: 8px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    z-index: 2147483647;
+    z-index: 2147483646;
     padding: 16px;
     `;
   }

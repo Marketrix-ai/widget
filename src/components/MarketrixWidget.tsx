@@ -72,6 +72,16 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
       style={customStyles}
       data-widget-mode={settings?.widget_feature_human ? 'hybrid' : 'ai'}
     >
+      {state.isTaskRunning && (
+        <div
+          className='animate-screen-edge-glow fixed inset-0 z-0'
+          style={{
+            boxShadow: 'inset 0 0 30px 2px var(--widget-primary-color)',
+            pointerEvents: 'none',
+          }}
+        />
+      )}
+
       <WidgetButton
         config={effectiveConfig}
         onClick={actions.toggleWidget}
