@@ -100,10 +100,27 @@ export class ShowModeService {
     }
 
     this.updateHighlightPosition = null;
-    this.currentPopup?.remove();
-    this.currentPopup = null;
-    this.currentHighlight?.remove();
-    this.currentHighlight = null;
+    
+    // Remove popup and highlight elements
+    if (this.currentPopup) {
+      this.currentPopup.remove();
+      this.currentPopup = null;
+    }
+    if (this.currentHighlight) {
+      this.currentHighlight.remove();
+      this.currentHighlight = null;
+    }
+    
+    // Also remove by ID in case they weren't properly tracked
+    const popupById = document.getElementById('marketrix-show-popup');
+    if (popupById) {
+      popupById.remove();
+    }
+    const highlightById = document.getElementById('marketrix-show-highlight');
+    if (highlightById) {
+      highlightById.remove();
+    }
+    
     this.currentElement = null;
     this.currentOptions = null;
     this.currentPromise = null;
