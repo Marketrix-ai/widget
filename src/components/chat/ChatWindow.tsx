@@ -14,6 +14,7 @@ import {
   startScreenShare,
   stopScreenShare,
 } from '../../services/ScreenShareService';
+import { showModeService } from '../../services/ShowModeService';
 import type { ChatMessage, MarketrixConfig, TaskProgress } from '../../types';
 import { addOpacity, getContrastingColor } from '../../utils/format';
 import { getPositionClasses } from '../../utils/widgetPositioning';
@@ -217,6 +218,32 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
 
     // Change mode without affecting screen sharing
     onSetMode(mode);
+  };
+
+  const handleStartScreenShare = async () => {
+    try {
+      // Use screenShareService to start screen sharing
+      const stream = await startScreenShare();
+
+      // Permission granted - update UI and proceed
+      setIsScreenSharing(true);
+      onScreenSharingChange?.(true);
+
+      // Add muted "started screenshare" message
+      const startedMessage = createStartedScreenshareMessage('show');
+      onAddMessage(startedMessage);
+
+      // Create a screenshare message with just the video stream
+      const screenshareMessage = createScreenshareMessage(stream, 'show');
+      setScreenShareMessageId(screenshareMessage.id);
+
+      // Add screenshare message using the callback
+      onAddMessage(screenshareMessage);
+    } catch (error) {
+      console.error('Failed to start screen sharing:', error);
+      setIsScreenSharing(false);
+      onScreenSharingChange?.(false);
+    }
   };
 
   const handleScreenAccessAllow = async () => {
@@ -427,7 +454,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
             borderColor: settings.widget_border_color,
           }}
         >
-          {/* Left side: Text and live button */}
+          {/* Left side: Text and screen sharing buttons */}
           <div className='flex items-center gap-2'>
             <span
               className='text-sm font-semibold leading-none'
@@ -435,22 +462,70 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
             >
               {settings.widget_header}
             </span>
+            {!isScreenSharing && (
+              <button
+                onClick={handleStartScreenShare}
+                className='flex items-center justify-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-all duration-300 shadow-md hover:shadow-lg hover:scale-105 active:scale-95 animate-fade-in '
+                style={{
+                  backgroundColor: settings.widget_secondary_color || '#10b981',
+                  color: getContrastingColor(settings.widget_secondary_color || '#10b981'),
+                }}
+                aria-label='Start screen sharing'
+                title='Click to start screen sharing'
+              >
+                <svg
+                  className='w-3 h-3'
+                  fill='none'
+                  stroke='currentColor'
+                  viewBox='0 0 24 24'
+                  style={{ color: getContrastingColor(settings.widget_secondary_color || '#10b981') }}
+                >
+                  <path
+                    strokeLinecap='round'
+                    strokeLinejoin='round'
+                    strokeWidth={2.5}
+                    d='M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z'
+                  />
+                </svg>
+                <span className='font-medium'>Share Screen</span>
+              </button>
+            )}
             {isScreenSharing && (
               <button
                 onClick={stopScreenSharing}
-                className='flex items-center justify-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium transition-all shadow-sm hover:opacity-90'
+                className='flex items-center justify-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-all duration-300 shadow-md hover:shadow-lg hover:scale-105 active:scale-95 animate-fade-in'
                 style={{
-                  backgroundColor: settings.widget_secondary_color,
-                  color: getContrastingColor(settings.widget_secondary_color),
+                  backgroundColor: settings.widget_secondary_color || '#ef4444',
+                  color: getContrastingColor(settings.widget_secondary_color || '#ef4444'),
                 }}
                 aria-label='Stop screen sharing'
-                title='Stop screen sharing'
+                title='Click to stop screen sharing'
               >
-                <div
-                  className='w-2 h-2 rounded-full animate-pulse'
-                  style={{ backgroundColor: getContrastingColor(settings.widget_secondary_color) }}
-                />
-                <span>Live</span>
+                <div className='relative flex items-center justify-center'>
+                  <div
+                    className='absolute w-2.5 h-2.5 rounded-full animate-ping opacity-75'
+                    style={{ backgroundColor: getContrastingColor(settings.widget_secondary_color || '#ef4444') }}
+                  />
+                  <div
+                    className='relative w-2 h-2 rounded-full'
+                    style={{ backgroundColor: getContrastingColor(settings.widget_secondary_color || '#ef4444') }}
+                  />
+                </div>
+                <span className='font-medium'>Live</span>
+                <svg
+                  className='w-3 h-3'
+                  fill='none'
+                  stroke='currentColor'
+                  viewBox='0 0 24 24'
+                  style={{ color: getContrastingColor(settings.widget_secondary_color || '#ef4444') }}
+                >
+                  <path
+                    strokeLinecap='round'
+                    strokeLinejoin='round'
+                    strokeWidth={2.5}
+                    d='M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z'
+                  />
+                </svg>
               </button>
             )}
           </div>
@@ -627,7 +702,11 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                 onSend={handleSendMessage}
                 isLoading={isLoading || messages.some((msg) => msg.isPlaceholder)}
                 isTaskRunning={isTaskRunning}
-                onStop={onStopTask}
+                onStop={() => {
+                  // Cleanup show mode popup and highlight when stopping task
+                  showModeService.cleanup();
+                  onStopTask?.();
+                }}
                 config={config}
               />
 
