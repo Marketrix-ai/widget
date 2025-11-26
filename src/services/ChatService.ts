@@ -45,6 +45,35 @@ export class ChatService {
     this.restoreState();
   }
 
+  createInitialContext(chatId: string): void {
+    if (typeof window === 'undefined') return;
+
+    try {
+      const existingContext = localStorage.getItem(CHAT_CONTEXT_STORAGE_KEY);
+      if (existingContext) {
+        return;
+      }
+
+      const initialContext: StoredChatContext = {
+        chat_id: chatId,
+        messages: [],
+        isTaskRunning: false,
+        activeTaskId: null,
+        taskProgress: [],
+        currentMode: 'tell',
+        isOpen: false,
+        isMinimized: false,
+        isLoading: false,
+        timestamp: Date.now(),
+        domState: [],
+      };
+
+      localStorage.setItem(CHAT_CONTEXT_STORAGE_KEY, JSON.stringify(initialContext));
+    } catch (error) {
+      console.error('[ChatService] Failed to create initial chat context:', error);
+    }
+  }
+
   getMessages(): ChatMessage[] {
     return this.messages;
   }
