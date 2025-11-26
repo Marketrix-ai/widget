@@ -79,30 +79,37 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   // Initialize ChatService on mount
   useEffect(() => {
-    // Get stored chat ID first
-    const chatId = sessionManager.getChatId();
-    chatService.initialize(chatId);
-    setState((prev) => ({
-      ...prev,
-      messages: chatService.getMessages(),
-      isLoading: chatService.getIsLoading(),
-      isTaskRunning: chatService.getIsTaskRunning(),
-      activeTaskId: chatService.getActiveTaskId(),
-      taskProgress: chatService.getTaskProgress(),
-      currentMode: chatService.getCurrentMode(),
-      isOpen: chatService.getIsOpen(),
-      isMinimized: chatService.getIsMinimized(),
-    }));
+    const initChat = async () => {
+      const chatId = await sessionManager.getOrCreateChatId();
 
-    // Connect WebSocket if chat ID exists
-    if (chatId) {
-      // Ensure config is loaded before initializing WebSocket
-      const config = configManager.getConfig();
-      const wsClient = WebSocketClient.getInstance(config || undefined);
-      wsClient
-        .connect(chatId)
-        .catch((err: unknown) => console.error('Initial WebSocket connection failed:', err));
-    }
+      chatService.createInitialContext(chatId);
+
+      chatService.initialize(chatId);
+      setState((prev) => ({
+        ...prev,
+        messages: chatService.getMessages(),
+        isLoading: chatService.getIsLoading(),
+        isTaskRunning: chatService.getIsTaskRunning(),
+        activeTaskId: chatService.getActiveTaskId(),
+        taskProgress: chatService.getTaskProgress(),
+        currentMode: chatService.getCurrentMode(),
+        isOpen: chatService.getIsOpen(),
+        isMinimized: chatService.getIsMinimized(),
+      }));
+
+      // Connect WebSocket if chat ID exists
+      if (chatId) {
+        // Ensure config is loaded before initializing WebSocket
+        const config = configManager.getConfig();
+        if (config) {
+          const wsClient = WebSocketClient.getInstance(config);
+          wsClient
+            .connect(chatId)
+            .catch((err: unknown) => console.error('Initial WebSocket connection failed:', err));
+        }
+      }
+    };
+    initChat();
   }, []);
 
   // Helper to update progress
@@ -198,7 +205,7 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         const params = message.params as ToolCallParams;
         const toolName = params?.name || 'unknown';
         const args = params?.arguments || {};
-        const mode = params?.mode || 'do';
+        const mode = (params?.mode as InstructionType) || state.currentMode || 'do';
         const explanation = params?.explanation || '';
         const requestId = message.id;
 

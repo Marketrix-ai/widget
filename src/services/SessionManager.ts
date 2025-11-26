@@ -8,6 +8,7 @@
 import { sdk } from '../sdk';
 import { extractApiData } from '../utils/apiUtils';
 import { createLogger } from '../utils/common';
+import { chatService } from './ChatService';
 
 const log = createLogger('ChatIdManager');
 const CHAT_ID_STORAGE_KEY = 'marketrix_chat_id';
@@ -92,6 +93,9 @@ class SessionManager {
         this.chatId = chatIdData;
         this.storeChatId(this.chatId);
         log.info('Created and stored new chat ID:', this.chatId);
+
+        chatService.createInitialContext(this.chatId);
+
         return this.chatId;
       } else {
         throw new Error('Failed to create chat session: invalid response');
