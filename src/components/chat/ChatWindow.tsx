@@ -20,6 +20,7 @@ import { addOpacity, getContrastingColor } from '../../utils/format';
 import { getPositionClasses } from '../../utils/widgetPositioning';
 import { MessageInput } from '../input/MessageInput';
 import { ModeSelector } from '../input/ModeSelector';
+import { ScreenAccessModal } from '../ui/ScreenAccessModal';
 import { MessageList } from './MessageList';
 
 interface ChatWindowProps {
@@ -75,6 +76,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   const [screenAccessRequestMessageId, setScreenAccessRequestMessageId] = useState<string | null>(
     null
   );
+  const [showScreenAccessModal, setShowScreenAccessModal] = useState(false);
   const [pendingMessage, setPendingMessage] = useState<{
     content: string;
     mode?: InstructionType;
@@ -220,7 +222,13 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     onSetMode(mode);
   };
 
-  const handleStartScreenShare = async () => {
+  const handleStartScreenShare = () => {
+    // Show the screen access modal instead of directly starting screen sharing
+    setShowScreenAccessModal(true);
+  };
+
+  const handleScreenAccessModalAllow = async () => {
+    setShowScreenAccessModal(false);
     try {
       // Use screenShareService to start screen sharing
       const stream = await startScreenShare();
@@ -244,6 +252,10 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       setIsScreenSharing(false);
       onScreenSharingChange?.(false);
     }
+  };
+
+  const handleScreenAccessModalDeny = () => {
+    setShowScreenAccessModal(false);
   };
 
   const handleScreenAccessAllow = async () => {
@@ -611,6 +623,16 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
             </button>
           </div>
         </div>
+
+        {/* Screen Access Modal */}
+        {showScreenAccessModal && (
+          <ScreenAccessModal
+            isOpen={showScreenAccessModal}
+            onAllow={handleScreenAccessModalAllow}
+            onDeny={handleScreenAccessModalDeny}
+            onClose={handleScreenAccessModalDeny}
+          />
+        )}
 
         {/* Chat Content */}
         {!isMinimized && (
