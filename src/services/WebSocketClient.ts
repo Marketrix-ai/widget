@@ -83,25 +83,41 @@ export class WebSocketClient {
       this.isIntentionallyDisconnected = false;
     }
 
+    // If already connected to the same chat, do nothing
     if (this.isConnected() && this.chatId === chatId) {
       return;
     }
 
+    // If already connecting to the same chat, wait for it
     if (
       this.status === 'connecting' &&
       this.chatId === chatId &&
       this.websocket?.readyState === WebSocket.CONNECTING
     ) {
-      return;
+      return new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          reject(new Error('Connection timeout'));
+        }, 5000);
+
+        const checkInterval = setInterval(() => {
+          if (this.status === 'registered' || this.status === 'connected') {
+            clearInterval(checkInterval);
+            clearTimeout(timeout);
+            resolve();
+          } else if (this.status === 'error' || this.status === 'disconnected') {
+            clearInterval(checkInterval);
+            clearTimeout(timeout);
+            reject(new Error('Connection failed'));
+          }
+        }, 100);
+      });
     }
 
-    // Handle existing connection
-    if (
-      this.websocket &&
-      (this.chatId !== chatId || this.websocket.readyState !== WebSocket.CONNECTING)
-    ) {
-      this.disconnect();
-      await new Promise((resolve) => setTimeout(resolve, 100));
+    if (this.websocket) {
+      if (this.chatId !== chatId || this.websocket.readyState !== WebSocket.CONNECTING) {
+        this.disconnect();
+        await new Promise((resolve) => setTimeout(resolve, 200));
+      }
     }
 
     this.chatId = chatId;
@@ -139,14 +155,31 @@ export class WebSocketClient {
         this.notifyError(new Error('WebSocket connection error'));
       };
 
-      ws.onclose = () => {
+      ws.onclose = (event) => {
         if (this.websocket !== ws) return;
+
+        const wasRegistered = this.status === 'registered';
         this.setStatus('disconnected');
         this.stopHeartbeat();
         this.websocket = null;
 
+        if (event.code !== 1000) {
+          // 1000 is normal closure
+          console.warn(
+            `[WebSocket] Connection closed with code ${event.code}: ${event.reason || 'No reason provided'}`
+          );
+        }
+
         if (!this.isIntentionallyDisconnected && this.chatId) {
-          this.scheduleReconnect();
+          if (wasRegistered) {
+            setTimeout(() => {
+              if (!this.isIntentionallyDisconnected && this.chatId) {
+                this.scheduleReconnect();
+              }
+            }, 500);
+          } else {
+            this.scheduleReconnect();
+          }
         }
       };
     } catch (error) {
@@ -185,7 +218,6 @@ export class WebSocketClient {
       this.websocket.send(JSON.stringify(message));
     } catch (error) {
       console.error('[WebSocket] Failed to send message:', error);
-      // We could re-throw or notify error listener
       this.notifyError(new Error(`Failed to send message: ${String(error)}`));
     }
   }
@@ -205,9 +237,14 @@ export class WebSocketClient {
     // Handle internal protocol messages
     if (message.method === 'widget/registered') {
       if (message.params?.chat_id === this.chatId) {
+        console.log('[WebSocket] Successfully registered with server');
         this.setStatus('registered');
         this.reconnectAttempts = 0;
+        this.reconnectDelay = 1000; // Reset delay on successful registration
       }
+    } else if (message.method === 'pong') {
+      // Acknowledge pong to confirm connection is alive
+      // This is handled by the server updating last_ping_pong
     }
 
     // Forward everything to listeners
@@ -241,9 +278,19 @@ export class WebSocketClient {
       this.maxReconnectDelay
     );
 
+    console.log(
+      `[WebSocket] Scheduling reconnect attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts} in ${delay}ms`
+    );
+
     this.reconnectTimer = setTimeout(() => {
       if (!this.isIntentionallyDisconnected && this.chatId) {
-        this.connect(this.chatId);
+        console.log(`[WebSocket] Attempting reconnect (attempt ${this.reconnectAttempts})...`);
+        this.connect(this.chatId).catch((error) => {
+          console.error('[WebSocket] Reconnect attempt failed:', error);
+          if (this.reconnectAttempts < this.maxReconnectAttempts) {
+            this.scheduleReconnect();
+          }
+        });
       }
     }, delay);
   }
