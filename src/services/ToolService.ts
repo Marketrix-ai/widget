@@ -472,11 +472,23 @@ export class ToolExecutionService {
       }
 
       case 'Backspace': {
-        // Delete character before cursor
+        // Delete character before cursor (or last character if cursor position unknown)
         if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
-          const start = element.selectionStart || 0;
-          const end = element.selectionEnd || 0;
           const value = element.value;
+
+          if (!value || value.length === 0) {
+            return 'Backspace: input is empty, nothing to delete';
+          }
+
+          // Get cursor position, default to end of input if not set
+          let start: number = element.selectionStart ?? value.length;
+          let end: number = element.selectionEnd ?? value.length;
+
+          // If cursor position is at 0, assume we want to delete from end
+          if (start === 0 && end === 0) {
+            start = value.length;
+            end = value.length;
+          }
 
           let newValue = value;
           let newCursorPos = start;
