@@ -210,6 +210,100 @@ javascript: (function () {
 See [docs/DEBUG_PANEL_USAGE.md](docs/DEBUG_PANEL_USAGE.md) for detailed debug
 panel documentation.
 
+### Testing Widget on Any Website
+
+You can inject the widget into any website for testing using bookmarklets or
+Tampermonkey.
+
+#### Option 1: Bookmarklet (Quick Testing)
+
+Create a bookmark with the following URL:
+
+**Local Development (using built version):**
+
+```bash
+npm run build:dev
+npx serve dist -l 5174 --cors
+```
+
+```javascript
+javascript: (function () {
+  var s = document.createElement('script');
+  s.src = 'http://localhost:5174/meet.js';
+  s.setAttribute('marketrix-agent', 'YOUR_AGENT_ID');
+  s.setAttribute('marketrix-connection-id', 'YOUR_CONNECTION_ID');
+  document.head.appendChild(s);
+})();
+```
+
+**Local Development (using dev server with HTTPS):**
+
+```bash
+npm start
+```
+
+First visit `https://localhost:5174` and accept the certificate, then use:
+
+```javascript
+javascript: (function () {
+  var s = document.createElement('script');
+  s.src = 'https://localhost:5174/meet.js';
+  s.setAttribute('marketrix-agent', 'YOUR_AGENT_ID');
+  s.setAttribute('marketrix-connection-id', 'YOUR_CONNECTION_ID');
+  document.head.appendChild(s);
+})();
+```
+
+**Production CDN:**
+
+```javascript
+javascript: (function () {
+  var s = document.createElement('script');
+  s.src = 'https://cdn.marketrix.io/widget/dev/meet.js';
+  s.setAttribute('marketrix-agent', 'YOUR_AGENT_ID');
+  s.setAttribute('marketrix-connection-id', 'YOUR_CONNECTION_ID');
+  document.head.appendChild(s);
+})();
+```
+
+#### Option 2: Tampermonkey (Auto-Inject on Specific Sites)
+
+Install [Tampermonkey](https://www.tampermonkey.net/) browser extension, then
+create a new script:
+
+```javascript
+// ==UserScript==
+// @name         Marketrix Widget Loader
+// @namespace    http://tampermonkey.net/
+// @version      1.0
+// @description  Load Marketrix widget on specific websites
+// @author       Marketrix
+// @match        https://www.example.com/*
+// @grant        none
+// @run-at       document-end
+// ==/UserScript==
+(function () {
+  'use strict';
+  var script = document.createElement('script');
+  // Use one of the following sources:
+  // Local dev server (HTTPS): script.src = "https://localhost:5174/meet.js";
+  // Local built version: script.src = "http://localhost:5174/meet.js";
+  // Production CDN:
+  script.src = 'https://cdn.marketrix.io/widget/dev/meet.js';
+  script.setAttribute('marketrix-agent', 'YOUR_AGENT_ID');
+  script.setAttribute('marketrix-connection-id', 'YOUR_CONNECTION_ID');
+  document.head.appendChild(script);
+})();
+```
+
+**Notes:**
+
+- Replace `YOUR_AGENT_ID` and `YOUR_CONNECTION_ID` with your actual values
+- Change the `@match` pattern to target specific websites (e.g.,
+  `https://www.google.com/*`)
+- For HTTPS sites with local dev server, you must first visit
+  `https://localhost:5174` and accept the SSL certificate
+
 ### Project Structure
 
 ```
