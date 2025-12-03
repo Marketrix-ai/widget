@@ -32,7 +32,7 @@ export default defineConfig({
         entryFileNames: 'debug.js',
         chunkFileNames: 'debug-[name].js',
         assetFileNames: 'debug.[ext]',
-        format: 'es',
+        format: 'iife',
         inlineDynamicImports: true,
         manualChunks: undefined,
       },

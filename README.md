@@ -190,6 +190,26 @@ npm run dev
 npm run build
 ```
 
+5. Build and run debug tool:
+
+```bash
+npm run build:debug
+npx serve dist -l 5174 --cors
+```
+
+Then use this bookmarklet on any website:
+
+```javascript
+javascript: (function () {
+  var s = document.createElement('script');
+  s.src = 'http://localhost:5174/debug.js';
+  document.body.appendChild(s);
+})();
+```
+
+See [docs/DEBUG_PANEL_USAGE.md](docs/DEBUG_PANEL_USAGE.md) for detailed debug
+panel documentation.
+
 ### Project Structure
 
 ```

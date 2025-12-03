@@ -47,12 +47,13 @@ corner).
 A bookmark that injects the debug panel into any website (Google, customer
 sites, etc.).
 
-### Setup
+### Setup (Recommended - Using Built Version)
 
-1. **Make sure dev server is running:**
+1. **Build the debug tool and serve it:**
 
    ```bash
-   npm run start
+   npm run build:debug
+   npx serve dist -l 5174 --cors
    ```
 
 2. **Create a new bookmark:**
@@ -63,8 +64,7 @@ sites, etc.).
    ```javascript
    javascript: (function () {
      var s = document.createElement('script');
-     s.type = 'module';
-     s.src = 'http://localhost:5173/debug.js';
+     s.src = 'http://localhost:5174/debug.js';
      document.body.appendChild(s);
    })();
    ```
@@ -75,9 +75,35 @@ sites, etc.).
    - Debug panel appears
    - Press `Ctrl+Shift+D` to toggle
 
-### For Production (HTTPS sites)
+### Alternative: Using Dev Server (HTTPS sites only)
 
-Localhost won't work on HTTPS sites. Host debug.js on your CDN:
+If you need hot-reload during development on HTTPS sites:
+
+1. **Start the dev server:**
+
+   ```bash
+   npm run start
+   ```
+
+2. **Visit `https://localhost:5174` first** and accept the SSL certificate
+   warning
+
+3. **Use this bookmarklet:**
+
+   ```javascript
+   javascript: (function () {
+     var s = document.createElement('script');
+     s.type = 'module';
+     s.src = 'https://localhost:5174/debug.js';
+     document.body.appendChild(s);
+   })();
+   ```
+
+   Note: Dev server uses ES modules, so `type='module'` is required.
+
+### For Production (CDN)
+
+Host debug.js on your CDN for use without a local server:
 
 ```bash
 npm run build:debug
@@ -89,7 +115,6 @@ Update bookmarklet URL:
 ```javascript
 javascript: (function () {
   var s = document.createElement('script');
-  s.type = 'module';
   s.src = 'https://your-cdn.com/debug.js';
   document.body.appendChild(s);
 })();

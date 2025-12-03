@@ -1,4 +1,5 @@
 import tailwindcss from '@tailwindcss/vite';
+import basicSsl from '@vitejs/plugin-basic-ssl';
 import react from '@vitejs/plugin-react';
 import { copyFileSync } from 'fs';
 import { resolve } from 'path';
@@ -70,12 +71,23 @@ export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
+    basicSsl(),
     devMeetPlugin(),
     cssInjectedByJsPlugin(),
     copyIndexHtmlPlugin(),
   ],
   root: '.',
   publicDir: false,
+  server: {
+    https: true,
+    port: 5174,
+    cors: true,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': '*',
+    },
+  },
   build: {
     outDir: 'dist',
     cssCodeSplit: false,

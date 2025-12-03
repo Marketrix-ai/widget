@@ -33,12 +33,13 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@tailwindcss/vite": "^4.1.17",
     "@types/node": "^24.10.1",
     "@types/react": "^19.2.6",
     "@types/react-dom": "^19.2.3",
     "@typescript-eslint/eslint-plugin": "^8.47.0",
     "@typescript-eslint/parser": "^8.47.0",
-    "@tailwindcss/vite": "^4.1.17",
+    "@vitejs/plugin-basic-ssl": "^2.1.0",
     "@vitejs/plugin-react": "^4.7.0",
     "autoprefixer": "^10.4.22",
     "cssnano": "^7.1.2",
