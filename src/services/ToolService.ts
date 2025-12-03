@@ -310,9 +310,215 @@ export class ToolExecutionService {
     const element = domService.getElementByIndex(index);
     if (!element) return { success: false, result: '', error: `Element ${index} not found` };
 
-    element.dispatchEvent(new KeyboardEvent('keydown', { key: keys, bubbles: true }));
-    element.dispatchEvent(new KeyboardEvent('keyup', { key: keys, bubbles: true }));
-    return { success: true, result: `Sent keys ${keys}` };
+    // Focus the element first
+    element.focus();
+
+    // Dispatch keyboard events (for custom event handlers)
+    element.dispatchEvent(
+      new KeyboardEvent('keydown', { key: keys, bubbles: true, cancelable: true })
+    );
+    element.dispatchEvent(
+      new KeyboardEvent('keyup', { key: keys, bubbles: true, cancelable: true })
+    );
+
+    // Simulate actual browser behavior for common keys
+    const actionResult = this.simulateKeyAction(element, keys);
+
+    return { success: true, result: actionResult || `Sent keys ${keys}` };
+  }
+
+  /**
+   * Simulate actual browser behavior for special keys
+   * Since programmatic KeyboardEvents are not "trusted", we need to
+   * manually trigger the expected behavior
+   */
+  private simulateKeyAction(element: HTMLElement, key: string): string | null {
+    switch (key) {
+      case 'Tab': {
+        // Move focus to next focusable element
+        const focusables = Array.from(
+          document.querySelectorAll<HTMLElement>(
+            'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+          )
+        ).filter((el) => el.offsetParent !== null); // Only visible elements
+
+        const currentIndex = focusables.indexOf(element);
+        if (currentIndex !== -1 && currentIndex < focusables.length - 1) {
+          const nextElement = focusables[currentIndex + 1];
+          nextElement.focus();
+          return `Tab: moved focus to ${nextElement.tagName.toLowerCase()}${nextElement.id ? `#${nextElement.id}` : ''}`;
+        }
+        return 'Tab: no next focusable element';
+      }
+
+      case 'Shift+Tab': {
+        // Move focus to previous focusable element
+        const focusables = Array.from(
+          document.querySelectorAll<HTMLElement>(
+            'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+          )
+        ).filter((el) => el.offsetParent !== null);
+
+        const currentIndex = focusables.indexOf(element);
+        if (currentIndex > 0) {
+          const prevElement = focusables[currentIndex - 1];
+          prevElement.focus();
+          return `Shift+Tab: moved focus to ${prevElement.tagName.toLowerCase()}${prevElement.id ? `#${prevElement.id}` : ''}`;
+        }
+        return 'Shift+Tab: no previous focusable element';
+      }
+
+      case 'Enter': {
+        // Submit form or click button
+        if (element instanceof HTMLButtonElement || element.getAttribute('role') === 'button') {
+          element.click();
+          return 'Enter: clicked button';
+        }
+        if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
+          const form = element.closest('form');
+          if (form) {
+            // Find submit button and click it, or submit form
+            const submitBtn = form.querySelector<HTMLButtonElement>(
+              'button[type="submit"], input[type="submit"]'
+            );
+            if (submitBtn) {
+              submitBtn.click();
+              return 'Enter: clicked form submit button';
+            } else {
+              form.requestSubmit();
+              return 'Enter: submitted form';
+            }
+          }
+        }
+        if (element instanceof HTMLAnchorElement) {
+          element.click();
+          return 'Enter: clicked link';
+        }
+        return 'Enter: dispatched event';
+      }
+
+      case 'Escape': {
+        // Blur current element (common behavior)
+        element.blur();
+        // Also dispatch to document for modal close handlers
+        document.dispatchEvent(
+          new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })
+        );
+        return 'Escape: blurred element and dispatched to document';
+      }
+
+      case ' ':
+      case 'Space': {
+        // Click checkboxes, radio buttons, or buttons
+        if (
+          element instanceof HTMLInputElement &&
+          (element.type === 'checkbox' || element.type === 'radio')
+        ) {
+          element.click();
+          return `Space: toggled ${element.type}`;
+        }
+        if (element instanceof HTMLButtonElement || element.getAttribute('role') === 'button') {
+          element.click();
+          return 'Space: clicked button';
+        }
+        return 'Space: dispatched event';
+      }
+
+      case 'ArrowDown': {
+        // For select elements, move to next option
+        if (element instanceof HTMLSelectElement) {
+          const currentIdx = element.selectedIndex;
+          if (currentIdx < element.options.length - 1) {
+            element.selectedIndex = currentIdx + 1;
+            element.dispatchEvent(new Event('change', { bubbles: true }));
+            return `ArrowDown: selected "${element.options[element.selectedIndex].text}"`;
+          }
+          return 'ArrowDown: already at last option';
+        }
+        return 'ArrowDown: dispatched event';
+      }
+
+      case 'ArrowUp': {
+        // For select elements, move to previous option
+        if (element instanceof HTMLSelectElement) {
+          const currentIdx = element.selectedIndex;
+          if (currentIdx > 0) {
+            element.selectedIndex = currentIdx - 1;
+            element.dispatchEvent(new Event('change', { bubbles: true }));
+            return `ArrowUp: selected "${element.options[element.selectedIndex].text}"`;
+          }
+          return 'ArrowUp: already at first option';
+        }
+        return 'ArrowUp: dispatched event';
+      }
+
+      case 'Home': {
+        // For inputs, move cursor to start
+        if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
+          element.setSelectionRange(0, 0);
+          return 'Home: moved cursor to start';
+        }
+        return 'Home: dispatched event';
+      }
+
+      case 'End': {
+        // For inputs, move cursor to end
+        if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
+          const len = element.value.length;
+          element.setSelectionRange(len, len);
+          return 'End: moved cursor to end';
+        }
+        return 'End: dispatched event';
+      }
+
+      case 'Backspace': {
+        // Delete character before cursor
+        if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
+          const start = element.selectionStart || 0;
+          const end = element.selectionEnd || 0;
+          const value = element.value;
+
+          if (start === end && start > 0) {
+            // No selection, delete char before cursor
+            element.value = value.slice(0, start - 1) + value.slice(end);
+            element.setSelectionRange(start - 1, start - 1);
+          } else if (start !== end) {
+            // Delete selection
+            element.value = value.slice(0, start) + value.slice(end);
+            element.setSelectionRange(start, start);
+          }
+          element.dispatchEvent(new Event('input', { bubbles: true }));
+          return 'Backspace: deleted character';
+        }
+        return 'Backspace: dispatched event';
+      }
+
+      case 'Delete': {
+        // Delete character after cursor
+        if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
+          const start = element.selectionStart || 0;
+          const end = element.selectionEnd || 0;
+          const value = element.value;
+
+          if (start === end && start < value.length) {
+            // No selection, delete char after cursor
+            element.value = value.slice(0, start) + value.slice(end + 1);
+            element.setSelectionRange(start, start);
+          } else if (start !== end) {
+            // Delete selection
+            element.value = value.slice(0, start) + value.slice(end);
+            element.setSelectionRange(start, start);
+          }
+          element.dispatchEvent(new Event('input', { bubbles: true }));
+          return 'Delete: deleted character';
+        }
+        return 'Delete: dispatched event';
+      }
+
+      default:
+        // For other keys, just dispatch events (already done above)
+        return null;
+    }
   }
 
   private uploadFile(_args: Record<string, unknown>): ToolExecutionResult {
