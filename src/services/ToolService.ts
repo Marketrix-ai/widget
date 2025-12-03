@@ -478,17 +478,43 @@ export class ToolExecutionService {
           const end = element.selectionEnd || 0;
           const value = element.value;
 
+          let newValue = value;
+          let newCursorPos = start;
+
           if (start === end && start > 0) {
             // No selection, delete char before cursor
-            element.value = value.slice(0, start - 1) + value.slice(end);
-            element.setSelectionRange(start - 1, start - 1);
+            newValue = value.slice(0, start - 1) + value.slice(end);
+            newCursorPos = start - 1;
           } else if (start !== end) {
             // Delete selection
-            element.value = value.slice(0, start) + value.slice(end);
-            element.setSelectionRange(start, start);
+            newValue = value.slice(0, start) + value.slice(end);
+            newCursorPos = start;
+          } else {
+            return 'Backspace: cursor at start, nothing to delete';
           }
+
+          // Use native input value setter to work with React/Vue controlled inputs
+          const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+            element instanceof HTMLTextAreaElement
+              ? HTMLTextAreaElement.prototype
+              : HTMLInputElement.prototype,
+            'value'
+          )?.set;
+
+          if (nativeInputValueSetter) {
+            nativeInputValueSetter.call(element, newValue);
+          } else {
+            element.value = newValue;
+          }
+
+          // Dispatch input event for React/Vue to pick up the change
           element.dispatchEvent(new Event('input', { bubbles: true }));
-          return 'Backspace: deleted character';
+          element.dispatchEvent(new Event('change', { bubbles: true }));
+
+          // Set cursor position after value change
+          element.setSelectionRange(newCursorPos, newCursorPos);
+
+          return `Backspace: deleted character, value is now "${newValue}"`;
         }
         return 'Backspace: dispatched event';
       }
@@ -500,17 +526,40 @@ export class ToolExecutionService {
           const end = element.selectionEnd || 0;
           const value = element.value;
 
+          let newValue = value;
+
           if (start === end && start < value.length) {
             // No selection, delete char after cursor
-            element.value = value.slice(0, start) + value.slice(end + 1);
-            element.setSelectionRange(start, start);
+            newValue = value.slice(0, start) + value.slice(end + 1);
           } else if (start !== end) {
             // Delete selection
-            element.value = value.slice(0, start) + value.slice(end);
-            element.setSelectionRange(start, start);
+            newValue = value.slice(0, start) + value.slice(end);
+          } else {
+            return 'Delete: cursor at end, nothing to delete';
           }
+
+          // Use native input value setter to work with React/Vue controlled inputs
+          const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+            element instanceof HTMLTextAreaElement
+              ? HTMLTextAreaElement.prototype
+              : HTMLInputElement.prototype,
+            'value'
+          )?.set;
+
+          if (nativeInputValueSetter) {
+            nativeInputValueSetter.call(element, newValue);
+          } else {
+            element.value = newValue;
+          }
+
+          // Dispatch input event for React/Vue to pick up the change
           element.dispatchEvent(new Event('input', { bubbles: true }));
-          return 'Delete: deleted character';
+          element.dispatchEvent(new Event('change', { bubbles: true }));
+
+          // Maintain cursor position
+          element.setSelectionRange(start, start);
+
+          return `Delete: deleted character, value is now "${newValue}"`;
         }
         return 'Delete: dispatched event';
       }
