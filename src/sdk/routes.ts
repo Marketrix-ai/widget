@@ -614,7 +614,7 @@ const contract = c.router({
   chatTell: {
     method: 'POST' as const,
     summary: 'Request tell mode response for given content',
-    description: 'Processes explanation request and returns AI response as text',
+    description: 'Processes explanation request and returns AI response (voice+text) as a data url',
     path: '/chat/:chat_id/tell',
     body: ChatRequestSchema,
     pathParams: z.object({ chat_id: z.string() }),
@@ -630,7 +630,7 @@ const contract = c.router({
   chatShow: {
     method: 'POST' as const,
     summary: 'Request show mode response for given content',
-    description: 'Processes user introduction and returns AI response as text',
+    description: 'Processes user introduction and returns AI response (voice+text) as a data url',
     path: '/chat/:chat_id/show',
     body: ChatRequestSchema,
     pathParams: z.object({ chat_id: z.string() }),

@@ -463,7 +463,6 @@ export const SimulationResultSchema = z.object({
       input_y: z.number().optional(),
     })
     .optional(),
-  attachments: z.array(z.unknown()).optional(),
 });
 
 /**
@@ -969,13 +968,38 @@ export const ChatResponseSchema = z.object({
 // ============================================================================
 
 /**
+ * Action log metadata schema
+ * Captures common metadata fields used across different action log types
+ */
+export const ActionLogMetadataSchema = z
+  .object({
+    details: z.string().optional(),
+    id: z.number().optional(),
+    type: z.string().optional(),
+    name: z.string().optional(),
+    target_user_id: z.number().optional(),
+    target_user_email: z.string().optional(),
+    reason: z.string().optional(),
+    assigned_role: z.string().optional(),
+    new_role: z.string().optional(),
+    previous_role: z.string().optional(),
+    tenant_name: z.string().optional(),
+    tenant_domain: z.string().optional(),
+    ip_address: z.string().optional(),
+    user_agent: z.string().optional(),
+    integration_type: z.string().optional(),
+    created_by: z.number().optional(),
+  })
+  .passthrough(); // Allow additional fields for flexibility (e.g., updatedData, previousData, createdData)
+
+/**
  * Action log entity schema
  */
 export const ActionLogEntitySchema = z.object({
   tenant_id: z.number(),
   user_id: z.number(),
   type: ActionLogTypeSchema,
-  metadata: z.record(z.string(), z.unknown()).optional(),
+  metadata: ActionLogMetadataSchema.optional(),
 });
 
 /**
@@ -995,6 +1019,7 @@ export const ActionLogCreateSchema = ActionLogEntitySchema.partial().extend({
 export const ChatEntitySchema = BaseEntitySchema.extend({
   user_id: z.number(),
   connection_id: z.number(),
+  agent_id: z.number(),
   chat_id: z.string(),
   role: ChatRoleSchema,
   source: ChatSourceSchema,
@@ -1090,7 +1115,7 @@ export const UpdateChatCountDataSchema = z.object({
   tenant_id: z.number(),
   chat_count: z.number(),
   prompt_text: z.string(),
-  metadata: z.record(z.string(), z.unknown()).optional(),
+  metadata: z.record(z.string(), z.string()).optional(),
 });
 
 /**
@@ -1119,7 +1144,7 @@ export const MailOptionsDataSchema = z.object({
   to: z.string(),
   subject: z.string(),
   template: z.string(),
-  context: z.record(z.string(), z.unknown()),
+  context: z.record(z.string(), z.string()),
 });
 
 /**
@@ -1220,6 +1245,7 @@ export type FileData = z.infer<typeof FileSchema>;
  * Service and data transfer types
  */
 export type ActionLogData = z.infer<typeof ActionLogEntitySchema>;
+export type ActionLogMetadataData = z.infer<typeof ActionLogMetadataSchema>;
 export type UpdateChatCountData = z.infer<typeof UpdateChatCountDataSchema>;
 export type TokenData = z.infer<typeof TokenSchema>;
 export type UserCreateData = z.infer<typeof UserCreateSchema>;
