@@ -31,6 +31,9 @@ export type MarketrixConfig = Partial<WidgetSettingsData> & {
   agentId?: number; // Direct agent ID from agent table
   connectionId?: number; // Direct connection ID from connection table
 
+  // Optional user ID for logging widget questions
+  userId?: number; // User ID to associate with widget questions
+
   // Optional API configuration
   apiBaseUrl?: string;
 

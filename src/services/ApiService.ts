@@ -33,6 +33,88 @@ export class MarketrixApiService {
   }
 
   /**
+   * Get user_id from various sources (config, localStorage, sessionStorage)
+   */
+  private getUserId(): number | null {
+    // Try to get from config first
+    if (this.config.userId && typeof this.config.userId === 'number') {
+      return this.config.userId;
+    }
+
+    // Try to get from localStorage
+    try {
+      const storedUserId = localStorage.getItem('marketrix_user_id');
+      if (storedUserId) {
+        const userId = Number(storedUserId);
+        if (!isNaN(userId)) {
+          return userId;
+        }
+      }
+    } catch (error) {
+      console.warn('[API Service] Failed to get user_id from localStorage:', error);
+    }
+
+    // Try to get from sessionStorage
+    try {
+      const sessionUserId = sessionStorage.getItem('marketrix_user_id');
+      if (sessionUserId) {
+        const userId = Number(sessionUserId);
+        if (!isNaN(userId)) {
+          return userId;
+        }
+      }
+    } catch (error) {
+      console.warn('[API Service] Failed to get user_id from sessionStorage:', error);
+    }
+
+    return null;
+  }
+
+  /**
+   * Log widget question to action_log
+   */
+  async logWidgetQuestion(question: string, mode: string): Promise<void> {
+    try {
+      const userId = this.getUserId();
+      
+      const metadata: Record<string, unknown> = {
+        question,
+        mode,
+        chat_id: this.chatId,
+        timestamp: new Date().toISOString(),
+      };
+
+      // Add user_id if available
+      if (userId !== null) {
+        metadata.user_id = userId;
+      }
+
+      // Add connection_id or marketrix credentials to metadata for tenant lookup
+      if (this.config.connectionId) {
+        metadata.connection_id = this.config.connectionId;
+      }
+      if (this.config.marketrixId && this.config.marketrixKey) {
+        metadata.marketrix_id = this.config.marketrixId;
+        metadata.marketrix_key = this.config.marketrixKey;
+      }
+
+      // Log the question (fire and forget - don't block on this)
+      sdk.logCreate({
+        body: {
+          type: 'widget_question',
+          metadata,
+        },
+      }).catch((error) => {
+        // Silently fail - logging is not critical for widget functionality
+        console.warn('[API Service] Failed to log widget question:', error);
+      });
+    } catch (error) {
+      // Silently fail - logging is not critical
+      console.warn('[API Service] Error logging widget question:', error);
+    }
+  }
+
+  /**
    * Send a message to the Marketrix API
    */
   async sendMessage(request: SendMessageRequest): Promise<SendMessageResponse> {
@@ -43,8 +125,13 @@ export class MarketrixApiService {
       // Map the mode to the appropriate chat endpoint
       const mode = request.mode || 'tell';
 
-      // Validate chat_id
-      if (!chatId) {
+      // Log the question and mode to action_log
+      if (request.message) {
+        await this.logWidgetQuestion(request.message, mode);
+      }
+
+      // Validate chat_id after initialization
+      if (!this.chatId) {
         throw new Error('Failed to initialize chat session. Please try again.');
       }
 
