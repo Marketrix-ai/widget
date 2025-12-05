@@ -477,6 +477,21 @@ const INTERACTIVE_TOOLS = new Set([
 ]);
 
 /**
+ * Remove "(Cancelled by cleanup)" and similar cancellation messages from content
+ * This filters out expected cancellation messages that shouldn't be shown to users
+ */
+function filterCancellationText(content: string): string {
+  if (!content) return content;
+  // Remove "(Cancelled by cleanup)" in various forms
+  return content
+    .replace(/\(Cancelled by cleanup\)/gi, '')
+    .replace(/\(cancelled by cleanup\)/gi, '')
+    .replace(/Cancelled by cleanup/gi, '')
+    .replace(/\s+/g, ' ') // Clean up multiple spaces
+    .trim();
+}
+
+/**
  * Add a new progress step to a message
  */
 export function addProgressLine(
@@ -497,17 +512,20 @@ export function addProgressLine(
   const hideIcon = !isInteractive;
   const textStyle = 'default';
 
+  // Filter cancellation text from explanation
+  const cleanedExplanation = filterCancellationText(explanation);
+
   if (existingPartIndex >= 0) {
     newParts[existingPartIndex] = {
       ...newParts[existingPartIndex],
-      content: explanation,
+      content: cleanedExplanation,
       hideIcon,
       textStyle,
     };
   } else {
     newParts.push({
       type: 'progress',
-      content: explanation,
+      content: cleanedExplanation,
       status: 'running',
       toolName,
       hideIcon,
@@ -612,6 +630,10 @@ export function markProgressLineFailed(
   const msg = ensureMessageStructure(message);
   const parts = msg.parts || [];
 
+  // Filter out "Cancelled by cleanup" errors - these are expected in show mode
+  // when a new action starts before the previous one completes
+  const shouldFilterError = error.toLowerCase().includes('cancelled by cleanup');
+
   // Update Parts
   const newParts = [...parts];
   let partIndex = parts.map((p) => (p.type === 'progress' ? p.toolName : '')).lastIndexOf(toolName);
@@ -625,11 +647,26 @@ export function markProgressLineFailed(
   }
 
   if (partIndex >= 0) {
-    newParts[partIndex] = {
-      ...newParts[partIndex],
-      status: 'failed',
-      content: `${newParts[partIndex].content} (${error})`,
-    };
+    // If error should be filtered, just mark as completed instead of failed
+    // This prevents showing confusing "Cancelled by cleanup" messages to users
+    if (shouldFilterError) {
+      // Clean any cancellation text from content and mark as completed
+      const cleanedContent = filterCancellationText(newParts[partIndex].content);
+      newParts[partIndex] = {
+        ...newParts[partIndex],
+        status: 'completed',
+        content: cleanedContent,
+      };
+    } else {
+      // Filter cancellation text from error before appending
+      const cleanedError = filterCancellationText(error);
+      const cleanedContent = filterCancellationText(newParts[partIndex].content);
+      newParts[partIndex] = {
+        ...newParts[partIndex],
+        status: 'failed',
+        content: cleanedError ? `${cleanedContent} (${cleanedError})` : cleanedContent,
+      };
+    }
   }
 
   return { ...msg, parts: newParts };
