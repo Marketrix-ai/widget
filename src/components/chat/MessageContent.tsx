@@ -31,7 +31,11 @@ export const MessageContent: React.FC<MessageContentProps> = ({
         {message.parts.map((part, index) => {
           if (part.type === 'text') {
             // Clean thinking marker if present in text part
-            const text = removeThinkingMarkerFromEnd(part.content).trim();
+            let text = removeThinkingMarkerFromEnd(part.content).trim();
+            text = text
+              .replace(/\(Cancelled by cleanup\)/gi, '')
+              .replace(/\s+/g, ' ')
+              .trim();
             if (!text) return null;
             return (
               <div

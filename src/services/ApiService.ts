@@ -76,11 +76,11 @@ export class MarketrixApiService {
   async logWidgetQuestion(question: string, mode: string): Promise<void> {
     try {
       const userId = this.getUserId();
-      
+
       const metadata: Record<string, unknown> = {
         question,
         mode,
-        chat_id: this.chatId,
+        chat_id: this.getChatId(),
         timestamp: new Date().toISOString(),
       };
 
@@ -99,15 +99,17 @@ export class MarketrixApiService {
       }
 
       // Log the question (fire and forget - don't block on this)
-      sdk.logCreate({
-        body: {
-          type: 'widget_question',
-          metadata,
-        },
-      }).catch((error) => {
-        // Silently fail - logging is not critical for widget functionality
-        console.warn('[API Service] Failed to log widget question:', error);
-      });
+      sdk
+        .logCreate({
+          body: {
+            type: 'widget_question',
+            metadata,
+          },
+        })
+        .catch((error) => {
+          // Silently fail - logging is not critical for widget functionality
+          console.warn('[API Service] Failed to log widget question:', error);
+        });
     } catch (error) {
       // Silently fail - logging is not critical
       console.warn('[API Service] Error logging widget question:', error);
@@ -131,7 +133,7 @@ export class MarketrixApiService {
       }
 
       // Validate chat_id after initialization
-      if (!this.chatId) {
+      if (!chatId) {
         throw new Error('Failed to initialize chat session. Please try again.');
       }
 
