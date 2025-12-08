@@ -14,7 +14,16 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 
-import { domService } from '../../services/DomService';
+import {
+  devTestService,
+  type ScenarioResult,
+  type TestResult,
+} from '../../services/DevTestService';
+import {
+  domService,
+  type ElementFingerprint,
+  type ValidationResult,
+} from '../../services/DomService';
 import { type ToolExecutionResult, toolExecutionService } from '../../services/ToolService';
 import { TOOL_PARAMS } from '../../utils/devTools';
 
@@ -223,7 +232,21 @@ interface IndexedElement {
   text: string;
 }
 
-type TabType = 'tools' | 'elements';
+type TabType = 'tools' | 'elements' | 'mismatch';
+
+interface MismatchIndexedElement {
+  index: number;
+  fingerprint: ElementFingerprint;
+  element: HTMLElement | null;
+}
+
+interface ValidationLogEntry {
+  timestamp: Date;
+  action: string;
+  originalIndex: number;
+  validation: ValidationResult;
+  recoveryAction?: string;
+}
 
 export const DebugPanel: React.FC = () => {
   const [isVisible, setIsVisible] = useState(true);
@@ -240,6 +263,14 @@ export const DebugPanel: React.FC = () => {
   // DOM elements state
   const [indexedElements, setIndexedElements] = useState<IndexedElement[]>([]);
   const [isIndexing, setIsIndexing] = useState(false);
+
+  // Mismatch testing state
+  const [mismatchElements, setMismatchElements] = useState<MismatchIndexedElement[]>([]);
+  const [validationLog, setValidationLog] = useState<ValidationLogEntry[]>([]);
+  const [lastTestResult, setLastTestResult] = useState<TestResult | null>(null);
+  const [scenarioResults, setScenarioResults] = useState<ScenarioResult[]>([]);
+  const [selectedMismatchIndex, setSelectedMismatchIndex] = useState<number>(0);
+  const [testCommandInput, setTestCommandInput] = useState<string>('click_element');
 
   // Keyboard shortcut handler
   useEffect(() => {
@@ -335,6 +366,105 @@ export const DebugPanel: React.FC = () => {
     setToolArgs((prev) => ({ ...prev, index: String(index) }));
   }, []);
 
+  // Mismatch testing handlers
+  const refreshMismatchElements = useCallback(() => {
+    const elements = devTestService.getIndexedElements();
+    setMismatchElements(elements);
+  }, []);
+
+  const refreshValidationLog = useCallback(() => {
+    setValidationLog(devTestService.getValidationLog());
+  }, []);
+
+  const handleMismatchReindex = useCallback(() => {
+    domService.indexInteractableElements();
+    refreshMismatchElements();
+  }, [refreshMismatchElements]);
+
+  const handleSimulateCommand = useCallback(async () => {
+    const result = await devTestService.simulateAgentCommand(testCommandInput, {
+      index: selectedMismatchIndex,
+    });
+    setLastTestResult(result);
+    refreshValidationLog();
+    refreshMismatchElements();
+  }, [testCommandInput, selectedMismatchIndex, refreshValidationLog, refreshMismatchElements]);
+
+  const handleRunScenario = useCallback(
+    async (scenarioId: string) => {
+      const result = await devTestService.runScenario(scenarioId);
+      setScenarioResults((prev) => [...prev, result]);
+      refreshValidationLog();
+      refreshMismatchElements();
+    },
+    [refreshValidationLog, refreshMismatchElements]
+  );
+
+  const handleRunAllScenarios = useCallback(async () => {
+    const results = await devTestService.runAllScenarios();
+    setScenarioResults(results);
+    refreshValidationLog();
+    refreshMismatchElements();
+  }, [refreshValidationLog, refreshMismatchElements]);
+
+  // DOM mutation handlers for mismatch testing
+  const handleInsertBefore = useCallback(() => {
+    devTestService.insertElementBefore(selectedMismatchIndex);
+    refreshMismatchElements();
+  }, [selectedMismatchIndex, refreshMismatchElements]);
+
+  const handleRemoveElement = useCallback(() => {
+    devTestService.removeElement(selectedMismatchIndex);
+    refreshMismatchElements();
+  }, [selectedMismatchIndex, refreshMismatchElements]);
+
+  const handleSimulateRerender = useCallback(() => {
+    devTestService.simulateRerender(selectedMismatchIndex);
+    refreshMismatchElements();
+  }, [selectedMismatchIndex, refreshMismatchElements]);
+
+  const handleChangeContent = useCallback(() => {
+    devTestService.changeElementContent(selectedMismatchIndex, `Modified Text ${Date.now()}`);
+    refreshMismatchElements();
+  }, [selectedMismatchIndex, refreshMismatchElements]);
+
+  const handleCleanup = useCallback(() => {
+    devTestService.cleanupTestElements();
+    refreshMismatchElements();
+  }, [refreshMismatchElements]);
+
+  const handleShowModal = useCallback(() => {
+    devTestService.showModal();
+  }, []);
+
+  const handleCreateIframe = useCallback(() => {
+    devTestService.createIframeWithButton();
+  }, []);
+
+  const handleCreateShadowDom = useCallback(() => {
+    devTestService.createShadowDomElement();
+  }, []);
+
+  // Validation status color
+  const getValidationColor = (validation: ValidationResult): string => {
+    if (validation.isValid) return '#4ec9b0'; // Green
+    if (validation.recoveredElement) return '#dcdcaa'; // Yellow
+    return '#f14c4c'; // Red
+  };
+
+  const getOutcomeColor = (outcome: string): string => {
+    switch (outcome) {
+      case 'executed':
+        return '#4ec9b0';
+      case 'recovered':
+        return '#dcdcaa';
+      case 'failed':
+        return '#f14c4c';
+      default:
+        return '#808080';
+    }
+  };
+
   if (!isVisible) return null;
 
   const toolParams = TOOL_PARAMS[selectedTool] || { required: [], optional: [] };
@@ -368,11 +498,21 @@ export const DebugPanel: React.FC = () => {
         >
           Elements {indexedElements.length > 0 && `(${indexedElements.length})`}
         </button>
+        <button
+          style={styles.tab(activeTab === 'mismatch')}
+          onClick={() => {
+            setActiveTab('mismatch');
+            refreshMismatchElements();
+            refreshValidationLog();
+          }}
+        >
+          Mismatch
+        </button>
       </div>
 
       {/* Content */}
       <div style={styles.content}>
-        {activeTab === 'tools' ? (
+        {activeTab === 'tools' && (
           <>
             {/* Tool Selector */}
             <div style={styles.section}>
@@ -498,7 +638,9 @@ export const DebugPanel: React.FC = () => {
               </div>
             )}
           </>
-        ) : (
+        )}
+
+        {activeTab === 'elements' && (
           <>
             {/* Index Button */}
             <button style={styles.indexBtn} onClick={handleIndexDOM} disabled={isIndexing}>
@@ -528,6 +670,330 @@ export const DebugPanel: React.FC = () => {
                 Click "Index DOM Elements" to scan the page
               </div>
             )}
+          </>
+        )}
+
+        {activeTab === 'mismatch' && (
+          <>
+            {/* Mismatch Testing Header */}
+            <div style={styles.section}>
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+                <button style={styles.indexBtn} onClick={handleMismatchReindex}>
+                  Re-index DOM
+                </button>
+                <button style={styles.indexBtn} onClick={refreshMismatchElements}>
+                  Refresh
+                </button>
+                <span style={{ marginLeft: 'auto', color: '#808080', fontSize: '11px' }}>
+                  {mismatchElements.length} elements
+                </span>
+              </div>
+            </div>
+
+            {/* Target Index Selection */}
+            <div style={styles.section}>
+              <div style={styles.sectionTitle}>Target Index</div>
+              <div style={styles.row}>
+                <input
+                  type='number'
+                  style={{ ...styles.input, width: '80px' }}
+                  value={selectedMismatchIndex}
+                  onChange={(e) => setSelectedMismatchIndex(parseInt(e.target.value) || 0)}
+                />
+                <select
+                  style={{ ...styles.select, flex: 1 }}
+                  value={testCommandInput}
+                  onChange={(e) => setTestCommandInput(e.target.value)}
+                >
+                  <option value='click_element'>click_element</option>
+                  <option value='type_text'>type_text</option>
+                  <option value='send_keys'>send_keys</option>
+                </select>
+                <button
+                  style={{
+                    ...styles.executeBtn,
+                    width: 'auto',
+                    padding: '8px 16px',
+                    backgroundColor: '#4ec9b0',
+                  }}
+                  onClick={handleSimulateCommand}
+                >
+                  Execute
+                </button>
+              </div>
+            </div>
+
+            {/* DOM Mutation Buttons */}
+            <div style={styles.section}>
+              <div style={styles.sectionTitle}>DOM Mutations</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                <button style={styles.indexBtn} onClick={handleInsertBefore}>
+                  Insert Before
+                </button>
+                <button
+                  style={{ ...styles.indexBtn, backgroundColor: '#5a1d1d' }}
+                  onClick={handleRemoveElement}
+                >
+                  Remove
+                </button>
+                <button style={styles.indexBtn} onClick={handleSimulateRerender}>
+                  Rerender
+                </button>
+                <button style={styles.indexBtn} onClick={handleChangeContent}>
+                  Change Text
+                </button>
+              </div>
+            </div>
+
+            {/* Special Cases */}
+            <div style={styles.section}>
+              <div style={styles.sectionTitle}>Special Cases</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                <button style={styles.indexBtn} onClick={handleShowModal}>
+                  Show Modal
+                </button>
+                <button style={styles.indexBtn} onClick={handleCreateIframe}>
+                  Create iFrame
+                </button>
+                <button style={styles.indexBtn} onClick={handleCreateShadowDom}>
+                  Shadow DOM
+                </button>
+                <button
+                  style={{ ...styles.indexBtn, backgroundColor: '#5a3d1d' }}
+                  onClick={handleCleanup}
+                >
+                  Cleanup Test Elements
+                </button>
+              </div>
+            </div>
+
+            {/* Test Scenarios */}
+            <div style={styles.section}>
+              <div style={styles.sectionTitle}>Test Scenarios</div>
+              <button
+                style={{ ...styles.executeBtn, marginBottom: '8px', backgroundColor: '#4ec9b0' }}
+                onClick={handleRunAllScenarios}
+              >
+                Run All Scenarios
+              </button>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <button
+                  style={styles.indexBtn}
+                  onClick={() => handleRunScenario('index-shift-insert')}
+                >
+                  Index Shift - Insert
+                </button>
+                <button
+                  style={styles.indexBtn}
+                  onClick={() => handleRunScenario('index-shift-remove')}
+                >
+                  Index Shift - Remove
+                </button>
+                <button
+                  style={styles.indexBtn}
+                  onClick={() => handleRunScenario('element-content-change')}
+                >
+                  Content Change
+                </button>
+                <button style={styles.indexBtn} onClick={() => handleRunScenario('spa-rerender')}>
+                  SPA Re-render
+                </button>
+              </div>
+            </div>
+
+            {/* Last Test Result */}
+            {lastTestResult && (
+              <div style={styles.section}>
+                <div style={styles.sectionTitle}>Last Result</div>
+                <div
+                  style={{
+                    ...styles.result,
+                    borderLeft: `3px solid ${getOutcomeColor(lastTestResult.outcome)}`,
+                  }}
+                >
+                  <div style={{ fontWeight: 'bold' }}>Command: {lastTestResult.command}</div>
+                  <div>Index: {lastTestResult.index}</div>
+                  <div style={{ color: getOutcomeColor(lastTestResult.outcome) }}>
+                    Outcome: {lastTestResult.outcome.toUpperCase()}
+                  </div>
+                  <div style={{ fontSize: '10px', color: '#808080', marginTop: '4px' }}>
+                    {lastTestResult.details}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Scenario Results */}
+            {scenarioResults.length > 0 && (
+              <div style={styles.section}>
+                <div style={styles.sectionTitle}>Scenario Results</div>
+                <div style={{ maxHeight: '150px', overflowY: 'auto' }}>
+                  {scenarioResults.map((result, idx) => (
+                    <div
+                      key={idx}
+                      style={{
+                        padding: '6px 10px',
+                        marginBottom: '4px',
+                        backgroundColor: '#2d2d2d',
+                        borderRadius: '4px',
+                        borderLeft: `3px solid ${result.passed ? '#4ec9b0' : '#f14c4c'}`,
+                      }}
+                    >
+                      <div
+                        style={{ fontWeight: 'bold', color: result.passed ? '#4ec9b0' : '#f14c4c' }}
+                      >
+                        {result.passed ? 'PASS' : 'FAIL'}: {result.scenarioName}
+                      </div>
+                      <div style={{ fontSize: '10px', color: '#808080' }}>{result.summary}</div>
+                    </div>
+                  ))}
+                </div>
+                <button
+                  style={{ ...styles.indexBtn, marginTop: '8px' }}
+                  onClick={() => setScenarioResults([])}
+                >
+                  Clear Results
+                </button>
+              </div>
+            )}
+
+            {/* Validation Log */}
+            <div style={styles.section}>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: '8px',
+                }}
+              >
+                <div style={styles.sectionTitle}>Validation Log</div>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <button
+                    style={{ ...styles.indexBtn, padding: '4px 8px', fontSize: '10px' }}
+                    onClick={refreshValidationLog}
+                  >
+                    Refresh
+                  </button>
+                  <button
+                    style={{ ...styles.indexBtn, padding: '4px 8px', fontSize: '10px' }}
+                    onClick={() => {
+                      devTestService.clearLog();
+                      refreshValidationLog();
+                    }}
+                  >
+                    Clear
+                  </button>
+                </div>
+              </div>
+              <div
+                style={{
+                  maxHeight: '200px',
+                  overflowY: 'auto',
+                  backgroundColor: '#2d2d2d',
+                  borderRadius: '4px',
+                }}
+              >
+                {validationLog.length === 0 ? (
+                  <div
+                    style={{
+                      color: '#808080',
+                      textAlign: 'center',
+                      padding: '20px',
+                      fontSize: '11px',
+                    }}
+                  >
+                    No validation events yet
+                  </div>
+                ) : (
+                  validationLog
+                    .slice()
+                    .reverse()
+                    .map((entry, idx) => (
+                      <div
+                        key={idx}
+                        style={{
+                          padding: '8px 10px',
+                          borderBottom: '1px solid #3c3c3c',
+                          borderLeft: `3px solid ${getValidationColor(entry.validation)}`,
+                        }}
+                      >
+                        <div style={{ color: '#808080', fontSize: '9px' }}>
+                          {entry.timestamp.toLocaleTimeString()}
+                        </div>
+                        <div style={{ fontWeight: 'bold', fontSize: '11px' }}>{entry.action}</div>
+                        <div style={{ fontSize: '10px' }}>
+                          Valid: {entry.validation.isValid ? 'Yes' : 'No'}
+                          {entry.validation.mismatchReason &&
+                            ` (${entry.validation.mismatchReason})`}
+                        </div>
+                        {entry.recoveryAction && (
+                          <div style={{ color: '#dcdcaa', fontSize: '10px' }}>
+                            Recovery: {entry.recoveryAction}
+                          </div>
+                        )}
+                      </div>
+                    ))
+                )}
+              </div>
+            </div>
+
+            {/* Indexed Elements with Validation Status */}
+            <div style={styles.section}>
+              <div style={styles.sectionTitle}>Elements (with validation)</div>
+              <div
+                style={{
+                  maxHeight: '200px',
+                  overflowY: 'auto',
+                  backgroundColor: '#2d2d2d',
+                  borderRadius: '4px',
+                }}
+              >
+                {mismatchElements.length === 0 ? (
+                  <div
+                    style={{
+                      color: '#808080',
+                      textAlign: 'center',
+                      padding: '20px',
+                      fontSize: '11px',
+                    }}
+                  >
+                    Click "Re-index DOM" to scan the page
+                  </div>
+                ) : (
+                  mismatchElements.map(({ index, fingerprint }) => {
+                    const validation = devTestService.forceValidation(index);
+                    return (
+                      <div
+                        key={index}
+                        onClick={() => setSelectedMismatchIndex(index)}
+                        style={{
+                          padding: '6px 10px',
+                          borderBottom: '1px solid #3c3c3c',
+                          cursor: 'pointer',
+                          backgroundColor:
+                            selectedMismatchIndex === index ? '#264f78' : 'transparent',
+                          borderLeft: `3px solid ${getValidationColor(validation)}`,
+                        }}
+                      >
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                          <span style={styles.elementIndex}>{index}</span>
+                          <span style={styles.elementTag}>
+                            &lt;{fingerprint.tagName.toLowerCase()}&gt;
+                          </span>
+                          {fingerprint.id && (
+                            <span style={styles.elementId}>#{fingerprint.id}</span>
+                          )}
+                        </div>
+                        <div style={{ fontSize: '10px', color: '#808080', marginTop: '2px' }}>
+                          {fingerprint.textContent?.substring(0, 40) || '(no text)'}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
           </>
         )}
       </div>

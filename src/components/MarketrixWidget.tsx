@@ -1,10 +1,13 @@
-import React, { useState } from 'react';
+import React, { lazy, Suspense, useEffect, useState } from 'react';
 
 import { useWidget } from '../hooks/useWidget';
 import type { MarketrixConfig } from '../types';
 import { ChatWindow } from './chat/ChatWindow';
 import { WidgetButton } from './layout/WidgetButton';
 import { ErrorDisplay } from './ui/ErrorDisplay';
+
+// Lazy load the dev panel (only in development)
+const DomTestPanel = lazy(() => import('./dev/DomTestPanel'));
 
 interface MarketrixWidgetProps {
   config: MarketrixConfig;
@@ -39,10 +42,26 @@ class WidgetErrorBoundary extends React.Component<
 
 export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
   const [isScreenSharing, setIsScreenSharing] = useState(false);
+  const [showDevPanel, setShowDevPanel] = useState(false);
 
   const { state, actions, marketrixConfig, shouldShow, getWidgetPosition, settings } = useWidget({
     config,
   });
+
+  // Keyboard shortcut for dev panel (Ctrl+Shift+D)
+  useEffect(() => {
+    if (process.env.NODE_ENV !== 'development') return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+        e.preventDefault();
+        setShowDevPanel((prev) => !prev);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   if (!shouldShow || !settings.widget_enabled) {
     return null;
@@ -126,6 +145,13 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
               | undefined
           }
         />
+      )}
+
+      {/* Dev-only DOM Test Panel */}
+      {process.env.NODE_ENV === 'development' && showDevPanel && (
+        <Suspense fallback={null}>
+          <DomTestPanel />
+        </Suspense>
       )}
     </div>
   );
