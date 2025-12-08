@@ -1,6 +1,6 @@
 import type { ChatMessage, InstructionType, TaskProgress } from '../types';
 import { removeThinkingMarkers } from '../utils/chat';
-import { domService } from './DomService';
+import { domService, type ElementFingerprint } from './DomService';
 
 interface StoredChatContext {
   chat_id: string;
@@ -13,7 +13,13 @@ interface StoredChatContext {
   isMinimized: boolean;
   isLoading: boolean;
   timestamp: number;
-  domState?: Array<[number, string]>;
+  // Legacy format support
+  domState?:
+    | Array<[number, string]>
+    | {
+        selectors: Array<[number, string]>;
+        fingerprints: Array<[number, ElementFingerprint]>;
+      };
 }
 
 const CHAT_CONTEXT_STORAGE_KEY = 'marketrix_chat_context';
@@ -65,7 +71,7 @@ export class ChatService {
         isMinimized: false,
         isLoading: false,
         timestamp: Date.now(),
-        domState: [],
+        domState: { selectors: [], fingerprints: [] },
       };
 
       localStorage.setItem(CHAT_CONTEXT_STORAGE_KEY, JSON.stringify(initialContext));

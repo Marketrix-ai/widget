@@ -6,6 +6,11 @@ export interface ToolExecutionResult {
   success: boolean;
   result: string;
   error?: string;
+  recoveryInfo?: {
+    originalIndex: number;
+    recoveredIndex?: number;
+    domReindexed: boolean;
+  };
 }
 
 export class ToolExecutionService {
@@ -156,8 +161,32 @@ export class ToolExecutionService {
     const index = args.index as number;
     if (index === undefined) return { success: false, result: '', error: 'Index required' };
 
-    const element = domService.getElementByIndex(index);
-    if (!element) return { success: false, result: '', error: `Element ${index} not found` };
+    // Use validated element lookup
+    const { element, validation } = domService.getValidatedElement(index);
+
+    if (!element) {
+      if (validation.requiresReindex) {
+        // Trigger re-indexing and return special error for agent to retry
+        domService.indexInteractableElements();
+        return {
+          success: false,
+          result: '',
+          error: `DOM_CHANGED: Element at index ${index} no longer exists. DOM has been re-indexed. Please call get_html to get updated element indices.`,
+          recoveryInfo: {
+            originalIndex: index,
+            domReindexed: true,
+          },
+        };
+      }
+      return { success: false, result: '', error: `Element ${index} not found` };
+    }
+
+    // Log if element was recovered at a different index
+    if (validation.mismatchReason === 'index_shifted' && validation.recoveredIndex !== undefined) {
+      console.log(
+        `[ToolExecutionService] Element shifted from index ${index} to ${validation.recoveredIndex}, executing on recovered element`
+      );
+    }
 
     element.scrollIntoView({ behavior: 'smooth', block: 'center' });
     await new Promise((resolve) => setTimeout(resolve, 100));
@@ -180,7 +209,15 @@ export class ToolExecutionService {
       }
     }, 50);
 
-    return { success: true, result: `Clicked element ${index}` };
+    const result: ToolExecutionResult = { success: true, result: `Clicked element ${index}` };
+    if (validation.recoveredIndex !== undefined && validation.recoveredIndex !== index) {
+      result.recoveryInfo = {
+        originalIndex: index,
+        recoveredIndex: validation.recoveredIndex,
+        domReindexed: false,
+      };
+    }
+    return result;
   }
 
   private typeText(args: Record<string, unknown>): ToolExecutionResult {
@@ -189,8 +226,21 @@ export class ToolExecutionService {
     if (index === undefined || text === undefined)
       return { success: false, result: '', error: 'Index and text required' };
 
-    const element = domService.getElementByIndex(index);
-    if (!element) return { success: false, result: '', error: `Element ${index} not found` };
+    // Use validated element lookup
+    const { element, validation } = domService.getValidatedElement(index);
+
+    if (!element) {
+      if (validation.requiresReindex) {
+        domService.indexInteractableElements();
+        return {
+          success: false,
+          result: '',
+          error: `DOM_CHANGED: Element at index ${index} no longer exists. DOM has been re-indexed. Please call get_html to get updated element indices.`,
+          recoveryInfo: { originalIndex: index, domReindexed: true },
+        };
+      }
+      return { success: false, result: '', error: `Element ${index} not found` };
+    }
 
     if ('value' in element) {
       (element as HTMLInputElement).value = text;
@@ -201,7 +251,18 @@ export class ToolExecutionService {
       element.dispatchEvent(new Event('input', { bubbles: true }));
     }
 
-    return { success: true, result: `Typed text into element ${index}` };
+    const result: ToolExecutionResult = {
+      success: true,
+      result: `Typed text into element ${index}`,
+    };
+    if (validation.recoveredIndex !== undefined && validation.recoveredIndex !== index) {
+      result.recoveryInfo = {
+        originalIndex: index,
+        recoveredIndex: validation.recoveredIndex,
+        domReindexed: false,
+      };
+    }
+    return result;
   }
 
   private scroll(args: Record<string, unknown>): ToolExecutionResult {
@@ -278,9 +339,24 @@ export class ToolExecutionService {
     if (index === undefined || !option)
       return { success: false, result: '', error: 'Index/Option required' };
 
-    const element = domService.getElementByIndex(index);
-    if (!element || !(element instanceof HTMLSelectElement)) {
+    // Use validated element lookup
+    const { element, validation } = domService.getValidatedElement(index);
+
+    if (!element) {
+      if (validation.requiresReindex) {
+        domService.indexInteractableElements();
+        return {
+          success: false,
+          result: '',
+          error: `DOM_CHANGED: Element at index ${index} no longer exists. DOM has been re-indexed. Please call get_html to get updated element indices.`,
+          recoveryInfo: { originalIndex: index, domReindexed: true },
+        };
+      }
       return { success: false, result: '', error: `Select ${index} not found` };
+    }
+
+    if (!(element instanceof HTMLSelectElement)) {
+      return { success: false, result: '', error: `Element ${index} is not a select element` };
     }
 
     const opt = Array.from(element.options).find((o) => o.value === option || o.text === option);
@@ -288,15 +364,41 @@ export class ToolExecutionService {
 
     element.value = opt.value;
     element.dispatchEvent(new Event('change', { bubbles: true }));
-    return { success: true, result: `Selected ${option}` };
+
+    const result: ToolExecutionResult = { success: true, result: `Selected ${option}` };
+    if (validation.recoveredIndex !== undefined && validation.recoveredIndex !== index) {
+      result.recoveryInfo = {
+        originalIndex: index,
+        recoveredIndex: validation.recoveredIndex,
+        domReindexed: false,
+      };
+    }
+    return result;
   }
 
   private getDropdownOptions(args: Record<string, unknown>): ToolExecutionResult {
     const index = args.index as number;
-    const element = domService.getElementByIndex(index);
-    if (!element || !(element instanceof HTMLSelectElement)) {
+
+    // Use validated element lookup
+    const { element, validation } = domService.getValidatedElement(index);
+
+    if (!element) {
+      if (validation.requiresReindex) {
+        domService.indexInteractableElements();
+        return {
+          success: false,
+          result: '',
+          error: `DOM_CHANGED: Element at index ${index} no longer exists. DOM has been re-indexed. Please call get_html to get updated element indices.`,
+          recoveryInfo: { originalIndex: index, domReindexed: true },
+        };
+      }
       return { success: false, result: '', error: `Select ${index} not found` };
     }
+
+    if (!(element instanceof HTMLSelectElement)) {
+      return { success: false, result: '', error: `Element ${index} is not a select element` };
+    }
+
     const options = Array.from(element.options).map((o) => ({ value: o.value, text: o.text }));
     return { success: true, result: JSON.stringify(options) };
   }
@@ -307,8 +409,21 @@ export class ToolExecutionService {
     if (index === undefined || !keys)
       return { success: false, result: '', error: 'Index/Keys required' };
 
-    const element = domService.getElementByIndex(index);
-    if (!element) return { success: false, result: '', error: `Element ${index} not found` };
+    // Use validated element lookup
+    const { element, validation } = domService.getValidatedElement(index);
+
+    if (!element) {
+      if (validation.requiresReindex) {
+        domService.indexInteractableElements();
+        return {
+          success: false,
+          result: '',
+          error: `DOM_CHANGED: Element at index ${index} no longer exists. DOM has been re-indexed. Please call get_html to get updated element indices.`,
+          recoveryInfo: { originalIndex: index, domReindexed: true },
+        };
+      }
+      return { success: false, result: '', error: `Element ${index} not found` };
+    }
 
     // Focus the element first
     element.focus();
@@ -324,7 +439,18 @@ export class ToolExecutionService {
     // Simulate actual browser behavior for common keys
     const actionResult = this.simulateKeyAction(element, keys);
 
-    return { success: true, result: actionResult || `Sent keys ${keys}` };
+    const result: ToolExecutionResult = {
+      success: true,
+      result: actionResult || `Sent keys ${keys}`,
+    };
+    if (validation.recoveredIndex !== undefined && validation.recoveredIndex !== index) {
+      result.recoveryInfo = {
+        originalIndex: index,
+        recoveredIndex: validation.recoveredIndex,
+        domReindexed: false,
+      };
+    }
+    return result;
   }
 
   /**
