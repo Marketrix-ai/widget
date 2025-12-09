@@ -3,6 +3,7 @@ import React from 'react';
 import type { ChatMessage, WidgetState } from '../../types';
 import { addOpacity, formatMessageTime, getContrastingColor } from '../../utils/format';
 import { MessageContent } from './MessageContent';
+import { TaskStatusIcon } from './TaskStatusIcon';
 import { VideoStreamDisplay } from './VideoStreamDisplay';
 
 interface MessageItemProps {
@@ -82,7 +83,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
 
         {/* Message bubble */}
         <div
-          className={`flex flex-col flex-1
+          className={`flex flex-col flex-1 relative
           ${message.videoStream ? 'p-0' : 'px-2.5 py-2'} shadow-sm border
           ${
             isUser
@@ -169,6 +170,16 @@ export const MessageItem: React.FC<MessageItemProps> = ({
               style={{ color: addOpacity(settings.widget_text_color, 0.5) }}
             >
               Check HTML Instead
+            </div>
+          )}
+
+          {/* Task status icon at bottom right (only for agent messages with task status) */}
+          {!isUser && message.taskStatus && (
+            <div className='absolute bottom-1 right-1 flex items-center justify-center'>
+              <TaskStatusIcon
+                status={message.taskStatus}
+                accentColor={settings.widget_accent_color}
+              />
             </div>
           )}
         </div>

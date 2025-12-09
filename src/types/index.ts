@@ -61,6 +61,7 @@ export interface ChatMessage {
   isPlaceholder?: boolean; // Indicates this is a placeholder message with progress bar
   placeholderState?: 'thinking' | 'waiting-for-user'; // State of placeholder: thinking or waiting for user action
   parts?: MessagePart[];
+  taskStatus?: 'ongoing' | 'done' | 'failed' | 'stopped'; // Task status indicator for task messages
 }
 
 export interface MessagePart {

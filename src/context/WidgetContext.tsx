@@ -146,8 +146,13 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
         const shouldWait = prev.isTaskRunning && prev.currentMode === 'show' && isInteractiveTool;
 
+        // Skip progress line for "done" tool - we show status icon instead
+        const isDoneTool = toolName === 'done';
+
         if (status === 'running') {
-          updatedMsg = addProgressLine(updatedMsg, friendlyName, explanation || friendlyName);
+          if (!isDoneTool) {
+            updatedMsg = addProgressLine(updatedMsg, friendlyName, explanation || friendlyName);
+          }
           if (prev.isTaskRunning && (prev.currentMode === 'show' || prev.currentMode === 'do')) {
             updatedMsg = updateThinkingMarker(
               updatedMsg,
@@ -157,7 +162,9 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             );
           }
         } else if (status === 'completed') {
-          updatedMsg = markProgressLineComplete(updatedMsg);
+          if (!isDoneTool) {
+            updatedMsg = markProgressLineComplete(updatedMsg);
+          }
           // When tool completes, revert to 'thinking' state (not waiting)
           if (prev.isTaskRunning && (prev.currentMode === 'show' || prev.currentMode === 'do')) {
             updatedMsg = updateThinkingMarker(
@@ -228,11 +235,71 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
               result: { content: [{ type: 'text', text: result.result }] },
             });
             updateProgressForTool(toolName, explanation, 'completed');
+            // If the "done" tool completed successfully, mark the task as complete
+            if (toolName === 'done' && result.success) {
+              setState((prev) => {
+                chatService.setTaskState(false, null, []);
+                // Find the task message and update its taskStatus
+                const found = findMessageForProgress({
+                  messages: prev.messages,
+                  isTaskRunning: prev.isTaskRunning,
+                  currentMode: prev.currentMode,
+                  preferPlaceholder: true,
+                  requireContent: false,
+                });
+                const newMessages = [...prev.messages];
+                if (found) {
+                  // Remove any "done" progress lines since we show icon instead
+                  const updatedParts =
+                    found.message.parts?.filter(
+                      (part) => !(part.type === 'progress' && part.toolName === 'done')
+                    ) || [];
+                  newMessages[found.index] = {
+                    ...found.message,
+                    taskStatus: 'done',
+                    parts: updatedParts,
+                  };
+                  chatService.setMessages(newMessages);
+                }
+                return {
+                  ...prev,
+                  messages: newMessages,
+                  isTaskRunning: false,
+                  activeTaskId: null,
+                  taskProgress: [],
+                };
+              });
+            }
           } catch (error) {
             console.error('Failed to send tool result:', error);
             // Even if send fails, we mark as completed locally so UI doesn't hang?
             // Or failed? If agent doesn't get it, task is stuck.
             updateProgressForTool(toolName, explanation, 'failed', 'Connection error');
+            // If this is a critical connection error and task is running, mark as failed
+            if (state.isTaskRunning) {
+              setState((prev) => {
+                const found = findMessageForProgress({
+                  messages: prev.messages,
+                  isTaskRunning: prev.isTaskRunning,
+                  currentMode: prev.currentMode,
+                  preferPlaceholder: true,
+                  requireContent: false,
+                });
+                const newMessages = [...prev.messages];
+                if (
+                  found &&
+                  found.message.taskStatus !== 'done' &&
+                  found.message.taskStatus !== 'stopped'
+                ) {
+                  newMessages[found.index] = {
+                    ...found.message,
+                    taskStatus: 'failed',
+                  };
+                  chatService.setMessages(newMessages);
+                }
+                return { ...prev, messages: newMessages };
+              });
+            }
           }
         } else {
           try {
@@ -412,10 +479,25 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
         // If task started (task_id present), update state
         if (response.task_id) {
-          setTaskState({
-            activeTaskId: response.task_id,
-            isTaskRunning: true,
-            taskProgress: [],
+          setState((prev) => {
+            // Find the placeholder message and set taskStatus to 'ongoing'
+            const placeholderIndex = prev.messages.findIndex((msg) => msg.id === placeholderId);
+            const newMessages = [...prev.messages];
+            if (placeholderIndex >= 0) {
+              newMessages[placeholderIndex] = {
+                ...newMessages[placeholderIndex],
+                taskStatus: 'ongoing',
+              };
+              chatService.setMessages(newMessages);
+            }
+            chatService.setTaskState(true, response.task_id || null, []);
+            return {
+              ...prev,
+              messages: newMessages,
+              activeTaskId: response.task_id || null,
+              isTaskRunning: true,
+              taskProgress: [],
+            };
           });
         }
       } catch (error) {
@@ -507,7 +589,32 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       resetState,
       stopTask: async () => {
         const taskId = state.activeTaskId;
-        setTaskState({ isTaskRunning: false, activeTaskId: null });
+        setState((prev) => {
+          // Find the task message and update its taskStatus
+          const found = findMessageForProgress({
+            messages: prev.messages,
+            isTaskRunning: prev.isTaskRunning,
+            currentMode: prev.currentMode,
+            preferPlaceholder: true,
+            requireContent: false,
+          });
+          const newMessages = [...prev.messages];
+          if (found) {
+            newMessages[found.index] = {
+              ...found.message,
+              taskStatus: 'stopped',
+            };
+            chatService.setMessages(newMessages);
+          }
+          chatService.setTaskState(false, null, []);
+          return {
+            ...prev,
+            messages: newMessages,
+            isTaskRunning: false,
+            activeTaskId: null,
+            taskProgress: [],
+          };
+        });
 
         // Attempt to reload config if missing
         let config = configManager.getConfig();

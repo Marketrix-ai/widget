@@ -638,6 +638,8 @@ export const AgentEntitySchema = BaseEntitySchema.extend({
   vector_store_id: z.string().optional(),
   pdf_search_index_id: z.string().optional(),
   json_search_index_id: z.string().optional(),
+  node_index_id: z.string().optional(),
+  edge_index_id: z.string().optional(),
   status: AgentStatusSchema,
   status_message: z.string().optional(),
   tenant: TenantEntitySchema.optional(),

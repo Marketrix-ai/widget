@@ -46,6 +46,11 @@ export const MessageContent: React.FC<MessageContentProps> = ({
               </div>
             );
           } else if (part.type === 'progress') {
+            // Hide progress line for "done" tool when task is completed (show icon instead)
+            if (part.toolName === 'done' && message.taskStatus === 'done') {
+              return null;
+            }
+
             const isPending = part.status === 'running' || !part.status;
 
             // For waiting state:
@@ -80,6 +85,7 @@ export const MessageContent: React.FC<MessageContentProps> = ({
             isWaitingForUser={isWaitingForUser}
             textColor={textColor}
             customText={customText}
+            accentColor={accentColor}
           />
         )}
       </div>
@@ -98,6 +104,7 @@ export const MessageContent: React.FC<MessageContentProps> = ({
         isWaitingForUser={isWaitingForUser}
         textColor={textColor}
         customText={customText}
+        accentColor={accentColor}
       />
     );
   }
