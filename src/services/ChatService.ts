@@ -208,6 +208,8 @@ export class ChatService {
           ...msg,
           timestamp: new Date(msg.timestamp),
           videoStream: undefined,
+          placeholderState: msg.placeholderState, // Restore placeholder state
+          taskStatus: msg.taskStatus, // Restore task status
           parts: msg.parts || [], // Use stored parts or default to empty
         };
 
@@ -266,6 +268,8 @@ export class ChatService {
           screenShareStatus: msg.screenShareStatus,
           isSystemMessage: msg.isSystemMessage,
           isPlaceholder: msg.isPlaceholder,
+          placeholderState: msg.placeholderState, // Save placeholder state
+          taskStatus: msg.taskStatus, // Save task status
           parts: msg.parts, // Save parts
         }));
 
