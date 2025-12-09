@@ -939,14 +939,17 @@
             >
               ⚙️ Settings
             </button>
-            <button
-              class="demo-button"
-              data-demo-element="login-button"
-              data-demo-description="User authentication and account access"
-              onclick="showLoginForm()"
-            >
-              🔐 Login
-            </button>
+            <div id="login-button-container">
+              <button
+                class="demo-button"
+                data-demo-element="login-button"
+                data-demo-description="User authentication and account access"
+                onclick="showLoginForm()"
+                id="login-button"
+              >
+                🔐 Login
+              </button>
+            </div>
           </div>
         </div>
 
@@ -1137,6 +1140,7 @@
             class="login-form-container"
             id="login-form-simulation"
             data-demo-element="login-form"
+            style="display: none;"
           >
             <div class="login-form-header">
               <h3>🔐 User Login</h3>
@@ -1147,7 +1151,7 @@
                 ×
               </button>
             </div>
-            <form class="login-form">
+            <form class="login-form" onsubmit="handleLoginSubmit(event)">
               <div class="form-section">
                 <h4>Account Credentials</h4>
                 <div class="form-group">
@@ -1395,6 +1399,48 @@
         </div>
       </div>
     </div>
+
+    <!-- Login Demo Scripts -->
+    <script>
+      function showLoginForm() {
+        const loginForm = document.getElementById('login-form-simulation');
+        if (loginForm) {
+          loginForm.style.display = 'block';
+        }
+      }
+
+      function handleLoginSubmit(event) {
+        event.preventDefault();
+        const emailInput = document.getElementById('login-email');
+        const email = emailInput ? emailInput.value : '';
+        
+        // Close the modal
+        const loginForm = document.getElementById('login-form-simulation');
+        if (loginForm) {
+          loginForm.style.display = 'none';
+        }
+        
+        // Show logged in message
+        const loginButtonContainer = document.getElementById('login-button-container');
+        const loginButton = document.getElementById('login-button');
+        
+        if (loginButtonContainer && loginButton) {
+          loginButton.style.display = 'none';
+          const loggedInMessage = document.createElement('div');
+          loggedInMessage.className = 'demo-button';
+          loggedInMessage.style.background = '#2e7d32';
+          loggedInMessage.style.color = 'white';
+          loggedInMessage.textContent = `✓ Logged in as ${email || 'user'}`;
+          loggedInMessage.id = 'logged-in-message';
+          loginButtonContainer.appendChild(loggedInMessage);
+        }
+        
+        // Reset form
+        if (event.target) {
+          event.target.reset();
+        }
+      }
+    </script>
 
     <!-- Widget Script (Demo Mode) -->
     <script
