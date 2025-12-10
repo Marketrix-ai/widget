@@ -254,6 +254,7 @@ export const TenantEntitySchema = BaseEntitySchema.extend({
   domain: z.string().optional(),
   status: EntityStatusSchema,
   package: TenantPackageSchema,
+  ending_date: z.string().datetime().optional(),
 });
 
 /**
@@ -268,6 +269,28 @@ export const TenantCreateSchema = TenantEntitySchema.partial().extend({
  * Tenant update schema
  */
 export const TenantUpdateSchema = TenantEntitySchema.partial();
+
+/**
+ * Tenant plan entity schema - tracks plan/subscription for each tenant
+ */
+export const TenantPlanEntitySchema = BaseEntitySchema.extend({
+  tenant_id: z.number(),
+  package: TenantPackageSchema,
+  ending_date: z.string().datetime().optional(),
+});
+
+/**
+ * Tenant plan creation schema
+ */
+export const TenantPlanCreateSchema = TenantPlanEntitySchema.partial().extend({
+  tenant_id: z.number(),
+  package: TenantPackageSchema,
+});
+
+/**
+ * Tenant plan update schema
+ */
+export const TenantPlanUpdateSchema = TenantPlanEntitySchema.partial();
 
 // ============================================================================
 // MEETING SCHEMAS - Video meeting management and operations
@@ -765,9 +788,9 @@ export const AgentSimulationIndexResponseSchema = z.object({
 export const AgentIndexCallbackRequestSchema = z.object({
   agent_id: z.coerce.number().positive('Agent ID must be a positive number'),
   index_name: z.string().min(1, 'Index name is required'),
-  index_type: z.enum(['pdf', 'json'], { required_error: 'Index type must be pdf or json' }),
-  status: z.enum(['success', 'failed'], { required_error: 'Status must be success or failed' }),
-  status_message: z.string(),
+  index_type: z.enum(['pdf', 'json'], { message: 'Index type must be pdf or json' as const }),
+  status: z.enum(['success', 'failed'], { message: 'Status must be success or failed' }),
+  status_message: z.string().optional(),
 });
 
 /**
@@ -998,7 +1021,7 @@ export const ActionLogMetadataSchema = z
 /**
  * Action log entity schema
  */
-export const ActionLogEntitySchema = z.object({
+export const ActionLogEntitySchema = BaseEntitySchema.extend({
   tenant_id: z.number(),
   user_id: z.number(),
   type: ActionLogTypeSchema,
@@ -1293,6 +1316,7 @@ export type MeetingEmailData = z.infer<typeof MeetingEmailDataSchema>;
  */
 export type UserData = z.infer<typeof UserEntitySchema>;
 export type TenantData = z.infer<typeof TenantEntitySchema>;
+export type TenantPlanData = z.infer<typeof TenantPlanEntitySchema>;
 export type AgentData = z.infer<typeof AgentEntitySchema>;
 export type MeetingData = z.infer<typeof MeetingEntitySchema>;
 export type KnowledgeData = z.infer<typeof KnowledgeEntitySchema>;

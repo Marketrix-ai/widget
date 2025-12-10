@@ -1192,6 +1192,27 @@ const contract = c.router({
     },
   },
 
+  simulationDelete: {
+    method: 'DELETE' as const,
+    summary: 'Delete simulation',
+    description: 'Removes a simulation and all associated data',
+    path: '/simulation/:simulation_id',
+    pathParams: z.object({ simulation_id: z.coerce.number() }),
+    responses: {
+      200: R.success(
+        z.object({
+          success: z.boolean(),
+          message: z.string(),
+        })
+      ),
+      400: R.error,
+      401: R.error,
+      403: R.error,
+      404: R.error,
+      500: R.error,
+    },
+  },
+
   browserSessionCreate: {
     method: 'POST' as const,
     summary: 'Create browser session for connection',
@@ -1289,6 +1310,22 @@ const contract = c.router({
       400: R.error,
       401: R.error,
       403: R.error,
+      500: R.error,
+    },
+  },
+
+  knowledgeDelete: {
+    method: 'DELETE' as const,
+    summary: 'Delete knowledge document',
+    description: 'Removes a knowledge document from the database',
+    path: '/knowledge/:id',
+    pathParams: z.object({ id: z.coerce.number() }),
+    responses: {
+      200: R.success(z.void()),
+      400: R.error,
+      401: R.error,
+      403: R.error,
+      404: R.error,
       500: R.error,
     },
   },
