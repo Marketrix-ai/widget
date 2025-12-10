@@ -663,6 +663,7 @@ export const AgentEntitySchema = BaseEntitySchema.extend({
   json_search_index_id: z.string().optional(),
   node_index_id: z.string().optional(),
   edge_index_id: z.string().optional(),
+  mindmap_url: z.string().optional(),
   status: AgentStatusSchema,
   status_message: z.string().optional(),
   tenant: TenantEntitySchema.optional(),
@@ -788,7 +789,9 @@ export const AgentSimulationIndexResponseSchema = z.object({
 export const AgentIndexCallbackRequestSchema = z.object({
   agent_id: z.coerce.number().positive('Agent ID must be a positive number'),
   index_name: z.string().min(1, 'Index name is required'),
-  index_type: z.enum(['pdf', 'json'], { message: 'Index type must be pdf or json' as const }),
+  index_type: z.enum(['pdf', 'json', 'node_index', 'edge_index', 'mindmap'], {
+    message: 'Index type must be pdf, json, node_index, edge_index, or mindmap' as const,
+  }),
   status: z.enum(['success', 'failed'], { message: 'Status must be success or failed' }),
   status_message: z.string().optional(),
 });

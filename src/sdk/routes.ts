@@ -837,6 +837,21 @@ const contract = c.router({
     },
   },
 
+  agentMindmap: {
+    method: 'GET' as const,
+    summary: 'Get agent mindmap by ID',
+    description: 'Returns the mindmap knowledge graph for the specified agent',
+    path: '/agent/:agent_id/mindmap',
+    pathParams: z.object({ agent_id: z.coerce.number() }),
+    responses: {
+      200: R.success(MindMapSchema),
+      400: R.error,
+      401: R.error,
+      403: R.error,
+      500: R.error,
+    },
+  },
+
   agentUpdate: {
     method: 'PUT' as const,
     summary: 'Update agent configuration and settings',
@@ -899,7 +914,8 @@ const contract = c.router({
   agentIndexCallback: {
     method: 'POST' as const,
     summary: 'Callback endpoint for agent index creation completion',
-    description: 'Called by agent service when PDF or JSON index creation completes',
+    description:
+      'Called by agent service when index creation completes (PDF, JSON, node_index, edge_index, or mindmap)',
     path: '/agent/index/callback',
     body: AgentIndexCallbackRequestSchema,
     responses: {
