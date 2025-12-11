@@ -314,8 +314,47 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           }
           updateProgressForTool(toolName, explanation, 'failed', result.error);
         }
-      } else if (message.method === 'task_status') {
-        // Handle task status updates if needed
+      } else if (message.method === 'task/status') {
+        // Handle task status updates (completed, failed, stopped)
+        const params = message.params as { status: string; message?: string; timestamp?: string };
+        const status = params?.status;
+        const statusMessage = params?.message || '';
+
+        if (status === 'completed' || status === 'failed' || status === 'stopped') {
+          setState((prev) => {
+            chatService.setTaskState(false, null, []);
+            // Find the task message and update its taskStatus
+            const found = findMessageForProgress({
+              messages: prev.messages,
+              isTaskRunning: prev.isTaskRunning,
+              currentMode: prev.currentMode,
+              preferPlaceholder: true,
+              requireContent: false,
+            });
+            const newMessages = [...prev.messages];
+            if (found) {
+              // Map status to taskStatus
+              let taskStatus: 'done' | 'failed' | 'stopped' = 'done';
+              if (status === 'failed') taskStatus = 'failed';
+              else if (status === 'stopped') taskStatus = 'stopped';
+
+              newMessages[found.index] = {
+                ...found.message,
+                taskStatus,
+                // Add status message if provided
+                ...(statusMessage && { content: statusMessage }),
+              };
+              chatService.setMessages(newMessages);
+            }
+            return {
+              ...prev,
+              messages: newMessages,
+              isTaskRunning: false,
+              activeTaskId: null,
+              taskProgress: [],
+            };
+          });
+        }
       }
     };
 
