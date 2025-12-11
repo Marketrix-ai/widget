@@ -1,7 +1,7 @@
 import tailwindcss from '@tailwindcss/vite';
-import basicSsl from '@vitejs/plugin-basic-ssl';
 import react from '@vitejs/plugin-react';
 import { copyFileSync, existsSync, readFileSync } from 'fs';
+import type { IncomingMessage, ServerResponse } from 'http';
 import { resolve } from 'path';
 import { defineConfig, type ViteDevServer } from 'vite';
 import cssInjectedByJsPlugin from 'vite-plugin-css-injected-by-js';
@@ -15,11 +15,7 @@ const devMeetPlugin = () => {
     configureServer(s: ViteDevServer) {
       server = s;
       // Add middleware at the VERY BEGINNING using stack manipulation
-      const htmlHandler = (
-        req: import('http').IncomingMessage,
-        res: import('http').ServerResponse,
-        next: () => void
-      ) => {
+      const htmlHandler = (req: IncomingMessage, res: ServerResponse, next: () => void) => {
         if (req.url === '/test.html' || req.url === '/test') {
           const testHtmlPath = resolve(process.cwd(), 'test.html');
           if (existsSync(testHtmlPath)) {

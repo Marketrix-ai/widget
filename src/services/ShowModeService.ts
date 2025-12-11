@@ -100,7 +100,7 @@ export class ShowModeService {
     }
 
     this.updateHighlightPosition = null;
-    
+
     // Remove popup and highlight elements
     if (this.currentPopup) {
       this.currentPopup.remove();
@@ -110,7 +110,7 @@ export class ShowModeService {
       this.currentHighlight.remove();
       this.currentHighlight = null;
     }
-    
+
     // Also remove by ID in case they weren't properly tracked
     const popupById = document.getElementById('marketrix-show-popup');
     if (popupById) {
@@ -120,7 +120,7 @@ export class ShowModeService {
     if (highlightById) {
       highlightById.remove();
     }
-    
+
     this.currentElement = null;
     this.currentOptions = null;
     this.currentPromise = null;

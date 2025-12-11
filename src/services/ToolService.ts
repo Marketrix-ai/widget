@@ -269,7 +269,7 @@ export class ToolExecutionService {
           const prototype = isTextArea ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
           const descriptor = Object.getOwnPropertyDescriptor(prototype, 'value');
 
-          if (descriptor && descriptor.set) {
+          if (descriptor?.set) {
             // Important: use the descriptor.set directly with .call()
             descriptor.set.call(inputElement, text);
             valueSet = true;

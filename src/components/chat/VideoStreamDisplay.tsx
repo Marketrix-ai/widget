@@ -111,7 +111,10 @@ export const VideoStreamDisplay: React.FC<VideoStreamDisplayProps> = ({
           <div className='flex flex-col items-center gap-2'>
             <div className='relative w-8 h-8'>
               <div className='absolute inset-0 border-2 border-white border-t-transparent rounded-full animate-spin' />
-              <div className='absolute inset-0 border-2 border-transparent border-r-white rounded-full animate-spin' style={{ animationDirection: 'reverse', animationDuration: '0.8s' }} />
+              <div
+                className='absolute inset-0 border-2 border-transparent border-r-white rounded-full animate-spin'
+                style={{ animationDirection: 'reverse', animationDuration: '0.8s' }}
+              />
             </div>
             <span className='text-xs text-white/70 font-medium'>Loading stream...</span>
           </div>

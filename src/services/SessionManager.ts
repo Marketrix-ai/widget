@@ -42,36 +42,40 @@ class SessionManager {
   private setupLinkInterceptor(): void {
     if (typeof window === 'undefined') return;
 
-    document.addEventListener('click', (event) => {
-      const target = event.target as HTMLElement;
-      const anchor = target.closest('a') as HTMLAnchorElement | null;
+    document.addEventListener(
+      'click',
+      (event) => {
+        const target = event.target as HTMLElement;
+        const anchor = target.closest('a') as HTMLAnchorElement | null;
 
-      if (!anchor || !anchor.href) return;
+        if (!anchor?.href) return;
 
-      // Skip if it's the same origin (sessionStorage will handle it)
-      try {
-        const linkUrl = new URL(anchor.href, window.location.origin);
-        const currentOrigin = window.location.origin;
+        // Skip if it's the same origin (sessionStorage will handle it)
+        try {
+          const linkUrl = new URL(anchor.href, window.location.origin);
+          const currentOrigin = window.location.origin;
 
-        // Only intercept cross-origin links
-        if (linkUrl.origin === currentOrigin) return;
+          // Only intercept cross-origin links
+          if (linkUrl.origin === currentOrigin) return;
 
-        // Skip non-http(s) links
-        if (!linkUrl.protocol.startsWith('http')) return;
+          // Skip non-http(s) links
+          if (!linkUrl.protocol.startsWith('http')) return;
 
-        // Skip links that open in new tab/window
-        if (anchor.target === '_blank') return;
+          // Skip links that open in new tab/window
+          if (anchor.target === '_blank') return;
 
-        // Append tab_id to the URL
-        if (this.tabId && !linkUrl.searchParams.has('_mktx_tab')) {
-          linkUrl.searchParams.set('_mktx_tab', this.tabId);
-          anchor.href = linkUrl.toString();
-          log.debug('Added tab_id to cross-domain link:', anchor.href);
+          // Append tab_id to the URL
+          if (this.tabId && !linkUrl.searchParams.has('_mktx_tab')) {
+            linkUrl.searchParams.set('_mktx_tab', this.tabId);
+            anchor.href = linkUrl.toString();
+            log.debug('Added tab_id to cross-domain link:', anchor.href);
+          }
+        } catch {
+          // Invalid URL, skip
         }
-      } catch (e) {
-        // Invalid URL, skip
-      }
-    }, true); // Use capture phase to intercept before navigation
+      },
+      true
+    ); // Use capture phase to intercept before navigation
   }
 
   /**

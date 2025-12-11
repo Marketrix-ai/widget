@@ -490,7 +490,9 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                   fill='none'
                   stroke='currentColor'
                   viewBox='0 0 24 24'
-                  style={{ color: getContrastingColor(settings.widget_secondary_color || '#10b981') }}
+                  style={{
+                    color: getContrastingColor(settings.widget_secondary_color || '#10b981'),
+                  }}
                 >
                   <path
                     strokeLinecap='round'
@@ -516,11 +518,19 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                 <div className='relative flex items-center justify-center'>
                   <div
                     className='absolute w-2.5 h-2.5 rounded-full animate-ping opacity-75'
-                    style={{ backgroundColor: getContrastingColor(settings.widget_secondary_color || '#ef4444') }}
+                    style={{
+                      backgroundColor: getContrastingColor(
+                        settings.widget_secondary_color || '#ef4444'
+                      ),
+                    }}
                   />
                   <div
                     className='relative w-2 h-2 rounded-full'
-                    style={{ backgroundColor: getContrastingColor(settings.widget_secondary_color || '#ef4444') }}
+                    style={{
+                      backgroundColor: getContrastingColor(
+                        settings.widget_secondary_color || '#ef4444'
+                      ),
+                    }}
                   />
                 </div>
                 <span className='font-medium'>Live</span>
@@ -529,7 +539,9 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                   fill='none'
                   stroke='currentColor'
                   viewBox='0 0 24 24'
-                  style={{ color: getContrastingColor(settings.widget_secondary_color || '#ef4444') }}
+                  style={{
+                    color: getContrastingColor(settings.widget_secondary_color || '#ef4444'),
+                  }}
                 >
                   <path
                     strokeLinecap='round'
