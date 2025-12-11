@@ -242,13 +242,156 @@ export class ToolExecutionService {
       return { success: false, result: '', error: `Element ${index} not found` };
     }
 
-    if ('value' in element) {
-      (element as HTMLInputElement).value = text;
-      element.dispatchEvent(new Event('input', { bubbles: true }));
-      element.dispatchEvent(new Event('change', { bubbles: true }));
+    // Check if element is an input-like element
+    const isInputLike =
+      element instanceof HTMLInputElement ||
+      element instanceof HTMLTextAreaElement ||
+      (element as HTMLElement).isContentEditable;
+
+    if (isInputLike) {
+      const inputElement = element as HTMLInputElement | HTMLTextAreaElement;
+
+      // Focus the element first (important for some frameworks)
+      try {
+        inputElement.focus();
+      } catch (e) {
+        console.warn('[ToolService] Focus failed:', e);
+      }
+
+      // Try multiple methods to set the value
+      let valueSet = false;
+      let lastError: unknown = null;
+
+      // Method 1: Native value setter (works with React controlled components)
+      if (!valueSet) {
+        try {
+          const isTextArea = inputElement.tagName.toUpperCase() === 'TEXTAREA';
+          const prototype = isTextArea ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+          const descriptor = Object.getOwnPropertyDescriptor(prototype, 'value');
+
+          if (descriptor && descriptor.set) {
+            // Important: use the descriptor.set directly with .call()
+            descriptor.set.call(inputElement, text);
+            valueSet = true;
+            console.log('[ToolService] Native setter succeeded');
+          }
+        } catch (e) {
+          lastError = e;
+          console.warn('[ToolService] Native setter failed:', e);
+        }
+      }
+
+      // Method 2: Direct value assignment
+      if (!valueSet) {
+        try {
+          inputElement.value = text;
+          valueSet = true;
+          console.log('[ToolService] Direct assignment succeeded');
+        } catch (e) {
+          lastError = e;
+          console.warn('[ToolService] Direct assignment failed:', e);
+        }
+      }
+
+      // Method 3: Select all and use execCommand insertText
+      if (!valueSet) {
+        try {
+          inputElement.focus();
+          inputElement.select();
+          const success = document.execCommand('insertText', false, text);
+          if (success) {
+            valueSet = true;
+            console.log('[ToolService] execCommand succeeded');
+          }
+        } catch (e) {
+          lastError = e;
+          console.warn('[ToolService] execCommand failed:', e);
+        }
+      }
+
+      // Method 4: Simulate keyboard input character by character (last resort)
+      if (!valueSet) {
+        try {
+          inputElement.focus();
+          // Clear existing value first
+          inputElement.value = '';
+          for (const char of text) {
+            inputElement.dispatchEvent(
+              new KeyboardEvent('keydown', { key: char, bubbles: true, cancelable: true })
+            );
+            inputElement.value += char;
+            inputElement.dispatchEvent(
+              new InputEvent('input', {
+                bubbles: true,
+                cancelable: true,
+                inputType: 'insertText',
+                data: char,
+              })
+            );
+            inputElement.dispatchEvent(
+              new KeyboardEvent('keyup', { key: char, bubbles: true, cancelable: true })
+            );
+          }
+          valueSet = true;
+          console.log('[ToolService] Simulated typing succeeded');
+        } catch (e) {
+          lastError = e;
+          console.warn('[ToolService] Simulated typing failed:', e);
+        }
+      }
+
+      if (!valueSet) {
+        return {
+          success: false,
+          result: '',
+          error: `Failed to set value: ${lastError instanceof Error ? lastError.message : String(lastError)}`,
+        };
+      }
+
+      // Dispatch events for React/Vue/Angular frameworks
+      try {
+        // InputEvent is more specific and carries data
+        const inputEvent = new InputEvent('input', {
+          bubbles: true,
+          cancelable: true,
+          inputType: 'insertText',
+          data: text,
+        });
+        inputElement.dispatchEvent(inputEvent);
+
+        // Change event for form validation
+        inputElement.dispatchEvent(new Event('change', { bubbles: true }));
+
+        // Some frameworks need blur to trigger validation
+        inputElement.dispatchEvent(new Event('blur', { bubbles: true }));
+      } catch (e) {
+        console.warn('[ToolService] Event dispatch failed:', e);
+      }
+    } else if ('value' in element) {
+      // Generic element with value property (e.g., select, custom elements)
+      try {
+        (element as HTMLInputElement).value = text;
+        element.dispatchEvent(new Event('input', { bubbles: true }));
+        element.dispatchEvent(new Event('change', { bubbles: true }));
+      } catch (e) {
+        return {
+          success: false,
+          result: '',
+          error: `Failed to set value on element: ${e instanceof Error ? e.message : String(e)}`,
+        };
+      }
     } else {
-      element.textContent = text;
-      element.dispatchEvent(new Event('input', { bubbles: true }));
+      // For contenteditable or text-based elements
+      try {
+        element.textContent = text;
+        element.dispatchEvent(new Event('input', { bubbles: true }));
+      } catch (e) {
+        return {
+          success: false,
+          result: '',
+          error: `Failed to set textContent: ${e instanceof Error ? e.message : String(e)}`,
+        };
+      }
     }
 
     const result: ToolExecutionResult = {

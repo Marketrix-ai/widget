@@ -1,5 +1,6 @@
 import { getAgentWebSocketUrl } from '../constants/config';
 import type { MarketrixConfig } from '../types';
+import { sessionManager } from './SessionManager';
 
 export type WebSocketStatus = 'disconnected' | 'connecting' | 'connected' | 'registered' | 'error';
 
@@ -257,10 +258,18 @@ export class WebSocketClient {
       // Wait for connection
       return;
     }
+
+    // Include tab_id for cross-domain session linking
+    const tabId = sessionManager.getTabId();
+
     this.send({
       jsonrpc: '2.0',
       method: 'widget/register',
-      params: { chat_id: this.chatId },
+      params: {
+        chat_id: this.chatId,
+        tab_id: tabId,
+        url: typeof window !== 'undefined' ? window.location.href : undefined,
+      },
     });
   }
 

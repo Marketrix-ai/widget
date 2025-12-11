@@ -13,6 +13,7 @@ import { WidgetSettingsLoader } from '../components/ui/WidgetSettingsLoader';
 import { WidgetProvider } from '../context/WidgetContext';
 import shadowStyles from '../index.css?inline';
 import type { MarketrixConfig } from '../types';
+import { checkAndReinjectOnLoad, initializePersistence } from './persistence';
 // Removed duplicate imports manually because I can't be sure what the previous command did or didn't do correctly.
 import { isHTMLElement, isHTMLScriptElement } from './validation';
 
@@ -298,6 +299,7 @@ const initializeWhenReady = (): void => {
  * 1. Stores the init function synchronously (no delays)
  * 2. Checks DOM ready state
  * 3. Either initializes immediately or waits for DOMContentLoaded
+ * 4. Sets up persistence for bookmarklet usage
  *
  * @param initWidget - Function to initialize the widget (passed to avoid circular dependency)
  */
@@ -308,13 +310,28 @@ export const registerAutoInit = (initWidget: (config: MarketrixConfig) => Promis
   }
 
   initWidgetFunction = initWidget;
+
+  // Check if we need to re-inject from a stored bookmarklet config (page reload scenario)
+  checkAndReinjectOnLoad();
+
   const readyState = document.readyState;
 
   if (readyState === 'complete' || readyState === 'interactive') {
     initializeWhenReady();
+    // Initialize persistence after widget is set up
+    initializePersistence();
   } else if (readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initializeWhenReady, { once: true });
+    document.addEventListener(
+      'DOMContentLoaded',
+      () => {
+        initializeWhenReady();
+        // Initialize persistence after widget is set up
+        initializePersistence();
+      },
+      { once: true }
+    );
   } else {
     initializeWhenReady();
+    initializePersistence();
   }
 };

@@ -352,8 +352,31 @@ export class DOMService {
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_ELEMENT, {
       acceptNode: (node: Node) => {
         if (node instanceof HTMLElement) {
+          // Same logic as indexInteractableElements to handle fixed-position modals
           if (node.offsetParent === null && node.tagName !== 'BODY') {
-            return NodeFilter.FILTER_REJECT;
+            const style = window.getComputedStyle(node);
+            const isFixedOrSticky = style.position === 'fixed' || style.position === 'sticky';
+            const isDisplayNone = style.display === 'none';
+
+            if (isDisplayNone) {
+              return NodeFilter.FILTER_REJECT;
+            }
+
+            if (!isFixedOrSticky) {
+              let parent = node.parentElement;
+              let insideFixedParent = false;
+              while (parent && parent !== document.body) {
+                const parentStyle = window.getComputedStyle(parent);
+                if (parentStyle.position === 'fixed' || parentStyle.position === 'sticky') {
+                  insideFixedParent = true;
+                  break;
+                }
+                parent = parent.parentElement;
+              }
+              if (!insideFixedParent) {
+                return NodeFilter.FILTER_REJECT;
+              }
+            }
           }
         }
         return NodeFilter.FILTER_ACCEPT;
@@ -507,8 +530,40 @@ export class DOMService {
         acceptNode: (node: Node) => {
           // Skip invisible elements immediately to improve performance
           if (node instanceof HTMLElement) {
+            // offsetParent is null for:
+            // 1. Elements with display: none (should skip)
+            // 2. Elements with position: fixed (should NOT skip - these are modals!)
+            // 3. The <body> element itself
             if (node.offsetParent === null && node.tagName !== 'BODY') {
-              return NodeFilter.FILTER_REJECT; // Skip this node and its children
+              // Check if it's a fixed/sticky positioned element (modal, popup, etc.)
+              const style = window.getComputedStyle(node);
+              const isFixedOrSticky = style.position === 'fixed' || style.position === 'sticky';
+              const isDisplayNone = style.display === 'none';
+
+              // Skip only if it's truly hidden (display: none), not just fixed position
+              if (isDisplayNone) {
+                return NodeFilter.FILTER_REJECT; // Skip this node and its children
+              }
+
+              // For fixed/sticky elements, continue to accept them
+              if (!isFixedOrSticky) {
+                // Check parent - if parent is fixed, this element is inside a modal
+                let parent = node.parentElement;
+                let insideFixedParent = false;
+                while (parent && parent !== document.body) {
+                  const parentStyle = window.getComputedStyle(parent);
+                  if (parentStyle.position === 'fixed' || parentStyle.position === 'sticky') {
+                    insideFixedParent = true;
+                    break;
+                  }
+                  parent = parent.parentElement;
+                }
+
+                // If not inside a fixed parent and offsetParent is null, skip
+                if (!insideFixedParent) {
+                  return NodeFilter.FILTER_REJECT;
+                }
+              }
             }
           }
           return NodeFilter.FILTER_ACCEPT;
@@ -563,33 +618,28 @@ export class DOMService {
     // Clone document for output
     const clone = document.documentElement.cloneNode(true) as Element;
 
-    // We need to match live elements to clone elements to inject attributes.
-    // Since we just indexed, we can try to walk both trees in sync.
-    // This assumes the clone operation creates an identical tree structure (which it should).
+    // Instead of walking both trees in sync (which can fail with modals/fixed elements),
+    // we directly inject data-id attributes based on our element map
+    // by finding matching elements in the clone via selectors
 
-    const liveWalker = document.createTreeWalker(document.body, NodeFilter.SHOW_ELEMENT);
-    // Find body in clone to start walking from same point
-    const cloneBody = clone.querySelector('body') || clone;
-    const cloneWalker = document.createTreeWalker(cloneBody, NodeFilter.SHOW_ELEMENT);
-
-    let liveNode: Node | null = liveWalker.nextNode();
-    let cloneNode: Node | null = cloneWalker.nextNode();
-
-    while (liveNode && cloneNode) {
-      // Synchronize walkers?
-      // `cloneNode(true)` copies everything including non-element nodes (if we used cloning on node),
-      // but `createTreeWalker` only shows elements.
-      // This lock-step should work for identical trees.
-
-      if (liveNode instanceof Element && cloneNode instanceof Element) {
-        const seq = this.elementToSequence.get(liveNode);
-        if (seq !== undefined) {
-          cloneNode.setAttribute('data-id', seq.toString());
+    for (const [index, element] of this.elementMap.entries()) {
+      if (element instanceof HTMLElement) {
+        // Generate a selector for this element
+        const selector = this.selectorMap.get(index);
+        if (selector) {
+          try {
+            // Find the same element in the clone
+            const cloneBody = clone.querySelector('body') || clone;
+            const cloneElement = cloneBody.querySelector(selector);
+            if (cloneElement) {
+              cloneElement.setAttribute('data-id', index.toString());
+            }
+          } catch (e) {
+            // Selector might be invalid, skip this element
+            console.warn(`[DOMService] Failed to apply data-id for index ${index}:`, e);
+          }
         }
       }
-
-      liveNode = liveWalker.nextNode();
-      cloneNode = cloneWalker.nextNode();
     }
 
     return clone.outerHTML;

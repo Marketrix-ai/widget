@@ -1,7 +1,7 @@
 import tailwindcss from '@tailwindcss/vite';
 import basicSsl from '@vitejs/plugin-basic-ssl';
 import react from '@vitejs/plugin-react';
-import { copyFileSync } from 'fs';
+import { copyFileSync, existsSync, readFileSync } from 'fs';
 import { resolve } from 'path';
 import { defineConfig, type ViteDevServer } from 'vite';
 import cssInjectedByJsPlugin from 'vite-plugin-css-injected-by-js';
@@ -14,6 +14,32 @@ const devMeetPlugin = () => {
     name: 'dev-meet',
     configureServer(s: ViteDevServer) {
       server = s;
+      // Add middleware at the VERY BEGINNING using stack manipulation
+      const htmlHandler = (
+        req: import('http').IncomingMessage,
+        res: import('http').ServerResponse,
+        next: () => void
+      ) => {
+        if (req.url === '/test.html' || req.url === '/test') {
+          const testHtmlPath = resolve(process.cwd(), 'test.html');
+          if (existsSync(testHtmlPath)) {
+            res.setHeader('Content-Type', 'text/html');
+            res.end(readFileSync(testHtmlPath, 'utf-8'));
+            return;
+          }
+        }
+        if (req.url === '/widget.html' || req.url === '/widget') {
+          const widgetHtmlPath = resolve(process.cwd(), 'widget.html');
+          if (existsSync(widgetHtmlPath)) {
+            res.setHeader('Content-Type', 'text/html');
+            res.end(readFileSync(widgetHtmlPath, 'utf-8'));
+            return;
+          }
+        }
+        next();
+      };
+      // @ts-expect-error - accessing internal stack
+      s.middlewares.stack.unshift({ route: '', handle: htmlHandler });
     },
     resolveId(id: string) {
       if (['/meet.js', './meet.js'].includes(id)) return id;
@@ -71,15 +97,15 @@ export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
-    basicSsl(),
+    // basicSsl(), // Disabled - using HTTP for local development
     devMeetPlugin(),
     cssInjectedByJsPlugin(),
     copyIndexHtmlPlugin(),
   ],
   root: '.',
-  publicDir: false,
+  publicDir: 'public',
   server: {
-    https: true,
+    // https: true, // Disabled - using HTTP for local development
     port: 5174,
     cors: true,
     headers: {

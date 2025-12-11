@@ -15,10 +15,22 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 
 import { DebugPanel } from './components/debug/DebugPanel';
+import { devTestService } from './services/DevTestService';
+import { domService } from './services/DomService';
 import { initDevTools } from './utils/devTools';
 
 // Initialize dev tools (console helpers)
 initDevTools();
+
+// Expose services on window for test.html
+declare global {
+  interface Window {
+    devTestService: typeof devTestService;
+    domService: typeof domService;
+  }
+}
+window.devTestService = devTestService;
+window.domService = domService;
 
 // Create container for debug panel
 function createDebugContainer(): HTMLElement {
