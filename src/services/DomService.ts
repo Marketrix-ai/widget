@@ -515,97 +515,99 @@ export class DOMService {
    * Index all interactable elements in the live DOM.
    * Always clears previous index first.
    */
-  indexInteractableElements(): Array<[number, Element]> {
-    if (this.indexingInProgress) {
-      console.warn('[DOMService] Indexing already in progress, skipping concurrent call');
-      return [];
-    }
+ indexInteractableElements(): Array<[number, Element]> {
+  if (this.indexingInProgress) {
+    console.warn('[DOMService] Indexing already in progress, skipping concurrent call');
+    return [];
+  }
 
-    try {
-      this.indexingInProgress = true;
-      this.clearIndex(); // Clear existing index
+  try {
+    this.indexingInProgress = true;
+    this.clearIndex(); // Clear existing index
 
-      // Walk the DOM tree in document order
-      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_ELEMENT, {
-        acceptNode: (node: Node) => {
-          // Skip invisible elements immediately to improve performance
-          if (node instanceof HTMLElement) {
-            // offsetParent is null for:
-            // 1. Elements with display: none (should skip)
-            // 2. Elements with position: fixed (should NOT skip - these are modals!)
-            // 3. The <body> element itself
-            if (node.offsetParent === null && node.tagName !== 'BODY') {
-              // Check if it's a fixed/sticky positioned element (modal, popup, etc.)
-              const style = window.getComputedStyle(node);
-              const isFixedOrSticky = style.position === 'fixed' || style.position === 'sticky';
-              const isDisplayNone = style.display === 'none';
+    // Walk the DOM with your visibility logic preserved
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_ELEMENT, {
+      acceptNode: (node: Node) => {
+        if (node instanceof HTMLElement) {
+          if (node.offsetParent === null && node.tagName !== 'BODY') {
+            const style = window.getComputedStyle(node);
+            const isFixedOrSticky = style.position === 'fixed' || style.position === 'sticky';
+            const isDisplayNone = style.display === 'none';
 
-              // Skip only if it's truly hidden (display: none), not just fixed position
-              if (isDisplayNone) {
-                return NodeFilter.FILTER_REJECT; // Skip this node and its children
+            if (isDisplayNone) return NodeFilter.FILTER_REJECT;
+
+            if (!isFixedOrSticky) {
+              let parent = node.parentElement;
+              let insideFixedParent = false;
+
+              while (parent && parent !== document.body) {
+                const parentStyle = window.getComputedStyle(parent);
+                if (parentStyle.position === 'fixed' || parentStyle.position === 'sticky') {
+                  insideFixedParent = true;
+                  break;
+                }
+                parent = parent.parentElement;
               }
 
-              // For fixed/sticky elements, continue to accept them
-              if (!isFixedOrSticky) {
-                // Check parent - if parent is fixed, this element is inside a modal
-                let parent = node.parentElement;
-                let insideFixedParent = false;
-                while (parent && parent !== document.body) {
-                  const parentStyle = window.getComputedStyle(parent);
-                  if (parentStyle.position === 'fixed' || parentStyle.position === 'sticky') {
-                    insideFixedParent = true;
-                    break;
-                  }
-                  parent = parent.parentElement;
-                }
-
-                // If not inside a fixed parent and offsetParent is null, skip
-                if (!insideFixedParent) {
-                  return NodeFilter.FILTER_REJECT;
-                }
-              }
+              if (!insideFixedParent) return NodeFilter.FILTER_REJECT;
             }
           }
-          return NodeFilter.FILTER_ACCEPT;
-        },
-      });
-
-      let node: Node | null = walker.nextNode();
-      let sequenceNumber = 0;
-      const indexedElements: Array<[number, Element]> = [];
-
-      while (node) {
-        if (node instanceof Element) {
-          if (isInteractable(node)) {
-            // Add to index
-            this.elementMap.set(sequenceNumber, node);
-            this.elementToSequence.set(node, sequenceNumber);
-
-            // Generate and store selector
-            const selector = this.generateSelector(node);
-            this.selectorMap.set(sequenceNumber, selector);
-
-            // Generate and store fingerprint for validation
-            const fingerprint = this.generateFingerprint(node, selector);
-            this.fingerprintMap.set(sequenceNumber, fingerprint);
-
-            indexedElements.push([sequenceNumber, node]);
-            sequenceNumber++;
-          }
         }
-        node = walker.nextNode();
+        return NodeFilter.FILTER_ACCEPT;
+      },
+    });
+
+    let node: Node | null = walker.nextNode();
+    let sequenceNumber = 0;
+    const indexedElements: Array<[number, Element]> = [];
+
+    while (node) {
+      if (node instanceof HTMLElement) {
+
+        // ---- 🔥 ENHANCED INTERACTABLE DETECTION LOGIC HERE ----
+        const semantic =
+          node.matches('a[href], button, input, textarea, select, [role="button"]');
+
+        const visuallyClickable =
+          node.classList.contains('cursor-pointer') ||
+          node.classList.contains('clickable');
+
+        const hasClickHandler =
+          typeof (node as any).onclick === 'function';
+
+        const isNowInteractable =
+          semantic || visuallyClickable || hasClickHandler || isInteractable(node);
+        // --------------------------------------------------------
+
+        if (isNowInteractable) {
+          this.elementMap.set(sequenceNumber, node);
+          this.elementToSequence.set(node, sequenceNumber);
+
+          const selector = this.generateSelector(node);
+          this.selectorMap.set(sequenceNumber, selector);
+
+          const fingerprint = this.generateFingerprint(node, selector);
+          this.fingerprintMap.set(sequenceNumber, fingerprint);
+
+          indexedElements.push([sequenceNumber, node]);
+          sequenceNumber++;
+        }
       }
 
-      this.isIndexed = true;
-      this.indexVersion++;
-      // State persistence is now handled by ChatService/WidgetContext via exportState()
-      console.log(`[DOMService] Indexed ${sequenceNumber} elements (version ${this.indexVersion})`);
-
-      return indexedElements;
-    } finally {
-      this.indexingInProgress = false;
+      node = walker.nextNode();
     }
+
+    this.isIndexed = true;
+    this.indexVersion++;
+
+    console.log(`[DOMService] Indexed ${sequenceNumber} elements (version ${this.indexVersion})`);
+
+    return indexedElements;
+  } finally {
+    this.indexingInProgress = false;
   }
+}
+
 
   /**
    * Get HTML snapshot with data-id attributes injected.
