@@ -13,6 +13,66 @@ export interface ToolExecutionResult {
   };
 }
 
+// TypeScript interfaces for tool parameters
+export interface NavigateParams {
+  url: string;
+  new_tab?: boolean;
+}
+
+export interface SearchParams {
+  query: string;
+  engine?: 'duckduckgo' | 'google' | 'bing';
+}
+
+export interface ClickElementParams {
+  index: number;
+}
+
+export interface TypeTextParams {
+  index: number;
+  text: string;
+}
+
+export interface ScrollParams {
+  direction: 'up' | 'down' | 'left' | 'right';
+}
+
+export interface ScrollToTextParams {
+  text: string;
+}
+
+export interface SendKeysParams {
+  index: number;
+  keys: string;
+}
+
+export interface SelectDropdownOptionParams {
+  index: number;
+  option: string;
+}
+
+export interface GetDropdownOptionsParams {
+  index: number;
+}
+
+export interface UploadFileParams {
+  index: number;
+  path: string;
+}
+
+export interface SwitchTabParams {
+  tab_index: number;
+}
+
+export interface DoneParams {
+  success: boolean;
+  message?: string;
+}
+
+export interface WaitParams {
+  seconds: number;
+}
+
 export class ToolExecutionService {
   private static instance: ToolExecutionService;
 
@@ -70,37 +130,37 @@ export class ToolExecutionService {
 
       switch (toolName) {
         case 'navigate':
-          return this.navigate(args);
+          return this.navigate(args as unknown as NavigateParams);
         case 'search':
-          return this.search(args);
+          return this.search(args as unknown as SearchParams);
         case 'click_element':
-          return await this.clickElement(args);
+          return await this.clickElement(args as unknown as ClickElementParams);
         case 'type_text':
-          return this.typeText(args);
+          return this.typeText(args as unknown as TypeTextParams);
         case 'scroll':
-          return this.scroll(args);
+          return this.scroll(args as unknown as ScrollParams);
         case 'scroll_to_text':
-          return this.scrollToText(args);
+          return this.scrollToText(args as unknown as ScrollToTextParams);
         case 'extract':
           return this.extract(args);
         case 'go_back':
           return this.goBack();
         case 'wait':
-          return await this.wait(args);
+          return await this.wait(args as unknown as WaitParams);
         case 'select_dropdown_option':
-          return this.selectDropdownOption(args);
+          return this.selectDropdownOption(args as unknown as SelectDropdownOptionParams);
         case 'get_dropdown_options':
-          return this.getDropdownOptions(args);
+          return this.getDropdownOptions(args as unknown as GetDropdownOptionsParams);
         case 'send_keys':
-          return this.sendKeys(args);
+          return this.sendKeys(args as unknown as SendKeysParams);
         case 'upload_file':
-          return this.uploadFile(args);
+          return this.uploadFile(args as unknown as UploadFileParams);
         case 'close_tab':
           return this.closeTab();
         case 'switch_tab':
-          return this.switchTab(args);
+          return this.switchTab(args as unknown as SwitchTabParams);
         case 'done':
-          return this.done(args);
+          return this.done(args as unknown as DoneParams);
         case 'get_html':
           return this.getHtml();
         case 'get_screenshot':
@@ -129,7 +189,7 @@ export class ToolExecutionService {
     ].includes(toolName);
   }
 
-  private navigate(args: Record<string, unknown>): ToolExecutionResult {
+  private navigate(args: NavigateParams): ToolExecutionResult {
     const url = args.url as string;
     if (!url) return { success: false, result: '', error: 'URL is required' };
 
@@ -142,7 +202,7 @@ export class ToolExecutionService {
     }
   }
 
-  private search(args: Record<string, unknown>): ToolExecutionResult {
+  private search(args: SearchParams): ToolExecutionResult {
     const query = args.query as string;
     if (!query) return { success: false, result: '', error: 'Query is required' };
 
@@ -157,7 +217,7 @@ export class ToolExecutionService {
     return { success: true, result: `Searching for "${query}" on ${engine}` };
   }
 
-  private async clickElement(args: Record<string, unknown>): Promise<ToolExecutionResult> {
+  private async clickElement(args: ClickElementParams): Promise<ToolExecutionResult> {
     const index = args.index as number;
     if (index === undefined) return { success: false, result: '', error: 'Index required' };
 
@@ -220,7 +280,7 @@ export class ToolExecutionService {
     return result;
   }
 
-  private typeText(args: Record<string, unknown>): ToolExecutionResult {
+  private typeText(args: TypeTextParams): ToolExecutionResult {
     const index = args.index as number;
     const text = args.text as string;
     if (index === undefined || text === undefined)
@@ -408,7 +468,7 @@ export class ToolExecutionService {
     return result;
   }
 
-  private scroll(args: Record<string, unknown>): ToolExecutionResult {
+  private scroll(args: ScrollParams): ToolExecutionResult {
     const direction = ((args.direction as string) || '').toLowerCase();
     const amount = window.innerHeight * 0.8;
 
@@ -431,7 +491,7 @@ export class ToolExecutionService {
     return { success: true, result: `Scrolled ${direction}` };
   }
 
-  private scrollToText(args: Record<string, unknown>): ToolExecutionResult {
+  private scrollToText(args: ScrollToTextParams): ToolExecutionResult {
     const text = args.text as string;
     if (!text) return { success: false, result: '', error: 'Text required' };
 
@@ -469,14 +529,14 @@ export class ToolExecutionService {
     return { success: false, result: '', error: 'No history' };
   }
 
-  private async wait(args: Record<string, unknown>): Promise<ToolExecutionResult> {
+  private async wait(args: WaitParams): Promise<ToolExecutionResult> {
     const seconds = args.seconds as number;
     if (seconds === undefined) return { success: false, result: '', error: 'Seconds required' };
     await new Promise((resolve) => setTimeout(resolve, seconds * 1000));
     return { success: true, result: `Waited ${seconds}s` };
   }
 
-  private selectDropdownOption(args: Record<string, unknown>): ToolExecutionResult {
+  private selectDropdownOption(args: SelectDropdownOptionParams): ToolExecutionResult {
     const index = args.index as number;
     const option = args.option as string;
     if (index === undefined || !option)
@@ -519,7 +579,7 @@ export class ToolExecutionService {
     return result;
   }
 
-  private getDropdownOptions(args: Record<string, unknown>): ToolExecutionResult {
+  private getDropdownOptions(args: GetDropdownOptionsParams): ToolExecutionResult {
     const index = args.index as number;
 
     // Use validated element lookup
@@ -546,7 +606,7 @@ export class ToolExecutionService {
     return { success: true, result: JSON.stringify(options) };
   }
 
-  private sendKeys(args: Record<string, unknown>): ToolExecutionResult {
+  private sendKeys(args: SendKeysParams): ToolExecutionResult {
     const index = args.index as number;
     const keys = args.keys as string;
     if (index === undefined || !keys)
@@ -851,7 +911,7 @@ export class ToolExecutionService {
     }
   }
 
-  private uploadFile(_args: Record<string, unknown>): ToolExecutionResult {
+  private uploadFile(_args: UploadFileParams): ToolExecutionResult {
     return { success: false, result: '', error: 'File upload not supported via script' };
   }
 
@@ -860,12 +920,23 @@ export class ToolExecutionService {
     return { success: true, result: 'Attempted close' };
   }
 
-  private switchTab(_args: Record<string, unknown>): ToolExecutionResult {
+  private switchTab(args: SwitchTabParams): ToolExecutionResult {
+    const tab_index = args.tab_index as number;
+    if (tab_index === undefined) {
+      return { success: false, result: '', error: 'tab_index is required' };
+    }
+    // Tab switching not supported in browser context
     return { success: false, result: '', error: 'Tab switching not supported' };
   }
 
-  private done(args: Record<string, unknown>): ToolExecutionResult {
-    return { success: true, result: args.success ? 'Task completed' : 'Task failed' };
+  private done(args: DoneParams): ToolExecutionResult {
+    const success = args.success as boolean;
+    if (success === undefined) {
+      return { success: false, result: '', error: 'success parameter is required' };
+    }
+    const message = args.message as string | undefined;
+    const resultMessage = message || (success ? 'Task completed' : 'Task failed');
+    return { success: true, result: resultMessage };
   }
 
   private getHtml(): ToolExecutionResult {

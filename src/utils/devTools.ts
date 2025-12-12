@@ -39,9 +39,9 @@ export const TOOL_PARAMS: Record<string, { required: string[]; optional: string[
   go_back: { required: [], optional: [] },
   wait: { required: ['seconds'], optional: [] },
   close_tab: { required: [], optional: [] },
-  switch_tab: { required: [], optional: [] },
+  switch_tab: { required: ['tab_index'], optional: [] },
   upload_file: { required: ['index', 'path'], optional: [] },
-  done: { required: [], optional: ['success'] },
+  done: { required: ['success'], optional: ['message'] },
 };
 
 // Dev tools helper object
