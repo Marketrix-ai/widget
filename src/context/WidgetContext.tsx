@@ -228,11 +228,13 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             // If we send "Waiting...", the agent might think that's the output.
             // For interactive tools in Show Mode, we really want to tell the agent "Action Performed".
             // The ToolExecutionService returned "User completed the action" or similar.
+            // Send the full ToolExecutionResult as JSON to match agent's expectations
+            const resultJson = JSON.stringify(result);
             wsClient.send({
               jsonrpc: '2.0',
               method: 'tools/call',
               id: requestId,
-              result: { content: [{ type: 'text', text: result.result }] },
+              result: { content: [{ type: 'text', text: resultJson }] },
             });
             updateProgressForTool(toolName, explanation, 'completed');
             // If the "done" tool completed successfully, mark the task as complete
