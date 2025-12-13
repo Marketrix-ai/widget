@@ -74,6 +74,10 @@ export class WebSocketClient {
     return this.status;
   }
 
+  getUrl(): string {
+    return this.url;
+  }
+
   isConnected(): boolean {
     return this.status === 'registered' && this.websocket?.readyState === WebSocket.OPEN;
   }

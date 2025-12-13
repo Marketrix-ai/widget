@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { IoChatbubbleEllipsesOutline } from 'react-icons/io5';
 import { LuMousePointerClick } from 'react-icons/lu';
 import { SiTicktick } from 'react-icons/si';
@@ -6,6 +6,9 @@ import { SiTicktick } from 'react-icons/si';
 import MarketrixLogo from '../../assets/marktrix-footer.png';
 import { useWidget } from '../../hooks/useWidget';
 import type { InstructionType } from '../../sdk';
+import { configManager } from '../../services/ConfigManager';
+import { sessionManager } from '../../services/SessionManager';
+import { WebSocketClient } from '../../services/WebSocketClient';
 import type { MarketrixConfig } from '../../types';
 import {
   addOpacity,
@@ -13,6 +16,7 @@ import {
   getModeDescription,
   getModeDisplayName,
 } from '../../utils/format';
+import { DiagnosticModal } from '../ui/DiagnosticModal';
 
 interface ModeSelectorProps {
   currentMode: InstructionType;
@@ -30,6 +34,7 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({
   config,
 }) => {
   const { settings } = useWidget(config ? { config } : {});
+  const [isDiagnosticModalOpen, setIsDiagnosticModalOpen] = useState(false);
   const getModeIcon = (mode: InstructionType) => {
     switch (mode) {
       case 'show':
@@ -131,8 +136,39 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({
       <img
         src={MarketrixLogo}
         alt='Marketrix Logo'
-        className='h-5 w-auto object-contain flex-shrink-0'
+        className='h-5 w-auto object-contain flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity'
         style={{ maxWidth: '100px' }}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setIsDiagnosticModalOpen(true);
+        }}
+      />
+      <DiagnosticModal
+        isOpen={isDiagnosticModalOpen}
+        onClose={() => setIsDiagnosticModalOpen(false)}
+        diagnosticData={{
+          chatId: sessionManager.getChatId(),
+          tabId: sessionManager.getTabId(),
+          websocketEndpoint: (() => {
+            try {
+              const wsClient = WebSocketClient.getInstance(config);
+              return wsClient.getUrl();
+            } catch {
+              return null;
+            }
+          })(),
+          connectionStatus: (() => {
+            try {
+              const wsClient = WebSocketClient.getInstance(config);
+              return wsClient.getStatus();
+            } catch {
+              return 'disconnected';
+            }
+          })(),
+          connectionId: configManager.getConfig()?.connectionId,
+          agentId: configManager.getConfig()?.agentId,
+        }}
       />
     </div>
   );
