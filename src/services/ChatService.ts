@@ -1,6 +1,5 @@
 import type { ChatMessage, InstructionType, TaskProgress } from '../types';
 import { removeThinkingMarkers } from '../utils/chat';
-import { domService, type ElementFingerprint } from './DomService';
 
 interface StoredChatContext {
   chat_id: string;
@@ -13,13 +12,6 @@ interface StoredChatContext {
   isMinimized: boolean;
   isLoading: boolean;
   timestamp: number;
-  // Legacy format support
-  domState?:
-    | Array<[number, string]>
-    | {
-        selectors: Array<[number, string]>;
-        fingerprints: Array<[number, ElementFingerprint]>;
-      };
 }
 
 const CHAT_CONTEXT_STORAGE_KEY = 'marketrix_chat_context';
@@ -71,7 +63,6 @@ export class ChatService {
         isMinimized: false,
         isLoading: false,
         timestamp: Date.now(),
-        domState: { selectors: [], fingerprints: [] },
       };
 
       localStorage.setItem(CHAT_CONTEXT_STORAGE_KEY, JSON.stringify(initialContext));
@@ -184,11 +175,6 @@ export class ChatService {
         console.log('[ChatService] Chat ID mismatch but restoring history');
       }
 
-      // Restore DOM state if available
-      if (context.domState) {
-        domService.importState(context.domState);
-      }
-
       this.messages = context.messages.map((msg) => {
         // Handle restored screenshare messages
         // If a message was a screenshare stream (id starts with 'screenshare-'),
@@ -214,11 +200,9 @@ export class ChatService {
         };
 
         // If no parts, create default text part from content (if any)
-        // @ts-ignore - parts is possibly undefined if ChatMessage type was strict but we ensure it above
-        if (restoredMsg.parts.length === 0 && restoredMsg.content) {
+        if (restoredMsg.parts?.length === 0 && restoredMsg.content) {
           const cleanContent = restoredMsg.content.replace(/\n\n__THINKING__$/, '').trim();
-          if (cleanContent) {
-            // @ts-ignore - parts is safe here
+          if (cleanContent && restoredMsg.parts) {
             restoredMsg.parts.push({
               type: 'text',
               content: cleanContent,
@@ -284,7 +268,6 @@ export class ChatService {
         isMinimized: this.isMinimized,
         isLoading: this.isLoading,
         timestamp: Date.now(),
-        domState: domService.exportState(),
       };
 
       localStorage.setItem(CHAT_CONTEXT_STORAGE_KEY, JSON.stringify(context));

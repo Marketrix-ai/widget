@@ -2,7 +2,6 @@ export interface ShowModeOptions {
   element: HTMLElement;
   explanation: string;
   toolName: string;
-  toolParams: Record<string, unknown>;
   isClickAction?: boolean;
 }
 

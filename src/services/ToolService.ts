@@ -99,11 +99,10 @@ export class ToolExecutionService {
         if (index !== undefined) {
           const element = domService.getElementByIndex(index);
           if (element) {
-            const confirmed = await (showModeService as any).showToolAction({
+            const confirmed = await showModeService.showToolAction({
               element,
               explanation: explanation || `Execute ${toolName}`,
               toolName,
-              toolParams: args,
               isClickAction: toolName === 'click_element',
             });
 
@@ -169,8 +168,7 @@ export class ToolExecutionService {
           return { success: false, result: '', error: `Unknown tool: ${toolName}` };
       }
     } catch (error) {
-      // @ts-ignore - showModeService might have typing issues in some envs, but it's valid
-      (showModeService as any).cleanup();
+      showModeService.cleanup();
       return {
         success: false,
         result: '',
@@ -253,19 +251,21 @@ export class ToolExecutionService {
     // Defer the click to allow the tool response to be sent first
     setTimeout(() => {
       try {
-        if (element instanceof HTMLElement) {
-          element.click();
-        } else {
-          // Fallback for SVG/other elements
+        // element is HTMLElement which has click() method
+        element.click();
+      } catch (e) {
+        console.warn('[ToolExecutionService] Click triggered an error on the page:', e);
+        // Fallback: try dispatchEvent if click() fails
+        try {
           const clickEvent = new MouseEvent('click', {
             bubbles: true,
             cancelable: true,
             view: window,
           });
-          (element as any).dispatchEvent(clickEvent);
+          element.dispatchEvent(clickEvent);
+        } catch (fallbackError) {
+          console.warn('[ToolExecutionService] Fallback click also failed:', fallbackError);
         }
-      } catch (e) {
-        console.warn('[ToolExecutionService] Click triggered an error on the page:', e);
       }
     }, 50);
 

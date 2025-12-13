@@ -469,30 +469,13 @@ export class DOMService {
   /**
    * Import state from external persistence (selectors and fingerprints)
    */
-  importState(
-    state:
-      | {
-          selectors?: Array<[number, string]>;
-          fingerprints?: Array<[number, ElementFingerprint]>;
-        }
-      | Array<[number, string]>
-  ): void {
+  importState(state: {
+    selectors?: Array<[number, string]>;
+    fingerprints?: Array<[number, ElementFingerprint]>;
+  }): void {
     if (!state) return;
 
     try {
-      // Handle legacy format (just selectors array)
-      if (Array.isArray(state)) {
-        this.selectorMap = new Map(state);
-        if (this.selectorMap.size > 0) {
-          this.isIndexed = true;
-          console.log(
-            `[DOMService] Restored ${this.selectorMap.size} element mappings (legacy format)`
-          );
-        }
-        return;
-      }
-
-      // Handle new format with selectors and fingerprints
       if (state.selectors) {
         this.selectorMap = new Map(state.selectors);
       }
@@ -571,7 +554,8 @@ export class DOMService {
           const visuallyClickable =
             node.classList.contains('cursor-pointer') || node.classList.contains('clickable');
 
-          const hasClickHandler = typeof (node as any).onclick === 'function';
+          const hasClickHandler =
+            'onclick' in node && typeof (node as HTMLElement).onclick === 'function';
 
           const isNowInteractable =
             semantic || visuallyClickable || hasClickHandler || isInteractable(node);
