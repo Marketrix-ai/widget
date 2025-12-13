@@ -106,8 +106,7 @@ export function createLogger(prefix: string) {
  * and ensure consistent error handling patterns across the widget.
  */
 
-// Remove self import
-// import { createLogger } from './logger';
+import { extractErrorMessage } from './apiUtils';
 
 const log = createLogger('ErrorUtils');
 
@@ -149,7 +148,7 @@ export function logError(
   error: unknown,
   additionalInfo?: Record<string, unknown>
 ): void {
-  const errorMessage = error instanceof Error ? error.message : String(error);
+  const errorMessage = extractErrorMessage(error);
   const errorStack = error instanceof Error ? error.stack : undefined;
 
   log.error(`${context}: ${errorMessage}`, {
@@ -167,20 +166,4 @@ export function logWarning(
   additionalInfo?: Record<string, unknown>
 ): void {
   log.warn(`${context}: ${message}`, additionalInfo || {});
-}
-
-/**
- * Extract error message from unknown error type
- */
-export function extractErrorMessage(error: unknown): string {
-  if (error instanceof Error) {
-    return error.message;
-  }
-  if (typeof error === 'string') {
-    return error;
-  }
-  if (error && typeof error === 'object' && 'message' in error) {
-    return String((error as { message: unknown }).message);
-  }
-  return 'Unknown error';
 }
