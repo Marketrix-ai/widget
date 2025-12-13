@@ -515,99 +515,230 @@ export class DOMService {
    * Index all interactable elements in the live DOM.
    * Always clears previous index first.
    */
- indexInteractableElements(): Array<[number, Element]> {
-  if (this.indexingInProgress) {
-    console.warn('[DOMService] Indexing already in progress, skipping concurrent call');
-    return [];
-  }
-
-  try {
-    this.indexingInProgress = true;
-    this.clearIndex(); // Clear existing index
-
-    // Walk the DOM with your visibility logic preserved
-    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_ELEMENT, {
-      acceptNode: (node: Node) => {
-        if (node instanceof HTMLElement) {
-          if (node.offsetParent === null && node.tagName !== 'BODY') {
-            const style = window.getComputedStyle(node);
-            const isFixedOrSticky = style.position === 'fixed' || style.position === 'sticky';
-            const isDisplayNone = style.display === 'none';
-
-            if (isDisplayNone) return NodeFilter.FILTER_REJECT;
-
-            if (!isFixedOrSticky) {
-              let parent = node.parentElement;
-              let insideFixedParent = false;
-
-              while (parent && parent !== document.body) {
-                const parentStyle = window.getComputedStyle(parent);
-                if (parentStyle.position === 'fixed' || parentStyle.position === 'sticky') {
-                  insideFixedParent = true;
-                  break;
-                }
-                parent = parent.parentElement;
-              }
-
-              if (!insideFixedParent) return NodeFilter.FILTER_REJECT;
-            }
-          }
-        }
-        return NodeFilter.FILTER_ACCEPT;
-      },
-    });
-
-    let node: Node | null = walker.nextNode();
-    let sequenceNumber = 0;
-    const indexedElements: Array<[number, Element]> = [];
-
-    while (node) {
-      if (node instanceof HTMLElement) {
-
-        // ---- 🔥 ENHANCED INTERACTABLE DETECTION LOGIC HERE ----
-        const semantic =
-          node.matches('a[href], button, input, textarea, select, [role="button"]');
-
-        const visuallyClickable =
-          node.classList.contains('cursor-pointer') ||
-          node.classList.contains('clickable');
-
-        const hasClickHandler =
-          typeof (node as any).onclick === 'function';
-
-        const isNowInteractable =
-          semantic || visuallyClickable || hasClickHandler || isInteractable(node);
-        // --------------------------------------------------------
-
-        if (isNowInteractable) {
-          this.elementMap.set(sequenceNumber, node);
-          this.elementToSequence.set(node, sequenceNumber);
-
-          const selector = this.generateSelector(node);
-          this.selectorMap.set(sequenceNumber, selector);
-
-          const fingerprint = this.generateFingerprint(node, selector);
-          this.fingerprintMap.set(sequenceNumber, fingerprint);
-
-          indexedElements.push([sequenceNumber, node]);
-          sequenceNumber++;
-        }
-      }
-
-      node = walker.nextNode();
+  indexInteractableElements(): Array<[number, Element]> {
+    if (this.indexingInProgress) {
+      console.warn('[DOMService] Indexing already in progress, skipping concurrent call');
+      return [];
     }
 
-    this.isIndexed = true;
-    this.indexVersion++;
+    try {
+      this.indexingInProgress = true;
+      this.clearIndex(); // Clear existing index
 
-    console.log(`[DOMService] Indexed ${sequenceNumber} elements (version ${this.indexVersion})`);
+      // Walk the DOM with your visibility logic preserved
+      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_ELEMENT, {
+        acceptNode: (node: Node) => {
+          if (node instanceof HTMLElement) {
+            if (node.offsetParent === null && node.tagName !== 'BODY') {
+              const style = window.getComputedStyle(node);
+              const isFixedOrSticky = style.position === 'fixed' || style.position === 'sticky';
+              const isDisplayNone = style.display === 'none';
 
-    return indexedElements;
-  } finally {
-    this.indexingInProgress = false;
+              if (isDisplayNone) return NodeFilter.FILTER_REJECT;
+
+              if (!isFixedOrSticky) {
+                let parent = node.parentElement;
+                let insideFixedParent = false;
+
+                while (parent && parent !== document.body) {
+                  const parentStyle = window.getComputedStyle(parent);
+                  if (parentStyle.position === 'fixed' || parentStyle.position === 'sticky') {
+                    insideFixedParent = true;
+                    break;
+                  }
+                  parent = parent.parentElement;
+                }
+
+                if (!insideFixedParent) return NodeFilter.FILTER_REJECT;
+              }
+            }
+          }
+          return NodeFilter.FILTER_ACCEPT;
+        },
+      });
+
+      let node: Node | null = walker.nextNode();
+      let sequenceNumber = 0;
+      const indexedElements: Array<[number, Element]> = [];
+
+      while (node) {
+        if (node instanceof HTMLElement) {
+          // ---- 🔥 ENHANCED INTERACTABLE DETECTION LOGIC HERE ----
+          const semantic = node.matches(
+            'a[href], button, input, textarea, select, [role="button"]'
+          );
+
+          const visuallyClickable =
+            node.classList.contains('cursor-pointer') || node.classList.contains('clickable');
+
+          const hasClickHandler = typeof (node as any).onclick === 'function';
+
+          const isNowInteractable =
+            semantic || visuallyClickable || hasClickHandler || isInteractable(node);
+          // --------------------------------------------------------
+
+          if (isNowInteractable) {
+            this.elementMap.set(sequenceNumber, node);
+            this.elementToSequence.set(node, sequenceNumber);
+
+            const selector = this.generateSelector(node);
+            this.selectorMap.set(sequenceNumber, selector);
+
+            const fingerprint = this.generateFingerprint(node, selector);
+            this.fingerprintMap.set(sequenceNumber, fingerprint);
+
+            indexedElements.push([sequenceNumber, node]);
+            sequenceNumber++;
+          }
+        }
+
+        node = walker.nextNode();
+      }
+
+      this.isIndexed = true;
+      this.indexVersion++;
+
+      console.log(`[DOMService] Indexed ${sequenceNumber} elements (version ${this.indexVersion})`);
+
+      return indexedElements;
+    } finally {
+      this.indexingInProgress = false;
+    }
   }
-}
 
+  /**
+   * Get element coordinates using getBoundingClientRect()
+   * Returns viewport-relative coordinates
+   */
+  private getElementCoordinates(element: HTMLElement): {
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+  } {
+    const rect = element.getBoundingClientRect();
+    return {
+      x: Math.round(rect.left),
+      y: Math.round(rect.top),
+      w: Math.round(rect.width),
+      h: Math.round(rect.height),
+    };
+  }
+
+  /**
+   * Check if an element creates a stacking context
+   * Based on CSS stacking context rules
+   */
+  private isStackingContext(element: HTMLElement): boolean {
+    const style = window.getComputedStyle(element);
+
+    // Positioned elements with z-index (not auto)
+    const position = style.position;
+    if (
+      (position === 'fixed' ||
+        position === 'absolute' ||
+        position === 'relative' ||
+        position === 'sticky') &&
+      style.zIndex !== 'auto'
+    ) {
+      return true;
+    }
+
+    // Opacity less than 1
+    const opacity = parseFloat(style.opacity);
+    if (!isNaN(opacity) && opacity < 1) {
+      return true;
+    }
+
+    // Transform (any value other than none)
+    if (style.transform && style.transform !== 'none') {
+      return true;
+    }
+
+    // Filter (any value other than none)
+    if (style.filter && style.filter !== 'none') {
+      return true;
+    }
+
+    // Will-change with transform or opacity
+    const willChange = style.willChange;
+    if (willChange && (willChange.includes('transform') || willChange.includes('opacity'))) {
+      return true;
+    }
+
+    // Isolation: isolate
+    if (style.isolation === 'isolate') {
+      return true;
+    }
+
+    // Contain: layout, style, or paint
+    const contain = style.contain;
+    if (
+      contain &&
+      (contain.includes('layout') || contain.includes('style') || contain.includes('paint'))
+    ) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Calculate global z-order for an element
+   * Traverses up the DOM tree to identify stacking contexts and calculate z-order
+   */
+  private calculateGlobalZOrder(element: HTMLElement): number {
+    let current: HTMLElement | null = element;
+    const stackingContexts: Array<{ element: HTMLElement; zIndex: number; domOrder: number }> = [];
+
+    // Walk up the DOM tree to document root
+    while (current && current !== document.body && current.parentElement) {
+      const style = window.getComputedStyle(current);
+
+      // Check if current element creates a stacking context
+      if (this.isStackingContext(current)) {
+        // Get z-index value (0 if auto)
+        let zIndex = 0;
+        if (style.zIndex !== 'auto') {
+          const parsedZIndex = parseInt(style.zIndex, 10);
+          if (!isNaN(parsedZIndex)) {
+            zIndex = parsedZIndex;
+          }
+        }
+
+        // Calculate DOM order among siblings in the same stacking context
+        let domOrder = 0;
+        if (current.parentElement) {
+          const siblings = Array.from(current.parentElement.children);
+          domOrder = siblings.indexOf(current);
+        }
+
+        stackingContexts.push({ element: current, zIndex, domOrder });
+      }
+
+      current = current.parentElement as HTMLElement;
+    }
+
+    // Calculate final z-order from stacking contexts
+    // Start with a base value and add contributions from each stacking context
+    let baseZOrder = 1000000; // Base value to ensure positive numbers
+
+    for (let i = stackingContexts.length - 1; i >= 0; i--) {
+      const ctx = stackingContexts[i];
+      // Each stacking context level contributes: zIndex * 10000 + domOrder
+      // This ensures z-index has more weight than DOM order
+      baseZOrder += ctx.zIndex * 10000 + ctx.domOrder;
+    }
+
+    // Add final DOM order for the element itself among its siblings
+    if (element.parentElement) {
+      const siblings = Array.from(element.parentElement.children);
+      const finalDomOrder = siblings.indexOf(element);
+      baseZOrder += finalDomOrder;
+    }
+
+    return baseZOrder;
+  }
 
   /**
    * Get HTML snapshot with data-id attributes injected.
@@ -634,11 +765,36 @@ export class DOMService {
             const cloneBody = clone.querySelector('body') || clone;
             const cloneElement = cloneBody.querySelector(selector);
             if (cloneElement) {
+              // Add data-id attribute
               cloneElement.setAttribute('data-id', index.toString());
+
+              // Get coordinates and z-order from the live element
+              const style = window.getComputedStyle(element);
+              const isDisplayNone = style.display === 'none';
+
+              // Handle edge cases: skip hidden elements or set coordinates to 0
+              if (isDisplayNone) {
+                cloneElement.setAttribute('data-x', '0');
+                cloneElement.setAttribute('data-y', '0');
+                cloneElement.setAttribute('data-w', '0');
+                cloneElement.setAttribute('data-h', '0');
+                cloneElement.setAttribute('data-z', '0');
+              } else {
+                // Extract coordinates
+                const coords = this.getElementCoordinates(element);
+                cloneElement.setAttribute('data-x', coords.x.toString());
+                cloneElement.setAttribute('data-y', coords.y.toString());
+                cloneElement.setAttribute('data-w', coords.w.toString());
+                cloneElement.setAttribute('data-h', coords.h.toString());
+
+                // Calculate and set z-order
+                const zOrder = this.calculateGlobalZOrder(element);
+                cloneElement.setAttribute('data-z', zOrder.toString());
+              }
             }
           } catch (e) {
             // Selector might be invalid, skip this element
-            console.warn(`[DOMService] Failed to apply data-id for index ${index}:`, e);
+            console.warn(`[DOMService] Failed to apply data attributes for index ${index}:`, e);
           }
         }
       }
