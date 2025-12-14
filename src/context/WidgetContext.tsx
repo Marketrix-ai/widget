@@ -11,6 +11,7 @@ import {
   type WebSocketStatus,
 } from '../services/WebSocketClient';
 import type { ChatMessage, InstructionType, TaskProgress, WidgetState } from '../types';
+import { isToolCallRequestMessage, type ToolCallResponseMessage } from '../types/toolMessages';
 import {
   addProgressLine,
   addThinkingMarker,
@@ -55,12 +56,7 @@ interface WidgetContextType {
   };
 }
 
-interface ToolCallParams {
-  name?: string;
-  arguments?: Record<string, unknown>;
-  mode?: string;
-  explanation?: string;
-}
+// Tool call types are now imported from toolMessages.ts
 
 const WidgetContext = createContext<WidgetContextType | undefined>(undefined);
 
@@ -208,12 +204,12 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     };
 
     const handleMessage = async (message: WebSocketMessage) => {
-      if (message.method === 'tools/call') {
-        const params = message.params as ToolCallParams;
-        const toolName = params?.name || 'unknown';
-        const args = params?.arguments || {};
-        const mode = (params?.mode as InstructionType) || state.currentMode || 'do';
-        const explanation = params?.explanation || '';
+      if (isToolCallRequestMessage(message)) {
+        const params = message.params;
+        const toolName = params.name;
+        const args = params.arguments;
+        const mode = params.mode || state.currentMode || 'do';
+        const explanation = params.explanation || '';
         const requestId = message.id;
 
         updateProgressForTool(toolName, explanation, 'running');
@@ -230,12 +226,14 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             // The ToolExecutionService returned "User completed the action" or similar.
             // Send the full ToolExecutionResult as JSON to match agent's expectations
             const resultJson = JSON.stringify(result);
-            wsClient.send({
+            const response: ToolCallResponseMessage = {
               jsonrpc: '2.0',
-              method: 'tools/call',
               id: requestId,
-              result: { content: [{ type: 'text', text: resultJson }] },
-            });
+              result: {
+                content: [{ type: 'text', text: resultJson }],
+              },
+            };
+            wsClient.send(response);
             updateProgressForTool(toolName, explanation, 'completed');
             // If the "done" tool completed successfully, mark the task as complete
             if (toolName === 'done' && result.success) {
