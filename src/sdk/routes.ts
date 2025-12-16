@@ -1238,7 +1238,7 @@ const contract = c.router({
       .object({
         connection_id: z.number().optional(),
         agent_id: z.number().optional(),
-        connection_url: z.string(),
+        connection_url: z.string().optional(),
         marketrix_id: z.string().optional(),
         marketrix_key: z.string().optional(),
       })
