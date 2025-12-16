@@ -365,6 +365,7 @@ export const KnowledgeEntitySchema = BaseEntitySchema.extend({
   file_type: KnowledgeTypeSchema,
   file_url: z.string(),
   file_id: z.string().optional(),
+  source_url: z.string().optional(), // Original URL for URL-based documents
 });
 
 // ============================================================================

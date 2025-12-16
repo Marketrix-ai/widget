@@ -1234,10 +1234,23 @@ const contract = c.router({
     summary: 'Create browser session for connection',
     description: 'Creates a browser session and navigates to the connection URL',
     path: '/browser-session/create',
-    body: z.object({
-      connection_id: z.number(),
-      agent_id: z.number(),
-    }),
+    body: z
+      .object({
+        connection_id: z.number().optional(),
+        agent_id: z.number().optional(),
+        connection_url: z.string(),
+        marketrix_id: z.string().optional(),
+        marketrix_key: z.string().optional(),
+      })
+      .refine(
+        (data) =>
+          (data.connection_id !== undefined && data.agent_id !== undefined) ||
+          (data.marketrix_id !== undefined && data.marketrix_key !== undefined),
+        {
+          message: 'Provide either connection_id+agent_id or marketrix_id+marketrix_key.',
+          path: ['connection_id'],
+        }
+      ),
     responses: {
       200: R.success(
         z.object({
@@ -1300,11 +1313,13 @@ const contract = c.router({
   knowledgeCreate: {
     method: 'POST' as const,
     summary: 'Upload new knowledge base document',
-    description: 'Processes file upload and creates knowledge entry for AI training',
+    description: 'Processes file upload or URL and creates knowledge entry for AI training',
     path: '/knowledge',
     contentType: 'multipart/form-data' as const,
     body: FileSchema.extend({
       connection_id: z.coerce.number(),
+      document_url: z.string().url().optional(),
+      document_name: z.string().optional(),
     }),
     responses: {
       200: R.success(KnowledgeEntitySchema),
@@ -1338,6 +1353,23 @@ const contract = c.router({
     pathParams: z.object({ id: z.coerce.number() }),
     responses: {
       200: R.success(z.void()),
+      400: R.error,
+      401: R.error,
+      403: R.error,
+      404: R.error,
+      500: R.error,
+    },
+  },
+
+  knowledgeRefresh: {
+    method: 'POST' as const,
+    summary: 'Refresh knowledge document',
+    description: 'Re-fetches HTML content from source URL and updates the document',
+    path: '/knowledge/:id/refresh',
+    pathParams: z.object({ id: z.coerce.number() }),
+    body: z.void(),
+    responses: {
+      200: R.success(KnowledgeEntitySchema),
       400: R.error,
       401: R.error,
       403: R.error,
