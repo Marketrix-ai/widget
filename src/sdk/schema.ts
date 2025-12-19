@@ -95,8 +95,8 @@ export const R = {
  */
 export const BaseEntitySchema = z.object({
   id: z.number().optional(),
-  created_at: z.string().datetime().optional(),
-  updated_at: z.string().datetime().optional(),
+  created_at: z.date().optional(),
+  updated_at: z.date().optional(),
 });
 
 export const FileSchema = z.object({
@@ -198,7 +198,7 @@ export const UserLoginSchema = z.object({
 export const PasswordResetEntitySchema = BaseEntitySchema.extend({
   user_id: z.number(),
   token: z.string(),
-  expiry_date: z.string().datetime(),
+  expiry_date: z.date(),
 });
 
 /**
@@ -254,7 +254,7 @@ export const TenantEntitySchema = BaseEntitySchema.extend({
   domain: z.string().optional(),
   status: EntityStatusSchema,
   package: TenantPackageSchema,
-  ending_date: z.string().datetime().optional(),
+  ending_date: z.date().optional(),
 });
 
 /**
@@ -276,7 +276,7 @@ export const TenantUpdateSchema = TenantEntitySchema.partial();
 export const TenantPlanEntitySchema = BaseEntitySchema.extend({
   tenant_id: z.number(),
   package: TenantPackageSchema,
-  ending_date: z.string().datetime().optional(),
+  ending_date: z.date(),
 });
 
 /**
@@ -304,8 +304,8 @@ export const MeetingSchema = BaseEntitySchema.extend({
   user_id: z.number(),
   meeting_id: z.string(),
   meeting_token: z.string().optional(),
-  start_time: z.string(),
-  minutes: z.string(),
+  start_time: z.date(),
+  minutes: z.number(),
   meeting_status: MeetingStatusSchema,
 });
 
@@ -313,7 +313,7 @@ export const MeetingSchema = BaseEntitySchema.extend({
  * Meeting creation schema
  */
 export const MeetingCreateSchema = MeetingSchema.partial().extend({
-  start_time: z.string().datetime(),
+  start_time: z.date(),
 });
 
 /**
@@ -329,9 +329,9 @@ export const MeetingEntitySchema = BaseEntitySchema.extend({
   tenant_id: z.number(),
   meeting_id: z.string(),
   meeting_token: z.string().optional(),
-  start_time: z.string(),
-  minutes: z.string(),
-  meeting_status: z.string(),
+  start_time: z.date(),
+  minutes: z.number(),
+  meeting_status: MeetingStatusSchema,
 });
 
 /**
@@ -610,7 +610,7 @@ export const SimulationProgressEntitySchema = z.object({
   status: z.string(),
   status_message: z.string().nullable(),
   num_steps: z.number().int().nonnegative().nullable(),
-  created_at: z.string(),
+  created_at: z.date(),
 });
 
 /**
@@ -1095,8 +1095,8 @@ export const FileUploadResponseSchema = z.object({
  * Meeting creation data schema for services
  */
 export const MeetingCreationDataSchema = z.object({
-  start_time: z.string(),
-  minutes: z.string(),
+  start_time: z.date(),
+  minutes: z.number(),
   tenant_id: z.number(),
   user_id: z.number(),
 });
