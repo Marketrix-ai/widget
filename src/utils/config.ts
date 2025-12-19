@@ -5,7 +5,7 @@
  * These functions provide a clean interface for accessing widget configuration.
  */
 
-import { DEFAULT_MARKETRIX_CONFIG, extractWidgetSettingsFromConfig } from '../constants/config';
+import { extractWidgetSettingsFromConfig } from '../constants/config';
 import type { MarketrixConfig } from '../types';
 
 export interface WidgetTextConfig {
@@ -96,7 +96,7 @@ export function getWidgetCustomize(config: MarketrixConfig): WidgetCustomizeConf
 export function getWidgetPosition(config: MarketrixConfig): WidgetPositionConfig {
   const settings = extractWidgetSettingsFromConfig(config);
   const defaultOffset = { x: 20, y: 20 };
-  const offset = config.widget_position_offset ?? DEFAULT_MARKETRIX_CONFIG.widget_position_offset;
+  const offset = config.widget_position_offset ?? { x: 20, y: 20 };
 
   return {
     position: settings.widget_position,
@@ -104,7 +104,6 @@ export function getWidgetPosition(config: MarketrixConfig): WidgetPositionConfig
       x: offset?.x ?? defaultOffset.x,
       y: offset?.y ?? defaultOffset.y,
     },
-    z_index:
-      config.widget_position_z_index ?? DEFAULT_MARKETRIX_CONFIG.widget_position_z_index ?? 40,
+    z_index: config.widget_position_z_index ?? 40,
   };
 }

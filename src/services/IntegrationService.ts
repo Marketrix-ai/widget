@@ -15,8 +15,14 @@ export class IntegrationService {
 
   /**
    * Fetch integration settings from the API
+   * Returns null if no credentials provided (for preview mode)
    */
   async fetchIntegrationSettings(): Promise<IntegrationData | null> {
+    // Skip API call if no credentials provided (preview mode)
+    if (!this.marketrixId && !this.marketrixKey && !this.connectionId) {
+      return null;
+    }
+
     try {
       let response;
 

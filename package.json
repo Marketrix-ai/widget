@@ -1,9 +1,19 @@
 {
-  "name": "@marketrix/inapp-react",
+  "name": "@marketrix/widget",
   "version": "1.0.1",
   "description": "Modern React-based In-App Support Widget",
   "type": "module",
   "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "start": "vite",
     "start:dev": "vite --mode=dev",

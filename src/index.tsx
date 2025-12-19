@@ -1,10 +1,15 @@
 import './index.css';
 
+import React, { useEffect, useRef } from 'react';
+import { createRoot, type Root } from 'react-dom/client';
+
+import { MarketrixWidget as MarketrixWidgetComponent } from './components/MarketrixWidget';
+import { WidgetProvider } from './context/WidgetContext';
 import type { WidgetSettingsData } from './sdk';
 import { createConfigFromSettings } from './services/ConfigManager';
 import { IntegrationService } from './services/IntegrationService';
 import { WidgetValidationService } from './services/ValidationService';
-import type { MarketrixConfig } from './types';
+import type { AddWidgetConfig, MarketrixConfig, MarketrixWidgetProps } from './types';
 import {
   clearWidgetState,
   createWidgetContainer,
@@ -13,12 +18,13 @@ import {
   getWidgetInstance,
   hideWidgetSettingsLoader,
   isWidgetInitialized,
-  mountWidget,
+  mountWidgetToContainer,
   registerAutoInit,
   setCurrentConfig,
   setWidgetInstance,
   showWidgetSettingsLoader,
 } from './utils/bootstrap';
+import { isHTMLElement } from './utils/validation';
 
 /**
  * Initialize widget with validated configuration
@@ -44,9 +50,13 @@ async function initializeWidgetWithConfig(
       ? integrationService.getWidgetSettings(integrationData)
       : null;
 
-    return integrationSettings
-      ? createConfigFromSettings(integrationSettings, config)
-      : createConfigFromSettings({} as WidgetSettingsData, config);
+    // API should always return settings (including defaults), but handle fallback just in case
+    if (integrationSettings) {
+      return createConfigFromSettings(integrationSettings, config);
+    }
+    // Fallback: if API didn't return settings, use empty settings
+    // This should rarely happen as API now returns defaults for widget searches
+    return createConfigFromSettings({} as WidgetSettingsData, config);
   } catch (err) {
     console.error('Error fetching integration settings:', err);
     return createConfigFromSettings({} as WidgetSettingsData, config);
@@ -56,7 +66,10 @@ async function initializeWidgetWithConfig(
 }
 
 // Initialize the widget
-export const initMarketrixWidget = async (config: MarketrixConfig): Promise<void> => {
+export const initWidget = async (
+  config: MarketrixConfig,
+  container?: HTMLElement
+): Promise<void> => {
   // Prevent double initialization
   if (isWidgetInitialized()) {
     console.warn('Marketrix Widget: already initialized');
@@ -87,17 +100,19 @@ export const initMarketrixWidget = async (config: MarketrixConfig): Promise<void
   }
 
   setCurrentConfig(finalConfig);
-  const { mountEl } = createWidgetContainer();
-  const instance = mountWidget(mountEl, finalConfig);
+  // Generate unique container ID for this widget instance (Bug 2 fix)
+  const containerId = `marketrix-widget-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  const { mountEl } = createWidgetContainer(container, containerId);
+  const instance = mountWidgetToContainer(mountEl, finalConfig);
   setWidgetInstance(instance);
 };
 
 // Register auto-initialization immediately after function definition
 // This ensures the function is available when DOM becomes ready
-registerAutoInit(initMarketrixWidget);
+registerAutoInit(initWidget);
 
 // Destroy the widget
-export const destroyMarketrixWidget = (): void => {
+export const unmountWidget = (): void => {
   const instance = getWidgetInstance();
   if (instance) {
     instance.unmount();
@@ -122,8 +137,8 @@ export const updateMarketrixConfig = async (newConfig: Partial<MarketrixConfig>)
       throw new Error('Widget not initialized');
     }
     const updatedConfig = { ...currentConfig, ...newConfig };
-    destroyMarketrixWidget();
-    await initMarketrixWidget(updatedConfig);
+    unmountWidget();
+    await initWidget(updatedConfig);
   }
 };
 
@@ -136,14 +151,159 @@ export const getCurrentConfig = (): MarketrixConfig => {
   return config;
 };
 
+/**
+ * MarketrixWidget - React component for preview mode
+ * Renders widget into parent container with shadow DOM
+ */
+export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ settings, container }) => {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const rootRef = useRef<Root | null>(null);
+  const widgetContainerRef = useRef<HTMLElement | null>(null);
+  const containerIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    // Determine where to mount
+    const parentContainer = container ?? containerRef?.current?.parentElement ?? document.body;
+
+    if (!parentContainer || !isHTMLElement(parentContainer)) {
+      console.error('MarketrixWidget: Invalid container');
+      return;
+    }
+
+    // Generate unique container ID for this widget instance (Bug 2 fix)
+    if (!containerIdRef.current) {
+      containerIdRef.current = `marketrix-widget-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    }
+
+    // Create container and shadow DOM with unique ID
+    const { container: widgetContainer, mountEl } = createWidgetContainer(
+      parentContainer as HTMLElement,
+      containerIdRef.current
+    );
+
+    widgetContainerRef.current = widgetContainer;
+
+    // Create config from settings
+    const config = createConfigFromSettings(settings);
+
+    // Unmount existing root if it exists (handles settings changes)
+    if (rootRef.current) {
+      rootRef.current.unmount();
+      rootRef.current = null;
+    }
+
+    // Mount widget
+    const root = createRoot(mountEl);
+    rootRef.current = root;
+
+    root.render(
+      <React.StrictMode>
+        <WidgetProvider>
+          <MarketrixWidgetComponent config={config} />
+        </WidgetProvider>
+      </React.StrictMode>
+    );
+
+    return () => {
+      // Cleanup
+      if (rootRef.current) {
+        rootRef.current.unmount();
+        rootRef.current = null;
+      }
+      if (widgetContainerRef.current) {
+        destroyWidgetContainer(widgetContainerRef.current);
+        widgetContainerRef.current = null;
+        containerIdRef.current = null;
+      }
+    };
+  }, [settings, container]);
+
+  // If container is provided, return null (mounting handled in useEffect)
+  // Otherwise, return a div that will be mounted into its parent
+  if (container) {
+    return null;
+  }
+
+  return <div ref={containerRef} style={{ width: '100%', height: '100%', position: 'relative' }} />;
+};
+
+/**
+ * addWidget - Function that auto-detects mode and initializes widget
+ * Supports preview, production, and dev modes
+ */
+export const mountWidget = async (config: AddWidgetConfig): Promise<void> => {
+  const container = config.container;
+
+  // Detect mode based on provided config
+  if ('settings' in config && config.settings !== undefined) {
+    // Preview mode: use settings directly, skip API calls
+    const previewConfig = config as Extract<AddWidgetConfig, { settings: WidgetSettingsData }>;
+    const { settings, container: _container, ...restConfig } = previewConfig;
+    const finalConfig = createConfigFromSettings(settings, restConfig);
+    setCurrentConfig(finalConfig);
+    // Generate unique container ID for this widget instance (Bug 2 fix)
+    const containerId = `marketrix-widget-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const { mountEl } = createWidgetContainer(container, containerId);
+    const instance = mountWidgetToContainer(mountEl, finalConfig);
+    setWidgetInstance(instance);
+  } else if (
+    'marketrixId' in config &&
+    config.marketrixId !== undefined &&
+    config.marketrixKey !== undefined
+  ) {
+    // Production mode: use marketrix credentials
+    const prodConfig = config as Extract<
+      AddWidgetConfig,
+      { marketrixId: string; marketrixKey: string }
+    >;
+    const { marketrixId, marketrixKey, container: _container, ...restConfig } = prodConfig;
+    await initWidget(
+      {
+        marketrixId,
+        marketrixKey,
+        ...restConfig,
+      },
+      container
+    );
+  } else if (
+    'agentId' in config &&
+    config.agentId !== undefined &&
+    config.connectionId !== undefined
+  ) {
+    // Dev mode: use agent and connection IDs
+    const devConfig = config as Extract<AddWidgetConfig, { agentId: number; connectionId: number }>;
+    const { agentId, connectionId, container: _container, ...restConfig } = devConfig;
+    await initWidget(
+      {
+        agentId,
+        connectionId,
+        ...restConfig,
+      },
+      container
+    );
+  } else {
+    throw new Error(
+      'Invalid configuration: provide either settings (preview), marketrixId+marketrixKey (production), or agentId+connectionId (dev)'
+    );
+  }
+};
+
 // Export types for external use
 export type { InstructionType } from './sdk';
-export type { ChatMessage, MarketrixConfig, WidgetState } from './types';
+export type {
+  AddWidgetConfig,
+  ChatMessage,
+  MarketrixConfig,
+  MarketrixWidgetProps,
+  WidgetState,
+} from './types';
 
 // Export default for ES modules
 export default {
-  initMarketrixWidget,
-  destroyMarketrixWidget,
+  MarketrixWidget,
+  mountWidget,
+  initWidget,
+  unmountWidget,
   updateMarketrixConfig,
   getCurrentConfig,
 };

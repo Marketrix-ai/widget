@@ -1,10 +1,6 @@
 import { useCallback, useEffect, useMemo } from 'react';
 
-import {
-  DEFAULT_MARKETRIX_CONFIG,
-  DEFAULT_WIDGET_SETTINGS,
-  extractWidgetSettingsFromConfig,
-} from '../constants/config';
+import { extractWidgetSettingsFromConfig } from '../constants/config';
 import { useWidgetContext } from '../context/WidgetContext';
 import { configManager } from '../services/ConfigManager';
 import type { MarketrixConfig, WidgetSettingsData } from '../types';
@@ -21,12 +17,9 @@ interface UseWidgetProps {
 export const useWidget = ({ config }: UseWidgetProps = {}) => {
   const { state, actions } = useWidgetContext();
 
-  // Memoize settings
+  // Memoize settings - config should already have all settings from API (including defaults)
   const marketrixConfig = useMemo<MarketrixConfig>(() => {
-    return {
-      ...DEFAULT_MARKETRIX_CONFIG,
-      ...config,
-    };
+    return config || {};
   }, [config]);
 
   // Update ConfigManager whenever config changes
@@ -34,9 +27,12 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
     configManager.saveConfig(marketrixConfig);
   }, [marketrixConfig]);
 
-  // Effective settings
+  // Effective settings - extract from config (which should have all settings from API)
   const effectiveSettings = useMemo<WidgetSettingsData>(() => {
-    if (!marketrixConfig) return DEFAULT_WIDGET_SETTINGS;
+    if (!marketrixConfig) {
+      // Return empty settings - should not happen as API always returns defaults
+      return {} as WidgetSettingsData;
+    }
     return extractWidgetSettingsFromConfig(marketrixConfig);
   }, [marketrixConfig]);
 

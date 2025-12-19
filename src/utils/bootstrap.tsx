@@ -29,50 +29,96 @@ let currentConfig: MarketrixConfig | null = null;
 let loaderInstance: Root | null = null;
 
 /**
+ * Generate unique container ID for widget instances
+ */
+let widgetInstanceCounter = 0;
+const generateContainerId = (): string => {
+  return `marketrix-widget-container-${++widgetInstanceCounter}`;
+};
+
+/**
  * Create widget container and shadow DOM
  * Returns the container element and shadow root
+ * @param parentContainer - Optional parent container to mount within. If provided, shadow DOM will be created within this container.
+ * @param containerId - Optional unique container ID. If not provided, a unique ID will be generated.
  */
-export const createWidgetContainer = (): {
+export const createWidgetContainer = (
+  parentContainer?: HTMLElement,
+  containerId?: string
+): {
   container: HTMLElement;
   shadowRoot: ShadowRoot;
   mountEl: HTMLElement;
 } => {
-  // Create container if it doesn't exist
-  let container = document.getElementById('marketrix-widget-container');
-  if (!container) {
-    container = document.createElement('div');
-    container.id = 'marketrix-widget-container';
-    container.className = 'marketrix-widget-container';
-    // Ensure container can receive pointer events
-    if (isHTMLElement(container)) {
-      container.style.pointerEvents = 'auto';
+  let container: HTMLElement;
+  const uniqueContainerId = containerId || generateContainerId();
+
+  if (parentContainer) {
+    // Use provided container - check if widget container already exists within it
+    const existingContainer = parentContainer.querySelector(`#${uniqueContainerId}`) as HTMLElement;
+    if (existingContainer) {
+      container = existingContainer;
+    } else {
+      // Create new container within parent
+      container = document.createElement('div');
+      container.id = uniqueContainerId;
+      container.className = 'marketrix-widget-container';
+      // Ensure container respects parent bounds
+      container.style.width = '100%';
+      container.style.height = '100%';
+      container.style.position = 'relative';
+      container.style.overflow = 'visible';
+      parentContainer.appendChild(container);
     }
-    document.body.appendChild(container);
   } else {
-    // Ensure existing container has pointer events enabled
-    if (isHTMLElement(container)) {
-      container.style.pointerEvents = 'auto';
+    // Create container in document.body (existing behavior)
+    // For backward compatibility, check for old ID first
+    container = document.getElementById('marketrix-widget-container') as HTMLElement;
+    if (!container) {
+      container = document.getElementById(uniqueContainerId) as HTMLElement;
     }
+    if (!container) {
+      container = document.createElement('div');
+      container.id = uniqueContainerId;
+      container.className = 'marketrix-widget-container';
+      document.body.appendChild(container);
+    }
+  }
+
+  // Ensure container can receive pointer events
+  if (isHTMLElement(container)) {
+    container.style.pointerEvents = 'auto';
   }
 
   if (!isHTMLElement(container)) {
     throw new Error('Container is not an HTMLElement');
   }
 
-  // Attach Shadow DOM (closed) and mount point
-  const shadowRoot = container.attachShadow({ mode: 'closed' });
+  // Check if shadow root already exists (Bug 1 fix)
+  let shadowRoot: ShadowRoot;
+  if (container.shadowRoot) {
+    // Reuse existing shadow root
+    shadowRoot = container.shadowRoot;
+  } else {
+    // Attach Shadow DOM (closed) and mount point
+    shadowRoot = container.attachShadow({ mode: 'closed' });
 
-  // Inject styles into shadow root so the widget is fully encapsulated
-  const styleEl = document.createElement('style');
-  styleEl.textContent = shadowStyles;
-  shadowRoot.appendChild(styleEl);
+    // Inject styles into shadow root so the widget is fully encapsulated
+    const styleEl = document.createElement('style');
+    styleEl.textContent = shadowStyles;
+    shadowRoot.appendChild(styleEl);
+  }
 
-  // Create a mount element inside the shadow root for React
-  const mountEl = document.createElement('div');
-  mountEl.id = 'marketrix-widget-root';
-  // Ensure mount element can receive pointer events
-  mountEl.style.pointerEvents = 'auto';
-  shadowRoot.appendChild(mountEl);
+  // Check if mount element already exists in shadow root
+  let mountEl = shadowRoot.querySelector('#marketrix-widget-root') as HTMLElement;
+  if (!mountEl) {
+    // Create a mount element inside the shadow root for React
+    mountEl = document.createElement('div');
+    mountEl.id = 'marketrix-widget-root';
+    // Ensure mount element can receive pointer events
+    mountEl.style.pointerEvents = 'auto';
+    shadowRoot.appendChild(mountEl);
+  }
 
   return { container, shadowRoot, mountEl };
 };
@@ -81,7 +127,7 @@ export const createWidgetContainer = (): {
  * Mount widget component to the provided mount element
  * Returns the React root instance
  */
-export const mountWidget = (mountEl: HTMLElement, config: MarketrixConfig): Root => {
+export const mountWidgetToContainer = (mountEl: HTMLElement, config: MarketrixConfig): Root => {
   // Create React root and render widget within the shadow root
   const root = createRoot(mountEl);
 
@@ -98,11 +144,12 @@ export const mountWidget = (mountEl: HTMLElement, config: MarketrixConfig): Root
 
 /**
  * Destroy widget container
+ * @param container - Optional specific container to destroy. If not provided, searches for default container.
  */
-export const destroyWidgetContainer = (): void => {
-  const container = document.getElementById('marketrix-widget-container');
-  if (container) {
-    container.remove();
+export const destroyWidgetContainer = (container?: HTMLElement): void => {
+  const containerToDestroy = container || document.getElementById('marketrix-widget-container');
+  if (containerToDestroy) {
+    containerToDestroy.remove();
   }
 };
 

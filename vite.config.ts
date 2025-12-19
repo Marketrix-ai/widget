@@ -72,18 +72,33 @@ const devMeetPlugin = () => {
   };
 };
 
-// Plugin to copy index.html to dist after build
-const copyIndexHtmlPlugin = () => {
+// Plugin to copy index.html and create meet.js (script tag bundle) after build
+const copyFilesPlugin = () => {
   return {
-    name: 'copy-index-html',
+    name: 'copy-files',
     writeBundle() {
+      // Copy index.html
       const srcPath = resolve(process.cwd(), 'index.html');
       const destPath = resolve(process.cwd(), 'dist', 'index.html');
       try {
-        copyFileSync(srcPath, destPath);
-        console.log('✓ Copied index.html to dist/');
+        if (existsSync(srcPath)) {
+          copyFileSync(srcPath, destPath);
+          console.log('✓ Copied index.html to dist/');
+        }
       } catch (error) {
         console.error('Error copying index.html:', error);
+      }
+
+      // Create meet.js as a copy of index.js for script tag mode (legacy support)
+      const indexJsPath = resolve(process.cwd(), 'dist', 'index.js');
+      const meetJsPath = resolve(process.cwd(), 'dist', 'meet.js');
+      try {
+        if (existsSync(indexJsPath)) {
+          copyFileSync(indexJsPath, meetJsPath);
+          console.log('✓ Created meet.js for script tag mode');
+        }
+      } catch (error) {
+        console.error('Error creating meet.js:', error);
       }
     },
   };
@@ -96,7 +111,7 @@ export default defineConfig({
     // basicSsl(), // Disabled - using HTTP for local development
     devMeetPlugin(),
     cssInjectedByJsPlugin(),
-    copyIndexHtmlPlugin(),
+    copyFilesPlugin(),
   ],
   root: '.',
   publicDir: 'public',
@@ -118,12 +133,11 @@ export default defineConfig({
     rollupOptions: {
       input: 'src/index.tsx',
       output: {
-        entryFileNames: 'meet.js',
-        chunkFileNames: 'meet.js',
-        assetFileNames: 'meet.[ext]', // Simple naming, won't be used as assets are inlined
+        entryFileNames: 'index.js',
+        chunkFileNames: 'chunks/[name]-[hash].js',
+        assetFileNames: 'assets/[name].[ext]',
         format: 'es',
-        inlineDynamicImports: true,
-        manualChunks: undefined,
+        inlineDynamicImports: false,
       },
     },
     minify: 'terser',

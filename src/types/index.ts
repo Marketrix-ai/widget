@@ -114,6 +114,57 @@ export interface SendMessageResponse {
 
 export type WidgetPosition = WidgetSettingsData['widget_position'];
 
+/**
+ * Configuration for addWidget function
+ * Supports preview, production, and dev modes
+ */
+export type AddWidgetConfig = (
+  | {
+      // Preview mode: provide settings directly
+      settings: WidgetSettingsData;
+      marketrixId?: never;
+      marketrixKey?: never;
+      agentId?: never;
+      connectionId?: never;
+    }
+  | {
+      // Production mode: provide marketrix credentials
+      settings?: never;
+      marketrixId: string;
+      marketrixKey: string;
+      agentId?: never;
+      connectionId?: never;
+    }
+  | {
+      // Dev mode: provide agent and connection IDs
+      settings?: never;
+      marketrixId?: never;
+      marketrixKey?: never;
+      agentId: number;
+      connectionId: number;
+    }
+) & {
+  // Optional container to mount widget within
+  container?: HTMLElement;
+  // Optional additional config
+  apiBaseUrl?: string;
+  agentServerUrl?: string;
+  userId?: number;
+  widget_position_offset?: {
+    x?: number;
+    y?: number;
+  };
+  widget_position_z_index?: number;
+};
+
+/**
+ * Props for MarketrixWidget React component
+ */
+export interface MarketrixWidgetProps {
+  settings: WidgetSettingsData;
+  container?: HTMLElement;
+}
+
 // Re-export SDK types for convenience
 export type { TourData } from '../sdk';
 

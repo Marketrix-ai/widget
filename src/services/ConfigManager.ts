@@ -1,4 +1,3 @@
-import { DEFAULT_MARKETRIX_CONFIG } from '../constants/config';
 import type { WidgetSettingsData } from '../sdk';
 import type { MarketrixConfig } from '../types';
 import { hasProperty } from '../utils/validation';
@@ -30,7 +29,8 @@ export class ConfigManager {
       console.warn('Failed to load config from localStorage:', error);
     }
 
-    this.config = this.getDefaultConfig();
+    // Return empty config - defaults should come from API
+    this.config = {};
     return this.config;
   }
 
@@ -45,7 +45,7 @@ export class ConfigManager {
 
   updateConfig(updates: Partial<MarketrixConfig>): void {
     if (!this.config) {
-      this.config = this.getDefaultConfig();
+      this.config = {};
     }
 
     this.config = { ...this.config, ...updates };
@@ -69,21 +69,20 @@ export class ConfigManager {
     }
     return this.config.widget_enabled ?? false;
   }
-
-  private getDefaultConfig(): MarketrixConfig {
-    return { ...DEFAULT_MARKETRIX_CONFIG };
-  }
 }
 
 export const configManager = ConfigManager.getInstance();
 
+/**
+ * Creates MarketrixConfig from WidgetSettingsData
+ * Defaults are now provided by the API, so we just merge settings with baseConfig
+ */
 export function createConfigFromSettings(
   widgetSettings: WidgetSettingsData,
   baseConfig: Partial<MarketrixConfig> = {}
 ): MarketrixConfig {
   return {
-    ...DEFAULT_MARKETRIX_CONFIG,
     ...baseConfig,
-    ...widgetSettings, // API settings override defaults and base config
+    ...widgetSettings, // API settings (which include defaults) override base config
   };
 }
