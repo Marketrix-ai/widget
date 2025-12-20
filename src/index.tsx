@@ -1,5 +1,3 @@
-import './index.css';
-
 import React, { useEffect, useRef } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 
@@ -27,9 +25,9 @@ import {
 } from './utils/bootstrap';
 import { isHTMLElement } from './utils/validation';
 
-// CSS is injected by vite-plugin-css-injected-by-js during build
-// No CSS import here to avoid breaking Next.js transpilation
-// The CSS will be automatically injected into the built bundle
+// CSS is NOT imported globally here to prevent conflicts with the host app's Tailwind CSS.
+// All widget CSS is isolated in Shadow DOM via bootstrap.tsx using 'index.css?inline'.
+// This ensures the widget's Tailwind CSS doesn't interfere with the app's responsive breakpoints.
 
 /**
  * Initialize widget with validated configuration

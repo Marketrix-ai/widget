@@ -6,7 +6,6 @@ import { copyFileSync, existsSync, readFileSync, writeFileSync } from 'fs';
 import type { IncomingMessage, ServerResponse } from 'http';
 import { resolve } from 'path';
 import { defineConfig, type ViteDevServer } from 'vite';
-import cssInjectedByJsPlugin from 'vite-plugin-css-injected-by-js';
 
 // Dev plugin: serves /meet.js and /debug.js endpoints
 const devMeetPlugin = () => {
@@ -136,7 +135,7 @@ export default defineConfig({
     tailwindcss(),
     // basicSsl(), // Disabled - using HTTP for local development
     devMeetPlugin(),
-    cssInjectedByJsPlugin(),
+    // cssInjectedByJsPlugin() removed - CSS is injected into Shadow DOM via bootstrap.tsx
     copyFilesPlugin(),
     buildCompletePlugin(),
   ],
@@ -164,6 +163,19 @@ export default defineConfig({
       fileName: 'index',
     },
     rollupOptions: {
+      // Suppress Tailwind sourcemap warning - the plugin doesn't generate sourcemaps for CSS transforms
+      // but this is safe to ignore as sourcemaps are still useful for JS debugging
+      onwarn(warning, warn) {
+        // Suppress the Tailwind CSS sourcemap warning
+        if (
+          warning.plugin === '@tailwindcss/vite:generate:build' &&
+          warning.message.includes('Sourcemap')
+        ) {
+          return;
+        }
+        // Use default warning handler for other warnings
+        warn(warning);
+      },
       external: ['react', 'react-dom', 'react-dom/client', 'react/jsx-runtime'],
       output: {
         entryFileNames: 'index.mjs',
