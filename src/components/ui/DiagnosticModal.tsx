@@ -9,8 +9,8 @@ interface DiagnosticModalProps {
     tabId: string | null;
     websocketEndpoint: string | null;
     connectionStatus: string;
-    connectionId: number | undefined;
-    agentId: number | undefined;
+    connectionId: number | undefined; // mtxApp
+    agentId: number | undefined; // mtxAgent
   };
 }
 

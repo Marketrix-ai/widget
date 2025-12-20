@@ -1,11 +1,10 @@
-import './index.css';
-
 import React, { useEffect, useRef } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 
 import { MarketrixWidget as MarketrixWidgetComponent } from './components/MarketrixWidget';
+import { updateApiConfig } from './constants/config';
 import { WidgetProvider } from './context/WidgetContext';
-import type { WidgetSettingsData } from './sdk';
+import { configureSdk, type WidgetSettingsData } from './sdk';
 import { createConfigFromSettings } from './services/ConfigManager';
 import { IntegrationService } from './services/IntegrationService';
 import { WidgetValidationService } from './services/ValidationService';
@@ -14,7 +13,7 @@ import {
   clearWidgetState,
   createWidgetContainer,
   destroyWidgetContainer,
-  getCurrentConfig as getCurrentConfigFromLifecycle,
+  getCurrentConfig,
   getWidgetInstance,
   hideWidgetSettingsLoader,
   isWidgetInitialized,
@@ -25,6 +24,10 @@ import {
   showWidgetSettingsLoader,
 } from './utils/bootstrap';
 import { isHTMLElement } from './utils/validation';
+
+// CSS is injected by vite-plugin-css-injected-by-js during build
+// No CSS import here to avoid breaking Next.js transpilation
+// The CSS will be automatically injected into the built bundle
 
 /**
  * Initialize widget with validated configuration
@@ -39,11 +42,7 @@ async function initializeWidgetWithConfig(
 
   showWidgetSettingsLoader('Loading widget settings...');
   try {
-    const integrationService = new IntegrationService(
-      config.marketrixId,
-      config.marketrixKey,
-      config.connectionId
-    );
+    const integrationService = new IntegrationService(config.mtxId, config.mtxKey, config.mtxApp);
 
     const integrationData = await integrationService.fetchIntegrationSettings();
     const integrationSettings = integrationData
@@ -74,6 +73,14 @@ export const initWidget = async (
   if (isWidgetInitialized()) {
     console.warn('Marketrix Widget: already initialized');
     return;
+  }
+
+  // Configure SDK and global config BEFORE validation
+  if (config.mtxApiHost || config.mtxAiHost) {
+    if (config.mtxApiHost) {
+      configureSdk(config.mtxApiHost);
+    }
+    updateApiConfig(config.mtxApiHost, config.mtxAiHost);
   }
 
   // Validate configuration
@@ -107,10 +114,6 @@ export const initWidget = async (
   setWidgetInstance(instance);
 };
 
-// Register auto-initialization immediately after function definition
-// This ensures the function is available when DOM becomes ready
-registerAutoInit(initWidget);
-
 // Destroy the widget
 export const unmountWidget = (): void => {
   const instance = getWidgetInstance();
@@ -132,7 +135,7 @@ export const unmountWidget = (): void => {
 export const updateMarketrixConfig = async (newConfig: Partial<MarketrixConfig>): Promise<void> => {
   if (isWidgetInitialized()) {
     // Re-initialize with updated config
-    const currentConfig = getCurrentConfigFromLifecycle();
+    const currentConfig = getCurrentConfig();
     if (!currentConfig) {
       throw new Error('Widget not initialized');
     }
@@ -142,14 +145,8 @@ export const updateMarketrixConfig = async (newConfig: Partial<MarketrixConfig>)
   }
 };
 
-// Get current configuration
-export const getCurrentConfig = (): MarketrixConfig => {
-  const config = getCurrentConfigFromLifecycle();
-  if (!config) {
-    throw new Error('Widget not initialized');
-  }
-  return config;
-};
+// Re-export lifecycle config getter (no wrapper / no alias)
+export { getCurrentConfig };
 
 /**
  * MarketrixWidget - React component for preview mode
@@ -246,47 +243,50 @@ export const mountWidget = async (config: AddWidgetConfig): Promise<void> => {
     const { mountEl } = createWidgetContainer(container, containerId);
     const instance = mountWidgetToContainer(mountEl, finalConfig);
     setWidgetInstance(instance);
-  } else if (
-    'marketrixId' in config &&
-    config.marketrixId !== undefined &&
-    config.marketrixKey !== undefined
-  ) {
+  } else if ('mtxId' in config && config.mtxId !== undefined && config.mtxKey !== undefined) {
     // Production mode: use marketrix credentials
-    const prodConfig = config as Extract<
-      AddWidgetConfig,
-      { marketrixId: string; marketrixKey: string }
-    >;
-    const { marketrixId, marketrixKey, container: _container, ...restConfig } = prodConfig;
+    const prodConfig = config as Extract<AddWidgetConfig, { mtxId: string; mtxKey: string }>;
+    const { mtxId, mtxKey, container: _container, ...restConfig } = prodConfig;
     await initWidget(
       {
-        marketrixId,
-        marketrixKey,
+        mtxId,
+        mtxKey,
         ...restConfig,
       },
       container
     );
-  } else if (
-    'agentId' in config &&
-    config.agentId !== undefined &&
-    config.connectionId !== undefined
-  ) {
+  } else if ('mtxApp' in config && config.mtxApp !== undefined && config.mtxAgent !== undefined) {
     // Dev mode: use agent and connection IDs
-    const devConfig = config as Extract<AddWidgetConfig, { agentId: number; connectionId: number }>;
-    const { agentId, connectionId, container: _container, ...restConfig } = devConfig;
+    const devConfig = config as Extract<AddWidgetConfig, { mtxApp: number; mtxAgent: number }>;
+    const { mtxApp, mtxAgent, container: _container, ...restConfig } = devConfig;
     await initWidget(
       {
-        agentId,
-        connectionId,
+        mtxApp,
+        mtxAgent,
         ...restConfig,
       },
       container
     );
   } else {
     throw new Error(
-      'Invalid configuration: provide either settings (preview), marketrixId+marketrixKey (production), or agentId+connectionId (dev)'
+      'Invalid configuration: provide either settings (preview), mtxId+mtxKey (production), or mtxApp+mtxAgent (dev)'
     );
   }
 };
+
+// Register auto-initialization - deferred to avoid breaking Next.js SSR
+// This runs only in browser environment after module is loaded
+if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+  // Use setTimeout to defer execution and ensure exports are available first
+  setTimeout(() => {
+    try {
+      registerAutoInit(initWidget);
+    } catch (error) {
+      // Silently fail if auto-init registration fails (e.g., during SSR)
+      console.debug('Marketrix Widget: Auto-init registration skipped', error);
+    }
+  }, 0);
+}
 
 // Export types for external use
 export type { InstructionType } from './sdk';

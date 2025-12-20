@@ -3,14 +3,14 @@ import { extractApiData, extractErrorMessage } from '../utils/apiUtils';
 import { isString, isWidgetSettingsData } from '../utils/validation';
 
 export class IntegrationService {
-  private marketrixId?: string;
-  private marketrixKey?: string;
-  private connectionId?: number;
+  private mtxId?: string;
+  private mtxKey?: string;
+  private mtxApp?: number;
 
-  constructor(marketrixId?: string, marketrixKey?: string, connectionId?: number) {
-    this.marketrixId = marketrixId;
-    this.marketrixKey = marketrixKey;
-    this.connectionId = connectionId;
+  constructor(mtxId?: string, mtxKey?: string, mtxApp?: number) {
+    this.mtxId = mtxId;
+    this.mtxKey = mtxKey;
+    this.mtxApp = mtxApp;
   }
 
   /**
@@ -19,26 +19,26 @@ export class IntegrationService {
    */
   async fetchIntegrationSettings(): Promise<IntegrationData | null> {
     // Skip API call if no credentials provided (preview mode)
-    if (!this.marketrixId && !this.marketrixKey && !this.connectionId) {
+    if (!this.mtxId && !this.mtxKey && !this.mtxApp) {
       return null;
     }
 
     try {
       let response;
 
-      if (this.marketrixId && this.marketrixKey) {
+      if (this.mtxId && this.mtxKey) {
         response = await sdk.integrationSearch({
           query: {
             type: 'widget',
-            marketrix_id: this.marketrixId,
-            marketrix_key: this.marketrixKey,
+            marketrix_id: this.mtxId,
+            marketrix_key: this.mtxKey,
           },
         });
-      } else if (this.connectionId) {
+      } else if (this.mtxApp) {
         response = await sdk.integrationSearch({
           query: {
             type: 'widget',
-            connection_id: this.connectionId,
+            connection_id: this.mtxApp,
           },
         });
       } else {

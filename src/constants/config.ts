@@ -1,16 +1,45 @@
 import type { WidgetSettingsData } from '../sdk';
 import type { MarketrixConfig } from '../types';
 
-export const VITE_API_URL = import.meta.env.VITE_API_URL || '';
-export const VITE_AGENT_SERVER_URL = import.meta.env.VITE_AGENT_SERVER_URL || '';
+// Mutable configuration for runtime updates
+// Initialized to empty strings to enforce runtime configuration
+export const Config = {
+  API_URL: '',
+  AGENT_SERVER_URL: '',
+};
+
+/**
+ * Update the global API configuration
+ */
+export const updateApiConfig = (apiUrl?: string, agentUrl?: string) => {
+  if (apiUrl) {
+    console.log(`[Config] Updating API URL to: ${apiUrl}`);
+    Config.API_URL = apiUrl;
+  }
+  if (agentUrl) {
+    console.log(`[Config] Updating Agent Server URL to: ${agentUrl}`);
+    Config.AGENT_SERVER_URL = agentUrl;
+  }
+};
+
+/**
+ * Get the configured API URL.
+ */
+export const getApiUrl = (): string => {
+  if (!Config.API_URL) {
+    // Return empty string to allow validation service to fail gracefully with specific error
+    return '';
+  }
+  return Config.API_URL;
+};
 
 const NON_WIDGET_SETTINGS_KEYS = [
-  'marketrixId',
-  'marketrixKey',
-  'agentId',
-  'connectionId',
-  'apiBaseUrl',
-  'agentServerUrl',
+  'mtxId',
+  'mtxKey',
+  'mtxApp',
+  'mtxAgent',
+  'mtxApiHost',
+  'mtxAiHost',
   'widget_position_offset',
   'widget_position_z_index',
 ] as const;
@@ -38,23 +67,23 @@ export function extractWidgetSettingsFromConfig(
 
 /**
  * Derives the websocket URL for the agent server
- * Requires either config.agentServerUrl or VITE_AGENT_SERVER_URL to be provided
- * @throws Error if neither agentServerUrl nor VITE_AGENT_SERVER_URL is provided
+ * Requires either config.mtxAiHost or configured AGENT_SERVER_URL to be provided
+ * @throws Error if neither mtxAiHost nor configured AGENT_SERVER_URL is provided
  */
 export function getAgentWebSocketUrl(config?: Partial<MarketrixConfig>): string {
   // 1. Check if explicitly provided in config
-  if (config?.agentServerUrl) {
-    return ensureWebSocketUrl(config.agentServerUrl);
+  if (config?.mtxAiHost) {
+    return ensureWebSocketUrl(config.mtxAiHost);
   }
 
-  // 2. Check environment variable
-  if (VITE_AGENT_SERVER_URL) {
-    return ensureWebSocketUrl(VITE_AGENT_SERVER_URL);
+  // 2. Check configured URL
+  if (Config.AGENT_SERVER_URL) {
+    return ensureWebSocketUrl(Config.AGENT_SERVER_URL);
   }
 
   // 3. Throw error if neither is provided
   throw new Error(
-    'Agent server URL is required. Please provide either agentServerUrl in config or set VITE_AGENT_SERVER_URL environment variable.'
+    'Agent server URL is required. Please provide either mtxAiHost in config or configure mtxAiHost.'
   );
 }
 

@@ -289,41 +289,53 @@ const autoInitializeWidget = (): void => {
     return;
   }
 
-  const scripts = document.querySelectorAll('script[marketrix-id], script[marketrix-agent]');
+  const scripts = document.querySelectorAll('script[mtx-id], script[mtx-app]');
   const scriptElement = scripts[scripts.length - 1];
 
   if (scriptElement && isHTMLScriptElement(scriptElement)) {
     const script = scriptElement;
-    const marketrixId = script.getAttribute('marketrix-id');
-    const marketrixKey = script.getAttribute('marketrix-key');
-    const agentId = script.getAttribute('marketrix-agent');
-    const connectionId = script.getAttribute('marketrix-connection-id');
+    const mtxId = script.getAttribute('mtx-id');
+    const mtxKey = script.getAttribute('mtx-key');
+    const mtxApiHost = script.getAttribute('mtx-api-host');
+    const mtxAiHost = script.getAttribute('mtx-ai-host');
+    const mtxApp = script.getAttribute('mtx-app');
+    const mtxAgent = script.getAttribute('mtx-agent');
 
-    if (marketrixId && marketrixKey) {
+    if (mtxId && mtxKey) {
       const config: MarketrixConfig = {
-        marketrixId,
-        marketrixKey,
+        mtxId,
+        mtxKey,
       };
+      // Add optional host configuration
+      if (mtxApiHost) {
+        config.mtxApiHost = mtxApiHost;
+      }
+      if (mtxAiHost) {
+        config.mtxAiHost = mtxAiHost;
+      }
       initWidgetFunction(config).catch((error) => {
         console.error('Failed to initialize widget:', error);
       });
-    } else if (agentId && connectionId) {
+    } else if (mtxApp && mtxAgent) {
       const config: MarketrixConfig = {
-        agentId: Number.parseInt(agentId),
-        connectionId: Number.parseInt(connectionId),
+        mtxApp: Number.parseInt(mtxApp),
+        mtxAgent: Number.parseInt(mtxAgent),
       };
+      // Add optional host configuration
+      if (mtxApiHost) {
+        config.mtxApiHost = mtxApiHost;
+      }
+      if (mtxAiHost) {
+        config.mtxAiHost = mtxAiHost;
+      }
       initWidgetFunction(config).catch((error) => {
         console.error('Failed to initialize widget:', error);
       });
     } else {
-      showWidgetSettingsLoader(
-        'Please configure marketrix_id and marketrix_key, or marketrix-agent and marketrix-connection-id'
-      );
+      showWidgetSettingsLoader('Please configure mtx-id and mtx-key, or mtx-app and mtx-agent');
     }
   } else {
-    showWidgetSettingsLoader(
-      'Please configure marketrix_id and marketrix_key, or marketrix-agent and marketrix-connection-id'
-    );
+    showWidgetSettingsLoader('Please configure mtx-id and mtx-key, or mtx-app and mtx-agent');
   }
 };
 

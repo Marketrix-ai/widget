@@ -1,17 +1,43 @@
 import { type FetchApiOptions, initClient } from '@ts-rest/core';
 
-import { VITE_API_URL } from '../constants/config';
+import { Config } from '../constants/config';
 import { hasProperty } from '../utils/validation';
 import { contract } from './routes';
 
 let authToken: string | null = null;
-const client = initClient(contract, {
-  baseUrl: VITE_API_URL,
+
+// Initialize the client with a placeholder or Config.API_URL if already set
+let client = initClient(contract, {
+  baseUrl: Config.API_URL || 'https://api.placeholder.invalid',
   baseHeaders: {
     Authorization: (_options: FetchApiOptions) => (authToken ? `Bearer ${authToken}` : ''),
   },
   jsonQuery: true,
 });
+
+/**
+ * Re-initialize the SDK client with a new base URL
+ */
+export const configureSdk = (apiUrl: string) => {
+  if (apiUrl && apiUrl !== Config.API_URL) {
+    console.log(`[SDK] Reconfiguring API URL to: ${apiUrl}`);
+
+    // Create new client instance
+    const newClient = initClient(contract, {
+      baseUrl: apiUrl,
+      baseHeaders: {
+        Authorization: (_options: FetchApiOptions) => (authToken ? `Bearer ${authToken}` : ''),
+      },
+      jsonQuery: true,
+    });
+
+    // Mutate the 'client' reference if possible, or update the proxy target?
+    // Since 'client' is locally scoped, we need to ensure 'sdk' uses the new one.
+    // The previous implementation used a proxy or object assignment.
+    // Let's rely on the proxy approach which is robust.
+    client = newClient;
+  }
+};
 
 interface ResBody {
   success: boolean;
@@ -65,8 +91,8 @@ const parse = <T extends Res>(res: T): ExtractData<T> => {
   throw new Error(err);
 };
 
-// SDK with auth token management methods
-export const sdk = Object.assign(client, {
+// Base object for auth methods and dynamic config
+const sdkExtras = {
   setAuthToken: (token: string) => {
     authToken = token;
   },
@@ -75,6 +101,24 @@ export const sdk = Object.assign(client, {
   },
   getAuthToken: () => authToken,
   parse,
+  configure: configureSdk,
+  // Add other methods that might be expected on sdk like `logCreate` which come from client
+};
+
+// Create a proxy to forward calls to the current client instance
+export const sdk = new Proxy({} as typeof client & typeof sdkExtras, {
+  get(_target, prop) {
+    // Check extras first
+    if (prop in sdkExtras) {
+      return sdkExtras[prop as keyof typeof sdkExtras];
+    }
+    // Forward to current client instance
+    const value = client[prop as keyof typeof client];
+    if (typeof value === 'function') {
+      return value.bind(client);
+    }
+    return value;
+  },
 });
 
 // Export all types from schema

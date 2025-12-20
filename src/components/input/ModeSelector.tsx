@@ -166,8 +166,8 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({
               return 'disconnected';
             }
           })(),
-          connectionId: configManager.getConfig()?.connectionId,
-          agentId: configManager.getConfig()?.agentId,
+          connectionId: configManager.getConfig()?.mtxApp,
+          agentId: configManager.getConfig()?.mtxAgent,
         }}
       />
     </div>

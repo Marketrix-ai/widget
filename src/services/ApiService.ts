@@ -90,12 +90,12 @@ export class MarketrixApiService {
       }
 
       // Add connection_id or marketrix credentials to metadata for tenant lookup
-      if (this.config.connectionId) {
-        metadata.connection_id = this.config.connectionId;
+      if (this.config.mtxApp) {
+        metadata.connection_id = this.config.mtxApp;
       }
-      if (this.config.marketrixId && this.config.marketrixKey) {
-        metadata.marketrix_id = this.config.marketrixId;
-        metadata.marketrix_key = this.config.marketrixKey;
+      if (this.config.mtxId && this.config.mtxKey) {
+        metadata.marketrix_id = this.config.mtxId;
+        metadata.marketrix_key = this.config.mtxKey;
       }
 
       // Log the question (fire and forget - don't block on this)
@@ -137,14 +137,12 @@ export class MarketrixApiService {
         throw new Error('Failed to initialize chat session. Please try again.');
       }
 
-      // Support both marketrixId/marketrixKey and agentId/connectionId paths
+      // Support both mtxId/mtxKey and mtxApp/mtxAgent paths
       if (
-        !(this.config.marketrixId && this.config.marketrixKey) &&
-        (!this.config.agentId || !this.config.connectionId)
+        !(this.config.mtxId && this.config.mtxKey) &&
+        (!this.config.mtxApp || !this.config.mtxAgent)
       ) {
-        throw new Error(
-          'Either marketrixId + marketrixKey or both agentId + connectionId are required'
-        );
+        throw new Error('Either mtxId + mtxKey or both mtxApp + mtxAgent are required');
       }
 
       // Build request body with available identifiers
@@ -160,14 +158,14 @@ export class MarketrixApiService {
         content: request.message || '',
       };
 
-      if (this.config.marketrixId && this.config.marketrixKey) {
-        // Use marketrixId + marketrixKey - API will validate credentials
-        body.marketrix_id = this.config.marketrixId;
-        body.marketrix_key = this.config.marketrixKey;
-      } else if (this.config.agentId && this.config.connectionId) {
-        // Use agentId and connectionId
-        body.agent_id = this.config.agentId;
-        body.connection_id = this.config.connectionId;
+      if (this.config.mtxId && this.config.mtxKey) {
+        // Use mtxId + mtxKey - API will validate credentials
+        body.marketrix_id = this.config.mtxId;
+        body.marketrix_key = this.config.mtxKey;
+      } else if (this.config.mtxApp && this.config.mtxAgent) {
+        // Use mtxApp and mtxAgent
+        body.agent_id = this.config.mtxAgent;
+        body.connection_id = this.config.mtxApp;
       }
 
       // Validate chatId exists

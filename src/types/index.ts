@@ -23,22 +23,22 @@ export type {
  */
 export type MarketrixConfig = Partial<WidgetSettingsData> & {
   // Core SDK fields (from IntegrationEntitySchema)
-  // Either marketrixId/marketrixKey OR agentId/connectionId must be provided
-  marketrixId?: string; // maps to marketrix_id from SDK
-  marketrixKey?: string; // maps to marketrix_key from SDK
+  // Either mtxId/mtxKey OR mtxApp/mtxAgent must be provided
+  mtxId?: string; // maps to marketrix_id from SDK (production mode)
+  mtxKey?: string; // maps to marketrix_key from SDK (production mode)
 
-  // Alternative: Direct agent and connection IDs (when marketrixId/marketrixKey not available)
-  agentId?: number; // Direct agent ID from agent table
-  connectionId?: number; // Direct connection ID from connection table
+  // Alternative: Direct agent and connection IDs (dev mode)
+  mtxApp?: number; // Connection/app ID (maps to connection_id)
+  mtxAgent?: number; // Agent ID (maps to agent_id)
 
   // Optional user ID for logging widget questions
   userId?: number; // User ID to associate with widget questions
 
   // Optional API configuration
-  apiBaseUrl?: string;
+  mtxApiHost?: string; // API server hostname
 
-  // Optional Agent Server URL for websocket connection
-  agentServerUrl?: string;
+  // Optional AI/Agent Server URL for websocket connection
+  mtxAiHost?: string; // AI/agent server hostname
 
   // Widget position config fields (offset/z_index) - local-only styling, not from API
   widget_position_offset?: {
@@ -98,8 +98,8 @@ export interface WidgetState {
 export interface SendMessageRequest {
   message?: string;
   mode?: InstructionType;
-  marketrixId?: string;
-  marketrixKey?: string;
+  mtxId?: string;
+  mtxKey?: string;
   connection_id?: number;
   question?: string;
 }
@@ -122,33 +122,33 @@ export type AddWidgetConfig = (
   | {
       // Preview mode: provide settings directly
       settings: WidgetSettingsData;
-      marketrixId?: never;
-      marketrixKey?: never;
-      agentId?: never;
-      connectionId?: never;
+      mtxId?: never;
+      mtxKey?: never;
+      mtxApp?: never;
+      mtxAgent?: never;
     }
   | {
       // Production mode: provide marketrix credentials
       settings?: never;
-      marketrixId: string;
-      marketrixKey: string;
-      agentId?: never;
-      connectionId?: never;
+      mtxId: string;
+      mtxKey: string;
+      mtxApp?: never;
+      mtxAgent?: never;
     }
   | {
       // Dev mode: provide agent and connection IDs
       settings?: never;
-      marketrixId?: never;
-      marketrixKey?: never;
-      agentId: number;
-      connectionId: number;
+      mtxId?: never;
+      mtxKey?: never;
+      mtxApp: number;
+      mtxAgent: number;
     }
 ) & {
   // Optional container to mount widget within
   container?: HTMLElement;
   // Optional additional config
-  apiBaseUrl?: string;
-  agentServerUrl?: string;
+  mtxApiHost?: string;
+  mtxAiHost?: string;
   userId?: number;
   widget_position_offset?: {
     x?: number;

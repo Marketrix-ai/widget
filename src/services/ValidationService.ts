@@ -21,36 +21,36 @@ export interface WidgetValidationResult {
 export class WidgetValidationService {
   /**
    * Validate widget configuration
-   * Handles both marketrixId+marketrixKey and agentId+connectionId cases
+   * Handles both mtxId+mtxKey and mtxApp+mtxAgent cases
    */
   async validateConfig(config: MarketrixConfig): Promise<WidgetValidationResult> {
-    if (config.marketrixId && config.marketrixKey) {
-      return this.validateByMarketrixId(config.marketrixId, config.marketrixKey);
+    if (config.mtxId && config.mtxKey) {
+      return this.validateByMarketrixId(config.mtxId, config.mtxKey);
     }
-    if (config.agentId && config.connectionId) {
-      return this.validateByAgentAndConnection(config.agentId, config.connectionId);
+    if (config.mtxApp && config.mtxAgent) {
+      return this.validateByAgentAndConnection(config.mtxApp, config.mtxAgent);
     }
     return {
       isValid: false,
-      error: 'Please provide either (marketrixId + marketrixKey) OR (agentId + connectionId)',
+      error: 'Please provide either (mtxId + mtxKey) OR (mtxApp + mtxAgent)',
     };
   }
 
   /**
-   * Validate by marketrixId and marketrixKey
+   * Validate by mtxId and mtxKey
    */
   private async validateByMarketrixId(
-    marketrixId: string,
-    marketrixKey: string
+    mtxId: string,
+    mtxKey: string
   ): Promise<WidgetValidationResult> {
     try {
       // Step 1: Fetch integration by marketrix_id and marketrix_key
-      console.log('Validating widget - fetching integration...', { marketrixId, marketrixKey });
+      console.log('Validating widget - fetching integration...', { mtxId, mtxKey });
 
       const integrationResponse = await sdk.integrationSearch({
         query: {
-          marketrix_id: marketrixId,
-          marketrix_key: marketrixKey,
+          marketrix_id: mtxId,
+          marketrix_key: mtxKey,
         },
       });
 
@@ -206,19 +206,19 @@ export class WidgetValidationService {
   }
 
   /**
-   * Validate by agentId and connectionId directly
+   * Validate by mtxApp and mtxAgent directly
    * Validates connection and agent by ID
    */
   private async validateByAgentAndConnection(
-    agentId: number,
-    connectionId: number
+    mtxApp: number,
+    mtxAgent: number
   ): Promise<WidgetValidationResult> {
     try {
-      console.log('Validating agent and connection by ID...', { agentId, connectionId });
+      console.log('Validating agent and connection by ID...', { mtxApp, mtxAgent });
 
       // Step 1: Validate connection exists (using connectionGet instead of connectionSearch)
       const connectionResponse = await sdk.connectionGet({
-        params: { connection_id: connectionId },
+        params: { connection_id: mtxApp },
       });
 
       const connectionData = extractApiData(connectionResponse);
@@ -227,7 +227,7 @@ export class WidgetValidationService {
           isValid: false,
           error: connectionData
             ? 'Invalid connection data format'
-            : `Connection with ID ${connectionId} not found`,
+            : `Connection with ID ${mtxApp} not found`,
         };
       }
 
@@ -244,14 +244,14 @@ export class WidgetValidationService {
 
       // Step 2: Validate agent exists
       const agentResponse = await sdk.agentGet({
-        params: { agent_id: agentId },
+        params: { agent_id: mtxAgent },
       });
 
       const agentData = extractApiData(agentResponse);
       if (!agentData || !isAgentData(agentData)) {
         return {
           isValid: false,
-          error: agentData ? 'Invalid agent data format' : `Agent with ID ${agentId} not found`,
+          error: agentData ? 'Invalid agent data format' : `Agent with ID ${mtxAgent} not found`,
           connection,
         };
       }
@@ -266,18 +266,18 @@ export class WidgetValidationService {
         agent_type: agent.agent_type,
       });
 
-      // Step 3: Validate that agent's connection_id matches the provided marketrix-connection-id
-      if (agent.connection_id !== connectionId) {
+      // Step 3: Validate that agent's connection_id matches the provided mtx-app
+      if (agent.connection_id !== mtxApp) {
         return {
           isValid: false,
-          error: `Agent ID ${agentId} belongs to connection ID ${agent.connection_id}, but provided connection ID is ${connectionId}. Please verify the connection ID matches the agent's connection_id.`,
+          error: `Agent ID ${mtxAgent} belongs to connection ID ${agent.connection_id}, but provided connection ID is ${mtxApp}. Please verify the connection ID matches the agent's connection_id.`,
           connection,
           agent,
         };
       }
 
       // Validation successful
-      console.log('✅ Validation successful:', { connection_id: connectionId, agent_id: agentId });
+      console.log('✅ Validation successful:', { connection_id: mtxApp, agent_id: mtxAgent });
 
       return {
         isValid: true,

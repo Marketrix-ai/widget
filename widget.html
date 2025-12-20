@@ -26,37 +26,49 @@
         const script = document.getElementById('marketrix-widget-script');
 
         // Get parameters from URL
-        const marketrixId = urlParams.get('marketrix-id');
-        const marketrixKey = urlParams.get('marketrix-key');
-        const marketrixAgent = urlParams.get('marketrix-agent');
-        const marketrixConnectionId = urlParams.get('marketrix-connection-id');
+        const mtxId = urlParams.get('mtx-id');
+        const mtxKey = urlParams.get('mtx-key');
+        const mtxApp = urlParams.get('mtx-app');
+        const mtxAgent = urlParams.get('mtx-agent');
+        const mtxApiHost = urlParams.get('mtx-api-host');
+        const mtxAiHost = urlParams.get('mtx-ai-host');
 
         console.log('📋 Widget HTML - URL Parameters:', {
-          marketrixId,
-          marketrixKey: marketrixKey ? '***' : null,
-          marketrixAgent,
-          marketrixConnectionId,
+          mtxId,
+          mtxKey: mtxKey ? '***' : null,
+          mtxApp,
+          mtxAgent,
+          mtxApiHost,
+          mtxAiHost,
         });
 
         // Set attributes on script tag
-        if (marketrixId) {
-          script.setAttribute('marketrix-id', marketrixId);
+        if (mtxId) {
+          script.setAttribute('mtx-id', mtxId);
         }
-        if (marketrixKey) {
-          script.setAttribute('marketrix-key', marketrixKey);
+        if (mtxKey) {
+          script.setAttribute('mtx-key', mtxKey);
         }
-        if (marketrixAgent) {
-          script.setAttribute('marketrix-agent', marketrixAgent);
+        if (mtxApp) {
+          script.setAttribute('mtx-app', mtxApp);
         }
-        if (marketrixConnectionId) {
-          script.setAttribute('marketrix-connection-id', marketrixConnectionId);
+        if (mtxAgent) {
+          script.setAttribute('mtx-agent', mtxAgent);
+        }
+        if (mtxApiHost) {
+          script.setAttribute('mtx-api-host', mtxApiHost);
+        }
+        if (mtxAiHost) {
+          script.setAttribute('mtx-ai-host', mtxAiHost);
         }
 
         console.log('✅ Widget script attributes set:', {
-          'marketrix-id': script.getAttribute('marketrix-id'),
-          'marketrix-key': script.getAttribute('marketrix-key') ? '***' : null,
-          'marketrix-agent': script.getAttribute('marketrix-agent'),
-          'marketrix-connection-id': script.getAttribute('marketrix-connection-id'),
+          'mtx-id': script.getAttribute('mtx-id'),
+          'mtx-key': script.getAttribute('mtx-key') ? '***' : null,
+          'mtx-app': script.getAttribute('mtx-app'),
+          'mtx-agent': script.getAttribute('mtx-agent'),
+          'mtx-api-host': script.getAttribute('mtx-api-host'),
+          'mtx-ai-host': script.getAttribute('mtx-ai-host'),
         });
       })();
     </script>

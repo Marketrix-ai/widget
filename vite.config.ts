@@ -1,6 +1,8 @@
+import { execSync } from 'node:child_process';
+
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
-import { copyFileSync, existsSync, readFileSync } from 'fs';
+import { copyFileSync, existsSync, readFileSync, writeFileSync } from 'fs';
 import type { IncomingMessage, ServerResponse } from 'http';
 import { resolve } from 'path';
 import { defineConfig, type ViteDevServer } from 'vite';
@@ -34,7 +36,6 @@ const devMeetPlugin = () => {
         }
         next();
       };
-      // @ts-expect-error - accessing internal stack
       s.middlewares.stack.unshift({ route: '', handle: htmlHandler });
     },
     resolveId(id: string) {
@@ -104,6 +105,45 @@ const copyFilesPlugin = () => {
   };
 };
 
+// Plugin to build debug panel and generate types after main build
+const buildCompletePlugin = () => {
+  return {
+    name: 'build-complete',
+    async closeBundle() {
+      // Build debug panel
+      try {
+        console.log('Building debug panel...');
+        execSync('vite build --config vite.config.debug.ts', { stdio: 'inherit' });
+      } catch (error) {
+        console.error('Error building debug panel:', error);
+        throw error;
+      }
+
+      // Generate types
+      try {
+        console.log('Generating types...');
+        execSync('tsc -p tsconfig.build.json', { stdio: 'inherit' });
+      } catch (error) {
+        console.error('Error generating types:', error);
+        throw error;
+      }
+
+      // Fix types (remove CSS import)
+      try {
+        const typePath = resolve(process.cwd(), 'dist', 'index.d.ts');
+        if (existsSync(typePath)) {
+          let content = readFileSync(typePath, 'utf8');
+          content = content.replace(/^import\s+['"]\.\/index\.css['"];?\n?/gm, '');
+          writeFileSync(typePath, content);
+          console.log('✓ Fixed type definitions');
+        }
+      } catch (error) {
+        console.error('Error fixing types:', error);
+      }
+    },
+  };
+};
+
 export default defineConfig({
   plugins: [
     react(),
@@ -112,6 +152,7 @@ export default defineConfig({
     devMeetPlugin(),
     cssInjectedByJsPlugin(),
     copyFilesPlugin(),
+    buildCompletePlugin(),
   ],
   root: '.',
   publicDir: 'public',
@@ -130,14 +171,24 @@ export default defineConfig({
     cssCodeSplit: false,
     chunkSizeWarningLimit: 600, // Widget is intentionally a single bundle
     assetsInlineLimit: 100000000, // Inline all assets as base64
+    sourcemap: true, // Generate sourcemaps for debugging
+    lib: {
+      entry: 'src/index.tsx',
+      formats: ['es'],
+      fileName: 'index',
+    },
     rollupOptions: {
-      input: 'src/index.tsx',
+      external: ['react', 'react-dom', 'react-dom/client', 'react/jsx-runtime'],
       output: {
-        entryFileNames: 'index.js',
-        chunkFileNames: 'chunks/[name]-[hash].js',
+        entryFileNames: 'index.mjs',
+        // chunkFileNames: 'chunks/[name]-[hash].js', // Removed for inline
         assetFileNames: 'assets/[name].[ext]',
         format: 'es',
-        inlineDynamicImports: false,
+        inlineDynamicImports: true, // Force single file
+        globals: {
+          react: 'React',
+          'react-dom': 'ReactDOM',
+        },
       },
     },
     minify: 'terser',

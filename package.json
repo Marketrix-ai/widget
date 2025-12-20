@@ -3,35 +3,29 @@
   "version": "1.0.1",
   "description": "Modern React-based In-App Support Widget",
   "type": "module",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "./dist/index.mjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
-    }
+      "import": "./dist/index.mjs",
+      "default": "./dist/index.mjs",
+      "browser": "./dist/index.mjs",
+      "react-server": "./dist/index.mjs",
+      "require": "./dist/index.mjs"
+    },
+    "./package.json": "./package.json"
   },
   "files": [
     "dist"
   ],
   "scripts": {
     "start": "vite",
-    "start:dev": "vite --mode=dev",
-    "start:prod": "vite --mode=prod",
     "build": "vite build",
-    "build:dev": "vite build --mode=dev",
-    "build:prod": "vite build --mode=prod",
-    "build:debug": "vite build --config vite.config.debug.ts",
-    "type-check": "tsc --noEmit",
-    "lint": "eslint . --ext .ts,.tsx --max-warnings 200",
-    "lint:fix": "eslint . --ext .ts,.tsx --fix",
+    "check": "tsc --noEmit",
+    "lint": "eslint . --ext .ts,.tsx --max-warnings 200 --fix",
     "format": "prettier --write .",
-    "format:check": "prettier --check .",
-    "imports:sort": "eslint . --ext .ts,.tsx --fix --rule 'simple-import-sort/imports: error'",
-    "imports:unused": "eslint . --ext .ts,.tsx --fix --rule 'unused-imports/no-unused-imports: error'",
-    "imports:fix": "npm run imports:sort && npm run imports:unused",
-    "code:fix": "npm run imports:fix && npm run lint:fix && npm run format",
-    "code:check": "npm run type-check && npm run lint && npm run format:check",
     "prepare": "husky"
   },
   "dependencies": {

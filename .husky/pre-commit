@@ -2,7 +2,7 @@ echo "🔍 Running pre-commit checks..."
 
 # Run TypeScript type checking first (fastest check)
 echo "📝 Checking TypeScript types..."
-npm run type-check
+npm run check
 
 if [ $? -ne 0 ]; then
     echo "❌ TypeScript type check failed! Please fix the type errors before committing."

@@ -5,7 +5,7 @@
  * Eliminates repetition of response validation and error handling across services.
  */
 
-import { VITE_API_URL } from '../constants/config';
+import { getApiUrl } from '../constants/config';
 
 // ============================================================================
 // API Response Helpers
@@ -100,7 +100,13 @@ export function handleApiError(
   const errorMessage = extractErrorMessage(error);
 
   if (isConnectionError(error)) {
-    const connectionErrorMessage = `Cannot connect to API server. Please ensure the API server is running at ${VITE_API_URL}. Error: ${errorMessage}`;
+    let apiUrl = 'configured API server';
+    try {
+      apiUrl = getApiUrl();
+    } catch {
+      // Ignore error if URL not configured yet
+    }
+    const connectionErrorMessage = `Cannot connect to API server. Please ensure the API server is running at ${apiUrl}. Error: ${errorMessage}`;
     return {
       isValid: false,
       error: connectionErrorMessage,

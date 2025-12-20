@@ -430,7 +430,7 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         config = configManager.loadConfig();
       }
 
-      if (!config || (!config.marketrixId && !config.marketrixKey && !config.agentId)) {
+      if (!config || (!config.mtxId && !config.mtxKey && !config.mtxAgent)) {
         console.error('Config not loaded or incomplete');
         // We could fallback to throwing error or showing UI error here
         const errorMsg = createAgentMessage(
@@ -469,7 +469,7 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       try {
         // Override config if connectionId is provided (for chips with specific connection)
         if (connectionId) {
-          apiService.updateConfig({ connectionId });
+          apiService.updateConfig({ mtxApp: connectionId });
         }
 
         const response = await apiService.sendMessage({

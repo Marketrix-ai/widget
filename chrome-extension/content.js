@@ -12,7 +12,7 @@ const SCRIPT_ID = 'marketrix-widget-script';
 function isWidgetPresent() {
   return !!(
     document.getElementById(SCRIPT_ID) ||
-    document.querySelector('script[marketrix-id], script[marketrix-agent]') ||
+    document.querySelector('script[mtx-id], script[mtx-app]') ||
     document.getElementById('marketrix-widget-container')
   );
 }
@@ -25,17 +25,23 @@ function injectWidget(config) {
     script.id = SCRIPT_ID;
     script.src = config.scriptSrc;
 
-    if (config.agentId) {
-      script.setAttribute('marketrix-agent', config.agentId);
+    if (config.mtxAgent) {
+      script.setAttribute('mtx-agent', config.mtxAgent);
     }
-    if (config.connectionId) {
-      script.setAttribute('marketrix-connection-id', config.connectionId);
+    if (config.mtxApp) {
+      script.setAttribute('mtx-app', config.mtxApp);
     }
-    if (config.marketrixId) {
-      script.setAttribute('marketrix-id', config.marketrixId);
+    if (config.mtxId) {
+      script.setAttribute('mtx-id', config.mtxId);
     }
-    if (config.marketrixKey) {
-      script.setAttribute('marketrix-key', config.marketrixKey);
+    if (config.mtxKey) {
+      script.setAttribute('mtx-key', config.mtxKey);
+    }
+    if (config.mtxApiHost) {
+      script.setAttribute('mtx-api-host', config.mtxApiHost);
+    }
+    if (config.mtxAiHost) {
+      script.setAttribute('mtx-ai-host', config.mtxAiHost);
     }
 
     // Append to body instead of head to avoid conflicts with head-modifying scripts
@@ -52,9 +58,13 @@ function injectWidget(config) {
 function injectWidgetDelayed(config) {
   // Wait for DOM to be ready, then add extra delay for page scripts
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-      setTimeout(() => injectWidget(config), 500);
-    }, { once: true });
+    document.addEventListener(
+      'DOMContentLoaded',
+      () => {
+        setTimeout(() => injectWidget(config), 500);
+      },
+      { once: true }
+    );
   } else {
     // DOM already ready, but still delay to avoid race conditions
     setTimeout(() => injectWidget(config), 100);
