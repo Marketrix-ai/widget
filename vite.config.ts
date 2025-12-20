@@ -7,7 +7,7 @@ import type { IncomingMessage, ServerResponse } from 'http';
 import { resolve } from 'path';
 import { defineConfig, type ViteDevServer } from 'vite';
 
-// Dev plugin: serves /meet.js and /debug.js endpoints
+// Dev plugin: serves /index.mjs and /debug.js endpoints
 const devMeetPlugin = () => {
   return {
     name: 'dev-meet',
@@ -22,25 +22,17 @@ const devMeetPlugin = () => {
             return;
           }
         }
-        if (req.url === '/widget.html' || req.url === '/widget') {
-          const widgetHtmlPath = resolve(process.cwd(), 'widget.html');
-          if (existsSync(widgetHtmlPath)) {
-            res.setHeader('Content-Type', 'text/html');
-            res.end(readFileSync(widgetHtmlPath, 'utf-8'));
-            return;
-          }
-        }
         next();
       };
       s.middlewares.stack.unshift({ route: '', handle: htmlHandler });
     },
     resolveId(id: string) {
-      if (['/meet.js', './meet.js'].includes(id)) return id;
+      if (['/index.mjs', './index.mjs'].includes(id)) return id;
       if (['/debug.js', './debug.js'].includes(id)) return id;
       return null;
     },
     async load(id: string) {
-      if (['/meet.js', './meet.js'].includes(id)) {
+      if (['/index.mjs', './index.mjs'].includes(id)) {
         // IMPORTANT:
         // Do NOT return `server.transformRequest()` output here.
         // Vite will run its own transform pipeline on this virtual module, and returning
@@ -50,7 +42,7 @@ const devMeetPlugin = () => {
         return `export * from '/src/index.tsx';\nexport { default } from '/src/index.tsx';\n`;
       }
       if (['/debug.js', './debug.js'].includes(id)) {
-        // Same reasoning as /meet.js: avoid returning already-transformed code
+        // Same reasoning as /index.mjs: avoid returning already-transformed code
         return `export * from '/src/debug.tsx';\nexport { default } from '/src/debug.tsx';\n`;
       }
       return null;
@@ -58,7 +50,7 @@ const devMeetPlugin = () => {
   };
 };
 
-// Plugin to copy index.html and create meet.js (script tag bundle) after build
+// Plugin to copy index.html after build
 const copyFilesPlugin = () => {
   return {
     name: 'copy-files',
@@ -73,18 +65,6 @@ const copyFilesPlugin = () => {
         }
       } catch (error) {
         console.error('Error copying index.html:', error);
-      }
-
-      // Create meet.js as a copy of index.mjs for script tag mode (legacy support)
-      const indexMjsPath = resolve(process.cwd(), 'dist', 'index.mjs');
-      const meetJsPath = resolve(process.cwd(), 'dist', 'meet.js');
-      try {
-        if (existsSync(indexMjsPath)) {
-          copyFileSync(indexMjsPath, meetJsPath);
-          console.log('✓ Created meet.js for script tag mode');
-        }
-      } catch (error) {
-        console.error('Error creating meet.js:', error);
       }
     },
   };

@@ -21,7 +21,7 @@ export default defineConfig({
   publicDir: false,
   build: {
     outDir: 'dist',
-    emptyOutDir: false, // Don't clear dist folder (keep meet.js)
+    emptyOutDir: false, // Don't clear dist folder (keep index.mjs)
     cssCodeSplit: false,
     chunkSizeWarningLimit: 600,
     assetsInlineLimit: 100000000,

@@ -50,8 +50,6 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
 
   // Keyboard shortcut for dev panel (Ctrl+Shift+D)
   useEffect(() => {
-    if (process.env.NODE_ENV !== 'development') return;
-
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.shiftKey && e.key === 'D') {
         e.preventDefault();
@@ -148,7 +146,7 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
       )}
 
       {/* Dev-only DOM Test Panel */}
-      {process.env.NODE_ENV === 'development' && showDevPanel && (
+      {showDevPanel && (
         <Suspense fallback={null}>
           <DomTestPanel />
         </Suspense>

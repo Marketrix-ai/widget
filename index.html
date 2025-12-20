@@ -1442,6 +1442,18 @@
       }
     </script>
 
+    <!-- Import maps for React dependencies (required for static serving) -->
+    <script type="importmap">
+      {
+        "imports": {
+          "react": "https://esm.sh/react@19.2.3",
+          "react-dom": "https://esm.sh/react-dom@19.2.3",
+          "react-dom/client": "https://esm.sh/react-dom@19.2.3/client",
+          "react/jsx-runtime": "https://esm.sh/react@19.2.3/jsx-runtime"
+        }
+      }
+    </script>
+
     <!-- Widget Script (Demo Mode) -->
     <script type="module">
       const params = new URLSearchParams(window.location.search);
