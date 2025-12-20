@@ -30,9 +30,11 @@ Add the widget to your HTML page using a script tag:
 
 ```html
 <script
-  src="path/to/meet.js"
-  marketrix-id="your-marketrix-id"
-  marketrix-key="your-marketrix-key"
+  src="path/to/index.mjs"
+  mtx-ai-host="https://agent.marketrix.ai"
+  mtx-api-host="https://api.marketrix.ai"
+  mtx-id="your-marketrix-id"
+  mtx-key="your-marketrix-key"
 ></script>
 ```
 
@@ -42,13 +44,11 @@ You can customize the widget using data attributes:
 
 ```html
 <script
-  src="path/to/meet.js"
-  marketrix-id="your-marketrix-id"
-  marketrix-key="your-marketrix-key"
-  data-position="bottom_right"
-  data-theme="light"
-  data-agent-name="Support Agent"
-  data-api-base-url="https://api.marketrix.com"
+  src="path/to/index.mjs"
+  mtx-ai-host="https://agent.marketrix.ai"
+  mtx-api-host="https://api.marketrix.ai"
+  mtx-id="your-marketrix-id"
+  mtx-key="your-marketrix-key"
 ></script>
 ```
 
@@ -229,9 +229,11 @@ npx serve dist -l 5174 --cors
 ```javascript
 javascript: (function () {
   var s = document.createElement('script');
-  s.src = 'http://localhost:5174/meet.js';
-  s.setAttribute('marketrix-agent', 'YOUR_AGENT_ID');
-  s.setAttribute('marketrix-connection-id', 'YOUR_CONNECTION_ID');
+  s.src = 'http://localhost:5174/index.mjs';
+  s.setAttribute('mtx-ai-host', 'https://agent.marketrix.ai');
+  s.setAttribute('mtx-api-host', 'https://api.marketrix.ai');
+  s.setAttribute('mtx-app', 'YOUR_APP_ID');
+  s.setAttribute('mtx-agent', 'YOUR_AGENT_ID');
   document.head.appendChild(s);
 })();
 ```
@@ -247,9 +249,11 @@ First visit `https://localhost:5174` and accept the certificate, then use:
 ```javascript
 javascript: (function () {
   var s = document.createElement('script');
-  s.src = 'https://localhost:5174/meet.js';
-  s.setAttribute('marketrix-agent', 'YOUR_AGENT_ID');
-  s.setAttribute('marketrix-connection-id', 'YOUR_CONNECTION_ID');
+  s.src = 'https://localhost:5174/index.mjs';
+  s.setAttribute('mtx-ai-host', 'https://agent.marketrix.ai');
+  s.setAttribute('mtx-api-host', 'https://api.marketrix.ai');
+  s.setAttribute('mtx-app', 'YOUR_APP_ID');
+  s.setAttribute('mtx-agent', 'YOUR_AGENT_ID');
   document.head.appendChild(s);
 })();
 ```
@@ -259,9 +263,11 @@ javascript: (function () {
 ```javascript
 javascript: (function () {
   var s = document.createElement('script');
-  s.src = 'https://cdn.marketrix.io/widget/dev/meet.js';
-  s.setAttribute('marketrix-agent', 'YOUR_AGENT_ID');
-  s.setAttribute('marketrix-connection-id', 'YOUR_CONNECTION_ID');
+  s.src = 'https://cdn.marketrix.io/widget/dev/index.mjs';
+  s.setAttribute('mtx-ai-host', 'https://agent.marketrix.ai');
+  s.setAttribute('mtx-api-host', 'https://api.marketrix.ai');
+  s.setAttribute('mtx-app', 'YOUR_APP_ID');
+  s.setAttribute('mtx-agent', 'YOUR_AGENT_ID');
   document.head.appendChild(s);
 })();
 ```
@@ -286,12 +292,14 @@ create a new script:
   'use strict';
   var script = document.createElement('script');
   // Use one of the following sources:
-  // Local dev server (HTTPS): script.src = "https://localhost:5174/meet.js";
-  // Local built version: script.src = "http://localhost:5174/meet.js";
+  // Local dev server (HTTPS): script.src = "https://localhost:5174/index.mjs";
+  // Local built version: script.src = "http://localhost:5174/index.mjs";
   // Production CDN:
-  script.src = 'https://cdn.marketrix.io/widget/dev/meet.js';
-  script.setAttribute('marketrix-agent', 'YOUR_AGENT_ID');
-  script.setAttribute('marketrix-connection-id', 'YOUR_CONNECTION_ID');
+  script.src = 'https://cdn.marketrix.io/widget/dev/index.mjs';
+  s.setAttribute('mtx-ai-host', 'https://agent.marketrix.ai');
+  s.setAttribute('mtx-api-host', 'https://api.marketrix.ai');
+  script.setAttribute('mtx-app', 'YOUR_APP_ID');
+  script.setAttribute('mtx-agent', 'YOUR_AGENT_ID');
   document.head.appendChild(script);
 })();
 ```
@@ -352,7 +360,7 @@ widget/
 ├── vite.config.ts          # Vite configuration
 ├── tailwind.config.js      # Tailwind configuration
 └── dist/                   # Build output
-    ├── meet.js             # Main widget bundle (IIFE)
+    ├── index.mjs           # Main widget bundle (IIFE)
     └── index.html          # Demo page
 ```
 
@@ -363,27 +371,23 @@ The widget uses Vite with a custom CSS injection plugin that:
 - Bundles all dependencies (React, etc.) into a single file
 - Injects CSS directly into the JavaScript bundle
 - Outputs an IIFE (Immediately Invoked Function Expression) format
-- Creates a standalone `meet.js` file with no external dependencies
+- Creates a standalone `index.mjs` file with no external dependencies
 
 ## API Reference
 
 ### Functions
 
-#### `initMarketrixWidget(config: MarketrixConfig)`
+#### `mountWidget(config: MarketrixConfig)`
 
-Initializes the widget with the provided configuration.
+Initializes the widget and adds it into the DOM.
 
-#### `destroyMarketrixWidget()`
+#### `unmountWidget()`
 
 Destroys the widget and removes it from the DOM.
 
-#### `updateMarketrixConfig(newConfig: Partial<MarketrixConfig>)`
+#### `previewWidget(config: MarketrixConfig)`
 
-Updates the widget configuration dynamically.
-
-#### `getCurrentConfig(): MarketrixConfig`
-
-Returns the current widget configuration.
+Previews the widget for quick appearance-checking.
 
 ### Types
 

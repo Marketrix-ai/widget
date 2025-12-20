@@ -17,7 +17,7 @@ chrome.storage.local.get(['enabled', 'config'], (result) => {
     connectionIdInput.value = result.config.connectionId || '';
   } else {
     // Default values
-    scriptSrcInput.value = 'http://localhost:5174/meet.js';
+    scriptSrcInput.value = 'http://localhost:5174/index.mjs';
     agentIdInput.value = '10';
     connectionIdInput.value = '13';
   }
@@ -31,7 +31,7 @@ saveBtn.addEventListener('click', () => {
   const config = {
     scriptSrc: scriptSrcInput.value.trim(),
     agentId: agentIdInput.value.trim(),
-    connectionId: connectionIdInput.value.trim()
+    connectionId: connectionIdInput.value.trim(),
   };
 
   chrome.storage.local.set({ config }, () => {
@@ -48,7 +48,7 @@ enableToggle.addEventListener('change', () => {
   const config = {
     scriptSrc: scriptSrcInput.value.trim(),
     agentId: agentIdInput.value.trim(),
-    connectionId: connectionIdInput.value.trim()
+    connectionId: connectionIdInput.value.trim(),
   };
 
   chrome.storage.local.set({ enabled, config }, () => {
@@ -57,15 +57,17 @@ enableToggle.addEventListener('change', () => {
     // Send message to current tab
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       if (tabs[0]) {
-        chrome.tabs.sendMessage(tabs[0].id, {
-          action: enabled ? 'inject' : 'remove',
-          config
-        }).catch(() => {
-          // Tab might not have content script loaded yet, reload it
-          if (enabled) {
-            chrome.tabs.reload(tabs[0].id);
-          }
-        });
+        chrome.tabs
+          .sendMessage(tabs[0].id, {
+            action: enabled ? 'inject' : 'remove',
+            config,
+          })
+          .catch(() => {
+            // Tab might not have content script loaded yet, reload it
+            if (enabled) {
+              chrome.tabs.reload(tabs[0].id);
+            }
+          });
       }
     });
   });
