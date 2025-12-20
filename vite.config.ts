@@ -75,12 +75,12 @@ const copyFilesPlugin = () => {
         console.error('Error copying index.html:', error);
       }
 
-      // Create meet.js as a copy of index.js for script tag mode (legacy support)
-      const indexJsPath = resolve(process.cwd(), 'dist', 'index.js');
+      // Create meet.js as a copy of index.mjs for script tag mode (legacy support)
+      const indexMjsPath = resolve(process.cwd(), 'dist', 'index.mjs');
       const meetJsPath = resolve(process.cwd(), 'dist', 'meet.js');
       try {
-        if (existsSync(indexJsPath)) {
-          copyFileSync(indexJsPath, meetJsPath);
+        if (existsSync(indexMjsPath)) {
+          copyFileSync(indexMjsPath, meetJsPath);
           console.log('✓ Created meet.js for script tag mode');
         }
       } catch (error) {
