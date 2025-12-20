@@ -10,12 +10,9 @@ import cssInjectedByJsPlugin from 'vite-plugin-css-injected-by-js';
 
 // Dev plugin: serves /meet.js and /debug.js endpoints
 const devMeetPlugin = () => {
-  let server: ViteDevServer;
-
   return {
     name: 'dev-meet',
     configureServer(s: ViteDevServer) {
-      server = s;
       // Add middleware at the VERY BEGINNING using stack manipulation
       const htmlHandler = (req: IncomingMessage, res: ServerResponse, next: () => void) => {
         if (req.url === '/test.html' || req.url === '/test') {
@@ -45,28 +42,17 @@ const devMeetPlugin = () => {
     },
     async load(id: string) {
       if (['/meet.js', './meet.js'].includes(id)) {
-        try {
-          if (server) {
-            const result = await server.transformRequest('/src/index.tsx');
-            return result?.code ?? null;
-          }
-          return `export * from '/src/index.tsx';`;
-        } catch (error) {
-          console.error('Error transforming meet.js:', error);
-          return null;
-        }
+        // IMPORTANT:
+        // Do NOT return `server.transformRequest()` output here.
+        // Vite will run its own transform pipeline on this virtual module, and returning
+        // already-transformed code can cause duplicated HMR preambles like:
+        //   "Identifier '__vite__createHotContext' has already been declared"
+        // Instead, return a small module that re-exports the real entry.
+        return `export * from '/src/index.tsx';\nexport { default } from '/src/index.tsx';\n`;
       }
       if (['/debug.js', './debug.js'].includes(id)) {
-        try {
-          if (server) {
-            const result = await server.transformRequest('/src/debug.tsx');
-            return result?.code ?? null;
-          }
-          return `export * from '/src/debug.tsx';`;
-        } catch (error) {
-          console.error('Error transforming debug.js:', error);
-          return null;
-        }
+        // Same reasoning as /meet.js: avoid returning already-transformed code
+        return `export * from '/src/debug.tsx';\nexport { default } from '/src/debug.tsx';\n`;
       }
       return null;
     },

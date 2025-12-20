@@ -1,3 +1,5 @@
+import './index.css';
+
 import React, { useEffect, useRef } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 

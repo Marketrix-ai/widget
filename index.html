@@ -1443,13 +1443,22 @@
     </script>
 
     <!-- Widget Script (Demo Mode) -->
-    <script
-      type="module"
-      src="./meet.js"
-      marketrix-id=""
-      marketrix-key=""
-      marketrix-agent="1"
-      marketrix-connection-id="1"
-    ></script>
+    <script type="module">
+      const params = new URLSearchParams(window.location.search);
+
+      const script = Object.assign(document.createElement('script'), {
+        type: 'module',
+        src: './meet.js'
+      });
+
+      script.setAttribute('mtx-id', params.get('mtx-id') ?? '');
+      script.setAttribute('mtx-key', params.get('mtx-key') ?? '');
+      script.setAttribute('mtx-app', params.get('mtx-app') ?? '1');
+      script.setAttribute('mtx-agent', params.get('mtx-agent') ?? '1');
+      script.setAttribute('mtx-api-host', params.get('mtx-api-host') ?? 'https://api.marketrix.co');
+      script.setAttribute('mtx-ai-host', params.get('mtx-ai-host') ?? 'https://agent.marketrix.co');
+
+      document.body.appendChild(script);
+    </script>
   </body>
 </html>

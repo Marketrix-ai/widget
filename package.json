@@ -10,10 +10,7 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.mjs",
-      "default": "./dist/index.mjs",
-      "browser": "./dist/index.mjs",
-      "react-server": "./dist/index.mjs",
-      "require": "./dist/index.mjs"
+      "default": "./dist/index.mjs"
     },
     "./package.json": "./package.json"
   },
