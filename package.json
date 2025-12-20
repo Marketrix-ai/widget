@@ -1,6 +1,6 @@
 {
-  "name": "@marketrix/widget",
-  "version": "1.0.1",
+  "name": "@marketrix.ai/widget",
+  "version": "1.0.0",
   "description": "Modern React-based In-App Support Widget",
   "type": "module",
   "main": "./dist/index.mjs",
