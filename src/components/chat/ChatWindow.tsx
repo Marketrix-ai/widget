@@ -71,7 +71,9 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
 }) => {
   const [inputValue, setInputValue] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatWindowRef = useRef<HTMLDivElement>(null);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
+  const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [screenShareMessageId, setScreenShareMessageId] = useState<string | null>(null);
   const [screenAccessRequestMessageId, setScreenAccessRequestMessageId] = useState<string | null>(
     null
@@ -383,6 +385,23 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     'bottom_right') as 'bottom_left' | 'bottom_right';
   const positionClasses = getPositionClasses(effectivePosition);
 
+  // Detect if widget is in preview mode (mounted in a container, not document.body)
+  useEffect(() => {
+    if (chatWindowRef.current) {
+      const rootNode = chatWindowRef.current.getRootNode();
+      // If we're inside a shadow root, check if the host's parent is not document.body
+      if (rootNode instanceof ShadowRoot) {
+        const host = rootNode.host;
+        // If the shadow root's host has a parent that's not document.body, we're in preview mode
+        if (host && host.parentElement && host.parentElement !== document.body) {
+          setIsPreviewMode(true);
+          return;
+        }
+      }
+      setIsPreviewMode(false);
+    }
+  }, []);
+
   if (!isOpen) return null;
 
   const customStyles = {
@@ -431,9 +450,13 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     }
   }
 
+  // Use absolute positioning in preview mode, fixed in production
+  const positionClass = isPreviewMode ? 'absolute' : 'fixed';
+
   return (
     <div
-      className={`fixed rounded-xl ${positionClasses} pointer-events-auto`}
+      ref={chatWindowRef}
+      className={`${positionClass} rounded-xl ${positionClasses} pointer-events-auto`}
       style={{
         zIndex: widgetPosition.z_index || 40,
         backgroundColor: '#ffffff',
