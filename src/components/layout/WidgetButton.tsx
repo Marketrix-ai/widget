@@ -22,27 +22,8 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
   isScreenSharing = false,
 }) => {
   const [showWelcomeText, setShowWelcomeText] = useState(false);
-  const [isPreviewMode, setIsPreviewMode] = useState(false);
-  const buttonRef = React.useRef<HTMLDivElement>(null);
   const { getWidgetPosition, settings } = useWidget({ config });
   const widgetPosition = getWidgetPosition();
-
-  // Detect if widget is in preview mode (mounted in a container, not document.body)
-  useEffect(() => {
-    if (buttonRef.current) {
-      const rootNode = buttonRef.current.getRootNode();
-      // If we're inside a shadow root, check if the host's parent is not document.body
-      if (rootNode instanceof ShadowRoot) {
-        const host = rootNode.host;
-        // If the shadow root's host has a parent that's not document.body, we're in preview mode
-        if (host && host.parentElement && host.parentElement !== document.body) {
-          setIsPreviewMode(true);
-          return;
-        }
-      }
-      setIsPreviewMode(false);
-    }
-  }, []);
 
   useEffect(() => {
     setShowWelcomeText(false);
@@ -74,13 +55,10 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
     'bottom_right') as 'bottom_left' | 'bottom_right';
   const effectivePositionClasses = getPositionClasses(effectivePosition);
 
-  // Use absolute positioning in preview mode, fixed in production
-  const positionClass = isPreviewMode ? 'absolute' : 'fixed';
-
+  // Use absolute positioning for both modes (relative to container)
   return (
     <div
-      ref={buttonRef}
-      className={`${positionClass} ${effectivePositionClasses} transition-transform duration-500 ease-in-out ${showWelcomeText && !isOpen ? (effectivePosition.includes('left') ? 'transform translate-x-64' : 'transform -translate-x-64') : ''}`}
+      className={`absolute ${effectivePositionClasses} transition-transform duration-500 ease-in-out ${showWelcomeText && !isOpen ? (effectivePosition.includes('left') ? 'transform translate-x-64' : 'transform -translate-x-64') : ''}`}
       style={{ zIndex: widgetPosition.z_index || 50 }}
     >
       <button

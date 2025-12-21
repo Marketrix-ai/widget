@@ -73,7 +73,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatWindowRef = useRef<HTMLDivElement>(null);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
-  const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [screenShareMessageId, setScreenShareMessageId] = useState<string | null>(null);
   const [screenAccessRequestMessageId, setScreenAccessRequestMessageId] = useState<string | null>(
     null
@@ -385,23 +384,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     'bottom_right') as 'bottom_left' | 'bottom_right';
   const positionClasses = getPositionClasses(effectivePosition);
 
-  // Detect if widget is in preview mode (mounted in a container, not document.body)
-  useEffect(() => {
-    if (chatWindowRef.current) {
-      const rootNode = chatWindowRef.current.getRootNode();
-      // If we're inside a shadow root, check if the host's parent is not document.body
-      if (rootNode instanceof ShadowRoot) {
-        const host = rootNode.host;
-        // If the shadow root's host has a parent that's not document.body, we're in preview mode
-        if (host?.parentElement && host.parentElement !== document.body) {
-          setIsPreviewMode(true);
-          return;
-        }
-      }
-      setIsPreviewMode(false);
-    }
-  }, []);
-
   if (!isOpen) return null;
 
   const customStyles = {
@@ -450,47 +432,25 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     }
   }
 
-  // Use absolute positioning in preview mode, fixed in production
-  const positionClass = isPreviewMode ? 'absolute' : 'fixed';
-
-  // In preview mode, adjust size to fit within container (500px height)
-  const chatWindowWidth = isPreviewMode ? 'w-[320px]' : 'w-[360px]';
-  const chatWindowHeight = isMinimized
-    ? 'h-12'
-    : isPreviewMode
-      ? 'h-[450px]' // Slightly smaller to fit in 500px container with padding
-      : 'h-[35rem]';
-
-  // In preview mode, adjust positioning to ensure it fits within container
-  const previewPositionStyle = isPreviewMode
-    ? {
-        bottom: '8px', // Use smaller offset in preview mode
-        ...(effectivePosition.includes('right') ? { right: '8px' } : { left: '8px' }),
-      }
-    : {};
+  // Use absolute positioning for both modes (relative to container)
+  const chatWindowHeight = isMinimized ? 'h-12' : 'h-[35rem]';
 
   return (
     <div
       ref={chatWindowRef}
-      className={`${positionClass} rounded-xl ${isPreviewMode ? '' : positionClasses} pointer-events-auto`}
+      className={`absolute rounded-xl ${positionClasses} pointer-events-auto`}
       style={{
         zIndex: widgetPosition.z_index || 40,
         backgroundColor: '#ffffff',
         backgroundImage: settings.widget_background_color.includes('gradient')
           ? settings.widget_background_color
           : `linear-gradient(135deg, ${settings.widget_background_color} 0%, ${settings.widget_background_color} 100%)`,
-        // In preview mode, ensure it's constrained within the container
-        ...(isPreviewMode && {
-          maxWidth: 'calc(100% - 16px)', // Account for padding
-          maxHeight: 'calc(100% - 16px)',
-          ...previewPositionStyle,
-        }),
       }}
     >
       <div
         className={`
           rounded-lg shadow-xl border
-          ${chatWindowWidth} ${isPreviewMode ? 'max-w-full' : 'max-w-sm'}
+          w-[360px] max-w-sm
           ${chatWindowHeight}
           transition-all duration-300 ease-in-out flex flex-col relative overflow-hidden
           ${isOpen ? 'animate-slide-up' : 'animate-slide-down'}

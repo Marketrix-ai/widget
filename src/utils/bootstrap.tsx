@@ -67,15 +67,7 @@ export const createWidgetContainer = (
       container.style.width = '100%';
       container.style.height = '100%';
       container.style.position = 'relative';
-      // For preview mode (when parent is not document.body), use hidden overflow to constrain widget
-      // For production mode (when parent is document.body), use visible overflow
-      container.style.overflow = parentContainer !== document.body ? 'hidden' : 'visible';
-      // Ensure container is positioned at the bottom for preview mode
-      if (parentContainer !== document.body) {
-        container.style.display = 'flex';
-        container.style.alignItems = 'flex-end';
-        container.style.justifyContent = 'flex-end';
-      }
+      container.style.overflow = 'visible';
       parentContainer.appendChild(container);
     }
   } else {
