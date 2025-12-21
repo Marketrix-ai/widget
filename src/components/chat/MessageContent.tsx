@@ -68,8 +68,8 @@ export const MessageContent: React.FC<MessageContentProps> = ({
                 isWaitingForUser={isWaitingForUserAction}
                 accentColor={accentColor}
                 textColor={textColor}
-                hideIcon={part.hideIcon}
-                textStyle={part.textStyle}
+                {...(part.hideIcon !== undefined ? { hideIcon: part.hideIcon } : {})}
+                {...(part.textStyle !== undefined ? { textStyle: part.textStyle } : {})}
               />
             );
           }
@@ -84,7 +84,7 @@ export const MessageContent: React.FC<MessageContentProps> = ({
           <ThinkingIndicator
             isWaitingForUser={isWaitingForUser}
             textColor={textColor}
-            customText={customText}
+            {...(customText !== undefined ? { customText } : {})}
             accentColor={accentColor}
           />
         )}
@@ -103,7 +103,7 @@ export const MessageContent: React.FC<MessageContentProps> = ({
       <ThinkingIndicator
         isWaitingForUser={isWaitingForUser}
         textColor={textColor}
-        customText={customText}
+        {...(customText !== undefined ? { customText } : {})}
         accentColor={accentColor}
       />
     );

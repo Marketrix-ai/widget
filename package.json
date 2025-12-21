@@ -1,6 +1,6 @@
 {
   "name": "@marketrix.ai/widget",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "Marketrix AI-Native Support Widget: Show, Tell, Do",
   "type": "module",
   "main": "./dist/index.mjs",

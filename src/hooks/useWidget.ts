@@ -53,6 +53,9 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
     return marketrixConfig?.widget_enabled ?? false;
   }, [marketrixConfig]);
 
+  // Extract preview mode flag from config
+  const isPreviewMode = marketrixConfig?.isPreviewMode ?? false;
+
   return {
     state,
     marketrixConfig,
@@ -62,5 +65,6 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
     getWidgetText,
     getWidgetCustomize,
     getWidgetPosition,
+    isPreviewMode,
   };
 };

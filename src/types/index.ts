@@ -46,6 +46,9 @@ export type MarketrixConfig = Partial<WidgetSettingsData> & {
     y?: number;
   };
   widget_position_z_index?: number;
+
+  // Preview mode flag - indicates widget is in preview mode (settings provided directly)
+  isPreviewMode?: boolean;
 };
 
 export interface ChatMessage {

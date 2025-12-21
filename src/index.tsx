@@ -181,7 +181,11 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ settings, cont
     widgetContainerRef.current = widgetContainer;
 
     // Create config from settings
-    const config = createConfigFromSettings(settings);
+    // If settings are provided, this is preview mode
+    const config = {
+      ...createConfigFromSettings(settings),
+      isPreviewMode: true, // Settings provided = preview mode
+    };
 
     // Unmount existing root if it exists (handles settings changes)
     if (rootRef.current) {

@@ -86,7 +86,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     alreadyAdded?: boolean;
   } | null>(null);
 
-  const { getWidgetPosition, settings } = useWidget({ config });
+  const { getWidgetPosition, settings, isPreviewMode } = useWidget({ config });
   const widgetPosition = getWidgetPosition();
 
   // Auto-scroll to bottom when new messages arrive
@@ -415,11 +415,11 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       return { hasError: true };
     }
 
-    componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    override componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
       console.error('Chat Error Boundary caught error:', error, errorInfo);
     }
 
-    render() {
+    override render() {
       if (this.state.hasError) {
         return (
           <div className='p-4 text-center text-xs text-gray-500'>
@@ -432,13 +432,14 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     }
   }
 
-  // Use absolute positioning for both modes (relative to container)
+  // Use absolute positioning in preview mode (container-relative), fixed in production (viewport-relative)
+  const positionClass = isPreviewMode ? 'absolute' : 'fixed';
   const chatWindowHeight = isMinimized ? 'h-12' : 'h-[35rem]';
 
   return (
     <div
       ref={chatWindowRef}
-      className={`absolute rounded-xl ${positionClasses} pointer-events-auto`}
+      className={`${positionClass} rounded-xl ${positionClasses} pointer-events-auto`}
       style={{
         zIndex: widgetPosition.z_index || 40,
         backgroundColor: '#ffffff',
@@ -672,8 +673,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                       setPendingMessage({
                         content,
                         mode,
-                        connectionId,
-                        question,
+                        ...(connectionId !== undefined ? { connectionId } : {}),
+                        ...(question !== undefined ? { question } : {}),
                         alreadyAdded: true,
                       });
                       requestScreenAccess(mode || currentMode);

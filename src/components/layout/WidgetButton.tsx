@@ -22,7 +22,7 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
   isScreenSharing = false,
 }) => {
   const [showWelcomeText, setShowWelcomeText] = useState(false);
-  const { getWidgetPosition, settings } = useWidget({ config });
+  const { getWidgetPosition, settings, isPreviewMode } = useWidget({ config });
   const widgetPosition = getWidgetPosition();
 
   useEffect(() => {
@@ -55,10 +55,12 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
     'bottom_right') as 'bottom_left' | 'bottom_right';
   const effectivePositionClasses = getPositionClasses(effectivePosition);
 
-  // Use absolute positioning for both modes (relative to container)
+  // Use absolute positioning in preview mode (container-relative), fixed in production (viewport-relative)
+  const positionClass = isPreviewMode ? 'absolute' : 'fixed';
+
   return (
     <div
-      className={`absolute ${effectivePositionClasses} transition-transform duration-500 ease-in-out ${showWelcomeText && !isOpen ? (effectivePosition.includes('left') ? 'transform translate-x-64' : 'transform -translate-x-64') : ''}`}
+      className={`${positionClass} ${effectivePositionClasses} transition-transform duration-500 ease-in-out ${showWelcomeText && !isOpen ? (effectivePosition.includes('left') ? 'transform translate-x-64' : 'transform -translate-x-64') : ''}`}
       style={{ zIndex: widgetPosition.z_index || 50 }}
     >
       <button
