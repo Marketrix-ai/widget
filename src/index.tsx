@@ -49,12 +49,12 @@ async function initializeWidgetWithConfig(
       ? integrationService.getWidgetSettings(integrationData)
       : null;
 
-    // API should always return settings (including defaults), but handle fallback just in case
+    // IntegrationService always returns settings (defaults merged with integration settings if found)
     if (integrationSettings) {
       return createConfigFromSettings(integrationSettings, config);
     }
-    // Fallback: if API didn't return settings, use empty settings
-    // This should rarely happen as API now returns defaults for widget searches
+    // Fallback: if service didn't return settings, use empty settings
+    // This should rarely happen as IntegrationService fetches defaults
     return createConfigFromSettings({} as WidgetSettingsData, config);
   } catch (err) {
     console.error('Error fetching integration settings:', err);

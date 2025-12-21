@@ -84,6 +84,7 @@ import {
   SimulationProgressEntitySchema,
   SimulationStepSchema,
   SimulationUpdateSchema,
+  SlackSettingsDataSchema,
   TenantCreateSchema,
   TenantEntitySchema,
   TenantUpdateSchema,
@@ -96,6 +97,7 @@ import {
   UserRegisterSchema,
   UserUpdateSchema,
   VerifyCaptchaSchema,
+  WidgetSettingsDataSchema,
 } from './schema';
 
 // Initialize the contract
@@ -529,6 +531,19 @@ const contract = c.router({
       200: R.success(z.array(IntegrationEntitySchema)),
       401: R.error,
       403: R.error,
+      500: R.error,
+    },
+  },
+
+  integrationGetDefaults: {
+    method: 'GET' as const,
+    summary: 'Get default settings for integration type',
+    description: 'Returns default settings for the specified integration type (widget or slack)',
+    path: '/integration/defaults/:type',
+    pathParams: z.object({ type: IntegrationTypeSchema }),
+    responses: {
+      200: R.success(z.union([WidgetSettingsDataSchema, SlackSettingsDataSchema])),
+      400: R.error,
       500: R.error,
     },
   },

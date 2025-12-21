@@ -15,6 +15,7 @@ export class IntegrationService {
 
   /**
    * Fetch integration settings from the API
+   * Always returns default settings merged with existing integration settings if found
    * Returns null if no credentials provided (for preview mode)
    */
   async fetchIntegrationSettings(): Promise<IntegrationData | null> {
@@ -24,10 +25,23 @@ export class IntegrationService {
     }
 
     try {
-      let response;
+      // First, fetch default widget settings
+      const defaultsResponse = await sdk.integrationGetDefaults({
+        params: { type: 'widget' },
+      });
+      const defaultSettings = extractApiData<WidgetSettingsData>(
+        defaultsResponse
+      ) as WidgetSettingsData | null;
 
+      if (!defaultSettings) {
+        console.error('Failed to fetch default widget settings');
+        return null;
+      }
+
+      // Then, try to fetch existing integration
+      let integrationResponse;
       if (this.mtxId && this.mtxKey) {
-        response = await sdk.integrationSearch({
+        integrationResponse = await sdk.integrationSearch({
           query: {
             type: 'widget',
             marketrix_id: this.mtxId,
@@ -35,7 +49,7 @@ export class IntegrationService {
           },
         });
       } else if (this.mtxApp) {
-        response = await sdk.integrationSearch({
+        integrationResponse = await sdk.integrationSearch({
           query: {
             type: 'widget',
             connection_id: this.mtxApp,
@@ -46,19 +60,48 @@ export class IntegrationService {
       }
 
       // Extract data from response: { success: true, data: [...] }
-      const integrationsData = extractApiData<IntegrationData[]>(response);
-
-      if (!integrationsData || !Array.isArray(integrationsData) || integrationsData.length === 0) {
-        return null;
-      }
+      const integrationsData = extractApiData<IntegrationData[]>(integrationResponse) as
+        | IntegrationData[]
+        | null;
 
       // Find active widget integration
-      const widgetIntegration = integrationsData.find(
-        (integration: IntegrationData) =>
-          integration.status === 'active' && integration.type === 'widget'
-      );
+      const widgetIntegration =
+        integrationsData?.find(
+          (integration: IntegrationData) =>
+            integration.status === 'active' && integration.type === 'widget'
+        ) || null;
 
-      return widgetIntegration || null;
+      // If integration found, merge its settings over defaults
+      if (widgetIntegration?.settings) {
+        const integrationSettings = this.getWidgetSettings(widgetIntegration);
+        if (integrationSettings) {
+          // Merge defaults with integration settings (integration settings take precedence)
+          const mergedSettings: WidgetSettingsData = {
+            ...defaultSettings,
+            ...integrationSettings,
+          };
+
+          return {
+            ...widgetIntegration,
+            settings: mergedSettings,
+          };
+        }
+      }
+
+      // No integration found, return defaults as a synthetic integration object
+      const now = new Date();
+      return {
+        id: 0,
+        connection_id: this.mtxApp || 0,
+        agent_id: 0,
+        type: 'widget' as const,
+        settings: defaultSettings,
+        status: 'active' as const,
+        marketrix_id: this.mtxId || '',
+        marketrix_key: this.mtxKey || '',
+        created_at: now,
+        updated_at: now,
+      } as IntegrationData;
     } catch (error) {
       console.error('Failed to fetch integration settings:', error);
       return null;
