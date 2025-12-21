@@ -185,6 +185,7 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ settings, cont
     const config = {
       ...createConfigFromSettings(settings),
       isPreviewMode: true, // Settings provided = preview mode
+      widget_enabled: settings.widget_enabled ?? true, // Ensure widget is enabled in preview
     };
 
     // Unmount existing root if it exists (handles settings changes)

@@ -436,16 +436,25 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   const positionClass = isPreviewMode ? 'absolute' : 'fixed';
   const chatWindowHeight = isMinimized ? 'h-12' : 'h-[35rem]';
 
+  // In preview mode, use inline styles for positioning to ensure it works in shadow DOM
+  const previewPositionStyle = isPreviewMode
+    ? {
+        bottom: '20px', // equivalent to bottom-5 (1.25rem = 20px)
+        ...(effectivePosition.includes('right') ? { right: '20px' } : { left: '20px' }),
+      }
+    : {};
+
   return (
     <div
       ref={chatWindowRef}
-      className={`${positionClass} rounded-xl ${positionClasses} pointer-events-auto`}
+      className={`${positionClass} rounded-xl ${isPreviewMode ? '' : positionClasses} pointer-events-auto`}
       style={{
         zIndex: widgetPosition.z_index || 40,
         backgroundColor: '#ffffff',
         backgroundImage: settings.widget_background_color.includes('gradient')
           ? settings.widget_background_color
           : `linear-gradient(135deg, ${settings.widget_background_color} 0%, ${settings.widget_background_color} 100%)`,
+        ...previewPositionStyle,
       }}
     >
       <div

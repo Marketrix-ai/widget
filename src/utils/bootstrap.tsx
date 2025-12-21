@@ -115,8 +115,11 @@ export const createWidgetContainer = (
     // Create a mount element inside the shadow root for React
     mountEl = document.createElement('div');
     mountEl.id = 'marketrix-widget-root';
-    // Ensure mount element can receive pointer events
+    // Ensure mount element can receive pointer events and fills container
     mountEl.style.pointerEvents = 'auto';
+    mountEl.style.width = '100%';
+    mountEl.style.height = '100%';
+    mountEl.style.position = 'relative';
     shadowRoot.appendChild(mountEl);
   }
 

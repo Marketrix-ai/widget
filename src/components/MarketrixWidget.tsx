@@ -44,7 +44,15 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [showDevPanel, setShowDevPanel] = useState(false);
 
-  const { state, actions, marketrixConfig, shouldShow, getWidgetPosition, settings } = useWidget({
+  const {
+    state,
+    actions,
+    marketrixConfig,
+    shouldShow,
+    getWidgetPosition,
+    settings,
+    isPreviewMode,
+  } = useWidget({
     config,
   });
 
@@ -61,7 +69,12 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  if (!shouldShow || !settings.widget_enabled) {
+  // In preview mode, always show if widget_enabled is true in config
+  const shouldRender = isPreviewMode
+    ? (config.widget_enabled ?? settings.widget_enabled ?? false)
+    : shouldShow && settings.widget_enabled;
+
+  if (!shouldRender) {
     return null;
   }
 
@@ -86,7 +99,7 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
   return (
     <div
       className='marketrix-widget relative'
-      style={customStyles}
+      style={{ ...customStyles, ...(isPreviewMode && { width: '100%', height: '100%' }) }}
       data-widget-mode={settings?.widget_feature_human ? 'hybrid' : 'ai'}
     >
       {state.isTaskRunning && (

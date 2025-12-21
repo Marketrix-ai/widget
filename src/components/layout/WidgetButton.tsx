@@ -58,10 +58,21 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
   // Use absolute positioning in preview mode (container-relative), fixed in production (viewport-relative)
   const positionClass = isPreviewMode ? 'absolute' : 'fixed';
 
+  // In preview mode, use inline styles for positioning to ensure it works in shadow DOM
+  const previewPositionStyle = isPreviewMode
+    ? {
+        bottom: '20px', // equivalent to bottom-5 (1.25rem = 20px)
+        ...(effectivePosition.includes('right') ? { right: '20px' } : { left: '20px' }),
+      }
+    : {};
+
   return (
     <div
-      className={`${positionClass} ${effectivePositionClasses} transition-transform duration-500 ease-in-out ${showWelcomeText && !isOpen ? (effectivePosition.includes('left') ? 'transform translate-x-64' : 'transform -translate-x-64') : ''}`}
-      style={{ zIndex: widgetPosition.z_index || 50 }}
+      className={`${positionClass} ${isPreviewMode ? '' : effectivePositionClasses} transition-transform duration-500 ease-in-out ${showWelcomeText && !isOpen ? (effectivePosition.includes('left') ? 'transform translate-x-64' : 'transform -translate-x-64') : ''}`}
+      style={{
+        zIndex: widgetPosition.z_index || 50,
+        ...previewPositionStyle,
+      }}
     >
       <button
         onClick={onClick}
