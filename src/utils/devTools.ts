@@ -226,16 +226,14 @@ export const devTools = {
  * Initialize dev tools - expose on window object
  */
 export function initDevTools(): void {
-  if (typeof window === 'undefined') return;
-
   // Expose services
-  (window as any).domService = domService;
-  (window as any).toolExecutionService = toolExecutionService;
-  (window as any).chatService = chatService;
-  (window as any).WebSocketClient = WebSocketClient;
+  window.domService = domService;
+  window.toolExecutionService = toolExecutionService;
+  window.chatService = chatService;
+  window.WebSocketClient = WebSocketClient;
 
   // Expose dev tools helper
-  (window as any).devTools = devTools;
+  window.devTools = devTools;
 
   console.log(`
 ╔════════════════════════════════════════════════════════════╗

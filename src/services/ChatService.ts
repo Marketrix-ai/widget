@@ -44,8 +44,6 @@ export class ChatService {
   }
 
   createInitialContext(chatId: string): void {
-    if (typeof window === 'undefined') return;
-
     try {
       const existingContext = localStorage.getItem(CHAT_CONTEXT_STORAGE_KEY);
       if (existingContext) {
@@ -156,8 +154,6 @@ export class ChatService {
   // State Restoration & Persistence
 
   private restoreState(): void {
-    if (typeof window === 'undefined') return;
-
     try {
       const stored = localStorage.getItem(CHAT_CONTEXT_STORAGE_KEY);
       if (!stored) return;
@@ -172,7 +168,7 @@ export class ChatService {
       }
 
       if (this.chatId && context.chat_id !== this.chatId) {
-        console.log('[ChatService] Chat ID mismatch but restoring history');
+        // Chat ID mismatch - restoring history anyway
       }
 
       this.messages = context.messages.map((msg) => {
@@ -226,7 +222,7 @@ export class ChatService {
   }
 
   private persistState(): void {
-    if (typeof window === 'undefined' || !this.chatId) return;
+    if (!this.chatId) return;
 
     try {
       const serializedMessages = this.messages

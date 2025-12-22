@@ -216,10 +216,7 @@ export function isChatResponseData(data: unknown): data is ChatResponseData {
     return false;
   }
 
-  return (
-    hasProperty(data, 'text') &&
-    (typeof data.text === 'string' || data.text === null || data.text === undefined)
-  );
+  return hasProperty(data, 'text') && (data.text == null || typeof data.text === 'string');
 }
 
 /**
@@ -334,5 +331,5 @@ export function isHTMLElementEventTarget(target: EventTarget | null): target is 
  * Check if code is running in a browser environment
  */
 export function isBrowser(): boolean {
-  return typeof window !== 'undefined';
+  return true;
 }

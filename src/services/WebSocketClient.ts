@@ -272,7 +272,7 @@ export class WebSocketClient {
       params: {
         chat_id: this.chatId,
         tab_id: tabId,
-        url: typeof window !== 'undefined' ? window.location.href : undefined,
+        url: window.location.href,
       },
     });
   }

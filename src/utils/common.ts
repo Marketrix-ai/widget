@@ -8,13 +8,10 @@
 type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
 // Check if we're in development mode
-// In Vite, we can check for development mode
-// Use a simple check: if we're not in a production build, assume development
 const isDevelopment =
-  typeof window !== 'undefined' &&
-  (window.location.hostname === 'localhost' ||
-    window.location.hostname === '127.0.0.1' ||
-    window.location.hostname.includes('localhost'));
+  window.location.hostname === 'localhost' ||
+  window.location.hostname === '127.0.0.1' ||
+  window.location.hostname.includes('localhost');
 
 /**
  * Log levels configuration

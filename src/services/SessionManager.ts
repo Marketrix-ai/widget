@@ -40,8 +40,6 @@ class SessionManager {
    * This ensures the same tab_id is preserved when navigating to external domains.
    */
   private setupLinkInterceptor(): void {
-    if (typeof window === 'undefined') return;
-
     document.addEventListener(
       'click',
       (event) => {
@@ -86,10 +84,6 @@ class SessionManager {
    * 3. Generate new - for new tabs
    */
   private getOrCreateTabId(): string {
-    if (typeof window === 'undefined') {
-      return this.generateTabId();
-    }
-
     // 1. Check URL for tab_id parameter (cross-domain navigation)
     const urlParams = new URLSearchParams(window.location.search);
     const urlTabId = urlParams.get('_mktx_tab');
@@ -119,8 +113,6 @@ class SessionManager {
    * Remove _mktx_tab parameter from URL without page reload
    */
   private cleanupTabIdFromUrl(): void {
-    if (typeof window === 'undefined') return;
-
     const url = new URL(window.location.href);
     if (url.searchParams.has('_mktx_tab')) {
       url.searchParams.delete('_mktx_tab');
@@ -133,7 +125,7 @@ class SessionManager {
    * Generate a unique tab ID
    */
   private generateTabId(): string {
-    return `tab_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+    return `tab_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
   }
 
   /**
@@ -242,12 +234,10 @@ class SessionManager {
   }
 
   private getStoredChatId(): string | null {
-    if (typeof window === 'undefined') return null;
     return localStorage.getItem(CHAT_ID_STORAGE_KEY);
   }
 
   private storeChatId(id: string): void {
-    if (typeof window === 'undefined') return;
     localStorage.setItem(CHAT_ID_STORAGE_KEY, id);
   }
 }

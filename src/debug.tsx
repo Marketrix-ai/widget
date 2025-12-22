@@ -23,12 +23,7 @@ import { initDevTools } from './utils/devTools';
 initDevTools();
 
 // Expose services on window for test.html
-declare global {
-  interface Window {
-    devTestService: typeof devTestService;
-    domService: typeof domService;
-  }
-}
+// Types are declared in global.d.ts
 window.devTestService = devTestService;
 window.domService = domService;
 

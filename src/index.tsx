@@ -49,16 +49,13 @@ async function initializeWidgetWithConfig(
       ? integrationService.getWidgetSettings(integrationData)
       : null;
 
-    // IntegrationService always returns settings (defaults merged with integration settings if found)
-    if (integrationSettings) {
-      return createConfigFromSettings(integrationSettings, config);
+    if (!integrationSettings) {
+      throw new Error('IntegrationService did not return widget settings');
     }
-    // Fallback: if service didn't return settings, use empty settings
-    // This should rarely happen as IntegrationService fetches defaults
-    return createConfigFromSettings({} as WidgetSettingsData, config);
+    return createConfigFromSettings(integrationSettings, config);
   } catch (err) {
     console.error('Error fetching integration settings:', err);
-    return createConfigFromSettings({} as WidgetSettingsData, config);
+    throw err;
   } finally {
     hideWidgetSettingsLoader();
   }
@@ -107,8 +104,8 @@ export const initWidget = async (
   }
 
   setCurrentConfig(finalConfig);
-  // Generate unique container ID for this widget instance (Bug 2 fix)
-  const containerId = `marketrix-widget-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  // Generate unique container ID for this widget instance
+  const containerId = `marketrix-widget-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
   const { mountEl } = createWidgetContainer(container, containerId);
   const instance = mountWidgetToContainer(mountEl, finalConfig);
   setWidgetInstance(instance);
@@ -121,13 +118,14 @@ export const unmountWidget = (): void => {
     instance.unmount();
     clearWidgetState();
 
-    // Remove container
-    destroyWidgetContainer();
+    const container = document.getElementById('marketrix-widget-container');
+    if (container) {
+      destroyWidgetContainer(container);
+    }
 
     console.log('Marketrix Widget destroyed');
   }
 
-  // Also hide loader if present
   hideWidgetSettingsLoader();
 };
 
@@ -167,9 +165,9 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ settings, cont
       return;
     }
 
-    // Generate unique container ID for this widget instance (Bug 2 fix)
+    // Generate unique container ID for this widget instance
     if (!containerIdRef.current) {
-      containerIdRef.current = `marketrix-widget-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      containerIdRef.current = `marketrix-widget-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
     }
 
     // Create container and shadow DOM with unique ID
@@ -207,7 +205,6 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ settings, cont
     );
 
     return () => {
-      // Cleanup
       if (rootRef.current) {
         rootRef.current.unmount();
         rootRef.current = null;
@@ -243,8 +240,8 @@ export const mountWidget = async (config: AddWidgetConfig): Promise<void> => {
     const { settings, container: _container, ...restConfig } = previewConfig;
     const finalConfig = createConfigFromSettings(settings, restConfig);
     setCurrentConfig(finalConfig);
-    // Generate unique container ID for this widget instance (Bug 2 fix)
-    const containerId = `marketrix-widget-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    // Generate unique container ID for this widget instance
+    const containerId = `marketrix-widget-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
     const { mountEl } = createWidgetContainer(container, containerId);
     const instance = mountWidgetToContainer(mountEl, finalConfig);
     setWidgetInstance(instance);
@@ -279,19 +276,14 @@ export const mountWidget = async (config: AddWidgetConfig): Promise<void> => {
   }
 };
 
-// Register auto-initialization - deferred to avoid breaking Next.js SSR
-// This runs only in browser environment after module is loaded
-if (typeof window !== 'undefined' && typeof document !== 'undefined') {
-  // Use setTimeout to defer execution and ensure exports are available first
-  setTimeout(() => {
-    try {
-      registerAutoInit(initWidget);
-    } catch (error) {
-      // Silently fail if auto-init registration fails (e.g., during SSR)
-      console.debug('Marketrix Widget: Auto-init registration skipped', error);
-    }
-  }, 0);
-}
+// Register auto-initialization
+setTimeout(() => {
+  try {
+    registerAutoInit(initWidget);
+  } catch (error) {
+    console.debug('Marketrix Widget: Auto-init registration skipped', error);
+  }
+}, 0);
 
 // Export types for external use
 export type { InstructionType } from './sdk';

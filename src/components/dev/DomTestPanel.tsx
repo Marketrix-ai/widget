@@ -274,10 +274,10 @@ export const DomTestPanel: React.FC = () => {
                       {fingerprint.id && ` #${fingerprint.id}`}
                     </div>
                     <div style={{ color: '#666', fontSize: '10px' }}>
-                      {fingerprint.textContent?.substring(0, 50) || '(no text)'}
+                      {fingerprint.textContent?.slice(0, 50) || '(no text)'}
                     </div>
                     <div style={{ color: '#999', fontSize: '10px' }}>
-                      {fingerprint.selector.substring(0, 60)}...
+                      {fingerprint.selector.slice(0, 60)}...
                     </div>
                   </div>
                 );

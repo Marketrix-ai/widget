@@ -330,7 +330,6 @@ export class ToolExecutionService {
           const descriptor = Object.getOwnPropertyDescriptor(prototype, 'value');
 
           if (descriptor?.set) {
-            // Important: use the descriptor.set directly with .call()
             descriptor.set.call(inputElement, text);
             valueSet = true;
             console.log('[ToolService] Native setter succeeded');
@@ -510,7 +509,7 @@ export class ToolExecutionService {
     const result = {
       title: document.title,
       url: window.location.href,
-      text: document.body.innerText.substring(0, 10000),
+      text: document.body.innerText.slice(0, 10000),
       links: Array.from(document.querySelectorAll('a[href]'))
         .slice(0, 100)
         .map((a) => ({

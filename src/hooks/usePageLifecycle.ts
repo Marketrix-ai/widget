@@ -14,10 +14,7 @@ import type { WidgetState } from '../types';
 /**
  * Hook for managing page lifecycle events
  */
-export function usePageLifecycle(
-  stateRef: React.MutableRefObject<WidgetState>,
-  restoreChatContext: (chatId: string) => void
-) {
+export function usePageLifecycle(stateRef: React.RefObject<WidgetState>) {
   useEffect(() => {
     const handlePageUnload = () => {
       // Screen sharing cleanup
@@ -44,10 +41,6 @@ export function usePageLifecycle(
           chatService.addMessage(stoppedMessage);
         }
       }
-
-      // Force persist state
-      // ChatService persists on addMessage, but we might want to force save everything
-      // chatService.persistState(); // Private method, but addMessage triggers it.
     };
 
     window.addEventListener('beforeunload', handlePageUnload);
@@ -61,20 +54,10 @@ export function usePageLifecycle(
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
-    // Storage sync listener
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'marketrix_chat_context' && e.newValue) {
-        // Trigger restore if needed
-        // restoreChatContext(chatId);
-      }
-    };
-    window.addEventListener('storage', handleStorageChange);
-
     return () => {
       window.removeEventListener('beforeunload', handlePageUnload);
       window.removeEventListener('pagehide', handlePageUnload);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('storage', handleStorageChange);
     };
-  }, [stateRef, restoreChatContext]);
+  }, [stateRef]);
 }

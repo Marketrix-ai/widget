@@ -75,7 +75,9 @@ export class DOMService {
         break; // ID is usually enough anchor
       } else {
         const parent = current.parentElement;
-        const siblings = Array.from(parent.children).filter((c) => c.tagName === current!.tagName);
+        if (!parent) break;
+        const currentTagName = current.tagName;
+        const siblings = Array.from(parent.children).filter((c) => c.tagName === currentTagName);
         if (siblings.length > 1) {
           const index = siblings.indexOf(current) + 1;
           selector += `:nth-of-type(${index})`;
@@ -96,7 +98,7 @@ export class DOMService {
     const truncate = (str: string | null, maxLen: number = 100): string | null => {
       if (!str) return null;
       const normalized = str.trim().replace(/\s+/g, ' ');
-      return normalized.length > maxLen ? normalized.substring(0, maxLen) : normalized;
+      return normalized.length > maxLen ? normalized.slice(0, maxLen) : normalized;
     };
 
     return {
@@ -187,7 +189,7 @@ export class DOMService {
     }
 
     // Check text content similarity (allow some tolerance for dynamic content)
-    const currentText = element.textContent?.trim().replace(/\s+/g, ' ').substring(0, 100) || null;
+    const currentText = element.textContent?.trim().replace(/\s+/g, ' ').slice(0, 100) || null;
     if (fingerprint.textContent && currentText) {
       const similarity = this.calculateSimilarity(fingerprint.textContent, currentText);
       if (similarity < 0.7) {

@@ -986,7 +986,7 @@ export const DebugPanel: React.FC = () => {
                           )}
                         </div>
                         <div style={{ fontSize: '10px', color: '#808080', marginTop: '2px' }}>
-                          {fingerprint.textContent?.substring(0, 40) || '(no text)'}
+                          {fingerprint.textContent?.slice(0, 40) || '(no text)'}
                         </div>
                       </div>
                     );

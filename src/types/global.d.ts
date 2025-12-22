@@ -20,10 +20,16 @@ declare global {
     }
   }
 
-  // Window extensions for step guide functionality
+  // Window extensions for step guide functionality and dev tools
   interface Window {
     stepGuideNext?: (event?: Event) => void;
     stepGuidePrev?: (event?: Event) => void;
+    domService?: unknown;
+    toolExecutionService?: unknown;
+    chatService?: unknown;
+    WebSocketClient?: unknown;
+    devTools?: unknown;
+    devTestService?: unknown;
   }
 
   // Navigator extensions for media devices

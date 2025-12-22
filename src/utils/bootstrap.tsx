@@ -13,8 +13,6 @@ import { WidgetSettingsLoader } from '../components/ui/WidgetSettingsLoader';
 import { WidgetProvider } from '../context/WidgetContext';
 import shadowStyles from '../index.css?inline';
 import type { MarketrixConfig } from '../types';
-import { checkAndReinjectOnLoad, initializePersistence } from './persistence';
-// Removed duplicate imports manually because I can't be sure what the previous command did or didn't do correctly.
 import { isHTMLElement, isHTMLScriptElement } from './validation';
 
 // ============================================================================
@@ -50,78 +48,61 @@ export const createWidgetContainer = (
   shadowRoot: ShadowRoot;
   mountEl: HTMLElement;
 } => {
-  let container: HTMLElement;
   const uniqueContainerId = containerId || generateContainerId();
 
+  let container: HTMLElement;
   if (parentContainer) {
-    // Use provided container - check if widget container already exists within it
     const existingContainer = parentContainer.querySelector(`#${uniqueContainerId}`) as HTMLElement;
     if (existingContainer) {
-      container = existingContainer;
-    } else {
-      // Create new container within parent
-      container = document.createElement('div');
-      container.id = uniqueContainerId;
-      container.className = 'marketrix-widget-container';
-      // Ensure container respects parent bounds
-      container.style.width = '100%';
-      container.style.height = '100%';
-      container.style.position = 'relative';
-      container.style.overflow = 'visible';
-      parentContainer.appendChild(container);
+      throw new Error(`Widget container with ID ${uniqueContainerId} already exists`);
     }
+    container = document.createElement('div');
+    container.id = uniqueContainerId;
+    container.className = 'marketrix-widget-container';
+    container.style.width = '100%';
+    container.style.height = '100%';
+    container.style.position = 'relative';
+    container.style.overflow = 'visible';
+    parentContainer.appendChild(container);
   } else {
-    // Create container in document.body (existing behavior)
-    // For backward compatibility, check for old ID first
-    container = document.getElementById('marketrix-widget-container') as HTMLElement;
-    if (!container) {
-      container = document.getElementById(uniqueContainerId) as HTMLElement;
+    const existingContainer = document.getElementById(uniqueContainerId) as HTMLElement;
+    if (existingContainer) {
+      throw new Error(`Widget container with ID ${uniqueContainerId} already exists`);
     }
-    if (!container) {
-      container = document.createElement('div');
-      container.id = uniqueContainerId;
-      container.className = 'marketrix-widget-container';
-      document.body.appendChild(container);
-    }
+    container = document.createElement('div');
+    container.id = uniqueContainerId;
+    container.className = 'marketrix-widget-container';
+    document.body.appendChild(container);
   }
 
-  // Ensure container can receive pointer events
-  if (isHTMLElement(container)) {
-    container.style.pointerEvents = 'auto';
-  }
+  container.style.pointerEvents = 'auto';
 
   if (!isHTMLElement(container)) {
     throw new Error('Container is not an HTMLElement');
   }
 
-  // Check if shadow root already exists (Bug 1 fix)
-  let shadowRoot: ShadowRoot;
   if (container.shadowRoot) {
-    // Reuse existing shadow root
-    shadowRoot = container.shadowRoot;
-  } else {
-    // Attach Shadow DOM (closed) and mount point
-    shadowRoot = container.attachShadow({ mode: 'closed' });
-
-    // Inject styles into shadow root so the widget is fully encapsulated
-    const styleEl = document.createElement('style');
-    styleEl.textContent = shadowStyles;
-    shadowRoot.appendChild(styleEl);
+    throw new Error('Container already has a shadow root');
   }
 
-  // Check if mount element already exists in shadow root
-  let mountEl = shadowRoot.querySelector('#marketrix-widget-root') as HTMLElement;
-  if (!mountEl) {
-    // Create a mount element inside the shadow root for React
-    mountEl = document.createElement('div');
-    mountEl.id = 'marketrix-widget-root';
-    // Ensure mount element can receive pointer events and fills container
-    mountEl.style.pointerEvents = 'auto';
-    mountEl.style.width = '100%';
-    mountEl.style.height = '100%';
-    mountEl.style.position = 'relative';
-    shadowRoot.appendChild(mountEl);
+  const shadowRoot = container.attachShadow({ mode: 'closed' });
+
+  const styleEl = document.createElement('style');
+  styleEl.textContent = shadowStyles;
+  shadowRoot.appendChild(styleEl);
+
+  const existingMountEl = shadowRoot.querySelector('#marketrix-widget-root') as HTMLElement;
+  if (existingMountEl) {
+    throw new Error('Mount element already exists in shadow root');
   }
+
+  const mountEl = document.createElement('div');
+  mountEl.id = 'marketrix-widget-root';
+  mountEl.style.pointerEvents = 'auto';
+  mountEl.style.width = '100%';
+  mountEl.style.height = '100%';
+  mountEl.style.position = 'relative';
+  shadowRoot.appendChild(mountEl);
 
   return { container, shadowRoot, mountEl };
 };
@@ -147,13 +128,13 @@ export const mountWidgetToContainer = (mountEl: HTMLElement, config: MarketrixCo
 
 /**
  * Destroy widget container
- * @param container - Optional specific container to destroy. If not provided, searches for default container.
+ * @param container - Container to destroy
  */
-export const destroyWidgetContainer = (container?: HTMLElement): void => {
-  const containerToDestroy = container || document.getElementById('marketrix-widget-container');
-  if (containerToDestroy) {
-    containerToDestroy.remove();
+export const destroyWidgetContainer = (container: HTMLElement): void => {
+  if (!container) {
+    throw new Error('Container is required');
   }
+  container.remove();
 };
 
 // ============================================================================
@@ -211,16 +192,20 @@ export const clearWidgetState = (): void => {
  * Show widget settings loader with optional message
  */
 export const showWidgetSettingsLoader = (message?: string): void => {
-  // Remove existing loader if present
   if (loaderInstance) {
     const loaderContainer = document.getElementById('marketrix-widget-loader-container');
     if (loaderContainer) {
       loaderContainer.remove();
     }
+    loaderInstance.unmount();
     loaderInstance = null;
   }
 
-  // Create container for loader
+  const existingLoader = document.getElementById('marketrix-widget-loader-container');
+  if (existingLoader) {
+    throw new Error('Widget loader container already exists');
+  }
+
   const loaderContainer = document.createElement('div');
   loaderContainer.id = 'marketrix-widget-loader-container';
   loaderContainer.className = 'marketrix-widget-loader-container';
@@ -269,26 +254,15 @@ export const hideWidgetSettingsLoader = (): void => {
  *
  * Handles automatic widget initialization from script tag data attributes.
  * Parses script attributes and initializes the widget accordingly.
- *
- * Flow:
- * 1. Function registration (synchronous) - stores init function
- * 2. DOM ready detection - checks document.readyState
- * 3. Initialization - only when both function registered AND DOM ready
  */
-
-// Remove duplicate imports and merge properly
-// Removed unused duplicate imports
 
 // Store the init function - set synchronously during registration
 let initWidgetFunction: ((config: MarketrixConfig) => Promise<void>) | null = null;
 
 /**
  * Auto-initialize widget from script tag attributes
- * Only called when both function is registered AND DOM is ready
- * Exported so it can be called manually after navigation if auto-init failed
- * Includes retry mechanism for cases where script tag isn't immediately queryable (e.g., on about:blank)
  */
-export const autoInitializeWidget = (retryCount: number = 0): void => {
+export const autoInitializeWidget = (): void => {
   if (!initWidgetFunction) {
     console.error('[AutoInit] initWidget function not registered');
     return;
@@ -311,7 +285,6 @@ export const autoInitializeWidget = (retryCount: number = 0): void => {
         mtxId,
         mtxKey,
       };
-      // Add optional host configuration
       if (mtxApiHost) {
         config.mtxApiHost = mtxApiHost;
       }
@@ -319,14 +292,24 @@ export const autoInitializeWidget = (retryCount: number = 0): void => {
         config.mtxAiHost = mtxAiHost;
       }
       initWidgetFunction(config).catch((error) => {
-        console.error('Failed to initialize widget:', error);
+        console.error('[AutoInit] Failed to initialize widget:', error);
       });
     } else if (mtxApp && mtxAgent) {
+      const appNum = Number.parseInt(mtxApp);
+      const agentNum = Number.parseInt(mtxAgent);
+
+      if (isNaN(appNum) || isNaN(agentNum)) {
+        console.error(
+          `[AutoInit] Invalid mtx-app or mtx-agent values: mtx-app=${mtxApp}, mtx-agent=${mtxAgent}`
+        );
+        showWidgetSettingsLoader('Invalid mtx-app or mtx-agent values');
+        return;
+      }
+
       const config: MarketrixConfig = {
-        mtxApp: Number.parseInt(mtxApp),
-        mtxAgent: Number.parseInt(mtxAgent),
+        mtxApp: appNum,
+        mtxAgent: agentNum,
       };
-      // Add optional host configuration
       if (mtxApiHost) {
         config.mtxApiHost = mtxApiHost;
       }
@@ -334,48 +317,18 @@ export const autoInitializeWidget = (retryCount: number = 0): void => {
         config.mtxAiHost = mtxAiHost;
       }
       initWidgetFunction(config).catch((error) => {
-        console.error('Failed to initialize widget:', error);
+        console.error('[AutoInit] Failed to initialize widget:', error);
       });
     } else {
       showWidgetSettingsLoader('Please configure mtx-id and mtx-key, or mtx-app and mtx-agent');
     }
   } else {
-    // Script tag not found - retry if we haven't exceeded max retries
-    const maxRetries = 5;
-    const retryDelay = 200; // 200ms between retries
-
-    if (retryCount < maxRetries) {
-      console.log(`[AutoInit] Script tag not found, retrying (${retryCount + 1}/${maxRetries})...`);
-      setTimeout(() => {
-        autoInitializeWidget(retryCount + 1);
-      }, retryDelay);
-    } else {
-      console.error('[AutoInit] Script tag not found after max retries');
-      showWidgetSettingsLoader('Please configure mtx-id and mtx-key, or mtx-app and mtx-agent');
-    }
+    showWidgetSettingsLoader('Please configure mtx-id and mtx-key, or mtx-app and mtx-agent');
   }
-};
-
-/**
- * Initialize when both function is registered AND DOM is ready
- * This ensures no race conditions
- */
-const initializeWhenReady = (): void => {
-  if (!initWidgetFunction) {
-    console.error('[AutoInit] initWidget function not registered');
-    return;
-  }
-  autoInitializeWidget();
 };
 
 /**
  * Register the widget initialization function and set up auto-initialization
- *
- * This function:
- * 1. Stores the init function synchronously (no delays)
- * 2. Checks DOM ready state
- * 3. Either initializes immediately or waits for DOMContentLoaded
- * 4. Sets up persistence for bookmarklet usage
  *
  * @param initWidget - Function to initialize the widget (passed to avoid circular dependency)
  */
@@ -386,28 +339,5 @@ export const registerAutoInit = (initWidget: (config: MarketrixConfig) => Promis
   }
 
   initWidgetFunction = initWidget;
-
-  // Check if we need to re-inject from a stored bookmarklet config (page reload scenario)
-  checkAndReinjectOnLoad();
-
-  const readyState = document.readyState;
-
-  if (readyState === 'complete' || readyState === 'interactive') {
-    initializeWhenReady();
-    // Initialize persistence after widget is set up
-    initializePersistence();
-  } else if (readyState === 'loading') {
-    document.addEventListener(
-      'DOMContentLoaded',
-      () => {
-        initializeWhenReady();
-        // Initialize persistence after widget is set up
-        initializePersistence();
-      },
-      { once: true }
-    );
-  } else {
-    initializeWhenReady();
-    initializePersistence();
-  }
+  autoInitializeWidget();
 };
