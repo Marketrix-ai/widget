@@ -285,8 +285,10 @@ let initWidgetFunction: ((config: MarketrixConfig) => Promise<void>) | null = nu
 /**
  * Auto-initialize widget from script tag attributes
  * Only called when both function is registered AND DOM is ready
+ * Exported so it can be called manually after navigation if auto-init failed
+ * Includes retry mechanism for cases where script tag isn't immediately queryable (e.g., on about:blank)
  */
-const autoInitializeWidget = (): void => {
+export const autoInitializeWidget = (retryCount: number = 0): void => {
   if (!initWidgetFunction) {
     console.error('[AutoInit] initWidget function not registered');
     return;
@@ -338,7 +340,19 @@ const autoInitializeWidget = (): void => {
       showWidgetSettingsLoader('Please configure mtx-id and mtx-key, or mtx-app and mtx-agent');
     }
   } else {
-    showWidgetSettingsLoader('Please configure mtx-id and mtx-key, or mtx-app and mtx-agent');
+    // Script tag not found - retry if we haven't exceeded max retries
+    const maxRetries = 5;
+    const retryDelay = 200; // 200ms between retries
+
+    if (retryCount < maxRetries) {
+      console.log(`[AutoInit] Script tag not found, retrying (${retryCount + 1}/${maxRetries})...`);
+      setTimeout(() => {
+        autoInitializeWidget(retryCount + 1);
+      }, retryDelay);
+    } else {
+      console.error('[AutoInit] Script tag not found after max retries');
+      showWidgetSettingsLoader('Please configure mtx-id and mtx-key, or mtx-app and mtx-agent');
+    }
   }
 };
 
