@@ -1,186 +1,184 @@
-import { execSync } from 'node:child_process';
+import { existsSync, readFileSync } from 'node:fs';
+import type { IncomingMessage, ServerResponse } from 'node:http';
+import { resolve } from 'node:path';
+import { cwd } from 'node:process';
 
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
-import { copyFileSync, existsSync, readFileSync, writeFileSync } from 'fs';
-import type { IncomingMessage, ServerResponse } from 'http';
-import { resolve } from 'path';
-import { defineConfig, type ViteDevServer } from 'vite';
+import { build, defineConfig, type UserConfig, type ViteDevServer } from 'vite';
+import cssInjectedByJsPlugin from 'vite-plugin-css-injected-by-js';
 
-// Dev plugin: serves /index.mjs and /debug.js endpoints
-const devMeetPlugin = () => {
-  return {
-    name: 'dev-meet',
-    configureServer(s: ViteDevServer) {
-      // Add middleware at the VERY BEGINNING using stack manipulation
-      const htmlHandler = (req: IncomingMessage, res: ServerResponse, next: () => void) => {
-        if (req.url === '/test.html' || req.url === '/test') {
-          const testHtmlPath = resolve(process.cwd(), 'test.html');
-          if (existsSync(testHtmlPath)) {
-            res.setHeader('Content-Type', 'text/html');
-            res.end(readFileSync(testHtmlPath, 'utf-8'));
-            return;
-          }
-        }
-        next();
-      };
-      s.middlewares.stack.unshift({ route: '', handle: htmlHandler });
-    },
-    resolveId(id: string) {
-      if (['/index.mjs', './index.mjs'].includes(id)) return id;
-      if (['/debug.js', './debug.js'].includes(id)) return id;
-      return null;
-    },
-    async load(id: string) {
-      if (['/index.mjs', './index.mjs'].includes(id)) {
-        // IMPORTANT:
-        // Do NOT return `server.transformRequest()` output here.
-        // Vite will run its own transform pipeline on this virtual module, and returning
-        // already-transformed code can cause duplicated HMR preambles like:
-        //   "Identifier '__vite__createHotContext' has already been declared"
-        // Instead, return a small module that re-exports the real entry.
-        return `export * from '/src/index.tsx';\nexport { default } from '/src/index.tsx';\n`;
-      }
-      if (['/debug.js', './debug.js'].includes(id)) {
-        // Same reasoning as /index.mjs: avoid returning already-transformed code
-        return `export * from '/src/debug.tsx';\nexport { default } from '/src/debug.tsx';\n`;
-      }
-      return null;
-    },
-  };
-};
+const OUT_DIR = '.vite-dev-build';
+const BUNDLE_FILE = 'index.mjs';
+const SOURCEMAP_FILE = 'index.mjs.map';
+const BUNDLE_PATH = '/index.mjs';
+const SOURCEMAP_PATH = '/index.mjs.map';
+const SRC_DIR = 'src';
+const ENTRY_FILE = 'src/index.tsx';
 
-// Plugin to copy index.html after build
-const copyFilesPlugin = () => {
-  return {
-    name: 'copy-files',
-    writeBundle() {
-      // Copy index.html
-      const srcPath = resolve(process.cwd(), 'index.html');
-      const destPath = resolve(process.cwd(), 'dist', 'index.html');
-      try {
-        if (existsSync(srcPath)) {
-          copyFileSync(srcPath, destPath);
-          console.log('✓ Copied index.html to dist/');
-        }
-      } catch (error) {
-        console.error('Error copying index.html:', error);
-      }
-    },
-  };
-};
-
-// Plugin to build debug panel and generate types after main build
-const buildCompletePlugin = () => {
-  return {
-    name: 'build-complete',
-    async closeBundle() {
-      // Build debug panel
-      try {
-        console.log('Building debug panel...');
-        execSync('vite build --config vite.config.debug.ts', { stdio: 'inherit' });
-      } catch (error) {
-        console.error('Error building debug panel:', error);
-        throw error;
-      }
-
-      // Generate types
-      try {
-        console.log('Generating types...');
-        execSync('tsc -p tsconfig.build.json', { stdio: 'inherit' });
-      } catch (error) {
-        console.error('Error generating types:', error);
-        throw error;
-      }
-
-      // Fix types (remove CSS import)
-      try {
-        const typePath = resolve(process.cwd(), 'dist', 'index.d.ts');
-        if (existsSync(typePath)) {
-          let content = readFileSync(typePath, 'utf8');
-          content = content.replace(/^import\s+['"]\.\/index\.css['"];?\n?/gm, '');
-          writeFileSync(typePath, content);
-          console.log('✓ Fixed type definitions');
-        }
-      } catch (error) {
-        console.error('Error fixing types:', error);
-      }
-    },
-  };
-};
-
-export default defineConfig({
-  plugins: [
-    react(),
-    tailwindcss(),
-    // basicSsl(), // Disabled - using HTTP for local development
-    devMeetPlugin(),
-    // cssInjectedByJsPlugin() removed - CSS is injected into Shadow DOM via bootstrap.tsx
-    copyFilesPlugin(),
-    buildCompletePlugin(),
-  ],
-  root: '.',
-  publicDir: 'public',
-  server: {
-    // https: true, // Disabled - using HTTP for local development
-    port: 5174,
-    cors: true,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': '*',
-    },
+const getBuildConfig = (options: { minify: boolean | 'terser'; outDir: string }): UserConfig => ({
+  mode: 'production',
+  define: {
+    'process.env.NODE_ENV': '"production"',
+    'process.env': '{}',
+    'global.process': 'undefined',
+    process: 'undefined',
   },
+  css: { devSourcemap: false },
   build: {
-    outDir: 'dist',
+    outDir: options.outDir,
+    sourcemap: true,
+    minify: options.minify,
+    target: 'esnext',
     cssCodeSplit: false,
-    chunkSizeWarningLimit: 600, // Widget is intentionally a single bundle
-    assetsInlineLimit: 100000000, // Inline all assets as base64
-    sourcemap: true, // Generate sourcemaps for debugging
     lib: {
-      entry: 'src/index.tsx',
+      entry: ENTRY_FILE,
       formats: ['es'],
       fileName: 'index',
     },
     rollupOptions: {
-      // Suppress Tailwind sourcemap warning - the plugin doesn't generate sourcemaps for CSS transforms
-      // but this is safe to ignore as sourcemaps are still useful for JS debugging
-      onwarn(warning, warn) {
-        // Suppress the Tailwind CSS sourcemap warning
-        if (
-          warning.plugin === '@tailwindcss/vite:generate:build' &&
-          warning.message.includes('Sourcemap')
-        ) {
-          return;
-        }
-        // Use default warning handler for other warnings
-        warn(warning);
-      },
-      external: ['react', 'react-dom', 'react-dom/client', 'react/jsx-runtime'],
       output: {
-        entryFileNames: 'index.mjs',
-        // chunkFileNames: 'chunks/[name]-[hash].js', // Removed for inline
-        assetFileNames: 'assets/[name].[ext]',
+        entryFileNames: BUNDLE_FILE,
         format: 'es',
-        inlineDynamicImports: true, // Force single file
-        globals: {
-          react: 'React',
-          'react-dom': 'ReactDOM',
+        inlineDynamicImports: true,
+      },
+    },
+    ...(options.minify === 'terser' && {
+      terserOptions: {
+        compress: {
+          drop_console: true,
+          drop_debugger: true,
+          pure_funcs: ['console.log', 'console.info', 'console.debug'],
+        },
+        format: {
+          comments: false,
         },
       },
-    },
-    minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: true,
-        drop_debugger: true,
-      },
-      mangle: {
-        toplevel: true,
-      },
-      format: {
-        comments: false,
-      },
-    },
+    }),
   },
+  plugins: [
+    react({
+      jsxRuntime: 'automatic',
+      jsxImportSource: 'react',
+    }),
+    tailwindcss(),
+    cssInjectedByJsPlugin(),
+  ],
+});
+
+const setCorsHeaders = (res: ServerResponse): void => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Cache-Control', 'no-cache');
+};
+
+const readFile = (path: string): string | null =>
+  existsSync(path) ? readFileSync(path, 'utf-8') : null;
+
+const devWidgetPlugin = () => {
+  let bundle: string | null = null;
+  let sourcemap: string | null = null;
+  let buildPromise: Promise<void> | null = null;
+
+  const doBuild = async (): Promise<void> => {
+    try {
+      const originalEnv = process.env.NODE_ENV;
+      process.env.NODE_ENV = 'production';
+      try {
+        const config = getBuildConfig({ minify: 'terser', outDir: OUT_DIR });
+        await build({ ...config, mode: 'production' });
+      } finally {
+        process.env.NODE_ENV = originalEnv;
+      }
+      const basePath = resolve(cwd(), OUT_DIR);
+      bundle = readFile(resolve(basePath, BUNDLE_FILE));
+      sourcemap = readFile(resolve(basePath, SOURCEMAP_FILE));
+      if (bundle) console.log(`✓ Built ${BUNDLE_PATH} bundle`);
+      if (sourcemap) console.log(`✓ Built ${SOURCEMAP_PATH} sourcemap`);
+    } catch (error) {
+      console.error(`Error building ${BUNDLE_PATH}:`, error);
+      throw error;
+    }
+  };
+
+  return {
+    name: 'dev-widget',
+    configureServer(s: ViteDevServer) {
+      buildPromise = doBuild();
+
+      s.watcher.add(resolve(cwd(), SRC_DIR, '**/*.{ts,tsx}'));
+      s.watcher.on('change', async (file) => {
+        if (file.includes(SRC_DIR)) {
+          console.log(`[dev-widget] Rebuilding ${BUNDLE_PATH}...`);
+          bundle = sourcemap = null;
+          buildPromise = doBuild();
+          await buildPromise;
+        }
+      });
+
+      const endpoints = {
+        [BUNDLE_PATH]: { contentType: 'application/javascript', getData: () => bundle },
+        [SOURCEMAP_PATH]: { contentType: 'application/json', getData: () => sourcemap },
+      };
+
+      const handler = async (req: IncomingMessage, res: ServerResponse, next: () => void) => {
+        const url = req.url;
+        if (url !== BUNDLE_PATH && url !== SOURCEMAP_PATH) {
+          next();
+          return;
+        }
+
+        if (req.method === 'OPTIONS') {
+          setCorsHeaders(res);
+          res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+          res.setHeader('Access-Control-Allow-Headers', '*');
+          res.statusCode = 204;
+          res.end();
+          return;
+        }
+
+        if (req.method === 'GET') {
+          if (buildPromise) {
+            await buildPromise;
+            buildPromise = null;
+          }
+
+          const config = endpoints[url];
+          let data = config.getData();
+          if (!data) {
+            await doBuild();
+            data = config.getData();
+          }
+
+          if (data) {
+            setCorsHeaders(res);
+            res.setHeader('Content-Type', config.contentType);
+            res.end(data);
+            return;
+          }
+        }
+
+        next();
+      };
+
+      s.middlewares.stack.unshift({ route: '', handle: handler });
+    },
+  };
+};
+
+export default defineConfig(({ command }) => {
+  const isProduction = command === 'build';
+
+  if (isProduction) {
+    return getBuildConfig({ minify: 'terser', outDir: 'dist' });
+  }
+
+  return {
+    plugins: [react(), tailwindcss(), devWidgetPlugin()],
+    root: '.',
+    server: {
+      port: 5174,
+      cors: true,
+      headers: { 'Access-Control-Allow-Origin': '*' },
+    },
+  };
 });
