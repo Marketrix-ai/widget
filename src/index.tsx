@@ -7,6 +7,8 @@ import { WidgetProvider } from './context/WidgetContext';
 import { configureSdk, type WidgetSettingsData } from './sdk';
 import { createConfigFromSettings } from './services/ConfigManager';
 import { IntegrationService } from './services/IntegrationService';
+import { sessionManager } from './services/SessionManager';
+import { SessionRecorder } from './services/SessionRecorder';
 import { WidgetValidationService } from './services/ValidationService';
 import type { AddWidgetConfig, MarketrixConfig, MarketrixWidgetProps } from './types';
 import {
@@ -28,6 +30,10 @@ import { isHTMLElement } from './utils/validation';
 // CSS is NOT imported globally here to prevent conflicts with the host app's Tailwind CSS.
 // All widget CSS is isolated in Shadow DOM via bootstrap.tsx using 'index.css?inline'.
 // This ensures the widget's Tailwind CSS doesn't interfere with the app's responsive breakpoints.
+
+// Global session recorder instance
+let sessionRecorder: SessionRecorder | null = null;
+let isRecordingInitialized = false; // Flag to prevent multiple SessionRecorder instances
 
 /**
  * Initialize widget with validated configuration
@@ -109,8 +115,72 @@ export const initWidget = async (
   const { mountEl } = createWidgetContainer(container, containerId);
   const instance = mountWidgetToContainer(mountEl, finalConfig);
   setWidgetInstance(instance);
+
+  // Initialize and start session recording
+  try {
+    // CRITICAL: Prevent multiple SessionRecorder instances per session
+    if (sessionRecorder && isRecordingInitialized) {
+      console.warn(
+        '[Marketrix Widget] ⚠️ SessionRecorder already initialized, skipping creation. Reusing existing instance.'
+      );
+      return;
+    }
+
+    // Stop existing recorder if any (shouldn't happen, but safety check)
+    if (sessionRecorder) {
+      console.warn(
+        '[Marketrix Widget] ⚠️ Stopping existing SessionRecorder before creating new one'
+      );
+      sessionRecorder.stop();
+      sessionRecorder = null;
+      isRecordingInitialized = false;
+    }
+
+    // CRITICAL: Ensure SessionManager is initialized before creating SessionRecorder
+    // SessionManager initializes the tab_id in sessionStorage, which SessionRecorder needs
+    const tabId = sessionManager.getTabId();
+    if (!tabId?.startsWith('tab_')) {
+      console.error(
+        '[Marketrix Widget] ❌ SessionManager tab_id not initialized correctly:',
+        tabId
+      );
+      console.error('[Marketrix Widget] Expected format: tab_*');
+      throw new Error(`SessionManager tab_id not initialized. Got: ${tabId}`);
+    }
+    console.log('[Marketrix Widget] ✅ SessionManager initialized with tab_id:', tabId);
+
+    // Get RRWeb server URL from environment variable
+    // Default to Api server port 8080 (matches Api server default PORT)
+    const rrwebServerUrl = import.meta.env.VITE_RRWEB_SERVER_URL || 'ws://localhost:8080/events';
+    const wsUrl = rrwebServerUrl.endsWith('/events') ? rrwebServerUrl : `${rrwebServerUrl}/events`;
+
+    console.log('[Marketrix Widget] Using RRWeb server URL:', wsUrl);
+
+    sessionRecorder = new SessionRecorder(wsUrl);
+    isRecordingInitialized = true; // Mark as initialized
+
+    // Start recording - it will wait for chat_id to be available
+    // The recorder will connect but wait to send metadata until chat_id exists
+    sessionRecorder.start().catch((error) => {
+      console.error('[Marketrix Widget] ❌ Failed to start session recording:', error);
+      console.error('[Marketrix Widget] Error details:', {
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+      // Reset flag on error so retry is possible
+      isRecordingInitialized = false;
+      // Don't block widget initialization if recording fails, but log the error
+      // The recorder will retry when chat_id becomes available (via reconnection)
+    });
+  } catch (error) {
+    console.error('[Marketrix Widget] Failed to initialize session recording:', error);
+    isRecordingInitialized = false; // Reset flag on error
+    // Don't block widget initialization if recording fails
+  }
 };
 
+// Register auto-initialization immediately after function definition
+// This ensures the function is available when DOM becomes ready
 // Destroy the widget
 export const unmountWidget = (): void => {
   const instance = getWidgetInstance();
@@ -126,6 +196,15 @@ export const unmountWidget = (): void => {
     console.log('Marketrix Widget destroyed');
   }
 
+  // Stop session recording
+  if (sessionRecorder) {
+    sessionRecorder.stop();
+    sessionRecorder = null;
+    isRecordingInitialized = false; // Reset flag
+    console.log('[Marketrix Widget] Session recording stopped');
+  }
+
+  // Also hide loader if present
   hideWidgetSettingsLoader();
 };
 
