@@ -22,6 +22,7 @@ import {
   mountWidgetToContainer,
   registerAutoInit,
   setCurrentConfig,
+  setProgrammaticInitInProgress,
   setWidgetInstance,
   showWidgetSettingsLoader,
 } from './utils/bootstrap';
@@ -112,9 +113,13 @@ export const initWidget = async (
   config: MarketrixConfig,
   container?: HTMLElement
 ): Promise<void> => {
+  // Signal that programmatic initialization is in progress
+  setProgrammaticInitInProgress(true);
+
   // Prevent double initialization
   if (isWidgetInitialized()) {
     console.warn('Marketrix Widget: already initialized');
+    setProgrammaticInitInProgress(false);
     return;
   }
 
@@ -133,6 +138,7 @@ export const initWidget = async (
     showWidgetSettingsLoader(
       validationResult.error || 'Widget validation failed. Please check your configuration.'
     );
+    setProgrammaticInitInProgress(false);
     return;
   }
 
@@ -143,6 +149,7 @@ export const initWidget = async (
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Failed to initialize widget';
     showWidgetSettingsLoader(errorMessage);
+    setProgrammaticInitInProgress(false);
     return;
   }
 
@@ -152,6 +159,8 @@ export const initWidget = async (
   const { mountEl } = createWidgetContainer(container, containerId);
   const instance = mountWidgetToContainer(mountEl, finalConfig);
   setWidgetInstance(instance);
+  // Widget successfully initialized, reset flag
+  setProgrammaticInitInProgress(false);
 
   // Initialize and start session recording
   try {
@@ -355,6 +364,9 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ settings, cont
  * Supports preview, production, and dev modes
  */
 export const mountWidget = async (config: AddWidgetConfig): Promise<void> => {
+  // Signal that programmatic initialization is in progress
+  setProgrammaticInitInProgress(true);
+
   const container = config.container;
 
   // Detect mode based on provided config
@@ -369,6 +381,8 @@ export const mountWidget = async (config: AddWidgetConfig): Promise<void> => {
     const { mountEl } = createWidgetContainer(container, containerId);
     const instance = mountWidgetToContainer(mountEl, finalConfig);
     setWidgetInstance(instance);
+    // Widget successfully initialized, reset flag
+    setProgrammaticInitInProgress(false);
   } else if ('mtxId' in config && config.mtxId !== undefined && config.mtxKey !== undefined) {
     // Production mode: use marketrix credentials
     const prodConfig = config as Extract<AddWidgetConfig, { mtxId: string; mtxKey: string }>;
@@ -394,6 +408,7 @@ export const mountWidget = async (config: AddWidgetConfig): Promise<void> => {
       container
     );
   } else {
+    setProgrammaticInitInProgress(false);
     throw new Error(
       'Invalid configuration: provide either settings (preview), mtxId+mtxKey (production), or mtxApp+mtxAgent (dev)'
     );

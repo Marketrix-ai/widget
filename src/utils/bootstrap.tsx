@@ -26,6 +26,9 @@ let currentConfig: MarketrixConfig | null = null;
 // Global loader instance
 let loaderInstance: Root | null = null;
 
+// Programmatic initialization tracking flag (memoized)
+let programmaticInitInProgress = false;
+
 /**
  * Generate unique container ID for widget instances
  */
@@ -185,6 +188,24 @@ export const clearWidgetState = (): void => {
 };
 
 // ============================================================================
+// Programmatic Initialization Tracking
+// ============================================================================
+
+/**
+ * Set programmatic initialization in progress flag
+ */
+export const setProgrammaticInitInProgress = (inProgress: boolean): void => {
+  programmaticInitInProgress = inProgress;
+};
+
+/**
+ * Check if programmatic initialization is in progress
+ */
+export const isProgrammaticInitInProgress = (): boolean => {
+  return programmaticInitInProgress;
+};
+
+// ============================================================================
 // Widget Loader Management
 // ============================================================================
 
@@ -294,6 +315,13 @@ export const autoInitializeWidget = (retryCount = 0): void => {
       setTimeout(() => autoInitializeWidget(retryCount + 1), delay);
       return;
     }
+    // Check if widget is already initialized or programmatic init is in progress
+    if (isWidgetInitialized() || isProgrammaticInitInProgress()) {
+      console.log(
+        '[AutoInit] Script tag not found, but widget is initialized or programmatic init is in progress. Skipping error message.'
+      );
+      return;
+    }
     console.error('[AutoInit] Script tag not found after all retries');
     console.error(
       '[AutoInit] Available scripts:',
@@ -371,6 +399,13 @@ export const autoInitializeWidget = (retryCount = 0): void => {
       console.error('[AutoInit] Failed to initialize widget:', error);
     });
   } else {
+    // Check if widget is already initialized or programmatic init is in progress
+    if (isWidgetInitialized() || isProgrammaticInitInProgress()) {
+      console.log(
+        '[AutoInit] Missing required attributes, but widget is initialized or programmatic init is in progress. Skipping error message.'
+      );
+      return;
+    }
     console.error('[AutoInit] Missing required attributes:', {
       hasMtxId: !!mtxId,
       hasMtxKey: !!mtxKey,
