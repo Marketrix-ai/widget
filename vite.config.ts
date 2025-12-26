@@ -1,3 +1,4 @@
+import { execSync } from 'node:child_process';
 import { copyFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { resolve } from 'node:path';
@@ -64,6 +65,7 @@ const getBuildConfig = (options: { minify: boolean | 'terser'; outDir: string })
     tailwindcss(),
     cssInjectedByJsPlugin(),
     copyIndexHtmlPlugin(options.outDir),
+    typescriptDeclarationPlugin(),
   ],
 });
 
@@ -89,6 +91,22 @@ const copyIndexHtmlPlugin = (outDir: string) => {
         }
         copyFileSync(indexPath, destPath);
         console.log(`✓ Copied index.html to ${outDir}/`);
+      }
+    },
+  };
+};
+
+const typescriptDeclarationPlugin = () => {
+  return {
+    name: 'typescript-declarations',
+    async closeBundle() {
+      try {
+        console.log('Generating TypeScript declarations...');
+        execSync('tsc -p tsconfig.build.json', { stdio: 'inherit', cwd: cwd() });
+        console.log('✓ TypeScript declarations generated');
+      } catch (error) {
+        console.error('TypeScript declaration generation failed');
+        throw error;
       }
     },
   };
