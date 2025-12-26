@@ -13,13 +13,20 @@ export type {
 } from '../sdk';
 
 /**
- * MarketrixConfig - Flat superset type extending WidgetSettingsData
+ * MarketrixConfig - Single source of truth for all widget configuration
  *
  * This type extends WidgetSettingsData (with all fields optional) with additional
  * widget-specific fields, allowing API settings to be spread directly:
  * { ...config, ...apiSettings }
  *
  * All fields are at the top level for easy merging and access.
+ *
+ * Component-level defaults (not in config):
+ * - Input placeholder: 'Ask anything'
+ * - Live agent header: 'Live Agent'
+ * - Live agent body: 'A live agent will be with you shortly.'
+ * - Position offset default: { x: 20, y: 20 }
+ * - Z-index default: 40
  */
 export type MarketrixConfig = Partial<WidgetSettingsData> & {
   // Core SDK fields (from IntegrationEntitySchema)
@@ -50,6 +57,15 @@ export type MarketrixConfig = Partial<WidgetSettingsData> & {
   // Preview mode flag - indicates widget is in preview mode (settings provided directly)
   isPreviewMode?: boolean;
 };
+
+/**
+ * ValidatedMarketrixConfig - MarketrixConfig with all WidgetSettingsData fields guaranteed to be non-undefined
+ *
+ * This type is returned by useWidget() after validation, ensuring all required widget settings
+ * are present. Components can use this type directly without additional type guards.
+ */
+export type ValidatedMarketrixConfig = Omit<MarketrixConfig, keyof WidgetSettingsData> &
+  Required<Pick<MarketrixConfig, keyof WidgetSettingsData>>;
 
 export interface ChatMessage {
   id: string;

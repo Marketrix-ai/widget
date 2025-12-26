@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 
 import { MarketrixWidget as MarketrixWidgetComponent } from './components/MarketrixWidget';
-import { Config, getEventsWebSocketUrl, updateApiConfig } from './constants/config';
+import { getEventsWebSocketUrl } from './constants/config';
 import { WidgetProvider } from './context/WidgetContext';
 import { configureSdk, type WidgetSettingsData } from './sdk';
 import { createConfigFromSettings } from './services/ConfigManager';
@@ -58,6 +58,46 @@ async function initializeWidgetWithConfig(
     if (!integrationSettings) {
       throw new Error('IntegrationService did not return widget settings');
     }
+
+    // Validate that all required settings fields exist
+    const requiredSettings = [
+      'widget_enabled',
+      'widget_appearance',
+      'widget_position',
+      'widget_device',
+      'widget_header',
+      'widget_body',
+      'widget_greeting',
+      'widget_feature_tell',
+      'widget_feature_show',
+      'widget_feature_do',
+      'widget_feature_human',
+      'widget_background_color',
+      'widget_text_color',
+      'widget_border_color',
+      'widget_accent_color',
+      'widget_secondary_color',
+      'widget_border_radius',
+      'widget_font_size',
+      'widget_width',
+      'widget_height',
+      'widget_shadow',
+      'widget_animation_duration',
+      'widget_fade_duration',
+      'widget_bounce_effect',
+      'widget_chips',
+    ] as const;
+
+    const missingSettings = requiredSettings.filter(
+      (key) => integrationSettings[key as keyof typeof integrationSettings] === undefined
+    );
+
+    if (missingSettings.length > 0) {
+      throw new Error(
+        `Widget settings are incomplete. Missing required fields: ${missingSettings.join(', ')}. The API must return all widget settings.`
+      );
+    }
+
     return createConfigFromSettings(integrationSettings, config);
   } catch (err) {
     console.error('Error fetching integration settings:', err);
@@ -78,12 +118,9 @@ export const initWidget = async (
     return;
   }
 
-  // Configure SDK and global config BEFORE validation
-  if (config.mtxApiHost || config.mtxAiHost) {
-    if (config.mtxApiHost) {
-      configureSdk(config.mtxApiHost);
-    }
-    updateApiConfig(config.mtxApiHost, config.mtxAiHost);
+  // Configure SDK BEFORE validation
+  if (config.mtxApiHost) {
+    configureSdk(config.mtxApiHost);
   }
 
   // Validate configuration
@@ -150,9 +187,16 @@ export const initWidget = async (
     console.log('[Marketrix Widget] ✅ SessionManager initialized with tab_id:', tabId);
 
     // Get RRWeb server URL from mtxApiHost config
-    // Priority: finalConfig.mtxApiHost > config.mtxApiHost > Config.API_URL > default
-    const apiHost =
-      finalConfig.mtxApiHost ?? config.mtxApiHost ?? Config.API_URL ?? 'ws://localhost:8080';
+    // Priority: finalConfig.mtxApiHost > config.mtxApiHost
+    const apiHost = finalConfig.mtxApiHost ?? config.mtxApiHost;
+
+    if (!apiHost || apiHost.trim() === '') {
+      const error =
+        'API host is required for session recording. Please provide mtxApiHost in the widget configuration.';
+      console.error('[Marketrix Widget] ❌', error);
+      throw new Error(error);
+    }
+
     const wsUrl = getEventsWebSocketUrl(apiHost);
 
     console.log('[Marketrix Widget] Using RRWeb server URL:', wsUrl);

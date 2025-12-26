@@ -75,14 +75,16 @@ export const configManager = ConfigManager.getInstance();
 
 /**
  * Creates MarketrixConfig from WidgetSettingsData
- * Defaults are now provided by the API, so we just merge settings with baseConfig
+ * Since MarketrixConfig extends WidgetSettingsData, this is just a direct merge.
+ * API settings (which include defaults) override base config.
  */
 export function createConfigFromSettings(
   widgetSettings: WidgetSettingsData,
   baseConfig: Partial<MarketrixConfig> = {}
 ): MarketrixConfig {
+  // Direct merge - MarketrixConfig already extends WidgetSettingsData
   return {
     ...baseConfig,
-    ...widgetSettings, // API settings (which include defaults) override base config
-  };
+    ...widgetSettings,
+  } as MarketrixConfig;
 }

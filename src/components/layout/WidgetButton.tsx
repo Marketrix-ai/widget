@@ -22,8 +22,7 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
   isScreenSharing = false,
 }) => {
   const [showWelcomeText, setShowWelcomeText] = useState(false);
-  const { getWidgetPosition, settings, isPreviewMode } = useWidget({ config });
-  const widgetPosition = getWidgetPosition();
+  const { config: widgetConfig, isPreviewMode } = useWidget({ config });
 
   useEffect(() => {
     setShowWelcomeText(false);
@@ -34,7 +33,7 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
     }
 
     // Only show welcome text for default appearance, not compact
-    if (settings.widget_appearance === 'default') {
+    if (widgetConfig.widget_appearance === 'default') {
       // Add a small delay to ensure button renders first
       const buttonTimer = setTimeout(() => {
         // Button is now visible, start welcome text timer
@@ -47,12 +46,11 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
 
       return () => clearTimeout(buttonTimer);
     }
-  }, [settings.widget_appearance, isMinimized]);
+  }, [widgetConfig.widget_appearance, isMinimized]);
 
-  // Use position from widget position config or settings
-  const effectivePosition = (widgetPosition.position ||
-    settings.widget_position ||
-    'bottom_right') as 'bottom_left' | 'bottom_right';
+  // Use position from config
+  const effectivePosition = widgetConfig.widget_position as 'bottom_left' | 'bottom_right';
+  const zIndex = widgetConfig.widget_position_z_index ?? 50;
   const effectivePositionClasses = getPositionClasses(effectivePosition);
 
   // Use absolute positioning in preview mode (container-relative), fixed in production (viewport-relative)
@@ -70,7 +68,7 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
     <div
       className={`${positionClass} ${isPreviewMode ? '' : effectivePositionClasses} transition-transform duration-500 ease-in-out ${showWelcomeText && !isOpen ? (effectivePosition.includes('left') ? 'transform translate-x-64' : 'transform -translate-x-64') : ''}`}
       style={{
-        zIndex: widgetPosition.z_index || 50,
+        zIndex,
         ...previewPositionStyle,
       }}
     >
@@ -82,7 +80,7 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
           border-2 border-transparent
         `}
         style={{
-          color: getContrastingColor(settings.widget_accent_color),
+          color: getContrastingColor(widgetConfig.widget_accent_color),
         }}
         aria-label='Open Marketrix support chat'
       >
@@ -97,8 +95,8 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
               alt='Marketrix Icon'
               className='w-fit h-12'
               style={{
-                boxShadow: settings.widget_shadow,
-                borderRadius: settings.widget_border_radius,
+                boxShadow: widgetConfig.widget_shadow,
+                borderRadius: widgetConfig.widget_border_radius,
                 border: 'none',
                 outline: 'none',
                 backgroundColor: 'transparent',
@@ -113,14 +111,14 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
       </button>
 
       {/* Welcome Text - appears after 2 seconds (only for default appearance) */}
-      {!isOpen && showWelcomeText && settings.widget_appearance === 'default' && (
+      {!isOpen && showWelcomeText && widgetConfig.widget_appearance === 'default' && (
         <div
           className={`absolute ${effectivePosition.includes('left') ? 'right-16' : 'left-16'} bottom-0 px-4 py-3 text-sm rounded-lg shadow-lg w-64 ${effectivePosition.includes('left') ? 'animate-slide-in-right' : 'animate-slide-in-left'} cursor-pointer`}
           style={{
             backgroundColor: '#ffffff',
             backgroundImage: 'none',
-            color: settings.widget_text_color,
-            borderColor: settings.widget_border_color,
+            color: widgetConfig.widget_text_color,
+            borderColor: widgetConfig.widget_border_color,
             borderWidth: '1px',
             borderStyle: 'solid',
           }}
@@ -155,9 +153,9 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
 
             {/* greeting text */}
             <div className='flex-1'>
-              <div className='font-medium'>{settings.widget_greeting}</div>
-              <div style={{ color: addOpacity(settings.widget_text_color, 0.7) }}>
-                {settings.widget_body}
+              <div className='font-medium'>{widgetConfig.widget_greeting}</div>
+              <div style={{ color: addOpacity(widgetConfig.widget_text_color, 0.7) }}>
+                {widgetConfig.widget_body}
               </div>
             </div>
 
@@ -191,7 +189,7 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
             className={`absolute bottom-0 ${effectivePosition.includes('left') ? 'left-full' : 'right-full'} transform translate-y-1/2 w-0 h-0 border-t-4 border-b-4`}
             style={{
               [effectivePosition.includes('left') ? 'borderLeftColor' : 'borderRightColor']:
-                settings.widget_background_color,
+                widgetConfig.widget_background_color,
               [effectivePosition.includes('left') ? 'borderRightColor' : 'borderLeftColor']:
                 'transparent',
               borderTopColor: 'transparent',
@@ -202,19 +200,19 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
       )}
 
       {/* Tooltip - show when welcome text is not displayed */}
-      {!isOpen && (!showWelcomeText || settings.widget_appearance === 'compact') && (
+      {!isOpen && (!showWelcomeText || widgetConfig.widget_appearance === 'compact') && (
         <div
           className={`absolute bottom-16 ${effectivePosition.includes('left') ? 'left-0' : 'right-0'} mb-2 px-3 py-2 text-sm rounded-lg shadow-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200`}
           style={{
-            backgroundColor: darkenColor(settings.widget_accent_color, 0.3),
-            color: getContrastingColor(darkenColor(settings.widget_accent_color, 0.3)),
+            backgroundColor: darkenColor(widgetConfig.widget_accent_color, 0.3),
+            color: getContrastingColor(darkenColor(widgetConfig.widget_accent_color, 0.3)),
           }}
         >
           {'Support Agent'}
           <div
             className={`absolute top-full ${effectivePosition.includes('left') ? 'left-4' : 'right-4'} w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent`}
             style={{
-              borderTopColor: darkenColor(settings.widget_accent_color, 0.3),
+              borderTopColor: darkenColor(widgetConfig.widget_accent_color, 0.3),
             }}
           />
         </div>

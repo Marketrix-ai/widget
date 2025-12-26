@@ -86,8 +86,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     alreadyAdded?: boolean;
   } | null>(null);
 
-  const { getWidgetPosition, settings, isPreviewMode } = useWidget({ config });
-  const widgetPosition = getWidgetPosition();
+  const { config: settings, isPreviewMode } = useWidget({ config });
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -379,9 +378,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   };
 
   // Get widget settings for positioning
-  const effectivePosition = (widgetPosition.position ||
-    settings.widget_position ||
-    'bottom_right') as 'bottom_left' | 'bottom_right';
+  const effectivePosition = settings.widget_position as 'bottom_left' | 'bottom_right';
+  const zIndex = settings.widget_position_z_index ?? 40;
   const positionClasses = getPositionClasses(effectivePosition);
 
   if (!isOpen) return null;
@@ -398,7 +396,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     color: settings.widget_text_color,
     borderColor: settings.widget_border_color,
     boxShadow: settings.widget_shadow,
-    zIndex: widgetPosition.z_index ?? 40,
+    zIndex,
   } satisfies React.CSSProperties;
 
   // Error Boundary for chat messages
@@ -449,7 +447,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       ref={chatWindowRef}
       className={`${positionClass} rounded-xl ${isPreviewMode ? '' : positionClasses} pointer-events-auto`}
       style={{
-        zIndex: widgetPosition.z_index || 40,
+        zIndex,
         backgroundColor: '#ffffff',
         backgroundImage: settings.widget_background_color.includes('gradient')
           ? settings.widget_background_color
@@ -494,8 +492,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                 onClick={handleStartScreenShare}
                 className='flex items-center justify-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-all duration-300 shadow-md hover:shadow-lg hover:scale-105 active:scale-95 animate-fade-in '
                 style={{
-                  backgroundColor: settings.widget_secondary_color || '#10b981',
-                  color: getContrastingColor(settings.widget_secondary_color || '#10b981'),
+                  backgroundColor: settings.widget_secondary_color,
+                  color: getContrastingColor(settings.widget_secondary_color),
                 }}
                 aria-label='Start screen sharing'
                 title='Click to start screen sharing'
@@ -506,7 +504,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                   stroke='currentColor'
                   viewBox='0 0 24 24'
                   style={{
-                    color: getContrastingColor(settings.widget_secondary_color || '#10b981'),
+                    color: getContrastingColor(settings.widget_secondary_color),
                   }}
                 >
                   <path
@@ -524,8 +522,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                 onClick={stopScreenSharing}
                 className='flex items-center justify-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-all duration-300 shadow-md hover:shadow-lg hover:scale-105 active:scale-95 animate-fade-in'
                 style={{
-                  backgroundColor: settings.widget_secondary_color || '#ef4444',
-                  color: getContrastingColor(settings.widget_secondary_color || '#ef4444'),
+                  backgroundColor: settings.widget_secondary_color,
+                  color: getContrastingColor(settings.widget_secondary_color),
                 }}
                 aria-label='Stop screen sharing'
                 title='Click to stop screen sharing'
@@ -534,17 +532,13 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                   <div
                     className='absolute w-2.5 h-2.5 rounded-full animate-ping opacity-75'
                     style={{
-                      backgroundColor: getContrastingColor(
-                        settings.widget_secondary_color || '#ef4444'
-                      ),
+                      backgroundColor: getContrastingColor(settings.widget_secondary_color),
                     }}
                   />
                   <div
                     className='relative w-2 h-2 rounded-full'
                     style={{
-                      backgroundColor: getContrastingColor(
-                        settings.widget_secondary_color || '#ef4444'
-                      ),
+                      backgroundColor: getContrastingColor(settings.widget_secondary_color),
                     }}
                   />
                 </div>
@@ -555,7 +549,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                   stroke='currentColor'
                   viewBox='0 0 24 24'
                   style={{
-                    color: getContrastingColor(settings.widget_secondary_color || '#ef4444'),
+                    color: getContrastingColor(settings.widget_secondary_color),
                   }}
                 >
                   <path

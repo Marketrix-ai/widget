@@ -19,11 +19,14 @@ export interface WidgetValidationResult {
  * 2. Agent ID and Connection ID exist and match
  */
 export class WidgetValidationService {
+  private config?: MarketrixConfig;
+
   /**
    * Validate widget configuration
    * Handles both mtxId+mtxKey and mtxApp+mtxAgent cases
    */
   async validateConfig(config: MarketrixConfig): Promise<WidgetValidationResult> {
+    this.config = config;
     if (config.mtxId && config.mtxKey) {
       return this.validateByMarketrixId(config.mtxId, config.mtxKey);
     }
@@ -201,7 +204,7 @@ export class WidgetValidationService {
       }
     } catch (error) {
       console.error('Widget validation error:', error);
-      return handleApiError(error, 'Widget validation');
+      return handleApiError(error, 'Widget validation', this.config);
     }
   }
 
@@ -286,7 +289,7 @@ export class WidgetValidationService {
       };
     } catch (error) {
       console.error('Agent and Connection validation error:', error);
-      return handleApiError(error, 'Agent and Connection validation');
+      return handleApiError(error, 'Agent and Connection validation', this.config);
     }
   }
 }

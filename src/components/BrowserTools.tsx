@@ -31,7 +31,7 @@ export const BrowserTools: React.FC<BrowserToolsProps> = ({
   onToolSelect,
   width = '100%',
 }) => {
-  const { settings } = useWidget(config ? { config } : {});
+  const { config: widgetConfig } = useWidget({ config });
   const [activeTab, setActiveTab] = useState<keyof typeof BROWSER_TOOL_CATEGORIES>('navigation');
 
   // Get tools for active category
@@ -131,10 +131,10 @@ export const BrowserTools: React.FC<BrowserToolsProps> = ({
     console.log('🔧 Browser Tool Selected:', tool.name, action);
   };
 
-  const accentColor = settings.widget_accent_color;
-  const secondaryColor = settings.widget_secondary_color;
-  const textColor = settings.widget_text_color;
-  const borderColor = settings.widget_border_color;
+  const accentColor = widgetConfig.widget_accent_color;
+  const secondaryColor = widgetConfig.widget_secondary_color;
+  const textColor = widgetConfig.widget_text_color;
+  const borderColor = widgetConfig.widget_border_color;
 
   return (
     <div
@@ -143,7 +143,7 @@ export const BrowserTools: React.FC<BrowserToolsProps> = ({
         width,
         backgroundColor: '#ffffff',
         border: `1px solid ${addOpacity(borderColor, 0.2)}`,
-        borderRadius: settings.widget_border_radius,
+        borderRadius: widgetConfig.widget_border_radius,
         overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column',

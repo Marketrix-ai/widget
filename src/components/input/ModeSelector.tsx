@@ -33,8 +33,9 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({
   isScreenSharing = false,
   config,
 }) => {
-  const { settings } = useWidget(config ? { config } : {});
+  const { config: widgetConfig } = useWidget(config ? { config } : {});
   const [isDiagnosticModalOpen, setIsDiagnosticModalOpen] = useState(false);
+
   const getModeIcon = (mode: InstructionType) => {
     switch (mode) {
       case 'show':
@@ -87,13 +88,13 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({
               opacity: 1,
               ...(currentMode === mode
                 ? {
-                    backgroundColor: settings.widget_accent_color,
-                    color: getContrastingColor(settings.widget_accent_color),
+                    backgroundColor: widgetConfig.widget_accent_color,
+                    color: getContrastingColor(widgetConfig.widget_accent_color),
                   }
                 : {
-                    backgroundColor: addOpacity(settings.widget_secondary_color, 0.2),
-                    color: settings.widget_text_color,
-                    borderColor: addOpacity(settings.widget_secondary_color, 0.3),
+                    backgroundColor: addOpacity(widgetConfig.widget_secondary_color, 0.2),
+                    color: widgetConfig.widget_text_color,
+                    borderColor: addOpacity(widgetConfig.widget_secondary_color, 0.3),
                   }),
               ...(isScreenSharing && currentMode === mode
                 ? {
@@ -105,11 +106,11 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({
             onMouseEnter={(e) => {
               if (currentMode !== mode) {
                 e.currentTarget.style.backgroundColor = addOpacity(
-                  settings.widget_secondary_color,
+                  widgetConfig.widget_secondary_color,
                   0.3
                 );
                 e.currentTarget.style.borderColor = addOpacity(
-                  settings.widget_secondary_color,
+                  widgetConfig.widget_secondary_color,
                   0.4
                 );
               }
@@ -117,11 +118,11 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({
             onMouseLeave={(e) => {
               if (currentMode !== mode) {
                 e.currentTarget.style.backgroundColor = addOpacity(
-                  settings.widget_secondary_color,
+                  widgetConfig.widget_secondary_color,
                   0.2
                 );
                 e.currentTarget.style.borderColor = addOpacity(
-                  settings.widget_secondary_color,
+                  widgetConfig.widget_secondary_color,
                   0.3
                 );
               }

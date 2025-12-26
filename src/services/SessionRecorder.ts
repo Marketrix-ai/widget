@@ -42,7 +42,10 @@ export class SessionRecorder {
   private readonly TAB_ID_STORAGE_KEY = 'marketrix_tab_id';
   private readonly CHAT_ID_STORAGE_KEY = 'marketrix_chat_id';
 
-  constructor(wsUrl: string = 'ws://localhost:8080/events') {
+  constructor(wsUrl: string) {
+    if (!wsUrl || wsUrl.trim() === '') {
+      throw new Error('WebSocket URL is required for SessionRecorder');
+    }
     log.info('Constructor called with wsUrl:', wsUrl);
     this.wsUrl = wsUrl;
     this.sessionId = this.getTabId();

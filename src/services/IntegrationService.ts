@@ -34,8 +34,10 @@ export class IntegrationService {
       ) as WidgetSettingsData | null;
 
       if (!defaultSettings) {
-        console.error('Failed to fetch default widget settings');
-        return null;
+        const error =
+          'Failed to fetch default widget settings from API. The API must return widget settings.';
+        console.error(error);
+        throw new Error(error);
       }
 
       // Then, try to fetch existing integration
@@ -103,8 +105,9 @@ export class IntegrationService {
         updated_at: now,
       } as IntegrationData;
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       console.error('Failed to fetch integration settings:', error);
-      return null;
+      throw new Error(`Failed to fetch widget settings from API: ${errorMessage}`);
     }
   }
 

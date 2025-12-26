@@ -49,8 +49,8 @@ export const MessageList = ({
   onScreenAccessAllow,
   onScreenAccessDeny,
 }: MessageListProps) => {
-  // Get widget settings and state
-  const { settings, state: widgetState } = useWidget(config ? { config } : {});
+  // Get widget config and state
+  const { config: widgetConfig, state: widgetState } = useWidget({ config });
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [showScrollBottom, setShowScrollBottom] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -98,9 +98,9 @@ export const MessageList = ({
 
   // Suggested actions to show when no messages - get from settings or use defaults
   const getSuggestedActions = () => {
-    // If settings have widget_chips, use those
-    if (settings?.widget_chips && settings.widget_chips.length > 0) {
-      return settings.widget_chips.map((chip: ChipData, index: number) => {
+    // If config has widget_chips, use those
+    if (widgetConfig.widget_chips && widgetConfig.widget_chips.length > 0) {
+      return widgetConfig.widget_chips.map((chip: ChipData, index: number) => {
         // Handle both formats: chip_text (expected) and question (actual backend)
         const chipText = chip.chip_text || chip.question || '';
         const chipMode = chip.chip_mode || chip.type || 'tell';
@@ -288,17 +288,23 @@ export const MessageList = ({
           `}
         style={{
           backgroundColor: '#ffffff',
-          backgroundImage: settings.widget_background_color.includes('gradient')
-            ? settings.widget_background_color
-            : `linear-gradient(135deg, ${settings.widget_background_color} 0%, ${settings.widget_background_color} 100%)`,
-          scrollbarColor: `${addOpacity(settings.widget_border_color, 0.3)} ${addOpacity(settings.widget_border_color, 0.1)}`,
+          backgroundImage: widgetConfig.widget_background_color.includes('gradient')
+            ? widgetConfig.widget_background_color
+            : `linear-gradient(135deg, ${widgetConfig.widget_background_color} 0%, ${widgetConfig.widget_background_color} 100%)`,
+          scrollbarColor: `${addOpacity(widgetConfig.widget_border_color, 0.3)} ${addOpacity(widgetConfig.widget_border_color, 0.1)}`,
           scrollbarWidth: 'thin',
         }}
       >
         {/* Welcome message - always show */}
         <WelcomeMessage
-          greeting={settings.widget_greeting}
-          settings={settings}
+          greeting={widgetConfig.widget_greeting}
+          settings={{
+            widget_shadow: widgetConfig.widget_shadow,
+            widget_border_radius: widgetConfig.widget_border_radius,
+            widget_text_color: widgetConfig.widget_text_color,
+            widget_border_color: widgetConfig.widget_border_color,
+            widget_secondary_color: widgetConfig.widget_secondary_color,
+          }}
           marketrixIcon={MarketrixIcon}
           suggestedActions={uniqueSuggestedActions}
           hasPendingMessage={hasPendingMessage}
@@ -313,7 +319,13 @@ export const MessageList = ({
             index={index}
             isLastMessage={index === messages.length - 1}
             widgetState={widgetState}
-            settings={settings}
+            settings={{
+              widget_accent_color: widgetConfig.widget_accent_color,
+              widget_text_color: widgetConfig.widget_text_color,
+              widget_border_color: widgetConfig.widget_border_color,
+              widget_shadow: widgetConfig.widget_shadow,
+              widget_border_radius: widgetConfig.widget_border_radius,
+            }}
             marketrixIcon={MarketrixIcon}
             onScreenAccessAllow={onScreenAccessAllow}
             onScreenAccessDeny={onScreenAccessDeny}
@@ -334,7 +346,7 @@ export const MessageList = ({
           >
             <FaArrowUp
               className='w-2.5 h-2.5 text-gray-500 group-hover:text-gray-700'
-              style={{ color: settings.widget_accent_color }}
+              style={{ color: widgetConfig.widget_accent_color }}
             />
           </button>
         </div>
@@ -350,7 +362,7 @@ export const MessageList = ({
           >
             <FaArrowDown
               className='w-2.5 h-2.5 text-gray-500 group-hover:text-gray-700'
-              style={{ color: settings.widget_accent_color }}
+              style={{ color: widgetConfig.widget_accent_color }}
             />
           </button>
         </div>

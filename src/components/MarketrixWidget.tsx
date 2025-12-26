@@ -47,10 +47,8 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
   const {
     state,
     actions,
-    marketrixConfig,
+    config: settings,
     shouldShow,
-    getWidgetPosition,
-    settings,
     isPreviewMode,
   } = useWidget({
     config,
@@ -78,8 +76,8 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
     return null;
   }
 
-  const effectiveConfig = marketrixConfig || config;
-  const widgetPosition = getWidgetPosition();
+  const effectiveConfig = settings;
+  const zIndex = settings.widget_position_z_index ?? 40;
   const customStyles = {
     '--widget-width': settings.widget_width,
     '--widget-height': settings.widget_height,
@@ -90,7 +88,7 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
     '--widget-background': settings.widget_background_color,
     '--widget-text-color': settings.widget_text_color,
     '--widget-border-color': settings.widget_border_color,
-    '--widget-z-index': widgetPosition.z_index ?? 40,
+    '--widget-z-index': zIndex,
     '--widget-shadow': settings.widget_shadow,
     '--widget-animation-duration': settings.widget_animation_duration,
     '--widget-fade-duration': settings.widget_fade_duration,
@@ -104,10 +102,11 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
     >
       {state.isTaskRunning && (
         <div
-          className='animate-screen-edge-glow fixed inset-0 z-0'
+          className='animate-screen-edge-glow fixed inset-0'
           style={{
             boxShadow: 'inset 0 0 30px 2px var(--widget-primary-color)',
             pointerEvents: 'none',
+            zIndex: 2147483647, // Maximum z-index value to ensure it's above all page elements
           }}
         />
       )}
@@ -148,12 +147,12 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
           error={state.error}
           onClose={() => actions.clearError()}
           position={
-            widgetPosition.position as
+            (settings.widget_position as
               | 'bottom_left'
               | 'bottom_right'
               | 'top_left'
               | 'top_right'
-              | undefined
+              | undefined) || 'bottom_right'
           }
         />
       )}

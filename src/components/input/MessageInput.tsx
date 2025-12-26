@@ -26,9 +26,8 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   onStop,
   config,
 }) => {
-  // Get atmosphere configuration
-  const { getWidgetText, settings } = useWidget(config ? { config } : {});
-  const widgetText = getWidgetText();
+  // Get configuration
+  const { config: settings } = useWidget(config ? { config } : {});
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Auto-resize textarea - shrink and grow with content
@@ -83,7 +82,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
               textarea.style.height = `${scrollHeight}px`;
             }}
             onKeyPress={handleKeyPress}
-            placeholder={widgetText.placeholder}
+            placeholder='Ask anything'
             disabled={isLoading}
             rows={1}
             className={`

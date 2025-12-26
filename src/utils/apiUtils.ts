@@ -6,6 +6,7 @@
  */
 
 import { getApiUrl } from '../constants/config';
+import type { MarketrixConfig } from '../types';
 
 // ============================================================================
 // API Response Helpers
@@ -92,7 +93,8 @@ export function extractErrorMessage(error: unknown, fallback = 'Unknown error'):
  */
 export function handleApiError(
   error: unknown,
-  context = 'Operation'
+  context = 'Operation',
+  config?: Partial<MarketrixConfig>
 ): {
   isValid: false;
   error: string;
@@ -100,12 +102,7 @@ export function handleApiError(
   const errorMessage = extractErrorMessage(error);
 
   if (isConnectionError(error)) {
-    let apiUrl = 'configured API server';
-    try {
-      apiUrl = getApiUrl();
-    } catch {
-      // Ignore error if URL not configured yet
-    }
+    const apiUrl = getApiUrl(config) || 'configured API server';
     const connectionErrorMessage = `Cannot connect to API server. Please ensure the API server is running at ${apiUrl}. Error: ${errorMessage}`;
     return {
       isValid: false,

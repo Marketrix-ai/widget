@@ -1,14 +1,15 @@
 import { type FetchApiOptions, initClient } from '@ts-rest/core';
 
-import { Config } from '../constants/config';
 import { hasProperty } from '../utils/validation';
 import { contract } from './routes';
 
 let authToken: string | null = null;
+let currentApiUrl: string = '';
 
-// Initialize the client with a placeholder or Config.API_URL if already set
+// Initialize the client - will be configured via configureSdk() before use
+// Using empty string as placeholder; actual URL must be set via configureSdk()
 let client = initClient(contract, {
-  baseUrl: Config.API_URL || 'http://localhost:8080',
+  baseUrl: '',
   baseHeaders: {
     Authorization: (_options: FetchApiOptions) => (authToken ? `Bearer ${authToken}` : ''),
   },
@@ -17,10 +18,16 @@ let client = initClient(contract, {
 
 /**
  * Re-initialize the SDK client with a new base URL
+ * Must be called before any SDK operations
  */
 export const configureSdk = (apiUrl: string) => {
-  if (apiUrl && apiUrl !== Config.API_URL) {
+  if (!apiUrl || apiUrl.trim() === '') {
+    throw new Error('API URL is required for SDK configuration');
+  }
+
+  if (apiUrl !== currentApiUrl) {
     console.log(`[SDK] Reconfiguring API URL to: ${apiUrl}`);
+    currentApiUrl = apiUrl;
 
     // Create new client instance
     const newClient = initClient(contract, {

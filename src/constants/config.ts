@@ -1,90 +1,29 @@
-import type { WidgetSettingsData } from '../sdk';
 import type { MarketrixConfig } from '../types';
 
-// Mutable configuration for runtime updates
-// Initialized to empty strings to enforce runtime configuration
-export const Config = {
-  API_URL: '',
-  AGENT_SERVER_URL: '',
-};
-
 /**
- * Update the global API configuration
+ * Get the API URL from config.
+ * @param config - MarketrixConfig to extract API URL from
+ * @returns API URL string or empty string if not configured
  */
-export const updateApiConfig = (apiUrl?: string, agentUrl?: string) => {
-  if (apiUrl) {
-    console.log(`[Config] Updating API URL to: ${apiUrl}`);
-    Config.API_URL = apiUrl;
+export const getApiUrl = (config?: Partial<MarketrixConfig>): string => {
+  if (config?.mtxApiHost) {
+    return config.mtxApiHost;
   }
-  if (agentUrl) {
-    console.log(`[Config] Updating Agent Server URL to: ${agentUrl}`);
-    Config.AGENT_SERVER_URL = agentUrl;
-  }
+  return '';
 };
-
-/**
- * Get the configured API URL.
- */
-export const getApiUrl = (): string => {
-  if (!Config.API_URL) {
-    // Return empty string to allow validation service to fail gracefully with specific error
-    return '';
-  }
-  return Config.API_URL;
-};
-
-const NON_WIDGET_SETTINGS_KEYS = [
-  'mtxId',
-  'mtxKey',
-  'mtxApp',
-  'mtxAgent',
-  'mtxApiHost',
-  'mtxAiHost',
-  'widget_position_offset',
-  'widget_position_z_index',
-] as const;
-
-function extractWidgetSettingsFields(
-  config: Partial<MarketrixConfig>
-): Partial<WidgetSettingsData> {
-  const result = { ...config } as Partial<WidgetSettingsData>;
-  for (const key of NON_WIDGET_SETTINGS_KEYS) {
-    delete (result as Record<string, unknown>)[key];
-  }
-  return result;
-}
-
-/**
- * Extract widget settings from MarketrixConfig
- * Settings should already include defaults from API, so we just extract the widget-specific fields
- */
-export function extractWidgetSettingsFromConfig(
-  config: Partial<MarketrixConfig>
-): WidgetSettingsData {
-  // Extract widget settings fields - config should already have all settings from API (including defaults)
-  return extractWidgetSettingsFields(config) as WidgetSettingsData;
-}
 
 /**
  * Derives the websocket URL for the agent server
- * Requires either config.mtxAiHost or configured AGENT_SERVER_URL to be provided
- * @throws Error if neither mtxAiHost nor configured AGENT_SERVER_URL is provided
+ * Requires config.mtxAiHost to be provided
+ * @throws Error if mtxAiHost is not provided
  */
 export function getAgentWebSocketUrl(config?: Partial<MarketrixConfig>): string {
-  // 1. Check if explicitly provided in config
-  if (config?.mtxAiHost) {
-    return ensureWebSocketUrl(config.mtxAiHost);
+  if (!config?.mtxAiHost) {
+    throw new Error(
+      'Agent server URL is required. Please provide mtxAiHost in the widget configuration.'
+    );
   }
-
-  // 2. Check configured URL
-  if (Config.AGENT_SERVER_URL) {
-    return ensureWebSocketUrl(Config.AGENT_SERVER_URL);
-  }
-
-  // 3. Throw error if neither is provided
-  throw new Error(
-    'Agent server URL is required. Please provide either mtxAiHost in config or configure mtxAiHost.'
-  );
+  return ensureWebSocketUrl(config.mtxAiHost);
 }
 
 /**
