@@ -1,6 +1,6 @@
 {
   "name": "@marketrix.ai/widget",
-  "version": "1.0.13",
+  "version": "1.0.14",
   "description": "Marketrix AI-Native Support Widget: Show, Tell, Do",
   "type": "module",
   "main": "./dist/index.mjs",
@@ -19,8 +19,7 @@
   ],
   "scripts": {
     "start": "vite",
-    "build": "vite build",
-    "build:dev": "vite build --mode development",
+    "build": "vite build && tsc -p tsconfig.build.json",
     "check": "tsc --noEmit",
     "lint": "eslint . --ext .ts,.tsx --max-warnings 200 --fix",
     "format": "prettier --write .",
