@@ -8,7 +8,7 @@ let authToken: string | null = null;
 
 // Initialize the client with a placeholder or Config.API_URL if already set
 let client = initClient(contract, {
-  baseUrl: Config.API_URL || 'https://api.placeholder.invalid',
+  baseUrl: Config.API_URL || 'http://localhost:8080',
   baseHeaders: {
     Authorization: (_options: FetchApiOptions) => (authToken ? `Bearer ${authToken}` : ''),
   },

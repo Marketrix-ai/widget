@@ -20,12 +20,14 @@
   "scripts": {
     "start": "vite",
     "build": "vite build",
+    "build:dev": "vite build --mode development",
     "check": "tsc --noEmit",
     "lint": "eslint . --ext .ts,.tsx --max-warnings 200 --fix",
     "format": "prettier --write .",
     "prepare": "husky"
   },
   "dependencies": {
+    "@rrweb/record": "^2.0.0-alpha.18",
     "@ts-rest/core": "^3.52.1",
     "axios": "^1.13.2",
     "react": "^19.2.3",
