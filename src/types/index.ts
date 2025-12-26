@@ -58,15 +58,6 @@ export type MarketrixConfig = Partial<WidgetSettingsData> & {
   isPreviewMode?: boolean;
 };
 
-/**
- * ValidatedMarketrixConfig - MarketrixConfig with all WidgetSettingsData fields guaranteed to be non-undefined
- *
- * This type is returned by useWidget() after validation, ensuring all required widget settings
- * are present. Components can use this type directly without additional type guards.
- */
-export type ValidatedMarketrixConfig = Omit<MarketrixConfig, keyof WidgetSettingsData> &
-  Required<Pick<MarketrixConfig, keyof WidgetSettingsData>>;
-
 export interface ChatMessage {
   id: string;
   content: string;
