@@ -400,14 +400,16 @@ export const mountWidget = async (config: AddWidgetConfig): Promise<void> => {
   }
 };
 
-// Register auto-initialization
-setTimeout(() => {
-  try {
-    registerAutoInit(initWidget);
-  } catch (error) {
-    console.debug('Marketrix Widget: Auto-init registration skipped', error);
-  }
-}, 0);
+// Register auto-initialization (only in browser)
+if (typeof window !== 'undefined') {
+  setTimeout(() => {
+    try {
+      registerAutoInit(initWidget);
+    } catch (error) {
+      console.debug('Marketrix Widget: Auto-init registration skipped', error);
+    }
+  }, 0);
+}
 
 // Export types for external use
 export type { InstructionType } from './sdk';

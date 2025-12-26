@@ -226,6 +226,11 @@ export const devTools = {
  * Initialize dev tools - expose on window object
  */
 export function initDevTools(): void {
+  // Guard against SSR - only run in browser
+  if (typeof window === 'undefined') {
+    return;
+  }
+
   // Expose services
   window.domService = domService;
   window.toolExecutionService = toolExecutionService;

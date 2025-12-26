@@ -19,14 +19,6 @@ import { devTestService } from './services/DevTestService';
 import { domService } from './services/DomService';
 import { initDevTools } from './utils/devTools';
 
-// Initialize dev tools (console helpers)
-initDevTools();
-
-// Expose services on window for test.html
-// Types are declared in global.d.ts
-window.devTestService = devTestService;
-window.domService = domService;
-
 // Create container for debug panel
 function createDebugContainer(): HTMLElement {
   // Check if container already exists
@@ -57,12 +49,31 @@ function mountDebugPanel(): void {
   console.log('[Debug] Debug panel mounted. Press Ctrl+Shift+D to toggle visibility.');
 }
 
-// Initialize when DOM is ready
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', mountDebugPanel);
-} else {
-  mountDebugPanel();
+// Initialize debug panel (only in browser)
+function initializeDebug(): void {
+  // Guard against SSR - only run in browser
+  if (typeof window === 'undefined' || typeof document === 'undefined') {
+    return;
+  }
+
+  // Initialize dev tools (console helpers)
+  initDevTools();
+
+  // Expose services on window for test.html
+  // Types are declared in global.d.ts
+  window.devTestService = devTestService;
+  window.domService = domService;
+
+  // Initialize when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', mountDebugPanel);
+  } else {
+    mountDebugPanel();
+  }
 }
+
+// Initialize debug panel
+initializeDebug();
 
 // Export for manual initialization
 export { mountDebugPanel };

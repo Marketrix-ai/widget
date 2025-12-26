@@ -21,6 +21,11 @@ class SessionManager {
   private initializationPromise: Promise<string> | null = null;
 
   private constructor() {
+    // Guard against SSR - only initialize in browser
+    if (typeof window === 'undefined' || typeof document === 'undefined') {
+      return;
+    }
+
     // Initialize tab ID (persists across same-tab navigations via sessionStorage)
     this.tabId = this.getOrCreateTabId();
     log.debug('Tab ID:', this.tabId);
@@ -40,6 +45,11 @@ class SessionManager {
    * This ensures the same tab_id is preserved when navigating to external domains.
    */
   private setupLinkInterceptor(): void {
+    // Guard against SSR
+    if (typeof document === 'undefined') {
+      return;
+    }
+
     document.addEventListener(
       'click',
       (event) => {
@@ -84,6 +94,11 @@ class SessionManager {
    * 3. Generate new - for new tabs
    */
   private getOrCreateTabId(): string {
+    // Guard against SSR
+    if (typeof window === 'undefined' || typeof sessionStorage === 'undefined') {
+      return this.generateTabId();
+    }
+
     // 1. Check URL for tab_id parameter (cross-domain navigation)
     const urlParams = new URLSearchParams(window.location.search);
     const urlTabId = urlParams.get('_mktx_tab');
@@ -113,6 +128,11 @@ class SessionManager {
    * Remove _mktx_tab parameter from URL without page reload
    */
   private cleanupTabIdFromUrl(): void {
+    // Guard against SSR
+    if (typeof window === 'undefined') {
+      return;
+    }
+
     const url = new URL(window.location.href);
     if (url.searchParams.has('_mktx_tab')) {
       url.searchParams.delete('_mktx_tab');
@@ -139,6 +159,18 @@ class SessionManager {
    * Get singleton instance
    */
   static getInstance(): SessionManager {
+    // Guard against SSR - return a dummy instance that won't be used
+    if (typeof window === 'undefined' || typeof document === 'undefined') {
+      if (!SessionManager.instance) {
+        // Create a minimal instance that won't access browser APIs
+        SessionManager.instance = Object.create(SessionManager.prototype) as SessionManager;
+        SessionManager.instance.chatId = null;
+        SessionManager.instance.tabId = null;
+        SessionManager.instance.initializationPromise = null;
+      }
+      return SessionManager.instance;
+    }
+
     if (!SessionManager.instance) {
       SessionManager.instance = new SessionManager();
     }
@@ -234,10 +266,18 @@ class SessionManager {
   }
 
   private getStoredChatId(): string | null {
+    // Guard against SSR
+    if (typeof localStorage === 'undefined') {
+      return null;
+    }
     return localStorage.getItem(CHAT_ID_STORAGE_KEY);
   }
 
   private storeChatId(id: string): void {
+    // Guard against SSR
+    if (typeof localStorage === 'undefined') {
+      return;
+    }
     localStorage.setItem(CHAT_ID_STORAGE_KEY, id);
   }
 }

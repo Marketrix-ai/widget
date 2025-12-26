@@ -7,17 +7,23 @@
 
 type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
-// Check if we're in development mode
-const isDevelopment =
-  window.location.hostname === 'localhost' ||
-  window.location.hostname === '127.0.0.1' ||
-  window.location.hostname.includes('localhost');
+// Check if we're in development mode (SSR-safe)
+const getIsDevelopment = (): boolean => {
+  if (typeof window === 'undefined') {
+    return false;
+  }
+  return (
+    window.location.hostname === 'localhost' ||
+    window.location.hostname === '127.0.0.1' ||
+    window.location.hostname.includes('localhost')
+  );
+};
 
 /**
  * Log levels configuration
  * Set to 'error' in production to only show errors
  */
-const MIN_LOG_LEVEL: LogLevel = isDevelopment ? 'debug' : 'error';
+const MIN_LOG_LEVEL: LogLevel = getIsDevelopment() ? 'debug' : 'error';
 
 const LOG_LEVELS: Record<LogLevel, number> = {
   debug: 0,

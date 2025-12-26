@@ -192,6 +192,11 @@ export const clearWidgetState = (): void => {
  * Show widget settings loader with optional message
  */
 export const showWidgetSettingsLoader = (message?: string): void => {
+  // Guard against SSR - only run in browser
+  if (typeof window === 'undefined' || typeof document === 'undefined') {
+    return;
+  }
+
   if (loaderInstance) {
     const loaderContainer = document.getElementById('marketrix-widget-loader-container');
     if (loaderContainer) {
@@ -264,6 +269,11 @@ let initWidgetFunction: ((config: MarketrixConfig) => Promise<void>) | null = nu
  * Retries if script tag not found to handle timing issues with ES module loading
  */
 export const autoInitializeWidget = (retryCount = 0): void => {
+  // Guard against SSR - only run in browser
+  if (typeof window === 'undefined' || typeof document === 'undefined') {
+    return;
+  }
+
   const MAX_RETRIES = 5;
   const RETRY_DELAYS = [0, 100, 500, 1000, 2000]; // ms
 
