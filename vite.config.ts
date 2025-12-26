@@ -78,7 +78,7 @@ const readFile = (path: string): string | null =>
 const copyIndexHtmlPlugin = (outDir: string) => {
   return {
     name: 'copy-index-html',
-    buildEnd() {
+    closeBundle() {
       const indexPath = resolve(cwd(), 'index.html');
       const destDir = resolve(cwd(), outDir);
       const destPath = resolve(destDir, 'index.html');
