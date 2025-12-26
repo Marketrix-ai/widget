@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 
 import { MarketrixWidget as MarketrixWidgetComponent } from './components/MarketrixWidget';
-import { updateApiConfig } from './constants/config';
+import { Config, getEventsWebSocketUrl, updateApiConfig } from './constants/config';
 import { WidgetProvider } from './context/WidgetContext';
 import { configureSdk, type WidgetSettingsData } from './sdk';
 import { createConfigFromSettings } from './services/ConfigManager';
@@ -149,10 +149,11 @@ export const initWidget = async (
     }
     console.log('[Marketrix Widget] ✅ SessionManager initialized with tab_id:', tabId);
 
-    // Get RRWeb server URL from environment variable
-    // Default to Api server port 8080 (matches Api server default PORT)
-    const rrwebServerUrl = import.meta.env.VITE_RRWEB_SERVER_URL || 'ws://localhost:8080/events';
-    const wsUrl = rrwebServerUrl.endsWith('/events') ? rrwebServerUrl : `${rrwebServerUrl}/events`;
+    // Get RRWeb server URL from mtxApiHost config
+    // Priority: finalConfig.mtxApiHost > config.mtxApiHost > Config.API_URL > default
+    const apiHost =
+      finalConfig.mtxApiHost ?? config.mtxApiHost ?? Config.API_URL ?? 'ws://localhost:8080';
+    const wsUrl = getEventsWebSocketUrl(apiHost);
 
     console.log('[Marketrix Widget] Using RRWeb server URL:', wsUrl);
 
