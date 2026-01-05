@@ -322,6 +322,12 @@ export const autoInitializeWidget = (retryCount = 0): void => {
       );
       return;
     }
+
+    // If no script tags found at all, assume auto-init was not intended (e.g. using npm package)
+    if (scripts.length === 0) {
+      console.log('[AutoInit] No marketrix script tags found. Skipping auto-initialization.');
+      return;
+    }
     console.error('[AutoInit] Script tag not found after all retries');
     console.error(
       '[AutoInit] Available scripts:',

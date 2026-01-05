@@ -173,6 +173,11 @@ export type AddWidgetConfig = (
 export interface MarketrixWidgetProps {
   settings: WidgetSettingsData;
   container?: HTMLElement;
+  // Optional config overrides for preview mode
+  mtxId?: string;
+  mtxKey?: string;
+  mtxApiHost?: string;
+  mtxAiHost?: string;
 }
 
 // Re-export SDK types for convenience

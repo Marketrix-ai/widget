@@ -19,9 +19,7 @@ export const getApiUrl = (config?: Partial<MarketrixConfig>): string => {
  */
 export function getAgentWebSocketUrl(config?: Partial<MarketrixConfig>): string {
   if (!config?.mtxAiHost) {
-    throw new Error(
-      'Agent server URL is required. Please provide mtxAiHost in the widget configuration.'
-    );
+    return '';
   }
   return ensureWebSocketUrl(config.mtxAiHost);
 }

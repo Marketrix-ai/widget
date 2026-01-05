@@ -128,6 +128,11 @@ export class WebSocketClient {
     this.chatId = chatId;
     this.isIntentionallyDisconnected = false;
     this.setStatus('connecting');
+    if (!this.url) {
+      console.warn('[WebSocket] Cannot connect: No AI host URL provided in configuration');
+      this.setStatus('error');
+      return;
+    }
 
     try {
       const ws = new WebSocket(this.url);

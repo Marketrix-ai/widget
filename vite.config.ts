@@ -38,10 +38,17 @@ const getBuildConfig = (options: { minify: boolean | 'terser'; outDir: string })
       fileName: 'index',
     },
     rollupOptions: {
+      external: ['react', 'react-dom', 'react-dom/client', 'react/jsx-runtime'],
       output: {
         entryFileNames: BUNDLE_FILE,
         format: 'es',
         inlineDynamicImports: true,
+        globals: {
+          react: 'React',
+          'react-dom': 'ReactDOM',
+          'react-dom/client': 'ReactDOMClient',
+          'react/jsx-runtime': 'jsxRuntime',
+        },
       },
     },
     ...(options.minify === 'terser' && {
