@@ -50,7 +50,7 @@ export const MessageList = ({
   onScreenAccessDeny,
 }: MessageListProps) => {
   // Get widget config and state
-  const { config: widgetConfig, state: widgetState } = useWidget({ config });
+  const { config: widgetConfig, state: widgetState, isPreviewMode } = useWidget({ config });
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [showScrollBottom, setShowScrollBottom] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -74,9 +74,10 @@ export const MessageList = ({
   };
 
   // Scroll to bottom handler
+  // Skip in preview mode to prevent scrolling the parent modal
   const scrollToBottom = () => {
     if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+      !isPreviewMode && messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   };
 
@@ -86,12 +87,11 @@ export const MessageList = ({
     // and scroll height is calculated correctly
     window.requestAnimationFrame(() => {
       if (messagesEndRef.current) {
-        messagesEndRef.current.scrollIntoView({ behavior: 'auto' });
-        // Force update scroll state
-        handleScroll();
+        !isPreviewMode && messagesEndRef.current.scrollIntoView({ behavior: 'auto' });
+        !isPreviewMode && handleScroll();
       }
     });
-  }, [messages.length]); // Run when messages length changes to handle history loading
+  }, [messages.length, isPreviewMode]); // Run when messages length changes to handle history loading
 
   // Check if there's a pending message (placeholder exists or isLoading)
   const hasPendingMessage = widgetState.isLoading || messages.some((msg) => msg.isPlaceholder);

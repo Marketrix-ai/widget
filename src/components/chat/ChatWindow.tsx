@@ -89,9 +89,12 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   const { config: settings, isPreviewMode } = useWidget({ config });
 
   // Auto-scroll to bottom when new messages arrive
+  // Skip in preview mode to prevent scrolling the parent modal
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    if (messagesEndRef.current) {
+      !isPreviewMode && messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages, isPreviewMode]);
 
   // Track previous screenshare state to detect external stops
   const wasSharingRef = useRef(isScreenSharing);
