@@ -19,7 +19,7 @@
   ],
   "scripts": {
     "start": "vite",
-    "build": "vite build",
+    "build": "vite build && BUILD_MODE=standalone vite build",
     "check": "tsc --noEmit",
     "lint": "eslint . --ext .ts,.tsx --max-warnings 200 --fix",
     "format": "prettier --write .",
