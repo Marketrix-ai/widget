@@ -305,12 +305,14 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           try {
             // Send error as JSON-serialized ToolExecutionResult to match agent's expectations
             const resultJson = JSON.stringify(result);
-            wsClient.send({
+            const response: ToolCallResponseMessage = {
               jsonrpc: '2.0',
-              method: 'tools/call',
               id: requestId,
-              result: { content: [{ type: 'text', text: resultJson }] },
-            });
+              result: {
+                content: [{ type: 'text', text: resultJson }],
+              },
+            };
+            wsClient.send(response);
           } catch (error) {
             console.error('Failed to send tool error:', error);
           }
