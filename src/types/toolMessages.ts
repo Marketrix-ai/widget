@@ -30,6 +30,7 @@ export interface ToolCallRequestMessage extends WebSocketMessage {
   jsonrpc: '2.0';
   id: string | number;
   method: 'tools/call';
+  targetStateVersion: number;
   params: ToolCallRequestParams;
 }
 
@@ -59,6 +60,7 @@ export interface ToolCallResponseMessage extends WebSocketMessage {
   jsonrpc: '2.0';
   id: string | number;
   result: ToolCallResponseContent;
+  newStateVersion: number;
 }
 
 /**

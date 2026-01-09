@@ -1,4 +1,12 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 
 import { MarketrixApiService } from '../services/ApiService';
 import { chatService, createAgentMessage, createUserMessage } from '../services/ChatService';
@@ -61,6 +69,8 @@ interface WidgetContextType {
 const WidgetContext = createContext<WidgetContextType | undefined>(undefined);
 
 export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const stateVersion = useRef(0);
+
   const [state, setState] = useState<WidgetState>({
     isOpen: false,
     isMinimized: false,
@@ -211,8 +221,27 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         const mode = params.mode || state.currentMode || 'do';
         const explanation = params.explanation || '';
         const requestId = message.id;
+        const targetStateVersion = params.stateVersion;
 
         updateProgressForTool(toolName, explanation, 'running');
+
+        if (targetStateVersion !== stateVersion.current) {
+          // Pause tool execution if version mismatched
+          console.log('State version mismatch, skipping tool execution');
+          const result = { success: false, result: '', error: 'State version mismatch' };
+          const resultJson = JSON.stringify(result);
+          const response: ToolCallResponseMessage = {
+            jsonrpc: '2.0',
+            id: requestId,
+            result: {
+              content: [{ type: 'text', text: resultJson }],
+            },
+            newStateVersion: stateVersion.current,
+          };
+          wsClient.send(response);
+          updateProgressForTool(toolName, explanation, 'failed', 'State version mismatch');
+          return;
+        }
 
         const result = await toolExecutionService.executeTool(toolName, args, mode, explanation);
 
@@ -225,6 +254,7 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             // For interactive tools in Show Mode, we really want to tell the agent "Action Performed".
             // The ToolExecutionService returned "User completed the action" or similar.
             // Send the full ToolExecutionResult as JSON to match agent's expectations
+            stateVersion.current++;
             const resultJson = JSON.stringify(result);
             const response: ToolCallResponseMessage = {
               jsonrpc: '2.0',
@@ -232,6 +262,7 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
               result: {
                 content: [{ type: 'text', text: resultJson }],
               },
+              newStateVersion: stateVersion.current,
             };
             wsClient.send(response);
             updateProgressForTool(toolName, explanation, 'completed');
@@ -305,12 +336,15 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           try {
             // Send error as JSON-serialized ToolExecutionResult to match agent's expectations
             const resultJson = JSON.stringify(result);
-            wsClient.send({
+            const response: ToolCallResponseMessage = {
               jsonrpc: '2.0',
-              method: 'tools/call',
               id: requestId,
-              result: { content: [{ type: 'text', text: resultJson }] },
-            });
+              result: {
+                content: [{ type: 'text', text: resultJson }],
+              },
+              newStateVersion: stateVersion.current,
+            };
+            wsClient.send(response);
           } catch (error) {
             console.error('Failed to send tool error:', error);
           }
