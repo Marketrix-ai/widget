@@ -34,9 +34,9 @@ import { z } from 'zod';
  * Core system enums for user roles, plans, and statuses
  */
 export const UserRoleSchema = z.enum(['user', 'admin', 'super']);
-export const UserPlanSchema = z.enum(['free', 'pro', 'enterprise']);
+export const UserPlanSchema = z.enum(['free', 'starter', 'growth', 'enterprise']);
 export const EntityStatusSchema = z.enum(['created', 'active', 'suspended', 'pending_approval']);
-export const TenantPackageSchema = z.enum(['free', 'starter', 'pro', 'enterprise']);
+export const TenantPackageSchema = z.enum(['free', 'starter', 'growth', 'enterprise']);
 export const AgentTypeSchema = z.enum(['human', 'ai']);
 export const AgentVoiceSchema = z.enum(['male', 'female']);
 export const AgentStatusSchema = z.enum(['active', 'learning', 'error']);
@@ -95,8 +95,8 @@ export const R = {
  */
 export const BaseEntitySchema = z.object({
   id: z.number().optional(),
-  created_at: z.coerce.date().optional(),
-  updated_at: z.coerce.date().optional(),
+  created_at: z.date().optional(),
+  updated_at: z.date().optional(),
 });
 
 export const FileSchema = z.object({
@@ -198,7 +198,7 @@ export const UserLoginSchema = z.object({
 export const PasswordResetEntitySchema = BaseEntitySchema.extend({
   user_id: z.number(),
   token: z.string(),
-  expiry_date: z.coerce.date(),
+  expiry_date: z.date(),
 });
 
 /**
@@ -254,7 +254,7 @@ export const TenantEntitySchema = BaseEntitySchema.extend({
   domain: z.string().optional(),
   status: EntityStatusSchema,
   package: TenantPackageSchema,
-  ending_date: z.coerce.date().optional(),
+  ending_date: z.date().optional(),
 });
 
 /**
@@ -270,13 +270,29 @@ export const TenantCreateSchema = TenantEntitySchema.partial().extend({
  */
 export const TenantUpdateSchema = TenantEntitySchema.partial();
 
+export const TenantPlanStatusSchema = z.enum([
+  'active',
+  'past_due',
+  'canceled',
+  'unpaid',
+  'trialing',
+  'incomplete',
+  'incomplete_expired',
+  'paused',
+]);
+
+export type TenantPlanStatus = z.infer<typeof TenantPlanStatusSchema>;
+
 /**
  * Tenant plan entity schema - tracks plan/subscription for each tenant
  */
 export const TenantPlanEntitySchema = BaseEntitySchema.extend({
   tenant_id: z.number(),
   package: TenantPackageSchema,
-  ending_date: z.coerce.date(),
+  ending_date: z.date(),
+  stripe_subscription_id: z.string().nullable().optional(),
+  stripe_price_id: z.string().nullable().optional(),
+  status: TenantPlanStatusSchema.default('active').optional(),
 });
 
 /**
@@ -304,7 +320,7 @@ export const MeetingSchema = BaseEntitySchema.extend({
   user_id: z.number(),
   meeting_id: z.string(),
   meeting_token: z.string().optional(),
-  start_time: z.coerce.date(),
+  start_time: z.date(),
   minutes: z.number(),
   meeting_status: MeetingStatusSchema,
 });
@@ -313,7 +329,7 @@ export const MeetingSchema = BaseEntitySchema.extend({
  * Meeting creation schema
  */
 export const MeetingCreateSchema = MeetingSchema.partial().extend({
-  start_time: z.coerce.date(),
+  start_time: z.date(),
 });
 
 /**
@@ -329,7 +345,7 @@ export const MeetingEntitySchema = BaseEntitySchema.extend({
   tenant_id: z.number(),
   meeting_id: z.string(),
   meeting_token: z.string().optional(),
-  start_time: z.coerce.date(),
+  start_time: z.date(),
   minutes: z.number(),
   meeting_status: MeetingStatusSchema,
 });
@@ -601,6 +617,55 @@ export const SimulationAnswerSchema = z.object({
   answer: z.string().min(1),
 });
 
+// ============================================================================
+// RRWEB SESSION SCHEMAS - RRWeb session recording management
+// ============================================================================
+
+/**
+ * Complete RRWeb session entity schema
+ */
+export const RrwebSessionEntitySchema = BaseEntitySchema.extend({
+  session_id: z.string(),
+  marketrix_chat_id: z.string(),
+  blob_url: z.string().nullable(),
+  event_count: z.number().int().nonnegative(),
+  started_at: z.string().datetime(),
+  ended_at: z.string().datetime().nullable(),
+  is_active: z.boolean(),
+  metadata: z
+    .object({
+      userAgent: z.string().optional(),
+      url: z.string().optional(),
+    })
+    .nullable(),
+  last_batch_index: z.number().int().nonnegative().nullable(),
+  last_event_timestamp: z.number().int().nullable(),
+  last_upload_time: z.string().datetime().nullable(),
+});
+
+/**
+ * RRWeb session upsert schema (for create/update)
+ */
+export const RrwebSessionUpsertSchema = z.object({
+  session_id: z.string().min(1),
+  marketrix_chat_id: z.string().min(1),
+  blob_url: z.string().nullable().optional(),
+  event_count: z.number().int().nonnegative().optional(),
+  started_at: z.string().datetime().optional(),
+  ended_at: z.string().datetime().nullable().optional(),
+  is_active: z.boolean().optional(),
+  metadata: z
+    .object({
+      userAgent: z.string().optional(),
+      url: z.string().optional(),
+    })
+    .nullable()
+    .optional(),
+  last_batch_index: z.number().int().nonnegative().nullable().optional(),
+  last_event_timestamp: z.number().int().nullable().optional(),
+  last_upload_time: z.string().datetime().nullable().optional(),
+});
+
 /**
  * Simulation progress entry schema
  */
@@ -610,7 +675,7 @@ export const SimulationProgressEntitySchema = z.object({
   status: z.string(),
   status_message: z.string().nullable(),
   num_steps: z.number().int().nonnegative().nullable(),
-  created_at: z.coerce.date(),
+  created_at: z.date(),
 });
 
 /**
@@ -675,12 +740,12 @@ export const AgentEntitySchema = BaseEntitySchema.extend({
 
 const KnowledgeIdsSchema = z
   .string()
-  .transform((str) => JSON.parse(str) as number[])
+  .transform(str => JSON.parse(str) as number[])
   .pipe(z.array(z.coerce.number()));
 
 const SimulationIdsSchema = z
   .string()
-  .transform((str) => JSON.parse(str) as number[])
+  .transform(str => JSON.parse(str) as number[])
   .pipe(z.array(z.coerce.number()));
 
 /**
@@ -978,13 +1043,9 @@ export const ChatRequestSchema = z
     chat_id: z.string().optional(), // Optional since it comes from path params in some routes
     content: z.string(),
   })
-  .refine(
-    (data) => (data.marketrix_id && data.marketrix_key) ?? (data.agent_id && data.connection_id),
-    {
-      message:
-        'Either marketrix_id + marketrix_key or both agent_id + connection_id must be provided',
-    }
-  );
+  .refine(data => (data.marketrix_id && data.marketrix_key) ?? (data.agent_id && data.connection_id), {
+    message: 'Either marketrix_id + marketrix_key or both agent_id + connection_id must be provided',
+  });
 
 /**
  * Chat response entity schema
@@ -1095,7 +1156,7 @@ export const FileUploadResponseSchema = z.object({
  * Meeting creation data schema for services
  */
 export const MeetingCreationDataSchema = z.object({
-  start_time: z.coerce.date(),
+  start_time: z.date(),
   minutes: z.number(),
   tenant_id: z.number(),
   user_id: z.number(),
@@ -1128,9 +1189,9 @@ export const UserPromptDataSchema = z.object({
 });
 
 /**
- * Usage stats response schema
+ * User quota response schema (for SDK chat endpoints)
  */
-export const UsageStatsSchema = z.object({
+export const UserQuotaSchema = z.object({
   user_id: z.number(),
   limit: z.number(),
   used: z.number(),
@@ -1244,6 +1305,147 @@ export const TaskPilotPromptSchema = z.object({
 });
 
 // ============================================================================
+// STRIPE SCHEMAS - Stripe subscription and payment management
+// ============================================================================
+
+/**
+ * Stripe checkout session creation request schema
+ */
+export const StripeCheckoutSchema = z.object({
+  priceId: z.string().min(1, 'Price ID is required'),
+  successUrl: z.string().url('Success URL must be a valid URL'),
+  cancelUrl: z.string().url('Cancel URL must be a valid URL'),
+});
+
+/**
+ * Stripe customer portal session creation request schema
+ */
+export const StripePortalSchema = z.object({
+  returnUrl: z.string().url('Return URL must be a valid URL'),
+});
+
+/**
+ * Stripe trial subscription creation request schema
+ */
+export const StripeTrialSchema = z.object({
+  plan: z.enum(['starter', 'growth']).default('starter'),
+  interval: z.enum(['month', 'year']).default('month'),
+});
+
+/**
+ * Stripe downgrade confirmation request schema
+ */
+export const StripeDowngradeSchema = z.object({
+  subscriptionId: z.string().min(1, 'Subscription ID is required'),
+  priceId: z.string().min(1, 'Price ID is required'),
+});
+
+/**
+ * Stripe downgrade response schema
+ */
+export const StripeDowngradeResponseSchema = z.object({
+  success: z.boolean(),
+  message: z.string(),
+});
+
+/**
+ * Plan information response schema
+ */
+export const PlanInfoSchema = z.object({
+  subscriptionId: z.string().nullable(),
+  customerId: z.string().nullable(),
+  status: z
+    .enum(['active', 'past_due', 'canceled', 'unpaid', 'trialing', 'incomplete', 'incomplete_expired', 'paused'])
+    .nullable(),
+  planTier: z.enum(['free', 'starter', 'growth', 'enterprise']).nullable(),
+  billingInterval: z.enum(['month', 'year']).nullable(),
+  priceId: z.string().nullable(),
+  trialEndDate: z.date().nullable(),
+  currentPeriodStart: z.date().nullable(),
+  currentPeriodEnd: z.date().nullable(),
+  cancelAtPeriodEnd: z.boolean(),
+  isTrialing: z.boolean(),
+  daysRemainingInTrial: z.number().nullable(),
+  trialProvisioned: z.boolean(),
+});
+
+/**
+ * Checkout session response schema
+ */
+export const CheckoutSessionSchema = z.object({
+  sessionId: z.string(),
+  url: z.string().url(),
+});
+
+/**
+ * Portal session response schema
+ */
+export const PortalSessionSchema = z.object({
+  url: z.string().url(),
+});
+
+/**
+ * Trial subscription response schema
+ */
+export const TrialSubscriptionSchema = z.object({
+  subscriptionId: z.string(),
+  customerId: z.string(),
+  status: z.literal('trialing'),
+  trialStartDate: z.date(),
+  trialEndDate: z.date(),
+  planTier: z.enum(['starter', 'growth']),
+  daysRemainingInTrial: z.number(),
+});
+
+/**
+ * Usage metric schema for individual resource
+ */
+export const UsageMetricSchema = z.object({
+  used: z.number().int().min(0),
+  limit: z.number().int(),
+});
+
+/**
+ * Subscription usage statistics schema (tenant-wide resource tracking)
+ * Used for billing and subscription management
+ */
+export const SubscriptionUsageSchema = z.object({
+  connectedApps: UsageMetricSchema,
+  simulationsPerMonth: UsageMetricSchema,
+  userPrompts: UsageMetricSchema,
+});
+
+/**
+ * Price amount schema for individual pricing
+ */
+export const PriceAmountSchema = z.object({
+  amount: z.number().int().min(0),
+  currency: z.string().default('usd'),
+  formatted: z.string(),
+});
+
+/**
+ * Plan pricing schema for a specific plan tier
+ */
+export const PlanPricingSchema = z.object({
+  planId: z.enum(['free', 'starter', 'growth', 'enterprise']),
+  monthly: PriceAmountSchema.nullable(),
+  annual: PriceAmountSchema.nullable(),
+  priceIds: z.object({
+    monthly: z.string().nullable(),
+    annual: z.string().nullable(),
+  }),
+});
+
+/**
+ * Stripe pricing response schema
+ */
+export const StripePricingSchema = z.object({
+  plans: z.array(PlanPricingSchema),
+  lastUpdated: z.string().datetime(),
+});
+
+// ============================================================================
 // TYPE EXPORTS - Essential TypeScript types for external use
 // ============================================================================
 
@@ -1353,8 +1555,23 @@ export type TourAnswerData = z.infer<typeof TourAnswerSchema>;
 export type TourStepData = z.infer<typeof TourStepSchema>;
 export type PasswordResetData = z.infer<typeof PasswordResetEntitySchema>;
 export type ChatData = z.infer<typeof ChatEntitySchema>;
-export type UsageStatsData = z.infer<typeof UsageStatsSchema>;
+export type UserQuotaData = z.infer<typeof UserQuotaSchema>;
+export type SubscriptionUsageData = z.infer<typeof SubscriptionUsageSchema>;
 export type SimulationProgressData = z.infer<typeof SimulationProgressEntitySchema>;
 export type MindMapEdgeData = z.infer<typeof MindMapEdgeSchema>;
 export type MindMapNodeData = z.infer<typeof MindMapNodeSchema>;
 export type MindMapData = z.infer<typeof MindMapSchema>;
+export type RrwebSessionData = z.infer<typeof RrwebSessionEntitySchema>;
+export type RrwebSessionUpsertData = z.infer<typeof RrwebSessionUpsertSchema>;
+export type StripeCheckoutData = z.infer<typeof StripeCheckoutSchema>;
+export type StripePortalData = z.infer<typeof StripePortalSchema>;
+export type StripeTrialData = z.infer<typeof StripeTrialSchema>;
+export type StripeDowngradeData = z.infer<typeof StripeDowngradeSchema>;
+export type StripeDowngradeResponseData = z.infer<typeof StripeDowngradeResponseSchema>;
+export type PlanInfoData = z.infer<typeof PlanInfoSchema>;
+export type CheckoutSessionData = z.infer<typeof CheckoutSessionSchema>;
+export type PortalSessionData = z.infer<typeof PortalSessionSchema>;
+export type TrialSubscriptionData = z.infer<typeof TrialSubscriptionSchema>;
+export type PriceAmountData = z.infer<typeof PriceAmountSchema>;
+export type PlanPricingData = z.infer<typeof PlanPricingSchema>;
+export type StripePricingData = z.infer<typeof StripePricingSchema>;
