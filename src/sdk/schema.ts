@@ -95,8 +95,8 @@ export const R = {
  */
 export const BaseEntitySchema = z.object({
   id: z.number().optional(),
-  created_at: z.date().optional(),
-  updated_at: z.date().optional(),
+  created_at: z.coerce.date().optional(),
+  updated_at: z.coerce.date().optional(),
 });
 
 export const FileSchema = z.object({
