@@ -198,7 +198,7 @@ export const UserLoginSchema = z.object({
 export const PasswordResetEntitySchema = BaseEntitySchema.extend({
   user_id: z.number(),
   token: z.string(),
-  expiry_date: z.date(),
+  expiry_date: z.coerce.date(),
 });
 
 /**
@@ -254,7 +254,7 @@ export const TenantEntitySchema = BaseEntitySchema.extend({
   domain: z.string().optional(),
   status: EntityStatusSchema,
   package: TenantPackageSchema,
-  ending_date: z.date().optional(),
+  ending_date: z.coerce.date().optional(),
 });
 
 /**
@@ -289,7 +289,7 @@ export type TenantPlanStatus = z.infer<typeof TenantPlanStatusSchema>;
 export const TenantPlanEntitySchema = BaseEntitySchema.extend({
   tenant_id: z.number(),
   package: TenantPackageSchema,
-  ending_date: z.date(),
+  ending_date: z.coerce.date(),
   stripe_subscription_id: z.string().nullable(),
   stripe_price_id: z.string().nullable(),
   status: TenantPlanStatusSchema.default('active').optional(),
@@ -320,7 +320,7 @@ export const MeetingSchema = BaseEntitySchema.extend({
   user_id: z.number(),
   meeting_id: z.string(),
   meeting_token: z.string().optional(),
-  start_time: z.date(),
+  start_time: z.coerce.date(),
   minutes: z.number(),
   meeting_status: MeetingStatusSchema,
 });
@@ -329,7 +329,7 @@ export const MeetingSchema = BaseEntitySchema.extend({
  * Meeting creation schema
  */
 export const MeetingCreateSchema = MeetingSchema.partial().extend({
-  start_time: z.date(),
+  start_time: z.coerce.date(),
 });
 
 /**
@@ -345,7 +345,7 @@ export const MeetingEntitySchema = BaseEntitySchema.extend({
   tenant_id: z.number(),
   meeting_id: z.string(),
   meeting_token: z.string().optional(),
-  start_time: z.date(),
+  start_time: z.coerce.date(),
   minutes: z.number(),
   meeting_status: MeetingStatusSchema,
 });
@@ -675,7 +675,7 @@ export const SimulationProgressEntitySchema = z.object({
   status: z.string(),
   status_message: z.string().nullable(),
   num_steps: z.number().int().nonnegative().nullable(),
-  created_at: z.date(),
+  created_at: z.coerce.date(),
 });
 
 /**
@@ -1228,7 +1228,7 @@ export const FileUploadResponseSchema = z.object({
  * Meeting creation data schema for services
  */
 export const MeetingCreationDataSchema = z.object({
-  start_time: z.date(),
+  start_time: z.coerce.date(),
   minutes: z.number(),
   tenant_id: z.number(),
   user_id: z.number(),
@@ -1457,9 +1457,9 @@ export const PlanInfoSchema = z.object({
   planTier: z.enum(['free', 'starter', 'growth', 'enterprise']).nullable(),
   billingInterval: z.enum(['month', 'year']).nullable(),
   priceId: z.string().nullable(),
-  trialEndDate: z.date().nullable(),
-  currentPeriodStart: z.date().nullable(),
-  currentPeriodEnd: z.date().nullable(),
+  trialEndDate: z.coerce.date().nullable(),
+  currentPeriodStart: z.coerce.date().nullable(),
+  currentPeriodEnd: z.coerce.date().nullable(),
   cancelAtPeriodEnd: z.boolean(),
   isTrialing: z.boolean(),
   daysRemainingInTrial: z.number().nullable(),
@@ -1488,8 +1488,8 @@ export const TrialSubscriptionSchema = z.object({
   subscriptionId: z.string(),
   customerId: z.string(),
   status: z.literal('trialing'),
-  trialStartDate: z.date(),
-  trialEndDate: z.date(),
+  trialStartDate: z.coerce.date(),
+  trialEndDate: z.coerce.date(),
   planTier: z.enum(['starter', 'growth']),
   daysRemainingInTrial: z.number(),
 });
