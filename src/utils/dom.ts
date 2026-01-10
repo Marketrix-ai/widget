@@ -142,7 +142,7 @@ export function getElementByIndex(index: number): HTMLElement | null {
     // If not found or invalid, fall through to fallback
   }
 
-  // Step 3: Fallback to current behavior (for backward compatibility)
+  // Step 3: Fallback to indexed element lookup
   const elements = getAllInteractiveElements();
   if (index < 0 || index >= elements.length) {
     return null;

@@ -33,7 +33,7 @@ export interface NavigateAction extends BaseBrowserAction {
 // Click Element Action
 export interface ClickElementAction extends BaseBrowserAction {
   type: 'click';
-  index?: number | null;
+  index: number; // Required, must be >= 1 (data-id value from browser_state)
   coordinate_x?: number | null;
   coordinate_y?: number | null;
 }
@@ -41,17 +41,17 @@ export interface ClickElementAction extends BaseBrowserAction {
 // Input Text Action
 export interface InputTextAction extends BaseBrowserAction {
   type: 'input_text';
-  index: number;
+  index: number; // Must be >= 0 (data-id value from browser_state)
   text: string;
-  clear?: boolean;
+  clear?: boolean; // Default: true (1=clear, 0=append)
 }
 
 // Done Action
 export interface DoneAction extends BaseBrowserAction {
   type: 'done';
-  text: string;
-  success?: boolean;
-  files_to_display?: string[] | null;
+  text: string; // Final user message
+  success?: boolean; // Default: true
+  files_to_display?: string[] | null; // Default: []
 }
 
 // Structured Output Action
@@ -84,7 +84,8 @@ export interface ScrollAction extends BaseBrowserAction {
 // Send Keys Action
 export interface SendKeysAction extends BaseBrowserAction {
   type: 'send_keys';
-  keys: string;
+  index: number; // Must be >= 0 (data-id value from browser_state)
+  keys: string; // Keys (Escape, Enter, PageDown)
 }
 
 // Upload File Action

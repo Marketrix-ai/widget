@@ -96,6 +96,7 @@ import {
   StripePortalSchema,
   StripePricingSchema,
   StripeTrialSchema,
+  StripeWebhookEventSchema,
   SubscriptionUsageSchema,
   TenantCreateSchema,
   TenantEntitySchema,
@@ -1392,7 +1393,7 @@ const contract = c.router({
     description: 'Receives and processes Stripe webhook events for subscription changes, payments, and other events.',
     path: '/stripe/webhook',
     contentType: 'application/json' as const,
-    body: z.unknown(),
+    body: StripeWebhookEventSchema,
     responses: {
       200: R.success(z.object({ received: z.literal(true) })),
       400: R.error,

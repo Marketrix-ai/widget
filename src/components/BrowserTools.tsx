@@ -80,7 +80,7 @@ export const BrowserTools: React.FC<BrowserToolsProps> = ({ config, onToolSelect
         action = { type: 'search', query: '', engine: 'duckduckgo' };
         break;
       case 'click':
-        action = { type: 'click', index: null, coordinate_x: null, coordinate_y: null };
+        action = { type: 'click', index: 1, coordinate_x: null, coordinate_y: null };
         break;
       case 'input_text':
         action = { type: 'input_text', index: 0, text: '', clear: true };
@@ -89,7 +89,7 @@ export const BrowserTools: React.FC<BrowserToolsProps> = ({ config, onToolSelect
         action = { type: 'scroll', down: true, pages: 1.0, index: null };
         break;
       case 'send_keys':
-        action = { type: 'send_keys', keys: '' };
+        action = { type: 'send_keys', index: 0, keys: '' };
         break;
       case 'extract':
         action = { type: 'extract', query: '', extract_links: false, start_from_char: 0 };

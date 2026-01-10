@@ -290,8 +290,8 @@ export const TenantPlanEntitySchema = BaseEntitySchema.extend({
   tenant_id: z.number(),
   package: TenantPackageSchema,
   ending_date: z.date(),
-  stripe_subscription_id: z.string().nullable().optional(),
-  stripe_price_id: z.string().nullable().optional(),
+  stripe_subscription_id: z.string().nullable(),
+  stripe_price_id: z.string().nullable(),
   status: TenantPlanStatusSchema.default('active').optional(),
 });
 
@@ -400,7 +400,7 @@ export const GoToUrlActionSchema = z.object({
 
 export const ClickElementByIndexActionSchema = z.object({
   click_element_by_index: z.object({
-    index: z.number(),
+    index: z.number().int().min(1), // Must be >= 1 (data-id value from browser_state)
   }),
 });
 
@@ -736,6 +736,8 @@ export const AgentEntitySchema = BaseEntitySchema.extend({
   user: UserEntitySchema.optional(),
   knowledge: z.array(KnowledgeEntitySchema).optional(),
   simulations: z.array(SimulationEntitySchema).optional(),
+  simulation_count: z.number().int().nonnegative().optional(),
+  knowledge_count: z.number().int().nonnegative().optional(),
 });
 
 const KnowledgeIdsSchema = z
@@ -771,6 +773,76 @@ export const AgentUpdateSchema = AgentEntitySchema.partial().extend({
   knowledge_ids: KnowledgeIdsSchema,
   simulation_ids: SimulationIdsSchema,
 });
+
+/**
+ * Agent task start response schema
+ * Response from agent server when starting a task
+ */
+export const AgentTaskStartResponseSchema = z.object({
+  text: z.string(),
+  task_id: z.string().optional(),
+});
+
+/**
+ * Agent task stop response schema
+ * Response from agent server when stopping a task
+ */
+export const AgentTaskStopResponseSchema = z.object({
+  status: z.string(),
+  message: z.string(),
+});
+
+/**
+ * Agent task status response schema
+ * Response from agent server for task status queries
+ */
+export const AgentTaskStatusResponseSchema = z.object({
+  task_id: z.string().optional(),
+  status: z.string().optional(),
+  current_step: z.string().optional(),
+  error: z.string().optional(),
+  message: z.string().optional(),
+});
+
+/**
+ * Simulation status response schema
+ * Response for simulation status queries from agent server
+ */
+export const SimulationStatusResponseSchema = z.object({
+  workflow_id: z.string(),
+  workflow_type: z.string(),
+  status: z.string(),
+  current_step: z.string(),
+  error: z.string().nullable(),
+  created_at: z.string(),
+  updated_at: z.string(),
+});
+
+/**
+ * Browser session response schema
+ * Response for browser session operations from agent server
+ */
+export const BrowserSessionResponseSchema = z.object({
+  session_id: z.string().optional(),
+  live_view_url: z.string().nullable().optional(),
+  status: z.string().optional(),
+  message: z.string().nullable().optional(),
+  success: z.boolean().optional(),
+});
+
+/**
+ * Task status enum schema
+ * Common status values for tasks and simulations
+ */
+export const TaskStatusSchema = z.enum([
+  'pending',
+  'running',
+  'completed',
+  'failed',
+  'cancelled',
+  'has_question',
+  'in_progress',
+]);
 
 /**
  * Agent knowledge search configuration schema
@@ -1309,6 +1381,31 @@ export const TaskPilotPromptSchema = z.object({
 // ============================================================================
 
 /**
+ * Stripe webhook event schema
+ * Matches the structure of Stripe.Event from the Stripe SDK
+ */
+export const StripeWebhookEventSchema = z.object({
+  id: z.string(),
+  object: z.literal('event'),
+  api_version: z.string().nullable().optional(),
+  created: z.number(),
+  data: z.object({
+    object: z.record(z.unknown()), // The actual event object varies by event type
+    previous_attributes: z.record(z.unknown()).optional(),
+  }),
+  livemode: z.boolean(),
+  pending_webhooks: z.number(),
+  request: z
+    .object({
+      id: z.string().nullable(),
+      idempotency_key: z.string().nullable(),
+    })
+    .nullable()
+    .optional(),
+  type: z.string(), // Event type (e.g., 'customer.subscription.created')
+});
+
+/**
  * Stripe checkout session creation request schema
  */
 export const StripeCheckoutSchema = z.object({
@@ -1507,6 +1604,12 @@ export type AgentSimulationIndexRequest = z.infer<typeof AgentSimulationIndexReq
 export type AgentSimulationIndexResponse = z.infer<typeof AgentSimulationIndexResponseSchema>;
 export type AgentIndexCallbackRequest = z.infer<typeof AgentIndexCallbackRequestSchema>;
 export type AgentIndexCallbackResponse = z.infer<typeof AgentIndexCallbackResponseSchema>;
+export type AgentTaskStartResponseData = z.infer<typeof AgentTaskStartResponseSchema>;
+export type AgentTaskStopResponseData = z.infer<typeof AgentTaskStopResponseSchema>;
+export type AgentTaskStatusResponseData = z.infer<typeof AgentTaskStatusResponseSchema>;
+export type SimulationStatusResponseData = z.infer<typeof SimulationStatusResponseSchema>;
+export type BrowserSessionResponseData = z.infer<typeof BrowserSessionResponseSchema>;
+export type TaskStatus = z.infer<typeof TaskStatusSchema>;
 export type FileUploadResponse = z.infer<typeof FileUploadResponseSchema>;
 export type ChatRequest = z.infer<typeof ChatRequestSchema>;
 export type ChatResponseData = z.infer<typeof ChatResponseSchema>;
