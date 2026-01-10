@@ -14,16 +14,8 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 
-import {
-  devTestService,
-  type ScenarioResult,
-  type TestResult,
-} from '../../services/DevTestService';
-import {
-  domService,
-  type ElementFingerprint,
-  type ValidationResult,
-} from '../../services/DomService';
+import { devTestService, type ScenarioResult, type TestResult } from '../../services/DevTestService';
+import { domService, type ElementFingerprint, type ValidationResult } from '../../services/DomService';
 import { type ToolExecutionResult, toolExecutionService } from '../../services/ToolService';
 import { TOOL_PARAMS } from '../../utils/devTools';
 
@@ -277,7 +269,7 @@ export const DebugPanel: React.FC = () => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.shiftKey && e.key === 'D') {
         e.preventDefault();
-        setIsVisible((prev) => !prev);
+        setIsVisible(prev => !prev);
       }
     };
 
@@ -324,12 +316,7 @@ export const DebugPanel: React.FC = () => {
         parsedArgs[key] = isNaN(num) ? value : num;
       }
 
-      const res = await toolExecutionService.executeTool(
-        selectedTool,
-        parsedArgs,
-        mode,
-        explanation
-      );
+      const res = await toolExecutionService.executeTool(selectedTool, parsedArgs, mode, explanation);
       setResult(res);
     } catch (error) {
       setResult({
@@ -363,7 +350,7 @@ export const DebugPanel: React.FC = () => {
   // Use element in tool
   const handleUseElement = useCallback((index: number) => {
     setActiveTab('tools');
-    setToolArgs((prev) => ({ ...prev, index: String(index) }));
+    setToolArgs(prev => ({ ...prev, index: String(index) }));
   }, []);
 
   // Mismatch testing handlers
@@ -393,11 +380,11 @@ export const DebugPanel: React.FC = () => {
   const handleRunScenario = useCallback(
     async (scenarioId: string) => {
       const result = await devTestService.runScenario(scenarioId);
-      setScenarioResults((prev) => [...prev, result]);
+      setScenarioResults(prev => [...prev, result]);
       refreshValidationLog();
       refreshMismatchElements();
     },
-    [refreshValidationLog, refreshMismatchElements]
+    [refreshValidationLog, refreshMismatchElements],
   );
 
   const handleRunAllScenarios = useCallback(async () => {
@@ -478,11 +465,7 @@ export const DebugPanel: React.FC = () => {
           🔧 Debug Panel
           <span style={{ ...styles.badge, backgroundColor: '#4ec9b0' }}>DEV</span>
         </span>
-        <button
-          style={styles.closeBtn}
-          onClick={() => setIsVisible(false)}
-          title='Close (Ctrl+Shift+D)'
-        >
+        <button style={styles.closeBtn} onClick={() => setIsVisible(false)} title='Close (Ctrl+Shift+D)'>
           ✕
         </button>
       </div>
@@ -492,10 +475,7 @@ export const DebugPanel: React.FC = () => {
         <button style={styles.tab(activeTab === 'tools')} onClick={() => setActiveTab('tools')}>
           Tools
         </button>
-        <button
-          style={styles.tab(activeTab === 'elements')}
-          onClick={() => setActiveTab('elements')}
-        >
+        <button style={styles.tab(activeTab === 'elements')} onClick={() => setActiveTab('elements')}>
           Elements {indexedElements.length > 0 && `(${indexedElements.length})`}
         </button>
         <button
@@ -517,11 +497,7 @@ export const DebugPanel: React.FC = () => {
             {/* Tool Selector */}
             <div style={styles.section}>
               <div style={styles.sectionTitle}>Select Tool</div>
-              <select
-                style={styles.select}
-                value={selectedTool}
-                onChange={(e) => setSelectedTool(e.target.value)}
-              >
+              <select style={styles.select} value={selectedTool} onChange={e => setSelectedTool(e.target.value)}>
                 <optgroup label='Navigation'>
                   <option value='navigate'>navigate</option>
                   <option value='search'>search</option>
@@ -553,21 +529,17 @@ export const DebugPanel: React.FC = () => {
             {allParams.length > 0 && (
               <div style={styles.section}>
                 <div style={styles.sectionTitle}>Parameters</div>
-                {allParams.map((param) => (
+                {allParams.map(param => (
                   <div key={param} style={styles.inputGroup}>
                     <label style={styles.label}>
                       {param}
-                      {toolParams.required.includes(param) && (
-                        <span style={{ color: '#f14c4c' }}> *</span>
-                      )}
+                      {toolParams.required.includes(param) && <span style={{ color: '#f14c4c' }}> *</span>}
                     </label>
                     <input
                       style={styles.input}
                       type='text'
                       value={toolArgs[param] || ''}
-                      onChange={(e) =>
-                        setToolArgs((prev) => ({ ...prev, [param]: e.target.value }))
-                      }
+                      onChange={e => setToolArgs(prev => ({ ...prev, [param]: e.target.value }))}
                       placeholder={getPlaceholder(param)}
                     />
                   </div>
@@ -593,7 +565,7 @@ export const DebugPanel: React.FC = () => {
                     style={styles.input}
                     type='text'
                     value={explanation}
-                    onChange={(e) => setExplanation(e.target.value)}
+                    onChange={e => setExplanation(e.target.value)}
                     placeholder='What this action does...'
                   />
                 </div>
@@ -632,9 +604,7 @@ export const DebugPanel: React.FC = () => {
                       : result.result}
                   </pre>
                 )}
-                {result.error && (
-                  <div style={{ marginTop: '8px', color: '#f14c4c' }}>{result.error}</div>
-                )}
+                {result.error && <div style={{ marginTop: '8px', color: '#f14c4c' }}>{result.error}</div>}
               </div>
             )}
           </>
@@ -650,7 +620,7 @@ export const DebugPanel: React.FC = () => {
             {/* Element List */}
             {indexedElements.length > 0 ? (
               <div style={styles.elementList}>
-                {indexedElements.map((el) => (
+                {indexedElements.map(el => (
                   <div
                     key={el.index}
                     style={styles.elementItem}
@@ -698,12 +668,12 @@ export const DebugPanel: React.FC = () => {
                   type='number'
                   style={{ ...styles.input, width: '80px' }}
                   value={selectedMismatchIndex}
-                  onChange={(e) => setSelectedMismatchIndex(parseInt(e.target.value) || 0)}
+                  onChange={e => setSelectedMismatchIndex(parseInt(e.target.value) || 0)}
                 />
                 <select
                   style={{ ...styles.select, flex: 1 }}
                   value={testCommandInput}
-                  onChange={(e) => setTestCommandInput(e.target.value)}
+                  onChange={e => setTestCommandInput(e.target.value)}
                 >
                   <option value='click_element'>click_element</option>
                   <option value='type_text'>type_text</option>
@@ -730,10 +700,7 @@ export const DebugPanel: React.FC = () => {
                 <button style={styles.indexBtn} onClick={handleInsertBefore}>
                   Insert Before
                 </button>
-                <button
-                  style={{ ...styles.indexBtn, backgroundColor: '#5a1d1d' }}
-                  onClick={handleRemoveElement}
-                >
+                <button style={{ ...styles.indexBtn, backgroundColor: '#5a1d1d' }} onClick={handleRemoveElement}>
                   Remove
                 </button>
                 <button style={styles.indexBtn} onClick={handleSimulateRerender}>
@@ -758,10 +725,7 @@ export const DebugPanel: React.FC = () => {
                 <button style={styles.indexBtn} onClick={handleCreateShadowDom}>
                   Shadow DOM
                 </button>
-                <button
-                  style={{ ...styles.indexBtn, backgroundColor: '#5a3d1d' }}
-                  onClick={handleCleanup}
-                >
+                <button style={{ ...styles.indexBtn, backgroundColor: '#5a3d1d' }} onClick={handleCleanup}>
                   Cleanup Test Elements
                 </button>
               </div>
@@ -777,22 +741,13 @@ export const DebugPanel: React.FC = () => {
                 Run All Scenarios
               </button>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <button
-                  style={styles.indexBtn}
-                  onClick={() => handleRunScenario('index-shift-insert')}
-                >
+                <button style={styles.indexBtn} onClick={() => handleRunScenario('index-shift-insert')}>
                   Index Shift - Insert
                 </button>
-                <button
-                  style={styles.indexBtn}
-                  onClick={() => handleRunScenario('index-shift-remove')}
-                >
+                <button style={styles.indexBtn} onClick={() => handleRunScenario('index-shift-remove')}>
                   Index Shift - Remove
                 </button>
-                <button
-                  style={styles.indexBtn}
-                  onClick={() => handleRunScenario('element-content-change')}
-                >
+                <button style={styles.indexBtn} onClick={() => handleRunScenario('element-content-change')}>
                   Content Change
                 </button>
                 <button style={styles.indexBtn} onClick={() => handleRunScenario('spa-rerender')}>
@@ -816,9 +771,7 @@ export const DebugPanel: React.FC = () => {
                   <div style={{ color: getOutcomeColor(lastTestResult.outcome) }}>
                     Outcome: {lastTestResult.outcome.toUpperCase()}
                   </div>
-                  <div style={{ fontSize: '10px', color: '#808080', marginTop: '4px' }}>
-                    {lastTestResult.details}
-                  </div>
+                  <div style={{ fontSize: '10px', color: '#808080', marginTop: '4px' }}>{lastTestResult.details}</div>
                 </div>
               </div>
             )}
@@ -839,19 +792,14 @@ export const DebugPanel: React.FC = () => {
                         borderLeft: `3px solid ${result.passed ? '#4ec9b0' : '#f14c4c'}`,
                       }}
                     >
-                      <div
-                        style={{ fontWeight: 'bold', color: result.passed ? '#4ec9b0' : '#f14c4c' }}
-                      >
+                      <div style={{ fontWeight: 'bold', color: result.passed ? '#4ec9b0' : '#f14c4c' }}>
                         {result.passed ? 'PASS' : 'FAIL'}: {result.scenarioName}
                       </div>
                       <div style={{ fontSize: '10px', color: '#808080' }}>{result.summary}</div>
                     </div>
                   ))}
                 </div>
-                <button
-                  style={{ ...styles.indexBtn, marginTop: '8px' }}
-                  onClick={() => setScenarioResults([])}
-                >
+                <button style={{ ...styles.indexBtn, marginTop: '8px' }} onClick={() => setScenarioResults([])}>
                   Clear Results
                 </button>
               </div>
@@ -918,19 +866,14 @@ export const DebugPanel: React.FC = () => {
                           borderLeft: `3px solid ${getValidationColor(entry.validation)}`,
                         }}
                       >
-                        <div style={{ color: '#808080', fontSize: '9px' }}>
-                          {entry.timestamp.toLocaleTimeString()}
-                        </div>
+                        <div style={{ color: '#808080', fontSize: '9px' }}>{entry.timestamp.toLocaleTimeString()}</div>
                         <div style={{ fontWeight: 'bold', fontSize: '11px' }}>{entry.action}</div>
                         <div style={{ fontSize: '10px' }}>
                           Valid: {entry.validation.isValid ? 'Yes' : 'No'}
-                          {entry.validation.mismatchReason &&
-                            ` (${entry.validation.mismatchReason})`}
+                          {entry.validation.mismatchReason && ` (${entry.validation.mismatchReason})`}
                         </div>
                         {entry.recoveryAction && (
-                          <div style={{ color: '#dcdcaa', fontSize: '10px' }}>
-                            Recovery: {entry.recoveryAction}
-                          </div>
+                          <div style={{ color: '#dcdcaa', fontSize: '10px' }}>Recovery: {entry.recoveryAction}</div>
                         )}
                       </div>
                     ))
@@ -971,19 +914,14 @@ export const DebugPanel: React.FC = () => {
                           padding: '6px 10px',
                           borderBottom: '1px solid #3c3c3c',
                           cursor: 'pointer',
-                          backgroundColor:
-                            selectedMismatchIndex === index ? '#264f78' : 'transparent',
+                          backgroundColor: selectedMismatchIndex === index ? '#264f78' : 'transparent',
                           borderLeft: `3px solid ${getValidationColor(validation)}`,
                         }}
                       >
                         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                           <span style={styles.elementIndex}>{index}</span>
-                          <span style={styles.elementTag}>
-                            &lt;{fingerprint.tagName.toLowerCase()}&gt;
-                          </span>
-                          {fingerprint.id && (
-                            <span style={styles.elementId}>#{fingerprint.id}</span>
-                          )}
+                          <span style={styles.elementTag}>&lt;{fingerprint.tagName.toLowerCase()}&gt;</span>
+                          {fingerprint.id && <span style={styles.elementId}>#{fingerprint.id}</span>}
                         </div>
                         <div style={{ fontSize: '10px', color: '#808080', marginTop: '2px' }}>
                           {fingerprint.textContent?.slice(0, 40) || '(no text)'}

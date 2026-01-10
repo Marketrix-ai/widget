@@ -36,7 +36,7 @@ type ApiResponse<T = unknown> = {
  * Consolidates the repeated pattern: response.status === 200 && response.body?.success
  */
 export function isValidApiResponse<T = unknown>(
-  response: ApiResponse<T>
+  response: ApiResponse<T>,
 ): response is ApiResponse<T> & { status: 200; body: ApiResponseBody<T> } {
   const body = response.body as ApiResponseBody<T> | null | undefined;
   return response.status === 200 && body?.success === true;
@@ -94,7 +94,7 @@ export function extractErrorMessage(error: unknown, fallback = 'Unknown error'):
 export function handleApiError(
   error: unknown,
   context = 'Operation',
-  config?: Partial<MarketrixConfig>
+  config?: Partial<MarketrixConfig>,
 ): {
   isValid: false;
   error: string;

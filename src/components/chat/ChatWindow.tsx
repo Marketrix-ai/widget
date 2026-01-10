@@ -39,7 +39,7 @@ interface ChatWindowProps {
     mode?: InstructionType,
     connectionId?: number,
     question?: string,
-    skipUserMessage?: boolean
+    skipUserMessage?: boolean,
   ) => void;
   onSetMode: (mode: InstructionType) => void;
   onAddMessage: (message: ChatMessage) => void;
@@ -74,9 +74,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   const chatWindowRef = useRef<HTMLDivElement>(null);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [screenShareMessageId, setScreenShareMessageId] = useState<string | null>(null);
-  const [screenAccessRequestMessageId, setScreenAccessRequestMessageId] = useState<string | null>(
-    null
-  );
+  const [screenAccessRequestMessageId, setScreenAccessRequestMessageId] = useState<string | null>(null);
   const [showScreenAccessModal, setShowScreenAccessModal] = useState(false);
   const [pendingMessage, setPendingMessage] = useState<{
     content: string;
@@ -131,12 +129,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           }
 
           // Add a muted "Stopped screenshare" message
-          const stoppedMessage = createSystemMessage(
-            'Stopped screenshare',
-            'show',
-            'user',
-            'stopped-sharing'
-          );
+          const stoppedMessage = createSystemMessage('Stopped screenshare', 'show', 'user', 'stopped-sharing');
           onAddMessage(stoppedMessage);
         }
 
@@ -156,7 +149,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
 
   const handleSendMessage = () => {
     // Check if there's a pending message (placeholder exists)
-    const hasPendingMessage = isLoading || messages.some((msg) => msg.isPlaceholder);
+    const hasPendingMessage = isLoading || messages.some(msg => msg.isPlaceholder);
 
     if (inputValue.trim() && !isLoading && !hasPendingMessage) {
       const messageContent = inputValue.trim();
@@ -167,11 +160,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       onAddMessage(userMessage);
 
       // Check if screen sharing is needed for show/do modes
-      if (
-        (currentMode === 'show' || currentMode === 'do') &&
-        !isScreenSharing &&
-        !screenAccessRequestMessageId
-      ) {
+      if ((currentMode === 'show' || currentMode === 'do') && !isScreenSharing && !screenAccessRequestMessageId) {
         // Store the pending message and show screen access request
         // alreadyAdded=true because we just added the message above
         setPendingMessage({ content: messageContent, mode: currentMode, alreadyAdded: true });
@@ -216,7 +205,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       `Switched to ${modeDisplayNames[mode]} mode`,
       mode,
       'agent',
-      'mode-change'
+      'mode-change',
     );
 
     onAddMessage(systemMessage);
@@ -297,13 +286,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       if (pendingMessage) {
         const message = pendingMessage;
         setPendingMessage(null);
-        onSendMessage(
-          message.content,
-          message.mode,
-          message.connectionId,
-          message.question,
-          message.alreadyAdded
-        );
+        onSendMessage(message.content, message.mode, message.connectionId, message.question, message.alreadyAdded);
       }
     } catch (error) {
       console.error('Failed to start screen sharing:', error);
@@ -321,13 +304,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       if (pendingMessage) {
         const message = pendingMessage;
         setPendingMessage(null);
-        onSendMessage(
-          message.content,
-          message.mode,
-          message.connectionId,
-          message.question,
-          message.alreadyAdded
-        );
+        onSendMessage(message.content, message.mode, message.connectionId, message.question, message.alreadyAdded);
       }
     }
   };
@@ -345,13 +322,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     if (pendingMessage) {
       const message = pendingMessage;
       setPendingMessage(null);
-      onSendMessage(
-        message.content,
-        message.mode,
-        message.connectionId,
-        message.question,
-        message.alreadyAdded
-      );
+      onSendMessage(message.content, message.mode, message.connectionId, message.question, message.alreadyAdded);
     }
   };
 
@@ -368,12 +339,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     }
 
     // Add a muted "Stopped screenshare" message
-    const stoppedMessage = createSystemMessage(
-      'Stopped screenshare',
-      'show',
-      'user',
-      'stopped-sharing'
-    );
+    const stoppedMessage = createSystemMessage('Stopped screenshare', 'show', 'user', 'stopped-sharing');
     onAddMessage(stoppedMessage);
 
     setScreenShareMessageId(null);
@@ -403,10 +369,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   } satisfies React.CSSProperties;
 
   // Error Boundary for chat messages
-  class ChatErrorBoundary extends React.Component<
-    { children: React.ReactNode },
-    { hasError: boolean }
-  > {
+  class ChatErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean }> {
     constructor(props: { children: React.ReactNode }) {
       super(props);
       this.state = { hasError: false };
@@ -578,7 +541,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                 onClick={() => {
                   const result = onClearChat();
                   if (result instanceof Promise) {
-                    result.catch((error) => {
+                    result.catch(error => {
                       console.error('Error clearing chat:', error);
                     });
                   }
@@ -587,13 +550,13 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                 style={{
                   backgroundColor: 'transparent',
                 }}
-                onMouseEnter={(e) => {
+                onMouseEnter={e => {
                   e.currentTarget.style.backgroundColor = addOpacity(
                     getContrastingColor(settings.widget_accent_color),
-                    0.2
+                    0.2,
                   );
                 }}
-                onMouseLeave={(e) => {
+                onMouseLeave={e => {
                   e.currentTarget.style.backgroundColor = 'transparent';
                 }}
                 aria-label='Reset widget'
@@ -621,13 +584,13 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
               style={{
                 backgroundColor: 'transparent',
               }}
-              onMouseEnter={(e) => {
+              onMouseEnter={e => {
                 e.currentTarget.style.backgroundColor = addOpacity(
                   getContrastingColor(settings.widget_accent_color),
-                  0.2
+                  0.2,
                 );
               }}
-              onMouseLeave={(e) => {
+              onMouseLeave={e => {
                 e.currentTarget.style.backgroundColor = 'transparent';
               }}
               aria-label='Close chat'
@@ -669,11 +632,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                   messagesEndRef={messagesEndRef}
                   onSendMessage={(content, mode, connectionId, question) => {
                     // Check if screen sharing is needed for show/do modes
-                    if (
-                      (mode === 'show' || mode === 'do') &&
-                      !isScreenSharing &&
-                      !screenAccessRequestMessageId
-                    ) {
+                    if ((mode === 'show' || mode === 'do') && !isScreenSharing && !screenAccessRequestMessageId) {
                       // Store the pending message and show screen access request
                       // alreadyAdded=true because chip messages are already added to chat
                       setPendingMessage({
@@ -722,17 +681,10 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                   </div>
                   <div className='space-y-1'>
                     {taskProgress.map((progress, idx) => (
-                      <div
-                        key={idx}
-                        className='text-xs opacity-80'
-                        style={{ color: settings.widget_text_color }}
-                      >
-                        <span className='font-medium'>Step {progress.step}:</span>{' '}
-                        {progress.tool_name}
+                      <div key={idx} className='text-xs opacity-80' style={{ color: settings.widget_text_color }}>
+                        <span className='font-medium'>Step {progress.step}:</span> {progress.tool_name}
                         {progress.tool_params && Object.keys(progress.tool_params).length > 0 && (
-                          <span className='opacity-70 ml-1'>
-                            ({Object.keys(progress.tool_params).join(', ')})
-                          </span>
+                          <span className='opacity-70 ml-1'>({Object.keys(progress.tool_params).join(', ')})</span>
                         )}
                       </div>
                     ))}
@@ -746,7 +698,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                 onChange={setInputValue}
                 onKeyPress={handleKeyPress}
                 onSend={handleSendMessage}
-                isLoading={isLoading || messages.some((msg) => msg.isPlaceholder)}
+                isLoading={isLoading || messages.some(msg => msg.isPlaceholder)}
                 isTaskRunning={isTaskRunning}
                 onStop={() => {
                   // Cleanup show mode popup and highlight when stopping task

@@ -89,8 +89,7 @@ const setCorsHeaders = (res: ServerResponse): void => {
   res.setHeader('Cache-Control', 'no-cache');
 };
 
-const readFile = (path: string): string | null =>
-  existsSync(path) ? readFileSync(path, 'utf-8') : null;
+const readFile = (path: string): string | null => (existsSync(path) ? readFileSync(path, 'utf-8') : null);
 
 const copyIndexHtmlPlugin = (outDir: string) => {
   return {
@@ -159,7 +158,7 @@ const devWidgetPlugin = () => {
       buildPromise = doBuild();
 
       s.watcher.add(resolve(cwd(), SRC_DIR, '**/*.{ts,tsx}'));
-      s.watcher.on('change', async (file) => {
+      s.watcher.on('change', async file => {
         if (file.includes(SRC_DIR)) {
           console.log(`[dev-widget] Rebuilding ${BUNDLE_PATH}...`);
           bundle = sourcemap = null;

@@ -6,11 +6,7 @@ interface ErrorDisplayProps {
   position?: 'bottom_left' | 'bottom_right' | 'top_left' | 'top_right';
 }
 
-export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
-  error,
-  onClose,
-  position = 'bottom_left',
-}) => {
+export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({ error, onClose, position = 'bottom_left' }) => {
   const positionStyle = position === 'bottom_left' || !position ? { left: '0' } : { right: '0' };
 
   return (
@@ -24,11 +20,7 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
       <div className='bg-red-500 text-white px-4 py-3 rounded-lg shadow-lg'>
         <div className='flex items-center justify-between'>
           <span className='text-sm'>{error}</span>
-          <button
-            onClick={onClose}
-            className='ml-4 text-white hover:text-red-100'
-            aria-label='Close error'
-          >
+          <button onClick={onClose} className='ml-4 text-white hover:text-red-100' aria-label='Close error'>
             <svg className='w-4 h-4' fill='currentColor' viewBox='0 0 20 20'>
               <path
                 fillRule='evenodd'

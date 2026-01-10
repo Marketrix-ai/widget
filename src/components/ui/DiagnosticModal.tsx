@@ -14,11 +14,7 @@ interface DiagnosticModalProps {
   };
 }
 
-export const DiagnosticModal: React.FC<DiagnosticModalProps> = ({
-  isOpen,
-  onClose,
-  diagnosticData,
-}) => {
+export const DiagnosticModal: React.FC<DiagnosticModalProps> = ({ isOpen, onClose, diagnosticData }) => {
   if (!isOpen) return null;
 
   const copyToClipboard = (text: string | null | undefined) => {
@@ -27,13 +23,10 @@ export const DiagnosticModal: React.FC<DiagnosticModalProps> = ({
   };
 
   return (
-    <div
-      className='fixed inset-0 bg-black/50 flex items-center justify-center z-[100]'
-      onClick={onClose}
-    >
+    <div className='fixed inset-0 bg-black/50 flex items-center justify-center z-[100]' onClick={onClose}>
       <div
         className='bg-white rounded-lg shadow-xl max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto'
-        onClick={(e) => e.stopPropagation()}
+        onClick={e => e.stopPropagation()}
       >
         {/* Header */}
         <div className='bg-gradient-to-r from-purple-600 to-blue-600 px-6 py-4 text-white relative overflow-hidden flex-shrink-0'>

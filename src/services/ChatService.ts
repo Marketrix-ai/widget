@@ -107,14 +107,12 @@ export class ChatService {
   }
 
   updateMessage(messageId: string, updates: Partial<ChatMessage>): void {
-    this.messages = this.messages.map((msg) =>
-      msg.id === messageId ? { ...msg, ...updates } : msg
-    );
+    this.messages = this.messages.map(msg => (msg.id === messageId ? { ...msg, ...updates } : msg));
     this.persistState();
   }
 
   removeMessage(messageId: string): void {
-    this.messages = this.messages.filter((msg) => msg.id !== messageId);
+    this.messages = this.messages.filter(msg => msg.id !== messageId);
     this.persistState();
   }
 
@@ -171,7 +169,7 @@ export class ChatService {
         // Chat ID mismatch - restoring history anyway
       }
 
-      this.messages = context.messages.map((msg) => {
+      this.messages = context.messages.map(msg => {
         // Handle restored screenshare messages
         // If a message was a screenshare stream (id starts with 'screenshare-'),
         // replace it with a "Screenshare ended" message since the stream is lost on refresh.
@@ -226,7 +224,7 @@ export class ChatService {
 
     try {
       const serializedMessages = this.messages
-        .filter((msg) => {
+        .filter(msg => {
           if (!msg.isPlaceholder) return true;
           // Keep placeholders if they have content, progress parts, OR are thinking/waiting
           if (msg.placeholderState === 'thinking' || msg.placeholderState === 'waiting-for-user') {
@@ -237,8 +235,8 @@ export class ChatService {
           const parts = msg.parts || [];
           return parts.length > 0;
         })
-        .filter((msg) => !(msg.isSystemMessage && msg.content === 'Chat context changed'))
-        .map((msg) => ({
+        .filter(msg => !(msg.isSystemMessage && msg.content === 'Chat context changed'))
+        .map(msg => ({
           id: msg.id,
           content: removeThinkingMarkers(msg.content),
           sender: msg.sender,
@@ -279,7 +277,7 @@ export const chatService = ChatService.getInstance();
 export function createUserMessage(
   content: string,
   mode?: InstructionType,
-  idPrefix: string = 'user-message'
+  idPrefix: string = 'user-message',
 ): ChatMessage {
   const parts = [];
   const cleanContent = content.trim();
@@ -301,7 +299,7 @@ export function createAgentMessage(
   content: string,
   mode?: InstructionType,
   messageId?: string,
-  idPrefix: string = 'agent-message'
+  idPrefix: string = 'agent-message',
 ): ChatMessage {
   const parts = [];
   const cleanContent = content.trim();
@@ -323,7 +321,7 @@ export function createSystemMessage(
   content: string,
   mode?: InstructionType,
   sender: 'user' | 'agent' = 'agent',
-  idPrefix: string = 'system-message'
+  idPrefix: string = 'system-message',
 ): ChatMessage {
   const parts = [];
   if (content) {
@@ -343,7 +341,7 @@ export function createSystemMessage(
 
 export function createPlaceholderMessage(
   mode?: InstructionType,
-  placeholderState: 'thinking' | 'waiting-for-user' = 'thinking'
+  placeholderState: 'thinking' | 'waiting-for-user' = 'thinking',
 ): ChatMessage {
   return {
     id: `placeholder-${Date.now()}`,
@@ -383,10 +381,7 @@ export function createStartedScreenshareMessage(mode: InstructionType = 'show'):
   };
 }
 
-export function createScreenshareMessage(
-  stream: MediaStream,
-  mode: InstructionType = 'show'
-): ChatMessage {
+export function createScreenshareMessage(stream: MediaStream, mode: InstructionType = 'show'): ChatMessage {
   return {
     id: `screenshare-${Date.now()}`,
     content: '',
@@ -398,11 +393,7 @@ export function createScreenshareMessage(
   };
 }
 
-export function createErrorMessage(
-  content: string,
-  mode?: InstructionType,
-  originalMessageId?: string
-): ChatMessage {
+export function createErrorMessage(content: string, mode?: InstructionType, originalMessageId?: string): ChatMessage {
   return {
     id: originalMessageId ? `error-${originalMessageId}-${Date.now()}` : `error-${Date.now()}`,
     content,

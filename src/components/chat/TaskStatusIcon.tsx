@@ -36,12 +36,6 @@ export const TaskStatusIcon: React.FC<TaskStatusIconProps> = ({ status, accentCo
       );
     case 'ongoing':
     default:
-      return (
-        <FaSpinner
-          className='flex-shrink-0 animate-spin'
-          style={{ color: accentColor }}
-          size={iconSize}
-        />
-      );
+      return <FaSpinner className='flex-shrink-0 animate-spin' style={{ color: accentColor }} size={iconSize} />;
   }
 };

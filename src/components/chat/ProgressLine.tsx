@@ -31,13 +31,7 @@ export const ProgressLine: React.FC<ProgressLineProps> = ({
   const renderIcon = () => {
     switch (status) {
       case 'completed':
-        return (
-          <FaCheckCircle
-            className='flex-shrink-0 mt-0.5'
-            style={{ color: accentColor || '#10b981' }}
-            size={16}
-          />
-        );
+        return <FaCheckCircle className='flex-shrink-0 mt-0.5' style={{ color: accentColor || '#10b981' }} size={16} />;
       case 'failed':
         return (
           <FaTimesCircle
@@ -47,13 +41,7 @@ export const ProgressLine: React.FC<ProgressLineProps> = ({
           />
         );
       case 'canceled':
-        return (
-          <FaBan
-            className='flex-shrink-0 mt-0.5'
-            style={{ color: addOpacity(textColor, 0.5) }}
-            size={16}
-          />
-        );
+        return <FaBan className='flex-shrink-0 mt-0.5' style={{ color: addOpacity(textColor, 0.5) }} size={16} />;
       case 'running':
         // If waiting for user, we might want a different icon or just spinner?
         // The original code had specific logic for waiting for user.
@@ -98,13 +86,7 @@ export const ProgressLine: React.FC<ProgressLineProps> = ({
       case 'pending':
       default:
         // Static circle for pending/queued
-        return (
-          <FaCircle
-            className='flex-shrink-0 mt-0.5'
-            style={{ color: addOpacity(textColor, 0.5) }}
-            size={16}
-          />
-        );
+        return <FaCircle className='flex-shrink-0 mt-0.5' style={{ color: addOpacity(textColor, 0.5) }} size={16} />;
     }
   };
 

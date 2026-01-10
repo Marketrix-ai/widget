@@ -52,7 +52,7 @@ class SessionManager {
 
     document.addEventListener(
       'click',
-      (event) => {
+      event => {
         const target = event.target as HTMLElement;
         const anchor = target.closest('a') as HTMLAnchorElement | null;
 
@@ -82,7 +82,7 @@ class SessionManager {
           // Invalid URL, skip
         }
       },
-      true
+      true,
     ); // Use capture phase to intercept before navigation
   }
 

@@ -37,10 +37,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
   if (message.isSystemMessage) {
     return (
       <div key={`message-${message.id}-${index}`} className='flex justify-center items-center py-0'>
-        <span
-          className='text-[10px] font-inter font-normal'
-          style={{ color: `${settings.widget_text_color}99` }}
-        >
+        <span className='text-[10px] font-inter font-normal' style={{ color: `${settings.widget_text_color}99` }}>
           {message.content}
         </span>
       </div>
@@ -85,25 +82,17 @@ export const MessageItem: React.FC<MessageItemProps> = ({
         <div
           className={`flex flex-col flex-1 relative
           ${message.videoStream ? 'p-0' : 'px-2.5 py-2'} shadow-sm border
-          ${
-            isUser
-              ? 'rounded-l-lg rounded-tr-lg rounded-br-lg'
-              : 'rounded-r-lg rounded-tl-lg rounded-bl-lg'
-          }
+          ${isUser ? 'rounded-l-lg rounded-tr-lg rounded-br-lg' : 'rounded-r-lg rounded-tl-lg rounded-bl-lg'}
         `}
           style={{
             backgroundColor: isUser ? settings.widget_accent_color : '#ffffff',
-            color: isUser
-              ? getContrastingColor(settings.widget_accent_color)
-              : settings.widget_text_color,
+            color: isUser ? getContrastingColor(settings.widget_accent_color) : settings.widget_text_color,
             borderColor: isUser ? settings.widget_accent_color : settings.widget_border_color,
             maxWidth: 'calc(100% - 40px)', // Leave space for logo space on left
           }}
         >
           {/* Video stream display - edge-to-edge */}
-          {message.videoStream && (
-            <VideoStreamDisplay stream={message.videoStream} isUserMessage={isUser} />
-          )}
+          {message.videoStream && <VideoStreamDisplay stream={message.videoStream} isUserMessage={isUser} />}
           {/* Message content */}
           {!message.videoStream && (
             <MessageContent
@@ -111,11 +100,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
               isLastMessage={isLastMessage}
               widgetState={widgetState}
               accentColor={settings.widget_accent_color}
-              textColor={
-                isUser
-                  ? getContrastingColor(settings.widget_accent_color)
-                  : settings.widget_text_color
-              }
+              textColor={isUser ? getContrastingColor(settings.widget_accent_color) : settings.widget_text_color}
             />
           )}
 
@@ -123,7 +108,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
           {message.isScreenAccessRequest && !message.screenShareStatus && (
             <div className='mt-1.5 pt-0.5 flex gap-2'>
               <button
-                onClick={(e) => {
+                onClick={e => {
                   e.preventDefault();
                   e.stopPropagation();
                   onScreenAccessAllow?.();
@@ -138,7 +123,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                 <span className='text-xs font-medium'>Yes</span>
               </button>
               <button
-                onClick={(e) => {
+                onClick={e => {
                   e.preventDefault();
                   e.stopPropagation();
                   onScreenAccessDeny?.();
@@ -176,10 +161,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
           {/* Task status icon at bottom right (only for agent messages with task status) */}
           {!isUser && message.taskStatus && (
             <div className='absolute bottom-1 right-1 flex items-center justify-center'>
-              <TaskStatusIcon
-                status={message.taskStatus}
-                accentColor={settings.widget_accent_color}
-              />
+              <TaskStatusIcon status={message.taskStatus} accentColor={settings.widget_accent_color} />
             </div>
           )}
         </div>

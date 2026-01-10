@@ -68,7 +68,7 @@ export const devTools = {
         id: el.id || '-',
         class: el.className?.toString().slice(0, 30) || '-',
         text: el.textContent?.slice(0, 30) || '-',
-      }))
+      })),
     );
   },
 
@@ -104,7 +104,7 @@ export const devTools = {
     toolName: string,
     args: Record<string, unknown> = {},
     mode: 'do' | 'show' = 'do',
-    explanation: string = ''
+    explanation: string = '',
   ): Promise<ToolExecutionResult> {
     // Validate tool exists
     if (!TOOL_PARAMS[toolName]) {
@@ -115,7 +115,7 @@ export const devTools = {
 
     // Check required params
     const { required } = TOOL_PARAMS[toolName];
-    const missing = required.filter((param) => !(param in args));
+    const missing = required.filter(param => !(param in args));
     if (missing.length > 0) {
       console.error(`[DevTools] Missing required params for ${toolName}:`, missing);
       return { success: false, result: '', error: `Missing params: ${missing.join(', ')}` };
@@ -145,7 +145,7 @@ export const devTools = {
    * Run a sequence of tools
    */
   async runSequence(
-    sequence: Array<{ tool: string; args?: Record<string, unknown>; delay?: number }>
+    sequence: Array<{ tool: string; args?: Record<string, unknown>; delay?: number }>,
   ): Promise<ToolExecutionResult[]> {
     const results: ToolExecutionResult[] = [];
 
@@ -162,7 +162,7 @@ export const devTools = {
       }
 
       if (i < sequence.length - 1 && delay > 0) {
-        await new Promise((resolve) => setTimeout(resolve, delay));
+        await new Promise(resolve => setTimeout(resolve, delay));
       }
     }
 

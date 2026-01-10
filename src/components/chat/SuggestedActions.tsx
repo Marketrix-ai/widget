@@ -33,7 +33,7 @@ export const SuggestedActions: React.FC<SuggestedActionsProps> = ({
       {actions.map((action, chipIndex) => (
         <button
           key={`welcome-chip-${action.id}-${chipIndex}`}
-          onClick={(e) => onActionClick(action, e)}
+          onClick={e => onActionClick(action, e)}
           disabled={hasPendingMessage}
           className={`
             w-full flex items-center gap-1 font-inter font-normal text-xs px-2.5 py-2 rounded-lg
@@ -49,25 +49,17 @@ export const SuggestedActions: React.FC<SuggestedActionsProps> = ({
             borderColor: hasPendingMessage
               ? addOpacity(settings.widget_secondary_color, 0.15)
               : addOpacity(settings.widget_secondary_color, 0.3),
-            color: hasPendingMessage
-              ? addOpacity(settings.widget_text_color, 0.5)
-              : settings.widget_text_color,
+            color: hasPendingMessage ? addOpacity(settings.widget_text_color, 0.5) : settings.widget_text_color,
           }}
-          onMouseEnter={(e) => {
+          onMouseEnter={e => {
             if (!hasPendingMessage) {
-              e.currentTarget.style.backgroundColor = addOpacity(
-                settings.widget_secondary_color,
-                0.3
-              );
+              e.currentTarget.style.backgroundColor = addOpacity(settings.widget_secondary_color, 0.3);
               e.currentTarget.style.borderColor = addOpacity(settings.widget_secondary_color, 0.4);
             }
           }}
-          onMouseLeave={(e) => {
+          onMouseLeave={e => {
             if (!hasPendingMessage) {
-              e.currentTarget.style.backgroundColor = addOpacity(
-                settings.widget_secondary_color,
-                0.2
-              );
+              e.currentTarget.style.backgroundColor = addOpacity(settings.widget_secondary_color, 0.2);
               e.currentTarget.style.borderColor = addOpacity(settings.widget_secondary_color, 0.3);
             }
           }}

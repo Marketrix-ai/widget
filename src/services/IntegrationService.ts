@@ -29,13 +29,10 @@ export class IntegrationService {
       const defaultsResponse = await sdk.integrationGetDefaults({
         params: { type: 'widget' },
       });
-      const defaultSettings = extractApiData<WidgetSettingsData>(
-        defaultsResponse
-      ) as WidgetSettingsData | null;
+      const defaultSettings = extractApiData<WidgetSettingsData>(defaultsResponse) as WidgetSettingsData | null;
 
       if (!defaultSettings) {
-        const error =
-          'Failed to fetch default widget settings from API. The API must return widget settings.';
+        const error = 'Failed to fetch default widget settings from API. The API must return widget settings.';
         console.error(error);
         throw new Error(error);
       }
@@ -62,15 +59,12 @@ export class IntegrationService {
       }
 
       // Extract data from response: { success: true, data: [...] }
-      const integrationsData = extractApiData<IntegrationData[]>(integrationResponse) as
-        | IntegrationData[]
-        | null;
+      const integrationsData = extractApiData<IntegrationData[]>(integrationResponse) as IntegrationData[] | null;
 
       // Find active widget integration
       const widgetIntegration =
         integrationsData?.find(
-          (integration: IntegrationData) =>
-            integration.status === 'active' && integration.type === 'widget'
+          (integration: IntegrationData) => integration.status === 'active' && integration.type === 'widget',
         ) || null;
 
       // If integration found, merge its settings over defaults

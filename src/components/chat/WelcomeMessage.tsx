@@ -29,7 +29,7 @@ interface WelcomeMessageProps {
       type: 'tell' | 'show' | 'do';
       isShow: boolean;
     },
-    event: React.MouseEvent
+    event: React.MouseEvent,
   ) => Promise<void>;
 }
 
@@ -97,9 +97,7 @@ export const WelcomeMessage: React.FC<WelcomeMessageProps> = ({
           }}
         >
           {/* Message content */}
-          <div className='text-xs font-inter font-medium leading-tight whitespace-pre-wrap break-words'>
-            {greeting}
-          </div>
+          <div className='text-xs font-inter font-medium leading-tight whitespace-pre-wrap break-words'>{greeting}</div>
 
           {/* Chips inside the greeting message bubble */}
           {suggestedActions.length > 0 && (
@@ -114,10 +112,7 @@ export const WelcomeMessage: React.FC<WelcomeMessageProps> = ({
       </div>
       {/* Timestamp below card - agent message, so right-aligned */}
       <div className='flex justify-end mt-0.5'>
-        <span
-          className='text-[10px] font-inter font-normal'
-          style={{ color: `${settings.widget_text_color}99` }}
-        >
+        <span className='text-[10px] font-inter font-normal' style={{ color: `${settings.widget_text_color}99` }}>
           {formatMessageTime(new Date())}
         </span>
       </div>

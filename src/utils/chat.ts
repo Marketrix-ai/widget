@@ -42,12 +42,7 @@ export function addThinkingMarker(content: string): string {
 export function findTaskMessageIndex(messages: ChatMessage[]): number {
   for (let i = messages.length - 1; i >= 0; i--) {
     const msg = messages[i];
-    if (
-      msg.sender === 'agent' &&
-      !msg.isSystemMessage &&
-      !msg.isScreenAccessRequest &&
-      !msg.isPlaceholder
-    ) {
+    if (msg.sender === 'agent' && !msg.isSystemMessage && !msg.isScreenAccessRequest && !msg.isPlaceholder) {
       return i;
     }
   }
@@ -82,7 +77,7 @@ function matchesProgressCriteria(
   currentMode: InstructionType,
   _preferPlaceholder: boolean | undefined,
   requireContent: boolean | undefined,
-  checkMode: boolean
+  checkMode: boolean,
 ): boolean {
   // Basic sender and type checks
   if (msg.sender !== 'agent' || msg.isSystemMessage || msg.isScreenAccessRequest) {
@@ -154,11 +149,10 @@ export function findMessageForProgress(options: FindMessageOptions): {
         currentMode,
         preferPlaceholder,
         requireContent,
-        checkMode
+        checkMode,
       );
       const isPlaceholder = msg.isPlaceholder;
-      const hasContent =
-        !requireContent || msg.content.trim().length > 0 || (msg.parts && msg.parts.length > 0);
+      const hasContent = !requireContent || msg.content.trim().length > 0 || (msg.parts && msg.parts.length > 0);
 
       if (matchesCriteria && isPlaceholder && hasContent) {
         taskMessageIndex = i;
@@ -176,7 +170,7 @@ export function findMessageForProgress(options: FindMessageOptions): {
           currentMode,
           preferPlaceholder,
           requireContent,
-          checkMode
+          checkMode,
         );
         const isPlaceholder = msg.isPlaceholder;
 
@@ -197,7 +191,7 @@ export function findMessageForProgress(options: FindMessageOptions): {
           currentMode,
           preferPlaceholder,
           requireContent,
-          checkMode
+          checkMode,
         );
         const isPlaceholder = msg.isPlaceholder;
 
@@ -222,8 +216,7 @@ export function findMessageForProgress(options: FindMessageOptions): {
       const isPlaceholder = msg.isPlaceholder;
       const notSystem = !msg.isSystemMessage;
       const notScreenAccess = !msg.isScreenAccessRequest;
-      const hasContent =
-        !requireContent || msg.content.trim().length > 0 || (msg.parts && msg.parts.length > 0);
+      const hasContent = !requireContent || msg.content.trim().length > 0 || (msg.parts && msg.parts.length > 0);
 
       if (isAgent && isPlaceholder && notSystem && notScreenAccess && hasContent) {
         taskMessageIndex = i;
@@ -235,12 +228,7 @@ export function findMessageForProgress(options: FindMessageOptions): {
     if (taskMessageIndex < 0 && !requireContent) {
       for (let i = messages.length - 1; i >= 0; i--) {
         const msg = messages[i];
-        if (
-          msg.sender === 'agent' &&
-          msg.isPlaceholder &&
-          !msg.isSystemMessage &&
-          !msg.isScreenAccessRequest
-        ) {
+        if (msg.sender === 'agent' && msg.isPlaceholder && !msg.isSystemMessage && !msg.isScreenAccessRequest) {
           taskMessageIndex = i;
           break;
         }
@@ -285,7 +273,7 @@ export function findMessageForProgress(options: FindMessageOptions): {
  */
 export function findPlaceholderMessage(
   messages: ChatMessage[],
-  currentMode?: InstructionType
+  currentMode?: InstructionType,
 ): { index: number; message: ChatMessage } | null {
   // First, try to find a placeholder matching the current mode
   if (currentMode) {
@@ -306,12 +294,7 @@ export function findPlaceholderMessage(
   // Fallback: find any placeholder
   for (let i = messages.length - 1; i >= 0; i--) {
     const msg = messages[i];
-    if (
-      msg.sender === 'agent' &&
-      msg.isPlaceholder &&
-      !msg.isSystemMessage &&
-      !msg.isScreenAccessRequest
-    ) {
+    if (msg.sender === 'agent' && msg.isPlaceholder && !msg.isSystemMessage && !msg.isScreenAccessRequest) {
       return { index: i, message: msg };
     }
   }
@@ -374,18 +357,14 @@ function filterCancellationText(content: string): string {
 /**
  * Add a new progress step to a message
  */
-export function addProgressLine(
-  message: ChatMessage,
-  toolName: string,
-  explanation: string
-): ChatMessage {
+export function addProgressLine(message: ChatMessage, toolName: string, explanation: string): ChatMessage {
   const msg = ensureMessageStructure(message);
   const parts = msg.parts || [];
 
   // Update Parts
   const newParts = [...parts];
   const existingPartIndex = parts.findIndex(
-    (part) => part.type === 'progress' && part.toolName === toolName && part.status === 'running'
+    part => part.type === 'progress' && part.toolName === toolName && part.status === 'running',
   );
 
   const isInteractive = INTERACTIVE_TOOLS.has(toolName);
@@ -426,16 +405,14 @@ export function updateProgressLine(
   message: ChatMessage,
   toolName: string,
   status: 'pending' | 'completed' | 'failed',
-  error?: string
+  error?: string,
 ): ChatMessage {
   const msg = ensureMessageStructure(message);
   const parts = msg.parts || [];
 
   // Update Parts
   const newParts = [...parts];
-  const partIndex = parts
-    .map((p) => (p.type === 'progress' ? p.toolName : ''))
-    .lastIndexOf(toolName);
+  const partIndex = parts.map(p => (p.type === 'progress' ? p.toolName : '')).lastIndexOf(toolName);
 
   const mappedStatus = status === 'pending' ? 'running' : status;
 
@@ -482,7 +459,7 @@ export function markProgressLineComplete(message: ChatMessage, toolName?: string
   const newParts = [...parts];
   let partIndex = -1;
   if (toolName) {
-    partIndex = parts.map((p) => (p.type === 'progress' ? p.toolName : '')).lastIndexOf(toolName);
+    partIndex = parts.map(p => (p.type === 'progress' ? p.toolName : '')).lastIndexOf(toolName);
   } else {
     for (let i = parts.length - 1; i >= 0; i--) {
       if (parts[i].type === 'progress' && parts[i].status === 'running') {
@@ -502,11 +479,7 @@ export function markProgressLineComplete(message: ChatMessage, toolName?: string
 /**
  * Mark the last incomplete progress step as failed
  */
-export function markProgressLineFailed(
-  message: ChatMessage,
-  toolName: string,
-  error: string
-): ChatMessage {
+export function markProgressLineFailed(message: ChatMessage, toolName: string, error: string): ChatMessage {
   const msg = ensureMessageStructure(message);
   const parts = msg.parts || [];
 
@@ -516,7 +489,7 @@ export function markProgressLineFailed(
 
   // Update Parts
   const newParts = [...parts];
-  let partIndex = parts.map((p) => (p.type === 'progress' ? p.toolName : '')).lastIndexOf(toolName);
+  let partIndex = parts.map(p => (p.type === 'progress' ? p.toolName : '')).lastIndexOf(toolName);
   if (partIndex === -1) {
     for (let i = parts.length - 1; i >= 0; i--) {
       if (parts[i].type === 'progress' && parts[i].status === 'running') {
@@ -559,7 +532,7 @@ export function updateThinkingMarker(
   message: ChatMessage,
   isTaskRunning: boolean,
   currentMode: 'show' | 'tell' | 'do',
-  isWaitingForUser: boolean = false
+  isWaitingForUser: boolean = false,
 ): ChatMessage {
   const msg = ensureMessageStructure(message);
 
@@ -655,7 +628,7 @@ export function getFriendlyToolName(toolName: string): string {
       .trim()
       // Capitalize first letter of each word
       .split(' ')
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
       .join(' ')
   );
 }

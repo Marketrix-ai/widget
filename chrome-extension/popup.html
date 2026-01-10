@@ -1,153 +1,153 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
-<head>
-  <meta charset="UTF-8">
-  <style>
-    body {
-      width: 320px;
-      padding: 16px;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      font-size: 14px;
-      color: #333;
-    }
-    h1 {
-      font-size: 16px;
-      margin: 0 0 16px 0;
-      color: #1BB55B;
-    }
-    .form-group {
-      margin-bottom: 12px;
-    }
-    label {
-      display: block;
-      margin-bottom: 4px;
-      font-weight: 500;
-      font-size: 12px;
-      color: #666;
-    }
-    input[type="text"] {
-      width: 100%;
-      padding: 8px;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      font-size: 13px;
-      box-sizing: border-box;
-    }
-    input[type="text"]:focus {
-      outline: none;
-      border-color: #1BB55B;
-    }
-    .toggle-container {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 12px 0;
-      border-top: 1px solid #eee;
-      margin-top: 16px;
-    }
-    .toggle-label {
-      font-weight: 600;
-    }
-    .toggle {
-      position: relative;
-      width: 48px;
-      height: 24px;
-    }
-    .toggle input {
-      opacity: 0;
-      width: 0;
-      height: 0;
-    }
-    .slider {
-      position: absolute;
-      cursor: pointer;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background-color: #ccc;
-      transition: 0.3s;
-      border-radius: 24px;
-    }
-    .slider:before {
-      position: absolute;
-      content: "";
-      height: 18px;
-      width: 18px;
-      left: 3px;
-      bottom: 3px;
-      background-color: white;
-      transition: 0.3s;
-      border-radius: 50%;
-    }
-    input:checked + .slider {
-      background-color: #1BB55B;
-    }
-    input:checked + .slider:before {
-      transform: translateX(24px);
-    }
-    .status {
-      font-size: 12px;
-      color: #666;
-      margin-top: 8px;
-      padding: 8px;
-      background: #f5f5f5;
-      border-radius: 4px;
-    }
-    .status.active {
-      background: #e8f5e9;
-      color: #2e7d32;
-    }
-    button {
-      width: 100%;
-      padding: 10px;
-      background: #1BB55B;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      font-size: 14px;
-      cursor: pointer;
-      margin-top: 12px;
-    }
-    button:hover {
-      background: #159b4a;
-    }
-    button:disabled {
-      background: #ccc;
-      cursor: not-allowed;
-    }
-  </style>
-</head>
-<body>
-  <h1>Marketrix Widget</h1>
+  <head>
+    <meta charset="UTF-8" />
+    <style>
+      body {
+        width: 320px;
+        padding: 16px;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-size: 14px;
+        color: #333;
+      }
+      h1 {
+        font-size: 16px;
+        margin: 0 0 16px 0;
+        color: #1bb55b;
+      }
+      .form-group {
+        margin-bottom: 12px;
+      }
+      label {
+        display: block;
+        margin-bottom: 4px;
+        font-weight: 500;
+        font-size: 12px;
+        color: #666;
+      }
+      input[type='text'] {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 13px;
+        box-sizing: border-box;
+      }
+      input[type='text']:focus {
+        outline: none;
+        border-color: #1bb55b;
+      }
+      .toggle-container {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 0;
+        border-top: 1px solid #eee;
+        margin-top: 16px;
+      }
+      .toggle-label {
+        font-weight: 600;
+      }
+      .toggle {
+        position: relative;
+        width: 48px;
+        height: 24px;
+      }
+      .toggle input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+      .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #ccc;
+        transition: 0.3s;
+        border-radius: 24px;
+      }
+      .slider:before {
+        position: absolute;
+        content: '';
+        height: 18px;
+        width: 18px;
+        left: 3px;
+        bottom: 3px;
+        background-color: white;
+        transition: 0.3s;
+        border-radius: 50%;
+      }
+      input:checked + .slider {
+        background-color: #1bb55b;
+      }
+      input:checked + .slider:before {
+        transform: translateX(24px);
+      }
+      .status {
+        font-size: 12px;
+        color: #666;
+        margin-top: 8px;
+        padding: 8px;
+        background: #f5f5f5;
+        border-radius: 4px;
+      }
+      .status.active {
+        background: #e8f5e9;
+        color: #2e7d32;
+      }
+      button {
+        width: 100%;
+        padding: 10px;
+        background: #1bb55b;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        font-size: 14px;
+        cursor: pointer;
+        margin-top: 12px;
+      }
+      button:hover {
+        background: #159b4a;
+      }
+      button:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Marketrix Widget</h1>
 
-  <div class="form-group">
-    <label>Script URL</label>
-    <input type="text" id="scriptSrc" placeholder="http://localhost:5174/index.mjs">
-  </div>
+    <div class="form-group">
+      <label>Script URL</label>
+      <input type="text" id="scriptSrc" placeholder="http://localhost:5174/index.mjs" />
+    </div>
 
-  <div class="form-group">
-    <label>Agent ID</label>
-    <input type="text" id="agentId" placeholder="10">
-  </div>
+    <div class="form-group">
+      <label>Agent ID</label>
+      <input type="text" id="agentId" placeholder="10" />
+    </div>
 
-  <div class="form-group">
-    <label>Connection ID</label>
-    <input type="text" id="connectionId" placeholder="13">
-  </div>
+    <div class="form-group">
+      <label>Connection ID</label>
+      <input type="text" id="connectionId" placeholder="13" />
+    </div>
 
-  <button id="saveBtn">Save Configuration</button>
+    <button id="saveBtn">Save Configuration</button>
 
-  <div class="toggle-container">
-    <span class="toggle-label">Enable Widget</span>
-    <label class="toggle">
-      <input type="checkbox" id="enableToggle">
-      <span class="slider"></span>
-    </label>
-  </div>
+    <div class="toggle-container">
+      <span class="toggle-label">Enable Widget</span>
+      <label class="toggle">
+        <input type="checkbox" id="enableToggle" />
+        <span class="slider"></span>
+      </label>
+    </div>
 
-  <div id="status" class="status">Widget is disabled</div>
+    <div id="status" class="status">Widget is disabled</div>
 
-  <script src="popup.js"></script>
-</body>
+    <script src="popup.js"></script>
+  </body>
 </html>

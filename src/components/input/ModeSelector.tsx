@@ -10,12 +10,7 @@ import { configManager } from '../../services/ConfigManager';
 import { sessionManager } from '../../services/SessionManager';
 import { WebSocketClient } from '../../services/WebSocketClient';
 import type { MarketrixConfig } from '../../types';
-import {
-  addOpacity,
-  getContrastingColor,
-  getModeDescription,
-  getModeDisplayName,
-} from '../../utils/format';
+import { addOpacity, getContrastingColor, getModeDescription, getModeDisplayName } from '../../utils/format';
 import { DiagnosticModal } from '../ui/DiagnosticModal';
 
 interface ModeSelectorProps {
@@ -50,9 +45,7 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({
   };
 
   // Reorder modes to: Tell, Show, Do
-  const orderedModes: InstructionType[] = (['tell', 'show', 'do'] as const).filter((mode) =>
-    enabledModes.includes(mode)
-  );
+  const orderedModes: InstructionType[] = (['tell', 'show', 'do'] as const).filter(mode => enabledModes.includes(mode));
 
   return (
     <div
@@ -65,7 +58,7 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({
         {orderedModes.map((mode: InstructionType) => (
           <button
             key={mode}
-            onClick={(e) => {
+            onClick={e => {
               e.preventDefault();
               e.stopPropagation();
               onModeChange(mode);
@@ -103,28 +96,16 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({
                   }
                 : {}),
             }}
-            onMouseEnter={(e) => {
+            onMouseEnter={e => {
               if (currentMode !== mode) {
-                e.currentTarget.style.backgroundColor = addOpacity(
-                  widgetConfig.widget_secondary_color,
-                  0.3
-                );
-                e.currentTarget.style.borderColor = addOpacity(
-                  widgetConfig.widget_secondary_color,
-                  0.4
-                );
+                e.currentTarget.style.backgroundColor = addOpacity(widgetConfig.widget_secondary_color, 0.3);
+                e.currentTarget.style.borderColor = addOpacity(widgetConfig.widget_secondary_color, 0.4);
               }
             }}
-            onMouseLeave={(e) => {
+            onMouseLeave={e => {
               if (currentMode !== mode) {
-                e.currentTarget.style.backgroundColor = addOpacity(
-                  widgetConfig.widget_secondary_color,
-                  0.2
-                );
-                e.currentTarget.style.borderColor = addOpacity(
-                  widgetConfig.widget_secondary_color,
-                  0.3
-                );
+                e.currentTarget.style.backgroundColor = addOpacity(widgetConfig.widget_secondary_color, 0.2);
+                e.currentTarget.style.borderColor = addOpacity(widgetConfig.widget_secondary_color, 0.3);
               }
             }}
             title={getModeDescription(mode)}
@@ -139,7 +120,7 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({
         alt='Marketrix Logo'
         className='h-5 w-auto object-contain flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity'
         style={{ maxWidth: '100px' }}
-        onClick={(e) => {
+        onClick={e => {
           e.preventDefault();
           e.stopPropagation();
           setIsDiagnosticModalOpen(true);

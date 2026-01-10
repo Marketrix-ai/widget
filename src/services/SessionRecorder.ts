@@ -76,8 +76,7 @@ export class SessionRecorder {
     const tabId = sessionStorage.getItem(this.TAB_ID_STORAGE_KEY);
 
     if (!tabId) {
-      const error =
-        'marketrix_tab_id not found in sessionStorage. SessionManager should initialize it first.';
+      const error = 'marketrix_tab_id not found in sessionStorage. SessionManager should initialize it first.';
       log.error('❌', error);
       log.error('sessionStorage keys:', Object.keys(sessionStorage));
       log.error(
@@ -87,8 +86,8 @@ export class SessionRecorder {
             acc[key] = sessionStorage.getItem(key);
             return acc;
           },
-          {} as Record<string, string | null>
-        )
+          {} as Record<string, string | null>,
+        ),
       );
       throw new Error(error);
     }
@@ -103,9 +102,7 @@ export class SessionRecorder {
       log.error('All sessionStorage keys:', Object.keys(sessionStorage));
       // Clear the invalid value so SessionManager can create a new one
       sessionStorage.removeItem(this.TAB_ID_STORAGE_KEY);
-      log.warn(
-        '⚠️ Cleared invalid tab_id from sessionStorage. SessionManager will create a new one.'
-      );
+      log.warn('⚠️ Cleared invalid tab_id from sessionStorage. SessionManager will create a new one.');
       throw new Error(error);
     }
 
@@ -139,7 +136,7 @@ export class SessionRecorder {
     log.debug('Key exists in localStorage:', keyExists);
     log.debug('Key comparison:', {
       lookingFor: this.CHAT_ID_STORAGE_KEY,
-      foundKeys: allKeys.filter((k) => k.includes('chat') || k.includes('marketrix')),
+      foundKeys: allKeys.filter(k => k.includes('chat') || k.includes('marketrix')),
     });
 
     // Try to get the value
@@ -150,9 +147,7 @@ export class SessionRecorder {
       isNull: chatId === null,
       isUndefined: chatId === undefined,
       length: chatId ? chatId.length : 0,
-      preview: chatId
-        ? `${chatId.substring(0, 50)}${chatId.length > 50 ? '...' : ''}`
-        : 'null/undefined',
+      preview: chatId ? `${chatId.substring(0, 50)}${chatId.length > 50 ? '...' : ''}` : 'null/undefined',
     });
 
     // Also try direct access with string literal
@@ -165,7 +160,7 @@ export class SessionRecorder {
 
     // Log all localStorage items for debugging
     log.debug('📋 Full localStorage contents:');
-    allKeys.forEach((key) => {
+    allKeys.forEach(key => {
       const value = localStorage.getItem(key);
       log.debug(`  - "${key}":`, {
         value: value ? (value.length > 100 ? `${value.substring(0, 100)}...` : value) : 'null',
@@ -239,8 +234,8 @@ export class SessionRecorder {
             acc[key] = value ? (value.length > 50 ? `${value.substring(0, 50)}...` : value) : null;
             return acc;
           },
-          {} as Record<string, string | null>
-        )
+          {} as Record<string, string | null>,
+        ),
       );
 
       let resolved = false;
@@ -284,8 +279,8 @@ export class SessionRecorder {
                 acc[key] = localStorage.getItem(key)?.substring(0, 50) || null;
                 return acc;
               },
-              {} as Record<string, string | null>
-            )
+              {} as Record<string, string | null>,
+            ),
           );
           reject(new Error(error));
         }
@@ -298,12 +293,7 @@ export class SessionRecorder {
           newValue: e.newValue ? `${e.newValue.substring(0, 20)}...` : null,
           oldValue: e.oldValue ? `${e.oldValue.substring(0, 20)}...` : null,
         });
-        if (
-          e.key === this.CHAT_ID_STORAGE_KEY &&
-          e.newValue &&
-          e.newValue.trim() !== '' &&
-          !resolved
-        ) {
+        if (e.key === this.CHAT_ID_STORAGE_KEY && e.newValue && e.newValue.trim() !== '' && !resolved) {
           resolved = true;
           clearInterval(checkInterval);
           window.removeEventListener('storage', storageListener);
@@ -367,9 +357,7 @@ export class SessionRecorder {
             const error = 'Cannot send metadata: marketrix_chat_id not found in localStorage';
             log.error('❌', error);
             log.error('Available localStorage keys:', Object.keys(localStorage));
-            log.error(
-              'This should not happen - waitForChatId() should have ensured chat_id exists'
-            );
+            log.error('This should not happen - waitForChatId() should have ensured chat_id exists');
             reject(new Error(error));
             this.ws?.close();
             return;
@@ -398,7 +386,7 @@ export class SessionRecorder {
               // Wait for server acknowledgment before flushing events
               // The acknowledgment will be handled in onmessage
             })
-            .catch((error) => {
+            .catch(error => {
               log.error('❌ Failed to send metadata in onopen:', error);
               // Close connection if metadata fails to send
               if (this.ws) {
@@ -409,7 +397,7 @@ export class SessionRecorder {
           resolve();
         };
 
-        this.ws.onerror = (error) => {
+        this.ws.onerror = error => {
           log.error('WebSocket error:', error);
           reject(error);
         };
@@ -426,7 +414,7 @@ export class SessionRecorder {
           }
         };
 
-        this.ws.onmessage = (event) => {
+        this.ws.onmessage = event => {
           log.debug('📨 Message received from server, length:', event.data.length);
           try {
             const data = JSON.parse(event.data);
@@ -478,14 +466,9 @@ export class SessionRecorder {
     }
 
     this.reconnectAttempts++;
-    const delay = Math.min(
-      this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1),
-      this.maxReconnectDelay
-    );
+    const delay = Math.min(this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1), this.maxReconnectDelay);
 
-    log.info(
-      `Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`
-    );
+    log.info(`Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
 
     this.reconnectTimer = setTimeout(() => {
       // On reconnection, we need to ensure chat_id is available before connecting
@@ -497,16 +480,16 @@ export class SessionRecorder {
         this.waitForChatId(5000)
           .then(() => {
             log.info('Chat_id available, proceeding with reconnection');
-            this.connect().catch((error) => {
+            this.connect().catch(error => {
               log.error('Reconnection failed:', error);
             });
           })
-          .catch((error) => {
+          .catch(error => {
             log.error('Failed to get chat_id for reconnection:', error);
             // Don't reconnect if chat_id is not available
           });
       } else {
-        this.connect().catch((error) => {
+        this.connect().catch(error => {
           log.error('Reconnection failed:', error);
         });
       }
@@ -530,7 +513,7 @@ export class SessionRecorder {
       return;
     }
 
-    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+    if (this.ws?.readyState === WebSocket.OPEN) {
       try {
         const eventJson = JSON.stringify(event);
         this.ws.send(eventJson);
@@ -546,7 +529,7 @@ export class SessionRecorder {
         log.error('❌ Error sending event:', error);
         this.eventQueue.push(event);
       }
-    } else if (this.ws && this.ws.readyState === WebSocket.CONNECTING) {
+    } else if (this.ws?.readyState === WebSocket.CONNECTING) {
       // Queue event if connection is still establishing
       log.debug('⏸️ WebSocket still connecting, queuing event');
       this.eventQueue.push(event);
@@ -568,7 +551,7 @@ export class SessionRecorder {
       isOpen: this.ws?.readyState === WebSocket.OPEN,
     });
 
-    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+    if (this.ws?.readyState !== WebSocket.OPEN) {
       const error = 'Cannot send metadata: WebSocket not open';
       log.error('❌', error);
       throw new Error(error);
@@ -606,20 +589,14 @@ export class SessionRecorder {
             acc[key] = value ? (value.length > 50 ? `${value.substring(0, 50)}...` : value) : null;
             return acc;
           },
-          {} as Record<string, string | null>
-        )
+          {} as Record<string, string | null>,
+        ),
       );
 
       // Try direct access to see what's actually there
       log.error('🔍 Direct localStorage access test:');
-      log.error(
-        '  localStorage.getItem("marketrix_chat_id"):',
-        localStorage.getItem('marketrix_chat_id')
-      );
-      log.error(
-        '  localStorage.getItem(this.CHAT_ID_STORAGE_KEY):',
-        localStorage.getItem(this.CHAT_ID_STORAGE_KEY)
-      );
+      log.error('  localStorage.getItem("marketrix_chat_id"):', localStorage.getItem('marketrix_chat_id'));
+      log.error('  localStorage.getItem(this.CHAT_ID_STORAGE_KEY):', localStorage.getItem(this.CHAT_ID_STORAGE_KEY));
       log.error('  this.CHAT_ID_STORAGE_KEY value:', this.CHAT_ID_STORAGE_KEY);
 
       throw new Error(error);
@@ -680,8 +657,7 @@ export class SessionRecorder {
     }
 
     if (!metadata.marketrixChatId || typeof metadata.marketrixChatId !== 'string') {
-      const error =
-        'CRITICAL: marketrixChatId missing or invalid in metadata object after creation';
+      const error = 'CRITICAL: marketrixChatId missing or invalid in metadata object after creation';
       log.error('❌', error);
       log.error('Metadata object:', metadata);
       throw new Error(error);
@@ -690,9 +666,7 @@ export class SessionRecorder {
     log.info('📤 Metadata object created:', {
       type: metadata.type,
       sessionId: metadata.sessionId, // Log full sessionId to verify format
-      sessionIdFormat: metadata.sessionId.startsWith('tab_')
-        ? '✅ tab_* format'
-        : '❌ Invalid format',
+      sessionIdFormat: metadata.sessionId.startsWith('tab_') ? '✅ tab_* format' : '❌ Invalid format',
       marketrixChatId: `${metadata.marketrixChatId.substring(0, 30)}...`,
       marketrixChatIdFull: metadata.marketrixChatId, // Log full value for debugging
       timestamp: metadata.timestamp,
@@ -713,8 +687,7 @@ export class SessionRecorder {
         }
 
         if (!metadata.marketrixChatId || metadata.marketrixChatId.trim() === '') {
-          const error =
-            'CRITICAL: marketrixChatId is missing or empty in metadata object - cannot send';
+          const error = 'CRITICAL: marketrixChatId is missing or empty in metadata object - cannot send';
           log.error('❌', error);
           log.error('Metadata object:', metadata);
           throw new Error(error);
@@ -838,8 +811,8 @@ export class SessionRecorder {
       const events = [...this.eventQueue];
       this.eventQueue = [];
 
-      events.forEach((event) => {
-        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      events.forEach(event => {
+        if (this.ws?.readyState === WebSocket.OPEN) {
           try {
             this.ws.send(JSON.stringify(event));
           } catch (error) {
@@ -881,14 +854,11 @@ export class SessionRecorder {
         if (!chatId || chatId.trim() === '') {
           throw new Error('marketrix_chat_id not available after waiting 30 seconds');
         }
-        log.info(
-          `✅ marketrix_chat_id confirmed available after ${waitDuration}ms:`,
-          `${chatId.substring(0, 20)}...`
-        );
+        log.info(`✅ marketrix_chat_id confirmed available after ${waitDuration}ms:`, `${chatId.substring(0, 20)}...`);
       } catch (error) {
         log.error('❌ Failed to get marketrix_chat_id:', error);
         throw new Error(
-          `Cannot start recording: ${error instanceof Error ? error.message : 'marketrix_chat_id not available'}`
+          `Cannot start recording: ${error instanceof Error ? error.message : 'marketrix_chat_id not available'}`,
         );
       }
 
@@ -902,7 +872,7 @@ export class SessionRecorder {
           match: verifiedChatId === chatId,
         });
         throw new Error(
-          `marketrix_chat_id changed or became unavailable: expected "${chatId}", got "${verifiedChatId}"`
+          `marketrix_chat_id changed or became unavailable: expected "${chatId}", got "${verifiedChatId}"`,
         );
       }
       log.info('✅ Chat ID verified, proceeding to connect...');

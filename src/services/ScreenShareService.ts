@@ -65,7 +65,7 @@ export function getActiveStream(): MediaStream | null {
  */
 export function stopScreenShare(): void {
   if (activeStream) {
-    activeStream.getTracks().forEach((track) => track.stop());
+    activeStream.getTracks().forEach(track => track.stop());
     activeStream = null;
   }
 }

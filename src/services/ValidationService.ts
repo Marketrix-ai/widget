@@ -42,10 +42,7 @@ export class WidgetValidationService {
   /**
    * Validate by mtxId and mtxKey
    */
-  private async validateByMarketrixId(
-    mtxId: string,
-    mtxKey: string
-  ): Promise<WidgetValidationResult> {
+  private async validateByMarketrixId(mtxId: string, mtxKey: string): Promise<WidgetValidationResult> {
     try {
       // Step 1: Fetch integration by marketrix_id and marketrix_key
       console.log('Validating widget - fetching integration...', { mtxId, mtxKey });
@@ -78,28 +75,25 @@ export class WidgetValidationService {
       console.log(
         'Found integrations:',
         integrations.length,
-        integrations.map((i) => ({
+        integrations.map(i => ({
           id: i.id,
           type: i.type,
           status: i.status,
           marketrix_id: i.marketrix_id,
-        }))
+        })),
       );
 
       // Find the widget integration
       const widgetIntegration = integrations.find(
-        (integration: IntegrationData) =>
-          integration.type === 'widget' && integration.status === 'active'
+        (integration: IntegrationData) => integration.type === 'widget' && integration.status === 'active',
       );
 
       if (!widgetIntegration) {
         // Check if there are any widget integrations with different status
-        const widgetIntegrations = integrations.filter(
-          (integration: IntegrationData) => integration.type === 'widget'
-        );
+        const widgetIntegrations = integrations.filter((integration: IntegrationData) => integration.type === 'widget');
 
         if (widgetIntegrations.length > 0) {
-          const statuses = widgetIntegrations.map((i) => i.status).join(', ');
+          const statuses = widgetIntegrations.map(i => i.status).join(', ');
           return {
             isValid: false,
             error: `Found widget integration(s) but none are active. Current status(es): ${statuses}. Please activate the integration in the dashboard.`,
@@ -116,7 +110,7 @@ export class WidgetValidationService {
         }
 
         // There are integrations but no widget type
-        const types = integrations.map((i) => i.type).join(', ');
+        const types = integrations.map(i => i.type).join(', ');
         return {
           isValid: false,
           error: `No widget integration found. Found integration type(s): ${types}. Please create a widget integration.`,
@@ -143,9 +137,7 @@ export class WidgetValidationService {
         if (!agentData || !isAgentData(agentData)) {
           return {
             isValid: false,
-            error: agentData
-              ? 'Invalid agent data format'
-              : `Agent with ID ${widgetIntegration.agent_id} not found`,
+            error: agentData ? 'Invalid agent data format' : `Agent with ID ${widgetIntegration.agent_id} not found`,
             integration: widgetIntegration,
           };
         }
@@ -212,10 +204,7 @@ export class WidgetValidationService {
    * Validate by mtxApp and mtxAgent directly
    * Validates connection and agent by ID
    */
-  private async validateByAgentAndConnection(
-    mtxApp: number,
-    mtxAgent: number
-  ): Promise<WidgetValidationResult> {
+  private async validateByAgentAndConnection(mtxApp: number, mtxAgent: number): Promise<WidgetValidationResult> {
     try {
       console.log('Validating agent and connection by ID...', { mtxApp, mtxAgent });
 
@@ -228,9 +217,7 @@ export class WidgetValidationService {
       if (!connectionData || !isConnectionData(connectionData)) {
         return {
           isValid: false,
-          error: connectionData
-            ? 'Invalid connection data format'
-            : `Connection with ID ${mtxApp} not found`,
+          error: connectionData ? 'Invalid connection data format' : `Connection with ID ${mtxApp} not found`,
         };
       }
 

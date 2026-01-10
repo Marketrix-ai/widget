@@ -56,9 +56,7 @@ export const MessageContent: React.FC<MessageContentProps> = ({
             // For waiting state:
             const isWaitingForUserAction =
               isWaitingForUser ||
-              (isPending &&
-                widgetState.isTaskRunning &&
-                (message.mode === 'show' || message.mode === 'do'));
+              (isPending && widgetState.isTaskRunning && (message.mode === 'show' || message.mode === 'do'));
 
             return (
               <ProgressLine
@@ -77,10 +75,8 @@ export const MessageContent: React.FC<MessageContentProps> = ({
         })}
 
         {/* Show thinking/waiting indicator at the bottom if task is running or it's a placeholder */}
-        {((message.isPlaceholder && !message.parts.some((p) => p.type === 'text')) ||
-          (widgetState.isTaskRunning &&
-            isLastMessage &&
-            (message.mode === 'show' || message.mode === 'do'))) && (
+        {((message.isPlaceholder && !message.parts.some(p => p.type === 'text')) ||
+          (widgetState.isTaskRunning && isLastMessage && (message.mode === 'show' || message.mode === 'do'))) && (
           <ThinkingIndicator
             isWaitingForUser={isWaitingForUser}
             textColor={textColor}
@@ -95,9 +91,7 @@ export const MessageContent: React.FC<MessageContentProps> = ({
   // Default empty state or if pure placeholder
   if (
     message.isPlaceholder ||
-    (widgetState.isTaskRunning &&
-      isLastMessage &&
-      (message.mode === 'show' || message.mode === 'do'))
+    (widgetState.isTaskRunning && isLastMessage && (message.mode === 'show' || message.mode === 'do'))
   ) {
     return (
       <ThinkingIndicator

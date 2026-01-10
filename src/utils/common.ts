@@ -42,11 +42,7 @@ function shouldLog(level: LogLevel): boolean {
 /**
  * Format log message with prefix
  */
-function formatMessage(
-  prefix: string,
-  message: string,
-  ...args: unknown[]
-): [string, ...unknown[]] {
+function formatMessage(prefix: string, message: string, ...args: unknown[]): [string, ...unknown[]] {
   return [`[${prefix}] ${message}`, ...args];
 }
 
@@ -133,7 +129,7 @@ export function safeExecute<T>(fn: () => T, errorMessage: string, defaultValue?:
 export async function safeExecuteAsync<T>(
   fn: () => Promise<T>,
   errorMessage: string,
-  defaultValue?: T
+  defaultValue?: T,
 ): Promise<T | undefined> {
   try {
     return await fn();
@@ -146,11 +142,7 @@ export async function safeExecuteAsync<T>(
 /**
  * Centralized error logging
  */
-export function logError(
-  context: string,
-  error: unknown,
-  additionalInfo?: Record<string, unknown>
-): void {
+export function logError(context: string, error: unknown, additionalInfo?: Record<string, unknown>): void {
   const errorMessage = extractErrorMessage(error);
   const errorStack = error instanceof Error ? error.stack : undefined;
 
@@ -163,10 +155,6 @@ export function logError(
 /**
  * Centralized warning logging
  */
-export function logWarning(
-  context: string,
-  message: string,
-  additionalInfo?: Record<string, unknown>
-): void {
+export function logWarning(context: string, message: string, additionalInfo?: Record<string, unknown>): void {
   log.warn(`${context}: ${message}`, additionalInfo || {});
 }

@@ -41,7 +41,7 @@ let isRecordingInitialized = false; // Flag to prevent multiple SessionRecorder 
  */
 async function initializeWidgetWithConfig(
   config: MarketrixConfig,
-  validationResult: { isValid: boolean; error?: string }
+  validationResult: { isValid: boolean; error?: string },
 ): Promise<MarketrixConfig> {
   if (!validationResult.isValid) {
     throw new Error(validationResult.error || 'Widget validation failed');
@@ -52,9 +52,7 @@ async function initializeWidgetWithConfig(
     const integrationService = new IntegrationService(config.mtxId, config.mtxKey, config.mtxApp);
 
     const integrationData = await integrationService.fetchIntegrationSettings();
-    const integrationSettings = integrationData
-      ? integrationService.getWidgetSettings(integrationData)
-      : null;
+    const integrationSettings = integrationData ? integrationService.getWidgetSettings(integrationData) : null;
 
     if (!integrationSettings) {
       throw new Error('IntegrationService did not return widget settings');
@@ -90,12 +88,12 @@ async function initializeWidgetWithConfig(
     ] as const;
 
     const missingSettings = requiredSettings.filter(
-      (key) => integrationSettings[key as keyof typeof integrationSettings] === undefined
+      key => integrationSettings[key as keyof typeof integrationSettings] === undefined,
     );
 
     if (missingSettings.length > 0) {
       throw new Error(
-        `Widget settings are incomplete. Missing required fields: ${missingSettings.join(', ')}. The API must return all widget settings.`
+        `Widget settings are incomplete. Missing required fields: ${missingSettings.join(', ')}. The API must return all widget settings.`,
       );
     }
 
@@ -109,10 +107,7 @@ async function initializeWidgetWithConfig(
 }
 
 // Initialize the widget
-export const initWidget = async (
-  config: MarketrixConfig,
-  container?: HTMLElement
-): Promise<void> => {
+export const initWidget = async (config: MarketrixConfig, container?: HTMLElement): Promise<void> => {
   // Signal that programmatic initialization is in progress
   setProgrammaticInitInProgress(true);
 
@@ -135,9 +130,7 @@ export const initWidget = async (
 
   if (!validationResult.isValid) {
     console.error('Marketrix Widget validation failed:', validationResult.error);
-    showWidgetSettingsLoader(
-      validationResult.error || 'Widget validation failed. Please check your configuration.'
-    );
+    showWidgetSettingsLoader(validationResult.error || 'Widget validation failed. Please check your configuration.');
     setProgrammaticInitInProgress(false);
     return;
   }
@@ -167,16 +160,14 @@ export const initWidget = async (
     // CRITICAL: Prevent multiple SessionRecorder instances per session
     if (sessionRecorder && isRecordingInitialized) {
       console.warn(
-        '[Marketrix Widget] ⚠️ SessionRecorder already initialized, skipping creation. Reusing existing instance.'
+        '[Marketrix Widget] ⚠️ SessionRecorder already initialized, skipping creation. Reusing existing instance.',
       );
       return;
     }
 
     // Stop existing recorder if any (shouldn't happen, but safety check)
     if (sessionRecorder) {
-      console.warn(
-        '[Marketrix Widget] ⚠️ Stopping existing SessionRecorder before creating new one'
-      );
+      console.warn('[Marketrix Widget] ⚠️ Stopping existing SessionRecorder before creating new one');
       sessionRecorder.stop();
       sessionRecorder = null;
       isRecordingInitialized = false;
@@ -186,10 +177,7 @@ export const initWidget = async (
     // SessionManager initializes the tab_id in sessionStorage, which SessionRecorder needs
     const tabId = sessionManager.getTabId();
     if (!tabId?.startsWith('tab_')) {
-      console.error(
-        '[Marketrix Widget] ❌ SessionManager tab_id not initialized correctly:',
-        tabId
-      );
+      console.error('[Marketrix Widget] ❌ SessionManager tab_id not initialized correctly:', tabId);
       console.error('[Marketrix Widget] Expected format: tab_*');
       throw new Error(`SessionManager tab_id not initialized. Got: ${tabId}`);
     }
@@ -215,7 +203,7 @@ export const initWidget = async (
 
     // Start recording - it will wait for chat_id to be available
     // The recorder will connect but wait to send metadata until chat_id exists
-    sessionRecorder.start().catch((error) => {
+    sessionRecorder.start().catch(error => {
       console.error('[Marketrix Widget] ❌ Failed to start session recording:', error);
       console.error('[Marketrix Widget] Error details:', {
         message: error instanceof Error ? error.message : String(error),
@@ -313,7 +301,7 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({
     // Create container and shadow DOM with unique ID
     const { container: widgetContainer, mountEl } = createWidgetContainer(
       parentContainer as HTMLElement,
-      containerIdRef.current
+      containerIdRef.current,
     );
 
     widgetContainerRef.current = widgetContainer;
@@ -346,7 +334,7 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({
         <WidgetProvider>
           <MarketrixWidgetComponent config={config} />
         </WidgetProvider>
-      </React.StrictMode>
+      </React.StrictMode>,
     );
 
     return () => {
@@ -405,7 +393,7 @@ export const mountWidget = async (config: AddWidgetConfig): Promise<void> => {
         mtxKey,
         ...restConfig,
       },
-      container
+      container,
     );
   } else if ('mtxApp' in config && config.mtxApp !== undefined && config.mtxAgent !== undefined) {
     // Dev mode: use agent and connection IDs
@@ -417,12 +405,12 @@ export const mountWidget = async (config: AddWidgetConfig): Promise<void> => {
         mtxAgent,
         ...restConfig,
       },
-      container
+      container,
     );
   } else {
     setProgrammaticInitInProgress(false);
     throw new Error(
-      'Invalid configuration: provide either settings (preview), mtxId+mtxKey (production), or mtxApp+mtxAgent (dev)'
+      'Invalid configuration: provide either settings (preview), mtxId+mtxKey (production), or mtxApp+mtxAgent (dev)',
     );
   }
 };
@@ -440,13 +428,7 @@ if (typeof window !== 'undefined') {
 
 // Export types for external use
 export type { InstructionType } from './sdk';
-export type {
-  AddWidgetConfig,
-  ChatMessage,
-  MarketrixConfig,
-  MarketrixWidgetProps,
-  WidgetState,
-} from './types';
+export type { AddWidgetConfig, ChatMessage, MarketrixConfig, MarketrixWidgetProps, WidgetState } from './types';
 
 // Export default for ES modules
 export default {

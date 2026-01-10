@@ -89,7 +89,7 @@ export class ToolExecutionService {
     toolName: string,
     args: Record<string, unknown>,
     mode: string = 'do',
-    explanation: string = ''
+    explanation: string = '',
   ): Promise<ToolExecutionResult> {
     try {
       console.log(`[ToolExecutionService] Executing ${toolName} (mode: ${mode})`);
@@ -113,11 +113,7 @@ export class ToolExecutionService {
             if (toolName === 'click_element') {
               // Execute the click after confirmation
               // We proceed to the switch case below to actually execute the click
-            } else if (
-              toolName === 'type_text' ||
-              toolName === 'select_dropdown_option' ||
-              toolName === 'send_keys'
-            ) {
+            } else if (toolName === 'type_text' || toolName === 'select_dropdown_option' || toolName === 'send_keys') {
               // Execute the action after confirmation
               // We proceed to the switch case below to actually execute the action
             } else {
@@ -178,13 +174,7 @@ export class ToolExecutionService {
   }
 
   private requiresHighlight(toolName: string): boolean {
-    return [
-      'click_element',
-      'type_text',
-      'select_dropdown_option',
-      'send_keys',
-      'upload_file',
-    ].includes(toolName);
+    return ['click_element', 'type_text', 'select_dropdown_option', 'send_keys', 'upload_file'].includes(toolName);
   }
 
   private navigate(args: NavigateParams): ToolExecutionResult {
@@ -242,12 +232,12 @@ export class ToolExecutionService {
     // Log if element was recovered at a different index
     if (validation.mismatchReason === 'index_shifted' && validation.recoveredIndex !== undefined) {
       console.log(
-        `[ToolExecutionService] Element shifted from index ${index} to ${validation.recoveredIndex}, executing on recovered element`
+        `[ToolExecutionService] Element shifted from index ${index} to ${validation.recoveredIndex}, executing on recovered element`,
       );
     }
 
     element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    await new Promise(resolve => setTimeout(resolve, 100));
     // Defer the click to allow the tool response to be sent first
     setTimeout(() => {
       try {
@@ -375,9 +365,7 @@ export class ToolExecutionService {
           // Clear existing value first
           inputElement.value = '';
           for (const char of text) {
-            inputElement.dispatchEvent(
-              new KeyboardEvent('keydown', { key: char, bubbles: true, cancelable: true })
-            );
+            inputElement.dispatchEvent(new KeyboardEvent('keydown', { key: char, bubbles: true, cancelable: true }));
             inputElement.value += char;
             inputElement.dispatchEvent(
               new InputEvent('input', {
@@ -385,11 +373,9 @@ export class ToolExecutionService {
                 cancelable: true,
                 inputType: 'insertText',
                 data: char,
-              })
+              }),
             );
-            inputElement.dispatchEvent(
-              new KeyboardEvent('keyup', { key: char, bubbles: true, cancelable: true })
-            );
+            inputElement.dispatchEvent(new KeyboardEvent('keyup', { key: char, bubbles: true, cancelable: true }));
           }
           valueSet = true;
           console.log('[ToolService] Simulated typing succeeded');
@@ -512,7 +498,7 @@ export class ToolExecutionService {
       text: document.body.innerText.slice(0, 10000),
       links: Array.from(document.querySelectorAll('a[href]'))
         .slice(0, 100)
-        .map((a) => ({
+        .map(a => ({
           text: a.textContent?.trim() || '',
           href: a.getAttribute('href'),
         })),
@@ -531,15 +517,14 @@ export class ToolExecutionService {
   private async wait(args: WaitParams): Promise<ToolExecutionResult> {
     const seconds = args.seconds as number;
     if (seconds === undefined) return { success: false, result: '', error: 'Seconds required' };
-    await new Promise((resolve) => setTimeout(resolve, seconds * 1000));
+    await new Promise(resolve => setTimeout(resolve, seconds * 1000));
     return { success: true, result: `Waited ${seconds}s` };
   }
 
   private selectDropdownOption(args: SelectDropdownOptionParams): ToolExecutionResult {
     const index = args.index as number;
     const option = args.option as string;
-    if (index === undefined || !option)
-      return { success: false, result: '', error: 'Index/Option required' };
+    if (index === undefined || !option) return { success: false, result: '', error: 'Index/Option required' };
 
     // Use validated element lookup
     const { element, validation } = domService.getValidatedElement(index);
@@ -561,7 +546,7 @@ export class ToolExecutionService {
       return { success: false, result: '', error: `Element ${index} is not a select element` };
     }
 
-    const opt = Array.from(element.options).find((o) => o.value === option || o.text === option);
+    const opt = Array.from(element.options).find(o => o.value === option || o.text === option);
     if (!opt) return { success: false, result: '', error: `Option ${option} not found` };
 
     element.value = opt.value;
@@ -601,15 +586,14 @@ export class ToolExecutionService {
       return { success: false, result: '', error: `Element ${index} is not a select element` };
     }
 
-    const options = Array.from(element.options).map((o) => ({ value: o.value, text: o.text }));
+    const options = Array.from(element.options).map(o => ({ value: o.value, text: o.text }));
     return { success: true, result: JSON.stringify(options) };
   }
 
   private sendKeys(args: SendKeysParams): ToolExecutionResult {
     const index = args.index as number;
     const keys = args.keys as string;
-    if (index === undefined || !keys)
-      return { success: false, result: '', error: 'Index/Keys required' };
+    if (index === undefined || !keys) return { success: false, result: '', error: 'Index/Keys required' };
 
     // Use validated element lookup
     const { element, validation } = domService.getValidatedElement(index);
@@ -631,12 +615,8 @@ export class ToolExecutionService {
     element.focus();
 
     // Dispatch keyboard events (for custom event handlers)
-    element.dispatchEvent(
-      new KeyboardEvent('keydown', { key: keys, bubbles: true, cancelable: true })
-    );
-    element.dispatchEvent(
-      new KeyboardEvent('keyup', { key: keys, bubbles: true, cancelable: true })
-    );
+    element.dispatchEvent(new KeyboardEvent('keydown', { key: keys, bubbles: true, cancelable: true }));
+    element.dispatchEvent(new KeyboardEvent('keyup', { key: keys, bubbles: true, cancelable: true }));
 
     // Simulate actual browser behavior for common keys
     const actionResult = this.simulateKeyAction(element, keys);
@@ -666,9 +646,9 @@ export class ToolExecutionService {
         // Move focus to next focusable element
         const focusables = Array.from(
           document.querySelectorAll<HTMLElement>(
-            'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
-          )
-        ).filter((el) => el.offsetParent !== null); // Only visible elements
+            'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+          ),
+        ).filter(el => el.offsetParent !== null); // Only visible elements
 
         const currentIndex = focusables.indexOf(element);
         if (currentIndex !== -1 && currentIndex < focusables.length - 1) {
@@ -683,9 +663,9 @@ export class ToolExecutionService {
         // Move focus to previous focusable element
         const focusables = Array.from(
           document.querySelectorAll<HTMLElement>(
-            'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
-          )
-        ).filter((el) => el.offsetParent !== null);
+            'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+          ),
+        ).filter(el => el.offsetParent !== null);
 
         const currentIndex = focusables.indexOf(element);
         if (currentIndex > 0) {
@@ -706,9 +686,7 @@ export class ToolExecutionService {
           const form = element.closest('form');
           if (form) {
             // Find submit button and click it, or submit form
-            const submitBtn = form.querySelector<HTMLButtonElement>(
-              'button[type="submit"], input[type="submit"]'
-            );
+            const submitBtn = form.querySelector<HTMLButtonElement>('button[type="submit"], input[type="submit"]');
             if (submitBtn) {
               submitBtn.click();
               return 'Enter: clicked form submit button';
@@ -729,19 +707,14 @@ export class ToolExecutionService {
         // Blur current element (common behavior)
         element.blur();
         // Also dispatch to document for modal close handlers
-        document.dispatchEvent(
-          new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })
-        );
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
         return 'Escape: blurred element and dispatched to document';
       }
 
       case ' ':
       case 'Space': {
         // Click checkboxes, radio buttons, or buttons
-        if (
-          element instanceof HTMLInputElement &&
-          (element.type === 'checkbox' || element.type === 'radio')
-        ) {
+        if (element instanceof HTMLInputElement && (element.type === 'checkbox' || element.type === 'radio')) {
           element.click();
           return `Space: toggled ${element.type}`;
         }
@@ -835,10 +808,8 @@ export class ToolExecutionService {
 
           // Use native input value setter to work with React/Vue controlled inputs
           const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
-            element instanceof HTMLTextAreaElement
-              ? HTMLTextAreaElement.prototype
-              : HTMLInputElement.prototype,
-            'value'
+            element instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype,
+            'value',
           )?.set;
 
           if (nativeInputValueSetter) {
@@ -880,10 +851,8 @@ export class ToolExecutionService {
 
           // Use native input value setter to work with React/Vue controlled inputs
           const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
-            element instanceof HTMLTextAreaElement
-              ? HTMLTextAreaElement.prototype
-              : HTMLInputElement.prototype,
-            'value'
+            element instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype,
+            'value',
           )?.set;
 
           if (nativeInputValueSetter) {
@@ -958,7 +927,7 @@ export class ToolExecutionService {
       video.style.display = 'none';
       document.body.appendChild(video);
 
-      await new Promise<void>((resolve) => {
+      await new Promise<void>(resolve => {
         video.onloadeddata = () => resolve();
       });
 

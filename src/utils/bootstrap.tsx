@@ -45,7 +45,7 @@ const generateContainerId = (): string => {
  */
 export const createWidgetContainer = (
   parentContainer?: HTMLElement,
-  containerId?: string
+  containerId?: string,
 ): {
   container: HTMLElement;
   shadowRoot: ShadowRoot;
@@ -123,7 +123,7 @@ export const mountWidgetToContainer = (mountEl: HTMLElement, config: MarketrixCo
       <WidgetProvider>
         <MarketrixWidget config={config} />
       </WidgetProvider>
-    </React.StrictMode>
+    </React.StrictMode>,
   );
 
   return root;
@@ -257,7 +257,7 @@ export const showWidgetSettingsLoader = (message?: string): void => {
   root.render(
     <React.StrictMode>
       <WidgetSettingsLoader message={message} />
-    </React.StrictMode>
+    </React.StrictMode>,
   );
 };
 
@@ -310,7 +310,7 @@ export const autoInitializeWidget = (retryCount = 0): void => {
     if (retryCount < MAX_RETRIES) {
       const delay = RETRY_DELAYS[retryCount] || 2000;
       console.warn(
-        `[AutoInit] Script tag not found (attempt ${retryCount + 1}/${MAX_RETRIES}), retrying in ${delay}ms...`
+        `[AutoInit] Script tag not found (attempt ${retryCount + 1}/${MAX_RETRIES}), retrying in ${delay}ms...`,
       );
       setTimeout(() => autoInitializeWidget(retryCount + 1), delay);
       return;
@@ -318,7 +318,7 @@ export const autoInitializeWidget = (retryCount = 0): void => {
     // Check if widget is already initialized or programmatic init is in progress
     if (isWidgetInitialized() || isProgrammaticInitInProgress()) {
       console.log(
-        '[AutoInit] Script tag not found, but widget is initialized or programmatic init is in progress. Skipping error message.'
+        '[AutoInit] Script tag not found, but widget is initialized or programmatic init is in progress. Skipping error message.',
       );
       return;
     }
@@ -331,13 +331,13 @@ export const autoInitializeWidget = (retryCount = 0): void => {
     console.error('[AutoInit] Script tag not found after all retries');
     console.error(
       '[AutoInit] Available scripts:',
-      Array.from(document.querySelectorAll('script')).map((s) => ({
+      Array.from(document.querySelectorAll('script')).map(s => ({
         id: s.id,
         src: s.src,
         type: s.type,
         hasMtxId: s.hasAttribute('mtx-id'),
         hasMtxApp: s.hasAttribute('mtx-app'),
-      }))
+      })),
     );
     showWidgetSettingsLoader('Please configure mtx-id and mtx-key, or mtx-app and mtx-agent');
     return;
@@ -372,7 +372,7 @@ export const autoInitializeWidget = (retryCount = 0): void => {
       config.mtxAiHost = mtxAiHost;
     }
     console.log('[AutoInit] Initializing widget with mtx-id/mtx-key config');
-    initWidgetFunction(config).catch((error) => {
+    initWidgetFunction(config).catch(error => {
       console.error('[AutoInit] Failed to initialize widget:', error);
     });
   } else if (mtxApp && mtxAgent) {
@@ -380,9 +380,7 @@ export const autoInitializeWidget = (retryCount = 0): void => {
     const agentNum = Number.parseInt(mtxAgent);
 
     if (isNaN(appNum) || isNaN(agentNum)) {
-      console.error(
-        `[AutoInit] Invalid mtx-app or mtx-agent values: mtx-app=${mtxApp}, mtx-agent=${mtxAgent}`
-      );
+      console.error(`[AutoInit] Invalid mtx-app or mtx-agent values: mtx-app=${mtxApp}, mtx-agent=${mtxAgent}`);
       showWidgetSettingsLoader('Invalid mtx-app or mtx-agent values');
       return;
     }
@@ -401,14 +399,14 @@ export const autoInitializeWidget = (retryCount = 0): void => {
       mtxApp: appNum,
       mtxAgent: agentNum,
     });
-    initWidgetFunction(config).catch((error) => {
+    initWidgetFunction(config).catch(error => {
       console.error('[AutoInit] Failed to initialize widget:', error);
     });
   } else {
     // Check if widget is already initialized or programmatic init is in progress
     if (isWidgetInitialized() || isProgrammaticInitInProgress()) {
       console.log(
-        '[AutoInit] Missing required attributes, but widget is initialized or programmatic init is in progress. Skipping error message.'
+        '[AutoInit] Missing required attributes, but widget is initialized or programmatic init is in progress. Skipping error message.',
       );
       return;
     }

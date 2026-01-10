@@ -234,14 +234,8 @@ export class ShowModeService {
     }
 
     // Clamp to screen
-    const left = Math.max(
-      padding,
-      Math.min(bestPos.left, window.innerWidth - popupWidth - padding)
-    );
-    const top = Math.max(
-      padding,
-      Math.min(bestPos.top, window.innerHeight - popupHeight - padding)
-    );
+    const left = Math.max(padding, Math.min(bestPos.left, window.innerWidth - popupWidth - padding));
+    const top = Math.max(padding, Math.min(bestPos.top, window.innerHeight - popupHeight - padding));
 
     this.currentPopup.style.cssText += `
     position: fixed;
@@ -285,7 +279,7 @@ export class ShowModeService {
     window.requestAnimationFrame(() => {
       const btn = popup.querySelector('#marketrix-show-continue') as HTMLButtonElement;
       if (btn) {
-        btn.addEventListener('click', (e) => {
+        btn.addEventListener('click', e => {
           e.stopPropagation();
           if (this.resolvePromise) {
             console.log('[ShowModeService] Continue clicked, resolving promise immediately');

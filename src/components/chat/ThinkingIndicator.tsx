@@ -25,10 +25,7 @@ export const ThinkingIndicator: React.FC<ThinkingIndicatorProps> = ({
         size={12}
       />
       {/* State text */}
-      <span
-        className='text-[10px] font-inter font-normal'
-        style={{ color: addOpacity(textColor, 0.5) }}
-      >
+      <span className='text-[10px] font-inter font-normal' style={{ color: addOpacity(textColor, 0.5) }}>
         {customText || (isWaitingForUser ? 'Waiting for you to complete the action' : 'Thinking')}
       </span>
     </div>
