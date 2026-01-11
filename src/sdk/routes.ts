@@ -43,8 +43,6 @@ import {
   AgentEntitySchema,
   AgentIndexCallbackRequestSchema,
   AgentIndexCallbackResponseSchema,
-  AgentKnowledgeSearchRequestSchema,
-  AgentKnowledgeSearchResponseSchema,
   AgentSimulationIndexRequestSchema,
   AgentSimulationIndexResponseSchema,
   AgentUpdateSchema,
@@ -743,22 +741,6 @@ const contract = c.router({
     path: '/agent/:agent_id',
     pathParams: z.object({ agent_id: z.coerce.number() }),
     responses: { 200: R.success(z.void()), 400: R.error, 401: R.error, 403: R.error, 500: R.error },
-  },
-
-  agentSearchKnowledge: {
-    method: 'POST' as const,
-    summary: 'Search agent knowledge base',
-    description: "Searches the agent's knowledge base with configurable options",
-    path: '/agent/:agent_id/search',
-    pathParams: z.object({ agent_id: z.coerce.number() }),
-    body: AgentKnowledgeSearchRequestSchema,
-    responses: {
-      200: R.success(AgentKnowledgeSearchResponseSchema),
-      400: R.error,
-      401: R.error,
-      403: R.error,
-      500: R.error,
-    },
   },
 
   agentIndexSimulation: {

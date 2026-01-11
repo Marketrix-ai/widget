@@ -40,6 +40,12 @@ export const TenantPackageSchema = z.enum(['free', 'starter', 'growth', 'enterpr
 export const AgentTypeSchema = z.enum(['human', 'ai']);
 export const AgentVoiceSchema = z.enum(['male', 'female']);
 export const AgentStatusSchema = z.enum(['active', 'learning', 'error']);
+export const LearningProgressSchema = z.object({
+  vector_index_created: z.boolean(),
+  mindmap_created: z.boolean(),
+  node_index_created: z.boolean(),
+  edge_index_created: z.boolean(),
+});
 export const KnowledgeTypeSchema = z.enum(['document', 'video']);
 export const MeetingStatusSchema = z.enum(['not_started', 'in_progress', 'ended', 'cancelled']);
 export const ChatRoleSchema = z.enum(['user', 'agent']);
@@ -380,7 +386,6 @@ export const KnowledgeEntitySchema = BaseEntitySchema.extend({
   file_size: z.number(),
   file_type: KnowledgeTypeSchema,
   file_url: z.string(),
-  file_id: z.string().optional(),
   source_url: z.string().optional(), // Original URL for URL-based documents
 });
 
@@ -724,14 +729,12 @@ export const AgentEntitySchema = BaseEntitySchema.extend({
   agent_description: z.string(),
   instructions: z.string().optional(),
   image_url: z.string().optional(),
-  vector_store_id: z.string().optional(),
-  pdf_search_index_id: z.string().optional(),
-  json_search_index_id: z.string().optional(),
   node_index_id: z.string().optional(),
   edge_index_id: z.string().optional(),
   mindmap_url: z.string().optional(),
   status: AgentStatusSchema,
   status_message: z.string().optional(),
+  learning_progress: LearningProgressSchema.optional(),
   tenant: TenantEntitySchema.optional(),
   user: UserEntitySchema.optional(),
   knowledge: z.array(KnowledgeEntitySchema).optional(),
@@ -885,24 +888,6 @@ export const SearchResultSchema = z.object({
 });
 
 /**
- * Agent knowledge search request schema
- */
-export const AgentKnowledgeSearchRequestSchema = z.object({
-  query: z.string().min(1, 'Search query is required'),
-  searchConfig: AgentSearchConfigSchema.optional(),
-});
-
-/**
- * Agent knowledge search response schema
- */
-export const AgentKnowledgeSearchResponseSchema = z.object({
-  results: z.array(SearchResultSchema),
-  totalCount: z.number(),
-  query: z.string(),
-  searchConfig: AgentSearchConfigSchema.optional(),
-});
-
-/**
  * Agent simulation index request schema
  */
 export const AgentSimulationIndexRequestSchema = z.object({
@@ -916,8 +901,6 @@ export const AgentSimulationIndexResponseSchema = z.object({
   agent: AgentEntitySchema,
   simulation_id: z.number(),
   knowledge_id: z.number(),
-  pdf_search_index_id: z.string().optional(),
-  json_search_index_id: z.string().optional(),
   message: z.string(),
 });
 
@@ -1598,8 +1581,6 @@ export type AgentUpdateData = z.infer<typeof AgentUpdateSchema>;
 export type AgentSearchConfig = z.infer<typeof AgentSearchConfigSchema>;
 export type SearchDocument = z.infer<typeof SearchDocumentSchema>;
 export type SearchResult = z.infer<typeof SearchResultSchema>;
-export type AgentKnowledgeSearchRequest = z.infer<typeof AgentKnowledgeSearchRequestSchema>;
-export type AgentKnowledgeSearchResponse = z.infer<typeof AgentKnowledgeSearchResponseSchema>;
 export type AgentSimulationIndexRequest = z.infer<typeof AgentSimulationIndexRequestSchema>;
 export type AgentSimulationIndexResponse = z.infer<typeof AgentSimulationIndexResponseSchema>;
 export type AgentIndexCallbackRequest = z.infer<typeof AgentIndexCallbackRequestSchema>;
