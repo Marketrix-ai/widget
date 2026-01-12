@@ -221,7 +221,7 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         const mode = params.mode || state.currentMode || 'do';
         const explanation = params.explanation || '';
         const requestId = message.id;
-        const targetStateVersion = params.stateVersion;
+        const targetStateVersion = message.targetStateVersion;
 
         updateProgressForTool(toolName, explanation, 'running');
 
