@@ -900,6 +900,9 @@ const contract = c.router({
     query: z.object({
       tenant_id: z.coerce.number().optional(),
       connection_id: z.coerce.number().optional(),
+      pinned: z.coerce.boolean().optional(),
+      limit: z.coerce.number().optional(),
+      offset: z.coerce.number().optional(),
     }),
     responses: {
       200: R.success(z.array(SimulationEntitySchema)),

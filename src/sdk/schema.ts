@@ -591,6 +591,7 @@ export const SimulationEntitySchema = BaseEntitySchema.extend({
   path: z.string(),
   instructions: z.string(),
   num_steps: z.number().int().nonnegative(),
+  pinned: z.boolean().optional(),
   agent_name: z.string().optional(),
 });
 
@@ -613,6 +614,7 @@ export const SimulationUpdateSchema = z.object({
   status: z.string(),
   status_message: z.string(),
   num_steps: z.number().int().nonnegative().optional(),
+  pinned: z.boolean().optional(),
 });
 
 /**
@@ -733,6 +735,7 @@ export const AgentEntitySchema = BaseEntitySchema.extend({
   node_index_id: z.string().optional(),
   edge_index_id: z.string().optional(),
   mindmap_url: z.string().optional(),
+  vector_store_id: z.string().optional(),
   status: AgentStatusSchema,
   status_message: z.string().optional(),
   learning_progress: LearningProgressSchema.optional(),
