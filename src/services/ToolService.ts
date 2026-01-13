@@ -162,6 +162,8 @@ export class ToolExecutionService {
           return this.done(args as unknown as DoneParams);
         case 'get_html':
           return this.getHtml();
+        case 'get_interactable_elements':
+          return this.getInteractableElements();
         case 'get_screenshot':
           return await this.getScreenshot();
         default:
@@ -942,6 +944,15 @@ export class ToolExecutionService {
     try {
       const html = domService.getSnapshotHtml();
       return { success: true, result: html };
+    } catch (error) {
+      return { success: false, result: '', error: String(error) };
+    }
+  }
+
+  private getInteractableElements(): ToolExecutionResult {
+    try {
+      const elements = domService.getInteractableElements();
+      return { success: true, result: JSON.stringify(elements) };
     } catch (error) {
       return { success: false, result: '', error: String(error) };
     }

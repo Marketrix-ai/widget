@@ -601,13 +601,16 @@ export class DOMService {
     y: number;
     w: number;
     h: number;
+    z: number;
   } {
     const rect = element.getBoundingClientRect();
+    const zIndex = this.calculateGlobalZOrder(element);
     return {
       x: Math.round(rect.left),
       y: Math.round(rect.top),
       w: Math.round(rect.width),
       h: Math.round(rect.height),
+      z: zIndex,
     };
   }
 
@@ -628,6 +631,20 @@ export class DOMService {
       style.zIndex !== 'auto'
     ) {
       return true;
+    }
+
+    // Flex or Grid child with z-index (not auto)
+    if (style.zIndex !== 'auto' && element.parentElement) {
+      const parentStyle = window.getComputedStyle(element.parentElement);
+      const parentDisplay = parentStyle.display;
+      if (
+        parentDisplay === 'flex' ||
+        parentDisplay === 'inline-flex' ||
+        parentDisplay === 'grid' ||
+        parentDisplay === 'inline-grid'
+      ) {
+        return true;
+      }
     }
 
     // Opacity less than 1
@@ -772,10 +789,7 @@ export class DOMService {
                 cloneElement.setAttribute('data-y', coords.y.toString());
                 cloneElement.setAttribute('data-w', coords.w.toString());
                 cloneElement.setAttribute('data-h', coords.h.toString());
-
-                // Calculate and set z-order
-                const zOrder = this.calculateGlobalZOrder(element);
-                cloneElement.setAttribute('data-z', zOrder.toString());
+                cloneElement.setAttribute('data-z', coords.z.toString());
               }
             }
           } catch (e) {
@@ -787,6 +801,43 @@ export class DOMService {
     }
 
     return clone.outerHTML;
+  }
+
+  /**
+   * Get actionable elements metadata
+   */
+  getInteractableElements(): Array<{
+    index: number;
+    fingerprint: ElementFingerprint;
+    coords: { x: number; y: number; w: number; h: number; z: number };
+    cssClasses: string[];
+  }> {
+    // Re-index first to ensure we have latest state
+    this.indexInteractableElements();
+
+    const elements: Array<{
+      index: number;
+      fingerprint: ElementFingerprint;
+      coords: { x: number; y: number; w: number; h: number; z: number };
+      cssClasses: string[];
+    }> = [];
+
+    for (const [index, element] of this.elementMap.entries()) {
+      if (element instanceof HTMLElement) {
+        const fingerprint = this.fingerprintMap.get(index);
+
+        if (fingerprint) {
+          elements.push({
+            index,
+            fingerprint,
+            coords: this.getElementCoordinates(element),
+            cssClasses: Array.from(element.classList),
+          });
+        }
+      }
+    }
+
+    return elements;
   }
 
   getElementByDataId(id: number): Element | undefined {
