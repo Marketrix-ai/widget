@@ -103,6 +103,7 @@ export interface WidgetState {
   activeTaskId: string | null;
   isTaskRunning: boolean;
   taskProgress: TaskProgress[];
+  urlGuideMessages?: string[]; // Messages from matching URL guide to display as chips
 }
 
 export interface SendMessageRequest {

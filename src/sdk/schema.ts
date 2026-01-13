@@ -1081,6 +1081,15 @@ export const TourEntitySchema = BaseEntitySchema.extend({
   answer: TourAnswerSchema,
 });
 
+/**
+ * URL Guide entity schema - stores URL patterns and messages to show in widget
+ */
+export const UrlGuideEntitySchema = BaseEntitySchema.extend({
+  integration_id: z.number(),
+  url_pattern: z.string(),
+  message: z.union([z.string(), z.array(z.string())]), // Support both single message and multiple messages
+});
+
 // ============================================================================
 // CHAT SCHEMAS - AI-powered chat and conversation management
 // ============================================================================
@@ -1637,6 +1646,7 @@ export type TaskPilotPromptData = z.infer<typeof TaskPilotPromptSchema>;
 export type TourData = z.infer<typeof TourEntitySchema>;
 export type TourAnswerData = z.infer<typeof TourAnswerSchema>;
 export type TourStepData = z.infer<typeof TourStepSchema>;
+export type UrlGuideData = z.infer<typeof UrlGuideEntitySchema>;
 export type PasswordResetData = z.infer<typeof PasswordResetEntitySchema>;
 export type ChatData = z.infer<typeof ChatEntitySchema>;
 export type UserQuotaData = z.infer<typeof UserQuotaSchema>;

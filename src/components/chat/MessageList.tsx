@@ -296,6 +296,8 @@ export const MessageList = ({
             widget_text_color: widgetConfig.widget_text_color,
             widget_border_color: widgetConfig.widget_border_color,
             widget_secondary_color: widgetConfig.widget_secondary_color,
+            widget_accent_color: widgetConfig.widget_accent_color,
+            widget_background_color: widgetConfig.widget_background_color,
           }}
           marketrixIcon={MarketrixIcon}
           suggestedActions={uniqueSuggestedActions}

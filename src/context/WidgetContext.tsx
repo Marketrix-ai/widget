@@ -1,5 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
+import { sdk } from '../sdk';
 import { MarketrixApiService } from '../services/ApiService';
 import { chatService, createAgentMessage, createUserMessage } from '../services/ChatService';
 import { configManager } from '../services/ConfigManager';
@@ -67,7 +68,160 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     activeTaskId: null,
     isTaskRunning: false,
     taskProgress: [],
+    urlGuideMessages: undefined,
   });
+
+  // Function to check URL guide match
+  const checkUrlGuide = useCallback(async (url?: string) => {
+    if (typeof window === 'undefined') return;
+
+    const currentUrl = url || window.location.href;
+    const config = configManager.getConfig();
+    
+    if (!config) {
+      console.log('⚠️ [Widget] No config available for URL guide check');
+      return;
+    }
+
+    // Log current URL information
+    console.log('🌐 [Widget] Current page URL information:', {
+      full_url: currentUrl,
+      origin: window.location.origin,
+      pathname: window.location.pathname,
+      hostname: window.location.hostname,
+      protocol: window.location.protocol,
+      hash: window.location.hash,
+      search: window.location.search,
+    });
+
+    try {
+      // Import IntegrationService to fetch integration data
+      const { IntegrationService } = await import('../services/IntegrationService');
+      const integrationService = new IntegrationService(
+        config.mtxId,
+        config.mtxKey,
+        config.mtxApp
+      );
+      
+      // Fetch integration to get integration_id (with retry)
+      let integrationData = await integrationService.fetchIntegrationSettings();
+      
+      // Retry once if integration data not found (might be loading)
+      if (!integrationData || !integrationData.id) {
+        console.log('⚠️ [Widget] Integration data not found, retrying in 1 second...');
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        integrationData = await integrationService.fetchIntegrationSettings();
+      }
+      
+      if (integrationData && integrationData.id) {
+        const integrationId = integrationData.id;
+        
+        // Print integration ID
+        console.log('═══════════════════════════════════════════════════════════');
+        console.log('🆔 [Widget] Integration ID:', integrationId);
+        console.log('═══════════════════════════════════════════════════════════');
+        
+        // Fetch all URL guides for this integration
+        try {
+          const urlGuidesResponse = await sdk.urlGuideSearch({
+            query: {
+              integration_id: integrationId,
+            },
+          });
+          const urlGuides = sdk.parse(urlGuidesResponse);
+          
+          if (urlGuides && Array.isArray(urlGuides) && urlGuides.length > 0) {
+            console.log(`📋 [Widget] Found ${urlGuides.length} URL guide(s) in url_guide table for integration ${integrationId}:`);
+            console.log('═══════════════════════════════════════════════════════════');
+            urlGuides.forEach((guide: any, index: number) => {
+              console.log(`  ${index + 1}. URL Guide ID: ${guide.id}`);
+              console.log(`     URL Pattern: "${guide.url_pattern}"`);
+              console.log(`     Message: "${guide.message}"`);
+              if (guide.description) {
+                console.log(`     Description: "${guide.description}"`);
+              }
+              console.log(`     Created: ${new Date(guide.created_at).toLocaleString()}`);
+              console.log('');
+            });
+            console.log('═══════════════════════════════════════════════════════════');
+          } else {
+            console.log(`ℹ️ [Widget] No URL guides found in url_guide table for integration ${integrationId}`);
+          }
+        } catch (error) {
+          console.error('❌ [Widget] Failed to fetch URL guides:', error);
+        }
+        
+        console.log('🔍 [Widget] Checking URL guide match:', {
+          integration_id: integrationId,
+          current_url: currentUrl,
+        });
+        
+        const response = await sdk.urlGuideMatch({
+          query: {
+            integration_id: integrationId,
+            url: currentUrl,
+          },
+        });
+        const guide = sdk.parse(response);
+        
+        if (guide && guide.message) {
+          // Normalize URLs for comparison (same as backend)
+          const normalizeUrl = (url: string): string => {
+            return url.trim().toLowerCase().replace(/\/+$/, '');
+          };
+          const normalizedPattern = normalizeUrl(guide.url_pattern);
+          const normalizedCurrentUrl = normalizeUrl(currentUrl);
+          
+          // Check if it's an exact match
+          const isExactMatch = normalizedPattern === normalizedCurrentUrl;
+          
+          if (isExactMatch) {
+            console.log('═══════════════════════════════════════════════════════════');
+            console.log('🎯 [Widget] EXACT URL MATCH FOUND!');
+            console.log('═══════════════════════════════════════════════════════════');
+            console.log(`✅ URL Pattern: "${guide.url_pattern}"`);
+            console.log(`✅ Current URL: "${currentUrl}"`);
+            console.log(`✅ MATCH TYPE: EXACT EQUAL`);
+            console.log(`✅ Message to show: "${guide.message}"`);
+            console.log('═══════════════════════════════════════════════════════════');
+            // Store the URL guide messages to display as chips (only for exact matches)
+            // Convert single message to array, or use array if already an array
+            const messages = Array.isArray(guide.message) ? guide.message : [guide.message];
+            setState((prev) => ({
+              ...prev,
+              urlGuideMessages: messages,
+            }));
+          } else {
+            console.log('✅ [Widget] URL guide match found!', {
+              url_pattern: guide.url_pattern,
+              message: guide.message,
+              current_url: currentUrl,
+              match_type: 'URL pattern matched (contains/starts-with/ends-with)',
+            });
+            // Clear URL guide messages for non-exact matches
+            setState((prev) => ({
+              ...prev,
+              urlGuideMessages: undefined,
+            }));
+          }
+        } else {
+          console.log('ℹ️ [Widget] No URL guide match found for:', currentUrl);
+          console.log('   Current URL does not match any URL patterns in url_guide table');
+          // Clear URL guide message if no match
+          setState((prev) => ({
+            ...prev,
+            urlGuideMessages: undefined,
+          }));
+        }
+      } else {
+        console.log('⚠️ [Widget] No integration data found after retry, URL:', currentUrl);
+        // Still log the URL even if integration data is not available
+      }
+    } catch (error) {
+      console.error('❌ [Widget] URL guide check failed:', error);
+      console.error('   Current URL:', currentUrl);
+    }
+  }, []);
 
   // Initialize ChatService on mount
   useEffect(() => {
@@ -97,10 +251,88 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           const wsClient = WebSocketClient.getInstance(config);
           wsClient.connect(chatId).catch((err: unknown) => console.error('Initial WebSocket connection failed:', err));
         }
+
+        // Check for URL guide messages from ValidationService (stored in sessionStorage)
+        if (typeof window !== 'undefined') {
+          const storedMessage = sessionStorage.getItem('marketrix_url_guide_message');
+          if (storedMessage) {
+            console.log('💾 [Widget] Found URL guide message from validation:', storedMessage);
+            // Try to parse as JSON array, otherwise treat as single message
+            try {
+              const parsed = JSON.parse(storedMessage);
+              const messages = Array.isArray(parsed) ? parsed : [parsed];
+              setState((prev) => ({
+                ...prev,
+                urlGuideMessages: messages,
+              }));
+            } catch {
+              // Not JSON, treat as single message string
+              setState((prev) => ({
+                ...prev,
+                urlGuideMessages: [storedMessage],
+              }));
+            }
+            // Clear it after reading
+            sessionStorage.removeItem('marketrix_url_guide_message');
+          }
+          
+          // Check for URL guide match on initial load
+          console.log('🚀 [Widget] Widget loaded, checking initial URL...');
+          await checkUrlGuide();
+        }
       }
     };
     initChat();
-  }, []);
+  }, [checkUrlGuide]);
+
+  // Monitor URL changes for SPAs (pushState, replaceState, popstate)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    let lastUrl = window.location.href;
+
+    // Function to handle URL changes
+    const handleUrlChange = () => {
+      const currentUrl = window.location.href;
+      if (currentUrl !== lastUrl) {
+        console.log('🔄 [Widget] URL changed detected:', {
+          from: lastUrl,
+          to: currentUrl,
+        });
+        lastUrl = currentUrl;
+        // Check URL guide for new URL
+        checkUrlGuide(currentUrl);
+      }
+    };
+
+    // Override pushState to detect URL changes
+    const originalPushState = window.history.pushState;
+    window.history.pushState = function (...args) {
+      originalPushState.apply(window.history, args);
+      setTimeout(handleUrlChange, 0);
+    };
+
+    // Override replaceState to detect URL changes
+    const originalReplaceState = window.history.replaceState;
+    window.history.replaceState = function (...args) {
+      originalReplaceState.apply(window.history, args);
+      setTimeout(handleUrlChange, 0);
+    };
+
+    // Listen for popstate (back/forward navigation)
+    window.addEventListener('popstate', handleUrlChange);
+
+    // Listen for hash changes
+    window.addEventListener('hashchange', handleUrlChange);
+
+    // Cleanup
+    return () => {
+      window.history.pushState = originalPushState;
+      window.history.replaceState = originalReplaceState;
+      window.removeEventListener('popstate', handleUrlChange);
+      window.removeEventListener('hashchange', handleUrlChange);
+    };
+  }, [checkUrlGuide]);
 
   // Helper to update progress
   const updateProgressForTool = useCallback(

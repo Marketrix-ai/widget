@@ -29,7 +29,7 @@ export const DiagnosticModal: React.FC<DiagnosticModalProps> = ({ isOpen, onClos
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className='bg-gradient-to-r from-purple-600 to-blue-600 px-6 py-4 text-white relative overflow-hidden flex-shrink-0'>
+        <div className='bg-gradient-to-r from-gray-900 to-gray-400 px-6 py-4 text-white relative overflow-hidden flex-shrink-0'>
           <div className='relative z-10 flex items-center justify-between'>
             <div>
               <h2 className='text-base font-semibold text-white'>Diagnostic Information</h2>
@@ -157,7 +157,7 @@ export const DiagnosticModal: React.FC<DiagnosticModalProps> = ({ isOpen, onClos
         <div className='flex justify-end items-center px-6 py-3 border-t border-gray-200 bg-gray-50 flex-shrink-0'>
           <button
             onClick={onClose}
-            className='px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors'
+            className='px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed'
           >
             Close
           </button>

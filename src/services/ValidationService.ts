@@ -9,6 +9,7 @@ export interface WidgetValidationResult {
   integration?: IntegrationData;
   agent?: AgentData;
   connection?: ConnectionData;
+  urlGuideMessage?: string | string[]; // URL guide message(s) when exact URL match is found
 }
 
 /**
@@ -173,6 +174,132 @@ export class WidgetValidationService {
         }
 
         const connection = connectionData;
+
+        // Fetch and check URL guides for this integration
+        const integrationId = widgetIntegration.id;
+        if (integrationId) {
+          try {
+            // Get current URL if available (browser environment)
+            const currentUrl = typeof window !== 'undefined' ? window.location.href : '';
+            
+            const urlGuidesResponse = await sdk.urlGuideSearch({
+              query: {
+                integration_id: integrationId,
+              },
+            });
+
+            if (isValidApiResponse(urlGuidesResponse)) {
+              const urlGuides = extractApiData(urlGuidesResponse);
+              if (urlGuides && Array.isArray(urlGuides) && urlGuides.length > 0) {
+                console.log('═══════════════════════════════════════════════════════════');
+                console.log(`📋 [Validation] URL Guides for Integration ID: ${integrationId}`);
+                console.log(`   Found ${urlGuides.length} URL guide(s) in url_guide table:`);
+                console.log('═══════════════════════════════════════════════════════════');
+                
+                // Normalize URLs for comparison (same as backend)
+                const normalizeUrl = (url: string): string => {
+                  return url.trim().toLowerCase().replace(/\/+$/, '');
+                };
+                
+                const normalizedCurrentUrl = currentUrl ? normalizeUrl(currentUrl) : '';
+                if (currentUrl) {
+                  console.log(`🌐 [Validation] Current URL: "${currentUrl}"`);
+                  console.log(`🔧 [Validation] Normalized Current URL: "${normalizedCurrentUrl}"`);
+                  console.log('');
+                }
+                
+                let exactMatchFound = false;
+                let matchedMessage: string | string[] | undefined = undefined;
+                
+                urlGuides.forEach((guide: any, index: number) => {
+                  const pattern = guide.url_pattern.trim();
+                  const normalizedPattern = normalizeUrl(pattern);
+                  
+                  console.log(`  ${index + 1}. URL Pattern: "${pattern}"`);
+                  console.log(`     Normalized Pattern: "${normalizedPattern}"`);
+                  console.log(`     Message: "${guide.message}"`);
+                  if (guide.description) {
+                    console.log(`     Description: "${guide.description}"`);
+                  }
+                  console.log(`     Guide ID: ${guide.id}`);
+                  
+                  // Check for exact match
+                  if (currentUrl && normalizedPattern === normalizedCurrentUrl) {
+                    exactMatchFound = true;
+                    matchedMessage = guide.message; // Store the matched message
+                    console.log(`     ✅ EXACT MATCH FOUND!`);
+                    console.log('');
+                    console.log('═══════════════════════════════════════════════════════════');
+                    console.log('🎯 [Validation] EXACT URL MATCH DETECTED!');
+                    console.log('═══════════════════════════════════════════════════════════');
+                    console.log(`✅ URL Pattern: "${pattern}"`);
+                    console.log(`✅ Current URL: "${currentUrl}"`);
+                    console.log(`✅ MATCH TYPE: EXACT EQUAL`);
+                    console.log(`✅ Message to show: "${guide.message}"`);
+                    console.log('═══════════════════════════════════════════════════════════');
+                    console.log('');
+                  } else {
+                    console.log('');
+                  }
+                });
+                
+                if (!exactMatchFound && currentUrl) {
+                  console.log(`ℹ️ [Validation] No exact URL match found. Current URL does not exactly match any URL pattern.`);
+                } else if (!currentUrl) {
+                  console.log(`ℹ️ [Validation] Cannot check URL match (not in browser environment)`);
+                }
+                
+                console.log('═══════════════════════════════════════════════════════════');
+                
+                // Store matched message for widget state
+                if (matchedMessage && typeof window !== 'undefined') {
+                  // Use URL guide match API to get the full guide data and ensure consistency
+                  try {
+                    const matchResponse = await sdk.urlGuideMatch({
+                      query: {
+                        integration_id: integrationId,
+                        url: currentUrl,
+                      },
+                    });
+                    const matchedGuide = sdk.parse(matchResponse);
+                    if (matchedGuide && matchedGuide.message) {
+                      // Normalize URLs to verify it's still an exact match (reuse existing normalizeUrl function)
+                      const normalizedPattern = normalizeUrl(matchedGuide.url_pattern);
+                      const normalizedCurrentUrl = normalizeUrl(currentUrl);
+                      if (normalizedPattern === normalizedCurrentUrl) {
+                        matchedMessage = matchedGuide.message;
+                        // Store in sessionStorage so WidgetContext can access it
+                        // ValidationService runs before WidgetContext is initialized
+                        // Serialize array to JSON if it's an array
+                        if (matchedMessage) {
+                          const messageToStore = Array.isArray(matchedMessage) 
+                            ? JSON.stringify(matchedMessage) 
+                            : matchedMessage;
+                          sessionStorage.setItem('marketrix_url_guide_message', messageToStore);
+                          console.log('💾 [Validation] Stored URL guide message(s) for widget display:', matchedMessage);
+                        }
+                      }
+                    }
+                  } catch (matchError) {
+                    console.warn('⚠️ [Validation] Failed to verify URL guide match:', matchError);
+                    // Still store the message we found earlier
+                    if (matchedMessage) {
+                      const messageToStoreFallback = Array.isArray(matchedMessage) 
+                        ? JSON.stringify(matchedMessage) 
+                        : matchedMessage;
+                      sessionStorage.setItem('marketrix_url_guide_message', messageToStoreFallback);
+                      console.log('💾 [Validation] Stored URL guide message(s) (fallback):', matchedMessage);
+                    }
+                  }
+                }
+              } else {
+                console.log(`ℹ️ [Validation] No URL guides found in url_guide table for integration ${integrationId}`);
+              }
+            }
+          } catch (urlGuideError) {
+            console.warn('⚠️ [Validation] Failed to fetch URL guides:', urlGuideError);
+          }
+        }
 
         console.log('Widget validation successful', {
           integration: widgetIntegration.id,

@@ -288,6 +288,7 @@ let initWidgetFunction: ((config: MarketrixConfig) => Promise<void>) | null = nu
 /**
  * Auto-initialize widget from script tag attributes
  * Retries if script tag not found to handle timing issues with ES module loading
+ * Waits for page to be fully loaded to avoid conflicts with other scripts (e.g., Elementor)
  */
 export const autoInitializeWidget = (retryCount = 0): void => {
   // Guard against SSR - only run in browser
@@ -303,120 +304,143 @@ export const autoInitializeWidget = (retryCount = 0): void => {
     return;
   }
 
-  const scripts = document.querySelectorAll('script[mtx-id], script[mtx-app]');
-  const scriptElement = scripts[scripts.length - 1];
+  // Wait for page to be fully loaded to avoid conflicts with other scripts
+  const initializeWhenReady = () => {
+    const scripts = document.querySelectorAll('script[mtx-id], script[mtx-app]');
+    const scriptElement = scripts[scripts.length - 1];
 
-  if (!scriptElement || !isHTMLScriptElement(scriptElement)) {
-    if (retryCount < MAX_RETRIES) {
-      const delay = RETRY_DELAYS[retryCount] || 2000;
-      console.warn(
-        `[AutoInit] Script tag not found (attempt ${retryCount + 1}/${MAX_RETRIES}), retrying in ${delay}ms...`,
+    if (!scriptElement || !isHTMLScriptElement(scriptElement)) {
+      if (retryCount < MAX_RETRIES) {
+        const delay = RETRY_DELAYS[retryCount] || 2000;
+        console.warn(
+          `[AutoInit] Script tag not found (attempt ${retryCount + 1}/${MAX_RETRIES}), retrying in ${delay}ms...`,
+        );
+        setTimeout(() => autoInitializeWidget(retryCount + 1), delay);
+        return;
+      }
+      // Check if widget is already initialized or programmatic init is in progress
+      if (isWidgetInitialized() || isProgrammaticInitInProgress()) {
+        console.log(
+          '[AutoInit] Script tag not found, but widget is initialized or programmatic init is in progress. Skipping error message.',
+        );
+        return;
+      }
+
+      // If no script tags found at all, assume auto-init was not intended (e.g. using npm package)
+      if (scripts.length === 0) {
+        console.log('[AutoInit] No marketrix script tags found. Skipping auto-initialization.');
+        return;
+      }
+      console.error('[AutoInit] Script tag not found after all retries');
+      console.error(
+        '[AutoInit] Available scripts:',
+        Array.from(document.querySelectorAll('script')).map(s => ({
+          id: s.id,
+          src: s.src,
+          type: s.type,
+          hasMtxId: s.hasAttribute('mtx-id'),
+          hasMtxApp: s.hasAttribute('mtx-app'),
+        })),
       );
-      setTimeout(() => autoInitializeWidget(retryCount + 1), delay);
-      return;
-    }
-    // Check if widget is already initialized or programmatic init is in progress
-    if (isWidgetInitialized() || isProgrammaticInitInProgress()) {
-      console.log(
-        '[AutoInit] Script tag not found, but widget is initialized or programmatic init is in progress. Skipping error message.',
-      );
+      showWidgetSettingsLoader('Please configure mtx-id and mtx-key, or mtx-app and mtx-agent');
       return;
     }
 
-    // If no script tags found at all, assume auto-init was not intended (e.g. using npm package)
-    if (scripts.length === 0) {
-      console.log('[AutoInit] No marketrix script tags found. Skipping auto-initialization.');
-      return;
-    }
-    console.error('[AutoInit] Script tag not found after all retries');
-    console.error(
-      '[AutoInit] Available scripts:',
-      Array.from(document.querySelectorAll('script')).map(s => ({
-        id: s.id,
-        src: s.src,
-        type: s.type,
-        hasMtxId: s.hasAttribute('mtx-id'),
-        hasMtxApp: s.hasAttribute('mtx-app'),
-      })),
-    );
-    showWidgetSettingsLoader('Please configure mtx-id and mtx-key, or mtx-app and mtx-agent');
-    return;
-  }
+    const script = scriptElement;
+    const mtxId = script.getAttribute('mtx-id');
+    const mtxKey = script.getAttribute('mtx-key');
+    const mtxApiHost = script.getAttribute('mtx-api-host');
+    const mtxAiHost = script.getAttribute('mtx-ai-host');
+    const mtxApp = script.getAttribute('mtx-app');
+    const mtxAgent = script.getAttribute('mtx-agent');
 
-  const script = scriptElement;
-  const mtxId = script.getAttribute('mtx-id');
-  const mtxKey = script.getAttribute('mtx-key');
-  const mtxApiHost = script.getAttribute('mtx-api-host');
-  const mtxAiHost = script.getAttribute('mtx-ai-host');
-  const mtxApp = script.getAttribute('mtx-app');
-  const mtxAgent = script.getAttribute('mtx-agent');
-
-  console.log('[AutoInit] Found script tag with attributes:', {
-    mtxId: mtxId ? '***' : null,
-    mtxKey: mtxKey ? '***' : null,
-    mtxApp,
-    mtxAgent,
-    mtxApiHost,
-    mtxAiHost,
-  });
-
-  if (mtxId && mtxKey) {
-    const config: MarketrixConfig = {
-      mtxId,
-      mtxKey,
-    };
-    if (mtxApiHost) {
-      config.mtxApiHost = mtxApiHost;
-    }
-    if (mtxAiHost) {
-      config.mtxAiHost = mtxAiHost;
-    }
-    console.log('[AutoInit] Initializing widget with mtx-id/mtx-key config');
-    initWidgetFunction(config).catch(error => {
-      console.error('[AutoInit] Failed to initialize widget:', error);
+    console.log('[AutoInit] Found script tag with attributes:', {
+      mtxId: mtxId ? '***' : null,
+      mtxKey: mtxKey ? '***' : null,
+      mtxApp,
+      mtxAgent,
+      mtxApiHost,
+      mtxAiHost,
     });
-  } else if (mtxApp && mtxAgent) {
-    const appNum = Number.parseInt(mtxApp);
-    const agentNum = Number.parseInt(mtxAgent);
 
-    if (isNaN(appNum) || isNaN(agentNum)) {
-      console.error(`[AutoInit] Invalid mtx-app or mtx-agent values: mtx-app=${mtxApp}, mtx-agent=${mtxAgent}`);
-      showWidgetSettingsLoader('Invalid mtx-app or mtx-agent values');
-      return;
-    }
+    if (mtxId && mtxKey) {
+      const config: MarketrixConfig = {
+        mtxId,
+        mtxKey,
+      };
+      if (mtxApiHost) {
+        config.mtxApiHost = mtxApiHost;
+      }
+      if (mtxAiHost) {
+        config.mtxAiHost = mtxAiHost;
+      }
+      console.log('[AutoInit] Initializing widget with mtx-id/mtx-key config');
+      if (initWidgetFunction) {
+        initWidgetFunction(config).catch(error => {
+          console.error('[AutoInit] Failed to initialize widget:', error);
+        });
+      }
+    } else if (mtxApp && mtxAgent) {
+      const appNum = Number.parseInt(mtxApp);
+      const agentNum = Number.parseInt(mtxAgent);
 
-    const config: MarketrixConfig = {
-      mtxApp: appNum,
-      mtxAgent: agentNum,
-    };
-    if (mtxApiHost) {
-      config.mtxApiHost = mtxApiHost;
+      if (isNaN(appNum) || isNaN(agentNum)) {
+        console.error(`[AutoInit] Invalid mtx-app or mtx-agent values: mtx-app=${mtxApp}, mtx-agent=${mtxAgent}`);
+        showWidgetSettingsLoader('Invalid mtx-app or mtx-agent values');
+        return;
+      }
+
+      const config: MarketrixConfig = {
+        mtxApp: appNum,
+        mtxAgent: agentNum,
+      };
+      if (mtxApiHost) {
+        config.mtxApiHost = mtxApiHost;
+      }
+      if (mtxAiHost) {
+        config.mtxAiHost = mtxAiHost;
+      }
+      console.log('[AutoInit] Initializing widget with mtx-app/mtx-agent config:', {
+        mtxApp: appNum,
+        mtxAgent: agentNum,
+      });
+      if (initWidgetFunction) {
+        initWidgetFunction(config).catch(error => {
+          console.error('[AutoInit] Failed to initialize widget:', error);
+        });
+      }
+    } else {
+      // Check if widget is already initialized or programmatic init is in progress
+      if (isWidgetInitialized() || isProgrammaticInitInProgress()) {
+        console.log(
+          '[AutoInit] Missing required attributes, but widget is initialized or programmatic init is in progress. Skipping error message.',
+        );
+        return;
+      }
+      console.error('[AutoInit] Missing required attributes:', {
+        hasMtxId: !!mtxId,
+        hasMtxKey: !!mtxKey,
+        hasMtxApp: !!mtxApp,
+        hasMtxAgent: !!mtxAgent,
+      });
+      showWidgetSettingsLoader('Please configure mtx-id and mtx-key, or mtx-app and mtx-agent');
     }
-    if (mtxAiHost) {
-      config.mtxAiHost = mtxAiHost;
-    }
-    console.log('[AutoInit] Initializing widget with mtx-app/mtx-agent config:', {
-      mtxApp: appNum,
-      mtxAgent: agentNum,
-    });
-    initWidgetFunction(config).catch(error => {
-      console.error('[AutoInit] Failed to initialize widget:', error);
-    });
+  };
+
+  // Wait for page to be fully loaded before initializing to avoid conflicts with other scripts
+  if (document.readyState === 'complete') {
+    // Page already loaded, wait a bit for other scripts to initialize
+    setTimeout(initializeWhenReady, 100);
   } else {
-    // Check if widget is already initialized or programmatic init is in progress
-    if (isWidgetInitialized() || isProgrammaticInitInProgress()) {
-      console.log(
-        '[AutoInit] Missing required attributes, but widget is initialized or programmatic init is in progress. Skipping error message.',
-      );
-      return;
-    }
-    console.error('[AutoInit] Missing required attributes:', {
-      hasMtxId: !!mtxId,
-      hasMtxKey: !!mtxKey,
-      hasMtxApp: !!mtxApp,
-      hasMtxAgent: !!mtxAgent,
-    });
-    showWidgetSettingsLoader('Please configure mtx-id and mtx-key, or mtx-app and mtx-agent');
+    // Wait for page load event
+    window.addEventListener(
+      'load',
+      () => {
+        // Additional delay to ensure all scripts (like Elementor) have initialized
+        setTimeout(initializeWhenReady, 200);
+      },
+      { once: true },
+    );
   }
 };
 

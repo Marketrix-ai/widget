@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import MarketrixIcon from '../../assets/marketrix-icon.png';
 import { useWidget } from '../../hooks/useWidget';
 import type { MarketrixConfig } from '../../types';
-import { addOpacity, darkenColor, getContrastingColor } from '../../utils/format';
+import { addOpacity, getContrastingColor } from '../../utils/format';
 import { getPositionClasses } from '../../utils/widgetPositioning';
 
 interface WidgetButtonProps {
@@ -22,7 +22,7 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
   isScreenSharing = false,
 }) => {
   const [showWelcomeText, setShowWelcomeText] = useState(false);
-  const { config: widgetConfig, isPreviewMode } = useWidget({ config });
+  const { config: widgetConfig, state: widgetState, isPreviewMode } = useWidget({ config });
 
   useEffect(() => {
     setShowWelcomeText(false);
@@ -72,6 +72,58 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
         ...previewPositionStyle,
       }}
     >
+
+      {/* URL Guide Message Chips - Displayed above button when exact URL match */}
+      {!isOpen && widgetState.urlGuideMessages && widgetState.urlGuideMessages.length > 0 && (
+        <div
+          className={`
+            absolute bottom-full mb-2 right-0
+            flex flex-wrap items-end gap-1.5
+            max-w-[280px]
+            ${effectivePosition.includes('left') ? 'animate-slide-in-right' : 'animate-slide-in-left'}
+          `}
+          style={{
+            justifyContent: effectivePosition.includes('right') ? 'flex-end' : 'flex-start',
+          }}
+        >
+          {widgetState.urlGuideMessages.map((message, index) => {
+            return (
+              <div
+                key={index}
+                className={`
+                  px-4 py-2 rounded-lg font-inter font-medium text-xs 
+                  transition-all duration-200
+                  whitespace-nowrap text-center
+                  backdrop-blur-sm
+                  w-auto
+                `}
+                style={{
+                  backgroundColor: addOpacity(widgetConfig.widget_background_color || '#ffffff', 0.95),
+                  color: widgetConfig.widget_text_color || '#374151',
+                  borderColor: addOpacity(widgetConfig.widget_border_color || '#e5e7eb', 0.5),
+                  borderWidth: '1px',
+                  borderStyle: 'solid',
+                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.1)',
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.backgroundColor = addOpacity(widgetConfig.widget_background_color || '#ffffff', 1);
+                  e.currentTarget.style.borderColor = addOpacity(widgetConfig.widget_border_color || '#e5e7eb', 0.8);
+                  e.currentTarget.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.07), 0 2px 4px rgba(0, 0, 0, 0.06)';
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.backgroundColor = addOpacity(widgetConfig.widget_background_color || '#ffffff', 0.95);
+                  e.currentTarget.style.borderColor = addOpacity(widgetConfig.widget_border_color || '#e5e7eb', 0.5);
+                  e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.1)';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }}
+              >
+                {message}
+              </div>
+            );
+          })}
+        </div>
+      )}
       <button
         onClick={onClick}
         className={`
@@ -109,101 +161,6 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
           )}
         </div>
       </button>
-
-      {/* Welcome Text - appears after 2 seconds (only for default appearance) */}
-      {!isOpen && showWelcomeText && widgetConfig.widget_appearance === 'default' && (
-        <div
-          className={`absolute ${effectivePosition.includes('left') ? 'right-16' : 'left-16'} bottom-0 px-4 py-3 text-sm rounded-lg shadow-lg w-64 ${effectivePosition.includes('left') ? 'animate-slide-in-right' : 'animate-slide-in-left'} cursor-pointer`}
-          style={{
-            backgroundColor: '#ffffff',
-            backgroundImage: 'none',
-            color: widgetConfig.widget_text_color,
-            borderColor: widgetConfig.widget_border_color,
-            borderWidth: '1px',
-            borderStyle: 'solid',
-          }}
-          onClick={onClick}
-        >
-          <div className='flex gap-2'>
-            {/* Close button - show first for bottom_left position */}
-            {effectivePosition.includes('left') && (
-              <button
-                onClick={e => {
-                  e.stopPropagation();
-                  setShowWelcomeText(false);
-                }}
-                className='flex-shrink-0 w-4 h-4 flex align-top justify-start rounded-full hover:bg-gray-100 transition-colors duration-200'
-                aria-label='Close welcome message'
-              >
-                <svg
-                  className='w-full h-full text-gray-500 border-2 border-gray-500 rounded-full p-0.1'
-                  fill='none'
-                  stroke='currentColor'
-                  viewBox='0 0 24 24'
-                >
-                  <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M6 18L18 6M6 6l12 12' />
-                </svg>
-              </button>
-            )}
-
-            {/* greeting text */}
-            <div className='flex-1'>
-              <div className='font-medium'>{widgetConfig.widget_greeting}</div>
-              <div style={{ color: addOpacity(widgetConfig.widget_text_color, 0.7) }}>{widgetConfig.widget_body}</div>
-            </div>
-
-            {/* Close button - show last for bottom_right position */}
-            {effectivePosition.includes('right') && (
-              <button
-                onClick={e => {
-                  e.stopPropagation();
-                  setShowWelcomeText(false);
-                }}
-                className='flex-shrink-0 w-4 h-4 flex align-top justify-start rounded-full hover:bg-gray-100 transition-colors duration-200'
-                aria-label='Close welcome message'
-              >
-                <svg
-                  className='w-full h-full text-gray-500 border-2 border-gray-500 rounded-full p-0.1'
-                  fill='none'
-                  stroke='currentColor'
-                  viewBox='0 0 24 24'
-                >
-                  <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M6 18L18 6M6 6l12 12' />
-                </svg>
-              </button>
-            )}
-          </div>
-          <div
-            className={`absolute bottom-0 ${effectivePosition.includes('left') ? 'left-full' : 'right-full'} transform translate-y-1/2 w-0 h-0 border-t-4 border-b-4`}
-            style={{
-              [effectivePosition.includes('left') ? 'borderLeftColor' : 'borderRightColor']:
-                widgetConfig.widget_background_color,
-              [effectivePosition.includes('left') ? 'borderRightColor' : 'borderLeftColor']: 'transparent',
-              borderTopColor: 'transparent',
-              borderBottomColor: 'transparent',
-            }}
-          />
-        </div>
-      )}
-
-      {/* Tooltip - show when welcome text is not displayed */}
-      {!isOpen && (!showWelcomeText || widgetConfig.widget_appearance === 'compact') && (
-        <div
-          className={`absolute bottom-16 ${effectivePosition.includes('left') ? 'left-0' : 'right-0'} mb-2 px-3 py-2 text-sm rounded-lg shadow-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200`}
-          style={{
-            backgroundColor: darkenColor(widgetConfig.widget_accent_color, 0.3),
-            color: getContrastingColor(darkenColor(widgetConfig.widget_accent_color, 0.3)),
-          }}
-        >
-          {'Support Agent'}
-          <div
-            className={`absolute top-full ${effectivePosition.includes('left') ? 'left-4' : 'right-4'} w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent`}
-            style={{
-              borderTopColor: darkenColor(widgetConfig.widget_accent_color, 0.3),
-            }}
-          />
-        </div>
-      )}
     </div>
   );
 };

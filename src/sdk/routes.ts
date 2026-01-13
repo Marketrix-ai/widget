@@ -103,6 +103,7 @@ import {
   TourEntitySchema,
   TourStepSchema,
   TrialSubscriptionSchema,
+  UrlGuideEntitySchema,
   UserEntitySchema,
   UserLoginSchema,
   UserQuotaSchema,
@@ -861,6 +862,45 @@ const contract = c.router({
           element_found: z.boolean(),
         }),
       ),
+      400: R.error,
+      401: R.error,
+      403: R.error,
+      500: R.error,
+    },
+  },
+
+  // ============================================================================
+  // URL GUIDE ROUTES - URL-based guidance messages for widget
+  // ============================================================================
+
+  urlGuideSearch: {
+    method: 'GET' as const,
+    summary: 'Search URL guides by integration',
+    description: 'Returns list of URL guides for specified integration',
+    path: '/url-guide',
+    query: z.object({
+      integration_id: z.coerce.number(),
+    }),
+    responses: {
+      200: R.success(z.array(UrlGuideEntitySchema)),
+      400: R.error,
+      401: R.error,
+      403: R.error,
+      500: R.error,
+    },
+  },
+
+  urlGuideMatch: {
+    method: 'GET' as const,
+    summary: 'Find matching URL guide for current URL',
+    description: 'Returns matching URL guide for a given URL pattern',
+    path: '/url-guide/match',
+    query: z.object({
+      integration_id: z.coerce.number(),
+      url: z.string(),
+    }),
+    responses: {
+      200: R.success(UrlGuideEntitySchema.nullable()),
       400: R.error,
       401: R.error,
       403: R.error,

@@ -11,6 +11,8 @@ interface WelcomeMessageProps {
     widget_text_color: string;
     widget_border_color: string;
     widget_secondary_color: string;
+    widget_accent_color: string;
+    widget_background_color: string;
   };
   marketrixIcon: string;
   suggestedActions: Array<{
@@ -55,6 +57,7 @@ export const WelcomeMessage: React.FC<WelcomeMessageProps> = ({
           background-color: transparent !important;
         }
       `}</style>
+      
       <div className='flex items-start gap-1 flex-row'>
         {/* Agent Logo */}
         <div
