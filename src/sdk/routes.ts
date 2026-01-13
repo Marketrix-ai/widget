@@ -1108,8 +1108,11 @@ const contract = c.router({
   rrwebSessionGetAll: {
     method: 'GET' as const,
     summary: 'Get all RRWeb sessions',
-    description: 'Retrieves all sessions ordered by creation date',
+    description: 'Retrieves all sessions ordered by creation date, optionally filtered by connection',
     path: '/rrweb-session',
+    query: z.object({
+      connection_id: z.coerce.number().optional(),
+    }),
     responses: {
       200: R.success(z.array(RrwebSessionEntitySchema)),
       500: R.error,

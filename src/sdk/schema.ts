@@ -663,6 +663,7 @@ export const RrwebSessionUpsertSchema = z.object({
     .object({
       userAgent: z.string().optional(),
       url: z.string().optional(),
+      connectionId: z.number().optional(), // For tenant/connection lookup
     })
     .nullable()
     .optional(),
