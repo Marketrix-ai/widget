@@ -611,8 +611,8 @@ export const SimulationCreateSchema = SimulationEntitySchema.partial().extend({
  */
 export const SimulationUpdateSchema = z.object({
   job_id: z.string().optional(),
-  status: z.string(),
-  status_message: z.string(),
+  status: z.string().optional(),
+  status_message: z.string().optional(),
   num_steps: z.number().int().nonnegative().optional(),
   pinned: z.boolean().optional(),
 });

@@ -900,7 +900,7 @@ const contract = c.router({
     query: z.object({
       tenant_id: z.coerce.number().optional(),
       connection_id: z.coerce.number().optional(),
-      pinned: z.coerce.boolean().optional(),
+      pinned: z.any().transform(val => (String(val) === 'true' ? true : String(val) === 'false' ? false : undefined)),
       limit: z.coerce.number().optional(),
       offset: z.coerce.number().optional(),
     }),
