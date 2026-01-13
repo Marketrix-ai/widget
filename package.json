@@ -1,6 +1,6 @@
 {
   "name": "@marketrix.ai/widget",
-  "version": "1.0.25",
+  "version": "1.0.26",
   "description": "Marketrix AI-Native Support Widget: Show, Tell, Do",
   "type": "module",
   "main": "./dist/index.mjs",
@@ -38,7 +38,7 @@
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.1.18",
-    "@types/node": "^24.10.7",
+    "@types/node": "^24.10.8",
     "@types/react": "^19.2.8",
     "@types/react-dom": "^19.2.3",
     "react": "^19.2.3",

@@ -735,6 +735,7 @@ export const AgentEntitySchema = BaseEntitySchema.extend({
   status: AgentStatusSchema,
   status_message: z.string().optional(),
   learning_progress: LearningProgressSchema.optional(),
+  learning_started_at: z.coerce.date().optional(),
   tenant: TenantEntitySchema.optional(),
   user: UserEntitySchema.optional(),
   knowledge: z.array(KnowledgeEntitySchema).optional(),
