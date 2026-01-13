@@ -13,10 +13,20 @@ const log = createLogger('SessionRecorder');
 interface SessionMetadata {
   type: 'session_metadata';
   sessionId: string;
-  marketrixChatId: string; // Required - must be present
+  marketrixChatId: string; // Required - chat session ID
+  connectionId: number; // Required - maps to mtxApp (connection_id)
   timestamp: number;
   userAgent: string;
   url: string;
+}
+
+/**
+ * Server message types
+ */
+interface ServerMessage {
+  type: string;
+  sessionId?: string;
+  timestamp?: number;
 }
 
 /**
@@ -34,6 +44,7 @@ export class SessionRecorder {
   private stopRecording: ReturnType<typeof record> | null = null;
   private isRecording = false;
   private wsUrl: string;
+  private connectionId: number; // Required - maps to mtxApp
   private metadataSent = false;
   private metadataAcknowledged = false;
   private metadataSendPromise: Promise<void> | null = null;
@@ -42,12 +53,16 @@ export class SessionRecorder {
   private readonly TAB_ID_STORAGE_KEY = 'marketrix_tab_id';
   private readonly CHAT_ID_STORAGE_KEY = 'marketrix_chat_id';
 
-  constructor(wsUrl: string) {
+  constructor(wsUrl: string, connectionId: number) {
     if (!wsUrl || wsUrl.trim() === '') {
       throw new Error('WebSocket URL is required for SessionRecorder');
     }
-    log.info('Constructor called with wsUrl:', wsUrl);
+    if (!connectionId || connectionId <= 0) {
+      throw new Error('connectionId (mtxApp) is required for SessionRecorder');
+    }
+    log.info('Constructor called with wsUrl:', wsUrl, 'connectionId:', connectionId);
     this.wsUrl = wsUrl;
+    this.connectionId = connectionId;
     this.sessionId = this.getTabId();
 
     // Validate that sessionId is in the correct format (tab_* not UUID)
@@ -417,7 +432,7 @@ export class SessionRecorder {
         this.ws.onmessage = event => {
           log.debug('📨 Message received from server, length:', event.data.length);
           try {
-            const data = JSON.parse(event.data);
+            const data = JSON.parse(event.data) as ServerMessage;
             log.debug('Parsed message from server:', {
               type: data.type,
               hasSessionId: !!data.sessionId,
@@ -643,6 +658,7 @@ export class SessionRecorder {
       type: 'session_metadata',
       sessionId: this.sessionId, // Must be tab_* format, not UUID
       marketrixChatId, // Now guaranteed to be a valid string
+      connectionId: this.connectionId, // For tenant/connection lookup
       timestamp: Date.now(),
       userAgent: navigator.userAgent,
       url: window.location.href,
@@ -745,14 +761,14 @@ export class SessionRecorder {
         }
 
         // Use bufferedAmount to ensure message is queued, then wait a bit for it to be sent
-        const beforeBuffered = this.ws!.bufferedAmount;
+        const beforeBuffered = this.ws?.bufferedAmount ?? 0;
         log.debug('WebSocket bufferedAmount before send:', beforeBuffered);
-        this.ws!.send(metadataJson);
+        this.ws?.send(metadataJson);
         log.info('✅ Metadata sent via WebSocket.send()');
 
         // Wait for the message to be sent (bufferedAmount decreases)
         const checkSent = () => {
-          if (this.ws!.readyState === WebSocket.OPEN) {
+          if (this.ws?.readyState === WebSocket.OPEN) {
             // Give it a small delay to ensure message is actually sent over the wire
             setTimeout(() => {
               this.metadataSent = true;
@@ -770,12 +786,12 @@ export class SessionRecorder {
         };
 
         // If bufferedAmount is 0, message was sent immediately
-        if (this.ws!.bufferedAmount === beforeBuffered) {
+        if (this.ws?.bufferedAmount === beforeBuffered) {
           checkSent();
         } else {
           // Wait for bufferedAmount to decrease
           const interval = setInterval(() => {
-            if (this.ws!.bufferedAmount === 0 || this.ws!.readyState !== WebSocket.OPEN) {
+            if (this.ws?.bufferedAmount === 0 || this.ws?.readyState !== WebSocket.OPEN) {
               clearInterval(interval);
               checkSent();
             }

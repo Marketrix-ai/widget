@@ -198,7 +198,13 @@ export const initWidget = async (config: MarketrixConfig, container?: HTMLElemen
 
     console.log('[Marketrix Widget] Using RRWeb server URL:', wsUrl);
 
-    sessionRecorder = new SessionRecorder(wsUrl);
+    // connectionId (mtxApp) is required for RRWeb uploads
+    const connectionId = finalConfig.mtxApp ?? config.mtxApp;
+    if (!connectionId) {
+      console.warn('[Marketrix Widget] ⚠️ No mtxApp (connectionId) configured - skipping session recording');
+      return;
+    }
+    sessionRecorder = new SessionRecorder(wsUrl, connectionId);
     isRecordingInitialized = true; // Mark as initialized
 
     // Start recording - it will wait for chat_id to be available
