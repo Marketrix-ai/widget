@@ -730,6 +730,9 @@ const contract = c.router({
     description: 'Modifies agent properties like prompts, behavior, or appearance',
     path: '/agent/:agent_id',
     pathParams: z.object({ agent_id: z.coerce.number() }),
+    query: z.object({
+      force_reset_learning: z.coerce.boolean().optional(),
+    }),
     contentType: 'multipart/form-data' as const,
     body: AgentUpdateSchema,
     responses: { 200: R.success(AgentEntitySchema), 400: R.error, 401: R.error, 403: R.error, 500: R.error },
@@ -770,6 +773,23 @@ const contract = c.router({
     responses: {
       200: R.success(AgentIndexCallbackResponseSchema),
       400: R.error,
+      500: R.error,
+    },
+  },
+
+  agentResetLearning: {
+    method: 'POST' as const,
+    summary: 'Force reset agent from stuck learning state',
+    description:
+      'Resets an agent that is stuck in learning state, setting it to error status with a message explaining the reset',
+    path: '/agent/:agent_id/reset-learning',
+    pathParams: z.object({ agent_id: z.coerce.number() }),
+    body: z.void(),
+    responses: {
+      200: R.success(AgentEntitySchema),
+      400: R.error,
+      401: R.error,
+      403: R.error,
       500: R.error,
     },
   },
@@ -920,6 +940,9 @@ const contract = c.router({
     query: z.object({
       tenant_id: z.coerce.number().optional(),
       connection_id: z.coerce.number().optional(),
+      pinned: z.any().transform(val => (String(val) === 'true' ? true : String(val) === 'false' ? false : undefined)),
+      limit: z.coerce.number().optional(),
+      offset: z.coerce.number().optional(),
     }),
     responses: {
       200: R.success(z.array(SimulationEntitySchema)),
@@ -1128,8 +1151,11 @@ const contract = c.router({
   rrwebSessionGetAll: {
     method: 'GET' as const,
     summary: 'Get all RRWeb sessions',
-    description: 'Retrieves all sessions ordered by creation date',
+    description: 'Retrieves all sessions ordered by creation date, optionally filtered by connection',
     path: '/rrweb-session',
+    query: z.object({
+      connection_id: z.coerce.number().optional(),
+    }),
     responses: {
       200: R.success(z.array(RrwebSessionEntitySchema)),
       500: R.error,

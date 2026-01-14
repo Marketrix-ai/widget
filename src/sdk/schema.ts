@@ -591,6 +591,7 @@ export const SimulationEntitySchema = BaseEntitySchema.extend({
   path: z.string(),
   instructions: z.string(),
   num_steps: z.number().int().nonnegative(),
+  pinned: z.boolean().optional(),
   agent_name: z.string().optional(),
 });
 
@@ -610,9 +611,10 @@ export const SimulationCreateSchema = SimulationEntitySchema.partial().extend({
  */
 export const SimulationUpdateSchema = z.object({
   job_id: z.string().optional(),
-  status: z.string(),
-  status_message: z.string(),
+  status: z.string().optional(),
+  status_message: z.string().optional(),
   num_steps: z.number().int().nonnegative().optional(),
+  pinned: z.boolean().optional(),
 });
 
 /**
@@ -663,6 +665,7 @@ export const RrwebSessionUpsertSchema = z.object({
     .object({
       userAgent: z.string().optional(),
       url: z.string().optional(),
+      connectionId: z.number().optional(), // For tenant/connection lookup
     })
     .nullable()
     .optional(),
@@ -732,9 +735,11 @@ export const AgentEntitySchema = BaseEntitySchema.extend({
   node_index_id: z.string().optional(),
   edge_index_id: z.string().optional(),
   mindmap_url: z.string().optional(),
+  vector_store_id: z.string().optional(),
   status: AgentStatusSchema,
   status_message: z.string().optional(),
   learning_progress: LearningProgressSchema.optional(),
+  learning_started_at: z.coerce.date().optional(),
   tenant: TenantEntitySchema.optional(),
   user: UserEntitySchema.optional(),
   knowledge: z.array(KnowledgeEntitySchema).optional(),
