@@ -189,8 +189,7 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         const requestId = request.id;
         const requestStateVersion = request.stateVersion;
 
-        updateProgressForTool(toolName, explanation, 'running');
-
+        // Check state version FIRST - silently fail if mismatch (no progress shown)
         if (requestStateVersion !== stateVersion.current) {
           console.log('State version mismatch, skipping tool execution');
           const response: ToolResponse = {
@@ -201,9 +200,11 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             stateVersion: stateVersion.current,
           };
           wsClient.send(response as unknown as WebSocketMessage);
-          updateProgressForTool(toolName, explanation, 'failed', 'State version mismatch');
           return;
         }
+
+        // Only show progress if we're actually executing
+        updateProgressForTool(toolName, explanation, 'running');
 
         const result = await toolExecutionService.executeTool(toolName, args, mode, explanation);
 
