@@ -62,7 +62,7 @@ class DevTestService {
       return [];
     }
 
-    const targetElement = domService.getElementByIndex(index);
+    const { element: targetElement } = domService.getElementByIndex(index);
     if (!targetElement) {
       console.warn(`[DevTestService] Could not find element at index ${index}`);
       return [];
@@ -89,7 +89,7 @@ class DevTestService {
    * Insert a new interactable element after the element at the given index
    */
   insertElementAfter(index: number): HTMLElement | null {
-    const targetElement = domService.getElementByIndex(index);
+    const { element: targetElement } = domService.getElementByIndex(index);
     if (!targetElement) {
       console.warn(`[DevTestService] Could not find element at index ${index}`);
       return null;
@@ -111,7 +111,7 @@ class DevTestService {
    * Remove the element at the given index
    */
   removeElement(index: number): boolean {
-    const targetElement = domService.getElementByIndex(index);
+    const { element: targetElement } = domService.getElementByIndex(index);
     if (!targetElement) {
       console.warn(`[DevTestService] Could not find element at index ${index}`);
       return false;
@@ -148,7 +148,7 @@ class DevTestService {
    * This creates a new DOM node with the same attributes
    */
   simulateRerender(index: number): HTMLElement | null {
-    const targetElement = domService.getElementByIndex(index);
+    const { element: targetElement } = domService.getElementByIndex(index);
     if (!targetElement) {
       console.warn(`[DevTestService] Could not find element at index ${index}`);
       return null;
@@ -305,7 +305,7 @@ class DevTestService {
    * Replace a skeleton loader with real content
    */
   replaceSkeleton(skeletonIndex: number): HTMLElement | null {
-    const skeleton = domService.getElementByIndex(skeletonIndex);
+    const { element: skeleton } = domService.getElementByIndex(skeletonIndex);
     if (!skeleton) {
       console.warn(`[DevTestService] No skeleton at index ${skeletonIndex}`);
       return null;
@@ -331,7 +331,7 @@ class DevTestService {
    * Insert a sibling of the same type to break nth-of-type selectors
    */
   insertSameSibling(index: number): HTMLElement | null {
-    const targetElement = domService.getElementByIndex(index);
+    const { element: targetElement } = domService.getElementByIndex(index);
     if (!targetElement) {
       console.warn(`[DevTestService] Could not find element at index ${index}`);
       return null;
@@ -353,7 +353,7 @@ class DevTestService {
    * Change the class name of an element
    */
   changeClassName(index: number, newClass: string): boolean {
-    const element = domService.getElementByIndex(index);
+    const { element } = domService.getElementByIndex(index);
     if (!element) {
       console.warn(`[DevTestService] Could not find element at index ${index}`);
       return false;
@@ -369,7 +369,7 @@ class DevTestService {
    * Wrap an element in a new parent div, changing its DOM path
    */
   wrapInParent(index: number): HTMLElement | null {
-    const element = domService.getElementByIndex(index);
+    const { element } = domService.getElementByIndex(index);
     if (!element) {
       console.warn(`[DevTestService] Could not find element at index ${index}`);
       return null;
@@ -390,7 +390,7 @@ class DevTestService {
    * Add a duplicate ID to cause selector ambiguity
    */
   addDuplicateId(index: number): HTMLElement | null {
-    const element = domService.getElementByIndex(index);
+    const { element } = domService.getElementByIndex(index);
     if (!element?.id) {
       console.warn(`[DevTestService] Element at index ${index} has no ID`);
       return null;
@@ -445,7 +445,7 @@ class DevTestService {
    * Expand a dropdown to show options
    */
   expandDropdown(index: number): HTMLElement | null {
-    const element = domService.getElementByIndex(index);
+    const { element } = domService.getElementByIndex(index);
     if (!element) {
       console.warn(`[DevTestService] Could not find element at index ${index}`);
       return null;
@@ -563,7 +563,7 @@ class DevTestService {
    * Change the text content of an element
    */
   changeElementContent(index: number, newText: string): boolean {
-    const element = domService.getElementByIndex(index);
+    const { element } = domService.getElementByIndex(index);
     if (!element) {
       console.warn(`[DevTestService] Could not find element at index ${index}`);
       return false;
@@ -579,7 +579,7 @@ class DevTestService {
    * Hide an element (make it non-interactable)
    */
   hideElement(index: number): boolean {
-    const element = domService.getElementByIndex(index);
+    const { element } = domService.getElementByIndex(index);
     if (!element) {
       console.warn(`[DevTestService] Could not find element at index ${index}`);
       return false;
@@ -845,7 +845,7 @@ class DevTestService {
     return fingerprints.map(([index, fingerprint]) => ({
       index,
       fingerprint,
-      element: domService.getElementByIndex(index),
+      element: domService.getElementByIndex(index).element,
     }));
   }
 

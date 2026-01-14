@@ -128,28 +128,30 @@ export class ToolExecutionService {
       if (mode === 'show' && this.requiresHighlight(toolName)) {
         const index = args.index as number | undefined;
         if (index !== undefined) {
-          const element = domService.getElementByIndex(index);
-          if (element) {
-            const confirmed = await showModeService.showToolAction({
-              element,
-              explanation: explanation || `Execute ${toolName}`,
-              toolName,
-              isClickAction: toolName === 'click_element',
-            });
+          const { element, error } = domService.getElementByIndex(index);
+          if (!element) {
+            return { success: false, data: { text: '' }, error: error || `Element ${index} not found` };
+          }
 
-            if (!confirmed) {
-              return { success: false, data: { text: '' }, error: 'User cancelled action' };
-            }
+          const confirmed = await showModeService.showToolAction({
+            element,
+            explanation: explanation || `Execute ${toolName}`,
+            toolName,
+            isClickAction: toolName === 'click_element',
+          });
 
-            if (toolName === 'click_element') {
-              // Execute the click after confirmation
-              // We proceed to the switch case below to actually execute the click
-            } else if (toolName === 'type_text' || toolName === 'select_dropdown_option' || toolName === 'send_keys') {
-              // Execute the action after confirmation
-              // We proceed to the switch case below to actually execute the action
-            } else {
-              // For other tools, proceed to execute as well if they were highlighted
-            }
+          if (!confirmed) {
+            return { success: false, data: { text: '' }, error: 'User cancelled action' };
+          }
+
+          if (toolName === 'click_element') {
+            // Execute the click after confirmation
+            // We proceed to the switch case below to actually execute the click
+          } else if (toolName === 'type_text' || toolName === 'select_dropdown_option' || toolName === 'send_keys') {
+            // Execute the action after confirmation
+            // We proceed to the switch case below to actually execute the action
+          } else {
+            // For other tools, proceed to execute as well if they were highlighted
           }
         }
       }
@@ -238,22 +240,10 @@ export class ToolExecutionService {
   private async clickElement(args: ClickElementParams): Promise<ToolExecutionResult> {
     if (args.index === undefined) return { success: false, data: { text: '' }, error: 'Index required' };
 
-    const { element, validation } = domService.getValidatedElement(args.index);
+    const { element, error } = domService.getValidatedElement(args.index);
 
     if (!element) {
-      if (validation.requiresReindex) {
-        domService.indexInteractableElements();
-        return {
-          success: false,
-          data: { text: '' },
-          error: `DOM_CHANGED: Element at index ${args.index} no longer exists. Please call get_html to get updated element indices.`,
-        };
-      }
-      return { success: false, data: { text: '' }, error: `Element ${args.index} not found` };
-    }
-
-    if (validation.mismatchReason === 'index_shifted' && validation.recoveredIndex !== undefined) {
-      console.log(`[ToolExecutionService] Element shifted from index ${args.index} to ${validation.recoveredIndex}`);
+      return { success: false, data: { text: '' }, error: error || `Element ${args.index} not found` };
     }
 
     element.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -281,18 +271,10 @@ export class ToolExecutionService {
 
     const clear = args.clear !== false;
 
-    const { element, validation } = domService.getValidatedElement(args.index);
+    const { element, error } = domService.getValidatedElement(args.index);
 
     if (!element) {
-      if (validation.requiresReindex) {
-        domService.indexInteractableElements();
-        return {
-          success: false,
-          data: { text: '' },
-          error: `DOM_CHANGED: Element at index ${args.index} no longer exists. Please call get_html to get updated element indices.`,
-        };
-      }
-      return { success: false, data: { text: '' }, error: `Element ${args.index} not found` };
+      return { success: false, data: { text: '' }, error: error || `Element ${args.index} not found` };
     }
 
     const isInputLike =
@@ -519,18 +501,10 @@ export class ToolExecutionService {
     if (args.index === undefined || !args.option)
       return { success: false, data: { text: '' }, error: 'Index/Option required' };
 
-    const { element, validation } = domService.getValidatedElement(args.index);
+    const { element, error } = domService.getValidatedElement(args.index);
 
     if (!element) {
-      if (validation.requiresReindex) {
-        domService.indexInteractableElements();
-        return {
-          success: false,
-          data: { text: '' },
-          error: `DOM_CHANGED: Element at index ${args.index} no longer exists. Please call get_html to get updated element indices.`,
-        };
-      }
-      return { success: false, data: { text: '' }, error: `Select ${args.index} not found` };
+      return { success: false, data: { text: '' }, error: error || `Select ${args.index} not found` };
     }
 
     if (!(element instanceof HTMLSelectElement)) {
@@ -549,18 +523,10 @@ export class ToolExecutionService {
   private getDropdownOptions(args: GetDropdownOptionsParams): ToolExecutionResult<DropdownOptionsData> {
     const index = args.index;
 
-    const { element, validation } = domService.getValidatedElement(index);
+    const { element, error } = domService.getValidatedElement(index);
 
     if (!element) {
-      if (validation.requiresReindex) {
-        domService.indexInteractableElements();
-        return {
-          success: false,
-          data: { options: [] },
-          error: `DOM_CHANGED: Element at index ${index} no longer exists. DOM has been re-indexed. Please call get_html to get updated element indices.`,
-        };
-      }
-      return { success: false, data: { options: [] }, error: `Select ${index} not found` };
+      return { success: false, data: { options: [] }, error: error || `Select ${index} not found` };
     }
 
     if (!(element instanceof HTMLSelectElement)) {
@@ -575,18 +541,10 @@ export class ToolExecutionService {
     if (args.index === undefined || !args.keys)
       return { success: false, data: { text: '' }, error: 'Index/Keys required' };
 
-    const { element, validation } = domService.getValidatedElement(args.index);
+    const { element, error } = domService.getValidatedElement(args.index);
 
     if (!element) {
-      if (validation.requiresReindex) {
-        domService.indexInteractableElements();
-        return {
-          success: false,
-          data: { text: '' },
-          error: `DOM_CHANGED: Element at index ${args.index} no longer exists. Please call get_html to get updated element indices.`,
-        };
-      }
-      return { success: false, data: { text: '' }, error: `Element ${args.index} not found` };
+      return { success: false, data: { text: '' }, error: error || `Element ${args.index} not found` };
     }
 
     element.focus();

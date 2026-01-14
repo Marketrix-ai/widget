@@ -123,8 +123,7 @@ export const DomTestPanel: React.FC = () => {
   // Validation status color
   const getValidationColor = (validation: ValidationResult): string => {
     if (validation.isValid) return '#4caf50'; // Green
-    if (validation.recoveredElement) return '#ff9800'; // Orange/Yellow
-    return '#f44336'; // Red
+    return '#f44336'; // Red - element changed or removed
   };
 
   const getOutcomeColor = (outcome: string): string => {

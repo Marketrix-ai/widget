@@ -76,7 +76,7 @@ export const devTools = {
    * Highlight an element by index (for visual verification)
    */
   highlightElement(index: number, duration: number = 2000): void {
-    const element = domService.getElementByIndex(index);
+    const { element } = domService.getElementByIndex(index);
     if (!element) {
       console.error(`[DevTools] Element ${index} not found. Run indexDOM() first.`);
       return;

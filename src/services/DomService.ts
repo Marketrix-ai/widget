@@ -21,10 +21,22 @@ export interface ElementFingerprint {
  */
 export interface ValidationResult {
   isValid: boolean;
-  mismatchReason?: 'element_removed' | 'element_changed' | 'index_shifted';
-  recoveredElement?: HTMLElement;
-  recoveredIndex?: number;
-  requiresReindex?: boolean;
+  mismatchReason?: 'element_removed' | 'element_changed';
+}
+
+/**
+ * Result of looking up an element by index
+ */
+export interface ElementLookupResult {
+  element: HTMLElement | null;
+  error?: string;
+}
+
+/**
+ * Result of validated element lookup (includes validation info)
+ */
+export interface ValidatedElementResult extends ElementLookupResult {
+  validation: ValidationResult;
 }
 
 export class DOMService {
@@ -116,39 +128,8 @@ export class DOMService {
   }
 
   /**
-   * Calculate similarity between two strings using word-based Jaccard similarity
-   * Returns a value between 0 and 1
-   */
-  private calculateSimilarity(str1: string | null, str2: string | null): number {
-    if (str1 === str2) return 1;
-    if (!str1 || !str2) return 0;
-
-    // Simple word-based Jaccard similarity
-    const words1 = new Set(
-      str1
-        .toLowerCase()
-        .split(/\s+/)
-        .filter(w => w.length > 0),
-    );
-    const words2 = new Set(
-      str2
-        .toLowerCase()
-        .split(/\s+/)
-        .filter(w => w.length > 0),
-    );
-
-    if (words1.size === 0 && words2.size === 0) return 1;
-    if (words1.size === 0 || words2.size === 0) return 0;
-
-    const intersection = new Set([...words1].filter(w => words2.has(w)));
-    const union = new Set([...words1, ...words2]);
-
-    return intersection.size / union.size;
-  }
-
-  /**
-   * Check if an element matches a stored fingerprint
-   * Uses various heuristics to determine identity
+   * Check if an element matches a stored fingerprint.
+   * Uses strict matching - fails if any key attribute differs.
    */
   private matchesFingerprint(element: Element, fingerprint: ElementFingerprint): boolean {
     // Primary check: tagName must match
@@ -188,263 +169,30 @@ export class DOMService {
       return false;
     }
 
-    // Check text content similarity (allow some tolerance for dynamic content)
-    const currentText = element.textContent?.trim().replace(/\s+/g, ' ').slice(0, 100) || null;
-    if (fingerprint.textContent && currentText) {
-      const similarity = this.calculateSimilarity(fingerprint.textContent, currentText);
-      if (similarity < 0.7) {
-        return false;
-      }
-    }
-
     return true;
   }
 
   /**
-   * Search the entire DOM for an element matching the fingerprint
-   * This is a last-resort recovery method
-   */
-  private searchDomForMatch(fingerprint: ElementFingerprint): HTMLElement | null {
-    // Build a query based on tag and key attributes
-    let query = fingerprint.tagName.toLowerCase();
-
-    if (fingerprint.id) {
-      query = `#${CSS.escape(fingerprint.id)}`;
-    } else if (fingerprint.type) {
-      query = `${fingerprint.tagName.toLowerCase()}[type="${fingerprint.type}"]`;
-    }
-
-    try {
-      const candidates = document.querySelectorAll(query);
-
-      // Limit search to prevent performance issues
-      const maxCandidates = Math.min(candidates.length, 1000);
-
-      for (let i = 0; i < maxCandidates; i++) {
-        const elem = candidates[i];
-        if (elem instanceof HTMLElement && this.matchesFingerprint(elem, fingerprint)) {
-          return elem;
-        }
-      }
-    } catch (e) {
-      console.warn('[DOMService] DOM search failed:', e);
-    }
-
-    return null;
-  }
-
-  /**
-   * Attempt to recover an element that doesn't match at its expected index
-   */
-  private attemptRecovery(index: number, fingerprint: ElementFingerprint): ValidationResult {
-    console.log(`[DOMService] Attempting recovery for index ${index}`);
-
-    // Get the original element reference if it exists
-    const originalElement = this.elementMap.get(index);
-    const originalElementStillExists = originalElement && document.contains(originalElement);
-
-    // Strategy 1: Try CSS selector
-    const selector = fingerprint.selector;
-    if (selector) {
-      try {
-        const element = document.querySelector(selector);
-        if (element && element instanceof HTMLElement) {
-          // If selector returns the SAME element reference (just content changed),
-          // it's safe to use even if text doesn't match
-          if (originalElement === element && originalElementStillExists) {
-            console.log(`[DOMService] Same element via selector, content may have changed: ${selector}`);
-            return {
-              isValid: false,
-              mismatchReason: 'element_changed',
-              recoveredElement: element,
-              recoveredIndex: index,
-              requiresReindex: false,
-            };
-          }
-
-          if (this.matchesFingerprint(element, fingerprint)) {
-            console.log(`[DOMService] Recovered element via selector: ${selector}`);
-
-            // Check if element is at a different index now
-            const currentIndex = this.elementToSequence.get(element);
-            if (currentIndex !== undefined && currentIndex !== index) {
-              return {
-                isValid: false,
-                mismatchReason: 'index_shifted',
-                recoveredElement: element,
-                recoveredIndex: currentIndex,
-                requiresReindex: false,
-              };
-            }
-
-            // Element found via selector, update mapping and return
-            this.elementMap.set(index, element);
-            return {
-              isValid: true,
-              recoveredElement: element,
-            };
-          }
-
-          // IMPORTANT: Only do relaxed recovery if the ORIGINAL element still exists
-          // This handles content changes. If original was REMOVED, don't accept a different element.
-          if (originalElementStillExists && element.tagName === fingerprint.tagName) {
-            console.log(`[DOMService] Relaxed recovery via selector (tag matches): ${selector}`);
-            return {
-              isValid: false,
-              mismatchReason: 'element_changed',
-              recoveredElement: element,
-              recoveredIndex: index,
-              requiresReindex: false,
-            };
-          }
-        }
-      } catch (e) {
-        console.warn('[DOMService] Selector recovery failed:', e);
-      }
-    }
-
-    // Strategy 2: Search all currently indexed elements for a match
-    // Only consider elements that are still in the document
-    for (const [idx, elem] of this.elementMap.entries()) {
-      if (elem instanceof HTMLElement && document.contains(elem) && this.matchesFingerprint(elem, fingerprint)) {
-        console.log(`[DOMService] Found matching element at different index: ${idx}`);
-        return {
-          isValid: false,
-          mismatchReason: 'index_shifted',
-          recoveredElement: elem,
-          recoveredIndex: idx,
-          requiresReindex: false,
-        };
-      }
-    }
-
-    // Strategy 3: Search entire DOM for matching element (expensive, last resort)
-    const matchingElement = this.searchDomForMatch(fingerprint);
-    if (matchingElement) {
-      console.log('[DOMService] Found matching element in DOM, requires re-index');
-      return {
-        isValid: false,
-        mismatchReason: 'index_shifted',
-        recoveredElement: matchingElement,
-        requiresReindex: true, // Element exists but needs re-indexing
-      };
-    }
-
-    // Element truly removed or changed beyond recognition
-    console.log(`[DOMService] Element at index ${index} could not be recovered`);
-    return {
-      isValid: false,
-      mismatchReason: 'element_removed',
-      requiresReindex: true,
-    };
-  }
-
-  /**
-   * Get the current DOM position of an element by re-traversing interactable elements
-   * Uses the same TreeWalker approach as indexInteractableElements for consistency
-   * Returns -1 if element is not found in current interactable elements
-   */
-  private getCurrentDomPosition(targetElement: HTMLElement): number {
-    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_ELEMENT, {
-      acceptNode: (node: Node) => {
-        if (node instanceof HTMLElement) {
-          // Same logic as indexInteractableElements to handle fixed-position modals
-          if (node.offsetParent === null && node.tagName !== 'BODY') {
-            const style = window.getComputedStyle(node);
-            const isFixedOrSticky = style.position === 'fixed' || style.position === 'sticky';
-            const isDisplayNone = style.display === 'none';
-
-            if (isDisplayNone) {
-              return NodeFilter.FILTER_REJECT;
-            }
-
-            if (!isFixedOrSticky) {
-              let parent = node.parentElement;
-              let insideFixedParent = false;
-              while (parent && parent !== document.body) {
-                const parentStyle = window.getComputedStyle(parent);
-                if (parentStyle.position === 'fixed' || parentStyle.position === 'sticky') {
-                  insideFixedParent = true;
-                  break;
-                }
-                parent = parent.parentElement;
-              }
-              if (!insideFixedParent) {
-                return NodeFilter.FILTER_REJECT;
-              }
-            }
-          }
-        }
-        return NodeFilter.FILTER_ACCEPT;
-      },
-    });
-
-    let node: Node | null = walker.nextNode();
-    let position = 0;
-
-    while (node) {
-      if (node instanceof Element && isInteractable(node)) {
-        if (node === targetElement) {
-          return position;
-        }
-        position++;
-      }
-      node = walker.nextNode();
-    }
-
-    return -1; // Element not found in current interactable elements
-  }
-
-  /**
-   * Validate that the element at a given index still matches its fingerprint
+   * Validate that the element at a given index still matches its fingerprint.
+   * No recovery - just check if element exists and matches.
    */
   private validateElementAtIndex(index: number): ValidationResult {
     const fingerprint = this.fingerprintMap.get(index);
     if (!fingerprint) {
-      // No fingerprint stored - cannot validate, proceed with caution
-      console.warn(`[DOMService] No fingerprint for index ${index}, skipping validation`);
+      // No fingerprint stored - assume OK
       return { isValid: true };
     }
 
-    // Check if index version is stale (informational)
-    if (fingerprint.indexVersion !== this.indexVersion) {
-      console.warn(
-        `[DOMService] Fingerprint version (${fingerprint.indexVersion}) differs from current index version (${this.indexVersion})`,
-      );
+    const element = this.elementMap.get(index);
+    if (!element || !document.contains(element)) {
+      return { isValid: false, mismatchReason: 'element_removed' };
     }
 
-    // Step 1: Check element in live map
-    const currentElement = this.elementMap.get(index);
-    if (currentElement && currentElement instanceof HTMLElement) {
-      // CRITICAL: Check if element is still in the document (not removed)
-      if (!document.contains(currentElement)) {
-        console.log(`[DOMService] Element at index ${index} was removed from DOM`);
-        return this.attemptRecovery(index, fingerprint);
-      }
-
-      // CRITICAL: Check if element is still at the expected DOM position
-      // Elements may have shifted due to insertions/removals
-      const currentDomPosition = this.getCurrentDomPosition(currentElement);
-      if (currentDomPosition !== -1 && currentDomPosition !== index) {
-        console.log(`[DOMService] Element shifted from index ${index} to DOM position ${currentDomPosition}`);
-        return {
-          isValid: false,
-          mismatchReason: 'index_shifted',
-          recoveredElement: currentElement,
-          recoveredIndex: currentDomPosition,
-          requiresReindex: false,
-        };
-      }
-
-      if (this.matchesFingerprint(currentElement, fingerprint)) {
-        return { isValid: true };
-      }
-      // Element at index doesn't match - it changed
-      console.log(`[DOMService] Element at index ${index} doesn't match fingerprint`);
+    if (element instanceof HTMLElement && !this.matchesFingerprint(element, fingerprint)) {
+      return { isValid: false, mismatchReason: 'element_changed' };
     }
 
-    // Step 2: Element not in map or doesn't match - attempt recovery
-    return this.attemptRecovery(index, fingerprint);
+    return { isValid: true };
   }
 
   /**
@@ -842,28 +590,87 @@ export class DOMService {
   }
 
   /**
-   * Get an interactive element by its index.
-   * Preferentially uses the current index.
+   * Check if an element is interactable (visible, not hidden, not obscured).
+   * Returns error string if not interactable, null if OK.
    */
-  getElementByIndex(index: number): HTMLElement | null {
+  private checkInteractability(element: HTMLElement, index: number): string | null {
+    if (!document.body.contains(element)) {
+      return `ELEMENT_NOT_INTERACTABLE: Element ${index} is not in the DOM`;
+    }
+
+    const style = window.getComputedStyle(element);
+    if (style.display === 'none') {
+      return `ELEMENT_NOT_INTERACTABLE: Element ${index} has display:none`;
+    }
+    if (style.visibility === 'hidden') {
+      return `ELEMENT_NOT_INTERACTABLE: Element ${index} has visibility:hidden`;
+    }
+    if (parseFloat(style.opacity) === 0) {
+      return `ELEMENT_NOT_INTERACTABLE: Element ${index} has opacity:0`;
+    }
+
+    const rect = element.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) {
+      return `ELEMENT_NOT_INTERACTABLE: Element ${index} has zero dimensions`;
+    }
+
+    if (rect.bottom < 0 || rect.top > window.innerHeight || rect.right < 0 || rect.left > window.innerWidth) {
+      return `ELEMENT_NOT_INTERACTABLE: Element ${index} is off-screen`;
+    }
+
+    // Occlusion check
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    const topElement = document.elementFromPoint(centerX, centerY);
+
+    if (topElement && topElement !== element && !element.contains(topElement)) {
+      const isMarketrixUI =
+        topElement.closest('#marketrix-show-highlight') ||
+        topElement.closest('#marketrix-show-popup') ||
+        topElement.closest('[data-marketrix-widget]');
+      if (!isMarketrixUI) {
+        const tagName = topElement.tagName.toLowerCase();
+        const obscurerInfo = topElement.className ? `${tagName}.${topElement.className.split(' ')[0]}` : tagName;
+        return (
+          `ELEMENT_OBSCURED: Element ${index} is covered by ${obscurerInfo}. ` +
+          `The obscuring element may be a modal or overlay that needs to be dismissed first.`
+        );
+      }
+    }
+
+    return null; // Element is interactable
+  }
+
+  /**
+   * Public method to check element interactability (for use by ShowModeService).
+   */
+  checkElementInteractable(element: HTMLElement, index: number): string | null {
+    return this.checkInteractability(element, index);
+  }
+
+  /**
+   * Get an interactive element by its index.
+   * Returns element only if it's interactable, otherwise returns null with error.
+   */
+  getElementByIndex(index: number): ElementLookupResult {
+    let element: HTMLElement | null = null;
+
     // Try live map first
     if (this.elementMap.has(index)) {
-      const element = this.elementMap.get(index);
-      if (element && element instanceof HTMLElement) {
-        return element;
+      const mapElement = this.elementMap.get(index);
+      if (mapElement && mapElement instanceof HTMLElement) {
+        element = mapElement;
       }
     }
 
     // Fallback to selector map (persistence)
-    if (this.selectorMap.has(index)) {
+    if (!element && this.selectorMap.has(index)) {
       const selector = this.selectorMap.get(index);
       if (selector) {
         try {
-          const element = document.querySelector(selector);
-          if (element && element instanceof HTMLElement) {
-            // Optimization: Cache it back to live map?
-            // Maybe not, as it might change again. But fine for now.
-            return element;
+          const queriedElement = document.querySelector(selector);
+          if (queriedElement && queriedElement instanceof HTMLElement) {
+            element = queriedElement;
           }
         } catch (e) {
           console.warn(`[DOMService] Failed to find element by selector for index ${index}:`, e);
@@ -871,30 +678,53 @@ export class DOMService {
       }
     }
 
-    return null;
+    if (!element) {
+      return { element: null, error: `Element ${index} not found` };
+    }
+
+    // Check interactability
+    const interactError = this.checkInteractability(element, index);
+    if (interactError) {
+      return { element: null, error: interactError };
+    }
+
+    return { element };
   }
 
   /**
    * Get an element by index with validation.
    * This is the main entry point for ToolService to use.
    * It validates the element matches its fingerprint and attempts recovery if not.
+   * Returns element only if it's interactable.
    */
-  getValidatedElement(index: number): {
-    element: HTMLElement | null;
-    validation: ValidationResult;
-  } {
+  getValidatedElement(index: number): ValidatedElementResult {
     const validation = this.validateElementAtIndex(index);
 
-    if (validation.isValid) {
-      const element = this.getElementByIndex(index);
-      return { element, validation };
+    if (!validation.isValid) {
+      const reason = validation.mismatchReason === 'element_removed' ? 'no longer exists' : 'has changed';
+      return {
+        element: null,
+        validation,
+        error: `DOM_CHANGED: Element at index ${index} ${reason}. Call get_html to get updated indices.`,
+      };
     }
 
-    if (validation.recoveredElement) {
-      return { element: validation.recoveredElement, validation };
+    const element = this.elementMap.get(index) as HTMLElement | undefined;
+    if (!element) {
+      return {
+        element: null,
+        validation,
+        error: `Element ${index} not found`,
+      };
     }
 
-    return { element: null, validation };
+    // Check interactability
+    const interactError = this.checkInteractability(element, index);
+    if (interactError) {
+      return { element: null, validation, error: interactError };
+    }
+
+    return { element, validation };
   }
 
   /**

@@ -1,3 +1,5 @@
+import { domService } from './DomService';
+
 export interface ShowModeOptions {
   element: HTMLElement;
   explanation: string;
@@ -19,6 +21,8 @@ export class ShowModeService {
   private scrollHandler: (() => void) | null = null;
   private updateHighlightPosition: (() => void) | null = null;
   private rafId: number | null = null;
+  private mutationObserver: MutationObserver | null = null;
+  private visibilityCheckInterval: ReturnType<typeof setInterval> | null = null;
 
   private constructor() {}
 
@@ -51,6 +55,8 @@ export class ShowModeService {
     this.createHighlight(element);
     this.createPopup(explanation, isClickAction);
     this.setupPositionUpdates();
+    this.setupElementMonitoring();
+    this.setupVisibilityMonitoring();
 
     if (isClickAction) {
       // For click actions, we let the event propagate first (to trigger the actual click)
@@ -96,6 +102,17 @@ export class ShowModeService {
     if (this.rafId !== null) {
       window.cancelAnimationFrame(this.rafId);
       this.rafId = null;
+    }
+
+    // Stop element monitoring
+    if (this.mutationObserver) {
+      this.mutationObserver.disconnect();
+      this.mutationObserver = null;
+    }
+
+    if (this.visibilityCheckInterval) {
+      clearInterval(this.visibilityCheckInterval);
+      this.visibilityCheckInterval = null;
     }
 
     this.updateHighlightPosition = null;
@@ -291,6 +308,49 @@ export class ShowModeService {
         });
       }
     });
+  }
+
+  private setupElementMonitoring(): void {
+    if (!this.currentElement) return;
+
+    // Monitor for element removal from DOM
+    this.mutationObserver = new MutationObserver(() => {
+      if (this.currentElement && !document.body.contains(this.currentElement)) {
+        this.failWithElementGone('Element was removed from DOM');
+      }
+    });
+
+    this.mutationObserver.observe(document.body, {
+      childList: true,
+      subtree: true,
+    });
+  }
+
+  private setupVisibilityMonitoring(): void {
+    // Check every 200ms if element is still interactable
+    this.visibilityCheckInterval = setInterval(() => {
+      if (!this.currentElement) return;
+
+      // Get the element's index for error messages
+      const index = domService.getSequenceForElement(this.currentElement) ?? -1;
+
+      // Use centralized interactability check from DomService
+      const error = domService.checkElementInteractable(this.currentElement, index);
+      if (error) {
+        this.failWithElementGone(error);
+      }
+    }, 200);
+  }
+
+  private failWithElementGone(reason: string): void {
+    console.log(`[ShowModeService] Element gone: ${reason}`);
+    if (this.rejectPromise) {
+      const reject = this.rejectPromise;
+      this.rejectPromise = null;
+      this.resolvePromise = null;
+      reject(new Error(`ELEMENT_GONE: ${reason}`));
+    }
+    this.cleanup();
   }
 
   private escapeHtml(text: string): string {

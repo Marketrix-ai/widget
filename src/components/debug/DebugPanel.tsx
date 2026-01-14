@@ -331,7 +331,7 @@ export const DebugPanel: React.FC = () => {
 
   // Highlight element
   const handleHighlightElement = useCallback((index: number) => {
-    const element = domService.getElementByIndex(index);
+    const { element } = domService.getElementByIndex(index);
     if (element) {
       const originalOutline = element.style.outline;
       const originalBackground = element.style.background;
@@ -435,8 +435,7 @@ export const DebugPanel: React.FC = () => {
   // Validation status color
   const getValidationColor = (validation: ValidationResult): string => {
     if (validation.isValid) return '#4ec9b0'; // Green
-    if (validation.recoveredElement) return '#dcdcaa'; // Yellow
-    return '#f14c4c'; // Red
+    return '#f14c4c'; // Red - element changed or removed
   };
 
   const getOutcomeColor = (outcome: string): string => {
