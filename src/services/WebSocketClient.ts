@@ -95,11 +95,7 @@ export class WebSocketClient {
     }
 
     // If already connecting to the same chat, wait for it
-    if (
-      this.status === 'connecting' &&
-      this.chatId === chatId &&
-      this.websocket?.readyState === WebSocket.CONNECTING
-    ) {
+    if (this.status === 'connecting' && this.chatId === chatId && this.websocket?.readyState === WebSocket.CONNECTING) {
       return new Promise((resolve, reject) => {
         const timeout = setTimeout(() => {
           reject(new Error('Connection timeout'));
@@ -122,7 +118,7 @@ export class WebSocketClient {
     if (this.websocket) {
       if (this.chatId !== chatId || this.websocket.readyState !== WebSocket.CONNECTING) {
         this.disconnect();
-        await new Promise((resolve) => setTimeout(resolve, 200));
+        await new Promise(resolve => setTimeout(resolve, 200));
       }
     }
 
@@ -149,7 +145,7 @@ export class WebSocketClient {
         this.startHeartbeat();
       };
 
-      ws.onmessage = (event) => {
+      ws.onmessage = event => {
         if (this.websocket !== ws) return;
         try {
           const message = JSON.parse(event.data) as WebSocketMessage;
@@ -159,14 +155,14 @@ export class WebSocketClient {
         }
       };
 
-      ws.onerror = (error) => {
+      ws.onerror = error => {
         if (this.websocket !== ws) return;
         console.error('[WebSocket] Error:', error);
         this.setStatus('error');
         this.notifyError(new Error('WebSocket connection error'));
       };
 
-      ws.onclose = (event) => {
+      ws.onclose = event => {
         if (this.websocket !== ws) return;
 
         const wasRegistered = this.status === 'registered';
@@ -177,7 +173,7 @@ export class WebSocketClient {
         if (event.code !== 1000) {
           // 1000 is normal closure
           console.warn(
-            `[WebSocket] Connection closed with code ${event.code}: ${event.reason || 'No reason provided'}`
+            `[WebSocket] Connection closed with code ${event.code}: ${event.reason || 'No reason provided'}`,
           );
         }
 
@@ -220,9 +216,7 @@ export class WebSocketClient {
       return;
     }
     if (this.websocket.readyState !== WebSocket.OPEN) {
-      console.warn(
-        `[WebSocket] Cannot send message: WebSocket state is ${this.websocket.readyState} (not OPEN)`
-      );
+      console.warn(`[WebSocket] Cannot send message: WebSocket state is ${this.websocket.readyState} (not OPEN)`);
       return;
     }
     try {
@@ -236,12 +230,12 @@ export class WebSocketClient {
   private setStatus(status: WebSocketStatus): void {
     if (this.status !== status) {
       this.status = status;
-      this.callbacks.forEach((cb) => cb.onStatusChange?.(status));
+      this.callbacks.forEach(cb => cb.onStatusChange?.(status));
     }
   }
 
   private notifyError(error: Error): void {
-    this.callbacks.forEach((cb) => cb.onError?.(error));
+    this.callbacks.forEach(cb => cb.onError?.(error));
   }
 
   private handleMessage(message: WebSocketMessage): void {
@@ -259,7 +253,7 @@ export class WebSocketClient {
     }
 
     // Forward everything to listeners
-    this.callbacks.forEach((cb) => cb.onMessage?.(message));
+    this.callbacks.forEach(cb => cb.onMessage?.(message));
   }
 
   private sendRegistration(): void {
@@ -292,19 +286,16 @@ export class WebSocketClient {
     this.clearReconnectTimer();
     this.reconnectAttempts++;
 
-    const delay = Math.min(
-      this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1),
-      this.maxReconnectDelay
-    );
+    const delay = Math.min(this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1), this.maxReconnectDelay);
 
     console.log(
-      `[WebSocket] Scheduling reconnect attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts} in ${delay}ms`
+      `[WebSocket] Scheduling reconnect attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts} in ${delay}ms`,
     );
 
     this.reconnectTimer = setTimeout(() => {
       if (!this.isIntentionallyDisconnected && this.chatId) {
         console.log(`[WebSocket] Attempting reconnect (attempt ${this.reconnectAttempts})...`);
-        this.connect(this.chatId).catch((error) => {
+        this.connect(this.chatId).catch(error => {
           console.error('[WebSocket] Reconnect attempt failed:', error);
           if (this.reconnectAttempts < this.maxReconnectAttempts) {
             this.scheduleReconnect();

@@ -22,21 +22,14 @@ export function usePageLifecycle(stateRef: React.RefObject<WidgetState>) {
         stopScreenShare();
 
         const currentState = stateRef.current;
-        const messagesWithoutScreenshare = currentState.messages.filter((msg) => !msg.videoStream);
+        const messagesWithoutScreenshare = currentState.messages.filter(msg => !msg.videoStream);
 
         const hasStoppedMessage = messagesWithoutScreenshare.some(
-          (msg) =>
-            msg.id === 'screenshare-stopped' ||
-            (msg.isSystemMessage && msg.content === 'Stopped screenshare')
+          msg => msg.id === 'screenshare-stopped' || (msg.isSystemMessage && msg.content === 'Stopped screenshare'),
         );
 
         if (!hasStoppedMessage) {
-          const stoppedMessage = createSystemMessage(
-            'Stopped screenshare',
-            'show',
-            'user',
-            'screenshare-stopped'
-          );
+          const stoppedMessage = createSystemMessage('Stopped screenshare', 'show', 'user', 'screenshare-stopped');
           // Directly add to service to ensure it's persisted
           chatService.addMessage(stoppedMessage);
         }

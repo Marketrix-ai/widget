@@ -11,11 +11,8 @@ import type { ChatMessage, WidgetState } from '../types';
 /**
  * Add a message to the state
  */
-export function addMessage(
-  setState: React.Dispatch<React.SetStateAction<WidgetState>>,
-  message: ChatMessage
-): void {
-  setState((prev) => ({
+export function addMessage(setState: React.Dispatch<React.SetStateAction<WidgetState>>, message: ChatMessage): void {
+  setState(prev => ({
     ...prev,
     messages: [...prev.messages, message],
   }));
@@ -27,23 +24,20 @@ export function addMessage(
 export function updateMessage(
   setState: React.Dispatch<React.SetStateAction<WidgetState>>,
   messageId: string,
-  updates: Partial<ChatMessage>
+  updates: Partial<ChatMessage>,
 ): void {
-  setState((prev) => ({
+  setState(prev => ({
     ...prev,
-    messages: prev.messages.map((msg) => (msg.id === messageId ? { ...msg, ...updates } : msg)),
+    messages: prev.messages.map(msg => (msg.id === messageId ? { ...msg, ...updates } : msg)),
   }));
 }
 
 /**
  * Remove a message from the state
  */
-export function removeMessage(
-  setState: React.Dispatch<React.SetStateAction<WidgetState>>,
-  messageId: string
-): void {
-  setState((prev) => ({
+export function removeMessage(setState: React.Dispatch<React.SetStateAction<WidgetState>>, messageId: string): void {
+  setState(prev => ({
     ...prev,
-    messages: prev.messages.filter((msg) => msg.id !== messageId),
+    messages: prev.messages.filter(msg => msg.id !== messageId),
   }));
 }

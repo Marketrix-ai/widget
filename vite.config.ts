@@ -17,6 +17,9 @@ const SOURCEMAP_PATH = '/index.mjs.map';
 const SRC_DIR = 'src';
 const ENTRY_FILE = 'src/index.tsx';
 
+// Use an environment variable to determine if we are building the standalone version
+const isStandalone = process.env.BUILD_MODE === 'standalone';
+
 const getBuildConfig = (options: { minify: boolean | 'terser'; outDir: string }): UserConfig => ({
   mode: 'production',
   define: {
@@ -28,6 +31,8 @@ const getBuildConfig = (options: { minify: boolean | 'terser'; outDir: string })
   css: { devSourcemap: false },
   build: {
     outDir: options.outDir,
+    // Do not empty outDir if building standalone so we don't wipe the library build
+    emptyOutDir: !isStandalone,
     sourcemap: true,
     minify: options.minify,
     target: 'esnext',
@@ -38,17 +43,19 @@ const getBuildConfig = (options: { minify: boolean | 'terser'; outDir: string })
       fileName: 'index',
     },
     rollupOptions: {
-      external: ['react', 'react-dom', 'react-dom/client', 'react/jsx-runtime'],
+      external: isStandalone ? [] : ['react', 'react-dom', 'react-dom/client', 'react/jsx-runtime'],
       output: {
-        entryFileNames: BUNDLE_FILE,
+        entryFileNames: isStandalone ? 'standalone.mjs' : BUNDLE_FILE,
         format: 'es',
         inlineDynamicImports: true,
-        globals: {
-          react: 'React',
-          'react-dom': 'ReactDOM',
-          'react-dom/client': 'ReactDOMClient',
-          'react/jsx-runtime': 'jsxRuntime',
-        },
+        globals: isStandalone
+          ? {}
+          : {
+              react: 'React',
+              'react-dom': 'ReactDOM',
+              'react-dom/client': 'ReactDOMClient',
+              'react/jsx-runtime': 'jsxRuntime',
+            },
       },
     },
     ...(options.minify === 'terser' && {
@@ -71,8 +78,9 @@ const getBuildConfig = (options: { minify: boolean | 'terser'; outDir: string })
     }),
     tailwindcss(),
     cssInjectedByJsPlugin(),
-    copyIndexHtmlPlugin(options.outDir),
-    typescriptDeclarationPlugin(),
+    // Only copy index.html and generate types for the main library build
+    !isStandalone && copyIndexHtmlPlugin(options.outDir),
+    !isStandalone && typescriptDeclarationPlugin(),
   ],
 });
 
@@ -81,8 +89,7 @@ const setCorsHeaders = (res: ServerResponse): void => {
   res.setHeader('Cache-Control', 'no-cache');
 };
 
-const readFile = (path: string): string | null =>
-  existsSync(path) ? readFileSync(path, 'utf-8') : null;
+const readFile = (path: string): string | null => (existsSync(path) ? readFileSync(path, 'utf-8') : null);
 
 const copyIndexHtmlPlugin = (outDir: string) => {
   return {
@@ -151,7 +158,7 @@ const devWidgetPlugin = () => {
       buildPromise = doBuild();
 
       s.watcher.add(resolve(cwd(), SRC_DIR, '**/*.{ts,tsx}'));
-      s.watcher.on('change', async (file) => {
+      s.watcher.on('change', async file => {
         if (file.includes(SRC_DIR)) {
           console.log(`[dev-widget] Rebuilding ${BUNDLE_PATH}...`);
           bundle = sourcemap = null;

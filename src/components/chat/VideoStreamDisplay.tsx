@@ -5,10 +5,7 @@ interface VideoStreamDisplayProps {
   isUserMessage?: boolean;
 }
 
-export const VideoStreamDisplay: React.FC<VideoStreamDisplayProps> = ({
-  stream,
-  isUserMessage = false,
-}) => {
+export const VideoStreamDisplay: React.FC<VideoStreamDisplayProps> = ({ stream, isUserMessage = false }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const playPromiseRef = useRef<Promise<void> | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -54,7 +51,7 @@ export const VideoStreamDisplay: React.FC<VideoStreamDisplayProps> = ({
         .then(() => {
           setIsLoaded(true);
         })
-        .catch((error) => {
+        .catch(error => {
           // AbortError is expected when a new stream loads - don't log it as an error
           if (error instanceof Error && error.name !== 'AbortError') {
             console.error('Error playing video stream:', error);
@@ -89,9 +86,7 @@ export const VideoStreamDisplay: React.FC<VideoStreamDisplayProps> = ({
 
   // Match message bubble border radius: user messages have rounded-l-lg rounded-tr-lg rounded-br-lg
   // So top corners should be rounded: top-left and top-right
-  const borderRadiusClass = isUserMessage
-    ? 'rounded-tl-lg rounded-tr-lg'
-    : 'rounded-tr-lg rounded-tl-lg';
+  const borderRadiusClass = isUserMessage ? 'rounded-tl-lg rounded-tr-lg' : 'rounded-tr-lg rounded-tl-lg';
 
   return (
     <div
@@ -123,16 +118,9 @@ export const VideoStreamDisplay: React.FC<VideoStreamDisplayProps> = ({
 
       {/* Error overlay */}
       {hasError && (
-        <div
-          className={`absolute inset-0 flex items-center justify-center bg-gray-900 ${borderRadiusClass} z-10`}
-        >
+        <div className={`absolute inset-0 flex items-center justify-center bg-gray-900 ${borderRadiusClass} z-10`}>
           <div className='flex flex-col items-center gap-2 text-center px-4'>
-            <svg
-              className='w-8 h-8 text-red-400'
-              fill='none'
-              stroke='currentColor'
-              viewBox='0 0 24 24'
-            >
+            <svg className='w-8 h-8 text-red-400' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
               <path
                 strokeLinecap='round'
                 strokeLinejoin='round'

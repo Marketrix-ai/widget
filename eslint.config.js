@@ -153,6 +153,6 @@ export default [
   },
   prettierConfig,
   {
-    ignores: ['node_modules/', 'dist/', 'build/', '*.js', '*.d.ts', 'chrome-extension/'],
+    ignores: ['node_modules/', 'dist/', 'build/', '*.js', '*.d.ts', 'chrome-extension/', 'src/sdk/**/*'],
   },
 ];

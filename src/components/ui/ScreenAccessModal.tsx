@@ -7,38 +7,28 @@ interface ScreenAccessModalProps {
   onClose: () => void;
 }
 
-export const ScreenAccessModal: React.FC<ScreenAccessModalProps> = ({
-  isOpen,
-  onAllow,
-  onDeny,
-  onClose,
-}) => {
+export const ScreenAccessModal: React.FC<ScreenAccessModalProps> = ({ isOpen, onAllow, onDeny, onClose }) => {
   if (!isOpen) return null;
 
   return (
     <div
       className='absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 rounded-lg'
-      onClick={(e) => {
+      onClick={e => {
         if (e.target === e.currentTarget) {
           onClose();
         }
       }}
     >
-      <div
-        className='bg-white rounded-lg p-3 max-w-md mx-4 shadow-xl'
-        onClick={(e) => e.stopPropagation()}
-      >
+      <div className='bg-white rounded-lg p-3 max-w-md mx-4 shadow-xl' onClick={e => e.stopPropagation()}>
         <div className='text-center'>
-          <h3 className='text-lg font-semibold text-gray-900 mb-3'>
-            Can I take a look at your screen?
-          </h3>
+          <h3 className='text-lg font-semibold text-gray-900 mb-3'>Can I take a look at your screen?</h3>
           <p className='text-gray-600 mb-6 text-sm leading-relaxed'>
-            By allowing screen access, Marketrix can understand your current context to guide you
-            better and complete tasks on your behalf.
+            By allowing screen access, Marketrix can understand your current context to guide you better and complete
+            tasks on your behalf.
           </p>
           <div className='flex gap-3 justify-center'>
             <button
-              onClick={(e) => {
+              onClick={e => {
                 e.preventDefault();
                 e.stopPropagation();
                 onAllow();
@@ -48,7 +38,7 @@ export const ScreenAccessModal: React.FC<ScreenAccessModalProps> = ({
               Yes
             </button>
             <button
-              onClick={(e) => {
+              onClick={e => {
                 e.preventDefault();
                 e.stopPropagation();
                 onDeny();

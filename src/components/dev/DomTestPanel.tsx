@@ -11,11 +11,7 @@ import {
   type TestResult,
   type ValidationLogEntry,
 } from '../../services/DevTestService';
-import {
-  domService,
-  type ElementFingerprint,
-  type ValidationResult,
-} from '../../services/DomService';
+import { domService, type ElementFingerprint, type ValidationResult } from '../../services/DomService';
 
 interface IndexedElement {
   index: number;
@@ -25,9 +21,7 @@ interface IndexedElement {
 
 export const DomTestPanel: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'elements' | 'simulate' | 'scenarios' | 'log'>(
-    'elements'
-  );
+  const [activeTab, setActiveTab] = useState<'elements' | 'simulate' | 'scenarios' | 'log'>('elements');
   const [indexedElements, setIndexedElements] = useState<IndexedElement[]>([]);
   const [validationLog, setValidationLog] = useState<ValidationLogEntry[]>([]);
   const [lastResult, setLastResult] = useState<TestResult | null>(null);
@@ -73,11 +67,11 @@ export const DomTestPanel: React.FC = () => {
   const handleRunScenario = useCallback(
     async (scenarioId: string) => {
       const result = await devTestService.runScenario(scenarioId);
-      setScenarioResults((prev) => [...prev, result]);
+      setScenarioResults(prev => [...prev, result]);
       refreshLog();
       refreshElements();
     },
-    [refreshLog, refreshElements]
+    [refreshLog, refreshElements],
   );
 
   // Run all scenarios
@@ -218,7 +212,7 @@ export const DomTestPanel: React.FC = () => {
 
       {/* Tabs */}
       <div style={{ display: 'flex', borderBottom: '1px solid #eee' }}>
-        {(['elements', 'simulate', 'scenarios', 'log'] as const).map((tab) => (
+        {(['elements', 'simulate', 'scenarios', 'log'] as const).map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -248,9 +242,7 @@ export const DomTestPanel: React.FC = () => {
               <button onClick={refreshElements} style={buttonStyle}>
                 Refresh
               </button>
-              <span style={{ marginLeft: 'auto', color: '#666' }}>
-                {indexedElements.length} elements
-              </span>
+              <span style={{ marginLeft: 'auto', color: '#666' }}>{indexedElements.length} elements</span>
             </div>
 
             <div style={{ maxHeight: '300px', overflow: 'auto' }}>
@@ -276,9 +268,7 @@ export const DomTestPanel: React.FC = () => {
                     <div style={{ color: '#666', fontSize: '10px' }}>
                       {fingerprint.textContent?.slice(0, 50) || '(no text)'}
                     </div>
-                    <div style={{ color: '#999', fontSize: '10px' }}>
-                      {fingerprint.selector.slice(0, 60)}...
-                    </div>
+                    <div style={{ color: '#999', fontSize: '10px' }}>{fingerprint.selector.slice(0, 60)}...</div>
                   </div>
                 );
               })}
@@ -290,34 +280,27 @@ export const DomTestPanel: React.FC = () => {
         {activeTab === 'simulate' && (
           <div>
             <div style={{ marginBottom: '15px' }}>
-              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-                Target Index:
-              </label>
+              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Target Index:</label>
               <input
                 type='number'
                 value={selectedIndex}
-                onChange={(e) => setSelectedIndex(parseInt(e.target.value) || 0)}
+                onChange={e => setSelectedIndex(parseInt(e.target.value) || 0)}
                 style={{ width: '100px', padding: '5px' }}
               />
             </div>
 
             <div style={{ marginBottom: '15px' }}>
-              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-                Command:
-              </label>
+              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Command:</label>
               <select
                 value={commandInput}
-                onChange={(e) => setCommandInput(e.target.value)}
+                onChange={e => setCommandInput(e.target.value)}
                 style={{ padding: '5px', marginRight: '10px' }}
               >
                 <option value='click_element'>click_element</option>
                 <option value='type_text'>type_text</option>
                 <option value='send_keys'>send_keys</option>
               </select>
-              <button
-                onClick={handleSimulateCommand}
-                style={{ ...buttonStyle, background: '#4caf50' }}
-              >
+              <button onClick={handleSimulateCommand} style={{ ...buttonStyle, background: '#4caf50' }}>
                 Execute
               </button>
             </div>
@@ -328,10 +311,7 @@ export const DomTestPanel: React.FC = () => {
                 <button onClick={handleInsertBefore} style={buttonStyle}>
                   Insert Before
                 </button>
-                <button
-                  onClick={handleRemoveElement}
-                  style={{ ...buttonStyle, background: '#f44336' }}
-                >
+                <button onClick={handleRemoveElement} style={{ ...buttonStyle, background: '#f44336' }}>
                   Remove
                 </button>
                 <button onClick={handleSimulateRerender} style={buttonStyle}>
@@ -388,10 +368,7 @@ export const DomTestPanel: React.FC = () => {
         {activeTab === 'scenarios' && (
           <div>
             <div style={{ marginBottom: '15px' }}>
-              <button
-                onClick={handleRunAllScenarios}
-                style={{ ...buttonStyle, background: '#4caf50' }}
-              >
+              <button onClick={handleRunAllScenarios} style={{ ...buttonStyle, background: '#4caf50' }}>
                 Run All Scenarios
               </button>
             </div>
@@ -405,10 +382,7 @@ export const DomTestPanel: React.FC = () => {
                 <button onClick={() => handleRunScenario('index-shift-remove')} style={buttonStyle}>
                   Index Shift - Remove
                 </button>
-                <button
-                  onClick={() => handleRunScenario('element-content-change')}
-                  style={buttonStyle}
-                >
+                <button onClick={() => handleRunScenario('element-content-change')} style={buttonStyle}>
                   Content Change
                 </button>
                 <button onClick={() => handleRunScenario('spa-rerender')} style={buttonStyle}>
@@ -437,10 +411,7 @@ export const DomTestPanel: React.FC = () => {
                     <div style={{ fontSize: '10px', color: '#666' }}>{result.summary}</div>
                   </div>
                 ))}
-                <button
-                  onClick={() => setScenarioResults([])}
-                  style={{ ...buttonStyle, marginTop: '10px' }}
-                >
+                <button onClick={() => setScenarioResults([])} style={{ ...buttonStyle, marginTop: '10px' }}>
                   Clear Results
                 </button>
               </div>
@@ -464,9 +435,7 @@ export const DomTestPanel: React.FC = () => {
               >
                 Clear
               </button>
-              <span style={{ marginLeft: 'auto', color: '#666' }}>
-                {validationLog.length} entries
-              </span>
+              <span style={{ marginLeft: 'auto', color: '#666' }}>{validationLog.length} entries</span>
             </div>
 
             <div style={{ maxHeight: '400px', overflow: 'auto' }}>
@@ -491,9 +460,7 @@ export const DomTestPanel: React.FC = () => {
                       Valid: {entry.validation.isValid ? 'Yes' : 'No'}
                       {entry.validation.mismatchReason && ` (${entry.validation.mismatchReason})`}
                     </div>
-                    {entry.recoveryAction && (
-                      <div style={{ color: '#ff9800' }}>Recovery: {entry.recoveryAction}</div>
-                    )}
+                    {entry.recoveryAction && <div style={{ color: '#ff9800' }}>Recovery: {entry.recoveryAction}</div>}
                   </div>
                 ))}
             </div>

@@ -24,12 +24,7 @@ type ChipData = {
 interface MessageListProps {
   messages: ChatMessage[];
   messagesEndRef: React.RefObject<HTMLDivElement | null>;
-  onSendMessage?: (
-    message: string,
-    mode?: 'show' | 'tell' | 'do',
-    connectionId?: number,
-    question?: string
-  ) => void;
+  onSendMessage?: (message: string, mode?: 'show' | 'tell' | 'do', connectionId?: number, question?: string) => void;
   onSetMode?: (mode: 'show' | 'tell' | 'do') => void;
   onModeChange?: (mode: 'show' | 'tell' | 'do') => void;
   onAddMessage?: (message: ChatMessage) => void;
@@ -94,7 +89,7 @@ export const MessageList = ({
   }, [messages.length, isPreviewMode]); // Run when messages length changes to handle history loading
 
   // Check if there's a pending message (placeholder exists or isLoading)
-  const hasPendingMessage = widgetState.isLoading || messages.some((msg) => msg.isPlaceholder);
+  const hasPendingMessage = widgetState.isLoading || messages.some(msg => msg.isPlaceholder);
 
   // Suggested actions to show when no messages - get from settings or use defaults
   const getSuggestedActions = () => {
@@ -230,10 +225,7 @@ export const MessageList = ({
     };
   });
 
-  const handleSuggestedActionClick = async (
-    action: (typeof suggestedActions)[0],
-    event: React.MouseEvent
-  ) => {
+  const handleSuggestedActionClick = async (action: (typeof suggestedActions)[0], event: React.MouseEvent) => {
     event.preventDefault();
     event.stopPropagation();
 
@@ -256,7 +248,7 @@ export const MessageList = ({
       }
 
       // Wait a tick to ensure mode change is processed and UI updates
-      await new Promise((resolve) => setTimeout(resolve, 0));
+      await new Promise(resolve => setTimeout(resolve, 0));
     }
 
     // THEN: Add the chip message as a user message in the chat (like user typed it)

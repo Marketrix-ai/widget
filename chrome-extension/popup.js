@@ -10,7 +10,7 @@ const saveBtn = document.getElementById('saveBtn');
 const statusDiv = document.getElementById('status');
 
 // Load saved configuration
-chrome.storage.local.get(['enabled', 'config'], (result) => {
+chrome.storage.local.get(['enabled', 'config'], result => {
   if (result.config) {
     scriptSrcInput.value = result.config.scriptSrc || '';
     agentIdInput.value = result.config.agentId || '';
@@ -55,7 +55,7 @@ enableToggle.addEventListener('change', () => {
     updateStatus(enabled);
 
     // Send message to current tab
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
       if (tabs[0]) {
         chrome.tabs
           .sendMessage(tabs[0].id, {

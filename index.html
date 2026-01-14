@@ -895,14 +895,13 @@
 
       <div class="demo-content">
         <p>
-          Hover over any element to see it highlighted, and the Marketrix AI assistant will provide
-          contextual help about that feature.
+          Hover over any element to see it highlighted, and the Marketrix AI assistant will provide contextual help
+          about that feature.
         </p>
 
         <div class="highlight">
-          <strong>Interactive Demo:</strong> Try hovering over different elements below - the AI
-          assistant will ask relevant questions about the highlighted areas and provide helpful
-          guidance!
+          <strong>Interactive Demo:</strong> Try hovering over different elements below - the AI assistant will ask
+          relevant questions about the highlighted areas and provide helpful guidance!
         </div>
 
         <!-- Navigation Bar -->
@@ -1140,13 +1139,13 @@
             class="login-form-container"
             id="login-form-simulation"
             data-demo-element="login-form"
-            style="display: none;"
+            style="display: none"
           >
             <div class="login-form-header">
               <h3>🔐 User Login</h3>
               <button
                 class="close-form-btn"
-                onclick="document.getElementById('login-form-simulation').style.display='none'"
+                onclick="document.getElementById('login-form-simulation').style.display = 'none'"
               >
                 ×
               </button>
@@ -1189,13 +1188,11 @@
                 <button
                   type="button"
                   class="btn-secondary"
-                  onclick="document.getElementById('login-form-simulation').style.display='none'"
+                  onclick="document.getElementById('login-form-simulation').style.display = 'none'"
                 >
                   Cancel
                 </button>
-                <button type="submit" class="btn-primary" data-demo-element="login-submit">
-                  Sign In
-                </button>
+                <button type="submit" class="btn-primary" data-demo-element="login-submit">Sign In</button>
               </div>
             </form>
           </div>
@@ -1329,9 +1326,8 @@
         </div>
 
         <div class="highlight">
-          <strong>Try It Out:</strong> Hover over any button, card, or section above to see the
-          Marketrix AI assistant provide contextual help and ask relevant questions about that
-          feature!
+          <strong>Try It Out:</strong> Hover over any button, card, or section above to see the Marketrix AI assistant
+          provide contextual help and ask relevant questions about that feature!
         </div>
 
         <!-- Test iPhone Notifications -->
@@ -1341,7 +1337,9 @@
           <div class="nav-demo">
             <button
               class="demo-button success"
-              onclick="showIPhoneNotification('Success! 🎉', 'This is a success notification with iPhone styling!', 'success')"
+              onclick="
+                showIPhoneNotification('Success! 🎉', 'This is a success notification with iPhone styling!', 'success')
+              "
             >
               ✅ Test Success
             </button>
@@ -1363,12 +1361,9 @@
             >
               ❌ Test Error
             </button>
-            <button class="demo-button primary" onclick="testIPhoneNotifications()">
-              🎬 Test All Types
-            </button>
+            <button class="demo-button primary" onclick="testIPhoneNotifications()">🎬 Test All Types</button>
           </div>
         </div>
-
 
         <!-- Test Responsive Spotlight -->
         <div class="demo-section" data-demo-area="spotlight-test">
@@ -1383,18 +1378,13 @@
             >
               🎯 Test Responsive Spotlight
             </button>
-            <button class="demo-button success" onclick="testResponsiveSpotlight()">
-              🚀 Start Spotlight Demo
-            </button>
+            <button class="demo-button success" onclick="testResponsiveSpotlight()">🚀 Start Spotlight Demo</button>
             <button class="demo-button warning" onclick="stopSpotlightDemo()">⏹️ Stop Demo</button>
-            <button class="demo-button" onclick="updateTextPosition()">
-              🔄 Update Text Position
-            </button>
+            <button class="demo-button" onclick="updateTextPosition()">🔄 Update Text Position</button>
           </div>
           <div class="highlight">
-            <strong>Instructions:</strong> Click "Start Spotlight Demo" then try resizing your
-            browser window or scrolling. The spotlight and border should follow the highlighted
-            element smoothly!
+            <strong>Instructions:</strong> Click "Start Spotlight Demo" then try resizing your browser window or
+            scrolling. The spotlight and border should follow the highlighted element smoothly!
           </div>
         </div>
       </div>
@@ -1413,17 +1403,17 @@
         event.preventDefault();
         const emailInput = document.getElementById('login-email');
         const email = emailInput ? emailInput.value : '';
-        
+
         // Close the modal
         const loginForm = document.getElementById('login-form-simulation');
         if (loginForm) {
           loginForm.style.display = 'none';
         }
-        
+
         // Show logged in message
         const loginButtonContainer = document.getElementById('login-button-container');
         const loginButton = document.getElementById('login-button');
-        
+
         if (loginButtonContainer && loginButton) {
           loginButton.style.display = 'none';
           const loggedInMessage = document.createElement('div');
@@ -1434,7 +1424,7 @@
           loggedInMessage.id = 'logged-in-message';
           loginButtonContainer.appendChild(loggedInMessage);
         }
-        
+
         // Reset form
         if (event.target) {
           event.target.reset();
@@ -1460,7 +1450,7 @@
 
       const script = Object.assign(document.createElement('script'), {
         type: 'module',
-        src: './index.mjs'
+        src: './index.mjs',
       });
 
       script.setAttribute('mtx-id', params.get('mtx-id') ?? '');

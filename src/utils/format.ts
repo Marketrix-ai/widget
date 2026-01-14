@@ -20,7 +20,7 @@ export function hexToRgb(hex: string): { r: number; g: number; b: number } | nul
  * Converts RGB to hex
  */
 function rgbToHex(r: number, g: number, b: number): string {
-  return `#${[r, g, b].map((x) => x.toString(16).padStart(2, '0')).join('')}`;
+  return `#${[r, g, b].map(x => x.toString(16).padStart(2, '0')).join('')}`;
 }
 
 /**
@@ -31,7 +31,7 @@ function getLuminance(color: string): number {
   const rgb = hexToRgb(color);
   if (!rgb) return 0.5; // Default to medium luminance if parsing fails
 
-  const [r, g, b] = [rgb.r / 255, rgb.g / 255, rgb.b / 255].map((val) => {
+  const [r, g, b] = [rgb.r / 255, rgb.g / 255, rgb.b / 255].map(val => {
     return val <= 0.03928 ? val / 12.92 : Math.pow((val + 0.055) / 1.055, 2.4);
   });
 
@@ -85,11 +85,7 @@ export function darkenColor(color: string, amount: number): string {
   if (!rgb) return color;
 
   const factor = 1 - amount;
-  return rgbToHex(
-    Math.round(rgb.r * factor),
-    Math.round(rgb.g * factor),
-    Math.round(rgb.b * factor)
-  );
+  return rgbToHex(Math.round(rgb.r * factor), Math.round(rgb.g * factor), Math.round(rgb.b * factor));
 }
 
 /**
@@ -103,7 +99,7 @@ export function lightenColor(color: string, amount: number): string {
   return rgbToHex(
     Math.min(255, Math.round(rgb.r * factor)),
     Math.min(255, Math.round(rgb.g * factor)),
-    Math.min(255, Math.round(rgb.b * factor))
+    Math.min(255, Math.round(rgb.b * factor)),
   );
 }
 

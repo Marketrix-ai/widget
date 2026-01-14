@@ -6,12 +6,9 @@ import { findTaskMessageIndex, updateThinkingMarker } from '../utils/chat';
 /**
  * Hook for managing task state and placeholder updates
  */
-export function useTaskState(
-  state: WidgetState,
-  setState: React.Dispatch<React.SetStateAction<WidgetState>>
-) {
+export function useTaskState(state: WidgetState, setState: React.Dispatch<React.SetStateAction<WidgetState>>) {
   useEffect(() => {
-    setState((prev) => {
+    setState(prev => {
       const messages = [...prev.messages];
       let updated = false;
 
@@ -22,15 +19,11 @@ export function useTaskState(
           // Determine placeholder state based on:
           // - 'waiting-for-user': task is running in show/do mode and has progress lines
           // - 'thinking': otherwise (agent is processing)
-          const hasProgress = msg.parts?.some((p) => p.type === 'progress') ?? false;
+          const hasProgress = msg.parts?.some(p => p.type === 'progress') ?? false;
           const shouldBeWaitingForUser =
-            prev.isTaskRunning &&
-            (prev.currentMode === 'show' || prev.currentMode === 'do') &&
-            hasProgress;
+            prev.isTaskRunning && (prev.currentMode === 'show' || prev.currentMode === 'do') && hasProgress;
 
-          const newState: 'thinking' | 'waiting-for-user' = shouldBeWaitingForUser
-            ? 'waiting-for-user'
-            : 'thinking';
+          const newState: 'thinking' | 'waiting-for-user' = shouldBeWaitingForUser ? 'waiting-for-user' : 'thinking';
 
           if (msg.placeholderState !== newState) {
             messages[i] = {
@@ -46,12 +39,12 @@ export function useTaskState(
       if (!prev.isTaskRunning || (prev.currentMode !== 'show' && prev.currentMode !== 'do')) {
         // Remove thinking indicator if task is not running or not in show/do mode
         const hasThinkingMessages = messages.some(
-          (msg) =>
+          msg =>
             msg.sender === 'agent' &&
             !msg.isSystemMessage &&
             !msg.isScreenAccessRequest &&
             !msg.isPlaceholder &&
-            msg.content.includes('__THINKING__')
+            msg.content.includes('__THINKING__'),
         );
         if (hasThinkingMessages) {
           for (let i = 0; i < messages.length; i++) {
@@ -77,11 +70,7 @@ export function useTaskState(
 
         if (taskMessageIndex >= 0) {
           const taskMessage = messages[taskMessageIndex];
-          const updatedMessage = updateThinkingMarker(
-            taskMessage,
-            prev.isTaskRunning,
-            prev.currentMode
-          );
+          const updatedMessage = updateThinkingMarker(taskMessage, prev.isTaskRunning, prev.currentMode);
 
           if (updatedMessage !== taskMessage) {
             messages[taskMessageIndex] = updatedMessage;

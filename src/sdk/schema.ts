@@ -34,12 +34,18 @@ import { z } from 'zod';
  * Core system enums for user roles, plans, and statuses
  */
 export const UserRoleSchema = z.enum(['user', 'admin', 'super']);
-export const UserPlanSchema = z.enum(['free', 'pro', 'enterprise']);
+export const UserPlanSchema = z.enum(['free', 'starter', 'growth', 'enterprise']);
 export const EntityStatusSchema = z.enum(['created', 'active', 'suspended', 'pending_approval']);
-export const TenantPackageSchema = z.enum(['free', 'starter', 'pro', 'enterprise']);
+export const TenantPackageSchema = z.enum(['free', 'starter', 'growth', 'enterprise']);
 export const AgentTypeSchema = z.enum(['human', 'ai']);
 export const AgentVoiceSchema = z.enum(['male', 'female']);
 export const AgentStatusSchema = z.enum(['active', 'learning', 'error']);
+export const LearningProgressSchema = z.object({
+  vector_index_created: z.boolean(),
+  mindmap_created: z.boolean(),
+  node_index_created: z.boolean(),
+  edge_index_created: z.boolean(),
+});
 export const KnowledgeTypeSchema = z.enum(['document', 'video']);
 export const MeetingStatusSchema = z.enum(['not_started', 'in_progress', 'ended', 'cancelled']);
 export const ChatRoleSchema = z.enum(['user', 'agent']);
@@ -270,6 +276,19 @@ export const TenantCreateSchema = TenantEntitySchema.partial().extend({
  */
 export const TenantUpdateSchema = TenantEntitySchema.partial();
 
+export const TenantPlanStatusSchema = z.enum([
+  'active',
+  'past_due',
+  'canceled',
+  'unpaid',
+  'trialing',
+  'incomplete',
+  'incomplete_expired',
+  'paused',
+]);
+
+export type TenantPlanStatus = z.infer<typeof TenantPlanStatusSchema>;
+
 /**
  * Tenant plan entity schema - tracks plan/subscription for each tenant
  */
@@ -277,6 +296,9 @@ export const TenantPlanEntitySchema = BaseEntitySchema.extend({
   tenant_id: z.number(),
   package: TenantPackageSchema,
   ending_date: z.coerce.date(),
+  stripe_subscription_id: z.string().nullable(),
+  stripe_price_id: z.string().nullable(),
+  status: TenantPlanStatusSchema.default('active').optional(),
 });
 
 /**
@@ -364,7 +386,6 @@ export const KnowledgeEntitySchema = BaseEntitySchema.extend({
   file_size: z.number(),
   file_type: KnowledgeTypeSchema,
   file_url: z.string(),
-  file_id: z.string().optional(),
   source_url: z.string().optional(), // Original URL for URL-based documents
 });
 
@@ -384,7 +405,7 @@ export const GoToUrlActionSchema = z.object({
 
 export const ClickElementByIndexActionSchema = z.object({
   click_element_by_index: z.object({
-    index: z.number(),
+    index: z.number().int().min(1), // Must be >= 1 (data-id value from browser_state)
   }),
 });
 
@@ -570,6 +591,7 @@ export const SimulationEntitySchema = BaseEntitySchema.extend({
   path: z.string(),
   instructions: z.string(),
   num_steps: z.number().int().nonnegative(),
+  pinned: z.boolean().optional(),
   agent_name: z.string().optional(),
 });
 
@@ -589,9 +611,10 @@ export const SimulationCreateSchema = SimulationEntitySchema.partial().extend({
  */
 export const SimulationUpdateSchema = z.object({
   job_id: z.string().optional(),
-  status: z.string(),
-  status_message: z.string(),
+  status: z.string().optional(),
+  status_message: z.string().optional(),
   num_steps: z.number().int().nonnegative().optional(),
+  pinned: z.boolean().optional(),
 });
 
 /**
@@ -599,6 +622,56 @@ export const SimulationUpdateSchema = z.object({
  */
 export const SimulationAnswerSchema = z.object({
   answer: z.string().min(1),
+});
+
+// ============================================================================
+// RRWEB SESSION SCHEMAS - RRWeb session recording management
+// ============================================================================
+
+/**
+ * Complete RRWeb session entity schema
+ */
+export const RrwebSessionEntitySchema = BaseEntitySchema.extend({
+  session_id: z.string(),
+  marketrix_chat_id: z.string(),
+  blob_url: z.string().nullable(),
+  event_count: z.number().int().nonnegative(),
+  started_at: z.string().datetime(),
+  ended_at: z.string().datetime().nullable(),
+  is_active: z.boolean(),
+  metadata: z
+    .object({
+      userAgent: z.string().optional(),
+      url: z.string().optional(),
+    })
+    .nullable(),
+  last_batch_index: z.number().int().nonnegative().nullable(),
+  last_event_timestamp: z.number().int().nullable(),
+  last_upload_time: z.string().datetime().nullable(),
+});
+
+/**
+ * RRWeb session upsert schema (for create/update)
+ */
+export const RrwebSessionUpsertSchema = z.object({
+  session_id: z.string().min(1),
+  marketrix_chat_id: z.string().min(1),
+  blob_url: z.string().nullable().optional(),
+  event_count: z.number().int().nonnegative().optional(),
+  started_at: z.string().datetime().optional(),
+  ended_at: z.string().datetime().nullable().optional(),
+  is_active: z.boolean().optional(),
+  metadata: z
+    .object({
+      userAgent: z.string().optional(),
+      url: z.string().optional(),
+      connectionId: z.number().optional(), // For tenant/connection lookup
+    })
+    .nullable()
+    .optional(),
+  last_batch_index: z.number().int().nonnegative().nullable().optional(),
+  last_event_timestamp: z.number().int().nullable().optional(),
+  last_upload_time: z.string().datetime().nullable().optional(),
 });
 
 /**
@@ -659,28 +732,30 @@ export const AgentEntitySchema = BaseEntitySchema.extend({
   agent_description: z.string(),
   instructions: z.string().optional(),
   image_url: z.string().optional(),
-  vector_store_id: z.string().optional(),
-  pdf_search_index_id: z.string().optional(),
-  json_search_index_id: z.string().optional(),
   node_index_id: z.string().optional(),
   edge_index_id: z.string().optional(),
   mindmap_url: z.string().optional(),
+  vector_store_id: z.string().optional(),
   status: AgentStatusSchema,
   status_message: z.string().optional(),
+  learning_progress: LearningProgressSchema.optional(),
+  learning_started_at: z.coerce.date().optional(),
   tenant: TenantEntitySchema.optional(),
   user: UserEntitySchema.optional(),
   knowledge: z.array(KnowledgeEntitySchema).optional(),
   simulations: z.array(SimulationEntitySchema).optional(),
+  simulation_count: z.number().int().nonnegative().optional(),
+  knowledge_count: z.number().int().nonnegative().optional(),
 });
 
 const KnowledgeIdsSchema = z
   .string()
-  .transform((str) => JSON.parse(str) as number[])
+  .transform(str => JSON.parse(str) as number[])
   .pipe(z.array(z.coerce.number()));
 
 const SimulationIdsSchema = z
   .string()
-  .transform((str) => JSON.parse(str) as number[])
+  .transform(str => JSON.parse(str) as number[])
   .pipe(z.array(z.coerce.number()));
 
 /**
@@ -706,6 +781,76 @@ export const AgentUpdateSchema = AgentEntitySchema.partial().extend({
   knowledge_ids: KnowledgeIdsSchema,
   simulation_ids: SimulationIdsSchema,
 });
+
+/**
+ * Agent task start response schema
+ * Response from agent server when starting a task
+ */
+export const AgentTaskStartResponseSchema = z.object({
+  text: z.string(),
+  task_id: z.string().optional(),
+});
+
+/**
+ * Agent task stop response schema
+ * Response from agent server when stopping a task
+ */
+export const AgentTaskStopResponseSchema = z.object({
+  status: z.string(),
+  message: z.string(),
+});
+
+/**
+ * Agent task status response schema
+ * Response from agent server for task status queries
+ */
+export const AgentTaskStatusResponseSchema = z.object({
+  task_id: z.string().optional(),
+  status: z.string().optional(),
+  current_step: z.string().optional(),
+  error: z.string().optional(),
+  message: z.string().optional(),
+});
+
+/**
+ * Simulation status response schema
+ * Response for simulation status queries from agent server
+ */
+export const SimulationStatusResponseSchema = z.object({
+  workflow_id: z.string(),
+  workflow_type: z.string(),
+  status: z.string(),
+  current_step: z.string(),
+  error: z.string().nullable(),
+  created_at: z.string(),
+  updated_at: z.string(),
+});
+
+/**
+ * Browser session response schema
+ * Response for browser session operations from agent server
+ */
+export const BrowserSessionResponseSchema = z.object({
+  session_id: z.string().optional(),
+  live_view_url: z.string().nullable().optional(),
+  status: z.string().optional(),
+  message: z.string().nullable().optional(),
+  success: z.boolean().optional(),
+});
+
+/**
+ * Task status enum schema
+ * Common status values for tasks and simulations
+ */
+export const TaskStatusSchema = z.enum([
+  'pending',
+  'running',
+  'completed',
+  'failed',
+  'cancelled',
+  'has_question',
+  'in_progress',
+]);
 
 /**
  * Agent knowledge search configuration schema
@@ -748,24 +893,6 @@ export const SearchResultSchema = z.object({
 });
 
 /**
- * Agent knowledge search request schema
- */
-export const AgentKnowledgeSearchRequestSchema = z.object({
-  query: z.string().min(1, 'Search query is required'),
-  searchConfig: AgentSearchConfigSchema.optional(),
-});
-
-/**
- * Agent knowledge search response schema
- */
-export const AgentKnowledgeSearchResponseSchema = z.object({
-  results: z.array(SearchResultSchema),
-  totalCount: z.number(),
-  query: z.string(),
-  searchConfig: AgentSearchConfigSchema.optional(),
-});
-
-/**
  * Agent simulation index request schema
  */
 export const AgentSimulationIndexRequestSchema = z.object({
@@ -779,8 +906,6 @@ export const AgentSimulationIndexResponseSchema = z.object({
   agent: AgentEntitySchema,
   simulation_id: z.number(),
   knowledge_id: z.number(),
-  pdf_search_index_id: z.string().optional(),
-  json_search_index_id: z.string().optional(),
   message: z.string(),
 });
 
@@ -790,8 +915,8 @@ export const AgentSimulationIndexResponseSchema = z.object({
 export const AgentIndexCallbackRequestSchema = z.object({
   agent_id: z.coerce.number().positive('Agent ID must be a positive number'),
   index_name: z.string().min(1, 'Index name is required'),
-  index_type: z.enum(['pdf', 'json', 'node_index', 'edge_index', 'mindmap'], {
-    message: 'Index type must be pdf, json, node_index, edge_index, or mindmap' as const,
+  index_type: z.enum(['vector_index', 'node_index', 'edge_index', 'mindmap'], {
+    message: 'Index type must be vector_index, node_index, edge_index, or mindmap' as const,
   }),
   status: z.enum(['success', 'failed'], { message: 'Status must be success or failed' }),
   status_message: z.string().optional(),
@@ -978,13 +1103,9 @@ export const ChatRequestSchema = z
     chat_id: z.string().optional(), // Optional since it comes from path params in some routes
     content: z.string(),
   })
-  .refine(
-    (data) => (data.marketrix_id && data.marketrix_key) ?? (data.agent_id && data.connection_id),
-    {
-      message:
-        'Either marketrix_id + marketrix_key or both agent_id + connection_id must be provided',
-    }
-  );
+  .refine(data => (data.marketrix_id && data.marketrix_key) ?? (data.agent_id && data.connection_id), {
+    message: 'Either marketrix_id + marketrix_key or both agent_id + connection_id must be provided',
+  });
 
 /**
  * Chat response entity schema
@@ -1128,9 +1249,9 @@ export const UserPromptDataSchema = z.object({
 });
 
 /**
- * Usage stats response schema
+ * User quota response schema (for SDK chat endpoints)
  */
-export const UsageStatsSchema = z.object({
+export const UserQuotaSchema = z.object({
   user_id: z.number(),
   limit: z.number(),
   used: z.number(),
@@ -1244,6 +1365,172 @@ export const TaskPilotPromptSchema = z.object({
 });
 
 // ============================================================================
+// STRIPE SCHEMAS - Stripe subscription and payment management
+// ============================================================================
+
+/**
+ * Stripe webhook event schema
+ * Matches the structure of Stripe.Event from the Stripe SDK
+ */
+export const StripeWebhookEventSchema = z.object({
+  id: z.string(),
+  object: z.literal('event'),
+  api_version: z.string().nullable().optional(),
+  created: z.number(),
+  data: z.object({
+    object: z.record(z.unknown()), // The actual event object varies by event type
+    previous_attributes: z.record(z.unknown()).optional(),
+  }),
+  livemode: z.boolean(),
+  pending_webhooks: z.number(),
+  request: z
+    .object({
+      id: z.string().nullable(),
+      idempotency_key: z.string().nullable(),
+    })
+    .nullable()
+    .optional(),
+  type: z.string(), // Event type (e.g., 'customer.subscription.created')
+});
+
+/**
+ * Stripe checkout session creation request schema
+ */
+export const StripeCheckoutSchema = z.object({
+  priceId: z.string().min(1, 'Price ID is required'),
+  successUrl: z.string().url('Success URL must be a valid URL'),
+  cancelUrl: z.string().url('Cancel URL must be a valid URL'),
+});
+
+/**
+ * Stripe customer portal session creation request schema
+ */
+export const StripePortalSchema = z.object({
+  returnUrl: z.string().url('Return URL must be a valid URL'),
+});
+
+/**
+ * Stripe trial subscription creation request schema
+ */
+export const StripeTrialSchema = z.object({
+  plan: z.enum(['starter', 'growth']).default('starter'),
+  interval: z.enum(['month', 'year']).default('month'),
+});
+
+/**
+ * Stripe downgrade confirmation request schema
+ */
+export const StripeDowngradeSchema = z.object({
+  subscriptionId: z.string().min(1, 'Subscription ID is required'),
+  priceId: z.string().min(1, 'Price ID is required'),
+});
+
+/**
+ * Stripe downgrade response schema
+ */
+export const StripeDowngradeResponseSchema = z.object({
+  success: z.boolean(),
+  message: z.string(),
+});
+
+/**
+ * Plan information response schema
+ */
+export const PlanInfoSchema = z.object({
+  subscriptionId: z.string().nullable(),
+  customerId: z.string().nullable(),
+  status: z
+    .enum(['active', 'past_due', 'canceled', 'unpaid', 'trialing', 'incomplete', 'incomplete_expired', 'paused'])
+    .nullable(),
+  planTier: z.enum(['free', 'starter', 'growth', 'enterprise']).nullable(),
+  billingInterval: z.enum(['month', 'year']).nullable(),
+  priceId: z.string().nullable(),
+  trialEndDate: z.coerce.date().nullable(),
+  currentPeriodStart: z.coerce.date().nullable(),
+  currentPeriodEnd: z.coerce.date().nullable(),
+  cancelAtPeriodEnd: z.boolean(),
+  isTrialing: z.boolean(),
+  daysRemainingInTrial: z.number().nullable(),
+  trialProvisioned: z.boolean(),
+});
+
+/**
+ * Checkout session response schema
+ */
+export const CheckoutSessionSchema = z.object({
+  sessionId: z.string(),
+  url: z.string().url(),
+});
+
+/**
+ * Portal session response schema
+ */
+export const PortalSessionSchema = z.object({
+  url: z.string().url(),
+});
+
+/**
+ * Trial subscription response schema
+ */
+export const TrialSubscriptionSchema = z.object({
+  subscriptionId: z.string(),
+  customerId: z.string(),
+  status: z.literal('trialing'),
+  trialStartDate: z.coerce.date(),
+  trialEndDate: z.coerce.date(),
+  planTier: z.enum(['starter', 'growth']),
+  daysRemainingInTrial: z.number(),
+});
+
+/**
+ * Usage metric schema for individual resource
+ */
+export const UsageMetricSchema = z.object({
+  used: z.number().int().min(0),
+  limit: z.number().int(),
+});
+
+/**
+ * Subscription usage statistics schema (tenant-wide resource tracking)
+ * Used for billing and subscription management
+ */
+export const SubscriptionUsageSchema = z.object({
+  connectedApps: UsageMetricSchema,
+  simulationsPerMonth: UsageMetricSchema,
+  userPrompts: UsageMetricSchema,
+});
+
+/**
+ * Price amount schema for individual pricing
+ */
+export const PriceAmountSchema = z.object({
+  amount: z.number().int().min(0),
+  currency: z.string().default('usd'),
+  formatted: z.string(),
+});
+
+/**
+ * Plan pricing schema for a specific plan tier
+ */
+export const PlanPricingSchema = z.object({
+  planId: z.enum(['free', 'starter', 'growth', 'enterprise']),
+  monthly: PriceAmountSchema.nullable(),
+  annual: PriceAmountSchema.nullable(),
+  priceIds: z.object({
+    monthly: z.string().nullable(),
+    annual: z.string().nullable(),
+  }),
+});
+
+/**
+ * Stripe pricing response schema
+ */
+export const StripePricingSchema = z.object({
+  plans: z.array(PlanPricingSchema),
+  lastUpdated: z.string().datetime(),
+});
+
+// ============================================================================
 // TYPE EXPORTS - Essential TypeScript types for external use
 // ============================================================================
 
@@ -1299,12 +1586,16 @@ export type AgentUpdateData = z.infer<typeof AgentUpdateSchema>;
 export type AgentSearchConfig = z.infer<typeof AgentSearchConfigSchema>;
 export type SearchDocument = z.infer<typeof SearchDocumentSchema>;
 export type SearchResult = z.infer<typeof SearchResultSchema>;
-export type AgentKnowledgeSearchRequest = z.infer<typeof AgentKnowledgeSearchRequestSchema>;
-export type AgentKnowledgeSearchResponse = z.infer<typeof AgentKnowledgeSearchResponseSchema>;
 export type AgentSimulationIndexRequest = z.infer<typeof AgentSimulationIndexRequestSchema>;
 export type AgentSimulationIndexResponse = z.infer<typeof AgentSimulationIndexResponseSchema>;
 export type AgentIndexCallbackRequest = z.infer<typeof AgentIndexCallbackRequestSchema>;
 export type AgentIndexCallbackResponse = z.infer<typeof AgentIndexCallbackResponseSchema>;
+export type AgentTaskStartResponseData = z.infer<typeof AgentTaskStartResponseSchema>;
+export type AgentTaskStopResponseData = z.infer<typeof AgentTaskStopResponseSchema>;
+export type AgentTaskStatusResponseData = z.infer<typeof AgentTaskStatusResponseSchema>;
+export type SimulationStatusResponseData = z.infer<typeof SimulationStatusResponseSchema>;
+export type BrowserSessionResponseData = z.infer<typeof BrowserSessionResponseSchema>;
+export type TaskStatus = z.infer<typeof TaskStatusSchema>;
 export type FileUploadResponse = z.infer<typeof FileUploadResponseSchema>;
 export type ChatRequest = z.infer<typeof ChatRequestSchema>;
 export type ChatResponseData = z.infer<typeof ChatResponseSchema>;
@@ -1353,8 +1644,23 @@ export type TourAnswerData = z.infer<typeof TourAnswerSchema>;
 export type TourStepData = z.infer<typeof TourStepSchema>;
 export type PasswordResetData = z.infer<typeof PasswordResetEntitySchema>;
 export type ChatData = z.infer<typeof ChatEntitySchema>;
-export type UsageStatsData = z.infer<typeof UsageStatsSchema>;
+export type UserQuotaData = z.infer<typeof UserQuotaSchema>;
+export type SubscriptionUsageData = z.infer<typeof SubscriptionUsageSchema>;
 export type SimulationProgressData = z.infer<typeof SimulationProgressEntitySchema>;
 export type MindMapEdgeData = z.infer<typeof MindMapEdgeSchema>;
 export type MindMapNodeData = z.infer<typeof MindMapNodeSchema>;
 export type MindMapData = z.infer<typeof MindMapSchema>;
+export type RrwebSessionData = z.infer<typeof RrwebSessionEntitySchema>;
+export type RrwebSessionUpsertData = z.infer<typeof RrwebSessionUpsertSchema>;
+export type StripeCheckoutData = z.infer<typeof StripeCheckoutSchema>;
+export type StripePortalData = z.infer<typeof StripePortalSchema>;
+export type StripeTrialData = z.infer<typeof StripeTrialSchema>;
+export type StripeDowngradeData = z.infer<typeof StripeDowngradeSchema>;
+export type StripeDowngradeResponseData = z.infer<typeof StripeDowngradeResponseSchema>;
+export type PlanInfoData = z.infer<typeof PlanInfoSchema>;
+export type CheckoutSessionData = z.infer<typeof CheckoutSessionSchema>;
+export type PortalSessionData = z.infer<typeof PortalSessionSchema>;
+export type TrialSubscriptionData = z.infer<typeof TrialSubscriptionSchema>;
+export type PriceAmountData = z.infer<typeof PriceAmountSchema>;
+export type PlanPricingData = z.infer<typeof PlanPricingSchema>;
+export type StripePricingData = z.infer<typeof StripePricingSchema>;

@@ -106,7 +106,7 @@ export class MarketrixApiService {
             metadata,
           },
         })
-        .catch((error) => {
+        .catch(error => {
           // Silently fail - logging is not critical for widget functionality
           console.warn('[API Service] Failed to log widget question:', error);
         });
@@ -138,10 +138,7 @@ export class MarketrixApiService {
       }
 
       // Support both mtxId/mtxKey and mtxApp/mtxAgent paths
-      if (
-        !(this.config.mtxId && this.config.mtxKey) &&
-        (!this.config.mtxApp || !this.config.mtxAgent)
-      ) {
+      if (!(this.config.mtxId && this.config.mtxKey) && (!this.config.mtxApp || !this.config.mtxAgent)) {
         throw new Error('Either mtxId + mtxKey or both mtxApp + mtxAgent are required');
       }
 
@@ -274,9 +271,7 @@ export class MarketrixApiService {
         body: apiResponse.body,
         response: apiResponse,
       });
-      throw new Error(
-        `Failed to send message. API returned status ${apiResponse.status}. ${errorBody}`
-      );
+      throw new Error(`Failed to send message. API returned status ${apiResponse.status}. ${errorBody}`);
     } catch (error) {
       console.error('Failed to send message:', extractErrorMessage(error));
       throw error;

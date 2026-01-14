@@ -43,7 +43,7 @@ function mountDebugPanel(): void {
   root.render(
     <React.StrictMode>
       <DebugPanel />
-    </React.StrictMode>
+    </React.StrictMode>,
   );
 
   console.log('[Debug] Debug panel mounted. Press Ctrl+Shift+D to toggle visibility.');

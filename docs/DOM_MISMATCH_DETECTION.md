@@ -408,9 +408,8 @@ if (element) {
   <!-- Now at nth-of-type(3)! -->
 </form>
 
-Selector "button:nth-of-type(2)" now returns "Cancel" - WRONG! →
-matchesFingerprint("Cancel", {textContent: "Submit"}) = false → Move to Strategy
-2
+Selector "button:nth-of-type(2)" now returns "Cancel" - WRONG! → matchesFingerprint("Cancel", {textContent: "Submit"}) =
+false → Move to Strategy 2
 ```
 
 ---

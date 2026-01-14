@@ -198,14 +198,14 @@ export function isTourStepData(data: unknown): data is TourStepData {
  * Type guard for array of IntegrationData
  */
 export function isIntegrationDataArray(data: unknown): data is IntegrationData[] {
-  return Array.isArray(data) && data.every((item) => isIntegrationData(item));
+  return Array.isArray(data) && data.every(item => isIntegrationData(item));
 }
 
 /**
  * Type guard for array of TourStepData
  */
 export function isTourStepDataArray(data: unknown): data is TourStepData[] {
-  return Array.isArray(data) && data.every((item) => isTourStepData(item));
+  return Array.isArray(data) && data.every(item => isTourStepData(item));
 }
 
 /**
@@ -241,7 +241,7 @@ export function isTourData(data: unknown): data is TourData {
  * Type guard for array of TourData
  */
 export function isTourDataArray(data: unknown): data is TourData[] {
-  return Array.isArray(data) && data.every((item) => isTourData(item));
+  return Array.isArray(data) && data.every(item => isTourData(item));
 }
 
 /**
@@ -284,18 +284,14 @@ export function isHTMLElement(element: Element | null): element is HTMLElement {
 /**
  * Type guard for HTMLInputElement
  */
-export function isHTMLInputElement(
-  element: Element | EventTarget | null
-): element is HTMLInputElement {
+export function isHTMLInputElement(element: Element | EventTarget | null): element is HTMLInputElement {
   return element !== null && element instanceof HTMLInputElement;
 }
 
 /**
  * Type guard for HTMLTextAreaElement
  */
-export function isHTMLTextAreaElement(
-  element: Element | EventTarget | null
-): element is HTMLTextAreaElement {
+export function isHTMLTextAreaElement(element: Element | EventTarget | null): element is HTMLTextAreaElement {
   return element !== null && element instanceof HTMLTextAreaElement;
 }
 

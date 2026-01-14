@@ -63,7 +63,7 @@ function injectWidgetDelayed(config) {
       () => {
         setTimeout(() => injectWidget(config), 500);
       },
-      { once: true }
+      { once: true },
     );
   } else {
     // DOM already ready, but still delay to avoid race conditions
@@ -72,7 +72,7 @@ function injectWidgetDelayed(config) {
 }
 
 // Check storage and inject if enabled (with delay)
-chrome.storage.local.get(['enabled', 'config'], (result) => {
+chrome.storage.local.get(['enabled', 'config'], result => {
   if (result.enabled && result.config) {
     injectWidgetDelayed(result.config);
   }

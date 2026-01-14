@@ -128,7 +128,7 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
             {/* Close button - show first for bottom_left position */}
             {effectivePosition.includes('left') && (
               <button
-                onClick={(e) => {
+                onClick={e => {
                   e.stopPropagation();
                   setShowWelcomeText(false);
                 }}
@@ -141,12 +141,7 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
                   stroke='currentColor'
                   viewBox='0 0 24 24'
                 >
-                  <path
-                    strokeLinecap='round'
-                    strokeLinejoin='round'
-                    strokeWidth={2}
-                    d='M6 18L18 6M6 6l12 12'
-                  />
+                  <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M6 18L18 6M6 6l12 12' />
                 </svg>
               </button>
             )}
@@ -154,15 +149,13 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
             {/* greeting text */}
             <div className='flex-1'>
               <div className='font-medium'>{widgetConfig.widget_greeting}</div>
-              <div style={{ color: addOpacity(widgetConfig.widget_text_color, 0.7) }}>
-                {widgetConfig.widget_body}
-              </div>
+              <div style={{ color: addOpacity(widgetConfig.widget_text_color, 0.7) }}>{widgetConfig.widget_body}</div>
             </div>
 
             {/* Close button - show last for bottom_right position */}
             {effectivePosition.includes('right') && (
               <button
-                onClick={(e) => {
+                onClick={e => {
                   e.stopPropagation();
                   setShowWelcomeText(false);
                 }}
@@ -175,12 +168,7 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
                   stroke='currentColor'
                   viewBox='0 0 24 24'
                 >
-                  <path
-                    strokeLinecap='round'
-                    strokeLinejoin='round'
-                    strokeWidth={2}
-                    d='M6 18L18 6M6 6l12 12'
-                  />
+                  <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M6 18L18 6M6 6l12 12' />
                 </svg>
               </button>
             )}
@@ -190,8 +178,7 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
             style={{
               [effectivePosition.includes('left') ? 'borderLeftColor' : 'borderRightColor']:
                 widgetConfig.widget_background_color,
-              [effectivePosition.includes('left') ? 'borderRightColor' : 'borderLeftColor']:
-                'transparent',
+              [effectivePosition.includes('left') ? 'borderRightColor' : 'borderLeftColor']: 'transparent',
               borderTopColor: 'transparent',
               borderBottomColor: 'transparent',
             }}

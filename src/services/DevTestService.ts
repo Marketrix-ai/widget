@@ -179,7 +179,7 @@ class DevTestService {
     const buttons = container.querySelectorAll('button, a, input, select');
     let replaced = 0;
 
-    buttons.forEach((element) => {
+    buttons.forEach(element => {
       if (element instanceof HTMLElement) {
         const newElement = element.cloneNode(true) as HTMLElement;
         newElement.setAttribute('data-test-state-changed', 'true');
@@ -241,7 +241,7 @@ class DevTestService {
     }
 
     // Re-append in new order
-    children.forEach((child) => container.appendChild(child));
+    children.forEach(child => container.appendChild(child));
 
     console.log(`[DevTestService] Reordered ${children.length} elements`);
     return children.length;
@@ -255,12 +255,11 @@ class DevTestService {
    * Inject content after a delay
    */
   async injectDelayedContent(delayMs: number = 2000): Promise<HTMLElement[]> {
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
       setTimeout(() => {
         const container = document.createElement('div');
         container.setAttribute('data-test-delayed', 'true');
-        container.style.cssText =
-          'padding: 10px; background: #e8f5e9; margin: 10px 0; border-radius: 4px;';
+        container.style.cssText = 'padding: 10px; background: #e8f5e9; margin: 10px 0; border-radius: 4px;';
         container.innerHTML = `
           <p>Delayed content loaded!</p>
           <button id="delayed-btn-1">Delayed Button 1</button>
@@ -283,8 +282,7 @@ class DevTestService {
   simulateInfiniteScroll(count: number = 5): HTMLElement[] {
     const container = document.createElement('div');
     container.setAttribute('data-test-infinite-scroll', 'true');
-    container.style.cssText =
-      'padding: 10px; background: #fff3e0; margin: 10px 0; border-radius: 4px;';
+    container.style.cssText = 'padding: 10px; background: #fff3e0; margin: 10px 0; border-radius: 4px;';
 
     const elements: HTMLElement[] = [];
 
@@ -545,7 +543,7 @@ class DevTestService {
             </div>
           `;
           }
-        }
+        },
       );
     }
 
@@ -730,10 +728,7 @@ class DevTestService {
       scenarioName: 'Index Shift - Remove',
       steps,
       passed: result.outcome === 'failed' && result.details.includes('DOM_CHANGED'),
-      summary:
-        result.outcome === 'failed'
-          ? 'Correctly detected element removal'
-          : 'Unexpectedly succeeded',
+      summary: result.outcome === 'failed' ? 'Correctly detected element removal' : 'Unexpectedly succeeded',
     };
   }
 
@@ -783,12 +778,7 @@ class DevTestService {
    * Run all test scenarios
    */
   async runAllScenarios(): Promise<ScenarioResult[]> {
-    const scenarioIds = [
-      'index-shift-insert',
-      'index-shift-remove',
-      'element-content-change',
-      'spa-rerender',
-    ];
+    const scenarioIds = ['index-shift-insert', 'index-shift-remove', 'element-content-change', 'spa-rerender'];
 
     const results: ScenarioResult[] = [];
 
@@ -845,10 +835,10 @@ class DevTestService {
         '[data-test-skeleton-replaced], [data-test-same-sibling], [data-test-class-changed], ' +
         '[data-test-wrapper], [data-test-duplicate-id], [data-test-modal], [data-test-dropdown], ' +
         '[data-test-rapid], [data-test-iframe], [data-test-shadow], [data-test-content-changed], ' +
-        '[data-test-hidden]'
+        '[data-test-hidden]',
     );
 
-    testElements.forEach((el) => el.remove());
+    testElements.forEach(el => el.remove());
     console.log(`[DevTestService] Cleaned up ${testElements.length} test elements`);
   }
 

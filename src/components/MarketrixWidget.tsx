@@ -14,10 +14,7 @@ interface MarketrixWidgetProps {
 }
 
 // Error Boundary for ChatWindow
-class WidgetErrorBoundary extends React.Component<
-  { children: React.ReactNode },
-  { hasError: boolean }
-> {
+class WidgetErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean }> {
   constructor(props: { children: React.ReactNode }) {
     super(props);
     this.state = { hasError: false };
@@ -59,7 +56,7 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.shiftKey && e.key === 'D') {
         e.preventDefault();
-        setShowDevPanel((prev) => !prev);
+        setShowDevPanel(prev => !prev);
       }
     };
 
@@ -147,12 +144,8 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
           error={state.error}
           onClose={() => actions.clearError()}
           position={
-            (settings.widget_position as
-              | 'bottom_left'
-              | 'bottom_right'
-              | 'top_left'
-              | 'top_right'
-              | undefined) || 'bottom_right'
+            (settings.widget_position as 'bottom_left' | 'bottom_right' | 'top_left' | 'top_right' | undefined) ||
+            'bottom_right'
           }
         />
       )}

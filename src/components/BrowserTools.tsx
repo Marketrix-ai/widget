@@ -26,16 +26,12 @@ interface BrowserToolsProps {
   width?: string;
 }
 
-export const BrowserTools: React.FC<BrowserToolsProps> = ({
-  config,
-  onToolSelect,
-  width = '100%',
-}) => {
+export const BrowserTools: React.FC<BrowserToolsProps> = ({ config, onToolSelect, width = '100%' }) => {
   const { config: widgetConfig } = useWidget({ config });
   const [activeTab, setActiveTab] = useState<keyof typeof BROWSER_TOOL_CATEGORIES>('navigation');
 
   // Get tools for active category
-  const toolsInCategory = BROWSER_TOOLS.filter((tool) => tool.category === activeTab);
+  const toolsInCategory = BROWSER_TOOLS.filter(tool => tool.category === activeTab);
 
   // Get icon for tool
   const getToolIcon = (tool: BrowserToolMetadata) => {
@@ -84,7 +80,7 @@ export const BrowserTools: React.FC<BrowserToolsProps> = ({
         action = { type: 'search', query: '', engine: 'duckduckgo' };
         break;
       case 'click':
-        action = { type: 'click', index: null, coordinate_x: null, coordinate_y: null };
+        action = { type: 'click', index: 1, coordinate_x: null, coordinate_y: null };
         break;
       case 'input_text':
         action = { type: 'input_text', index: 0, text: '', clear: true };
@@ -93,7 +89,7 @@ export const BrowserTools: React.FC<BrowserToolsProps> = ({
         action = { type: 'scroll', down: true, pages: 1.0, index: null };
         break;
       case 'send_keys':
-        action = { type: 'send_keys', keys: '' };
+        action = { type: 'send_keys', index: 0, keys: '' };
         break;
       case 'extract':
         action = { type: 'extract', query: '', extract_links: false, start_from_char: 0 };
@@ -169,12 +165,12 @@ export const BrowserTools: React.FC<BrowserToolsProps> = ({
                 color: isActive ? getContrastingColor(accentColor) : textColor,
                 borderBottom: isActive ? `2px solid ${accentColor}` : `2px solid transparent`,
               }}
-              onMouseEnter={(e) => {
+              onMouseEnter={e => {
                 if (!isActive) {
                   e.currentTarget.style.backgroundColor = addOpacity(secondaryColor, 0.1);
                 }
               }}
-              onMouseLeave={(e) => {
+              onMouseLeave={e => {
                 if (!isActive) {
                   e.currentTarget.style.backgroundColor = addOpacity(secondaryColor, 0.05);
                 }
@@ -196,7 +192,7 @@ export const BrowserTools: React.FC<BrowserToolsProps> = ({
         }}
       >
         <div className='grid grid-cols-1 gap-2'>
-          {toolsInCategory.map((tool) => (
+          {toolsInCategory.map(tool => (
             <button
               key={tool.id}
               onClick={() => handleToolClick(tool)}
@@ -206,11 +202,11 @@ export const BrowserTools: React.FC<BrowserToolsProps> = ({
                 border: `1px solid ${addOpacity(borderColor, 0.2)}`,
                 color: textColor,
               }}
-              onMouseEnter={(e) => {
+              onMouseEnter={e => {
                 e.currentTarget.style.backgroundColor = addOpacity(accentColor, 0.1);
                 e.currentTarget.style.borderColor = accentColor;
               }}
-              onMouseLeave={(e) => {
+              onMouseLeave={e => {
                 e.currentTarget.style.backgroundColor = addOpacity(secondaryColor, 0.1);
                 e.currentTarget.style.borderColor = addOpacity(borderColor, 0.2);
               }}
@@ -248,8 +244,7 @@ export const BrowserTools: React.FC<BrowserToolsProps> = ({
           color: addOpacity(textColor, 0.6),
         }}
       >
-        {toolsInCategory.length} tool{toolsInCategory.length !== 1 ? 's' : ''} in{' '}
-        {BROWSER_TOOL_CATEGORIES[activeTab]}
+        {toolsInCategory.length} tool{toolsInCategory.length !== 1 ? 's' : ''} in {BROWSER_TOOL_CATEGORIES[activeTab]}
       </div>
     </div>
   );

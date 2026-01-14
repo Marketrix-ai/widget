@@ -77,7 +77,7 @@ export class DOMService {
         const parent = current.parentElement;
         if (!parent) break;
         const currentTagName = current.tagName;
-        const siblings = Array.from(parent.children).filter((c) => c.tagName === currentTagName);
+        const siblings = Array.from(parent.children).filter(c => c.tagName === currentTagName);
         if (siblings.length > 1) {
           const index = siblings.indexOf(current) + 1;
           selector += `:nth-of-type(${index})`;
@@ -128,19 +128,19 @@ export class DOMService {
       str1
         .toLowerCase()
         .split(/\s+/)
-        .filter((w) => w.length > 0)
+        .filter(w => w.length > 0),
     );
     const words2 = new Set(
       str2
         .toLowerCase()
         .split(/\s+/)
-        .filter((w) => w.length > 0)
+        .filter(w => w.length > 0),
     );
 
     if (words1.size === 0 && words2.size === 0) return 1;
     if (words1.size === 0 || words2.size === 0) return 0;
 
-    const intersection = new Set([...words1].filter((w) => words2.has(w)));
+    const intersection = new Set([...words1].filter(w => words2.has(w)));
     const union = new Set([...words1, ...words2]);
 
     return intersection.size / union.size;
@@ -252,9 +252,7 @@ export class DOMService {
           // If selector returns the SAME element reference (just content changed),
           // it's safe to use even if text doesn't match
           if (originalElement === element && originalElementStillExists) {
-            console.log(
-              `[DOMService] Same element via selector, content may have changed: ${selector}`
-            );
+            console.log(`[DOMService] Same element via selector, content may have changed: ${selector}`);
             return {
               isValid: false,
               mismatchReason: 'element_changed',
@@ -308,11 +306,7 @@ export class DOMService {
     // Strategy 2: Search all currently indexed elements for a match
     // Only consider elements that are still in the document
     for (const [idx, elem] of this.elementMap.entries()) {
-      if (
-        elem instanceof HTMLElement &&
-        document.contains(elem) &&
-        this.matchesFingerprint(elem, fingerprint)
-      ) {
+      if (elem instanceof HTMLElement && document.contains(elem) && this.matchesFingerprint(elem, fingerprint)) {
         console.log(`[DOMService] Found matching element at different index: ${idx}`);
         return {
           isValid: false,
@@ -415,7 +409,7 @@ export class DOMService {
     // Check if index version is stale (informational)
     if (fingerprint.indexVersion !== this.indexVersion) {
       console.warn(
-        `[DOMService] Fingerprint version (${fingerprint.indexVersion}) differs from current index version (${this.indexVersion})`
+        `[DOMService] Fingerprint version (${fingerprint.indexVersion}) differs from current index version (${this.indexVersion})`,
       );
     }
 
@@ -432,9 +426,7 @@ export class DOMService {
       // Elements may have shifted due to insertions/removals
       const currentDomPosition = this.getCurrentDomPosition(currentElement);
       if (currentDomPosition !== -1 && currentDomPosition !== index) {
-        console.log(
-          `[DOMService] Element shifted from index ${index} to DOM position ${currentDomPosition}`
-        );
+        console.log(`[DOMService] Element shifted from index ${index} to DOM position ${currentDomPosition}`);
         return {
           isValid: false,
           mismatchReason: 'index_shifted',
@@ -488,7 +480,7 @@ export class DOMService {
       if (this.selectorMap.size > 0 || this.fingerprintMap.size > 0) {
         this.isIndexed = true;
         console.log(
-          `[DOMService] Restored ${this.selectorMap.size} selectors and ${this.fingerprintMap.size} fingerprints`
+          `[DOMService] Restored ${this.selectorMap.size} selectors and ${this.fingerprintMap.size} fingerprints`,
         );
       }
     } catch (e) {
@@ -549,18 +541,13 @@ export class DOMService {
       while (node) {
         if (node instanceof HTMLElement) {
           // ---- 🔥 ENHANCED INTERACTABLE DETECTION LOGIC HERE ----
-          const semantic = node.matches(
-            'a[href], button, input, textarea, select, [role="button"]'
-          );
+          const semantic = node.matches('a[href], button, input, textarea, select, [role="button"]');
 
-          const visuallyClickable =
-            node.classList.contains('cursor-pointer') || node.classList.contains('clickable');
+          const visuallyClickable = node.classList.contains('cursor-pointer') || node.classList.contains('clickable');
 
-          const hasClickHandler =
-            'onclick' in node && typeof (node as HTMLElement).onclick === 'function';
+          const hasClickHandler = 'onclick' in node && typeof (node as HTMLElement).onclick === 'function';
 
-          const isNowInteractable =
-            semantic || visuallyClickable || hasClickHandler || isInteractable(node);
+          const isNowInteractable = semantic || visuallyClickable || hasClickHandler || isInteractable(node);
           // --------------------------------------------------------
 
           if (isNowInteractable) {
@@ -624,10 +611,7 @@ export class DOMService {
     // Positioned elements with z-index (not auto)
     const position = style.position;
     if (
-      (position === 'fixed' ||
-        position === 'absolute' ||
-        position === 'relative' ||
-        position === 'sticky') &&
+      (position === 'fixed' || position === 'absolute' || position === 'relative' || position === 'sticky') &&
       style.zIndex !== 'auto'
     ) {
       return true;
@@ -676,10 +660,7 @@ export class DOMService {
 
     // Contain: layout, style, or paint
     const contain = style.contain;
-    if (
-      contain &&
-      (contain.includes('layout') || contain.includes('style') || contain.includes('paint'))
-    ) {
+    if (contain && (contain.includes('layout') || contain.includes('style') || contain.includes('paint'))) {
       return true;
     }
 

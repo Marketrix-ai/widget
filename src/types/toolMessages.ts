@@ -80,9 +80,7 @@ export interface ToolCallErrorResponseMessage extends WebSocketMessage {
 /**
  * Type guard to check if a WebSocketMessage is a ToolCallRequestMessage.
  */
-export function isToolCallRequestMessage(
-  message: WebSocketMessage
-): message is ToolCallRequestMessage {
+export function isToolCallRequestMessage(message: WebSocketMessage): message is ToolCallRequestMessage {
   return (
     message.method === 'tools/call' &&
     message.jsonrpc === '2.0' &&
@@ -96,9 +94,7 @@ export function isToolCallRequestMessage(
 /**
  * Type guard to check if a WebSocketMessage is a ToolCallResponseMessage.
  */
-export function isToolCallResponseMessage(
-  message: WebSocketMessage
-): message is ToolCallResponseMessage {
+export function isToolCallResponseMessage(message: WebSocketMessage): message is ToolCallResponseMessage {
   return (
     message.jsonrpc === '2.0' &&
     typeof message.id !== 'undefined' &&

@@ -32,7 +32,7 @@ function removeEventListenerSafely(
   element: EventTarget,
   event: string,
   handler: EventListener,
-  options?: boolean | AddEventListenerOptions
+  options?: boolean | AddEventListenerOptions,
 ): void {
   try {
     element.removeEventListener(event, handler, options);
@@ -60,7 +60,7 @@ export function removeTourClickHandler(element: HTMLElement): void {
 export function removeStepHighlights(): void {
   try {
     const allHighlightedElements = document.querySelectorAll('.step-highlight');
-    allHighlightedElements.forEach((element) => {
+    allHighlightedElements.forEach(element => {
       if (isHTMLElement(element)) {
         element.classList.remove('step-highlight');
         removeTourClickHandler(element);
@@ -142,7 +142,7 @@ export function getElementByIndex(index: number): HTMLElement | null {
     // If not found or invalid, fall through to fallback
   }
 
-  // Step 3: Fallback to current behavior (for backward compatibility)
+  // Step 3: Fallback to indexed element lookup
   const elements = getAllInteractiveElements();
   if (index < 0 || index >= elements.length) {
     return null;
@@ -186,7 +186,7 @@ function isElementInteractive(element: HTMLElement): boolean {
  */
 export function getAllFileInputs(): HTMLInputElement[] {
   const inputs = Array.from(document.querySelectorAll<HTMLInputElement>('input[type="file"]'));
-  return inputs.filter((input) => isElementVisible(input) && !input.disabled);
+  return inputs.filter(input => isElementVisible(input) && !input.disabled);
 }
 
 /**
@@ -205,7 +205,7 @@ export function getFileInputByIndex(index: number): HTMLInputElement | null {
  */
 export function getAllSelectElements(): HTMLSelectElement[] {
   const selects = Array.from(document.querySelectorAll<HTMLSelectElement>('select'));
-  return selects.filter((select) => isElementVisible(select) && !select.disabled);
+  return selects.filter(select => isElementVisible(select) && !select.disabled);
 }
 
 /**
@@ -288,10 +288,7 @@ export function isInteractable(el: Element | null): boolean {
           return false;
         }
         const root: Node | null = p instanceof Element ? p.getRootNode() : null;
-        p =
-          p instanceof Element
-            ? p.parentElement || (root instanceof ShadowRoot ? root.host : null)
-            : null;
+        p = p instanceof Element ? p.parentElement || (root instanceof ShadowRoot ? root.host : null) : null;
       }
     } catch (error) {
       // If inert check fails, continue (don't block on this)
@@ -355,8 +352,7 @@ export function isInteractable(el: Element | null): boolean {
       while (node && node !== document.body) {
         const rootNode = node.getRootNode();
         const parent: Element | null =
-          node.parentElement ||
-          (rootNode instanceof ShadowRoot ? (rootNode as ShadowRoot).host : null);
+          node.parentElement || (rootNode instanceof ShadowRoot ? (rootNode as ShadowRoot).host : null);
 
         if (!parent) break;
 
@@ -375,10 +371,7 @@ export function isInteractable(el: Element | null): boolean {
           // For buttons: only fail if completely outside (all edges outside)
           // For other elements: fail if any edge is outside (stricter)
           const isCompletelyOutside =
-            rect.right < pr.left ||
-            rect.left > pr.right ||
-            rect.bottom < pr.top ||
-            rect.top > pr.bottom;
+            rect.right < pr.left || rect.left > pr.right || rect.bottom < pr.top || rect.top > pr.bottom;
 
           if (isButton) {
             // Button: only fail if completely outside parent bounds
@@ -468,7 +461,7 @@ export function parseEnabledModesAttribute(value: string | null): ('show' | 'tel
     return ['show', 'tell', 'do'];
   }
 
-  const modes = value.split(',').map((m) => m.trim());
+  const modes = value.split(',').map(m => m.trim());
   const validModes: ('show' | 'tell' | 'do')[] = [];
 
   for (const mode of modes) {

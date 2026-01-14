@@ -1,23 +1,11 @@
-import React, {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 import { MarketrixApiService } from '../services/ApiService';
 import { chatService, createAgentMessage, createUserMessage } from '../services/ChatService';
 import { configManager } from '../services/ConfigManager';
 import { sessionManager } from '../services/SessionManager';
 import { toolExecutionService } from '../services/ToolService';
-import {
-  WebSocketClient,
-  type WebSocketMessage,
-  type WebSocketStatus,
-} from '../services/WebSocketClient';
+import { WebSocketClient, type WebSocketMessage, type WebSocketStatus } from '../services/WebSocketClient';
 import type { ChatMessage, InstructionType, TaskProgress, WidgetState } from '../types';
 import { isToolCallRequestMessage, type ToolCallResponseMessage } from '../types/toolMessages';
 import {
@@ -59,7 +47,7 @@ interface WidgetContextType {
       mode?: InstructionType,
       connectionId?: number,
       question?: string,
-      skipUserMessage?: boolean
+      skipUserMessage?: boolean,
     ) => Promise<void>;
   };
 }
@@ -91,7 +79,7 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       chatService.createInitialContext(chatId);
 
       chatService.initialize(chatId);
-      setState((prev) => ({
+      setState(prev => ({
         ...prev,
         messages: chatService.getMessages(),
         isLoading: chatService.getIsLoading(),
@@ -109,9 +97,7 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         const config = configManager.getConfig();
         if (config) {
           const wsClient = WebSocketClient.getInstance(config);
-          wsClient
-            .connect(chatId)
-            .catch((err: unknown) => console.error('Initial WebSocket connection failed:', err));
+          wsClient.connect(chatId).catch((err: unknown) => console.error('Initial WebSocket connection failed:', err));
         }
       }
     };
@@ -120,13 +106,8 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   // Helper to update progress
   const updateProgressForTool = useCallback(
-    (
-      toolName: string,
-      explanation: string,
-      status: 'running' | 'completed' | 'failed',
-      error?: string
-    ) => {
-      setState((prev) => {
+    (toolName: string, explanation: string, status: 'running' | 'completed' | 'failed', error?: string) => {
+      setState(prev => {
         const friendlyName = getFriendlyToolName(toolName);
         const found = findMessageForProgress({
           messages: prev.messages,
@@ -160,12 +141,7 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             updatedMsg = addProgressLine(updatedMsg, friendlyName, explanation || friendlyName);
           }
           if (prev.isTaskRunning && (prev.currentMode === 'show' || prev.currentMode === 'do')) {
-            updatedMsg = updateThinkingMarker(
-              updatedMsg,
-              prev.isTaskRunning,
-              prev.currentMode,
-              shouldWait
-            );
+            updatedMsg = updateThinkingMarker(updatedMsg, prev.isTaskRunning, prev.currentMode, shouldWait);
           }
         } else if (status === 'completed') {
           if (!isDoneTool) {
@@ -173,23 +149,13 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           }
           // When tool completes, revert to 'thinking' state (not waiting)
           if (prev.isTaskRunning && (prev.currentMode === 'show' || prev.currentMode === 'do')) {
-            updatedMsg = updateThinkingMarker(
-              updatedMsg,
-              prev.isTaskRunning,
-              prev.currentMode,
-              false
-            );
+            updatedMsg = updateThinkingMarker(updatedMsg, prev.isTaskRunning, prev.currentMode, false);
           }
         } else {
           updatedMsg = markProgressLineFailed(updatedMsg, friendlyName, error || '');
           // On failure, we might also want to revert to thinking or just leave it (likely task will stop soon)
           if (prev.isTaskRunning && (prev.currentMode === 'show' || prev.currentMode === 'do')) {
-            updatedMsg = updateThinkingMarker(
-              updatedMsg,
-              prev.isTaskRunning,
-              prev.currentMode,
-              false
-            );
+            updatedMsg = updateThinkingMarker(updatedMsg, prev.isTaskRunning, prev.currentMode, false);
           }
         }
 
@@ -200,7 +166,7 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         return { ...prev, messages: newMessages };
       });
     },
-    []
+    [],
   );
 
   // WebSocket Setup
@@ -210,7 +176,7 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const wsClient = WebSocketClient.getInstance(config || undefined);
 
     const handleStatusChange = (status: WebSocketStatus) => {
-      setState((prev) => ({ ...prev, agentAvailable: status === 'registered' }));
+      setState(prev => ({ ...prev, agentAvailable: status === 'registered' }));
     };
 
     const handleMessage = async (message: WebSocketMessage) => {
@@ -268,7 +234,7 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             updateProgressForTool(toolName, explanation, 'completed');
             // If the "done" tool completed successfully, mark the task as complete
             if (toolName === 'done' && result.success) {
-              setState((prev) => {
+              setState(prev => {
                 chatService.setTaskState(false, null, []);
                 // Find the task message and update its taskStatus
                 const found = findMessageForProgress({
@@ -282,9 +248,7 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 if (found) {
                   // Remove any "done" progress lines since we show icon instead
                   const updatedParts =
-                    found.message.parts?.filter(
-                      (part) => !(part.type === 'progress' && part.toolName === 'done')
-                    ) || [];
+                    found.message.parts?.filter(part => !(part.type === 'progress' && part.toolName === 'done')) || [];
                   newMessages[found.index] = {
                     ...found.message,
                     taskStatus: 'done',
@@ -308,7 +272,7 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             updateProgressForTool(toolName, explanation, 'failed', 'Connection error');
             // If this is a critical connection error and task is running, mark as failed
             if (state.isTaskRunning) {
-              setState((prev) => {
+              setState(prev => {
                 const found = findMessageForProgress({
                   messages: prev.messages,
                   isTaskRunning: prev.isTaskRunning,
@@ -317,11 +281,7 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                   requireContent: false,
                 });
                 const newMessages = [...prev.messages];
-                if (
-                  found &&
-                  found.message.taskStatus !== 'done' &&
-                  found.message.taskStatus !== 'stopped'
-                ) {
+                if (found && found.message.taskStatus !== 'done' && found.message.taskStatus !== 'stopped') {
                   newMessages[found.index] = {
                     ...found.message,
                     taskStatus: 'failed',
@@ -357,7 +317,7 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         const statusMessage = params?.message || '';
 
         if (status === 'completed' || status === 'failed' || status === 'stopped') {
-          setState((prev) => {
+          setState(prev => {
             chatService.setTaskState(false, null, []);
             // Find the task message and update its taskStatus
             const found = findMessageForProgress({
@@ -395,7 +355,7 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     };
 
     const handleError = (error: Error) => {
-      setState((prev) => ({ ...prev, error: error.message }));
+      setState(prev => ({ ...prev, error: error.message }));
     };
 
     const callbacks = {
@@ -413,26 +373,18 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   // Action Implementations
   const setTaskState = useCallback(
-    (payload: {
-      activeTaskId: string | null;
-      isTaskRunning: boolean;
-      taskProgress?: TaskProgress[];
-    }) => {
-      setState((prev) => {
-        chatService.setTaskState(
-          payload.isTaskRunning,
-          payload.activeTaskId,
-          payload.taskProgress || []
-        );
+    (payload: { activeTaskId: string | null; isTaskRunning: boolean; taskProgress?: TaskProgress[] }) => {
+      setState(prev => {
+        chatService.setTaskState(payload.isTaskRunning, payload.activeTaskId, payload.taskProgress || []);
         return { ...prev, ...payload };
       });
     },
-    []
+    [],
   );
 
   const resetState = useCallback(() => {
     chatService.clearMessages();
-    setState((prev) => ({
+    setState(prev => ({
       ...prev,
       messages: [],
       isTaskRunning: false,
@@ -443,7 +395,7 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, []);
 
   const addMessage = useCallback((message: ChatMessage) => {
-    setState((prev) => {
+    setState(prev => {
       chatService.addMessage(message);
       return { ...prev, messages: [...prev.messages, message] };
     });
@@ -456,7 +408,7 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       mode?: InstructionType,
       connectionId?: number,
       question?: string,
-      skipUserMessage?: boolean
+      skipUserMessage?: boolean,
     ) => {
       // Attempt to reload config if missing (e.g. from localStorage)
       let config = configManager.getConfig();
@@ -468,7 +420,7 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         console.error('Config not loaded or incomplete');
         // We could fallback to throwing error or showing UI error here
         const errorMsg = createAgentMessage(
-          'Configuration error: Missing API credentials. Please check your widget settings.'
+          'Configuration error: Missing API credentials. Please check your widget settings.',
         );
         addMessage(errorMsg);
         return;
@@ -496,7 +448,7 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       placeholderMsg.content = addThinkingMarker('');
       addMessage(placeholderMsg);
 
-      setState((prev) => ({ ...prev, isLoading: true }));
+      setState(prev => ({ ...prev, isLoading: true }));
 
       // Send to API
       const apiService = new MarketrixApiService(config);
@@ -517,22 +469,17 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         if (chatId) {
           const wsClient = WebSocketClient.getInstance(config);
           if (!wsClient.isConnected()) {
-            wsClient
-              .connect(chatId)
-              .catch((err) => console.error('WebSocket connection failed:', err));
+            wsClient.connect(chatId).catch(err => console.error('WebSocket connection failed:', err));
           }
         }
 
         // Update placeholder with final response
-        setState((prev) => {
-          const newMessages = prev.messages.map((msg) => {
+        setState(prev => {
+          const newMessages = prev.messages.map(msg => {
             if (msg.id === placeholderId) {
               const currentParts = msg.parts || [];
               // Append response as a text part
-              const newParts = [
-                ...currentParts,
-                { type: 'text' as const, content: response.response },
-              ];
+              const newParts = [...currentParts, { type: 'text' as const, content: response.response }];
 
               return {
                 ...msg,
@@ -554,9 +501,9 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
         // If task started (task_id present), update state
         if (response.task_id) {
-          setState((prev) => {
+          setState(prev => {
             // Find the placeholder message and set taskStatus to 'ongoing'
-            const placeholderIndex = prev.messages.findIndex((msg) => msg.id === placeholderId);
+            const placeholderIndex = prev.messages.findIndex(msg => msg.id === placeholderId);
             const newMessages = [...prev.messages];
             if (placeholderIndex >= 0) {
               newMessages[placeholderIndex] = {
@@ -579,11 +526,10 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         console.error('Failed to send message:', error);
 
         // Update placeholder to show error
-        setState((prev) => {
-          const newMessages = prev.messages.map((msg) => {
+        setState(prev => {
+          const newMessages = prev.messages.map(msg => {
             if (msg.id === placeholderId) {
-              const errorMessage =
-                "I'm sorry, I encountered an error processing your request. Please try again.";
+              const errorMessage = "I'm sorry, I encountered an error processing your request. Please try again.";
               const currentParts = msg.parts || [];
               const newParts = [...currentParts, { type: 'text' as const, content: errorMessage }];
 
@@ -601,17 +547,17 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           return { ...prev, messages: newMessages };
         });
       } finally {
-        setState((prev) => ({ ...prev, isLoading: false }));
+        setState(prev => ({ ...prev, isLoading: false }));
       }
     },
-    [state.currentMode, addMessage, setTaskState, state]
+    [state.currentMode, addMessage, setTaskState, state],
   );
 
   const actions = useMemo(
     () => ({
-      setState: (payload: Partial<WidgetState>) => setState((prev) => ({ ...prev, ...payload })),
+      setState: (payload: Partial<WidgetState>) => setState(prev => ({ ...prev, ...payload })),
       toggleWidget: () =>
-        setState((prev) => {
+        setState(prev => {
           const newState = {
             ...prev,
             isOpen: !prev.isOpen,
@@ -621,50 +567,47 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           return newState;
         }),
       closeWidget: () =>
-        setState((prev) => {
+        setState(prev => {
           const newState = { ...prev, isOpen: false, isMinimized: true };
           chatService.setWidgetState(newState.isOpen, newState.isMinimized);
           return newState;
         }),
       setMode: (mode: InstructionType) =>
-        setState((prev) => {
+        setState(prev => {
           chatService.setMode(mode);
           return { ...prev, currentMode: mode };
         }),
       setLoading: (loading: boolean) => {
         chatService.setIsLoading(loading);
-        setState((prev) => ({ ...prev, isLoading: loading }));
+        setState(prev => ({ ...prev, isLoading: loading }));
       },
-      setAgentAvailable: (available: boolean) =>
-        setState((prev) => ({ ...prev, agentAvailable: available })),
-      setError: (error: string | undefined) => setState((prev) => ({ ...prev, error })),
-      clearError: () => setState((prev) => ({ ...prev, error: undefined })),
+      setAgentAvailable: (available: boolean) => setState(prev => ({ ...prev, agentAvailable: available })),
+      setError: (error: string | undefined) => setState(prev => ({ ...prev, error })),
+      clearError: () => setState(prev => ({ ...prev, error: undefined })),
       setTaskState,
       addMessage,
       updateMessage: (messageId: string, updates: Partial<ChatMessage>) =>
-        setState((prev) => {
+        setState(prev => {
           chatService.updateMessage(messageId, updates);
           return {
             ...prev,
-            messages: prev.messages.map((msg) =>
-              msg.id === messageId ? { ...msg, ...updates } : msg
-            ),
+            messages: prev.messages.map(msg => (msg.id === messageId ? { ...msg, ...updates } : msg)),
           };
         }),
       removeMessage: (messageId: string) =>
-        setState((prev) => {
+        setState(prev => {
           chatService.removeMessage(messageId);
-          return { ...prev, messages: prev.messages.filter((msg) => msg.id !== messageId) };
+          return { ...prev, messages: prev.messages.filter(msg => msg.id !== messageId) };
         }),
       setMessages: (messages: ChatMessage[]) =>
-        setState((prev) => {
+        setState(prev => {
           chatService.setMessages(messages);
           return { ...prev, messages };
         }),
       resetState,
       stopTask: async () => {
         const taskId = state.activeTaskId;
-        setState((prev) => {
+        setState(prev => {
           // Find the task message and update its taskStatus
           const found = findMessageForProgress({
             messages: prev.messages,
@@ -709,7 +652,7 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       clearChatHistory: resetState,
       sendMessage,
     }),
-    [state.currentMode, setTaskState, resetState, addMessage, sendMessage]
+    [state.currentMode, setTaskState, resetState, addMessage, sendMessage],
   );
 
   return <WidgetContext.Provider value={{ state, actions }}>{children}</WidgetContext.Provider>;

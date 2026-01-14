@@ -122,12 +122,7 @@ await devTools.testTool('type_text', { index: 3, text: 'Hello World' });
 await devTools.testTool('scroll', { direction: 'down' });
 
 // Execute with Show mode (confirmation UI)
-await devTools.testTool(
-  'click_element',
-  { index: 5 },
-  'show',
-  'Click this button'
-);
+await devTools.testTool('click_element', { index: 5 }, 'show', 'Click this button');
 
 // Run a sequence of tools
 await devTools.runSequence([
@@ -296,12 +291,7 @@ Show mode displays a confirmation overlay before executing:
 // 6. Click confirm or cancel
 
 // With Console:
-await devTools.testTool(
-  'click_element',
-  { index: 5 },
-  'show',
-  'This will submit the form'
-);
+await devTools.testTool('click_element', { index: 5 }, 'show', 'This will submit the form');
 ```
 
 ---

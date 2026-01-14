@@ -80,7 +80,7 @@ export const configManager = ConfigManager.getInstance();
  */
 export function createConfigFromSettings(
   widgetSettings: WidgetSettingsData,
-  baseConfig: Partial<MarketrixConfig> = {}
+  baseConfig: Partial<MarketrixConfig> = {},
 ): MarketrixConfig {
   // Direct merge - MarketrixConfig already extends WidgetSettingsData
   return {

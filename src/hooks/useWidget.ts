@@ -14,21 +14,17 @@ interface UseWidgetProps {
  * Throws an error if validation fails
  */
 function validateWidgetSettings(
-  config: MarketrixConfig | undefined
+  config: MarketrixConfig | undefined,
 ): asserts config is MarketrixConfig & Required<Pick<MarketrixConfig, keyof WidgetSettingsData>> {
   if (!config) {
     throw new Error('Widget configuration is missing');
   }
 
-  const requiredKeys = Object.keys(WidgetSettingsDataSchema.shape) as Array<
-    keyof WidgetSettingsData
-  >;
-  const missingSettings = requiredKeys.filter((key) => config[key] === undefined);
+  const requiredKeys = Object.keys(WidgetSettingsDataSchema.shape) as Array<keyof WidgetSettingsData>;
+  const missingSettings = requiredKeys.filter(key => config[key] === undefined);
 
   if (missingSettings.length > 0) {
-    throw new Error(
-      `Widget settings are incomplete. Missing required fields: ${missingSettings.join(', ')}`
-    );
+    throw new Error(`Widget settings are incomplete. Missing required fields: ${missingSettings.join(', ')}`);
   }
 }
 

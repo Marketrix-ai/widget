@@ -71,7 +71,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
           <textarea
             ref={textareaRef}
             value={value}
-            onChange={(e) => {
+            onChange={e => {
               onChange(e.target.value);
               // Auto-resize on change - shrink and grow with content
               const textarea = e.target;
@@ -110,7 +110,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
         {/* Circular Send/Stop button */}
         {isTaskRunning && onStop ? (
           <button
-            onClick={(e) => {
+            onClick={e => {
               e.preventDefault();
               e.stopPropagation();
               onStop();
@@ -130,7 +130,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
           </button>
         ) : (
           <button
-            onClick={(e) => {
+            onClick={e => {
               e.preventDefault();
               e.stopPropagation();
               onSend();
