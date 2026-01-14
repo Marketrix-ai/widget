@@ -281,6 +281,9 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             }
           }
         } else {
+          // Increment stateVersion on failure - DOM state may have changed
+          stateVersion.current++;
+
           try {
             const response: ToolResponse<unknown> = {
               id: requestId,
@@ -293,7 +296,7 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           } catch (error) {
             console.error('Failed to send tool error:', error);
           }
-          updateProgressForTool(toolName, explanation, 'failed', result.error);
+          // Don't show failed tool calls in chat - agent loop continues
         }
       } else if (message.method === 'task/status') {
         // Handle task status updates (completed, failed, stopped)
