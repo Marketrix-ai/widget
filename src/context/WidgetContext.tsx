@@ -58,6 +58,7 @@ const WidgetContext = createContext<WidgetContextType | undefined>(undefined);
 
 export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const stateVersion = useRef(0);
+  const processedRequestIds = useRef(new Set<string>());
 
   const [state, setState] = useState<WidgetState>({
     isOpen: false,
@@ -182,11 +183,18 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const handleMessage = async (message: WebSocketMessage) => {
       if (isToolRequest(message as Record<string, unknown>)) {
         const request = message as ToolRequest;
+        const requestId = request.id;
+
+        // Prevent duplicate processing (React StrictMode can cause duplicate callbacks)
+        if (processedRequestIds.current.has(requestId)) {
+          return;
+        }
+        processedRequestIds.current.add(requestId);
+
         const toolName = request.tool;
         const args = request.args;
         const mode = request.mode || state.currentMode || 'do';
         const explanation = request.explanation || '';
-        const requestId = request.id;
         const requestStateVersion = request.stateVersion;
 
         // Check state version FIRST - silently fail if mismatch (no progress shown)
