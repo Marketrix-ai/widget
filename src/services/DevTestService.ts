@@ -10,7 +10,7 @@ export interface TestResult {
   command: string;
   index: number;
   validation: ValidationResult;
-  outcome: 'executed' | 'recovered' | 'failed';
+  outcome: 'executed' | 'failed';
   details: string;
   timestamp: Date;
 }
@@ -607,17 +607,12 @@ class DevTestService {
     // Get validation info
     const { validation } = domService.getValidatedElement(index);
 
-    let outcome: 'executed' | 'recovered' | 'failed';
+    let outcome: 'executed' | 'failed';
     let details: string;
 
     if (result.success) {
-      if (result.recoveryInfo) {
-        outcome = 'recovered';
-        details = `Recovered from index ${result.recoveryInfo.originalIndex} to ${result.recoveryInfo.recoveredIndex}`;
-      } else {
-        outcome = 'executed';
-        details = result.result;
-      }
+      outcome = 'executed';
+      details = (result.data as { text?: string })?.text || JSON.stringify(result.data);
     } else {
       outcome = 'failed';
       details = result.error || 'Unknown error';
@@ -638,7 +633,7 @@ class DevTestService {
       action: `${tool} on index ${index}`,
       originalIndex: index,
       validation,
-      recoveryAction: outcome === 'recovered' ? details : undefined,
+      recoveryAction: undefined,
     });
 
     return testResult;
@@ -701,12 +696,7 @@ class DevTestService {
       scenarioName: 'Index Shift - Insert',
       steps,
       passed: result.outcome !== 'failed',
-      summary:
-        result.outcome === 'recovered'
-          ? 'Successfully recovered element after index shift'
-          : result.outcome === 'executed'
-            ? 'Element found at original index (unexpected)'
-            : 'Failed to recover element',
+      summary: result.outcome === 'executed' ? 'Element found at original index' : 'Failed to recover element',
     };
   }
 
@@ -748,7 +738,7 @@ class DevTestService {
       scenarioId: 'element-content-change',
       scenarioName: 'Element Content Change',
       steps,
-      passed: result.outcome === 'executed' || result.outcome === 'recovered',
+      passed: result.outcome === 'executed',
       summary: `Content change handled: ${result.outcome}`,
     };
   }
@@ -769,7 +759,7 @@ class DevTestService {
       scenarioId: 'spa-rerender',
       scenarioName: 'SPA Re-render',
       steps,
-      passed: result.outcome === 'recovered' || result.outcome === 'executed',
+      passed: result.outcome === 'executed',
       summary: `Re-render handled: ${result.outcome}`,
     };
   }

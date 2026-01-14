@@ -9,7 +9,7 @@ export interface WebSocketMessage {
   method?: string;
   params?: Record<string, unknown>;
   result?: unknown;
-  targetStateVersion?: number;
+  stateVersion?: number;
   error?: {
     code: number;
     message: string;

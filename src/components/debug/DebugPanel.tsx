@@ -250,7 +250,7 @@ export const DebugPanel: React.FC = () => {
   const [mode, setMode] = useState<'do' | 'show'>('do');
   const [explanation, setExplanation] = useState('');
   const [isExecuting, setIsExecuting] = useState(false);
-  const [result, setResult] = useState<ToolExecutionResult | null>(null);
+  const [result, setResult] = useState<ToolExecutionResult<unknown> | null>(null);
 
   // DOM elements state
   const [indexedElements, setIndexedElements] = useState<IndexedElement[]>([]);
@@ -321,7 +321,7 @@ export const DebugPanel: React.FC = () => {
     } catch (error) {
       setResult({
         success: false,
-        result: '',
+        data: { text: '' },
         error: error instanceof Error ? error.message : String(error),
       });
     } finally {
@@ -590,20 +590,16 @@ export const DebugPanel: React.FC = () => {
                 <div style={result.success ? styles.resultSuccess : styles.resultError}>
                   {result.success ? '✓ Success' : '✗ Failed'}
                 </div>
-                {result.result && (
-                  <pre
-                    style={{
-                      margin: '8px 0 0 0',
-                      whiteSpace: 'pre-wrap',
-                      wordBreak: 'break-all',
-                      fontSize: '11px',
-                    }}
-                  >
-                    {typeof result.result === 'string' && result.result.length > 500
-                      ? `${result.result.slice(0, 500)}...`
-                      : result.result}
-                  </pre>
-                )}
+                <pre
+                  style={{
+                    margin: '8px 0 0 0',
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-all',
+                    fontSize: '11px',
+                  }}
+                >
+                  {JSON.stringify(result.data, null, 2).slice(0, 500)}
+                </pre>
                 {result.error && <div style={{ marginTop: '8px', color: '#f14c4c' }}>{result.error}</div>}
               </div>
             )}

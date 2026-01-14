@@ -7,7 +7,7 @@ import { sessionManager } from '../services/SessionManager';
 import { toolExecutionService } from '../services/ToolService';
 import { WebSocketClient, type WebSocketMessage, type WebSocketStatus } from '../services/WebSocketClient';
 import type { ChatMessage, InstructionType, TaskProgress, WidgetState } from '../types';
-import { isToolCallRequestMessage, type ToolCallResponseMessage } from '../types/toolMessages';
+import { isToolRequest, type ToolRequest, type ToolResponse } from '../types/toolMessages';
 import {
   addProgressLine,
   addThinkingMarker,
@@ -180,31 +180,27 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     };
 
     const handleMessage = async (message: WebSocketMessage) => {
-      if (isToolCallRequestMessage(message)) {
-        const params = message.params;
-        const toolName = params.name;
-        const args = params.arguments;
-        const mode = params.mode || state.currentMode || 'do';
-        const explanation = params.explanation || '';
-        const requestId = message.id;
-        const targetStateVersion = message.targetStateVersion;
+      if (isToolRequest(message as Record<string, unknown>)) {
+        const request = message as ToolRequest;
+        const toolName = request.tool;
+        const args = request.args;
+        const mode = request.mode || state.currentMode || 'do';
+        const explanation = request.explanation || '';
+        const requestId = request.id;
+        const requestStateVersion = request.stateVersion;
 
         updateProgressForTool(toolName, explanation, 'running');
 
-        if (targetStateVersion !== stateVersion.current) {
-          // Pause tool execution if version mismatched
+        if (requestStateVersion !== stateVersion.current) {
           console.log('State version mismatch, skipping tool execution');
-          const result = { success: false, result: '', error: 'State version mismatch' };
-          const resultJson = JSON.stringify(result);
-          const response: ToolCallResponseMessage = {
-            jsonrpc: '2.0',
+          const response: ToolResponse = {
             id: requestId,
-            result: {
-              content: [{ type: 'text', text: resultJson }],
-            },
-            newStateVersion: stateVersion.current,
+            success: false,
+            data: { text: '' },
+            error: 'State version mismatch',
+            stateVersion: stateVersion.current,
           };
-          wsClient.send(response);
+          wsClient.send(response as unknown as WebSocketMessage);
           updateProgressForTool(toolName, explanation, 'failed', 'State version mismatch');
           return;
         }
@@ -213,24 +209,15 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
         if (result.success) {
           try {
-            // If result is a waiting message (from Show Mode user confirmation),
-            // we don't complete the tool yet. We might want to send a status update?
-            // But currently the agent expects a tool result to proceed.
-            // If we send "Waiting...", the agent might think that's the output.
-            // For interactive tools in Show Mode, we really want to tell the agent "Action Performed".
-            // The ToolExecutionService returned "User completed the action" or similar.
-            // Send the full ToolExecutionResult as JSON to match agent's expectations
             stateVersion.current++;
-            const resultJson = JSON.stringify(result);
-            const response: ToolCallResponseMessage = {
-              jsonrpc: '2.0',
+            const response: ToolResponse<unknown> = {
               id: requestId,
-              result: {
-                content: [{ type: 'text', text: resultJson }],
-              },
-              newStateVersion: stateVersion.current,
+              success: result.success,
+              data: result.data,
+              error: result.error ?? null,
+              stateVersion: stateVersion.current,
             };
-            wsClient.send(response);
+            wsClient.send(response as unknown as WebSocketMessage);
             updateProgressForTool(toolName, explanation, 'completed');
             // If the "done" tool completed successfully, mark the task as complete
             if (toolName === 'done' && result.success) {
@@ -294,17 +281,14 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           }
         } else {
           try {
-            // Send error as JSON-serialized ToolExecutionResult to match agent's expectations
-            const resultJson = JSON.stringify(result);
-            const response: ToolCallResponseMessage = {
-              jsonrpc: '2.0',
+            const response: ToolResponse<unknown> = {
               id: requestId,
-              result: {
-                content: [{ type: 'text', text: resultJson }],
-              },
-              newStateVersion: stateVersion.current,
+              success: false,
+              data: result.data,
+              error: result.error ?? null,
+              stateVersion: stateVersion.current,
             };
-            wsClient.send(response);
+            wsClient.send(response as unknown as WebSocketMessage);
           } catch (error) {
             console.error('Failed to send tool error:', error);
           }

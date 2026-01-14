@@ -2,15 +2,37 @@ import { domService } from './DomService';
 import { startScreenShare } from './ScreenShareService';
 import { showModeService } from './ShowModeService';
 
-export interface ToolExecutionResult {
+// =================================================================================================
+// Tool Data Types (the `data` field in ToolExecutionResult)
+// =================================================================================================
+
+export interface TextData {
+  text: string;
+}
+
+export interface ExtractData {
+  title: string;
+  url: string;
+  text: string;
+  links: Array<{ text: string; href: string | null }>;
+}
+
+export interface DropdownOptionsData {
+  options: Array<{ value: string; text: string }>;
+}
+
+export interface ElementsData {
+  elements: unknown[];
+}
+
+// =================================================================================================
+// Tool Response Type
+// =================================================================================================
+
+export interface ToolExecutionResult<T = TextData> {
   success: boolean;
-  result: string;
+  data: T;
   error?: string;
-  recoveryInfo?: {
-    originalIndex: number;
-    recoveredIndex?: number;
-    domReindexed: boolean;
-  };
 }
 
 // TypeScript interfaces for tool parameters
@@ -26,11 +48,14 @@ export interface SearchParams {
 
 export interface ClickElementParams {
   index: number;
+  coordinate_x?: number;
+  coordinate_y?: number;
 }
 
 export interface TypeTextParams {
   index: number;
   text: string;
+  clear?: boolean;
 }
 
 export interface ScrollParams {
@@ -61,7 +86,7 @@ export interface UploadFileParams {
 }
 
 export interface SwitchTabParams {
-  tab_index: number;
+  tab_id: string;
 }
 
 export interface DoneParams {
@@ -71,6 +96,12 @@ export interface DoneParams {
 
 export interface WaitParams {
   seconds: number;
+}
+
+export interface ExtractParams {
+  query?: string;
+  extract_links?: boolean;
+  start_from_char?: number;
 }
 
 export class ToolExecutionService {
@@ -90,7 +121,7 @@ export class ToolExecutionService {
     args: Record<string, unknown>,
     mode: string = 'do',
     explanation: string = '',
-  ): Promise<ToolExecutionResult> {
+  ): Promise<ToolExecutionResult<unknown>> {
     try {
       console.log(`[ToolExecutionService] Executing ${toolName} (mode: ${mode})`);
 
@@ -107,7 +138,7 @@ export class ToolExecutionService {
             });
 
             if (!confirmed) {
-              return { success: false, result: '', error: 'User cancelled action' };
+              return { success: false, data: { text: '' }, error: 'User cancelled action' };
             }
 
             if (toolName === 'click_element') {
@@ -137,7 +168,7 @@ export class ToolExecutionService {
         case 'scroll_to_text':
           return this.scrollToText(args as unknown as ScrollToTextParams);
         case 'extract':
-          return this.extract(args);
+          return this.extract(args as unknown as ExtractParams);
         case 'go_back':
           return this.goBack();
         case 'wait':
@@ -163,13 +194,13 @@ export class ToolExecutionService {
         case 'get_screenshot':
           return await this.getScreenshot();
         default:
-          return { success: false, result: '', error: `Unknown tool: ${toolName}` };
+          return { success: false, data: { text: '' }, error: `Unknown tool: ${toolName}` };
       }
     } catch (error) {
       showModeService.cleanup();
       return {
         success: false,
-        result: '',
+        data: { text: '' },
         error: error instanceof Error ? error.message : String(error),
       };
     }
@@ -180,121 +211,90 @@ export class ToolExecutionService {
   }
 
   private navigate(args: NavigateParams): ToolExecutionResult {
-    const url = args.url as string;
-    if (!url) return { success: false, result: '', error: 'URL is required' };
+    if (!args.url) return { success: false, data: { text: '' }, error: 'URL is required' };
 
     if (args.new_tab) {
-      window.open(url, '_blank');
-      return { success: true, result: `Opened ${url} in new tab` };
-    } else {
-      window.location.href = url;
-      return { success: true, result: `Navigating to ${url}` };
+      window.open(args.url, '_blank');
+      return { success: true, data: { text: `Opened ${args.url} in new tab` } };
     }
+    window.location.href = args.url;
+    return { success: true, data: { text: `Navigating to ${args.url}` } };
   }
 
   private search(args: SearchParams): ToolExecutionResult {
-    const query = args.query as string;
-    if (!query) return { success: false, result: '', error: 'Query is required' };
+    if (!args.query) return { success: false, data: { text: '' }, error: 'Query is required' };
 
-    const engine = (args.engine as string) || 'duckduckgo';
-    const encoded = encodeURIComponent(query);
+    const engine = args.engine || 'duckduckgo';
+    const encoded = encodeURIComponent(args.query);
     let url = `https://duckduckgo.com/?q=${encoded}`;
 
     if (engine === 'google') url = `https://www.google.com/search?q=${encoded}`;
     if (engine === 'bing') url = `https://www.bing.com/search?q=${encoded}`;
 
     window.location.href = url;
-    return { success: true, result: `Searching for "${query}" on ${engine}` };
+    return { success: true, data: { text: `Searching for "${args.query}" on ${engine}` } };
   }
 
   private async clickElement(args: ClickElementParams): Promise<ToolExecutionResult> {
-    const index = args.index as number;
-    if (index === undefined) return { success: false, result: '', error: 'Index required' };
+    if (args.index === undefined) return { success: false, data: { text: '' }, error: 'Index required' };
 
-    // Use validated element lookup
-    const { element, validation } = domService.getValidatedElement(index);
+    const { element, validation } = domService.getValidatedElement(args.index);
 
     if (!element) {
       if (validation.requiresReindex) {
-        // Trigger re-indexing and return special error for agent to retry
         domService.indexInteractableElements();
         return {
           success: false,
-          result: '',
-          error: `DOM_CHANGED: Element at index ${index} no longer exists. DOM has been re-indexed. Please call get_html to get updated element indices.`,
-          recoveryInfo: {
-            originalIndex: index,
-            domReindexed: true,
-          },
+          data: { text: '' },
+          error: `DOM_CHANGED: Element at index ${args.index} no longer exists. Please call get_html to get updated element indices.`,
         };
       }
-      return { success: false, result: '', error: `Element ${index} not found` };
+      return { success: false, data: { text: '' }, error: `Element ${args.index} not found` };
     }
 
-    // Log if element was recovered at a different index
     if (validation.mismatchReason === 'index_shifted' && validation.recoveredIndex !== undefined) {
-      console.log(
-        `[ToolExecutionService] Element shifted from index ${index} to ${validation.recoveredIndex}, executing on recovered element`,
-      );
+      console.log(`[ToolExecutionService] Element shifted from index ${args.index} to ${validation.recoveredIndex}`);
     }
 
     element.scrollIntoView({ behavior: 'smooth', block: 'center' });
     await new Promise(resolve => setTimeout(resolve, 100));
-    // Defer the click to allow the tool response to be sent first
+
     setTimeout(() => {
       try {
-        // element is HTMLElement which has click() method
         element.click();
       } catch (e) {
-        console.warn('[ToolExecutionService] Click triggered an error on the page:', e);
-        // Fallback: try dispatchEvent if click() fails
+        console.warn('[ToolExecutionService] Click error:', e);
         try {
-          const clickEvent = new MouseEvent('click', {
-            bubbles: true,
-            cancelable: true,
-            view: window,
-          });
-          element.dispatchEvent(clickEvent);
+          element.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
         } catch (fallbackError) {
-          console.warn('[ToolExecutionService] Fallback click also failed:', fallbackError);
+          console.warn('[ToolExecutionService] Fallback click failed:', fallbackError);
         }
       }
     }, 50);
 
-    const result: ToolExecutionResult = { success: true, result: `Clicked element ${index}` };
-    if (validation.recoveredIndex !== undefined && validation.recoveredIndex !== index) {
-      result.recoveryInfo = {
-        originalIndex: index,
-        recoveredIndex: validation.recoveredIndex,
-        domReindexed: false,
-      };
-    }
-    return result;
+    return { success: true, data: { text: `Clicked element ${args.index}` } };
   }
 
   private typeText(args: TypeTextParams): ToolExecutionResult {
-    const index = args.index as number;
-    const text = args.text as string;
-    if (index === undefined || text === undefined)
-      return { success: false, result: '', error: 'Index and text required' };
+    if (args.index === undefined || args.text === undefined)
+      return { success: false, data: { text: '' }, error: 'Index and text required' };
 
-    // Use validated element lookup
-    const { element, validation } = domService.getValidatedElement(index);
+    const clear = args.clear !== false;
+
+    const { element, validation } = domService.getValidatedElement(args.index);
 
     if (!element) {
       if (validation.requiresReindex) {
         domService.indexInteractableElements();
         return {
           success: false,
-          result: '',
-          error: `DOM_CHANGED: Element at index ${index} no longer exists. DOM has been re-indexed. Please call get_html to get updated element indices.`,
-          recoveryInfo: { originalIndex: index, domReindexed: true },
+          data: { text: '' },
+          error: `DOM_CHANGED: Element at index ${args.index} no longer exists. Please call get_html to get updated element indices.`,
         };
       }
-      return { success: false, result: '', error: `Element ${index} not found` };
+      return { success: false, data: { text: '' }, error: `Element ${args.index} not found` };
     }
 
-    // Check if element is an input-like element
     const isInputLike =
       element instanceof HTMLInputElement ||
       element instanceof HTMLTextAreaElement ||
@@ -303,12 +303,13 @@ export class ToolExecutionService {
     if (isInputLike) {
       const inputElement = element as HTMLInputElement | HTMLTextAreaElement;
 
-      // Focus the element first (important for some frameworks)
       try {
         inputElement.focus();
       } catch (e) {
         console.warn('[ToolService] Focus failed:', e);
       }
+
+      const finalValue = clear ? args.text : inputElement.value + args.text;
 
       // Try multiple methods to set the value
       let valueSet = false;
@@ -322,7 +323,7 @@ export class ToolExecutionService {
           const descriptor = Object.getOwnPropertyDescriptor(prototype, 'value');
 
           if (descriptor?.set) {
-            descriptor.set.call(inputElement, text);
+            descriptor.set.call(inputElement, finalValue);
             valueSet = true;
             console.log('[ToolService] Native setter succeeded');
           }
@@ -335,7 +336,7 @@ export class ToolExecutionService {
       // Method 2: Direct value assignment
       if (!valueSet) {
         try {
-          inputElement.value = text;
+          inputElement.value = finalValue;
           valueSet = true;
           console.log('[ToolService] Direct assignment succeeded');
         } catch (e) {
@@ -348,8 +349,8 @@ export class ToolExecutionService {
       if (!valueSet) {
         try {
           inputElement.focus();
-          inputElement.select();
-          const success = document.execCommand('insertText', false, text);
+          if (clear) inputElement.select();
+          const success = document.execCommand('insertText', false, args.text);
           if (success) {
             valueSet = true;
             console.log('[ToolService] execCommand succeeded');
@@ -364,9 +365,9 @@ export class ToolExecutionService {
       if (!valueSet) {
         try {
           inputElement.focus();
-          // Clear existing value first
-          inputElement.value = '';
-          for (const char of text) {
+          // Clear existing value first if clear=true
+          if (clear) inputElement.value = '';
+          for (const char of args.text) {
             inputElement.dispatchEvent(new KeyboardEvent('keydown', { key: char, bubbles: true, cancelable: true }));
             inputElement.value += char;
             inputElement.dispatchEvent(
@@ -390,7 +391,7 @@ export class ToolExecutionService {
       if (!valueSet) {
         return {
           success: false,
-          result: '',
+          data: { text: '' },
           error: `Failed to set value: ${lastError instanceof Error ? lastError.message : String(lastError)}`,
         };
       }
@@ -402,7 +403,7 @@ export class ToolExecutionService {
           bubbles: true,
           cancelable: true,
           inputType: 'insertText',
-          data: text,
+          data: args.text,
         });
         inputElement.dispatchEvent(inputEvent);
 
@@ -417,49 +418,37 @@ export class ToolExecutionService {
     } else if ('value' in element) {
       // Generic element with value property (e.g., select, custom elements)
       try {
-        (element as HTMLInputElement).value = text;
+        (element as HTMLInputElement).value = args.text;
         element.dispatchEvent(new Event('input', { bubbles: true }));
         element.dispatchEvent(new Event('change', { bubbles: true }));
       } catch (e) {
         return {
           success: false,
-          result: '',
+          data: { text: '' },
           error: `Failed to set value on element: ${e instanceof Error ? e.message : String(e)}`,
         };
       }
     } else {
       // For contenteditable or text-based elements
       try {
-        element.textContent = text;
+        element.textContent = args.text;
         element.dispatchEvent(new Event('input', { bubbles: true }));
       } catch (e) {
         return {
           success: false,
-          result: '',
+          data: { text: '' },
           error: `Failed to set textContent: ${e instanceof Error ? e.message : String(e)}`,
         };
       }
     }
 
-    const result: ToolExecutionResult = {
-      success: true,
-      result: `Typed text into element ${index}`,
-    };
-    if (validation.recoveredIndex !== undefined && validation.recoveredIndex !== index) {
-      result.recoveryInfo = {
-        originalIndex: index,
-        recoveredIndex: validation.recoveredIndex,
-        domReindexed: false,
-      };
-    }
-    return result;
+    return { success: true, data: { text: `Typed text into element ${args.index}` } };
   }
 
   private scroll(args: ScrollParams): ToolExecutionResult {
-    const direction = ((args.direction as string) || '').toLowerCase();
     const amount = window.innerHeight * 0.8;
 
-    switch (direction) {
+    switch (args.direction) {
       case 'down':
         window.scrollBy({ top: amount, behavior: 'smooth' });
         break;
@@ -473,102 +462,93 @@ export class ToolExecutionService {
         window.scrollBy({ left: amount, behavior: 'smooth' });
         break;
       default:
-        return { success: false, result: '', error: 'Invalid direction' };
+        return { success: false, data: { text: '' }, error: 'Invalid direction' };
     }
-    return { success: true, result: `Scrolled ${direction}` };
+    return { success: true, data: { text: `Scrolled ${args.direction}` } };
   }
 
   private scrollToText(args: ScrollToTextParams): ToolExecutionResult {
-    const text = args.text as string;
-    if (!text) return { success: false, result: '', error: 'Text required' };
+    if (!args.text) return { success: false, data: { text: '' }, error: 'Text required' };
 
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
     let node: Node | null;
     while ((node = walker.nextNode())) {
-      if (node.textContent?.includes(text) && node.parentElement) {
+      if (node.textContent?.includes(args.text) && node.parentElement) {
         node.parentElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        return { success: true, result: `Scrolled to "${text}"` };
+        return { success: true, data: { text: `Scrolled to "${args.text}"` } };
       }
     }
-    return { success: false, result: '', error: `Text "${text}" not found` };
+    return { success: false, data: { text: '' }, error: `Text "${args.text}" not found` };
   }
 
-  private extract(_args: Record<string, unknown>): ToolExecutionResult {
-    const result = {
+  private extract(args: ExtractParams): ToolExecutionResult<ExtractData> {
+    const startFrom = args.start_from_char ?? 0;
+    const includeLinks = args.extract_links !== false;
+    const fullText = document.body.innerText;
+    const extractResult: ExtractData = {
       title: document.title,
       url: window.location.href,
-      text: document.body.innerText.slice(0, 10000),
-      links: Array.from(document.querySelectorAll('a[href]'))
-        .slice(0, 100)
-        .map(a => ({
-          text: a.textContent?.trim() || '',
-          href: a.getAttribute('href'),
-        })),
+      text: fullText.slice(startFrom, startFrom + 10000),
+      links: includeLinks
+        ? Array.from(document.querySelectorAll('a[href]'))
+            .slice(0, 100)
+            .map(a => ({
+              text: a.textContent?.trim() || '',
+              href: a.getAttribute('href'),
+            }))
+        : [],
     };
-    return { success: true, result: JSON.stringify(result) };
+    return { success: true, data: extractResult };
   }
 
   private goBack(): ToolExecutionResult {
     if (window.history.length > 1) {
       window.history.back();
-      return { success: true, result: 'Navigated back' };
+      return { success: true, data: { text: 'Navigated back' } };
     }
-    return { success: false, result: '', error: 'No history' };
+    return { success: false, data: { text: '' }, error: 'No history' };
   }
 
   private async wait(args: WaitParams): Promise<ToolExecutionResult> {
-    const seconds = args.seconds as number;
-    if (seconds === undefined) return { success: false, result: '', error: 'Seconds required' };
-    await new Promise(resolve => setTimeout(resolve, seconds * 1000));
-    return { success: true, result: `Waited ${seconds}s` };
+    if (args.seconds === undefined) return { success: false, data: { text: '' }, error: 'Seconds required' };
+    await new Promise(resolve => setTimeout(resolve, args.seconds * 1000));
+    return { success: true, data: { text: `Waited ${args.seconds}s` } };
   }
 
   private selectDropdownOption(args: SelectDropdownOptionParams): ToolExecutionResult {
-    const index = args.index as number;
-    const option = args.option as string;
-    if (index === undefined || !option) return { success: false, result: '', error: 'Index/Option required' };
+    if (args.index === undefined || !args.option)
+      return { success: false, data: { text: '' }, error: 'Index/Option required' };
 
-    // Use validated element lookup
-    const { element, validation } = domService.getValidatedElement(index);
+    const { element, validation } = domService.getValidatedElement(args.index);
 
     if (!element) {
       if (validation.requiresReindex) {
         domService.indexInteractableElements();
         return {
           success: false,
-          result: '',
-          error: `DOM_CHANGED: Element at index ${index} no longer exists. DOM has been re-indexed. Please call get_html to get updated element indices.`,
-          recoveryInfo: { originalIndex: index, domReindexed: true },
+          data: { text: '' },
+          error: `DOM_CHANGED: Element at index ${args.index} no longer exists. Please call get_html to get updated element indices.`,
         };
       }
-      return { success: false, result: '', error: `Select ${index} not found` };
+      return { success: false, data: { text: '' }, error: `Select ${args.index} not found` };
     }
 
     if (!(element instanceof HTMLSelectElement)) {
-      return { success: false, result: '', error: `Element ${index} is not a select element` };
+      return { success: false, data: { text: '' }, error: `Element ${args.index} is not a select element` };
     }
 
-    const opt = Array.from(element.options).find(o => o.value === option || o.text === option);
-    if (!opt) return { success: false, result: '', error: `Option ${option} not found` };
+    const opt = Array.from(element.options).find(o => o.value === args.option || o.text === args.option);
+    if (!opt) return { success: false, data: { text: '' }, error: `Option ${args.option} not found` };
 
     element.value = opt.value;
     element.dispatchEvent(new Event('change', { bubbles: true }));
 
-    const result: ToolExecutionResult = { success: true, result: `Selected ${option}` };
-    if (validation.recoveredIndex !== undefined && validation.recoveredIndex !== index) {
-      result.recoveryInfo = {
-        originalIndex: index,
-        recoveredIndex: validation.recoveredIndex,
-        domReindexed: false,
-      };
-    }
-    return result;
+    return { success: true, data: { text: `Selected ${args.option}` } };
   }
 
-  private getDropdownOptions(args: GetDropdownOptionsParams): ToolExecutionResult {
-    const index = args.index as number;
+  private getDropdownOptions(args: GetDropdownOptionsParams): ToolExecutionResult<DropdownOptionsData> {
+    const index = args.index;
 
-    // Use validated element lookup
     const { element, validation } = domService.getValidatedElement(index);
 
     if (!element) {
@@ -576,65 +556,46 @@ export class ToolExecutionService {
         domService.indexInteractableElements();
         return {
           success: false,
-          result: '',
+          data: { options: [] },
           error: `DOM_CHANGED: Element at index ${index} no longer exists. DOM has been re-indexed. Please call get_html to get updated element indices.`,
-          recoveryInfo: { originalIndex: index, domReindexed: true },
         };
       }
-      return { success: false, result: '', error: `Select ${index} not found` };
+      return { success: false, data: { options: [] }, error: `Select ${index} not found` };
     }
 
     if (!(element instanceof HTMLSelectElement)) {
-      return { success: false, result: '', error: `Element ${index} is not a select element` };
+      return { success: false, data: { options: [] }, error: `Element ${index} is not a select element` };
     }
 
     const options = Array.from(element.options).map(o => ({ value: o.value, text: o.text }));
-    return { success: true, result: JSON.stringify(options) };
+    return { success: true, data: { options } };
   }
 
   private sendKeys(args: SendKeysParams): ToolExecutionResult {
-    const index = args.index as number;
-    const keys = args.keys as string;
-    if (index === undefined || !keys) return { success: false, result: '', error: 'Index/Keys required' };
+    if (args.index === undefined || !args.keys)
+      return { success: false, data: { text: '' }, error: 'Index/Keys required' };
 
-    // Use validated element lookup
-    const { element, validation } = domService.getValidatedElement(index);
+    const { element, validation } = domService.getValidatedElement(args.index);
 
     if (!element) {
       if (validation.requiresReindex) {
         domService.indexInteractableElements();
         return {
           success: false,
-          result: '',
-          error: `DOM_CHANGED: Element at index ${index} no longer exists. DOM has been re-indexed. Please call get_html to get updated element indices.`,
-          recoveryInfo: { originalIndex: index, domReindexed: true },
+          data: { text: '' },
+          error: `DOM_CHANGED: Element at index ${args.index} no longer exists. Please call get_html to get updated element indices.`,
         };
       }
-      return { success: false, result: '', error: `Element ${index} not found` };
+      return { success: false, data: { text: '' }, error: `Element ${args.index} not found` };
     }
 
-    // Focus the element first
     element.focus();
+    element.dispatchEvent(new KeyboardEvent('keydown', { key: args.keys, bubbles: true, cancelable: true }));
+    element.dispatchEvent(new KeyboardEvent('keyup', { key: args.keys, bubbles: true, cancelable: true }));
 
-    // Dispatch keyboard events (for custom event handlers)
-    element.dispatchEvent(new KeyboardEvent('keydown', { key: keys, bubbles: true, cancelable: true }));
-    element.dispatchEvent(new KeyboardEvent('keyup', { key: keys, bubbles: true, cancelable: true }));
+    const actionResult = this.simulateKeyAction(element, args.keys);
 
-    // Simulate actual browser behavior for common keys
-    const actionResult = this.simulateKeyAction(element, keys);
-
-    const result: ToolExecutionResult = {
-      success: true,
-      result: actionResult || `Sent keys ${keys}`,
-    };
-    if (validation.recoveredIndex !== undefined && validation.recoveredIndex !== index) {
-      result.recoveryInfo = {
-        originalIndex: index,
-        recoveredIndex: validation.recoveredIndex,
-        domReindexed: false,
-      };
-    }
-    return result;
+    return { success: true, data: { text: actionResult || `Sent keys ${args.keys}` } };
   }
 
   /**
@@ -882,55 +843,52 @@ export class ToolExecutionService {
   }
 
   private uploadFile(_args: UploadFileParams): ToolExecutionResult {
-    return { success: false, result: '', error: 'File upload not supported via script' };
+    return { success: false, data: { text: '' }, error: 'File upload not supported via script' };
   }
 
   private closeTab(): ToolExecutionResult {
     window.close();
-    return { success: true, result: 'Attempted close' };
+    return { success: true, data: { text: 'Attempted close' } };
   }
 
   private switchTab(args: SwitchTabParams): ToolExecutionResult {
-    const tab_index = args.tab_index as number;
-    if (tab_index === undefined) {
-      return { success: false, result: '', error: 'tab_index is required' };
+    if (!args.tab_id) {
+      return { success: false, data: { text: '' }, error: 'tab_id is required' };
     }
     // Tab switching not supported in browser context
-    return { success: false, result: '', error: 'Tab switching not supported' };
+    return { success: false, data: { text: '' }, error: 'Tab switching not supported' };
   }
 
   private done(args: DoneParams): ToolExecutionResult {
-    const success = args.success as boolean;
-    if (success === undefined) {
-      return { success: false, result: '', error: 'success parameter is required' };
+    if (args.success === undefined) {
+      return { success: false, data: { text: '' }, error: 'success parameter is required' };
     }
-    const message = args.message as string | undefined;
-    const resultMessage = message || (success ? 'Task completed' : 'Task failed');
-    return { success: true, result: resultMessage };
+    const resultMessage = args.message || (args.success ? 'Task completed' : 'Task failed');
+    return { success: true, data: { text: resultMessage } };
   }
 
   private getHtml(): ToolExecutionResult {
     try {
       const html = domService.getSnapshotHtml();
-      return { success: true, result: html };
+      return { success: true, data: { text: html } };
     } catch (error) {
-      return { success: false, result: '', error: String(error) };
+      return { success: false, data: { text: '' }, error: String(error) };
     }
   }
 
-  private getInteractableElements(): ToolExecutionResult {
+  private getInteractableElements(): ToolExecutionResult<ElementsData> {
     try {
       const elements = domService.getInteractableElements();
-      return { success: true, result: JSON.stringify(elements) };
+      return { success: true, data: { elements } };
     } catch (error) {
-      return { success: false, result: '', error: String(error) };
+      return { success: false, data: { elements: [] }, error: String(error) };
     }
   }
 
   private async getScreenshot(): Promise<ToolExecutionResult> {
     try {
       const stream = await startScreenShare();
-      if (!stream) return { success: false, result: '', error: 'Failed to get stream' };
+      if (!stream) return { success: false, data: { text: '' }, error: 'Failed to get stream' };
 
       const video = document.createElement('video');
       video.srcObject = stream;
@@ -957,9 +915,9 @@ export class ToolExecutionService {
       // But if we just requested permissions for this, maybe we should stop?
       // Original implementation reused active stream. `startScreenShare` handles reuse.
 
-      return { success: true, result: base64 };
+      return { success: true, data: { text: base64 } };
     } catch (error) {
-      return { success: false, result: '', error: String(error) };
+      return { success: false, data: { text: '' }, error: String(error) };
     }
   }
 }

@@ -105,12 +105,12 @@ export const devTools = {
     args: Record<string, unknown> = {},
     mode: 'do' | 'show' = 'do',
     explanation: string = '',
-  ): Promise<ToolExecutionResult> {
+  ): Promise<ToolExecutionResult<unknown>> {
     // Validate tool exists
     if (!TOOL_PARAMS[toolName]) {
       console.error(`[DevTools] Unknown tool: ${toolName}`);
       console.log('[DevTools] Available tools:', Object.keys(TOOL_PARAMS));
-      return { success: false, result: '', error: `Unknown tool: ${toolName}` };
+      return { success: false, data: { text: '' }, error: `Unknown tool: ${toolName}` };
     }
 
     // Check required params
@@ -118,7 +118,7 @@ export const devTools = {
     const missing = required.filter(param => !(param in args));
     if (missing.length > 0) {
       console.error(`[DevTools] Missing required params for ${toolName}:`, missing);
-      return { success: false, result: '', error: `Missing params: ${missing.join(', ')}` };
+      return { success: false, data: { text: '' }, error: `Missing params: ${missing.join(', ')}` };
     }
 
     console.log(`[DevTools] Executing ${toolName}`, { args, mode, explanation });
@@ -129,7 +129,7 @@ export const devTools = {
       const duration = (window.performance.now() - startTime).toFixed(2);
 
       if (result.success) {
-        console.log(`[DevTools] ✓ ${toolName} succeeded in ${duration}ms`, result.result);
+        console.log(`[DevTools] ✓ ${toolName} succeeded in ${duration}ms`, result.data);
       } else {
         console.error(`[DevTools] ✗ ${toolName} failed in ${duration}ms`, result.error);
       }
@@ -137,7 +137,7 @@ export const devTools = {
       return result;
     } catch (error) {
       console.error(`[DevTools] ✗ ${toolName} threw error:`, error);
-      return { success: false, result: '', error: String(error) };
+      return { success: false, data: { text: '' }, error: String(error) };
     }
   },
 
@@ -146,8 +146,8 @@ export const devTools = {
    */
   async runSequence(
     sequence: Array<{ tool: string; args?: Record<string, unknown>; delay?: number }>,
-  ): Promise<ToolExecutionResult[]> {
-    const results: ToolExecutionResult[] = [];
+  ): Promise<ToolExecutionResult<unknown>[]> {
+    const results: ToolExecutionResult<unknown>[] = [];
 
     for (let i = 0; i < sequence.length; i++) {
       const { tool, args = {}, delay = 500 } = sequence[i];
