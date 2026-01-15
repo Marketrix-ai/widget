@@ -222,6 +222,35 @@ const contract = c.router({
   },
 
   // ============================================================================
+  // ONBOARDING ROUTES - User and tenant onboarding
+  // ============================================================================
+
+  onboard: {
+    method: 'POST' as const,
+    summary: 'Complete user onboarding in one atomic operation',
+    description:
+      'Creates tenant, updates user status, invites team members, and returns fresh token with updated claims',
+    path: '/onboard',
+    body: z.object({
+      name: z.string().min(1).max(45),
+      domain: z.string().min(1).max(200),
+      team_emails: z.array(z.string().email()).optional().default([]),
+    }),
+    responses: {
+      200: R.success(
+        z.object({
+          token: z.string(),
+          tenant: TenantEntitySchema,
+        }),
+      ),
+      400: R.error,
+      401: R.error,
+      403: R.error,
+      500: R.error,
+    },
+  },
+
+  // ============================================================================
   // MEETING ROUTES - Video meeting management and operations
   // ============================================================================
 

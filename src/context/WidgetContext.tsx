@@ -56,7 +56,13 @@ interface WidgetContextType {
 
 const WidgetContext = createContext<WidgetContextType | undefined>(undefined);
 
-export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+interface WidgetProviderProps {
+  children: React.ReactNode;
+  /** Preview mode disables all network ops (WebSocket, API, SessionManager) */
+  previewMode?: boolean;
+}
+
+export const WidgetProvider: React.FC<WidgetProviderProps> = ({ children, previewMode = false }) => {
   const stateVersion = useRef(0);
   const processedRequestIds = useRef(new Set<string>());
 
@@ -72,8 +78,13 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     taskProgress: [],
   });
 
-  // Initialize ChatService on mount
+  // Initialize ChatService on mount (skip in preview mode)
   useEffect(() => {
+    // Skip all network initialization in preview mode
+    if (previewMode) {
+      return;
+    }
+
     const initChat = async () => {
       const chatId = await sessionManager.getOrCreateChatId();
 
@@ -103,7 +114,7 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
     };
     initChat();
-  }, []);
+  }, [previewMode]);
 
   // Helper to update progress
   const updateProgressForTool = useCallback(
@@ -170,8 +181,13 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     [],
   );
 
-  // WebSocket Setup
+  // WebSocket Setup (skip in preview mode)
   useEffect(() => {
+    // Skip WebSocket setup in preview mode - no network connections
+    if (previewMode) {
+      return;
+    }
+
     // Ensure config is loaded before initializing WebSocket
     const config = configManager.getConfig();
     const wsClient = WebSocketClient.getInstance(config || undefined);
@@ -365,7 +381,7 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return () => {
       wsClient.removeCallbacks(callbacks);
     };
-  }, [updateProgressForTool]);
+  }, [updateProgressForTool, previewMode]);
 
   // Action Implementations
   const setTaskState = useCallback(
@@ -406,6 +422,20 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       question?: string,
       skipUserMessage?: boolean,
     ) => {
+      // In preview mode, show user message and a preview response (no network)
+      if (previewMode) {
+        if (!skipUserMessage) {
+          const userMsg = createUserMessage(content, mode || state.currentMode);
+          addMessage(userMsg);
+        }
+        // Show preview response
+        const previewResponse = createAgentMessage(
+          "This is a preview. In production, I'll respond to your messages here.",
+        );
+        addMessage(previewResponse);
+        return;
+      }
+
       // Attempt to reload config if missing (e.g. from localStorage)
       let config = configManager.getConfig();
       if (!config) {
@@ -546,7 +576,7 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         setState(prev => ({ ...prev, isLoading: false }));
       }
     },
-    [state.currentMode, addMessage, setTaskState, state],
+    [state.currentMode, addMessage, setTaskState, state, previewMode],
   );
 
   const actions = useMemo(
@@ -618,9 +648,13 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
               ...found.message,
               taskStatus: 'stopped',
             };
-            chatService.setMessages(newMessages);
+            if (!previewMode) {
+              chatService.setMessages(newMessages);
+            }
           }
-          chatService.setTaskState(false, null, []);
+          if (!previewMode) {
+            chatService.setTaskState(false, null, []);
+          }
           return {
             ...prev,
             messages: newMessages,
@@ -629,6 +663,11 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             taskProgress: [],
           };
         });
+
+        // Skip API call in preview mode
+        if (previewMode) {
+          return;
+        }
 
         // Attempt to reload config if missing
         let config = configManager.getConfig();
@@ -648,7 +687,7 @@ export const WidgetProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       clearChatHistory: resetState,
       sendMessage,
     }),
-    [state.currentMode, setTaskState, resetState, addMessage, sendMessage],
+    [state.currentMode, setTaskState, resetState, addMessage, sendMessage, previewMode],
   );
 
   return <WidgetContext.Provider value={{ state, actions }}>{children}</WidgetContext.Provider>;

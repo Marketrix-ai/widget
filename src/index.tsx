@@ -18,10 +18,12 @@ import {
   getCurrentConfig,
   getWidgetInstance,
   hideWidgetSettingsLoader,
+  isProductionWidgetActive,
   isWidgetInitialized,
   mountWidgetToContainer,
   registerAutoInit,
   setCurrentConfig,
+  setProductionWidgetActive,
   setProgrammaticInitInProgress,
   setWidgetInstance,
   showWidgetSettingsLoader,
@@ -118,6 +120,13 @@ export const initWidget = async (config: MarketrixConfig, container?: HTMLElemen
     return;
   }
 
+  // Singleton guard: prevent duplicate production widgets on same page
+  if (isProductionWidgetActive()) {
+    console.warn('Marketrix Widget: production widget already active on this page, skipping duplicate initialization');
+    setProgrammaticInitInProgress(false);
+    return;
+  }
+
   // Configure SDK BEFORE validation
   if (config.mtxApiHost) {
     configureSdk(config.mtxApiHost);
@@ -152,6 +161,8 @@ export const initWidget = async (config: MarketrixConfig, container?: HTMLElemen
   const { mountEl } = createWidgetContainer(container, containerId);
   const instance = mountWidgetToContainer(mountEl, finalConfig);
   setWidgetInstance(instance);
+  // Mark production widget as active (singleton guard)
+  setProductionWidgetActive(true);
   // Widget successfully initialized, reset flag
   setProgrammaticInitInProgress(false);
 
@@ -337,7 +348,7 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({
 
     root.render(
       <React.StrictMode>
-        <WidgetProvider>
+        <WidgetProvider previewMode>
           <MarketrixWidgetComponent config={config} />
         </WidgetProvider>
       </React.StrictMode>,
@@ -377,16 +388,20 @@ export const mountWidget = async (config: AddWidgetConfig): Promise<void> => {
 
   // Detect mode based on provided config
   if ('settings' in config && config.settings !== undefined) {
-    // Preview mode: use settings directly, skip API calls
+    // Preview mode: use settings directly, skip API calls and network ops
+    // Preview widgets are standalone - don't set global instance or production flag
     const previewConfig = config as Extract<AddWidgetConfig, { settings: WidgetSettingsData }>;
     const { settings, container: _container, ...restConfig } = previewConfig;
-    const finalConfig = createConfigFromSettings(settings, restConfig);
-    setCurrentConfig(finalConfig);
+    const finalConfig = {
+      ...createConfigFromSettings(settings, restConfig),
+      isPreviewMode: true,
+    };
     // Generate unique container ID for this widget instance
     const containerId = `marketrix-widget-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
     const { mountEl } = createWidgetContainer(container, containerId);
-    const instance = mountWidgetToContainer(mountEl, finalConfig);
-    setWidgetInstance(instance);
+    // Mount with previewMode=true to disable all network operations
+    mountWidgetToContainer(mountEl, finalConfig, true);
+    // Don't set global widget instance for preview - it's independent
     // Widget successfully initialized, reset flag
     setProgrammaticInitInProgress(false);
   } else if ('mtxId' in config && config.mtxId !== undefined && config.mtxKey !== undefined) {

@@ -29,6 +29,9 @@ let loaderInstance: Root | null = null;
 // Programmatic initialization tracking flag (memoized)
 let programmaticInitInProgress = false;
 
+// Production widget singleton tracking - prevents duplicate widgets on same page
+let productionWidgetActive = false;
+
 /**
  * Generate unique container ID for widget instances
  */
@@ -113,14 +116,17 @@ export const createWidgetContainer = (
 /**
  * Mount widget component to the provided mount element
  * Returns the React root instance
+ * @param mountEl - The mount element inside shadow DOM
+ * @param config - Widget configuration
+ * @param previewMode - If true, disables network operations (for integration previews)
  */
-export const mountWidgetToContainer = (mountEl: HTMLElement, config: MarketrixConfig): Root => {
+export const mountWidgetToContainer = (mountEl: HTMLElement, config: MarketrixConfig, previewMode = false): Root => {
   // Create React root and render widget within the shadow root
   const root = createRoot(mountEl);
 
   root.render(
     <React.StrictMode>
-      <WidgetProvider>
+      <WidgetProvider previewMode={previewMode}>
         <MarketrixWidget config={config} />
       </WidgetProvider>
     </React.StrictMode>,
@@ -185,6 +191,7 @@ export const isWidgetInitialized = (): boolean => {
 export const clearWidgetState = (): void => {
   widgetInstance = null;
   currentConfig = null;
+  productionWidgetActive = false;
 };
 
 // ============================================================================
@@ -203,6 +210,26 @@ export const setProgrammaticInitInProgress = (inProgress: boolean): void => {
  */
 export const isProgrammaticInitInProgress = (): boolean => {
   return programmaticInitInProgress;
+};
+
+// ============================================================================
+// Production Widget Singleton Guard
+// ============================================================================
+
+/**
+ * Check if a production widget is already active on this page
+ * Production widgets (non-preview) should be singletons - only one per page
+ */
+export const isProductionWidgetActive = (): boolean => {
+  return productionWidgetActive;
+};
+
+/**
+ * Set production widget active state
+ * Call with true when initializing a production widget, false when unmounting
+ */
+export const setProductionWidgetActive = (active: boolean): void => {
+  productionWidgetActive = active;
 };
 
 // ============================================================================
