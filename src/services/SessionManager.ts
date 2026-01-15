@@ -9,9 +9,9 @@ import { sdk } from '../sdk';
 import { extractApiData } from '../utils/apiUtils';
 import { createLogger } from '../utils/common';
 import { chatService } from './ChatService';
+import { storageService } from './StorageService';
 
 const log = createLogger('ChatIdManager');
-const CHAT_ID_STORAGE_KEY = 'marketrix_chat_id';
 const TAB_ID_STORAGE_KEY = 'marketrix_tab_id';
 
 class SessionManager {
@@ -266,19 +266,11 @@ class SessionManager {
   }
 
   private getStoredChatId(): string | null {
-    // Guard against SSR
-    if (typeof localStorage === 'undefined') {
-      return null;
-    }
-    return localStorage.getItem(CHAT_ID_STORAGE_KEY);
+    return storageService.getChatId();
   }
 
   private storeChatId(id: string): void {
-    // Guard against SSR
-    if (typeof localStorage === 'undefined') {
-      return;
-    }
-    localStorage.setItem(CHAT_ID_STORAGE_KEY, id);
+    storageService.setChatId(id);
   }
 }
 

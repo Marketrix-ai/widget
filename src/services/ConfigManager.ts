@@ -1,6 +1,6 @@
 import type { WidgetSettingsData } from '../sdk';
 import type { MarketrixConfig } from '../types';
-import { hasProperty } from '../utils/validation';
+import { storageService } from './StorageService';
 
 export class ConfigManager {
   private static instance: ConfigManager;
@@ -16,17 +16,10 @@ export class ConfigManager {
   }
 
   loadConfig(): MarketrixConfig {
-    try {
-      const stored = localStorage.getItem('marketrix_widget_config');
-      if (stored) {
-        const parsed: unknown = JSON.parse(stored);
-        if (this.validateConfig(parsed)) {
-          this.config = parsed;
-          return parsed;
-        }
-      }
-    } catch (error) {
-      console.warn('Failed to load config from localStorage:', error);
+    const stored = storageService.getConfig();
+    if (stored) {
+      this.config = stored;
+      return stored;
     }
 
     // Return empty config - defaults should come from API
@@ -35,12 +28,8 @@ export class ConfigManager {
   }
 
   saveConfig(config: MarketrixConfig): void {
-    try {
-      localStorage.setItem('marketrix_widget_config', JSON.stringify(config));
-      this.config = config;
-    } catch (error) {
-      console.error('Failed to save config to localStorage:', error);
-    }
+    storageService.setConfig(config);
+    this.config = config;
   }
 
   updateConfig(updates: Partial<MarketrixConfig>): void {
@@ -54,13 +43,6 @@ export class ConfigManager {
 
   getConfig(): MarketrixConfig | null {
     return this.config;
-  }
-
-  private validateConfig(config: unknown): config is MarketrixConfig {
-    if (!config || typeof config !== 'object') {
-      return false;
-    }
-    return hasProperty(config, 'widget_enabled');
   }
 
   shouldShowWidget(): boolean {

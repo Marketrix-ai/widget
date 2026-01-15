@@ -2,6 +2,7 @@ import { record } from '@rrweb/record';
 import type { eventWithTime } from '@rrweb/types';
 
 import { createLogger } from '../utils/common';
+import { storageService } from './StorageService';
 
 type RecordOptions = Parameters<typeof record>[0];
 
@@ -51,7 +52,6 @@ export class SessionRecorder {
   private metadataAckResolver: ((value: void | PromiseLike<void>) => void) | null = null;
 
   private readonly TAB_ID_STORAGE_KEY = 'marketrix_tab_id';
-  private readonly CHAT_ID_STORAGE_KEY = 'marketrix_chat_id';
 
   constructor(wsUrl: string, connectionId: number) {
     if (!wsUrl || wsUrl.trim() === '') {
@@ -126,133 +126,34 @@ export class SessionRecorder {
   }
 
   /**
-   * Get marketrix_chat_id from localStorage
+   * Get chat_id from StorageService
    */
   private getMarketrixChatId(): string | undefined {
-    log.debug('🔍 getMarketrixChatId() called');
-    log.debug('Storage key:', this.CHAT_ID_STORAGE_KEY);
-    log.debug('CHAT_ID_STORAGE_KEY constant value:', 'marketrix_chat_id');
-
-    if (typeof window === 'undefined') {
-      log.warn('❌ window is undefined, cannot get marketrix_chat_id');
+    const chatId = storageService.getChatId();
+    if (!chatId || chatId.trim() === '') {
+      log.debug('chat_id not available in storage');
       return undefined;
     }
-
-    log.debug('✅ window is defined');
-    log.debug('localStorage exists:', typeof localStorage !== 'undefined');
-
-    // Get all localStorage keys first
-    const allKeys = Object.keys(localStorage);
-    log.debug('📋 All localStorage keys:', allKeys);
-    log.debug('📋 localStorage key count:', allKeys.length);
-
-    // Check if our key exists
-    const keyExists = allKeys.includes(this.CHAT_ID_STORAGE_KEY);
-    log.debug('Key exists in localStorage:', keyExists);
-    log.debug('Key comparison:', {
-      lookingFor: this.CHAT_ID_STORAGE_KEY,
-      foundKeys: allKeys.filter(k => k.includes('chat') || k.includes('marketrix')),
-    });
-
-    // Try to get the value
-    const chatId = localStorage.getItem(this.CHAT_ID_STORAGE_KEY);
-    log.debug('📥 Raw value from localStorage.getItem():', {
-      value: chatId,
-      type: typeof chatId,
-      isNull: chatId === null,
-      isUndefined: chatId === undefined,
-      length: chatId ? chatId.length : 0,
-      preview: chatId ? `${chatId.substring(0, 50)}${chatId.length > 50 ? '...' : ''}` : 'null/undefined',
-    });
-
-    // Also try direct access with string literal
-    const directAccess = localStorage.getItem('marketrix_chat_id');
-    log.debug('📥 Direct access with string literal "marketrix_chat_id":', {
-      value: directAccess,
-      type: typeof directAccess,
-      matches: directAccess === chatId,
-    });
-
-    // Log all localStorage items for debugging
-    log.debug('📋 Full localStorage contents:');
-    allKeys.forEach(key => {
-      const value = localStorage.getItem(key);
-      log.debug(`  - "${key}":`, {
-        value: value ? (value.length > 100 ? `${value.substring(0, 100)}...` : value) : 'null',
-        length: value ? value.length : 0,
-        type: typeof value,
-        matchesKey: key === this.CHAT_ID_STORAGE_KEY,
-      });
-    });
-
-    if (!chatId) {
-      log.warn('❌ marketrix_chat_id is null or undefined');
-      log.warn('This means the key does not exist in localStorage');
-      return undefined;
-    }
-
-    if (typeof chatId !== 'string') {
-      log.warn('❌ marketrix_chat_id is not a string, type:', typeof chatId);
-      return undefined;
-    }
-
-    const trimmed = chatId.trim();
-    if (trimmed === '') {
-      log.warn('❌ marketrix_chat_id is empty string after trim');
-      log.warn('Original value was:', JSON.stringify(chatId));
-      return undefined;
-    }
-
-    log.info('✅ Successfully retrieved marketrix_chat_id:', {
-      value: trimmed,
-      length: trimmed.length,
-      preview: `${trimmed.substring(0, 30)}${trimmed.length > 30 ? '...' : ''}`,
-      firstChars: trimmed.substring(0, 10),
-      lastChars: trimmed.substring(trimmed.length - 10),
-    });
-
-    return trimmed;
+    log.debug('Retrieved chat_id from storage:', `${chatId.substring(0, 30)}...`);
+    return chatId;
   }
 
   /**
-   * Wait for marketrix_chat_id to become available in localStorage
+   * Wait for chat_id to become available in storage
    * @param timeoutMs Maximum time to wait in milliseconds
    * @returns Promise that resolves with the chat ID or rejects on timeout
    */
   private waitForChatId(timeoutMs: number = 30000): Promise<string> {
     return new Promise((resolve, reject) => {
-      // Check if already available
-      log.info('⏳ waitForChatId() started, timeout:', timeoutMs, 'ms');
-      log.debug('Current time:', new Date().toISOString());
       const existingChatId = this.getMarketrixChatId();
-      log.debug('📊 Initial check result:', {
-        value: existingChatId,
-        type: typeof existingChatId,
-        isTruthy: !!existingChatId,
-        isEmpty: existingChatId ? existingChatId.trim() === '' : true,
-      });
 
-      if (existingChatId && existingChatId.trim() !== '') {
-        log.info('✅ marketrix_chat_id already available, resolving immediately');
-        log.info('Resolving with chatId:', `${existingChatId.substring(0, 30)}...`);
+      if (existingChatId) {
+        log.info('chat_id already available');
         resolve(existingChatId);
         return;
       }
 
-      log.info('⏳ Waiting for marketrix_chat_id to become available...');
-      log.debug('Current localStorage keys:', Object.keys(localStorage));
-      log.debug(
-        'Current localStorage values:',
-        Object.keys(localStorage).reduce(
-          (acc, key) => {
-            const value = localStorage.getItem(key);
-            acc[key] = value ? (value.length > 50 ? `${value.substring(0, 50)}...` : value) : null;
-            return acc;
-          },
-          {} as Record<string, string | null>,
-        ),
-      );
-
+      log.info('Waiting for chat_id...');
       let resolved = false;
       const startTime = Date.now();
 
@@ -265,67 +166,30 @@ export class SessionRecorder {
 
         const chatId = this.getMarketrixChatId();
         const elapsed = Date.now() - startTime;
-        if (chatId && chatId.trim() !== '') {
+
+        if (chatId) {
           resolved = true;
           clearInterval(checkInterval);
-          window.removeEventListener('storage', storageListener);
-          log.info(`✅ marketrix_chat_id became available via polling after ${elapsed}ms:`, chatId);
+          log.info(`chat_id became available after ${elapsed}ms`);
           resolve(chatId);
           return;
-        }
-
-        // Log progress every 5 seconds
-        if (elapsed % 5000 < 500) {
-          log.debug(`⏳ Still waiting for marketrix_chat_id... (${elapsed}ms / ${timeoutMs}ms)`);
         }
 
         // Check timeout
         if (elapsed >= timeoutMs) {
           resolved = true;
           clearInterval(checkInterval);
-          window.removeEventListener('storage', storageListener);
-          const error = `marketrix_chat_id not available after ${timeoutMs}ms`;
-          log.error('❌', error);
-          log.error('localStorage keys at timeout:', Object.keys(localStorage));
-          log.error(
-            'localStorage values at timeout:',
-            Object.keys(localStorage).reduce(
-              (acc, key) => {
-                acc[key] = localStorage.getItem(key)?.substring(0, 50) || null;
-                return acc;
-              },
-              {} as Record<string, string | null>,
-            ),
-          );
+          const error = `chat_id not available after ${timeoutMs}ms`;
+          log.error(error);
           reject(new Error(error));
         }
-      }, 500); // Check every 500ms
-
-      // Also listen for storage events (works across tabs/windows)
-      const storageListener = (e: StorageEvent) => {
-        log.debug('Storage event received:', {
-          key: e.key,
-          newValue: e.newValue ? `${e.newValue.substring(0, 20)}...` : null,
-          oldValue: e.oldValue ? `${e.oldValue.substring(0, 20)}...` : null,
-        });
-        if (e.key === this.CHAT_ID_STORAGE_KEY && e.newValue && e.newValue.trim() !== '' && !resolved) {
-          resolved = true;
-          clearInterval(checkInterval);
-          window.removeEventListener('storage', storageListener);
-          const elapsed = Date.now() - startTime;
-          log.info(`✅ marketrix_chat_id set via storage event after ${elapsed}ms:`, e.newValue);
-          resolve(e.newValue);
-        }
-      };
-      window.addEventListener('storage', storageListener);
-      log.debug('Added storage event listener for marketrix_chat_id');
+      }, 500);
 
       // Cleanup on timeout
       setTimeout(() => {
         if (!resolved) {
           resolved = true;
           clearInterval(checkInterval);
-          window.removeEventListener('storage', storageListener);
         }
       }, timeoutMs);
     });
@@ -578,50 +442,16 @@ export class SessionRecorder {
       return;
     }
 
-    // Get chat_id - it should already be available since we waited for it in start()
-    log.info('🔍 Getting marketrix_chat_id in sendMetadataAsync()...');
-    log.debug('Current time:', new Date().toISOString());
+    // Get chat_id - should already be available since we waited for it in start()
     const marketrixChatId = this.getMarketrixChatId();
 
-    log.debug('📊 Result from getMarketrixChatId():', {
-      value: marketrixChatId,
-      type: typeof marketrixChatId,
-      isUndefined: marketrixChatId === undefined,
-      isNull: marketrixChatId === null,
-      isEmpty: marketrixChatId ? marketrixChatId.trim() === '' : true,
-      length: marketrixChatId ? marketrixChatId.length : 0,
-    });
-
-    if (!marketrixChatId || marketrixChatId.trim() === '') {
-      const error = 'marketrix_chat_id is required but not found or empty in localStorage';
-      log.error('❌', error);
-      log.error('Available localStorage keys:', Object.keys(localStorage));
-      log.error(
-        'localStorage contents:',
-        Object.keys(localStorage).reduce(
-          (acc, key) => {
-            const value = localStorage.getItem(key);
-            acc[key] = value ? (value.length > 50 ? `${value.substring(0, 50)}...` : value) : null;
-            return acc;
-          },
-          {} as Record<string, string | null>,
-        ),
-      );
-
-      // Try direct access to see what's actually there
-      log.error('🔍 Direct localStorage access test:');
-      log.error('  localStorage.getItem("marketrix_chat_id"):', localStorage.getItem('marketrix_chat_id'));
-      log.error('  localStorage.getItem(this.CHAT_ID_STORAGE_KEY):', localStorage.getItem(this.CHAT_ID_STORAGE_KEY));
-      log.error('  this.CHAT_ID_STORAGE_KEY value:', this.CHAT_ID_STORAGE_KEY);
-
+    if (!marketrixChatId) {
+      const error = 'chat_id is required but not found in storage';
+      log.error(error);
       throw new Error(error);
     }
 
-    log.info('✅ marketrixChatId validated:', {
-      value: `${marketrixChatId.substring(0, 30)}...`,
-      length: marketrixChatId.length,
-      type: typeof marketrixChatId,
-    });
+    log.debug('Got chat_id for metadata:', `${marketrixChatId.substring(0, 30)}...`);
 
     if (!this.sessionId || this.sessionId.trim() === '') {
       const error = 'marketrix_tab_id is required but not found or empty in sessionStorage';

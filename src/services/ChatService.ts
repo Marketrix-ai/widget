@@ -1,21 +1,6 @@
 import type { ChatMessage, InstructionType, TaskProgress } from '../types';
 import { removeThinkingMarkers } from '../utils/chat';
-
-interface StoredChatContext {
-  chat_id: string;
-  messages: Array<Omit<ChatMessage, 'videoStream' | 'timestamp'> & { timestamp: string }>;
-  isTaskRunning: boolean;
-  activeTaskId: string | null;
-  taskProgress: TaskProgress[];
-  currentMode: InstructionType;
-  isOpen: boolean;
-  isMinimized: boolean;
-  isLoading: boolean;
-  timestamp: number;
-}
-
-const CHAT_CONTEXT_STORAGE_KEY = 'marketrix_chat_context';
-const CONTEXT_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+import { storageService } from './StorageService';
 
 export class ChatService {
   private static instance: ChatService;
@@ -45,12 +30,12 @@ export class ChatService {
 
   createInitialContext(chatId: string): void {
     try {
-      const existingContext = localStorage.getItem(CHAT_CONTEXT_STORAGE_KEY);
-      if (existingContext) {
+      // Only create if no existing context
+      if (storageService.hasValidContext()) {
         return;
       }
 
-      const initialContext: StoredChatContext = {
+      storageService.updateContext({
         chat_id: chatId,
         messages: [],
         isTaskRunning: false,
@@ -60,10 +45,7 @@ export class ChatService {
         isOpen: false,
         isMinimized: false,
         isLoading: false,
-        timestamp: Date.now(),
-      };
-
-      localStorage.setItem(CHAT_CONTEXT_STORAGE_KEY, JSON.stringify(initialContext));
+      });
     } catch (error) {
       console.error('[ChatService] Failed to create initial chat context:', error);
     }
@@ -153,17 +135,9 @@ export class ChatService {
 
   private restoreState(): void {
     try {
-      const stored = localStorage.getItem(CHAT_CONTEXT_STORAGE_KEY);
-      if (!stored) return;
+      const context = storageService.getContext();
 
-      const context = JSON.parse(stored) as StoredChatContext;
-
-      if (!context || typeof context !== 'object') return;
-
-      if (Date.now() - context.timestamp > CONTEXT_EXPIRY_MS) {
-        localStorage.removeItem(CHAT_CONTEXT_STORAGE_KEY);
-        return;
-      }
+      if (!context.chat_id) return;
 
       if (this.chatId && context.chat_id !== this.chatId) {
         // Chat ID mismatch - restoring history anyway
@@ -251,7 +225,7 @@ export class ChatService {
           parts: msg.parts, // Save parts
         }));
 
-      const context: StoredChatContext = {
+      storageService.updateContext({
         chat_id: this.chatId,
         messages: serializedMessages,
         isTaskRunning: this.isTaskRunning,
@@ -261,10 +235,7 @@ export class ChatService {
         isOpen: this.isOpen,
         isMinimized: this.isMinimized,
         isLoading: this.isLoading,
-        timestamp: Date.now(),
-      };
-
-      localStorage.setItem(CHAT_CONTEXT_STORAGE_KEY, JSON.stringify(context));
+      });
     } catch (error) {
       console.warn('[ChatService] Failed to persist state:', error);
     }
