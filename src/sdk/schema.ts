@@ -140,6 +140,7 @@ export const IndexResponseSchema = z.object({
 
 /**
  * Complete user entity schema
+ * Note: Users don't have plans - plans belong to tenants (via tenant_plan table)
  */
 export const UserEntitySchema = BaseEntitySchema.extend({
   tenant_id: z.number().optional(),
@@ -151,7 +152,6 @@ export const UserEntitySchema = BaseEntitySchema.extend({
   last_name: z.string().optional(),
   password: z.string().optional(),
   image_url: z.string().optional(),
-  plan: UserPlanSchema,
   prompt_limit: z.number().optional(),
 });
 
@@ -254,6 +254,8 @@ export const TokenSchema = z.object({
 
 /**
  * Complete tenant entity schema
+ * Note: package and ending_date come from tenant_plan table (joined when fetching tenant data).
+ * They are NOT stored on the tenant table itself.
  */
 export const TenantEntitySchema = BaseEntitySchema.extend({
   name: z.string(),
@@ -797,7 +799,7 @@ export const AgentTaskStartResponseSchema = z.object({
  */
 export const AgentTaskStopResponseSchema = z.object({
   status: z.string(),
-  message: z.string(),
+  message: z.string().optional(),
 });
 
 /**

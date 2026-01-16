@@ -142,12 +142,44 @@ class StorageService {
 
   // ========== Chat ID ==========
 
+  /**
+   * Check if a string is a valid chat_id
+   */
+  private isValidChatId(value: string | null | undefined): value is string {
+    return typeof value === 'string' && value.trim() !== '';
+  }
+
+  /**
+   * Get chat_id with window.name fallback for cross-page navigation
+   * Priority: window.name (if valid) -> localStorage
+   */
   getChatId(): string | null {
+    // First check window.name for chat_id (persists across page navigations)
+    if (typeof window !== 'undefined' && this.isValidChatId(window.name)) {
+      const windowChatId = window.name;
+      const storedChatId = this.getContext().chat_id;
+
+      // If window.name has a valid chat_id different from localStorage, update localStorage
+      if (windowChatId !== storedChatId) {
+        this.updateContext({ chat_id: windowChatId });
+      }
+      return windowChatId;
+    }
+
+    // Fall back to localStorage
     return this.getContext().chat_id;
   }
 
+  /**
+   * Set chat_id in both localStorage and window.name
+   */
   setChatId(chatId: string | null): void {
     this.updateContext({ chat_id: chatId });
+
+    // Also set window.name for cross-page navigation persistence
+    if (typeof window !== 'undefined' && chatId) {
+      window.name = chatId;
+    }
   }
 
   // ========== Messages ==========
