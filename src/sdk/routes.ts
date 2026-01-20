@@ -78,6 +78,11 @@ import {
   PasswordUpdateSchema,
   PlanInfoSchema,
   PortalSessionSchema,
+  QADocumentCreateSchema,
+  QADocumentEntitySchema,
+  QADocumentProcessingResponseSchema,
+  QADocumentStatusSchema,
+  QATestResultEntitySchema,
   R,
   RrwebSessionEntitySchema,
   RrwebSessionUpsertSchema,
@@ -103,6 +108,9 @@ import {
   TourEntitySchema,
   TourStepSchema,
   TrialSubscriptionSchema,
+  UrlGuideCreateSchema,
+  UrlGuideEntitySchema,
+  UrlGuideUpdateSchema,
   UserEntitySchema,
   UserLoginSchema,
   UserQuotaSchema,
@@ -918,6 +926,106 @@ const contract = c.router({
   },
 
   // ============================================================================
+  // URL GUIDE ROUTES - URL-based guidance messages for widget
+  // ============================================================================
+
+  urlGuideSearch: {
+    method: 'GET' as const,
+    summary: 'Search URL guides by integration',
+    description: 'Returns list of URL guides for specified integration',
+    path: '/url-guide',
+    query: z.object({
+      integration_id: z.coerce.number(),
+    }),
+    responses: {
+      200: R.success(z.array(UrlGuideEntitySchema)),
+      400: R.error,
+      401: R.error,
+      403: R.error,
+      500: R.error,
+    },
+  },
+
+  urlGuideCreate: {
+    method: 'POST' as const,
+    summary: 'Create new URL guide',
+    description: 'Creates URL guide with pattern and message',
+    path: '/url-guide',
+    body: UrlGuideCreateSchema,
+    responses: {
+      200: R.success(UrlGuideEntitySchema),
+      400: R.error,
+      401: R.error,
+      403: R.error,
+      500: R.error,
+    },
+  },
+
+  urlGuideGet: {
+    method: 'GET' as const,
+    summary: 'Get URL guide by ID',
+    description: 'Returns URL guide details',
+    path: '/url-guide/:id',
+    pathParams: z.object({ id: z.coerce.number() }),
+    responses: {
+      200: R.success(UrlGuideEntitySchema),
+      400: R.error,
+      401: R.error,
+      403: R.error,
+      500: R.error,
+    },
+  },
+
+  urlGuideUpdate: {
+    method: 'PUT' as const,
+    summary: 'Update URL guide',
+    description: 'Updates URL guide properties',
+    path: '/url-guide/:id',
+    pathParams: z.object({ id: z.coerce.number() }),
+    body: UrlGuideUpdateSchema,
+    responses: {
+      200: R.success(UrlGuideEntitySchema),
+      400: R.error,
+      401: R.error,
+      403: R.error,
+      500: R.error,
+    },
+  },
+
+  urlGuideDelete: {
+    method: 'DELETE' as const,
+    summary: 'Delete URL guide',
+    description: 'Removes URL guide from system',
+    path: '/url-guide/:id',
+    pathParams: z.object({ id: z.coerce.number() }),
+    responses: {
+      200: R.success(z.void()),
+      400: R.error,
+      401: R.error,
+      403: R.error,
+      500: R.error,
+    },
+  },
+
+  urlGuideMatch: {
+    method: 'GET' as const,
+    summary: 'Find matching URL guide for current URL',
+    description: 'Returns matching URL guide for a given URL pattern',
+    path: '/url-guide/match',
+    query: z.object({
+      integration_id: z.coerce.number(),
+      url: z.string(),
+    }),
+    responses: {
+      200: R.success(UrlGuideEntitySchema.nullable()),
+      400: R.error,
+      401: R.error,
+      403: R.error,
+      500: R.error,
+    },
+  },
+
+  // ============================================================================
   // SIMULATION ROUTES - Application simulation and testing
   // ============================================================================
 
@@ -1288,6 +1396,152 @@ const contract = c.router({
       400: R.error,
       401: R.error,
       403: R.error,
+      404: R.error,
+      500: R.error,
+    },
+  },
+
+  // ============================================================================
+  // QA DOCUMENT ROUTES - QA document upload and test result management
+  // ============================================================================
+
+  qaDocumentUpload: {
+    method: 'POST' as const,
+    summary: 'Upload QA document (file or text)',
+    description: 'Uploads a PDF/text file or text content for QA test generation',
+    path: '/qa/document',
+    contentType: 'multipart/form-data' as const,
+    body: QADocumentCreateSchema,
+    responses: {
+      200: R.success(QADocumentEntitySchema),
+      400: R.error,
+      401: R.error,
+      403: R.error,
+      500: R.error,
+    },
+  },
+
+  qaDocumentProcess: {
+    method: 'POST' as const,
+    summary: 'Process QA document and generate test cases',
+    description: 'Processes a QA document and generates test cases via AI agent API',
+    path: '/qa/document/:id/process',
+    pathParams: z.object({ id: z.coerce.number() }),
+    body: z.void(),
+    responses: {
+      200: R.success(QADocumentProcessingResponseSchema),
+      400: R.error,
+      401: R.error,
+      403: R.error,
+      404: R.error,
+      500: R.error,
+    },
+  },
+
+  qaDocumentGet: {
+    method: 'GET' as const,
+    summary: 'Get QA document by ID',
+    description: 'Retrieves a QA document by its ID',
+    path: '/qa/document/:id',
+    pathParams: z.object({ id: z.coerce.number() }),
+    responses: {
+      200: R.success(QADocumentEntitySchema),
+      400: R.error,
+      401: R.error,
+      404: R.error,
+      500: R.error,
+    },
+  },
+
+  qaDocumentList: {
+    method: 'GET' as const,
+    summary: 'List QA documents',
+    description: 'Gets all QA documents for the authenticated tenant',
+    path: '/qa/document',
+    query: z.object({
+      connection_id: z.coerce.number().optional(),
+    }),
+    responses: {
+      200: R.success(z.array(QADocumentEntitySchema)),
+      400: R.error,
+      401: R.error,
+      500: R.error,
+    },
+  },
+
+  qaDocumentUpdate: {
+    method: 'PUT' as const,
+    summary: 'Update QA document status',
+    description: 'Updates the status of a QA document',
+    path: '/qa/document/:id',
+    pathParams: z.object({ id: z.coerce.number() }),
+    body: z.object({
+      status: QADocumentStatusSchema,
+    }),
+    responses: {
+      200: R.success(QADocumentEntitySchema),
+      400: R.error,
+      401: R.error,
+      404: R.error,
+      500: R.error,
+    },
+  },
+
+  qaTestResultList: {
+    method: 'GET' as const,
+    summary: 'Get test results for a QA document',
+    description: 'Retrieves all test results for a specific QA document',
+    path: '/qa/document/:id/test-results',
+    pathParams: z.object({ id: z.coerce.number() }),
+    responses: {
+      200: R.success(z.array(QATestResultEntitySchema)),
+      400: R.error,
+      401: R.error,
+      404: R.error,
+      500: R.error,
+    },
+  },
+
+  qaDocumentMock: {
+    method: 'GET' as const,
+    summary: 'Get mock QA test cases and summary',
+    description: 'Returns mock QA test cases and summary for testing/demo purposes',
+    path: '/qa/document/:id/mock',
+    pathParams: z.object({ id: z.coerce.number() }),
+    responses: {
+      200: R.success(QADocumentProcessingResponseSchema),
+      400: R.error,
+      401: R.error,
+      403: R.error,
+      404: R.error,
+      500: R.error,
+    },
+  },
+
+  qaTestResultUpdate: {
+    method: 'PUT' as const,
+    summary: 'Update test result status and progress',
+    description: 'Updates a test result with status, progress log, and screenshot',
+    path: '/qa/test-result/:id',
+    pathParams: z.object({ id: z.coerce.number() }),
+    body: z.object({
+      status: z.enum(['pending', 'running', 'completed', 'failed']).optional(),
+      progress_log: z
+        .array(
+          z.object({
+            step: z.number(),
+            message: z.string(),
+            timestamp: z.string(),
+            status: z.enum(['success', 'error', 'info']),
+          }),
+        )
+        .optional(),
+      screenshot_url: z.string().nullable().optional(),
+    }),
+    responses: {
+      200: R.success(QATestResultEntitySchema),
+      400: R.error,
+      401: R.error,
       404: R.error,
       500: R.error,
     },

@@ -47,6 +47,8 @@ export const LearningProgressSchema = z.object({
   edge_index_created: z.boolean(),
 });
 export const KnowledgeTypeSchema = z.enum(['document', 'video']);
+export const QADocumentStatusSchema = z.enum(['pending', 'processing', 'waiting_review', 'completed', 'failed']);
+export const QATestStatusSchema = z.enum(['pending', 'running', 'completed', 'failed']);
 export const MeetingStatusSchema = z.enum(['not_started', 'in_progress', 'ended', 'cancelled']);
 export const ChatRoleSchema = z.enum(['user', 'agent']);
 export const ChatSourceSchema = z.enum(['taskpilot', 'widget', 'app']);
@@ -147,7 +149,8 @@ export const UserEntitySchema = BaseEntitySchema.extend({
   status: EntityStatusSchema,
   role: UserRoleSchema,
   email: z.string().email(),
-  google_id: z.string().optional(),
+  external_id: z.string().optional(),
+  external_tenant_id: z.string().optional(),
   first_name: z.string().optional(),
   last_name: z.string().optional(),
   password: z.string().optional(),
@@ -389,6 +392,95 @@ export const KnowledgeEntitySchema = BaseEntitySchema.extend({
   file_type: KnowledgeTypeSchema,
   file_url: z.string(),
   source_url: z.string().optional(), // Original URL for URL-based documents
+});
+
+// ============================================================================
+// QA DOCUMENT SCHEMAS - QA document and test result management
+// ============================================================================
+
+/**
+ * QA document entity schema
+ */
+export const QADocumentEntitySchema = BaseEntitySchema.extend({
+  tenant_id: z.number(),
+  user_id: z.number(),
+  connection_id: z.number(),
+  file_name: z.string(),
+  file_size: z.number(),
+  file_type: z.string(), // MIME type
+  file_url: z.string(),
+  file_path: z.string().nullable(),
+  status: QADocumentStatusSchema,
+});
+
+/**
+ * QA document create schema
+ */
+export const QADocumentCreateSchema = z.object({
+  connection_id: z.coerce.number(),
+  file: z.custom<Express.Multer.File>().optional(),
+  text_content: z.string().optional(),
+  file_name: z.string().optional(),
+});
+
+/**
+ * QA test result entity schema
+ */
+export const QATestResultEntitySchema = BaseEntitySchema.extend({
+  tenant_id: z.number(),
+  user_id: z.number(),
+  qa_document_id: z.number(),
+  test_title: z.string(),
+  test_objective: z.string(),
+  test_steps: z.array(z.string()),
+  expected_outcome: z.string(),
+  priority: z.enum(['Low', 'Medium', 'High']).nullable(),
+  status: QATestStatusSchema,
+  progress_log: z
+    .array(
+      z.object({
+        step: z.number(),
+        message: z.string(),
+        timestamp: z.string(),
+        status: z.enum(['success', 'error', 'info']),
+      }),
+    )
+    .nullable(),
+  screenshot_url: z.string().nullable(),
+});
+
+/**
+ * QA test result create schema
+ */
+export const QATestResultCreateSchema = z.object({
+  qa_document_id: z.number(),
+  test_title: z.string(),
+  test_objective: z.string(),
+  test_steps: z.array(z.string()),
+  expected_outcome: z.string(),
+  priority: z.enum(['Low', 'Medium', 'High']).optional(),
+});
+
+/**
+ * QA document processing response schema
+ */
+export const QADocumentProcessingResponseSchema = z.object({
+  document: QADocumentEntitySchema,
+  testCases: z.array(
+    z.object({
+      id: z.number(),
+      prompt: z.string(),
+      objective: z.string().optional(),
+      steps: z.array(z.string()).optional(),
+      expectedOutcome: z.string().optional(),
+      priority: z.enum(['Low', 'Medium', 'High']).optional(),
+    }),
+  ),
+  summary: z.object({
+    total: z.number(),
+    estimatedTime: z.string(),
+    complexity: z.enum(['Low', 'Medium', 'High']),
+  }),
 });
 
 // ============================================================================
@@ -1065,6 +1157,35 @@ export const IntegrationCreateSchema = IntegrationEntitySchema.partial().extend(
 export const IntegrationUpdateSchema = IntegrationEntitySchema.partial();
 
 // ============================================================================
+// URL GUIDE SCHEMAS - URL-based guidance messages for widget
+// ============================================================================
+
+/**
+ * URL Guide entity schema - stores URL patterns and messages to show in widget
+ * message can be a string (single message) or array of strings (multiple chips)
+ */
+export const UrlGuideEntitySchema = BaseEntitySchema.extend({
+  integration_id: z.number(),
+  url_pattern: z.string(),
+  message: z.union([z.string(), z.array(z.string())]), // Support both single message and multiple messages
+  description: z.string().optional(),
+});
+
+/**
+ * URL Guide creation schema
+ */
+export const UrlGuideCreateSchema = UrlGuideEntitySchema.partial().extend({
+  integration_id: z.number().positive(),
+  url_pattern: z.string().min(1),
+  message: z.union([z.string().min(1), z.array(z.string().min(1)).min(1)]), // Support both single message and multiple messages
+});
+
+/**
+ * URL Guide update schema
+ */
+export const UrlGuideUpdateSchema = UrlGuideEntitySchema.partial();
+
+// ============================================================================
 // TOUR SCHEMAS - Interactive tour and guidance system
 // ============================================================================
 
@@ -1624,6 +1745,9 @@ export type ConnectionWithIntegrationsData = z.infer<typeof ConnectionWithIntegr
 export type IntegrationData = z.infer<typeof IntegrationEntitySchema>;
 export type IntegrationCreateData = z.infer<typeof IntegrationCreateSchema>;
 export type IntegrationUpdateData = z.infer<typeof IntegrationUpdateSchema>;
+export type UrlGuideData = z.infer<typeof UrlGuideEntitySchema>;
+export type UrlGuideCreateData = z.infer<typeof UrlGuideCreateSchema>;
+export type UrlGuideUpdateData = z.infer<typeof UrlGuideUpdateSchema>;
 export type WidgetSettingsData = z.infer<typeof WidgetSettingsDataSchema>;
 export type SlackSettingsData = z.infer<typeof SlackSettingsDataSchema>;
 export type WidgetSettingsKey = keyof z.infer<typeof WidgetSettingsDataSchema>;
@@ -1646,6 +1770,9 @@ export type TourAnswerData = z.infer<typeof TourAnswerSchema>;
 export type TourStepData = z.infer<typeof TourStepSchema>;
 export type PasswordResetData = z.infer<typeof PasswordResetEntitySchema>;
 export type ChatData = z.infer<typeof ChatEntitySchema>;
+export type QADocumentData = z.infer<typeof QADocumentEntitySchema>;
+export type QATestResultData = z.infer<typeof QATestResultEntitySchema>;
+export type QADocumentProcessingResponseData = z.infer<typeof QADocumentProcessingResponseSchema>;
 export type UserQuotaData = z.infer<typeof UserQuotaSchema>;
 export type SubscriptionUsageData = z.infer<typeof SubscriptionUsageSchema>;
 export type SimulationProgressData = z.infer<typeof SimulationProgressEntitySchema>;
