@@ -150,7 +150,6 @@ export const UserEntitySchema = BaseEntitySchema.extend({
   role: UserRoleSchema,
   email: z.string().email(),
   external_id: z.string().optional(),
-  external_tenant_id: z.string().optional(),
   first_name: z.string().optional(),
   last_name: z.string().optional(),
   password: z.string().optional(),
@@ -1653,6 +1652,25 @@ export const StripePricingSchema = z.object({
   lastUpdated: z.string().datetime(),
 });
 
+/**
+ * Stripe configuration schema for frontend
+ */
+export const StripeConfigSchema = z.object({
+  publishableKey: z.string(),
+  priceIds: z.object({
+    starter: z.object({
+      monthly: z.string().nullable(),
+      annual: z.string().nullable(),
+    }),
+    growth: z.object({
+      monthly: z.string().nullable(),
+      annual: z.string().nullable(),
+    }),
+  }),
+  trialDays: z.number().int().min(0),
+  calendlyUrl: z.string(),
+});
+
 // ============================================================================
 // TYPE EXPORTS - Essential TypeScript types for external use
 // ============================================================================
@@ -1793,3 +1811,4 @@ export type TrialSubscriptionData = z.infer<typeof TrialSubscriptionSchema>;
 export type PriceAmountData = z.infer<typeof PriceAmountSchema>;
 export type PlanPricingData = z.infer<typeof PlanPricingSchema>;
 export type StripePricingData = z.infer<typeof StripePricingSchema>;
+export type StripeConfigData = z.infer<typeof StripeConfigSchema>;

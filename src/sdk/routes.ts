@@ -94,6 +94,7 @@ import {
   SimulationUpdateSchema,
   SlackSettingsDataSchema,
   StripeCheckoutSchema,
+  StripeConfigSchema,
   StripeDowngradeResponseSchema,
   StripeDowngradeSchema,
   StripePortalSchema,
@@ -1674,6 +1675,17 @@ const contract = c.router({
     path: '/stripe/pricing',
     responses: {
       200: R.success(StripePricingSchema),
+      500: R.error,
+    },
+  },
+
+  stripeGetConfig: {
+    method: 'GET' as const,
+    summary: 'Get Stripe configuration for frontend',
+    description: 'Returns Stripe publishable key, price IDs, and trial days configuration for frontend use.',
+    path: '/stripe/config',
+    responses: {
+      200: R.success(StripeConfigSchema),
       500: R.error,
     },
   },
