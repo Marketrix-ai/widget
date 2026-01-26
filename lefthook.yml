@@ -1,0 +1,11 @@
+# Lefthook git hooks configuration
+# https://github.com/evilmartians/lefthook
+
+pre-commit:
+  commands:
+    type-check:
+      run: npm run check
+    lint-staged:
+      run: npx lint-staged
+    build:
+      run: npm run build
