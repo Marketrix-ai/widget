@@ -172,7 +172,7 @@ git clone <repository-url>
 cd widget
 ```
 
-2. Install dependencies:
+2. Install dependencies (git hooks auto-installed):
 
 ```bash
 npm install

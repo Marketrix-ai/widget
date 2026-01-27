@@ -1,6 +1,6 @@
 {
   "name": "@marketrix.ai/widget",
-  "version": "1.0.39",
+  "version": "1.0.40",
   "description": "Marketrix AI-Native Support Widget: Show, Tell, Do",
   "type": "module",
   "main": "./dist/index.mjs",
@@ -18,6 +18,7 @@
     "dist"
   ],
   "scripts": {
+    "prepare": "lefthook install",
     "start": "vite",
     "build": "vite build && BUILD_MODE=standalone vite build",
     "check": "tsc --noEmit",

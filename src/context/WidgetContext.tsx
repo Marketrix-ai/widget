@@ -207,6 +207,20 @@ export const WidgetProvider: React.FC<WidgetProviderProps> = ({ children, previe
         }
         processedRequestIds.current.add(requestId);
 
+        // Reject tool calls when widget is not running a task
+        if (!state.isTaskRunning) {
+          console.warn('[Widget] Tool call received but no task running, rejecting');
+          const response: ToolResponse = {
+            id: requestId,
+            success: false,
+            data: { text: '' },
+            error: 'widget_task_inactive',
+            stateVersion: stateVersion.current,
+          };
+          wsClient.send(response as unknown as WebSocketMessage);
+          return;
+        }
+
         const toolName = request.tool;
         const args = request.args;
         const mode = request.mode || state.currentMode || 'do';
