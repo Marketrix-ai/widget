@@ -23,7 +23,8 @@
     "build": "vite build && BUILD_MODE=standalone vite build",
     "check": "tsc --noEmit",
     "lint": "eslint . --ext .ts,.tsx --max-warnings 200 --fix",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "code:check": "npm run check && npm run build"
   },
   "dependencies": {
     "@rrweb/record": "^2.0.0-alpha.18",

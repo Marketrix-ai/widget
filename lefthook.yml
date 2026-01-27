@@ -9,3 +9,8 @@ pre-commit:
       run: npx lint-staged
     build:
       run: npm run build
+
+pre-push:
+  commands:
+    code-check:
+      run: npm run code:check
