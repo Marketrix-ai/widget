@@ -65,6 +65,10 @@ interface WidgetProviderProps {
 export const WidgetProvider: React.FC<WidgetProviderProps> = ({ children, previewMode = false }) => {
   const stateVersion = useRef(0);
   const processedRequestIds = useRef(new Set<string>());
+  const isTaskRunningRef = useRef(false);
+  // Track both conditions for task start: HTTP response and WebSocket notification
+  const taskIdFromApiRef = useRef<string | null>(null);
+  const taskStartedFromAgentRef = useRef(false);
 
   const [state, setState] = useState<WidgetState>({
     isOpen: false,
@@ -91,11 +95,13 @@ export const WidgetProvider: React.FC<WidgetProviderProps> = ({ children, previe
       chatService.createInitialContext(chatId);
 
       chatService.initialize(chatId);
+      const isTaskRunning = chatService.getIsTaskRunning();
+      isTaskRunningRef.current = isTaskRunning; // Initialize ref
       setState(prev => ({
         ...prev,
         messages: chatService.getMessages(),
         isLoading: chatService.getIsLoading(),
-        isTaskRunning: chatService.getIsTaskRunning(),
+        isTaskRunning,
         activeTaskId: chatService.getActiveTaskId(),
         taskProgress: chatService.getTaskProgress(),
         currentMode: chatService.getCurrentMode(),
@@ -208,7 +214,8 @@ export const WidgetProvider: React.FC<WidgetProviderProps> = ({ children, previe
         processedRequestIds.current.add(requestId);
 
         // Reject tool calls when widget is not running a task
-        if (!state.isTaskRunning) {
+        // Use ref to get latest value (avoid stale closure)
+        if (!isTaskRunningRef.current) {
           console.warn('[Widget] Tool call received but no task running, rejecting');
           const response: ToolResponse = {
             id: requestId,
@@ -260,8 +267,13 @@ export const WidgetProvider: React.FC<WidgetProviderProps> = ({ children, previe
             updateProgressForTool(toolName, explanation, 'completed');
             // If the "done" tool completed successfully, mark the task as complete
             if (toolName === 'done' && result.success) {
+              // Reset both flags when task ends
+              taskIdFromApiRef.current = null;
+              taskStartedFromAgentRef.current = false;
+
               setState(prev => {
                 chatService.setTaskState(false, null, []);
+                isTaskRunningRef.current = false; // Update ref immediately
                 // Find the task message and update its taskStatus
                 const found = findMessageForProgress({
                   messages: prev.messages,
@@ -345,17 +357,29 @@ export const WidgetProvider: React.FC<WidgetProviderProps> = ({ children, previe
         if (status === 'started') {
           // Extract task_id from params if present
           const taskId = (params as { task_id?: string }).task_id || null;
+          taskStartedFromAgentRef.current = true;
 
-          setState(prev => {
-            chatService.setTaskState(true, taskId, []);
-            return {
-              ...prev,
-              isTaskRunning: true,
-              activeTaskId: taskId,
-              taskProgress: [],
-            };
-          });
+          // Only mark task as started if both conditions are met:
+          // 1. API responded with task_id (stored in taskIdFromApiRef)
+          // 2. Agent sent "started" status via WebSocket (just received)
+          const finalTaskId = taskIdFromApiRef.current || taskId;
+          if (taskIdFromApiRef.current) {
+            setState(prev => {
+              chatService.setTaskState(true, finalTaskId, []);
+              isTaskRunningRef.current = true; // Update ref immediately
+              return {
+                ...prev,
+                isTaskRunning: true,
+                activeTaskId: finalTaskId,
+                taskProgress: [],
+              };
+            });
+          }
+          // If API hasn't responded yet, we'll start when it does (handled in sendMessage)
         } else if (status === 'completed' || status === 'failed' || status === 'stopped') {
+          // Reset both flags when task ends
+          taskIdFromApiRef.current = null;
+          taskStartedFromAgentRef.current = false;
           setState(prev => {
             chatService.setTaskState(false, null, []);
             // Find the task message and update its taskStatus
@@ -381,6 +405,7 @@ export const WidgetProvider: React.FC<WidgetProviderProps> = ({ children, previe
               };
               chatService.setMessages(newMessages);
             }
+            isTaskRunningRef.current = false; // Update ref immediately
             return {
               ...prev,
               messages: newMessages,
@@ -423,6 +448,10 @@ export const WidgetProvider: React.FC<WidgetProviderProps> = ({ children, previe
 
   const resetState = useCallback(() => {
     chatService.clearMessages();
+    // Reset both flags
+    taskIdFromApiRef.current = null;
+    taskStartedFromAgentRef.current = false;
+    isTaskRunningRef.current = false; // Update ref immediately
     setState(prev => ({
       ...prev,
       messages: [],
@@ -552,28 +581,36 @@ export const WidgetProvider: React.FC<WidgetProviderProps> = ({ children, previe
           return { ...prev, messages: newMessages };
         });
 
-        // If task started (task_id present), update state
+        // If task_id present in API response, store it and check if we can start
         if (response.task_id) {
-          setState(prev => {
-            // Find the placeholder message and set taskStatus to 'ongoing'
-            const placeholderIndex = prev.messages.findIndex(msg => msg.id === placeholderId);
-            const newMessages = [...prev.messages];
-            if (placeholderIndex >= 0) {
-              newMessages[placeholderIndex] = {
-                ...newMessages[placeholderIndex],
-                taskStatus: 'ongoing',
+          taskIdFromApiRef.current = response.task_id;
+
+          // Only mark task as started if both conditions are met:
+          // 1. API responded with task_id (just received)
+          // 2. Agent sent "started" status via WebSocket
+          if (taskStartedFromAgentRef.current) {
+            setState(prev => {
+              // Find the placeholder message and set taskStatus to 'ongoing'
+              const placeholderIndex = prev.messages.findIndex(msg => msg.id === placeholderId);
+              const newMessages = [...prev.messages];
+              if (placeholderIndex >= 0) {
+                newMessages[placeholderIndex] = {
+                  ...newMessages[placeholderIndex],
+                  taskStatus: 'ongoing',
+                };
+                chatService.setMessages(newMessages);
+              }
+              chatService.setTaskState(true, response.task_id || null, []);
+              isTaskRunningRef.current = true; // Update ref immediately
+              return {
+                ...prev,
+                messages: newMessages,
+                activeTaskId: response.task_id || null,
+                isTaskRunning: true,
+                taskProgress: [],
               };
-              chatService.setMessages(newMessages);
-            }
-            chatService.setTaskState(true, response.task_id || null, []);
-            return {
-              ...prev,
-              messages: newMessages,
-              activeTaskId: response.task_id || null,
-              isTaskRunning: true,
-              taskProgress: [],
-            };
-          });
+            });
+          }
         }
       } catch (error) {
         console.error('Failed to send message:', error);
@@ -682,6 +719,10 @@ export const WidgetProvider: React.FC<WidgetProviderProps> = ({ children, previe
           if (!previewMode) {
             chatService.setTaskState(false, null, []);
           }
+          // Reset both flags when task ends
+          taskIdFromApiRef.current = null;
+          taskStartedFromAgentRef.current = false;
+          isTaskRunningRef.current = false; // Update ref immediately
           return {
             ...prev,
             messages: newMessages,
