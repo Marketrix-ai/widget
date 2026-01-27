@@ -337,12 +337,25 @@ export const WidgetProvider: React.FC<WidgetProviderProps> = ({ children, previe
           // Don't show failed tool calls in chat - agent loop continues
         }
       } else if (message.method === 'task/status') {
-        // Handle task status updates (completed, failed, stopped)
+        // Handle task status updates (started, completed, failed, stopped)
         const params = message.params as { status: string; message?: string; timestamp?: string };
         const status = params?.status;
         const statusMessage = params?.message || '';
 
-        if (status === 'completed' || status === 'failed' || status === 'stopped') {
+        if (status === 'started') {
+          // Extract task_id from params if present
+          const taskId = (params as { task_id?: string }).task_id || null;
+
+          setState(prev => {
+            chatService.setTaskState(true, taskId, []);
+            return {
+              ...prev,
+              isTaskRunning: true,
+              activeTaskId: taskId,
+              taskProgress: [],
+            };
+          });
+        } else if (status === 'completed' || status === 'failed' || status === 'stopped') {
           setState(prev => {
             chatService.setTaskState(false, null, []);
             // Find the task message and update its taskStatus
