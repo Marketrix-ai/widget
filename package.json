@@ -18,7 +18,7 @@
     "dist"
   ],
   "scripts": {
-    "prepare": "lefthook install",
+    "prepare": "lefthook install || true",
     "start": "vite",
     "build": "vite build && BUILD_MODE=standalone vite build",
     "check": "tsc --noEmit",
