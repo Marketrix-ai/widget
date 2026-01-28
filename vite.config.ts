@@ -228,7 +228,7 @@ export default defineConfig(({ command }) => {
     plugins: [react(), tailwindcss(), devWidgetPlugin()],
     root: '.',
     server: {
-      port: 5174,
+      port: parseInt(process.env.PORT || process.env.VITE_PORT || '5174', 10),
       cors: true,
       headers: { 'Access-Control-Allow-Origin': '*' },
     },
