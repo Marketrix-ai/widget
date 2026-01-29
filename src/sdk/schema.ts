@@ -40,11 +40,15 @@ export const TenantPackageSchema = z.enum(['free', 'starter', 'growth', 'enterpr
 export const AgentTypeSchema = z.enum(['human', 'ai']);
 export const AgentVoiceSchema = z.enum(['male', 'female']);
 export const AgentStatusSchema = z.enum(['active', 'learning', 'error']);
+// Learning progress uses nullable boolean:
+// - null: callback not yet received
+// - true: callback received with success
+// - false: callback received with failure
 export const LearningProgressSchema = z.object({
-  vector_index_created: z.boolean(),
-  mindmap_created: z.boolean(),
-  node_index_created: z.boolean(),
-  edge_index_created: z.boolean(),
+  vector_index_created: z.boolean().nullable(),
+  mindmap_created: z.boolean().nullable(),
+  node_index_created: z.boolean().nullable(),
+  edge_index_created: z.boolean().nullable(),
 });
 export const KnowledgeTypeSchema = z.enum(['document', 'video']);
 export const QADocumentStatusSchema = z.enum(['pending', 'processing', 'waiting_review', 'completed', 'failed']);
