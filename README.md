@@ -1,26 +1,23 @@
 # Marketrix In-App Support Widget
 
 A modern, React-based in-app support widget for Marketrix that provides Show,
-Tell, and Do modes with advanced features like screen sharing, tour
-functionality, and API-driven configuration. Designed for easy integration into
-any website using a simple script tag.
+Tell, and Do modes with AI-powered assistance. Designed for easy integration
+into any website using a simple script tag.
 
 ## Features
 
 - 🎯 **Three Interaction Modes**: Show, Tell, and Do
-- 🎨 **Modern UI**: Built with React 18 and Tailwind CSS
-- 🌙 **Theme Support**: Light and dark themes with custom theming
+- 🎨 **Modern UI**: Built with React 19 and Tailwind CSS v4
+- 🌙 **Theme Support**: Customizable colors and appearance
 - 📱 **Responsive Design**: Works on desktop, tablet, and mobile
 - ⚙️ **API-Driven Configuration**: Dynamic settings from integration service
 - 🔌 **Easy Integration**: Simple script tag integration
 - 🚀 **TypeScript**: Full TypeScript support with comprehensive type definitions
 - 📦 **Standalone**: Single file bundle with no external dependencies
-- 🎥 **Screen Sharing**: Built-in screen sharing and recording capabilities
-- 🗺️ **Tour System**: Interactive tour functionality with step-by-step guidance
-- 🎛️ **Atmosphere Config**: Advanced widget atmosphere and behavior control
-- 🏷️ **Widget Chips**: Quick action chips for common tasks
-- 🔄 **Auto-Refresh**: Dynamic configuration updates
-- 🎭 **Demo Mode**: Built-in demo mode for testing
+- 🎥 **Session Recording**: Built-in RRWeb session recording capabilities
+- 🔒 **Shadow DOM Isolation**: CSS isolation prevents conflicts with host app
+- 🎛️ **Widget Chips**: Quick action chips for common tasks
+- 🔄 **WebSocket Communication**: Real-time AI agent communication
 
 ## Quick Start
 
@@ -30,7 +27,7 @@ Add the widget to your HTML page using a script tag:
 
 ```html
 <script
-  src="path/to/index.mjs"
+  src="https://cdn.marketrix.io/widget/index.mjs"
   mtx-ai-host="https://agent.marketrix.ai"
   mtx-api-host="https://api.marketrix.ai"
   mtx-id="your-marketrix-id"
@@ -38,130 +35,167 @@ Add the widget to your HTML page using a script tag:
 ></script>
 ```
 
-### Configuration Options
+### Alternative: Dev Mode (Agent & Connection IDs)
 
-You can customize the widget using data attributes:
+For development/testing with direct agent and connection IDs:
 
 ```html
 <script
-  src="path/to/index.mjs"
+  src="https://cdn.marketrix.io/widget/dev/index.mjs"
   mtx-ai-host="https://agent.marketrix.ai"
   mtx-api-host="https://api.marketrix.ai"
-  mtx-id="your-marketrix-id"
-  mtx-key="your-marketrix-key"
+  mtx-app="YOUR_CONNECTION_ID"
+  mtx-agent="YOUR_AGENT_ID"
 ></script>
 ```
 
 ## Configuration Options
 
-### Basic Configuration
+### Script Attributes
 
-| Option         | Type   | Required | Default                  | Description                                                                      |
-| -------------- | ------ | -------- | ------------------------ | -------------------------------------------------------------------------------- |
-| `marketrixId`  | string | ✅       | -                        | Your Marketrix account ID                                                        |
-| `marketrixKey` | string | ✅       | -                        | Your Marketrix API key                                                           |
-| `apiBaseUrl`   | string | ❌       | `http://localhost:8080`  | API base URL override                                                            |
-| `position`     | string | ❌       | `'bottom_right'`         | Widget position (`'bottom_right'`, `'bottom_left'`, `'top-right'`, `'top-left'`) |
-| `theme`        | string | ❌       | `'light'`                | Theme (`'light'` or `'dark'`)                                                    |
-| `avatarUrl`    | string | ❌       | -                        | URL to the agent's avatar image                                                  |
-| `agentName`    | string | ❌       | `'Support Agent'`        | Display name for the support agent                                               |
-| `enabledModes` | array  | ❌       | `['show', 'tell', 'do']` | Array of enabled modes                                                           |
+| Attribute      | Type   | Required | Description                                     |
+| -------------- | ------ | -------- | ----------------------------------------------- |
+| `mtx-id`       | string | ✅\*     | Your Marketrix ID (production mode)             |
+| `mtx-key`      | string | ✅\*     | Your Marketrix API key (production mode)        |
+| `mtx-app`      | number | ✅\*     | Connection/App ID (dev mode)                    |
+| `mtx-agent`    | number | ✅\*     | Agent ID (dev mode)                             |
+| `mtx-api-host` | string | ✅       | API server URL (e.g., https://api.marketrix.ai) |
+| `mtx-ai-host`  | string | ✅       | AI/Agent server URL for WebSocket connection    |
 
-### Advanced Configuration
+\*Either `mtx-id` + `mtx-key` (production) OR `mtx-app` + `mtx-agent` (dev) must
+be provided.
 
-The widget supports extensive configuration through the atmosphere system and
-integration service:
+### Widget Settings (from API)
 
-#### Widget Customization
+Widget appearance and behavior are configured through the API. Settings include:
 
-- **Colors**: Primary, secondary, background, text, border colors
-- **Sizes**: Width, height, border radius, font size
-- **Animations**: Slide duration, fade duration, bounce effects
-- **Shadows**: Custom shadow configurations
-- **Z-index**: Layering control
-
-#### Device Visibility
-
-- **Desktop**: Show/hide on desktop
-- **Tablet**: Show/hide on tablet
-- **Mobile**: Show/hide on mobile
-
-#### Advanced Settings
-
-- **Auto-open delay**: Delay before auto-opening
-- **Session timeout**: Session timeout duration
-- **Max messages**: Maximum message history
-- **Typing indicator**: Show typing indicators
-- **Read receipts**: Enable read receipts
-- **Sound notifications**: Audio notifications
-- **Vibration**: Haptic feedback
-
-#### Widget Chips
-
-Quick action chips for common tasks:
-
-```typescript
-interface WidgetChipConfig {
-  chip_mode: 'show' | 'tell' | 'do';
-  chip_text: string;
-  type?: string;
-  question?: string;
-}
-```
+- **Appearance**: Position, colors, border radius, shadows, dimensions
+- **Features**: Enable/disable Tell, Show, Do modes, human handoff
+- **Device Visibility**: Desktop, mobile, or both
+- **Text**: Header, body, greeting messages
+- **Chips**: Quick action buttons with predefined questions
 
 ## Interaction Modes
 
-### Show Mode
-
-The agent will demonstrate how to perform a task or show you the steps to
-accomplish something. Includes interactive tour functionality with step-by-step
-guidance.
-
 ### Tell Mode
 
-The agent will explain concepts, provide information, or answer questions with
+The agent explains concepts, provides information, or answers questions with
 detailed explanations.
+
+### Show Mode
+
+The agent demonstrates how to perform a task with step-by-step guidance and
+visual highlighting of UI elements.
 
 ### Do Mode
 
-The agent will perform actions on your behalf or execute tasks for you,
-including screen sharing capabilities for remote assistance.
+The agent performs actions on your behalf using browser automation tools,
+including clicking, typing, scrolling, and navigating.
 
-## API Integration
+## Programmatic Usage
 
-The widget communicates with the Marketrix API using the following endpoints:
+### ES Module Import
 
-### Core Endpoints
+```typescript
+import { initWidget, unmountWidget, mountWidget, MarketrixWidget, getCurrentConfig } from '@marketrix.ai/widget';
 
-- `GET /integration` - Fetch integration settings and widget configuration
-- `GET /tour` - Fetch tour data for specific connections
-- `GET /agent/status` - Check agent availability
-- `GET /agent/info` - Get agent information
+// Initialize with production credentials
+await initWidget({
+  mtxId: 'your-marketrix-id',
+  mtxKey: 'your-marketrix-key',
+  mtxApiHost: 'https://api.marketrix.ai',
+  mtxAiHost: 'https://agent.marketrix.ai',
+});
 
-### Integration Service
+// Or initialize with dev credentials
+await initWidget({
+  mtxApp: 123,
+  mtxAgent: 456,
+  mtxApiHost: 'https://api.marketrix.ai',
+  mtxAiHost: 'https://agent.marketrix.ai',
+});
 
-The widget includes a comprehensive integration service that:
+// Destroy widget
+unmountWidget();
+```
 
-- Fetches widget configuration from the API
-- Converts integration settings to atmosphere configuration
-- Manages tour data for connections
-- Auto-configures widget based on API settings
-- Supports dynamic configuration updates
+### React Component (Preview Mode)
 
-### Authentication
+```tsx
+import { MarketrixWidget } from '@marketrix.ai/widget';
 
-The widget supports multiple authentication methods:
+function App() {
+  return (
+    <MarketrixWidget
+      settings={{
+        widget_enabled: true,
+        widget_appearance: 'default',
+        widget_position: 'bottom_right',
+        widget_device: 'desktop_mobile',
+        widget_header: 'AI Assistant',
+        widget_body: 'How can I help you today?',
+        widget_greeting: 'Hello! Ask me anything.',
+        widget_feature_tell: true,
+        widget_feature_show: true,
+        widget_feature_do: true,
+        widget_feature_human: false,
+        widget_background_color: '#ffffff',
+        widget_text_color: '#1f2937',
+        widget_border_color: '#e5e7eb',
+        widget_accent_color: '#3b82f6',
+        widget_secondary_color: '#6b7280',
+        widget_border_radius: '16px',
+        widget_font_size: '14px',
+        widget_width: '400px',
+        widget_height: '600px',
+        widget_shadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+        widget_animation_duration: '300ms',
+        widget_fade_duration: '200ms',
+        widget_bounce_effect: true,
+        widget_chips: [],
+      }}
+      mtxApiHost='https://api.marketrix.ai'
+      mtxAiHost='https://agent.marketrix.ai'
+    />
+  );
+}
+```
 
-- URL parameters: `marketrix_id` and `marketrix_key`
-- Headers: `X-Marketrix-ID` and `X-Marketrix-Key`
-- Authorization: `Bearer` token
+### Mount Widget with Auto-Mode Detection
+
+```typescript
+import { mountWidget } from '@marketrix.ai/widget';
+
+// Production mode
+await mountWidget({
+  mtxId: 'your-id',
+  mtxKey: 'your-key',
+  mtxApiHost: 'https://api.marketrix.ai',
+  mtxAiHost: 'https://agent.marketrix.ai',
+});
+
+// Dev mode
+await mountWidget({
+  mtxApp: 123,
+  mtxAgent: 456,
+  mtxApiHost: 'https://api.marketrix.ai',
+  mtxAiHost: 'https://agent.marketrix.ai',
+});
+
+// Preview mode (with settings directly)
+await mountWidget({
+  settings: widgetSettings,
+  mtxApiHost: 'https://api.marketrix.ai',
+  mtxAiHost: 'https://agent.marketrix.ai',
+});
+```
 
 ## Development
 
 ### Prerequisites
 
-- Node.js 16+
-- npm or yarn
+- Node.js 18+
+- npm
 
 ### Setup
 
@@ -172,7 +206,7 @@ git clone <repository-url>
 cd widget
 ```
 
-2. Install dependencies (git hooks auto-installed):
+2. Install dependencies (git hooks auto-installed via lefthook):
 
 ```bash
 npm install
@@ -181,7 +215,7 @@ npm install
 3. Start development server:
 
 ```bash
-npm run dev
+npm start
 ```
 
 4. Build for production:
@@ -190,7 +224,59 @@ npm run dev
 npm run build
 ```
 
-5. Build and run debug tool:
+### Testing Widget on Any Website
+
+#### Option 1: Bookmarklet (Quick Testing)
+
+Build and serve the widget locally:
+
+```bash
+npm run build
+npx serve dist -l 5174 --cors
+```
+
+Create a bookmark with this URL:
+
+```javascript
+javascript: (function () {
+  var s = document.createElement('script');
+  s.src = 'http://localhost:5174/index.mjs';
+  s.setAttribute('mtx-ai-host', 'https://agent.marketrix.ai');
+  s.setAttribute('mtx-api-host', 'https://api.marketrix.ai');
+  s.setAttribute('mtx-app', 'YOUR_CONNECTION_ID');
+  s.setAttribute('mtx-agent', 'YOUR_AGENT_ID');
+  document.head.appendChild(s);
+})();
+```
+
+#### Option 2: HTTPS Dev Server
+
+```bash
+npm start
+```
+
+First visit `https://localhost:5173` and accept the certificate, then use:
+
+```javascript
+javascript: (function () {
+  var s = document.createElement('script');
+  s.src = 'https://localhost:5173/index.mjs';
+  s.setAttribute('mtx-ai-host', 'https://agent.marketrix.ai');
+  s.setAttribute('mtx-api-host', 'https://api.marketrix.ai');
+  s.setAttribute('mtx-app', 'YOUR_CONNECTION_ID');
+  s.setAttribute('mtx-agent', 'YOUR_AGENT_ID');
+  document.head.appendChild(s);
+})();
+```
+
+#### Option 3: Chrome Extension
+
+See [chrome-extension/README.md](chrome-extension/README.md) for persistent
+widget injection across page navigations.
+
+### Debug Tools
+
+Build and run debug tool for testing browser tools:
 
 ```bash
 npm run build:debug
@@ -207,377 +293,198 @@ javascript: (function () {
 })();
 ```
 
+Press `Ctrl+Shift+D` to toggle the debug panel.
+
 See [docs/DEBUG_PANEL_USAGE.md](docs/DEBUG_PANEL_USAGE.md) for detailed debug
 panel documentation.
-
-### Testing Widget on Any Website
-
-You can inject the widget into any website for testing using bookmarklets or
-Tampermonkey.
-
-#### Option 1: Bookmarklet (Quick Testing)
-
-Create a bookmark with the following URL:
-
-**Local Development (using built version):**
-
-```bash
-npm run build:dev
-npx serve dist -l 5174 --cors
-```
-
-```javascript
-javascript: (function () {
-  var s = document.createElement('script');
-  s.src = 'http://localhost:5174/index.mjs';
-  s.setAttribute('mtx-ai-host', 'https://agent.marketrix.ai');
-  s.setAttribute('mtx-api-host', 'https://api.marketrix.ai');
-  s.setAttribute('mtx-app', 'YOUR_APP_ID');
-  s.setAttribute('mtx-agent', 'YOUR_AGENT_ID');
-  document.head.appendChild(s);
-})();
-```
-
-**Local Development (using dev server with HTTPS):**
-
-```bash
-npm start
-```
-
-First visit `https://localhost:5174` and accept the certificate, then use:
-
-```javascript
-javascript: (function () {
-  var s = document.createElement('script');
-  s.src = 'https://localhost:5174/index.mjs';
-  s.setAttribute('mtx-ai-host', 'https://agent.marketrix.ai');
-  s.setAttribute('mtx-api-host', 'https://api.marketrix.ai');
-  s.setAttribute('mtx-app', 'YOUR_APP_ID');
-  s.setAttribute('mtx-agent', 'YOUR_AGENT_ID');
-  document.head.appendChild(s);
-})();
-```
-
-**Production CDN:**
-
-```javascript
-javascript: (function () {
-  var s = document.createElement('script');
-  s.src = 'https://cdn.marketrix.io/widget/dev/index.mjs';
-  s.setAttribute('mtx-ai-host', 'https://agent.marketrix.ai');
-  s.setAttribute('mtx-api-host', 'https://api.marketrix.ai');
-  s.setAttribute('mtx-app', 'YOUR_APP_ID');
-  s.setAttribute('mtx-agent', 'YOUR_AGENT_ID');
-  document.head.appendChild(s);
-})();
-```
-
-#### Option 2: Tampermonkey (Auto-Inject on Specific Sites)
-
-Install [Tampermonkey](https://www.tampermonkey.net/) browser extension, then
-create a new script:
-
-```javascript
-// ==UserScript==
-// @name         Marketrix Widget Loader
-// @namespace    http://tampermonkey.net/
-// @version      1.0
-// @description  Load Marketrix widget on specific websites
-// @author       Marketrix
-// @match        https://www.example.com/*
-// @grant        none
-// @run-at       document-end
-// ==/UserScript==
-(function () {
-  'use strict';
-  var script = document.createElement('script');
-  // Use one of the following sources:
-  // Local dev server (HTTPS): script.src = "https://localhost:5174/index.mjs";
-  // Local built version: script.src = "http://localhost:5174/index.mjs";
-  // Production CDN:
-  script.src = 'https://cdn.marketrix.io/widget/dev/index.mjs';
-  s.setAttribute('mtx-ai-host', 'https://agent.marketrix.ai');
-  s.setAttribute('mtx-api-host', 'https://api.marketrix.ai');
-  script.setAttribute('mtx-app', 'YOUR_APP_ID');
-  script.setAttribute('mtx-agent', 'YOUR_AGENT_ID');
-  document.head.appendChild(script);
-})();
-```
-
-**Notes:**
-
-- Replace `YOUR_AGENT_ID` and `YOUR_CONNECTION_ID` with your actual values
-- Change the `@match` pattern to target specific websites (e.g.,
-  `https://www.google.com/*`)
-- For HTTPS sites with local dev server, you must first visit
-  `https://localhost:5174` and accept the SSL certificate
 
 ### Project Structure
 
 ```
 widget/
 ├── src/
-│   ├── components/          # React components
-│   │   ├── ChatWindow.tsx   # Main chat interface
-│   │   ├── WidgetButton.tsx # Widget toggle button
-│   │   ├── MessageList.tsx  # Message display
-│   │   ├── MessageInput.tsx # Message input
-│   │   ├── ModeSelector.tsx # Mode selection
-│   │   ├── ScreenAccessModal.tsx # Screen sharing modal
-│   │   ├── ScreenSharePreview.tsx # Screen share preview
-│   │   └── DemoWidgetWrapper.tsx # Demo wrapper
-│   ├── hooks/              # Custom React hooks
-│   │   ├── useMarketrixWidget.ts # Main widget logic
-│   │   ├── useWidgetAtmosphere.ts # Atmosphere configuration
-│   │   └── useIntegrationSettings.ts # Integration settings
-│   ├── services/           # API services
-│   │   ├── api.ts          # Main API service
-│   │   ├── demo-api.ts     # Demo API service
-│   │   ├── integration-settings.ts # Integration settings service
-│   │   ├── integrationService.ts # Integration service
-│   │   └── tourService.ts   # Tour service
-│   ├── sdk/                # SDK components
-│   │   ├── integrationService.ts # Integration service
-│   │   ├── routes.ts       # API routes
-│   │   └── schema.ts       # Schema definitions
-│   ├── types/              # TypeScript type definitions
-│   │   ├── index.ts        # Main types
-│   │   └── assets.d.ts     # Asset types
-│   ├── utils/              # Utility functions
-│   │   ├── ConfigManager.ts # Configuration management
-│   │   ├── formatting.ts   # Text formatting
-│   │   ├── highlighting.ts # Syntax highlighting
-│   │   └── positioning.ts  # Widget positioning
-│   ├── config/             # Configuration files
-│   │   └── widget-atmosphere.ts # Atmosphere configuration
-│   ├── assets/             # Static assets
-│   │   ├── marketrix-icon.png
-│   │   ├── marketrix-logo.png
-│   │   ├── marktrix-footer.png
-│   │   └── send.png
-│   ├── index.css           # Global styles
-│   └── index.tsx           # Main entry point
-├── vite.config.ts          # Vite configuration
-├── tailwind.config.js      # Tailwind configuration
-└── dist/                   # Build output
-    ├── index.mjs           # Main widget bundle (IIFE)
-    └── index.html          # Demo page
+│   ├── components/           # React components
+│   │   ├── chat/             # Chat UI components
+│   │   │   ├── ChatWindow.tsx
+│   │   │   ├── MessageContent.tsx
+│   │   │   ├── MessageItem.tsx
+│   │   │   ├── MessageList.tsx
+│   │   │   ├── ProgressLine.tsx
+│   │   │   ├── SuggestedActions.tsx
+│   │   │   ├── TaskStatusIcon.tsx
+│   │   │   ├── ThinkingIndicator.tsx
+│   │   │   ├── VideoStreamDisplay.tsx
+│   │   │   └── WelcomeMessage.tsx
+│   │   ├── debug/            # Debug panel (dev only)
+│   │   │   └── DebugPanel.tsx
+│   │   ├── dev/              # Dev testing components
+│   │   │   └── DomTestPanel.tsx
+│   │   ├── input/            # Input components
+│   │   │   ├── MessageInput.tsx
+│   │   │   └── ModeSelector.tsx
+│   │   ├── layout/           # Layout components
+│   │   │   └── WidgetButton.tsx
+│   │   ├── ui/               # UI utility components
+│   │   │   ├── DiagnosticModal.tsx
+│   │   │   ├── ErrorDisplay.tsx
+│   │   │   ├── ScreenAccessModal.tsx
+│   │   │   └── WidgetSettingsLoader.tsx
+│   │   ├── BrowserTools.tsx
+│   │   └── MarketrixWidget.tsx
+│   ├── context/              # React context
+│   │   └── WidgetContext.tsx
+│   ├── hooks/                # Custom React hooks
+│   │   ├── usePageLifecycle.ts
+│   │   ├── useTaskState.ts
+│   │   └── useWidget.ts
+│   ├── services/             # Core services
+│   │   ├── ApiService.ts
+│   │   ├── ChatService.ts
+│   │   ├── ConfigManager.ts
+│   │   ├── DevTestService.ts
+│   │   ├── DomService.ts
+│   │   ├── IntegrationService.ts
+│   │   ├── ScreenShareService.ts
+│   │   ├── SessionManager.ts
+│   │   ├── SessionRecorder.ts
+│   │   ├── ShowModeService.ts
+│   │   ├── StorageService.ts
+│   │   ├── ToolService.ts
+│   │   ├── ValidationService.ts
+│   │   └── WebSocketClient.ts
+│   ├── sdk/                  # API SDK
+│   │   ├── index.ts
+│   │   ├── routes.ts
+│   │   └── schema.ts
+│   ├── types/                # TypeScript types
+│   │   ├── assets.d.ts
+│   │   ├── browserTools.ts
+│   │   ├── global.d.ts
+│   │   ├── index.ts
+│   │   └── toolMessages.ts
+│   ├── utils/                # Utility functions
+│   │   ├── apiUtils.ts
+│   │   ├── bootstrap.tsx
+│   │   ├── chat.ts
+│   │   ├── cleanupUtils.ts
+│   │   ├── common.ts
+│   │   ├── devTools.ts
+│   │   ├── dom.ts
+│   │   ├── format.ts
+│   │   ├── persistence.ts
+│   │   ├── stateUtils.ts
+│   │   ├── validation.ts
+│   │   └── widgetPositioning.ts
+│   ├── constants/            # Configuration constants
+│   │   └── config.ts
+│   ├── assets/               # Static assets
+│   ├── debug.tsx             # Debug entry point
+│   ├── index.css             # Global styles
+│   └── index.tsx             # Main entry point
+├── chrome-extension/         # Chrome extension for persistent injection
+├── docs/                     # Documentation
+├── vite.config.ts            # Vite configuration
+├── vite.config.debug.ts      # Debug build configuration
+├── tailwind.config.js        # Tailwind configuration
+├── tsconfig.json             # TypeScript configuration
+└── package.json
 ```
-
-## Build System
-
-The widget uses Vite with a custom CSS injection plugin that:
-
-- Bundles all dependencies (React, etc.) into a single file
-- Injects CSS directly into the JavaScript bundle
-- Outputs an IIFE (Immediately Invoked Function Expression) format
-- Creates a standalone `index.mjs` file with no external dependencies
 
 ## API Reference
 
-### Functions
+### Exported Functions
 
-#### `mountWidget(config: MarketrixConfig)`
+#### `initWidget(config: MarketrixConfig): Promise<void>`
 
-Initializes the widget and adds it into the DOM.
+Initializes the widget with the provided configuration. Validates credentials,
+fetches settings from the API, and mounts the widget to the DOM.
 
-#### `unmountWidget()`
+#### `unmountWidget(): void`
 
-Destroys the widget and removes it from the DOM.
+Destroys the widget and removes it from the DOM. Also stops session recording.
 
-#### `previewWidget(config: MarketrixConfig)`
+#### `mountWidget(config: AddWidgetConfig): Promise<void>`
 
-Previews the widget for quick appearance-checking.
+Auto-detects mode (preview, production, or dev) and initializes the widget.
 
-### Types
+#### `getCurrentConfig(): MarketrixConfig | null`
 
-#### `MarketrixConfig`
+Returns the current widget configuration.
+
+### Exported Types
 
 ```typescript
+// Core configuration
 interface MarketrixConfig {
-  marketrixId: string;
-  marketrixKey: string;
-  apiBaseUrl?: string;
-  position?: 'bottom_right' | 'bottom_left' | 'top-right' | 'top-left';
-  theme?: 'light' | 'dark';
-  avatarUrl?: string;
-  agentName?: string;
-  enabledModes?: ('show' | 'tell' | 'do')[];
+  // Production mode credentials
+  mtxId?: string;
+  mtxKey?: string;
 
-  // Extended atmosphere controls
-  session_time?: number;
-  sessionActive?: boolean;
-  recorded_time?: number;
-  recordActive?: boolean;
-  widget_text?: WidgetTextConfig;
-  widget_type?: 'ai' | 'live' | 'hybrid';
-  widget_visible?: boolean;
-  widget_customize?: WidgetCustomizeConfig;
-  active_avatar?: AvatarConfig;
-  avatar_trigger_time?: number;
-  enable_widget_popup?: boolean;
-  avatar_status?: 'online' | 'offline' | 'busy' | 'away';
-  widget_mode?: 'ai' | 'live' | 'hybrid';
-  mLive_form?: LiveFormConfig;
-  hybrid_agents_on?: boolean;
-  hybrid_agents_off?: boolean;
-  widget_visible_device?: DeviceVisibilityConfig;
-  streaming_avatar_status?: 'idle' | 'typing' | 'speaking' | 'listening';
-  widget_position?: WidgetPositionConfig;
-  enable_ai_tour?: boolean;
-  widget_header_ai?: string;
-  widget_body_ai?: string;
-  widget_header_live?: string;
-  widget_body_live?: string;
-  widget_chat_greeting?: string;
-  widget_tour_greeting?: string;
-  inapp_login_url?: string;
-  inapp_login_id?: string;
-  inapp_login_password?: string;
-  advanced_settings?: AdvancedSettingsConfig;
-  themes?: ThemeConfig;
-  responsive_breakpoints?: ResponsiveBreakpointsConfig;
+  // Dev mode credentials
+  mtxApp?: number;
+  mtxAgent?: number;
+
+  // API configuration
+  mtxApiHost?: string;
+  mtxAiHost?: string;
+
+  // Optional user ID
+  userId?: number;
+
+  // Widget position overrides
+  widget_position_offset?: { x?: number; y?: number };
+  widget_position_z_index?: number;
+
+  // Preview mode flag
+  isPreviewMode?: boolean;
+
+  // All WidgetSettingsData fields (optional)
+  // ...
 }
-```
 
-#### `WidgetAtmosphereConfig`
-
-```typescript
-interface WidgetAtmosphereConfig {
-  session_time: number;
-  sessionActive: boolean;
-  recorded_time: number;
-  recordActive: boolean;
-  widget_text: WidgetTextConfig;
-  widget_settings: WidgetSettingsConfig;
-  widget_type: 'ai' | 'live' | 'hybrid';
-  widget_visible: boolean;
-  widget_customize: WidgetCustomizeConfig;
-  active_avatar: AvatarConfig;
-  avatar_trigger_time: number;
-  enable_widget_popup: boolean;
-  avatar_status: 'online' | 'offline' | 'busy' | 'away';
-  widget_mode: 'ai' | 'live' | 'hybrid';
-  mLive_form: LiveFormConfig;
-  hybrid_agents_on: boolean;
-  hybrid_agents_off: boolean;
-  widget_visible_device: DeviceVisibilityConfig;
-  streaming_avatar_status: 'idle' | 'typing' | 'speaking' | 'listening';
-  widget_position: WidgetPositionConfig;
-  enable_ai_tour: boolean;
-  widget_header_ai: string;
-  widget_body_ai: string;
-  widget_header_live: string;
-  widget_body_live: string;
-  widget_chat_greeting: string;
-  widget_tour_greeting: string;
-  inapp_login_url: string;
-  inapp_login_id: string;
-  inapp_login_password: string;
-  advanced_settings: AdvancedSettingsConfig;
-  themes: ThemeConfig;
-  responsive_breakpoints: ResponsiveBreakpointsConfig;
-}
-```
-
-#### `IntegrationSettings`
-
-```typescript
-interface IntegrationSettings {
-  widget_enabled?: boolean;
-  widget_appearance?: string;
-  widget_position?: string;
-  widget_device?: string;
-  widget_header?: string;
-  widget_body?: string;
-  widget_greeting?: string;
-  widget_feature_tell?: boolean;
-  widget_feature_show?: boolean;
-  widget_feature_do?: boolean;
-  widget_feature_request_human?: boolean;
-  widget_background_color?: string;
-  widget_text_color?: string;
-  widget_border_color?: string;
-  widget_accent_color?: string;
-  widget_secondary_color?: string;
-  widget_border_radius?: string;
-  widget_font_size?: string;
-  widget_width?: string;
-  widget_height?: string;
-  widget_shadow?: string;
-  widget_animation_duration?: string;
-  widget_fade_duration?: string;
-  widget_bounce_effect?: boolean;
-  widget_chips?: Array<{
-    chip_mode?: string;
-    chip_text?: string;
-    type?: string;
-    question?: string;
-  }>;
-}
-```
-
-#### `ChatMessage`
-
-```typescript
+// Chat message
 interface ChatMessage {
   id: string;
   content: string;
   sender: 'user' | 'agent';
   timestamp: Date;
-  mode?: 'show' | 'tell' | 'do';
+  mode?: 'tell' | 'show' | 'do';
+  parts?: MessagePart[];
+  taskStatus?: 'ongoing' | 'done' | 'failed' | 'stopped';
 }
+
+// Widget state
+interface WidgetState {
+  isOpen: boolean;
+  isMinimized: boolean;
+  isLoading: boolean;
+  messages: ChatMessage[];
+  currentMode: 'tell' | 'show' | 'do';
+  agentAvailable: boolean;
+  error?: string;
+  activeTaskId: string | null;
+  isTaskRunning: boolean;
+  taskProgress: TaskProgress[];
+}
+
+// Instruction types
+type InstructionType = 'tell' | 'show' | 'do';
 ```
 
-## Advanced Features
+## Build System
 
-### Screen Sharing
+The widget uses Vite with:
 
-The widget includes built-in screen sharing capabilities:
+- CSS injection plugin for single-file bundles
+- Shadow DOM isolation for CSS
+- IIFE format for script tag usage
+- ESM format for module imports
+- Source maps for debugging
 
-- Screen access modal for permissions
-- Screen share preview component
-- Recording functionality
-- Integration with tour system
+Output files:
 
-### Tour System
-
-Interactive tour functionality with:
-
-- Step-by-step guidance
-- Element targeting with selectors
-- Action execution
-- Tour data management
-- Connection-based tours
-
-### Demo Mode
-
-Built-in demo mode for testing:
-
-- Use `demo-marketrix-id` and `demo-marketrix-key`
-- Simulated API responses
-- Context-aware demo messages
-- No real API calls required
-
-### Atmosphere Configuration
-
-Advanced widget atmosphere control:
-
-- Dynamic configuration updates
-- Auto-refresh capability
-- Session and recording management
-- Avatar status control
-- Widget visibility management
-
-## Styling
-
-The widget uses Tailwind CSS with custom animations and theming:
-
-- Custom color palette with Marketrix branding
-- Smooth animations (fade, slide, genie effects)
-- Responsive design with breakpoints
-- CSS custom properties for dynamic theming
-- Custom keyframes for advanced animations
+- `dist/index.mjs` - Main widget bundle
+- `dist/debug.js` - Debug panel bundle
 
 ## Browser Support
 
@@ -586,13 +493,24 @@ The widget uses Tailwind CSS with custom animations and theming:
 - Safari 14+
 - Edge 90+
 
-## Contributing
+## Dependencies
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
+### Production
+
+- `react` / `react-dom` v19 (peer dependency)
+- `@rrweb/record` - Session recording
+- `@ts-rest/core` - Type-safe API client
+- `axios` - HTTP client
+- `react-icons` - Icons
+- `zod` - Schema validation
+
+### Development
+
+- Vite 6
+- Tailwind CSS v4
+- TypeScript 5
+- ESLint + Prettier
+- Lefthook for git hooks
 
 ## License
 

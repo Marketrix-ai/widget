@@ -82,10 +82,10 @@ If you need hot-reload during development on HTTPS sites:
 1. **Start the dev server:**
 
    ```bash
-   npm run start
+   npm start
    ```
 
-2. **Visit `https://localhost:5174` first** and accept the SSL certificate
+2. **Visit `https://localhost:5173` first** and accept the SSL certificate
    warning
 
 3. **Use this bookmarklet:**
@@ -94,7 +94,7 @@ If you need hot-reload during development on HTTPS sites:
    javascript: (function () {
      var s = document.createElement('script');
      s.type = 'module';
-     s.src = 'https://localhost:5174/debug.js';
+     s.src = 'https://localhost:5173/src/debug.tsx';
      document.body.appendChild(s);
    })();
    ```
@@ -141,6 +141,25 @@ await devTools.testTool('click_element', { index: 5 });
 await devTools.testTool('type_text', { index: 3, text: 'Hello' });
 await devTools.testTool('scroll', { direction: 'down' });
 
+// Execute with Show mode (confirmation UI)
+await devTools.testTool('click_element', { index: 5 }, 'show', 'Click this button');
+
+// Run a sequence of tools
+await devTools.runSequence([
+  { tool: 'click_element', args: { index: 0 } },
+  { tool: 'type_text', args: { index: 1, text: 'test@email.com' }, delay: 500 },
+  { tool: 'click_element', args: { index: 3 } },
+]);
+
+// Check WebSocket status
+devTools.getConnectionStatus();
+
+// Get chat messages
+devTools.getMessages();
+
+// Clear chat history
+devTools.clearChat();
+
 // Show all available commands
 devTools.help();
 ```
@@ -154,11 +173,56 @@ devTools.help();
 | `click_element`          | `index`             | `{ index: 5 }`                  |
 | `type_text`              | `index`, `text`     | `{ index: 3, text: "hello" }`   |
 | `scroll`                 | `direction`         | `{ direction: "down" }`         |
+| `scroll_to_text`         | `text`              | `{ text: "Login" }`             |
 | `send_keys`              | `index`, `keys`     | `{ index: 2, keys: "Enter" }`   |
 | `select_dropdown_option` | `index`, `option`   | `{ index: 4, option: "us" }`    |
+| `get_dropdown_options`   | `index`             | `{ index: 4 }`                  |
 | `navigate`               | `url`               | `{ url: "https://google.com" }` |
+| `search`                 | `query`             | `{ query: "test" }`             |
+| `go_back`                | none                | `{}`                            |
+| `wait`                   | `seconds`           | `{ seconds: 2 }`                |
+| `close_tab`              | none                | `{}`                            |
+| `switch_tab`             | `tab_index`         | `{ tab_index: 1 }`              |
+| `upload_file`            | `index`, `path`     | `{ index: 3, path: "/f.txt" }`  |
+| `done`                   | `success`           | `{ success: true }`             |
+| `extract`                | none                | `{}`                            |
+| `get_html`               | none                | `{}`                            |
+| `get_screenshot`         | none                | `{}`                            |
 
 ### Keyboard Keys for `send_keys`
 
 `Enter`, `Tab`, `Escape`, `Space`, `Backspace`, `Delete`, `ArrowUp`,
 `ArrowDown`, `ArrowLeft`, `ArrowRight`, `Home`, `End`
+
+### Scroll Directions
+
+`up`, `down`, `left`, `right`
+
+### Search Engines (for `search` tool)
+
+`google`, `bing`, `duckduckgo` (optional, defaults to google)
+
+---
+
+## Troubleshooting
+
+### Panel doesn't appear
+
+- Make sure dev server is running (`npm start`) or built files are being served
+- Check browser console for CORS or loading errors
+- Some sites block external scripts - try a different site
+
+### "Module not found" error
+
+- The script uses ES modules when using dev server
+- Use the built version (`npm run build:debug`) for non-module environments
+
+### "Element not found" error
+
+- DOM not indexed or index is stale
+- Run `devTools.indexDOM()` to refresh
+
+### Tool executes but nothing happens
+
+- Wrong element index
+- Run `devTools.highlightElement(index)` to verify

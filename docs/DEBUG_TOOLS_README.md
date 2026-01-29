@@ -21,12 +21,15 @@ Instead of waiting for the agent to send commands, you can:
 
 ```
 src/
-├── debug.tsx                      # Entry point (loads debug panel)
-├── utils/devTools.ts              # Console helpers (devTools object)
-└── components/debug/DebugPanel.tsx # Visual UI panel
+├── debug.tsx                       # Entry point (loads debug panel)
+├── utils/devTools.ts               # Console helpers (devTools object)
+├── components/debug/DebugPanel.tsx # Visual UI panel
+├── services/DomService.ts          # DOM indexing and element lookup
+├── services/ToolService.ts         # Tool execution engine
+├── services/DevTestService.ts      # Test simulation methods (dev only)
+└── services/ChatService.ts         # Chat message management
 
-test.html                          # Test page with sample elements
-vite.config.debug.ts               # Build config for debug.js
+vite.config.debug.ts                # Build config for debug.js
 ```
 
 ---
@@ -36,20 +39,20 @@ vite.config.debug.ts               # Build config for debug.js
 ### Step 1: Start the Dev Server
 
 ```bash
-npm run start
+npm start
 ```
 
-This starts Vite at `http://localhost:5173`
+This starts Vite at `https://localhost:5173` (with HTTPS/SSL enabled)
 
-### Step 2: Open the Test Page
+### Step 2: Open the Widget Index
 
-Open `test.html` in your browser:
+Open in your browser:
 
 ```
-http://localhost:5173/test.html
+https://localhost:5173
 ```
 
-Or open it directly as a file (but scripts need the dev server running).
+Accept the SSL certificate if prompted.
 
 ### Step 3: Use the Debug Panel
 
@@ -62,8 +65,6 @@ The panel appears in the **top-right corner** with a dark DevTools-style look.
 ## Debug Panel Features
 
 ### Tools Tab
-
-![Tools Tab]
 
 1. **Select Tool** - Dropdown with all available tools grouped by category:
    - Navigation: `navigate`, `search`, `go_back`
@@ -191,11 +192,13 @@ chatService.clearMessages();
 
 ### Utility Tools
 
-| Tool        | Parameters           | Description             |
-| ----------- | -------------------- | ----------------------- |
-| `wait`      | `seconds` (required) | Wait for specified time |
-| `done`      | `success` (optional) | Mark task complete      |
-| `close_tab` | none                 | Close current tab       |
+| Tool          | Parameters                 | Description             |
+| ------------- | -------------------------- | ----------------------- |
+| `wait`        | `seconds` (required)       | Wait for specified time |
+| `done`        | `success` (required)       | Mark task complete      |
+| `close_tab`   | none                       | Close current tab       |
+| `switch_tab`  | `tab_index` (required)     | Switch to tab by index  |
+| `upload_file` | `index`, `path` (required) | Upload file to input    |
 
 ---
 
@@ -213,6 +216,7 @@ DOM must be indexed.
    - Elements with interactive roles
 3. Assigns each element a number (0, 1, 2, ...)
 4. Stores a CSS selector for each element
+5. Generates fingerprints for validation (see DOM_MISMATCH_DETECTION.md)
 
 ### When to Re-Index:
 
@@ -308,7 +312,7 @@ npm run build:debug
 To use in production:
 
 ```html
-<script type="module" src="/path/to/debug.js"></script>
+<script src="/path/to/debug.js"></script>
 ```
 
 ---
@@ -347,7 +351,7 @@ devTools.listElements();
 1. Check browser console for errors
 2. Try clicking in the page first (to give it focus)
 3. Press `Ctrl+Shift+D` again
-4. Check if `http://localhost:5173/debug.js` loads
+4. Check if the debug script is loading
 
 ### Cannot Type in Inputs
 
@@ -357,8 +361,8 @@ devTools.listElements();
 
 ```javascript
 // Check element type
-const el = domService.getElementByIndex(3);
-console.log(el.tagName, el.type);
+const { element } = domService.getElementByIndex(3);
+console.log(element?.tagName, element?.type);
 ```
 
 ---
@@ -377,11 +381,14 @@ it on any page to inject the debug panel.
 
 #### Step 1: Choose Your Script URL
 
-**For local development (dev server must be running):**
+**For local development (build and serve):**
 
+```bash
+npm run build:debug
+npx serve dist -l 5174 --cors
 ```
-http://localhost:5173/debug.js
-```
+
+URL: `http://localhost:5174/debug.js`
 
 **For production (host debug.js on your CDN):**
 
@@ -391,13 +398,12 @@ https://your-cdn.com/debug.js
 
 #### Step 2: Create the Bookmarklet
 
-**Localhost version:**
+**Localhost version (built):**
 
 ```javascript
 javascript: (function () {
   var s = document.createElement('script');
-  s.type = 'module';
-  s.src = 'http://localhost:5173/debug.js';
+  s.src = 'http://localhost:5174/debug.js';
   document.body.appendChild(s);
 })();
 ```
@@ -407,7 +413,6 @@ javascript: (function () {
 ```javascript
 javascript: (function () {
   var s = document.createElement('script');
-  s.type = 'module';
   s.src = 'https://your-cdn.com/debug.js';
   document.body.appendChild(s);
 })();
@@ -428,47 +433,13 @@ javascript: (function () {
 3. Debug panel appears in the top-right corner
 4. Press `Ctrl+Shift+D` to toggle visibility
 
-### Visual Guide
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│  ☆ Bookmarks Bar                                            │
-│  ┌────────────────────┐                                     │
-│  │ 🔧 Marketrix Debug │  ← Click this on any site           │
-│  └────────────────────┘                                     │
-└─────────────────────────────────────────────────────────────┘
-                              ↓
-┌─────────────────────────────────────────────────────────────┐
-│                                                             │
-│  Any Website (Google, customer site, etc.)                  │
-│                                                             │
-│                                      ┌────────────────────┐ │
-│                                      │ 🔧 Debug Panel     │ │
-│                                      │                    │ │
-│                                      │ [Tools] [Elements] │ │
-│                                      │                    │ │
-│                                      │ Select Tool: ▼     │ │
-│                                      │ click_element      │ │
-│                                      │                    │ │
-│                                      │ [Execute]          │ │
-│                                      └────────────────────┘ │
-│                                                             │
-└─────────────────────────────────────────────────────────────┘
-```
-
 ### Bookmarklet Troubleshooting
 
 **Panel doesn't appear:**
 
-- Make sure dev server is running (`npm run start`)
+- Make sure the build files are being served (`npx serve dist -l 5174 --cors`)
 - Check browser console for CORS or loading errors
 - Some sites block external scripts - try a different site
-
-**"Module not found" error:**
-
-- The script uses ES modules (`type="module"`)
-- Older browsers may not support this
-- Use Chrome, Firefox, or Edge (latest versions)
 
 **Works locally but not on other sites:**
 
@@ -485,20 +456,5 @@ npm run build:debug
 # Example: https://cdn.marketrix.com/debug.js
 
 # 3. Update bookmarklet with CDN URL
-javascript:(function(){var s=document.createElement('script');s.type='module';s.src='https://cdn.marketrix.com/debug.js';document.body.appendChild(s);})()
+javascript:(function(){var s=document.createElement('script');s.src='https://cdn.marketrix.com/debug.js';document.body.appendChild(s);})()
 ```
-
----
-
-## Files You Can Ignore in Git
-
-Add to `.gitignore` if not already:
-
-```
-test.html
-DEBUG_TOOLS_README.md
-PERSONAL_README.md
-dist/debug.js
-```
-
-These are personal development files, not for production or GitHub.
