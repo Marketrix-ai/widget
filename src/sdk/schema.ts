@@ -609,65 +609,82 @@ export const SimulationResultSchema = z.object({
 });
 
 /**
- * Browser tab schema
+ * Browser tab schema (browser-use format)
  */
-export const BrowserTabSchema = z.object({
-  url: z.string(),
-  title: z.string(),
-  target_id: z.string(),
-  parent_target_id: z.string().nullable(),
-});
+export const BrowserTabSchema = z
+  .object({
+    url: z.string(),
+    title: z.string(),
+    tab_id: z.string(),
+    parent_tab_id: z.string().nullable(),
+  })
+  .passthrough();
 
 /**
- * Interacted element schema
+ * Interacted element schema (browser-use can emit null attributes/bounds, optional stable_hash/ax_name)
  */
-export const InteractedElementSchema = z.object({
-  node_id: z.number(),
-  backend_node_id: z.number(),
-  frame_id: z.string().nullable(),
-  node_type: z.number(),
-  node_value: z.string(),
-  node_name: z.string(),
-  attributes: z.record(z.string()),
-  x_path: z.string(),
-  element_hash: z.number(),
-  bounds: z.object({
-    x: z.number(),
-    y: z.number(),
-    width: z.number(),
-    height: z.number(),
-  }),
-});
+export const InteractedElementSchema = z
+  .object({
+    node_id: z.number(),
+    backend_node_id: z.number(),
+    frame_id: z.string().nullable(),
+    node_type: z.number(),
+    node_value: z.string(),
+    node_name: z.string(),
+    attributes: z.record(z.string()).optional().nullable(),
+    x_path: z.string(),
+    element_hash: z.number(),
+    bounds: z
+      .object({
+        x: z.number(),
+        y: z.number(),
+        width: z.number(),
+        height: z.number(),
+      })
+      .optional()
+      .nullable(),
+    stable_hash: z.number().optional(),
+    ax_name: z.string().optional().nullable(),
+  })
+  .passthrough();
 
 /**
- * Browser state schema for simulation step
+ * Browser state schema for simulation step (browser-use format)
  */
-export const SimulationStateSchema = z.object({
-  tabs: z.array(BrowserTabSchema),
-  screenshot_path: z.string().nullable(),
-  interacted_element: z.array(InteractedElementSchema.nullable()),
-  url: z.string(),
-  title: z.string(),
-});
+export const SimulationStateSchema = z
+  .object({
+    tabs: z.array(BrowserTabSchema),
+    screenshot_path: z.string().nullable(),
+    interacted_element: z.array(InteractedElementSchema.nullable()),
+    url: z.string(),
+    title: z.string(),
+  })
+  .passthrough();
 
 /**
- * Metadata schema for simulation step
+ * Metadata schema for simulation step (browser-use can omit or add step_interval)
  */
-export const SimulationStepMetadataSchema = z.object({
-  step_start_time: z.number(),
-  step_end_time: z.number(),
-  step_number: z.number(),
-});
+export const SimulationStepMetadataSchema = z
+  .object({
+    step_start_time: z.number().optional(),
+    step_end_time: z.number().optional(),
+    step_number: z.number().optional(),
+    step_interval: z.number().optional(),
+  })
+  .passthrough();
 
 /**
- * Individual simulation step schema
+ * Individual simulation step schema (browser-use adds state_message, metadata can be null)
  */
-export const SimulationStepSchema = z.object({
-  model_output: SimulationModelOutputSchema.nullable(),
-  result: z.array(SimulationResultSchema),
-  state: SimulationStateSchema,
-  metadata: SimulationStepMetadataSchema,
-});
+export const SimulationStepSchema = z
+  .object({
+    model_output: SimulationModelOutputSchema.nullable(),
+    result: z.array(SimulationResultSchema),
+    state: SimulationStateSchema,
+    metadata: SimulationStepMetadataSchema.nullable(),
+    state_message: z.string().optional().nullable(),
+  })
+  .passthrough();
 
 /**
  * Complete simulation history schema
