@@ -47,8 +47,7 @@ export const AgentStatusSchema = z.enum(['active', 'learning', 'error']);
 export const LearningProgressSchema = z.object({
   vector_index_created: z.boolean().nullable(),
   mindmap_created: z.boolean().nullable(),
-  node_index_created: z.boolean().nullable(),
-  edge_index_created: z.boolean().nullable(),
+  graph_index_created: z.boolean().nullable(),
 });
 export const KnowledgeTypeSchema = z.enum(['document', 'video']);
 export const QADocumentStatusSchema = z.enum(['pending', 'processing', 'waiting_review', 'completed', 'failed']);
@@ -159,6 +158,8 @@ export const UserEntitySchema = BaseEntitySchema.extend({
   password: z.string().optional(),
   image_url: z.string().optional(),
   prompt_limit: z.number().optional(),
+  last_login_at: z.coerce.date().optional(),
+  auth_method: z.enum(['password', 'oauth']).optional(),
 });
 
 /**
@@ -269,6 +270,8 @@ export const TenantEntitySchema = BaseEntitySchema.extend({
   status: EntityStatusSchema,
   package: TenantPackageSchema,
   ending_date: z.coerce.date().optional(),
+  external_tenant_id: z.string().optional(),
+  type: z.enum(['personal', 'organization']).optional(),
 });
 
 /**
@@ -450,6 +453,7 @@ export const QATestResultEntitySchema = BaseEntitySchema.extend({
     )
     .nullable(),
   screenshot_url: z.string().nullable(),
+  simulation_id: z.number().nullable().optional(),
 });
 
 /**
@@ -700,6 +704,7 @@ export const SimulationEntitySchema = BaseEntitySchema.extend({
   connection_id: z.number(),
   agent_id: z.number(),
   job_id: z.string(),
+  session_id: z.string().nullable().optional(),
   status: z.string(),
   status_message: z.string(),
   path: z.string(),
@@ -846,8 +851,7 @@ export const AgentEntitySchema = BaseEntitySchema.extend({
   agent_description: z.string(),
   instructions: z.string().optional(),
   image_url: z.string().optional(),
-  node_index_id: z.string().optional(),
-  edge_index_id: z.string().optional(),
+  graph_index_id: z.string().optional(),
   mindmap_url: z.string().optional(),
   vector_store_id: z.string().optional(),
   status: AgentStatusSchema,
@@ -1026,15 +1030,20 @@ export const AgentSimulationIndexResponseSchema = z.object({
 /**
  * Agent index callback request schema
  */
-export const AgentIndexCallbackRequestSchema = z.object({
-  agent_id: z.coerce.number().positive('Agent ID must be a positive number'),
-  index_name: z.string().min(1, 'Index name is required'),
-  index_type: z.enum(['vector_index', 'node_index', 'edge_index', 'mindmap'], {
-    message: 'Index type must be vector_index, node_index, edge_index, or mindmap' as const,
-  }),
-  status: z.enum(['success', 'failed'], { message: 'Status must be success or failed' }),
-  status_message: z.string().optional(),
-});
+export const AgentIndexCallbackRequestSchema = z
+  .object({
+    agent_id: z.coerce.number().positive('Agent ID must be a positive number'),
+    index_name: z.string(),
+    index_type: z.enum(['vector_index', 'graph_index', 'mindmap'], {
+      message: 'Index type must be vector_index, graph_index, or mindmap' as const,
+    }),
+    status: z.enum(['success', 'failed'], { message: 'Status must be success or failed' }),
+    status_message: z.string().optional(),
+  })
+  .refine(data => data.status === 'failed' || data.index_name.length > 0, {
+    message: 'Index name is required when status is success',
+    path: ['index_name'],
+  });
 
 /**
  * Agent index callback response schema
