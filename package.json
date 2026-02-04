@@ -1,6 +1,6 @@
 {
   "name": "@marketrix.ai/widget",
-  "version": "1.0.42",
+  "version": "1.0.43",
   "type": "module",
   "main": "./dist/index.mjs",
   "module": "./dist/index.mjs",
@@ -21,7 +21,7 @@
     "check": "tsc --noEmit"
   },
   "dependencies": {
-    "@rrweb/record": "^2.0.0-alpha.18",
+    "@rrweb/record": "^2.0.0-alpha.20",
     "@ts-rest/core": "^3.52.1",
     "react-icons": "^5.5.0",
     "zod": "^3.25.76"
@@ -32,8 +32,8 @@
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.1.18",
-    "@types/node": "^24.10.9",
-    "@types/react": "^19.2.10",
+    "@types/node": "^24.10.10",
+    "@types/react": "^19.2.11",
     "@types/react-dom": "^19.2.3",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
@@ -41,7 +41,7 @@
     "@typescript-eslint/parser": "^8.54.0",
     "@vitejs/plugin-basic-ssl": "^2.1.4",
     "@vitejs/plugin-react": "^4.7.0",
-    "autoprefixer": "^10.4.23",
+    "autoprefixer": "^10.4.24",
     "cssnano": "^7.1.2",
     "eslint": "^9.39.2",
     "eslint-config-prettier": "^10.1.8",
