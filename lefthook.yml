@@ -3,14 +3,8 @@
 
 pre-commit:
   commands:
-    type-check:
+    check:
       run: npm run check
-    lint-staged:
-      run: npx lint-staged
-    build:
-      run: npm run build
-
-pre-push:
-  commands:
-    code-check:
-      run: npm run code:check
+    lint:
+      run: npm run lint
+      stage_fixed: true

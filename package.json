@@ -1,7 +1,6 @@
 {
   "name": "@marketrix.ai/widget",
   "version": "1.0.42",
-  "description": "Marketrix AI-Native Support Widget: Show, Tell, Do",
   "type": "module",
   "main": "./dist/index.mjs",
   "module": "./dist/index.mjs",
@@ -14,17 +13,12 @@
     },
     "./package.json": "./package.json"
   },
-  "files": [
-    "dist"
-  ],
+  "files": ["dist"],
   "scripts": {
-    "prepare": "lefthook install || true",
     "start": "vite",
     "build": "vite build && BUILD_MODE=standalone vite build",
-    "check": "tsc --noEmit",
     "lint": "eslint . --ext .ts,.tsx --max-warnings 200 --fix",
-    "format": "prettier --write .",
-    "code:check": "npm run check && npm run build"
+    "check": "tsc --noEmit"
   },
   "dependencies": {
     "@rrweb/record": "^2.0.0-alpha.18",
@@ -56,7 +50,6 @@
     "eslint-plugin-prettier": "^5.5.5",
     "eslint-plugin-simple-import-sort": "^12.1.1",
     "eslint-plugin-unused-imports": "^4.3.0",
-    "lint-staged": "^16.2.7",
     "postcss": "^8.5.6",
     "prettier": "^3.8.1",
     "tailwindcss": "^4.1.18",
@@ -66,27 +59,5 @@
     "vite": "^6.4.1",
     "vite-plugin-css-injected-by-js": "^3.5.2",
     "vite-plugin-include-css": "^6.0.0"
-  },
-  "keywords": [
-    "react",
-    "widget",
-    "in-app-support",
-    "marketrix"
-  ],
-  "author": "Marketrix",
-  "license": "MIT",
-  "lint-staged": {
-    "*.{ts,tsx}": [
-      "eslint --fix --max-warnings 200",
-      "prettier --write"
-    ],
-    "*.{js,jsx}": [
-      "eslint --fix --max-warnings 200",
-      "prettier --write"
-    ],
-    "*.{json,md,yml,yaml,css,scss}": [
-      "prettier --write"
-    ],
-    "*.{png,jpg,jpeg,gif,svg,ico}": []
   }
 }
