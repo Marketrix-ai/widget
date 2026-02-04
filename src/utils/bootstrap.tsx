@@ -330,8 +330,17 @@ export const autoInitializeWidget = (retryCount = 0): void => {
     return;
   }
 
-  const scripts = document.querySelectorAll('script[mtx-id], script[mtx-app]');
-  const scriptElement = scripts[scripts.length - 1];
+  // Prefer the currently executing script when it has config (injected script tag in playground).
+  // Fall back to last matching script for static script tags.
+  const bySelector = document.querySelectorAll('script[mtx-id], script[mtx-app]');
+  const current =
+    typeof document.currentScript !== 'undefined' &&
+    document.currentScript != null &&
+    isHTMLScriptElement(document.currentScript) &&
+    (document.currentScript.hasAttribute('mtx-id') || document.currentScript.hasAttribute('mtx-app'))
+      ? document.currentScript
+      : null;
+  const scriptElement = current ?? bySelector[bySelector.length - 1];
 
   if (!scriptElement || !isHTMLScriptElement(scriptElement)) {
     if (retryCount < MAX_RETRIES) {
@@ -351,7 +360,7 @@ export const autoInitializeWidget = (retryCount = 0): void => {
     }
 
     // If no script tags found at all, assume auto-init was not intended (e.g. using npm package)
-    if (scripts.length === 0) {
+    if (bySelector.length === 0) {
       console.log('[AutoInit] No marketrix script tags found. Skipping auto-initialization.');
       return;
     }
