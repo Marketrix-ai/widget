@@ -851,7 +851,6 @@ export const AgentEntitySchema = BaseEntitySchema.extend({
   instructions: z.string().optional(),
   image_url: z.string().optional(),
   graph_index_id: z.string().optional(),
-  mindmap_url: z.string().optional(),
   vector_store_id: z.string().optional(),
   status: AgentStatusSchema,
   status_message: z.string().optional(),
