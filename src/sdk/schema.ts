@@ -1081,7 +1081,7 @@ export const ConnectionCreateSchema = ConnectionEntitySchema.partial().extend({
 /**
  * Connection update schema
  */
-export const ConnectionUpdateSchema = ConnectionEntitySchema.partial();
+export const ConnectionUpdateSchema = ConnectionEntitySchema.partial().omit({ tenant_id: true });
 
 // ============================================================================
 // INTEGRATION SCHEMAS - Integration management (widget, slack, etc.)
