@@ -1,6 +1,6 @@
 {
   "name": "@marketrix.ai/widget",
-  "version": "1.0.44",
+  "version": "1.0.45",
   "type": "module",
   "main": "./dist/index.mjs",
   "module": "./dist/index.mjs",
@@ -13,8 +13,11 @@
     },
     "./package.json": "./package.json"
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
+    "tag": "bash scripts/release.sh",
     "start": "vite",
     "build": "vite build && BUILD_MODE=standalone vite build",
     "lint": "eslint . --ext .ts,.tsx --max-warnings 200 --fix",
