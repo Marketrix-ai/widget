@@ -80,6 +80,7 @@ export const ActionLogTypeSchema = z.enum([
   'deny_user',
   'request_tenant',
   'widget_question',
+  'qa_run_started',
 ]);
 
 /**
