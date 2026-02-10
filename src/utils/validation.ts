@@ -54,8 +54,13 @@ export function isBoolean(value: unknown): value is boolean {
 /**
  * Type guard for WidgetPosition
  */
-export function isWidgetPosition(value: unknown): value is 'bottom_left' | 'bottom_right' {
-  return typeof value === 'string' && (value === 'bottom_left' || value === 'bottom_right');
+export function isWidgetPosition(
+  value: unknown,
+): value is 'bottom_left' | 'bottom_right' | 'top_left' | 'top_right' {
+  return (
+    typeof value === 'string' &&
+    (value === 'bottom_left' || value === 'bottom_right' || value === 'top_left' || value === 'top_right')
+  );
 }
 
 /**

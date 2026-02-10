@@ -1,13 +1,14 @@
-import React, { lazy, Suspense, useEffect, useState } from 'react';
+import React, { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 
 import { useWidget } from '../hooks/useWidget';
-import type { MarketrixConfig } from '../types';
+import type { MarketrixConfig, WidgetPosition } from '../types';
 import { ChatWindow } from './chat/ChatWindow';
 import { WidgetButton } from './layout/WidgetButton';
 import { ErrorDisplay } from './ui/ErrorDisplay';
 
 // Lazy load the dev panel (only in development)
 const DomTestPanel = lazy(() => import('./dev/DomTestPanel'));
+const WIDGET_Z_INDEX_BASE = 2147483000;
 
 interface MarketrixWidgetProps {
   config: MarketrixConfig;
@@ -50,6 +51,14 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
   } = useWidget({
     config,
   });
+  const [widgetPosition, setWidgetPosition] = useState<WidgetPosition>(
+    (config.widget_position as WidgetPosition | undefined) ?? 'bottom_right',
+  );
+
+  const positionStorageKey = useMemo(() => {
+    const tenantScopedId = config.mtxId ?? (config.mtxApp != null ? String(config.mtxApp) : 'default');
+    return `marketrix_widget_position_${tenantScopedId}`;
+  }, [config.mtxApp, config.mtxId]);
 
   // Keyboard shortcut for dev panel (Ctrl+Shift+D)
   useEffect(() => {
@@ -64,6 +73,34 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  useEffect(() => {
+    const fallback = (settings.widget_position as WidgetPosition | undefined) ?? 'bottom_right';
+    setWidgetPosition(fallback);
+  }, [settings.widget_position]);
+
+  useEffect(() => {
+    if (isPreviewMode || typeof localStorage === 'undefined') {
+      return;
+    }
+
+    const fallback = (settings.widget_position as WidgetPosition | undefined) ?? 'bottom_right';
+    const storedPosition = localStorage.getItem(positionStorageKey);
+    if (storedPosition === 'bottom_left' || storedPosition === 'bottom_right' || storedPosition === 'top_left' || storedPosition === 'top_right') {
+      setWidgetPosition(storedPosition);
+      return;
+    }
+
+    localStorage.setItem(positionStorageKey, fallback);
+    setWidgetPosition(fallback);
+  }, [isPreviewMode, positionStorageKey, settings.widget_position]);
+
+  const handlePositionChange = (position: WidgetPosition) => {
+    setWidgetPosition(position);
+    if (!isPreviewMode && typeof localStorage !== 'undefined') {
+      localStorage.setItem(positionStorageKey, position);
+    }
+  };
+
   // In preview mode, always show if widget_enabled is true in config
   const shouldRender = isPreviewMode
     ? (config.widget_enabled ?? settings.widget_enabled ?? false)
@@ -73,8 +110,13 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
     return null;
   }
 
-  const effectiveConfig = settings;
-  const zIndex = settings.widget_position_z_index ?? 40;
+  const effectiveWidgetZIndex = Math.max(settings.widget_position_z_index ?? 0, WIDGET_Z_INDEX_BASE + 10);
+
+  const effectiveConfig = {
+    ...settings,
+    widget_position: widgetPosition,
+    widget_position_z_index: effectiveWidgetZIndex,
+  };
   const customStyles = {
     '--widget-width': settings.widget_width,
     '--widget-height': settings.widget_height,
@@ -85,7 +127,7 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
     '--widget-background': settings.widget_background_color,
     '--widget-text-color': settings.widget_text_color,
     '--widget-border-color': settings.widget_border_color,
-    '--widget-z-index': zIndex,
+    '--widget-z-index': effectiveWidgetZIndex,
     '--widget-shadow': settings.widget_shadow,
     '--widget-animation-duration': settings.widget_animation_duration,
     '--widget-fade-duration': settings.widget_fade_duration,
@@ -103,7 +145,7 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
           style={{
             boxShadow: 'inset 0 0 30px 2px var(--widget-primary-color)',
             pointerEvents: 'none',
-            zIndex: 2147483647, // Maximum z-index value to ensure it's above all page elements
+            zIndex: WIDGET_Z_INDEX_BASE, // Keep glow beneath widget controls.
           }}
         />
       )}
@@ -114,6 +156,8 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
         isOpen={state.isOpen}
         isMinimized={state.isMinimized}
         isScreenSharing={isScreenSharing}
+        position={widgetPosition}
+        onPositionChange={handlePositionChange}
       />
 
       <WidgetErrorBoundary>
@@ -143,10 +187,7 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
         <ErrorDisplay
           error={state.error}
           onClose={() => actions.clearError()}
-          position={
-            (settings.widget_position as 'bottom_left' | 'bottom_right' | 'top_left' | 'top_right' | undefined) ||
-            'bottom_right'
-          }
+          position={widgetPosition}
         />
       )}
 

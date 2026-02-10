@@ -347,7 +347,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   };
 
   // Get widget settings for positioning
-  const effectivePosition = settings.widget_position as 'bottom_left' | 'bottom_right';
+  const effectivePosition = settings.widget_position as 'bottom_left' | 'bottom_right' | 'top_left' | 'top_right';
   const zIndex = settings.widget_position_z_index ?? 40;
   const positionClasses = getPositionClasses(effectivePosition);
 
@@ -402,10 +402,15 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
 
   // In preview mode, use inline styles for positioning to ensure it works in shadow DOM
   const previewPositionStyle = isPreviewMode
-    ? {
-        bottom: '20px', // equivalent to bottom-5 (1.25rem = 20px)
-        ...(effectivePosition.includes('right') ? { right: '20px' } : { left: '20px' }),
-      }
+    ? effectivePosition.includes('top')
+      ? {
+          top: '20px',
+          ...(effectivePosition.includes('right') ? { right: '20px' } : { left: '20px' }),
+        }
+      : {
+          bottom: '20px',
+          ...(effectivePosition.includes('right') ? { right: '20px' } : { left: '20px' }),
+        }
     : {};
 
   return (
