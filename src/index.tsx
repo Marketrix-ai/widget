@@ -37,6 +37,10 @@ import { isHTMLElement } from './utils/validation';
 // Global session recorder instance
 let sessionRecorder: SessionRecorder | null = null;
 let isRecordingInitialized = false; // Flag to prevent multiple SessionRecorder instances
+// Tracks in-flight start() promise to prevent concurrent starts and enable safe stop/teardown
+let recordingStartPromise: Promise<void> | null = null;
+// Prevents concurrent initWidget() calls from creating duplicate widgets
+let initPromise: Promise<void> | null = null;
 
 /**
  * Initialize widget with validated configuration
@@ -108,31 +112,28 @@ async function initializeWidgetWithConfig(
   }
 }
 
-// Initialize the widget
-export const initWidget = async (config: MarketrixConfig, container?: HTMLElement): Promise<void> => {
-  // Signal that programmatic initialization is in progress
+/**
+ * Internal init implementation. Call only via initWidget() which guards with initPromise.
+ */
+async function initWidgetInternal(config: MarketrixConfig, container?: HTMLElement): Promise<void> {
   setProgrammaticInitInProgress(true);
 
-  // Prevent double initialization
   if (isWidgetInitialized()) {
     console.warn('Marketrix Widget: already initialized');
     setProgrammaticInitInProgress(false);
     return;
   }
 
-  // Singleton guard: prevent duplicate production widgets on same page
   if (isProductionWidgetActive()) {
     console.warn('Marketrix Widget: production widget already active on this page, skipping duplicate initialization');
     setProgrammaticInitInProgress(false);
     return;
   }
 
-  // Configure SDK BEFORE validation
   if (config.mtxApiHost) {
     configureSdk(config.mtxApiHost);
   }
 
-  // Validate configuration
   showWidgetSettingsLoader('Validating widget configuration...');
   const validationService = new WidgetValidationService();
   const validationResult = await validationService.validateConfig(config);
@@ -144,7 +145,6 @@ export const initWidget = async (config: MarketrixConfig, container?: HTMLElemen
     return;
   }
 
-  // Initialize with validated config
   let finalConfig: MarketrixConfig;
   try {
     finalConfig = await initializeWidgetWithConfig(config, validationResult);
@@ -156,19 +156,14 @@ export const initWidget = async (config: MarketrixConfig, container?: HTMLElemen
   }
 
   setCurrentConfig(finalConfig);
-  // Generate unique container ID for this widget instance
   const containerId = `marketrix-widget-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
   const { mountEl } = createWidgetContainer(container, containerId);
   const instance = mountWidgetToContainer(mountEl, finalConfig);
   setWidgetInstance(instance);
-  // Mark production widget as active (singleton guard)
   setProductionWidgetActive(true);
-  // Widget successfully initialized, reset flag
   setProgrammaticInitInProgress(false);
 
-  // Initialize and start session recording
   try {
-    // CRITICAL: Prevent multiple SessionRecorder instances per session
     if (sessionRecorder && isRecordingInitialized) {
       console.warn(
         '[Marketrix Widget] ⚠️ SessionRecorder already initialized, skipping creation. Reusing existing instance.',
@@ -176,7 +171,6 @@ export const initWidget = async (config: MarketrixConfig, container?: HTMLElemen
       return;
     }
 
-    // Stop existing recorder if any (shouldn't happen, but safety check)
     if (sessionRecorder) {
       console.warn('[Marketrix Widget] ⚠️ Stopping existing SessionRecorder before creating new one');
       sessionRecorder.stop();
@@ -184,8 +178,6 @@ export const initWidget = async (config: MarketrixConfig, container?: HTMLElemen
       isRecordingInitialized = false;
     }
 
-    // CRITICAL: Ensure SessionManager is initialized before creating SessionRecorder
-    // SessionManager initializes the tab_id in sessionStorage, which SessionRecorder needs
     const tabId = sessionManager.getTabId();
     if (!tabId?.startsWith('tab_')) {
       console.error('[Marketrix Widget] ❌ SessionManager tab_id not initialized correctly:', tabId);
@@ -194,8 +186,6 @@ export const initWidget = async (config: MarketrixConfig, container?: HTMLElemen
     }
     console.log('[Marketrix Widget] ✅ SessionManager initialized with tab_id:', tabId);
 
-    // Get RRWeb server URL from mtxApiHost config
-    // Priority: finalConfig.mtxApiHost > config.mtxApiHost
     const apiHost = finalConfig.mtxApiHost ?? config.mtxApiHost;
 
     if (!apiHost || apiHost.trim() === '') {
@@ -206,35 +196,54 @@ export const initWidget = async (config: MarketrixConfig, container?: HTMLElemen
     }
 
     const wsUrl = getEventsWebSocketUrl(apiHost);
-
     console.log('[Marketrix Widget] Using RRWeb server URL:', wsUrl);
 
-    // connectionId (mtxApp) is required for RRWeb uploads
     const connectionId = finalConfig.mtxApp ?? config.mtxApp;
     if (!connectionId) {
       console.warn('[Marketrix Widget] ⚠️ No mtxApp (connectionId) configured - skipping session recording');
       return;
     }
     sessionRecorder = new SessionRecorder(wsUrl, connectionId);
-    isRecordingInitialized = true; // Mark as initialized
+    isRecordingInitialized = true;
 
-    // Start recording - it will wait for chat_id to be available
-    // The recorder will connect but wait to send metadata until chat_id exists
-    sessionRecorder.start().catch(error => {
-      console.error('[Marketrix Widget] ❌ Failed to start session recording:', error);
-      console.error('[Marketrix Widget] Error details:', {
-        message: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined,
+    recordingStartPromise = sessionRecorder
+      .start()
+      .catch(error => {
+        console.error('[Marketrix Widget] ❌ Failed to start session recording:', error);
+        console.error('[Marketrix Widget] Error details:', {
+          message: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+        });
+        isRecordingInitialized = false;
+      })
+      .finally(() => {
+        recordingStartPromise = null;
       });
-      // Reset flag on error so retry is possible
-      isRecordingInitialized = false;
-      // Don't block widget initialization if recording fails, but log the error
-      // The recorder will retry when chat_id becomes available (via reconnection)
-    });
   } catch (error) {
     console.error('[Marketrix Widget] Failed to initialize session recording:', error);
-    isRecordingInitialized = false; // Reset flag on error
-    // Don't block widget initialization if recording fails
+    isRecordingInitialized = false;
+  }
+}
+
+// Initialize the widget
+export const initWidget = async (config: MarketrixConfig, container?: HTMLElement): Promise<void> => {
+  if (initPromise) {
+    return initPromise;
+  }
+  if (isWidgetInitialized()) {
+    console.warn('Marketrix Widget: already initialized');
+    return;
+  }
+  if (isProductionWidgetActive()) {
+    console.warn('Marketrix Widget: production widget already active on this page, skipping duplicate initialization');
+    return;
+  }
+
+  initPromise = initWidgetInternal(config, container);
+  try {
+    await initPromise;
+  } finally {
+    initPromise = null;
   }
 };
 
@@ -255,16 +264,63 @@ export const unmountWidget = (): void => {
     console.log('Marketrix Widget destroyed');
   }
 
-  // Stop session recording
+  // Stop session recording (SessionRecorder.stop() aborts in-flight start via stopRequested)
   if (sessionRecorder) {
     sessionRecorder.stop();
     sessionRecorder = null;
-    isRecordingInitialized = false; // Reset flag
+    isRecordingInitialized = false;
+    recordingStartPromise = null;
     console.log('[Marketrix Widget] Session recording stopped');
   }
 
+  initPromise = null;
+
   // Also hide loader if present
   hideWidgetSettingsLoader();
+};
+
+/**
+ * Stop RRWeb session recording without unmounting the widget.
+ * Keeps the SessionRecorder instance so recording can be restarted with startRecording().
+ * SessionRecorder.stop() aborts in-flight start() via stopRequested.
+ */
+export const stopRecording = (): void => {
+  if (!sessionRecorder) return;
+  sessionRecorder.stop();
+  console.log('[Marketrix Widget] Session recording stopped (toggle)');
+};
+
+/**
+ * Start RRWeb session recording. Use after stopRecording() to resume, or when recording was not started on init.
+ * Safe to call while auto-start is in-flight — awaits the pending start instead of creating a concurrent one.
+ * @throws Error if session recorder was never created (e.g. missing mtxApiHost/mtxApp).
+ */
+export const startRecording = async (): Promise<void> => {
+  if (!sessionRecorder) {
+    throw new Error('Session recording not available. Ensure the widget is initialized with mtxApiHost and mtxApp.');
+  }
+  // If a start is already in-flight (auto-start or previous call), wait for it
+  if (recordingStartPromise) {
+    await recordingStartPromise.catch(() => {});
+    // After it settles, check if recording is already active
+    if (sessionRecorder?.isActive()) return;
+  }
+  // Already recording — no-op (SessionRecorder.start checks too, but avoid the promise tracking overhead)
+  if (sessionRecorder.isActive()) return;
+
+  recordingStartPromise = sessionRecorder.start();
+  try {
+    await recordingStartPromise;
+  } finally {
+    recordingStartPromise = null;
+  }
+};
+
+/**
+ * Returns whether RRWeb session recording is currently active.
+ */
+export const getRecordingState = (): boolean => {
+  return sessionRecorder?.isActive() ?? false;
 };
 
 // Update widget configuration
@@ -459,4 +515,7 @@ export default {
   unmountWidget,
   updateMarketrixConfig,
   getCurrentConfig,
+  startRecording,
+  stopRecording,
+  getRecordingState,
 };

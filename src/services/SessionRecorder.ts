@@ -50,6 +50,8 @@ export class SessionRecorder {
   private metadataAcknowledged = false;
   private metadataSendPromise: Promise<void> | null = null;
   private metadataAckResolver: ((value: void | PromiseLike<void>) => void) | null = null;
+  private startPromise: Promise<void> | null = null;
+  private stopRequested = false;
 
   private readonly TAB_ID_STORAGE_KEY = 'marketrix_tab_id';
 
@@ -185,11 +187,12 @@ export class SessionRecorder {
         }
       }, 500);
 
-      // Cleanup on timeout
+      // Reject on timeout so the promise always settles
       setTimeout(() => {
         if (!resolved) {
           resolved = true;
           clearInterval(checkInterval);
+          reject(new Error(`chat_id not available after ${timeoutMs}ms`));
         }
       }, timeoutMs);
     });
@@ -674,13 +677,31 @@ export class SessionRecorder {
 
   /**
    * Start recording session
-   * Will wait for marketrix_chat_id to be available before sending metadata
+   * Will wait for marketrix_chat_id to be available before sending metadata.
+   * Safe against concurrent calls (returns existing startPromise).
    */
   async start(): Promise<void> {
     if (this.isRecording) {
       log.warn('Recording already started');
       return;
     }
+    if (this.startPromise) {
+      return this.startPromise;
+    }
+
+    this.startPromise = this.doStart();
+    try {
+      await this.startPromise;
+    } finally {
+      this.startPromise = null;
+    }
+  }
+
+  /**
+   * Internal start implementation. Checks stopRequested at each async boundary.
+   */
+  private async doStart(): Promise<void> {
+    this.stopRequested = false;
 
     try {
       log.info('🚀 start() called');
@@ -690,12 +711,12 @@ export class SessionRecorder {
         sessionId: this.sessionId,
       });
 
-      // Wait for chat_id to be available (with timeout)
       log.info('⏳ Starting - waiting for marketrix_chat_id...');
       let chatId: string;
       try {
         const waitStartTime = Date.now();
-        chatId = await this.waitForChatId(30000); // Wait up to 30 seconds
+        chatId = await this.waitForChatId(30000);
+        if (this.stopRequested) throw new Error('Recording stopped during startup');
         const waitDuration = Date.now() - waitStartTime;
         if (!chatId || chatId.trim() === '') {
           throw new Error('marketrix_chat_id not available after waiting 30 seconds');
@@ -708,7 +729,6 @@ export class SessionRecorder {
         );
       }
 
-      // Verify chat_id is still available before connecting
       log.debug('Verifying chat_id is still available before connecting...');
       const verifiedChatId = this.getMarketrixChatId();
       if (!verifiedChatId || verifiedChatId !== chatId) {
@@ -723,13 +743,13 @@ export class SessionRecorder {
       }
       log.info('✅ Chat ID verified, proceeding to connect...');
 
-      // Connect to WebSocket first
+      if (this.stopRequested) throw new Error('Recording stopped during startup');
+
       log.info('Connecting to WebSocket...');
       await this.connect();
+      if (this.stopRequested) throw new Error('Recording stopped during startup');
       log.info('✅ WebSocket connection established');
 
-      // Wait for metadata to be sent before starting recording
-      // This prevents events from being sent before metadata
       if (!this.metadataSent) {
         log.warn('Metadata not sent after connection, sending now...');
         try {
@@ -739,29 +759,22 @@ export class SessionRecorder {
           throw new Error(`Failed to send metadata before starting recording: ${error}`);
         }
       } else if (this.metadataSendPromise) {
-        // If metadata send is in progress, wait for it
         log.debug('Waiting for metadata send to complete...');
         await this.metadataSendPromise;
       }
 
-      // Verify metadata was sent
+      if (this.stopRequested) throw new Error('Recording stopped during startup');
       if (!this.metadataSent) {
         throw new Error('Failed to send metadata before starting recording');
       }
 
-      // Wait for server acknowledgment with timeout
       log.info('Waiting for server metadata acknowledgment...');
       const ackPromise = new Promise<void>((resolve, reject) => {
-        // If already acknowledged, resolve immediately
         if (this.metadataAcknowledged) {
           resolve();
           return;
         }
-
-        // Set up resolver
         this.metadataAckResolver = resolve;
-
-        // Timeout after 5 seconds
         setTimeout(() => {
           if (!this.metadataAcknowledged) {
             this.metadataAckResolver = null;
@@ -778,26 +791,21 @@ export class SessionRecorder {
         throw new Error(`Server did not acknowledge metadata: ${error}`);
       }
 
-      // Configure RRWeb recording options
+      if (this.stopRequested) throw new Error('Recording stopped during startup');
+
       const recordOptions: RecordOptions = {
         emit: (event: unknown) => {
           this.sendEvent(event as eventWithTime);
         },
-        // Record all interactions
-        recordCanvas: false, // Set to true if you need canvas recording
+        recordCanvas: false,
         recordCrossOriginIframes: false,
-        // Mask sensitive data if needed
         maskAllInputs: false,
-        // Other options
         collectFonts: false,
         inlineStylesheet: true,
-        // Block class for elements to ignore
         blockClass: 'rr-block',
-        // Ignore class for elements to ignore
         ignoreClass: 'rr-ignore',
       };
 
-      // Start RRWeb recording (only after metadata is confirmed sent)
       this.stopRecording = record(recordOptions);
       this.isRecording = true;
 
@@ -809,10 +817,22 @@ export class SessionRecorder {
   }
 
   /**
-   * Stop recording session
+   * Stop recording session.
+   * When recording is not yet started but start() is in-flight, sets stopRequested and aborts
+   * connections so doStart() will throw and not resurrect recording.
    */
   stop(): void {
+    this.stopRequested = true;
+
     if (!this.isRecording) {
+      if (this.ws) {
+        this.ws.close();
+        this.ws = null;
+      }
+      if (this.reconnectTimer) {
+        clearTimeout(this.reconnectTimer);
+        this.reconnectTimer = null;
+      }
       return;
     }
 
@@ -823,19 +843,16 @@ export class SessionRecorder {
 
     this.isRecording = false;
 
-    // Close WebSocket connection
     if (this.ws) {
       this.ws.close();
       this.ws = null;
     }
 
-    // Clear reconnection timer
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
     }
 
-    // Clear event queue
     this.eventQueue = [];
     this.metadataSent = false;
     this.metadataAcknowledged = false;
