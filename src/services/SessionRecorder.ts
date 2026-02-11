@@ -141,61 +141,14 @@ export class SessionRecorder {
   }
 
   /**
-   * Wait for chat_id to become available in storage
-   * @param timeoutMs Maximum time to wait in milliseconds
-   * @returns Promise that resolves with the chat ID or rejects on timeout
+   * Get chat_id or throw. Called only after external code has confirmed chat_id exists.
    */
-  private waitForChatId(timeoutMs: number = 30000): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const existingChatId = this.getMarketrixChatId();
-
-      if (existingChatId) {
-        log.info('chat_id already available');
-        resolve(existingChatId);
-        return;
-      }
-
-      log.info('Waiting for chat_id...');
-      let resolved = false;
-      const startTime = Date.now();
-
-      // Poll for chat_id
-      const checkInterval = setInterval(() => {
-        if (resolved) {
-          clearInterval(checkInterval);
-          return;
-        }
-
-        const chatId = this.getMarketrixChatId();
-        const elapsed = Date.now() - startTime;
-
-        if (chatId) {
-          resolved = true;
-          clearInterval(checkInterval);
-          log.info(`chat_id became available after ${elapsed}ms`);
-          resolve(chatId);
-          return;
-        }
-
-        // Check timeout
-        if (elapsed >= timeoutMs) {
-          resolved = true;
-          clearInterval(checkInterval);
-          const error = `chat_id not available after ${timeoutMs}ms`;
-          log.error(error);
-          reject(new Error(error));
-        }
-      }, 500);
-
-      // Reject on timeout so the promise always settles
-      setTimeout(() => {
-        if (!resolved) {
-          resolved = true;
-          clearInterval(checkInterval);
-          reject(new Error(`chat_id not available after ${timeoutMs}ms`));
-        }
-      }, timeoutMs);
-    });
+  private requireChatId(): string {
+    const chatId = this.getMarketrixChatId();
+    if (!chatId) {
+      throw new Error('chat_id not available in storage — start() should only be called after chat_id is set');
+    }
+    return chatId;
   }
 
   /**
@@ -353,28 +306,14 @@ export class SessionRecorder {
     log.info(`Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
 
     this.reconnectTimer = setTimeout(() => {
-      // On reconnection, we need to ensure chat_id is available before connecting
-      log.debug('Reconnecting - checking for chat_id...');
       const chatId = this.getMarketrixChatId();
       if (!chatId || chatId.trim() === '') {
-        log.warn('⚠️ Chat_id not available on reconnect, waiting...');
-        // Wait for chat_id before reconnecting
-        this.waitForChatId(5000)
-          .then(() => {
-            log.info('Chat_id available, proceeding with reconnection');
-            this.connect().catch(error => {
-              log.error('Reconnection failed:', error);
-            });
-          })
-          .catch(error => {
-            log.error('Failed to get chat_id for reconnection:', error);
-            // Don't reconnect if chat_id is not available
-          });
-      } else {
-        this.connect().catch(error => {
-          log.error('Reconnection failed:', error);
-        });
+        log.warn('⚠️ chat_id not available on reconnect, skipping');
+        return;
       }
+      this.connect().catch(error => {
+        log.error('Reconnection failed:', error);
+      });
     }, delay);
   }
 
@@ -711,37 +650,9 @@ export class SessionRecorder {
         sessionId: this.sessionId,
       });
 
-      log.info('⏳ Starting - waiting for marketrix_chat_id...');
-      let chatId: string;
-      try {
-        const waitStartTime = Date.now();
-        chatId = await this.waitForChatId(30000);
-        if (this.stopRequested) throw new Error('Recording stopped during startup');
-        const waitDuration = Date.now() - waitStartTime;
-        if (!chatId || chatId.trim() === '') {
-          throw new Error('marketrix_chat_id not available after waiting 30 seconds');
-        }
-        log.info(`✅ marketrix_chat_id confirmed available after ${waitDuration}ms:`, `${chatId.substring(0, 20)}...`);
-      } catch (error) {
-        log.error('❌ Failed to get marketrix_chat_id:', error);
-        throw new Error(
-          `Cannot start recording: ${error instanceof Error ? error.message : 'marketrix_chat_id not available'}`,
-        );
-      }
-
-      log.debug('Verifying chat_id is still available before connecting...');
-      const verifiedChatId = this.getMarketrixChatId();
-      if (!verifiedChatId || verifiedChatId !== chatId) {
-        log.error('❌ Chat ID verification failed:', {
-          expected: chatId,
-          got: verifiedChatId,
-          match: verifiedChatId === chatId,
-        });
-        throw new Error(
-          `marketrix_chat_id changed or became unavailable: expected "${chatId}", got "${verifiedChatId}"`,
-        );
-      }
-      log.info('✅ Chat ID verified, proceeding to connect...');
+      // chat_id must already exist — recording is triggered by the marketrix:chatid event
+      const chatId = this.requireChatId();
+      log.info('✅ chat_id available:', `${chatId.substring(0, 20)}...`);
 
       if (this.stopRequested) throw new Error('Recording stopped during startup');
 

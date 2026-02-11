@@ -171,14 +171,15 @@ class StorageService {
   }
 
   /**
-   * Set chat_id in both localStorage and window.name
+   * Set chat_id in both localStorage and window.name.
+   * Dispatches a 'marketrix:chatid' event so other services (e.g. SessionRecorder) can react.
    */
   setChatId(chatId: string | null): void {
     this.updateContext({ chat_id: chatId });
 
-    // Also set window.name for cross-page navigation persistence
     if (typeof window !== 'undefined' && chatId) {
       window.name = chatId;
+      window.dispatchEvent(new CustomEvent('marketrix:chatid', { detail: { chatId } }));
     }
   }
 

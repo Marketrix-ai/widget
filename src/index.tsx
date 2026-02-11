@@ -9,6 +9,7 @@ import { createConfigFromSettings } from './services/ConfigManager';
 import { IntegrationService } from './services/IntegrationService';
 import { sessionManager } from './services/SessionManager';
 import { SessionRecorder } from './services/SessionRecorder';
+import { storageService } from './services/StorageService';
 import { WidgetValidationService } from './services/ValidationService';
 import type { AddWidgetConfig, MarketrixConfig, MarketrixWidgetProps } from './types';
 import {
@@ -41,6 +42,8 @@ let isRecordingInitialized = false; // Flag to prevent multiple SessionRecorder 
 let recordingStartPromise: Promise<void> | null = null;
 // Prevents concurrent initWidget() calls from creating duplicate widgets
 let initPromise: Promise<void> | null = null;
+// AbortController for marketrix:chatid listener — abort on unmount to remove listener
+let recordingAbortController: AbortController | null = null;
 
 /**
  * Initialize widget with validated configuration
@@ -206,19 +209,42 @@ async function initWidgetInternal(config: MarketrixConfig, container?: HTMLEleme
     sessionRecorder = new SessionRecorder(wsUrl, connectionId);
     isRecordingInitialized = true;
 
-    recordingStartPromise = sessionRecorder
-      .start()
-      .catch(error => {
-        console.error('[Marketrix Widget] ❌ Failed to start session recording:', error);
-        console.error('[Marketrix Widget] Error details:', {
-          message: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined,
+    recordingAbortController = new AbortController();
+
+    // Start recording as soon as a chat_id is available.
+    // chat_id is created when the widget registers over websocket (WidgetContext mount).
+    // If a chat_id already exists in storage (returning user), start immediately.
+    const startRecordingLocal = () => {
+      if (!sessionRecorder || sessionRecorder.isActive()) return;
+      const recorder = sessionRecorder;
+      recordingStartPromise = recorder
+        .start()
+        .catch(error => {
+          if (sessionRecorder !== recorder) return;
+          console.error('[Marketrix Widget] ❌ Failed to start session recording:', error);
+          isRecordingInitialized = false;
+        })
+        .finally(() => {
+          if (sessionRecorder !== recorder) return;
+          recordingStartPromise = null;
         });
-        isRecordingInitialized = false;
-      })
-      .finally(() => {
-        recordingStartPromise = null;
-      });
+    };
+
+    const existingChatId = storageService.getChatId();
+    if (existingChatId) {
+      console.log('[Marketrix Widget] chat_id already in storage, starting recording immediately');
+      startRecordingLocal();
+    } else {
+      console.log('[Marketrix Widget] Waiting for chat_id before starting recording...');
+      window.addEventListener(
+        'marketrix:chatid',
+        () => {
+          console.log('[Marketrix Widget] chat_id created, starting recording');
+          startRecordingLocal();
+        },
+        { once: true, signal: recordingAbortController.signal },
+      );
+    }
   } catch (error) {
     console.error('[Marketrix Widget] Failed to initialize session recording:', error);
     isRecordingInitialized = false;
@@ -264,6 +290,9 @@ export const unmountWidget = (): void => {
     console.log('Marketrix Widget destroyed');
   }
 
+  recordingAbortController?.abort();
+  recordingAbortController = null;
+
   // Stop session recording (SessionRecorder.stop() aborts in-flight start via stopRequested)
   if (sessionRecorder) {
     sessionRecorder.stop();
@@ -308,11 +337,12 @@ export const startRecording = async (): Promise<void> => {
   // Already recording — no-op (SessionRecorder.start checks too, but avoid the promise tracking overhead)
   if (sessionRecorder.isActive()) return;
 
-  recordingStartPromise = sessionRecorder.start();
+  const promise = sessionRecorder.start();
+  recordingStartPromise = promise;
   try {
-    await recordingStartPromise;
+    await promise;
   } finally {
-    recordingStartPromise = null;
+    if (recordingStartPromise === promise) recordingStartPromise = null;
   }
 };
 
