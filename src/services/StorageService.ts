@@ -75,7 +75,7 @@ class StorageService {
    * Load context from localStorage
    */
   private loadContext(): MarketrixChatContext {
-    if (typeof localStorage === 'undefined') {
+    if (typeof window === 'undefined') {
       this.context = { ...DEFAULT_CONTEXT };
       return this.context;
     }
@@ -107,7 +107,7 @@ class StorageService {
    * Save context to localStorage
    */
   private saveContext(): void {
-    if (typeof localStorage === 'undefined' || !this.context) {
+    if (typeof window === 'undefined' || !this.context) {
       return;
     }
 
@@ -236,7 +236,7 @@ class StorageService {
 
   clear(): void {
     this.context = { ...DEFAULT_CONTEXT };
-    if (typeof localStorage !== 'undefined') {
+    if (typeof window !== 'undefined') {
       localStorage.removeItem(STORAGE_KEY);
     }
   }
