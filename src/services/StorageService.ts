@@ -75,7 +75,7 @@ class StorageService {
    * Load context from localStorage
    */
   private loadContext(): MarketrixChatContext {
-    if (typeof localStorage === 'undefined') {
+    if (typeof window === 'undefined') {
       this.context = { ...DEFAULT_CONTEXT };
       return this.context;
     }
@@ -107,7 +107,7 @@ class StorageService {
    * Save context to localStorage
    */
   private saveContext(): void {
-    if (typeof localStorage === 'undefined' || !this.context) {
+    if (typeof window === 'undefined' || !this.context) {
       return;
     }
 
@@ -171,14 +171,15 @@ class StorageService {
   }
 
   /**
-   * Set chat_id in both localStorage and window.name
+   * Set chat_id in both localStorage and window.name.
+   * Dispatches a 'marketrix:chatid' event so other services (e.g. SessionRecorder) can react.
    */
   setChatId(chatId: string | null): void {
     this.updateContext({ chat_id: chatId });
 
-    // Also set window.name for cross-page navigation persistence
     if (typeof window !== 'undefined' && chatId) {
       window.name = chatId;
+      window.dispatchEvent(new CustomEvent('marketrix:chatid', { detail: { chatId } }));
     }
   }
 
@@ -235,7 +236,7 @@ class StorageService {
 
   clear(): void {
     this.context = { ...DEFAULT_CONTEXT };
-    if (typeof localStorage !== 'undefined') {
+    if (typeof window !== 'undefined') {
       localStorage.removeItem(STORAGE_KEY);
     }
   }

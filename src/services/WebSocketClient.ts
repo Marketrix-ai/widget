@@ -40,6 +40,8 @@ export class WebSocketClient {
 
   private heartbeatInterval: ReturnType<typeof setInterval> | null = null;
   private readonly heartbeatIntervalMs = 20000;
+  private connectPromise: Promise<void> | null = null;
+  private connectPromiseChatId: string | null = null;
 
   private constructor(config?: Partial<MarketrixConfig>) {
     this.url = getAgentWebSocketUrl(config);
@@ -85,36 +87,32 @@ export class WebSocketClient {
 
   async connect(chatId: string): Promise<void> {
     if (this.isIntentionallyDisconnected) {
-      // Reset intentional disconnect flag if explicitly called to connect
       this.isIntentionallyDisconnected = false;
     }
 
-    // If already connected to the same chat, do nothing
     if (this.isConnected() && this.chatId === chatId) {
       return;
     }
 
-    // If already connecting to the same chat, wait for it
-    if (this.status === 'connecting' && this.chatId === chatId && this.websocket?.readyState === WebSocket.CONNECTING) {
-      return new Promise((resolve, reject) => {
-        const timeout = setTimeout(() => {
-          reject(new Error('Connection timeout'));
-        }, 5000);
-
-        const checkInterval = setInterval(() => {
-          if (this.status === 'registered' || this.status === 'connected') {
-            clearInterval(checkInterval);
-            clearTimeout(timeout);
-            resolve();
-          } else if (this.status === 'error' || this.status === 'disconnected') {
-            clearInterval(checkInterval);
-            clearTimeout(timeout);
-            reject(new Error('Connection failed'));
-          }
-        }, 100);
-      });
+    if (this.connectPromise && this.connectPromiseChatId === chatId) {
+      return this.connectPromise;
     }
 
+    if (this.connectPromise) {
+      await this.connectPromise.catch(() => {});
+    }
+
+    this.connectPromiseChatId = chatId;
+    this.connectPromise = this.doConnect(chatId);
+    try {
+      await this.connectPromise;
+    } finally {
+      this.connectPromise = null;
+      this.connectPromiseChatId = null;
+    }
+  }
+
+  private async doConnect(chatId: string): Promise<void> {
     if (this.websocket) {
       if (this.chatId !== chatId || this.websocket.readyState !== WebSocket.CONNECTING) {
         this.disconnect();
@@ -171,7 +169,6 @@ export class WebSocketClient {
         this.websocket = null;
 
         if (event.code !== 1000) {
-          // 1000 is normal closure
           console.warn(
             `[WebSocket] Connection closed with code ${event.code}: ${event.reason || 'No reason provided'}`,
           );
@@ -200,6 +197,8 @@ export class WebSocketClient {
     this.isIntentionallyDisconnected = true;
     this.stopHeartbeat();
     this.clearReconnectTimer();
+    this.connectPromise = null;
+    this.connectPromiseChatId = null;
 
     if (this.websocket) {
       this.websocket.close();

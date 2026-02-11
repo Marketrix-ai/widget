@@ -50,6 +50,8 @@ export class SessionRecorder {
   private metadataAcknowledged = false;
   private metadataSendPromise: Promise<void> | null = null;
   private metadataAckResolver: ((value: void | PromiseLike<void>) => void) | null = null;
+  private startPromise: Promise<void> | null = null;
+  private stopRequested = false;
 
   private readonly TAB_ID_STORAGE_KEY = 'marketrix_tab_id';
 
@@ -139,60 +141,14 @@ export class SessionRecorder {
   }
 
   /**
-   * Wait for chat_id to become available in storage
-   * @param timeoutMs Maximum time to wait in milliseconds
-   * @returns Promise that resolves with the chat ID or rejects on timeout
+   * Get chat_id or throw. Called only after external code has confirmed chat_id exists.
    */
-  private waitForChatId(timeoutMs: number = 30000): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const existingChatId = this.getMarketrixChatId();
-
-      if (existingChatId) {
-        log.info('chat_id already available');
-        resolve(existingChatId);
-        return;
-      }
-
-      log.info('Waiting for chat_id...');
-      let resolved = false;
-      const startTime = Date.now();
-
-      // Poll for chat_id
-      const checkInterval = setInterval(() => {
-        if (resolved) {
-          clearInterval(checkInterval);
-          return;
-        }
-
-        const chatId = this.getMarketrixChatId();
-        const elapsed = Date.now() - startTime;
-
-        if (chatId) {
-          resolved = true;
-          clearInterval(checkInterval);
-          log.info(`chat_id became available after ${elapsed}ms`);
-          resolve(chatId);
-          return;
-        }
-
-        // Check timeout
-        if (elapsed >= timeoutMs) {
-          resolved = true;
-          clearInterval(checkInterval);
-          const error = `chat_id not available after ${timeoutMs}ms`;
-          log.error(error);
-          reject(new Error(error));
-        }
-      }, 500);
-
-      // Cleanup on timeout
-      setTimeout(() => {
-        if (!resolved) {
-          resolved = true;
-          clearInterval(checkInterval);
-        }
-      }, timeoutMs);
-    });
+  private requireChatId(): string {
+    const chatId = this.getMarketrixChatId();
+    if (!chatId) {
+      throw new Error('chat_id not available in storage — start() should only be called after chat_id is set');
+    }
+    return chatId;
   }
 
   /**
@@ -350,28 +306,14 @@ export class SessionRecorder {
     log.info(`Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
 
     this.reconnectTimer = setTimeout(() => {
-      // On reconnection, we need to ensure chat_id is available before connecting
-      log.debug('Reconnecting - checking for chat_id...');
       const chatId = this.getMarketrixChatId();
       if (!chatId || chatId.trim() === '') {
-        log.warn('⚠️ Chat_id not available on reconnect, waiting...');
-        // Wait for chat_id before reconnecting
-        this.waitForChatId(5000)
-          .then(() => {
-            log.info('Chat_id available, proceeding with reconnection');
-            this.connect().catch(error => {
-              log.error('Reconnection failed:', error);
-            });
-          })
-          .catch(error => {
-            log.error('Failed to get chat_id for reconnection:', error);
-            // Don't reconnect if chat_id is not available
-          });
-      } else {
-        this.connect().catch(error => {
-          log.error('Reconnection failed:', error);
-        });
+        log.warn('⚠️ chat_id not available on reconnect, skipping');
+        return;
       }
+      this.connect().catch(error => {
+        log.error('Reconnection failed:', error);
+      });
     }, delay);
   }
 
@@ -674,13 +616,31 @@ export class SessionRecorder {
 
   /**
    * Start recording session
-   * Will wait for marketrix_chat_id to be available before sending metadata
+   * Will wait for marketrix_chat_id to be available before sending metadata.
+   * Safe against concurrent calls (returns existing startPromise).
    */
   async start(): Promise<void> {
     if (this.isRecording) {
       log.warn('Recording already started');
       return;
     }
+    if (this.startPromise) {
+      return this.startPromise;
+    }
+
+    this.startPromise = this.doStart();
+    try {
+      await this.startPromise;
+    } finally {
+      this.startPromise = null;
+    }
+  }
+
+  /**
+   * Internal start implementation. Checks stopRequested at each async boundary.
+   */
+  private async doStart(): Promise<void> {
+    this.stopRequested = false;
 
     try {
       log.info('🚀 start() called');
@@ -690,46 +650,17 @@ export class SessionRecorder {
         sessionId: this.sessionId,
       });
 
-      // Wait for chat_id to be available (with timeout)
-      log.info('⏳ Starting - waiting for marketrix_chat_id...');
-      let chatId: string;
-      try {
-        const waitStartTime = Date.now();
-        chatId = await this.waitForChatId(30000); // Wait up to 30 seconds
-        const waitDuration = Date.now() - waitStartTime;
-        if (!chatId || chatId.trim() === '') {
-          throw new Error('marketrix_chat_id not available after waiting 30 seconds');
-        }
-        log.info(`✅ marketrix_chat_id confirmed available after ${waitDuration}ms:`, `${chatId.substring(0, 20)}...`);
-      } catch (error) {
-        log.error('❌ Failed to get marketrix_chat_id:', error);
-        throw new Error(
-          `Cannot start recording: ${error instanceof Error ? error.message : 'marketrix_chat_id not available'}`,
-        );
-      }
+      // chat_id must already exist — recording is triggered by the marketrix:chatid event
+      const chatId = this.requireChatId();
+      log.info('✅ chat_id available:', `${chatId.substring(0, 20)}...`);
 
-      // Verify chat_id is still available before connecting
-      log.debug('Verifying chat_id is still available before connecting...');
-      const verifiedChatId = this.getMarketrixChatId();
-      if (!verifiedChatId || verifiedChatId !== chatId) {
-        log.error('❌ Chat ID verification failed:', {
-          expected: chatId,
-          got: verifiedChatId,
-          match: verifiedChatId === chatId,
-        });
-        throw new Error(
-          `marketrix_chat_id changed or became unavailable: expected "${chatId}", got "${verifiedChatId}"`,
-        );
-      }
-      log.info('✅ Chat ID verified, proceeding to connect...');
+      if (this.stopRequested) throw new Error('Recording stopped during startup');
 
-      // Connect to WebSocket first
       log.info('Connecting to WebSocket...');
       await this.connect();
+      if (this.stopRequested) throw new Error('Recording stopped during startup');
       log.info('✅ WebSocket connection established');
 
-      // Wait for metadata to be sent before starting recording
-      // This prevents events from being sent before metadata
       if (!this.metadataSent) {
         log.warn('Metadata not sent after connection, sending now...');
         try {
@@ -739,29 +670,22 @@ export class SessionRecorder {
           throw new Error(`Failed to send metadata before starting recording: ${error}`);
         }
       } else if (this.metadataSendPromise) {
-        // If metadata send is in progress, wait for it
         log.debug('Waiting for metadata send to complete...');
         await this.metadataSendPromise;
       }
 
-      // Verify metadata was sent
+      if (this.stopRequested) throw new Error('Recording stopped during startup');
       if (!this.metadataSent) {
         throw new Error('Failed to send metadata before starting recording');
       }
 
-      // Wait for server acknowledgment with timeout
       log.info('Waiting for server metadata acknowledgment...');
       const ackPromise = new Promise<void>((resolve, reject) => {
-        // If already acknowledged, resolve immediately
         if (this.metadataAcknowledged) {
           resolve();
           return;
         }
-
-        // Set up resolver
         this.metadataAckResolver = resolve;
-
-        // Timeout after 5 seconds
         setTimeout(() => {
           if (!this.metadataAcknowledged) {
             this.metadataAckResolver = null;
@@ -778,26 +702,21 @@ export class SessionRecorder {
         throw new Error(`Server did not acknowledge metadata: ${error}`);
       }
 
-      // Configure RRWeb recording options
+      if (this.stopRequested) throw new Error('Recording stopped during startup');
+
       const recordOptions: RecordOptions = {
         emit: (event: unknown) => {
           this.sendEvent(event as eventWithTime);
         },
-        // Record all interactions
-        recordCanvas: false, // Set to true if you need canvas recording
+        recordCanvas: false,
         recordCrossOriginIframes: false,
-        // Mask sensitive data if needed
         maskAllInputs: false,
-        // Other options
         collectFonts: false,
         inlineStylesheet: true,
-        // Block class for elements to ignore
         blockClass: 'rr-block',
-        // Ignore class for elements to ignore
         ignoreClass: 'rr-ignore',
       };
 
-      // Start RRWeb recording (only after metadata is confirmed sent)
       this.stopRecording = record(recordOptions);
       this.isRecording = true;
 
@@ -809,10 +728,22 @@ export class SessionRecorder {
   }
 
   /**
-   * Stop recording session
+   * Stop recording session.
+   * When recording is not yet started but start() is in-flight, sets stopRequested and aborts
+   * connections so doStart() will throw and not resurrect recording.
    */
   stop(): void {
+    this.stopRequested = true;
+
     if (!this.isRecording) {
+      if (this.ws) {
+        this.ws.close();
+        this.ws = null;
+      }
+      if (this.reconnectTimer) {
+        clearTimeout(this.reconnectTimer);
+        this.reconnectTimer = null;
+      }
       return;
     }
 
@@ -823,19 +754,16 @@ export class SessionRecorder {
 
     this.isRecording = false;
 
-    // Close WebSocket connection
     if (this.ws) {
       this.ws.close();
       this.ws = null;
     }
 
-    // Clear reconnection timer
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
     }
 
-    // Clear event queue
     this.eventQueue = [];
     this.metadataSent = false;
     this.metadataAcknowledged = false;
