@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 
+import { DARK_THEME_COLORS } from '../../constants/theme';
 import { useResize, type ResizeCorner } from '../../hooks/useResize';
 import { useWidget } from '../../hooks/useWidget';
 import type { InstructionType } from '../../sdk';
@@ -371,7 +372,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     height: isMinimized ? '48px' : heightPx,
     borderRadius: settings.widget_border_radius,
     fontSize: settings.widget_font_size,
-    backgroundColor: '#ffffff',
+    backgroundColor: DARK_THEME_COLORS.white,
     backgroundImage: settings.widget_background_color.includes('gradient')
       ? settings.widget_background_color
       : `linear-gradient(135deg, ${settings.widget_background_color} 0%, ${settings.widget_background_color} 100%)`,
@@ -431,7 +432,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       className={`${positionClass} rounded-xl ${isPreviewMode ? '' : positionClasses} pointer-events-auto`}
       style={{
         zIndex,
-        backgroundColor: '#ffffff',
+        backgroundColor: DARK_THEME_COLORS.white,
         backgroundImage: settings.widget_background_color.includes('gradient')
           ? settings.widget_background_color
           : `linear-gradient(135deg, ${settings.widget_background_color} 0%, ${settings.widget_background_color} 100%)`,
@@ -677,7 +678,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
             <div
               className='flex-shrink-0 rounded-lg m-2 mt-auto'
               style={{
-                backgroundColor: '#ffffff',
+                backgroundColor: DARK_THEME_COLORS.white,
               }}
             >
               {/* Task Progress Display */}

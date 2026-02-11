@@ -1,5 +1,16 @@
 @import 'tailwindcss';
 
+:root {
+  --mx-gray-50: #f9fafb;
+  --mx-gray-100: #f3f4f6;
+  --mx-gray-300: #d1d5db;
+  --mx-gray-400: #9ca3af;
+  --mx-gray-500: #6b7280;
+  --mx-gray-700: #374151;
+  --mx-gray-800: #1f2937;
+  --mx-gray-900: #111827;
+}
+
 /* Custom styles for the widget */
 .marketrix-widget {
   font-family:
@@ -39,7 +50,7 @@
 
 .gradient-border {
   border: 2px solid;
-  border-image: linear-gradient(to right, #8b5cf6, #10b981) 1;
+  border-image: linear-gradient(to right, var(--mx-gray-700), var(--mx-gray-900)) 1;
 }
 
 /* Fade-in animation for welcome text */
@@ -98,24 +109,24 @@
 
 .marketrix-widget ::-webkit-scrollbar-track,
 .marketrix-widget * ::-webkit-scrollbar-track {
-  background: #f6f6f6;
+  background: var(--mx-gray-100);
   border-radius: 3px;
 }
 
 .marketrix-widget ::-webkit-scrollbar-thumb,
 .marketrix-widget * ::-webkit-scrollbar-thumb {
-  background: #b6b6b6;
+  background: var(--mx-gray-400);
   border-radius: 3px;
 }
 
 .marketrix-widget ::-webkit-scrollbar-thumb:hover,
 .marketrix-widget * ::-webkit-scrollbar-thumb:hover {
-  background: #a0a0a0;
+  background: var(--mx-gray-500);
 }
 
 /* Firefox scrollbar styles */
 .marketrix-widget {
-  scrollbar-color: #f6f6f6 #b6b6b6;
+  scrollbar-color: var(--mx-gray-100) var(--mx-gray-400);
   scrollbar-width: thin;
 }
 
@@ -176,13 +187,13 @@
   0%,
   100% {
     box-shadow:
-      0 0 15px rgba(139, 92, 246, 0.8),
-      0 0 30px rgba(139, 92, 246, 0.5);
+      0 0 15px rgba(31, 41, 55, 0.8),
+      0 0 30px rgba(31, 41, 55, 0.5);
   }
   50% {
     box-shadow:
-      0 0 25px rgba(139, 92, 246, 1),
-      0 0 50px rgba(139, 92, 246, 0.7);
+      0 0 25px rgba(31, 41, 55, 1),
+      0 0 50px rgba(31, 41, 55, 0.7);
   }
 }
 
@@ -193,13 +204,13 @@
     border-color: rgba(255, 255, 255, 0.6);
     box-shadow:
       0 0 0 0 rgba(255, 255, 255, 0.3),
-      0 0 0 0 rgba(139, 92, 246, 0.4);
+      0 0 0 0 rgba(31, 41, 55, 0.4);
   }
   50% {
     border-color: rgba(255, 255, 255, 1);
     box-shadow:
       0 0 0 2px rgba(255, 255, 255, 0.6),
-      0 0 0 4px rgba(139, 92, 246, 0.3);
+      0 0 0 4px rgba(31, 41, 55, 0.3);
   }
 }
 

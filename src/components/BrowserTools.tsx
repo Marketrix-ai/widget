@@ -18,6 +18,7 @@ import {
   type BrowserAction,
   type BrowserToolMetadata,
 } from '../types/browserTools';
+import { DARK_THEME_COLORS } from '../constants/theme';
 import { addOpacity, getContrastingColor } from '../utils/format';
 
 interface BrowserToolsProps {
@@ -137,7 +138,7 @@ export const BrowserTools: React.FC<BrowserToolsProps> = ({ config, onToolSelect
       className='browser-tools-container'
       style={{
         width,
-        backgroundColor: '#ffffff',
+        backgroundColor: DARK_THEME_COLORS.white,
         border: `1px solid ${addOpacity(borderColor, 0.2)}`,
         borderRadius: widgetConfig.widget_border_radius,
         overflow: 'hidden',

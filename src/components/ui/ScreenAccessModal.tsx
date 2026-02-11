@@ -1,4 +1,5 @@
 import React from 'react';
+import { DARK_THEME_CLASSES } from '../../constants/theme';
 
 interface ScreenAccessModalProps {
   isOpen: boolean;
@@ -33,7 +34,7 @@ export const ScreenAccessModal: React.FC<ScreenAccessModalProps> = ({ isOpen, on
                 e.stopPropagation();
                 onAllow();
               }}
-              className='px-5 py-1 bg-[#E7DDFF] text-[#6941C6] rounded-full transition-all duration-200 text-sm font-medium hover:bg-[#D4C4FF]'
+              className={DARK_THEME_CLASSES.allowButtonCompact}
             >
               Yes
             </button>
@@ -43,7 +44,7 @@ export const ScreenAccessModal: React.FC<ScreenAccessModalProps> = ({ isOpen, on
                 e.stopPropagation();
                 onDeny();
               }}
-              className='px-6 py-1 bg-[#E7DDFF] text-[#6941C6] rounded-full transition-all duration-200 text-sm font-medium hover:bg-[#D4C4FF]'
+              className={DARK_THEME_CLASSES.denyButtonCompact}
             >
               No
             </button>

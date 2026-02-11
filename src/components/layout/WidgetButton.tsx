@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 
 import MarketrixIcon from '../../assets/marketrix-icon.png';
+import { DARK_THEME_COLORS } from '../../constants/theme';
 import { useWidget } from '../../hooks/useWidget';
 import type { MarketrixConfig, WidgetPosition } from '../../types';
 import { addOpacity, darkenColor, getContrastingColor } from '../../utils/format';
@@ -290,7 +291,7 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
             />
           </div>
           {!isOpen && isScreenSharing && (
-            <div className='absolute top-1 right-1 w-3 h-3 rounded-full bg-red-500 animate-pulse border-2 border-white' />
+            <div className='absolute top-1 right-1 w-3 h-3 rounded-full bg-gray-700 animate-pulse border-2 border-white' />
           )}
         </div>
       </button>
@@ -300,7 +301,7 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
         <div
           className={`absolute ${effectivePosition.includes('left') ? 'right-16' : 'left-16'} bottom-0 px-4 py-3 text-sm rounded-lg shadow-lg w-64 ${effectivePosition.includes('left') ? 'animate-slide-in-right' : 'animate-slide-in-left'} cursor-pointer`}
           style={{
-            backgroundColor: '#ffffff',
+            backgroundColor: DARK_THEME_COLORS.white,
             backgroundImage: 'none',
             color: widgetConfig.widget_text_color,
             borderColor: widgetConfig.widget_border_color,

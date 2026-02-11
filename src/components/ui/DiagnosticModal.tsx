@@ -1,5 +1,6 @@
 import React from 'react';
 import { FiX } from 'react-icons/fi';
+import { DARK_THEME_CLASSES } from '../../constants/theme';
 
 interface DiagnosticModalProps {
   isOpen: boolean;
@@ -29,11 +30,13 @@ export const DiagnosticModal: React.FC<DiagnosticModalProps> = ({ isOpen, onClos
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className='bg-gradient-to-r from-purple-600 to-blue-600 px-6 py-4 text-white relative overflow-hidden flex-shrink-0 rounded-t-lg'>
+        <div
+          className={`${DARK_THEME_CLASSES.diagnosticHeader} px-6 py-4 text-white relative overflow-hidden flex-shrink-0 rounded-t-lg`}
+        >
           <div className='relative z-10 flex items-center justify-between'>
             <div>
               <h2 className='text-base font-semibold text-white'>Diagnostic Information</h2>
-              <p className='text-xs text-purple-100 mt-0.5'>Widget connection details</p>
+              <p className={`text-xs ${DARK_THEME_CLASSES.diagnosticSubtitle} mt-0.5`}>Widget connection details</p>
             </div>
             <button onClick={onClose} className='text-white/80 hover:text-white transition-colors'>
               <FiX className='w-5 h-5' />

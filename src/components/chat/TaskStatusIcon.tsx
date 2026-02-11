@@ -1,5 +1,6 @@
 import React from 'react';
 import { FaCheckCircle, FaCircle, FaExclamationCircle, FaSpinner } from 'react-icons/fa';
+import { addOpacity } from '../../utils/format';
 
 interface TaskStatusIconProps {
   status: 'ongoing' | 'done' | 'failed' | 'stopped';
@@ -14,7 +15,7 @@ export const TaskStatusIcon: React.FC<TaskStatusIconProps> = ({ status, accentCo
       return (
         <FaCheckCircle
           className='flex-shrink-0'
-          style={{ color: '#10b981' }} // Green
+          style={{ color: accentColor }}
           size={iconSize}
         />
       );
@@ -22,7 +23,7 @@ export const TaskStatusIcon: React.FC<TaskStatusIconProps> = ({ status, accentCo
       return (
         <FaExclamationCircle
           className='flex-shrink-0'
-          style={{ color: '#ef4444' }} // Red
+          style={{ color: addOpacity(accentColor, 0.75) }}
           size={iconSize}
         />
       );
@@ -30,7 +31,7 @@ export const TaskStatusIcon: React.FC<TaskStatusIconProps> = ({ status, accentCo
       return (
         <FaCircle
           className='flex-shrink-0'
-          style={{ color: '#eab308' }} // Yellow
+          style={{ color: addOpacity(accentColor, 0.5) }}
           size={iconSize}
         />
       );

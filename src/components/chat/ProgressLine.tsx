@@ -31,12 +31,12 @@ export const ProgressLine: React.FC<ProgressLineProps> = ({
   const renderIcon = () => {
     switch (status) {
       case 'completed':
-        return <FaCheckCircle className='flex-shrink-0 mt-0.5' style={{ color: accentColor || '#10b981' }} size={16} />;
+        return <FaCheckCircle className='flex-shrink-0 mt-0.5' style={{ color: accentColor }} size={16} />;
       case 'failed':
         return (
           <FaTimesCircle
             className='flex-shrink-0 mt-0.5'
-            style={{ color: '#ef4444' }} // Red for error
+            style={{ color: addOpacity(textColor, 0.65) }}
             size={16}
           />
         );
@@ -61,7 +61,7 @@ export const ProgressLine: React.FC<ProgressLineProps> = ({
                   width: '16px',
                   height: '16px',
                   border: `2px solid ${addOpacity(textColor, 0.2)}`,
-                  borderTop: `2px solid ${accentColor || '#10b981'}`,
+                  borderTop: `2px solid ${accentColor}`,
                   borderRadius: '50%',
                   animation: 'spin 1s linear infinite',
                 }}
@@ -79,7 +79,7 @@ export const ProgressLine: React.FC<ProgressLineProps> = ({
         return (
           <FaSpinner
             className='flex-shrink-0 mt-0.5 animate-spin'
-            style={{ color: accentColor || '#10b981' }}
+            style={{ color: accentColor }}
             size={16}
           />
         );
