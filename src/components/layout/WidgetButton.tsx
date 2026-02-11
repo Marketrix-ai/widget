@@ -17,6 +17,8 @@ interface WidgetButtonProps {
   isOpen: boolean;
   isMinimized?: boolean;
   isScreenSharing?: boolean;
+  isLoading?: boolean;
+  isTaskRunning?: boolean;
   position: WidgetPosition;
   onPositionChange: (position: WidgetPosition) => void;
 }
@@ -27,9 +29,12 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
   isOpen,
   isMinimized = false,
   isScreenSharing = false,
+  isLoading = false,
+  isTaskRunning = false,
   position,
   onPositionChange,
 }) => {
+  const showProcessingGlow = !isOpen && (isLoading || isTaskRunning);
   const [showWelcomeText, setShowWelcomeText] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const wrapperRef = useRef<HTMLDivElement | null>(null);
@@ -244,6 +249,13 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
         ...previewPositionStyle,
       }}
     >
+      <div className='relative w-14 h-14'>
+        {showProcessingGlow && (
+          <div
+            className='absolute inset-[-10px] rounded-[27px] marketrix-widget-button-processing-glow pointer-events-none'
+            aria-hidden
+          />
+        )}
       <button
         onClick={() => {
           if (Date.now() < suppressUntilRef.current) return;
@@ -295,6 +307,7 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
           )}
         </div>
       </button>
+      </div>
 
       {/* Welcome Text */}
       {!isOpen && showWelcomeText && widgetConfig.widget_appearance === 'default' && (

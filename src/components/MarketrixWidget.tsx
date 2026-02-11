@@ -156,6 +156,8 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
         isOpen={state.isOpen}
         isMinimized={state.isMinimized}
         isScreenSharing={isScreenSharing}
+        isLoading={state.isLoading}
+        isTaskRunning={state.isTaskRunning}
         position={widgetPosition}
         onPositionChange={handlePositionChange}
       />
