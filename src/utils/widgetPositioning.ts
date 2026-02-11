@@ -54,3 +54,67 @@ export const getNearestCorner = (
   if (!isBottom && isRight) return 'top_right';
   return 'top_left';
 };
+
+const EDGE_OFFSET_PX = 20;
+
+/** Anchor top-left of widget (px) for a corner, given viewport and widget size. */
+export const getAnchorTopLeft = (
+  position: WidgetPosition,
+  vw: number,
+  vh: number,
+  w: number,
+  h: number,
+): { x: number; y: number } => {
+  switch (position) {
+    case 'top_left':
+      return { x: EDGE_OFFSET_PX, y: EDGE_OFFSET_PX };
+    case 'top_right':
+      return { x: vw - EDGE_OFFSET_PX - w, y: EDGE_OFFSET_PX };
+    case 'bottom_left':
+      return { x: EDGE_OFFSET_PX, y: vh - EDGE_OFFSET_PX - h };
+    case 'bottom_right':
+    default:
+      return { x: vw - EDGE_OFFSET_PX - w, y: vh - EDGE_OFFSET_PX - h };
+  }
+};
+
+/** Delta (dx, dy) that would place widget center at the given corner center. */
+export const getDeltaToCorner = (
+  position: WidgetPosition,
+  corner: WidgetPosition,
+  vw: number,
+  vh: number,
+  w: number,
+  h: number,
+): { dx: number; dy: number } => {
+  const anchor = getAnchorTopLeft(position, vw, vh, w, h);
+  const centerX = anchor.x + w / 2;
+  const centerY = anchor.y + h / 2;
+
+  let targetCenterX: number;
+  let targetCenterY: number;
+  switch (corner) {
+    case 'top_left':
+      targetCenterX = EDGE_OFFSET_PX + w / 2;
+      targetCenterY = EDGE_OFFSET_PX + h / 2;
+      break;
+    case 'top_right':
+      targetCenterX = vw - EDGE_OFFSET_PX - w / 2;
+      targetCenterY = EDGE_OFFSET_PX + h / 2;
+      break;
+    case 'bottom_left':
+      targetCenterX = EDGE_OFFSET_PX + w / 2;
+      targetCenterY = vh - EDGE_OFFSET_PX - h / 2;
+      break;
+    case 'bottom_right':
+    default:
+      targetCenterX = vw - EDGE_OFFSET_PX - w / 2;
+      targetCenterY = vh - EDGE_OFFSET_PX - h / 2;
+      break;
+  }
+
+  return {
+    dx: targetCenterX - centerX,
+    dy: targetCenterY - centerY,
+  };
+};

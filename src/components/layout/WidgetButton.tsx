@@ -4,7 +4,11 @@ import MarketrixIcon from '../../assets/marketrix-icon.png';
 import { useWidget } from '../../hooks/useWidget';
 import type { MarketrixConfig, WidgetPosition } from '../../types';
 import { addOpacity, darkenColor, getContrastingColor } from '../../utils/format';
-import { getPositionClasses } from '../../utils/widgetPositioning';
+import {
+  getAnchorTopLeft,
+  getDeltaToCorner,
+  getPositionClasses,
+} from '../../utils/widgetPositioning';
 
 interface WidgetButtonProps {
   config: MarketrixConfig;
@@ -46,15 +50,19 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
   useEffect(() => {
     setShowWelcomeText(false);
     if (isMinimized) return;
-    if (widgetConfig.widget_appearance === 'default') {
-      const buttonTimer = setTimeout(() => {
-        const welcomeTimer = setTimeout(() => {
-          setShowWelcomeText(true);
-        }, 2000);
-        return () => clearTimeout(welcomeTimer);
-      }, 100);
-      return () => clearTimeout(buttonTimer);
-    }
+    if (widgetConfig.widget_appearance !== 'default') return;
+
+    let welcomeTimer: ReturnType<typeof setTimeout> | null = null;
+    const buttonTimer = setTimeout(() => {
+      welcomeTimer = setTimeout(() => {
+        setShowWelcomeText(true);
+      }, 2000);
+    }, 100);
+
+    return () => {
+      clearTimeout(buttonTimer);
+      if (welcomeTimer !== null) clearTimeout(welcomeTimer);
+    };
   }, [widgetConfig.widget_appearance, isMinimized]);
 
   // Cleanup RAF on unmount
@@ -68,6 +76,9 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
   const zIndex = widgetConfig.widget_position_z_index ?? 50;
   const effectivePositionClasses = getPositionClasses(effectivePosition);
   const positionClass = isPreviewMode ? 'absolute' : 'fixed';
+
+  const MAGNET_DISTANCE = 140;
+  const MAGNET_STRENGTH = 0.92;
 
   const previewPositionStyle = isPreviewMode
     ? effectivePosition.includes('top')
@@ -102,7 +113,6 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
 
   const onPointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
     if (isOpen) return;
-    setShowWelcomeText(false);
     dragRef.current = {
       pointerId: event.pointerId,
       startX: event.clientX,
@@ -124,6 +134,7 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
     if (!drag.dragging && Math.hypot(dx, dy) > 6) {
       drag.dragging = true;
       setIsDragging(true);
+      setShowWelcomeText(false);
       // Hint GPU
       if (wrapperRef.current) {
         wrapperRef.current.style.willChange = 'transform';
@@ -141,9 +152,49 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
       rafRef.current = window.requestAnimationFrame(() => {
         rafRef.current = null;
         const d = dragRef.current;
-        if (wrapperRef.current && d) {
-          wrapperRef.current.style.transform = `translate3d(${d.lastX}px, ${d.lastY}px, 0)`;
+        const wrapper = wrapperRef.current;
+        if (!wrapper || !d) return;
+
+        let dx = d.lastX;
+        let dy = d.lastY;
+
+        if (typeof window !== 'undefined') {
+          const vw = window.innerWidth;
+          const vh = window.innerHeight;
+          const rect = wrapper.getBoundingClientRect();
+          const w = rect.width;
+          const h = rect.height;
+          const anchor = getAnchorTopLeft(position, vw, vh, w, h);
+          const centerX = anchor.x + w / 2 + dx;
+          const centerY = anchor.y + h / 2 + dy;
+
+          const edge = 20;
+          const cornerCenters: { corner: WidgetPosition; x: number; y: number }[] = [
+            { corner: 'top_left', x: edge + w / 2, y: edge + h / 2 },
+            { corner: 'top_right', x: vw - edge - w / 2, y: edge + h / 2 },
+            { corner: 'bottom_left', x: edge + w / 2, y: vh - edge - h / 2 },
+            { corner: 'bottom_right', x: vw - edge - w / 2, y: vh - edge - h / 2 },
+          ];
+
+          let nearestDist = Infinity;
+          let nearest: (typeof cornerCenters)[0] | null = null;
+          for (const cc of cornerCenters) {
+            const dist = Math.hypot(centerX - cc.x, centerY - cc.y);
+            if (dist < nearestDist) {
+              nearestDist = dist;
+              nearest = cc;
+            }
+          }
+
+          if (nearest && nearestDist < MAGNET_DISTANCE) {
+            const pull = Math.pow(1 - nearestDist / MAGNET_DISTANCE, 1.2) * MAGNET_STRENGTH;
+            const target = getDeltaToCorner(position, nearest.corner, vw, vh, w, h);
+            dx = dx + (target.dx - dx) * pull;
+            dy = dy + (target.dy - dy) * pull;
+          }
         }
+
+        wrapper.style.transform = `translate3d(${dx}px, ${dy}px, 0)`;
       });
     }
   };
