@@ -277,24 +277,24 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
           }}
           aria-label='Open Marketrix support chat'
         >
-        <div className='w-full h-full flex items-center justify-center relative'>
-          <img
-            src={MarketrixIcon}
-            alt='Marketrix Icon'
-            className='w-full h-full object-contain'
-            draggable={false}
-            onDragStart={e => e.preventDefault()}
-            style={{
-              boxShadow: widgetConfig.widget_shadow,
-              borderRadius: widgetConfig.widget_border_radius,
-              border: 'none',
-              outline: 'none',
-              backgroundColor: 'transparent',
-              pointerEvents: 'none',
-              userSelect: 'none',
-            }}
-          />
-        </div>
+          <div className='w-full h-full flex items-center justify-center relative'>
+            <img
+              src={MarketrixIcon}
+              alt='Marketrix Icon'
+              className='w-full h-full object-contain'
+              draggable={false}
+              onDragStart={e => e.preventDefault()}
+              style={{
+                boxShadow: widgetConfig.widget_shadow,
+                borderRadius: widgetConfig.widget_border_radius,
+                border: 'none',
+                outline: 'none',
+                backgroundColor: 'transparent',
+                pointerEvents: 'none',
+                userSelect: 'none',
+              }}
+            />
+          </div>
         </button>
       </div>
 
