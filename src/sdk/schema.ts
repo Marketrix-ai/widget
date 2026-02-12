@@ -1033,8 +1033,8 @@ export const AgentIndexCallbackRequestSchema = z
   .object({
     agent_id: z.coerce.number().positive('Agent ID must be a positive number'),
     index_name: z.string(),
-    index_type: z.enum(['vector_index', 'graph_index', 'mindmap'], {
-      message: 'Index type must be vector_index, graph_index, or mindmap' as const,
+    index_type: z.enum(['vector_index', 'graph_index'], {
+      message: 'Index type must be vector_index or graph_index' as const,
     }),
     status: z.enum(['success', 'failed'], { message: 'Status must be success or failed' }),
     status_message: z.string().optional(),
