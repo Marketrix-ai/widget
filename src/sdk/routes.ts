@@ -244,6 +244,9 @@ const contract = c.router({
       name: z.string().min(1).max(45),
       domain: z.string().min(1).max(200),
       team_emails: z.array(z.string().email()).optional().default([]),
+      app_url: z.string().url().optional(),
+      app_username: z.string().optional(),
+      app_password: z.string().optional(),
     }),
     responses: {
       200: R.success(
