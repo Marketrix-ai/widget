@@ -1,4 +1,5 @@
 import React from 'react';
+
 import { DARK_THEME_COLORS } from '../../constants/theme';
 
 interface WidgetSettingsLoaderProps {

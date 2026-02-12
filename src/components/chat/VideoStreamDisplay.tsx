@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+
 import { DARK_THEME_COLORS } from '../../constants/theme';
 
 interface VideoStreamDisplayProps {

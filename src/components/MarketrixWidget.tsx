@@ -39,7 +39,7 @@ class WidgetErrorBoundary extends React.Component<{ children: React.ReactNode },
 }
 
 export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
-  const [isScreenSharing, setIsScreenSharing] = useState(false);
+  const [_isScreenSharing, setIsScreenSharing] = useState(false);
   const [showDevPanel, setShowDevPanel] = useState(false);
 
   const {
@@ -85,7 +85,12 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
 
     const fallback = (settings.widget_position as WidgetPosition | undefined) ?? 'bottom_right';
     const storedPosition = localStorage.getItem(positionStorageKey);
-    if (storedPosition === 'bottom_left' || storedPosition === 'bottom_right' || storedPosition === 'top_left' || storedPosition === 'top_right') {
+    if (
+      storedPosition === 'bottom_left' ||
+      storedPosition === 'bottom_right' ||
+      storedPosition === 'top_left' ||
+      storedPosition === 'top_right'
+    ) {
       setWidgetPosition(storedPosition);
       return;
     }
@@ -139,25 +144,14 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
       style={{ ...customStyles, ...(isPreviewMode && { width: '100%', height: '100%' }) }}
       data-widget-mode={settings?.widget_feature_human ? 'hybrid' : 'ai'}
     >
-      {state.isTaskRunning && (
-        <div
-          className='animate-screen-edge-glow fixed inset-0'
-          style={{
-            boxShadow: 'inset 0 0 30px 2px var(--widget-primary-color)',
-            pointerEvents: 'none',
-            zIndex: WIDGET_Z_INDEX_BASE, // Keep glow beneath widget controls.
-          }}
-        />
-      )}
-
       <WidgetButton
         config={effectiveConfig}
         onClick={actions.toggleWidget}
         isOpen={state.isOpen}
         isMinimized={state.isMinimized}
-        isScreenSharing={isScreenSharing}
         isLoading={state.isLoading}
         isTaskRunning={state.isTaskRunning}
+        hasError={!!state.error}
         position={widgetPosition}
         onPositionChange={handlePositionChange}
       />
@@ -186,11 +180,7 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
       </WidgetErrorBoundary>
 
       {state.error && (
-        <ErrorDisplay
-          error={state.error}
-          onClose={() => actions.clearError()}
-          position={widgetPosition}
-        />
+        <ErrorDisplay error={state.error} onClose={() => actions.clearError()} position={widgetPosition} />
       )}
 
       {/* Dev-only DOM Test Panel */}

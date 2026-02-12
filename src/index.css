@@ -182,21 +182,6 @@
   border: none !important;
 }
 
-/* Glowing animation for screen sharing button */
-@keyframes glow-pulse {
-  0%,
-  100% {
-    box-shadow:
-      0 0 15px rgba(31, 41, 55, 0.8),
-      0 0 30px rgba(31, 41, 55, 0.5);
-  }
-  50% {
-    box-shadow:
-      0 0 25px rgba(31, 41, 55, 1),
-      0 0 50px rgba(31, 41, 55, 0.7);
-  }
-}
-
 /* Animated glow border for mode buttons during screen sharing */
 @keyframes glow-border-pulse {
   0%,
@@ -214,42 +199,80 @@
   }
 }
 
-/* Screen edge glow animation */
-@keyframes screen-edge-glow {
-  0%,
-  100% {
-    opacity: 0.7;
-  }
-  50% {
-    opacity: 1;
-  }
+/* Processing glow for widget button. CSS-only, no host deps.
+   Green (#31d06d) = default processing, Red (#D0342C) = error. */
+
+/* Shared glow base */
+.marketrix-widget-button-processing-glow,
+.marketrix-widget-button-error-glow {
+  position: absolute;
+  pointer-events: none;
+  top: 50%;
+  left: 50%;
+  width: 140%;
+  height: 140%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  filter: blur(14px);
+  will-change: transform, opacity;
 }
 
-.animate-screen-edge-glow {
-  animation: screen-edge-glow 1.5s ease-in-out infinite;
-}
-
-/* Processing glow for widget button (closed + loading). CSS-only, no host deps. */
-@keyframes widget-button-processing-glow {
-  0%,
-  100% {
-    opacity: 1;
-    box-shadow:
-      0 0 16px 6px rgba(255, 87, 51, 0.7),
-      0 0 28px 10px rgba(51, 255, 87, 0.55),
-      0 0 32px 12px rgba(51, 87, 255, 0.55),
-      0 0 20px 6px rgba(241, 196, 15, 0.6);
+/* Default: green pulsating glow */
+@keyframes widget-glow-green {
+  0%, 100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.72;
+    background: radial-gradient(
+      circle,
+      rgba(49, 208, 109, 0) 38%,
+      rgba(49, 208, 109, 0.38) 58%,
+      rgba(49, 208, 109, 0.24) 68%,
+      transparent 78%
+    );
   }
   50% {
+    transform: translate(-50%, -50%) scale(1.1);
     opacity: 1;
-    box-shadow:
-      0 0 24px 8px rgba(255, 87, 51, 0.9),
-      0 0 40px 14px rgba(51, 255, 87, 0.75),
-      0 0 48px 16px rgba(51, 87, 255, 0.75),
-      0 0 32px 10px rgba(241, 196, 15, 0.85);
+    background: radial-gradient(
+      circle,
+      rgba(49, 208, 109, 0) 34%,
+      rgba(49, 208, 109, 0.55) 56%,
+      rgba(49, 208, 109, 0.33) 68%,
+      transparent 80%
+    );
   }
 }
 
 .marketrix-widget-button-processing-glow {
-  animation: widget-button-processing-glow 1.8s ease-in-out infinite;
+  animation: widget-glow-green 2s ease-in-out infinite;
+}
+
+/* Error: red pulsating glow */
+@keyframes widget-glow-red {
+  0%, 100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.65;
+    background: radial-gradient(
+      circle,
+      rgba(208, 52, 44, 0) 38%,
+      rgba(208, 52, 44, 0.34) 58%,
+      rgba(208, 52, 44, 0.22) 68%,
+      transparent 78%
+    );
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.1);
+    opacity: 0.95;
+    background: radial-gradient(
+      circle,
+      rgba(208, 52, 44, 0) 34%,
+      rgba(208, 52, 44, 0.5) 56%,
+      rgba(208, 52, 44, 0.3) 68%,
+      transparent 80%
+    );
+  }
+}
+
+.marketrix-widget-button-error-glow {
+  animation: widget-glow-red 1.5s ease-in-out infinite;
 }

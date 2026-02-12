@@ -1,5 +1,6 @@
 import React from 'react';
 import { FiX } from 'react-icons/fi';
+
 import { DARK_THEME_CLASSES } from '../../constants/theme';
 
 interface DiagnosticModalProps {

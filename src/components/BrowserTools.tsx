@@ -10,6 +10,7 @@ import { LuMousePointerClick, LuScroll } from 'react-icons/lu';
 import { MdOutlineKeyboard, MdOutlineSelectAll } from 'react-icons/md';
 import { TbArrowDown, TbFileUpload } from 'react-icons/tb';
 
+import { DARK_THEME_COLORS } from '../constants/theme';
 import { useWidget } from '../hooks/useWidget';
 import type { MarketrixConfig } from '../types';
 import {
@@ -18,7 +19,6 @@ import {
   type BrowserAction,
   type BrowserToolMetadata,
 } from '../types/browserTools';
-import { DARK_THEME_COLORS } from '../constants/theme';
 import { addOpacity, getContrastingColor } from '../utils/format';
 
 interface BrowserToolsProps {

@@ -7,7 +7,8 @@ interface ErrorDisplayProps {
 }
 
 export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({ error, onClose, position = 'bottom_left' }) => {
-  const positionStyle = position === 'bottom_left' || position === 'top_left' || !position ? { left: '0' } : { right: '0' };
+  const positionStyle =
+    position === 'bottom_left' || position === 'top_left' || !position ? { left: '0' } : { right: '0' };
   const verticalStyle = position.includes('top') ? { top: '20px' } : { bottom: '90px' };
 
   return (

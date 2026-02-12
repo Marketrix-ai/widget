@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 import { DARK_THEME_COLORS } from '../../constants/theme';
-import { useResize, type ResizeCorner } from '../../hooks/useResize';
+import { type ResizeCorner, useResize } from '../../hooks/useResize';
 import { useWidget } from '../../hooks/useWidget';
 import type { InstructionType } from '../../sdk';
 import {
@@ -741,7 +741,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         )}
 
         {/* Resize handles - all 4 corners, Windows 11 style */}
-        {!isMinimized && !isPreviewMode &&
+        {!isMinimized &&
+          !isPreviewMode &&
           (['top-left', 'top-right', 'bottom-left', 'bottom-right'] as const).map(corner => {
             const posClasses: Record<ResizeCorner, string> = {
               'top-left': 'top-0 left-0 rounded-tl-lg cursor-nwse-resize items-start justify-start',
@@ -759,8 +760,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                 onMouseDown={onResizeStart(corner)}
               />
             );
-          })
-        }
+          })}
       </div>
     </div>
   );

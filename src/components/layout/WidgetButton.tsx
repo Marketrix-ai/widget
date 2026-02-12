@@ -5,20 +5,16 @@ import { DARK_THEME_COLORS } from '../../constants/theme';
 import { useWidget } from '../../hooks/useWidget';
 import type { MarketrixConfig, WidgetPosition } from '../../types';
 import { addOpacity, darkenColor, getContrastingColor } from '../../utils/format';
-import {
-  getAnchorTopLeft,
-  getDeltaToCorner,
-  getPositionClasses,
-} from '../../utils/widgetPositioning';
+import { getAnchorTopLeft, getDeltaToCorner, getPositionClasses } from '../../utils/widgetPositioning';
 
 interface WidgetButtonProps {
   config: MarketrixConfig;
   onClick: () => void;
   isOpen: boolean;
   isMinimized?: boolean;
-  isScreenSharing?: boolean;
   isLoading?: boolean;
   isTaskRunning?: boolean;
+  hasError?: boolean;
   position: WidgetPosition;
   onPositionChange: (position: WidgetPosition) => void;
 }
@@ -28,13 +24,14 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
   onClick,
   isOpen,
   isMinimized = false,
-  isScreenSharing = false,
   isLoading = false,
   isTaskRunning = false,
+  hasError = false,
   position,
   onPositionChange,
 }) => {
   const showProcessingGlow = !isOpen && (isLoading || isTaskRunning);
+  const glowClass = hasError ? 'marketrix-widget-button-error-glow' : 'marketrix-widget-button-processing-glow';
   const [showWelcomeText, setShowWelcomeText] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const wrapperRef = useRef<HTMLDivElement | null>(null);
@@ -132,7 +129,7 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
 
   const onPointerMove = (event: React.PointerEvent<HTMLButtonElement>) => {
     const drag = dragRef.current;
-    if (!drag || drag.pointerId !== event.pointerId) return;
+    if (drag?.pointerId !== event.pointerId) return;
 
     const dx = event.clientX - drag.startX;
     const dy = event.clientY - drag.startY;
@@ -219,7 +216,7 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
 
   const onPointerUp = (event: React.PointerEvent<HTMLButtonElement>) => {
     const drag = dragRef.current;
-    if (!drag || drag.pointerId !== event.pointerId) return;
+    if (drag?.pointerId !== event.pointerId) return;
     if (drag.dragging) {
       snapToNearestCorner(event.clientX, event.clientY);
       suppressUntilRef.current = Date.now() + 300;
@@ -232,7 +229,7 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
 
   const onPointerCancel = (event: React.PointerEvent<HTMLButtonElement>) => {
     const drag = dragRef.current;
-    if (!drag || drag.pointerId !== event.pointerId) return;
+    if (drag?.pointerId !== event.pointerId) return;
     resetDragStyles();
     dragRef.current = null;
     setIsDragging(false);
@@ -249,64 +246,56 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
         ...previewPositionStyle,
       }}
     >
-      <div className='relative w-14 h-14'>
-        {showProcessingGlow && (
-          <div
-            className='absolute inset-[-10px] rounded-[27px] marketrix-widget-button-processing-glow pointer-events-none'
-            aria-hidden
-          />
-        )}
-      <button
-        onClick={() => {
-          if (Date.now() < suppressUntilRef.current) return;
-          onClick();
-        }}
-        onDragStart={e => e.preventDefault()}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onPointerCancel={onPointerCancel}
+      <div
         className={`
-          relative w-14 h-14 rounded-[27px] transition-all duration-300 ease-in-out
+          relative w-14 h-14 overflow-visible transition-all duration-300 ease-in-out
           ${isOpen ? 'scale-0 opacity-0 pointer-events-none' : 'scale-100 opacity-100 hover:scale-110'}
-          border-2 border-transparent
         `}
-        style={{
-          color: getContrastingColor(widgetConfig.widget_accent_color),
-          touchAction: 'none',
-          cursor: isDragging ? 'grabbing' : 'grab',
-          userSelect: 'none',
-          WebkitUserSelect: 'none',
-        }}
-        aria-label='Open Marketrix support chat'
       >
+        {showProcessingGlow && <div className={glowClass} aria-hidden />}
+        <button
+          onClick={() => {
+            if (Date.now() < suppressUntilRef.current) return;
+            onClick();
+          }}
+          onDragStart={e => e.preventDefault()}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          onPointerCancel={onPointerCancel}
+          className={`
+          relative z-10 w-14 h-14 rounded-[27px]
+          border-0 bg-transparent
+        `}
+          style={{
+            color: getContrastingColor(widgetConfig.widget_accent_color),
+            backgroundColor: 'transparent',
+            touchAction: 'none',
+            cursor: isDragging ? 'grabbing' : 'grab',
+            userSelect: 'none',
+            WebkitUserSelect: 'none',
+          }}
+          aria-label='Open Marketrix support chat'
+        >
         <div className='w-full h-full flex items-center justify-center relative'>
-          <div
-            className='w-full h-full rounded flex items-center justify-center'
-            style={{ backgroundColor: 'transparent' }}
-          >
-            <img
-              src={MarketrixIcon}
-              alt='Marketrix Icon'
-              className='w-fit h-12'
-              draggable={false}
-              onDragStart={e => e.preventDefault()}
-              style={{
-                boxShadow: widgetConfig.widget_shadow,
-                borderRadius: widgetConfig.widget_border_radius,
-                border: 'none',
-                outline: 'none',
-                backgroundColor: 'transparent',
-                pointerEvents: 'none',
-                userSelect: 'none',
-              }}
-            />
-          </div>
-          {!isOpen && isScreenSharing && (
-            <div className='absolute top-1 right-1 w-3 h-3 rounded-full bg-gray-700 animate-pulse border-2 border-white' />
-          )}
+          <img
+            src={MarketrixIcon}
+            alt='Marketrix Icon'
+            className='w-full h-full object-contain'
+            draggable={false}
+            onDragStart={e => e.preventDefault()}
+            style={{
+              boxShadow: widgetConfig.widget_shadow,
+              borderRadius: widgetConfig.widget_border_radius,
+              border: 'none',
+              outline: 'none',
+              backgroundColor: 'transparent',
+              pointerEvents: 'none',
+              userSelect: 'none',
+            }}
+          />
         </div>
-      </button>
+        </button>
       </div>
 
       {/* Welcome Text */}
