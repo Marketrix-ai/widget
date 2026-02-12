@@ -31,14 +31,10 @@ export const ProgressLine: React.FC<ProgressLineProps> = ({
   const renderIcon = () => {
     switch (status) {
       case 'completed':
-        return <FaCheckCircle className='flex-shrink-0 mt-0.5' style={{ color: accentColor || '#10b981' }} size={16} />;
+        return <FaCheckCircle className='flex-shrink-0 mt-0.5' style={{ color: accentColor }} size={16} />;
       case 'failed':
         return (
-          <FaTimesCircle
-            className='flex-shrink-0 mt-0.5'
-            style={{ color: '#ef4444' }} // Red for error
-            size={16}
-          />
+          <FaTimesCircle className='flex-shrink-0 mt-0.5' style={{ color: addOpacity(textColor, 0.65) }} size={16} />
         );
       case 'canceled':
         return <FaBan className='flex-shrink-0 mt-0.5' style={{ color: addOpacity(textColor, 0.5) }} size={16} />;
@@ -61,7 +57,7 @@ export const ProgressLine: React.FC<ProgressLineProps> = ({
                   width: '16px',
                   height: '16px',
                   border: `2px solid ${addOpacity(textColor, 0.2)}`,
-                  borderTop: `2px solid ${accentColor || '#10b981'}`,
+                  borderTop: `2px solid ${accentColor}`,
                   borderRadius: '50%',
                   animation: 'spin 1s linear infinite',
                 }}
@@ -76,13 +72,7 @@ export const ProgressLine: React.FC<ProgressLineProps> = ({
           );
         }
         // Standard running spinner
-        return (
-          <FaSpinner
-            className='flex-shrink-0 mt-0.5 animate-spin'
-            style={{ color: accentColor || '#10b981' }}
-            size={16}
-          />
-        );
+        return <FaSpinner className='flex-shrink-0 mt-0.5 animate-spin' style={{ color: accentColor }} size={16} />;
       case 'pending':
       default:
         // Static circle for pending/queued

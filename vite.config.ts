@@ -22,6 +22,7 @@ const isStandalone = process.env.BUILD_MODE === 'standalone';
 
 const getBuildConfig = (options: { minify: boolean | 'terser'; outDir: string }): UserConfig => ({
   mode: 'production',
+  resolve: { alias: { '@': resolve(cwd(), 'src') } },
   define: {
     'process.env.NODE_ENV': '"production"',
     'process.env': '{}',
@@ -225,6 +226,7 @@ export default defineConfig(({ command }) => {
   }
 
   return {
+    resolve: { alias: { '@': resolve(cwd(), 'src') } },
     plugins: [react(), tailwindcss(), devWidgetPlugin()],
     root: '.',
     server: {

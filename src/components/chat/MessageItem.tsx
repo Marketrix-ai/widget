@@ -1,5 +1,6 @@
 import React from 'react';
 
+import { DARK_THEME_CLASSES } from '../../constants/theme';
 import type { ChatMessage, WidgetState } from '../../types';
 import { addOpacity, formatMessageTime, getContrastingColor } from '../../utils/format';
 import { MessageContent } from './MessageContent';
@@ -81,11 +82,11 @@ export const MessageItem: React.FC<MessageItemProps> = ({
         {/* Message bubble */}
         <div
           className={`flex flex-col flex-1 relative
-          ${message.videoStream ? 'p-0' : 'px-2.5 py-2'} shadow-sm border
+          ${message.videoStream ? 'p-0' : 'px-2.5 py-2'} shadow-sm border ${!isUser ? 'bg-white' : ''}
           ${isUser ? 'rounded-l-lg rounded-tr-lg rounded-br-lg' : 'rounded-r-lg rounded-tl-lg rounded-bl-lg'}
         `}
           style={{
-            backgroundColor: isUser ? settings.widget_accent_color : '#ffffff',
+            backgroundColor: isUser ? settings.widget_accent_color : undefined,
             color: isUser ? getContrastingColor(settings.widget_accent_color) : settings.widget_text_color,
             borderColor: isUser ? settings.widget_accent_color : settings.widget_border_color,
             maxWidth: 'calc(100% - 40px)', // Leave space for logo space on left
@@ -113,7 +114,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                   e.stopPropagation();
                   onScreenAccessAllow?.();
                 }}
-                className='flex items-center justify-center text-sm font-medium transition-all duration-200 bg-purple-600 text-white shadow-lg border-2 border-transparent'
+                className={DARK_THEME_CLASSES.allowButton}
                 style={{
                   width: '65px',
                   height: '26px',
@@ -128,7 +129,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                   e.stopPropagation();
                   onScreenAccessDeny?.();
                 }}
-                className='flex items-center justify-center text-sm font-medium transition-all duration-200 bg-purple-100 text-black hover:bg-purple-200 border border-purple-200'
+                className={DARK_THEME_CLASSES.denyButton}
                 style={{
                   width: '65px',
                   height: '26px',

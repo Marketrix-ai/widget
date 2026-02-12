@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 
+import { DARK_THEME_COLORS } from '../../constants/theme';
+
 interface VideoStreamDisplayProps {
   stream: MediaStream | null;
   isUserMessage?: boolean;
@@ -92,8 +94,8 @@ export const VideoStreamDisplay: React.FC<VideoStreamDisplayProps> = ({ stream, 
     <div
       className={`w-full overflow-hidden mb-1 ${borderRadiusClass} relative group`}
       style={{
-        backgroundColor: '#000000',
-        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+        backgroundColor: DARK_THEME_COLORS.black,
+        boxShadow: `0 4px 6px -1px ${DARK_THEME_COLORS.black10}, 0 2px 4px -1px ${DARK_THEME_COLORS.black06}`,
       }}
     >
       {/* Loading overlay */}
@@ -120,7 +122,7 @@ export const VideoStreamDisplay: React.FC<VideoStreamDisplayProps> = ({ stream, 
       {hasError && (
         <div className={`absolute inset-0 flex items-center justify-center bg-gray-900 ${borderRadiusClass} z-10`}>
           <div className='flex flex-col items-center gap-2 text-center px-4'>
-            <svg className='w-8 h-8 text-red-400' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+            <svg className='w-8 h-8 text-gray-400' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
               <path
                 strokeLinecap='round'
                 strokeLinejoin='round'
@@ -144,16 +146,16 @@ export const VideoStreamDisplay: React.FC<VideoStreamDisplayProps> = ({ stream, 
         }`}
         style={{
           minHeight: '120px',
-          background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)',
+          background: DARK_THEME_COLORS.videoGradient,
         }}
       />
 
       {/* Live indicator badge */}
       {isLoaded && !hasError && (
         <div
-          className='absolute top-2 right-2 flex items-center gap-1.5 px-2 py-1 rounded-full bg-red-500/90 backdrop-blur-sm z-20 animate-fade-in'
+          className='absolute top-2 right-2 flex items-center gap-1.5 px-2 py-1 rounded-full bg-gray-700/90 backdrop-blur-sm z-20 animate-fade-in'
           style={{
-            boxShadow: '0 2px 8px rgba(239, 68, 68, 0.4)',
+            boxShadow: `0 2px 8px ${DARK_THEME_COLORS.liveBadgeShadow}`,
           }}
         >
           <div className='relative flex items-center justify-center'>

@@ -1102,7 +1102,7 @@ export const WidgetChipSchema = z.object({
 export const WidgetSettingsDataSchema = z.object({
   widget_enabled: z.boolean(),
   widget_appearance: z.enum(['default', 'compact', 'full']),
-  widget_position: z.enum(['bottom_left', 'bottom_right']),
+  widget_position: z.enum(['bottom_left', 'bottom_right', 'top_left', 'top_right']),
   widget_device: z.enum(['desktop', 'mobile', 'desktop_mobile']),
   widget_header: z.string(),
   widget_body: z.string(),

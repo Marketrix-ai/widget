@@ -1,6 +1,8 @@
 import React from 'react';
 import { FiX } from 'react-icons/fi';
 
+import { DARK_THEME_CLASSES } from '../../constants/theme';
+
 interface DiagnosticModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -23,17 +25,19 @@ export const DiagnosticModal: React.FC<DiagnosticModalProps> = ({ isOpen, onClos
   };
 
   return (
-    <div className='fixed inset-0 bg-black/50 flex items-center justify-center z-[100]' onClick={onClose}>
+    <div className='fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4' onClick={onClose}>
       <div
-        className='bg-white rounded-lg shadow-xl max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto'
+        className='bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] flex flex-col'
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className='bg-gradient-to-r from-purple-600 to-blue-600 px-6 py-4 text-white relative overflow-hidden flex-shrink-0'>
+        <div
+          className={`${DARK_THEME_CLASSES.diagnosticHeader} px-6 py-4 text-white relative overflow-hidden flex-shrink-0 rounded-t-lg`}
+        >
           <div className='relative z-10 flex items-center justify-between'>
             <div>
               <h2 className='text-base font-semibold text-white'>Diagnostic Information</h2>
-              <p className='text-xs text-purple-100 mt-0.5'>Widget connection details</p>
+              <p className={`text-xs ${DARK_THEME_CLASSES.diagnosticSubtitle} mt-0.5`}>Widget connection details</p>
             </div>
             <button onClick={onClose} className='text-white/80 hover:text-white transition-colors'>
               <FiX className='w-5 h-5' />
@@ -41,8 +45,8 @@ export const DiagnosticModal: React.FC<DiagnosticModalProps> = ({ isOpen, onClos
           </div>
         </div>
 
-        {/* Content */}
-        <div className='px-6 py-5 space-y-4'>
+        {/* Content - scrollable when needed */}
+        <div className='px-6 py-5 space-y-4 flex-1 min-h-0 overflow-y-auto'>
           <div className='space-y-3'>
             <div className='flex items-center justify-between py-2 border-b border-gray-200'>
               <span className='text-sm font-medium text-gray-700'>Chat ID</span>
@@ -154,7 +158,7 @@ export const DiagnosticModal: React.FC<DiagnosticModalProps> = ({ isOpen, onClos
         </div>
 
         {/* Footer */}
-        <div className='flex justify-end items-center px-6 py-3 border-t border-gray-200 bg-gray-50 flex-shrink-0'>
+        <div className='flex justify-end items-center px-6 py-3 border-t border-gray-200 bg-gray-50 flex-shrink-0 rounded-b-lg'>
           <button
             onClick={onClose}
             className='px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors'

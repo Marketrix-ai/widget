@@ -1,5 +1,7 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 
+import { DARK_THEME_COLORS } from '../../constants/theme';
+import { type ResizeCorner, useResize } from '../../hooks/useResize';
 import { useWidget } from '../../hooks/useWidget';
 import type { InstructionType } from '../../sdk';
 import {
@@ -85,6 +87,18 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   } | null>(null);
 
   const { config: settings, isPreviewMode } = useWidget({ config });
+
+  const tenantId = useMemo(
+    () => config.mtxId ?? (config.mtxApp != null ? String(config.mtxApp) : 'default'),
+    [config.mtxId, config.mtxApp],
+  );
+  const { widthPx, heightPx, onResizeStart } = useResize(
+    settings.widget_width,
+    settings.widget_height,
+    tenantId,
+    isMinimized,
+    isPreviewMode,
+  );
 
   // Auto-scroll to bottom when new messages arrive
   // Skip in preview mode to prevent scrolling the parent modal
@@ -347,18 +361,18 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   };
 
   // Get widget settings for positioning
-  const effectivePosition = settings.widget_position as 'bottom_left' | 'bottom_right';
+  const effectivePosition = settings.widget_position as 'bottom_left' | 'bottom_right' | 'top_left' | 'top_right';
   const zIndex = settings.widget_position_z_index ?? 40;
   const positionClasses = getPositionClasses(effectivePosition);
 
   if (!isOpen) return null;
 
   const customStyles = {
-    width: settings.widget_width,
-    height: isMinimized ? '48px' : settings.widget_height,
+    width: widthPx,
+    height: isMinimized ? '48px' : heightPx,
     borderRadius: settings.widget_border_radius,
     fontSize: settings.widget_font_size,
-    backgroundColor: '#ffffff',
+    backgroundColor: DARK_THEME_COLORS.white,
     backgroundImage: settings.widget_background_color.includes('gradient')
       ? settings.widget_background_color
       : `linear-gradient(135deg, ${settings.widget_background_color} 0%, ${settings.widget_background_color} 100%)`,
@@ -398,14 +412,18 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
 
   // Use absolute positioning in preview mode (container-relative), fixed in production (viewport-relative)
   const positionClass = isPreviewMode ? 'absolute' : 'fixed';
-  const chatWindowHeight = isMinimized ? 'h-12' : 'h-[35rem]';
 
   // In preview mode, use inline styles for positioning to ensure it works in shadow DOM
   const previewPositionStyle = isPreviewMode
-    ? {
-        bottom: '20px', // equivalent to bottom-5 (1.25rem = 20px)
-        ...(effectivePosition.includes('right') ? { right: '20px' } : { left: '20px' }),
-      }
+    ? effectivePosition.includes('top')
+      ? {
+          top: '20px',
+          ...(effectivePosition.includes('right') ? { right: '20px' } : { left: '20px' }),
+        }
+      : {
+          bottom: '20px',
+          ...(effectivePosition.includes('right') ? { right: '20px' } : { left: '20px' }),
+        }
     : {};
 
   return (
@@ -414,7 +432,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       className={`${positionClass} rounded-xl ${isPreviewMode ? '' : positionClasses} pointer-events-auto`}
       style={{
         zIndex,
-        backgroundColor: '#ffffff',
+        backgroundColor: DARK_THEME_COLORS.white,
         backgroundImage: settings.widget_background_color.includes('gradient')
           ? settings.widget_background_color
           : `linear-gradient(135deg, ${settings.widget_background_color} 0%, ${settings.widget_background_color} 100%)`,
@@ -424,8 +442,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       <div
         className={`
           rounded-lg shadow-xl border
-          w-[360px] max-w-sm
-          ${chatWindowHeight}
           transition-all duration-300 ease-in-out flex flex-col relative overflow-hidden
           ${isOpen ? 'animate-slide-up' : 'animate-slide-down'}
           transform-gpu
@@ -662,7 +678,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
             <div
               className='flex-shrink-0 rounded-lg m-2 mt-auto'
               style={{
-                backgroundColor: '#ffffff',
+                backgroundColor: DARK_THEME_COLORS.white,
               }}
             >
               {/* Task Progress Display */}
@@ -723,6 +739,28 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
             </div>
           </>
         )}
+
+        {/* Resize handles - all 4 corners, Windows 11 style */}
+        {!isMinimized &&
+          !isPreviewMode &&
+          (['top-left', 'top-right', 'bottom-left', 'bottom-right'] as const).map(corner => {
+            const posClasses: Record<ResizeCorner, string> = {
+              'top-left': 'top-0 left-0 rounded-tl-lg cursor-nwse-resize items-start justify-start',
+              'top-right': 'top-0 right-0 rounded-tr-lg cursor-nesw-resize items-start justify-end',
+              'bottom-left': 'bottom-0 left-0 rounded-bl-lg cursor-nesw-resize items-end justify-start',
+              'bottom-right': 'bottom-0 right-0 rounded-br-lg cursor-nwse-resize items-end justify-end',
+            };
+            return (
+              <div
+                key={corner}
+                role='separator'
+                aria-label={`Resize widget from ${corner.replace('-', ' ')}`}
+                title='Drag to resize'
+                className={`absolute w-5 h-5 flex p-1 touch-none z-10 group ${posClasses[corner]}`}
+                onMouseDown={onResizeStart(corner)}
+              />
+            );
+          })}
       </div>
     </div>
   );

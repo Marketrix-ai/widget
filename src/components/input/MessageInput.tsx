@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { IoSend, IoStop } from 'react-icons/io5';
 
+import { DARK_THEME_COLORS } from '../../constants/theme';
 import { useWidget } from '../../hooks/useWidget';
 import type { MarketrixConfig } from '../../types';
 import { addOpacity, getContrastingColor } from '../../utils/format';
@@ -92,7 +93,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
               border rounded-none
             `}
             style={{
-              backgroundColor: addOpacity('#ffffff', 0.7),
+              backgroundColor: DARK_THEME_COLORS.white70,
               backdropFilter: 'blur(10px)',
               WebkitBackdropFilter: 'blur(10px)',
               borderColor: settings.widget_border_color,
@@ -121,8 +122,8 @@ export const MessageInput: React.FC<MessageInputProps> = ({
               mt-0.5
             `}
             style={{
-              background: `linear-gradient(to right, #ef4444, #dc2626)`,
-              color: '#ffffff',
+              background: `linear-gradient(to right, ${DARK_THEME_COLORS.gray800}, ${DARK_THEME_COLORS.gray900})`,
+              color: DARK_THEME_COLORS.white,
             }}
             aria-label='Stop task'
           >

@@ -6,6 +6,7 @@ import { LuMousePointerClick } from 'react-icons/lu';
 import { SiTicktick } from 'react-icons/si';
 
 import MarketrixIcon from '../../assets/marketrix-icon.png';
+import { DARK_THEME_CLASSES } from '../../constants/theme';
 import { useWidget } from '../../hooks/useWidget';
 import { createUserMessage } from '../../services/ChatService';
 import type { ChatMessage, MarketrixConfig } from '../../types';
@@ -276,10 +277,12 @@ export const MessageList = ({
         onScroll={handleScroll}
         className={`
             h-full overflow-y-auto px-2 space-y-0.5 pt-0
-            scrollbar-thin scrollbar-track-[#f6f6f6] scrollbar-thumb-[#b6b6b6]
+            scrollbar-thin ${DARK_THEME_CLASSES.scrollbarTrack} ${DARK_THEME_CLASSES.scrollbarThumb}
           `}
         style={{
-          backgroundColor: '#ffffff',
+          backgroundColor: widgetConfig.widget_background_color.includes('gradient')
+            ? 'transparent'
+            : widgetConfig.widget_background_color,
           backgroundImage: widgetConfig.widget_background_color.includes('gradient')
             ? widgetConfig.widget_background_color
             : `linear-gradient(135deg, ${widgetConfig.widget_background_color} 0%, ${widgetConfig.widget_background_color} 100%)`,

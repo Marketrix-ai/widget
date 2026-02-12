@@ -1,17 +1,22 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 import MarketrixIcon from '../../assets/marketrix-icon.png';
+import { DARK_THEME_COLORS } from '../../constants/theme';
 import { useWidget } from '../../hooks/useWidget';
-import type { MarketrixConfig } from '../../types';
+import type { MarketrixConfig, WidgetPosition } from '../../types';
 import { addOpacity, darkenColor, getContrastingColor } from '../../utils/format';
-import { getPositionClasses } from '../../utils/widgetPositioning';
+import { getAnchorTopLeft, getDeltaToCorner, getPositionClasses } from '../../utils/widgetPositioning';
 
 interface WidgetButtonProps {
   config: MarketrixConfig;
   onClick: () => void;
   isOpen: boolean;
   isMinimized?: boolean;
-  isScreenSharing?: boolean;
+  isLoading?: boolean;
+  isTaskRunning?: boolean;
+  hasError?: boolean;
+  position: WidgetPosition;
+  onPositionChange: (position: WidgetPosition) => void;
 }
 
 export const WidgetButton: React.FC<WidgetButtonProps> = ({
@@ -19,103 +24,286 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
   onClick,
   isOpen,
   isMinimized = false,
-  isScreenSharing = false,
+  isLoading = false,
+  isTaskRunning = false,
+  hasError = false,
+  position,
+  onPositionChange,
 }) => {
+  const showProcessingGlow = !isOpen && (isLoading || isTaskRunning);
+  const glowClass = hasError ? 'marketrix-widget-button-error-glow' : 'marketrix-widget-button-processing-glow';
   const [showWelcomeText, setShowWelcomeText] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const wrapperRef = useRef<HTMLDivElement | null>(null);
+
+  // All drag state lives in refs to avoid React rerenders during drag.
+  const dragRef = useRef<{
+    pointerId: number;
+    startX: number;
+    startY: number;
+    dragging: boolean;
+    lastX: number;
+    lastY: number;
+  } | null>(null);
+  const rafRef = useRef<number | null>(null);
+  const suppressUntilRef = useRef(0);
+
   const { config: widgetConfig, isPreviewMode } = useWidget({ config });
 
   useEffect(() => {
     setShowWelcomeText(false);
+    if (isMinimized) return;
+    if (widgetConfig.widget_appearance !== 'default') return;
 
-    // Don't show welcome text if widget is minimized
-    if (isMinimized) {
-      return;
-    }
+    let welcomeTimer: ReturnType<typeof setTimeout> | null = null;
+    const buttonTimer = setTimeout(() => {
+      welcomeTimer = setTimeout(() => {
+        setShowWelcomeText(true);
+      }, 2000);
+    }, 100);
 
-    // Only show welcome text for default appearance, not compact
-    if (widgetConfig.widget_appearance === 'default') {
-      // Add a small delay to ensure button renders first
-      const buttonTimer = setTimeout(() => {
-        // Button is now visible, start welcome text timer
-        const welcomeTimer = setTimeout(() => {
-          setShowWelcomeText(true);
-        }, 2000);
-
-        return () => clearTimeout(welcomeTimer);
-      }, 100);
-
-      return () => clearTimeout(buttonTimer);
-    }
+    return () => {
+      clearTimeout(buttonTimer);
+      if (welcomeTimer !== null) clearTimeout(welcomeTimer);
+    };
   }, [widgetConfig.widget_appearance, isMinimized]);
 
-  // Use position from config
-  const effectivePosition = widgetConfig.widget_position as 'bottom_left' | 'bottom_right';
+  // Cleanup RAF on unmount
+  useEffect(() => {
+    return () => {
+      if (rafRef.current !== null) window.cancelAnimationFrame(rafRef.current);
+    };
+  }, []);
+
+  const effectivePosition = position;
   const zIndex = widgetConfig.widget_position_z_index ?? 50;
   const effectivePositionClasses = getPositionClasses(effectivePosition);
-
-  // Use absolute positioning in preview mode (container-relative), fixed in production (viewport-relative)
   const positionClass = isPreviewMode ? 'absolute' : 'fixed';
 
-  // In preview mode, use inline styles for positioning to ensure it works in shadow DOM
+  const MAGNET_DISTANCE = 140;
+  const MAGNET_STRENGTH = 0.92;
+
   const previewPositionStyle = isPreviewMode
-    ? {
-        bottom: '20px', // equivalent to bottom-5 (1.25rem = 20px)
-        ...(effectivePosition.includes('right') ? { right: '20px' } : { left: '20px' }),
-      }
+    ? effectivePosition.includes('top')
+      ? {
+          top: '20px',
+          ...(effectivePosition.includes('right') ? { right: '20px' } : { left: '20px' }),
+        }
+      : {
+          bottom: '20px',
+          ...(effectivePosition.includes('right') ? { right: '20px' } : { left: '20px' }),
+        }
     : {};
+
+  const snapToNearestCorner = (clientX: number, clientY: number) => {
+    if (typeof window === 'undefined') return;
+    const isRight = clientX >= window.innerWidth / 2;
+    const isBottom = clientY >= window.innerHeight / 2;
+    const next: WidgetPosition = isBottom
+      ? isRight
+        ? 'bottom_right'
+        : 'bottom_left'
+      : isRight
+        ? 'top_right'
+        : 'top_left';
+    onPositionChange(next);
+  };
+
+  // ---- Drag handlers ----
+  // Strategy: keep CSS corner anchor classes intact.
+  // Apply translate3d(deltaX, deltaY, 0) as offset from anchored position.
+  // This avoids any jumping. On drop, clear transform and snap corner.
+
+  const onPointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
+    if (isOpen) return;
+    dragRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      dragging: false,
+      lastX: 0,
+      lastY: 0,
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const onPointerMove = (event: React.PointerEvent<HTMLButtonElement>) => {
+    const drag = dragRef.current;
+    if (drag?.pointerId !== event.pointerId) return;
+
+    const dx = event.clientX - drag.startX;
+    const dy = event.clientY - drag.startY;
+
+    if (!drag.dragging && Math.hypot(dx, dy) > 6) {
+      drag.dragging = true;
+      setIsDragging(true);
+      setShowWelcomeText(false);
+      // Hint GPU
+      if (wrapperRef.current) {
+        wrapperRef.current.style.willChange = 'transform';
+        wrapperRef.current.style.transition = 'none';
+      }
+    }
+
+    if (!drag.dragging) return;
+
+    drag.lastX = dx;
+    drag.lastY = dy;
+
+    // Coalesce into single RAF
+    if (rafRef.current === null) {
+      rafRef.current = window.requestAnimationFrame(() => {
+        rafRef.current = null;
+        const d = dragRef.current;
+        const wrapper = wrapperRef.current;
+        if (!wrapper || !d) return;
+
+        let dx = d.lastX;
+        let dy = d.lastY;
+
+        if (typeof window !== 'undefined') {
+          const vw = window.innerWidth;
+          const vh = window.innerHeight;
+          const rect = wrapper.getBoundingClientRect();
+          const w = rect.width;
+          const h = rect.height;
+          const anchor = getAnchorTopLeft(position, vw, vh, w, h);
+          const centerX = anchor.x + w / 2 + dx;
+          const centerY = anchor.y + h / 2 + dy;
+
+          const edge = 20;
+          const cornerCenters: { corner: WidgetPosition; x: number; y: number }[] = [
+            { corner: 'top_left', x: edge + w / 2, y: edge + h / 2 },
+            { corner: 'top_right', x: vw - edge - w / 2, y: edge + h / 2 },
+            { corner: 'bottom_left', x: edge + w / 2, y: vh - edge - h / 2 },
+            { corner: 'bottom_right', x: vw - edge - w / 2, y: vh - edge - h / 2 },
+          ];
+
+          let nearestDist = Infinity;
+          let nearest: (typeof cornerCenters)[0] | null = null;
+          for (const cc of cornerCenters) {
+            const dist = Math.hypot(centerX - cc.x, centerY - cc.y);
+            if (dist < nearestDist) {
+              nearestDist = dist;
+              nearest = cc;
+            }
+          }
+
+          if (nearest && nearestDist < MAGNET_DISTANCE) {
+            const pull = Math.pow(1 - nearestDist / MAGNET_DISTANCE, 1.2) * MAGNET_STRENGTH;
+            const target = getDeltaToCorner(position, nearest.corner, vw, vh, w, h);
+            dx = dx + (target.dx - dx) * pull;
+            dy = dy + (target.dy - dy) * pull;
+          }
+        }
+
+        wrapper.style.transform = `translate3d(${dx}px, ${dy}px, 0)`;
+      });
+    }
+  };
+
+  const resetDragStyles = () => {
+    if (rafRef.current !== null) {
+      window.cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
+    if (wrapperRef.current) {
+      wrapperRef.current.style.transform = '';
+      wrapperRef.current.style.willChange = '';
+      wrapperRef.current.style.transition = '';
+    }
+  };
+
+  const onPointerUp = (event: React.PointerEvent<HTMLButtonElement>) => {
+    const drag = dragRef.current;
+    if (drag?.pointerId !== event.pointerId) return;
+    if (drag.dragging) {
+      snapToNearestCorner(event.clientX, event.clientY);
+      suppressUntilRef.current = Date.now() + 300;
+    }
+    resetDragStyles();
+    dragRef.current = null;
+    setIsDragging(false);
+    event.currentTarget.releasePointerCapture(event.pointerId);
+  };
+
+  const onPointerCancel = (event: React.PointerEvent<HTMLButtonElement>) => {
+    const drag = dragRef.current;
+    if (drag?.pointerId !== event.pointerId) return;
+    resetDragStyles();
+    dragRef.current = null;
+    setIsDragging(false);
+    event.currentTarget.releasePointerCapture(event.pointerId);
+  };
 
   return (
     <div
-      className={`${positionClass} ${isPreviewMode ? '' : effectivePositionClasses} transition-transform duration-500 ease-in-out ${showWelcomeText && !isOpen ? (effectivePosition.includes('left') ? 'transform translate-x-64' : 'transform -translate-x-64') : ''}`}
+      ref={wrapperRef}
+      className={`${positionClass} ${isPreviewMode ? '' : effectivePositionClasses} ${isDragging ? '' : 'transition-all duration-300 ease-in-out'} ${showWelcomeText && !isOpen ? (effectivePosition.includes('left') ? 'transform translate-x-64' : 'transform -translate-x-64') : ''}`}
       style={{
         zIndex,
+        pointerEvents: isOpen ? 'none' : 'auto',
         ...previewPositionStyle,
       }}
     >
-      <button
-        onClick={onClick}
+      <div
         className={`
-          relative w-14 h-14 rounded-[27px] transition-all duration-300 ease-in-out
+          relative w-14 h-14 overflow-visible transition-all duration-300 ease-in-out
           ${isOpen ? 'scale-0 opacity-0 pointer-events-none' : 'scale-100 opacity-100 hover:scale-110'}
-          border-2 border-transparent
         `}
-        style={{
-          color: getContrastingColor(widgetConfig.widget_accent_color),
-        }}
-        aria-label='Open Marketrix support chat'
       >
-        {/* Logo/Icon */}
+        {showProcessingGlow && <div className={glowClass} aria-hidden />}
+        <button
+          onClick={() => {
+            if (Date.now() < suppressUntilRef.current) return;
+            onClick();
+          }}
+          onDragStart={e => e.preventDefault()}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          onPointerCancel={onPointerCancel}
+          className={`
+          relative z-10 w-14 h-14 rounded-[27px]
+          border-0 bg-transparent
+        `}
+          style={{
+            color: getContrastingColor(widgetConfig.widget_accent_color),
+            backgroundColor: 'transparent',
+            touchAction: 'none',
+            cursor: isDragging ? 'grabbing' : 'grab',
+            userSelect: 'none',
+            WebkitUserSelect: 'none',
+          }}
+          aria-label='Open Marketrix support chat'
+        >
         <div className='w-full h-full flex items-center justify-center relative'>
-          <div
-            className='w-full h-full rounded flex items-center justify-center'
-            style={{ backgroundColor: 'transparent' }}
-          >
-            <img
-              src={MarketrixIcon}
-              alt='Marketrix Icon'
-              className='w-fit h-12'
-              style={{
-                boxShadow: widgetConfig.widget_shadow,
-                borderRadius: widgetConfig.widget_border_radius,
-                border: 'none',
-                outline: 'none',
-                backgroundColor: 'transparent',
-              }}
-            />
-          </div>
-          {/* Live indicator dot - show when screensharing and chat is closed */}
-          {!isOpen && isScreenSharing && (
-            <div className='absolute top-1 right-1 w-3 h-3 rounded-full bg-red-500 animate-pulse border-2 border-white' />
-          )}
+          <img
+            src={MarketrixIcon}
+            alt='Marketrix Icon'
+            className='w-full h-full object-contain'
+            draggable={false}
+            onDragStart={e => e.preventDefault()}
+            style={{
+              boxShadow: widgetConfig.widget_shadow,
+              borderRadius: widgetConfig.widget_border_radius,
+              border: 'none',
+              outline: 'none',
+              backgroundColor: 'transparent',
+              pointerEvents: 'none',
+              userSelect: 'none',
+            }}
+          />
         </div>
-      </button>
+        </button>
+      </div>
 
-      {/* Welcome Text - appears after 2 seconds (only for default appearance) */}
+      {/* Welcome Text */}
       {!isOpen && showWelcomeText && widgetConfig.widget_appearance === 'default' && (
         <div
           className={`absolute ${effectivePosition.includes('left') ? 'right-16' : 'left-16'} bottom-0 px-4 py-3 text-sm rounded-lg shadow-lg w-64 ${effectivePosition.includes('left') ? 'animate-slide-in-right' : 'animate-slide-in-left'} cursor-pointer`}
           style={{
-            backgroundColor: '#ffffff',
+            backgroundColor: DARK_THEME_COLORS.white,
             backgroundImage: 'none',
             color: widgetConfig.widget_text_color,
             borderColor: widgetConfig.widget_border_color,
@@ -125,7 +313,6 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
           onClick={onClick}
         >
           <div className='flex gap-2'>
-            {/* Close button - show first for bottom_left position */}
             {effectivePosition.includes('left') && (
               <button
                 onClick={e => {
@@ -146,13 +333,11 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
               </button>
             )}
 
-            {/* greeting text */}
             <div className='flex-1'>
               <div className='font-medium'>{widgetConfig.widget_greeting}</div>
               <div style={{ color: addOpacity(widgetConfig.widget_text_color, 0.7) }}>{widgetConfig.widget_body}</div>
             </div>
 
-            {/* Close button - show last for bottom_right position */}
             {effectivePosition.includes('right') && (
               <button
                 onClick={e => {
@@ -186,7 +371,7 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
         </div>
       )}
 
-      {/* Tooltip - show when welcome text is not displayed */}
+      {/* Tooltip */}
       {!isOpen && (!showWelcomeText || widgetConfig.widget_appearance === 'compact') && (
         <div
           className={`absolute bottom-16 ${effectivePosition.includes('left') ? 'left-0' : 'right-0'} mb-2 px-3 py-2 text-sm rounded-lg shadow-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200`}

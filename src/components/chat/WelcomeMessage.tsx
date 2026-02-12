@@ -1,5 +1,6 @@
 import React from 'react';
 
+import { DARK_THEME_COLORS } from '../../constants/theme';
 import { formatMessageTime } from '../../utils/format';
 import { SuggestedActions } from './SuggestedActions';
 
@@ -90,7 +91,7 @@ export const WelcomeMessage: React.FC<WelcomeMessageProps> = ({
             px-2.5 py-2 rounded-r-lg rounded-tl-lg rounded-bl-lg shadow-sm border
           `}
           style={{
-            backgroundColor: '#ffffff',
+            backgroundColor: DARK_THEME_COLORS.white,
             backgroundImage: 'none',
             color: settings.widget_text_color,
             borderColor: settings.widget_border_color,

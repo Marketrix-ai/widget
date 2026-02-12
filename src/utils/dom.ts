@@ -436,8 +436,10 @@ export function isInteractable(el: Element | null): boolean {
 /**
  * Parse position attribute from script tag
  */
-export function parsePositionAttribute(value: string | null): 'bottom_right' | 'bottom_left' {
-  if (value === 'bottom_left' || value === 'bottom_right') {
+export function parsePositionAttribute(
+  value: string | null,
+): 'bottom_right' | 'bottom_left' | 'top_left' | 'top_right' {
+  if (value === 'bottom_left' || value === 'bottom_right' || value === 'top_left' || value === 'top_right') {
     return value;
   }
   return 'bottom_right';
