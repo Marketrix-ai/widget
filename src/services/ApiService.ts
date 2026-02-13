@@ -336,7 +336,8 @@ export class MarketrixApiService {
         };
       }
 
-      throw new Error('Invalid response from stop endpoint');
+      // API responded successfully but without a status field — treat as stopped.
+      return { status: 'stopped', message: 'Task stopped' };
     } catch (error) {
       console.error('Failed to stop task:', extractErrorMessage(error));
       throw error;

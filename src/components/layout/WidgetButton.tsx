@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 
-import MarketrixIcon from '../../assets/marketrix-icon.png';
+import MarketrixIcon from '../../assets/marketrix-icon.svg';
 import { DARK_THEME_COLORS } from '../../constants/theme';
 import { useWidget } from '../../hooks/useWidget';
 import type { MarketrixConfig, WidgetPosition } from '../../types';
@@ -56,6 +56,7 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
   const suppressUntilRef = useRef(0);
 
   const { config: widgetConfig, isPreviewMode } = useWidget({ config });
+  const activityRingRadius = Math.max(6, Math.min(22, Number.parseFloat(widgetConfig.widget_border_radius) || 12));
 
   useEffect(() => {
     setShowWelcomeText(false);
@@ -316,7 +317,6 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
         `}
       >
         {showProcessingGlow && <div className={glowClass} aria-hidden />}
-        {showProcessingGlow && <div className={activityRingClass} aria-hidden />}
         {showStopControl && !isDragging && (
           <button
             type='button'
@@ -356,22 +356,29 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
           aria-label='Open Marketrix support chat'
         >
           <div className='w-full h-full flex items-center justify-center relative'>
-            <img
-              src={MarketrixIcon}
-              alt='Marketrix Icon'
-              className='w-12 h-12 object-contain'
-              draggable={false}
-              onDragStart={e => e.preventDefault()}
-              style={{
-                boxShadow: widgetConfig.widget_shadow,
-                borderRadius: widgetConfig.widget_border_radius,
-                border: 'none',
-                outline: 'none',
-                backgroundColor: 'transparent',
-                pointerEvents: 'none',
-                userSelect: 'none',
-              }}
-            />
+            <div className='relative w-12 h-12'>
+              {showProcessingGlow && (
+                <svg className={activityRingClass} viewBox='0 0 54 54' fill='none' aria-hidden>
+                  <rect x='1.25' y='1.25' width='51.5' height='51.5' rx={activityRingRadius + 1} ry={activityRingRadius + 1} />
+                </svg>
+              )}
+              <img
+                src={MarketrixIcon}
+                alt='Marketrix Icon'
+                className='relative z-10 w-full h-full object-contain'
+                draggable={false}
+                onDragStart={e => e.preventDefault()}
+                style={{
+                  boxShadow: widgetConfig.widget_shadow,
+                  borderRadius: widgetConfig.widget_border_radius,
+                  border: 'none',
+                  outline: 'none',
+                  backgroundColor: 'transparent',
+                  pointerEvents: 'none',
+                  userSelect: 'none',
+                }}
+              />
+            </div>
           </div>
         </button>
       </div>

@@ -232,30 +232,31 @@
   will-change: transform, opacity;
 }
 
-/* Rotating ring around icon: quick spin -> pause -> quick spin */
-@keyframes widget-activity-ring-spin-pause {
+/* Activity ring: dash travels along icon border path (no rotation of shape).
+   Perimeter of rounded-rect ~160. Dash segment ~40, gap ~120. */
+@keyframes widget-activity-dash-travel {
   0% {
-    transform: rotate(0deg);
+    stroke-dashoffset: 0;
     opacity: 0.5;
   }
   18% {
-    transform: rotate(320deg);
+    stroke-dashoffset: -112;
     opacity: 1;
   }
   35% {
-    transform: rotate(360deg);
+    stroke-dashoffset: -160;
     opacity: 0.65;
   }
   60% {
-    transform: rotate(360deg);
+    stroke-dashoffset: -160;
     opacity: 0.45;
   }
   82% {
-    transform: rotate(680deg);
+    stroke-dashoffset: -272;
     opacity: 1;
   }
   100% {
-    transform: rotate(720deg);
+    stroke-dashoffset: -320;
     opacity: 0.6;
   }
 }
@@ -263,32 +264,30 @@
 .marketrix-widget-button-processing-activity-ring,
 .marketrix-widget-button-error-activity-ring {
   position: absolute;
-  inset: -4px;
+  inset: -3px;
   pointer-events: none;
-  z-index: 5;
-  border-radius: 9999px;
-  animation: widget-activity-ring-spin-pause 1.9s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-  will-change: transform, opacity;
-  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px));
-  mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px));
+  z-index: 0;
+  overflow: visible;
 }
 
-.marketrix-widget-button-processing-activity-ring {
-  background: conic-gradient(
-    from 0deg,
-    rgba(49, 208, 109, 0) 0deg 210deg,
-    rgba(49, 208, 109, 0.95) 250deg 318deg,
-    rgba(49, 208, 109, 0) 360deg
-  );
+.marketrix-widget-button-processing-activity-ring rect,
+.marketrix-widget-button-error-activity-ring rect {
+  fill: none;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 40 120;
+  animation: widget-activity-dash-travel 1.9s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 
-.marketrix-widget-button-error-activity-ring {
-  background: conic-gradient(
-    from 0deg,
-    rgba(208, 52, 44, 0) 0deg 210deg,
-    rgba(208, 52, 44, 0.95) 250deg 318deg,
-    rgba(208, 52, 44, 0) 360deg
-  );
+.marketrix-widget-button-processing-activity-ring rect {
+  stroke: #31d06d;
+  filter: drop-shadow(0 0 3px rgba(49, 208, 109, 0.7));
+}
+
+.marketrix-widget-button-error-activity-ring rect {
+  stroke: #D0342C;
+  filter: drop-shadow(0 0 3px rgba(208, 52, 44, 0.7));
 }
 
 /* Default: green pulsating glow */
