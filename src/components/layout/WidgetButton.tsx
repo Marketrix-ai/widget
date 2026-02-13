@@ -10,6 +10,7 @@ import { getAnchorTopLeft, getDeltaToCorner, getPositionClasses } from '../../ut
 interface WidgetButtonProps {
   config: MarketrixConfig;
   onClick: () => void;
+  onStopTask?: () => void;
   isOpen: boolean;
   isMinimized?: boolean;
   isLoading?: boolean;
@@ -22,6 +23,7 @@ interface WidgetButtonProps {
 export const WidgetButton: React.FC<WidgetButtonProps> = ({
   config,
   onClick,
+  onStopTask,
   isOpen,
   isMinimized = false,
   isLoading = false,
@@ -31,7 +33,11 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
   onPositionChange,
 }) => {
   const showProcessingGlow = !isOpen && (isLoading || isTaskRunning);
+  const showStopControl = !isOpen && isTaskRunning && !!onStopTask;
   const glowClass = hasError ? 'marketrix-widget-button-error-glow' : 'marketrix-widget-button-processing-glow';
+  const activityRingClass = hasError
+    ? 'marketrix-widget-button-error-activity-ring'
+    : 'marketrix-widget-button-processing-activity-ring';
   const [showWelcomeText, setShowWelcomeText] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const wrapperRef = useRef<HTMLDivElement | null>(null);
@@ -46,6 +52,7 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
     lastY: number;
   } | null>(null);
   const rafRef = useRef<number | null>(null);
+  const snapTimeoutRef = useRef<number | null>(null);
   const suppressUntilRef = useRef(0);
 
   const { config: widgetConfig, isPreviewMode } = useWidget({ config });
@@ -72,6 +79,7 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
   useEffect(() => {
     return () => {
       if (rafRef.current !== null) window.cancelAnimationFrame(rafRef.current);
+      if (snapTimeoutRef.current !== null) window.clearTimeout(snapTimeoutRef.current);
     };
   }, []);
 
@@ -82,6 +90,7 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
 
   const MAGNET_DISTANCE = 140;
   const MAGNET_STRENGTH = 0.92;
+  const SNAP_DURATION_MS = 240;
 
   const previewPositionStyle = isPreviewMode
     ? effectivePosition.includes('top')
@@ -95,24 +104,23 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
         }
     : {};
 
-  const snapToNearestCorner = (clientX: number, clientY: number) => {
-    if (typeof window === 'undefined') return;
+  const getNearestCorner = (clientX: number, clientY: number): WidgetPosition => {
+    if (typeof window === 'undefined') return 'bottom_right';
     const isRight = clientX >= window.innerWidth / 2;
     const isBottom = clientY >= window.innerHeight / 2;
-    const next: WidgetPosition = isBottom
+    return isBottom
       ? isRight
         ? 'bottom_right'
         : 'bottom_left'
       : isRight
         ? 'top_right'
         : 'top_left';
-    onPositionChange(next);
   };
 
   // ---- Drag handlers ----
   // Strategy: keep CSS corner anchor classes intact.
   // Apply translate3d(deltaX, deltaY, 0) as offset from anchored position.
-  // This avoids any jumping. On drop, clear transform and snap corner.
+  // On drop, animate to nearest corner and then commit corner class.
 
   const onPointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
     if (isOpen) return;
@@ -207,6 +215,10 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
       window.cancelAnimationFrame(rafRef.current);
       rafRef.current = null;
     }
+    if (snapTimeoutRef.current !== null) {
+      window.clearTimeout(snapTimeoutRef.current);
+      snapTimeoutRef.current = null;
+    }
     if (wrapperRef.current) {
       wrapperRef.current.style.transform = '';
       wrapperRef.current.style.willChange = '';
@@ -214,12 +226,63 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
     }
   };
 
+  const animateSnapToCorner = (clientX: number, clientY: number) => {
+    const nextCorner = getNearestCorner(clientX, clientY);
+    if (typeof window === 'undefined' || !wrapperRef.current) {
+      onPositionChange(nextCorner);
+      setIsDragging(false);
+      return;
+    }
+
+    const wrapper = wrapperRef.current;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const rect = wrapper.getBoundingClientRect();
+    const target = getDeltaToCorner(position, nextCorner, vw, vh, rect.width, rect.height);
+
+    wrapper.style.willChange = 'transform';
+    wrapper.style.transition = `transform ${SNAP_DURATION_MS}ms cubic-bezier(0.22, 1, 0.36, 1)`;
+    wrapper.style.transform = `translate3d(${target.dx}px, ${target.dy}px, 0)`;
+
+    let finished = false;
+    const finishSnap = () => {
+      if (finished) return;
+      finished = true;
+      wrapper.removeEventListener('transitionend', onTransitionEnd);
+      if (snapTimeoutRef.current !== null) {
+        window.clearTimeout(snapTimeoutRef.current);
+        snapTimeoutRef.current = null;
+      }
+
+      // Swap anchor + clear transform in one frame so it lands smoothly.
+      wrapper.style.transition = 'none';
+      wrapper.style.transform = '';
+      wrapper.style.willChange = '';
+      onPositionChange(nextCorner);
+      setIsDragging(false);
+      window.requestAnimationFrame(() => {
+        if (wrapperRef.current) wrapperRef.current.style.transition = '';
+      });
+    };
+
+    const onTransitionEnd = (event: TransitionEvent) => {
+      if (event.propertyName !== 'transform') return;
+      finishSnap();
+    };
+
+    wrapper.addEventListener('transitionend', onTransitionEnd);
+    snapTimeoutRef.current = window.setTimeout(finishSnap, SNAP_DURATION_MS + 100);
+  };
+
   const onPointerUp = (event: React.PointerEvent<HTMLButtonElement>) => {
     const drag = dragRef.current;
     if (drag?.pointerId !== event.pointerId) return;
     if (drag.dragging) {
-      snapToNearestCorner(event.clientX, event.clientY);
+      animateSnapToCorner(event.clientX, event.clientY);
       suppressUntilRef.current = Date.now() + 300;
+      dragRef.current = null;
+      event.currentTarget.releasePointerCapture(event.pointerId);
+      return;
     }
     resetDragStyles();
     dragRef.current = null;
@@ -248,11 +311,26 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
     >
       <div
         className={`
-          relative w-14 h-14 overflow-visible transition-all duration-300 ease-in-out
+          group relative w-14 h-14 overflow-visible transition-all duration-300 ease-in-out
           ${isOpen ? 'scale-0 opacity-0 pointer-events-none' : 'scale-100 opacity-100 hover:scale-110'}
         `}
       >
         {showProcessingGlow && <div className={glowClass} aria-hidden />}
+        {showProcessingGlow && <div className={activityRingClass} aria-hidden />}
+        {showStopControl && !isDragging && (
+          <button
+            type='button'
+            onClick={e => {
+              e.preventDefault();
+              e.stopPropagation();
+              onStopTask?.();
+            }}
+            className={`absolute top-1/2 z-20 -translate-y-1/2 rounded-full border border-white/25 bg-gray-900 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-white shadow-lg opacity-0 transition-opacity duration-150 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto group-focus-within:opacity-100 group-focus-within:pointer-events-auto ${effectivePosition.includes('left') ? 'left-full ml-2' : 'right-full mr-2'}`}
+            aria-label='Stop running task'
+          >
+            Stop
+          </button>
+        )}
         <button
           onClick={() => {
             if (Date.now() < suppressUntilRef.current) return;
@@ -281,7 +359,7 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
             <img
               src={MarketrixIcon}
               alt='Marketrix Icon'
-              className='w-full h-full object-contain'
+              className='w-12 h-12 object-contain'
               draggable={false}
               onDragStart={e => e.preventDefault()}
               style={{

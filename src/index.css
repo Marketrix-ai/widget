@@ -199,6 +199,21 @@
   }
 }
 
+/* Full-page edge glow while processing */
+@keyframes marketrix-screen-edge-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.marketrix-screen-edge-glow {
+  animation: marketrix-screen-edge-pulse 1.6s ease-in-out infinite;
+}
+
 /* Processing glow for widget button. CSS-only, no host deps.
    Green (#31d06d) = default processing, Red (#D0342C) = error. */
 
@@ -215,6 +230,65 @@
   border-radius: 50%;
   filter: blur(14px);
   will-change: transform, opacity;
+}
+
+/* Rotating ring around icon: quick spin -> pause -> quick spin */
+@keyframes widget-activity-ring-spin-pause {
+  0% {
+    transform: rotate(0deg);
+    opacity: 0.5;
+  }
+  18% {
+    transform: rotate(320deg);
+    opacity: 1;
+  }
+  35% {
+    transform: rotate(360deg);
+    opacity: 0.65;
+  }
+  60% {
+    transform: rotate(360deg);
+    opacity: 0.45;
+  }
+  82% {
+    transform: rotate(680deg);
+    opacity: 1;
+  }
+  100% {
+    transform: rotate(720deg);
+    opacity: 0.6;
+  }
+}
+
+.marketrix-widget-button-processing-activity-ring,
+.marketrix-widget-button-error-activity-ring {
+  position: absolute;
+  inset: -4px;
+  pointer-events: none;
+  z-index: 5;
+  border-radius: 9999px;
+  animation: widget-activity-ring-spin-pause 1.9s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  will-change: transform, opacity;
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px));
+}
+
+.marketrix-widget-button-processing-activity-ring {
+  background: conic-gradient(
+    from 0deg,
+    rgba(49, 208, 109, 0) 0deg 210deg,
+    rgba(49, 208, 109, 0.95) 250deg 318deg,
+    rgba(49, 208, 109, 0) 360deg
+  );
+}
+
+.marketrix-widget-button-error-activity-ring {
+  background: conic-gradient(
+    from 0deg,
+    rgba(208, 52, 44, 0) 0deg 210deg,
+    rgba(208, 52, 44, 0.95) 250deg 318deg,
+    rgba(208, 52, 44, 0) 360deg
+  );
 }
 
 /* Default: green pulsating glow */
