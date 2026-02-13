@@ -1,7 +1,36 @@
-<svg width="361" height="360" viewBox="0 0 361 360" fill="none" xmlns="http://www.w3.org/2000/svg">
-<rect x="1.24518" y="0.651428" width="358.697" height="358.697" rx="43.3486" fill="#101828"/>
-<path d="M83.3718 209.582C98.7232 209.582 111.168 197.137 111.168 181.786C111.168 166.435 98.7232 153.991 83.3718 153.991C68.0205 153.991 55.5757 166.435 55.5757 181.786C55.5757 197.137 68.0205 209.582 83.3718 209.582Z" fill="#7CFFA6"/>
-<path d="M85.864 68.2802L238.317 291.719H305.612L234.993 177.946L303.119 68.2802H235.824L194.699 133.587L153.159 68.2802H85.864Z" fill="white"/>
-<path d="M176.612 249.83L141.536 198.827L83.7111 291.532H150.563L176.612 249.83Z" fill="#7CFFA6" stroke="#7CFFA6" stroke-width="0.376377"/>
-<rect x="1.24518" y="0.651428" width="358.697" height="358.697" rx="43.3486" stroke="#CDC9C2" stroke-width="1.30286"/>
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Layer_1" xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 361 360">
+  <!-- Generator: Adobe Illustrator 30.1.0, SVG Export Plug-In . SVG Version: 2.1.1 Build 136)  -->
+  <defs>
+    <style>
+      .st0 {
+        display: none;
+        fill: none;
+        stroke: #cdc9c2;
+        stroke-width: 1.3px;
+      }
+
+      .st1 {
+        fill: #fff;
+      }
+
+      .st2, .st3 {
+        fill: #7cffa6;
+      }
+
+      .st3 {
+        stroke: #7cffa6;
+        stroke-width: .38px;
+      }
+
+      .st4 {
+        fill: #101828;
+      }
+    </style>
+  </defs>
+  <rect class="st4" x=".5" width="360" height="360"/>
+  <path class="st2" d="M83.37,209.58c15.35,0,27.8-12.45,27.8-27.8s-12.44-27.79-27.8-27.79-27.8,12.44-27.8,27.79,12.44,27.8,27.8,27.8Z"/>
+  <path class="st1" d="M85.86,68.28l152.45,223.44h67.29l-70.62-113.77,68.13-109.67h-67.29l-41.12,65.31-41.54-65.31h-67.29Z"/>
+  <path class="st3" d="M176.61,249.83l-35.08-51-57.82,92.71h66.85l26.05-41.7Z"/>
+  <rect class="st0" x="1.25" y=".65" width="358.7" height="358.7" rx="43.35" ry="43.35"/>
 </svg>
