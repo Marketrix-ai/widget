@@ -219,7 +219,8 @@
 
 /* Default: green pulsating glow */
 @keyframes widget-glow-green {
-  0%, 100% {
+  0%,
+  100% {
     transform: translate(-50%, -50%) scale(1);
     opacity: 0.72;
     background: radial-gradient(
@@ -249,7 +250,8 @@
 
 /* Error: red pulsating glow */
 @keyframes widget-glow-red {
-  0%, 100% {
+  0%,
+  100% {
     transform: translate(-50%, -50%) scale(1);
     opacity: 0.65;
     background: radial-gradient(

@@ -153,6 +153,15 @@ export default [
   },
   prettierConfig,
   {
-    ignores: ['node_modules/', 'dist/', 'build/', '*.js', '*.d.ts', 'chrome-extension/', 'src/sdk/**/*'],
+    ignores: [
+      'node_modules/',
+      'dist/',
+      'build/',
+      '.vite-dev-build/',
+      '*.js',
+      '*.d.ts',
+      'chrome-extension/',
+      'src/sdk/**/*',
+    ],
   },
 ];
