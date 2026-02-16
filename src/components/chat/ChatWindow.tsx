@@ -92,7 +92,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     () => config.mtxId ?? (config.mtxApp != null ? String(config.mtxApp) : 'default'),
     [config.mtxId, config.mtxApp],
   );
-  const { widthPx, heightPx, onResizeStart } = useResize(
+  const { widthPx, heightPx, onResizeStart, containerRef } = useResize(
     settings.widget_width,
     settings.widget_height,
     tenantId,
@@ -440,9 +440,10 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       }}
     >
       <div
+        ref={containerRef}
         className={`
           rounded-lg shadow-xl border
-          transition-all duration-300 ease-in-out flex flex-col relative overflow-hidden
+          flex flex-col relative overflow-hidden
           ${isOpen ? 'animate-slide-up' : 'animate-slide-down'}
           transform-gpu
           shadow-2xl

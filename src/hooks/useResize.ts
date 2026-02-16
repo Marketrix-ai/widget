@@ -53,6 +53,7 @@ export function useResize(
 ) {
   const storageKey = useMemo(() => `${STORAGE_KEY_PREFIX}${tenantId}`, [tenantId]);
   const dimsRef = useRef<{ width: number; height: number }>({ width: 360, height: 450 });
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const [dimensions, setDimensions] = useState<{ width: number; height: number }>(() => {
     if (typeof localStorage === 'undefined') {
@@ -92,6 +93,11 @@ export function useResize(
       const startH = dimsRef.current.height;
       const { cursor } = getDeltaAndCursor(corner, startX, startY, startX, startY);
 
+      // Disable transitions during resize for instant visual feedback
+      if (containerRef.current) {
+        containerRef.current.dataset.resizing = 'true';
+      }
+
       const onMove = (moveEvent: MouseEvent) => {
         const { dx, dy } = getDeltaAndCursor(corner, startX, startY, moveEvent.clientX, moveEvent.clientY);
         const maxH = Math.floor(window.innerHeight * MAX_HEIGHT);
@@ -100,7 +106,12 @@ export function useResize(
           height: clamp(startH + dy, MIN_HEIGHT, maxH),
         };
         dimsRef.current = next;
-        setDimensions(next);
+
+        // Direct DOM update — skip React re-renders during drag
+        if (containerRef.current) {
+          containerRef.current.style.width = `${next.width}px`;
+          containerRef.current.style.height = `${next.height}px`;
+        }
       };
 
       const onUp = () => {
@@ -108,6 +119,15 @@ export function useResize(
         document.removeEventListener('mouseup', onUp);
         document.body.style.cursor = '';
         document.body.style.userSelect = '';
+
+        // Re-enable transitions
+        if (containerRef.current) {
+          delete containerRef.current.dataset.resizing;
+        }
+
+        // Sync React state once on mouseup
+        setDimensions({ ...dimsRef.current });
+
         if (!isPreviewMode && typeof localStorage !== 'undefined') {
           const { width, height } = dimsRef.current;
           localStorage.setItem(storageKey, JSON.stringify({ width, height }));
@@ -128,5 +148,6 @@ export function useResize(
     widthPx: `${dimensions.width}px`,
     heightPx: `${dimensions.height}px`,
     onResizeStart: handleResizeStart,
+    containerRef,
   };
 }
