@@ -5,7 +5,10 @@ import { DARK_THEME_COLORS } from '../../constants/theme';
 import { useWidget } from '../../hooks/useWidget';
 import type { MarketrixConfig, WidgetPosition } from '../../types';
 import { addOpacity, darkenColor, getContrastingColor } from '../../utils/format';
-import { getAnchorTopLeft, getDeltaToCorner, getPositionClasses } from '../../utils/widgetPositioning';
+import {
+  getNearestCornerByTranslation,
+  getPositionClasses,
+} from '../../utils/widgetPositioning';
 
 interface WidgetButtonProps {
   config: MarketrixConfig;
@@ -52,8 +55,10 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
     lastY: number;
   } | null>(null);
   const rafRef = useRef<number | null>(null);
-  const snapTimeoutRef = useRef<number | null>(null);
   const suppressUntilRef = useRef(0);
+  // Velocity history for Next.js-style momentum snap (sample every ~10ms)
+  const velocityHistoryRef = useRef<Array<{ x: number; y: number; t: number }>>([]);
+  const lastVelocitySampleRef = useRef(0);
 
   const { config: widgetConfig, isPreviewMode } = useWidget({ config });
   const activityRingRadius = Math.max(6, Math.min(22, Number.parseFloat(widgetConfig.widget_border_radius) || 12));
@@ -80,7 +85,6 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
   useEffect(() => {
     return () => {
       if (rafRef.current !== null) window.cancelAnimationFrame(rafRef.current);
-      if (snapTimeoutRef.current !== null) window.clearTimeout(snapTimeoutRef.current);
     };
   }, []);
 
@@ -89,9 +93,7 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
   const effectivePositionClasses = getPositionClasses(effectivePosition);
   const positionClass = isPreviewMode ? 'absolute' : 'fixed';
 
-  const MAGNET_DISTANCE = 140;
-  const MAGNET_STRENGTH = 0.92;
-  const SNAP_DURATION_MS = 240;
+  const DRAG_THRESHOLD_PX = 5;
 
   const previewPositionStyle = isPreviewMode
     ? effectivePosition.includes('top')
@@ -105,17 +107,19 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
         }
     : {};
 
-  const getNearestCorner = (clientX: number, clientY: number): WidgetPosition => {
-    if (typeof window === 'undefined') return 'bottom_right';
-    const isRight = clientX >= window.innerWidth / 2;
-    const isBottom = clientY >= window.innerHeight / 2;
-    return isBottom
-      ? isRight
-        ? 'bottom_right'
-        : 'bottom_left'
-      : isRight
-        ? 'top_right'
-        : 'top_left';
+  // Velocity in px/s; project to extra px for momentum (Next.js formula)
+  const projectVelocity = (v: number, decel = 0.999) =>
+    ((v / 1000) * decel) / (1 - decel);
+
+  const getVelocityFromHistory = (): { x: number; y: number } => {
+    const h = velocityHistoryRef.current;
+    if (h.length < 2) return { x: 0, y: 0 };
+    const dt = h[h.length - 1].t - h[0].t;
+    if (dt <= 0) return { x: 0, y: 0 };
+    return {
+      x: ((h[h.length - 1].x - h[0].x) / dt) * 1000,
+      y: ((h[h.length - 1].y - h[0].y) / dt) * 1000,
+    };
   };
 
   // ---- Drag handlers ----
@@ -143,11 +147,12 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
     const dx = event.clientX - drag.startX;
     const dy = event.clientY - drag.startY;
 
-    if (!drag.dragging && Math.hypot(dx, dy) > 6) {
+    if (!drag.dragging && Math.hypot(dx, dy) > DRAG_THRESHOLD_PX) {
       drag.dragging = true;
       setIsDragging(true);
       setShowWelcomeText(false);
-      // Hint GPU
+      velocityHistoryRef.current = [];
+      lastVelocitySampleRef.current = 0;
       if (wrapperRef.current) {
         wrapperRef.current.style.willChange = 'transform';
         wrapperRef.current.style.transition = 'none';
@@ -159,54 +164,22 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
     drag.lastX = dx;
     drag.lastY = dy;
 
-    // Coalesce into single RAF
+    const now = Date.now();
+    if (now - lastVelocitySampleRef.current >= 10) {
+      lastVelocitySampleRef.current = now;
+      velocityHistoryRef.current = [
+        ...velocityHistoryRef.current.slice(-5),
+        { x: event.clientX, y: event.clientY, t: now },
+      ];
+    }
+
     if (rafRef.current === null) {
       rafRef.current = window.requestAnimationFrame(() => {
         rafRef.current = null;
         const d = dragRef.current;
         const wrapper = wrapperRef.current;
         if (!wrapper || !d) return;
-
-        let dx = d.lastX;
-        let dy = d.lastY;
-
-        if (typeof window !== 'undefined') {
-          const vw = window.innerWidth;
-          const vh = window.innerHeight;
-          const rect = wrapper.getBoundingClientRect();
-          const w = rect.width;
-          const h = rect.height;
-          const anchor = getAnchorTopLeft(position, vw, vh, w, h);
-          const centerX = anchor.x + w / 2 + dx;
-          const centerY = anchor.y + h / 2 + dy;
-
-          const edge = 20;
-          const cornerCenters: { corner: WidgetPosition; x: number; y: number }[] = [
-            { corner: 'top_left', x: edge + w / 2, y: edge + h / 2 },
-            { corner: 'top_right', x: vw - edge - w / 2, y: edge + h / 2 },
-            { corner: 'bottom_left', x: edge + w / 2, y: vh - edge - h / 2 },
-            { corner: 'bottom_right', x: vw - edge - w / 2, y: vh - edge - h / 2 },
-          ];
-
-          let nearestDist = Infinity;
-          let nearest: (typeof cornerCenters)[0] | null = null;
-          for (const cc of cornerCenters) {
-            const dist = Math.hypot(centerX - cc.x, centerY - cc.y);
-            if (dist < nearestDist) {
-              nearestDist = dist;
-              nearest = cc;
-            }
-          }
-
-          if (nearest && nearestDist < MAGNET_DISTANCE) {
-            const pull = Math.pow(1 - nearestDist / MAGNET_DISTANCE, 1.2) * MAGNET_STRENGTH;
-            const target = getDeltaToCorner(position, nearest.corner, vw, vh, w, h);
-            dx = dx + (target.dx - dx) * pull;
-            dy = dy + (target.dy - dy) * pull;
-          }
-        }
-
-        wrapper.style.transform = `translate3d(${dx}px, ${dy}px, 0)`;
+        wrapper.style.transform = `translate3d(${d.lastX}px, ${d.lastY}px, 0)`;
       });
     }
   };
@@ -216,10 +189,6 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
       window.cancelAnimationFrame(rafRef.current);
       rafRef.current = null;
     }
-    if (snapTimeoutRef.current !== null) {
-      window.clearTimeout(snapTimeoutRef.current);
-      snapTimeoutRef.current = null;
-    }
     if (wrapperRef.current) {
       wrapperRef.current.style.transform = '';
       wrapperRef.current.style.willChange = '';
@@ -227,59 +196,37 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
     }
   };
 
-  const animateSnapToCorner = (clientX: number, clientY: number) => {
-    const nextCorner = getNearestCorner(clientX, clientY);
-    if (typeof window === 'undefined' || !wrapperRef.current) {
-      onPositionChange(nextCorner);
-      setIsDragging(false);
-      return;
-    }
-
-    const wrapper = wrapperRef.current;
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
-    const rect = wrapper.getBoundingClientRect();
-    const target = getDeltaToCorner(position, nextCorner, vw, vh, rect.width, rect.height);
-
-    wrapper.style.willChange = 'transform';
-    wrapper.style.transition = `transform ${SNAP_DURATION_MS}ms cubic-bezier(0.22, 1, 0.36, 1)`;
-    wrapper.style.transform = `translate3d(${target.dx}px, ${target.dy}px, 0)`;
-
-    let finished = false;
-    const finishSnap = () => {
-      if (finished) return;
-      finished = true;
-      wrapper.removeEventListener('transitionend', onTransitionEnd);
-      if (snapTimeoutRef.current !== null) {
-        window.clearTimeout(snapTimeoutRef.current);
-        snapTimeoutRef.current = null;
-      }
-
-      // Swap anchor + clear transform in one frame so it lands smoothly.
-      wrapper.style.transition = 'none';
-      wrapper.style.transform = '';
-      wrapper.style.willChange = '';
-      onPositionChange(nextCorner);
-      setIsDragging(false);
-      window.requestAnimationFrame(() => {
-        if (wrapperRef.current) wrapperRef.current.style.transition = '';
-      });
-    };
-
-    const onTransitionEnd = (event: TransitionEvent) => {
-      if (event.propertyName !== 'transform') return;
-      finishSnap();
-    };
-
-    wrapper.addEventListener('transitionend', onTransitionEnd);
-    snapTimeoutRef.current = window.setTimeout(finishSnap, SNAP_DURATION_MS + 100);
+  const snapToCorner = (nextCorner: WidgetPosition) => {
+    resetDragStyles();
+    onPositionChange(nextCorner);
+    setIsDragging(false);
   };
 
   const onPointerUp = (event: React.PointerEvent<HTMLButtonElement>) => {
     const drag = dragRef.current;
     if (drag?.pointerId !== event.pointerId) return;
     if (drag.dragging) {
-      animateSnapToCorner(event.clientX, event.clientY);
+      const v = getVelocityFromHistory();
+      const projX = projectVelocity(v.x);
+      const projY = projectVelocity(v.y);
+      const projected = { dx: drag.lastX + projX, dy: drag.lastY + projY };
+
+      let nextCorner: WidgetPosition;
+      if (typeof window !== 'undefined' && wrapperRef.current) {
+        const rect = wrapperRef.current.getBoundingClientRect();
+        nextCorner = getNearestCornerByTranslation(
+          projected,
+          position,
+          window.innerWidth,
+          window.innerHeight,
+          rect.width,
+          rect.height,
+        );
+      } else {
+        nextCorner = position;
+      }
+
+      snapToCorner(nextCorner);
       suppressUntilRef.current = Date.now() + 300;
       dragRef.current = null;
       event.currentTarget.releasePointerCapture(event.pointerId);

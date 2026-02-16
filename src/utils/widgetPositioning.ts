@@ -118,3 +118,26 @@ export const getDeltaToCorner = (
     dy: targetCenterY - centerY,
   };
 };
+
+/** Nearest corner by translation distance (for velocity-based snap, Next.js style). */
+export const getNearestCornerByTranslation = (
+  translation: { dx: number; dy: number },
+  position: WidgetPosition,
+  vw: number,
+  vh: number,
+  w: number,
+  h: number,
+): WidgetPosition => {
+  const corners: WidgetPosition[] = ['top_left', 'top_right', 'bottom_left', 'bottom_right'];
+  let nearest: WidgetPosition = position;
+  let minDist = Infinity;
+  for (const corner of corners) {
+    const target = getDeltaToCorner(position, corner, vw, vh, w, h);
+    const dist = Math.hypot(translation.dx - target.dx, translation.dy - target.dy);
+    if (dist < minDist) {
+      minDist = dist;
+      nearest = corner;
+    }
+  }
+  return nearest;
+};
