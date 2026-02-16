@@ -136,7 +136,8 @@ class StorageService {
     if (!this.context) {
       this.loadContext();
     }
-    this.context = { ...this.context!, ...updates };
+    const currentContext = this.context as MarketrixChatContext;
+    this.context = { ...currentContext, ...updates };
     this.saveContext();
   }
 

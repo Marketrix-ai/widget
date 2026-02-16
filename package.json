@@ -21,7 +21,10 @@
     "start": "vite",
     "build": "vite build && cross-env BUILD_MODE=standalone vite build",
     "lint": "eslint . --ext .ts,.tsx --max-warnings 200 --fix",
-    "check": "tsc --noEmit"
+    "check": "tsc --noEmit",
+    "type-check": "tsc --noEmit",
+    "code:fix": "eslint . --ext .ts,.tsx --fix && prettier --write .",
+    "code:check": "tsc --noEmit && eslint . --ext .ts,.tsx && prettier --check ."
   },
   "dependencies": {
     "@rrweb/record": "^2.0.0-alpha.20",

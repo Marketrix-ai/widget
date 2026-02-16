@@ -250,7 +250,8 @@ export class SessionRecorder {
         };
 
         this.ws.onmessage = event => {
-          log.debug('📨 Message received from server, length:', event.data.length);
+          const dataLength = typeof event.data === 'string' ? event.data.length : 0;
+          log.debug('📨 Message received from server, length:', dataLength);
           try {
             const data = JSON.parse(event.data) as ServerMessage;
             log.debug('Parsed message from server:', {
@@ -667,7 +668,7 @@ export class SessionRecorder {
           await this.sendMetadataAsync();
         } catch (error) {
           log.error('Failed to send metadata:', error);
-          throw new Error(`Failed to send metadata before starting recording: ${error}`);
+          throw new Error(`Failed to send metadata before starting recording: ${String(error)}`);
         }
       } else if (this.metadataSendPromise) {
         log.debug('Waiting for metadata send to complete...');
@@ -699,7 +700,7 @@ export class SessionRecorder {
         log.info('Metadata acknowledged by server, starting RRWeb recording...');
       } catch (error) {
         log.error('Failed to receive metadata acknowledgment:', error);
-        throw new Error(`Server did not acknowledge metadata: ${error}`);
+        throw new Error(`Server did not acknowledge metadata: ${String(error)}`);
       }
 
       if (this.stopRequested) throw new Error('Recording stopped during startup');
