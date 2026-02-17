@@ -3,3 +3,7 @@ node_modules
 .DS_Store
 .vite-dev-build
 /.husky/
+
+# Logs
+logs
+*.log
