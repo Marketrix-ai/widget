@@ -256,7 +256,7 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
       <div
         className={`
           group relative w-14 h-14 overflow-visible transition-all duration-300 ease-in-out
-          ${isOpen ? 'scale-0 opacity-0 pointer-events-none' : 'scale-100 opacity-100 hover:scale-110'}
+          ${isOpen ? 'scale-0 opacity-0 pointer-events-none' : 'scale-100 opacity-100'}
         `}
       >
         {showProcessingGlow && <div className={glowClass} aria-hidden />}
@@ -286,7 +286,7 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
           onPointerCancel={onPointerCancel}
           className={`
           relative z-10 w-14 h-14 rounded-[27px]
-          border-0 bg-transparent
+          border-0 bg-transparent marketrix-widget-btn-shine
         `}
           style={{
             color: getContrastingColor(widgetConfig.widget_accent_color),
@@ -299,7 +299,10 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
           aria-label='Open Marketrix support chat'
         >
           <div className='w-full h-full flex items-center justify-center relative'>
-            <div className='relative w-12 h-12'>
+            <div
+              className='relative w-12 h-12 overflow-hidden marketrix-widget-icon-shine'
+              style={{ borderRadius: widgetConfig.widget_border_radius }}
+            >
               {showProcessingGlow && (
                 <svg className={activityRingClass} viewBox='0 0 54 54' fill='none' aria-hidden>
                   <rect
@@ -319,7 +322,6 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
                 draggable={false}
                 onDragStart={e => e.preventDefault()}
                 style={{
-                  boxShadow: widgetConfig.widget_shadow,
                   borderRadius: widgetConfig.widget_border_radius,
                   border: 'none',
                   outline: 'none',

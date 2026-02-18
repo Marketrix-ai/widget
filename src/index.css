@@ -65,6 +65,38 @@
   border-image: linear-gradient(to right, var(--mx-gray-700), var(--mx-gray-900)) 1;
 }
 
+/* Shine effect on widget button icon hover —
+   Uses ::after pseudo-element so it layers above the icon image.
+   Triggered by hovering the parent button (.marketrix-widget-btn-shine). */
+.marketrix-widget-icon-shine {
+  position: relative;
+}
+
+.marketrix-widget-icon-shine::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  pointer-events: none;
+  border-radius: inherit;
+  background-image: linear-gradient(
+    45deg,
+    transparent 25%,
+    rgba(255, 255, 255, 0.3) 50%,
+    transparent 75%,
+    transparent 100%
+  );
+  background-size: 250% 250%;
+  background-position: -100% 0;
+  background-repeat: no-repeat;
+  transition: background-position 0s ease !important;
+}
+
+.marketrix-widget-btn-shine:hover .marketrix-widget-icon-shine::after {
+  background-position: 200% 0;
+  transition: background-position 1.5s ease !important;
+}
+
 /* Fade-in animation for welcome text */
 @keyframes fade-in {
   from {
