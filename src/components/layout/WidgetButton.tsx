@@ -5,10 +5,7 @@ import { DARK_THEME_COLORS } from '../../constants/theme';
 import { useWidget } from '../../hooks/useWidget';
 import type { MarketrixConfig, WidgetPosition } from '../../types';
 import { addOpacity, darkenColor, getContrastingColor } from '../../utils/format';
-import {
-  getNearestCornerByTranslation,
-  getPositionClasses,
-} from '../../utils/widgetPositioning';
+import { getNearestCornerByTranslation, getPositionClasses } from '../../utils/widgetPositioning';
 
 interface WidgetButtonProps {
   config: MarketrixConfig;
@@ -108,8 +105,7 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
     : {};
 
   // Velocity in px/s; project to extra px for momentum (Next.js formula)
-  const projectVelocity = (v: number, decel = 0.999) =>
-    ((v / 1000) * decel) / (1 - decel);
+  const projectVelocity = (v: number, decel = 0.999) => ((v / 1000) * decel) / (1 - decel);
 
   const getVelocityFromHistory = (): { x: number; y: number } => {
     const h = velocityHistoryRef.current;
@@ -306,7 +302,14 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
             <div className='relative w-12 h-12'>
               {showProcessingGlow && (
                 <svg className={activityRingClass} viewBox='0 0 54 54' fill='none' aria-hidden>
-                  <rect x='1.25' y='1.25' width='51.5' height='51.5' rx={activityRingRadius + 1} ry={activityRingRadius + 1} />
+                  <rect
+                    x='1.25'
+                    y='1.25'
+                    width='51.5'
+                    height='51.5'
+                    rx={activityRingRadius + 1}
+                    ry={activityRingRadius + 1}
+                  />
                 </svg>
               )}
               <img
