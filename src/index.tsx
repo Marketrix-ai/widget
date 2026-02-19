@@ -259,9 +259,12 @@ export const initWidget = async (config: MarketrixConfig, container?: HTMLElemen
   if (initPromise) {
     return initPromise;
   }
-  if (isInitializing) {
+  if (isInitializing && initPromise) {
     console.warn('Marketrix Widget: initialization already in progress');
-    return initPromise; // Return existing promise if available
+    return initPromise;
+  }
+  if (isInitializing) {
+    return Promise.resolve();
   }
   if (isWidgetInitialized()) {
     console.warn('Marketrix Widget: already initialized');
@@ -272,10 +275,9 @@ export const initWidget = async (config: MarketrixConfig, container?: HTMLElemen
     return;
   }
 
-  // Set flag atomically before async operations
-  isInitializing = true;
-  
+  // Set promise first so concurrent callers always get Promise<void>, not null
   initPromise = initWidgetInternal(config, container);
+  isInitializing = true;
   try {
     await initPromise;
   } finally {
