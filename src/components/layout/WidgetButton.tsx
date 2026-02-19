@@ -1,11 +1,16 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 import MarketrixIcon from '../../assets/marketrix-icon.svg';
 import { DARK_THEME_COLORS } from '../../constants/theme';
 import { useWidget } from '../../hooks/useWidget';
 import type { MarketrixConfig, WidgetPosition } from '../../types';
 import { addOpacity, darkenColor, getContrastingColor } from '../../utils/format';
-import { getNearestCornerByTranslation, getPositionClasses } from '../../utils/widgetPositioning';
+import {
+  getAnchorTopLeft,
+  getDeltaToCorner,
+  getNearestCornerByTranslation,
+  getPositionClasses,
+} from '../../utils/widgetPositioning';
 
 interface WidgetButtonProps {
   config: MarketrixConfig;
@@ -41,6 +46,9 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
   const [showWelcomeText, setShowWelcomeText] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const wrapperRef = useRef<HTMLDivElement | null>(null);
+  const [wrapperSize, setWrapperSize] = useState({ w: 56, h: 56 });
+  const [, setViewportTick] = useState(0);
+  const transitionEndRef = useRef<(() => void) | null>(null);
 
   // All drag state lives in refs to avoid React rerenders during drag.
   const dragRef = useRef<{
@@ -85,10 +93,41 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
     };
   }, []);
 
+  // Measure wrapper for pixel positioning (Next.js-style: avoids teleport on snap)
+  const measureWrapper = useCallback(() => {
+    if (!wrapperRef.current || typeof window === 'undefined') return;
+    const rect = wrapperRef.current.getBoundingClientRect();
+    setWrapperSize(prev => (prev.w === rect.width && prev.h === rect.height ? prev : { w: rect.width, h: rect.height }));
+  }, []);
+  useLayoutEffect(() => {
+    measureWrapper();
+    const ro =
+      typeof window !== 'undefined' && wrapperRef.current
+        ? new ResizeObserver(measureWrapper)
+        : null;
+    if (ro && wrapperRef.current) ro.observe(wrapperRef.current);
+    return () => ro?.disconnect();
+  }, [measureWrapper, position]);
+
+  useEffect(() => {
+    if (isPreviewMode) return;
+    const onResize = () => setViewportTick(t => t + 1);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, [isPreviewMode]);
+
   const effectivePosition = position;
   const zIndex = widgetConfig.widget_position_z_index ?? 50;
   const effectivePositionClasses = getPositionClasses(effectivePosition);
   const positionClass = isPreviewMode ? 'absolute' : 'fixed';
+
+  const vw = typeof window !== 'undefined' ? window.innerWidth : 0;
+  const vh = typeof window !== 'undefined' ? window.innerHeight : 0;
+  const anchor = getAnchorTopLeft(effectivePosition, vw, vh, wrapperSize.w, wrapperSize.h);
+  const pixelPositionStyle =
+    !isPreviewMode && vw > 0 && vh > 0
+      ? { left: anchor.x, top: anchor.y }
+      : undefined;
 
   const DRAG_THRESHOLD_PX = 5;
 
@@ -192,10 +231,56 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
     }
   };
 
+  const commitPositionAfterAnimation = useCallback(
+    (nextCorner: WidgetPosition) => {
+      if (transitionEndRef.current) return;
+      const wrapper = wrapperRef.current;
+      if (!wrapper) {
+        onPositionChange(nextCorner);
+        setIsDragging(false);
+        return;
+      }
+      const done = () => {
+        transitionEndRef.current = null;
+        wrapper.style.transition = '';
+        wrapper.style.transform = '';
+        onPositionChange(nextCorner);
+        setIsDragging(false);
+      };
+      transitionEndRef.current = done;
+      wrapper.addEventListener('transitionend', function onEnd(e: TransitionEvent) {
+        if (e.propertyName !== 'transform') return;
+        wrapper.removeEventListener('transitionend', onEnd);
+        done();
+      });
+    },
+    [onPositionChange],
+  );
+
   const snapToCorner = (nextCorner: WidgetPosition) => {
-    resetDragStyles();
-    onPositionChange(nextCorner);
-    setIsDragging(false);
+    if (!wrapperRef.current || !pixelPositionStyle) {
+      resetDragStyles();
+      onPositionChange(nextCorner);
+      setIsDragging(false);
+      return;
+    }
+    if (rafRef.current !== null) {
+      window.cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
+    const targetDelta = getDeltaToCorner(
+      position,
+      nextCorner,
+      vw,
+      vh,
+      wrapperSize.w,
+      wrapperSize.h,
+    );
+    const wrapper = wrapperRef.current;
+    wrapper.style.willChange = 'transform';
+    wrapper.style.transition = 'transform 491ms cubic-bezier(0.34, 1.56, 0.64, 1)';
+    wrapper.style.transform = `translate3d(${targetDelta.dx}px, ${targetDelta.dy}px, 0)`;
+    commitPositionAfterAnimation(nextCorner);
   };
 
   const onPointerUp = (event: React.PointerEvent<HTMLButtonElement>) => {
@@ -246,11 +331,12 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
   return (
     <div
       ref={wrapperRef}
-      className={`${positionClass} ${isPreviewMode ? '' : effectivePositionClasses} ${isDragging ? '' : 'transition-all duration-300 ease-in-out'} ${showWelcomeText && !isOpen ? (effectivePosition.includes('left') ? 'transform translate-x-64' : 'transform -translate-x-64') : ''}`}
+      className={`${positionClass} ${pixelPositionStyle ? '' : effectivePositionClasses} ${isDragging ? '' : 'transition-all duration-300 ease-in-out'} ${showWelcomeText && !isOpen ? (effectivePosition.includes('left') ? 'transform translate-x-64' : 'transform -translate-x-64') : ''}`}
       style={{
         zIndex,
         pointerEvents: isOpen ? 'none' : 'auto',
         ...previewPositionStyle,
+        ...pixelPositionStyle,
       }}
     >
       <div
