@@ -368,7 +368,7 @@ export class SessionRecorder {
    */
   private pushToQueue(event: eventWithTime): void {
     this.eventQueue.push(event);
-    
+
     // Prevent unbounded queue growth
     if (this.eventQueue.length > this.MAX_QUEUE_SIZE) {
       const droppedCount = this.eventQueue.length - this.MAX_QUEUE_SIZE;
