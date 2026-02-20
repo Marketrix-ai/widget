@@ -97,14 +97,13 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
   const measureWrapper = useCallback(() => {
     if (!wrapperRef.current || typeof window === 'undefined') return;
     const rect = wrapperRef.current.getBoundingClientRect();
-    setWrapperSize(prev => (prev.w === rect.width && prev.h === rect.height ? prev : { w: rect.width, h: rect.height }));
+    setWrapperSize(prev =>
+      prev.w === rect.width && prev.h === rect.height ? prev : { w: rect.width, h: rect.height },
+    );
   }, []);
   useLayoutEffect(() => {
     measureWrapper();
-    const ro =
-      typeof window !== 'undefined' && wrapperRef.current
-        ? new ResizeObserver(measureWrapper)
-        : null;
+    const ro = typeof window !== 'undefined' && wrapperRef.current ? new ResizeObserver(measureWrapper) : null;
     if (ro && wrapperRef.current) ro.observe(wrapperRef.current);
     return () => ro?.disconnect();
   }, [measureWrapper, position]);
@@ -124,10 +123,7 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
   const vw = typeof window !== 'undefined' ? window.innerWidth : 0;
   const vh = typeof window !== 'undefined' ? window.innerHeight : 0;
   const anchor = getAnchorTopLeft(effectivePosition, vw, vh, wrapperSize.w, wrapperSize.h);
-  const pixelPositionStyle =
-    !isPreviewMode && vw > 0 && vh > 0
-      ? { left: anchor.x, top: anchor.y }
-      : undefined;
+  const pixelPositionStyle = !isPreviewMode && vw > 0 && vh > 0 ? { left: anchor.x, top: anchor.y } : undefined;
 
   const DRAG_THRESHOLD_PX = 5;
 
@@ -242,6 +238,12 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
       }
       const done = () => {
         transitionEndRef.current = null;
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+        const rect = wrapper.getBoundingClientRect();
+        const newAnchor = getAnchorTopLeft(nextCorner, vw, vh, rect.width, rect.height);
+        wrapper.style.left = `${newAnchor.x}px`;
+        wrapper.style.top = `${newAnchor.y}px`;
         wrapper.style.transition = '';
         wrapper.style.transform = '';
         onPositionChange(nextCorner);
@@ -268,14 +270,7 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
       window.cancelAnimationFrame(rafRef.current);
       rafRef.current = null;
     }
-    const targetDelta = getDeltaToCorner(
-      position,
-      nextCorner,
-      vw,
-      vh,
-      wrapperSize.w,
-      wrapperSize.h,
-    );
+    const targetDelta = getDeltaToCorner(position, nextCorner, vw, vh, wrapperSize.w, wrapperSize.h);
     const wrapper = wrapperRef.current;
     wrapper.style.willChange = 'transform';
     wrapper.style.transition = 'transform 491ms cubic-bezier(0.34, 1.56, 0.64, 1)';
