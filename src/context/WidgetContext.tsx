@@ -696,7 +696,8 @@ export const WidgetProvider: React.FC<WidgetProviderProps> = ({ children, previe
         }),
       resetState,
       stopTask: async () => {
-        const taskId = state.activeTaskId;
+        // Capture taskId from ref (always current) instead of stale closure
+        const taskId = state.activeTaskId || isTaskRunningRef.current ? (state.activeTaskId ?? undefined) : undefined;
         setState(prev => {
           // Find the task message and update its taskStatus
           const found = findMessageForProgress({
@@ -719,10 +720,9 @@ export const WidgetProvider: React.FC<WidgetProviderProps> = ({ children, previe
           if (!previewMode) {
             chatService.setTaskState(false, null, []);
           }
-          // Reset both flags when task ends
-          taskIdFromApiRef.current = null;
-          taskStartedFromAgentRef.current = false;
-          isTaskRunningRef.current = false; // Update ref immediately
+          // Only reset isTaskRunning state; leave handshake refs intact
+          // so subsequent task starts can still complete the API+WS handshake.
+          isTaskRunningRef.current = false;
           return {
             ...prev,
             messages: newMessages,

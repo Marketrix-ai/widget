@@ -41,6 +41,7 @@ export class SessionRecorder {
   private maxReconnectDelay = 30000; // Max 30 seconds
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private eventQueue: eventWithTime[] = [];
+  private readonly MAX_QUEUE_SIZE = 500; // Prevent unbounded memory growth
   private sessionId: string;
   private stopRecording: ReturnType<typeof record> | null = null;
   private isRecording = false;
@@ -331,7 +332,7 @@ export class SessionRecorder {
         metadataAcknowledged: this.metadataAcknowledged,
         queueSize: this.eventQueue.length + 1,
       });
-      this.eventQueue.push(event);
+      this.pushToQueue(event);
       return;
     }
 
@@ -349,16 +350,30 @@ export class SessionRecorder {
         }
       } catch (error) {
         log.error('❌ Error sending event:', error);
-        this.eventQueue.push(event);
+        this.pushToQueue(event);
       }
     } else if (this.ws?.readyState === WebSocket.CONNECTING) {
       // Queue event if connection is still establishing
       log.debug('⏸️ WebSocket still connecting, queuing event');
-      this.eventQueue.push(event);
+      this.pushToQueue(event);
     } else {
       // Connection is closed or not available, queue the event
       log.debug('⏸️ WebSocket not open, queuing event. State:', this.ws?.readyState);
-      this.eventQueue.push(event);
+      this.pushToQueue(event);
+    }
+  }
+
+  /**
+   * Push event to queue with size limit to prevent memory leaks
+   */
+  private pushToQueue(event: eventWithTime): void {
+    this.eventQueue.push(event);
+
+    // Prevent unbounded queue growth
+    if (this.eventQueue.length > this.MAX_QUEUE_SIZE) {
+      const droppedCount = this.eventQueue.length - this.MAX_QUEUE_SIZE;
+      this.eventQueue = this.eventQueue.slice(-this.MAX_QUEUE_SIZE);
+      log.warn(`⚠️ Event queue exceeded ${this.MAX_QUEUE_SIZE}, dropped ${droppedCount} oldest events`);
     }
   }
 

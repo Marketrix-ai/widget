@@ -252,9 +252,19 @@ async function initWidgetInternal(config: MarketrixConfig, container?: HTMLEleme
 }
 
 // Initialize the widget
+let isInitializing = false; // Atomic flag to prevent TOCTOU race condition
+
 export const initWidget = async (config: MarketrixConfig, container?: HTMLElement): Promise<void> => {
+  // Check for existing initialization or initialization in progress
   if (initPromise) {
     return initPromise;
+  }
+  if (isInitializing && initPromise) {
+    console.warn('Marketrix Widget: initialization already in progress');
+    return initPromise;
+  }
+  if (isInitializing) {
+    return Promise.resolve();
   }
   if (isWidgetInitialized()) {
     console.warn('Marketrix Widget: already initialized');
@@ -265,11 +275,14 @@ export const initWidget = async (config: MarketrixConfig, container?: HTMLElemen
     return;
   }
 
+  // Set promise first so concurrent callers always get Promise<void>, not null
   initPromise = initWidgetInternal(config, container);
+  isInitializing = true;
   try {
     await initPromise;
   } finally {
     initPromise = null;
+    isInitializing = false;
   }
 };
 

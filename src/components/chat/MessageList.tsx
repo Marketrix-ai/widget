@@ -5,7 +5,7 @@ import { IoChatbubbleEllipsesOutline } from 'react-icons/io5';
 import { LuMousePointerClick } from 'react-icons/lu';
 import { SiTicktick } from 'react-icons/si';
 
-import MarketrixIcon from '../../assets/marketrix-icon.png';
+import MarketrixIcon from '../../assets/marketrix-icon.svg';
 import { DARK_THEME_CLASSES } from '../../constants/theme';
 import { useWidget } from '../../hooks/useWidget';
 import { createUserMessage } from '../../services/ChatService';

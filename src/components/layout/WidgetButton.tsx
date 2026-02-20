@@ -1,15 +1,21 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 
-import MarketrixIcon from '../../assets/marketrix-icon.png';
+import MarketrixIcon from '../../assets/marketrix-icon.svg';
 import { DARK_THEME_COLORS } from '../../constants/theme';
 import { useWidget } from '../../hooks/useWidget';
 import type { MarketrixConfig, WidgetPosition } from '../../types';
 import { addOpacity, darkenColor, getContrastingColor } from '../../utils/format';
-import { getAnchorTopLeft, getDeltaToCorner, getPositionClasses } from '../../utils/widgetPositioning';
+import {
+  getAnchorTopLeft,
+  getDeltaToCorner,
+  getNearestCornerByTranslation,
+  getPositionClasses,
+} from '../../utils/widgetPositioning';
 
 interface WidgetButtonProps {
   config: MarketrixConfig;
   onClick: () => void;
+  onStopTask?: () => void;
   isOpen: boolean;
   isMinimized?: boolean;
   isLoading?: boolean;
@@ -22,6 +28,7 @@ interface WidgetButtonProps {
 export const WidgetButton: React.FC<WidgetButtonProps> = ({
   config,
   onClick,
+  onStopTask,
   isOpen,
   isMinimized = false,
   isLoading = false,
@@ -31,10 +38,17 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
   onPositionChange,
 }) => {
   const showProcessingGlow = !isOpen && (isLoading || isTaskRunning);
+  const showStopControl = !isOpen && isTaskRunning && !!onStopTask;
   const glowClass = hasError ? 'marketrix-widget-button-error-glow' : 'marketrix-widget-button-processing-glow';
+  const activityRingClass = hasError
+    ? 'marketrix-widget-button-error-activity-ring'
+    : 'marketrix-widget-button-processing-activity-ring';
   const [showWelcomeText, setShowWelcomeText] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const wrapperRef = useRef<HTMLDivElement | null>(null);
+  const [wrapperSize, setWrapperSize] = useState({ w: 56, h: 56 });
+  const [, setViewportTick] = useState(0);
+  const transitionEndRef = useRef<(() => void) | null>(null);
 
   // All drag state lives in refs to avoid React rerenders during drag.
   const dragRef = useRef<{
@@ -47,8 +61,12 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
   } | null>(null);
   const rafRef = useRef<number | null>(null);
   const suppressUntilRef = useRef(0);
+  // Velocity history for Next.js-style momentum snap (sample every ~10ms)
+  const velocityHistoryRef = useRef<Array<{ x: number; y: number; t: number }>>([]);
+  const lastVelocitySampleRef = useRef(0);
 
   const { config: widgetConfig, isPreviewMode } = useWidget({ config });
+  const activityRingRadius = Math.max(6, Math.min(22, Number.parseFloat(widgetConfig.widget_border_radius) || 12));
 
   useEffect(() => {
     setShowWelcomeText(false);
@@ -75,13 +93,39 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
     };
   }, []);
 
+  // Measure wrapper for pixel positioning (Next.js-style: avoids teleport on snap)
+  const measureWrapper = useCallback(() => {
+    if (!wrapperRef.current || typeof window === 'undefined') return;
+    const rect = wrapperRef.current.getBoundingClientRect();
+    setWrapperSize(prev =>
+      prev.w === rect.width && prev.h === rect.height ? prev : { w: rect.width, h: rect.height },
+    );
+  }, []);
+  useLayoutEffect(() => {
+    measureWrapper();
+    const ro = typeof window !== 'undefined' && wrapperRef.current ? new ResizeObserver(measureWrapper) : null;
+    if (ro && wrapperRef.current) ro.observe(wrapperRef.current);
+    return () => ro?.disconnect();
+  }, [measureWrapper, position]);
+
+  useEffect(() => {
+    if (isPreviewMode) return;
+    const onResize = () => setViewportTick(t => t + 1);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, [isPreviewMode]);
+
   const effectivePosition = position;
   const zIndex = widgetConfig.widget_position_z_index ?? 50;
   const effectivePositionClasses = getPositionClasses(effectivePosition);
   const positionClass = isPreviewMode ? 'absolute' : 'fixed';
 
-  const MAGNET_DISTANCE = 140;
-  const MAGNET_STRENGTH = 0.92;
+  const vw = typeof window !== 'undefined' ? window.innerWidth : 0;
+  const vh = typeof window !== 'undefined' ? window.innerHeight : 0;
+  const anchor = getAnchorTopLeft(effectivePosition, vw, vh, wrapperSize.w, wrapperSize.h);
+  const pixelPositionStyle = !isPreviewMode && vw > 0 && vh > 0 ? { left: anchor.x, top: anchor.y } : undefined;
+
+  const DRAG_THRESHOLD_PX = 5;
 
   const previewPositionStyle = isPreviewMode
     ? effectivePosition.includes('top')
@@ -95,24 +139,24 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
         }
     : {};
 
-  const snapToNearestCorner = (clientX: number, clientY: number) => {
-    if (typeof window === 'undefined') return;
-    const isRight = clientX >= window.innerWidth / 2;
-    const isBottom = clientY >= window.innerHeight / 2;
-    const next: WidgetPosition = isBottom
-      ? isRight
-        ? 'bottom_right'
-        : 'bottom_left'
-      : isRight
-        ? 'top_right'
-        : 'top_left';
-    onPositionChange(next);
+  // Velocity in px/s; project to extra px for momentum (Next.js formula)
+  const projectVelocity = (v: number, decel = 0.999) => ((v / 1000) * decel) / (1 - decel);
+
+  const getVelocityFromHistory = (): { x: number; y: number } => {
+    const h = velocityHistoryRef.current;
+    if (h.length < 2) return { x: 0, y: 0 };
+    const dt = h[h.length - 1].t - h[0].t;
+    if (dt <= 0) return { x: 0, y: 0 };
+    return {
+      x: ((h[h.length - 1].x - h[0].x) / dt) * 1000,
+      y: ((h[h.length - 1].y - h[0].y) / dt) * 1000,
+    };
   };
 
   // ---- Drag handlers ----
   // Strategy: keep CSS corner anchor classes intact.
   // Apply translate3d(deltaX, deltaY, 0) as offset from anchored position.
-  // This avoids any jumping. On drop, clear transform and snap corner.
+  // On drop, animate to nearest corner and then commit corner class.
 
   const onPointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
     if (isOpen) return;
@@ -134,11 +178,12 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
     const dx = event.clientX - drag.startX;
     const dy = event.clientY - drag.startY;
 
-    if (!drag.dragging && Math.hypot(dx, dy) > 6) {
+    if (!drag.dragging && Math.hypot(dx, dy) > DRAG_THRESHOLD_PX) {
       drag.dragging = true;
       setIsDragging(true);
       setShowWelcomeText(false);
-      // Hint GPU
+      velocityHistoryRef.current = [];
+      lastVelocitySampleRef.current = 0;
       if (wrapperRef.current) {
         wrapperRef.current.style.willChange = 'transform';
         wrapperRef.current.style.transition = 'none';
@@ -150,54 +195,22 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
     drag.lastX = dx;
     drag.lastY = dy;
 
-    // Coalesce into single RAF
+    const now = Date.now();
+    if (now - lastVelocitySampleRef.current >= 10) {
+      lastVelocitySampleRef.current = now;
+      velocityHistoryRef.current = [
+        ...velocityHistoryRef.current.slice(-5),
+        { x: event.clientX, y: event.clientY, t: now },
+      ];
+    }
+
     if (rafRef.current === null) {
       rafRef.current = window.requestAnimationFrame(() => {
         rafRef.current = null;
         const d = dragRef.current;
         const wrapper = wrapperRef.current;
         if (!wrapper || !d) return;
-
-        let dx = d.lastX;
-        let dy = d.lastY;
-
-        if (typeof window !== 'undefined') {
-          const vw = window.innerWidth;
-          const vh = window.innerHeight;
-          const rect = wrapper.getBoundingClientRect();
-          const w = rect.width;
-          const h = rect.height;
-          const anchor = getAnchorTopLeft(position, vw, vh, w, h);
-          const centerX = anchor.x + w / 2 + dx;
-          const centerY = anchor.y + h / 2 + dy;
-
-          const edge = 20;
-          const cornerCenters: { corner: WidgetPosition; x: number; y: number }[] = [
-            { corner: 'top_left', x: edge + w / 2, y: edge + h / 2 },
-            { corner: 'top_right', x: vw - edge - w / 2, y: edge + h / 2 },
-            { corner: 'bottom_left', x: edge + w / 2, y: vh - edge - h / 2 },
-            { corner: 'bottom_right', x: vw - edge - w / 2, y: vh - edge - h / 2 },
-          ];
-
-          let nearestDist = Infinity;
-          let nearest: (typeof cornerCenters)[0] | null = null;
-          for (const cc of cornerCenters) {
-            const dist = Math.hypot(centerX - cc.x, centerY - cc.y);
-            if (dist < nearestDist) {
-              nearestDist = dist;
-              nearest = cc;
-            }
-          }
-
-          if (nearest && nearestDist < MAGNET_DISTANCE) {
-            const pull = Math.pow(1 - nearestDist / MAGNET_DISTANCE, 1.2) * MAGNET_STRENGTH;
-            const target = getDeltaToCorner(position, nearest.corner, vw, vh, w, h);
-            dx = dx + (target.dx - dx) * pull;
-            dy = dy + (target.dy - dy) * pull;
-          }
-        }
-
-        wrapper.style.transform = `translate3d(${dx}px, ${dy}px, 0)`;
+        wrapper.style.transform = `translate3d(${d.lastX}px, ${d.lastY}px, 0)`;
       });
     }
   };
@@ -214,12 +227,86 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
     }
   };
 
+  const commitPositionAfterAnimation = useCallback(
+    (nextCorner: WidgetPosition) => {
+      if (transitionEndRef.current) return;
+      const wrapper = wrapperRef.current;
+      if (!wrapper) {
+        onPositionChange(nextCorner);
+        setIsDragging(false);
+        return;
+      }
+      const done = () => {
+        transitionEndRef.current = null;
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+        const rect = wrapper.getBoundingClientRect();
+        const newAnchor = getAnchorTopLeft(nextCorner, vw, vh, rect.width, rect.height);
+        wrapper.style.left = `${newAnchor.x}px`;
+        wrapper.style.top = `${newAnchor.y}px`;
+        wrapper.style.transition = '';
+        wrapper.style.transform = '';
+        onPositionChange(nextCorner);
+        setIsDragging(false);
+      };
+      transitionEndRef.current = done;
+      wrapper.addEventListener('transitionend', function onEnd(e: TransitionEvent) {
+        if (e.propertyName !== 'transform') return;
+        wrapper.removeEventListener('transitionend', onEnd);
+        done();
+      });
+    },
+    [onPositionChange],
+  );
+
+  const snapToCorner = (nextCorner: WidgetPosition) => {
+    if (!wrapperRef.current || !pixelPositionStyle) {
+      resetDragStyles();
+      onPositionChange(nextCorner);
+      setIsDragging(false);
+      return;
+    }
+    if (rafRef.current !== null) {
+      window.cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
+    const targetDelta = getDeltaToCorner(position, nextCorner, vw, vh, wrapperSize.w, wrapperSize.h);
+    const wrapper = wrapperRef.current;
+    wrapper.style.willChange = 'transform';
+    wrapper.style.transition = 'transform 491ms cubic-bezier(0.34, 1.56, 0.64, 1)';
+    wrapper.style.transform = `translate3d(${targetDelta.dx}px, ${targetDelta.dy}px, 0)`;
+    commitPositionAfterAnimation(nextCorner);
+  };
+
   const onPointerUp = (event: React.PointerEvent<HTMLButtonElement>) => {
     const drag = dragRef.current;
     if (drag?.pointerId !== event.pointerId) return;
     if (drag.dragging) {
-      snapToNearestCorner(event.clientX, event.clientY);
+      const v = getVelocityFromHistory();
+      const projX = projectVelocity(v.x);
+      const projY = projectVelocity(v.y);
+      const projected = { dx: drag.lastX + projX, dy: drag.lastY + projY };
+
+      let nextCorner: WidgetPosition;
+      if (typeof window !== 'undefined' && wrapperRef.current) {
+        const rect = wrapperRef.current.getBoundingClientRect();
+        nextCorner = getNearestCornerByTranslation(
+          projected,
+          position,
+          window.innerWidth,
+          window.innerHeight,
+          rect.width,
+          rect.height,
+        );
+      } else {
+        nextCorner = position;
+      }
+
+      snapToCorner(nextCorner);
       suppressUntilRef.current = Date.now() + 300;
+      dragRef.current = null;
+      event.currentTarget.releasePointerCapture(event.pointerId);
+      return;
     }
     resetDragStyles();
     dragRef.current = null;
@@ -239,20 +326,35 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
   return (
     <div
       ref={wrapperRef}
-      className={`${positionClass} ${isPreviewMode ? '' : effectivePositionClasses} ${isDragging ? '' : 'transition-all duration-300 ease-in-out'} ${showWelcomeText && !isOpen ? (effectivePosition.includes('left') ? 'transform translate-x-64' : 'transform -translate-x-64') : ''}`}
+      className={`${positionClass} ${pixelPositionStyle ? '' : effectivePositionClasses} ${isDragging ? '' : 'transition-all duration-300 ease-in-out'} ${showWelcomeText && !isOpen ? (effectivePosition.includes('left') ? 'transform translate-x-64' : 'transform -translate-x-64') : ''}`}
       style={{
         zIndex,
         pointerEvents: isOpen ? 'none' : 'auto',
         ...previewPositionStyle,
+        ...pixelPositionStyle,
       }}
     >
       <div
         className={`
-          relative w-14 h-14 overflow-visible transition-all duration-300 ease-in-out
-          ${isOpen ? 'scale-0 opacity-0 pointer-events-none' : 'scale-100 opacity-100 hover:scale-110'}
+          group relative w-14 h-14 overflow-visible transition-all duration-300 ease-in-out
+          ${isOpen ? 'scale-0 opacity-0 pointer-events-none' : 'scale-100 opacity-100'}
         `}
       >
         {showProcessingGlow && <div className={glowClass} aria-hidden />}
+        {showStopControl && !isDragging && (
+          <button
+            type='button'
+            onClick={e => {
+              e.preventDefault();
+              e.stopPropagation();
+              onStopTask?.();
+            }}
+            className={`absolute top-1/2 z-20 -translate-y-1/2 rounded-full border border-white/25 bg-gray-900 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-white shadow-lg opacity-0 transition-opacity duration-150 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto group-focus-within:opacity-100 group-focus-within:pointer-events-auto ${effectivePosition.includes('left') ? 'left-full ml-2' : 'right-full mr-2'}`}
+            aria-label='Stop running task'
+          >
+            Stop
+          </button>
+        )}
         <button
           onClick={() => {
             if (Date.now() < suppressUntilRef.current) return;
@@ -265,7 +367,7 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
           onPointerCancel={onPointerCancel}
           className={`
           relative z-10 w-14 h-14 rounded-[27px]
-          border-0 bg-transparent
+          border-0 bg-transparent marketrix-widget-btn-shine
         `}
           style={{
             color: getContrastingColor(widgetConfig.widget_accent_color),
@@ -278,22 +380,38 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
           aria-label='Open Marketrix support chat'
         >
           <div className='w-full h-full flex items-center justify-center relative'>
-            <img
-              src={MarketrixIcon}
-              alt='Marketrix Icon'
-              className='w-full h-full object-contain'
-              draggable={false}
-              onDragStart={e => e.preventDefault()}
-              style={{
-                boxShadow: widgetConfig.widget_shadow,
-                borderRadius: widgetConfig.widget_border_radius,
-                border: 'none',
-                outline: 'none',
-                backgroundColor: 'transparent',
-                pointerEvents: 'none',
-                userSelect: 'none',
-              }}
-            />
+            <div
+              className='relative w-12 h-12 overflow-hidden marketrix-widget-icon-shine'
+              style={{ borderRadius: widgetConfig.widget_border_radius }}
+            >
+              {showProcessingGlow && (
+                <svg className={activityRingClass} viewBox='0 0 54 54' fill='none' aria-hidden>
+                  <rect
+                    x='1.25'
+                    y='1.25'
+                    width='51.5'
+                    height='51.5'
+                    rx={activityRingRadius + 1}
+                    ry={activityRingRadius + 1}
+                  />
+                </svg>
+              )}
+              <img
+                src={MarketrixIcon}
+                alt='Marketrix Icon'
+                className='relative z-10 w-full h-full object-contain'
+                draggable={false}
+                onDragStart={e => e.preventDefault()}
+                style={{
+                  borderRadius: widgetConfig.widget_border_radius,
+                  border: 'none',
+                  outline: 'none',
+                  backgroundColor: 'transparent',
+                  pointerEvents: 'none',
+                  userSelect: 'none',
+                }}
+              />
+            </div>
           </div>
         </button>
       </div>

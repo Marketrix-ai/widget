@@ -2,6 +2,7 @@ import React, { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 
 import { useWidget } from '../hooks/useWidget';
 import type { MarketrixConfig, WidgetPosition } from '../types';
+import { addOpacity } from '../utils/format';
 import { ChatWindow } from './chat/ChatWindow';
 import { WidgetButton } from './layout/WidgetButton';
 import { ErrorDisplay } from './ui/ErrorDisplay';
@@ -122,6 +123,7 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
     widget_position: widgetPosition,
     widget_position_z_index: effectiveWidgetZIndex,
   };
+  const showProcessingFeedback = state.isLoading || state.isTaskRunning;
   const customStyles = {
     '--widget-width': settings.widget_width,
     '--widget-height': settings.widget_height,
@@ -144,9 +146,21 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
       style={{ ...customStyles, ...(isPreviewMode && { width: '100%', height: '100%' }) }}
       data-widget-mode={settings?.widget_feature_human ? 'hybrid' : 'ai'}
     >
+      {showProcessingFeedback && (
+        <div
+          className='marketrix-screen-edge-glow fixed inset-0'
+          style={{
+            boxShadow: `inset 0 0 22px 2px ${addOpacity(settings.widget_accent_color, 0.72)}, inset 0 0 46px 10px ${addOpacity(settings.widget_accent_color, 0.28)}`,
+            pointerEvents: 'none',
+            zIndex: WIDGET_Z_INDEX_BASE,
+          }}
+        />
+      )}
+
       <WidgetButton
         config={effectiveConfig}
         onClick={actions.toggleWidget}
+        onStopTask={actions.stopTask}
         isOpen={state.isOpen}
         isMinimized={state.isMinimized}
         isLoading={state.isLoading}

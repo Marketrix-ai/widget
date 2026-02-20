@@ -43,14 +43,58 @@
   pointer-events: auto;
 }
 
-/* Smooth transitions */
+/* Smooth transitions (excludes width/height so resizing stays instant) */
 .marketrix-widget * {
-  transition: all 0.2s ease-in-out;
+  transition:
+    color 0.2s ease-in-out,
+    background-color 0.2s ease-in-out,
+    border-color 0.2s ease-in-out,
+    opacity 0.2s ease-in-out,
+    box-shadow 0.2s ease-in-out,
+    transform 0.2s ease-in-out;
+}
+
+/* Kill all transitions while actively resizing */
+[data-resizing='true'],
+[data-resizing='true'] * {
+  transition: none !important;
 }
 
 .gradient-border {
   border: 2px solid;
   border-image: linear-gradient(to right, var(--mx-gray-700), var(--mx-gray-900)) 1;
+}
+
+/* Shine effect on widget button icon hover —
+   Uses ::after pseudo-element so it layers above the icon image.
+   Triggered by hovering the parent button (.marketrix-widget-btn-shine). */
+.marketrix-widget-icon-shine {
+  position: relative;
+}
+
+.marketrix-widget-icon-shine::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  pointer-events: none;
+  border-radius: inherit;
+  background-image: linear-gradient(
+    45deg,
+    transparent 25%,
+    rgba(255, 255, 255, 0.3) 50%,
+    transparent 75%,
+    transparent 100%
+  );
+  background-size: 250% 250%;
+  background-position: -100% 0;
+  background-repeat: no-repeat;
+  transition: background-position 0s ease !important;
+}
+
+.marketrix-widget-btn-shine:hover .marketrix-widget-icon-shine::after {
+  background-position: 200% 0;
+  transition: background-position 1.5s ease !important;
 }
 
 /* Fade-in animation for welcome text */
@@ -199,6 +243,21 @@
   }
 }
 
+/* Full-page edge glow while processing */
+@keyframes marketrix-screen-edge-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.marketrix-screen-edge-glow {
+  animation: marketrix-screen-edge-pulse 1.6s ease-in-out infinite;
+}
+
 /* Processing glow for widget button. CSS-only, no host deps.
    Green (#31d06d) = default processing, Red (#D0342C) = error. */
 
@@ -215,6 +274,64 @@
   border-radius: 50%;
   filter: blur(14px);
   will-change: transform, opacity;
+}
+
+/* Activity ring: dash travels along icon border path (no rotation of shape).
+   Perimeter of rounded-rect ~160. Dash segment ~40, gap ~120. */
+@keyframes widget-activity-dash-travel {
+  0% {
+    stroke-dashoffset: 0;
+    opacity: 0.5;
+  }
+  18% {
+    stroke-dashoffset: -112;
+    opacity: 1;
+  }
+  35% {
+    stroke-dashoffset: -160;
+    opacity: 0.65;
+  }
+  60% {
+    stroke-dashoffset: -160;
+    opacity: 0.45;
+  }
+  82% {
+    stroke-dashoffset: -272;
+    opacity: 1;
+  }
+  100% {
+    stroke-dashoffset: -320;
+    opacity: 0.6;
+  }
+}
+
+.marketrix-widget-button-processing-activity-ring,
+.marketrix-widget-button-error-activity-ring {
+  position: absolute;
+  inset: -3px;
+  pointer-events: none;
+  z-index: 0;
+  overflow: visible;
+}
+
+.marketrix-widget-button-processing-activity-ring rect,
+.marketrix-widget-button-error-activity-ring rect {
+  fill: none;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 40 120;
+  animation: widget-activity-dash-travel 1.9s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.marketrix-widget-button-processing-activity-ring rect {
+  stroke: #31d06d;
+  filter: drop-shadow(0 0 3px rgba(49, 208, 109, 0.7));
+}
+
+.marketrix-widget-button-error-activity-ring rect {
+  stroke: #d0342c;
+  filter: drop-shadow(0 0 3px rgba(208, 52, 44, 0.7));
 }
 
 /* Default: green pulsating glow */
