@@ -40,6 +40,7 @@ export class WebSocketClient {
 
   private heartbeatInterval: ReturnType<typeof setInterval> | null = null;
   private readonly heartbeatIntervalMs = 20000;
+  private readonly connectionTimeoutMs = 10000;
   private connectPromise: Promise<void> | null = null;
   private connectPromiseChatId: string | null = null;
 
@@ -129,11 +130,22 @@ export class WebSocketClient {
       return;
     }
 
-    try {
+    return new Promise((resolve, reject) => {
       const ws = new WebSocket(this.url);
       this.websocket = ws;
 
+      const connectionTimeout = setTimeout(() => {
+        if (ws.readyState !== WebSocket.OPEN) {
+          console.warn('[WebSocket] Connection timeout');
+          ws.close();
+          this.setStatus('error');
+          this.notifyError(new Error('WebSocket connection timeout'));
+          reject(new Error('Connection timeout'));
+        }
+      }, this.connectionTimeoutMs);
+
       ws.onopen = () => {
+        clearTimeout(connectionTimeout);
         if (this.websocket !== ws) return;
         this.setStatus('connected');
         this.reconnectAttempts = 0;
@@ -141,6 +153,7 @@ export class WebSocketClient {
         this.clearReconnectTimer();
         this.sendRegistration();
         this.startHeartbeat();
+        resolve();
       };
 
       ws.onmessage = event => {
@@ -154,13 +167,16 @@ export class WebSocketClient {
       };
 
       ws.onerror = error => {
+        clearTimeout(connectionTimeout);
         if (this.websocket !== ws) return;
         console.error('[WebSocket] Error:', error);
         this.setStatus('error');
         this.notifyError(new Error('WebSocket connection error'));
+        reject(new Error('WebSocket connection error'));
       };
 
       ws.onclose = event => {
+        clearTimeout(connectionTimeout);
         if (this.websocket !== ws) return;
 
         const wasRegistered = this.status === 'registered';
@@ -185,12 +201,9 @@ export class WebSocketClient {
             this.scheduleReconnect();
           }
         }
+        resolve();
       };
-    } catch (error) {
-      this.setStatus('error');
-      this.notifyError(error instanceof Error ? error : new Error(String(error)));
-      this.scheduleReconnect();
-    }
+    });
   }
 
   disconnect(): void {
