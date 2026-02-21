@@ -471,6 +471,22 @@ interface WidgetState {
 type InstructionType = 'tell' | 'show' | 'do';
 ```
 
+## CI/CD & Deployment
+
+GitHub Actions workflows in `.github/workflows/`:
+
+| Workflow | Trigger | Action |
+|----------|---------|--------|
+| `dev-build.yml` | Push to `dev` | Sanity check (npm ci + build, no upload) |
+| `prod-build.yml` | Release created | Sanity check (npm ci + build, no upload) |
+| `deploy.yml` | Manual | Build + upload to Azure Blob Storage + purge CDN cache |
+
+**Deploy options:**
+- **Environment**: `dev` or `prod`
+- **Version** (required for prod): Git tag to checkout and build from (e.g. `v1.2.0`).
+
+Dev builds are uploaded to `widget/dev/` and prod builds to `widget/latest/` on Azure CDN.
+
 ## Build System
 
 The widget uses Vite with:
