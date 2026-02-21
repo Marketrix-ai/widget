@@ -34,9 +34,9 @@ Why is this migration necessary?
 
 **Affected Components:**
 
-- [ ] API only
-- [ ] App only
-- [ ] Both API and App
+- [ ] Widget Core
+- [ ] Chrome Extension
+- [ ] Both Widget and Extension
 - [ ] Infrastructure/CI-CD
 
 **Files/Directories Involved:**

@@ -12,8 +12,8 @@ A clear and concise description of the feature you'd like to see implemented.
 
 ## 🎯 Target Component
 
-- [ ] API (Node.js + TypeScript + Express + MySQL)
-- [ ] App (Next.js + TypeScript + React + Tailwind CSS)
+- [ ] Widget Core (Vite + TypeScript + React + Tailwind CSS)
+- [ ] Chrome Extension
 
 ## 📖 User Story
 
@@ -55,23 +55,20 @@ How does this feature integrate with existing Marketrix functionality?
 
 ### Affected Components
 
-- [ ] Authentication & User Management
-- [ ] Agent Management
-- [ ] Connection Management
-- [ ] Knowledge Management
-- [ ] Simulations
+- [ ] Widget Core / Initialisation
+- [ ] UI Components
 - [ ] Session Recording (rrweb)
-- [ ] Dashboard UI
-- [ ] API Endpoints
-- [ ] Database Schema
+- [ ] Chrome Extension
+- [ ] SDK / Integration API
+- [ ] Build / Bundling
 - [ ] Other (please specify):
 
 ### Dependencies
 
-- [ ] Requires new database tables/fields
-- [ ] Requires new API endpoints
+- [ ] Requires new API/backend endpoints
 - [ ] Requires third-party integrations
 - [ ] Requires UI components
+- [ ] Requires build/bundle changes
 - [ ] Other dependencies:
 
 ## 🎨 Mockups/Wireframes

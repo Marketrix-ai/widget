@@ -42,9 +42,9 @@ Why is this refactoring necessary?
 
 **Affected Components:**
 
-- [ ] API only
-- [ ] App only
-- [ ] Both API and App
+- [ ] Widget Core
+- [ ] Chrome Extension
+- [ ] Both Widget and Extension
 - [ ] Documentation
 - [ ] CI/CD
 

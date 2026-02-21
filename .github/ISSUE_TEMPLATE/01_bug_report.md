@@ -12,9 +12,8 @@ A clear and concise description of what the bug is.
 
 ## 🎯 Component Selection
 
-- [ ] API (Node.js + TypeScript + Express + MySQL)
-- [ ] App (Next.js + TypeScript + React + Tailwind CSS)
-- [ ] Both API and App
+- [ ] Widget Core (Vite + TypeScript + React + Tailwind CSS)
+- [ ] Chrome Extension
 - [ ] Infrastructure/Deployment
 
 ## 🖥️ Environment Information
@@ -22,8 +21,7 @@ A clear and concise description of what the bug is.
 | Component        | Version |
 | ---------------- | ------- |
 | Node.js          |         |
-| Next.js          |         |
-| MySQL            |         |
+| Vite             |         |
 | Browser          |         |
 | Operating System |         |
 
@@ -31,15 +29,12 @@ A clear and concise description of what the bug is.
 
 Please check all that apply:
 
-- [ ] Authentication & User Management
-- [ ] Agent Management
-- [ ] Connection Management
-- [ ] Knowledge Management
-- [ ] Simulations
+- [ ] Widget Core / Initialisation
+- [ ] UI Components
 - [ ] Session Recording (rrweb)
-- [ ] Dashboard UI
-- [ ] API Endpoints
-- [ ] Database Operations
+- [ ] Chrome Extension
+- [ ] SDK / Integration API
+- [ ] Build / Bundling
 - [ ] Other (please specify):
 
 ## 🔄 Steps to Reproduce
@@ -91,7 +86,7 @@ If you have any ideas on how to fix this, please describe them here.
 
 ## 💻 Technical Details (Optional)
 
-- **API Endpoint:** (if applicable)
-- **Database Query:** (if applicable)
+- **Widget Version:** (if applicable)
 - **Component:** (if applicable)
 - **User Agent:** (if applicable)
+- **Host Page URL:** (if applicable)
