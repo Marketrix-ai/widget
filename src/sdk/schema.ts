@@ -1293,6 +1293,13 @@ export const IntegrationInfoSchema = IntegrationEntitySchema.extend({
 });
 
 /**
+ * Integration search result schema - includes optional eager-loaded agent
+ */
+export const IntegrationWithAgentSchema = IntegrationEntitySchema.extend({
+  agent: AgentEntitySchema.partial().optional(),
+});
+
+/**
  * Connection with integrations schema - matches API response structure
  */
 export const ConnectionWithIntegrationsSchema = ConnectionEntitySchema.extend({
@@ -1934,6 +1941,7 @@ export type ConnectionCreateData = z.infer<typeof ConnectionCreateSchema>;
 export type ConnectionUpdateData = z.infer<typeof ConnectionUpdateSchema>;
 export type ConnectionWithIntegrationsData = z.infer<typeof ConnectionWithIntegrationsSchema>;
 export type IntegrationData = z.infer<typeof IntegrationEntitySchema>;
+export type IntegrationWithAgentData = z.infer<typeof IntegrationWithAgentSchema>;
 export type IntegrationCreateData = z.infer<typeof IntegrationCreateSchema>;
 export type IntegrationUpdateData = z.infer<typeof IntegrationUpdateSchema>;
 export type UrlGuideData = z.infer<typeof UrlGuideEntitySchema>;

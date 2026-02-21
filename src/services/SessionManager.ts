@@ -228,17 +228,13 @@ class SessionManager {
       log.info('Creating new chat ID...');
       const chatId = await sdk.chatCreate(undefined);
 
-      if (chatId && typeof chatId === 'string') {
-        this.chatId = chatId;
-        this.storeChatId(this.chatId);
-        log.info('Created and stored new chat ID:', this.chatId);
+      this.chatId = chatId;
+      this.storeChatId(this.chatId);
+      log.info('Created and stored new chat ID:', this.chatId);
 
-        chatService.createInitialContext(this.chatId);
+      chatService.createInitialContext(this.chatId);
 
-        return this.chatId;
-      } else {
-        throw new Error('Failed to create chat session: invalid response');
-      }
+      return this.chatId;
     } catch (error) {
       log.error('Failed to create chat ID:', error);
       // Clear the promise on error so retry is possible

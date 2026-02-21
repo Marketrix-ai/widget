@@ -68,6 +68,7 @@ import {
   IntegrationEntitySchema,
   IntegrationTypeSchema,
   IntegrationUpdateSchema,
+  IntegrationWithAgentSchema,
   KnowledgeEntitySchema,
   KnowledgeTypeSchema,
   MeetingCreateSchema,
@@ -506,7 +507,7 @@ const contract = {
         marketrix_key: z.string().optional(),
       }),
     )
-    .output(z.array(IntegrationEntitySchema)),
+    .output(z.array(IntegrationWithAgentSchema)),
 
   integrationGetDefaults: oc
     .route({

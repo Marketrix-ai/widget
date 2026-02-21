@@ -25,7 +25,7 @@ export class IntegrationService {
 
     try {
       // First, fetch default widget settings - oRPC returns data directly
-      const defaultSettings = (await sdk.integrationGetDefaults({ type: 'widget' })) as WidgetSettingsData | null;
+      const defaultSettings = await sdk.integrationGetDefaults({ type: 'widget' });
 
       if (!defaultSettings) {
         const error = 'Failed to fetch default widget settings from API. The API must return widget settings.';
@@ -36,16 +36,16 @@ export class IntegrationService {
       // Then, try to fetch existing integration
       let integrationsData: IntegrationData[] | null = null;
       if (this.mtxId && this.mtxKey) {
-        integrationsData = (await sdk.integrationSearch({
+        integrationsData = await sdk.integrationSearch({
           type: 'widget',
           marketrix_id: this.mtxId,
           marketrix_key: this.mtxKey,
-        })) as IntegrationData[] | null;
+        });
       } else if (this.mtxApp) {
-        integrationsData = (await sdk.integrationSearch({
+        integrationsData = await sdk.integrationSearch({
           type: 'widget',
           connection_id: this.mtxApp,
-        })) as IntegrationData[] | null;
+        });
       } else {
         return null;
       }

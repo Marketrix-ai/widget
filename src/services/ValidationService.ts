@@ -1,7 +1,6 @@
 import { type AgentData, type ConnectionData, type IntegrationData, sdk } from '../sdk';
 import type { MarketrixConfig } from '../types';
 import { extractErrorMessage, handleApiError } from '../utils/apiUtils';
-import { isAgentData, isConnectionData, isIntegrationDataArray } from '../utils/validation';
 
 export interface WidgetValidationResult {
   isValid: boolean;
@@ -52,7 +51,7 @@ export class WidgetValidationService {
         marketrix_key: mtxKey,
       });
 
-      if (!integrationsData || !isIntegrationDataArray(integrationsData)) {
+      if (!integrationsData || integrationsData.length === 0) {
         return {
           isValid: false,
           error: 'Integration not found or invalid credentials',
@@ -121,14 +120,6 @@ export class WidgetValidationService {
       try {
         const agent = await sdk.agentGet({ agent_id: widgetIntegration.agent_id });
 
-        if (!agent || !isAgentData(agent)) {
-          return {
-            isValid: false,
-            error: agent ? 'Invalid agent data format' : `Agent with ID ${widgetIntegration.agent_id} not found`,
-            integration: widgetIntegration,
-          };
-        }
-
         // Step 3: Validate connection ID exists
         if (!widgetIntegration.connection_id) {
           return {
@@ -142,17 +133,6 @@ export class WidgetValidationService {
         console.log('Validating connection ID...', widgetIntegration.connection_id);
 
         const connection = await sdk.connectionGet({ connection_id: widgetIntegration.connection_id });
-
-        if (!connection || !isConnectionData(connection)) {
-          return {
-            isValid: false,
-            error: connection
-              ? 'Invalid connection data format'
-              : `Connection with ID ${widgetIntegration.connection_id} not found`,
-            integration: widgetIntegration,
-            agent,
-          };
-        }
 
         console.log('Widget validation successful', {
           integration: widgetIntegration.id,
@@ -191,13 +171,6 @@ export class WidgetValidationService {
       // Step 1: Validate connection exists
       const connection = await sdk.connectionGet({ connection_id: mtxApp });
 
-      if (!connection || !isConnectionData(connection)) {
-        return {
-          isValid: false,
-          error: connection ? 'Invalid connection data format' : `Connection with ID ${mtxApp} not found`,
-        };
-      }
-
       // Log connection data as object
       console.log('Connection found:', {
         id: connection.id,
@@ -209,14 +182,6 @@ export class WidgetValidationService {
 
       // Step 2: Validate agent exists
       const agent = await sdk.agentGet({ agent_id: mtxAgent });
-
-      if (!agent || !isAgentData(agent)) {
-        return {
-          isValid: false,
-          error: agent ? 'Invalid agent data format' : `Agent with ID ${mtxAgent} not found`,
-          connection,
-        };
-      }
 
       // Log agent data as object
       console.log('Agent found:', {

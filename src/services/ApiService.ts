@@ -1,14 +1,7 @@
 import { sdk } from '../sdk';
 import type { MarketrixConfig, SendMessageRequest, SendMessageResponse } from '../types';
 import { extractErrorMessage } from '../utils/apiUtils';
-import { isChatResponseData, isNonNullObject } from '../utils/validation';
 import { sessionManager } from './SessionManager';
-
-interface TaskResponse {
-  task_id?: string;
-  status?: string;
-  message?: string;
-}
 
 export class MarketrixApiService {
   private config: MarketrixConfig;
@@ -168,29 +161,41 @@ export class MarketrixApiService {
         throw new Error('Invalid chat_id. Please ensure chat session is initialized.');
       }
 
-      let responseData;
       try {
         switch (mode) {
+          case 'do': {
+            await sdk.chatDo(input);
+            return {
+              messageId: Date.now().toString(),
+              response: 'Action completed successfully',
+              mode,
+              timestamp: new Date(),
+            };
+          }
           case 'tell': {
-            responseData = await sdk.chatTell(input);
-            break;
+            const tellResponse = await sdk.chatTell(input);
+            return {
+              messageId: Date.now().toString(),
+              response: tellResponse.text || 'Response received',
+              mode,
+              timestamp: new Date(),
+            };
           }
           case 'show': {
-            responseData = await sdk.chatShow(input);
-            break;
-          }
-          case 'do': {
-            responseData = await sdk.chatDo(input);
-            break;
+            const showResponse = await sdk.chatShow(input);
+            return {
+              messageId: Date.now().toString(),
+              response: showResponse.text || 'Response received',
+              mode,
+              timestamp: new Date(),
+            };
           }
           default: {
-            // This should never happen due to TypeScript's exhaustive checking
             const _exhaustiveCheck: never = mode;
             throw new Error(`Unsupported mode: ${String(_exhaustiveCheck)}`);
           }
         }
       } catch (sdkError) {
-        // SDK throws errors for failed requests - rethrow with better context
         const errorMessage = extractErrorMessage(sdkError);
         console.error('[API Service] SDK error:', {
           mode,
@@ -200,51 +205,6 @@ export class MarketrixApiService {
         });
         throw new Error(`API request failed: ${errorMessage}`);
       }
-
-      if (responseData) {
-        // Map the response to our expected format
-        if (mode === 'do') {
-          // chatDo returns UsageStatsData, not ChatResponseData
-          // But we also get task_id for show/do modes
-          const result: SendMessageResponse = {
-            messageId: Date.now().toString(),
-            response: 'Action completed successfully',
-            mode,
-            timestamp: new Date(),
-          };
-
-          if (isNonNullObject(responseData) && typeof (responseData as Record<string, unknown>).task_id === 'string') {
-            result.task_id = (responseData as Record<string, unknown>).task_id as string;
-          }
-
-          return result;
-        } else {
-          // chatTell and chatShow return ChatResponseData
-          if (!isChatResponseData(responseData)) {
-            console.error('[API Service] Invalid chat response data format:', responseData);
-            throw new Error('Invalid chat response data format');
-          }
-
-          const chatResponse = responseData;
-          // Fix for missing property access by type checking or casting
-          const responseText = chatResponse.text || 'Response received';
-
-          const result: SendMessageResponse = {
-            messageId: Date.now().toString(),
-            response: responseText,
-            mode,
-            timestamp: new Date(),
-          };
-          // Include task_id if available (for show mode)
-          const taskResponse = responseData as unknown as TaskResponse;
-          if (taskResponse.task_id) {
-            result.task_id = taskResponse.task_id;
-          }
-          return result;
-        }
-      }
-
-      throw new Error('Failed to send message. No response data received.');
     } catch (error) {
       console.error('Failed to send message:', extractErrorMessage(error));
       throw error;
@@ -292,22 +252,16 @@ export class MarketrixApiService {
         throw new Error('Failed to initialize chat session. Please try again.');
       }
 
-      // Call the stop endpoint - oRPC returns data directly
+      // Call the stop endpoint - oRPC returns { status: string, message: string }
       const responseData = await sdk.chatStop({
         chat_id: chatId,
         task_id: taskId,
       });
 
-      if (responseData && typeof responseData === 'object' && 'status' in responseData) {
-        const data = responseData as { status: unknown; message?: unknown };
-        return {
-          status: String(data.status),
-          message: String(data.message || 'Task stopped'),
-        };
-      }
-
-      // API responded successfully but without a status field — treat as stopped.
-      return { status: 'stopped', message: 'Task stopped' };
+      return {
+        status: responseData.status,
+        message: responseData.message,
+      };
     } catch (error) {
       console.error('Failed to stop task:', extractErrorMessage(error));
       throw error;

@@ -224,7 +224,7 @@ export const WidgetProvider: React.FC<WidgetProviderProps> = ({ children, previe
             error: 'widget_task_inactive',
             stateVersion: stateVersion.current,
           };
-          wsClient.send(response as unknown as WebSocketMessage);
+          wsClient.send(response);
           return;
         }
 
@@ -244,7 +244,7 @@ export const WidgetProvider: React.FC<WidgetProviderProps> = ({ children, previe
             error: 'State version mismatch',
             stateVersion: stateVersion.current,
           };
-          wsClient.send(response as unknown as WebSocketMessage);
+          wsClient.send(response);
           return;
         }
 
@@ -263,7 +263,7 @@ export const WidgetProvider: React.FC<WidgetProviderProps> = ({ children, previe
               error: result.error ?? null,
               stateVersion: stateVersion.current,
             };
-            wsClient.send(response as unknown as WebSocketMessage);
+            wsClient.send(response);
             updateProgressForTool(toolName, explanation, 'completed');
             // If the "done" tool completed successfully, mark the task as complete
             if (toolName === 'done' && result.success) {
@@ -342,7 +342,7 @@ export const WidgetProvider: React.FC<WidgetProviderProps> = ({ children, previe
               error: result.error ?? null,
               stateVersion: stateVersion.current,
             };
-            wsClient.send(response as unknown as WebSocketMessage);
+            wsClient.send(response);
           } catch (error) {
             console.error('Failed to send tool error:', error);
           }
