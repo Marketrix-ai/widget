@@ -86,24 +86,6 @@ export const ActionLogTypeSchema = z.enum([
 ]);
 
 /**
- * Common response schemas used across all API endpoints
- */
-export const ServiceResponseSchema = <T extends z.ZodTypeAny>(success: boolean, schema: T) =>
-  z.object({
-    success: z.literal(success),
-    data: schema,
-    error: z.string().optional(),
-    message: z.string().optional(),
-  });
-
-// Common response patterns for compression
-export const R = {
-  success: <T extends z.ZodTypeAny>(schema: T) => ServiceResponseSchema(true, schema),
-  error: ServiceResponseSchema(false, z.void()),
-  void: z.void(),
-};
-
-/**
  * Base entity schema with common fields for all database entities
  */
 export const BaseEntitySchema = z.object({
@@ -484,7 +466,7 @@ export const QATestResultEntitySchema = BaseEntitySchema.extend({
   screenshot_url: z.string().nullable(),
   simulation_id: z.number().nullable().optional(),
   browser_type: BrowserTypeSchema.nullable().optional(),
-  healing_metadata: z.record(z.unknown()).nullable().optional(),
+  healing_metadata: z.record(z.string(), z.unknown()).nullable().optional(),
   last_healed_at: z.coerce.date().nullable().optional(),
 });
 /**
@@ -575,9 +557,9 @@ export const QAHealingAttemptEntitySchema = BaseEntitySchema.extend({
   simulation_id: z.number().nullable(),
   failure_type: QAFailureTypeSchema,
   failure_message: z.string().nullable(),
-  failure_context: z.record(z.unknown()).nullable(),
+  failure_context: z.record(z.string(), z.unknown()).nullable(),
   repair_strategy: z.string().nullable(),
-  repair_details: z.record(z.unknown()).nullable(),
+  repair_details: z.record(z.string(), z.unknown()).nullable(),
   confidence_score: z.number().min(0).max(1).nullable(),
   validation_status: QAValidationStatusSchema,
   validation_simulation_id: z.number().nullable(),
@@ -589,12 +571,12 @@ export const FailureAnalysisSchema = z.object({
   is_healable: z.boolean(),
   is_actual_bug: z.boolean(),
   failure_message: z.string(),
-  failure_context: z.record(z.unknown()),
+  failure_context: z.record(z.string(), z.unknown()),
   suggested_repair: z
     .object({
       type: z.enum(['update_locator', 'update_assertion', 'update_steps', 'skip_test']),
       confidence: z.number().min(0).max(1),
-      details: z.record(z.unknown()),
+      details: z.record(z.string(), z.unknown()),
     })
     .nullable(),
 });
@@ -750,7 +732,7 @@ export const InteractedElementSchema = z
     node_type: z.number(),
     node_value: z.string(),
     node_name: z.string(),
-    attributes: z.record(z.string()).optional().nullable(),
+    attributes: z.record(z.string(), z.string()).optional().nullable(),
     x_path: z.string(),
     element_hash: z.number(),
     bounds: z
@@ -1006,15 +988,15 @@ export const AgentEntitySchema = BaseEntitySchema.extend({
   knowledge_count: z.number().int().nonnegative().optional(),
 });
 
-const KnowledgeIdsSchema = z
-  .string()
-  .transform(str => JSON.parse(str) as number[])
-  .pipe(z.array(z.coerce.number()));
+const KnowledgeIdsSchema = z.string().transform(str => {
+  const parsed = JSON.parse(str);
+  return Array.isArray(parsed) ? parsed.map(v => Number(v)) : [];
+});
 
-const SimulationIdsSchema = z
-  .string()
-  .transform(str => JSON.parse(str) as number[])
-  .pipe(z.array(z.coerce.number()));
+const SimulationIdsSchema = z.string().transform(str => {
+  const parsed = JSON.parse(str);
+  return Array.isArray(parsed) ? parsed.map(v => Number(v)) : [];
+});
 
 /**
  * Agent creation schema
@@ -1147,7 +1129,7 @@ export const SearchDocumentSchema = z.object({
 export const SearchResultSchema = z.object({
   document: SearchDocumentSchema,
   score: z.number(),
-  highlights: z.record(z.array(z.string())).optional(),
+  highlights: z.record(z.string(), z.array(z.string())).optional(),
 });
 
 /**
@@ -1658,8 +1640,8 @@ export const StripeWebhookEventSchema = z.object({
   api_version: z.string().nullable().optional(),
   created: z.number(),
   data: z.object({
-    object: z.record(z.unknown()), // The actual event object varies by event type
-    previous_attributes: z.record(z.unknown()).optional(),
+    object: z.record(z.string(), z.unknown()), // The actual event object varies by event type
+    previous_attributes: z.record(z.string(), z.unknown()).optional(),
   }),
   livemode: z.boolean(),
   pending_webhooks: z.number(),

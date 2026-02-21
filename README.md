@@ -335,6 +335,7 @@ widget/
 │   │   └── WidgetContext.tsx
 │   ├── hooks/                # Custom React hooks
 │   │   ├── usePageLifecycle.ts
+│   │   ├── useResize.ts
 │   │   ├── useTaskState.ts
 │   │   └── useWidget.ts
 │   ├── services/             # Core services
@@ -352,10 +353,10 @@ widget/
 │   │   ├── ToolService.ts
 │   │   ├── ValidationService.ts
 │   │   └── WebSocketClient.ts
-│   ├── sdk/                  # API SDK
-│   │   ├── index.ts
-│   │   ├── routes.ts
-│   │   └── schema.ts
+│   ├── sdk/                  # API SDK (oRPC client + contract)
+│   │   ├── index.ts          # Client setup and exports
+│   │   ├── routes.ts         # oRPC contract/route definitions
+│   │   └── schema.ts         # Zod schemas for API types
 │   ├── types/                # TypeScript types
 │   │   ├── assets.d.ts
 │   │   ├── browserTools.ts
@@ -499,7 +500,8 @@ The widget uses Vite with:
 
 Output files:
 
-- `dist/index.mjs` - Main widget bundle
+- `dist/index.mjs` - Library build (React as peer dependency)
+- `dist/standalone.mjs` - Standalone build (all dependencies bundled)
 - `dist/debug.js` - Debug panel bundle
 
 ## Browser Support
@@ -515,8 +517,7 @@ Output files:
 
 - `react` / `react-dom` v19 (peer dependency)
 - `@rrweb/record` - Session recording
-- `@ts-rest/core` - Type-safe API client
-- `axios` - HTTP client
+- `@orpc/client` / `@orpc/contract` - Type-safe API client (oRPC)
 - `react-icons` - Icons
 - `zod` - Schema validation
 

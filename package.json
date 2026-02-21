@@ -28,7 +28,8 @@
   },
   "dependencies": {
     "@rrweb/record": "^2.0.0-alpha.20",
-    "@ts-rest/core": "^3.52.1",
+    "@orpc/client": "^1.0.0",
+    "@orpc/contract": "^1.0.0",
     "react-icons": "^5.5.0",
     "zod": "^3.25.76"
   },

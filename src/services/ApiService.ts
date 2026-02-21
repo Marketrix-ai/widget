@@ -1,6 +1,6 @@
 import { sdk } from '../sdk';
 import type { MarketrixConfig, SendMessageRequest, SendMessageResponse } from '../types';
-import { extractApiData, extractErrorMessage } from '../utils/apiUtils';
+import { extractErrorMessage } from '../utils/apiUtils';
 import { isChatResponseData, isNonNullObject } from '../utils/validation';
 import { sessionManager } from './SessionManager';
 
@@ -101,10 +101,8 @@ export class MarketrixApiService {
       // Log the question (fire and forget - don't block on this)
       sdk
         .logCreate({
-          body: {
-            type: 'widget_question',
-            metadata,
-          },
+          type: 'widget_question',
+          metadata,
         })
         .catch(error => {
           // Silently fail - logging is not critical for widget functionality
@@ -142,8 +140,8 @@ export class MarketrixApiService {
         throw new Error('Either mtxId + mtxKey or both mtxApp + mtxAgent are required');
       }
 
-      // Build request body with available identifiers
-      const body: {
+      // Build request input with available identifiers
+      const input: {
         marketrix_id?: string;
         marketrix_key?: string;
         agent_id?: number;
@@ -157,12 +155,12 @@ export class MarketrixApiService {
 
       if (this.config.mtxId && this.config.mtxKey) {
         // Use mtxId + mtxKey - API will validate credentials
-        body.marketrix_id = this.config.mtxId;
-        body.marketrix_key = this.config.mtxKey;
+        input.marketrix_id = this.config.mtxId;
+        input.marketrix_key = this.config.mtxKey;
       } else if (this.config.mtxApp && this.config.mtxAgent) {
         // Use mtxApp and mtxAgent
-        body.agent_id = this.config.mtxAgent;
-        body.connection_id = this.config.mtxApp;
+        input.agent_id = this.config.mtxAgent;
+        input.connection_id = this.config.mtxApp;
       }
 
       // Validate chatId exists
@@ -170,28 +168,19 @@ export class MarketrixApiService {
         throw new Error('Invalid chat_id. Please ensure chat session is initialized.');
       }
 
-      let apiResponse;
+      let responseData;
       try {
         switch (mode) {
           case 'tell': {
-            apiResponse = await sdk.chatTell({
-              params: { chat_id: chatId },
-              body,
-            });
+            responseData = await sdk.chatTell(input);
             break;
           }
           case 'show': {
-            apiResponse = await sdk.chatShow({
-              params: { chat_id: chatId },
-              body,
-            });
+            responseData = await sdk.chatShow(input);
             break;
           }
           case 'do': {
-            apiResponse = await sdk.chatDo({
-              params: { chat_id: chatId },
-              body,
-            });
+            responseData = await sdk.chatDo(input);
             break;
           }
           default: {
@@ -212,7 +201,6 @@ export class MarketrixApiService {
         throw new Error(`API request failed: ${errorMessage}`);
       }
 
-      const responseData = extractApiData(apiResponse);
       if (responseData) {
         // Map the response to our expected format
         if (mode === 'do') {
@@ -225,8 +213,8 @@ export class MarketrixApiService {
             timestamp: new Date(),
           };
 
-          if (isNonNullObject(responseData) && typeof responseData.task_id === 'string') {
-            result.task_id = responseData.task_id;
+          if (isNonNullObject(responseData) && typeof (responseData as Record<string, unknown>).task_id === 'string') {
+            result.task_id = (responseData as Record<string, unknown>).task_id as string;
           }
 
           return result;
@@ -248,8 +236,6 @@ export class MarketrixApiService {
             timestamp: new Date(),
           };
           // Include task_id if available (for show mode)
-          // We need to check if responseData has task_id property (it might if it's a union type)
-          // Or we can cast to TaskResponse
           const taskResponse = responseData as unknown as TaskResponse;
           if (taskResponse.task_id) {
             result.task_id = taskResponse.task_id;
@@ -258,20 +244,7 @@ export class MarketrixApiService {
         }
       }
 
-      // Log the actual response for debugging
-      const errorBody =
-        apiResponse.body &&
-        typeof apiResponse.body === 'object' &&
-        apiResponse.body !== null &&
-        'error' in apiResponse.body
-          ? String(apiResponse.body.error)
-          : JSON.stringify(apiResponse.body || 'Unknown error');
-      console.error('[API Service] Failed to extract data from response:', {
-        status: apiResponse.status,
-        body: apiResponse.body,
-        response: apiResponse,
-      });
-      throw new Error(`Failed to send message. API returned status ${apiResponse.status}. ${errorBody}`);
+      throw new Error('Failed to send message. No response data received.');
     } catch (error) {
       console.error('Failed to send message:', extractErrorMessage(error));
       throw error;
@@ -319,15 +292,12 @@ export class MarketrixApiService {
         throw new Error('Failed to initialize chat session. Please try again.');
       }
 
-      // Call the stop endpoint
-      const apiResponse = await sdk.chatStop({
-        params: { chat_id: chatId },
-        body: {
-          task_id: taskId,
-        },
+      // Call the stop endpoint - oRPC returns data directly
+      const responseData = await sdk.chatStop({
+        chat_id: chatId,
+        task_id: taskId,
       });
 
-      const responseData = extractApiData(apiResponse);
       if (responseData && typeof responseData === 'object' && 'status' in responseData) {
         const data = responseData as { status: unknown; message?: unknown };
         return {

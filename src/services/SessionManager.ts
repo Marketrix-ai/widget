@@ -6,7 +6,6 @@
  */
 
 import { sdk } from '../sdk';
-import { extractApiData } from '../utils/apiUtils';
 import { createLogger } from '../utils/common';
 import { chatService } from './ChatService';
 import { storageService } from './StorageService';
@@ -222,16 +221,15 @@ class SessionManager {
   }
 
   /**
-   * Create a new chat ID
+   * Create a new chat ID - oRPC returns data directly
    */
   private async createChatId(): Promise<string> {
     try {
       log.info('Creating new chat ID...');
-      const chatResponse = await sdk.chatCreate({ body: undefined });
-      const chatIdData = extractApiData(chatResponse);
+      const chatId = await sdk.chatCreate(undefined);
 
-      if (chatIdData && typeof chatIdData === 'string') {
-        this.chatId = chatIdData;
+      if (chatId && typeof chatId === 'string') {
+        this.chatId = chatId;
         this.storeChatId(this.chatId);
         log.info('Created and stored new chat ID:', this.chatId);
 
