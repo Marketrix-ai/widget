@@ -139,18 +139,18 @@ export const AuthMethodSchema = z.enum(['password', 'oauth']);
  * Note: Users don't have plans - plans belong to tenants (via tenant_plan table)
  */
 export const UserEntitySchema = BaseEntitySchema.extend({
-  tenant_id: z.number().optional(),
+  tenant_id: z.number().nullish(),
   status: EntityStatusSchema,
   role: UserRoleSchema,
   email: z.string().email(),
-  external_id: z.string().optional(),
-  first_name: z.string().optional(),
-  last_name: z.string().optional(),
-  password: z.string().optional(),
-  image_url: z.string().optional(),
-  prompt_limit: z.number().optional(),
-  last_login_at: z.coerce.date().optional(),
-  auth_method: AuthMethodSchema.optional(),
+  external_id: z.string().nullish(),
+  first_name: z.string().nullish(),
+  last_name: z.string().nullish(),
+  password: z.string().nullish(),
+  image_url: z.string().nullish(),
+  prompt_limit: z.number().nullish(),
+  last_login_at: z.coerce.date().nullish(),
+  auth_method: AuthMethodSchema.nullish(),
 });
 
 /**
@@ -241,12 +241,12 @@ export const TokenSchema = z.object({
  */
 export const TenantEntitySchema = BaseEntitySchema.extend({
   name: z.string(),
-  domain: z.string().optional(),
+  domain: z.string().nullish(),
   status: EntityStatusSchema,
   package: TenantPackageSchema,
-  ending_date: z.coerce.date().optional(),
-  external_tenant_id: z.string().optional(),
-  type: z.enum(['personal', 'organization']).optional(),
+  ending_date: z.coerce.date().nullish(),
+  external_tenant_id: z.string().nullish(),
+  type: z.enum(['personal', 'organization']).nullish(),
 });
 
 /**
@@ -372,7 +372,7 @@ export const KnowledgeEntitySchema = BaseEntitySchema.extend({
   file_size: z.number(),
   file_type: KnowledgeTypeSchema,
   file_url: z.string(),
-  source_url: z.string().optional(), // Original URL for URL-based documents
+  source_url: z.string().nullish(), // Original URL for URL-based documents
 });
 
 // ============================================================================
@@ -814,12 +814,12 @@ export const SimulationEntitySchema = BaseEntitySchema.extend({
   job_id: z.string(),
   session_id: z.string().nullable().optional(),
   status: z.string(),
-  status_message: z.string(),
-  path: z.string(),
-  instructions: z.string(),
+  status_message: z.string().nullish(),
+  path: z.string().nullish(),
+  instructions: z.string().nullish(),
   num_steps: z.number().int().nonnegative(),
   pinned: z.boolean().optional(),
-  agent_name: z.string().optional(),
+  agent_name: z.string().nullish(),
   graph_index_id: z.string().nullable().optional(),
 });
 
