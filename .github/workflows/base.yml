@@ -11,46 +11,23 @@ on:
         description: "Target environment (dev|prod)"
         required: true
         type: string
-      version:
-        description: "Version tag for prod builds"
-        required: false
-        type: string
-        default: ""
 
 jobs:
-  # ── BUILD ───────────────────────────────────────────────
+  # ── BUILD (sanity check only) ─────────────────────────
   build:
     if: inputs.action == 'build'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-
-      - uses: azure/login@v2
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-
       - name: Install dependencies
         run: npm ci
-
       - name: Build
         run: npm run build
-
-      - name: Upload to Azure Storage
-        run: |
-          FOLDER=${{ inputs.environment == 'prod' && 'latest' || 'dev' }}
-          az storage blob delete-batch --source widget --pattern "$FOLDER/*" --account-name marketrix --auth-mode login
-          az storage blob upload-batch --destination widget/$FOLDER --source ./dist --account-name marketrix --overwrite --auth-mode login
-
-      - name: Purge CDN cache
-        run: |
-          FOLDER=${{ inputs.environment == 'prod' && 'latest' || 'dev' }}
-          az afd endpoint purge --profile-name marketrix-cdn --endpoint-name cdn-marketrix-io --resource-group Marketrix --content-paths "/widget/$FOLDER/*" --no-wait
-
       - name: Cleanup
         if: always()
         run: rm -rf ./dist
 
-  # ── DEPLOY ──────────────────────────────────────────────
+  # ── DEPLOY (build + upload + purge) ────────────────────
   deploy:
     if: inputs.action == 'deploy'
     runs-on: ubuntu-latest
