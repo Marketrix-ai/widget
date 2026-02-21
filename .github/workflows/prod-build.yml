@@ -1,0 +1,12 @@
+name: Build WIDGET-PROD
+on:
+  release:
+    types: [created]
+
+jobs:
+  prod-build:
+    uses: ./.github/workflows/base.yml
+    with:
+      action: build
+      environment: prod
+    secrets: inherit

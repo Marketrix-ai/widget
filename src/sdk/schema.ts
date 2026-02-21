@@ -51,6 +51,7 @@ export const LearningProgressSchema = z.object({
 export const KnowledgeTypeSchema = z.enum(['document', 'video']);
 export const QADocumentStatusSchema = z.enum(['pending', 'processing', 'waiting_review', 'completed', 'failed']);
 export const QATestStatusSchema = z.enum(['pending', 'running', 'completed', 'failed']);
+export const QARunStatusSchema = z.enum(['pending', 'running', 'completed', 'failed']);
 export const MeetingStatusSchema = z.enum(['not_started', 'in_progress', 'ended', 'cancelled']);
 export const ChatRoleSchema = z.enum(['user', 'agent']);
 export const ChatSourceSchema = z.enum(['taskpilot', 'widget', 'app']);
@@ -81,6 +82,7 @@ export const ActionLogTypeSchema = z.enum([
   'request_tenant',
   'widget_question',
   'qa_run_started',
+  'start_simulation',
 ]);
 
 /**
@@ -144,6 +146,13 @@ export const IndexResponseSchema = z.object({
 // ============================================================================
 
 /**
+ * Authentication method schema
+ * password: Email/password authentication
+ * oauth: Social login (Google, Microsoft, Apple, etc.) or SSO
+ */
+export const AuthMethodSchema = z.enum(['password', 'oauth']);
+
+/**
  * Complete user entity schema
  * Note: Users don't have plans - plans belong to tenants (via tenant_plan table)
  */
@@ -159,7 +168,7 @@ export const UserEntitySchema = BaseEntitySchema.extend({
   image_url: z.string().optional(),
   prompt_limit: z.number().optional(),
   last_login_at: z.coerce.date().optional(),
-  auth_method: z.enum(['password', 'oauth']).optional(),
+  auth_method: AuthMethodSchema.optional(),
 });
 
 /**
@@ -192,13 +201,6 @@ export const BatchUserCreateResultSchema = z.object({
 // ============================================================================
 // AUTHENTICATION SCHEMAS - User authentication and authorization
 // ============================================================================
-
-/**
- * CAPTCHA verification schema
- */
-export const VerifyCaptchaSchema = z.object({
-  token: z.string().min(1, 'Captcha token is required'),
-});
 
 /**
  * User login credentials schema
@@ -237,15 +239,6 @@ export const PasswordResetRequestSchema = z.object({
 export const PasswordUpdateSchema = z.object({
   token: z.string(),
   password: z.string(),
-});
-
-/**
- * Google OAuth callback schema
- */
-export const GoogleLoginCallbackSchema = z.object({
-  code: z.string().optional(),
-  error: z.string().optional(),
-  state: z.string().optional(),
 });
 
 /**
@@ -401,6 +394,22 @@ export const KnowledgeEntitySchema = BaseEntitySchema.extend({
 });
 
 // ============================================================================
+// QA CROSS-BROWSER SCHEMAS (must be defined before QA schemas)
+// ============================================================================
+
+export const BrowserTypeSchema = z.enum(['chromium', 'firefox', 'webkit']);
+
+export const BrowserConfigSchema = z.object({
+  browsers: z.array(BrowserTypeSchema).default(['chromium']),
+  parallel: z.boolean().default(false),
+  fail_fast: z.boolean().default(false),
+  timeout_per_browser: z.number().int().min(60).max(3600).optional(),
+});
+
+export type BrowserType = z.infer<typeof BrowserTypeSchema>;
+export type BrowserConfig = z.infer<typeof BrowserConfigSchema>;
+
+// ============================================================================
 // QA DOCUMENT SCHEMAS - QA document and test result management
 // ============================================================================
 
@@ -413,10 +422,14 @@ export const QADocumentEntitySchema = BaseEntitySchema.extend({
   connection_id: z.number(),
   file_name: z.string(),
   file_size: z.number(),
-  file_type: z.string(), // MIME type
+  file_type: z.string(),
   file_url: z.string(),
   file_path: z.string().nullable(),
+  additional_instructions: z.string().nullable().optional(),
   status: QADocumentStatusSchema,
+  processing_step: z.string().nullable().optional(),
+  ultimate_goal: z.string().nullable().optional(),
+  browser_config: BrowserConfigSchema.nullable().optional(),
 });
 
 /**
@@ -427,6 +440,21 @@ export const QADocumentCreateSchema = z.object({
   file: z.custom<Express.Multer.File>().optional(),
   text_content: z.string().optional(),
   file_name: z.string().optional(),
+  additional_instructions: z.string().optional(),
+});
+
+/**
+ * QA run entity schema
+ */
+export const QARunEntitySchema = BaseEntitySchema.extend({
+  qa_document_id: z.number(),
+  tenant_id: z.number(),
+  user_id: z.number(),
+  status: QARunStatusSchema,
+  started_at: z.coerce.date().nullable().optional(),
+  completed_at: z.coerce.date().nullable().optional(),
+  browser_type: BrowserTypeSchema.nullable().optional(),
+  browser_config: BrowserConfigSchema.nullable().optional(),
 });
 
 /**
@@ -436,6 +464,7 @@ export const QATestResultEntitySchema = BaseEntitySchema.extend({
   tenant_id: z.number(),
   user_id: z.number(),
   qa_document_id: z.number(),
+  qa_run_id: z.number().nullable().optional(),
   test_title: z.string(),
   test_objective: z.string(),
   test_steps: z.array(z.string()),
@@ -454,8 +483,10 @@ export const QATestResultEntitySchema = BaseEntitySchema.extend({
     .nullable(),
   screenshot_url: z.string().nullable(),
   simulation_id: z.number().nullable().optional(),
+  browser_type: BrowserTypeSchema.nullable().optional(),
+  healing_metadata: z.record(z.unknown()).nullable().optional(),
+  last_healed_at: z.coerce.date().nullable().optional(),
 });
-
 /**
  * QA test result create schema
  */
@@ -472,15 +503,17 @@ export const QATestResultCreateSchema = z.object({
  * QA document processing response schema
  */
 export const QADocumentProcessingResponseSchema = z.object({
+  ultimateGoal: z.string(),
   document: QADocumentEntitySchema,
   testCases: z.array(
     z.object({
       id: z.number(),
+      title: z.string(),
       prompt: z.string(),
-      objective: z.string().optional(),
-      steps: z.array(z.string()).optional(),
-      expectedOutcome: z.string().optional(),
-      priority: z.enum(['Low', 'Medium', 'High']).optional(),
+      objective: z.string(),
+      steps: z.array(z.string()),
+      expectedOutcome: z.string(),
+      priority: z.enum(['Low', 'Medium', 'High']),
     }),
   ),
   summary: z.object({
@@ -489,6 +522,88 @@ export const QADocumentProcessingResponseSchema = z.object({
     complexity: z.enum(['Low', 'Medium', 'High']),
   }),
 });
+
+// ============================================================================
+// QA Test Version Schemas
+// ============================================================================
+
+export const QATestVersionChangeTypeSchema = z.enum(['created', 'modified', 'self_healed', 'refined', 'deleted']);
+
+export const QATestVersionEntitySchema = BaseEntitySchema.extend({
+  test_result_id: z.number(),
+  version: z.number().int().positive(),
+  test_title: z.string(),
+  test_objective: z.string(),
+  test_steps: z.array(z.string()),
+  expected_outcome: z.string(),
+  priority: z.enum(['Low', 'Medium', 'High']).nullable(),
+  change_type: QATestVersionChangeTypeSchema,
+  change_reason: z.string().nullable(),
+  changed_by: z.number().nullable(),
+  previous_version_id: z.number().nullable(),
+});
+
+export const QATestVersionCreateSchema = z.object({
+  test_result_id: z.number(),
+  change_type: QATestVersionChangeTypeSchema,
+  change_reason: z.string().optional(),
+});
+
+export type QATestVersionData = z.infer<typeof QATestVersionEntitySchema>;
+export type QATestVersionChangeType = z.infer<typeof QATestVersionChangeTypeSchema>;
+
+// ============================================================================
+// QA Self-Healing Schemas
+// ============================================================================
+
+export const QAFailureTypeSchema = z.enum(['locator', 'assertion', 'timeout', 'flow_change', 'environment']);
+
+export const QAValidationStatusSchema = z.enum(['pending', 'validated', 'failed', 'rejected']);
+
+export const QAHealingMetadataSchema = z.object({
+  healing_enabled: z.boolean().default(true),
+  auto_apply: z.boolean().default(false),
+  min_confidence_threshold: z.number().min(0).max(1).default(0.85),
+  max_healing_attempts: z.number().int().min(1).max(5).default(2),
+  last_healing_attempt: z.string().datetime().nullable(),
+  total_healing_attempts: z.number().int().default(0),
+  successful_heals: z.number().int().default(0),
+});
+
+export const QAHealingAttemptEntitySchema = BaseEntitySchema.extend({
+  test_result_id: z.number(),
+  simulation_id: z.number().nullable(),
+  failure_type: QAFailureTypeSchema,
+  failure_message: z.string().nullable(),
+  failure_context: z.record(z.unknown()).nullable(),
+  repair_strategy: z.string().nullable(),
+  repair_details: z.record(z.unknown()).nullable(),
+  confidence_score: z.number().min(0).max(1).nullable(),
+  validation_status: QAValidationStatusSchema,
+  validation_simulation_id: z.number().nullable(),
+  healed_version_id: z.number().nullable(),
+});
+
+export const FailureAnalysisSchema = z.object({
+  failure_type: QAFailureTypeSchema,
+  is_healable: z.boolean(),
+  is_actual_bug: z.boolean(),
+  failure_message: z.string(),
+  failure_context: z.record(z.unknown()),
+  suggested_repair: z
+    .object({
+      type: z.enum(['update_locator', 'update_assertion', 'update_steps', 'skip_test']),
+      confidence: z.number().min(0).max(1),
+      details: z.record(z.unknown()),
+    })
+    .nullable(),
+});
+
+export type QAFailureType = z.infer<typeof QAFailureTypeSchema>;
+export type QAValidationStatus = z.infer<typeof QAValidationStatusSchema>;
+export type QAHealingMetadata = z.infer<typeof QAHealingMetadataSchema>;
+export type QAHealingAttemptData = z.infer<typeof QAHealingAttemptEntitySchema>;
+export type FailureAnalysis = z.infer<typeof FailureAnalysisSchema>;
 
 // ============================================================================
 // SIMULATION SCHEMAS - Application simulation and testing
@@ -698,6 +813,17 @@ export const SimulationHistorySchema = z.object({
 });
 
 /**
+ * Summary of one simulation step for JSON listing (topic + screenshot link)
+ */
+export const SimulationStepSummarySchema = z.object({
+  step_number: z.number().int().positive(),
+  topic: z.string(),
+  screenshot_url: z.string().nullable(),
+  title: z.string().optional().nullable(),
+  url: z.string().optional().nullable(),
+});
+
+/**
  * App simulation schema
  */
 export const SimulationEntitySchema = BaseEntitySchema.extend({
@@ -712,6 +838,18 @@ export const SimulationEntitySchema = BaseEntitySchema.extend({
   num_steps: z.number().int().nonnegative(),
   pinned: z.boolean().optional(),
   agent_name: z.string().optional(),
+  graph_index_id: z.string().nullable().optional(),
+});
+
+/**
+ * Simulation logging user - user who has started at least one simulation (for GET /simulation/logging-users)
+ */
+export const SimulationLoggingUserSchema = z.object({
+  user_id: z.number(),
+  email: z.string(),
+  first_name: z.string().optional().nullable(),
+  last_name: z.string().optional().nullable(),
+  last_simulation_at: z.string().optional(), // ISO date of most recent simulation start
 });
 
 /**
@@ -734,6 +872,7 @@ export const SimulationUpdateSchema = z.object({
   status_message: z.string().optional(),
   num_steps: z.number().int().nonnegative().optional(),
   pinned: z.boolean().optional(),
+  graph_index_id: z.string().optional(),
 });
 
 /**
@@ -753,6 +892,7 @@ export const SimulationAnswerSchema = z.object({
 export const RrwebSessionEntitySchema = BaseEntitySchema.extend({
   session_id: z.string(),
   marketrix_chat_id: z.string(),
+  connection_id: z.number().int().nullable().optional(),
   blob_url: z.string().nullable(),
   event_count: z.number().int().nonnegative(),
   started_at: z.string().datetime(),
@@ -775,6 +915,7 @@ export const RrwebSessionEntitySchema = BaseEntitySchema.extend({
 export const RrwebSessionUpsertSchema = z.object({
   session_id: z.string().min(1),
   marketrix_chat_id: z.string().min(1),
+  connection_id: z.number().int().nullable().optional(),
   blob_url: z.string().nullable().optional(),
   event_count: z.number().int().nonnegative().optional(),
   started_at: z.string().datetime().optional(),
@@ -784,7 +925,7 @@ export const RrwebSessionUpsertSchema = z.object({
     .object({
       userAgent: z.string().optional(),
       url: z.string().optional(),
-      connectionId: z.number().optional(), // For tenant/connection lookup
+      connectionId: z.number().optional(), // Still accepted; API persists to connection_id column
     })
     .nullable()
     .optional(),
@@ -1024,6 +1165,14 @@ export const AgentSimulationIndexResponseSchema = z.object({
   simulation_id: z.number(),
   knowledge_id: z.number(),
   message: z.string(),
+});
+
+/**
+ * Agent video generation request schema
+ */
+export const AgentVideoGenerateRequestSchema = z.object({
+  simulation_id: z.coerce.number().optional(),
+  prompt: z.string().optional(),
 });
 
 /**
@@ -1421,21 +1570,6 @@ export const UpdateChatCountDataSchema = z.object({
 });
 
 /**
- * State auth payload schema
- */
-export const StateAuthPayloadSchema = z.object({
-  ts: z.number(),
-  redirect_uri: z.string(),
-});
-
-/**
- * State auth result schema
- */
-export const StateAuthResultSchema = z.object({
-  redirect_uri: z.string(),
-});
-
-/**
  * AI agent status email data schema
  */
 
@@ -1467,11 +1601,6 @@ export const INITIAL_TENANT_ID = 1;
  * Initial prompt limit for new users
  */
 export const INITIAL_PROMPT_LIMIT = 50;
-
-/**
- * OAuth authentication scopes
- */
-export const AUTH_SCOPES = ['openid', 'email', 'profile'];
 
 // ============================================================================
 // TASKPILOT SCHEMAS - TaskPilot-specific types
@@ -1682,6 +1811,31 @@ export const StripePricingSchema = z.object({
 });
 
 /**
+ * Plan catalog entry schema (metadata for display)
+ */
+export const PlanCatalogEntrySchema = z.object({
+  id: z.enum(['free', 'starter', 'growth', 'enterprise']),
+  name: z.string(),
+  description: z.string(),
+  features: z.array(z.string()),
+  cta: z.string(),
+  isPopular: z.boolean(),
+  customPriceDisplay: z.string().optional(),
+  priceSubtext: z.string().optional(),
+  borderColor: z.string(),
+  buttonColor: z.string(),
+  outlineColor: z.string(),
+  checkColor: z.string(),
+});
+
+/**
+ * Plan catalog response schema (GET /stripe/plans)
+ */
+export const PlanCatalogSchema = z.object({
+  plans: z.array(PlanCatalogEntrySchema),
+});
+
+/**
  * Stripe configuration schema for frontend
  */
 export const StripeConfigSchema = z.object({
@@ -1698,6 +1852,16 @@ export const StripeConfigSchema = z.object({
   }),
   trialDays: z.number().int().min(0),
   calendlyUrl: z.string(),
+});
+
+/**
+ * Public client config (no auth). Values are kept in backend env only.
+ */
+export const PublicConfigSchema = z.object({
+  widgetKey: z.string(),
+  widgetId: z.string(),
+  agentUrl: z.string(),
+  widgetUrl: z.string(),
 });
 
 // ============================================================================
@@ -1741,9 +1905,6 @@ export type BatchUserCreateData = z.infer<typeof BatchUserCreateSchema>;
 export type BatchUserCreateResult = z.infer<typeof BatchUserCreateResultSchema>;
 export type PasswordResetRequest = z.infer<typeof PasswordResetRequestSchema>;
 export type PasswordUpdateData = z.infer<typeof PasswordUpdateSchema>;
-export type GoogleLoginCallbackData = z.infer<typeof GoogleLoginCallbackSchema>;
-export type StateAuthPayload = z.infer<typeof StateAuthPayloadSchema>;
-export type StateAuthResult = z.infer<typeof StateAuthResultSchema>;
 export type UploadUserLogoData = z.infer<typeof UploadUserLogoDataSchema>;
 export type TenantReadData = z.infer<typeof TenantCreateSchema>;
 export type TenantUpdateData = z.infer<typeof TenantUpdateSchema>;
@@ -1768,6 +1929,7 @@ export type BrowserSessionResponseData = z.infer<typeof BrowserSessionResponseSc
 export type TaskStatus = z.infer<typeof TaskStatusSchema>;
 export type FileUploadResponse = z.infer<typeof FileUploadResponseSchema>;
 export type ChatRequest = z.infer<typeof ChatRequestSchema>;
+export type AgentVideoGenerateRequest = z.infer<typeof AgentVideoGenerateRequestSchema>;
 export type ChatResponseData = z.infer<typeof ChatResponseSchema>;
 export type MailOptionsData = z.infer<typeof MailOptionsDataSchema>;
 export type MeetingEmailData = z.infer<typeof MeetingEmailDataSchema>;
@@ -1801,7 +1963,9 @@ export type WidgetSettingsKey = keyof z.infer<typeof WidgetSettingsDataSchema>;
 export type WidgetChip = z.infer<typeof WidgetChipSchema>;
 export type SlackSettingsKey = keyof z.infer<typeof SlackSettingsDataSchema>;
 export type SimulationData = z.infer<typeof SimulationEntitySchema>;
+export type SimulationLoggingUserData = z.infer<typeof SimulationLoggingUserSchema>;
 export type SimulationStepData = z.infer<typeof SimulationStepSchema>;
+export type SimulationStepSummaryData = z.infer<typeof SimulationStepSummarySchema>;
 export type SimulationHistoryData = z.infer<typeof SimulationHistorySchema>;
 export type SimulationModelOutputData = z.infer<typeof SimulationModelOutputSchema>;
 export type SimulationResultData = z.infer<typeof SimulationResultSchema>;
@@ -1817,9 +1981,6 @@ export type TourAnswerData = z.infer<typeof TourAnswerSchema>;
 export type TourStepData = z.infer<typeof TourStepSchema>;
 export type PasswordResetData = z.infer<typeof PasswordResetEntitySchema>;
 export type ChatData = z.infer<typeof ChatEntitySchema>;
-export type QADocumentData = z.infer<typeof QADocumentEntitySchema>;
-export type QATestResultData = z.infer<typeof QATestResultEntitySchema>;
-export type QADocumentProcessingResponseData = z.infer<typeof QADocumentProcessingResponseSchema>;
 export type UserQuotaData = z.infer<typeof UserQuotaSchema>;
 export type SubscriptionUsageData = z.infer<typeof SubscriptionUsageSchema>;
 export type SimulationProgressData = z.infer<typeof SimulationProgressEntitySchema>;
@@ -1841,3 +2002,14 @@ export type PriceAmountData = z.infer<typeof PriceAmountSchema>;
 export type PlanPricingData = z.infer<typeof PlanPricingSchema>;
 export type StripePricingData = z.infer<typeof StripePricingSchema>;
 export type StripeConfigData = z.infer<typeof StripeConfigSchema>;
+export type PublicConfigData = z.infer<typeof PublicConfigSchema>;
+export type QADocumentData = z.infer<typeof QADocumentEntitySchema>;
+export type QADocumentListItemData = QADocumentData & {
+  run_count: number;
+  display_title: string;
+  total_failed: number;
+  pass_rate: number | null;
+};
+export type QARunData = z.infer<typeof QARunEntitySchema>;
+export type QATestResultData = z.infer<typeof QATestResultEntitySchema>;
+export type QADocumentProcessingResponseData = z.infer<typeof QADocumentProcessingResponseSchema>;
