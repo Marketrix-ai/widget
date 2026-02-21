@@ -1,0 +1,34 @@
+blank_issues_enabled: false
+templates:
+  - name: 🐛 Bug Report
+    description: Report a bug or issue
+    file: 01_bug_report.md
+    label: bug
+  - name: ✨ Feature Request
+    description: Suggest a new feature
+    file: 02_feature_request.md
+    label: enhancement
+  - name: 🔄 Migration Task
+    description: Track infrastructure or dependency migrations
+    file: 03_migration_task.md
+    label: migration
+  - name: 🔧 Refactoring Task
+    description: Track code refactoring and architecture improvements
+    file: 04_refactoring_task.md
+    label: refactoring
+contact_links:
+  - name: 📚 Marketrix Documentation
+    url: https://docs.marketrix.ai
+    about: Official documentation for Marketrix.ai platform
+  - name: 💬 Community Support
+    url: https://github.com/marketrix-ai/marketrix/discussions
+    about: Ask questions and share ideas with the community
+  - name: 📧 Email Support
+    url: https://marketrix.ai/support
+    about: Get help from our support team
+  - name: 🐛 Report Security Issue
+    url: https://marketrix.ai/security
+    about: Report security vulnerabilities privately
+  - name: 🚀 Feature Requests
+    url: https://github.com/marketrix-ai/marketrix/discussions/categories/feature-requests
+    about: Discuss and vote on new features
