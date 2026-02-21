@@ -37,6 +37,11 @@ jobs:
           az storage blob delete-batch --source widget --pattern "$FOLDER/*" --account-name marketrix --auth-mode login
           az storage blob upload-batch --destination widget/$FOLDER --source ./dist --account-name marketrix --overwrite --auth-mode login
 
+      - name: Purge CDN cache
+        run: |
+          FOLDER=${{ inputs.environment == 'prod' && 'latest' || 'dev' }}
+          az afd endpoint purge --profile-name marketrix-cdn --endpoint-name cdn-marketrix-io --resource-group Marketrix --content-paths "/widget/$FOLDER/*" --no-wait
+
       - name: Cleanup
         if: always()
         run: rm -rf ./dist
@@ -61,6 +66,11 @@ jobs:
           FOLDER=${{ inputs.environment == 'prod' && 'latest' || 'dev' }}
           az storage blob delete-batch --source widget --pattern "$FOLDER/*" --account-name marketrix --auth-mode login
           az storage blob upload-batch --destination widget/$FOLDER --source ./dist --account-name marketrix --overwrite --auth-mode login
+
+      - name: Purge CDN cache
+        run: |
+          FOLDER=${{ inputs.environment == 'prod' && 'latest' || 'dev' }}
+          az afd endpoint purge --profile-name marketrix-cdn --endpoint-name cdn-marketrix-io --resource-group Marketrix --content-paths "/widget/$FOLDER/*" --no-wait
 
       - name: Cleanup
         if: always()
