@@ -46,8 +46,11 @@ import {
   AgentSimulationIndexRequestSchema,
   AgentSimulationIndexResponseSchema,
   AgentUpdateSchema,
+  AgentVideoGenerateRequestSchema,
   BatchUserCreateResultSchema,
   BatchUserCreateSchema,
+  BrowserConfigSchema,
+  BrowserTypeSchema,
   ChatRequestSchema,
   ChatResponseSchema,
   CheckoutSessionSchema,
@@ -56,9 +59,9 @@ import {
   ConnectionTypeSchema,
   ConnectionUpdateSchema,
   EntityStatusSchema,
+  FailureAnalysisSchema,
   FileSchema,
   FileUploadResponseSchema,
-  GoogleLoginCallbackSchema,
   HealthResponseSchema,
   IndexResponseSchema,
   IntegrationCreateSchema,
@@ -76,21 +79,28 @@ import {
   MindMapSchema,
   PasswordResetRequestSchema,
   PasswordUpdateSchema,
+  PlanCatalogSchema,
   PlanInfoSchema,
   PortalSessionSchema,
+  PublicConfigSchema,
   QADocumentCreateSchema,
   QADocumentEntitySchema,
   QADocumentProcessingResponseSchema,
   QADocumentStatusSchema,
+  QAHealingAttemptEntitySchema,
+  QARunEntitySchema,
   QATestResultEntitySchema,
+  QATestVersionEntitySchema,
   R,
   RrwebSessionEntitySchema,
   RrwebSessionUpsertSchema,
   SimulationAnswerSchema,
   SimulationCreateSchema,
   SimulationEntitySchema,
+  SimulationLoggingUserSchema,
   SimulationProgressEntitySchema,
   SimulationStepSchema,
+  SimulationStepSummarySchema,
   SimulationUpdateSchema,
   SlackSettingsDataSchema,
   StripeCheckoutSchema,
@@ -117,7 +127,6 @@ import {
   UserQuotaSchema,
   UserRegisterSchema,
   UserUpdateSchema,
-  VerifyCaptchaSchema,
   WidgetSettingsDataSchema,
 } from './schema';
 
@@ -146,18 +155,17 @@ const contract = c.router({
     responses: { 200: R.success(HealthResponseSchema) },
   },
 
+  getPublicConfig: {
+    method: 'GET' as const,
+    summary: 'Get public client configuration',
+    description: 'Returns widget key and widget ID. No auth. Values are stored in backend env only.',
+    path: '/config/public',
+    responses: { 200: R.success(PublicConfigSchema), 500: R.error },
+  },
+
   // ============================================================================
   // AUTHENTICATION ROUTES - User authentication and authorization
   // ============================================================================
-
-  authCaptcha: {
-    method: 'POST' as const,
-    summary: 'Verify CAPTCHA challenge to prevent automated abuse',
-    description: 'Validates user-submitted CAPTCHA response against challenge',
-    path: '/auth/captcha',
-    body: VerifyCaptchaSchema,
-    responses: { 200: R.success(z.boolean()), 400: R.error, 500: R.error },
-  },
 
   authPwRegister: {
     method: 'POST' as const,
@@ -195,39 +203,29 @@ const contract = c.router({
     responses: { 200: R.success(z.void()), 400: R.error, 401: R.error, 500: R.error },
   },
 
-  authGoogleLoginByToken: {
-    method: 'POST' as const,
-    summary: 'Authenticate user with Google OAuth token',
-    description: 'Validates Google OAuth token and returns authentication data',
-    path: '/auth/google/token',
-    body: TokenSchema,
-    responses: { 200: R.success(TokenSchema), 400: R.error, 401: R.error, 500: R.error },
-  },
-
-  authGoogleLoginByRedirect: {
-    method: 'GET' as const,
-    summary: 'Redirect to Google OAuth authorization page',
-    description: "Initiates OAuth flow by redirecting user to Google's consent screen",
-    path: '/auth/google/redirect',
-    query: z.object({ callback: z.string() }),
-    responses: { 302: R.void, 400: R.error, 500: R.error },
-  },
-
-  authGoogleLoginCallback: {
-    method: 'GET' as const,
-    summary: 'Handle Google OAuth callback',
-    description: 'Processes OAuth callback from Google and completes authentication',
-    path: '/auth/google/callback',
-    query: GoogleLoginCallbackSchema,
-    responses: { 302: R.void, 400: R.error, 500: R.error },
-  },
-
   authRefreshToken: {
     method: 'GET' as const,
     summary: 'Refresh current authentication token',
     description: 'Checks if provided token is valid and returns a new token',
     path: '/auth/refresh',
     responses: { 200: R.success(TokenSchema), 400: R.error, 401: R.error, 500: R.error },
+  },
+
+  authMe: {
+    method: 'GET' as const,
+    summary: 'Get current authenticated user and tenant information',
+    description: 'Returns user profile and tenant data based on JWT token',
+    path: '/auth/me',
+    responses: {
+      200: R.success(
+        z.object({
+          user: UserEntitySchema,
+          tenant: TenantEntitySchema.nullable(),
+        }),
+      ),
+      401: R.error,
+      500: R.error,
+    },
   },
 
   // ============================================================================
@@ -244,9 +242,6 @@ const contract = c.router({
       name: z.string().min(1).max(45),
       domain: z.string().min(1).max(200),
       team_emails: z.array(z.string().email()).optional().default([]),
-      app_url: z.string().url().optional(),
-      app_username: z.string().optional(),
-      app_password: z.string().optional(),
     }),
     responses: {
       200: R.success(
@@ -806,8 +801,7 @@ const contract = c.router({
   agentIndexCallback: {
     method: 'POST' as const,
     summary: 'Callback endpoint for agent index creation completion',
-    description:
-      'Called by agent service when index creation completes (PDF, JSON, node_index, edge_index, or mindmap)',
+    description: 'Called by agent service when index creation completes (vector_index or graph_index)',
     path: '/agent/index/callback',
     body: AgentIndexCallbackRequestSchema,
     responses: {
@@ -830,6 +824,23 @@ const contract = c.router({
       400: R.error,
       401: R.error,
       403: R.error,
+      500: R.error,
+    },
+  },
+
+  agentVideoGenerate: {
+    method: 'POST' as const,
+    summary: 'Generate video for agent from its last simulation',
+    description: 'Generates a walkthrough video from agent simulation screenshots',
+    path: '/agent/:agent_id/video',
+    pathParams: z.object({ agent_id: z.coerce.number() }),
+    body: AgentVideoGenerateRequestSchema,
+    responses: {
+      200: R.success(z.object({ video_url: z.string() })),
+      400: R.error,
+      401: R.error,
+      403: R.error,
+      404: R.error,
       500: R.error,
     },
   },
@@ -1036,17 +1047,36 @@ const contract = c.router({
   simulationSearch: {
     method: 'GET' as const,
     summary: 'Search and filter simulations by tenant',
-    description: 'Returns list of simulations associated with specified tenant',
+    description:
+      'Returns list of simulations associated with specified tenant as JSON. Use connection_id, agent_id, or pinned to filter.',
     path: '/simulation',
     query: z.object({
       tenant_id: z.coerce.number().optional(),
       connection_id: z.coerce.number().optional(),
+      agent_id: z.coerce.number().optional(),
       pinned: z.any().transform(val => (String(val) === 'true' ? true : String(val) === 'false' ? false : undefined)),
       limit: z.coerce.number().optional(),
       offset: z.coerce.number().optional(),
     }),
     responses: {
       200: R.success(z.array(SimulationEntitySchema)),
+      400: R.error,
+      401: R.error,
+      403: R.error,
+      500: R.error,
+    },
+  },
+
+  simulationLoggingUsers: {
+    method: 'GET' as const,
+    summary: 'Get users who have started simulations',
+    description: 'Returns list of users who have logged simulation starts (started at least one simulation) as JSON.',
+    path: '/simulation/logging-users',
+    query: z.object({
+      tenant_id: z.coerce.number().optional(),
+    }),
+    responses: {
+      200: R.success(z.array(SimulationLoggingUserSchema)),
       400: R.error,
       401: R.error,
       403: R.error,
@@ -1121,6 +1151,22 @@ const contract = c.router({
       400: R.error,
       401: R.error,
       403: R.error,
+      500: R.error,
+    },
+  },
+
+  simulationSteps: {
+    method: 'GET' as const,
+    summary: 'Get all simulation steps with topic and screenshot link as JSON',
+    description: 'Returns each step with step_number, topic, screenshot_url, and optional title/url for the simulation',
+    path: '/simulation/:simulation_id/steps',
+    pathParams: z.object({ simulation_id: z.coerce.number() }),
+    responses: {
+      200: R.success(z.array(SimulationStepSummarySchema)),
+      400: R.error,
+      401: R.error,
+      403: R.error,
+      404: R.error,
       500: R.error,
     },
   },
@@ -1252,10 +1298,12 @@ const contract = c.router({
   rrwebSessionGetAll: {
     method: 'GET' as const,
     summary: 'Get all RRWeb sessions',
-    description: 'Retrieves all sessions ordered by creation date, optionally filtered by connection',
+    description: 'Retrieves all sessions ordered by creation date, optionally filtered by connection and date range',
     path: '/rrweb-session',
     query: z.object({
       connection_id: z.coerce.number().optional(),
+      start_date: z.string().optional(),
+      end_date: z.string().optional(),
     }),
     responses: {
       200: R.success(z.array(RrwebSessionEntitySchema)),
@@ -1297,6 +1345,28 @@ const contract = c.router({
       400: R.error,
       401: R.error,
       403: R.error,
+      500: R.error,
+    },
+  },
+
+  browserSessionStopTasks: {
+    method: 'POST' as const,
+    summary: 'Stop all tasks for browser session',
+    description: 'Stops all active tasks for widgets connected to the browser session',
+    path: '/browser-session/:session_id/stop-tasks',
+    pathParams: z.object({ session_id: z.string() }),
+    body: z.object({}),
+    responses: {
+      200: R.success(
+        z.object({
+          success: z.boolean(),
+          message: z.string(),
+        }),
+      ),
+      400: R.error,
+      401: R.error,
+      403: R.error,
+      404: R.error,
       500: R.error,
     },
   },
@@ -1428,10 +1498,30 @@ const contract = c.router({
   qaDocumentProcess: {
     method: 'POST' as const,
     summary: 'Process QA document and generate test cases',
-    description: 'Processes a QA document and generates test cases via AI agent API',
+    description:
+      'Starts async processing (returns 202). Poll GET /qa/document/:id for status and processing_step until completed/failed.',
     path: '/qa/document/:id/process',
     pathParams: z.object({ id: z.coerce.number() }),
     body: z.void(),
+    responses: {
+      202: R.success(z.object({ document: QADocumentEntitySchema })),
+      400: R.error,
+      401: R.error,
+      403: R.error,
+      404: R.error,
+      500: R.error,
+    },
+  },
+
+  qaDocumentRefine: {
+    method: 'POST' as const,
+    summary: 'Refine existing QA test cases',
+    description: 'Refines existing test cases with a refinement prompt via AI agent API',
+    path: '/qa/document/:id/refine',
+    pathParams: z.object({ id: z.coerce.number() }),
+    body: z.object({
+      refinementPrompt: z.string().min(5).max(2000),
+    }),
     responses: {
       200: R.success(QADocumentProcessingResponseSchema),
       400: R.error,
@@ -1460,13 +1550,22 @@ const contract = c.router({
   qaDocumentList: {
     method: 'GET' as const,
     summary: 'List QA documents',
-    description: 'Gets all QA documents for the authenticated tenant',
+    description: 'Gets all QA documents with run_count and display_title',
     path: '/qa/document',
     query: z.object({
       connection_id: z.coerce.number().optional(),
     }),
     responses: {
-      200: R.success(z.array(QADocumentEntitySchema)),
+      200: R.success(
+        z.array(
+          QADocumentEntitySchema.extend({
+            run_count: z.number(),
+            display_title: z.string(),
+            total_failed: z.number(),
+            pass_rate: z.number().nullable(),
+          }),
+        ),
+      ),
       400: R.error,
       401: R.error,
       500: R.error,
@@ -1491,14 +1590,22 @@ const contract = c.router({
     },
   },
 
-  qaTestResultList: {
+  qaDocumentRuns: {
     method: 'GET' as const,
-    summary: 'Get test results for a QA document',
-    description: 'Retrieves all test results for a specific QA document',
-    path: '/qa/document/:id/test-results',
+    summary: 'List runs for a QA document',
+    description: 'Returns all runs for a document with total/passed/failed counts',
+    path: '/qa/document/:id/runs',
     pathParams: z.object({ id: z.coerce.number() }),
     responses: {
-      200: R.success(z.array(QATestResultEntitySchema)),
+      200: R.success(
+        z.array(
+          QARunEntitySchema.extend({
+            total_tests: z.number(),
+            passed: z.number(),
+            failed: z.number(),
+          }),
+        ),
+      ),
       400: R.error,
       401: R.error,
       404: R.error,
@@ -1506,17 +1613,58 @@ const contract = c.router({
     },
   },
 
-  qaDocumentMock: {
+  qaRunGet: {
     method: 'GET' as const,
-    summary: 'Get mock QA test cases and summary',
-    description: 'Returns mock QA test cases and summary for testing/demo purposes',
-    path: '/qa/document/:id/mock',
+    summary: 'Get a QA run by ID',
+    description: 'Returns run details with test results',
+    path: '/qa/run/:id',
     pathParams: z.object({ id: z.coerce.number() }),
     responses: {
-      200: R.success(QADocumentProcessingResponseSchema),
+      200: R.success(
+        QARunEntitySchema.extend({
+          test_results: z.array(QATestResultEntitySchema),
+        }),
+      ),
       400: R.error,
       401: R.error,
-      403: R.error,
+      404: R.error,
+      500: R.error,
+    },
+  },
+
+  qaDocumentRun: {
+    method: 'POST' as const,
+    summary: 'Create and start a new QA run',
+    description:
+      'Creates a new run (clones test cases) and starts execution. Returns 202; poll test-results by run_id.',
+    path: '/qa/document/:id/run',
+    pathParams: z.object({ id: z.coerce.number() }),
+    body: z.void(),
+    responses: {
+      202: R.success(
+        z.object({
+          run: QARunEntitySchema,
+          simulations: z.array(SimulationEntitySchema),
+        }),
+      ),
+      400: R.error,
+      401: R.error,
+      404: R.error,
+      500: R.error,
+    },
+  },
+
+  qaTestResultList: {
+    method: 'GET' as const,
+    summary: 'Get test results for a QA document',
+    description: 'Retrieves test results; optional run_id scopes to that run',
+    path: '/qa/document/:id/test-results',
+    pathParams: z.object({ id: z.coerce.number() }),
+    query: z.object({ run_id: z.coerce.number().optional() }),
+    responses: {
+      200: R.success(z.array(QATestResultEntitySchema)),
+      400: R.error,
+      401: R.error,
       404: R.error,
       500: R.error,
     },
@@ -1548,6 +1696,275 @@ const contract = c.router({
       401: R.error,
       404: R.error,
       500: R.error,
+    },
+  },
+
+  // Execute all tests for a document (creates a run and executes; returns run + simulations)
+  qaDocumentExecuteTests: {
+    method: 'POST' as const,
+    path: '/qa/document/:id/execute',
+    pathParams: z.object({ id: z.coerce.number() }),
+    body: z.void(),
+    responses: {
+      200: R.success(
+        z.object({
+          run: QARunEntitySchema,
+          simulations: z.array(SimulationEntitySchema),
+        }),
+      ),
+      404: R.error,
+      500: R.error,
+    },
+    summary: 'Create a run and execute all pending tests for a QA document as simulations',
+  },
+
+  // Execute a single test
+  qaTestResultExecute: {
+    method: 'POST' as const,
+    path: '/qa/test-result/:id/execute',
+    pathParams: z.object({ id: z.coerce.number() }),
+    body: z.void(),
+    responses: {
+      200: R.success(
+        z.object({
+          simulation: SimulationEntitySchema,
+        }),
+      ),
+      404: R.error,
+      500: R.error,
+    },
+    summary: 'Execute a single test as a simulation',
+  },
+
+  // Get simulation linked to test result
+  qaTestResultSimulation: {
+    method: 'GET' as const,
+    path: '/qa/test-result/:id/simulation',
+    pathParams: z.object({ id: z.coerce.number() }),
+    responses: {
+      200: R.success(
+        z.object({
+          simulation: SimulationEntitySchema.nullable(),
+        }),
+      ),
+      404: R.error,
+      500: R.error,
+    },
+    summary: 'Get the simulation linked to a test result',
+  },
+
+  // QA Test Version routes
+  qaTestVersionList: {
+    method: 'GET' as const,
+    summary: 'Get version history for a test',
+    description: 'Returns all versions of a test case with change history',
+    path: '/qa/test-result/:id/versions',
+    pathParams: z.object({ id: z.coerce.number() }),
+    responses: {
+      200: R.success(z.array(QATestVersionEntitySchema)),
+      401: R.error,
+      404: R.error,
+    },
+  },
+  qaTestVersionGet: {
+    method: 'GET' as const,
+    summary: 'Get specific test version',
+    description: 'Returns a specific version of a test case',
+    path: '/qa/test-result/:id/versions/:version',
+    pathParams: z.object({ id: z.coerce.number(), version: z.coerce.number() }),
+    responses: {
+      200: R.success(QATestVersionEntitySchema),
+      401: R.error,
+      404: R.error,
+    },
+  },
+  qaTestVersionRollback: {
+    method: 'POST' as const,
+    summary: 'Rollback to specific version',
+    description: 'Restores test to a previous version and creates new version record',
+    path: '/qa/test-result/:id/versions/:version/rollback',
+    pathParams: z.object({ id: z.coerce.number(), version: z.coerce.number() }),
+    body: z.object({}),
+    responses: {
+      200: R.success(QATestVersionEntitySchema),
+      401: R.error,
+      404: R.error,
+    },
+  },
+  qaTestVersionCompare: {
+    method: 'GET' as const,
+    summary: 'Compare two versions',
+    description: 'Returns differences between two test versions',
+    path: '/qa/test-result/:id/versions/compare',
+    pathParams: z.object({ id: z.coerce.number() }),
+    query: z.object({
+      version1: z.coerce.number(),
+      version2: z.coerce.number(),
+    }),
+    responses: {
+      200: R.success(
+        z.object({
+          version1: QATestVersionEntitySchema,
+          version2: QATestVersionEntitySchema,
+          diff: z.array(
+            z.object({
+              field: z.string(),
+              oldValue: z.unknown(),
+              newValue: z.unknown(),
+            }),
+          ),
+        }),
+      ),
+      401: R.error,
+      404: R.error,
+    },
+  },
+
+  // QA Self-Healing routes
+  qaHealingAttemptList: {
+    method: 'GET' as const,
+    summary: 'Get healing attempts for a test',
+    description: 'Returns all healing attempts for a specific test result',
+    path: '/qa/test-result/:id/healing-attempts',
+    pathParams: z.object({ id: z.coerce.number() }),
+    responses: {
+      200: R.success(z.array(QAHealingAttemptEntitySchema)),
+      401: R.error,
+      404: R.error,
+    },
+  },
+  qaHealingAttemptApprove: {
+    method: 'POST' as const,
+    summary: 'Approve a healing attempt',
+    description: 'Applies the repair from a validated healing attempt',
+    path: '/qa/test-result/:id/healing-attempts/:attemptId/approve',
+    pathParams: z.object({ id: z.coerce.number(), attemptId: z.coerce.number() }),
+    body: z.object({}),
+    responses: {
+      200: R.success(z.object({ success: z.boolean() })),
+      401: R.error,
+      404: R.error,
+    },
+  },
+  qaHealingAttemptReject: {
+    method: 'POST' as const,
+    summary: 'Reject a healing attempt',
+    description: 'Marks a healing attempt as rejected',
+    path: '/qa/test-result/:id/healing-attempts/:attemptId/reject',
+    pathParams: z.object({ id: z.coerce.number(), attemptId: z.coerce.number() }),
+    body: z.object({}),
+    responses: {
+      200: R.success(z.object({ success: z.boolean() })),
+      401: R.error,
+      404: R.error,
+    },
+  },
+  qaHealingTrigger: {
+    method: 'POST' as const,
+    summary: 'Trigger self-healing for a failed test',
+    description: 'Initiates the self-healing workflow for a test result',
+    path: '/qa/test-result/:id/heal',
+    pathParams: z.object({ id: z.coerce.number() }),
+    body: z.object({
+      simulation_id: z.number(),
+      config: z
+        .object({
+          enabled: z.boolean().optional(),
+          autoApply: z.boolean().optional(),
+          minConfidenceThreshold: z.number().min(0).max(1).optional(),
+          maxHealingAttempts: z.number().int().min(1).max(5).optional(),
+        })
+        .optional(),
+    }),
+    responses: {
+      200: R.success(
+        z.object({
+          healed: z.boolean(),
+          attemptId: z.number().nullable(),
+          analysis: FailureAnalysisSchema.nullable(),
+          confidence: z.number().nullable(),
+        }),
+      ),
+      401: R.error,
+      404: R.error,
+    },
+  },
+
+  // QA Cross-Browser routes
+  qaCrossBrowserRun: {
+    method: 'POST' as const,
+    summary: 'Execute cross-browser tests',
+    description: 'Runs tests across multiple browsers (chromium, firefox, webkit)',
+    path: '/qa/document/:id/run-cross-browser',
+    pathParams: z.object({ id: z.coerce.number() }),
+    body: BrowserConfigSchema,
+    responses: {
+      200: R.success(
+        z.object({
+          runs: z.array(
+            z.object({
+              browserType: BrowserTypeSchema,
+              runId: z.number(),
+              status: z.enum(['completed', 'failed', 'skipped']),
+              passedTests: z.number(),
+              failedTests: z.number(),
+              totalTests: z.number(),
+            }),
+          ),
+          summary: z.object({
+            totalRuns: z.number(),
+            completedRuns: z.number(),
+            failedRuns: z.number(),
+            overallPassed: z.number(),
+            overallFailed: z.number(),
+          }),
+        }),
+      ),
+      401: R.error,
+      404: R.error,
+    },
+  },
+  qaCrossBrowserComparison: {
+    method: 'GET' as const,
+    summary: 'Get cross-browser comparison',
+    description: 'Returns test results comparison across different browsers',
+    path: '/qa/document/:id/cross-browser-comparison',
+    pathParams: z.object({ id: z.coerce.number() }),
+    responses: {
+      200: R.success(
+        z.object({
+          byTest: z.record(
+            z.record(
+              z.object({
+                status: z.string(),
+                runId: z.number(),
+              }),
+            ),
+          ),
+          byBrowser: z.record(
+            z.object({
+              passed: z.number(),
+              failed: z.number(),
+              total: z.number(),
+            }),
+          ),
+        }),
+      ),
+      401: R.error,
+      404: R.error,
+    },
+  },
+  qaBrowserConfigUpdate: {
+    method: 'PUT' as const,
+    summary: 'Update browser configuration',
+    description: 'Updates the default browser configuration for a QA document',
+    path: '/qa/document/:id/browser-config',
+    pathParams: z.object({ id: z.coerce.number() }),
+    body: BrowserConfigSchema,
+    responses: {
+      200: R.success(z.object({ success: z.boolean() })),
+      401: R.error,
+      404: R.error,
     },
   },
 
@@ -1689,6 +2106,17 @@ const contract = c.router({
     path: '/stripe/config',
     responses: {
       200: R.success(StripeConfigSchema),
+      500: R.error,
+    },
+  },
+
+  stripeGetPlans: {
+    method: 'GET' as const,
+    summary: 'Get plan catalog (metadata for display)',
+    description: 'Returns plan names, descriptions, features, CTA and styling. No auth required.',
+    path: '/stripe/plans',
+    responses: {
+      200: R.success(PlanCatalogSchema),
       500: R.error,
     },
   },
