@@ -56,19 +56,16 @@ const sdkExtras = {
 
 type SdkExtras = typeof sdkExtras;
 
-// Create a proxy to forward calls to the current client instance
+// Create a proxy to forward calls to the current client instance.
+// oRPC's client is a deep Proxy that intercepts all string property accesses
+// (including .bind, .call, etc.) as route path segments, so we must not call
+// .bind() on it — just return the property directly.
 export const sdk = new Proxy({} as ContractRouterClient<typeof contract> & SdkExtras, {
   get(_target, prop) {
-    // Check extras first
     if (prop in sdkExtras) {
       return sdkExtras[prop as keyof typeof sdkExtras];
     }
-    // Forward to current client instance
-    const value = client[prop as keyof typeof client];
-    if (typeof value === 'function') {
-      return value.bind(client);
-    }
-    return value;
+    return client[prop as keyof typeof client];
   },
 });
 
