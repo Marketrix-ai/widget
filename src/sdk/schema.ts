@@ -966,20 +966,20 @@ export const MindMapSchema = z.object({
  */
 export const AgentEntitySchema = BaseEntitySchema.extend({
   tenant_id: z.number(),
-  user_id: z.number(),
+  user_id: z.number().nullish(),
   connection_id: z.number(),
   agent_name: z.string(),
   agent_type: AgentTypeSchema,
   agent_voice: AgentVoiceSchema,
-  agent_description: z.string(),
-  instructions: z.string().optional(),
-  image_url: z.string().optional(),
-  graph_index_id: z.string().optional(),
-  vector_store_id: z.string().optional(),
+  agent_description: z.string().nullish(),
+  instructions: z.string().nullish(),
+  image_url: z.string().nullish(),
+  graph_index_id: z.string().nullish(),
+  vector_store_id: z.string().nullish(),
   status: AgentStatusSchema,
-  status_message: z.string().optional(),
-  learning_progress: LearningProgressSchema.optional(),
-  learning_started_at: z.coerce.date().optional(),
+  status_message: z.string().nullish(),
+  learning_progress: LearningProgressSchema.nullish(),
+  learning_started_at: z.coerce.date().nullish(),
   tenant: TenantEntitySchema.optional(),
   user: UserEntitySchema.optional(),
   knowledge: z.array(KnowledgeEntitySchema).optional(),
@@ -1194,10 +1194,10 @@ export const ConnectionEntitySchema = BaseEntitySchema.extend({
   tenant_id: z.number(),
   name: z.string(),
   type: ConnectionTypeSchema,
-  url: z.string().optional(),
-  username: z.string().optional(),
-  password: z.string().optional(),
-  allowed_domains: z.array(z.string()).optional().default([]),
+  url: z.string().nullish(),
+  username: z.string().nullish(),
+  password: z.string().nullish(),
+  allowed_domains: z.array(z.string()).nullish().default([]),
 });
 
 /**
@@ -1279,7 +1279,7 @@ export const IntegrationEntitySchema = BaseEntitySchema.extend({
   status: EntityStatusSchema,
   marketrix_id: z.string(),
   marketrix_key: z.string(),
-  snippet: z.string().optional(),
+  snippet: z.string().nullish(),
 });
 
 /**
