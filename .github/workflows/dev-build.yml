@@ -1,0 +1,12 @@
+name: Build WIDGET-DEV
+on:
+  push:
+    branches: [dev]
+
+jobs:
+  dev-build:
+    uses: ./.github/workflows/base.yml
+    with:
+      action: build
+      environment: dev
+    secrets: inherit

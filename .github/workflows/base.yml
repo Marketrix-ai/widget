@@ -1,0 +1,67 @@
+name: Widget Base Workflow
+
+on:
+  workflow_call:
+    inputs:
+      action:
+        description: "Action to perform (build|deploy)"
+        required: true
+        type: string
+      environment:
+        description: "Target environment (dev|prod)"
+        required: true
+        type: string
+      version:
+        description: "Version tag for prod builds"
+        required: false
+        type: string
+        default: ""
+
+jobs:
+  # ── BUILD ───────────────────────────────────────────────
+  build:
+    if: inputs.action == 'build'
+    runs-on: prod-runner
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Upload to Azure Storage
+        run: |
+          FOLDER=${{ inputs.environment == 'prod' && 'latest' || 'dev' }}
+          az storage blob delete-batch --source widget --pattern "$FOLDER/*" --account-name marketrix --auth-mode login
+          az storage blob upload-batch --destination widget/$FOLDER --source ./dist --account-name marketrix --overwrite --auth-mode login
+
+      - name: Cleanup
+        if: always()
+        run: rm -rf ./dist
+
+  # ── DEPLOY ──────────────────────────────────────────────
+  deploy:
+    if: inputs.action == 'deploy'
+    runs-on: prod-runner
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.environment == 'prod' && 'main' || 'dev' }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Upload to Azure Storage
+        run: |
+          FOLDER=${{ inputs.environment == 'prod' && 'latest' || 'dev' }}
+          az storage blob delete-batch --source widget --pattern "$FOLDER/*" --account-name marketrix --auth-mode login
+          az storage blob upload-batch --destination widget/$FOLDER --source ./dist --account-name marketrix --overwrite --auth-mode login
+
+      - name: Cleanup
+        if: always()
+        run: rm -rf ./dist

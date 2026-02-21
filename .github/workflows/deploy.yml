@@ -1,0 +1,19 @@
+name: Deploy WIDGET
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target environment
+        required: true
+        type: choice
+        options:
+          - dev
+          - prod
+
+jobs:
+  deploy:
+    uses: ./.github/workflows/base.yml
+    with:
+      action: deploy
+      environment: ${{ inputs.environment }}
+    secrets: inherit
