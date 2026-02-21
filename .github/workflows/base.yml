@@ -21,9 +21,13 @@ jobs:
   # ── BUILD ───────────────────────────────────────────────
   build:
     if: inputs.action == 'build'
-    runs-on: prod-runner
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+
+      - uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       - name: Install dependencies
         run: npm ci
@@ -49,11 +53,15 @@ jobs:
   # ── DEPLOY ──────────────────────────────────────────────
   deploy:
     if: inputs.action == 'deploy'
-    runs-on: prod-runner
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
         with:
           ref: ${{ inputs.environment == 'prod' && 'main' || 'dev' }}
+
+      - uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       - name: Install dependencies
         run: npm ci
