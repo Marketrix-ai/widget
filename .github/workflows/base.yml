@@ -4,18 +4,18 @@ on:
   workflow_call:
     inputs:
       action:
-        description: "Action to perform (build|deploy)"
+        description: 'Action to perform (build|deploy)'
         required: true
         type: string
       environment:
-        description: "Target environment (dev|prod)"
+        description: 'Target environment (dev|prod)'
         required: true
         type: string
       version:
-        description: "Git tag for prod deploys (e.g. v1.2.0)"
+        description: 'Git tag for prod deploys (e.g. v1.2.0)'
         required: false
         type: string
-        default: ""
+        default: ''
 
 jobs:
   # ── BUILD (sanity check only) ─────────────────────────
