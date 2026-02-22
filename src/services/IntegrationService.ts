@@ -1,5 +1,4 @@
 import { type IntegrationData, sdk, type WidgetSettingsData } from '../sdk';
-import { extractApiData } from '../utils/apiUtils';
 import { isWidgetSettingsData } from '../utils/validation';
 
 export class IntegrationService {
@@ -25,11 +24,8 @@ export class IntegrationService {
     }
 
     try {
-      // First, fetch default widget settings
-      const defaultsResponse = await sdk.integrationGetDefaults({
-        params: { type: 'widget' },
-      });
-      const defaultSettings = extractApiData<WidgetSettingsData>(defaultsResponse) as WidgetSettingsData | null;
+      // First, fetch default widget settings - oRPC returns data directly
+      const defaultSettings = await sdk.integrationGetDefaults({ type: 'widget' });
 
       if (!defaultSettings) {
         const error = 'Failed to fetch default widget settings from API. The API must return widget settings.';
@@ -38,28 +34,21 @@ export class IntegrationService {
       }
 
       // Then, try to fetch existing integration
-      let integrationResponse;
+      let integrationsData: IntegrationData[] | null = null;
       if (this.mtxId && this.mtxKey) {
-        integrationResponse = await sdk.integrationSearch({
-          query: {
-            type: 'widget',
-            marketrix_id: this.mtxId,
-            marketrix_key: this.mtxKey,
-          },
+        integrationsData = await sdk.integrationSearch({
+          type: 'widget',
+          marketrix_id: this.mtxId,
+          marketrix_key: this.mtxKey,
         });
       } else if (this.mtxApp) {
-        integrationResponse = await sdk.integrationSearch({
-          query: {
-            type: 'widget',
-            connection_id: this.mtxApp,
-          },
+        integrationsData = await sdk.integrationSearch({
+          type: 'widget',
+          connection_id: this.mtxApp,
         });
       } else {
         return null;
       }
-
-      // Extract data from response: { success: true, data: [...] }
-      const integrationsData = extractApiData<IntegrationData[]>(integrationResponse) as IntegrationData[] | null;
 
       // Find active widget integration
       const widgetIntegration =

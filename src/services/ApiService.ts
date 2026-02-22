@@ -1,14 +1,7 @@
 import { sdk } from '../sdk';
 import type { MarketrixConfig, SendMessageRequest, SendMessageResponse } from '../types';
-import { extractApiData, extractErrorMessage } from '../utils/apiUtils';
-import { isChatResponseData, isNonNullObject } from '../utils/validation';
+import { extractErrorMessage } from '../utils/apiUtils';
 import { sessionManager } from './SessionManager';
-
-interface TaskResponse {
-  task_id?: string;
-  status?: string;
-  message?: string;
-}
 
 export class MarketrixApiService {
   private config: MarketrixConfig;
@@ -101,10 +94,8 @@ export class MarketrixApiService {
       // Log the question (fire and forget - don't block on this)
       sdk
         .logCreate({
-          body: {
-            type: 'widget_question',
-            metadata,
-          },
+          type: 'widget_question',
+          metadata,
         })
         .catch(error => {
           // Silently fail - logging is not critical for widget functionality
@@ -142,8 +133,8 @@ export class MarketrixApiService {
         throw new Error('Either mtxId + mtxKey or both mtxApp + mtxAgent are required');
       }
 
-      // Build request body with available identifiers
-      const body: {
+      // Build request input with available identifiers
+      const input: {
         marketrix_id?: string;
         marketrix_key?: string;
         agent_id?: number;
@@ -157,12 +148,12 @@ export class MarketrixApiService {
 
       if (this.config.mtxId && this.config.mtxKey) {
         // Use mtxId + mtxKey - API will validate credentials
-        body.marketrix_id = this.config.mtxId;
-        body.marketrix_key = this.config.mtxKey;
+        input.marketrix_id = this.config.mtxId;
+        input.marketrix_key = this.config.mtxKey;
       } else if (this.config.mtxApp && this.config.mtxAgent) {
         // Use mtxApp and mtxAgent
-        body.agent_id = this.config.mtxAgent;
-        body.connection_id = this.config.mtxApp;
+        input.agent_id = this.config.mtxAgent;
+        input.connection_id = this.config.mtxApp;
       }
 
       // Validate chatId exists
@@ -170,38 +161,44 @@ export class MarketrixApiService {
         throw new Error('Invalid chat_id. Please ensure chat session is initialized.');
       }
 
-      let apiResponse;
       try {
         switch (mode) {
+          case 'do': {
+            const doResponse = await sdk.chatDo(input);
+            return {
+              messageId: Date.now().toString(),
+              response: doResponse.text || 'Action completed successfully',
+              mode,
+              timestamp: new Date(),
+              task_id: doResponse.task_id,
+            };
+          }
           case 'tell': {
-            apiResponse = await sdk.chatTell({
-              params: { chat_id: chatId },
-              body,
-            });
-            break;
+            const tellResponse = await sdk.chatTell(input);
+            return {
+              messageId: Date.now().toString(),
+              response: tellResponse.text || 'Response received',
+              mode,
+              timestamp: new Date(),
+              task_id: tellResponse.task_id,
+            };
           }
           case 'show': {
-            apiResponse = await sdk.chatShow({
-              params: { chat_id: chatId },
-              body,
-            });
-            break;
-          }
-          case 'do': {
-            apiResponse = await sdk.chatDo({
-              params: { chat_id: chatId },
-              body,
-            });
-            break;
+            const showResponse = await sdk.chatShow(input);
+            return {
+              messageId: Date.now().toString(),
+              response: showResponse.text || 'Response received',
+              mode,
+              timestamp: new Date(),
+              task_id: showResponse.task_id,
+            };
           }
           default: {
-            // This should never happen due to TypeScript's exhaustive checking
             const _exhaustiveCheck: never = mode;
             throw new Error(`Unsupported mode: ${String(_exhaustiveCheck)}`);
           }
         }
       } catch (sdkError) {
-        // SDK throws errors for failed requests - rethrow with better context
         const errorMessage = extractErrorMessage(sdkError);
         console.error('[API Service] SDK error:', {
           mode,
@@ -211,67 +208,6 @@ export class MarketrixApiService {
         });
         throw new Error(`API request failed: ${errorMessage}`);
       }
-
-      const responseData = extractApiData(apiResponse);
-      if (responseData) {
-        // Map the response to our expected format
-        if (mode === 'do') {
-          // chatDo returns UsageStatsData, not ChatResponseData
-          // But we also get task_id for show/do modes
-          const result: SendMessageResponse = {
-            messageId: Date.now().toString(),
-            response: 'Action completed successfully',
-            mode,
-            timestamp: new Date(),
-          };
-
-          if (isNonNullObject(responseData) && typeof responseData.task_id === 'string') {
-            result.task_id = responseData.task_id;
-          }
-
-          return result;
-        } else {
-          // chatTell and chatShow return ChatResponseData
-          if (!isChatResponseData(responseData)) {
-            console.error('[API Service] Invalid chat response data format:', responseData);
-            throw new Error('Invalid chat response data format');
-          }
-
-          const chatResponse = responseData;
-          // Fix for missing property access by type checking or casting
-          const responseText = chatResponse.text || 'Response received';
-
-          const result: SendMessageResponse = {
-            messageId: Date.now().toString(),
-            response: responseText,
-            mode,
-            timestamp: new Date(),
-          };
-          // Include task_id if available (for show mode)
-          // We need to check if responseData has task_id property (it might if it's a union type)
-          // Or we can cast to TaskResponse
-          const taskResponse = responseData as unknown as TaskResponse;
-          if (taskResponse.task_id) {
-            result.task_id = taskResponse.task_id;
-          }
-          return result;
-        }
-      }
-
-      // Log the actual response for debugging
-      const errorBody =
-        apiResponse.body &&
-        typeof apiResponse.body === 'object' &&
-        apiResponse.body !== null &&
-        'error' in apiResponse.body
-          ? String(apiResponse.body.error)
-          : JSON.stringify(apiResponse.body || 'Unknown error');
-      console.error('[API Service] Failed to extract data from response:', {
-        status: apiResponse.status,
-        body: apiResponse.body,
-        response: apiResponse,
-      });
-      throw new Error(`Failed to send message. API returned status ${apiResponse.status}. ${errorBody}`);
     } catch (error) {
       console.error('Failed to send message:', extractErrorMessage(error));
       throw error;
@@ -319,25 +255,16 @@ export class MarketrixApiService {
         throw new Error('Failed to initialize chat session. Please try again.');
       }
 
-      // Call the stop endpoint
-      const apiResponse = await sdk.chatStop({
-        params: { chat_id: chatId },
-        body: {
-          task_id: taskId,
-        },
+      // Call the stop endpoint - oRPC returns { status: string, message: string }
+      const responseData = await sdk.chatStop({
+        chat_id: chatId,
+        task_id: taskId,
       });
 
-      const responseData = extractApiData(apiResponse);
-      if (responseData && typeof responseData === 'object' && 'status' in responseData) {
-        const data = responseData as { status: unknown; message?: unknown };
-        return {
-          status: String(data.status),
-          message: String(data.message || 'Task stopped'),
-        };
-      }
-
-      // API responded successfully but without a status field — treat as stopped.
-      return { status: 'stopped', message: 'Task stopped' };
+      return {
+        status: responseData.status,
+        message: responseData.message,
+      };
     } catch (error) {
       console.error('Failed to stop task:', extractErrorMessage(error));
       throw error;

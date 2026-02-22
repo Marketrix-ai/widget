@@ -1,5 +1,6 @@
 import { getAgentWebSocketUrl } from '../constants/config';
 import type { MarketrixConfig } from '../types';
+import type { ToolResponse } from '../types/toolMessages';
 import { sessionManager } from './SessionManager';
 
 export type WebSocketStatus = 'disconnected' | 'connecting' | 'connected' | 'registered' | 'error';
@@ -222,7 +223,7 @@ export class WebSocketClient {
     this.chatId = null;
   }
 
-  send(message: WebSocketMessage): void {
+  send(message: WebSocketMessage | ToolResponse<unknown>): void {
     if (!this.websocket) {
       console.warn('[WebSocket] Cannot send message: WebSocket is null');
       return;

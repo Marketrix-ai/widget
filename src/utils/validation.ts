@@ -79,85 +79,7 @@ export function isObject(value: unknown): value is Record<string, unknown> {
 // API Response Type Guards
 // ============================================================================
 
-import type {
-  AgentData,
-  ChatResponseData,
-  ConnectionData,
-  IntegrationData,
-  TourData,
-  TourStepData,
-  WidgetSettingsData,
-} from '../sdk';
-
-/**
- * Type guard for ConnectionData
- */
-export function isConnectionData(data: unknown): data is ConnectionData {
-  if (!isNonNullObject(data)) {
-    return false;
-  }
-
-  return (
-    hasProperty(data, 'tenant_id') &&
-    typeof data.tenant_id === 'number' &&
-    hasProperty(data, 'name') &&
-    typeof data.name === 'string' &&
-    hasProperty(data, 'type') &&
-    (data.type === 'app' || data.type === 'website')
-  );
-}
-
-/**
- * Type guard for IntegrationData
- */
-export function isIntegrationData(data: unknown): data is IntegrationData {
-  if (!isNonNullObject(data)) {
-    return false;
-  }
-
-  return (
-    hasProperty(data, 'connection_id') &&
-    typeof data.connection_id === 'number' &&
-    hasProperty(data, 'agent_id') &&
-    typeof data.agent_id === 'number' &&
-    hasProperty(data, 'type') &&
-    (data.type === 'widget' || data.type === 'slack') &&
-    hasProperty(data, 'status') &&
-    typeof data.status === 'string' &&
-    hasProperty(data, 'marketrix_id') &&
-    typeof data.marketrix_id === 'string' &&
-    hasProperty(data, 'marketrix_key') &&
-    typeof data.marketrix_key === 'string'
-  );
-}
-
-/**
- * Type guard for AgentData
- */
-export function isAgentData(data: unknown): data is AgentData {
-  if (!isNonNullObject(data)) {
-    return false;
-  }
-
-  return (
-    hasProperty(data, 'tenant_id') &&
-    typeof data.tenant_id === 'number' &&
-    hasProperty(data, 'user_id') &&
-    typeof data.user_id === 'number' &&
-    hasProperty(data, 'connection_id') &&
-    typeof data.connection_id === 'number' &&
-    hasProperty(data, 'agent_name') &&
-    typeof data.agent_name === 'string' &&
-    hasProperty(data, 'agent_type') &&
-    (data.agent_type === 'human' || data.agent_type === 'ai') &&
-    hasProperty(data, 'agent_voice') &&
-    (data.agent_voice === 'male' || data.agent_voice === 'female') &&
-    hasProperty(data, 'agent_description') &&
-    typeof data.agent_description === 'string' &&
-    hasProperty(data, 'status') &&
-    (data.status === 'active' || data.status === 'learning' || data.status === 'error')
-  );
-}
+import type { TourData, TourStepData, WidgetSettingsData } from '../sdk';
 
 /**
  * Type guard for WidgetSettingsData
@@ -198,28 +120,10 @@ export function isTourStepData(data: unknown): data is TourStepData {
 }
 
 /**
- * Type guard for array of IntegrationData
- */
-export function isIntegrationDataArray(data: unknown): data is IntegrationData[] {
-  return Array.isArray(data) && data.every(item => isIntegrationData(item));
-}
-
-/**
  * Type guard for array of TourStepData
  */
 export function isTourStepDataArray(data: unknown): data is TourStepData[] {
   return Array.isArray(data) && data.every(item => isTourStepData(item));
-}
-
-/**
- * Type guard for ChatResponseData
- */
-export function isChatResponseData(data: unknown): data is ChatResponseData {
-  if (!isNonNullObject(data)) {
-    return false;
-  }
-
-  return hasProperty(data, 'text') && (data.text == null || typeof data.text === 'string');
 }
 
 /**

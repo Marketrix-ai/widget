@@ -86,24 +86,6 @@ export const ActionLogTypeSchema = z.enum([
 ]);
 
 /**
- * Common response schemas used across all API endpoints
- */
-export const ServiceResponseSchema = <T extends z.ZodTypeAny>(success: boolean, schema: T) =>
-  z.object({
-    success: z.literal(success),
-    data: schema,
-    error: z.string().optional(),
-    message: z.string().optional(),
-  });
-
-// Common response patterns for compression
-export const R = {
-  success: <T extends z.ZodTypeAny>(schema: T) => ServiceResponseSchema(true, schema),
-  error: ServiceResponseSchema(false, z.void()),
-  void: z.void(),
-};
-
-/**
  * Base entity schema with common fields for all database entities
  */
 export const BaseEntitySchema = z.object({
@@ -157,18 +139,18 @@ export const AuthMethodSchema = z.enum(['password', 'oauth']);
  * Note: Users don't have plans - plans belong to tenants (via tenant_plan table)
  */
 export const UserEntitySchema = BaseEntitySchema.extend({
-  tenant_id: z.number().optional(),
+  tenant_id: z.number().nullish(),
   status: EntityStatusSchema,
   role: UserRoleSchema,
   email: z.string().email(),
-  external_id: z.string().optional(),
-  first_name: z.string().optional(),
-  last_name: z.string().optional(),
-  password: z.string().optional(),
-  image_url: z.string().optional(),
-  prompt_limit: z.number().optional(),
-  last_login_at: z.coerce.date().optional(),
-  auth_method: AuthMethodSchema.optional(),
+  external_id: z.string().nullish(),
+  first_name: z.string().nullish(),
+  last_name: z.string().nullish(),
+  password: z.string().nullish(),
+  image_url: z.string().nullish(),
+  prompt_limit: z.number().nullish(),
+  last_login_at: z.coerce.date().nullish(),
+  auth_method: AuthMethodSchema.nullish(),
 });
 
 /**
@@ -259,12 +241,12 @@ export const TokenSchema = z.object({
  */
 export const TenantEntitySchema = BaseEntitySchema.extend({
   name: z.string(),
-  domain: z.string().optional(),
+  domain: z.string().nullish(),
   status: EntityStatusSchema,
   package: TenantPackageSchema,
-  ending_date: z.coerce.date().optional(),
-  external_tenant_id: z.string().optional(),
-  type: z.enum(['personal', 'organization']).optional(),
+  ending_date: z.coerce.date().nullish(),
+  external_tenant_id: z.string().nullish(),
+  type: z.enum(['personal', 'organization']).nullish(),
 });
 
 /**
@@ -390,7 +372,7 @@ export const KnowledgeEntitySchema = BaseEntitySchema.extend({
   file_size: z.number(),
   file_type: KnowledgeTypeSchema,
   file_url: z.string(),
-  source_url: z.string().optional(), // Original URL for URL-based documents
+  source_url: z.string().nullish(), // Original URL for URL-based documents
 });
 
 // ============================================================================
@@ -484,7 +466,7 @@ export const QATestResultEntitySchema = BaseEntitySchema.extend({
   screenshot_url: z.string().nullable(),
   simulation_id: z.number().nullable().optional(),
   browser_type: BrowserTypeSchema.nullable().optional(),
-  healing_metadata: z.record(z.unknown()).nullable().optional(),
+  healing_metadata: z.record(z.string(), z.unknown()).nullable().optional(),
   last_healed_at: z.coerce.date().nullable().optional(),
 });
 /**
@@ -575,9 +557,9 @@ export const QAHealingAttemptEntitySchema = BaseEntitySchema.extend({
   simulation_id: z.number().nullable(),
   failure_type: QAFailureTypeSchema,
   failure_message: z.string().nullable(),
-  failure_context: z.record(z.unknown()).nullable(),
+  failure_context: z.record(z.string(), z.unknown()).nullable(),
   repair_strategy: z.string().nullable(),
-  repair_details: z.record(z.unknown()).nullable(),
+  repair_details: z.record(z.string(), z.unknown()).nullable(),
   confidence_score: z.number().min(0).max(1).nullable(),
   validation_status: QAValidationStatusSchema,
   validation_simulation_id: z.number().nullable(),
@@ -589,12 +571,12 @@ export const FailureAnalysisSchema = z.object({
   is_healable: z.boolean(),
   is_actual_bug: z.boolean(),
   failure_message: z.string(),
-  failure_context: z.record(z.unknown()),
+  failure_context: z.record(z.string(), z.unknown()),
   suggested_repair: z
     .object({
       type: z.enum(['update_locator', 'update_assertion', 'update_steps', 'skip_test']),
       confidence: z.number().min(0).max(1),
-      details: z.record(z.unknown()),
+      details: z.record(z.string(), z.unknown()),
     })
     .nullable(),
 });
@@ -750,7 +732,7 @@ export const InteractedElementSchema = z
     node_type: z.number(),
     node_value: z.string(),
     node_name: z.string(),
-    attributes: z.record(z.string()).optional().nullable(),
+    attributes: z.record(z.string(), z.string()).optional().nullable(),
     x_path: z.string(),
     element_hash: z.number(),
     bounds: z
@@ -832,12 +814,12 @@ export const SimulationEntitySchema = BaseEntitySchema.extend({
   job_id: z.string(),
   session_id: z.string().nullable().optional(),
   status: z.string(),
-  status_message: z.string(),
-  path: z.string(),
-  instructions: z.string(),
+  status_message: z.string().nullish(),
+  path: z.string().nullish(),
+  instructions: z.string().nullish(),
   num_steps: z.number().int().nonnegative(),
   pinned: z.boolean().optional(),
-  agent_name: z.string().optional(),
+  agent_name: z.string().nullish(),
   graph_index_id: z.string().nullable().optional(),
 });
 
@@ -984,20 +966,20 @@ export const MindMapSchema = z.object({
  */
 export const AgentEntitySchema = BaseEntitySchema.extend({
   tenant_id: z.number(),
-  user_id: z.number(),
+  user_id: z.number().nullish(),
   connection_id: z.number(),
   agent_name: z.string(),
   agent_type: AgentTypeSchema,
   agent_voice: AgentVoiceSchema,
-  agent_description: z.string(),
-  instructions: z.string().optional(),
-  image_url: z.string().optional(),
-  graph_index_id: z.string().optional(),
-  vector_store_id: z.string().optional(),
+  agent_description: z.string().nullish(),
+  instructions: z.string().nullish(),
+  image_url: z.string().nullish(),
+  graph_index_id: z.string().nullish(),
+  vector_store_id: z.string().nullish(),
   status: AgentStatusSchema,
-  status_message: z.string().optional(),
-  learning_progress: LearningProgressSchema.optional(),
-  learning_started_at: z.coerce.date().optional(),
+  status_message: z.string().nullish(),
+  learning_progress: LearningProgressSchema.nullish(),
+  learning_started_at: z.coerce.date().nullish(),
   tenant: TenantEntitySchema.optional(),
   user: UserEntitySchema.optional(),
   knowledge: z.array(KnowledgeEntitySchema).optional(),
@@ -1006,15 +988,15 @@ export const AgentEntitySchema = BaseEntitySchema.extend({
   knowledge_count: z.number().int().nonnegative().optional(),
 });
 
-const KnowledgeIdsSchema = z
-  .string()
-  .transform(str => JSON.parse(str) as number[])
-  .pipe(z.array(z.coerce.number()));
+const KnowledgeIdsSchema = z.string().transform(str => {
+  const parsed = JSON.parse(str);
+  return Array.isArray(parsed) ? parsed.map(v => Number(v)) : [];
+});
 
-const SimulationIdsSchema = z
-  .string()
-  .transform(str => JSON.parse(str) as number[])
-  .pipe(z.array(z.coerce.number()));
+const SimulationIdsSchema = z.string().transform(str => {
+  const parsed = JSON.parse(str);
+  return Array.isArray(parsed) ? parsed.map(v => Number(v)) : [];
+});
 
 /**
  * Agent creation schema
@@ -1147,7 +1129,7 @@ export const SearchDocumentSchema = z.object({
 export const SearchResultSchema = z.object({
   document: SearchDocumentSchema,
   score: z.number(),
-  highlights: z.record(z.array(z.string())).optional(),
+  highlights: z.record(z.string(), z.array(z.string())).optional(),
 });
 
 /**
@@ -1212,10 +1194,10 @@ export const ConnectionEntitySchema = BaseEntitySchema.extend({
   tenant_id: z.number(),
   name: z.string(),
   type: ConnectionTypeSchema,
-  url: z.string().optional(),
-  username: z.string().optional(),
-  password: z.string().optional(),
-  allowed_domains: z.array(z.string()).optional().default([]),
+  url: z.string().nullish(),
+  username: z.string().nullish(),
+  password: z.string().nullish(),
+  allowed_domains: z.array(z.string()).nullish().default([]),
 });
 
 /**
@@ -1297,7 +1279,7 @@ export const IntegrationEntitySchema = BaseEntitySchema.extend({
   status: EntityStatusSchema,
   marketrix_id: z.string(),
   marketrix_key: z.string(),
-  snippet: z.string().optional(),
+  snippet: z.string().nullish(),
 });
 
 /**
@@ -1308,6 +1290,13 @@ export const IntegrationInfoSchema = IntegrationEntitySchema.extend({
   tenant: TenantEntitySchema.partial(),
   user: UserEntitySchema.partial(),
   agent: AgentEntitySchema.partial(),
+});
+
+/**
+ * Integration search result schema - includes optional eager-loaded agent
+ */
+export const IntegrationWithAgentSchema = IntegrationEntitySchema.extend({
+  agent: AgentEntitySchema.partial().optional(),
 });
 
 /**
@@ -1412,6 +1401,7 @@ export const ChatRequestSchema = z
  */
 export const ChatResponseSchema = z.object({
   text: z.string(),
+  task_id: z.string().optional(),
 });
 
 // ============================================================================
@@ -1658,8 +1648,8 @@ export const StripeWebhookEventSchema = z.object({
   api_version: z.string().nullable().optional(),
   created: z.number(),
   data: z.object({
-    object: z.record(z.unknown()), // The actual event object varies by event type
-    previous_attributes: z.record(z.unknown()).optional(),
+    object: z.record(z.string(), z.unknown()), // The actual event object varies by event type
+    previous_attributes: z.record(z.string(), z.unknown()).optional(),
   }),
   livemode: z.boolean(),
   pending_webhooks: z.number(),
@@ -1952,6 +1942,7 @@ export type ConnectionCreateData = z.infer<typeof ConnectionCreateSchema>;
 export type ConnectionUpdateData = z.infer<typeof ConnectionUpdateSchema>;
 export type ConnectionWithIntegrationsData = z.infer<typeof ConnectionWithIntegrationsSchema>;
 export type IntegrationData = z.infer<typeof IntegrationEntitySchema>;
+export type IntegrationWithAgentData = z.infer<typeof IntegrationWithAgentSchema>;
 export type IntegrationCreateData = z.infer<typeof IntegrationCreateSchema>;
 export type IntegrationUpdateData = z.infer<typeof IntegrationUpdateSchema>;
 export type UrlGuideData = z.infer<typeof UrlGuideEntitySchema>;

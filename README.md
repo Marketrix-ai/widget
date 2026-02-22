@@ -335,6 +335,7 @@ widget/
 │   │   └── WidgetContext.tsx
 │   ├── hooks/                # Custom React hooks
 │   │   ├── usePageLifecycle.ts
+│   │   ├── useResize.ts
 │   │   ├── useTaskState.ts
 │   │   └── useWidget.ts
 │   ├── services/             # Core services
@@ -352,10 +353,10 @@ widget/
 │   │   ├── ToolService.ts
 │   │   ├── ValidationService.ts
 │   │   └── WebSocketClient.ts
-│   ├── sdk/                  # API SDK
-│   │   ├── index.ts
-│   │   ├── routes.ts
-│   │   └── schema.ts
+│   ├── sdk/                  # API SDK (oRPC client + contract)
+│   │   ├── index.ts          # Client setup and exports
+│   │   ├── routes.ts         # oRPC contract/route definitions
+│   │   └── schema.ts         # Zod schemas for API types
 │   ├── types/                # TypeScript types
 │   │   ├── assets.d.ts
 │   │   ├── browserTools.ts
@@ -471,6 +472,22 @@ interface WidgetState {
 type InstructionType = 'tell' | 'show' | 'do';
 ```
 
+## CI/CD & Deployment
+
+GitHub Actions workflows in `.github/workflows/`:
+
+| Workflow | Trigger | Action |
+|----------|---------|--------|
+| `dev-build.yml` | Push to `dev` | Sanity check (npm ci + build, no upload) |
+| `prod-build.yml` | Release created | Sanity check (npm ci + build, no upload) |
+| `deploy.yml` | Manual | Build + upload to Azure Blob Storage + purge CDN cache |
+
+**Deploy options:**
+- **Environment**: `dev` or `prod`
+- **Version** (required for prod): Git tag to checkout and build from (e.g. `v1.2.0`).
+
+Dev builds are uploaded to `widget/dev/` and prod builds to `widget/latest/` on Azure CDN.
+
 ## Build System
 
 The widget uses Vite with:
@@ -483,7 +500,8 @@ The widget uses Vite with:
 
 Output files:
 
-- `dist/index.mjs` - Main widget bundle
+- `dist/index.mjs` - Library build (React as peer dependency)
+- `dist/standalone.mjs` - Standalone build (all dependencies bundled)
 - `dist/debug.js` - Debug panel bundle
 
 ## Browser Support
@@ -499,8 +517,7 @@ Output files:
 
 - `react` / `react-dom` v19 (peer dependency)
 - `@rrweb/record` - Session recording
-- `@ts-rest/core` - Type-safe API client
-- `axios` - HTTP client
+- `@orpc/client` / `@orpc/contract` - Type-safe API client (oRPC)
 - `react-icons` - Icons
 - `zod` - Schema validation
 
