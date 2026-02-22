@@ -1401,6 +1401,7 @@ export const ChatRequestSchema = z
  */
 export const ChatResponseSchema = z.object({
   text: z.string(),
+  task_id: z.string().optional(),
 });
 
 // ============================================================================

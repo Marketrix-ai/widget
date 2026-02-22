@@ -605,7 +605,7 @@ const contract = {
       description: 'Creates prompt with specified configuration and returns creation response',
     })
     .input(ChatRequestSchema.and(z.object({ chat_id: z.string() })))
-    .output(UserQuotaSchema),
+    .output(ChatResponseSchema),
 
   chatStop: oc
     .route({

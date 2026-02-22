@@ -164,12 +164,13 @@ export class MarketrixApiService {
       try {
         switch (mode) {
           case 'do': {
-            await sdk.chatDo(input);
+            const doResponse = await sdk.chatDo(input);
             return {
               messageId: Date.now().toString(),
-              response: 'Action completed successfully',
+              response: doResponse.text || 'Action completed successfully',
               mode,
               timestamp: new Date(),
+              task_id: doResponse.task_id,
             };
           }
           case 'tell': {
@@ -179,6 +180,7 @@ export class MarketrixApiService {
               response: tellResponse.text || 'Response received',
               mode,
               timestamp: new Date(),
+              task_id: tellResponse.task_id,
             };
           }
           case 'show': {
@@ -188,6 +190,7 @@ export class MarketrixApiService {
               response: showResponse.text || 'Response received',
               mode,
               timestamp: new Date(),
+              task_id: showResponse.task_id,
             };
           }
           default: {
