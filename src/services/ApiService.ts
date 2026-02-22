@@ -97,7 +97,7 @@ export class MarketrixApiService {
           type: 'widget_question',
           metadata,
         })
-        .catch(error => {
+        .catch((error: unknown) => {
           // Silently fail - logging is not critical for widget functionality
           console.warn('[API Service] Failed to log widget question:', error);
         });
