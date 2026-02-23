@@ -93,7 +93,7 @@ export class MarketrixApiService {
 
       // Log the question (fire and forget - don't block on this)
       sdk
-        .logCreate({
+        .activityLogCreate({
           type: 'widget_question',
           metadata,
         })

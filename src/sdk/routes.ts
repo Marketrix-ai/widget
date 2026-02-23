@@ -6,7 +6,7 @@
  *
  * Route Categories:
  * - Root: System health and index endpoints
- * - Auth: User authentication, OAuth, and password management
+ * - Auth: User authentication and OAuth
  * - User: User account management and operations
  * - Tenant: Organization and workspace management
  * - Agent: AI agent creation, management, and operations
@@ -78,8 +78,6 @@ import {
   MigrationPrepareSchema,
   MigrationRunSchema,
   MindMapSchema,
-  PasswordResetRequestSchema,
-  PasswordUpdateSchema,
   PlanCatalogSchema,
   PlanInfoSchema,
   PortalSessionSchema,
@@ -123,9 +121,7 @@ import {
   UrlGuideEntitySchema,
   UrlGuideUpdateSchema,
   UserEntitySchema,
-  UserLoginSchema,
   UserQuotaSchema,
-  UserRegisterSchema,
   UserUpdateSchema,
   WidgetSettingsDataSchema,
 } from './schema';
@@ -167,61 +163,12 @@ const contract = {
   // AUTHENTICATION ROUTES - User authentication and authorization
   // ============================================================================
 
-  authPwRegister: oc
-    .route({
-      method: 'POST',
-      path: '/auth/pw/register',
-      summary: 'Register new user account with email and password',
-      description: 'Creates new user account and returns user entity with authentication token',
-    })
-    .input(UserRegisterSchema)
-    .output(UserEntitySchema),
-
-  authPwLogin: oc
-    .route({
-      method: 'POST',
-      path: '/auth/pw/login',
-      summary: 'Authenticate user with email and password credentials',
-      description: 'Validates credentials and returns authentication token and user data',
-    })
-    .input(UserLoginSchema)
-    .output(TokenSchema),
-
-  authPwReset: oc
-    .route({
-      method: 'POST',
-      path: '/auth/pw/reset',
-      summary: 'Initiate password reset process',
-      description: "Sends password reset email to user's registered email address",
-    })
-    .input(PasswordResetRequestSchema)
-    .output(z.object({ message: z.string() })),
-
-  authPwUpdate: oc
-    .route({
-      method: 'PUT',
-      path: '/auth/pw/reset',
-      summary: 'Update user password using reset token',
-      description: 'Allows user to set new password after receiving reset token',
-    })
-    .input(PasswordUpdateSchema)
-    .output(z.object({ message: z.string() })),
-
-  authRefreshToken: oc
-    .route({
-      method: 'GET',
-      path: '/auth/refresh',
-      summary: 'Refresh current authentication token',
-      description: 'Checks if provided token is valid and returns a new token',
-    })
-    .output(TokenSchema),
-
   authMe: oc
     .route({
       method: 'GET',
       path: '/auth/me',
       summary: 'Get current authenticated user and tenant information',
-      description: 'Returns user profile and tenant data based on JWT token',
+      description: 'Returns user profile and tenant data based on session cookie',
     })
     .output(
       z.object({
@@ -240,7 +187,7 @@ const contract = {
       path: '/onboard',
       summary: 'Complete user onboarding in one atomic operation',
       description:
-        'Creates tenant, updates user status, invites team members, and returns fresh token with updated claims',
+        'Creates tenant, updates user status, and invites team members',
     })
     .input(
       z.object({
@@ -249,12 +196,7 @@ const contract = {
         team_emails: z.array(z.string().email()).optional().default([]),
       }),
     )
-    .output(
-      z.object({
-        token: z.string(),
-        tenant: TenantEntitySchema,
-      }),
-    ),
+    .output(z.object({ tenant: TenantEntitySchema })),
 
   // ============================================================================
   // MEETING ROUTES - Video meeting management and operations
@@ -558,7 +500,7 @@ const contract = {
       method: 'POST',
       path: '/chat',
       summary: 'Create a new chat thread',
-      description: 'Initializes new chat thread and returns session id',
+      description: 'Initializes new chat thread and returns session ID',
     })
     .output(z.string()),
 
@@ -566,8 +508,8 @@ const contract = {
     .route({
       method: 'GET',
       path: '/chat',
-      summary: 'Search chat submitted by user',
-      description: 'Returns list of chats submitted by user',
+      summary: 'Search chats by user',
+      description: 'Returns chat list and quota for the specified user',
     })
     .input(
       z.object({
@@ -582,7 +524,7 @@ const contract = {
       method: 'POST',
       path: '/chat/{chat_id}/tell',
       summary: 'Request tell mode response for given content',
-      description: 'Processes explanation request and returns AI response (voice+text) as a data url',
+      description: 'Processes explanation request and returns AI response (voice+text) as a data URL',
     })
     .input(ChatRequestSchema.and(z.object({ chat_id: z.string() })))
     .output(ChatResponseSchema),
@@ -592,7 +534,7 @@ const contract = {
       method: 'POST',
       path: '/chat/{chat_id}/show',
       summary: 'Request show mode response for given content',
-      description: 'Processes user introduction and returns AI response (voice+text) as a data url',
+      description: 'Processes user introduction and returns AI response (voice+text) as a data URL',
     })
     .input(ChatRequestSchema.and(z.object({ chat_id: z.string() })))
     .output(ChatResponseSchema),
@@ -602,7 +544,7 @@ const contract = {
       method: 'POST',
       path: '/chat/{chat_id}/do',
       summary: 'Request do mode response for given content',
-      description: 'Creates prompt with specified configuration and returns creation response',
+      description: 'Processes action request and returns AI response (voice+text) as a data URL',
     })
     .input(ChatRequestSchema.and(z.object({ chat_id: z.string() })))
     .output(ChatResponseSchema),
@@ -691,12 +633,12 @@ const contract = {
     .input(z.object({ user_id: z.coerce.number() }))
     .output(z.void()),
 
-  userDisable: oc
+  userDeactivate: oc
     .route({
       method: 'POST',
       path: '/user/{user_id}/deactivate',
       summary: 'Deactivate user account without deletion',
-      description: 'Disables user access while preserving data for potential reactivation',
+      description: 'Deactivates user access while preserving data for potential reactivation',
     })
     .input(z.object({ user_id: z.coerce.number(), reason: z.string().optional() }))
     .output(z.void()),
@@ -818,7 +760,7 @@ const contract = {
   // ACTIVITY LOG ROUTES - System activity tracking and auditing
   // ============================================================================
 
-  logCreate: oc
+  activityLogCreate: oc
     .route({
       method: 'POST',
       path: '/log',
@@ -828,7 +770,7 @@ const contract = {
     .input(ActionLogCreateSchema)
     .output(ActionLogEntitySchema),
 
-  logSearch: oc
+  activityLogSearch: oc
     .route({
       method: 'GET',
       path: '/log',
@@ -847,10 +789,10 @@ const contract = {
   // TOUR ROUTES - Interactive tour and guidance system
   // ============================================================================
 
-  tourGet: oc
+  tourQuery: oc
     .route({
       method: 'GET',
-      path: '/tour',
+      path: '/tour/query',
       summary: 'Get tour information based on question and tenant',
       description: 'Returns relevant tour steps and guidance for user query',
     })
@@ -994,7 +936,7 @@ const contract = {
       path: '/simulation',
       summary: 'Search and filter simulations by tenant',
       description:
-        'Returns list of simulations associated with specified tenant as JSON. Use connection_id, agent_id, or pinned to filter.',
+        'Returns list of simulations associated with specified tenant. Use connection_id, agent_id, or pinned to filter.',
     })
     .input(
       z.object({
@@ -1008,12 +950,12 @@ const contract = {
     )
     .output(z.array(SimulationEntitySchema)),
 
-  simulationLoggingUsers: oc
+  simulationUsers: oc
     .route({
       method: 'GET',
       path: '/simulation/logging-users',
-      summary: 'Get users who have started simulations',
-      description: 'Returns list of users who have logged simulation starts (started at least one simulation) as JSON.',
+      summary: 'Get users who participated in simulations',
+      description: 'Returns users who have started at least one simulation',
     })
     .input(
       z.object({
@@ -1158,7 +1100,7 @@ const contract = {
     .input(RrwebSessionUpsertSchema)
     .output(RrwebSessionEntitySchema),
 
-  rrwebSessionGetById: oc
+  rrwebSessionGet: oc
     .route({
       method: 'GET',
       path: '/rrweb-session/{session_id}',
@@ -1168,7 +1110,7 @@ const contract = {
     .input(z.object({ session_id: z.string() }))
     .output(RrwebSessionEntitySchema.nullable()),
 
-  rrwebSessionGetByChatId: oc
+  rrwebSessionGetByChat: oc
     .route({
       method: 'GET',
       path: '/rrweb-session/chat/{marketrix_chat_id}',
@@ -1178,7 +1120,7 @@ const contract = {
     .input(z.object({ marketrix_chat_id: z.string() }))
     .output(z.array(RrwebSessionEntitySchema)),
 
-  rrwebSessionGetAll: oc
+  rrwebSessionSearch: oc
     .route({
       method: 'GET',
       path: '/rrweb-session',
@@ -1194,7 +1136,7 @@ const contract = {
     )
     .output(z.array(RrwebSessionEntitySchema)),
 
-  rrwebSessionGetEvents: oc
+  rrwebSessionEvents: oc
     .route({
       method: 'GET',
       path: '/rrweb-session/{session_id}/events',
@@ -1328,7 +1270,7 @@ const contract = {
   // QA DOCUMENT ROUTES - QA document upload and test result management
   // ============================================================================
 
-  qaDocumentUpload: oc
+  qaDocumentCreate: oc
     .route({
       method: 'POST',
       path: '/qa/document',
@@ -1374,7 +1316,7 @@ const contract = {
     .input(z.object({ id: z.coerce.number() }))
     .output(QADocumentEntitySchema),
 
-  qaDocumentList: oc
+  qaDocumentSearch: oc
     .route({
       method: 'GET',
       path: '/qa/document',
