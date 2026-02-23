@@ -1,0 +1,56 @@
+name: PR Preview Widget
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+
+jobs:
+  deploy-preview:
+    if: github.event.action != 'closed'
+    uses: ./.github/workflows/base.yml
+    with:
+      action: preview-deploy
+      environment: ${{ contains(github.event.pull_request.labels.*.name, 'preview:prod') && 'prod' || 'dev' }}
+      pr_number: ${{ github.event.pull_request.number }}
+    secrets: inherit
+
+  comment-preview:
+    needs: deploy-preview
+    if: github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request.number;
+            const body = `**Preview deployed**: https://pr-${pr}-widget.marketrix.co`;
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr,
+            });
+            const existing = comments.find(c => c.body.includes('Preview deployed'));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr,
+                body,
+              });
+            }
+
+  cleanup-preview:
+    if: github.event.action == 'closed'
+    uses: ./.github/workflows/base.yml
+    with:
+      action: preview-cleanup
+      pr_number: ${{ github.event.pull_request.number }}
+    secrets: inherit

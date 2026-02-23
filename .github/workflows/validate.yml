@@ -1,0 +1,11 @@
+name: Validate Widget
+on:
+  push:
+    branches: [dev, main]
+
+jobs:
+  validate:
+    uses: ./.github/workflows/base.yml
+    with:
+      action: validate
+    secrets: inherit

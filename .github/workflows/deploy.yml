@@ -1,4 +1,4 @@
-name: Deploy WIDGET
+name: Deploy Widget
 on:
   workflow_dispatch:
     inputs:
@@ -10,7 +10,7 @@ on:
           - dev
           - prod
       version:
-        description: "Git tag for prod deploys (e.g. v1.2.0)"
+        description: "Git tag for prod deploys (default: latest tag)"
         required: false
         type: string
 

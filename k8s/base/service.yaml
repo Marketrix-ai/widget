@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: widget
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: 80
+      name: http
+  selector:
+    app: widget

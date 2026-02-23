@@ -4,70 +4,235 @@ on:
   workflow_call:
     inputs:
       action:
-        description: "Action to perform (build|deploy)"
+        description: "Action to perform (validate|deploy|preview-deploy|preview-cleanup)"
         required: true
         type: string
       environment:
         description: "Target environment (dev|prod)"
-        required: true
+        required: false
         type: string
+        default: "dev"
       version:
-        description: "Git tag for prod deploys (e.g. v1.2.0)"
+        description: "Git tag for prod deploys (default: latest tag)"
+        required: false
+        type: string
+        default: ""
+      pr_number:
+        description: "PR number for preview deployments"
         required: false
         type: string
         default: ""
 
 jobs:
-  # ── BUILD (sanity check only) ─────────────────────────
-  build:
-    if: inputs.action == 'build'
+  # ── VALIDATE (type check + source build) ─────────────
+  validate:
+    if: inputs.action == 'validate'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - name: Install dependencies
-        run: npm ci
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm ci
+      - name: Type check
+        run: npm run type-check
       - name: Build
         run: npm run build
-      - name: Cleanup
-        if: always()
-        run: rm -rf ./dist
 
-  # ── DEPLOY (build + upload + purge) ────────────────────
+  # ── DEPLOY (build + push + deploy to AKS) ───────────
   deploy:
     if: inputs.action == 'deploy'
     runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
     steps:
-      - name: Validate prod requires version
-        if: inputs.environment == 'prod' && inputs.version == ''
-        run: |
-          echo "::error::Production deploys require a version tag"
-          exit 1
-
       - uses: actions/checkout@v6
         with:
-          ref: ${{ inputs.version || 'dev' }}
+          fetch-depth: 0
+
+      - name: Resolve deploy ref
+        id: resolve
+        run: |
+          if [ "${{ inputs.environment }}" = "dev" ]; then
+            git checkout dev
+            echo "tag=" >> $GITHUB_OUTPUT
+          else
+            VERSION="${{ inputs.version }}"
+            if [ -z "$VERSION" ]; then
+              VERSION=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+              if [ -z "$VERSION" ]; then
+                echo "::error::No tags found. Specify a version tag for prod deploy."
+                exit 1
+              fi
+              echo "Using latest tag: $VERSION"
+            fi
+            git checkout "$VERSION"
+            echo "tag=$VERSION" >> $GITHUB_OUTPUT
+          fi
 
       - uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build
-        run: npm run build
-
-      - name: Upload to Azure Storage
+      - name: Build and Push Image
         run: |
-          FOLDER=${{ inputs.environment == 'prod' && 'latest' || 'dev' }}
-          az storage blob delete-batch --source widget --pattern "$FOLDER/*" --account-name marketrix --auth-mode login
-          az storage blob upload-batch --destination widget/$FOLDER --source ./dist --account-name marketrix --overwrite --auth-mode login
+          az acr login --name marketrix
+          IMG="marketrix.azurecr.io/${{ inputs.environment }}/widget:latest"
+          docker build -t $IMG -f Dockerfile .
+          docker push $IMG
+          TAG="${{ steps.resolve.outputs.tag }}"
+          TAG="${TAG#v}"
+          if [ -n "$TAG" ]; then
+            IMG_V="marketrix.azurecr.io/${{ inputs.environment }}/widget:$TAG"
+            docker tag $IMG $IMG_V
+            docker push $IMG_V
+          fi
 
-      - name: Purge CDN cache
+      - name: Get AKS credentials
         run: |
-          FOLDER=${{ inputs.environment == 'prod' && 'latest' || 'dev' }}
-          az afd endpoint purge --profile-name marketrix --endpoint-name marketrix-cdn --resource-group Marketrix --content-paths "/widget/$FOLDER/*" --no-wait
+          az aks get-credentials \
+            --resource-group Marketrix \
+            --name marketrix-aks \
+            --overwrite-existing
+
+      - name: Deploy to AKS
+        run: |
+          NS="${{ inputs.environment }}"
+          TAG="${{ steps.resolve.outputs.tag }}"
+          TAG="${TAG#v}"
+          TAG="${TAG:-latest}"
+          cd k8s/overlays/$NS
+          kustomize build . \
+            | sed "s|marketrix.azurecr.io/$NS/widget:latest|marketrix.azurecr.io/$NS/widget:$TAG|g" \
+            | kubectl apply -f -
+          kubectl rollout status deployment/widget --namespace "$NS" --timeout=300s
 
       - name: Cleanup
         if: always()
-        run: rm -rf ./dist
+        run: docker image prune -af && docker builder prune -f || true
+
+  # ── PREVIEW DEPLOY (PR environment) ─────────────────
+  preview-deploy:
+    if: inputs.action == 'preview-deploy'
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Build and Push Image
+        run: |
+          az acr login --name marketrix
+          PR="${{ inputs.pr_number }}"
+          IMG="marketrix.azurecr.io/pr/widget:pr-${PR}"
+          docker build -t $IMG -f Dockerfile .
+          docker push $IMG
+
+      - name: Get AKS credentials
+        run: |
+          az aks get-credentials \
+            --resource-group Marketrix \
+            --name marketrix-aks \
+            --overwrite-existing
+
+      - name: Create PR namespace
+        run: |
+          NS="pr-${{ inputs.pr_number }}"
+          kubectl create namespace "$NS" --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Deploy to PR namespace
+        run: |
+          NS="pr-${{ inputs.pr_number }}"
+          cd k8s/overlays/dev
+          kustomize build . \
+            | sed "s|namespace: dev|namespace: $NS|g" \
+            | sed "s|marketrix.azurecr.io/dev/widget:latest|marketrix.azurecr.io/pr/widget:pr-${{ inputs.pr_number }}|g" \
+            | kubectl apply -f -
+          kubectl rollout status deployment/widget --namespace "$NS" --timeout=300s
+
+      - name: Create PR ingress
+        run: |
+          PR="${{ inputs.pr_number }}"
+          NS="pr-${PR}"
+          cat <<EOF | kubectl apply -f -
+          apiVersion: networking.k8s.io/v1
+          kind: Ingress
+          metadata:
+            name: pr-ingress-widget
+            namespace: $NS
+            annotations:
+              cert-manager.io/cluster-issuer: letsencrypt-prod
+              nginx.ingress.kubernetes.io/ssl-redirect: "true"
+          spec:
+            ingressClassName: nginx
+            tls:
+              - hosts:
+                  - pr-${PR}-widget.marketrix.co
+                secretName: pr-${PR}-widget-tls
+            rules:
+              - host: pr-${PR}-widget.marketrix.co
+                http:
+                  paths:
+                    - path: /
+                      pathType: Prefix
+                      backend:
+                        service:
+                          name: widget
+                          port:
+                            number: 80
+          EOF
+
+      - name: Create DNS record
+        env:
+          DO_TOKEN: ${{ secrets.DIGITALOCEAN_TOKEN }}
+        run: |
+          PR="${{ inputs.pr_number }}"
+          INGRESS_IP=$(kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+          curl -sf -X POST \
+            -H "Authorization: Bearer $DO_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "{\"type\":\"A\",\"name\":\"pr-${PR}-widget\",\"data\":\"$INGRESS_IP\",\"ttl\":300}" \
+            "https://api.digitalocean.com/v2/domains/marketrix.co/records"
+
+      - name: Cleanup
+        if: always()
+        run: docker image prune -af && docker builder prune -f || true
+
+  # ── PREVIEW CLEANUP ─────────────────────────────────
+  preview-cleanup:
+    if: inputs.action == 'preview-cleanup'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Get AKS credentials
+        run: |
+          az aks get-credentials \
+            --resource-group Marketrix \
+            --name marketrix-aks \
+            --overwrite-existing
+
+      - name: Delete PR resources
+        run: |
+          NS="pr-${{ inputs.pr_number }}"
+          kubectl delete deployment widget --namespace "$NS" --ignore-not-found
+          kubectl delete service widget --namespace "$NS" --ignore-not-found
+          kubectl delete ingress pr-ingress-widget --namespace "$NS" --ignore-not-found
+
+      - name: Delete DNS record
+        env:
+          DO_TOKEN: ${{ secrets.DIGITALOCEAN_TOKEN }}
+        run: |
+          PR="${{ inputs.pr_number }}"
+          RECORD_ID=$(curl -sf -H "Authorization: Bearer $DO_TOKEN" \
+            "https://api.digitalocean.com/v2/domains/marketrix.co/records?per_page=200" \
+            | jq -r ".domain_records[] | select(.name == \"pr-${PR}-widget\") | .id")
+          if [ -n "$RECORD_ID" ] && [ "$RECORD_ID" != "null" ]; then
+            curl -sf -X DELETE \
+              -H "Authorization: Bearer $DO_TOKEN" \
+              "https://api.digitalocean.com/v2/domains/marketrix.co/records/${RECORD_ID}"
+          fi
