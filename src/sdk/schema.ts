@@ -185,45 +185,6 @@ export const BatchUserCreateResultSchema = z.object({
 // ============================================================================
 
 /**
- * User login credentials schema
- */
-export const UserLoginSchema = z.object({
-  email: z.string().email(),
-  password: z.string(),
-});
-
-export const PasswordResetEntitySchema = BaseEntitySchema.extend({
-  user_id: z.number(),
-  token: z.string(),
-  expiry_date: z.coerce.date(),
-});
-
-/**
- * User registration schema
- */
-export const UserRegisterSchema = z.object({
-  email: z.string().email(),
-  password: z.string(),
-  first_name: z.string(),
-  last_name: z.string(),
-});
-
-/**
- * Password reset request schema
- */
-export const PasswordResetRequestSchema = z.object({
-  email: z.string().email(),
-});
-
-/**
- * Password update schema using reset token
- */
-export const PasswordUpdateSchema = z.object({
-  token: z.string(),
-  password: z.string(),
-});
-
-/**
  * Login schema with authentication token
  */
 export const TokenSchema = z.object({
@@ -1893,8 +1854,6 @@ export type UserCreateData = z.infer<typeof UserCreateSchema>;
 export type UserUpdateData = z.infer<typeof UserUpdateSchema>;
 export type BatchUserCreateData = z.infer<typeof BatchUserCreateSchema>;
 export type BatchUserCreateResult = z.infer<typeof BatchUserCreateResultSchema>;
-export type PasswordResetRequest = z.infer<typeof PasswordResetRequestSchema>;
-export type PasswordUpdateData = z.infer<typeof PasswordUpdateSchema>;
 export type UploadUserLogoData = z.infer<typeof UploadUserLogoDataSchema>;
 export type TenantReadData = z.infer<typeof TenantCreateSchema>;
 export type TenantUpdateData = z.infer<typeof TenantUpdateSchema>;
@@ -1970,7 +1929,6 @@ export type TaskPilotPromptData = z.infer<typeof TaskPilotPromptSchema>;
 export type TourData = z.infer<typeof TourEntitySchema>;
 export type TourAnswerData = z.infer<typeof TourAnswerSchema>;
 export type TourStepData = z.infer<typeof TourStepSchema>;
-export type PasswordResetData = z.infer<typeof PasswordResetEntitySchema>;
 export type ChatData = z.infer<typeof ChatEntitySchema>;
 export type UserQuotaData = z.infer<typeof UserQuotaSchema>;
 export type SubscriptionUsageData = z.infer<typeof SubscriptionUsageSchema>;
