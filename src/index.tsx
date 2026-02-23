@@ -267,6 +267,10 @@ async function initWidgetInternal(config: MarketrixConfig, container?: HTMLEleme
 let isInitializing = false; // Atomic flag to prevent TOCTOU race condition
 
 export const initWidget = async (config: MarketrixConfig, container?: HTMLElement): Promise<void> => {
+  // Window-level guard survives ES module re-execution (fresh module-level vars)
+  if (window.__mtx?.state) {
+    return;
+  }
   // Check for existing initialization or initialization in progress
   if (initPromise) {
     return initPromise;
