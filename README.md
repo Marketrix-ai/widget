@@ -8,16 +8,17 @@ into any website using a simple script tag.
 
 - 🎯 **Three Interaction Modes**: Show, Tell, and Do
 - 🎨 **Modern UI**: Built with React 19 and Tailwind CSS v4
-- 🌙 **Theme Support**: Customizable colors and appearance
+- 🌙 **Theme Support**: Dark theme with customizable colors and appearance
 - 📱 **Responsive Design**: Works on desktop, tablet, and mobile
 - ⚙️ **API-Driven Configuration**: Dynamic settings from integration service
 - 🔌 **Easy Integration**: Simple script tag integration
 - 🚀 **TypeScript**: Full TypeScript support with comprehensive type definitions
 - 📦 **Standalone**: Single file bundle with no external dependencies
-- 🎥 **Session Recording**: Built-in RRWeb session recording capabilities
+- 🎥 **Session Recording**: Built-in RRWeb session recording with start/stop control
 - 🔒 **Shadow DOM Isolation**: CSS isolation prevents conflicts with host app
 - 🎛️ **Widget Chips**: Quick action chips for common tasks
 - 🔄 **WebSocket Communication**: Real-time AI agent communication
+- 🖥️ **Screen Sharing**: Screen access modals and video stream display
 
 ## Quick Start
 
@@ -97,7 +98,17 @@ including clicking, typing, scrolling, and navigating.
 ### ES Module Import
 
 ```typescript
-import { initWidget, unmountWidget, mountWidget, MarketrixWidget, getCurrentConfig } from '@marketrix.ai/widget';
+import {
+  initWidget,
+  unmountWidget,
+  mountWidget,
+  MarketrixWidget,
+  getCurrentConfig,
+  updateMarketrixConfig,
+  startRecording,
+  stopRecording,
+  getRecordingState,
+} from '@marketrix.ai/widget';
 
 // Initialize with production credentials
 await initWidget({
@@ -114,6 +125,17 @@ await initWidget({
   mtxApiHost: 'https://api.marketrix.ai',
   mtxAiHost: 'https://agent.marketrix.ai',
 });
+
+// Initialize into a specific container element
+await initWidget(config, document.getElementById('my-container')!);
+
+// Update config at runtime (unmounts and reinitializes)
+await updateMarketrixConfig({ mtxAiHost: 'https://new-agent.marketrix.ai' });
+
+// Session recording controls
+await startRecording();
+stopRecording();
+const isRecording = getRecordingState();
 
 // Destroy widget
 unmountWidget();
@@ -154,8 +176,8 @@ function App() {
         widget_bounce_effect: true,
         widget_chips: [],
       }}
-      mtxApiHost='https://api.marketrix.ai'
-      mtxAiHost='https://agent.marketrix.ai'
+      mtxApiHost="https://api.marketrix.ai"
+      mtxAiHost="https://agent.marketrix.ai"
     />
   );
 }
@@ -249,18 +271,20 @@ javascript: (function () {
 })();
 ```
 
-#### Option 2: HTTPS Dev Server
+#### Option 2: Dev Server
 
 ```bash
 npm start
 ```
 
-First visit `https://localhost:5173` and accept the certificate, then use:
+The dev server runs on port 5174 by default (configurable via `PORT` or
+`VITE_PORT` env vars). Visit `https://localhost:5174` and accept the
+certificate, then use:
 
 ```javascript
 javascript: (function () {
   var s = document.createElement('script');
-  s.src = 'https://localhost:5173/index.mjs';
+  s.src = 'https://localhost:5174/index.mjs';
   s.setAttribute('mtx-ai-host', 'https://agent.marketrix.ai');
   s.setAttribute('mtx-api-host', 'https://api.marketrix.ai');
   s.setAttribute('mtx-app', 'YOUR_CONNECTION_ID');
@@ -276,10 +300,10 @@ widget injection across page navigations.
 
 ### Debug Tools
 
-Build and run debug tool for testing browser tools:
+Build the debug panel using the dedicated Vite config:
 
 ```bash
-npm run build:debug
+npx vite build --config vite.config.debug.ts
 npx serve dist -l 5174 --cors
 ```
 
@@ -294,9 +318,6 @@ javascript: (function () {
 ```
 
 Press `Ctrl+Shift+D` to toggle the debug panel.
-
-See [docs/DEBUG_PANEL_USAGE.md](docs/DEBUG_PANEL_USAGE.md) for detailed debug
-panel documentation.
 
 ### Project Structure
 
@@ -376,18 +397,23 @@ widget/
 │   │   ├── stateUtils.ts
 │   │   ├── validation.ts
 │   │   └── widgetPositioning.ts
+│   ├── lib/                  # Shared utility library
+│   │   └── utils.ts          # Class name helper (cn)
 │   ├── constants/            # Configuration constants
-│   │   └── config.ts
-│   ├── assets/               # Static assets
-│   ├── debug.tsx             # Debug entry point
+│   │   ├── config.ts         # App configuration (URLs, defaults)
+│   │   └── theme.ts          # Dark theme classes and color tokens
+│   ├── assets/               # Static assets (icons, logos)
+│   ├── debug.tsx             # Debug panel entry point
 │   ├── index.css             # Global styles
 │   └── index.tsx             # Main entry point
 ├── chrome-extension/         # Chrome extension for persistent injection
-├── docs/                     # Documentation
-├── vite.config.ts            # Vite configuration
-├── vite.config.debug.ts      # Debug build configuration
+├── scripts/                  # Build & release scripts
+│   └── release.sh
+├── vite.config.ts            # Vite configuration (dev + production)
+├── vite.config.debug.ts      # Debug panel build configuration
 ├── tailwind.config.js        # Tailwind configuration
 ├── tsconfig.json             # TypeScript configuration
+├── tsconfig.build.json       # TypeScript config for declaration generation
 └── package.json
 ```
 
@@ -395,14 +421,17 @@ widget/
 
 ### Exported Functions
 
-#### `initWidget(config: MarketrixConfig): Promise<void>`
+#### `initWidget(config: MarketrixConfig, container?: HTMLElement): Promise<void>`
 
 Initializes the widget with the provided configuration. Validates credentials,
-fetches settings from the API, and mounts the widget to the DOM.
+fetches settings from the API, and mounts the widget to the DOM. Optionally
+accepts a container element to mount within. Safe to call multiple times —
+concurrent and duplicate calls are deduplicated.
 
 #### `unmountWidget(): void`
 
-Destroys the widget and removes it from the DOM. Also stops session recording.
+Destroys the widget and removes it from the DOM. Also stops session recording
+and cleans up all resources including the WebSocket connection.
 
 #### `mountWidget(config: AddWidgetConfig): Promise<void>`
 
@@ -410,7 +439,50 @@ Auto-detects mode (preview, production, or dev) and initializes the widget.
 
 #### `getCurrentConfig(): MarketrixConfig | null`
 
-Returns the current widget configuration.
+Returns the current widget configuration, or `null` if not initialized.
+
+#### `updateMarketrixConfig(newConfig: Partial<MarketrixConfig>): Promise<void>`
+
+Updates the widget configuration at runtime. Unmounts the current widget and
+reinitializes with the merged config.
+
+#### `startRecording(): Promise<void>`
+
+Starts RRWeb session recording. Safe to call while a previous start is
+in-flight. Throws if the widget was not initialized with `mtxApiHost` and
+`mtxApp`.
+
+#### `stopRecording(): void`
+
+Stops RRWeb session recording without unmounting the widget. Recording can be
+resumed later with `startRecording()`.
+
+#### `getRecordingState(): boolean`
+
+Returns whether RRWeb session recording is currently active.
+
+#### `MarketrixWidget` (React Component)
+
+React component for preview mode rendering. Accepts `settings`, `container`,
+`mtxId`, `mtxKey`, `mtxApiHost`, and `mtxAiHost` props.
+
+### Default Export
+
+The module also provides a default export object bundling all functions:
+
+```typescript
+import widget from '@marketrix.ai/widget';
+
+widget.initWidget(config);
+widget.unmountWidget();
+widget.mountWidget(config);
+widget.getCurrentConfig();
+widget.updateMarketrixConfig(newConfig);
+widget.startRecording();
+widget.stopRecording();
+widget.getRecordingState();
+// widget.MarketrixWidget — React component
+```
 
 ### Exported Types
 
@@ -449,9 +521,25 @@ interface ChatMessage {
   content: string;
   sender: 'user' | 'agent';
   timestamp: Date;
-  mode?: 'tell' | 'show' | 'do';
+  mode?: InstructionType;
+  videoStream?: MediaStream;
+  isScreenAccessRequest?: boolean;
+  screenShareStatus?: 'allowed' | 'denied';
+  isSystemMessage?: boolean;
+  isPlaceholder?: boolean;
+  placeholderState?: 'thinking' | 'waiting-for-user';
   parts?: MessagePart[];
   taskStatus?: 'ongoing' | 'done' | 'failed' | 'stopped';
+}
+
+// Message part (text or progress indicator)
+interface MessagePart {
+  type: 'text' | 'progress';
+  content: string;
+  status?: 'running' | 'completed' | 'failed' | 'canceled';
+  toolName?: string;
+  hideIcon?: boolean;
+  textStyle?: 'default' | 'muted';
 }
 
 // Widget state
@@ -460,12 +548,22 @@ interface WidgetState {
   isMinimized: boolean;
   isLoading: boolean;
   messages: ChatMessage[];
-  currentMode: 'tell' | 'show' | 'do';
+  currentMode: InstructionType;
   agentAvailable: boolean;
   error?: string;
   activeTaskId: string | null;
   isTaskRunning: boolean;
   taskProgress: TaskProgress[];
+}
+
+// Task progress tracking
+interface TaskProgress {
+  tool_name: string;
+  tool_params: Record<string, unknown>;
+  step: number;
+  explanation: string;
+  mode: string;
+  timestamp: number;
 }
 
 // Instruction types
@@ -474,15 +572,18 @@ type InstructionType = 'tell' | 'show' | 'do';
 
 ## CI/CD & Deployment
 
-GitHub Actions workflows in `.github/workflows/`:
+GitHub Actions workflows in `.github/workflows/`. All build and deploy jobs
+are delegated to `base.yml` as a reusable workflow:
 
-| Workflow | Trigger | Action |
-|----------|---------|--------|
-| `dev-build.yml` | Push to `dev` | Sanity check (npm ci + build, no upload) |
-| `prod-build.yml` | Release created | Sanity check (npm ci + build, no upload) |
-| `deploy.yml` | Manual | Build + upload to Azure Blob Storage + purge CDN cache |
+| Workflow         | Trigger         | Action                                                 |
+| ---------------- | --------------- | ------------------------------------------------------ |
+| `base.yml`       | Called by others | Reusable workflow: build (sanity) or deploy (full)     |
+| `dev-build.yml`  | Push to `dev`   | Sanity check via `base.yml` (npm ci + build, no upload)|
+| `prod-build.yml` | Release created | Sanity check via `base.yml` (npm ci + build, no upload)|
+| `deploy.yml`     | Manual dispatch | Build + upload to Azure Blob Storage + purge CDN cache |
 
 **Deploy options:**
+
 - **Environment**: `dev` or `prod`
 - **Version** (required for prod): Git tag to checkout and build from (e.g. `v1.2.0`).
 
@@ -494,15 +595,17 @@ The widget uses Vite with:
 
 - CSS injection plugin for single-file bundles
 - Shadow DOM isolation for CSS
-- IIFE format for script tag usage
-- ESM format for module imports
+- ESM format for both library and standalone builds
+- TypeScript declaration generation (`tsconfig.build.json`)
 - Source maps for debugging
+- Terser minification with console/debugger stripping in production
+- Hot-reload dev server that rebuilds the production bundle on file changes
 
 Output files:
 
 - `dist/index.mjs` - Library build (React as peer dependency)
 - `dist/standalone.mjs` - Standalone build (all dependencies bundled)
-- `dist/debug.js` - Debug panel bundle
+- `dist/debug.js` - Debug panel bundle (IIFE format, unminified)
 
 ## Browser Support
 
@@ -517,17 +620,18 @@ Output files:
 
 - `react` / `react-dom` v19 (peer dependency)
 - `@rrweb/record` - Session recording
-- `@orpc/client` / `@orpc/contract` - Type-safe API client (oRPC)
+- `@orpc/client` / `@orpc/contract` v1 - Type-safe API client (oRPC)
 - `react-icons` - Icons
 - `zod` - Schema validation
 
 ### Development
 
 - Vite 6
-- Tailwind CSS v4
+- Tailwind CSS v4 (via `@tailwindcss/vite` plugin)
 - TypeScript 5
 - ESLint + Prettier
 - Lefthook for git hooks
+- Terser for production minification
 
 ## License
 
