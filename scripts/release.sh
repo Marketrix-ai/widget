@@ -3,7 +3,7 @@ set -euo pipefail
 
 VERSION="${1:?Usage: release.sh <version> (e.g. 1.0.45)}"
 PROJECT="widget"
-TAG="${PROJECT}-v${VERSION}"
+TAG="v${VERSION}"
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
@@ -24,7 +24,7 @@ npm run build
 
 # 4. Commit manifest + lockfile
 git add package.json package-lock.json
-git commit -m "chore(${PROJECT}): release ${TAG}"
+git commit -m "chore(${PROJECT}): release v${VERSION}"
 
 # 5. Create annotated tag
 git tag -a "$TAG" -m "Release ${TAG}"
