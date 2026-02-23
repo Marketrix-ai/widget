@@ -359,11 +359,13 @@ export const WidgetProvider: React.FC<WidgetProviderProps> = ({ children, previe
           const taskId = (params as { task_id?: string }).task_id || null;
           taskStartedFromAgentRef.current = true;
 
-          // Only mark task as started if both conditions are met:
-          // 1. API responded with task_id (stored in taskIdFromApiRef)
-          // 2. Agent sent "started" status via WebSocket (just received)
+          // Start the task if we have a task_id from either source:
+          // - API responded with task_id (stored in taskIdFromApiRef), OR
+          // - Agent sent task_id in the WebSocket "started" status
+          // This prevents a race condition where tool calls arrive before the
+          // API HTTP response but after the WebSocket notification.
           const finalTaskId = taskIdFromApiRef.current || taskId;
-          if (taskIdFromApiRef.current) {
+          if (finalTaskId) {
             setState(prev => {
               chatService.setTaskState(true, finalTaskId, []);
               isTaskRunningRef.current = true; // Update ref immediately
@@ -375,7 +377,7 @@ export const WidgetProvider: React.FC<WidgetProviderProps> = ({ children, previe
               };
             });
           }
-          // If API hasn't responded yet, we'll start when it does (handled in sendMessage)
+          // If neither source has task_id yet, we'll start when API responds (handled in sendMessage)
         } else if (status === 'completed' || status === 'failed' || status === 'stopped') {
           // Reset both flags when task ends
           taskIdFromApiRef.current = null;
