@@ -1,7 +1,11 @@
-name: Deploy WIDGET
+name: Deploy
 on:
   workflow_dispatch:
     inputs:
+      tag:
+        description: "Tag name (existing tag deploys that version, new tag creates it on current commit)"
+        required: true
+        type: string
       environment:
         description: Target environment
         required: true
@@ -9,16 +13,87 @@ on:
         options:
           - dev
           - prod
-      version:
-        description: 'Git tag for prod deploys (e.g. v1.2.0)'
-        required: false
-        type: string
+
+permissions:
+  contents: write
+  actions: read
 
 jobs:
   deploy:
-    uses: ./.github/workflows/base.yml
-    with:
-      action: deploy
-      environment: ${{ inputs.environment }}
-      version: ${{ inputs.version }}
-    secrets: inherit
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Resolve tag
+        id: resolve
+        run: |
+          TAG="${{ inputs.tag }}"
+          if git rev-parse "refs/tags/$TAG" >/dev/null 2>&1; then
+            echo "Tag '$TAG' exists, deploying that version"
+            COMMIT=$(git rev-list -n1 "refs/tags/$TAG")
+            git checkout "$TAG"
+            echo "created=false" >> $GITHUB_OUTPUT
+          else
+            echo "Tag '$TAG' is new, will create on current commit"
+            COMMIT=$(git rev-parse HEAD)
+            echo "created=true" >> $GITHUB_OUTPUT
+          fi
+          echo "commit=$COMMIT" >> $GITHUB_OUTPUT
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+      - name: Check validation status
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          COMMIT="${{ steps.resolve.outputs.commit }}"
+          RESULT=$(gh run list --commit "$COMMIT" --workflow validate.yml --json conclusion --jq '.[0].conclusion')
+          if [ "$RESULT" != "success" ]; then
+            echo "::error::Validation has not passed for commit $COMMIT. Push first and wait for validation to succeed."
+            exit 1
+          fi
+
+      - name: Create tag
+        if: steps.resolve.outputs.created == 'true'
+        run: |
+          git tag "${{ inputs.tag }}"
+          git push origin "${{ inputs.tag }}"
+
+      - uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Build and Push Image
+        run: |
+          az acr login --name marketrix
+          TAG="${{ steps.resolve.outputs.tag }}"
+          TAG="${TAG#v}"
+          IMG="marketrix.azurecr.io/${{ inputs.environment }}/widget:${TAG}"
+          docker build -t $IMG -f Dockerfile .
+          docker push $IMG
+          docker tag $IMG "marketrix.azurecr.io/${{ inputs.environment }}/widget:latest"
+          docker push "marketrix.azurecr.io/${{ inputs.environment }}/widget:latest"
+
+      - name: Get AKS credentials
+        run: |
+          az aks get-credentials \
+            --resource-group Marketrix \
+            --name marketrix-aks \
+            --overwrite-existing
+
+      - name: Deploy to AKS
+        run: |
+          NS="${{ inputs.environment }}"
+          TAG="${{ steps.resolve.outputs.tag }}"
+          TAG="${TAG#v}"
+          cd k8s/overlays/$NS
+          kustomize build . \
+            | sed "s|marketrix.azurecr.io/$NS/widget:latest|marketrix.azurecr.io/$NS/widget:$TAG|g" \
+            | kubectl apply -f -
+          kubectl rollout status deployment/widget --namespace "$NS" --timeout=300s
+
+      - name: Cleanup
+        if: always()
+        run: docker image prune -af && docker builder prune -f || true
