@@ -1,3 +1,9 @@
+declare global {
+  interface Window {
+    __mtx?: { state?: 'initializing' | 'active' };
+  }
+}
+
 import React, { useEffect, useRef } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 
@@ -133,6 +139,9 @@ async function initWidgetInternal(config: MarketrixConfig, container?: HTMLEleme
     return;
   }
 
+  // Window-level guard survives ES module re-execution
+  window.__mtx = { state: 'initializing' };
+
   if (config.mtxApiHost) {
     configureSdk(config.mtxApiHost);
   }
@@ -145,6 +154,7 @@ async function initWidgetInternal(config: MarketrixConfig, container?: HTMLEleme
     console.error('Marketrix Widget validation failed:', validationResult.error);
     showWidgetSettingsLoader(validationResult.error || 'Widget validation failed. Please check your configuration.');
     setProgrammaticInitInProgress(false);
+    window.__mtx = undefined;
     return;
   }
 
@@ -155,6 +165,7 @@ async function initWidgetInternal(config: MarketrixConfig, container?: HTMLEleme
     const errorMessage = error instanceof Error ? error.message : 'Failed to initialize widget';
     showWidgetSettingsLoader(errorMessage);
     setProgrammaticInitInProgress(false);
+    window.__mtx = undefined;
     return;
   }
 
@@ -165,6 +176,7 @@ async function initWidgetInternal(config: MarketrixConfig, container?: HTMLEleme
   setWidgetInstance(instance);
   setProductionWidgetActive(true);
   setProgrammaticInitInProgress(false);
+  window.__mtx = { state: 'active' };
 
   try {
     if (sessionRecorder && isRecordingInitialized) {
@@ -295,9 +307,9 @@ export const unmountWidget = (): void => {
     instance.unmount();
     clearWidgetState();
 
-    const container = document.getElementById('marketrix-widget-container');
+    const container = document.querySelector('.marketrix-widget-container');
     if (container) {
-      destroyWidgetContainer(container);
+      destroyWidgetContainer(container as HTMLElement);
     }
 
     console.log('Marketrix Widget destroyed');
@@ -316,6 +328,7 @@ export const unmountWidget = (): void => {
   }
 
   initPromise = null;
+  window.__mtx = undefined;
 
   // Also hide loader if present
   hideWidgetSettingsLoader();
