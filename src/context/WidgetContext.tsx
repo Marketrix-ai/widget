@@ -66,6 +66,17 @@ export const WidgetProvider: React.FC<WidgetProviderProps> = ({ children, previe
   const stateVersion = useRef(0);
   const processedRequestIds = useRef(new Set<string>());
   const isTaskRunningRef = useRef(false);
+  const MAX_PROCESSED_IDS = 1000;
+
+  const addProcessedRequestId = useCallback((requestId: string) => {
+    processedRequestIds.current.add(requestId);
+
+    if (processedRequestIds.current.size > MAX_PROCESSED_IDS) {
+      const entries = Array.from(processedRequestIds.current);
+      const toKeep = entries.slice(-MAX_PROCESSED_IDS / 2);
+      processedRequestIds.current = new Set(toKeep);
+    }
+  }, []);
   // Track both conditions for task start: HTTP response and WebSocket notification
   const taskIdFromApiRef = useRef<string | null>(null);
   const taskStartedFromAgentRef = useRef(false);
@@ -203,6 +214,12 @@ export const WidgetProvider: React.FC<WidgetProviderProps> = ({ children, previe
     };
 
     const handleMessage = async (message: WebSocketMessage) => {
+      // Validate message structure
+      if (!message || typeof message !== 'object') {
+        console.warn('[Widget] Invalid message structure:', message);
+        return;
+      }
+
       if (isToolRequest(message as Record<string, unknown>)) {
         const request = message as ToolRequest;
         const requestId = request.id;
@@ -211,7 +228,44 @@ export const WidgetProvider: React.FC<WidgetProviderProps> = ({ children, previe
         if (processedRequestIds.current.has(requestId)) {
           return;
         }
-        processedRequestIds.current.add(requestId);
+        addProcessedRequestId(requestId);
+
+        // Validate request structure
+        if (!request.id || !request.tool) {
+          console.warn('[Widget] Malformed tool request:', request);
+          return;
+        }
+
+        // Validate tool name is in allowed list
+        const ALLOWED_TOOLS = [
+          'click_element',
+          'type_text',
+          'select_dropdown_option',
+          'send_keys',
+          'upload_file',
+          'scroll',
+          'done',
+          'wait',
+          'get_element_text',
+          'get_current_url',
+          'hover_element',
+          'screenshot',
+          'drag_element',
+          'ask_question',
+        ];
+
+        if (!ALLOWED_TOOLS.includes(request.tool)) {
+          console.warn('[Widget] Unknown tool requested:', request.tool);
+          const response: ToolResponse = {
+            id: requestId,
+            success: false,
+            data: { text: '' },
+            error: `Unknown tool: ${request.tool}`,
+            stateVersion: stateVersion.current,
+          };
+          wsClient.send(response as unknown as WebSocketMessage);
+          return;
+        }
 
         // Reject tool calls when widget is not running a task
         // Use ref to get latest value (avoid stale closure)
@@ -379,7 +433,7 @@ export const WidgetProvider: React.FC<WidgetProviderProps> = ({ children, previe
           }
           // If neither source has task_id yet, we'll start when API responds (handled in sendMessage)
         } else if (status === 'completed' || status === 'failed' || status === 'stopped') {
-          // Reset both flags when task ends
+          processedRequestIds.current.clear();
           taskIdFromApiRef.current = null;
           taskStartedFromAgentRef.current = false;
           setState(prev => {

@@ -78,17 +78,24 @@ chrome.storage.local.get(['enabled', 'config'], result => {
   }
 });
 
-// Listen for messages from popup to enable/disable
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.action === 'inject') {
-    // Immediate injection when user clicks enable
-    injectWidget(message.config);
-    sendResponse({ success: true });
-  } else if (message.action === 'remove') {
-    const container = document.getElementById('marketrix-widget-container');
-    const script = document.getElementById(SCRIPT_ID);
-    if (container) container.remove();
-    if (script) script.remove();
-    sendResponse({ success: true });
+// Listen for messages from popup to enable/disable.
+// Always call sendResponse once and synchronously so the message port doesn't close before response (avoids "message port closed" when popup closes).
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  try {
+    if (message.action === 'inject') {
+      injectWidget(message.config);
+      sendResponse({ success: true });
+    } else if (message.action === 'remove') {
+      const container = document.getElementById('marketrix-widget-container');
+      const script = document.getElementById(SCRIPT_ID);
+      if (container) container.remove();
+      if (script) script.remove();
+      sendResponse({ success: true });
+    } else {
+      sendResponse({ success: false });
+    }
+  } catch (e) {
+    sendResponse({ success: false, error: String(e) });
   }
+  return false; // synchronous response; keeps port from closing before sendResponse
 });

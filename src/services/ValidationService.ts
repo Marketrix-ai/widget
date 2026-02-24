@@ -64,7 +64,7 @@ export class WidgetValidationService {
       console.log(
         'Found integrations:',
         integrations.length,
-        integrations.map(i => ({
+        integrations.map((i: IntegrationData) => ({
           id: i.id,
           type: i.type,
           status: i.status,
@@ -82,7 +82,7 @@ export class WidgetValidationService {
         const widgetIntegrations = integrations.filter((integration: IntegrationData) => integration.type === 'widget');
 
         if (widgetIntegrations.length > 0) {
-          const statuses = widgetIntegrations.map(i => i.status).join(', ');
+          const statuses = widgetIntegrations.map((i: IntegrationData) => i.status).join(', ');
           return {
             isValid: false,
             error: `Found widget integration(s) but none are active. Current status(es): ${statuses}. Please activate the integration in the dashboard.`,
@@ -99,7 +99,7 @@ export class WidgetValidationService {
         }
 
         // There are integrations but no widget type
-        const types = integrations.map(i => i.type).join(', ');
+        const types = integrations.map((i: IntegrationData) => i.type).join(', ');
         return {
           isValid: false,
           error: `No widget integration found. Found integration type(s): ${types}. Please create a widget integration.`,

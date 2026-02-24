@@ -368,7 +368,7 @@ export const QADocumentEntitySchema = BaseEntitySchema.extend({
   file_type: z.string(),
   file_url: z.string(),
   file_path: z.string().nullable(),
-  additional_instructions: z.string().nullable().optional(),
+  additional_instructions: z.string().max(1000).nullable().optional(),
   status: QADocumentStatusSchema,
   processing_step: z.string().nullable().optional(),
   ultimate_goal: z.string().nullable().optional(),
@@ -383,7 +383,7 @@ export const QADocumentCreateSchema = z.object({
   file: z.custom<Express.Multer.File>().optional(),
   text_content: z.string().optional(),
   file_name: z.string().optional(),
-  additional_instructions: z.string().optional(),
+  additional_instructions: z.string().max(1000).optional(),
 });
 
 /**
