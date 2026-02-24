@@ -54,19 +54,13 @@ enableToggle.addEventListener('change', () => {
   chrome.storage.local.set({ enabled, config }, () => {
     updateStatus(enabled);
 
-    // Send message to current tab
+    // Send message to current tab (fire-and-forget; port may close if popup closes before response)
     chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
       if (tabs[0]) {
         chrome.tabs
-          .sendMessage(tabs[0].id, {
-            action: enabled ? 'inject' : 'remove',
-            config,
-          })
+          .sendMessage(tabs[0].id, { action: enabled ? 'inject' : 'remove', config })
           .catch(() => {
-            // Tab might not have content script loaded yet, reload it
-            if (enabled) {
-              chrome.tabs.reload(tabs[0].id);
-            }
+            if (enabled) chrome.tabs.reload(tabs[0].id);
           });
       }
     });
