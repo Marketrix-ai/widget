@@ -322,6 +322,11 @@ export const autoInitializeWidget = (retryCount = 0): void => {
     return;
   }
 
+  // Window-level guard survives ES module re-execution
+  if (window.__mtx?.state) {
+    return;
+  }
+
   const MAX_RETRIES = 5;
   const RETRY_DELAYS = [0, 100, 500, 1000, 2000]; // ms
 
