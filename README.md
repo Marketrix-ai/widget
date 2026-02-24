@@ -176,8 +176,8 @@ function App() {
         widget_bounce_effect: true,
         widget_chips: [],
       }}
-      mtxApiHost="https://api.marketrix.ai"
-      mtxAiHost="https://agent.marketrix.ai"
+      mtxApiHost='https://api.marketrix.ai'
+      mtxAiHost='https://agent.marketrix.ai'
     />
   );
 }
@@ -575,12 +575,12 @@ type InstructionType = 'tell' | 'show' | 'do';
 GitHub Actions workflows in `.github/workflows/`. All build and deploy jobs
 are delegated to `base.yml` as a reusable workflow:
 
-| Workflow         | Trigger         | Action                                                 |
-| ---------------- | --------------- | ------------------------------------------------------ |
-| `base.yml`       | Called by others | Reusable workflow: build (sanity) or deploy (full)     |
-| `dev-build.yml`  | Push to `dev`   | Sanity check via `base.yml` (npm ci + build, no upload)|
-| `prod-build.yml` | Release created | Sanity check via `base.yml` (npm ci + build, no upload)|
-| `deploy.yml`     | Manual dispatch | Build + upload to Azure Blob Storage + purge CDN cache |
+| Workflow         | Trigger          | Action                                                  |
+| ---------------- | ---------------- | ------------------------------------------------------- |
+| `base.yml`       | Called by others | Reusable workflow: build (sanity) or deploy (full)      |
+| `dev-build.yml`  | Push to `dev`    | Sanity check via `base.yml` (npm ci + build, no upload) |
+| `prod-build.yml` | Release created  | Sanity check via `base.yml` (npm ci + build, no upload) |
+| `deploy.yml`     | Manual dispatch  | Build + upload to Azure Blob Storage + purge CDN cache  |
 
 **Deploy options:**
 

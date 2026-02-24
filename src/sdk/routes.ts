@@ -135,6 +135,7 @@ const contract = {
   getIndex: oc
     .route({
       method: 'GET',
+      tags: ['Root'],
       path: '/',
       summary: 'Get API index information and basic system details',
       description: 'Returns general API information, version, and available endpoints',
@@ -144,6 +145,7 @@ const contract = {
   getHealth: oc
     .route({
       method: 'GET',
+      tags: ['Root'],
       path: '/health',
       summary: 'Health check endpoint for monitoring system status',
       description: 'Returns current system health, database connectivity, and service status',
@@ -153,6 +155,7 @@ const contract = {
   getPublicConfig: oc
     .route({
       method: 'GET',
+      tags: ['Root'],
       path: '/config/public',
       summary: 'Get public client configuration',
       description: 'Returns widget key and widget ID. No auth. Values are stored in backend env only.',
@@ -166,6 +169,7 @@ const contract = {
   authMe: oc
     .route({
       method: 'GET',
+      tags: ['Auth'],
       path: '/auth/me',
       summary: 'Get current authenticated user and tenant information',
       description: 'Returns user profile and tenant data based on session cookie',
@@ -184,10 +188,10 @@ const contract = {
   onboard: oc
     .route({
       method: 'POST',
+      tags: ['Onboarding'],
       path: '/onboard',
       summary: 'Complete user onboarding in one atomic operation',
-      description:
-        'Creates tenant, updates user status, and invites team members',
+      description: 'Creates tenant, updates user status, and invites team members',
     })
     .input(
       z.object({
@@ -205,6 +209,7 @@ const contract = {
   meetingCreate: oc
     .route({
       method: 'POST',
+      tags: ['Meeting'],
       path: '/meeting',
       summary: 'Create a new video meeting session',
       description: 'Creates meeting room with specified settings and returns meeting details',
@@ -215,6 +220,7 @@ const contract = {
   meetingSearch: oc
     .route({
       method: 'GET',
+      tags: ['Meeting'],
       path: '/meeting',
       summary: 'Search and filter meetings by various criteria',
       description: 'Returns list of meetings matching search parameters (tenant, client, user)',
@@ -231,6 +237,7 @@ const contract = {
   meetingCount: oc
     .route({
       method: 'GET',
+      tags: ['Meeting'],
       path: '/meeting/count',
       summary: 'Get total count of meetings for a tenant',
       description: 'Returns number of meetings associated with specified tenant',
@@ -241,6 +248,7 @@ const contract = {
   meetingGet: oc
     .route({
       method: 'GET',
+      tags: ['Meeting'],
       path: '/meeting/{meeting_id}',
       summary: 'Get specific meeting details by ID',
       description: 'Returns complete meeting information including participants and settings',
@@ -251,6 +259,7 @@ const contract = {
   meetingUpdate: oc
     .route({
       method: 'PUT',
+      tags: ['Meeting'],
       path: '/meeting/{meeting_id}',
       summary: 'Update meeting settings and configuration',
       description: 'Modifies meeting properties like title, duration, or participant settings',
@@ -261,6 +270,7 @@ const contract = {
   meetingDelete: oc
     .route({
       method: 'DELETE',
+      tags: ['Meeting'],
       path: '/meeting/{meeting_id}',
       summary: 'Delete a meeting and clean up associated resources',
       description: 'Removes meeting from system and cancels any scheduled sessions',
@@ -271,6 +281,7 @@ const contract = {
   meetingJoin: oc
     .route({
       method: 'POST',
+      tags: ['Meeting'],
       path: '/meeting/{meeting_id}/join',
       summary: 'Join an existing meeting session',
       description: 'Authenticates user and provides meeting access credentials',
@@ -281,6 +292,7 @@ const contract = {
   meetingEnd: oc
     .route({
       method: 'POST',
+      tags: ['Meeting'],
       path: '/meeting/{meeting_id}/end',
       summary: 'End an active meeting session',
       description: 'Terminates meeting and updates participant status',
@@ -295,6 +307,7 @@ const contract = {
   tenantCreate: oc
     .route({
       method: 'POST',
+      tags: ['Tenant'],
       path: '/tenant',
       summary: 'Create a new tenant organization',
       description: 'Creates new tenant with specified settings and returns tenant entity',
@@ -305,6 +318,7 @@ const contract = {
   tenantSearch: oc
     .route({
       method: 'GET',
+      tags: ['Tenant'],
       path: '/tenant',
       summary: 'Search and filter tenants by various criteria',
       description: 'Returns list of tenants matching search parameters (name, domain, email, etc.)',
@@ -324,6 +338,7 @@ const contract = {
   tenantGet: oc
     .route({
       method: 'GET',
+      tags: ['Tenant'],
       path: '/tenant/{tenant_id}',
       summary: 'Get specific tenant details by ID',
       description: 'Returns complete tenant information including settings and configuration',
@@ -334,6 +349,7 @@ const contract = {
   tenantUpdate: oc
     .route({
       method: 'PUT',
+      tags: ['Tenant'],
       path: '/tenant/{tenant_id}',
       summary: 'Update tenant settings and configuration',
       description: 'Modifies tenant properties like name, domain, or feature settings',
@@ -344,6 +360,7 @@ const contract = {
   tenantDelete: oc
     .route({
       method: 'DELETE',
+      tags: ['Tenant'],
       path: '/tenant/{tenant_id}',
       summary: 'Delete tenant and all associated data',
       description: 'Removes tenant from system and cleans up all related resources',
@@ -358,6 +375,7 @@ const contract = {
   connectionCreate: oc
     .route({
       method: 'POST',
+      tags: ['Connection'],
       path: '/connection',
       summary: 'Create a new connection',
       description: 'Creates a new app or website connection for a tenant',
@@ -389,6 +407,7 @@ const contract = {
   connectionGet: oc
     .route({
       method: 'GET',
+      tags: ['Connection'],
       path: '/connection/{connection_id}',
       summary: 'Get connection by ID',
       description: 'Returns specific connection details by connection ID, always includes integrations',
@@ -403,6 +422,7 @@ const contract = {
   connectionUpdate: oc
     .route({
       method: 'PUT',
+      tags: ['Connection'],
       path: '/connection/{connection_id}',
       summary: 'Update connection',
       description: 'Updates connection details and configuration',
@@ -413,6 +433,7 @@ const contract = {
   connectionDelete: oc
     .route({
       method: 'DELETE',
+      tags: ['Connection'],
       path: '/connection/{connection_id}',
       summary: 'Delete connection',
       description: 'Removes a connection and all associated integrations',
@@ -427,6 +448,7 @@ const contract = {
   integrationCreate: oc
     .route({
       method: 'POST',
+      tags: ['Integration'],
       path: '/integration',
       summary: 'Create a new integration',
       description: 'Creates a new integration (widget, slack, etc.) for a connection',
@@ -437,6 +459,7 @@ const contract = {
   integrationSearch: oc
     .route({
       method: 'GET',
+      tags: ['Integration'],
       path: '/integration',
       summary: 'Search integrations for tenant',
       description: 'Search integrations by type, connection, marketrix_id, or marketrix_key',
@@ -464,6 +487,7 @@ const contract = {
   integrationGet: oc
     .route({
       method: 'GET',
+      tags: ['Integration'],
       path: '/integration/{integration_id}',
       summary: 'Get integration by ID',
       description: 'Returns specific integration details by integration ID including snippet code',
@@ -474,6 +498,7 @@ const contract = {
   integrationUpdate: oc
     .route({
       method: 'PUT',
+      tags: ['Integration'],
       path: '/integration/{integration_id}',
       summary: 'Update integration',
       description: 'Updates integration settings and configuration',
@@ -484,6 +509,7 @@ const contract = {
   integrationDelete: oc
     .route({
       method: 'DELETE',
+      tags: ['Integration'],
       path: '/integration/{integration_id}',
       summary: 'Delete integration',
       description: 'Removes an integration from a connection',
@@ -498,6 +524,7 @@ const contract = {
   chatCreate: oc
     .route({
       method: 'POST',
+      tags: ['Chat'],
       path: '/chat',
       summary: 'Create a new chat thread',
       description: 'Initializes new chat thread and returns session ID',
@@ -507,6 +534,7 @@ const contract = {
   chatSearch: oc
     .route({
       method: 'GET',
+      tags: ['Chat'],
       path: '/chat',
       summary: 'Search chats by user',
       description: 'Returns chat list and quota for the specified user',
@@ -571,6 +599,7 @@ const contract = {
   userSearch: oc
     .route({
       method: 'GET',
+      tags: ['User'],
       path: '/user',
       summary: 'Search and filter users by tenant',
       description: 'Returns list of users associated with specified tenant',
@@ -586,6 +615,7 @@ const contract = {
   userCreateBatch: oc
     .route({
       method: 'POST',
+      tags: ['User'],
       path: '/user/batch',
       summary: 'Create multiple users in batch operation',
       description: 'Processes bulk user creation and returns results for each user',
@@ -596,6 +626,7 @@ const contract = {
   userGet: oc
     .route({
       method: 'GET',
+      tags: ['User'],
       path: '/user/{user_id}',
       summary: 'Get specific user details by ID',
       description: 'Returns complete user information including profile and settings',
@@ -606,6 +637,7 @@ const contract = {
   userUpdate: oc
     .route({
       method: 'PUT',
+      tags: ['User'],
       path: '/user/{user_id}',
       summary: 'Update user profile and settings',
       description: 'Modifies user properties like name, email, or preferences',
@@ -626,6 +658,7 @@ const contract = {
   userDelete: oc
     .route({
       method: 'DELETE',
+      tags: ['User'],
       path: '/user/{user_id}',
       summary: 'Delete user account and all associated data',
       description: 'Removes user from system and cleans up all related resources',
@@ -636,6 +669,7 @@ const contract = {
   userDeactivate: oc
     .route({
       method: 'POST',
+      tags: ['User'],
       path: '/user/{user_id}/deactivate',
       summary: 'Deactivate user account without deletion',
       description: 'Deactivates user access while preserving data for potential reactivation',
@@ -650,6 +684,7 @@ const contract = {
   agentCreate: oc
     .route({
       method: 'POST',
+      tags: ['Agent'],
       path: '/agent',
       summary: 'Create new AI agent with configuration',
       description: 'Creates agent with specified settings, prompts, and returns agent entity',
@@ -660,6 +695,7 @@ const contract = {
   agentSearch: oc
     .route({
       method: 'GET',
+      tags: ['Agent'],
       path: '/agent',
       summary: 'Search and filter agents by tenant or user',
       description: 'Returns list of agents matching search parameters',
@@ -676,6 +712,7 @@ const contract = {
   agentGet: oc
     .route({
       method: 'GET',
+      tags: ['Agent'],
       path: '/agent/{agent_id}',
       summary: 'Get specific agent details by ID',
       description: 'Returns complete agent information including configuration and settings',
@@ -686,6 +723,7 @@ const contract = {
   agentMindmap: oc
     .route({
       method: 'GET',
+      tags: ['Agent'],
       path: '/agent/{agent_id}/mindmap',
       summary: 'Get agent mindmap by ID',
       description: 'Returns the mindmap knowledge graph for the specified agent',
@@ -696,6 +734,7 @@ const contract = {
   agentUpdate: oc
     .route({
       method: 'PUT',
+      tags: ['Agent'],
       path: '/agent/{agent_id}',
       summary: 'Update agent configuration and settings',
       description: 'Modifies agent properties like prompts, behavior, or appearance',
@@ -708,6 +747,7 @@ const contract = {
   agentDelete: oc
     .route({
       method: 'DELETE',
+      tags: ['Agent'],
       path: '/agent/{agent_id}',
       summary: 'Delete agent and all associated data',
       description: 'Removes agent from system and cleans up all related resources',
@@ -728,6 +768,7 @@ const contract = {
   agentIndexCallback: oc
     .route({
       method: 'POST',
+      tags: ['Agent'],
       path: '/agent/index/callback',
       summary: 'Callback endpoint for agent index creation completion',
       description: 'Called by agent service when index creation completes (vector_index or graph_index)',
@@ -738,6 +779,7 @@ const contract = {
   agentResetLearning: oc
     .route({
       method: 'POST',
+      tags: ['Agent'],
       path: '/agent/{agent_id}/reset-learning',
       summary: 'Force reset agent from stuck learning state',
       description:
@@ -749,6 +791,7 @@ const contract = {
   agentVideoGenerate: oc
     .route({
       method: 'POST',
+      tags: ['Agent'],
       path: '/agent/{agent_id}/video',
       summary: 'Generate video for agent from its last simulation',
       description: 'Generates a walkthrough video from agent simulation screenshots',
@@ -792,6 +835,7 @@ const contract = {
   tourQuery: oc
     .route({
       method: 'GET',
+      tags: ['Tour'],
       path: '/tour/query',
       summary: 'Get tour information based on question and tenant',
       description: 'Returns relevant tour steps and guidance for user query',
@@ -807,6 +851,7 @@ const contract = {
   tourSearch: oc
     .route({
       method: 'GET',
+      tags: ['Tour'],
       path: '/tour',
       summary: 'Search and filter tours by tenant',
       description: 'Returns list of available tours for specified tenant',
@@ -822,6 +867,7 @@ const contract = {
   tourCreate: oc
     .route({
       method: 'POST',
+      tags: ['Tour'],
       path: '/tour',
       summary: 'Create new interactive tour',
       description: 'Creates tour with specified steps and configuration',
@@ -832,6 +878,7 @@ const contract = {
   tourShow: oc
     .route({
       method: 'POST',
+      tags: ['Tour'],
       path: '/tour/show',
       summary: 'Show tour spotlight and description',
       description: 'Triggers tour spotlight for a specific step and element',
@@ -860,6 +907,7 @@ const contract = {
   urlGuideSearch: oc
     .route({
       method: 'GET',
+      tags: ['URL Guide'],
       path: '/url-guide',
       summary: 'Search URL guides by integration',
       description: 'Returns list of URL guides for specified integration',
@@ -874,6 +922,7 @@ const contract = {
   urlGuideCreate: oc
     .route({
       method: 'POST',
+      tags: ['URL Guide'],
       path: '/url-guide',
       summary: 'Create new URL guide',
       description: 'Creates URL guide with pattern and message',
@@ -884,6 +933,7 @@ const contract = {
   urlGuideGet: oc
     .route({
       method: 'GET',
+      tags: ['URL Guide'],
       path: '/url-guide/{id}',
       summary: 'Get URL guide by ID',
       description: 'Returns URL guide details',
@@ -894,6 +944,7 @@ const contract = {
   urlGuideUpdate: oc
     .route({
       method: 'PUT',
+      tags: ['URL Guide'],
       path: '/url-guide/{id}',
       summary: 'Update URL guide',
       description: 'Updates URL guide properties',
@@ -904,6 +955,7 @@ const contract = {
   urlGuideDelete: oc
     .route({
       method: 'DELETE',
+      tags: ['URL Guide'],
       path: '/url-guide/{id}',
       summary: 'Delete URL guide',
       description: 'Removes URL guide from system',
@@ -914,6 +966,7 @@ const contract = {
   urlGuideMatch: oc
     .route({
       method: 'GET',
+      tags: ['URL Guide'],
       path: '/url-guide/match',
       summary: 'Find matching URL guide for current URL',
       description: 'Returns matching URL guide for a given URL pattern',
@@ -933,6 +986,7 @@ const contract = {
   simulationSearch: oc
     .route({
       method: 'GET',
+      tags: ['Simulation'],
       path: '/simulation',
       summary: 'Search and filter simulations by tenant',
       description:
@@ -967,6 +1021,7 @@ const contract = {
   simulationStart: oc
     .route({
       method: 'POST',
+      tags: ['Simulation'],
       path: '/simulation/start',
       summary: 'Start new application simulation',
       description: 'Creates and initializes simulation with specified parameters',
@@ -976,7 +1031,8 @@ const contract = {
 
   simulationUpdate: oc
     .route({
-      method: 'POST',
+      method: 'PUT',
+      tags: ['Simulation'],
       path: '/simulation/{simulation_id}',
       summary: 'Update simulation configuration and status',
       description: 'Modifies simulation parameters and updates execution state',
@@ -987,6 +1043,7 @@ const contract = {
   simulationProgress: oc
     .route({
       method: 'GET',
+      tags: ['Simulation'],
       path: '/simulation/{simulation_id}/progress',
       summary: 'Get simulation progress history as chat transcript',
       description: 'Returns all progress updates for a simulation ordered chronologically',
@@ -997,6 +1054,7 @@ const contract = {
   simulationLiveView: oc
     .route({
       method: 'GET',
+      tags: ['Simulation'],
       path: '/simulation/{simulation_id}/live-view',
       summary: 'Get live view URL for simulation session',
       description: 'Returns Browserbase live view URL for embedding in iframe',
@@ -1013,6 +1071,7 @@ const contract = {
   simulationHistory: oc
     .route({
       method: 'GET',
+      tags: ['Simulation'],
       path: '/simulation/{simulation_id}/history',
       summary: 'Get simulation history by ID',
       description: 'Returns the history array for the specified simulation',
@@ -1023,6 +1082,7 @@ const contract = {
   simulationSteps: oc
     .route({
       method: 'GET',
+      tags: ['Simulation'],
       path: '/simulation/{simulation_id}/steps',
       summary: 'Get all simulation steps with topic and screenshot link as JSON',
       description:
@@ -1034,6 +1094,7 @@ const contract = {
   simulationMindmap: oc
     .route({
       method: 'GET',
+      tags: ['Simulation'],
       path: '/simulation/{simulation_id}/mindmap',
       summary: 'Get simulation mindmap by ID',
       description: 'Returns the mindmap knowledge graph for the specified simulation',
@@ -1044,6 +1105,7 @@ const contract = {
   simulationStop: oc
     .route({
       method: 'POST',
+      tags: ['Simulation'],
       path: '/simulation/{simulation_id}/stop',
       summary: 'Stop running simulation',
       description: 'Terminates the simulation session',
@@ -1059,6 +1121,7 @@ const contract = {
   simulationAnswer: oc
     .route({
       method: 'POST',
+      tags: ['Simulation'],
       path: '/simulation/{simulation_id}/answer',
       summary: 'Submit answer to simulation question',
       description: 'Submits an answer to a pending question from the simulation agent',
@@ -1074,6 +1137,7 @@ const contract = {
   simulationDelete: oc
     .route({
       method: 'DELETE',
+      tags: ['Simulation'],
       path: '/simulation/{simulation_id}',
       summary: 'Delete simulation',
       description: 'Removes a simulation and all associated data',
@@ -1093,6 +1157,7 @@ const contract = {
   rrwebSessionUpsert: oc
     .route({
       method: 'POST',
+      tags: ['Session'],
       path: '/rrweb-session',
       summary: 'Create or update RRWeb session',
       description: 'Creates a new session or updates an existing one',
@@ -1103,6 +1168,7 @@ const contract = {
   rrwebSessionGet: oc
     .route({
       method: 'GET',
+      tags: ['Session'],
       path: '/rrweb-session/{session_id}',
       summary: 'Get RRWeb session by session ID',
       description: 'Retrieves a session by its session_id',
@@ -1113,6 +1179,7 @@ const contract = {
   rrwebSessionGetByChat: oc
     .route({
       method: 'GET',
+      tags: ['Session'],
       path: '/rrweb-session/chat/{marketrix_chat_id}',
       summary: 'Get RRWeb sessions by marketrix chat ID',
       description: 'Retrieves all sessions for a given marketrix_chat_id',
@@ -1123,6 +1190,7 @@ const contract = {
   rrwebSessionSearch: oc
     .route({
       method: 'GET',
+      tags: ['Session'],
       path: '/rrweb-session',
       summary: 'Get all RRWeb sessions',
       description: 'Retrieves all sessions ordered by creation date, optionally filtered by connection and date range',
@@ -1139,12 +1207,21 @@ const contract = {
   rrwebSessionEvents: oc
     .route({
       method: 'GET',
+      tags: ['Session'],
       path: '/rrweb-session/{session_id}/events',
       summary: 'Get RRWeb session events',
       description: 'Fetches all batches from folder, combines them in correct order, and returns events array',
     })
     .input(z.object({ session_id: z.string() }))
-    .output(z.array(z.any())), // RRWebEvent array
+    .output(
+      z.array(
+        z.object({
+          type: z.number(),
+          timestamp: z.number(),
+          data: z.unknown(),
+        }),
+      ),
+    ),
 
   browserSessionCreate: oc
     .route({
@@ -1170,6 +1247,7 @@ const contract = {
   browserSessionStopTasks: oc
     .route({
       method: 'POST',
+      tags: ['Session'],
       path: '/browser-session/{session_id}/stop-tasks',
       summary: 'Stop all tasks for browser session',
       description: 'Stops all active tasks for widgets connected to the browser session',
@@ -1185,6 +1263,7 @@ const contract = {
   browserSessionStop: oc
     .route({
       method: 'POST',
+      tags: ['Session'],
       path: '/browser-session/{session_id}/stop',
       summary: 'Stop browser session',
       description: 'Terminates the browser session',
@@ -1204,6 +1283,7 @@ const contract = {
   knowledgeSearch: oc
     .route({
       method: 'GET',
+      tags: ['Knowledge'],
       path: '/knowledge',
       summary: 'Search and filter knowledge base documents',
       description: 'Returns list of knowledge documents matching search parameters',
@@ -1220,6 +1300,7 @@ const contract = {
   knowledgeCreate: oc
     .route({
       method: 'POST',
+      tags: ['Knowledge'],
       path: '/knowledge',
       summary: 'Upload new knowledge base document',
       description: 'Processes file upload or URL and creates knowledge entry for AI training',
@@ -1239,6 +1320,7 @@ const contract = {
   knowledgeGet: oc
     .route({
       method: 'GET',
+      tags: ['Knowledge'],
       path: '/knowledge/{id}',
       summary: 'Get specific knowledge document by ID',
       description: 'Returns complete knowledge document information and content',
@@ -1249,6 +1331,7 @@ const contract = {
   knowledgeDelete: oc
     .route({
       method: 'DELETE',
+      tags: ['Knowledge'],
       path: '/knowledge/{id}',
       summary: 'Delete knowledge document',
       description: 'Removes a knowledge document from the database',
@@ -1259,6 +1342,7 @@ const contract = {
   knowledgeRefresh: oc
     .route({
       method: 'POST',
+      tags: ['Knowledge'],
       path: '/knowledge/{id}/refresh',
       summary: 'Refresh knowledge document',
       description: 'Re-fetches HTML content from source URL and updates the document',
@@ -1273,6 +1357,7 @@ const contract = {
   qaDocumentCreate: oc
     .route({
       method: 'POST',
+      tags: ['QA'],
       path: '/qa/document',
       summary: 'Upload QA document (file or text)',
       description: 'Uploads a PDF/text file or text content for QA test generation',
@@ -1283,6 +1368,7 @@ const contract = {
   qaDocumentProcess: oc
     .route({
       method: 'POST',
+      tags: ['QA'],
       path: '/qa/document/{id}/process',
       summary: 'Process QA document and generate test cases',
       description:
@@ -1294,6 +1380,7 @@ const contract = {
   qaDocumentRefine: oc
     .route({
       method: 'POST',
+      tags: ['QA'],
       path: '/qa/document/{id}/refine',
       summary: 'Refine existing QA test cases',
       description: 'Refines existing test cases with a refinement prompt via AI agent API',
@@ -1309,6 +1396,7 @@ const contract = {
   qaDocumentGet: oc
     .route({
       method: 'GET',
+      tags: ['QA'],
       path: '/qa/document/{id}',
       summary: 'Get QA document by ID',
       description: 'Retrieves a QA document by its ID',
@@ -1319,6 +1407,7 @@ const contract = {
   qaDocumentSearch: oc
     .route({
       method: 'GET',
+      tags: ['QA'],
       path: '/qa/document',
       summary: 'List QA documents',
       description: 'Gets all QA documents with run_count and display_title',
@@ -1342,6 +1431,7 @@ const contract = {
   qaDocumentUpdate: oc
     .route({
       method: 'PUT',
+      tags: ['QA'],
       path: '/qa/document/{id}',
       summary: 'Update QA document status',
       description: 'Updates the status of a QA document',
@@ -1357,6 +1447,7 @@ const contract = {
   qaDocumentRuns: oc
     .route({
       method: 'GET',
+      tags: ['QA'],
       path: '/qa/document/{id}/runs',
       summary: 'List runs for a QA document',
       description: 'Returns all runs for a document with total/passed/failed counts',
@@ -1375,6 +1466,7 @@ const contract = {
   qaRunGet: oc
     .route({
       method: 'GET',
+      tags: ['QA'],
       path: '/qa/run/{id}',
       summary: 'Get a QA run by ID',
       description: 'Returns run details with test results',
@@ -1389,6 +1481,7 @@ const contract = {
   qaDocumentRun: oc
     .route({
       method: 'POST',
+      tags: ['QA'],
       path: '/qa/document/{id}/run',
       summary: 'Create and start a new QA run',
       description:
@@ -1442,6 +1535,7 @@ const contract = {
   qaDocumentExecuteTests: oc
     .route({
       method: 'POST',
+      tags: ['QA'],
       path: '/qa/document/{id}/execute',
       summary: 'Create a run and execute all pending tests for a QA document as simulations',
     })
@@ -1674,6 +1768,7 @@ const contract = {
   migratePrepare: oc
     .route({
       method: 'POST',
+      tags: ['Migration'],
       path: '/migrate/prepare',
       summary: 'Prepare database migration',
       description: 'Validates migration requirements and prepares system for migration',
@@ -1684,6 +1779,7 @@ const contract = {
   migrateRun: oc
     .route({
       method: 'POST',
+      tags: ['Migration'],
       path: '/migrate/run',
       summary: 'Execute database migration',
       description: 'Runs migration scripts and updates database schema',
@@ -1698,6 +1794,7 @@ const contract = {
   stripeCreateTrial: oc
     .route({
       method: 'POST',
+      tags: ['Stripe'],
       path: '/stripe/trial',
       summary: 'Create a trial subscription',
       description: 'Creates a trial subscription for the authenticated tenant. The trial period is 30 days by default.',
@@ -1708,6 +1805,7 @@ const contract = {
   stripeCreateCheckout: oc
     .route({
       method: 'POST',
+      tags: ['Stripe'],
       path: '/stripe/checkout',
       summary: 'Create a checkout session for subscription purchase',
       description:
@@ -1719,6 +1817,7 @@ const contract = {
   stripeCreatePortal: oc
     .route({
       method: 'POST',
+      tags: ['Stripe'],
       path: '/stripe/portal',
       summary: 'Create a customer portal session',
       description: 'Creates a Stripe billing portal session for managing subscription, payment methods, and invoices.',
@@ -1729,6 +1828,7 @@ const contract = {
   stripeConfirmDowngrade: oc
     .route({
       method: 'POST',
+      tags: ['Stripe'],
       path: '/stripe/downgrade',
       summary: 'Confirm and process a subscription downgrade',
       description: 'Processes a confirmed subscription downgrade to a lower tier plan. No payment required.',
@@ -1739,6 +1839,7 @@ const contract = {
   stripeCancelSubscription: oc
     .route({
       method: 'POST',
+      tags: ['Stripe'],
       path: '/stripe/cancel',
       summary: 'Cancel subscription at period end',
       description: 'Cancels the subscription at the end of the current billing period.',
@@ -1749,6 +1850,7 @@ const contract = {
   stripeGetPlan: oc
     .route({
       method: 'GET',
+      tags: ['Stripe'],
       path: '/stripe/plan',
       summary: 'Get current plan information',
       description: 'Returns current subscription plan and usage information for authenticated tenant.',
@@ -1758,6 +1860,7 @@ const contract = {
   stripeGetUsage: oc
     .route({
       method: 'GET',
+      tags: ['Stripe'],
       path: '/stripe/usage',
       summary: 'Get current usage statistics',
       description: 'Returns actual usage counts for agents, knowledge sources, meetings, storage, and team members.',
@@ -1767,6 +1870,7 @@ const contract = {
   stripeGetPricing: oc
     .route({
       method: 'GET',
+      tags: ['Stripe'],
       path: '/stripe/pricing',
       summary: 'Get pricing information for all plans',
       description: 'Returns actual pricing from Stripe for all plans. Ensures frontend displays match Stripe charges.',
@@ -1776,6 +1880,7 @@ const contract = {
   stripeGetConfig: oc
     .route({
       method: 'GET',
+      tags: ['Stripe'],
       path: '/stripe/config',
       summary: 'Get Stripe configuration for frontend',
       description: 'Returns Stripe publishable key, price IDs, and trial days configuration for frontend use.',
@@ -1785,6 +1890,7 @@ const contract = {
   stripeGetPlans: oc
     .route({
       method: 'GET',
+      tags: ['Stripe'],
       path: '/stripe/plans',
       summary: 'Get plan catalog (metadata for display)',
       description: 'Returns plan names, descriptions, features, CTA and styling. No auth required.',
@@ -1794,6 +1900,7 @@ const contract = {
   stripeWebhook: oc
     .route({
       method: 'POST',
+      tags: ['Stripe'],
       path: '/stripe/webhook',
       summary: 'Handle Stripe webhook events',
       description: 'Receives and processes Stripe webhook events for subscription changes, payments, and other events.',
