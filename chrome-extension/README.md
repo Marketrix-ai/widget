@@ -37,11 +37,11 @@ Bookmarklets cannot persist across full-page navigations because:
 
 ## Configuration Options
 
-| Setting       | Description              | Default / Example                           |
-| ------------- | ------------------------ | ------------------------------------------- |
-| Script URL    | URL to the widget bundle | `http://localhost:5174/index.mjs`           |
-| Agent ID      | Agent identifier         | `10`                                        |
-| Connection ID | Connection identifier    | `13`                                        |
+| Setting       | Description              | Default / Example                 |
+| ------------- | ------------------------ | --------------------------------- |
+| Script URL    | URL to the widget bundle | `http://localhost:5174/index.mjs` |
+| Agent ID      | Agent identifier         | `10`                              |
+| Connection ID | Connection identifier    | `13`                              |
 
 ### Extended Attributes (content script)
 
@@ -49,14 +49,14 @@ The content script can also set additional `<script>` attributes when present
 in the stored config object. These are not currently exposed in the popup UI
 but can be set programmatically via `chrome.storage.local`:
 
-| Config Key   | Script Attribute | Description              |
-| ------------ | ---------------- | ------------------------ |
-| `mtxAgent`   | `mtx-agent`      | Agent ID                 |
-| `mtxApp`     | `mtx-app`        | App / connection ID      |
-| `mtxId`      | `mtx-id`         | Widget instance ID       |
-| `mtxKey`     | `mtx-key`        | API key                  |
-| `mtxApiHost` | `mtx-api-host`   | API server URL           |
-| `mtxAiHost`  | `mtx-ai-host`    | Agent (AI) server URL    |
+| Config Key   | Script Attribute | Description           |
+| ------------ | ---------------- | --------------------- |
+| `mtxAgent`   | `mtx-agent`      | Agent ID              |
+| `mtxApp`     | `mtx-app`        | App / connection ID   |
+| `mtxId`      | `mtx-id`         | Widget instance ID    |
+| `mtxKey`     | `mtx-key`        | API key               |
+| `mtxApiHost` | `mtx-api-host`   | API server URL        |
+| `mtxAiHost`  | `mtx-ai-host`    | Agent (AI) server URL |
 
 ## How It Works
 
@@ -73,22 +73,22 @@ but can be set programmatically via `chrome.storage.local`:
 
 ## Files
 
-| File            | Purpose                                           |
-| --------------- | ------------------------------------------------- |
-| `manifest.json` | Extension manifest (Manifest V3)                  |
-| `content.js`    | Content script — injected on every page           |
-| `popup.html`    | Popup UI for configuration & enable/disable toggle|
-| `popup.js`      | Popup logic (save config, toggle, message tab)    |
-| `icon16.png`    | Toolbar icon (16×16)                              |
-| `icon48.png`    | Extensions page icon (48×48)                      |
-| `icon128.png`   | Chrome Web Store / install icon (128×128)         |
+| File            | Purpose                                            |
+| --------------- | -------------------------------------------------- |
+| `manifest.json` | Extension manifest (Manifest V3)                   |
+| `content.js`    | Content script — injected on every page            |
+| `popup.html`    | Popup UI for configuration & enable/disable toggle |
+| `popup.js`      | Popup logic (save config, toggle, message tab)     |
+| `icon16.png`    | Toolbar icon (16×16)                               |
+| `icon48.png`    | Extensions page icon (48×48)                       |
+| `icon128.png`   | Chrome Web Store / install icon (128×128)          |
 
 ### Permissions
 
-| Permission  | Reason                                              |
-| ----------- | --------------------------------------------------- |
+| Permission  | Reason                                                |
+| ----------- | ----------------------------------------------------- |
 | `storage`   | Persist configuration & enabled state across sessions |
-| `activeTab` | Send messages to the currently active tab            |
+| `activeTab` | Send messages to the currently active tab             |
 
 ## Development
 
@@ -134,7 +134,7 @@ https://cdn.marketrix.io/widget/index.mjs
 - Ensure Agent ID and Connection ID are correct
 - Look for WebSocket connection errors in the console
 - If the widget needs API/AI host overrides, set `mtxApiHost` / `mtxAiHost` in
-  storage (see *Extended Attributes* above)
+  storage (see _Extended Attributes_ above)
 
 ### Mixed content errors
 

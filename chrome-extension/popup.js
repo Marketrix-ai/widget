@@ -57,11 +57,9 @@ enableToggle.addEventListener('change', () => {
     // Send message to current tab (fire-and-forget; port may close if popup closes before response)
     chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
       if (tabs[0]) {
-        chrome.tabs
-          .sendMessage(tabs[0].id, { action: enabled ? 'inject' : 'remove', config })
-          .catch(() => {
-            if (enabled) chrome.tabs.reload(tabs[0].id);
-          });
+        chrome.tabs.sendMessage(tabs[0].id, { action: enabled ? 'inject' : 'remove', config }).catch(() => {
+          if (enabled) chrome.tabs.reload(tabs[0].id);
+        });
       }
     });
   });

@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Tag name (existing tag deploys that version, new tag creates it on current commit)"
+        description: 'Tag name (existing tag deploys that version, new tag creates it on current commit)'
         required: true
         type: string
       environment:

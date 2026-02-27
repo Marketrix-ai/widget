@@ -25,6 +25,35 @@ import { ModeSelector } from '../input/ModeSelector';
 import { ScreenAccessModal } from '../ui/ScreenAccessModal';
 import { MessageList } from './MessageList';
 
+// Error Boundary for chat messages — defined outside ChatWindow to keep a stable
+// class identity across re-renders (avoids unmount/remount of the entire subtree).
+class ChatErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean }> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  override componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error('Chat Error Boundary caught error:', error, errorInfo);
+  }
+
+  override render() {
+    if (this.state.hasError) {
+      return (
+        <div className='p-4 text-center text-xs text-gray-500'>
+          Something went wrong displaying messages. Please refresh.
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
 interface ChatWindowProps {
   config: MarketrixConfig;
   isOpen: boolean;
@@ -121,45 +150,58 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     screenShareMessageIdRef.current = screenShareMessageId;
   }, [screenShareMessageId]);
 
-  // Sync isScreenSharing state with service and handle external stops
+  // Stable refs for callbacks so the interval never goes stale
+  const onAddMessageRef = useRef(onAddMessage);
+  const onRemoveMessageRef = useRef(onRemoveMessage);
+  const onScreenSharingChangeRef = useRef(onScreenSharingChange);
+  useEffect(() => {
+    onAddMessageRef.current = onAddMessage;
+  }, [onAddMessage]);
+  useEffect(() => {
+    onRemoveMessageRef.current = onRemoveMessage;
+  }, [onRemoveMessage]);
+  useEffect(() => {
+    onScreenSharingChangeRef.current = onScreenSharingChange;
+  }, [onScreenSharingChange]);
+
+  // Sync isScreenSharing state with service and handle external stops.
+  // The interval runs independently; we no longer re-create it on every
+  // messages.length change, which avoids a tight re-render / effect loop.
   useEffect(() => {
     const checkScreenSharing = () => {
       const isSharing = isScreenSharingActive();
       const wasSharing = wasSharingRef.current;
       const currentMessageId = screenShareMessageIdRef.current;
 
-      wasSharingRef.current = isSharing;
-      setIsScreenSharing(isSharing);
-      onScreenSharingChange?.(isSharing);
+      // Only update React state when the value actually changed
+      if (isSharing !== wasSharing) {
+        wasSharingRef.current = isSharing;
+        setIsScreenSharing(isSharing);
+        onScreenSharingChangeRef.current?.(isSharing);
+      }
 
       // If screenshare stopped externally (was sharing, now not)
       if (wasSharing && !isSharing && currentMessageId) {
-        // Only handle this if we have messages (not during a reset)
-        // During reset, messages are cleared, so we don't want to add a "Stopped screenshare" message
-        if (messages.length > 0) {
-          // Remove the screenshare message
-          if (onRemoveMessage) {
-            onRemoveMessage(currentMessageId);
-          }
+        // Remove the screenshare message
+        onRemoveMessageRef.current?.(currentMessageId);
 
-          // Add a muted "Stopped screenshare" message
-          const stoppedMessage = createSystemMessage('Stopped screenshare', 'show', 'user', 'stopped-sharing');
-          onAddMessage(stoppedMessage);
-        }
+        // Add a muted "Stopped screenshare" message
+        const stoppedMessage = createSystemMessage('Stopped screenshare', 'show', 'user', 'stopped-sharing');
+        onAddMessageRef.current(stoppedMessage);
 
         // Always clear the message ID reference
         setScreenShareMessageId(null);
       }
     };
 
-    // Check initially
+    // Check once on mount
     checkScreenSharing();
 
     // Set up interval to check periodically (in case stream ends externally)
     const interval = setInterval(checkScreenSharing, 1000);
 
     return () => clearInterval(interval);
-  }, [messages.length]);
+  }, []);
 
   const handleSendMessage = () => {
     // Check if there's a pending message (placeholder exists)
@@ -381,34 +423,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     boxShadow: settings.widget_shadow,
     zIndex,
   } satisfies React.CSSProperties;
-
-  // Error Boundary for chat messages
-  class ChatErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean }> {
-    constructor(props: { children: React.ReactNode }) {
-      super(props);
-      this.state = { hasError: false };
-    }
-
-    static getDerivedStateFromError() {
-      return { hasError: true };
-    }
-
-    override componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-      console.error('Chat Error Boundary caught error:', error, errorInfo);
-    }
-
-    override render() {
-      if (this.state.hasError) {
-        return (
-          <div className='p-4 text-center text-xs text-gray-500'>
-            Something went wrong displaying messages. Please refresh.
-          </div>
-        );
-      }
-
-      return this.props.children;
-    }
-  }
 
   // Use absolute positioning in preview mode (container-relative), fixed in production (viewport-relative)
   const positionClass = isPreviewMode ? 'absolute' : 'fixed';
