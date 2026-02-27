@@ -1,0 +1,17 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: local
+resources:
+  - ../../base
+images:
+  - name: marketrix.azurecr.io/dev/widget
+    newName: marketrix/widget
+    newTag: local
+patches:
+  - target:
+      kind: Deployment
+      name: widget
+    patch: |
+      - op: replace
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: Never
