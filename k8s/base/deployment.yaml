@@ -21,8 +21,8 @@ spec:
     spec:
       containers:
         - name: widget
-          image: marketrix.azurecr.io/dev/widget:latest
-          imagePullPolicy: Always
+          image: marketrix/widget:local
+          imagePullPolicy: Never
           ports:
             - containerPort: 80
               name: http
