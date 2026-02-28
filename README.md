@@ -28,7 +28,7 @@ Add the widget to your HTML page using a script tag:
 
 ```html
 <script
-  src="https://cdn.marketrix.io/widget/index.mjs"
+  src="https://storage.marketrix.ai/widget/index.mjs"
   mtx-ai-host="https://agent.marketrix.ai"
   mtx-api-host="https://api.marketrix.ai"
   mtx-id="your-marketrix-id"
@@ -42,7 +42,7 @@ For development/testing with direct agent and connection IDs:
 
 ```html
 <script
-  src="https://cdn.marketrix.io/widget/dev/index.mjs"
+  src="https://storage.marketrix.ai/widget/dev/index.mjs"
   mtx-ai-host="https://agent.marketrix.ai"
   mtx-api-host="https://api.marketrix.ai"
   mtx-app="YOUR_CONNECTION_ID"

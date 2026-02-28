@@ -15,7 +15,7 @@ on every page, persisting across full-page navigations.
 1. Click the Marketrix extension icon in your browser toolbar
 2. Configure the settings:
    - **Script URL** — URL to the widget bundle (e.g.
-     `http://localhost:5174/index.mjs` or `https://cdn.marketrix.io/widget/index.mjs`)
+     `http://localhost:5174/index.mjs` or `https://storage.marketrix.ai/widget/index.mjs`)
    - **Agent ID** — The agent identifier
    - **Connection ID** — The connection/app identifier
 3. Click **Save Configuration**
@@ -116,7 +116,7 @@ but can be set programmatically via `chrome.storage.local`:
 Use the CDN URL:
 
 ```
-https://cdn.marketrix.io/widget/index.mjs
+https://storage.marketrix.ai/widget/index.mjs
 ```
 
 ## Troubleshooting
