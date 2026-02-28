@@ -5,7 +5,7 @@ on:
 
 jobs:
   deploy:
-    if: github.event.action != 'closed'
+    if: github.event.action != 'closed' && github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
     environment: ${{ contains(github.event.pull_request.labels.*.name, 'preview:prod') && 'prod' || 'dev' }}
     steps:
@@ -95,7 +95,7 @@ jobs:
 
   comment:
     needs: deploy
-    if: github.event.action != 'closed'
+    if: github.event.action != 'closed' && github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
@@ -148,6 +148,7 @@ jobs:
           kubectl delete deployment widget --namespace "$NS" --ignore-not-found
           kubectl delete service widget --namespace "$NS" --ignore-not-found
           kubectl delete ingress pr-ingress-widget --namespace "$NS" --ignore-not-found
+          kubectl delete pvc --all --namespace "$NS" --ignore-not-found
 
       - name: Delete DNS record
         env:
@@ -161,4 +162,12 @@ jobs:
             curl -sf -X DELETE \
               -H "Authorization: Bearer $DO_TOKEN" \
               "https://api.digitalocean.com/v2/domains/marketrix.co/records/${RECORD_ID}"
+          fi
+
+      - name: Delete namespace
+        run: |
+          NS="pr-${{ github.event.pull_request.number }}"
+          REMAINING=$(kubectl get all --namespace "$NS" --no-headers 2>/dev/null | wc -l)
+          if [ "$REMAINING" -eq 0 ]; then
+            kubectl delete namespace "$NS" --ignore-not-found
           fi
