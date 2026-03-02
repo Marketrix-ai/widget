@@ -398,6 +398,7 @@ export const autoInitializeWidget = (retryCount = 0): void => {
   const mtxAiHost = script.getAttribute('mtx-ai-host');
   const mtxApp = script.getAttribute('mtx-app');
   const mtxAgent = script.getAttribute('mtx-agent');
+  const mtxUseScreenshare = script.getAttribute('mtx-use-screenshare');
 
   console.log('[AutoInit] Found script tag with attributes:', {
     mtxId: mtxId ? '***' : null,
@@ -418,6 +419,9 @@ export const autoInitializeWidget = (retryCount = 0): void => {
     }
     if (mtxAiHost) {
       config.mtxAiHost = mtxAiHost;
+    }
+    if (mtxUseScreenshare === 'false') {
+      config.use_screenshare = false;
     }
     console.log('[AutoInit] Initializing widget with mtx-id/mtx-key config');
     initWidgetFunction(config).catch(error => {
@@ -442,6 +446,9 @@ export const autoInitializeWidget = (retryCount = 0): void => {
     }
     if (mtxAiHost) {
       config.mtxAiHost = mtxAiHost;
+    }
+    if (mtxUseScreenshare === 'false') {
+      config.use_screenshare = false;
     }
     console.log('[AutoInit] Initializing widget with mtx-app/mtx-agent config:', {
       mtxApp: appNum,

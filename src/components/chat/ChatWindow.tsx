@@ -216,7 +216,12 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       onAddMessage(userMessage);
 
       // Check if screen sharing is needed for show/do modes
-      if ((currentMode === 'show' || currentMode === 'do') && !isScreenSharing && !screenAccessRequestMessageId) {
+      if (
+        config.use_screenshare !== false &&
+        (currentMode === 'show' || currentMode === 'do') &&
+        !isScreenSharing &&
+        !screenAccessRequestMessageId
+      ) {
         // Store the pending message and show screen access request
         // alreadyAdded=true because we just added the message above
         setPendingMessage({ content: messageContent, mode: currentMode, alreadyAdded: true });
@@ -484,7 +489,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
             >
               {settings.widget_header}
             </span>
-            {!isScreenSharing && (
+            {config.use_screenshare !== false && !isScreenSharing && (
               <button
                 onClick={handleStartScreenShare}
                 className='flex items-center justify-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-all duration-300 shadow-md hover:shadow-lg hover:scale-105 active:scale-95 animate-fade-in '
@@ -663,7 +668,12 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                   messagesEndRef={messagesEndRef}
                   onSendMessage={(content, mode, connectionId, question) => {
                     // Check if screen sharing is needed for show/do modes
-                    if ((mode === 'show' || mode === 'do') && !isScreenSharing && !screenAccessRequestMessageId) {
+                    if (
+                      config.use_screenshare !== false &&
+                      (mode === 'show' || mode === 'do') &&
+                      !isScreenSharing &&
+                      !screenAccessRequestMessageId
+                    ) {
                       // Store the pending message and show screen access request
                       // alreadyAdded=true because chip messages are already added to chat
                       setPendingMessage({

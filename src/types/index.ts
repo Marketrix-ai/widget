@@ -56,6 +56,12 @@ export type MarketrixConfig = Partial<WidgetSettingsData> & {
 
   // Preview mode flag - indicates widget is in preview mode (settings provided directly)
   isPreviewMode?: boolean;
+
+  // Top-level behavioral controls for SDK consumers
+  /** Controls visual rendering of the widget. When false, widget initializes fully but UI is hidden. Default: true */
+  show_widget?: boolean;
+  /** Controls screen sharing prompts and button. When false, screen access requests are auto-denied and Share Screen button is hidden. Default: true */
+  use_screenshare?: boolean;
 };
 
 export interface ChatMessage {
@@ -165,6 +171,10 @@ export type AddWidgetConfig = (
     y?: number;
   };
   widget_position_z_index?: number;
+  /** Controls visual rendering of the widget. When false, widget initializes fully but UI is hidden. Default: true */
+  show_widget?: boolean;
+  /** Controls screen sharing prompts and button. When false, screen access requests are auto-denied and Share Screen button is hidden. Default: true */
+  use_screenshare?: boolean;
 };
 
 /**
