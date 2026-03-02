@@ -110,7 +110,7 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
   // In preview mode, always show if widget_enabled is true in config
   const shouldRender = isPreviewMode
     ? (config.widget_enabled ?? settings.widget_enabled ?? false)
-    : shouldShow && settings.widget_enabled;
+    : shouldShow && settings.widget_enabled && config.show_widget !== false;
 
   if (!shouldRender) {
     return null;
