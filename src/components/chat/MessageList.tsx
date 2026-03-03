@@ -6,11 +6,12 @@ import { LuMousePointerClick } from 'react-icons/lu';
 import { SiTicktick } from 'react-icons/si';
 
 import MarketrixIcon from '../../assets/marketrix-icon.svg';
-import { DARK_THEME_CLASSES } from '../../constants/theme';
 import { useWidget } from '../../hooks/useWidget';
 import { createUserMessage } from '../../services/ChatService';
 import type { ChatMessage, MarketrixConfig } from '../../types';
 import { addOpacity } from '../../utils/format';
+import { Button } from '../base/Button';
+import { StateMessage } from '../ui/StateMessage';
 import { MessageItem } from './MessageItem';
 import { WelcomeMessage } from './WelcomeMessage';
 
@@ -275,10 +276,7 @@ export const MessageList = ({
         key='message-list-container'
         ref={containerRef}
         onScroll={handleScroll}
-        className={`
-            h-full overflow-y-auto px-2 space-y-0.5 pt-0
-            scrollbar-thin ${DARK_THEME_CLASSES.scrollbarTrack} ${DARK_THEME_CLASSES.scrollbarThumb}
-          `}
+        className='h-full overflow-y-auto px-2 space-y-0.5 pt-0 scrollbar-thin scrollbar-track-gray-100 scrollbar-thumb-gray-400'
         style={{
           backgroundColor: widgetConfig.widget_background_color.includes('gradient')
             ? 'transparent'
@@ -290,6 +288,9 @@ export const MessageList = ({
           scrollbarWidth: 'thin',
         }}
       >
+        {/* Initial loading state when no messages yet */}
+        {messages.length === 0 && widgetState.isLoading && <StateMessage variant='loading' message='Connecting…' />}
+
         {/* Welcome message - always show */}
         <WelcomeMessage
           greeting={widgetConfig.widget_greeting}
@@ -334,32 +335,35 @@ export const MessageList = ({
       {/* Scroll to Top Button */}
       {showScrollTop && (
         <div className='absolute top-2 left-0 right-0 flex justify-center z-10 pointer-events-none'>
-          <button
+          <Button
+            type='button'
+            variant='secondary'
+            size='sm'
             onClick={scrollToTop}
-            className='p-1.5 rounded-full shadow-md bg-white/90 hover:bg-white transition-all duration-200 border border-gray-200 group backdrop-blur-sm pointer-events-auto'
+            className='p-1.5 rounded-full shadow-md bg-white/90 hover:bg-white border border-gray-200 pointer-events-auto'
+            style={{ border: '1px solid #e5e7eb' }}
             title='Scroll to top'
+            aria-label='Scroll to top'
           >
-            <FaArrowUp
-              className='w-2.5 h-2.5 text-gray-500 group-hover:text-gray-700'
-              style={{ color: widgetConfig.widget_accent_color }}
-            />
-          </button>
+            <FaArrowUp className='w-2.5 h-2.5' style={{ color: widgetConfig.widget_accent_color }} />
+          </Button>
         </div>
       )}
 
-      {/* Scroll to Bottom Button */}
       {showScrollBottom && (
         <div className='absolute bottom-2 left-0 right-0 flex justify-center z-10 pointer-events-none'>
-          <button
+          <Button
+            type='button'
+            variant='secondary'
+            size='sm'
             onClick={scrollToBottom}
-            className='p-1.5 rounded-full shadow-md bg-white/90 hover:bg-white transition-all duration-200 border border-gray-200 group backdrop-blur-sm pointer-events-auto'
+            className='p-1.5 rounded-full shadow-md bg-white/90 hover:bg-white border border-gray-200 pointer-events-auto'
+            style={{ border: '1px solid #e5e7eb' }}
             title='Scroll to bottom'
+            aria-label='Scroll to bottom'
           >
-            <FaArrowDown
-              className='w-2.5 h-2.5 text-gray-500 group-hover:text-gray-700'
-              style={{ color: widgetConfig.widget_accent_color }}
-            />
-          </button>
+            <FaArrowDown className='w-2.5 h-2.5' style={{ color: widgetConfig.widget_accent_color }} />
+          </Button>
         </div>
       )}
     </div>

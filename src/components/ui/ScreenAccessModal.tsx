@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { DARK_THEME_CLASSES } from '../../constants/theme';
+import { Button } from '../base/Button';
 
 interface ScreenAccessModalProps {
   isOpen: boolean;
@@ -29,26 +29,34 @@ export const ScreenAccessModal: React.FC<ScreenAccessModalProps> = ({ isOpen, on
             tasks on your behalf.
           </p>
           <div className='flex gap-3 justify-center'>
-            <button
+            <Button
+              type='button'
+              variant='primary'
+              size='sm'
               onClick={e => {
                 e.preventDefault();
                 e.stopPropagation();
                 onAllow();
               }}
-              className={DARK_THEME_CLASSES.allowButtonCompact}
+              className='px-5 py-1 rounded-full text-sm font-medium'
+              style={{ backgroundColor: '#111827', color: '#fff', border: 'none' }}
             >
               Yes
-            </button>
-            <button
+            </Button>
+            <Button
+              type='button'
+              variant='secondary'
+              size='sm'
               onClick={e => {
                 e.preventDefault();
                 e.stopPropagation();
                 onDeny();
               }}
-              className={DARK_THEME_CLASSES.denyButtonCompact}
+              className='px-6 py-1 rounded-full text-sm font-medium border border-gray-200'
+              style={{ backgroundColor: '#f3f4f6', color: '#1f2937' }}
             >
               No
-            </button>
+            </Button>
           </div>
         </div>
       </div>

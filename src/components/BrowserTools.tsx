@@ -10,7 +10,6 @@ import { LuMousePointerClick, LuScroll } from 'react-icons/lu';
 import { MdOutlineKeyboard, MdOutlineSelectAll } from 'react-icons/md';
 import { TbArrowDown, TbFileUpload } from 'react-icons/tb';
 
-import { DARK_THEME_COLORS } from '../constants/theme';
 import { useWidget } from '../hooks/useWidget';
 import type { MarketrixConfig } from '../types';
 import {
@@ -138,7 +137,7 @@ export const BrowserTools: React.FC<BrowserToolsProps> = ({ config, onToolSelect
       className='browser-tools-container'
       style={{
         width,
-        backgroundColor: DARK_THEME_COLORS.white,
+        backgroundColor: '#ffffff',
         border: `1px solid ${addOpacity(borderColor, 0.2)}`,
         borderRadius: widgetConfig.widget_border_radius,
         overflow: 'hidden',

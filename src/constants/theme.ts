@@ -1,3 +1,7 @@
+/**
+ * Legacy theme constants. New UI should use src/design-system (tokens, semantic-tokens, themes).
+ * Kept for reference; migrated components use base primitives and inline/token values.
+ */
 export const DARK_THEME_CLASSES = {
   allowButton:
     'flex items-center justify-center text-sm font-medium transition-all duration-200 bg-gray-900 text-white shadow-lg border-2 border-transparent hover:bg-gray-800',

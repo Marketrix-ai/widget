@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 
-import { DARK_THEME_COLORS } from '../../constants/theme';
 import { type ResizeCorner, useResize } from '../../hooks/useResize';
 import { useWidget } from '../../hooks/useWidget';
 import type { InstructionType } from '../../sdk';
@@ -20,6 +19,7 @@ import { showModeService } from '../../services/ShowModeService';
 import type { ChatMessage, MarketrixConfig, TaskProgress } from '../../types';
 import { addOpacity, getContrastingColor } from '../../utils/format';
 import { getPositionClasses } from '../../utils/widgetPositioning';
+import { Button } from '../base/Button';
 import { MessageInput } from '../input/MessageInput';
 import { ModeSelector } from '../input/ModeSelector';
 import { ScreenAccessModal } from '../ui/ScreenAccessModal';
@@ -419,7 +419,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     height: isMinimized ? '48px' : heightPx,
     borderRadius: settings.widget_border_radius,
     fontSize: settings.widget_font_size,
-    backgroundColor: DARK_THEME_COLORS.white,
+    backgroundColor: '#ffffff',
     backgroundImage: settings.widget_background_color.includes('gradient')
       ? settings.widget_background_color
       : `linear-gradient(135deg, ${settings.widget_background_color} 0%, ${settings.widget_background_color} 100%)`,
@@ -451,7 +451,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       className={`${positionClass} rounded-xl ${isPreviewMode ? '' : positionClasses} pointer-events-auto`}
       style={{
         zIndex,
-        backgroundColor: DARK_THEME_COLORS.white,
+        backgroundColor: '#ffffff',
         backgroundImage: settings.widget_background_color.includes('gradient')
           ? settings.widget_background_color
           : `linear-gradient(135deg, ${settings.widget_background_color} 0%, ${settings.widget_background_color} 100%)`,
@@ -490,12 +490,16 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
               {settings.widget_header}
             </span>
             {config.use_screenshare !== false && !isScreenSharing && (
-              <button
+              <Button
+                type='button'
+                variant='secondary'
+                size='sm'
                 onClick={handleStartScreenShare}
-                className='flex items-center justify-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-all duration-300 shadow-md hover:shadow-lg hover:scale-105 active:scale-95 animate-fade-in '
+                className='flex items-center justify-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-all duration-300 shadow-md hover:shadow-lg hover:scale-105 active:scale-95 animate-fade-in'
                 style={{
                   backgroundColor: settings.widget_secondary_color,
                   color: getContrastingColor(settings.widget_secondary_color),
+                  border: 'none',
                 }}
                 aria-label='Start screen sharing'
                 title='Click to start screen sharing'
@@ -517,15 +521,19 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                   />
                 </svg>
                 <span className='font-medium'>Share Screen</span>
-              </button>
+              </Button>
             )}
             {isScreenSharing && (
-              <button
+              <Button
+                type='button'
+                variant='secondary'
+                size='sm'
                 onClick={stopScreenSharing}
                 className='flex items-center justify-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-all duration-300 shadow-md hover:shadow-lg hover:scale-105 active:scale-95 animate-fade-in'
                 style={{
                   backgroundColor: settings.widget_secondary_color,
                   color: getContrastingColor(settings.widget_secondary_color),
+                  border: 'none',
                 }}
                 aria-label='Stop screen sharing'
                 title='Click to stop screen sharing'
@@ -561,7 +569,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                     d='M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z'
                   />
                 </svg>
-              </button>
+              </Button>
             )}
           </div>
 
@@ -573,7 +581,10 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
             }}
           >
             {onClearChat && (
-              <button
+              <Button
+                type='button'
+                variant='ghost'
+                size='sm'
                 onClick={() => {
                   const result = onClearChat();
                   if (result instanceof Promise) {
@@ -612,9 +623,12 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                     d='M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15'
                   />
                 </svg>
-              </button>
+              </Button>
             )}
-            <button
+            <Button
+              type='button'
+              variant='ghost'
+              size='sm'
               onClick={onClose}
               className='p-1 rounded-full transition-colors'
               style={{
@@ -643,7 +657,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                   clipRule='evenodd'
                 />
               </svg>
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -703,7 +717,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
             <div
               className='flex-shrink-0 rounded-lg m-2 mt-auto'
               style={{
-                backgroundColor: DARK_THEME_COLORS.white,
+                backgroundColor: '#ffffff',
               }}
             >
               {/* Task Progress Display */}

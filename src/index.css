@@ -1,4 +1,14 @@
 @import 'tailwindcss';
+@import './design-system/tokens.css';
+@import './styles/reset.css';
+@import './styles/utilities.css';
+
+/*
+ * Documented !important exceptions (plan UI-03):
+ * - [data-resizing='true']: transition none during resize (required for drag).
+ * - .marketrix-widget-icon-shine: transition for shine animation (override inherited).
+ * - WebKit scrollbar rules: hide scrollbar buttons/corners (browser defaults vary).
+ */
 
 :root {
   --mx-gray-50: #f9fafb;
@@ -33,17 +43,17 @@
 /* Ensure widget appears above other content */
 .marketrix-widget-container {
   position: fixed;
-  z-index: 2147483647;
+  z-index: var(--widget-z-index, 1210);
   pointer-events: auto;
 }
 
-/* Ensure all elements inside the widget can receive pointer events */
+/* Widget shell: pointer-events and transitions scoped to .marketrix-widget only */
 .marketrix-widget,
 .marketrix-widget * {
   pointer-events: auto;
 }
 
-/* Smooth transitions (excludes width/height so resizing stays instant) */
+.marketrix-widget,
 .marketrix-widget * {
   transition:
     color 0.2s ease-in-out,

@@ -1,0 +1,40 @@
+:host,
+#marketrix-widget-root {
+  --mx-color-surface: #ffffff;
+  --mx-color-text: #1f2937;
+  --mx-color-border: #e5e7eb;
+  --mx-color-accent: #3b82f6;
+  --mx-color-secondary: #6b7280;
+
+  --mx-radius-md: 16px;
+  --mx-shadow-md: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  --mx-font-size-base: 14px;
+
+  --mx-motion-duration-animation: 300ms;
+  --mx-motion-duration-fade: 200ms;
+
+  --mx-size-widget-width: 400px;
+  --mx-size-widget-height: 600px;
+
+  /* Back-compat aliases for existing widget variable names. */
+  --widget-width: var(--mx-size-widget-width);
+  --widget-height: var(--mx-size-widget-height);
+  --widget-border-radius: var(--mx-radius-md);
+  --widget-font-size: var(--mx-font-size-base);
+  --widget-primary-color: var(--mx-color-accent);
+  --widget-secondary-color: var(--mx-color-secondary);
+  --widget-background: var(--mx-color-surface);
+  --widget-text-color: var(--mx-color-text);
+  --widget-border-color: var(--mx-color-border);
+  --widget-shadow: var(--mx-shadow-md);
+  --widget-animation-duration: var(--mx-motion-duration-animation);
+  --widget-fade-duration: var(--mx-motion-duration-fade);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :host,
+  #marketrix-widget-root {
+    --mx-motion-duration-animation: 0ms;
+    --mx-motion-duration-fade: 0ms;
+  }
+}

@@ -572,22 +572,19 @@ type InstructionType = 'tell' | 'show' | 'do';
 
 ## CI/CD & Deployment
 
-GitHub Actions workflows in `.github/workflows/`. All build and deploy jobs
-are delegated to `base.yml` as a reusable workflow:
+GitHub Actions workflows live in `.github/workflows/`:
 
-| Workflow         | Trigger          | Action                                                  |
-| ---------------- | ---------------- | ------------------------------------------------------- |
-| `base.yml`       | Called by others | Reusable workflow: build (sanity) or deploy (full)      |
-| `dev-build.yml`  | Push to `dev`    | Sanity check via `base.yml` (npm ci + build, no upload) |
-| `prod-build.yml` | Release created  | Sanity check via `base.yml` (npm ci + build, no upload) |
-| `deploy.yml`     | Manual dispatch  | Build + upload to Azure Blob Storage + purge CDN cache  |
+| Workflow       | Trigger                 | Action                                                                                                                                 |
+| -------------- | ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `validate.yml` | Push/PR to `dev`, `main` | Runs `npm ci`, then: `type-check`, `lint:check`, `format:check`, `test:run`, `build`, `visual:check`, `a11y:check`, `bundle:check` |
+| `deploy.yml`   | Manual dispatch         | Validates selected tag passed `validate.yml`, builds Docker image, and deploys to AKS          |
 
 **Deploy options:**
 
+- **Tag**: existing tag to deploy, or a new tag name to create on current commit
 - **Environment**: `dev` or `prod`
-- **Version** (required for prod): Git tag to checkout and build from (e.g. `v1.2.0`).
 
-Dev builds are uploaded to `widget/dev/` and prod builds to `widget/latest/` on Azure CDN.
+Validation must be green for the target commit before deployment is allowed.
 
 ## Build System
 
@@ -629,9 +626,11 @@ Output files:
 - Vite 6
 - Tailwind CSS v4 (via `@tailwindcss/vite` plugin)
 - TypeScript 5
+- Vitest + Testing Library (unit and integration tests)
 - ESLint + Prettier
-- Lefthook for git hooks
 - Terser for production minification
+
+**Quality gates (run before PR):** `npm run type-check`, `npm run lint:check`, `npm run format:check`, `npm run test:run`, `npm run build`, `npm run visual:check`, `npm run a11y:check`, `npm run bundle:check`. See `.github/pull_request_template.md` and `docs/release-ui-checklist.md`.
 
 ## License
 

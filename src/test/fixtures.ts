@@ -1,0 +1,42 @@
+import type { MarketrixConfig } from '../types';
+
+/**
+ * Minimal valid widget config for tests (satisfies WidgetSettingsDataSchema).
+ * Use with WidgetProvider previewMode to avoid network calls.
+ */
+export function getMockWidgetConfig(overrides: Partial<MarketrixConfig> = {}): MarketrixConfig {
+  return {
+    widget_enabled: true,
+    widget_appearance: 'default',
+    widget_position: 'bottom_right',
+    widget_device: 'desktop_mobile',
+    widget_header: 'Support',
+    widget_body: 'How can we help?',
+    widget_greeting: 'Hi! Need help?',
+    widget_feature_tell: true,
+    widget_feature_show: true,
+    widget_feature_do: true,
+    widget_feature_human: false,
+    widget_background_color: '#111827',
+    widget_text_color: '#f9fafb',
+    widget_border_color: '#374151',
+    widget_accent_color: '#3b82f6',
+    widget_secondary_color: '#6b7280',
+    widget_border_radius: '12px',
+    widget_font_size: '14px',
+    widget_width: '400px',
+    widget_height: '600px',
+    widget_shadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
+    widget_animation_duration: '300ms',
+    widget_fade_duration: '200ms',
+    widget_bounce_effect: true,
+    widget_chips: [],
+    widget_position_z_index: 1230,
+    mtxId: 'test-id',
+    mtxKey: 'test-key',
+    mtxApiHost: 'https://api.test',
+    mtxAiHost: 'https://agent.test',
+    isPreviewMode: true,
+    ...overrides,
+  };
+}

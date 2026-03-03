@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 import MarketrixIcon from '../../assets/marketrix-icon.svg';
-import { DARK_THEME_COLORS } from '../../constants/theme';
 import { useWidget } from '../../hooks/useWidget';
 import type { MarketrixConfig, WidgetPosition } from '../../types';
 import { addOpacity, darkenColor, getContrastingColor } from '../../utils/format';
@@ -11,6 +10,7 @@ import {
   getNearestCornerByTranslation,
   getPositionClasses,
 } from '../../utils/widgetPositioning';
+import { Button } from '../base/Button';
 
 interface WidgetButtonProps {
   config: MarketrixConfig;
@@ -342,20 +342,25 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
       >
         {showProcessingGlow && <div className={glowClass} aria-hidden />}
         {showStopControl && !isDragging && (
-          <button
+          <Button
             type='button'
+            variant='secondary'
+            size='sm'
             onClick={e => {
               e.preventDefault();
               e.stopPropagation();
               onStopTask?.();
             }}
             className={`absolute top-1/2 z-20 -translate-y-1/2 rounded-full border border-white/25 bg-gray-900 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-white shadow-lg opacity-0 transition-opacity duration-150 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto group-focus-within:opacity-100 group-focus-within:pointer-events-auto ${effectivePosition.includes('left') ? 'left-full ml-2' : 'right-full mr-2'}`}
+            style={{ border: '1px solid rgba(255,255,255,0.25)' }}
             aria-label='Stop running task'
           >
             Stop
-          </button>
+          </Button>
         )}
-        <button
+        <Button
+          type='button'
+          variant='primary'
           onClick={() => {
             if (Date.now() < suppressUntilRef.current) return;
             onClick();
@@ -365,10 +370,7 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerCancel}
-          className={`
-          relative z-10 w-14 h-14 rounded-[27px]
-          border-0 bg-transparent marketrix-widget-btn-shine
-        `}
+          className='relative z-10 w-14 h-14 min-w-14 rounded-[27px] border-0 bg-transparent marketrix-widget-btn-shine p-0'
           style={{
             color: getContrastingColor(widgetConfig.widget_accent_color),
             backgroundColor: 'transparent',
@@ -413,7 +415,7 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
               />
             </div>
           </div>
-        </button>
+        </Button>
       </div>
 
       {/* Welcome Text */}
@@ -421,7 +423,7 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
         <div
           className={`absolute ${effectivePosition.includes('left') ? 'right-16' : 'left-16'} bottom-0 px-4 py-3 text-sm rounded-lg shadow-lg w-64 ${effectivePosition.includes('left') ? 'animate-slide-in-right' : 'animate-slide-in-left'} cursor-pointer`}
           style={{
-            backgroundColor: DARK_THEME_COLORS.white,
+            backgroundColor: '#ffffff',
             backgroundImage: 'none',
             color: widgetConfig.widget_text_color,
             borderColor: widgetConfig.widget_border_color,
@@ -432,12 +434,15 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
         >
           <div className='flex gap-2'>
             {effectivePosition.includes('left') && (
-              <button
+              <Button
+                type='button'
+                variant='ghost'
+                size='sm'
                 onClick={e => {
                   e.stopPropagation();
                   setShowWelcomeText(false);
                 }}
-                className='flex-shrink-0 w-4 h-4 flex align-top justify-start rounded-full hover:bg-gray-100 transition-colors duration-200'
+                className='flex-shrink-0 w-4 h-4 min-w-0 p-0 flex align-top justify-start rounded-full hover:bg-gray-100 transition-colors duration-200'
                 aria-label='Close welcome message'
               >
                 <svg
@@ -448,7 +453,7 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
                 >
                   <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M6 18L18 6M6 6l12 12' />
                 </svg>
-              </button>
+              </Button>
             )}
 
             <div className='flex-1'>
@@ -457,12 +462,15 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
             </div>
 
             {effectivePosition.includes('right') && (
-              <button
+              <Button
+                type='button'
+                variant='ghost'
+                size='sm'
                 onClick={e => {
                   e.stopPropagation();
                   setShowWelcomeText(false);
                 }}
-                className='flex-shrink-0 w-4 h-4 flex align-top justify-start rounded-full hover:bg-gray-100 transition-colors duration-200'
+                className='flex-shrink-0 w-4 h-4 min-w-0 p-0 flex align-top justify-start rounded-full hover:bg-gray-100 transition-colors duration-200'
                 aria-label='Close welcome message'
               >
                 <svg
@@ -473,7 +481,7 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
                 >
                   <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M6 18L18 6M6 6l12 12' />
                 </svg>
-              </button>
+              </Button>
             )}
           </div>
           <div

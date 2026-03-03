@@ -11,6 +11,7 @@ import { sessionManager } from '../../services/SessionManager';
 import { WebSocketClient } from '../../services/WebSocketClient';
 import type { MarketrixConfig } from '../../types';
 import { addOpacity, getContrastingColor, getModeDescription, getModeDisplayName } from '../../utils/format';
+import { Button } from '../base/Button';
 import { DiagnosticModal } from '../ui/DiagnosticModal';
 
 interface ModeSelectorProps {
@@ -56,33 +57,26 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({
     >
       <div className='flex space-x-2 flex-shrink-0'>
         {orderedModes.map((mode: InstructionType) => (
-          <button
+          <Button
             key={mode}
+            type='button'
+            variant={currentMode === mode ? 'primary' : 'secondary'}
+            size='sm'
             onClick={e => {
               e.preventDefault();
               e.stopPropagation();
               onModeChange(mode);
             }}
-            className={`
-                flex items-center justify-center gap-1 text-sm font-medium transition-all duration-200 relative
-                ${currentMode === mode ? 'shadow-lg' : ''}
-                ${
-                  isScreenSharing && currentMode === mode
-                    ? 'border-2'
-                    : currentMode === mode
-                      ? 'border-2 border-transparent'
-                      : ''
-                }
-              `}
+            className={`flex items-center justify-center gap-1 text-sm font-medium transition-all duration-200 relative w-[65px] h-[26px] min-w-0 ${
+              currentMode === mode ? 'shadow-lg' : ''
+            } ${isScreenSharing && currentMode === mode ? 'border-2' : currentMode === mode ? 'border-2 border-transparent' : ''}`}
             style={{
-              width: '65px',
-              height: '26px',
               borderRadius: '22px',
-              opacity: 1,
               ...(currentMode === mode
                 ? {
                     backgroundColor: widgetConfig.widget_accent_color,
                     color: getContrastingColor(widgetConfig.widget_accent_color),
+                    border: 'none',
                   }
                 : {
                     backgroundColor: addOpacity(widgetConfig.widget_secondary_color, 0.2),
@@ -112,7 +106,7 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({
           >
             {getModeIcon(mode)}
             <span className='text-xs font-medium'>{getModeDisplayName(mode)}</span>
-          </button>
+          </Button>
         ))}
       </div>
       <img

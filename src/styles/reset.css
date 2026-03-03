@@ -1,0 +1,15 @@
+/*
+ * Scoped reset for widget content (plan §4.2).
+ * Keeps host page unaffected; applied inside .marketrix-widget.
+ */
+.marketrix-widget,
+.marketrix-widget * {
+  box-sizing: border-box;
+}
+
+.marketrix-widget button,
+.marketrix-widget input,
+.marketrix-widget textarea,
+.marketrix-widget select {
+  font: inherit;
+}

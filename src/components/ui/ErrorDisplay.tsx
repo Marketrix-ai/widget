@@ -1,12 +1,17 @@
 import React from 'react';
 
+import { LAYER_TOKENS } from '../../design-system/layers';
+import { Button } from '../base/Button';
+
 interface ErrorDisplayProps {
   error: string;
   onClose: () => void;
+  /** Optional retry for transient failures (explicit recovery per plan 7.4) */
+  onRetry?: () => void;
   position?: 'bottom_left' | 'bottom_right' | 'top_left' | 'top_right';
 }
 
-export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({ error, onClose, position = 'bottom_left' }) => {
+export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({ error, onClose, onRetry, position = 'bottom_left' }) => {
   const positionStyle =
     position === 'bottom_left' || position === 'top_left' || !position ? { left: '0' } : { right: '0' };
   const verticalStyle = position.includes('top') ? { top: '20px' } : { bottom: '90px' };
@@ -15,15 +20,36 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({ error, onClose, posi
     <div
       className='fixed max-w-sm'
       style={{
-        zIndex: 2147483030,
+        zIndex: LAYER_TOKENS.toast + 10,
         ...verticalStyle,
         ...positionStyle,
       }}
     >
       <div className='bg-red-500 text-white px-4 py-3 rounded-lg shadow-lg'>
-        <div className='flex items-center justify-between'>
-          <span className='text-sm'>{error}</span>
-          <button onClick={onClose} className='ml-4 text-white hover:text-red-100' aria-label='Close error'>
+        <div className='flex items-center justify-between gap-2'>
+          <span className='text-sm flex-1'>{error}</span>
+          {onRetry && (
+            <Button
+              type='button'
+              variant='secondary'
+              size='sm'
+              onClick={() => {
+                onRetry();
+                onClose();
+              }}
+              className='text-white border-white/50 hover:bg-red-600'
+              aria-label='Retry'
+            >
+              Retry
+            </Button>
+          )}
+          <Button
+            type='button'
+            variant='ghost'
+            onClick={onClose}
+            className='ml-4 text-white hover:text-red-100 min-w-0 p-1'
+            aria-label='Close error'
+          >
             <svg className='w-4 h-4' fill='currentColor' viewBox='0 0 20 20'>
               <path
                 fillRule='evenodd'
@@ -31,7 +57,7 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({ error, onClose, posi
                 clipRule='evenodd'
               />
             </svg>
-          </button>
+          </Button>
         </div>
       </div>
     </div>

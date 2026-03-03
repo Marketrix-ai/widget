@@ -1,5 +1,8 @@
 import React, { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 
+import { LAYER_TOKENS } from '../design-system/layers';
+import { semanticTokensToCssCustomProperties } from '../design-system/semantic-tokens';
+import { createSemanticTokens } from '../design-system/token-adapter';
 import { useWidget } from '../hooks/useWidget';
 import type { MarketrixConfig, WidgetPosition } from '../types';
 import { addOpacity } from '../utils/format';
@@ -9,7 +12,6 @@ import { ErrorDisplay } from './ui/ErrorDisplay';
 
 // Lazy load the dev panel (only in development)
 const DomTestPanel = lazy(() => import('./dev/DomTestPanel'));
-const WIDGET_Z_INDEX_BASE = 2147483000;
 
 interface MarketrixWidgetProps {
   config: MarketrixConfig;
@@ -42,6 +44,7 @@ class WidgetErrorBoundary extends React.Component<{ children: React.ReactNode },
 export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
   const [_isScreenSharing, setIsScreenSharing] = useState(false);
   const [showDevPanel, setShowDevPanel] = useState(false);
+  const isDevBuild = import.meta.env.DEV;
 
   const {
     state,
@@ -63,6 +66,10 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
 
   // Keyboard shortcut for dev panel (Ctrl+Shift+D)
   useEffect(() => {
+    if (!isDevBuild) {
+      return;
+    }
+
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.shiftKey && e.key === 'D') {
         e.preventDefault();
@@ -72,7 +79,7 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [isDevBuild]);
 
   useEffect(() => {
     const fallback = (settings.widget_position as WidgetPosition | undefined) ?? 'bottom_right';
@@ -116,7 +123,10 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
     return null;
   }
 
-  const effectiveWidgetZIndex = Math.max(settings.widget_position_z_index ?? 0, WIDGET_Z_INDEX_BASE + 10);
+  const semanticTokens = createSemanticTokens(settings);
+  const semanticTokenStyles = semanticTokensToCssCustomProperties(semanticTokens);
+
+  const effectiveWidgetZIndex = Math.max(settings.widget_position_z_index ?? 0, LAYER_TOKENS.panel);
 
   const effectiveConfig = {
     ...settings,
@@ -125,6 +135,7 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
   };
   const showProcessingFeedback = state.isLoading || state.isTaskRunning;
   const customStyles = {
+    ...semanticTokenStyles,
     '--widget-width': settings.widget_width,
     '--widget-height': settings.widget_height,
     '--widget-border-radius': settings.widget_border_radius,
@@ -152,7 +163,7 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
           style={{
             boxShadow: `inset 0 0 22px 2px ${addOpacity(settings.widget_accent_color, 0.72)}, inset 0 0 46px 10px ${addOpacity(settings.widget_accent_color, 0.28)}`,
             pointerEvents: 'none',
-            zIndex: WIDGET_Z_INDEX_BASE,
+            zIndex: LAYER_TOKENS.overlay,
           }}
         />
       )}
@@ -194,11 +205,16 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
       </WidgetErrorBoundary>
 
       {state.error && (
-        <ErrorDisplay error={state.error} onClose={() => actions.clearError()} position={widgetPosition} />
+        <ErrorDisplay
+          error={state.error}
+          onClose={() => actions.clearError()}
+          onRetry={() => actions.clearError()}
+          position={widgetPosition}
+        />
       )}
 
       {/* Dev-only DOM Test Panel */}
-      {showDevPanel && (
+      {isDevBuild && showDevPanel && (
         <Suspense fallback={null}>
           <DomTestPanel />
         </Suspense>

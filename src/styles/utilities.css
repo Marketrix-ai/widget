@@ -1,0 +1,17 @@
+/*
+ * Widget-scoped utilities (plan §4.2).
+ * Add shared utility classes here; prefer design tokens and base components.
+ */
+
+/* Screen-reader only (a11y) */
+.marketrix-widget .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

@@ -1,0 +1,42 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Button visual snapshots > loading state matches snapshot 1`] = `
+<button
+  aria-busy="true"
+  class="base-button"
+  data-disabled="true"
+  data-loading="true"
+  data-size="md"
+  data-variant="primary"
+  disabled=""
+  type="button"
+>
+  Saving
+</button>
+`;
+
+exports[`Button visual snapshots > primary default matches snapshot 1`] = `
+<button
+  class="base-button"
+  data-disabled="false"
+  data-loading="false"
+  data-size="md"
+  data-variant="primary"
+  type="button"
+>
+  Submit
+</button>
+`;
+
+exports[`Button visual snapshots > secondary matches snapshot 1`] = `
+<button
+  class="base-button"
+  data-disabled="false"
+  data-loading="false"
+  data-size="md"
+  data-variant="secondary"
+  type="button"
+>
+  Cancel
+</button>
+`;

@@ -1,8 +1,8 @@
 import React from 'react';
 
-import { DARK_THEME_CLASSES } from '../../constants/theme';
 import type { ChatMessage, WidgetState } from '../../types';
 import { addOpacity, formatMessageTime, getContrastingColor } from '../../utils/format';
+import { Button } from '../base/Button';
 import { MessageContent } from './MessageContent';
 import { TaskStatusIcon } from './TaskStatusIcon';
 import { VideoStreamDisplay } from './VideoStreamDisplay';
@@ -108,36 +108,41 @@ export const MessageItem: React.FC<MessageItemProps> = ({
           {/* Screen access request action buttons - show if not yet handled */}
           {message.isScreenAccessRequest && !message.screenShareStatus && (
             <div className='mt-1.5 pt-0.5 flex gap-2'>
-              <button
+              <Button
+                type='button'
+                variant='primary'
+                size='sm'
                 onClick={e => {
                   e.preventDefault();
                   e.stopPropagation();
                   onScreenAccessAllow?.();
                 }}
-                className={DARK_THEME_CLASSES.allowButton}
+                className='flex items-center justify-center text-sm font-medium h-[26px] min-w-[65px] rounded-[22px]'
                 style={{
-                  width: '65px',
-                  height: '26px',
-                  borderRadius: '22px',
+                  backgroundColor: '#111827',
+                  color: '#fff',
+                  border: 'none',
                 }}
               >
-                <span className='text-xs font-medium'>Yes</span>
-              </button>
-              <button
+                Yes
+              </Button>
+              <Button
+                type='button'
+                variant='secondary'
+                size='sm'
                 onClick={e => {
                   e.preventDefault();
                   e.stopPropagation();
                   onScreenAccessDeny?.();
                 }}
-                className={DARK_THEME_CLASSES.denyButton}
+                className='flex items-center justify-center text-sm font-medium h-[26px] min-w-[65px] rounded-[22px] border border-gray-200'
                 style={{
-                  width: '65px',
-                  height: '26px',
-                  borderRadius: '22px',
+                  backgroundColor: '#f3f4f6',
+                  color: '#111827',
                 }}
               >
-                <span className='text-xs font-medium'>No</span>
-              </button>
+                No
+              </Button>
             </div>
           )}
 
