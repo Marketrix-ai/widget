@@ -240,18 +240,18 @@ export const WidgetProvider: React.FC<WidgetProviderProps> = ({ children, previe
         const ALLOWED_TOOLS = [
           'click_element',
           'type_text',
+          'scroll',
+          'scroll_to_text',
+          'go_back',
+          'wait',
           'select_dropdown_option',
+          'get_dropdown_options',
           'send_keys',
           'upload_file',
-          'scroll',
           'done',
-          'wait',
-          'get_element_text',
-          'get_current_url',
-          'hover_element',
-          'screenshot',
-          'drag_element',
-          'ask_question',
+          'get_html',
+          'get_interactable_elements',
+          'get_screenshot',
         ];
 
         if (!ALLOWED_TOOLS.includes(request.tool)) {
