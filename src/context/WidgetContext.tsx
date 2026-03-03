@@ -237,7 +237,7 @@ export const WidgetProvider: React.FC<WidgetProviderProps> = ({ children, previe
           return;
         }
 
-        // Derived from BROWSER_TOOLS — single source of truth
+        // Validate tool name is in allowed list (derived from single source of truth)
         const ALLOWED_TOOLS = BROWSER_TOOLS.map(t => t.id);
 
         if (!ALLOWED_TOOLS.includes(request.tool)) {

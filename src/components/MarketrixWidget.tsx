@@ -122,6 +122,10 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
     ...settings,
     widget_position: widgetPosition,
     widget_position_z_index: effectiveWidgetZIndex,
+    // Preserve top-level config props that come from script tag attributes / init config
+    // (not from API settings) so they propagate to child components like ChatWindow
+    show_widget: config.show_widget,
+    use_screenshare: config.use_screenshare,
   };
   const showProcessingFeedback = state.isLoading || state.isTaskRunning;
   const customStyles = {
