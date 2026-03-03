@@ -35,11 +35,12 @@ export const TOOL_PARAMS: Record<string, { required: string[]; optional: string[
   get_dropdown_options: { required: ['index'], optional: [] },
   extract: { required: [], optional: [] },
   get_html: { required: [], optional: [] },
+  get_interactable_elements: { required: [], optional: [] },
   get_screenshot: { required: [], optional: [] },
   go_back: { required: [], optional: [] },
   wait: { required: ['seconds'], optional: [] },
   close_tab: { required: [], optional: [] },
-  switch_tab: { required: ['tab_index'], optional: [] },
+  switch_tab: { required: ['tab_id'], optional: [] },
   upload_file: { required: ['index', 'path'], optional: [] },
   done: { required: ['success'], optional: ['message'] },
 };
