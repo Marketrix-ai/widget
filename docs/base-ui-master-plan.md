@@ -2,13 +2,13 @@
 
 ## Document Control
 
-| Field | Value |
-| --- | --- |
-| Status | Draft for execution |
-| Date | 2026-03-02 |
-| Scope | `widget` package, `chrome-extension`, CI/CD, quality gates, docs |
-| Primary Goal | Deliver an industry-leading embedded chat widget UI using Base UI in closed Shadow DOM |
-| Directive | Pre-release product: no backward compatibility, legacy support, or rollback obligations |
+| Field        | Value                                                                                   |
+| ------------ | --------------------------------------------------------------------------------------- |
+| Status       | Draft for execution                                                                     |
+| Date         | 2026-03-02                                                                              |
+| Scope        | `widget` package, `chrome-extension`, CI/CD, quality gates, docs                        |
+| Primary Goal | Deliver an industry-leading embedded chat widget UI using Base UI in closed Shadow DOM  |
+| Directive    | Pre-release product: no backward compatibility, legacy support, or rollback obligations |
 
 ## 1. Executive Summary
 
@@ -36,18 +36,18 @@ This plan addresses all previously identified issues:
 
 ### 2.2 Issue Register and Mitigation Mapping
 
-| ID | Current Issue | Impact | Mitigation in this Plan | Exit Condition |
-| --- | --- | --- | --- | --- |
-| UI-01 | No canonical design token system | Inconsistent look/feel | Create semantic token layer and governance | 100% UI primitives consume semantic tokens |
-| UI-02 | Broad descendant selectors in `index.css` | Unintended style side effects | Replace with component-scoped styles | No global descendant selector for core behavior |
-| UI-03 | Heavy `!important` usage | Fragile overrides and regressions | Refactor style architecture and remove non-essential overrides | `!important` reduced to documented exceptions only |
-| UI-04 | No primitive contract (dialog/menu/popover/input/button) | Inconsistent UX/accessibility | Implement Base UI wrappers in `src/components/base` | Core interaction primitives fully migrated |
-| UI-05 | Inconsistent states (hover/focus/disabled/loading/error) | Unpolished UX | Define interaction state matrix and apply universally | State matrix completed and validated visually |
-| UI-06 | Layering/z-index near max int | Host conflicts and brittle overlay behavior | Standardized layer scale and overlay strategy | All layers use a documented tokenized scale |
-| UI-07 | No visual regression testing | UI quality drift | Add screenshot tests for critical surfaces | PR gate enforces visual checks |
-| UI-08 | CI lacks full UI quality gates | Regressions can ship | Add lint/prettier/tests/a11y/perf gates | Validate workflow blocks on full checks |
-| UI-09 | Docs/PR template drift | Team confusion and process errors | Rewrite docs and templates to match actual scripts | No dead commands in docs/templates |
-| UI-10 | Debug shortcuts/dev tooling exposed globally | Production noise/risk | Add environment guards and debug boundaries | Debug-only tooling disabled in production paths |
+| ID    | Current Issue                                            | Impact                                      | Mitigation in this Plan                                        | Exit Condition                                     |
+| ----- | -------------------------------------------------------- | ------------------------------------------- | -------------------------------------------------------------- | -------------------------------------------------- |
+| UI-01 | No canonical design token system                         | Inconsistent look/feel                      | Create semantic token layer and governance                     | 100% UI primitives consume semantic tokens         |
+| UI-02 | Broad descendant selectors in `index.css`                | Unintended style side effects               | Replace with component-scoped styles                           | No global descendant selector for core behavior    |
+| UI-03 | Heavy `!important` usage                                 | Fragile overrides and regressions           | Refactor style architecture and remove non-essential overrides | `!important` reduced to documented exceptions only |
+| UI-04 | No primitive contract (dialog/menu/popover/input/button) | Inconsistent UX/accessibility               | Implement Base UI wrappers in `src/components/base`            | Core interaction primitives fully migrated         |
+| UI-05 | Inconsistent states (hover/focus/disabled/loading/error) | Unpolished UX                               | Define interaction state matrix and apply universally          | State matrix completed and validated visually      |
+| UI-06 | Layering/z-index near max int                            | Host conflicts and brittle overlay behavior | Standardized layer scale and overlay strategy                  | All layers use a documented tokenized scale        |
+| UI-07 | No visual regression testing                             | UI quality drift                            | Add screenshot tests for critical surfaces                     | PR gate enforces visual checks                     |
+| UI-08 | CI lacks full UI quality gates                           | Regressions can ship                        | Add lint/prettier/tests/a11y/perf gates                        | Validate workflow blocks on full checks            |
+| UI-09 | Docs/PR template drift                                   | Team confusion and process errors           | Rewrite docs and templates to match actual scripts             | No dead commands in docs/templates                 |
+| UI-10 | Debug shortcuts/dev tooling exposed globally             | Production noise/risk                       | Add environment guards and debug boundaries                    | Debug-only tooling disabled in production paths    |
 
 ## 3. Product Vision and Standards
 
@@ -63,25 +63,25 @@ The widget must be:
 
 ### 3.2 Design standards
 
-| Domain | Standard |
-| --- | --- |
-| Visual system | Semantic tokens for color, spacing, radius, elevation, typography, motion |
-| Components | Base UI primitives wrapped by Marketrix contracts |
-| Motion | Consistent durations/easing; reduced-motion support |
-| Accessibility | Keyboard-first, visible focus, ARIA semantics, contrast compliance |
-| Copy/voice | Consistent product tone, clear system messages, precise error states |
+| Domain              | Standard                                                                  |
+| ------------------- | ------------------------------------------------------------------------- |
+| Visual system       | Semantic tokens for color, spacing, radius, elevation, typography, motion |
+| Components          | Base UI primitives wrapped by Marketrix contracts                         |
+| Motion              | Consistent durations/easing; reduced-motion support                       |
+| Accessibility       | Keyboard-first, visible focus, ARIA semantics, contrast compliance        |
+| Copy/voice          | Consistent product tone, clear system messages, precise error states      |
 | Responsive behavior | Defined breakpoints and density rules for launcher, chat window, composer |
 
 ### 3.3 Engineering standards
 
-| Domain | Standard |
-| --- | --- |
-| Type safety | Strict TypeScript, no unmanaged `any` growth |
-| Styling | No broad global behavior selectors; scoped and token-driven |
-| Testing | Unit + integration + visual regression for critical flows |
-| CI quality gates | Type, lint, format, tests, visual checks, bundle checks |
-| Observability | Structured logs/events for UI state transitions and errors |
-| Documentation | Living docs for architecture, design system, release process |
+| Domain           | Standard                                                     |
+| ---------------- | ------------------------------------------------------------ |
+| Type safety      | Strict TypeScript, no unmanaged `any` growth                 |
+| Styling          | No broad global behavior selectors; scoped and token-driven  |
+| Testing          | Unit + integration + visual regression for critical flows    |
+| CI quality gates | Type, lint, format, tests, visual checks, bundle checks      |
+| Observability    | Structured logs/events for UI state transitions and errors   |
+| Documentation    | Living docs for architecture, design system, release process |
 
 ## 4. Target Architecture
 
@@ -144,20 +144,20 @@ src/
 
 ## 5. Workstreams
 
-| WS | Name | Scope | Deliverables | Exit Criteria |
-| --- | --- | --- | --- | --- |
-| WS-01 | Product UX specification | End-to-end interaction design | UX flows, state matrix, interaction rules | All key states documented and reviewed |
-| WS-02 | Design tokens foundation | Visual language | Token files, semantic mapping, theming contract | 100% of core components consume semantic tokens |
-| WS-03 | Base UI primitive platform | Reusable component foundation | `src/components/base/*` wrappers | Button/Input/Dialog/Menu/Popover/Tooltip/Select/Toast complete |
-| WS-04 | Chat shell redesign | Primary user surfaces | Header, message list, bubbles, composer, footer | Shell fully migrated with no legacy styles |
-| WS-05 | Feature component migration | Secondary surfaces | Modals, diagnostics, errors, loaders, chips | `src/components/ui/*` legacy replacements complete |
-| WS-06 | Accessibility hardening | A11y compliance | Keyboard model, focus model, ARIA audit | WCAG AA checklist passes |
-| WS-07 | Performance and reliability | Runtime quality | Rendering/perf profiling, event-driven state cleanup | Meets performance budgets and crash targets |
-| WS-08 | Testing and quality automation | Regression prevention | Unit/integration/visual tests | CI blocks regressions on protected branches |
-| WS-09 | CI/CD and release hardening | Delivery governance | Updated workflows, stricter gates, release checklist | Deploy only from validated artifacts |
-| WS-10 | Extension and embed parity | Full product consistency | Extension compatibility validation | Widget behavior consistent across script and extension injection |
-| WS-11 | Documentation and onboarding | Team execution clarity | Architecture docs, DS docs, contribution guides | Docs match real scripts/workflows |
-| WS-12 | Analytics and observability | Operational insight | UI telemetry model and dashboards | Core UX metrics visible per build/release |
+| WS    | Name                           | Scope                         | Deliverables                                         | Exit Criteria                                                    |
+| ----- | ------------------------------ | ----------------------------- | ---------------------------------------------------- | ---------------------------------------------------------------- |
+| WS-01 | Product UX specification       | End-to-end interaction design | UX flows, state matrix, interaction rules            | All key states documented and reviewed                           |
+| WS-02 | Design tokens foundation       | Visual language               | Token files, semantic mapping, theming contract      | 100% of core components consume semantic tokens                  |
+| WS-03 | Base UI primitive platform     | Reusable component foundation | `src/components/base/*` wrappers                     | Button/Input/Dialog/Menu/Popover/Tooltip/Select/Toast complete   |
+| WS-04 | Chat shell redesign            | Primary user surfaces         | Header, message list, bubbles, composer, footer      | Shell fully migrated with no legacy styles                       |
+| WS-05 | Feature component migration    | Secondary surfaces            | Modals, diagnostics, errors, loaders, chips          | `src/components/ui/*` legacy replacements complete               |
+| WS-06 | Accessibility hardening        | A11y compliance               | Keyboard model, focus model, ARIA audit              | WCAG AA checklist passes                                         |
+| WS-07 | Performance and reliability    | Runtime quality               | Rendering/perf profiling, event-driven state cleanup | Meets performance budgets and crash targets                      |
+| WS-08 | Testing and quality automation | Regression prevention         | Unit/integration/visual tests                        | CI blocks regressions on protected branches                      |
+| WS-09 | CI/CD and release hardening    | Delivery governance           | Updated workflows, stricter gates, release checklist | Deploy only from validated artifacts                             |
+| WS-10 | Extension and embed parity     | Full product consistency      | Extension compatibility validation                   | Widget behavior consistent across script and extension injection |
+| WS-11 | Documentation and onboarding   | Team execution clarity        | Architecture docs, DS docs, contribution guides      | Docs match real scripts/workflows                                |
+| WS-12 | Analytics and observability    | Operational insight           | UI telemetry model and dashboards                    | Core UX metrics visible per build/release                        |
 
 ## 6. Phased Execution Plan
 
@@ -317,14 +317,14 @@ An epic is complete only if:
 
 ## 9. Performance, Accessibility, and Reliability Targets
 
-| Category | Target |
-| --- | --- |
-| Boot performance | Widget interactive within agreed budget on representative environments |
-| Input responsiveness | No perceived lag in typing/composer interactions |
-| Motion quality | Smooth open/close and message transitions with reduced-motion fallback |
-| Accessibility | WCAG 2.2 AA compliance across keyboard and screen-reader critical paths |
-| Error handling | No silent failure paths for user-visible surfaces |
-| Stability | No unresolved critical UI defects at release gate |
+| Category             | Target                                                                  |
+| -------------------- | ----------------------------------------------------------------------- |
+| Boot performance     | Widget interactive within agreed budget on representative environments  |
+| Input responsiveness | No perceived lag in typing/composer interactions                        |
+| Motion quality       | Smooth open/close and message transitions with reduced-motion fallback  |
+| Accessibility        | WCAG 2.2 AA compliance across keyboard and screen-reader critical paths |
+| Error handling       | No silent failure paths for user-visible surfaces                       |
+| Stability            | No unresolved critical UI defects at release gate                       |
 
 ## 10. Security and Privacy Considerations
 
@@ -338,13 +338,13 @@ An epic is complete only if:
 
 ### 11.1 Roles
 
-| Role | Responsibility |
-| --- | --- |
-| Frontend Lead | Technical ownership of architecture and migration sequence |
-| Product Designer | Token system, interaction specs, visual QA |
-| QA Lead | Test strategy, regression gates, release sign-off |
-| DevOps Engineer | CI/CD hardening and deployment quality gates |
-| Extension Owner | Chrome extension parity and compatibility validation |
+| Role             | Responsibility                                             |
+| ---------------- | ---------------------------------------------------------- |
+| Frontend Lead    | Technical ownership of architecture and migration sequence |
+| Product Designer | Token system, interaction specs, visual QA                 |
+| QA Lead          | Test strategy, regression gates, release sign-off          |
+| DevOps Engineer  | CI/CD hardening and deployment quality gates               |
+| Extension Owner  | Chrome extension parity and compatibility validation       |
 
 ### 11.2 Cadence
 
@@ -355,13 +355,13 @@ An epic is complete only if:
 
 ## 12. Risk Register
 
-| Risk | Probability | Impact | Mitigation |
-| --- | --- | --- | --- |
-| Migration breadth causes schedule slip | Medium | High | Strict phase gates and scope discipline |
-| Incomplete visual parity during refactor | Medium | High | Snapshot baselines plus manual design QA |
-| Hidden regressions in Shadow DOM overlays | Medium | High | Dedicated overlay test matrix and host-page smoke tests |
-| CI runtime increases and slows delivery | Medium | Medium | Parallelize checks and optimize test selection |
-| Team reintroduces ad-hoc styles | Medium | Medium | Enforce wrapper usage and lint rules |
+| Risk                                      | Probability | Impact | Mitigation                                              |
+| ----------------------------------------- | ----------- | ------ | ------------------------------------------------------- |
+| Migration breadth causes schedule slip    | Medium      | High   | Strict phase gates and scope discipline                 |
+| Incomplete visual parity during refactor  | Medium      | High   | Snapshot baselines plus manual design QA                |
+| Hidden regressions in Shadow DOM overlays | Medium      | High   | Dedicated overlay test matrix and host-page smoke tests |
+| CI runtime increases and slows delivery   | Medium      | Medium | Parallelize checks and optimize test selection          |
+| Team reintroduces ad-hoc styles           | Medium      | Medium | Enforce wrapper usage and lint rules                    |
 
 ## 13. Dependencies
 
