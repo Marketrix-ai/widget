@@ -69,48 +69,11 @@ export function TooltipTrigger({
   ...props
 }: TooltipTriggerProps) {
   const context = useTooltipContext('TooltipTrigger');
-  if (as === 'button') {
-    return (
-      <button
-        {...props}
-        aria-describedby={context.open ? context.contentId : undefined}
-        className={cn('base-tooltip-trigger', className)}
-        data-state={context.open ? 'open' : 'closed'}
-        onBlur={event => {
-          onBlur?.(event);
-          if (!event.defaultPrevented) {
-            context.setOpen(false);
-          }
-        }}
-        onFocus={event => {
-          onFocus?.(event);
-          if (!event.defaultPrevented) {
-            context.setOpen(true);
-          }
-        }}
-        onMouseEnter={event => {
-          onMouseEnter?.(event);
-          if (!event.defaultPrevented) {
-            context.setOpen(true);
-          }
-        }}
-        onMouseLeave={event => {
-          onMouseLeave?.(event);
-          if (!event.defaultPrevented) {
-            context.setOpen(false);
-          }
-        }}
-        type='button'
-      >
-        {children}
-      </button>
-    );
-  }
 
   const sharedProps = {
     ...props,
     'aria-describedby': context.open ? context.contentId : undefined,
-    className: cn('base-tooltip-trigger', className),
+    className: cn('cursor-help', className),
     'data-state': context.open ? 'open' : 'closed',
     onBlur: (event: React.FocusEvent<HTMLElement>) => {
       onBlur?.(event);
@@ -138,24 +101,19 @@ export function TooltipTrigger({
     },
   };
 
+  if (as === 'button') {
+    return (
+      <button {...sharedProps} type='button'>
+        {children}
+      </button>
+    );
+  }
+
   if (as === 'span') {
     return <span {...sharedProps}>{children}</span>;
   }
 
-  return (
-    <div
-      {...props}
-      aria-describedby={context.open ? context.contentId : undefined}
-      className={cn('base-tooltip-trigger', className)}
-      data-state={context.open ? 'open' : 'closed'}
-      onBlur={sharedProps.onBlur}
-      onFocus={sharedProps.onFocus}
-      onMouseEnter={sharedProps.onMouseEnter}
-      onMouseLeave={sharedProps.onMouseLeave}
-    >
-      {children}
-    </div>
-  );
+  return <div {...sharedProps}>{children}</div>;
 }
 
 export function TooltipContent({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
@@ -167,7 +125,10 @@ export function TooltipContent({ className, ...props }: React.HTMLAttributes<HTM
   return (
     <div
       {...props}
-      className={cn('base-tooltip-content', className)}
+      className={cn(
+        'absolute z-[var(--layer-tooltip)] max-w-[250px] overflow-hidden bg-foreground text-background rounded-md px-2.5 py-1.5 text-xs leading-snug animate-tooltip-in',
+        className,
+      )}
       data-state='open'
       id={context.contentId}
       role='tooltip'

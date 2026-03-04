@@ -25,12 +25,21 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function 
         ref={ref}
         aria-describedby={describedById}
         aria-invalid={hasError || undefined}
-        className={cn('base-textarea', className)}
+        className={cn(
+          'block w-full px-3 py-2 text-sm leading-normal text-foreground bg-background border border-input rounded-lg transition-colors min-h-20 resize-y hover:border-muted-foreground focus:outline-none focus:border-ring focus:ring-3 focus:ring-ring disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-muted',
+          validationState === 'invalid' && 'border-destructive focus:border-destructive focus:ring-destructive',
+          validationState === 'valid' && 'border-success focus:border-success focus:ring-success',
+          className,
+        )}
         data-validation-state={validationState}
         id={textareaId}
       />
       {errorMessage ? (
-        <span className='base-textarea-error' data-validation-state={validationState} id={describedById}>
+        <span
+          className={cn('block mt-1 text-xs text-destructive', validationState === 'valid' && 'text-success')}
+          data-validation-state={validationState}
+          id={describedById}
+        >
           {errorMessage}
         </span>
       ) : null}

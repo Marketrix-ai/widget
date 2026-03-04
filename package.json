@@ -42,6 +42,7 @@
     "@orpc/contract": "^1.0.0",
     "@rrweb/record": "^2.0.0-alpha.20",
     "react-icons": "^5.5.0",
+    "tailwind-merge": "^3.5.0",
     "zod": "^3.25.76"
   },
   "peerDependencies": {

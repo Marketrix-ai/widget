@@ -65,7 +65,7 @@ export function PopoverTrigger({ children, className, onClick, ...props }: Popov
       {...props}
       aria-controls={context.contentId}
       aria-expanded={context.open}
-      className={cn('base-popover-trigger', className)}
+      className={cn('cursor-pointer', className)}
       data-state={context.open ? 'open' : 'closed'}
       onClick={event => {
         onClick?.(event);
@@ -89,7 +89,10 @@ export function PopoverContent({ className, ...props }: React.HTMLAttributes<HTM
   return (
     <div
       {...props}
-      className={cn('base-popover-content', className)}
+      className={cn(
+        'absolute z-[var(--layer-popover)] w-full max-w-[300px] overflow-hidden bg-popover border border-border rounded-lg shadow-lg px-4 py-3 animate-popover-in',
+        className,
+      )}
       data-state='open'
       id={context.contentId}
       role='dialog'

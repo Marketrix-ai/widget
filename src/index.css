@@ -6,7 +6,12 @@
    THEME
    ════════════════════════════════════════════════════════════════ */
 
-:root {
+/*
+ * :host is required so variables cascade inside closed Shadow DOM.
+ * :root provides defaults for non-shadow contexts (dev preview, tests).
+ */
+:root,
+:host {
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
@@ -23,6 +28,10 @@
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(1 0 0);
+  --success: oklch(0.6 0.2 145);
+  --success-foreground: oklch(1 0 0);
+  --warning: oklch(0.75 0.18 85);
+  --warning-foreground: oklch(0.2 0 0);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
@@ -71,7 +80,8 @@
   --layer-toast: 1200;
 }
 
-.dark {
+.dark,
+:host(.dark) {
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);
@@ -88,6 +98,10 @@
   --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.704 0.191 22.216);
   --destructive-foreground: oklch(0.985 0 0);
+  --success: oklch(0.55 0.2 145);
+  --success-foreground: oklch(1 0 0);
+  --warning: oklch(0.7 0.18 85);
+  --warning-foreground: oklch(0.2 0 0);
   --border: oklch(0.275 0 0);
   --input: oklch(0.325 0 0);
   --ring: oklch(0.556 0 0);
@@ -143,6 +157,10 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -177,6 +195,16 @@
   --shadow-lg: var(--shadow-lg);
   --shadow-xl: var(--shadow-xl);
   --shadow-2xl: var(--shadow-2xl);
+
+  --animate-dialog-overlay-in: dialog-overlay-in var(--duration-fade) ease-out;
+  --animate-dialog-content-in: dialog-content-in var(--duration-animation) ease-out;
+  --animate-menu-in: menu-in var(--duration-fade) ease-out;
+  --animate-popover-in: popover-in var(--duration-fade) ease-out;
+  --animate-tooltip-in: tooltip-in var(--duration-fade) ease-out;
+  --animate-toast-in: toast-in var(--duration-animation) ease-out;
+  --animate-fade-in: fade-in 0.5s ease-out;
+  --animate-slide-in-left: slide-in-left 0.6s ease-out;
+  --animate-slide-in-right: slide-in-right 0.6s ease-out;
 }
 
 @layer base {
@@ -196,15 +224,110 @@
 }
 
 /* ════════════════════════════════════════════════════════════════
-   WIDGET STYLES
+   KEYFRAMES
    ════════════════════════════════════════════════════════════════ */
 
-/*
- * Documented !important exceptions:
- * - [data-resizing='true']: transition none during resize (required for drag).
- * - .marketrix-widget-icon-shine: transition for shine animation (override inherited).
- * - WebKit scrollbar rules: hide scrollbar buttons/corners (browser defaults vary).
- */
+@keyframes dialog-overlay-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes dialog-content-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -48%);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+}
+
+@keyframes menu-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes popover-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes tooltip-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-in-left {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════
+   WIDGET SHELL — pseudo-elements & complex selectors that
+   can't be expressed as Tailwind utilities
+   ════════════════════════════════════════════════════════════════ */
 
 .marketrix-widget {
   font-family: var(--font-sans);
@@ -221,6 +344,7 @@
 .marketrix-widget,
 .marketrix-widget * {
   pointer-events: auto;
+  box-sizing: border-box;
 }
 
 .marketrix-widget,
@@ -233,6 +357,20 @@
     box-shadow 0.2s ease-in-out,
     transform 0.2s ease-in-out;
 }
+
+.marketrix-widget button,
+.marketrix-widget input,
+.marketrix-widget textarea,
+.marketrix-widget select {
+  font: inherit;
+}
+
+/*
+ * !important exceptions:
+ * - [data-resizing]: transition none during drag
+ * - .marketrix-widget-icon-shine: transition override for shine animation
+ * - scrollbar rules: hide buttons/corners across browsers
+ */
 
 [data-resizing='true'],
 [data-resizing='true'] * {
@@ -271,51 +409,6 @@
 .marketrix-widget-btn-shine:hover .marketrix-widget-icon-shine::after {
   background-position: 200% 0;
   transition: background-position 1.5s ease !important;
-}
-
-@keyframes fade-in {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.animate-fade-in {
-  animation: fade-in 0.5s ease-out;
-}
-
-@keyframes slide-in-left {
-  from {
-    opacity: 0;
-    transform: translateX(-30px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@keyframes slide-in-right {
-  from {
-    opacity: 0;
-    transform: translateX(30px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-.animate-slide-in-left {
-  animation: slide-in-left 0.6s ease-out;
-}
-
-.animate-slide-in-right {
-  animation: slide-in-right 0.6s ease-out;
 }
 
 /* Scrollbar */
@@ -370,18 +463,6 @@
 .marketrix-widget ::-webkit-scrollbar-button:vertical:end:increment,
 .marketrix-widget ::-webkit-scrollbar-button:horizontal:start:decrement,
 .marketrix-widget ::-webkit-scrollbar-button:horizontal:end:increment {
-  display: none !important;
-  width: 0 !important;
-  height: 0 !important;
-}
-
-.marketrix-widget ::-webkit-scrollbar-button:vertical:start:decrement {
-  display: none !important;
-  width: 0 !important;
-  height: 0 !important;
-}
-
-.marketrix-widget ::-webkit-scrollbar-button:vertical:end:increment {
   display: none !important;
   width: 0 !important;
   height: 0 !important;

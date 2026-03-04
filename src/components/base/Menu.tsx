@@ -70,7 +70,7 @@ export function MenuTrigger({ children, className, onClick, ...props }: MenuTrig
       aria-controls={context.contentId}
       aria-expanded={context.open}
       aria-haspopup='menu'
-      className={cn('base-menu-trigger', className)}
+      className={cn('cursor-pointer', className)}
       data-state={context.open ? 'open' : 'closed'}
       onClick={event => {
         onClick?.(event);
@@ -94,7 +94,10 @@ export function MenuContent({ className, ...props }: React.HTMLAttributes<HTMLDi
   return (
     <div
       {...props}
-      className={cn('base-menu-content', className)}
+      className={cn(
+        'absolute z-[var(--layer-popover)] min-w-[180px] overflow-hidden bg-popover border border-border rounded-lg shadow-lg p-1 animate-menu-in',
+        className,
+      )}
       data-state='open'
       id={context.contentId}
       role='menu'
@@ -108,7 +111,10 @@ export function MenuItem({ children, className, onClick, ...props }: MenuItemPro
   return (
     <button
       {...props}
-      className={cn('base-menu-item', className)}
+      className={cn(
+        'flex items-center gap-2 w-full px-3 py-2 text-sm text-popover-foreground bg-transparent border-none rounded-sm cursor-pointer text-left transition-colors hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed',
+        className,
+      )}
       onClick={event => {
         onClick?.(event);
         if (!event.defaultPrevented) {

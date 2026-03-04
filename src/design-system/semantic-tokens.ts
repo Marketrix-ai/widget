@@ -88,7 +88,10 @@ export const DEFAULT_SEMANTIC_TOKENS: SemanticTokens =
 
 /**
  * Convert tokens to CSS custom properties.
- * Applied as inline styles on the widget root to override static CSS defaults.
+ * Applied as inline styles on the widget root to override static CSS defaults
+ * set by `:host` in index.css. Must cover every variable that Tailwind utilities
+ * or base-component classes reference so the widget renders correctly inside
+ * closed Shadow DOM regardless of host page styles.
  */
 export function semanticTokensToCssCustomProperties(tokens: SemanticTokens): Record<string, string> {
   return {
@@ -102,10 +105,15 @@ export function semanticTokensToCssCustomProperties(tokens: SemanticTokens): Rec
     '--primary-foreground': tokens.color.primaryForeground,
     '--secondary': tokens.color.secondary,
     '--secondary-foreground': tokens.color.secondaryForeground,
+    '--muted': tokens.color.border,
+    '--muted-foreground': tokens.color.secondary,
+    '--accent': tokens.color.background,
+    '--accent-foreground': tokens.color.foreground,
     '--border': tokens.color.border,
     '--input': tokens.color.border,
     '--ring': tokens.color.primary,
     '--radius': tokens.radius,
+    '--shadow': tokens.shadow,
     '--duration-animation': tokens.motion.durationAnimation,
     '--duration-fade': tokens.motion.durationFade,
     '--widget-width': tokens.size.widgetWidth,

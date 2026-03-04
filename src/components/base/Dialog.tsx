@@ -75,7 +75,7 @@ export function DialogTrigger({ children, className, onClick, ...props }: Dialog
       {...props}
       aria-controls={context.contentId}
       aria-expanded={context.open}
-      className={cn('base-dialog-trigger', className)}
+      className={className}
       data-state={context.open ? 'open' : 'closed'}
       onClick={event => {
         onClick?.(event);
@@ -96,7 +96,14 @@ export function DialogOverlay({ className, ...props }: React.HTMLAttributes<HTML
     return null;
   }
 
-  return <div {...props} aria-hidden='true' className={cn('base-dialog-overlay', className)} data-state='open' />;
+  return (
+    <div
+      {...props}
+      aria-hidden='true'
+      className={cn('fixed inset-0 z-[var(--layer-dialog)] bg-black/50 animate-dialog-overlay-in', className)}
+      data-state='open'
+    />
+  );
 }
 
 export function DialogContent({ children, className, onKeyDown, ...props }: DialogContentProps) {
@@ -127,7 +134,10 @@ export function DialogContent({ children, className, onKeyDown, ...props }: Dial
       aria-describedby={context.descriptionId}
       aria-labelledby={context.titleId}
       aria-modal='true'
-      className={cn('base-dialog-content', className)}
+      className={cn(
+        'fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[calc(var(--layer-dialog)+1)] flex flex-col w-full max-w-[500px] max-h-[85vh] overflow-auto bg-card rounded-lg shadow-xl p-6 animate-dialog-content-in',
+        className,
+      )}
       data-state='open'
       id={context.contentId}
       onKeyDown={event => {
@@ -147,13 +157,15 @@ export function DialogContent({ children, className, onKeyDown, ...props }: Dial
 export function DialogTitle({ className, ...props }: React.HTMLAttributes<HTMLHeadingElement>) {
   const context = useDialogContext('DialogTitle');
 
-  return <h2 {...props} className={cn('base-dialog-title', className)} id={context.titleId} />;
+  return (
+    <h2 {...props} className={cn('text-lg font-semibold text-card-foreground mb-2', className)} id={context.titleId} />
+  );
 }
 
 export function DialogDescription({ className, ...props }: React.HTMLAttributes<HTMLParagraphElement>) {
   const context = useDialogContext('DialogDescription');
 
-  return <p {...props} className={cn('base-dialog-description', className)} id={context.descriptionId} />;
+  return <p {...props} className={cn('text-sm text-muted-foreground mb-4', className)} id={context.descriptionId} />;
 }
 
 export function DialogClose({ children, className, onClick, ...props }: DialogTriggerProps) {
@@ -162,7 +174,10 @@ export function DialogClose({ children, className, onClick, ...props }: DialogTr
   return (
     <button
       {...props}
-      className={cn('base-dialog-close', className)}
+      className={cn(
+        'absolute top-4 right-4 flex items-center justify-center w-8 h-8 p-0 bg-transparent border-none rounded-lg text-muted-foreground cursor-pointer transition-colors hover:bg-muted',
+        className,
+      )}
       onClick={event => {
         onClick?.(event);
         if (!event.defaultPrevented) {
