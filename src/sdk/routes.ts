@@ -86,10 +86,10 @@ import {
   QADocumentEntitySchema,
   QADocumentProcessingResponseSchema,
   QADocumentStatusSchema,
-  QAHealingAttemptEntitySchema,
+  QAHealingAttemptEntrySchema,
   QARunEntitySchema,
-  QATestResultEntitySchema,
-  QATestVersionEntitySchema,
+  QATestCaseEntitySchema,
+  QAVersionHistoryEntrySchema,
   RrwebSessionEntitySchema,
   RrwebSessionUpsertSchema,
   SimulationAnswerSchema,
@@ -1469,12 +1469,12 @@ const contract = {
       tags: ['QA'],
       path: '/qa/run/{id}',
       summary: 'Get a QA run by ID',
-      description: 'Returns run details with test results',
+      description: 'Returns run details with test cases',
     })
     .input(z.object({ id: z.coerce.number() }))
     .output(
       QARunEntitySchema.extend({
-        test_results: z.array(QATestResultEntitySchema),
+        test_cases: z.array(QATestCaseEntitySchema),
       }),
     ),
 
@@ -1485,7 +1485,7 @@ const contract = {
       path: '/qa/document/{id}/run',
       summary: 'Create and start a new QA run',
       description:
-        'Creates a new run (clones test cases) and starts execution. Returns 202; poll test-results by run_id.',
+        'Creates a new run (clones test cases) and starts execution. Returns 202; poll test-cases by run_id.',
     })
     .input(z.object({ id: z.coerce.number() }))
     .output(
@@ -1495,22 +1495,22 @@ const contract = {
       }),
     ),
 
-  qaTestResultList: oc
+  qaTestCaseList: oc
     .route({
       method: 'GET',
-      path: '/qa/document/{id}/test-results',
-      summary: 'Get test results for a QA document',
-      description: 'Retrieves test results; optional run_id scopes to that run',
+      path: '/qa/document/{id}/test-cases',
+      summary: 'Get test cases for a QA document',
+      description: 'Retrieves test cases; optional run_id scopes to that run',
     })
     .input(z.object({ id: z.coerce.number(), run_id: z.coerce.number().optional() }))
-    .output(z.array(QATestResultEntitySchema)),
+    .output(z.array(QATestCaseEntitySchema)),
 
-  qaTestResultUpdate: oc
+  qaTestCaseUpdate: oc
     .route({
       method: 'PUT',
-      path: '/qa/test-result/{id}',
-      summary: 'Update test result status and progress',
-      description: 'Updates a test result with status, progress log, and screenshot',
+      path: '/qa/test-case/{id}',
+      summary: 'Update test case status and progress',
+      description: 'Updates a test case with status, progress log, and screenshot',
     })
     .input(
       z.object({
@@ -1529,7 +1529,7 @@ const contract = {
         screenshot_url: z.string().nullable().optional(),
       }),
     )
-    .output(QATestResultEntitySchema),
+    .output(QATestCaseEntitySchema),
 
   // Execute all tests for a document (creates a run and executes; returns run + simulations)
   qaDocumentExecuteTests: oc
@@ -1548,10 +1548,10 @@ const contract = {
     ),
 
   // Execute a single test
-  qaTestResultExecute: oc
+  qaTestCaseExecute: oc
     .route({
       method: 'POST',
-      path: '/qa/test-result/{id}/execute',
+      path: '/qa/test-case/{id}/execute',
       summary: 'Execute a single test as a simulation',
     })
     .input(z.object({ id: z.coerce.number() }))
@@ -1561,12 +1561,12 @@ const contract = {
       }),
     ),
 
-  // Get simulation linked to test result
-  qaTestResultSimulation: oc
+  // Get simulation linked to test case
+  qaTestCaseSimulation: oc
     .route({
       method: 'GET',
-      path: '/qa/test-result/{id}/simulation',
-      summary: 'Get the simulation linked to a test result',
+      path: '/qa/test-case/{id}/simulation',
+      summary: 'Get the simulation linked to a test case',
     })
     .input(z.object({ id: z.coerce.number() }))
     .output(
@@ -1576,48 +1576,48 @@ const contract = {
     ),
 
   // QA Test Version routes
-  qaTestVersionList: oc
+  qaTestCaseVersionList: oc
     .route({
       method: 'GET',
-      path: '/qa/test-result/{id}/versions',
+      path: '/qa/test-case/{id}/versions',
       summary: 'Get version history for a test',
       description: 'Returns all versions of a test case with change history',
     })
     .input(z.object({ id: z.coerce.number() }))
-    .output(z.array(QATestVersionEntitySchema)),
+    .output(z.array(QAVersionHistoryEntrySchema)),
 
-  qaTestVersionGet: oc
+  qaTestCaseVersionGet: oc
     .route({
       method: 'GET',
-      path: '/qa/test-result/{id}/versions/{version}',
+      path: '/qa/test-case/{id}/versions/{version}',
       summary: 'Get specific test version',
       description: 'Returns a specific version of a test case',
     })
     .input(z.object({ id: z.coerce.number(), version: z.coerce.number() }))
-    .output(QATestVersionEntitySchema),
+    .output(QAVersionHistoryEntrySchema),
 
-  qaTestVersionRollback: oc
+  qaTestCaseVersionRollback: oc
     .route({
       method: 'POST',
-      path: '/qa/test-result/{id}/versions/{version}/rollback',
+      path: '/qa/test-case/{id}/versions/{version}/rollback',
       summary: 'Rollback to specific version',
       description: 'Restores test to a previous version and creates new version record',
     })
     .input(z.object({ id: z.coerce.number(), version: z.coerce.number() }))
-    .output(QATestVersionEntitySchema),
+    .output(QAVersionHistoryEntrySchema),
 
-  qaTestVersionCompare: oc
+  qaTestCaseVersionCompare: oc
     .route({
       method: 'GET',
-      path: '/qa/test-result/{id}/versions/compare',
+      path: '/qa/test-case/{id}/versions/compare',
       summary: 'Compare two versions',
       description: 'Returns differences between two test versions',
     })
     .input(z.object({ id: z.coerce.number(), version1: z.coerce.number(), version2: z.coerce.number() }))
     .output(
       z.object({
-        version1: QATestVersionEntitySchema,
-        version2: QATestVersionEntitySchema,
+        version1: QAVersionHistoryEntrySchema,
+        version2: QAVersionHistoryEntrySchema,
         diff: z.array(
           z.object({
             field: z.string(),
@@ -1632,39 +1632,39 @@ const contract = {
   qaHealingAttemptList: oc
     .route({
       method: 'GET',
-      path: '/qa/test-result/{id}/healing-attempts',
+      path: '/qa/test-case/{id}/healing-attempts',
       summary: 'Get healing attempts for a test',
-      description: 'Returns all healing attempts for a specific test result',
+      description: 'Returns all healing attempts for a specific test case',
     })
     .input(z.object({ id: z.coerce.number() }))
-    .output(z.array(QAHealingAttemptEntitySchema)),
+    .output(z.array(QAHealingAttemptEntrySchema)),
 
   qaHealingAttemptApprove: oc
     .route({
       method: 'POST',
-      path: '/qa/test-result/{id}/healing-attempts/{attemptId}/approve',
+      path: '/qa/test-case/{id}/healing-attempts/{attemptIndex}/approve',
       summary: 'Approve a healing attempt',
       description: 'Applies the repair from a validated healing attempt',
     })
-    .input(z.object({ id: z.coerce.number(), attemptId: z.coerce.number() }))
+    .input(z.object({ id: z.coerce.number(), attemptIndex: z.coerce.number() }))
     .output(z.object({ success: z.boolean() })),
 
   qaHealingAttemptReject: oc
     .route({
       method: 'POST',
-      path: '/qa/test-result/{id}/healing-attempts/{attemptId}/reject',
+      path: '/qa/test-case/{id}/healing-attempts/{attemptIndex}/reject',
       summary: 'Reject a healing attempt',
       description: 'Marks a healing attempt as rejected',
     })
-    .input(z.object({ id: z.coerce.number(), attemptId: z.coerce.number() }))
+    .input(z.object({ id: z.coerce.number(), attemptIndex: z.coerce.number() }))
     .output(z.object({ success: z.boolean() })),
 
   qaHealingTrigger: oc
     .route({
       method: 'POST',
-      path: '/qa/test-result/{id}/heal',
+      path: '/qa/test-case/{id}/heal',
       summary: 'Trigger self-healing for a failed test',
-      description: 'Initiates the self-healing workflow for a test result',
+      description: 'Initiates the self-healing workflow for a test case',
     })
     .input(
       z.object({
@@ -1683,7 +1683,7 @@ const contract = {
     .output(
       z.object({
         healed: z.boolean(),
-        attemptId: z.number().nullable(),
+        attemptIndex: z.number().nullable(),
         analysis: FailureAnalysisSchema.nullable(),
         confidence: z.number().nullable(),
       }),
@@ -1725,7 +1725,7 @@ const contract = {
       method: 'GET',
       path: '/qa/document/{id}/cross-browser-comparison',
       summary: 'Get cross-browser comparison',
-      description: 'Returns test results comparison across different browsers',
+      description: 'Returns test cases comparison across different browsers',
     })
     .input(z.object({ id: z.coerce.number() }))
     .output(
