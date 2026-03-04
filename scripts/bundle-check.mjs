@@ -19,9 +19,7 @@ for (const artifact of requiredFiles) {
       continue;
     }
     if (stats.size > artifact.maxBytes) {
-      errors.push(
-        `${artifact.path} (${stats.size} bytes) exceeds limit ${artifact.maxBytes} bytes`
-      );
+      errors.push(`${artifact.path} (${stats.size} bytes) exceeds limit ${artifact.maxBytes} bytes`);
     }
   } catch {
     errors.push(`${artifact.path} is missing`);

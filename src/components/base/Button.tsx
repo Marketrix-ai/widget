@@ -1,3 +1,4 @@
+import { Button as BaseButton } from '@base-ui/react/button';
 import { forwardRef } from 'react';
 
 import { cn } from '@/lib/utils';
@@ -18,7 +19,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
   const isDisabled = disabled || loading;
 
   return (
-    <button
+    <BaseButton
       {...props}
       ref={ref}
       aria-busy={loading || undefined}

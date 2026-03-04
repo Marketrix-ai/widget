@@ -1,5 +1,6 @@
 @import 'tailwindcss';
 @import './design-system/tokens.css';
+@import './styles/base-components.css';
 @import './styles/reset.css';
 @import './styles/utilities.css';
 

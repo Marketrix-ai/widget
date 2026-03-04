@@ -574,10 +574,10 @@ type InstructionType = 'tell' | 'show' | 'do';
 
 GitHub Actions workflows live in `.github/workflows/`:
 
-| Workflow       | Trigger                 | Action                                                                                                                                 |
-| -------------- | ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| Workflow       | Trigger                  | Action                                                                                                                             |
+| -------------- | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
 | `validate.yml` | Push/PR to `dev`, `main` | Runs `npm ci`, then: `type-check`, `lint:check`, `format:check`, `test:run`, `build`, `visual:check`, `a11y:check`, `bundle:check` |
-| `deploy.yml`   | Manual dispatch         | Validates selected tag passed `validate.yml`, builds Docker image, and deploys to AKS          |
+| `deploy.yml`   | Manual dispatch          | Validates selected tag passed `validate.yml`, builds Docker image, and deploys to AKS                                              |
 
 **Deploy options:**
 
