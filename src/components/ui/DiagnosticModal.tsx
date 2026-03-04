@@ -1,8 +1,6 @@
 import React from 'react';
 import { FiX } from 'react-icons/fi';
 
-import { DARK_THEME_CLASSES } from '../../constants/theme';
-
 interface DiagnosticModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -24,147 +22,62 @@ export const DiagnosticModal: React.FC<DiagnosticModalProps> = ({ isOpen, onClos
     navigator.clipboard.writeText(text.toString());
   };
 
+  const statusColor =
+    diagnosticData.connectionStatus === 'registered'
+      ? 'bg-green-100 text-green-700'
+      : diagnosticData.connectionStatus === 'connected'
+        ? 'bg-blue-100 text-blue-700'
+        : diagnosticData.connectionStatus === 'connecting'
+          ? 'bg-yellow-100 text-yellow-700'
+          : 'bg-gray-100 text-gray-600';
+
+  const rows: { label: string; value: string | null | undefined; copyable?: boolean }[] = [
+    { label: 'Chat ID', value: diagnosticData.chatId, copyable: true },
+    { label: 'Tab ID', value: diagnosticData.tabId, copyable: true },
+    { label: 'WS Endpoint', value: diagnosticData.websocketEndpoint, copyable: true },
+    { label: 'Connection ID', value: diagnosticData.connectionId?.toString(), copyable: true },
+    { label: 'Agent ID', value: diagnosticData.agentId?.toString(), copyable: true },
+  ];
+
   return (
-    <div className='fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4' onClick={onClose}>
-      <div
-        className='bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] flex flex-col'
-        onClick={e => e.stopPropagation()}
-      >
+    <div className='fixed inset-0 flex items-center justify-center z-[100]' onClick={onClose}>
+      <div className='bg-white rounded-md shadow-lg border border-gray-200 w-64' onClick={e => e.stopPropagation()}>
         {/* Header */}
-        <div
-          className={`${DARK_THEME_CLASSES.diagnosticHeader} px-6 py-4 text-white relative overflow-hidden flex-shrink-0 rounded-t-lg`}
-        >
-          <div className='relative z-10 flex items-center justify-between'>
-            <div>
-              <h2 className='text-base font-semibold text-white'>Diagnostic Information</h2>
-              <p className={`text-xs ${DARK_THEME_CLASSES.diagnosticSubtitle} mt-0.5`}>Widget connection details</p>
-            </div>
-            <button onClick={onClose} className='text-white/80 hover:text-white transition-colors'>
-              <FiX className='w-5 h-5' />
-            </button>
-          </div>
-        </div>
-
-        {/* Content - scrollable when needed */}
-        <div className='px-6 py-5 space-y-4 flex-1 min-h-0 overflow-y-auto'>
-          <div className='space-y-3'>
-            <div className='flex items-center justify-between py-2 border-b border-gray-200'>
-              <span className='text-sm font-medium text-gray-700'>Chat ID</span>
-              <div className='flex items-center gap-2'>
-                <code className='text-xs text-gray-600 bg-gray-50 px-2 py-1 rounded'>
-                  {diagnosticData.chatId || 'N/A'}
-                </code>
-                {diagnosticData.chatId && (
-                  <button
-                    onClick={() => copyToClipboard(diagnosticData.chatId)}
-                    className='text-xs text-blue-600 hover:text-blue-700'
-                    title='Copy to clipboard'
-                  >
-                    Copy
-                  </button>
-                )}
-              </div>
-            </div>
-
-            <div className='flex items-center justify-between py-2 border-b border-gray-200'>
-              <span className='text-sm font-medium text-gray-700'>Tab ID</span>
-              <div className='flex items-center gap-2'>
-                <code className='text-xs text-gray-600 bg-gray-50 px-2 py-1 rounded'>
-                  {diagnosticData.tabId || 'N/A'}
-                </code>
-                {diagnosticData.tabId && (
-                  <button
-                    onClick={() => copyToClipboard(diagnosticData.tabId)}
-                    className='text-xs text-blue-600 hover:text-blue-700'
-                    title='Copy to clipboard'
-                  >
-                    Copy
-                  </button>
-                )}
-              </div>
-            </div>
-
-            <div className='flex items-center justify-between py-2 border-b border-gray-200'>
-              <span className='text-sm font-medium text-gray-700'>WebSocket Endpoint</span>
-              <div className='flex items-center gap-2'>
-                <code className='text-xs text-gray-600 bg-gray-50 px-2 py-1 rounded max-w-[200px] truncate'>
-                  {diagnosticData.websocketEndpoint || 'N/A'}
-                </code>
-                {diagnosticData.websocketEndpoint && (
-                  <button
-                    onClick={() => copyToClipboard(diagnosticData.websocketEndpoint)}
-                    className='text-xs text-blue-600 hover:text-blue-700'
-                    title='Copy to clipboard'
-                  >
-                    Copy
-                  </button>
-                )}
-              </div>
-            </div>
-
-            <div className='flex items-center justify-between py-2 border-b border-gray-200'>
-              <span className='text-sm font-medium text-gray-700'>Connection Status</span>
-              <span
-                className={`text-xs font-medium px-2 py-1 rounded ${
-                  diagnosticData.connectionStatus === 'registered'
-                    ? 'bg-green-100 text-green-800'
-                    : diagnosticData.connectionStatus === 'connected'
-                      ? 'bg-blue-100 text-blue-800'
-                      : diagnosticData.connectionStatus === 'connecting'
-                        ? 'bg-yellow-100 text-yellow-800'
-                        : 'bg-gray-100 text-gray-800'
-                }`}
-              >
-                {diagnosticData.connectionStatus}
-              </span>
-            </div>
-
-            <div className='flex items-center justify-between py-2 border-b border-gray-200'>
-              <span className='text-sm font-medium text-gray-700'>Connection ID</span>
-              <div className='flex items-center gap-2'>
-                <code className='text-xs text-gray-600 bg-gray-50 px-2 py-1 rounded'>
-                  {diagnosticData.connectionId || 'N/A'}
-                </code>
-                {diagnosticData.connectionId && (
-                  <button
-                    onClick={() => copyToClipboard(diagnosticData.connectionId?.toString())}
-                    className='text-xs text-blue-600 hover:text-blue-700'
-                    title='Copy to clipboard'
-                  >
-                    Copy
-                  </button>
-                )}
-              </div>
-            </div>
-
-            <div className='flex items-center justify-between py-2 border-b border-gray-200'>
-              <span className='text-sm font-medium text-gray-700'>Agent ID</span>
-              <div className='flex items-center gap-2'>
-                <code className='text-xs text-gray-600 bg-gray-50 px-2 py-1 rounded'>
-                  {diagnosticData.agentId || 'N/A'}
-                </code>
-                {diagnosticData.agentId && (
-                  <button
-                    onClick={() => copyToClipboard(diagnosticData.agentId?.toString())}
-                    className='text-xs text-blue-600 hover:text-blue-700'
-                    title='Copy to clipboard'
-                  >
-                    Copy
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className='flex justify-end items-center px-6 py-3 border-t border-gray-200 bg-gray-50 flex-shrink-0 rounded-b-lg'>
-          <button
-            onClick={onClose}
-            className='px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors'
-          >
-            Close
+        <div className='flex items-center justify-between px-3 py-1.5 border-b border-gray-100'>
+          <span className='text-[11px] font-semibold text-gray-700 flex-1 text-center'>Widget Details</span>
+          <button onClick={onClose} className='text-gray-400 hover:text-gray-600 -mr-1'>
+            <FiX className='w-3 h-3' />
           </button>
+        </div>
+
+        {/* Content */}
+        <div className='px-3 py-1.5'>
+          {rows.map(row => (
+            <div key={row.label} className='flex items-center justify-between py-[3px]'>
+              <span className='text-[10px] text-gray-500'>{row.label}</span>
+              <div className='flex items-center gap-1'>
+                <code className='text-[9px] text-gray-600 bg-gray-50 px-1 py-0.5 rounded max-w-[120px] truncate'>
+                  {row.value || 'N/A'}
+                </code>
+                {row.copyable && row.value && (
+                  <button
+                    onClick={() => copyToClipboard(row.value)}
+                    className='text-[9px] text-blue-500 hover:text-blue-600'
+                  >
+                    Copy
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+
+          {/* Connection Status */}
+          <div className='flex items-center justify-between py-[3px]'>
+            <span className='text-[10px] text-gray-500'>Status</span>
+            <span className={`text-[9px] font-medium px-1.5 py-0.5 rounded ${statusColor}`}>
+              {diagnosticData.connectionStatus}
+            </span>
+          </div>
         </div>
       </div>
     </div>
