@@ -11,8 +11,6 @@ export const DARK_THEME_CLASSES = {
     'flex items-center justify-center text-sm font-medium transition-all duration-200 bg-gray-100 text-gray-900 hover:bg-gray-200 border border-gray-200',
   denyButtonCompact:
     'px-6 py-1 bg-gray-100 text-gray-800 rounded-full transition-all duration-200 text-sm font-medium hover:bg-gray-200 border border-gray-200',
-  diagnosticHeader: 'bg-gradient-to-r from-gray-900 to-gray-700',
-  diagnosticSubtitle: 'text-gray-200',
   scrollbarTrack: 'scrollbar-track-gray-100',
   scrollbarThumb: 'scrollbar-thumb-gray-400',
 } as const;
