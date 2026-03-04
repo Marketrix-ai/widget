@@ -29,6 +29,6 @@ describe('Widget smoke', () => {
     );
     const widget = container.querySelector('.marketrix-widget');
     expect(widget).toBeInTheDocument();
-    expect(widget).toHaveStyle({ '--mx-color-accent': '#2563eb' });
+    expect(widget).toHaveStyle({ '--primary': '#2563eb' });
   });
 });

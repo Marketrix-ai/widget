@@ -9,6 +9,7 @@ exports[`Button visual snapshots > loading state matches snapshot 1`] = `
   data-size="md"
   data-variant="primary"
   disabled=""
+  tabindex="0"
   type="button"
 >
   Saving
@@ -22,6 +23,7 @@ exports[`Button visual snapshots > primary default matches snapshot 1`] = `
   data-loading="false"
   data-size="md"
   data-variant="primary"
+  tabindex="0"
   type="button"
 >
   Submit
@@ -35,6 +37,7 @@ exports[`Button visual snapshots > secondary matches snapshot 1`] = `
   data-loading="false"
   data-size="md"
   data-variant="secondary"
+  tabindex="0"
   type="button"
 >
   Cancel

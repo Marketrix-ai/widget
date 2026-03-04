@@ -1,34 +1,17 @@
 import type { WidgetSettingsData } from '../sdk';
 
-export const SEMANTIC_TOKEN_CSS_VARS = {
-  colorSurface: '--mx-color-surface',
-  colorText: '--mx-color-text',
-  colorBorder: '--mx-color-border',
-  colorAccent: '--mx-color-accent',
-  colorSecondary: '--mx-color-secondary',
-  radiusMd: '--mx-radius-md',
-  shadowMd: '--mx-shadow-md',
-  fontSizeBase: '--mx-font-size-base',
-  motionDurationAnimation: '--mx-motion-duration-animation',
-  motionDurationFade: '--mx-motion-duration-fade',
-  sizeWidgetWidth: '--mx-size-widget-width',
-  sizeWidgetHeight: '--mx-size-widget-height',
-} as const;
-
 export type SemanticTokens = {
   color: {
-    surface: string;
-    text: string;
+    background: string;
+    foreground: string;
     border: string;
-    accent: string;
+    primary: string;
+    primaryForeground: string;
     secondary: string;
+    secondaryForeground: string;
   };
-  radius: {
-    md: string;
-  };
-  shadow: {
-    md: string;
-  };
+  radius: string;
+  shadow: string;
   typography: {
     fontSizeBase: string;
   };
@@ -58,7 +41,6 @@ export type WidgetStyleSettingsDefaults = Pick<
   | 'widget_fade_duration'
 >;
 
-// Baseline widget defaults documented in README preview settings.
 export const WIDGET_STYLE_SETTINGS_DEFAULTS: WidgetStyleSettingsDefaults = {
   widget_background_color: '#ffffff',
   widget_text_color: '#1f2937',
@@ -77,18 +59,16 @@ export const WIDGET_STYLE_SETTINGS_DEFAULTS: WidgetStyleSettingsDefaults = {
 export function mapWidgetSettingsToSemanticTokens(settings: WidgetStyleSettingsDefaults): SemanticTokens {
   return {
     color: {
-      surface: settings.widget_background_color,
-      text: settings.widget_text_color,
+      background: settings.widget_background_color,
+      foreground: settings.widget_text_color,
       border: settings.widget_border_color,
-      accent: settings.widget_accent_color,
+      primary: settings.widget_accent_color,
+      primaryForeground: '#ffffff',
       secondary: settings.widget_secondary_color,
+      secondaryForeground: '#ffffff',
     },
-    radius: {
-      md: settings.widget_border_radius,
-    },
-    shadow: {
-      md: settings.widget_shadow,
-    },
+    radius: settings.widget_border_radius,
+    shadow: settings.widget_shadow,
     typography: {
       fontSizeBase: settings.widget_font_size,
     },
@@ -106,19 +86,29 @@ export function mapWidgetSettingsToSemanticTokens(settings: WidgetStyleSettingsD
 export const DEFAULT_SEMANTIC_TOKENS: SemanticTokens =
   mapWidgetSettingsToSemanticTokens(WIDGET_STYLE_SETTINGS_DEFAULTS);
 
+/**
+ * Convert tokens to CSS custom properties.
+ * Applied as inline styles on the widget root to override static CSS defaults.
+ */
 export function semanticTokensToCssCustomProperties(tokens: SemanticTokens): Record<string, string> {
   return {
-    [SEMANTIC_TOKEN_CSS_VARS.colorSurface]: tokens.color.surface,
-    [SEMANTIC_TOKEN_CSS_VARS.colorText]: tokens.color.text,
-    [SEMANTIC_TOKEN_CSS_VARS.colorBorder]: tokens.color.border,
-    [SEMANTIC_TOKEN_CSS_VARS.colorAccent]: tokens.color.accent,
-    [SEMANTIC_TOKEN_CSS_VARS.colorSecondary]: tokens.color.secondary,
-    [SEMANTIC_TOKEN_CSS_VARS.radiusMd]: tokens.radius.md,
-    [SEMANTIC_TOKEN_CSS_VARS.shadowMd]: tokens.shadow.md,
-    [SEMANTIC_TOKEN_CSS_VARS.fontSizeBase]: tokens.typography.fontSizeBase,
-    [SEMANTIC_TOKEN_CSS_VARS.motionDurationAnimation]: tokens.motion.durationAnimation,
-    [SEMANTIC_TOKEN_CSS_VARS.motionDurationFade]: tokens.motion.durationFade,
-    [SEMANTIC_TOKEN_CSS_VARS.sizeWidgetWidth]: tokens.size.widgetWidth,
-    [SEMANTIC_TOKEN_CSS_VARS.sizeWidgetHeight]: tokens.size.widgetHeight,
+    '--background': tokens.color.background,
+    '--foreground': tokens.color.foreground,
+    '--card': tokens.color.background,
+    '--card-foreground': tokens.color.foreground,
+    '--popover': tokens.color.background,
+    '--popover-foreground': tokens.color.foreground,
+    '--primary': tokens.color.primary,
+    '--primary-foreground': tokens.color.primaryForeground,
+    '--secondary': tokens.color.secondary,
+    '--secondary-foreground': tokens.color.secondaryForeground,
+    '--border': tokens.color.border,
+    '--input': tokens.color.border,
+    '--ring': tokens.color.primary,
+    '--radius': tokens.radius,
+    '--duration-animation': tokens.motion.durationAnimation,
+    '--duration-fade': tokens.motion.durationFade,
+    '--widget-width': tokens.size.widgetWidth,
+    '--widget-height': tokens.size.widgetHeight,
   };
 }

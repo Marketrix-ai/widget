@@ -140,19 +140,7 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
   const showProcessingFeedback = state.isLoading || state.isTaskRunning;
   const customStyles = {
     ...semanticTokenStyles,
-    '--widget-width': settings.widget_width,
-    '--widget-height': settings.widget_height,
-    '--widget-border-radius': settings.widget_border_radius,
-    '--widget-font-size': settings.widget_font_size,
-    '--widget-primary-color': settings.widget_accent_color,
-    '--widget-secondary-color': settings.widget_secondary_color,
-    '--widget-background': settings.widget_background_color,
-    '--widget-text-color': settings.widget_text_color,
-    '--widget-border-color': settings.widget_border_color,
     '--widget-z-index': effectiveWidgetZIndex,
-    '--widget-shadow': settings.widget_shadow,
-    '--widget-animation-duration': settings.widget_animation_duration,
-    '--widget-fade-duration': settings.widget_fade_duration,
   } as React.CSSProperties;
 
   return (
