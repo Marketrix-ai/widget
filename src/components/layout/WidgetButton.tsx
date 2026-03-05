@@ -365,7 +365,7 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerCancel}
-          className='relative z-10 w-14 h-14 min-w-14 rounded-[27px] border-0 bg-transparent marketrix-widget-btn-shine p-0'
+          className='relative z-10 w-14 h-14 min-w-14 rounded-[27px] border-0 bg-transparent p-0'
           style={{
             color: getContrastingColor(widgetConfig.widget_accent_color),
             backgroundColor: 'transparent',
@@ -380,14 +380,13 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
           <div className='w-full h-full flex items-center justify-center relative'>
             <div
               className={`
-                relative w-12 h-12 overflow-hidden ${isOpen ? 'marketrix-widget-icon-shine' : ''}
-                transition-[transform,opacity,background-color] duration-[167ms] ease-[cubic-bezier(0.33,0,0,1)]
+                relative w-12 h-12 overflow-hidden transition-[transform,opacity,background-color] duration-[167ms] ease-[cubic-bezier(0.33,0,0,1)]
                 hover:scale-110 hover:duration-[250ms] active:scale-[0.85] active:duration-[134ms] active:ease-[cubic-bezier(0.45,0,0.2,1)]
                 animate-launcher-entrance
               `}
               style={{
                 borderRadius: widgetConfig.widget_border_radius,
-                backgroundColor: isOpen ? widgetConfig.widget_text_color : widgetConfig.widget_accent_color,
+                backgroundColor: isOpen ? widgetConfig.widget_background_color : widgetConfig.widget_accent_color,
               }}
             >
               {showProcessingGlow && (
@@ -448,7 +447,7 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
                   stroke='currentColor'
                   viewBox='0 0 24 24'
                   style={{
-                    color: getContrastingColor(widgetConfig.widget_text_color),
+                    color: widgetConfig.widget_text_color,
                     pointerEvents: 'none',
                   }}
                 >
