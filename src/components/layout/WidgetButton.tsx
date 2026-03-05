@@ -326,7 +326,7 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
   return (
     <div
       ref={wrapperRef}
-      className={`${positionClass} ${pixelPositionStyle ? '' : effectivePositionClasses} ${isDragging ? '' : 'transition-all duration-300 ease-in-out'} ${showWelcomeText && !isOpen ? (effectivePosition.includes('left') ? 'transform translate-x-64' : 'transform -translate-x-64') : ''}`}
+      className={`${positionClass} ${pixelPositionStyle ? '' : effectivePositionClasses} ${isDragging ? '' : 'transition-transform duration-300 ease-in-out'} ${showWelcomeText && !isOpen ? (effectivePosition.includes('left') ? 'transform translate-x-64' : 'transform -translate-x-64') : ''}`}
       style={{
         zIndex,
         pointerEvents: isOpen ? 'none' : 'auto',
@@ -337,7 +337,7 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
       <div
         className={`
           group relative w-14 h-14 overflow-visible transition-all duration-300 ease-in-out
-          ${isOpen ? 'scale-0 opacity-0 pointer-events-none' : 'scale-100 opacity-100'}
+          ${isOpen ? 'scale-0 opacity-0 pointer-events-none' : 'scale-100 opacity-100 hover:scale-110'}
         `}
       >
         {showProcessingGlow && <div className={glowClass} aria-hidden />}

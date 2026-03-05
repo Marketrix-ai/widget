@@ -51,7 +51,7 @@ export const LearningProgressSchema = z.object({
 export const KnowledgeTypeSchema = z.enum(['document', 'video']);
 export const QADocumentStatusSchema = z.enum(['pending', 'processing', 'waiting_review', 'completed', 'failed']);
 export const QATestStatusSchema = z.enum(['pending', 'running', 'completed', 'failed']);
-export const QARunStatusSchema = z.enum(['pending', 'running', 'completed', 'failed']);
+export const QARunStatusSchema = z.enum(['pending', 'running', 'completed', 'failed', 'cancelled']);
 export const MeetingStatusSchema = z.enum(['not_started', 'in_progress', 'ended', 'cancelled']);
 export const ChatRoleSchema = z.enum(['user', 'agent']);
 export const ChatSourceSchema = z.enum(['taskpilot', 'widget', 'app']);
@@ -392,48 +392,92 @@ export const QADocumentCreateSchema = z.object({
 export const QARunEntitySchema = BaseEntitySchema.extend({
   qa_document_id: z.number(),
   tenant_id: z.number(),
-  user_id: z.number(),
+  triggered_by: z.number(),
   status: QARunStatusSchema,
+  browser_type: BrowserTypeSchema,
+  browser_config: BrowserConfigSchema.nullable().optional(),
+  total_tests: z.number().int().nonnegative(),
+  passed_tests: z.number().int().nonnegative(),
+  failed_tests: z.number().int().nonnegative(),
   started_at: z.coerce.date().nullable().optional(),
   completed_at: z.coerce.date().nullable().optional(),
-  browser_type: BrowserTypeSchema.nullable().optional(),
-  browser_config: BrowserConfigSchema.nullable().optional(),
 });
 
 /**
- * QA test result entity schema
+ * JSON entry schemas for qa_test_case embedded arrays
  */
-export const QATestResultEntitySchema = BaseEntitySchema.extend({
-  tenant_id: z.number(),
-  user_id: z.number(),
-  qa_document_id: z.number(),
-  qa_run_id: z.number().nullable().optional(),
+export const QAProgressLogEntrySchema = z.object({
+  step: z.number(),
+  message: z.string(),
+  timestamp: z.string(),
+  status: z.enum(['success', 'error', 'info']),
+});
+
+export const QAExecutionEntrySchema = z.object({
+  run_id: z.number(),
+  status: z.enum(['pending', 'running', 'passed', 'failed', 'skipped']),
+  browser_type: BrowserTypeSchema.nullable().optional(),
+  progress_log: z.array(QAProgressLogEntrySchema).default([]),
+  error_message: z.string().nullable().optional(),
+  screenshot_url: z.string().nullable().optional(),
+  simulation_id: z.number().nullable().optional(),
+  duration_ms: z.number().nullable().optional(),
+  started_at: z.string().nullable().optional(),
+  completed_at: z.string().nullable().optional(),
+});
+
+export const QAVersionHistoryEntrySchema = z.object({
+  version: z.number().int().positive(),
   test_title: z.string(),
   test_objective: z.string(),
   test_steps: z.array(z.string()),
   expected_outcome: z.string(),
-  priority: z.enum(['Low', 'Medium', 'High']).nullable(),
-  status: QATestStatusSchema,
-  progress_log: z
-    .array(
-      z.object({
-        step: z.number(),
-        message: z.string(),
-        timestamp: z.string(),
-        status: z.enum(['success', 'error', 'info']),
-      }),
-    )
-    .nullable(),
-  screenshot_url: z.string().nullable(),
+  priority: z.enum(['Low', 'Medium', 'High']),
+  change_type: z.enum(['created', 'modified', 'self_healed', 'refined', 'deleted']),
+  change_reason: z.string().nullable().optional(),
+  changed_by: z.number().nullable().optional(),
+  created_at: z.string(),
+});
+
+export const QAHealingAttemptEntrySchema = z.object({
+  failure_type: z.enum(['locator', 'assertion', 'timeout', 'flow_change', 'environment']),
+  failure_message: z.string().nullable().optional(),
+  failure_context: z.record(z.string(), z.unknown()).nullable().optional(),
+  repair_strategy: z.string().nullable().optional(),
+  repair_details: z.record(z.string(), z.unknown()).nullable().optional(),
+  confidence_score: z.number().min(0).max(1).nullable().optional(),
+  validation_status: z.enum(['pending', 'validated', 'failed', 'rejected']),
   simulation_id: z.number().nullable().optional(),
-  browser_type: BrowserTypeSchema.nullable().optional(),
+  validation_simulation_id: z.number().nullable().optional(),
+  healed_version: z.number().nullable().optional(),
+  created_at: z.string(),
+});
+
+/**
+ * QA test case entity schema (replaces old qa_test_result)
+ */
+export const QATestCaseEntitySchema = BaseEntitySchema.extend({
+  qa_document_id: z.number(),
+  tenant_id: z.number(),
+  order_index: z.number().int().nonnegative(),
+  test_title: z.string(),
+  test_objective: z.string(),
+  test_steps: z.array(z.string()),
+  expected_outcome: z.string(),
+  priority: z.enum(['Low', 'Medium', 'High']),
+  is_active: z.boolean(),
+  current_version: z.number().int().positive(),
+  version_history: z.array(QAVersionHistoryEntrySchema).nullable(),
+  executions: z.array(QAExecutionEntrySchema).nullable(),
+  healing_attempts: z.array(QAHealingAttemptEntrySchema).nullable(),
   healing_metadata: z.record(z.string(), z.unknown()).nullable().optional(),
   last_healed_at: z.coerce.date().nullable().optional(),
 });
+
 /**
- * QA test result create schema
+ * QA test case create schema
  */
-export const QATestResultCreateSchema = z.object({
+export const QATestCaseCreateSchema = z.object({
   qa_document_id: z.number(),
   test_title: z.string(),
   test_objective: z.string(),
@@ -467,40 +511,11 @@ export const QADocumentProcessingResponseSchema = z.object({
 });
 
 // ============================================================================
-// QA Test Version Schemas
+// QA Test Version & Healing Types (consolidated into qa_test_case JSON columns)
 // ============================================================================
 
 export const QATestVersionChangeTypeSchema = z.enum(['created', 'modified', 'self_healed', 'refined', 'deleted']);
-
-export const QATestVersionEntitySchema = BaseEntitySchema.extend({
-  test_result_id: z.number(),
-  version: z.number().int().positive(),
-  test_title: z.string(),
-  test_objective: z.string(),
-  test_steps: z.array(z.string()),
-  expected_outcome: z.string(),
-  priority: z.enum(['Low', 'Medium', 'High']).nullable(),
-  change_type: QATestVersionChangeTypeSchema,
-  change_reason: z.string().nullable(),
-  changed_by: z.number().nullable(),
-  previous_version_id: z.number().nullable(),
-});
-
-export const QATestVersionCreateSchema = z.object({
-  test_result_id: z.number(),
-  change_type: QATestVersionChangeTypeSchema,
-  change_reason: z.string().optional(),
-});
-
-export type QATestVersionData = z.infer<typeof QATestVersionEntitySchema>;
-export type QATestVersionChangeType = z.infer<typeof QATestVersionChangeTypeSchema>;
-
-// ============================================================================
-// QA Self-Healing Schemas
-// ============================================================================
-
 export const QAFailureTypeSchema = z.enum(['locator', 'assertion', 'timeout', 'flow_change', 'environment']);
-
 export const QAValidationStatusSchema = z.enum(['pending', 'validated', 'failed', 'rejected']);
 
 export const QAHealingMetadataSchema = z.object({
@@ -511,20 +526,6 @@ export const QAHealingMetadataSchema = z.object({
   last_healing_attempt: z.string().datetime().nullable(),
   total_healing_attempts: z.number().int().default(0),
   successful_heals: z.number().int().default(0),
-});
-
-export const QAHealingAttemptEntitySchema = BaseEntitySchema.extend({
-  test_result_id: z.number(),
-  simulation_id: z.number().nullable(),
-  failure_type: QAFailureTypeSchema,
-  failure_message: z.string().nullable(),
-  failure_context: z.record(z.string(), z.unknown()).nullable(),
-  repair_strategy: z.string().nullable(),
-  repair_details: z.record(z.string(), z.unknown()).nullable(),
-  confidence_score: z.number().min(0).max(1).nullable(),
-  validation_status: QAValidationStatusSchema,
-  validation_simulation_id: z.number().nullable(),
-  healed_version_id: z.number().nullable(),
 });
 
 export const FailureAnalysisSchema = z.object({
@@ -542,11 +543,14 @@ export const FailureAnalysisSchema = z.object({
     .nullable(),
 });
 
+export type QATestVersionChangeType = z.infer<typeof QATestVersionChangeTypeSchema>;
 export type QAFailureType = z.infer<typeof QAFailureTypeSchema>;
 export type QAValidationStatus = z.infer<typeof QAValidationStatusSchema>;
 export type QAHealingMetadata = z.infer<typeof QAHealingMetadataSchema>;
-export type QAHealingAttemptData = z.infer<typeof QAHealingAttemptEntitySchema>;
 export type FailureAnalysis = z.infer<typeof FailureAnalysisSchema>;
+export type QAExecutionEntry = z.infer<typeof QAExecutionEntrySchema>;
+export type QAVersionHistoryEntry = z.infer<typeof QAVersionHistoryEntrySchema>;
+export type QAHealingAttemptEntry = z.infer<typeof QAHealingAttemptEntrySchema>;
 
 // ============================================================================
 // SIMULATION SCHEMAS - Application simulation and testing
@@ -1960,5 +1964,5 @@ export type QADocumentListItemData = QADocumentData & {
   pass_rate: number | null;
 };
 export type QARunData = z.infer<typeof QARunEntitySchema>;
-export type QATestResultData = z.infer<typeof QATestResultEntitySchema>;
+export type QATestCaseData = z.infer<typeof QATestCaseEntitySchema>;
 export type QADocumentProcessingResponseData = z.infer<typeof QADocumentProcessingResponseSchema>;

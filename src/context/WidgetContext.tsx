@@ -7,6 +7,7 @@ import { sessionManager } from '../services/SessionManager';
 import { toolExecutionService } from '../services/ToolService';
 import { WebSocketClient, type WebSocketMessage, type WebSocketStatus } from '../services/WebSocketClient';
 import type { ChatMessage, InstructionType, TaskProgress, WidgetState } from '../types';
+import { BROWSER_TOOLS } from '../types/browserTools';
 import { isToolRequest, type ToolRequest, type ToolResponse } from '../types/toolMessages';
 import {
   addProgressLine,
@@ -236,23 +237,8 @@ export const WidgetProvider: React.FC<WidgetProviderProps> = ({ children, previe
           return;
         }
 
-        // Validate tool name is in allowed list
-        const ALLOWED_TOOLS = [
-          'click_element',
-          'type_text',
-          'scroll',
-          'scroll_to_text',
-          'go_back',
-          'wait',
-          'select_dropdown_option',
-          'get_dropdown_options',
-          'send_keys',
-          'upload_file',
-          'done',
-          'get_html',
-          'get_interactable_elements',
-          'get_screenshot',
-        ];
+        // Validate tool name is in allowed list (derived from single source of truth)
+        const ALLOWED_TOOLS = BROWSER_TOOLS.map(t => t.id);
 
         if (!ALLOWED_TOOLS.includes(request.tool)) {
           console.warn('[Widget] Unknown tool requested:', request.tool);

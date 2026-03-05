@@ -38,18 +38,23 @@ export const BrowserTools: React.FC<BrowserToolsProps> = ({ config, onToolSelect
   const getToolIcon = (tool: BrowserToolMetadata) => {
     switch (tool.actionType) {
       case 'navigate':
+      case 'go_back':
         return <HiOutlineGlobeAlt className='w-4 h-4' />;
       case 'search':
         return <HiOutlineMagnifyingGlass className='w-4 h-4' />;
-      case 'click':
+      case 'click_element':
         return <LuMousePointerClick className='w-4 h-4' />;
-      case 'input_text':
+      case 'type_text':
         return <HiOutlineDocumentText className='w-4 h-4' />;
       case 'scroll':
+      case 'scroll_to_text':
         return <LuScroll className='w-4 h-4' />;
       case 'send_keys':
         return <MdOutlineKeyboard className='w-4 h-4' />;
       case 'extract':
+      case 'get_html':
+      case 'get_interactable_elements':
+      case 'get_screenshot':
         return <HiOutlineDocumentText className='w-4 h-4' />;
       case 'get_dropdown_options':
         return <MdOutlineSelectAll className='w-4 h-4' />;
@@ -70,7 +75,6 @@ export const BrowserTools: React.FC<BrowserToolsProps> = ({ config, onToolSelect
 
   // Handle tool click
   const handleToolClick = (tool: BrowserToolMetadata) => {
-    // Create a basic action based on tool type
     let action: BrowserAction;
 
     switch (tool.actionType) {
@@ -80,14 +84,17 @@ export const BrowserTools: React.FC<BrowserToolsProps> = ({ config, onToolSelect
       case 'search':
         action = { type: 'search', query: '', engine: 'duckduckgo' };
         break;
-      case 'click':
-        action = { type: 'click', index: 1, coordinate_x: null, coordinate_y: null };
+      case 'click_element':
+        action = { type: 'click_element', index: 1, coordinate_x: null, coordinate_y: null };
         break;
-      case 'input_text':
-        action = { type: 'input_text', index: 0, text: '', clear: true };
+      case 'type_text':
+        action = { type: 'type_text', index: 0, text: '', clear: true };
         break;
       case 'scroll':
         action = { type: 'scroll', down: true, pages: 1.0, index: null };
+        break;
+      case 'scroll_to_text':
+        action = { type: 'scroll_to_text', text: '' };
         break;
       case 'send_keys':
         action = { type: 'send_keys', index: 0, keys: '' };
@@ -104,20 +111,32 @@ export const BrowserTools: React.FC<BrowserToolsProps> = ({ config, onToolSelect
       case 'upload_file':
         action = { type: 'upload_file', index: 0, path: '' };
         break;
+      case 'go_back':
+        action = { type: 'go_back' };
+        break;
+      case 'wait':
+        action = { type: 'wait', seconds: 1 };
+        break;
       case 'switch_tab':
         action = { type: 'switch_tab', tab_id: '' };
         break;
       case 'close_tab':
-        action = { type: 'close_tab', tab_id: '' };
+        action = { type: 'close_tab' };
         break;
       case 'done':
         action = { type: 'done', text: '', success: true, files_to_display: null };
         break;
-      case 'structured_output':
-        action = { type: 'structured_output', success: true, data: {} };
+      case 'get_html':
+        action = { type: 'get_html' };
+        break;
+      case 'get_interactable_elements':
+        action = { type: 'get_interactable_elements' };
+        break;
+      case 'get_screenshot':
+        action = { type: 'get_screenshot' };
         break;
       default:
-        action = { type: 'no_params' };
+        action = { type: tool.actionType };
     }
 
     if (onToolSelect) {
