@@ -329,17 +329,12 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
       className={`${positionClass} ${pixelPositionStyle ? '' : effectivePositionClasses} ${isDragging ? '' : 'transition-all duration-300 ease-in-out'} ${showWelcomeText && !isOpen ? (effectivePosition.includes('left') ? 'transform translate-x-64' : 'transform -translate-x-64') : ''}`}
       style={{
         zIndex,
-        pointerEvents: isOpen ? 'none' : 'auto',
+        pointerEvents: 'auto',
         ...previewPositionStyle,
         ...pixelPositionStyle,
       }}
     >
-      <div
-        className={`
-          group relative w-14 h-14 overflow-visible transition-all duration-300 ease-in-out
-          ${isOpen ? 'scale-0 opacity-0 pointer-events-none' : 'scale-100 opacity-100'}
-        `}
-      >
+      <div className='group relative w-14 h-14 overflow-visible transition-all duration-300 ease-in-out'>
         {showProcessingGlow && <div className={glowClass} aria-hidden />}
         {showStopControl && !isDragging && (
           <Button
@@ -379,12 +374,21 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
             userSelect: 'none',
             WebkitUserSelect: 'none',
           }}
-          aria-label='Open Marketrix support chat'
+          aria-label={isOpen ? 'Close' : 'Open'}
+          aria-live='polite'
         >
           <div className='w-full h-full flex items-center justify-center relative'>
             <div
-              className='relative w-12 h-12 overflow-hidden marketrix-widget-icon-shine'
-              style={{ borderRadius: widgetConfig.widget_border_radius }}
+              className={`
+                relative w-12 h-12 overflow-hidden ${isOpen ? 'marketrix-widget-icon-shine' : ''}
+                transition-[transform,opacity,background-color] duration-[167ms] ease-[cubic-bezier(0.33,0,0,1)]
+                hover:scale-110 hover:duration-[250ms] active:scale-[0.85] active:duration-[134ms] active:ease-[cubic-bezier(0.45,0,0.2,1)]
+                animate-launcher-entrance
+              `}
+              style={{
+                borderRadius: widgetConfig.widget_border_radius,
+                backgroundColor: isOpen ? widgetConfig.widget_text_color : widgetConfig.widget_accent_color,
+              }}
             >
               {showProcessingGlow && (
                 <svg className={activityRingClass} viewBox='0 0 54 54' fill='none' aria-hidden>
@@ -398,21 +402,59 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
                   />
                 </svg>
               )}
-              <img
-                src={MarketrixIcon}
-                alt='Marketrix Icon'
-                className='relative z-10 w-full h-full object-contain'
-                draggable={false}
-                onDragStart={e => e.preventDefault()}
+              {/* Logo icon: visible when closed; crossfade out when open */}
+              <div
+                className='absolute inset-0 flex items-center justify-center transition-[transform,opacity] duration-[160ms] linear'
                 style={{
-                  borderRadius: widgetConfig.widget_border_radius,
-                  border: 'none',
-                  outline: 'none',
-                  backgroundColor: 'transparent',
-                  pointerEvents: 'none',
-                  userSelect: 'none',
+                  transform: isOpen ? 'rotate(30deg) scale(0)' : 'rotate(0deg) scale(1)',
+                  opacity: isOpen ? 0 : 1,
+                  transitionProperty: 'transform, opacity',
+                  transitionDuration: '0.16s, 0.08s',
+                  transitionTimingFunction: 'linear',
                 }}
-              />
+                aria-hidden={isOpen}
+              >
+                <img
+                  src={MarketrixIcon}
+                  alt=''
+                  className='relative z-10 w-full h-full object-contain'
+                  draggable={false}
+                  onDragStart={e => e.preventDefault()}
+                  style={{
+                    borderRadius: widgetConfig.widget_border_radius,
+                    border: 'none',
+                    outline: 'none',
+                    backgroundColor: 'transparent',
+                    pointerEvents: 'none',
+                    userSelect: 'none',
+                  }}
+                />
+              </div>
+              {/* ChevronDown icon: visible when open; crossfade in when open */}
+              <div
+                className='absolute inset-0 flex items-center justify-center transition-[transform,opacity] duration-[160ms] linear'
+                style={{
+                  transform: isOpen ? 'rotate(0deg) scale(1)' : 'rotate(-30deg) scale(0)',
+                  opacity: isOpen ? 1 : 0,
+                  transitionProperty: 'transform, opacity',
+                  transitionDuration: '0.16s, 0.08s',
+                  transitionTimingFunction: 'linear',
+                }}
+                aria-hidden={!isOpen}
+              >
+                <svg
+                  className='w-6 h-6 relative z-10'
+                  fill='none'
+                  stroke='currentColor'
+                  viewBox='0 0 24 24'
+                  style={{
+                    color: getContrastingColor(widgetConfig.widget_text_color),
+                    pointerEvents: 'none',
+                  }}
+                >
+                  <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2.5} d='M19 9l-7 7-7-7' />
+                </svg>
+              </div>
             </div>
           </div>
         </Button>

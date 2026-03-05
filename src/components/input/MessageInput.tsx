@@ -18,16 +18,19 @@ interface MessageInputProps {
   config?: MarketrixConfig;
 }
 
-export const MessageInput: React.FC<MessageInputProps> = ({
-  value,
-  onChange,
-  onKeyPress,
-  onSend,
-  isLoading,
-  isTaskRunning = false,
-  onStop,
-  config,
-}) => {
+function mergeRefs<T>(...refs: (React.Ref<T> | undefined)[]) {
+  return (el: T | null) => {
+    refs.forEach(r => {
+      if (typeof r === 'function') r(el);
+      else if (r) (r as React.MutableRefObject<T | null>).current = el;
+    });
+  };
+}
+
+export const MessageInput = React.forwardRef<HTMLTextAreaElement, Omit<MessageInputProps, 'ref'>>(function MessageInput(
+  { value, onChange, onKeyPress, onSend, isLoading, isTaskRunning = false, onStop, config },
+  ref,
+) {
   // Get configuration
   const { config: settings } = useWidget(config ? { config } : {});
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -68,14 +71,15 @@ export const MessageInput: React.FC<MessageInputProps> = ({
 
   const placeholderColor = addOpacity(settings.widget_text_color, 0.6);
   const canSend = Boolean(value.trim()) && !isLoading;
+  const iconBtnStyle = { color: settings.widget_text_color };
 
   return (
     <div className='py-2 pr-2 bg-transparent'>
       <style>{`.message-input-textarea::placeholder { color: ${placeholderColor}; }`}</style>
-      <div className='flex items-start space-x-2'>
-        <div className='flex-1 relative'>
+      <div className='flex items-end gap-2'>
+        <div className='flex-1 relative flex flex-col gap-1'>
           <Textarea
-            ref={textareaRef}
+            ref={mergeRefs(textareaRef, ref)}
             value={value}
             onChange={handleChange}
             onKeyDown={handleKeyDown as React.KeyboardEventHandler<HTMLTextAreaElement>}
@@ -94,6 +98,38 @@ export const MessageInput: React.FC<MessageInputProps> = ({
               paddingBottom: '6px',
             }}
           />
+          {/* Composer toolbar: attachment, emoji (placeholders), gap */}
+          <div className='flex items-center gap-1 opacity-60 hover:[&_button:not(:disabled)]:opacity-100 transition-opacity'>
+            <button
+              type='button'
+              disabled
+              className='w-4 h-4 p-0 rounded flex items-center justify-center cursor-not-allowed'
+              style={iconBtnStyle}
+              title='Coming soon'
+              aria-label='Attach file (coming soon)'
+            >
+              <svg className='w-4 h-4' fill='none' stroke='currentColor' viewBox='0 0 24 24' aria-hidden>
+                <path
+                  strokeLinecap='round'
+                  strokeLinejoin='round'
+                  strokeWidth={2}
+                  d='M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13'
+                />
+              </svg>
+            </button>
+            <button
+              type='button'
+              disabled
+              className='w-4 h-4 p-0 rounded flex items-center justify-center cursor-not-allowed'
+              style={iconBtnStyle}
+              title='Coming soon'
+              aria-label='Insert emoji (coming soon)'
+            >
+              <span className='text-base leading-none' aria-hidden>
+                😊
+              </span>
+            </button>
+          </div>
         </div>
         {isTaskRunning && onStop ? (
           <Button
@@ -105,7 +141,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
               e.stopPropagation();
               onStop();
             }}
-            className='w-8 h-8 min-w-8 rounded-full flex items-center justify-center flex-shrink-0 shadow-lg mt-0.5'
+            className='w-8 h-8 min-w-8 rounded-full flex items-center justify-center flex-shrink-0 shadow-lg'
             style={{
               background: 'linear-gradient(to right, #1f2937, #111827)',
               color: '#fff',
@@ -126,7 +162,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
               e.stopPropagation();
               onSend();
             }}
-            className='w-8 h-8 min-w-8 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5'
+            className='w-8 h-8 min-w-8 rounded-full flex items-center justify-center flex-shrink-0'
             style={
               canSend
                 ? {
@@ -135,7 +171,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
                     border: 'none',
                   }
                 : {
-                    backgroundColor: addOpacity(settings.widget_border_color, 0.2),
+                    backgroundColor: 'transparent',
                     color: addOpacity(settings.widget_text_color, 0.4),
                     border: 'none',
                   }
@@ -148,4 +184,4 @@ export const MessageInput: React.FC<MessageInputProps> = ({
       </div>
     </div>
   );
-};
+});

@@ -3,11 +3,12 @@ import React, { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { LAYER_TOKENS } from '../design-system/layers';
 import { semanticTokensToCssCustomProperties } from '../design-system/semantic-tokens';
 import { createSemanticTokens } from '../design-system/token-adapter';
+import { useScrollLock } from '../hooks/useScrollLock';
 import { useWidget } from '../hooks/useWidget';
 import type { MarketrixConfig, WidgetPosition } from '../types';
 import { addOpacity } from '../utils/format';
-import { ChatWindow } from './chat/ChatWindow';
 import { WidgetButton } from './layout/WidgetButton';
+import { MessengerShell } from './navigation/MessengerShell';
 import { ErrorDisplay } from './ui/ErrorDisplay';
 
 // Lazy load the dev panel (only in development)
@@ -17,15 +18,18 @@ interface MarketrixWidgetProps {
   config: MarketrixConfig;
 }
 
-// Error Boundary for ChatWindow
-class WidgetErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean }> {
+// Error Boundary for MessengerShell
+class WidgetErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean; error: Error | null }
+> {
   constructor(props: { children: React.ReactNode }) {
     super(props);
-    this.state = { hasError: false };
+    this.state = { hasError: false, error: null };
   }
 
-  static getDerivedStateFromError() {
-    return { hasError: true };
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
@@ -34,6 +38,9 @@ class WidgetErrorBoundary extends React.Component<{ children: React.ReactNode },
 
   render() {
     if (this.state.hasError) {
+      {
+        console.error('Widget render error', this.state.error);
+      }
       return null; // Fail gracefully by rendering nothing instead of crashing
     }
 
@@ -55,6 +62,9 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
   } = useWidget({
     config,
   });
+
+  useScrollLock(state.isOpen);
+
   const [widgetPosition, setWidgetPosition] = useState<WidgetPosition>(
     (config.widget_position as WidgetPosition | undefined) ?? 'bottom_right',
   );
@@ -133,7 +143,7 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
     widget_position: widgetPosition,
     widget_position_z_index: effectiveWidgetZIndex,
     // Preserve top-level config props that come from script tag attributes / init config
-    // (not from API settings) so they propagate to child components like ChatWindow
+    // (not from API settings) so they propagate to child components like MessengerShell
     show_widget: config.show_widget,
     use_screenshare: config.use_screenshare,
   };
@@ -143,12 +153,30 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
     '--widget-z-index': effectiveWidgetZIndex,
   } as React.CSSProperties;
 
+  const gradientPositionStyle = (() => {
+    const size = 500;
+    const base: React.CSSProperties = {
+      position: 'fixed',
+      width: `${size}px`,
+      height: `${size}px`,
+      pointerEvents: 'none',
+      zIndex: LAYER_TOKENS.panel - 1,
+      background: `radial-gradient(circle at ${widgetPosition.includes('right') ? '100%' : '0%'} ${widgetPosition.includes('bottom') ? '100%' : '0%'}, ${addOpacity(settings.widget_accent_color, 0.08)} 0%, transparent 70%)`,
+    };
+    if (widgetPosition.includes('top')) base.top = 0;
+    else base.bottom = 0;
+    if (widgetPosition.includes('right')) base.right = 0;
+    else base.left = 0;
+    return base;
+  })();
+
   return (
     <div
       className='marketrix-widget relative'
       style={{ ...customStyles, ...(isPreviewMode && { width: '100%', height: '100%' }) }}
       data-widget-mode={settings?.widget_feature_human ? 'hybrid' : 'ai'}
     >
+      {state.isOpen && <div className='animate-fade-in' style={gradientPositionStyle} aria-hidden />}
       {showProcessingFeedback && (
         <div
           className='marketrix-screen-edge-glow fixed inset-0'
@@ -159,6 +187,29 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
           }}
         />
       )}
+
+      <WidgetErrorBoundary>
+        <MessengerShell
+          config={effectiveConfig}
+          isOpen={state.isOpen}
+          isMinimized={state.isMinimized}
+          messages={state.messages}
+          currentMode={state.currentMode}
+          isTaskRunning={state.isTaskRunning}
+          taskProgress={state.taskProgress}
+          activeView={state.activeView}
+          onClose={actions.closeWidget}
+          onSendMessage={actions.sendMessage}
+          onSetMode={actions.setMode}
+          onAddMessage={actions.addMessage}
+          onUpdateMessage={actions.updateMessage}
+          onRemoveMessage={actions.removeMessage}
+          onStopTask={actions.stopTask}
+          onClearChat={actions.clearChatHistory}
+          onScreenSharingChange={setIsScreenSharing}
+          setActiveView={actions.setActiveView}
+        />
+      </WidgetErrorBoundary>
 
       <WidgetButton
         config={effectiveConfig}
@@ -172,29 +223,6 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
         position={widgetPosition}
         onPositionChange={handlePositionChange}
       />
-
-      <WidgetErrorBoundary>
-        <ChatWindow
-          config={effectiveConfig}
-          isOpen={state.isOpen}
-          isMinimized={state.isMinimized}
-          isLoading={state.isLoading}
-          messages={state.messages}
-          currentMode={state.currentMode}
-          agentAvailable={state.agentAvailable}
-          isTaskRunning={state.isTaskRunning}
-          taskProgress={state.taskProgress}
-          onClose={actions.closeWidget}
-          onSendMessage={actions.sendMessage}
-          onSetMode={actions.setMode}
-          onAddMessage={actions.addMessage}
-          onUpdateMessage={actions.updateMessage}
-          onRemoveMessage={actions.removeMessage}
-          onStopTask={actions.stopTask}
-          onClearChat={actions.clearChatHistory}
-          onScreenSharingChange={setIsScreenSharing}
-        />
-      </WidgetErrorBoundary>
 
       {state.error && (
         <ErrorDisplay

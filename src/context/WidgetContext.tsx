@@ -6,7 +6,7 @@ import { configManager } from '../services/ConfigManager';
 import { sessionManager } from '../services/SessionManager';
 import { toolExecutionService } from '../services/ToolService';
 import { WebSocketClient, type WebSocketMessage, type WebSocketStatus } from '../services/WebSocketClient';
-import type { ChatMessage, InstructionType, TaskProgress, WidgetState } from '../types';
+import type { ChatMessage, InstructionType, TaskProgress, WidgetState, WidgetView } from '../types';
 import { isToolRequest, type ToolRequest, type ToolResponse } from '../types/toolMessages';
 import {
   addProgressLine,
@@ -23,6 +23,7 @@ interface WidgetContextType {
   state: WidgetState;
   actions: {
     setState: (payload: Partial<WidgetState>) => void;
+    setActiveView: (view: WidgetView) => void;
     toggleWidget: () => void;
     closeWidget: () => void;
     setMode: (mode: InstructionType) => void;
@@ -91,6 +92,7 @@ export const WidgetProvider: React.FC<WidgetProviderProps> = ({ children, previe
     activeTaskId: null,
     isTaskRunning: false,
     taskProgress: [],
+    activeView: 'home',
   });
 
   // Initialize ChatService on mount (skip in preview mode)
@@ -702,6 +704,7 @@ export const WidgetProvider: React.FC<WidgetProviderProps> = ({ children, previe
   const actions = useMemo(
     () => ({
       setState: (payload: Partial<WidgetState>) => setState(prev => ({ ...prev, ...payload })),
+      setActiveView: (view: WidgetView) => setState(prev => ({ ...prev, activeView: view })),
       toggleWidget: () =>
         setState(prev => {
           const newState = {

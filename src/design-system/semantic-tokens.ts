@@ -47,11 +47,11 @@ export const WIDGET_STYLE_SETTINGS_DEFAULTS: WidgetStyleSettingsDefaults = {
   widget_border_color: '#e5e7eb',
   widget_accent_color: '#3b82f6',
   widget_secondary_color: '#6b7280',
-  widget_border_radius: '16px',
+  widget_border_radius: '20px',
   widget_font_size: '14px',
   widget_width: '400px',
   widget_height: '600px',
-  widget_shadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+  widget_shadow: '0 5px 40px 0 rgba(0, 0, 0, 0.3)',
   widget_animation_duration: '300ms',
   widget_fade_duration: '200ms',
 };

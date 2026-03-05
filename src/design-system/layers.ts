@@ -8,10 +8,10 @@ export type LayerTokens = {
 };
 
 export const LAYER_TOKENS: LayerTokens = {
-  launcher: 1200,
-  panel: 1210,
-  overlay: 1220,
-  modal: 1230,
-  toast: 1240,
-  debug: 1250,
+  launcher: 2147483003,
+  panel: 2147483002,
+  overlay: 2147483001,
+  modal: 2147483004,
+  toast: 2147483005,
+  debug: 2147483006,
 };

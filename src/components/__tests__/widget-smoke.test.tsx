@@ -17,7 +17,7 @@ describe('Widget smoke', () => {
         <MarketrixWidget config={config} />
       </WidgetProvider>,
     );
-    expect(screen.getByRole('button', { name: /open marketrix support chat/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /open/i })).toBeInTheDocument();
   });
 
   it('uses semantic tokens and layer tokens', () => {

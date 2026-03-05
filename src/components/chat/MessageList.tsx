@@ -1,27 +1,17 @@
 // / <reference lib="dom" />
 import React, { useEffect, useRef, useState } from 'react';
 import { FaArrowDown, FaArrowUp } from 'react-icons/fa';
-import { IoChatbubbleEllipsesOutline } from 'react-icons/io5';
-import { LuMousePointerClick } from 'react-icons/lu';
-import { SiTicktick } from 'react-icons/si';
 
 import MarketrixIcon from '../../assets/marketrix-icon.svg';
 import { useWidget } from '../../hooks/useWidget';
 import { createUserMessage } from '../../services/ChatService';
 import type { ChatMessage, MarketrixConfig } from '../../types';
 import { addOpacity } from '../../utils/format';
+import { getSuggestedActionsFromConfig } from '../../utils/suggestedActions';
 import { Button } from '../base/Button';
 import { StateMessage } from '../ui/StateMessage';
 import { MessageItem } from './MessageItem';
 import { WelcomeMessage } from './WelcomeMessage';
-
-// Define the chip type to handle both formats
-type ChipData = {
-  chip_mode?: 'show' | 'tell' | 'do' | string;
-  chip_text?: string;
-  type?: 'show' | 'tell' | 'do' | string;
-  question?: string;
-};
 
 interface MessageListProps {
   messages: ChatMessage[];
@@ -93,139 +83,8 @@ export const MessageList = ({
   // Check if there's a pending message (placeholder exists or isLoading)
   const hasPendingMessage = widgetState.isLoading || messages.some(msg => msg.isPlaceholder);
 
-  // Suggested actions to show when no messages - get from settings or use defaults
-  const getSuggestedActions = () => {
-    // If config has widget_chips, use those
-    if (widgetConfig.widget_chips && widgetConfig.widget_chips.length > 0) {
-      return widgetConfig.widget_chips.map((chip: ChipData, index: number) => {
-        // Handle both formats: chip_text (expected) and question (actual backend)
-        const chipText = chip.chip_text || chip.question || '';
-        const chipMode = chip.chip_mode || chip.type || 'tell';
-        const mode: 'show' | 'tell' | 'do' =
-          chipMode === 'show' || chipMode === 'tell' || chipMode === 'do' ? chipMode : 'tell';
-
-        let icon;
-        let isShow = false;
-
-        switch (mode) {
-          case 'do':
-            icon = (
-              <SiTicktick
-                className='w-3 h-3 text-xs'
-                style={{ fontSize: '0.75rem', width: '0.75rem', height: '0.75rem' }}
-              />
-            );
-            isShow = false;
-            break;
-          case 'show':
-            icon = (
-              <LuMousePointerClick
-                className='w-3 h-3 text-xs'
-                style={{ fontSize: '0.75rem', width: '0.75rem', height: '0.75rem' }}
-              />
-            );
-            isShow = true;
-            break;
-          case 'tell':
-            icon = (
-              <IoChatbubbleEllipsesOutline
-                className='w-3 h-3 text-xs'
-                style={{ fontSize: '0.75rem', width: '0.75rem', height: '0.75rem' }}
-              />
-            );
-            isShow = false;
-            break;
-          default:
-            icon = (
-              <IoChatbubbleEllipsesOutline
-                className='w-3 h-3 text-xs'
-                style={{ fontSize: '0.75rem', width: '0.75rem', height: '0.75rem' }}
-              />
-            );
-            isShow = false;
-            break;
-        }
-
-        // Create a unique ID using the chip content and index
-        const uniqueId = `chip-${chipText.replace(/\s+/g, '-').toLowerCase()}-${index}`;
-
-        return {
-          id: uniqueId,
-          text: chipText,
-          icon,
-          type: mode,
-          isShow,
-        };
-      });
-    }
-
-    return [
-      {
-        id: 'show-add-product',
-        text: 'Show me how to add a new product',
-        icon: <LuMousePointerClick className='w-6 h-6' />,
-        type: 'show' as const,
-        isShow: true,
-      },
-      {
-        id: 'show-login',
-        text: 'Show me how to login',
-        icon: <LuMousePointerClick className='w-6 h-6' />,
-        type: 'show' as const,
-        isShow: true,
-      },
-      {
-        id: 'do-login',
-        text: 'Do the login process for me',
-        icon: <SiTicktick className='w-4 h-4' />,
-        type: 'do' as const,
-        isShow: false,
-      },
-      {
-        id: 'show-revenue',
-        text: 'Show me the revenue metrics',
-        icon: <LuMousePointerClick className='w-6 h-6' />,
-        type: 'show' as const,
-        isShow: true,
-      },
-      {
-        id: 'tell-conversion-rate',
-        text: 'What does my conversion rate mean and how can I improve it?',
-        icon: <IoChatbubbleEllipsesOutline className='w-5 h-5' />,
-        type: 'tell' as const,
-        isShow: false,
-      },
-    ];
-  };
-
-  const suggestedActions = getSuggestedActions();
-  const seenIds = new Set();
-  interface SuggestedActionItem {
-    id: string;
-    text: string;
-    icon: React.ReactElement;
-    type: 'tell' | 'show' | 'do';
-    isShow: boolean;
-  }
-
-  const uniqueSuggestedActions = suggestedActions.map((action: SuggestedActionItem) => {
-    let uniqueId = action.id;
-    let counter = 0;
-    while (seenIds.has(uniqueId)) {
-      counter++;
-      uniqueId = `${action.id}-${counter}`;
-    }
-    seenIds.add(uniqueId);
-
-    if (counter > 0) {
-      console.warn(`Duplicate ID found: ${action.id}, using: ${uniqueId}`);
-    }
-
-    return {
-      ...action,
-      id: uniqueId,
-    };
-  });
+  const suggestedActions = getSuggestedActionsFromConfig(widgetConfig);
+  const uniqueSuggestedActions = suggestedActions;
 
   const handleSuggestedActionClick = async (action: (typeof suggestedActions)[0], event: React.MouseEvent) => {
     event.preventDefault();
@@ -276,6 +135,8 @@ export const MessageList = ({
         key='message-list-container'
         ref={containerRef}
         onScroll={handleScroll}
+        role='log'
+        aria-relevant='additions'
         className='h-full overflow-y-auto px-2 space-y-0.5 pt-0 scrollbar-thin scrollbar-track-gray-100 scrollbar-thumb-gray-400'
         style={{
           backgroundColor: widgetConfig.widget_background_color.includes('gradient')

@@ -48,7 +48,13 @@ export const MessageItem: React.FC<MessageItemProps> = ({
   const isUser = message.sender === 'user';
 
   return (
-    <div key={`message-${message.id}-${index}`} className='group flex flex-col mt-[10px]'>
+    <div
+      key={`message-${message.id}-${index}`}
+      className={`group flex flex-col mt-[10px] ${isLastMessage ? 'animate-message-enter' : ''}`}
+      role='article'
+      aria-roledescription='message'
+      aria-label={isUser ? 'You said…' : 'Agent says…'}
+    >
       <div className='flex items-start gap-1 w-full flex-row'>
         {/* Logo or Spacer - Always on left */}
         <div
@@ -82,14 +88,15 @@ export const MessageItem: React.FC<MessageItemProps> = ({
         {/* Message bubble */}
         <div
           className={`flex flex-col flex-1 relative
-          ${message.videoStream ? 'p-0' : 'px-2.5 py-2'} shadow-sm border ${!isUser ? 'bg-white' : ''}
-          ${isUser ? 'rounded-l-lg rounded-tr-lg rounded-br-lg' : 'rounded-r-lg rounded-tl-lg rounded-bl-lg'}
+          ${message.videoStream ? 'p-0' : 'px-2.5 py-2'}
+          ${!isUser ? 'rounded-[var(--radius)] shadow-[0_1px_4px_rgba(0,0,0,0.1)]' : 'border'}
+          ${isUser ? 'rounded-l-[var(--radius)] rounded-tr-[var(--radius)] rounded-br-[var(--radius)]' : ''}
         `}
           style={{
-            backgroundColor: isUser ? settings.widget_accent_color : undefined,
+            backgroundColor: isUser ? settings.widget_accent_color : 'transparent',
             color: isUser ? getContrastingColor(settings.widget_accent_color) : settings.widget_text_color,
-            borderColor: isUser ? settings.widget_accent_color : settings.widget_border_color,
-            maxWidth: 'calc(100% - 40px)', // Leave space for logo space on left
+            borderColor: isUser ? settings.widget_accent_color : 'transparent',
+            maxWidth: isUser ? 'calc(100% - 40px)' : '280px',
           }}
         >
           {/* Video stream display - edge-to-edge */}
@@ -172,8 +179,17 @@ export const MessageItem: React.FC<MessageItemProps> = ({
           )}
         </div>
       </div>
+      {/* Attribution line for agent messages */}
+      {!isUser && !message.isPlaceholder && (
+        <div
+          className='text-[11px] mt-1 ml-9 opacity-60 transition-[max-height,opacity] duration-300'
+          style={{ color: settings.widget_text_color }}
+        >
+          Marketrix • AI Agent • {formatMessageTime(message.timestamp)}
+        </div>
+      )}
       {/* Timestamp below card */}
-      {!message.isPlaceholder && (
+      {!message.isPlaceholder && isUser && (
         <div className='flex justify-end mt-0.5 mr-1'>
           <span className='text-[10px] text-gray-400 font-inter font-normal'>
             {formatMessageTime(message.timestamp)}

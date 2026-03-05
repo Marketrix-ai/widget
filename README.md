@@ -640,3 +640,5 @@ MIT License - see LICENSE file for details.
 
 For support and questions, please contact the Marketrix team or create an issue
 in the repository.
+
+[Back to top](#marketrix-in-app-support-widget)
