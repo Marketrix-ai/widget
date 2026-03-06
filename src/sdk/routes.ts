@@ -108,7 +108,6 @@ import {
   StripePortalSchema,
   StripePricingSchema,
   StripeTrialSchema,
-  StripeWebhookEventSchema,
   SubscriptionUsageSchema,
   TenantCreateSchema,
   TenantEntitySchema,
@@ -151,6 +150,30 @@ const contract = {
       description: 'Returns current system health, database connectivity, and service status',
     })
     .output(HealthResponseSchema),
+
+  validateUrl: oc
+    .route({
+      method: 'GET',
+      tags: ['Root'],
+      path: '/validate-url',
+      summary: 'Validate URL accessibility and DNS resolution',
+      description: 'Validates a URL for format, DNS resolution, and HTTP accessibility',
+    })
+    .input(
+      z.object({
+        url: z.string(),
+        skip_network: z.string().optional(),
+      }),
+    )
+    .output(
+      z.object({
+        valid: z.boolean(),
+        accessible: z.boolean(),
+        dnsResolves: z.boolean(),
+        error: z.string().optional(),
+        warnings: z.array(z.string()).optional(),
+      }),
+    ),
 
   getPublicConfig: oc
     .route({
@@ -198,9 +221,16 @@ const contract = {
         name: z.string().min(1).max(45),
         domain: z.string().min(1).max(200),
         team_emails: z.array(z.string().email()).optional().default([]),
+        app_url: z.string().optional(),
+        app_username: z.string().optional(),
+        app_password: z.string().optional(),
       }),
     )
-    .output(z.object({ tenant: TenantEntitySchema })),
+    .output(
+      z.object({
+        tenant: TenantEntitySchema,
+      }),
+    ),
 
   // ============================================================================
   // MEETING ROUTES - Video meeting management and operations
@@ -824,6 +854,7 @@ const contract = {
       z.object({
         tenant_id: z.coerce.number().optional(),
         type: ActionLogTypeSchema.optional(),
+        connection_id: z.coerce.number().optional(),
       }),
     )
     .output(z.array(ActionLogEntitySchema)),
@@ -1062,7 +1093,7 @@ const contract = {
     .input(z.object({ simulation_id: z.coerce.number() }))
     .output(
       z.object({
-        job_id: z.string(),
+        session_id: z.string(),
         live_view_url: z.string(),
         status: z.string(),
       }),
@@ -1428,6 +1459,17 @@ const contract = {
       ),
     ),
 
+  qaDocumentDelete: oc
+    .route({
+      method: 'DELETE',
+      tags: ['QA'],
+      path: '/qa/document/{id}',
+      summary: 'Delete QA document',
+      description: 'Deletes a QA document and all its runs and test cases',
+    })
+    .input(z.object({ id: z.coerce.number() }))
+    .output(z.void()),
+
   qaDocumentUpdate: oc
     .route({
       method: 'PUT',
@@ -1484,8 +1526,7 @@ const contract = {
       tags: ['QA'],
       path: '/qa/document/{id}/run',
       summary: 'Create and start a new QA run',
-      description:
-        'Creates a new run (clones test cases) and starts execution. Returns 202; poll test-cases by run_id.',
+      description: 'Creates a new run and starts execution. Returns 202; poll test-cases for execution status.',
     })
     .input(z.object({ id: z.coerce.number() }))
     .output(
@@ -1509,24 +1550,18 @@ const contract = {
     .route({
       method: 'PUT',
       path: '/qa/test-case/{id}',
-      summary: 'Update test case status and progress',
-      description: 'Updates a test case with status, progress log, and screenshot',
+      summary: 'Update test case definition fields',
+      description: 'Updates a test case definition (title, objective, steps, etc.)',
     })
     .input(
       z.object({
         id: z.coerce.number(),
-        status: z.enum(['pending', 'running', 'completed', 'failed']).optional(),
-        progress_log: z
-          .array(
-            z.object({
-              step: z.number(),
-              message: z.string(),
-              timestamp: z.string(),
-              status: z.enum(['success', 'error', 'info']),
-            }),
-          )
-          .optional(),
-        screenshot_url: z.string().nullable().optional(),
+        test_title: z.string().optional(),
+        test_objective: z.string().optional(),
+        test_steps: z.array(z.string()).optional(),
+        expected_outcome: z.string().optional(),
+        priority: z.enum(['Low', 'Medium', 'High']).optional(),
+        is_active: z.boolean().optional(),
       }),
     )
     .output(QATestCaseEntitySchema),
@@ -1552,7 +1587,7 @@ const contract = {
     .route({
       method: 'POST',
       path: '/qa/test-case/{id}/execute',
-      summary: 'Execute a single test as a simulation',
+      summary: 'Execute a single test case as a simulation',
     })
     .input(z.object({ id: z.coerce.number() }))
     .output(
@@ -1575,13 +1610,13 @@ const contract = {
       }),
     ),
 
-  // QA Test Version routes
+  // QA Test Case Version routes (reads from qa_test_case.version_history JSON)
   qaTestCaseVersionList: oc
     .route({
       method: 'GET',
       path: '/qa/test-case/{id}/versions',
-      summary: 'Get version history for a test',
-      description: 'Returns all versions of a test case with change history',
+      summary: 'Get version history for a test case',
+      description: 'Returns all version entries from the test case version_history JSON',
     })
     .input(z.object({ id: z.coerce.number() }))
     .output(z.array(QAVersionHistoryEntrySchema)),
@@ -1590,8 +1625,8 @@ const contract = {
     .route({
       method: 'GET',
       path: '/qa/test-case/{id}/versions/{version}',
-      summary: 'Get specific test version',
-      description: 'Returns a specific version of a test case',
+      summary: 'Get specific test case version',
+      description: 'Returns a specific version entry from the test case version_history JSON',
     })
     .input(z.object({ id: z.coerce.number(), version: z.coerce.number() }))
     .output(QAVersionHistoryEntrySchema),
@@ -1601,7 +1636,7 @@ const contract = {
       method: 'POST',
       path: '/qa/test-case/{id}/versions/{version}/rollback',
       summary: 'Rollback to specific version',
-      description: 'Restores test to a previous version and creates new version record',
+      description: 'Restores test case to a previous version and appends new version entry',
     })
     .input(z.object({ id: z.coerce.number(), version: z.coerce.number() }))
     .output(QAVersionHistoryEntrySchema),
@@ -1611,7 +1646,7 @@ const contract = {
       method: 'GET',
       path: '/qa/test-case/{id}/versions/compare',
       summary: 'Compare two versions',
-      description: 'Returns differences between two test versions',
+      description: 'Returns differences between two test case versions',
     })
     .input(z.object({ id: z.coerce.number(), version1: z.coerce.number(), version2: z.coerce.number() }))
     .output(
@@ -1628,13 +1663,13 @@ const contract = {
       }),
     ),
 
-  // QA Self-Healing routes
+  // QA Self-Healing routes (reads from qa_test_case.healing_attempts JSON)
   qaHealingAttemptList: oc
     .route({
       method: 'GET',
       path: '/qa/test-case/{id}/healing-attempts',
-      summary: 'Get healing attempts for a test',
-      description: 'Returns all healing attempts for a specific test case',
+      summary: 'Get healing attempts for a test case',
+      description: 'Returns all healing attempt entries from the test case healing_attempts JSON',
     })
     .input(z.object({ id: z.coerce.number() }))
     .output(z.array(QAHealingAttemptEntrySchema)),
@@ -1644,7 +1679,7 @@ const contract = {
       method: 'POST',
       path: '/qa/test-case/{id}/healing-attempts/{attemptIndex}/approve',
       summary: 'Approve a healing attempt',
-      description: 'Applies the repair from a validated healing attempt',
+      description: 'Applies the repair from a validated healing attempt by array index',
     })
     .input(z.object({ id: z.coerce.number(), attemptIndex: z.coerce.number() }))
     .output(z.object({ success: z.boolean() })),
@@ -1654,7 +1689,7 @@ const contract = {
       method: 'POST',
       path: '/qa/test-case/{id}/healing-attempts/{attemptIndex}/reject',
       summary: 'Reject a healing attempt',
-      description: 'Marks a healing attempt as rejected',
+      description: 'Marks a healing attempt as rejected by array index',
     })
     .input(z.object({ id: z.coerce.number(), attemptIndex: z.coerce.number() }))
     .output(z.object({ success: z.boolean() })),
@@ -1663,7 +1698,7 @@ const contract = {
     .route({
       method: 'POST',
       path: '/qa/test-case/{id}/heal',
-      summary: 'Trigger self-healing for a failed test',
+      summary: 'Trigger self-healing for a failed test case',
       description: 'Initiates the self-healing workflow for a test case',
     })
     .input(
@@ -1897,16 +1932,7 @@ const contract = {
     })
     .output(PlanCatalogSchema),
 
-  stripeWebhook: oc
-    .route({
-      method: 'POST',
-      tags: ['Stripe'],
-      path: '/stripe/webhook',
-      summary: 'Handle Stripe webhook events',
-      description: 'Receives and processes Stripe webhook events for subscription changes, payments, and other events.',
-    })
-    .input(StripeWebhookEventSchema)
-    .output(z.object({ received: z.literal(true) })),
+  // stripeWebhook is handled as a raw Express route — not part of the oRPC contract.
 };
 
 export { contract };

@@ -465,7 +465,7 @@ export const QATestCaseEntitySchema = BaseEntitySchema.extend({
   test_steps: z.array(z.string()),
   expected_outcome: z.string(),
   priority: z.enum(['Low', 'Medium', 'High']),
-  is_active: z.boolean(),
+  is_active: z.preprocess(v => (typeof v === 'number' ? v !== 0 : v), z.boolean()),
   current_version: z.number().int().positive(),
   version_history: z.array(QAVersionHistoryEntrySchema).nullable(),
   executions: z.array(QAExecutionEntrySchema).nullable(),
@@ -626,53 +626,50 @@ export const NavigateToUrlActionSchema = z.object({
 });
 
 /**
- * Union schema for all possible simulation actions
+ * Schema for simulation actions.
+ * Browser-use can emit many action types beyond the ones explicitly defined above,
+ * so we accept any single-key object (e.g. { scroll: {...} }, { send_keys: {...} }).
  */
-export const SimulationActionSchema = z.union([
-  GoToUrlActionSchema,
-  ClickElementByIndexActionSchema,
-  InputTextActionSchema,
-  WriteFileActionSchema,
-  GetOtpActionSchema,
-  DoneActionSchema,
-  WaitActionSchema,
-  ReloadPageActionSchema,
-  OpenNewTabActionSchema,
-  NavigateToUrlActionSchema,
-]);
+export const SimulationActionSchema = z.record(z.string(), z.unknown());
 
 /**
  * Model output schema for simulation step
  */
-export const SimulationModelOutputSchema = z.object({
-  evaluation_previous_goal: z.string().optional(),
-  memory: z.string().optional(),
-  next_goal: z.string().optional(),
-  action: z.array(SimulationActionSchema).optional(),
-  thinking: z.string().optional(),
-});
+export const SimulationModelOutputSchema = z
+  .object({
+    evaluation_previous_goal: z.string().optional().nullable(),
+    memory: z.string().optional().nullable(),
+    next_goal: z.string().optional().nullable(),
+    action: z.array(SimulationActionSchema).optional().nullable(),
+    thinking: z.string().optional().nullable(),
+  })
+  .passthrough();
 
 /**
  * Result schema for simulation step
  */
-export const SimulationResultSchema = z.object({
-  is_done: z.boolean(),
-  success: z.boolean().optional(),
-  long_term_memory: z.string().optional(),
-  extracted_content: z.string().optional(),
-  include_extracted_content_only_once: z.boolean().optional(),
-  include_in_memory: z.boolean().optional(),
-  error: z.string().optional(),
-  metadata: z
-    .object({
-      click_x: z.number().optional(),
-      click_y: z.number().optional(),
-      new_tab_opened: z.boolean().optional(),
-      input_x: z.number().optional(),
-      input_y: z.number().optional(),
-    })
-    .optional(),
-});
+export const SimulationResultSchema = z
+  .object({
+    is_done: z.boolean(),
+    success: z.boolean().optional().nullable(),
+    long_term_memory: z.string().optional().nullable(),
+    extracted_content: z.string().optional().nullable(),
+    include_extracted_content_only_once: z.boolean().optional().nullable(),
+    include_in_memory: z.boolean().optional().nullable(),
+    error: z.string().optional().nullable(),
+    metadata: z
+      .object({
+        click_x: z.number().optional(),
+        click_y: z.number().optional(),
+        new_tab_opened: z.boolean().optional(),
+        input_x: z.number().optional(),
+        input_y: z.number().optional(),
+      })
+      .passthrough()
+      .optional()
+      .nullable(),
+  })
+  .passthrough();
 
 /**
  * Browser tab schema (browser-use format)
@@ -681,8 +678,8 @@ export const BrowserTabSchema = z
   .object({
     url: z.string(),
     title: z.string(),
-    tab_id: z.string(),
-    parent_tab_id: z.string().nullable(),
+    tab_id: z.string().optional(),
+    parent_tab_id: z.string().optional().nullable(),
   })
   .passthrough();
 
@@ -691,15 +688,15 @@ export const BrowserTabSchema = z
  */
 export const InteractedElementSchema = z
   .object({
-    node_id: z.number(),
-    backend_node_id: z.number(),
-    frame_id: z.string().nullable(),
-    node_type: z.number(),
-    node_value: z.string(),
-    node_name: z.string(),
+    node_id: z.number().optional(),
+    backend_node_id: z.number().optional(),
+    frame_id: z.string().optional().nullable(),
+    node_type: z.number().optional(),
+    node_value: z.string().optional(),
+    node_name: z.string().optional(),
     attributes: z.record(z.string(), z.string()).optional().nullable(),
-    x_path: z.string(),
-    element_hash: z.number(),
+    x_path: z.string().optional(),
+    element_hash: z.number().optional(),
     bounds: z
       .object({
         x: z.number(),
@@ -707,6 +704,7 @@ export const InteractedElementSchema = z
         width: z.number(),
         height: z.number(),
       })
+      .passthrough()
       .optional()
       .nullable(),
     stable_hash: z.number().optional(),
@@ -732,10 +730,10 @@ export const SimulationStateSchema = z
  */
 export const SimulationStepMetadataSchema = z
   .object({
-    step_start_time: z.number().optional(),
-    step_end_time: z.number().optional(),
-    step_number: z.number().optional(),
-    step_interval: z.number().optional(),
+    step_start_time: z.number().optional().nullable(),
+    step_end_time: z.number().optional().nullable(),
+    step_number: z.number().optional().nullable(),
+    step_interval: z.number().optional().nullable(),
   })
   .passthrough();
 
@@ -771,6 +769,17 @@ export const SimulationStepSummarySchema = z.object({
 });
 
 /**
+ * One entry inside simulation.progress_log (stored as JSON array on the simulation row).
+ */
+export const SimulationProgressEntrySchema = z.object({
+  status: z.string(),
+  status_message: z.string().nullable(),
+  num_steps: z.number().int().nonnegative().nullable(),
+  created_at: z.coerce.date(),
+});
+export type SimulationProgressEntry = z.infer<typeof SimulationProgressEntrySchema>;
+
+/**
  * App simulation schema
  */
 export const SimulationEntitySchema = BaseEntitySchema.extend({
@@ -786,6 +795,7 @@ export const SimulationEntitySchema = BaseEntitySchema.extend({
   pinned: z.boolean().optional(),
   agent_name: z.string().nullish(),
   graph_index_id: z.string().nullable().optional(),
+  progress_log: z.array(SimulationProgressEntrySchema).optional(),
 });
 
 /**
@@ -844,7 +854,7 @@ export const RrwebSessionEntitySchema = BaseEntitySchema.extend({
   event_count: z.number().int().nonnegative(),
   started_at: z.string().datetime(),
   ended_at: z.string().datetime().nullable(),
-  is_active: z.boolean(),
+  is_active: z.preprocess(v => (typeof v === 'number' ? v !== 0 : v), z.boolean()),
   metadata: z
     .object({
       userAgent: z.string().optional(),
@@ -867,7 +877,7 @@ export const RrwebSessionUpsertSchema = z.object({
   event_count: z.number().int().nonnegative().optional(),
   started_at: z.string().datetime().optional(),
   ended_at: z.string().datetime().nullable().optional(),
-  is_active: z.boolean().optional(),
+  is_active: z.preprocess(v => (typeof v === 'number' ? v !== 0 : v), z.boolean()).optional(),
   metadata: z
     .object({
       userAgent: z.string().optional(),
@@ -882,7 +892,8 @@ export const RrwebSessionUpsertSchema = z.object({
 });
 
 /**
- * Simulation progress entry schema
+ * API response schema for the simulationProgress endpoint.
+ * Synthesises id/simulation_id so existing callers keep working.
  */
 export const SimulationProgressEntitySchema = z.object({
   id: z.number(),
@@ -954,13 +965,13 @@ export const AgentEntitySchema = BaseEntitySchema.extend({
 });
 
 const KnowledgeIdsSchema = z.string().transform(str => {
-  const parsed = JSON.parse(str);
-  return Array.isArray(parsed) ? parsed.map(v => Number(v)) : [];
+  const parsed: unknown = JSON.parse(str);
+  return Array.isArray(parsed) ? (parsed as unknown[]).map(v => Number(v)) : [];
 });
 
 const SimulationIdsSchema = z.string().transform(str => {
-  const parsed = JSON.parse(str);
-  return Array.isArray(parsed) ? parsed.map(v => Number(v)) : [];
+  const parsed: unknown = JSON.parse(str);
+  return Array.isArray(parsed) ? (parsed as unknown[]).map(v => Number(v)) : [];
 });
 
 /**
