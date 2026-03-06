@@ -43,6 +43,8 @@ export default [
         clearTimeout: 'readonly',
         setInterval: 'readonly',
         clearInterval: 'readonly',
+        requestAnimationFrame: 'readonly',
+        cancelAnimationFrame: 'readonly',
         Buffer: 'readonly',
         React: 'readonly',
         JSX: 'readonly',

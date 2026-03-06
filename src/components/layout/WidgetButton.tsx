@@ -4,12 +4,7 @@ import MarketrixIcon from '../../assets/marketrix-icon.svg';
 import { useWidget } from '../../hooks/useWidget';
 import type { MarketrixConfig, WidgetPosition } from '../../types';
 import { addOpacity, darkenColor, getContrastingColor } from '../../utils/format';
-import {
-  getAnchorTopLeft,
-  getDeltaToCorner,
-  getNearestCornerByTranslation,
-  getPositionClasses,
-} from '../../utils/widgetPositioning';
+import { getAnchorTopLeft, getNearestCornerByTranslation, getPositionClasses } from '../../utils/widgetPositioning';
 import { Button } from '../base/Button';
 
 interface WidgetButtonProps {
@@ -48,8 +43,6 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const [wrapperSize, setWrapperSize] = useState({ w: 56, h: 56 });
   const [, setViewportTick] = useState(0);
-  const transitionEndRef = useRef<(() => void) | null>(null);
-
   // All drag state lives in refs to avoid React rerenders during drag.
   const dragRef = useRef<{
     pointerId: number;
@@ -61,7 +54,7 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
   } | null>(null);
   const rafRef = useRef<number | null>(null);
   const suppressUntilRef = useRef(0);
-  // Velocity history for Next.js-style momentum snap (sample every ~10ms)
+  // Velocity history for momentum-based corner snap (sample every ~10ms)
   const velocityHistoryRef = useRef<Array<{ x: number; y: number; t: number }>>([]);
   const lastVelocitySampleRef = useRef(0);
 
@@ -139,7 +132,7 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
         }
     : {};
 
-  // Velocity in px/s; project to extra px for momentum (Next.js formula)
+  // Velocity in px/s; project to extra px for momentum
   const projectVelocity = (v: number, decel = 0.999) => ((v / 1000) * decel) / (1 - decel);
 
   const getVelocityFromHistory = (): { x: number; y: number } => {
@@ -156,7 +149,7 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
   // ---- Drag handlers ----
   // Strategy: keep CSS corner anchor classes intact.
   // Apply translate3d(deltaX, deltaY, 0) as offset from anchored position.
-  // On drop, animate to nearest corner and then commit corner class.
+  // On drop, snap to nearest corner instantly.
 
   const onPointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
     if (isOpen) return;
@@ -227,55 +220,34 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
     }
   };
 
-  const commitPositionAfterAnimation = useCallback(
-    (nextCorner: WidgetPosition) => {
-      if (transitionEndRef.current) return;
-      const wrapper = wrapperRef.current;
-      if (!wrapper) {
-        onPositionChange(nextCorner);
-        setIsDragging(false);
-        return;
-      }
-      const done = () => {
-        transitionEndRef.current = null;
-        const vw = window.innerWidth;
-        const vh = window.innerHeight;
-        const rect = wrapper.getBoundingClientRect();
-        const newAnchor = getAnchorTopLeft(nextCorner, vw, vh, rect.width, rect.height);
-        wrapper.style.left = `${newAnchor.x}px`;
-        wrapper.style.top = `${newAnchor.y}px`;
-        wrapper.style.transition = '';
-        wrapper.style.transform = '';
-        onPositionChange(nextCorner);
-        setIsDragging(false);
-      };
-      transitionEndRef.current = done;
-      wrapper.addEventListener('transitionend', function onEnd(e: TransitionEvent) {
-        if (e.propertyName !== 'transform') return;
-        wrapper.removeEventListener('transitionend', onEnd);
-        done();
-      });
-    },
-    [onPositionChange],
-  );
-
-  const snapToCorner = (nextCorner: WidgetPosition) => {
-    if (!wrapperRef.current || !pixelPositionStyle) {
-      resetDragStyles();
-      onPositionChange(nextCorner);
-      setIsDragging(false);
-      return;
-    }
-    if (rafRef.current !== null) {
-      window.cancelAnimationFrame(rafRef.current);
-      rafRef.current = null;
-    }
-    const targetDelta = getDeltaToCorner(position, nextCorner, vw, vh, wrapperSize.w, wrapperSize.h);
+  const snapToCornerInstant = (nextCorner: WidgetPosition) => {
     const wrapper = wrapperRef.current;
-    wrapper.style.willChange = 'transform';
-    wrapper.style.transition = 'transform 491ms cubic-bezier(0.34, 1.56, 0.64, 1)';
-    wrapper.style.transform = `translate3d(${targetDelta.dx}px, ${targetDelta.dy}px, 0)`;
-    commitPositionAfterAnimation(nextCorner);
+    if (wrapper) {
+      if (rafRef.current !== null) {
+        window.cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
+      const newAnchor = getAnchorTopLeft(
+        nextCorner,
+        window.innerWidth,
+        window.innerHeight,
+        wrapperSize.w,
+        wrapperSize.h,
+      );
+      wrapper.style.transition = 'none';
+      wrapper.style.transform = 'none';
+      wrapper.style.willChange = '';
+      wrapper.style.left = `${newAnchor.x}px`;
+      wrapper.style.top = `${newAnchor.y}px`;
+    }
+    onPositionChange(nextCorner);
+    setIsDragging(false);
+    requestAnimationFrame(() => {
+      if (wrapperRef.current) {
+        wrapperRef.current.style.transition = '';
+        wrapperRef.current.style.transform = '';
+      }
+    });
   };
 
   const onPointerUp = (event: React.PointerEvent<HTMLButtonElement>) => {
@@ -302,8 +274,8 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
         nextCorner = position;
       }
 
-      snapToCorner(nextCorner);
-      suppressUntilRef.current = Date.now() + 300;
+      snapToCornerInstant(nextCorner);
+      suppressUntilRef.current = Date.now() + 50;
       dragRef.current = null;
       event.currentTarget.releasePointerCapture(event.pointerId);
       return;
@@ -326,7 +298,7 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
   return (
     <div
       ref={wrapperRef}
-      className={`${positionClass} ${pixelPositionStyle ? '' : effectivePositionClasses} ${isDragging ? '' : 'transition-all duration-300 ease-in-out'} ${showWelcomeText && !isOpen ? (effectivePosition.includes('left') ? 'transform translate-x-64' : 'transform -translate-x-64') : ''}`}
+      className={`${positionClass} ${pixelPositionStyle ? '' : effectivePositionClasses} ${isDragging ? '' : 'transition-transform duration-300 ease-in-out'} ${showWelcomeText && !isOpen ? (effectivePosition.includes('left') ? 'transform translate-x-64' : 'transform -translate-x-64') : ''}`}
       style={{
         zIndex,
         pointerEvents: 'auto',

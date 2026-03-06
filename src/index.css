@@ -382,7 +382,6 @@
   border-image: linear-gradient(to right, var(--foreground), var(--foreground)) 1;
 }
 
-
 /* Scrollbar */
 .marketrix-widget ::-webkit-scrollbar,
 .marketrix-widget * ::-webkit-scrollbar {
