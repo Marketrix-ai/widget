@@ -607,22 +607,11 @@ export const WidgetProvider: React.FC<WidgetProviderProps> = ({ children, previe
           }
         }
 
-        const response = await apiService.sendMessage({
+        await apiService.sendMessage({
           message: content,
           mode: mode || state.currentMode,
           question, // Pass question context if available (e.g. from chips)
-        });
-
-        // Update placeholder id to match the requestId so chat/response can find it
-        setState(prev => {
-          const newMessages = prev.messages.map(msg => {
-            if (msg.id === placeholderId) {
-              return { ...msg, id: response.messageId };
-            }
-            return msg;
-          });
-          chatService.setMessages(newMessages);
-          return { ...prev, messages: newMessages };
+          requestId: placeholderId, // Use placeholder ID as request_id so chat/response matches immediately
         });
 
         // Placeholder stays in "thinking" state until chat/response arrives via stream

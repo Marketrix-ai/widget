@@ -128,7 +128,7 @@ export class MarketrixApiService {
       throw new Error('Either mtxId + mtxKey or both mtxApp + mtxAgent are required');
     }
 
-    const requestId = `req_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    const requestId = request.requestId || `req_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
     const command: WidgetCommand = {
       type: `chat/${mode}` as 'chat/tell' | 'chat/show' | 'chat/do',
       request_id: requestId,
