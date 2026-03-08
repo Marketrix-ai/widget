@@ -337,7 +337,12 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
         ...pixelPositionStyle,
       }}
     >
-      <div className='group relative w-14 h-14 overflow-visible transition-all duration-300 ease-in-out'>
+      <div
+        className={`
+          group relative w-14 h-14 overflow-visible transition-all duration-300 ease-in-out
+          ${isOpen ? 'scale-0 opacity-0 pointer-events-none' : 'scale-100 opacity-100 hover:scale-110'}
+        `}
+      >
         {showProcessingGlow && <div className={glowClass} aria-hidden />}
         {showStopControl && !isDragging && (
           <Button

@@ -6,6 +6,7 @@
  */
 
 import type { ChatMessage, InstructionType } from '../types';
+import { BROWSER_TOOLS } from '../types/browserTools';
 
 /**
  * Remove all __THINKING__ markers from message content
@@ -333,10 +334,10 @@ function ensureMessageStructure(message: ChatMessage): ChatMessage {
 const INTERACTIVE_TOOLS = new Set([
   'click_element',
   'type_text',
-  'press_key',
   'send_keys',
-  'select_option',
-  'hover_element',
+  'select_dropdown_option',
+  'upload_file',
+  'scroll',
 ]);
 
 /**
@@ -569,41 +570,12 @@ export function updateThinkingMarker(
   return msg;
 }
 /**
- * Tool Name Mapping Utility
- *
+ * Tool Name Mapping — derived from BROWSER_TOOLS (single source of truth).
  * Provides friendly display names for technical tool names.
- * Used for showing user-friendly progress updates in the chat.
  */
-
-export const TOOL_NAME_MAPPING: Record<string, string> = {
-  // Navigation & Browser
-  navigate_to_url: 'Navigating to URL',
-  go_back: 'Going back',
-  go_forward: 'Going forward',
-  refresh_page: 'Refreshing page',
-
-  // Interaction
-  click_element: 'Clicking element',
-  hover_element: 'Hovering element',
-  type_text: 'Typing text',
-  press_key: 'Pressing key',
-  select_option: 'Selecting option',
-  scroll_to_element: 'Scrolling to element',
-  scroll: 'Scrolling',
-
-  // Information Retrieval
-  get_page_content: 'Reading page content',
-  get_element_text: 'Reading element text',
-  get_element_attribute: 'Reading element attribute',
-  take_screenshot: 'Taking screenshot',
-  get_html: 'Viewed your screen',
-
-  // Logic & Flow
-  wait_for_element: 'Waiting for element',
-  sleep: 'Waiting',
-
-  // Default fallback pattern handling in getFriendlyToolName
-};
+export const TOOL_NAME_MAPPING: Record<string, string> = Object.fromEntries(
+  BROWSER_TOOLS.map(t => [t.id, t.displayAction]),
+);
 
 /**
  * Get a friendly display name for a tool

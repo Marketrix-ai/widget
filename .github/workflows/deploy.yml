@@ -92,6 +92,7 @@ jobs:
           kustomize build . \
             | sed "s|marketrix.azurecr.io/$NS/widget:latest|marketrix.azurecr.io/$NS/widget:$TAG|g" \
             | kubectl apply -f -
+          kubectl rollout restart deployment/widget --namespace "$NS"
           kubectl rollout status deployment/widget --namespace "$NS" --timeout=300s
 
       - name: Cleanup

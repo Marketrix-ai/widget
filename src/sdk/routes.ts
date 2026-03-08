@@ -32,7 +32,7 @@
  * - 500: Internal Server Error
  */
 
-import { oc } from '@orpc/contract';
+import { eventIterator, oc } from '@orpc/contract';
 import { z } from 'zod';
 
 import {
@@ -51,8 +51,8 @@ import {
   BatchUserCreateSchema,
   BrowserConfigSchema,
   BrowserTypeSchema,
-  ChatRequestSchema,
-  ChatResponseSchema,
+  WidgetCommandSchema,
+  WidgetEventSchema,
   CheckoutSessionSchema,
   ConnectionCreateSchema,
   ConnectionEntitySchema,
@@ -78,6 +78,9 @@ import {
   MigrationPrepareSchema,
   MigrationRunSchema,
   MindMapSchema,
+  PreviewVideoChatEntitySchema,
+  PreviewVideoChatSearchSchema,
+  PreviewVideoChatUpsertSchema,
   PlanCatalogSchema,
   PlanInfoSchema,
   PortalSessionSchema,
@@ -86,10 +89,10 @@ import {
   QADocumentEntitySchema,
   QADocumentProcessingResponseSchema,
   QADocumentStatusSchema,
-  QAHealingAttemptEntitySchema,
+  QAHealingAttemptEntrySchema,
   QARunEntitySchema,
-  QATestResultEntitySchema,
-  QATestVersionEntitySchema,
+  QATestCaseEntitySchema,
+  QAVersionHistoryEntrySchema,
   RrwebSessionEntitySchema,
   RrwebSessionUpsertSchema,
   SimulationAnswerSchema,
@@ -108,7 +111,6 @@ import {
   StripePortalSchema,
   StripePricingSchema,
   StripeTrialSchema,
-  StripeWebhookEventSchema,
   SubscriptionUsageSchema,
   TenantCreateSchema,
   TenantEntitySchema,
@@ -152,6 +154,30 @@ const contract = {
     })
     .output(HealthResponseSchema),
 
+  validateUrl: oc
+    .route({
+      method: 'GET',
+      tags: ['Root'],
+      path: '/validate-url',
+      summary: 'Validate URL accessibility and DNS resolution',
+      description: 'Validates a URL for format, DNS resolution, and HTTP accessibility',
+    })
+    .input(
+      z.object({
+        url: z.string(),
+        skip_network: z.string().optional(),
+      }),
+    )
+    .output(
+      z.object({
+        valid: z.boolean(),
+        accessible: z.boolean(),
+        dnsResolves: z.boolean(),
+        error: z.string().optional(),
+        warnings: z.array(z.string()).optional(),
+      }),
+    ),
+
   getPublicConfig: oc
     .route({
       method: 'GET',
@@ -161,6 +187,17 @@ const contract = {
       description: 'Returns widget key and widget ID. No auth. Values are stored in backend env only.',
     })
     .output(PublicConfigSchema),
+
+  /** No-op for client-side auth callback registration; prevents 404 when SDK merges client with setOnAuthError. */
+  setOnAuthError: oc
+    .route({
+      method: 'POST',
+      path: '/setOnAuthError',
+      summary: 'No-op (client-only callback registration)',
+      description: 'Client registers 401 callback locally; this endpoint exists to avoid 404.',
+    })
+    .input(z.any().optional())
+    .output(z.void()),
 
   // ============================================================================
   // AUTHENTICATION ROUTES - User authentication and authorization
@@ -198,9 +235,16 @@ const contract = {
         name: z.string().min(1).max(45),
         domain: z.string().min(1).max(200),
         team_emails: z.array(z.string().email()).optional().default([]),
+        app_url: z.string().optional(),
+        app_username: z.string().optional(),
+        app_password: z.string().optional(),
       }),
     )
-    .output(z.object({ tenant: TenantEntitySchema })),
+    .output(
+      z.object({
+        tenant: TenantEntitySchema,
+      }),
+    ),
 
   // ============================================================================
   // MEETING ROUTES - Video meeting management and operations
@@ -367,6 +411,56 @@ const contract = {
     })
     .input(z.object({ tenant_id: z.coerce.number() }))
     .output(z.void()),
+
+  // ============================================================================
+  // ADMIN ROUTES - System administration and maintenance
+  // ============================================================================
+
+  // Admin
+  adminReconcile: oc
+    .route({
+      method: 'POST',
+      path: '/admin/reconcile',
+      tags: ['Admin'],
+      summary: 'Reconcile Stripe customers and WorkOS users',
+      description: 'Backfills missing Stripe customer IDs for tenants and real WorkOS user IDs for users. Idempotent and safe to run repeatedly. Requires super user role.',
+    })
+    .output(z.object({
+      tenants_stripe_created: z.number(),
+      users_workos_created: z.number(),
+      tenant_plans_synced: z.number(),
+      trials_provisioned: z.number(),
+      stripe_plans_refreshed: z.number(),
+      workos_profiles_synced: z.number(),
+      errors: z.array(z.object({
+        type: z.string(),
+        id: z.number(),
+        error: z.string(),
+      })),
+    })),
+
+  adminMaintenance: oc
+    .route({
+      method: 'POST',
+      path: '/admin/maintenance',
+      tags: ['Admin'],
+      summary: 'Run periodic maintenance cleanup tasks',
+      description:
+        'Cleans up orphaned CosmosDB containers, QA simulations not linked to existing runs, and orphaned blob storage files. Idempotent and safe to run repeatedly. Requires super user role.',
+    })
+    .output(
+      z.object({
+        cosmos_containers_deleted: z.number(),
+        orphaned_qa_simulations_deleted: z.number(),
+        orphaned_blob_dirs_deleted: z.number(),
+        errors: z.array(
+          z.object({
+            type: z.string(),
+            detail: z.string(),
+          }),
+        ),
+      }),
+    ),
 
   // ============================================================================
   // CONNECTION ROUTES - App and website connection management
@@ -547,50 +641,35 @@ const contract = {
     )
     .output(UserQuotaSchema),
 
-  chatTell: oc
+  previewVideoChatUpsert: oc
     .route({
       method: 'POST',
-      path: '/chat/{chat_id}/tell',
-      summary: 'Request tell mode response for given content',
-      description: 'Processes explanation request and returns AI response (voice+text) as a data URL',
+      path: '/preview-video-chat',
+      summary: 'Create or update preview video chat record',
+      description: 'Persists guide preview chat content, history, output, and related simulation metadata',
     })
-    .input(ChatRequestSchema.and(z.object({ chat_id: z.string() })))
-    .output(ChatResponseSchema),
+    .input(PreviewVideoChatUpsertSchema)
+    .output(PreviewVideoChatEntitySchema),
 
-  chatShow: oc
+  previewVideoChatSearch: oc
     .route({
-      method: 'POST',
-      path: '/chat/{chat_id}/show',
-      summary: 'Request show mode response for given content',
-      description: 'Processes user introduction and returns AI response (voice+text) as a data URL',
+      method: 'GET',
+      path: '/preview-video-chat',
+      summary: 'Search preview video chat records',
+      description: 'Returns preview chat records filtered by chat_id, agent_id, or simulation_id for current tenant',
     })
-    .input(ChatRequestSchema.and(z.object({ chat_id: z.string() })))
-    .output(ChatResponseSchema),
+    .input(PreviewVideoChatSearchSchema)
+    .output(z.array(PreviewVideoChatEntitySchema)),
 
-  chatDo: oc
+  previewVideoChatGet: oc
     .route({
-      method: 'POST',
-      path: '/chat/{chat_id}/do',
-      summary: 'Request do mode response for given content',
-      description: 'Processes action request and returns AI response (voice+text) as a data URL',
+      method: 'GET',
+      path: '/preview-video-chat/{id}',
+      summary: 'Get preview video chat record by ID',
+      description: 'Returns a single preview chat record for current tenant',
     })
-    .input(ChatRequestSchema.and(z.object({ chat_id: z.string() })))
-    .output(ChatResponseSchema),
-
-  chatStop: oc
-    .route({
-      method: 'POST',
-      path: '/chat/{chat_id}/stop',
-      summary: 'Stop a running show/do mode task',
-      description: 'Stops an ongoing task for the given chat_id',
-    })
-    .input(
-      z.object({
-        chat_id: z.string(),
-        task_id: z.string().optional(),
-      }),
-    )
-    .output(z.object({ status: z.string(), message: z.string() })),
+    .input(z.object({ id: z.coerce.number() }))
+    .output(PreviewVideoChatEntitySchema.nullable()),
 
   // ============================================================================
   // USER ROUTES - User account management and operations
@@ -824,6 +903,7 @@ const contract = {
       z.object({
         tenant_id: z.coerce.number().optional(),
         type: ActionLogTypeSchema.optional(),
+        connection_id: z.coerce.number().optional(),
       }),
     )
     .output(z.array(ActionLogEntitySchema)),
@@ -998,6 +1078,7 @@ const contract = {
         connection_id: z.coerce.number().optional(),
         agent_id: z.coerce.number().optional(),
         pinned: z.any().transform(val => (String(val) === 'true' ? true : String(val) === 'false' ? false : undefined)),
+        source: z.enum(['direct', 'qa']).optional(),
         limit: z.coerce.number().optional(),
         offset: z.coerce.number().optional(),
       }),
@@ -1040,6 +1121,22 @@ const contract = {
     .input(SimulationUpdateSchema.extend({ simulation_id: z.coerce.number() }))
     .output(SimulationEntitySchema),
 
+  simulationAssignAgents: oc
+    .route({
+      method: 'PUT',
+      tags: ['Simulation'],
+      path: '/simulation/{simulation_id}/agents',
+      summary: 'Assign agents to a simulation',
+      description: 'Sets which agents use this simulation for their knowledge. Triggers learning on affected agents.',
+    })
+    .input(
+      z.object({
+        simulation_id: z.coerce.number(),
+        agent_ids: z.array(z.number()),
+      }),
+    )
+    .output(SimulationEntitySchema),
+
   simulationProgress: oc
     .route({
       method: 'GET',
@@ -1062,7 +1159,7 @@ const contract = {
     .input(z.object({ simulation_id: z.coerce.number() }))
     .output(
       z.object({
-        job_id: z.string(),
+        session_id: z.string(),
         live_view_url: z.string(),
         status: z.string(),
       }),
@@ -1328,6 +1425,22 @@ const contract = {
     .input(z.object({ id: z.coerce.number() }))
     .output(KnowledgeEntitySchema),
 
+  knowledgeAssignAgents: oc
+    .route({
+      method: 'PUT',
+      tags: ['Knowledge'],
+      path: '/knowledge/{knowledge_id}/agents',
+      summary: 'Assign agents to a knowledge item',
+      description: 'Sets which agents use this knowledge item. Triggers learning on affected agents.',
+    })
+    .input(
+      z.object({
+        knowledge_id: z.coerce.number(),
+        agent_ids: z.array(z.number()),
+      }),
+    )
+    .output(KnowledgeEntitySchema),
+
   knowledgeDelete: oc
     .route({
       method: 'DELETE',
@@ -1428,6 +1541,17 @@ const contract = {
       ),
     ),
 
+  qaDocumentDelete: oc
+    .route({
+      method: 'DELETE',
+      tags: ['QA'],
+      path: '/qa/document/{id}',
+      summary: 'Delete QA document',
+      description: 'Deletes a QA document and all its runs and test cases',
+    })
+    .input(z.object({ id: z.coerce.number() }))
+    .output(z.void()),
+
   qaDocumentUpdate: oc
     .route({
       method: 'PUT',
@@ -1469,12 +1593,12 @@ const contract = {
       tags: ['QA'],
       path: '/qa/run/{id}',
       summary: 'Get a QA run by ID',
-      description: 'Returns run details with test results',
+      description: 'Returns run details with test cases',
     })
     .input(z.object({ id: z.coerce.number() }))
     .output(
       QARunEntitySchema.extend({
-        test_results: z.array(QATestResultEntitySchema),
+        test_cases: z.array(QATestCaseEntitySchema),
       }),
     ),
 
@@ -1484,8 +1608,7 @@ const contract = {
       tags: ['QA'],
       path: '/qa/document/{id}/run',
       summary: 'Create and start a new QA run',
-      description:
-        'Creates a new run (clones test cases) and starts execution. Returns 202; poll test-results by run_id.',
+      description: 'Creates a new run and starts execution. Returns 202; poll test-cases for execution status.',
     })
     .input(z.object({ id: z.coerce.number() }))
     .output(
@@ -1495,41 +1618,35 @@ const contract = {
       }),
     ),
 
-  qaTestResultList: oc
+  qaTestCaseList: oc
     .route({
       method: 'GET',
-      path: '/qa/document/{id}/test-results',
-      summary: 'Get test results for a QA document',
-      description: 'Retrieves test results; optional run_id scopes to that run',
+      path: '/qa/document/{id}/test-cases',
+      summary: 'Get test cases for a QA document',
+      description: 'Retrieves test cases; optional run_id scopes to that run',
     })
     .input(z.object({ id: z.coerce.number(), run_id: z.coerce.number().optional() }))
-    .output(z.array(QATestResultEntitySchema)),
+    .output(z.array(QATestCaseEntitySchema)),
 
-  qaTestResultUpdate: oc
+  qaTestCaseUpdate: oc
     .route({
       method: 'PUT',
-      path: '/qa/test-result/{id}',
-      summary: 'Update test result status and progress',
-      description: 'Updates a test result with status, progress log, and screenshot',
+      path: '/qa/test-case/{id}',
+      summary: 'Update test case definition fields',
+      description: 'Updates a test case definition (title, objective, steps, etc.)',
     })
     .input(
       z.object({
         id: z.coerce.number(),
-        status: z.enum(['pending', 'running', 'completed', 'failed']).optional(),
-        progress_log: z
-          .array(
-            z.object({
-              step: z.number(),
-              message: z.string(),
-              timestamp: z.string(),
-              status: z.enum(['success', 'error', 'info']),
-            }),
-          )
-          .optional(),
-        screenshot_url: z.string().nullable().optional(),
+        test_title: z.string().optional(),
+        test_objective: z.string().optional(),
+        test_steps: z.array(z.string()).optional(),
+        expected_outcome: z.string().optional(),
+        priority: z.enum(['Low', 'Medium', 'High']).optional(),
+        is_active: z.boolean().optional(),
       }),
     )
-    .output(QATestResultEntitySchema),
+    .output(QATestCaseEntitySchema),
 
   // Execute all tests for a document (creates a run and executes; returns run + simulations)
   qaDocumentExecuteTests: oc
@@ -1548,11 +1665,11 @@ const contract = {
     ),
 
   // Execute a single test
-  qaTestResultExecute: oc
+  qaTestCaseExecute: oc
     .route({
       method: 'POST',
-      path: '/qa/test-result/{id}/execute',
-      summary: 'Execute a single test as a simulation',
+      path: '/qa/test-case/{id}/execute',
+      summary: 'Execute a single test case as a simulation',
     })
     .input(z.object({ id: z.coerce.number() }))
     .output(
@@ -1561,12 +1678,12 @@ const contract = {
       }),
     ),
 
-  // Get simulation linked to test result
-  qaTestResultSimulation: oc
+  // Get simulation linked to test case
+  qaTestCaseSimulation: oc
     .route({
       method: 'GET',
-      path: '/qa/test-result/{id}/simulation',
-      summary: 'Get the simulation linked to a test result',
+      path: '/qa/test-case/{id}/simulation',
+      summary: 'Get the simulation linked to a test case',
     })
     .input(z.object({ id: z.coerce.number() }))
     .output(
@@ -1575,49 +1692,49 @@ const contract = {
       }),
     ),
 
-  // QA Test Version routes
-  qaTestVersionList: oc
+  // QA Test Case Version routes (reads from qa_test_case.version_history JSON)
+  qaTestCaseVersionList: oc
     .route({
       method: 'GET',
-      path: '/qa/test-result/{id}/versions',
-      summary: 'Get version history for a test',
-      description: 'Returns all versions of a test case with change history',
+      path: '/qa/test-case/{id}/versions',
+      summary: 'Get version history for a test case',
+      description: 'Returns all version entries from the test case version_history JSON',
     })
     .input(z.object({ id: z.coerce.number() }))
-    .output(z.array(QATestVersionEntitySchema)),
+    .output(z.array(QAVersionHistoryEntrySchema)),
 
-  qaTestVersionGet: oc
+  qaTestCaseVersionGet: oc
     .route({
       method: 'GET',
-      path: '/qa/test-result/{id}/versions/{version}',
-      summary: 'Get specific test version',
-      description: 'Returns a specific version of a test case',
+      path: '/qa/test-case/{id}/versions/{version}',
+      summary: 'Get specific test case version',
+      description: 'Returns a specific version entry from the test case version_history JSON',
     })
     .input(z.object({ id: z.coerce.number(), version: z.coerce.number() }))
-    .output(QATestVersionEntitySchema),
+    .output(QAVersionHistoryEntrySchema),
 
-  qaTestVersionRollback: oc
+  qaTestCaseVersionRollback: oc
     .route({
       method: 'POST',
-      path: '/qa/test-result/{id}/versions/{version}/rollback',
+      path: '/qa/test-case/{id}/versions/{version}/rollback',
       summary: 'Rollback to specific version',
-      description: 'Restores test to a previous version and creates new version record',
+      description: 'Restores test case to a previous version and appends new version entry',
     })
     .input(z.object({ id: z.coerce.number(), version: z.coerce.number() }))
-    .output(QATestVersionEntitySchema),
+    .output(QAVersionHistoryEntrySchema),
 
-  qaTestVersionCompare: oc
+  qaTestCaseVersionCompare: oc
     .route({
       method: 'GET',
-      path: '/qa/test-result/{id}/versions/compare',
+      path: '/qa/test-case/{id}/versions/compare',
       summary: 'Compare two versions',
-      description: 'Returns differences between two test versions',
+      description: 'Returns differences between two test case versions',
     })
     .input(z.object({ id: z.coerce.number(), version1: z.coerce.number(), version2: z.coerce.number() }))
     .output(
       z.object({
-        version1: QATestVersionEntitySchema,
-        version2: QATestVersionEntitySchema,
+        version1: QAVersionHistoryEntrySchema,
+        version2: QAVersionHistoryEntrySchema,
         diff: z.array(
           z.object({
             field: z.string(),
@@ -1628,43 +1745,43 @@ const contract = {
       }),
     ),
 
-  // QA Self-Healing routes
+  // QA Self-Healing routes (reads from qa_test_case.healing_attempts JSON)
   qaHealingAttemptList: oc
     .route({
       method: 'GET',
-      path: '/qa/test-result/{id}/healing-attempts',
-      summary: 'Get healing attempts for a test',
-      description: 'Returns all healing attempts for a specific test result',
+      path: '/qa/test-case/{id}/healing-attempts',
+      summary: 'Get healing attempts for a test case',
+      description: 'Returns all healing attempt entries from the test case healing_attempts JSON',
     })
     .input(z.object({ id: z.coerce.number() }))
-    .output(z.array(QAHealingAttemptEntitySchema)),
+    .output(z.array(QAHealingAttemptEntrySchema)),
 
   qaHealingAttemptApprove: oc
     .route({
       method: 'POST',
-      path: '/qa/test-result/{id}/healing-attempts/{attemptId}/approve',
+      path: '/qa/test-case/{id}/healing-attempts/{attemptIndex}/approve',
       summary: 'Approve a healing attempt',
-      description: 'Applies the repair from a validated healing attempt',
+      description: 'Applies the repair from a validated healing attempt by array index',
     })
-    .input(z.object({ id: z.coerce.number(), attemptId: z.coerce.number() }))
+    .input(z.object({ id: z.coerce.number(), attemptIndex: z.coerce.number() }))
     .output(z.object({ success: z.boolean() })),
 
   qaHealingAttemptReject: oc
     .route({
       method: 'POST',
-      path: '/qa/test-result/{id}/healing-attempts/{attemptId}/reject',
+      path: '/qa/test-case/{id}/healing-attempts/{attemptIndex}/reject',
       summary: 'Reject a healing attempt',
-      description: 'Marks a healing attempt as rejected',
+      description: 'Marks a healing attempt as rejected by array index',
     })
-    .input(z.object({ id: z.coerce.number(), attemptId: z.coerce.number() }))
+    .input(z.object({ id: z.coerce.number(), attemptIndex: z.coerce.number() }))
     .output(z.object({ success: z.boolean() })),
 
   qaHealingTrigger: oc
     .route({
       method: 'POST',
-      path: '/qa/test-result/{id}/heal',
-      summary: 'Trigger self-healing for a failed test',
-      description: 'Initiates the self-healing workflow for a test result',
+      path: '/qa/test-case/{id}/heal',
+      summary: 'Trigger self-healing for a failed test case',
+      description: 'Initiates the self-healing workflow for a test case',
     })
     .input(
       z.object({
@@ -1683,7 +1800,7 @@ const contract = {
     .output(
       z.object({
         healed: z.boolean(),
-        attemptId: z.number().nullable(),
+        attemptIndex: z.number().nullable(),
         analysis: FailureAnalysisSchema.nullable(),
         confidence: z.number().nullable(),
       }),
@@ -1725,7 +1842,7 @@ const contract = {
       method: 'GET',
       path: '/qa/document/{id}/cross-browser-comparison',
       summary: 'Get cross-browser comparison',
-      description: 'Returns test results comparison across different browsers',
+      description: 'Returns test cases comparison across different browsers',
     })
     .input(z.object({ id: z.coerce.number() }))
     .output(
@@ -1897,16 +2014,46 @@ const contract = {
     })
     .output(PlanCatalogSchema),
 
-  stripeWebhook: oc
+  // stripeWebhook is handled as a raw Express route — not part of the oRPC contract.
+
+  widgetStream: oc
+    .route({
+      method: 'GET',
+      tags: ['Widget'],
+      path: '/widget/stream',
+      summary: 'SSE stream for real-time widget events',
+      description:
+        'Typed event stream delivering tool calls, task status updates, chat responses, and registration confirmation.',
+    })
+    .input(
+      z.object({
+        chat_id: z.string(),
+        tab_id: z.string().optional(),
+        // Integration auth
+        marketrix_id: z.string().optional(),
+        marketrix_key: z.string().optional(),
+        // Playground/simulation auth
+        agent_id: z.coerce.number().optional(),
+        connection_id: z.coerce.number().optional(),
+      }),
+    )
+    .output(eventIterator(WidgetEventSchema)),
+
+  widgetMessage: oc
     .route({
       method: 'POST',
-      tags: ['Stripe'],
-      path: '/stripe/webhook',
-      summary: 'Handle Stripe webhook events',
-      description: 'Receives and processes Stripe webhook events for subscription changes, payments, and other events.',
+      tags: ['Widget'],
+      path: '/widget/message',
+      summary: 'Send a typed command from widget to server',
+      description: 'Receives chat commands, tool responses, and keepalive pings from the widget.',
     })
-    .input(StripeWebhookEventSchema)
-    .output(z.object({ received: z.literal(true) })),
+    .input(
+      z.object({
+        chat_id: z.string(),
+        command: WidgetCommandSchema,
+      }),
+    )
+    .output(z.object({ ok: z.boolean() })),
 };
 
 export { contract };

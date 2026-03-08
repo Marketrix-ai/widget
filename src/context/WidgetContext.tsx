@@ -1,13 +1,14 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
+import type { WidgetEvent } from '../sdk/schema';
 import { MarketrixApiService } from '../services/ApiService';
 import { chatService, createAgentMessage, createUserMessage } from '../services/ChatService';
 import { configManager } from '../services/ConfigManager';
 import { sessionManager } from '../services/SessionManager';
+import { StreamClient, type WebSocketStatus } from '../services/StreamClient';
 import { toolExecutionService } from '../services/ToolService';
-import { WebSocketClient, type WebSocketMessage, type WebSocketStatus } from '../services/WebSocketClient';
 import type { ChatMessage, InstructionType, TaskProgress, WidgetState, WidgetView } from '../types';
-import { isToolRequest, type ToolRequest, type ToolResponse } from '../types/toolMessages';
+import { BROWSER_TOOLS } from '../types/browserTools';
 import {
   addProgressLine,
   addThinkingMarker,
@@ -52,8 +53,6 @@ interface WidgetContextType {
     ) => Promise<void>;
   };
 }
-
-// Tool call types are now imported from toolMessages.ts
 
 const WidgetContext = createContext<WidgetContextType | undefined>(undefined);
 
@@ -122,14 +121,23 @@ export const WidgetProvider: React.FC<WidgetProviderProps> = ({ children, previe
         isMinimized: chatService.getIsMinimized(),
       }));
 
-      // Connect WebSocket if chat ID exists
+      // Connect to stream if chat ID exists
       if (chatId) {
-        // Ensure config is loaded before initializing WebSocket
-        const config = configManager.getConfig();
-        if (config) {
-          const wsClient = WebSocketClient.getInstance(config);
-          wsClient.connect(chatId).catch((err: unknown) => console.error('Initial WebSocket connection failed:', err));
-        }
+        const streamClient = StreamClient.getInstance();
+        const streamConfig = configManager.getConfig();
+        streamClient
+          .connect(
+            chatId,
+            streamConfig
+              ? {
+                  mtxId: streamConfig.mtxId,
+                  mtxKey: streamConfig.mtxKey,
+                  mtxAgent: streamConfig.mtxAgent,
+                  mtxApp: streamConfig.mtxApp,
+                }
+              : undefined,
+          )
+          .catch((err: unknown) => console.error('Initial stream connection failed:', err));
       }
     };
     initChat();
@@ -207,65 +215,31 @@ export const WidgetProvider: React.FC<WidgetProviderProps> = ({ children, previe
       return;
     }
 
-    // Ensure config is loaded before initializing WebSocket
-    const config = configManager.getConfig();
-    const wsClient = WebSocketClient.getInstance(config || undefined);
+    const wsClient = StreamClient.getInstance();
 
     const handleStatusChange = (status: WebSocketStatus) => {
       setState(prev => ({ ...prev, agentAvailable: status === 'registered' }));
     };
 
-    const handleMessage = async (message: WebSocketMessage) => {
-      // Validate message structure
-      if (!message || typeof message !== 'object') {
-        console.warn('[Widget] Invalid message structure:', message);
-        return;
-      }
-
-      if (isToolRequest(message as Record<string, unknown>)) {
-        const request = message as ToolRequest;
-        const requestId = request.id;
+    const handleMessage = async (event: WidgetEvent) => {
+      if (event.type === 'tool/call') {
+        const requestId = event.call_id;
 
         // Prevent duplicate processing (React StrictMode can cause duplicate callbacks)
-        if (processedRequestIds.current.has(requestId)) {
-          return;
-        }
+        if (processedRequestIds.current.has(requestId)) return;
         addProcessedRequestId(requestId);
 
-        // Validate request structure
-        if (!request.id || !request.tool) {
-          console.warn('[Widget] Malformed tool request:', request);
-          return;
-        }
-
-        // Validate tool name is in allowed list
-        const ALLOWED_TOOLS = [
-          'click_element',
-          'type_text',
-          'scroll',
-          'scroll_to_text',
-          'go_back',
-          'wait',
-          'select_dropdown_option',
-          'get_dropdown_options',
-          'send_keys',
-          'upload_file',
-          'done',
-          'get_html',
-          'get_interactable_elements',
-          'get_screenshot',
-        ];
-
-        if (!ALLOWED_TOOLS.includes(request.tool)) {
-          console.warn('[Widget] Unknown tool requested:', request.tool);
-          const response: ToolResponse = {
-            id: requestId,
+        // Validate tool name is in allowed list (derived from single source of truth)
+        const ALLOWED_TOOLS = BROWSER_TOOLS.map(t => t.id);
+        if (!ALLOWED_TOOLS.includes(event.tool)) {
+          console.warn('[Widget] Unknown tool requested:', event.tool);
+          wsClient.send({
+            type: 'tool/response',
+            call_id: requestId,
             success: false,
-            data: { text: '' },
-            error: `Unknown tool: ${request.tool}`,
-            stateVersion: stateVersion.current,
-          };
-          wsClient.send(response as unknown as WebSocketMessage);
+            error: `Unknown tool: ${event.tool}`,
+            state_version: stateVersion.current,
+          });
           return;
         }
 
@@ -273,34 +247,32 @@ export const WidgetProvider: React.FC<WidgetProviderProps> = ({ children, previe
         // Use ref to get latest value (avoid stale closure)
         if (!isTaskRunningRef.current) {
           console.warn('[Widget] Tool call received but no task running, rejecting');
-          const response: ToolResponse = {
-            id: requestId,
+          wsClient.send({
+            type: 'tool/response',
+            call_id: requestId,
             success: false,
-            data: { text: '' },
             error: 'widget_task_inactive',
-            stateVersion: stateVersion.current,
-          };
-          wsClient.send(response);
+            state_version: stateVersion.current,
+          });
           return;
         }
 
-        const toolName = request.tool;
-        const args = request.args;
-        const mode = request.mode || state.currentMode || 'do';
-        const explanation = request.explanation || '';
-        const requestStateVersion = request.stateVersion;
+        const toolName = event.tool;
+        const args = event.args;
+        const mode = event.mode || state.currentMode || 'do';
+        const explanation = event.explanation || '';
+        const requestStateVersion = event.state_version;
 
         // Check state version FIRST - silently fail if mismatch (no progress shown)
-        if (requestStateVersion !== stateVersion.current) {
+        if (requestStateVersion !== undefined && requestStateVersion !== stateVersion.current) {
           console.log('State version mismatch, skipping tool execution');
-          const response: ToolResponse = {
-            id: requestId,
+          wsClient.send({
+            type: 'tool/response',
+            call_id: requestId,
             success: false,
-            data: { text: '' },
             error: 'State version mismatch',
-            stateVersion: stateVersion.current,
-          };
-          wsClient.send(response);
+            state_version: stateVersion.current,
+          });
           return;
         }
 
@@ -312,25 +284,23 @@ export const WidgetProvider: React.FC<WidgetProviderProps> = ({ children, previe
         if (result.success) {
           try {
             stateVersion.current++;
-            const response: ToolResponse<unknown> = {
-              id: requestId,
-              success: result.success,
-              data: result.data,
-              error: result.error ?? null,
-              stateVersion: stateVersion.current,
-            };
-            wsClient.send(response);
+            wsClient.send({
+              type: 'tool/response',
+              call_id: requestId,
+              success: true,
+              data: typeof result.data === 'string' ? result.data : JSON.stringify(result.data),
+              state_version: stateVersion.current,
+            });
             updateProgressForTool(toolName, explanation, 'completed');
+
             // If the "done" tool completed successfully, mark the task as complete
-            if (toolName === 'done' && result.success) {
-              // Reset both flags when task ends
+            if (toolName === 'done') {
               taskIdFromApiRef.current = null;
               taskStartedFromAgentRef.current = false;
 
               setState(prev => {
                 chatService.setTaskState(false, null, []);
-                isTaskRunningRef.current = false; // Update ref immediately
-                // Find the task message and update its taskStatus
+                isTaskRunningRef.current = false;
                 const found = findMessageForProgress({
                   messages: prev.messages,
                   isTaskRunning: prev.isTaskRunning,
@@ -340,7 +310,6 @@ export const WidgetProvider: React.FC<WidgetProviderProps> = ({ children, previe
                 });
                 const newMessages = [...prev.messages];
                 if (found) {
-                  // Remove any "done" progress lines since we show icon instead
                   const updatedParts =
                     found.message.parts?.filter(part => !(part.type === 'progress' && part.toolName === 'done')) || [];
                   newMessages[found.index] = {
@@ -361,70 +330,36 @@ export const WidgetProvider: React.FC<WidgetProviderProps> = ({ children, previe
             }
           } catch (error) {
             console.error('Failed to send tool result:', error);
-            // Even if send fails, we mark as completed locally so UI doesn't hang?
-            // Or failed? If agent doesn't get it, task is stuck.
             updateProgressForTool(toolName, explanation, 'failed', 'Connection error');
-            // If this is a critical connection error and task is running, mark as failed
-            if (state.isTaskRunning) {
-              setState(prev => {
-                const found = findMessageForProgress({
-                  messages: prev.messages,
-                  isTaskRunning: prev.isTaskRunning,
-                  currentMode: prev.currentMode,
-                  preferPlaceholder: true,
-                  requireContent: false,
-                });
-                const newMessages = [...prev.messages];
-                if (found && found.message.taskStatus !== 'done' && found.message.taskStatus !== 'stopped') {
-                  newMessages[found.index] = {
-                    ...found.message,
-                    taskStatus: 'failed',
-                  };
-                  chatService.setMessages(newMessages);
-                }
-                return { ...prev, messages: newMessages };
-              });
-            }
           }
         } else {
-          // Increment stateVersion on failure - DOM state may have changed
           stateVersion.current++;
-
           try {
-            const response: ToolResponse<unknown> = {
-              id: requestId,
+            wsClient.send({
+              type: 'tool/response',
+              call_id: requestId,
               success: false,
-              data: result.data,
-              error: result.error ?? null,
-              stateVersion: stateVersion.current,
-            };
-            wsClient.send(response);
+              data: typeof result.data === 'string' ? result.data : JSON.stringify(result.data),
+              error: result.error ?? undefined,
+              state_version: stateVersion.current,
+            });
           } catch (error) {
             console.error('Failed to send tool error:', error);
           }
-          // Don't show failed tool calls in chat - agent loop continues
         }
-      } else if (message.method === 'task/status') {
-        // Handle task status updates (started, completed, failed, stopped)
-        const params = message.params as { status: string; message?: string; timestamp?: string };
-        const status = params?.status;
-        const statusMessage = params?.message || '';
+      } else if (event.type === 'task/status') {
+        const status = event.status;
+        const statusMessage = event.message || '';
 
         if (status === 'started') {
-          // Extract task_id from params if present
-          const taskId = (params as { task_id?: string }).task_id || null;
+          const taskId = event.task_id || null;
           taskStartedFromAgentRef.current = true;
 
-          // Start the task if we have a task_id from either source:
-          // - API responded with task_id (stored in taskIdFromApiRef), OR
-          // - Agent sent task_id in the WebSocket "started" status
-          // This prevents a race condition where tool calls arrive before the
-          // API HTTP response but after the WebSocket notification.
           const finalTaskId = taskIdFromApiRef.current || taskId;
           if (finalTaskId) {
             setState(prev => {
               chatService.setTaskState(true, finalTaskId, []);
-              isTaskRunningRef.current = true; // Update ref immediately
+              isTaskRunningRef.current = true;
               return {
                 ...prev,
                 isTaskRunning: true,
@@ -433,14 +368,12 @@ export const WidgetProvider: React.FC<WidgetProviderProps> = ({ children, previe
               };
             });
           }
-          // If neither source has task_id yet, we'll start when API responds (handled in sendMessage)
         } else if (status === 'completed' || status === 'failed' || status === 'stopped') {
           processedRequestIds.current.clear();
           taskIdFromApiRef.current = null;
           taskStartedFromAgentRef.current = false;
           setState(prev => {
             chatService.setTaskState(false, null, []);
-            // Find the task message and update its taskStatus
             const found = findMessageForProgress({
               messages: prev.messages,
               isTaskRunning: prev.isTaskRunning,
@@ -450,20 +383,17 @@ export const WidgetProvider: React.FC<WidgetProviderProps> = ({ children, previe
             });
             const newMessages = [...prev.messages];
             if (found) {
-              // Map status to taskStatus
               let taskStatus: 'done' | 'failed' | 'stopped' = 'done';
               if (status === 'failed') taskStatus = 'failed';
               else if (status === 'stopped') taskStatus = 'stopped';
-
               newMessages[found.index] = {
                 ...found.message,
                 taskStatus,
-                // Add status message if provided
                 ...(statusMessage && { content: statusMessage }),
               };
               chatService.setMessages(newMessages);
             }
-            isTaskRunningRef.current = false; // Update ref immediately
+            isTaskRunningRef.current = false;
             return {
               ...prev,
               messages: newMessages,
@@ -473,6 +403,65 @@ export const WidgetProvider: React.FC<WidgetProviderProps> = ({ children, previe
             };
           });
         }
+      } else if (event.type === 'chat/response') {
+        // Handle chat response — update the placeholder message matching request_id
+        setState(prev => {
+          const newMessages = prev.messages.map(msg => {
+            if (msg.id === event.request_id) {
+              const currentParts = msg.parts || [];
+              const newParts = [...currentParts, { type: 'text' as const, content: event.text }];
+              return {
+                ...msg,
+                content: event.text,
+                isPlaceholder: false,
+                placeholderState: undefined,
+                parts: newParts,
+                ...(event.task_id && { taskId: event.task_id }),
+              };
+            }
+            return msg;
+          });
+          chatService.setMessages(newMessages);
+
+          // If task_id present, handle task start handshake
+          if (event.task_id) {
+            taskIdFromApiRef.current = event.task_id;
+            if (taskStartedFromAgentRef.current) {
+              chatService.setTaskState(true, event.task_id, []);
+              isTaskRunningRef.current = true;
+              return {
+                ...prev,
+                messages: newMessages,
+                isTaskRunning: true,
+                activeTaskId: event.task_id,
+                taskProgress: [],
+              };
+            }
+          }
+
+          return { ...prev, messages: newMessages, isLoading: false };
+        });
+      } else if (event.type === 'chat/error') {
+        // Handle chat error — update the placeholder message matching request_id
+        setState(prev => {
+          const newMessages = prev.messages.map(msg => {
+            if (msg.id === event.request_id) {
+              const errorMessage = `Error: ${event.error}`;
+              const currentParts = msg.parts || [];
+              const newParts = [...currentParts, { type: 'text' as const, content: errorMessage }];
+              return {
+                ...msg,
+                content: errorMessage,
+                isPlaceholder: false,
+                placeholderState: undefined,
+                parts: newParts,
+              };
+            }
+            return msg;
+          });
+          chatService.setMessages(newMessages);
+          return { ...prev, messages: newMessages, isLoading: false };
+        });
       }
     };
 
@@ -590,12 +579,34 @@ export const WidgetProvider: React.FC<WidgetProviderProps> = ({ children, previe
 
       setState(prev => ({ ...prev, isLoading: true }));
 
-      // Send to API
+      // Send via stream (fire-and-forget — response arrives as chat/response event)
       const apiService = new MarketrixApiService(config);
       try {
         // Override config if connectionId is provided (for chips with specific connection)
         if (connectionId) {
           apiService.updateConfig({ mtxApp: connectionId });
+        }
+
+        // Ensure stream is connected before sending
+        const chatId = apiService.getChatId();
+        if (chatId) {
+          const streamClient = StreamClient.getInstance();
+          if (!streamClient.isConnected()) {
+            const streamConfig = configManager.getConfig();
+            streamClient
+              .connect(
+                chatId,
+                streamConfig
+                  ? {
+                      mtxId: streamConfig.mtxId,
+                      mtxKey: streamConfig.mtxKey,
+                      mtxAgent: streamConfig.mtxAgent,
+                      mtxApp: streamConfig.mtxApp,
+                    }
+                  : undefined,
+              )
+              .catch(err => console.error('Stream connection failed:', err));
+          }
         }
 
         const response = await apiService.sendMessage({
@@ -604,72 +615,19 @@ export const WidgetProvider: React.FC<WidgetProviderProps> = ({ children, previe
           question, // Pass question context if available (e.g. from chips)
         });
 
-        // Connect WebSocket if not connected
-        const chatId = apiService.getChatId();
-        if (chatId) {
-          const wsClient = WebSocketClient.getInstance(config);
-          if (!wsClient.isConnected()) {
-            wsClient.connect(chatId).catch(err => console.error('WebSocket connection failed:', err));
-          }
-        }
-
-        // Update placeholder with final response
+        // Update placeholder id to match the requestId so chat/response can find it
         setState(prev => {
           const newMessages = prev.messages.map(msg => {
             if (msg.id === placeholderId) {
-              const currentParts = msg.parts || [];
-              // Append response as a text part
-              const newParts = [...currentParts, { type: 'text' as const, content: response.response }];
-
-              return {
-                ...msg,
-                id: response.messageId, // Update to real ID
-                content: response.response,
-                mode: response.mode,
-                timestamp: response.timestamp,
-                isPlaceholder: false,
-                placeholderState: undefined,
-                parts: newParts,
-              };
+              return { ...msg, id: response.messageId };
             }
             return msg;
           });
-
           chatService.setMessages(newMessages);
           return { ...prev, messages: newMessages };
         });
 
-        // If task_id present in API response, store it and check if we can start
-        if (response.task_id) {
-          taskIdFromApiRef.current = response.task_id;
-
-          // Only mark task as started if both conditions are met:
-          // 1. API responded with task_id (just received)
-          // 2. Agent sent "started" status via WebSocket
-          if (taskStartedFromAgentRef.current) {
-            setState(prev => {
-              // Find the placeholder message and set taskStatus to 'ongoing'
-              const placeholderIndex = prev.messages.findIndex(msg => msg.id === placeholderId);
-              const newMessages = [...prev.messages];
-              if (placeholderIndex >= 0) {
-                newMessages[placeholderIndex] = {
-                  ...newMessages[placeholderIndex],
-                  taskStatus: 'ongoing',
-                };
-                chatService.setMessages(newMessages);
-              }
-              chatService.setTaskState(true, response.task_id || null, []);
-              isTaskRunningRef.current = true; // Update ref immediately
-              return {
-                ...prev,
-                messages: newMessages,
-                activeTaskId: response.task_id || null,
-                isTaskRunning: true,
-                taskProgress: [],
-              };
-            });
-          }
-        }
+        // Placeholder stays in "thinking" state until chat/response arrives via stream
       } catch (error) {
         console.error('Failed to send message:', error);
 
@@ -796,19 +754,11 @@ export const WidgetProvider: React.FC<WidgetProviderProps> = ({ children, previe
           return;
         }
 
-        // Attempt to reload config if missing
-        let config = configManager.getConfig();
-        if (!config) {
-          config = configManager.loadConfig();
-        }
-
-        if (config) {
-          try {
-            const apiService = new MarketrixApiService(config);
-            await apiService.stopTask(taskId || undefined);
-          } catch (error) {
-            console.error('Failed to stop task remotely:', error);
-          }
+        try {
+          const wsClient = StreamClient.getInstance();
+          wsClient.send({ type: 'chat/stop' as const, ...(taskId && { task_id: taskId }) });
+        } catch (error) {
+          console.error('Failed to stop task remotely:', error);
         }
       },
       clearChatHistory: resetState,

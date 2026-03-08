@@ -1,7 +1,8 @@
 import { sdk } from '../sdk';
+import type { WidgetCommand } from '../sdk/schema';
 import type { MarketrixConfig, SendMessageRequest, SendMessageResponse } from '../types';
-import { extractErrorMessage } from '../utils/apiUtils';
 import { sessionManager } from './SessionManager';
+import { StreamClient } from './StreamClient';
 
 export class MarketrixApiService {
   private config: MarketrixConfig;
@@ -108,110 +109,43 @@ export class MarketrixApiService {
   }
 
   /**
-   * Send a message to the Marketrix API
+   * Send a message via the typed stream (fire-and-forget).
+   * The actual response arrives asynchronously as a chat/response stream event.
    */
   async sendMessage(request: SendMessageRequest): Promise<SendMessageResponse> {
-    try {
-      // Get or create chat ID using centralized manager
-      const chatId = await sessionManager.getOrCreateChatId();
+    const chatId = await sessionManager.getOrCreateChatId();
+    if (!chatId) throw new Error('Failed to initialize chat session');
 
-      // Map the mode to the appropriate chat endpoint
-      const mode = request.mode || 'tell';
+    const mode = request.mode || 'tell';
 
-      // Log the question and mode to action_log
-      if (request.message) {
-        await this.logWidgetQuestion(request.message, mode);
-      }
-
-      // Validate chat_id after initialization
-      if (!chatId) {
-        throw new Error('Failed to initialize chat session. Please try again.');
-      }
-
-      // Support both mtxId/mtxKey and mtxApp/mtxAgent paths
-      if (!(this.config.mtxId && this.config.mtxKey) && (!this.config.mtxApp || !this.config.mtxAgent)) {
-        throw new Error('Either mtxId + mtxKey or both mtxApp + mtxAgent are required');
-      }
-
-      // Build request input with available identifiers
-      const input: {
-        marketrix_id?: string;
-        marketrix_key?: string;
-        agent_id?: number;
-        connection_id?: number;
-        chat_id: string;
-        content: string;
-      } = {
-        chat_id: chatId,
-        content: request.message || '',
-      };
-
-      if (this.config.mtxId && this.config.mtxKey) {
-        // Use mtxId + mtxKey - API will validate credentials
-        input.marketrix_id = this.config.mtxId;
-        input.marketrix_key = this.config.mtxKey;
-      } else if (this.config.mtxApp && this.config.mtxAgent) {
-        // Use mtxApp and mtxAgent
-        input.agent_id = this.config.mtxAgent;
-        input.connection_id = this.config.mtxApp;
-      }
-
-      // Validate chatId exists
-      if (!chatId || typeof chatId !== 'string' || chatId.trim() === '') {
-        throw new Error('Invalid chat_id. Please ensure chat session is initialized.');
-      }
-
-      try {
-        switch (mode) {
-          case 'do': {
-            const doResponse = await sdk.chatDo(input);
-            return {
-              messageId: Date.now().toString(),
-              response: doResponse.text || 'Action completed successfully',
-              mode,
-              timestamp: new Date(),
-              task_id: doResponse.task_id,
-            };
-          }
-          case 'tell': {
-            const tellResponse = await sdk.chatTell(input);
-            return {
-              messageId: Date.now().toString(),
-              response: tellResponse.text || 'Response received',
-              mode,
-              timestamp: new Date(),
-              task_id: tellResponse.task_id,
-            };
-          }
-          case 'show': {
-            const showResponse = await sdk.chatShow(input);
-            return {
-              messageId: Date.now().toString(),
-              response: showResponse.text || 'Response received',
-              mode,
-              timestamp: new Date(),
-              task_id: showResponse.task_id,
-            };
-          }
-          default: {
-            const _exhaustiveCheck: never = mode;
-            throw new Error(`Unsupported mode: ${String(_exhaustiveCheck)}`);
-          }
-        }
-      } catch (sdkError) {
-        const errorMessage = extractErrorMessage(sdkError);
-        console.error('[API Service] SDK error:', {
-          mode,
-          chatId,
-          error: sdkError,
-          errorMessage,
-        });
-        throw new Error(`API request failed: ${errorMessage}`);
-      }
-    } catch (error) {
-      console.error('Failed to send message:', extractErrorMessage(error));
-      throw error;
+    // Log the question and mode to action_log
+    if (request.message) {
+      await this.logWidgetQuestion(request.message, mode);
     }
+
+    // Auth validation still needed
+    if (!(this.config.mtxId && this.config.mtxKey) && (!this.config.mtxApp || !this.config.mtxAgent)) {
+      throw new Error('Either mtxId + mtxKey or both mtxApp + mtxAgent are required');
+    }
+
+    const requestId = `req_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    const command: WidgetCommand = {
+      type: `chat/${mode}` as 'chat/tell' | 'chat/show' | 'chat/do',
+      request_id: requestId,
+      content: request.message || '',
+    };
+
+    // Send command via stream (fire-and-forget — response arrives as chat/response event)
+    const wsClient = StreamClient.getInstance();
+    wsClient.send(command);
+
+    // Return immediately — the actual response text will come via stream
+    return {
+      messageId: requestId,
+      response: '', // Will be populated by chat/response stream event
+      mode,
+      timestamp: new Date(),
+    };
   }
 
   /**
@@ -244,31 +178,12 @@ export class MarketrixApiService {
   }
 
   /**
-   * Stop a running task
+   * Stop a running task via the stream
    */
   async stopTask(taskId?: string): Promise<{ status: string; message: string }> {
-    try {
-      // Get or create chat ID using centralized manager
-      const chatId = await sessionManager.getOrCreateChatId();
-
-      if (!chatId) {
-        throw new Error('Failed to initialize chat session. Please try again.');
-      }
-
-      // Call the stop endpoint - oRPC returns { status: string, message: string }
-      const responseData = await sdk.chatStop({
-        chat_id: chatId,
-        task_id: taskId,
-      });
-
-      return {
-        status: responseData.status,
-        message: responseData.message,
-      };
-    } catch (error) {
-      console.error('Failed to stop task:', extractErrorMessage(error));
-      throw error;
-    }
+    const wsClient = StreamClient.getInstance();
+    wsClient.send({ type: 'chat/stop' as const, ...(taskId && { task_id: taskId }) });
+    return { status: 'stopping', message: 'Stop command sent' };
   }
 
   /**

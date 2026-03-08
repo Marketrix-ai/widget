@@ -35,7 +35,6 @@ export function getMockWidgetConfig(overrides: Partial<MarketrixConfig> = {}): M
     mtxId: 'test-id',
     mtxKey: 'test-key',
     mtxApiHost: 'https://api.test',
-    mtxAiHost: 'https://agent.test',
     isPreviewMode: true,
     ...overrides,
   };

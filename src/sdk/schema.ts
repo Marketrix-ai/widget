@@ -51,7 +51,7 @@ export const LearningProgressSchema = z.object({
 export const KnowledgeTypeSchema = z.enum(['document', 'video']);
 export const QADocumentStatusSchema = z.enum(['pending', 'processing', 'waiting_review', 'completed', 'failed']);
 export const QATestStatusSchema = z.enum(['pending', 'running', 'completed', 'failed']);
-export const QARunStatusSchema = z.enum(['pending', 'running', 'completed', 'failed']);
+export const QARunStatusSchema = z.enum(['pending', 'running', 'completed', 'failed', 'cancelled']);
 export const MeetingStatusSchema = z.enum(['not_started', 'in_progress', 'ended', 'cancelled']);
 export const ChatRoleSchema = z.enum(['user', 'agent']);
 export const ChatSourceSchema = z.enum(['taskpilot', 'widget', 'app']);
@@ -319,6 +319,15 @@ export const MeetingJoinRequestSchema = z.object({
   token: z.string().optional(),
 });
 
+/**
+ * Lightweight agent badge for embedding in other entities
+ */
+export const AgentBadgeSchema = z.object({
+  id: z.number(),
+  agent_name: z.string(),
+  image_url: z.string().nullish(),
+});
+
 // ============================================================================
 // KNOWLEDGE SCHEMAS - Knowledge base and document management
 // ============================================================================
@@ -334,6 +343,7 @@ export const KnowledgeEntitySchema = BaseEntitySchema.extend({
   file_type: KnowledgeTypeSchema,
   file_url: z.string(),
   source_url: z.string().nullish(), // Original URL for URL-based documents
+  agents: z.array(AgentBadgeSchema).optional(),
 });
 
 // ============================================================================
@@ -392,48 +402,92 @@ export const QADocumentCreateSchema = z.object({
 export const QARunEntitySchema = BaseEntitySchema.extend({
   qa_document_id: z.number(),
   tenant_id: z.number(),
-  user_id: z.number(),
+  triggered_by: z.number(),
   status: QARunStatusSchema,
+  browser_type: BrowserTypeSchema,
+  browser_config: BrowserConfigSchema.nullable().optional(),
+  total_tests: z.number().int().nonnegative(),
+  passed_tests: z.number().int().nonnegative(),
+  failed_tests: z.number().int().nonnegative(),
   started_at: z.coerce.date().nullable().optional(),
   completed_at: z.coerce.date().nullable().optional(),
-  browser_type: BrowserTypeSchema.nullable().optional(),
-  browser_config: BrowserConfigSchema.nullable().optional(),
 });
 
 /**
- * QA test result entity schema
+ * JSON entry schemas for qa_test_case embedded arrays
  */
-export const QATestResultEntitySchema = BaseEntitySchema.extend({
-  tenant_id: z.number(),
-  user_id: z.number(),
-  qa_document_id: z.number(),
-  qa_run_id: z.number().nullable().optional(),
+export const QAProgressLogEntrySchema = z.object({
+  step: z.number(),
+  message: z.string(),
+  timestamp: z.string(),
+  status: z.enum(['success', 'error', 'info']),
+});
+
+export const QAExecutionEntrySchema = z.object({
+  run_id: z.number(),
+  status: z.enum(['pending', 'running', 'passed', 'failed', 'skipped']),
+  browser_type: BrowserTypeSchema.nullable().optional(),
+  progress_log: z.array(QAProgressLogEntrySchema).default([]),
+  error_message: z.string().nullable().optional(),
+  screenshot_url: z.string().nullable().optional(),
+  simulation_id: z.number().nullable().optional(),
+  duration_ms: z.number().nullable().optional(),
+  started_at: z.string().nullable().optional(),
+  completed_at: z.string().nullable().optional(),
+});
+
+export const QAVersionHistoryEntrySchema = z.object({
+  version: z.number().int().positive(),
   test_title: z.string(),
   test_objective: z.string(),
   test_steps: z.array(z.string()),
   expected_outcome: z.string(),
-  priority: z.enum(['Low', 'Medium', 'High']).nullable(),
-  status: QATestStatusSchema,
-  progress_log: z
-    .array(
-      z.object({
-        step: z.number(),
-        message: z.string(),
-        timestamp: z.string(),
-        status: z.enum(['success', 'error', 'info']),
-      }),
-    )
-    .nullable(),
-  screenshot_url: z.string().nullable(),
+  priority: z.enum(['Low', 'Medium', 'High']),
+  change_type: z.enum(['created', 'modified', 'self_healed', 'refined', 'deleted']),
+  change_reason: z.string().nullable().optional(),
+  changed_by: z.number().nullable().optional(),
+  created_at: z.string(),
+});
+
+export const QAHealingAttemptEntrySchema = z.object({
+  failure_type: z.enum(['locator', 'assertion', 'timeout', 'flow_change', 'environment']),
+  failure_message: z.string().nullable().optional(),
+  failure_context: z.record(z.string(), z.unknown()).nullable().optional(),
+  repair_strategy: z.string().nullable().optional(),
+  repair_details: z.record(z.string(), z.unknown()).nullable().optional(),
+  confidence_score: z.number().min(0).max(1).nullable().optional(),
+  validation_status: z.enum(['pending', 'validated', 'failed', 'rejected']),
   simulation_id: z.number().nullable().optional(),
-  browser_type: BrowserTypeSchema.nullable().optional(),
+  validation_simulation_id: z.number().nullable().optional(),
+  healed_version: z.number().nullable().optional(),
+  created_at: z.string(),
+});
+
+/**
+ * QA test case entity schema (replaces old qa_test_result)
+ */
+export const QATestCaseEntitySchema = BaseEntitySchema.extend({
+  qa_document_id: z.number(),
+  tenant_id: z.number(),
+  order_index: z.number().int().nonnegative(),
+  test_title: z.string(),
+  test_objective: z.string(),
+  test_steps: z.array(z.string()),
+  expected_outcome: z.string(),
+  priority: z.enum(['Low', 'Medium', 'High']),
+  is_active: z.preprocess(v => (typeof v === 'number' ? v !== 0 : v), z.boolean()),
+  current_version: z.number().int().positive(),
+  version_history: z.array(QAVersionHistoryEntrySchema).nullable(),
+  executions: z.array(QAExecutionEntrySchema).nullable(),
+  healing_attempts: z.array(QAHealingAttemptEntrySchema).nullable(),
   healing_metadata: z.record(z.string(), z.unknown()).nullable().optional(),
   last_healed_at: z.coerce.date().nullable().optional(),
 });
+
 /**
- * QA test result create schema
+ * QA test case create schema
  */
-export const QATestResultCreateSchema = z.object({
+export const QATestCaseCreateSchema = z.object({
   qa_document_id: z.number(),
   test_title: z.string(),
   test_objective: z.string(),
@@ -467,40 +521,11 @@ export const QADocumentProcessingResponseSchema = z.object({
 });
 
 // ============================================================================
-// QA Test Version Schemas
+// QA Test Version & Healing Types (consolidated into qa_test_case JSON columns)
 // ============================================================================
 
 export const QATestVersionChangeTypeSchema = z.enum(['created', 'modified', 'self_healed', 'refined', 'deleted']);
-
-export const QATestVersionEntitySchema = BaseEntitySchema.extend({
-  test_result_id: z.number(),
-  version: z.number().int().positive(),
-  test_title: z.string(),
-  test_objective: z.string(),
-  test_steps: z.array(z.string()),
-  expected_outcome: z.string(),
-  priority: z.enum(['Low', 'Medium', 'High']).nullable(),
-  change_type: QATestVersionChangeTypeSchema,
-  change_reason: z.string().nullable(),
-  changed_by: z.number().nullable(),
-  previous_version_id: z.number().nullable(),
-});
-
-export const QATestVersionCreateSchema = z.object({
-  test_result_id: z.number(),
-  change_type: QATestVersionChangeTypeSchema,
-  change_reason: z.string().optional(),
-});
-
-export type QATestVersionData = z.infer<typeof QATestVersionEntitySchema>;
-export type QATestVersionChangeType = z.infer<typeof QATestVersionChangeTypeSchema>;
-
-// ============================================================================
-// QA Self-Healing Schemas
-// ============================================================================
-
 export const QAFailureTypeSchema = z.enum(['locator', 'assertion', 'timeout', 'flow_change', 'environment']);
-
 export const QAValidationStatusSchema = z.enum(['pending', 'validated', 'failed', 'rejected']);
 
 export const QAHealingMetadataSchema = z.object({
@@ -511,20 +536,6 @@ export const QAHealingMetadataSchema = z.object({
   last_healing_attempt: z.string().datetime().nullable(),
   total_healing_attempts: z.number().int().default(0),
   successful_heals: z.number().int().default(0),
-});
-
-export const QAHealingAttemptEntitySchema = BaseEntitySchema.extend({
-  test_result_id: z.number(),
-  simulation_id: z.number().nullable(),
-  failure_type: QAFailureTypeSchema,
-  failure_message: z.string().nullable(),
-  failure_context: z.record(z.string(), z.unknown()).nullable(),
-  repair_strategy: z.string().nullable(),
-  repair_details: z.record(z.string(), z.unknown()).nullable(),
-  confidence_score: z.number().min(0).max(1).nullable(),
-  validation_status: QAValidationStatusSchema,
-  validation_simulation_id: z.number().nullable(),
-  healed_version_id: z.number().nullable(),
 });
 
 export const FailureAnalysisSchema = z.object({
@@ -542,11 +553,14 @@ export const FailureAnalysisSchema = z.object({
     .nullable(),
 });
 
+export type QATestVersionChangeType = z.infer<typeof QATestVersionChangeTypeSchema>;
 export type QAFailureType = z.infer<typeof QAFailureTypeSchema>;
 export type QAValidationStatus = z.infer<typeof QAValidationStatusSchema>;
 export type QAHealingMetadata = z.infer<typeof QAHealingMetadataSchema>;
-export type QAHealingAttemptData = z.infer<typeof QAHealingAttemptEntitySchema>;
 export type FailureAnalysis = z.infer<typeof FailureAnalysisSchema>;
+export type QAExecutionEntry = z.infer<typeof QAExecutionEntrySchema>;
+export type QAVersionHistoryEntry = z.infer<typeof QAVersionHistoryEntrySchema>;
+export type QAHealingAttemptEntry = z.infer<typeof QAHealingAttemptEntrySchema>;
 
 // ============================================================================
 // SIMULATION SCHEMAS - Application simulation and testing
@@ -622,53 +636,50 @@ export const NavigateToUrlActionSchema = z.object({
 });
 
 /**
- * Union schema for all possible simulation actions
+ * Schema for simulation actions.
+ * Browser-use can emit many action types beyond the ones explicitly defined above,
+ * so we accept any single-key object (e.g. { scroll: {...} }, { send_keys: {...} }).
  */
-export const SimulationActionSchema = z.union([
-  GoToUrlActionSchema,
-  ClickElementByIndexActionSchema,
-  InputTextActionSchema,
-  WriteFileActionSchema,
-  GetOtpActionSchema,
-  DoneActionSchema,
-  WaitActionSchema,
-  ReloadPageActionSchema,
-  OpenNewTabActionSchema,
-  NavigateToUrlActionSchema,
-]);
+export const SimulationActionSchema = z.record(z.string(), z.unknown());
 
 /**
  * Model output schema for simulation step
  */
-export const SimulationModelOutputSchema = z.object({
-  evaluation_previous_goal: z.string().optional(),
-  memory: z.string().optional(),
-  next_goal: z.string().optional(),
-  action: z.array(SimulationActionSchema).optional(),
-  thinking: z.string().optional(),
-});
+export const SimulationModelOutputSchema = z
+  .object({
+    evaluation_previous_goal: z.string().optional().nullable(),
+    memory: z.string().optional().nullable(),
+    next_goal: z.string().optional().nullable(),
+    action: z.array(SimulationActionSchema).optional().nullable(),
+    thinking: z.string().optional().nullable(),
+  })
+  .passthrough();
 
 /**
  * Result schema for simulation step
  */
-export const SimulationResultSchema = z.object({
-  is_done: z.boolean(),
-  success: z.boolean().optional(),
-  long_term_memory: z.string().optional(),
-  extracted_content: z.string().optional(),
-  include_extracted_content_only_once: z.boolean().optional(),
-  include_in_memory: z.boolean().optional(),
-  error: z.string().optional(),
-  metadata: z
-    .object({
-      click_x: z.number().optional(),
-      click_y: z.number().optional(),
-      new_tab_opened: z.boolean().optional(),
-      input_x: z.number().optional(),
-      input_y: z.number().optional(),
-    })
-    .optional(),
-});
+export const SimulationResultSchema = z
+  .object({
+    is_done: z.boolean(),
+    success: z.boolean().optional().nullable(),
+    long_term_memory: z.string().optional().nullable(),
+    extracted_content: z.string().optional().nullable(),
+    include_extracted_content_only_once: z.boolean().optional().nullable(),
+    include_in_memory: z.boolean().optional().nullable(),
+    error: z.string().optional().nullable(),
+    metadata: z
+      .object({
+        click_x: z.number().optional(),
+        click_y: z.number().optional(),
+        new_tab_opened: z.boolean().optional(),
+        input_x: z.number().optional(),
+        input_y: z.number().optional(),
+      })
+      .passthrough()
+      .optional()
+      .nullable(),
+  })
+  .passthrough();
 
 /**
  * Browser tab schema (browser-use format)
@@ -677,8 +688,8 @@ export const BrowserTabSchema = z
   .object({
     url: z.string(),
     title: z.string(),
-    tab_id: z.string(),
-    parent_tab_id: z.string().nullable(),
+    tab_id: z.string().optional(),
+    parent_tab_id: z.string().optional().nullable(),
   })
   .passthrough();
 
@@ -687,15 +698,15 @@ export const BrowserTabSchema = z
  */
 export const InteractedElementSchema = z
   .object({
-    node_id: z.number(),
-    backend_node_id: z.number(),
-    frame_id: z.string().nullable(),
-    node_type: z.number(),
-    node_value: z.string(),
-    node_name: z.string(),
+    node_id: z.number().optional(),
+    backend_node_id: z.number().optional(),
+    frame_id: z.string().optional().nullable(),
+    node_type: z.number().optional(),
+    node_value: z.string().optional(),
+    node_name: z.string().optional(),
     attributes: z.record(z.string(), z.string()).optional().nullable(),
-    x_path: z.string(),
-    element_hash: z.number(),
+    x_path: z.string().optional(),
+    element_hash: z.number().optional(),
     bounds: z
       .object({
         x: z.number(),
@@ -703,6 +714,7 @@ export const InteractedElementSchema = z
         width: z.number(),
         height: z.number(),
       })
+      .passthrough()
       .optional()
       .nullable(),
     stable_hash: z.number().optional(),
@@ -728,10 +740,10 @@ export const SimulationStateSchema = z
  */
 export const SimulationStepMetadataSchema = z
   .object({
-    step_start_time: z.number().optional(),
-    step_end_time: z.number().optional(),
-    step_number: z.number().optional(),
-    step_interval: z.number().optional(),
+    step_start_time: z.number().optional().nullable(),
+    step_end_time: z.number().optional().nullable(),
+    step_number: z.number().optional().nullable(),
+    step_interval: z.number().optional().nullable(),
   })
   .passthrough();
 
@@ -767,6 +779,17 @@ export const SimulationStepSummarySchema = z.object({
 });
 
 /**
+ * One entry inside simulation.progress_log (stored as JSON array on the simulation row).
+ */
+export const SimulationProgressEntrySchema = z.object({
+  status: z.string(),
+  status_message: z.string().nullable(),
+  num_steps: z.number().int().nonnegative().nullable(),
+  created_at: z.coerce.date(),
+});
+export type SimulationProgressEntry = z.infer<typeof SimulationProgressEntrySchema>;
+
+/**
  * App simulation schema
  */
 export const SimulationEntitySchema = BaseEntitySchema.extend({
@@ -780,8 +803,11 @@ export const SimulationEntitySchema = BaseEntitySchema.extend({
   instructions: z.string().nullish(),
   num_steps: z.number().int().nonnegative(),
   pinned: z.boolean().optional(),
+  source: z.enum(['direct', 'qa']).optional(),
   agent_name: z.string().nullish(),
   graph_index_id: z.string().nullable().optional(),
+  progress_log: z.array(SimulationProgressEntrySchema).optional(),
+  agents: z.array(AgentBadgeSchema).optional(),
 });
 
 /**
@@ -840,7 +866,7 @@ export const RrwebSessionEntitySchema = BaseEntitySchema.extend({
   event_count: z.number().int().nonnegative(),
   started_at: z.string().datetime(),
   ended_at: z.string().datetime().nullable(),
-  is_active: z.boolean(),
+  is_active: z.preprocess(v => (typeof v === 'number' ? v !== 0 : v), z.boolean()),
   metadata: z
     .object({
       userAgent: z.string().optional(),
@@ -863,7 +889,7 @@ export const RrwebSessionUpsertSchema = z.object({
   event_count: z.number().int().nonnegative().optional(),
   started_at: z.string().datetime().optional(),
   ended_at: z.string().datetime().nullable().optional(),
-  is_active: z.boolean().optional(),
+  is_active: z.preprocess(v => (typeof v === 'number' ? v !== 0 : v), z.boolean()).optional(),
   metadata: z
     .object({
       userAgent: z.string().optional(),
@@ -878,7 +904,8 @@ export const RrwebSessionUpsertSchema = z.object({
 });
 
 /**
- * Simulation progress entry schema
+ * API response schema for the simulationProgress endpoint.
+ * Synthesises id/simulation_id so existing callers keep working.
  */
 export const SimulationProgressEntitySchema = z.object({
   id: z.number(),
@@ -950,13 +977,13 @@ export const AgentEntitySchema = BaseEntitySchema.extend({
 });
 
 const KnowledgeIdsSchema = z.string().transform(str => {
-  const parsed = JSON.parse(str);
-  return Array.isArray(parsed) ? parsed.map(v => Number(v)) : [];
+  const parsed: unknown = JSON.parse(str);
+  return Array.isArray(parsed) ? (parsed as unknown[]).map(v => Number(v)) : [];
 });
 
 const SimulationIdsSchema = z.string().transform(str => {
-  const parsed = JSON.parse(str);
-  return Array.isArray(parsed) ? parsed.map(v => Number(v)) : [];
+  const parsed: unknown = JSON.parse(str);
+  return Array.isArray(parsed) ? (parsed as unknown[]).map(v => Number(v)) : [];
 });
 
 /**
@@ -1337,33 +1364,61 @@ export const TourEntitySchema = BaseEntitySchema.extend({
 });
 
 // ============================================================================
-// CHAT SCHEMAS - AI-powered chat and conversation management
+// WIDGET STREAM SCHEMAS - Typed events and commands for widget communication
 // ============================================================================
 
-/**
- * Chat request schema
- * Requires either: marketrix_id + marketrix_key OR agent_id + connection_id
- */
-export const ChatRequestSchema = z
-  .object({
-    marketrix_id: z.string().optional(),
-    marketrix_key: z.string().optional(),
-    agent_id: z.number().positive().optional(),
-    connection_id: z.number().positive().optional(),
-    chat_id: z.string().optional(), // Optional since it comes from path params in some routes
-    content: z.string(),
-  })
-  .refine(data => (data.marketrix_id && data.marketrix_key) ?? (data.agent_id && data.connection_id), {
-    message: 'Either marketrix_id + marketrix_key or both agent_id + connection_id must be provided',
-  });
+/** Server → Widget event (discriminated union on `type`) */
+export const WidgetEventSchema = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('registered'), chat_id: z.string() }),
+  z.object({ type: z.literal('pong') }),
+  z.object({
+    type: z.literal('chat/response'),
+    request_id: z.string(),
+    text: z.string(),
+    task_id: z.string().optional(),
+  }),
+  z.object({
+    type: z.literal('chat/error'),
+    request_id: z.string(),
+    error: z.string(),
+  }),
+  z.object({
+    type: z.literal('task/status'),
+    status: z.enum(['started', 'completed', 'failed', 'stopped']),
+    message: z.string().optional(),
+    task_id: z.string().optional(),
+    timestamp: z.number().optional(),
+  }),
+  z.object({
+    type: z.literal('tool/call'),
+    call_id: z.string(),
+    tool: z.string(),
+    args: z.record(z.string(), z.unknown()),
+    mode: z.enum(['show', 'do']).optional(),
+    explanation: z.string().optional(),
+    state_version: z.number().optional(),
+  }),
+]);
 
-/**
- * Chat response entity schema
- */
-export const ChatResponseSchema = z.object({
-  text: z.string(),
-  task_id: z.string().optional(),
-});
+/** Widget → Server command (discriminated union on `type`) */
+export const WidgetCommandSchema = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('chat/tell'), request_id: z.string(), content: z.string() }),
+  z.object({ type: z.literal('chat/show'), request_id: z.string(), content: z.string() }),
+  z.object({ type: z.literal('chat/do'), request_id: z.string(), content: z.string() }),
+  z.object({ type: z.literal('chat/stop'), task_id: z.string().optional() }),
+  z.object({
+    type: z.literal('tool/response'),
+    call_id: z.string(),
+    success: z.boolean(),
+    data: z.string().optional(),
+    error: z.string().optional(),
+    state_version: z.number().optional(),
+  }),
+  z.object({ type: z.literal('ping') }),
+]);
+
+export type WidgetEvent = z.infer<typeof WidgetEventSchema>;
+export type WidgetCommand = z.infer<typeof WidgetCommandSchema>;
 
 // ============================================================================
 // ACTIVITY LOG SCHEMAS - System activity tracking and auditing
@@ -1811,7 +1866,6 @@ export const StripeConfigSchema = z.object({
 export const PublicConfigSchema = z.object({
   widgetKey: z.string(),
   widgetId: z.string(),
-  agentUrl: z.string(),
   widgetUrl: z.string(),
 });
 
@@ -1877,9 +1931,7 @@ export type SimulationStatusResponseData = z.infer<typeof SimulationStatusRespon
 export type BrowserSessionResponseData = z.infer<typeof BrowserSessionResponseSchema>;
 export type TaskStatus = z.infer<typeof TaskStatusSchema>;
 export type FileUploadResponse = z.infer<typeof FileUploadResponseSchema>;
-export type ChatRequest = z.infer<typeof ChatRequestSchema>;
 export type AgentVideoGenerateRequest = z.infer<typeof AgentVideoGenerateRequestSchema>;
-export type ChatResponseData = z.infer<typeof ChatResponseSchema>;
 export type MailOptionsData = z.infer<typeof MailOptionsDataSchema>;
 export type MeetingEmailData = z.infer<typeof MeetingEmailDataSchema>;
 
@@ -1960,5 +2012,53 @@ export type QADocumentListItemData = QADocumentData & {
   pass_rate: number | null;
 };
 export type QARunData = z.infer<typeof QARunEntitySchema>;
-export type QATestResultData = z.infer<typeof QATestResultEntitySchema>;
+export type QATestCaseData = z.infer<typeof QATestCaseEntitySchema>;
 export type QADocumentProcessingResponseData = z.infer<typeof QADocumentProcessingResponseSchema>;
+
+// ---------------------------------------------------------------------------
+// Preview Video Chat
+// ---------------------------------------------------------------------------
+
+export const PreviewVideoChatMessageSchema = z.object({
+  role: z.enum(['user', 'assistant', 'system']),
+  content: z.string(),
+  timestamp: z.string().optional(),
+});
+
+export const PreviewVideoChatEntitySchema = BaseEntitySchema.extend({
+  tenant_id: z.number(),
+  connection_id: z.number().nullable().optional(),
+  agent_id: z.number().nullable().optional(),
+  simulation_id: z.number().nullable().optional(),
+  chat_id: z.string(),
+  chat_content: z.string().nullable().optional(),
+  chat_history: z.array(PreviewVideoChatMessageSchema).nullable().optional(),
+  chat_output: z.string().nullable().optional(),
+  preview_video_url: z.string().nullable().optional(),
+  metadata: z.record(z.string(), z.unknown()).nullable().optional(),
+});
+
+export const PreviewVideoChatUpsertSchema = z.object({
+  connection_id: z.number().nullable().optional(),
+  agent_id: z.number().nullable().optional(),
+  simulation_id: z.number().nullable().optional(),
+  chat_id: z.string(),
+  chat_content: z.string().nullable().optional(),
+  chat_history: z.array(PreviewVideoChatMessageSchema).nullable().optional(),
+  chat_output: z.string().nullable().optional(),
+  preview_video_url: z.string().nullable().optional(),
+  metadata: z.record(z.string(), z.unknown()).nullable().optional(),
+});
+
+export const PreviewVideoChatSearchSchema = z.object({
+  chat_id: z.string().optional(),
+  agent_id: z.number().optional(),
+  simulation_id: z.number().optional(),
+  limit: z.number().optional(),
+  offset: z.number().optional(),
+});
+
+export type PreviewVideoChatMessageData = z.infer<typeof PreviewVideoChatMessageSchema>;
+export type PreviewVideoChatData = z.infer<typeof PreviewVideoChatEntitySchema>;
+export type PreviewVideoChatUpsertData = z.infer<typeof PreviewVideoChatUpsertSchema>;
+export type PreviewVideoChatSearchData = z.infer<typeof PreviewVideoChatSearchSchema>;

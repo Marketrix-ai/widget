@@ -1,81 +1,108 @@
-import React from 'react';
+import React, { useState } from 'react';
+
+import MarketrixIcon from '../../assets/marketrix-icon.svg';
+import { DARK_THEME_COLORS } from '../../constants/theme';
 
 interface WidgetSettingsLoaderProps {
   message?: string;
 }
 
-/**
- * WidgetSettingsLoader
- *
- * Displays a loading state with default widget settings when
- * marketrix_id or marketrix_key are not available
- */
 export const WidgetSettingsLoader: React.FC<WidgetSettingsLoaderProps> = ({
   message = 'Loading widget settings...',
 }) => {
+  const [dismissed, setDismissed] = useState(false);
+  const showCredentialHint = message?.includes('marketrix_id') || message?.includes('marketrix_key');
+
+  if (dismissed) return null;
+
   return (
     <div
       className='marketrix-widget-loader'
       style={{
         position: 'fixed',
         bottom: '20px',
-        right: '20px',
-        width: '320px',
-        height: '200px',
-        backgroundColor: 'rgba(255, 255, 255, 0.95)',
-        borderRadius: '12px',
-        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        maxWidth: '420px',
+        backgroundColor: DARK_THEME_COLORS.white95,
+        borderRadius: showCredentialHint ? '18px' : '999px',
+        boxShadow: `0 2px 12px ${DARK_THEME_COLORS.black15}`,
         display: 'flex',
         flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '24px',
-        border: '1px solid rgba(255, 255, 255, 0.2)',
+        alignItems: 'stretch',
+        gap: '8px',
+        padding: '10px 12px',
+        border: `1px solid ${DARK_THEME_COLORS.white20}`,
         zIndex: 9999,
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
       }}
     >
-      {/* Loading Spinner */}
-      <div
-        className='spinner'
-        style={{
-          width: '48px',
-          height: '48px',
-          border: '4px solid #e5e7eb',
-          borderTop: '4px solid #374151',
-          borderRadius: '50%',
-          animation: 'spin 1s linear infinite',
-        }}
-      />
-      <style>
-        {`
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-        `}
-      </style>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <img
+          src={MarketrixIcon}
+          alt=''
+          style={{
+            width: '28px',
+            height: '28px',
+            borderRadius: '50%',
+            overflow: 'hidden',
+            flexShrink: 0,
+          }}
+        />
 
-      {/* Loading Message */}
-      <p
-        style={{
-          marginTop: '16px',
-          fontSize: '14px',
-          color: '#1f2937',
-          textAlign: 'center',
-          fontWeight: 500,
-        }}
-      >
-        {message}
-      </p>
+        <span
+          style={{
+            fontSize: '13px',
+            color: DARK_THEME_COLORS.gray800,
+            fontWeight: 500,
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            flex: 1,
+            minWidth: 0,
+          }}
+        >
+          {message}
+        </span>
 
-      {/* Additional Info - only show if message indicates missing credentials */}
-      {message?.includes('marketrix_id') || message?.includes('marketrix_key') ? (
+        <button
+          type='button'
+          onClick={() => setDismissed(true)}
+          aria-label='Dismiss'
+          style={{
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            padding: '2px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+            color: DARK_THEME_COLORS.gray500,
+            borderRadius: '50%',
+            width: '20px',
+            height: '20px',
+          }}
+        >
+          <svg width='12' height='12' viewBox='0 0 12 12' fill='none'>
+            <path
+              d='M9 3L3 9M3 3l6 6'
+              stroke='currentColor'
+              strokeWidth='1.5'
+              strokeLinecap='round'
+              strokeLinejoin='round'
+            />
+          </svg>
+        </button>
+      </div>
+
+      {showCredentialHint ? (
         <p
           style={{
-            marginTop: '8px',
             fontSize: '12px',
-            color: '#6b7280',
-            textAlign: 'center',
+            color: DARK_THEME_COLORS.gray500,
+            textAlign: 'left',
+            margin: 0,
           }}
         >
           Please configure marketrix_id and marketrix_key

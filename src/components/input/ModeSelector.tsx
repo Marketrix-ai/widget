@@ -8,7 +8,7 @@ import { useWidget } from '../../hooks/useWidget';
 import type { InstructionType } from '../../sdk';
 import { configManager } from '../../services/ConfigManager';
 import { sessionManager } from '../../services/SessionManager';
-import { WebSocketClient } from '../../services/WebSocketClient';
+import { StreamClient } from '../../services/StreamClient';
 import type { MarketrixConfig } from '../../types';
 import { addOpacity, getContrastingColor, getModeDescription, getModeDisplayName } from '../../utils/format';
 import { Button } from '../base/Button';
@@ -127,17 +127,12 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({
           chatId: sessionManager.getChatId(),
           tabId: sessionManager.getTabId(),
           websocketEndpoint: (() => {
-            try {
-              const wsClient = WebSocketClient.getInstance(config);
-              return wsClient.getUrl();
-            } catch {
-              return null;
-            }
+            const apiHost = configManager.getConfig()?.mtxApiHost || config?.mtxApiHost;
+            return apiHost ? `${apiHost.replace(/\/$/, '')}/widget/stream` : null;
           })(),
           connectionStatus: (() => {
             try {
-              const wsClient = WebSocketClient.getInstance(config);
-              return wsClient.getStatus();
+              return StreamClient.getInstance().getStatus();
             } catch {
               return 'disconnected';
             }

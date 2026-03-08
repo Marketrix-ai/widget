@@ -404,14 +404,7 @@ export { getCurrentConfig };
  * MarketrixWidget - React component for preview mode
  * Renders widget into parent container with shadow DOM
  */
-export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({
-  settings,
-  container,
-  mtxId,
-  mtxKey,
-  mtxApiHost,
-  mtxAiHost,
-}) => {
+export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ settings, container, mtxId, mtxKey, mtxApiHost }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const rootRef = useRef<Root | null>(null);
   const widgetContainerRef = useRef<HTMLElement | null>(null);
@@ -446,7 +439,6 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({
         mtxId,
         mtxKey,
         mtxApiHost,
-        mtxAiHost,
       }),
       isPreviewMode: true, // Settings provided = preview mode
       widget_enabled: settings.widget_enabled ?? true, // Ensure widget is enabled in preview

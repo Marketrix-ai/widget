@@ -1,7 +1,7 @@
 import React from 'react';
 
+import MarketrixIcon from '../../assets/marketrix-icon.svg';
 import { LAYER_TOKENS } from '../../design-system/layers';
-import { Button } from '../base/Button';
 
 interface ErrorDisplayProps {
   error: string;
@@ -15,50 +15,80 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({ error, onClose, onRe
   const positionStyle =
     position === 'bottom_left' || position === 'top_left' || !position ? { left: '0' } : { right: '0' };
   const verticalStyle = position.includes('top') ? { top: '20px' } : { bottom: '90px' };
-
   return (
     <div
-      className='fixed max-w-sm'
+      className='fixed'
       style={{
         zIndex: LAYER_TOKENS.toast + 10,
         ...verticalStyle,
         ...positionStyle,
+        maxWidth: '420px',
       }}
     >
-      <div className='bg-red-500 text-white px-4 py-3 rounded-lg shadow-lg'>
-        <div className='flex items-center justify-between gap-2'>
-          <span className='text-sm flex-1'>{error}</span>
-          {onRetry && (
-            <Button
-              type='button'
-              variant='secondary'
-              size='sm'
-              onClick={() => {
-                onRetry();
-                onClose();
-              }}
-              className='text-white border-white/50 hover:bg-red-600'
-              aria-label='Retry'
-            >
-              Retry
-            </Button>
-          )}
-          <Button
+      <div
+        className='flex items-center gap-2.5 rounded-full shadow-lg'
+        style={{
+          padding: '8px 12px 8px 8px',
+          backgroundColor: '#fef2f2',
+          border: '1px solid #fecaca',
+        }}
+      >
+        {/* Marketrix Logo */}
+        <img
+          src={MarketrixIcon}
+          alt=''
+          className='flex-shrink-0 rounded-full'
+          style={{ width: '28px', height: '28px' }}
+        />
+
+        {/* Error Message */}
+        <span
+          className='text-red-700 font-medium flex-1 min-w-0'
+          style={{
+            fontSize: '13px',
+            whiteSpace: onRetry ? 'normal' : 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+          }}
+        >
+          {error}
+        </span>
+
+        {onRetry && (
+          <button
             type='button'
-            variant='ghost'
-            onClick={onClose}
-            className='ml-4 text-white hover:text-red-100 min-w-0 p-1'
-            aria-label='Close error'
+            onClick={() => {
+              onRetry();
+              onClose();
+            }}
+            className='flex-shrink-0 rounded-full px-3 py-1 text-xs font-semibold text-red-700 transition-colors hover:text-red-800'
+            style={{
+              backgroundColor: '#fee2e2',
+              border: '1px solid #fecaca',
+            }}
+            aria-label='Retry'
           >
-            <svg className='w-4 h-4' fill='currentColor' viewBox='0 0 20 20'>
-              <path
-                fillRule='evenodd'
-                d='M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z'
-                clipRule='evenodd'
-              />
-            </svg>
-          </Button>
-        </div>
+            Retry
+          </button>
+        )}
+
+        <button
+          type='button'
+          onClick={onClose}
+          className='flex-shrink-0 text-red-400 hover:text-red-600 flex items-center justify-center rounded-full'
+          style={{ width: '20px', height: '20px', padding: '2px' }}
+          aria-label='Close error'
+        >
+          <svg width='12' height='12' viewBox='0 0 12 12' fill='none'>
+            <path
+              d='M9 3L3 9M3 3l6 6'
+              stroke='currentColor'
+              strokeWidth='1.5'
+              strokeLinecap='round'
+              strokeLinejoin='round'
+            />
+          </svg>
+        </button>
       </div>
     </div>
   );
