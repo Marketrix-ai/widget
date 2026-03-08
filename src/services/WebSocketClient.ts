@@ -1,4 +1,4 @@
-import { getAgentWebSocketUrl } from '../constants/config';
+import { getWidgetWebSocketUrl } from '../constants/config';
 import type { MarketrixConfig } from '../types';
 import type { ToolResponse } from '../types/toolMessages';
 import { sessionManager } from './SessionManager';
@@ -46,7 +46,7 @@ export class WebSocketClient {
   private connectPromiseChatId: string | null = null;
 
   private constructor(config?: Partial<MarketrixConfig>) {
-    this.url = getAgentWebSocketUrl(config);
+    this.url = getWidgetWebSocketUrl(config);
   }
 
   static getInstance(config?: Partial<MarketrixConfig>): WebSocketClient {
@@ -56,7 +56,7 @@ export class WebSocketClient {
       // If config is provided, ensure we update the URL if not connected or force update logic if needed
       // But typically we don't want to change the URL mid-flight unless disconnected.
       // We can check if the new config would result in a different URL.
-      const newUrl = getAgentWebSocketUrl(config);
+      const newUrl = getWidgetWebSocketUrl(config);
       if (newUrl !== WebSocketClient.instance.url) {
         WebSocketClient.instance.url = newUrl;
         // If disconnected, the next connect() will use the new URL.
@@ -126,7 +126,7 @@ export class WebSocketClient {
     this.isIntentionallyDisconnected = false;
     this.setStatus('connecting');
     if (!this.url) {
-      console.warn('[WebSocket] Cannot connect: No AI host URL provided in configuration');
+      console.warn('[WebSocket] Cannot connect: No API host URL provided in configuration');
       this.setStatus('error');
       return;
     }

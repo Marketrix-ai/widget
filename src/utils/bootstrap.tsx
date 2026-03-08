@@ -395,7 +395,6 @@ export const autoInitializeWidget = (retryCount = 0): void => {
   const mtxId = script.getAttribute('mtx-id');
   const mtxKey = script.getAttribute('mtx-key');
   const mtxApiHost = script.getAttribute('mtx-api-host');
-  const mtxAiHost = script.getAttribute('mtx-ai-host');
   const mtxApp = script.getAttribute('mtx-app');
   const mtxAgent = script.getAttribute('mtx-agent');
   const mtxUseScreenshare = script.getAttribute('mtx-use-screenshare');
@@ -406,7 +405,6 @@ export const autoInitializeWidget = (retryCount = 0): void => {
     mtxApp,
     mtxAgent,
     mtxApiHost,
-    mtxAiHost,
   });
 
   if (mtxId && mtxKey) {
@@ -416,9 +414,6 @@ export const autoInitializeWidget = (retryCount = 0): void => {
     };
     if (mtxApiHost) {
       config.mtxApiHost = mtxApiHost;
-    }
-    if (mtxAiHost) {
-      config.mtxAiHost = mtxAiHost;
     }
     if (mtxUseScreenshare === 'false') {
       config.use_screenshare = false;
@@ -443,9 +438,6 @@ export const autoInitializeWidget = (retryCount = 0): void => {
     };
     if (mtxApiHost) {
       config.mtxApiHost = mtxApiHost;
-    }
-    if (mtxAiHost) {
-      config.mtxAiHost = mtxAiHost;
     }
     if (mtxUseScreenshare === 'false') {
       config.use_screenshare = false;

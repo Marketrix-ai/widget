@@ -13,15 +13,14 @@ export const getApiUrl = (config?: Partial<MarketrixConfig>): string => {
 };
 
 /**
- * Derives the websocket URL for the agent server
- * Requires config.mtxAiHost to be provided
- * @throws Error if mtxAiHost is not provided
+ * Derives the websocket URL for the API server's /widget endpoint
+ * Requires config.mtxApiHost to be provided
  */
-export function getAgentWebSocketUrl(config?: Partial<MarketrixConfig>): string {
-  if (!config?.mtxAiHost) {
+export function getWidgetWebSocketUrl(config?: Partial<MarketrixConfig>): string {
+  if (!config?.mtxApiHost) {
     return '';
   }
-  return ensureWebSocketUrl(config.mtxAiHost);
+  return ensureWebSocketUrl(config.mtxApiHost);
 }
 
 /**

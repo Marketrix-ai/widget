@@ -44,9 +44,6 @@ export type MarketrixConfig = Partial<WidgetSettingsData> & {
   // Optional API configuration
   mtxApiHost?: string; // API server hostname
 
-  // Optional AI/Agent Server URL for websocket connection
-  mtxAiHost?: string; // AI/agent server hostname
-
   // Widget position config fields (offset/z_index) - local-only styling, not from API
   widget_position_offset?: {
     x?: number;
@@ -164,7 +161,6 @@ export type AddWidgetConfig = (
   container?: HTMLElement;
   // Optional additional config
   mtxApiHost?: string;
-  mtxAiHost?: string;
   userId?: number;
   widget_position_offset?: {
     x?: number;
@@ -187,7 +183,6 @@ export interface MarketrixWidgetProps {
   mtxId?: string;
   mtxKey?: string;
   mtxApiHost?: string;
-  mtxAiHost?: string;
 }
 
 // Re-export SDK types for convenience

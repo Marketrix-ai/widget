@@ -1838,7 +1838,6 @@ export const StripeConfigSchema = z.object({
 export const PublicConfigSchema = z.object({
   widgetKey: z.string(),
   widgetId: z.string(),
-  agentUrl: z.string(),
   widgetUrl: z.string(),
 });
 
