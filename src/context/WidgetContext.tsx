@@ -4,8 +4,8 @@ import { MarketrixApiService } from '../services/ApiService';
 import { chatService, createAgentMessage, createUserMessage } from '../services/ChatService';
 import { configManager } from '../services/ConfigManager';
 import { sessionManager } from '../services/SessionManager';
+import { StreamClient, type WebSocketMessage, type WebSocketStatus } from '../services/StreamClient';
 import { toolExecutionService } from '../services/ToolService';
-import { WebSocketClient, type WebSocketMessage, type WebSocketStatus } from '../services/WebSocketClient';
 import type { ChatMessage, InstructionType, TaskProgress, WidgetState } from '../types';
 import { BROWSER_TOOLS } from '../types/browserTools';
 import { isToolRequest, type ToolRequest, type ToolResponse } from '../types/toolMessages';
@@ -121,14 +121,10 @@ export const WidgetProvider: React.FC<WidgetProviderProps> = ({ children, previe
         isMinimized: chatService.getIsMinimized(),
       }));
 
-      // Connect WebSocket if chat ID exists
+      // Connect to stream if chat ID exists
       if (chatId) {
-        // Ensure config is loaded before initializing WebSocket
-        const config = configManager.getConfig();
-        if (config) {
-          const wsClient = WebSocketClient.getInstance(config);
-          wsClient.connect(chatId).catch((err: unknown) => console.error('Initial WebSocket connection failed:', err));
-        }
+        const streamClient = StreamClient.getInstance();
+        streamClient.connect(chatId).catch((err: unknown) => console.error('Initial stream connection failed:', err));
       }
     };
     initChat();
@@ -206,9 +202,7 @@ export const WidgetProvider: React.FC<WidgetProviderProps> = ({ children, previe
       return;
     }
 
-    // Ensure config is loaded before initializing WebSocket
-    const config = configManager.getConfig();
-    const wsClient = WebSocketClient.getInstance(config || undefined);
+    const wsClient = StreamClient.getInstance();
 
     const handleStatusChange = (status: WebSocketStatus) => {
       setState(prev => ({ ...prev, agentAvailable: status === 'registered' }));
@@ -588,12 +582,12 @@ export const WidgetProvider: React.FC<WidgetProviderProps> = ({ children, previe
           question, // Pass question context if available (e.g. from chips)
         });
 
-        // Connect WebSocket if not connected
+        // Connect to stream if not connected
         const chatId = apiService.getChatId();
         if (chatId) {
-          const wsClient = WebSocketClient.getInstance(config);
-          if (!wsClient.isConnected()) {
-            wsClient.connect(chatId).catch(err => console.error('WebSocket connection failed:', err));
+          const streamClient = StreamClient.getInstance();
+          if (!streamClient.isConnected()) {
+            streamClient.connect(chatId).catch(err => console.error('Stream connection failed:', err));
           }
         }
 

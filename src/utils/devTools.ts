@@ -19,8 +19,8 @@
 
 import { chatService } from '../services/ChatService';
 import { domService } from '../services/DomService';
+import { StreamClient } from '../services/StreamClient';
 import { type ToolExecutionResult, toolExecutionService } from '../services/ToolService';
-import { WebSocketClient } from '../services/WebSocketClient';
 
 // Tool parameter definitions for reference
 export const TOOL_PARAMS: Record<string, { required: string[]; optional: string[] }> = {
@@ -171,11 +171,11 @@ export const devTools = {
   },
 
   /**
-   * Get WebSocket connection status
+   * Get stream connection status
    */
   getConnectionStatus(): string {
-    const wsClient = WebSocketClient.getInstance();
-    return wsClient.getStatus();
+    const streamClient = StreamClient.getInstance();
+    return streamClient.getStatus();
   },
 
   /**
@@ -236,7 +236,7 @@ export function initDevTools(): void {
   window.domService = domService;
   window.toolExecutionService = toolExecutionService;
   window.chatService = chatService;
-  window.WebSocketClient = WebSocketClient;
+  window.WebSocketClient = StreamClient;
 
   // Expose dev tools helper
   window.devTools = devTools;

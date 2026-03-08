@@ -32,7 +32,7 @@
  * - 500: Internal Server Error
  */
 
-import { oc } from '@orpc/contract';
+import { eventIterator, oc } from '@orpc/contract';
 import { z } from 'zod';
 
 import {
@@ -2060,6 +2060,48 @@ const contract = {
     .output(PlanCatalogSchema),
 
   // stripeWebhook is handled as a raw Express route — not part of the oRPC contract.
+
+  widgetStream: oc
+    .route({
+      method: 'GET',
+      tags: ['Widget'],
+      path: '/widget/stream',
+      summary: 'SSE stream for real-time widget events',
+      description:
+        'Server-Sent Events stream delivering tool calls, task status updates, and registration confirmation to the widget client.',
+    })
+    .input(
+      z.object({
+        chat_id: z.string(),
+        tab_id: z.string().optional(),
+      }),
+    )
+    .output(
+      eventIterator(
+        z.object({
+          jsonrpc: z.string().optional(),
+          method: z.string(),
+          id: z.string().optional(),
+          params: z.record(z.string(), z.unknown()).optional(),
+        }),
+      ),
+    ),
+
+  widgetMessage: oc
+    .route({
+      method: 'POST',
+      tags: ['Widget'],
+      path: '/widget/message',
+      summary: 'Send a message from widget to server',
+      description: 'Receives tool responses and other messages from the widget client.',
+    })
+    .input(
+      z.object({
+        chat_id: z.string(),
+        message: z.record(z.string(), z.unknown()),
+      }),
+    )
+    .output(z.object({ ok: z.boolean() })),
 };
 
 export { contract };
