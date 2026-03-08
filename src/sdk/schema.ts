@@ -1393,6 +1393,60 @@ export const ChatResponseSchema = z.object({
 });
 
 // ============================================================================
+// WIDGET STREAM SCHEMAS - Typed events and commands for widget communication
+// ============================================================================
+
+/** Server → Widget event (discriminated union on `type`) */
+export const WidgetEventSchema = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('registered'), chat_id: z.string() }),
+  z.object({ type: z.literal('pong') }),
+  z.object({
+    type: z.literal('chat/response'),
+    request_id: z.string(),
+    text: z.string(),
+    task_id: z.string().optional(),
+  }),
+  z.object({
+    type: z.literal('chat/error'),
+    request_id: z.string(),
+    error: z.string(),
+  }),
+  z.object({
+    type: z.literal('task/status'),
+    status: z.enum(['started', 'completed', 'failed', 'stopped']),
+    message: z.string().optional(),
+    task_id: z.string().optional(),
+    timestamp: z.number().optional(),
+  }),
+  z.object({
+    type: z.literal('tool/call'),
+    call_id: z.string(),
+    tool: z.string(),
+    args: z.record(z.string(), z.unknown()),
+    mode: z.enum(['show', 'do']).optional(),
+    explanation: z.string().optional(),
+    state_version: z.number().optional(),
+  }),
+]);
+
+/** Widget → Server command (discriminated union on `type`) */
+export const WidgetCommandSchema = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('chat/tell'), request_id: z.string(), content: z.string() }),
+  z.object({ type: z.literal('chat/show'), request_id: z.string(), content: z.string() }),
+  z.object({ type: z.literal('chat/do'), request_id: z.string(), content: z.string() }),
+  z.object({ type: z.literal('chat/stop'), task_id: z.string().optional() }),
+  z.object({
+    type: z.literal('tool/response'),
+    call_id: z.string(),
+    success: z.boolean(),
+    data: z.string().optional(),
+    error: z.string().optional(),
+    state_version: z.number().optional(),
+  }),
+  z.object({ type: z.literal('ping') }),
+]);
+
+// ============================================================================
 // ACTIVITY LOG SCHEMAS - System activity tracking and auditing
 // ============================================================================
 

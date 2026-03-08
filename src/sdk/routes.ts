@@ -51,8 +51,8 @@ import {
   BatchUserCreateSchema,
   BrowserConfigSchema,
   BrowserTypeSchema,
-  ChatRequestSchema,
-  ChatResponseSchema,
+  WidgetCommandSchema,
+  WidgetEventSchema,
   CheckoutSessionSchema,
   ConnectionCreateSchema,
   ConnectionEntitySchema,
@@ -670,51 +670,6 @@ const contract = {
     })
     .input(z.object({ id: z.coerce.number() }))
     .output(PreviewVideoChatEntitySchema.nullable()),
-
-  chatTell: oc
-    .route({
-      method: 'POST',
-      path: '/chat/{chat_id}/tell',
-      summary: 'Request tell mode response for given content',
-      description: 'Processes explanation request and returns AI response (voice+text) as a data URL',
-    })
-    .input(ChatRequestSchema.and(z.object({ chat_id: z.string() })))
-    .output(ChatResponseSchema),
-
-  chatShow: oc
-    .route({
-      method: 'POST',
-      path: '/chat/{chat_id}/show',
-      summary: 'Request show mode response for given content',
-      description: 'Processes user introduction and returns AI response (voice+text) as a data URL',
-    })
-    .input(ChatRequestSchema.and(z.object({ chat_id: z.string() })))
-    .output(ChatResponseSchema),
-
-  chatDo: oc
-    .route({
-      method: 'POST',
-      path: '/chat/{chat_id}/do',
-      summary: 'Request do mode response for given content',
-      description: 'Processes action request and returns AI response (voice+text) as a data URL',
-    })
-    .input(ChatRequestSchema.and(z.object({ chat_id: z.string() })))
-    .output(ChatResponseSchema),
-
-  chatStop: oc
-    .route({
-      method: 'POST',
-      path: '/chat/{chat_id}/stop',
-      summary: 'Stop a running show/do mode task',
-      description: 'Stops an ongoing task for the given chat_id',
-    })
-    .input(
-      z.object({
-        chat_id: z.string(),
-        task_id: z.string().optional(),
-      }),
-    )
-    .output(z.object({ status: z.string(), message: z.string() })),
 
   // ============================================================================
   // USER ROUTES - User account management and operations
@@ -2068,37 +2023,34 @@ const contract = {
       path: '/widget/stream',
       summary: 'SSE stream for real-time widget events',
       description:
-        'Server-Sent Events stream delivering tool calls, task status updates, and registration confirmation to the widget client.',
+        'Typed event stream delivering tool calls, task status updates, chat responses, and registration confirmation.',
     })
     .input(
       z.object({
         chat_id: z.string(),
         tab_id: z.string().optional(),
+        // Integration auth
+        marketrix_id: z.string().optional(),
+        marketrix_key: z.string().optional(),
+        // Playground/simulation auth
+        agent_id: z.coerce.number().optional(),
+        connection_id: z.coerce.number().optional(),
       }),
     )
-    .output(
-      eventIterator(
-        z.object({
-          jsonrpc: z.string().optional(),
-          method: z.string(),
-          id: z.string().optional(),
-          params: z.record(z.string(), z.unknown()).optional(),
-        }),
-      ),
-    ),
+    .output(eventIterator(WidgetEventSchema)),
 
   widgetMessage: oc
     .route({
       method: 'POST',
       tags: ['Widget'],
       path: '/widget/message',
-      summary: 'Send a message from widget to server',
-      description: 'Receives tool responses and other messages from the widget client.',
+      summary: 'Send a typed command from widget to server',
+      description: 'Receives chat commands, tool responses, and keepalive pings from the widget.',
     })
     .input(
       z.object({
         chat_id: z.string(),
-        message: z.record(z.string(), z.unknown()),
+        command: WidgetCommandSchema,
       }),
     )
     .output(z.object({ ok: z.boolean() })),
