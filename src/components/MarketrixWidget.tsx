@@ -197,9 +197,7 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
         />
       </WidgetErrorBoundary>
 
-      {state.error && (
-        <ErrorDisplay error={state.error} onClose={() => actions.clearError()} position={widgetPosition} />
-      )}
+      {state.error && <ErrorDisplay error={state.error} onClose={() => actions.clearError()} />}
 
       {/* Dev-only DOM Test Panel */}
       {showDevPanel && (
