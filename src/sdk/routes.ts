@@ -439,6 +439,29 @@ const contract = {
       })),
     })),
 
+  adminMaintenance: oc
+    .route({
+      method: 'POST',
+      path: '/admin/maintenance',
+      tags: ['Admin'],
+      summary: 'Run periodic maintenance cleanup tasks',
+      description:
+        'Cleans up orphaned CosmosDB containers, QA simulations not linked to existing runs, and orphaned blob storage files. Idempotent and safe to run repeatedly. Requires super user role.',
+    })
+    .output(
+      z.object({
+        cosmos_containers_deleted: z.number(),
+        orphaned_qa_simulations_deleted: z.number(),
+        orphaned_blob_dirs_deleted: z.number(),
+        errors: z.array(
+          z.object({
+            type: z.string(),
+            detail: z.string(),
+          }),
+        ),
+      }),
+    ),
+
   // ============================================================================
   // CONNECTION ROUTES - App and website connection management
   // ============================================================================
