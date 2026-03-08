@@ -1,22 +1,12 @@
 import { sdk } from '../sdk';
-import type { ToolResponse } from '../types/toolMessages';
+import type { WidgetEvent, WidgetCommand } from '../sdk/schema';
 import { sessionManager } from './SessionManager';
 
 export type WebSocketStatus = 'disconnected' | 'connecting' | 'connected' | 'registered' | 'error';
 
-export interface WebSocketMessage {
-  jsonrpc?: string;
-  method?: string;
-  params?: Record<string, unknown>;
-  result?: unknown;
-  stateVersion?: number;
-  error?: { code: number; message: string };
-  id?: string | number;
-}
-
 export interface WebSocketClientCallbacks {
   onStatusChange?: (status: WebSocketStatus) => void;
-  onMessage?: (message: WebSocketMessage) => void;
+  onMessage?: (event: WidgetEvent) => void;
   onError?: (error: Error) => void;
 }
 
@@ -32,6 +22,7 @@ export class StreamClient {
   private reconnectDelay = 1000;
   private readonly maxReconnectDelay = 30000;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private config?: { mtxId?: string; mtxKey?: string; mtxAgent?: number; mtxApp?: number };
 
   private constructor() {}
 
@@ -58,7 +49,7 @@ export class StreamClient {
     return this.status === 'registered';
   }
 
-  async connect(chatId: string): Promise<void> {
+  async connect(chatId: string, config?: { mtxId?: string; mtxKey?: string; mtxAgent?: number; mtxApp?: number }): Promise<void> {
     if (this.isIntentionallyDisconnected) {
       this.isIntentionallyDisconnected = false;
     }
@@ -74,6 +65,9 @@ export class StreamClient {
     }
 
     this.chatId = chatId;
+    if (config) {
+      this.config = config;
+    }
     this.setStatus('connecting');
 
     const tabId = sessionManager.getTabId();
@@ -81,8 +75,18 @@ export class StreamClient {
     const signal = this.abortController.signal;
 
     try {
+      // Build the stream input with auth params
+      const streamInput: Record<string, unknown> = { chat_id: chatId, tab_id: tabId ?? undefined };
+      if (this.config?.mtxId && this.config?.mtxKey) {
+        streamInput.marketrix_id = this.config.mtxId;
+        streamInput.marketrix_key = this.config.mtxKey;
+      } else if (this.config?.mtxAgent && this.config?.mtxApp) {
+        streamInput.agent_id = this.config.mtxAgent;
+        streamInput.connection_id = this.config.mtxApp;
+      }
+
       // Call the oRPC streaming endpoint — returns an async iterator for eventIterator outputs
-      const iterator = await sdk.widgetStream({ chat_id: chatId, tab_id: tabId ?? undefined }, { signal });
+      const iterator = await sdk.widgetStream(streamInput as any, { signal });
 
       this.setStatus('connected');
       this.reconnectAttempts = 0;
@@ -101,14 +105,14 @@ export class StreamClient {
   }
 
   private async consumeEvents(
-    iterator: AsyncIterable<{ jsonrpc?: string; method: string; id?: string; params?: Record<string, unknown> }>,
+    iterator: AsyncIterable<WidgetEvent>,
     chatId: string,
   ): Promise<void> {
     try {
       for await (const event of iterator) {
         // Stop processing if the chat has changed (a reconnect replaced us)
         if (this.chatId !== chatId) break;
-        this.handleMessage(event as WebSocketMessage);
+        this.handleMessage(event);
       }
     } catch (error) {
       if (!this.isIntentionallyDisconnected) {
@@ -134,7 +138,7 @@ export class StreamClient {
     this.chatId = null;
   }
 
-  send(message: WebSocketMessage | ToolResponse<unknown>): void {
+  send(command: WidgetCommand): void {
     if (!this.chatId) {
       console.warn('[StreamClient] Cannot send: no active chat');
       return;
@@ -144,7 +148,7 @@ export class StreamClient {
     sdk
       .widgetMessage({
         chat_id: this.chatId,
-        message: message as Record<string, unknown>,
+        command,
       })
       .catch(err => {
         console.error('[StreamClient] Send failed:', err);
@@ -163,16 +167,16 @@ export class StreamClient {
     this.callbacks.forEach(cb => cb.onError?.(error));
   }
 
-  private handleMessage(message: WebSocketMessage): void {
-    if (message.method === 'widget/registered') {
-      if (message.params?.chat_id === this.chatId) {
+  private handleMessage(event: WidgetEvent): void {
+    if (event.type === 'registered') {
+      if (event.chat_id === this.chatId) {
         console.log('[StreamClient] Successfully registered with server');
         this.setStatus('registered');
         this.reconnectAttempts = 0;
         this.reconnectDelay = 1000;
       }
     }
-    this.callbacks.forEach(cb => cb.onMessage?.(message));
+    this.callbacks.forEach(cb => cb.onMessage?.(event));
   }
 
   private scheduleReconnect(): void {
@@ -188,7 +192,7 @@ export class StreamClient {
     );
     this.reconnectTimer = setTimeout(() => {
       if (!this.isIntentionallyDisconnected && this.chatId) {
-        this.connect(this.chatId).catch(console.error);
+        this.connect(this.chatId, this.config).catch(console.error);
       }
     }, delay);
   }
