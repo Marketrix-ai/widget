@@ -11,6 +11,7 @@ interface DiagnosticModalProps {
     connectionStatus: string;
     connectionId: number | undefined; // mtxApp
     agentId: number | undefined; // mtxAgent
+    version: string;
   };
 }
 
@@ -44,7 +45,9 @@ export const DiagnosticModal: React.FC<DiagnosticModalProps> = ({ isOpen, onClos
       <div className='bg-white rounded-md shadow-lg border border-gray-200 w-64' onClick={e => e.stopPropagation()}>
         {/* Header */}
         <div className='flex items-center justify-between px-3 py-1.5 border-b border-gray-100'>
-          <span className='text-[11px] font-semibold text-gray-700 flex-1 text-center'>Widget Details</span>
+          <span className='text-[11px] font-semibold text-gray-700 flex-1 text-center'>
+            Widget v{diagnosticData.version}
+          </span>
           <button onClick={onClose} className='text-gray-400 hover:text-gray-600 -mr-1'>
             <FiX className='w-3 h-3' />
           </button>

@@ -3,6 +3,7 @@ import { IoChatbubbleEllipsesOutline } from 'react-icons/io5';
 import { LuMousePointerClick } from 'react-icons/lu';
 import { SiTicktick } from 'react-icons/si';
 
+import packageJson from '../../../package.json';
 import MarketrixLogo from '../../assets/marktrix-footer.png';
 import { useWidget } from '../../hooks/useWidget';
 import type { InstructionType } from '../../sdk';
@@ -145,6 +146,7 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({
           })(),
           connectionId: configManager.getConfig()?.mtxApp,
           agentId: configManager.getConfig()?.mtxAgent,
+          version: packageJson.version,
         }}
       />
     </div>
