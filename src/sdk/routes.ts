@@ -416,6 +416,8 @@ const contract = {
       users_workos_created: z.number(),
       tenant_plans_synced: z.number(),
       trials_provisioned: z.number(),
+      stripe_plans_refreshed: z.number(),
+      workos_profiles_synced: z.number(),
       errors: z.array(z.object({
         type: z.string(),
         id: z.number(),
