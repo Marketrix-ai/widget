@@ -78,6 +78,9 @@ import {
   MigrationPrepareSchema,
   MigrationRunSchema,
   MindMapSchema,
+  PreviewVideoChatEntitySchema,
+  PreviewVideoChatSearchSchema,
+  PreviewVideoChatUpsertSchema,
   PlanCatalogSchema,
   PlanInfoSchema,
   PortalSessionSchema,
@@ -184,6 +187,17 @@ const contract = {
       description: 'Returns widget key and widget ID. No auth. Values are stored in backend env only.',
     })
     .output(PublicConfigSchema),
+
+  /** No-op for client-side auth callback registration; prevents 404 when SDK merges client with setOnAuthError. */
+  setOnAuthError: oc
+    .route({
+      method: 'POST',
+      path: '/setOnAuthError',
+      summary: 'No-op (client-only callback registration)',
+      description: 'Client registers 401 callback locally; this endpoint exists to avoid 404.',
+    })
+    .input(z.any().optional())
+    .output(z.void()),
 
   // ============================================================================
   // AUTHENTICATION ROUTES - User authentication and authorization
@@ -603,6 +617,36 @@ const contract = {
       }),
     )
     .output(UserQuotaSchema),
+
+  previewVideoChatUpsert: oc
+    .route({
+      method: 'POST',
+      path: '/preview-video-chat',
+      summary: 'Create or update preview video chat record',
+      description: 'Persists guide preview chat content, history, output, and related simulation metadata',
+    })
+    .input(PreviewVideoChatUpsertSchema)
+    .output(PreviewVideoChatEntitySchema),
+
+  previewVideoChatSearch: oc
+    .route({
+      method: 'GET',
+      path: '/preview-video-chat',
+      summary: 'Search preview video chat records',
+      description: 'Returns preview chat records filtered by chat_id, agent_id, or simulation_id for current tenant',
+    })
+    .input(PreviewVideoChatSearchSchema)
+    .output(z.array(PreviewVideoChatEntitySchema)),
+
+  previewVideoChatGet: oc
+    .route({
+      method: 'GET',
+      path: '/preview-video-chat/{id}',
+      summary: 'Get preview video chat record by ID',
+      description: 'Returns a single preview chat record for current tenant',
+    })
+    .input(z.object({ id: z.coerce.number() }))
+    .output(PreviewVideoChatEntitySchema.nullable()),
 
   chatTell: oc
     .route({
@@ -1056,6 +1100,7 @@ const contract = {
         connection_id: z.coerce.number().optional(),
         agent_id: z.coerce.number().optional(),
         pinned: z.any().transform(val => (String(val) === 'true' ? true : String(val) === 'false' ? false : undefined)),
+        source: z.enum(['direct', 'qa']).optional(),
         limit: z.coerce.number().optional(),
         offset: z.coerce.number().optional(),
       }),
@@ -1096,6 +1141,22 @@ const contract = {
       description: 'Modifies simulation parameters and updates execution state',
     })
     .input(SimulationUpdateSchema.extend({ simulation_id: z.coerce.number() }))
+    .output(SimulationEntitySchema),
+
+  simulationAssignAgents: oc
+    .route({
+      method: 'PUT',
+      tags: ['Simulation'],
+      path: '/simulation/{simulation_id}/agents',
+      summary: 'Assign agents to a simulation',
+      description: 'Sets which agents use this simulation for their knowledge. Triggers learning on affected agents.',
+    })
+    .input(
+      z.object({
+        simulation_id: z.coerce.number(),
+        agent_ids: z.array(z.number()),
+      }),
+    )
     .output(SimulationEntitySchema),
 
   simulationProgress: oc
@@ -1384,6 +1445,22 @@ const contract = {
       description: 'Returns complete knowledge document information and content',
     })
     .input(z.object({ id: z.coerce.number() }))
+    .output(KnowledgeEntitySchema),
+
+  knowledgeAssignAgents: oc
+    .route({
+      method: 'PUT',
+      tags: ['Knowledge'],
+      path: '/knowledge/{knowledge_id}/agents',
+      summary: 'Assign agents to a knowledge item',
+      description: 'Sets which agents use this knowledge item. Triggers learning on affected agents.',
+    })
+    .input(
+      z.object({
+        knowledge_id: z.coerce.number(),
+        agent_ids: z.array(z.number()),
+      }),
+    )
     .output(KnowledgeEntitySchema),
 
   knowledgeDelete: oc

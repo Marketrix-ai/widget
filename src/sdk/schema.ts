@@ -319,6 +319,15 @@ export const MeetingJoinRequestSchema = z.object({
   token: z.string().optional(),
 });
 
+/**
+ * Lightweight agent badge for embedding in other entities
+ */
+export const AgentBadgeSchema = z.object({
+  id: z.number(),
+  agent_name: z.string(),
+  image_url: z.string().nullish(),
+});
+
 // ============================================================================
 // KNOWLEDGE SCHEMAS - Knowledge base and document management
 // ============================================================================
@@ -334,6 +343,7 @@ export const KnowledgeEntitySchema = BaseEntitySchema.extend({
   file_type: KnowledgeTypeSchema,
   file_url: z.string(),
   source_url: z.string().nullish(), // Original URL for URL-based documents
+  agents: z.array(AgentBadgeSchema).optional(),
 });
 
 // ============================================================================
@@ -793,9 +803,11 @@ export const SimulationEntitySchema = BaseEntitySchema.extend({
   instructions: z.string().nullish(),
   num_steps: z.number().int().nonnegative(),
   pinned: z.boolean().optional(),
+  source: z.enum(['direct', 'qa']).optional(),
   agent_name: z.string().nullish(),
   graph_index_id: z.string().nullable().optional(),
   progress_log: z.array(SimulationProgressEntrySchema).optional(),
+  agents: z.array(AgentBadgeSchema).optional(),
 });
 
 /**
@@ -1977,3 +1989,51 @@ export type QADocumentListItemData = QADocumentData & {
 export type QARunData = z.infer<typeof QARunEntitySchema>;
 export type QATestCaseData = z.infer<typeof QATestCaseEntitySchema>;
 export type QADocumentProcessingResponseData = z.infer<typeof QADocumentProcessingResponseSchema>;
+
+// ---------------------------------------------------------------------------
+// Preview Video Chat
+// ---------------------------------------------------------------------------
+
+export const PreviewVideoChatMessageSchema = z.object({
+  role: z.enum(['user', 'assistant', 'system']),
+  content: z.string(),
+  timestamp: z.string().optional(),
+});
+
+export const PreviewVideoChatEntitySchema = BaseEntitySchema.extend({
+  tenant_id: z.number(),
+  connection_id: z.number().nullable().optional(),
+  agent_id: z.number().nullable().optional(),
+  simulation_id: z.number().nullable().optional(),
+  chat_id: z.string(),
+  chat_content: z.string().nullable().optional(),
+  chat_history: z.array(PreviewVideoChatMessageSchema).nullable().optional(),
+  chat_output: z.string().nullable().optional(),
+  preview_video_url: z.string().nullable().optional(),
+  metadata: z.record(z.string(), z.unknown()).nullable().optional(),
+});
+
+export const PreviewVideoChatUpsertSchema = z.object({
+  connection_id: z.number().nullable().optional(),
+  agent_id: z.number().nullable().optional(),
+  simulation_id: z.number().nullable().optional(),
+  chat_id: z.string(),
+  chat_content: z.string().nullable().optional(),
+  chat_history: z.array(PreviewVideoChatMessageSchema).nullable().optional(),
+  chat_output: z.string().nullable().optional(),
+  preview_video_url: z.string().nullable().optional(),
+  metadata: z.record(z.string(), z.unknown()).nullable().optional(),
+});
+
+export const PreviewVideoChatSearchSchema = z.object({
+  chat_id: z.string().optional(),
+  agent_id: z.number().optional(),
+  simulation_id: z.number().optional(),
+  limit: z.number().optional(),
+  offset: z.number().optional(),
+});
+
+export type PreviewVideoChatMessageData = z.infer<typeof PreviewVideoChatMessageSchema>;
+export type PreviewVideoChatData = z.infer<typeof PreviewVideoChatEntitySchema>;
+export type PreviewVideoChatUpsertData = z.infer<typeof PreviewVideoChatUpsertSchema>;
+export type PreviewVideoChatSearchData = z.infer<typeof PreviewVideoChatSearchSchema>;
