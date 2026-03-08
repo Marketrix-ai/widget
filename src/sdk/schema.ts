@@ -1446,6 +1446,9 @@ export const WidgetCommandSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('ping') }),
 ]);
 
+export type WidgetEvent = z.infer<typeof WidgetEventSchema>;
+export type WidgetCommand = z.infer<typeof WidgetCommandSchema>;
+
 // ============================================================================
 // ACTIVITY LOG SCHEMAS - System activity tracking and auditing
 // ============================================================================
