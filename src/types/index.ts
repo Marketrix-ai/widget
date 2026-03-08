@@ -118,6 +118,7 @@ export interface SendMessageRequest {
   mtxKey?: string;
   connection_id?: number;
   question?: string;
+  requestId?: string;
 }
 
 export interface SendMessageResponse {

@@ -19,9 +19,12 @@ permissions:
   actions: read
 
 jobs:
-  deploy:
+  prepare:
     runs-on: ubuntu-latest
-    environment: ${{ inputs.environment }}
+    outputs:
+      tag: ${{ steps.resolve.outputs.tag }}
+      commit: ${{ steps.resolve.outputs.commit }}
+      created: ${{ steps.resolve.outputs.created }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -34,7 +37,6 @@ jobs:
           if git rev-parse "refs/tags/$TAG" >/dev/null 2>&1; then
             echo "Tag '$TAG' exists, deploying that version"
             COMMIT=$(git rev-list -n1 "refs/tags/$TAG")
-            git checkout "$TAG"
             echo "created=false" >> $GITHUB_OUTPUT
           else
             echo "Tag '$TAG' is new, will create on current commit"
@@ -61,6 +63,40 @@ jobs:
           git tag "${{ inputs.tag }}"
           git push origin "${{ inputs.tag }}"
 
+  publish-npm:
+    needs: prepare
+    if: inputs.environment == 'prod'
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.prepare.outputs.tag }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+
+      - name: Install and build
+        run: |
+          npm ci
+          npm run build
+
+      - name: Publish to npm
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  deploy-aks:
+    needs: prepare
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.prepare.outputs.tag }}
+
       - uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
@@ -68,7 +104,7 @@ jobs:
       - name: Build and Push Image
         run: |
           az acr login --name marketrix
-          TAG="${{ steps.resolve.outputs.tag }}"
+          TAG="${{ needs.prepare.outputs.tag }}"
           TAG="${TAG#v}"
           IMG="marketrix.azurecr.io/${{ inputs.environment }}/widget:${TAG}"
           docker build -t $IMG -f Dockerfile .
@@ -86,7 +122,7 @@ jobs:
       - name: Deploy to AKS
         run: |
           NS="${{ inputs.environment }}"
-          TAG="${{ steps.resolve.outputs.tag }}"
+          TAG="${{ needs.prepare.outputs.tag }}"
           TAG="${TAG#v}"
           cd k8s/overlays/$NS
           kustomize build . \
