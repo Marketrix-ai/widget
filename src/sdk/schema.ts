@@ -1364,35 +1364,6 @@ export const TourEntitySchema = BaseEntitySchema.extend({
 });
 
 // ============================================================================
-// CHAT SCHEMAS - AI-powered chat and conversation management
-// ============================================================================
-
-/**
- * Chat request schema
- * Requires either: marketrix_id + marketrix_key OR agent_id + connection_id
- */
-export const ChatRequestSchema = z
-  .object({
-    marketrix_id: z.string().optional(),
-    marketrix_key: z.string().optional(),
-    agent_id: z.number().positive().optional(),
-    connection_id: z.number().positive().optional(),
-    chat_id: z.string().optional(), // Optional since it comes from path params in some routes
-    content: z.string(),
-  })
-  .refine(data => (data.marketrix_id && data.marketrix_key) ?? (data.agent_id && data.connection_id), {
-    message: 'Either marketrix_id + marketrix_key or both agent_id + connection_id must be provided',
-  });
-
-/**
- * Chat response entity schema
- */
-export const ChatResponseSchema = z.object({
-  text: z.string(),
-  task_id: z.string().optional(),
-});
-
-// ============================================================================
 // WIDGET STREAM SCHEMAS - Typed events and commands for widget communication
 // ============================================================================
 
@@ -1960,9 +1931,7 @@ export type SimulationStatusResponseData = z.infer<typeof SimulationStatusRespon
 export type BrowserSessionResponseData = z.infer<typeof BrowserSessionResponseSchema>;
 export type TaskStatus = z.infer<typeof TaskStatusSchema>;
 export type FileUploadResponse = z.infer<typeof FileUploadResponseSchema>;
-export type ChatRequest = z.infer<typeof ChatRequestSchema>;
 export type AgentVideoGenerateRequest = z.infer<typeof AgentVideoGenerateRequestSchema>;
-export type ChatResponseData = z.infer<typeof ChatResponseSchema>;
 export type MailOptionsData = z.infer<typeof MailOptionsDataSchema>;
 export type MeetingEmailData = z.infer<typeof MeetingEmailDataSchema>;
 
