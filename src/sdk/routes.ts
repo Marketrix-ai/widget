@@ -399,6 +399,30 @@ const contract = {
     .output(z.void()),
 
   // ============================================================================
+  // ADMIN ROUTES - System administration and maintenance
+  // ============================================================================
+
+  // Admin
+  adminReconcile: oc
+    .route({
+      method: 'POST',
+      path: '/admin/reconcile',
+      tags: ['Admin'],
+      summary: 'Reconcile Stripe customers and WorkOS users',
+      description: 'Backfills missing Stripe customer IDs for tenants and real WorkOS user IDs for users. Idempotent and safe to run repeatedly. Requires super user role.',
+    })
+    .output(z.object({
+      tenants_stripe_created: z.number(),
+      users_workos_created: z.number(),
+      tenant_plans_synced: z.number(),
+      errors: z.array(z.object({
+        type: z.string(),
+        id: z.number(),
+        error: z.string(),
+      })),
+    })),
+
+  // ============================================================================
   // CONNECTION ROUTES - App and website connection management
   // ============================================================================
 
