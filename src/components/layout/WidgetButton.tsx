@@ -43,6 +43,7 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const [wrapperSize, setWrapperSize] = useState({ w: 56, h: 56 });
   const [, setViewportTick] = useState(0);
+  const transitionEndRef = useRef<(() => void) | null>(null);
   // All drag state lives in refs to avoid React rerenders during drag.
   const dragRef = useRef<{
     pointerId: number;
@@ -220,34 +221,64 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
     }
   };
 
-  const snapToCornerInstant = (nextCorner: WidgetPosition) => {
+  const SNAP_DURATION_MS = 600;
+  const SNAP_EASING = 'cubic-bezier(0.16, 1, 0.3, 1)';
+
+  const commitPositionAfterAnimation = useCallback(
+    (nextCorner: WidgetPosition, wrapper: HTMLDivElement) => {
+      if (transitionEndRef.current) return;
+      let finished = false;
+      const done = () => {
+        if (finished) return;
+        finished = true;
+        transitionEndRef.current = null;
+        wrapper.style.transition = 'none';
+        wrapper.style.willChange = '';
+        onPositionChange(nextCorner);
+        setIsDragging(false);
+        requestAnimationFrame(() => {
+          if (wrapperRef.current) {
+            wrapperRef.current.style.transition = '';
+          }
+        });
+      };
+      transitionEndRef.current = done;
+      const fallbackTimer = window.setTimeout(done, SNAP_DURATION_MS + 50);
+      wrapper.addEventListener('transitionend', function onEnd(e: TransitionEvent) {
+        if (e.target !== wrapper || e.propertyName !== 'left') return;
+        window.clearTimeout(fallbackTimer);
+        wrapper.removeEventListener('transitionend', onEnd);
+        done();
+      });
+    },
+    [onPositionChange],
+  );
+
+  const snapToCorner = (nextCorner: WidgetPosition, fromX: number, fromY: number) => {
+    if (!wrapperRef.current || !pixelPositionStyle) {
+      resetDragStyles();
+      onPositionChange(nextCorner);
+      setIsDragging(false);
+      return;
+    }
+    if (rafRef.current !== null) {
+      window.cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
     const wrapper = wrapperRef.current;
-    if (wrapper) {
-      if (rafRef.current !== null) {
-        window.cancelAnimationFrame(rafRef.current);
-        rafRef.current = null;
-      }
-      const newAnchor = getAnchorTopLeft(
-        nextCorner,
-        window.innerWidth,
-        window.innerHeight,
-        wrapperSize.w,
-        wrapperSize.h,
-      );
-      wrapper.style.transition = 'none';
-      wrapper.style.transform = 'none';
-      wrapper.style.willChange = '';
+    const oldAnchor = getAnchorTopLeft(position, vw, vh, wrapperSize.w, wrapperSize.h);
+    const newAnchor = getAnchorTopLeft(nextCorner, vw, vh, wrapperSize.w, wrapperSize.h);
+    wrapper.style.transition = 'none';
+    wrapper.style.transform = 'none';
+    wrapper.style.willChange = 'left, top';
+    wrapper.style.left = `${oldAnchor.x + fromX}px`;
+    wrapper.style.top = `${oldAnchor.y + fromY}px`;
+    requestAnimationFrame(() => {
+      wrapper.style.transition = `left ${SNAP_DURATION_MS}ms ${SNAP_EASING}, top ${SNAP_DURATION_MS}ms ${SNAP_EASING}`;
       wrapper.style.left = `${newAnchor.x}px`;
       wrapper.style.top = `${newAnchor.y}px`;
-    }
-    onPositionChange(nextCorner);
-    setIsDragging(false);
-    requestAnimationFrame(() => {
-      if (wrapperRef.current) {
-        wrapperRef.current.style.transition = '';
-        wrapperRef.current.style.transform = '';
-      }
     });
+    commitPositionAfterAnimation(nextCorner, wrapper);
   };
 
   const onPointerUp = (event: React.PointerEvent<HTMLButtonElement>) => {
@@ -274,8 +305,8 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
         nextCorner = position;
       }
 
-      snapToCornerInstant(nextCorner);
-      suppressUntilRef.current = Date.now() + 50;
+      snapToCorner(nextCorner, drag.lastX, drag.lastY);
+      suppressUntilRef.current = Date.now() + 600;
       dragRef.current = null;
       event.currentTarget.releasePointerCapture(event.pointerId);
       return;
