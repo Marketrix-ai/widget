@@ -53,8 +53,6 @@ interface WidgetContextType {
   };
 }
 
-// Tool call types are now imported from toolMessages.ts
-
 const WidgetContext = createContext<WidgetContextType | undefined>(undefined);
 
 interface WidgetProviderProps {
