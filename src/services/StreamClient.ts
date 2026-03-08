@@ -1,5 +1,5 @@
 import { sdk } from '../sdk';
-import type { WidgetEvent, WidgetCommand } from '../sdk/schema';
+import type { WidgetCommand, WidgetEvent } from '../sdk/schema';
 import { sessionManager } from './SessionManager';
 
 export type WebSocketStatus = 'disconnected' | 'connecting' | 'connected' | 'registered' | 'error';
@@ -49,7 +49,10 @@ export class StreamClient {
     return this.status === 'registered';
   }
 
-  async connect(chatId: string, config?: { mtxId?: string; mtxKey?: string; mtxAgent?: number; mtxApp?: number }): Promise<void> {
+  async connect(
+    chatId: string,
+    config?: { mtxId?: string; mtxKey?: string; mtxAgent?: number; mtxApp?: number },
+  ): Promise<void> {
     if (this.isIntentionallyDisconnected) {
       this.isIntentionallyDisconnected = false;
     }
@@ -104,10 +107,7 @@ export class StreamClient {
     }
   }
 
-  private async consumeEvents(
-    iterator: AsyncIterable<WidgetEvent>,
-    chatId: string,
-  ): Promise<void> {
+  private async consumeEvents(iterator: AsyncIterable<WidgetEvent>, chatId: string): Promise<void> {
     try {
       for await (const event of iterator) {
         // Stop processing if the chat has changed (a reconnect replaced us)
