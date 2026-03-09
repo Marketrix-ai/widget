@@ -107,7 +107,7 @@ jobs:
           TAG="${{ needs.prepare.outputs.tag }}"
           TAG="${TAG#v}"
           IMG="marketrix.azurecr.io/${{ inputs.environment }}/widget:${TAG}"
-          docker build -t $IMG -f Dockerfile .
+          docker build -t $IMG -f Dockerfile --build-arg BUILD_COMMIT=${{ github.sha }} .
           docker push $IMG
           docker tag $IMG "marketrix.azurecr.io/${{ inputs.environment }}/widget:latest"
           docker push "marketrix.azurecr.io/${{ inputs.environment }}/widget:latest"
