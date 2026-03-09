@@ -158,43 +158,7 @@ export const MessageList = ({
       });
     }
 
-    return [
-      {
-        id: 'show-add-product',
-        text: 'Show me how to add a new product',
-        icon: <LuMousePointerClick className='w-6 h-6' />,
-        type: 'show' as const,
-        isShow: true,
-      },
-      {
-        id: 'show-login',
-        text: 'Show me how to login',
-        icon: <LuMousePointerClick className='w-6 h-6' />,
-        type: 'show' as const,
-        isShow: true,
-      },
-      {
-        id: 'do-login',
-        text: 'Do the login process for me',
-        icon: <SiTicktick className='w-4 h-4' />,
-        type: 'do' as const,
-        isShow: false,
-      },
-      {
-        id: 'show-revenue',
-        text: 'Show me the revenue metrics',
-        icon: <LuMousePointerClick className='w-6 h-6' />,
-        type: 'show' as const,
-        isShow: true,
-      },
-      {
-        id: 'tell-conversion-rate',
-        text: 'What does my conversion rate mean and how can I improve it?',
-        icon: <IoChatbubbleEllipsesOutline className='w-5 h-5' />,
-        type: 'tell' as const,
-        isShow: false,
-      },
-    ];
+    return [];
   };
 
   const suggestedActions = getSuggestedActions();
