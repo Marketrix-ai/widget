@@ -3,7 +3,7 @@ import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from
 import MarketrixIcon from '../../assets/marketrix-icon.svg';
 import { useWidget } from '../../hooks/useWidget';
 import type { MarketrixConfig, WidgetPosition } from '../../types';
-import { addOpacity, darkenColor, getContrastingColor } from '../../utils/format';
+import { darkenColor, getContrastingColor } from '../../utils/format';
 import { getAnchorTopLeft, getNearestCornerByTranslation, getPositionClasses } from '../../utils/widgetPositioning';
 import { Button } from '../base/Button';
 
@@ -25,7 +25,7 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
   onClick,
   onStopTask,
   isOpen,
-  isMinimized = false,
+  isMinimized: _isMinimized = false,
   isLoading = false,
   isTaskRunning = false,
   hasError = false,
@@ -38,7 +38,6 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
   const activityRingClass = hasError
     ? 'marketrix-widget-button-error-activity-ring'
     : 'marketrix-widget-button-processing-activity-ring';
-  const [showWelcomeText, setShowWelcomeText] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const [wrapperSize, setWrapperSize] = useState({ w: 56, h: 56 });
@@ -61,24 +60,6 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
 
   const { config: widgetConfig, isPreviewMode } = useWidget({ config });
   const activityRingRadius = Math.max(6, Math.min(22, Number.parseFloat(widgetConfig.widget_border_radius) || 12));
-
-  useEffect(() => {
-    setShowWelcomeText(false);
-    if (isMinimized) return;
-    if (widgetConfig.widget_appearance !== 'default') return;
-
-    let welcomeTimer: ReturnType<typeof setTimeout> | null = null;
-    const buttonTimer = setTimeout(() => {
-      welcomeTimer = setTimeout(() => {
-        setShowWelcomeText(true);
-      }, 2000);
-    }, 100);
-
-    return () => {
-      clearTimeout(buttonTimer);
-      if (welcomeTimer !== null) clearTimeout(welcomeTimer);
-    };
-  }, [widgetConfig.widget_appearance, isMinimized]);
 
   // Cleanup RAF on unmount
   useEffect(() => {
@@ -175,7 +156,6 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
     if (!drag.dragging && Math.hypot(dx, dy) > DRAG_THRESHOLD_PX) {
       drag.dragging = true;
       setIsDragging(true);
-      setShowWelcomeText(false);
       velocityHistoryRef.current = [];
       lastVelocitySampleRef.current = 0;
       if (wrapperRef.current) {
@@ -329,7 +309,7 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
   return (
     <div
       ref={wrapperRef}
-      className={`${positionClass} ${pixelPositionStyle ? '' : effectivePositionClasses} ${isDragging ? '' : 'transition-transform duration-300 ease-in-out'} ${showWelcomeText && !isOpen ? (effectivePosition.includes('left') ? 'transform translate-x-64' : 'transform -translate-x-64') : ''}`}
+      className={`${positionClass} ${pixelPositionStyle ? '' : effectivePositionClasses} ${isDragging ? '' : 'transition-transform duration-300 ease-in-out'}`}
       style={{
         zIndex,
         pointerEvents: 'auto',
@@ -467,87 +447,10 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
         </Button>
       </div>
 
-      {/* Welcome Text */}
-      {!isOpen && showWelcomeText && widgetConfig.widget_appearance === 'default' && (
-        <div
-          className={`absolute ${effectivePosition.includes('left') ? 'right-16' : 'left-16'} bottom-0 px-4 py-3 text-sm rounded-lg shadow-lg w-64 ${effectivePosition.includes('left') ? 'animate-slide-in-right' : 'animate-slide-in-left'} cursor-pointer`}
-          style={{
-            backgroundColor: '#ffffff',
-            backgroundImage: 'none',
-            color: widgetConfig.widget_text_color,
-            borderColor: widgetConfig.widget_border_color,
-            borderWidth: '1px',
-            borderStyle: 'solid',
-          }}
-          onClick={onClick}
-        >
-          <div className='flex gap-2'>
-            {effectivePosition.includes('left') && (
-              <Button
-                type='button'
-                variant='ghost'
-                size='sm'
-                onClick={e => {
-                  e.stopPropagation();
-                  setShowWelcomeText(false);
-                }}
-                className='flex-shrink-0 w-4 h-4 min-w-0 p-0 flex align-top justify-start rounded-full hover:bg-gray-100 transition-colors duration-200'
-                aria-label='Close welcome message'
-              >
-                <svg
-                  className='w-full h-full text-gray-500 border-2 border-gray-500 rounded-full p-0.1'
-                  fill='none'
-                  stroke='currentColor'
-                  viewBox='0 0 24 24'
-                >
-                  <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M6 18L18 6M6 6l12 12' />
-                </svg>
-              </Button>
-            )}
-
-            <div className='flex-1'>
-              <div className='font-medium'>{widgetConfig.widget_greeting}</div>
-              <div style={{ color: addOpacity(widgetConfig.widget_text_color, 0.7) }}>{widgetConfig.widget_body}</div>
-            </div>
-
-            {effectivePosition.includes('right') && (
-              <Button
-                type='button'
-                variant='ghost'
-                size='sm'
-                onClick={e => {
-                  e.stopPropagation();
-                  setShowWelcomeText(false);
-                }}
-                className='flex-shrink-0 w-4 h-4 min-w-0 p-0 flex align-top justify-start rounded-full hover:bg-gray-100 transition-colors duration-200'
-                aria-label='Close welcome message'
-              >
-                <svg
-                  className='w-full h-full text-gray-500 border-2 border-gray-500 rounded-full p-0.1'
-                  fill='none'
-                  stroke='currentColor'
-                  viewBox='0 0 24 24'
-                >
-                  <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M6 18L18 6M6 6l12 12' />
-                </svg>
-              </Button>
-            )}
-          </div>
-          <div
-            className={`absolute bottom-0 ${effectivePosition.includes('left') ? 'left-full' : 'right-full'} transform translate-y-1/2 w-0 h-0 border-t-4 border-b-4`}
-            style={{
-              [effectivePosition.includes('left') ? 'borderLeftColor' : 'borderRightColor']:
-                widgetConfig.widget_background_color,
-              [effectivePosition.includes('left') ? 'borderRightColor' : 'borderLeftColor']: 'transparent',
-              borderTopColor: 'transparent',
-              borderBottomColor: 'transparent',
-            }}
-          />
-        </div>
-      )}
+      {/* Welcome text shown as GreetingToast in MarketrixWidget */}
 
       {/* Tooltip */}
-      {!isOpen && (!showWelcomeText || widgetConfig.widget_appearance === 'compact') && (
+      {!isOpen && (
         <div
           className={`absolute bottom-16 ${effectivePosition.includes('left') ? 'left-0' : 'right-0'} mb-2 px-3 py-2 text-sm rounded-lg shadow-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200`}
           style={{

@@ -10,6 +10,7 @@ import { addOpacity } from '../utils/format';
 import { WidgetButton } from './layout/WidgetButton';
 import { MessengerShell } from './navigation/MessengerShell';
 import { ErrorDisplay } from './ui/ErrorDisplay';
+import { GreetingToast } from './ui/GreetingToast';
 
 // Lazy load the dev panel (only in development)
 const DomTestPanel = lazy(() => import('./dev/DomTestPanel'));
@@ -52,6 +53,7 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
   const [_isScreenSharing, setIsScreenSharing] = useState(false);
   const [showDevPanel, setShowDevPanel] = useState(false);
   const isDevBuild = import.meta.env.DEV;
+  const [showGreeting, setShowGreeting] = useState(false);
 
   const {
     state,
@@ -116,6 +118,16 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
     localStorage.setItem(positionStorageKey, fallback);
     setWidgetPosition(fallback);
   }, [isPreviewMode, positionStorageKey, settings.widget_position]);
+
+  // Show greeting toast after delay when widget is closed
+  useEffect(() => {
+    if (state.isOpen || isPreviewMode || settings.widget_appearance !== 'default') {
+      setShowGreeting(false);
+      return;
+    }
+    const timer = setTimeout(() => setShowGreeting(true), 2000);
+    return () => clearTimeout(timer);
+  }, [state.isOpen, isPreviewMode, settings.widget_appearance]);
 
   const handlePositionChange = (position: WidgetPosition) => {
     setWidgetPosition(position);
@@ -230,6 +242,14 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
           onClose={() => actions.clearError()}
           onRetry={() => actions.clearError()}
           position={widgetPosition}
+        />
+      )}
+
+      {showGreeting && !state.error && settings.widget_greeting && (
+        <GreetingToast
+          greeting={settings.widget_greeting}
+          body={settings.widget_body}
+          onClose={() => setShowGreeting(false)}
         />
       )}
 
