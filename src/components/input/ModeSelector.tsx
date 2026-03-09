@@ -141,6 +141,8 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({
           connectionId: configManager.getConfig()?.mtxApp,
           agentId: configManager.getConfig()?.mtxAgent,
           version: packageJson.version,
+          // eslint-disable-next-line no-undef
+          build: typeof __BUILD_COMMIT__ !== 'undefined' ? __BUILD_COMMIT__ : 'dev',
         }}
       />
     </div>

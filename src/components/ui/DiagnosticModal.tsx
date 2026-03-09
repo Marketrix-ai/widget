@@ -15,6 +15,7 @@ interface DiagnosticModalProps {
     connectionId: number | undefined; // mtxApp
     agentId: number | undefined; // mtxAgent
     version: string;
+    build: string;
   };
 }
 
@@ -53,7 +54,8 @@ export const DiagnosticModal: React.FC<DiagnosticModalProps> = ({ isOpen, onClos
         {/* Header */}
         <div className='flex items-center justify-between px-3 py-1.5 border-b border-gray-100'>
           <span className='text-[11px] font-semibold text-gray-700 flex-1 text-center'>
-            Widget v{diagnosticData.version}
+            Widget v{diagnosticData.version} (
+            {diagnosticData.build === 'dev' ? 'dev' : diagnosticData.build.slice(0, 7)})
           </span>
           <Button
             type='button'
