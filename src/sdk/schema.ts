@@ -1415,6 +1415,20 @@ export const WidgetCommandSchema = z.discriminatedUnion('type', [
     state_version: z.number().optional(),
   }),
   z.object({ type: z.literal('ping') }),
+  z.object({
+    type: z.literal('rrweb/metadata'),
+    session_id: z.string(),
+    marketrix_chat_id: z.string(),
+    connection_id: z.number(),
+    url: z.string().optional(),
+    user_agent: z.string().optional(),
+    timestamp: z.number().optional(),
+  }),
+  z.object({
+    type: z.literal('rrweb/events'),
+    session_id: z.string(),
+    events: z.array(z.unknown()),
+  }),
 ]);
 
 export type WidgetEvent = z.infer<typeof WidgetEventSchema>;
