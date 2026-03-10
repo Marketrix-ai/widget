@@ -27,7 +27,7 @@ declare global {
     domService?: unknown;
     toolExecutionService?: unknown;
     chatService?: unknown;
-    WebSocketClient?: unknown;
+    StreamClient?: unknown;
     devTools?: unknown;
     devTestService?: unknown;
   }

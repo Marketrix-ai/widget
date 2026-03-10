@@ -5,7 +5,7 @@ import { MarketrixApiService } from '../services/ApiService';
 import { chatService, createAgentMessage, createUserMessage } from '../services/ChatService';
 import { configManager } from '../services/ConfigManager';
 import { sessionManager } from '../services/SessionManager';
-import { StreamClient, type WebSocketStatus } from '../services/StreamClient';
+import { StreamClient, type StreamStatus } from '../services/StreamClient';
 import { toolExecutionService } from '../services/ToolService';
 import type { ChatMessage, InstructionType, TaskProgress, WidgetState } from '../types';
 import { BROWSER_TOOLS } from '../types/browserTools';
@@ -215,7 +215,7 @@ export const WidgetProvider: React.FC<WidgetProviderProps> = ({ children, previe
 
     const wsClient = StreamClient.getInstance();
 
-    const handleStatusChange = (status: WebSocketStatus) => {
+    const handleStatusChange = (status: StreamStatus) => {
       setState(prev => ({ ...prev, agentAvailable: status === 'registered' }));
     };
 

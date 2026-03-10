@@ -4,23 +4,24 @@
  * This file defines the Marketrix API contract, using oRPC for type safety and documentation.
  * It includes all endpoints grouped by functionality, with useful descriptions.
  *
- * Route Categories:
+ * Route Categories (code name → user-facing name):
  * - Root: System health and index endpoints
  * - Auth: User authentication and OAuth
- * - User: User account management and operations
- * - Tenant: Organization and workspace management
- * - Agent: AI agent creation, management, and operations
- * - Meeting: Video meeting scheduling, joining, and management
- * - Chat: AI-powered chat and conversation management
+ * - User: User account management
+ * - Workspace: Organization and workspace management
+ * - Agent: AI agent creation and management
+ * - Application: Application management
  * - Knowledge: Knowledge base and document management
- * - Integration: Third-party integrations (e.g., Slack, widgets)
- * - Connection: External service connection management
- * - Simulation: Application simulation and testing
- * - Tour: Interactive tour and guidance system
+ * - Simulation: Simulation runs and results
+ * - QA: QA Flows, runs, and test cases
+ * - Widget: Widget configuration
+ * - Connector: Automation triggers (user-facing: "Connectors")
+ * - Chat: AI-powered chat and conversation management
+ * - Tour: Guide system (user-facing: "Guides")
  * - Activity Log: System activity tracking and auditing
  * - App Config: In-app configuration management
- * - TaskPilot: AI prompt and automation management
- * - Rule: Business rule and automation rule management
+ * - TaskPilot: AI prompt management
+ * - Rule: Business rule management
  * - Migration: Database migration and system updates
  * - File: File upload and management
  *
@@ -47,15 +48,15 @@ import {
   AgentVideoGenerateRequestSchema,
   AppEventSchema,
   AppEventScopeSchema,
+  ApplicationCreateSchema,
+  ApplicationEntitySchema,
+  ApplicationTypeSchema,
+  ApplicationUpdateSchema,
   BatchUserCreateResultSchema,
   BatchUserCreateSchema,
   BrowserConfigSchema,
   BrowserTypeSchema,
   CheckoutSessionSchema,
-  ConnectionCreateSchema,
-  ConnectionEntitySchema,
-  ConnectionTypeSchema,
-  ConnectionUpdateSchema,
   ConnectorEntitySchema,
   ConnectorSearchSchema,
   ConnectorUpsertSchema,
@@ -65,17 +66,8 @@ import {
   FileUploadResponseSchema,
   HealthResponseSchema,
   IndexResponseSchema,
-  IntegrationCreateSchema,
-  IntegrationEntitySchema,
-  IntegrationTypeSchema,
-  IntegrationUpdateSchema,
-  IntegrationWithAgentSchema,
   KnowledgeEntitySchema,
   KnowledgeTypeSchema,
-  MeetingCreateSchema,
-  MeetingEntitySchema,
-  MeetingJoinRequestSchema,
-  MeetingUpdateSchema,
   MigrationPrepareSchema,
   MigrationRunSchema,
   MindMapSchema,
@@ -86,16 +78,16 @@ import {
   PreviewVideoChatSearchSchema,
   PreviewVideoChatUpsertSchema,
   PublicConfigSchema,
-  QADocumentCreateSchema,
-  QADocumentEntitySchema,
-  QADocumentProcessingResponseSchema,
-  QADocumentStatusSchema,
+  QAFlowCreateSchema,
+  QAFlowEntitySchema,
+  QAFlowProcessingResponseSchema,
+  QAFlowStatusSchema,
   QAHealingAttemptEntrySchema,
   QARunEntitySchema,
   QATestCaseEntitySchema,
   QAVersionHistoryEntrySchema,
-  RrwebSessionEntitySchema,
-  RrwebSessionUpsertSchema,
+  SessionEntitySchema,
+  SessionUpsertSchema,
   SimulationAnswerSchema,
   SimulationCreateSchema,
   SimulationEntitySchema,
@@ -113,10 +105,6 @@ import {
   StripePricingSchema,
   StripeTrialSchema,
   SubscriptionUsageSchema,
-  TenantCreateSchema,
-  TenantEntitySchema,
-  TenantUpdateSchema,
-  TokenSchema,
   TourEntitySchema,
   TourStepSchema,
   TrialSubscriptionSchema,
@@ -127,8 +115,18 @@ import {
   UserQuotaSchema,
   UserUpdateSchema,
   WidgetCommandSchema,
+  WidgetCreateSchema,
+  WidgetEntitySchema,
   WidgetEventSchema,
   WidgetSettingsDataSchema,
+  WidgetTypeSchema,
+  WidgetUpdateSchema,
+  WidgetWithAgentSchema,
+  WorkspaceCreateSchema,
+  WorkspaceEntitySchema,
+  WorkspaceMemberEntitySchema,
+  WorkspaceMemberRoleSchema,
+  WorkspaceUpdateSchema,
 } from './schema';
 
 // Main contract with all routes
@@ -211,18 +209,26 @@ const contract = {
       method: 'GET',
       tags: ['Auth'],
       path: '/auth/me',
-      summary: 'Get current authenticated user and tenant information',
-      description: 'Returns user profile and tenant data based on session cookie',
+      summary: 'Get current authenticated user and workspace information',
+      description: 'Returns user profile and workspace data based on session cookie',
     })
     .output(
       z.object({
         user: UserEntitySchema,
-        tenant: TenantEntitySchema.nullable(),
+        workspace: WorkspaceEntitySchema.nullable(),
+        workspaces: z.array(
+          z.object({
+            id: z.number(),
+            name: z.string(),
+            slug: z.string(),
+            role: z.enum(['owner', 'member']),
+          }),
+        ),
       }),
     ),
 
   // ============================================================================
-  // ONBOARDING ROUTES - User and tenant onboarding
+  // ONBOARDING ROUTES - User and workspace onboarding
   // ============================================================================
 
   onboard: oc
@@ -231,7 +237,7 @@ const contract = {
       tags: ['Onboarding'],
       path: '/onboard',
       summary: 'Complete user onboarding in one atomic operation',
-      description: 'Creates tenant, updates user status, and invites team members',
+      description: 'Creates workspace, updates user status, and invites team members',
     })
     .input(
       z.object({
@@ -245,130 +251,32 @@ const contract = {
     )
     .output(
       z.object({
-        tenant: TenantEntitySchema,
+        workspace: WorkspaceEntitySchema,
       }),
     ),
 
   // ============================================================================
-  // MEETING ROUTES - Video meeting management and operations
+  // WORKSPACE ROUTES - Organization and workspace management
   // ============================================================================
 
-  meetingCreate: oc
+  workspaceCreate: oc
     .route({
       method: 'POST',
-      tags: ['Meeting'],
-      path: '/meeting',
-      summary: 'Create a new video meeting session',
-      description: 'Creates meeting room with specified settings and returns meeting details',
+      tags: ['Workspace'],
+      path: '/workspaces',
+      summary: 'Create a new workspace',
+      description: 'Creates new workspace with specified settings and returns workspace entity',
     })
-    .input(MeetingCreateSchema)
-    .output(MeetingEntitySchema),
+    .input(WorkspaceCreateSchema)
+    .output(WorkspaceEntitySchema),
 
-  meetingSearch: oc
+  workspaceSearch: oc
     .route({
       method: 'GET',
-      tags: ['Meeting'],
-      path: '/meeting',
-      summary: 'Search and filter meetings by various criteria',
-      description: 'Returns list of meetings matching search parameters (tenant, client, user)',
-    })
-    .input(
-      z.object({
-        tenant_id: z.coerce.number().optional(),
-        client_id: z.coerce.number().optional(),
-        user_id: z.coerce.number().optional(),
-      }),
-    )
-    .output(z.array(MeetingEntitySchema)),
-
-  meetingCount: oc
-    .route({
-      method: 'GET',
-      tags: ['Meeting'],
-      path: '/meeting/count',
-      summary: 'Get total count of meetings for a tenant',
-      description: 'Returns number of meetings associated with specified tenant',
-    })
-    .input(z.object({ tenant_id: z.coerce.number().optional() }))
-    .output(z.number()),
-
-  meetingGet: oc
-    .route({
-      method: 'GET',
-      tags: ['Meeting'],
-      path: '/meeting/{meeting_id}',
-      summary: 'Get specific meeting details by ID',
-      description: 'Returns complete meeting information including participants and settings',
-    })
-    .input(z.object({ meeting_id: z.string() }))
-    .output(MeetingEntitySchema),
-
-  meetingUpdate: oc
-    .route({
-      method: 'PUT',
-      tags: ['Meeting'],
-      path: '/meeting/{meeting_id}',
-      summary: 'Update meeting settings and configuration',
-      description: 'Modifies meeting properties like title, duration, or participant settings',
-    })
-    .input(MeetingUpdateSchema.extend({ meeting_id: z.string() }))
-    .output(MeetingEntitySchema),
-
-  meetingDelete: oc
-    .route({
-      method: 'DELETE',
-      tags: ['Meeting'],
-      path: '/meeting/{meeting_id}',
-      summary: 'Delete a meeting and clean up associated resources',
-      description: 'Removes meeting from system and cancels any scheduled sessions',
-    })
-    .input(z.object({ meeting_id: z.string() }))
-    .output(z.void()),
-
-  meetingJoin: oc
-    .route({
-      method: 'POST',
-      tags: ['Meeting'],
-      path: '/meeting/{meeting_id}/join',
-      summary: 'Join an existing meeting session',
-      description: 'Authenticates user and provides meeting access credentials',
-    })
-    .input(MeetingJoinRequestSchema.extend({ meeting_id: z.string() }))
-    .output(TokenSchema),
-
-  meetingEnd: oc
-    .route({
-      method: 'POST',
-      tags: ['Meeting'],
-      path: '/meeting/{meeting_id}/end',
-      summary: 'End an active meeting session',
-      description: 'Terminates meeting and updates participant status',
-    })
-    .input(z.object({ meeting_id: z.string() }))
-    .output(z.void()),
-
-  // ============================================================================
-  // TENANT ROUTES - Organization and workspace management
-  // ============================================================================
-
-  tenantCreate: oc
-    .route({
-      method: 'POST',
-      tags: ['Tenant'],
-      path: '/tenant',
-      summary: 'Create a new tenant organization',
-      description: 'Creates new tenant with specified settings and returns tenant entity',
-    })
-    .input(TenantCreateSchema)
-    .output(TenantEntitySchema),
-
-  tenantSearch: oc
-    .route({
-      method: 'GET',
-      tags: ['Tenant'],
-      path: '/tenant',
-      summary: 'Search and filter tenants by various criteria',
-      description: 'Returns list of tenants matching search parameters (name, domain, email, etc.)',
+      tags: ['Workspace'],
+      path: '/workspaces',
+      summary: 'Search and filter workspaces by various criteria',
+      description: 'Returns list of workspaces matching search parameters (name, domain, email, etc.)',
     })
     .input(
       z.object({
@@ -376,44 +284,100 @@ const contract = {
         domain: z.string().optional(),
         email: z.string().email().optional(),
         app_id: z.coerce.number().optional(),
-        tenant_id: z.coerce.number().optional(),
+        workspace_id: z.coerce.number().optional(),
         user_id: z.coerce.number().optional(),
       }),
     )
-    .output(z.array(TenantEntitySchema)),
+    .output(z.array(WorkspaceEntitySchema)),
 
-  tenantGet: oc
+  workspaceGet: oc
     .route({
       method: 'GET',
-      tags: ['Tenant'],
-      path: '/tenant/{tenant_id}',
-      summary: 'Get specific tenant details by ID',
-      description: 'Returns complete tenant information including settings and configuration',
+      tags: ['Workspace'],
+      path: '/workspaces/{slug}',
+      summary: 'Get specific workspace details by slug',
+      description: 'Returns complete workspace information including settings and configuration',
     })
-    .input(z.object({ tenant_id: z.coerce.number() }))
-    .output(TenantEntitySchema),
+    .input(z.object({ slug: z.string() }))
+    .output(WorkspaceEntitySchema),
 
-  tenantUpdate: oc
+  workspaceUpdate: oc
     .route({
       method: 'PUT',
-      tags: ['Tenant'],
-      path: '/tenant/{tenant_id}',
-      summary: 'Update tenant settings and configuration',
-      description: 'Modifies tenant properties like name, domain, or feature settings',
+      tags: ['Workspace'],
+      path: '/workspaces/{slug}',
+      summary: 'Update workspace settings and configuration',
+      description: 'Modifies workspace properties like name, domain, or feature settings',
     })
-    .input(TenantUpdateSchema.extend({ tenant_id: z.coerce.number() }))
-    .output(TenantEntitySchema),
+    .input(WorkspaceUpdateSchema.extend({ slug: z.string() }))
+    .output(WorkspaceEntitySchema),
 
-  tenantDelete: oc
+  workspaceDelete: oc
     .route({
       method: 'DELETE',
-      tags: ['Tenant'],
-      path: '/tenant/{tenant_id}',
-      summary: 'Delete tenant and all associated data',
-      description: 'Removes tenant from system and cleans up all related resources',
+      tags: ['Workspace'],
+      path: '/workspaces/{slug}',
+      summary: 'Delete workspace and all associated data',
+      description: 'Removes workspace from system and cleans up all related resources',
     })
-    .input(z.object({ tenant_id: z.coerce.number() }))
+    .input(z.object({ slug: z.string() }))
     .output(z.void()),
+
+  // ── Workspace Members ───────────────────────────────────────────────
+  workspaceMemberList: oc
+    .route({
+      method: 'GET',
+      tags: ['Workspace'],
+      path: '/workspaces/{slug}/members',
+      summary: 'List workspace members',
+    })
+    .input(z.object({ slug: z.string() }))
+    .output(
+      z.array(
+        WorkspaceMemberEntitySchema.extend({
+          user: UserEntitySchema.pick({ id: true, email: true, first_name: true, last_name: true, image_url: true }),
+        }),
+      ),
+    ),
+
+  workspaceMemberAdd: oc
+    .route({
+      method: 'POST',
+      tags: ['Workspace'],
+      path: '/workspaces/{slug}/members',
+      summary: 'Add member to workspace',
+    })
+    .input(z.object({ slug: z.string(), email: z.string().email(), role: WorkspaceMemberRoleSchema.default('member') }))
+    .output(WorkspaceMemberEntitySchema),
+
+  workspaceMemberRemove: oc
+    .route({
+      method: 'DELETE',
+      tags: ['Workspace'],
+      path: '/workspaces/{slug}/members/{user_id}',
+      summary: 'Remove member from workspace',
+    })
+    .input(z.object({ slug: z.string(), user_id: z.number() }))
+    .output(z.object({ success: z.boolean() })),
+
+  workspaceMemberUpdateRole: oc
+    .route({
+      method: 'PATCH',
+      tags: ['Workspace'],
+      path: '/workspaces/{slug}/members/{user_id}',
+      summary: 'Update member role',
+    })
+    .input(z.object({ slug: z.string(), user_id: z.number(), role: WorkspaceMemberRoleSchema }))
+    .output(WorkspaceMemberEntitySchema),
+
+  workspaceListForUser: oc
+    .route({
+      method: 'GET',
+      tags: ['Workspace'],
+      path: '/users/me/workspaces',
+      summary: 'List workspaces for current user',
+    })
+    .output(z.array(WorkspaceEntitySchema.extend({ role: WorkspaceMemberRoleSchema }))),
 
   // ============================================================================
   // ADMIN ROUTES - System administration and maintenance
@@ -427,13 +391,13 @@ const contract = {
       tags: ['Admin'],
       summary: 'Reconcile Stripe customers and WorkOS users',
       description:
-        'Backfills missing Stripe customer IDs for tenants and real WorkOS user IDs for users. Idempotent and safe to run repeatedly. Requires super user role.',
+        'Backfills missing Stripe customer IDs for workspaces and real WorkOS user IDs for users. Idempotent and safe to run repeatedly. Requires super user role.',
     })
     .output(
       z.object({
-        tenants_stripe_created: z.number(),
+        workspaces_stripe_created: z.number(),
         users_workos_created: z.number(),
-        tenant_plans_synced: z.number(),
+        workspace_plans_synced: z.number(),
         trials_provisioned: z.number(),
         stripe_plans_refreshed: z.number(),
         workos_profiles_synced: z.number(),
@@ -471,152 +435,152 @@ const contract = {
     ),
 
   // ============================================================================
-  // CONNECTION ROUTES - App and website connection management
+  // APPLICATION ROUTES - App and website management
   // ============================================================================
 
-  connectionCreate: oc
+  applicationCreate: oc
     .route({
       method: 'POST',
-      tags: ['Connection'],
-      path: '/connections',
+      tags: ['Application'],
+      path: '/applications',
       summary: 'Create a new application',
-      description: 'Creates a new application for a tenant',
+      description: 'Creates a new application for a workspace',
     })
-    .input(ConnectionCreateSchema)
-    .output(ConnectionEntitySchema),
+    .input(ApplicationCreateSchema)
+    .output(ApplicationEntitySchema),
 
-  connectionSearch: oc
+  applicationSearch: oc
     .route({
       method: 'GET',
-      path: '/connections',
-      summary: 'Search applications for tenant',
+      path: '/applications',
+      summary: 'Search applications for workspace',
       description:
-        'Returns applications for the authenticated tenant, optionally filtered by type, always includes integrations',
+        'Returns applications for the authenticated workspace, optionally filtered by type, always includes widgets',
     })
     .input(
       z.object({
-        type: ConnectionTypeSchema.optional(),
+        type: ApplicationTypeSchema.optional(),
       }),
     )
     .output(
       z.array(
-        ConnectionEntitySchema.extend({
-          integrations: z.array(IntegrationEntitySchema),
+        ApplicationEntitySchema.extend({
+          integrations: z.array(WidgetEntitySchema),
         }),
       ),
     ),
 
-  connectionGet: oc
+  applicationGet: oc
     .route({
       method: 'GET',
-      tags: ['Connection'],
-      path: '/connections/{connection_id}',
+      tags: ['Application'],
+      path: '/applications/{application_id}',
       summary: 'Get application by ID',
-      description: 'Returns specific application details by ID, always includes integrations',
+      description: 'Returns specific application details by ID, always includes widgets',
     })
-    .input(z.object({ connection_id: z.coerce.number() }))
+    .input(z.object({ application_id: z.coerce.number() }))
     .output(
-      ConnectionEntitySchema.extend({
-        integrations: z.array(IntegrationEntitySchema),
+      ApplicationEntitySchema.extend({
+        integrations: z.array(WidgetEntitySchema),
       }),
     ),
 
-  connectionUpdate: oc
+  applicationUpdate: oc
     .route({
       method: 'PUT',
-      tags: ['Connection'],
-      path: '/connections/{connection_id}',
+      tags: ['Application'],
+      path: '/applications/{application_id}',
       summary: 'Update application',
       description: 'Updates application details and configuration',
     })
-    .input(ConnectionUpdateSchema.extend({ connection_id: z.coerce.number() }))
-    .output(ConnectionEntitySchema),
+    .input(ApplicationUpdateSchema.extend({ application_id: z.coerce.number() }))
+    .output(ApplicationEntitySchema),
 
-  connectionDelete: oc
+  applicationDelete: oc
     .route({
       method: 'DELETE',
-      tags: ['Connection'],
-      path: '/connections/{connection_id}',
+      tags: ['Application'],
+      path: '/applications/{application_id}',
       summary: 'Delete application',
-      description: 'Removes an application and all associated integrations',
+      description: 'Removes an application and all associated widgets',
     })
-    .input(z.object({ connection_id: z.coerce.number() }))
+    .input(z.object({ application_id: z.coerce.number() }))
     .output(z.void()),
 
   // ============================================================================
-  // INTEGRATION ROUTES - Widget, Slack, and other integration management
+  // WIDGET ROUTES - Widget, Slack, and other widget management
   // ============================================================================
 
-  integrationCreate: oc
+  widgetCreate: oc
     .route({
       method: 'POST',
-      tags: ['Integration'],
-      path: '/integration',
-      summary: 'Create a new widget integration',
-      description: 'Creates a new widget integration for an application',
+      tags: ['Widget'],
+      path: '/widgets',
+      summary: 'Create a new widget',
+      description: 'Creates a new widget for an application',
     })
-    .input(IntegrationCreateSchema)
-    .output(IntegrationEntitySchema),
+    .input(WidgetCreateSchema)
+    .output(WidgetEntitySchema),
 
-  integrationSearch: oc
+  widgetSearch: oc
     .route({
       method: 'GET',
-      tags: ['Integration'],
-      path: '/integration',
-      summary: 'Search integrations for tenant',
-      description: 'Search integrations by type, application, marketrix_id, or marketrix_key',
+      tags: ['Widget'],
+      path: '/widgets',
+      summary: 'Search widgets for workspace',
+      description: 'Search widgets by type, application, marketrix_id, or marketrix_key',
     })
     .input(
       z.object({
-        type: IntegrationTypeSchema.optional(),
-        connection_id: z.coerce.number().optional(),
+        type: WidgetTypeSchema.optional(),
+        application_id: z.coerce.number().optional(),
         marketrix_id: z.string().optional(),
         marketrix_key: z.string().optional(),
       }),
     )
-    .output(z.array(IntegrationWithAgentSchema)),
+    .output(z.array(WidgetWithAgentSchema)),
 
-  integrationGetDefaults: oc
+  widgetGetDefaults: oc
     .route({
       method: 'GET',
-      path: '/integration/defaults/{type}',
-      summary: 'Get default settings for integration type',
-      description: 'Returns default settings for the specified integration type',
+      path: '/widgets/defaults/{type}',
+      summary: 'Get default settings for widget type',
+      description: 'Returns default settings for the specified widget type',
     })
-    .input(z.object({ type: IntegrationTypeSchema }))
+    .input(z.object({ type: WidgetTypeSchema }))
     .output(z.union([WidgetSettingsDataSchema, SlackSettingsDataSchema])),
 
-  integrationGet: oc
+  widgetGet: oc
     .route({
       method: 'GET',
-      tags: ['Integration'],
-      path: '/integration/{integration_id}',
-      summary: 'Get integration by ID',
-      description: 'Returns specific integration details by integration ID including snippet code',
+      tags: ['Widget'],
+      path: '/widgets/{widget_id}',
+      summary: 'Get widget by ID',
+      description: 'Returns specific widget details by widget ID including snippet code',
     })
-    .input(z.object({ integration_id: z.coerce.number() }))
-    .output(IntegrationEntitySchema),
+    .input(z.object({ widget_id: z.coerce.number() }))
+    .output(WidgetEntitySchema),
 
-  integrationUpdate: oc
+  widgetUpdate: oc
     .route({
       method: 'PUT',
-      tags: ['Integration'],
-      path: '/integration/{integration_id}',
-      summary: 'Update integration',
-      description: 'Updates integration settings and configuration',
+      tags: ['Widget'],
+      path: '/widgets/{widget_id}',
+      summary: 'Update widget',
+      description: 'Updates widget settings and configuration',
     })
-    .input(IntegrationUpdateSchema.extend({ integration_id: z.coerce.number() }))
-    .output(IntegrationEntitySchema),
+    .input(WidgetUpdateSchema.extend({ widget_id: z.coerce.number() }))
+    .output(WidgetEntitySchema),
 
-  integrationDelete: oc
+  widgetDelete: oc
     .route({
       method: 'DELETE',
-      tags: ['Integration'],
-      path: '/integration/{integration_id}',
-      summary: 'Delete integration',
-      description: 'Removes a widget integration from an application',
+      tags: ['Widget'],
+      path: '/widgets/{widget_id}',
+      summary: 'Delete widget',
+      description: 'Removes a widget from an application',
     })
-    .input(z.object({ integration_id: z.coerce.number() }))
+    .input(z.object({ widget_id: z.coerce.number() }))
     .output(z.void()),
 
   // ============================================================================
@@ -664,7 +628,7 @@ const contract = {
       method: 'GET',
       path: '/preview-video-chat',
       summary: 'Search preview video chat records',
-      description: 'Returns preview chat records filtered by chat_id, agent_id, or simulation_id for current tenant',
+      description: 'Returns preview chat records filtered by chat_id, agent_id, or simulation_id for current workspace',
     })
     .input(PreviewVideoChatSearchSchema)
     .output(z.array(PreviewVideoChatEntitySchema)),
@@ -674,7 +638,7 @@ const contract = {
       method: 'GET',
       path: '/preview-video-chat/{id}',
       summary: 'Get preview video chat record by ID',
-      description: 'Returns a single preview chat record for current tenant',
+      description: 'Returns a single preview chat record for current workspace',
     })
     .input(z.object({ id: z.coerce.number() }))
     .output(PreviewVideoChatEntitySchema.nullable()),
@@ -684,7 +648,7 @@ const contract = {
       method: 'POST',
       path: '/connector',
       summary: 'Create or update connector',
-      description: 'Stores provider credentials and API endpoint details for tenant connectors',
+      description: 'Stores provider credentials and API endpoint details for workspace connectors',
     })
     .input(ConnectorUpsertSchema)
     .output(ConnectorEntitySchema),
@@ -694,7 +658,7 @@ const contract = {
       method: 'GET',
       path: '/connector',
       summary: 'Search connectors',
-      description: 'Returns tenant connectors filtered by provider/status',
+      description: 'Returns workspace connectors filtered by provider/status',
     })
     .input(ConnectorSearchSchema)
     .output(z.array(ConnectorEntitySchema)),
@@ -704,7 +668,7 @@ const contract = {
       method: 'GET',
       path: '/connector/{id}',
       summary: 'Get connector by ID',
-      description: 'Returns a single tenant connector',
+      description: 'Returns a single workspace connector',
     })
     .input(z.object({ id: z.coerce.number() }))
     .output(ConnectorEntitySchema.nullable()),
@@ -714,7 +678,7 @@ const contract = {
       method: 'DELETE',
       path: '/connector/{id}',
       summary: 'Delete connector',
-      description: 'Deletes a connector for current tenant',
+      description: 'Deletes a connector for current workspace',
     })
     .input(z.object({ id: z.coerce.number() }))
     .output(z.void()),
@@ -727,12 +691,12 @@ const contract = {
       method: 'GET',
       tags: ['User'],
       path: '/user',
-      summary: 'Search and filter users by tenant',
-      description: 'Returns list of users associated with specified tenant',
+      summary: 'Search and filter users by workspace',
+      description: 'Returns list of users associated with specified workspace',
     })
     .input(
       z.object({
-        tenant_id: z.coerce.number().optional(),
+        workspace_id: z.coerce.number().optional(),
         status: EntityStatusSchema.optional(),
       }),
     )
@@ -823,14 +787,14 @@ const contract = {
       method: 'GET',
       tags: ['Agent'],
       path: '/agent',
-      summary: 'Search and filter agents by tenant or user',
+      summary: 'Search and filter agents by workspace or user',
       description: 'Returns list of agents matching search parameters',
     })
     .input(
       z.object({
-        tenant_id: z.coerce.number().optional(),
+        workspace_id: z.coerce.number().optional(),
         user_id: z.coerce.number().optional(),
-        connection_id: z.coerce.number().optional(),
+        application_id: z.coerce.number().optional(),
       }),
     )
     .output(z.array(AgentEntitySchema)),
@@ -933,13 +897,13 @@ const contract = {
       method: 'GET',
       path: '/log',
       summary: 'Search and filter activity logs',
-      description: 'Returns list of activity logs matching search parameters (tenant, type)',
+      description: 'Returns list of activity logs matching search parameters (workspace, type)',
     })
     .input(
       z.object({
-        tenant_id: z.coerce.number().optional(),
+        workspace_id: z.coerce.number().optional(),
         type: ActionLogTypeSchema.optional(),
-        connection_id: z.coerce.number().optional(),
+        application_id: z.coerce.number().optional(),
       }),
     )
     .output(z.array(ActionLogEntitySchema)),
@@ -953,12 +917,12 @@ const contract = {
       method: 'GET',
       tags: ['Tour'],
       path: '/tour/query',
-      summary: 'Get tour information based on question and tenant',
+      summary: 'Get tour information based on question and workspace',
       description: 'Returns relevant tour steps and guidance for user query',
     })
     .input(
       z.object({
-        connection_id: z.coerce.number().optional(),
+        application_id: z.coerce.number().optional(),
         question: z.string().min(1),
       }),
     )
@@ -969,13 +933,13 @@ const contract = {
       method: 'GET',
       tags: ['Tour'],
       path: '/tour',
-      summary: 'Search and filter tours by tenant',
-      description: 'Returns list of available tours for specified tenant',
+      summary: 'Search and filter tours by workspace',
+      description: 'Returns list of available tours for specified workspace',
     })
     .input(
       z.object({
-        tenant_id: z.coerce.number().optional(),
-        connection_id: z.coerce.number().optional(),
+        workspace_id: z.coerce.number().optional(),
+        application_id: z.coerce.number().optional(),
       }),
     )
     .output(z.array(TourEntitySchema)),
@@ -1025,12 +989,12 @@ const contract = {
       method: 'GET',
       tags: ['URL Guide'],
       path: '/url-guide',
-      summary: 'Search URL guides by integration',
-      description: 'Returns list of URL guides for specified integration',
+      summary: 'Search URL guides by widget',
+      description: 'Returns list of URL guides for specified widget',
     })
     .input(
       z.object({
-        integration_id: z.coerce.number(),
+        widget_id: z.coerce.number(),
       }),
     )
     .output(z.array(UrlGuideEntitySchema)),
@@ -1089,7 +1053,7 @@ const contract = {
     })
     .input(
       z.object({
-        integration_id: z.coerce.number(),
+        widget_id: z.coerce.number(),
         url: z.string(),
       }),
     )
@@ -1104,14 +1068,14 @@ const contract = {
       method: 'GET',
       tags: ['Simulation'],
       path: '/simulation',
-      summary: 'Search and filter simulations by tenant',
+      summary: 'Search and filter simulations by workspace',
       description:
-        'Returns list of simulations associated with specified tenant. Use connection_id, agent_id, or pinned to filter.',
+        'Returns list of simulations associated with specified workspace. Use application_id, agent_id, or pinned to filter.',
     })
     .input(
       z.object({
-        tenant_id: z.coerce.number().optional(),
-        connection_id: z.coerce.number().optional(),
+        workspace_id: z.coerce.number().optional(),
+        application_id: z.coerce.number().optional(),
         agent_id: z.coerce.number().optional(),
         pinned: z.any().transform(val => (String(val) === 'true' ? true : String(val) === 'false' ? false : undefined)),
         source: z.enum(['direct', 'qa']).optional(),
@@ -1130,7 +1094,7 @@ const contract = {
     })
     .input(
       z.object({
-        tenant_id: z.coerce.number().optional(),
+        workspace_id: z.coerce.number().optional(),
       }),
     )
     .output(z.array(SimulationLoggingUserSchema)),
@@ -1284,65 +1248,65 @@ const contract = {
     ),
 
   // ============================================================================
-  // RRWEB SESSION ROUTES - RRWeb session recording management
+  // SESSION ROUTES - Session recording management
   // ============================================================================
 
-  rrwebSessionUpsert: oc
+  sessionUpsert: oc
     .route({
       method: 'POST',
       tags: ['Session'],
-      path: '/rrweb-session',
-      summary: 'Create or update RRWeb session',
+      path: '/sessions',
+      summary: 'Create or update session',
       description: 'Creates a new session or updates an existing one',
     })
-    .input(RrwebSessionUpsertSchema)
-    .output(RrwebSessionEntitySchema),
+    .input(SessionUpsertSchema)
+    .output(SessionEntitySchema),
 
-  rrwebSessionGet: oc
+  sessionGet: oc
     .route({
       method: 'GET',
       tags: ['Session'],
-      path: '/rrweb-session/{session_id}',
-      summary: 'Get RRWeb session by session ID',
+      path: '/sessions/{session_id}',
+      summary: 'Get session by session ID',
       description: 'Retrieves a session by its session_id',
     })
     .input(z.object({ session_id: z.string() }))
-    .output(RrwebSessionEntitySchema.nullable()),
+    .output(SessionEntitySchema.nullable()),
 
-  rrwebSessionGetByChat: oc
+  sessionGetByChat: oc
     .route({
       method: 'GET',
       tags: ['Session'],
-      path: '/rrweb-session/chat/{marketrix_chat_id}',
-      summary: 'Get RRWeb sessions by marketrix chat ID',
+      path: '/sessions/chat/{marketrix_chat_id}',
+      summary: 'Get sessions by marketrix chat ID',
       description: 'Retrieves all sessions for a given marketrix_chat_id',
     })
     .input(z.object({ marketrix_chat_id: z.string() }))
-    .output(z.array(RrwebSessionEntitySchema)),
+    .output(z.array(SessionEntitySchema)),
 
-  rrwebSessionSearch: oc
+  sessionSearch: oc
     .route({
       method: 'GET',
       tags: ['Session'],
-      path: '/rrweb-session',
-      summary: 'Get all RRWeb sessions',
+      path: '/sessions',
+      summary: 'Get all sessions',
       description: 'Retrieves all sessions ordered by creation date, optionally filtered by application and date range',
     })
     .input(
       z.object({
-        connection_id: z.coerce.number().optional(),
+        application_id: z.coerce.number().optional(),
         start_date: z.string().optional(),
         end_date: z.string().optional(),
       }),
     )
-    .output(z.array(RrwebSessionEntitySchema)),
+    .output(z.array(SessionEntitySchema)),
 
-  rrwebSessionEvents: oc
+  sessionEvents: oc
     .route({
       method: 'GET',
       tags: ['Session'],
-      path: '/rrweb-session/{session_id}/events',
-      summary: 'Get RRWeb session events',
+      path: '/sessions/{session_id}/events',
+      summary: 'Get session events',
       description: 'Fetches all batches from folder, combines them in correct order, and returns events array',
     })
     .input(z.object({ session_id: z.string() }))
@@ -1365,7 +1329,7 @@ const contract = {
     })
     .input(
       z.object({
-        connection_id: z.number(),
+        application_id: z.number(),
         agent_id: z.number(),
         connection_url: z.string().nullish(),
       }),
@@ -1423,9 +1387,9 @@ const contract = {
     })
     .input(
       z.object({
-        tenant_id: z.coerce.number().optional(),
+        workspace_id: z.coerce.number().optional(),
         type: KnowledgeTypeSchema.optional(),
-        connection_id: z.coerce.number().optional(),
+        application_id: z.coerce.number().optional(),
       }),
     )
     .output(z.array(KnowledgeEntitySchema)),
@@ -1441,7 +1405,7 @@ const contract = {
     .input(
       z.object({
         file: z.custom<Express.Multer.File>().optional(),
-        connection_id: z.coerce.number(),
+        application_id: z.coerce.number(),
         document_url: z.string().url().optional(),
         document_name: z.string().optional(),
         video_url: z.string().url().optional(),
@@ -1503,7 +1467,7 @@ const contract = {
   // QA FLOW ROUTES - QA flow upload and test result management
   // ============================================================================
 
-  qaDocumentCreate: oc
+  qaFlowCreate: oc
     .route({
       method: 'POST',
       tags: ['QA'],
@@ -1511,10 +1475,10 @@ const contract = {
       summary: 'Upload QA flow (file or text)',
       description: 'Uploads a PDF/text file or text content for QA test generation',
     })
-    .input(QADocumentCreateSchema)
-    .output(QADocumentEntitySchema),
+    .input(QAFlowCreateSchema)
+    .output(QAFlowEntitySchema),
 
-  qaDocumentProcess: oc
+  qaFlowProcess: oc
     .route({
       method: 'POST',
       tags: ['QA'],
@@ -1524,9 +1488,9 @@ const contract = {
         'Starts async processing (returns 202). Poll GET /qa/document/:id for status and processing_step until completed/failed.',
     })
     .input(z.object({ id: z.coerce.number() }))
-    .output(z.object({ document: QADocumentEntitySchema })),
+    .output(z.object({ document: QAFlowEntitySchema })),
 
-  qaDocumentRefine: oc
+  qaFlowRefine: oc
     .route({
       method: 'POST',
       tags: ['QA'],
@@ -1540,9 +1504,9 @@ const contract = {
         refinementPrompt: z.string().min(5).max(2000),
       }),
     )
-    .output(QADocumentProcessingResponseSchema),
+    .output(QAFlowProcessingResponseSchema),
 
-  qaDocumentGet: oc
+  qaFlowGet: oc
     .route({
       method: 'GET',
       tags: ['QA'],
@@ -1551,9 +1515,9 @@ const contract = {
       description: 'Retrieves a QA flow by its ID',
     })
     .input(z.object({ id: z.coerce.number() }))
-    .output(QADocumentEntitySchema),
+    .output(QAFlowEntitySchema),
 
-  qaDocumentSearch: oc
+  qaFlowSearch: oc
     .route({
       method: 'GET',
       tags: ['QA'],
@@ -1563,13 +1527,13 @@ const contract = {
     })
     .input(
       z.object({
-        connection_id: z.coerce.number().optional(),
+        application_id: z.coerce.number().optional(),
       }),
     )
     .output(
       z.object({
         documents: z.array(
-          QADocumentEntitySchema.extend({
+          QAFlowEntitySchema.extend({
             run_count: z.number(),
             display_title: z.string(),
             total_failed: z.number(),
@@ -1596,7 +1560,7 @@ const contract = {
       }),
     ),
 
-  qaDocumentDelete: oc
+  qaFlowDelete: oc
     .route({
       method: 'DELETE',
       tags: ['QA'],
@@ -1607,7 +1571,7 @@ const contract = {
     .input(z.object({ id: z.coerce.number() }))
     .output(z.void()),
 
-  qaDocumentUpdate: oc
+  qaFlowUpdate: oc
     .route({
       method: 'PUT',
       tags: ['QA'],
@@ -1618,12 +1582,12 @@ const contract = {
     .input(
       z.object({
         id: z.coerce.number(),
-        status: QADocumentStatusSchema,
+        status: QAFlowStatusSchema,
       }),
     )
-    .output(QADocumentEntitySchema),
+    .output(QAFlowEntitySchema),
 
-  qaDocumentRuns: oc
+  qaFlowRuns: oc
     .route({
       method: 'GET',
       tags: ['QA'],
@@ -1668,7 +1632,7 @@ const contract = {
     .input(z.object({ id: z.coerce.number() }))
     .output(z.void()),
 
-  qaDocumentRun: oc
+  qaFlowRun: oc
     .route({
       method: 'POST',
       tags: ['QA'],
@@ -1715,7 +1679,7 @@ const contract = {
     .output(QATestCaseEntitySchema),
 
   // Execute all tests for a document (creates a run and executes; returns run + simulations)
-  qaDocumentExecuteTests: oc
+  qaFlowExecuteTests: oc
     .route({
       method: 'POST',
       tags: ['QA'],
@@ -2000,7 +1964,8 @@ const contract = {
       tags: ['Stripe'],
       path: '/stripe/trial',
       summary: 'Create a trial subscription',
-      description: 'Creates a trial subscription for the authenticated tenant. The trial period is 30 days by default.',
+      description:
+        'Creates a trial subscription for the authenticated workspace. The trial period is 30 days by default.',
     })
     .input(StripeTrialSchema)
     .output(TrialSubscriptionSchema),
@@ -2056,7 +2021,7 @@ const contract = {
       tags: ['Stripe'],
       path: '/stripe/plan',
       summary: 'Get current plan information',
-      description: 'Returns current subscription plan and usage information for authenticated tenant.',
+      description: 'Returns current subscription plan and usage information for authenticated workspace.',
     })
     .output(PlanInfoSchema),
 
@@ -2066,7 +2031,7 @@ const contract = {
       tags: ['Stripe'],
       path: '/stripe/usage',
       summary: 'Get current usage statistics',
-      description: 'Returns actual usage counts for agents, knowledge sources, meetings, storage, and team members.',
+      description: 'Returns actual usage counts for agents, knowledge sources, storage, and team members.',
     })
     .output(SubscriptionUsageSchema),
 
@@ -2122,7 +2087,7 @@ const contract = {
         marketrix_id: z.string().optional(),
         marketrix_key: z.string().optional(),
         agent_id: z.coerce.number().optional(),
-        connection_id: z.coerce.number().optional(),
+        application_id: z.coerce.number().optional(),
       }),
     )
     .output(eventIterator(WidgetEventSchema)),
@@ -2154,12 +2119,12 @@ const contract = {
       path: '/app/events',
       summary: 'SSE stream for real-time app dashboard events',
       description:
-        'Typed event stream delivering simulation, agent, QA, and user updates filtered by scope and connection.',
+        'Typed event stream delivering simulation, agent, QA, and user updates filtered by scope and application.',
     })
     .input(
       z.object({
         scopes: z.array(AppEventScopeSchema).min(1),
-        connection_id: z.coerce.number().optional(),
+        application_id: z.coerce.number().optional(),
       }),
     )
     .output(eventIterator(AppEventSchema)),

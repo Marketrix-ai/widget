@@ -236,7 +236,7 @@ export function initDevTools(): void {
   window.domService = domService;
   window.toolExecutionService = toolExecutionService;
   window.chatService = chatService;
-  window.WebSocketClient = StreamClient;
+  window.StreamClient = StreamClient;
 
   // Expose dev tools helper
   window.devTools = devTools;

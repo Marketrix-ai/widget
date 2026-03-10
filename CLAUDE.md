@@ -30,7 +30,7 @@ Embeddable support widget that customers integrate into their products. Communic
 
 ## Terminology
 
-The widget is the runtime component of what users call **User Support** in the dashboard. It connects to an **Application** (code: `connection`) and an **Agent**. See root `CLAUDE.md` glossary for full terminology.
+The widget is the runtime component of what users call **Widgets** in the dashboard. It connects to an **Application** (code: `connection`) and an **Agent**. See root `CLAUDE.md` glossary for full terminology.
 
 ## Conventions
 

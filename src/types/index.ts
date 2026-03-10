@@ -3,13 +3,13 @@ import type { InstructionType, WidgetSettingsData } from '../sdk';
 // Re-export SDK types for proper type usage
 export type {
   AgentData,
-  ConnectionData,
+  ApplicationData,
   InstructionType,
-  IntegrationData,
-  TenantData,
   UserData,
   WidgetChip,
+  WidgetData,
   WidgetSettingsData,
+  WorkspaceData,
 } from '../sdk';
 
 /**
@@ -29,7 +29,7 @@ export type {
  * - Z-index default: 40
  */
 export type MarketrixConfig = Partial<WidgetSettingsData> & {
-  // Core SDK fields (from IntegrationEntitySchema)
+  // Core SDK fields (from WidgetEntitySchema)
   // Either mtxId/mtxKey OR mtxApp/mtxAgent must be provided
   mtxId?: string; // maps to marketrix_id from SDK (production mode)
   mtxKey?: string; // maps to marketrix_key from SDK (production mode)
