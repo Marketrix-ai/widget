@@ -8,6 +8,7 @@ export interface WebSocketClientCallbacks {
   onStatusChange?: (status: WebSocketStatus) => void;
   onMessage?: (event: WidgetEvent) => void;
   onError?: (error: Error) => void;
+  onRegistered?: (connectionId: number | undefined) => void;
 }
 
 export class StreamClient {
@@ -174,6 +175,7 @@ export class StreamClient {
         this.setStatus('registered');
         this.reconnectAttempts = 0;
         this.reconnectDelay = 1000;
+        this.callbacks.forEach(cb => cb.onRegistered?.(event.connection_id));
       }
     }
     this.callbacks.forEach(cb => cb.onMessage?.(event));

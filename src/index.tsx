@@ -16,6 +16,7 @@ import { IntegrationService } from './services/IntegrationService';
 import { sessionManager } from './services/SessionManager';
 import { SessionRecorder } from './services/SessionRecorder';
 import { storageService } from './services/StorageService';
+import { StreamClient } from './services/StreamClient';
 import { WidgetValidationService } from './services/ValidationService';
 import type { AddWidgetConfig, MarketrixConfig, MarketrixWidgetProps } from './types';
 import {
@@ -213,49 +214,71 @@ async function initWidgetInternal(config: MarketrixConfig, container?: HTMLEleme
     const wsUrl = getEventsWebSocketUrl(apiHost);
     console.log('[Marketrix Widget] Using RRWeb server URL:', wsUrl);
 
-    const connectionId = finalConfig.mtxApp ?? config.mtxApp;
-    if (!connectionId) {
-      console.warn('[Marketrix Widget] ⚠️ No mtxApp (connectionId) configured - skipping session recording');
-      return;
-    }
-    sessionRecorder = new SessionRecorder(wsUrl, connectionId);
-    isRecordingInitialized = true;
-
     recordingAbortController = new AbortController();
 
-    // Start recording as soon as a chat_id is available.
-    // chat_id is created when the widget registers over websocket (WidgetContext mount).
-    // If a chat_id already exists in storage (returning user), start immediately.
-    const startRecordingLocal = () => {
-      if (!sessionRecorder || sessionRecorder.isActive()) return;
-      const recorder = sessionRecorder;
-      recordingStartPromise = recorder
-        .start()
-        .catch(error => {
-          if (sessionRecorder !== recorder) return;
-          console.error('[Marketrix Widget] ❌ Failed to start session recording:', error);
-          isRecordingInitialized = false;
-        })
-        .finally(() => {
-          if (sessionRecorder !== recorder) return;
-          recordingStartPromise = null;
-        });
+    const initRecorderWithConnectionId = (connId: number) => {
+      if (sessionRecorder && isRecordingInitialized) return; // Already initialized
+      sessionRecorder = new SessionRecorder(wsUrl, connId);
+      isRecordingInitialized = true;
+
+      // Start recording as soon as a chat_id is available.
+      // chat_id is created when the widget registers over the stream (WidgetContext mount).
+      // If a chat_id already exists in storage (returning user), start immediately.
+      const startRecordingLocal = () => {
+        if (!sessionRecorder || sessionRecorder.isActive()) return;
+        const recorder = sessionRecorder;
+        recordingStartPromise = recorder
+          .start()
+          .catch(error => {
+            if (sessionRecorder !== recorder) return;
+            console.error('[Marketrix Widget] ❌ Failed to start session recording:', error);
+            isRecordingInitialized = false;
+          })
+          .finally(() => {
+            if (sessionRecorder !== recorder) return;
+            recordingStartPromise = null;
+          });
+      };
+
+      const existingChatId = storageService.getChatId();
+      if (existingChatId) {
+        console.log('[Marketrix Widget] chat_id already in storage, starting recording immediately');
+        startRecordingLocal();
+      } else {
+        console.log('[Marketrix Widget] Waiting for chat_id before starting recording...');
+        window.addEventListener(
+          'marketrix:chatid',
+          () => {
+            console.log('[Marketrix Widget] chat_id created, starting recording');
+            startRecordingLocal();
+          },
+          { once: true, signal: recordingAbortController?.signal },
+        );
+      }
     };
 
-    const existingChatId = storageService.getChatId();
-    if (existingChatId) {
-      console.log('[Marketrix Widget] chat_id already in storage, starting recording immediately');
-      startRecordingLocal();
+    const connectionId = finalConfig.mtxApp ?? config.mtxApp;
+    if (connectionId) {
+      // connectionId available from config — start recording immediately
+      initRecorderWithConnectionId(connectionId);
     } else {
-      console.log('[Marketrix Widget] Waiting for chat_id before starting recording...');
-      window.addEventListener(
-        'marketrix:chatid',
-        () => {
-          console.log('[Marketrix Widget] chat_id created, starting recording');
-          startRecordingLocal();
-        },
-        { once: true, signal: recordingAbortController.signal },
+      // connectionId not in config — wait for it from the stream's registered event
+      console.log(
+        '[Marketrix Widget] No mtxApp (connectionId) in config, waiting for connection_id from stream registration...',
       );
+      const streamClient = StreamClient.getInstance();
+      const callbacks = {
+        onRegistered: (connId: number | undefined) => {
+          if (connId) {
+            console.log('[Marketrix Widget] Received connection_id from stream:', connId);
+            initRecorderWithConnectionId(connId);
+          } else {
+            console.warn('[Marketrix Widget] ⚠️ Stream registered without connection_id — cannot start recording');
+          }
+          streamClient.removeCallbacks(callbacks);
+        },
+      };
+      streamClient.addCallbacks(callbacks);
     }
   } catch (error) {
     console.error('[Marketrix Widget] Failed to initialize session recording:', error);

@@ -1369,7 +1369,7 @@ export const TourEntitySchema = BaseEntitySchema.extend({
 
 /** Server → Widget event (discriminated union on `type`) */
 export const WidgetEventSchema = z.discriminatedUnion('type', [
-  z.object({ type: z.literal('registered'), chat_id: z.string() }),
+  z.object({ type: z.literal('registered'), chat_id: z.string(), connection_id: z.number().optional() }),
   z.object({ type: z.literal('pong') }),
   z.object({
     type: z.literal('chat/response'),
