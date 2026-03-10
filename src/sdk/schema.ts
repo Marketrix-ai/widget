@@ -54,10 +54,12 @@ export const QATestStatusSchema = z.enum(['pending', 'running', 'completed', 'fa
 export const QARunStatusSchema = z.enum(['pending', 'running', 'completed', 'failed', 'cancelled']);
 export const MeetingStatusSchema = z.enum(['not_started', 'in_progress', 'ended', 'cancelled']);
 export const ChatRoleSchema = z.enum(['user', 'agent']);
+// 'taskpilot' is legacy (was used by playground) — kept for backward-compat with existing DB rows
 export const ChatSourceSchema = z.enum(['taskpilot', 'widget', 'app']);
 export const InstructionTypeSchema = z.enum(['tell', 'show', 'do']);
 export const ConnectionTypeSchema = z.enum(['app', 'website']);
 export const IntegrationTypeSchema = z.enum(['widget', 'slack']);
+export const ConnectorTypeSchema = z.enum(['timer', 'github', 'slack', 'teams', 'jira']);
 export const ActionLogTypeSchema = z.enum([
   'user_login',
   'url_visit',
@@ -111,6 +113,7 @@ export const HealthResponseSchema = z.object({
   timestamp: z.string(),
   service: z.string(),
   version: z.string(),
+  build: z.string(),
 });
 
 /**
@@ -119,6 +122,7 @@ export const HealthResponseSchema = z.object({
 export const IndexResponseSchema = z.object({
   name: z.string(),
   version: z.string(),
+  build: z.string(),
   status: z.string(),
   timestamp: z.string(),
 });
@@ -328,6 +332,8 @@ export const AgentBadgeSchema = z.object({
   image_url: z.string().nullish(),
 });
 
+export type AgentBadgeData = z.infer<typeof AgentBadgeSchema>;
+
 // ============================================================================
 // KNOWLEDGE SCHEMAS - Knowledge base and document management
 // ============================================================================
@@ -447,6 +453,7 @@ export const QAVersionHistoryEntrySchema = z.object({
   change_reason: z.string().nullable().optional(),
   changed_by: z.number().nullable().optional(),
   created_at: z.string(),
+  accepted: z.boolean().optional(),
 });
 
 export const QAHealingAttemptEntrySchema = z.object({
@@ -1145,32 +1152,6 @@ export const AgentVideoGenerateRequestSchema = z.object({
   prompt: z.string().optional(),
 });
 
-/**
- * Agent index callback request schema
- */
-export const AgentIndexCallbackRequestSchema = z
-  .object({
-    agent_id: z.coerce.number().positive('Agent ID must be a positive number'),
-    index_name: z.string(),
-    index_type: z.enum(['vector_index', 'graph_index'], {
-      message: 'Index type must be vector_index or graph_index' as const,
-    }),
-    status: z.enum(['success', 'failed'], { message: 'Status must be success or failed' }),
-    status_message: z.string().optional(),
-  })
-  .refine(data => data.status === 'failed' || data.index_name.length > 0, {
-    message: 'Index name is required when status is success',
-    path: ['index_name'],
-  });
-
-/**
- * Agent index callback response schema
- */
-export const AgentIndexCallbackResponseSchema = z.object({
-  success: z.boolean(),
-  message: z.string(),
-});
-
 // ============================================================================
 // CONNECTION SCHEMAS - Connection management (apps and websites)
 // ============================================================================
@@ -1364,6 +1345,35 @@ export const TourEntitySchema = BaseEntitySchema.extend({
 });
 
 // ============================================================================
+// CHAT SCHEMAS - AI-powered chat and conversation management
+// ============================================================================
+
+/**
+ * Chat request schema
+ * Requires either: marketrix_id + marketrix_key OR agent_id + connection_id
+ */
+export const ChatRequestSchema = z
+  .object({
+    marketrix_id: z.string().optional(),
+    marketrix_key: z.string().optional(),
+    agent_id: z.number().positive().optional(),
+    connection_id: z.number().positive().optional(),
+    chat_id: z.string().optional(), // Optional since it comes from path params in some routes
+    content: z.string(),
+  })
+  .refine(data => (data.marketrix_id && data.marketrix_key) ?? (data.agent_id && data.connection_id), {
+    message: 'Either marketrix_id + marketrix_key or both agent_id + connection_id must be provided',
+  });
+
+/**
+ * Chat response entity schema
+ */
+export const ChatResponseSchema = z.object({
+  text: z.string(),
+  task_id: z.string().optional(),
+});
+
+// ============================================================================
 // WIDGET STREAM SCHEMAS - Typed events and commands for widget communication
 // ============================================================================
 
@@ -1435,6 +1445,107 @@ export type WidgetEvent = z.infer<typeof WidgetEventSchema>;
 export type WidgetCommand = z.infer<typeof WidgetCommandSchema>;
 
 // ============================================================================
+// APP EVENTS - Real-time event stream for the dashboard app
+// ============================================================================
+
+export const AppEventScopeSchema = z.enum(['simulations', 'agents', 'qa', 'user', 'jobs']);
+
+export const AppEventSchema = z.discriminatedUnion('type', [
+  // Simulation events
+  z.object({
+    type: z.literal('simulation/updated'),
+    simulation_id: z.number(),
+    connection_id: z.number(),
+    status: z.string(),
+    step_label: z.string().optional(),
+  }),
+  z.object({
+    type: z.literal('simulation/created'),
+    simulation_id: z.number(),
+    connection_id: z.number(),
+  }),
+  z.object({
+    type: z.literal('simulation/deleted'),
+    simulation_id: z.number(),
+    connection_id: z.number(),
+  }),
+
+  // Agent events
+  z.object({
+    type: z.literal('agent/updated'),
+    agent_id: z.number(),
+    connection_id: z.number(),
+    status: z.string(),
+  }),
+  z.object({
+    type: z.literal('agent/created'),
+    agent_id: z.number(),
+    connection_id: z.number(),
+  }),
+  z.object({
+    type: z.literal('agent/deleted'),
+    agent_id: z.number(),
+    connection_id: z.number(),
+  }),
+
+  // QA events
+  z.object({
+    type: z.literal('qa-document/updated'),
+    document_id: z.number(),
+    connection_id: z.number(),
+    status: z.string(),
+    step_label: z.string().optional(),
+  }),
+  z.object({
+    type: z.literal('qa-run/updated'),
+    run_id: z.number(),
+    document_id: z.number(),
+    connection_id: z.number(),
+    status: z.string(),
+  }),
+  z.object({
+    type: z.literal('qa-test/updated'),
+    test_id: z.number(),
+    run_id: z.number(),
+    document_id: z.number(),
+    connection_id: z.number(),
+    status: z.string(),
+  }),
+
+  // User events
+  z.object({
+    type: z.literal('user/updated'),
+    user_id: z.number(),
+    tenant_id: z.number(),
+    status: z.string(),
+  }),
+
+  // Job lifecycle events (for long-running dashboard operations)
+  z.object({
+    type: z.literal('job/progress'),
+    job_id: z.string(),
+    connection_id: z.number(),
+    status: z.string(),
+    message: z.string().optional(),
+  }),
+  z.object({
+    type: z.literal('job/completed'),
+    job_id: z.string(),
+    connection_id: z.number(),
+    result: z.unknown().optional(),
+  }),
+  z.object({
+    type: z.literal('job/failed'),
+    job_id: z.string(),
+    connection_id: z.number(),
+    error: z.string(),
+  }),
+]);
+
+export type AppEvent = z.infer<typeof AppEventSchema>;
+export type AppEventScope = z.infer<typeof AppEventScopeSchema>;
+
+// ============================================================================
 // ACTIVITY LOG SCHEMAS - System activity tracking and auditing
 // ============================================================================
 
@@ -1495,6 +1606,51 @@ export const ChatEntitySchema = BaseEntitySchema.extend({
   role: ChatRoleSchema,
   source: ChatSourceSchema,
   message: z.string(),
+});
+
+// ============================================================================
+// CONNECTOR SCHEMAS - External service connectors for automations
+// ============================================================================
+
+/**
+ * Connector entity schema (per-tenant provider credentials/endpoints)
+ */
+export const ConnectorEntitySchema = BaseEntitySchema.extend({
+  tenant_id: z.number(),
+  provider: ConnectorTypeSchema,
+  name: z.string().min(1).max(120),
+  identifier: z.string().max(120).nullable().optional(),
+  api_endpoint: z.string().url().nullable().optional(),
+  api_token: z.string().nullable().optional(),
+  metadata: z.record(z.string(), z.unknown()).nullable().optional(),
+  is_active: z.boolean().default(true),
+  status: EntityStatusSchema.default('active'),
+});
+
+/**
+ * Upsert payload for connector
+ */
+export const ConnectorUpsertSchema = z.object({
+  id: z.coerce.number().optional(),
+  provider: ConnectorTypeSchema,
+  name: z.string().min(1).max(120),
+  identifier: z.string().max(120).nullable().optional(),
+  api_endpoint: z.string().url().nullable().optional(),
+  api_token: z.string().nullable().optional(),
+  metadata: z.record(z.string(), z.unknown()).nullable().optional(),
+  is_active: z.boolean().optional(),
+  status: EntityStatusSchema.optional(),
+});
+
+/**
+ * Search payload for connectors
+ */
+export const ConnectorSearchSchema = z.object({
+  provider: ConnectorTypeSchema.optional(),
+  status: EntityStatusSchema.optional(),
+  is_active: z.coerce.boolean().optional(),
+  limit: z.coerce.number().int().positive().max(100).optional(),
+  offset: z.coerce.number().int().nonnegative().optional(),
 });
 
 // ============================================================================
@@ -1904,6 +2060,7 @@ export type ChatSource = z.infer<typeof ChatSourceSchema>;
 export type InstructionType = z.infer<typeof InstructionTypeSchema>;
 export type ConnectionType = z.infer<typeof ConnectionTypeSchema>;
 export type IntegrationType = z.infer<typeof IntegrationTypeSchema>;
+export type ConnectorType = z.infer<typeof ConnectorTypeSchema>;
 export type ActionLogType = z.infer<typeof ActionLogTypeSchema>;
 
 /**
@@ -1936,8 +2093,6 @@ export type SearchDocument = z.infer<typeof SearchDocumentSchema>;
 export type SearchResult = z.infer<typeof SearchResultSchema>;
 export type AgentSimulationIndexRequest = z.infer<typeof AgentSimulationIndexRequestSchema>;
 export type AgentSimulationIndexResponse = z.infer<typeof AgentSimulationIndexResponseSchema>;
-export type AgentIndexCallbackRequest = z.infer<typeof AgentIndexCallbackRequestSchema>;
-export type AgentIndexCallbackResponse = z.infer<typeof AgentIndexCallbackResponseSchema>;
 export type AgentTaskStartResponseData = z.infer<typeof AgentTaskStartResponseSchema>;
 export type AgentTaskStopResponseData = z.infer<typeof AgentTaskStopResponseSchema>;
 export type AgentTaskStatusResponseData = z.infer<typeof AgentTaskStatusResponseSchema>;
@@ -1945,7 +2100,9 @@ export type SimulationStatusResponseData = z.infer<typeof SimulationStatusRespon
 export type BrowserSessionResponseData = z.infer<typeof BrowserSessionResponseSchema>;
 export type TaskStatus = z.infer<typeof TaskStatusSchema>;
 export type FileUploadResponse = z.infer<typeof FileUploadResponseSchema>;
+export type ChatRequest = z.infer<typeof ChatRequestSchema>;
 export type AgentVideoGenerateRequest = z.infer<typeof AgentVideoGenerateRequestSchema>;
+export type ChatResponseData = z.infer<typeof ChatResponseSchema>;
 export type MailOptionsData = z.infer<typeof MailOptionsDataSchema>;
 export type MeetingEmailData = z.infer<typeof MeetingEmailDataSchema>;
 
@@ -1996,6 +2153,9 @@ export type TourData = z.infer<typeof TourEntitySchema>;
 export type TourAnswerData = z.infer<typeof TourAnswerSchema>;
 export type TourStepData = z.infer<typeof TourStepSchema>;
 export type ChatData = z.infer<typeof ChatEntitySchema>;
+export type ConnectorData = z.infer<typeof ConnectorEntitySchema>;
+export type ConnectorUpsertData = z.infer<typeof ConnectorUpsertSchema>;
+export type ConnectorSearchData = z.infer<typeof ConnectorSearchSchema>;
 export type UserQuotaData = z.infer<typeof UserQuotaSchema>;
 export type SubscriptionUsageData = z.infer<typeof SubscriptionUsageSchema>;
 export type SimulationProgressData = z.infer<typeof SimulationProgressEntitySchema>;
@@ -2019,11 +2179,20 @@ export type StripePricingData = z.infer<typeof StripePricingSchema>;
 export type StripeConfigData = z.infer<typeof StripeConfigSchema>;
 export type PublicConfigData = z.infer<typeof PublicConfigSchema>;
 export type QADocumentData = z.infer<typeof QADocumentEntitySchema>;
+export type QADocumentLastRunData = {
+  id: number;
+  status: string;
+  total_tests: number;
+  passed_tests: number;
+  failed_tests: number;
+  created_at: Date | null;
+};
 export type QADocumentListItemData = QADocumentData & {
   run_count: number;
   display_title: string;
   total_failed: number;
   pass_rate: number | null;
+  last_run: QADocumentLastRunData | null;
 };
 export type QARunData = z.infer<typeof QARunEntitySchema>;
 export type QATestCaseData = z.infer<typeof QATestCaseEntitySchema>;

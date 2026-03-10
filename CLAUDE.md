@@ -28,6 +28,10 @@ Embeddable support widget that customers integrate into their products. Communic
 | `vite.config.ts` | Dual-build config (library + standalone) |
 | `nginx.conf` | Production static file server |
 
+## Terminology
+
+The widget is the runtime component of what users call **User Support** in the dashboard. It connects to an **Application** (code: `connection`) and an **Agent**. See root `CLAUDE.md` glossary for full terminology.
+
 ## Conventions
 
 ### Embedding Modes

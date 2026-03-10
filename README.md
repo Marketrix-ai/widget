@@ -17,7 +17,7 @@ into any website using a simple script tag.
 - 🎥 **Session Recording**: Built-in RRWeb session recording with start/stop control
 - 🔒 **Shadow DOM Isolation**: CSS isolation prevents conflicts with host app
 - 🎛️ **Widget Chips**: Quick action chips for common tasks
-- 🔄 **WebSocket Communication**: Real-time AI agent communication
+- 🔄 **Real-time Streaming**: SSE-based AI agent communication
 - 🖥️ **Screen Sharing**: Screen access modals and video stream display
 
 ## Quick Start
@@ -29,23 +29,21 @@ Add the widget to your HTML page using a script tag:
 ```html
 <script
   src="https://storage.marketrix.ai/widget/index.mjs"
-  mtx-ai-host="https://agent.marketrix.ai"
   mtx-api-host="https://api.marketrix.ai"
   mtx-id="your-marketrix-id"
   mtx-key="your-marketrix-key"
 ></script>
 ```
 
-### Alternative: Dev Mode (Agent & Connection IDs)
+### Alternative: Dev Mode (Application & Agent IDs)
 
-For development/testing with direct agent and connection IDs:
+For development/testing with direct application and agent IDs:
 
 ```html
 <script
   src="https://storage.marketrix.ai/widget/dev/index.mjs"
-  mtx-ai-host="https://agent.marketrix.ai"
   mtx-api-host="https://api.marketrix.ai"
-  mtx-app="YOUR_CONNECTION_ID"
+  mtx-app="YOUR_APPLICATION_ID"
   mtx-agent="YOUR_AGENT_ID"
 ></script>
 ```
@@ -58,10 +56,9 @@ For development/testing with direct agent and connection IDs:
 | -------------- | ------ | -------- | ----------------------------------------------- |
 | `mtx-id`       | string | ✅\*     | Your Marketrix ID (production mode)             |
 | `mtx-key`      | string | ✅\*     | Your Marketrix API key (production mode)        |
-| `mtx-app`      | number | ✅\*     | Connection/App ID (dev mode)                    |
+| `mtx-app`      | number | ✅\*     | Application ID (dev mode)                       |
 | `mtx-agent`    | number | ✅\*     | Agent ID (dev mode)                             |
 | `mtx-api-host` | string | ✅       | API server URL (e.g., https://api.marketrix.ai) |
-| `mtx-ai-host`  | string | ✅       | AI/Agent server URL for WebSocket connection    |
 
 \*Either `mtx-id` + `mtx-key` (production) OR `mtx-app` + `mtx-agent` (dev) must
 be provided.
@@ -115,7 +112,6 @@ await initWidget({
   mtxId: 'your-marketrix-id',
   mtxKey: 'your-marketrix-key',
   mtxApiHost: 'https://api.marketrix.ai',
-  mtxAiHost: 'https://agent.marketrix.ai',
 });
 
 // Or initialize with dev credentials
@@ -123,14 +119,13 @@ await initWidget({
   mtxApp: 123,
   mtxAgent: 456,
   mtxApiHost: 'https://api.marketrix.ai',
-  mtxAiHost: 'https://agent.marketrix.ai',
 });
 
 // Initialize into a specific container element
 await initWidget(config, document.getElementById('my-container')!);
 
 // Update config at runtime (unmounts and reinitializes)
-await updateMarketrixConfig({ mtxAiHost: 'https://new-agent.marketrix.ai' });
+await updateMarketrixConfig({ mtxApiHost: 'https://new-api.marketrix.ai' });
 
 // Session recording controls
 await startRecording();
@@ -177,7 +172,6 @@ function App() {
         widget_chips: [],
       }}
       mtxApiHost='https://api.marketrix.ai'
-      mtxAiHost='https://agent.marketrix.ai'
     />
   );
 }
@@ -193,7 +187,6 @@ await mountWidget({
   mtxId: 'your-id',
   mtxKey: 'your-key',
   mtxApiHost: 'https://api.marketrix.ai',
-  mtxAiHost: 'https://agent.marketrix.ai',
 });
 
 // Dev mode
@@ -201,14 +194,12 @@ await mountWidget({
   mtxApp: 123,
   mtxAgent: 456,
   mtxApiHost: 'https://api.marketrix.ai',
-  mtxAiHost: 'https://agent.marketrix.ai',
 });
 
 // Preview mode (with settings directly)
 await mountWidget({
   settings: widgetSettings,
   mtxApiHost: 'https://api.marketrix.ai',
-  mtxAiHost: 'https://agent.marketrix.ai',
 });
 ```
 
@@ -263,7 +254,6 @@ Create a bookmark with this URL:
 javascript: (function () {
   var s = document.createElement('script');
   s.src = 'http://localhost:5174/index.mjs';
-  s.setAttribute('mtx-ai-host', 'https://agent.marketrix.ai');
   s.setAttribute('mtx-api-host', 'https://api.marketrix.ai');
   s.setAttribute('mtx-app', 'YOUR_CONNECTION_ID');
   s.setAttribute('mtx-agent', 'YOUR_AGENT_ID');
@@ -285,7 +275,6 @@ certificate, then use:
 javascript: (function () {
   var s = document.createElement('script');
   s.src = 'https://localhost:5174/index.mjs';
-  s.setAttribute('mtx-ai-host', 'https://agent.marketrix.ai');
   s.setAttribute('mtx-api-host', 'https://api.marketrix.ai');
   s.setAttribute('mtx-app', 'YOUR_CONNECTION_ID');
   s.setAttribute('mtx-agent', 'YOUR_AGENT_ID');
@@ -372,7 +361,7 @@ widget/
 │   │   ├── StorageService.ts
 │   │   ├── ToolService.ts
 │   │   ├── ValidationService.ts
-│   │   └── WebSocketClient.ts
+│   │   └── StreamClient.ts
 │   ├── sdk/                  # API SDK (oRPC client + contract)
 │   │   ├── index.ts          # Client setup and exports
 │   │   ├── routes.ts         # oRPC contract/route definitions
@@ -430,7 +419,7 @@ concurrent and duplicate calls are deduplicated.
 #### `unmountWidget(): void`
 
 Destroys the widget and removes it from the DOM. Also stops session recording
-and cleans up all resources including the WebSocket connection.
+and cleans up all resources including the SSE stream connection.
 
 #### `mountWidget(config: AddWidgetConfig): Promise<void>`
 
@@ -463,7 +452,7 @@ Returns whether RRWeb session recording is currently active.
 #### `MarketrixWidget` (React Component)
 
 React component for preview mode rendering. Accepts `settings`, `container`,
-`mtxId`, `mtxKey`, `mtxApiHost`, and `mtxAiHost` props.
+`mtxId`, `mtxKey`, and `mtxApiHost` props.
 
 ### Default Export
 
@@ -498,7 +487,6 @@ interface MarketrixConfig {
 
   // API configuration
   mtxApiHost?: string;
-  mtxAiHost?: string;
 
   // Optional user ID
   userId?: number;
