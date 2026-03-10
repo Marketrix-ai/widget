@@ -350,7 +350,6 @@ widget/
 │   │   │   ├── ErrorDisplay.tsx
 │   │   │   ├── ScreenAccessModal.tsx
 │   │   │   └── WidgetSettingsLoader.tsx
-│   │   ├── BrowserTools.tsx
 │   │   └── MarketrixWidget.tsx
 │   ├── context/              # React context
 │   │   └── WidgetContext.tsx
@@ -635,7 +634,7 @@ Output files:
 
 ## License
 
-MIT License - see LICENSE file for details.
+Apache License 2.0 - see LICENSE file for details.
 
 ## Support
 
