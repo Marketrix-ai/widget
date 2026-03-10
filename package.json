@@ -1,6 +1,6 @@
 {
   "name": "@marketrix.ai/widget",
-  "version": "1.1.34",
+  "version": "1.1.35",
   "type": "module",
   "main": "./dist/index.mjs",
   "module": "./dist/index.mjs",
@@ -64,7 +64,6 @@
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "vite": "^6.4.1",
-    "vite-plugin-css-injected-by-js": "^3.5.2",
-    "vite-plugin-include-css": "^6.0.0"
+    "vite-plugin-css-injected-by-js": "^3.5.2"
   }
 }
