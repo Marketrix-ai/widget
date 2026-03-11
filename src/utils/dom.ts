@@ -181,14 +181,6 @@ function isElementInteractive(element: HTMLElement): boolean {
   return true;
 }
 
-/**
- * Get all file input elements on the page, ordered by DOM position.
- */
-export function getAllFileInputs(): HTMLInputElement[] {
-  const inputs = Array.from(document.querySelectorAll<HTMLInputElement>('input[type="file"]'));
-  return inputs.filter(input => isElementVisible(input) && !input.disabled);
-}
-
 export function isInteractable(el: Element | null): boolean {
   if (!el || !(el instanceof Element)) return false;
 

@@ -21,7 +21,6 @@
  * - Guide: Guide system
  * - Activity Log: System activity tracking and auditing
  * - App Config: In-app configuration management
- * - TaskPilot: Legacy prompt tracking (deprecated — new code uses 'app' source)
  * - Rule: Business rule management
  * - Migration: Database migration and system updates
  */

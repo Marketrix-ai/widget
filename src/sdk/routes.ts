@@ -20,7 +20,6 @@
  * - Tour: Guide system (user-facing: "Guides")
  * - Activity Log: System activity tracking and auditing
  * - App Config: In-app configuration management
- * - TaskPilot: AI prompt management
  * - Rule: Business rule management
  * - Migration: Database migration and system updates
  * - File: File upload and management
