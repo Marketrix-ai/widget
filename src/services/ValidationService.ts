@@ -1,13 +1,13 @@
-import { type AgentData, type ConnectionData, type IntegrationData, sdk } from '../sdk';
+import { type AgentData, type ApplicationData, sdk, type WidgetData } from '../sdk';
 import type { MarketrixConfig } from '../types';
 import { extractErrorMessage, handleApiError } from '../utils/apiUtils';
 
 export interface WidgetValidationResult {
   isValid: boolean;
   error?: string;
-  integration?: IntegrationData;
+  integration?: WidgetData;
   agent?: AgentData;
-  connection?: ConnectionData;
+  connection?: ApplicationData;
 }
 
 /**
@@ -46,7 +46,7 @@ export class WidgetValidationService {
       // Step 1: Fetch integration by marketrix_id and marketrix_key
       console.log('Validating widget - fetching integration...', { mtxId, mtxKey });
 
-      const integrationsData = await sdk.integrationSearch({
+      const integrationsData = await sdk.widgetSearch({
         marketrix_id: mtxId,
         marketrix_key: mtxKey,
       });
@@ -64,7 +64,7 @@ export class WidgetValidationService {
       console.log(
         'Found integrations:',
         integrations.length,
-        integrations.map((i: IntegrationData) => ({
+        integrations.map((i: WidgetData) => ({
           id: i.id,
           type: i.type,
           status: i.status,
@@ -74,15 +74,15 @@ export class WidgetValidationService {
 
       // Find the widget integration
       const widgetIntegration = integrations.find(
-        (integration: IntegrationData) => integration.type === 'widget' && integration.status === 'active',
+        (integration: WidgetData) => integration.type === 'widget' && integration.status === 'active',
       );
 
       if (!widgetIntegration) {
         // Check if there are any widget integrations with different status
-        const widgetIntegrations = integrations.filter((integration: IntegrationData) => integration.type === 'widget');
+        const widgetIntegrations = integrations.filter((integration: WidgetData) => integration.type === 'widget');
 
         if (widgetIntegrations.length > 0) {
-          const statuses = widgetIntegrations.map((i: IntegrationData) => i.status).join(', ');
+          const statuses = widgetIntegrations.map((i: WidgetData) => i.status).join(', ');
           return {
             isValid: false,
             error: `Found widget integration(s) but none are active. Current status(es): ${statuses}. Please activate the integration in the dashboard.`,
@@ -99,7 +99,7 @@ export class WidgetValidationService {
         }
 
         // There are integrations but no widget type
-        const types = integrations.map((i: IntegrationData) => i.type).join(', ');
+        const types = integrations.map((i: WidgetData) => i.type).join(', ');
         return {
           isValid: false,
           error: `No widget integration found. Found integration type(s): ${types}. Please create a widget integration.`,
@@ -132,7 +132,7 @@ export class WidgetValidationService {
 
         console.log('Validating connection ID...', widgetIntegration.connection_id);
 
-        const connection = await sdk.connectionGet({ connection_id: widgetIntegration.connection_id });
+        const connection = await sdk.applicationGet({ application_id: widgetIntegration.connection_id });
 
         console.log('Widget validation successful', {
           integration: widgetIntegration.id,
@@ -169,7 +169,7 @@ export class WidgetValidationService {
       console.log('Validating agent and connection by ID...', { mtxApp, mtxAgent });
 
       // Step 1: Validate connection exists
-      const connection = await sdk.connectionGet({ connection_id: mtxApp });
+      const connection = await sdk.applicationGet({ application_id: mtxApp });
 
       // Log connection data as object
       console.log('Connection found:', {
@@ -202,7 +202,7 @@ export class WidgetValidationService {
       }
 
       // Validation successful
-      console.log('Validation successful:', { connection_id: mtxApp, agent_id: mtxAgent });
+      console.log('Validation successful:', { application_id: mtxApp, agent_id: mtxAgent });
 
       return {
         isValid: true,

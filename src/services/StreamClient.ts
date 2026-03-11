@@ -2,10 +2,10 @@ import { sdk } from '../sdk';
 import type { WidgetCommand, WidgetEvent } from '../sdk/schema';
 import { sessionManager } from './SessionManager';
 
-export type WebSocketStatus = 'disconnected' | 'connecting' | 'connected' | 'registered' | 'error';
+export type StreamStatus = 'disconnected' | 'connecting' | 'connected' | 'registered' | 'error';
 
-export interface WebSocketClientCallbacks {
-  onStatusChange?: (status: WebSocketStatus) => void;
+export interface StreamClientCallbacks {
+  onStatusChange?: (status: StreamStatus) => void;
   onMessage?: (event: WidgetEvent) => void;
   onError?: (error: Error) => void;
   onRegistered?: (connectionId: number | undefined) => void;
@@ -15,8 +15,8 @@ export class StreamClient {
   private static instance: StreamClient | null = null;
   private abortController: AbortController | null = null;
   private chatId: string | null = null;
-  private status: WebSocketStatus = 'disconnected';
-  private callbacks: Set<WebSocketClientCallbacks> = new Set();
+  private status: StreamStatus = 'disconnected';
+  private callbacks: Set<StreamClientCallbacks> = new Set();
   private isIntentionallyDisconnected = false;
   private reconnectAttempts = 0;
   private readonly maxReconnectAttempts = 10;
@@ -34,15 +34,15 @@ export class StreamClient {
     return StreamClient.instance;
   }
 
-  addCallbacks(callbacks: WebSocketClientCallbacks): void {
+  addCallbacks(callbacks: StreamClientCallbacks): void {
     this.callbacks.add(callbacks);
   }
 
-  removeCallbacks(callbacks: WebSocketClientCallbacks): void {
+  removeCallbacks(callbacks: StreamClientCallbacks): void {
     this.callbacks.delete(callbacks);
   }
 
-  getStatus(): WebSocketStatus {
+  getStatus(): StreamStatus {
     return this.status;
   }
 
@@ -157,7 +157,7 @@ export class StreamClient {
       });
   }
 
-  private setStatus(status: WebSocketStatus): void {
+  private setStatus(status: StreamStatus): void {
     if (this.status !== status) {
       this.status = status;
       this.callbacks.forEach(cb => cb.onStatusChange?.(status));

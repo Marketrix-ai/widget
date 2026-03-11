@@ -127,7 +127,7 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({
         diagnosticData={{
           chatId: sessionManager.getChatId(),
           tabId: sessionManager.getTabId(),
-          websocketEndpoint: (() => {
+          streamEndpoint: (() => {
             const apiHost = configManager.getConfig()?.mtxApiHost || config?.mtxApiHost;
             return apiHost ? `${apiHost.replace(/\/$/, '')}/widget/stream` : null;
           })(),

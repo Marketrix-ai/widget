@@ -5,22 +5,24 @@
  * to match the route structure. It provides type-safe validation for requests, responses,
  * and internal data structures.
  *
- * Schema Categories:
+ * Schema Categories (code name → user-facing name):
  * - Base Types: Core enums and common schemas
  * - Authentication: User auth, OAuth, password management
- * - Meeting: Video meeting management and operations
- * - Tenant: Organization and workspace management
- * - Integration: Management and configuration of integrations (widget, slack, etc.)
- * - Chat: AI-powered chat and conversation management
- * - User: User account management and operations
+ * - Workspace: Organization and workspace management
+ * - User: User account management
  * - Agent: AI agent creation and management
+ * - Application: Application management
+ * - Knowledge: Knowledge base and document management
+ * - Simulation: Simulation runs and results
+ * - QA: QA Flows, runs, and test cases
+ * - Widget: Widget configuration
+ * - Connector: Connector triggers
+ * - Chat: AI-powered chat and conversation management
+ * - Guide: Guide system
  * - Activity Log: System activity tracking and auditing
  * - App Config: In-app configuration management
- * - Tour: Interactive tour and guidance system
- * - Simulation: Application simulation and testing
- * - Knowledge: Knowledge base and document management
- * - TaskPilot: AI prompt management and automation
- * - Rule: Business rule and automation rule management
+ * - TaskPilot: Legacy prompt tracking (deprecated — new code uses 'app' source)
+ * - Rule: Business rule management
  * - Migration: Database migration and system updates
  */
 
@@ -31,12 +33,11 @@ import { z } from 'zod';
 // ============================================================================
 
 /**
- * Core system enums for user roles, plans, and statuses
+ * Core system enums for plans and statuses
  */
-export const UserRoleSchema = z.enum(['user', 'admin', 'super']);
 export const UserPlanSchema = z.enum(['free', 'starter', 'growth', 'enterprise']);
 export const EntityStatusSchema = z.enum(['created', 'active', 'suspended', 'pending_approval']);
-export const TenantPackageSchema = z.enum(['free', 'starter', 'growth', 'enterprise']);
+export const WorkspacePackageSchema = z.enum(['free', 'starter', 'growth', 'enterprise']);
 export const AgentTypeSchema = z.enum(['human', 'ai']);
 export const AgentVoiceSchema = z.enum(['male', 'female']);
 export const AgentStatusSchema = z.enum(['active', 'learning', 'error']);
@@ -49,16 +50,15 @@ export const LearningProgressSchema = z.object({
   graph_index_created: z.boolean().nullable(),
 });
 export const KnowledgeTypeSchema = z.enum(['document', 'video']);
-export const QADocumentStatusSchema = z.enum(['pending', 'processing', 'waiting_review', 'completed', 'failed']);
+export const QAFlowStatusSchema = z.enum(['pending', 'processing', 'waiting_review', 'completed', 'failed']);
 export const QATestStatusSchema = z.enum(['pending', 'running', 'completed', 'failed']);
 export const QARunStatusSchema = z.enum(['pending', 'running', 'completed', 'failed', 'cancelled']);
-export const MeetingStatusSchema = z.enum(['not_started', 'in_progress', 'ended', 'cancelled']);
 export const ChatRoleSchema = z.enum(['user', 'agent']);
 // 'taskpilot' is legacy (was used by playground) — kept for backward-compat with existing DB rows
 export const ChatSourceSchema = z.enum(['taskpilot', 'widget', 'app']);
 export const InstructionTypeSchema = z.enum(['tell', 'show', 'do']);
-export const ConnectionTypeSchema = z.enum(['app', 'website']);
-export const IntegrationTypeSchema = z.enum(['widget', 'slack']);
+export const ApplicationTypeSchema = z.enum(['app', 'website']);
+export const WidgetTypeSchema = z.enum(['widget', 'slack']);
 export const ConnectorTypeSchema = z.enum(['timer', 'github', 'slack', 'teams', 'jira']);
 export const ActionLogTypeSchema = z.enum([
   'user_login',
@@ -140,12 +140,11 @@ export const AuthMethodSchema = z.enum(['password', 'oauth']);
 
 /**
  * Complete user entity schema
- * Note: Users don't have plans - plans belong to tenants (via tenant_plan table)
+ * Note: Users don't have plans - plans belong to workspaces (via workspace_plan table)
  */
 export const UserEntitySchema = BaseEntitySchema.extend({
-  tenant_id: z.number().nullish(),
+  is_super: z.boolean(),
   status: EntityStatusSchema,
-  role: UserRoleSchema,
   email: z.string().email(),
   external_id: z.string().nullish(),
   first_name: z.string().nullish(),
@@ -196,38 +195,36 @@ export const TokenSchema = z.object({
 });
 
 // ============================================================================
-// TENANT SCHEMAS - Organization and workspace management
+// WORKSPACE SCHEMAS - Organization and workspace management
 // ============================================================================
 
 /**
- * Complete tenant entity schema
- * Note: package and ending_date come from tenant_plan table (joined when fetching tenant data).
- * They are NOT stored on the tenant table itself.
+ * Complete workspace entity schema
+ * Note: package and ending_date come from workspace_plan table (joined when fetching workspace data).
+ * They are NOT stored on the workspace table itself.
  */
-export const TenantEntitySchema = BaseEntitySchema.extend({
+export const WorkspaceEntitySchema = BaseEntitySchema.extend({
   name: z.string(),
-  domain: z.string().nullish(),
+  slug: z.string(),
   status: EntityStatusSchema,
-  package: TenantPackageSchema,
+  package: WorkspacePackageSchema,
   ending_date: z.coerce.date().nullish(),
-  external_tenant_id: z.string().nullish(),
-  type: z.enum(['personal', 'organization']).nullish(),
+  external_workspace_id: z.string().nullish(),
 });
 
 /**
- * Tenant creation schema
+ * Workspace creation schema
  */
-export const TenantCreateSchema = TenantEntitySchema.partial().extend({
+export const WorkspaceCreateSchema = WorkspaceEntitySchema.partial().extend({
   name: z.string().min(1),
-  domain: z.string().min(1),
 });
 
 /**
- * Tenant update schema
+ * Workspace update schema
  */
-export const TenantUpdateSchema = TenantEntitySchema.partial();
+export const WorkspaceUpdateSchema = WorkspaceEntitySchema.partial();
 
-export const TenantPlanStatusSchema = z.enum([
+export const WorkspacePlanStatusSchema = z.enum([
   'active',
   'past_due',
   'canceled',
@@ -238,90 +235,43 @@ export const TenantPlanStatusSchema = z.enum([
   'paused',
 ]);
 
-export type TenantPlanStatus = z.infer<typeof TenantPlanStatusSchema>;
+export type WorkspacePlanStatus = z.infer<typeof WorkspacePlanStatusSchema>;
 
 /**
- * Tenant plan entity schema - tracks plan/subscription for each tenant
+ * Workspace plan entity schema - tracks plan/subscription for each workspace
  */
-export const TenantPlanEntitySchema = BaseEntitySchema.extend({
-  tenant_id: z.number(),
-  package: TenantPackageSchema,
+export const WorkspacePlanEntitySchema = BaseEntitySchema.extend({
+  workspace_id: z.number(),
+  package: WorkspacePackageSchema,
   ending_date: z.coerce.date(),
   stripe_subscription_id: z.string().nullable(),
   stripe_price_id: z.string().nullable(),
-  status: TenantPlanStatusSchema.default('active').optional(),
+  status: WorkspacePlanStatusSchema.default('active').optional(),
 });
 
 /**
- * Tenant plan creation schema
+ * Workspace plan creation schema
  */
-export const TenantPlanCreateSchema = TenantPlanEntitySchema.partial().extend({
-  tenant_id: z.number(),
-  package: TenantPackageSchema,
+export const WorkspacePlanCreateSchema = WorkspacePlanEntitySchema.partial().extend({
+  workspace_id: z.number(),
+  package: WorkspacePackageSchema,
 });
 
 /**
- * Tenant plan update schema
+ * Workspace plan update schema
  */
-export const TenantPlanUpdateSchema = TenantPlanEntitySchema.partial();
+export const WorkspacePlanUpdateSchema = WorkspacePlanEntitySchema.partial();
 
-// ============================================================================
-// MEETING SCHEMAS - Video meeting management and operations
-// ============================================================================
+export const WorkspaceMemberRoleSchema = z.enum(['owner', 'member']);
 
-/**
- * Meeting entity schema
- */
-export const MeetingSchema = BaseEntitySchema.extend({
-  tenant_id: z.number(),
+export const WorkspaceMemberEntitySchema = BaseEntitySchema.extend({
+  workspace_id: z.number(),
   user_id: z.number(),
-  meeting_id: z.string(),
-  meeting_token: z.string().optional(),
-  start_time: z.coerce.date(),
-  minutes: z.number(),
-  meeting_status: MeetingStatusSchema,
+  role: WorkspaceMemberRoleSchema,
 });
 
-/**
- * Meeting creation schema
- */
-export const MeetingCreateSchema = MeetingSchema.partial().extend({
-  start_time: z.coerce.date(),
-});
-
-/**
- * Meeting update schema
- */
-export const MeetingUpdateSchema = MeetingSchema.partial();
-
-/**
- * Meeting response schema
- */
-export const MeetingEntitySchema = BaseEntitySchema.extend({
-  user_id: z.number(),
-  tenant_id: z.number(),
-  meeting_id: z.string(),
-  meeting_token: z.string().optional(),
-  start_time: z.coerce.date(),
-  minutes: z.number(),
-  meeting_status: MeetingStatusSchema,
-});
-
-/**
- * Meeting join request schema
- */
-export const MeetingJoinRequestSchema = z.object({
-  client: z.object({
-    id: z.number(),
-    password: z.string().optional(),
-  }),
-  guest: z.object({
-    name: z.string(),
-    email: z.string().email().optional(),
-    password: z.string().optional(),
-  }),
-  token: z.string().optional(),
-});
+export type WorkspaceMemberData = z.infer<typeof WorkspaceMemberEntitySchema>;
+export type WorkspaceMemberRole = z.infer<typeof WorkspaceMemberRoleSchema>;
 
 /**
  * Lightweight agent badge for embedding in other entities
@@ -342,7 +292,7 @@ export type AgentBadgeData = z.infer<typeof AgentBadgeSchema>;
  * Knowledge base document schema
  */
 export const KnowledgeEntitySchema = BaseEntitySchema.extend({
-  tenant_id: z.number(),
+  workspace_id: z.number(),
   connection_id: z.number().optional(),
   file_name: z.string(),
   file_size: z.number(),
@@ -375,8 +325,8 @@ export type BrowserConfig = z.infer<typeof BrowserConfigSchema>;
 /**
  * QA document entity schema
  */
-export const QADocumentEntitySchema = BaseEntitySchema.extend({
-  tenant_id: z.number(),
+export const QAFlowEntitySchema = BaseEntitySchema.extend({
+  workspace_id: z.number(),
   user_id: z.number(),
   connection_id: z.number(),
   file_name: z.string(),
@@ -385,7 +335,7 @@ export const QADocumentEntitySchema = BaseEntitySchema.extend({
   file_url: z.string(),
   file_path: z.string().nullable(),
   additional_instructions: z.string().max(1000).nullable().optional(),
-  status: QADocumentStatusSchema,
+  status: QAFlowStatusSchema,
   processing_step: z.string().nullable().optional(),
   ultimate_goal: z.string().nullable().optional(),
   browser_config: BrowserConfigSchema.nullable().optional(),
@@ -394,7 +344,7 @@ export const QADocumentEntitySchema = BaseEntitySchema.extend({
 /**
  * QA document create schema
  */
-export const QADocumentCreateSchema = z.object({
+export const QAFlowCreateSchema = z.object({
   connection_id: z.coerce.number(),
   file: z.custom<Express.Multer.File>().optional(),
   text_content: z.string().optional(),
@@ -407,7 +357,7 @@ export const QADocumentCreateSchema = z.object({
  */
 export const QARunEntitySchema = BaseEntitySchema.extend({
   qa_document_id: z.number(),
-  tenant_id: z.number(),
+  workspace_id: z.number(),
   triggered_by: z.number(),
   status: QARunStatusSchema,
   browser_type: BrowserTypeSchema,
@@ -475,7 +425,7 @@ export const QAHealingAttemptEntrySchema = z.object({
  */
 export const QATestCaseEntitySchema = BaseEntitySchema.extend({
   qa_document_id: z.number(),
-  tenant_id: z.number(),
+  workspace_id: z.number(),
   order_index: z.number().int().nonnegative(),
   test_title: z.string(),
   test_objective: z.string(),
@@ -506,9 +456,9 @@ export const QATestCaseCreateSchema = z.object({
 /**
  * QA document processing response schema
  */
-export const QADocumentProcessingResponseSchema = z.object({
+export const QAFlowProcessingResponseSchema = z.object({
   ultimateGoal: z.string(),
-  document: QADocumentEntitySchema,
+  document: QAFlowEntitySchema,
   testCases: z.array(
     z.object({
       id: z.number(),
@@ -865,7 +815,7 @@ export const SimulationAnswerSchema = z.object({
 /**
  * Complete RRWeb session entity schema
  */
-export const RrwebSessionEntitySchema = BaseEntitySchema.extend({
+export const SessionEntitySchema = BaseEntitySchema.extend({
   session_id: z.string(),
   marketrix_chat_id: z.string(),
   connection_id: z.number().int().nullable().optional(),
@@ -888,7 +838,7 @@ export const RrwebSessionEntitySchema = BaseEntitySchema.extend({
 /**
  * RRWeb session upsert schema (for create/update)
  */
-export const RrwebSessionUpsertSchema = z.object({
+export const SessionUpsertSchema = z.object({
   session_id: z.string().min(1),
   marketrix_chat_id: z.string().min(1),
   connection_id: z.number().int().nullable().optional(),
@@ -960,7 +910,7 @@ export const MindMapSchema = z.object({
  * Complete agent entity schema
  */
 export const AgentEntitySchema = BaseEntitySchema.extend({
-  tenant_id: z.number(),
+  workspace_id: z.number(),
   user_id: z.number().nullish(),
   connection_id: z.number(),
   agent_name: z.string(),
@@ -975,7 +925,7 @@ export const AgentEntitySchema = BaseEntitySchema.extend({
   status_message: z.string().nullish(),
   learning_progress: LearningProgressSchema.nullish(),
   learning_started_at: z.coerce.date().nullish(),
-  tenant: TenantEntitySchema.optional(),
+  workspace: WorkspaceEntitySchema.optional(),
   user: UserEntitySchema.optional(),
   knowledge: z.array(KnowledgeEntitySchema).optional(),
   simulations: z.array(SimulationEntitySchema).optional(),
@@ -1159,10 +1109,10 @@ export const AgentVideoGenerateRequestSchema = z.object({
 /**
  * Connection entity schema
  */
-export const ConnectionEntitySchema = BaseEntitySchema.extend({
-  tenant_id: z.number(),
+export const ApplicationEntitySchema = BaseEntitySchema.extend({
+  workspace_id: z.number(),
   name: z.string(),
-  type: ConnectionTypeSchema,
+  type: ApplicationTypeSchema,
   url: z.string().nullish(),
   username: z.string().nullish(),
   password: z.string().nullish(),
@@ -1172,8 +1122,8 @@ export const ConnectionEntitySchema = BaseEntitySchema.extend({
 /**
  * Connection creation schema
  */
-export const ConnectionCreateSchema = ConnectionEntitySchema.partial().extend({
-  type: ConnectionTypeSchema,
+export const ApplicationCreateSchema = ApplicationEntitySchema.partial().extend({
+  type: ApplicationTypeSchema,
   name: z.string().min(1),
   url: z.string(),
   allowed_domains: z.array(z.string()).optional().default([]),
@@ -1182,7 +1132,7 @@ export const ConnectionCreateSchema = ConnectionEntitySchema.partial().extend({
 /**
  * Connection update schema
  */
-export const ConnectionUpdateSchema = ConnectionEntitySchema.partial().omit({ tenant_id: true });
+export const ApplicationUpdateSchema = ApplicationEntitySchema.partial().omit({ workspace_id: true });
 
 // ============================================================================
 // INTEGRATION SCHEMAS - Integration management (widget, slack, etc.)
@@ -1240,10 +1190,10 @@ export const SlackSettingsDataSchema = z.object({
 /**
  * Integration entity schema
  */
-export const IntegrationEntitySchema = BaseEntitySchema.extend({
+export const WidgetEntitySchema = BaseEntitySchema.extend({
   connection_id: z.number(),
   agent_id: z.number(),
-  type: IntegrationTypeSchema,
+  type: WidgetTypeSchema,
   settings: z.union([WidgetSettingsDataSchema, SlackSettingsDataSchema]),
   status: EntityStatusSchema,
   marketrix_id: z.string(),
@@ -1254,9 +1204,9 @@ export const IntegrationEntitySchema = BaseEntitySchema.extend({
 /**
  * Integration information schema
  */
-export const IntegrationInfoSchema = IntegrationEntitySchema.extend({
-  connection: ConnectionEntitySchema.partial(),
-  tenant: TenantEntitySchema.partial(),
+export const WidgetInfoSchema = WidgetEntitySchema.extend({
+  connection: ApplicationEntitySchema.partial(),
+  workspace: WorkspaceEntitySchema.partial(),
   user: UserEntitySchema.partial(),
   agent: AgentEntitySchema.partial(),
 });
@@ -1264,32 +1214,32 @@ export const IntegrationInfoSchema = IntegrationEntitySchema.extend({
 /**
  * Integration search result schema - includes optional eager-loaded agent
  */
-export const IntegrationWithAgentSchema = IntegrationEntitySchema.extend({
+export const WidgetWithAgentSchema = WidgetEntitySchema.extend({
   agent: AgentEntitySchema.partial().optional(),
 });
 
 /**
  * Connection with integrations schema - matches API response structure
  */
-export const ConnectionWithIntegrationsSchema = ConnectionEntitySchema.extend({
-  integrations: z.array(IntegrationEntitySchema),
+export const ApplicationWithWidgetsSchema = ApplicationEntitySchema.extend({
+  integrations: z.array(WidgetEntitySchema),
   agents: z.array(AgentEntitySchema).optional(),
 });
 
 /**
  * Integration creation schema
  */
-export const IntegrationCreateSchema = IntegrationEntitySchema.partial().extend({
+export const WidgetCreateSchema = WidgetEntitySchema.partial().extend({
   connection_id: z.number().positive(),
   agent_id: z.number().positive(),
-  type: IntegrationTypeSchema,
+  type: WidgetTypeSchema,
   settings: z.union([WidgetSettingsDataSchema, SlackSettingsDataSchema]).optional(),
 });
 
 /**
  * Integration update schema
  */
-export const IntegrationUpdateSchema = IntegrationEntitySchema.partial();
+export const WidgetUpdateSchema = WidgetEntitySchema.partial();
 
 // ============================================================================
 // URL GUIDE SCHEMAS - URL-based guidance messages for widget
@@ -1516,7 +1466,7 @@ export const AppEventSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('user/updated'),
     user_id: z.number(),
-    tenant_id: z.number(),
+    workspace_id: z.number(),
     status: z.string(),
   }),
 
@@ -1565,8 +1515,8 @@ export const ActionLogMetadataSchema = z
     assigned_role: z.string().optional(),
     new_role: z.string().optional(),
     previous_role: z.string().optional(),
-    tenant_name: z.string().optional(),
-    tenant_domain: z.string().optional(),
+    workspace_name: z.string().optional(),
+    workspace_slug: z.string().optional(),
     ip_address: z.string().optional(),
     user_agent: z.string().optional(),
     integration_type: z.string().optional(),
@@ -1578,7 +1528,7 @@ export const ActionLogMetadataSchema = z
  * Action log entity schema
  */
 export const ActionLogEntitySchema = BaseEntitySchema.extend({
-  tenant_id: z.number(),
+  workspace_id: z.number(),
   user_id: z.number(),
   type: ActionLogTypeSchema,
   metadata: ActionLogMetadataSchema.optional(),
@@ -1613,10 +1563,10 @@ export const ChatEntitySchema = BaseEntitySchema.extend({
 // ============================================================================
 
 /**
- * Connector entity schema (per-tenant provider credentials/endpoints)
+ * Connector entity schema (per-workspace provider credentials/endpoints)
  */
 export const ConnectorEntitySchema = BaseEntitySchema.extend({
-  tenant_id: z.number(),
+  workspace_id: z.number(),
   provider: ConnectorTypeSchema,
   name: z.string().min(1).max(120),
   identifier: z.string().max(120).nullable().optional(),
@@ -1689,23 +1639,6 @@ export const FileUploadResponseSchema = z.object({
 // ============================================================================
 
 /**
- * Meeting creation data schema for services
- */
-export const MeetingCreationDataSchema = z.object({
-  start_time: z.coerce.date(),
-  minutes: z.number(),
-  tenant_id: z.number(),
-  user_id: z.number(),
-});
-
-/**
- * Meeting end data schema for services
- */
-export const MeetingEndDataSchema = z.object({
-  meeting_id: z.string(),
-});
-
-/**
  * Upload user logo data schema
  */
 export const UploadUserLogoDataSchema = z.object({
@@ -1739,7 +1672,7 @@ export const UserQuotaSchema = z.object({
  */
 export const UpdateChatCountDataSchema = z.object({
   user_id: z.number(),
-  tenant_id: z.number(),
+  workspace_id: z.number(),
   chat_count: z.number(),
   prompt_text: z.string(),
   metadata: z.record(z.string(), z.string()).optional(),
@@ -1759,19 +1692,9 @@ export const MailOptionsDataSchema = z.object({
   context: z.record(z.string(), z.string()),
 });
 
-/**
- * Meeting email data schema
- */
-export const MeetingEmailDataSchema = MailOptionsDataSchema;
-
 // ============================================================================
 // CONSTANTS - System-wide constants and configuration values
 // ============================================================================
-
-/**
- * Initial tenant ID for system setup
- */
-export const INITIAL_TENANT_ID = 1;
 
 /**
  * Initial prompt limit for new users
@@ -1947,7 +1870,7 @@ export const UsageMetricSchema = z.object({
 });
 
 /**
- * Subscription usage statistics schema (tenant-wide resource tracking)
+ * Subscription usage statistics schema (workspace-wide resource tracking)
  * Used for billing and subscription management
  */
 export const SubscriptionUsageSchema = z.object({
@@ -2046,20 +1969,18 @@ export const PublicConfigSchema = z.object({
 /**
  * Core enum types
  */
-export type UserRole = z.infer<typeof UserRoleSchema>;
 export type UserPlan = z.infer<typeof UserPlanSchema>;
 export type EntityStatus = z.infer<typeof EntityStatusSchema>;
-export type TenantPackage = z.infer<typeof TenantPackageSchema>;
+export type WorkspacePackage = z.infer<typeof WorkspacePackageSchema>;
 export type AgentType = z.infer<typeof AgentTypeSchema>;
 export type AgentVoice = z.infer<typeof AgentVoiceSchema>;
 export type AgentStatus = z.infer<typeof AgentStatusSchema>;
 export type KnowledgeType = z.infer<typeof KnowledgeTypeSchema>;
-export type MeetingStatus = z.infer<typeof MeetingStatusSchema>;
 export type ChatStatus = z.infer<typeof ChatRoleSchema>;
 export type ChatSource = z.infer<typeof ChatSourceSchema>;
 export type InstructionType = z.infer<typeof InstructionTypeSchema>;
-export type ConnectionType = z.infer<typeof ConnectionTypeSchema>;
-export type IntegrationType = z.infer<typeof IntegrationTypeSchema>;
+export type ApplicationType = z.infer<typeof ApplicationTypeSchema>;
+export type WidgetType = z.infer<typeof WidgetTypeSchema>;
 export type ConnectorType = z.infer<typeof ConnectorTypeSchema>;
 export type ActionLogType = z.infer<typeof ActionLogTypeSchema>;
 
@@ -2080,12 +2001,9 @@ export type UserUpdateData = z.infer<typeof UserUpdateSchema>;
 export type BatchUserCreateData = z.infer<typeof BatchUserCreateSchema>;
 export type BatchUserCreateResult = z.infer<typeof BatchUserCreateResultSchema>;
 export type UploadUserLogoData = z.infer<typeof UploadUserLogoDataSchema>;
-export type TenantReadData = z.infer<typeof TenantCreateSchema>;
-export type TenantUpdateData = z.infer<typeof TenantUpdateSchema>;
-export type IntegrationInfoData = z.infer<typeof IntegrationInfoSchema>;
-export type MeetingCreationData = z.infer<typeof MeetingCreationDataSchema>;
-export type MeetingEndData = z.infer<typeof MeetingEndDataSchema>;
-export type MeetingUpdateData = z.infer<typeof MeetingUpdateSchema>;
+export type WorkspaceReadData = z.infer<typeof WorkspaceCreateSchema>;
+export type WorkspaceUpdateData = z.infer<typeof WorkspaceUpdateSchema>;
+export type WidgetInfoData = z.infer<typeof WidgetInfoSchema>;
 export type AgentCreationData = z.infer<typeof AgentCreateSchema>;
 export type AgentUpdateData = z.infer<typeof AgentUpdateSchema>;
 export type AgentSearchConfig = z.infer<typeof AgentSearchConfigSchema>;
@@ -2104,8 +2022,6 @@ export type ChatRequest = z.infer<typeof ChatRequestSchema>;
 export type AgentVideoGenerateRequest = z.infer<typeof AgentVideoGenerateRequestSchema>;
 export type ChatResponseData = z.infer<typeof ChatResponseSchema>;
 export type MailOptionsData = z.infer<typeof MailOptionsDataSchema>;
-export type MeetingEmailData = z.infer<typeof MeetingEmailDataSchema>;
-
 // ============================================================================
 // MODEL ATTRIBUTES - TypeScript interfaces for Sequelize models
 // ============================================================================
@@ -2114,19 +2030,18 @@ export type MeetingEmailData = z.infer<typeof MeetingEmailDataSchema>;
  * Model attribute types for Sequelize models
  */
 export type UserData = z.infer<typeof UserEntitySchema>;
-export type TenantData = z.infer<typeof TenantEntitySchema>;
-export type TenantPlanData = z.infer<typeof TenantPlanEntitySchema>;
+export type WorkspaceData = z.infer<typeof WorkspaceEntitySchema>;
+export type WorkspacePlanData = z.infer<typeof WorkspacePlanEntitySchema>;
 export type AgentData = z.infer<typeof AgentEntitySchema>;
-export type MeetingData = z.infer<typeof MeetingEntitySchema>;
 export type KnowledgeData = z.infer<typeof KnowledgeEntitySchema>;
-export type ConnectionData = z.infer<typeof ConnectionEntitySchema>;
-export type ConnectionCreateData = z.infer<typeof ConnectionCreateSchema>;
-export type ConnectionUpdateData = z.infer<typeof ConnectionUpdateSchema>;
-export type ConnectionWithIntegrationsData = z.infer<typeof ConnectionWithIntegrationsSchema>;
-export type IntegrationData = z.infer<typeof IntegrationEntitySchema>;
-export type IntegrationWithAgentData = z.infer<typeof IntegrationWithAgentSchema>;
-export type IntegrationCreateData = z.infer<typeof IntegrationCreateSchema>;
-export type IntegrationUpdateData = z.infer<typeof IntegrationUpdateSchema>;
+export type ApplicationData = z.infer<typeof ApplicationEntitySchema>;
+export type ApplicationCreateData = z.infer<typeof ApplicationCreateSchema>;
+export type ApplicationUpdateData = z.infer<typeof ApplicationUpdateSchema>;
+export type ApplicationWithWidgetsData = z.infer<typeof ApplicationWithWidgetsSchema>;
+export type WidgetData = z.infer<typeof WidgetEntitySchema>;
+export type WidgetWithAgentData = z.infer<typeof WidgetWithAgentSchema>;
+export type WidgetCreateData = z.infer<typeof WidgetCreateSchema>;
+export type WidgetUpdateData = z.infer<typeof WidgetUpdateSchema>;
 export type UrlGuideData = z.infer<typeof UrlGuideEntitySchema>;
 export type UrlGuideCreateData = z.infer<typeof UrlGuideCreateSchema>;
 export type UrlGuideUpdateData = z.infer<typeof UrlGuideUpdateSchema>;
@@ -2162,8 +2077,8 @@ export type SimulationProgressData = z.infer<typeof SimulationProgressEntitySche
 export type MindMapEdgeData = z.infer<typeof MindMapEdgeSchema>;
 export type MindMapNodeData = z.infer<typeof MindMapNodeSchema>;
 export type MindMapData = z.infer<typeof MindMapSchema>;
-export type RrwebSessionData = z.infer<typeof RrwebSessionEntitySchema>;
-export type RrwebSessionUpsertData = z.infer<typeof RrwebSessionUpsertSchema>;
+export type SessionData = z.infer<typeof SessionEntitySchema>;
+export type SessionUpsertData = z.infer<typeof SessionUpsertSchema>;
 export type StripeCheckoutData = z.infer<typeof StripeCheckoutSchema>;
 export type StripePortalData = z.infer<typeof StripePortalSchema>;
 export type StripeTrialData = z.infer<typeof StripeTrialSchema>;
@@ -2178,8 +2093,8 @@ export type PlanPricingData = z.infer<typeof PlanPricingSchema>;
 export type StripePricingData = z.infer<typeof StripePricingSchema>;
 export type StripeConfigData = z.infer<typeof StripeConfigSchema>;
 export type PublicConfigData = z.infer<typeof PublicConfigSchema>;
-export type QADocumentData = z.infer<typeof QADocumentEntitySchema>;
-export type QADocumentLastRunData = {
+export type QAFlowData = z.infer<typeof QAFlowEntitySchema>;
+export type QAFlowLastRunData = {
   id: number;
   status: string;
   total_tests: number;
@@ -2187,16 +2102,16 @@ export type QADocumentLastRunData = {
   failed_tests: number;
   created_at: Date | null;
 };
-export type QADocumentListItemData = QADocumentData & {
+export type QAFlowListItemData = QAFlowData & {
   run_count: number;
   display_title: string;
   total_failed: number;
   pass_rate: number | null;
-  last_run: QADocumentLastRunData | null;
+  last_run: QAFlowLastRunData | null;
 };
 export type QARunData = z.infer<typeof QARunEntitySchema>;
 export type QATestCaseData = z.infer<typeof QATestCaseEntitySchema>;
-export type QADocumentProcessingResponseData = z.infer<typeof QADocumentProcessingResponseSchema>;
+export type QAFlowProcessingResponseData = z.infer<typeof QAFlowProcessingResponseSchema>;
 
 // ---------------------------------------------------------------------------
 // Preview Video Chat
@@ -2209,7 +2124,7 @@ export const PreviewVideoChatMessageSchema = z.object({
 });
 
 export const PreviewVideoChatEntitySchema = BaseEntitySchema.extend({
-  tenant_id: z.number(),
+  workspace_id: z.number(),
   connection_id: z.number().nullable().optional(),
   agent_id: z.number().nullable().optional(),
   simulation_id: z.number().nullable().optional(),
