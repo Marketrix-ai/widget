@@ -68,7 +68,7 @@ interface ChatWindowProps {
   onSendMessage: (
     message: string,
     mode?: InstructionType,
-    connectionId?: number,
+    applicationId?: number,
     question?: string,
     skipUserMessage?: boolean,
   ) => void;
@@ -110,21 +110,21 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   const [pendingMessage, setPendingMessage] = useState<{
     content: string;
     mode?: InstructionType;
-    connectionId?: number;
+    applicationId?: number;
     question?: string;
     alreadyAdded?: boolean;
   } | null>(null);
 
   const { config: settings, isPreviewMode } = useWidget({ config });
 
-  const tenantId = useMemo(
+  const workspaceId = useMemo(
     () => config.mtxId ?? (config.mtxApp != null ? String(config.mtxApp) : 'default'),
     [config.mtxId, config.mtxApp],
   );
   const { widthPx, heightPx, onResizeStart, containerRef } = useResize(
     settings.widget_width,
     settings.widget_height,
-    tenantId,
+    workspaceId,
     isMinimized,
     isPreviewMode,
   );
@@ -347,7 +347,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       if (pendingMessage) {
         const message = pendingMessage;
         setPendingMessage(null);
-        onSendMessage(message.content, message.mode, message.connectionId, message.question, message.alreadyAdded);
+        onSendMessage(message.content, message.mode, message.applicationId, message.question, message.alreadyAdded);
       }
     } catch (error) {
       console.error('Failed to start screen sharing:', error);
@@ -365,7 +365,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       if (pendingMessage) {
         const message = pendingMessage;
         setPendingMessage(null);
-        onSendMessage(message.content, message.mode, message.connectionId, message.question, message.alreadyAdded);
+        onSendMessage(message.content, message.mode, message.applicationId, message.question, message.alreadyAdded);
       }
     }
   };
@@ -383,7 +383,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     if (pendingMessage) {
       const message = pendingMessage;
       setPendingMessage(null);
-      onSendMessage(message.content, message.mode, message.connectionId, message.question, message.alreadyAdded);
+      onSendMessage(message.content, message.mode, message.applicationId, message.question, message.alreadyAdded);
     }
   };
 
@@ -666,7 +666,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                 <MessageList
                   messages={messages}
                   messagesEndRef={messagesEndRef}
-                  onSendMessage={(content, mode, connectionId, question) => {
+                  onSendMessage={(content, mode, applicationId, question) => {
                     // Check if screen sharing is needed for show/do modes
                     if (
                       config.use_screenshare !== false &&
@@ -679,14 +679,14 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                       setPendingMessage({
                         content,
                         mode,
-                        ...(connectionId !== undefined ? { connectionId } : {}),
+                        ...(applicationId !== undefined ? { applicationId } : {}),
                         ...(question !== undefined ? { question } : {}),
                         alreadyAdded: true,
                       });
                       requestScreenAccess(mode || currentMode);
                     } else {
                       // Send message directly (chip message already added, so skip adding it again)
-                      onSendMessage(content, mode, connectionId, question, true);
+                      onSendMessage(content, mode, applicationId, question, true);
                     }
                   }}
                   onSetMode={onSetMode}

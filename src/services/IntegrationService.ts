@@ -77,7 +77,7 @@ export class IntegrationService {
       const now = new Date();
       return {
         id: 0,
-        connection_id: this.mtxApp || 0,
+        application_id: this.mtxApp || 0,
         agent_id: 0,
         type: 'widget' as const,
         settings: defaultSettings,

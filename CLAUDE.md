@@ -30,7 +30,7 @@ Embeddable support widget that customers integrate into their products. Communic
 
 ## Terminology
 
-The widget is the runtime component of what users call **Widgets** in the dashboard. It connects to an **Application** (code: `connection`) and an **Agent**. See root `CLAUDE.md` glossary for full terminology.
+The widget is the runtime component of what users call **Widgets** in the dashboard. It connects to an **Application** and an **Agent**. See root `CLAUDE.md` glossary for full terminology.
 
 ## Conventions
 
@@ -63,3 +63,9 @@ The widget is the runtime component of what users call **Widgets** in the dashbo
 - `npm start` — Vite dev server (port 5174)
 - `npm run build` — dual library + standalone build
 - `npm run lint` — ESLint
+
+## Release
+
+- `npm version patch && npm publish` — bump version and publish to npm as `@marketrix.ai/widget`
+- After publishing, update the app dependency: `cd ../app && npm install @marketrix.ai/widget@latest`
+- Never deploy app changes that depend on widget changes without first publishing the widget to npm

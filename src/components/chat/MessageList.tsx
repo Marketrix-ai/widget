@@ -25,7 +25,7 @@ type ChipData = {
 interface MessageListProps {
   messages: ChatMessage[];
   messagesEndRef: React.RefObject<HTMLDivElement | null>;
-  onSendMessage?: (message: string, mode?: 'show' | 'tell' | 'do', connectionId?: number, question?: string) => void;
+  onSendMessage?: (message: string, mode?: 'show' | 'tell' | 'do', applicationId?: number, question?: string) => void;
   onSetMode?: (mode: 'show' | 'tell' | 'do') => void;
   onModeChange?: (mode: 'show' | 'tell' | 'do') => void;
   onAddMessage?: (message: ChatMessage) => void;

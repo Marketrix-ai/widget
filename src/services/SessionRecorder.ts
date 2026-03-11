@@ -28,7 +28,7 @@ export class SessionRecorder {
   private stopRecording: ReturnType<typeof record> | null = null;
   private isRecording = false;
   private chatId: string;
-  private connectionId: number;
+  private applicationId: number;
   private metadataSent = false;
   private startPromise: Promise<void> | null = null;
   private stopRequested = false;
@@ -36,16 +36,16 @@ export class SessionRecorder {
 
   private readonly TAB_ID_STORAGE_KEY = 'marketrix_tab_id';
 
-  constructor(chatId: string, connectionId: number) {
+  constructor(chatId: string, applicationId: number) {
     if (!chatId || chatId.trim() === '') {
       throw new Error('chatId is required for SessionRecorder');
     }
-    if (!connectionId || connectionId <= 0) {
-      throw new Error('connectionId (mtxApp) is required for SessionRecorder');
+    if (!applicationId || applicationId <= 0) {
+      throw new Error('applicationId (mtxApp) is required for SessionRecorder');
     }
-    log.info('Constructor called with chatId:', chatId, 'connectionId:', connectionId);
+    log.info('Constructor called with chatId:', chatId, 'applicationId:', applicationId);
     this.chatId = chatId;
-    this.connectionId = connectionId;
+    this.applicationId = applicationId;
     this.sessionId = this.getTabId();
 
     // Validate that sessionId is in the correct format (tab_* not UUID)
@@ -112,7 +112,7 @@ export class SessionRecorder {
         type: 'rrweb/metadata' as const,
         session_id: this.sessionId,
         marketrix_chat_id: this.chatId,
-        connection_id: this.connectionId,
+        application_id: this.applicationId,
         url: window.location.href,
         user_agent: navigator.userAgent,
         timestamp: Date.now(),

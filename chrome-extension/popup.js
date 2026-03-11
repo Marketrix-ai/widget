@@ -4,7 +4,7 @@
 
 const scriptSrcInput = document.getElementById('scriptSrc');
 const agentIdInput = document.getElementById('agentId');
-const connectionIdInput = document.getElementById('connectionId');
+const applicationIdInput = document.getElementById('applicationId');
 const enableToggle = document.getElementById('enableToggle');
 const saveBtn = document.getElementById('saveBtn');
 const statusDiv = document.getElementById('status');
@@ -14,12 +14,12 @@ chrome.storage.local.get(['enabled', 'config'], result => {
   if (result.config) {
     scriptSrcInput.value = result.config.scriptSrc || '';
     agentIdInput.value = result.config.agentId || '';
-    connectionIdInput.value = result.config.connectionId || '';
+    applicationIdInput.value = result.config.applicationId || '';
   } else {
     // Default values
     scriptSrcInput.value = 'http://localhost:5174/index.mjs';
     agentIdInput.value = '10';
-    connectionIdInput.value = '13';
+    applicationIdInput.value = '13';
   }
 
   enableToggle.checked = result.enabled || false;
@@ -31,7 +31,7 @@ saveBtn.addEventListener('click', () => {
   const config = {
     scriptSrc: scriptSrcInput.value.trim(),
     agentId: agentIdInput.value.trim(),
-    connectionId: connectionIdInput.value.trim(),
+    applicationId: applicationIdInput.value.trim(),
   };
 
   chrome.storage.local.set({ config }, () => {
@@ -48,7 +48,7 @@ enableToggle.addEventListener('change', () => {
   const config = {
     scriptSrc: scriptSrcInput.value.trim(),
     agentId: agentIdInput.value.trim(),
-    connectionId: connectionIdInput.value.trim(),
+    applicationId: applicationIdInput.value.trim(),
   };
 
   chrome.storage.local.set({ enabled, config }, () => {

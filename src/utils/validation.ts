@@ -135,8 +135,8 @@ export function isTourData(data: unknown): data is TourData {
   }
 
   return (
-    hasProperty(data, 'connection_id') &&
-    typeof data.connection_id === 'number' &&
+    hasProperty(data, 'application_id') &&
+    typeof data.application_id === 'number' &&
     hasProperty(data, 'question') &&
     typeof data.question === 'string' &&
     hasProperty(data, 'answer') &&

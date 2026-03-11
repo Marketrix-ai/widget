@@ -121,18 +121,18 @@ export class WidgetValidationService {
         const agent = await sdk.agentGet({ agent_id: widgetIntegration.agent_id });
 
         // Step 3: Validate connection ID exists
-        if (!widgetIntegration.connection_id) {
+        if (!widgetIntegration.application_id) {
           return {
             isValid: false,
-            error: 'Integration missing connection_id',
+            error: 'Integration missing application_id',
             integration: widgetIntegration,
             agent,
           };
         }
 
-        console.log('Validating connection ID...', widgetIntegration.connection_id);
+        console.log('Validating connection ID...', widgetIntegration.application_id);
 
-        const connection = await sdk.applicationGet({ application_id: widgetIntegration.connection_id });
+        const connection = await sdk.applicationGet({ application_id: widgetIntegration.application_id });
 
         console.log('Widget validation successful', {
           integration: widgetIntegration.id,
@@ -187,15 +187,15 @@ export class WidgetValidationService {
       console.log('Agent found:', {
         id: agent.id,
         agent_name: agent.agent_name,
-        connection_id: agent.connection_id,
+        application_id: agent.application_id,
         agent_type: agent.agent_type,
       });
 
-      // Step 3: Validate that agent's connection_id matches the provided mtx-app
-      if (agent.connection_id !== mtxApp) {
+      // Step 3: Validate that agent's application_id matches the provided mtx-app
+      if (agent.application_id !== mtxApp) {
         return {
           isValid: false,
-          error: `Agent ID ${mtxAgent} belongs to connection ID ${agent.connection_id}, but provided connection ID is ${mtxApp}. Please verify the connection ID matches the agent's connection_id.`,
+          error: `Agent ID ${mtxAgent} belongs to connection ID ${agent.application_id}, but provided connection ID is ${mtxApp}. Please verify the connection ID matches the agent's application_id.`,
           connection,
           agent,
         };

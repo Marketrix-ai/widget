@@ -8,7 +8,7 @@ export interface StreamClientCallbacks {
   onStatusChange?: (status: StreamStatus) => void;
   onMessage?: (event: WidgetEvent) => void;
   onError?: (error: Error) => void;
-  onRegistered?: (connectionId: number | undefined) => void;
+  onRegistered?: (applicationId: number | undefined) => void;
 }
 
 export class StreamClient {
@@ -86,7 +86,7 @@ export class StreamClient {
         streamInput.marketrix_key = this.config.mtxKey;
       } else if (this.config?.mtxAgent && this.config?.mtxApp) {
         streamInput.agent_id = this.config.mtxAgent;
-        streamInput.connection_id = this.config.mtxApp;
+        streamInput.application_id = this.config.mtxApp;
       }
 
       // Call the oRPC streaming endpoint — returns an async iterator for eventIterator outputs
@@ -175,7 +175,7 @@ export class StreamClient {
         this.setStatus('registered');
         this.reconnectAttempts = 0;
         this.reconnectDelay = 1000;
-        this.callbacks.forEach(cb => cb.onRegistered?.(event.connection_id));
+        this.callbacks.forEach(cb => cb.onRegistered?.(event.application_id));
       }
     }
     this.callbacks.forEach(cb => cb.onMessage?.(event));

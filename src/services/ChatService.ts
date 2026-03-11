@@ -363,14 +363,3 @@ export function createScreenshareMessage(stream: MediaStream, mode: InstructionT
     parts: [],
   };
 }
-
-export function createErrorMessage(content: string, mode?: InstructionType, originalMessageId?: string): ChatMessage {
-  return {
-    id: originalMessageId ? `error-${originalMessageId}-${Date.now()}` : `error-${Date.now()}`,
-    content,
-    sender: 'agent',
-    timestamp: new Date(),
-    mode,
-    parts: [{ type: 'text', content }],
-  };
-}

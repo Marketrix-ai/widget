@@ -343,9 +343,7 @@ widget/
 │   ├── context/              # React context
 │   │   └── WidgetContext.tsx
 │   ├── hooks/                # Custom React hooks
-│   │   ├── usePageLifecycle.ts
 │   │   ├── useResize.ts
-│   │   ├── useTaskState.ts
 │   │   └── useWidget.ts
 │   ├── services/             # Core services
 │   │   ├── ApiService.ts
@@ -381,7 +379,6 @@ widget/
 │   │   ├── devTools.ts
 │   │   ├── dom.ts
 │   │   ├── format.ts
-│   │   ├── persistence.ts
 │   │   ├── stateUtils.ts
 │   │   ├── validation.ts
 │   │   └── widgetPositioning.ts
