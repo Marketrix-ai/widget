@@ -138,7 +138,7 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({
               return 'disconnected';
             }
           })(),
-          connectionId: configManager.getConfig()?.mtxApp,
+          applicationId: configManager.getConfig()?.mtxApp,
           agentId: configManager.getConfig()?.mtxAgent,
           version: packageJson.version,
           // eslint-disable-next-line no-undef

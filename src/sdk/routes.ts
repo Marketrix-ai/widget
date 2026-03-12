@@ -1331,7 +1331,7 @@ const contract = {
       z.object({
         application_id: z.number(),
         agent_id: z.number(),
-        connection_url: z.string().nullish(),
+        application_url: z.string().nullish(),
       }),
     )
     .output(

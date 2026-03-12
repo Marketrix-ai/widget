@@ -18,7 +18,7 @@ interface ChatWindowProps {
   onSendMessage: (
     message: string,
     mode?: InstructionType,
-    connectionId?: number,
+    applicationId?: number,
     question?: string,
     skipUserMessage?: boolean,
   ) => void;

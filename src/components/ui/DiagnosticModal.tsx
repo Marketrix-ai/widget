@@ -12,7 +12,7 @@ interface DiagnosticModalProps {
     tabId: string | null;
     streamEndpoint: string | null;
     connectionStatus: string;
-    connectionId: number | undefined; // mtxApp
+    applicationId: number | undefined; // mtxApp
     agentId: number | undefined; // mtxAgent
     version: string;
     build: string;
@@ -40,7 +40,7 @@ export const DiagnosticModal: React.FC<DiagnosticModalProps> = ({ isOpen, onClos
     { label: 'Chat ID', value: diagnosticData.chatId, copyable: true },
     { label: 'Tab ID', value: diagnosticData.tabId, copyable: true },
     { label: 'Stream Endpoint', value: diagnosticData.streamEndpoint, copyable: true },
-    { label: 'Connection ID', value: diagnosticData.connectionId?.toString(), copyable: true },
+    { label: 'Application ID', value: diagnosticData.applicationId?.toString(), copyable: true },
     { label: 'Agent ID', value: diagnosticData.agentId?.toString(), copyable: true },
   ];
 

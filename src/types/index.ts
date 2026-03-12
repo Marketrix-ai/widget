@@ -34,8 +34,8 @@ export type MarketrixConfig = Partial<WidgetSettingsData> & {
   mtxId?: string; // maps to marketrix_id from SDK (production mode)
   mtxKey?: string; // maps to marketrix_key from SDK (production mode)
 
-  // Alternative: Direct agent and connection IDs (dev mode)
-  mtxApp?: number; // Connection/app ID (maps to connection_id)
+  // Alternative: Direct agent and application IDs (dev mode)
+  mtxApp?: number; // Application ID (maps to application_id)
   mtxAgent?: number; // Agent ID (maps to agent_id)
 
   // Optional user ID for logging widget questions
@@ -116,7 +116,7 @@ export interface SendMessageRequest {
   mode?: InstructionType;
   mtxId?: string;
   mtxKey?: string;
-  connection_id?: number;
+  application_id?: number;
   question?: string;
   requestId?: string;
 }
@@ -153,7 +153,7 @@ export type AddWidgetConfig = (
       mtxAgent?: never;
     }
   | {
-      // Dev mode: provide agent and connection IDs
+      // Dev mode: provide agent and application IDs
       settings?: never;
       mtxId?: never;
       mtxKey?: never;

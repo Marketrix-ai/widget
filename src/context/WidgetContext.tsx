@@ -47,7 +47,7 @@ interface WidgetContextType {
     sendMessage: (
       content: string,
       mode?: InstructionType,
-      connectionId?: number,
+      applicationId?: number,
       question?: string,
       skipUserMessage?: boolean,
     ) => Promise<void>;
@@ -521,7 +521,7 @@ export const WidgetProvider: React.FC<WidgetProviderProps> = ({ children, previe
     async (
       content: string,
       mode?: InstructionType,
-      connectionId?: number,
+      applicationId?: number,
       question?: string,
       skipUserMessage?: boolean,
     ) => {
@@ -582,9 +582,9 @@ export const WidgetProvider: React.FC<WidgetProviderProps> = ({ children, previe
       // Send via stream (fire-and-forget — response arrives as chat/response event)
       const apiService = new MarketrixApiService(config);
       try {
-        // Override config if connectionId is provided (for chips with specific connection)
-        if (connectionId) {
-          apiService.updateConfig({ mtxApp: connectionId });
+        // Override config if applicationId is provided (for chips with specific application)
+        if (applicationId) {
+          apiService.updateConfig({ mtxApp: applicationId });
         }
 
         // Ensure stream is connected before sending

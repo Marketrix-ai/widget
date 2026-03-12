@@ -205,10 +205,10 @@ async function initWidgetInternal(config: MarketrixConfig, container?: HTMLEleme
     recordingAbortController = new AbortController();
 
     // SessionRecorder now requires chatId at construction (uses HTTP POST, not WebSocket).
-    // We need both connectionId and chatId before creating the recorder.
-    const initRecorder = (connId: number, chatId: string) => {
+    // We need both applicationId and chatId before creating the recorder.
+    const initRecorder = (appId: number, chatId: string) => {
       if (sessionRecorder && isRecordingInitialized) return; // Already initialized
-      sessionRecorder = new SessionRecorder(chatId, connId);
+      sessionRecorder = new SessionRecorder(chatId, appId);
       isRecordingInitialized = true;
 
       // Start recording immediately — chatId is already available
@@ -226,11 +226,11 @@ async function initWidgetInternal(config: MarketrixConfig, container?: HTMLEleme
         });
     };
 
-    const initRecorderWhenChatIdReady = (connId: number) => {
+    const initRecorderWhenChatIdReady = (appId: number) => {
       const existingChatId = storageService.getChatId();
       if (existingChatId) {
         console.log('[Marketrix Widget] chat_id already in storage, initializing recorder immediately');
-        initRecorder(connId, existingChatId);
+        initRecorder(appId, existingChatId);
       } else {
         console.log('[Marketrix Widget] Waiting for chat_id before initializing recorder...');
         window.addEventListener(
@@ -239,7 +239,7 @@ async function initWidgetInternal(config: MarketrixConfig, container?: HTMLEleme
             const chatId = storageService.getChatId();
             if (chatId) {
               console.log('[Marketrix Widget] chat_id created, initializing recorder');
-              initRecorder(connId, chatId);
+              initRecorder(appId, chatId);
             }
           },
           { once: true, signal: recordingAbortController?.signal },
@@ -247,23 +247,23 @@ async function initWidgetInternal(config: MarketrixConfig, container?: HTMLEleme
       }
     };
 
-    const connectionId = finalConfig.mtxApp ?? config.mtxApp;
-    if (connectionId) {
-      // connectionId available from config
-      initRecorderWhenChatIdReady(connectionId);
+    const applicationId = finalConfig.mtxApp ?? config.mtxApp;
+    if (applicationId) {
+      // applicationId available from config
+      initRecorderWhenChatIdReady(applicationId);
     } else {
-      // connectionId not in config — wait for it from the stream's registered event
+      // applicationId not in config — wait for it from the stream's registered event
       console.log(
-        '[Marketrix Widget] No mtxApp (connectionId) in config, waiting for connection_id from stream registration...',
+        '[Marketrix Widget] No mtxApp (applicationId) in config, waiting for application_id from stream registration...',
       );
       const streamClient = StreamClient.getInstance();
       const callbacks = {
-        onRegistered: (connId: number | undefined) => {
-          if (connId) {
-            console.log('[Marketrix Widget] Received connection_id from stream:', connId);
-            initRecorderWhenChatIdReady(connId);
+        onRegistered: (appId: number | undefined) => {
+          if (appId) {
+            console.log('[Marketrix Widget] Received application_id from stream:', appId);
+            initRecorderWhenChatIdReady(appId);
           } else {
-            console.warn('[Marketrix Widget] ⚠️ Stream registered without connection_id — cannot start recording');
+            console.warn('[Marketrix Widget] ⚠️ Stream registered without application_id — cannot start recording');
           }
           streamClient.removeCallbacks(callbacks);
         },
@@ -538,7 +538,7 @@ export const mountWidget = async (config: AddWidgetConfig): Promise<void> => {
       container,
     );
   } else if ('mtxApp' in config && config.mtxApp !== undefined && config.mtxAgent !== undefined) {
-    // Dev mode: use agent and connection IDs
+    // Dev mode: use agent and application IDs
     const devConfig = config as Extract<AddWidgetConfig, { mtxApp: number; mtxAgent: number }>;
     const { mtxApp, mtxAgent, container: _container, ...restConfig } = devConfig;
     await initWidget(

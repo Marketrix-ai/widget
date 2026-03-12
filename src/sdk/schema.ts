@@ -98,7 +98,7 @@ export const BaseEntitySchema = z.object({
 
 export const FileSchema = z.object({
   file: z.custom<Express.Multer.File>(),
-  connection_id: z.coerce.number().optional(),
+  application_id: z.coerce.number().optional(),
 });
 
 // ============================================================================
@@ -293,7 +293,7 @@ export type AgentBadgeData = z.infer<typeof AgentBadgeSchema>;
  */
 export const KnowledgeEntitySchema = BaseEntitySchema.extend({
   workspace_id: z.number(),
-  connection_id: z.number().optional(),
+  application_id: z.number().optional(),
   file_name: z.string(),
   file_size: z.number(),
   file_type: KnowledgeTypeSchema,
@@ -328,7 +328,7 @@ export type BrowserConfig = z.infer<typeof BrowserConfigSchema>;
 export const QAFlowEntitySchema = BaseEntitySchema.extend({
   workspace_id: z.number(),
   user_id: z.number(),
-  connection_id: z.number(),
+  application_id: z.number(),
   file_name: z.string(),
   file_size: z.number(),
   file_type: z.string(),
@@ -345,7 +345,7 @@ export const QAFlowEntitySchema = BaseEntitySchema.extend({
  * QA document create schema
  */
 export const QAFlowCreateSchema = z.object({
-  connection_id: z.coerce.number(),
+  application_id: z.coerce.number(),
   file: z.custom<Express.Multer.File>().optional(),
   text_content: z.string().optional(),
   file_name: z.string().optional(),
@@ -750,7 +750,7 @@ export type SimulationProgressEntry = z.infer<typeof SimulationProgressEntrySche
  * App simulation schema
  */
 export const SimulationEntitySchema = BaseEntitySchema.extend({
-  connection_id: z.number(),
+  application_id: z.number(),
   agent_id: z.number(),
   job_id: z.string(),
   session_id: z.string().nullable().optional(),
@@ -782,7 +782,7 @@ export const SimulationLoggingUserSchema = z.object({
  * Simulation creation schema
  */
 export const SimulationCreateSchema = SimulationEntitySchema.partial().extend({
-  connection_id: z.number(),
+  application_id: z.number(),
   agent_id: z.number(),
   instructions: z.string(),
   max_steps: z.number().int().positive().max(1000).optional(),
@@ -818,7 +818,7 @@ export const SimulationAnswerSchema = z.object({
 export const SessionEntitySchema = BaseEntitySchema.extend({
   session_id: z.string(),
   marketrix_chat_id: z.string(),
-  connection_id: z.number().int().nullable().optional(),
+  application_id: z.number().int().nullable().optional(),
   blob_url: z.string().nullable(),
   event_count: z.number().int().nonnegative(),
   started_at: z.string().datetime(),
@@ -841,7 +841,7 @@ export const SessionEntitySchema = BaseEntitySchema.extend({
 export const SessionUpsertSchema = z.object({
   session_id: z.string().min(1),
   marketrix_chat_id: z.string().min(1),
-  connection_id: z.number().int().nullable().optional(),
+  application_id: z.number().int().nullable().optional(),
   blob_url: z.string().nullable().optional(),
   event_count: z.number().int().nonnegative().optional(),
   started_at: z.string().datetime().optional(),
@@ -851,7 +851,7 @@ export const SessionUpsertSchema = z.object({
     .object({
       userAgent: z.string().optional(),
       url: z.string().optional(),
-      connectionId: z.number().optional(), // Still accepted; API persists to connection_id column
+      applicationId: z.number().optional(), // Still accepted; API persists to application_id column
     })
     .nullable()
     .optional(),
@@ -912,7 +912,7 @@ export const MindMapSchema = z.object({
 export const AgentEntitySchema = BaseEntitySchema.extend({
   workspace_id: z.number(),
   user_id: z.number().nullish(),
-  connection_id: z.number(),
+  application_id: z.number(),
   agent_name: z.string(),
   agent_type: AgentTypeSchema,
   agent_voice: AgentVoiceSchema,
@@ -947,7 +947,7 @@ const SimulationIdsSchema = z.string().transform(str => {
  * Agent creation schema
  */
 export const AgentCreateSchema = AgentEntitySchema.partial().extend({
-  connection_id: z.coerce.number(),
+  application_id: z.coerce.number(),
   agent_name: z.string(),
   agent_type: AgentTypeSchema,
   agent_voice: AgentVoiceSchema,
@@ -1191,7 +1191,7 @@ export const SlackSettingsDataSchema = z.object({
  * Integration entity schema
  */
 export const WidgetEntitySchema = BaseEntitySchema.extend({
-  connection_id: z.number(),
+  application_id: z.number(),
   agent_id: z.number(),
   type: WidgetTypeSchema,
   settings: z.union([WidgetSettingsDataSchema, SlackSettingsDataSchema]),
@@ -1230,7 +1230,7 @@ export const ApplicationWithWidgetsSchema = ApplicationEntitySchema.extend({
  * Integration creation schema
  */
 export const WidgetCreateSchema = WidgetEntitySchema.partial().extend({
-  connection_id: z.number().positive(),
+  application_id: z.number().positive(),
   agent_id: z.number().positive(),
   type: WidgetTypeSchema,
   settings: z.union([WidgetSettingsDataSchema, SlackSettingsDataSchema]).optional(),
@@ -1289,7 +1289,7 @@ export const TourAnswerSchema = z.array(TourStepSchema);
  * Tour entity schema
  */
 export const TourEntitySchema = BaseEntitySchema.extend({
-  connection_id: z.number(),
+  application_id: z.number(),
   question: z.string(),
   answer: TourAnswerSchema,
 });
@@ -1300,19 +1300,19 @@ export const TourEntitySchema = BaseEntitySchema.extend({
 
 /**
  * Chat request schema
- * Requires either: marketrix_id + marketrix_key OR agent_id + connection_id
+ * Requires either: marketrix_id + marketrix_key OR agent_id + application_id
  */
 export const ChatRequestSchema = z
   .object({
     marketrix_id: z.string().optional(),
     marketrix_key: z.string().optional(),
     agent_id: z.number().positive().optional(),
-    connection_id: z.number().positive().optional(),
+    application_id: z.number().positive().optional(),
     chat_id: z.string().optional(), // Optional since it comes from path params in some routes
     content: z.string(),
   })
-  .refine(data => (data.marketrix_id && data.marketrix_key) ?? (data.agent_id && data.connection_id), {
-    message: 'Either marketrix_id + marketrix_key or both agent_id + connection_id must be provided',
+  .refine(data => (data.marketrix_id && data.marketrix_key) ?? (data.agent_id && data.application_id), {
+    message: 'Either marketrix_id + marketrix_key or both agent_id + application_id must be provided',
   });
 
 /**
@@ -1329,7 +1329,7 @@ export const ChatResponseSchema = z.object({
 
 /** Server → Widget event (discriminated union on `type`) */
 export const WidgetEventSchema = z.discriminatedUnion('type', [
-  z.object({ type: z.literal('registered'), chat_id: z.string(), connection_id: z.number().optional() }),
+  z.object({ type: z.literal('registered'), chat_id: z.string(), application_id: z.number().optional() }),
   z.object({ type: z.literal('pong') }),
   z.object({
     type: z.literal('chat/response'),
@@ -1379,7 +1379,7 @@ export const WidgetCommandSchema = z.discriminatedUnion('type', [
     type: z.literal('rrweb/metadata'),
     session_id: z.string(),
     marketrix_chat_id: z.string(),
-    connection_id: z.number(),
+    application_id: z.number(),
     url: z.string().optional(),
     user_agent: z.string().optional(),
     timestamp: z.number().optional(),
@@ -1405,44 +1405,44 @@ export const AppEventSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('simulation/updated'),
     simulation_id: z.number(),
-    connection_id: z.number(),
+    application_id: z.number(),
     status: z.string(),
     step_label: z.string().optional(),
   }),
   z.object({
     type: z.literal('simulation/created'),
     simulation_id: z.number(),
-    connection_id: z.number(),
+    application_id: z.number(),
   }),
   z.object({
     type: z.literal('simulation/deleted'),
     simulation_id: z.number(),
-    connection_id: z.number(),
+    application_id: z.number(),
   }),
 
   // Agent events
   z.object({
     type: z.literal('agent/updated'),
     agent_id: z.number(),
-    connection_id: z.number(),
+    application_id: z.number(),
     status: z.string(),
   }),
   z.object({
     type: z.literal('agent/created'),
     agent_id: z.number(),
-    connection_id: z.number(),
+    application_id: z.number(),
   }),
   z.object({
     type: z.literal('agent/deleted'),
     agent_id: z.number(),
-    connection_id: z.number(),
+    application_id: z.number(),
   }),
 
   // QA events
   z.object({
     type: z.literal('qa-document/updated'),
     document_id: z.number(),
-    connection_id: z.number(),
+    application_id: z.number(),
     status: z.string(),
     step_label: z.string().optional(),
   }),
@@ -1450,7 +1450,7 @@ export const AppEventSchema = z.discriminatedUnion('type', [
     type: z.literal('qa-run/updated'),
     run_id: z.number(),
     document_id: z.number(),
-    connection_id: z.number(),
+    application_id: z.number(),
     status: z.string(),
   }),
   z.object({
@@ -1458,7 +1458,7 @@ export const AppEventSchema = z.discriminatedUnion('type', [
     test_id: z.number(),
     run_id: z.number(),
     document_id: z.number(),
-    connection_id: z.number(),
+    application_id: z.number(),
     status: z.string(),
   }),
 
@@ -1474,20 +1474,20 @@ export const AppEventSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('job/progress'),
     job_id: z.string(),
-    connection_id: z.number(),
+    application_id: z.number(),
     status: z.string(),
     message: z.string().optional(),
   }),
   z.object({
     type: z.literal('job/completed'),
     job_id: z.string(),
-    connection_id: z.number(),
+    application_id: z.number(),
     result: z.unknown().optional(),
   }),
   z.object({
     type: z.literal('job/failed'),
     job_id: z.string(),
-    connection_id: z.number(),
+    application_id: z.number(),
     error: z.string(),
   }),
 ]);
@@ -1550,7 +1550,7 @@ export const ActionLogCreateSchema = ActionLogEntitySchema.partial().extend({
  */
 export const ChatEntitySchema = BaseEntitySchema.extend({
   user_id: z.number(),
-  connection_id: z.number(),
+  application_id: z.number(),
   agent_id: z.number(),
   chat_id: z.string(),
   role: ChatRoleSchema,
@@ -1651,7 +1651,7 @@ export const UploadUserLogoDataSchema = z.object({
  */
 export const UserPromptDataSchema = z.object({
   user_id: z.number(),
-  connection_id: z.number(),
+  application_id: z.number(),
   source: ChatSourceSchema,
   prompt: z.string(),
   status: z.string(),
@@ -2125,7 +2125,7 @@ export const PreviewVideoChatMessageSchema = z.object({
 
 export const PreviewVideoChatEntitySchema = BaseEntitySchema.extend({
   workspace_id: z.number(),
-  connection_id: z.number().nullable().optional(),
+  application_id: z.number().nullable().optional(),
   agent_id: z.number().nullable().optional(),
   simulation_id: z.number().nullable().optional(),
   chat_id: z.string(),
@@ -2137,7 +2137,7 @@ export const PreviewVideoChatEntitySchema = BaseEntitySchema.extend({
 });
 
 export const PreviewVideoChatUpsertSchema = z.object({
-  connection_id: z.number().nullable().optional(),
+  application_id: z.number().nullable().optional(),
   agent_id: z.number().nullable().optional(),
   simulation_id: z.number().nullable().optional(),
   chat_id: z.string(),

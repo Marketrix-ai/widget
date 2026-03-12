@@ -7,7 +7,7 @@ export interface WidgetValidationResult {
   error?: string;
   integration?: WidgetData;
   agent?: AgentData;
-  connection?: ApplicationData;
+  application?: ApplicationData;
 }
 
 /**
@@ -15,7 +15,7 @@ export interface WidgetValidationResult {
  *
  * Validates widget configuration by checking:
  * 1. Integration exists (via marketrix_id and marketrix_key) OR
- * 2. Agent ID and Connection ID exist and match
+ * 2. Agent ID and Application ID exist and match
  */
 export class WidgetValidationService {
   private config?: MarketrixConfig;
@@ -30,7 +30,7 @@ export class WidgetValidationService {
       return this.validateByMarketrixId(config.mtxId, config.mtxKey);
     }
     if (config.mtxApp && config.mtxAgent) {
-      return this.validateByAgentAndConnection(config.mtxApp, config.mtxAgent);
+      return this.validateByAgentAndApplication(config.mtxApp, config.mtxAgent);
     }
     return {
       isValid: false,
@@ -120,31 +120,31 @@ export class WidgetValidationService {
       try {
         const agent = await sdk.agentGet({ agent_id: widgetIntegration.agent_id });
 
-        // Step 3: Validate connection ID exists
-        if (!widgetIntegration.connection_id) {
+        // Step 3: Validate application ID exists
+        if (!widgetIntegration.application_id) {
           return {
             isValid: false,
-            error: 'Integration missing connection_id',
+            error: 'Integration missing application_id',
             integration: widgetIntegration,
             agent,
           };
         }
 
-        console.log('Validating connection ID...', widgetIntegration.connection_id);
+        console.log('Validating application ID...', widgetIntegration.application_id);
 
-        const connection = await sdk.applicationGet({ application_id: widgetIntegration.connection_id });
+        const application = await sdk.applicationGet({ application_id: widgetIntegration.application_id });
 
         console.log('Widget validation successful', {
           integration: widgetIntegration.id,
           agent: agent.id,
-          connection: connection.id,
+          application: application.id,
         });
 
         return {
           isValid: true,
           integration: widgetIntegration,
           agent,
-          connection,
+          application,
         };
       } catch (agentError) {
         console.error('Error validating agent:', agentError);
@@ -162,22 +162,22 @@ export class WidgetValidationService {
 
   /**
    * Validate by mtxApp and mtxAgent directly
-   * Validates connection and agent by ID
+   * Validates application and agent by ID
    */
-  private async validateByAgentAndConnection(mtxApp: number, mtxAgent: number): Promise<WidgetValidationResult> {
+  private async validateByAgentAndApplication(mtxApp: number, mtxAgent: number): Promise<WidgetValidationResult> {
     try {
-      console.log('Validating agent and connection by ID...', { mtxApp, mtxAgent });
+      console.log('Validating application and agent by ID...', { mtxApp, mtxAgent });
 
-      // Step 1: Validate connection exists
-      const connection = await sdk.applicationGet({ application_id: mtxApp });
+      // Step 1: Validate application exists
+      const application = await sdk.applicationGet({ application_id: mtxApp });
 
-      // Log connection data as object
-      console.log('Connection found:', {
-        id: connection.id,
-        name: connection.name,
-        type: connection.type,
-        url: connection.url,
-        allowed_domains: connection.allowed_domains,
+      // Log application data as object
+      console.log('Application found:', {
+        id: application.id,
+        name: application.name,
+        type: application.type,
+        url: application.url,
+        allowed_domains: application.allowed_domains,
       });
 
       // Step 2: Validate agent exists
@@ -187,16 +187,16 @@ export class WidgetValidationService {
       console.log('Agent found:', {
         id: agent.id,
         agent_name: agent.agent_name,
-        connection_id: agent.connection_id,
+        application_id: agent.application_id,
         agent_type: agent.agent_type,
       });
 
-      // Step 3: Validate that agent's connection_id matches the provided mtx-app
-      if (agent.connection_id !== mtxApp) {
+      // Step 3: Validate that agent's application_id matches the provided mtx-app
+      if (agent.application_id !== mtxApp) {
         return {
           isValid: false,
-          error: `Agent ID ${mtxAgent} belongs to connection ID ${agent.connection_id}, but provided connection ID is ${mtxApp}. Please verify the connection ID matches the agent's connection_id.`,
-          connection,
+          error: `Agent ID ${mtxAgent} belongs to application ID ${agent.application_id}, but provided application ID is ${mtxApp}. Please verify the application ID matches the agent's application_id.`,
+          application,
           agent,
         };
       }
@@ -206,12 +206,12 @@ export class WidgetValidationService {
 
       return {
         isValid: true,
-        connection,
+        application,
         agent,
       };
     } catch (error) {
-      console.error('Agent and Connection validation error:', error);
-      return handleApiError(error, 'Agent and Connection validation', this.config);
+      console.error('Agent and application validation error:', error);
+      return handleApiError(error, 'Agent and application validation', this.config);
     }
   }
 }
