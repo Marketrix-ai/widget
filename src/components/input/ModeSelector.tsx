@@ -126,7 +126,6 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({
         onClose={() => setIsDiagnosticModalOpen(false)}
         diagnosticData={{
           chatId: sessionManager.getChatId(),
-          tabId: sessionManager.getTabId(),
           streamEndpoint: (() => {
             const apiHost = configManager.getConfig()?.mtxApiHost || config?.mtxApiHost;
             return apiHost ? `${apiHost.replace(/\/$/, '')}/widget/stream` : null;

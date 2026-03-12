@@ -11,7 +11,6 @@ import { MarketrixWidget as MarketrixWidgetComponent } from './components/Market
 import { WidgetProvider } from './context/WidgetContext';
 import { configureSdk, type WidgetSettingsData } from './sdk';
 import { createConfigFromSettings } from './services/ConfigManager';
-import { sessionManager } from './services/SessionManager';
 import { SessionRecorder } from './services/SessionRecorder';
 import { storageService } from './services/StorageService';
 import { StreamClient } from './services/StreamClient';
@@ -192,14 +191,6 @@ async function initWidgetInternal(config: MarketrixConfig, container?: HTMLEleme
       sessionRecorder = null;
       isRecordingInitialized = false;
     }
-
-    const tabId = sessionManager.getTabId();
-    if (!tabId?.startsWith('tab_')) {
-      console.error('[Marketrix Widget] ❌ SessionManager tab_id not initialized correctly:', tabId);
-      console.error('[Marketrix Widget] Expected format: tab_*');
-      throw new Error(`SessionManager tab_id not initialized. Got: ${tabId}`);
-    }
-    console.log('[Marketrix Widget] ✅ SessionManager initialized with tab_id:', tabId);
 
     recordingAbortController = new AbortController();
 

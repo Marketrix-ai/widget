@@ -816,7 +816,7 @@ export const SimulationAnswerSchema = z.object({
  */
 export const SessionEntitySchema = BaseEntitySchema.extend({
   session_id: z.string(),
-  marketrix_chat_id: z.string(),
+  chat_id: z.string(),
   application_id: z.number().int().nullable().optional(),
   blob_url: z.string().nullable(),
   event_count: z.number().int().nonnegative(),
@@ -839,7 +839,7 @@ export const SessionEntitySchema = BaseEntitySchema.extend({
  */
 export const SessionUpsertSchema = z.object({
   session_id: z.string().min(1),
-  marketrix_chat_id: z.string().min(1),
+  chat_id: z.string().min(1),
   application_id: z.number().int().nullable().optional(),
   blob_url: z.string().nullable().optional(),
   event_count: z.number().int().nonnegative().optional(),
@@ -1377,7 +1377,7 @@ export const WidgetCommandSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('rrweb/metadata'),
     session_id: z.string(),
-    marketrix_chat_id: z.string(),
+    chat_id: z.string(),
     application_id: z.number(),
     url: z.string().optional(),
     user_agent: z.string().optional(),
