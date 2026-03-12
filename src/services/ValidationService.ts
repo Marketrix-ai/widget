@@ -5,7 +5,7 @@ import { extractErrorMessage, handleApiError } from '../utils/apiUtils';
 export interface WidgetValidationResult {
   isValid: boolean;
   error?: string;
-  integration?: WidgetData;
+  widget?: WidgetData;
   agent?: AgentData;
   application?: ApplicationData;
 }
@@ -43,28 +43,28 @@ export class WidgetValidationService {
    */
   private async validateByMarketrixId(mtxId: string, mtxKey: string): Promise<WidgetValidationResult> {
     try {
-      // Step 1: Fetch integration by marketrix_id and marketrix_key
-      console.log('Validating widget - fetching integration...', { mtxId, mtxKey });
+      // Step 1: Fetch widget by marketrix_id and marketrix_key
+      console.log('Validating widget - fetching widget...', { mtxId, mtxKey });
 
-      const integrationsData = await sdk.widgetSearch({
+      const widgetsData = await sdk.widgetSearch({
         marketrix_id: mtxId,
         marketrix_key: mtxKey,
       });
 
-      if (!integrationsData || integrationsData.length === 0) {
+      if (!widgetsData || widgetsData.length === 0) {
         return {
           isValid: false,
-          error: 'Integration not found or invalid credentials',
+          error: 'Widget not found or invalid credentials',
         };
       }
 
-      const integrations = integrationsData;
+      const widgets = widgetsData;
 
-      // Debug: Log what integrations were found
+      // Debug: Log what widgets were found
       console.log(
-        'Found integrations:',
-        integrations.length,
-        integrations.map((i: WidgetData) => ({
+        'Found widgets:',
+        widgets.length,
+        widgets.map((i: WidgetData) => ({
           id: i.id,
           type: i.type,
           status: i.status,
@@ -72,77 +72,74 @@ export class WidgetValidationService {
         })),
       );
 
-      // Find the widget integration
-      const widgetIntegration = integrations.find(
-        (integration: WidgetData) => integration.type === 'widget' && integration.status === 'active',
-      );
+      // Find the active widget
+      const activeWidget = widgets.find((widget: WidgetData) => widget.type === 'widget' && widget.status === 'active');
 
-      if (!widgetIntegration) {
-        // Check if there are any widget integrations with different status
-        const widgetIntegrations = integrations.filter((integration: WidgetData) => integration.type === 'widget');
+      if (!activeWidget) {
+        // Check if there are any widgets with different status
+        const widgetMatches = widgets.filter((widget: WidgetData) => widget.type === 'widget');
 
-        if (widgetIntegrations.length > 0) {
-          const statuses = widgetIntegrations.map((i: WidgetData) => i.status).join(', ');
+        if (widgetMatches.length > 0) {
+          const statuses = widgetMatches.map((i: WidgetData) => i.status).join(', ');
           return {
             isValid: false,
-            error: `Found widget integration(s) but none are active. Current status(es): ${statuses}. Please activate the integration in the dashboard.`,
+            error: `Found widget(s) but none are active. Current status(es): ${statuses}. Please activate the widget in the dashboard.`,
           };
         }
 
-        // Check if there are any integrations at all
-        if (integrations.length === 0) {
+        // Check if there are any widgets at all
+        if (widgets.length === 0) {
           return {
             isValid: false,
-            error:
-              'No integrations found for the provided marketrix_id and marketrix_key. Please verify your credentials.',
+            error: 'No widgets found for the provided marketrix_id and marketrix_key. Please verify your credentials.',
           };
         }
 
-        // There are integrations but no widget type
-        const types = integrations.map((i: WidgetData) => i.type).join(', ');
+        // There are widgets but no widget type
+        const types = widgets.map((i: WidgetData) => i.type).join(', ');
         return {
           isValid: false,
-          error: `No widget integration found. Found integration type(s): ${types}. Please create a widget integration.`,
+          error: `No widget found. Found widget type(s): ${types}. Please create a widget.`,
         };
       }
 
       // Step 2: Validate agent ID exists
-      if (!widgetIntegration.agent_id) {
+      if (!activeWidget.agent_id) {
         return {
           isValid: false,
-          error: 'Integration missing agent_id',
-          integration: widgetIntegration,
+          error: 'Widget missing agent_id',
+          widget: activeWidget,
         };
       }
 
-      console.log('Validating agent ID...', widgetIntegration.agent_id);
+      console.log('Validating agent ID...', activeWidget.agent_id);
 
       try {
-        const agent = await sdk.agentGet({ agent_id: widgetIntegration.agent_id });
+        const agent = await sdk.agentGet({ agent_id: activeWidget.agent_id });
 
         // Step 3: Validate application ID exists
-        if (!widgetIntegration.application_id) {
+        if (!activeWidget.application_id) {
           return {
             isValid: false,
-            error: 'Integration missing application_id',
-            integration: widgetIntegration,
+            error: 'Widget missing application_id',
+            widget: activeWidget,
             agent,
           };
         }
 
-        console.log('Validating application ID...', widgetIntegration.application_id);
+        console.log('Validating application ID...', activeWidget.application_id);
 
-        const application = await sdk.applicationGet({ application_id: widgetIntegration.application_id });
+        const application = await sdk.applicationGet({ application_id: activeWidget.application_id });
 
         console.log('Widget validation successful', {
-          integration: widgetIntegration.id,
+          widget: activeWidget.id,
           agent: agent.id,
           application: application.id,
         });
 
         return {
           isValid: true,
-          integration: widgetIntegration,
+          widget: activeWidget,
           agent,
           application,
         };
@@ -151,7 +148,7 @@ export class WidgetValidationService {
         return {
           isValid: false,
           error: `Failed to validate agent: ${extractErrorMessage(agentError)}`,
-          integration: widgetIntegration,
+          widget: activeWidget,
         };
       }
     } catch (error) {

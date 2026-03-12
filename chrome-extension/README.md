@@ -17,7 +17,7 @@ on every page, persisting across full-page navigations.
    - **Script URL** — URL to the widget bundle (e.g.
      `http://localhost:5174/index.mjs` or `https://storage.marketrix.ai/widget/index.mjs`)
    - **Agent ID** — The agent identifier
-   - **Connection ID** — The connection/app identifier
+   - **Application ID** — The application identifier
 3. Click **Save Configuration**
 4. Toggle **Enable Widget** to ON
 
@@ -37,11 +37,11 @@ Bookmarklets cannot persist across full-page navigations because:
 
 ## Configuration Options
 
-| Setting       | Description              | Default / Example                 |
-| ------------- | ------------------------ | --------------------------------- |
-| Script URL    | URL to the widget bundle | `http://localhost:5174/index.mjs` |
-| Agent ID      | Agent identifier         | `10`                              |
-| Connection ID | Connection identifier    | `13`                              |
+| Setting        | Description              | Default / Example                 |
+| -------------- | ------------------------ | --------------------------------- |
+| Script URL     | URL to the widget bundle | `http://localhost:5174/index.mjs` |
+| Agent ID       | Agent identifier         | `10`                              |
+| Application ID | Application identifier   | `13`                              |
 
 ### Extended Attributes (content script)
 
@@ -52,7 +52,7 @@ but can be set programmatically via `chrome.storage.local`:
 | Config Key   | Script Attribute | Description           |
 | ------------ | ---------------- | --------------------- |
 | `mtxAgent`   | `mtx-agent`      | Agent ID              |
-| `mtxApp`     | `mtx-app`        | App / connection ID   |
+| `mtxApp`     | `mtx-app`        | Application ID        |
 | `mtxId`      | `mtx-id`         | Widget instance ID    |
 | `mtxKey`     | `mtx-key`        | API key               |
 | `mtxApiHost` | `mtx-api-host`   | API server URL        |
@@ -131,7 +131,7 @@ https://storage.marketrix.ai/widget/index.mjs
 
 ### Widget appears but doesn't connect
 
-- Ensure Agent ID and Connection ID are correct
+- Ensure Agent ID and Application ID are correct
 - Look for WebSocket connection errors in the console
 - If the widget needs API/AI host overrides, set `mtxApiHost` / `mtxAiHost` in
   storage (see _Extended Attributes_ above)

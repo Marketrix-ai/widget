@@ -181,43 +181,6 @@ function isElementInteractive(element: HTMLElement): boolean {
   return true;
 }
 
-/**
- * Get all file input elements on the page, ordered by DOM position.
- */
-export function getAllFileInputs(): HTMLInputElement[] {
-  const inputs = Array.from(document.querySelectorAll<HTMLInputElement>('input[type="file"]'));
-  return inputs.filter(input => isElementVisible(input) && !input.disabled);
-}
-
-/**
- * Get a file input element by its index.
- */
-export function getFileInputByIndex(index: number): HTMLInputElement | null {
-  const inputs = getAllFileInputs();
-  if (index < 0 || index >= inputs.length) {
-    return null;
-  }
-  return inputs[index];
-}
-
-/**
- * Get all select/dropdown elements on the page, ordered by DOM position.
- */
-export function getAllSelectElements(): HTMLSelectElement[] {
-  const selects = Array.from(document.querySelectorAll<HTMLSelectElement>('select'));
-  return selects.filter(select => isElementVisible(select) && !select.disabled);
-}
-
-/**
- * Get a select element by its index.
- */
-export function getSelectElementByIndex(index: number): HTMLSelectElement | null {
-  const selects = getAllSelectElements();
-  if (index < 0 || index >= selects.length) {
-    return null;
-  }
-  return selects[index];
-}
 export function isInteractable(el: Element | null): boolean {
   if (!el || !(el instanceof Element)) return false;
 
@@ -425,52 +388,4 @@ export function isInteractable(el: Element | null): boolean {
     console.error('[isInteractable] Unexpected error:', error);
     return false;
   }
-}
-/**
- * Attribute Parsing Utilities
- *
- * Pure utility functions for parsing script tag data attributes.
- * These functions validate and normalize attribute values.
- */
-
-/**
- * Parse position attribute from script tag
- */
-export function parsePositionAttribute(
-  value: string | null,
-): 'bottom_right' | 'bottom_left' | 'top_left' | 'top_right' {
-  if (value === 'bottom_left' || value === 'bottom_right' || value === 'top_left' || value === 'top_right') {
-    return value;
-  }
-  return 'bottom_right';
-}
-
-/**
- * Parse theme attribute from script tag
- */
-export function parseThemeAttribute(value: string | null): 'light' | 'dark' {
-  if (value === 'light' || value === 'dark') {
-    return value;
-  }
-  return 'light';
-}
-
-/**
- * Parse enabled modes attribute from script tag
- */
-export function parseEnabledModesAttribute(value: string | null): ('show' | 'tell' | 'do')[] {
-  if (!value) {
-    return ['show', 'tell', 'do'];
-  }
-
-  const modes = value.split(',').map(m => m.trim());
-  const validModes: ('show' | 'tell' | 'do')[] = [];
-
-  for (const mode of modes) {
-    if (mode === 'show' || mode === 'tell' || mode === 'do') {
-      validModes.push(mode);
-    }
-  }
-
-  return validModes.length > 0 ? validModes : ['show', 'tell', 'do'];
 }

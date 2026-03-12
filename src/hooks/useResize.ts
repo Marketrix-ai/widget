@@ -47,11 +47,11 @@ function getDeltaAndCursor(
 export function useResize(
   settingsWidth: string | undefined,
   settingsHeight: string | undefined,
-  tenantId: string,
+  workspaceId: string,
   isMinimized: boolean,
   isPreviewMode: boolean,
 ) {
-  const storageKey = useMemo(() => `${STORAGE_KEY_PREFIX}${tenantId}`, [tenantId]);
+  const storageKey = useMemo(() => `${STORAGE_KEY_PREFIX}${workspaceId}`, [workspaceId]);
   const dimsRef = useRef<{ width: number; height: number }>({ width: 360, height: 450 });
   const containerRef = useRef<HTMLDivElement>(null);
 

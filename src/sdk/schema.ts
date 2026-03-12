@@ -21,7 +21,6 @@
  * - Guide: Guide system
  * - Activity Log: System activity tracking and auditing
  * - App Config: In-app configuration management
- * - TaskPilot: Legacy prompt tracking (deprecated — new code uses 'app' source)
  * - Rule: Business rule management
  * - Migration: Database migration and system updates
  */
@@ -70,12 +69,12 @@ export const ActionLogTypeSchema = z.enum([
   'create_agent',
   'update_agent',
   'delete_agent',
-  'create_connection',
-  'update_connection',
-  'delete_connection',
-  'create_integration',
-  'update_integration',
-  'delete_integration',
+  'create_application',
+  'update_application',
+  'delete_application',
+  'create_widget',
+  'update_widget',
+  'delete_widget',
   'create_knowledge',
   'update_knowledge',
   'delete_knowledge',
@@ -356,7 +355,7 @@ export const QAFlowCreateSchema = z.object({
  * QA run entity schema
  */
 export const QARunEntitySchema = BaseEntitySchema.extend({
-  qa_document_id: z.number(),
+  qa_flow_id: z.number(),
   workspace_id: z.number(),
   triggered_by: z.number(),
   status: QARunStatusSchema,
@@ -424,7 +423,7 @@ export const QAHealingAttemptEntrySchema = z.object({
  * QA test case entity schema (replaces old qa_test_result)
  */
 export const QATestCaseEntitySchema = BaseEntitySchema.extend({
-  qa_document_id: z.number(),
+  qa_flow_id: z.number(),
   workspace_id: z.number(),
   order_index: z.number().int().nonnegative(),
   test_title: z.string(),
@@ -445,7 +444,7 @@ export const QATestCaseEntitySchema = BaseEntitySchema.extend({
  * QA test case create schema
  */
 export const QATestCaseCreateSchema = z.object({
-  qa_document_id: z.number(),
+  qa_flow_id: z.number(),
   test_title: z.string(),
   test_objective: z.string(),
   test_steps: z.array(z.string()),
@@ -851,7 +850,7 @@ export const SessionUpsertSchema = z.object({
     .object({
       userAgent: z.string().optional(),
       url: z.string().optional(),
-      applicationId: z.number().optional(), // Still accepted; API persists to application_id column
+      applicationId: z.number().optional(), // API persists to application_id column; also accepted from metadata
     })
     .nullable()
     .optional(),
@@ -1103,11 +1102,11 @@ export const AgentVideoGenerateRequestSchema = z.object({
 });
 
 // ============================================================================
-// CONNECTION SCHEMAS - Connection management (apps and websites)
+// APPLICATION SCHEMAS - Application management (apps and websites)
 // ============================================================================
 
 /**
- * Connection entity schema
+ * Application entity schema
  */
 export const ApplicationEntitySchema = BaseEntitySchema.extend({
   workspace_id: z.number(),
@@ -1120,7 +1119,7 @@ export const ApplicationEntitySchema = BaseEntitySchema.extend({
 });
 
 /**
- * Connection creation schema
+ * Application creation schema
  */
 export const ApplicationCreateSchema = ApplicationEntitySchema.partial().extend({
   type: ApplicationTypeSchema,
@@ -1130,12 +1129,12 @@ export const ApplicationCreateSchema = ApplicationEntitySchema.partial().extend(
 });
 
 /**
- * Connection update schema
+ * Application update schema
  */
 export const ApplicationUpdateSchema = ApplicationEntitySchema.partial().omit({ workspace_id: true });
 
 // ============================================================================
-// INTEGRATION SCHEMAS - Integration management (widget, slack, etc.)
+// WIDGET SCHEMAS - Widget management (widget, slack, etc.)
 // ============================================================================
 
 /**
@@ -1178,7 +1177,7 @@ export const WidgetSettingsDataSchema = z.object({
 });
 
 /**
- * Slack integration settings schema (example for future use)
+ * Slack widget settings schema (example for future use)
  */
 export const SlackSettingsDataSchema = z.object({
   webhook_url: z.string().url(),
@@ -1188,7 +1187,7 @@ export const SlackSettingsDataSchema = z.object({
 });
 
 /**
- * Integration entity schema
+ * Widget entity schema
  */
 export const WidgetEntitySchema = BaseEntitySchema.extend({
   application_id: z.number(),
@@ -1202,32 +1201,32 @@ export const WidgetEntitySchema = BaseEntitySchema.extend({
 });
 
 /**
- * Integration information schema
+ * Widget information schema
  */
 export const WidgetInfoSchema = WidgetEntitySchema.extend({
-  connection: ApplicationEntitySchema.partial(),
+  application: ApplicationEntitySchema.partial(),
   workspace: WorkspaceEntitySchema.partial(),
   user: UserEntitySchema.partial(),
   agent: AgentEntitySchema.partial(),
 });
 
 /**
- * Integration search result schema - includes optional eager-loaded agent
+ * Widget search result schema - includes optional eager-loaded agent
  */
 export const WidgetWithAgentSchema = WidgetEntitySchema.extend({
   agent: AgentEntitySchema.partial().optional(),
 });
 
 /**
- * Connection with integrations schema - matches API response structure
+ * Application with widgets schema - matches API response structure
  */
 export const ApplicationWithWidgetsSchema = ApplicationEntitySchema.extend({
-  integrations: z.array(WidgetEntitySchema),
+  widgets: z.array(WidgetEntitySchema),
   agents: z.array(AgentEntitySchema).optional(),
 });
 
 /**
- * Integration creation schema
+ * Widget creation schema
  */
 export const WidgetCreateSchema = WidgetEntitySchema.partial().extend({
   application_id: z.number().positive(),
@@ -1237,7 +1236,7 @@ export const WidgetCreateSchema = WidgetEntitySchema.partial().extend({
 });
 
 /**
- * Integration update schema
+ * Widget update schema
  */
 export const WidgetUpdateSchema = WidgetEntitySchema.partial();
 
@@ -1250,7 +1249,7 @@ export const WidgetUpdateSchema = WidgetEntitySchema.partial();
  * message can be a string (single message) or array of strings (multiple chips)
  */
 export const UrlGuideEntitySchema = BaseEntitySchema.extend({
-  integration_id: z.number(),
+  widget_id: z.number(),
   url_pattern: z.string(),
   message: z.union([z.string(), z.array(z.string())]), // Support both single message and multiple messages
   description: z.string().optional(),
@@ -1260,7 +1259,7 @@ export const UrlGuideEntitySchema = BaseEntitySchema.extend({
  * URL Guide creation schema
  */
 export const UrlGuideCreateSchema = UrlGuideEntitySchema.partial().extend({
-  integration_id: z.number().positive(),
+  widget_id: z.number().positive(),
   url_pattern: z.string().min(1),
   message: z.union([z.string().min(1), z.array(z.string().min(1)).min(1)]), // Support both single message and multiple messages
 });
@@ -1519,7 +1518,7 @@ export const ActionLogMetadataSchema = z
     workspace_slug: z.string().optional(),
     ip_address: z.string().optional(),
     user_agent: z.string().optional(),
-    integration_type: z.string().optional(),
+    widget_type: z.string().optional(),
     created_by: z.number().optional(),
   })
   .passthrough(); // Allow additional fields for flexibility (e.g., updatedData, previousData, createdData)
@@ -1700,48 +1699,6 @@ export const MailOptionsDataSchema = z.object({
  * Initial prompt limit for new users
  */
 export const INITIAL_PROMPT_LIMIT = 50;
-
-// ============================================================================
-// TASKPILOT SCHEMAS - TaskPilot-specific types
-// ============================================================================
-
-/**
- * TaskPilot prompt metadata schema
- */
-export const TaskPilotPromptMetadataSchema = z.object({
-  step_number: z.number().optional(),
-  duration: z.string().optional(),
-  source: z.string().optional(),
-  tags: z.array(z.string()).optional(),
-});
-
-/**
- * TaskPilot prompt schema
- */
-export const TaskPilotPromptSchema = z.object({
-  id: z.string(),
-  title: z.string(),
-  description: z.string(),
-  created_at: z.string(),
-  user_id: z.string(),
-  user: z.object({
-    email: z.string().optional(),
-    name: z.string().optional(),
-  }),
-  prompt_text: z.string().optional(),
-  response_text: z.string().optional(),
-  status: z.string().optional(),
-  createdAt: z.string().optional(),
-  metadata: TaskPilotPromptMetadataSchema.optional(),
-  taskpilotUser: z
-    .object({
-      name: z.string().optional(),
-      email: z.string().optional(),
-    })
-    .optional(),
-  question: z.string().optional(),
-  response: z.string().optional(),
-});
 
 // ============================================================================
 // STRIPE SCHEMAS - Stripe subscription and payment management
@@ -2062,8 +2019,6 @@ export type SimulationStepMetadataData = z.infer<typeof SimulationStepMetadataSc
 export type SimulationActionData = z.infer<typeof SimulationActionSchema>;
 export type BrowserTabData = z.infer<typeof BrowserTabSchema>;
 export type InteractedElementData = z.infer<typeof InteractedElementSchema>;
-export type TaskPilotPromptMetadataData = z.infer<typeof TaskPilotPromptMetadataSchema>;
-export type TaskPilotPromptData = z.infer<typeof TaskPilotPromptSchema>;
 export type TourData = z.infer<typeof TourEntitySchema>;
 export type TourAnswerData = z.infer<typeof TourAnswerSchema>;
 export type TourStepData = z.infer<typeof TourStepSchema>;

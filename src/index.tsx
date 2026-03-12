@@ -8,16 +8,15 @@ import React, { useEffect, useRef } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 
 import { MarketrixWidget as MarketrixWidgetComponent } from './components/MarketrixWidget';
-// getEventsWebSocketUrl removed — SessionRecorder now uses HTTP POST
 import { WidgetProvider } from './context/WidgetContext';
 import { configureSdk, type WidgetSettingsData } from './sdk';
 import { createConfigFromSettings } from './services/ConfigManager';
-import { IntegrationService } from './services/IntegrationService';
 import { sessionManager } from './services/SessionManager';
 import { SessionRecorder } from './services/SessionRecorder';
 import { storageService } from './services/StorageService';
 import { StreamClient } from './services/StreamClient';
 import { WidgetValidationService } from './services/ValidationService';
+import { WidgetService } from './services/WidgetService';
 import type { AddWidgetConfig, MarketrixConfig, MarketrixWidgetProps } from './types';
 import {
   clearWidgetState,
@@ -65,13 +64,13 @@ async function initializeWidgetWithConfig(
 
   showWidgetSettingsLoader('Loading widget settings...');
   try {
-    const integrationService = new IntegrationService(config.mtxId, config.mtxKey, config.mtxApp);
+    const widgetService = new WidgetService(config.mtxId, config.mtxKey, config.mtxApp);
 
-    const integrationData = await integrationService.fetchIntegrationSettings();
-    const integrationSettings = integrationData ? integrationService.getWidgetSettings(integrationData) : null;
+    const widgetData = await widgetService.fetchWidgetSettings();
+    const widgetSettings = widgetData ? widgetService.getWidgetSettings(widgetData) : null;
 
-    if (!integrationSettings) {
-      throw new Error('IntegrationService did not return widget settings');
+    if (!widgetSettings) {
+      throw new Error('WidgetService did not return widget settings');
     }
 
     // Validate that all required settings fields exist
@@ -104,7 +103,7 @@ async function initializeWidgetWithConfig(
     ] as const;
 
     const missingSettings = requiredSettings.filter(
-      key => integrationSettings[key as keyof typeof integrationSettings] === undefined,
+      key => widgetSettings[key as keyof typeof widgetSettings] === undefined,
     );
 
     if (missingSettings.length > 0) {
@@ -113,9 +112,9 @@ async function initializeWidgetWithConfig(
       );
     }
 
-    return createConfigFromSettings(integrationSettings, config);
+    return createConfigFromSettings(widgetSettings, config);
   } catch (err) {
-    console.error('Error fetching integration settings:', err);
+    console.error('Error fetching widget settings:', err);
     throw err;
   } finally {
     hideWidgetSettingsLoader();
@@ -206,9 +205,9 @@ async function initWidgetInternal(config: MarketrixConfig, container?: HTMLEleme
 
     // SessionRecorder now requires chatId at construction (uses HTTP POST, not WebSocket).
     // We need both applicationId and chatId before creating the recorder.
-    const initRecorder = (appId: number, chatId: string) => {
+    const initRecorder = (applicationId: number, chatId: string) => {
       if (sessionRecorder && isRecordingInitialized) return; // Already initialized
-      sessionRecorder = new SessionRecorder(chatId, appId);
+      sessionRecorder = new SessionRecorder(chatId, applicationId);
       isRecordingInitialized = true;
 
       // Start recording immediately — chatId is already available
@@ -226,11 +225,11 @@ async function initWidgetInternal(config: MarketrixConfig, container?: HTMLEleme
         });
     };
 
-    const initRecorderWhenChatIdReady = (appId: number) => {
+    const initRecorderWhenChatIdReady = (applicationId: number) => {
       const existingChatId = storageService.getChatId();
       if (existingChatId) {
         console.log('[Marketrix Widget] chat_id already in storage, initializing recorder immediately');
-        initRecorder(appId, existingChatId);
+        initRecorder(applicationId, existingChatId);
       } else {
         console.log('[Marketrix Widget] Waiting for chat_id before initializing recorder...');
         window.addEventListener(
@@ -239,7 +238,7 @@ async function initWidgetInternal(config: MarketrixConfig, container?: HTMLEleme
             const chatId = storageService.getChatId();
             if (chatId) {
               console.log('[Marketrix Widget] chat_id created, initializing recorder');
-              initRecorder(appId, chatId);
+              initRecorder(applicationId, chatId);
             }
           },
           { once: true, signal: recordingAbortController?.signal },
@@ -258,10 +257,10 @@ async function initWidgetInternal(config: MarketrixConfig, container?: HTMLEleme
       );
       const streamClient = StreamClient.getInstance();
       const callbacks = {
-        onRegistered: (appId: number | undefined) => {
-          if (appId) {
-            console.log('[Marketrix Widget] Received application_id from stream:', appId);
-            initRecorderWhenChatIdReady(appId);
+        onRegistered: (applicationId: number | undefined) => {
+          if (applicationId) {
+            console.log('[Marketrix Widget] Received application_id from stream:', applicationId);
+            initRecorderWhenChatIdReady(applicationId);
           } else {
             console.warn('[Marketrix Widget] ⚠️ Stream registered without application_id — cannot start recording');
           }

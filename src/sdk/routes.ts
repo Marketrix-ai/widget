@@ -20,7 +20,6 @@
  * - Tour: Guide system (user-facing: "Guides")
  * - Activity Log: System activity tracking and auditing
  * - App Config: In-app configuration management
- * - TaskPilot: AI prompt management
  * - Rule: Business rule management
  * - Migration: Database migration and system updates
  * - File: File upload and management
@@ -465,7 +464,7 @@ const contract = {
     .output(
       z.array(
         ApplicationEntitySchema.extend({
-          integrations: z.array(WidgetEntitySchema),
+          widgets: z.array(WidgetEntitySchema),
         }),
       ),
     ),
@@ -481,7 +480,7 @@ const contract = {
     .input(z.object({ application_id: z.coerce.number() }))
     .output(
       ApplicationEntitySchema.extend({
-        integrations: z.array(WidgetEntitySchema),
+        widgets: z.array(WidgetEntitySchema),
       }),
     ),
 
@@ -1331,7 +1330,7 @@ const contract = {
       z.object({
         application_id: z.number(),
         agent_id: z.number(),
-        application_url: z.string().nullish(),
+        url: z.string().nullish(),
       }),
     )
     .output(
