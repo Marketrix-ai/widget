@@ -14,8 +14,22 @@ const MAX_QUEUE_SIZE = 500;
 /** Flush when estimated serialized size reaches this threshold (bytes) */
 const FLUSH_SIZE_THRESHOLD = 50_000; // 50 KB
 
+/**
+ * Hard cap on the serialized byte size of a single POST body.
+ * Must stay well under the API body-parser limit (currently 5mb).
+ * Batches exceeding this are split across multiple flushes.
+ */
+const MAX_BATCH_BYTES = 500_000; // 500 KB
+
 /** Flush at most every this many ms */
 const FLUSH_INTERVAL_MS = 500;
+
+/**
+ * Maximum consecutive flush failures before the recorder gives up retrying
+ * and starts dropping events.  This prevents an infinite loop when the server
+ * consistently rejects the payload (e.g. 413 or 400).
+ */
+const MAX_CONSECUTIVE_FAILURES = 5;
 
 /**
  * SessionRecorder manages real-time RRWeb session recording,
@@ -33,6 +47,8 @@ export class SessionRecorder {
   private startPromise: Promise<void> | null = null;
   private stopRequested = false;
   private flushTimer: ReturnType<typeof setTimeout> | null = null;
+
+  private consecutiveFailures = 0;
 
   private readonly TAB_ID_STORAGE_KEY = 'marketrix_tab_id';
 
@@ -157,7 +173,13 @@ export class SessionRecorder {
   }
 
   /**
-   * Flush buffered events via POST. On failure, events stay in the buffer for next flush.
+   * Flush buffered events via POST.
+   *
+   * Batches are capped at MAX_BATCH_BYTES to stay within the API body-parser limit.
+   * On transient server errors (5xx / network) the batch is re-queued up to
+   * MAX_CONSECUTIVE_FAILURES times before being dropped.
+   * On permanent client errors (4xx) the batch is dropped immediately — re-sending
+   * would never succeed and would create an infinite retry loop.
    */
   private flush(): void {
     if (this.flushTimer) {
@@ -167,13 +189,38 @@ export class SessionRecorder {
 
     if (this.eventQueue.length === 0) return;
 
-    // Take all events out of the buffer
-    const events = this.eventQueue;
-    const estimatedBytes = this.estimatedQueueBytes;
-    this.eventQueue = [];
-    this.estimatedQueueBytes = 0;
+    // Build a batch that fits within MAX_BATCH_BYTES.
+    // If the whole queue fits, take it all; otherwise slice until we hit the cap.
+    let batchEvents: eventWithTime[];
+    let batchBytes: number;
 
-    log.debug(`Flushing ${events.length} events (~${estimatedBytes} bytes)`);
+    if (this.estimatedQueueBytes <= MAX_BATCH_BYTES) {
+      batchEvents = this.eventQueue;
+      batchBytes = this.estimatedQueueBytes;
+      this.eventQueue = [];
+      this.estimatedQueueBytes = 0;
+    } else {
+      batchEvents = [];
+      batchBytes = 0;
+      while (this.eventQueue.length > 0) {
+        const next = this.eventQueue[0]!;
+        const nextSize = JSON.stringify(next).length;
+        if (batchBytes + nextSize > MAX_BATCH_BYTES && batchEvents.length > 0) break;
+        batchEvents.push(this.eventQueue.shift()!);
+        batchBytes += nextSize;
+        this.estimatedQueueBytes -= nextSize;
+      }
+
+      // If there are still events remaining, schedule the next flush immediately.
+      if (this.eventQueue.length > 0 && !this.flushTimer) {
+        this.flushTimer = setTimeout(() => {
+          this.flushTimer = null;
+          this.flush();
+        }, 0);
+      }
+    }
+
+    log.debug(`Flushing ${batchEvents.length} events (~${batchBytes} bytes)`);
 
     sdk
       .widgetMessage({
@@ -181,16 +228,45 @@ export class SessionRecorder {
         command: {
           type: 'rrweb/events' as const,
           session_id: this.sessionId,
-          events,
+          events: batchEvents,
         },
       })
-      .catch(err => {
-        log.error('Failed to flush events, re-queuing:', err);
-        // Prepend failed events back to the buffer
-        this.eventQueue = events.concat(this.eventQueue);
-        this.estimatedQueueBytes += estimatedBytes;
+      .then(() => {
+        this.consecutiveFailures = 0;
+      })
+      .catch((err: unknown) => {
+        // Determine whether this is a permanent client error (4xx) or a transient one.
+        const status =
+          err != null && typeof err === 'object' && 'status' in err ? (err as { status: unknown }).status : null;
+        const isPermanent = typeof status === 'number' && status >= 400 && status < 500;
 
-        // Enforce max queue size after re-queuing
+        if (isPermanent) {
+          // 4xx: drop the batch — retrying the same payload will never succeed.
+          log.error(`Dropping ${batchEvents.length} events after permanent ${String(status)} error:`, err);
+          this.consecutiveFailures = 0;
+          return;
+        }
+
+        this.consecutiveFailures++;
+        if (this.consecutiveFailures > MAX_CONSECUTIVE_FAILURES) {
+          log.error(
+            `Dropping ${batchEvents.length} events after ${MAX_CONSECUTIVE_FAILURES} consecutive failures:`,
+            err,
+          );
+          this.consecutiveFailures = 0;
+          return;
+        }
+
+        log.error(
+          `Failed to flush events (attempt ${this.consecutiveFailures}/${MAX_CONSECUTIVE_FAILURES}), re-queuing:`,
+          err,
+        );
+
+        // Prepend failed events back to the buffer for the next flush attempt.
+        this.eventQueue = batchEvents.concat(this.eventQueue);
+        this.estimatedQueueBytes += batchBytes;
+
+        // Enforce max queue size after re-queuing.
         if (this.eventQueue.length > MAX_QUEUE_SIZE) {
           const excess = this.eventQueue.length - MAX_QUEUE_SIZE;
           const dropped = this.eventQueue.splice(0, excess);
