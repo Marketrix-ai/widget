@@ -1,7 +1,7 @@
 import { sdk, type WidgetData, type WidgetSettingsData } from '../sdk';
 import { isWidgetSettingsData } from '../utils/validation';
 
-export class IntegrationService {
+export class WidgetService {
   private mtxId?: string;
   private mtxKey?: string;
   private mtxApp?: number;
@@ -13,11 +13,11 @@ export class IntegrationService {
   }
 
   /**
-   * Fetch integration settings from the API
-   * Always returns default settings merged with existing integration settings if found
+   * Fetch widget settings from the API
+   * Always returns default settings merged with existing widget settings if found
    * Returns null if no credentials provided (for preview mode)
    */
-  async fetchIntegrationSettings(): Promise<WidgetData | null> {
+  async fetchWidgetSettings(): Promise<WidgetData | null> {
     // Skip API call if no credentials provided (preview mode)
     if (!this.mtxId && !this.mtxKey && !this.mtxApp) {
       return null;
@@ -33,16 +33,16 @@ export class IntegrationService {
         throw new Error(error);
       }
 
-      // Then, try to fetch existing integration
-      let integrationsData: WidgetData[] | null = null;
+      // Then, try to fetch existing widget
+      let widgetsData: WidgetData[] | null = null;
       if (this.mtxId && this.mtxKey) {
-        integrationsData = await sdk.widgetSearch({
+        widgetsData = await sdk.widgetSearch({
           type: 'widget',
           marketrix_id: this.mtxId,
           marketrix_key: this.mtxKey,
         });
       } else if (this.mtxApp) {
-        integrationsData = await sdk.widgetSearch({
+        widgetsData = await sdk.widgetSearch({
           type: 'widget',
           application_id: this.mtxApp,
         });
@@ -50,30 +50,28 @@ export class IntegrationService {
         return null;
       }
 
-      // Find active widget integration
-      const widgetIntegration =
-        integrationsData?.find(
-          (integration: WidgetData) => integration.status === 'active' && integration.type === 'widget',
-        ) || null;
+      // Find active widget
+      const matchedWidget =
+        widgetsData?.find((widget: WidgetData) => widget.status === 'active' && widget.type === 'widget') || null;
 
-      // If integration found, merge its settings over defaults
-      if (widgetIntegration?.settings) {
-        const integrationSettings = this.getWidgetSettings(widgetIntegration);
-        if (integrationSettings) {
-          // Merge defaults with integration settings (integration settings take precedence)
+      // If widget found, merge its settings over defaults
+      if (matchedWidget?.settings) {
+        const widgetSettings = this.getWidgetSettings(matchedWidget);
+        if (widgetSettings) {
+          // Merge defaults with widget settings (widget settings take precedence)
           const mergedSettings: WidgetSettingsData = {
             ...defaultSettings,
-            ...integrationSettings,
+            ...widgetSettings,
           };
 
           return {
-            ...widgetIntegration,
+            ...matchedWidget,
             settings: mergedSettings,
           };
         }
       }
 
-      // No integration found, return defaults as a synthetic integration object
+      // No widget found, return defaults as a synthetic widget object
       const now = new Date();
       return {
         id: 0,
@@ -89,19 +87,19 @@ export class IntegrationService {
       } as WidgetData;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error('Failed to fetch integration settings:', error);
+      console.error('Failed to fetch widget settings:', error);
       throw new Error(`Failed to fetch widget settings from API: ${errorMessage}`);
     }
   }
 
   /**
-   * Get widget settings from integration data
+   * Get widget settings from widget data
    * Settings are always objects (current API format)
    */
-  getWidgetSettings(integration: WidgetData): WidgetSettingsData | null {
-    if (!integration?.settings) return null;
+  getWidgetSettings(widget: WidgetData): WidgetSettingsData | null {
+    if (!widget?.settings) return null;
 
-    const settings = integration.settings;
+    const settings = widget.settings;
 
     if (isWidgetSettingsData(settings)) {
       return settings;
@@ -112,4 +110,4 @@ export class IntegrationService {
   }
 }
 
-export default IntegrationService;
+export default WidgetService;

@@ -255,7 +255,7 @@ javascript: (function () {
   var s = document.createElement('script');
   s.src = 'http://localhost:5174/index.mjs';
   s.setAttribute('mtx-api-host', 'https://api.marketrix.ai');
-  s.setAttribute('mtx-app', 'YOUR_CONNECTION_ID');
+  s.setAttribute('mtx-app', 'YOUR_APPLICATION_ID');
   s.setAttribute('mtx-agent', 'YOUR_AGENT_ID');
   document.head.appendChild(s);
 })();
@@ -276,7 +276,7 @@ javascript: (function () {
   var s = document.createElement('script');
   s.src = 'https://localhost:5174/index.mjs';
   s.setAttribute('mtx-api-host', 'https://api.marketrix.ai');
-  s.setAttribute('mtx-app', 'YOUR_CONNECTION_ID');
+  s.setAttribute('mtx-app', 'YOUR_APPLICATION_ID');
   s.setAttribute('mtx-agent', 'YOUR_AGENT_ID');
   document.head.appendChild(s);
 })();
@@ -351,7 +351,7 @@ widget/
 │   │   ├── ConfigManager.ts
 │   │   ├── DevTestService.ts
 │   │   ├── DomService.ts
-│   │   ├── IntegrationService.ts
+│   │   ├── WidgetService.ts
 │   │   ├── ScreenShareService.ts
 │   │   ├── SessionManager.ts
 │   │   ├── SessionRecorder.ts

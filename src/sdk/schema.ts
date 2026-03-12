@@ -1134,7 +1134,7 @@ export const ApplicationCreateSchema = ApplicationEntitySchema.partial().extend(
 export const ApplicationUpdateSchema = ApplicationEntitySchema.partial().omit({ workspace_id: true });
 
 // ============================================================================
-// INTEGRATION SCHEMAS - Integration management (widget, slack, etc.)
+// WIDGET SCHEMAS - Widget management (widget, slack, etc.)
 // ============================================================================
 
 /**
@@ -1177,7 +1177,7 @@ export const WidgetSettingsDataSchema = z.object({
 });
 
 /**
- * Slack integration settings schema (example for future use)
+ * Slack widget settings schema (example for future use)
  */
 export const SlackSettingsDataSchema = z.object({
   webhook_url: z.string().url(),
@@ -1187,7 +1187,7 @@ export const SlackSettingsDataSchema = z.object({
 });
 
 /**
- * Integration entity schema
+ * Widget entity schema
  */
 export const WidgetEntitySchema = BaseEntitySchema.extend({
   application_id: z.number(),
@@ -1201,17 +1201,17 @@ export const WidgetEntitySchema = BaseEntitySchema.extend({
 });
 
 /**
- * Integration information schema
+ * Widget information schema
  */
 export const WidgetInfoSchema = WidgetEntitySchema.extend({
-  connection: ApplicationEntitySchema.partial(),
+  application: ApplicationEntitySchema.partial(),
   workspace: WorkspaceEntitySchema.partial(),
   user: UserEntitySchema.partial(),
   agent: AgentEntitySchema.partial(),
 });
 
 /**
- * Integration search result schema - includes optional eager-loaded agent
+ * Widget search result schema - includes optional eager-loaded agent
  */
 export const WidgetWithAgentSchema = WidgetEntitySchema.extend({
   agent: AgentEntitySchema.partial().optional(),
@@ -1221,12 +1221,12 @@ export const WidgetWithAgentSchema = WidgetEntitySchema.extend({
  * Application with widgets schema - matches API response structure
  */
 export const ApplicationWithWidgetsSchema = ApplicationEntitySchema.extend({
-  integrations: z.array(WidgetEntitySchema),
+  widgets: z.array(WidgetEntitySchema),
   agents: z.array(AgentEntitySchema).optional(),
 });
 
 /**
- * Integration creation schema
+ * Widget creation schema
  */
 export const WidgetCreateSchema = WidgetEntitySchema.partial().extend({
   application_id: z.number().positive(),
@@ -1236,7 +1236,7 @@ export const WidgetCreateSchema = WidgetEntitySchema.partial().extend({
 });
 
 /**
- * Integration update schema
+ * Widget update schema
  */
 export const WidgetUpdateSchema = WidgetEntitySchema.partial();
 
@@ -1518,7 +1518,7 @@ export const ActionLogMetadataSchema = z
     workspace_slug: z.string().optional(),
     ip_address: z.string().optional(),
     user_agent: z.string().optional(),
-    integration_type: z.string().optional(),
+    widget_type: z.string().optional(),
     created_by: z.number().optional(),
   })
   .passthrough(); // Allow additional fields for flexibility (e.g., updatedData, previousData, createdData)

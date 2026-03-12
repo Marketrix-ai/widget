@@ -464,7 +464,7 @@ const contract = {
     .output(
       z.array(
         ApplicationEntitySchema.extend({
-          integrations: z.array(WidgetEntitySchema),
+          widgets: z.array(WidgetEntitySchema),
         }),
       ),
     ),
@@ -480,7 +480,7 @@ const contract = {
     .input(z.object({ application_id: z.coerce.number() }))
     .output(
       ApplicationEntitySchema.extend({
-        integrations: z.array(WidgetEntitySchema),
+        widgets: z.array(WidgetEntitySchema),
       }),
     ),
 
@@ -1330,7 +1330,7 @@ const contract = {
       z.object({
         application_id: z.number(),
         agent_id: z.number(),
-        connection_url: z.string().nullish(),
+        url: z.string().nullish(),
       }),
     )
     .output(

@@ -11,12 +11,12 @@ import { MarketrixWidget as MarketrixWidgetComponent } from './components/Market
 import { WidgetProvider } from './context/WidgetContext';
 import { configureSdk, type WidgetSettingsData } from './sdk';
 import { createConfigFromSettings } from './services/ConfigManager';
-import { IntegrationService } from './services/IntegrationService';
 import { sessionManager } from './services/SessionManager';
 import { SessionRecorder } from './services/SessionRecorder';
 import { storageService } from './services/StorageService';
 import { StreamClient } from './services/StreamClient';
 import { WidgetValidationService } from './services/ValidationService';
+import { WidgetService } from './services/WidgetService';
 import type { AddWidgetConfig, MarketrixConfig, MarketrixWidgetProps } from './types';
 import {
   clearWidgetState,
@@ -64,13 +64,13 @@ async function initializeWidgetWithConfig(
 
   showWidgetSettingsLoader('Loading widget settings...');
   try {
-    const integrationService = new IntegrationService(config.mtxId, config.mtxKey, config.mtxApp);
+    const widgetService = new WidgetService(config.mtxId, config.mtxKey, config.mtxApp);
 
-    const integrationData = await integrationService.fetchIntegrationSettings();
-    const integrationSettings = integrationData ? integrationService.getWidgetSettings(integrationData) : null;
+    const widgetData = await widgetService.fetchWidgetSettings();
+    const widgetSettings = widgetData ? widgetService.getWidgetSettings(widgetData) : null;
 
-    if (!integrationSettings) {
-      throw new Error('IntegrationService did not return widget settings');
+    if (!widgetSettings) {
+      throw new Error('WidgetService did not return widget settings');
     }
 
     // Validate that all required settings fields exist
@@ -103,7 +103,7 @@ async function initializeWidgetWithConfig(
     ] as const;
 
     const missingSettings = requiredSettings.filter(
-      key => integrationSettings[key as keyof typeof integrationSettings] === undefined,
+      key => widgetSettings[key as keyof typeof widgetSettings] === undefined,
     );
 
     if (missingSettings.length > 0) {
@@ -112,9 +112,9 @@ async function initializeWidgetWithConfig(
       );
     }
 
-    return createConfigFromSettings(integrationSettings, config);
+    return createConfigFromSettings(widgetSettings, config);
   } catch (err) {
-    console.error('Error fetching integration settings:', err);
+    console.error('Error fetching widget settings:', err);
     throw err;
   } finally {
     hideWidgetSettingsLoader();
