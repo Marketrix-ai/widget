@@ -50,8 +50,6 @@ export class SessionRecorder {
 
   private consecutiveFailures = 0;
 
-  private readonly TAB_ID_STORAGE_KEY = 'marketrix_tab_id';
-
   constructor(chatId: string, applicationId: number) {
     if (!chatId || chatId.trim() === '') {
       throw new Error('chatId is required for SessionRecorder');
@@ -62,53 +60,9 @@ export class SessionRecorder {
     log.info('Constructor called with chatId:', chatId, 'applicationId:', applicationId);
     this.chatId = chatId;
     this.applicationId = applicationId;
-    this.sessionId = this.getTabId();
-
-    // Validate that sessionId is in the correct format (tab_* not UUID)
-    if (!this.sessionId.startsWith('tab_')) {
-      const error = `Invalid sessionId format. Expected tab_* format, got: ${this.sessionId}. This suggests SessionManager may not have initialized correctly.`;
-      log.error('❌', error);
-      log.error('sessionStorage contents:', {
-        tabId: sessionStorage.getItem(this.TAB_ID_STORAGE_KEY),
-        allKeys: Object.keys(sessionStorage),
-      });
-      throw new Error(error);
-    }
+    this.sessionId = chatId;
 
     log.info('Initialized with sessionId:', this.sessionId);
-  }
-
-  /**
-   * Get marketrix_tab_id from sessionStorage (string, not UUID)
-   * Must be in format: tab_${timestamp}_${random}
-   */
-  private getTabId(): string {
-    if (typeof window === 'undefined') {
-      throw new Error('marketrix_tab_id not available in non-browser environment');
-    }
-
-    const tabId = sessionStorage.getItem(this.TAB_ID_STORAGE_KEY);
-
-    if (!tabId) {
-      const error = 'marketrix_tab_id not found in sessionStorage. SessionManager should initialize it first.';
-      log.error('❌', error);
-      log.error('sessionStorage keys:', Object.keys(sessionStorage));
-      throw new Error(error);
-    }
-
-    // Validate format - must start with 'tab_'
-    if (!tabId.startsWith('tab_')) {
-      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tabId);
-      const error = `Invalid tab_id format in sessionStorage. Expected 'tab_*' format, got: ${tabId}. ${isUUID ? 'This appears to be a UUID from an old version.' : 'Please clear sessionStorage and reload.'}`;
-      log.error('❌', error);
-      // Clear the invalid value so SessionManager can create a new one
-      sessionStorage.removeItem(this.TAB_ID_STORAGE_KEY);
-      log.warn('⚠️ Cleared invalid tab_id from sessionStorage. SessionManager will create a new one.');
-      throw new Error(error);
-    }
-
-    log.info('✅ Loaded marketrix_tab_id from sessionStorage:', tabId);
-    return tabId;
   }
 
   /**
@@ -127,7 +81,7 @@ export class SessionRecorder {
       command: {
         type: 'rrweb/metadata' as const,
         session_id: this.sessionId,
-        marketrix_chat_id: this.chatId,
+        chat_id: this.chatId,
         application_id: this.applicationId,
         url: window.location.href,
         user_agent: navigator.userAgent,
@@ -328,7 +282,7 @@ export class SessionRecorder {
       this.stopRecording = record(recordOptions);
       this.isRecording = true;
 
-      log.info('Recording started with marketrix_tab_id:', this.sessionId);
+      log.info('Recording started with chatId:', this.sessionId);
     } catch (error) {
       log.error('Failed to start recording:', error);
       throw error;

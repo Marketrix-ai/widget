@@ -1,6 +1,5 @@
 import { sdk } from '../sdk';
 import type { WidgetCommand, WidgetEvent } from '../sdk/schema';
-import { sessionManager } from './SessionManager';
 
 export type StreamStatus = 'disconnected' | 'connecting' | 'connected' | 'registered' | 'error';
 
@@ -74,13 +73,12 @@ export class StreamClient {
     }
     this.setStatus('connecting');
 
-    const tabId = sessionManager.getTabId();
     this.abortController = new AbortController();
     const signal = this.abortController.signal;
 
     try {
       // Build the stream input with auth params
-      const streamInput: Record<string, unknown> = { chat_id: chatId, tab_id: tabId ?? undefined };
+      const streamInput: Record<string, unknown> = { chat_id: chatId };
       if (this.config?.mtxId && this.config?.mtxKey) {
         streamInput.marketrix_id = this.config.mtxId;
         streamInput.marketrix_key = this.config.mtxKey;

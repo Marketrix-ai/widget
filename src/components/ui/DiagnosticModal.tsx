@@ -6,7 +6,6 @@ interface DiagnosticModalProps {
   onClose: () => void;
   diagnosticData: {
     chatId: string | null;
-    tabId: string | null;
     streamEndpoint: string | null;
     connectionStatus: string;
     applicationId: number | undefined; // mtxApp
@@ -35,7 +34,6 @@ export const DiagnosticModal: React.FC<DiagnosticModalProps> = ({ isOpen, onClos
 
   const rows: { label: string; value: string | null | undefined; copyable?: boolean }[] = [
     { label: 'Chat ID', value: diagnosticData.chatId, copyable: true },
-    { label: 'Tab ID', value: diagnosticData.tabId, copyable: true },
     { label: 'Stream Endpoint', value: diagnosticData.streamEndpoint, copyable: true },
     { label: 'Connection ID', value: diagnosticData.applicationId?.toString(), copyable: true },
     { label: 'Agent ID', value: diagnosticData.agentId?.toString(), copyable: true },

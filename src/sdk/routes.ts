@@ -1276,11 +1276,11 @@ const contract = {
     .route({
       method: 'GET',
       tags: ['Session'],
-      path: '/sessions/chat/{marketrix_chat_id}',
+      path: '/sessions/chat/{chat_id}',
       summary: 'Get sessions by marketrix chat ID',
-      description: 'Retrieves all sessions for a given marketrix_chat_id',
+      description: 'Retrieves all sessions for a given chat_id',
     })
-    .input(z.object({ marketrix_chat_id: z.string() }))
+    .input(z.object({ chat_id: z.string() }))
     .output(z.array(SessionEntitySchema)),
 
   sessionSearch: oc
@@ -2082,7 +2082,6 @@ const contract = {
     .input(
       z.object({
         chat_id: z.string(),
-        tab_id: z.string().optional(),
         marketrix_id: z.string().optional(),
         marketrix_key: z.string().optional(),
         agent_id: z.coerce.number().optional(),
