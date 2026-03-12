@@ -90,7 +90,6 @@ import {
   SimulationAnswerSchema,
   SimulationCreateSchema,
   SimulationEntitySchema,
-  SimulationLoggingUserSchema,
   SimulationProgressEntitySchema,
   SimulationStepSchema,
   SimulationStepSummarySchema,
@@ -105,7 +104,6 @@ import {
   StripeTrialSchema,
   SubscriptionUsageSchema,
   TourEntitySchema,
-  TourStepSchema,
   TrialSubscriptionSchema,
   UrlGuideCreateSchema,
   UrlGuideEntitySchema,
@@ -187,17 +185,6 @@ const contract = {
       description: 'Returns widget key and widget ID. No auth. Values are stored in backend env only.',
     })
     .output(PublicConfigSchema),
-
-  /** No-op for client-side auth callback registration; prevents 404 when SDK merges client with setOnAuthError. */
-  setOnAuthError: oc
-    .route({
-      method: 'POST',
-      path: '/setOnAuthError',
-      summary: 'No-op (client-only callback registration)',
-      description: 'Client registers 401 callback locally; this endpoint exists to avoid 404.',
-    })
-    .input(z.any().optional())
-    .output(z.void()),
 
   // ============================================================================
   // AUTHENTICATION ROUTES - User authentication and authorization
@@ -911,22 +898,6 @@ const contract = {
   // TOUR ROUTES - Interactive tour and guidance system
   // ============================================================================
 
-  tourQuery: oc
-    .route({
-      method: 'GET',
-      tags: ['Tour'],
-      path: '/tour/query',
-      summary: 'Get tour information based on question and workspace',
-      description: 'Returns relevant tour steps and guidance for user query',
-    })
-    .input(
-      z.object({
-        application_id: z.coerce.number().optional(),
-        question: z.string().min(1),
-      }),
-    )
-    .output(TourEntitySchema),
-
   tourSearch: oc
     .route({
       method: 'GET',
@@ -953,31 +924,6 @@ const contract = {
     })
     .input(TourEntitySchema)
     .output(TourEntitySchema),
-
-  tourShow: oc
-    .route({
-      method: 'POST',
-      tags: ['Tour'],
-      path: '/tour/show',
-      summary: 'Show tour spotlight and description',
-      description: 'Triggers tour spotlight for a specific step and element',
-    })
-    .input(
-      z.object({
-        step: TourStepSchema,
-        element_selector: z.string().optional(),
-      }),
-    )
-    .output(
-      z.object({
-        success: z.boolean(),
-        message: z.string(),
-        spotlight_created: z.boolean(),
-        description_created: z.boolean(),
-        step_id: z.number(),
-        element_found: z.boolean(),
-      }),
-    ),
 
   // ============================================================================
   // URL GUIDE ROUTES - URL-based guidance messages for widget
@@ -1083,20 +1029,6 @@ const contract = {
       }),
     )
     .output(z.array(SimulationEntitySchema)),
-
-  simulationUsers: oc
-    .route({
-      method: 'GET',
-      path: '/simulation/logging-users',
-      summary: 'Get users who participated in simulations',
-      description: 'Returns users who have started at least one simulation',
-    })
-    .input(
-      z.object({
-        workspace_id: z.coerce.number().optional(),
-      }),
-    )
-    .output(z.array(SimulationLoggingUserSchema)),
 
   simulationStart: oc
     .route({
@@ -1277,7 +1209,7 @@ const contract = {
       method: 'GET',
       tags: ['Session'],
       path: '/sessions/chat/{chat_id}',
-      summary: 'Get sessions by marketrix chat ID',
+      summary: 'Get sessions by chat ID',
       description: 'Retrieves all sessions for a given chat_id',
     })
     .input(z.object({ chat_id: z.string() }))
@@ -1340,37 +1272,21 @@ const contract = {
       }),
     ),
 
-  browserSessionStopTasks: oc
-    .route({
-      method: 'POST',
-      tags: ['Session'],
-      path: '/browser-session/{session_id}/stop-tasks',
-      summary: 'Stop all tasks for browser session',
-      description: 'Stops all active tasks for widgets connected to the browser session',
-    })
-    .input(z.object({ session_id: z.string() }))
-    .output(
-      z.object({
-        success: z.boolean(),
-        message: z.string(),
-      }),
-    ),
-
   browserSessionStop: oc
     .route({
       method: 'POST',
-      tags: ['Session'],
+      tags: ['Browser Session'],
       path: '/browser-session/{session_id}/stop',
       summary: 'Stop browser session',
-      description: 'Terminates the browser session',
+      description: 'Stops all running tasks and closes the browser session. Set stop_tasks=false to skip task cleanup.',
     })
-    .input(z.object({ session_id: z.string() }))
-    .output(
+    .input(
       z.object({
-        success: z.boolean(),
-        message: z.string(),
+        session_id: z.string(),
+        stop_tasks: z.boolean().optional().default(true),
       }),
-    ),
+    )
+    .output(z.object({ success: z.boolean(), message: z.string() })),
 
   // ============================================================================
   // KNOWLEDGE ROUTES - Knowledge base and document management
@@ -2014,55 +1930,25 @@ const contract = {
     .input(z.object({ subscriptionId: z.string() }))
     .output(z.object({ subscriptionId: z.string(), cancelAtPeriodEnd: z.boolean() })),
 
-  stripeGetPlan: oc
+  stripeGetCatalog: oc
     .route({
       method: 'GET',
       tags: ['Stripe'],
-      path: '/stripe/plan',
-      summary: 'Get current plan information',
-      description: 'Returns current subscription plan and usage information for authenticated workspace.',
+      path: '/stripe/catalog',
+      summary: 'Get public Stripe catalog (pricing, plans, config)',
+      description: 'Returns pricing from Stripe, plan catalog metadata, and Stripe frontend configuration in a single call.',
     })
-    .output(PlanInfoSchema),
+    .output(z.object({ pricing: StripePricingSchema, plans: PlanCatalogSchema, config: StripeConfigSchema })),
 
-  stripeGetUsage: oc
+  stripeGetSubscription: oc
     .route({
       method: 'GET',
       tags: ['Stripe'],
-      path: '/stripe/usage',
-      summary: 'Get current usage statistics',
-      description: 'Returns actual usage counts for agents, knowledge sources, storage, and team members.',
+      path: '/stripe/subscription',
+      summary: 'Get current subscription plan and usage',
+      description: 'Returns current subscription plan information and actual usage statistics for the authenticated workspace.',
     })
-    .output(SubscriptionUsageSchema),
-
-  stripeGetPricing: oc
-    .route({
-      method: 'GET',
-      tags: ['Stripe'],
-      path: '/stripe/pricing',
-      summary: 'Get pricing information for all plans',
-      description: 'Returns actual pricing from Stripe for all plans. Ensures frontend displays match Stripe charges.',
-    })
-    .output(StripePricingSchema),
-
-  stripeGetConfig: oc
-    .route({
-      method: 'GET',
-      tags: ['Stripe'],
-      path: '/stripe/config',
-      summary: 'Get Stripe configuration for frontend',
-      description: 'Returns Stripe publishable key, price IDs, and trial days configuration for frontend use.',
-    })
-    .output(StripeConfigSchema),
-
-  stripeGetPlans: oc
-    .route({
-      method: 'GET',
-      tags: ['Stripe'],
-      path: '/stripe/plans',
-      summary: 'Get plan catalog (metadata for display)',
-      description: 'Returns plan names, descriptions, features, CTA and styling. No auth required.',
-    })
-    .output(PlanCatalogSchema),
+    .output(z.object({ plan: PlanInfoSchema, usage: SubscriptionUsageSchema })),
 
   // stripeWebhook is handled as a raw Express route — not part of the oRPC contract.
 

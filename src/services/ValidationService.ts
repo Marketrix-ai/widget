@@ -14,8 +14,8 @@ export interface WidgetValidationResult {
  * WidgetValidationService
  *
  * Validates widget configuration by checking:
- * 1. Integration exists (via marketrix_id and marketrix_key) OR
- * 2. Agent ID and Connection ID exist and match
+ * 1. Widget exists (via marketrix_id and marketrix_key) OR
+ * 2. Agent ID and Application ID exist and match
  */
 export class WidgetValidationService {
   private config?: MarketrixConfig;
