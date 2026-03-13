@@ -19,11 +19,24 @@ permissions:
   actions: read
 
 jobs:
+  deploy:
+    uses: Marketrix-ai/marketrix-infra/.github/workflows/deploy-service.yml@main
+    with:
+      tag: ${{ inputs.tag }}
+      environment: ${{ inputs.environment }}
+      service: widget
+      validate_cmd: 'npm ci && npm run type-check && npm run build'
+      build_args: '--build-arg BUILD_COMMIT=${{ github.sha }}'
+    secrets: inherit
+
   publish-npm:
     if: inputs.environment == 'prod'
+    needs: [deploy]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.tag }}
       - uses: actions/setup-node@v4
         with:
           node-version: 24
@@ -33,15 +46,3 @@ jobs:
       - run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-  deploy:
-    needs: [publish-npm]
-    if: always() && (needs.publish-npm.result == 'success' || needs.publish-npm.result == 'skipped')
-    uses: Marketrix-ai/marketrix-infra/.github/workflows/deploy-service.yml@main
-    with:
-      tag: ${{ inputs.tag }}
-      environment: ${{ inputs.environment }}
-      service: widget
-      validate_cmd: 'npm ci && npm run type-check && npm run build'
-      build_args: '--build-arg BUILD_COMMIT=${{ github.sha }}'
-    secrets: inherit
