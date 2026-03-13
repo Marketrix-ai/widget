@@ -22,11 +22,7 @@ export const ProgressLine: React.FC<ProgressLineProps> = ({
   hideIcon = false,
   textStyle = 'default',
 }) => {
-  // Normalize status for display
-  // Legacy 'pending' maps to 'running' visually if we want spinner,
-  // but originally it was just a circle.
-  // If status is 'running', show spinner.
-  // If status is 'pending' (legacy), show circle.
+  // 'running' shows spinner, 'pending' shows static circle, others show status icons.
 
   const renderIcon = () => {
     switch (status) {

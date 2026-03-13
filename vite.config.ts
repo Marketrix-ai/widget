@@ -138,7 +138,7 @@ const devWidgetPlugin = () => {
       const originalEnv = process.env.NODE_ENV;
       process.env.NODE_ENV = 'production';
       try {
-        const config = getBuildConfig({ minify: 'terser', outDir: OUT_DIR });
+        const config = getBuildConfig({ minify: false, outDir: OUT_DIR });
         await build({ ...config, mode: 'production' });
       } finally {
         process.env.NODE_ENV = originalEnv;
@@ -228,7 +228,7 @@ export default defineConfig(({ command }) => {
 
   return {
     resolve: { alias: { '@': resolve(cwd(), 'src') } },
-    plugins: [react(), tailwindcss(), devWidgetPlugin()],
+    plugins: [react(), tailwindcss(), !process.env.KUBERNETES_SERVICE_HOST && devWidgetPlugin()],
     root: '.',
     server: {
       port: parseInt(process.env.PORT || process.env.VITE_PORT || '5174', 10),
