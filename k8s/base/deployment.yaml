@@ -26,6 +26,13 @@ spec:
           ports:
             - containerPort: 80
               name: http
+          envFrom:
+            - configMapRef:
+                name: widget-config
+                optional: true
+            - secretRef:
+                name: widget-env
+                optional: true
           resources:
             requests:
               cpu: 100m

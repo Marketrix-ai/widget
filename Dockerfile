@@ -4,9 +4,6 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 
-ARG BUILD_COMMIT=unknown
-ENV BUILD_COMMIT=$BUILD_COMMIT
-
 COPY . .
 RUN npm run build
 

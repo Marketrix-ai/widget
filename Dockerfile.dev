@@ -1,11 +1,5 @@
-# Development: run Vite dev server on port 5174
 FROM node:24-slim
-
 WORKDIR /app
-COPY package*.json ./
+COPY package.json package-lock.json ./
 RUN npm ci
-
-COPY . .
-
-EXPOSE 5174
-CMD ["npm", "start"]
+CMD ["npx", "vite", "--host", "--port", "80"]
