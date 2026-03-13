@@ -2,4 +2,5 @@ FROM node:24-slim
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
-CMD ["npx", "vite", "--host", "--port", "80"]
+COPY . .
+CMD ["npx", "vite", "dev", "--host", "--port", "80"]
