@@ -64,8 +64,9 @@ The widget is the runtime component of what users call **Widgets** in the dashbo
 - `npm run build` — dual library + standalone build
 - `npm run lint` — ESLint
 
-## Release
+## Build & Deploy
 
-- `npm version patch && npm publish` — bump version and publish to npm as `@marketrix.ai/widget`
-- After publishing, update the app dependency: `cd ../app && npm install @marketrix.ai/widget@latest`
-- Never deploy app changes that depend on widget changes without first publishing the widget to npm
+- Pushing a tag (`v*`) triggers `build.yml` → builds and pushes `marketrix.azurecr.io/widget:{version}` to ACR + publishes `@marketrix.ai/widget` to npm
+- Pushing to `dev` branch builds image only (no npm publish)
+- Deployment is centralized in `marketrix-infra` via `deploy.yml` workflow
+- After publishing a new widget version, update the app dependency: `cd ../app && npm install @marketrix.ai/widget@latest`

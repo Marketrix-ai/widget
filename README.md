@@ -556,22 +556,14 @@ type InstructionType = 'tell' | 'show' | 'do';
 
 ## CI/CD & Deployment
 
-GitHub Actions workflows in `.github/workflows/`. All build and deploy jobs
-are delegated to `base.yml` as a reusable workflow:
+GitHub Actions workflows in `.github/workflows/`:
 
-| Workflow         | Trigger          | Action                                                  |
-| ---------------- | ---------------- | ------------------------------------------------------- |
-| `base.yml`       | Called by others | Reusable workflow: build (sanity) or deploy (full)      |
-| `dev-build.yml`  | Push to `dev`    | Sanity check via `base.yml` (npm ci + build, no upload) |
-| `prod-build.yml` | Release created  | Sanity check via `base.yml` (npm ci + build, no upload) |
-| `deploy.yml`     | Manual dispatch  | Build + upload to Azure Blob Storage + purge CDN cache  |
+| Workflow         | Trigger                          | Action                                                    |
+| ---------------- | -------------------------------- | --------------------------------------------------------- |
+| `validate.yml`   | Push / PR                        | Type check, lint, build                                   |
+| `build.yml`      | Tag push (`v*`) or push to `dev` | Build Docker image, push to ACR; publish to npm on tag    |
 
-**Deploy options:**
-
-- **Environment**: `dev` or `prod`
-- **Version** (required for prod): Git tag to checkout and build from (e.g. `v1.2.0`).
-
-Dev builds are uploaded to `widget/dev/` and prod builds to `widget/latest/` on Azure CDN.
+Image builds produce `marketrix.azurecr.io/widget:{version}`. Tag pushes also publish `@marketrix.ai/widget` to npm. Deployment to dev/prod is handled by the centralized `deploy.yml` workflow in `marketrix-infra`.
 
 ## Build System
 
