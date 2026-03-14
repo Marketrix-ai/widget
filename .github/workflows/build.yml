@@ -13,5 +13,5 @@ jobs:
     uses: Marketrix-ai/marketrix-infra/.github/workflows/build-service.yml@main
     with:
       service: widget
-      npm_publish: true
+      npm_publish: 'true'
     secrets: inherit
