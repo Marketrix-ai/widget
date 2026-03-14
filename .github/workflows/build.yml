@@ -1,0 +1,17 @@
+name: Build
+
+on:
+  push:
+    tags: ['v*']
+    branches: [dev]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    uses: Marketrix-ai/marketrix-infra/.github/workflows/build-service.yml@main
+    with:
+      service: widget
+      npm_publish: true
+    secrets: inherit
