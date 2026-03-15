@@ -556,19 +556,14 @@ type InstructionType = 'tell' | 'show' | 'do';
 
 ## CI/CD & Deployment
 
-GitHub Actions workflows live in `.github/workflows/`:
+GitHub Actions workflows in `.github/workflows/`:
 
-| Workflow       | Trigger                  | Action                                                                                                                             |
-| -------------- | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `validate.yml` | Push/PR to `dev`, `main` | Runs `npm ci`, then: `type-check`, `lint:check`, `format:check`, `test:run`, `build`, `visual:check`, `a11y:check`, `bundle:check` |
-| `deploy.yml`   | Manual dispatch          | Validates selected tag passed `validate.yml`, builds Docker image, and deploys to AKS                                              |
+| Workflow         | Trigger                          | Action                                                    |
+| ---------------- | -------------------------------- | --------------------------------------------------------- |
+| `validate.yml`   | Push / PR to `dev`, `main`       | Type check, lint, format, tests, build, visual, a11y, bundle checks |
+| `build.yml`      | Tag push (`v*`) or push to `dev` | Build Docker image, push to ACR; publish to npm on tag    |
 
-**Deploy options:**
-
-- **Tag**: existing tag to deploy, or a new tag name to create on current commit
-- **Environment**: `dev` or `prod`
-
-Validation must be green for the target commit before deployment is allowed.
+Image builds produce `marketrix.azurecr.io/widget:{version}`. Tag pushes also publish `@marketrix.ai/widget` to npm. Deployment to dev/prod is handled by the centralized deploy workflow in `marketrix-infra`.
 
 ## Build System
 

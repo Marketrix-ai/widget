@@ -72,8 +72,8 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
   );
 
   const positionStorageKey = useMemo(() => {
-    const tenantScopedId = config.mtxId ?? (config.mtxApp != null ? String(config.mtxApp) : 'default');
-    return `marketrix_widget_position_${tenantScopedId}`;
+    const scopedId = config.mtxId ?? (config.mtxApp != null ? String(config.mtxApp) : 'default');
+    return `marketrix_widget_position_${scopedId}`;
   }, [config.mtxApp, config.mtxId]);
 
   // Keyboard shortcut for dev panel (Ctrl+Shift+D)

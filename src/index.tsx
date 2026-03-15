@@ -528,7 +528,7 @@ export const mountWidget = async (config: AddWidgetConfig): Promise<void> => {
       container,
     );
   } else if ('mtxApp' in config && config.mtxApp !== undefined && config.mtxAgent !== undefined) {
-    // Dev mode: use agent and application IDs
+    // Dev mode: use application and agent IDs
     const devConfig = config as Extract<AddWidgetConfig, { mtxApp: number; mtxAgent: number }>;
     const { mtxApp, mtxAgent, container: _container, ...restConfig } = devConfig;
     await initWidget(

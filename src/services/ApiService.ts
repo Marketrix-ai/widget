@@ -83,7 +83,7 @@ export class MarketrixApiService {
         metadata.user_id = userId;
       }
 
-      // Add application_id or marketrix credentials to metadata for tenant lookup
+      // Add application_id or marketrix credentials to metadata for workspace lookup
       if (this.config.mtxApp) {
         metadata.application_id = this.config.mtxApp;
       }
