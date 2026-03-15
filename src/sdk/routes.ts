@@ -1936,7 +1936,8 @@ const contract = {
       tags: ['Stripe'],
       path: '/stripe/catalog',
       summary: 'Get public Stripe catalog (pricing, plans, config)',
-      description: 'Returns pricing from Stripe, plan catalog metadata, and Stripe frontend configuration in a single call.',
+      description:
+        'Returns pricing from Stripe, plan catalog metadata, and Stripe frontend configuration in a single call.',
     })
     .output(z.object({ pricing: StripePricingSchema, plans: PlanCatalogSchema, config: StripeConfigSchema })),
 
@@ -1946,7 +1947,8 @@ const contract = {
       tags: ['Stripe'],
       path: '/stripe/subscription',
       summary: 'Get current subscription plan and usage',
-      description: 'Returns current subscription plan information and actual usage statistics for the authenticated workspace.',
+      description:
+        'Returns current subscription plan information and actual usage statistics for the authenticated workspace.',
     })
     .output(z.object({ plan: PlanInfoSchema, usage: SubscriptionUsageSchema })),
 

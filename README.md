@@ -558,10 +558,10 @@ type InstructionType = 'tell' | 'show' | 'do';
 
 GitHub Actions workflows in `.github/workflows/`:
 
-| Workflow         | Trigger                          | Action                                                    |
-| ---------------- | -------------------------------- | --------------------------------------------------------- |
-| `validate.yml`   | Push / PR to `dev`, `main`       | Type check, lint, format, tests, build, visual, a11y, bundle checks |
-| `build.yml`      | Tag push (`v*`) or push to `dev` | Build Docker image, push to ACR; publish to npm on tag    |
+| Workflow       | Trigger                          | Action                                                              |
+| -------------- | -------------------------------- | ------------------------------------------------------------------- |
+| `validate.yml` | Push / PR to `dev`, `main`       | Type check, lint, format, tests, build, visual, a11y, bundle checks |
+| `build.yml`    | Tag push (`v*`) or push to `dev` | Build Docker image, push to ACR; publish to npm on tag              |
 
 Image builds produce `marketrix.azurecr.io/widget:{version}`. Tag pushes also publish `@marketrix.ai/widget` to npm. Deployment to dev/prod is handled by the centralized deploy workflow in `marketrix-infra`.
 

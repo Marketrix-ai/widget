@@ -32,22 +32,22 @@ Embeddable support widget that customers integrate into their products. Communic
 
 14 service modules:
 
-| Service | Purpose |
-|---------|---------|
-| `StreamClient.ts` | SSE client with auto-reconnect and exponential backoff |
-| `ChatService.ts` | HTTP POST for chat commands (tell/show/do/stop) |
-| `SessionRecorder.ts` | rrweb recording with batched POST (500ms/50KB flush) |
-| `WidgetService.ts` | Fetch widget settings from API |
-| `ConfigManager.ts` | Convert API settings to runtime config |
-| `ValidationService.ts` | Validate credentials (mtxId+mtxKey or mtxApp+mtxAgent) |
-| `StorageService.ts` | LocalStorage wrapper (chat_id, preferences) |
-| `SessionManager.ts` | Session lifecycle management |
-| `ToolService.ts` | Browser tool availability detection |
-| `DomService.ts` | DOM utilities (highlight, scroll, query) |
-| `ScreenShareService.ts` | Screen sharing / video stream |
-| `ShowModeService.ts` | Show mode guidance (element highlighting) |
-| `ApiService.ts` | Generic API call wrapper |
-| `DevTestService.ts` | Dev testing utilities |
+| Service                 | Purpose                                                |
+| ----------------------- | ------------------------------------------------------ |
+| `StreamClient.ts`       | SSE client with auto-reconnect and exponential backoff |
+| `ChatService.ts`        | HTTP POST for chat commands (tell/show/do/stop)        |
+| `SessionRecorder.ts`    | rrweb recording with batched POST (500ms/50KB flush)   |
+| `WidgetService.ts`      | Fetch widget settings from API                         |
+| `ConfigManager.ts`      | Convert API settings to runtime config                 |
+| `ValidationService.ts`  | Validate credentials (mtxId+mtxKey or mtxApp+mtxAgent) |
+| `StorageService.ts`     | LocalStorage wrapper (chat_id, preferences)            |
+| `SessionManager.ts`     | Session lifecycle management                           |
+| `ToolService.ts`        | Browser tool availability detection                    |
+| `DomService.ts`         | DOM utilities (highlight, scroll, query)               |
+| `ScreenShareService.ts` | Screen sharing / video stream                          |
+| `ShowModeService.ts`    | Show mode guidance (element highlighting)              |
+| `ApiService.ts`         | Generic API call wrapper                               |
+| `DevTestService.ts`     | Dev testing utilities                                  |
 
 ## Chrome Extension (`chrome-extension/`)
 

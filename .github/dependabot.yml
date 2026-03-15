@@ -1,21 +1,21 @@
 version: 2
 updates:
-  - package-ecosystem: "npm"
-    directory: "/"
+  - package-ecosystem: 'npm'
+    directory: '/'
     schedule:
-      interval: "weekly"
+      interval: 'weekly'
     groups:
       minor-and-patch:
-        update-types: ["minor", "patch"]
+        update-types: ['minor', 'patch']
     open-pull-requests-limit: 5
-    target-branch: "dev"
-  - package-ecosystem: "docker"
-    directory: "/"
+    target-branch: 'dev'
+  - package-ecosystem: 'docker'
+    directory: '/'
     schedule:
-      interval: "weekly"
-    target-branch: "dev"
-  - package-ecosystem: "github-actions"
-    directory: "/"
+      interval: 'weekly'
+    target-branch: 'dev'
+  - package-ecosystem: 'github-actions'
+    directory: '/'
     schedule:
-      interval: "weekly"
-    target-branch: "dev"
+      interval: 'weekly'
+    target-branch: 'dev'
