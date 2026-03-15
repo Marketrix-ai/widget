@@ -3,11 +3,6 @@ name: Build
 on:
   push:
     tags: ['v*']
-    branches: [dev]
-
-permissions:
-  contents: read
-  security-events: write
 
 jobs:
   build:
@@ -18,23 +13,15 @@ jobs:
       - name: Resolve image tag
         id: tag
         run: |
-          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
-            RAW="${GITHUB_REF#refs/tags/}"
-            echo "image_tag=${RAW#v}" >> $GITHUB_OUTPUT
-            echo "is_tag=true" >> $GITHUB_OUTPUT
-          else
-            echo "image_tag=dev-${GITHUB_SHA:0:7}" >> $GITHUB_OUTPUT
-            echo "is_tag=false" >> $GITHUB_OUTPUT
-          fi
+          RAW="${GITHUB_REF#refs/tags/}"
+          echo "image_tag=${RAW#v}" >> $GITHUB_OUTPUT
 
       - uses: actions/setup-node@v4
-        if: steps.tag.outputs.is_tag == 'true'
         with:
           node-version: 24
           registry-url: 'https://registry.npmjs.org'
 
       - name: Publish to npm
-        if: steps.tag.outputs.is_tag == 'true'
         run: |
           npm ci
           npm run build
