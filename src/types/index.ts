@@ -34,7 +34,7 @@ export type MarketrixConfig = Partial<WidgetSettingsData> & {
   mtxId?: string; // maps to marketrix_id from SDK (production mode)
   mtxKey?: string; // maps to marketrix_key from SDK (production mode)
 
-  // Alternative: Direct agent and connection IDs (dev mode)
+  // Alternative: Direct application and agent IDs (dev mode)
   mtxApp?: number; // Application ID
   mtxAgent?: number; // Agent ID (maps to agent_id)
 
@@ -150,7 +150,7 @@ export type AddWidgetConfig = (
       mtxAgent?: never;
     }
   | {
-      // Dev mode: provide agent and connection IDs
+      // Dev mode: provide application and agent IDs
       settings?: never;
       mtxId?: never;
       mtxKey?: never;

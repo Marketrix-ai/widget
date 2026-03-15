@@ -62,7 +62,7 @@ export const ConnectorTypeSchema = z.enum(['timer', 'github', 'slack', 'teams', 
 export const ActionLogTypeSchema = z.enum([
   'user_login',
   'url_visit',
-  'update_tenant',
+  'update_workspace',
   'create_user',
   'update_user',
   'delete_user',
@@ -80,7 +80,7 @@ export const ActionLogTypeSchema = z.enum([
   'delete_knowledge',
   'approve_user',
   'deny_user',
-  'request_tenant',
+  'request_workspace',
   'widget_question',
   'qa_run_started',
   'start_simulation',
@@ -1646,7 +1646,7 @@ export const UploadUserLogoDataSchema = z.object({
 });
 
 /**
- * User prompt data schema for TaskPilot
+ * User prompt data schema for chat/playground prompts
  */
 export const UserPromptDataSchema = z.object({
   user_id: z.number(),
@@ -1831,7 +1831,7 @@ export const UsageMetricSchema = z.object({
  * Used for billing and subscription management
  */
 export const SubscriptionUsageSchema = z.object({
-  connectedApps: UsageMetricSchema,
+  applications: UsageMetricSchema,
   simulationsPerMonth: UsageMetricSchema,
   userPrompts: UsageMetricSchema,
 });
