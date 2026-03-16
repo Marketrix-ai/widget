@@ -1172,14 +1172,6 @@ export const AgentSimulationIndexResponseSchema = z.object({
   message: z.string(),
 });
 
-/**
- * Agent video generation request schema
- */
-export const AgentVideoGenerateRequestSchema = z.object({
-  simulation_id: z.coerce.number().optional(),
-  prompt: z.string().optional(),
-});
-
 // ============================================================================
 // APPLICATION SCHEMAS - Application management (apps and websites)
 // ============================================================================
@@ -2056,7 +2048,6 @@ export type BrowserSessionResponseData = z.infer<typeof BrowserSessionResponseSc
 export type TaskStatus = z.infer<typeof TaskStatusSchema>;
 export type FileUploadResponse = z.infer<typeof FileUploadResponseSchema>;
 export type ChatRequest = z.infer<typeof ChatRequestSchema>;
-export type AgentVideoGenerateRequest = z.infer<typeof AgentVideoGenerateRequestSchema>;
 export type ChatResponseData = z.infer<typeof ChatResponseSchema>;
 export type MailOptionsData = z.infer<typeof MailOptionsDataSchema>;
 // ============================================================================

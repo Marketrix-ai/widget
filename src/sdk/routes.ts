@@ -44,7 +44,6 @@ import {
   AgentSimulationIndexRequestSchema,
   AgentSimulationIndexResponseSchema,
   AgentUpdateSchema,
-  AgentVideoGenerateRequestSchema,
   AppEventSchema,
   AppEventScopeSchema,
   ApplicationCreateSchema,
@@ -920,17 +919,6 @@ const contract = {
     })
     .input(ByAgentIdSchema)
     .output(AgentEntitySchema),
-
-  agentVideoGenerate: oc
-    .route({
-      method: 'POST',
-      tags: ['Agent'],
-      path: '/agent/{agent_id}/video',
-      summary: 'Generate video for agent from its last simulation',
-      description: 'Generates a walkthrough video from agent simulation screenshots',
-    })
-    .input(AgentVideoGenerateRequestSchema.extend({ agent_id: z.coerce.number() }))
-    .output(z.object({ video_url: z.string() })),
 
   // ============================================================================
   // ACTIVITY LOG ROUTES - System activity tracking and auditing
