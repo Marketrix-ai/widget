@@ -100,6 +100,53 @@ export const FileSchema = z.object({
 });
 
 // ============================================================================
+// SHARED HELPERS — Reusable input/output schemas
+// ============================================================================
+
+// ── Shared input helpers ──
+export const ByIdSchema = z.object({ id: z.coerce.number() });
+export const BySlugSchema = z.object({ slug: z.string() });
+export const ByAgentIdSchema = z.object({ agent_id: z.coerce.number() });
+export const ByWidgetIdSchema = z.object({ widget_id: z.coerce.number() });
+export const BySimulationIdSchema = z.object({ simulation_id: z.coerce.number() });
+export const ByApplicationIdSchema = z.object({ application_id: z.coerce.number() });
+export const ByUserIdSchema = z.object({ user_id: z.coerce.number() });
+
+// ── Shared output helpers ──
+export const SuccessSchema = z.object({ success: z.literal(true) });
+export const SuccessWithMessageSchema = SuccessSchema.extend({ message: z.string() });
+
+// ── Shared filter fragments ──
+export const WorkspaceFilterSchema = z.object({
+  workspace_id: z.coerce.number().optional(),
+});
+export const ApplicationFilterSchema = z.object({
+  application_id: z.coerce.number().optional(),
+});
+export const PaginationSchema = z.object({
+  limit: z.coerce.number().optional().default(50),
+  offset: z.coerce.number().optional().default(0),
+});
+
+// ── List wrappers ──
+
+/** Paginated list for unbounded queries — includes total/limit/offset for pagination */
+export const paginatedListOf = <T extends z.ZodTypeAny>(schema: T) =>
+  z.object({
+    items: z.array(schema),
+    total: z.number(),
+    limit: z.number(),
+    offset: z.number(),
+  });
+
+/** Simple list for bounded results (scoped to parent entity) — includes count */
+export const listOf = <T extends z.ZodTypeAny>(schema: T) =>
+  z.object({
+    items: z.array(schema),
+    count: z.number(),
+  });
+
+// ============================================================================
 // ROOT ROUTES SCHEMAS - Basic system endpoints
 // ============================================================================
 
@@ -293,7 +340,7 @@ export const KnowledgeEntitySchema = BaseEntitySchema.extend({
   workspace_id: z.number(),
   application_id: z.number().optional(),
   file_name: z.string(),
-  file_size: z.number(),
+  file_size: z.coerce.number(),
   file_type: KnowledgeTypeSchema,
   file_url: z.string(),
   source_url: z.string().nullish(), // Original URL for URL-based documents
@@ -328,7 +375,7 @@ export const QAFlowEntitySchema = BaseEntitySchema.extend({
   user_id: z.number(),
   application_id: z.number(),
   file_name: z.string(),
-  file_size: z.number(),
+  file_size: z.coerce.number(),
   file_type: z.string(),
   file_url: z.string(),
   file_path: z.string().nullable(),
@@ -475,9 +522,42 @@ export const QAFlowProcessingResponseSchema = z.object({
   }),
 });
 
+// ── QA Insight Response (completion payload for process/refine streams) ──
+export const QAInsightResponseSchema = z.object({
+  ultimate_goal: z.string(),
+  test_cases: z.array(
+    z.object({
+      test_title: z.string(),
+      test_objective: z.string(),
+      test_steps: z.array(z.string()),
+      expected_outcome: z.string(),
+      priority: z.enum(['Low', 'Medium', 'High']),
+    }),
+  ),
+  summary: z.object({
+    total_tests: z.number(),
+    high_priority: z.number(),
+    medium_priority: z.number(),
+    low_priority: z.number(),
+    estimated_time_minutes: z.number(),
+  }),
+});
+
+// ── SSE stream events for QA processing ──
+export const SSEEventSchema = z.discriminatedUnion('event', [
+  z.object({ event: z.literal('response.created'), data: z.object({ message: z.string() }) }),
+  z.object({ event: z.literal('response.progress'), data: z.object({ message: z.string() }) }),
+  z.object({ event: z.literal('response.clear'), data: z.object({}).optional() }),
+  z.object({ event: z.literal('response.completed'), data: QAInsightResponseSchema }),
+  z.object({ event: z.literal('error'), data: z.object({ detail: z.string() }) }),
+]);
+
 // ============================================================================
 // QA Test Version & Healing Types (consolidated into qa_test_case JSON columns)
 // ============================================================================
+
+/** Value types in QA test case version diffs */
+export const DiffValueSchema = z.union([z.string(), z.number(), z.boolean(), z.array(z.string()), z.null()]);
 
 export const QATestVersionChangeTypeSchema = z.enum(['created', 'modified', 'self_healed', 'refined', 'deleted']);
 export const QAFailureTypeSchema = z.enum(['locator', 'assertion', 'timeout', 'flow_change', 'environment']);
@@ -819,8 +899,8 @@ export const SessionEntitySchema = BaseEntitySchema.extend({
   application_id: z.number().int().nullable().optional(),
   blob_url: z.string().nullable(),
   event_count: z.number().int().nonnegative(),
-  started_at: z.string().datetime(),
-  ended_at: z.string().datetime().nullable(),
+  started_at: z.coerce.date(),
+  ended_at: z.coerce.date().nullable(),
   is_active: z.preprocess(v => (typeof v === 'number' ? v !== 0 : v), z.boolean()),
   metadata: z
     .object({
@@ -830,7 +910,7 @@ export const SessionEntitySchema = BaseEntitySchema.extend({
     .nullable(),
   last_batch_index: z.number().int().nonnegative().nullable(),
   last_event_timestamp: z.number().int().nullable(),
-  last_upload_time: z.string().datetime().nullable(),
+  last_upload_time: z.coerce.date().nullable(),
 });
 
 /**
@@ -842,8 +922,8 @@ export const SessionUpsertSchema = z.object({
   application_id: z.number().int().nullable().optional(),
   blob_url: z.string().nullable().optional(),
   event_count: z.number().int().nonnegative().optional(),
-  started_at: z.string().datetime().optional(),
-  ended_at: z.string().datetime().nullable().optional(),
+  started_at: z.coerce.date().optional(),
+  ended_at: z.coerce.date().nullable().optional(),
   is_active: z.preprocess(v => (typeof v === 'number' ? v !== 0 : v), z.boolean()).optional(),
   metadata: z
     .object({
@@ -855,7 +935,7 @@ export const SessionUpsertSchema = z.object({
     .optional(),
   last_batch_index: z.number().int().nonnegative().nullable().optional(),
   last_event_timestamp: z.number().int().nullable().optional(),
-  last_upload_time: z.string().datetime().nullable().optional(),
+  last_upload_time: z.coerce.date().nullable().optional(),
 });
 
 /**
