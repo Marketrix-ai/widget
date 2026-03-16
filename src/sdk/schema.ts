@@ -339,7 +339,7 @@ export type AgentBadgeData = z.infer<typeof AgentBadgeSchema>;
 export const KnowledgeEntitySchema = BaseEntitySchema.extend({
   workspace_id: z.number(),
   application_id: z.number().optional(),
-  file_name: z.string(),
+  file_name: z.string().min(1),
   file_size: z.coerce.number(),
   file_type: KnowledgeTypeSchema,
   file_url: z.string(),
@@ -374,16 +374,16 @@ export const QAFlowEntitySchema = BaseEntitySchema.extend({
   workspace_id: z.number(),
   user_id: z.number(),
   application_id: z.number(),
-  file_name: z.string(),
+  file_name: z.string().min(1),
   file_size: z.coerce.number(),
   file_type: z.string(),
   file_url: z.string(),
   file_path: z.string().nullable(),
-  additional_instructions: z.string().max(1000).nullable().optional(),
+  additional_instructions: z.string().max(1000).nullish(),
   status: QAFlowStatusSchema,
-  processing_step: z.string().nullable().optional(),
-  ultimate_goal: z.string().nullable().optional(),
-  browser_config: BrowserConfigSchema.nullable().optional(),
+  processing_step: z.string().nullish(),
+  ultimate_goal: z.string().nullish(),
+  browser_config: BrowserConfigSchema.nullish(),
 });
 
 /**
@@ -406,12 +406,12 @@ export const QARunEntitySchema = BaseEntitySchema.extend({
   triggered_by: z.number(),
   status: QARunStatusSchema,
   browser_type: BrowserTypeSchema,
-  browser_config: BrowserConfigSchema.nullable().optional(),
+  browser_config: BrowserConfigSchema.nullish(),
   total_tests: z.number().int().nonnegative(),
   passed_tests: z.number().int().nonnegative(),
   failed_tests: z.number().int().nonnegative(),
-  started_at: z.coerce.date().nullable().optional(),
-  completed_at: z.coerce.date().nullable().optional(),
+  started_at: z.coerce.date().nullish(),
+  completed_at: z.coerce.date().nullish(),
 });
 
 /**
@@ -427,14 +427,14 @@ export const QAProgressLogEntrySchema = z.object({
 export const QAExecutionEntrySchema = z.object({
   run_id: z.number(),
   status: z.enum(['pending', 'running', 'passed', 'failed', 'skipped']),
-  browser_type: BrowserTypeSchema.nullable().optional(),
+  browser_type: BrowserTypeSchema.nullish(),
   progress_log: z.array(QAProgressLogEntrySchema).default([]),
-  error_message: z.string().nullable().optional(),
-  screenshot_url: z.string().nullable().optional(),
-  simulation_id: z.number().nullable().optional(),
-  duration_ms: z.number().nullable().optional(),
-  started_at: z.string().nullable().optional(),
-  completed_at: z.string().nullable().optional(),
+  error_message: z.string().nullish(),
+  screenshot_url: z.string().nullish(),
+  simulation_id: z.number().nullish(),
+  duration_ms: z.number().nullish(),
+  started_at: z.string().nullish(),
+  completed_at: z.string().nullish(),
 });
 
 export const QAVersionHistoryEntrySchema = z.object({
@@ -445,23 +445,23 @@ export const QAVersionHistoryEntrySchema = z.object({
   expected_outcome: z.string(),
   priority: z.enum(['Low', 'Medium', 'High']),
   change_type: z.enum(['created', 'modified', 'self_healed', 'refined', 'deleted']),
-  change_reason: z.string().nullable().optional(),
-  changed_by: z.number().nullable().optional(),
+  change_reason: z.string().nullish(),
+  changed_by: z.number().nullish(),
   created_at: z.string(),
   accepted: z.boolean().optional(),
 });
 
 export const QAHealingAttemptEntrySchema = z.object({
   failure_type: z.enum(['locator', 'assertion', 'timeout', 'flow_change', 'environment']),
-  failure_message: z.string().nullable().optional(),
-  failure_context: z.record(z.string(), z.unknown()).nullable().optional(),
-  repair_strategy: z.string().nullable().optional(),
-  repair_details: z.record(z.string(), z.unknown()).nullable().optional(),
-  confidence_score: z.number().min(0).max(1).nullable().optional(),
+  failure_message: z.string().nullish(),
+  failure_context: z.record(z.string(), z.unknown()).nullish(),
+  repair_strategy: z.string().nullish(),
+  repair_details: z.record(z.string(), z.unknown()).nullish(),
+  confidence_score: z.number().min(0).max(1).nullish(),
   validation_status: z.enum(['pending', 'validated', 'failed', 'rejected']),
-  simulation_id: z.number().nullable().optional(),
-  validation_simulation_id: z.number().nullable().optional(),
-  healed_version: z.number().nullable().optional(),
+  simulation_id: z.number().nullish(),
+  validation_simulation_id: z.number().nullish(),
+  healed_version: z.number().nullish(),
   created_at: z.string(),
 });
 
@@ -482,8 +482,8 @@ export const QATestCaseEntitySchema = BaseEntitySchema.extend({
   version_history: z.array(QAVersionHistoryEntrySchema).nullable(),
   executions: z.array(QAExecutionEntrySchema).nullable(),
   healing_attempts: z.array(QAHealingAttemptEntrySchema).nullable(),
-  healing_metadata: z.record(z.string(), z.unknown()).nullable().optional(),
-  last_healed_at: z.coerce.date().nullable().optional(),
+  healing_metadata: z.record(z.string(), z.unknown()).nullish(),
+  last_healed_at: z.coerce.date().nullish(),
 });
 
 /**
@@ -831,7 +831,7 @@ export const SimulationEntitySchema = BaseEntitySchema.extend({
   application_id: z.number(),
   agent_id: z.number(),
   job_id: z.string(),
-  session_id: z.string().nullable().optional(),
+  session_id: z.string().nullish(),
   status: z.string(),
   status_message: z.string().nullish(),
   path: z.string().nullish(),
@@ -840,7 +840,7 @@ export const SimulationEntitySchema = BaseEntitySchema.extend({
   pinned: z.boolean().optional(),
   source: z.enum(['direct', 'qa']).optional(),
   agent_name: z.string().nullish(),
-  graph_index_id: z.string().nullable().optional(),
+  graph_index_id: z.string().nullish(),
   progress_log: z.array(SimulationProgressEntrySchema).optional(),
   agents: z.array(AgentBadgeSchema).optional(),
 });
@@ -896,7 +896,7 @@ export const SimulationAnswerSchema = z.object({
 export const SessionEntitySchema = BaseEntitySchema.extend({
   session_id: z.string(),
   chat_id: z.string(),
-  application_id: z.number().int().nullable().optional(),
+  application_id: z.number().int().nullish(),
   blob_url: z.string().nullable(),
   event_count: z.number().int().nonnegative(),
   started_at: z.coerce.date(),
@@ -919,11 +919,11 @@ export const SessionEntitySchema = BaseEntitySchema.extend({
 export const SessionUpsertSchema = z.object({
   session_id: z.string().min(1),
   chat_id: z.string().min(1),
-  application_id: z.number().int().nullable().optional(),
-  blob_url: z.string().nullable().optional(),
+  application_id: z.number().int().nullish(),
+  blob_url: z.string().nullish(),
   event_count: z.number().int().nonnegative().optional(),
   started_at: z.coerce.date().optional(),
-  ended_at: z.coerce.date().nullable().optional(),
+  ended_at: z.coerce.date().nullish(),
   is_active: z.preprocess(v => (typeof v === 'number' ? v !== 0 : v), z.boolean()).optional(),
   metadata: z
     .object({
@@ -933,9 +933,9 @@ export const SessionUpsertSchema = z.object({
     })
     .nullable()
     .optional(),
-  last_batch_index: z.number().int().nonnegative().nullable().optional(),
-  last_event_timestamp: z.number().int().nullable().optional(),
-  last_upload_time: z.coerce.date().nullable().optional(),
+  last_batch_index: z.number().int().nonnegative().nullish(),
+  last_event_timestamp: z.number().int().nullish(),
+  last_upload_time: z.coerce.date().nullish(),
 });
 
 /**
@@ -1095,9 +1095,9 @@ export const SimulationStatusResponseSchema = z.object({
  */
 export const BrowserSessionResponseSchema = z.object({
   session_id: z.string().optional(),
-  live_view_url: z.string().nullable().optional(),
+  live_view_url: z.string().nullish(),
   status: z.string().optional(),
-  message: z.string().nullable().optional(),
+  message: z.string().nullish(),
   success: z.boolean().optional(),
 });
 
@@ -1647,10 +1647,10 @@ export const ConnectorEntitySchema = BaseEntitySchema.extend({
   workspace_id: z.number(),
   provider: ConnectorTypeSchema,
   name: z.string().min(1).max(120),
-  identifier: z.string().max(120).nullable().optional(),
-  api_endpoint: z.string().url().nullable().optional(),
-  api_token: z.string().nullable().optional(),
-  metadata: z.record(z.string(), z.unknown()).nullable().optional(),
+  identifier: z.string().max(120).nullish(),
+  api_endpoint: z.string().url().nullish(),
+  api_token: z.string().nullish(),
+  metadata: z.record(z.string(), z.unknown()).nullish(),
   is_active: z.boolean().default(true),
   status: EntityStatusSchema.default('active'),
 });
@@ -1662,10 +1662,10 @@ export const ConnectorUpsertSchema = z.object({
   id: z.coerce.number().optional(),
   provider: ConnectorTypeSchema,
   name: z.string().min(1).max(120),
-  identifier: z.string().max(120).nullable().optional(),
-  api_endpoint: z.string().url().nullable().optional(),
-  api_token: z.string().nullable().optional(),
-  metadata: z.record(z.string(), z.unknown()).nullable().optional(),
+  identifier: z.string().max(120).nullish(),
+  api_endpoint: z.string().url().nullish(),
+  api_token: z.string().nullish(),
+  metadata: z.record(z.string(), z.unknown()).nullish(),
   is_active: z.boolean().optional(),
   status: EntityStatusSchema.optional(),
 });
@@ -1790,7 +1790,7 @@ export const INITIAL_PROMPT_LIMIT = 50;
 export const StripeWebhookEventSchema = z.object({
   id: z.string(),
   object: z.literal('event'),
-  api_version: z.string().nullable().optional(),
+  api_version: z.string().nullish(),
   created: z.number(),
   data: z.object({
     object: z.record(z.string(), z.unknown()), // The actual event object varies by event type
@@ -2159,27 +2159,27 @@ export const PreviewVideoChatMessageSchema = z.object({
 
 export const PreviewVideoChatEntitySchema = BaseEntitySchema.extend({
   workspace_id: z.number(),
-  application_id: z.number().nullable().optional(),
-  agent_id: z.number().nullable().optional(),
-  simulation_id: z.number().nullable().optional(),
+  application_id: z.number().nullish(),
+  agent_id: z.number().nullish(),
+  simulation_id: z.number().nullish(),
   chat_id: z.string(),
-  chat_content: z.string().nullable().optional(),
-  chat_history: z.array(PreviewVideoChatMessageSchema).nullable().optional(),
-  chat_output: z.string().nullable().optional(),
-  preview_video_url: z.string().nullable().optional(),
-  metadata: z.record(z.string(), z.unknown()).nullable().optional(),
+  chat_content: z.string().nullish(),
+  chat_history: z.array(PreviewVideoChatMessageSchema).nullish(),
+  chat_output: z.string().nullish(),
+  preview_video_url: z.string().nullish(),
+  metadata: z.record(z.string(), z.unknown()).nullish(),
 });
 
 export const PreviewVideoChatUpsertSchema = z.object({
-  application_id: z.number().nullable().optional(),
-  agent_id: z.number().nullable().optional(),
-  simulation_id: z.number().nullable().optional(),
+  application_id: z.number().nullish(),
+  agent_id: z.number().nullish(),
+  simulation_id: z.number().nullish(),
   chat_id: z.string(),
-  chat_content: z.string().nullable().optional(),
-  chat_history: z.array(PreviewVideoChatMessageSchema).nullable().optional(),
-  chat_output: z.string().nullable().optional(),
-  preview_video_url: z.string().nullable().optional(),
-  metadata: z.record(z.string(), z.unknown()).nullable().optional(),
+  chat_content: z.string().nullish(),
+  chat_history: z.array(PreviewVideoChatMessageSchema).nullish(),
+  chat_output: z.string().nullish(),
+  preview_video_url: z.string().nullish(),
+  metadata: z.record(z.string(), z.unknown()).nullish(),
 });
 
 export const PreviewVideoChatSearchSchema = z.object({

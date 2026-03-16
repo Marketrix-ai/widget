@@ -175,7 +175,7 @@ const contract = {
     })
     .input(
       z.object({
-        url: z.string(),
+        url: z.string().url(),
         skip_network: z.string().optional(),
       }),
     )
@@ -184,8 +184,8 @@ const contract = {
         valid: z.boolean(),
         accessible: z.boolean(),
         dnsResolves: z.boolean(),
-        error: z.string().optional(),
-        warnings: z.array(z.string()).optional(),
+        error: z.string().optional().describe('Error message if URL validation failed'),
+        warnings: z.array(z.string()).optional().describe('Non-fatal issues found during URL validation'),
       }),
     ),
 
@@ -236,7 +236,7 @@ const contract = {
       description:
         'Handles approve/reject links from admin emails. Token-in-URL authentication (no session required). Returns an HTML page, not JSON.',
     })
-    .input(z.object({ token: z.string() }))
+    .input(z.object({ token: z.string().min(1) }))
     .output(z.object({ result: z.string().describe('HTML response page') })),
 
   // ============================================================================
@@ -347,7 +347,7 @@ const contract = {
       description: 'Permanently deletes a workspace and cleans up all related resources. This action cannot be undone.',
     })
     .input(BySlugSchema)
-    .output(z.void()),
+    .output(SuccessSchema),
 
   // ── Workspace Members ───────────────────────────────────────────────
   workspaceMemberList: oc
@@ -539,7 +539,7 @@ const contract = {
       description: 'Permanently deletes an application and all associated widgets. This action cannot be undone.',
     })
     .input(ByApplicationIdSchema)
-    .output(z.void()),
+    .output(SuccessSchema),
 
   // ============================================================================
   // WIDGET ROUTES - Widget, Slack, and other widget management
@@ -619,7 +619,7 @@ const contract = {
       description: 'Permanently deletes a widget from an application. This action cannot be undone.',
     })
     .input(ByWidgetIdSchema)
-    .output(z.void()),
+    .output(SuccessSchema),
 
   // ============================================================================
   // CHAT ROUTES - AI-powered chat and conversation management
@@ -726,7 +726,7 @@ const contract = {
       description: 'Permanently deletes a connector for current workspace. This action cannot be undone.',
     })
     .input(ByIdSchema)
-    .output(z.void()),
+    .output(SuccessSchema),
   // ============================================================================
   // USER ROUTES - User account management and operations
   // ============================================================================
@@ -803,7 +803,7 @@ const contract = {
         'Permanently deletes a user account and cleans up all related resources. This action cannot be undone.',
     })
     .input(ByUserIdSchema)
-    .output(z.void()),
+    .output(SuccessSchema),
 
   userDeactivate: oc
     .route({
@@ -814,7 +814,7 @@ const contract = {
       description: 'Deactivates user access while preserving data for potential reactivation',
     })
     .input(ByUserIdSchema.extend({ reason: z.string().optional() }))
-    .output(z.void()),
+    .output(SuccessSchema),
 
   // ============================================================================
   // AGENT ROUTES - AI agent creation and management
@@ -896,7 +896,7 @@ const contract = {
       description: 'Permanently deletes an agent and cleans up all related resources. This action cannot be undone.',
     })
     .input(ByAgentIdSchema)
-    .output(z.void()),
+    .output(SuccessSchema),
 
   agentIndexSimulation: oc
     .route({
@@ -1056,7 +1056,7 @@ const contract = {
       description: 'Permanently deletes a URL guide. This action cannot be undone.',
     })
     .input(ByIdSchema)
-    .output(z.void()),
+    .output(SuccessSchema),
 
   urlGuideMatch: oc
     .route({
@@ -1269,7 +1269,7 @@ const contract = {
       summary: 'Get session by session ID',
       description: 'Retrieves a session by its session_id',
     })
-    .input(z.object({ session_id: z.string() }))
+    .input(z.object({ session_id: z.string().min(1) }))
     .output(SessionEntitySchema.nullable()),
 
   sessionGetByChat: oc
@@ -1280,7 +1280,7 @@ const contract = {
       summary: 'Get sessions by chat ID',
       description: 'Retrieves all sessions for a given chat_id',
     })
-    .input(z.object({ chat_id: z.string() }))
+    .input(z.object({ chat_id: z.string().min(1) }))
     .output(listOf(SessionEntitySchema)),
 
   sessionSearch: oc
@@ -1310,7 +1310,7 @@ const contract = {
       summary: 'Get session events',
       description: 'Fetches all batches from folder, combines them in correct order, and returns events array',
     })
-    .input(z.object({ session_id: z.string() }))
+    .input(z.object({ session_id: z.string().min(1) }))
     .output(
       listOf(
         z.object({
@@ -1423,7 +1423,7 @@ const contract = {
       description: 'Permanently deletes a knowledge document from the database. This action cannot be undone.',
     })
     .input(ByIdSchema)
-    .output(z.void()),
+    .output(SuccessSchema),
 
   knowledgeRefresh: oc
     .route({
@@ -1609,7 +1609,7 @@ const contract = {
       description: 'Permanently deletes a QA flow and all its runs and test cases. This action cannot be undone.',
     })
     .input(ByIdSchema)
-    .output(z.void()),
+    .output(SuccessSchema),
 
   qaFlowUpdate: oc
     .route({
@@ -1669,7 +1669,7 @@ const contract = {
       description: 'Permanently deletes a QA run and all its test case results. This action cannot be undone.',
     })
     .input(ByIdSchema)
-    .output(z.void()),
+    .output(SuccessSchema),
 
   qaFlowRun: oc
     .route({
@@ -2070,7 +2070,7 @@ const contract = {
       summary: 'Cancel subscription at period end',
       description: 'Cancels the subscription at the end of the current billing period.',
     })
-    .input(z.object({ subscriptionId: z.string() }))
+    .input(z.object({ subscriptionId: z.string().min(1) }))
     .output(z.object({ subscriptionId: z.string(), cancelAtPeriodEnd: z.boolean() })),
 
   stripeGetCatalog: oc
