@@ -78,6 +78,7 @@ import {
   MigrationPrepareSchema,
   MigrationRunSchema,
   MindMapSchema,
+  PaginationSchema,
   PlanCatalogSchema,
   PlanInfoSchema,
   PortalSessionSchema,
@@ -134,6 +135,8 @@ import {
   WorkspaceMemberEntitySchema,
   WorkspaceMemberRoleSchema,
   WorkspaceUpdateSchema,
+  listOf,
+  paginatedListOf,
 } from './schema';
 
 // Main contract with all routes
@@ -289,16 +292,18 @@ const contract = {
       description: 'Returns list of workspaces matching search parameters (name, domain, email, etc.)',
     })
     .input(
-      z.object({
-        name: z.string().optional(),
-        domain: z.string().optional(),
-        email: z.string().email().optional(),
-        app_id: z.coerce.number().optional(),
-        workspace_id: z.coerce.number().optional(),
-        user_id: z.coerce.number().optional(),
-      }),
+      z
+        .object({
+          name: z.string().optional(),
+          domain: z.string().optional(),
+          email: z.string().email().optional(),
+          app_id: z.coerce.number().optional(),
+          workspace_id: z.coerce.number().optional(),
+          user_id: z.coerce.number().optional(),
+        })
+        .merge(PaginationSchema),
     )
-    .output(z.array(WorkspaceEntitySchema)),
+    .output(paginatedListOf(WorkspaceEntitySchema)),
 
   workspaceLookup: oc
     .route({
@@ -355,7 +360,7 @@ const contract = {
     })
     .input(BySlugSchema)
     .output(
-      z.array(
+      listOf(
         WorkspaceMemberEntitySchema.extend({
           user: UserEntitySchema.pick({ id: true, email: true, first_name: true, last_name: true, image_url: true }),
         }),
@@ -403,7 +408,7 @@ const contract = {
       summary: 'List workspaces for current user',
       description: 'Returns all workspaces the authenticated user belongs to, including their role in each.',
     })
-    .output(z.array(WorkspaceEntitySchema.extend({ role: WorkspaceMemberRoleSchema }))),
+    .output(listOf(WorkspaceEntitySchema.extend({ role: WorkspaceMemberRoleSchema }))),
 
   // ============================================================================
   // ADMIN ROUTES - System administration and maintenance
@@ -485,12 +490,14 @@ const contract = {
         'Returns applications for the authenticated workspace, optionally filtered by type, always includes widgets',
     })
     .input(
-      z.object({
-        type: ApplicationTypeSchema.optional(),
-      }),
+      z
+        .object({
+          type: ApplicationTypeSchema.optional(),
+        })
+        .merge(PaginationSchema),
     )
     .output(
-      z.array(
+      paginatedListOf(
         ApplicationEntitySchema.extend({
           widgets: z.array(WidgetEntitySchema),
         }),
@@ -559,14 +566,16 @@ const contract = {
       description: 'Search widgets by type, application, marketrix_id, or marketrix_key',
     })
     .input(
-      z.object({
-        type: WidgetTypeSchema.optional(),
-        application_id: z.coerce.number().optional(),
-        marketrix_id: z.string().optional(),
-        marketrix_key: z.string().optional(),
-      }),
+      z
+        .object({
+          type: WidgetTypeSchema.optional(),
+          application_id: z.coerce.number().optional(),
+          marketrix_id: z.string().optional(),
+          marketrix_key: z.string().optional(),
+        })
+        .merge(PaginationSchema),
     )
-    .output(z.array(WidgetWithAgentSchema)),
+    .output(paginatedListOf(WidgetWithAgentSchema)),
 
   widgetGetDefaults: oc
     .route({
@@ -662,7 +671,7 @@ const contract = {
       description: 'Returns preview chat records filtered by chat_id, agent_id, or simulation_id for current workspace',
     })
     .input(PreviewVideoChatSearchSchema)
-    .output(z.array(PreviewVideoChatEntitySchema)),
+    .output(listOf(PreviewVideoChatEntitySchema)),
 
   previewVideoChatGet: oc
     .route({
@@ -695,7 +704,7 @@ const contract = {
       description: 'Returns workspace connectors filtered by provider/status',
     })
     .input(ConnectorSearchSchema)
-    .output(z.array(ConnectorEntitySchema)),
+    .output(paginatedListOf(ConnectorEntitySchema)),
 
   connectorGet: oc
     .route({
@@ -731,12 +740,14 @@ const contract = {
       description: 'Returns list of users associated with specified workspace',
     })
     .input(
-      z.object({
-        workspace_id: z.coerce.number().optional(),
-        status: EntityStatusSchema.optional(),
-      }),
+      z
+        .object({
+          workspace_id: z.coerce.number().optional(),
+          status: EntityStatusSchema.optional(),
+        })
+        .merge(PaginationSchema),
     )
-    .output(z.array(UserEntitySchema)),
+    .output(paginatedListOf(UserEntitySchema)),
 
   userCreateBatch: oc
     .route({
@@ -830,13 +841,15 @@ const contract = {
         'Returns list of agents matching search parameters. Supports filtering by workspace_id, user_id, and application_id.',
     })
     .input(
-      z.object({
-        workspace_id: z.coerce.number().optional(),
-        user_id: z.coerce.number().optional(),
-        application_id: z.coerce.number().optional(),
-      }),
+      z
+        .object({
+          workspace_id: z.coerce.number().optional(),
+          user_id: z.coerce.number().optional(),
+          application_id: z.coerce.number().optional(),
+        })
+        .merge(PaginationSchema),
     )
-    .output(z.array(AgentEntitySchema)),
+    .output(paginatedListOf(AgentEntitySchema)),
 
   agentGet: oc
     .route({
@@ -943,13 +956,15 @@ const contract = {
       description: 'Returns list of activity logs matching search parameters (workspace, type)',
     })
     .input(
-      z.object({
-        workspace_id: z.coerce.number().optional(),
-        type: ActionLogTypeSchema.optional(),
-        application_id: z.coerce.number().optional(),
-      }),
+      z
+        .object({
+          workspace_id: z.coerce.number().optional(),
+          type: ActionLogTypeSchema.optional(),
+          application_id: z.coerce.number().optional(),
+        })
+        .merge(PaginationSchema),
     )
-    .output(z.array(ActionLogEntitySchema)),
+    .output(paginatedListOf(ActionLogEntitySchema)),
 
   // ============================================================================
   // TOUR ROUTES - Interactive tour and guidance system
@@ -964,12 +979,14 @@ const contract = {
       description: 'Returns list of available tours for specified workspace',
     })
     .input(
-      z.object({
-        workspace_id: z.coerce.number().optional(),
-        application_id: z.coerce.number().optional(),
-      }),
+      z
+        .object({
+          workspace_id: z.coerce.number().optional(),
+          application_id: z.coerce.number().optional(),
+        })
+        .merge(PaginationSchema),
     )
-    .output(z.array(TourEntitySchema)),
+    .output(paginatedListOf(TourEntitySchema)),
 
   tourCreate: oc
     .route({
@@ -994,8 +1011,8 @@ const contract = {
       summary: 'Search URL guides by widget',
       description: 'Returns list of URL guides for specified widget',
     })
-    .input(ByWidgetIdSchema)
-    .output(z.array(UrlGuideEntitySchema)),
+    .input(ByWidgetIdSchema.merge(PaginationSchema))
+    .output(paginatedListOf(UrlGuideEntitySchema)),
 
   urlGuideCreate: oc
     .route({
@@ -1071,30 +1088,30 @@ const contract = {
         'Returns list of simulations associated with specified workspace. Use application_id, agent_id, or pinned to filter.',
     })
     .input(
-      z.object({
-        workspace_id: z.coerce.number().optional(),
-        application_id: z.coerce.number().optional(),
-        agent_id: z.coerce.number().optional(),
-        pinned: z
-          .union([z.boolean(), z.string()])
-          .optional()
-          .transform(val =>
-            val === undefined
-              ? undefined
-              : typeof val === 'boolean'
-                ? val
-                : val === 'true'
-                  ? true
-                  : val === 'false'
-                    ? false
-                    : undefined,
-          ),
-        source: z.enum(['direct', 'qa']).optional(),
-        limit: z.coerce.number().optional(),
-        offset: z.coerce.number().optional(),
-      }),
+      z
+        .object({
+          workspace_id: z.coerce.number().optional(),
+          application_id: z.coerce.number().optional(),
+          agent_id: z.coerce.number().optional(),
+          pinned: z
+            .union([z.boolean(), z.string()])
+            .optional()
+            .transform(val =>
+              val === undefined
+                ? undefined
+                : typeof val === 'boolean'
+                  ? val
+                  : val === 'true'
+                    ? true
+                    : val === 'false'
+                      ? false
+                      : undefined,
+            ),
+          source: z.enum(['direct', 'qa']).optional(),
+        })
+        .merge(PaginationSchema),
     )
-    .output(z.array(SimulationEntitySchema)),
+    .output(paginatedListOf(SimulationEntitySchema)),
 
   simulationStart: oc
     .route({
@@ -1142,7 +1159,7 @@ const contract = {
       description: 'Returns all progress updates for a simulation ordered chronologically',
     })
     .input(BySimulationIdSchema)
-    .output(z.array(SimulationProgressEntitySchema)),
+    .output(listOf(SimulationProgressEntitySchema)),
 
   simulationLiveView: oc
     .route({
@@ -1170,7 +1187,7 @@ const contract = {
       description: 'Returns the history array for the specified simulation',
     })
     .input(BySimulationIdSchema)
-    .output(z.object({ history: z.array(SimulationStepSchema) })),
+    .output(listOf(SimulationStepSchema)),
 
   simulationSteps: oc
     .route({
@@ -1182,7 +1199,7 @@ const contract = {
         'Returns each step with step_number, topic, screenshot_url, and optional title/url for the simulation',
     })
     .input(BySimulationIdSchema)
-    .output(z.array(SimulationStepSummarySchema)),
+    .output(listOf(SimulationStepSummarySchema)),
 
   simulationMindmap: oc
     .route({
@@ -1264,7 +1281,7 @@ const contract = {
       description: 'Retrieves all sessions for a given chat_id',
     })
     .input(z.object({ chat_id: z.string() }))
-    .output(z.array(SessionEntitySchema)),
+    .output(listOf(SessionEntitySchema)),
 
   sessionSearch: oc
     .route({
@@ -1275,13 +1292,15 @@ const contract = {
       description: 'Retrieves all sessions ordered by creation date, optionally filtered by application and date range',
     })
     .input(
-      z.object({
-        application_id: z.coerce.number().optional(),
-        start_date: z.string().optional(),
-        end_date: z.string().optional(),
-      }),
+      z
+        .object({
+          application_id: z.coerce.number().optional(),
+          start_date: z.string().optional(),
+          end_date: z.string().optional(),
+        })
+        .merge(PaginationSchema),
     )
-    .output(z.array(SessionEntitySchema)),
+    .output(paginatedListOf(SessionEntitySchema)),
 
   sessionEvents: oc
     .route({
@@ -1293,7 +1312,7 @@ const contract = {
     })
     .input(z.object({ session_id: z.string() }))
     .output(
-      z.array(
+      listOf(
         z.object({
           type: z.number(),
           timestamp: z.number(),
@@ -1354,13 +1373,15 @@ const contract = {
         'Returns list of knowledge documents matching search parameters. Supports filtering by workspace_id, type, and application_id.',
     })
     .input(
-      z.object({
-        workspace_id: z.coerce.number().optional(),
-        type: KnowledgeTypeSchema.optional(),
-        application_id: z.coerce.number().optional(),
-      }),
+      z
+        .object({
+          workspace_id: z.coerce.number().optional(),
+          type: KnowledgeTypeSchema.optional(),
+          application_id: z.coerce.number().optional(),
+        })
+        .merge(PaginationSchema),
     )
-    .output(z.array(KnowledgeEntitySchema)),
+    .output(paginatedListOf(KnowledgeEntitySchema)),
 
   knowledgeCreate: oc
     .route({
@@ -1544,30 +1565,31 @@ const contract = {
         'Returns all QA flows with aggregated metrics (run_count, pass_rate, total_failed) and the last run summary. Supports filtering by application_id.',
     })
     .input(
-      z.object({
-        application_id: z.coerce.number().optional(),
-      }),
+      z
+        .object({
+          application_id: z.coerce.number().optional(),
+        })
+        .merge(PaginationSchema),
     )
     .output(
-      z.object({
-        documents: z.array(
-          QAFlowEntitySchema.extend({
-            run_count: z.number(),
-            display_title: z.string(),
-            total_failed: z.number(),
-            pass_rate: z.number().nullable(),
-            last_run: z
-              .object({
-                id: z.number(),
-                status: z.string(),
-                total_tests: z.number(),
-                passed_tests: z.number(),
-                failed_tests: z.number(),
-                created_at: z.coerce.date().nullable(),
-              })
-              .nullable(),
-          }),
-        ),
+      paginatedListOf(
+        QAFlowEntitySchema.extend({
+          run_count: z.number(),
+          display_title: z.string(),
+          total_failed: z.number(),
+          pass_rate: z.number().nullable(),
+          last_run: z
+            .object({
+              id: z.number(),
+              status: z.string(),
+              total_tests: z.number(),
+              passed_tests: z.number(),
+              failed_tests: z.number(),
+              created_at: z.coerce.date().nullable(),
+            })
+            .nullable(),
+        }),
+      ).extend({
         metrics: z.object({
           total_flows: z.number(),
           total_runs: z.number(),
@@ -1612,9 +1634,9 @@ const contract = {
       summary: 'List runs for a QA flow',
       description: 'Returns all runs for a document with total/passed/failed counts',
     })
-    .input(ByIdSchema)
+    .input(ByIdSchema.merge(PaginationSchema))
     .output(
-      z.array(
+      paginatedListOf(
         QARunEntitySchema.extend({
           total_tests: z.number(),
           passed: z.number(),
@@ -1674,7 +1696,7 @@ const contract = {
       description: 'Retrieves test cases; optional run_id scopes to that run',
     })
     .input(ByIdSchema.extend({ run_id: z.coerce.number().optional() }))
-    .output(z.array(QATestCaseEntitySchema)),
+    .output(listOf(QATestCaseEntitySchema)),
 
   qaTestCaseUpdate: oc
     .route({
@@ -1756,7 +1778,7 @@ const contract = {
       description: 'Returns all version entries from the test case version_history JSON',
     })
     .input(ByIdSchema)
-    .output(z.array(QAVersionHistoryEntrySchema)),
+    .output(listOf(QAVersionHistoryEntrySchema)),
 
   qaTestCaseVersionGet: oc
     .route({
@@ -1835,7 +1857,7 @@ const contract = {
       description: 'Returns all healing attempt entries from the test case healing_attempts JSON',
     })
     .input(ByIdSchema)
-    .output(z.array(QAHealingAttemptEntrySchema)),
+    .output(listOf(QAHealingAttemptEntrySchema)),
 
   qaHealingAttemptApprove: oc
     .route({

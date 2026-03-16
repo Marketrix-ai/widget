@@ -36,16 +36,18 @@ export class WidgetService {
       // Then, try to fetch existing widget
       let widgetsData: WidgetData[] | null = null;
       if (this.mtxId && this.mtxKey) {
-        widgetsData = await sdk.widgetSearch({
+        const result = await sdk.widgetSearch({
           type: 'widget',
           marketrix_id: this.mtxId,
           marketrix_key: this.mtxKey,
         });
+        widgetsData = result.items;
       } else if (this.mtxApp) {
-        widgetsData = await sdk.widgetSearch({
+        const result = await sdk.widgetSearch({
           type: 'widget',
           application_id: this.mtxApp,
         });
+        widgetsData = result.items;
       } else {
         return null;
       }
