@@ -301,7 +301,7 @@ const contract = {
           workspace_id: z.coerce.number().optional(),
           user_id: z.coerce.number().optional(),
         })
-        .merge(PaginationSchema),
+        .extend(PaginationSchema.shape),
     )
     .output(paginatedListOf(WorkspaceEntitySchema)),
 
@@ -494,7 +494,7 @@ const contract = {
         .object({
           type: ApplicationTypeSchema.optional(),
         })
-        .merge(PaginationSchema),
+        .extend(PaginationSchema.shape),
     )
     .output(
       paginatedListOf(
@@ -573,7 +573,7 @@ const contract = {
           marketrix_id: z.string().optional(),
           marketrix_key: z.string().optional(),
         })
-        .merge(PaginationSchema),
+        .extend(PaginationSchema.shape),
     )
     .output(paginatedListOf(WidgetWithAgentSchema)),
 
@@ -745,7 +745,7 @@ const contract = {
           workspace_id: z.coerce.number().optional(),
           status: EntityStatusSchema.optional(),
         })
-        .merge(PaginationSchema),
+        .extend(PaginationSchema.shape),
     )
     .output(paginatedListOf(UserEntitySchema)),
 
@@ -847,7 +847,7 @@ const contract = {
           user_id: z.coerce.number().optional(),
           application_id: z.coerce.number().optional(),
         })
-        .merge(PaginationSchema),
+        .extend(PaginationSchema.shape),
     )
     .output(paginatedListOf(AgentEntitySchema)),
 
@@ -962,7 +962,7 @@ const contract = {
           type: ActionLogTypeSchema.optional(),
           application_id: z.coerce.number().optional(),
         })
-        .merge(PaginationSchema),
+        .extend(PaginationSchema.shape),
     )
     .output(paginatedListOf(ActionLogEntitySchema)),
 
@@ -984,7 +984,7 @@ const contract = {
           workspace_id: z.coerce.number().optional(),
           application_id: z.coerce.number().optional(),
         })
-        .merge(PaginationSchema),
+        .extend(PaginationSchema.shape),
     )
     .output(paginatedListOf(TourEntitySchema)),
 
@@ -1011,7 +1011,7 @@ const contract = {
       summary: 'Search URL guides by widget',
       description: 'Returns list of URL guides for specified widget',
     })
-    .input(ByWidgetIdSchema.merge(PaginationSchema))
+    .input(ByWidgetIdSchema.extend(PaginationSchema.shape))
     .output(paginatedListOf(UrlGuideEntitySchema)),
 
   urlGuideCreate: oc
@@ -1109,7 +1109,7 @@ const contract = {
             ),
           source: z.enum(['direct', 'qa']).optional(),
         })
-        .merge(PaginationSchema),
+        .extend(PaginationSchema.shape),
     )
     .output(paginatedListOf(SimulationEntitySchema)),
 
@@ -1298,7 +1298,7 @@ const contract = {
           start_date: z.string().optional(),
           end_date: z.string().optional(),
         })
-        .merge(PaginationSchema),
+        .extend(PaginationSchema.shape),
     )
     .output(paginatedListOf(SessionEntitySchema)),
 
@@ -1379,7 +1379,7 @@ const contract = {
           type: KnowledgeTypeSchema.optional(),
           application_id: z.coerce.number().optional(),
         })
-        .merge(PaginationSchema),
+        .extend(PaginationSchema.shape),
     )
     .output(paginatedListOf(KnowledgeEntitySchema)),
 
@@ -1569,7 +1569,7 @@ const contract = {
         .object({
           application_id: z.coerce.number().optional(),
         })
-        .merge(PaginationSchema),
+        .extend(PaginationSchema.shape),
     )
     .output(
       paginatedListOf(
@@ -1634,7 +1634,7 @@ const contract = {
       summary: 'List runs for a QA flow',
       description: 'Returns all runs for a document with total/passed/failed counts',
     })
-    .input(ByIdSchema.merge(PaginationSchema))
+    .input(ByIdSchema.extend(PaginationSchema.shape))
     .output(
       paginatedListOf(
         QARunEntitySchema.extend({
