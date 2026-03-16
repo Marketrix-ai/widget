@@ -46,19 +46,17 @@ export class WidgetValidationService {
       // Step 1: Fetch widget by marketrix_id and marketrix_key
       console.log('Validating widget - fetching widget...', { mtxId, mtxKey });
 
-      const widgetsData = await sdk.widgetSearch({
+      const { items: widgets } = await sdk.widgetSearch({
         marketrix_id: mtxId,
         marketrix_key: mtxKey,
       });
 
-      if (!widgetsData || widgetsData.length === 0) {
+      if (!widgets || widgets.length === 0) {
         return {
           isValid: false,
           error: 'Widget not found or invalid credentials',
         };
       }
-
-      const widgets = widgetsData;
 
       // Debug: Log what widgets were found
       console.log(

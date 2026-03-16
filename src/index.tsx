@@ -194,7 +194,7 @@ async function initWidgetInternal(config: MarketrixConfig, container?: HTMLEleme
 
     recordingAbortController = new AbortController();
 
-    // SessionRecorder now requires chatId at construction (uses HTTP POST, not WebSocket).
+    // SessionRecorder now requires chatId at construction (uses HTTP POST).
     // We need both applicationId and chatId before creating the recorder.
     const initRecorder = (applicationId: number, chatId: string) => {
       if (sessionRecorder && isRecordingInitialized) return; // Already initialized
