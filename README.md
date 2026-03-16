@@ -563,7 +563,7 @@ GitHub Actions workflows in `.github/workflows/`:
 | `validate.yml` | Push / PR to `dev`, `main`       | Type check, lint, format, tests, build, visual, a11y, bundle checks |
 | `build.yml`    | Tag push (`v*`) or push to `dev` | Build Docker image, push to ACR; publish to npm on tag              |
 
-Image builds produce `marketrix.azurecr.io/widget:{version}`. Tag pushes also publish `@marketrix.ai/widget` to npm. Deployment to dev/prod is handled by the centralized deploy workflow in `marketrix-infra`.
+Image builds produce `marketrix.azurecr.io/widget:{version}`. Tag pushes also publish `@marketrix.ai/widget` to npm. Deployment to dev/prod is handled by the centralized deploy workflow (e.g. `deploy.yml` in infra). Dev branch pushes do not build images.
 
 ## Build System
 
