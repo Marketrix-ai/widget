@@ -132,7 +132,7 @@ https://storage.marketrix.ai/widget/index.mjs
 ### Widget appears but doesn't connect
 
 - Ensure Agent ID and Application ID are correct
-- Look for WebSocket connection errors in the console
+- Look for SSE connection errors in the console
 - If the widget needs API/AI host overrides, set `mtxApiHost` / `mtxAiHost` in
   storage (see _Extended Attributes_ above)
 

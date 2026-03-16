@@ -57,7 +57,7 @@ const WidgetContext = createContext<WidgetContextType | undefined>(undefined);
 
 interface WidgetProviderProps {
   children: React.ReactNode;
-  /** Preview mode disables all network ops (WebSocket, API, SessionManager) */
+  /** Preview mode disables all network ops (SSE, API, SessionManager) */
   previewMode?: boolean;
 }
 
@@ -76,7 +76,7 @@ export const WidgetProvider: React.FC<WidgetProviderProps> = ({ children, previe
       processedRequestIds.current = new Set(toKeep);
     }
   }, []);
-  // Track both conditions for task start: HTTP response and WebSocket notification
+  // Track both conditions for task start: HTTP response and SSE notification
   const taskIdFromApiRef = useRef<string | null>(null);
   const taskStartedFromAgentRef = useRef(false);
 
@@ -206,9 +206,9 @@ export const WidgetProvider: React.FC<WidgetProviderProps> = ({ children, previe
     [],
   );
 
-  // WebSocket Setup (skip in preview mode)
+  // SSE Setup (skip in preview mode)
   useEffect(() => {
-    // Skip WebSocket setup in preview mode - no network connections
+    // Skip SSE setup in preview mode - no network connections
     if (previewMode) {
       return;
     }

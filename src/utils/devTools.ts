@@ -206,7 +206,7 @@ export const devTools = {
 ║ devTools.highlightElement(i)  - Highlight element by index ║
 ║ devTools.testTool(name, args) - Execute a tool             ║
 ║ devTools.runSequence([...])   - Run tool sequence          ║
-║ devTools.getConnectionStatus()- WebSocket status           ║
+║ devTools.getConnectionStatus()- stream status             ║
 ║ devTools.getMessages()        - Get chat messages          ║
 ║ devTools.clearChat()          - Clear chat history         ║
 ║ devTools.help()               - Show this help             ║

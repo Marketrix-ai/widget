@@ -54,7 +54,7 @@ export function findTaskMessageIndex(messages: ChatMessage[]): number {
  *
  * Centralized logic for finding messages in the chat that should receive
  * progress updates, tool call results, or errors. Eliminates duplicate
- * message finding code across websocket handlers.
+ * message finding code across stream handlers.
  */
 
 // import type { InstructionType } from '../types';
