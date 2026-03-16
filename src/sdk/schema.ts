@@ -1409,6 +1409,7 @@ export const ChatResponseSchema = z.object({
 export const WidgetEventSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('registered'), chat_id: z.string(), application_id: z.number().optional() }),
   z.object({ type: z.literal('pong') }),
+  z.object({ type: z.literal('heartbeat') }),
   z.object({
     type: z.literal('chat/response'),
     request_id: z.string(),
