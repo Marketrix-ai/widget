@@ -75,9 +75,11 @@ import {
   IndexResponseSchema,
   KnowledgeEntitySchema,
   KnowledgeTypeSchema,
+  listOf,
   MigrationPrepareSchema,
   MigrationRunSchema,
   MindMapSchema,
+  paginatedListOf,
   PaginationSchema,
   PlanCatalogSchema,
   PlanInfoSchema,
@@ -135,8 +137,6 @@ import {
   WorkspaceMemberEntitySchema,
   WorkspaceMemberRoleSchema,
   WorkspaceUpdateSchema,
-  listOf,
-  paginatedListOf,
 } from './schema';
 
 // Main contract with all routes
