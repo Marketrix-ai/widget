@@ -97,6 +97,6 @@ The widget is the runtime component of what users call **Widgets** in the dashbo
 
 - `validate.yml` runs on dev branch push (type check + build)
 - `build.yml` runs on tag push (`v*`) → builds and pushes `marketrix.azurecr.io/widget:{version}` to ACR + publishes `@marketrix.ai/widget` to npm
-- Deployment is centralized in `marketrix-infra` via `deploy.yml` workflow
+- Deployment is centralized in `infra` via `deploy.yml` workflow
 - No dev branch image builds
 - After publishing a new widget version, update the app dependency: `cd ../app && npm install @marketrix.ai/widget@latest`
