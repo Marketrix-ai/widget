@@ -167,6 +167,9 @@ export class StreamClient {
   }
 
   private handleMessage(event: WidgetEvent): void {
+    // Heartbeats are keepalive-only — ignore silently
+    if (event.type === 'heartbeat') return;
+
     if (event.type === 'registered') {
       if (event.chat_id === this.chatId) {
         console.log('[StreamClient] Successfully registered with server');
