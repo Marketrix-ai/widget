@@ -53,8 +53,7 @@ export const QAFlowStatusSchema = z.enum(['pending', 'processing', 'waiting_revi
 export const QATestStatusSchema = z.enum(['pending', 'running', 'completed', 'failed']);
 export const QARunStatusSchema = z.enum(['pending', 'running', 'completed', 'failed', 'cancelled']);
 export const ChatRoleSchema = z.enum(['user', 'agent']);
-// 'taskpilot' is legacy (was used by playground) — kept for backward-compat with existing DB rows
-export const ChatSourceSchema = z.enum(['taskpilot', 'widget', 'app']);
+export const ChatSourceSchema = z.enum(['widget', 'app']);
 export const InstructionTypeSchema = z.enum(['tell', 'show', 'do']);
 export const ApplicationTypeSchema = z.enum(['app', 'website']);
 export const WidgetTypeSchema = z.enum(['widget', 'slack']);
