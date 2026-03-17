@@ -1,11 +1,11 @@
 FROM node:24-slim AS builder
 
 WORKDIR /app
-ENV NODE_ENV=production
 COPY package*.json ./
 RUN npm ci
 
 COPY . .
+ENV NODE_ENV=production
 RUN npm run build
 
 FROM nginx:1.27-alpine

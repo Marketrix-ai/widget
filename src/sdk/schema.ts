@@ -896,20 +896,15 @@ export const SimulationAnswerSchema = z.object({
 export const SessionEntitySchema = BaseEntitySchema.extend({
   session_id: z.string(),
   chat_id: z.string(),
-  application_id: z.number().int().nullish(),
+  application_id: z.coerce.number().nullish(),
   blob_url: z.string().nullable(),
-  event_count: z.number().int().nonnegative(),
+  event_count: z.coerce.number().int().nonnegative(),
   started_at: z.coerce.date(),
   ended_at: z.coerce.date().nullable(),
   is_active: z.preprocess(v => (typeof v === 'number' ? v !== 0 : v), z.boolean()),
-  metadata: z
-    .object({
-      userAgent: z.string().optional(),
-      url: z.string().optional(),
-    })
-    .nullable(),
-  last_batch_index: z.number().int().nonnegative().nullable(),
-  last_event_timestamp: z.number().int().nullable(),
+  metadata: z.unknown().nullable(),
+  last_batch_index: z.coerce.number().int().nullable(),
+  last_event_timestamp: z.coerce.number().int().nullable(),
   last_upload_time: z.coerce.date().nullable(),
 });
 
