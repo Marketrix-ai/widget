@@ -4,4 +4,4 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --prefer-offline
 COPY . .
-CMD ["npx", "vite", "dev", "--host", "--port", "80"]
+CMD ["npx", "vite", "dev", "--host", "--port", "3000"]

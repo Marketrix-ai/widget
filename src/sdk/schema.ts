@@ -379,6 +379,7 @@ export const QAFlowEntitySchema = BaseEntitySchema.extend({
   file_type: z.string(),
   file_url: z.string(),
   file_path: z.string().nullable(),
+  text_content: z.string().nullish(),
   additional_instructions: z.string().max(1000).nullish(),
   status: QAFlowStatusSchema,
   processing_step: z.string().nullish(),
