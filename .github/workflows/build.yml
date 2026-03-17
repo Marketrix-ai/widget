@@ -16,7 +16,7 @@ jobs:
           RAW="${GITHUB_REF#refs/tags/}"
           echo "image_tag=${RAW#v}" >> $GITHUB_OUTPUT
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 24
           registry-url: 'https://registry.npmjs.org'
