@@ -187,6 +187,13 @@ export class StreamClient {
         this.callbacks.forEach(cb => cb.onRegistered?.(event.application_id));
       }
     }
+
+    // Auth errors are non-retriable — stop reconnecting with same bad credentials
+    if (event.type === 'chat/error' && event.request_id === 'auth') {
+      console.error('[StreamClient] Authentication failed — will not reconnect');
+      this.isIntentionallyDisconnected = true;
+    }
+
     this.callbacks.forEach(cb => cb.onMessage?.(event));
   }
 

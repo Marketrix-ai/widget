@@ -1381,7 +1381,7 @@ const contract = {
     })
     .input(
       z.object({
-        file: z.custom<Express.Multer.File>().optional(),
+        file: z.instanceof(File).optional(),
         application_id: z.coerce.number(),
         document_url: z.string().url().optional(),
         document_name: z.string().optional(),
