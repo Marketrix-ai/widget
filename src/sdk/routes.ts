@@ -492,13 +492,14 @@ const contract = {
       z
         .object({
           type: ApplicationTypeSchema.optional(),
+          include: z.array(z.enum(['widgets'])).optional(),
         })
         .extend(PaginationSchema.shape),
     )
     .output(
       paginatedListOf(
         ApplicationEntitySchema.extend({
-          widgets: z.array(WidgetEntitySchema),
+          widgets: z.array(WidgetEntitySchema).optional(),
         }),
       ),
     ),
@@ -571,6 +572,7 @@ const contract = {
           application_id: z.coerce.number().optional(),
           marketrix_id: z.string().optional(),
           marketrix_key: z.string().optional(),
+          include: z.array(z.enum(['agent'])).optional(),
         })
         .extend(PaginationSchema.shape),
     )
@@ -845,6 +847,7 @@ const contract = {
           workspace_id: z.coerce.number().optional(),
           user_id: z.coerce.number().optional(),
           application_id: z.coerce.number().optional(),
+          include: z.array(z.enum(['knowledge', 'simulations'])).optional(),
         })
         .extend(PaginationSchema.shape),
     )
@@ -858,7 +861,7 @@ const contract = {
       summary: 'Get specific agent details by ID',
       description: 'Returns complete agent information including configuration and settings',
     })
-    .input(ByAgentIdSchema)
+    .input(ByAgentIdSchema.extend({ include: z.array(z.enum(['knowledge', 'simulations'])).optional() }))
     .output(AgentEntitySchema),
 
   agentMindmap: oc
@@ -1096,6 +1099,7 @@ const contract = {
                       : undefined,
             ),
           source: z.enum(['direct', 'qa']).optional(),
+          include: z.array(z.enum(['agent', 'application'])).optional(),
         })
         .extend(PaginationSchema.shape),
     )
@@ -1366,6 +1370,7 @@ const contract = {
           workspace_id: z.coerce.number().optional(),
           type: KnowledgeTypeSchema.optional(),
           application_id: z.coerce.number().optional(),
+          include: z.array(z.enum(['agents', 'application'])).optional(),
         })
         .extend(PaginationSchema.shape),
     )
