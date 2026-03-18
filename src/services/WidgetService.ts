@@ -1,6 +1,8 @@
 import { sdk, type WidgetData, type WidgetSettingsData } from '../sdk';
 import { isWidgetSettingsData } from '../utils/validation';
 
+let cachedDefaults: WidgetSettingsData | null = null;
+
 export class WidgetService {
   private mtxId?: string;
   private mtxKey?: string;
@@ -24,8 +26,11 @@ export class WidgetService {
     }
 
     try {
-      // First, fetch default widget settings - oRPC returns data directly
-      const defaultSettings = await sdk.widgetGetDefaults({ type: 'widget' });
+      // Fetch default widget settings (cached after first call — static per session)
+      if (!cachedDefaults) {
+        cachedDefaults = (await sdk.widgetGetDefaults({ type: 'widget' })) as WidgetSettingsData;
+      }
+      const defaultSettings = cachedDefaults;
 
       if (!defaultSettings) {
         const error = 'Failed to fetch default widget settings from API. The API must return widget settings.';

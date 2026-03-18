@@ -228,7 +228,22 @@ export default defineConfig(({ command }) => {
 
   return {
     resolve: { alias: { '@': resolve(cwd(), 'src') } },
-    plugins: [react(), tailwindcss(), !process.env.KUBERNETES_SERVICE_HOST && devWidgetPlugin()],
+    plugins: [
+      react(),
+      tailwindcss(),
+      !process.env.KUBERNETES_SERVICE_HOST && devWidgetPlugin(),
+      // Rewrite /standalone.mjs to the source entry so the production URL works in dev
+      {
+        name: 'widget-dev-routing',
+        configureServer(server: ViteDevServer) {
+          server.middlewares.use((req, _res, next) => {
+            if (req.url === '/standalone.mjs') req.url = '/src/index.tsx';
+            next();
+          });
+        },
+      },
+    ],
+    appType: 'mpa',
     root: '.',
     server: {
       port: parseInt(process.env.PORT || process.env.VITE_PORT || '5174', 10),
