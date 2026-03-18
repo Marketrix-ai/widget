@@ -28,35 +28,6 @@ Embeddable support widget that customers integrate into their products. Communic
 | `vite.config.ts` | Dual-build config (library + standalone) |
 | `nginx.conf` | Production static file server |
 
-## Services (`src/services/`)
-
-14 service modules:
-
-| Service | Purpose |
-|---------|---------|
-| `StreamClient.ts` | SSE client with auto-reconnect and exponential backoff |
-| `ChatService.ts` | HTTP POST for chat commands (tell/show/do/stop) |
-| `SessionRecorder.ts` | rrweb recording with batched POST (500ms/50KB flush) |
-| `WidgetService.ts` | Fetch widget settings from API |
-| `ConfigManager.ts` | Convert API settings to runtime config |
-| `ValidationService.ts` | Validate credentials (mtxId+mtxKey or mtxApp+mtxAgent) |
-| `StorageService.ts` | LocalStorage wrapper (chat_id, preferences) |
-| `SessionManager.ts` | Session lifecycle management |
-| `ToolService.ts` | Browser tool availability detection |
-| `DomService.ts` | DOM utilities (highlight, scroll, query) |
-| `ScreenShareService.ts` | Screen sharing / video stream |
-| `ShowModeService.ts` | Show mode guidance (element highlighting) |
-| `ApiService.ts` | Generic API call wrapper |
-| `DevTestService.ts` | Dev testing utilities |
-
-## Chrome Extension (`chrome-extension/`)
-
-Browser extension for persistent widget testing across page navigations. Injects the widget script on every page load.
-
-- `manifest.json` — Extension configuration
-- `content.js` — Widget script injection
-- `popup.html` / `popup.js` — Extension popup UI
-
 ## Terminology
 
 The widget is the runtime component of what users call **Widgets** in the dashboard. It connects to an **Application** and an **Agent**. See root `CLAUDE.md` glossary for full terminology.

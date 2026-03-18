@@ -27,14 +27,6 @@ navigations.
 > **Tip:** Toggling the widget off removes the injected script and container
 > from the active tab immediately — no reload required.
 
-## Why an Extension?
-
-Bookmarklets cannot persist across full-page navigations because:
-
-- When a page navigates, **all** injected JavaScript is destroyed
-- The new page loads fresh with no memory of previous scripts
-- Only browser extensions can run code automatically on every page load
-
 ## Configuration Options
 
 | Setting       | Description              | Default / Example                 |
@@ -118,25 +110,3 @@ Use the CDN URL:
 ```
 https://storage.marketrix.ai/widget/index.mjs
 ```
-
-## Troubleshooting
-
-### Widget doesn't appear
-
-- Confirm the extension is enabled in `chrome://extensions/`
-- Verify the Script URL is reachable (open it in a new tab)
-- Check the browser console (`F12`) for errors
-- Some sites enforce a strict **Content-Security-Policy** that blocks external
-  scripts — the widget cannot be injected on those pages
-
-### Widget appears but doesn't connect
-
-- Ensure Agent ID and Application ID are correct
-- Look for SSE connection errors in the console
-- If the widget needs API/AI host overrides, set `mtxApiHost` / `mtxAiHost` in
-  storage (see _Extended Attributes_ above)
-
-### Mixed content errors
-
-- Using `http://localhost` on an HTTPS page triggers mixed-content warnings
-- For HTTPS sites, serve the widget over HTTPS or use the CDN
