@@ -712,8 +712,8 @@ export class ToolExecutionService {
             end = value.length;
           }
 
-          let newValue = value;
-          let newCursorPos = start;
+          let newValue: string;
+          let newCursorPos: number;
 
           if (start === end && start > 0) {
             // No selection, delete char before cursor
@@ -758,7 +758,7 @@ export class ToolExecutionService {
           const end = element.selectionEnd || 0;
           const value = element.value;
 
-          let newValue = value;
+          let newValue: string;
 
           if (start === end && start < value.length) {
             // No selection, delete char after cursor

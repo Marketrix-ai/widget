@@ -95,7 +95,7 @@ export const BaseEntitySchema = z.object({
 });
 
 export const FileSchema = z.object({
-  file: z.custom<Express.Multer.File>(),
+  file: z.instanceof(File),
   application_id: z.coerce.number().optional(),
 });
 
@@ -392,7 +392,7 @@ export const QAFlowEntitySchema = BaseEntitySchema.extend({
  */
 export const QAFlowCreateSchema = z.object({
   application_id: z.coerce.number(),
-  file: z.custom<Express.Multer.File>().optional(),
+  file: z.instanceof(File).optional(),
   text_content: z.string().optional(),
   file_name: z.string().optional(),
   additional_instructions: z.string().max(1000).optional(),
@@ -466,9 +466,7 @@ export const QAHealingAttemptEntrySchema = z.object({
   created_at: z.string(),
 });
 
-/**
- * QA test case entity schema (replaces old qa_test_result)
- */
+/** QA test case entity schema. */
 export const QATestCaseEntitySchema = BaseEntitySchema.extend({
   qa_flow_id: z.number(),
   workspace_id: z.number(),
@@ -1027,7 +1025,7 @@ export const AgentCreateSchema = AgentEntitySchema.partial().extend({
   agent_voice: AgentVoiceSchema,
   agent_description: z.string(),
   instructions: z.string(),
-  file: z.custom<Express.Multer.File>(),
+  file: z.instanceof(File),
   knowledge_ids: KnowledgeIdsSchema,
   simulation_ids: SimulationIdsSchema,
 });
@@ -1036,7 +1034,7 @@ export const AgentCreateSchema = AgentEntitySchema.partial().extend({
  * Agent update schema
  */
 export const AgentUpdateSchema = AgentEntitySchema.partial().extend({
-  file: z.custom<Express.Multer.File>(),
+  file: z.instanceof(File),
   knowledge_ids: KnowledgeIdsSchema,
   simulation_ids: SimulationIdsSchema,
 });
@@ -1691,7 +1689,7 @@ export const MigrationRunSchema = z.object({
 });
 
 // ============================================================================
-// FILE UPLOAD RESPONSE SCHEMAS - Express.Multer.File upload and media handling
+// FILE UPLOAD RESPONSE SCHEMAS - File upload and media handling
 // ============================================================================
 
 /**
@@ -1710,7 +1708,7 @@ export const FileUploadResponseSchema = z.object({
  */
 export const UploadUserLogoDataSchema = z.object({
   user_id: z.number(),
-  file: z.custom<Express.Multer.File>(),
+  file: z.instanceof(File),
 });
 
 /**

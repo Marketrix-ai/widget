@@ -95,7 +95,9 @@ export class WidgetService {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       console.error('Failed to fetch widget settings:', error);
-      throw new Error(`Failed to fetch widget settings from API: ${errorMessage}`);
+      const err = new Error(`Failed to fetch widget settings from API: ${errorMessage}`);
+      (err as unknown as { cause: unknown }).cause = error;
+      throw err;
     }
   }
 

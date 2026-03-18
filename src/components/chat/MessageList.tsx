@@ -104,7 +104,7 @@ export const MessageList = ({
           chipMode === 'show' || chipMode === 'tell' || chipMode === 'do' ? chipMode : 'tell';
 
         let icon;
-        let isShow = false;
+        let isShow;
 
         switch (mode) {
           case 'do':
