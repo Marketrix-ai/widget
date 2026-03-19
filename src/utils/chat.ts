@@ -135,11 +135,10 @@ export function findMessageForProgress(options: FindMessageOptions): {
 } | null {
   const { messages, isTaskRunning, currentMode, preferPlaceholder, requireContent } = options;
   let taskMessageIndex = -1;
-  let checkMode = false;
 
   // For active show/do tasks, find the message that matches the current mode and task state
   if (isTaskRunning && (currentMode === 'show' || currentMode === 'do')) {
-    checkMode = true;
+    const checkMode = true;
 
     // Priority 1: Find LAST placeholder with content in matching mode
     for (let i = messages.length - 1; i >= 0; i--) {

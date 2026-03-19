@@ -337,7 +337,7 @@ export const autoInitializeWidget = (retryCount = 0): void => {
 
   // Prefer the currently executing script when it has config (injected script tag in playground).
   // Fall back to last matching script for static script tags.
-  // Also match legacy attribute names (marketrix-id) for backward compat with old embed snippets.
+  // Match both mtx-* and marketrix-* attribute names on script tags.
   const bySelector = document.querySelectorAll('script[mtx-id], script[mtx-app], script[marketrix-id]');
   const current =
     typeof document.currentScript !== 'undefined' &&
@@ -395,7 +395,7 @@ export const autoInitializeWidget = (retryCount = 0): void => {
   }
 
   const script = scriptElement;
-  // Support both current (mtx-*) and legacy (marketrix-*) attribute names
+  // Read widget credentials from script tag attributes
   const mtxId = script.getAttribute('mtx-id') || script.getAttribute('marketrix-id');
   const mtxKey = script.getAttribute('mtx-key') || script.getAttribute('marketrix-key');
   const mtxApiHost = script.getAttribute('mtx-api-host');
