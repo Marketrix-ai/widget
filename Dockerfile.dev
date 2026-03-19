@@ -4,5 +4,5 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
-EXPOSE 4000
-CMD ["npx", "vite", "dev", "--host", "0.0.0.0", "--port", "4000"]
+EXPOSE 9001
+CMD ["npx", "vite", "dev", "--host", "0.0.0.0", "--port", "9001"]
