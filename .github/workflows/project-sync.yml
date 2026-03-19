@@ -1,0 +1,16 @@
+name: Project Sync
+on:
+  issues:
+    types: [opened, assigned, closed]
+  pull_request:
+    types: [opened, closed]
+jobs:
+  sync:
+    uses: Marketrix-ai/infra/.github/workflows/project-sync-service.yml@dev
+    with:
+      project-id: PVT_kwDOCO0iG84An17k
+      event-name: ${{ github.event_name }}
+      event-action: ${{ github.event.action }}
+      item-node-id: ${{ github.event.issue.node_id || github.event.pull_request.node_id }}
+      pr-merged: ${{ github.event.pull_request.merged && 'true' || 'false' }}
+    secrets: inherit

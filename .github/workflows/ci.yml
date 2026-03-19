@@ -1,0 +1,12 @@
+name: CI
+on:
+  push:
+    branches: [dev]
+    tags: ['v*']
+jobs:
+  ci:
+    uses: Marketrix-ai/infra/.github/workflows/ci-service.yml@dev
+    with:
+      service: widget
+      npm-publish: true
+    secrets: inherit
