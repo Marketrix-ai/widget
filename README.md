@@ -17,12 +17,12 @@ Embeddable support widget for Marketrix. Integrates into any website via script 
 
 ### Script Attributes
 
-| Attribute      | Type   | Required | Description                                     |
-| -------------- | ------ | -------- | ----------------------------------------------- |
-| `mtx-id`       | string | \*       | Your Marketrix ID (production mode)             |
-| `mtx-key`      | string | \*       | Your Marketrix API key (production mode)        |
-| `mtx-app`      | number | \*       | Application ID (dev mode)                       |
-| `mtx-agent`    | number | \*       | Agent ID (dev mode)                             |
+| Attribute      | Type   | Required | Description                                       |
+| -------------- | ------ | -------- | ------------------------------------------------- |
+| `mtx-id`       | string | \*       | Your Marketrix ID (production mode)               |
+| `mtx-key`      | string | \*       | Your Marketrix API key (production mode)          |
+| `mtx-app`      | number | \*       | Application ID (dev mode)                         |
+| `mtx-agent`    | number | \*       | Agent ID (dev mode)                               |
 | `mtx-api-host` | string | yes      | API server URL (e.g., `https://api.marketrix.ai`) |
 
 \*Either `mtx-id` + `mtx-key` (production) OR `mtx-app` + `mtx-agent` (dev) must be provided.
@@ -40,7 +40,14 @@ Widget appearance and behavior are configured through the API. Settings include 
 ### `initWidget`
 
 ```typescript
-import { initWidget, unmountWidget, updateMarketrixConfig, startRecording, stopRecording, getRecordingState } from '@marketrix.ai/widget';
+import {
+  initWidget,
+  unmountWidget,
+  updateMarketrixConfig,
+  startRecording,
+  stopRecording,
+  getRecordingState,
+} from '@marketrix.ai/widget';
 
 // Production
 await initWidget({
@@ -79,8 +86,8 @@ import { MarketrixWidget } from '@marketrix.ai/widget';
 function App() {
   return (
     <MarketrixWidget
-      settings={{ widget_enabled: true, widget_position: 'bottom_right', /* ... */ }}
-      mtxApiHost="https://api.marketrix.ai"
+      settings={{ widget_enabled: true, widget_position: 'bottom_right' /* ... */ }}
+      mtxApiHost='https://api.marketrix.ai'
     />
   );
 }
@@ -151,6 +158,7 @@ interface MarketrixConfig {
 | `build.yml`    | Tag push (`v*`) or push to `dev` | Build Docker image, push to ACR; publish to npm on tag              |
 
 Image builds produce `marketrix.azurecr.io/widget:{version}`. Tag pushes also publish `@marketrix.ai/widget` to npm. Deployment to dev/prod is handled by the centralized deploy workflow (e.g. `deploy.yml` in infra). Dev branch pushes do not build images.
+
 - Node.js 18+
 - npm
 
