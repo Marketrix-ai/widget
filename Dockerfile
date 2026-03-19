@@ -16,7 +16,7 @@ RUN sed -i '/application\/javascript/s/;/ mjs;/' /etc/nginx/mime.types \
     && sed -i '/^user /d' /etc/nginx/nginx.conf \
     && rm -rf /docker-entrypoint.d \
     && chown -R nginx:nginx /var/cache/nginx /var/log/nginx /usr/share/nginx/html
-EXPOSE 3000
+EXPOSE 4000
 
 USER nginx
 CMD ["nginx", "-g", "daemon off;"]
