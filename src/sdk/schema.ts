@@ -83,6 +83,10 @@ export const ActionLogTypeSchema = z.enum([
   'widget_question',
   'qa_run_started',
   'start_simulation',
+  'create_automation',
+  'update_automation',
+  'delete_automation',
+  'toggle_automation',
 ]);
 
 /**
@@ -93,6 +97,11 @@ export const BaseEntitySchema = z.object({
   created_at: z.coerce.date().optional(),
   updated_at: z.coerce.date().optional(),
 });
+
+/** Convert an Express multipart file to a Web File. */
+export function fromMulterFile(f: { buffer: Buffer; originalname: string; mimetype: string }): File {
+  return new File([new Uint8Array(f.buffer)], f.originalname, { type: f.mimetype });
+}
 
 export const FileSchema = z.object({
   file: z.instanceof(File),
@@ -901,7 +910,12 @@ export const SessionEntitySchema = BaseEntitySchema.extend({
   started_at: z.coerce.date(),
   ended_at: z.coerce.date().nullable(),
   is_active: z.preprocess(v => (typeof v === 'number' ? v !== 0 : v), z.boolean()),
-  metadata: z.unknown().nullable(),
+  metadata: z
+    .object({
+      userAgent: z.string().optional(),
+      url: z.string().optional(),
+    })
+    .nullable(),
   last_batch_index: z.coerce.number().int().nullable(),
   last_event_timestamp: z.coerce.number().int().nullable(),
   last_upload_time: z.coerce.date().nullable(),
@@ -923,7 +937,7 @@ export const SessionUpsertSchema = z.object({
     .object({
       userAgent: z.string().optional(),
       url: z.string().optional(),
-      applicationId: z.number().optional(), // Also accepted from metadata
+      applicationId: z.number().optional(), // API persists to application_id column; also accepted from metadata
     })
     .nullable()
     .optional(),
@@ -1005,15 +1019,17 @@ export const AgentEntitySchema = BaseEntitySchema.extend({
   knowledge_count: z.number().int().nonnegative().optional(),
 });
 
-const KnowledgeIdsSchema = z.string().transform(str => {
-  const parsed: unknown = JSON.parse(str);
-  return Array.isArray(parsed) ? (parsed as unknown[]).map(v => Number(v)) : [];
-});
+const parseIds = (val: unknown): number[] => {
+  if (Array.isArray(val)) return val.map(v => Number(v));
+  if (typeof val === 'string') {
+    const parsed: unknown = JSON.parse(val);
+    return Array.isArray(parsed) ? (parsed as unknown[]).map(v => Number(v)) : [];
+  }
+  return [];
+};
 
-const SimulationIdsSchema = z.string().transform(str => {
-  const parsed: unknown = JSON.parse(str);
-  return Array.isArray(parsed) ? (parsed as unknown[]).map(v => Number(v)) : [];
-});
+const KnowledgeIdsSchema = z.union([z.array(z.number()), z.string()]).transform(parseIds);
+const SimulationIdsSchema = z.union([z.array(z.number()), z.string()]).transform(parseIds);
 
 /**
  * Agent creation schema
@@ -1025,7 +1041,8 @@ export const AgentCreateSchema = AgentEntitySchema.partial().extend({
   agent_voice: AgentVoiceSchema,
   agent_description: z.string(),
   instructions: z.string(),
-  file: z.instanceof(File),
+  file: z.instanceof(File).optional(),
+  image_url: z.string().optional(),
   knowledge_ids: KnowledgeIdsSchema,
   simulation_ids: SimulationIdsSchema,
 });
@@ -1034,7 +1051,7 @@ export const AgentCreateSchema = AgentEntitySchema.partial().extend({
  * Agent update schema
  */
 export const AgentUpdateSchema = AgentEntitySchema.partial().extend({
-  file: z.instanceof(File),
+  file: z.instanceof(File).optional(),
   knowledge_ids: KnowledgeIdsSchema,
   simulation_ids: SimulationIdsSchema,
 });
@@ -1286,7 +1303,7 @@ export const WidgetWithAgentSchema = WidgetEntitySchema.extend({
  * Application with widgets schema - matches API response structure
  */
 export const ApplicationWithWidgetsSchema = ApplicationEntitySchema.extend({
-  widgets: z.array(WidgetEntitySchema),
+  widgets: z.array(WidgetEntitySchema).optional(),
   agents: z.array(AgentEntitySchema).optional(),
 });
 
@@ -1668,6 +1685,143 @@ export const ConnectorSearchSchema = z.object({
   offset: z.coerce.number().int().nonnegative().optional(),
 });
 
+/** GitHub repo item (from GitHub API user/repos) */
+export const GithubRepoSchema = z.object({
+  id: z.number(),
+  full_name: z.string(),
+  name: z.string(),
+  private: z.boolean(),
+  html_url: z.string(),
+  default_branch: z.string().optional(),
+});
+
+/** GitHub Actions workflow run (from repos/.../actions/runs) */
+export const GithubWorkflowRunSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  status: z.string(),
+  conclusion: z.string().nullable(),
+  created_at: z.string(),
+  updated_at: z.string(),
+  html_url: z.string(),
+  head_branch: z.string(),
+  run_attempt: z.number(),
+});
+
+// ============================================================================
+// AUTOMATION SCHEMAS - DAG-based workflow engine
+// ============================================================================
+
+export const AutomationRunStatusSchema = z.enum(['pending', 'running', 'completed', 'failed', 'stopped']);
+
+export const AutomationNodeKindSchema = z.enum(['connector', 'condition']);
+
+const ConnectorNodeSchema = z.object({
+  kind: z.literal('connector'),
+  connector_type: z.string().min(1),
+  connector_id: z.number().nullable().optional(),
+  capability: z.string().min(1),
+  role: z.enum(['trigger', 'callback']),
+  config: z.record(z.string(), z.unknown()).default({}),
+});
+
+const ConditionNodeSchema = z.object({
+  kind: z.literal('condition'),
+  config: z.object({
+    field: z.string().min(1),
+    operator: z.enum(['equals', 'not_equals', 'contains', 'gt', 'lt']),
+    value: z.unknown(),
+  }),
+});
+
+export const AutomationNodeSchema = z.discriminatedUnion('kind', [ConnectorNodeSchema, ConditionNodeSchema]);
+
+export const AutomationEdgeSchema = z.object({
+  from: z.string().min(1),
+  to: z.string().min(1),
+  when: z.enum(['true', 'false']).optional(),
+});
+
+export const AutomationGraphSchema = z.object({
+  nodes: z.record(z.string(), AutomationNodeSchema),
+  edges: z.array(AutomationEdgeSchema),
+});
+
+export const AutomationConcurrencySchema = z.enum(['skip', 'queue', 'replace']).default('skip');
+
+export const AutomationEntitySchema = BaseEntitySchema.extend({
+  workspace_id: z.number(),
+  name: z.string(),
+  graph: AutomationGraphSchema,
+  concurrency: AutomationConcurrencySchema,
+  enabled: z.boolean(),
+  last_run_at: z.coerce.date().nullable(),
+  next_run_at: z.coerce.date().nullable(),
+});
+
+export const AutomationCreateSchema = z.object({
+  name: z.string().min(1).max(255),
+  graph: AutomationGraphSchema,
+  concurrency: AutomationConcurrencySchema.optional(),
+  enabled: z.boolean().optional(),
+});
+
+export const AutomationUpdateSchema = z.object({
+  id: z.coerce.number(),
+  name: z.string().min(1).max(255).optional(),
+  graph: AutomationGraphSchema.optional(),
+  enabled: z.boolean().optional(),
+});
+
+export const AutomationSearchSchema = z.object({
+  enabled: z.coerce.boolean().optional(),
+  limit: z.coerce.number().int().positive().max(100).optional(),
+  offset: z.coerce.number().int().nonnegative().optional(),
+});
+
+export const AutomationNodeResultSchema = z.object({
+  status: z.enum(['completed', 'failed', 'skipped', 'stopped']),
+  output: z.record(z.string(), z.unknown()).nullable().optional(),
+  error: z.string().nullable().optional(),
+  duration_ms: z.number().optional(),
+});
+
+export const AutomationRunEntitySchema = z.object({
+  id: z.number().optional(),
+  automation_id: z.number(),
+  status: AutomationRunStatusSchema,
+  trigger_node_id: z.string(),
+  trigger_data: z.record(z.string(), z.unknown()).nullable(),
+  node_results: z.record(z.string(), AutomationNodeResultSchema),
+  started_at: z.coerce.date(),
+  completed_at: z.coerce.date().nullable(),
+});
+
+export const AutomationRunSearchSchema = z.object({
+  status: AutomationRunStatusSchema.optional(),
+  limit: z.coerce.number().int().positive().max(100).optional(),
+  offset: z.coerce.number().int().nonnegative().optional(),
+});
+
+export const ConnectorCapabilitySchema = z.object({
+  connector_type: z.string(),
+  built_in: z.boolean(),
+  triggers: z.array(
+    z.object({
+      capability: z.string(),
+      description: z.string(),
+      config_schema: z.record(z.string(), z.unknown()),
+    }),
+  ),
+  callbacks: z.array(
+    z.object({
+      capability: z.string(),
+      description: z.string(),
+      config_schema: z.record(z.string(), z.unknown()),
+    }),
+  ),
+});
+
 // ============================================================================
 // MIGRATION SCHEMAS - Database migration and system updates
 // ============================================================================
@@ -2007,9 +2161,6 @@ export type WidgetType = z.infer<typeof WidgetTypeSchema>;
 export type ConnectorType = z.infer<typeof ConnectorTypeSchema>;
 export type ActionLogType = z.infer<typeof ActionLogTypeSchema>;
 
-/**
- * File and upload types
- */
 export type FileData = z.infer<typeof FileSchema>;
 
 /**
@@ -2091,6 +2242,15 @@ export type ChatData = z.infer<typeof ChatEntitySchema>;
 export type ConnectorData = z.infer<typeof ConnectorEntitySchema>;
 export type ConnectorUpsertData = z.infer<typeof ConnectorUpsertSchema>;
 export type ConnectorSearchData = z.infer<typeof ConnectorSearchSchema>;
+export type AutomationData = z.infer<typeof AutomationEntitySchema>;
+export type AutomationCreateData = z.infer<typeof AutomationCreateSchema>;
+export type AutomationUpdateData = z.infer<typeof AutomationUpdateSchema>;
+export type AutomationSearchData = z.infer<typeof AutomationSearchSchema>;
+export type AutomationRunData = z.infer<typeof AutomationRunEntitySchema>;
+export type AutomationRunSearchData = z.infer<typeof AutomationRunSearchSchema>;
+export type AutomationGraph = z.infer<typeof AutomationGraphSchema>;
+export type AutomationNode = z.infer<typeof AutomationNodeSchema>;
+export type AutomationNodeResult = z.infer<typeof AutomationNodeResultSchema>;
 export type UserQuotaData = z.infer<typeof UserQuotaSchema>;
 export type SubscriptionUsageData = z.infer<typeof SubscriptionUsageSchema>;
 export type SimulationProgressData = z.infer<typeof SimulationProgressEntitySchema>;
