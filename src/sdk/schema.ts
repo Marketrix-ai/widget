@@ -2257,8 +2257,20 @@ export type SimulationProgressData = z.infer<typeof SimulationProgressEntitySche
 export type MindMapEdgeData = z.infer<typeof MindMapEdgeSchema>;
 export type MindMapNodeData = z.infer<typeof MindMapNodeSchema>;
 export type MindMapData = z.infer<typeof MindMapSchema>;
+export const SessionStatsEntrySchema = z.object({
+  date: z.string().describe('YYYY-MM-DD'),
+  sessions: z.number().int().nonnegative(),
+  events: z.number().int().nonnegative(),
+});
+
+export const SessionStatsResponseSchema = z.object({
+  items: z.array(SessionStatsEntrySchema),
+});
+
 export type SessionData = z.infer<typeof SessionEntitySchema>;
 export type SessionUpsertData = z.infer<typeof SessionUpsertSchema>;
+export type SessionStatsEntry = z.infer<typeof SessionStatsEntrySchema>;
+export type SessionStatsResponse = z.infer<typeof SessionStatsResponseSchema>;
 export type StripeCheckoutData = z.infer<typeof StripeCheckoutSchema>;
 export type StripePortalData = z.infer<typeof StripePortalSchema>;
 export type StripeTrialData = z.infer<typeof StripeTrialSchema>;

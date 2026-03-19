@@ -105,6 +105,7 @@ import {
   QATestCaseEntitySchema,
   QAVersionHistoryEntrySchema,
   SessionEntitySchema,
+  SessionStatsResponseSchema,
   SessionUpsertSchema,
   SimulationAnswerSchema,
   SimulationCreateSchema,
@@ -1483,6 +1484,24 @@ const contract = {
         .extend(PaginationSchema.shape),
     )
     .output(paginatedListOf(SessionEntitySchema)),
+
+  sessionStats: oc
+    .route({
+      method: 'GET',
+      tags: ['Session'],
+      path: '/sessions/stats',
+      summary: 'Get session activity stats',
+      description:
+        'Returns daily aggregated session metrics for charting. Each entry is one calendar day with session count and total event count.',
+    })
+    .input(
+      z.object({
+        application_id: z.coerce.number(),
+        start_date: z.string().describe('YYYY-MM-DD'),
+        end_date: z.string().describe('YYYY-MM-DD'),
+      }),
+    )
+    .output(SessionStatsResponseSchema),
 
   sessionEvents: oc
     .route({
