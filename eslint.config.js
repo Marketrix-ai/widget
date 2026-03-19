@@ -1,7 +1,7 @@
 import js from '@eslint/js';
 import typescript from '@typescript-eslint/eslint-plugin';
 import typescriptParser from '@typescript-eslint/parser';
-import importPlugin from 'eslint-plugin-import';
+import importPlugin from 'eslint-plugin-import-x';
 import simpleImportSort from 'eslint-plugin-simple-import-sort';
 import unusedImports from 'eslint-plugin-unused-imports';
 import prettier from 'eslint-plugin-prettier';
@@ -55,7 +55,7 @@ export default [
     },
     plugins: {
       '@typescript-eslint': typescript,
-      import: importPlugin,
+      'import-x': importPlugin,
       'simple-import-sort': simpleImportSort,
       'unused-imports': unusedImports,
       prettier: prettier,
@@ -85,9 +85,9 @@ export default [
       '@typescript-eslint/restrict-template-expressions': 'warn', // Allow with warning
 
       // Import/Export rules
-      'import/no-duplicates': 'error',
-      'import/no-unresolved': 'off', // TypeScript handles this
-      'import/order': 'off', // handled by simple-import-sort
+      'import-x/no-duplicates': 'error',
+      'import-x/no-unresolved': 'off', // TypeScript handles this
+      'import-x/order': 'off', // handled by simple-import-sort
       'simple-import-sort/imports': 'error',
       'simple-import-sort/exports': 'error',
       'unused-imports/no-unused-imports': 'error',
