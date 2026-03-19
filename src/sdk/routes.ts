@@ -50,6 +50,12 @@ import {
   ApplicationEntitySchema,
   ApplicationTypeSchema,
   ApplicationUpdateSchema,
+  AutomationCreateSchema,
+  AutomationEntitySchema,
+  AutomationRunEntitySchema,
+  AutomationRunSearchSchema,
+  AutomationSearchSchema,
+  AutomationUpdateSchema,
   BatchUserCreateResultSchema,
   BatchUserCreateSchema,
   BrowserConfigSchema,
@@ -62,6 +68,7 @@ import {
   ByUserIdSchema,
   ByWidgetIdSchema,
   CheckoutSessionSchema,
+  ConnectorCapabilitySchema,
   ConnectorEntitySchema,
   ConnectorSearchSchema,
   ConnectorUpsertSchema,
@@ -70,6 +77,8 @@ import {
   FailureAnalysisSchema,
   FileSchema,
   FileUploadResponseSchema,
+  GithubRepoSchema,
+  GithubWorkflowRunSchema,
   HealthResponseSchema,
   IndexResponseSchema,
   KnowledgeEntitySchema,
@@ -96,6 +105,7 @@ import {
   QATestCaseEntitySchema,
   QAVersionHistoryEntrySchema,
   SessionEntitySchema,
+  SessionStatsResponseSchema,
   SessionUpsertSchema,
   SimulationAnswerSchema,
   SimulationCreateSchema,
@@ -464,6 +474,29 @@ const contract = {
       }),
     ),
 
+  adminRebuild: oc
+    .route({
+      method: 'POST',
+      path: '/admin/rebuild',
+      tags: ['Internal'],
+      summary: 'Rebuild all agent indexes after cleanup',
+      description:
+        'Removes stale knowledge (missing files), stale simulations (0 steps or missing blobs), then deletes and recreates vector stores and knowledge graphs for every agent. Index creation is async. Requires super user role.',
+    })
+    .output(
+      z.object({
+        knowledge_removed: z.number(),
+        simulations_removed: z.number(),
+        agents_rebuilt: z.number(),
+        errors: z.array(
+          z.object({
+            type: z.string(),
+            detail: z.string(),
+          }),
+        ),
+      }),
+    ),
+
   // ============================================================================
   // APPLICATION ROUTES - App and website management
   // ============================================================================
@@ -728,6 +761,161 @@ const contract = {
     })
     .input(ByIdSchema)
     .output(SuccessSchema),
+
+  // ============================================================================
+  // GitHub connectivity (UI helper endpoints)
+  // ============================================================================
+
+  connectorGithubRepos: oc
+    .route({
+      method: 'GET',
+      tags: ['Connector'],
+      path: '/connector/{id}/github/repos',
+      summary: 'List GitHub repositories for a GitHub connector',
+      description: 'Uses the stored GitHub PAT from the connector to call GitHub /user/repos.',
+    })
+    .input(
+      z.object({
+        id: z.coerce.number(),
+        per_page: z.coerce.number().int().min(1).max(100).optional(),
+        page: z.coerce.number().int().min(1).optional(),
+      }),
+    )
+    .output(z.array(GithubRepoSchema)),
+
+  connectorGithubWorkflowRuns: oc
+    .route({
+      method: 'GET',
+      tags: ['Connector'],
+      path: '/connector/{id}/github/repos/{owner}/{repo}/actions/runs',
+      summary: 'List GitHub Actions workflow runs',
+      description: 'Lists workflow runs for a repository (pass/fail status).',
+    })
+    .input(
+      z.object({
+        id: z.coerce.number(),
+        owner: z.string().min(1),
+        repo: z.string().min(1),
+        per_page: z.coerce.number().int().min(1).max(100).optional(),
+        page: z.coerce.number().int().min(1).optional(),
+      }),
+    )
+    .output(z.array(GithubWorkflowRunSchema)),
+
+  // ============================================================================
+  // AUTOMATION ROUTES - DAG-based workflow engine
+  // ============================================================================
+
+  automationCreate: oc
+    .route({
+      method: 'POST',
+      tags: ['Automation'],
+      path: '/automation',
+      summary: 'Create automation',
+      description: 'Creates a DAG-based automation workflow',
+    })
+    .input(AutomationCreateSchema)
+    .output(AutomationEntitySchema),
+
+  automationSearch: oc
+    .route({
+      method: 'GET',
+      tags: ['Automation'],
+      path: '/automation',
+      summary: 'List automations',
+      description: 'Returns automations for the current workspace',
+    })
+    .input(AutomationSearchSchema)
+    .output(paginatedListOf(AutomationEntitySchema)),
+
+  automationGet: oc
+    .route({
+      method: 'GET',
+      tags: ['Automation'],
+      path: '/automation/{id}',
+      summary: 'Get automation',
+      description: 'Returns a single automation with its graph',
+    })
+    .input(ByIdSchema)
+    .output(AutomationEntitySchema.nullable()),
+
+  automationUpdate: oc
+    .route({
+      method: 'PUT',
+      tags: ['Automation'],
+      path: '/automation/{id}',
+      summary: 'Update automation',
+      description: 'Updates automation graph and settings',
+    })
+    .input(AutomationUpdateSchema)
+    .output(AutomationEntitySchema),
+
+  automationDelete: oc
+    .route({
+      method: 'DELETE',
+      tags: ['Automation'],
+      path: '/automation/{id}',
+      summary: 'Delete automation',
+      description: 'Permanently deletes an automation and deregisters its triggers',
+    })
+    .input(ByIdSchema)
+    .output(SuccessSchema),
+
+  automationToggle: oc
+    .route({
+      method: 'PATCH',
+      tags: ['Automation'],
+      path: '/automation/{id}/toggle',
+      summary: 'Toggle automation',
+      description: 'Enable or disable an automation',
+    })
+    .input(z.object({ id: z.coerce.number(), enabled: z.boolean() }))
+    .output(AutomationEntitySchema),
+
+  automationRun: oc
+    .route({
+      method: 'POST',
+      tags: ['Automation'],
+      path: '/automation/{id}/run',
+      summary: 'Trigger automation run',
+      description: 'Manually triggers an automation run',
+    })
+    .input(ByIdSchema)
+    .output(AutomationRunEntitySchema.nullable()),
+
+  automationRunSearch: oc
+    .route({
+      method: 'GET',
+      tags: ['Automation'],
+      path: '/automation/{id}/runs',
+      summary: 'List automation runs',
+      description: 'Returns execution history for an automation',
+    })
+    .input(z.object({ id: z.coerce.number() }).extend(AutomationRunSearchSchema.shape))
+    .output(paginatedListOf(AutomationRunEntitySchema)),
+
+  automationRunGet: oc
+    .route({
+      method: 'GET',
+      tags: ['Automation'],
+      path: '/automation/{id}/runs/{run_id}',
+      summary: 'Get automation run',
+      description: 'Returns a single run with per-node results',
+    })
+    .input(z.object({ id: z.coerce.number(), run_id: z.coerce.number() }))
+    .output(AutomationRunEntitySchema.nullable()),
+
+  connectorCapabilities: oc
+    .route({
+      method: 'GET',
+      tags: ['Connector'],
+      path: '/connector-capabilities',
+      summary: 'List connector capabilities',
+      description: 'Returns available triggers and callbacks per connector type',
+    })
+    .input(z.object({}))
+    .output(z.array(ConnectorCapabilitySchema)),
+
   // ============================================================================
   // USER ROUTES - User account management and operations
   // ============================================================================
@@ -885,7 +1073,10 @@ const contract = {
         'Updates agent details. For JSON requests, handled by oRPC. Also accepts multipart/form-data for logo file uploads (handled by raw Express route).',
     })
     .input(
-      AgentUpdateSchema.extend({ agent_id: z.coerce.number(), force_reset_learning: z.coerce.boolean().optional() }),
+      AgentUpdateSchema.extend({
+        agent_id: z.coerce.number(),
+        force_reset_learning: z.coerce.boolean().optional(),
+      }),
     )
     .output(AgentEntitySchema),
 
@@ -1294,6 +1485,24 @@ const contract = {
     )
     .output(paginatedListOf(SessionEntitySchema)),
 
+  sessionStats: oc
+    .route({
+      method: 'GET',
+      tags: ['Session'],
+      path: '/sessions/stats',
+      summary: 'Get session activity stats',
+      description:
+        'Returns daily aggregated session metrics for charting. Each entry is one calendar day with session count and total event count.',
+    })
+    .input(
+      z.object({
+        application_id: z.coerce.number(),
+        start_date: z.string().describe('YYYY-MM-DD'),
+        end_date: z.string().describe('YYYY-MM-DD'),
+      }),
+    )
+    .output(SessionStatsResponseSchema),
+
   sessionEvents: oc
     .route({
       method: 'GET',
@@ -1382,11 +1591,11 @@ const contract = {
       tags: ['Knowledge'],
       path: '/knowledge',
       summary: 'Upload new knowledge base document',
-      description: 'Processes file upload or URL and creates knowledge entry for AI training',
+      description: 'Upload a file, document URL, or video URL to create a knowledge entry for AI training',
     })
     .input(
       z.object({
-        file: z.instanceof(File).optional(),
+        file: z.file().optional(),
         application_id: z.coerce.number(),
         document_url: z.string().url().optional(),
         document_name: z.string().optional(),
@@ -2106,6 +2315,7 @@ const contract = {
     .input(
       z.object({
         chat_id: z.string(),
+        tab_id: z.string().optional(),
         marketrix_id: z.string().optional(),
         marketrix_key: z.string().optional(),
         agent_id: z.coerce.number().optional(),
