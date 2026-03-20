@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
 
-import MarketrixIcon from '../../assets/marketrix-icon.svg';
 import type { InstructionType } from '../../sdk';
 import {
   createScreenAccessRequestMessage,
@@ -101,7 +100,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
   onRemoveMessage,
   onStopTask,
   onClearChat,
-  onClose,
+  onClose: _onClose,
   onScreenSharingChange,
   messageInputRef: externalMessageInputRef,
 }) => {
@@ -324,31 +323,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
   return (
     <div className='flex flex-col h-full' id='view-chat' role='tabpanel' aria-labelledby='tab-chat'>
-      {/* Header */}
-      <div
-        className='flex justify-between items-center px-3 py-2 relative border-b rounded-t-[var(--radius)] flex-shrink-0'
-        style={{
-          backgroundColor: 'transparent',
-          borderColor: config.widget_border_color,
-        }}
-      >
-        <div className='flex items-center gap-2 min-w-0 flex-1'>
-          <img
-            src={MarketrixIcon}
-            alt=''
-            className='flex-shrink-0 w-8 h-8 rounded-[var(--radius)] object-cover'
-            style={{ boxShadow: config.widget_shadow }}
-          />
-          <div className='min-w-0'>
-            <div className='text-sm font-semibold leading-tight truncate' style={{ color: config.widget_text_color }}>
-              Marketrix AI
-            </div>
-            <div className='text-xs opacity-70 truncate' style={{ color: config.widget_text_color }}>
-              AI Agent
-            </div>
-          </div>
-        </div>
-
+      {/* Chat toolbar (screen share, more menu) */}
+      <div className='flex justify-end items-center px-3 py-1 flex-shrink-0' style={{ backgroundColor: 'transparent' }}>
         <div className='flex items-center gap-0.5 flex-shrink-0'>
           {config.use_screenshare !== false && !isScreenSharing && (
             <Button
@@ -436,23 +412,6 @@ export const ChatView: React.FC<ChatViewProps> = ({
               </div>
             )}
           </div>
-          <Button
-            type='button'
-            variant='ghost'
-            size='sm'
-            onClick={onClose}
-            className='p-1.5 rounded-full opacity-60 hover:opacity-100 transition-opacity'
-            style={{ color: config.widget_text_color }}
-            aria-label='Close'
-          >
-            <svg className='w-4 h-4' fill='currentColor' viewBox='0 0 20 20'>
-              <path
-                fillRule='evenodd'
-                d='M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z'
-                clipRule='evenodd'
-              />
-            </svg>
-          </Button>
         </div>
       </div>
 

@@ -1,6 +1,5 @@
 import React from 'react';
 
-import MarketrixIcon from '../../assets/marketrix-icon.svg';
 import type { ChatMessage, MarketrixConfig } from '../../types';
 import { addOpacity } from '../../utils/format';
 import { getSuggestedActionsFromConfig, type SuggestedActionItem } from '../../utils/suggestedActions';
@@ -11,10 +10,9 @@ interface HomeViewProps {
   messages: ChatMessage[];
   onNavigateToChat: () => void;
   onChipClick: (action: SuggestedActionItem) => void;
-  onClose: () => void;
 }
 
-export const HomeView: React.FC<HomeViewProps> = ({ config, messages, onNavigateToChat, onChipClick, onClose }) => {
+export const HomeView: React.FC<HomeViewProps> = ({ config, messages, onNavigateToChat, onChipClick }) => {
   const suggestedActions = getSuggestedActionsFromConfig(config);
   const accentColor = config.widget_accent_color ?? '#3b82f6';
   const textColor = config.widget_text_color ?? '#1f2937';
@@ -28,45 +26,17 @@ export const HomeView: React.FC<HomeViewProps> = ({ config, messages, onNavigate
 
   return (
     <div className='flex flex-col h-full overflow-hidden' id='view-home' role='tabpanel' aria-labelledby='tab-home'>
-      {/* Header with close button */}
-      <div
-        className='flex justify-between items-center px-3 py-2 border-b flex-shrink-0'
-        style={{ borderColor: config.widget_border_color }}
-      >
-        <div className='flex items-center gap-2 min-w-0 flex-1'>
-          <img
-            src={MarketrixIcon}
-            alt=''
-            className='flex-shrink-0 w-8 h-8 rounded-[var(--radius)] object-cover'
-            style={{ boxShadow: config.widget_shadow }}
-          />
-          <div className='min-w-0'>
-            <div className='text-sm font-semibold leading-tight truncate' style={{ color: textColor }}>
-              {config.widget_greeting ?? 'Hello'}
-            </div>
-            <p className='text-xs opacity-70 truncate' style={{ color: textColor }}>
-              {config.widget_body ?? 'How can we help?'}
-            </p>
-          </div>
-        </div>
-        <button
-          type='button'
-          onClick={onClose}
-          className='p-1.5 rounded-full opacity-60 hover:opacity-100 transition-opacity flex-shrink-0'
-          style={{ color: textColor }}
-          aria-label='Close'
-        >
-          <svg className='w-4 h-4' fill='currentColor' viewBox='0 0 20 20'>
-            <path
-              fillRule='evenodd'
-              d='M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z'
-              clipRule='evenodd'
-            />
-          </svg>
-        </button>
-      </div>
-
       <div className='flex-1 overflow-y-auto p-3 space-y-3'>
+        {/* Centered greeting */}
+        <div className='text-center pt-2'>
+          <h2 className='text-lg font-semibold' style={{ color: textColor }}>
+            {config.widget_greeting ?? 'Hey There!'}
+          </h2>
+          <p className='text-sm opacity-70 mt-1' style={{ color: textColor }}>
+            {config.widget_body ?? 'How can I help you today?'}
+          </p>
+        </div>
+
         {/* Ask a question CTA */}
         <button
           type='button'

@@ -4,10 +4,8 @@ import { FaArrowDown, FaArrowUp } from 'react-icons/fa';
 
 import MarketrixIcon from '../../assets/marketrix-icon.svg';
 import { useWidget } from '../../hooks/useWidget';
-import { createUserMessage } from '../../services/ChatService';
 import type { ChatMessage, MarketrixConfig } from '../../types';
 import { addOpacity } from '../../utils/format';
-import { getSuggestedActionsFromConfig } from '../../utils/suggestedActions';
 import { Button } from '../base/Button';
 import { StateMessage } from '../ui/StateMessage';
 import { MessageItem } from './MessageItem';
@@ -28,10 +26,10 @@ interface MessageListProps {
 export const MessageList = ({
   messages,
   messagesEndRef,
-  onSendMessage,
-  onSetMode,
-  onModeChange,
-  onAddMessage,
+  onSendMessage: _onSendMessage,
+  onSetMode: _onSetMode,
+  onModeChange: _onModeChange,
+  onAddMessage: _onAddMessage,
   config,
   onScreenAccessAllow,
   onScreenAccessDeny,
@@ -80,55 +78,6 @@ export const MessageList = ({
     });
   }, [messages.length, isPreviewMode]); // Run when messages length changes to handle history loading
 
-  // Check if there's a pending message (placeholder exists or isLoading)
-  const hasPendingMessage = widgetState.isLoading || messages.some(msg => msg.isPlaceholder);
-
-  const suggestedActions = getSuggestedActionsFromConfig(widgetConfig);
-  const uniqueSuggestedActions = suggestedActions;
-
-  const handleSuggestedActionClick = async (action: (typeof suggestedActions)[0], event: React.MouseEvent) => {
-    event.preventDefault();
-    event.stopPropagation();
-
-    // Don't allow clicking chips when there's a pending message
-    if (hasPendingMessage) {
-      return;
-    }
-
-    // FIRST: Switch to the chip's mode if not already in that mode
-    // Use onModeChange if available (adds system message), otherwise fall back to onSetMode
-    if (action.type) {
-      if (onModeChange) {
-        // onModeChange adds system message and switches mode
-        console.log('Changing mode to:', action.type);
-        onModeChange(action.type);
-      } else if (onSetMode) {
-        // Fallback to direct mode set
-        console.log('Setting mode to:', action.type);
-        onSetMode(action.type);
-      }
-
-      // Wait a tick to ensure mode change is processed and UI updates
-      await new Promise(resolve => setTimeout(resolve, 0));
-    }
-
-    // THEN: Add the chip message as a user message in the chat (like user typed it)
-    // The greeting message and all existing messages remain unchanged
-    if (onAddMessage) {
-      // We import createUserMessage from ChatService now (exported function)
-      const userMessage = createUserMessage(action.text, action.type, 'chip-message');
-      onAddMessage(userMessage);
-    }
-
-    // Send message through normal flow (will check for screen access if needed)
-    // This ensures chips get the same treatment as typing a message
-    if (onSendMessage) {
-      console.log('Sending message with mode:', action.type, action.text);
-      // The wrapper in ChatWindow will handle screen access check
-      onSendMessage(action.text, action.type);
-    }
-  };
-
   return (
     <div className='relative h-full'>
       <div
@@ -163,9 +112,6 @@ export const MessageList = ({
             widget_secondary_color: widgetConfig.widget_secondary_color,
           }}
           marketrixIcon={MarketrixIcon}
-          suggestedActions={uniqueSuggestedActions}
-          hasPendingMessage={hasPendingMessage}
-          onActionClick={handleSuggestedActionClick}
         />
 
         {/* Messages */}

@@ -1,7 +1,6 @@
 import React from 'react';
 
 import { formatMessageTime } from '../../utils/format';
-import { SuggestedActions } from './SuggestedActions';
 
 interface WelcomeMessageProps {
   greeting: string;
@@ -13,34 +12,9 @@ interface WelcomeMessageProps {
     widget_secondary_color: string;
   };
   marketrixIcon: string;
-  suggestedActions: Array<{
-    id: string;
-    text: string;
-    icon: React.ReactElement;
-    type: 'tell' | 'show' | 'do';
-    isShow: boolean;
-  }>;
-  hasPendingMessage: boolean;
-  onActionClick: (
-    action: {
-      id: string;
-      text: string;
-      icon: React.ReactElement;
-      type: 'tell' | 'show' | 'do';
-      isShow: boolean;
-    },
-    event: React.MouseEvent,
-  ) => Promise<void>;
 }
 
-export const WelcomeMessage: React.FC<WelcomeMessageProps> = ({
-  greeting,
-  settings,
-  marketrixIcon,
-  suggestedActions,
-  hasPendingMessage,
-  onActionClick,
-}) => {
+export const WelcomeMessage: React.FC<WelcomeMessageProps> = ({ greeting, settings, marketrixIcon }) => {
   return (
     <div key='welcome-message' className='group flex flex-col justify-start mt-2'>
       <style>{`
@@ -98,16 +72,6 @@ export const WelcomeMessage: React.FC<WelcomeMessageProps> = ({
         >
           {/* Message content */}
           <div className='text-xs font-inter font-medium leading-tight whitespace-pre-wrap break-words'>{greeting}</div>
-
-          {/* Chips inside the greeting message bubble */}
-          {suggestedActions.length > 0 && (
-            <SuggestedActions
-              actions={suggestedActions}
-              hasPendingMessage={hasPendingMessage}
-              settings={settings}
-              onActionClick={onActionClick}
-            />
-          )}
         </div>
       </div>
       {/* Timestamp below card - agent message, so right-aligned */}
