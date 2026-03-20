@@ -458,11 +458,9 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ settings, cont
     rootRef.current = root;
 
     root.render(
-      <React.StrictMode>
-        <WidgetProvider previewMode>
-          <MarketrixWidgetComponent config={config} />
-        </WidgetProvider>
-      </React.StrictMode>,
+      <WidgetProvider previewMode>
+        <MarketrixWidgetComponent config={config} />
+      </WidgetProvider>,
     );
 
     return () => {

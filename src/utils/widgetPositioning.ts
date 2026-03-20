@@ -19,13 +19,9 @@ export const getPositionClasses = (position: WidgetPosition): string => {
   }
 };
 
-const LAUNCHER_SIZE_PX = 56;
-const LAUNCHER_GAP_PX = 12;
-const PANEL_EDGE_OFFSET_PX = EDGE_OFFSET_PX + LAUNCHER_SIZE_PX + LAUNCHER_GAP_PX; // 88px
-
-/** Panel position inline styles — offset from edge to clear the launcher button. */
+/** Panel position inline styles — anchored to same corner as the launcher button. */
 export const getPanelPositionStyle = (position: WidgetPosition): React.CSSProperties => {
-  const primary = `${PANEL_EDGE_OFFSET_PX}px`;
+  const primary = `${EDGE_OFFSET_PX}px`;
   const secondary = `${EDGE_OFFSET_PX}px`;
   switch (position) {
     case 'bottom_right':
