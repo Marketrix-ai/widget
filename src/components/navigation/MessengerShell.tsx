@@ -232,6 +232,7 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
                     messages={messages}
                     onNavigateToChat={handleNavigateToChat}
                     onChipClick={handleChipClick}
+                    onClose={onClose}
                   />
                 )}
                 {activeView === 'chat' && (
@@ -249,10 +250,6 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
                     onStopTask={onStopTask}
                     onClearChat={onClearChat}
                     onClose={onClose}
-                    onBack={() => {
-                      setNavDirection('back');
-                      setActiveView('home');
-                    }}
                     onScreenSharingChange={onScreenSharingChange}
                     messageInputRef={messageInputRef}
                   />

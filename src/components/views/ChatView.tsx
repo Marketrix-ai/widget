@@ -69,7 +69,6 @@ export interface ChatViewProps {
   onStopTask?: () => void;
   onClearChat?: () => void | Promise<void>;
   onClose: () => void;
-  onBack: () => void;
   onScreenSharingChange?: (isSharing: boolean) => void;
   /** Optional ref for focus trap to focus the message input */
   messageInputRef?: React.RefObject<HTMLTextAreaElement | null>;
@@ -103,7 +102,6 @@ export const ChatView: React.FC<ChatViewProps> = ({
   onStopTask,
   onClearChat,
   onClose,
-  onBack,
   onScreenSharingChange,
   messageInputRef: externalMessageInputRef,
 }) => {
@@ -335,19 +333,6 @@ export const ChatView: React.FC<ChatViewProps> = ({
         }}
       >
         <div className='flex items-center gap-2 min-w-0 flex-1'>
-          <Button
-            type='button'
-            variant='ghost'
-            size='sm'
-            onClick={onBack}
-            className='p-1.5 rounded-full opacity-60 hover:opacity-100 transition-opacity -ml-0.5'
-            style={{ color: config.widget_text_color }}
-            aria-label='Back to home'
-          >
-            <svg className='w-4 h-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
-              <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M15 19l-7-7 7-7' />
-            </svg>
-          </Button>
           <img
             src={MarketrixIcon}
             alt=''
