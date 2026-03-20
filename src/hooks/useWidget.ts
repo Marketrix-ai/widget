@@ -36,11 +36,7 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
     return config || {};
   }, [config]);
 
-  // Validate settings - throws if invalid, TypeScript narrows the type
-  validateWidgetSettings(marketrixConfig);
-
-  // After validation, TypeScript knows all required fields exist
-  // Update ConfigManager whenever config changes
+  // All hooks must be called before any throw — React requires stable hook count across renders.
   useEffect(() => {
     configManager.saveConfig(marketrixConfig);
   }, [marketrixConfig]);
@@ -51,6 +47,9 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
 
   // Extract preview mode flag from config
   const isPreviewMode = marketrixConfig.isPreviewMode ?? false;
+
+  // Validate AFTER all hooks so hook count is stable even if this throws
+  validateWidgetSettings(marketrixConfig);
 
   return {
     state,
