@@ -1,9 +1,12 @@
 import React, { useCallback, useEffect, useRef } from 'react';
-import { IoSend, IoStop } from 'react-icons/io5';
+import { IoChatbubbleEllipsesOutline, IoStop } from 'react-icons/io5';
+import { LuMousePointerClick } from 'react-icons/lu';
+import { SiTicktick } from 'react-icons/si';
 
 import { useWidget } from '../../hooks/useWidget';
+import type { InstructionType } from '../../sdk';
 import type { MarketrixConfig } from '../../types';
-import { addOpacity, getContrastingColor } from '../../utils/format';
+import { addOpacity, getContrastingColor, getModeDisplayName } from '../../utils/format';
 import { Button } from '../base/Button';
 import { Textarea } from '../base/Textarea';
 
@@ -16,6 +19,10 @@ interface MessageInputProps {
   isTaskRunning?: boolean;
   onStop?: () => void;
   config?: MarketrixConfig;
+  currentMode?: InstructionType;
+  enabledModes?: InstructionType[];
+  onModeChange?: (mode: InstructionType) => void;
+  isScreenSharing?: boolean;
 }
 
 function mergeRefs<T>(...refs: (React.Ref<T> | undefined)[]) {
@@ -28,7 +35,20 @@ function mergeRefs<T>(...refs: (React.Ref<T> | undefined)[]) {
 }
 
 export const MessageInput = React.forwardRef<HTMLTextAreaElement, Omit<MessageInputProps, 'ref'>>(function MessageInput(
-  { value, onChange, onKeyPress, onSend, isLoading, isTaskRunning = false, onStop, config },
+  {
+    value,
+    onChange,
+    onKeyPress,
+    onSend,
+    isLoading,
+    isTaskRunning = false,
+    onStop,
+    config,
+    currentMode,
+    enabledModes = [],
+    onModeChange,
+    isScreenSharing = false,
+  },
   ref,
 ) {
   // Get configuration
@@ -71,116 +91,145 @@ export const MessageInput = React.forwardRef<HTMLTextAreaElement, Omit<MessageIn
 
   const placeholderColor = addOpacity(settings.widget_text_color, 0.6);
   const canSend = Boolean(value.trim()) && !isLoading;
-  const iconBtnStyle = { color: settings.widget_text_color };
+
+  const orderedModes: InstructionType[] = (['tell', 'show', 'do'] as const).filter(m => enabledModes.includes(m));
+
+  const getModeIcon = (mode: InstructionType) => {
+    switch (mode) {
+      case 'show':
+        return <LuMousePointerClick className='w-3 h-3' />;
+      case 'tell':
+        return <IoChatbubbleEllipsesOutline className='w-3 h-3' />;
+      case 'do':
+        return <SiTicktick className='w-3 h-3' />;
+      default:
+        return null;
+    }
+  };
 
   return (
-    <div className='py-1.5 pr-2 bg-transparent'>
+    <div className='py-1.5 px-2 bg-transparent'>
       <style>{`.message-input-textarea::placeholder { color: ${placeholderColor}; }`}</style>
-      <div className='flex items-end gap-2'>
-        <div className='flex-1 relative flex flex-col gap-1'>
-          <Textarea
-            ref={mergeRefs(textareaRef, ref)}
-            value={value}
-            onChange={handleChange}
-            onKeyDown={handleKeyDown as React.KeyboardEventHandler<HTMLTextAreaElement>}
-            placeholder='Ask anything'
-            disabled={isLoading}
-            rows={1}
-            className='message-input-textarea w-full px-3 text-sm resize-none focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed border rounded-none overflow-hidden'
-            style={{
-              backgroundColor: 'rgba(255,255,255,0.7)',
-              backdropFilter: 'blur(10px)',
-              WebkitBackdropFilter: 'blur(10px)',
-              borderColor: settings.widget_border_color,
-              color: settings.widget_text_color,
-              lineHeight: '20px',
-              paddingTop: '6px',
-              paddingBottom: '6px',
-            }}
-          />
-          {/* Composer toolbar: attachment, emoji (placeholders), gap */}
-          <div className='flex items-center gap-1 opacity-60 hover:[&_button:not(:disabled)]:opacity-100 transition-opacity'>
-            <button
+      <div
+        className='flex flex-col rounded-xl border overflow-hidden'
+        style={{
+          borderColor: settings.widget_border_color,
+          backgroundColor: 'rgba(255,255,255,0.7)',
+          backdropFilter: 'blur(10px)',
+          WebkitBackdropFilter: 'blur(10px)',
+        }}
+      >
+        <Textarea
+          ref={mergeRefs(textareaRef, ref)}
+          value={value}
+          onChange={handleChange}
+          onKeyDown={handleKeyDown as React.KeyboardEventHandler<HTMLTextAreaElement>}
+          placeholder='Ask anything'
+          disabled={isLoading}
+          rows={1}
+          className='message-input-textarea w-full px-3 text-sm resize-none focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed border-none overflow-hidden'
+          style={{
+            backgroundColor: 'transparent',
+            color: settings.widget_text_color,
+            lineHeight: '20px',
+            paddingTop: '8px',
+            paddingBottom: '4px',
+          }}
+        />
+        {/* Mode pills + send button row */}
+        <div className='flex items-center justify-between px-1.5 pb-1.5'>
+          <div className='flex items-center gap-1'>
+            {orderedModes.map(mode => {
+              const isActive = currentMode === mode;
+              return (
+                <button
+                  key={mode}
+                  type='button'
+                  onClick={e => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onModeChange?.(mode);
+                  }}
+                  className={`flex items-center gap-0.5 text-[11px] font-medium px-2 py-0.5 transition-all duration-200 ${isActive ? 'shadow-sm' : ''}`}
+                  style={{
+                    borderRadius: '20px',
+                    ...(isActive
+                      ? {
+                          backgroundColor: settings.widget_accent_color,
+                          color: getContrastingColor(settings.widget_accent_color),
+                          border: 'none',
+                        }
+                      : {
+                          backgroundColor: addOpacity(settings.widget_secondary_color, 0.15),
+                          color: addOpacity(settings.widget_text_color, 0.7),
+                          border: 'none',
+                        }),
+                    ...(isScreenSharing && isActive
+                      ? {
+                          animation: 'glow-border-pulse 2s ease-in-out infinite',
+                        }
+                      : {}),
+                  }}
+                >
+                  {getModeIcon(mode)}
+                  <span>{getModeDisplayName(mode)}</span>
+                </button>
+              );
+            })}
+          </div>
+          {isTaskRunning && onStop ? (
+            <Button
               type='button'
-              disabled
-              className='w-4 h-4 p-0 rounded flex items-center justify-center cursor-not-allowed'
-              style={iconBtnStyle}
-              title='Coming soon'
-              aria-label='Attach file (coming soon)'
+              variant='secondary'
+              size='sm'
+              onClick={e => {
+                e.preventDefault();
+                e.stopPropagation();
+                onStop();
+              }}
+              className='w-7 h-7 min-w-7 rounded-full flex items-center justify-center flex-shrink-0 shadow-lg'
+              style={{
+                background: 'linear-gradient(to right, #1f2937, #111827)',
+                color: '#fff',
+                border: 'none',
+              }}
+              aria-label='Stop task'
+            >
+              <IoStop className='w-3.5 h-3.5' />
+            </Button>
+          ) : (
+            <Button
+              type='button'
+              variant='primary'
+              size='sm'
+              disabled={!canSend}
+              onClick={e => {
+                e.preventDefault();
+                e.stopPropagation();
+                onSend();
+              }}
+              className='w-7 h-7 min-w-7 rounded-full flex items-center justify-center flex-shrink-0'
+              style={
+                canSend
+                  ? {
+                      backgroundColor: settings.widget_accent_color,
+                      color: getContrastingColor(settings.widget_accent_color),
+                      border: 'none',
+                    }
+                  : {
+                      backgroundColor: 'transparent',
+                      color: addOpacity(settings.widget_text_color, 0.4),
+                      border: 'none',
+                    }
+              }
+              aria-label='Send message'
             >
               <svg className='w-4 h-4' fill='none' stroke='currentColor' viewBox='0 0 24 24' aria-hidden>
-                <path
-                  strokeLinecap='round'
-                  strokeLinejoin='round'
-                  strokeWidth={2}
-                  d='M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13'
-                />
+                <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M5 10l7-7m0 0l7 7m-7-7v18' />
               </svg>
-            </button>
-            <button
-              type='button'
-              disabled
-              className='w-4 h-4 p-0 rounded flex items-center justify-center cursor-not-allowed'
-              style={iconBtnStyle}
-              title='Coming soon'
-              aria-label='Insert emoji (coming soon)'
-            >
-              <span className='text-base leading-none' aria-hidden>
-                😊
-              </span>
-            </button>
-          </div>
+            </Button>
+          )}
         </div>
-        {isTaskRunning && onStop ? (
-          <Button
-            type='button'
-            variant='secondary'
-            size='sm'
-            onClick={e => {
-              e.preventDefault();
-              e.stopPropagation();
-              onStop();
-            }}
-            className='w-8 h-8 min-w-8 rounded-full flex items-center justify-center flex-shrink-0 shadow-lg'
-            style={{
-              background: 'linear-gradient(to right, #1f2937, #111827)',
-              color: '#fff',
-              border: 'none',
-            }}
-            aria-label='Stop task'
-          >
-            <IoStop className='w-4 h-4' />
-          </Button>
-        ) : (
-          <Button
-            type='button'
-            variant='primary'
-            size='sm'
-            disabled={!canSend}
-            onClick={e => {
-              e.preventDefault();
-              e.stopPropagation();
-              onSend();
-            }}
-            className='w-8 h-8 min-w-8 rounded-full flex items-center justify-center flex-shrink-0'
-            style={
-              canSend
-                ? {
-                    backgroundColor: settings.widget_accent_color,
-                    color: getContrastingColor(settings.widget_accent_color),
-                    border: 'none',
-                  }
-                : {
-                    backgroundColor: 'transparent',
-                    color: addOpacity(settings.widget_text_color, 0.4),
-                    border: 'none',
-                  }
-            }
-            aria-label='Send message'
-          >
-            <IoSend className={canSend ? 'w-4 h-4' : 'w-4 h-4 ml-0.5'} />
-          </Button>
-        )}
       </div>
     </div>
   );

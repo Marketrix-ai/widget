@@ -103,7 +103,7 @@ export const MessageList = ({
 
         {/* Welcome message - always show */}
         <WelcomeMessage
-          greeting={widgetConfig.widget_greeting}
+          greeting={widgetConfig.widget_body ?? 'How can I help you today?'}
           settings={{
             widget_shadow: widgetConfig.widget_shadow,
             widget_border_radius: widgetConfig.widget_border_radius,
@@ -111,7 +111,6 @@ export const MessageList = ({
             widget_border_color: widgetConfig.widget_border_color,
             widget_secondary_color: widgetConfig.widget_secondary_color,
           }}
-          marketrixIcon={MarketrixIcon}
         />
 
         {/* Messages */}

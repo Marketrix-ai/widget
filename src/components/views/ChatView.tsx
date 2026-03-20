@@ -19,7 +19,6 @@ import { addOpacity } from '../../utils/format';
 import { Button } from '../base/Button';
 import { MessageList } from '../chat/MessageList';
 import { MessageInput } from '../input/MessageInput';
-import { ModeSelector } from '../input/ModeSelector';
 import { ScreenAccessModal } from '../ui/ScreenAccessModal';
 
 class ChatErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean }> {
@@ -409,6 +408,18 @@ export const ChatView: React.FC<ChatViewProps> = ({
                     Clear chat
                   </button>
                 )}
+                <button
+                  type='button'
+                  className='w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded-md transition-colors'
+                  style={{ color: config.widget_text_color }}
+                  onClick={() => {
+                    window.open('https://marketrix.ai', '_blank', 'noopener,noreferrer');
+                    setMoreMenuOpen(false);
+                  }}
+                  role='menuitem'
+                >
+                  About Marketrix
+                </button>
               </div>
             )}
           </div>
@@ -498,14 +509,10 @@ export const ChatView: React.FC<ChatViewProps> = ({
             onStopTask?.();
           }}
           config={config}
-        />
-
-        <ModeSelector
           currentMode={currentMode}
           enabledModes={getEnabledModes(settings)}
           onModeChange={handleModeChange}
           isScreenSharing={isScreenSharing}
-          config={config}
         />
       </div>
     </div>
