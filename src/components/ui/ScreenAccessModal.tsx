@@ -1,6 +1,7 @@
 import React from 'react';
 
 import { Button } from '../base/Button';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '../base/Dialog';
 
 interface ScreenAccessModalProps {
   isOpen: boolean;
@@ -10,56 +11,52 @@ interface ScreenAccessModalProps {
 }
 
 export const ScreenAccessModal: React.FC<ScreenAccessModalProps> = ({ isOpen, onAllow, onDeny, onClose }) => {
-  if (!isOpen) return null;
-
   return (
-    <div
-      className='absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 rounded-lg'
-      onClick={e => {
-        if (e.target === e.currentTarget) {
-          onClose();
-        }
+    <Dialog
+      open={isOpen}
+      onOpenChange={open => {
+        if (!open) onClose();
       }}
     >
-      <div className='bg-white rounded-lg p-3 max-w-md mx-4 shadow-xl' onClick={e => e.stopPropagation()}>
-        <div className='text-center'>
-          <h3 className='text-lg font-semibold text-gray-900 mb-3'>Can I take a look at your screen?</h3>
-          <p className='text-gray-600 mb-6 text-sm leading-relaxed'>
-            By allowing screen access, Marketrix can understand your current context to guide you better and complete
-            tasks on your behalf.
-          </p>
-          <div className='flex gap-3 justify-center'>
-            <Button
-              type='button'
-              variant='primary'
-              size='sm'
-              onClick={e => {
-                e.preventDefault();
-                e.stopPropagation();
-                onAllow();
-              }}
-              className='px-5 py-1 rounded-full text-sm font-medium'
-              style={{ backgroundColor: '#111827', color: '#fff', border: 'none' }}
-            >
-              Yes
-            </Button>
-            <Button
-              type='button'
-              variant='secondary'
-              size='sm'
-              onClick={e => {
-                e.preventDefault();
-                e.stopPropagation();
-                onDeny();
-              }}
-              className='px-6 py-1 rounded-full text-sm font-medium border border-gray-200'
-              style={{ backgroundColor: '#f3f4f6', color: '#1f2937' }}
-            >
-              No
-            </Button>
-          </div>
+      <DialogContent className='bg-white rounded-lg p-3 max-w-md mx-4 shadow-xl text-center'>
+        <DialogTitle className='text-lg font-semibold text-gray-900 mb-3'>
+          Can I take a look at your screen?
+        </DialogTitle>
+        <DialogDescription className='text-gray-600 mb-6 text-sm leading-relaxed'>
+          By allowing screen access, Marketrix can understand your current context to guide you better and complete
+          tasks on your behalf.
+        </DialogDescription>
+        <div className='flex gap-3 justify-center'>
+          <Button
+            type='button'
+            variant='primary'
+            size='sm'
+            onClick={e => {
+              e.preventDefault();
+              e.stopPropagation();
+              onAllow();
+            }}
+            className='px-5 py-1 rounded-full text-sm font-medium'
+            style={{ backgroundColor: '#111827', color: '#fff', border: 'none' }}
+          >
+            Yes
+          </Button>
+          <Button
+            type='button'
+            variant='secondary'
+            size='sm'
+            onClick={e => {
+              e.preventDefault();
+              e.stopPropagation();
+              onDeny();
+            }}
+            className='px-6 py-1 rounded-full text-sm font-medium border border-gray-200'
+            style={{ backgroundColor: '#f3f4f6', color: '#1f2937' }}
+          >
+            No
+          </Button>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };

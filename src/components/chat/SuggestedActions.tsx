@@ -1,6 +1,7 @@
 import React from 'react';
 
 import { addOpacity } from '../../utils/format';
+import { Button } from '../base/Button';
 
 interface SuggestedAction {
   id: string;
@@ -31,8 +32,10 @@ export const SuggestedActions: React.FC<SuggestedActionsProps> = ({
   return (
     <div className='mt-2.5 mb-1.5 p-0 flex flex-col gap-1'>
       {actions.map((action, chipIndex) => (
-        <button
+        <Button
           key={`welcome-chip-${action.id}-${chipIndex}`}
+          variant='ghost'
+          size='sm'
           onClick={e => onActionClick(action, e)}
           disabled={hasPendingMessage}
           className={`
@@ -70,7 +73,7 @@ export const SuggestedActions: React.FC<SuggestedActionsProps> = ({
               action.text
             )}
           </span>
-        </button>
+        </Button>
       ))}
     </div>
   );
