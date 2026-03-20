@@ -59,6 +59,10 @@ export type MarketrixConfig = Partial<WidgetSettingsData> & {
   show_widget?: boolean;
   /** Controls screen sharing prompts and button. When false, screen access requests are auto-denied and Share Screen button is hidden. Default: true */
   use_screenshare?: boolean;
+
+  // Agent identity fields (passed through from agent settings)
+  agent_name?: string;
+  agent_description?: string;
 };
 
 export interface ChatMessage {

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 
+import MarketrixIcon from '../../assets/marketrix-icon.svg';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { type ResizeCorner, useResize } from '../../hooks/useResize';
 import { useWidget } from '../../hooks/useWidget';
@@ -224,6 +225,47 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
           </div>
         ) : (
           <>
+            {/* Shared header: agent name + description */}
+            <div
+              className='flex justify-between items-center px-3 py-2 border-b flex-shrink-0'
+              style={{ borderColor: settings.widget_border_color }}
+            >
+              <div className='flex items-center gap-2 min-w-0 flex-1'>
+                <img
+                  src={MarketrixIcon}
+                  alt=''
+                  className='flex-shrink-0 w-8 h-8 rounded-[var(--radius)] object-cover'
+                  style={{ boxShadow: settings.widget_shadow }}
+                />
+                <div className='min-w-0'>
+                  <div
+                    className='text-sm font-semibold leading-tight truncate'
+                    style={{ color: settings.widget_text_color }}
+                  >
+                    {config.agent_name ?? 'AI Agent'}
+                  </div>
+                  <p className='text-xs opacity-70 truncate' style={{ color: settings.widget_text_color }}>
+                    {config.agent_description ?? 'How can I help?'}
+                  </p>
+                </div>
+              </div>
+              <button
+                type='button'
+                onClick={onClose}
+                className='p-1.5 rounded-full opacity-60 hover:opacity-100 transition-opacity flex-shrink-0'
+                style={{ color: settings.widget_text_color }}
+                aria-label='Close'
+              >
+                <svg className='w-4 h-4' fill='currentColor' viewBox='0 0 20 20'>
+                  <path
+                    fillRule='evenodd'
+                    d='M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z'
+                    clipRule='evenodd'
+                  />
+                </svg>
+              </button>
+            </div>
+
             <div className='flex-1 overflow-hidden flex flex-col min-h-0'>
               <ViewTransition key={activeView} direction={navDirection}>
                 {activeView === 'home' && (
@@ -232,7 +274,6 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
                     messages={messages}
                     onNavigateToChat={handleNavigateToChat}
                     onChipClick={handleChipClick}
-                    onClose={onClose}
                   />
                 )}
                 {activeView === 'chat' && (
