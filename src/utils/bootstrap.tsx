@@ -5,6 +5,7 @@
  * and loader display. Consolidates all widget-related DOM manipulation and state management.
  */
 
+import React from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 
 import { MarketrixWidget } from '../components/MarketrixWidget';
@@ -124,9 +125,11 @@ export const mountWidgetToContainer = (mountEl: HTMLElement, config: MarketrixCo
   const root = createRoot(mountEl);
 
   root.render(
-    <WidgetProvider previewMode={previewMode}>
-      <MarketrixWidget config={config} />
-    </WidgetProvider>,
+    <React.StrictMode>
+      <WidgetProvider previewMode={previewMode}>
+        <MarketrixWidget config={config} />
+      </WidgetProvider>
+    </React.StrictMode>,
   );
 
   return root;
@@ -278,7 +281,11 @@ export const showWidgetSettingsLoader = (message?: string): void => {
   const root = createRoot(mountEl);
   loaderInstance = root;
 
-  root.render(<WidgetSettingsLoader message={message} />);
+  root.render(
+    <React.StrictMode>
+      <WidgetSettingsLoader message={message} />
+    </React.StrictMode>,
+  );
 };
 
 /**
