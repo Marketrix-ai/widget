@@ -1,8 +1,8 @@
 import React from 'react';
 import { FiX } from 'react-icons/fi';
 
-import { LAYER_TOKENS } from '../../design-system/layers';
 import { Button } from '../base/Button';
+import { Dialog, DialogClose, DialogContent, DialogTitle } from '../base/Dialog';
 
 interface DiagnosticModalProps {
   isOpen: boolean;
@@ -19,8 +19,6 @@ interface DiagnosticModalProps {
 }
 
 export const DiagnosticModal: React.FC<DiagnosticModalProps> = ({ isOpen, onClose, diagnosticData }) => {
-  if (!isOpen) return null;
-
   const copyToClipboard = (text: string | null | undefined) => {
     if (!text) return;
     navigator.clipboard.writeText(text.toString());
@@ -43,28 +41,25 @@ export const DiagnosticModal: React.FC<DiagnosticModalProps> = ({ isOpen, onClos
   ];
 
   return (
-    <div
-      className='fixed inset-0 flex items-center justify-center'
-      style={{ zIndex: LAYER_TOKENS.modal + 10 }}
-      onClick={onClose}
+    <Dialog
+      open={isOpen}
+      onOpenChange={open => {
+        if (!open) onClose();
+      }}
     >
-      <div className='bg-white rounded-md shadow-lg border border-gray-200 w-64' onClick={e => e.stopPropagation()}>
+      <DialogContent className='bg-white rounded-md shadow-lg border border-gray-200 w-64 p-0'>
         {/* Header */}
         <div className='flex items-center justify-between px-3 py-1.5 border-b border-gray-100'>
-          <span className='text-[11px] font-semibold text-gray-700 flex-1 text-center'>
+          <DialogTitle className='text-[11px] font-semibold text-gray-700 flex-1 text-center mb-0'>
             Widget v{diagnosticData.version} (
             {diagnosticData.build === 'dev' ? 'dev' : diagnosticData.build.slice(0, 7)})
-          </span>
-          <Button
-            type='button'
-            variant='ghost'
-            size='sm'
-            onClick={onClose}
-            className='text-gray-400 hover:text-gray-600 -mr-1 min-w-0 p-0'
+          </DialogTitle>
+          <DialogClose
+            className='text-gray-400 hover:text-gray-600 -mr-1 static w-auto h-auto'
             aria-label='Close diagnostic'
           >
             <FiX className='w-3 h-3' />
-          </Button>
+          </DialogClose>
         </div>
 
         {/* Content */}
@@ -99,7 +94,7 @@ export const DiagnosticModal: React.FC<DiagnosticModalProps> = ({ isOpen, onClos
             </span>
           </div>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };
