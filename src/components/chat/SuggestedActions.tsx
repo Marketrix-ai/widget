@@ -39,7 +39,7 @@ export const SuggestedActions: React.FC<SuggestedActionsProps> = ({
           onClick={e => onActionClick(action, e)}
           disabled={hasPendingMessage}
           className={`
-            w-full flex items-center justify-center gap-1 font-inter font-normal text-xs px-3 py-2 rounded-xl
+            w-full flex items-center justify-center gap-1 font-inter font-normal text-xs px-3 py-2 rounded-lg
             transition-[background-color,color,border-color] duration-[250ms] ease-in-out text-left
             border border-solid
             ${hasPendingMessage ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}

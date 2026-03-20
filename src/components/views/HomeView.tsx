@@ -80,22 +80,22 @@ export const HomeView: React.FC<HomeViewProps> = ({ config, messages, onNavigate
         {/* Recent conversation preview */}
         {messages.length > 0 && (
           <div
-            className='p-3 rounded-lg border'
+            className='px-3 py-2 rounded-lg border'
             style={{
               backgroundColor: addOpacity(config.widget_background_color ?? '#ffffff', 0.6),
               borderColor: config.widget_border_color ?? '#e5e7eb',
             }}
           >
-            <p className='text-xs font-medium opacity-70 mb-1' style={{ color: textColor }}>
+            <p className='text-sm font-semibold mb-0.5' style={{ color: textColor }}>
               Recent conversation
             </p>
-            <p className='text-sm line-clamp-2' style={{ color: textColor }}>
+            <p className='text-xs line-clamp-2 opacity-80' style={{ color: textColor }}>
               {messages[messages.length - 1].content || 'Message'}
             </p>
             <button
               type='button'
               onClick={onNavigateToChat}
-              className='mt-2 text-xs font-medium'
+              className='mt-1 text-xs font-medium'
               style={{ color: accentColor }}
             >
               Continue conversation →
