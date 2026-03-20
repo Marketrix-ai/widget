@@ -21,16 +21,28 @@
     "start": "vite",
     "build": "vite build && cross-env BUILD_MODE=standalone vite build",
     "lint": "eslint . --ext .ts,.tsx --max-warnings 200 --fix",
+    "lint:check": "eslint . --ext .ts,.tsx --max-warnings 0",
     "check": "tsc --noEmit",
     "type-check": "tsc --noEmit",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:ui": "vitest --watch",
+    "test:coverage": "vitest run --coverage",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "visual:check": "node scripts/visual-check.mjs",
+    "a11y:check": "node scripts/a11y-check.mjs",
+    "bundle:check": "node scripts/bundle-check.mjs",
     "code:fix": "eslint . --ext .ts,.tsx --fix && prettier --write .",
     "code:check": "tsc --noEmit && eslint . --ext .ts,.tsx && prettier --check ."
   },
   "dependencies": {
+    "@base-ui/react": "^1.2.0",
     "@orpc/client": "^1.13.9",
     "@orpc/contract": "^1.13.9",
     "@rrweb/record": "^2.0.0-alpha.20",
     "react-icons": "^5.6.0",
+    "tailwind-merge": "^3.5.0",
     "zod": "^4.3.6"
   },
   "peerDependencies": {
@@ -40,12 +52,16 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@tailwindcss/vite": "^4.2.2",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.0",
     "@types/node": "^25.5.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@typescript-eslint/eslint-plugin": "^8.57.1",
     "@typescript-eslint/parser": "^8.57.1",
     "@vitejs/plugin-react": "^6.0.1",
+    "@vitest/coverage-v8": "^3.2.4",
+    "axe-core": "^4.11.1",
     "cross-env": "^10.1.0",
     "eslint": "^10.0.3",
     "eslint-config-prettier": "^10.1.8",
@@ -53,6 +69,7 @@
     "eslint-plugin-prettier": "^5.5.5",
     "eslint-plugin-simple-import-sort": "^12.1.1",
     "eslint-plugin-unused-imports": "^4.4.1",
+    "jsdom": "^26.1.0",
     "prettier": "^3.8.1",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
@@ -60,6 +77,8 @@
     "terser": "^5.46.1",
     "typescript": "^5.9.3",
     "vite": "^8.0.1",
-    "vite-plugin-css-injected-by-js": "^4.0.1"
+    "vite-plugin-css-injected-by-js": "^4.0.1",
+    "vitest": "^3.2.4",
+    "vitest-axe": "^0.1.0"
   }
 }

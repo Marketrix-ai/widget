@@ -7,7 +7,7 @@ import { configManager } from '../services/ConfigManager';
 import { sessionManager } from '../services/SessionManager';
 import { StreamClient, type StreamStatus } from '../services/StreamClient';
 import { toolExecutionService } from '../services/ToolService';
-import type { ChatMessage, InstructionType, TaskProgress, WidgetState } from '../types';
+import type { ChatMessage, InstructionType, TaskProgress, WidgetState, WidgetView } from '../types';
 import { BROWSER_TOOLS } from '../types/browserTools';
 import {
   addProgressLine,
@@ -24,6 +24,7 @@ interface WidgetContextType {
   state: WidgetState;
   actions: {
     setState: (payload: Partial<WidgetState>) => void;
+    setActiveView: (view: WidgetView) => void;
     toggleWidget: () => void;
     closeWidget: () => void;
     setMode: (mode: InstructionType) => void;
@@ -90,6 +91,7 @@ export const WidgetProvider: React.FC<WidgetProviderProps> = ({ children, previe
     activeTaskId: null,
     isTaskRunning: false,
     taskProgress: [],
+    activeView: 'home',
   });
 
   // Initialize ChatService on mount (skip in preview mode)
@@ -580,7 +582,7 @@ export const WidgetProvider: React.FC<WidgetProviderProps> = ({ children, previe
       // Send via stream (fire-and-forget — response arrives as chat/response event)
       const apiService = new MarketrixApiService(config);
       try {
-        // Override config if applicationId is provided (for chips with specific connection)
+        // Override config if applicationId is provided (for chips with specific application)
         if (applicationId) {
           apiService.updateConfig({ mtxApp: applicationId });
         }
@@ -649,6 +651,7 @@ export const WidgetProvider: React.FC<WidgetProviderProps> = ({ children, previe
   const actions = useMemo(
     () => ({
       setState: (payload: Partial<WidgetState>) => setState(prev => ({ ...prev, ...payload })),
+      setActiveView: (view: WidgetView) => setState(prev => ({ ...prev, activeView: view })),
       toggleWidget: () =>
         setState(prev => {
           const newState = {

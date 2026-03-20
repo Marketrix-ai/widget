@@ -95,6 +95,8 @@ export interface TaskProgress {
   timestamp: number;
 }
 
+export type WidgetView = 'home' | 'chat' | 'help' | 'news';
+
 export interface WidgetState {
   isOpen: boolean;
   isMinimized: boolean;
@@ -106,6 +108,7 @@ export interface WidgetState {
   activeTaskId: string | null;
   isTaskRunning: boolean;
   taskProgress: TaskProgress[];
+  activeView: WidgetView;
 }
 
 export interface SendMessageRequest {

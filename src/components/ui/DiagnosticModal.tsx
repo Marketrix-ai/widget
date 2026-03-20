@@ -1,6 +1,9 @@
 import React from 'react';
 import { FiX } from 'react-icons/fi';
 
+import { LAYER_TOKENS } from '../../design-system/layers';
+import { Button } from '../base/Button';
+
 interface DiagnosticModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -35,12 +38,16 @@ export const DiagnosticModal: React.FC<DiagnosticModalProps> = ({ isOpen, onClos
   const rows: { label: string; value: string | null | undefined; copyable?: boolean }[] = [
     { label: 'Chat ID', value: diagnosticData.chatId, copyable: true },
     { label: 'Stream Endpoint', value: diagnosticData.streamEndpoint, copyable: true },
-    { label: 'Connection ID', value: diagnosticData.applicationId?.toString(), copyable: true },
+    { label: 'Application ID', value: diagnosticData.applicationId?.toString(), copyable: true },
     { label: 'Agent ID', value: diagnosticData.agentId?.toString(), copyable: true },
   ];
 
   return (
-    <div className='fixed inset-0 flex items-center justify-center z-[100]' onClick={onClose}>
+    <div
+      className='fixed inset-0 flex items-center justify-center'
+      style={{ zIndex: LAYER_TOKENS.modal + 10 }}
+      onClick={onClose}
+    >
       <div className='bg-white rounded-md shadow-lg border border-gray-200 w-64' onClick={e => e.stopPropagation()}>
         {/* Header */}
         <div className='flex items-center justify-between px-3 py-1.5 border-b border-gray-100'>
@@ -48,9 +55,16 @@ export const DiagnosticModal: React.FC<DiagnosticModalProps> = ({ isOpen, onClos
             Widget v{diagnosticData.version} (
             {diagnosticData.build === 'dev' ? 'dev' : diagnosticData.build.slice(0, 7)})
           </span>
-          <button onClick={onClose} className='text-gray-400 hover:text-gray-600 -mr-1'>
+          <Button
+            type='button'
+            variant='ghost'
+            size='sm'
+            onClick={onClose}
+            className='text-gray-400 hover:text-gray-600 -mr-1 min-w-0 p-0'
+            aria-label='Close diagnostic'
+          >
             <FiX className='w-3 h-3' />
-          </button>
+          </Button>
         </div>
 
         {/* Content */}
@@ -63,12 +77,15 @@ export const DiagnosticModal: React.FC<DiagnosticModalProps> = ({ isOpen, onClos
                   {row.value || 'N/A'}
                 </code>
                 {row.copyable && row.value && (
-                  <button
+                  <Button
+                    type='button'
+                    variant='ghost'
+                    size='sm'
                     onClick={() => copyToClipboard(row.value)}
-                    className='text-[9px] text-blue-500 hover:text-blue-600'
+                    className='text-[9px] text-blue-500 hover:text-blue-600 min-w-0 p-0 h-auto'
                   >
                     Copy
-                  </button>
+                  </Button>
                 )}
               </div>
             </div>

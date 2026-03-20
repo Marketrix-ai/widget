@@ -1,103 +1,296 @@
 @import 'tailwindcss';
 
-:root {
-  --mx-gray-50: #f9fafb;
-  --mx-gray-100: #f3f4f6;
-  --mx-gray-300: #d1d5db;
-  --mx-gray-400: #9ca3af;
-  --mx-gray-500: #6b7280;
-  --mx-gray-700: #374151;
-  --mx-gray-800: #1f2937;
-  --mx-gray-900: #111827;
+@custom-variant dark (&:is(.dark *));
+
+/* ════════════════════════════════════════════════════════════════
+   THEME
+   ════════════════════════════════════════════════════════════════ */
+
+/*
+ * :host is required so variables cascade inside closed Shadow DOM.
+ * :root provides defaults for non-shadow contexts (dev preview, tests).
+ */
+:root,
+:host {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(1 0 0);
+  --success: oklch(0.6 0.2 145);
+  --success-foreground: oklch(1 0 0);
+  --warning: oklch(0.75 0.18 85);
+  --warning-foreground: oklch(0.2 0 0);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.81 0.1 252);
+  --chart-2: oklch(0.62 0.19 260);
+  --chart-3: oklch(0.55 0.22 263);
+  --chart-4: oklch(0.49 0.22 264);
+  --chart-5: oklch(0.42 0.18 266);
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+  --font-sans:
+    'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+    'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+  --font-serif: ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  --radius: 0.625rem;
+  --shadow-x: 0;
+  --shadow-y: 1px;
+  --shadow-blur: 3px;
+  --shadow-spread: 0px;
+  --shadow-opacity: 0.1;
+  --shadow-color: oklch(0 0 0);
+  --shadow-2xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
+  --shadow-xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
+  --shadow-sm: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
+  --shadow: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
+  --shadow-md: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 2px 4px -1px hsl(0 0% 0% / 0.1);
+  --shadow-lg: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 4px 6px -1px hsl(0 0% 0% / 0.1);
+  --shadow-xl: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 8px 10px -1px hsl(0 0% 0% / 0.1);
+  --shadow-2xl: 0 1px 3px 0px hsl(0 0% 0% / 0.25);
+  --tracking-normal: 0em;
+  --spacing: 0.25rem;
+  --duration-animation: 300ms;
+  --duration-fade: 200ms;
+  --widget-width: 400px;
+  --widget-height: 600px;
+  --layer-tooltip: 1000;
+  --layer-popover: 1050;
+  --layer-dialog: 1100;
+  --layer-toast: 1200;
 }
 
-/* Custom styles for the widget */
-.marketrix-widget {
-  font-family:
-    'Inter',
-    -apple-system,
-    BlinkMacSystemFont,
-    'Segoe UI',
-    'Roboto',
-    'Oxygen',
-    'Ubuntu',
-    'Cantarell',
-    'Fira Sans',
-    'Droid Sans',
-    'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+.dark,
+:host(.dark) {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.269 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.371 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --destructive-foreground: oklch(0.985 0 0);
+  --success: oklch(0.55 0.2 145);
+  --success-foreground: oklch(1 0 0);
+  --warning: oklch(0.7 0.18 85);
+  --warning-foreground: oklch(0.2 0 0);
+  --border: oklch(0.275 0 0);
+  --input: oklch(0.325 0 0);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.81 0.1 252);
+  --chart-2: oklch(0.62 0.19 260);
+  --chart-3: oklch(0.55 0.22 263);
+  --chart-4: oklch(0.49 0.22 264);
+  --chart-5: oklch(0.42 0.18 266);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(0.275 0 0);
+  --sidebar-ring: oklch(0.439 0 0);
+  --font-sans:
+    'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+    'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+  --font-serif: ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  --radius: 0.625rem;
+  --shadow-x: 0;
+  --shadow-y: 1px;
+  --shadow-blur: 3px;
+  --shadow-spread: 0px;
+  --shadow-opacity: 0.1;
+  --shadow-color: oklch(0 0 0);
+  --shadow-2xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
+  --shadow-xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
+  --shadow-sm: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
+  --shadow: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
+  --shadow-md: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 2px 4px -1px hsl(0 0% 0% / 0.1);
+  --shadow-lg: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 4px 6px -1px hsl(0 0% 0% / 0.1);
+  --shadow-xl: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 8px 10px -1px hsl(0 0% 0% / 0.1);
+  --shadow-2xl: 0 1px 3px 0px hsl(0 0% 0% / 0.25);
 }
 
-/* Ensure widget appears above other content */
-.marketrix-widget-container {
-  position: fixed;
-  z-index: 2147483647;
-  pointer-events: auto;
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+  --font-serif: var(--font-serif);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --shadow-2xs: var(--shadow-2xs);
+  --shadow-xs: var(--shadow-xs);
+  --shadow-sm: var(--shadow-sm);
+  --shadow: var(--shadow);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+  --shadow-xl: var(--shadow-xl);
+  --shadow-2xl: var(--shadow-2xl);
+
+  --animate-dialog-overlay-in: dialog-overlay-in var(--duration-fade) ease-out;
+  --animate-dialog-content-in: dialog-content-in var(--duration-animation) ease-out;
+  --animate-menu-in: menu-in var(--duration-fade) ease-out;
+  --animate-popover-in: popover-in var(--duration-fade) ease-out;
+  --animate-tooltip-in: tooltip-in var(--duration-fade) ease-out;
+  --animate-toast-in: toast-in var(--duration-animation) ease-out;
+  --animate-fade-in: fade-in 0.5s ease-out;
+  --animate-slide-in-left: slide-in-left 0.6s ease-out;
+  --animate-slide-in-right: slide-in-right 0.6s ease-out;
 }
 
-/* Ensure all elements inside the widget can receive pointer events */
-.marketrix-widget,
-.marketrix-widget * {
-  pointer-events: auto;
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
 }
 
-/* Smooth transitions (excludes width/height so resizing stays instant) */
-.marketrix-widget * {
-  transition:
-    color 0.2s ease-in-out,
-    background-color 0.2s ease-in-out,
-    border-color 0.2s ease-in-out,
-    opacity 0.2s ease-in-out,
-    box-shadow 0.2s ease-in-out,
-    transform 0.2s ease-in-out;
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-animation: 0ms;
+    --duration-fade: 0ms;
+  }
 }
 
-/* Kill all transitions while actively resizing */
-[data-resizing='true'],
-[data-resizing='true'] * {
-  transition: none !important;
+/* ════════════════════════════════════════════════════════════════
+   KEYFRAMES
+   ════════════════════════════════════════════════════════════════ */
+
+@keyframes dialog-overlay-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
-.gradient-border {
-  border: 2px solid;
-  border-image: linear-gradient(to right, var(--mx-gray-700), var(--mx-gray-900)) 1;
+@keyframes dialog-content-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -48%);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
 }
 
-/* Shine effect on widget button icon hover —
-   Uses ::after pseudo-element so it layers above the icon image.
-   Triggered by hovering the parent button (.marketrix-widget-btn-shine). */
-.marketrix-widget-icon-shine {
-  position: relative;
+@keyframes menu-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
-.marketrix-widget-icon-shine::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: 20;
-  pointer-events: none;
-  border-radius: inherit;
-  background-image: linear-gradient(
-    45deg,
-    transparent 25%,
-    rgba(255, 255, 255, 0.3) 50%,
-    transparent 75%,
-    transparent 100%
-  );
-  background-size: 250% 250%;
-  background-position: -100% 0;
-  background-repeat: no-repeat;
-  transition: background-position 0s ease !important;
+@keyframes popover-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-.marketrix-widget-btn-shine:hover .marketrix-widget-icon-shine::after {
-  background-position: 200% 0;
-  transition: background-position 1.5s ease !important;
+@keyframes tooltip-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
-/* Fade-in animation for welcome text */
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
 @keyframes fade-in {
   from {
     opacity: 0;
@@ -109,11 +302,6 @@
   }
 }
 
-.animate-fade-in {
-  animation: fade-in 0.5s ease-out;
-}
-
-/* Slide-in-left animation for welcome text */
 @keyframes slide-in-left {
   from {
     opacity: 0;
@@ -136,15 +324,65 @@
   }
 }
 
-.animate-slide-in-left {
-  animation: slide-in-left 0.6s ease-out;
+/* ════════════════════════════════════════════════════════════════
+   WIDGET SHELL — pseudo-elements & complex selectors that
+   can't be expressed as Tailwind utilities
+   ════════════════════════════════════════════════════════════════ */
+
+.marketrix-widget {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-.animate-slide-in-right {
-  animation: slide-in-right 0.6s ease-out;
+.marketrix-widget-container {
+  position: fixed;
+  z-index: var(--widget-z-index, 1210);
+  pointer-events: auto;
 }
 
-/* Custom scrollbar styles */
+.marketrix-widget,
+.marketrix-widget * {
+  pointer-events: auto;
+  box-sizing: border-box;
+}
+
+.marketrix-widget,
+.marketrix-widget * {
+  transition:
+    color 0.2s ease-in-out,
+    background-color 0.2s ease-in-out,
+    border-color 0.2s ease-in-out,
+    opacity 0.2s ease-in-out,
+    box-shadow 0.2s ease-in-out,
+    transform 0.2s ease-in-out;
+}
+
+.marketrix-widget button,
+.marketrix-widget input,
+.marketrix-widget textarea,
+.marketrix-widget select {
+  font: inherit;
+}
+
+/*
+ * !important exceptions:
+ * - [data-resizing]: transition none during drag
+
+ * - scrollbar rules: hide buttons/corners across browsers
+ */
+
+[data-resizing='true'],
+[data-resizing='true'] * {
+  transition: none !important;
+}
+
+.gradient-border {
+  border: 2px solid;
+  border-image: linear-gradient(to right, var(--foreground), var(--foreground)) 1;
+}
+
+/* Scrollbar */
 .marketrix-widget ::-webkit-scrollbar,
 .marketrix-widget * ::-webkit-scrollbar {
   width: 6px;
@@ -153,28 +391,26 @@
 
 .marketrix-widget ::-webkit-scrollbar-track,
 .marketrix-widget * ::-webkit-scrollbar-track {
-  background: var(--mx-gray-100);
+  background: var(--muted);
   border-radius: 3px;
 }
 
 .marketrix-widget ::-webkit-scrollbar-thumb,
 .marketrix-widget * ::-webkit-scrollbar-thumb {
-  background: var(--mx-gray-400);
+  background: var(--muted-foreground);
   border-radius: 3px;
 }
 
 .marketrix-widget ::-webkit-scrollbar-thumb:hover,
 .marketrix-widget * ::-webkit-scrollbar-thumb:hover {
-  background: var(--mx-gray-500);
+  background: var(--foreground);
 }
 
-/* Firefox scrollbar styles */
 .marketrix-widget {
-  scrollbar-color: var(--mx-gray-100) var(--mx-gray-400);
+  scrollbar-color: var(--muted) var(--muted-foreground);
   scrollbar-width: thin;
 }
 
-/* Remove scrollbar arrows and edge curves */
 .marketrix-widget ::-webkit-scrollbar-button,
 .marketrix-widget * ::-webkit-scrollbar-button {
   display: none !important;
@@ -194,7 +430,6 @@
   display: none !important;
 }
 
-/* Additional arrow removal for all scrollbar elements */
 .marketrix-widget ::-webkit-scrollbar-button:vertical:start:decrement,
 .marketrix-widget ::-webkit-scrollbar-button:vertical:end:increment,
 .marketrix-widget ::-webkit-scrollbar-button:horizontal:start:decrement,
@@ -204,20 +439,6 @@
   height: 0 !important;
 }
 
-/* Specifically target up and down arrows */
-.marketrix-widget ::-webkit-scrollbar-button:vertical:start:decrement {
-  display: none !important;
-  width: 0 !important;
-  height: 0 !important;
-}
-
-.marketrix-widget ::-webkit-scrollbar-button:vertical:end:increment {
-  display: none !important;
-  width: 0 !important;
-  height: 0 !important;
-}
-
-/* Ensure all scrollbar buttons are completely hidden */
 .marketrix-widget ::-webkit-scrollbar-button {
   display: none !important;
   width: 0 !important;
@@ -226,7 +447,7 @@
   border: none !important;
 }
 
-/* Animated glow border for mode buttons during screen sharing */
+/* Glow effects */
 @keyframes glow-border-pulse {
   0%,
   100% {
@@ -243,7 +464,6 @@
   }
 }
 
-/* Full-page edge glow while processing */
 @keyframes marketrix-screen-edge-pulse {
   0%,
   100% {
@@ -258,10 +478,6 @@
   animation: marketrix-screen-edge-pulse 1.6s ease-in-out infinite;
 }
 
-/* Processing glow for widget button. CSS-only, no host deps.
-   Green (#31d06d) = default processing, Red (#D0342C) = error. */
-
-/* Shared glow base */
 .marketrix-widget-button-processing-glow,
 .marketrix-widget-button-error-glow {
   position: absolute;
@@ -276,8 +492,6 @@
   will-change: transform, opacity;
 }
 
-/* Activity ring: dash travels along icon border path (no rotation of shape).
-   Perimeter of rounded-rect ~160. Dash segment ~40, gap ~120. */
 @keyframes widget-activity-dash-travel {
   0% {
     stroke-dashoffset: 0;
@@ -334,7 +548,6 @@
   filter: drop-shadow(0 0 3px rgba(208, 52, 44, 0.7));
 }
 
-/* Default: green pulsating glow */
 @keyframes widget-glow-green {
   0%,
   100% {
@@ -365,7 +578,6 @@
   animation: widget-glow-green 2s ease-in-out infinite;
 }
 
-/* Error: red pulsating glow */
 @keyframes widget-glow-red {
   0%,
   100% {
@@ -394,4 +606,115 @@
 
 .marketrix-widget-button-error-glow {
   animation: widget-glow-red 1.5s ease-in-out infinite;
+}
+
+/* ════════════════════════════════════════════════════════════════
+   FIN INTEGRATION — launcher, messenger, message animations
+   ════════════════════════════════════════════════════════════════ */
+
+@keyframes launcher-entrance {
+  from {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-launcher-entrance {
+  animation: launcher-entrance 0.25s ease-out forwards;
+}
+
+@keyframes messenger-entrance {
+  0% {
+    opacity: 0;
+    transform: scale(0);
+  }
+  40% {
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes messenger-exit {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.95) translateY(8px);
+  }
+}
+
+.animate-messenger-entrance {
+  animation: messenger-entrance 300ms cubic-bezier(0, 1.2, 1, 1) forwards;
+}
+
+.animate-messenger-exit {
+  animation: messenger-exit 200ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes message-enter {
+  0% {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-message-enter {
+  animation: message-enter 200ms ease-out;
+}
+
+/* View slide transitions (Phase 3) */
+.view-slide-enter.forward {
+  transform: translateX(20px);
+  opacity: 0;
+}
+.view-slide-enter.back {
+  transform: translateX(-20px);
+  opacity: 0;
+}
+.view-slide-enter-active {
+  transform: translateX(0);
+  opacity: 1;
+  transition:
+    transform 150ms 150ms,
+    opacity 150ms 150ms;
+}
+.view-slide-enter-active.forward {
+  transform: translateX(0);
+  opacity: 1;
+}
+.view-slide-enter-active.back {
+  transform: translateX(0);
+  opacity: 1;
+}
+.view-slide-exit-active.forward {
+  transform: translateX(-20px);
+  opacity: 0;
+  transition:
+    transform 150ms,
+    opacity 150ms;
+}
+.view-slide-exit-active.back {
+  transform: translateX(20px);
+  opacity: 0;
+  transition:
+    transform 150ms,
+    opacity 150ms;
+}
+
+@media print {
+  .marketrix-widget {
+    display: none !important;
+  }
 }

@@ -29,11 +29,11 @@ navigations.
 
 ## Configuration Options
 
-| Setting       | Description              | Default / Example                 |
-| ------------- | ------------------------ | --------------------------------- |
-| Script URL    | URL to the widget bundle | `http://localhost:5174/index.mjs` |
-| Agent ID      | Agent identifier         | `10`                              |
-| Application ID | Application identifier  | `13`                              |
+| Setting        | Description              | Default / Example                 |
+| -------------- | ------------------------ | --------------------------------- |
+| Script URL     | URL to the widget bundle | `http://localhost:5174/index.mjs` |
+| Agent ID       | Agent identifier         | `10`                              |
+| Application ID | Application identifier   | `13`                              |
 
 ### Extended Attributes (content script)
 

@@ -1,30 +1,36 @@
 import React, { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 
+import { LAYER_TOKENS } from '../design-system/layers';
+import { semanticTokensToCssCustomProperties } from '../design-system/semantic-tokens';
+import { createSemanticTokens } from '../design-system/token-adapter';
+import { useScrollLock } from '../hooks/useScrollLock';
 import { useWidget } from '../hooks/useWidget';
 import type { MarketrixConfig, WidgetPosition } from '../types';
 import { addOpacity } from '../utils/format';
-import { ChatWindow } from './chat/ChatWindow';
 import { WidgetButton } from './layout/WidgetButton';
+import { MessengerShell } from './navigation/MessengerShell';
 import { ErrorDisplay } from './ui/ErrorDisplay';
 import { GreetingToast } from './ui/GreetingToast';
 
 // Lazy load the dev panel (only in development)
 const DomTestPanel = lazy(() => import('./dev/DomTestPanel'));
-const WIDGET_Z_INDEX_BASE = 2147483000;
 
 interface MarketrixWidgetProps {
   config: MarketrixConfig;
 }
 
-// Error Boundary for ChatWindow
-class WidgetErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean }> {
+// Error Boundary for MessengerShell
+class WidgetErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean; error: Error | null }
+> {
   constructor(props: { children: React.ReactNode }) {
     super(props);
-    this.state = { hasError: false };
+    this.state = { hasError: false, error: null };
   }
 
-  static getDerivedStateFromError() {
-    return { hasError: true };
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
@@ -33,6 +39,9 @@ class WidgetErrorBoundary extends React.Component<{ children: React.ReactNode },
 
   render() {
     if (this.state.hasError) {
+      {
+        console.error('Widget render error', this.state.error);
+      }
       return null; // Fail gracefully by rendering nothing instead of crashing
     }
 
@@ -43,6 +52,7 @@ class WidgetErrorBoundary extends React.Component<{ children: React.ReactNode },
 export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
   const [_isScreenSharing, setIsScreenSharing] = useState(false);
   const [showDevPanel, setShowDevPanel] = useState(false);
+  const isDevBuild = import.meta.env.DEV;
   const [showGreeting, setShowGreeting] = useState(false);
 
   const {
@@ -54,6 +64,9 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
   } = useWidget({
     config,
   });
+
+  useScrollLock(state.isOpen);
+
   const [widgetPosition, setWidgetPosition] = useState<WidgetPosition>(
     (config.widget_position as WidgetPosition | undefined) ?? 'bottom_right',
   );
@@ -65,6 +78,10 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
 
   // Keyboard shortcut for dev panel (Ctrl+Shift+D)
   useEffect(() => {
+    if (!isDevBuild) {
+      return;
+    }
+
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.shiftKey && e.key === 'D') {
         e.preventDefault();
@@ -74,7 +91,7 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [isDevBuild]);
 
   useEffect(() => {
     const fallback = (settings.widget_position as WidgetPosition | undefined) ?? 'bottom_right';
@@ -128,33 +145,42 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
     return null;
   }
 
-  const effectiveWidgetZIndex = Math.max(settings.widget_position_z_index ?? 0, WIDGET_Z_INDEX_BASE + 10);
+  const semanticTokens = createSemanticTokens(settings);
+  const semanticTokenStyles = semanticTokensToCssCustomProperties(semanticTokens);
+
+  const effectiveWidgetZIndex = Math.max(settings.widget_position_z_index ?? 0, LAYER_TOKENS.panel);
 
   const effectiveConfig = {
     ...settings,
     widget_position: widgetPosition,
     widget_position_z_index: effectiveWidgetZIndex,
     // Preserve top-level config props that come from script tag attributes / init config
-    // (not from API settings) so they propagate to child components like ChatWindow
+    // (not from API settings) so they propagate to child components like MessengerShell
     show_widget: config.show_widget,
     use_screenshare: config.use_screenshare,
   };
   const showProcessingFeedback = state.isLoading || state.isTaskRunning;
   const customStyles = {
-    '--widget-width': settings.widget_width,
-    '--widget-height': settings.widget_height,
-    '--widget-border-radius': settings.widget_border_radius,
-    '--widget-font-size': settings.widget_font_size,
-    '--widget-primary-color': settings.widget_accent_color,
-    '--widget-secondary-color': settings.widget_secondary_color,
-    '--widget-background': settings.widget_background_color,
-    '--widget-text-color': settings.widget_text_color,
-    '--widget-border-color': settings.widget_border_color,
+    ...semanticTokenStyles,
     '--widget-z-index': effectiveWidgetZIndex,
-    '--widget-shadow': settings.widget_shadow,
-    '--widget-animation-duration': settings.widget_animation_duration,
-    '--widget-fade-duration': settings.widget_fade_duration,
   } as React.CSSProperties;
+
+  const gradientPositionStyle = (() => {
+    const size = 500;
+    const base: React.CSSProperties = {
+      position: 'fixed',
+      width: `${size}px`,
+      height: `${size}px`,
+      pointerEvents: 'none',
+      zIndex: LAYER_TOKENS.panel - 1,
+      background: `radial-gradient(circle at ${widgetPosition.includes('right') ? '100%' : '0%'} ${widgetPosition.includes('bottom') ? '100%' : '0%'}, ${addOpacity(settings.widget_accent_color, 0.08)} 0%, transparent 70%)`,
+    };
+    if (widgetPosition.includes('top')) base.top = 0;
+    else base.bottom = 0;
+    if (widgetPosition.includes('right')) base.right = 0;
+    else base.left = 0;
+    return base;
+  })();
 
   return (
     <div
@@ -162,16 +188,40 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
       style={{ ...customStyles, ...(isPreviewMode && { width: '100%', height: '100%' }) }}
       data-widget-mode={settings?.widget_feature_human ? 'hybrid' : 'ai'}
     >
+      {state.isOpen && <div className='animate-fade-in' style={gradientPositionStyle} aria-hidden />}
       {showProcessingFeedback && (
         <div
           className='marketrix-screen-edge-glow fixed inset-0'
           style={{
             boxShadow: `inset 0 0 22px 2px ${addOpacity(settings.widget_accent_color, 0.72)}, inset 0 0 46px 10px ${addOpacity(settings.widget_accent_color, 0.28)}`,
             pointerEvents: 'none',
-            zIndex: WIDGET_Z_INDEX_BASE,
+            zIndex: LAYER_TOKENS.overlay,
           }}
         />
       )}
+
+      <WidgetErrorBoundary>
+        <MessengerShell
+          config={effectiveConfig}
+          isOpen={state.isOpen}
+          isMinimized={state.isMinimized}
+          messages={state.messages}
+          currentMode={state.currentMode}
+          isTaskRunning={state.isTaskRunning}
+          taskProgress={state.taskProgress}
+          activeView={state.activeView}
+          onClose={actions.closeWidget}
+          onSendMessage={actions.sendMessage}
+          onSetMode={actions.setMode}
+          onAddMessage={actions.addMessage}
+          onUpdateMessage={actions.updateMessage}
+          onRemoveMessage={actions.removeMessage}
+          onStopTask={actions.stopTask}
+          onClearChat={actions.clearChatHistory}
+          onScreenSharingChange={setIsScreenSharing}
+          setActiveView={actions.setActiveView}
+        />
+      </WidgetErrorBoundary>
 
       <WidgetButton
         config={effectiveConfig}
@@ -186,30 +236,14 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
         onPositionChange={handlePositionChange}
       />
 
-      <WidgetErrorBoundary>
-        <ChatWindow
-          config={effectiveConfig}
-          isOpen={state.isOpen}
-          isMinimized={state.isMinimized}
-          isLoading={state.isLoading}
-          messages={state.messages}
-          currentMode={state.currentMode}
-          agentAvailable={state.agentAvailable}
-          isTaskRunning={state.isTaskRunning}
-          taskProgress={state.taskProgress}
-          onClose={actions.closeWidget}
-          onSendMessage={actions.sendMessage}
-          onSetMode={actions.setMode}
-          onAddMessage={actions.addMessage}
-          onUpdateMessage={actions.updateMessage}
-          onRemoveMessage={actions.removeMessage}
-          onStopTask={actions.stopTask}
-          onClearChat={actions.clearChatHistory}
-          onScreenSharingChange={setIsScreenSharing}
+      {state.error && (
+        <ErrorDisplay
+          error={state.error}
+          onClose={() => actions.clearError()}
+          onRetry={() => actions.clearError()}
+          position={widgetPosition}
         />
-      </WidgetErrorBoundary>
-
-      {state.error && <ErrorDisplay error={state.error} onClose={() => actions.clearError()} />}
+      )}
 
       {showGreeting && !state.error && settings.widget_greeting && (
         <GreetingToast
@@ -220,7 +254,7 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
       )}
 
       {/* Dev-only DOM Test Panel */}
-      {showDevPanel && (
+      {isDevBuild && showDevPanel && (
         <Suspense fallback={null}>
           <DomTestPanel />
         </Suspense>

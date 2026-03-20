@@ -157,10 +157,12 @@ export class SessionRecorder {
       batchEvents = [];
       batchBytes = 0;
       while (this.eventQueue.length > 0) {
-        const next = this.eventQueue[0]!;
+        const next = this.eventQueue[0];
+        if (next === undefined) break;
         const nextSize = JSON.stringify(next).length;
         if (batchBytes + nextSize > MAX_BATCH_BYTES && batchEvents.length > 0) break;
-        batchEvents.push(this.eventQueue.shift()!);
+        const shifted = this.eventQueue.shift();
+        if (shifted !== undefined) batchEvents.push(shifted);
         batchBytes += nextSize;
         this.estimatedQueueBytes -= nextSize;
       }

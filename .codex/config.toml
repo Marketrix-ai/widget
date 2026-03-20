@@ -1,0 +1,12 @@
+[mcp_servers.chrome-devtools]
+command = "cmd"
+args = ["/c", "npx", "-y", "chrome-devtools-mcp@latest",]
+env = { SystemRoot = "C:\\Windows", PROGRAMFILES = "C:\\Program Files" }
+
+[mcp_servers.context7]
+command = "npx"
+args = ["-y", "@upstash/context7-mcp",]
+
+[mcp_servers.postgresql]
+command = "npx"
+args = ["-y", "@bytebase/dbhub@latest", "--transport", "stdio", "--config", "c:/marketrix.ai/dbhub.toml"]

@@ -36,60 +36,36 @@ export const SuggestedActions: React.FC<SuggestedActionsProps> = ({
           onClick={e => onActionClick(action, e)}
           disabled={hasPendingMessage}
           className={`
-            w-full flex items-center gap-1 font-inter font-normal text-xs px-2.5 py-2 rounded-lg
-            transition-all duration-200 text-left
-            group
-            leading-tight
-            ${hasPendingMessage ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:shadow-md hover:scale-[1.01] active:scale-100'}
+            w-full flex items-center justify-center gap-1 font-inter font-normal text-xs px-3 py-2 rounded-full
+            transition-[background-color,color,border-color] duration-[250ms] ease-in-out text-left
+            border border-solid
+            ${hasPendingMessage ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}
           `}
           style={{
-            backgroundColor: hasPendingMessage
-              ? addOpacity(settings.widget_secondary_color, 0.1)
-              : addOpacity(settings.widget_secondary_color, 0.2),
-            borderColor: hasPendingMessage
-              ? addOpacity(settings.widget_secondary_color, 0.15)
-              : addOpacity(settings.widget_secondary_color, 0.3),
+            backgroundColor: 'rgba(0,0,0,0.05)',
+            borderColor: 'rgba(0,0,0,0.12)',
             color: hasPendingMessage ? addOpacity(settings.widget_text_color, 0.5) : settings.widget_text_color,
           }}
           onMouseEnter={e => {
             if (!hasPendingMessage) {
-              e.currentTarget.style.backgroundColor = addOpacity(settings.widget_secondary_color, 0.3);
-              e.currentTarget.style.borderColor = addOpacity(settings.widget_secondary_color, 0.4);
+              e.currentTarget.style.backgroundColor = settings.widget_text_color;
+              e.currentTarget.style.color = '#ffffff';
+              e.currentTarget.style.borderColor = settings.widget_text_color;
             }
           }}
           onMouseLeave={e => {
             if (!hasPendingMessage) {
-              e.currentTarget.style.backgroundColor = addOpacity(settings.widget_secondary_color, 0.2);
-              e.currentTarget.style.borderColor = addOpacity(settings.widget_secondary_color, 0.3);
+              e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.05)';
+              e.currentTarget.style.color = settings.widget_text_color;
+              e.currentTarget.style.borderColor = 'rgba(0,0,0,0.12)';
             }
           }}
         >
-          <span
-            className='flex-shrink-0 flex items-center justify-center'
-            style={{
-              width: '0.75rem',
-              height: '0.75rem',
-              lineHeight: '0.75rem',
-              color: settings.widget_secondary_color,
-            }}
-          >
-            {action.icon}
-          </span>
-          <span className='font-normal leading-none' style={{ color: settings.widget_text_color }}>
+          <span className='font-normal leading-none'>
             {action.type === 'show' ? (
-              <>
-                <span className='font-semibold' style={{ color: settings.widget_secondary_color }}>
-                  Show me{' '}
-                </span>
-                {action.text.replace(/^Show me\s*/i, '')}
-              </>
+              <>Show me {action.text.replace(/^Show me\s*/i, '')}</>
             ) : action.type === 'do' ? (
-              <>
-                <span className='font-semibold' style={{ color: settings.widget_secondary_color }}>
-                  Do{' '}
-                </span>
-                {action.text.replace(/^Do\s*/i, '')}
-              </>
+              <>Do {action.text.replace(/^Do\s*/i, '')}</>
             ) : (
               action.text
             )}

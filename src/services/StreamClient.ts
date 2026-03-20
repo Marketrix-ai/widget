@@ -88,7 +88,15 @@ export class StreamClient {
       }
 
       // Call the oRPC streaming endpoint — returns an async iterator for eventIterator outputs
-      const iterator = await sdk.widgetStream(streamInput as any, { signal });
+      type WidgetStreamInput = {
+        chat_id: string;
+        tab_id?: string;
+        marketrix_id?: string;
+        marketrix_key?: string;
+        agent_id?: number;
+        application_id?: number;
+      };
+      const iterator = await sdk.widgetStream(streamInput as WidgetStreamInput, { signal });
 
       this.setStatus('connected');
       this.reconnectAttempts = 0;

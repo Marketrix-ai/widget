@@ -7,7 +7,7 @@ export interface WidgetValidationResult {
   error?: string;
   widget?: WidgetData;
   agent?: AgentData;
-  connection?: ApplicationData;
+  application?: ApplicationData;
 }
 
 /**
@@ -30,7 +30,7 @@ export class WidgetValidationService {
       return this.validateByMarketrixId(config.mtxId, config.mtxKey);
     }
     if (config.mtxApp && config.mtxAgent) {
-      return this.validateByAgentAndConnection(config.mtxApp, config.mtxAgent);
+      return this.validateByAgentAndApplication(config.mtxApp, config.mtxAgent);
     }
     return {
       isValid: false,
@@ -115,7 +115,7 @@ export class WidgetValidationService {
       try {
         const agent = await sdk.agentGet({ agent_id: activeWidget.agent_id });
 
-        // Step 3: Validate connection ID exists
+        // Step 3: Validate application ID exists
         if (!activeWidget.application_id) {
           return {
             isValid: false,
@@ -125,21 +125,21 @@ export class WidgetValidationService {
           };
         }
 
-        console.log('Validating connection ID...', activeWidget.application_id);
+        console.log('Validating application ID...', activeWidget.application_id);
 
-        const connection = await sdk.applicationGet({ application_id: activeWidget.application_id });
+        const application = await sdk.applicationGet({ application_id: activeWidget.application_id });
 
         console.log('Widget validation successful', {
           widget: activeWidget.id,
           agent: agent.id,
-          connection: connection.id,
+          application: application.id,
         });
 
         return {
           isValid: true,
           widget: activeWidget,
           agent,
-          connection,
+          application,
         };
       } catch (agentError) {
         console.error('Error validating agent:', agentError);
@@ -157,22 +157,22 @@ export class WidgetValidationService {
 
   /**
    * Validate by mtxApp and mtxAgent directly
-   * Validates connection and agent by ID
+   * Validates application and agent by ID
    */
-  private async validateByAgentAndConnection(mtxApp: number, mtxAgent: number): Promise<WidgetValidationResult> {
+  private async validateByAgentAndApplication(mtxApp: number, mtxAgent: number): Promise<WidgetValidationResult> {
     try {
-      console.log('Validating agent and connection by ID...', { mtxApp, mtxAgent });
+      console.log('Validating application and agent by ID...', { mtxApp, mtxAgent });
 
-      // Step 1: Validate connection exists
-      const connection = await sdk.applicationGet({ application_id: mtxApp });
+      // Step 1: Validate application exists
+      const application = await sdk.applicationGet({ application_id: mtxApp });
 
-      // Log connection data as object
-      console.log('Connection found:', {
-        id: connection.id,
-        name: connection.name,
-        type: connection.type,
-        url: connection.url,
-        allowed_domains: connection.allowed_domains,
+      // Log application data as object
+      console.log('Application found:', {
+        id: application.id,
+        name: application.name,
+        type: application.type,
+        url: application.url,
+        allowed_domains: application.allowed_domains,
       });
 
       // Step 2: Validate agent exists
@@ -190,8 +190,8 @@ export class WidgetValidationService {
       if (agent.application_id !== mtxApp) {
         return {
           isValid: false,
-          error: `Agent ID ${mtxAgent} belongs to connection ID ${agent.application_id}, but provided connection ID is ${mtxApp}. Please verify the connection ID matches the agent's application_id.`,
-          connection,
+          error: `Agent ID ${mtxAgent} belongs to application ID ${agent.application_id}, but provided application ID is ${mtxApp}. Please verify the application ID matches the agent's application_id.`,
+          application,
           agent,
         };
       }
@@ -201,12 +201,12 @@ export class WidgetValidationService {
 
       return {
         isValid: true,
-        connection,
+        application,
         agent,
       };
     } catch (error) {
-      console.error('Agent and Connection validation error:', error);
-      return handleApiError(error, 'Agent and Connection validation', this.config);
+      console.error('Agent and application validation error:', error);
+      return handleApiError(error, 'Agent and application validation', this.config);
     }
   }
 }

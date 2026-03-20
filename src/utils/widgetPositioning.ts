@@ -1,7 +1,10 @@
+import type React from 'react';
+
 import type { WidgetPosition } from '../types';
 
+const EDGE_OFFSET_PX = 20;
+
 export const getPositionClasses = (position: WidgetPosition): string => {
-  // Use exact positioning for precise widget placement
   switch (position) {
     case 'bottom_right':
       return 'bottom-5 right-5';
@@ -13,6 +16,28 @@ export const getPositionClasses = (position: WidgetPosition): string => {
       return 'top-5 left-5';
     default:
       return 'bottom-5 right-5';
+  }
+};
+
+const LAUNCHER_SIZE_PX = 56;
+const LAUNCHER_GAP_PX = 12;
+const PANEL_EDGE_OFFSET_PX = EDGE_OFFSET_PX + LAUNCHER_SIZE_PX + LAUNCHER_GAP_PX; // 88px
+
+/** Panel position inline styles — offset from edge to clear the launcher button. */
+export const getPanelPositionStyle = (position: WidgetPosition): React.CSSProperties => {
+  const primary = `${PANEL_EDGE_OFFSET_PX}px`;
+  const secondary = `${EDGE_OFFSET_PX}px`;
+  switch (position) {
+    case 'bottom_right':
+      return { bottom: primary, right: secondary };
+    case 'bottom_left':
+      return { bottom: primary, left: secondary };
+    case 'top_right':
+      return { top: primary, right: secondary };
+    case 'top_left':
+      return { top: primary, left: secondary };
+    default:
+      return { bottom: primary, right: secondary };
   }
 };
 
@@ -54,8 +79,6 @@ export const getNearestCorner = (
   if (!isBottom && isRight) return 'top_right';
   return 'top_left';
 };
-
-const EDGE_OFFSET_PX = 20;
 
 /** Anchor top-left of widget (px) for a corner, given viewport and widget size. */
 export const getAnchorTopLeft = (

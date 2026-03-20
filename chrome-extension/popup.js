@@ -14,7 +14,7 @@ chrome.storage.local.get(['enabled', 'config'], result => {
   if (result.config) {
     scriptSrcInput.value = result.config.scriptSrc || '';
     agentIdInput.value = result.config.agentId || '';
-    applicationIdInput.value = result.config.applicationId || '';
+    applicationIdInput.value = result.config.applicationId || result.config.connectionId || '';
   } else {
     // Default values
     scriptSrcInput.value = 'http://localhost:5174/index.mjs';

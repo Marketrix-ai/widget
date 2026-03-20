@@ -1,7 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
 
-import { DARK_THEME_COLORS } from '../../constants/theme';
-
 interface VideoStreamDisplayProps {
   stream: MediaStream | null;
   isUserMessage?: boolean;
@@ -94,8 +92,8 @@ export const VideoStreamDisplay: React.FC<VideoStreamDisplayProps> = ({ stream, 
     <div
       className={`w-full overflow-hidden mb-1 ${borderRadiusClass} relative group`}
       style={{
-        backgroundColor: DARK_THEME_COLORS.black,
-        boxShadow: `0 4px 6px -1px ${DARK_THEME_COLORS.black10}, 0 2px 4px -1px ${DARK_THEME_COLORS.black06}`,
+        backgroundColor: '#000000',
+        boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)',
       }}
     >
       {/* Loading overlay */}
@@ -146,7 +144,7 @@ export const VideoStreamDisplay: React.FC<VideoStreamDisplayProps> = ({ stream, 
         }`}
         style={{
           minHeight: '120px',
-          background: DARK_THEME_COLORS.videoGradient,
+          background: 'linear-gradient(135deg, #111827 0%, #374151 100%)',
         }}
       />
 
@@ -155,7 +153,7 @@ export const VideoStreamDisplay: React.FC<VideoStreamDisplayProps> = ({ stream, 
         <div
           className='absolute top-2 right-2 flex items-center gap-1.5 px-2 py-1 rounded-full bg-gray-700/90 backdrop-blur-sm z-20 animate-fade-in'
           style={{
-            boxShadow: `0 2px 8px ${DARK_THEME_COLORS.liveBadgeShadow}`,
+            boxShadow: '0 2px 8px rgba(31, 41, 55, 0.4)',
           }}
         >
           <div className='relative flex items-center justify-center'>

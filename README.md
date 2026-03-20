@@ -17,12 +17,12 @@ Embeddable support widget for Marketrix. Integrates into any website via script 
 
 ### Script Attributes
 
-| Attribute      | Type   | Required | Description                                     |
-| -------------- | ------ | -------- | ----------------------------------------------- |
-| `mtx-id`       | string | \*       | Your Marketrix ID (production mode)             |
-| `mtx-key`      | string | \*       | Your Marketrix API key (production mode)        |
-| `mtx-app`      | number | \*       | Application ID (dev mode)                       |
-| `mtx-agent`    | number | \*       | Agent ID (dev mode)                             |
+| Attribute      | Type   | Required | Description                                       |
+| -------------- | ------ | -------- | ------------------------------------------------- |
+| `mtx-id`       | string | \*       | Your Marketrix ID (production mode)               |
+| `mtx-key`      | string | \*       | Your Marketrix API key (production mode)          |
+| `mtx-app`      | number | \*       | Application ID (dev mode)                         |
+| `mtx-agent`    | number | \*       | Agent ID (dev mode)                               |
 | `mtx-api-host` | string | yes      | API server URL (e.g., `https://api.marketrix.ai`) |
 
 \*Either `mtx-id` + `mtx-key` (production) OR `mtx-app` + `mtx-agent` (dev) must be provided.
@@ -40,7 +40,14 @@ Widget appearance and behavior are configured through the API. Settings include 
 ### `initWidget`
 
 ```typescript
-import { initWidget, unmountWidget, updateMarketrixConfig, startRecording, stopRecording, getRecordingState } from '@marketrix.ai/widget';
+import {
+  initWidget,
+  unmountWidget,
+  updateMarketrixConfig,
+  startRecording,
+  stopRecording,
+  getRecordingState,
+} from '@marketrix.ai/widget';
 
 // Production
 await initWidget({
@@ -79,8 +86,8 @@ import { MarketrixWidget } from '@marketrix.ai/widget';
 function App() {
   return (
     <MarketrixWidget
-      settings={{ widget_enabled: true, widget_position: 'bottom_right', /* ... */ }}
-      mtxApiHost="https://api.marketrix.ai"
+      settings={{ widget_enabled: true, widget_position: 'bottom_right' /* ... */ }}
+      mtxApiHost='https://api.marketrix.ai'
     />
   );
 }
@@ -145,6 +152,13 @@ interface MarketrixConfig {
 
 ### Prerequisites
 
+| Workflow       | Trigger                          | Action                                                              |
+| -------------- | -------------------------------- | ------------------------------------------------------------------- |
+| `validate.yml` | Push / PR to `dev`, `main`       | Type check, lint, format, tests, build, visual, a11y, bundle checks |
+| `build.yml`    | Tag push (`v*`) or push to `dev` | Build Docker image, push to ACR; publish to npm on tag              |
+
+Image builds produce `marketrix.azurecr.io/widget:{version}`. Tag pushes also publish `@marketrix.ai/widget` to npm. Deployment to dev/prod is handled by the centralized deploy workflow (e.g. `deploy.yml` in infra). Dev branch pushes do not build images.
+
 - Node.js 18+
 - npm
 
@@ -194,4 +208,34 @@ Output files:
 | `validate.yml` | Push to `dev` / PR | Type check, lint, build                         |
 | `build.yml`    | Tag push (`v*`)    | Build Docker image, push to ACR, publish to npm |
 
-Tag pushes publish `@marketrix.ai/widget` to npm. Deployment is handled by the centralized `deploy.yml` workflow in `infra`.
+## Dependencies
+
+### Production
+
+- `react` / `react-dom` v19 (peer dependency)
+- `@rrweb/record` - Session recording
+- `@orpc/client` / `@orpc/contract` v1 - Type-safe API client (oRPC)
+- `react-icons` - Icons
+- `zod` - Schema validation
+
+### Development
+
+- Vite 6
+- Tailwind CSS v4 (via `@tailwindcss/vite` plugin)
+- TypeScript 5
+- Vitest + Testing Library (unit and integration tests)
+- ESLint + Prettier
+- Terser for production minification
+
+**Quality gates (run before PR):** `npm run type-check`, `npm run lint:check`, `npm run format:check`, `npm run test:run`, `npm run build`, `npm run visual:check`, `npm run a11y:check`, `npm run bundle:check`. See `.github/pull_request_template.md` and `docs/release-ui-checklist.md`.
+
+## License
+
+Apache License 2.0 - see LICENSE file for details.
+
+## Support
+
+For support and questions, please contact the Marketrix team or create an issue
+in the repository.
+
+[Back to top](#marketrix-in-app-support-widget)
