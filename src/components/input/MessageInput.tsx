@@ -74,7 +74,7 @@ export const MessageInput = React.forwardRef<HTMLTextAreaElement, Omit<MessageIn
   const iconBtnStyle = { color: settings.widget_text_color };
 
   return (
-    <div className='py-2 pr-2 bg-transparent'>
+    <div className='py-1.5 pr-2 bg-transparent'>
       <style>{`.message-input-textarea::placeholder { color: ${placeholderColor}; }`}</style>
       <div className='flex items-end gap-2'>
         <div className='flex-1 relative flex flex-col gap-1'>

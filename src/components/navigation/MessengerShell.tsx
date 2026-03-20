@@ -200,7 +200,7 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
       >
         {isMinimized ? (
           <div
-            className='flex items-center justify-between px-3 h-12 border-b'
+            className='flex items-center justify-between px-3 h-10 border-b'
             style={{ borderColor: settings.widget_border_color }}
           >
             <span className='text-sm font-medium' style={{ color: settings.widget_text_color }}>
@@ -262,7 +262,7 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
                     id='view-help'
                     role='tabpanel'
                     aria-labelledby='tab-help'
-                    className='flex items-center justify-center h-full p-4 text-sm opacity-70'
+                    className='flex items-center justify-center h-full p-3 text-sm opacity-70'
                     style={{ color: settings.widget_text_color }}
                   >
                     Help – coming soon
@@ -273,7 +273,7 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
                     id='view-news'
                     role='tabpanel'
                     aria-labelledby='tab-news'
-                    className='flex items-center justify-center h-full p-4 text-sm opacity-70'
+                    className='flex items-center justify-center h-full p-3 text-sm opacity-70'
                     style={{ color: settings.widget_text_color }}
                   >
                     News – coming soon

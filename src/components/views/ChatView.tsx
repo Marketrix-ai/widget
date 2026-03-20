@@ -480,7 +480,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
         />
       )}
 
-      <div className='flex-1 overflow-hidden py-2 flex flex-col min-h-0'>
+      <div className='flex-1 overflow-hidden py-1 flex flex-col min-h-0'>
         <ChatErrorBoundary>
           <MessageList
             messages={messages}

@@ -27,7 +27,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ config, messages, onNavigate
 
   return (
     <div className='flex flex-col h-full overflow-hidden' id='view-home' role='tabpanel' aria-labelledby='tab-home'>
-      <div className='flex-1 overflow-y-auto p-4 space-y-4'>
+      <div className='flex-1 overflow-y-auto p-3 space-y-3'>
         {/* Hero / greeting */}
         <div className='flex flex-col gap-1'>
           <div className='flex items-center gap-2'>
