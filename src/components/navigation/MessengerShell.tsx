@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import MarketrixIcon from '../../assets/marketrix-icon.svg';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
@@ -9,6 +9,7 @@ import type { ChatMessage, InstructionType, MarketrixConfig, TaskProgress, Widge
 import { addOpacity } from '../../utils/format';
 import type { SuggestedActionItem } from '../../utils/suggestedActions';
 import { getPanelPositionStyle } from '../../utils/widgetPositioning';
+import { Button } from '../base/Button';
 import { ChatView } from '../views/ChatView';
 import { HomeView } from '../views/HomeView';
 import { TabBar } from './TabBar';
@@ -177,6 +178,33 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
     onSendMessage(action.text, action.type, undefined, undefined, true);
   };
 
+  // Header menu + screen share state (lifted from ChatView)
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
+  const [headerScreenSharing, setHeaderScreenSharing] = useState(false);
+  const moreMenuRef = useRef<HTMLDivElement>(null);
+  const chatViewStartScreenShareRef = useRef<(() => void) | null>(null);
+  const chatViewStopScreenShareRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (moreMenuRef.current && !moreMenuRef.current.contains(e.target as Node)) {
+        setMoreMenuOpen(false);
+      }
+    };
+    if (moreMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [moreMenuOpen]);
+
+  const handleHeaderScreenSharingChange = useCallback(
+    (isSharing: boolean) => {
+      setHeaderScreenSharing(isSharing);
+      onScreenSharingChange?.(isSharing);
+    },
+    [onScreenSharingChange],
+  );
+
   return (
     <div
       className={`${positionClass} rounded-[var(--radius)] pointer-events-auto`}
@@ -249,21 +277,125 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
                   </p>
                 </div>
               </div>
-              <button
-                type='button'
-                onClick={onClose}
-                className='p-1.5 rounded-full opacity-60 hover:opacity-100 transition-opacity flex-shrink-0'
-                style={{ color: settings.widget_text_color }}
-                aria-label='Close'
-              >
-                <svg className='w-4 h-4' fill='currentColor' viewBox='0 0 20 20'>
-                  <path
-                    fillRule='evenodd'
-                    d='M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z'
-                    clipRule='evenodd'
-                  />
-                </svg>
-              </button>
+              <div className='flex items-center gap-0.5 flex-shrink-0'>
+                {activeView === 'chat' && (
+                  <>
+                    {config.use_screenshare !== false && !headerScreenSharing && (
+                      <Button
+                        type='button'
+                        variant='ghost'
+                        size='sm'
+                        onClick={() => chatViewStartScreenShareRef.current?.()}
+                        className='p-1.5 rounded-full opacity-60 hover:opacity-100 transition-opacity'
+                        style={{ color: settings.widget_text_color }}
+                        aria-label='Start screen sharing'
+                        title='Share screen'
+                      >
+                        <svg className='w-4 h-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                          <path
+                            strokeLinecap='round'
+                            strokeLinejoin='round'
+                            strokeWidth={2}
+                            d='M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z'
+                          />
+                        </svg>
+                      </Button>
+                    )}
+                    {headerScreenSharing && (
+                      <Button
+                        type='button'
+                        variant='ghost'
+                        size='sm'
+                        onClick={() => chatViewStopScreenShareRef.current?.()}
+                        className='p-1.5 rounded-full opacity-80 hover:opacity-100 transition-opacity flex items-center gap-1'
+                        style={{ color: settings.widget_text_color }}
+                        aria-label='Stop screen sharing'
+                        title='Stop screen sharing'
+                      >
+                        <span className='w-1.5 h-1.5 rounded-full bg-current animate-pulse' />
+                        <svg className='w-4 h-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                          <path
+                            strokeLinecap='round'
+                            strokeLinejoin='round'
+                            strokeWidth={2}
+                            d='M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z'
+                          />
+                        </svg>
+                      </Button>
+                    )}
+                    <div className='relative' ref={moreMenuRef}>
+                      <Button
+                        type='button'
+                        variant='ghost'
+                        size='sm'
+                        onClick={() => setMoreMenuOpen(prev => !prev)}
+                        className='p-1.5 rounded-full opacity-60 hover:opacity-100 transition-opacity'
+                        style={{ color: settings.widget_text_color }}
+                        aria-label='More options'
+                        aria-haspopup='true'
+                        aria-expanded={moreMenuOpen}
+                      >
+                        <svg className='w-4 h-4' fill='currentColor' viewBox='0 0 20 20'>
+                          <path d='M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z' />
+                        </svg>
+                      </Button>
+                      {moreMenuOpen && (
+                        <div
+                          className='absolute right-0 top-full mt-1 py-1 rounded-lg shadow-lg border min-w-[140px] z-50'
+                          style={{
+                            backgroundColor: '#ffffff',
+                            borderColor: settings.widget_border_color,
+                          }}
+                          role='menu'
+                        >
+                          {onClearChat && (
+                            <button
+                              type='button'
+                              className='w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded-md transition-colors'
+                              style={{ color: settings.widget_text_color }}
+                              onClick={() => {
+                                const result = onClearChat();
+                                if (result instanceof Promise) result.catch(e => console.error(e));
+                                setMoreMenuOpen(false);
+                              }}
+                              role='menuitem'
+                            >
+                              Clear chat
+                            </button>
+                          )}
+                          <button
+                            type='button'
+                            className='w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded-md transition-colors'
+                            style={{ color: settings.widget_text_color }}
+                            onClick={() => {
+                              window.open('https://marketrix.ai', '_blank', 'noopener,noreferrer');
+                              setMoreMenuOpen(false);
+                            }}
+                            role='menuitem'
+                          >
+                            About Marketrix
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
+                <button
+                  type='button'
+                  onClick={onClose}
+                  className='p-1.5 rounded-full opacity-60 hover:opacity-100 transition-opacity flex-shrink-0'
+                  style={{ color: settings.widget_text_color }}
+                  aria-label='Close'
+                >
+                  <svg className='w-4 h-4' fill='currentColor' viewBox='0 0 20 20'>
+                    <path
+                      fillRule='evenodd'
+                      d='M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z'
+                      clipRule='evenodd'
+                    />
+                  </svg>
+                </button>
+              </div>
             </div>
 
             <div className='flex-1 overflow-hidden flex flex-col min-h-0'>
@@ -291,7 +423,9 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
                     onStopTask={onStopTask}
                     onClearChat={onClearChat}
                     onClose={onClose}
-                    onScreenSharingChange={onScreenSharingChange}
+                    onScreenSharingChange={handleHeaderScreenSharingChange}
+                    onStartScreenShareRef={chatViewStartScreenShareRef}
+                    onStopScreenShareRef={chatViewStopScreenShareRef}
                     messageInputRef={messageInputRef}
                   />
                 )}

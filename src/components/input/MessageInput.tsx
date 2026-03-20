@@ -111,7 +111,7 @@ export const MessageInput = React.forwardRef<HTMLTextAreaElement, Omit<MessageIn
     <div className='py-1.5 px-2 bg-transparent'>
       <style>{`.message-input-textarea::placeholder { color: ${placeholderColor}; }`}</style>
       <div
-        className='flex flex-col rounded-xl border overflow-hidden'
+        className='flex flex-col rounded-xl border overflow-hidden focus-within:border-gray-300 transition-colors'
         style={{
           borderColor: settings.widget_border_color,
           backgroundColor: 'rgba(255,255,255,0.7)',
@@ -127,7 +127,7 @@ export const MessageInput = React.forwardRef<HTMLTextAreaElement, Omit<MessageIn
           placeholder='Ask anything'
           disabled={isLoading}
           rows={1}
-          className='message-input-textarea w-full px-3 text-sm resize-none focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed border-none overflow-hidden'
+          className='message-input-textarea w-full px-3 text-sm resize-none focus:outline-none focus:ring-0 border-none shadow-none disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden'
           style={{
             backgroundColor: 'transparent',
             color: settings.widget_text_color,
@@ -177,40 +177,29 @@ export const MessageInput = React.forwardRef<HTMLTextAreaElement, Omit<MessageIn
               );
             })}
           </div>
-          {isTaskRunning && onStop ? (
-            <Button
-              type='button'
-              variant='secondary'
-              size='sm'
-              onClick={e => {
-                e.preventDefault();
-                e.stopPropagation();
+          <Button
+            type='button'
+            variant={isTaskRunning ? 'secondary' : 'primary'}
+            size='sm'
+            disabled={!isTaskRunning && !canSend}
+            onClick={e => {
+              e.preventDefault();
+              e.stopPropagation();
+              if (isTaskRunning && onStop) {
                 onStop();
-              }}
-              className='w-7 h-7 min-w-7 rounded-full flex items-center justify-center flex-shrink-0 shadow-lg'
-              style={{
-                background: 'linear-gradient(to right, #1f2937, #111827)',
-                color: '#fff',
-                border: 'none',
-              }}
-              aria-label='Stop task'
-            >
-              <IoStop className='w-3.5 h-3.5' />
-            </Button>
-          ) : (
-            <Button
-              type='button'
-              variant='primary'
-              size='sm'
-              disabled={!canSend}
-              onClick={e => {
-                e.preventDefault();
-                e.stopPropagation();
+              } else {
                 onSend();
-              }}
-              className='w-7 h-7 min-w-7 rounded-full flex items-center justify-center flex-shrink-0'
-              style={
-                canSend
+              }
+            }}
+            className='w-7 h-7 min-w-7 rounded-full flex items-center justify-center flex-shrink-0'
+            style={
+              isTaskRunning
+                ? {
+                    background: 'linear-gradient(to right, #1f2937, #111827)',
+                    color: '#fff',
+                    border: 'none',
+                  }
+                : canSend
                   ? {
                       backgroundColor: settings.widget_accent_color,
                       color: getContrastingColor(settings.widget_accent_color),
@@ -221,14 +210,17 @@ export const MessageInput = React.forwardRef<HTMLTextAreaElement, Omit<MessageIn
                       color: addOpacity(settings.widget_text_color, 0.4),
                       border: 'none',
                     }
-              }
-              aria-label='Send message'
-            >
+            }
+            aria-label={isTaskRunning ? 'Stop task' : 'Send message'}
+          >
+            {isTaskRunning ? (
+              <IoStop className='w-3.5 h-3.5' />
+            ) : (
               <svg className='w-4 h-4' fill='none' stroke='currentColor' viewBox='0 0 24 24' aria-hidden>
-                <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M5 10l7-7m0 0l7 7m-7-7v18' />
+                <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M5 12h14m-7-7l7 7-7 7' />
               </svg>
-            </Button>
-          )}
+            )}
+          </Button>
         </div>
       </div>
     </div>
