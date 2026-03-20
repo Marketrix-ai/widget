@@ -61,6 +61,7 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
     config: settings,
     shouldShow,
     isPreviewMode,
+    configValid,
   } = useWidget({
     config,
   });
@@ -135,6 +136,10 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
       localStorage.setItem(positionStorageKey, position);
     }
   };
+
+  if (!configValid) {
+    return null;
+  }
 
   // In preview mode, always show if widget_enabled is true in config
   const shouldRender = isPreviewMode

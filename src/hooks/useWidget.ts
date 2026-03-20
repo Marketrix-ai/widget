@@ -5,57 +5,47 @@ import { WidgetSettingsDataSchema } from '../sdk';
 import { configManager } from '../services/ConfigManager';
 import type { MarketrixConfig, WidgetSettingsData } from '../types';
 
+export type ValidWidgetConfig = MarketrixConfig & Required<Pick<MarketrixConfig, keyof WidgetSettingsData>>;
+
 interface UseWidgetProps {
   config?: MarketrixConfig;
 }
 
-/**
- * Type guard that validates config has all required widget settings
- * Throws an error if validation fails
- */
-function validateWidgetSettings(
-  config: MarketrixConfig | undefined,
-): asserts config is MarketrixConfig & Required<Pick<MarketrixConfig, keyof WidgetSettingsData>> {
-  if (!config) {
-    throw new Error('Widget configuration is missing');
-  }
-
+function isConfigComplete(config: MarketrixConfig): config is ValidWidgetConfig {
   const requiredKeys = Object.keys(WidgetSettingsDataSchema.shape) as Array<keyof WidgetSettingsData>;
-  const missingSettings = requiredKeys.filter(key => config[key] === undefined);
-
-  if (missingSettings.length > 0) {
-    throw new Error(`Widget settings are incomplete. Missing required fields: ${missingSettings.join(', ')}`);
-  }
+  return requiredKeys.every(key => config[key] !== undefined);
 }
 
 export const useWidget = ({ config }: UseWidgetProps = {}) => {
   const { state, actions } = useWidgetContext();
 
-  // Memoize config - should already have all settings from API (including defaults)
   const marketrixConfig = useMemo<MarketrixConfig>(() => {
     return config || {};
   }, [config]);
 
-  // All hooks must be called before any throw — React requires stable hook count across renders.
+  const configValid = isConfigComplete(marketrixConfig);
+
   useEffect(() => {
-    configManager.saveConfig(marketrixConfig);
-  }, [marketrixConfig]);
+    if (configValid) {
+      configManager.saveConfig(marketrixConfig);
+    }
+  }, [marketrixConfig, configValid]);
 
   const shouldShowWidget = useCallback(() => {
-    return marketrixConfig.widget_enabled === true;
-  }, [marketrixConfig]);
+    return configValid && marketrixConfig.widget_enabled === true;
+  }, [marketrixConfig, configValid]);
 
-  // Extract preview mode flag from config
   const isPreviewMode = marketrixConfig.isPreviewMode ?? false;
-
-  // Validate AFTER all hooks so hook count is stable even if this throws
-  validateWidgetSettings(marketrixConfig);
 
   return {
     state,
-    config: marketrixConfig,
+    // Cast is safe: callers must check configValid before accessing widget setting fields.
+    // The asserts-based validation was removed because throwing mid-render breaks React's
+    // hook count invariant (React error #310).
+    config: marketrixConfig as ValidWidgetConfig,
     actions,
     shouldShow: shouldShowWidget(),
     isPreviewMode,
+    configValid,
   };
 };
