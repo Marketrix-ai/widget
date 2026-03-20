@@ -2,6 +2,7 @@ FROM node:24-alpine
 ENV NODE_OPTIONS="--max-old-space-size=256"
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci --prefer-offline
+RUN npm ci
 COPY . .
-CMD ["npx", "vite", "dev", "--host", "--port", "3000"]
+EXPOSE 9001
+CMD ["npx", "vite", "dev", "--host", "0.0.0.0", "--port", "9001"]

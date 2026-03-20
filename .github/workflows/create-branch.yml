@@ -1,0 +1,33 @@
+name: Create Branch
+on:
+  issues:
+    types: [assigned]
+jobs:
+  create-branch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: dev
+
+      - name: Create feature branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ISSUE_NUM="${{ github.event.issue.number }}"
+          SLUG=$(echo "${{ github.event.issue.title }}" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | sed 's/--*/-/g' | sed 's/^-//;s/-$//' | cut -c1-50)
+          BRANCH="${ISSUE_NUM}-${SLUG}"
+
+          LABELS='${{ toJSON(github.event.issue.labels.*.name) }}'
+          if echo "$LABELS" | grep -q '"cross-cutting"'; then
+            echo "Skipping branch creation for cross-cutting tracking issue"
+            exit 0
+          fi
+
+          git checkout -b "$BRANCH"
+          git push origin "$BRANCH"
+
+          gh issue comment "$ISSUE_NUM" --body "Branch \`$BRANCH\` created. To start working:
+          \`\`\`
+          git fetch origin && git checkout $BRANCH
+          \`\`\`"
