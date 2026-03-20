@@ -136,6 +136,33 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
   const zIndex = settings.widget_position_z_index ?? 40;
   const panelPositionStyle = getPanelPositionStyle(effectivePosition);
 
+  // All hooks must be above the early return — React requires stable hook count.
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
+  const [headerScreenSharing, setHeaderScreenSharing] = useState(false);
+  const moreMenuRef = useRef<HTMLDivElement>(null);
+  const chatViewStartScreenShareRef = useRef<(() => void) | null>(null);
+  const chatViewStopScreenShareRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (moreMenuRef.current && !moreMenuRef.current.contains(e.target as Node)) {
+        setMoreMenuOpen(false);
+      }
+    };
+    if (moreMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [moreMenuOpen]);
+
+  const handleHeaderScreenSharingChange = useCallback(
+    (isSharing: boolean) => {
+      setHeaderScreenSharing(isSharing);
+      onScreenSharingChange?.(isSharing);
+    },
+    [onScreenSharingChange],
+  );
+
   if (!isOpen) return null;
 
   const customStyles: React.CSSProperties = {
@@ -177,33 +204,6 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
     onSetMode(action.type);
     onSendMessage(action.text, action.type, undefined, undefined, true);
   };
-
-  // Header menu + screen share state (lifted from ChatView)
-  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
-  const [headerScreenSharing, setHeaderScreenSharing] = useState(false);
-  const moreMenuRef = useRef<HTMLDivElement>(null);
-  const chatViewStartScreenShareRef = useRef<(() => void) | null>(null);
-  const chatViewStopScreenShareRef = useRef<(() => void) | null>(null);
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (moreMenuRef.current && !moreMenuRef.current.contains(e.target as Node)) {
-        setMoreMenuOpen(false);
-      }
-    };
-    if (moreMenuOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }
-  }, [moreMenuOpen]);
-
-  const handleHeaderScreenSharingChange = useCallback(
-    (isSharing: boolean) => {
-      setHeaderScreenSharing(isSharing);
-      onScreenSharingChange?.(isSharing);
-    },
-    [onScreenSharingChange],
-  );
 
   return (
     <div
