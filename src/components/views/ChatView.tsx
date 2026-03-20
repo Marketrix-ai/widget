@@ -16,7 +16,6 @@ import {
 import { showModeService } from '../../services/ShowModeService';
 import type { ChatMessage, MarketrixConfig, TaskProgress } from '../../types';
 import { addOpacity } from '../../utils/format';
-import { Button } from '../base/Button';
 import { MessageList } from '../chat/MessageList';
 import { MessageInput } from '../input/MessageInput';
 import { ScreenAccessModal } from '../ui/ScreenAccessModal';
@@ -68,6 +67,9 @@ export interface ChatViewProps {
   onClearChat?: () => void | Promise<void>;
   onClose: () => void;
   onScreenSharingChange?: (isSharing: boolean) => void;
+  /** Refs for header buttons to trigger screen share start/stop */
+  onStartScreenShareRef?: React.MutableRefObject<(() => void) | null>;
+  onStopScreenShareRef?: React.MutableRefObject<(() => void) | null>;
   /** Optional ref for focus trap to focus the message input */
   messageInputRef?: React.RefObject<HTMLTextAreaElement | null>;
 }
@@ -98,9 +100,11 @@ export const ChatView: React.FC<ChatViewProps> = ({
   onUpdateMessage,
   onRemoveMessage,
   onStopTask,
-  onClearChat,
+  onClearChat: _onClearChat,
   onClose: _onClose,
   onScreenSharingChange,
+  onStartScreenShareRef,
+  onStopScreenShareRef,
   messageInputRef: externalMessageInputRef,
 }) => {
   const [inputValue, setInputValue] = useState('');
@@ -109,8 +113,6 @@ export const ChatView: React.FC<ChatViewProps> = ({
   const [screenShareMessageId, setScreenShareMessageId] = useState<string | null>(null);
   const [screenAccessRequestMessageId, setScreenAccessRequestMessageId] = useState<string | null>(null);
   const [showScreenAccessModal, setShowScreenAccessModal] = useState(false);
-  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
-  const moreMenuRef = useRef<HTMLDivElement>(null);
 
   const [pendingMessage, setPendingMessage] = useState<{
     content: string;
@@ -163,18 +165,6 @@ export const ChatView: React.FC<ChatViewProps> = ({
     const interval = setInterval(checkScreenSharing, 1000);
     return () => clearInterval(interval);
   }, []);
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (moreMenuRef.current && !moreMenuRef.current.contains(e.target as Node)) {
-        setMoreMenuOpen(false);
-      }
-    };
-    if (moreMenuOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }
-  }, [moreMenuOpen]);
 
   const requestScreenAccess = (mode: InstructionType) => {
     if (screenAccessRequestMessageId) return;
@@ -313,6 +303,16 @@ export const ChatView: React.FC<ChatViewProps> = ({
     setScreenShareMessageId(null);
   };
 
+  // Expose screen share handlers to MessengerShell header via refs
+  useEffect(() => {
+    if (onStartScreenShareRef) onStartScreenShareRef.current = handleStartScreenShare;
+    if (onStopScreenShareRef) onStopScreenShareRef.current = stopScreenSharing;
+    return () => {
+      if (onStartScreenShareRef) onStartScreenShareRef.current = null;
+      if (onStopScreenShareRef) onStopScreenShareRef.current = null;
+    };
+  });
+
   const settings = config as MarketrixConfig & {
     widget_greeting?: string;
     widget_feature_show?: boolean;
@@ -322,110 +322,6 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
   return (
     <div className='flex flex-col h-full' id='view-chat' role='tabpanel' aria-labelledby='tab-chat'>
-      {/* Chat toolbar (screen share, more menu) */}
-      <div className='flex justify-end items-center px-3 py-1 flex-shrink-0' style={{ backgroundColor: 'transparent' }}>
-        <div className='flex items-center gap-0.5 flex-shrink-0'>
-          {config.use_screenshare !== false && !isScreenSharing && (
-            <Button
-              type='button'
-              variant='ghost'
-              size='sm'
-              onClick={handleStartScreenShare}
-              className='p-1.5 rounded-full opacity-60 hover:opacity-100 transition-opacity'
-              style={{ color: config.widget_text_color }}
-              aria-label='Start screen sharing'
-              title='Share screen'
-            >
-              <svg className='w-4 h-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
-                <path
-                  strokeLinecap='round'
-                  strokeLinejoin='round'
-                  strokeWidth={2}
-                  d='M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z'
-                />
-              </svg>
-            </Button>
-          )}
-          {isScreenSharing && (
-            <Button
-              type='button'
-              variant='ghost'
-              size='sm'
-              onClick={stopScreenSharing}
-              className='p-1.5 rounded-full opacity-80 hover:opacity-100 transition-opacity flex items-center gap-1'
-              style={{ color: config.widget_text_color }}
-              aria-label='Stop screen sharing'
-              title='Stop screen sharing'
-            >
-              <span className='w-1.5 h-1.5 rounded-full bg-current animate-pulse' />
-              <svg className='w-4 h-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
-                <path
-                  strokeLinecap='round'
-                  strokeLinejoin='round'
-                  strokeWidth={2}
-                  d='M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z'
-                />
-              </svg>
-            </Button>
-          )}
-          <div className='relative' ref={moreMenuRef}>
-            <Button
-              type='button'
-              variant='ghost'
-              size='sm'
-              onClick={() => setMoreMenuOpen(prev => !prev)}
-              className='p-1.5 rounded-full opacity-60 hover:opacity-100 transition-opacity'
-              style={{ color: config.widget_text_color }}
-              aria-label='More options'
-              aria-haspopup='true'
-              aria-expanded={moreMenuOpen}
-            >
-              <svg className='w-4 h-4' fill='currentColor' viewBox='0 0 20 20'>
-                <path d='M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z' />
-              </svg>
-            </Button>
-            {moreMenuOpen && (
-              <div
-                className='absolute right-0 top-full mt-1 py-1 rounded-lg shadow-lg border min-w-[140px] z-50'
-                style={{
-                  backgroundColor: '#ffffff',
-                  borderColor: config.widget_border_color,
-                }}
-                role='menu'
-              >
-                {onClearChat && (
-                  <button
-                    type='button'
-                    className='w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded-md transition-colors'
-                    style={{ color: config.widget_text_color }}
-                    onClick={() => {
-                      const result = onClearChat();
-                      if (result instanceof Promise) result.catch(e => console.error(e));
-                      setMoreMenuOpen(false);
-                    }}
-                    role='menuitem'
-                  >
-                    Clear chat
-                  </button>
-                )}
-                <button
-                  type='button'
-                  className='w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded-md transition-colors'
-                  style={{ color: config.widget_text_color }}
-                  onClick={() => {
-                    window.open('https://marketrix.ai', '_blank', 'noopener,noreferrer');
-                    setMoreMenuOpen(false);
-                  }}
-                  role='menuitem'
-                >
-                  About Marketrix
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
       {showScreenAccessModal && (
         <ScreenAccessModal
           isOpen={showScreenAccessModal}
