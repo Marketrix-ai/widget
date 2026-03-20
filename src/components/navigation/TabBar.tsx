@@ -28,9 +28,9 @@ export const TabBar: React.FC<TabBarProps> = ({
   return (
     <div
       role='tablist'
-      className='flex items-center justify-around flex-shrink-0 h-16 border-t'
+      className='flex items-center justify-around flex-shrink-0 h-12 border-t'
       style={{
-        height: '64px',
+        height: '48px',
         borderColor,
         boxShadow: '0 -2px 8px rgba(0,0,0,0.06)',
       }}
