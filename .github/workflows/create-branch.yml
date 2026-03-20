@@ -2,6 +2,10 @@ name: Create Branch
 on:
   issues:
     types: [assigned]
+permissions:
+  contents: write
+  issues: write
+
 jobs:
   create-branch:
     runs-on: ubuntu-latest
