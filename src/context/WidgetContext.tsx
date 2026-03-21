@@ -243,18 +243,12 @@ export const WidgetProvider: React.FC<WidgetProviderProps> = ({ children, previe
           return;
         }
 
-        // Reject tool calls when widget is not running a task
-        // Use ref to get latest value (avoid stale closure)
+        // If tool/call arrives before task/started, auto-activate the task
+        // instead of rejecting — the agent clearly intends a task to be running.
         if (!isTaskRunningRef.current) {
-          console.warn('[Widget] Tool call received but no task running, rejecting');
-          wsClient.send({
-            type: 'tool/response',
-            call_id: requestId,
-            success: false,
-            error: 'widget_task_inactive',
-            state_version: stateVersion.current,
-          });
-          return;
+          console.log('[Widget] Tool call received before task/started — auto-activating task');
+          isTaskRunningRef.current = true;
+          setState(prev => ({ ...prev, isTaskRunning: true }));
         }
 
         const toolName = event.tool;
@@ -263,23 +257,10 @@ export const WidgetProvider: React.FC<WidgetProviderProps> = ({ children, previe
         const explanation = event.explanation || '';
         const requestStateVersion = event.state_version;
 
-        // Check state version — skip if mismatch (stale tool call).
-        // On fresh session (stateVersion === 0), adopt the server's version instead of rejecting.
+        // Sync state version from server — adopt whatever version the agent sends.
+        // This prevents stale-version rejections that cause silent task failures.
         if (requestStateVersion !== undefined && requestStateVersion !== stateVersion.current) {
-          if (stateVersion.current === 0) {
-            // Fresh session — sync to the server's version
-            stateVersion.current = requestStateVersion;
-          } else {
-            console.log('State version mismatch, skipping tool execution');
-            wsClient.send({
-              type: 'tool/response',
-              call_id: requestId,
-              success: false,
-              error: 'State version mismatch',
-              state_version: stateVersion.current,
-            });
-            return;
-          }
+          stateVersion.current = requestStateVersion;
         }
 
         // Only show progress if we're actually executing
@@ -339,6 +320,8 @@ export const WidgetProvider: React.FC<WidgetProviderProps> = ({ children, previe
             updateProgressForTool(toolName, explanation, 'failed', 'Connection error');
           }
         } else {
+          // Tool execution failed — update progress UI and notify server
+          updateProgressForTool(toolName, explanation, 'failed', result.error || 'Tool execution failed');
           stateVersion.current++;
           try {
             wsClient.send({
