@@ -1,4 +1,4 @@
-import React, { lazy, Suspense, useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 
 import { LAYER_TOKENS } from '../design-system/layers';
 import { semanticTokensToCssCustomProperties } from '../design-system/semantic-tokens';
@@ -12,9 +12,6 @@ import { WidgetButton } from './layout/WidgetButton';
 import { MessengerShell } from './navigation/MessengerShell';
 import { ErrorDisplay } from './ui/ErrorDisplay';
 import { GreetingToast } from './ui/GreetingToast';
-
-// Lazy load the dev panel (only in development)
-const DomTestPanel = lazy(() => import('./dev/DomTestPanel'));
 
 interface MarketrixWidgetProps {
   config: MarketrixConfig;
@@ -52,8 +49,6 @@ class WidgetErrorBoundary extends React.Component<
 
 export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
   const [_isScreenSharing, setIsScreenSharing] = useState(false);
-  const [showDevPanel, setShowDevPanel] = useState(false);
-  const isDevBuild = import.meta.env.DEV;
   const [showGreeting, setShowGreeting] = useState(false);
 
   const {
@@ -77,23 +72,6 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
     const scopedId = config.mtxId ?? (config.mtxApp != null ? String(config.mtxApp) : 'default');
     return `marketrix_widget_position_${scopedId}`;
   }, [config.mtxApp, config.mtxId]);
-
-  // Keyboard shortcut for dev panel (Ctrl+Shift+D)
-  useEffect(() => {
-    if (!isDevBuild) {
-      return;
-    }
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.ctrlKey && e.shiftKey && e.key === 'D') {
-        e.preventDefault();
-        setShowDevPanel(prev => !prev);
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isDevBuild]);
 
   useEffect(() => {
     const fallback = (settings.widget_position as WidgetPosition | undefined) ?? 'bottom_right';
@@ -257,13 +235,6 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
           body={settings.widget_body}
           onClose={() => setShowGreeting(false)}
         />
-      )}
-
-      {/* Dev-only DOM Test Panel */}
-      {isDevBuild && showDevPanel && (
-        <Suspense fallback={null}>
-          <DomTestPanel />
-        </Suspense>
       )}
     </Surface>
   );

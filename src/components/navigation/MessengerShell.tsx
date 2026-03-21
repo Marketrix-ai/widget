@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { FiInfo, FiTrash2 } from 'react-icons/fi';
 
 import packageJson from '../../../package.json';
 import MarketrixIcon from '../../assets/marketrix-icon.svg';
@@ -286,7 +285,7 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
                               }}
                               role='menuitem'
                             >
-                              <FiTrash2 className='w-3.5 h-3.5 opacity-60' />
+                              <Icon name='trash' size={14} className='opacity-60' />
                               Clear chat
                             </button>
                           )}
@@ -299,7 +298,7 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
                             }}
                             role='menuitem'
                           >
-                            <FiInfo className='w-3.5 h-3.5 opacity-60' />
+                            <Icon name='info' size={14} className='opacity-60' />
                             About
                           </button>
                         </Surface>
