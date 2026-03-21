@@ -247,7 +247,15 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
                     }}
                   >
                     <Text size='xs' variant='faint' style={{ textAlign: 'center', display: 'block' }}>
-                      {config.agent_name ?? 'AI Agent'} • v{packageJson.version}
+                      {config.agent_name ?? 'AI Agent'} • v{packageJson.version} •{' '}
+                      {(() => {
+                        try {
+                          const status = StreamClient.getInstance().getStatus();
+                          return status === 'connected' ? 'Connected' : status;
+                        } catch {
+                          return '—';
+                        }
+                      })()}
                     </Text>
                   </Surface>
                 </Stack>
