@@ -1,5 +1,6 @@
 export * from './Button';
 export * from './Dialog';
+export * from './Icon';
 export * from './IconButton';
 export * from './Indicator';
 export * from './Input';
