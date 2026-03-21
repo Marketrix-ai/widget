@@ -1,4 +1,4 @@
-import { forwardRef } from 'react';
+import { type CSSProperties, forwardRef } from 'react';
 
 import { cn } from '@/lib/utils';
 
@@ -8,6 +8,7 @@ export interface SpinnerProps {
   size?: SpinnerSize;
   label?: string;
   className?: string;
+  style?: CSSProperties;
 }
 
 const sizeStyles: Record<SpinnerSize, string> = {
@@ -17,11 +18,17 @@ const sizeStyles: Record<SpinnerSize, string> = {
 };
 
 export const Spinner = forwardRef<HTMLDivElement, SpinnerProps>(function Spinner(
-  { size = 'md', label, className },
+  { size = 'md', label, className, style },
   ref,
 ) {
   return (
-    <div ref={ref} className={cn('inline-flex items-center gap-1.5', className)} data-size={size} role='status'>
+    <div
+      ref={ref}
+      className={cn('inline-flex items-center gap-1.5', className)}
+      data-size={size}
+      role='status'
+      style={style}
+    >
       <div
         aria-hidden='true'
         className={cn('animate-spin rounded-full border-current border-t-transparent flex-shrink-0', sizeStyles[size])}
