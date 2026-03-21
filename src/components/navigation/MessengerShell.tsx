@@ -11,7 +11,6 @@ import { StreamClient } from '../../services/StreamClient';
 import type { ChatMessage, InstructionType, MarketrixConfig, TaskProgress, WidgetView } from '../../types';
 import type { SuggestedActionItem } from '../../utils/suggestedActions';
 import { getPanelPositionStyle } from '../../utils/widgetPositioning';
-import { Button } from '../base/Button';
 import { Icon } from '../base/Icon';
 import { Stack } from '../base/Stack';
 import { Surface } from '../base/Surface';
@@ -233,26 +232,24 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
                 />
               )}
               {activeView === 'help' && (
-                <Stack
-                  id='view-help'
-                  role='tabpanel'
-                  aria-labelledby='tab-help'
-                  height='full'
-                  justify='center'
-                  align='center'
-                  gap='lg'
-                  padding='lg'
-                >
-                  <Stack align='center' gap='sm'>
+                <Stack id='view-help' role='tabpanel' aria-labelledby='tab-help' height='full' padding='lg'>
+                  <Stack grow align='center' justify='center' gap='sm'>
                     <Icon name='help' size={32} className='text-foreground-faint' />
                     <Text size='sm' variant='muted'>
                       Help – coming soon
                     </Text>
                   </Stack>
-                  <Button type='button' variant='ghost' size='sm' onClick={() => setDiagnosticOpen(true)}>
-                    <Icon name='info' size={14} />
-                    About
-                  </Button>
+                  <Surface
+                    style={{
+                      padding: '10px 16px',
+                      borderRadius: 'var(--radius-xl, 12px)',
+                      border: '1px solid var(--border)',
+                    }}
+                  >
+                    <Text size='xs' variant='faint' style={{ textAlign: 'center', display: 'block' }}>
+                      {config.agent_name ?? 'AI Agent'} • v{packageJson.version}
+                    </Text>
+                  </Surface>
                 </Stack>
               )}
               {activeView === 'news' && (
