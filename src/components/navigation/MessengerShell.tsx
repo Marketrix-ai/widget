@@ -3,7 +3,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import packageJson from '../../../package.json';
 import { SHADOW } from '../../design-system/shadows';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
-import { useResize } from '../../hooks/useResize';
+import { type ResizeCorner, useResize } from '../../hooks/useResize';
 import { useWidget } from '../../hooks/useWidget';
 import { createUserMessage } from '../../services/ChatService';
 import { configManager } from '../../services/ConfigManager';
@@ -25,6 +25,50 @@ import { DiagnosticModal } from '../ui/DiagnosticModal';
 import { ChatView } from '../views/ChatView';
 import { HomeView } from '../views/HomeView';
 import { ViewTransition } from './ViewTransition';
+
+const RESIZE_CORNERS: ResizeCorner[] = ['top-left', 'top-right', 'bottom-left', 'bottom-right'];
+
+function getCornerStyle(corner: ResizeCorner): React.CSSProperties {
+  const isTop = corner.startsWith('top');
+  const isLeft = corner.endsWith('left');
+  return {
+    position: 'absolute',
+    width: '20px',
+    height: '20px',
+    padding: '4px',
+    touchAction: 'none',
+    zIndex: 10,
+    display: 'flex',
+    alignItems: isTop ? 'flex-start' : 'flex-end',
+    justifyContent: isLeft ? 'flex-start' : 'flex-end',
+    cursor: (isTop && isLeft) || (!isTop && !isLeft) ? 'nwse-resize' : 'nesw-resize',
+    top: isTop ? 0 : undefined,
+    bottom: isTop ? undefined : 0,
+    left: isLeft ? 0 : undefined,
+    right: isLeft ? undefined : 0,
+  };
+}
+
+interface ResizeHandlesProps {
+  onResizeStart: (corner: ResizeCorner) => (e: React.MouseEvent) => void;
+}
+
+function ResizeHandles({ onResizeStart }: ResizeHandlesProps) {
+  return (
+    <>
+      {RESIZE_CORNERS.map(corner => (
+        <div
+          key={corner}
+          role='separator'
+          aria-label={`Resize widget from ${corner.replace('-', ' ')}`}
+          title='Drag to resize'
+          style={getCornerStyle(corner)}
+          onMouseDown={onResizeStart(corner)}
+        />
+      ))}
+    </>
+  );
+}
 
 const TAB_DEFS = [
   { id: 'home' as const, icon: 'home' as const, label: 'Home' },
@@ -296,38 +340,7 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
         </>
       )}
 
-      {!isMinimized &&
-        !isPreviewMode &&
-        (['top-left', 'top-right', 'bottom-left', 'bottom-right'] as const).map(corner => {
-          const isTop = corner.startsWith('top');
-          const isLeft = corner.endsWith('left');
-          const cornerStyle: React.CSSProperties = {
-            position: 'absolute',
-            width: '20px',
-            height: '20px',
-            padding: '4px',
-            touchAction: 'none',
-            zIndex: 10,
-            display: 'flex',
-            alignItems: isTop ? 'flex-start' : 'flex-end',
-            justifyContent: isLeft ? 'flex-start' : 'flex-end',
-            cursor: (isTop && isLeft) || (!isTop && !isLeft) ? 'nwse-resize' : 'nesw-resize',
-            top: isTop ? 0 : undefined,
-            bottom: isTop ? undefined : 0,
-            left: isLeft ? 0 : undefined,
-            right: isLeft ? undefined : 0,
-          };
-          return (
-            <div
-              key={corner}
-              role='separator'
-              aria-label={`Resize widget from ${corner.replace('-', ' ')}`}
-              title='Drag to resize'
-              style={cornerStyle}
-              onMouseDown={onResizeStart(corner)}
-            />
-          );
-        })}
+      {!isMinimized && !isPreviewMode && <ResizeHandles onResizeStart={onResizeStart} />}
       <DiagnosticModal
         isOpen={diagnosticOpen}
         onClose={() => setDiagnosticOpen(false)}

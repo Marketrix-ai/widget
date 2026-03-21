@@ -1,9 +1,10 @@
-import React, { useCallback, useLayoutEffect, useRef, useState } from 'react';
+import React, { useRef } from 'react';
 
 import MarketrixIcon from '../../assets/marketrix-icon.svg';
 import { SHADOW } from '../../design-system/shadows';
+import { useDragSnap } from '../../hooks/useDragSnap';
 import type { WidgetPosition } from '../../types';
-import { getAnchorTopLeft, getNearestCornerByTranslation, getPositionClasses } from '../../utils/widgetPositioning';
+import { getPositionClasses } from '../../utils/widgetPositioning';
 import { Avatar } from '../base/Avatar';
 import { Button } from '../base/Button';
 import { Flex } from '../base/Flex';
@@ -31,10 +32,6 @@ export interface WidgetFabProps {
   isPreviewMode?: boolean;
 }
 
-const DRAG_THRESHOLD_PX = 5;
-const SNAP_DURATION_MS = 600;
-const SNAP_EASING = 'cubic-bezier(0.16, 1, 0.3, 1)';
-
 export const WidgetFab: React.FC<WidgetFabProps> = ({
   open,
   processing = false,
@@ -61,59 +58,17 @@ export const WidgetFab: React.FC<WidgetFabProps> = ({
 
   const activityRingRadius = Math.max(6, Math.min(22, Number.parseFloat(borderRadius) || 12));
 
-  const [isDragging, setIsDragging] = useState(false);
   const wrapperRef = useRef<HTMLDivElement | null>(null);
-  const [wrapperSize, setWrapperSize] = useState({ w: 56, h: 56 });
-  const [, setViewportTick] = useState(0);
-  const transitionEndRef = useRef<(() => void) | null>(null);
 
-  const dragRef = useRef<{
-    pointerId: number;
-    startX: number;
-    startY: number;
-    dragging: boolean;
-    lastX: number;
-    lastY: number;
-  } | null>(null);
-  const rafRef = useRef<number | null>(null);
-  const suppressUntilRef = useRef(0);
-  const velocityHistoryRef = useRef<Array<{ x: number; y: number; t: number }>>([]);
-  const lastVelocitySampleRef = useRef(0);
-
-  // Cleanup RAF on unmount
-  React.useEffect(() => {
-    return () => {
-      if (rafRef.current !== null) window.cancelAnimationFrame(rafRef.current);
-    };
-  }, []);
-
-  // Resize listener for viewport changes
-  React.useEffect(() => {
-    if (isPreviewMode) return;
-    const onResize = () => setViewportTick(t => t + 1);
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-  }, [isPreviewMode]);
-
-  const measureWrapper = useCallback(() => {
-    if (!wrapperRef.current || typeof window === 'undefined') return;
-    const rect = wrapperRef.current.getBoundingClientRect();
-    setWrapperSize(prev =>
-      prev.w === rect.width && prev.h === rect.height ? prev : { w: rect.width, h: rect.height },
-    );
-  }, []);
-
-  useLayoutEffect(() => {
-    measureWrapper();
-    const ro = typeof window !== 'undefined' && wrapperRef.current ? new ResizeObserver(measureWrapper) : null;
-    if (ro && wrapperRef.current) ro.observe(wrapperRef.current);
-    return () => ro?.disconnect();
-  }, [measureWrapper, position]);
-
-  const vw = typeof window !== 'undefined' ? window.innerWidth : 0;
-  const vh = typeof window !== 'undefined' ? window.innerHeight : 0;
-  const anchor = getAnchorTopLeft(position, vw, vh, wrapperSize.w, wrapperSize.h);
-  const pixelPositionStyle = !isPreviewMode && vw > 0 && vh > 0 ? { left: anchor.x, top: anchor.y } : undefined;
+  const {
+    isDragging,
+    pixelPositionStyle,
+    onPointerDown,
+    onPointerMove,
+    onPointerUp,
+    onPointerCancel,
+    suppressUntilRef,
+  } = useDragSnap({ position, onDrag, isPreviewMode, wrapperRef });
 
   const effectivePositionClasses = getPositionClasses(position);
   const positionClass = isPreviewMode ? 'absolute' : 'fixed';
@@ -129,189 +84,6 @@ export const WidgetFab: React.FC<WidgetFabProps> = ({
           ...(position.includes('right') ? { right: '20px' } : { left: '20px' }),
         }
     : {};
-
-  const projectVelocity = (v: number, decel = 0.999) => ((v / 1000) * decel) / (1 - decel);
-
-  const getVelocityFromHistory = (): { x: number; y: number } => {
-    const h = velocityHistoryRef.current;
-    if (h.length < 2) return { x: 0, y: 0 };
-    const dt = h[h.length - 1].t - h[0].t;
-    if (dt <= 0) return { x: 0, y: 0 };
-    return {
-      x: ((h[h.length - 1].x - h[0].x) / dt) * 1000,
-      y: ((h[h.length - 1].y - h[0].y) / dt) * 1000,
-    };
-  };
-
-  const resetDragStyles = () => {
-    if (rafRef.current !== null) {
-      window.cancelAnimationFrame(rafRef.current);
-      rafRef.current = null;
-    }
-    if (wrapperRef.current) {
-      wrapperRef.current.style.transform = '';
-      wrapperRef.current.style.willChange = '';
-      wrapperRef.current.style.transition = '';
-    }
-  };
-
-  const commitPositionAfterAnimation = useCallback(
-    (nextCorner: WidgetPosition, wrapper: HTMLDivElement) => {
-      if (transitionEndRef.current) return;
-      let finished = false;
-      const done = () => {
-        if (finished) return;
-        finished = true;
-        transitionEndRef.current = null;
-        wrapper.style.transition = 'none';
-        wrapper.style.willChange = '';
-        onDrag(nextCorner);
-        setIsDragging(false);
-        requestAnimationFrame(() => {
-          if (wrapperRef.current) {
-            wrapperRef.current.style.transition = '';
-          }
-        });
-      };
-      transitionEndRef.current = done;
-      const fallbackTimer = window.setTimeout(done, SNAP_DURATION_MS + 50);
-      wrapper.addEventListener('transitionend', function onEnd(e: TransitionEvent) {
-        if (e.target !== wrapper || e.propertyName !== 'left') return;
-        window.clearTimeout(fallbackTimer);
-        wrapper.removeEventListener('transitionend', onEnd);
-        done();
-      });
-    },
-    [onDrag],
-  );
-
-  const snapToCorner = (nextCorner: WidgetPosition, fromX: number, fromY: number) => {
-    if (!wrapperRef.current || !pixelPositionStyle) {
-      resetDragStyles();
-      onDrag(nextCorner);
-      setIsDragging(false);
-      return;
-    }
-    if (rafRef.current !== null) {
-      window.cancelAnimationFrame(rafRef.current);
-      rafRef.current = null;
-    }
-    const wrapper = wrapperRef.current;
-    const oldAnchor = getAnchorTopLeft(position, vw, vh, wrapperSize.w, wrapperSize.h);
-    const newAnchor = getAnchorTopLeft(nextCorner, vw, vh, wrapperSize.w, wrapperSize.h);
-    wrapper.style.transition = 'none';
-    wrapper.style.transform = 'none';
-    wrapper.style.willChange = 'left, top';
-    wrapper.style.left = `${oldAnchor.x + fromX}px`;
-    wrapper.style.top = `${oldAnchor.y + fromY}px`;
-    requestAnimationFrame(() => {
-      wrapper.style.transition = `left ${SNAP_DURATION_MS}ms ${SNAP_EASING}, top ${SNAP_DURATION_MS}ms ${SNAP_EASING}`;
-      wrapper.style.left = `${newAnchor.x}px`;
-      wrapper.style.top = `${newAnchor.y}px`;
-    });
-    commitPositionAfterAnimation(nextCorner, wrapper);
-  };
-
-  const onPointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
-    if (open) return;
-    dragRef.current = {
-      pointerId: event.pointerId,
-      startX: event.clientX,
-      startY: event.clientY,
-      dragging: false,
-      lastX: 0,
-      lastY: 0,
-    };
-    event.currentTarget.setPointerCapture(event.pointerId);
-  };
-
-  const onPointerMove = (event: React.PointerEvent<HTMLButtonElement>) => {
-    const drag = dragRef.current;
-    if (drag?.pointerId !== event.pointerId) return;
-
-    const dx = event.clientX - drag.startX;
-    const dy = event.clientY - drag.startY;
-
-    if (!drag.dragging && Math.hypot(dx, dy) > DRAG_THRESHOLD_PX) {
-      drag.dragging = true;
-      setIsDragging(true);
-      velocityHistoryRef.current = [];
-      lastVelocitySampleRef.current = 0;
-      if (wrapperRef.current) {
-        wrapperRef.current.style.willChange = 'transform';
-        wrapperRef.current.style.transition = 'none';
-      }
-    }
-
-    if (!drag.dragging) return;
-
-    drag.lastX = dx;
-    drag.lastY = dy;
-
-    const now = Date.now();
-    if (now - lastVelocitySampleRef.current >= 10) {
-      lastVelocitySampleRef.current = now;
-      velocityHistoryRef.current = [
-        ...velocityHistoryRef.current.slice(-5),
-        { x: event.clientX, y: event.clientY, t: now },
-      ];
-    }
-
-    if (rafRef.current === null) {
-      rafRef.current = window.requestAnimationFrame(() => {
-        rafRef.current = null;
-        const d = dragRef.current;
-        const wrapper = wrapperRef.current;
-        if (!wrapper || !d) return;
-        wrapper.style.transform = `translate3d(${d.lastX}px, ${d.lastY}px, 0)`;
-      });
-    }
-  };
-
-  const onPointerUp = (event: React.PointerEvent<HTMLButtonElement>) => {
-    const drag = dragRef.current;
-    if (drag?.pointerId !== event.pointerId) return;
-    if (drag.dragging) {
-      const v = getVelocityFromHistory();
-      const projX = projectVelocity(v.x);
-      const projY = projectVelocity(v.y);
-      const projected = { dx: drag.lastX + projX, dy: drag.lastY + projY };
-
-      let nextCorner: WidgetPosition;
-      if (typeof window !== 'undefined' && wrapperRef.current) {
-        const rect = wrapperRef.current.getBoundingClientRect();
-        nextCorner = getNearestCornerByTranslation(
-          projected,
-          position,
-          window.innerWidth,
-          window.innerHeight,
-          rect.width,
-          rect.height,
-        );
-      } else {
-        nextCorner = position;
-      }
-
-      snapToCorner(nextCorner, drag.lastX, drag.lastY);
-      suppressUntilRef.current = Date.now() + 600;
-      dragRef.current = null;
-      event.currentTarget.releasePointerCapture(event.pointerId);
-      return;
-    }
-    resetDragStyles();
-    dragRef.current = null;
-    setIsDragging(false);
-    event.currentTarget.releasePointerCapture(event.pointerId);
-  };
-
-  const onPointerCancel = (event: React.PointerEvent<HTMLButtonElement>) => {
-    const drag = dragRef.current;
-    if (drag?.pointerId !== event.pointerId) return;
-    resetDragStyles();
-    dragRef.current = null;
-    setIsDragging(false);
-    event.currentTarget.releasePointerCapture(event.pointerId);
-  };
 
   return (
     <Surface

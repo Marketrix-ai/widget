@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 
 import { Flex } from '../base/Flex';
 import { Icon } from '../base/Icon';
+import { Spinner } from '../base/Spinner';
 import { Surface } from '../base/Surface';
 import { Text } from '../base/Text';
 import { Video } from '../base/Video';
@@ -9,6 +10,12 @@ import { Video } from '../base/Video';
 interface VideoStreamDisplayProps {
   stream: MediaStream | null;
 }
+
+// Top corners are always rounded; match message bubble shape
+const TOP_RADIUS = '8px';
+const OVERLAY_BORDER_RADIUS = `${TOP_RADIUS} ${TOP_RADIUS} 0 0`;
+const OVERLAY_BG = '#111827';
+const MUTED_TEXT_COLOR = 'rgba(255,255,255,0.7)';
 
 export const VideoStreamDisplay: React.FC<VideoStreamDisplayProps> = ({ stream }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -89,9 +96,6 @@ export const VideoStreamDisplay: React.FC<VideoStreamDisplayProps> = ({ stream }
 
   if (!stream) return null;
 
-  // Top corners are always rounded; match message bubble shape
-  const topRadius = '8px';
-
   return (
     <Surface
       width='full'
@@ -99,7 +103,7 @@ export const VideoStreamDisplay: React.FC<VideoStreamDisplayProps> = ({ stream }
       position='relative'
       style={{
         marginBottom: '4px',
-        borderRadius: `${topRadius} ${topRadius} 0 0`,
+        borderRadius: OVERLAY_BORDER_RADIUS,
         backgroundColor: '#000000',
         boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)',
       }}
@@ -112,36 +116,16 @@ export const VideoStreamDisplay: React.FC<VideoStreamDisplayProps> = ({ stream }
           align='center'
           justify='center'
           style={{
-            backgroundColor: '#111827',
-            borderRadius: `${topRadius} ${topRadius} 0 0`,
+            backgroundColor: OVERLAY_BG,
+            borderRadius: OVERLAY_BORDER_RADIUS,
             zIndex: 10,
             transition: 'opacity 300ms',
             opacity: isLoaded ? 0 : 1,
           }}
         >
           <Flex direction='column' align='center' gap='md'>
-            <Surface position='relative' style={{ width: '32px', height: '32px' }}>
-              <Surface
-                position='absolute'
-                inset='0'
-                rounded='full'
-                animate='spin'
-                style={{ border: '2px solid white', borderTopColor: 'transparent' }}
-              />
-              <Surface
-                position='absolute'
-                inset='0'
-                rounded='full'
-                animate='spin'
-                style={{
-                  border: '2px solid transparent',
-                  borderRightColor: 'white',
-                  animationDirection: 'reverse',
-                  animationDuration: '0.8s',
-                }}
-              />
-            </Surface>
-            <Text as='span' size='xs' weight='medium' style={{ color: 'rgba(255,255,255,0.7)' }}>
+            <Spinner size='lg' style={{ color: 'white' }} />
+            <Text as='span' size='xs' weight='medium' style={{ color: MUTED_TEXT_COLOR }}>
               Loading stream...
             </Text>
           </Flex>
@@ -156,8 +140,8 @@ export const VideoStreamDisplay: React.FC<VideoStreamDisplayProps> = ({ stream }
           align='center'
           justify='center'
           style={{
-            backgroundColor: '#111827',
-            borderRadius: `${topRadius} ${topRadius} 0 0`,
+            backgroundColor: OVERLAY_BG,
+            borderRadius: OVERLAY_BORDER_RADIUS,
             zIndex: 10,
           }}
         >
@@ -168,7 +152,7 @@ export const VideoStreamDisplay: React.FC<VideoStreamDisplayProps> = ({ stream }
             style={{ textAlign: 'center', paddingLeft: '16px', paddingRight: '16px' }}
           >
             <Icon name='alertCircle' size={32} style={{ color: '#9ca3af' }} />
-            <Text as='span' size='xs' weight='medium' style={{ color: 'rgba(255,255,255,0.7)' }}>
+            <Text as='span' size='xs' weight='medium' style={{ color: MUTED_TEXT_COLOR }}>
               Failed to load stream
             </Text>
           </Flex>
@@ -186,7 +170,7 @@ export const VideoStreamDisplay: React.FC<VideoStreamDisplayProps> = ({ stream }
           height: 'auto',
           maxHeight: '192px',
           objectFit: 'contain',
-          borderRadius: `${topRadius} ${topRadius} 0 0`,
+          borderRadius: OVERLAY_BORDER_RADIUS,
           transition: 'opacity 500ms',
           opacity: isLoaded ? 1 : 0,
           minHeight: '120px',
@@ -243,7 +227,7 @@ export const VideoStreamDisplay: React.FC<VideoStreamDisplayProps> = ({ stream }
         align='center'
         justify='center'
         style={{
-          borderRadius: `${topRadius} ${topRadius} 0 0`,
+          borderRadius: OVERLAY_BORDER_RADIUS,
           backgroundColor: 'rgba(0,0,0,0)',
           zIndex: 30,
           pointerEvents: 'none',

@@ -1,5 +1,5 @@
 // / <reference lib="dom" />
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 import { SHADOW } from '../../design-system/shadows';
 import { useWidget } from '../../hooks/useWidget';
@@ -44,6 +44,19 @@ export const MessageList = ({
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [showScrollBottom, setShowScrollBottom] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Prepend greeting as first agent message
+  const greetingMessage = useMemo<ChatMessage>(
+    () => ({
+      id: 'welcome',
+      content: widgetConfig.widget_body ?? 'How can I help you today?',
+      sender: 'agent',
+      timestamp: new Date(),
+      isPlaceholder: false,
+    }),
+    [widgetConfig.widget_body],
+  );
+  const allMessages = useMemo(() => [greetingMessage, ...messages], [greetingMessage, messages]);
 
   // Handle scroll visibility
   const handleScroll = () => {
@@ -110,16 +123,7 @@ export const MessageList = ({
         {messages.length === 0 && widgetState.isLoading && <StateMessage variant='loading' message='Connecting…' />}
 
         {/* Messages (greeting prepended as first agent message) */}
-        {[
-          {
-            id: 'welcome',
-            content: widgetConfig.widget_body ?? 'How can I help you today?',
-            sender: 'agent' as const,
-            timestamp: new Date(),
-            isPlaceholder: false,
-          } satisfies ChatMessage,
-          ...messages,
-        ].map((message: ChatMessage, index: number, allMessages: ChatMessage[]) => (
+        {allMessages.map((message: ChatMessage, index: number) => (
           <MessageItem
             key={`message-${message.id}-${index}`}
             message={message}
