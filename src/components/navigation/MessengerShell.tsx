@@ -13,7 +13,13 @@ import { StreamClient } from '../../services/StreamClient';
 import type { ChatMessage, InstructionType, MarketrixConfig, TaskProgress, WidgetView } from '../../types';
 import type { SuggestedActionItem } from '../../utils/suggestedActions';
 import { getPanelPositionStyle } from '../../utils/widgetPositioning';
+import { Avatar } from '../base/Avatar';
+import { Flex } from '../base/Flex';
+import { Icon } from '../base/Icon';
 import { IconButton } from '../base/IconButton';
+import { Stack } from '../base/Stack';
+import { Surface } from '../base/Surface';
+import { Text } from '../base/Text';
 import { DiagnosticModal } from '../ui/DiagnosticModal';
 import { ChatView } from '../views/ChatView';
 import { HomeView } from '../views/HomeView';
@@ -21,36 +27,9 @@ import { TabBar } from './TabBar';
 import { ViewTransition } from './ViewTransition';
 
 const TAB_ICONS = {
-  home: (
-    <svg className='w-5 h-5' fill='none' stroke='currentColor' viewBox='0 0 24 24' aria-hidden>
-      <path
-        strokeLinecap='round'
-        strokeLinejoin='round'
-        strokeWidth={2}
-        d='M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6'
-      />
-    </svg>
-  ),
-  chat: (
-    <svg className='w-5 h-5' fill='none' stroke='currentColor' viewBox='0 0 24 24' aria-hidden>
-      <path
-        strokeLinecap='round'
-        strokeLinejoin='round'
-        strokeWidth={2}
-        d='M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z'
-      />
-    </svg>
-  ),
-  help: (
-    <svg className='w-5 h-5' fill='none' stroke='currentColor' viewBox='0 0 24 24' aria-hidden>
-      <path
-        strokeLinecap='round'
-        strokeLinejoin='round'
-        strokeWidth={2}
-        d='M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z'
-      />
-    </svg>
-  ),
+  home: <Icon name='home' size={20} />,
+  chat: <Icon name='chat' size={20} />,
+  help: <Icon name='help' size={20} />,
 };
 
 export interface MessengerShellProps {
@@ -209,17 +188,17 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
   };
 
   return (
-    <div
-      className={`${positionClass} rounded-[var(--radius)] pointer-events-auto bg-background`}
+    <Surface
+      className={`${positionClass} rounded-[var(--radius)] pointer-events-auto`}
       style={{
         zIndex,
         backgroundImage,
         ...(isPreviewMode ? previewPositionStyle : panelPositionStyle),
       }}
     >
-      <div
+      <Stack
         ref={containerRef}
-        className='rounded-[var(--radius)] shadow-[var(--shadow)] border border-border text-foreground flex flex-col relative overflow-hidden animate-messenger-entrance'
+        className='rounded-[var(--radius)] shadow-[var(--shadow)] border border-border text-foreground relative overflow-hidden animate-messenger-entrance'
         style={{
           transformOrigin,
           ...customStyles,
@@ -227,38 +206,35 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
         }}
       >
         {isMinimized ? (
-          <div className='flex items-center justify-between px-3 h-10 border-b border-border'>
-            <span className='text-sm font-medium text-foreground'>Marketrix</span>
+          <Flex className='items-center justify-between px-3 h-10 border-b border-border'>
+            <Text size='sm' weight='medium'>
+              Marketrix
+            </Text>
             <IconButton variant='ghost' size='sm' label='Close' onClick={onClose}>
-              <svg className='w-4 h-4' fill='currentColor' viewBox='0 0 20 20'>
-                <path
-                  fillRule='evenodd'
-                  d='M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z'
-                  clipRule='evenodd'
-                />
-              </svg>
+              <Icon name='close' size={16} />
             </IconButton>
-          </div>
+          </Flex>
         ) : (
           <>
             {/* Shared header: agent name + description */}
-            <div className='flex justify-between items-center px-3 py-2 border-b border-border flex-shrink-0'>
-              <div className='flex items-center gap-2 min-w-0 flex-1'>
-                <img
+            <Flex className='justify-between items-center px-3 py-2 border-b border-border flex-shrink-0'>
+              <Flex className='items-center gap-2 min-w-0 flex-1'>
+                <Avatar
                   src={MarketrixIcon}
                   alt=''
-                  className='flex-shrink-0 w-8 h-8 rounded-[var(--radius)] object-cover shadow-[var(--shadow)]'
+                  size='md'
+                  className='rounded-[var(--radius)] shadow-[var(--shadow)]'
                 />
-                <div className='min-w-0'>
-                  <div className='text-sm font-semibold leading-tight truncate text-foreground'>
+                <Stack className='min-w-0'>
+                  <Text size='sm' weight='semibold' truncate className='leading-tight'>
                     {config.agent_name ?? 'AI Agent'}
-                  </div>
-                  <p className='text-xs text-foreground-muted truncate'>
+                  </Text>
+                  <Text as='p' size='xs' variant='muted' truncate>
                     {config.agent_description ?? 'How can I help?'}
-                  </p>
-                </div>
-              </div>
-              <div className='flex items-center gap-0.5 flex-shrink-0'>
+                  </Text>
+                </Stack>
+              </Flex>
+              <Flex className='items-center gap-0.5 flex-shrink-0'>
                 {activeView === 'chat' && (
                   <>
                     {config.use_screenshare !== false && !headerScreenSharing && (
@@ -268,14 +244,7 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
                         label='Start screen sharing'
                         onClick={() => chatViewStartScreenShareRef.current?.()}
                       >
-                        <svg className='w-4 h-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
-                          <path
-                            strokeLinecap='round'
-                            strokeLinejoin='round'
-                            strokeWidth={2}
-                            d='M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z'
-                          />
-                        </svg>
+                        <Icon name='screenShare' size={16} />
                       </IconButton>
                     )}
                     {headerScreenSharing && (
@@ -286,14 +255,7 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
                         onClick={() => chatViewStopScreenShareRef.current?.()}
                       >
                         <span className='w-1.5 h-1.5 rounded-full bg-current animate-pulse' />
-                        <svg className='w-4 h-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
-                          <path
-                            strokeLinecap='round'
-                            strokeLinejoin='round'
-                            strokeWidth={2}
-                            d='M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z'
-                          />
-                        </svg>
+                        <Icon name='screenShare' size={16} />
                       </IconButton>
                     )}
                     <div className='relative' ref={moreMenuRef}>
@@ -305,12 +267,10 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
                         aria-haspopup='true'
                         aria-expanded={moreMenuOpen}
                       >
-                        <svg className='w-4 h-4' fill='currentColor' viewBox='0 0 20 20'>
-                          <path d='M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z' />
-                        </svg>
+                        <Icon name='moreVertical' size={16} />
                       </IconButton>
                       {moreMenuOpen && (
-                        <div
+                        <Surface
                           className='absolute right-0 top-full mt-1 py-1 rounded-lg shadow-lg border border-border bg-card min-w-[140px] z-50'
                           role='menu'
                           onMouseDown={e => e.nativeEvent.stopImmediatePropagation()}
@@ -342,24 +302,18 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
                             <FiInfo className='w-3.5 h-3.5 opacity-60' />
                             About
                           </button>
-                        </div>
+                        </Surface>
                       )}
                     </div>
                   </>
                 )}
                 <IconButton variant='ghost' size='sm' label='Close' onClick={onClose}>
-                  <svg className='w-4 h-4' fill='currentColor' viewBox='0 0 20 20'>
-                    <path
-                      fillRule='evenodd'
-                      d='M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z'
-                      clipRule='evenodd'
-                    />
-                  </svg>
+                  <Icon name='close' size={16} />
                 </IconButton>
-              </div>
-            </div>
+              </Flex>
+            </Flex>
 
-            <div className='flex-1 overflow-hidden flex flex-col min-h-0'>
+            <Surface className='flex-1 overflow-hidden flex flex-col min-h-0'>
               <ViewTransition key={activeView} direction={navDirection}>
                 {activeView === 'home' && (
                   <HomeView
@@ -391,27 +345,31 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
                   />
                 )}
                 {activeView === 'help' && (
-                  <div
+                  <Flex
                     id='view-help'
                     role='tabpanel'
                     aria-labelledby='tab-help'
-                    className='flex items-center justify-center h-full p-3 text-sm text-foreground-muted'
+                    className='items-center justify-center h-full p-3'
                   >
-                    Help – coming soon
-                  </div>
+                    <Text size='sm' variant='muted'>
+                      Help – coming soon
+                    </Text>
+                  </Flex>
                 )}
                 {activeView === 'news' && (
-                  <div
+                  <Flex
                     id='view-news'
                     role='tabpanel'
                     aria-labelledby='tab-news'
-                    className='flex items-center justify-center h-full p-3 text-sm text-foreground-muted'
+                    className='items-center justify-center h-full p-3'
                   >
-                    News – coming soon
-                  </div>
+                    <Text size='sm' variant='muted'>
+                      News – coming soon
+                    </Text>
+                  </Flex>
                 )}
               </ViewTransition>
-            </div>
+            </Surface>
 
             <TabBar activeView={activeView} onViewChange={handleViewChange} tabs={tabs} />
           </>
@@ -427,17 +385,17 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
               'bottom-right': 'bottom-0 right-0 rounded-br-[var(--radius)] cursor-nwse-resize items-end justify-end',
             };
             return (
-              <div
+              <Flex
                 key={corner}
                 role='separator'
                 aria-label={`Resize widget from ${corner.replace('-', ' ')}`}
                 title='Drag to resize'
-                className={`absolute w-5 h-5 flex p-1 touch-none z-10 group ${posClasses[corner]}`}
+                className={`absolute w-5 h-5 p-1 touch-none z-10 group ${posClasses[corner]}`}
                 onMouseDown={onResizeStart(corner)}
               />
             );
           })}
-      </div>
+      </Stack>
       <DiagnosticModal
         isOpen={diagnosticOpen}
         onClose={() => setDiagnosticOpen(false)}
@@ -460,6 +418,6 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
           build: typeof __BUILD_COMMIT__ !== 'undefined' ? __BUILD_COMMIT__ : 'dev',
         }}
       />
-    </div>
+    </Surface>
   );
 };
