@@ -125,7 +125,6 @@ export const MessageList = ({
             message={message}
             index={index}
             isLastMessage={index === allMessages.length - 1}
-            widgetState={widgetState}
             onScreenAccessAllow={onScreenAccessAllow}
             onScreenAccessDeny={onScreenAccessDeny}
           />

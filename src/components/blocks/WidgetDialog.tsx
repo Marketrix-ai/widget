@@ -35,10 +35,10 @@ export interface WidgetDialogProps {
 }
 
 const statusColorMap: Record<WidgetDialogStatus['color'], string> = {
-  green: 'bg-green-100 text-green-700',
-  blue: 'bg-blue-100 text-blue-700',
-  yellow: 'bg-yellow-100 text-yellow-700',
-  gray: 'bg-gray-100 text-gray-600',
+  green: 'bg-success/15 text-success',
+  blue: 'bg-chart-1/15 text-chart-1',
+  yellow: 'bg-warning/15 text-warning',
+  gray: 'bg-muted text-muted-foreground',
 };
 
 export const WidgetDialog: React.FC<WidgetDialogProps> = ({
@@ -65,10 +65,12 @@ export const WidgetDialog: React.FC<WidgetDialogProps> = ({
       }}
     >
       {variant === 'confirm' ? (
-        <DialogContent className='bg-white rounded-lg p-4 max-w-sm shadow-xl'>
-          <DialogTitle className='text-base font-semibold text-gray-900 mb-1'>{title}</DialogTitle>
+        <DialogContent className='bg-card rounded-lg p-4 max-w-sm shadow-xl'>
+          <DialogTitle className='text-base font-semibold text-foreground mb-1'>{title}</DialogTitle>
           {description != null && (
-            <DialogDescription className='text-sm text-gray-600 mb-4 leading-relaxed'>{description}</DialogDescription>
+            <DialogDescription className='text-sm text-muted-foreground mb-4 leading-relaxed'>
+              {description}
+            </DialogDescription>
           )}
           <Flex className='gap-2 justify-end'>
             <Button
@@ -80,7 +82,7 @@ export const WidgetDialog: React.FC<WidgetDialogProps> = ({
                 e.stopPropagation();
                 onClose();
               }}
-              className='px-4 py-1.5 rounded-full text-sm font-medium border border-gray-200'
+              className='px-4 py-1.5 rounded-full text-sm font-medium border border-border'
             >
               {cancelLabel}
             </Button>
@@ -100,13 +102,14 @@ export const WidgetDialog: React.FC<WidgetDialogProps> = ({
           </Flex>
         </DialogContent>
       ) : (
-        <DialogContent className='bg-white rounded-md shadow-lg border border-gray-200 w-64 p-0'>
+        <DialogContent className='bg-card rounded-md shadow-lg border border-border w-64 p-0'>
           {/* Header */}
-          <Flex className='items-center justify-between px-3 py-1.5 border-b border-gray-100'>
-            <DialogTitle className='text-[11px] font-semibold text-gray-700 flex-1 text-center mb-0'>
-              {title}
-            </DialogTitle>
-            <DialogClose className='text-gray-400 hover:text-gray-600 -mr-1 static w-auto h-auto' aria-label='Close'>
+          <Flex className='items-center justify-between px-3 py-1.5 border-b border-border'>
+            <DialogTitle className='text-xs font-semibold text-foreground flex-1 text-center mb-0'>{title}</DialogTitle>
+            <DialogClose
+              className='text-muted-foreground hover:text-foreground -mr-1 static w-auto h-auto'
+              aria-label='Close'
+            >
               <Icon name='x' size={12} />
             </DialogClose>
           </Flex>
@@ -115,13 +118,13 @@ export const WidgetDialog: React.FC<WidgetDialogProps> = ({
           <Stack className='px-3 py-1.5'>
             {rows.map(row => (
               <Flex key={row.label} className='items-center justify-between py-[3px]'>
-                <Text as='span' className='text-[10px] text-gray-500'>
+                <Text as='span' className='text-xs text-muted-foreground'>
                   {row.label}
                 </Text>
                 <Flex className='items-center gap-1'>
                   <Text
                     as='code'
-                    className='text-[9px] text-gray-600 bg-gray-50 px-1 py-0.5 rounded max-w-[120px] truncate'
+                    className='text-xs text-muted-foreground bg-muted px-1 py-0.5 rounded max-w-[120px] truncate'
                   >
                     {row.value || 'N/A'}
                   </Text>
@@ -131,7 +134,7 @@ export const WidgetDialog: React.FC<WidgetDialogProps> = ({
                       variant='ghost'
                       size='sm'
                       onClick={() => copyToClipboard(row.value)}
-                      className='text-[9px] text-blue-500 hover:text-blue-600 min-w-0 p-0 h-auto'
+                      className='text-xs text-primary hover:text-primary min-w-0 p-0 h-auto'
                     >
                       Copy
                     </Button>
@@ -143,7 +146,7 @@ export const WidgetDialog: React.FC<WidgetDialogProps> = ({
             {/* Status badge */}
             {status != null && (
               <Flex className='items-center justify-between py-[3px]'>
-                <Text as='span' className='text-[10px] text-gray-500'>
+                <Text as='span' className='text-xs text-muted-foreground'>
                   Status
                 </Text>
                 <Badge variant='status' className={statusColorMap[status.color]}>

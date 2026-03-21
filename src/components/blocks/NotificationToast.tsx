@@ -31,6 +31,15 @@ const TONE_STYLES = {
   },
 } as const;
 
+const AUTO_DISMISS_MS = 8000;
+
+function getPositionStyle(position: 'bottom-center' | 'above-fab'): React.CSSProperties {
+  if (position === 'above-fab') {
+    return { bottom: '90px', left: '50%', transform: 'translateX(-50%)' };
+  }
+  return { bottom: '20px', left: '50%', transform: 'translateX(-50%)' };
+}
+
 export interface NotificationToastProps {
   tone: 'info' | 'error';
   title: string;
@@ -58,14 +67,9 @@ export const NotificationToast: React.FC<NotificationToastProps> = ({
   // Auto-dismiss after 8s for info tone
   useEffect(() => {
     if (tone !== 'info') return;
-    const timer = setTimeout(dismiss, 8000);
+    const timer = setTimeout(dismiss, AUTO_DISMISS_MS);
     return () => clearTimeout(timer);
   }, [tone, dismiss]);
-
-  const positionStyle: React.CSSProperties =
-    position === 'bottom-center'
-      ? { bottom: '20px', left: '50%', transform: 'translateX(-50%)' }
-      : { bottom: '90px', left: '50%', transform: 'translateX(-50%)' };
 
   const colors = TONE_STYLES[tone];
 
@@ -78,7 +82,7 @@ export const NotificationToast: React.FC<NotificationToastProps> = ({
         opacity: isExiting ? 0 : 1,
         transition: 'opacity 0.3s ease-out',
         animation: isExiting ? 'none' : 'fadeIn 0.3s ease-out',
-        ...positionStyle,
+        ...getPositionStyle(position),
       }}
     >
       <Flex

@@ -1,6 +1,7 @@
 import React from 'react';
 
-import type { ChatMessage, WidgetState } from '../../types';
+import { useWidget } from '../../hooks/useWidget';
+import type { ChatMessage } from '../../types';
 import { removeThinkingMarkerFromEnd } from '../../utils/chat';
 import { Stack } from '../base/Stack';
 import { Surface } from '../base/Surface';
@@ -11,10 +12,10 @@ import { ThinkingIndicator } from './ThinkingIndicator';
 interface MessageContentProps {
   message: ChatMessage;
   isLastMessage: boolean;
-  widgetState: WidgetState;
 }
 
-export const MessageContent: React.FC<MessageContentProps> = ({ message, isLastMessage, widgetState }) => {
+export const MessageContent: React.FC<MessageContentProps> = ({ message, isLastMessage }) => {
+  const { state: widgetState } = useWidget();
   const placeholderState = message.placeholderState || 'thinking';
   const isWaitingForUser = placeholderState === 'waiting-for-user';
 

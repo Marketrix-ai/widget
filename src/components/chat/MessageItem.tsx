@@ -2,7 +2,7 @@ import React from 'react';
 
 import MarketrixIcon from '../../assets/marketrix-icon.svg';
 import { SHADOW } from '../../design-system/shadows';
-import type { ChatMessage, WidgetState } from '../../types';
+import type { ChatMessage } from '../../types';
 import { formatMessageTime } from '../../utils/format';
 import { Avatar, Button, Flex, Stack, Text } from '../base';
 import { MessageContent } from './MessageContent';
@@ -13,7 +13,6 @@ interface MessageItemProps {
   message: ChatMessage;
   index: number;
   isLastMessage: boolean;
-  widgetState: WidgetState;
   onScreenAccessAllow?: () => void;
   onScreenAccessDeny?: () => void;
 }
@@ -22,7 +21,6 @@ export const MessageItem: React.FC<MessageItemProps> = ({
   message,
   index,
   isLastMessage,
-  widgetState,
   onScreenAccessAllow,
   onScreenAccessDeny,
 }) => {
@@ -84,35 +82,17 @@ export const MessageItem: React.FC<MessageItemProps> = ({
           {/* Video stream display - edge-to-edge */}
           {message.videoStream && <VideoStreamDisplay stream={message.videoStream} />}
           {/* Message content */}
-          {!message.videoStream && (
-            <MessageContent message={message} isLastMessage={isLastMessage} widgetState={widgetState} />
-          )}
+          {!message.videoStream && <MessageContent message={message} isLastMessage={isLastMessage} />}
 
           {/* Screen access request action buttons - show if not yet handled */}
           {message.isScreenAccessRequest && !message.screenShareStatus && (
-            <Flex align='center' gap='md' style={{ marginTop: '6px', paddingTop: '2px' }}>
+            <Flex align='center' gap='sm' style={{ marginTop: '6px' }}>
               <Button
                 type='button'
                 variant='primary'
                 size='sm'
-                onClick={e => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  onScreenAccessAllow?.();
-                }}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '14px',
-                  fontWeight: 500,
-                  height: '26px',
-                  minWidth: '65px',
-                  borderRadius: '22px',
-                  backgroundColor: 'var(--primary)',
-                  color: 'var(--primary-foreground)',
-                  border: 'none',
-                }}
+                className='rounded-full'
+                onClick={() => onScreenAccessAllow?.()}
               >
                 Yes
               </Button>
@@ -120,39 +100,17 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                 type='button'
                 variant='secondary'
                 size='sm'
-                onClick={e => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  onScreenAccessDeny?.();
-                }}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '14px',
-                  fontWeight: 500,
-                  height: '26px',
-                  minWidth: '65px',
-                  borderRadius: '22px',
-                  backgroundColor: 'var(--secondary)',
-                  color: 'var(--primary)',
-                  border: '1px solid var(--border)',
-                }}
+                className='rounded-full'
+                onClick={() => onScreenAccessDeny?.()}
               >
                 No
               </Button>
             </Flex>
           )}
 
-          {/* Screen access request handled state - show decision */}
-          {message.isScreenAccessRequest && message.screenShareStatus === 'allowed' && (
-            <Text as='div' variant='faint' size='xs' weight='medium' style={{ marginTop: '2px', fontStyle: 'italic' }}>
-              Sure
-            </Text>
-          )}
-          {message.isScreenAccessRequest && message.screenShareStatus === 'denied' && (
-            <Text as='div' variant='faint' size='xs' weight='medium' style={{ marginTop: '2px', fontStyle: 'italic' }}>
-              Check HTML Instead
+          {message.isScreenAccessRequest && message.screenShareStatus && (
+            <Text as='div' variant='faint' size='xs' style={{ marginTop: '2px', fontStyle: 'italic' }}>
+              {message.screenShareStatus === 'allowed' ? 'Sure' : 'Check HTML Instead'}
             </Text>
           )}
 
