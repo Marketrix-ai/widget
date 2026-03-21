@@ -2,16 +2,15 @@ import { type ElementType, forwardRef } from 'react';
 
 import { cn } from '@/lib/utils';
 
-type SurfaceVariant = 'default' | 'card' | 'overlay';
-type SurfacePadding = 'none' | 'sm' | 'md' | 'lg';
+import { type LayoutProps, resolveLayoutClasses, stripLayoutProps } from './layoutProps';
 
-export interface SurfaceProps extends React.HTMLAttributes<HTMLElement> {
+type SurfaceVariant = 'default' | 'card' | 'overlay';
+
+export interface SurfaceProps extends LayoutProps, Omit<React.HTMLAttributes<HTMLElement>, 'className'> {
   as?: ElementType;
   variant?: SurfaceVariant;
-  border?: boolean;
-  rounded?: boolean;
-  shadow?: boolean;
-  padding?: SurfacePadding;
+  /** @internal blocks/ only */
+  className?: string;
 }
 
 const variantStyles: Record<SurfaceVariant, string> = {
@@ -20,29 +19,12 @@ const variantStyles: Record<SurfaceVariant, string> = {
   overlay: 'bg-background/70 backdrop-blur-sm',
 };
 
-const paddingStyles: Record<SurfacePadding, string> = {
-  none: '',
-  sm: 'p-2',
-  md: 'p-3',
-  lg: 'p-4',
-};
+export const Surface = forwardRef<HTMLElement, SurfaceProps>(function Surface(props, ref) {
+  const { as: Component = 'div', variant = 'default', className, style, ...rest } = props;
+  const layoutClasses = resolveLayoutClasses(props);
+  const domProps = stripLayoutProps(rest);
 
-export const Surface = forwardRef<HTMLElement, SurfaceProps>(function Surface(
-  { as: Component = 'div', variant = 'default', border, rounded, shadow, padding = 'none', className, ...props },
-  ref,
-) {
   return (
-    <Component
-      {...props}
-      ref={ref}
-      className={cn(
-        variantStyles[variant],
-        border && 'border border-border',
-        rounded && 'rounded-[var(--radius)]',
-        shadow && 'shadow-[var(--shadow)]',
-        paddingStyles[padding],
-        className,
-      )}
-    />
+    <Component {...domProps} ref={ref} className={cn(variantStyles[variant], layoutClasses, className)} style={style} />
   );
 });
