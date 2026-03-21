@@ -30,7 +30,7 @@ export const MessageContent: React.FC<MessageContentProps> = ({
   // Render using structured parts
   if (message.parts && message.parts.length > 0) {
     return (
-      <Stack className='gap-1.5'>
+      <Stack gap='sm'>
         {message.parts.map((part, index) => {
           if (part.type === 'text') {
             // Clean thinking marker if present in text part
@@ -44,7 +44,14 @@ export const MessageContent: React.FC<MessageContentProps> = ({
               <Text
                 as='div'
                 key={`part-${index}`}
-                className='text-xs font-inter font-medium leading-tight break-words whitespace-pre-wrap mb-1'
+                size='xs'
+                weight='medium'
+                style={{
+                  lineHeight: 'tight',
+                  wordBreak: 'break-word',
+                  whiteSpace: 'pre-wrap',
+                  marginBottom: '4px',
+                }}
               >
                 {text}
               </Text>

@@ -30,24 +30,20 @@ export const SuggestedActions: React.FC<SuggestedActionsProps> = ({
   if (actions.length === 0) return null;
 
   return (
-    <Stack className='mt-2.5 mb-1.5 p-0 gap-1'>
+    <Stack style={{ marginTop: '10px', marginBottom: '6px', gap: '4px' }}>
       {actions.map((action, chipIndex) => (
         <Button
           key={`welcome-chip-${action.id}-${chipIndex}`}
           variant='ghost'
           size='sm'
+          full
           onClick={e => onActionClick(action, e)}
           disabled={hasPendingMessage}
-          className={`
-            w-full flex items-center justify-center gap-1 font-inter font-normal text-xs px-3 py-2 rounded-lg
-            transition-[background-color,color,border-color] duration-[250ms] ease-in-out text-left
-            border border-solid
-            ${hasPendingMessage ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}
-          `}
           style={{
             backgroundColor: 'rgba(0,0,0,0.05)',
             borderColor: 'rgba(0,0,0,0.12)',
             color: hasPendingMessage ? addOpacity(settings.widget_text_color, 0.5) : settings.widget_text_color,
+            transition: 'background-color 250ms ease-in-out, color 250ms ease-in-out, border-color 250ms ease-in-out',
           }}
           onMouseEnter={e => {
             if (!hasPendingMessage) {
@@ -64,7 +60,7 @@ export const SuggestedActions: React.FC<SuggestedActionsProps> = ({
             }
           }}
         >
-          <Text as='span' className='text-inherit font-normal leading-none'>
+          <Text as='span' weight='normal' style={{ lineHeight: 1 }}>
             {action.type === 'show' ? (
               <>Show me {action.text.replace(/^Show me\s*/i, '')}</>
             ) : action.type === 'do' ? (

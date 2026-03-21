@@ -30,19 +30,18 @@ export const ProgressLine: React.FC<ProgressLineProps> = ({
   const renderIcon = () => {
     switch (status) {
       case 'completed':
-        return <Icon name='checkCircle' className='flex-shrink-0 mt-0.5' style={{ color: accentColor }} size={16} />;
+        return <Icon name='checkCircle' style={{ color: accentColor, marginTop: '2px', flexShrink: 0 }} size={16} />;
       case 'failed':
         return (
           <Icon
             name='timesCircle'
-            className='flex-shrink-0 mt-0.5'
-            style={{ color: addOpacity(textColor, 0.65) }}
+            style={{ color: addOpacity(textColor, 0.65), marginTop: '2px', flexShrink: 0 }}
             size={16}
           />
         );
       case 'canceled':
         return (
-          <Icon name='ban' className='flex-shrink-0 mt-0.5' style={{ color: addOpacity(textColor, 0.5) }} size={16} />
+          <Icon name='ban' style={{ color: addOpacity(textColor, 0.5), marginTop: '2px', flexShrink: 0 }} size={16} />
         );
       case 'running':
         // If waiting for user, we might want a different icon or just spinner?
@@ -50,15 +49,15 @@ export const ProgressLine: React.FC<ProgressLineProps> = ({
         if (isWaitingForUser) {
           return (
             <Flex
-              className='flex-shrink-0 mt-0.5 spinner-container'
+              shrink={false}
+              position='relative'
               style={{
                 width: '16px',
                 height: '16px',
-                position: 'relative',
+                marginTop: '2px',
               }}
             >
               <Flex
-                className='spinner'
                 style={{
                   width: '16px',
                   height: '16px',
@@ -78,15 +77,14 @@ export const ProgressLine: React.FC<ProgressLineProps> = ({
           );
         }
         // Standard running spinner
-        return <Spinner size='sm' className='flex-shrink-0 mt-0.5' style={{ color: accentColor }} />;
+        return <Spinner size='sm' style={{ color: accentColor, marginTop: '2px' }} />;
       case 'pending':
       default:
         // Static circle for pending/queued
         return (
           <Icon
             name='circle'
-            className='flex-shrink-0 mt-0.5'
-            style={{ color: addOpacity(textColor, 0.5) }}
+            style={{ color: addOpacity(textColor, 0.5), marginTop: '2px', flexShrink: 0 }}
             size={16}
           />
         );
@@ -94,12 +92,16 @@ export const ProgressLine: React.FC<ProgressLineProps> = ({
   };
 
   return (
-    <Flex className='items-start gap-2'>
+    <Flex align='start' gap='md'>
       {!hideIcon && renderIcon()}
       <Text
         as='span'
-        className='flex-1 whitespace-pre-wrap text-xs font-inter font-medium leading-tight'
+        size='xs'
+        weight='medium'
         style={{
+          flex: 1,
+          whiteSpace: 'pre-wrap',
+          lineHeight: 'tight',
           color: textStyle === 'muted' ? addOpacity(textColor, 0.5) : textColor,
         }}
       >

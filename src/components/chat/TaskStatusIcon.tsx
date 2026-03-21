@@ -14,22 +14,19 @@ export const TaskStatusIcon: React.FC<TaskStatusIconProps> = ({ status, accentCo
 
   switch (status) {
     case 'done':
-      return <Icon name='checkCircle' className='flex-shrink-0' style={{ color: accentColor }} size={iconSize} />;
+      return <Icon name='checkCircle' style={{ color: accentColor, flexShrink: 0 }} size={iconSize} />;
     case 'failed':
       return (
         <Icon
           name='exclamationCircle'
-          className='flex-shrink-0'
-          style={{ color: addOpacity(accentColor, 0.75) }}
+          style={{ color: addOpacity(accentColor, 0.75), flexShrink: 0 }}
           size={iconSize}
         />
       );
     case 'stopped':
-      return (
-        <Icon name='circle' className='flex-shrink-0' style={{ color: addOpacity(accentColor, 0.5) }} size={iconSize} />
-      );
+      return <Icon name='circle' style={{ color: addOpacity(accentColor, 0.5), flexShrink: 0 }} size={iconSize} />;
     case 'ongoing':
     default:
-      return <Spinner size='sm' className='flex-shrink-0' style={{ color: accentColor }} />;
+      return <Spinner size='sm' style={{ color: accentColor }} />;
   }
 };

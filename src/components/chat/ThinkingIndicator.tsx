@@ -19,11 +19,11 @@ export const ThinkingIndicator: React.FC<ThinkingIndicatorProps> = ({
   accentColor,
 }) => {
   return (
-    <Flex className='items-center gap-1.5 py-0.5'>
+    <Flex align='center' gap='sm' paddingY='xs'>
       {/* Spinner icon */}
-      <Spinner size='sm' className='flex-shrink-0' style={{ color: accentColor || addOpacity(textColor, 0.5) }} />
+      <Spinner size='sm' style={{ color: accentColor || addOpacity(textColor, 0.5) }} />
       {/* State text */}
-      <Text as='span' className='text-[10px] font-inter font-normal' style={{ color: addOpacity(textColor, 0.5) }}>
+      <Text as='span' weight='normal' style={{ fontSize: '10px', color: addOpacity(textColor, 0.5) }}>
         {customText || (isWaitingForUser ? 'Waiting for you to complete the action' : 'Thinking')}
       </Text>
     </Flex>
