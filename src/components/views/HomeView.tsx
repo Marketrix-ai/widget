@@ -29,9 +29,9 @@ export const HomeView: React.FC<HomeViewProps> = ({ config, messages, onNavigate
 
   return (
     <Stack height='full' overflow='hidden' id='view-home' role='tabpanel' aria-labelledby='tab-home'>
-      <Stack grow overflowY='auto' padding='lg' gap='lg'>
-        {/* Greeting */}
-        <Surface style={{ textAlign: 'center', paddingTop: '8px' }}>
+      <Stack grow overflowY='auto' padding='lg'>
+        {/* Block 1: Greeting */}
+        <Surface style={{ textAlign: 'center', paddingTop: '8px', paddingBottom: '16px' }}>
           <Text as='h2' size='lg' weight='semibold'>
             {config.widget_greeting ?? 'Hey There!'}
           </Text>
@@ -40,38 +40,39 @@ export const HomeView: React.FC<HomeViewProps> = ({ config, messages, onNavigate
           </Text>
         </Surface>
 
-        {/* Ask a question CTA */}
-        <Button
-          type='button'
-          variant='primary'
-          full
-          onClick={onNavigateToChat}
-          aria-label='Ask a question'
-          style={{
-            justifyContent: 'space-between',
-            padding: '12px 16px',
-            borderRadius: 'var(--radius)',
-            fontWeight: 500,
-          }}
-        >
-          <Flex align='center' gap='md'>
-            <Icon name='chat' size={20} />
-            Ask a question
-          </Flex>
-          <Icon name='chevronRight' size={16} />
-        </Button>
+        {/* Block 2: Actions — CTA + chips as one unit */}
+        <Stack gap='sm'>
+          <Button
+            type='button'
+            variant='primary'
+            full
+            onClick={onNavigateToChat}
+            aria-label='Ask a question'
+            style={{
+              justifyContent: 'space-between',
+              padding: '12px 16px',
+              borderRadius: 'var(--radius)',
+              fontWeight: 500,
+            }}
+          >
+            <Flex align='center' gap='md'>
+              <Icon name='chat' size={20} />
+              Ask a question
+            </Flex>
+            <Icon name='chevronRight' size={16} />
+          </Button>
 
-        {/* Suggested action chips */}
-        <SuggestedActions
-          actions={suggestedActions}
-          settings={{
-            widget_text_color: config.widget_text_color ?? '#1f2937',
-          }}
-          onActionClick={handleActionClick}
-        />
+          <SuggestedActions
+            actions={suggestedActions}
+            settings={{
+              widget_text_color: config.widget_text_color ?? '#1f2937',
+            }}
+            onActionClick={handleActionClick}
+          />
+        </Stack>
       </Stack>
 
-      {/* Recent conversation — anchored at bottom, matches chat input card style */}
+      {/* Block 3: Recent conversation — anchored at bottom */}
       {messages.length > 0 && (
         <Surface
           style={{
