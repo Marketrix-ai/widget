@@ -80,6 +80,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ config, messages, onNavigate
             margin: '0 12px 12px 12px',
             borderRadius: 'var(--radius-xl, 12px)',
             border: '1px solid var(--border)',
+            boxShadow: '0 -2px 8px rgba(0,0,0,0.04)',
           }}
         >
           <Text as='p' size='xs' weight='semibold' style={{ marginBottom: '2px' }}>
