@@ -1,7 +1,7 @@
 import React from 'react';
 
 import { addOpacity } from '../../utils/format';
-import { Button } from '../base/Button';
+import { Button, Stack, Text } from '../base';
 
 interface SuggestedAction {
   id: string;
@@ -30,7 +30,7 @@ export const SuggestedActions: React.FC<SuggestedActionsProps> = ({
   if (actions.length === 0) return null;
 
   return (
-    <div className='mt-2.5 mb-1.5 p-0 flex flex-col gap-1'>
+    <Stack className='mt-2.5 mb-1.5 p-0 gap-1'>
       {actions.map((action, chipIndex) => (
         <Button
           key={`welcome-chip-${action.id}-${chipIndex}`}
@@ -64,7 +64,7 @@ export const SuggestedActions: React.FC<SuggestedActionsProps> = ({
             }
           }}
         >
-          <span className='font-normal leading-none'>
+          <Text as='span' className='text-inherit font-normal leading-none'>
             {action.type === 'show' ? (
               <>Show me {action.text.replace(/^Show me\s*/i, '')}</>
             ) : action.type === 'do' ? (
@@ -72,9 +72,9 @@ export const SuggestedActions: React.FC<SuggestedActionsProps> = ({
             ) : (
               action.text
             )}
-          </span>
+          </Text>
         </Button>
       ))}
-    </div>
+    </Stack>
   );
 };
