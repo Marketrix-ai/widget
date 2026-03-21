@@ -77,16 +77,16 @@ const copyIndexHtmlPlugin = (outDir: string) => {
   return {
     name: 'copy-index-html',
     closeBundle() {
-      const indexPath = resolve(cwd(), 'inject.html');
+      const indexPath = resolve(cwd(), 'index.html');
       const destDir = resolve(cwd(), outDir);
-      const destPath = resolve(destDir, 'inject.html');
+      const destPath = resolve(destDir, 'index.html');
       if (existsSync(indexPath)) {
         // Ensure destination directory exists
         if (!existsSync(destDir)) {
           mkdirSync(destDir, { recursive: true });
         }
         copyFileSync(indexPath, destPath);
-        console.log(`✓ Copied inject.html to ${outDir}/`);
+        console.log(`✓ Copied index.html to ${outDir}/`);
       }
     },
   };

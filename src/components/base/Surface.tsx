@@ -15,5 +15,5 @@ export const Surface = forwardRef<HTMLElement, SurfaceProps>(function Surface(pr
   const layoutClasses = resolveLayoutClasses(props);
   const domProps = stripLayoutProps(rest);
 
-  return <Component {...domProps} ref={ref} className={cn('bg-background', layoutClasses, className)} style={style} />;
+  return <Component {...domProps} ref={ref} className={cn(layoutClasses, className)} style={style} />;
 });
