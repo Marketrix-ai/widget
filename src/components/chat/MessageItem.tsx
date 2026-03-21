@@ -53,12 +53,12 @@ export const MessageItem: React.FC<MessageItemProps> = ({
     >
       <Flex align='start' gap='xs' width='full'>
         {/* Logo or Spacer - Always on left */}
-        <Flex shrink={false} style={{ width: '32px', height: '32px', backgroundColor: 'transparent' }}>
+        <Flex shrink={false} style={{ width: '24px', height: '24px', backgroundColor: 'transparent' }}>
           {!isUser && (
             <Avatar
               src={MarketrixIcon}
               alt='Marketrix AI'
-              size='md'
+              size={24}
               rounded='theme'
               style={{
                 border: 'none',
@@ -175,7 +175,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
       </Flex>
       {/* Attribution line for agent messages */}
       {!isUser && !message.isPlaceholder && (
-        <Text as='div' variant='muted' style={{ fontSize: '11px', marginTop: '4px', marginLeft: '36px' }}>
+        <Text as='div' variant='muted' style={{ fontSize: '11px', marginTop: '4px', marginLeft: '28px' }}>
           Marketrix • AI Agent • {formatMessageTime(message.timestamp)}
         </Text>
       )}

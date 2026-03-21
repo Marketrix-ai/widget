@@ -30,12 +30,12 @@ export const HomeView: React.FC<HomeViewProps> = ({ config, messages, onNavigate
   return (
     <Stack height='full' overflow='hidden' id='view-home' role='tabpanel' aria-labelledby='tab-home'>
       <Stack grow overflowY='auto' padding='lg' gap='lg'>
-        {/* Centered greeting */}
+        {/* Greeting */}
         <Surface style={{ textAlign: 'center', paddingTop: '8px' }}>
           <Text as='h2' size='lg' weight='semibold'>
             {config.widget_greeting ?? 'Hey There!'}
           </Text>
-          <Text as='p' variant='muted' size='sm' style={{ marginTop: '4px' }}>
+          <Text as='p' variant='muted' size='sm' style={{ marginTop: '2px' }}>
             {config.widget_body ?? 'How can I help you today?'}
           </Text>
         </Surface>
@@ -62,45 +62,46 @@ export const HomeView: React.FC<HomeViewProps> = ({ config, messages, onNavigate
         </Button>
 
         {/* Suggested action chips */}
-        <Surface>
-          <SuggestedActions
-            actions={suggestedActions}
-            settings={{
-              widget_text_color: config.widget_text_color ?? '#1f2937',
-            }}
-            onActionClick={handleActionClick}
-          />
-        </Surface>
-
-        {/* Recent conversation preview */}
-        {messages.length > 0 && (
-          <Surface
-            border
-            rounded='lg'
-            style={{ padding: '8px 12px', backgroundColor: 'var(--color-background, transparent)', opacity: 0.6 }}
-          >
-            <Text as='p' size='sm' weight='semibold' style={{ marginBottom: '2px' }}>
-              Recent conversation
-            </Text>
-            <Text
-              as='p'
-              size='xs'
-              variant='muted'
-              style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
-            >
-              {messages[messages.length - 1].content || 'Message'}
-            </Text>
-            <Button
-              type='button'
-              variant='ghost'
-              onClick={onNavigateToChat}
-              style={{ marginTop: '4px', fontSize: '12px', fontWeight: 500, color: 'var(--color-primary)', padding: 0 }}
-            >
-              Continue conversation →
-            </Button>
-          </Surface>
-        )}
+        <SuggestedActions
+          actions={suggestedActions}
+          settings={{
+            widget_text_color: config.widget_text_color ?? '#1f2937',
+          }}
+          onActionClick={handleActionClick}
+        />
       </Stack>
+
+      {/* Recent conversation — anchored at bottom, matches chat input card style */}
+      {messages.length > 0 && (
+        <Surface
+          style={{
+            padding: '10px 16px',
+            margin: '0 12px 12px 12px',
+            borderRadius: 'var(--radius-xl, 12px)',
+            border: '1px solid var(--border)',
+          }}
+        >
+          <Text as='p' size='xs' weight='semibold' style={{ marginBottom: '2px' }}>
+            Recent conversation
+          </Text>
+          <Text
+            as='p'
+            size='xs'
+            variant='muted'
+            style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
+          >
+            {messages[messages.length - 1].content || 'Message'}
+          </Text>
+          <Button
+            type='button'
+            variant='bare'
+            onClick={onNavigateToChat}
+            style={{ marginTop: '4px', fontSize: '12px', fontWeight: 500, color: 'var(--color-primary)' }}
+          >
+            Continue conversation →
+          </Button>
+        </Surface>
+      )}
     </Stack>
   );
 };

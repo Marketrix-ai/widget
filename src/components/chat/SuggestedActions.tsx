@@ -22,7 +22,7 @@ export const SuggestedActions: React.FC<SuggestedActionsProps> = ({ actions, set
   if (actions.length === 0) return null;
 
   return (
-    <Stack gap='xs'>
+    <Stack gap='sm'>
       {actions.map((action, chipIndex) => (
         <Button
           key={`welcome-chip-${action.id}-${chipIndex}`}

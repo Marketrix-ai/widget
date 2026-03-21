@@ -8,9 +8,9 @@ import { Button } from '../base/Button';
 import { Flex } from '../base/Flex';
 import { Icon } from '../base/Icon';
 import { Surface } from '../base/Surface';
+import { Text } from '../base/Text';
 import { StateMessage } from '../ui/StateMessage';
 import { MessageItem } from './MessageItem';
-import { WelcomeMessage } from './WelcomeMessage';
 
 interface MessageListProps {
   messages: ChatMessage[];
@@ -18,6 +18,7 @@ interface MessageListProps {
   config?: MarketrixConfig;
   onScreenAccessAllow?: () => void;
   onScreenAccessDeny?: () => void;
+  onClearChat?: () => void | Promise<void>;
 }
 
 export const MessageList = ({
@@ -26,6 +27,7 @@ export const MessageList = ({
   config,
   onScreenAccessAllow,
   onScreenAccessDeny,
+  onClearChat,
 }: MessageListProps) => {
   // Get widget config and state
   const { config: widgetConfig, state: widgetState, isPreviewMode } = useWidget({ config });
@@ -81,7 +83,7 @@ export const MessageList = ({
         aria-relevant='additions'
         height='full'
         overflowY='auto'
-        paddingX='md'
+        paddingX='lg'
         paddingY='sm'
         style={{
           backgroundColor: widgetConfig.widget_background_color.includes('gradient')
@@ -97,16 +99,22 @@ export const MessageList = ({
         {/* Initial loading state when no messages yet */}
         {messages.length === 0 && widgetState.isLoading && <StateMessage variant='loading' message='Connecting…' />}
 
-        {/* Welcome message - always show */}
-        <WelcomeMessage greeting={widgetConfig.widget_body ?? 'How can I help you today?'} />
-
-        {/* Messages */}
-        {messages.map((message: ChatMessage, index: number) => (
+        {/* Messages (greeting prepended as first agent message) */}
+        {[
+          {
+            id: 'welcome',
+            content: widgetConfig.widget_body ?? 'How can I help you today?',
+            sender: 'agent' as const,
+            timestamp: new Date(),
+            isPlaceholder: false,
+          } satisfies ChatMessage,
+          ...messages,
+        ].map((message: ChatMessage, index: number, allMessages: ChatMessage[]) => (
           <MessageItem
             key={`message-${message.id}-${index}`}
             message={message}
             index={index}
-            isLastMessage={index === messages.length - 1}
+            isLastMessage={index === allMessages.length - 1}
             widgetState={widgetState}
             settings={{
               widget_accent_color: widgetConfig.widget_accent_color,
@@ -115,6 +123,24 @@ export const MessageList = ({
             onScreenAccessDeny={onScreenAccessDeny}
           />
         ))}
+
+        {/* Clear conversation footer */}
+        {messages.length > 0 && onClearChat && (
+          <Flex justify='center' style={{ marginTop: '12px', marginBottom: '4px' }}>
+            <Button
+              type='button'
+              variant='bare'
+              onClick={() => {
+                const result = onClearChat();
+                if (result instanceof Promise) result.catch(e => console.error(e));
+              }}
+            >
+              <Text size='xs' variant='muted' style={{ cursor: 'pointer' }}>
+                Clear conversation
+              </Text>
+            </Button>
+          </Flex>
+        )}
 
         {/* Auto-scroll anchor */}
         <Surface key='scroll-anchor' ref={messagesEndRef as React.RefObject<HTMLDivElement>} />

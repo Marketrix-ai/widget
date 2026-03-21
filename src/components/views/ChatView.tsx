@@ -68,6 +68,7 @@ export interface ChatViewProps {
   onUpdateMessage: (messageId: string, updates: Partial<ChatMessage>) => void;
   onRemoveMessage?: (messageId: string) => void;
   onStopTask?: () => void;
+  onClearChat?: () => void | Promise<void>;
   onScreenSharingChange?: (isSharing: boolean) => void;
   /** Refs for header buttons to trigger screen share start/stop */
   onStartScreenShareRef?: React.MutableRefObject<(() => void) | null>;
@@ -110,6 +111,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
   onUpdateMessage,
   onRemoveMessage,
   onStopTask,
+  onClearChat,
   onScreenSharingChange,
   onStartScreenShareRef,
   onStopScreenShareRef,
@@ -344,6 +346,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
             config={config}
             onScreenAccessAllow={handleScreenAccessAllow}
             onScreenAccessDeny={handleScreenAccessDeny}
+            onClearChat={onClearChat}
           />
         </ChatErrorBoundary>
       </Surface>

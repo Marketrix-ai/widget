@@ -11,6 +11,7 @@ import { StreamClient } from '../../services/StreamClient';
 import type { ChatMessage, InstructionType, MarketrixConfig, TaskProgress, WidgetView } from '../../types';
 import type { SuggestedActionItem } from '../../utils/suggestedActions';
 import { getPanelPositionStyle } from '../../utils/widgetPositioning';
+import { Button } from '../base/Button';
 import { Icon } from '../base/Icon';
 import { Stack } from '../base/Stack';
 import { Surface } from '../base/Surface';
@@ -160,25 +161,6 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
     onSendMessage(action.text, action.type, undefined, undefined, true);
   };
 
-  const menuItems =
-    activeView === 'chat'
-      ? [
-          ...(onClearChat
-            ? [
-                {
-                  label: 'Clear chat',
-                  icon: 'trash' as const,
-                  onClick: () => {
-                    const result = onClearChat();
-                    if (result instanceof Promise) result.catch(e => console.error(e));
-                  },
-                },
-              ]
-            : []),
-          { label: 'About', icon: 'info' as const, onClick: () => setDiagnosticOpen(true) },
-        ]
-      : undefined;
-
   const screenShareHandler =
     activeView === 'chat' && config.use_screenshare !== false
       ? () => {
@@ -216,7 +198,6 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
         screenSharing={headerScreenSharing}
         onScreenShare={screenShareHandler}
         onClose={onClose}
-        menuItems={menuItems}
       />
 
       {!isMinimized && (
@@ -244,6 +225,7 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
                   onUpdateMessage={onUpdateMessage}
                   onRemoveMessage={onRemoveMessage}
                   onStopTask={onStopTask}
+                  onClearChat={onClearChat}
                   onScreenSharingChange={handleHeaderScreenSharingChange}
                   onStartScreenShareRef={chatViewStartScreenShareRef}
                   onStopScreenShareRef={chatViewStopScreenShareRef}
@@ -256,15 +238,21 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
                   role='tabpanel'
                   aria-labelledby='tab-help'
                   height='full'
-                  align='center'
                   justify='center'
-                  gap='sm'
+                  align='center'
+                  gap='lg'
                   padding='lg'
                 >
-                  <Icon name='help' size={32} className='text-foreground-faint' />
-                  <Text size='sm' variant='muted'>
-                    Help – coming soon
-                  </Text>
+                  <Stack align='center' gap='sm'>
+                    <Icon name='help' size={32} className='text-foreground-faint' />
+                    <Text size='sm' variant='muted'>
+                      Help – coming soon
+                    </Text>
+                  </Stack>
+                  <Button type='button' variant='ghost' size='sm' onClick={() => setDiagnosticOpen(true)}>
+                    <Icon name='info' size={14} />
+                    About
+                  </Button>
                 </Stack>
               )}
               {activeView === 'news' && (
