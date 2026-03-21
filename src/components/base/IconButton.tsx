@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 type IconButtonVariant = 'primary' | 'secondary' | 'ghost';
 type IconButtonSize = 'sm' | 'md';
 
-export interface IconButtonProps extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'className'> {
+export interface IconButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: IconButtonVariant;
   size?: IconButtonSize;
   rounded?: boolean;
@@ -24,7 +24,7 @@ const sizeStyles: Record<IconButtonSize, string> = {
 };
 
 export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(function IconButton(
-  { variant = 'ghost', size = 'sm', rounded = true, label, disabled, children, ...props },
+  { variant = 'ghost', size = 'sm', rounded = true, label, disabled, className: userClassName, children, ...props },
   ref,
 ) {
   return (
@@ -40,6 +40,7 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(functio
         sizeStyles[size],
         rounded ? 'rounded-full' : 'rounded-[var(--radius)]',
         disabled && 'opacity-50 cursor-not-allowed pointer-events-none',
+        userClassName,
       )}
     >
       {children}
