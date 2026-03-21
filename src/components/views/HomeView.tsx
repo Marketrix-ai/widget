@@ -3,7 +3,6 @@ import React from 'react';
 import type { ChatMessage, MarketrixConfig } from '../../types';
 import { getSuggestedActionsFromConfig, type SuggestedActionItem } from '../../utils/suggestedActions';
 import { Button } from '../base/Button';
-import { Flex } from '../base/Flex';
 import { Icon } from '../base/Icon';
 import { Stack } from '../base/Stack';
 import { Surface } from '../base/Surface';
@@ -49,17 +48,14 @@ export const HomeView: React.FC<HomeViewProps> = ({ config, messages, onNavigate
             onClick={onNavigateToChat}
             aria-label='Ask a question'
             style={{
-              justifyContent: 'space-between',
+              justifyContent: 'center',
               padding: '10px 16px',
               borderRadius: 'var(--radius)',
               fontWeight: 500,
             }}
           >
-            <Flex align='center' gap='md'>
-              <Icon name='chat' size={20} />
-              Ask a question
-            </Flex>
-            <Icon name='chevronRight' size={16} />
+            <Icon name='chat' size={20} />
+            Ask a question
           </Button>
 
           <SuggestedActions
