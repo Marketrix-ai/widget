@@ -23,9 +23,8 @@ export const WidgetSettingsLoader: React.FC<WidgetSettingsLoaderProps> = ({
 
   return (
     <Surface
-      className='marketrix-widget-loader'
+      position='fixed'
       style={{
-        position: 'fixed',
         bottom: '20px',
         left: '50%',
         transform: 'translateX(-50%)',
@@ -43,7 +42,7 @@ export const WidgetSettingsLoader: React.FC<WidgetSettingsLoaderProps> = ({
         fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
       }}
     >
-      <Flex style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+      <Flex align='center' style={{ gap: '10px' }}>
         <Avatar
           src={MarketrixIcon}
           alt=''

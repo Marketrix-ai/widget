@@ -1,7 +1,5 @@
 import React from 'react';
 
-import { cn } from '@/lib/utils';
-
 import { Button } from '../base/Button';
 import { Spinner } from '../base/Spinner';
 import { Stack } from '../base/Stack';
@@ -12,7 +10,6 @@ type StateMessageVariant = 'loading' | 'empty' | 'error';
 interface StateMessageProps {
   variant: StateMessageVariant;
   message: string;
-  className?: string;
   /** Optional recovery action label (e.g. "Retry") */
   actionLabel?: string;
   onAction?: () => void;
@@ -22,18 +19,23 @@ interface StateMessageProps {
  * Standardized skeleton/loading, empty, and error states using design tokens.
  * Use in message list, composer, or any surface that needs consistent state UI.
  */
-export const StateMessage: React.FC<StateMessageProps> = ({ variant, message, className, actionLabel, onAction }) => {
+export const StateMessage: React.FC<StateMessageProps> = ({ variant, message, actionLabel, onAction }) => {
   const isError = variant === 'error';
   const isLoading = variant === 'loading';
 
   return (
     <Stack
-      className={cn('items-center justify-center gap-3 py-6 px-4 text-center', isError && 'text-red-600', className)}
+      align='center'
+      justify='center'
+      gap='lg'
+      paddingY='2xl'
+      paddingX='xl'
       role={isLoading ? 'status' : undefined}
       aria-live={isError ? 'assertive' : 'polite'}
+      style={isError ? { color: 'var(--color-red-600, #dc2626)' } : undefined}
     >
       {isLoading && <Spinner size='lg' />}
-      <Text as='p' size='sm'>
+      <Text as='p' size='sm' align='center'>
         {message}
       </Text>
       {actionLabel && onAction && (
@@ -41,7 +43,7 @@ export const StateMessage: React.FC<StateMessageProps> = ({ variant, message, cl
           type='button'
           variant='ghost'
           onClick={onAction}
-          className='text-sm font-medium underline focus:outline-none focus:ring-2 focus:ring-offset-2 rounded'
+          style={{ fontSize: '0.875rem', fontWeight: 500, textDecoration: 'underline' }}
         >
           {actionLabel}
         </Button>
