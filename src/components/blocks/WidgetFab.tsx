@@ -318,7 +318,7 @@ export const WidgetFab: React.FC<WidgetFabProps> = ({
       className={`${positionClass} ${pixelPositionStyle ? '' : effectivePositionClasses} ${isDragging ? '' : 'transition-transform duration-300 ease-in-out'}`}
       style={{
         zIndex,
-        pointerEvents: 'auto',
+        pointerEvents: open ? 'none' : 'auto',
         ...previewPositionStyle,
         ...pixelPositionStyle,
       }}

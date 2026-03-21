@@ -53,7 +53,7 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(f
   ref,
 ) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const maxTextareaHeight = 46; // 2 lines (20px each) + 6px padding
+  const maxTextareaHeight = 66; // 3 lines (20px each) + 6px padding
 
   useEffect(() => {
     const textarea = textareaRef.current;
@@ -133,7 +133,7 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(f
           })}
         </Flex>
         <IconButton
-          variant={taskRunning ? 'secondary' : canSend ? 'primary' : 'ghost'}
+          variant={taskRunning ? 'secondary' : 'primary'}
           size='sm'
           disabled={!taskRunning && !canSend}
           label={taskRunning ? 'Stop task' : 'Send message'}
