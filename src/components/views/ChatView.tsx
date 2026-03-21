@@ -6,6 +6,7 @@ import { createSystemMessage, createUserMessage } from '../../services/ChatServi
 import { showModeService } from '../../services/ShowModeService';
 import type { ChatMessage, MarketrixConfig, TaskProgress } from '../../types';
 import { addOpacity, getModeDisplayName } from '../../utils/format';
+import { Card } from '../base/Card';
 import { Flex } from '../base/Flex';
 import { Stack } from '../base/Stack';
 import { Surface } from '../base/Surface';
@@ -200,7 +201,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
         </ChatErrorBoundary>
       </Surface>
 
-      <Surface shrink={false} rounded='theme' margin='md' style={{ marginTop: 'auto', backgroundColor: 'var(--card)' }}>
+      <Card style={{ margin: '0 12px 12px 12px', marginTop: 'auto' }}>
         {isTaskRunning && taskProgress.length > 0 && (
           <Surface
             rounded
@@ -262,7 +263,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
             }}
           />
         </Surface>
-      </Surface>
+      </Card>
     </Stack>
   );
 };

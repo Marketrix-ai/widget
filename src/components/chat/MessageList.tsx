@@ -8,14 +8,13 @@ import { addOpacity } from '../../utils/format';
 import { Button } from '../base/Button';
 import { Flex } from '../base/Flex';
 import { Icon } from '../base/Icon';
+import { IconButton } from '../base/IconButton';
 import { Surface } from '../base/Surface';
 import { Text } from '../base/Text';
 import { StateMessage } from '../ui/StateMessage';
 import { MessageItem } from './MessageItem';
 
 const scrollButtonStyle: React.CSSProperties = {
-  padding: '6px',
-  borderRadius: '9999px',
   boxShadow: SHADOW.button,
   backgroundColor: 'var(--card)',
   border: '1px solid var(--border)',
@@ -163,17 +162,15 @@ export const MessageList = ({
           justify='center'
           style={{ top: '8px', left: 0, right: 0, zIndex: 10, pointerEvents: 'none' }}
         >
-          <Button
-            type='button'
+          <IconButton
             variant='secondary'
             size='sm'
+            label='Scroll to top'
             onClick={scrollToTop}
             style={scrollButtonStyle}
-            title='Scroll to top'
-            aria-label='Scroll to top'
           >
             <Icon name='arrowUp' size={10} style={{ color: widgetConfig.widget_accent_color }} />
-          </Button>
+          </IconButton>
         </Flex>
       )}
 
@@ -183,17 +180,15 @@ export const MessageList = ({
           justify='center'
           style={{ bottom: '8px', left: 0, right: 0, zIndex: 10, pointerEvents: 'none' }}
         >
-          <Button
-            type='button'
+          <IconButton
             variant='secondary'
             size='sm'
+            label='Scroll to bottom'
             onClick={scrollToBottom}
             style={scrollButtonStyle}
-            title='Scroll to bottom'
-            aria-label='Scroll to bottom'
           >
             <Icon name='arrowDown' size={10} style={{ color: widgetConfig.widget_accent_color }} />
-          </Button>
+          </IconButton>
         </Flex>
       )}
     </Surface>
