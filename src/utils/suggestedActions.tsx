@@ -1,8 +1,6 @@
 import React from 'react';
-import { IoChatbubbleEllipsesOutline } from 'react-icons/io5';
-import { LuMousePointerClick } from 'react-icons/lu';
-import { SiTicktick } from 'react-icons/si';
 
+import { Icon } from '../components/base';
 import type { MarketrixConfig } from '../types';
 
 type ChipData = {
@@ -24,35 +22,35 @@ const DEFAULT_CHIPS: SuggestedActionItem[] = [
   {
     id: 'show-add-product',
     text: 'Show me how to add a new product',
-    icon: <LuMousePointerClick className='w-6 h-6' />,
+    icon: <Icon name='mousePointerClick' size={24} />,
     type: 'show',
     isShow: true,
   },
   {
     id: 'show-login',
     text: 'Show me how to login',
-    icon: <LuMousePointerClick className='w-6 h-6' />,
+    icon: <Icon name='mousePointerClick' size={24} />,
     type: 'show',
     isShow: true,
   },
   {
     id: 'do-login',
     text: 'Do the login process for me',
-    icon: <SiTicktick className='w-4 h-4' />,
+    icon: <Icon name='ticktick' size={16} />,
     type: 'do',
     isShow: false,
   },
   {
     id: 'show-revenue',
     text: 'Show me the revenue metrics',
-    icon: <LuMousePointerClick className='w-6 h-6' />,
+    icon: <Icon name='mousePointerClick' size={24} />,
     type: 'show',
     isShow: true,
   },
   {
     id: 'tell-conversion-rate',
     text: 'What does my conversion rate mean and how can I improve it?',
-    icon: <IoChatbubbleEllipsesOutline className='w-5 h-5' />,
+    icon: <Icon name='chatBubble' size={20} />,
     type: 'tell',
     isShow: false,
   },
@@ -62,20 +60,29 @@ function getIconForMode(mode: 'show' | 'tell' | 'do') {
   switch (mode) {
     case 'do':
       return (
-        <SiTicktick className='w-3 h-3 text-xs' style={{ fontSize: '0.75rem', width: '0.75rem', height: '0.75rem' }} />
+        <Icon
+          name='ticktick'
+          size={12}
+          className='text-xs'
+          style={{ fontSize: '0.75rem', width: '0.75rem', height: '0.75rem' }}
+        />
       );
     case 'show':
       return (
-        <LuMousePointerClick
-          className='w-3 h-3 text-xs'
+        <Icon
+          name='mousePointerClick'
+          size={12}
+          className='text-xs'
           style={{ fontSize: '0.75rem', width: '0.75rem', height: '0.75rem' }}
         />
       );
     case 'tell':
     default:
       return (
-        <IoChatbubbleEllipsesOutline
-          className='w-3 h-3 text-xs'
+        <Icon
+          name='chatBubble'
+          size={12}
+          className='text-xs'
           style={{ fontSize: '0.75rem', width: '0.75rem', height: '0.75rem' }}
         />
       );
