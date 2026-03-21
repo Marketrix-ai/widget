@@ -147,23 +147,6 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
     '--widget-z-index': effectiveWidgetZIndex,
   } as React.CSSProperties;
 
-  const gradientPositionStyle = (() => {
-    const size = 500;
-    const base: React.CSSProperties = {
-      position: 'fixed',
-      width: `${size}px`,
-      height: `${size}px`,
-      pointerEvents: 'none',
-      zIndex: LAYER_TOKENS.panel - 1,
-      background: `radial-gradient(circle at ${widgetPosition.includes('right') ? '100%' : '0%'} ${widgetPosition.includes('bottom') ? '100%' : '0%'}, ${addOpacity(settings.widget_accent_color, 0.08)} 0%, transparent 70%)`,
-    };
-    if (widgetPosition.includes('top')) base.top = 0;
-    else base.bottom = 0;
-    if (widgetPosition.includes('right')) base.right = 0;
-    else base.left = 0;
-    return base;
-  })();
-
   return (
     <Surface
       data-marketrix-widget
@@ -171,7 +154,6 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
       style={{ ...customStyles, ...(isPreviewMode && { width: '100%', height: '100%' }) }}
       data-widget-mode={settings?.widget_feature_human ? 'hybrid' : 'ai'}
     >
-      {state.isOpen && <Surface animate='fadeIn' style={gradientPositionStyle} aria-hidden />}
       {showProcessingFeedback && (
         <Surface
           data-screen-edge-glow

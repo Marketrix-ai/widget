@@ -351,7 +351,7 @@ export const WidgetFab: React.FC<WidgetFabProps> = ({
 
         <Button
           type='button'
-          variant='primary'
+          variant='bare'
           onClick={() => {
             if (Date.now() < suppressUntilRef.current) return;
             onClick();
@@ -361,7 +361,7 @@ export const WidgetFab: React.FC<WidgetFabProps> = ({
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerCancel}
-          className='relative z-10 w-14 h-14 min-w-14 rounded-[27px] border-0 bg-transparent p-0 text-primary-foreground'
+          className='relative z-10 w-14 h-14 min-w-14'
           style={{
             touchAction: 'none',
             cursor: isDragging ? 'grabbing' : 'grab',
@@ -381,6 +381,7 @@ export const WidgetFab: React.FC<WidgetFabProps> = ({
               style={{
                 borderRadius,
                 backgroundColor: open ? backgroundColor : accentColor,
+                boxShadow: '0 2px 8px rgba(0,0,0,0.18), 0 0 0 1px rgba(0,0,0,0.04)',
               }}
             >
               {showProcessingGlow && (

@@ -3,7 +3,7 @@ import { forwardRef } from 'react';
 
 import { cn } from '@/lib/utils';
 
-type ButtonVariant = 'primary' | 'secondary' | 'ghost';
+type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'bare';
 type ButtonSize = 'sm' | 'md';
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -16,6 +16,7 @@ const variantStyles: Record<ButtonVariant, string> = {
   primary: 'bg-primary text-primary-foreground border-transparent hover:bg-primary/90',
   secondary: 'bg-secondary text-secondary-foreground border-transparent hover:bg-secondary/80',
   ghost: 'bg-transparent text-foreground border-border hover:bg-muted',
+  bare: 'bg-transparent text-inherit border-transparent hover:bg-transparent p-0 min-h-0',
 };
 
 const sizeStyles: Record<ButtonSize, string> = {
@@ -32,9 +33,10 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       {...props}
       ref={ref}
       className={cn(
-        'inline-flex items-center justify-center gap-2 font-medium border rounded-lg cursor-pointer transition-all focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2',
+        'inline-flex items-center justify-center gap-2 font-medium cursor-pointer transition-all focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2',
+        variant !== 'bare' && 'border rounded-lg',
         variantStyles[variant],
-        sizeStyles[size],
+        variant !== 'bare' && sizeStyles[size],
         disabled && 'opacity-50 cursor-not-allowed pointer-events-none',
         full && 'w-full',
         className,
