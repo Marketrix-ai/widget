@@ -34,6 +34,8 @@ export const SuggestedActions: React.FC<SuggestedActionsProps> = ({ actions, set
           style={{
             backgroundColor: 'var(--secondary-bg)',
             color: settings.widget_text_color,
+            paddingTop: '8px',
+            paddingBottom: '8px',
           }}
         >
           <Text as='span' weight='normal' style={{ lineHeight: 1 }}>

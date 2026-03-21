@@ -50,7 +50,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ config, messages, onNavigate
             aria-label='Ask a question'
             style={{
               justifyContent: 'space-between',
-              padding: '12px 16px',
+              padding: '10px 16px',
               borderRadius: 'var(--radius)',
               fontWeight: 500,
             }}
