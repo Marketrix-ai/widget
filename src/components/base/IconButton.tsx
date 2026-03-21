@@ -3,12 +3,11 @@ import { forwardRef } from 'react';
 import { cn } from '@/lib/utils';
 
 type IconButtonVariant = 'primary' | 'secondary' | 'ghost';
-type IconButtonSize = 'sm' | 'md';
+type IconButtonSize = 'sm';
 
 export interface IconButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: IconButtonVariant;
   size?: IconButtonSize;
-  rounded?: boolean;
   label: string;
   /** @internal blocks/ only */
   className?: string;
@@ -22,11 +21,10 @@ const variantStyles: Record<IconButtonVariant, string> = {
 
 const sizeStyles: Record<IconButtonSize, string> = {
   sm: 'w-7 h-7 min-w-7',
-  md: 'w-9 h-9 min-w-9',
 };
 
 export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(function IconButton(
-  { variant = 'ghost', size = 'sm', rounded = true, label, disabled, className: userClassName, children, ...props },
+  { variant = 'ghost', size = 'sm', label, disabled, className: userClassName, children, ...props },
   ref,
 ) {
   return (
@@ -37,10 +35,9 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(functio
       disabled={disabled}
       aria-label={label}
       className={cn(
-        'inline-flex items-center justify-center flex-shrink-0 border-none cursor-pointer transition-all',
+        'inline-flex items-center justify-center flex-shrink-0 border-none cursor-pointer transition-all rounded-full',
         variantStyles[variant],
         sizeStyles[size],
-        rounded ? 'rounded-full' : 'rounded-[var(--radius)]',
         disabled && 'opacity-50 cursor-not-allowed pointer-events-none',
         userClassName,
       )}

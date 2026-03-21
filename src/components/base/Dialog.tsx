@@ -1,6 +1,8 @@
-import { createContext, useCallback, useContext, useEffect, useId, useMemo, useState } from 'react';
+import { createContext, useContext, useEffect, useId, useMemo } from 'react';
 
 import { cn } from '@/lib/utils';
+
+import { useDisclosure } from './useDisclosure';
 
 interface DialogContextValue {
   contentId: string;
@@ -12,13 +14,8 @@ interface DialogContextValue {
 
 interface DialogProps {
   children: React.ReactNode;
-  defaultOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
   open?: boolean;
-}
-
-interface DialogTriggerProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  children: React.ReactNode;
 }
 
 interface DialogContentProps extends React.HTMLAttributes<HTMLDivElement> {
@@ -35,23 +32,11 @@ function useDialogContext(name: string): DialogContextValue {
   return context;
 }
 
-export function Dialog({ children, defaultOpen = false, onOpenChange, open }: DialogProps) {
-  const [uncontrolledOpen, setUncontrolledOpen] = useState(defaultOpen);
-  const isControlled = open !== undefined;
-  const resolvedOpen = isControlled ? open : uncontrolledOpen;
+export function Dialog({ children, onOpenChange, open }: DialogProps) {
+  const { isOpen: resolvedOpen, setIsOpen: setOpen } = useDisclosure({ onOpenChange, open });
   const contentId = useId();
   const titleId = useId();
   const descriptionId = useId();
-
-  const setOpen = useCallback(
-    (next: boolean) => {
-      if (!isControlled) {
-        setUncontrolledOpen(next);
-      }
-      onOpenChange?.(next);
-    },
-    [isControlled, onOpenChange],
-  );
 
   const value = useMemo<DialogContextValue>(
     () => ({
@@ -65,45 +50,6 @@ export function Dialog({ children, defaultOpen = false, onOpenChange, open }: Di
   );
 
   return <DialogContext.Provider value={value}>{children}</DialogContext.Provider>;
-}
-
-export function DialogTrigger({ children, className, onClick, ...props }: DialogTriggerProps) {
-  const context = useDialogContext('DialogTrigger');
-
-  return (
-    <button
-      {...props}
-      aria-controls={context.contentId}
-      aria-expanded={context.open}
-      className={className}
-      data-state={context.open ? 'open' : 'closed'}
-      onClick={event => {
-        onClick?.(event);
-        if (!event.defaultPrevented) {
-          context.setOpen(!context.open);
-        }
-      }}
-      type='button'
-    >
-      {children}
-    </button>
-  );
-}
-
-export function DialogOverlay({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  const context = useDialogContext('DialogOverlay');
-  if (!context.open) {
-    return null;
-  }
-
-  return (
-    <div
-      {...props}
-      aria-hidden='true'
-      className={cn('fixed inset-0 z-[var(--layer-dialog)] bg-black/50 animate-dialog-overlay-in', className)}
-      data-state='open'
-    />
-  );
 }
 
 export function DialogContent({ children, className, onKeyDown, ...props }: DialogContentProps) {
@@ -168,7 +114,7 @@ export function DialogDescription({ className, ...props }: React.HTMLAttributes<
   return <p {...props} className={cn('text-sm text-muted-foreground mb-4', className)} id={context.descriptionId} />;
 }
 
-export function DialogClose({ children, className, onClick, ...props }: DialogTriggerProps) {
+export function DialogClose({ children, className, onClick, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
   const context = useDialogContext('DialogClose');
 
   return (

@@ -1,16 +1,16 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 
-import { ErrorDisplay } from '../ErrorDisplay';
+import { NotificationToast } from '../../blocks/NotificationToast';
 
-describe('ErrorDisplay', () => {
-  it('shows error message and calls onClose when close is clicked', () => {
+describe('NotificationToast (error)', () => {
+  it('shows error message and calls onDismiss when close is clicked', () => {
     vi.useFakeTimers();
-    const onClose = vi.fn();
-    render(<ErrorDisplay error='Something failed' onClose={onClose} />);
+    const onDismiss = vi.fn();
+    render(<NotificationToast tone='error' title='Something failed' onDismiss={onDismiss} />);
     expect(screen.getByText('Something failed')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /dismiss/i }));
     vi.advanceTimersByTime(300);
-    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(onDismiss).toHaveBeenCalledTimes(1);
     vi.useRealTimers();
   });
 });

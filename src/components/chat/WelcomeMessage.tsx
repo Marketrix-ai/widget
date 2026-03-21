@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 
 import { formatMessageTime } from '../../utils/format';
 import { Flex, Stack, Text } from '../base';
@@ -6,8 +6,6 @@ import { Flex, Stack, Text } from '../base';
 interface WelcomeMessageProps {
   greeting: string;
   settings: {
-    widget_shadow: string;
-    widget_border_radius: string;
     widget_text_color: string;
     widget_border_color: string;
     widget_secondary_color: string;
@@ -15,6 +13,8 @@ interface WelcomeMessageProps {
 }
 
 export const WelcomeMessage: React.FC<WelcomeMessageProps> = ({ greeting, settings }) => {
+  const mountTimeRef = useRef(new Date());
+
   return (
     <Stack key='welcome-message' justify='start' marginTop='md'>
       <Flex align='start'>
@@ -47,7 +47,7 @@ export const WelcomeMessage: React.FC<WelcomeMessageProps> = ({ greeting, settin
       {/* Timestamp below card */}
       <Flex justify='end' style={{ marginTop: '2px' }}>
         <Text as='span' style={{ fontSize: '10px', color: `${settings.widget_text_color}99` }}>
-          {formatMessageTime(new Date())}
+          {formatMessageTime(mountTimeRef.current)}
         </Text>
       </Flex>
     </Stack>

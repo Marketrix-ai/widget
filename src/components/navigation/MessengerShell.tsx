@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import packageJson from '../../../package.json';
-import MarketrixIcon from '../../assets/marketrix-icon.svg';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { useResize } from '../../hooks/useResize';
 import { useWidget } from '../../hooks/useWidget';
@@ -216,7 +215,6 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
         }}
       >
         <HeaderBar
-          logo={MarketrixIcon}
           title={config.agent_name ?? 'AI Agent'}
           subtitle={isMinimized ? undefined : (config.agent_description ?? 'How can I help?')}
           minimized={isMinimized}
@@ -251,8 +249,6 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
                     onUpdateMessage={onUpdateMessage}
                     onRemoveMessage={onRemoveMessage}
                     onStopTask={onStopTask}
-                    onClearChat={onClearChat}
-                    onClose={onClose}
                     onScreenSharingChange={handleHeaderScreenSharingChange}
                     onStartScreenShareRef={chatViewStartScreenShareRef}
                     onStopScreenShareRef={chatViewStopScreenShareRef}

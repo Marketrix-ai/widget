@@ -1,6 +1,8 @@
-import { createContext, useCallback, useContext, useId, useMemo, useState } from 'react';
+import { createContext, useContext, useId, useMemo } from 'react';
 
 import { cn } from '@/lib/utils';
+
+import { useDisclosure } from './useDisclosure';
 
 interface MenuContextValue {
   contentId: string;
@@ -34,20 +36,8 @@ function useMenuContext(name: string): MenuContextValue {
 }
 
 export function Menu({ children, defaultOpen = false, onOpenChange, open }: MenuProps) {
-  const [uncontrolledOpen, setUncontrolledOpen] = useState(defaultOpen);
-  const isControlled = open !== undefined;
-  const resolvedOpen = isControlled ? open : uncontrolledOpen;
+  const { isOpen: resolvedOpen, setIsOpen: setOpen } = useDisclosure({ defaultOpen, onOpenChange, open });
   const contentId = useId();
-
-  const setOpen = useCallback(
-    (next: boolean) => {
-      if (!isControlled) {
-        setUncontrolledOpen(next);
-      }
-      onOpenChange?.(next);
-    },
-    [isControlled, onOpenChange],
-  );
 
   const value = useMemo<MenuContextValue>(
     () => ({

@@ -6,7 +6,6 @@ type SpinnerSize = 'sm' | 'md' | 'lg';
 
 export interface SpinnerProps {
   size?: SpinnerSize;
-  label?: string;
   /** @internal blocks/ only */
   className?: string;
   style?: CSSProperties;
@@ -19,7 +18,7 @@ const sizeStyles: Record<SpinnerSize, string> = {
 };
 
 export const Spinner = forwardRef<HTMLDivElement, SpinnerProps>(function Spinner(
-  { size = 'md', label, className, style },
+  { size = 'md', className, style },
   ref,
 ) {
   return (
@@ -34,7 +33,7 @@ export const Spinner = forwardRef<HTMLDivElement, SpinnerProps>(function Spinner
         aria-hidden='true'
         className={cn('animate-spin rounded-full border-current border-t-transparent flex-shrink-0', sizeStyles[size])}
       />
-      {label ? <span className='text-xs'>{label}</span> : <span className='sr-only'>Loading</span>}
+      <span className='sr-only'>Loading</span>
     </div>
   );
 });

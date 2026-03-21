@@ -6,12 +6,11 @@ import { createSemanticTokens } from '../design-system/token-adapter';
 import { useScrollLock } from '../hooks/useScrollLock';
 import { useWidget } from '../hooks/useWidget';
 import type { MarketrixConfig, WidgetPosition } from '../types';
-import { addOpacity } from '../utils/format';
+import { addOpacity, darkenColor, getContrastingColor } from '../utils/format';
 import { Surface } from './base/Surface';
-import { WidgetButton } from './layout/WidgetButton';
+import { NotificationToast } from './blocks/NotificationToast';
+import { WidgetFab } from './blocks/WidgetFab';
 import { MessengerShell } from './navigation/MessengerShell';
-import { ErrorDisplay } from './ui/ErrorDisplay';
-import { GreetingToast } from './ui/GreetingToast';
 
 interface MarketrixWidgetProps {
   config: MarketrixConfig;
@@ -48,7 +47,6 @@ class WidgetErrorBoundary extends React.Component<
 }
 
 export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
-  const [_isScreenSharing, setIsScreenSharing] = useState(false);
   const [showGreeting, setShowGreeting] = useState(false);
 
   const {
@@ -205,38 +203,45 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
           onRemoveMessage={actions.removeMessage}
           onStopTask={actions.stopTask}
           onClearChat={actions.clearChatHistory}
-          onScreenSharingChange={setIsScreenSharing}
           setActiveView={actions.setActiveView}
         />
       </WidgetErrorBoundary>
 
-      <WidgetButton
-        config={effectiveConfig}
+      <WidgetFab
+        open={state.isOpen}
+        processing={state.isLoading}
+        error={!!state.error}
+        taskRunning={state.isTaskRunning}
         onClick={actions.toggleWidget}
-        onStopTask={actions.stopTask}
-        isOpen={state.isOpen}
-        isMinimized={state.isMinimized}
-        isLoading={state.isLoading}
-        isTaskRunning={state.isTaskRunning}
-        hasError={!!state.error}
+        onStop={actions.stopTask}
+        accentColor={effectiveConfig.widget_accent_color}
+        backgroundColor={effectiveConfig.widget_background_color}
+        borderRadius={effectiveConfig.widget_border_radius}
+        tooltipBgColor={darkenColor(effectiveConfig.widget_accent_color, 0.3)}
+        tooltipTextColor={getContrastingColor(darkenColor(effectiveConfig.widget_accent_color, 0.3))}
+        zIndex={effectiveConfig.widget_position_z_index ?? 50}
         position={widgetPosition}
-        onPositionChange={handlePositionChange}
+        onDrag={handlePositionChange}
+        isPreviewMode={isPreviewMode}
       />
 
       {state.error && (
-        <ErrorDisplay
-          error={state.error}
-          onClose={() => actions.clearError()}
+        <NotificationToast
+          tone='error'
+          title={state.error}
+          onDismiss={() => actions.clearError()}
           onRetry={() => actions.clearError()}
-          position={widgetPosition}
+          position={widgetPosition.includes('top') ? 'bottom-center' : 'above-fab'}
         />
       )}
 
       {showGreeting && !state.error && settings.widget_greeting && (
-        <GreetingToast
-          greeting={settings.widget_greeting}
+        <NotificationToast
+          tone='info'
+          title={settings.widget_greeting}
           body={settings.widget_body}
-          onClose={() => setShowGreeting(false)}
+          onDismiss={() => setShowGreeting(false)}
+          position='bottom-center'
         />
       )}
     </Surface>

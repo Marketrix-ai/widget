@@ -1,7 +1,6 @@
 // / <reference lib="dom" />
 import React, { useEffect, useRef, useState } from 'react';
 
-import MarketrixIcon from '../../assets/marketrix-icon.svg';
 import { useWidget } from '../../hooks/useWidget';
 import type { ChatMessage, MarketrixConfig } from '../../types';
 import { addOpacity } from '../../utils/format';
@@ -16,10 +15,6 @@ import { WelcomeMessage } from './WelcomeMessage';
 interface MessageListProps {
   messages: ChatMessage[];
   messagesEndRef: React.RefObject<HTMLDivElement | null>;
-  onSendMessage?: (message: string, mode?: 'show' | 'tell' | 'do', applicationId?: number, question?: string) => void;
-  onSetMode?: (mode: 'show' | 'tell' | 'do') => void;
-  onModeChange?: (mode: 'show' | 'tell' | 'do') => void;
-  onAddMessage?: (message: ChatMessage) => void;
   config?: MarketrixConfig;
   onScreenAccessAllow?: () => void;
   onScreenAccessDeny?: () => void;
@@ -28,10 +23,6 @@ interface MessageListProps {
 export const MessageList = ({
   messages,
   messagesEndRef,
-  onSendMessage: _onSendMessage,
-  onSetMode: _onSetMode,
-  onModeChange: _onModeChange,
-  onAddMessage: _onAddMessage,
   config,
   onScreenAccessAllow,
   onScreenAccessDeny,
@@ -109,8 +100,6 @@ export const MessageList = ({
         <WelcomeMessage
           greeting={widgetConfig.widget_body ?? 'How can I help you today?'}
           settings={{
-            widget_shadow: widgetConfig.widget_shadow,
-            widget_border_radius: widgetConfig.widget_border_radius,
             widget_text_color: widgetConfig.widget_text_color,
             widget_border_color: widgetConfig.widget_border_color,
             widget_secondary_color: widgetConfig.widget_secondary_color,
@@ -127,12 +116,7 @@ export const MessageList = ({
             widgetState={widgetState}
             settings={{
               widget_accent_color: widgetConfig.widget_accent_color,
-              widget_text_color: widgetConfig.widget_text_color,
-              widget_border_color: widgetConfig.widget_border_color,
-              widget_shadow: widgetConfig.widget_shadow,
-              widget_border_radius: widgetConfig.widget_border_radius,
             }}
-            marketrixIcon={MarketrixIcon}
             onScreenAccessAllow={onScreenAccessAllow}
             onScreenAccessDeny={onScreenAccessDeny}
           />

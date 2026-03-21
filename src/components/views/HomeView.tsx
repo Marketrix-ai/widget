@@ -60,9 +60,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ config, messages, onNavigate
         <Surface>
           <SuggestedActions
             actions={suggestedActions}
-            hasPendingMessage={false}
             settings={{
-              widget_secondary_color: config.widget_secondary_color ?? '#f3f4f6',
               widget_text_color: config.widget_text_color ?? '#1f2937',
             }}
             onActionClick={handleActionClick}

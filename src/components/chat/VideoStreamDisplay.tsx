@@ -8,13 +8,9 @@ import { Video } from '../base/Video';
 
 interface VideoStreamDisplayProps {
   stream: MediaStream | null;
-  isUserMessage?: boolean;
 }
 
-export const VideoStreamDisplay: React.FC<VideoStreamDisplayProps> = ({
-  stream,
-  isUserMessage: _isUserMessage = false,
-}) => {
+export const VideoStreamDisplay: React.FC<VideoStreamDisplayProps> = ({ stream }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const playPromiseRef = useRef<Promise<void> | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);

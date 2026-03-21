@@ -570,7 +570,7 @@ export const icons = {
     ],
   },
 
-  /** Close X (small) — 12×12 viewBox used in ErrorDisplay, WidgetSettingsLoader, GreetingToast */
+  /** Close X (small) — 12×12 viewBox used in NotificationToast, WidgetSettingsLoader */
   closeSmall: {
     viewBox: '0 0 12 12',
     paths: [

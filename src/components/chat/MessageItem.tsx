@@ -1,5 +1,6 @@
 import React from 'react';
 
+import MarketrixIcon from '../../assets/marketrix-icon.svg';
 import type { ChatMessage, WidgetState } from '../../types';
 import { formatMessageTime } from '../../utils/format';
 import { Avatar, Button, Flex, Stack, Text } from '../base';
@@ -14,12 +15,7 @@ interface MessageItemProps {
   widgetState: WidgetState;
   settings: {
     widget_accent_color: string;
-    widget_text_color: string;
-    widget_border_color: string;
-    widget_shadow: string;
-    widget_border_radius: string;
   };
-  marketrixIcon: string;
   onScreenAccessAllow?: () => void;
   onScreenAccessDeny?: () => void;
 }
@@ -30,7 +26,6 @@ export const MessageItem: React.FC<MessageItemProps> = ({
   isLastMessage,
   widgetState,
   settings,
-  marketrixIcon,
   onScreenAccessAllow,
   onScreenAccessDeny,
 }) => {
@@ -61,7 +56,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
         <Flex shrink={false} style={{ width: '32px', height: '32px', backgroundColor: 'transparent' }}>
           {!isUser && (
             <Avatar
-              src={marketrixIcon}
+              src={MarketrixIcon}
               alt='Marketrix AI'
               size='md'
               rounded='theme'
@@ -91,7 +86,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
           }}
         >
           {/* Video stream display - edge-to-edge */}
-          {message.videoStream && <VideoStreamDisplay stream={message.videoStream} isUserMessage={isUser} />}
+          {message.videoStream && <VideoStreamDisplay stream={message.videoStream} />}
           {/* Message content */}
           {!message.videoStream && (
             <MessageContent
@@ -99,7 +94,6 @@ export const MessageItem: React.FC<MessageItemProps> = ({
               isLastMessage={isLastMessage}
               widgetState={widgetState}
               accentColor={settings.widget_accent_color}
-              textColor={isUser ? 'inherit' : 'inherit'}
             />
           )}
 

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 
+import MarketrixIcon from '../../assets/marketrix-icon.svg';
 import { LAYER_TOKENS } from '../../design-system/layers';
 import { Avatar } from '../base/Avatar';
 import { Button } from '../base/Button';
@@ -32,8 +33,6 @@ const TONE_STYLES = {
 
 export interface NotificationToastProps {
   tone: 'info' | 'error';
-  /** Logo image URL */
-  icon?: string;
   title: string;
   body?: string;
   onDismiss: () => void;
@@ -43,7 +42,6 @@ export interface NotificationToastProps {
 
 export const NotificationToast: React.FC<NotificationToastProps> = ({
   tone,
-  icon,
   title,
   body,
   onDismiss,
@@ -91,7 +89,7 @@ export const NotificationToast: React.FC<NotificationToastProps> = ({
           border: colors.border,
         }}
       >
-        {icon && <Avatar src={icon} alt='' size={28} className='flex-shrink-0' style={{ borderRadius: '50%' }} />}
+        <Avatar src={MarketrixIcon} alt='' size={28} className='flex-shrink-0' style={{ borderRadius: '50%' }} />
 
         <Stack className='flex-1 min-w-0'>
           <Text

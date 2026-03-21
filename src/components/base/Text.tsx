@@ -2,10 +2,10 @@ import { type ElementType, forwardRef } from 'react';
 
 import { cn } from '@/lib/utils';
 
-type TextVariant = 'default' | 'muted' | 'faint' | 'accent';
-type TextSize = 'xs' | 'sm' | 'base' | 'lg';
-type TextWeight = 'normal' | 'medium' | 'semibold' | 'bold';
-type TextAlign = 'left' | 'center' | 'right';
+type TextVariant = 'default' | 'muted' | 'faint';
+type TextSize = 'xs' | 'sm' | 'lg';
+type TextWeight = 'normal' | 'medium' | 'semibold';
+type TextAlign = 'center';
 
 export interface TextProps extends React.HTMLAttributes<HTMLElement> {
   as?: ElementType;
@@ -22,13 +22,11 @@ const variantStyles: Record<TextVariant, string> = {
   default: 'text-foreground',
   muted: 'text-foreground-muted',
   faint: 'text-foreground-faint',
-  accent: 'text-primary',
 };
 
 const sizeStyles: Record<TextSize, string> = {
   xs: 'text-xs',
   sm: 'text-sm',
-  base: 'text-base',
   lg: 'text-lg',
 };
 
@@ -36,13 +34,10 @@ const weightStyles: Record<TextWeight, string> = {
   normal: 'font-normal',
   medium: 'font-medium',
   semibold: 'font-semibold',
-  bold: 'font-bold',
 };
 
 const alignStyles: Record<TextAlign, string> = {
-  left: 'text-left',
   center: 'text-center',
-  right: 'text-right',
 };
 
 export const Text = forwardRef<HTMLElement, TextProps>(function Text(

@@ -1,6 +1,5 @@
 import React from 'react';
 
-import { Button } from '../base/Button';
 import { Spinner } from '../base/Spinner';
 import { Stack } from '../base/Stack';
 import { Text } from '../base/Text';
@@ -10,16 +9,13 @@ type StateMessageVariant = 'loading' | 'empty' | 'error';
 interface StateMessageProps {
   variant: StateMessageVariant;
   message: string;
-  /** Optional recovery action label (e.g. "Retry") */
-  actionLabel?: string;
-  onAction?: () => void;
 }
 
 /**
  * Standardized skeleton/loading, empty, and error states using design tokens.
  * Use in message list, composer, or any surface that needs consistent state UI.
  */
-export const StateMessage: React.FC<StateMessageProps> = ({ variant, message, actionLabel, onAction }) => {
+export const StateMessage: React.FC<StateMessageProps> = ({ variant, message }) => {
   const isError = variant === 'error';
   const isLoading = variant === 'loading';
 
@@ -38,16 +34,6 @@ export const StateMessage: React.FC<StateMessageProps> = ({ variant, message, ac
       <Text as='p' size='sm' align='center'>
         {message}
       </Text>
-      {actionLabel && onAction && (
-        <Button
-          type='button'
-          variant='ghost'
-          onClick={onAction}
-          style={{ fontSize: '0.875rem', fontWeight: 500, textDecoration: 'underline' }}
-        >
-          {actionLabel}
-        </Button>
-      )}
     </Stack>
   );
 };

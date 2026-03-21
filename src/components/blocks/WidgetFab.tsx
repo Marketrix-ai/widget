@@ -1,5 +1,6 @@
 import React, { useCallback, useLayoutEffect, useRef, useState } from 'react';
 
+import MarketrixIcon from '../../assets/marketrix-icon.svg';
 import type { WidgetPosition } from '../../types';
 import { getAnchorTopLeft, getNearestCornerByTranslation, getPositionClasses } from '../../utils/widgetPositioning';
 import { Avatar } from '../base/Avatar';
@@ -10,12 +11,10 @@ import { Surface } from '../base/Surface';
 import { Text } from '../base/Text';
 
 export interface WidgetFabProps {
-  logo: string;
   open: boolean;
   processing?: boolean;
   error?: boolean;
   taskRunning?: boolean;
-  tooltip?: string;
   onClick: () => void;
   onStop?: () => void;
   // Styling props resolved by consumer from widget config
@@ -36,12 +35,10 @@ const SNAP_DURATION_MS = 600;
 const SNAP_EASING = 'cubic-bezier(0.16, 1, 0.3, 1)';
 
 export const WidgetFab: React.FC<WidgetFabProps> = ({
-  logo,
   open,
   processing = false,
   error = false,
   taskRunning = false,
-  tooltip,
   onClick,
   onStop,
   accentColor,
@@ -413,7 +410,7 @@ export const WidgetFab: React.FC<WidgetFabProps> = ({
                 aria-hidden={open}
               >
                 <Avatar
-                  src={logo}
+                  src={MarketrixIcon}
                   alt=''
                   className='relative z-10 w-full h-full object-contain'
                   draggable={false}
@@ -449,7 +446,7 @@ export const WidgetFab: React.FC<WidgetFabProps> = ({
       </Surface>
 
       {/* Tooltip */}
-      {!open && tooltip != null && (
+      {!open && (
         <Surface
           className={`absolute bottom-16 ${position.includes('left') ? 'left-0' : 'right-0'} mb-2 px-3 py-2 text-sm rounded-lg shadow-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200`}
           style={{
@@ -458,7 +455,7 @@ export const WidgetFab: React.FC<WidgetFabProps> = ({
           }}
         >
           <Text as='span' className='text-inherit'>
-            {tooltip}
+            Support Agent
           </Text>
           <Surface
             aria-hidden

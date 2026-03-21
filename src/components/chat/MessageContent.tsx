@@ -13,19 +13,11 @@ interface MessageContentProps {
   isLastMessage: boolean;
   widgetState: WidgetState;
   accentColor: string;
-  textColor: string;
 }
 
-export const MessageContent: React.FC<MessageContentProps> = ({
-  message,
-  isLastMessage,
-  widgetState,
-  accentColor,
-  textColor,
-}) => {
+export const MessageContent: React.FC<MessageContentProps> = ({ message, isLastMessage, widgetState, accentColor }) => {
   const placeholderState = message.placeholderState || 'thinking';
   const isWaitingForUser = placeholderState === 'waiting-for-user';
-  const customText = undefined;
 
   // Render using structured parts
   if (message.parts && message.parts.length > 0) {
@@ -62,21 +54,12 @@ export const MessageContent: React.FC<MessageContentProps> = ({
               return null;
             }
 
-            const isPending = part.status === 'running' || !part.status;
-
-            // For waiting state:
-            const isWaitingForUserAction =
-              isWaitingForUser ||
-              (isPending && widgetState.isTaskRunning && (message.mode === 'show' || message.mode === 'do'));
-
             return (
               <ProgressLine
                 key={`part-${index}`}
                 content={part.content}
                 status={part.status || 'running'}
-                isWaitingForUser={isWaitingForUserAction}
                 accentColor={accentColor}
-                textColor={textColor}
                 {...(part.hideIcon !== undefined ? { hideIcon: part.hideIcon } : {})}
                 {...(part.textStyle !== undefined ? { textStyle: part.textStyle } : {})}
               />
@@ -88,12 +71,7 @@ export const MessageContent: React.FC<MessageContentProps> = ({
         {/* Show thinking/waiting indicator at the bottom if task is running or it's a placeholder */}
         {((message.isPlaceholder && !message.parts.some(p => p.type === 'text')) ||
           (widgetState.isTaskRunning && isLastMessage && (message.mode === 'show' || message.mode === 'do'))) && (
-          <ThinkingIndicator
-            isWaitingForUser={isWaitingForUser}
-            textColor={textColor}
-            {...(customText !== undefined ? { customText } : {})}
-            accentColor={accentColor}
-          />
+          <ThinkingIndicator isWaitingForUser={isWaitingForUser} accentColor={accentColor} />
         )}
       </Stack>
     );
@@ -104,14 +82,7 @@ export const MessageContent: React.FC<MessageContentProps> = ({
     message.isPlaceholder ||
     (widgetState.isTaskRunning && isLastMessage && (message.mode === 'show' || message.mode === 'do'))
   ) {
-    return (
-      <ThinkingIndicator
-        isWaitingForUser={isWaitingForUser}
-        textColor={textColor}
-        {...(customText !== undefined ? { customText } : {})}
-        accentColor={accentColor}
-      />
-    );
+    return <ThinkingIndicator isWaitingForUser={isWaitingForUser} accentColor={accentColor} />;
   }
 
   return <Surface />;

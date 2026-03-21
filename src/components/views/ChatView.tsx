@@ -15,14 +15,14 @@ import {
 } from '../../services/ScreenShareService';
 import { showModeService } from '../../services/ShowModeService';
 import type { ChatMessage, MarketrixConfig, TaskProgress } from '../../types';
-import { addOpacity } from '../../utils/format';
+import { addOpacity, getModeDisplayName } from '../../utils/format';
 import { Flex } from '../base/Flex';
 import { Stack } from '../base/Stack';
 import { Surface } from '../base/Surface';
 import { Text } from '../base/Text';
+import { ChatInput, type ChatInputMode } from '../blocks/ChatInput';
+import { WidgetDialog } from '../blocks/WidgetDialog';
 import { MessageList } from '../chat/MessageList';
-import { MessageInput } from '../input/MessageInput';
-import { ScreenAccessModal } from '../ui/ScreenAccessModal';
 
 class ChatErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean }> {
   constructor(props: { children: React.ReactNode }) {
@@ -68,8 +68,6 @@ export interface ChatViewProps {
   onUpdateMessage: (messageId: string, updates: Partial<ChatMessage>) => void;
   onRemoveMessage?: (messageId: string) => void;
   onStopTask?: () => void;
-  onClearChat?: () => void | Promise<void>;
-  onClose: () => void;
   onScreenSharingChange?: (isSharing: boolean) => void;
   /** Refs for header buttons to trigger screen share start/stop */
   onStartScreenShareRef?: React.MutableRefObject<(() => void) | null>;
@@ -77,6 +75,14 @@ export interface ChatViewProps {
   /** Optional ref for focus trap to focus the message input */
   messageInputRef?: React.RefObject<HTMLTextAreaElement | null>;
 }
+
+const MODE_ICON_MAP: Record<InstructionType, ChatInputMode['icon']> = {
+  show: 'mousePointerClick',
+  tell: 'chatBubble',
+  do: 'ticktick',
+};
+
+const ORDERED_MODES: InstructionType[] = ['tell', 'show', 'do'];
 
 function getEnabledModes(
   settings: MarketrixConfig & {
@@ -104,8 +110,6 @@ export const ChatView: React.FC<ChatViewProps> = ({
   onUpdateMessage,
   onRemoveMessage,
   onStopTask,
-  onClearChat: _onClearChat,
-  onClose: _onClose,
   onScreenSharingChange,
   onStartScreenShareRef,
   onStopScreenShareRef,
@@ -195,13 +199,6 @@ export const ChatView: React.FC<ChatViewProps> = ({
       } else {
         onSendMessage(messageContent, currentMode, undefined, undefined, true);
       }
-    }
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
     }
   };
 
@@ -327,11 +324,15 @@ export const ChatView: React.FC<ChatViewProps> = ({
   return (
     <Stack height='full' id='view-chat' role='tabpanel' aria-labelledby='tab-chat'>
       {showScreenAccessModal && (
-        <ScreenAccessModal
-          isOpen={showScreenAccessModal}
-          onAllow={handleScreenAccessModalAllow}
-          onDeny={handleScreenAccessModalDeny}
+        <WidgetDialog
+          variant='confirm'
+          open={showScreenAccessModal}
           onClose={handleScreenAccessModalDeny}
+          title='Can I take a look at your screen?'
+          description='By allowing screen access, Marketrix can understand your current context to guide you better and complete tasks on your behalf.'
+          onConfirm={handleScreenAccessModalAllow}
+          confirmLabel='Yes'
+          cancelLabel='No'
         />
       )}
 
@@ -340,28 +341,6 @@ export const ChatView: React.FC<ChatViewProps> = ({
           <MessageList
             messages={messages}
             messagesEndRef={messagesEndRef}
-            onSendMessage={(content, mode, applicationId, question) => {
-              if (
-                config.use_screenshare !== false &&
-                (mode === 'show' || mode === 'do') &&
-                !isScreenSharing &&
-                !screenAccessRequestMessageId
-              ) {
-                setPendingMessage({
-                  content,
-                  mode,
-                  ...(applicationId !== undefined ? { applicationId } : {}),
-                  ...(question !== undefined ? { question } : {}),
-                  alreadyAdded: true,
-                });
-                requestScreenAccess(mode || currentMode);
-              } else {
-                onSendMessage(content, mode, applicationId, question, true);
-              }
-            }}
-            onSetMode={onSetMode}
-            onModeChange={handleModeChange}
-            onAddMessage={onAddMessage}
             config={config}
             onScreenAccessAllow={handleScreenAccessAllow}
             onScreenAccessDeny={handleScreenAccessDeny}
@@ -410,23 +389,27 @@ export const ChatView: React.FC<ChatViewProps> = ({
           </Surface>
         )}
 
-        <MessageInput
-          ref={externalMessageInputRef}
-          value={inputValue}
-          onChange={setInputValue}
-          onKeyPress={handleKeyPress}
-          onSend={handleSendMessage}
-          isLoading={messages.some(msg => msg.isPlaceholder)}
-          isTaskRunning={isTaskRunning}
-          onStop={() => {
-            showModeService.cleanup();
-            onStopTask?.();
-          }}
-          currentMode={currentMode}
-          enabledModes={getEnabledModes(settings)}
-          onModeChange={handleModeChange}
-          isScreenSharing={isScreenSharing}
-        />
+        <Surface paddingY='sm' paddingX='md' style={{ backgroundColor: 'transparent' }}>
+          <ChatInput
+            ref={externalMessageInputRef}
+            value={inputValue}
+            onChange={setInputValue}
+            onSubmit={handleSendMessage}
+            modes={ORDERED_MODES.filter(m => getEnabledModes(settings).includes(m)).map(m => ({
+              id: m,
+              icon: MODE_ICON_MAP[m],
+              label: getModeDisplayName(m),
+            }))}
+            activeMode={currentMode}
+            onModeChange={mode => handleModeChange(mode as InstructionType)}
+            disabled={messages.some(msg => msg.isPlaceholder)}
+            taskRunning={isTaskRunning}
+            onStop={() => {
+              showModeService.cleanup();
+              onStopTask?.();
+            }}
+          />
+        </Surface>
       </Surface>
     </Stack>
   );
