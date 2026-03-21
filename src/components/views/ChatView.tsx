@@ -41,7 +41,7 @@ class ChatErrorBoundary extends React.Component<{ children: React.ReactNode }, {
   override render() {
     if (this.state.hasError) {
       return (
-        <Text as='div' className='p-4 text-center text-xs text-gray-500'>
+        <Text as='div' size='xs' align='center' style={{ padding: '16px', color: '#6b7280' }}>
           Something went wrong displaying messages. Please refresh.
         </Text>
       );
@@ -325,7 +325,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
   };
 
   return (
-    <Stack className='h-full' id='view-chat' role='tabpanel' aria-labelledby='tab-chat'>
+    <Stack height='full' id='view-chat' role='tabpanel' aria-labelledby='tab-chat'>
       {showScreenAccessModal && (
         <ScreenAccessModal
           isOpen={showScreenAccessModal}
@@ -335,7 +335,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
         />
       )}
 
-      <Surface className='flex-1 overflow-hidden py-1 flex flex-col min-h-0'>
+      <Surface grow overflow='hidden' paddingY='xs' style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
         <ChatErrorBoundary>
           <MessageList
             messages={messages}
@@ -369,33 +369,38 @@ export const ChatView: React.FC<ChatViewProps> = ({
         </ChatErrorBoundary>
       </Surface>
 
-      <Surface className='flex-shrink-0 rounded-[var(--radius)] m-2 mt-auto' style={{ backgroundColor: '#ffffff' }}>
+      <Surface shrink={false} rounded='theme' margin='md' style={{ marginTop: 'auto', backgroundColor: '#ffffff' }}>
         {isTaskRunning && taskProgress.length > 0 && (
           <Surface
-            className='mx-2 mb-2 p-2 rounded text-xs max-h-32 overflow-y-auto'
+            rounded
+            overflowY='auto'
             style={{
+              margin: '0 8px 8px',
+              padding: '8px',
+              maxHeight: '128px',
               backgroundColor: addOpacity(config.widget_background_color ?? '#fff', 0.8),
               borderColor: config.widget_border_color,
               borderWidth: '1px',
               borderStyle: 'solid',
             }}
           >
-            <Text as='div' weight='semibold' className='mb-1' style={{ color: config.widget_text_color }}>
+            <Text as='div' weight='semibold' style={{ marginBottom: '4px', color: config.widget_text_color }}>
               Task Progress ({taskProgress.length} steps)
             </Text>
-            <Stack className='gap-1'>
+            <Stack gap='xs'>
               {taskProgress.map((progress, idx) => (
                 <Flex
                   key={idx}
-                  className='items-start gap-1.5 text-xs opacity-80'
-                  style={{ color: config.widget_text_color }}
+                  align='start'
+                  gap='sm'
+                  style={{ fontSize: '12px', opacity: 0.8, color: config.widget_text_color }}
                 >
                   <Text as='span' weight='medium'>
                     Step {progress.step}:
                   </Text>{' '}
                   {progress.tool_name}
                   {progress.tool_params && Object.keys(progress.tool_params).length > 0 && (
-                    <Text as='span' className='opacity-70 ml-1'>
+                    <Text as='span' style={{ opacity: 0.7, marginLeft: '4px' }}>
                       ({Object.keys(progress.tool_params).join(', ')})
                     </Text>
                   )}

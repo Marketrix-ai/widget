@@ -3,7 +3,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import packageJson from '../../../package.json';
 import MarketrixIcon from '../../assets/marketrix-icon.svg';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
-import { type ResizeCorner, useResize } from '../../hooks/useResize';
+import { useResize } from '../../hooks/useResize';
 import { useWidget } from '../../hooks/useWidget';
 import { createUserMessage } from '../../services/ChatService';
 import { configManager } from '../../services/ConfigManager';
@@ -12,24 +12,22 @@ import { StreamClient } from '../../services/StreamClient';
 import type { ChatMessage, InstructionType, MarketrixConfig, TaskProgress, WidgetView } from '../../types';
 import type { SuggestedActionItem } from '../../utils/suggestedActions';
 import { getPanelPositionStyle } from '../../utils/widgetPositioning';
-import { Avatar } from '../base/Avatar';
 import { Flex } from '../base/Flex';
-import { Icon } from '../base/Icon';
-import { IconButton } from '../base/IconButton';
 import { Stack } from '../base/Stack';
 import { Surface } from '../base/Surface';
 import { Text } from '../base/Text';
+import { HeaderBar } from '../blocks/HeaderBar';
+import { TabBar } from '../blocks/TabBar';
 import { DiagnosticModal } from '../ui/DiagnosticModal';
 import { ChatView } from '../views/ChatView';
 import { HomeView } from '../views/HomeView';
-import { TabBar } from './TabBar';
 import { ViewTransition } from './ViewTransition';
 
-const TAB_ICONS = {
-  home: <Icon name='home' size={20} />,
-  chat: <Icon name='chat' size={20} />,
-  help: <Icon name='help' size={20} />,
-};
+const TAB_DEFS = [
+  { id: 'home' as const, icon: 'home' as const, label: 'Home' },
+  { id: 'chat' as const, icon: 'chat' as const, label: 'Chat' },
+  { id: 'help' as const, icon: 'help' as const, label: 'Help' },
+];
 
 export interface MessengerShellProps {
   config: MarketrixConfig;
@@ -106,38 +104,15 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
     focusTargetRef: activeView === 'chat' ? messageInputRef : undefined,
   });
 
-  const tabs = useMemo(
-    () => [
-      { id: 'home' as const, label: 'Home', icon: TAB_ICONS.home },
-      { id: 'chat' as const, label: 'Chat', icon: TAB_ICONS.chat },
-      { id: 'help' as const, label: 'Help', icon: TAB_ICONS.help },
-    ],
-    [],
-  );
-
   const effectivePosition = settings.widget_position as 'bottom_left' | 'bottom_right' | 'top_left' | 'top_right';
   const zIndex = settings.widget_position_z_index ?? 40;
   const panelPositionStyle = getPanelPositionStyle(effectivePosition);
 
   // All hooks must be above the early return — React requires stable hook count.
-  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const [diagnosticOpen, setDiagnosticOpen] = useState(false);
   const [headerScreenSharing, setHeaderScreenSharing] = useState(false);
-  const moreMenuRef = useRef<HTMLDivElement>(null);
   const chatViewStartScreenShareRef = useRef<(() => void) | null>(null);
   const chatViewStopScreenShareRef = useRef<(() => void) | null>(null);
-
-  useEffect(() => {
-    if (!moreMenuOpen) return;
-    const handleClickOutside = (e: MouseEvent) => {
-      const target = e.composedPath()[0] as Node;
-      if (moreMenuRef.current && !moreMenuRef.current.contains(target)) {
-        setMoreMenuOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [moreMenuOpen]);
 
   const handleHeaderScreenSharingChange = useCallback(
     (isSharing: boolean) => {
@@ -171,8 +146,8 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
   const transformOrigin =
     `${effectivePosition.includes('top') ? 'top' : 'bottom'} ${effectivePosition.includes('right') ? 'right' : 'left'}` as const;
 
-  const handleViewChange = (view: WidgetView) => {
-    setActiveView(view);
+  const handleViewChange = (view: string) => {
+    setActiveView(view as WidgetView);
   };
 
   const handleNavigateToChat = () => {
@@ -186,133 +161,74 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
     onSendMessage(action.text, action.type, undefined, undefined, true);
   };
 
+  const menuItems =
+    activeView === 'chat'
+      ? [
+          ...(onClearChat
+            ? [
+                {
+                  label: 'Clear chat',
+                  icon: 'trash' as const,
+                  onClick: () => {
+                    const result = onClearChat();
+                    if (result instanceof Promise) result.catch(e => console.error(e));
+                  },
+                },
+              ]
+            : []),
+          { label: 'About', icon: 'info' as const, onClick: () => setDiagnosticOpen(true) },
+        ]
+      : undefined;
+
+  const screenShareHandler =
+    activeView === 'chat' && config.use_screenshare !== false
+      ? () => {
+          if (headerScreenSharing) {
+            chatViewStopScreenShareRef.current?.();
+          } else {
+            chatViewStartScreenShareRef.current?.();
+          }
+        }
+      : undefined;
+
   return (
     <Surface
-      className={`${positionClass} rounded-[var(--radius)] pointer-events-auto`}
+      position={positionClass as 'fixed' | 'absolute'}
+      rounded='theme'
       style={{
         zIndex,
         backgroundImage,
         ...(isPreviewMode ? previewPositionStyle : panelPositionStyle),
+        pointerEvents: 'auto',
       }}
     >
       <Stack
         ref={containerRef}
-        className='rounded-[var(--radius)] shadow-[var(--shadow)] border border-border text-foreground relative overflow-hidden animate-messenger-entrance'
+        rounded='theme'
+        shadow
+        border
+        overflow='hidden'
         style={{
           transformOrigin,
           ...customStyles,
           scrollbarWidth: 'thin',
+          animation: 'messenger-entrance 300ms cubic-bezier(0, 1.2, 1, 1)',
         }}
       >
-        {isMinimized ? (
-          <Flex className='items-center justify-between px-3 h-10 border-b border-border'>
-            <Text size='sm' weight='medium'>
-              Marketrix
-            </Text>
-            <IconButton variant='ghost' size='sm' label='Close' onClick={onClose}>
-              <Icon name='close' size={16} />
-            </IconButton>
-          </Flex>
-        ) : (
-          <>
-            {/* Shared header: agent name + description */}
-            <Flex className='justify-between items-center px-3 py-2 border-b border-border flex-shrink-0'>
-              <Flex className='items-center gap-2 min-w-0 flex-1'>
-                <Avatar
-                  src={MarketrixIcon}
-                  alt=''
-                  size='md'
-                  className='rounded-[var(--radius)] shadow-[var(--shadow)]'
-                />
-                <Stack className='min-w-0'>
-                  <Text size='sm' weight='semibold' truncate className='leading-tight'>
-                    {config.agent_name ?? 'AI Agent'}
-                  </Text>
-                  <Text as='p' size='xs' variant='muted' truncate>
-                    {config.agent_description ?? 'How can I help?'}
-                  </Text>
-                </Stack>
-              </Flex>
-              <Flex className='items-center gap-0.5 flex-shrink-0'>
-                {activeView === 'chat' && (
-                  <>
-                    {config.use_screenshare !== false && !headerScreenSharing && (
-                      <IconButton
-                        variant='ghost'
-                        size='sm'
-                        label='Start screen sharing'
-                        onClick={() => chatViewStartScreenShareRef.current?.()}
-                      >
-                        <Icon name='screenShare' size={16} />
-                      </IconButton>
-                    )}
-                    {headerScreenSharing && (
-                      <IconButton
-                        variant='ghost'
-                        size='sm'
-                        label='Stop screen sharing'
-                        onClick={() => chatViewStopScreenShareRef.current?.()}
-                      >
-                        <span className='w-1.5 h-1.5 rounded-full bg-current animate-pulse' />
-                        <Icon name='screenShare' size={16} />
-                      </IconButton>
-                    )}
-                    <div className='relative' ref={moreMenuRef}>
-                      <IconButton
-                        variant='ghost'
-                        size='sm'
-                        label='More options'
-                        onClick={() => setMoreMenuOpen(prev => !prev)}
-                        aria-haspopup='true'
-                        aria-expanded={moreMenuOpen}
-                      >
-                        <Icon name='moreVertical' size={16} />
-                      </IconButton>
-                      {moreMenuOpen && (
-                        <Surface
-                          className='absolute right-0 top-full mt-1 py-1 rounded-lg shadow-lg border border-border bg-card min-w-[140px] z-50'
-                          role='menu'
-                          onMouseDown={e => e.nativeEvent.stopImmediatePropagation()}
-                        >
-                          {onClearChat && (
-                            <button
-                              type='button'
-                              className='w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-secondary-bg rounded-md transition-colors'
-                              onClick={() => {
-                                const result = onClearChat();
-                                if (result instanceof Promise) result.catch(e => console.error(e));
-                                setMoreMenuOpen(false);
-                              }}
-                              role='menuitem'
-                            >
-                              <Icon name='trash' size={14} className='opacity-60' />
-                              Clear chat
-                            </button>
-                          )}
-                          <button
-                            type='button'
-                            className='w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-secondary-bg rounded-md transition-colors'
-                            onClick={() => {
-                              setDiagnosticOpen(true);
-                              setMoreMenuOpen(false);
-                            }}
-                            role='menuitem'
-                          >
-                            <Icon name='info' size={14} className='opacity-60' />
-                            About
-                          </button>
-                        </Surface>
-                      )}
-                    </div>
-                  </>
-                )}
-                <IconButton variant='ghost' size='sm' label='Close' onClick={onClose}>
-                  <Icon name='close' size={16} />
-                </IconButton>
-              </Flex>
-            </Flex>
+        <HeaderBar
+          logo={MarketrixIcon}
+          title={config.agent_name ?? 'AI Agent'}
+          subtitle={isMinimized ? undefined : (config.agent_description ?? 'How can I help?')}
+          minimized={isMinimized}
+          screenSharing={headerScreenSharing}
+          onScreenShare={screenShareHandler}
+          onClose={onClose}
+          menuItems={menuItems}
+        />
 
-            <Surface className='flex-1 overflow-hidden flex flex-col min-h-0'>
+        {!isMinimized && (
+          <>
+            <Surface grow overflow='hidden' style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
               <ViewTransition key={activeView} direction={navDirection}>
                 {activeView === 'home' && (
                   <HomeView
@@ -348,7 +264,10 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
                     id='view-help'
                     role='tabpanel'
                     aria-labelledby='tab-help'
-                    className='items-center justify-center h-full p-3'
+                    align='center'
+                    justify='center'
+                    height='full'
+                    padding='lg'
                   >
                     <Text size='sm' variant='muted'>
                       Help – coming soon
@@ -360,7 +279,10 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
                     id='view-news'
                     role='tabpanel'
                     aria-labelledby='tab-news'
-                    className='items-center justify-center h-full p-3'
+                    align='center'
+                    justify='center'
+                    height='full'
+                    padding='lg'
                   >
                     <Text size='sm' variant='muted'>
                       News – coming soon
@@ -370,26 +292,38 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
               </ViewTransition>
             </Surface>
 
-            <TabBar activeView={activeView} onViewChange={handleViewChange} tabs={tabs} />
+            <TabBar tabs={TAB_DEFS} active={activeView} onChange={handleViewChange} />
           </>
         )}
 
         {!isMinimized &&
           !isPreviewMode &&
           (['top-left', 'top-right', 'bottom-left', 'bottom-right'] as const).map(corner => {
-            const posClasses: Record<ResizeCorner, string> = {
-              'top-left': 'top-0 left-0 rounded-tl-[var(--radius)] cursor-nwse-resize items-start justify-start',
-              'top-right': 'top-0 right-0 rounded-tr-[var(--radius)] cursor-nesw-resize items-start justify-end',
-              'bottom-left': 'bottom-0 left-0 rounded-bl-[var(--radius)] cursor-nesw-resize items-end justify-start',
-              'bottom-right': 'bottom-0 right-0 rounded-br-[var(--radius)] cursor-nwse-resize items-end justify-end',
+            const isTop = corner.startsWith('top');
+            const isLeft = corner.endsWith('left');
+            const cornerStyle: React.CSSProperties = {
+              position: 'absolute',
+              width: '20px',
+              height: '20px',
+              padding: '4px',
+              touchAction: 'none',
+              zIndex: 10,
+              display: 'flex',
+              alignItems: isTop ? 'flex-start' : 'flex-end',
+              justifyContent: isLeft ? 'flex-start' : 'flex-end',
+              cursor: (isTop && isLeft) || (!isTop && !isLeft) ? 'nwse-resize' : 'nesw-resize',
+              top: isTop ? 0 : undefined,
+              bottom: isTop ? undefined : 0,
+              left: isLeft ? 0 : undefined,
+              right: isLeft ? undefined : 0,
             };
             return (
-              <Flex
+              <div
                 key={corner}
                 role='separator'
                 aria-label={`Resize widget from ${corner.replace('-', ' ')}`}
                 title='Drag to resize'
-                className={`absolute w-5 h-5 p-1 touch-none z-10 group ${posClasses[corner]}`}
+                style={cornerStyle}
                 onMouseDown={onResizeStart(corner)}
               />
             );

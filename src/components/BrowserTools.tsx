@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 
-import { useWidget } from '../hooks/useWidget';
 import type { MarketrixConfig } from '../types';
 import {
   BROWSER_TOOL_CATEGORIES,
@@ -8,13 +7,8 @@ import {
   type BrowserAction,
   type BrowserToolMetadata,
 } from '../types/browserTools';
-import { addOpacity, getContrastingColor } from '../utils/format';
-import { Button } from './base/Button';
-import { Flex } from './base/Flex';
-import { Icon } from './base/Icon';
-import { Stack } from './base/Stack';
-import { Surface } from './base/Surface';
-import { Text } from './base/Text';
+import type { IconName } from './base/icons';
+import { type ToolCategory, type ToolItem, ToolPanel } from './blocks/ToolPanel';
 
 interface BrowserToolsProps {
   config?: MarketrixConfig;
@@ -22,247 +16,130 @@ interface BrowserToolsProps {
   width?: string;
 }
 
-export const BrowserTools: React.FC<BrowserToolsProps> = ({ config, onToolSelect, width = '100%' }) => {
-  const { config: widgetConfig } = useWidget({ config });
-  const [activeTab, setActiveTab] = useState<keyof typeof BROWSER_TOOL_CATEGORIES>('navigation');
+function getToolIconName(actionType: BrowserAction['type']): IconName {
+  switch (actionType) {
+    case 'navigate':
+    case 'go_back':
+      return 'globe';
+    case 'search':
+      return 'magnifyingGlass';
+    case 'click_element':
+      return 'mousePointerClick';
+    case 'type_text':
+      return 'documentText';
+    case 'scroll':
+    case 'scroll_to_text':
+      return 'scroll';
+    case 'send_keys':
+      return 'keyboard';
+    case 'extract':
+    case 'get_html':
+    case 'get_interactable_elements':
+    case 'get_screenshot':
+      return 'documentText';
+    case 'get_dropdown_options':
+      return 'selectAll';
+    case 'select_dropdown_option':
+      return 'tablerArrowDown';
+    case 'upload_file':
+      return 'fileUpload';
+    case 'switch_tab':
+      return 'arrowRight';
+    case 'close_tab':
+      return 'xMark';
+    case 'done':
+      return 'mousePointerClick';
+    default:
+      return 'documentText';
+  }
+}
 
-  // Get tools for active category
-  const toolsInCategory = BROWSER_TOOLS.filter(tool => tool.category === activeTab);
+function buildAction(tool: BrowserToolMetadata): BrowserAction {
+  switch (tool.actionType) {
+    case 'navigate':
+      return { type: 'navigate', url: '', new_tab: false };
+    case 'search':
+      return { type: 'search', query: '', engine: 'duckduckgo' };
+    case 'click_element':
+      return { type: 'click_element', index: 1, coordinate_x: null, coordinate_y: null };
+    case 'type_text':
+      return { type: 'type_text', index: 0, text: '', clear: true };
+    case 'scroll':
+      return { type: 'scroll', down: true, pages: 1.0, index: null };
+    case 'scroll_to_text':
+      return { type: 'scroll_to_text', text: '' };
+    case 'send_keys':
+      return { type: 'send_keys', index: 0, keys: '' };
+    case 'extract':
+      return { type: 'extract', query: '', extract_links: false, start_from_char: 0 };
+    case 'get_dropdown_options':
+      return { type: 'get_dropdown_options', index: 0 };
+    case 'select_dropdown_option':
+      return { type: 'select_dropdown_option', index: 0, text: '' };
+    case 'upload_file':
+      return { type: 'upload_file', index: 0, path: '' };
+    case 'go_back':
+      return { type: 'go_back' };
+    case 'wait':
+      return { type: 'wait', seconds: 1 };
+    case 'switch_tab':
+      return { type: 'switch_tab', tab_id: '' };
+    case 'close_tab':
+      return { type: 'close_tab' };
+    case 'done':
+      return { type: 'done', text: '', success: true, files_to_display: null };
+    case 'get_html':
+      return { type: 'get_html' };
+    case 'get_interactable_elements':
+      return { type: 'get_interactable_elements' };
+    case 'get_screenshot':
+      return { type: 'get_screenshot' };
+    default:
+      return { type: tool.actionType };
+  }
+}
 
-  // Get icon for tool
-  const getToolIcon = (tool: BrowserToolMetadata) => {
-    switch (tool.actionType) {
-      case 'navigate':
-      case 'go_back':
-        return <Icon name='globe' size={16} />;
-      case 'search':
-        return <Icon name='magnifyingGlass' size={16} />;
-      case 'click_element':
-        return <Icon name='mousePointerClick' size={16} />;
-      case 'type_text':
-        return <Icon name='documentText' size={16} />;
-      case 'scroll':
-      case 'scroll_to_text':
-        return <Icon name='scroll' size={16} />;
-      case 'send_keys':
-        return <Icon name='keyboard' size={16} />;
-      case 'extract':
-      case 'get_html':
-      case 'get_interactable_elements':
-      case 'get_screenshot':
-        return <Icon name='documentText' size={16} />;
-      case 'get_dropdown_options':
-        return <Icon name='selectAll' size={16} />;
-      case 'select_dropdown_option':
-        return <Icon name='tablerArrowDown' size={16} />;
-      case 'upload_file':
-        return <Icon name='fileUpload' size={16} />;
-      case 'switch_tab':
-        return <Icon name='arrowRight' size={16} />;
-      case 'close_tab':
-        return <Icon name='xMark' size={16} />;
-      case 'done':
-        return <Icon name='mousePointerClick' size={16} />;
-      default:
-        return <Icon name='documentText' size={16} />;
-    }
+// Map BrowserToolMetadata to ToolItem for ToolPanel
+function toToolItem(tool: BrowserToolMetadata): ToolItem {
+  return {
+    id: tool.id,
+    name: tool.name,
+    description: tool.description,
+    icon: getToolIconName(tool.actionType),
   };
+}
 
-  // Handle tool click
-  const handleToolClick = (tool: BrowserToolMetadata) => {
-    let action: BrowserAction;
+const TOOL_CATEGORIES: ToolCategory[] = Object.entries(BROWSER_TOOL_CATEGORIES).map(([key, label]) => ({
+  id: key,
+  label,
+  tools: BROWSER_TOOLS.filter(t => t.category === key).map(toToolItem),
+}));
 
-    switch (tool.actionType) {
-      case 'navigate':
-        action = { type: 'navigate', url: '', new_tab: false };
-        break;
-      case 'search':
-        action = { type: 'search', query: '', engine: 'duckduckgo' };
-        break;
-      case 'click_element':
-        action = { type: 'click_element', index: 1, coordinate_x: null, coordinate_y: null };
-        break;
-      case 'type_text':
-        action = { type: 'type_text', index: 0, text: '', clear: true };
-        break;
-      case 'scroll':
-        action = { type: 'scroll', down: true, pages: 1.0, index: null };
-        break;
-      case 'scroll_to_text':
-        action = { type: 'scroll_to_text', text: '' };
-        break;
-      case 'send_keys':
-        action = { type: 'send_keys', index: 0, keys: '' };
-        break;
-      case 'extract':
-        action = { type: 'extract', query: '', extract_links: false, start_from_char: 0 };
-        break;
-      case 'get_dropdown_options':
-        action = { type: 'get_dropdown_options', index: 0 };
-        break;
-      case 'select_dropdown_option':
-        action = { type: 'select_dropdown_option', index: 0, text: '' };
-        break;
-      case 'upload_file':
-        action = { type: 'upload_file', index: 0, path: '' };
-        break;
-      case 'go_back':
-        action = { type: 'go_back' };
-        break;
-      case 'wait':
-        action = { type: 'wait', seconds: 1 };
-        break;
-      case 'switch_tab':
-        action = { type: 'switch_tab', tab_id: '' };
-        break;
-      case 'close_tab':
-        action = { type: 'close_tab' };
-        break;
-      case 'done':
-        action = { type: 'done', text: '', success: true, files_to_display: null };
-        break;
-      case 'get_html':
-        action = { type: 'get_html' };
-        break;
-      case 'get_interactable_elements':
-        action = { type: 'get_interactable_elements' };
-        break;
-      case 'get_screenshot':
-        action = { type: 'get_screenshot' };
-        break;
-      default:
-        action = { type: tool.actionType };
-    }
+// Map from ToolItem id back to BrowserToolMetadata for action building
+const TOOL_METADATA_MAP = new Map(BROWSER_TOOLS.map(t => [t.id, t]));
 
+export const BrowserTools: React.FC<BrowserToolsProps> = ({ onToolSelect, width: _width = '100%' }) => {
+  const [activeCategory, setActiveCategory] = useState<string>('navigation');
+  const [selectedTool, setSelectedTool] = useState<string | undefined>();
+
+  const handleToolSelect = (item: ToolItem) => {
+    setSelectedTool(item.id);
+    const meta = TOOL_METADATA_MAP.get(item.id);
+    if (!meta) return;
+    const action = buildAction(meta);
     if (onToolSelect) {
-      onToolSelect(tool, action);
+      onToolSelect(meta, action);
     }
-
-    // Log tool selection
-    console.log('Browser Tool Selected:', tool.name, action);
+    console.log('Browser Tool Selected:', meta.name, action);
   };
-
-  const accentColor = widgetConfig.widget_accent_color;
-  const secondaryColor = widgetConfig.widget_secondary_color;
-  const textColor = widgetConfig.widget_text_color;
-  const borderColor = widgetConfig.widget_border_color;
 
   return (
-    <Surface
-      className='browser-tools-container'
-      style={{
-        width,
-        backgroundColor: '#ffffff',
-        border: `1px solid ${addOpacity(borderColor, 0.2)}`,
-        borderRadius: widgetConfig.widget_border_radius,
-        overflow: 'hidden',
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-    >
-      {/* Tabs Header */}
-      <Flex
-        className='border-b'
-        style={{
-          borderColor: addOpacity(borderColor, 0.2),
-          backgroundColor: addOpacity(secondaryColor, 0.05),
-        }}
-      >
-        {Object.entries(BROWSER_TOOL_CATEGORIES).map(([key, label]) => {
-          const isActive = activeTab === key;
-          return (
-            <Button
-              key={key}
-              variant='ghost'
-              onClick={() => setActiveTab(key as keyof typeof BROWSER_TOOL_CATEGORIES)}
-              className='flex-1 px-3 py-2 text-xs font-medium transition-all duration-200'
-              style={{
-                backgroundColor: isActive ? accentColor : addOpacity(secondaryColor, 0.05),
-                color: isActive ? getContrastingColor(accentColor) : textColor,
-                borderBottom: isActive ? `2px solid ${accentColor}` : `2px solid transparent`,
-              }}
-              onMouseEnter={e => {
-                if (!isActive) {
-                  e.currentTarget.style.backgroundColor = addOpacity(secondaryColor, 0.1);
-                }
-              }}
-              onMouseLeave={e => {
-                if (!isActive) {
-                  e.currentTarget.style.backgroundColor = addOpacity(secondaryColor, 0.05);
-                }
-              }}
-            >
-              {label}
-            </Button>
-          );
-        })}
-      </Flex>
-
-      {/* Tools List */}
-      <div
-        className='flex-1 overflow-y-auto p-2'
-        style={{
-          maxHeight: '300px',
-          scrollbarWidth: 'thin',
-          scrollbarColor: `${addOpacity(borderColor, 0.3)} ${addOpacity(borderColor, 0.1)}`,
-        }}
-      >
-        <Stack className='gap-2'>
-          {toolsInCategory.map(tool => (
-            <Button
-              key={tool.id}
-              variant='ghost'
-              onClick={() => handleToolClick(tool)}
-              className='flex items-start gap-2 p-2 rounded-lg text-left transition-all duration-200 hover:shadow-md'
-              style={{
-                backgroundColor: addOpacity(secondaryColor, 0.1),
-                border: `1px solid ${addOpacity(borderColor, 0.2)}`,
-                color: textColor,
-              }}
-              onMouseEnter={e => {
-                e.currentTarget.style.backgroundColor = addOpacity(accentColor, 0.1);
-                e.currentTarget.style.borderColor = accentColor;
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.backgroundColor = addOpacity(secondaryColor, 0.1);
-                e.currentTarget.style.borderColor = addOpacity(borderColor, 0.2);
-              }}
-            >
-              <Flex
-                className='shrink-0 items-center justify-center rounded'
-                style={{
-                  width: '32px',
-                  height: '32px',
-                  backgroundColor: addOpacity(accentColor, 0.1),
-                  color: accentColor,
-                }}
-              >
-                {getToolIcon(tool)}
-              </Flex>
-              <div className='flex-1 min-w-0'>
-                <Text as='div' className='text-sm font-medium' style={{ color: textColor }}>
-                  {tool.name}
-                </Text>
-                <Text as='div' className='text-xs mt-0.5' style={{ color: addOpacity(textColor, 0.7) }}>
-                  {tool.description}
-                </Text>
-              </div>
-            </Button>
-          ))}
-        </Stack>
-      </div>
-
-      {/* Footer Info */}
-      <Flex
-        className='px-3 py-2 text-xs border-t'
-        style={{
-          borderColor: addOpacity(borderColor, 0.2),
-          backgroundColor: addOpacity(secondaryColor, 0.05),
-          color: addOpacity(textColor, 0.6),
-        }}
-      >
-        {toolsInCategory.length} tool{toolsInCategory.length !== 1 ? 's' : ''} in {BROWSER_TOOL_CATEGORIES[activeTab]}
-      </Flex>
-    </Surface>
+    <ToolPanel
+      categories={TOOL_CATEGORIES}
+      activeCategory={activeCategory}
+      onCategoryChange={setActiveCategory}
+      onToolSelect={handleToolSelect}
+      selectedTool={selectedTool}
+    />
   );
 };

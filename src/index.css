@@ -343,7 +343,8 @@
    can't be expressed as Tailwind utilities
    ════════════════════════════════════════════════════════════════ */
 
-.marketrix-widget {
+.marketrix-widget,
+[data-marketrix-widget] {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -356,13 +357,17 @@
 }
 
 .marketrix-widget,
-.marketrix-widget * {
+.marketrix-widget *,
+[data-marketrix-widget],
+[data-marketrix-widget] * {
   pointer-events: auto;
   box-sizing: border-box;
 }
 
 .marketrix-widget,
-.marketrix-widget * {
+.marketrix-widget *,
+[data-marketrix-widget],
+[data-marketrix-widget] * {
   transition:
     color 0.2s ease-in-out,
     background-color 0.2s ease-in-out,
@@ -375,7 +380,11 @@
 .marketrix-widget button,
 .marketrix-widget input,
 .marketrix-widget textarea,
-.marketrix-widget select {
+.marketrix-widget select,
+[data-marketrix-widget] button,
+[data-marketrix-widget] input,
+[data-marketrix-widget] textarea,
+[data-marketrix-widget] select {
   font: inherit;
 }
 
@@ -488,7 +497,8 @@
   }
 }
 
-.marketrix-screen-edge-glow {
+.marketrix-screen-edge-glow,
+[data-screen-edge-glow] {
   animation: marketrix-screen-edge-pulse 1.6s ease-in-out infinite;
 }
 
@@ -725,6 +735,22 @@
   transition:
     transform 150ms,
     opacity 150ms;
+}
+
+/* ViewTransition semantic-props variant — data-direction drives animation */
+[data-view-transition][data-direction='forward'] {
+  animation: viewSlideForward 300ms both;
+}
+[data-view-transition][data-direction='back'] {
+  animation: viewSlideBack 300ms both;
+}
+@keyframes viewSlideForward {
+  from { transform: translateX(20px); opacity: 0; }
+  to   { transform: translateX(0); opacity: 1; }
+}
+@keyframes viewSlideBack {
+  from { transform: translateX(-20px); opacity: 0; }
+  to   { transform: translateX(0); opacity: 1; }
 }
 
 @media print {

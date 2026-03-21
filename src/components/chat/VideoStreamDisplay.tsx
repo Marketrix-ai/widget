@@ -11,7 +11,10 @@ interface VideoStreamDisplayProps {
   isUserMessage?: boolean;
 }
 
-export const VideoStreamDisplay: React.FC<VideoStreamDisplayProps> = ({ stream, isUserMessage = false }) => {
+export const VideoStreamDisplay: React.FC<VideoStreamDisplayProps> = ({
+  stream,
+  isUserMessage: _isUserMessage = false,
+}) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const playPromiseRef = useRef<Promise<void> | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -90,14 +93,17 @@ export const VideoStreamDisplay: React.FC<VideoStreamDisplayProps> = ({ stream, 
 
   if (!stream) return null;
 
-  // Match message bubble border radius: user messages have rounded-l-lg rounded-tr-lg rounded-br-lg
-  // So top corners should be rounded: top-left and top-right
-  const borderRadiusClass = isUserMessage ? 'rounded-tl-lg rounded-tr-lg' : 'rounded-tr-lg rounded-tl-lg';
+  // Top corners are always rounded; match message bubble shape
+  const topRadius = '8px';
 
   return (
     <Surface
-      className={`w-full overflow-hidden mb-1 ${borderRadiusClass} relative group`}
+      width='full'
+      overflow='hidden'
+      position='relative'
       style={{
+        marginBottom: '4px',
+        borderRadius: `${topRadius} ${topRadius} 0 0`,
         backgroundColor: '#000000',
         boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)',
       }}
@@ -105,19 +111,41 @@ export const VideoStreamDisplay: React.FC<VideoStreamDisplayProps> = ({ stream, 
       {/* Loading overlay */}
       {!isLoaded && !hasError && (
         <Flex
-          className={`absolute inset-0 items-center justify-center bg-gray-900 ${borderRadiusClass} z-10 transition-opacity duration-300 ${
-            isLoaded ? 'opacity-0' : 'opacity-100'
-          }`}
+          position='absolute'
+          inset='0'
+          align='center'
+          justify='center'
+          style={{
+            backgroundColor: '#111827',
+            borderRadius: `${topRadius} ${topRadius} 0 0`,
+            zIndex: 10,
+            transition: 'opacity 300ms',
+            opacity: isLoaded ? 0 : 1,
+          }}
         >
-          <Flex className='flex-col items-center gap-2'>
-            <Surface className='relative w-8 h-8'>
-              <Surface className='absolute inset-0 border-2 border-white border-t-transparent rounded-full animate-spin' />
+          <Flex direction='column' align='center' gap='md'>
+            <Surface position='relative' style={{ width: '32px', height: '32px' }}>
               <Surface
-                className='absolute inset-0 border-2 border-transparent border-r-white rounded-full animate-spin'
-                style={{ animationDirection: 'reverse', animationDuration: '0.8s' }}
+                position='absolute'
+                inset='0'
+                rounded='full'
+                animate='spin'
+                style={{ border: '2px solid white', borderTopColor: 'transparent' }}
+              />
+              <Surface
+                position='absolute'
+                inset='0'
+                rounded='full'
+                animate='spin'
+                style={{
+                  border: '2px solid transparent',
+                  borderRightColor: 'white',
+                  animationDirection: 'reverse',
+                  animationDuration: '0.8s',
+                }}
               />
             </Surface>
-            <Text as='span' className='text-xs text-white/70 font-medium'>
+            <Text as='span' size='xs' weight='medium' style={{ color: 'rgba(255,255,255,0.7)' }}>
               Loading stream...
             </Text>
           </Flex>
@@ -126,10 +154,25 @@ export const VideoStreamDisplay: React.FC<VideoStreamDisplayProps> = ({ stream, 
 
       {/* Error overlay */}
       {hasError && (
-        <Flex className={`absolute inset-0 items-center justify-center bg-gray-900 ${borderRadiusClass} z-10`}>
-          <Flex className='flex-col items-center gap-2 text-center px-4'>
-            <Icon name='alertCircle' size={32} className='text-gray-400' />
-            <Text as='span' className='text-xs text-white/70 font-medium'>
+        <Flex
+          position='absolute'
+          inset='0'
+          align='center'
+          justify='center'
+          style={{
+            backgroundColor: '#111827',
+            borderRadius: `${topRadius} ${topRadius} 0 0`,
+            zIndex: 10,
+          }}
+        >
+          <Flex
+            direction='column'
+            align='center'
+            gap='md'
+            style={{ textAlign: 'center', paddingLeft: '16px', paddingRight: '16px' }}
+          >
+            <Icon name='alertCircle' size={32} style={{ color: '#9ca3af' }} />
+            <Text as='span' size='xs' weight='medium' style={{ color: 'rgba(255,255,255,0.7)' }}>
               Failed to load stream
             </Text>
           </Flex>
@@ -142,10 +185,14 @@ export const VideoStreamDisplay: React.FC<VideoStreamDisplayProps> = ({ stream, 
         autoPlay
         muted
         playsInline
-        className={`w-full h-auto max-h-48 object-contain ${borderRadiusClass} transition-opacity duration-500 ${
-          isLoaded ? 'opacity-100' : 'opacity-0'
-        }`}
         style={{
+          width: '100%',
+          height: 'auto',
+          maxHeight: '192px',
+          objectFit: 'contain',
+          borderRadius: `${topRadius} ${topRadius} 0 0`,
+          transition: 'opacity 500ms',
+          opacity: isLoaded ? 1 : 0,
           minHeight: '120px',
           background: 'linear-gradient(135deg, #111827 0%, #374151 100%)',
         }}
@@ -154,16 +201,40 @@ export const VideoStreamDisplay: React.FC<VideoStreamDisplayProps> = ({ stream, 
       {/* Live indicator badge */}
       {isLoaded && !hasError && (
         <Flex
-          className='absolute top-2 right-2 items-center gap-1.5 px-2 py-1 rounded-full bg-gray-700/90 backdrop-blur-sm z-20 animate-fade-in'
+          position='absolute'
+          align='center'
+          gap='sm'
+          animate='fadeIn'
           style={{
+            top: '8px',
+            right: '8px',
+            padding: '4px 8px',
+            borderRadius: '9999px',
+            backgroundColor: 'rgba(55,65,81,0.9)',
+            backdropFilter: 'blur(4px)',
+            zIndex: 20,
             boxShadow: '0 2px 8px rgba(31, 41, 55, 0.4)',
           }}
         >
-          <Flex className='relative items-center justify-center'>
-            <Surface className='absolute w-2 h-2 rounded-full bg-white animate-ping opacity-75' />
-            <Surface className='relative w-1.5 h-1.5 rounded-full bg-white' />
+          <Flex position='relative' align='center' justify='center'>
+            <Surface
+              position='absolute'
+              rounded='full'
+              animate='ping'
+              style={{ width: '8px', height: '8px', backgroundColor: 'white', opacity: 0.75 }}
+            />
+            <Surface
+              position='relative'
+              rounded='full'
+              style={{ width: '6px', height: '6px', backgroundColor: 'white' }}
+            />
           </Flex>
-          <Text as='span' className='text-[10px] font-semibold text-white uppercase tracking-wide'>
+          <Text
+            as='span'
+            size='xs'
+            weight='semibold'
+            style={{ color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: '10px' }}
+          >
             Live
           </Text>
         </Flex>
@@ -171,10 +242,26 @@ export const VideoStreamDisplay: React.FC<VideoStreamDisplayProps> = ({ stream, 
 
       {/* Hover overlay with info */}
       <Flex
-        className={`absolute inset-0 ${borderRadiusClass} bg-black/0 group-hover:bg-black/20 transition-all duration-300 items-center justify-center opacity-0 group-hover:opacity-100 z-30 pointer-events-none`}
+        position='absolute'
+        inset='0'
+        align='center'
+        justify='center'
+        style={{
+          borderRadius: `${topRadius} ${topRadius} 0 0`,
+          backgroundColor: 'rgba(0,0,0,0)',
+          zIndex: 30,
+          pointerEvents: 'none',
+        }}
       >
-        <Surface className='px-3 py-1.5 rounded-lg bg-black/70 backdrop-blur-sm'>
-          <Text as='div' className='text-white text-xs font-medium'>
+        <Surface
+          rounded='lg'
+          style={{
+            padding: '4px 12px',
+            backgroundColor: 'rgba(0,0,0,0.7)',
+            backdropFilter: 'blur(4px)',
+          }}
+        >
+          <Text as='div' size='xs' weight='medium' style={{ color: 'white' }}>
             Screen Sharing Active
           </Text>
         </Surface>
