@@ -1,7 +1,10 @@
 import React from 'react';
-import { FaBan, FaCheckCircle, FaCircle, FaSpinner, FaTimesCircle } from 'react-icons/fa';
 
 import { addOpacity } from '../../utils/format';
+import { Flex } from '../base/Flex';
+import { Icon } from '../base/Icon';
+import { Spinner } from '../base/Spinner';
+import { Text } from '../base/Text';
 
 interface ProgressLineProps {
   content: string;
@@ -27,19 +30,26 @@ export const ProgressLine: React.FC<ProgressLineProps> = ({
   const renderIcon = () => {
     switch (status) {
       case 'completed':
-        return <FaCheckCircle className='flex-shrink-0 mt-0.5' style={{ color: accentColor }} size={16} />;
+        return <Icon name='checkCircle' className='flex-shrink-0 mt-0.5' style={{ color: accentColor }} size={16} />;
       case 'failed':
         return (
-          <FaTimesCircle className='flex-shrink-0 mt-0.5' style={{ color: addOpacity(textColor, 0.65) }} size={16} />
+          <Icon
+            name='timesCircle'
+            className='flex-shrink-0 mt-0.5'
+            style={{ color: addOpacity(textColor, 0.65) }}
+            size={16}
+          />
         );
       case 'canceled':
-        return <FaBan className='flex-shrink-0 mt-0.5' style={{ color: addOpacity(textColor, 0.5) }} size={16} />;
+        return (
+          <Icon name='ban' className='flex-shrink-0 mt-0.5' style={{ color: addOpacity(textColor, 0.5) }} size={16} />
+        );
       case 'running':
         // If waiting for user, we might want a different icon or just spinner?
         // The original code had specific logic for waiting for user.
         if (isWaitingForUser) {
           return (
-            <div
+            <Flex
               className='flex-shrink-0 mt-0.5 spinner-container'
               style={{
                 width: '16px',
@@ -47,7 +57,7 @@ export const ProgressLine: React.FC<ProgressLineProps> = ({
                 position: 'relative',
               }}
             >
-              <div
+              <Flex
                 className='spinner'
                 style={{
                   width: '16px',
@@ -64,29 +74,37 @@ export const ProgressLine: React.FC<ProgressLineProps> = ({
                   100% { transform: rotate(360deg); }
                 }
               `}</style>
-            </div>
+            </Flex>
           );
         }
         // Standard running spinner
-        return <FaSpinner className='flex-shrink-0 mt-0.5 animate-spin' style={{ color: accentColor }} size={16} />;
+        return <Spinner size='sm' className='flex-shrink-0 mt-0.5' style={{ color: accentColor }} />;
       case 'pending':
       default:
         // Static circle for pending/queued
-        return <FaCircle className='flex-shrink-0 mt-0.5' style={{ color: addOpacity(textColor, 0.5) }} size={16} />;
+        return (
+          <Icon
+            name='circle'
+            className='flex-shrink-0 mt-0.5'
+            style={{ color: addOpacity(textColor, 0.5) }}
+            size={16}
+          />
+        );
     }
   };
 
   return (
-    <div className='flex items-start gap-2'>
+    <Flex className='items-start gap-2'>
       {!hideIcon && renderIcon()}
-      <span
+      <Text
+        as='span'
         className='flex-1 whitespace-pre-wrap text-xs font-inter font-medium leading-tight'
         style={{
           color: textStyle === 'muted' ? addOpacity(textColor, 0.5) : textColor,
         }}
       >
         {content}
-      </span>
-    </div>
+      </Text>
+    </Flex>
   );
 };

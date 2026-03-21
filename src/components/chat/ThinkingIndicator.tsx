@@ -1,7 +1,9 @@
 import React from 'react';
-import { FaSpinner } from 'react-icons/fa';
 
 import { addOpacity } from '../../utils/format';
+import { Flex } from '../base/Flex';
+import { Spinner } from '../base/Spinner';
+import { Text } from '../base/Text';
 
 interface ThinkingIndicatorProps {
   isWaitingForUser: boolean;
@@ -17,17 +19,13 @@ export const ThinkingIndicator: React.FC<ThinkingIndicatorProps> = ({
   accentColor,
 }) => {
   return (
-    <div className='flex items-center gap-1.5 py-0.5'>
+    <Flex className='items-center gap-1.5 py-0.5'>
       {/* Spinner icon */}
-      <FaSpinner
-        className='flex-shrink-0 animate-spin'
-        style={{ color: accentColor || addOpacity(textColor, 0.5) }}
-        size={12}
-      />
+      <Spinner size='sm' className='flex-shrink-0' style={{ color: accentColor || addOpacity(textColor, 0.5) }} />
       {/* State text */}
-      <span className='text-[10px] font-inter font-normal' style={{ color: addOpacity(textColor, 0.5) }}>
+      <Text as='span' className='text-[10px] font-inter font-normal' style={{ color: addOpacity(textColor, 0.5) }}>
         {customText || (isWaitingForUser ? 'Waiting for you to complete the action' : 'Thinking')}
-      </span>
-    </div>
+      </Text>
+    </Flex>
   );
 };
