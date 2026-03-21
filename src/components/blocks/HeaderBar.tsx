@@ -49,7 +49,10 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
   }
 
   return (
-    <Flex className='justify-between items-center px-3 py-2 border-b border-border flex-shrink-0'>
+    <Flex
+      className='justify-between items-center px-3 py-2 border-b border-border flex-shrink-0'
+      style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}
+    >
       <Flex className='items-center gap-2 min-w-0 flex-1'>
         <Avatar src={MarketrixIcon} alt='' size='md' className='rounded-[var(--radius)] shadow-[var(--shadow)]' />
         <Stack className='min-w-0'>
