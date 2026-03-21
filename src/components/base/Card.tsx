@@ -20,7 +20,7 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(function Card({ classN
       ref={ref}
       className={cn(className)}
       style={{
-        padding: '6px 10px',
+        padding: '8px 12px',
         borderRadius: 'var(--radius-xl, 12px)',
         border: '1px solid transparent',
         backgroundColor: '#ffffff',

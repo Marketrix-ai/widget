@@ -298,7 +298,7 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
                       Help – coming soon
                     </Text>
                   </Stack>
-                  <Card style={{ margin: '0 0 4px 0' }}>
+                  <Card style={{ margin: '0 12px 12px 12px' }}>
                     <Text size='xs' variant='faint' style={{ display: 'block' }}>
                       Widget v{packageJson.version}
                     </Text>
