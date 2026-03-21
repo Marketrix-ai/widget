@@ -10,6 +10,8 @@ export interface IconButtonProps extends React.ButtonHTMLAttributes<HTMLButtonEl
   size?: IconButtonSize;
   rounded?: boolean;
   label: string;
+  /** @internal blocks/ only */
+  className?: string;
 }
 
 const variantStyles: Record<IconButtonVariant, string> = {

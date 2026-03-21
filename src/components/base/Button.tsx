@@ -10,6 +10,7 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
   loading?: boolean;
   size?: ButtonSize;
   variant?: ButtonVariant;
+  full?: boolean;
 }
 
 const variantStyles: Record<ButtonVariant, string> = {
@@ -26,7 +27,7 @@ const sizeStyles: Record<ButtonSize, string> = {
 };
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
-  { className, disabled, loading = false, size = 'md', type = 'button', variant = 'primary', ...props },
+  { className, disabled, full, loading = false, size = 'md', type = 'button', variant = 'primary', ...props },
   ref,
 ) {
   const isDisabled = disabled || loading;
@@ -42,6 +43,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
         sizeStyles[size],
         isDisabled && !loading && 'opacity-50 cursor-not-allowed pointer-events-none',
         loading && 'opacity-70 cursor-wait pointer-events-none',
+        full && 'w-full',
         className,
       )}
       data-disabled={isDisabled ? 'true' : 'false'}

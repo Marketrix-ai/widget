@@ -7,6 +7,8 @@ type BadgeVariant = 'live' | 'status' | 'count';
 export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
   variant: BadgeVariant;
   color?: string;
+  /** @internal blocks/ only */
+  className?: string;
 }
 
 const variantStyles: Record<BadgeVariant, string> = {

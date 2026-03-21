@@ -7,6 +7,7 @@ type SpinnerSize = 'sm' | 'md' | 'lg';
 export interface SpinnerProps {
   size?: SpinnerSize;
   label?: string;
+  /** @internal blocks/ only */
   className?: string;
   style?: CSSProperties;
 }

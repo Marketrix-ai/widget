@@ -14,6 +14,8 @@ export interface TextProps extends React.HTMLAttributes<HTMLElement> {
   weight?: TextWeight;
   truncate?: boolean;
   align?: TextAlign;
+  /** @internal blocks/ only */
+  className?: string;
 }
 
 const variantStyles: Record<TextVariant, string> = {

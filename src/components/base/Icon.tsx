@@ -7,6 +7,8 @@ import { type IconData, type IconName, icons } from './icons';
 export interface IconProps extends React.SVGAttributes<SVGElement> {
   name: IconName;
   size?: number;
+  /** @internal blocks/ only */
+  className?: string;
 }
 
 export const Icon = forwardRef<SVGSVGElement, IconProps>(function Icon({ name, size = 16, className, ...props }, ref) {

@@ -9,6 +9,7 @@ export interface AvatarProps extends Omit<React.ImgHTMLAttributes<HTMLImageEleme
   alt: string;
   size?: AvatarSize | number;
   fallback?: ReactNode;
+  rounded?: boolean | 'full' | 'theme';
 }
 
 const sizeStyles: Record<AvatarSize, string> = {
@@ -18,7 +19,7 @@ const sizeStyles: Record<AvatarSize, string> = {
 };
 
 export const Avatar = forwardRef<HTMLImageElement, AvatarProps>(function Avatar(
-  { src, alt, size = 'md', fallback: _fallback, className, style, ...props },
+  { src, alt, size = 'md', fallback: _fallback, rounded, className, style, ...props },
   ref,
 ) {
   const isPreset = typeof size === 'string';
@@ -30,7 +31,13 @@ export const Avatar = forwardRef<HTMLImageElement, AvatarProps>(function Avatar(
       {...props}
       ref={ref}
       alt={alt}
-      className={cn('flex-shrink-0 object-contain', sizeClass, className)}
+      className={cn(
+        'flex-shrink-0 object-contain',
+        sizeClass,
+        (rounded === true || rounded === 'theme') && 'rounded-[var(--radius)]',
+        rounded === 'full' && 'rounded-full',
+        className,
+      )}
       src={src}
       style={sizeStyle}
     />
