@@ -52,9 +52,9 @@ export const MessageItem: React.FC<MessageItemProps> = ({
       animate={isLastMessage ? 'fadeIn' : undefined}
     >
       <Flex align='start' gap='sm' width='full'>
-        {/* Logo or Spacer - Always on left */}
-        {!isUser && (
-          <Flex shrink={false} style={{ width: '20px', height: '20px', marginTop: '4px' }}>
+        {/* Logo (agent) or spacer (user) on left */}
+        <Flex shrink={false} style={{ width: '20px', height: '20px', marginTop: '4px' }}>
+          {!isUser && (
             <Avatar
               src={MarketrixIcon}
               alt='Marketrix AI'
@@ -68,8 +68,8 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                 borderRadius: 'calc(var(--radius) * 0.6)',
               }}
             />
-          </Flex>
-        )}
+          )}
+        </Flex>
 
         {/* Message bubble */}
         <Stack
@@ -77,12 +77,11 @@ export const MessageItem: React.FC<MessageItemProps> = ({
           position='relative'
           style={{
             padding: message.videoStream ? '0' : '8px 10px',
-            borderRadius: isUser ? 'var(--radius) 0 var(--radius) var(--radius)' : 'var(--radius)',
-            boxShadow: !isUser ? '0 1px 4px rgba(0,0,0,0.1)' : undefined,
-            border: isUser ? '1px solid var(--primary)' : '1px solid transparent',
+            borderRadius: 'var(--radius)',
+            boxShadow: '0 1px 4px rgba(0,0,0,0.1)',
+            border: '1px solid transparent',
             backgroundColor: isUser ? 'var(--primary)' : undefined,
             color: isUser ? 'var(--primary-foreground)' : 'var(--foreground)',
-            maxWidth: isUser ? 'calc(100% - 40px)' : '280px',
           }}
         >
           {/* Video stream display - edge-to-edge */}
@@ -172,15 +171,13 @@ export const MessageItem: React.FC<MessageItemProps> = ({
             </Flex>
           )}
         </Stack>
+
+        {/* Spacer on right for user messages */}
+        <Flex shrink={false} style={{ width: '20px' }} />
       </Flex>
-      {/* Timestamp */}
+      {/* Timestamp — right-aligned */}
       {!message.isPlaceholder && (
-        <Text
-          as='div'
-          variant='faint'
-          size='xs'
-          style={{ marginTop: '2px', marginLeft: isUser ? undefined : '26px', textAlign: isUser ? 'right' : undefined }}
-        >
+        <Text as='div' variant='faint' size='xs' style={{ marginTop: '2px', textAlign: 'right', marginRight: '26px' }}>
           {formatMessageTime(message.timestamp)}
         </Text>
       )}
