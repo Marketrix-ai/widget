@@ -51,25 +51,25 @@ export const MessageItem: React.FC<MessageItemProps> = ({
       aria-label={isUser ? 'You said…' : 'Agent says…'}
       animate={isLastMessage ? 'fadeIn' : undefined}
     >
-      <Flex align='start' gap='xs' width='full'>
+      <Flex align='start' gap='sm' width='full'>
         {/* Logo or Spacer - Always on left */}
-        <Flex shrink={false} style={{ width: '24px', height: '24px', backgroundColor: 'transparent' }}>
-          {!isUser && (
+        {!isUser && (
+          <Flex shrink={false} style={{ width: '20px', height: '20px', marginTop: '4px' }}>
             <Avatar
               src={MarketrixIcon}
               alt='Marketrix AI'
-              size={24}
-              rounded='theme'
+              size={20}
               style={{
                 border: 'none',
                 outline: 'none',
                 display: 'block',
                 objectFit: 'cover',
                 backgroundColor: 'transparent',
+                borderRadius: 'calc(var(--radius) * 0.6)',
               }}
             />
-          )}
-        </Flex>
+          </Flex>
+        )}
 
         {/* Message bubble */}
         <Stack
@@ -175,7 +175,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
       </Flex>
       {/* Attribution line for agent messages */}
       {!isUser && !message.isPlaceholder && (
-        <Text as='div' variant='muted' style={{ fontSize: '11px', marginTop: '4px', marginLeft: '28px' }}>
+        <Text as='div' variant='muted' style={{ fontSize: '11px', marginTop: '4px', marginLeft: '26px' }}>
           Marketrix • AI Agent • {formatMessageTime(message.timestamp)}
         </Text>
       )}

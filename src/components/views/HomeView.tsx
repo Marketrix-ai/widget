@@ -44,19 +44,16 @@ export const HomeView: React.FC<HomeViewProps> = ({ config, messages, onNavigate
           <Button
             type='button'
             variant='primary'
-            size='sm'
             full
             onClick={onNavigateToChat}
             aria-label='Ask a question'
             style={{
-              paddingTop: '8px',
-              paddingBottom: '8px',
+              paddingTop: '10px',
+              paddingBottom: '10px',
             }}
           >
-            <Icon name='chat' size={14} />
-            <Text as='span' weight='normal' style={{ lineHeight: 1 }}>
-              Ask a question
-            </Text>
+            <Icon name='chat' size={16} />
+            Ask a question
           </Button>
 
           <SuggestedActions
