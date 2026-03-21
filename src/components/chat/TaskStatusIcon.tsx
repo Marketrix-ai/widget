@@ -1,7 +1,8 @@
 import React from 'react';
-import { FaCheckCircle, FaCircle, FaExclamationCircle, FaSpinner } from 'react-icons/fa';
 
 import { addOpacity } from '../../utils/format';
+import { Icon } from '../base/Icon';
+import { Spinner } from '../base/Spinner';
 
 interface TaskStatusIconProps {
   status: 'ongoing' | 'done' | 'failed' | 'stopped';
@@ -13,19 +14,22 @@ export const TaskStatusIcon: React.FC<TaskStatusIconProps> = ({ status, accentCo
 
   switch (status) {
     case 'done':
-      return <FaCheckCircle className='flex-shrink-0' style={{ color: accentColor }} size={iconSize} />;
+      return <Icon name='checkCircle' className='flex-shrink-0' style={{ color: accentColor }} size={iconSize} />;
     case 'failed':
       return (
-        <FaExclamationCircle
+        <Icon
+          name='exclamationCircle'
           className='flex-shrink-0'
           style={{ color: addOpacity(accentColor, 0.75) }}
           size={iconSize}
         />
       );
     case 'stopped':
-      return <FaCircle className='flex-shrink-0' style={{ color: addOpacity(accentColor, 0.5) }} size={iconSize} />;
+      return (
+        <Icon name='circle' className='flex-shrink-0' style={{ color: addOpacity(accentColor, 0.5) }} size={iconSize} />
+      );
     case 'ongoing':
     default:
-      return <FaSpinner className='flex-shrink-0 animate-spin' style={{ color: accentColor }} size={iconSize} />;
+      return <Spinner size='sm' className='flex-shrink-0' style={{ color: accentColor }} />;
   }
 };

@@ -2,6 +2,9 @@ import React from 'react';
 
 import type { ChatMessage, WidgetState } from '../../types';
 import { removeThinkingMarkerFromEnd } from '../../utils/chat';
+import { Stack } from '../base/Stack';
+import { Surface } from '../base/Surface';
+import { Text } from '../base/Text';
 import { ProgressLine } from './ProgressLine';
 import { ThinkingIndicator } from './ThinkingIndicator';
 
@@ -27,7 +30,7 @@ export const MessageContent: React.FC<MessageContentProps> = ({
   // Render using structured parts
   if (message.parts && message.parts.length > 0) {
     return (
-      <div className='flex flex-col gap-1.5'>
+      <Stack className='gap-1.5'>
         {message.parts.map((part, index) => {
           if (part.type === 'text') {
             // Clean thinking marker if present in text part
@@ -38,12 +41,13 @@ export const MessageContent: React.FC<MessageContentProps> = ({
               .trim();
             if (!text) return null;
             return (
-              <div
+              <Text
+                as='div'
                 key={`part-${index}`}
                 className='text-xs font-inter font-medium leading-tight break-words whitespace-pre-wrap mb-1'
               >
                 {text}
-              </div>
+              </Text>
             );
           } else if (part.type === 'progress') {
             // Hide progress line for "done" tool when task is completed (show icon instead)
@@ -84,7 +88,7 @@ export const MessageContent: React.FC<MessageContentProps> = ({
             accentColor={accentColor}
           />
         )}
-      </div>
+      </Stack>
     );
   }
 
@@ -103,5 +107,5 @@ export const MessageContent: React.FC<MessageContentProps> = ({
     );
   }
 
-  return <div />;
+  return <Surface />;
 };
