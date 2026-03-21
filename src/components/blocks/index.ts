@@ -1,4 +1,6 @@
+export * from './ChatInput';
 export * from './HeaderBar';
 export * from './MessageRow';
+export * from './NotificationToast';
 export * from './ProgressStep';
 export * from './TabBar';
