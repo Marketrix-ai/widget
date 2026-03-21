@@ -109,7 +109,7 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(f
           minHeight: 'unset',
         }}
       />
-      <Flex className='items-center justify-between px-1.5 pb-1.5'>
+      <Flex className='items-center justify-between px-1.5 pt-1 pb-1.5'>
         <Flex className='items-center gap-1'>
           {modes.map(mode => {
             const isActive = activeMode === mode.id;
