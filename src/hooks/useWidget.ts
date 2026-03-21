@@ -20,7 +20,7 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
   const { state, actions } = useWidgetContext();
 
   const marketrixConfig = useMemo<MarketrixConfig>(() => {
-    return config || {};
+    return config || configManager.getConfig() || {};
   }, [config]);
 
   const configValid = isConfigComplete(marketrixConfig);
