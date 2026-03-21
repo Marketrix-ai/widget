@@ -35,11 +35,11 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({
   const getModeIcon = (mode: InstructionType) => {
     switch (mode) {
       case 'show':
-        return <Icon name='mousePointerClick' size={16} className='text-base' />;
+        return <Icon name='mousePointerClick' size={16} />;
       case 'tell':
-        return <Icon name='chatBubble' size={16} className='text-base' />;
+        return <Icon name='chatBubble' size={16} />;
       case 'do':
-        return <Icon name='ticktick' size={16} className='text-base' />;
+        return <Icon name='ticktick' size={16} />;
       default:
         return null;
     }
@@ -49,8 +49,15 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({
   const orderedModes: InstructionType[] = (['tell', 'show', 'do'] as const).filter(mode => enabledModes.includes(mode));
 
   return (
-    <Flex className='px-3 pb-2 bg-transparent items-center justify-between gap-2'>
-      <Flex className='space-x-2 flex-shrink-0'>
+    <Flex
+      paddingX='lg'
+      paddingY='md'
+      align='center'
+      justify='between'
+      gap='md'
+      style={{ backgroundColor: 'transparent' }}
+    >
+      <Flex gap='md' shrink={false}>
         {orderedModes.map((mode: InstructionType) => (
           <Pill
             key={mode}
@@ -65,7 +72,7 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({
             title={getModeDescription(mode)}
           >
             {getModeIcon(mode)}
-            <Text as='span' className='text-inherit text-xs font-medium'>
+            <Text as='span' size='xs' weight='medium' style={{ color: 'inherit' }}>
               {getModeDisplayName(mode)}
             </Text>
           </Pill>
@@ -74,8 +81,14 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({
       <Avatar
         src={MarketrixLogo}
         alt='Marketrix Logo'
-        className='h-5 w-auto object-contain flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity'
-        style={{ maxWidth: '100px' }}
+        style={{
+          height: '20px',
+          width: 'auto',
+          objectFit: 'contain',
+          maxWidth: '100px',
+          flexShrink: 0,
+          cursor: 'pointer',
+        }}
         onClick={e => {
           e.preventDefault();
           e.stopPropagation();
