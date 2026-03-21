@@ -3,6 +3,7 @@ import React from 'react';
 import type { ChatMessage, MarketrixConfig } from '../../types';
 import { getSuggestedActionsFromConfig, type SuggestedActionItem } from '../../utils/suggestedActions';
 import { Button } from '../base/Button';
+import { Card } from '../base/Card';
 import { Icon } from '../base/Icon';
 import { Stack } from '../base/Stack';
 import { Surface } from '../base/Surface';
@@ -56,28 +57,13 @@ export const HomeView: React.FC<HomeViewProps> = ({ config, messages, onNavigate
             Ask a question
           </Button>
 
-          <SuggestedActions
-            actions={suggestedActions}
-            settings={{
-              widget_text_color: config.widget_text_color ?? '#1f2937',
-            }}
-            onActionClick={handleActionClick}
-          />
+          <SuggestedActions actions={suggestedActions} onActionClick={handleActionClick} />
         </Stack>
       </Stack>
 
       {/* Block 3: Recent conversation — anchored at bottom */}
       {messages.length > 0 && (
-        <Surface
-          style={{
-            padding: '10px 16px',
-            margin: '0 12px 12px 12px',
-            borderRadius: 'var(--radius-xl, 12px)',
-            border: '1px solid transparent',
-            backgroundColor: '#ffffff',
-            boxShadow: '0 1px 4px rgba(0,0,0,0.1)',
-          }}
-        >
+        <Card style={{ margin: '0 12px 12px 12px' }}>
           <Text as='p' size='xs' weight='semibold' style={{ marginBottom: '2px' }}>
             Recent conversation
           </Text>
@@ -98,7 +84,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ config, messages, onNavigate
           >
             Continue conversation →
           </Text>
-        </Surface>
+        </Card>
       )}
     </Stack>
   );

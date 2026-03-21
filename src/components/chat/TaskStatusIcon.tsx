@@ -1,15 +1,17 @@
 import React from 'react';
 
+import { useWidget } from '../../hooks/useWidget';
 import { addOpacity } from '../../utils/format';
 import { Icon } from '../base/Icon';
 import { Spinner } from '../base/Spinner';
 
 interface TaskStatusIconProps {
   status: 'ongoing' | 'done' | 'failed' | 'stopped';
-  accentColor: string;
 }
 
-export const TaskStatusIcon: React.FC<TaskStatusIconProps> = ({ status, accentColor }) => {
+export const TaskStatusIcon: React.FC<TaskStatusIconProps> = ({ status }) => {
+  const { config: widgetConfig } = useWidget();
+  const accentColor = widgetConfig.widget_accent_color;
   const iconSize = 14;
 
   switch (status) {

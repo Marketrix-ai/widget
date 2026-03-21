@@ -12,10 +12,9 @@ interface MessageContentProps {
   message: ChatMessage;
   isLastMessage: boolean;
   widgetState: WidgetState;
-  accentColor: string;
 }
 
-export const MessageContent: React.FC<MessageContentProps> = ({ message, isLastMessage, widgetState, accentColor }) => {
+export const MessageContent: React.FC<MessageContentProps> = ({ message, isLastMessage, widgetState }) => {
   const placeholderState = message.placeholderState || 'thinking';
   const isWaitingForUser = placeholderState === 'waiting-for-user';
 
@@ -59,7 +58,6 @@ export const MessageContent: React.FC<MessageContentProps> = ({ message, isLastM
                 key={`part-${index}`}
                 content={part.content}
                 status={part.status || 'running'}
-                accentColor={accentColor}
                 {...(part.hideIcon !== undefined ? { hideIcon: part.hideIcon } : {})}
                 {...(part.textStyle !== undefined ? { textStyle: part.textStyle } : {})}
               />
@@ -71,7 +69,7 @@ export const MessageContent: React.FC<MessageContentProps> = ({ message, isLastM
         {/* Show thinking/waiting indicator at the bottom if task is running or it's a placeholder */}
         {((message.isPlaceholder && !message.parts.some(p => p.type === 'text')) ||
           (widgetState.isTaskRunning && isLastMessage && (message.mode === 'show' || message.mode === 'do'))) && (
-          <ThinkingIndicator isWaitingForUser={isWaitingForUser} accentColor={accentColor} />
+          <ThinkingIndicator isWaitingForUser={isWaitingForUser} />
         )}
       </Stack>
     );
@@ -82,7 +80,7 @@ export const MessageContent: React.FC<MessageContentProps> = ({ message, isLastM
     message.isPlaceholder ||
     (widgetState.isTaskRunning && isLastMessage && (message.mode === 'show' || message.mode === 'do'))
   ) {
-    return <ThinkingIndicator isWaitingForUser={isWaitingForUser} accentColor={accentColor} />;
+    return <ThinkingIndicator isWaitingForUser={isWaitingForUser} />;
   }
 
   // Fallback: render plain content text

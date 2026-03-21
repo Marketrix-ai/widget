@@ -1,6 +1,7 @@
 import React, { useCallback, useLayoutEffect, useRef, useState } from 'react';
 
 import MarketrixIcon from '../../assets/marketrix-icon.svg';
+import { SHADOW } from '../../design-system/shadows';
 import type { WidgetPosition } from '../../types';
 import { getAnchorTopLeft, getNearestCornerByTranslation, getPositionClasses } from '../../utils/widgetPositioning';
 import { Avatar } from '../base/Avatar';
@@ -381,7 +382,7 @@ export const WidgetFab: React.FC<WidgetFabProps> = ({
               style={{
                 borderRadius,
                 backgroundColor: open ? backgroundColor : accentColor,
-                boxShadow: '0 2px 8px rgba(0,0,0,0.18), 0 0 0 1px rgba(0,0,0,0.04)',
+                boxShadow: SHADOW.fab,
               }}
             >
               {showProcessingGlow && (

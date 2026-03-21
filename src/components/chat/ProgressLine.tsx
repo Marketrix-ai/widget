@@ -1,5 +1,6 @@
 import React from 'react';
 
+import { useWidget } from '../../hooks/useWidget';
 import { Flex } from '../base/Flex';
 import { Icon } from '../base/Icon';
 import { Spinner } from '../base/Spinner';
@@ -8,7 +9,6 @@ import { Text } from '../base/Text';
 interface ProgressLineProps {
   content: string;
   status?: 'running' | 'completed' | 'failed' | 'canceled' | 'pending';
-  accentColor: string;
   hideIcon?: boolean;
   textStyle?: 'default' | 'muted';
 }
@@ -16,10 +16,11 @@ interface ProgressLineProps {
 export const ProgressLine: React.FC<ProgressLineProps> = ({
   content,
   status = 'pending',
-  accentColor,
   hideIcon = false,
   textStyle = 'default',
 }) => {
+  const { config: widgetConfig } = useWidget();
+  const accentColor = widgetConfig.widget_accent_color;
   const renderIcon = () => {
     switch (status) {
       case 'completed':

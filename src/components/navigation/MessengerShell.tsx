@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import packageJson from '../../../package.json';
+import { SHADOW } from '../../design-system/shadows';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { useResize } from '../../hooks/useResize';
 import { useWidget } from '../../hooks/useWidget';
@@ -12,6 +13,7 @@ import type { ChatMessage, InstructionType, MarketrixConfig, TaskProgress, Widge
 import type { SuggestedActionItem } from '../../utils/suggestedActions';
 import { getPanelPositionStyle } from '../../utils/widgetPositioning';
 import { Badge } from '../base/Badge';
+import { Card } from '../base/Card';
 import { Icon } from '../base/Icon';
 import { IconButton } from '../base/IconButton';
 import { Stack } from '../base/Stack';
@@ -189,7 +191,7 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
         pointerEvents: 'auto',
         scrollbarWidth: 'thin',
         animation: 'messenger-entrance 300ms cubic-bezier(0, 1.2, 1, 1)',
-        boxShadow: '0 12px 40px rgba(0,0,0,0.16), 0 4px 12px rgba(0,0,0,0.08)',
+        boxShadow: SHADOW.panel,
       }}
     >
       <HeaderBar
@@ -252,16 +254,7 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
                       Help – coming soon
                     </Text>
                   </Stack>
-                  <Surface
-                    style={{
-                      padding: '10px 16px',
-                      margin: '0 0 4px 0',
-                      borderRadius: 'var(--radius-xl, 12px)',
-                      border: '1px solid transparent',
-                      backgroundColor: '#ffffff',
-                      boxShadow: '0 1px 4px rgba(0,0,0,0.1)',
-                    }}
-                  >
+                  <Card style={{ margin: '0 0 4px 0' }}>
                     <Text size='xs' variant='faint' style={{ display: 'block' }}>
                       Widget v{packageJson.version}
                     </Text>
@@ -276,7 +269,7 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
                         }
                       })()}
                     </Text>
-                  </Surface>
+                  </Card>
                 </Stack>
               )}
               {activeView === 'news' && (

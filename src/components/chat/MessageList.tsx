@@ -1,6 +1,7 @@
 // / <reference lib="dom" />
 import React, { useEffect, useRef, useState } from 'react';
 
+import { SHADOW } from '../../design-system/shadows';
 import { useWidget } from '../../hooks/useWidget';
 import type { ChatMessage, MarketrixConfig } from '../../types';
 import { addOpacity } from '../../utils/format';
@@ -11,6 +12,15 @@ import { Surface } from '../base/Surface';
 import { Text } from '../base/Text';
 import { StateMessage } from '../ui/StateMessage';
 import { MessageItem } from './MessageItem';
+
+const scrollButtonStyle: React.CSSProperties = {
+  padding: '6px',
+  borderRadius: '9999px',
+  boxShadow: SHADOW.button,
+  backgroundColor: 'var(--card)',
+  border: '1px solid var(--border)',
+  pointerEvents: 'auto',
+};
 
 interface MessageListProps {
   messages: ChatMessage[];
@@ -116,9 +126,6 @@ export const MessageList = ({
             index={index}
             isLastMessage={index === allMessages.length - 1}
             widgetState={widgetState}
-            settings={{
-              widget_accent_color: widgetConfig.widget_accent_color,
-            }}
             onScreenAccessAllow={onScreenAccessAllow}
             onScreenAccessDeny={onScreenAccessDeny}
           />
@@ -158,14 +165,7 @@ export const MessageList = ({
             variant='secondary'
             size='sm'
             onClick={scrollToTop}
-            style={{
-              padding: '6px',
-              borderRadius: '9999px',
-              boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
-              backgroundColor: 'rgba(255,255,255,0.9)',
-              border: '1px solid #e5e7eb',
-              pointerEvents: 'auto',
-            }}
+            style={scrollButtonStyle}
             title='Scroll to top'
             aria-label='Scroll to top'
           >
@@ -185,14 +185,7 @@ export const MessageList = ({
             variant='secondary'
             size='sm'
             onClick={scrollToBottom}
-            style={{
-              padding: '6px',
-              borderRadius: '9999px',
-              boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
-              backgroundColor: 'rgba(255,255,255,0.9)',
-              border: '1px solid #e5e7eb',
-              pointerEvents: 'auto',
-            }}
+            style={scrollButtonStyle}
             title='Scroll to bottom'
             aria-label='Scroll to bottom'
           >

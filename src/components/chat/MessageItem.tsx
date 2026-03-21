@@ -1,6 +1,7 @@
 import React from 'react';
 
 import MarketrixIcon from '../../assets/marketrix-icon.svg';
+import { SHADOW } from '../../design-system/shadows';
 import type { ChatMessage, WidgetState } from '../../types';
 import { formatMessageTime } from '../../utils/format';
 import { Avatar, Button, Flex, Stack, Text } from '../base';
@@ -13,9 +14,6 @@ interface MessageItemProps {
   index: number;
   isLastMessage: boolean;
   widgetState: WidgetState;
-  settings: {
-    widget_accent_color: string;
-  };
   onScreenAccessAllow?: () => void;
   onScreenAccessDeny?: () => void;
 }
@@ -25,7 +23,6 @@ export const MessageItem: React.FC<MessageItemProps> = ({
   index,
   isLastMessage,
   widgetState,
-  settings,
   onScreenAccessAllow,
   onScreenAccessDeny,
 }) => {
@@ -78,7 +75,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
           style={{
             padding: message.videoStream ? '0' : '8px 10px',
             borderRadius: 'var(--radius)',
-            boxShadow: '0 1px 4px rgba(0,0,0,0.1)',
+            boxShadow: SHADOW.card,
             border: '1px solid transparent',
             backgroundColor: isUser ? 'var(--primary)' : undefined,
             color: isUser ? 'var(--primary-foreground)' : 'var(--foreground)',
@@ -88,12 +85,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
           {message.videoStream && <VideoStreamDisplay stream={message.videoStream} />}
           {/* Message content */}
           {!message.videoStream && (
-            <MessageContent
-              message={message}
-              isLastMessage={isLastMessage}
-              widgetState={widgetState}
-              accentColor={settings.widget_accent_color}
-            />
+            <MessageContent message={message} isLastMessage={isLastMessage} widgetState={widgetState} />
           )}
 
           {/* Screen access request action buttons - show if not yet handled */}
@@ -117,8 +109,8 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                   height: '26px',
                   minWidth: '65px',
                   borderRadius: '22px',
-                  backgroundColor: '#111827',
-                  color: '#fff',
+                  backgroundColor: 'var(--primary)',
+                  color: 'var(--primary-foreground)',
                   border: 'none',
                 }}
               >
@@ -142,9 +134,9 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                   height: '26px',
                   minWidth: '65px',
                   borderRadius: '22px',
-                  backgroundColor: '#f3f4f6',
-                  color: '#111827',
-                  border: '1px solid #e5e7eb',
+                  backgroundColor: 'var(--secondary)',
+                  color: 'var(--primary)',
+                  border: '1px solid var(--border)',
                 }}
               >
                 No
@@ -167,7 +159,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
           {/* Task status icon at bottom right (only for agent messages with task status) */}
           {!isUser && message.taskStatus && (
             <Flex position='absolute' align='center' justify='center' style={{ bottom: '4px', right: '4px' }}>
-              <TaskStatusIcon status={message.taskStatus} accentColor={settings.widget_accent_color} />
+              <TaskStatusIcon status={message.taskStatus} />
             </Flex>
           )}
         </Stack>

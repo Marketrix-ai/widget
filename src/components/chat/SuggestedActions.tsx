@@ -1,5 +1,7 @@
 import React from 'react';
 
+import { SHADOW } from '../../design-system/shadows';
+import { useWidget } from '../../hooks/useWidget';
 import { Button, Stack, Text } from '../base';
 
 interface SuggestedAction {
@@ -12,13 +14,11 @@ interface SuggestedAction {
 
 interface SuggestedActionsProps {
   actions: SuggestedAction[];
-  settings: {
-    widget_text_color: string;
-  };
   onActionClick: (action: SuggestedAction, event: React.MouseEvent) => Promise<void>;
 }
 
-export const SuggestedActions: React.FC<SuggestedActionsProps> = ({ actions, settings, onActionClick }) => {
+export const SuggestedActions: React.FC<SuggestedActionsProps> = ({ actions, onActionClick }) => {
+  const { config: widgetConfig } = useWidget();
   if (actions.length === 0) return null;
 
   return (
@@ -33,10 +33,10 @@ export const SuggestedActions: React.FC<SuggestedActionsProps> = ({ actions, set
           className='hover:bg-primary hover:text-primary-foreground hover:border-primary'
           style={{
             backgroundColor: 'var(--secondary-bg)',
-            color: settings.widget_text_color,
+            color: widgetConfig.widget_text_color,
             paddingTop: '8px',
             paddingBottom: '8px',
-            boxShadow: '0 1px 4px rgba(0,0,0,0.1)',
+            boxShadow: SHADOW.card,
           }}
         >
           <Text as='span' weight='normal' style={{ lineHeight: 1 }}>

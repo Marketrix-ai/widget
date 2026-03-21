@@ -41,7 +41,7 @@ class ChatErrorBoundary extends React.Component<{ children: React.ReactNode }, {
   override render() {
     if (this.state.hasError) {
       return (
-        <Text as='div' size='xs' align='center' style={{ padding: '16px', color: '#6b7280' }}>
+        <Text as='div' size='xs' align='center' style={{ padding: '16px', color: 'var(--muted-foreground)' }}>
           Something went wrong displaying messages. Please refresh.
         </Text>
       );
@@ -351,7 +351,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
         </ChatErrorBoundary>
       </Surface>
 
-      <Surface shrink={false} rounded='theme' margin='md' style={{ marginTop: 'auto', backgroundColor: '#ffffff' }}>
+      <Surface shrink={false} rounded='theme' margin='md' style={{ marginTop: 'auto', backgroundColor: 'var(--card)' }}>
         {isTaskRunning && taskProgress.length > 0 && (
           <Surface
             rounded
