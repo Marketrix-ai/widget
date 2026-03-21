@@ -1,14 +1,22 @@
 import type { WidgetSettingsData } from '../sdk';
+import { addOpacity, getContrastingColor } from '../utils/format';
 
 export type SemanticTokens = {
   color: {
     background: string;
     foreground: string;
+    foregroundMuted: string;
+    foregroundFaint: string;
     border: string;
+    borderMuted: string;
     primary: string;
     primaryForeground: string;
+    primaryHover: string;
+    primaryMuted: string;
     secondary: string;
     secondaryForeground: string;
+    secondaryBg: string;
+    secondaryHover: string;
   };
   radius: string;
   shadow: string;
@@ -61,11 +69,18 @@ export function mapWidgetSettingsToSemanticTokens(settings: WidgetStyleSettingsD
     color: {
       background: settings.widget_background_color,
       foreground: settings.widget_text_color,
+      foregroundMuted: addOpacity(settings.widget_text_color, 0.6),
+      foregroundFaint: addOpacity(settings.widget_text_color, 0.4),
       border: settings.widget_border_color,
+      borderMuted: addOpacity(settings.widget_border_color, 0.3),
       primary: settings.widget_accent_color,
-      primaryForeground: '#ffffff',
+      primaryForeground: getContrastingColor(settings.widget_accent_color),
+      primaryHover: addOpacity(settings.widget_accent_color, 0.85),
+      primaryMuted: addOpacity(settings.widget_accent_color, 0.3),
       secondary: settings.widget_secondary_color,
       secondaryForeground: '#ffffff',
+      secondaryBg: addOpacity(settings.widget_secondary_color, 0.2),
+      secondaryHover: addOpacity(settings.widget_secondary_color, 0.3),
     },
     radius: settings.widget_border_radius,
     shadow: settings.widget_shadow,
@@ -102,9 +117,16 @@ export function semanticTokensToCssCustomProperties(tokens: SemanticTokens): Rec
     '--popover': tokens.color.background,
     '--popover-foreground': tokens.color.foreground,
     '--primary': tokens.color.primary,
+    '--foreground-muted': tokens.color.foregroundMuted,
+    '--foreground-faint': tokens.color.foregroundFaint,
+    '--border-muted': tokens.color.borderMuted,
     '--primary-foreground': tokens.color.primaryForeground,
+    '--primary-hover': tokens.color.primaryHover,
+    '--primary-muted': tokens.color.primaryMuted,
     '--secondary': tokens.color.secondary,
     '--secondary-foreground': tokens.color.secondaryForeground,
+    '--secondary-bg': tokens.color.secondaryBg,
+    '--secondary-hover': tokens.color.secondaryHover,
     '--muted': tokens.color.border,
     '--muted-foreground': tokens.color.secondary,
     '--accent': tokens.color.background,

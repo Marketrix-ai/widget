@@ -404,7 +404,6 @@ export const ChatView: React.FC<ChatViewProps> = ({
             showModeService.cleanup();
             onStopTask?.();
           }}
-          config={config}
           currentMode={currentMode}
           enabledModes={getEnabledModes(settings)}
           onModeChange={handleModeChange}

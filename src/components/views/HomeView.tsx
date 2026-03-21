@@ -1,7 +1,6 @@
 import React from 'react';
 
 import type { ChatMessage, MarketrixConfig } from '../../types';
-import { addOpacity } from '../../utils/format';
 import { getSuggestedActionsFromConfig, type SuggestedActionItem } from '../../utils/suggestedActions';
 import { SuggestedActions } from '../chat/SuggestedActions';
 
@@ -14,8 +13,6 @@ interface HomeViewProps {
 
 export const HomeView: React.FC<HomeViewProps> = ({ config, messages, onNavigateToChat, onChipClick }) => {
   const suggestedActions = getSuggestedActionsFromConfig(config);
-  const accentColor = config.widget_accent_color ?? '#3b82f6';
-  const textColor = config.widget_text_color ?? '#1f2937';
 
   const handleActionClick = async (action: SuggestedActionItem, event: React.MouseEvent) => {
     event.preventDefault();
@@ -29,23 +26,15 @@ export const HomeView: React.FC<HomeViewProps> = ({ config, messages, onNavigate
       <div className='flex-1 overflow-y-auto p-3 space-y-3'>
         {/* Centered greeting */}
         <div className='text-center pt-2'>
-          <h2 className='text-lg font-semibold' style={{ color: textColor }}>
-            {config.widget_greeting ?? 'Hey There!'}
-          </h2>
-          <p className='text-sm opacity-70 mt-1' style={{ color: textColor }}>
-            {config.widget_body ?? 'How can I help you today?'}
-          </p>
+          <h2 className='text-lg font-semibold text-foreground'>{config.widget_greeting ?? 'Hey There!'}</h2>
+          <p className='text-sm text-foreground-muted mt-1'>{config.widget_body ?? 'How can I help you today?'}</p>
         </div>
 
         {/* Ask a question CTA */}
         <button
           type='button'
           onClick={onNavigateToChat}
-          className='w-full flex items-center justify-between gap-2 px-4 py-3 rounded-xl font-medium text-white transition-opacity hover:opacity-95'
-          style={{
-            background: `linear-gradient(135deg, ${accentColor} 0%, ${addOpacity(accentColor, 0.85)} 100%)`,
-            boxShadow: `0 2px 8px ${addOpacity(accentColor, 0.35)}`,
-          }}
+          className='w-full flex items-center justify-between gap-2 px-4 py-3 rounded-xl font-medium bg-primary text-primary-foreground transition-opacity hover:opacity-95 shadow-sm'
           aria-label='Ask a question'
         >
           <span className='flex items-center gap-2'>
@@ -71,7 +60,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ config, messages, onNavigate
             hasPendingMessage={false}
             settings={{
               widget_secondary_color: config.widget_secondary_color ?? '#f3f4f6',
-              widget_text_color: textColor,
+              widget_text_color: config.widget_text_color ?? '#1f2937',
             }}
             onActionClick={handleActionClick}
           />
@@ -79,25 +68,12 @@ export const HomeView: React.FC<HomeViewProps> = ({ config, messages, onNavigate
 
         {/* Recent conversation preview */}
         {messages.length > 0 && (
-          <div
-            className='px-3 py-2 rounded-lg border'
-            style={{
-              backgroundColor: addOpacity(config.widget_background_color ?? '#ffffff', 0.6),
-              borderColor: config.widget_border_color ?? '#e5e7eb',
-            }}
-          >
-            <p className='text-sm font-semibold mb-0.5' style={{ color: textColor }}>
-              Recent conversation
-            </p>
-            <p className='text-xs line-clamp-2 opacity-80' style={{ color: textColor }}>
+          <div className='px-3 py-2 rounded-lg border border-border bg-background/60'>
+            <p className='text-sm font-semibold text-foreground mb-0.5'>Recent conversation</p>
+            <p className='text-xs text-foreground-muted line-clamp-2'>
               {messages[messages.length - 1].content || 'Message'}
             </p>
-            <button
-              type='button'
-              onClick={onNavigateToChat}
-              className='mt-1 text-xs font-medium'
-              style={{ color: accentColor }}
-            >
+            <button type='button' onClick={onNavigateToChat} className='mt-1 text-xs font-medium text-primary'>
               Continue conversation →
             </button>
           </div>

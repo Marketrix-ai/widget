@@ -48,6 +48,13 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+  --foreground-muted: rgba(31, 41, 55, 0.6);
+  --foreground-faint: rgba(31, 41, 55, 0.4);
+  --border-muted: rgba(229, 231, 235, 0.3);
+  --primary-hover: rgba(59, 130, 246, 0.85);
+  --primary-muted: rgba(59, 130, 246, 0.3);
+  --secondary-bg: rgba(107, 114, 128, 0.2);
+  --secondary-hover: rgba(107, 114, 128, 0.3);
   --font-sans:
     'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
     'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
@@ -177,6 +184,13 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --color-foreground-muted: var(--foreground-muted);
+  --color-foreground-faint: var(--foreground-faint);
+  --color-border-muted: var(--border-muted);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-muted: var(--primary-muted);
+  --color-secondary-bg: var(--secondary-bg);
+  --color-secondary-hover: var(--secondary-hover);
 
   --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);

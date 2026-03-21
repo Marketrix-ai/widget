@@ -3,11 +3,10 @@ import { IoChatbubbleEllipsesOutline, IoStop } from 'react-icons/io5';
 import { LuMousePointerClick } from 'react-icons/lu';
 import { SiTicktick } from 'react-icons/si';
 
-import { useWidget } from '../../hooks/useWidget';
 import type { InstructionType } from '../../sdk';
-import type { MarketrixConfig } from '../../types';
-import { addOpacity, getContrastingColor, getModeDisplayName } from '../../utils/format';
-import { Button } from '../base/Button';
+import { getModeDisplayName } from '../../utils/format';
+import { IconButton } from '../base/IconButton';
+import { Pill } from '../base/Pill';
 import { Textarea } from '../base/Textarea';
 
 interface MessageInputProps {
@@ -18,7 +17,6 @@ interface MessageInputProps {
   isLoading: boolean;
   isTaskRunning?: boolean;
   onStop?: () => void;
-  config?: MarketrixConfig;
   currentMode?: InstructionType;
   enabledModes?: InstructionType[];
   onModeChange?: (mode: InstructionType) => void;
@@ -43,7 +41,6 @@ export const MessageInput = React.forwardRef<HTMLTextAreaElement, Omit<MessageIn
     isLoading,
     isTaskRunning = false,
     onStop,
-    config,
     currentMode,
     enabledModes = [],
     onModeChange,
@@ -51,8 +48,6 @@ export const MessageInput = React.forwardRef<HTMLTextAreaElement, Omit<MessageIn
   },
   ref,
 ) {
-  // Get configuration
-  const { config: settings } = useWidget(config ? { config } : {});
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Auto-resize textarea - grow up to 2 lines, then scroll
@@ -92,7 +87,6 @@ export const MessageInput = React.forwardRef<HTMLTextAreaElement, Omit<MessageIn
     [onChange],
   );
 
-  const placeholderColor = addOpacity(settings.widget_text_color, 0.6);
   const canSend = Boolean(value.trim()) && !isLoading;
 
   const orderedModes: InstructionType[] = (['tell', 'show', 'do'] as const).filter(m => enabledModes.includes(m));
@@ -112,16 +106,7 @@ export const MessageInput = React.forwardRef<HTMLTextAreaElement, Omit<MessageIn
 
   return (
     <div className='py-1.5 px-2 bg-transparent'>
-      <style>{`.message-input-textarea::placeholder { color: ${placeholderColor}; }`}</style>
-      <div
-        className='flex flex-col rounded-xl border overflow-hidden focus-within:border-gray-300 transition-colors'
-        style={{
-          borderColor: settings.widget_border_color,
-          backgroundColor: 'rgba(255,255,255,0.7)',
-          backdropFilter: 'blur(10px)',
-          WebkitBackdropFilter: 'blur(10px)',
-        }}
-      >
+      <div className='flex flex-col rounded-xl border border-border overflow-hidden focus-within:border-foreground-faint transition-colors bg-card/70 backdrop-blur-sm'>
         <Textarea
           ref={mergeRefs(textareaRef, ref)}
           value={value}
@@ -130,10 +115,9 @@ export const MessageInput = React.forwardRef<HTMLTextAreaElement, Omit<MessageIn
           placeholder='Ask anything'
           disabled={isLoading}
           rows={1}
-          className='message-input-textarea w-full px-3 text-sm resize-none focus:outline-none focus:ring-0 border-none shadow-none disabled:opacity-50 disabled:cursor-not-allowed'
+          className='message-input-textarea w-full px-3 text-sm text-foreground placeholder:text-foreground-faint resize-none focus:outline-none focus:ring-0 border-none shadow-none disabled:opacity-50 disabled:cursor-not-allowed'
           style={{
             backgroundColor: 'transparent',
-            color: settings.widget_text_color,
             lineHeight: '20px',
             paddingTop: '4px',
             paddingBottom: '2px',
@@ -145,46 +129,28 @@ export const MessageInput = React.forwardRef<HTMLTextAreaElement, Omit<MessageIn
             {orderedModes.map(mode => {
               const isActive = currentMode === mode;
               return (
-                <button
+                <Pill
                   key={mode}
-                  type='button'
+                  active={isActive}
+                  size='sm'
+                  animated={isScreenSharing && isActive}
                   onClick={e => {
                     e.preventDefault();
                     e.stopPropagation();
                     onModeChange?.(mode);
                   }}
-                  className={`flex items-center gap-0.5 text-[11px] font-medium px-2 py-0.5 transition-all duration-200 ${isActive ? 'shadow-sm' : ''}`}
-                  style={{
-                    borderRadius: '20px',
-                    ...(isActive
-                      ? {
-                          backgroundColor: settings.widget_accent_color,
-                          color: getContrastingColor(settings.widget_accent_color),
-                          border: 'none',
-                        }
-                      : {
-                          backgroundColor: addOpacity(settings.widget_secondary_color, 0.15),
-                          color: addOpacity(settings.widget_text_color, 0.7),
-                          border: 'none',
-                        }),
-                    ...(isScreenSharing && isActive
-                      ? {
-                          animation: 'glow-border-pulse 2s ease-in-out infinite',
-                        }
-                      : {}),
-                  }}
                 >
                   {getModeIcon(mode)}
                   <span>{getModeDisplayName(mode)}</span>
-                </button>
+                </Pill>
               );
             })}
           </div>
-          <Button
-            type='button'
-            variant={isTaskRunning ? 'secondary' : 'primary'}
+          <IconButton
+            variant={isTaskRunning ? 'secondary' : canSend ? 'primary' : 'ghost'}
             size='sm'
             disabled={!isTaskRunning && !canSend}
+            label={isTaskRunning ? 'Stop task' : 'Send message'}
             onClick={e => {
               e.preventDefault();
               e.stopPropagation();
@@ -194,28 +160,6 @@ export const MessageInput = React.forwardRef<HTMLTextAreaElement, Omit<MessageIn
                 onSend();
               }
             }}
-            className='w-7 h-7 min-w-7 rounded-full flex items-center justify-center flex-shrink-0'
-            style={
-              isTaskRunning
-                ? {
-                    background: 'linear-gradient(to right, #1f2937, #111827)',
-                    color: '#fff',
-                    border: 'none',
-                  }
-                : canSend
-                  ? {
-                      backgroundColor: settings.widget_accent_color,
-                      color: getContrastingColor(settings.widget_accent_color),
-                      border: 'none',
-                    }
-                  : {
-                      backgroundColor: addOpacity(settings.widget_accent_color, 0.3),
-                      color: getContrastingColor(settings.widget_accent_color),
-                      border: 'none',
-                      opacity: 0.5,
-                    }
-            }
-            aria-label={isTaskRunning ? 'Stop task' : 'Send message'}
           >
             {isTaskRunning ? (
               <IoStop className='w-3.5 h-3.5' />
@@ -224,7 +168,7 @@ export const MessageInput = React.forwardRef<HTMLTextAreaElement, Omit<MessageIn
                 <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M5 12h14m-7-7l7 7-7 7' />
               </svg>
             )}
-          </Button>
+          </IconButton>
         </div>
       </div>
     </div>

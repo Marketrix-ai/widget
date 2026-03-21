@@ -5,14 +5,13 @@ import { SiTicktick } from 'react-icons/si';
 
 import packageJson from '../../../package.json';
 import MarketrixLogo from '../../assets/marktrix-footer.png';
-import { useWidget } from '../../hooks/useWidget';
 import type { InstructionType } from '../../sdk';
 import { configManager } from '../../services/ConfigManager';
 import { sessionManager } from '../../services/SessionManager';
 import { StreamClient } from '../../services/StreamClient';
 import type { MarketrixConfig } from '../../types';
-import { addOpacity, getContrastingColor, getModeDescription, getModeDisplayName } from '../../utils/format';
-import { Button } from '../base/Button';
+import { getModeDescription, getModeDisplayName } from '../../utils/format';
+import { Pill } from '../base/Pill';
 import { DiagnosticModal } from '../ui/DiagnosticModal';
 
 interface ModeSelectorProps {
@@ -30,7 +29,6 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({
   isScreenSharing = false,
   config,
 }) => {
-  const { config: widgetConfig } = useWidget(config ? { config } : {});
   const [isDiagnosticModalOpen, setIsDiagnosticModalOpen] = useState(false);
 
   const getModeIcon = (mode: InstructionType) => {
@@ -50,64 +48,24 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({
   const orderedModes: InstructionType[] = (['tell', 'show', 'do'] as const).filter(mode => enabledModes.includes(mode));
 
   return (
-    <div
-      className={`
-        px-3 pb-2
-        bg-transparent flex items-center justify-between gap-2
-      `}
-    >
+    <div className='px-3 pb-2 bg-transparent flex items-center justify-between gap-2'>
       <div className='flex space-x-2 flex-shrink-0'>
         {orderedModes.map((mode: InstructionType) => (
-          <Button
+          <Pill
             key={mode}
-            type='button'
-            variant={currentMode === mode ? 'primary' : 'secondary'}
-            size='sm'
+            active={currentMode === mode}
+            size='md'
+            animated={isScreenSharing && currentMode === mode}
             onClick={e => {
               e.preventDefault();
               e.stopPropagation();
               onModeChange(mode);
             }}
-            className={`flex items-center justify-center gap-1 text-sm font-medium transition-all duration-200 relative w-[65px] h-[26px] min-w-0 ${
-              currentMode === mode ? 'shadow-lg' : ''
-            } ${isScreenSharing && currentMode === mode ? 'border-2' : currentMode === mode ? 'border-2 border-transparent' : ''}`}
-            style={{
-              borderRadius: '22px',
-              ...(currentMode === mode
-                ? {
-                    backgroundColor: widgetConfig.widget_accent_color,
-                    color: getContrastingColor(widgetConfig.widget_accent_color),
-                    border: 'none',
-                  }
-                : {
-                    backgroundColor: addOpacity(widgetConfig.widget_secondary_color, 0.2),
-                    color: widgetConfig.widget_text_color,
-                    borderColor: addOpacity(widgetConfig.widget_secondary_color, 0.3),
-                  }),
-              ...(isScreenSharing && currentMode === mode
-                ? {
-                    animation: 'glow-border-pulse 2s ease-in-out infinite',
-                    borderColor: 'rgba(255, 255, 255, 0.6)',
-                  }
-                : {}),
-            }}
-            onMouseEnter={e => {
-              if (currentMode !== mode) {
-                e.currentTarget.style.backgroundColor = addOpacity(widgetConfig.widget_secondary_color, 0.3);
-                e.currentTarget.style.borderColor = addOpacity(widgetConfig.widget_secondary_color, 0.4);
-              }
-            }}
-            onMouseLeave={e => {
-              if (currentMode !== mode) {
-                e.currentTarget.style.backgroundColor = addOpacity(widgetConfig.widget_secondary_color, 0.2);
-                e.currentTarget.style.borderColor = addOpacity(widgetConfig.widget_secondary_color, 0.3);
-              }
-            }}
             title={getModeDescription(mode)}
           >
             {getModeIcon(mode)}
             <span className='text-xs font-medium'>{getModeDisplayName(mode)}</span>
-          </Button>
+          </Pill>
         ))}
       </div>
       <img
