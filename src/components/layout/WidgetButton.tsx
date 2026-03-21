@@ -353,10 +353,8 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerCancel}
-          className='relative z-10 w-14 h-14 min-w-14 rounded-[27px] border-0 bg-transparent p-0'
+          className='relative z-10 w-14 h-14 min-w-14 rounded-[27px] border-0 bg-transparent p-0 text-primary-foreground'
           style={{
-            color: getContrastingColor(widgetConfig.widget_accent_color),
-            backgroundColor: 'transparent',
             touchAction: 'none',
             cursor: isDragging ? 'grabbing' : 'grab',
             userSelect: 'none',
@@ -430,14 +428,10 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
                 aria-hidden={!isOpen}
               >
                 <svg
-                  className='w-6 h-6 relative z-10'
+                  className='w-6 h-6 relative z-10 text-foreground pointer-events-none'
                   fill='none'
                   stroke='currentColor'
                   viewBox='0 0 24 24'
-                  style={{
-                    color: widgetConfig.widget_text_color,
-                    pointerEvents: 'none',
-                  }}
                 >
                   <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2.5} d='M19 9l-7 7-7-7' />
                 </svg>

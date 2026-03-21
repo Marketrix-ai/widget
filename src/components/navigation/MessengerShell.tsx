@@ -11,10 +11,9 @@ import { configManager } from '../../services/ConfigManager';
 import { sessionManager } from '../../services/SessionManager';
 import { StreamClient } from '../../services/StreamClient';
 import type { ChatMessage, InstructionType, MarketrixConfig, TaskProgress, WidgetView } from '../../types';
-import { addOpacity } from '../../utils/format';
 import type { SuggestedActionItem } from '../../utils/suggestedActions';
 import { getPanelPositionStyle } from '../../utils/widgetPositioning';
-import { Button } from '../base/Button';
+import { IconButton } from '../base/IconButton';
 import { DiagnosticModal } from '../ui/DiagnosticModal';
 import { ChatView } from '../views/ChatView';
 import { HomeView } from '../views/HomeView';
@@ -172,18 +171,15 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
 
   if (!isOpen) return null;
 
+  const backgroundImage = settings.widget_background_color.includes('gradient')
+    ? settings.widget_background_color
+    : `linear-gradient(135deg, ${settings.widget_background_color} 0%, ${settings.widget_background_color} 100%)`;
+
   const customStyles: React.CSSProperties = {
     width: widthPx,
     height: isMinimized ? '48px' : heightPx,
-    borderRadius: settings.widget_border_radius,
     fontSize: settings.widget_font_size,
-    backgroundColor: '#ffffff',
-    backgroundImage: settings.widget_background_color.includes('gradient')
-      ? settings.widget_background_color
-      : `linear-gradient(135deg, ${settings.widget_background_color} 0%, ${settings.widget_background_color} 100%)`,
-    color: settings.widget_text_color,
-    borderColor: settings.widget_border_color,
-    boxShadow: settings.widget_shadow,
+    backgroundImage,
     zIndex,
   };
 
@@ -214,41 +210,26 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
 
   return (
     <div
-      className={`${positionClass} rounded-[var(--radius)] pointer-events-auto`}
+      className={`${positionClass} rounded-[var(--radius)] pointer-events-auto bg-background`}
       style={{
         zIndex,
-        backgroundColor: '#ffffff',
-        backgroundImage: settings.widget_background_color.includes('gradient')
-          ? settings.widget_background_color
-          : `linear-gradient(135deg, ${settings.widget_background_color} 0%, ${settings.widget_background_color} 100%)`,
+        backgroundImage,
         ...(isPreviewMode ? previewPositionStyle : panelPositionStyle),
       }}
     >
       <div
         ref={containerRef}
-        className='rounded-[var(--radius)] shadow-xl border flex flex-col relative overflow-hidden animate-messenger-entrance shadow-2xl'
+        className='rounded-[var(--radius)] shadow-[var(--shadow)] border border-border text-foreground flex flex-col relative overflow-hidden animate-messenger-entrance'
         style={{
           transformOrigin,
           ...customStyles,
-          scrollbarColor: `${addOpacity(settings.widget_border_color, 0.3)} ${addOpacity(settings.widget_border_color, 0.1)}`,
           scrollbarWidth: 'thin',
         }}
       >
         {isMinimized ? (
-          <div
-            className='flex items-center justify-between px-3 h-10 border-b'
-            style={{ borderColor: settings.widget_border_color }}
-          >
-            <span className='text-sm font-medium' style={{ color: settings.widget_text_color }}>
-              Marketrix
-            </span>
-            <button
-              type='button'
-              onClick={onClose}
-              className='p-1.5 rounded-full opacity-60 hover:opacity-100'
-              style={{ color: settings.widget_text_color }}
-              aria-label='Close'
-            >
+          <div className='flex items-center justify-between px-3 h-10 border-b border-border'>
+            <span className='text-sm font-medium text-foreground'>Marketrix</span>
+            <IconButton variant='ghost' size='sm' label='Close' onClick={onClose}>
               <svg className='w-4 h-4' fill='currentColor' viewBox='0 0 20 20'>
                 <path
                   fillRule='evenodd'
@@ -256,30 +237,23 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
                   clipRule='evenodd'
                 />
               </svg>
-            </button>
+            </IconButton>
           </div>
         ) : (
           <>
             {/* Shared header: agent name + description */}
-            <div
-              className='flex justify-between items-center px-3 py-2 border-b flex-shrink-0'
-              style={{ borderColor: settings.widget_border_color }}
-            >
+            <div className='flex justify-between items-center px-3 py-2 border-b border-border flex-shrink-0'>
               <div className='flex items-center gap-2 min-w-0 flex-1'>
                 <img
                   src={MarketrixIcon}
                   alt=''
-                  className='flex-shrink-0 w-8 h-8 rounded-[var(--radius)] object-cover'
-                  style={{ boxShadow: settings.widget_shadow }}
+                  className='flex-shrink-0 w-8 h-8 rounded-[var(--radius)] object-cover shadow-[var(--shadow)]'
                 />
                 <div className='min-w-0'>
-                  <div
-                    className='text-sm font-semibold leading-tight truncate'
-                    style={{ color: settings.widget_text_color }}
-                  >
+                  <div className='text-sm font-semibold leading-tight truncate text-foreground'>
                     {config.agent_name ?? 'AI Agent'}
                   </div>
-                  <p className='text-xs opacity-70 truncate' style={{ color: settings.widget_text_color }}>
+                  <p className='text-xs text-foreground-muted truncate'>
                     {config.agent_description ?? 'How can I help?'}
                   </p>
                 </div>
@@ -288,15 +262,11 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
                 {activeView === 'chat' && (
                   <>
                     {config.use_screenshare !== false && !headerScreenSharing && (
-                      <Button
-                        type='button'
+                      <IconButton
                         variant='ghost'
                         size='sm'
+                        label='Start screen sharing'
                         onClick={() => chatViewStartScreenShareRef.current?.()}
-                        className='p-1.5 rounded-full opacity-60 hover:opacity-100 transition-opacity'
-                        style={{ color: settings.widget_text_color }}
-                        aria-label='Start screen sharing'
-                        title='Share screen'
                       >
                         <svg className='w-4 h-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
                           <path
@@ -306,18 +276,14 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
                             d='M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z'
                           />
                         </svg>
-                      </Button>
+                      </IconButton>
                     )}
                     {headerScreenSharing && (
-                      <Button
-                        type='button'
+                      <IconButton
                         variant='ghost'
                         size='sm'
+                        label='Stop screen sharing'
                         onClick={() => chatViewStopScreenShareRef.current?.()}
-                        className='p-1.5 rounded-full opacity-80 hover:opacity-100 transition-opacity flex items-center gap-1'
-                        style={{ color: settings.widget_text_color }}
-                        aria-label='Stop screen sharing'
-                        title='Stop screen sharing'
                       >
                         <span className='w-1.5 h-1.5 rounded-full bg-current animate-pulse' />
                         <svg className='w-4 h-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
@@ -328,39 +294,31 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
                             d='M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z'
                           />
                         </svg>
-                      </Button>
+                      </IconButton>
                     )}
                     <div className='relative' ref={moreMenuRef}>
-                      <Button
-                        type='button'
+                      <IconButton
                         variant='ghost'
                         size='sm'
+                        label='More options'
                         onClick={() => setMoreMenuOpen(prev => !prev)}
-                        className='p-1.5 rounded-full opacity-60 hover:opacity-100 transition-opacity'
-                        style={{ color: settings.widget_text_color }}
-                        aria-label='More options'
                         aria-haspopup='true'
                         aria-expanded={moreMenuOpen}
                       >
                         <svg className='w-4 h-4' fill='currentColor' viewBox='0 0 20 20'>
                           <path d='M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z' />
                         </svg>
-                      </Button>
+                      </IconButton>
                       {moreMenuOpen && (
                         <div
-                          className='absolute right-0 top-full mt-1 py-1 rounded-lg shadow-lg border min-w-[140px] z-50'
-                          style={{
-                            backgroundColor: '#ffffff',
-                            borderColor: settings.widget_border_color,
-                          }}
+                          className='absolute right-0 top-full mt-1 py-1 rounded-lg shadow-lg border border-border bg-card min-w-[140px] z-50'
                           role='menu'
                           onMouseDown={e => e.nativeEvent.stopImmediatePropagation()}
                         >
                           {onClearChat && (
                             <button
                               type='button'
-                              className='w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-100 rounded-md transition-colors'
-                              style={{ color: settings.widget_text_color }}
+                              className='w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-secondary-bg rounded-md transition-colors'
                               onClick={() => {
                                 const result = onClearChat();
                                 if (result instanceof Promise) result.catch(e => console.error(e));
@@ -374,8 +332,7 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
                           )}
                           <button
                             type='button'
-                            className='w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-100 rounded-md transition-colors'
-                            style={{ color: settings.widget_text_color }}
+                            className='w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-secondary-bg rounded-md transition-colors'
                             onClick={() => {
                               setDiagnosticOpen(true);
                               setMoreMenuOpen(false);
@@ -390,13 +347,7 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
                     </div>
                   </>
                 )}
-                <button
-                  type='button'
-                  onClick={onClose}
-                  className='p-1.5 rounded-full opacity-60 hover:opacity-100 transition-opacity flex-shrink-0'
-                  style={{ color: settings.widget_text_color }}
-                  aria-label='Close'
-                >
+                <IconButton variant='ghost' size='sm' label='Close' onClick={onClose}>
                   <svg className='w-4 h-4' fill='currentColor' viewBox='0 0 20 20'>
                     <path
                       fillRule='evenodd'
@@ -404,7 +355,7 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
                       clipRule='evenodd'
                     />
                   </svg>
-                </button>
+                </IconButton>
               </div>
             </div>
 
@@ -444,8 +395,7 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
                     id='view-help'
                     role='tabpanel'
                     aria-labelledby='tab-help'
-                    className='flex items-center justify-center h-full p-3 text-sm opacity-70'
-                    style={{ color: settings.widget_text_color }}
+                    className='flex items-center justify-center h-full p-3 text-sm text-foreground-muted'
                   >
                     Help – coming soon
                   </div>
@@ -455,8 +405,7 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
                     id='view-news'
                     role='tabpanel'
                     aria-labelledby='tab-news'
-                    className='flex items-center justify-center h-full p-3 text-sm opacity-70'
-                    style={{ color: settings.widget_text_color }}
+                    className='flex items-center justify-center h-full p-3 text-sm text-foreground-muted'
                   >
                     News – coming soon
                   </div>
@@ -464,14 +413,7 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
               </ViewTransition>
             </div>
 
-            <TabBar
-              activeView={activeView}
-              onViewChange={handleViewChange}
-              tabs={tabs}
-              accentColor={settings.widget_accent_color ?? '#3b82f6'}
-              textColor={settings.widget_text_color ?? '#1f2937'}
-              borderColor={settings.widget_border_color ?? '#e5e7eb'}
-            />
+            <TabBar activeView={activeView} onViewChange={handleViewChange} tabs={tabs} />
           </>
         )}
 

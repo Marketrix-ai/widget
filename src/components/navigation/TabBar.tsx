@@ -1,6 +1,7 @@
 import React from 'react';
 
 import type { WidgetView } from '../../types';
+import { Indicator } from '../base/Indicator';
 
 export interface TabItem {
   id: WidgetView;
@@ -12,28 +13,14 @@ interface TabBarProps {
   activeView: WidgetView;
   onViewChange: (view: WidgetView) => void;
   tabs: TabItem[];
-  accentColor: string;
-  textColor: string;
-  borderColor: string;
 }
 
-export const TabBar: React.FC<TabBarProps> = ({
-  activeView,
-  onViewChange,
-  tabs,
-  accentColor,
-  textColor,
-  borderColor,
-}) => {
+export const TabBar: React.FC<TabBarProps> = ({ activeView, onViewChange, tabs }) => {
   return (
     <div
       role='tablist'
-      className='flex items-center justify-around flex-shrink-0 h-12 border-t'
-      style={{
-        height: '48px',
-        borderColor,
-        boxShadow: '0 -2px 8px rgba(0,0,0,0.06)',
-      }}
+      className='flex items-center justify-around flex-shrink-0 h-12 border-t border-border'
+      style={{ boxShadow: '0 -2px 8px rgba(0,0,0,0.06)' }}
     >
       {tabs.map(tab => {
         const isActive = activeView === tab.id;
@@ -46,17 +33,14 @@ export const TabBar: React.FC<TabBarProps> = ({
             aria-controls={`view-${tab.id}`}
             id={`tab-${tab.id}`}
             onClick={() => onViewChange(tab.id)}
-            className='relative flex flex-col items-center justify-center gap-0.5 flex-1 py-2 transition-[color,opacity] duration-150 min-w-0'
-            style={{
-              color: isActive ? accentColor : `${textColor}99`,
-              fontWeight: isActive ? 600 : 400,
-            }}
+            className={`relative flex flex-col items-center justify-center gap-0.5 flex-1 py-2 transition-[color,opacity] duration-150 min-w-0 ${
+              isActive ? 'text-primary font-semibold' : 'text-foreground-muted font-normal'
+            }`}
           >
             {isActive && (
-              <span
-                className='absolute top-0 left-1/4 right-1/4 h-0.5 rounded-full'
-                style={{ backgroundColor: accentColor }}
-              />
+              <span className='absolute top-0 left-1/4 right-1/4'>
+                <Indicator variant='bar' color='accent' />
+              </span>
             )}
             <span className='flex-shrink-0' aria-hidden>
               {tab.icon}
