@@ -2,7 +2,7 @@ import React from 'react';
 
 import type { ChatMessage, WidgetState } from '../../types';
 import { formatMessageTime } from '../../utils/format';
-import { Button } from '../base/Button';
+import { Avatar, Button, Flex, Stack, Text } from '../base';
 import { MessageContent } from './MessageContent';
 import { TaskStatusIcon } from './TaskStatusIcon';
 import { VideoStreamDisplay } from './VideoStreamDisplay';
@@ -37,38 +37,41 @@ export const MessageItem: React.FC<MessageItemProps> = ({
   // Render system messages differently (muted, centered)
   if (message.isSystemMessage) {
     return (
-      <div key={`message-${message.id}-${index}`} className='flex justify-center items-center py-0'>
-        <span className='text-[10px] font-inter font-normal text-foreground-faint'>{message.content}</span>
-      </div>
+      <Flex key={`message-${message.id}-${index}`} className='justify-center items-center py-0'>
+        <Text as='span' variant='faint' className='text-[10px] font-inter font-normal'>
+          {message.content}
+        </Text>
+      </Flex>
     );
   }
 
   const isUser = message.sender === 'user';
 
   return (
-    <div
+    <Stack
       key={`message-${message.id}-${index}`}
-      className={`group flex flex-col mt-[10px] ${isLastMessage ? 'animate-message-enter' : ''}`}
+      className={`group mt-[10px] ${isLastMessage ? 'animate-message-enter' : ''}`}
       role='article'
       aria-roledescription='message'
       aria-label={isUser ? 'You said…' : 'Agent says…'}
     >
-      <div className='flex items-start gap-1 w-full flex-row'>
+      <Flex className='items-start gap-1 w-full flex-row'>
         {/* Logo or Spacer - Always on left */}
-        <div className='flex-shrink-0 agent-logo-img-container w-8 h-8 bg-transparent'>
+        <Flex className='flex-shrink-0 agent-logo-img-container w-8 h-8 bg-transparent'>
           {!isUser && (
-            <img
+            <Avatar
               src={marketrixIcon}
               alt='Marketrix AI'
-              className='agent-logo-img w-8 h-8 shadow-[var(--shadow)] rounded-[var(--radius)] block object-cover bg-transparent'
+              size='md'
+              className='agent-logo-img shadow-[var(--shadow)] rounded-[var(--radius)] block object-cover bg-transparent'
               style={{ border: 'none', outline: 'none' }}
             />
           )}
-        </div>
+        </Flex>
 
         {/* Message bubble */}
-        <div
-          className={`flex flex-col flex-1 relative
+        <Stack
+          className={`flex-1 relative
           ${message.videoStream ? 'p-0' : 'px-2.5 py-2'}
           ${!isUser ? 'rounded-[var(--radius)] shadow-[0_1px_4px_rgba(0,0,0,0.1)]' : 'border'}
           ${isUser ? 'rounded-l-[var(--radius)] rounded-tr-[var(--radius)] rounded-br-[var(--radius)] bg-primary text-primary-foreground border-primary' : 'text-foreground border-transparent'}
@@ -92,7 +95,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
 
           {/* Screen access request action buttons - show if not yet handled */}
           {message.isScreenAccessRequest && !message.screenShareStatus && (
-            <div className='mt-1.5 pt-0.5 flex gap-2'>
+            <Flex className='mt-1.5 pt-0.5 gap-2'>
               <Button
                 type='button'
                 variant='primary'
@@ -128,39 +131,43 @@ export const MessageItem: React.FC<MessageItemProps> = ({
               >
                 No
               </Button>
-            </div>
+            </Flex>
           )}
 
           {/* Screen access request handled state - show decision */}
           {message.isScreenAccessRequest && message.screenShareStatus === 'allowed' && (
-            <div className='mt-0.5 text-xs font-medium italic text-foreground-faint'>Sure</div>
+            <Text as='div' variant='faint' className='mt-0.5 text-xs font-medium italic'>
+              Sure
+            </Text>
           )}
           {message.isScreenAccessRequest && message.screenShareStatus === 'denied' && (
-            <div className='mt-0.5 text-xs font-medium italic text-foreground-faint'>Check HTML Instead</div>
+            <Text as='div' variant='faint' className='mt-0.5 text-xs font-medium italic'>
+              Check HTML Instead
+            </Text>
           )}
 
           {/* Task status icon at bottom right (only for agent messages with task status) */}
           {!isUser && message.taskStatus && (
-            <div className='absolute bottom-1 right-1 flex items-center justify-center'>
+            <Flex className='absolute bottom-1 right-1 items-center justify-center'>
               <TaskStatusIcon status={message.taskStatus} accentColor={settings.widget_accent_color} />
-            </div>
+            </Flex>
           )}
-        </div>
-      </div>
+        </Stack>
+      </Flex>
       {/* Attribution line for agent messages */}
       {!isUser && !message.isPlaceholder && (
-        <div className='text-[11px] mt-1 ml-9 text-foreground-muted'>
+        <Text as='div' variant='muted' className='text-[11px] mt-1 ml-9'>
           Marketrix • AI Agent • {formatMessageTime(message.timestamp)}
-        </div>
+        </Text>
       )}
       {/* Timestamp below card */}
       {!message.isPlaceholder && isUser && (
-        <div className='flex justify-end mt-0.5 mr-1'>
-          <span className='text-[10px] text-foreground-faint font-inter font-normal'>
+        <Flex className='justify-end mt-0.5 mr-1'>
+          <Text as='span' variant='faint' className='text-[10px] font-inter font-normal'>
             {formatMessageTime(message.timestamp)}
-          </span>
-        </div>
+          </Text>
+        </Flex>
       )}
-    </div>
+    </Stack>
   );
 };

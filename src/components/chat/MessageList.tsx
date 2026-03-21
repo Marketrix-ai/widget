@@ -1,12 +1,14 @@
 // / <reference lib="dom" />
 import React, { useEffect, useRef, useState } from 'react';
-import { FaArrowDown, FaArrowUp } from 'react-icons/fa';
 
 import MarketrixIcon from '../../assets/marketrix-icon.svg';
 import { useWidget } from '../../hooks/useWidget';
 import type { ChatMessage, MarketrixConfig } from '../../types';
 import { addOpacity } from '../../utils/format';
 import { Button } from '../base/Button';
+import { Flex } from '../base/Flex';
+import { Icon } from '../base/Icon';
+import { Surface } from '../base/Surface';
 import { StateMessage } from '../ui/StateMessage';
 import { MessageItem } from './MessageItem';
 import { WelcomeMessage } from './WelcomeMessage';
@@ -79,10 +81,10 @@ export const MessageList = ({
   }, [messages.length, isPreviewMode]); // Run when messages length changes to handle history loading
 
   return (
-    <div className='relative h-full'>
-      <div
+    <Surface className='relative h-full'>
+      <Surface
         key='message-list-container'
-        ref={containerRef}
+        ref={containerRef as React.RefObject<HTMLDivElement>}
         onScroll={handleScroll}
         role='log'
         aria-relevant='additions'
@@ -135,12 +137,12 @@ export const MessageList = ({
         ))}
 
         {/* Auto-scroll anchor */}
-        <div key='scroll-anchor' ref={messagesEndRef} />
-      </div>
+        <Surface key='scroll-anchor' ref={messagesEndRef as React.RefObject<HTMLDivElement>} />
+      </Surface>
 
       {/* Scroll to Top Button */}
       {showScrollTop && (
-        <div className='absolute top-2 left-0 right-0 flex justify-center z-10 pointer-events-none'>
+        <Flex className='absolute top-2 left-0 right-0 justify-center z-10 pointer-events-none'>
           <Button
             type='button'
             variant='secondary'
@@ -151,13 +153,13 @@ export const MessageList = ({
             title='Scroll to top'
             aria-label='Scroll to top'
           >
-            <FaArrowUp className='w-2.5 h-2.5' style={{ color: widgetConfig.widget_accent_color }} />
+            <Icon name='arrowUp' size={10} style={{ color: widgetConfig.widget_accent_color }} />
           </Button>
-        </div>
+        </Flex>
       )}
 
       {showScrollBottom && (
-        <div className='absolute bottom-2 left-0 right-0 flex justify-center z-10 pointer-events-none'>
+        <Flex className='absolute bottom-2 left-0 right-0 justify-center z-10 pointer-events-none'>
           <Button
             type='button'
             variant='secondary'
@@ -168,10 +170,10 @@ export const MessageList = ({
             title='Scroll to bottom'
             aria-label='Scroll to bottom'
           >
-            <FaArrowDown className='w-2.5 h-2.5' style={{ color: widgetConfig.widget_accent_color }} />
+            <Icon name='arrowDown' size={10} style={{ color: widgetConfig.widget_accent_color }} />
           </Button>
-        </div>
+        </Flex>
       )}
-    </div>
+    </Surface>
   );
 };
