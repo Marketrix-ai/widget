@@ -59,33 +59,12 @@ const DEFAULT_CHIPS: SuggestedActionItem[] = [
 function getIconForMode(mode: 'show' | 'tell' | 'do') {
   switch (mode) {
     case 'do':
-      return (
-        <Icon
-          name='ticktick'
-          size={12}
-          className='text-xs'
-          style={{ fontSize: '0.75rem', width: '0.75rem', height: '0.75rem' }}
-        />
-      );
+      return <Icon name='ticktick' size={12} />;
     case 'show':
-      return (
-        <Icon
-          name='mousePointerClick'
-          size={12}
-          className='text-xs'
-          style={{ fontSize: '0.75rem', width: '0.75rem', height: '0.75rem' }}
-        />
-      );
+      return <Icon name='mousePointerClick' size={12} />;
     case 'tell':
     default:
-      return (
-        <Icon
-          name='chatBubble'
-          size={12}
-          className='text-xs'
-          style={{ fontSize: '0.75rem', width: '0.75rem', height: '0.75rem' }}
-        />
-      );
+      return <Icon name='chatBubble' size={12} />;
   }
 }
 

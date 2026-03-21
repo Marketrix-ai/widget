@@ -28,14 +28,14 @@ export const HomeView: React.FC<HomeViewProps> = ({ config, messages, onNavigate
   };
 
   return (
-    <Stack className='h-full overflow-hidden' id='view-home' role='tabpanel' aria-labelledby='tab-home'>
-      <Stack className='flex-1 overflow-y-auto p-3 gap-3'>
+    <Stack height='full' overflow='hidden' id='view-home' role='tabpanel' aria-labelledby='tab-home'>
+      <Stack grow overflowY='auto' padding='lg' gap='lg'>
         {/* Centered greeting */}
-        <Surface className='text-center pt-2'>
+        <Surface style={{ textAlign: 'center', paddingTop: '8px' }}>
           <Text as='h2' size='lg' weight='semibold'>
             {config.widget_greeting ?? 'Hey There!'}
           </Text>
-          <Text as='p' variant='muted' size='sm' className='mt-1'>
+          <Text as='p' variant='muted' size='sm' style={{ marginTop: '4px' }}>
             {config.widget_body ?? 'How can I help you today?'}
           </Text>
         </Surface>
@@ -43,11 +43,13 @@ export const HomeView: React.FC<HomeViewProps> = ({ config, messages, onNavigate
         {/* Ask a question CTA */}
         <Button
           type='button'
+          variant='primary'
+          full
           onClick={onNavigateToChat}
-          className='w-full flex items-center justify-between gap-2 px-4 py-3 rounded-xl font-medium bg-primary text-primary-foreground transition-opacity hover:opacity-95 shadow-sm'
           aria-label='Ask a question'
+          style={{ justifyContent: 'space-between', padding: '12px 16px', borderRadius: '12px', fontWeight: 500 }}
         >
-          <Flex className='items-center gap-2'>
+          <Flex align='center' gap='md'>
             <Icon name='chat' size={20} />
             Ask a question
           </Flex>
@@ -69,14 +71,28 @@ export const HomeView: React.FC<HomeViewProps> = ({ config, messages, onNavigate
 
         {/* Recent conversation preview */}
         {messages.length > 0 && (
-          <Surface className='px-3 py-2 rounded-lg border border-border bg-background/60'>
-            <Text as='p' size='sm' weight='semibold' className='mb-0.5'>
+          <Surface
+            border
+            rounded='lg'
+            style={{ padding: '8px 12px', backgroundColor: 'var(--color-background, transparent)', opacity: 0.6 }}
+          >
+            <Text as='p' size='sm' weight='semibold' style={{ marginBottom: '2px' }}>
               Recent conversation
             </Text>
-            <Text as='p' size='xs' variant='muted' className='line-clamp-2'>
+            <Text
+              as='p'
+              size='xs'
+              variant='muted'
+              style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
+            >
               {messages[messages.length - 1].content || 'Message'}
             </Text>
-            <Button type='button' onClick={onNavigateToChat} className='mt-1 text-xs font-medium text-primary'>
+            <Button
+              type='button'
+              variant='ghost'
+              onClick={onNavigateToChat}
+              style={{ marginTop: '4px', fontSize: '12px', fontWeight: 500, color: 'var(--color-primary)', padding: 0 }}
+            >
               Continue conversation →
             </Button>
           </Surface>

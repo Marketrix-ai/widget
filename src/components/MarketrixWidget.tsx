@@ -168,14 +168,17 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
 
   return (
     <Surface
-      className='marketrix-widget relative'
+      data-marketrix-widget
+      position='relative'
       style={{ ...customStyles, ...(isPreviewMode && { width: '100%', height: '100%' }) }}
       data-widget-mode={settings?.widget_feature_human ? 'hybrid' : 'ai'}
     >
-      {state.isOpen && <Surface className='animate-fade-in' style={gradientPositionStyle} aria-hidden />}
+      {state.isOpen && <Surface animate='fadeIn' style={gradientPositionStyle} aria-hidden />}
       {showProcessingFeedback && (
         <Surface
-          className='marketrix-screen-edge-glow fixed inset-0'
+          data-screen-edge-glow
+          position='fixed'
+          inset='0'
           style={{
             boxShadow: `inset 0 0 22px 2px ${addOpacity(settings.widget_accent_color, 0.72)}, inset 0 0 46px 10px ${addOpacity(settings.widget_accent_color, 0.28)}`,
             pointerEvents: 'none',

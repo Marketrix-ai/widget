@@ -27,7 +27,7 @@ describe('Widget smoke', () => {
         <MarketrixWidget config={config} />
       </WidgetProvider>,
     );
-    const widget = container.querySelector('.marketrix-widget');
+    const widget = container.querySelector('[data-marketrix-widget]');
     expect(widget).toBeInTheDocument();
     expect(widget).toHaveStyle({ '--primary': '#2563eb' });
   });
