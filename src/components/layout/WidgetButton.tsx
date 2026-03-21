@@ -5,7 +5,12 @@ import { useWidget } from '../../hooks/useWidget';
 import type { MarketrixConfig, WidgetPosition } from '../../types';
 import { darkenColor, getContrastingColor } from '../../utils/format';
 import { getAnchorTopLeft, getNearestCornerByTranslation, getPositionClasses } from '../../utils/widgetPositioning';
+import { Avatar } from '../base/Avatar';
 import { Button } from '../base/Button';
+import { Flex } from '../base/Flex';
+import { Icon } from '../base/Icon';
+import { Surface } from '../base/Surface';
+import { Text } from '../base/Text';
 
 interface WidgetButtonProps {
   config: MarketrixConfig;
@@ -307,8 +312,8 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
   };
 
   return (
-    <div
-      ref={wrapperRef}
+    <Surface
+      ref={wrapperRef as React.Ref<HTMLElement>}
       className={`${positionClass} ${pixelPositionStyle ? '' : effectivePositionClasses} ${isDragging ? '' : 'transition-transform duration-300 ease-in-out'}`}
       style={{
         zIndex,
@@ -317,13 +322,13 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
         ...pixelPositionStyle,
       }}
     >
-      <div
+      <Surface
         className={`
           group relative w-14 h-14 overflow-visible transition-all duration-300 ease-in-out
           ${isOpen ? 'scale-0 opacity-0 pointer-events-none' : 'scale-100 opacity-100 hover:scale-110'}
         `}
       >
-        {showProcessingGlow && <div className={glowClass} aria-hidden />}
+        {showProcessingGlow && <Surface className={glowClass} aria-hidden />}
         {showStopControl && !isDragging && (
           <Button
             type='button'
@@ -363,8 +368,8 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
           aria-label={isOpen ? 'Close' : 'Open'}
           aria-live='polite'
         >
-          <div className='w-full h-full flex items-center justify-center relative'>
-            <div
+          <Flex className='w-full h-full items-center justify-center relative'>
+            <Surface
               className={`
                 relative w-12 h-12 overflow-hidden transition-[transform,opacity,background-color] duration-[167ms] ease-[cubic-bezier(0.33,0,0,1)]
                 hover:scale-110 hover:duration-[250ms] active:scale-[0.85] active:duration-[134ms] active:ease-[cubic-bezier(0.45,0,0.2,1)]
@@ -376,6 +381,7 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
               }}
             >
               {showProcessingGlow && (
+                // Activity ring: dynamic SVG, exception to base-only rule
                 <svg className={activityRingClass} viewBox='0 0 54 54' fill='none' aria-hidden>
                   <rect
                     x='1.25'
@@ -388,8 +394,8 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
                 </svg>
               )}
               {/* Logo icon: visible when closed; crossfade out when open */}
-              <div
-                className='absolute inset-0 flex items-center justify-center transition-[transform,opacity] duration-[160ms] linear'
+              <Flex
+                className='absolute inset-0 items-center justify-center transition-[transform,opacity] duration-[160ms] linear'
                 style={{
                   transform: isOpen ? 'rotate(30deg) scale(0)' : 'rotate(0deg) scale(1)',
                   opacity: isOpen ? 0 : 1,
@@ -399,7 +405,7 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
                 }}
                 aria-hidden={isOpen}
               >
-                <img
+                <Avatar
                   src={MarketrixIcon}
                   alt=''
                   className='relative z-10 w-full h-full object-contain'
@@ -414,10 +420,10 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
                     userSelect: 'none',
                   }}
                 />
-              </div>
+              </Flex>
               {/* ChevronDown icon: visible when open; crossfade in when open */}
-              <div
-                className='absolute inset-0 flex items-center justify-center transition-[transform,opacity] duration-[160ms] linear'
+              <Flex
+                className='absolute inset-0 items-center justify-center transition-[transform,opacity] duration-[160ms] linear'
                 style={{
                   transform: isOpen ? 'rotate(0deg) scale(1)' : 'rotate(-30deg) scale(0)',
                   opacity: isOpen ? 1 : 0,
@@ -427,40 +433,36 @@ export const WidgetButton: React.FC<WidgetButtonProps> = ({
                 }}
                 aria-hidden={!isOpen}
               >
-                <svg
-                  className='w-6 h-6 relative z-10 text-foreground pointer-events-none'
-                  fill='none'
-                  stroke='currentColor'
-                  viewBox='0 0 24 24'
-                >
-                  <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2.5} d='M19 9l-7 7-7-7' />
-                </svg>
-              </div>
-            </div>
-          </div>
+                <Icon name='chevronDown' size={24} className='relative z-10 text-foreground pointer-events-none' />
+              </Flex>
+            </Surface>
+          </Flex>
         </Button>
-      </div>
+      </Surface>
 
       {/* Welcome text shown as GreetingToast in MarketrixWidget */}
 
       {/* Tooltip */}
       {!isOpen && (
-        <div
+        <Surface
           className={`absolute bottom-16 ${effectivePosition.includes('left') ? 'left-0' : 'right-0'} mb-2 px-3 py-2 text-sm rounded-lg shadow-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200`}
           style={{
             backgroundColor: darkenColor(widgetConfig.widget_accent_color, 0.3),
             color: getContrastingColor(darkenColor(widgetConfig.widget_accent_color, 0.3)),
           }}
         >
-          {'Support Agent'}
-          <div
+          <Text as='span' className='text-inherit'>
+            {'Support Agent'}
+          </Text>
+          <Surface
+            aria-hidden
             className={`absolute top-full ${effectivePosition.includes('left') ? 'left-4' : 'right-4'} w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent`}
             style={{
               borderTopColor: darkenColor(widgetConfig.widget_accent_color, 0.3),
             }}
           />
-        </div>
+        </Surface>
       )}
-    </div>
+    </Surface>
   );
 };

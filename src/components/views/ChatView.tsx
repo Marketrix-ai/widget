@@ -16,6 +16,10 @@ import {
 import { showModeService } from '../../services/ShowModeService';
 import type { ChatMessage, MarketrixConfig, TaskProgress } from '../../types';
 import { addOpacity } from '../../utils/format';
+import { Flex } from '../base/Flex';
+import { Stack } from '../base/Stack';
+import { Surface } from '../base/Surface';
+import { Text } from '../base/Text';
 import { MessageList } from '../chat/MessageList';
 import { MessageInput } from '../input/MessageInput';
 import { ScreenAccessModal } from '../ui/ScreenAccessModal';
@@ -37,9 +41,9 @@ class ChatErrorBoundary extends React.Component<{ children: React.ReactNode }, {
   override render() {
     if (this.state.hasError) {
       return (
-        <div className='p-4 text-center text-xs text-gray-500'>
+        <Text as='div' className='p-4 text-center text-xs text-gray-500'>
           Something went wrong displaying messages. Please refresh.
-        </div>
+        </Text>
       );
     }
     return this.props.children;
@@ -321,7 +325,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
   };
 
   return (
-    <div className='flex flex-col h-full' id='view-chat' role='tabpanel' aria-labelledby='tab-chat'>
+    <Stack className='h-full' id='view-chat' role='tabpanel' aria-labelledby='tab-chat'>
       {showScreenAccessModal && (
         <ScreenAccessModal
           isOpen={showScreenAccessModal}
@@ -331,7 +335,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
         />
       )}
 
-      <div className='flex-1 overflow-hidden py-1 flex flex-col min-h-0'>
+      <Surface className='flex-1 overflow-hidden py-1 flex flex-col min-h-0'>
         <ChatErrorBoundary>
           <MessageList
             messages={messages}
@@ -363,11 +367,11 @@ export const ChatView: React.FC<ChatViewProps> = ({
             onScreenAccessDeny={handleScreenAccessDeny}
           />
         </ChatErrorBoundary>
-      </div>
+      </Surface>
 
-      <div className='flex-shrink-0 rounded-[var(--radius)] m-2 mt-auto' style={{ backgroundColor: '#ffffff' }}>
+      <Surface className='flex-shrink-0 rounded-[var(--radius)] m-2 mt-auto' style={{ backgroundColor: '#ffffff' }}>
         {isTaskRunning && taskProgress.length > 0 && (
-          <div
+          <Surface
             className='mx-2 mb-2 p-2 rounded text-xs max-h-32 overflow-y-auto'
             style={{
               backgroundColor: addOpacity(config.widget_background_color ?? '#fff', 0.8),
@@ -376,20 +380,29 @@ export const ChatView: React.FC<ChatViewProps> = ({
               borderStyle: 'solid',
             }}
           >
-            <div className='font-semibold mb-1' style={{ color: config.widget_text_color }}>
+            <Text as='div' weight='semibold' className='mb-1' style={{ color: config.widget_text_color }}>
               Task Progress ({taskProgress.length} steps)
-            </div>
-            <div className='space-y-1'>
+            </Text>
+            <Stack className='gap-1'>
               {taskProgress.map((progress, idx) => (
-                <div key={idx} className='text-xs opacity-80' style={{ color: config.widget_text_color }}>
-                  <span className='font-medium'>Step {progress.step}:</span> {progress.tool_name}
+                <Flex
+                  key={idx}
+                  className='items-start gap-1.5 text-xs opacity-80'
+                  style={{ color: config.widget_text_color }}
+                >
+                  <Text as='span' weight='medium'>
+                    Step {progress.step}:
+                  </Text>{' '}
+                  {progress.tool_name}
                   {progress.tool_params && Object.keys(progress.tool_params).length > 0 && (
-                    <span className='opacity-70 ml-1'>({Object.keys(progress.tool_params).join(', ')})</span>
+                    <Text as='span' className='opacity-70 ml-1'>
+                      ({Object.keys(progress.tool_params).join(', ')})
+                    </Text>
                   )}
-                </div>
+                </Flex>
               ))}
-            </div>
-          </div>
+            </Stack>
+          </Surface>
         )}
 
         <MessageInput
@@ -409,7 +422,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
           onModeChange={handleModeChange}
           isScreenSharing={isScreenSharing}
         />
-      </div>
-    </div>
+      </Surface>
+    </Stack>
   );
 };
