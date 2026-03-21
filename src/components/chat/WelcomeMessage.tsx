@@ -1,39 +1,47 @@
 import React, { useRef } from 'react';
 
+import MarketrixIcon from '../../assets/marketrix-icon.svg';
 import { formatMessageTime } from '../../utils/format';
-import { Flex, Stack, Text } from '../base';
+import { Avatar, Flex, Stack, Text } from '../base';
 
 interface WelcomeMessageProps {
   greeting: string;
-  settings: {
-    widget_text_color: string;
-    widget_border_color: string;
-    widget_secondary_color: string;
-  };
 }
 
-export const WelcomeMessage: React.FC<WelcomeMessageProps> = ({ greeting, settings }) => {
+export const WelcomeMessage: React.FC<WelcomeMessageProps> = ({ greeting }) => {
   const mountTimeRef = useRef(new Date());
 
   return (
-    <Stack key='welcome-message' justify='start' marginTop='md'>
-      <Flex align='start'>
-        {/* Message bubble */}
+    <Stack role='article' aria-roledescription='message' aria-label='Agent says…'>
+      <Flex align='start' gap='xs'>
+        {/* Agent avatar */}
+        <Flex shrink={false} style={{ width: '32px', height: '32px', backgroundColor: 'transparent' }}>
+          <Avatar
+            src={MarketrixIcon}
+            alt='Marketrix AI'
+            size='md'
+            rounded='theme'
+            style={{
+              border: 'none',
+              outline: 'none',
+              display: 'block',
+              objectFit: 'cover',
+              backgroundColor: 'transparent',
+            }}
+          />
+        </Flex>
+
+        {/* Message bubble — matches MessageItem agent style */}
         <Stack
           grow
-          paddingX='sm'
-          paddingY='md'
-          rounded='lg'
-          shadow
-          border
           style={{
-            backgroundColor: '#ffffff',
-            backgroundImage: 'none',
-            color: settings.widget_text_color,
-            borderColor: settings.widget_border_color,
+            padding: '8px 10px',
+            borderRadius: 'var(--radius)',
+            boxShadow: '0 1px 4px rgba(0,0,0,0.1)',
+            border: '1px solid transparent',
+            color: 'var(--foreground)',
           }}
         >
-          {/* Message content */}
           <Text
             as='div'
             size='xs'
@@ -44,12 +52,10 @@ export const WelcomeMessage: React.FC<WelcomeMessageProps> = ({ greeting, settin
           </Text>
         </Stack>
       </Flex>
-      {/* Timestamp below card */}
-      <Flex justify='end' style={{ marginTop: '2px' }}>
-        <Text as='span' style={{ fontSize: '10px', color: `${settings.widget_text_color}99` }}>
-          {formatMessageTime(mountTimeRef.current)}
-        </Text>
-      </Flex>
+      {/* Attribution — matches MessageItem */}
+      <Text as='div' variant='muted' style={{ fontSize: '11px', marginTop: '4px', marginLeft: '36px' }}>
+        Marketrix • AI Agent • {formatMessageTime(mountTimeRef.current)}
+      </Text>
     </Stack>
   );
 };

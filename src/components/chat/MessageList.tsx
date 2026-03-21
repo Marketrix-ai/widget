@@ -82,6 +82,7 @@ export const MessageList = ({
         height='full'
         overflowY='auto'
         paddingX='md'
+        paddingY='sm'
         style={{
           backgroundColor: widgetConfig.widget_background_color.includes('gradient')
             ? 'transparent'
@@ -97,14 +98,7 @@ export const MessageList = ({
         {messages.length === 0 && widgetState.isLoading && <StateMessage variant='loading' message='Connecting…' />}
 
         {/* Welcome message - always show */}
-        <WelcomeMessage
-          greeting={widgetConfig.widget_body ?? 'How can I help you today?'}
-          settings={{
-            widget_text_color: widgetConfig.widget_text_color,
-            widget_border_color: widgetConfig.widget_border_color,
-            widget_secondary_color: widgetConfig.widget_secondary_color,
-          }}
-        />
+        <WelcomeMessage greeting={widgetConfig.widget_body ?? 'How can I help you today?'} />
 
         {/* Messages */}
         {messages.map((message: ChatMessage, index: number) => (
