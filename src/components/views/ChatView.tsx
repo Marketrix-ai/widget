@@ -242,27 +242,25 @@ export const ChatView: React.FC<ChatViewProps> = ({
           </Surface>
         )}
 
-        <Surface paddingY='sm' paddingX='md' style={{ backgroundColor: 'transparent' }}>
-          <ChatInput
-            ref={externalMessageInputRef}
-            value={inputValue}
-            onChange={setInputValue}
-            onSubmit={handleSendMessage}
-            modes={ORDERED_MODES.filter(m => getEnabledModes(settings).includes(m)).map(m => ({
-              id: m,
-              icon: MODE_ICON_MAP[m],
-              label: getModeDisplayName(m),
-            }))}
-            activeMode={currentMode}
-            onModeChange={mode => handleModeChange(mode as InstructionType)}
-            disabled={messages.some(msg => msg.isPlaceholder)}
-            taskRunning={isTaskRunning}
-            onStop={() => {
-              showModeService.cleanup();
-              onStopTask?.();
-            }}
-          />
-        </Surface>
+        <ChatInput
+          ref={externalMessageInputRef}
+          value={inputValue}
+          onChange={setInputValue}
+          onSubmit={handleSendMessage}
+          modes={ORDERED_MODES.filter(m => getEnabledModes(settings).includes(m)).map(m => ({
+            id: m,
+            icon: MODE_ICON_MAP[m],
+            label: getModeDisplayName(m),
+          }))}
+          activeMode={currentMode}
+          onModeChange={mode => handleModeChange(mode as InstructionType)}
+          disabled={messages.some(msg => msg.isPlaceholder)}
+          taskRunning={isTaskRunning}
+          onStop={() => {
+            showModeService.cleanup();
+            onStopTask?.();
+          }}
+        />
       </Card>
     </Stack>
   );
