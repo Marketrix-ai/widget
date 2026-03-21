@@ -16,11 +16,16 @@ interface WelcomeMessageProps {
 
 export const WelcomeMessage: React.FC<WelcomeMessageProps> = ({ greeting, settings }) => {
   return (
-    <Stack key='welcome-message' className='group justify-start mt-2'>
-      <Flex className='items-start flex-row'>
+    <Stack key='welcome-message' justify='start' marginTop='md'>
+      <Flex align='start'>
         {/* Message bubble */}
         <Stack
-          className='flex-1 px-2.5 py-2 rounded-lg shadow-sm border'
+          grow
+          paddingX='sm'
+          paddingY='md'
+          rounded='lg'
+          shadow
+          border
           style={{
             backgroundColor: '#ffffff',
             backgroundImage: 'none',
@@ -31,19 +36,17 @@ export const WelcomeMessage: React.FC<WelcomeMessageProps> = ({ greeting, settin
           {/* Message content */}
           <Text
             as='div'
-            className='text-inherit text-xs font-inter font-medium leading-tight whitespace-pre-wrap break-words'
+            size='xs'
+            weight='medium'
+            style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', lineHeight: 'tight' }}
           >
             {greeting}
           </Text>
         </Stack>
       </Flex>
       {/* Timestamp below card */}
-      <Flex className='justify-end mt-0.5'>
-        <Text
-          as='span'
-          className='text-inherit text-[10px] font-inter font-normal'
-          style={{ color: `${settings.widget_text_color}99` }}
-        >
+      <Flex justify='end' style={{ marginTop: '2px' }}>
+        <Text as='span' style={{ fontSize: '10px', color: `${settings.widget_text_color}99` }}>
           {formatMessageTime(new Date())}
         </Text>
       </Flex>

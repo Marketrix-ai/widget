@@ -81,14 +81,16 @@ export const MessageList = ({
   }, [messages.length, isPreviewMode]); // Run when messages length changes to handle history loading
 
   return (
-    <Surface className='relative h-full'>
+    <Surface position='relative' height='full'>
       <Surface
         key='message-list-container'
         ref={containerRef as React.RefObject<HTMLDivElement>}
         onScroll={handleScroll}
         role='log'
         aria-relevant='additions'
-        className='h-full overflow-y-auto px-2 space-y-0.5 pt-0 scrollbar-thin scrollbar-track-gray-100 scrollbar-thumb-gray-400'
+        height='full'
+        overflowY='auto'
+        paddingX='md'
         style={{
           backgroundColor: widgetConfig.widget_background_color.includes('gradient')
             ? 'transparent'
@@ -142,14 +144,24 @@ export const MessageList = ({
 
       {/* Scroll to Top Button */}
       {showScrollTop && (
-        <Flex className='absolute top-2 left-0 right-0 justify-center z-10 pointer-events-none'>
+        <Flex
+          position='absolute'
+          justify='center'
+          style={{ top: '8px', left: 0, right: 0, zIndex: 10, pointerEvents: 'none' }}
+        >
           <Button
             type='button'
             variant='secondary'
             size='sm'
             onClick={scrollToTop}
-            className='p-1.5 rounded-full shadow-md bg-white/90 hover:bg-white border border-gray-200 pointer-events-auto'
-            style={{ border: '1px solid #e5e7eb' }}
+            style={{
+              padding: '6px',
+              borderRadius: '9999px',
+              boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
+              backgroundColor: 'rgba(255,255,255,0.9)',
+              border: '1px solid #e5e7eb',
+              pointerEvents: 'auto',
+            }}
             title='Scroll to top'
             aria-label='Scroll to top'
           >
@@ -159,14 +171,24 @@ export const MessageList = ({
       )}
 
       {showScrollBottom && (
-        <Flex className='absolute bottom-2 left-0 right-0 justify-center z-10 pointer-events-none'>
+        <Flex
+          position='absolute'
+          justify='center'
+          style={{ bottom: '8px', left: 0, right: 0, zIndex: 10, pointerEvents: 'none' }}
+        >
           <Button
             type='button'
             variant='secondary'
             size='sm'
             onClick={scrollToBottom}
-            className='p-1.5 rounded-full shadow-md bg-white/90 hover:bg-white border border-gray-200 pointer-events-auto'
-            style={{ border: '1px solid #e5e7eb' }}
+            style={{
+              padding: '6px',
+              borderRadius: '9999px',
+              boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
+              backgroundColor: 'rgba(255,255,255,0.9)',
+              border: '1px solid #e5e7eb',
+              pointerEvents: 'auto',
+            }}
             title='Scroll to bottom'
             aria-label='Scroll to bottom'
           >

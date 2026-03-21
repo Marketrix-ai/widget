@@ -37,8 +37,8 @@ export const MessageItem: React.FC<MessageItemProps> = ({
   // Render system messages differently (muted, centered)
   if (message.isSystemMessage) {
     return (
-      <Flex key={`message-${message.id}-${index}`} className='justify-center items-center py-0'>
-        <Text as='span' variant='faint' className='text-[10px] font-inter font-normal'>
+      <Flex key={`message-${message.id}-${index}`} justify='center' align='center'>
+        <Text as='span' variant='faint' style={{ fontSize: '10px', fontWeight: 'normal' }}>
           {message.content}
         </Text>
       </Flex>
@@ -50,33 +50,43 @@ export const MessageItem: React.FC<MessageItemProps> = ({
   return (
     <Stack
       key={`message-${message.id}-${index}`}
-      className={`group mt-[10px] ${isLastMessage ? 'animate-message-enter' : ''}`}
+      style={{ marginTop: '10px' }}
       role='article'
       aria-roledescription='message'
       aria-label={isUser ? 'You said…' : 'Agent says…'}
+      animate={isLastMessage ? 'fadeIn' : undefined}
     >
-      <Flex className='items-start gap-1 w-full flex-row'>
+      <Flex align='start' gap='xs' width='full'>
         {/* Logo or Spacer - Always on left */}
-        <Flex className='flex-shrink-0 agent-logo-img-container w-8 h-8 bg-transparent'>
+        <Flex shrink={false} style={{ width: '32px', height: '32px', backgroundColor: 'transparent' }}>
           {!isUser && (
             <Avatar
               src={marketrixIcon}
               alt='Marketrix AI'
               size='md'
-              className='agent-logo-img shadow-[var(--shadow)] rounded-[var(--radius)] block object-cover bg-transparent'
-              style={{ border: 'none', outline: 'none' }}
+              rounded='theme'
+              style={{
+                border: 'none',
+                outline: 'none',
+                display: 'block',
+                objectFit: 'cover',
+                backgroundColor: 'transparent',
+              }}
             />
           )}
         </Flex>
 
         {/* Message bubble */}
         <Stack
-          className={`flex-1 relative
-          ${message.videoStream ? 'p-0' : 'px-2.5 py-2'}
-          ${!isUser ? 'rounded-[var(--radius)] shadow-[0_1px_4px_rgba(0,0,0,0.1)]' : 'border'}
-          ${isUser ? 'rounded-l-[var(--radius)] rounded-tr-[var(--radius)] rounded-br-[var(--radius)] bg-primary text-primary-foreground border-primary' : 'text-foreground border-transparent'}
-        `}
+          grow
+          position='relative'
           style={{
+            padding: message.videoStream ? '0' : '8px 10px',
+            borderRadius: isUser ? 'var(--radius) 0 var(--radius) var(--radius)' : 'var(--radius)',
+            boxShadow: !isUser ? '0 1px 4px rgba(0,0,0,0.1)' : undefined,
+            border: isUser ? '1px solid var(--primary)' : '1px solid transparent',
+            backgroundColor: isUser ? 'var(--primary)' : undefined,
+            color: isUser ? 'var(--primary-foreground)' : 'var(--foreground)',
             maxWidth: isUser ? 'calc(100% - 40px)' : '280px',
           }}
         >
@@ -95,7 +105,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
 
           {/* Screen access request action buttons - show if not yet handled */}
           {message.isScreenAccessRequest && !message.screenShareStatus && (
-            <Flex className='mt-1.5 pt-0.5 gap-2'>
+            <Flex align='center' gap='md' style={{ marginTop: '6px', paddingTop: '2px' }}>
               <Button
                 type='button'
                 variant='primary'
@@ -105,8 +115,15 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                   e.stopPropagation();
                   onScreenAccessAllow?.();
                 }}
-                className='flex items-center justify-center text-sm font-medium h-[26px] min-w-[65px] rounded-[22px]'
                 style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  height: '26px',
+                  minWidth: '65px',
+                  borderRadius: '22px',
                   backgroundColor: '#111827',
                   color: '#fff',
                   border: 'none',
@@ -123,10 +140,18 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                   e.stopPropagation();
                   onScreenAccessDeny?.();
                 }}
-                className='flex items-center justify-center text-sm font-medium h-[26px] min-w-[65px] rounded-[22px] border border-gray-200'
                 style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  height: '26px',
+                  minWidth: '65px',
+                  borderRadius: '22px',
                   backgroundColor: '#f3f4f6',
                   color: '#111827',
+                  border: '1px solid #e5e7eb',
                 }}
               >
                 No
@@ -136,19 +161,19 @@ export const MessageItem: React.FC<MessageItemProps> = ({
 
           {/* Screen access request handled state - show decision */}
           {message.isScreenAccessRequest && message.screenShareStatus === 'allowed' && (
-            <Text as='div' variant='faint' className='mt-0.5 text-xs font-medium italic'>
+            <Text as='div' variant='faint' size='xs' weight='medium' style={{ marginTop: '2px', fontStyle: 'italic' }}>
               Sure
             </Text>
           )}
           {message.isScreenAccessRequest && message.screenShareStatus === 'denied' && (
-            <Text as='div' variant='faint' className='mt-0.5 text-xs font-medium italic'>
+            <Text as='div' variant='faint' size='xs' weight='medium' style={{ marginTop: '2px', fontStyle: 'italic' }}>
               Check HTML Instead
             </Text>
           )}
 
           {/* Task status icon at bottom right (only for agent messages with task status) */}
           {!isUser && message.taskStatus && (
-            <Flex className='absolute bottom-1 right-1 items-center justify-center'>
+            <Flex position='absolute' align='center' justify='center' style={{ bottom: '4px', right: '4px' }}>
               <TaskStatusIcon status={message.taskStatus} accentColor={settings.widget_accent_color} />
             </Flex>
           )}
@@ -156,14 +181,14 @@ export const MessageItem: React.FC<MessageItemProps> = ({
       </Flex>
       {/* Attribution line for agent messages */}
       {!isUser && !message.isPlaceholder && (
-        <Text as='div' variant='muted' className='text-[11px] mt-1 ml-9'>
+        <Text as='div' variant='muted' style={{ fontSize: '11px', marginTop: '4px', marginLeft: '36px' }}>
           Marketrix • AI Agent • {formatMessageTime(message.timestamp)}
         </Text>
       )}
       {/* Timestamp below card */}
       {!message.isPlaceholder && isUser && (
-        <Flex className='justify-end mt-0.5 mr-1'>
-          <Text as='span' variant='faint' className='text-[10px] font-inter font-normal'>
+        <Flex justify='end' style={{ marginTop: '2px', marginRight: '4px' }}>
+          <Text as='span' variant='faint' weight='normal' style={{ fontSize: '10px' }}>
             {formatMessageTime(message.timestamp)}
           </Text>
         </Flex>
