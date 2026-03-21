@@ -22,7 +22,7 @@ export const SuggestedActions: React.FC<SuggestedActionsProps> = ({ actions, set
   if (actions.length === 0) return null;
 
   return (
-    <Stack style={{ marginTop: '10px', marginBottom: '6px', gap: '4px' }}>
+    <Stack gap='xs'>
       {actions.map((action, chipIndex) => (
         <Button
           key={`welcome-chip-${action.id}-${chipIndex}`}
@@ -30,21 +30,10 @@ export const SuggestedActions: React.FC<SuggestedActionsProps> = ({ actions, set
           size='sm'
           full
           onClick={e => onActionClick(action, e)}
+          className='hover:bg-primary hover:text-primary-foreground hover:border-primary'
           style={{
-            backgroundColor: 'rgba(0,0,0,0.05)',
-            borderColor: 'rgba(0,0,0,0.12)',
+            backgroundColor: 'var(--secondary-bg)',
             color: settings.widget_text_color,
-            transition: 'background-color 250ms ease-in-out, color 250ms ease-in-out, border-color 250ms ease-in-out',
-          }}
-          onMouseEnter={e => {
-            e.currentTarget.style.backgroundColor = settings.widget_text_color;
-            e.currentTarget.style.color = '#ffffff';
-            e.currentTarget.style.borderColor = settings.widget_text_color;
-          }}
-          onMouseLeave={e => {
-            e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.05)';
-            e.currentTarget.style.color = settings.widget_text_color;
-            e.currentTarget.style.borderColor = 'rgba(0,0,0,0.12)';
           }}
         >
           <Text as='span' weight='normal' style={{ lineHeight: 1 }}>

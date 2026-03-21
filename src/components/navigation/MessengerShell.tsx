@@ -11,7 +11,7 @@ import { StreamClient } from '../../services/StreamClient';
 import type { ChatMessage, InstructionType, MarketrixConfig, TaskProgress, WidgetView } from '../../types';
 import type { SuggestedActionItem } from '../../utils/suggestedActions';
 import { getPanelPositionStyle } from '../../utils/widgetPositioning';
-import { Flex } from '../base/Flex';
+import { Icon } from '../base/Icon';
 import { Stack } from '../base/Stack';
 import { Surface } from '../base/Surface';
 import { Text } from '../base/Text';
@@ -191,140 +191,138 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
       : undefined;
 
   return (
-    <Surface
+    <Stack
+      ref={containerRef}
       position={positionClass as 'fixed' | 'absolute'}
       rounded='theme'
+      border
+      overflow='hidden'
       style={{
         zIndex,
         backgroundImage,
+        transformOrigin,
+        ...customStyles,
         ...(isPreviewMode ? previewPositionStyle : panelPositionStyle),
         pointerEvents: 'auto',
+        scrollbarWidth: 'thin',
+        animation: 'messenger-entrance 300ms cubic-bezier(0, 1.2, 1, 1)',
+        boxShadow: '0 12px 40px rgba(0,0,0,0.16), 0 4px 12px rgba(0,0,0,0.08)',
       }}
     >
-      <Stack
-        ref={containerRef}
-        rounded='theme'
-        shadow
-        border
-        overflow='hidden'
-        style={{
-          transformOrigin,
-          ...customStyles,
-          scrollbarWidth: 'thin',
-          animation: 'messenger-entrance 300ms cubic-bezier(0, 1.2, 1, 1)',
-        }}
-      >
-        <HeaderBar
-          title={config.agent_name ?? 'AI Agent'}
-          subtitle={isMinimized ? undefined : (config.agent_description ?? 'How can I help?')}
-          minimized={isMinimized}
-          screenSharing={headerScreenSharing}
-          onScreenShare={screenShareHandler}
-          onClose={onClose}
-          menuItems={menuItems}
-        />
+      <HeaderBar
+        title={config.agent_name ?? 'AI Agent'}
+        subtitle={isMinimized ? undefined : (config.agent_description ?? 'How can I help?')}
+        minimized={isMinimized}
+        screenSharing={headerScreenSharing}
+        onScreenShare={screenShareHandler}
+        onClose={onClose}
+        menuItems={menuItems}
+      />
 
-        {!isMinimized && (
-          <>
-            <Surface grow overflow='hidden' style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-              <ViewTransition key={activeView} direction={navDirection}>
-                {activeView === 'home' && (
-                  <HomeView
-                    config={config}
-                    messages={messages}
-                    onNavigateToChat={handleNavigateToChat}
-                    onChipClick={handleChipClick}
-                  />
-                )}
-                {activeView === 'chat' && (
-                  <ChatView
-                    config={config}
-                    messages={messages}
-                    currentMode={currentMode}
-                    isTaskRunning={isTaskRunning}
-                    taskProgress={taskProgress}
-                    onSendMessage={onSendMessage}
-                    onSetMode={onSetMode}
-                    onAddMessage={onAddMessage}
-                    onUpdateMessage={onUpdateMessage}
-                    onRemoveMessage={onRemoveMessage}
-                    onStopTask={onStopTask}
-                    onScreenSharingChange={handleHeaderScreenSharingChange}
-                    onStartScreenShareRef={chatViewStartScreenShareRef}
-                    onStopScreenShareRef={chatViewStopScreenShareRef}
-                    messageInputRef={messageInputRef}
-                  />
-                )}
-                {activeView === 'help' && (
-                  <Flex
-                    id='view-help'
-                    role='tabpanel'
-                    aria-labelledby='tab-help'
-                    align='center'
-                    justify='center'
-                    height='full'
-                    padding='lg'
-                  >
-                    <Text size='sm' variant='muted'>
-                      Help – coming soon
-                    </Text>
-                  </Flex>
-                )}
-                {activeView === 'news' && (
-                  <Flex
-                    id='view-news'
-                    role='tabpanel'
-                    aria-labelledby='tab-news'
-                    align='center'
-                    justify='center'
-                    height='full'
-                    padding='lg'
-                  >
-                    <Text size='sm' variant='muted'>
-                      News – coming soon
-                    </Text>
-                  </Flex>
-                )}
-              </ViewTransition>
-            </Surface>
+      {!isMinimized && (
+        <>
+          <Surface grow overflow='hidden' style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+            <ViewTransition key={activeView} direction={navDirection}>
+              {activeView === 'home' && (
+                <HomeView
+                  config={config}
+                  messages={messages}
+                  onNavigateToChat={handleNavigateToChat}
+                  onChipClick={handleChipClick}
+                />
+              )}
+              {activeView === 'chat' && (
+                <ChatView
+                  config={config}
+                  messages={messages}
+                  currentMode={currentMode}
+                  isTaskRunning={isTaskRunning}
+                  taskProgress={taskProgress}
+                  onSendMessage={onSendMessage}
+                  onSetMode={onSetMode}
+                  onAddMessage={onAddMessage}
+                  onUpdateMessage={onUpdateMessage}
+                  onRemoveMessage={onRemoveMessage}
+                  onStopTask={onStopTask}
+                  onScreenSharingChange={handleHeaderScreenSharingChange}
+                  onStartScreenShareRef={chatViewStartScreenShareRef}
+                  onStopScreenShareRef={chatViewStopScreenShareRef}
+                  messageInputRef={messageInputRef}
+                />
+              )}
+              {activeView === 'help' && (
+                <Stack
+                  id='view-help'
+                  role='tabpanel'
+                  aria-labelledby='tab-help'
+                  height='full'
+                  align='center'
+                  justify='center'
+                  gap='sm'
+                  padding='lg'
+                >
+                  <Icon name='help' size={32} className='text-foreground-faint' />
+                  <Text size='sm' variant='muted'>
+                    Help – coming soon
+                  </Text>
+                </Stack>
+              )}
+              {activeView === 'news' && (
+                <Stack
+                  id='view-news'
+                  role='tabpanel'
+                  aria-labelledby='tab-news'
+                  height='full'
+                  align='center'
+                  justify='center'
+                  gap='sm'
+                  padding='lg'
+                >
+                  <Icon name='info' size={32} className='text-foreground-faint' />
+                  <Text size='sm' variant='muted'>
+                    News – coming soon
+                  </Text>
+                </Stack>
+              )}
+            </ViewTransition>
+          </Surface>
 
-            <TabBar tabs={TAB_DEFS} active={activeView} onChange={handleViewChange} />
-          </>
-        )}
+          <TabBar tabs={TAB_DEFS} active={activeView} onChange={handleViewChange} />
+        </>
+      )}
 
-        {!isMinimized &&
-          !isPreviewMode &&
-          (['top-left', 'top-right', 'bottom-left', 'bottom-right'] as const).map(corner => {
-            const isTop = corner.startsWith('top');
-            const isLeft = corner.endsWith('left');
-            const cornerStyle: React.CSSProperties = {
-              position: 'absolute',
-              width: '20px',
-              height: '20px',
-              padding: '4px',
-              touchAction: 'none',
-              zIndex: 10,
-              display: 'flex',
-              alignItems: isTop ? 'flex-start' : 'flex-end',
-              justifyContent: isLeft ? 'flex-start' : 'flex-end',
-              cursor: (isTop && isLeft) || (!isTop && !isLeft) ? 'nwse-resize' : 'nesw-resize',
-              top: isTop ? 0 : undefined,
-              bottom: isTop ? undefined : 0,
-              left: isLeft ? 0 : undefined,
-              right: isLeft ? undefined : 0,
-            };
-            return (
-              <div
-                key={corner}
-                role='separator'
-                aria-label={`Resize widget from ${corner.replace('-', ' ')}`}
-                title='Drag to resize'
-                style={cornerStyle}
-                onMouseDown={onResizeStart(corner)}
-              />
-            );
-          })}
-      </Stack>
+      {!isMinimized &&
+        !isPreviewMode &&
+        (['top-left', 'top-right', 'bottom-left', 'bottom-right'] as const).map(corner => {
+          const isTop = corner.startsWith('top');
+          const isLeft = corner.endsWith('left');
+          const cornerStyle: React.CSSProperties = {
+            position: 'absolute',
+            width: '20px',
+            height: '20px',
+            padding: '4px',
+            touchAction: 'none',
+            zIndex: 10,
+            display: 'flex',
+            alignItems: isTop ? 'flex-start' : 'flex-end',
+            justifyContent: isLeft ? 'flex-start' : 'flex-end',
+            cursor: (isTop && isLeft) || (!isTop && !isLeft) ? 'nwse-resize' : 'nesw-resize',
+            top: isTop ? 0 : undefined,
+            bottom: isTop ? undefined : 0,
+            left: isLeft ? 0 : undefined,
+            right: isLeft ? undefined : 0,
+          };
+          return (
+            <div
+              key={corner}
+              role='separator'
+              aria-label={`Resize widget from ${corner.replace('-', ' ')}`}
+              title='Drag to resize'
+              style={cornerStyle}
+              onMouseDown={onResizeStart(corner)}
+            />
+          );
+        })}
       <DiagnosticModal
         isOpen={diagnosticOpen}
         onClose={() => setDiagnosticOpen(false)}
@@ -347,6 +345,6 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
           build: typeof __BUILD_COMMIT__ !== 'undefined' ? __BUILD_COMMIT__ : 'dev',
         }}
       />
-    </Surface>
+    </Stack>
   );
 };

@@ -91,7 +91,7 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(f
   const canSend = Boolean(value.trim()) && !disabled;
 
   return (
-    <Stack className='rounded-xl border border-border overflow-hidden focus-within:border-foreground-faint transition-colors bg-card/70 backdrop-blur-sm'>
+    <Stack className='rounded-xl border border-border overflow-hidden focus-within:border-foreground-faint transition-colors'>
       <Textarea
         ref={mergeRefs(textareaRef, ref)}
         value={value}

@@ -47,7 +47,12 @@ export const HomeView: React.FC<HomeViewProps> = ({ config, messages, onNavigate
           full
           onClick={onNavigateToChat}
           aria-label='Ask a question'
-          style={{ justifyContent: 'space-between', padding: '12px 16px', borderRadius: '12px', fontWeight: 500 }}
+          style={{
+            justifyContent: 'space-between',
+            padding: '12px 16px',
+            borderRadius: 'var(--radius)',
+            fontWeight: 500,
+          }}
         >
           <Flex align='center' gap='md'>
             <Icon name='chat' size={20} />

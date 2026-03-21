@@ -25,8 +25,8 @@ export const TabBar: React.FC<TabBarProps> = ({ tabs, active, onChange }) => {
             aria-controls={`view-${tab.id}`}
             id={`tab-${tab.id}`}
             onClick={() => onChange(tab.id)}
-            variant='ghost'
-            className={`relative flex-col gap-0.5 flex-1 py-2 min-w-0 border-0 rounded-none min-h-0 px-0 transition-[color,opacity] duration-150 ${
+            variant='bare'
+            className={`relative flex-col gap-0.5 flex-1 h-full min-w-0 transition-[color,opacity] duration-150 ${
               isActive ? 'text-primary font-semibold' : 'text-foreground-muted font-normal'
             }`}
           >
