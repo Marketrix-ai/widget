@@ -69,9 +69,14 @@ export const DiagnosticModal: React.FC<DiagnosticModalProps> = ({ isOpen, onClos
         <Stack className='px-3 py-1.5'>
           {rows.map(row => (
             <Flex key={row.label} className='items-center justify-between py-[3px]'>
-              <Text as='span' className='text-[10px] text-gray-500'>{row.label}</Text>
+              <Text as='span' className='text-[10px] text-gray-500'>
+                {row.label}
+              </Text>
               <Flex className='items-center gap-1'>
-                <Text as='code' className='text-[9px] text-gray-600 bg-gray-50 px-1 py-0.5 rounded max-w-[120px] truncate'>
+                <Text
+                  as='code'
+                  className='text-[9px] text-gray-600 bg-gray-50 px-1 py-0.5 rounded max-w-[120px] truncate'
+                >
                   {row.value || 'N/A'}
                 </Text>
                 {row.copyable && row.value && (
@@ -91,7 +96,9 @@ export const DiagnosticModal: React.FC<DiagnosticModalProps> = ({ isOpen, onClos
 
           {/* Connection Status */}
           <Flex className='items-center justify-between py-[3px]'>
-            <Text as='span' className='text-[10px] text-gray-500'>Status</Text>
+            <Text as='span' className='text-[10px] text-gray-500'>
+              Status
+            </Text>
             <Text as='span' className={`text-[9px] font-medium px-1.5 py-0.5 rounded ${statusColor}`}>
               {diagnosticData.connectionStatus}
             </Text>

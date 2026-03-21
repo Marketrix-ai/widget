@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 
 import MarketrixIcon from '../../assets/marketrix-icon.svg';
+import { DARK_THEME_COLORS } from '../../constants/theme';
 import { Avatar } from '../base/Avatar';
 import { Flex } from '../base/Flex';
 import { Icon } from '../base/Icon';
 import { IconButton } from '../base/IconButton';
 import { Surface } from '../base/Surface';
 import { Text } from '../base/Text';
-import { DARK_THEME_COLORS } from '../../constants/theme';
 
 interface WidgetSettingsLoaderProps {
   message?: string;
