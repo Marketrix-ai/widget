@@ -1,24 +1,15 @@
 import { execSync } from 'node:child_process';
-import { copyFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs';
-import type { IncomingMessage, ServerResponse } from 'node:http';
+import { copyFileSync, existsSync, mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { cwd } from 'node:process';
 
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
-import { build, defineConfig, type UserConfig, type ViteDevServer } from 'vite';
+import { defineConfig, type UserConfig, type ViteDevServer } from 'vite';
 import cssInjectedByJsPlugin from 'vite-plugin-css-injected-by-js';
 
-const OUT_DIR = '.vite-dev-build';
-const BUNDLE_FILE = 'index.mjs';
-const SOURCEMAP_FILE = 'index.mjs.map';
-const BUNDLE_PATH = '/index.mjs';
-const SOURCEMAP_PATH = '/index.mjs.map';
-const SRC_DIR = 'src';
+const BUNDLE_FILE = 'widget.mjs';
 const ENTRY_FILE = 'src/index.tsx';
-
-// Use an environment variable to determine if we are building the standalone version
-const isStandalone = process.env.BUILD_MODE === 'standalone';
 
 const getBuildConfig = (options: { minify: boolean | 'terser'; outDir: string }): UserConfig => ({
   mode: 'production',
@@ -33,8 +24,7 @@ const getBuildConfig = (options: { minify: boolean | 'terser'; outDir: string })
   css: { devSourcemap: false },
   build: {
     outDir: options.outDir,
-    // Do not empty outDir if building standalone so we don't wipe the library build
-    emptyOutDir: !isStandalone,
+    emptyOutDir: true,
     sourcemap: true,
     minify: options.minify,
     target: 'esnext',
@@ -42,22 +32,20 @@ const getBuildConfig = (options: { minify: boolean | 'terser'; outDir: string })
     lib: {
       entry: ENTRY_FILE,
       formats: ['es'],
-      fileName: 'index',
+      fileName: 'widget',
     },
     rollupOptions: {
-      external: isStandalone ? [] : ['react', 'react-dom', 'react-dom/client', 'react/jsx-runtime'],
+      external: ['react', 'react-dom', 'react-dom/client', 'react/jsx-runtime'],
       output: {
-        entryFileNames: isStandalone ? 'standalone.mjs' : BUNDLE_FILE,
+        entryFileNames: BUNDLE_FILE,
         format: 'es',
         inlineDynamicImports: true,
-        globals: isStandalone
-          ? {}
-          : {
-              react: 'React',
-              'react-dom': 'ReactDOM',
-              'react-dom/client': 'ReactDOMClient',
-              'react/jsx-runtime': 'jsxRuntime',
-            },
+        globals: {
+          react: 'React',
+          'react-dom': 'ReactDOM',
+          'react-dom/client': 'ReactDOMClient',
+          'react/jsx-runtime': 'jsxRuntime',
+        },
       },
     },
     ...(options.minify === 'terser' && {
@@ -80,33 +68,25 @@ const getBuildConfig = (options: { minify: boolean | 'terser'; outDir: string })
     }),
     tailwindcss(),
     cssInjectedByJsPlugin(),
-    // Only copy index.html and generate types for the main library build
-    !isStandalone && copyIndexHtmlPlugin(options.outDir),
-    !isStandalone && typescriptDeclarationPlugin(),
+    copyIndexHtmlPlugin(options.outDir),
+    typescriptDeclarationPlugin(),
   ],
 });
-
-const setCorsHeaders = (res: ServerResponse): void => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Cache-Control', 'no-cache');
-};
-
-const readFile = (path: string): string | null => (existsSync(path) ? readFileSync(path, 'utf-8') : null);
 
 const copyIndexHtmlPlugin = (outDir: string) => {
   return {
     name: 'copy-index-html',
     closeBundle() {
-      const indexPath = resolve(cwd(), 'index.html');
+      const indexPath = resolve(cwd(), 'inject.html');
       const destDir = resolve(cwd(), outDir);
-      const destPath = resolve(destDir, 'index.html');
+      const destPath = resolve(destDir, 'inject.html');
       if (existsSync(indexPath)) {
         // Ensure destination directory exists
         if (!existsSync(destDir)) {
           mkdirSync(destDir, { recursive: true });
         }
         copyFileSync(indexPath, destPath);
-        console.log(`✓ Copied index.html to ${outDir}/`);
+        console.log(`✓ Copied inject.html to ${outDir}/`);
       }
     },
   };
@@ -128,97 +108,6 @@ const typescriptDeclarationPlugin = () => {
   };
 };
 
-const devWidgetPlugin = () => {
-  let bundle: string | null = null;
-  let sourcemap: string | null = null;
-  let buildPromise: Promise<void> | null = null;
-
-  const doBuild = async (): Promise<void> => {
-    try {
-      const originalEnv = process.env.NODE_ENV;
-      process.env.NODE_ENV = 'production';
-      try {
-        const config = getBuildConfig({ minify: false, outDir: OUT_DIR });
-        await build({ ...config, mode: 'production' });
-      } finally {
-        process.env.NODE_ENV = originalEnv;
-      }
-      const basePath = resolve(cwd(), OUT_DIR);
-      bundle = readFile(resolve(basePath, BUNDLE_FILE));
-      sourcemap = readFile(resolve(basePath, SOURCEMAP_FILE));
-      if (bundle) console.log(`✓ Built ${BUNDLE_PATH} bundle`);
-      if (sourcemap) console.log(`✓ Built ${SOURCEMAP_PATH} sourcemap`);
-    } catch (error) {
-      console.error(`Error building ${BUNDLE_PATH}:`, error);
-      throw error;
-    }
-  };
-
-  return {
-    name: 'dev-widget',
-    configureServer(s: ViteDevServer) {
-      buildPromise = doBuild();
-
-      s.watcher.add(resolve(cwd(), SRC_DIR, '**/*.{ts,tsx}'));
-      s.watcher.on('change', async file => {
-        if (file.includes(SRC_DIR)) {
-          console.log(`[dev-widget] Rebuilding ${BUNDLE_PATH}...`);
-          bundle = sourcemap = null;
-          buildPromise = doBuild();
-          await buildPromise;
-        }
-      });
-
-      const endpoints = {
-        [BUNDLE_PATH]: { contentType: 'application/javascript', getData: () => bundle },
-        [SOURCEMAP_PATH]: { contentType: 'application/json', getData: () => sourcemap },
-      };
-
-      const handler = async (req: IncomingMessage, res: ServerResponse, next: () => void) => {
-        const url = req.url;
-        if (url !== BUNDLE_PATH && url !== SOURCEMAP_PATH) {
-          next();
-          return;
-        }
-
-        if (req.method === 'OPTIONS') {
-          setCorsHeaders(res);
-          res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-          res.setHeader('Access-Control-Allow-Headers', '*');
-          res.statusCode = 204;
-          res.end();
-          return;
-        }
-
-        if (req.method === 'GET') {
-          if (buildPromise) {
-            await buildPromise;
-            buildPromise = null;
-          }
-
-          const config = endpoints[url];
-          let data = config.getData();
-          if (!data) {
-            await doBuild();
-            data = config.getData();
-          }
-
-          if (data) {
-            setCorsHeaders(res);
-            res.setHeader('Content-Type', config.contentType);
-            res.end(data);
-            return;
-          }
-        }
-
-        next();
-      };
-
-      s.middlewares.stack.unshift({ route: '', handle: handler });
-    },
-  };
-};
-
 export default defineConfig(({ command }) => {
   const isProduction = command === 'build';
 
@@ -231,13 +120,12 @@ export default defineConfig(({ command }) => {
     plugins: [
       react(),
       tailwindcss(),
-      !process.env.KUBERNETES_SERVICE_HOST && devWidgetPlugin(),
-      // Rewrite /standalone.mjs to the source entry so the production URL works in dev
+      // Rewrite /widget.mjs and /standalone.mjs to the source entry so the production URL works in dev
       {
         name: 'widget-dev-routing',
         configureServer(server: ViteDevServer) {
           server.middlewares.use((req, _res, next) => {
-            if (req.url === '/standalone.mjs') req.url = '/src/index.tsx';
+            if (req.url === '/widget.mjs' || req.url === '/standalone.mjs') req.url = '/src/index.tsx';
             next();
           });
         },

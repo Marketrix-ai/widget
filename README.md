@@ -6,7 +6,7 @@ Embeddable support widget for Marketrix. Integrates into any website via script 
 
 ```html
 <script
-  src="https://storage.marketrix.ai/widget/index.mjs"
+  src="https://widget.marketrix.ai/loader.js"
   mtx-api-host="https://api.marketrix.ai"
   mtx-id="your-marketrix-id"
   mtx-key="your-marketrix-key"
@@ -186,7 +186,6 @@ widget/
 │   ├── utils/            # Utility functions
 │   ├── constants/        # Config constants and theme tokens
 │   └── index.tsx         # Main entry point
-├── chrome-extension/     # Chrome extension for persistent injection
 ├── vite.config.ts
 ├── tsconfig.json
 └── package.json
@@ -198,8 +197,8 @@ Vite with CSS injection, Shadow DOM isolation, ESM format, TypeScript declaratio
 
 Output files:
 
-- `dist/index.mjs` — Library build (React as peer dependency)
-- `dist/standalone.mjs` — Standalone build (all dependencies bundled)
+- `dist/widget.mjs` — Library build (React as peer dependency)
+- `dist/loader.js` — Classic loader script (loads widget.mjs with configured attributes)
 
 ## CI/CD
 

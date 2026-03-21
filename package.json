@@ -2,14 +2,14 @@
   "name": "@marketrix.ai/widget",
   "version": "3.2.170",
   "type": "module",
-  "main": "./dist/index.mjs",
-  "module": "./dist/index.mjs",
+  "main": "./dist/widget.mjs",
+  "module": "./dist/widget.mjs",
   "types": "./dist/src/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/src/index.d.ts",
-      "import": "./dist/index.mjs",
-      "default": "./dist/index.mjs"
+      "import": "./dist/widget.mjs",
+      "default": "./dist/widget.mjs"
     },
     "./package.json": "./package.json"
   },
@@ -19,7 +19,7 @@
   "scripts": {
     "tag": "bash scripts/release.sh",
     "start": "vite",
-    "build": "vite build && cross-env BUILD_MODE=standalone vite build",
+    "build": "vite build",
     "lint": "eslint . --ext .ts,.tsx --max-warnings 200 --fix",
     "lint:check": "eslint . --ext .ts,.tsx --max-warnings 0",
     "check": "tsc --noEmit",
@@ -62,7 +62,6 @@
     "@vitejs/plugin-react": "^6.0.1",
     "@vitest/coverage-v8": "^3.2.4",
     "axe-core": "^4.11.1",
-    "cross-env": "^10.1.0",
     "eslint": "^10.1.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-import-x": "^4.16.2",

@@ -55,15 +55,16 @@ export const MessageInput = React.forwardRef<HTMLTextAreaElement, Omit<MessageIn
   const { config: settings } = useWidget(config ? { config } : {});
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Auto-resize textarea - shrink and grow with content
+  // Auto-resize textarea - grow up to 2 lines, then scroll
+  const maxTextareaHeight = 46; // 2 lines (20px each) + 6px padding
   useEffect(() => {
     const textarea = textareaRef.current;
     if (textarea) {
-      // Reset height to auto to get accurate scrollHeight
       textarea.style.height = 'auto';
       const scrollHeight = textarea.scrollHeight;
-      // Set height to match content exactly
-      textarea.style.height = `${scrollHeight}px`;
+      const clamped = Math.min(scrollHeight, maxTextareaHeight);
+      textarea.style.height = `${clamped}px`;
+      textarea.style.overflowY = scrollHeight > maxTextareaHeight ? 'auto' : 'hidden';
     }
   }, [value]);
 
@@ -84,7 +85,9 @@ export const MessageInput = React.forwardRef<HTMLTextAreaElement, Omit<MessageIn
       onChange(e.target.value);
       const ta = e.target;
       ta.style.height = 'auto';
-      ta.style.height = `${ta.scrollHeight}px`;
+      const clamped = Math.min(ta.scrollHeight, maxTextareaHeight);
+      ta.style.height = `${clamped}px`;
+      ta.style.overflowY = ta.scrollHeight > maxTextareaHeight ? 'auto' : 'hidden';
     },
     [onChange],
   );
@@ -127,13 +130,13 @@ export const MessageInput = React.forwardRef<HTMLTextAreaElement, Omit<MessageIn
           placeholder='Ask anything'
           disabled={isLoading}
           rows={1}
-          className='message-input-textarea w-full px-3 text-sm resize-none focus:outline-none focus:ring-0 border-none shadow-none disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden'
+          className='message-input-textarea w-full px-3 text-sm resize-none focus:outline-none focus:ring-0 border-none shadow-none disabled:opacity-50 disabled:cursor-not-allowed'
           style={{
             backgroundColor: 'transparent',
             color: settings.widget_text_color,
             lineHeight: '20px',
-            paddingTop: '8px',
-            paddingBottom: '4px',
+            paddingTop: '4px',
+            paddingBottom: '2px',
           }}
         />
         {/* Mode pills + send button row */}
@@ -206,9 +209,10 @@ export const MessageInput = React.forwardRef<HTMLTextAreaElement, Omit<MessageIn
                       border: 'none',
                     }
                   : {
-                      backgroundColor: 'transparent',
-                      color: addOpacity(settings.widget_text_color, 0.4),
+                      backgroundColor: addOpacity(settings.widget_accent_color, 0.3),
+                      color: getContrastingColor(settings.widget_accent_color),
                       border: 'none',
+                      opacity: 0.5,
                     }
             }
             aria-label={isTaskRunning ? 'Stop task' : 'Send message'}

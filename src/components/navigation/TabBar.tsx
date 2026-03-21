@@ -46,13 +46,18 @@ export const TabBar: React.FC<TabBarProps> = ({
             aria-controls={`view-${tab.id}`}
             id={`tab-${tab.id}`}
             onClick={() => onViewChange(tab.id)}
-            className='flex flex-col items-center justify-center gap-0.5 flex-1 py-2 transition-[color,opacity] duration-150 min-w-0'
+            className='relative flex flex-col items-center justify-center gap-0.5 flex-1 py-2 transition-[color,opacity] duration-150 min-w-0'
             style={{
               color: isActive ? accentColor : `${textColor}99`,
               fontWeight: isActive ? 600 : 400,
-              borderBottom: isActive ? `2px solid ${accentColor}` : '2px solid transparent',
             }}
           >
+            {isActive && (
+              <span
+                className='absolute top-0 left-1/4 right-1/4 h-0.5 rounded-full'
+                style={{ backgroundColor: accentColor }}
+              />
+            )}
             <span className='flex-shrink-0' aria-hidden>
               {tab.icon}
             </span>

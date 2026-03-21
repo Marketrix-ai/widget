@@ -1,9 +1,25 @@
-dist
-node_modules
-.DS_Store
-.vite-dev-build
-/.husky/
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+.vite-dev-build/
 
 # Logs
-logs
+logs/
 *.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment
+.env
+.env.*
+!.env.example

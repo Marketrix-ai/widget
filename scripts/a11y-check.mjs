@@ -1,6 +1,6 @@
 import { statSync } from 'node:fs';
 
-const requiredFiles = ['dist/index.mjs', 'dist/standalone.mjs'];
+const requiredFiles = ['dist/widget.mjs', 'dist/loader.js'];
 
 const missing = [];
 for (const file of requiredFiles) {

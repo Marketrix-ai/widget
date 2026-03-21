@@ -1,8 +1,8 @@
 import { statSync } from 'node:fs';
 
 const requiredFiles = [
-  { path: 'dist/index.mjs', maxBytes: 2_000_000 },
-  { path: 'dist/standalone.mjs', maxBytes: 4_000_000 },
+  { path: 'dist/widget.mjs', maxBytes: 2_000_000 },
+  { path: 'dist/loader.js', maxBytes: 10_000 },
 ];
 
 const errors = [];

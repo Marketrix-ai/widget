@@ -1,15 +1,21 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { FiInfo, FiTrash2 } from 'react-icons/fi';
 
+import packageJson from '../../../package.json';
 import MarketrixIcon from '../../assets/marketrix-icon.svg';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { type ResizeCorner, useResize } from '../../hooks/useResize';
 import { useWidget } from '../../hooks/useWidget';
 import { createUserMessage } from '../../services/ChatService';
+import { configManager } from '../../services/ConfigManager';
+import { sessionManager } from '../../services/SessionManager';
+import { StreamClient } from '../../services/StreamClient';
 import type { ChatMessage, InstructionType, MarketrixConfig, TaskProgress, WidgetView } from '../../types';
 import { addOpacity } from '../../utils/format';
 import type { SuggestedActionItem } from '../../utils/suggestedActions';
 import { getPanelPositionStyle } from '../../utils/widgetPositioning';
 import { Button } from '../base/Button';
+import { DiagnosticModal } from '../ui/DiagnosticModal';
 import { ChatView } from '../views/ChatView';
 import { HomeView } from '../views/HomeView';
 import { TabBar } from './TabBar';
@@ -138,21 +144,22 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
 
   // All hooks must be above the early return — React requires stable hook count.
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
+  const [diagnosticOpen, setDiagnosticOpen] = useState(false);
   const [headerScreenSharing, setHeaderScreenSharing] = useState(false);
   const moreMenuRef = useRef<HTMLDivElement>(null);
   const chatViewStartScreenShareRef = useRef<(() => void) | null>(null);
   const chatViewStopScreenShareRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
+    if (!moreMenuOpen) return;
     const handleClickOutside = (e: MouseEvent) => {
-      if (moreMenuRef.current && !moreMenuRef.current.contains(e.target as Node)) {
+      const target = e.composedPath()[0] as Node;
+      if (moreMenuRef.current && !moreMenuRef.current.contains(target)) {
         setMoreMenuOpen(false);
       }
     };
-    if (moreMenuOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [moreMenuOpen]);
 
   const handleHeaderScreenSharingChange = useCallback(
@@ -219,7 +226,7 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
     >
       <div
         ref={containerRef}
-        className='rounded-[var(--radius)] shadow-xl border flex flex-col relative overflow-hidden animate-messenger-entrance transform-gpu shadow-2xl'
+        className='rounded-[var(--radius)] shadow-xl border flex flex-col relative overflow-hidden animate-messenger-entrance shadow-2xl'
         style={{
           transformOrigin,
           ...customStyles,
@@ -347,11 +354,12 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
                             borderColor: settings.widget_border_color,
                           }}
                           role='menu'
+                          onMouseDown={e => e.nativeEvent.stopImmediatePropagation()}
                         >
                           {onClearChat && (
                             <button
                               type='button'
-                              className='w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded-md transition-colors'
+                              className='w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-100 rounded-md transition-colors'
                               style={{ color: settings.widget_text_color }}
                               onClick={() => {
                                 const result = onClearChat();
@@ -360,20 +368,22 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
                               }}
                               role='menuitem'
                             >
+                              <FiTrash2 className='w-3.5 h-3.5 opacity-60' />
                               Clear chat
                             </button>
                           )}
                           <button
                             type='button'
-                            className='w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded-md transition-colors'
+                            className='w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-100 rounded-md transition-colors'
                             style={{ color: settings.widget_text_color }}
                             onClick={() => {
-                              window.open('https://marketrix.ai', '_blank', 'noopener,noreferrer');
+                              setDiagnosticOpen(true);
                               setMoreMenuOpen(false);
                             }}
                             role='menuitem'
                           >
-                            About Marketrix
+                            <FiInfo className='w-3.5 h-3.5 opacity-60' />
+                            About
                           </button>
                         </div>
                       )}
@@ -486,6 +496,28 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
             );
           })}
       </div>
+      <DiagnosticModal
+        isOpen={diagnosticOpen}
+        onClose={() => setDiagnosticOpen(false)}
+        diagnosticData={{
+          chatId: sessionManager.getChatId(),
+          streamEndpoint: (() => {
+            const apiHost = configManager.getConfig()?.mtxApiHost || config.mtxApiHost;
+            return apiHost ? `${apiHost.replace(/\/$/, '')}/widget/stream` : null;
+          })(),
+          connectionStatus: (() => {
+            try {
+              return StreamClient.getInstance().getStatus();
+            } catch {
+              return 'disconnected';
+            }
+          })(),
+          applicationId: configManager.getConfig()?.mtxApp,
+          agentId: configManager.getConfig()?.mtxAgent,
+          version: packageJson.version,
+          build: typeof __BUILD_COMMIT__ !== 'undefined' ? __BUILD_COMMIT__ : 'dev',
+        }}
+      />
     </div>
   );
 };

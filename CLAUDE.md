@@ -5,7 +5,7 @@ Embeddable support widget that customers integrate into their products. Communic
 ## Stack
 
 - **Language**: TypeScript 5.9 (strict), React 19
-- **Build**: Vite 6 (dual build: library + standalone)
+- **Build**: Vite 6 (single build: widget.mjs + loader.js)
 - **Styling**: Tailwind CSS 4
 - **Validation**: Zod
 - **API Client**: oRPC (`@orpc/client`, `@orpc/contract`)
@@ -49,14 +49,6 @@ Embeddable support widget that customers integrate into their products. Communic
 | `ApiService.ts`         | Generic API call wrapper                               |
 | `DevTestService.ts`     | Dev testing utilities                                  |
 
-## Chrome Extension (`chrome-extension/`)
-
-Browser extension for persistent widget testing across page navigations. Injects the widget script on every page load.
-
-- `manifest.json` — Extension configuration
-- `content.js` — Widget script injection
-- `popup.html` / `popup.js` — Extension popup UI
-
 ## Terminology
 
 The widget is the runtime component of what users call **Widgets** in the dashboard. It connects to an **Application** and an **Agent**. See root `CLAUDE.md` glossary for full terminology.
@@ -80,8 +72,8 @@ The widget is the runtime component of what users call **Widgets** in the dashbo
 
 ### Build Output
 
-- Library build: `dist/index.mjs` (React as peer dep)
-- Standalone build: `dist/standalone.mjs` (React bundled)
+- Library build: `dist/widget.mjs` (React as peer dep)
+- Loader script: `dist/loader.js` (classic script, sets attributes and loads widget.mjs)
 - CSS injected inline via `vite-plugin-css-injected-by-js`
 - Types: `dist/src/**/*.d.ts`
 
