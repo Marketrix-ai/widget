@@ -85,5 +85,19 @@ export const MessageContent: React.FC<MessageContentProps> = ({ message, isLastM
     return <ThinkingIndicator isWaitingForUser={isWaitingForUser} accentColor={accentColor} />;
   }
 
+  // Fallback: render plain content text
+  if (message.content) {
+    return (
+      <Text
+        as='div'
+        size='xs'
+        weight='medium'
+        style={{ lineHeight: 'tight', wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}
+      >
+        {message.content}
+      </Text>
+    );
+  }
+
   return <Surface />;
 };
