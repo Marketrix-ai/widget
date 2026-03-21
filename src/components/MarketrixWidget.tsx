@@ -7,6 +7,7 @@ import { useScrollLock } from '../hooks/useScrollLock';
 import { useWidget } from '../hooks/useWidget';
 import type { MarketrixConfig, WidgetPosition } from '../types';
 import { addOpacity } from '../utils/format';
+import { Surface } from './base/Surface';
 import { WidgetButton } from './layout/WidgetButton';
 import { MessengerShell } from './navigation/MessengerShell';
 import { ErrorDisplay } from './ui/ErrorDisplay';
@@ -188,14 +189,14 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
   })();
 
   return (
-    <div
+    <Surface
       className='marketrix-widget relative'
       style={{ ...customStyles, ...(isPreviewMode && { width: '100%', height: '100%' }) }}
       data-widget-mode={settings?.widget_feature_human ? 'hybrid' : 'ai'}
     >
-      {state.isOpen && <div className='animate-fade-in' style={gradientPositionStyle} aria-hidden />}
+      {state.isOpen && <Surface className='animate-fade-in' style={gradientPositionStyle} aria-hidden />}
       {showProcessingFeedback && (
-        <div
+        <Surface
           className='marketrix-screen-edge-glow fixed inset-0'
           style={{
             boxShadow: `inset 0 0 22px 2px ${addOpacity(settings.widget_accent_color, 0.72)}, inset 0 0 46px 10px ${addOpacity(settings.widget_accent_color, 0.28)}`,
@@ -264,6 +265,6 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
           <DomTestPanel />
         </Suspense>
       )}
-    </div>
+    </Surface>
   );
 };

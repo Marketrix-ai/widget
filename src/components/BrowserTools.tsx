@@ -1,14 +1,4 @@
 import React, { useState } from 'react';
-import {
-  HiOutlineArrowRight,
-  HiOutlineDocumentText,
-  HiOutlineGlobeAlt,
-  HiOutlineMagnifyingGlass,
-  HiOutlineXMark,
-} from 'react-icons/hi2';
-import { LuMousePointerClick, LuScroll } from 'react-icons/lu';
-import { MdOutlineKeyboard, MdOutlineSelectAll } from 'react-icons/md';
-import { TbArrowDown, TbFileUpload } from 'react-icons/tb';
 
 import { useWidget } from '../hooks/useWidget';
 import type { MarketrixConfig } from '../types';
@@ -19,6 +9,12 @@ import {
   type BrowserToolMetadata,
 } from '../types/browserTools';
 import { addOpacity, getContrastingColor } from '../utils/format';
+import { Button } from './base/Button';
+import { Flex } from './base/Flex';
+import { Icon } from './base/Icon';
+import { Stack } from './base/Stack';
+import { Surface } from './base/Surface';
+import { Text } from './base/Text';
 
 interface BrowserToolsProps {
   config?: MarketrixConfig;
@@ -38,37 +34,37 @@ export const BrowserTools: React.FC<BrowserToolsProps> = ({ config, onToolSelect
     switch (tool.actionType) {
       case 'navigate':
       case 'go_back':
-        return <HiOutlineGlobeAlt className='w-4 h-4' />;
+        return <Icon name='globe' size={16} />;
       case 'search':
-        return <HiOutlineMagnifyingGlass className='w-4 h-4' />;
+        return <Icon name='magnifyingGlass' size={16} />;
       case 'click_element':
-        return <LuMousePointerClick className='w-4 h-4' />;
+        return <Icon name='mousePointerClick' size={16} />;
       case 'type_text':
-        return <HiOutlineDocumentText className='w-4 h-4' />;
+        return <Icon name='documentText' size={16} />;
       case 'scroll':
       case 'scroll_to_text':
-        return <LuScroll className='w-4 h-4' />;
+        return <Icon name='scroll' size={16} />;
       case 'send_keys':
-        return <MdOutlineKeyboard className='w-4 h-4' />;
+        return <Icon name='keyboard' size={16} />;
       case 'extract':
       case 'get_html':
       case 'get_interactable_elements':
       case 'get_screenshot':
-        return <HiOutlineDocumentText className='w-4 h-4' />;
+        return <Icon name='documentText' size={16} />;
       case 'get_dropdown_options':
-        return <MdOutlineSelectAll className='w-4 h-4' />;
+        return <Icon name='selectAll' size={16} />;
       case 'select_dropdown_option':
-        return <TbArrowDown className='w-4 h-4' />;
+        return <Icon name='tablerArrowDown' size={16} />;
       case 'upload_file':
-        return <TbFileUpload className='w-4 h-4' />;
+        return <Icon name='fileUpload' size={16} />;
       case 'switch_tab':
-        return <HiOutlineArrowRight className='w-4 h-4' />;
+        return <Icon name='arrowRight' size={16} />;
       case 'close_tab':
-        return <HiOutlineXMark className='w-4 h-4' />;
+        return <Icon name='xMark' size={16} />;
       case 'done':
-        return <LuMousePointerClick className='w-4 h-4' />;
+        return <Icon name='mousePointerClick' size={16} />;
       default:
-        return <HiOutlineDocumentText className='w-4 h-4' />;
+        return <Icon name='documentText' size={16} />;
     }
   };
 
@@ -143,7 +139,7 @@ export const BrowserTools: React.FC<BrowserToolsProps> = ({ config, onToolSelect
     }
 
     // Log tool selection
-    console.log('🔧 Browser Tool Selected:', tool.name, action);
+    console.log('Browser Tool Selected:', tool.name, action);
   };
 
   const accentColor = widgetConfig.widget_accent_color;
@@ -152,7 +148,7 @@ export const BrowserTools: React.FC<BrowserToolsProps> = ({ config, onToolSelect
   const borderColor = widgetConfig.widget_border_color;
 
   return (
-    <div
+    <Surface
       className='browser-tools-container'
       style={{
         width,
@@ -165,8 +161,8 @@ export const BrowserTools: React.FC<BrowserToolsProps> = ({ config, onToolSelect
       }}
     >
       {/* Tabs Header */}
-      <div
-        className='flex border-b'
+      <Flex
+        className='border-b'
         style={{
           borderColor: addOpacity(borderColor, 0.2),
           backgroundColor: addOpacity(secondaryColor, 0.05),
@@ -175,8 +171,9 @@ export const BrowserTools: React.FC<BrowserToolsProps> = ({ config, onToolSelect
         {Object.entries(BROWSER_TOOL_CATEGORIES).map(([key, label]) => {
           const isActive = activeTab === key;
           return (
-            <button
+            <Button
               key={key}
+              variant='ghost'
               onClick={() => setActiveTab(key as keyof typeof BROWSER_TOOL_CATEGORIES)}
               className='flex-1 px-3 py-2 text-xs font-medium transition-all duration-200'
               style={{
@@ -196,10 +193,10 @@ export const BrowserTools: React.FC<BrowserToolsProps> = ({ config, onToolSelect
               }}
             >
               {label}
-            </button>
+            </Button>
           );
         })}
-      </div>
+      </Flex>
 
       {/* Tools List */}
       <div
@@ -210,10 +207,11 @@ export const BrowserTools: React.FC<BrowserToolsProps> = ({ config, onToolSelect
           scrollbarColor: `${addOpacity(borderColor, 0.3)} ${addOpacity(borderColor, 0.1)}`,
         }}
       >
-        <div className='grid grid-cols-1 gap-2'>
+        <Stack className='gap-2'>
           {toolsInCategory.map(tool => (
-            <button
+            <Button
               key={tool.id}
+              variant='ghost'
               onClick={() => handleToolClick(tool)}
               className='flex items-start gap-2 p-2 rounded-lg text-left transition-all duration-200 hover:shadow-md'
               style={{
@@ -230,8 +228,8 @@ export const BrowserTools: React.FC<BrowserToolsProps> = ({ config, onToolSelect
                 e.currentTarget.style.borderColor = addOpacity(borderColor, 0.2);
               }}
             >
-              <div
-                className='shrink-0 flex items-center justify-center rounded'
+              <Flex
+                className='shrink-0 items-center justify-center rounded'
                 style={{
                   width: '32px',
                   height: '32px',
@@ -240,22 +238,22 @@ export const BrowserTools: React.FC<BrowserToolsProps> = ({ config, onToolSelect
                 }}
               >
                 {getToolIcon(tool)}
-              </div>
+              </Flex>
               <div className='flex-1 min-w-0'>
-                <div className='text-sm font-medium' style={{ color: textColor }}>
+                <Text as='div' className='text-sm font-medium' style={{ color: textColor }}>
                   {tool.name}
-                </div>
-                <div className='text-xs mt-0.5' style={{ color: addOpacity(textColor, 0.7) }}>
+                </Text>
+                <Text as='div' className='text-xs mt-0.5' style={{ color: addOpacity(textColor, 0.7) }}>
                   {tool.description}
-                </div>
+                </Text>
               </div>
-            </button>
+            </Button>
           ))}
-        </div>
+        </Stack>
       </div>
 
       {/* Footer Info */}
-      <div
+      <Flex
         className='px-3 py-2 text-xs border-t'
         style={{
           borderColor: addOpacity(borderColor, 0.2),
@@ -264,7 +262,7 @@ export const BrowserTools: React.FC<BrowserToolsProps> = ({ config, onToolSelect
         }}
       >
         {toolsInCategory.length} tool{toolsInCategory.length !== 1 ? 's' : ''} in {BROWSER_TOOL_CATEGORIES[activeTab]}
-      </div>
-    </div>
+      </Flex>
+    </Surface>
   );
 };

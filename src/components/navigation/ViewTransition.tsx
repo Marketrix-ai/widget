@@ -1,5 +1,7 @@
 import React from 'react';
 
+import { Surface } from '../base/Surface';
+
 type ViewDirection = 'forward' | 'back';
 
 interface ViewTransitionProps {
@@ -14,8 +16,11 @@ interface ViewTransitionProps {
  */
 export const ViewTransition: React.FC<ViewTransitionProps> = ({ children, direction }) => {
   return (
-    <div className={`view-slide-enter view-slide-enter-active ${direction}`} style={{ width: '100%', height: '100%' }}>
+    <Surface
+      className={`view-slide-enter view-slide-enter-active ${direction}`}
+      style={{ width: '100%', height: '100%' }}
+    >
       {children}
-    </div>
+    </Surface>
   );
 };
