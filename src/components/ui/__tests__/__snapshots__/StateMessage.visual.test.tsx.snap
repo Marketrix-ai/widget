@@ -6,7 +6,7 @@ exports[`StateMessage visual snapshots > empty variant matches snapshot 1`] = `
   class="flex flex-col items-center justify-center gap-3 py-6 px-4 text-center"
 >
   <p
-    class="text-sm"
+    class="text-foreground text-sm"
   >
     No messages yet.
   </p>
@@ -19,12 +19,17 @@ exports[`StateMessage visual snapshots > error variant with retry matches snapsh
   class="flex flex-col items-center justify-center gap-3 py-6 px-4 text-center text-red-600"
 >
   <p
-    class="text-sm"
+    class="text-foreground text-sm"
   >
     Something went wrong.
   </p>
   <button
-    class="text-sm font-medium underline focus:outline-none focus:ring-2 focus:ring-offset-2 rounded"
+    class="inline-flex items-center justify-center gap-2 border cursor-pointer transition-all focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2 bg-transparent text-foreground border-border hover:bg-muted px-4 py-2 min-h-9 text-sm font-medium underline focus:outline-none focus:ring-2 focus:ring-offset-2 rounded"
+    data-disabled="false"
+    data-loading="false"
+    data-size="md"
+    data-variant="ghost"
+    tabindex="0"
     type="button"
   >
     Retry
@@ -39,11 +44,22 @@ exports[`StateMessage visual snapshots > loading variant matches snapshot 1`] = 
   role="status"
 >
   <div
-    aria-hidden="true"
-    class="h-6 w-6 animate-spin rounded-full border-2 border-current border-t-transparent"
-  />
+    class="inline-flex items-center gap-1.5"
+    data-size="lg"
+    role="status"
+  >
+    <div
+      aria-hidden="true"
+      class="animate-spin rounded-full border-current border-t-transparent flex-shrink-0 h-6 w-6 border-2"
+    />
+    <span
+      class="sr-only"
+    >
+      Loading
+    </span>
+  </div>
   <p
-    class="text-sm"
+    class="text-foreground text-sm"
   >
     Connecting…
   </p>

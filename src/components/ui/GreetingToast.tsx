@@ -1,6 +1,13 @@
 import React, { useCallback, useEffect, useState } from 'react';
 
 import MarketrixIcon from '../../assets/marketrix-icon.svg';
+import { Avatar } from '../base/Avatar';
+import { Flex } from '../base/Flex';
+import { Icon } from '../base/Icon';
+import { IconButton } from '../base/IconButton';
+import { Stack } from '../base/Stack';
+import { Surface } from '../base/Surface';
+import { Text } from '../base/Text';
 
 interface GreetingToastProps {
   greeting: string;
@@ -23,7 +30,7 @@ export const GreetingToast: React.FC<GreetingToastProps> = ({ greeting, body, on
   }, [autoCloseMs, dismiss]);
 
   return (
-    <div
+    <Surface
       className='fixed'
       style={{
         bottom: '20px',
@@ -36,8 +43,8 @@ export const GreetingToast: React.FC<GreetingToastProps> = ({ greeting, body, on
         animation: isExiting ? 'none' : 'fadeIn 0.3s ease-out',
       }}
     >
-      <div
-        className='flex items-center gap-2.5 rounded-full shadow-lg cursor-pointer'
+      <Flex
+        className='items-center gap-2.5 rounded-full shadow-lg cursor-pointer'
         style={{
           padding: '8px 12px 8px 8px',
           backgroundColor: '#f0f9ff',
@@ -45,16 +52,13 @@ export const GreetingToast: React.FC<GreetingToastProps> = ({ greeting, body, on
         }}
         onClick={dismiss}
       >
-        <img
-          src={MarketrixIcon}
-          alt=''
-          className='flex-shrink-0 rounded-full'
-          style={{ width: '28px', height: '28px' }}
-        />
+        <Avatar src={MarketrixIcon} alt='' size={28} className='flex-shrink-0' style={{ borderRadius: '50%' }} />
 
-        <div className='flex-1 min-w-0'>
-          <span
-            className='font-medium block'
+        <Stack className='flex-1 min-w-0'>
+          <Text
+            as='span'
+            weight='medium'
+            className='block text-inherit'
             style={{
               fontSize: '13px',
               color: '#0c4a6e',
@@ -64,10 +68,11 @@ export const GreetingToast: React.FC<GreetingToastProps> = ({ greeting, body, on
             }}
           >
             {greeting}
-          </span>
+          </Text>
           {body && (
-            <span
-              className='block'
+            <Text
+              as='span'
+              className='block text-inherit'
               style={{
                 fontSize: '12px',
                 color: '#0369a1',
@@ -78,30 +83,22 @@ export const GreetingToast: React.FC<GreetingToastProps> = ({ greeting, body, on
               }}
             >
               {body}
-            </span>
+            </Text>
           )}
-        </div>
+        </Stack>
 
-        <button
+        <IconButton
+          label='Dismiss'
           onClick={e => {
             e.stopPropagation();
             dismiss();
           }}
-          className='flex-shrink-0 flex items-center justify-center rounded-full'
+          className='flex-shrink-0'
           style={{ width: '20px', height: '20px', padding: '2px', color: '#7dd3fc' }}
-          aria-label='Dismiss'
         >
-          <svg width='12' height='12' viewBox='0 0 12 12' fill='none'>
-            <path
-              d='M9 3L3 9M3 3l6 6'
-              stroke='currentColor'
-              strokeWidth='1.5'
-              strokeLinecap='round'
-              strokeLinejoin='round'
-            />
-          </svg>
-        </button>
-      </div>
-    </div>
+          <Icon name='closeSmall' size={12} />
+        </IconButton>
+      </Flex>
+    </Surface>
   );
 };

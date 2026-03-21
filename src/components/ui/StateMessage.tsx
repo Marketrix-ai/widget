@@ -2,6 +2,11 @@ import React from 'react';
 
 import { cn } from '@/lib/utils';
 
+import { Button } from '../base/Button';
+import { Spinner } from '../base/Spinner';
+import { Stack } from '../base/Stack';
+import { Text } from '../base/Text';
+
 type StateMessageVariant = 'loading' | 'empty' | 'error';
 
 interface StateMessageProps {
@@ -22,28 +27,25 @@ export const StateMessage: React.FC<StateMessageProps> = ({ variant, message, cl
   const isLoading = variant === 'loading';
 
   return (
-    <div
-      className={cn(
-        'flex flex-col items-center justify-center gap-3 py-6 px-4 text-center',
-        isError && 'text-red-600',
-        className,
-      )}
+    <Stack
+      className={cn('items-center justify-center gap-3 py-6 px-4 text-center', isError && 'text-red-600', className)}
       role={isLoading ? 'status' : undefined}
       aria-live={isError ? 'assertive' : 'polite'}
     >
-      {isLoading && (
-        <div className='h-6 w-6 animate-spin rounded-full border-2 border-current border-t-transparent' aria-hidden />
-      )}
-      <p className='text-sm'>{message}</p>
+      {isLoading && <Spinner size='lg' />}
+      <Text as='p' size='sm'>
+        {message}
+      </Text>
       {actionLabel && onAction && (
-        <button
+        <Button
           type='button'
+          variant='ghost'
           onClick={onAction}
           className='text-sm font-medium underline focus:outline-none focus:ring-2 focus:ring-offset-2 rounded'
         >
           {actionLabel}
-        </button>
+        </Button>
       )}
-    </div>
+    </Stack>
   );
 };

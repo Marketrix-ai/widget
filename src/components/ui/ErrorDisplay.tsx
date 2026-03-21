@@ -2,6 +2,13 @@ import React from 'react';
 
 import MarketrixIcon from '../../assets/marketrix-icon.svg';
 import { LAYER_TOKENS } from '../../design-system/layers';
+import { Avatar } from '../base/Avatar';
+import { Button } from '../base/Button';
+import { Flex } from '../base/Flex';
+import { Icon } from '../base/Icon';
+import { IconButton } from '../base/IconButton';
+import { Surface } from '../base/Surface';
+import { Text } from '../base/Text';
 
 interface ErrorDisplayProps {
   error: string;
@@ -16,7 +23,7 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({ error, onClose, onRe
     position === 'bottom_left' || position === 'top_left' || !position ? { left: '0' } : { right: '0' };
   const verticalStyle = position.includes('top') ? { top: '20px' } : { bottom: '90px' };
   return (
-    <div
+    <Surface
       className='fixed'
       style={{
         zIndex: LAYER_TOKENS.toast + 10,
@@ -25,8 +32,8 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({ error, onClose, onRe
         maxWidth: '420px',
       }}
     >
-      <div
-        className='flex items-center gap-2.5 rounded-full shadow-lg'
+      <Flex
+        className='items-center gap-2.5 rounded-full shadow-lg'
         style={{
           padding: '8px 12px 8px 8px',
           backgroundColor: '#fef2f2',
@@ -34,16 +41,12 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({ error, onClose, onRe
         }}
       >
         {/* Marketrix Logo */}
-        <img
-          src={MarketrixIcon}
-          alt=''
-          className='flex-shrink-0 rounded-full'
-          style={{ width: '28px', height: '28px' }}
-        />
+        <Avatar src={MarketrixIcon} alt='' size={28} className='flex-shrink-0' style={{ borderRadius: '50%' }} />
 
         {/* Error Message */}
-        <span
-          className='text-red-700 font-medium flex-1 min-w-0'
+        <Text
+          as='span'
+          className='text-red-700 font-medium flex-1 min-w-0 text-inherit'
           style={{
             fontSize: '13px',
             whiteSpace: onRetry ? 'normal' : 'nowrap',
@@ -52,11 +55,12 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({ error, onClose, onRe
           }}
         >
           {error}
-        </span>
+        </Text>
 
         {onRetry && (
-          <button
+          <Button
             type='button'
+            variant='ghost'
             onClick={() => {
               onRetry();
               onClose();
@@ -69,27 +73,18 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({ error, onClose, onRe
             aria-label='Retry'
           >
             Retry
-          </button>
+          </Button>
         )}
 
-        <button
-          type='button'
+        <IconButton
+          label='Close error'
           onClick={onClose}
-          className='flex-shrink-0 text-red-400 hover:text-red-600 flex items-center justify-center rounded-full'
+          className='flex-shrink-0 text-red-400 hover:text-red-600'
           style={{ width: '20px', height: '20px', padding: '2px' }}
-          aria-label='Close error'
         >
-          <svg width='12' height='12' viewBox='0 0 12 12' fill='none'>
-            <path
-              d='M9 3L3 9M3 3l6 6'
-              stroke='currentColor'
-              strokeWidth='1.5'
-              strokeLinecap='round'
-              strokeLinejoin='round'
-            />
-          </svg>
-        </button>
-      </div>
-    </div>
+          <Icon name='closeSmall' size={12} />
+        </IconButton>
+      </Flex>
+    </Surface>
   );
 };
