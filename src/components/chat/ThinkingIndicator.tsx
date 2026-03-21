@@ -13,7 +13,7 @@ export const ThinkingIndicator: React.FC<ThinkingIndicatorProps> = ({ isWaitingF
   return (
     <Flex align='center' gap='sm' paddingY='xs'>
       <Spinner size='sm' style={{ color: accentColor }} />
-      <Text as='span' weight='normal' style={{ fontSize: '10px', opacity: 0.5 }}>
+      <Text as='span' size='xs' weight='normal' variant='faint'>
         {isWaitingForUser ? 'Waiting for you to complete the action' : 'Thinking'}
       </Text>
     </Flex>

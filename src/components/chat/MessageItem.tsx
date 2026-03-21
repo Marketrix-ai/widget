@@ -33,7 +33,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
   if (message.isSystemMessage) {
     return (
       <Flex key={`message-${message.id}-${index}`} justify='center' align='center'>
-        <Text as='span' variant='faint' style={{ fontSize: '10px', fontWeight: 'normal' }}>
+        <Text as='span' variant='faint' size='xs' weight='normal'>
           {message.content}
         </Text>
       </Flex>
@@ -173,19 +173,16 @@ export const MessageItem: React.FC<MessageItemProps> = ({
           )}
         </Stack>
       </Flex>
-      {/* Attribution line for agent messages */}
-      {!isUser && !message.isPlaceholder && (
-        <Text as='div' variant='muted' style={{ fontSize: '11px', marginTop: '4px', marginLeft: '26px' }}>
-          Marketrix • AI Agent • {formatMessageTime(message.timestamp)}
+      {/* Timestamp */}
+      {!message.isPlaceholder && (
+        <Text
+          as='div'
+          variant='faint'
+          size='xs'
+          style={{ marginTop: '2px', marginLeft: isUser ? undefined : '26px', textAlign: isUser ? 'right' : undefined }}
+        >
+          {formatMessageTime(message.timestamp)}
         </Text>
-      )}
-      {/* Timestamp below card */}
-      {!message.isPlaceholder && isUser && (
-        <Flex justify='end' style={{ marginTop: '2px', marginRight: '4px' }}>
-          <Text as='span' variant='faint' weight='normal' style={{ fontSize: '10px' }}>
-            {formatMessageTime(message.timestamp)}
-          </Text>
-        </Flex>
       )}
     </Stack>
   );
