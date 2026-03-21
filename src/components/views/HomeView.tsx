@@ -73,7 +73,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ config, messages, onNavigate
             padding: '10px 16px',
             margin: '0 12px 12px 12px',
             borderRadius: 'var(--radius-xl, 12px)',
-            border: '1px solid var(--border)',
+            border: '1px solid transparent',
             backgroundColor: '#ffffff',
             boxShadow: '0 1px 4px rgba(0,0,0,0.1)',
           }}

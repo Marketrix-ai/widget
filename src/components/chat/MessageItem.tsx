@@ -53,7 +53,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
     >
       <Flex align='start' gap='sm' width='full'>
         {/* Logo (agent) or spacer (user) on left */}
-        <Flex shrink={false} style={{ width: '20px', height: '20px', marginTop: '4px' }}>
+        <Flex shrink={false} style={{ width: '20px', height: '20px', marginTop: '6px' }}>
           {!isUser && (
             <Avatar
               src={MarketrixIcon}

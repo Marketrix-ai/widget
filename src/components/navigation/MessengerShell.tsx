@@ -243,7 +243,7 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
                     style={{
                       padding: '10px 16px',
                       borderRadius: 'var(--radius-xl, 12px)',
-                      border: '1px solid var(--border)',
+                      border: '1px solid transparent',
                       boxShadow: '0 1px 4px rgba(0,0,0,0.1)',
                     }}
                   >
