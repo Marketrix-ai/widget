@@ -242,19 +242,18 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
                   <Surface
                     style={{
                       padding: '10px 16px',
+                      margin: '0 0 4px 0',
                       borderRadius: 'var(--radius-xl, 12px)',
                       border: '1px solid transparent',
+                      backgroundColor: '#ffffff',
                       boxShadow: '0 1px 4px rgba(0,0,0,0.1)',
                     }}
                   >
-                    <Text
-                      size='xs'
-                      variant='faint'
-                      style={{ textAlign: 'center', display: 'block', lineHeight: '1.6' }}
-                    >
-                      {config.agent_name ?? 'AI Agent'}
-                      <br />
-                      Widget v{packageJson.version} • API{' '}
+                    <Text size='xs' variant='faint' style={{ display: 'block' }}>
+                      Widget v{packageJson.version}
+                    </Text>
+                    <Text size='xs' variant='faint' style={{ display: 'block' }}>
+                      API{' '}
                       {(() => {
                         try {
                           const status = StreamClient.getInstance().getStatus();
