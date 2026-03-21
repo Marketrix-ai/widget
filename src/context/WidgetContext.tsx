@@ -263,17 +263,23 @@ export const WidgetProvider: React.FC<WidgetProviderProps> = ({ children, previe
         const explanation = event.explanation || '';
         const requestStateVersion = event.state_version;
 
-        // Check state version FIRST - silently fail if mismatch (no progress shown)
+        // Check state version — skip if mismatch (stale tool call).
+        // On fresh session (stateVersion === 0), adopt the server's version instead of rejecting.
         if (requestStateVersion !== undefined && requestStateVersion !== stateVersion.current) {
-          console.log('State version mismatch, skipping tool execution');
-          wsClient.send({
-            type: 'tool/response',
-            call_id: requestId,
-            success: false,
-            error: 'State version mismatch',
-            state_version: stateVersion.current,
-          });
-          return;
+          if (stateVersion.current === 0) {
+            // Fresh session — sync to the server's version
+            stateVersion.current = requestStateVersion;
+          } else {
+            console.log('State version mismatch, skipping tool execution');
+            wsClient.send({
+              type: 'tool/response',
+              call_id: requestId,
+              success: false,
+              error: 'State version mismatch',
+              state_version: stateVersion.current,
+            });
+            return;
+          }
         }
 
         // Only show progress if we're actually executing
