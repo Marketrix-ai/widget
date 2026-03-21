@@ -36,7 +36,7 @@ export const MessageContent: React.FC<MessageContentProps> = ({ message, isLastM
               <Text
                 as='div'
                 key={`part-${index}`}
-                size='xs'
+                size='sm'
                 weight='medium'
                 style={{
                   lineHeight: 'tight',
@@ -90,7 +90,7 @@ export const MessageContent: React.FC<MessageContentProps> = ({ message, isLastM
     return (
       <Text
         as='div'
-        size='xs'
+        size='sm'
         weight='medium'
         style={{ lineHeight: 'tight', wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}
       >

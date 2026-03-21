@@ -33,7 +33,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
   if (message.isSystemMessage) {
     return (
       <Flex key={`message-${message.id}-${index}`} justify='center' align='center'>
-        <Text as='span' variant='faint' size='xs' weight='normal'>
+        <Text as='span' variant='faint' weight='normal' style={{ fontSize: '10px' }}>
           {message.content}
         </Text>
       </Flex>
@@ -177,7 +177,11 @@ export const MessageItem: React.FC<MessageItemProps> = ({
       </Flex>
       {/* Timestamp — right-aligned */}
       {!message.isPlaceholder && (
-        <Text as='div' variant='faint' size='xs' style={{ marginTop: '2px', textAlign: 'right', marginRight: '26px' }}>
+        <Text
+          as='div'
+          variant='faint'
+          style={{ marginTop: '2px', textAlign: 'right', marginRight: '26px', fontSize: '10px' }}
+        >
           {formatMessageTime(message.timestamp)}
         </Text>
       )}
