@@ -4,3 +4,6 @@ export * from './MessageRow';
 export * from './NotificationToast';
 export * from './ProgressStep';
 export * from './TabBar';
+export * from './ToolPanel';
+export * from './WidgetDialog';
+export * from './WidgetFab';
