@@ -1,8 +1,11 @@
 import React from 'react';
-import { FiX } from 'react-icons/fi';
 
 import { Button } from '../base/Button';
 import { Dialog, DialogClose, DialogContent, DialogTitle } from '../base/Dialog';
+import { Flex } from '../base/Flex';
+import { Icon } from '../base/Icon';
+import { Stack } from '../base/Stack';
+import { Text } from '../base/Text';
 
 interface DiagnosticModalProps {
   isOpen: boolean;
@@ -49,7 +52,7 @@ export const DiagnosticModal: React.FC<DiagnosticModalProps> = ({ isOpen, onClos
     >
       <DialogContent className='bg-white rounded-md shadow-lg border border-gray-200 w-64 p-0'>
         {/* Header */}
-        <div className='flex items-center justify-between px-3 py-1.5 border-b border-gray-100'>
+        <Flex className='items-center justify-between px-3 py-1.5 border-b border-gray-100'>
           <DialogTitle className='text-[11px] font-semibold text-gray-700 flex-1 text-center mb-0'>
             Widget v{diagnosticData.version} (
             {diagnosticData.build === 'dev' ? 'dev' : diagnosticData.build.slice(0, 7)})
@@ -58,19 +61,19 @@ export const DiagnosticModal: React.FC<DiagnosticModalProps> = ({ isOpen, onClos
             className='text-gray-400 hover:text-gray-600 -mr-1 static w-auto h-auto'
             aria-label='Close diagnostic'
           >
-            <FiX className='w-3 h-3' />
+            <Icon name='x' size={12} />
           </DialogClose>
-        </div>
+        </Flex>
 
         {/* Content */}
-        <div className='px-3 py-1.5'>
+        <Stack className='px-3 py-1.5'>
           {rows.map(row => (
-            <div key={row.label} className='flex items-center justify-between py-[3px]'>
-              <span className='text-[10px] text-gray-500'>{row.label}</span>
-              <div className='flex items-center gap-1'>
-                <code className='text-[9px] text-gray-600 bg-gray-50 px-1 py-0.5 rounded max-w-[120px] truncate'>
+            <Flex key={row.label} className='items-center justify-between py-[3px]'>
+              <Text as='span' className='text-[10px] text-gray-500'>{row.label}</Text>
+              <Flex className='items-center gap-1'>
+                <Text as='code' className='text-[9px] text-gray-600 bg-gray-50 px-1 py-0.5 rounded max-w-[120px] truncate'>
                   {row.value || 'N/A'}
-                </code>
+                </Text>
                 {row.copyable && row.value && (
                   <Button
                     type='button'
@@ -82,18 +85,18 @@ export const DiagnosticModal: React.FC<DiagnosticModalProps> = ({ isOpen, onClos
                     Copy
                   </Button>
                 )}
-              </div>
-            </div>
+              </Flex>
+            </Flex>
           ))}
 
           {/* Connection Status */}
-          <div className='flex items-center justify-between py-[3px]'>
-            <span className='text-[10px] text-gray-500'>Status</span>
-            <span className={`text-[9px] font-medium px-1.5 py-0.5 rounded ${statusColor}`}>
+          <Flex className='items-center justify-between py-[3px]'>
+            <Text as='span' className='text-[10px] text-gray-500'>Status</Text>
+            <Text as='span' className={`text-[9px] font-medium px-1.5 py-0.5 rounded ${statusColor}`}>
               {diagnosticData.connectionStatus}
-            </span>
-          </div>
-        </div>
+            </Text>
+          </Flex>
+        </Stack>
       </DialogContent>
     </Dialog>
   );

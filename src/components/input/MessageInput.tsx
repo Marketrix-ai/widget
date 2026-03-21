@@ -1,12 +1,14 @@
 import React, { useCallback, useEffect, useRef } from 'react';
-import { IoChatbubbleEllipsesOutline, IoStop } from 'react-icons/io5';
-import { LuMousePointerClick } from 'react-icons/lu';
-import { SiTicktick } from 'react-icons/si';
 
 import type { InstructionType } from '../../sdk';
 import { getModeDisplayName } from '../../utils/format';
+import { Flex } from '../base/Flex';
+import { Icon } from '../base/Icon';
 import { IconButton } from '../base/IconButton';
 import { Pill } from '../base/Pill';
+import { Stack } from '../base/Stack';
+import { Surface } from '../base/Surface';
+import { Text } from '../base/Text';
 import { Textarea } from '../base/Textarea';
 
 interface MessageInputProps {
@@ -94,19 +96,19 @@ export const MessageInput = React.forwardRef<HTMLTextAreaElement, Omit<MessageIn
   const getModeIcon = (mode: InstructionType) => {
     switch (mode) {
       case 'show':
-        return <LuMousePointerClick className='w-3 h-3' />;
+        return <Icon name='mousePointerClick' size={12} />;
       case 'tell':
-        return <IoChatbubbleEllipsesOutline className='w-3 h-3' />;
+        return <Icon name='chatBubble' size={12} />;
       case 'do':
-        return <SiTicktick className='w-3 h-3' />;
+        return <Icon name='ticktick' size={12} />;
       default:
         return null;
     }
   };
 
   return (
-    <div className='py-1.5 px-2 bg-transparent'>
-      <div className='flex flex-col rounded-xl border border-border overflow-hidden focus-within:border-foreground-faint transition-colors bg-card/70 backdrop-blur-sm'>
+    <Surface className='py-1.5 px-2 bg-transparent'>
+      <Stack className='rounded-xl border border-border overflow-hidden focus-within:border-foreground-faint transition-colors bg-card/70 backdrop-blur-sm'>
         <Textarea
           ref={mergeRefs(textareaRef, ref)}
           value={value}
@@ -124,8 +126,8 @@ export const MessageInput = React.forwardRef<HTMLTextAreaElement, Omit<MessageIn
           }}
         />
         {/* Mode pills + send button row */}
-        <div className='flex items-center justify-between px-1.5 pb-1.5'>
-          <div className='flex items-center gap-1'>
+        <Flex className='items-center justify-between px-1.5 pb-1.5'>
+          <Flex className='items-center gap-1'>
             {orderedModes.map(mode => {
               const isActive = currentMode === mode;
               return (
@@ -141,11 +143,13 @@ export const MessageInput = React.forwardRef<HTMLTextAreaElement, Omit<MessageIn
                   }}
                 >
                   {getModeIcon(mode)}
-                  <span>{getModeDisplayName(mode)}</span>
+                  <Text as='span' className='text-inherit'>
+                    {getModeDisplayName(mode)}
+                  </Text>
                 </Pill>
               );
             })}
-          </div>
+          </Flex>
           <IconButton
             variant={isTaskRunning ? 'secondary' : canSend ? 'primary' : 'ghost'}
             size='sm'
@@ -161,16 +165,10 @@ export const MessageInput = React.forwardRef<HTMLTextAreaElement, Omit<MessageIn
               }
             }}
           >
-            {isTaskRunning ? (
-              <IoStop className='w-3.5 h-3.5' />
-            ) : (
-              <svg className='w-4 h-4' fill='none' stroke='currentColor' viewBox='0 0 24 24' aria-hidden>
-                <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M5 12h14m-7-7l7 7-7 7' />
-              </svg>
-            )}
+            {isTaskRunning ? <Icon name='stop' size={14} /> : <Icon name='send' size={16} />}
           </IconButton>
-        </div>
-      </div>
-    </div>
+        </Flex>
+      </Stack>
+    </Surface>
   );
 });

@@ -1,7 +1,4 @@
 import React, { useState } from 'react';
-import { IoChatbubbleEllipsesOutline } from 'react-icons/io5';
-import { LuMousePointerClick } from 'react-icons/lu';
-import { SiTicktick } from 'react-icons/si';
 
 import packageJson from '../../../package.json';
 import MarketrixLogo from '../../assets/marktrix-footer.png';
@@ -11,7 +8,11 @@ import { sessionManager } from '../../services/SessionManager';
 import { StreamClient } from '../../services/StreamClient';
 import type { MarketrixConfig } from '../../types';
 import { getModeDescription, getModeDisplayName } from '../../utils/format';
+import { Avatar } from '../base/Avatar';
+import { Flex } from '../base/Flex';
+import { Icon } from '../base/Icon';
 import { Pill } from '../base/Pill';
+import { Text } from '../base/Text';
 import { DiagnosticModal } from '../ui/DiagnosticModal';
 
 interface ModeSelectorProps {
@@ -34,11 +35,11 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({
   const getModeIcon = (mode: InstructionType) => {
     switch (mode) {
       case 'show':
-        return <LuMousePointerClick className='w-4 h-4 text-base' />;
+        return <Icon name='mousePointerClick' size={16} className='text-base' />;
       case 'tell':
-        return <IoChatbubbleEllipsesOutline className='w-4 h-4 text-base' />;
+        return <Icon name='chatBubble' size={16} className='text-base' />;
       case 'do':
-        return <SiTicktick className='w-4 h-4 text-base' />;
+        return <Icon name='ticktick' size={16} className='text-base' />;
       default:
         return null;
     }
@@ -48,8 +49,8 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({
   const orderedModes: InstructionType[] = (['tell', 'show', 'do'] as const).filter(mode => enabledModes.includes(mode));
 
   return (
-    <div className='px-3 pb-2 bg-transparent flex items-center justify-between gap-2'>
-      <div className='flex space-x-2 flex-shrink-0'>
+    <Flex className='px-3 pb-2 bg-transparent items-center justify-between gap-2'>
+      <Flex className='space-x-2 flex-shrink-0'>
         {orderedModes.map((mode: InstructionType) => (
           <Pill
             key={mode}
@@ -64,11 +65,13 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({
             title={getModeDescription(mode)}
           >
             {getModeIcon(mode)}
-            <span className='text-xs font-medium'>{getModeDisplayName(mode)}</span>
+            <Text as='span' className='text-inherit text-xs font-medium'>
+              {getModeDisplayName(mode)}
+            </Text>
           </Pill>
         ))}
-      </div>
-      <img
+      </Flex>
+      <Avatar
         src={MarketrixLogo}
         alt='Marketrix Logo'
         className='h-5 w-auto object-contain flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity'
@@ -102,6 +105,6 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({
           build: typeof __BUILD_COMMIT__ !== 'undefined' ? __BUILD_COMMIT__ : 'dev',
         }}
       />
-    </div>
+    </Flex>
   );
 };

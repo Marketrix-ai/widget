@@ -2,6 +2,7 @@ import React from 'react';
 
 import { Button } from '../base/Button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '../base/Dialog';
+import { Flex } from '../base/Flex';
 
 interface ScreenAccessModalProps {
   isOpen: boolean;
@@ -26,7 +27,7 @@ export const ScreenAccessModal: React.FC<ScreenAccessModalProps> = ({ isOpen, on
           By allowing screen access, Marketrix can understand your current context to guide you better and complete
           tasks on your behalf.
         </DialogDescription>
-        <div className='flex gap-3 justify-center'>
+        <Flex className='gap-3 justify-center'>
           <Button
             type='button'
             variant='primary'
@@ -55,7 +56,7 @@ export const ScreenAccessModal: React.FC<ScreenAccessModalProps> = ({ isOpen, on
           >
             No
           </Button>
-        </div>
+        </Flex>
       </DialogContent>
     </Dialog>
   );

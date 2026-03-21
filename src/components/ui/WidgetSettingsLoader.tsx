@@ -1,6 +1,12 @@
 import React, { useState } from 'react';
 
 import MarketrixIcon from '../../assets/marketrix-icon.svg';
+import { Avatar } from '../base/Avatar';
+import { Flex } from '../base/Flex';
+import { Icon } from '../base/Icon';
+import { IconButton } from '../base/IconButton';
+import { Surface } from '../base/Surface';
+import { Text } from '../base/Text';
 import { DARK_THEME_COLORS } from '../../constants/theme';
 
 interface WidgetSettingsLoaderProps {
@@ -16,7 +22,7 @@ export const WidgetSettingsLoader: React.FC<WidgetSettingsLoaderProps> = ({
   if (dismissed) return null;
 
   return (
-    <div
+    <Surface
       className='marketrix-widget-loader'
       style={{
         position: 'fixed',
@@ -37,20 +43,16 @@ export const WidgetSettingsLoader: React.FC<WidgetSettingsLoaderProps> = ({
         fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-        <img
+      <Flex style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <Avatar
           src={MarketrixIcon}
           alt=''
-          style={{
-            width: '28px',
-            height: '28px',
-            borderRadius: '50%',
-            overflow: 'hidden',
-            flexShrink: 0,
-          }}
+          size={28}
+          style={{ borderRadius: '50%', overflow: 'hidden', flexShrink: 0 }}
         />
 
-        <span
+        <Text
+          as='span'
           style={{
             fontSize: '13px',
             color: DARK_THEME_COLORS.gray800,
@@ -63,12 +65,11 @@ export const WidgetSettingsLoader: React.FC<WidgetSettingsLoaderProps> = ({
           }}
         >
           {message}
-        </span>
+        </Text>
 
-        <button
-          type='button'
+        <IconButton
+          label='Dismiss'
           onClick={() => setDismissed(true)}
-          aria-label='Dismiss'
           style={{
             background: 'none',
             border: 'none',
@@ -82,22 +83,16 @@ export const WidgetSettingsLoader: React.FC<WidgetSettingsLoaderProps> = ({
             borderRadius: '50%',
             width: '20px',
             height: '20px',
+            minWidth: 'unset',
           }}
         >
-          <svg width='12' height='12' viewBox='0 0 12 12' fill='none'>
-            <path
-              d='M9 3L3 9M3 3l6 6'
-              stroke='currentColor'
-              strokeWidth='1.5'
-              strokeLinecap='round'
-              strokeLinejoin='round'
-            />
-          </svg>
-        </button>
-      </div>
+          <Icon name='closeSmall' size={12} />
+        </IconButton>
+      </Flex>
 
       {showCredentialHint ? (
-        <p
+        <Text
+          as='p'
           style={{
             fontSize: '12px',
             color: DARK_THEME_COLORS.gray500,
@@ -106,9 +101,9 @@ export const WidgetSettingsLoader: React.FC<WidgetSettingsLoaderProps> = ({
           }}
         >
           Please configure marketrix_id and marketrix_key
-        </p>
+        </Text>
       ) : null}
-    </div>
+    </Surface>
   );
 };
 
