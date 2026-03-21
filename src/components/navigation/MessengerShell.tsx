@@ -11,7 +11,9 @@ import { StreamClient } from '../../services/StreamClient';
 import type { ChatMessage, InstructionType, MarketrixConfig, TaskProgress, WidgetView } from '../../types';
 import type { SuggestedActionItem } from '../../utils/suggestedActions';
 import { getPanelPositionStyle } from '../../utils/widgetPositioning';
+import { Badge } from '../base/Badge';
 import { Icon } from '../base/Icon';
+import { IconButton } from '../base/IconButton';
 import { Stack } from '../base/Stack';
 import { Surface } from '../base/Surface';
 import { Text } from '../base/Text';
@@ -194,9 +196,20 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
         title={config.agent_name ?? 'AI Agent'}
         subtitle={isMinimized ? undefined : (config.agent_description ?? 'How can I help?')}
         minimized={isMinimized}
-        screenSharing={headerScreenSharing}
-        onScreenShare={screenShareHandler}
         onClose={onClose}
+        controls={
+          screenShareHandler && (
+            <IconButton
+              variant='ghost'
+              size='sm'
+              label={headerScreenSharing ? 'Stop screen sharing' : 'Start screen sharing'}
+              onClick={screenShareHandler}
+            >
+              {headerScreenSharing && <Badge variant='live' className='absolute top-0.5 right-0.5' />}
+              <Icon name='screenShare' size={16} />
+            </IconButton>
+          )
+        }
       />
 
       {!isMinimized && (
