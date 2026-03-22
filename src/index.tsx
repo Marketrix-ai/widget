@@ -43,6 +43,7 @@ import { isHTMLElement } from './utils/validation';
 // Global session recorder instance
 let sessionRecorder: SessionRecorder | null = null;
 let isRecordingInitialized = false; // Flag to prevent multiple SessionRecorder instances
+let isRecorderStarting = false; // Flag to prevent concurrent initRecorder() calls
 // Tracks in-flight start() promise to prevent concurrent starts and enable safe stop/teardown
 let recordingStartPromise: Promise<void> | null = null;
 // Prevents concurrent initWidget() calls from creating duplicate widgets
@@ -198,22 +199,30 @@ async function initWidgetInternal(config: MarketrixConfig, container?: HTMLEleme
     // We need both applicationId and chatId before creating the recorder.
     const initRecorder = (applicationId: number, chatId: string) => {
       if (sessionRecorder && isRecordingInitialized) return; // Already initialized
-      sessionRecorder = new SessionRecorder(chatId, applicationId);
-      isRecordingInitialized = true;
+      if (isRecorderStarting) return;
+      isRecorderStarting = true;
 
-      // Start recording immediately — chatId is already available
-      const recorder = sessionRecorder;
-      recordingStartPromise = recorder
-        .start()
-        .catch(error => {
-          if (sessionRecorder !== recorder) return;
-          console.error('[Marketrix Widget] ❌ Failed to start session recording:', error);
-          isRecordingInitialized = false;
-        })
-        .finally(() => {
-          if (sessionRecorder !== recorder) return;
-          recordingStartPromise = null;
-        });
+      try {
+        sessionRecorder = new SessionRecorder(chatId, applicationId);
+        isRecordingInitialized = true;
+
+        // Start recording immediately — chatId is already available
+        const recorder = sessionRecorder;
+        recordingStartPromise = recorder
+          .start()
+          .catch(error => {
+            if (sessionRecorder !== recorder) return;
+            console.error('[Marketrix Widget] Failed to start session recording:', error);
+            isRecordingInitialized = false;
+          })
+          .finally(() => {
+            isRecorderStarting = false;
+            if (sessionRecorder !== recorder) return;
+            recordingStartPromise = null;
+          });
+      } catch {
+        isRecorderStarting = false;
+      }
     };
 
     const initRecorderWhenChatIdReady = (applicationId: number) => {
@@ -330,6 +339,7 @@ export const unmountWidget = (): void => {
     sessionRecorder.stop();
     sessionRecorder = null;
     isRecordingInitialized = false;
+    isRecorderStarting = false;
     recordingStartPromise = null;
     console.log('[Marketrix Widget] Session recording stopped');
   }
