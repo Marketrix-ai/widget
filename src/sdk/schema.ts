@@ -1490,6 +1490,8 @@ export const AppEventSchema = z.discriminatedUnion('type', [
     application_id: z.number(),
     status: z.string(),
     step_label: z.string().optional(),
+    step_pending: z.boolean().optional(),
+    num_steps: z.number().optional(),
   }),
   z.object({
     type: z.literal('simulation/created'),
