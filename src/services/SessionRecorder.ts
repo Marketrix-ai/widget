@@ -49,6 +49,7 @@ export class SessionRecorder {
   private flushTimer: ReturnType<typeof setTimeout> | null = null;
 
   private consecutiveFailures = 0;
+  private isFlushing = false;
 
   constructor(chatId: string, applicationId: number) {
     if (!chatId || chatId.trim() === '') {
@@ -98,7 +99,7 @@ export class SessionRecorder {
    */
   private bufferEvent(event: eventWithTime): void {
     this.eventQueue.push(event);
-    this.estimatedQueueBytes += JSON.stringify(event).length;
+    this.estimatedQueueBytes += new Blob([JSON.stringify(event)]).size;
 
     // Enforce max queue size
     if (this.eventQueue.length > MAX_QUEUE_SIZE) {
@@ -136,12 +137,17 @@ export class SessionRecorder {
    * would never succeed and would create an infinite retry loop.
    */
   private flush(): void {
+    if (this.isFlushing) return;
+    this.isFlushing = true;
     if (this.flushTimer) {
       clearTimeout(this.flushTimer);
       this.flushTimer = null;
     }
 
-    if (this.eventQueue.length === 0) return;
+    if (this.eventQueue.length === 0) {
+      this.isFlushing = false;
+      return;
+    }
 
     // Build a batch that fits within MAX_BATCH_BYTES.
     // If the whole queue fits, take it all; otherwise slice until we hit the cap.
@@ -231,6 +237,9 @@ export class SessionRecorder {
           }
           log.warn(`⚠️ Event queue exceeded ${MAX_QUEUE_SIZE} after re-queue, dropped ${excess} oldest events`);
         }
+      })
+      .finally(() => {
+        this.isFlushing = false;
       });
   }
 

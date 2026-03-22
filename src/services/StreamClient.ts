@@ -152,21 +152,19 @@ export class StreamClient {
     this.chatId = null;
   }
 
-  send(command: WidgetCommand): void {
+  send(command: WidgetCommand): Promise<void> {
     if (!this.chatId) {
-      console.warn('[StreamClient] Cannot send: no active chat');
-      return;
+      return Promise.reject(new Error('No active chat'));
     }
-
-    // Fire-and-forget POST via SDK
-    sdk
+    return sdk
       .widgetMessage({
         chat_id: this.chatId,
         command,
       })
+      .then(() => {})
       .catch(err => {
-        console.error('[StreamClient] Send failed:', err);
         this.notifyError(new Error(`Failed to send message: ${String(err)}`));
+        throw err;
       });
   }
 
@@ -182,6 +180,7 @@ export class StreamClient {
   }
 
   private handleMessage(event: WidgetEvent): void {
+    if (this.isIntentionallyDisconnected) return;
     // Heartbeats are keepalive-only — ignore silently
     if (event.type === 'heartbeat') return;
 

@@ -245,13 +245,15 @@ export const WidgetProvider: React.FC<WidgetProviderProps> = ({ children, previe
         const ALLOWED_TOOLS = BROWSER_TOOLS.map(t => t.id);
         if (!ALLOWED_TOOLS.includes(event.tool)) {
           console.warn('[Widget] Unknown tool requested:', event.tool);
-          wsClient.send({
-            type: 'tool/response',
-            call_id: requestId,
-            success: false,
-            error: `Unknown tool: ${event.tool}`,
-            state_version: stateVersion.current,
-          });
+          wsClient
+            .send({
+              type: 'tool/response',
+              call_id: requestId,
+              success: false,
+              error: `Unknown tool: ${event.tool}`,
+              state_version: stateVersion.current,
+            })
+            .catch(err => console.error('Failed to send unknown-tool response:', err));
           return;
         }
 
@@ -271,7 +273,7 @@ export const WidgetProvider: React.FC<WidgetProviderProps> = ({ children, previe
 
         // Sync state version from server — adopt whatever version the agent sends.
         // This prevents stale-version rejections that cause silent task failures.
-        if (requestStateVersion !== undefined && requestStateVersion !== stateVersion.current) {
+        if (requestStateVersion !== undefined && requestStateVersion > stateVersion.current) {
           stateVersion.current = requestStateVersion;
         }
 
@@ -283,13 +285,15 @@ export const WidgetProvider: React.FC<WidgetProviderProps> = ({ children, previe
         if (result.success) {
           try {
             stateVersion.current++;
-            wsClient.send({
-              type: 'tool/response',
-              call_id: requestId,
-              success: true,
-              data: typeof result.data === 'string' ? result.data : JSON.stringify(result.data),
-              state_version: stateVersion.current,
-            });
+            wsClient
+              .send({
+                type: 'tool/response',
+                call_id: requestId,
+                success: true,
+                data: typeof result.data === 'string' ? result.data : JSON.stringify(result.data),
+                state_version: stateVersion.current,
+              })
+              .catch(err => console.error('Failed to send tool success response:', err));
             updateProgressForTool(toolName, explanation, 'completed');
 
             // If the "done" tool completed successfully, mark the task as complete
@@ -334,18 +338,16 @@ export const WidgetProvider: React.FC<WidgetProviderProps> = ({ children, previe
           // Tool execution failed — update progress UI and notify server
           updateProgressForTool(toolName, explanation, 'failed', result.error || 'Tool execution failed');
           stateVersion.current++;
-          try {
-            wsClient.send({
+          wsClient
+            .send({
               type: 'tool/response',
               call_id: requestId,
               success: false,
               data: typeof result.data === 'string' ? result.data : JSON.stringify(result.data),
               error: result.error ?? undefined,
               state_version: stateVersion.current,
-            });
-          } catch (error) {
-            console.error('Failed to send tool error:', error);
-          }
+            })
+            .catch(err => console.error('Failed to send tool error response:', err));
         }
       } else if (event.type === 'task/status') {
         const status = event.status;
@@ -540,7 +542,7 @@ export const WidgetProvider: React.FC<WidgetProviderProps> = ({ children, previe
       }
 
       // Create placeholder message
-      const placeholderId = `temp-${Date.now()}`;
+      const placeholderId = `temp-${globalThis.crypto.randomUUID()}`;
       const placeholderMsg: ChatMessage = {
         id: placeholderId,
         content: '',
@@ -723,12 +725,9 @@ export const WidgetProvider: React.FC<WidgetProviderProps> = ({ children, previe
           return;
         }
 
-        try {
-          const wsClient = StreamClient.getInstance();
-          wsClient.send({ type: 'chat/stop' as const, ...(taskId && { task_id: taskId }) });
-        } catch (error) {
-          console.error('Failed to stop task remotely:', error);
-        }
+        StreamClient.getInstance()
+          .send({ type: 'chat/stop' as const, ...(taskId && { task_id: taskId }) })
+          .catch(err => console.error('Failed to stop task remotely:', err));
       },
       clearChatHistory: resetState,
       sendMessage,
