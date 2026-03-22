@@ -24,18 +24,6 @@ exports[`StateMessage visual snapshots > error variant with retry matches snapsh
   >
     Something went wrong.
   </p>
-  <button
-    class="inline-flex items-center justify-center gap-2 font-medium border rounded-lg cursor-pointer transition-all focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2 bg-transparent text-foreground border-border hover:bg-muted px-4 py-2 text-sm min-h-9"
-    data-disabled="false"
-    data-loading="false"
-    data-size="md"
-    data-variant="ghost"
-    style="font-size: 0.875rem; font-weight: 500; text-decoration: underline;"
-    tabindex="0"
-    type="button"
-  >
-    Retry
-  </button>
 </div>
 `;
 

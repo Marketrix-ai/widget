@@ -34,11 +34,11 @@ export interface WidgetDialogProps {
   status?: WidgetDialogStatus;
 }
 
-const statusColorMap: Record<WidgetDialogStatus['color'], string> = {
-  green: 'bg-success/15 text-success',
-  blue: 'bg-chart-1/15 text-chart-1',
-  yellow: 'bg-warning/15 text-warning',
-  gray: 'bg-muted text-muted-foreground',
+const statusToneMap: Record<WidgetDialogStatus['color'], 'success' | 'primary' | 'warning' | 'muted'> = {
+  green: 'success',
+  blue: 'primary',
+  yellow: 'warning',
+  gray: 'muted',
 };
 
 export const WidgetDialog: React.FC<WidgetDialogProps> = ({
@@ -65,24 +65,20 @@ export const WidgetDialog: React.FC<WidgetDialogProps> = ({
       }}
     >
       {variant === 'confirm' ? (
-        <DialogContent className='bg-card rounded-lg p-4 max-w-sm shadow-xl'>
-          <DialogTitle className='text-base font-semibold text-foreground mb-1'>{title}</DialogTitle>
-          {description != null && (
-            <DialogDescription className='text-sm text-muted-foreground mb-4 leading-relaxed'>
-              {description}
-            </DialogDescription>
-          )}
-          <Flex className='gap-2 justify-end'>
+        <DialogContent variant='confirm'>
+          <DialogTitle variant='confirm'>{title}</DialogTitle>
+          {description != null && <DialogDescription variant='confirm'>{description}</DialogDescription>}
+          <Flex gap='md' justify='end'>
             <Button
               type='button'
               variant='secondary'
               size='sm'
+              shape='pill'
               onClick={e => {
                 e.preventDefault();
                 e.stopPropagation();
                 onClose();
               }}
-              className='px-4 py-1.5 rounded-full text-sm font-medium border border-border'
             >
               {cancelLabel}
             </Button>
@@ -90,52 +86,40 @@ export const WidgetDialog: React.FC<WidgetDialogProps> = ({
               type='button'
               variant='primary'
               size='sm'
+              shape='pill'
               onClick={e => {
                 e.preventDefault();
                 e.stopPropagation();
                 onConfirm?.();
               }}
-              className='px-4 py-1.5 rounded-full text-sm font-medium'
             >
               {confirmLabel}
             </Button>
           </Flex>
         </DialogContent>
       ) : (
-        <DialogContent className='bg-card rounded-md shadow-lg border border-border w-64 p-0'>
+        <DialogContent variant='info'>
           {/* Header */}
-          <Flex className='items-center justify-between px-3 py-1.5 border-b border-border'>
-            <DialogTitle className='text-xs font-semibold text-foreground flex-1 text-center mb-0'>{title}</DialogTitle>
-            <DialogClose
-              className='text-muted-foreground hover:text-foreground -mr-1 static w-auto h-auto'
-              aria-label='Close'
-            >
+          <Flex align='center' justify='between' paddingX='lg' paddingY='sm' border='bottom'>
+            <DialogTitle variant='info'>{title}</DialogTitle>
+            <DialogClose variant='info' aria-label='Close'>
               <Icon name='x' size={12} />
             </DialogClose>
           </Flex>
 
           {/* Rows */}
-          <Stack className='px-3 py-1.5'>
+          <Stack paddingX='lg' paddingY='sm'>
             {rows.map(row => (
-              <Flex key={row.label} className='items-center justify-between py-[3px]'>
-                <Text as='span' className='text-xs text-muted-foreground'>
+              <Flex key={row.label} align='center' justify='between' paddingY='2xs'>
+                <Text as='span' size='xs' variant='muted'>
                   {row.label}
                 </Text>
-                <Flex className='items-center gap-1'>
-                  <Text
-                    as='code'
-                    className='text-xs text-muted-foreground bg-muted px-1 py-0.5 rounded max-w-[120px] truncate'
-                  >
+                <Flex align='center' gap='2xs'>
+                  <Text as='code' code size='xs' variant='muted' truncate style={{ maxWidth: '120px' }}>
                     {row.value || 'N/A'}
                   </Text>
                   {row.copyable === true && row.value && (
-                    <Button
-                      type='button'
-                      variant='ghost'
-                      size='sm'
-                      onClick={() => copyToClipboard(row.value)}
-                      className='text-xs text-primary hover:text-primary min-w-0 p-0 h-auto'
-                    >
+                    <Button type='button' variant='inline' size='sm' onClick={() => copyToClipboard(row.value)}>
                       Copy
                     </Button>
                   )}
@@ -145,11 +129,11 @@ export const WidgetDialog: React.FC<WidgetDialogProps> = ({
 
             {/* Status badge */}
             {status != null && (
-              <Flex className='items-center justify-between py-[3px]'>
-                <Text as='span' className='text-xs text-muted-foreground'>
+              <Flex align='center' justify='between' paddingY='2xs'>
+                <Text as='span' size='xs' variant='muted'>
                   Status
                 </Text>
-                <Badge variant='status' className={statusColorMap[status.color]}>
+                <Badge variant='status' tone={statusToneMap[status.color]}>
                   {status.label}
                 </Badge>
               </Flex>

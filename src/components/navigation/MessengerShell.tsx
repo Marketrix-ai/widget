@@ -251,7 +251,9 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
               label={headerScreenSharing ? 'Stop screen sharing' : 'Start screen sharing'}
               onClick={screenShareHandler}
             >
-              {headerScreenSharing && <Badge variant='live' className='absolute top-0.5 right-0.5' />}
+              {headerScreenSharing && (
+                <Badge variant='live' style={{ position: 'absolute', top: '2px', right: '2px' }} />
+              )}
               <Icon name='screenShare' size={16} />
             </IconButton>
           )
@@ -293,7 +295,9 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
               {activeView === 'help' && (
                 <Stack id='view-help' role='tabpanel' aria-labelledby='tab-help' height='full' padding='lg'>
                   <Stack grow align='center' justify='center' gap='sm'>
-                    <Icon name='help' size={32} className='text-foreground-faint' />
+                    <Text as='span' variant='faint'>
+                      <Icon name='help' size={32} />
+                    </Text>
                     <Text size='sm' variant='muted'>
                       Help – coming soon
                     </Text>
@@ -327,7 +331,9 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
                   gap='sm'
                   padding='lg'
                 >
-                  <Icon name='info' size={32} className='text-foreground-faint' />
+                  <Text as='span' variant='faint'>
+                    <Icon name='info' size={32} />
+                  </Text>
                   <Text size='sm' variant='muted'>
                     News – coming soon
                   </Text>

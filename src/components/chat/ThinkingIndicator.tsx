@@ -10,9 +10,9 @@ interface ThinkingIndicatorProps {
 
 export const ThinkingIndicator: React.FC<ThinkingIndicatorProps> = ({ isWaitingForUser }) => {
   return (
-    <Flex align='center' gap='sm' paddingY='xs' className='text-foreground-faint'>
+    <Flex align='center' gap='sm' paddingY='xs'>
       <Spinner size='sm' />
-      <Text as='span' size='xs' weight='normal'>
+      <Text as='span' size='xs' weight='normal' variant='faint'>
         {isWaitingForUser ? 'Waiting for you to complete the action' : 'Thinking'}
       </Text>
     </Flex>

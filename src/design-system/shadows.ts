@@ -1,5 +1,6 @@
 /** Shared shadow tokens used across all widget components */
 export const SHADOW = {
+  none: 'none',
   /** Cards, message bubbles, chips — subtle elevation */
   card: '0 1px 4px rgba(0,0,0,0.1)',
   /** Header bar, tab bar — section separator */
@@ -11,3 +12,5 @@ export const SHADOW = {
   /** Scroll-to buttons */
   button: '0 4px 6px -1px rgba(0,0,0,0.1)',
 } as const;
+
+export type ShadowToken = keyof typeof SHADOW;
