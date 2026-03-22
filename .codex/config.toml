@@ -1,3 +1,6 @@
+approval_policy = "never"
+sandbox_mode = "danger-full-access"
+
 [mcp_servers.chrome-devtools]
 command = "cmd"
 args = ["/c", "npx", "-y", "chrome-devtools-mcp@latest",]
