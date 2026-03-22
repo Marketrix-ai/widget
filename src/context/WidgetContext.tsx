@@ -77,9 +77,21 @@ export const WidgetProvider: React.FC<WidgetProviderProps> = ({ children, previe
       processedRequestIds.current = new Set(toKeep);
     }
   }, []);
-  // Track both conditions for task start: HTTP response and SSE notification
-  const taskIdFromApiRef = useRef<string | null>(null);
-  const taskStartedFromAgentRef = useRef(false);
+  // Single ref to coordinate task start handshake between HTTP response and SSE notification
+  const pendingTaskRef = useRef<{ apiTaskId?: string; agentStarted?: boolean }>({});
+
+  const maybeActivateTask = useCallback(() => {
+    const p = pendingTaskRef.current;
+    if (p.apiTaskId && p.agentStarted) {
+      const taskId = p.apiTaskId;
+      pendingTaskRef.current = {};
+      setState(prev => {
+        chatService.setTaskState(true, taskId, []);
+        isTaskRunningRef.current = true;
+        return { ...prev, isTaskRunning: true, activeTaskId: taskId, taskProgress: [] };
+      });
+    }
+  }, []);
 
   const [state, setState] = useState<WidgetState>({
     isOpen: false,
@@ -282,8 +294,7 @@ export const WidgetProvider: React.FC<WidgetProviderProps> = ({ children, previe
 
             // If the "done" tool completed successfully, mark the task as complete
             if (toolName === 'done') {
-              taskIdFromApiRef.current = null;
-              taskStartedFromAgentRef.current = false;
+              pendingTaskRef.current = {};
 
               setState(prev => {
                 chatService.setTaskState(false, null, []);
@@ -341,26 +352,15 @@ export const WidgetProvider: React.FC<WidgetProviderProps> = ({ children, previe
         const statusMessage = event.message || '';
 
         if (status === 'started') {
-          const taskId = event.task_id || null;
-          taskStartedFromAgentRef.current = true;
-
-          const finalTaskId = taskIdFromApiRef.current || taskId;
-          if (finalTaskId) {
-            setState(prev => {
-              chatService.setTaskState(true, finalTaskId, []);
-              isTaskRunningRef.current = true;
-              return {
-                ...prev,
-                isTaskRunning: true,
-                activeTaskId: finalTaskId,
-                taskProgress: [],
-              };
-            });
-          }
+          pendingTaskRef.current = {
+            ...pendingTaskRef.current,
+            agentStarted: true,
+            apiTaskId: pendingTaskRef.current.apiTaskId || event.task_id || undefined,
+          };
+          maybeActivateTask();
         } else if (status === 'completed' || status === 'failed' || status === 'stopped') {
           processedRequestIds.current.clear();
-          taskIdFromApiRef.current = null;
-          taskStartedFromAgentRef.current = false;
+          pendingTaskRef.current = {};
           setState(prev => {
             chatService.setTaskState(false, null, []);
             const found = findMessageForProgress({
@@ -414,18 +414,8 @@ export const WidgetProvider: React.FC<WidgetProviderProps> = ({ children, previe
 
           // If task_id present, handle task start handshake
           if (event.task_id) {
-            taskIdFromApiRef.current = event.task_id;
-            if (taskStartedFromAgentRef.current) {
-              chatService.setTaskState(true, event.task_id, []);
-              isTaskRunningRef.current = true;
-              return {
-                ...prev,
-                messages: newMessages,
-                isTaskRunning: true,
-                activeTaskId: event.task_id,
-                taskProgress: [],
-              };
-            }
+            pendingTaskRef.current = { ...pendingTaskRef.current, apiTaskId: event.task_id };
+            maybeActivateTask();
           }
 
           return { ...prev, messages: newMessages, isLoading: false };
@@ -484,9 +474,8 @@ export const WidgetProvider: React.FC<WidgetProviderProps> = ({ children, previe
 
   const resetState = useCallback(() => {
     chatService.clearMessages();
-    // Reset both flags
-    taskIdFromApiRef.current = null;
-    taskStartedFromAgentRef.current = false;
+    // Reset pending task handshake
+    pendingTaskRef.current = {};
     isTaskRunningRef.current = false; // Update ref immediately
     setState(prev => ({
       ...prev,
@@ -582,8 +571,8 @@ export const WidgetProvider: React.FC<WidgetProviderProps> = ({ children, previe
           const streamClient = StreamClient.getInstance();
           if (!streamClient.isConnected()) {
             const streamConfig = configManager.getConfig();
-            streamClient
-              .connect(
+            try {
+              await streamClient.connect(
                 chatId,
                 streamConfig
                   ? {
@@ -593,8 +582,10 @@ export const WidgetProvider: React.FC<WidgetProviderProps> = ({ children, previe
                       mtxApp: streamConfig.mtxApp,
                     }
                   : undefined,
-              )
-              .catch(err => console.error('Stream connection failed:', err));
+              );
+            } catch (err) {
+              console.error('Stream connection failed:', err);
+            }
           }
         }
 
