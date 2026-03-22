@@ -1426,7 +1426,7 @@ export const WidgetEventSchema = z.discriminatedUnion('type', [
   }),
   z.object({
     type: z.literal('task/status'),
-    status: z.enum(['started', 'completed', 'failed', 'stopped']),
+    status: z.enum(['started', 'completed', 'failed', 'stopped', 'in_progress', 'has_question']),
     message: z.string().optional(),
     task_id: z.string().optional(),
     timestamp: z.number().optional(),
