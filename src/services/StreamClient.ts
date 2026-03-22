@@ -23,6 +23,7 @@ export class StreamClient {
   private readonly maxReconnectDelay = 30000;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private config?: { mtxId?: string; mtxKey?: string; mtxAgent?: number; mtxApp?: number };
+  private connectionId = 0;
 
   private constructor() {}
 
@@ -72,6 +73,7 @@ export class StreamClient {
       this.config = config;
     }
     this.setStatus('connecting');
+    const myConnectionId = ++this.connectionId;
 
     this.abortController = new AbortController();
     const signal = this.abortController.signal;
@@ -103,7 +105,7 @@ export class StreamClient {
       this.reconnectDelay = 1000;
 
       // Consume events in the background; do not await here
-      this.consumeEvents(iterator, chatId);
+      this.consumeEvents(iterator, myConnectionId);
     } catch (error) {
       if (!signal.aborted) {
         console.error('[StreamClient] Connection failed:', error);
@@ -114,20 +116,25 @@ export class StreamClient {
     }
   }
 
-  private async consumeEvents(iterator: AsyncIterable<WidgetEvent>, chatId: string): Promise<void> {
+  private async consumeEvents(iterator: AsyncIterable<WidgetEvent>, connectionId: number): Promise<void> {
+    let stale = false;
     try {
       for await (const event of iterator) {
-        // Stop processing if the chat has changed (a reconnect replaced us)
-        if (this.chatId !== chatId) break;
+        if (this.connectionId !== connectionId) {
+          stale = true;
+          break;
+        }
         this.handleMessage(event);
       }
     } catch (error) {
-      if (!this.isIntentionallyDisconnected) {
+      if (this.connectionId !== connectionId) {
+        stale = true;
+      } else if (!this.isIntentionallyDisconnected) {
         console.warn('[StreamClient] Stream error:', error);
         this.setStatus('error');
       }
     } finally {
-      if (!this.isIntentionallyDisconnected && this.chatId === chatId) {
+      if (!stale && this.connectionId === connectionId && !this.isIntentionallyDisconnected) {
         this.setStatus('disconnected');
         this.scheduleReconnect();
       }
