@@ -28,6 +28,7 @@ const getBuildConfig = (options: { minify: boolean | 'terser'; outDir: string })
     sourcemap: true,
     minify: options.minify,
     target: 'esnext',
+    codeSplitting: false,
     cssCodeSplit: false,
     lib: {
       entry: ENTRY_FILE,
@@ -39,7 +40,6 @@ const getBuildConfig = (options: { minify: boolean | 'terser'; outDir: string })
       output: {
         entryFileNames: BUNDLE_FILE,
         format: 'es',
-        inlineDynamicImports: true,
         globals: {
           react: 'React',
           'react-dom': 'ReactDOM',
