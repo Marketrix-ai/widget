@@ -1260,6 +1260,20 @@ const contract = {
   // SIMULATION ROUTES - Application simulation and testing
   // ============================================================================
 
+  simulationGet: oc
+    .route({
+      method: 'GET',
+      tags: ['Simulation'],
+      path: '/simulation/{simulation_id}',
+      summary: 'Get a single simulation by ID',
+    })
+    .input(
+      z.object({
+        simulation_id: z.coerce.number(),
+      }),
+    )
+    .output(SimulationEntitySchema),
+
   simulationSearch: oc
     .route({
       method: 'GET',
