@@ -19,7 +19,7 @@ jobs:
 
       - name: Create feature branch and draft PR
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.INFRA_PAT }}
         run: |
           ISSUE_NUM="${{ github.event.issue.number }}"
           SLUG=$(echo "${{ github.event.issue.title }}" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | sed 's/--*/-/g' | sed 's/^-//;s/-$//' | cut -c1-50)
