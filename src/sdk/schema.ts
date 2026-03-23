@@ -1490,6 +1490,8 @@ export const AppEventSchema = z.discriminatedUnion('type', [
     application_id: z.number(),
     status: z.string(),
     step_label: z.string().optional(),
+    step_pending: z.boolean().optional(),
+    num_steps: z.number().optional(),
   }),
   z.object({
     type: z.literal('simulation/created'),
@@ -2352,3 +2354,91 @@ export type PreviewVideoChatMessageData = z.infer<typeof PreviewVideoChatMessage
 export type PreviewVideoChatData = z.infer<typeof PreviewVideoChatEntitySchema>;
 export type PreviewVideoChatUpsertData = z.infer<typeof PreviewVideoChatUpsertSchema>;
 export type PreviewVideoChatSearchData = z.infer<typeof PreviewVideoChatSearchSchema>;
+
+// ============================================================================
+// CONNECTION / TRIGGER / ACTION SCHEMAS
+// ============================================================================
+
+export const ConnectionProviderSchema = z.enum(['github', 'slack', 'teams', 'jira']);
+export const TriggerProviderSchema = z.enum(['github', 'slack', 'teams', 'jira', 'timer']);
+export const ActionProviderSchema = z.enum(['github', 'slack', 'teams', 'jira', 'internal']);
+export const ConnectionStatusSchema = z.enum(['connected', 'disconnected']);
+
+// --- Connection ---
+export const ConnectionEntitySchema = BaseEntitySchema.extend({
+  workspace_id: z.number(),
+  provider: ConnectionProviderSchema,
+  status: ConnectionStatusSchema.default('disconnected'),
+  provider_data: z.record(z.string(), z.unknown()).nullish(),
+  connected_at: z.coerce.date().nullish(),
+});
+
+// --- Trigger ---
+export const TriggerEntitySchema = BaseEntitySchema.extend({
+  workspace_id: z.number(),
+  connection_id: z.number().nullish(),
+  provider: TriggerProviderSchema,
+  name: z.string().min(1).max(255),
+  source_config: z.record(z.string(), z.unknown()).default({}),
+  webhook_id: z.string(),
+  webhook_secret: z.string(),
+  enabled: z.boolean().default(true),
+  last_triggered_at: z.coerce.date().nullish(),
+});
+
+export const TriggerCreateSchema = z.object({
+  connection_id: z.number().nullish(),
+  provider: TriggerProviderSchema,
+  name: z.string().min(1).max(255),
+  source_config: z.record(z.string(), z.unknown()).default({}),
+});
+
+export const TriggerUpdateSchema = z.object({
+  trigger_id: z.coerce.number(),
+  name: z.string().min(1).max(255).optional(),
+  source_config: z.record(z.string(), z.unknown()).optional(),
+  enabled: z.boolean().optional(),
+});
+
+export const TriggerSearchSchema = z.object({
+  provider: TriggerProviderSchema.optional(),
+  connection_id: z.coerce.number().optional(),
+}).extend(PaginationSchema.shape);
+
+// --- Action ---
+export const ActionEntitySchema = BaseEntitySchema.extend({
+  workspace_id: z.number(),
+  connection_id: z.number().nullish(),
+  provider: ActionProviderSchema,
+  name: z.string().min(1).max(255),
+  type: z.string().min(1).max(60),
+  target_config: z.record(z.string(), z.unknown()).default({}),
+  is_default: z.boolean().default(false),
+  enabled: z.boolean().default(true),
+  last_executed_at: z.coerce.date().nullish(),
+});
+
+export const ActionCreateSchema = z.object({
+  connection_id: z.number().nullish(),
+  provider: ActionProviderSchema,
+  name: z.string().min(1).max(255),
+  type: z.string().min(1).max(60),
+  target_config: z.record(z.string(), z.unknown()).default({}),
+});
+
+export const ActionUpdateSchema = z.object({
+  action_id: z.coerce.number(),
+  name: z.string().min(1).max(255).optional(),
+  target_config: z.record(z.string(), z.unknown()).optional(),
+  enabled: z.boolean().optional(),
+});
+
+export const ActionSearchSchema = z.object({
+  provider: ActionProviderSchema.optional(),
+  type: z.string().optional(),
+}).extend(PaginationSchema.shape);
+
+// Type aliases
+export type ConnectionData = z.infer<typeof ConnectionEntitySchema>;
+export type TriggerData = z.infer<typeof TriggerEntitySchema>;
+export type ActionData = z.infer<typeof ActionEntitySchema>;

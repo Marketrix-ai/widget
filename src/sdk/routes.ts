@@ -50,6 +50,10 @@ import {
   ApplicationEntitySchema,
   ApplicationTypeSchema,
   ApplicationUpdateSchema,
+  ActionCreateSchema,
+  ActionEntitySchema,
+  ActionSearchSchema,
+  ActionUpdateSchema,
   AutomationCreateSchema,
   AutomationEntitySchema,
   AutomationRunEntitySchema,
@@ -72,6 +76,8 @@ import {
   ConnectorEntitySchema,
   ConnectorSearchSchema,
   ConnectorUpsertSchema,
+  ConnectionEntitySchema,
+  ConnectionProviderSchema,
   DiffValueSchema,
   EntityStatusSchema,
   FailureAnalysisSchema,
@@ -127,6 +133,10 @@ import {
   SuccessWithMessageSchema,
   TourEntitySchema,
   TrialSubscriptionSchema,
+  TriggerCreateSchema,
+  TriggerEntitySchema,
+  TriggerSearchSchema,
+  TriggerUpdateSchema,
   UrlGuideCreateSchema,
   UrlGuideEntitySchema,
   UrlGuideUpdateSchema,
@@ -905,6 +915,178 @@ const contract = {
     .input(z.object({ id: z.coerce.number(), run_id: z.coerce.number() }))
     .output(AutomationRunEntitySchema.nullable()),
 
+  // ============================================================================
+  // CONNECTION ROUTES - OAuth provider connections
+  // ============================================================================
+
+  connectionGet: oc
+    .route({
+      method: 'GET',
+      tags: ['Connection'],
+      path: '/connection/{provider}',
+      summary: 'Get connection for a provider',
+    })
+    .input(z.object({ provider: ConnectionProviderSchema }))
+    .output(ConnectionEntitySchema.nullable()),
+
+  connectionDelete: oc
+    .route({
+      method: 'DELETE',
+      tags: ['Connection'],
+      path: '/connection/{provider}',
+      summary: 'Disconnect a provider',
+    })
+    .input(z.object({ provider: ConnectionProviderSchema }))
+    .output(z.object({ success: z.boolean() })),
+
+  connectionRefresh: oc
+    .route({
+      method: 'POST',
+      tags: ['Connection'],
+      path: '/connection/{provider}/refresh',
+      summary: 'Re-fetch provider data using stored credentials',
+    })
+    .input(z.object({ provider: ConnectionProviderSchema }))
+    .output(ConnectionEntitySchema),
+
+  // ============================================================================
+  // TRIGGER ROUTES - Inbound event sources
+  // ============================================================================
+
+  triggerCreate: oc
+    .route({
+      method: 'POST',
+      tags: ['Trigger'],
+      path: '/trigger',
+      summary: 'Create a new trigger',
+    })
+    .input(TriggerCreateSchema)
+    .output(TriggerEntitySchema),
+
+  triggerGet: oc
+    .route({
+      method: 'GET',
+      tags: ['Trigger'],
+      path: '/trigger/{trigger_id}',
+      summary: 'Get a single trigger',
+    })
+    .input(z.object({ trigger_id: z.coerce.number() }))
+    .output(TriggerEntitySchema),
+
+  triggerSearch: oc
+    .route({
+      method: 'GET',
+      tags: ['Trigger'],
+      path: '/trigger',
+      summary: 'List triggers',
+    })
+    .input(TriggerSearchSchema)
+    .output(paginatedListOf(TriggerEntitySchema)),
+
+  triggerUpdate: oc
+    .route({
+      method: 'PUT',
+      tags: ['Trigger'],
+      path: '/trigger/{trigger_id}',
+      summary: 'Update trigger',
+    })
+    .input(TriggerUpdateSchema)
+    .output(TriggerEntitySchema),
+
+  triggerDelete: oc
+    .route({
+      method: 'DELETE',
+      tags: ['Trigger'],
+      path: '/trigger/{trigger_id}',
+      summary: 'Delete a trigger',
+    })
+    .input(z.object({ trigger_id: z.coerce.number() }))
+    .output(z.object({ success: z.boolean() })),
+
+  triggerToggle: oc
+    .route({
+      method: 'PATCH',
+      tags: ['Trigger'],
+      path: '/trigger/{trigger_id}/toggle',
+      summary: 'Toggle trigger enabled state',
+    })
+    .input(z.object({ trigger_id: z.coerce.number() }))
+    .output(TriggerEntitySchema),
+
+  triggerAutoInstall: oc
+    .route({
+      method: 'POST',
+      tags: ['Trigger'],
+      path: '/trigger/{trigger_id}/install',
+      summary: 'Auto-install trigger configuration on the provider',
+    })
+    .input(z.object({ trigger_id: z.coerce.number() }))
+    .output(z.object({ success: z.boolean(), message: z.string() })),
+
+  // ============================================================================
+  // ACTION ROUTES - Outbound capabilities
+  // ============================================================================
+
+  actionCreate: oc
+    .route({
+      method: 'POST',
+      tags: ['Action'],
+      path: '/action',
+      summary: 'Create a custom action',
+    })
+    .input(ActionCreateSchema)
+    .output(ActionEntitySchema),
+
+  actionGet: oc
+    .route({
+      method: 'GET',
+      tags: ['Action'],
+      path: '/action/{action_id}',
+      summary: 'Get a single action',
+    })
+    .input(z.object({ action_id: z.coerce.number() }))
+    .output(ActionEntitySchema),
+
+  actionSearch: oc
+    .route({
+      method: 'GET',
+      tags: ['Action'],
+      path: '/action',
+      summary: 'List actions',
+    })
+    .input(ActionSearchSchema)
+    .output(paginatedListOf(ActionEntitySchema)),
+
+  actionUpdate: oc
+    .route({
+      method: 'PUT',
+      tags: ['Action'],
+      path: '/action/{action_id}',
+      summary: 'Update action',
+    })
+    .input(ActionUpdateSchema)
+    .output(ActionEntitySchema),
+
+  actionDelete: oc
+    .route({
+      method: 'DELETE',
+      tags: ['Action'],
+      path: '/action/{action_id}',
+      summary: 'Delete an action',
+    })
+    .input(z.object({ action_id: z.coerce.number() }))
+    .output(z.object({ success: z.boolean() })),
+
+  actionToggle: oc
+    .route({
+      method: 'PATCH',
+      tags: ['Action'],
+      path: '/action/{action_id}/toggle',
+      summary: 'Toggle action enabled state',
+    })
+    .input(z.object({ action_id: z.coerce.number() }))
+    .output(ActionEntitySchema),
+
   connectorCapabilities: oc
     .route({
       method: 'GET',
@@ -1259,6 +1441,20 @@ const contract = {
   // ============================================================================
   // SIMULATION ROUTES - Application simulation and testing
   // ============================================================================
+
+  simulationGet: oc
+    .route({
+      method: 'GET',
+      tags: ['Simulation'],
+      path: '/simulation/{simulation_id}',
+      summary: 'Get a single simulation by ID',
+    })
+    .input(
+      z.object({
+        simulation_id: z.coerce.number(),
+      }),
+    )
+    .output(SimulationEntitySchema),
 
   simulationSearch: oc
     .route({
