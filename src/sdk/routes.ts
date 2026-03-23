@@ -1013,6 +1013,16 @@ const contract = {
     .input(z.object({ trigger_id: z.coerce.number() }))
     .output(TriggerEntitySchema),
 
+  triggerAutoInstall: oc
+    .route({
+      method: 'POST',
+      tags: ['Trigger'],
+      path: '/trigger/{trigger_id}/install',
+      summary: 'Auto-install trigger configuration on the provider',
+    })
+    .input(z.object({ trigger_id: z.coerce.number() }))
+    .output(z.object({ success: z.boolean(), message: z.string() })),
+
   // ============================================================================
   // ACTION ROUTES - Outbound capabilities
   // ============================================================================
