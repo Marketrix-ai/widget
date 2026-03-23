@@ -1,10 +1,13 @@
 name: Create Branch
+
 on:
   issues:
     types: [assigned]
+
 permissions:
   contents: write
   issues: write
+  pull-requests: write
 
 jobs:
   create-branch:
@@ -14,24 +17,36 @@ jobs:
         with:
           ref: dev
 
-      - name: Create feature branch
+      - name: Create feature branch and draft PR
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           ISSUE_NUM="${{ github.event.issue.number }}"
           SLUG=$(echo "${{ github.event.issue.title }}" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | sed 's/--*/-/g' | sed 's/^-//;s/-$//' | cut -c1-50)
           BRANCH="${ISSUE_NUM}-${SLUG}"
+          ASSIGNEE="${{ github.event.assignee.login }}"
 
           LABELS='${{ toJSON(github.event.issue.labels.*.name) }}'
           if echo "$LABELS" | grep -q '"cross-cutting"'; then
-            echo "Skipping branch creation for cross-cutting tracking issue"
+            echo "Skipping for cross-cutting tracking issue"
             exit 0
           fi
 
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
           git checkout -b "$BRANCH"
+          git commit --allow-empty -m "chore: tracking branch for #${ISSUE_NUM}"
           git push origin "$BRANCH"
 
-          gh issue comment "$ISSUE_NUM" --body "Branch \`$BRANCH\` created. To start working:
+          PR_URL=$(gh pr create \
+            --base dev \
+            --head "$BRANCH" \
+            --title "${{ github.event.issue.title }}" \
+            --body "Closes #${ISSUE_NUM}" \
+            --draft \
+            --assignee "$ASSIGNEE")
+
+          gh issue comment "$ISSUE_NUM" --body "Branch \`$BRANCH\` and [draft PR]($PR_URL) created, assigned to @${ASSIGNEE}.
           \`\`\`
           git fetch origin && git checkout $BRANCH
           \`\`\`"
