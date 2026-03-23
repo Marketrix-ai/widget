@@ -37,6 +37,7 @@ Marketrix Widget is an embeddable support widget built with TypeScript 5.9, Reac
 
 ## Development Rules
 - Do not develop directly on `dev`; use a feature branch or worktree.
+- Assigned issues create a feature branch and draft PR automatically; keep the PR linked with `Closes #N`.
 - Treat issues or PR descriptions as the source of truth for scope, then verify the implementation matches before handoff.
 - Keep `src/sdk/routes.ts` and `src/sdk/schema.ts` synchronized with backend contract changes in the API repo.
 - Prefer extending shared services or utilities over adding one-off logic in a single component.
@@ -47,4 +48,4 @@ Use TypeScript with 2-space indentation, single quotes, semicolons, trailing com
 
 ## Testing, Commits & Pull Requests
 
-Vitest runs in `jsdom` with Testing Library, `@testing-library/jest-dom`, and axe helpers. Name tests `*.test.ts` or `*.test.tsx` and keep them near the feature under test. For stream or session changes, add tests for reconnects, persistence, or event handling, not just render output. Recent history follows Conventional Commit style such as `fix(scope): ...` and `chore(widget): release v3.2.183`. PRs should use `.github/pull_request_template.md`, link issues, summarize behavior changes, list validation performed, and include screenshots for visible UI updates.
+Vitest runs in `jsdom` with Testing Library, `@testing-library/jest-dom`, and axe helpers. Name tests `*.test.ts` or `*.test.tsx` and keep them near the feature under test. For stream or session changes, add tests for reconnects, persistence, or event handling, not just render output. Recent history follows Conventional Commit style such as `fix(scope): ...` and `chore(widget): release v3.2.183`. PRs should link the issue, summarize behavior changes, list validation performed, and include screenshots for visible UI updates.
