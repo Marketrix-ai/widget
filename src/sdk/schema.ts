@@ -56,8 +56,8 @@ export const ChatRoleSchema = z.enum(['user', 'agent']);
 export const ChatSourceSchema = z.enum(['widget', 'app']);
 export const InstructionTypeSchema = z.enum(['tell', 'show', 'do']);
 export const ApplicationTypeSchema = z.enum(['app', 'website']);
-export const WidgetTypeSchema = z.enum(['widget', 'slack']);
-export const ConnectorTypeSchema = z.enum(['timer', 'github', 'slack', 'teams', 'jira']);
+export const WidgetTypeSchema = z.enum(['widget']);
+export const ConnectorTypeSchema = z.enum(['timer', 'github', 'slack', 'teams', 'jira', 'mcp']);
 export const ActionLogTypeSchema = z.enum([
   'user_login',
   'url_visit',
@@ -1651,6 +1651,7 @@ export const ChatEntitySchema = BaseEntitySchema.extend({
  */
 export const ConnectorEntitySchema = BaseEntitySchema.extend({
   workspace_id: z.number(),
+  application_id: z.number().nullish(),
   provider: ConnectorTypeSchema,
   name: z.string().min(1).max(120),
   identifier: z.string().max(120).nullish(),
@@ -1666,6 +1667,7 @@ export const ConnectorEntitySchema = BaseEntitySchema.extend({
  */
 export const ConnectorUpsertSchema = z.object({
   id: z.coerce.number().optional(),
+  application_id: z.number().nullish(),
   provider: ConnectorTypeSchema,
   name: z.string().min(1).max(120),
   identifier: z.string().max(120).nullish(),
@@ -1680,6 +1682,7 @@ export const ConnectorUpsertSchema = z.object({
  * Search payload for connectors
  */
 export const ConnectorSearchSchema = z.object({
+  application_id: z.number().nullish(),
   provider: ConnectorTypeSchema.optional(),
   status: EntityStatusSchema.optional(),
   is_active: z.coerce.boolean().optional(),
@@ -2360,7 +2363,7 @@ export type PreviewVideoChatSearchData = z.infer<typeof PreviewVideoChatSearchSc
 // ============================================================================
 
 export const ConnectionProviderSchema = z.enum(['github', 'slack', 'teams', 'jira']);
-export const TriggerProviderSchema = z.enum(['github', 'slack', 'teams', 'jira', 'timer']);
+export const TriggerProviderSchema = z.enum(['github', 'slack', 'teams', 'jira', 'timer', 'mcp']);
 export const ActionProviderSchema = z.enum(['github', 'slack', 'teams', 'jira', 'internal']);
 export const ConnectionStatusSchema = z.enum(['connected', 'disconnected']);
 
@@ -2376,6 +2379,7 @@ export const ConnectionEntitySchema = BaseEntitySchema.extend({
 // --- Trigger ---
 export const TriggerEntitySchema = BaseEntitySchema.extend({
   workspace_id: z.number(),
+  connector_id: z.number().nullish(),
   connection_id: z.number().nullish(),
   provider: TriggerProviderSchema,
   name: z.string().min(1).max(255),
@@ -2387,6 +2391,7 @@ export const TriggerEntitySchema = BaseEntitySchema.extend({
 });
 
 export const TriggerCreateSchema = z.object({
+  connector_id: z.number().nullish(),
   connection_id: z.number().nullish(),
   provider: TriggerProviderSchema,
   name: z.string().min(1).max(255),
@@ -2402,6 +2407,7 @@ export const TriggerUpdateSchema = z.object({
 
 export const TriggerSearchSchema = z.object({
   provider: TriggerProviderSchema.optional(),
+  connector_id: z.number().nullish(),
   connection_id: z.coerce.number().optional(),
 }).extend(PaginationSchema.shape);
 
