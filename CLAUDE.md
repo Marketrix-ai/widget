@@ -83,6 +83,14 @@ The widget is the runtime component of what users call **Widgets** in the dashbo
 - `src/sdk/schema.ts` must stay in sync with `api/schema.ts`
 - Published as `@marketrix.ai/widget` — consumed by `app/` for preview
 
+## Development Rules
+
+1. **Issue = design spec.** What to build and why. No implementation details.
+2. **Draft PR = implementation plan.** Before coding, write the plan in the draft PR body: files to change, approach, key decisions. This is what the PR will be reviewed against.
+3. **Before completing, compare.** Check implementation against the PR plan. Implement anything missing. Then update the PR body to match what was actually built.
+4. **Always use worktrees.** Never develop on `dev` directly. `git worktree add` against the auto-created branch.
+5. **PR must link an issue.** Use `Closes #N` in the PR body. If no issue exists, the automation creates one.
+
 ## Commands
 
 - `npm start` — Vite dev server (port 5174)
