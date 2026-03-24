@@ -1704,18 +1704,30 @@ const contract = {
       method: 'GET',
       tags: ['Session'],
       path: '/sessions/{session_id}/events',
-      summary: 'Get session events',
-      description: 'Fetches all batches from folder, combines them in correct order, and returns events array',
+      summary: 'Get session events (paginated by batch)',
+      description: 'Fetches batches from storage in pages. Use batch_offset/batch_limit to paginate.',
     })
-    .input(z.object({ session_id: z.string().min(1) }))
+    .input(
+      z.object({
+        session_id: z.string().min(1),
+        batch_offset: z.coerce.number().int().nonnegative().default(0),
+        batch_limit: z.coerce.number().int().positive().max(50).default(20),
+      }),
+    )
     .output(
-      listOf(
-        z.object({
-          type: z.number(),
-          timestamp: z.number(),
-          data: z.unknown().describe('rrweb event payload — shape defined by rrweb library'),
-        }),
-      ),
+      z.object({
+        items: z.array(
+          z.object({
+            type: z.number(),
+            timestamp: z.number(),
+            data: z.unknown().describe('rrweb event payload — shape defined by rrweb library'),
+          }),
+        ),
+        count: z.number(),
+        total_batches: z.number(),
+        batch_offset: z.number(),
+        batch_limit: z.number(),
+      }),
     ),
 
   browserSessionCreate: oc

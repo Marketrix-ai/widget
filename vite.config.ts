@@ -134,7 +134,7 @@ export default defineConfig(({ command }) => {
     appType: 'mpa',
     root: '.',
     server: {
-      port: parseInt(process.env.PORT || process.env.VITE_PORT || '5174', 10),
+      port: parseInt(process.env.PORT || process.env.VITE_PORT || '9001', 10),
       cors: true,
       headers: { 'Access-Control-Allow-Origin': '*' },
     },
