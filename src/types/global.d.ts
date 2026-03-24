@@ -29,7 +29,6 @@ declare global {
     chatService?: unknown;
     StreamClient?: unknown;
     devTools?: unknown;
-    devTestService?: unknown;
   }
 
   // Navigator extensions for media devices
