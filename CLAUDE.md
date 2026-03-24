@@ -93,7 +93,7 @@ The widget is the runtime component of what users call **Widgets** in the dashbo
 
 ## Commands
 
-- `npm start` — Vite dev server (port 5174)
+- `npm start` — Vite dev server (port 9001)
 - `npm run build` — dual library + standalone build
 - `npm run lint` — ESLint
 
