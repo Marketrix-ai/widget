@@ -6,7 +6,7 @@ on:
   pull_request:
     branches: [dev]
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.sha }}
   cancel-in-progress: true
 jobs:
   validate:
