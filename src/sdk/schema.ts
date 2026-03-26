@@ -846,6 +846,8 @@ export const SimulationTaskEntrySchema = z.object({
   started_at: z.string().nullish(),
   completed_at: z.string().nullish(),
   order_index: z.number().int().nonnegative().default(0),
+  tab_id: z.string().nullish(),
+  steps_completed: z.number().int().nonnegative().default(0),
 });
 export type SimulationTaskEntry = z.infer<typeof SimulationTaskEntrySchema>;
 
