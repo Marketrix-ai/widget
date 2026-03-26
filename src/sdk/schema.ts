@@ -834,6 +834,22 @@ export const SimulationProgressEntrySchema = z.object({
 export type SimulationProgressEntry = z.infer<typeof SimulationProgressEntrySchema>;
 
 /**
+ * A single task within a simulation. Direct simulations have 1 task (the prompt).
+ * QA simulations have N tasks (one per test case).
+ */
+export const SimulationTaskEntrySchema = z.object({
+  task_id: z.string(),
+  title: z.string(),
+  instructions: z.string(),
+  status: z.enum(['pending', 'running', 'passed', 'failed', 'skipped']),
+  error_message: z.string().nullish(),
+  started_at: z.string().nullish(),
+  completed_at: z.string().nullish(),
+  order_index: z.number().int().nonnegative().default(0),
+});
+export type SimulationTaskEntry = z.infer<typeof SimulationTaskEntrySchema>;
+
+/**
  * App simulation schema
  */
 export const SimulationEntitySchema = BaseEntitySchema.extend({
@@ -851,6 +867,7 @@ export const SimulationEntitySchema = BaseEntitySchema.extend({
   agent_name: z.string().nullish(),
   graph_index_id: z.string().nullish(),
   progress_log: z.array(SimulationProgressEntrySchema).optional(),
+  tasks: z.array(SimulationTaskEntrySchema).optional(),
   agents: z.array(AgentBadgeSchema).optional(),
 });
 
@@ -2606,7 +2623,10 @@ export const ReactionResultEntitySchema = z.object({
   persona_id: z.number().nullable(),
   persona_name: z.string().optional(),
   persona_initials: z.string().optional(),
-  ad_hoc_persona: z.object({ name: z.string(), description: z.string(), traits: z.array(z.string()) }).nullable().optional(),
+  ad_hoc_persona: z
+    .object({ name: z.string(), description: z.string(), traits: z.array(z.string()) })
+    .nullable()
+    .optional(),
   overall_reactions: z.record(z.string(), ReactionScoreSchema),
   dimension_scores: z.record(z.string(), ReactionScoreSchema),
   created_at: z.coerce.date().optional(),
