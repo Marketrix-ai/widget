@@ -1,7 +1,6 @@
 import React from 'react';
 
 import MarketrixIcon from '../../assets/marketrix-icon.svg';
-import { SHADOW } from '../../design-system/shadows';
 import type { ChatMessage } from '../../types';
 import { formatMessageTime } from '../../utils/format';
 import { Avatar, Button, Flex, Stack, Text } from '../base';
@@ -54,13 +53,13 @@ export const MessageItem: React.FC<MessageItemProps> = ({
               src={MarketrixIcon}
               alt='Marketrix AI'
               size={20}
+              fit='cover'
+              rounded='theme'
               style={{
                 border: 'none',
                 outline: 'none',
                 display: 'block',
-                objectFit: 'cover',
                 backgroundColor: 'transparent',
-                borderRadius: 'calc(var(--radius) * 0.6)',
               }}
             />
           )}
@@ -70,10 +69,10 @@ export const MessageItem: React.FC<MessageItemProps> = ({
         <Stack
           grow
           position='relative'
+          rounded='theme'
+          elevation='card'
           style={{
             padding: message.videoStream ? '0' : '8px 10px',
-            borderRadius: 'var(--radius)',
-            boxShadow: SHADOW.card,
             border: '1px solid transparent',
             backgroundColor: isUser ? 'var(--primary)' : undefined,
             color: isUser ? 'var(--primary-foreground)' : 'var(--foreground)',
@@ -87,29 +86,17 @@ export const MessageItem: React.FC<MessageItemProps> = ({
           {/* Screen access request action buttons - show if not yet handled */}
           {message.isScreenAccessRequest && !message.screenShareStatus && (
             <Flex align='center' gap='sm' style={{ marginTop: '6px' }}>
-              <Button
-                type='button'
-                variant='primary'
-                size='sm'
-                className='rounded-full'
-                onClick={() => onScreenAccessAllow?.()}
-              >
+              <Button type='button' variant='primary' size='sm' shape='pill' onClick={() => onScreenAccessAllow?.()}>
                 Yes
               </Button>
-              <Button
-                type='button'
-                variant='secondary'
-                size='sm'
-                className='rounded-full'
-                onClick={() => onScreenAccessDeny?.()}
-              >
+              <Button type='button' variant='secondary' size='sm' shape='pill' onClick={() => onScreenAccessDeny?.()}>
                 No
               </Button>
             </Flex>
           )}
 
           {message.isScreenAccessRequest && message.screenShareStatus && (
-            <Text as='div' variant='faint' size='xs' style={{ marginTop: '2px', fontStyle: 'italic' }}>
+            <Text as='div' variant='faint' size='xs' italic style={{ marginTop: '2px' }}>
               {message.screenShareStatus === 'allowed' ? 'Sure' : 'Check HTML Instead'}
             </Text>
           )}
@@ -127,11 +114,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
       </Flex>
       {/* Timestamp — right-aligned */}
       {!message.isPlaceholder && (
-        <Text
-          as='div'
-          variant='faint'
-          style={{ marginTop: '2px', textAlign: 'right', marginRight: '26px', fontSize: '10px' }}
-        >
+        <Text as='div' variant='faint' size='xxs' align='right' style={{ marginTop: '2px', marginRight: '26px' }}>
           {formatMessageTime(message.timestamp)}
         </Text>
       )}

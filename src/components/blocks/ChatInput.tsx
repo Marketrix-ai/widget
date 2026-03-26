@@ -91,7 +91,13 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(f
   const canSend = Boolean(value.trim()) && !disabled;
 
   return (
-    <Stack className='rounded-xl border border-border overflow-hidden focus-within:border-foreground-faint transition-colors'>
+    <Stack
+      background='card'
+      rounded='xl'
+      border
+      overflow='hidden'
+      className='focus-within:border-foreground-faint transition-colors'
+    >
       <Textarea
         ref={mergeRefs(textareaRef, ref)}
         value={value}
@@ -100,17 +106,16 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(f
         placeholder={placeholder}
         disabled={disabled}
         rows={1}
-        className='w-full px-3 text-sm text-foreground placeholder:text-foreground-faint resize-none focus:outline-none focus:ring-0 border-none shadow-none disabled:opacity-50 disabled:cursor-not-allowed'
+        variant='chat'
         style={{
-          backgroundColor: 'transparent',
           lineHeight: '20px',
           paddingTop: '4px',
           paddingBottom: '2px',
           minHeight: 'unset',
         }}
       />
-      <Flex className='items-center justify-between px-1.5 pt-1 pb-1.5'>
-        <Flex className='items-center gap-1'>
+      <Flex align='center' justify='between' paddingX='sm' paddingTop='2xs' paddingBottom='sm'>
+        <Flex align='center' gap='2xs'>
           {modes.map(mode => {
             const isActive = activeMode === mode.id;
             return (
@@ -125,7 +130,7 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(f
                 }}
               >
                 <Icon name={mode.icon} size={12} />
-                <Text as='span' className='text-inherit'>
+                <Text as='span' inheritColor>
                   {mode.label}
                 </Text>
               </Pill>

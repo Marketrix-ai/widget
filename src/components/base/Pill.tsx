@@ -2,6 +2,8 @@ import { forwardRef } from 'react';
 
 import { cn } from '@/lib/utils';
 
+import { radiusClasses } from '../../design-system/component-tokens';
+
 type PillVariant = 'primary';
 type PillSize = 'sm';
 
@@ -25,7 +27,8 @@ export const Pill = forwardRef<HTMLButtonElement, PillProps>(function Pill(
       ref={ref}
       type='button'
       className={cn(
-        'inline-flex items-center font-medium rounded-full border-none cursor-pointer transition-all duration-200',
+        'inline-flex items-center font-medium border-none cursor-pointer transition-all duration-200',
+        radiusClasses.pill,
         sizeStyles[size],
         active && variant === 'primary' && 'bg-primary text-primary-foreground shadow-sm',
         !active && 'bg-secondary-bg text-foreground-muted',

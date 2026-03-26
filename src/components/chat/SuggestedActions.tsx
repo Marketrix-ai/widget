@@ -1,6 +1,5 @@
 import React from 'react';
 
-import { SHADOW } from '../../design-system/shadows';
 import { useWidget } from '../../hooks/useWidget';
 import { Button, Stack, Text } from '../base';
 
@@ -26,20 +25,19 @@ export const SuggestedActions: React.FC<SuggestedActionsProps> = ({ actions, onA
       {actions.map((action, chipIndex) => (
         <Button
           key={`welcome-chip-${action.id}-${chipIndex}`}
-          variant='ghost'
+          elevation='card'
+          shape='theme'
           size='sm'
+          variant='chip'
           full
           onClick={e => onActionClick(action, e)}
-          className='hover:bg-primary hover:text-primary-foreground hover:border-primary'
           style={{
-            backgroundColor: 'var(--secondary-bg)',
             color: widgetConfig.widget_text_color,
             paddingTop: '8px',
             paddingBottom: '8px',
-            boxShadow: SHADOW.card,
           }}
         >
-          <Text as='span' weight='normal' style={{ lineHeight: 1 }}>
+          <Text as='span' weight='normal' leading='tight'>
             {action.type === 'show' ? (
               <>Show me {action.text.replace(/^Show me\s*/i, '')}</>
             ) : action.type === 'do' ? (

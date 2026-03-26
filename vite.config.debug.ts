@@ -22,6 +22,7 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     emptyOutDir: false, // Don't clear dist folder (keep index.mjs)
+    codeSplitting: false,
     cssCodeSplit: false,
     chunkSizeWarningLimit: 600,
     assetsInlineLimit: 100000000,
@@ -32,7 +33,6 @@ export default defineConfig({
         chunkFileNames: 'debug-[name].js',
         assetFileNames: 'debug.[ext]',
         format: 'iife',
-        inlineDynamicImports: true,
         manualChunks: undefined,
       },
     },

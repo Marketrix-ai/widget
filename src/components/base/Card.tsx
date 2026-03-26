@@ -1,10 +1,15 @@
 import { forwardRef } from 'react';
 
-import { cn } from '@/lib/utils';
-
-import { SHADOW } from '../../design-system/shadows';
+import type { RadiusToken } from '../../design-system/component-tokens';
+import type { ShadowToken } from '../../design-system/shadows';
+import { Surface } from './Surface';
 
 export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
+  background?: 'card' | 'transparent';
+  border?: boolean | 'top' | 'bottom';
+  elevation?: ShadowToken;
+  paddingPreset?: 'compact' | 'card';
+  radius?: RadiusToken;
   /** @internal */
   className?: string;
 }
@@ -13,22 +18,34 @@ export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
  * A card surface with consistent border-radius, shadow, and white background.
  * Used for: recent conversation card, help about card, chat input container, etc.
  */
-export const Card = forwardRef<HTMLDivElement, CardProps>(function Card({ className, style, children, ...props }, ref) {
+export const Card = forwardRef<HTMLDivElement, CardProps>(function Card(
+  {
+    background = 'card',
+    border = true,
+    children,
+    className,
+    elevation = 'card',
+    paddingPreset = 'card',
+    radius = 'xl',
+    style,
+    ...props
+  },
+  ref,
+) {
   return (
-    <div
+    <Surface
       {...props}
-      ref={ref}
-      className={cn(className)}
-      style={{
-        padding: '8px 12px',
-        borderRadius: 'var(--radius-xl, 12px)',
-        border: '1px solid transparent',
-        backgroundColor: '#ffffff',
-        boxShadow: SHADOW.card,
-        ...style,
-      }}
+      ref={ref as React.Ref<HTMLElement>}
+      as='div'
+      background={background}
+      border={border}
+      className={className}
+      elevation={elevation}
+      paddingPreset={paddingPreset}
+      radius={radius}
+      style={style}
     >
       {children}
-    </div>
+    </Surface>
   );
 });
