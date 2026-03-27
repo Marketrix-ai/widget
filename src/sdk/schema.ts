@@ -420,6 +420,7 @@ export const QARunEntitySchema = BaseEntitySchema.extend({
   total_tests: z.number().int().nonnegative(),
   passed_tests: z.number().int().nonnegative(),
   failed_tests: z.number().int().nonnegative(),
+  simulation_id: z.number().nullish(),
   started_at: z.coerce.date().nullish(),
   completed_at: z.coerce.date().nullish(),
 });
@@ -436,7 +437,7 @@ export const QAProgressLogEntrySchema = z.object({
 
 export const QAExecutionEntrySchema = z.object({
   run_id: z.number(),
-  status: z.enum(['pending', 'running', 'passed', 'failed', 'skipped']),
+  status: z.enum(['pending', 'running', 'passed', 'failed', 'skipped', 'completed']),
   browser_type: BrowserTypeSchema.nullish(),
   progress_log: z.array(QAProgressLogEntrySchema).default([]),
   error_message: z.string().nullish(),
@@ -833,6 +834,24 @@ export const SimulationProgressEntrySchema = z.object({
 export type SimulationProgressEntry = z.infer<typeof SimulationProgressEntrySchema>;
 
 /**
+ * A single task within a simulation. Direct simulations have 1 task (the prompt).
+ * QA simulations have N tasks (one per test case).
+ */
+export const SimulationTaskEntrySchema = z.object({
+  task_id: z.string(),
+  title: z.string(),
+  instructions: z.string(),
+  status: z.enum(['pending', 'running', 'passed', 'failed', 'skipped']),
+  error_message: z.string().nullish(),
+  started_at: z.string().nullish(),
+  completed_at: z.string().nullish(),
+  order_index: z.number().int().nonnegative().default(0),
+  tab_id: z.string().nullish(),
+  steps_completed: z.number().int().nonnegative().default(0),
+});
+export type SimulationTaskEntry = z.infer<typeof SimulationTaskEntrySchema>;
+
+/**
  * App simulation schema
  */
 export const SimulationEntitySchema = BaseEntitySchema.extend({
@@ -850,6 +869,7 @@ export const SimulationEntitySchema = BaseEntitySchema.extend({
   agent_name: z.string().nullish(),
   graph_index_id: z.string().nullish(),
   progress_log: z.array(SimulationProgressEntrySchema).optional(),
+  tasks: z.array(SimulationTaskEntrySchema).optional(),
   agents: z.array(AgentBadgeSchema).optional(),
 });
 
@@ -1480,7 +1500,7 @@ export type WidgetCommand = z.infer<typeof WidgetCommandSchema>;
 // APP EVENTS - Real-time event stream for the dashboard app
 // ============================================================================
 
-export const AppEventScopeSchema = z.enum(['simulations', 'agents', 'qa', 'user', 'jobs']);
+export const AppEventScopeSchema = z.enum(['simulations', 'agents', 'qa', 'user', 'jobs', 'triggers']);
 
 export const AppEventSchema = z.discriminatedUnion('type', [
   // Simulation events
@@ -1504,11 +1524,62 @@ export const AppEventSchema = z.discriminatedUnion('type', [
     application_id: z.number(),
   }),
 
+  // Flow-driven simulation lifecycle events
+  z.object({
+    type: z.literal('simulation/queued'),
+    simulation_id: z.number(),
+    job_id: z.string(),
+  }),
+  z.object({
+    type: z.literal('simulation/started'),
+    simulation_id: z.number(),
+    job_id: z.string(),
+  }),
+  z.object({
+    type: z.literal('simulation/step'),
+    simulation_id: z.number(),
+    job_id: z.string(),
+    step_count: z.number().optional(),
+    message: z.string().optional(),
+  }),
+  z.object({
+    type: z.literal('simulation/question'),
+    simulation_id: z.number(),
+    job_id: z.string(),
+    question: z.string().optional(),
+  }),
+  z.object({
+    type: z.literal('simulation/completed'),
+    simulation_id: z.number(),
+    job_id: z.string(),
+    step_count: z.number().optional(),
+  }),
+  z.object({
+    type: z.literal('simulation/failed'),
+    simulation_id: z.number(),
+    job_id: z.string(),
+    error: z.string().optional(),
+  }),
+  z.object({
+    type: z.literal('simulation/stopped'),
+    simulation_id: z.number(),
+    job_id: z.string(),
+  }),
+
+  // Flow-driven qa-run terminal event
+  z.object({
+    type: z.literal('qa-run/completed'),
+    run_id: z.number(),
+    status: z.string(),
+  }),
+
   // Agent events
   z.object({
     type: z.literal('agent/updated'),
-    agent_id: z.number(),
-    application_id: z.number(),
+    agent_id: z.number().optional(),
+    chat_id: z.string().optional(),
+    task_id: z.string().optional(),
+    application_id: z.number().optional(),
     status: z.string(),
   }),
   z.object({
@@ -1536,6 +1607,7 @@ export const AppEventSchema = z.discriminatedUnion('type', [
     document_id: z.number(),
     application_id: z.number(),
     status: z.string(),
+    simulation_id: z.number().optional(),
   }),
   z.object({
     type: z.literal('qa-test/updated'),
@@ -1573,6 +1645,17 @@ export const AppEventSchema = z.discriminatedUnion('type', [
     job_id: z.string(),
     application_id: z.number(),
     error: z.string(),
+  }),
+
+  // Trigger events
+  z.object({
+    type: z.literal('trigger/fired'),
+    trigger_id: z.number(),
+    workspace_id: z.number(),
+    provider: z.string(),
+    name: z.string(),
+    payload: z.unknown().optional(),
+    timestamp: z.string(),
   }),
 ]);
 
@@ -2236,7 +2319,6 @@ export type SimulationHistoryData = z.infer<typeof SimulationHistorySchema>;
 export type SimulationModelOutputData = z.infer<typeof SimulationModelOutputSchema>;
 export type SimulationResultData = z.infer<typeof SimulationResultSchema>;
 export type SimulationStateData = z.infer<typeof SimulationStateSchema>;
-export type SimulationStepMetadataData = z.infer<typeof SimulationStepMetadataSchema>;
 export type SimulationActionData = z.infer<typeof SimulationActionSchema>;
 export type BrowserTabData = z.infer<typeof BrowserTabSchema>;
 export type InteractedElementData = z.infer<typeof InteractedElementSchema>;
@@ -2372,6 +2454,7 @@ export const ConnectionEntitySchema = BaseEntitySchema.extend({
   workspace_id: z.number(),
   provider: ConnectionProviderSchema,
   status: ConnectionStatusSchema.default('disconnected'),
+  credentials: z.record(z.string(), z.unknown()).nullish(),
   provider_data: z.record(z.string(), z.unknown()).nullish(),
   connected_at: z.coerce.date().nullish(),
 });
@@ -2379,8 +2462,8 @@ export const ConnectionEntitySchema = BaseEntitySchema.extend({
 // --- Trigger ---
 export const TriggerEntitySchema = BaseEntitySchema.extend({
   workspace_id: z.number(),
-  connector_id: z.number().nullish(),
   connection_id: z.number().nullish(),
+  connector_id: z.number().nullish(),
   provider: TriggerProviderSchema,
   name: z.string().min(1).max(255),
   source_config: z.record(z.string(), z.unknown()).default({}),
@@ -2391,8 +2474,8 @@ export const TriggerEntitySchema = BaseEntitySchema.extend({
 });
 
 export const TriggerCreateSchema = z.object({
-  connector_id: z.number().nullish(),
   connection_id: z.number().nullish(),
+  connector_id: z.number().nullish(),
   provider: TriggerProviderSchema,
   name: z.string().min(1).max(255),
   source_config: z.record(z.string(), z.unknown()).default({}),
@@ -2405,11 +2488,13 @@ export const TriggerUpdateSchema = z.object({
   enabled: z.boolean().optional(),
 });
 
-export const TriggerSearchSchema = z.object({
-  provider: TriggerProviderSchema.optional(),
-  connector_id: z.number().nullish(),
-  connection_id: z.coerce.number().optional(),
-}).extend(PaginationSchema.shape);
+export const TriggerSearchSchema = z
+  .object({
+    provider: TriggerProviderSchema.optional(),
+    connection_id: z.coerce.number().optional(),
+    connector_id: z.coerce.number().optional(),
+  })
+  .extend(PaginationSchema.shape);
 
 // --- Action ---
 export const ActionEntitySchema = BaseEntitySchema.extend({
@@ -2439,10 +2524,152 @@ export const ActionUpdateSchema = z.object({
   enabled: z.boolean().optional(),
 });
 
-export const ActionSearchSchema = z.object({
-  provider: ActionProviderSchema.optional(),
-  type: z.string().optional(),
-}).extend(PaginationSchema.shape);
+export const ActionSearchSchema = z
+  .object({
+    provider: ActionProviderSchema.optional(),
+    type: z.string().optional(),
+  })
+  .extend(PaginationSchema.shape);
+
+// ============================================================================
+// INSIGHT - UX Insights: Personas, Heatmaps, Reactions
+// ============================================================================
+
+export const InsightConnectorStatusSchema = z.enum(['connected', 'not_connected']);
+
+export const InsightConnectorSchema = z.object({
+  key: z.string(),
+  label: z.string(),
+  color: z.string(),
+  status: InsightConnectorStatusSchema,
+  session_count: z.number().nullable(),
+});
+
+export const InsightSegmentEntitySchema = z.object({
+  id: z.number(),
+  application_id: z.number(),
+  name: z.string(),
+  percentage: z.number(),
+  description: z.string(),
+  avg_sessions_per_week: z.number(),
+  mobile_percentage: z.number(),
+  created_at: z.coerce.date().optional(),
+  updated_at: z.coerce.date().optional(),
+});
+
+export const InsightPersonaEntitySchema = z.object({
+  id: z.number(),
+  application_id: z.number(),
+  segment_id: z.number().nullable(),
+  segment_name: z.string().optional(),
+  name: z.string(),
+  initials: z.string(),
+  description: z.string(),
+  traits: z.array(z.string()),
+  created_at: z.coerce.date().optional(),
+  updated_at: z.coerce.date().optional(),
+});
+
+export const InsightPersonasResponseSchema = z.object({
+  connectors: z.array(InsightConnectorSchema),
+  segments: z.array(InsightSegmentEntitySchema),
+  personas: z.array(InsightPersonaEntitySchema),
+});
+
+// Heatmaps
+
+export const HeatmapTypeSchema = z.enum(['clicks', 'scroll', 'attention']);
+export const HeatmapVariationSchema = z.enum(['desktop', 'tablet', 'mobile']);
+
+export const HeatSpotSchema = z.object({
+  x: z.number(),
+  y: z.number(),
+  radius: z.number(),
+  intensity: z.number(),
+});
+
+export const HeatmapStatsSchema = z.object({
+  total_interactions: z.number(),
+  unique_users: z.number(),
+  hottest_zone: z.string(),
+  dead_zones: z.number(),
+});
+
+export const HeatmapPageEntitySchema = z.object({
+  id: z.number(),
+  application_id: z.number(),
+  path: z.string(),
+  session_count: z.number(),
+  variation_count: z.number(),
+});
+
+export const HeatmapSnapshotEntitySchema = z.object({
+  id: z.number(),
+  heatmap_page_id: z.number(),
+  variation: HeatmapVariationSchema,
+  type: HeatmapTypeSchema,
+  spots: z.array(HeatSpotSchema),
+  stats: HeatmapStatsSchema,
+});
+
+// Reactions
+
+export const ReactionScoreSchema = z.object({
+  score: z.number().min(1).max(10),
+  justification: z.string(),
+});
+
+export const ReactionResultEntitySchema = z.object({
+  id: z.number(),
+  run_id: z.number(),
+  persona_id: z.number().nullable(),
+  persona_name: z.string().optional(),
+  persona_initials: z.string().optional(),
+  ad_hoc_persona: z
+    .object({ name: z.string(), description: z.string(), traits: z.array(z.string()) })
+    .nullable()
+    .optional(),
+  overall_reactions: z.record(z.string(), ReactionScoreSchema),
+  dimension_scores: z.record(z.string(), ReactionScoreSchema),
+  created_at: z.coerce.date().optional(),
+});
+
+export const ContextRefSchema = z.object({
+  type: z.enum(['doc', 'sim', 'session']),
+  id: z.string(),
+  label: z.string(),
+});
+
+export const SuggestedSimulationSchema = z.object({
+  description: z.string(),
+  selected: z.boolean(),
+});
+
+export const ReactionRunEntitySchema = z.object({
+  id: z.number(),
+  reaction_id: z.number(),
+  run_number: z.number().optional(),
+  context_refs: z.array(ContextRefSchema),
+  simulations: z.array(SuggestedSimulationSchema),
+  persona_ids: z.array(z.number()).optional(),
+  results: z.array(ReactionResultEntitySchema).optional(),
+  created_at: z.coerce.date().optional(),
+});
+
+export const ReactionEntitySchema = z.object({
+  id: z.number(),
+  application_id: z.number(),
+  question: z.string(),
+  run_count: z.number().optional(),
+  last_run_at: z.coerce.date().optional(),
+  runs: z.array(ReactionRunEntitySchema).optional(),
+  created_at: z.coerce.date().optional(),
+});
+
+export const ChatContextResponseSchema = z.object({
+  contextRefs: z.array(ContextRefSchema),
+  suggestedSimulations: z.array(SuggestedSimulationSchema),
+});
 
 // Type aliases
 export type ConnectionData = z.infer<typeof ConnectionEntitySchema>;
