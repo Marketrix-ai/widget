@@ -11,7 +11,14 @@ export interface TabBarProps {
 
 export const TabBar: React.FC<TabBarProps> = ({ tabs, active, onChange }) => {
   return (
-    <Flex role='tablist' align='center' justify='around' shrink={false} border='top' style={controlSizeStyles.tabBar}>
+    <Flex
+      role='tablist'
+      align='center'
+      justify='around'
+      shrink={false}
+      border='top'
+      style={{ ...controlSizeStyles.tabBar, backgroundColor: 'var(--card)' }}
+    >
       {tabs.map(tab => {
         const isActive = active === tab.id;
         return (
@@ -25,12 +32,27 @@ export const TabBar: React.FC<TabBarProps> = ({ tabs, active, onChange }) => {
             active={isActive}
             stacked
             variant='tab'
+            style={{
+              transition: 'color 0.2s ease-in-out, opacity 0.2s ease-in-out',
+              opacity: isActive ? 1 : 0.65,
+            }}
           >
-            {isActive && (
-              <Text as='span' inheritColor style={{ position: 'absolute', top: 0, left: '25%', right: '25%' }}>
-                <Indicator variant='bar' color='accent' />
-              </Text>
-            )}
+            <Text
+              as='span'
+              inheritColor
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: '20%',
+                right: '20%',
+                transform: isActive ? 'scaleX(1)' : 'scaleX(0)',
+                opacity: isActive ? 1 : 0,
+                transition: 'transform 0.25s cubic-bezier(0.2, 0, 0, 1), opacity 0.15s ease-out',
+                transformOrigin: 'center',
+              }}
+            >
+              <Indicator variant='bar' color='accent' />
+            </Text>
             <Text as='span' inheritColor aria-hidden='true'>
               <Icon name={tab.icon} size={20} />
             </Text>

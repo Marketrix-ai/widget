@@ -294,29 +294,56 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
               )}
               {activeView === 'help' && (
                 <Stack id='view-help' role='tabpanel' aria-labelledby='tab-help' height='full' padding='lg'>
-                  <Stack grow align='center' justify='center' gap='sm'>
-                    <Text as='span' variant='faint'>
-                      <Icon name='help' size={32} />
-                    </Text>
-                    <Text size='sm' variant='muted'>
-                      Help – coming soon
-                    </Text>
+                  <Stack grow align='center' justify='center' gap='md'>
+                    <Surface
+                      className='animate-stagger-1'
+                      style={{
+                        width: '56px',
+                        height: '56px',
+                        borderRadius: '16px',
+                        backgroundColor: 'var(--primary-muted)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Text as='span' tone='primary'>
+                        <Icon name='help' size={28} />
+                      </Text>
+                    </Surface>
+                    <Stack align='center' gap='xs' className='animate-stagger-2'>
+                      <Text size='sm' weight='semibold'>
+                        Help Center
+                      </Text>
+                      <Text size='xs' variant='muted' align='center'>
+                        Coming soon — documentation, FAQs, and tutorials.
+                      </Text>
+                    </Stack>
                   </Stack>
-                  <Card style={{ margin: '0 12px 12px 12px' }}>
-                    <Text size='xs' variant='faint' style={{ display: 'block' }}>
-                      Widget v{packageJson.version}
-                    </Text>
-                    <Text size='xs' variant='faint' style={{ display: 'block' }}>
-                      API{' '}
-                      {(() => {
-                        try {
-                          const status = StreamClient.getInstance().getStatus();
-                          return status === 'connected' ? 'connected' : 'disconnected';
-                        } catch {
-                          return '—';
-                        }
-                      })()}
-                    </Text>
+                  <Card className='animate-stagger-3' style={{ margin: '0 0 0 0' }}>
+                    <Stack gap='xs'>
+                      <Text size='xs' variant='faint' style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <Text as='span' weight='medium'>
+                          Widget
+                        </Text>
+                        <Text as='span'>v{packageJson.version}</Text>
+                      </Text>
+                      <Text size='xs' variant='faint' style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <Text as='span' weight='medium'>
+                          API
+                        </Text>
+                        <Text as='span'>
+                          {(() => {
+                            try {
+                              const status = StreamClient.getInstance().getStatus();
+                              return status === 'connected' ? 'Connected' : 'Disconnected';
+                            } catch {
+                              return '—';
+                            }
+                          })()}
+                        </Text>
+                      </Text>
+                    </Stack>
                   </Card>
                 </Stack>
               )}

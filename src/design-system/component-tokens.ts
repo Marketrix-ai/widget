@@ -60,8 +60,8 @@ export const notificationToneStyles: Record<
     border: '1px solid #bae6fd',
     titleColor: '#0c4a6e',
     bodyColor: '#0369a1',
-    closeColor: '#7dd3fc',
-    closeHoverColor: '#38bdf8',
+    closeColor: '#0369a1',
+    closeHoverColor: '#0c4a6e',
     actionBackground: '#e0f2fe',
   },
   error: {
@@ -69,8 +69,8 @@ export const notificationToneStyles: Record<
     border: '1px solid #fecaca',
     titleColor: '#b91c1c',
     bodyColor: '#b91c1c',
-    closeColor: '#f87171',
-    closeHoverColor: '#ef4444',
+    closeColor: '#b91c1c',
+    closeHoverColor: '#991b1b',
     actionBackground: '#fee2e2',
   },
 };

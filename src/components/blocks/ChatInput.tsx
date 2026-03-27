@@ -91,13 +91,7 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(f
   const canSend = Boolean(value.trim()) && !disabled;
 
   return (
-    <Stack
-      background='card'
-      rounded='xl'
-      border
-      overflow='hidden'
-      className='focus-within:border-foreground-faint transition-colors'
-    >
+    <Stack background='card' rounded='xl' border overflow='hidden' className='chat-input-focus-glow transition-colors'>
       <Textarea
         ref={mergeRefs(textareaRef, ref)}
         value={value}
@@ -142,6 +136,7 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(f
           size='sm'
           disabled={!taskRunning && !canSend}
           label={taskRunning ? 'Stop task' : 'Send message'}
+          className='send-btn-press transition-transform'
           onClick={e => {
             e.preventDefault();
             e.stopPropagation();

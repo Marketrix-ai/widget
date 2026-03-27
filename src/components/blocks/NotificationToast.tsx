@@ -56,6 +56,8 @@ export const NotificationToast: React.FC<NotificationToastProps> = ({
 
   return (
     <Surface
+      role={tone === 'error' ? 'alert' : 'status'}
+      aria-live={tone === 'error' ? 'assertive' : 'polite'}
       position='fixed'
       style={{
         zIndex: LAYER_TOKENS.toast,
@@ -103,7 +105,6 @@ export const NotificationToast: React.FC<NotificationToastProps> = ({
               style={{
                 fontSize: '12px',
                 color: colors.bodyColor,
-                opacity: 0.8,
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',

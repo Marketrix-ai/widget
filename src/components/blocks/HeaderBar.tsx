@@ -2,7 +2,7 @@ import React from 'react';
 
 import MarketrixIcon from '../../assets/marketrix-icon.svg';
 import { controlSizeStyles } from '../../design-system/component-tokens';
-import { Avatar, Flex, Icon, IconButton, Stack, Text } from '../base';
+import { Avatar, Flex, Icon, IconButton, Stack, Surface, Text } from '../base';
 
 export interface HeaderBarProps {
   title: string;
@@ -39,21 +39,51 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({ title, subtitle, minimized
       align='center'
       justify='between'
       paddingX='lg'
-      paddingY='md'
       border='bottom'
       shrink={false}
       elevation='section'
+      className='header-blur'
+      style={{ position: 'relative', zIndex: 2, height: 56, backgroundColor: 'var(--card)' }}
     >
       <Flex align='center' gap='md' minWidth='0' grow>
-        <Avatar src={MarketrixIcon} alt='' size='md' rounded='theme' elevation='card' />
-        <Stack minWidth='0'>
+        <Flex
+          shrink={false}
+          style={{
+            width: '36px',
+            height: '36px',
+            borderRadius: '10px',
+            background: 'linear-gradient(135deg, var(--primary), var(--primary-hover))',
+            padding: '2px',
+            boxShadow: '0 2px 8px var(--primary-muted)',
+          }}
+        >
+          <Avatar
+            src={MarketrixIcon}
+            alt=''
+            size={32}
+            rounded='lg'
+            style={{ border: 'none', backgroundColor: 'transparent' }}
+          />
+        </Flex>
+        <Stack minWidth='0' gap='2xs'>
           <Text size='sm' weight='semibold' truncate leading='tight'>
             {title}
           </Text>
           {subtitle != null && (
-            <Text as='p' size='xs' variant='muted' truncate>
-              {subtitle}
-            </Text>
+            <Flex align='center' gap='xs'>
+              <Surface
+                style={{
+                  width: '6px',
+                  height: '6px',
+                  borderRadius: '50%',
+                  backgroundColor: 'var(--success)',
+                  flexShrink: 0,
+                }}
+              />
+              <Text as='p' size='xs' variant='muted' truncate>
+                {subtitle}
+              </Text>
+            </Flex>
           )}
         </Stack>
       </Flex>

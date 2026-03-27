@@ -73,15 +73,27 @@ export const MessageItem: React.FC<MessageItemProps> = ({
           elevation='card'
           style={{
             padding: message.videoStream ? '0' : '8px 10px',
-            border: '1px solid transparent',
-            backgroundColor: isUser ? 'var(--primary)' : undefined,
+            border: isUser ? '1px solid transparent' : '1px solid var(--border)',
+            backgroundColor: isUser ? 'var(--primary)' : 'var(--card)',
             color: isUser ? 'var(--primary-foreground)' : 'var(--foreground)',
           }}
         >
           {/* Video stream display - edge-to-edge */}
           {message.videoStream && <VideoStreamDisplay stream={message.videoStream} />}
+
+          {/* Typing indicator for thinking placeholder */}
+          {!message.videoStream && message.isPlaceholder && message.placeholderState === 'thinking' && (
+            <Flex align='center' gap='sm' style={{ padding: '4px 2px' }} role='status' aria-label='Agent is typing'>
+              <span className='typing-dot' aria-hidden='true' />
+              <span className='typing-dot' aria-hidden='true' />
+              <span className='typing-dot' aria-hidden='true' />
+            </Flex>
+          )}
+
           {/* Message content */}
-          {!message.videoStream && <MessageContent message={message} isLastMessage={isLastMessage} />}
+          {!message.videoStream && !(message.isPlaceholder && message.placeholderState === 'thinking') && (
+            <MessageContent message={message} isLastMessage={isLastMessage} />
+          )}
 
           {/* Screen access request action buttons - show if not yet handled */}
           {message.isScreenAccessRequest && !message.screenShareStatus && (

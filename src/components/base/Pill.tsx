@@ -27,11 +27,11 @@ export const Pill = forwardRef<HTMLButtonElement, PillProps>(function Pill(
       ref={ref}
       type='button'
       className={cn(
-        'inline-flex items-center font-medium border-none cursor-pointer transition-all duration-200',
+        'inline-flex items-center font-medium border-none cursor-pointer transition-all duration-200 focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-1',
         radiusClasses.pill,
         sizeStyles[size],
         active && variant === 'primary' && 'bg-primary text-primary-foreground shadow-sm',
-        !active && 'bg-secondary-bg text-foreground-muted',
+        !active && 'bg-secondary-bg text-foreground-muted hover:bg-secondary-hover',
       )}
     >
       {children}
