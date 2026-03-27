@@ -17,6 +17,7 @@ Marketrix Widget is an embeddable support widget built with TypeScript 5.9, Reac
 3. UI quality first. Keep accessibility, responsive behavior, and design-token usage consistent across `src/components/` and `src/design-system/`.
 
 ## Runtime Model
+
 - Production mode uses `mtxId` + `mtxKey`, dev mode uses `mtxApp` + `mtxAgent`, and preview mode renders through `MarketrixWidget`.
 - The widget mounts in a closed Shadow DOM, uses `window.__mtx` as a singleton guard, and talks to the API through typed SSE (`widgetStream`) plus typed POST commands (`widgetMessage`).
 
@@ -30,12 +31,14 @@ Marketrix Widget is an embeddable support widget built with TypeScript 5.9, Reac
 - `public/`: static loader assets. `dist/`: generated output only.
 
 ## Critical Integration Points
+
 - `src/sdk/index.ts`: oRPC client wrapper with dynamic `configureSdk()` behavior.
 - `src/services/StreamClient.ts`: SSE lifecycle, registration, auth failure handling, and exponential backoff reconnects.
 - `src/services/SessionRecorder.ts`: rrweb batching and POST flush behavior. Preserve the current 500 ms / 50 KB flush thresholds and 500 KB batch cap unless you intentionally change API expectations.
 - `src/utils/bootstrap.tsx`: container creation, closed Shadow DOM mounting, and singleton lifecycle rules.
 
 ## Development Rules
+
 - Do not develop directly on `dev`; use a feature branch or worktree.
 - Assigned issues create a feature branch and draft PR automatically; keep the PR linked with `Closes #N`.
 - Treat issues or PR descriptions as the source of truth for scope, then verify the implementation matches before handoff.
