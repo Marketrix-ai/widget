@@ -1774,6 +1774,18 @@ export const ConnectorSearchSchema = z.object({
   offset: z.coerce.number().int().nonnegative().optional(),
 });
 
+/**
+ * MCP activation status — subset of connector fields exposed to the dashboard
+ */
+export const McpStatusSchema = z.object({
+  id: z.number(),
+  application_id: z.number(),
+  identifier: z.string(),
+  api_token: z.string(),
+  is_active: z.boolean(),
+  created_at: z.coerce.date().optional(),
+});
+
 /** GitHub repo item (from GitHub API user/repos) */
 export const GithubRepoSchema = z.object({
   id: z.number(),
@@ -2330,6 +2342,7 @@ export type ChatData = z.infer<typeof ChatEntitySchema>;
 export type ConnectorData = z.infer<typeof ConnectorEntitySchema>;
 export type ConnectorUpsertData = z.infer<typeof ConnectorUpsertSchema>;
 export type ConnectorSearchData = z.infer<typeof ConnectorSearchSchema>;
+export type McpStatusData = z.infer<typeof McpStatusSchema>;
 export type AutomationData = z.infer<typeof AutomationEntitySchema>;
 export type AutomationCreateData = z.infer<typeof AutomationCreateSchema>;
 export type AutomationUpdateData = z.infer<typeof AutomationUpdateSchema>;

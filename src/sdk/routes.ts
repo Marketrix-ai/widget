@@ -90,6 +90,7 @@ import {
   KnowledgeEntitySchema,
   KnowledgeTypeSchema,
   listOf,
+  McpStatusSchema,
   MigrationPrepareSchema,
   MigrationRunSchema,
   MindMapSchema,
@@ -811,6 +812,54 @@ const contract = {
       }),
     )
     .output(z.array(GithubWorkflowRunSchema)),
+
+  // ============================================================================
+  // MCP ROUTES - MCP connector activation and credential management
+  // ============================================================================
+
+  mcpActivate: oc
+    .route({
+      method: 'POST',
+      tags: ['MCP'],
+      path: '/mcp/activate',
+      summary: 'Activate MCP for an application',
+      description: 'Creates or reactivates an MCP connector with auto-generated credentials.',
+    })
+    .input(z.object({ application_id: z.coerce.number() }))
+    .output(McpStatusSchema),
+
+  mcpDeactivate: oc
+    .route({
+      method: 'POST',
+      tags: ['MCP'],
+      path: '/mcp/deactivate',
+      summary: 'Deactivate MCP for an application',
+      description: 'Deactivates the MCP connector. Credentials are preserved but access is revoked.',
+    })
+    .input(z.object({ application_id: z.coerce.number() }))
+    .output(McpStatusSchema),
+
+  mcpRegenerate: oc
+    .route({
+      method: 'POST',
+      tags: ['MCP'],
+      path: '/mcp/regenerate',
+      summary: 'Regenerate MCP API key',
+      description: 'Generates a new API key for the MCP connector. Existing integrations will break.',
+    })
+    .input(z.object({ application_id: z.coerce.number() }))
+    .output(McpStatusSchema),
+
+  mcpStatus: oc
+    .route({
+      method: 'GET',
+      tags: ['MCP'],
+      path: '/mcp/status/{application_id}',
+      summary: 'Get MCP activation status',
+      description: 'Returns the MCP connector status for an application, or null if not activated.',
+    })
+    .input(z.object({ application_id: z.coerce.number() }))
+    .output(McpStatusSchema.nullable()),
 
   // ============================================================================
   // AUTOMATION ROUTES - DAG-based workflow engine
