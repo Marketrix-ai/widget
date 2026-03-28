@@ -841,7 +841,7 @@ export const SimulationTaskEntrySchema = z.object({
   task_id: z.string(),
   title: z.string(),
   instructions: z.string(),
-  status: z.enum(['pending', 'running', 'passed', 'failed', 'skipped']),
+  status: z.enum(['pending', 'running', 'passed', 'failed', 'skipped', 'stopped']),
   error_message: z.string().nullish(),
   started_at: z.string().nullish(),
   completed_at: z.string().nullish(),
@@ -1512,6 +1512,7 @@ export const AppEventSchema = z.discriminatedUnion('type', [
     step_label: z.string().optional(),
     step_pending: z.boolean().optional(),
     num_steps: z.number().optional(),
+    task_id: z.string().nullish(),
   }),
   z.object({
     type: z.literal('simulation/created'),
