@@ -37,36 +37,28 @@ export const SuggestedActions: React.FC<SuggestedActionsProps> = ({ actions, onA
           variant='chip'
           full
           onClick={e => onActionClick(action, e)}
-          className='chip-action-hover'
+          className='chip-action-hover py-2.5 px-3 justify-start text-left'
           style={{
             color: widgetConfig.widget_text_color,
-            paddingTop: '10px',
-            paddingBottom: '10px',
-            paddingLeft: '12px',
-            paddingRight: '12px',
-            justifyContent: 'flex-start',
-            textAlign: 'left',
           }}
         >
-          <Flex align='center' gap='sm' style={{ width: '100%' }}>
+          <Flex align='center' gap='sm' className='w-full'>
             <Flex
               align='center'
               justify='center'
               shrink={false}
+              className='w-7 h-7 rounded-lg'
               style={{
-                width: '28px',
-                height: '28px',
-                borderRadius: '8px',
                 backgroundColor: 'var(--primary-muted)',
                 color: 'var(--primary)',
               }}
             >
               <Icon name={MODE_ICON_MAP[action.type]} size={14} />
             </Flex>
-            <Text as='span' size='sm' weight='normal' leading='snug' style={{ flex: 1 }}>
+            <Text as='span' size='sm' weight='normal' leading='snug' className='flex-1'>
               {action.text}
             </Text>
-            <Flex shrink={false} style={{ opacity: 0.6 }}>
+            <Flex shrink={false} className='opacity-60'>
               <Icon name='chevronRight' size={14} />
             </Flex>
           </Flex>

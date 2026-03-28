@@ -33,8 +33,7 @@ export const TabBar: React.FC<TabBarProps> = ({ tabs, active, onChange }) => {
             stacked
             variant='tab'
             style={{
-              transition: 'color 0.2s ease-in-out, opacity 0.2s ease-in-out',
-              opacity: isActive ? 1 : 0.65,
+              transition: 'color 0.2s ease-in-out',
             }}
           >
             <Text

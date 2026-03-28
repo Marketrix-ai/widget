@@ -1,4 +1,4 @@
-import { addOpacity, getContrastingColor } from '../../utils/format';
+import { addOpacity, darkenColor, getContrastingColor } from '../../utils/format';
 import { DEFAULT_SEMANTIC_TOKENS, type SemanticTokens } from '../semantic-tokens';
 
 export const THEME_ID_HIGH_CONTRAST = 'high-contrast';
@@ -18,6 +18,7 @@ export const highContrastTheme: SemanticTokens = {
     foregroundFaint: addOpacity(fg, 0.4),
     border,
     borderMuted: addOpacity(border, 0.3),
+    inputBorder: darkenColor(border, 0.4),
     primary,
     primaryForeground: getContrastingColor(primary),
     primaryHover: addOpacity(primary, 0.85),

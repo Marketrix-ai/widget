@@ -1168,14 +1168,18 @@
       // Read query params and inject loader with mtx-* attributes
       (function () {
         var params = new URLSearchParams(window.location.search);
+        var defaultWidgetId = 'mLive-CJeYj';
+        var defaultWidgetKey = 'GqCXuLLrfrPmkjp8yjQGE1WUbh4AbatyXHtkhOQ0ggSAJjCdxb';
+        var defaultApiHost = 'https://api.marketrix.co';
+        var defaultAiHost = 'https://agent.marketrix.co';
         var script = document.createElement('script');
         script.src = './loader.js';
-        script.setAttribute('mtx-id', params.get('mtx-id') || '');
-        script.setAttribute('mtx-key', params.get('mtx-key') || '');
-        script.setAttribute('mtx-app', params.get('mtx-app') || '1');
-        script.setAttribute('mtx-agent', params.get('mtx-agent') || '1');
-        script.setAttribute('mtx-api-host', params.get('mtx-api-host') || 'https://api.marketrix.co');
-        script.setAttribute('mtx-ai-host', params.get('mtx-ai-host') || 'https://agent.marketrix.co');
+        script.setAttribute('mtx-id', params.get('mtx-id') || defaultWidgetId);
+        script.setAttribute('mtx-key', params.get('mtx-key') || defaultWidgetKey);
+        script.setAttribute('mtx-app', params.get('mtx-app') || '');
+        script.setAttribute('mtx-agent', params.get('mtx-agent') || '');
+        script.setAttribute('mtx-api-host', params.get('mtx-api-host') || defaultApiHost);
+        script.setAttribute('mtx-ai-host', params.get('mtx-ai-host') || defaultAiHost);
         document.head.appendChild(script);
       })();
     </script>

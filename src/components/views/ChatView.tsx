@@ -32,7 +32,7 @@ class ChatErrorBoundary extends React.Component<{ children: React.ReactNode }, {
   override render() {
     if (this.state.hasError) {
       return (
-        <Text as='div' size='xs' align='center' style={{ padding: '16px', color: 'var(--muted-foreground)' }}>
+        <Text as='div' size='xs' align='center' tone='muted' className='p-4'>
           Something went wrong displaying messages. Please refresh.
         </Text>
       );
@@ -201,14 +201,13 @@ export const ChatView: React.FC<ChatViewProps> = ({
         </ChatErrorBoundary>
       </Surface>
 
-      <Card style={{ margin: '0 12px 12px 12px', marginTop: 'auto' }}>
+      <Card className='mx-3 mb-3 mt-auto'>
         {isTaskRunning && taskProgress.length > 0 && (
           <Surface
             rounded
             overflowY='auto'
+            className='mx-2 mb-2 p-2'
             style={{
-              margin: '0 8px 8px',
-              padding: '8px',
               maxHeight: '128px',
               backgroundColor: addOpacity(config.widget_background_color ?? '#fff', 0.8),
               borderColor: config.widget_border_color,
@@ -216,7 +215,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
               borderStyle: 'solid',
             }}
           >
-            <Text as='div' weight='semibold' style={{ marginBottom: '4px', color: config.widget_text_color }}>
+            <Text as='div' weight='semibold' className='mb-1' style={{ color: config.widget_text_color }}>
               Task Progress ({taskProgress.length} steps)
             </Text>
             <Stack gap='xs'>
@@ -225,14 +224,15 @@ export const ChatView: React.FC<ChatViewProps> = ({
                   key={idx}
                   align='start'
                   gap='sm'
-                  style={{ fontSize: '12px', opacity: 0.8, color: config.widget_text_color }}
+                  className='text-xs opacity-80'
+                  style={{ color: config.widget_text_color }}
                 >
                   <Text as='span' weight='medium'>
                     Step {progress.step}:
                   </Text>{' '}
                   {progress.tool_name}
                   {progress.tool_params && Object.keys(progress.tool_params).length > 0 && (
-                    <Text as='span' style={{ opacity: 0.7, marginLeft: '4px' }}>
+                    <Text as='span' className='opacity-70 ml-1'>
                       ({Object.keys(progress.tool_params).join(', ')})
                     </Text>
                   )}

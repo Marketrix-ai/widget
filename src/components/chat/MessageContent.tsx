@@ -39,7 +39,7 @@ export const MessageContent: React.FC<MessageContentProps> = ({ message, isLastM
                 size='sm'
                 weight='medium'
                 style={{
-                  lineHeight: 'tight',
+                  lineHeight: '1.45',
                   wordBreak: 'break-word',
                   whiteSpace: 'pre-wrap',
                   marginBottom: '4px',
@@ -91,7 +91,7 @@ export const MessageContent: React.FC<MessageContentProps> = ({ message, isLastM
         as='div'
         size='sm'
         weight='medium'
-        style={{ lineHeight: 'tight', wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}
+        style={{ lineHeight: '1.45', wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}
       >
         {message.content}
       </Text>

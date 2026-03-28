@@ -56,22 +56,22 @@ export const notificationToneStyles: Record<
   }
 > = {
   info: {
-    background: '#f0f9ff',
-    border: '1px solid #bae6fd',
-    titleColor: '#0c4a6e',
-    bodyColor: '#0369a1',
-    closeColor: '#0369a1',
-    closeHoverColor: '#0c4a6e',
-    actionBackground: '#e0f2fe',
+    background: 'var(--notification-info-bg)',
+    border: '1px solid var(--notification-info-border)',
+    titleColor: 'var(--notification-info-title)',
+    bodyColor: 'var(--notification-info-body)',
+    closeColor: 'var(--notification-info-body)',
+    closeHoverColor: 'var(--notification-info-title)',
+    actionBackground: 'var(--notification-info-action-bg)',
   },
   error: {
-    background: '#fef2f2',
-    border: '1px solid #fecaca',
-    titleColor: '#b91c1c',
-    bodyColor: '#b91c1c',
-    closeColor: '#b91c1c',
-    closeHoverColor: '#991b1b',
-    actionBackground: '#fee2e2',
+    background: 'var(--notification-error-bg)',
+    border: '1px solid var(--notification-error-border)',
+    titleColor: 'var(--notification-error-title)',
+    bodyColor: 'var(--notification-error-body)',
+    closeColor: 'var(--notification-error-body)',
+    closeHoverColor: 'var(--notification-error-title)',
+    actionBackground: 'var(--notification-error-action-bg)',
   },
 };
 

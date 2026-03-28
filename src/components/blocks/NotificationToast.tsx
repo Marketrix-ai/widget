@@ -86,9 +86,9 @@ export const NotificationToast: React.FC<NotificationToastProps> = ({
             as='span'
             block
             inheritColor
+            size='sm'
             weight='medium'
             style={{
-              fontSize: '13px',
               color: colors.titleColor,
               whiteSpace: onRetry ? 'normal' : 'nowrap',
               overflow: 'hidden',
@@ -102,8 +102,8 @@ export const NotificationToast: React.FC<NotificationToastProps> = ({
               as='span'
               block
               inheritColor
+              size='xs'
               style={{
-                fontSize: '12px',
                 color: colors.bodyColor,
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
@@ -145,9 +145,9 @@ export const NotificationToast: React.FC<NotificationToastProps> = ({
           shape='circle'
           size='xs'
           tone='inherit'
+          className='p-0.5'
           style={{
             color: colors.closeColor,
-            padding: '2px',
           }}
         >
           <Icon name='closeSmall' size={12} />

@@ -48,12 +48,9 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({ title, subtitle, minimized
       <Flex align='center' gap='md' minWidth='0' grow>
         <Flex
           shrink={false}
+          className='w-9 h-9 rounded-[10px] p-0.5'
           style={{
-            width: '36px',
-            height: '36px',
-            borderRadius: '10px',
             background: 'linear-gradient(135deg, var(--primary), var(--primary-hover))',
-            padding: '2px',
             boxShadow: '0 2px 8px var(--primary-muted)',
           }}
         >
@@ -72,12 +69,9 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({ title, subtitle, minimized
           {subtitle != null && (
             <Flex align='center' gap='xs'>
               <Surface
+                className='w-1.5 h-1.5 rounded-full shrink-0'
                 style={{
-                  width: '6px',
-                  height: '6px',
-                  borderRadius: '50%',
                   backgroundColor: 'var(--success)',
-                  flexShrink: 0,
                 }}
               />
               <Text as='p' size='xs' variant='muted' truncate>

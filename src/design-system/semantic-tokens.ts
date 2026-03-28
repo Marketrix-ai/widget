@@ -1,5 +1,5 @@
 import type { WidgetSettingsData } from '../sdk';
-import { addOpacity, getContrastingColor } from '../utils/format';
+import { addOpacity, darkenColor, getContrastingColor } from '../utils/format';
 
 export type SemanticTokens = {
   color: {
@@ -9,6 +9,7 @@ export type SemanticTokens = {
     foregroundFaint: string;
     border: string;
     borderMuted: string;
+    inputBorder: string;
     primary: string;
     primaryForeground: string;
     primaryHover: string;
@@ -73,6 +74,7 @@ export function mapWidgetSettingsToSemanticTokens(settings: WidgetStyleSettingsD
       foregroundFaint: addOpacity(settings.widget_text_color, 0.75),
       border: settings.widget_border_color,
       borderMuted: addOpacity(settings.widget_border_color, 0.3),
+      inputBorder: darkenColor(settings.widget_border_color, 0.4),
       primary: settings.widget_accent_color,
       primaryForeground: getContrastingColor(settings.widget_accent_color),
       primaryHover: addOpacity(settings.widget_accent_color, 0.85),
@@ -133,6 +135,7 @@ export function semanticTokensToCssCustomProperties(tokens: SemanticTokens): Rec
     '--accent-foreground': tokens.color.foreground,
     '--border': tokens.color.border,
     '--input': tokens.color.border,
+    '--input-border': tokens.color.inputBorder,
     '--ring': tokens.color.primary,
     '--radius': tokens.radius,
     '--shadow': tokens.shadow,

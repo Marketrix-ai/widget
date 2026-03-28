@@ -33,18 +33,10 @@ export const HomeView: React.FC<HomeViewProps> = ({ config, messages, onNavigate
     <Stack height='full' overflow='hidden' id='view-home' role='tabpanel' aria-labelledby='tab-home'>
       <Stack grow overflowY='auto' padding='lg'>
         {/* Block 1: Greeting with avatar */}
-        <Stack
-          className='animate-stagger-1'
-          align='center'
-          gap='sm'
-          style={{ paddingTop: '12px', paddingBottom: '16px' }}
-        >
+        <Stack className='animate-stagger-1 pt-3 pb-4' align='center' gap='sm'>
           <Surface
+            className='w-12 h-12 rounded-2xl p-0.5'
             style={{
-              width: '48px',
-              height: '48px',
-              borderRadius: '16px',
-              padding: '2px',
               background: 'linear-gradient(135deg, var(--primary), var(--primary-hover))',
               boxShadow: '0 4px 14px var(--primary-muted)',
             }}
@@ -60,7 +52,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ config, messages, onNavigate
           <Text as='h2' size='lg' weight='semibold'>
             {config.widget_greeting ?? 'Hey There!'}
           </Text>
-          <Text as='p' variant='muted' size='sm' style={{ marginTop: '-4px' }}>
+          <Text as='p' variant='muted' size='sm' className='-mt-1'>
             {config.widget_body ?? 'How can I help you today?'}
           </Text>
         </Stack>
@@ -74,10 +66,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ config, messages, onNavigate
               full
               onClick={onNavigateToChat}
               aria-label='Ask a question'
-              style={{
-                paddingTop: '10px',
-                paddingBottom: '10px',
-              }}
+              className='py-2.5'
             >
               <Icon name='chat' size={16} />
               Ask a question
@@ -92,8 +81,8 @@ export const HomeView: React.FC<HomeViewProps> = ({ config, messages, onNavigate
 
       {/* Block 3: Recent conversation — anchored at bottom */}
       {messages.length > 0 && (
-        <Card className='animate-stagger-4' style={{ margin: '0 12px 12px 12px' }}>
-          <Text as='p' size='xs' weight='semibold' style={{ marginBottom: '2px' }}>
+        <Card className='animate-stagger-4 mx-3 mb-3'>
+          <Text as='p' size='xs' weight='semibold' className='mb-0.5'>
             Recent conversation
           </Text>
           <Text as='p' size='xs' variant='muted' clamp={2}>
@@ -103,7 +92,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ config, messages, onNavigate
             type='button'
             variant='inline'
             onClick={onNavigateToChat}
-            style={{ marginTop: '4px' }}
+            className='mt-1'
             aria-label='Continue recent conversation'
           >
             <Text as='span' size='xs' variant='muted'>

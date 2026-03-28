@@ -114,8 +114,7 @@ export const WidgetFab: React.FC<WidgetFabProps> = ({
               e.stopPropagation();
               onStop?.();
             }}
-            className={`absolute top-1/2 z-20 -translate-y-1/2 rounded-full border border-white/25 bg-gray-900 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-white shadow-lg opacity-0 transition-opacity duration-150 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto group-focus-within:opacity-100 group-focus-within:pointer-events-auto ${position.includes('left') ? 'left-full ml-2' : 'right-full mr-2'}`}
-            style={{ border: '1px solid rgba(255,255,255,0.25)' }}
+            className={`absolute top-1/2 z-20 -translate-y-1/2 rounded-full border border-white/25 bg-foreground px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-primary-foreground shadow-lg opacity-0 transition-opacity duration-150 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto group-focus-within:opacity-100 group-focus-within:pointer-events-auto ${position.includes('left') ? 'left-full ml-2' : 'right-full mr-2'}`}
             aria-label='Stop running task'
           >
             Stop

@@ -27,9 +27,9 @@ const variantStyles: Record<ButtonVariant, string> = {
   ghost: 'bg-transparent text-foreground border-border hover:bg-muted',
   bare: 'bg-transparent text-inherit border-transparent hover:bg-transparent p-0 min-h-0',
   chip: 'bg-secondary-bg text-foreground border-transparent hover:bg-primary hover:text-primary-foreground hover:border-primary',
-  tab: 'bg-transparent text-foreground-muted border-transparent hover:text-foreground hover:bg-transparent p-0 min-h-0',
+  tab: 'bg-transparent text-foreground-muted border-transparent hover:text-foreground hover:bg-transparent p-0 min-h-0 transition-colors',
   inline: 'bg-transparent text-primary border-transparent hover:bg-transparent hover:text-primary p-0 min-h-0',
-  toolbar: 'bg-transparent text-foreground border-transparent opacity-60 hover:opacity-100',
+  toolbar: 'bg-transparent text-foreground border-transparent opacity-75 hover:opacity-100',
 };
 
 const sizeStyles: Record<ButtonSize, string> = {

@@ -27,7 +27,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
   if (message.isSystemMessage) {
     return (
       <Flex key={`message-${message.id}-${index}`} justify='center' align='center'>
-        <Text as='span' variant='faint' weight='normal' style={{ fontSize: '10px' }}>
+        <Text as='span' variant='faint' weight='normal' size='xxs'>
           {message.content}
         </Text>
       </Flex>
@@ -39,7 +39,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
   return (
     <Stack
       key={`message-${message.id}-${index}`}
-      style={{ marginTop: '10px' }}
+      className='mt-2.5'
       role='article'
       aria-roledescription='message'
       aria-label={isUser ? 'You said…' : 'Agent says…'}
@@ -47,7 +47,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
     >
       <Flex align='start' gap='sm' width='full'>
         {/* Logo (agent) or spacer (user) on left */}
-        <Flex shrink={false} style={{ width: '20px', height: '20px', marginTop: '6px' }}>
+        <Flex shrink={false} className='w-5 h-5 mt-1.5'>
           {!isUser && (
             <Avatar
               src={MarketrixIcon}
@@ -71,8 +71,8 @@ export const MessageItem: React.FC<MessageItemProps> = ({
           position='relative'
           rounded='theme'
           elevation='card'
+          className={message.videoStream ? '' : 'py-2 px-2.5'}
           style={{
-            padding: message.videoStream ? '0' : '8px 10px',
             border: isUser ? '1px solid transparent' : '1px solid var(--border)',
             backgroundColor: isUser ? 'var(--primary)' : 'var(--card)',
             color: isUser ? 'var(--primary-foreground)' : 'var(--foreground)',
@@ -83,7 +83,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
 
           {/* Typing indicator for thinking placeholder */}
           {!message.videoStream && message.isPlaceholder && message.placeholderState === 'thinking' && (
-            <Flex align='center' gap='sm' style={{ padding: '4px 2px' }} role='status' aria-label='Agent is typing'>
+            <Flex align='center' gap='sm' className='py-1 px-0.5' role='status' aria-label='Agent is typing'>
               <span className='typing-dot' aria-hidden='true' />
               <span className='typing-dot' aria-hidden='true' />
               <span className='typing-dot' aria-hidden='true' />
@@ -97,7 +97,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
 
           {/* Screen access request action buttons - show if not yet handled */}
           {message.isScreenAccessRequest && !message.screenShareStatus && (
-            <Flex align='center' gap='sm' style={{ marginTop: '6px' }}>
+            <Flex align='center' gap='sm' className='mt-1.5'>
               <Button type='button' variant='primary' size='sm' shape='pill' onClick={() => onScreenAccessAllow?.()}>
                 Yes
               </Button>
@@ -108,25 +108,25 @@ export const MessageItem: React.FC<MessageItemProps> = ({
           )}
 
           {message.isScreenAccessRequest && message.screenShareStatus && (
-            <Text as='div' variant='faint' size='xs' italic style={{ marginTop: '2px' }}>
+            <Text as='div' variant='faint' size='xs' italic className='mt-0.5'>
               {message.screenShareStatus === 'allowed' ? 'Sure' : 'Check HTML Instead'}
             </Text>
           )}
 
           {/* Task status icon at bottom right (only for agent messages with task status) */}
           {!isUser && message.taskStatus && (
-            <Flex position='absolute' align='center' justify='center' style={{ bottom: '4px', right: '4px' }}>
+            <Flex position='absolute' align='center' justify='center' className='bottom-1 right-1'>
               <TaskStatusIcon status={message.taskStatus} />
             </Flex>
           )}
         </Stack>
 
         {/* Spacer on right for user messages */}
-        <Flex shrink={false} style={{ width: '20px' }} />
+        <Flex shrink={false} className='w-5' />
       </Flex>
       {/* Timestamp — right-aligned */}
       {!message.isPlaceholder && (
-        <Text as='div' variant='faint' size='xxs' align='right' style={{ marginTop: '2px', marginRight: '26px' }}>
+        <Text as='div' variant='faint' size='xxs' align='right' className='mt-0.5 mr-6.5'>
           {formatMessageTime(message.timestamp)}
         </Text>
       )}
