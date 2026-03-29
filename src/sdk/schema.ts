@@ -833,6 +833,12 @@ export const SimulationProgressEntrySchema = z.object({
 });
 export type SimulationProgressEntry = z.infer<typeof SimulationProgressEntrySchema>;
 
+export const TaskDependencySchema = z.object({
+  task_id: z.string(),
+  condition: z.enum(['pass']).optional(),
+});
+export type TaskDependency = z.infer<typeof TaskDependencySchema>;
+
 /**
  * A single task within a simulation. Direct simulations have 1 task (the prompt).
  * QA simulations have N tasks (one per test case).
@@ -848,6 +854,7 @@ export const SimulationTaskEntrySchema = z.object({
   order_index: z.number().int().nonnegative().default(0),
   tab_id: z.string().nullish(),
   steps_completed: z.number().int().nonnegative().default(0),
+  blocked_by: z.array(TaskDependencySchema).default([]),
 });
 export type SimulationTaskEntry = z.infer<typeof SimulationTaskEntrySchema>;
 
