@@ -493,6 +493,9 @@ export const QATestCaseEntitySchema = BaseEntitySchema.extend({
   healing_attempts: z.array(QAHealingAttemptEntrySchema).nullable(),
   healing_metadata: z.record(z.string(), z.unknown()).nullish(),
   last_healed_at: z.coerce.date().nullish(),
+  blocked_by: z
+    .array(z.object({ index: z.number().int().nonnegative(), condition: z.enum(['pass']).optional() }))
+    .default([]),
 });
 
 /**
