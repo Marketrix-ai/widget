@@ -3,7 +3,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import packageJson from '../../../package.json';
 import { SHADOW } from '../../design-system/shadows';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
-import { type ResizeCorner, useResize } from '../../hooks/useResize';
+import { useResize } from '../../hooks/useResize';
 import { useWidget } from '../../hooks/useWidget';
 import { createUserMessage } from '../../services/ChatService';
 import { configManager } from '../../services/ConfigManager';
@@ -20,61 +20,12 @@ import { Stack } from '../base/Stack';
 import { Surface } from '../base/Surface';
 import { Text } from '../base/Text';
 import { HeaderBar } from '../blocks/HeaderBar';
-import { TabBar } from '../blocks/TabBar';
 import { DiagnosticModal } from '../ui/DiagnosticModal';
 import { ChatView } from '../views/ChatView';
 import { HomeView } from '../views/HomeView';
+import { ResizeHandles } from './ResizeHandles';
+import { ShellTabBar } from './ShellTabBar';
 import { ViewTransition } from './ViewTransition';
-
-const RESIZE_CORNERS: ResizeCorner[] = ['top-left', 'top-right', 'bottom-left', 'bottom-right'];
-
-function getCornerStyle(corner: ResizeCorner): React.CSSProperties {
-  const isTop = corner.startsWith('top');
-  const isLeft = corner.endsWith('left');
-  return {
-    position: 'absolute',
-    width: '20px',
-    height: '20px',
-    padding: '4px',
-    touchAction: 'none',
-    zIndex: 10,
-    display: 'flex',
-    alignItems: isTop ? 'flex-start' : 'flex-end',
-    justifyContent: isLeft ? 'flex-start' : 'flex-end',
-    cursor: (isTop && isLeft) || (!isTop && !isLeft) ? 'nwse-resize' : 'nesw-resize',
-    top: isTop ? 0 : undefined,
-    bottom: isTop ? undefined : 0,
-    left: isLeft ? 0 : undefined,
-    right: isLeft ? undefined : 0,
-  };
-}
-
-interface ResizeHandlesProps {
-  onResizeStart: (corner: ResizeCorner) => (e: React.MouseEvent) => void;
-}
-
-function ResizeHandles({ onResizeStart }: ResizeHandlesProps) {
-  return (
-    <>
-      {RESIZE_CORNERS.map(corner => (
-        <div
-          key={corner}
-          role='separator'
-          aria-label={`Resize widget from ${corner.replace('-', ' ')}`}
-          title='Drag to resize'
-          style={getCornerStyle(corner)}
-          onMouseDown={onResizeStart(corner)}
-        />
-      ))}
-    </>
-  );
-}
-
-const TAB_DEFS = [
-  { id: 'home' as const, icon: 'home' as const, label: 'Home' },
-  { id: 'chat' as const, icon: 'chat' as const, label: 'Chat' },
-  { id: 'help' as const, icon: 'help' as const, label: 'Help' },
-];
 
 export interface MessengerShellProps {
   config: MarketrixConfig;
@@ -192,10 +143,6 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
 
   const transformOrigin =
     `${effectivePosition.includes('top') ? 'top' : 'bottom'} ${effectivePosition.includes('right') ? 'right' : 'left'}` as const;
-
-  const handleViewChange = (view: string) => {
-    setActiveView(view as WidgetView);
-  };
 
   const handleNavigateToChat = () => {
     setNavDirection('forward');
@@ -342,7 +289,7 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
             </ViewTransition>
           </Surface>
 
-          <TabBar tabs={TAB_DEFS} active={activeView} onChange={handleViewChange} />
+          <ShellTabBar activeView={activeView} onChange={setActiveView} />
         </>
       )}
 
