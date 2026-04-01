@@ -414,15 +414,11 @@ export const QARunEntitySchema = BaseEntitySchema.extend({
   qa_flow_id: z.number(),
   workspace_id: z.number(),
   triggered_by: z.number(),
-  status: QARunStatusSchema,
   browser_type: BrowserTypeSchema,
   browser_config: BrowserConfigSchema.nullish(),
-  total_tests: z.number().int().nonnegative(),
-  passed_tests: z.number().int().nonnegative(),
-  failed_tests: z.number().int().nonnegative(),
   simulation_id: z.number().nullish(),
-  started_at: z.coerce.date().nullish(),
-  completed_at: z.coerce.date().nullish(),
+  source: z.enum(['manual', 'automation', 'github_pr']).nullish(),
+  source_metadata: z.record(z.string(), z.unknown()).nullish(),
 });
 
 /**
@@ -831,7 +827,6 @@ export const SimulationStepSummarySchema = z.object({
 export const SimulationProgressEntrySchema = z.object({
   status: z.string(),
   status_message: z.string().nullable(),
-  num_steps: z.number().int().nonnegative().nullable(),
   created_at: z.coerce.date(),
 });
 export type SimulationProgressEntry = z.infer<typeof SimulationProgressEntrySchema>;
@@ -873,12 +868,12 @@ export const SimulationEntitySchema = BaseEntitySchema.extend({
   status_message: z.string().nullish(),
   path: z.string().nullish(),
   instructions: z.string().nullish(),
-  num_steps: z.number().int().nonnegative(),
   pinned: z.boolean().optional(),
   source: z.enum(['direct', 'qa']).optional(),
   agent_name: z.string().nullish(),
   graph_index_id: z.string().nullish(),
   progress_log: z.array(SimulationProgressEntrySchema).optional(),
+  task_progress_log: z.record(z.string(), z.array(SimulationProgressEntrySchema)).optional(),
   tasks: z.array(SimulationTaskEntrySchema).optional(),
   agents: z.array(AgentBadgeSchema).optional(),
 });
@@ -912,7 +907,6 @@ export const SimulationUpdateSchema = z.object({
   job_id: z.string().optional(),
   status: z.string().optional(),
   status_message: z.string().optional(),
-  num_steps: z.number().int().nonnegative().optional(),
   pinned: z.boolean().optional(),
   graph_index_id: z.string().optional(),
 });
@@ -985,7 +979,6 @@ export const SimulationProgressEntitySchema = z.object({
   simulation_id: z.number(),
   status: z.string(),
   status_message: z.string().nullable(),
-  num_steps: z.number().int().nonnegative().nullable(),
   created_at: z.coerce.date(),
 });
 
@@ -1521,7 +1514,6 @@ export const AppEventSchema = z.discriminatedUnion('type', [
     status: z.string(),
     step_label: z.string().optional(),
     step_pending: z.boolean().optional(),
-    num_steps: z.number().optional(),
     task_id: z.string().nullish(),
   }),
   z.object({
@@ -1931,6 +1923,53 @@ export const ConnectorCapabilitySchema = z.object({
       config_schema: z.record(z.string(), z.unknown()),
     }),
   ),
+});
+
+// ============================================================================
+// GITHUB PR AUTOMATION — Schemas for PR-triggered QA workflows
+// ============================================================================
+
+export const GithubPRFileItemSchema = z.object({
+  filename: z.string(),
+  status: z.string(),
+  additions: z.number(),
+  deletions: z.number(),
+  patch: z.string().optional(),
+});
+
+export const GithubPRTriggerDataSchema = z.object({
+  event: z.string(),
+  action: z.string(),
+  pull_request: z.object({
+    number: z.number(),
+    title: z.string(),
+    html_url: z.string(),
+    head: z.object({ sha: z.string(), ref: z.string() }),
+    base: z.object({ ref: z.string() }),
+  }),
+  repository: z.object({
+    full_name: z.string(),
+    name: z.string(),
+    owner: z.object({ login: z.string() }),
+  }),
+  sender: z.object({ login: z.string() }),
+  files: z.array(GithubPRFileItemSchema).optional(),
+});
+
+export const GithubCheckRunInputSchema = z.object({
+  name: z.string(),
+  head_sha: z.string(),
+  status: z.enum(['queued', 'in_progress', 'completed']).optional(),
+  conclusion: z.enum(['success', 'failure', 'neutral', 'cancelled', 'timed_out', 'action_required']).optional(),
+  started_at: z.string().optional(),
+  completed_at: z.string().optional(),
+  output: z
+    .object({
+      title: z.string(),
+      summary: z.string(),
+      text: z.string().optional(),
+    })
+    .optional(),
 });
 
 // ============================================================================
@@ -2695,7 +2734,49 @@ export const ChatContextResponseSchema = z.object({
   suggestedSimulations: z.array(SuggestedSimulationSchema),
 });
 
+// ============================================================================
+// SLACK COMMAND LOG SCHEMAS - Slash command logging and capability stats
+// ============================================================================
+
+export const SlackCommandLogStatusSchema = z.enum(['received', 'classifying', 'dispatched', 'completed', 'failed']);
+
+export const SlackCommandLogEntitySchema = z.object({
+  id: z.number(),
+  workspace_id: z.number(),
+  slack_user_id: z.string(),
+  slack_channel_id: z.string().nullable(),
+  raw_text: z.string(),
+  detected_intent: z.string(),
+  extracted_params: z.record(z.string(), z.unknown()),
+  status: SlackCommandLogStatusSchema,
+  response_text: z.string().nullable(),
+  error_message: z.string().nullable(),
+  duration_ms: z.number().nullable(),
+  created_at: z.coerce.date().optional(),
+  updated_at: z.coerce.date().optional(),
+});
+
+export const SlackCommandLogSearchSchema = z.object({
+  intent: z.string().optional(),
+  limit: z.coerce.number().optional().default(20),
+  offset: z.coerce.number().optional().default(0),
+});
+
+export const SlackCapabilitySchema = z.object({
+  intent: z.string(),
+  name: z.string(),
+  description: z.string(),
+  example: z.string(),
+  execution_count: z.number(),
+  last_used: z.string().nullable(),
+});
+
 // Type aliases
 export type ConnectionData = z.infer<typeof ConnectionEntitySchema>;
 export type TriggerData = z.infer<typeof TriggerEntitySchema>;
 export type ActionData = z.infer<typeof ActionEntitySchema>;
+export type SlackCommandLogData = z.infer<typeof SlackCommandLogEntitySchema>;
+export type SlackCapabilityData = z.infer<typeof SlackCapabilitySchema>;
+export type GithubPRFileItem = z.infer<typeof GithubPRFileItemSchema>;
+export type GithubPRTriggerData = z.infer<typeof GithubPRTriggerDataSchema>;
+export type GithubCheckRunInput = z.infer<typeof GithubCheckRunInputSchema>;

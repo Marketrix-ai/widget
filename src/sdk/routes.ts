@@ -36,9 +36,13 @@ import { eventIterator, oc } from '@orpc/contract';
 import { z } from 'zod';
 
 import {
+  ActionCreateSchema,
+  ActionEntitySchema,
   ActionLogCreateSchema,
   ActionLogEntitySchema,
   ActionLogTypeSchema,
+  ActionSearchSchema,
+  ActionUpdateSchema,
   AgentCreateSchema,
   AgentEntitySchema,
   AgentSimulationIndexRequestSchema,
@@ -50,10 +54,6 @@ import {
   ApplicationEntitySchema,
   ApplicationTypeSchema,
   ApplicationUpdateSchema,
-  ActionCreateSchema,
-  ActionEntitySchema,
-  ActionSearchSchema,
-  ActionUpdateSchema,
   AutomationCreateSchema,
   AutomationEntitySchema,
   AutomationRunEntitySchema,
@@ -71,13 +71,15 @@ import {
   BySlugSchema,
   ByUserIdSchema,
   ByWidgetIdSchema,
+  ChatContextResponseSchema,
   CheckoutSessionSchema,
+  ConnectionEntitySchema,
+  ConnectionProviderSchema,
   ConnectorCapabilitySchema,
   ConnectorEntitySchema,
   ConnectorSearchSchema,
   ConnectorUpsertSchema,
-  ConnectionEntitySchema,
-  ConnectionProviderSchema,
+  ContextRefSchema,
   DiffValueSchema,
   EntityStatusSchema,
   FailureAnalysisSchema,
@@ -86,7 +88,14 @@ import {
   GithubRepoSchema,
   GithubWorkflowRunSchema,
   HealthResponseSchema,
+  HeatmapPageEntitySchema,
+  HeatmapSnapshotEntitySchema,
+  HeatmapTypeSchema,
+  HeatmapVariationSchema,
   IndexResponseSchema,
+  InsightPersonaEntitySchema,
+  InsightPersonasResponseSchema,
+  InsightSegmentEntitySchema,
   KnowledgeEntitySchema,
   KnowledgeTypeSchema,
   listOf,
@@ -111,6 +120,8 @@ import {
   QARunEntitySchema,
   QATestCaseEntitySchema,
   QAVersionHistoryEntrySchema,
+  ReactionEntitySchema,
+  ReactionRunEntitySchema,
   SessionEntitySchema,
   SessionStatsResponseSchema,
   SessionUpsertSchema,
@@ -121,6 +132,9 @@ import {
   SimulationStepSchema,
   SimulationStepSummarySchema,
   SimulationUpdateSchema,
+  SlackCapabilitySchema,
+  SlackCommandLogEntitySchema,
+  SlackCommandLogSearchSchema,
   SlackSettingsDataSchema,
   StripeCheckoutSchema,
   StripeConfigSchema,
@@ -132,6 +146,7 @@ import {
   SubscriptionUsageSchema,
   SuccessSchema,
   SuccessWithMessageSchema,
+  SuggestedSimulationSchema,
   TourEntitySchema,
   TrialSubscriptionSchema,
   TriggerCreateSchema,
@@ -1073,6 +1088,29 @@ const contract = {
     .output(z.object({ success: z.boolean(), message: z.string() })),
 
   // ============================================================================
+  // SLACK COMMAND ROUTES - Slash command log and capabilities
+  // ============================================================================
+
+  slackCommandLogSearch: oc
+    .route({
+      method: 'GET',
+      tags: ['Slack'],
+      path: '/slack/command-log',
+      summary: 'Search slash command logs',
+    })
+    .input(SlackCommandLogSearchSchema)
+    .output(paginatedListOf(SlackCommandLogEntitySchema)),
+
+  slackCapabilities: oc
+    .route({
+      method: 'GET',
+      tags: ['Slack'],
+      path: '/slack/capabilities',
+      summary: 'Get Slack capability stats',
+    })
+    .output(z.array(SlackCapabilitySchema)),
+
+  // ============================================================================
   // ACTION ROUTES - Outbound capabilities
   // ============================================================================
 
@@ -1586,7 +1624,7 @@ const contract = {
       summary: 'Get simulation progress history as chat transcript',
       description: 'Returns all progress updates for a simulation ordered chronologically',
     })
-    .input(BySimulationIdSchema)
+    .input(BySimulationIdSchema.extend({ task_id: z.string().optional() }))
     .output(listOf(SimulationProgressEntitySchema)),
 
   simulationLiveView: oc
@@ -1606,6 +1644,27 @@ const contract = {
       }),
     ),
 
+  simulationTaskLiveView: oc
+    .route({
+      method: 'GET',
+      tags: ['Simulation'],
+      path: '/simulation/{simulation_id}/task/{task_id}/live-view',
+      summary: 'Get per-task live view URL',
+      description: 'Returns Browserbase per-tab live view URL for a specific task within a simulation.',
+    })
+    .input(
+      z.object({
+        simulation_id: z.coerce.number().int().positive(),
+        task_id: z.string(),
+      }),
+    )
+    .output(
+      z.object({
+        live_view_url: z.string(),
+        status: z.string(),
+      }),
+    ),
+
   simulationHistory: oc
     .route({
       method: 'GET',
@@ -1614,7 +1673,7 @@ const contract = {
       summary: 'Get simulation history by ID',
       description: 'Returns the history array for the specified simulation',
     })
-    .input(BySimulationIdSchema)
+    .input(BySimulationIdSchema.extend({ task_id: z.string().optional() }))
     .output(listOf(SimulationStepSchema)),
 
   simulationSteps: oc
@@ -1852,7 +1911,7 @@ const contract = {
     })
     .input(
       z.object({
-        file: z.instanceof(File).optional(),
+        file: z.file().optional(),
         application_id: z.coerce.number(),
         document_url: z.string().url().optional(),
         document_name: z.string().optional(),
@@ -2218,9 +2277,10 @@ const contract = {
       tags: ['QA'],
       path: '/qa/test-case/{id}/simulation',
       summary: 'Get the simulation linked to a test case',
-      description: 'Returns the simulation entity associated with the test case, or null if no simulation exists.',
+      description:
+        'Returns the simulation entity associated with the test case for a specific run, or null if no simulation exists.',
     })
-    .input(ByIdSchema)
+    .input(ByIdSchema.extend({ run_id: z.coerce.number().int().positive().optional() }))
     .output(
       z.object({
         simulation: SimulationEntitySchema.nullable(),
@@ -2657,6 +2717,140 @@ const contract = {
         .describe('Stripe event payload'),
     )
     .output(z.object({ received: z.boolean() })),
+
+  // ============================================================================
+  // INSIGHT - UX Insights
+  // ============================================================================
+
+  // Personas
+  insightPersonasGet: oc
+    .route({
+      method: 'GET',
+      tags: ['Insight'],
+      path: '/insights/personas',
+      summary: 'Get personas overview (connectors + segments + personas)',
+    })
+    .input(ByApplicationIdSchema)
+    .output(InsightPersonasResponseSchema),
+
+  insightSegmentsGenerate: oc
+    .route({
+      method: 'POST',
+      tags: ['Insight'],
+      path: '/insights/segments/generate',
+      summary: 'Generate segments from session data (mocked)',
+    })
+    .input(ByApplicationIdSchema)
+    .output(z.object({ items: z.array(InsightSegmentEntitySchema) })),
+
+  insightSegmentDelete: oc
+    .route({ method: 'DELETE', tags: ['Insight'], path: '/insights/segments/{id}', summary: 'Delete a segment' })
+    .input(z.object({ id: z.coerce.number() }))
+    .output(SuccessSchema),
+
+  insightPersonasGenerate: oc
+    .route({
+      method: 'POST',
+      tags: ['Insight'],
+      path: '/insights/personas/generate',
+      summary: 'Generate personas from segments (mocked)',
+    })
+    .input(ByApplicationIdSchema)
+    .output(z.object({ items: z.array(InsightPersonaEntitySchema) })),
+
+  insightPersonaDelete: oc
+    .route({ method: 'DELETE', tags: ['Insight'], path: '/insights/personas/{id}', summary: 'Delete a persona' })
+    .input(z.object({ id: z.coerce.number() }))
+    .output(SuccessSchema),
+
+  // Heatmaps
+  insightHeatmapPages: oc
+    .route({
+      method: 'GET',
+      tags: ['Insight'],
+      path: '/insights/heatmaps/pages',
+      summary: 'Get all tracked heatmap pages',
+    })
+    .input(ByApplicationIdSchema)
+    .output(z.object({ items: z.array(HeatmapPageEntitySchema) })),
+
+  insightHeatmapSnapshot: oc
+    .route({
+      method: 'GET',
+      tags: ['Insight'],
+      path: '/insights/heatmaps/snapshot',
+      summary: 'Get heatmap snapshot for a page/variation/type',
+    })
+    .input(z.object({ page_id: z.coerce.number(), variation: HeatmapVariationSchema, type: HeatmapTypeSchema }))
+    .output(HeatmapSnapshotEntitySchema.nullable()),
+
+  insightHeatmapsGenerate: oc
+    .route({
+      method: 'POST',
+      tags: ['Insight'],
+      path: '/insights/heatmaps/generate',
+      summary: 'Generate heatmap data from sessions (mocked)',
+    })
+    .input(ByApplicationIdSchema)
+    .output(SuccessSchema),
+
+  // Reactions
+  insightReactionsGet: oc
+    .route({
+      method: 'GET',
+      tags: ['Insight'],
+      path: '/insights/reactions',
+      summary: 'Get all reactions with runs and results',
+    })
+    .input(ByApplicationIdSchema)
+    .output(z.object({ reactions: z.array(ReactionEntitySchema), personas: z.array(InsightPersonaEntitySchema) })),
+
+  insightReactionCreate: oc
+    .route({
+      method: 'POST',
+      tags: ['Insight'],
+      path: '/insights/reactions',
+      summary: 'Create a new reaction (question)',
+    })
+    .input(z.object({ application_id: z.coerce.number(), question: z.string() }))
+    .output(ReactionEntitySchema),
+
+  insightReactionDelete: oc
+    .route({
+      method: 'DELETE',
+      tags: ['Insight'],
+      path: '/insights/reactions/{id}',
+      summary: 'Delete a reaction and all its runs',
+    })
+    .input(z.object({ id: z.coerce.number() }))
+    .output(SuccessSchema),
+
+  insightReactionContext: oc
+    .route({
+      method: 'POST',
+      tags: ['Insight'],
+      path: '/insights/reactions/context',
+      summary: 'Get context for a reaction question (mocked)',
+    })
+    .input(z.object({ application_id: z.coerce.number(), question: z.string() }))
+    .output(ChatContextResponseSchema),
+
+  insightReactionRun: oc
+    .route({
+      method: 'POST',
+      tags: ['Insight'],
+      path: '/insights/reactions/{reaction_id}/run',
+      summary: 'Run reaction scoring for selected personas (mocked scoring)',
+    })
+    .input(
+      z.object({
+        reaction_id: z.coerce.number(),
+        persona_ids: z.array(z.coerce.number()),
+        context_refs: z.array(ContextRefSchema),
+        simulations: z.array(SuggestedSimulationSchema),
+      }),
+    )
+    .output(ReactionRunEntitySchema),
 };
 
 export { contract };
