@@ -1,25 +1,26 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+/**
+ * WidgetContext — compatibility shim.
+ *
+ * Assembles UIStateContext, ChatContext, and TaskContext into the original
+ * { state, actions } shape so all existing consumers keep working unchanged.
+ *
+ * New code should import from the focused contexts directly:
+ *   - UIStateContext  → isOpen, isMinimized, activeView, currentMode, …
+ *   - ChatContext     → messages, sendMessage, addMessage, …
+ *   - TaskContext     → isTaskRunning, activeTaskId, stopTask, …
+ */
+import React, { createContext, useContext, useMemo } from 'react';
 
-import type { WidgetEvent } from '../sdk/schema';
-import { MarketrixApiService } from '../services/ApiService';
-import { chatService, createAgentMessage, createUserMessage } from '../services/ChatService';
-import { configManager } from '../services/ConfigManager';
-import { sessionManager } from '../services/SessionManager';
-import { StreamClient, type StreamStatus } from '../services/StreamClient';
-import { toolExecutionService } from '../services/ToolService';
 import type { ChatMessage, InstructionType, TaskProgress, WidgetState, WidgetView } from '../types';
-import { BROWSER_TOOLS } from '../types/browserTools';
-import {
-  addProgressLine,
-  addThinkingMarker,
-  findMessageForProgress,
-  getFriendlyToolName,
-  markProgressLineComplete,
-  markProgressLineFailed,
-  updateThinkingMarker,
-} from '../utils/chat';
+import { useChatContext } from './ChatContext';
+import { useTaskContext } from './TaskContext';
+import { useUIStateContext } from './UIStateContext';
+import { WidgetProviders } from './WidgetProviders';
 
-// Define Context Interface
+// ---------------------------------------------------------------------------
+// Legacy combined context type — preserved for full backwards compatibility
+// ---------------------------------------------------------------------------
+
 interface WidgetContextType {
   state: WidgetState;
   actions: {
@@ -54,7 +55,98 @@ interface WidgetContextType {
   };
 }
 
+// ---------------------------------------------------------------------------
+// Internal assembled context
+// ---------------------------------------------------------------------------
+
 const WidgetContext = createContext<WidgetContextType | undefined>(undefined);
+
+/**
+ * WidgetContextAssembler — must render inside WidgetProviders so all three
+ * focused contexts are available. Assembles the legacy { state, actions } shape.
+ */
+export const WidgetContextAssembler: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { uiState, uiActions } = useUIStateContext();
+  const { chatState, chatActions } = useChatContext();
+  const { taskState, taskActions } = useTaskContext();
+
+  const state = useMemo<WidgetState>(
+    () => ({
+      isOpen: uiState.isOpen,
+      isMinimized: uiState.isMinimized,
+      isLoading: uiState.isLoading,
+      currentMode: uiState.currentMode,
+      agentAvailable: uiState.agentAvailable,
+      error: uiState.error,
+      activeView: uiState.activeView,
+      messages: chatState.messages,
+      activeTaskId: taskState.activeTaskId,
+      isTaskRunning: taskState.isTaskRunning,
+      taskProgress: taskState.taskProgress,
+    }),
+    [uiState, chatState, taskState],
+  );
+
+  const actions = useMemo<WidgetContextType['actions']>(
+    () => ({
+      setState: (payload: Partial<WidgetState>) => {
+        uiActions.applyState({
+          ...(payload.isOpen !== undefined && { isOpen: payload.isOpen }),
+          ...(payload.isMinimized !== undefined && { isMinimized: payload.isMinimized }),
+          ...(payload.isLoading !== undefined && { isLoading: payload.isLoading }),
+          ...(payload.currentMode !== undefined && { currentMode: payload.currentMode }),
+          ...(payload.agentAvailable !== undefined && { agentAvailable: payload.agentAvailable }),
+          ...(payload.error !== undefined && { error: payload.error }),
+          ...(payload.activeView !== undefined && { activeView: payload.activeView }),
+        });
+        if (payload.messages !== undefined) chatActions.setMessages(payload.messages);
+        if (
+          payload.activeTaskId !== undefined ||
+          payload.isTaskRunning !== undefined ||
+          payload.taskProgress !== undefined
+        ) {
+          taskActions.setTaskState({
+            activeTaskId: payload.activeTaskId ?? taskState.activeTaskId,
+            isTaskRunning: payload.isTaskRunning ?? taskState.isTaskRunning,
+            taskProgress: payload.taskProgress ?? taskState.taskProgress,
+          });
+        }
+      },
+      setActiveView: uiActions.setActiveView,
+      toggleWidget: uiActions.toggleWidget,
+      closeWidget: uiActions.closeWidget,
+      setMode: uiActions.setMode,
+      setLoading: uiActions.setLoading,
+      setAgentAvailable: uiActions.setAgentAvailable,
+      setError: uiActions.setError,
+      clearError: uiActions.clearError,
+      setTaskState: taskActions.setTaskState,
+      stopTask: taskActions.stopTask,
+      addMessage: chatActions.addMessage,
+      updateMessage: chatActions.updateMessage,
+      removeMessage: chatActions.removeMessage,
+      setMessages: chatActions.setMessages,
+      sendMessage: chatActions.sendMessage,
+      resetState: () => {
+        chatActions.clearMessages();
+        taskActions.setTaskState({ activeTaskId: null, isTaskRunning: false, taskProgress: [] });
+        uiActions.setError(undefined);
+      },
+      clearChatHistory: () => {
+        chatActions.clearMessages();
+        taskActions.setTaskState({ activeTaskId: null, isTaskRunning: false, taskProgress: [] });
+        uiActions.setError(undefined);
+      },
+    }),
+    [uiActions, chatActions, taskActions, taskState],
+  );
+
+  return <WidgetContext.Provider value={{ state, actions }}>{children}</WidgetContext.Provider>;
+};
+
+// ---------------------------------------------------------------------------
+// WidgetProvider — drop-in replacement for the old monolithic provider
+// ---------------------------------------------------------------------------
 
 interface WidgetProviderProps {
   children: React.ReactNode;
@@ -62,681 +154,15 @@ interface WidgetProviderProps {
   previewMode?: boolean;
 }
 
-export const WidgetProvider: React.FC<WidgetProviderProps> = ({ children, previewMode = false }) => {
-  const stateVersion = useRef(0);
-  const processedRequestIds = useRef(new Set<string>());
-  const isTaskRunningRef = useRef(false);
-  const MAX_PROCESSED_IDS = 1000;
+export const WidgetProvider: React.FC<WidgetProviderProps> = ({ children, previewMode = false }) => (
+  <WidgetProviders previewMode={previewMode}>
+    <WidgetContextAssembler>{children}</WidgetContextAssembler>
+  </WidgetProviders>
+);
 
-  const addProcessedRequestId = useCallback((requestId: string) => {
-    processedRequestIds.current.add(requestId);
-
-    if (processedRequestIds.current.size > MAX_PROCESSED_IDS) {
-      const entries = Array.from(processedRequestIds.current);
-      const toKeep = entries.slice(-MAX_PROCESSED_IDS / 2);
-      processedRequestIds.current = new Set(toKeep);
-    }
-  }, []);
-  // Single ref to coordinate task start handshake between HTTP response and SSE notification
-  const pendingTaskRef = useRef<{ apiTaskId?: string; agentStarted?: boolean }>({});
-
-  const maybeActivateTask = useCallback(() => {
-    const p = pendingTaskRef.current;
-    if (p.apiTaskId && p.agentStarted) {
-      const taskId = p.apiTaskId;
-      pendingTaskRef.current = {};
-      setState(prev => {
-        chatService.setTaskState(true, taskId, []);
-        isTaskRunningRef.current = true;
-        return { ...prev, isTaskRunning: true, activeTaskId: taskId, taskProgress: [] };
-      });
-    }
-  }, []);
-
-  const [state, setState] = useState<WidgetState>({
-    isOpen: false,
-    isMinimized: false,
-    isLoading: false,
-    messages: [],
-    currentMode: 'tell',
-    agentAvailable: false,
-    activeTaskId: null,
-    isTaskRunning: false,
-    taskProgress: [],
-    activeView: 'home',
-  });
-
-  // Initialize ChatService on mount (skip in preview mode)
-  useEffect(() => {
-    // Skip all network initialization in preview mode
-    if (previewMode) {
-      return;
-    }
-
-    const initChat = async () => {
-      const chatId = await sessionManager.getOrCreateChatId();
-
-      chatService.createInitialContext(chatId);
-
-      chatService.initialize(chatId);
-      const isTaskRunning = chatService.getIsTaskRunning();
-      isTaskRunningRef.current = isTaskRunning; // Initialize ref
-      setState(prev => ({
-        ...prev,
-        messages: chatService.getMessages(),
-        isLoading: chatService.getIsLoading(),
-        isTaskRunning,
-        activeTaskId: chatService.getActiveTaskId(),
-        taskProgress: chatService.getTaskProgress(),
-        currentMode: chatService.getCurrentMode(),
-        isOpen: chatService.getIsOpen(),
-        isMinimized: chatService.getIsMinimized(),
-      }));
-
-      // Connect to stream if chat ID exists
-      if (chatId) {
-        const streamClient = StreamClient.getInstance();
-        const streamConfig = configManager.getConfig();
-        streamClient
-          .connect(
-            chatId,
-            streamConfig
-              ? {
-                  mtxId: streamConfig.mtxId,
-                  mtxKey: streamConfig.mtxKey,
-                  mtxAgent: streamConfig.mtxAgent,
-                  mtxApp: streamConfig.mtxApp,
-                }
-              : undefined,
-          )
-          .catch((err: unknown) => console.error('Initial stream connection failed:', err));
-      }
-    };
-    initChat();
-  }, [previewMode]);
-
-  // Helper to update progress
-  const updateProgressForTool = useCallback(
-    (toolName: string, explanation: string, status: 'running' | 'completed' | 'failed', error?: string) => {
-      setState(prev => {
-        const friendlyName = getFriendlyToolName(toolName);
-        const found = findMessageForProgress({
-          messages: prev.messages,
-          isTaskRunning: prev.isTaskRunning,
-          currentMode: prev.currentMode,
-          preferPlaceholder: true,
-          requireContent: status === 'failed',
-        });
-
-        if (!found) return prev;
-
-        let updatedMsg = found.message;
-
-        // Determine if this tool interaction requires user waiting
-        // Matches ToolService.requiresHighlight logic + show mode
-        const isInteractiveTool = [
-          'click_element',
-          'type_text',
-          'select_dropdown_option',
-          'send_keys',
-          'upload_file',
-        ].includes(toolName);
-
-        const shouldWait = prev.isTaskRunning && prev.currentMode === 'show' && isInteractiveTool;
-
-        // Skip progress line for "done" tool - we show status icon instead
-        const isDoneTool = toolName === 'done';
-
-        if (status === 'running') {
-          if (!isDoneTool) {
-            updatedMsg = addProgressLine(updatedMsg, friendlyName, explanation || friendlyName);
-          }
-          if (prev.isTaskRunning && (prev.currentMode === 'show' || prev.currentMode === 'do')) {
-            updatedMsg = updateThinkingMarker(updatedMsg, prev.isTaskRunning, prev.currentMode, shouldWait);
-          }
-        } else if (status === 'completed') {
-          if (!isDoneTool) {
-            updatedMsg = markProgressLineComplete(updatedMsg);
-          }
-          // When tool completes, revert to 'thinking' state (not waiting)
-          if (prev.isTaskRunning && (prev.currentMode === 'show' || prev.currentMode === 'do')) {
-            updatedMsg = updateThinkingMarker(updatedMsg, prev.isTaskRunning, prev.currentMode, false);
-          }
-        } else {
-          updatedMsg = markProgressLineFailed(updatedMsg, friendlyName, error || '');
-          // On failure, we might also want to revert to thinking or just leave it (likely task will stop soon)
-          if (prev.isTaskRunning && (prev.currentMode === 'show' || prev.currentMode === 'do')) {
-            updatedMsg = updateThinkingMarker(updatedMsg, prev.isTaskRunning, prev.currentMode, false);
-          }
-        }
-
-        const newMessages = [...prev.messages];
-        newMessages[found.index] = updatedMsg;
-
-        chatService.setMessages(newMessages);
-        return { ...prev, messages: newMessages };
-      });
-    },
-    [],
-  );
-
-  // SSE Setup (skip in preview mode)
-  useEffect(() => {
-    // Skip SSE setup in preview mode - no network connections
-    if (previewMode) {
-      return;
-    }
-
-    const wsClient = StreamClient.getInstance();
-
-    const handleStatusChange = (status: StreamStatus) => {
-      setState(prev => ({ ...prev, agentAvailable: status === 'registered' }));
-    };
-
-    const handleMessage = async (event: WidgetEvent) => {
-      if (event.type === 'tool/call') {
-        const requestId = event.call_id;
-
-        // Prevent duplicate processing (React StrictMode can cause duplicate callbacks)
-        if (processedRequestIds.current.has(requestId)) return;
-        addProcessedRequestId(requestId);
-
-        // Validate tool name is in allowed list (derived from single source of truth)
-        const ALLOWED_TOOLS = BROWSER_TOOLS.map(t => t.id);
-        if (!ALLOWED_TOOLS.includes(event.tool)) {
-          console.warn('[Widget] Unknown tool requested:', event.tool);
-          wsClient
-            .send({
-              type: 'tool/response',
-              call_id: requestId,
-              success: false,
-              error: `Unknown tool: ${event.tool}`,
-              state_version: stateVersion.current,
-            })
-            .catch(err => console.error('Failed to send unknown-tool response:', err));
-          return;
-        }
-
-        // If tool/call arrives before task/started, auto-activate the task
-        // instead of rejecting — the agent clearly intends a task to be running.
-        if (!isTaskRunningRef.current) {
-          console.log('[Widget] Tool call received before task/started — auto-activating task');
-          isTaskRunningRef.current = true;
-          setState(prev => ({ ...prev, isTaskRunning: true }));
-        }
-
-        const toolName = event.tool;
-        const args = event.args;
-        const mode = event.mode || state.currentMode || 'do';
-        const explanation = event.explanation || '';
-        const requestStateVersion = event.state_version;
-
-        // Sync state version from server — adopt whatever version the agent sends.
-        // This prevents stale-version rejections that cause silent task failures.
-        if (requestStateVersion !== undefined && requestStateVersion > stateVersion.current) {
-          stateVersion.current = requestStateVersion;
-        }
-
-        // Only show progress if we're actually executing
-        updateProgressForTool(toolName, explanation, 'running');
-
-        const result = await toolExecutionService.executeTool(toolName, args, mode, explanation);
-
-        if (result.success) {
-          try {
-            stateVersion.current++;
-            wsClient
-              .send({
-                type: 'tool/response',
-                call_id: requestId,
-                success: true,
-                data: typeof result.data === 'string' ? result.data : JSON.stringify(result.data),
-                state_version: stateVersion.current,
-              })
-              .catch(err => console.error('Failed to send tool success response:', err));
-            updateProgressForTool(toolName, explanation, 'completed');
-
-            // If the "done" tool completed successfully, mark the task as complete
-            if (toolName === 'done') {
-              pendingTaskRef.current = {};
-
-              setState(prev => {
-                chatService.setTaskState(false, null, []);
-                isTaskRunningRef.current = false;
-                const found = findMessageForProgress({
-                  messages: prev.messages,
-                  isTaskRunning: prev.isTaskRunning,
-                  currentMode: prev.currentMode,
-                  preferPlaceholder: true,
-                  requireContent: false,
-                });
-                const newMessages = [...prev.messages];
-                if (found) {
-                  const updatedParts =
-                    found.message.parts?.filter(part => !(part.type === 'progress' && part.toolName === 'done')) || [];
-                  newMessages[found.index] = {
-                    ...found.message,
-                    taskStatus: 'done',
-                    parts: updatedParts,
-                  };
-                  chatService.setMessages(newMessages);
-                }
-                return {
-                  ...prev,
-                  messages: newMessages,
-                  isTaskRunning: false,
-                  activeTaskId: null,
-                  taskProgress: [],
-                };
-              });
-            }
-          } catch (error) {
-            console.error('Failed to send tool result:', error);
-            updateProgressForTool(toolName, explanation, 'failed', 'Connection error');
-          }
-        } else {
-          // Tool execution failed — update progress UI and notify server
-          updateProgressForTool(toolName, explanation, 'failed', result.error || 'Tool execution failed');
-          stateVersion.current++;
-          wsClient
-            .send({
-              type: 'tool/response',
-              call_id: requestId,
-              success: false,
-              data: typeof result.data === 'string' ? result.data : JSON.stringify(result.data),
-              error: result.error ?? undefined,
-              state_version: stateVersion.current,
-            })
-            .catch(err => console.error('Failed to send tool error response:', err));
-        }
-      } else if (event.type === 'task/status') {
-        const status = event.status;
-        const statusMessage = event.message || '';
-
-        if (status === 'started') {
-          pendingTaskRef.current = {
-            ...pendingTaskRef.current,
-            agentStarted: true,
-            apiTaskId: pendingTaskRef.current.apiTaskId || event.task_id || undefined,
-          };
-          maybeActivateTask();
-        } else if (status === 'completed' || status === 'failed' || status === 'stopped') {
-          processedRequestIds.current.clear();
-          pendingTaskRef.current = {};
-          setState(prev => {
-            chatService.setTaskState(false, null, []);
-            const found = findMessageForProgress({
-              messages: prev.messages,
-              isTaskRunning: prev.isTaskRunning,
-              currentMode: prev.currentMode,
-              preferPlaceholder: true,
-              requireContent: false,
-            });
-            const newMessages = [...prev.messages];
-            if (found) {
-              let taskStatus: 'done' | 'failed' | 'stopped' = 'done';
-              if (status === 'failed') taskStatus = 'failed';
-              else if (status === 'stopped') taskStatus = 'stopped';
-              newMessages[found.index] = {
-                ...found.message,
-                taskStatus,
-                ...(statusMessage && { content: statusMessage }),
-              };
-              chatService.setMessages(newMessages);
-            }
-            isTaskRunningRef.current = false;
-            return {
-              ...prev,
-              messages: newMessages,
-              isTaskRunning: false,
-              activeTaskId: null,
-              taskProgress: [],
-            };
-          });
-        }
-      } else if (event.type === 'chat/response') {
-        // Handle chat response — update the placeholder message matching request_id
-        setState(prev => {
-          const newMessages = prev.messages.map(msg => {
-            if (msg.id === event.request_id) {
-              const currentParts = msg.parts || [];
-              const newParts = [...currentParts, { type: 'text' as const, content: event.text }];
-              return {
-                ...msg,
-                content: event.text,
-                isPlaceholder: false,
-                placeholderState: undefined,
-                parts: newParts,
-                ...(event.task_id && { taskId: event.task_id }),
-              };
-            }
-            return msg;
-          });
-          chatService.setMessages(newMessages);
-
-          // If task_id present, handle task start handshake
-          if (event.task_id) {
-            pendingTaskRef.current = { ...pendingTaskRef.current, apiTaskId: event.task_id };
-            maybeActivateTask();
-          }
-
-          return { ...prev, messages: newMessages, isLoading: false };
-        });
-      } else if (event.type === 'chat/error') {
-        // Handle chat error — update the placeholder message matching request_id
-        setState(prev => {
-          const newMessages = prev.messages.map(msg => {
-            if (msg.id === event.request_id) {
-              const errorMessage = `Error: ${event.error}`;
-              const currentParts = msg.parts || [];
-              const newParts = [...currentParts, { type: 'text' as const, content: errorMessage }];
-              return {
-                ...msg,
-                content: errorMessage,
-                isPlaceholder: false,
-                placeholderState: undefined,
-                parts: newParts,
-              };
-            }
-            return msg;
-          });
-          chatService.setMessages(newMessages);
-          return { ...prev, messages: newMessages, isLoading: false };
-        });
-      }
-    };
-
-    const handleError = (error: Error) => {
-      setState(prev => ({ ...prev, error: error.message }));
-    };
-
-    const callbacks = {
-      onStatusChange: handleStatusChange,
-      onMessage: handleMessage,
-      onError: handleError,
-    };
-
-    wsClient.addCallbacks(callbacks);
-
-    return () => {
-      wsClient.removeCallbacks(callbacks);
-    };
-  }, [updateProgressForTool, previewMode]);
-
-  // Action Implementations
-  const setTaskState = useCallback(
-    (payload: { activeTaskId: string | null; isTaskRunning: boolean; taskProgress?: TaskProgress[] }) => {
-      setState(prev => {
-        chatService.setTaskState(payload.isTaskRunning, payload.activeTaskId, payload.taskProgress || []);
-        return { ...prev, ...payload };
-      });
-    },
-    [],
-  );
-
-  const resetState = useCallback(() => {
-    chatService.clearMessages();
-    // Reset pending task handshake
-    pendingTaskRef.current = {};
-    isTaskRunningRef.current = false; // Update ref immediately
-    setState(prev => ({
-      ...prev,
-      messages: [],
-      isTaskRunning: false,
-      activeTaskId: null,
-      taskProgress: [],
-      error: undefined,
-    }));
-  }, []);
-
-  const addMessage = useCallback((message: ChatMessage) => {
-    setState(prev => {
-      chatService.addMessage(message);
-      return { ...prev, messages: [...prev.messages, message] };
-    });
-  }, []);
-
-  // Implement actual sendMessage logic using API service
-  const sendMessage = useCallback(
-    async (
-      content: string,
-      mode?: InstructionType,
-      applicationId?: number,
-      question?: string,
-      skipUserMessage?: boolean,
-    ) => {
-      // In preview mode, show user message and a preview response (no network)
-      if (previewMode) {
-        if (!skipUserMessage) {
-          const userMsg = createUserMessage(content, mode || state.currentMode);
-          addMessage(userMsg);
-        }
-        // Show preview response
-        const previewResponse = createAgentMessage(
-          "This is a preview. In production, I'll respond to your messages here.",
-        );
-        addMessage(previewResponse);
-        return;
-      }
-
-      // Attempt to reload config if missing (e.g. from localStorage)
-      let config = configManager.getConfig();
-      if (!config) {
-        config = configManager.loadConfig();
-      }
-
-      if (!config || (!config.mtxId && !config.mtxKey && !config.mtxAgent)) {
-        console.error('Config not loaded or incomplete');
-        // We could fallback to throwing error or showing UI error here
-        const errorMsg = createAgentMessage(
-          'Configuration error: Missing API credentials. Please check your widget settings.',
-        );
-        addMessage(errorMsg);
-        return;
-      }
-
-      // Add user message if not skipped
-      if (!skipUserMessage) {
-        const userMsg = createUserMessage(content, mode || state.currentMode);
-        addMessage(userMsg);
-      }
-
-      // Create placeholder message
-      const placeholderId = `temp-${globalThis.crypto.randomUUID()}`;
-      const placeholderMsg: ChatMessage = {
-        id: placeholderId,
-        content: '',
-        sender: 'agent',
-        timestamp: new Date(),
-        mode: mode || state.currentMode,
-        isPlaceholder: true,
-        placeholderState: 'thinking',
-        parts: [],
-      };
-      // Add thinking marker for the active message logic to work
-      placeholderMsg.content = addThinkingMarker('');
-      addMessage(placeholderMsg);
-
-      setState(prev => ({ ...prev, isLoading: true }));
-
-      // Send via stream (fire-and-forget — response arrives as chat/response event)
-      const apiService = new MarketrixApiService(config);
-      try {
-        // Override config if applicationId is provided (for chips with specific application)
-        if (applicationId) {
-          apiService.updateConfig({ mtxApp: applicationId });
-        }
-
-        // Ensure stream is connected before sending
-        const chatId = apiService.getChatId();
-        if (chatId) {
-          const streamClient = StreamClient.getInstance();
-          if (!streamClient.isConnected()) {
-            const streamConfig = configManager.getConfig();
-            try {
-              await streamClient.connect(
-                chatId,
-                streamConfig
-                  ? {
-                      mtxId: streamConfig.mtxId,
-                      mtxKey: streamConfig.mtxKey,
-                      mtxAgent: streamConfig.mtxAgent,
-                      mtxApp: streamConfig.mtxApp,
-                    }
-                  : undefined,
-              );
-            } catch (err) {
-              console.error('Stream connection failed:', err);
-            }
-          }
-        }
-
-        await apiService.sendMessage({
-          message: content,
-          mode: mode || state.currentMode,
-          question, // Pass question context if available (e.g. from chips)
-          requestId: placeholderId, // Use placeholder ID as request_id so chat/response matches immediately
-        });
-
-        // Placeholder stays in "thinking" state until chat/response arrives via stream
-      } catch (error) {
-        console.error('Failed to send message:', error);
-
-        // Update placeholder to show error
-        setState(prev => {
-          const newMessages = prev.messages.map(msg => {
-            if (msg.id === placeholderId) {
-              const errorMessage = "I'm sorry, I encountered an error processing your request. Please try again.";
-              const currentParts = msg.parts || [];
-              const newParts = [...currentParts, { type: 'text' as const, content: errorMessage }];
-
-              return {
-                ...msg,
-                isPlaceholder: false,
-                parts: newParts,
-                content: errorMessage,
-              };
-            }
-            return msg;
-          });
-
-          chatService.setMessages(newMessages);
-          return { ...prev, messages: newMessages };
-        });
-      } finally {
-        setState(prev => ({ ...prev, isLoading: false }));
-      }
-    },
-    [state.currentMode, addMessage, setTaskState, state, previewMode],
-  );
-
-  const actions = useMemo(
-    () => ({
-      setState: (payload: Partial<WidgetState>) => setState(prev => ({ ...prev, ...payload })),
-      setActiveView: (view: WidgetView) => setState(prev => ({ ...prev, activeView: view })),
-      toggleWidget: () =>
-        setState(prev => {
-          const newState = {
-            ...prev,
-            isOpen: !prev.isOpen,
-            isMinimized: !prev.isOpen ? false : true,
-          };
-          chatService.setWidgetState(newState.isOpen, newState.isMinimized);
-          return newState;
-        }),
-      closeWidget: () =>
-        setState(prev => {
-          const newState = { ...prev, isOpen: false, isMinimized: true };
-          chatService.setWidgetState(newState.isOpen, newState.isMinimized);
-          return newState;
-        }),
-      setMode: (mode: InstructionType) =>
-        setState(prev => {
-          chatService.setMode(mode);
-          return { ...prev, currentMode: mode };
-        }),
-      setLoading: (loading: boolean) => {
-        chatService.setIsLoading(loading);
-        setState(prev => ({ ...prev, isLoading: loading }));
-      },
-      setAgentAvailable: (available: boolean) => setState(prev => ({ ...prev, agentAvailable: available })),
-      setError: (error: string | undefined) => setState(prev => ({ ...prev, error })),
-      clearError: () => setState(prev => ({ ...prev, error: undefined })),
-      setTaskState,
-      addMessage,
-      updateMessage: (messageId: string, updates: Partial<ChatMessage>) =>
-        setState(prev => {
-          chatService.updateMessage(messageId, updates);
-          return {
-            ...prev,
-            messages: prev.messages.map(msg => (msg.id === messageId ? { ...msg, ...updates } : msg)),
-          };
-        }),
-      removeMessage: (messageId: string) =>
-        setState(prev => {
-          chatService.removeMessage(messageId);
-          return { ...prev, messages: prev.messages.filter(msg => msg.id !== messageId) };
-        }),
-      setMessages: (messages: ChatMessage[]) =>
-        setState(prev => {
-          chatService.setMessages(messages);
-          return { ...prev, messages };
-        }),
-      resetState,
-      stopTask: async () => {
-        // Capture taskId from ref (always current) instead of stale closure
-        const taskId = state.activeTaskId || isTaskRunningRef.current ? (state.activeTaskId ?? undefined) : undefined;
-        setState(prev => {
-          // Find the task message and update its taskStatus
-          const found = findMessageForProgress({
-            messages: prev.messages,
-            isTaskRunning: prev.isTaskRunning,
-            currentMode: prev.currentMode,
-            preferPlaceholder: true,
-            requireContent: false,
-          });
-          const newMessages = [...prev.messages];
-          if (found) {
-            newMessages[found.index] = {
-              ...found.message,
-              taskStatus: 'stopped',
-            };
-            if (!previewMode) {
-              chatService.setMessages(newMessages);
-            }
-          }
-          if (!previewMode) {
-            chatService.setTaskState(false, null, []);
-          }
-          // Only reset isTaskRunning state; leave handshake refs intact
-          // so subsequent task starts can still complete the API+WS handshake.
-          isTaskRunningRef.current = false;
-          return {
-            ...prev,
-            messages: newMessages,
-            isTaskRunning: false,
-            activeTaskId: null,
-            taskProgress: [],
-          };
-        });
-
-        // Skip API call in preview mode
-        if (previewMode) {
-          return;
-        }
-
-        StreamClient.getInstance()
-          .send({ type: 'chat/stop' as const, ...(taskId && { task_id: taskId }) })
-          .catch(err => console.error('Failed to stop task remotely:', err));
-      },
-      clearChatHistory: resetState,
-      sendMessage,
-    }),
-    [state.currentMode, setTaskState, resetState, addMessage, sendMessage, previewMode],
-  );
-
-  return <WidgetContext.Provider value={{ state, actions }}>{children}</WidgetContext.Provider>;
-};
+// ---------------------------------------------------------------------------
+// Hook
+// ---------------------------------------------------------------------------
 
 export const useWidgetContext = () => {
   const context = useContext(WidgetContext);
