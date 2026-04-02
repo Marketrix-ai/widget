@@ -418,7 +418,7 @@ export const QARunEntitySchema = BaseEntitySchema.extend({
   browser_type: BrowserTypeSchema,
   browser_config: BrowserConfigSchema.nullish(),
   simulation_id: z.number().nullish(),
-  source: z.enum(['manual', 'automation', 'github_pr']).nullish(),
+  source: z.enum(['manual', 'automation', 'github_pr', 'slack_command']).nullish(),
   source_metadata: z.record(z.string(), z.unknown()).nullish(),
 });
 
@@ -874,6 +874,7 @@ export const SimulationEntitySchema = BaseEntitySchema.extend({
   source: z.enum(['direct', 'qa']).optional(),
   agent_name: z.string().nullish(),
   graph_index_id: z.string().nullish(),
+  source_metadata: z.record(z.string(), z.unknown()).nullish(),
   tasks: z.array(SimulationTaskEntrySchema).optional(),
   agents: z.array(AgentBadgeSchema).optional(),
 });
