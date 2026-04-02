@@ -827,6 +827,7 @@ export const SimulationStepSummarySchema = z.object({
 export const SimulationProgressEntrySchema = z.object({
   status: z.string(),
   status_message: z.string().nullable(),
+  task_id: z.string().nullish(),
   created_at: z.coerce.date(),
 });
 export type SimulationProgressEntry = z.infer<typeof SimulationProgressEntrySchema>;
