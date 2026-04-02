@@ -1580,7 +1580,7 @@ export const AppEventSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('agent/updated'),
     agent_id: z.number().optional(),
-    chat_id: z.string().optional(),
+    context_id: z.string().optional(),
     task_id: z.string().optional(),
     application_id: z.number().optional(),
     status: z.string(),
