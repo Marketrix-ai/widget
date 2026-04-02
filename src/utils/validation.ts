@@ -79,7 +79,7 @@ export function isObject(value: unknown): value is Record<string, unknown> {
 // API Response Type Guards
 // ============================================================================
 
-import type { TourData, TourStepData, WidgetSettingsData } from '../sdk';
+import type { WidgetSettingsData } from '../sdk';
 
 /**
  * Type guard for WidgetSettingsData
@@ -97,68 +97,6 @@ export function isWidgetSettingsData(data: unknown): data is WidgetSettingsData 
     hasProperty(data, 'widget_position') &&
     typeof data.widget_position === 'string'
   );
-}
-
-/**
- * Type guard for TourStepData
- */
-export function isTourStepData(data: unknown): data is TourStepData {
-  if (!isNonNullObject(data)) {
-    return false;
-  }
-
-  return (
-    hasProperty(data, 'step_number') &&
-    typeof data.step_number === 'number' &&
-    hasProperty(data, 'action') &&
-    typeof data.action === 'string' &&
-    hasProperty(data, 'element') &&
-    typeof data.element === 'string' &&
-    hasProperty(data, 'text') &&
-    typeof data.text === 'string'
-  );
-}
-
-/**
- * Type guard for array of TourStepData
- */
-export function isTourStepDataArray(data: unknown): data is TourStepData[] {
-  return Array.isArray(data) && data.every(item => isTourStepData(item));
-}
-
-/**
- * Type guard for TourData
- */
-export function isTourData(data: unknown): data is TourData {
-  if (!isNonNullObject(data)) {
-    return false;
-  }
-
-  const appId =
-    (data as { application_id?: number; connection_id?: number }).application_id ??
-    (data as { connection_id?: number }).connection_id;
-  return (
-    (hasProperty(data, 'application_id') || hasProperty(data, 'connection_id')) &&
-    typeof appId === 'number' &&
-    hasProperty(data, 'question') &&
-    typeof data.question === 'string' &&
-    hasProperty(data, 'answer') &&
-    Array.isArray(data.answer)
-  );
-}
-
-/**
- * Type guard for array of TourData
- */
-export function isTourDataArray(data: unknown): data is TourData[] {
-  return Array.isArray(data) && data.every(item => isTourData(item));
-}
-
-/**
- * Type guard for tour answer with steps property
- */
-export function isTourAnswerWithSteps(answer: unknown): answer is { steps: unknown } {
-  return isObject(answer) && 'steps' in answer;
 }
 
 /**

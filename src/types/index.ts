@@ -193,9 +193,6 @@ export interface MarketrixWidgetProps {
   mtxApiHost?: string;
 }
 
-// Re-export SDK types for convenience
-export type { TourData } from '../sdk';
-
 // Re-export browser tools types
 export type {
   BrowserAction,

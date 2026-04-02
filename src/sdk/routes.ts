@@ -147,7 +147,6 @@ import {
   SuccessSchema,
   SuccessWithMessageSchema,
   SuggestedSimulationSchema,
-  TourEntitySchema,
   TrialSubscriptionSchema,
   TriggerCreateSchema,
   TriggerEntitySchema,
@@ -1416,39 +1415,6 @@ const contract = {
         .extend(PaginationSchema.shape),
     )
     .output(paginatedListOf(ActionLogEntitySchema)),
-
-  // ============================================================================
-  // TOUR ROUTES - Interactive tour and guidance system
-  // ============================================================================
-
-  tourSearch: oc
-    .route({
-      method: 'GET',
-      tags: ['Tour'],
-      path: '/tour',
-      summary: 'Search and filter tours by workspace',
-      description: 'Returns list of available tours for specified workspace',
-    })
-    .input(
-      z
-        .object({
-          workspace_id: z.coerce.number().optional(),
-          application_id: z.coerce.number().optional(),
-        })
-        .extend(PaginationSchema.shape),
-    )
-    .output(paginatedListOf(TourEntitySchema)),
-
-  tourCreate: oc
-    .route({
-      method: 'POST',
-      tags: ['Tour'],
-      path: '/tour',
-      summary: 'Create new interactive tour',
-      description: 'Creates tour with specified steps and configuration',
-    })
-    .input(TourEntitySchema)
-    .output(TourEntitySchema),
 
   // ============================================================================
   // URL GUIDE ROUTES - URL-based guidance messages for widget

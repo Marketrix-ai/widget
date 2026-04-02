@@ -87,6 +87,7 @@ export const ActionLogTypeSchema = z.enum([
   'update_automation',
   'delete_automation',
   'toggle_automation',
+  'slack_command',
 ]);
 
 /**
@@ -822,7 +823,7 @@ export const SimulationStepSummarySchema = z.object({
 });
 
 /**
- * One entry inside simulation.progress_log (stored as JSON array on the simulation row).
+ * One row in the simulation_progress table.
  */
 export const SimulationProgressEntrySchema = z.object({
   status: z.string(),
@@ -873,8 +874,6 @@ export const SimulationEntitySchema = BaseEntitySchema.extend({
   source: z.enum(['direct', 'qa']).optional(),
   agent_name: z.string().nullish(),
   graph_index_id: z.string().nullish(),
-  progress_log: z.array(SimulationProgressEntrySchema).optional(),
-  task_progress_log: z.record(z.string(), z.array(SimulationProgressEntrySchema)).optional(),
   tasks: z.array(SimulationTaskEntrySchema).optional(),
   agents: z.array(AgentBadgeSchema).optional(),
 });
@@ -1376,30 +1375,6 @@ export const UrlGuideCreateSchema = UrlGuideEntitySchema.partial().extend({
 export const UrlGuideUpdateSchema = UrlGuideEntitySchema.partial();
 
 // ============================================================================
-// TOUR SCHEMAS - Interactive tour and guidance system
-// ============================================================================
-
-export const TourStepSchema = z.object({
-  step_number: z.number(),
-  action: z.string(),
-  element: z.string(),
-  text: z.string(),
-  description: z.string(),
-  selector: z.string(),
-});
-
-export const TourAnswerSchema = z.array(TourStepSchema);
-
-/**
- * Tour entity schema
- */
-export const TourEntitySchema = BaseEntitySchema.extend({
-  application_id: z.number(),
-  question: z.string(),
-  answer: TourAnswerSchema,
-});
-
-// ============================================================================
 // CHAT SCHEMAS - AI-powered chat and conversation management
 // ============================================================================
 
@@ -1713,20 +1688,32 @@ export const ActionLogCreateSchema = ActionLogEntitySchema.partial().extend({
 });
 
 // ============================================================================
-// CHAT SCHEMAS - AI-powered chat and conversation management
+// CHAT / CONVERSATION SCHEMAS - AI-powered chat and conversation management
 // ============================================================================
 
-/**
- * Chat entity schema - matches the Chat model structure
- */
-export const ChatEntitySchema = BaseEntitySchema.extend({
-  user_id: z.number(),
-  application_id: z.number(),
-  agent_id: z.number(),
-  chat_id: z.string(),
-  role: ChatRoleSchema,
-  source: ChatSourceSchema,
-  message: z.string(),
+export const ConversationTypeSchema = z.enum(['widget_chat', 'app_chat', 'guide_preview', 'slack']);
+export const ConversationMessageRoleSchema = z.enum(['user', 'agent', 'assistant', 'system', 'tool']);
+
+export const ConversationEntitySchema = BaseEntitySchema.extend({
+  context_id: z.string(),
+  workspace_id: z.number(),
+  application_id: z.number().nullish(),
+  agent_id: z.number().nullish(),
+  user_id: z.number().nullish(),
+  simulation_id: z.number().nullish(),
+  session_id: z.number().nullish(),
+  persona_id: z.number().nullish(),
+  type: ConversationTypeSchema,
+  channel_id: z.string().nullish(),
+  preview_video_url: z.string().nullish(),
+  metadata: z.record(z.string(), z.unknown()).nullish(),
+});
+
+export const ConversationMessageEntitySchema = BaseEntitySchema.extend({
+  conversation_id: z.number(),
+  role: ConversationMessageRoleSchema,
+  content: z.string(),
+  tool_call_id: z.string().nullish(),
 });
 
 // ============================================================================
@@ -2385,10 +2372,10 @@ export type SimulationStateData = z.infer<typeof SimulationStateSchema>;
 export type SimulationActionData = z.infer<typeof SimulationActionSchema>;
 export type BrowserTabData = z.infer<typeof BrowserTabSchema>;
 export type InteractedElementData = z.infer<typeof InteractedElementSchema>;
-export type TourData = z.infer<typeof TourEntitySchema>;
-export type TourAnswerData = z.infer<typeof TourAnswerSchema>;
-export type TourStepData = z.infer<typeof TourStepSchema>;
-export type ChatData = z.infer<typeof ChatEntitySchema>;
+export type ConversationType = z.infer<typeof ConversationTypeSchema>;
+export type ConversationMessageRole = z.infer<typeof ConversationMessageRoleSchema>;
+export type ConversationData = z.infer<typeof ConversationEntitySchema>;
+export type ConversationMessageData = z.infer<typeof ConversationMessageEntitySchema>;
 export type ConnectorData = z.infer<typeof ConnectorEntitySchema>;
 export type ConnectorUpsertData = z.infer<typeof ConnectorUpsertSchema>;
 export type ConnectorSearchData = z.infer<typeof ConnectorSearchSchema>;
