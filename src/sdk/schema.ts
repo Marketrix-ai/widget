@@ -865,7 +865,7 @@ export const SimulationEntitySchema = BaseEntitySchema.extend({
   application_id: z.number(),
   agent_id: z.number(),
   job_id: z.string(),
-  session_id: z.string().nullish(),
+  browser_session_id: z.string().nullish(),
   status: z.string(),
   status_message: z.string().nullish(),
   path: z.string().nullish(),
@@ -1129,7 +1129,7 @@ export const SimulationStatusResponseSchema = z.object({
  * Response for browser session operations from agent server
  */
 export const BrowserSessionResponseSchema = z.object({
-  session_id: z.string().optional(),
+  browser_session_id: z.string().optional(),
   live_view_url: z.string().nullish(),
   status: z.string().optional(),
   message: z.string().nullish(),
