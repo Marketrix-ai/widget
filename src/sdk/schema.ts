@@ -997,15 +997,31 @@ export const MindMapEdgeSchema = z.object({
 });
 
 /**
- * Mindmap node schema - unique web state (page + situation) during simulation
+ * Mindmap section schema - functional UI section within a page node
+ */
+export const MindMapSectionSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  purpose: z.string(),
+  elements: z.array(z.record(z.string(), z.unknown())).default([]),
+  bbox: z.record(z.string(), z.unknown()).default({}),
+  screenshot: z.string().default(''),
+  embedding: z.array(z.number()).nullish(),
+});
+
+/**
+ * Mindmap node schema - unique page state observed during simulation.
+ * Matches agent's PageNode model (perception/graph.py).
  */
 export const MindMapNodeSchema = z.object({
   id: z.string(),
-  screenshots: z.array(z.string()),
   title: z.string(),
   url: z.string(),
-  state: z.array(z.string()),
-  mentions: z.array(z.string()),
+  summary: z.string().default(''),
+  screenshot: z.string().default(''),
+  sections: z.array(MindMapSectionSchema).default([]),
+  sequence_ids: z.array(z.number()).default([]),
+  embedding: z.array(z.number()).nullish(),
 });
 
 /**
@@ -1144,14 +1160,7 @@ export const BrowserSessionResponseSchema = z.object({
  * Task status enum schema
  * Common status values for tasks and simulations
  */
-export const TaskStatusSchema = z.enum([
-  'pending',
-  'in_progress',
-  'completed',
-  'failed',
-  'stopped',
-  'has_question',
-]);
+export const TaskStatusSchema = z.enum(['pending', 'in_progress', 'completed', 'failed', 'stopped', 'has_question']);
 
 /**
  * Agent knowledge search configuration schema
