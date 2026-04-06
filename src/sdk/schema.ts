@@ -853,7 +853,7 @@ export const SimulationTaskEntrySchema = z.object({
   completed_at: z.string().nullish(),
   order_index: z.number().int().nonnegative().default(0),
   tab_id: z.string().nullish(),
-  steps_completed: z.number().int().nonnegative().default(0),
+  step_count: z.number().int().nonnegative().default(0),
   blocked_by: z.array(TaskDependencySchema).default([]),
 });
 export type SimulationTaskEntry = z.infer<typeof SimulationTaskEntrySchema>;
@@ -1142,12 +1142,11 @@ export const BrowserSessionResponseSchema = z.object({
  */
 export const TaskStatusSchema = z.enum([
   'pending',
-  'running',
+  'in_progress',
   'completed',
   'failed',
-  'cancelled',
+  'stopped',
   'has_question',
-  'in_progress',
 ]);
 
 /**

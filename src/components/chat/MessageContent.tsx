@@ -58,7 +58,7 @@ export const MessageContent: React.FC<MessageContentProps> = ({ message, isLastM
               <ProgressLine
                 key={`part-${index}`}
                 content={part.content}
-                status={part.status || 'running'}
+                status={part.status || 'in_progress'}
                 {...(part.hideIcon !== undefined ? { hideIcon: part.hideIcon } : {})}
                 {...(part.textStyle !== undefined ? { textStyle: part.textStyle } : {})}
               />

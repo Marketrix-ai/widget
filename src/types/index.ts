@@ -84,7 +84,7 @@ export interface ChatMessage {
 export interface MessagePart {
   type: 'text' | 'progress';
   content: string;
-  status?: 'running' | 'completed' | 'failed' | 'canceled';
+  status?: 'in_progress' | 'completed' | 'failed' | 'stopped';
   toolName?: string;
   hideIcon?: boolean;
   textStyle?: 'default' | 'muted';

@@ -8,7 +8,7 @@ import { Text } from '../base/Text';
 
 interface ProgressLineProps {
   content: string;
-  status?: 'running' | 'completed' | 'failed' | 'canceled' | 'pending';
+  status?: 'in_progress' | 'completed' | 'failed' | 'stopped' | 'pending';
   hideIcon?: boolean;
   textStyle?: 'default' | 'muted';
 }
@@ -27,9 +27,9 @@ export const ProgressLine: React.FC<ProgressLineProps> = ({
         return <Icon name='checkCircle' style={{ color: accentColor, marginTop: '2px', flexShrink: 0 }} size={16} />;
       case 'failed':
         return <Icon name='timesCircle' style={{ opacity: 0.65, marginTop: '2px', flexShrink: 0 }} size={16} />;
-      case 'canceled':
+      case 'stopped':
         return <Icon name='ban' style={{ opacity: 0.5, marginTop: '2px', flexShrink: 0 }} size={16} />;
-      case 'running':
+      case 'in_progress':
         return <Spinner size='sm' style={{ color: accentColor, marginTop: '2px' }} />;
       case 'pending':
       default:
