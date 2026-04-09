@@ -50,8 +50,8 @@ export const LearningProgressSchema = z.object({
 });
 export const KnowledgeTypeSchema = z.enum(['document', 'video']);
 export const QAFlowStatusSchema = z.enum(['pending', 'processing', 'waiting_review', 'completed', 'failed']);
-export const QATestStatusSchema = z.enum(['pending', 'running', 'completed', 'failed']);
-export const QARunStatusSchema = z.enum(['pending', 'running', 'completed', 'failed', 'cancelled']);
+export const QATestStatusSchema = z.enum(['pending', 'in_progress', 'completed', 'failed']);
+export const QARunStatusSchema = z.enum(['pending', 'in_progress', 'completed', 'failed', 'stopped']);
 export const ChatRoleSchema = z.enum(['user', 'agent']);
 export const ChatSourceSchema = z.enum(['widget', 'app']);
 export const InstructionTypeSchema = z.enum(['tell', 'show', 'do']);
@@ -418,7 +418,7 @@ export const QARunEntitySchema = BaseEntitySchema.extend({
   browser_type: BrowserTypeSchema,
   browser_config: BrowserConfigSchema.nullish(),
   simulation_id: z.number().nullish(),
-  source: z.enum(['manual', 'automation', 'github_pr']).nullish(),
+  source: z.enum(['manual', 'automation', 'github_pr', 'slack_command']).nullish(),
   source_metadata: z.record(z.string(), z.unknown()).nullish(),
 });
 
@@ -434,7 +434,7 @@ export const QAProgressLogEntrySchema = z.object({
 
 export const QAExecutionEntrySchema = z.object({
   run_id: z.number(),
-  status: z.enum(['pending', 'running', 'passed', 'failed', 'skipped', 'completed']),
+  status: z.enum(['pending', 'in_progress', 'passed', 'failed', 'skipped', 'completed']),
   browser_type: BrowserTypeSchema.nullish(),
   progress_log: z.array(QAProgressLogEntrySchema).default([]),
   error_message: z.string().nullish(),
@@ -847,13 +847,13 @@ export const SimulationTaskEntrySchema = z.object({
   task_id: z.string(),
   title: z.string(),
   instructions: z.string(),
-  status: z.enum(['pending', 'running', 'passed', 'failed', 'skipped', 'stopped']),
+  status: z.enum(['pending', 'in_progress', 'passed', 'failed', 'skipped', 'stopped']),
   error_message: z.string().nullish(),
   started_at: z.string().nullish(),
   completed_at: z.string().nullish(),
   order_index: z.number().int().nonnegative().default(0),
   tab_id: z.string().nullish(),
-  steps_completed: z.number().int().nonnegative().default(0),
+  step_count: z.number().int().nonnegative().default(0),
   blocked_by: z.array(TaskDependencySchema).default([]),
 });
 export type SimulationTaskEntry = z.infer<typeof SimulationTaskEntrySchema>;
@@ -865,7 +865,7 @@ export const SimulationEntitySchema = BaseEntitySchema.extend({
   application_id: z.number(),
   agent_id: z.number(),
   job_id: z.string(),
-  session_id: z.string().nullish(),
+  browser_session_id: z.string().nullish(),
   status: z.string(),
   status_message: z.string().nullish(),
   path: z.string().nullish(),
@@ -874,8 +874,13 @@ export const SimulationEntitySchema = BaseEntitySchema.extend({
   source: z.enum(['direct', 'qa']).optional(),
   agent_name: z.string().nullish(),
   graph_index_id: z.string().nullish(),
+  source_metadata: z.record(z.string(), z.unknown()).nullish(),
   tasks: z.array(SimulationTaskEntrySchema).optional(),
   agents: z.array(AgentBadgeSchema).optional(),
+  mindmap_status: z.string().optional(),
+  mindmap_steps_processed: z.number().int().nonnegative().optional(),
+  mindmap_steps_total: z.number().int().nonnegative().optional(),
+  mindmap_error: z.string().nullish(),
 });
 
 /**
@@ -989,19 +994,37 @@ export const MindMapEdgeSchema = z.object({
   start: z.string(),
   end: z.string(),
   action: z.string(),
-});
+}).passthrough();
 
 /**
- * Mindmap node schema - unique web state (page + situation) during simulation
+ * Mindmap section schema - functional UI section within a page node
+ */
+export const MindMapSectionSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  purpose: z.string(),
+  elements: z.array(z.record(z.string(), z.unknown())).default([]),
+  bbox: z.record(z.string(), z.unknown()).default({}),
+  screenshot: z.string().default(''),
+  embedding: z.array(z.number()).nullish(),
+}).passthrough();
+
+/**
+ * Mindmap node schema - unique page state observed during simulation.
+ * Matches agent's PageNode model (perception/graph.py).
+ * Uses passthrough() because Cosmos DB adds metadata fields and the agent
+ * model may evolve faster than the schema.
  */
 export const MindMapNodeSchema = z.object({
   id: z.string(),
-  screenshots: z.array(z.string()),
   title: z.string(),
   url: z.string(),
-  state: z.array(z.string()),
-  mentions: z.array(z.string()),
-});
+  summary: z.string().default(''),
+  screenshot: z.string().default(''),
+  sections: z.array(MindMapSectionSchema).default([]),
+  sequence_ids: z.array(z.number()).default([]),
+  embedding: z.array(z.number()).nullish(),
+}).passthrough();
 
 /**
  * Mindmap schema - knowledge graph showing nodes and edges from simulation
@@ -1128,7 +1151,7 @@ export const SimulationStatusResponseSchema = z.object({
  * Response for browser session operations from agent server
  */
 export const BrowserSessionResponseSchema = z.object({
-  session_id: z.string().optional(),
+  browser_session_id: z.string().optional(),
   live_view_url: z.string().nullish(),
   status: z.string().optional(),
   message: z.string().nullish(),
@@ -1139,15 +1162,7 @@ export const BrowserSessionResponseSchema = z.object({
  * Task status enum schema
  * Common status values for tasks and simulations
  */
-export const TaskStatusSchema = z.enum([
-  'pending',
-  'running',
-  'completed',
-  'failed',
-  'cancelled',
-  'has_question',
-  'in_progress',
-]);
+export const TaskStatusSchema = z.enum(['pending', 'in_progress', 'completed', 'failed', 'stopped', 'has_question']);
 
 /**
  * Agent knowledge search configuration schema
@@ -1479,7 +1494,7 @@ export type WidgetCommand = z.infer<typeof WidgetCommandSchema>;
 // APP EVENTS - Real-time event stream for the dashboard app
 // ============================================================================
 
-export const AppEventScopeSchema = z.enum(['simulations', 'agents', 'qa', 'user', 'jobs', 'triggers']);
+export const AppEventScopeSchema = z.enum(['simulations', 'agents', 'qa', 'user', 'jobs', 'triggers', 'automations']);
 
 export const AppEventSchema = z.discriminatedUnion('type', [
   // Simulation events
@@ -1543,6 +1558,16 @@ export const AppEventSchema = z.discriminatedUnion('type', [
     type: z.literal('simulation/stopped'),
     simulation_id: z.number(),
     job_id: z.string(),
+  }),
+
+  // Mindmap generation progress
+  z.object({
+    type: z.literal('simulation/mindmap-updated'),
+    simulation_id: z.number(),
+    application_id: z.number(),
+    mindmap_status: z.string(),
+    steps_processed: z.number(),
+    steps_total: z.number(),
   }),
 
   // Flow-driven qa-run terminal event
@@ -1635,6 +1660,21 @@ export const AppEventSchema = z.discriminatedUnion('type', [
     name: z.string(),
     payload: z.unknown().optional(),
     timestamp: z.string(),
+  }),
+
+  // Automation run events
+  z.object({
+    type: z.literal('automation-run/completed'),
+    automation_id: z.number(),
+    run_id: z.number(),
+    status: z.literal('completed'),
+  }),
+  z.object({
+    type: z.literal('automation-run/failed'),
+    automation_id: z.number(),
+    run_id: z.number(),
+    status: z.literal('failed'),
+    error: z.string().optional(),
   }),
 ]);
 
@@ -1776,6 +1816,14 @@ export const McpStatusSchema = z.object({
   created_at: z.coerce.date().optional(),
 });
 
+export const McpToolSchema = z.object({
+  name: z.string(),
+  category: z.string(),
+  description: z.string(),
+  inputSchema: z.record(z.string(), z.unknown()),
+  enabled: z.boolean(),
+});
+
 /** GitHub repo item (from GitHub API user/repos) */
 export const GithubRepoSchema = z.object({
   id: z.number(),
@@ -1803,7 +1851,7 @@ export const GithubWorkflowRunSchema = z.object({
 // AUTOMATION SCHEMAS - DAG-based workflow engine
 // ============================================================================
 
-export const AutomationRunStatusSchema = z.enum(['pending', 'running', 'completed', 'failed', 'stopped']);
+export const AutomationRunStatusSchema = z.enum(['pending', 'in_progress', 'completed', 'failed', 'stopped']);
 
 export const AutomationNodeKindSchema = z.enum(['connector', 'condition']);
 
@@ -1811,6 +1859,9 @@ const ConnectorNodeSchema = z.object({
   kind: z.literal('connector'),
   connector_type: z.string().min(1),
   connector_id: z.number().nullable().optional(),
+  connection_id: z.number().nullable().optional(),
+  trigger_id: z.number().nullable().optional(),
+  action_id: z.number().nullable().optional(),
   capability: z.string().min(1),
   role: z.enum(['trigger', 'callback']),
   config: z.record(z.string(), z.unknown()).default({}),
@@ -1842,6 +1893,7 @@ export const AutomationConcurrencySchema = z.enum(['skip', 'queue', 'replace']).
 
 export const AutomationEntitySchema = BaseEntitySchema.extend({
   workspace_id: z.number(),
+  created_by_user_id: z.number().nullable(),
   name: z.string(),
   graph: AutomationGraphSchema,
   concurrency: AutomationConcurrencySchema,
@@ -1871,7 +1923,7 @@ export const AutomationSearchSchema = z.object({
 });
 
 export const AutomationNodeResultSchema = z.object({
-  status: z.enum(['completed', 'failed', 'skipped', 'stopped']),
+  status: z.enum(['in_progress', 'completed', 'failed', 'skipped', 'stopped']),
   output: z.record(z.string(), z.unknown()).nullable().optional(),
   error: z.string().nullable().optional(),
   duration_ms: z.number().optional(),
@@ -2380,6 +2432,7 @@ export type ConnectorData = z.infer<typeof ConnectorEntitySchema>;
 export type ConnectorUpsertData = z.infer<typeof ConnectorUpsertSchema>;
 export type ConnectorSearchData = z.infer<typeof ConnectorSearchSchema>;
 export type McpStatusData = z.infer<typeof McpStatusSchema>;
+export type McpToolData = z.infer<typeof McpToolSchema>;
 export type AutomationData = z.infer<typeof AutomationEntitySchema>;
 export type AutomationCreateData = z.infer<typeof AutomationCreateSchema>;
 export type AutomationUpdateData = z.infer<typeof AutomationUpdateSchema>;

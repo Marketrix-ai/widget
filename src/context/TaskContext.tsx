@@ -105,7 +105,7 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({
   // Internal helper — update progress lines inside a message
   // -------------------------------------------------------------------------
   const updateProgressForTool = useCallback(
-    (toolName: string, explanation: string, status: 'running' | 'completed' | 'failed', error?: string) => {
+    (toolName: string, explanation: string, status: 'in_progress' | 'completed' | 'failed', error?: string) => {
       setMessages(prev => {
         const friendlyName = getFriendlyToolName(toolName);
         const found = findMessageForProgress({
@@ -128,7 +128,7 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({
         const shouldWait = isTaskRunningRef.current && currentModeRef.current === 'show' && isInteractiveTool;
         const isDoneTool = toolName === 'done';
 
-        if (status === 'running') {
+        if (status === 'in_progress') {
           if (!isDoneTool) {
             updatedMsg = addProgressLine(updatedMsg, friendlyName, explanation || friendlyName);
           }
@@ -224,7 +224,7 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({
           stateVersion.current = requestStateVersion;
         }
 
-        updateProgressForTool(toolName, explanation, 'running');
+        updateProgressForTool(toolName, explanation, 'in_progress');
 
         const result = await toolExecutionService.executeTool(toolName, args, mode, explanation);
 

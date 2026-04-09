@@ -364,7 +364,7 @@ export function addProgressLine(message: ChatMessage, toolName: string, explanat
   // Update Parts
   const newParts = [...parts];
   const existingPartIndex = parts.findIndex(
-    part => part.type === 'progress' && part.toolName === toolName && part.status === 'running',
+    part => part.type === 'progress' && part.toolName === toolName && part.status === 'in_progress',
   );
 
   const isInteractive = INTERACTIVE_TOOLS.has(toolName);
@@ -385,7 +385,7 @@ export function addProgressLine(message: ChatMessage, toolName: string, explanat
     newParts.push({
       type: 'progress',
       content: cleanedExplanation,
-      status: 'running',
+      status: 'in_progress',
       toolName,
       hideIcon,
       textStyle,
@@ -414,7 +414,7 @@ export function updateProgressLine(
   const newParts = [...parts];
   const partIndex = parts.map(p => (p.type === 'progress' ? p.toolName : '')).lastIndexOf(toolName);
 
-  const mappedStatus = status === 'pending' ? 'running' : status;
+  const mappedStatus = status === 'pending' ? 'in_progress' : status;
 
   const isInteractive = INTERACTIVE_TOOLS.has(toolName);
   const hideIcon = !isInteractive;
@@ -462,7 +462,7 @@ export function markProgressLineComplete(message: ChatMessage, toolName?: string
     partIndex = parts.map(p => (p.type === 'progress' ? p.toolName : '')).lastIndexOf(toolName);
   } else {
     for (let i = parts.length - 1; i >= 0; i--) {
-      if (parts[i].type === 'progress' && parts[i].status === 'running') {
+      if (parts[i].type === 'progress' && parts[i].status === 'in_progress') {
         partIndex = i;
         break;
       }
@@ -492,7 +492,7 @@ export function markProgressLineFailed(message: ChatMessage, toolName: string, e
   let partIndex = parts.map(p => (p.type === 'progress' ? p.toolName : '')).lastIndexOf(toolName);
   if (partIndex === -1) {
     for (let i = parts.length - 1; i >= 0; i--) {
-      if (parts[i].type === 'progress' && parts[i].status === 'running') {
+      if (parts[i].type === 'progress' && parts[i].status === 'in_progress') {
         partIndex = i;
         break;
       }

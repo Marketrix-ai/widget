@@ -1604,7 +1604,7 @@ const contract = {
     .input(BySimulationIdSchema)
     .output(
       z.object({
-        session_id: z.string(),
+        browser_session_id: z.string(),
         live_view_url: z.string(),
         status: z.string(),
       }),
@@ -1821,7 +1821,7 @@ const contract = {
     )
     .output(
       z.object({
-        session_id: z.string(),
+        browser_session_id: z.string(),
         live_view_url: z.string(),
       }),
     ),
@@ -1830,13 +1830,13 @@ const contract = {
     .route({
       method: 'POST',
       tags: ['Browser Session'],
-      path: '/browser-session/{session_id}/stop',
+      path: '/browser-session/{browser_session_id}/stop',
       summary: 'Stop browser session',
       description: 'Stops all running tasks and closes the browser session. Set stop_tasks=false to skip task cleanup.',
     })
     .input(
       z.object({
-        session_id: z.string(),
+        browser_session_id: z.string(),
         stop_tasks: z.boolean().optional().default(true),
       }),
     )
