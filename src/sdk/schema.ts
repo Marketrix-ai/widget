@@ -990,24 +990,28 @@ export const SimulationProgressEntitySchema = z.object({
 /**
  * Mindmap edge schema - transition from one node to another via an action
  */
-export const MindMapEdgeSchema = z.object({
-  start: z.string(),
-  end: z.string(),
-  action: z.string(),
-}).passthrough();
+export const MindMapEdgeSchema = z
+  .object({
+    start: z.string(),
+    end: z.string(),
+    action: z.string(),
+  })
+  .passthrough();
 
 /**
  * Mindmap section schema - functional UI section within a page node
  */
-export const MindMapSectionSchema = z.object({
-  id: z.string(),
-  label: z.string(),
-  purpose: z.string(),
-  elements: z.array(z.record(z.string(), z.unknown())).default([]),
-  bbox: z.record(z.string(), z.unknown()).default({}),
-  screenshot: z.string().default(''),
-  embedding: z.array(z.number()).nullish(),
-}).passthrough();
+export const MindMapSectionSchema = z
+  .object({
+    id: z.string(),
+    label: z.string(),
+    purpose: z.string(),
+    elements: z.array(z.record(z.string(), z.unknown())).default([]),
+    bbox: z.record(z.string(), z.unknown()).default({}),
+    screenshot: z.string().default(''),
+    embedding: z.array(z.number()).nullish(),
+  })
+  .passthrough();
 
 /**
  * Mindmap node schema - unique page state observed during simulation.
@@ -1015,16 +1019,18 @@ export const MindMapSectionSchema = z.object({
  * Uses passthrough() because Cosmos DB adds metadata fields and the agent
  * model may evolve faster than the schema.
  */
-export const MindMapNodeSchema = z.object({
-  id: z.string(),
-  title: z.string(),
-  url: z.string(),
-  summary: z.string().default(''),
-  screenshot: z.string().default(''),
-  sections: z.array(MindMapSectionSchema).default([]),
-  sequence_ids: z.array(z.number()).default([]),
-  embedding: z.array(z.number()).nullish(),
-}).passthrough();
+export const MindMapNodeSchema = z
+  .object({
+    id: z.string(),
+    title: z.string(),
+    url: z.string(),
+    summary: z.string().default(''),
+    screenshot: z.string().default(''),
+    sections: z.array(MindMapSectionSchema).default([]),
+    sequence_ids: z.array(z.number()).default([]),
+    embedding: z.array(z.number()).nullish(),
+  })
+  .passthrough();
 
 /**
  * Mindmap schema - knowledge graph showing nodes and edges from simulation
