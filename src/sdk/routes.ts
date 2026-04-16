@@ -100,6 +100,7 @@ import {
   KnowledgeTypeSchema,
   listOf,
   McpStatusSchema,
+  McpToolSchema,
   MigrationPrepareSchema,
   MigrationRunSchema,
   MindMapSchema,
@@ -357,6 +358,17 @@ const contract = {
       path: '/workspaces/{slug}',
       summary: 'Get specific workspace details by slug',
       description: 'Returns complete workspace information including settings and configuration',
+    })
+    .input(BySlugSchema)
+    .output(WorkspaceEntitySchema),
+
+  workspaceSelect: oc
+    .route({
+      method: 'POST',
+      tags: ['Workspace'],
+      path: '/workspaces/{slug}/select',
+      summary: 'Select the active workspace for the current session',
+      description: 'Updates the server-side session workspace context to match the selected workspace slug.',
     })
     .input(BySlugSchema)
     .output(WorkspaceEntitySchema),
@@ -874,6 +886,28 @@ const contract = {
     })
     .input(z.object({ application_id: z.coerce.number() }))
     .output(McpStatusSchema.nullable()),
+
+  mcpTools: oc
+    .route({
+      method: 'GET',
+      tags: ['MCP'],
+      path: '/mcp/tools/{application_id}',
+      summary: 'List MCP platform tools',
+      description: 'Returns all platform tools with their enabled/disabled state.',
+    })
+    .input(z.object({ application_id: z.coerce.number() }))
+    .output(z.array(McpToolSchema)),
+
+  mcpToolToggle: oc
+    .route({
+      method: 'PATCH',
+      tags: ['MCP'],
+      path: '/mcp/tools/toggle',
+      summary: 'Toggle a platform tool',
+      description: 'Enable or disable a specific platform tool for the MCP server.',
+    })
+    .input(z.object({ application_id: z.coerce.number(), tool_name: z.string(), enabled: z.boolean() }))
+    .output(z.array(McpToolSchema)),
 
   // ============================================================================
   // AUTOMATION ROUTES - DAG-based workflow engine
@@ -1593,23 +1627,6 @@ const contract = {
     .input(BySimulationIdSchema.extend({ task_id: z.string().optional() }))
     .output(listOf(SimulationProgressEntitySchema)),
 
-  simulationLiveView: oc
-    .route({
-      method: 'GET',
-      tags: ['Simulation'],
-      path: '/simulation/{simulation_id}/live-view',
-      summary: 'Get live view URL for simulation session',
-      description: 'Returns Browserbase live view URL for embedding in iframe',
-    })
-    .input(BySimulationIdSchema)
-    .output(
-      z.object({
-        browser_session_id: z.string(),
-        live_view_url: z.string(),
-        status: z.string(),
-      }),
-    ),
-
   simulationTaskLiveView: oc
     .route({
       method: 'GET',
@@ -1639,7 +1656,7 @@ const contract = {
       summary: 'Get simulation history by ID',
       description: 'Returns the history array for the specified simulation',
     })
-    .input(BySimulationIdSchema.extend({ task_id: z.string().optional() }))
+    .input(BySimulationIdSchema.extend({ task_id: z.string() }))
     .output(listOf(SimulationStepSchema)),
 
   simulationSteps: oc
@@ -1685,6 +1702,17 @@ const contract = {
       description: 'Submits an answer to a pending question from the simulation agent',
     })
     .input(SimulationAnswerSchema.extend({ simulation_id: z.coerce.number() }))
+    .output(SuccessWithMessageSchema),
+
+  simulationRetryMindmap: oc
+    .route({
+      method: 'POST',
+      tags: ['Simulation'],
+      path: '/simulation/{simulation_id}/retry-mindmap',
+      summary: 'Retry mindmap generation',
+      description: 'Restarts mindmap generation from stored history for a simulation.',
+    })
+    .input(z.object({ simulation_id: z.coerce.number() }))
     .output(SuccessWithMessageSchema),
 
   simulationDelete: oc
