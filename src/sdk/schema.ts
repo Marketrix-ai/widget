@@ -425,26 +425,6 @@ export const QARunEntitySchema = BaseEntitySchema.extend({
 /**
  * JSON entry schemas for qa_test_case embedded arrays
  */
-export const QAProgressLogEntrySchema = z.object({
-  step: z.number(),
-  message: z.string(),
-  timestamp: z.string(),
-  status: z.enum(['success', 'error', 'info']),
-});
-
-export const QAExecutionEntrySchema = z.object({
-  run_id: z.number(),
-  status: z.enum(['pending', 'in_progress', 'passed', 'failed', 'skipped', 'completed']),
-  browser_type: BrowserTypeSchema.nullish(),
-  progress_log: z.array(QAProgressLogEntrySchema).default([]),
-  error_message: z.string().nullish(),
-  screenshot_url: z.string().nullish(),
-  simulation_id: z.number().nullish(),
-  duration_ms: z.number().nullish(),
-  started_at: z.string().nullish(),
-  completed_at: z.string().nullish(),
-});
-
 export const QAVersionHistoryEntrySchema = z.object({
   version: z.number().int().positive(),
   test_title: z.string(),
@@ -486,7 +466,6 @@ export const QATestCaseEntitySchema = BaseEntitySchema.extend({
   is_active: z.preprocess(v => (typeof v === 'number' ? v !== 0 : v), z.boolean()),
   current_version: z.number().int().positive(),
   version_history: z.array(QAVersionHistoryEntrySchema).nullable(),
-  executions: z.array(QAExecutionEntrySchema).nullable(),
   healing_attempts: z.array(QAHealingAttemptEntrySchema).nullable(),
   healing_metadata: z.record(z.string(), z.unknown()).nullish(),
   last_healed_at: z.coerce.date().nullish(),
@@ -602,7 +581,6 @@ export type QAFailureType = z.infer<typeof QAFailureTypeSchema>;
 export type QAValidationStatus = z.infer<typeof QAValidationStatusSchema>;
 export type QAHealingMetadata = z.infer<typeof QAHealingMetadataSchema>;
 export type FailureAnalysis = z.infer<typeof FailureAnalysisSchema>;
-export type QAExecutionEntry = z.infer<typeof QAExecutionEntrySchema>;
 export type QAVersionHistoryEntry = z.infer<typeof QAVersionHistoryEntrySchema>;
 export type QAHealingAttemptEntry = z.infer<typeof QAHealingAttemptEntrySchema>;
 
