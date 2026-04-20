@@ -849,7 +849,7 @@ export const SimulationTaskEntrySchema = z.object({
   task_id: z.string(),
   title: z.string(),
   instructions: z.string(),
-  status: z.enum(['pending', 'in_progress', 'passed', 'failed', 'skipped', 'stopped']),
+  status: z.enum(['pending', 'in_progress', 'has_question', 'passed', 'failed', 'skipped', 'stopped']),
   error_message: z.string().nullish(),
   started_at: z.string().nullish(),
   completed_at: z.string().nullish(),
