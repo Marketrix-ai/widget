@@ -420,7 +420,31 @@ export const QARunEntitySchema = BaseEntitySchema.extend({
   simulation_id: z.number().nullish(),
   source: z.enum(['manual', 'automation', 'github_pr', 'slack_command']).nullish(),
   source_metadata: z.record(z.string(), z.unknown()).nullish(),
+  auto_heal: z.boolean().default(false),
 });
+
+export const QAVerdictSchema = z.enum(['passed', 'needs_healing', 'failed']);
+export type QAVerdict = z.infer<typeof QAVerdictSchema>;
+
+export const QAEvaluationSchema = z.object({
+  outcome_reached: z.boolean(),
+  steps_aligned: z.boolean(),
+  healing_recommended: z.boolean(),
+  is_actual_bug: z.boolean(),
+  confidence: z.number().min(0).max(1),
+  reasoning: z.string(),
+  evaluated_at: z.string(),
+});
+export type QAEvaluation = z.infer<typeof QAEvaluationSchema>;
+
+export const QATestVerdictEntitySchema = BaseEntitySchema.extend({
+  qa_run_id: z.number(),
+  qa_test_case_id: z.number(),
+  simulation_task_id: z.string().nullable(),
+  verdict: QAVerdictSchema,
+  evaluation: QAEvaluationSchema.nullable(),
+});
+export type QATestVerdictData = z.infer<typeof QATestVerdictEntitySchema>;
 
 /**
  * JSON entry schemas for qa_test_case embedded arrays
