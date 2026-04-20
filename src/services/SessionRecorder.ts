@@ -90,7 +90,6 @@ export class SessionRecorder {
         viewport: {
           width: window.innerWidth,
           height: window.innerHeight,
-          dpr: window.devicePixelRatio,
         },
       },
     });

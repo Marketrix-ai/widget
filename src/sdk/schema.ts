@@ -1467,7 +1467,6 @@ export const WidgetCommandSchema = z.discriminatedUnion('type', [
       .object({
         width: z.number(),
         height: z.number(),
-        dpr: z.number().optional(),
       })
       .optional(),
   }),
