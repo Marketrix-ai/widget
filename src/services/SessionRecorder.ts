@@ -87,6 +87,10 @@ export class SessionRecorder {
         url: window.location.href,
         user_agent: navigator.userAgent,
         timestamp: Date.now(),
+        viewport: {
+          width: window.innerWidth,
+          height: window.innerHeight,
+        },
       },
     });
 

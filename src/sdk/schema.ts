@@ -1487,6 +1487,12 @@ export const WidgetCommandSchema = z.discriminatedUnion('type', [
     url: z.string().optional(),
     user_agent: z.string().optional(),
     timestamp: z.number().optional(),
+    viewport: z
+      .object({
+        width: z.number(),
+        height: z.number(),
+      })
+      .optional(),
   }),
   z.object({
     type: z.literal('rrweb/events'),
