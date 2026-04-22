@@ -100,7 +100,7 @@ export const BaseEntitySchema = z.object({
 });
 
 /** Convert an Express multipart file to a Web File. */
-export function fromMulterFile(f: { buffer: Buffer; originalname: string; mimetype: string }): File {
+export function fromMulterFile(f: { buffer: Uint8Array; originalname: string; mimetype: string }): File {
   return new File([new Uint8Array(f.buffer)], f.originalname, { type: f.mimetype });
 }
 

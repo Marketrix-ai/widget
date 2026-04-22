@@ -2757,6 +2757,16 @@ const contract = {
     .input(z.object({ id: z.coerce.number() }))
     .output(SuccessSchema),
 
+  insightPersonasRegenerate: oc
+    .route({
+      method: 'POST',
+      tags: ['Insight'],
+      path: '/insights/personas/regenerate',
+      summary: 'Start segment + persona regeneration for an application (fire-and-forget)',
+    })
+    .input(z.object({ application_id: z.number() }))
+    .output(z.object({ job_id: z.string() })),
+
   // Heatmaps
   insightHeatmapPages: oc
     .route({
