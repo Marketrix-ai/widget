@@ -2719,6 +2719,7 @@ export const HeatmapPageEntitySchema = z.object({
   path: z.string(),
   session_count: z.number(),
   variation_count: z.number(),
+  variations: z.array(HeatmapVariationSchema).default([]),
 });
 
 export const HeatmapSnapshotEntitySchema = z.object({
