@@ -1,7 +1,6 @@
 {
   "compilerOptions": {
-    "baseUrl": ".",
-    "paths": { "@/*": ["src/*"] },
+    "paths": { "@/*": ["./src/*"] },
     "target": "es2020",
     "useDefineForClassFields": true,
     "lib": ["es2020", "dom", "dom.iterable"],

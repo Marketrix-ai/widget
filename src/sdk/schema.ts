@@ -100,7 +100,7 @@ export const BaseEntitySchema = z.object({
 });
 
 /** Convert an Express multipart file to a Web File. */
-export function fromMulterFile(f: { buffer: Buffer; originalname: string; mimetype: string }): File {
+export function fromMulterFile(f: { buffer: Uint8Array; originalname: string; mimetype: string }): File {
   return new File([new Uint8Array(f.buffer)], f.originalname, { type: f.mimetype });
 }
 
@@ -420,31 +420,35 @@ export const QARunEntitySchema = BaseEntitySchema.extend({
   simulation_id: z.number().nullish(),
   source: z.enum(['manual', 'automation', 'github_pr', 'slack_command']).nullish(),
   source_metadata: z.record(z.string(), z.unknown()).nullish(),
+  auto_heal: z.boolean().default(false),
 });
+
+export const QAVerdictSchema = z.enum(['passed', 'needs_healing', 'failed']);
+export type QAVerdict = z.infer<typeof QAVerdictSchema>;
+
+export const QAEvaluationSchema = z.object({
+  outcome_reached: z.boolean(),
+  steps_aligned: z.boolean(),
+  healing_recommended: z.boolean(),
+  is_actual_bug: z.boolean(),
+  confidence: z.number().min(0).max(1),
+  reasoning: z.string(),
+  evaluated_at: z.string(),
+});
+export type QAEvaluation = z.infer<typeof QAEvaluationSchema>;
+
+export const QATestVerdictEntitySchema = BaseEntitySchema.extend({
+  qa_run_id: z.number(),
+  qa_test_case_id: z.number(),
+  simulation_task_id: z.string().nullable(),
+  verdict: QAVerdictSchema,
+  evaluation: QAEvaluationSchema.nullable(),
+});
+export type QATestVerdictData = z.infer<typeof QATestVerdictEntitySchema>;
 
 /**
  * JSON entry schemas for qa_test_case embedded arrays
  */
-export const QAProgressLogEntrySchema = z.object({
-  step: z.number(),
-  message: z.string(),
-  timestamp: z.string(),
-  status: z.enum(['success', 'error', 'info']),
-});
-
-export const QAExecutionEntrySchema = z.object({
-  run_id: z.number(),
-  status: z.enum(['pending', 'in_progress', 'passed', 'failed', 'skipped', 'completed']),
-  browser_type: BrowserTypeSchema.nullish(),
-  progress_log: z.array(QAProgressLogEntrySchema).default([]),
-  error_message: z.string().nullish(),
-  screenshot_url: z.string().nullish(),
-  simulation_id: z.number().nullish(),
-  duration_ms: z.number().nullish(),
-  started_at: z.string().nullish(),
-  completed_at: z.string().nullish(),
-});
-
 export const QAVersionHistoryEntrySchema = z.object({
   version: z.number().int().positive(),
   test_title: z.string(),
@@ -486,7 +490,6 @@ export const QATestCaseEntitySchema = BaseEntitySchema.extend({
   is_active: z.preprocess(v => (typeof v === 'number' ? v !== 0 : v), z.boolean()),
   current_version: z.number().int().positive(),
   version_history: z.array(QAVersionHistoryEntrySchema).nullable(),
-  executions: z.array(QAExecutionEntrySchema).nullable(),
   healing_attempts: z.array(QAHealingAttemptEntrySchema).nullable(),
   healing_metadata: z.record(z.string(), z.unknown()).nullish(),
   last_healed_at: z.coerce.date().nullish(),
@@ -602,7 +605,6 @@ export type QAFailureType = z.infer<typeof QAFailureTypeSchema>;
 export type QAValidationStatus = z.infer<typeof QAValidationStatusSchema>;
 export type QAHealingMetadata = z.infer<typeof QAHealingMetadataSchema>;
 export type FailureAnalysis = z.infer<typeof FailureAnalysisSchema>;
-export type QAExecutionEntry = z.infer<typeof QAExecutionEntrySchema>;
 export type QAVersionHistoryEntry = z.infer<typeof QAVersionHistoryEntrySchema>;
 export type QAHealingAttemptEntry = z.infer<typeof QAHealingAttemptEntrySchema>;
 
@@ -847,7 +849,7 @@ export const SimulationTaskEntrySchema = z.object({
   task_id: z.string(),
   title: z.string(),
   instructions: z.string(),
-  status: z.enum(['pending', 'in_progress', 'passed', 'failed', 'skipped', 'stopped']),
+  status: z.enum(['pending', 'in_progress', 'has_question', 'passed', 'failed', 'skipped', 'stopped']),
   error_message: z.string().nullish(),
   started_at: z.string().nullish(),
   completed_at: z.string().nullish(),
@@ -990,24 +992,28 @@ export const SimulationProgressEntitySchema = z.object({
 /**
  * Mindmap edge schema - transition from one node to another via an action
  */
-export const MindMapEdgeSchema = z.object({
-  start: z.string(),
-  end: z.string(),
-  action: z.string(),
-}).passthrough();
+export const MindMapEdgeSchema = z
+  .object({
+    start: z.string(),
+    end: z.string(),
+    action: z.string(),
+  })
+  .passthrough();
 
 /**
  * Mindmap section schema - functional UI section within a page node
  */
-export const MindMapSectionSchema = z.object({
-  id: z.string(),
-  label: z.string(),
-  purpose: z.string(),
-  elements: z.array(z.record(z.string(), z.unknown())).default([]),
-  bbox: z.record(z.string(), z.unknown()).default({}),
-  screenshot: z.string().default(''),
-  embedding: z.array(z.number()).nullish(),
-}).passthrough();
+export const MindMapSectionSchema = z
+  .object({
+    id: z.string(),
+    label: z.string(),
+    purpose: z.string(),
+    elements: z.array(z.record(z.string(), z.unknown())).default([]),
+    bbox: z.record(z.string(), z.unknown()).default({}),
+    screenshot: z.string().default(''),
+    embedding: z.array(z.number()).nullish(),
+  })
+  .passthrough();
 
 /**
  * Mindmap node schema - unique page state observed during simulation.
@@ -1015,16 +1021,18 @@ export const MindMapSectionSchema = z.object({
  * Uses passthrough() because Cosmos DB adds metadata fields and the agent
  * model may evolve faster than the schema.
  */
-export const MindMapNodeSchema = z.object({
-  id: z.string(),
-  title: z.string(),
-  url: z.string(),
-  summary: z.string().default(''),
-  screenshot: z.string().default(''),
-  sections: z.array(MindMapSectionSchema).default([]),
-  sequence_ids: z.array(z.number()).default([]),
-  embedding: z.array(z.number()).nullish(),
-}).passthrough();
+export const MindMapNodeSchema = z
+  .object({
+    id: z.string(),
+    title: z.string(),
+    url: z.string(),
+    summary: z.string().default(''),
+    screenshot: z.string().default(''),
+    sections: z.array(MindMapSectionSchema).default([]),
+    sequence_ids: z.array(z.number()).default([]),
+    embedding: z.array(z.number()).nullish(),
+  })
+  .passthrough();
 
 /**
  * Mindmap schema - knowledge graph showing nodes and edges from simulation
@@ -1479,6 +1487,12 @@ export const WidgetCommandSchema = z.discriminatedUnion('type', [
     url: z.string().optional(),
     user_agent: z.string().optional(),
     timestamp: z.number().optional(),
+    viewport: z
+      .object({
+        width: z.number(),
+        height: z.number(),
+      })
+      .optional(),
   }),
   z.object({
     type: z.literal('rrweb/events'),
@@ -2705,6 +2719,7 @@ export const HeatmapPageEntitySchema = z.object({
   path: z.string(),
   session_count: z.number(),
   variation_count: z.number(),
+  variations: z.array(HeatmapVariationSchema).default([]),
 });
 
 export const HeatmapSnapshotEntitySchema = z.object({
