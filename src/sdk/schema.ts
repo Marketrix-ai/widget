@@ -1653,6 +1653,8 @@ export const AppEventSchema = z.discriminatedUnion('type', [
     application_id: z.number(),
     status: z.string(),
     message: z.string().optional(),
+    // Phase 4: sub-phase indicator for chained jobs (e.g. research -> segments -> personas).
+    phase: z.enum(['research', 'segments', 'personas']).optional(),
   }),
   z.object({
     type: z.literal('job/completed'),
