@@ -49,6 +49,7 @@ export const LearningProgressSchema = z.object({
   graph_index_created: z.boolean().nullable(),
 });
 export const KnowledgeTypeSchema = z.enum(['document', 'video']);
+export const KnowledgeSourceSchema = z.enum(['user', 'research']);
 export const QAFlowStatusSchema = z.enum(['pending', 'processing', 'waiting_review', 'completed', 'failed']);
 export const QATestStatusSchema = z.enum(['pending', 'in_progress', 'completed', 'failed']);
 export const QARunStatusSchema = z.enum(['pending', 'in_progress', 'completed', 'failed', 'stopped']);
@@ -354,6 +355,7 @@ export const KnowledgeEntitySchema = BaseEntitySchema.extend({
   file_type: KnowledgeTypeSchema,
   file_url: z.string(),
   source_url: z.string().nullish(), // Original URL for URL-based documents
+  source: KnowledgeSourceSchema.default('user').optional(),
   agents: z.array(AgentBadgeSchema).optional(),
 });
 
@@ -2357,6 +2359,7 @@ export type AgentType = z.infer<typeof AgentTypeSchema>;
 export type AgentVoice = z.infer<typeof AgentVoiceSchema>;
 export type AgentStatus = z.infer<typeof AgentStatusSchema>;
 export type KnowledgeType = z.infer<typeof KnowledgeTypeSchema>;
+export type KnowledgeSource = z.infer<typeof KnowledgeSourceSchema>;
 export type ChatStatus = z.infer<typeof ChatRoleSchema>;
 export type ChatSource = z.infer<typeof ChatSourceSchema>;
 export type InstructionType = z.infer<typeof InstructionTypeSchema>;
