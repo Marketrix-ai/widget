@@ -2777,6 +2777,8 @@ export const ReactionResultEntitySchema = z.object({
     .optional(),
   overall_reactions: z.record(z.string(), ReactionScoreSchema),
   dimension_scores: z.record(z.string(), ReactionScoreSchema),
+  simulation_id: z.number().nullable().optional(),
+  task_id: z.string().nullable().optional(),
   created_at: z.coerce.date().optional(),
 });
 
