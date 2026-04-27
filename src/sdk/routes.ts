@@ -2863,7 +2863,7 @@ const contract = {
         reaction_id: z.coerce.number(),
         persona_ids: z.array(z.coerce.number()),
         context_refs: z.array(ContextRefSchema),
-        simulations: z.array(SuggestedSimulationSchema),
+        simulations: z.array(SuggestedSimulationSchema.pick({ description: true, selected: true })),
       }),
     )
     .output(ReactionRunEntitySchema),
