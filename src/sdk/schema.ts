@@ -1694,6 +1694,21 @@ export const AppEventSchema = z.discriminatedUnion('type', [
     status: z.literal('failed'),
     error: z.string().optional(),
   }),
+
+  // Reaction simulation events
+  z.object({
+    type: z.literal('reaction/completed'),
+    reaction_id: z.number(),
+    run_id: z.number(),
+    application_id: z.number(),
+  }),
+  z.object({
+    type: z.literal('reaction/failed'),
+    reaction_id: z.number(),
+    run_id: z.number(),
+    application_id: z.number(),
+    error: z.string().optional(),
+  }),
 ]);
 
 export type AppEvent = z.infer<typeof AppEventSchema>;
@@ -2784,6 +2799,11 @@ export const ReactionRunEntitySchema = z.object({
   simulations: z.array(SuggestedSimulationSchema),
   persona_ids: z.array(z.number()).optional(),
   results: z.array(ReactionResultEntitySchema).optional(),
+  status: z.enum(['running', 'completed', 'failed']).nullable().optional(),
+  processing_started_at: z.coerce.date().nullable().optional(),
+  completed_at: z.coerce.date().nullable().optional(),
+  failed_at: z.coerce.date().nullable().optional(),
+  error: z.string().nullable().optional(),
   created_at: z.coerce.date().optional(),
 });
 
