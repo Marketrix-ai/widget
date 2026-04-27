@@ -2791,6 +2791,9 @@ export const ContextRefSchema = z.object({
 export const SuggestedSimulationSchema = z.object({
   description: z.string(),
   selected: z.boolean(),
+  simulation_id: z.number().nullable().optional(),
+  task_id: z.string().nullable().optional(),
+  status: z.string().nullable().optional(),
 });
 
 export const ReactionRunEntitySchema = z.object({
