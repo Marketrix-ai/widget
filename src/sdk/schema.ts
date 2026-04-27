@@ -1709,6 +1709,17 @@ export const AppEventSchema = z.discriminatedUnion('type', [
     application_id: z.number(),
     error: z.string().optional(),
   }),
+  z.object({
+    type: z.literal('reaction/progress'),
+    reaction_id: z.number(),
+    run_id: z.number(),
+    application_id: z.number(),
+    result_id: z.number(),
+    persona_id: z.number().nullable(),
+    completed_personas: z.number(),
+    total_personas: z.number(),
+    failed_personas: z.number(),
+  }),
 ]);
 
 export type AppEvent = z.infer<typeof AppEventSchema>;
@@ -2779,6 +2790,35 @@ export const ReactionResultEntitySchema = z.object({
   dimension_scores: z.record(z.string(), ReactionScoreSchema),
   simulation_id: z.number().nullable().optional(),
   task_id: z.string().nullable().optional(),
+  status: z.enum(['pending', 'completed', 'failed']).optional(),
+  replay_evidence: z
+    .object({
+      simulations: z
+        .array(
+          z.object({
+            simulation_id: z.number(),
+            task_id: z.string().nullable().optional(),
+            step_count: z.number(),
+            summary: z.string(),
+          }),
+        )
+        .optional(),
+      moments: z.array(z.object({ sim_index: z.number(), step_index: z.number(), label: z.string() })).optional(),
+      context_refs: z.array(z.object({ type: z.string(), id: z.string(), label: z.string() })).optional(),
+    })
+    .nullable()
+    .optional(),
+  error: z.string().nullable().optional(),
+  persona_snapshot: z
+    .object({
+      name: z.string(),
+      initials: z.string().optional(),
+      segment_name: z.string().optional(),
+      traits: z.array(z.string()).optional(),
+      age_range: z.string().optional(),
+    })
+    .nullable()
+    .optional(),
   created_at: z.coerce.date().optional(),
 });
 
