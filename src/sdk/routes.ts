@@ -2767,6 +2767,18 @@ const contract = {
     .input(z.object({ application_id: z.number() }))
     .output(z.object({ job_id: z.string() })),
 
+  insightResearchRun: oc
+    .route({
+      method: 'POST',
+      tags: ['Insight'],
+      path: '/insights/{application_id}/research/run',
+      summary: 'Kick off Background Research for an application',
+      description:
+        "Fire-and-forget: dispatches Background Research to the agent, returns a job_id the client can subscribe to via appEvents. On completion, research output is persisted as knowledge rows with source='research' and a knowledge_embed is dispatched per row.",
+    })
+    .input(z.object({ application_id: z.coerce.number() }))
+    .output(z.object({ job_id: z.string() })),
+
   // Heatmaps
   insightHeatmapPages: oc
     .route({
