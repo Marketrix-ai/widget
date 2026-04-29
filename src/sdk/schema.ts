@@ -2696,6 +2696,11 @@ export const InsightPersonaEntitySchema = z.object({
   neuroticism: z.number().nullable().optional(),
   mbti_type: z.string().optional().default(''),
   mbti_rationale: z.string().optional().default(''),
+  key_features: z.array(z.string()).optional().default([]),
+  bhvr_proficiency: z.number().nullable().optional(),
+  bhvr_preciseness: z.number().nullable().optional(),
+  bhvr_sensitivity: z.number().nullable().optional(),
+  bhvr_efficiency: z.number().nullable().optional(),
   created_at: z.coerce.date().optional(),
   updated_at: z.coerce.date().optional(),
 });
