@@ -1536,13 +1536,38 @@ export type WidgetCommand = z.infer<typeof WidgetCommandSchema>;
 
 export const AppEventScopeSchema = z.enum(['simulations', 'agents', 'qa', 'user', 'jobs', 'triggers', 'automations']);
 
+/**
+ * Simulation status — mirrors the Sequelize ENUM on the `simulation` model.
+ * Emitted by the API on `simulation/updated` events and stored on the row.
+ */
+export const SimulationStatusSchema = z.enum([
+  'queued',
+  'dispatched',
+  'pending',
+  'in_progress',
+  'completed',
+  'failed',
+  'stopped',
+  'task_stopped',
+  'has_question',
+  'creating_knowledge',
+]);
+export type SimulationStatus = z.infer<typeof SimulationStatusSchema>;
+
+/**
+ * QA run derived status — set by `deriveQARunStats` based on aggregated task
+ * states. Emitted by the API on `qa-run/updated` events.
+ */
+export const QARunDerivedStatusSchema = z.enum(['pending', 'in_progress', 'completed', 'failed', 'stopped']);
+export type QARunDerivedStatus = z.infer<typeof QARunDerivedStatusSchema>;
+
 export const AppEventSchema = z.discriminatedUnion('type', [
   // Simulation events
   z.object({
     type: z.literal('simulation/updated'),
     simulation_id: z.number(),
     application_id: z.number(),
-    status: z.string(),
+    status: SimulationStatusSchema,
     step_label: z.string().optional(),
     step_pending: z.boolean().optional(),
     task_id: z.string().nullish(),
@@ -1650,7 +1675,7 @@ export const AppEventSchema = z.discriminatedUnion('type', [
     run_id: z.number(),
     document_id: z.number(),
     application_id: z.number(),
-    status: z.string(),
+    status: QARunDerivedStatusSchema,
     simulation_id: z.number().optional(),
   }),
   z.object({
