@@ -897,6 +897,17 @@ export const SimulationEntitySchema = BaseEntitySchema.extend({
 });
 
 /**
+ * Simulation row shape returned by list endpoints (e.g. simulationSearch).
+ * Omits per-row fields that are heavy and unused in the list view: `tasks`
+ * (full SimulationTaskEntry array) and `source_metadata` (free-form bag).
+ */
+export const SimulationListEntitySchema = SimulationEntitySchema.omit({
+  tasks: true,
+  source_metadata: true,
+});
+export type SimulationListData = z.infer<typeof SimulationListEntitySchema>;
+
+/**
  * Simulation logging user - user who has started at least one simulation (for GET /simulation/logging-users)
  */
 export const SimulationLoggingUserSchema = z.object({
@@ -910,13 +921,15 @@ export const SimulationLoggingUserSchema = z.object({
 /**
  * Simulation creation schema
  */
-export const SimulationCreateSchema = SimulationEntitySchema.partial().extend({
-  application_id: z.number(),
-  agent_id: z.number(),
-  instructions: z.string(),
-  max_steps: z.number().int().positive().max(1000).optional(),
-  timeout: z.number().positive().max(360).optional(), // Max 6 hours in minutes
-});
+export const SimulationCreateSchema = SimulationEntitySchema.omit({ tasks: true })
+  .partial()
+  .extend({
+    application_id: z.number(),
+    agent_id: z.number(),
+    instructions: z.string(),
+    max_steps: z.number().int().positive().max(1000).optional(),
+    timeout: z.number().positive().max(360).optional(), // Max 6 hours in minutes
+  });
 
 /**
  * Simulation update schema
