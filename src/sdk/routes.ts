@@ -81,6 +81,7 @@ import {
   ConnectorUpsertSchema,
   ContextRefSchema,
   DiffValueSchema,
+  DomainPersonaSuggestResponseSchema,
   EntityStatusSchema,
   FailureAnalysisSchema,
   FileSchema,
@@ -88,6 +89,8 @@ import {
   GithubRepoSchema,
   GithubWorkflowRunSchema,
   HealthResponseSchema,
+  HeatmapCandidateSchema,
+  HeatmapJobStatusSchema,
   HeatmapPageEntitySchema,
   HeatmapSnapshotEntitySchema,
   HeatmapTypeSchema,
@@ -95,6 +98,8 @@ import {
   IndexResponseSchema,
   InsightPersonaEntitySchema,
   InsightPersonasResponseSchema,
+  InsightPersonasSaveDomainInputSchema,
+  InsightPersonaUpdateInputSchema,
   InsightSegmentEntitySchema,
   KnowledgeEntitySchema,
   KnowledgeTypeSchema,
@@ -120,6 +125,7 @@ import {
   QAHealingAttemptEntrySchema,
   QARunEntitySchema,
   QATestCaseEntitySchema,
+  QATestVerdictEntitySchema,
   QAVersionHistoryEntrySchema,
   ReactionEntitySchema,
   ReactionRunEntitySchema,
@@ -2128,12 +2134,13 @@ const contract = {
       method: 'PUT',
       tags: ['QA'],
       path: '/qa/document/{id}',
-      summary: 'Update QA flow status',
-      description: 'Updates the status of a QA flow',
+      summary: 'Update QA flow',
+      description: 'Updates status and/or pinned state of a QA flow',
     })
     .input(
       ByIdSchema.extend({
-        status: QAFlowStatusSchema,
+        status: QAFlowStatusSchema.optional(),
+        pinned: z.boolean().optional(),
       }),
     )
     .output(QAFlowEntitySchema),
@@ -2150,6 +2157,7 @@ const contract = {
     .output(
       paginatedListOf(
         QARunEntitySchema.extend({
+          status: z.string(),
           total_tests: z.number(),
           passed: z.number(),
           failed: z.number(),
@@ -2172,6 +2180,17 @@ const contract = {
       }),
     ),
 
+  qaRunVerdicts: oc
+    .route({
+      method: 'GET',
+      tags: ['QA'],
+      path: '/qa/run/{run_id}/verdicts',
+      summary: 'Get evaluator verdicts for a QA run',
+      description: 'Returns all qa_test_verdict rows for a run, keyed by test case',
+    })
+    .input(z.object({ run_id: z.coerce.number() }))
+    .output(z.array(QATestVerdictEntitySchema)),
+
   qaRunDelete: oc
     .route({
       method: 'DELETE',
@@ -2191,7 +2210,12 @@ const contract = {
       summary: 'Create and start a new QA run',
       description: 'Creates a new run and starts execution. Returns 202; poll test-cases for execution status.',
     })
-    .input(ByIdSchema)
+    .input(
+      ByIdSchema.extend({
+        auto_heal: z.boolean().default(false),
+        auto_accept: z.boolean().default(false),
+      }),
+    )
     .output(
       z.object({
         run: QARunEntitySchema,
@@ -2757,6 +2781,46 @@ const contract = {
     .input(z.object({ id: z.coerce.number() }))
     .output(SuccessSchema),
 
+  insightPersonasDomainSuggest: oc
+    .route({
+      method: 'GET',
+      tags: ['Insight'],
+      path: '/insights/personas/domain-suggest',
+      summary: 'Get domain-specific persona suggestions (accessible during onboarding)',
+    })
+    .input(z.object({ domain: z.string() }))
+    .output(DomainPersonaSuggestResponseSchema),
+
+  insightPersonasSaveDomain: oc
+    .route({
+      method: 'POST',
+      tags: ['Insight'],
+      path: '/insights/personas/save-domain',
+      summary: 'Save domain-suggested personas to the workspace (accessible during onboarding)',
+    })
+    .input(InsightPersonasSaveDomainInputSchema)
+    .output(z.object({ saved: z.number() })),
+
+  insightPersonaUpdate: oc
+    .route({
+      method: 'PATCH',
+      tags: ['Insight'],
+      path: '/insights/personas/{id}',
+      summary: 'Update persona content (name, description, profile fields, tags, traits)',
+    })
+    .input(InsightPersonaUpdateInputSchema)
+    .output(SuccessSchema),
+
+  insightPersonaUpdateSelection: oc
+    .route({
+      method: 'PATCH',
+      tags: ['Insight'],
+      path: '/insights/personas/{id}/selection',
+      summary: 'Toggle the is_selected state of a persona',
+    })
+    .input(z.object({ id: z.coerce.number(), is_selected: z.boolean() }))
+    .output(SuccessSchema),
+
   insightPersonasRegenerate: oc
     .route({
       method: 'POST',
@@ -2766,6 +2830,16 @@ const contract = {
     })
     .input(z.object({ application_id: z.number() }))
     .output(z.object({ job_id: z.string() })),
+
+  insightPersonaKeyFeatures: oc
+    .route({
+      method: 'POST',
+      tags: ['Insight'],
+      path: '/insights/personas/{id}/key-features',
+      summary: 'Generate AI key product feature insights for a specific persona',
+    })
+    .input(z.object({ id: z.coerce.number() }))
+    .output(z.object({ features: z.array(z.string()) })),
 
   insightResearchRun: oc
     .route({
@@ -2778,6 +2852,18 @@ const contract = {
     })
     .input(z.object({ application_id: z.coerce.number() }))
     .output(z.object({ job_id: z.string() })),
+
+  insightResearchStatus: oc
+    .route({
+      method: 'POST',
+      tags: ['Insight'],
+      path: '/insights/{application_id}/research/status',
+      summary: 'Check whether Background Research is currently running',
+      description:
+        'Returns the current Background Research dispatch state for an application. Used by the client to restore the "Researching…" banner across page refreshes — if `status="in_progress"`, the client subscribes to appEvents and waits for `job/completed`. Per-pod tracking; not persistent across api restarts.',
+    })
+    .input(z.object({ application_id: z.coerce.number() }))
+    .output(z.object({ status: z.enum(['idle', 'in_progress']) })),
 
   // Heatmaps
   insightHeatmapPages: oc
@@ -2805,10 +2891,58 @@ const contract = {
       method: 'POST',
       tags: ['Insight'],
       path: '/insights/heatmaps/generate',
-      summary: 'Generate heatmap data from sessions (mocked)',
+      summary: 'Enqueue a heatmap aggregation job over RRWeb session batches',
     })
     .input(ByApplicationIdSchema)
-    .output(SuccessSchema),
+    .output(z.object({ job_id: z.string(), status: z.enum(['queued', 'active']) })),
+
+  insightHeatmapsStatus: oc
+    .route({
+      method: 'GET',
+      tags: ['Insight'],
+      path: '/insights/heatmaps/status',
+      summary: 'Get the current heatmap aggregation job status for an application',
+    })
+    .input(ByApplicationIdSchema)
+    .output(HeatmapJobStatusSchema),
+
+  insightHeatmapCandidates: oc
+    .route({
+      method: 'POST',
+      tags: ['Insight'],
+      path: '/insights/heatmaps/candidates',
+      summary: 'Live-scan contributing sessions for a (page, variation) snapshot',
+    })
+    .input(
+      z.object({
+        page_id: z.number(),
+        variation: HeatmapVariationSchema,
+        limit: z.number().int().min(1).max(50).default(15),
+        offset: z.number().int().min(0).default(0),
+      }),
+    )
+    .output(
+      z.object({
+        candidates: z.array(HeatmapCandidateSchema),
+        total: z.number(),
+      }),
+    ),
+
+  insightHeatmapSetBackdrop: oc
+    .route({
+      method: 'POST',
+      tags: ['Insight'],
+      path: '/insights/heatmaps/backdrop',
+      summary: 'Pin a session as the backdrop override for a (page, variation) snapshot, or clear it with null',
+    })
+    .input(
+      z.object({
+        page_id: z.number(),
+        variation: HeatmapVariationSchema,
+        session_id: z.string().nullable(),
+      }),
+    )
+    .output(z.object({ success: z.literal(true) })),
 
   // Reactions
   insightReactionsGet: oc

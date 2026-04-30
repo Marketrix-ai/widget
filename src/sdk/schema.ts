@@ -395,8 +395,11 @@ export const QAFlowEntitySchema = BaseEntitySchema.extend({
   additional_instructions: z.string().max(1000).nullish(),
   status: QAFlowStatusSchema,
   processing_step: z.string().nullish(),
+  processing_started_at: z.coerce.date().nullish(),
   ultimate_goal: z.string().nullish(),
   browser_config: BrowserConfigSchema.nullish(),
+  persona_ids: z.array(z.coerce.number()).optional().default([]),
+  pinned: z.boolean().optional().default(false),
 });
 
 /**
@@ -408,6 +411,7 @@ export const QAFlowCreateSchema = z.object({
   text_content: z.string().optional(),
   file_name: z.string().optional(),
   additional_instructions: z.string().max(1000).optional(),
+  persona_ids: z.array(z.coerce.number()).optional(),
 });
 
 /**
@@ -423,30 +427,8 @@ export const QARunEntitySchema = BaseEntitySchema.extend({
   source: z.enum(['manual', 'automation', 'github_pr', 'slack_command']).nullish(),
   source_metadata: z.record(z.string(), z.unknown()).nullish(),
   auto_heal: z.boolean().default(false),
+  auto_accept: z.boolean().default(false),
 });
-
-export const QAVerdictSchema = z.enum(['passed', 'needs_healing', 'failed']);
-export type QAVerdict = z.infer<typeof QAVerdictSchema>;
-
-export const QAEvaluationSchema = z.object({
-  outcome_reached: z.boolean(),
-  steps_aligned: z.boolean(),
-  healing_recommended: z.boolean(),
-  is_actual_bug: z.boolean(),
-  confidence: z.number().min(0).max(1),
-  reasoning: z.string(),
-  evaluated_at: z.string(),
-});
-export type QAEvaluation = z.infer<typeof QAEvaluationSchema>;
-
-export const QATestVerdictEntitySchema = BaseEntitySchema.extend({
-  qa_run_id: z.number(),
-  qa_test_case_id: z.number(),
-  simulation_task_id: z.string().nullable(),
-  verdict: QAVerdictSchema,
-  evaluation: QAEvaluationSchema.nullable(),
-});
-export type QATestVerdictData = z.infer<typeof QATestVerdictEntitySchema>;
 
 /**
  * JSON entry schemas for qa_test_case embedded arrays
@@ -478,6 +460,33 @@ export const QAHealingAttemptEntrySchema = z.object({
   healed_version: z.number().nullish(),
   created_at: z.string(),
 });
+
+/**
+ * QA verdict entity schemas — LLM evaluator output per (qa_run, qa_test_case).
+ * Independent of simulation task status (which keeps raw execution semantics).
+ */
+export const QAVerdictSchema = z.enum(['passed', 'needs_healing', 'failed']);
+export type QAVerdict = z.infer<typeof QAVerdictSchema>;
+
+export const QAEvaluationSchema = z.object({
+  outcome_reached: z.boolean(),
+  steps_aligned: z.boolean(),
+  healing_recommended: z.boolean(),
+  is_actual_bug: z.boolean(),
+  confidence: z.number().min(0).max(1),
+  reasoning: z.string(),
+  evaluated_at: z.string(),
+});
+export type QAEvaluation = z.infer<typeof QAEvaluationSchema>;
+
+export const QATestVerdictEntitySchema = BaseEntitySchema.extend({
+  qa_run_id: z.number(),
+  qa_test_case_id: z.number(),
+  simulation_task_id: z.string().nullable(),
+  verdict: QAVerdictSchema,
+  evaluation: QAEvaluationSchema.nullable(),
+});
+export type QATestVerdictData = z.infer<typeof QATestVerdictEntitySchema>;
 
 /** QA test case entity schema. */
 export const QATestCaseEntitySchema = BaseEntitySchema.extend({
@@ -947,6 +956,7 @@ export const SessionEntitySchema = BaseEntitySchema.extend({
     .object({
       userAgent: z.string().optional(),
       url: z.string().optional(),
+      viewport: z.object({ width: z.number(), height: z.number() }).optional(),
     })
     .nullable(),
   last_batch_index: z.coerce.number().int().nullable(),
@@ -971,6 +981,7 @@ export const SessionUpsertSchema = z.object({
       userAgent: z.string().optional(),
       url: z.string().optional(),
       applicationId: z.number().optional(), // API persists to application_id column; also accepted from metadata
+      viewport: z.object({ width: z.number(), height: z.number() }).optional(),
     })
     .nullable()
     .optional(),
@@ -1895,7 +1906,7 @@ export const GithubWorkflowRunSchema = z.object({
 // AUTOMATION SCHEMAS - DAG-based workflow engine
 // ============================================================================
 
-export const AutomationRunStatusSchema = z.enum(['pending', 'in_progress', 'completed', 'failed', 'stopped']);
+export const AutomationRunStatusSchema = z.enum(['pending', 'running', 'completed', 'failed', 'stopped']);
 
 export const AutomationNodeKindSchema = z.enum(['connector', 'condition']);
 
@@ -2711,10 +2722,19 @@ export const InsightPersonaEntitySchema = z.object({
   application_id: z.number(),
   segment_id: z.number().nullable(),
   segment_name: z.string().optional(),
+  is_selected: z.boolean().default(false),
+  is_top: z.boolean().default(false),
   name: z.string(),
   initials: z.string(),
   description: z.string(),
   traits: z.array(z.string()),
+  tags: z.array(z.string()).optional().default([]),
+  source: z.enum(['generated', 'domain', 'manual']).optional().default('generated'),
+  age_range: z.string().optional().default(''),
+  goals: z.string().optional().default(''),
+  behavior: z.string().optional().default(''),
+  pain_points: z.string().optional().default(''),
+  triggers: z.string().optional().default(''),
   openness: z.number().nullable().optional(),
   conscientiousness: z.number().nullable().optional(),
   extraversion: z.number().nullable().optional(),
@@ -2737,6 +2757,45 @@ export const InsightPersonasResponseSchema = z.object({
   personas: z.array(InsightPersonaEntitySchema),
 });
 
+export const DomainPersonaSuggestionSchema = z.object({
+  name: z.string(),
+  initials: z.string(),
+  description: z.string(),
+  traits: z.array(z.string()),
+  tags: z.array(z.string()).optional().default([]),
+  is_top: z.boolean().default(false),
+});
+
+export const InsightPersonasSaveDomainInputSchema = z.object({
+  personas: z.array(
+    DomainPersonaSuggestionSchema.extend({
+      is_selected: z.boolean(),
+    }),
+  ),
+});
+
+export const InsightPersonaUpdateInputSchema = z.object({
+  id: z.coerce.number(),
+  name: z.string().optional(),
+  description: z.string().optional(),
+  age_range: z.string().optional(),
+  goals: z.string().optional(),
+  behavior: z.string().optional(),
+  pain_points: z.string().optional(),
+  triggers: z.string().optional(),
+  tags: z.array(z.string()).optional(),
+  traits: z.array(z.string()).optional(),
+  key_features: z.array(z.string()).optional(),
+});
+
+export const DomainPersonaSuggestResponseSchema = z
+  .object({
+    label: z.string(),
+    industry: z.string(),
+    personas: z.array(DomainPersonaSuggestionSchema),
+  })
+  .nullable();
+
 // Heatmaps
 
 export const HeatmapTypeSchema = z.enum(['clicks', 'scroll', 'attention']);
@@ -2756,6 +2815,13 @@ export const HeatmapStatsSchema = z.object({
   dead_zones: z.number(),
 });
 
+export const HeatmapElementCountSchema = z.object({
+  selector: z.string(),
+  count: z.number(),
+  dead_clicks: z.number(),
+  rage_clicks: z.number(),
+});
+
 export const HeatmapPageEntitySchema = z.object({
   id: z.number(),
   application_id: z.number(),
@@ -2763,6 +2829,9 @@ export const HeatmapPageEntitySchema = z.object({
   session_count: z.number(),
   variation_count: z.number(),
   variations: z.array(HeatmapVariationSchema).default([]),
+  visitor_count: z.number().optional(),
+  last_aggregated_at: z.coerce.date().nullable().optional(),
+  representative_session_id: z.string().nullable().optional(),
 });
 
 export const HeatmapSnapshotEntitySchema = z.object({
@@ -2772,7 +2841,33 @@ export const HeatmapSnapshotEntitySchema = z.object({
   type: HeatmapTypeSchema,
   spots: z.array(HeatSpotSchema),
   stats: HeatmapStatsSchema,
+  page_width: z.number().nullable().optional(),
+  page_height: z.number().nullable().optional(),
+  element_counts: z.array(HeatmapElementCountSchema).optional(),
+  representative_session_override: z.string().nullable().optional(),
 });
+
+export const HeatmapJobStatusSchema = z.object({
+  job_id: z.string().nullable(),
+  status: z.enum(['idle', 'queued', 'active', 'completed', 'failed']),
+  last_aggregated_at: z.coerce.date().nullable(),
+});
+
+/**
+ * Candidate session returned by `insightHeatmapCandidates`. Represents a
+ * session that contributed to a (page, variation) heatmap and could be
+ * pinned as that snapshot's DOM backdrop via `insightHeatmapSetBackdrop`.
+ */
+export const HeatmapCandidateSchema = z.object({
+  session_id: z.string(),
+  width: z.number(),
+  height: z.number(),
+  event_count: z.number(),
+  started_at: z.coerce.date(),
+  has_full_snapshot: z.boolean(),
+});
+
+export type HeatmapCandidate = z.infer<typeof HeatmapCandidateSchema>;
 
 // Reactions
 
