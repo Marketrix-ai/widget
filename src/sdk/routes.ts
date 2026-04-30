@@ -135,6 +135,7 @@ import {
   SimulationAnswerSchema,
   SimulationCreateSchema,
   SimulationEntitySchema,
+  SimulationListEntitySchema,
   SimulationProgressEntitySchema,
   SimulationStepSchema,
   SimulationStepSummarySchema,
@@ -1583,7 +1584,7 @@ const contract = {
         })
         .extend(PaginationSchema.shape),
     )
-    .output(paginatedListOf(SimulationEntitySchema)),
+    .output(paginatedListOf(SimulationListEntitySchema)),
 
   simulationStart: oc
     .route({
@@ -2219,7 +2220,6 @@ const contract = {
     .output(
       z.object({
         run: QARunEntitySchema,
-        simulations: z.array(SimulationEntitySchema),
       }),
     ),
 
