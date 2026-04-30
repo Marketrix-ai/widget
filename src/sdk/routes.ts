@@ -2846,7 +2846,7 @@ const contract = {
       method: 'POST',
       tags: ['Insight'],
       path: '/insights/reactions/context',
-      summary: 'Get context for a reaction question (mocked)',
+      summary: 'Get context for a reaction question',
     })
     .input(z.object({ application_id: z.coerce.number(), question: z.string() }))
     .output(ChatContextResponseSchema),
@@ -2856,14 +2856,14 @@ const contract = {
       method: 'POST',
       tags: ['Insight'],
       path: '/insights/reactions/{reaction_id}/run',
-      summary: 'Run reaction scoring for selected personas (mocked scoring)',
+      summary: 'Run reaction scoring for selected personas',
     })
     .input(
       z.object({
         reaction_id: z.coerce.number(),
         persona_ids: z.array(z.coerce.number()),
         context_refs: z.array(ContextRefSchema),
-        simulations: z.array(SuggestedSimulationSchema),
+        simulations: z.array(SuggestedSimulationSchema.pick({ description: true, selected: true })),
       }),
     )
     .output(ReactionRunEntitySchema),

@@ -1694,6 +1694,32 @@ export const AppEventSchema = z.discriminatedUnion('type', [
     status: z.literal('failed'),
     error: z.string().optional(),
   }),
+
+  // Reaction simulation events
+  z.object({
+    type: z.literal('reaction/completed'),
+    reaction_id: z.number(),
+    run_id: z.number(),
+    application_id: z.number(),
+  }),
+  z.object({
+    type: z.literal('reaction/failed'),
+    reaction_id: z.number(),
+    run_id: z.number(),
+    application_id: z.number(),
+    error: z.string().optional(),
+  }),
+  z.object({
+    type: z.literal('reaction/progress'),
+    reaction_id: z.number(),
+    run_id: z.number(),
+    application_id: z.number(),
+    result_id: z.number(),
+    persona_id: z.number().nullable(),
+    completed_personas: z.number(),
+    total_personas: z.number(),
+    failed_personas: z.number(),
+  }),
 ]);
 
 export type AppEvent = z.infer<typeof AppEventSchema>;
@@ -2755,6 +2781,44 @@ export const ReactionScoreSchema = z.object({
   justification: z.string(),
 });
 
+export const ContextRefSchema = z.object({
+  type: z.enum(['doc', 'sim', 'session']),
+  id: z.string(),
+  label: z.string(),
+});
+
+export const ReactionReplayEvidenceSchema = z.object({
+  simulations: z
+    .array(
+      z.object({
+        simulation_id: z.number(),
+        task_id: z.string().nullable().optional(),
+        step_count: z.number(),
+        summary: z.string(),
+      }),
+    )
+    .default([]),
+  moments: z
+    .array(
+      z.object({
+        sim_index: z.number(),
+        step_index: z.number(),
+        label: z.string(),
+      }),
+    )
+    .max(6)
+    .default([]),
+  context_refs: z.array(ContextRefSchema).default([]),
+});
+
+export const PersonaSnapshotSchema = z.object({
+  name: z.string(),
+  initials: z.string().optional(),
+  segment_name: z.string().optional(),
+  traits: z.array(z.string()).optional(),
+  age_range: z.string().optional(),
+});
+
 export const ReactionResultEntitySchema = z.object({
   id: z.number(),
   run_id: z.number(),
@@ -2767,18 +2831,21 @@ export const ReactionResultEntitySchema = z.object({
     .optional(),
   overall_reactions: z.record(z.string(), ReactionScoreSchema),
   dimension_scores: z.record(z.string(), ReactionScoreSchema),
+  simulation_id: z.number().nullable().optional(),
+  task_id: z.string().nullable().optional(),
+  status: z.enum(['pending', 'completed', 'failed']).optional(),
+  replay_evidence: ReactionReplayEvidenceSchema.nullable().optional(),
+  error: z.string().nullable().optional(),
+  persona_snapshot: PersonaSnapshotSchema.nullable().optional(),
   created_at: z.coerce.date().optional(),
-});
-
-export const ContextRefSchema = z.object({
-  type: z.enum(['doc', 'sim', 'session']),
-  id: z.string(),
-  label: z.string(),
 });
 
 export const SuggestedSimulationSchema = z.object({
   description: z.string(),
   selected: z.boolean(),
+  simulation_id: z.number().nullable().optional(),
+  task_id: z.string().nullable().optional(),
+  status: z.string().nullable().optional(),
 });
 
 export const ReactionRunEntitySchema = z.object({
@@ -2789,6 +2856,11 @@ export const ReactionRunEntitySchema = z.object({
   simulations: z.array(SuggestedSimulationSchema),
   persona_ids: z.array(z.number()).optional(),
   results: z.array(ReactionResultEntitySchema).optional(),
+  status: z.enum(['running', 'completed', 'failed']).nullable().optional(),
+  processing_started_at: z.coerce.date().nullable().optional(),
+  completed_at: z.coerce.date().nullable().optional(),
+  failed_at: z.coerce.date().nullable().optional(),
+  error: z.string().nullable().optional(),
   created_at: z.coerce.date().optional(),
 });
 
