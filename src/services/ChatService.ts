@@ -310,22 +310,6 @@ export function createSystemMessage(
   };
 }
 
-export function createPlaceholderMessage(
-  mode?: InstructionType,
-  placeholderState: 'thinking' | 'waiting-for-user' = 'thinking',
-): ChatMessage {
-  return {
-    id: `placeholder-${Date.now()}`,
-    content: '',
-    sender: 'agent',
-    timestamp: new Date(),
-    mode,
-    isPlaceholder: true,
-    placeholderState,
-    parts: [],
-  };
-}
-
 export function createScreenAccessRequestMessage(mode?: InstructionType): ChatMessage {
   const content = 'Can I take a look at your screen?';
   return {

@@ -2,7 +2,6 @@ import type { CSSProperties } from 'react';
 
 import { SHADOW, type ShadowToken } from './shadows';
 
-export type ElevationToken = Exclude<ShadowToken, 'none'>;
 export type RadiusToken = 'none' | 'sm' | 'md' | 'lg' | 'xl' | 'theme' | 'pill' | 'circle';
 export type TextTone = 'default' | 'muted' | 'faint' | 'primary' | 'success' | 'warning' | 'inherit';
 export type TextLeading = 'tight' | 'snug' | 'normal' | 'relaxed';

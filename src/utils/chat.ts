@@ -269,40 +269,6 @@ export function findMessageForProgress(options: FindMessageOptions): {
 }
 
 /**
- * Find a placeholder message, optionally matching the current mode
- */
-export function findPlaceholderMessage(
-  messages: ChatMessage[],
-  currentMode?: InstructionType,
-): { index: number; message: ChatMessage } | null {
-  // First, try to find a placeholder matching the current mode
-  if (currentMode) {
-    for (let i = messages.length - 1; i >= 0; i--) {
-      const msg = messages[i];
-      if (
-        msg.sender === 'agent' &&
-        msg.isPlaceholder &&
-        !msg.isSystemMessage &&
-        !msg.isScreenAccessRequest &&
-        (msg.mode === currentMode || !msg.mode)
-      ) {
-        return { index: i, message: msg };
-      }
-    }
-  }
-
-  // Fallback: find any placeholder
-  for (let i = messages.length - 1; i >= 0; i--) {
-    const msg = messages[i];
-    if (msg.sender === 'agent' && msg.isPlaceholder && !msg.isSystemMessage && !msg.isScreenAccessRequest) {
-      return { index: i, message: msg };
-    }
-  }
-
-  return null;
-}
-
-/**
  * Ensure message has initialized parts
  */
 function ensureMessageStructure(message: ChatMessage): ChatMessage {
@@ -396,56 +362,6 @@ export function addProgressLine(message: ChatMessage, toolName: string, explanat
     ...msg,
     parts: newParts,
   };
-}
-
-/**
- * Update an existing progress step for a tool
- */
-export function updateProgressLine(
-  message: ChatMessage,
-  toolName: string,
-  status: 'pending' | 'completed' | 'failed',
-  error?: string,
-): ChatMessage {
-  const msg = ensureMessageStructure(message);
-  const parts = msg.parts || [];
-
-  // Update Parts
-  const newParts = [...parts];
-  const partIndex = parts.map(p => (p.type === 'progress' ? p.toolName : '')).lastIndexOf(toolName);
-
-  const mappedStatus = status === 'pending' ? 'in_progress' : status;
-
-  const isInteractive = INTERACTIVE_TOOLS.has(toolName);
-  const hideIcon = !isInteractive;
-  const textStyle = 'default';
-
-  if (partIndex >= 0) {
-    newParts[partIndex] = {
-      ...newParts[partIndex],
-      status: mappedStatus,
-      hideIcon,
-      textStyle,
-    };
-
-    if (status === 'failed' && error) {
-      newParts[partIndex] = {
-        ...newParts[partIndex],
-        content: `${newParts[partIndex].content} (${error})`,
-      };
-    }
-  } else {
-    newParts.push({
-      type: 'progress',
-      content: `${getFriendlyToolName(toolName)}...`,
-      status: mappedStatus,
-      toolName,
-      hideIcon,
-      textStyle,
-    });
-  }
-
-  return { ...msg, parts: newParts };
 }
 
 /**
