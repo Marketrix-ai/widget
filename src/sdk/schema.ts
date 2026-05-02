@@ -1395,14 +1395,14 @@ export const WidgetCreateSchema = WidgetEntitySchema.partial().extend({
 export const WidgetUpdateSchema = WidgetEntitySchema.partial();
 
 // ============================================================================
-// URL GUIDE SCHEMAS - URL-based guidance messages for widget
+// STATE TRIGGER SCHEMAS - URL-based guidance messages for widget
 // ============================================================================
 
 /**
- * URL Guide entity schema - stores URL patterns and messages to show in widget
+ * State Trigger entity schema - stores URL patterns and messages to show in widget
  * message can be a string (single message) or array of strings (multiple chips)
  */
-export const UrlGuideEntitySchema = BaseEntitySchema.extend({
+export const StateTriggerEntitySchema = BaseEntitySchema.extend({
   widget_id: z.number(),
   url_pattern: z.string(),
   message: z.union([z.string(), z.array(z.string())]), // Support both single message and multiple messages
@@ -1410,18 +1410,18 @@ export const UrlGuideEntitySchema = BaseEntitySchema.extend({
 });
 
 /**
- * URL Guide creation schema
+ * State Trigger creation schema
  */
-export const UrlGuideCreateSchema = UrlGuideEntitySchema.partial().extend({
+export const StateTriggerCreateSchema = StateTriggerEntitySchema.partial().extend({
   widget_id: z.number().positive(),
   url_pattern: z.string().min(1),
   message: z.union([z.string().min(1), z.array(z.string().min(1)).min(1)]), // Support both single message and multiple messages
 });
 
 /**
- * URL Guide update schema
+ * State Trigger update schema
  */
-export const UrlGuideUpdateSchema = UrlGuideEntitySchema.partial();
+export const StateTriggerUpdateSchema = StateTriggerEntitySchema.partial();
 
 // ============================================================================
 // CHAT SCHEMAS - AI-powered chat and conversation management
@@ -2499,9 +2499,9 @@ export type WidgetData = z.infer<typeof WidgetEntitySchema>;
 export type WidgetWithAgentData = z.infer<typeof WidgetWithAgentSchema>;
 export type WidgetCreateData = z.infer<typeof WidgetCreateSchema>;
 export type WidgetUpdateData = z.infer<typeof WidgetUpdateSchema>;
-export type UrlGuideData = z.infer<typeof UrlGuideEntitySchema>;
-export type UrlGuideCreateData = z.infer<typeof UrlGuideCreateSchema>;
-export type UrlGuideUpdateData = z.infer<typeof UrlGuideUpdateSchema>;
+export type StateTriggerData = z.infer<typeof StateTriggerEntitySchema>;
+export type StateTriggerCreateData = z.infer<typeof StateTriggerCreateSchema>;
+export type StateTriggerUpdateData = z.infer<typeof StateTriggerUpdateSchema>;
 export type WidgetSettingsData = z.infer<typeof WidgetSettingsDataSchema>;
 export type SlackSettingsData = z.infer<typeof SlackSettingsDataSchema>;
 export type WidgetSettingsKey = keyof z.infer<typeof WidgetSettingsDataSchema>;
