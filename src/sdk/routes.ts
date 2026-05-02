@@ -144,6 +144,9 @@ import {
   SlackCommandLogEntitySchema,
   SlackCommandLogSearchSchema,
   SlackSettingsDataSchema,
+  StateTriggerCreateSchema,
+  StateTriggerEntitySchema,
+  StateTriggerUpdateSchema,
   StripeCheckoutSchema,
   StripeConfigSchema,
   StripeDowngradeResponseSchema,
@@ -160,9 +163,6 @@ import {
   TriggerEntitySchema,
   TriggerSearchSchema,
   TriggerUpdateSchema,
-  UrlGuideCreateSchema,
-  UrlGuideEntitySchema,
-  UrlGuideUpdateSchema,
   UserEntitySchema,
   UserQuotaSchema,
   UserUpdateSchema,
@@ -1458,71 +1458,71 @@ const contract = {
     .output(paginatedListOf(ActionLogEntitySchema)),
 
   // ============================================================================
-  // URL GUIDE ROUTES - URL-based guidance messages for widget
+  // STATE TRIGGER ROUTES - URL-based guidance messages for widget
   // ============================================================================
 
-  urlGuideSearch: oc
+  stateTriggerSearch: oc
     .route({
       method: 'GET',
-      tags: ['URL Guide'],
+      tags: ['State Trigger'],
       path: '/url-guide',
-      summary: 'Search URL guides by widget',
-      description: 'Returns list of URL guides for specified widget',
+      summary: 'Search state triggers by widget',
+      description: 'Returns list of state triggers for specified widget',
     })
     .input(ByWidgetIdSchema.extend(PaginationSchema.shape))
-    .output(paginatedListOf(UrlGuideEntitySchema)),
+    .output(paginatedListOf(StateTriggerEntitySchema)),
 
-  urlGuideCreate: oc
+  stateTriggerCreate: oc
     .route({
       method: 'POST',
-      tags: ['URL Guide'],
+      tags: ['State Trigger'],
       path: '/url-guide',
-      summary: 'Create new URL guide',
-      description: 'Creates URL guide with pattern and message',
+      summary: 'Create new state trigger',
+      description: 'Creates state trigger with pattern and message',
     })
-    .input(UrlGuideCreateSchema)
-    .output(UrlGuideEntitySchema),
+    .input(StateTriggerCreateSchema)
+    .output(StateTriggerEntitySchema),
 
-  urlGuideGet: oc
+  stateTriggerGet: oc
     .route({
       method: 'GET',
-      tags: ['URL Guide'],
+      tags: ['State Trigger'],
       path: '/url-guide/{id}',
-      summary: 'Get URL guide by ID',
-      description: 'Returns URL guide details',
+      summary: 'Get state trigger by ID',
+      description: 'Returns state trigger details',
     })
     .input(ByIdSchema)
-    .output(UrlGuideEntitySchema),
+    .output(StateTriggerEntitySchema),
 
-  urlGuideUpdate: oc
+  stateTriggerUpdate: oc
     .route({
       method: 'PUT',
-      tags: ['URL Guide'],
+      tags: ['State Trigger'],
       path: '/url-guide/{id}',
-      summary: 'Update URL guide',
-      description: 'Updates URL guide properties',
+      summary: 'Update state trigger',
+      description: 'Updates state trigger properties',
     })
-    .input(UrlGuideUpdateSchema.extend({ id: z.coerce.number() }))
-    .output(UrlGuideEntitySchema),
+    .input(StateTriggerUpdateSchema.extend({ id: z.coerce.number() }))
+    .output(StateTriggerEntitySchema),
 
-  urlGuideDelete: oc
+  stateTriggerDelete: oc
     .route({
       method: 'DELETE',
-      tags: ['URL Guide'],
+      tags: ['State Trigger'],
       path: '/url-guide/{id}',
-      summary: 'Delete URL guide',
-      description: 'Permanently deletes a URL guide. This action cannot be undone.',
+      summary: 'Delete state trigger',
+      description: 'Permanently deletes a state trigger. This action cannot be undone.',
     })
     .input(ByIdSchema)
     .output(SuccessSchema),
 
-  urlGuideMatch: oc
+  stateTriggerMatch: oc
     .route({
       method: 'GET',
-      tags: ['URL Guide'],
+      tags: ['State Trigger'],
       path: '/url-guide/match',
-      summary: 'Find matching URL guide for current URL',
-      description: 'Returns matching URL guide for a given URL pattern',
+      summary: 'Find matching state trigger for current URL',
+      description: 'Returns matching state trigger for a given URL pattern',
     })
     .input(
       z.object({
@@ -1530,7 +1530,7 @@ const contract = {
         url: z.string(),
       }),
     )
-    .output(UrlGuideEntitySchema.nullable()),
+    .output(StateTriggerEntitySchema.nullable()),
 
   // ============================================================================
   // SIMULATION ROUTES - Application simulation and testing
