@@ -40,6 +40,12 @@ const WidgetContextBridge: React.FC<BridgeProps> = ({ children, previewMode }) =
     const init = async () => {
       const chatId = await sessionManager.getOrCreateChatId();
       chatService.createInitialContext(chatId);
+
+      const initErr = chatService.getInitError();
+      if (initErr) {
+        uiActions.setError('Widget failed to initialise — please refresh the page.');
+      }
+
       chatService.initialize(chatId);
 
       const isTaskRunning = chatService.getIsTaskRunning();
