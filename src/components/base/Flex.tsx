@@ -2,51 +2,23 @@ import { forwardRef, type ReactNode } from 'react';
 
 import { cn } from '@/lib/utils';
 
-import { getElevationStyle, type RadiusToken } from '../../design-system/component-tokens';
-import type { ShadowToken } from '../../design-system/shadows';
-import { type LayoutProps, resolveLayoutClasses, stripLayoutProps } from './layoutProps';
-import { backgroundClasses, paddingPresetClasses, type SurfaceBackground, type SurfacePadding } from './Surface';
+import { Surface, type SurfaceProps } from './Surface';
 
-export interface FlexProps extends LayoutProps, Omit<React.HTMLAttributes<HTMLElement>, 'className'> {
-  background?: SurfaceBackground;
+/**
+ * Flex extends Surface with flexbox semantics.
+ *
+ * Composes `Surface` so that the prop-forwarding, className merging, and
+ * elevation/padding/background/radius/layout handling all live in exactly
+ * one place. Flex's only contribution is the `flex` utility class plus an
+ * optional `flex-col` from the `direction` prop. Public API is unchanged
+ * for callers.
+ */
+export interface FlexProps extends SurfaceProps {
   direction?: 'row' | 'column';
-  elevation?: ShadowToken;
-  paddingPreset?: SurfacePadding;
-  radius?: RadiusToken;
-  /** @internal blocks/ only */
-  className?: string;
   children?: ReactNode;
 }
 
 export const Flex = forwardRef<HTMLElement, FlexProps>(function Flex(props, ref) {
-  const {
-    as: Component = 'div',
-    background = 'default',
-    direction,
-    className,
-    elevation,
-    paddingPreset = 'none',
-    radius,
-    style,
-    ...rest
-  } = props;
-  const layoutClasses = resolveLayoutClasses(props);
-  const domProps = stripLayoutProps(rest);
-
-  return (
-    <Component
-      {...domProps}
-      ref={ref}
-      className={cn(
-        'flex',
-        direction === 'column' && 'flex-col',
-        backgroundClasses[background],
-        paddingPresetClasses[paddingPreset],
-        radius && resolveLayoutClasses({ rounded: radius }),
-        layoutClasses,
-        className,
-      )}
-      style={{ ...getElevationStyle(elevation), ...style }}
-    />
-  );
+  const { className, direction, ...rest } = props;
+  return <Surface {...rest} ref={ref} className={cn('flex', direction === 'column' && 'flex-col', className)} />;
 });
