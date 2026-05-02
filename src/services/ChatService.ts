@@ -13,6 +13,7 @@ export class ChatService {
   private isOpen: boolean = false;
   private isMinimized: boolean = false;
   private isLoading: boolean = false;
+  initError: Error | null = null;
 
   private constructor() {}
 
@@ -48,7 +49,12 @@ export class ChatService {
       });
     } catch (error) {
       console.error('[ChatService] Failed to create initial chat context:', error);
+      this.initError = error instanceof Error ? error : new Error(String(error));
     }
+  }
+
+  getInitError(): Error | null {
+    return this.initError;
   }
 
   getMessages(): ChatMessage[] {
