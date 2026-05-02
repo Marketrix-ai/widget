@@ -16,6 +16,14 @@
  *
  * Seam: WidgetEventSchema in src/sdk/schema.ts (lines ~1460-1491)
  *       StreamClient.ts handleMessage() consumes WidgetEvent values.
+ *
+ * Wave 8a note: api PR #374 split sims/QA into typed wire vocabularies
+ * (`SimulationTaskStatus` / `QATaskStatus`), but `WidgetEventSchema.task/status`
+ * was deliberately left on the legacy widget enum (`'started' | 'in_progress' |
+ * 'completed' | 'failed' | 'stopped' | 'has_question'`) since chat sessions
+ * still emit those values to widget clients in flight. The widget-facing
+ * task/status vocabulary cutover is a future wave; these assertions remain
+ * pinned to the current WidgetEventSchema shape.
  */
 
 import { describe, expect, it } from 'vitest';

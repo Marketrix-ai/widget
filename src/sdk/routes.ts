@@ -124,8 +124,8 @@ import {
   QAFlowStatusSchema,
   QAHealingAttemptEntrySchema,
   QARunEntitySchema,
+  QARunTaskEntitySchema,
   QATestCaseEntitySchema,
-  QATestVerdictEntitySchema,
   QAVersionHistoryEntrySchema,
   ReactionEntitySchema,
   ReactionRunEntitySchema,
@@ -2187,10 +2187,10 @@ const contract = {
       tags: ['QA'],
       path: '/qa/run/{run_id}/verdicts',
       summary: 'Get evaluator verdicts for a QA run',
-      description: 'Returns all qa_test_verdict rows for a run, keyed by test case',
+      description: 'Returns all qa_run_task rows for a run, keyed by test case',
     })
     .input(z.object({ run_id: z.coerce.number() }))
-    .output(z.array(QATestVerdictEntitySchema)),
+    .output(z.array(QARunTaskEntitySchema)),
 
   qaRunDelete: oc
     .route({

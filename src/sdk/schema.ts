@@ -479,14 +479,38 @@ export const QAEvaluationSchema = z.object({
 });
 export type QAEvaluation = z.infer<typeof QAEvaluationSchema>;
 
-export const QATestVerdictEntitySchema = BaseEntitySchema.extend({
+/**
+ * QA task status (Wave 8a) — first-class outcome of a QA run task.
+ * Mirrors the `qa_task_status` Postgres ENUM and proto QATaskStatus.
+ */
+export const QATaskStatusSchema = z.enum(['queued', 'running', 'passed', 'failed', 'needs_healing', 'stopped']);
+export type QATaskStatusValue = z.infer<typeof QATaskStatusSchema>;
+
+/**
+ * QA run task entity schema (Wave 8a — renamed from QATestVerdict).
+ *
+ * Composite PK (qa_run_id, qa_test_case_id) — no surrogate `id`. The legacy
+ * `verdict` enum-text column was promoted to a typed `status` enum; `verdict`
+ * is now a nullable human-readable summary set by the post-run evaluator.
+ *
+ * `created_at` / `updated_at` are populated by Sequelize, so they are
+ * optional on the input shape (a fresh upsert payload can omit them).
+ */
+export const QARunTaskEntitySchema = z.object({
   qa_run_id: z.number(),
   qa_test_case_id: z.number(),
-  simulation_task_id: z.string().nullable(),
-  verdict: QAVerdictSchema,
-  evaluation: QAEvaluationSchema.nullable(),
+  simulation_task_id: z.string().nullable().optional(),
+  status: QATaskStatusSchema,
+  verdict: z.string().nullable().optional(),
+  proposed_steps: z.array(z.string()).default([]),
+  executed_steps: z.array(z.string()).nullable().optional(),
+  evaluation: QAEvaluationSchema.nullable().optional(),
+  started_at: z.coerce.date().nullable().optional(),
+  ended_at: z.coerce.date().nullable().optional(),
+  created_at: z.coerce.date().optional(),
+  updated_at: z.coerce.date().optional(),
 });
-export type QATestVerdictData = z.infer<typeof QATestVerdictEntitySchema>;
+export type QARunTaskData = z.infer<typeof QARunTaskEntitySchema>;
 
 /** QA test case entity schema. */
 export const QATestCaseEntitySchema = BaseEntitySchema.extend({
@@ -1537,13 +1561,23 @@ export type WidgetCommand = z.infer<typeof WidgetCommandSchema>;
 export const AppEventScopeSchema = z.enum(['simulations', 'agents', 'qa', 'user', 'jobs', 'triggers', 'automations']);
 
 /**
- * Simulation status — mirrors the Sequelize ENUM on the `simulation` model.
- * Emitted by the API on `simulation/updated` events and stored on the row.
+ * Simulation status — the contract value emitted by the API on
+ * `simulation/updated` events and returned in oRPC simulation payloads.
+ *
+ * Wave 8a adds `'running'` to the union as the new wire vocabulary. The
+ * legacy `'in_progress'` value is retained for backward compat with any
+ * historical events still in flight; egress sites translate
+ * `'in_progress'` → `'running'` via `internalToWireSimulationStatus()` so
+ * consumers see the new wire vocab. The other legacy values
+ * (`'pending'`, `'dispatched'`, `'task_stopped'`, `'creating_knowledge'`)
+ * remain on this union because the api still emits them today; narrowing
+ * is a follow-up beyond Wave 8a's scope.
  */
 export const SimulationStatusSchema = z.enum([
   'queued',
   'dispatched',
   'pending',
+  'running',
   'in_progress',
   'completed',
   'failed',
@@ -1555,10 +1589,17 @@ export const SimulationStatusSchema = z.enum([
 export type SimulationStatus = z.infer<typeof SimulationStatusSchema>;
 
 /**
- * QA run derived status — set by `deriveQARunStats` based on aggregated task
- * states. Emitted by the API on `qa-run/updated` events.
+ * QA run derived status — set by `deriveQARunStats` based on aggregated
+ * task states. Emitted by the API on `qa-run/updated` events and returned
+ * in QA run oRPC payloads.
+ *
+ * Wave 8a adds `'running'` to the union as the new wire vocabulary.
+ * `'in_progress'` is retained for backward compat with any historical
+ * events still in flight; egress sites translate `'in_progress'` →
+ * `'running'` via `internalToWireQARunStatus()` so consumers see the new
+ * wire vocab.
  */
-export const QARunDerivedStatusSchema = z.enum(['pending', 'in_progress', 'completed', 'failed', 'stopped']);
+export const QARunDerivedStatusSchema = z.enum(['pending', 'running', 'in_progress', 'completed', 'failed', 'stopped']);
 export type QARunDerivedStatus = z.infer<typeof QARunDerivedStatusSchema>;
 
 export const AppEventSchema = z.discriminatedUnion('type', [
