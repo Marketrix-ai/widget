@@ -3,6 +3,17 @@
  *
  * Consolidates all widget localStorage into a single key: marketrix_chat_context
  * Contains: chat_id, messages, widget state, and config
+ *
+ * **Canonical implementation.** This file is the source of truth for the
+ * `StorageService` mirror pair. The matching `app/src/services/StorageService.ts`
+ * in the dashboard repo should be byte-identical to this file (modulo its
+ * own `'../types'` import path). When updating storage semantics, change
+ * this file first and copy the result over to the app mirror.
+ *
+ * Why widget is canonical: the chat context object (chat_id, messages,
+ * task progress, widget config) originates in the embeddable widget — the
+ * widget owns the read/write lifecycle, and the dashboard only ever reads
+ * the same shape for parity. See Wave 13 cleanup (F-048).
  */
 
 import type { ChatMessage, InstructionType, MarketrixConfig, TaskProgress } from '../types';
@@ -56,6 +67,12 @@ const DEFAULT_CONTEXT: MarketrixChatContext = {
   timestamp: Date.now(),
 };
 
+/**
+ * Singleton wrapper around `localStorage` for the unified widget chat context.
+ *
+ * Canonical implementation — see file header. Mirror in `app/src/services/StorageService.ts`
+ * must be byte-identical (modulo the relative path of the `../types` import).
+ */
 class StorageService {
   private static instance: StorageService;
   private context: MarketrixChatContext | null = null;
