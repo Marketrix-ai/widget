@@ -339,7 +339,7 @@ const contract = {
           name: z.string().optional(),
           domain: z.string().optional(),
           email: z.string().email().optional(),
-          app_id: z.coerce.number().optional(),
+          application_id: z.coerce.number().optional(),
           workspace_id: z.coerce.number().optional(),
           user_id: z.coerce.number().optional(),
         })
@@ -1041,7 +1041,7 @@ const contract = {
       summary: 'Disconnect a provider',
     })
     .input(z.object({ provider: ConnectionProviderSchema }))
-    .output(z.object({ success: z.boolean() })),
+    .output(SuccessSchema),
 
   connectionRefresh: oc
     .route({
@@ -1105,7 +1105,7 @@ const contract = {
       summary: 'Delete a trigger',
     })
     .input(z.object({ trigger_id: z.coerce.number() }))
-    .output(z.object({ success: z.boolean() })),
+    .output(SuccessSchema),
 
   triggerToggle: oc
     .route({
@@ -1202,7 +1202,7 @@ const contract = {
       summary: 'Delete an action',
     })
     .input(z.object({ action_id: z.coerce.number() }))
-    .output(z.object({ success: z.boolean() })),
+    .output(SuccessSchema),
 
   actionToggle: oc
     .route({
