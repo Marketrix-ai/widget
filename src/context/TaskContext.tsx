@@ -291,9 +291,10 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({
         const statusMessage = event.message || '';
 
         if (status === 'running') {
-          // Wave 14 (C1 cutover): legacy `'started'` was renamed to canonical
-          // `'running'` here. Internal widget enums for tool-call progress
-          // remain `'in_progress'`/`'completed'`/`'failed'` (separate concept).
+          // Canonical wire vocabulary uses `'running'` (the `'started'` value
+          // is no longer emitted). Internal widget enums for tool-call progress
+          // are a separate concept and remain `'in_progress'` / `'completed'` /
+          // `'failed'`.
           pendingTaskRef.current = {
             ...pendingTaskRef.current,
             agentStarted: true,

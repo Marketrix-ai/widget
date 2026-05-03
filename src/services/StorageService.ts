@@ -13,7 +13,7 @@
  * Why widget is canonical: the chat context object (chat_id, messages,
  * task progress, widget config) originates in the embeddable widget — the
  * widget owns the read/write lifecycle, and the dashboard only ever reads
- * the same shape for parity. See Wave 13 cleanup (F-048).
+ * the same shape for parity.
  */
 
 import type { ChatMessage, InstructionType, MarketrixConfig, TaskProgress } from '../types';
