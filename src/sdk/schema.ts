@@ -480,18 +480,19 @@ export const QAEvaluationSchema = z.object({
 export type QAEvaluation = z.infer<typeof QAEvaluationSchema>;
 
 /**
- * QA task status (Wave 8a) — first-class outcome of a QA run task.
+ * QA task status — first-class outcome of a QA run task.
  * Mirrors the `qa_task_status` Postgres ENUM and proto QATaskStatus.
  */
 export const QATaskStatusSchema = z.enum(['queued', 'running', 'passed', 'failed', 'needs_healing', 'stopped']);
 export type QATaskStatusValue = z.infer<typeof QATaskStatusSchema>;
 
 /**
- * QA run task entity schema (Wave 8a — renamed from QATestVerdict).
+ * QA run task entity schema.
  *
- * Composite PK (qa_run_id, qa_test_case_id) — no surrogate `id`. The legacy
- * `verdict` enum-text column was promoted to a typed `status` enum; `verdict`
- * is now a nullable human-readable summary set by the post-run evaluator.
+ * Composite PK (qa_run_id, qa_test_case_id) — no surrogate `id`. The
+ * pass/fail/needs_healing outcome lives on the typed `status` enum;
+ * `verdict` is a nullable human-readable summary set by the post-run
+ * evaluator.
  *
  * `created_at` / `updated_at` are populated by Sequelize, so they are
  * optional on the input shape (a fresh upsert payload can omit them).
@@ -877,7 +878,7 @@ export const SimulationTaskEntrySchema = z.object({
   task_id: z.string(),
   title: z.string(),
   instructions: z.string(),
-  // Wave 14 (B1 cleanup): writers now use 'running' instead of 'in_progress'.
+  // writers now use 'running' instead of 'in_progress'.
   // 'in_progress' is retained for backward compat with old JSONB rows; readers
   // may still encounter it. New writes always use 'running'.
   status: z.enum(['pending', 'running', 'in_progress', 'has_question', 'passed', 'failed', 'skipped', 'stopped']),
@@ -1556,16 +1557,10 @@ export const AppEventScopeSchema = z.enum(['simulations', 'agents', 'qa', 'user'
  * Simulation status — the contract value emitted by the API on
  * `simulation/updated` events and returned in oRPC simulation payloads.
  *
- * Wave 14 narrows this union to the canonical 7-value wire vocabulary
- * matching the SimulationStatus proto enum. Legacy strings (`'pending'`,
- * `'dispatched'`, `'in_progress'`, `'task_stopped'`) have been migrated to
- * canonical values at all api writers (see db-V37 migration + A2 cleanup),
- * so they no longer appear on the wire and have been removed from this
- * union.
- *
- * The two new first-class states (`'creating_knowledge'`, `'has_question'`)
- * carry through to consumers — the app accepts them in `SimulationStatusSchema`
- * mirrors.
+ * 7-value canonical wire vocabulary matching the SimulationStatus proto
+ * enum. Legacy strings (`'pending'`, `'dispatched'`, `'in_progress'`,
+ * `'task_stopped'`) were migrated to canonical values by db-V37 and no
+ * longer appear on the wire.
  */
 export const SimulationStatusSchema = z.enum([
   'queued',
@@ -1583,9 +1578,8 @@ export type SimulationStatus = z.infer<typeof SimulationStatusSchema>;
  * task states. Emitted by the API on `qa-run/updated` events and returned
  * in QA run oRPC payloads.
  *
- * Wave 14 drops `'in_progress'` from the union — `deriveQARunStats` now
- * returns `'running'` directly (B1 internal cleanup). `'pending'` is kept
- * as the empty-task initial state.
+ * Canonical wire vocabulary; `deriveQARunStats` returns `'running'` directly.
+ * `'pending'` is the empty-task initial state.
  */
 export const QARunDerivedStatusSchema = z.enum(['pending', 'running', 'completed', 'failed', 'stopped']);
 export type QARunDerivedStatus = z.infer<typeof QARunDerivedStatusSchema>;
