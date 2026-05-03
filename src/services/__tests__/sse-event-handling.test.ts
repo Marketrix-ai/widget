@@ -21,9 +21,13 @@
  * (`SimulationTaskStatus` / `QATaskStatus`), but `WidgetEventSchema.task/status`
  * was deliberately left on the legacy widget enum (`'started' | 'in_progress' |
  * 'completed' | 'failed' | 'stopped' | 'has_question'`) since chat sessions
- * still emit those values to widget clients in flight. The widget-facing
- * task/status vocabulary cutover is a future wave; these assertions remain
- * pinned to the current WidgetEventSchema shape.
+ * still emit those values to widget clients in flight.
+ *
+ * Wave 14 (C1 cutover) — applied here: the widget event surface aligned with
+ * the canonical wire vocabulary. `'started'` and `'in_progress'` were dropped
+ * from `WidgetEventSchema.task/status`; the union is now
+ * `'running' | 'completed' | 'failed' | 'stopped' | 'has_question'`.
+ * BREAKING CHANGE for external widget consumers — published in v3.3.160.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -50,7 +54,7 @@ const MINIMAL_EVENT_FIXTURES: Record<ExpectedEventType, object> = {
   heartbeat: { type: 'heartbeat' },
   'chat/response': { type: 'chat/response', request_id: 'req-1', text: 'Hello!' },
   'chat/error': { type: 'chat/error', request_id: 'req-2', error: 'Something went wrong' },
-  'task/status': { type: 'task/status', status: 'started' },
+  'task/status': { type: 'task/status', status: 'running' },
   'tool/call': {
     type: 'tool/call',
     call_id: 'call-1',
@@ -77,7 +81,7 @@ describe('SSE event discriminated-union contract (WidgetEventSchema)', () => {
 
   describe('discriminant field "type" is mandatory on every event', () => {
     it('rejects an event with no type field', () => {
-      const result = WidgetEventSchema.safeParse({ status: 'started' });
+      const result = WidgetEventSchema.safeParse({ status: 'running' });
       expect(result.success).toBe(false);
     });
 
@@ -131,8 +135,23 @@ describe('SSE event discriminated-union contract (WidgetEventSchema)', () => {
       expect(WidgetEventSchema.safeParse({ type: 'task/status' }).success).toBe(false);
     });
 
-    it('"started" is a valid status (widget-specific — api uses "in_progress")', () => {
+    it('"running" is a valid status (Wave 14 canonical wire vocab)', () => {
+      const result = WidgetEventSchema.safeParse({ type: 'task/status', status: 'running' });
+      expect(result.success).toBe(true);
+    });
+
+    it('legacy "started" is REJECTED post-Wave-14 (BREAKING contract change)', () => {
       const result = WidgetEventSchema.safeParse({ type: 'task/status', status: 'started' });
+      expect(result.success).toBe(false);
+    });
+
+    it('legacy "in_progress" is REJECTED post-Wave-14 (BREAKING contract change)', () => {
+      const result = WidgetEventSchema.safeParse({ type: 'task/status', status: 'in_progress' });
+      expect(result.success).toBe(false);
+    });
+
+    it('"has_question" remains a valid status (sim-only state propagated to widget)', () => {
+      const result = WidgetEventSchema.safeParse({ type: 'task/status', status: 'has_question' });
       expect(result.success).toBe(true);
     });
 
