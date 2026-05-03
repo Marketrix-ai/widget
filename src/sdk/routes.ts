@@ -73,8 +73,6 @@ import {
   ByWidgetIdSchema,
   ChatContextResponseSchema,
   CheckoutSessionSchema,
-  ConnectionEntitySchema,
-  ConnectionProviderSchema,
   ConnectorCapabilitySchema,
   ConnectorEntitySchema,
   ConnectorSearchSchema,
@@ -117,6 +115,8 @@ import {
   PreviewVideoChatEntitySchema,
   PreviewVideoChatSearchSchema,
   PreviewVideoChatUpsertSchema,
+  ProviderEntitySchema,
+  ProviderNameSchema,
   PublicConfigSchema,
   QAFlowCreateSchema,
   QAFlowEntitySchema,
@@ -1020,38 +1020,38 @@ const contract = {
     .output(AutomationRunEntitySchema.nullable()),
 
   // ============================================================================
-  // CONNECTION ROUTES - OAuth provider connections
+  // PROVIDER ROUTES - OAuth provider rows (one per workspace × provider)
   // ============================================================================
 
-  connectionGet: oc
+  providerGet: oc
     .route({
       method: 'GET',
-      tags: ['Connection'],
-      path: '/connection/{provider}',
-      summary: 'Get connection for a provider',
+      tags: ['Provider'],
+      path: '/provider/{provider}',
+      summary: 'Get provider record for a workspace',
     })
-    .input(z.object({ provider: ConnectionProviderSchema }))
-    .output(ConnectionEntitySchema.nullable()),
+    .input(z.object({ provider: ProviderNameSchema }))
+    .output(ProviderEntitySchema.nullable()),
 
-  connectionDelete: oc
+  providerDelete: oc
     .route({
       method: 'DELETE',
-      tags: ['Connection'],
-      path: '/connection/{provider}',
+      tags: ['Provider'],
+      path: '/provider/{provider}',
       summary: 'Disconnect a provider',
     })
-    .input(z.object({ provider: ConnectionProviderSchema }))
+    .input(z.object({ provider: ProviderNameSchema }))
     .output(SuccessSchema),
 
-  connectionRefresh: oc
+  providerRefresh: oc
     .route({
       method: 'POST',
-      tags: ['Connection'],
-      path: '/connection/{provider}/refresh',
+      tags: ['Provider'],
+      path: '/provider/{provider}/refresh',
       summary: 'Re-fetch provider data using stored credentials',
     })
-    .input(z.object({ provider: ConnectionProviderSchema }))
-    .output(ConnectionEntitySchema),
+    .input(z.object({ provider: ProviderNameSchema }))
+    .output(ProviderEntitySchema),
 
   // ============================================================================
   // TRIGGER ROUTES - Inbound event sources
