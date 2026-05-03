@@ -17,7 +17,7 @@
  * - Widget: Widget configuration
  * - Connector: Automation triggers (user-facing: "Connectors")
  * - Chat: AI-powered chat and conversation management
- * - Tour: Guide system (user-facing: "Guides")
+ * - State Trigger: URL-pattern rules that swap widget chips per page (formerly UrlGuide)
  * - Activity Log: System activity tracking and auditing
  * - App Config: In-app configuration management
  * - Rule: Business rule management
@@ -2855,7 +2855,7 @@ const contract = {
 
   insightResearchStatus: oc
     .route({
-      method: 'POST',
+      method: 'GET',
       tags: ['Insight'],
       path: '/insights/{application_id}/research/status',
       summary: 'Check whether Background Research is currently running',
