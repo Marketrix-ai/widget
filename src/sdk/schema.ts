@@ -878,9 +878,9 @@ export const SimulationTaskEntrySchema = z.object({
   task_id: z.string(),
   title: z.string(),
   instructions: z.string(),
-  // writers now use 'running' instead of 'in_progress'.
-  // 'in_progress' is retained for backward compat with old JSONB rows; readers
-  // may still encounter it. New writes always use 'running'.
+  // Writers use 'running'; the legacy 'in_progress' string is kept on the
+  // union for backward read compat with old JSONB rows. New writes always
+  // emit 'running'.
   status: z.enum(['pending', 'running', 'in_progress', 'has_question', 'passed', 'failed', 'skipped', 'stopped']),
   error_message: z.string().nullish(),
   started_at: z.string().nullish(),
@@ -1975,7 +1975,6 @@ const ConnectorNodeSchema = z.object({
   kind: z.literal('connector'),
   connector_type: z.string().min(1),
   connector_id: z.number().nullable().optional(),
-  connection_id: z.number().nullable().optional(),
   trigger_id: z.number().nullable().optional(),
   action_id: z.number().nullable().optional(),
   capability: z.string().min(1),
@@ -2667,28 +2666,35 @@ export type PreviewVideoChatUpsertData = z.infer<typeof PreviewVideoChatUpsertSc
 export type PreviewVideoChatSearchData = z.infer<typeof PreviewVideoChatSearchSchema>;
 
 // ============================================================================
-// CONNECTION / TRIGGER / ACTION SCHEMAS
+// PROVIDER / TRIGGER / ACTION SCHEMAS
 // ============================================================================
 
-export const ConnectionProviderSchema = z.enum(['github', 'slack', 'teams', 'jira']);
+// Subset of providers we have first-party OAuth integrations for.
+// TriggerProviderSchema and ActionProviderSchema extend this with extra values
+// (`timer`, `mcp`, `internal`) that don't have a corresponding provider row.
+export const ProviderNameSchema = z.enum(['github', 'slack', 'teams', 'jira']);
 export const TriggerProviderSchema = z.enum(['github', 'slack', 'teams', 'jira', 'timer', 'mcp']);
 export const ActionProviderSchema = z.enum(['github', 'slack', 'teams', 'jira', 'internal']);
-export const ConnectionStatusSchema = z.enum(['connected', 'disconnected']);
+export const ProviderStatusSchema = z.enum(['connected', 'disconnected']);
 
-// --- Connection ---
-export const ConnectionEntitySchema = BaseEntitySchema.extend({
+// --- Provider ---
+// Keyed by (workspace_id, provider). No surrogate id — every consumer already
+// looks up by that pair, and the trigger/action linkage flows through their
+// own (workspace_id, provider) columns rather than a FK.
+export const ProviderEntitySchema = z.object({
   workspace_id: z.number(),
-  provider: ConnectionProviderSchema,
-  status: ConnectionStatusSchema.default('disconnected'),
+  provider: ProviderNameSchema,
+  status: ProviderStatusSchema.default('disconnected'),
   credentials: z.record(z.string(), z.unknown()).nullish(),
   provider_data: z.record(z.string(), z.unknown()).nullish(),
   connected_at: z.coerce.date().nullish(),
+  created_at: z.coerce.date().optional(),
+  updated_at: z.coerce.date().optional(),
 });
 
 // --- Trigger ---
 export const TriggerEntitySchema = BaseEntitySchema.extend({
   workspace_id: z.number(),
-  connection_id: z.number().nullish(),
   connector_id: z.number().nullish(),
   provider: TriggerProviderSchema,
   name: z.string().min(1).max(255),
@@ -2700,7 +2706,6 @@ export const TriggerEntitySchema = BaseEntitySchema.extend({
 });
 
 export const TriggerCreateSchema = z.object({
-  connection_id: z.number().nullish(),
   connector_id: z.number().nullish(),
   provider: TriggerProviderSchema,
   name: z.string().min(1).max(255),
@@ -2717,7 +2722,6 @@ export const TriggerUpdateSchema = z.object({
 export const TriggerSearchSchema = z
   .object({
     provider: TriggerProviderSchema.optional(),
-    connection_id: z.coerce.number().optional(),
     connector_id: z.coerce.number().optional(),
   })
   .extend(PaginationSchema.shape);
@@ -2725,7 +2729,6 @@ export const TriggerSearchSchema = z
 // --- Action ---
 export const ActionEntitySchema = BaseEntitySchema.extend({
   workspace_id: z.number(),
-  connection_id: z.number().nullish(),
   provider: ActionProviderSchema,
   name: z.string().min(1).max(255),
   type: z.string().min(1).max(60),
@@ -2736,7 +2739,6 @@ export const ActionEntitySchema = BaseEntitySchema.extend({
 });
 
 export const ActionCreateSchema = z.object({
-  connection_id: z.number().nullish(),
   provider: ActionProviderSchema,
   name: z.string().min(1).max(255),
   type: z.string().min(1).max(60),
@@ -3078,7 +3080,7 @@ export const SlackCapabilitySchema = z.object({
 });
 
 // Type aliases
-export type ConnectionData = z.infer<typeof ConnectionEntitySchema>;
+export type ProviderData = z.infer<typeof ProviderEntitySchema>;
 export type TriggerData = z.infer<typeof TriggerEntitySchema>;
 export type ActionData = z.infer<typeof ActionEntitySchema>;
 export type SlackCommandLogData = z.infer<typeof SlackCommandLogEntitySchema>;
