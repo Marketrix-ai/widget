@@ -884,7 +884,10 @@ export const SimulationTaskEntrySchema = z.object({
   task_id: z.string(),
   title: z.string(),
   instructions: z.string(),
-  status: z.enum(['pending', 'in_progress', 'has_question', 'passed', 'failed', 'skipped', 'stopped']),
+  // Wave 14 (B1 cleanup): writers now use 'running' instead of 'in_progress'.
+  // 'in_progress' is retained for backward compat with old JSONB rows; readers
+  // may still encounter it. New writes always use 'running'.
+  status: z.enum(['pending', 'running', 'in_progress', 'has_question', 'passed', 'failed', 'skipped', 'stopped']),
   error_message: z.string().nullish(),
   started_at: z.string().nullish(),
   completed_at: z.string().nullish(),
@@ -1498,7 +1501,11 @@ export const WidgetEventSchema = z.discriminatedUnion('type', [
   }),
   z.object({
     type: z.literal('task/status'),
-    status: z.enum(['started', 'completed', 'failed', 'stopped', 'in_progress', 'has_question']),
+    // Wave 14 (C1 cutover): canonical wire vocabulary. Legacy `'started'` and
+    // `'in_progress'` were dropped in this wave — widget now emits `'running'`
+    // for in-progress task events, matching SimulationTaskStatus / QATaskStatus.
+    // BREAKING CHANGE for external widget consumers — bumped in widget v3.3.160.
+    status: z.enum(['running', 'completed', 'failed', 'stopped', 'has_question']),
     message: z.string().optional(),
     task_id: z.string().optional(),
     timestamp: z.number().optional(),
@@ -1564,27 +1571,25 @@ export const AppEventScopeSchema = z.enum(['simulations', 'agents', 'qa', 'user'
  * Simulation status — the contract value emitted by the API on
  * `simulation/updated` events and returned in oRPC simulation payloads.
  *
- * Wave 8a adds `'running'` to the union as the new wire vocabulary. The
- * legacy `'in_progress'` value is retained for backward compat with any
- * historical events still in flight; egress sites translate
- * `'in_progress'` → `'running'` via `internalToWireSimulationStatus()` so
- * consumers see the new wire vocab. The other legacy values
- * (`'pending'`, `'dispatched'`, `'task_stopped'`, `'creating_knowledge'`)
- * remain on this union because the api still emits them today; narrowing
- * is a follow-up beyond Wave 8a's scope.
+ * Wave 14 narrows this union to the canonical 7-value wire vocabulary
+ * matching the SimulationStatus proto enum. Legacy strings (`'pending'`,
+ * `'dispatched'`, `'in_progress'`, `'task_stopped'`) have been migrated to
+ * canonical values at all api writers (see db-V37 migration + A2 cleanup),
+ * so they no longer appear on the wire and have been removed from this
+ * union.
+ *
+ * The two new first-class states (`'creating_knowledge'`, `'has_question'`)
+ * carry through to consumers — the app accepts them in `SimulationStatusSchema`
+ * mirrors.
  */
 export const SimulationStatusSchema = z.enum([
   'queued',
-  'dispatched',
-  'pending',
   'running',
-  'in_progress',
+  'creating_knowledge',
+  'has_question',
   'completed',
   'failed',
   'stopped',
-  'task_stopped',
-  'has_question',
-  'creating_knowledge',
 ]);
 export type SimulationStatus = z.infer<typeof SimulationStatusSchema>;
 
@@ -1593,13 +1598,11 @@ export type SimulationStatus = z.infer<typeof SimulationStatusSchema>;
  * task states. Emitted by the API on `qa-run/updated` events and returned
  * in QA run oRPC payloads.
  *
- * Wave 8a adds `'running'` to the union as the new wire vocabulary.
- * `'in_progress'` is retained for backward compat with any historical
- * events still in flight; egress sites translate `'in_progress'` →
- * `'running'` via `internalToWireQARunStatus()` so consumers see the new
- * wire vocab.
+ * Wave 14 drops `'in_progress'` from the union — `deriveQARunStats` now
+ * returns `'running'` directly (B1 internal cleanup). `'pending'` is kept
+ * as the empty-task initial state.
  */
-export const QARunDerivedStatusSchema = z.enum(['pending', 'running', 'in_progress', 'completed', 'failed', 'stopped']);
+export const QARunDerivedStatusSchema = z.enum(['pending', 'running', 'completed', 'failed', 'stopped']);
 export type QARunDerivedStatus = z.infer<typeof QARunDerivedStatusSchema>;
 
 export const AppEventSchema = z.discriminatedUnion('type', [
@@ -2428,12 +2431,19 @@ export const PlanCatalogEntrySchema = z.object({
   checkColor: z.string(),
 });
 
+/** Inferred type for a single plan catalog entry — mirrored to the app SDK so
+ *  consumers don't need to redeclare the shape locally. */
+export type PlanCatalogEntry = z.infer<typeof PlanCatalogEntrySchema>;
+
 /**
  * Plan catalog response schema (GET /stripe/plans)
  */
 export const PlanCatalogSchema = z.object({
   plans: z.array(PlanCatalogEntrySchema),
 });
+
+/** Inferred type for the plan catalog response. */
+export type PlanCatalog = z.infer<typeof PlanCatalogSchema>;
 
 /**
  * Stripe configuration schema for frontend
