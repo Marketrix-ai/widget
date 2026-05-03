@@ -57,10 +57,6 @@ export function findTaskMessageIndex(messages: ChatMessage[]): number {
  * message finding code across stream handlers.
  */
 
-// import type { InstructionType } from '../types';
-// Remove self import
-// // import { findTaskMessageIndex } from './messageContentUtils';
-
 export interface FindMessageOptions {
   messages: ChatMessage[];
   isTaskRunning: boolean;

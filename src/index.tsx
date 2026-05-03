@@ -287,10 +287,6 @@ export const initWidget = async (config: MarketrixConfig, container?: HTMLElemen
   if (initPromise) {
     return initPromise;
   }
-  if (isInitializing && initPromise) {
-    console.warn('Marketrix Widget: initialization already in progress');
-    return initPromise;
-  }
   if (isInitializing) {
     return Promise.resolve();
   }
