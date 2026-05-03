@@ -842,13 +842,6 @@ export const SimulationStepSchema = z
   .passthrough();
 
 /**
- * Complete simulation history schema
- */
-export const SimulationHistorySchema = z.object({
-  history: z.array(SimulationStepSchema),
-});
-
-/**
  * Summary of one simulation step for JSON listing (topic + screenshot link)
  */
 export const SimulationStepSummarySchema = z.object({
@@ -1220,12 +1213,6 @@ export const BrowserSessionResponseSchema = z.object({
 });
 
 /**
- * Task status enum schema
- * Common status values for tasks and simulations
- */
-export const TaskStatusSchema = z.enum(['pending', 'in_progress', 'completed', 'failed', 'stopped', 'has_question']);
-
-/**
  * Agent knowledge search configuration schema
  */
 export const AgentSearchConfigSchema = z.object({
@@ -1501,10 +1488,8 @@ export const WidgetEventSchema = z.discriminatedUnion('type', [
   }),
   z.object({
     type: z.literal('task/status'),
-    // Wave 14 (C1 cutover): canonical wire vocabulary. Legacy `'started'` and
-    // `'in_progress'` were dropped in this wave — widget now emits `'running'`
-    // for in-progress task events, matching SimulationTaskStatus / QATaskStatus.
-    // BREAKING CHANGE for external widget consumers — bumped in widget v3.3.160.
+    // Canonical wire vocabulary. The widget emits 'running' (not legacy 'started'/'in_progress')
+    // for in-progress task events, matching SimulationTaskStatus / QATaskStatus on the agent side.
     status: z.enum(['running', 'completed', 'failed', 'stopped', 'has_question']),
     message: z.string().optional(),
     task_id: z.string().optional(),
@@ -2525,7 +2510,6 @@ export type AgentTaskStopResponseData = z.infer<typeof AgentTaskStopResponseSche
 export type AgentTaskStatusResponseData = z.infer<typeof AgentTaskStatusResponseSchema>;
 export type SimulationStatusResponseData = z.infer<typeof SimulationStatusResponseSchema>;
 export type BrowserSessionResponseData = z.infer<typeof BrowserSessionResponseSchema>;
-export type TaskStatus = z.infer<typeof TaskStatusSchema>;
 export type FileUploadResponse = z.infer<typeof FileUploadResponseSchema>;
 export type ChatRequest = z.infer<typeof ChatRequestSchema>;
 export type ChatResponseData = z.infer<typeof ChatResponseSchema>;
@@ -2562,7 +2546,6 @@ export type SimulationData = z.infer<typeof SimulationEntitySchema>;
 export type SimulationLoggingUserData = z.infer<typeof SimulationLoggingUserSchema>;
 export type SimulationStepData = z.infer<typeof SimulationStepSchema>;
 export type SimulationStepSummaryData = z.infer<typeof SimulationStepSummarySchema>;
-export type SimulationHistoryData = z.infer<typeof SimulationHistorySchema>;
 export type SimulationModelOutputData = z.infer<typeof SimulationModelOutputSchema>;
 export type SimulationResultData = z.infer<typeof SimulationResultSchema>;
 export type SimulationStateData = z.infer<typeof SimulationStateSchema>;
