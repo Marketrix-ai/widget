@@ -51,8 +51,6 @@ export const LearningProgressSchema = z.object({
 export const KnowledgeTypeSchema = z.enum(['document', 'video']);
 export const KnowledgeSourceSchema = z.enum(['user', 'research']);
 export const QAFlowStatusSchema = z.enum(['pending', 'processing', 'waiting_review', 'completed', 'failed']);
-export const QATestStatusSchema = z.enum(['pending', 'in_progress', 'completed', 'failed']);
-export const QARunStatusSchema = z.enum(['pending', 'in_progress', 'completed', 'failed', 'stopped']);
 export const ChatRoleSchema = z.enum(['user', 'agent']);
 export const ChatSourceSchema = z.enum(['widget', 'app']);
 export const InstructionTypeSchema = z.enum(['tell', 'show', 'do']);
@@ -878,10 +876,7 @@ export const SimulationTaskEntrySchema = z.object({
   task_id: z.string(),
   title: z.string(),
   instructions: z.string(),
-  // Writers use 'running'; the legacy 'in_progress' string is kept on the
-  // union for backward read compat with old JSONB rows. New writes always
-  // emit 'running'.
-  status: z.enum(['pending', 'running', 'in_progress', 'has_question', 'passed', 'failed', 'skipped', 'stopped']),
+  status: z.enum(['pending', 'running', 'has_question', 'passed', 'failed', 'skipped', 'stopped']),
   error_message: z.string().nullish(),
   started_at: z.string().nullish(),
   completed_at: z.string().nullish(),
