@@ -264,6 +264,10 @@ export const WorkspaceEntitySchema = BaseEntitySchema.extend({
   package: WorkspacePackageSchema,
   ending_date: z.coerce.date().nullish(),
   external_workspace_id: z.string().nullish(),
+  // Read-only flag derived from `slack_webhook_url`'s presence. The URL itself
+  // is a secret and is never returned to clients — only this boolean is.
+  slack_webhook_configured: z.boolean().optional(),
+  notify_all_members_on_question: z.boolean().optional(),
 });
 
 /**
@@ -274,9 +278,25 @@ export const WorkspaceCreateSchema = WorkspaceEntitySchema.partial().extend({
 });
 
 /**
- * Workspace update schema
+ * Slack incoming-webhook URL validator — shared by the workspace update path
+ * and the slack-test endpoint so both surface a 400 BAD_REQUEST for the same
+ * malformed input.
  */
-export const WorkspaceUpdateSchema = WorkspaceEntitySchema.partial();
+export const SlackWebhookUrlSchema = z
+  .string()
+  .url()
+  .refine(u => /^https:\/\/hooks\.slack\.com\//.test(u), {
+    message: 'Slack webhook URL must start with https://hooks.slack.com/',
+  });
+
+/**
+ * Workspace update schema. `slack_webhook_url` is write-only — it never
+ * appears in the entity response (only `slack_webhook_configured` does).
+ * Pass `null` to clear the stored webhook.
+ */
+export const WorkspaceUpdateSchema = WorkspaceEntitySchema.omit({ slack_webhook_configured: true }).partial().extend({
+  slack_webhook_url: SlackWebhookUrlSchema.nullable().optional(),
+});
 
 export const WorkspacePlanStatusSchema = z.enum([
   'active',
@@ -910,6 +930,7 @@ export const SimulationEntitySchema = BaseEntitySchema.extend({
   mindmap_steps_processed: z.number().int().nonnegative().optional(),
   mindmap_steps_total: z.number().int().nonnegative().optional(),
   mindmap_error: z.string().nullish(),
+  created_by_user_id: z.number().nullish(),
 });
 
 /**
@@ -1552,7 +1573,16 @@ export type WidgetCommand = z.infer<typeof WidgetCommandSchema>;
 // APP EVENTS - Real-time event stream for the dashboard app
 // ============================================================================
 
-export const AppEventScopeSchema = z.enum(['simulations', 'agents', 'qa', 'user', 'jobs', 'triggers', 'automations']);
+export const AppEventScopeSchema = z.enum([
+  'simulations',
+  'agents',
+  'qa',
+  'user',
+  'jobs',
+  'triggers',
+  'automations',
+  'notifications',
+]);
 
 /**
  * Simulation status — the contract value emitted by the API on
@@ -1793,10 +1823,93 @@ export const AppEventSchema = z.discriminatedUnion('type', [
     total_personas: z.number(),
     failed_personas: z.number(),
   }),
+
+  // Notification events
+  z.object({
+    type: z.literal('notification/created'),
+    notification_id: z.number(),
+    workspace_id: z.number(),
+    recipient_user_id: z.number(),
+    simulation_id: z.number(),
+    application_id: z.number(),
+    task_id: z.string().nullable(),
+    url: z.string(),
+    summary: z.string(),
+    // Server-side only; safe inside the authenticated app surface. Stripped
+    // before email/Slack/push fan-out by those channel services.
+    question_text: z.string().nullable(),
+  }),
+  z.object({
+    type: z.literal('notification/resolved'),
+    notification_id: z.number(),
+    workspace_id: z.number(),
+    simulation_id: z.number(),
+    application_id: z.number(),
+    reason: z.enum(['answered', 'dismissed', 'cancelled']),
+  }),
 ]);
 
 export type AppEvent = z.infer<typeof AppEventSchema>;
 export type AppEventScope = z.infer<typeof AppEventScopeSchema>;
+
+// ============================================================================
+// NOTIFICATION SCHEMAS — Multi-channel pause-for-input system
+// ============================================================================
+
+export const NotificationTypeSchema = z.enum(['simulation_question']);
+export const NotificationResolvedReasonSchema = z.enum(['answered', 'dismissed', 'cancelled']);
+
+export const NotificationEntitySchema = z.object({
+  id: z.number(),
+  workspace_id: z.number(),
+  recipient_user_id: z.number(),
+  type: NotificationTypeSchema,
+  simulation_id: z.number().nullable(),
+  task_id: z.string().nullable(),
+  question_text: z.string().nullable(),
+  // Server-canonical deep link. Null for notification types that don't have
+  // one (none today; future-proofing).
+  url: z.string().nullable(),
+  // Human-readable one-line summary. Server-computed so every channel (in-app
+  // toast, email subject, Slack ping, web push body) sees the same text.
+  summary: z.string(),
+  email_sent_at: z.coerce.date().nullable(),
+  read_at: z.coerce.date().nullable(),
+  resolved_at: z.coerce.date().nullable(),
+  resolved_reason: NotificationResolvedReasonSchema.nullable(),
+  resolved_by_user_id: z.number().nullable(),
+  created_at: z.coerce.date(),
+});
+export type NotificationEntity = z.infer<typeof NotificationEntitySchema>;
+
+export const NotificationChannelsSchema = z.object({
+  push: z.object({ enabled: z.boolean() }),
+  email: z.object({
+    enabled: z.boolean(),
+    delay_minutes: z.coerce.number().int().min(1).max(120),
+  }),
+  slack: z.object({ enabled: z.boolean() }),
+});
+export type NotificationChannelsInput = z.infer<typeof NotificationChannelsSchema>;
+
+export const PushSubscriptionRegisterSchema = z.object({
+  endpoint: z.string().url(),
+  p256dh: z.string().min(1),
+  auth: z.string().min(1),
+  user_agent: z.string().optional(),
+});
+
+export const PushSubscriptionUnregisterSchema = z.object({
+  endpoint: z.string().url(),
+});
+
+export const NotificationSlackTestSchema = z.object({
+  webhook_url: SlackWebhookUrlSchema,
+});
+
+export const VapidPublicKeyResponseSchema = z.object({
+  public_key: z.string().nullable(),
+});
 
 // ============================================================================
 // ACTIVITY LOG SCHEMAS - System activity tracking and auditing
