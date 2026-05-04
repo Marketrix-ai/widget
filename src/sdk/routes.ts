@@ -51,7 +51,7 @@ import {
   AppEventSchema,
   AppEventScopeSchema,
   ApplicationCreateSchema,
-  ApplicationEntitySchema,
+  ApplicationReadSchema,
   ApplicationTypeSchema,
   ApplicationUpdateSchema,
   AutomationCreateSchema,
@@ -554,7 +554,7 @@ const contract = {
       description: 'Creates a new application for the authenticated workspace and returns the created entity.',
     })
     .input(ApplicationCreateSchema)
-    .output(ApplicationEntitySchema),
+    .output(ApplicationReadSchema),
 
   applicationSearch: oc
     .route({
@@ -575,7 +575,7 @@ const contract = {
     )
     .output(
       paginatedListOf(
-        ApplicationEntitySchema.extend({
+        ApplicationReadSchema.extend({
           widgets: z.array(WidgetEntitySchema).optional(),
         }),
       ),
@@ -591,7 +591,7 @@ const contract = {
     })
     .input(ByApplicationIdSchema)
     .output(
-      ApplicationEntitySchema.extend({
+      ApplicationReadSchema.extend({
         widgets: z.array(WidgetEntitySchema),
       }),
     ),
@@ -605,7 +605,7 @@ const contract = {
       description: 'Updates application details and configuration',
     })
     .input(ApplicationUpdateSchema.extend({ application_id: z.coerce.number() }))
-    .output(ApplicationEntitySchema),
+    .output(ApplicationReadSchema),
 
   applicationDelete: oc
     .route({

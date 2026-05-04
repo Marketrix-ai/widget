@@ -1283,6 +1283,12 @@ export const ApplicationEntitySchema = BaseEntitySchema.extend({
 });
 
 /**
+ * Application read schema — entity minus password. Used for all API
+ * responses; password is write-only and never returned to clients.
+ */
+export const ApplicationReadSchema = ApplicationEntitySchema.omit({ password: true });
+
+/**
  * Application creation schema
  */
 export const ApplicationCreateSchema = ApplicationEntitySchema.partial().extend({
@@ -1368,7 +1374,7 @@ export const WidgetEntitySchema = BaseEntitySchema.extend({
  * Widget information schema
  */
 export const WidgetInfoSchema = WidgetEntitySchema.extend({
-  application: ApplicationEntitySchema.partial(),
+  application: ApplicationReadSchema.partial(),
   workspace: WorkspaceEntitySchema.partial(),
   user: UserEntitySchema.partial(),
   agent: AgentEntitySchema.partial(),
@@ -1384,7 +1390,7 @@ export const WidgetWithAgentSchema = WidgetEntitySchema.extend({
 /**
  * Application with widgets schema - matches API response structure
  */
-export const ApplicationWithWidgetsSchema = ApplicationEntitySchema.extend({
+export const ApplicationWithWidgetsSchema = ApplicationReadSchema.extend({
   widgets: z.array(WidgetEntitySchema).optional(),
   agents: z.array(AgentEntitySchema).optional(),
 });
@@ -2515,6 +2521,7 @@ export type WorkspacePlanData = z.infer<typeof WorkspacePlanEntitySchema>;
 export type AgentData = z.infer<typeof AgentEntitySchema>;
 export type KnowledgeData = z.infer<typeof KnowledgeEntitySchema>;
 export type ApplicationData = z.infer<typeof ApplicationEntitySchema>;
+export type ApplicationReadData = z.infer<typeof ApplicationReadSchema>;
 export type ApplicationCreateData = z.infer<typeof ApplicationCreateSchema>;
 export type ApplicationUpdateData = z.infer<typeof ApplicationUpdateSchema>;
 export type ApplicationWithWidgetsData = z.infer<typeof ApplicationWithWidgetsSchema>;
