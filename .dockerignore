@@ -3,10 +3,8 @@ dist
 .git
 .github
 *.md
-Dockerfile*
 .env*
 *.tsbuildinfo
-chrome-extension/
 coverage/
 .eslintcache
 .DS_Store
