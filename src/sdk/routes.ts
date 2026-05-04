@@ -1465,7 +1465,7 @@ const contract = {
     .route({
       method: 'GET',
       tags: ['State Trigger'],
-      path: '/url-guide',
+      path: '/state-trigger',
       summary: 'Search state triggers by widget',
       description: 'Returns list of state triggers for specified widget',
     })
@@ -1476,7 +1476,7 @@ const contract = {
     .route({
       method: 'POST',
       tags: ['State Trigger'],
-      path: '/url-guide',
+      path: '/state-trigger',
       summary: 'Create new state trigger',
       description: 'Creates state trigger with pattern and message',
     })
@@ -1487,7 +1487,7 @@ const contract = {
     .route({
       method: 'GET',
       tags: ['State Trigger'],
-      path: '/url-guide/{id}',
+      path: '/state-trigger/{id}',
       summary: 'Get state trigger by ID',
       description: 'Returns state trigger details',
     })
@@ -1498,7 +1498,7 @@ const contract = {
     .route({
       method: 'PUT',
       tags: ['State Trigger'],
-      path: '/url-guide/{id}',
+      path: '/state-trigger/{id}',
       summary: 'Update state trigger',
       description: 'Updates state trigger properties',
     })
@@ -1509,7 +1509,7 @@ const contract = {
     .route({
       method: 'DELETE',
       tags: ['State Trigger'],
-      path: '/url-guide/{id}',
+      path: '/state-trigger/{id}',
       summary: 'Delete state trigger',
       description: 'Permanently deletes a state trigger. This action cannot be undone.',
     })
@@ -1520,7 +1520,7 @@ const contract = {
     .route({
       method: 'GET',
       tags: ['State Trigger'],
-      path: '/url-guide/match',
+      path: '/state-trigger/match',
       summary: 'Find matching state trigger for current URL',
       description: 'Returns matching state trigger for a given URL pattern',
     })
