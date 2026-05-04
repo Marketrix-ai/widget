@@ -107,6 +107,9 @@ import {
   MigrationPrepareSchema,
   MigrationRunSchema,
   MindMapSchema,
+  NotificationChannelsSchema,
+  NotificationEntitySchema,
+  NotificationSlackTestSchema,
   paginatedListOf,
   PaginationSchema,
   PlanCatalogSchema,
@@ -118,6 +121,8 @@ import {
   ProviderEntitySchema,
   ProviderNameSchema,
   PublicConfigSchema,
+  PushSubscriptionRegisterSchema,
+  PushSubscriptionUnregisterSchema,
   QAFlowCreateSchema,
   QAFlowEntitySchema,
   QAFlowProcessingResponseSchema,
@@ -166,6 +171,7 @@ import {
   UserEntitySchema,
   UserQuotaSchema,
   UserUpdateSchema,
+  VapidPublicKeyResponseSchema,
   WidgetCommandSchema,
   WidgetCreateSchema,
   WidgetEntitySchema,
@@ -1732,6 +1738,97 @@ const contract = {
         'Permanently deletes a simulation and all associated data. Only works on simulations in terminal state.',
     })
     .input(BySimulationIdSchema)
+    .output(SuccessWithMessageSchema),
+
+  // ============================================================================
+  // NOTIFICATION ROUTES - Multi-channel pause-for-input notifications
+  // ============================================================================
+
+  notificationListPending: oc
+    .route({
+      method: 'GET',
+      tags: ['Notification'],
+      path: '/notification/pending',
+      summary: 'List pending notifications for the current user',
+    })
+    .output(listOf(NotificationEntitySchema)),
+
+  notificationMarkRead: oc
+    .route({
+      method: 'POST',
+      tags: ['Notification'],
+      path: '/notification/{id}/read',
+      summary: 'Mark a notification as read',
+    })
+    .input(z.object({ id: z.coerce.number() }))
+    .output(SuccessSchema),
+
+  notificationDismiss: oc
+    .route({
+      method: 'POST',
+      tags: ['Notification'],
+      path: '/notification/{id}/dismiss',
+      summary: 'Dismiss a pending notification',
+    })
+    .input(z.object({ id: z.coerce.number() }))
+    .output(SuccessSchema),
+
+  notificationGetPreferences: oc
+    .route({
+      method: 'GET',
+      tags: ['Notification'],
+      path: '/notification/preferences',
+      summary: 'Get notification preferences for the current (user, workspace)',
+    })
+    .output(NotificationChannelsSchema),
+
+  notificationUpdatePreferences: oc
+    .route({
+      method: 'PUT',
+      tags: ['Notification'],
+      path: '/notification/preferences',
+      summary: 'Update notification preferences for the current (user, workspace)',
+    })
+    .input(NotificationChannelsSchema)
+    .output(NotificationChannelsSchema),
+
+  notificationGetVapidPublicKey: oc
+    .route({
+      method: 'GET',
+      tags: ['Notification'],
+      path: '/notification/vapid-public-key',
+      summary: 'Public VAPID key for browser pushManager.subscribe',
+    })
+    .output(VapidPublicKeyResponseSchema),
+
+  notificationRegisterPushSubscription: oc
+    .route({
+      method: 'POST',
+      tags: ['Notification'],
+      path: '/notification/push-subscription',
+      summary: 'Register a Web Push subscription for the current user',
+    })
+    .input(PushSubscriptionRegisterSchema)
+    .output(SuccessSchema),
+
+  notificationUnregisterPushSubscription: oc
+    .route({
+      method: 'DELETE',
+      tags: ['Notification'],
+      path: '/notification/push-subscription',
+      summary: 'Unregister a Web Push subscription for the current user',
+    })
+    .input(PushSubscriptionUnregisterSchema)
+    .output(SuccessSchema),
+
+  notificationSendTestSlack: oc
+    .route({
+      method: 'POST',
+      tags: ['Notification'],
+      path: '/notification/slack-test',
+      summary: 'Send a test message to a Slack incoming-webhook URL',
+    })
+    .input(NotificationSlackTestSchema)
     .output(SuccessWithMessageSchema),
 
   // ============================================================================
