@@ -120,12 +120,12 @@ export default defineConfig(({ command }) => {
     plugins: [
       react(),
       tailwindcss(),
-      // Rewrite /widget.mjs and /standalone.mjs to the source entry so the production URL works in dev
+      // Rewrite /widget.mjs to the source entry so the production URL works in dev
       {
         name: 'widget-dev-routing',
         configureServer(server: ViteDevServer) {
           server.middlewares.use((req, _res, next) => {
-            if (req.url === '/widget.mjs' || req.url === '/standalone.mjs') req.url = '/src/index.tsx';
+            if (req.url === '/widget.mjs') req.url = '/src/index.tsx';
             next();
           });
         },

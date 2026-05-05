@@ -4,10 +4,8 @@ import { Icon } from '../components/base';
 import type { MarketrixConfig } from '../types';
 
 type ChipData = {
-  chip_mode?: 'show' | 'tell' | 'do' | string;
-  chip_text?: string;
-  type?: 'show' | 'tell' | 'do' | string;
-  question?: string;
+  chip_mode: 'show' | 'tell' | 'do';
+  chip_text: string;
 };
 
 export interface SuggestedActionItem {
@@ -73,10 +71,8 @@ export function getSuggestedActionsFromConfig(config: MarketrixConfig): Suggeste
   if (chips && Array.isArray(chips) && chips.length > 0) {
     const seen = new Set<string>();
     return chips.map((chip: ChipData, index: number) => {
-      const chipText = chip.chip_text || chip.question || '';
-      const chipMode = chip.chip_mode || chip.type || 'tell';
-      const mode: 'show' | 'tell' | 'do' =
-        chipMode === 'show' || chipMode === 'tell' || chipMode === 'do' ? chipMode : 'tell';
+      const chipText = chip.chip_text;
+      const mode = chip.chip_mode;
       const uniqueId = `chip-${chipText.replace(/\s+/g, '-').toLowerCase()}-${index}`;
       let id = uniqueId;
       let c = 0;

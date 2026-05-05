@@ -24,7 +24,7 @@ interface BridgeProps {
   previewMode: boolean;
 }
 
-const WidgetContextBridge: React.FC<BridgeProps> = ({ children, previewMode }) => {
+const TaskBridge: React.FC<BridgeProps> = ({ children, previewMode }) => {
   const { uiState, uiActions } = useUIStateContext();
   const { _setMessages } = useChatContextInternal();
 
@@ -111,7 +111,7 @@ const UIStateBridge: React.FC<BridgeProps> = ({ children, previewMode }) => {
 
   return (
     <ChatProvider previewMode={previewMode} uiActions={uiActions} currentMode={uiState.currentMode}>
-      <WidgetContextBridge previewMode={previewMode}>{children}</WidgetContextBridge>
+      <TaskBridge previewMode={previewMode}>{children}</TaskBridge>
     </ChatProvider>
   );
 };

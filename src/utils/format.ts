@@ -88,43 +88,6 @@ export function darkenColor(color: string, amount: number): string {
   return rgbToHex(Math.round(rgb.r * factor), Math.round(rgb.g * factor), Math.round(rgb.b * factor));
 }
 
-/**
- * Lightens a color by a specified amount (0-1)
- */
-export function lightenColor(color: string, amount: number): string {
-  const rgb = hexToRgb(color);
-  if (!rgb) return color;
-
-  const factor = 1 + amount;
-  return rgbToHex(
-    Math.min(255, Math.round(rgb.r * factor)),
-    Math.min(255, Math.round(rgb.g * factor)),
-    Math.min(255, Math.round(rgb.b * factor)),
-  );
-}
-
-/**
- * Extracts the first color from a gradient string, or returns the color as-is
- */
-export function extractColorFromGradient(color: string): string {
-  // Try to extract hex color from gradient
-  const hexMatch = color.match(/#[0-9A-Fa-f]{6}/);
-  if (hexMatch) {
-    return hexMatch[0];
-  }
-
-  // Try to extract rgb color
-  const rgbMatch = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
-  if (rgbMatch) {
-    const r = parseInt(rgbMatch[1]);
-    const g = parseInt(rgbMatch[2]);
-    const b = parseInt(rgbMatch[3]);
-    return rgbToHex(r, g, b);
-  }
-
-  // Return as-is if no color found
-  return color;
-}
 export const formatMessageTime = (date: Date | undefined): string => {
   if (!date) {
     return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -142,18 +105,5 @@ export const getModeDisplayName = (mode: 'show' | 'tell' | 'do'): string => {
       return 'Do';
     default:
       return mode;
-  }
-};
-
-export const getModeDescription = (mode: 'show' | 'tell' | 'do'): string => {
-  switch (mode) {
-    case 'show':
-      return "I'll show you how to do this";
-    case 'tell':
-      return "I'll explain this to you";
-    case 'do':
-      return "I'll do this for you";
-    default:
-      return '';
   }
 };

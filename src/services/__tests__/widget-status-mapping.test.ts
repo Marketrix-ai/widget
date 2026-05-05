@@ -1,22 +1,6 @@
 /**
- * Wave 14 (C1 cutover): widget task status now matches the canonical wire
- * vocabulary. Pre-Wave-14 the widget event surface still emitted the legacy
- * `'started'` / `'in_progress'` strings; Wave 14 drops them and aligns the
- * widget's `task/status` discriminator with `SimulationTaskStatus` /
- * `QATaskStatus` (specifically: `'running'` replaces `'started'`, and
- * `'in_progress'` is removed).
- *
- * Pre-Wave-8a: widget had its own task status set ('started', 'completed', 'failed', 'stopped').
- * Wave 8a: api split sims/QA into two distinct wire vocabularies — sim tasks
- *   emit `SimulationTaskStatus`, QA tasks emit `QATaskStatus`. The widget event
- *   surface was deliberately left on the legacy enum at that time.
- * Wave 14 (C1): widget event surface aligns with the canonical wire vocab —
- *   `'started'` and `'in_progress'` are dropped from `WidgetEventSchema`.
- *
- * `'has_question'` (sim only) and `'passed'` / `'needs_healing'` (QA only) remain
- * valid wire values per their respective enums.
- *
- * BREAKING CHANGE for external widget consumers — published in widget v3.3.160.
+ * Widget task status contract — aligns with SimulationTaskStatus / QATaskStatus.
+ * Widget `task/status` union: `'running' | 'completed' | 'failed' | 'stopped' | 'has_question'`.
  */
 import { describe, expect, it } from 'vitest';
 

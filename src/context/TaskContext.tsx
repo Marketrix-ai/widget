@@ -82,7 +82,7 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({
   const isTaskRunningRef = useRef(false);
   const stateVersion = useRef(0);
   const processedRequestIds = useRef(new Set<string>());
-  const pendingTaskRef = useRef<{ apiTaskId?: string; agentStarted?: boolean }>({});
+  const pendingTaskRef = useRef<{ apiTaskId?: string; agentRunning?: boolean }>({});
   const currentModeRef = useRef(currentMode);
   currentModeRef.current = currentMode;
 
@@ -112,7 +112,6 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({
           messages: prev.messages,
           isTaskRunning: isTaskRunningRef.current,
           currentMode: currentModeRef.current,
-          preferPlaceholder: true,
           requireContent: status === 'failed',
         });
         if (!found) return prev;
@@ -159,11 +158,11 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({
   );
 
   // -------------------------------------------------------------------------
-  // Activate pending task once both API response and SSE task/started arrive
+  // Activate pending task once both API response and SSE task/status running arrive
   // -------------------------------------------------------------------------
   const maybeActivateTask = useCallback(() => {
     const p = pendingTaskRef.current;
-    if (p.apiTaskId && p.agentStarted) {
+    if (p.apiTaskId && p.agentRunning) {
       const taskId = p.apiTaskId;
       pendingTaskRef.current = {};
       setTaskState_(prev => {
@@ -209,7 +208,7 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({
         }
 
         if (!isTaskRunningRef.current) {
-          console.log('[Widget] Tool call received before task/started — auto-activating task');
+          console.log('[Widget] Tool call received before task/status running — auto-activating task');
           isTaskRunningRef.current = true;
           setTaskState_(prev => ({ ...prev, isTaskRunning: true }));
         }
@@ -252,7 +251,6 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({
                     messages: msgPrev.messages,
                     isTaskRunning: prev.isTaskRunning,
                     currentMode: currentModeRef.current,
-                    preferPlaceholder: true,
                     requireContent: false,
                   });
                   const newMessages = [...msgPrev.messages];
@@ -291,13 +289,10 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({
         const statusMessage = event.message || '';
 
         if (status === 'running') {
-          // Canonical wire vocabulary uses `'running'` (the `'started'` value
-          // is no longer emitted). Internal widget enums for tool-call progress
-          // are a separate concept and remain `'in_progress'` / `'completed'` /
-          // `'failed'`.
+          // 'running' is the canonical in-progress wire status.
           pendingTaskRef.current = {
             ...pendingTaskRef.current,
-            agentStarted: true,
+            agentRunning: true,
             apiTaskId: pendingTaskRef.current.apiTaskId || event.task_id || undefined,
           };
           maybeActivateTask();
@@ -311,7 +306,6 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({
                 messages: msgPrev.messages,
                 isTaskRunning: prev.isTaskRunning,
                 currentMode: currentModeRef.current,
-                preferPlaceholder: true,
                 requireContent: false,
               });
               const newMessages = [...msgPrev.messages];
@@ -411,7 +405,6 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({
           messages: msgPrev.messages,
           isTaskRunning: prev.isTaskRunning,
           currentMode: currentModeRef.current,
-          preferPlaceholder: true,
           requireContent: false,
         });
         const newMessages = [...msgPrev.messages];

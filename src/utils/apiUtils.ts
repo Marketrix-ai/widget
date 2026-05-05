@@ -1,9 +1,4 @@
-/**
- * API Utilities
- *
- * Error handling patterns for API calls.
- * With oRPC, responses return data directly - no response unwrapping needed.
- */
+/** Error-handling helpers for API calls. */
 
 import { getApiUrl } from '../constants/config';
 import type { MarketrixConfig } from '../types';
@@ -16,7 +11,7 @@ import type { MarketrixConfig } from '../types';
  * Check if error is a connection/network error
  * Consolidates the repeated pattern across widgetValidationService and other services
  */
-export function isConnectionError(error: unknown): boolean {
+function isConnectionError(error: unknown): boolean {
   const errorMessage = error instanceof Error ? error.message : String(error);
   return (
     errorMessage.includes('Failed to fetch') ||
