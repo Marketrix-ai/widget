@@ -1437,12 +1437,12 @@ export const WidgetUpdateSchema = WidgetEntitySchema.partial();
 
 /**
  * State Trigger entity schema - stores URL patterns and messages to show in widget
- * message can be a string (single message) or array of strings (multiple chips)
+ * `message` is one or more chip texts shown by the widget when the URL pattern matches.
  */
 export const StateTriggerEntitySchema = BaseEntitySchema.extend({
   widget_id: z.number(),
   url_pattern: z.string(),
-  message: z.union([z.string(), z.array(z.string())]), // Support both single message and multiple messages
+  message: z.array(z.string()),
   description: z.string().optional(),
 });
 
@@ -1452,7 +1452,7 @@ export const StateTriggerEntitySchema = BaseEntitySchema.extend({
 export const StateTriggerCreateSchema = StateTriggerEntitySchema.partial().extend({
   widget_id: z.number().positive(),
   url_pattern: z.string().min(1),
-  message: z.union([z.string().min(1), z.array(z.string().min(1)).min(1)]), // Support both single message and multiple messages
+  message: z.array(z.string().min(1)).min(1),
 });
 
 /**
@@ -2239,26 +2239,6 @@ export const GithubCheckRunInputSchema = z.object({
       text: z.string().optional(),
     })
     .optional(),
-});
-
-// ============================================================================
-// MIGRATION SCHEMAS - Database migration and system updates
-// ============================================================================
-
-/**
- * Migration prepare schema
- */
-export const MigrationPrepareSchema = z.object({
-  migration_type: z.string().optional(),
-  dry_run: z.boolean().default(true),
-});
-
-/**
- * Migration run schema
- */
-export const MigrationRunSchema = z.object({
-  migration_type: z.string().optional(),
-  backup: z.boolean().default(true),
 });
 
 // ============================================================================

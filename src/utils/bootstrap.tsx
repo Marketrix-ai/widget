@@ -10,7 +10,7 @@ import { createRoot, type Root } from 'react-dom/client';
 
 import { MarketrixWidget } from '../components/MarketrixWidget';
 import { WidgetSettingsLoader } from '../components/ui/WidgetSettingsLoader';
-import { WidgetProvider } from '../context/WidgetContext';
+import { WidgetProviders as WidgetProvider } from '../context/WidgetProviders';
 import shadowStyles from '../index.css?inline';
 import type { MarketrixConfig } from '../types';
 import { isHTMLElement, isHTMLScriptElement } from './validation';

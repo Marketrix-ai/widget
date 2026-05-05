@@ -5,7 +5,7 @@
 import { render, screen } from '@testing-library/react';
 import React from 'react';
 
-import { WidgetProvider } from '../../context/WidgetContext';
+import { WidgetProviders as WidgetProvider } from '../../context/WidgetProviders';
 import { getMockWidgetConfig } from '../../test/fixtures';
 import { MarketrixWidget } from '../MarketrixWidget';
 
