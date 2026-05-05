@@ -10,7 +10,7 @@ import { createLogger } from '../utils/common';
 import { chatService } from './ChatService';
 import { storageService } from './StorageService';
 
-const log = createLogger('ChatIdManager');
+const log = createLogger('SessionManager');
 
 class SessionManager {
   private static instance: SessionManager | null = null;
@@ -119,22 +119,6 @@ class SessionManager {
       this.initializationPromise = null;
       throw error;
     }
-  }
-
-  /**
-   * Clear the current chat ID (for testing/reset purposes)
-   */
-  clearChatId(): void {
-    this.chatId = null;
-    this.initializationPromise = null;
-    log.debug('Cleared chat ID');
-  }
-
-  /**
-   * Reset the singleton instance (for testing purposes)
-   */
-  static resetInstance(): void {
-    SessionManager.instance = null;
   }
 
   private getStoredChatId(): string | null {

@@ -37,45 +37,6 @@ export const getPanelPositionStyle = (position: WidgetPosition): React.CSSProper
   }
 };
 
-export const getCornerInlineStyle = (
-  position: WidgetPosition,
-  offsetPx = 20,
-): {
-  top?: string;
-  right?: string;
-  bottom?: string;
-  left?: string;
-} => {
-  const offset = `${offsetPx}px`;
-  switch (position) {
-    case 'top_left':
-      return { top: offset, left: offset };
-    case 'top_right':
-      return { top: offset, right: offset };
-    case 'bottom_left':
-      return { bottom: offset, left: offset };
-    case 'bottom_right':
-    default:
-      return { bottom: offset, right: offset };
-  }
-};
-
-export const getNearestCorner = (
-  x: number,
-  y: number,
-  bounds: { left: number; top: number; width: number; height: number },
-): WidgetPosition => {
-  const midX = bounds.left + bounds.width / 2;
-  const midY = bounds.top + bounds.height / 2;
-  const isRight = x >= midX;
-  const isBottom = y >= midY;
-
-  if (isBottom && isRight) return 'bottom_right';
-  if (isBottom && !isRight) return 'bottom_left';
-  if (!isBottom && isRight) return 'top_right';
-  return 'top_left';
-};
-
 /** Anchor top-left of widget (px) for a corner, given viewport and widget size. */
 export const getAnchorTopLeft = (
   position: WidgetPosition,
@@ -98,7 +59,7 @@ export const getAnchorTopLeft = (
 };
 
 /** Delta (dx, dy) that would place widget center at the given corner center. */
-export const getDeltaToCorner = (
+const getDeltaToCorner = (
   position: WidgetPosition,
   corner: WidgetPosition,
   vw: number,

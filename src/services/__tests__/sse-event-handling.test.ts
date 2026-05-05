@@ -1,33 +1,7 @@
 /**
  * Characterization tests — SSE discriminated-union event contract.
- *
- * Approach A: WidgetEventSchema (Zod discriminated union) is the canonical
- * runtime validator for every event the widget receives from the server.
- * StreamClient.ts calls sdk.widgetStream() which returns a typed async iterator;
- * the oRPC layer validates each yielded value against WidgetEventSchema before
- * the widget sees it. There is no hand-rolled raw SSE line parser in the codebase
- * — the schema IS the parser contract.
- *
- * These tests pin:
- *   1. All event types present in the discriminated union (regression guard).
- *   2. Required and optional fields for each event shape.
- *   3. The discriminant field 'type' is present on every valid event.
- *   4. Invalid/unknown event types are rejected at the schema boundary.
- *
- * Seam: WidgetEventSchema in src/sdk/schema.ts (lines ~1460-1491)
- *       StreamClient.ts handleMessage() consumes WidgetEvent values.
- *
- * Wave 8a note: api PR #374 split sims/QA into typed wire vocabularies
- * (`SimulationTaskStatus` / `QATaskStatus`), but `WidgetEventSchema.task/status`
- * was deliberately left on the legacy widget enum (`'started' | 'in_progress' |
- * 'completed' | 'failed' | 'stopped' | 'has_question'`) since chat sessions
- * still emit those values to widget clients in flight.
- *
- * Wave 14 (C1 cutover) — applied here: the widget event surface aligned with
- * the canonical wire vocabulary. `'started'` and `'in_progress'` were dropped
- * from `WidgetEventSchema.task/status`; the union is now
- * `'running' | 'completed' | 'failed' | 'stopped' | 'has_question'`.
- * BREAKING CHANGE for external widget consumers — published in v3.3.160.
+ * WidgetEventSchema (src/sdk/schema.ts) is the canonical runtime validator;
+ * task/status union is `'running' | 'completed' | 'failed' | 'stopped' | 'has_question'`.
  */
 
 import { describe, expect, it } from 'vitest';

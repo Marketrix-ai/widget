@@ -5,7 +5,7 @@
 import { render, screen } from '@testing-library/react';
 import React from 'react';
 
-import { WidgetProviders as WidgetProvider } from '../../context/WidgetProviders';
+import { WidgetProviders } from '../../context/WidgetProviders';
 import { getMockWidgetConfig } from '../../test/fixtures';
 import { MarketrixWidget } from '../MarketrixWidget';
 
@@ -13,9 +13,9 @@ describe('Widget smoke', () => {
   it('mounts and shows launcher button', () => {
     const config = getMockWidgetConfig();
     render(
-      <WidgetProvider previewMode>
+      <WidgetProviders previewMode>
         <MarketrixWidget config={config} />
-      </WidgetProvider>,
+      </WidgetProviders>,
     );
     expect(screen.getByRole('button', { name: /open/i })).toBeInTheDocument();
   });
@@ -23,9 +23,9 @@ describe('Widget smoke', () => {
   it('uses semantic tokens and layer tokens', () => {
     const config = getMockWidgetConfig({ widget_accent_color: '#2563eb' });
     const { container } = render(
-      <WidgetProvider previewMode>
+      <WidgetProviders previewMode>
         <MarketrixWidget config={config} />
-      </WidgetProvider>,
+      </WidgetProviders>,
     );
     const widget = container.querySelector('[data-marketrix-widget]');
     expect(widget).toBeInTheDocument();

@@ -47,114 +47,29 @@ function formatMessage(prefix: string, message: string, ...args: unknown[]): [st
 }
 
 /**
- * Logger interface
- */
-export const logger = {
-  /**
-   * Debug logs - detailed information for debugging
-   */
-  debug: (prefix: string, message: string, ...args: unknown[]): void => {
-    if (shouldLog('debug')) {
-      console.debug(...formatMessage(prefix, message, ...args));
-    }
-  },
-
-  /**
-   * Info logs - general information about application flow
-   */
-  info: (prefix: string, message: string, ...args: unknown[]): void => {
-    if (shouldLog('info')) {
-      console.info(...formatMessage(prefix, message, ...args));
-    }
-  },
-
-  /**
-   * Warning logs - potential issues that don't break functionality
-   */
-  warn: (prefix: string, message: string, ...args: unknown[]): void => {
-    if (shouldLog('warn')) {
-      console.warn(...formatMessage(prefix, message, ...args));
-    }
-  },
-
-  /**
-   * Error logs - errors that need attention
-   */
-  error: (prefix: string, message: string, ...args: unknown[]): void => {
-    if (shouldLog('error')) {
-      console.error(...formatMessage(prefix, message, ...args));
-    }
-  },
-};
-
-/**
  * Create a scoped logger with a fixed prefix
  */
 export function createLogger(prefix: string) {
   return {
-    debug: (message: string, ...args: unknown[]) => logger.debug(prefix, message, ...args),
-    info: (message: string, ...args: unknown[]) => logger.info(prefix, message, ...args),
-    warn: (message: string, ...args: unknown[]) => logger.warn(prefix, message, ...args),
-    error: (message: string, ...args: unknown[]) => logger.error(prefix, message, ...args),
+    debug: (message: string, ...args: unknown[]) => {
+      if (shouldLog('debug')) {
+        console.debug(...formatMessage(prefix, message, ...args));
+      }
+    },
+    info: (message: string, ...args: unknown[]) => {
+      if (shouldLog('info')) {
+        console.info(...formatMessage(prefix, message, ...args));
+      }
+    },
+    warn: (message: string, ...args: unknown[]) => {
+      if (shouldLog('warn')) {
+        console.warn(...formatMessage(prefix, message, ...args));
+      }
+    },
+    error: (message: string, ...args: unknown[]) => {
+      if (shouldLog('error')) {
+        console.error(...formatMessage(prefix, message, ...args));
+      }
+    },
   };
-}
-/**
- * Error Handling Utilities
- *
- * Centralized error handling and logging utilities to reduce code duplication
- * and ensure consistent error handling patterns across the widget.
- */
-
-import { extractErrorMessage } from './apiUtils';
-
-const log = createLogger('ErrorUtils');
-
-/**
- * Execute a function safely with error handling
- * Returns the result or undefined if an error occurs
- */
-export function safeExecute<T>(fn: () => T, errorMessage: string, defaultValue?: T): T | undefined {
-  try {
-    return fn();
-  } catch (error) {
-    logError('safeExecute', error, { errorMessage, defaultValue });
-    return defaultValue;
-  }
-}
-
-/**
- * Execute an async function safely with error handling
- * Returns the result or undefined if an error occurs
- */
-export async function safeExecuteAsync<T>(
-  fn: () => Promise<T>,
-  errorMessage: string,
-  defaultValue?: T,
-): Promise<T | undefined> {
-  try {
-    return await fn();
-  } catch (error) {
-    logError('safeExecuteAsync', error, { errorMessage, defaultValue });
-    return defaultValue;
-  }
-}
-
-/**
- * Centralized error logging
- */
-export function logError(context: string, error: unknown, additionalInfo?: Record<string, unknown>): void {
-  const errorMessage = extractErrorMessage(error);
-  const errorStack = error instanceof Error ? error.stack : undefined;
-
-  log.error(`${context}: ${errorMessage}`, {
-    ...additionalInfo,
-    stack: errorStack,
-  });
-}
-
-/**
- * Centralized warning logging
- */
-export function logWarning(context: string, message: string, additionalInfo?: Record<string, unknown>): void {
-  log.warn(`${context}: ${message}`, additionalInfo || {});
 }

@@ -8,7 +8,7 @@ import React, { useEffect, useRef } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 
 import { MarketrixWidget as MarketrixWidgetComponent } from './components/MarketrixWidget';
-import { WidgetProviders as WidgetProvider } from './context/WidgetProviders';
+import { WidgetProviders } from './context/WidgetProviders';
 import { configureSdk, type WidgetSettingsData } from './sdk';
 import { createConfigFromSettings } from './services/ConfigManager';
 import { SessionRecorder } from './services/SessionRecorder';
@@ -464,9 +464,9 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ settings, cont
     rootRef.current = root;
 
     root.render(
-      <WidgetProvider previewMode>
+      <WidgetProviders previewMode>
         <MarketrixWidgetComponent config={config} />
-      </WidgetProvider>,
+      </WidgetProviders>,
     );
 
     return () => {

@@ -19,14 +19,6 @@ export class MarketrixApiService {
   }
 
   /**
-   * Get or create chat ID using centralized manager
-   * This ensures only one chat ID is created even with concurrent calls
-   */
-  async getOrCreateChatId(): Promise<string> {
-    return sessionManager.getOrCreateChatId();
-  }
-
-  /**
    * Get user_id from various sources (config, localStorage, sessionStorage)
    */
   private getUserId(): number | null {
@@ -146,44 +138,6 @@ export class MarketrixApiService {
       mode,
       timestamp: new Date(),
     };
-  }
-
-  /**
-   * Check agent availability - simplified implementation
-   * Since there's no dedicated endpoint, we'll assume agent is available
-   * if we have a chat ID (does not create one if missing)
-   */
-  async checkAgentAvailability(): Promise<boolean> {
-    try {
-      // Just check if we have a chat ID, don't create one
-      // This prevents unnecessary chat ID creation during availability checks
-      const chatId = sessionManager.getChatId();
-      return chatId !== null;
-    } catch (error) {
-      console.error('Failed to check agent availability:', error);
-      return false;
-    }
-  }
-
-  /**
-   * Get agent information - simplified implementation
-   * Since there's no dedicated endpoint, return basic info
-   */
-  async getAgentInfo(): Promise<{ available: boolean; status: string }> {
-    return {
-      available: true,
-      status: 'online',
-      // Add any other basic info that might be needed
-    };
-  }
-
-  /**
-   * Stop a running task via the stream
-   */
-  async stopTask(taskId?: string): Promise<{ status: string; message: string }> {
-    const wsClient = StreamClient.getInstance();
-    wsClient.send({ type: 'chat/stop' as const, ...(taskId && { task_id: taskId }) });
-    return { status: 'stopping', message: 'Stop command sent' };
   }
 
   /**

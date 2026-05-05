@@ -61,7 +61,6 @@ export interface FindMessageOptions {
   messages: ChatMessage[];
   isTaskRunning: boolean;
   currentMode: InstructionType;
-  preferPlaceholder?: boolean;
   requireContent?: boolean;
 }
 
@@ -72,7 +71,6 @@ function matchesProgressCriteria(
   msg: ChatMessage,
   isTaskRunning: boolean,
   currentMode: InstructionType,
-  _preferPlaceholder: boolean | undefined,
   requireContent: boolean | undefined,
   checkMode: boolean,
 ): boolean {
@@ -129,7 +127,7 @@ export function findMessageForProgress(options: FindMessageOptions): {
   index: number;
   message: ChatMessage;
 } | null {
-  const { messages, isTaskRunning, currentMode, preferPlaceholder, requireContent } = options;
+  const { messages, isTaskRunning, currentMode, requireContent } = options;
   let taskMessageIndex = -1;
 
   // For active show/do tasks, find the message that matches the current mode and task state
@@ -139,14 +137,7 @@ export function findMessageForProgress(options: FindMessageOptions): {
     // Priority 1: Find LAST placeholder with content in matching mode
     for (let i = messages.length - 1; i >= 0; i--) {
       const msg = messages[i];
-      const matchesCriteria = matchesProgressCriteria(
-        msg,
-        isTaskRunning,
-        currentMode,
-        preferPlaceholder,
-        requireContent,
-        checkMode,
-      );
+      const matchesCriteria = matchesProgressCriteria(msg, isTaskRunning, currentMode, requireContent, checkMode);
       const isPlaceholder = msg.isPlaceholder;
       const hasContent = !requireContent || msg.content.trim().length > 0 || (msg.parts && msg.parts.length > 0);
 
@@ -160,14 +151,7 @@ export function findMessageForProgress(options: FindMessageOptions): {
     if (taskMessageIndex < 0 && !requireContent) {
       for (let i = messages.length - 1; i >= 0; i--) {
         const msg = messages[i];
-        const matchesCriteria = matchesProgressCriteria(
-          msg,
-          isTaskRunning,
-          currentMode,
-          preferPlaceholder,
-          requireContent,
-          checkMode,
-        );
+        const matchesCriteria = matchesProgressCriteria(msg, isTaskRunning, currentMode, requireContent, checkMode);
         const isPlaceholder = msg.isPlaceholder;
 
         if (matchesCriteria && isPlaceholder) {
@@ -181,14 +165,7 @@ export function findMessageForProgress(options: FindMessageOptions): {
     if (taskMessageIndex < 0) {
       for (let i = messages.length - 1; i >= 0; i--) {
         const msg = messages[i];
-        const matchesCriteria = matchesProgressCriteria(
-          msg,
-          isTaskRunning,
-          currentMode,
-          preferPlaceholder,
-          requireContent,
-          checkMode,
-        );
+        const matchesCriteria = matchesProgressCriteria(msg, isTaskRunning, currentMode, requireContent, checkMode);
         const isPlaceholder = msg.isPlaceholder;
 
         if (matchesCriteria && !isPlaceholder) {
@@ -204,8 +181,6 @@ export function findMessageForProgress(options: FindMessageOptions): {
   if (taskMessageIndex < 0) {
     // Priority 1: Check LAST placeholder message (preferred for progress updates)
     // Don't require mode matching or content when task isn't running yet
-    // ALWAYS check for placeholders first, regardless of preferPlaceholder flag
-    // This ensures we find existing placeholders before creating new ones
     for (let i = messages.length - 1; i >= 0; i--) {
       const msg = messages[i];
       const isAgent = msg.sender === 'agent';
@@ -259,7 +234,6 @@ export function findMessageForProgress(options: FindMessageOptions): {
     totalMessages: messages.length,
     isTaskRunning,
     currentMode,
-    preferPlaceholder,
   });
   return null;
 }

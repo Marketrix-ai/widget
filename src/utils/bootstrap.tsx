@@ -10,7 +10,7 @@ import { createRoot, type Root } from 'react-dom/client';
 
 import { MarketrixWidget } from '../components/MarketrixWidget';
 import { WidgetSettingsLoader } from '../components/ui/WidgetSettingsLoader';
-import { WidgetProviders as WidgetProvider } from '../context/WidgetProviders';
+import { WidgetProviders } from '../context/WidgetProviders';
 import shadowStyles from '../index.css?inline';
 import type { MarketrixConfig } from '../types';
 import { isHTMLElement, isHTMLScriptElement } from './validation';
@@ -126,9 +126,9 @@ export const mountWidgetToContainer = (mountEl: HTMLElement, config: MarketrixCo
 
   root.render(
     <React.StrictMode>
-      <WidgetProvider previewMode={previewMode}>
+      <WidgetProviders previewMode={previewMode}>
         <MarketrixWidget config={config} />
-      </WidgetProvider>
+      </WidgetProviders>
     </React.StrictMode>,
   );
 
@@ -337,15 +337,12 @@ export const autoInitializeWidget = (retryCount = 0): void => {
 
   // Prefer the currently executing script when it has config (injected script tag in playground).
   // Fall back to last matching script for static script tags.
-  // Match both mtx-* and marketrix-* attribute names on script tags.
-  const bySelector = document.querySelectorAll('script[mtx-id], script[mtx-app], script[marketrix-id]');
+  const bySelector = document.querySelectorAll('script[mtx-id], script[mtx-app]');
   const current =
     typeof document.currentScript !== 'undefined' &&
     document.currentScript != null &&
     isHTMLScriptElement(document.currentScript) &&
-    (document.currentScript.hasAttribute('mtx-id') ||
-      document.currentScript.hasAttribute('mtx-app') ||
-      document.currentScript.hasAttribute('marketrix-id'))
+    (document.currentScript.hasAttribute('mtx-id') || document.currentScript.hasAttribute('mtx-app'))
       ? document.currentScript
       : null;
   const scriptElement = current ?? bySelector[bySelector.length - 1];
@@ -396,8 +393,8 @@ export const autoInitializeWidget = (retryCount = 0): void => {
 
   const script = scriptElement;
   // Read widget credentials from script tag attributes
-  const mtxId = script.getAttribute('mtx-id') || script.getAttribute('marketrix-id');
-  const mtxKey = script.getAttribute('mtx-key') || script.getAttribute('marketrix-key');
+  const mtxId = script.getAttribute('mtx-id');
+  const mtxKey = script.getAttribute('mtx-key');
   const mtxApiHost = script.getAttribute('mtx-api-host');
   const mtxApp = script.getAttribute('mtx-app');
   const mtxAgent = script.getAttribute('mtx-agent');

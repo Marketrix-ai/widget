@@ -8,14 +8,14 @@ import { Text } from '../base/Text';
 
 interface ProgressLineProps {
   content: string;
-  status?: 'in_progress' | 'completed' | 'failed' | 'stopped' | 'pending';
+  status?: 'in_progress' | 'completed' | 'failed' | 'stopped';
   hideIcon?: boolean;
   textStyle?: 'default' | 'muted';
 }
 
 export const ProgressLine: React.FC<ProgressLineProps> = ({
   content,
-  status = 'pending',
+  status,
   hideIcon = false,
   textStyle = 'default',
 }) => {
@@ -30,10 +30,8 @@ export const ProgressLine: React.FC<ProgressLineProps> = ({
       case 'stopped':
         return <Icon name='ban' style={{ opacity: 0.5, marginTop: '2px', flexShrink: 0 }} size={16} />;
       case 'in_progress':
-        return <Spinner size='sm' style={{ color: accentColor, marginTop: '2px' }} />;
-      case 'pending':
       default:
-        return <Icon name='circle' style={{ opacity: 0.5, marginTop: '2px', flexShrink: 0 }} size={16} />;
+        return <Spinner size='sm' style={{ color: accentColor, marginTop: '2px' }} />;
     }
   };
 

@@ -2,7 +2,7 @@ import type { MarketrixConfig } from '../types';
 
 /**
  * Minimal valid widget config for tests (satisfies WidgetSettingsDataSchema).
- * Use with WidgetProvider previewMode to avoid network calls.
+ * Use with WidgetProviders previewMode to avoid network calls.
  */
 export function getMockWidgetConfig(overrides: Partial<MarketrixConfig> = {}): MarketrixConfig {
   return {
