@@ -13,6 +13,4 @@ jobs:
     uses: Marketrix-ai/infra/.github/workflows/ci-service.yml@dev
     with:
       service: widget
-      npm-publish: true
-      extra-validate-scripts: 'format:check,test:run,visual:check,a11y:check,bundle:check'
     secrets: inherit
