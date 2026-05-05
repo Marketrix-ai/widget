@@ -8,7 +8,7 @@ import React, { useEffect, useRef } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 
 import { MarketrixWidget as MarketrixWidgetComponent } from './components/MarketrixWidget';
-import { WidgetProvider } from './context/WidgetContext';
+import { WidgetProviders as WidgetProvider } from './context/WidgetProviders';
 import { configureSdk, type WidgetSettingsData } from './sdk';
 import { createConfigFromSettings } from './services/ConfigManager';
 import { SessionRecorder } from './services/SessionRecorder';

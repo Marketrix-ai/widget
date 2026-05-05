@@ -104,8 +104,6 @@ import {
   listOf,
   McpStatusSchema,
   McpToolSchema,
-  MigrationPrepareSchema,
-  MigrationRunSchema,
   MindMapSchema,
   NotificationChannelsSchema,
   NotificationEntitySchema,
@@ -2619,32 +2617,6 @@ const contract = {
     })
     .input(BrowserConfigSchema.extend({ id: z.coerce.number() }))
     .output(SuccessSchema),
-
-  // ============================================================================
-  // MIGRATION ROUTES - Database migration and system updates
-  // ============================================================================
-
-  migratePrepare: oc
-    .route({
-      method: 'POST',
-      tags: ['Internal'],
-      path: '/migrate/prepare',
-      summary: 'Prepare database migration',
-      description: 'Validates migration requirements and prepares system for migration',
-    })
-    .input(MigrationPrepareSchema)
-    .output(z.object({ message: z.string(), status: z.string(), data: MigrationPrepareSchema })),
-
-  migrateRun: oc
-    .route({
-      method: 'POST',
-      tags: ['Internal'],
-      path: '/migrate/run',
-      summary: 'Execute database migration',
-      description: 'Runs migration scripts and updates database schema',
-    })
-    .input(MigrationRunSchema)
-    .output(z.object({ message: z.string(), status: z.string(), data: MigrationRunSchema })),
 
   // ============================================================================
   // STRIPE ROUTES - Subscription and payment management
