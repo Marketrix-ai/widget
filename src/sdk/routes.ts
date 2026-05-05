@@ -146,7 +146,6 @@ import {
   SlackCapabilitySchema,
   SlackCommandLogEntitySchema,
   SlackCommandLogSearchSchema,
-  SlackSettingsDataSchema,
   StateTriggerCreateSchema,
   StateTriggerEntitySchema,
   StateTriggerUpdateSchema,
@@ -668,7 +667,7 @@ const contract = {
       description: 'Returns default settings for the specified widget type',
     })
     .input(z.object({ type: WidgetTypeSchema }))
-    .output(z.union([WidgetSettingsDataSchema, SlackSettingsDataSchema])),
+    .output(WidgetSettingsDataSchema),
 
   widgetGet: oc
     .route({

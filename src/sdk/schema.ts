@@ -494,6 +494,7 @@ export const QAEvaluationSchema = z.object({
   confidence: z.number().min(0).max(1),
   reasoning: z.string(),
   evaluated_at: z.string(),
+  screenshot_url: z.string().nullish(),
 });
 export type QAEvaluation = z.infer<typeof QAEvaluationSchema>;
 
@@ -996,7 +997,7 @@ export const SimulationAnswerSchema = z.object({
 export const SessionEntitySchema = BaseEntitySchema.extend({
   session_id: z.string(),
   chat_id: z.string(),
-  application_id: z.coerce.number().nullish(),
+  application_id: z.coerce.number(),
   blob_url: z.string().nullable(),
   event_count: z.coerce.number().int().nonnegative(),
   started_at: z.coerce.date(),
@@ -1030,7 +1031,6 @@ export const SessionUpsertSchema = z.object({
     .object({
       userAgent: z.string().optional(),
       url: z.string().optional(),
-      applicationId: z.number().optional(), // API persists to application_id column; also accepted from metadata
       viewport: z.object({ width: z.number(), height: z.number() }).optional(),
     })
     .nullable()
@@ -1042,7 +1042,6 @@ export const SessionUpsertSchema = z.object({
 
 /**
  * API response schema for the simulationProgress endpoint.
- * Synthesises id/simulation_id so existing callers keep working.
  */
 export const SimulationProgressEntitySchema = z.object({
   id: z.number(),
@@ -1368,23 +1367,13 @@ export const WidgetSettingsDataSchema = z.object({
 });
 
 /**
- * Slack widget settings schema (example for future use)
- */
-export const SlackSettingsDataSchema = z.object({
-  webhook_url: z.string().url(),
-  channel: z.string(),
-  bot_token: z.string(),
-  notifications_enabled: z.boolean(),
-});
-
-/**
  * Widget entity schema
  */
 export const WidgetEntitySchema = BaseEntitySchema.extend({
   application_id: z.number(),
   agent_id: z.number(),
   type: WidgetTypeSchema,
-  settings: z.union([WidgetSettingsDataSchema, SlackSettingsDataSchema]),
+  settings: WidgetSettingsDataSchema,
   status: EntityStatusSchema,
   marketrix_id: z.string(),
   marketrix_key: z.string(),
@@ -1423,7 +1412,7 @@ export const WidgetCreateSchema = WidgetEntitySchema.partial().extend({
   application_id: z.number().positive(),
   agent_id: z.number().positive(),
   type: WidgetTypeSchema,
-  settings: z.union([WidgetSettingsDataSchema, SlackSettingsDataSchema]).optional(),
+  settings: WidgetSettingsDataSchema.optional(),
 });
 
 /**
@@ -1511,8 +1500,7 @@ export const WidgetEventSchema = z.discriminatedUnion('type', [
   }),
   z.object({
     type: z.literal('task/status'),
-    // Canonical wire vocabulary. The widget emits 'running' (not legacy 'started'/'in_progress')
-    // for in-progress task events, matching SimulationTaskStatus / QATaskStatus on the agent side.
+    // Matches SimulationTaskStatus / QATaskStatus on the agent side.
     status: z.enum(['running', 'completed', 'failed', 'stopped', 'has_question']),
     message: z.string().optional(),
     task_id: z.string().optional(),
@@ -1587,11 +1575,7 @@ export const AppEventScopeSchema = z.enum([
 /**
  * Simulation status — the contract value emitted by the API on
  * `simulation/updated` events and returned in oRPC simulation payloads.
- *
- * 7-value canonical wire vocabulary matching the SimulationStatus proto
- * enum. Legacy strings (`'pending'`, `'dispatched'`, `'in_progress'`,
- * `'task_stopped'`) were migrated to canonical values by db-V37 and no
- * longer appear on the wire.
+ * 7-value canonical wire vocabulary matching the SimulationStatus proto enum.
  */
 export const SimulationStatusSchema = z.enum([
   'queued',
@@ -1704,6 +1688,7 @@ export const AppEventSchema = z.discriminatedUnion('type', [
     task_id: z.string().optional(),
     application_id: z.number().optional(),
     status: z.string(),
+    error: z.string().optional(),
   }),
   z.object({
     type: z.literal('agent/created'),
@@ -1962,7 +1947,7 @@ export const ActionLogCreateSchema = ActionLogEntitySchema.partial().extend({
 // ============================================================================
 
 export const ConversationTypeSchema = z.enum(['widget_chat', 'app_chat', 'guide_preview', 'slack']);
-export const ConversationMessageRoleSchema = z.enum(['user', 'agent', 'assistant', 'system', 'tool']);
+export const ConversationMessageRoleSchema = z.enum(['user', 'assistant', 'system', 'tool']);
 
 export const ConversationEntitySchema = BaseEntitySchema.extend({
   context_id: z.string(),
@@ -2406,7 +2391,7 @@ export const PlanInfoSchema = z.object({
   cancelAtPeriodEnd: z.boolean(),
   isTrialing: z.boolean(),
   daysRemainingInTrial: z.number().nullable(),
-  trialProvisioned: z.boolean(),
+  trial_provisioned: z.boolean(),
 });
 
 /**
@@ -2626,10 +2611,8 @@ export type StateTriggerData = z.infer<typeof StateTriggerEntitySchema>;
 export type StateTriggerCreateData = z.infer<typeof StateTriggerCreateSchema>;
 export type StateTriggerUpdateData = z.infer<typeof StateTriggerUpdateSchema>;
 export type WidgetSettingsData = z.infer<typeof WidgetSettingsDataSchema>;
-export type SlackSettingsData = z.infer<typeof SlackSettingsDataSchema>;
 export type WidgetSettingsKey = keyof z.infer<typeof WidgetSettingsDataSchema>;
 export type WidgetChip = z.infer<typeof WidgetChipSchema>;
-export type SlackSettingsKey = keyof z.infer<typeof SlackSettingsDataSchema>;
 export type SimulationData = z.infer<typeof SimulationEntitySchema>;
 export type SimulationLoggingUserData = z.infer<typeof SimulationLoggingUserSchema>;
 export type SimulationStepData = z.infer<typeof SimulationStepSchema>;
