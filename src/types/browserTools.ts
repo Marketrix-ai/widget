@@ -3,7 +3,7 @@
  * Based on browser_use Python library views.py
  *
  * IMPORTANT: This file is the single source of truth for widget tool metadata.
- * ALLOWED_TOOLS in WidgetContext.tsx and TOOL_NAME_MAPPING in chat.ts are derived from BROWSER_TOOLS.
+ * ALLOWED_TOOLS in TaskContext.tsx and TOOL_NAME_MAPPING in chat.ts are derived from BROWSER_TOOLS.
  */
 
 // Base action interface
