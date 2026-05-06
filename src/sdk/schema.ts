@@ -441,7 +441,7 @@ export const QARunEntitySchema = BaseEntitySchema.extend({
   triggered_by: z.number(),
   browser_type: BrowserTypeSchema,
   browser_config: BrowserConfigSchema.nullish(),
-  simulation_id: z.number().nullish(),
+  simulation_id: z.number(),
   source: z.enum(['manual', 'automation', 'github_pr', 'slack_command']).nullish(),
   source_metadata: z.record(z.string(), z.unknown()).nullish(),
   auto_heal: z.boolean().default(false),
