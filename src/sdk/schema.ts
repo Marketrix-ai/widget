@@ -446,6 +446,7 @@ export const QARunEntitySchema = BaseEntitySchema.extend({
   source_metadata: z.record(z.string(), z.unknown()).nullish(),
   auto_heal: z.boolean().default(false),
   auto_accept: z.boolean().default(false),
+  has_question: z.boolean().optional(),
 });
 
 /**
@@ -932,6 +933,7 @@ export const SimulationEntitySchema = BaseEntitySchema.extend({
   mindmap_steps_total: z.number().int().nonnegative().optional(),
   mindmap_error: z.string().nullish(),
   created_by_user_id: z.number().nullish(),
+  has_question: z.boolean().optional(),
 });
 
 /**
@@ -1581,7 +1583,6 @@ export const SimulationStatusSchema = z.enum([
   'queued',
   'running',
   'creating_knowledge',
-  'has_question',
   'completed',
   'failed',
   'stopped',
@@ -1606,6 +1607,7 @@ export const AppEventSchema = z.discriminatedUnion('type', [
     simulation_id: z.number(),
     application_id: z.number(),
     status: SimulationStatusSchema,
+    has_question: z.boolean().optional(),
     step_label: z.string().optional(),
     step_pending: z.boolean().optional(),
     task_id: z.string().nullish(),
@@ -1715,6 +1717,7 @@ export const AppEventSchema = z.discriminatedUnion('type', [
     document_id: z.number(),
     application_id: z.number(),
     status: QARunDerivedStatusSchema,
+    has_question: z.boolean().optional(),
     simulation_id: z.number().optional(),
   }),
   z.object({
