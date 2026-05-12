@@ -34,9 +34,9 @@ import { z } from 'zod';
 /**
  * Core system enums for plans and statuses
  */
-export const UserPlanSchema = z.enum(['free', 'starter', 'growth', 'enterprise']);
+export const UserPlanSchema = z.enum(['free', 'startup', 'growth', 'enterprise']);
 export const EntityStatusSchema = z.enum(['created', 'active', 'suspended', 'pending_approval']);
-export const WorkspacePackageSchema = z.enum(['free', 'starter', 'growth', 'enterprise']);
+export const WorkspacePackageSchema = z.enum(['free', 'startup', 'growth', 'enterprise']);
 export const AgentTypeSchema = z.enum(['human', 'ai']);
 export const AgentVoiceSchema = z.enum(['male', 'female']);
 export const AgentStatusSchema = z.enum(['active', 'learning', 'error']);
@@ -446,6 +446,9 @@ export const QARunEntitySchema = BaseEntitySchema.extend({
   source_metadata: z.record(z.string(), z.unknown()).nullish(),
   auto_heal: z.boolean().default(false),
   auto_accept: z.boolean().default(false),
+  // Derived flag: true if any test case in the run is paused waiting on user
+  // input. Parent run status itself is computed from terminal task states and
+  // does not hold a "question" value.
   has_question: z.boolean().optional(),
 });
 
@@ -933,6 +936,9 @@ export const SimulationEntitySchema = BaseEntitySchema.extend({
   mindmap_steps_total: z.number().int().nonnegative().optional(),
   mindmap_error: z.string().nullish(),
   created_by_user_id: z.number().nullish(),
+  // Derived flag: true if any per-task status is `has_question`. The parent
+  // `status` itself never holds `has_question` — that's a per-task state. The
+  // flag drives the "Question" UI pill on the simulation header.
   has_question: z.boolean().optional(),
 });
 
@@ -1607,6 +1613,9 @@ export const AppEventSchema = z.discriminatedUnion('type', [
     simulation_id: z.number(),
     application_id: z.number(),
     status: SimulationStatusSchema,
+    // Mirrors the entity-level derived flag: true if any task is currently
+    // paused on a `has_question`. The parent `status` itself doesn't carry
+    // that value any more.
     has_question: z.boolean().optional(),
     step_label: z.string().optional(),
     step_pending: z.boolean().optional(),
@@ -1717,6 +1726,8 @@ export const AppEventSchema = z.discriminatedUnion('type', [
     document_id: z.number(),
     application_id: z.number(),
     status: QARunDerivedStatusSchema,
+    // True if any test case in the run is paused on a `has_question`. The
+    // parent run status doesn't carry this value.
     has_question: z.boolean().optional(),
     simulation_id: z.number().optional(),
   }),
@@ -2356,7 +2367,7 @@ export const StripePortalSchema = z.object({
  * Stripe trial subscription creation request schema
  */
 export const StripeTrialSchema = z.object({
-  plan: z.enum(['starter', 'growth']).default('starter'),
+  plan: z.enum(['startup', 'growth']).default('startup'),
   interval: z.enum(['month', 'year']).default('month'),
 });
 
@@ -2385,7 +2396,7 @@ export const PlanInfoSchema = z.object({
   status: z
     .enum(['active', 'past_due', 'canceled', 'unpaid', 'trialing', 'incomplete', 'incomplete_expired', 'paused'])
     .nullable(),
-  planTier: z.enum(['free', 'starter', 'growth', 'enterprise']).nullable(),
+  planTier: z.enum(['free', 'startup', 'growth', 'enterprise']).nullable(),
   billingInterval: z.enum(['month', 'year']).nullable(),
   priceId: z.string().nullable(),
   trialEndDate: z.coerce.date().nullable(),
@@ -2421,7 +2432,7 @@ export const TrialSubscriptionSchema = z.object({
   status: z.literal('trialing'),
   trialStartDate: z.coerce.date(),
   trialEndDate: z.coerce.date(),
-  planTier: z.enum(['starter', 'growth']),
+  planTier: z.enum(['startup', 'growth']),
   daysRemainingInTrial: z.number(),
 });
 
@@ -2456,7 +2467,7 @@ export const PriceAmountSchema = z.object({
  * Plan pricing schema for a specific plan tier
  */
 export const PlanPricingSchema = z.object({
-  planId: z.enum(['free', 'starter', 'growth', 'enterprise']),
+  planId: z.enum(['free', 'startup', 'growth', 'enterprise']),
   monthly: PriceAmountSchema.nullable(),
   annual: PriceAmountSchema.nullable(),
   priceIds: z.object({
@@ -2477,7 +2488,7 @@ export const StripePricingSchema = z.object({
  * Plan catalog entry schema (metadata for display)
  */
 export const PlanCatalogEntrySchema = z.object({
-  id: z.enum(['free', 'starter', 'growth', 'enterprise']),
+  id: z.enum(['free', 'startup', 'growth', 'enterprise']),
   name: z.string(),
   description: z.string(),
   features: z.array(z.string()),
@@ -2511,7 +2522,7 @@ export type PlanCatalog = z.infer<typeof PlanCatalogSchema>;
 export const StripeConfigSchema = z.object({
   publishableKey: z.string(),
   priceIds: z.object({
-    starter: z.object({
+    startup: z.object({
       monthly: z.string().nullable(),
       annual: z.string().nullable(),
     }),
