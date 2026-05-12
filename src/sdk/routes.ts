@@ -2700,6 +2700,17 @@ const contract = {
     })
     .output(z.object({ plan: PlanInfoSchema, usage: SubscriptionUsageSchema })),
 
+  stripeSyncPlan: oc
+    .route({
+      method: 'POST',
+      tags: ['Stripe'],
+      path: '/stripe/sync',
+      summary: 'Reconcile workspace plan with Stripe',
+      description:
+        'Force-syncs the workspace_plan row with live Stripe subscription state. Called by the app after checkout success to recover from delayed or missed webhooks.',
+    })
+    .output(z.object({ plan: PlanInfoSchema })),
+
   // stripeWebhook is handled as a raw Express route — not part of the oRPC contract.
 
   // ============================================================================
