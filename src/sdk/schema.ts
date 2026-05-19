@@ -1303,6 +1303,7 @@ export const AgentSimulationIndexResponseSchema = z.object({
 export const ApplicationEntitySchema = BaseEntitySchema.extend({
   workspace_id: z.number(),
   name: z.string(),
+  slug: z.string(),
   type: ApplicationTypeSchema,
   url: z.string().nullish(),
   username: z.string().nullish(),
@@ -1329,7 +1330,7 @@ export const ApplicationCreateSchema = ApplicationEntitySchema.partial().extend(
 /**
  * Application update schema
  */
-export const ApplicationUpdateSchema = ApplicationEntitySchema.partial().omit({ workspace_id: true });
+export const ApplicationUpdateSchema = ApplicationEntitySchema.partial().omit({ workspace_id: true, slug: true });
 
 // ============================================================================
 // WIDGET SCHEMAS - Widget management (widget, slack, etc.)
