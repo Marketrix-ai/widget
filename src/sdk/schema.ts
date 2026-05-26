@@ -1721,6 +1721,16 @@ export const AppEventSchema = z.discriminatedUnion('type', [
     total_personas: z.number(),
     failed_personas: z.number(),
   }),
+  z.object({
+    type: z.literal('reaction-run/report-ready'),
+    run_id: z.number(),
+    url: z.string(),
+  }),
+  z.object({
+    type: z.literal('reaction-run/report-failed'),
+    run_id: z.number(),
+    error: z.string(),
+  }),
 
   // Notification events
   z.object({
@@ -3008,6 +3018,7 @@ export const ReactionRunEntitySchema = z.object({
   completed_at: z.coerce.date().nullable().optional(),
   failed_at: z.coerce.date().nullable().optional(),
   error: z.string().nullable().optional(),
+  report_pdf_url: z.string().nullish(),
   created_at: z.coerce.date().optional(),
 });
 

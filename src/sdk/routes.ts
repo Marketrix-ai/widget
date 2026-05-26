@@ -3080,6 +3080,18 @@ const contract = {
       }),
     )
     .output(ReactionRunEntitySchema),
+
+  insightReactionReportGenerate: oc
+    .route({
+      method: 'POST',
+      tags: ['Insight'],
+      path: '/insights/reactions/run/{id}/report',
+      summary: 'Schedule background generation of a reaction run PDF report',
+      description:
+        'Kicks off PDF rendering in the background to avoid nginx timeouts. Listen for reaction-run/report-ready (or reaction-run/report-failed) SSE for the resulting URL.',
+    })
+    .input(ByIdSchema)
+    .output(z.object({ status: z.literal('pending') })),
 };
 
 export { contract };
