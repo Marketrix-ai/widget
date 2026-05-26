@@ -740,130 +740,28 @@ export const NavigateToUrlActionSchema = z.object({
   }),
 });
 
-/**
- * Schema for simulation actions.
- * Browser-use can emit many action types beyond the ones explicitly defined above,
- * so we accept any single-key object (e.g. { scroll: {...} }, { send_keys: {...} }).
- */
-export const SimulationActionSchema = z.record(z.string(), z.unknown());
+export const ToolCallRecordSchema = z.object({
+  name: z.string().min(1),
+  params: z.record(z.string(), z.unknown()).default({}),
+  result: z.record(z.string(), z.unknown()).default({}),
+});
+export type ToolCallRecord = z.infer<typeof ToolCallRecordSchema>;
 
-/**
- * Model output schema for simulation step
- */
-export const SimulationModelOutputSchema = z
-  .object({
-    evaluation_previous_goal: z.string().optional().nullable(),
-    memory: z.string().optional().nullable(),
-    next_goal: z.string().optional().nullable(),
-    action: z.array(SimulationActionSchema).optional().nullable(),
-    thinking: z.string().optional().nullable(),
-  })
-  .passthrough();
-
-/**
- * Result schema for simulation step
- */
-export const SimulationResultSchema = z
-  .object({
-    is_done: z.boolean(),
-    success: z.boolean().optional().nullable(),
-    long_term_memory: z.string().optional().nullable(),
-    extracted_content: z.string().optional().nullable(),
-    include_extracted_content_only_once: z.boolean().optional().nullable(),
-    include_in_memory: z.boolean().optional().nullable(),
-    error: z.string().optional().nullable(),
-    metadata: z
-      .object({
-        click_x: z.number().optional(),
-        click_y: z.number().optional(),
-        new_tab_opened: z.boolean().optional(),
-        input_x: z.number().optional(),
-        input_y: z.number().optional(),
-      })
-      .passthrough()
-      .optional()
-      .nullable(),
-  })
-  .passthrough();
-
-/**
- * Browser tab schema (browser-use format)
- */
-export const BrowserTabSchema = z
-  .object({
-    url: z.string(),
-    title: z.string(),
-    tab_id: z.string().optional(),
-    parent_tab_id: z.string().optional().nullable(),
-  })
-  .passthrough();
-
-/**
- * Interacted element schema (browser-use can emit null attributes/bounds, optional stable_hash/ax_name)
- */
-export const InteractedElementSchema = z
-  .object({
-    node_id: z.number().optional(),
-    backend_node_id: z.number().optional(),
-    frame_id: z.string().optional().nullable(),
-    node_type: z.number().optional(),
-    node_value: z.string().optional(),
-    node_name: z.string().optional(),
-    attributes: z.record(z.string(), z.string()).optional().nullable(),
-    x_path: z.string().optional(),
-    element_hash: z.number().optional(),
-    bounds: z
-      .object({
-        x: z.number(),
-        y: z.number(),
-        width: z.number(),
-        height: z.number(),
-      })
-      .passthrough()
-      .optional()
-      .nullable(),
-    stable_hash: z.number().optional(),
-    ax_name: z.string().optional().nullable(),
-  })
-  .passthrough();
-
-/**
- * Browser state schema for simulation step (browser-use format)
- */
-export const SimulationStateSchema = z
-  .object({
-    tabs: z.array(BrowserTabSchema),
-    screenshot_path: z.string().nullable(),
-    interacted_element: z.array(InteractedElementSchema.nullable()),
-    url: z.string(),
-    title: z.string(),
-  })
-  .passthrough();
-
-/**
- * Metadata schema for simulation step (browser-use can omit or add step_interval)
- */
-export const SimulationStepMetadataSchema = z
-  .object({
-    step_start_time: z.number().optional().nullable(),
-    step_end_time: z.number().optional().nullable(),
-    step_number: z.number().optional().nullable(),
-    step_interval: z.number().optional().nullable(),
-  })
-  .passthrough();
-
-/**
- * Individual simulation step schema (browser-use adds state_message, metadata can be null)
- */
 export const SimulationStepSchema = z
   .object({
-    model_output: SimulationModelOutputSchema.nullable(),
-    result: z.array(SimulationResultSchema),
-    state: SimulationStateSchema,
-    metadata: SimulationStepMetadataSchema.nullable(),
-    state_message: z.string().optional().nullable(),
+    action_text: z.string().min(1),
+    tool_calls: z.array(ToolCallRecordSchema).default([]),
+    skill_used: z.string().nullable().default(null),
+    screenshot_path: z.string().nullable().default(null),
+    status: z.enum(['running', 'completed', 'failed', 'has_question']).default('completed'),
+    started_at: z.string(),
+    ended_at: z.string(),
+    error_message: z.string().nullable().default(null),
+    url: z.string().nullable().default(null),
+    title: z.string().nullable().default(null),
   })
   .passthrough();
+export type SimulationStepData = z.infer<typeof SimulationStepSchema>;
 
 /**
  * Summary of one simulation step for JSON listing (topic + screenshot link)
@@ -2630,14 +2528,7 @@ export type WidgetSettingsKey = keyof z.infer<typeof WidgetSettingsDataSchema>;
 export type WidgetChip = z.infer<typeof WidgetChipSchema>;
 export type SimulationData = z.infer<typeof SimulationEntitySchema>;
 export type SimulationLoggingUserData = z.infer<typeof SimulationLoggingUserSchema>;
-export type SimulationStepData = z.infer<typeof SimulationStepSchema>;
 export type SimulationStepSummaryData = z.infer<typeof SimulationStepSummarySchema>;
-export type SimulationModelOutputData = z.infer<typeof SimulationModelOutputSchema>;
-export type SimulationResultData = z.infer<typeof SimulationResultSchema>;
-export type SimulationStateData = z.infer<typeof SimulationStateSchema>;
-export type SimulationActionData = z.infer<typeof SimulationActionSchema>;
-export type BrowserTabData = z.infer<typeof BrowserTabSchema>;
-export type InteractedElementData = z.infer<typeof InteractedElementSchema>;
 export type ConversationType = z.infer<typeof ConversationTypeSchema>;
 export type ConversationMessageRole = z.infer<typeof ConversationMessageRoleSchema>;
 export type ConversationData = z.infer<typeof ConversationEntitySchema>;
