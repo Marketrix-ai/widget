@@ -1,39 +1,5 @@
-/**
- * Marketrix API Schema Definitions
- *
- * This file defines all Zod schemas for the Marketrix API, organized by functional areas
- * to match the route structure. It provides type-safe validation for requests, responses,
- * and internal data structures.
- *
- * Schema Categories (code name → user-facing name):
- * - Base Types: Core enums and common schemas
- * - Authentication: User auth, OAuth, password management
- * - Workspace: Organization and workspace management
- * - User: User account management
- * - Agent: AI agent creation and management
- * - Application: Application management
- * - Knowledge: Knowledge base and document management
- * - Simulation: Simulation runs and results
- * - QA: QA Flows, runs, and test cases
- * - Widget: Widget configuration
- * - Connector: Connector triggers
- * - Chat: AI-powered chat and conversation management
- * - Guide: Guide system
- * - Activity Log: System activity tracking and auditing
- * - App Config: In-app configuration management
- * - Rule: Business rule management
- * - Migration: Database migration and system updates
- */
-
 import { z } from 'zod';
 
-// ============================================================================
-// BASE TYPES & ENUMS - Core system enums and common schemas
-// ============================================================================
-
-/**
- * Core system enums for plans and statuses
- */
 export const UserPlanSchema = z.enum(['free', 'startup', 'growth', 'enterprise']);
 export const EntityStatusSchema = z.enum(['created', 'active', 'suspended', 'pending_approval']);
 export const WorkspacePackageSchema = z.enum(['free', 'startup', 'growth', 'enterprise']);
@@ -108,10 +74,6 @@ export const FileSchema = z.object({
   application_id: z.coerce.number().optional(),
 });
 
-// ============================================================================
-// SHARED HELPERS — Reusable input/output schemas
-// ============================================================================
-
 // ── Shared input helpers ──
 export const ByIdSchema = z.object({ id: z.coerce.number() });
 export const BySlugSchema = z.object({ slug: z.string() });
@@ -155,13 +117,6 @@ export const listOf = <T extends z.ZodTypeAny>(schema: T) =>
     count: z.number(),
   });
 
-// ============================================================================
-// ROOT ROUTES SCHEMAS - Basic system endpoints
-// ============================================================================
-
-/**
- * Health check response schema
- */
 export const HealthResponseSchema = z.object({
   status: z.string(),
   timestamp: z.string(),
@@ -170,9 +125,6 @@ export const HealthResponseSchema = z.object({
   build: z.string(),
 });
 
-/**
- * API index response schema
- */
 export const IndexResponseSchema = z.object({
   name: z.string(),
   version: z.string(),
@@ -180,10 +132,6 @@ export const IndexResponseSchema = z.object({
   status: z.string(),
   timestamp: z.string(),
 });
-
-// ============================================================================
-// USER SCHEMAS - User account management and operations
-// ============================================================================
 
 /**
  * Authentication method schema
@@ -210,47 +158,24 @@ export const UserEntitySchema = BaseEntitySchema.extend({
   auth_method: AuthMethodSchema.nullish(),
 });
 
-/**
- * User creation schema
- */
 export const UserCreateSchema = UserEntitySchema.partial().extend({
   email: z.string().email(),
   password: z.string(),
 });
 
-/**
- * User update schema
- */
 export const UserUpdateSchema = UserEntitySchema.partial();
 
-/**
- * Batch user creation schema
- */
 export const BatchUserCreateSchema = z.object({
   users: z.array(UserCreateSchema),
 });
 
-/**
- * Batch user creation result schema
- */
 export const BatchUserCreateResultSchema = z.object({
   users: z.array(UserEntitySchema.partial()),
 });
 
-// ============================================================================
-// AUTHENTICATION SCHEMAS - User authentication and authorization
-// ============================================================================
-
-/**
- * Login schema with authentication token
- */
 export const TokenSchema = z.object({
   token: z.string(),
 });
-
-// ============================================================================
-// WORKSPACE SCHEMAS - Organization and workspace management
-// ============================================================================
 
 /**
  * Complete workspace entity schema
@@ -270,9 +195,6 @@ export const WorkspaceEntitySchema = BaseEntitySchema.extend({
   notify_all_members_on_question: z.boolean().optional(),
 });
 
-/**
- * Workspace creation schema
- */
 export const WorkspaceCreateSchema = WorkspaceEntitySchema.partial().extend({
   name: z.string().min(1),
 });
@@ -323,17 +245,11 @@ export const WorkspacePlanEntitySchema = BaseEntitySchema.extend({
   status: WorkspacePlanStatusSchema.default('active').optional(),
 });
 
-/**
- * Workspace plan creation schema
- */
 export const WorkspacePlanCreateSchema = WorkspacePlanEntitySchema.partial().extend({
   workspace_id: z.number(),
   package: WorkspacePackageSchema,
 });
 
-/**
- * Workspace plan update schema
- */
 export const WorkspacePlanUpdateSchema = WorkspacePlanEntitySchema.partial();
 
 export const WorkspaceMemberRoleSchema = z.enum(['owner', 'member']);
@@ -358,10 +274,6 @@ export const AgentBadgeSchema = z.object({
 
 export type AgentBadgeData = z.infer<typeof AgentBadgeSchema>;
 
-// ============================================================================
-// KNOWLEDGE SCHEMAS - Knowledge base and document management
-// ============================================================================
-
 /**
  * Knowledge base document schema
  */
@@ -377,10 +289,6 @@ export const KnowledgeEntitySchema = BaseEntitySchema.extend({
   agents: z.array(AgentBadgeSchema).optional(),
 });
 
-// ============================================================================
-// QA CROSS-BROWSER SCHEMAS (must be defined before QA schemas)
-// ============================================================================
-
 export const BrowserTypeSchema = z.enum(['chromium', 'firefox', 'webkit']);
 
 export const BrowserConfigSchema = z.object({
@@ -392,10 +300,6 @@ export const BrowserConfigSchema = z.object({
 
 export type BrowserType = z.infer<typeof BrowserTypeSchema>;
 export type BrowserConfig = z.infer<typeof BrowserConfigSchema>;
-
-// ============================================================================
-// QA DOCUMENT SCHEMAS - QA document and test result management
-// ============================================================================
 
 /**
  * QA document entity schema
@@ -420,9 +324,6 @@ export const QAFlowEntitySchema = BaseEntitySchema.extend({
   pinned: z.boolean().optional().default(false),
 });
 
-/**
- * QA document create schema
- */
 export const QAFlowCreateSchema = z.object({
   application_id: z.coerce.number(),
   file: z.instanceof(File).optional(),
@@ -432,9 +333,6 @@ export const QAFlowCreateSchema = z.object({
   persona_ids: z.array(z.coerce.number()).optional(),
 });
 
-/**
- * QA run entity schema
- */
 export const QARunEntitySchema = BaseEntitySchema.extend({
   qa_flow_id: z.number(),
   workspace_id: z.number(),
@@ -446,6 +344,7 @@ export const QARunEntitySchema = BaseEntitySchema.extend({
   source_metadata: z.record(z.string(), z.unknown()).nullish(),
   auto_heal: z.boolean().default(false),
   auto_accept: z.boolean().default(false),
+  report_pdf_url: z.string().nullish(),
   // Derived flag: true if any test case in the run is paused waiting on user
   // input. Parent run status itself is computed from terminal task states and
   // does not hold a "question" value.
@@ -557,9 +456,6 @@ export const QATestCaseEntitySchema = BaseEntitySchema.extend({
     .default([]),
 });
 
-/**
- * QA test case create schema
- */
 export const QATestCaseCreateSchema = z.object({
   qa_flow_id: z.number(),
   test_title: z.string(),
@@ -569,9 +465,6 @@ export const QATestCaseCreateSchema = z.object({
   priority: z.enum(['Low', 'Medium', 'High']).optional(),
 });
 
-/**
- * QA document processing response schema
- */
 export const QAFlowProcessingResponseSchema = z.object({
   ultimateGoal: z.string(),
   document: QAFlowEntitySchema,
@@ -623,10 +516,6 @@ export const SSEEventSchema = z.discriminatedUnion('event', [
   z.object({ event: z.literal('error'), data: z.object({ detail: z.string() }) }),
 ]);
 
-// ============================================================================
-// QA Test Version & Healing Types (consolidated into qa_test_case JSON columns)
-// ============================================================================
-
 /** Value types in QA test case version diffs */
 export const DiffValueSchema = z.union([z.string(), z.number(), z.boolean(), z.array(z.string()), z.null()]);
 
@@ -667,13 +556,6 @@ export type FailureAnalysis = z.infer<typeof FailureAnalysisSchema>;
 export type QAVersionHistoryEntry = z.infer<typeof QAVersionHistoryEntrySchema>;
 export type QAHealingAttemptEntry = z.infer<typeof QAHealingAttemptEntrySchema>;
 
-// ============================================================================
-// SIMULATION SCHEMAS - Application simulation and testing
-// ============================================================================
-
-/**
- * Simulation action schemas
- */
 export const GoToUrlActionSchema = z.object({
   go_to_url: z.object({
     url: z.string(),
@@ -740,6 +622,10 @@ export const NavigateToUrlActionSchema = z.object({
   }),
 });
 
+/**
+ * One tool_call recorded inside a SimulationStep — the underlying browser_op
+ * invocation that contributed to the step's action.
+ */
 export const ToolCallRecordSchema = z.object({
   name: z.string().min(1),
   params: z.record(z.string(), z.unknown()).default({}),
@@ -747,6 +633,10 @@ export const ToolCallRecordSchema = z.object({
 });
 export type ToolCallRecord = z.infer<typeof ToolCallRecordSchema>;
 
+/**
+ * Flat step shape written by the BrowserRuntime. UI renders `action_text` as
+ * the headline and `tool_calls[]` as the expandable detail.
+ */
 export const SimulationStepSchema = z
   .object({
     action_text: z.string().min(1),
@@ -810,9 +700,6 @@ export const SimulationTaskEntrySchema = z.object({
 });
 export type SimulationTaskEntry = z.infer<typeof SimulationTaskEntrySchema>;
 
-/**
- * App simulation schema
- */
 export const SimulationEntitySchema = BaseEntitySchema.extend({
   application_id: z.number(),
   agent_id: z.number(),
@@ -834,6 +721,10 @@ export const SimulationEntitySchema = BaseEntitySchema.extend({
   mindmap_steps_total: z.number().int().nonnegative().optional(),
   mindmap_error: z.string().nullish(),
   created_by_user_id: z.number().nullish(),
+  // Persona selected for this run in the Generate Simulation modal. Nullable
+  // for "Generic" runs and for reaction-flow runs (which use
+  // reaction_result.persona_id for many-personas-per-run). See migration V54.
+  persona_id: z.number().nullish(),
   // Derived flag: true if any per-task status is `has_question`. The parent
   // `status` itself never holds `has_question` — that's a per-task state. The
   // flag drives the "Question" UI pill on the simulation header.
@@ -862,9 +753,13 @@ export const SimulationLoggingUserSchema = z.object({
   last_simulation_at: z.string().optional(), // ISO date of most recent simulation start
 });
 
-/**
- * Simulation creation schema
- */
+// Optional input on simulationStart to invoke a specific skill
+export const SkillInvocationRequestSchema = z.object({
+  skill_id: z.number().int(),
+  params: z.record(z.string(), z.string()),
+});
+export type SkillInvocationRequest = z.infer<typeof SkillInvocationRequestSchema>;
+
 export const SimulationCreateSchema = SimulationEntitySchema.omit({ tasks: true })
   .partial()
   .extend({
@@ -873,11 +768,15 @@ export const SimulationCreateSchema = SimulationEntitySchema.omit({ tasks: true 
     instructions: z.string(),
     max_steps: z.number().int().positive().max(1000).optional(),
     timeout: z.number().positive().max(360).optional(), // Max 6 hours in minutes
+    // Skill-registry experience level (1=junior … 5=senior). Default 5 so
+    // legacy callers without the field get the most-capable agent.
+    experience_level: z.number().int().min(1).max(5).optional().default(5),
+    // Optional skill invocation: when present, the simulation is launched to
+    // execute a specific skill with the given params. The skill's description
+    // is templated (`{{token}}` → `params[token]`) and used as the task text.
+    skill_invocation: SkillInvocationRequestSchema.optional(),
   });
 
-/**
- * Simulation update schema
- */
 export const SimulationUpdateSchema = z.object({
   job_id: z.string().optional(),
   status: z.string().optional(),
@@ -886,16 +785,54 @@ export const SimulationUpdateSchema = z.object({
   graph_index_id: z.string().optional(),
 });
 
-/**
- * Simulation answer submission schema
- */
 export const SimulationAnswerSchema = z.object({
   answer: z.string().min(1),
 });
 
-// ============================================================================
-// RRWEB SESSION SCHEMAS - RRWeb session recording management
-// ============================================================================
+// --- Skill registry ---
+
+export const SkillRunKindSchema = z.enum(['simulation', 'qa', 'reaction']);
+export type SkillRunKind = z.infer<typeof SkillRunKindSchema>;
+
+export const SkillEntitySchema = z.object({
+  id: z.number().int(),
+  workspace_id: z.number().int().nullable(),
+  application_id: z.number().int().nullable(),
+  name: z.string().min(1),
+  version: z.number().int().positive(),
+  description: z.string().min(1),
+  script: z.string().nullable(), // NULL for browser_ops; NON-NULL for learned skills (enforced at write-time in service)
+  deprecated_at: z.coerce.date().nullable(),
+  created_at: z.coerce.date(),
+});
+export type SkillData = z.infer<typeof SkillEntitySchema>;
+
+// List-view rows omit the script body for list density
+export const SkillListRowSchema = SkillEntitySchema.omit({ script: true });
+export type SkillListRow = z.infer<typeof SkillListRowSchema>;
+
+// Detail-view: skill + full lineage (all versions of the same scope+name, ordered ASC)
+export const SkillDetailSchema = z.object({
+  skill: SkillEntitySchema,
+  lineage: z.array(SkillEntitySchema),
+});
+export type SkillDetail = z.infer<typeof SkillDetailSchema>;
+
+// Candidate emitted by the agent's distillation pass. Persisted by
+// skillEvolutionService.persistDistilledCandidates with version bump.
+export const SkillCandidateSchema = z.object({
+  name: z.string().min(1),
+  description: z.string().min(1),
+  script: z.string().min(1),
+});
+export type SkillCandidate = z.infer<typeof SkillCandidateSchema>;
+
+export const SubmitSkillCandidatesPayloadSchema = z.object({
+  workspace_id: z.number().int().positive(),
+  application_id: z.number().int().positive(),
+  candidates: z.array(SkillCandidateSchema).min(1),
+});
+export type SubmitSkillCandidatesPayload = z.infer<typeof SubmitSkillCandidatesPayloadSchema>;
 
 /**
  * Complete RRWeb session entity schema
@@ -954,6 +891,9 @@ export const SimulationProgressEntitySchema = z.object({
   simulation_id: z.number(),
   status: z.string(),
   status_message: z.string().nullable(),
+  skill: z.string().nullable().optional(),
+  screenshot_path: z.string().nullable().optional(),
+  tool_calls: z.array(ToolCallRecordSchema).default([]),
   created_at: z.coerce.date(),
 });
 
@@ -986,8 +926,7 @@ export const MindMapSectionSchema = z
 /**
  * Mindmap node schema - unique page state observed during simulation.
  * Matches agent's PageNode model (perception/graph.py).
- * Uses passthrough() because Cosmos DB adds metadata fields and the agent
- * model may evolve faster than the schema.
+ * Uses passthrough() because the agent model may evolve faster than the schema.
  */
 export const MindMapNodeSchema = z
   .object({
@@ -1002,21 +941,11 @@ export const MindMapNodeSchema = z
   })
   .passthrough();
 
-/**
- * Mindmap schema - knowledge graph showing nodes and edges from simulation
- */
 export const MindMapSchema = z.object({
   nodes: z.array(MindMapNodeSchema),
   edges: z.array(MindMapEdgeSchema),
 });
 
-// ============================================================================
-// AGENT SCHEMAS - AI agent creation and management
-// ============================================================================
-
-/**
- * Complete agent entity schema
- */
 export const AgentEntitySchema = BaseEntitySchema.extend({
   workspace_id: z.number(),
   user_id: z.number().nullish(),
@@ -1053,9 +982,6 @@ const parseIds = (val: unknown): number[] => {
 const KnowledgeIdsSchema = z.union([z.array(z.number()), z.string()]).transform(parseIds);
 const SimulationIdsSchema = z.union([z.array(z.number()), z.string()]).transform(parseIds);
 
-/**
- * Agent creation schema
- */
 export const AgentCreateSchema = AgentEntitySchema.partial().extend({
   application_id: z.coerce.number(),
   agent_name: z.string(),
@@ -1069,9 +995,6 @@ export const AgentCreateSchema = AgentEntitySchema.partial().extend({
   simulation_ids: SimulationIdsSchema,
 });
 
-/**
- * Agent update schema
- */
 export const AgentUpdateSchema = AgentEntitySchema.partial().extend({
   file: z.instanceof(File).optional(),
   knowledge_ids: KnowledgeIdsSchema,
@@ -1134,9 +1057,6 @@ export const BrowserSessionResponseSchema = z.object({
   success: z.boolean().optional(),
 });
 
-/**
- * Agent knowledge search configuration schema
- */
 export const AgentSearchConfigSchema = z.object({
   contentType: z.enum(['document', 'video', 'automation_log', 'screenshot', 'all']).optional(),
   context: z.string().optional(),
@@ -1174,16 +1094,10 @@ export const SearchResultSchema = z.object({
   highlights: z.record(z.string(), z.array(z.string())).optional(),
 });
 
-/**
- * Agent simulation index request schema
- */
 export const AgentSimulationIndexRequestSchema = z.object({
   simulation_id: z.coerce.number().positive('Simulation ID must be a positive number'),
 });
 
-/**
- * Agent simulation index response schema
- */
 export const AgentSimulationIndexResponseSchema = z.object({
   agent: AgentEntitySchema,
   simulation_id: z.number(),
@@ -1191,13 +1105,6 @@ export const AgentSimulationIndexResponseSchema = z.object({
   message: z.string(),
 });
 
-// ============================================================================
-// APPLICATION SCHEMAS - Application management (apps and websites)
-// ============================================================================
-
-/**
- * Application entity schema
- */
 export const ApplicationEntitySchema = BaseEntitySchema.extend({
   workspace_id: z.number(),
   name: z.string(),
@@ -1215,9 +1122,6 @@ export const ApplicationEntitySchema = BaseEntitySchema.extend({
  */
 export const ApplicationReadSchema = ApplicationEntitySchema.omit({ password: true });
 
-/**
- * Application creation schema
- */
 export const ApplicationCreateSchema = ApplicationEntitySchema.partial().extend({
   type: ApplicationTypeSchema,
   name: z.string().min(1),
@@ -1225,26 +1129,13 @@ export const ApplicationCreateSchema = ApplicationEntitySchema.partial().extend(
   allowed_domains: z.array(z.string()).optional().default([]),
 });
 
-/**
- * Application update schema
- */
 export const ApplicationUpdateSchema = ApplicationEntitySchema.partial().omit({ workspace_id: true, slug: true });
 
-// ============================================================================
-// WIDGET SCHEMAS - Widget management (widget, slack, etc.)
-// ============================================================================
-
-/**
- * Zod schema for widget chips
- */
 export const WidgetChipSchema = z.object({
   chip_mode: z.enum(['show', 'tell', 'do']),
   chip_text: z.string(),
 });
 
-/**
- * Zod schema for widget settings
- */
 export const WidgetSettingsDataSchema = z.object({
   widget_enabled: z.boolean(),
   widget_appearance: z.enum(['default', 'compact', 'full']),
@@ -1273,9 +1164,6 @@ export const WidgetSettingsDataSchema = z.object({
   widget_chips: z.array(WidgetChipSchema),
 });
 
-/**
- * Widget entity schema
- */
 export const WidgetEntitySchema = BaseEntitySchema.extend({
   application_id: z.number(),
   agent_id: z.number(),
@@ -1287,9 +1175,6 @@ export const WidgetEntitySchema = BaseEntitySchema.extend({
   snippet: z.string().nullish(),
 });
 
-/**
- * Widget information schema
- */
 export const WidgetInfoSchema = WidgetEntitySchema.extend({
   application: ApplicationReadSchema.partial(),
   workspace: WorkspaceEntitySchema.partial(),
@@ -1312,9 +1197,6 @@ export const ApplicationWithWidgetsSchema = ApplicationReadSchema.extend({
   agents: z.array(AgentEntitySchema).optional(),
 });
 
-/**
- * Widget creation schema
- */
 export const WidgetCreateSchema = WidgetEntitySchema.partial().extend({
   application_id: z.number().positive(),
   agent_id: z.number().positive(),
@@ -1322,14 +1204,7 @@ export const WidgetCreateSchema = WidgetEntitySchema.partial().extend({
   settings: WidgetSettingsDataSchema.optional(),
 });
 
-/**
- * Widget update schema
- */
 export const WidgetUpdateSchema = WidgetEntitySchema.partial();
-
-// ============================================================================
-// STATE TRIGGER SCHEMAS - URL-based guidance messages for widget
-// ============================================================================
 
 /**
  * State Trigger entity schema - stores URL patterns and messages to show in widget
@@ -1342,23 +1217,13 @@ export const StateTriggerEntitySchema = BaseEntitySchema.extend({
   description: z.string().optional(),
 });
 
-/**
- * State Trigger creation schema
- */
 export const StateTriggerCreateSchema = StateTriggerEntitySchema.partial().extend({
   widget_id: z.number().positive(),
   url_pattern: z.string().min(1),
   message: z.array(z.string().min(1)).min(1),
 });
 
-/**
- * State Trigger update schema
- */
 export const StateTriggerUpdateSchema = StateTriggerEntitySchema.partial();
-
-// ============================================================================
-// CHAT SCHEMAS - AI-powered chat and conversation management
-// ============================================================================
 
 /**
  * Chat request schema
@@ -1377,17 +1242,10 @@ export const ChatRequestSchema = z
     message: 'Either marketrix_id + marketrix_key or both agent_id + application_id must be provided',
   });
 
-/**
- * Chat response entity schema
- */
 export const ChatResponseSchema = z.object({
   text: z.string(),
   task_id: z.string().optional(),
 });
-
-// ============================================================================
-// WIDGET STREAM SCHEMAS - Typed events and commands for widget communication
-// ============================================================================
 
 /** Server → Widget event (discriminated union on `type`) */
 export const WidgetEventSchema = z.discriminatedUnion('type', [
@@ -1464,10 +1322,6 @@ export const WidgetCommandSchema = z.discriminatedUnion('type', [
 export type WidgetEvent = z.infer<typeof WidgetEventSchema>;
 export type WidgetCommand = z.infer<typeof WidgetCommandSchema>;
 
-// ============================================================================
-// APP EVENTS - Real-time event stream for the dashboard app
-// ============================================================================
-
 export const AppEventScopeSchema = z.enum([
   'simulations',
   'agents',
@@ -1519,6 +1373,10 @@ export const AppEventSchema = z.discriminatedUnion('type', [
     step_label: z.string().optional(),
     step_pending: z.boolean().optional(),
     task_id: z.string().nullish(),
+    // Tool calls about to run for a pending step. Lets the live UI render
+    // the same "N tool call" expandable for the in-flight step that the
+    // history view shows for completed ones.
+    tool_calls: z.array(ToolCallRecordSchema).optional(),
   }),
   z.object({
     type: z.literal('simulation/created'),
@@ -1638,6 +1496,16 @@ export const AppEventSchema = z.discriminatedUnion('type', [
     application_id: z.number(),
     status: z.string(),
   }),
+  z.object({
+    type: z.literal('qa-run/report-ready'),
+    run_id: z.number(),
+    url: z.string(),
+  }),
+  z.object({
+    type: z.literal('qa-run/report-failed'),
+    run_id: z.number(),
+    error: z.string(),
+  }),
 
   // User events
   z.object({
@@ -1721,16 +1589,6 @@ export const AppEventSchema = z.discriminatedUnion('type', [
     total_personas: z.number(),
     failed_personas: z.number(),
   }),
-  z.object({
-    type: z.literal('reaction-run/report-ready'),
-    run_id: z.number(),
-    url: z.string(),
-  }),
-  z.object({
-    type: z.literal('reaction-run/report-failed'),
-    run_id: z.number(),
-    error: z.string(),
-  }),
 
   // Notification events
   z.object({
@@ -1759,10 +1617,6 @@ export const AppEventSchema = z.discriminatedUnion('type', [
 
 export type AppEvent = z.infer<typeof AppEventSchema>;
 export type AppEventScope = z.infer<typeof AppEventScopeSchema>;
-
-// ============================================================================
-// NOTIFICATION SCHEMAS — Multi-channel pause-for-input system
-// ============================================================================
 
 export const NotificationTypeSchema = z.enum(['simulation_question']);
 export const NotificationResolvedReasonSchema = z.enum(['answered', 'dismissed', 'cancelled']);
@@ -1819,10 +1673,6 @@ export const VapidPublicKeyResponseSchema = z.object({
   public_key: z.string().nullable(),
 });
 
-// ============================================================================
-// ACTIVITY LOG SCHEMAS - System activity tracking and auditing
-// ============================================================================
-
 /**
  * Action log metadata schema
  * Captures common metadata fields used across different action log types
@@ -1848,9 +1698,6 @@ export const ActionLogMetadataSchema = z
   })
   .passthrough(); // Allow additional fields for flexibility (e.g., updatedData, previousData, createdData)
 
-/**
- * Action log entity schema
- */
 export const ActionLogEntitySchema = BaseEntitySchema.extend({
   workspace_id: z.number(),
   user_id: z.number(),
@@ -1858,16 +1705,9 @@ export const ActionLogEntitySchema = BaseEntitySchema.extend({
   metadata: ActionLogMetadataSchema.optional(),
 });
 
-/**
- * Action log creation schema
- */
 export const ActionLogCreateSchema = ActionLogEntitySchema.partial().extend({
   type: ActionLogTypeSchema,
 });
-
-// ============================================================================
-// CHAT / CONVERSATION SCHEMAS - AI-powered chat and conversation management
-// ============================================================================
 
 export const ConversationTypeSchema = z.enum(['widget_chat', 'app_chat', 'guide_preview', 'slack']);
 export const ConversationMessageRoleSchema = z.enum(['user', 'assistant', 'system', 'tool']);
@@ -1894,10 +1734,6 @@ export const ConversationMessageEntitySchema = BaseEntitySchema.extend({
   tool_call_id: z.string().nullish(),
 });
 
-// ============================================================================
-// CONNECTOR SCHEMAS - External service connectors for automations
-// ============================================================================
-
 /**
  * Connector entity schema (per-workspace provider credentials/endpoints)
  */
@@ -1914,9 +1750,6 @@ export const ConnectorEntitySchema = BaseEntitySchema.extend({
   status: EntityStatusSchema.default('active'),
 });
 
-/**
- * Upsert payload for connector
- */
 export const ConnectorUpsertSchema = z.object({
   id: z.coerce.number().optional(),
   application_id: z.number().nullish(),
@@ -1930,9 +1763,6 @@ export const ConnectorUpsertSchema = z.object({
   status: EntityStatusSchema.optional(),
 });
 
-/**
- * Search payload for connectors
- */
 export const ConnectorSearchSchema = z.object({
   application_id: z.number().nullish(),
   provider: ConnectorTypeSchema.optional(),
@@ -1984,10 +1814,6 @@ export const GithubWorkflowRunSchema = z.object({
   head_branch: z.string(),
   run_attempt: z.number(),
 });
-
-// ============================================================================
-// AUTOMATION SCHEMAS - DAG-based workflow engine
-// ============================================================================
 
 export const AutomationRunStatusSchema = z.enum(['pending', 'running', 'completed', 'failed', 'stopped']);
 
@@ -2102,10 +1928,6 @@ export const ConnectorCapabilitySchema = z.object({
   ),
 });
 
-// ============================================================================
-// GITHUB PR AUTOMATION — Schemas for PR-triggered QA workflows
-// ============================================================================
-
 export const GithubPRFileItemSchema = z.object({
   filename: z.string(),
   status: z.string(),
@@ -2149,32 +1971,15 @@ export const GithubCheckRunInputSchema = z.object({
     .optional(),
 });
 
-// ============================================================================
-// FILE UPLOAD RESPONSE SCHEMAS - File upload and media handling
-// ============================================================================
-
-/**
- * File upload response schema
- */
 export const FileUploadResponseSchema = z.object({
   url: z.string(),
 });
 
-// ============================================================================
-// SERVICE SCHEMAS - Internal service communication and data transfer
-// ============================================================================
-
-/**
- * Upload user logo data schema
- */
 export const UploadUserLogoDataSchema = z.object({
   user_id: z.number(),
   file: z.instanceof(File),
 });
 
-/**
- * User prompt data schema for chat/playground prompts
- */
 export const UserPromptDataSchema = z.object({
   user_id: z.number(),
   application_id: z.number(),
@@ -2183,9 +1988,6 @@ export const UserPromptDataSchema = z.object({
   status: z.string(),
 });
 
-/**
- * User quota response schema (for SDK chat endpoints)
- */
 export const UserQuotaSchema = z.object({
   user_id: z.number(),
   limit: z.number(),
@@ -2193,9 +1995,6 @@ export const UserQuotaSchema = z.object({
   remaining: z.number(),
 });
 
-/**
- * Update chat count data schema
- */
 export const UpdateChatCountDataSchema = z.object({
   user_id: z.number(),
   workspace_id: z.number(),
@@ -2208,9 +2007,6 @@ export const UpdateChatCountDataSchema = z.object({
  * AI agent status email data schema
  */
 
-/**
- * Mail options data schema
- */
 export const MailOptionsDataSchema = z.object({
   to: z.string(),
   subject: z.string(),
@@ -2218,18 +2014,10 @@ export const MailOptionsDataSchema = z.object({
   context: z.record(z.string(), z.string()),
 });
 
-// ============================================================================
-// CONSTANTS - System-wide constants and configuration values
-// ============================================================================
-
 /**
  * Initial prompt limit for new users
  */
 export const INITIAL_PROMPT_LIMIT = 50;
-
-// ============================================================================
-// STRIPE SCHEMAS - Stripe subscription and payment management
-// ============================================================================
 
 /**
  * Stripe webhook event schema
@@ -2256,49 +2044,31 @@ export const StripeWebhookEventSchema = z.object({
   type: z.string(), // Event type (e.g., 'customer.subscription.created')
 });
 
-/**
- * Stripe checkout session creation request schema
- */
 export const StripeCheckoutSchema = z.object({
   priceId: z.string().min(1, 'Price ID is required'),
   successUrl: z.string().url('Success URL must be a valid URL'),
   cancelUrl: z.string().url('Cancel URL must be a valid URL'),
 });
 
-/**
- * Stripe customer portal session creation request schema
- */
 export const StripePortalSchema = z.object({
   returnUrl: z.string().url('Return URL must be a valid URL'),
 });
 
-/**
- * Stripe trial subscription creation request schema
- */
 export const StripeTrialSchema = z.object({
   plan: z.enum(['startup', 'growth']).default('startup'),
   interval: z.enum(['month', 'year']).default('month'),
 });
 
-/**
- * Stripe downgrade confirmation request schema
- */
 export const StripeDowngradeSchema = z.object({
   subscriptionId: z.string().min(1, 'Subscription ID is required'),
   priceId: z.string().min(1, 'Price ID is required'),
 });
 
-/**
- * Stripe downgrade response schema
- */
 export const StripeDowngradeResponseSchema = z.object({
   success: z.boolean(),
   message: z.string(),
 });
 
-/**
- * Plan information response schema
- */
 export const PlanInfoSchema = z.object({
   subscriptionId: z.string().nullable(),
   customerId: z.string().nullable(),
@@ -2317,24 +2087,15 @@ export const PlanInfoSchema = z.object({
   trial_provisioned: z.boolean(),
 });
 
-/**
- * Checkout session response schema
- */
 export const CheckoutSessionSchema = z.object({
   sessionId: z.string(),
   url: z.string().url(),
 });
 
-/**
- * Portal session response schema
- */
 export const PortalSessionSchema = z.object({
   url: z.string().url(),
 });
 
-/**
- * Trial subscription response schema
- */
 export const TrialSubscriptionSchema = z.object({
   subscriptionId: z.string(),
   customerId: z.string(),
@@ -2345,9 +2106,6 @@ export const TrialSubscriptionSchema = z.object({
   daysRemainingInTrial: z.number(),
 });
 
-/**
- * Usage metric schema for individual resource
- */
 export const UsageMetricSchema = z.object({
   used: z.number().int().min(0),
   limit: z.number().int(),
@@ -2363,18 +2121,12 @@ export const SubscriptionUsageSchema = z.object({
   userPrompts: UsageMetricSchema,
 });
 
-/**
- * Price amount schema for individual pricing
- */
 export const PriceAmountSchema = z.object({
   amount: z.number().int().min(0),
   currency: z.string().default('usd'),
   formatted: z.string(),
 });
 
-/**
- * Plan pricing schema for a specific plan tier
- */
 export const PlanPricingSchema = z.object({
   planId: z.enum(['free', 'startup', 'growth', 'enterprise']),
   monthly: PriceAmountSchema.nullable(),
@@ -2385,17 +2137,11 @@ export const PlanPricingSchema = z.object({
   }),
 });
 
-/**
- * Stripe pricing response schema
- */
 export const StripePricingSchema = z.object({
   plans: z.array(PlanPricingSchema),
   lastUpdated: z.string().datetime(),
 });
 
-/**
- * Plan catalog entry schema (metadata for display)
- */
 export const PlanCatalogEntrySchema = z.object({
   id: z.enum(['free', 'startup', 'growth', 'enterprise']),
   name: z.string(),
@@ -2415,9 +2161,6 @@ export const PlanCatalogEntrySchema = z.object({
  *  consumers don't need to redeclare the shape locally. */
 export type PlanCatalogEntry = z.infer<typeof PlanCatalogEntrySchema>;
 
-/**
- * Plan catalog response schema (GET /stripe/plans)
- */
 export const PlanCatalogSchema = z.object({
   plans: z.array(PlanCatalogEntrySchema),
 });
@@ -2425,9 +2168,6 @@ export const PlanCatalogSchema = z.object({
 /** Inferred type for the plan catalog response. */
 export type PlanCatalog = z.infer<typeof PlanCatalogSchema>;
 
-/**
- * Stripe configuration schema for frontend
- */
 export const StripeConfigSchema = z.object({
   publishableKey: z.string(),
   priceIds: z.object({
@@ -2452,10 +2192,6 @@ export const PublicConfigSchema = z.object({
   widgetId: z.string(),
   widgetUrl: z.string(),
 });
-
-// ============================================================================
-// TYPE EXPORTS - Essential TypeScript types for external use
-// ============================================================================
 
 /**
  * Core enum types
@@ -2509,10 +2245,6 @@ export type FileUploadResponse = z.infer<typeof FileUploadResponseSchema>;
 export type ChatRequest = z.infer<typeof ChatRequestSchema>;
 export type ChatResponseData = z.infer<typeof ChatResponseSchema>;
 export type MailOptionsData = z.infer<typeof MailOptionsDataSchema>;
-// ============================================================================
-// MODEL ATTRIBUTES - TypeScript interfaces for Sequelize models
-// ============================================================================
-
 /**
  * Model attribute types for Sequelize models
  */
@@ -2605,6 +2337,7 @@ export type QAFlowListItemData = QAFlowData & {
   display_title: string;
   total_failed: number;
   pass_rate: number | null;
+  test_case_count: number;
   last_run: QAFlowLastRunData | null;
 };
 export type QARunData = z.infer<typeof QARunEntitySchema>;
@@ -2658,10 +2391,6 @@ export type PreviewVideoChatMessageData = z.infer<typeof PreviewVideoChatMessage
 export type PreviewVideoChatData = z.infer<typeof PreviewVideoChatEntitySchema>;
 export type PreviewVideoChatUpsertData = z.infer<typeof PreviewVideoChatUpsertSchema>;
 export type PreviewVideoChatSearchData = z.infer<typeof PreviewVideoChatSearchSchema>;
-
-// ============================================================================
-// PROVIDER / TRIGGER / ACTION SCHEMAS
-// ============================================================================
 
 // Subset of providers we have first-party OAuth integrations for.
 // TriggerProviderSchema and ActionProviderSchema extend this with extra values
@@ -2753,10 +2482,6 @@ export const ActionSearchSchema = z
   })
   .extend(PaginationSchema.shape);
 
-// ============================================================================
-// INSIGHT - UX Insights: Personas, Heatmaps, Reactions
-// ============================================================================
-
 export const InsightConnectorStatusSchema = z.enum(['connected', 'not_connected']);
 
 export const InsightConnectorSchema = z.object({
@@ -2786,6 +2511,7 @@ export const InsightPersonaEntitySchema = z.object({
   segment_name: z.string().optional(),
   is_selected: z.boolean().default(false),
   is_top: z.boolean().default(false),
+  is_pinned: z.boolean().default(false),
   name: z.string(),
   initials: z.string(),
   description: z.string(),
@@ -2857,6 +2583,226 @@ export const DomainPersonaSuggestResponseSchema = z
     personas: z.array(DomainPersonaSuggestionSchema),
   })
   .nullable();
+
+// Findings (Personas redesign v1.0)
+// A Finding is an issue surfaced by a persona during a simulation. Severity
+// and status are closed enums defined in PDF §03 (design tokens & taxonomies).
+
+export const InsightFindingSeveritySchema = z.enum(['critical', 'high', 'medium', 'low']);
+export const InsightFindingStatusSchema = z.enum(['open', 'triaged', 'fixed', 'dismissed']);
+
+export const InsightFindingEntitySchema = z.object({
+  id: z.number(),
+  application_id: z.number(),
+  persona_id: z.number(),
+  simulation_id: z.number().nullable(),
+  title: z.string(),
+  severity: InsightFindingSeveritySchema,
+  status: InsightFindingStatusSchema,
+  page_or_flow: z.string().nullable(),
+  description: z.string().nullable(),
+  fingerprint: z.string().nullable(),
+  first_seen_at: z.coerce.date().nullable(),
+  created_at: z.coerce.date().optional(),
+  updated_at: z.coerce.date().optional(),
+});
+
+export const InsightFindingSeverityBreakdownSchema = z.object({
+  critical: z.number(),
+  high: z.number(),
+  medium: z.number(),
+  low: z.number(),
+});
+
+export const InsightFindingStatusBreakdownSchema = z.object({
+  open: z.number(),
+  triaged: z.number(),
+  fixed: z.number(),
+  dismissed: z.number(),
+});
+
+// Hover quick-preview surface — top open critical/high finding (advanced
+// persona-card feature). Lets the card teaser the worst-known issue without
+// requiring a click into the detail page.
+export const InsightPersonaTopFindingSchema = z.object({
+  id: z.number(),
+  title: z.string(),
+  severity: InsightFindingSeveritySchema,
+  page_or_flow: z.string().nullable(),
+});
+
+// One bucket on the sparkline (advanced persona-card feature). `at` is the
+// simulation's surfaced-at timestamp; `issues` is the count of findings
+// surfaced in that simulation.
+export const InsightPersonaTrendPointSchema = z.object({
+  sim_id: z.number().nullable(),
+  issues: z.number(),
+  at: z.coerce.date().nullable(),
+});
+
+// Top pages bucket — page_or_flow with the count of findings surfaced there.
+// Rendered as chips under TOP PAGES on the persona card (PDF §06 image).
+export const InsightPersonaTopPageSchema = z.object({
+  page: z.string(),
+  count: z.number(),
+});
+
+// Simulation outcome split for a persona. `running` rolls up queued, running,
+// and creating_knowledge — anything not yet terminal. `failed` includes the
+// 'stopped' status (user-cancelled runs read as failure for the persona since
+// no findings will surface). Drives the small status pills next to the Sims
+// count on the persona card.
+export const InsightPersonaSimulationsBreakdownSchema = z.object({
+  completed: z.number(),
+  failed: z.number(),
+  running: z.number(),
+});
+
+// Aggregated stats per persona, used by the redesigned persona card.
+// `velocity_*` and `trend` power the velocity badge + sparkline on the card.
+// `top_finding` powers the hover quick-preview AND the SIGNATURE FINDING row.
+// `top_pages` powers the TOP PAGES chips row on the card.
+export const InsightPersonaStatsSchema = z.object({
+  persona_id: z.number(),
+  simulations_count: z.number(),
+  issues_count: z.number(),
+  severity_breakdown: InsightFindingSeverityBreakdownSchema,
+  status_breakdown: InsightFindingStatusBreakdownSchema,
+  last_run_at: z.coerce.date().nullable(),
+  velocity_7d: z.number().default(0),
+  velocity_delta: z.number().default(0),
+  trend: z.array(InsightPersonaTrendPointSchema).default([]),
+  top_finding: InsightPersonaTopFindingSchema.nullable().default(null),
+  top_pages: z.array(InsightPersonaTopPageSchema).default([]),
+  simulations_breakdown: InsightPersonaSimulationsBreakdownSchema.default({
+    completed: 0,
+    failed: 0,
+    running: 0,
+  }),
+});
+
+export const InsightPersonaPinInputSchema = z.object({
+  id: z.coerce.number(),
+  is_pinned: z.boolean(),
+});
+
+// Stats bar tiles on the list page header.
+export const InsightPersonasOverviewSchema = z.object({
+  personas_count: z.number(),
+  simulations_total: z.number(),
+  issues_total: z.number(),
+  uncovered_traffic_pct: z.number(),
+  audience: z.object({
+    segments_count: z.number(),
+    traits_count: z.number(),
+    gaps_count: z.number(),
+  }),
+});
+
+export const InsightFindingsListInputSchema = z.object({
+  persona_id: z.coerce.number(),
+});
+
+// A simulation that this persona ran against — derived from `reaction_result`,
+// the source-of-truth join table for persona ↔ simulation. Surfaced
+// independently of findings so the detail page can show "this persona ran
+// against sim #X" even when X produced no findings yet.
+export const InsightPersonaLinkedSimulationSchema = z.object({
+  simulation_id: z.number(),
+  ran_at: z.coerce.date().nullable(),
+});
+
+export const InsightFindingsListResponseSchema = z.object({
+  findings: z.array(InsightFindingEntitySchema),
+  severity_breakdown: InsightFindingSeverityBreakdownSchema,
+  status_breakdown: InsightFindingStatusBreakdownSchema,
+  simulations_count: z.number(),
+  simulations_breakdown: InsightPersonaSimulationsBreakdownSchema.default({
+    completed: 0,
+    failed: 0,
+    running: 0,
+  }),
+  linked_simulations: z.array(InsightPersonaLinkedSimulationSchema).default([]),
+});
+
+// Top pages surfaced by a single simulation — rendered in the simulation
+// detail page (below PersonasPanel) so the operator sees at-a-glance which
+// pages or flows this specific run hit hardest.
+export const InsightSimulationTopPagesInputSchema = z.object({
+  simulation_id: z.coerce.number(),
+});
+
+export const InsightSimulationTopPagesResponseSchema = z.object({
+  top_pages: z.array(InsightPersonaTopPageSchema),
+  total_findings: z.number(),
+});
+
+export const InsightFindingUpdateStatusInputSchema = z.object({
+  id: z.coerce.number(),
+  status: InsightFindingStatusSchema,
+});
+
+export const InsightFindingCreateInputSchema = z.object({
+  persona_id: z.number(),
+  simulation_id: z.number().nullable().optional(),
+  title: z.string().min(3).max(280),
+  severity: InsightFindingSeveritySchema,
+  status: InsightFindingStatusSchema.optional().default('open'),
+  page_or_flow: z.string().nullable().optional(),
+  description: z.string().nullable().optional(),
+});
+
+export const InsightFindingSummarizeInputSchema = z.object({
+  persona_id: z.coerce.number(),
+});
+
+export const InsightFindingSummarizeResponseSchema = z.object({
+  summary: z.string(),
+});
+
+// Compare view (PDF §06). Two or three personas side by side.
+
+export const InsightPersonaCompareCardSchema = z.object({
+  persona: InsightPersonaEntitySchema,
+  stats: InsightPersonaStatsSchema,
+  top_pages: z.array(z.object({ page: z.string(), count: z.number() })),
+  signature_finding: InsightFindingEntitySchema.nullable(),
+});
+
+export const InsightPersonaCompareInputSchema = z.object({
+  persona_ids: z.array(z.coerce.number()).min(2).max(3),
+});
+
+export const InsightPersonaCompareResponseSchema = z.object({
+  cards: z.array(InsightPersonaCompareCardSchema),
+  shared_findings: z.array(
+    z.object({
+      title: z.string(),
+      page_or_flow: z.string().nullable(),
+      persona_ids: z.array(z.number()),
+    }),
+  ),
+  synthesis: z.string(),
+});
+
+// Duplicate detection + audience gaps (PDF §04 — P3).
+
+export const InsightPersonaDuplicateGroupSchema = z.object({
+  reason: z.string(),
+  persona_ids: z.array(z.number()),
+});
+
+export const InsightAudienceGapSchema = z.object({
+  label: z.string(),
+  description: z.string(),
+});
+
+export const InsightAudienceCoverageSchema = z.object({
+  segments_count: z.number(),
+  traits_count: z.number(),
+  duplicates: z.array(InsightPersonaDuplicateGroupSchema),
+  gaps: z.array(InsightAudienceGapSchema),
+});
 
 // Heatmaps
 
@@ -3018,7 +2964,6 @@ export const ReactionRunEntitySchema = z.object({
   completed_at: z.coerce.date().nullable().optional(),
   failed_at: z.coerce.date().nullable().optional(),
   error: z.string().nullable().optional(),
-  report_pdf_url: z.string().nullish(),
   created_at: z.coerce.date().optional(),
 });
 
@@ -3036,10 +2981,6 @@ export const ChatContextResponseSchema = z.object({
   contextRefs: z.array(ContextRefSchema),
   suggestedSimulations: z.array(SuggestedSimulationSchema),
 });
-
-// ============================================================================
-// SLACK COMMAND LOG SCHEMAS - Slash command logging and capability stats
-// ============================================================================
 
 export const SlackCommandLogStatusSchema = z.enum(['received', 'classifying', 'dispatched', 'completed', 'failed']);
 
