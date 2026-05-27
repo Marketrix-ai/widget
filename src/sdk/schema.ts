@@ -11,7 +11,6 @@ export const AgentStatusSchema = z.enum(['active', 'learning', 'error']);
 // - true: callback received with success
 // - false: callback received with failure
 export const LearningProgressSchema = z.object({
-  vector_index_created: z.boolean().nullable(),
   graph_index_created: z.boolean().nullable(),
 });
 export const KnowledgeTypeSchema = z.enum(['document', 'video']);
