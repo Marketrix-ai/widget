@@ -1,37 +1,3 @@
-/**
- * API Routes Contract Definition
- *
- * This file defines the Marketrix API contract, using oRPC for type safety and documentation.
- * It includes all endpoints grouped by functionality, with useful descriptions.
- *
- * Route Categories (code name → user-facing name):
- * - Root: System health and index endpoints
- * - Auth: User authentication and OAuth
- * - User: User account management
- * - Workspace: Organization and workspace management
- * - Agent: AI agent creation and management
- * - Application: Application management
- * - Knowledge: Knowledge base and document management
- * - Simulation: Simulation runs and results
- * - QA: QA Flows, runs, and test cases
- * - Widget: Widget configuration
- * - Connector: Automation triggers (user-facing: "Connectors")
- * - Chat: AI-powered chat and conversation management
- * - State Trigger: URL-pattern rules that swap widget chips per page (formerly UrlGuide)
- * - Activity Log: System activity tracking and auditing
- * - App Config: In-app configuration management
- * - Rule: Business rule management
- * - Migration: Database migration and system updates
- * - File: File upload and management
- *
- * All routes include proper HTTP status codes:
- * - 200: Success
- * - 400: Bad Request
- * - 401: Unauthorized (authentication required)
- * - 403: Forbidden (insufficient permissions)
- * - 500: Internal Server Error
- */
-
 import { eventIterator, oc } from '@orpc/contract';
 import { z } from 'zod';
 
@@ -94,11 +60,26 @@ import {
   HeatmapTypeSchema,
   HeatmapVariationSchema,
   IndexResponseSchema,
+  InsightAudienceCoverageSchema,
+  InsightFindingCreateInputSchema,
+  InsightFindingEntitySchema,
+  InsightFindingsListInputSchema,
+  InsightFindingsListResponseSchema,
+  InsightFindingSummarizeInputSchema,
+  InsightFindingSummarizeResponseSchema,
+  InsightFindingUpdateStatusInputSchema,
+  InsightPersonaCompareInputSchema,
+  InsightPersonaCompareResponseSchema,
   InsightPersonaEntitySchema,
+  InsightPersonaPinInputSchema,
+  InsightPersonasOverviewSchema,
   InsightPersonasResponseSchema,
   InsightPersonasSaveDomainInputSchema,
+  InsightPersonaStatsSchema,
   InsightPersonaUpdateInputSchema,
   InsightSegmentEntitySchema,
+  InsightSimulationTopPagesInputSchema,
+  InsightSimulationTopPagesResponseSchema,
   KnowledgeEntitySchema,
   KnowledgeTypeSchema,
   listOf,
@@ -143,6 +124,8 @@ import {
   SimulationStepSchema,
   SimulationStepSummarySchema,
   SimulationUpdateSchema,
+  SkillDetailSchema,
+  SkillListRowSchema,
   SlackCapabilitySchema,
   SlackCommandLogEntitySchema,
   SlackCommandLogSearchSchema,
@@ -186,10 +169,6 @@ import {
 
 // Main contract with all routes
 const contract = {
-  // ============================================================================
-  // ROOT ROUTES - Basic system endpoints
-  // ============================================================================
-
   getIndex: oc
     .route({
       method: 'GET',
@@ -244,10 +223,6 @@ const contract = {
     })
     .output(PublicConfigSchema),
 
-  // ============================================================================
-  // AUTHENTICATION ROUTES - User authentication and authorization
-  // ============================================================================
-
   authMe: oc
     .route({
       method: 'GET',
@@ -284,10 +259,6 @@ const contract = {
     .input(z.object({ token: z.string().min(1) }))
     .output(z.object({ result: z.string().describe('HTML response page') })),
 
-  // ============================================================================
-  // ONBOARDING ROUTES - User and workspace onboarding
-  // ============================================================================
-
   onboard: oc
     .route({
       method: 'POST',
@@ -312,10 +283,6 @@ const contract = {
         workspace: WorkspaceEntitySchema,
       }),
     ),
-
-  // ============================================================================
-  // WORKSPACE ROUTES - Organization and workspace management
-  // ============================================================================
 
   workspaceCreate: oc
     .route({
@@ -466,10 +433,6 @@ const contract = {
     })
     .output(listOf(WorkspaceEntitySchema.extend({ role: WorkspaceMemberRoleSchema }))),
 
-  // ============================================================================
-  // ADMIN ROUTES - System administration and maintenance
-  // ============================================================================
-
   // Admin
   adminReconcile: oc
     .route({
@@ -505,11 +468,10 @@ const contract = {
       tags: ['Internal'],
       summary: 'Run periodic maintenance cleanup tasks',
       description:
-        'Cleans up orphaned CosmosDB containers, QA simulations not linked to existing runs, and orphaned blob storage files. Idempotent and safe to run repeatedly. Requires super user role.',
+        'Cleans up QA simulations not linked to existing runs and orphaned blob storage files. Idempotent and safe to run repeatedly. Requires super user role.',
     })
     .output(
       z.object({
-        cosmos_containers_deleted: z.number(),
         orphaned_qa_simulations_deleted: z.number(),
         orphaned_blob_dirs_deleted: z.number(),
         errors: z.array(
@@ -543,10 +505,6 @@ const contract = {
         ),
       }),
     ),
-
-  // ============================================================================
-  // APPLICATION ROUTES - App and website management
-  // ============================================================================
 
   applicationCreate: oc
     .route({
@@ -620,10 +578,6 @@ const contract = {
     })
     .input(ByApplicationIdSchema)
     .output(SuccessSchema),
-
-  // ============================================================================
-  // WIDGET ROUTES - Widget, Slack, and other widget management
-  // ============================================================================
 
   widgetCreate: oc
     .route({
@@ -701,10 +655,6 @@ const contract = {
     })
     .input(ByWidgetIdSchema)
     .output(SuccessSchema),
-
-  // ============================================================================
-  // CHAT ROUTES - AI-powered chat and conversation management
-  // ============================================================================
 
   chatCreate: oc
     .route({
@@ -809,10 +759,6 @@ const contract = {
     .input(ByIdSchema)
     .output(SuccessSchema),
 
-  // ============================================================================
-  // GitHub connectivity (UI helper endpoints)
-  // ============================================================================
-
   connectorGithubRepos: oc
     .route({
       method: 'GET',
@@ -848,10 +794,6 @@ const contract = {
       }),
     )
     .output(z.array(GithubWorkflowRunSchema)),
-
-  // ============================================================================
-  // MCP ROUTES - MCP connector activation and credential management
-  // ============================================================================
 
   mcpActivate: oc
     .route({
@@ -918,10 +860,6 @@ const contract = {
     })
     .input(z.object({ application_id: z.coerce.number(), tool_name: z.string(), enabled: z.boolean() }))
     .output(z.array(McpToolSchema)),
-
-  // ============================================================================
-  // AUTOMATION ROUTES - DAG-based workflow engine
-  // ============================================================================
 
   automationCreate: oc
     .route({
@@ -1022,10 +960,6 @@ const contract = {
     .input(z.object({ id: z.coerce.number(), run_id: z.coerce.number() }))
     .output(AutomationRunEntitySchema.nullable()),
 
-  // ============================================================================
-  // PROVIDER ROUTES - OAuth provider rows (one per workspace × provider)
-  // ============================================================================
-
   providerGet: oc
     .route({
       method: 'GET',
@@ -1055,10 +989,6 @@ const contract = {
     })
     .input(z.object({ provider: ProviderNameSchema }))
     .output(ProviderEntitySchema),
-
-  // ============================================================================
-  // TRIGGER ROUTES - Inbound event sources
-  // ============================================================================
 
   triggerCreate: oc
     .route({
@@ -1130,9 +1060,42 @@ const contract = {
     .input(z.object({ trigger_id: z.coerce.number() }))
     .output(z.object({ success: z.boolean(), message: z.string() })),
 
-  // ============================================================================
-  // SLACK COMMAND ROUTES - Slash command log and capabilities
-  // ============================================================================
+  skillList: oc
+    .route({
+      method: 'GET',
+      tags: ['Skill'],
+      path: '/workspaces/{workspace_id}/applications/{application_id}/skills',
+      summary: 'List active learned skills for an application',
+      description:
+        'Returns the current non-deprecated version of each learned skill for (workspace, application). Browser_ops excluded — they are global and not listed here.',
+    })
+    .input(
+      z.object({
+        workspace_id: z.coerce.number().int(),
+        application_id: z.coerce.number().int(),
+      }),
+    )
+    .output(z.array(SkillListRowSchema)),
+
+  skillGet: oc
+    .route({
+      method: 'GET',
+      tags: ['Skill'],
+      path: '/skills/{skill_id}',
+      summary: 'Get a skill with its full version lineage',
+    })
+    .input(z.object({ skill_id: z.coerce.number().int() }))
+    .output(SkillDetailSchema),
+
+  skillDeprecate: oc
+    .route({
+      method: 'POST',
+      tags: ['Skill'],
+      path: '/skills/{skill_id}/deprecate',
+      summary: 'Soft-delete a learned skill (sets deprecated_at)',
+    })
+    .input(z.object({ skill_id: z.coerce.number().int() }))
+    .output(z.object({ ok: z.literal(true) })),
 
   slackCommandLogSearch: oc
     .route({
@@ -1152,10 +1115,6 @@ const contract = {
       summary: 'Get Slack capability stats',
     })
     .output(z.array(SlackCapabilitySchema)),
-
-  // ============================================================================
-  // ACTION ROUTES - Outbound capabilities
-  // ============================================================================
 
   actionCreate: oc
     .route({
@@ -1227,10 +1186,6 @@ const contract = {
     })
     .input(z.object({}))
     .output(z.array(ConnectorCapabilitySchema)),
-
-  // ============================================================================
-  // USER ROUTES - User account management and operations
-  // ============================================================================
 
   userSearch: oc
     .route({
@@ -1316,10 +1271,6 @@ const contract = {
     })
     .input(ByUserIdSchema.extend({ reason: z.string().optional() }))
     .output(SuccessSchema),
-
-  // ============================================================================
-  // AGENT ROUTES - AI agent creation and management
-  // ============================================================================
 
   agentCreate: oc
     .route({
@@ -1426,10 +1377,6 @@ const contract = {
     .input(ByAgentIdSchema)
     .output(AgentEntitySchema),
 
-  // ============================================================================
-  // ACTIVITY LOG ROUTES - System activity tracking and auditing
-  // ============================================================================
-
   activityLogCreate: oc
     .route({
       method: 'POST',
@@ -1459,10 +1406,6 @@ const contract = {
         .extend(PaginationSchema.shape),
     )
     .output(paginatedListOf(ActionLogEntitySchema)),
-
-  // ============================================================================
-  // STATE TRIGGER ROUTES - URL-based guidance messages for widget
-  // ============================================================================
 
   stateTriggerSearch: oc
     .route({
@@ -1534,10 +1477,6 @@ const contract = {
       }),
     )
     .output(StateTriggerEntitySchema.nullable()),
-
-  // ============================================================================
-  // SIMULATION ROUTES - Application simulation and testing
-  // ============================================================================
 
   simulationGet: oc
     .route({
@@ -1737,10 +1676,6 @@ const contract = {
     .input(BySimulationIdSchema)
     .output(SuccessWithMessageSchema),
 
-  // ============================================================================
-  // NOTIFICATION ROUTES - Multi-channel pause-for-input notifications
-  // ============================================================================
-
   notificationListPending: oc
     .route({
       method: 'GET',
@@ -1827,10 +1762,6 @@ const contract = {
     })
     .input(NotificationSlackTestSchema)
     .output(SuccessWithMessageSchema),
-
-  // ============================================================================
-  // SESSION ROUTES - Session recording management
-  // ============================================================================
 
   sessionUpsert: oc
     .route({
@@ -1971,10 +1902,6 @@ const contract = {
     )
     .output(SuccessWithMessageSchema),
 
-  // ============================================================================
-  // KNOWLEDGE ROUTES - Knowledge base and document management
-  // ============================================================================
-
   knowledgeSearch: oc
     .route({
       method: 'GET',
@@ -2064,10 +1991,6 @@ const contract = {
       }),
     )
     .output(KnowledgeEntitySchema),
-
-  // ============================================================================
-  // QA FLOW ROUTES - QA flow upload and test result management
-  // ============================================================================
 
   qaFlowCreate: oc
     .route({
@@ -2191,6 +2114,7 @@ const contract = {
           display_title: z.string(),
           total_failed: z.number(),
           pass_rate: z.number().nullable(),
+          test_case_count: z.number().default(0),
           last_run: z
             .object({
               id: z.number(),
@@ -2286,16 +2210,41 @@ const contract = {
     .input(z.object({ run_id: z.coerce.number() }))
     .output(z.array(QARunTaskEntitySchema)),
 
+  qaRunStop: oc
+    .route({
+      method: 'POST',
+      tags: ['QA'],
+      path: '/qa/run/{id}/stop',
+      summary: 'Stop a running QA run',
+      description:
+        'Marks every still-running/queued task in the linked simulation as stopped, sets the simulation to stopped, and fires the agent stop signal. No-op on terminal runs.',
+    })
+    .input(ByIdSchema)
+    .output(SuccessSchema),
+
   qaRunDelete: oc
     .route({
       method: 'DELETE',
       tags: ['QA'],
       path: '/qa/run/{id}',
       summary: 'Delete a QA run',
-      description: 'Permanently deletes a QA run and all its test case results. This action cannot be undone.',
+      description:
+        'Permanently deletes a QA run and all its test case results. Refuses while in flight — call qaRunStop first.',
     })
     .input(ByIdSchema)
     .output(SuccessSchema),
+
+  qaRunReportGenerate: oc
+    .route({
+      method: 'POST',
+      tags: ['QA'],
+      path: '/qa/run/{id}/report',
+      summary: 'Schedule background generation of a QA run PDF report',
+      description:
+        'Kicks off PDF rendering in the background to avoid nginx timeouts on long runs. Listen for the qa-run/report-ready (or qa-run/report-failed) SSE event for the resulting URL.',
+    })
+    .input(ByIdSchema)
+    .output(z.object({ status: z.literal('pending') })),
 
   qaFlowRun: oc
     .route({
@@ -2617,10 +2566,6 @@ const contract = {
     .input(BrowserConfigSchema.extend({ id: z.coerce.number() }))
     .output(SuccessSchema),
 
-  // ============================================================================
-  // STRIPE ROUTES - Subscription and payment management
-  // ============================================================================
-
   stripeCreateTrial: oc
     .route({
       method: 'POST',
@@ -2713,10 +2658,6 @@ const contract = {
 
   // stripeWebhook is handled as a raw Express route — not part of the oRPC contract.
 
-  // ============================================================================
-  // WIDGET STREAM - Real-time widget communication via SSE
-  // ============================================================================
-
   widgetStream: oc
     .route({
       method: 'GET',
@@ -2754,10 +2695,6 @@ const contract = {
     )
     .output(z.object({ ok: z.boolean() })),
 
-  // ============================================================================
-  // APP EVENTS - Real-time dashboard event stream via SSE
-  // ============================================================================
-
   appEvents: oc
     .route({
       method: 'GET',
@@ -2774,10 +2711,6 @@ const contract = {
       }),
     )
     .output(eventIterator(AppEventSchema)),
-
-  // ============================================================================
-  // WEBHOOK ROUTES - External service webhooks
-  // ============================================================================
 
   /** @docs-only — raw Express handler; requires webhook signature verification */
   workosWebhook: oc
@@ -2814,10 +2747,6 @@ const contract = {
         .describe('Stripe event payload'),
     )
     .output(z.object({ received: z.boolean() })),
-
-  // ============================================================================
-  // INSIGHT - UX Insights
-  // ============================================================================
 
   // Personas
   insightPersonasGet: oc
@@ -2900,6 +2829,16 @@ const contract = {
     .input(z.object({ id: z.coerce.number(), is_selected: z.boolean() }))
     .output(SuccessSchema),
 
+  insightPersonaPin: oc
+    .route({
+      method: 'PATCH',
+      tags: ['Insight'],
+      path: '/insights/personas/{id}/pin',
+      summary: 'Pin or unpin a persona (pinned personas sort to the top of the grid)',
+    })
+    .input(InsightPersonaPinInputSchema)
+    .output(SuccessSchema),
+
   insightPersonasRegenerate: oc
     .route({
       method: 'POST',
@@ -2943,6 +2882,100 @@ const contract = {
     })
     .input(z.object({ application_id: z.coerce.number() }))
     .output(z.object({ status: z.enum(['idle', 'in_progress']) })),
+
+  // Personas — Findings (Personas redesign v1.0)
+
+  insightPersonasOverview: oc
+    .route({
+      method: 'GET',
+      tags: ['Insight'],
+      path: '/insights/personas/overview',
+      summary: 'Personas list-page stats bar: personas, simulations, issues, uncovered traffic, audience',
+    })
+    .input(ByApplicationIdSchema)
+    .output(InsightPersonasOverviewSchema),
+
+  insightPersonaStatsList: oc
+    .route({
+      method: 'GET',
+      tags: ['Insight'],
+      path: '/insights/personas/stats',
+      summary: 'Per-persona outcome stats (simulations count, issues count, severity mix, last run)',
+    })
+    .input(ByApplicationIdSchema)
+    .output(z.object({ items: z.array(InsightPersonaStatsSchema) })),
+
+  insightAudienceCoverage: oc
+    .route({
+      method: 'GET',
+      tags: ['Insight'],
+      path: '/insights/personas/audience-coverage',
+      summary: 'Audience coverage: segments, traits, near-duplicate persona groups, segment gaps',
+    })
+    .input(ByApplicationIdSchema)
+    .output(InsightAudienceCoverageSchema),
+
+  insightPersonaFindings: oc
+    .route({
+      method: 'GET',
+      tags: ['Insight'],
+      path: '/insights/personas/{persona_id}/findings',
+      summary: 'List findings surfaced by a persona, with severity + status breakdowns',
+    })
+    .input(InsightFindingsListInputSchema)
+    .output(InsightFindingsListResponseSchema),
+
+  insightSimulationTopPages: oc
+    .route({
+      method: 'GET',
+      tags: ['Insight'],
+      path: '/insights/simulations/{simulation_id}/top-pages',
+      summary: 'Top pages or flows surfaced by a single simulation',
+      description:
+        'Buckets non-dismissed findings for this simulation by page_or_flow and returns the 5 heaviest. Drives the TOP PAGES chips on the simulation detail page below PersonasPanel.',
+    })
+    .input(InsightSimulationTopPagesInputSchema)
+    .output(InsightSimulationTopPagesResponseSchema),
+
+  insightFindingCreate: oc
+    .route({
+      method: 'POST',
+      tags: ['Insight'],
+      path: '/insights/findings',
+      summary: 'Record a new finding for a persona (used by simulation/agent post-processing)',
+    })
+    .input(InsightFindingCreateInputSchema)
+    .output(InsightFindingEntitySchema),
+
+  insightFindingUpdateStatus: oc
+    .route({
+      method: 'PATCH',
+      tags: ['Insight'],
+      path: '/insights/findings/{id}/status',
+      summary: 'Update finding status (open / triaged / fixed / dismissed)',
+    })
+    .input(InsightFindingUpdateStatusInputSchema)
+    .output(SuccessSchema),
+
+  insightFindingSummarize: oc
+    .route({
+      method: 'POST',
+      tags: ['Insight'],
+      path: '/insights/personas/{persona_id}/findings/summarize',
+      summary: "Three-sentence AI synthesis of a persona's findings (clusters, patterns, recommendation)",
+    })
+    .input(InsightFindingSummarizeInputSchema)
+    .output(InsightFindingSummarizeResponseSchema),
+
+  insightPersonaCompare: oc
+    .route({
+      method: 'POST',
+      tags: ['Insight'],
+      path: '/insights/personas/compare',
+      summary: 'Side-by-side comparison of 2-3 personas: stats, top pages, shared findings, AI synthesis',
+    })
+    .input(InsightPersonaCompareInputSchema)
+    .output(InsightPersonaCompareResponseSchema),
 
   // Heatmaps
   insightHeatmapPages: oc
@@ -3080,18 +3113,6 @@ const contract = {
       }),
     )
     .output(ReactionRunEntitySchema),
-
-  insightReactionReportGenerate: oc
-    .route({
-      method: 'POST',
-      tags: ['Insight'],
-      path: '/insights/reactions/run/{id}/report',
-      summary: 'Schedule background generation of a reaction run PDF report',
-      description:
-        'Kicks off PDF rendering in the background to avoid nginx timeouts. Listen for reaction-run/report-ready (or reaction-run/report-failed) SSE for the resulting URL.',
-    })
-    .input(ByIdSchema)
-    .output(z.object({ status: z.literal('pending') })),
 };
 
 export { contract };
