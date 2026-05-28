@@ -16,6 +16,31 @@ export const LearningProgressSchema = z.object({
 export const KnowledgeTypeSchema = z.enum(['document', 'video']);
 export const KnowledgeSourceSchema = z.enum(['user', 'research']);
 export const QAFlowStatusSchema = z.enum(['pending', 'processing', 'waiting_review', 'completed', 'failed']);
+/**
+ * Simulation parent status — canonical wire vocabulary matching the
+ * `simulation_status` Postgres ENUM. `has_question` is intentionally absent;
+ * it's a per-task state surfaced as a derived `has_question` boolean.
+ */
+export const SimulationStatusSchema = z.enum([
+  'queued',
+  'running',
+  'creating_knowledge',
+  'completed',
+  'failed',
+  'stopped',
+]);
+/**
+ * Per-task status within a simulation. Matches the `simulation_task_status`
+ * Postgres ENUM and the SimulationTaskStatus proto enum.
+ */
+export const SimulationTaskStatusSchema = z.enum([
+  'queued',
+  'running',
+  'completed',
+  'failed',
+  'has_question',
+  'stopped',
+]);
 export const ChatRoleSchema = z.enum(['user', 'agent']);
 export const ChatSourceSchema = z.enum(['widget', 'app']);
 export const InstructionTypeSchema = z.enum(['tell', 'show', 'do']);
@@ -667,7 +692,7 @@ export const SimulationStepSummarySchema = z.object({
  * One row in the simulation_progress table.
  */
 export const SimulationProgressEntrySchema = z.object({
-  status: z.string(),
+  status: SimulationTaskStatusSchema,
   status_message: z.string().nullable(),
   task_id: z.string().nullish(),
   created_at: z.coerce.date(),
@@ -704,7 +729,7 @@ export const SimulationEntitySchema = BaseEntitySchema.extend({
   agent_id: z.number(),
   job_id: z.string(),
   browser_session_id: z.string().nullish(),
-  status: z.string(),
+  status: SimulationStatusSchema,
   status_message: z.string().nullish(),
   path: z.string().nullish(),
   instructions: z.string().nullish(),
@@ -778,7 +803,7 @@ export const SimulationCreateSchema = SimulationEntitySchema.omit({ tasks: true 
 
 export const SimulationUpdateSchema = z.object({
   job_id: z.string().optional(),
-  status: z.string().optional(),
+  status: SimulationStatusSchema.optional(),
   status_message: z.string().optional(),
   pinned: z.boolean().optional(),
   graph_index_id: z.string().optional(),
@@ -888,7 +913,7 @@ export const SessionUpsertSchema = z.object({
 export const SimulationProgressEntitySchema = z.object({
   id: z.number(),
   simulation_id: z.number(),
-  status: z.string(),
+  status: SimulationTaskStatusSchema,
   status_message: z.string().nullable(),
   skill: z.string().nullable().optional(),
   screenshot_path: z.string().nullable().optional(),
@@ -1332,20 +1357,8 @@ export const AppEventScopeSchema = z.enum([
   'notifications',
 ]);
 
-/**
- * Simulation status — the contract value emitted by the API on
- * `simulation/updated` events and returned in oRPC simulation payloads.
- * 7-value canonical wire vocabulary matching the SimulationStatus proto enum.
- */
-export const SimulationStatusSchema = z.enum([
-  'queued',
-  'running',
-  'creating_knowledge',
-  'completed',
-  'failed',
-  'stopped',
-]);
 export type SimulationStatus = z.infer<typeof SimulationStatusSchema>;
+export type SimulationTaskStatus = z.infer<typeof SimulationTaskStatusSchema>;
 
 /**
  * QA run derived status — set by `deriveQARunStats` based on aggregated
@@ -1473,7 +1486,7 @@ export const AppEventSchema = z.discriminatedUnion('type', [
     type: z.literal('qa-document/updated'),
     document_id: z.number(),
     application_id: z.number(),
-    status: z.string(),
+    status: QAFlowStatusSchema,
     step_label: z.string().optional(),
   }),
   z.object({
@@ -1493,7 +1506,7 @@ export const AppEventSchema = z.discriminatedUnion('type', [
     run_id: z.number(),
     document_id: z.number(),
     application_id: z.number(),
-    status: z.string(),
+    status: QAVerdictSchema,
   }),
   z.object({
     type: z.literal('qa-run/report-ready'),
@@ -1511,7 +1524,7 @@ export const AppEventSchema = z.discriminatedUnion('type', [
     type: z.literal('user/updated'),
     user_id: z.number(),
     workspace_id: z.number(),
-    status: z.string(),
+    status: EntityStatusSchema,
   }),
 
   // Job lifecycle events (for long-running dashboard operations)
