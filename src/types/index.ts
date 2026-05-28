@@ -193,28 +193,4 @@ export interface MarketrixWidgetProps {
   mtxApiHost?: string;
 }
 
-// Re-export browser tools types
-export type {
-  BrowserAction,
-  BrowserToolMetadata,
-  ClickElementAction,
-  CloseTabAction,
-  DoneAction,
-  ExtractAction,
-  GetDropdownOptionsAction,
-  GetHtmlAction,
-  GetInteractableElementsAction,
-  GetScreenshotAction,
-  GoBackAction,
-  NavigateAction,
-  ScrollAction,
-  ScrollToTextAction,
-  SearchAction,
-  SelectDropdownOptionAction,
-  SendKeysAction,
-  SwitchTabAction,
-  TypeTextAction,
-  UploadFileAction,
-  WaitAction,
-} from './browserTools';
 export { BROWSER_TOOL_CATEGORIES, BROWSER_TOOLS } from './browserTools';
