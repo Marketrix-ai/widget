@@ -41,6 +41,32 @@ export const SimulationTaskStatusSchema = z.enum([
   'has_question',
   'stopped',
 ]);
+/**
+ * Mindmap generation lifecycle status on a simulation row. Values written by
+ * `mindmapDispatch.ts` and `simulationHooks.ts`; relayed on the
+ * `simulation/mindmap-updated` app event.
+ */
+export const MindmapStatusSchema = z.enum(['pending', 'generating', 'completed', 'failed']);
+/**
+ * Status carried on the `agent/updated` app event. The event has two emitter
+ * lineages: (1) `agentService` + `agentLearningHooks` emit an agent-entity
+ * status (`AgentStatusSchema`), and (2) the agentTask flow's `eventMapping`
+ * emits a task-status (`SimulationTaskStatusSchema`). The union captures both
+ * vocabularies so downstream consumers get exhaustiveness rather than `string`.
+ */
+export const AgentUpdatedStatusSchema = z.enum([
+  // Agent entity statuses (AgentStatusSchema)
+  'active',
+  'learning',
+  'error',
+  // Task-level statuses surfaced via agentTask flow transitions
+  'queued',
+  'running',
+  'completed',
+  'failed',
+  'has_question',
+  'stopped',
+]);
 export const ChatRoleSchema = z.enum(['user', 'agent']);
 export const ChatSourceSchema = z.enum(['widget', 'app']);
 export const InstructionTypeSchema = z.enum(['tell', 'show', 'do']);
@@ -740,7 +766,7 @@ export const SimulationEntitySchema = BaseEntitySchema.extend({
   source_metadata: z.record(z.string(), z.unknown()).nullish(),
   tasks: z.array(SimulationTaskEntrySchema).optional(),
   agents: z.array(AgentBadgeSchema).optional(),
-  mindmap_status: z.string().optional(),
+  mindmap_status: MindmapStatusSchema.optional(),
   mindmap_steps_processed: z.number().int().nonnegative().optional(),
   mindmap_steps_total: z.number().int().nonnegative().optional(),
   mindmap_error: z.string().nullish(),
@@ -1448,7 +1474,7 @@ export const AppEventSchema = z.discriminatedUnion('type', [
     type: z.literal('simulation/mindmap-updated'),
     simulation_id: z.number(),
     application_id: z.number(),
-    mindmap_status: z.string(),
+    mindmap_status: MindmapStatusSchema,
     steps_processed: z.number(),
     steps_total: z.number(),
   }),
@@ -1457,7 +1483,7 @@ export const AppEventSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('qa-run/completed'),
     run_id: z.number(),
-    status: z.string(),
+    status: QARunDerivedStatusSchema,
   }),
 
   // Agent events
@@ -1467,7 +1493,7 @@ export const AppEventSchema = z.discriminatedUnion('type', [
     context_id: z.string().optional(),
     task_id: z.string().optional(),
     application_id: z.number().optional(),
-    status: z.string(),
+    status: AgentUpdatedStatusSchema,
     error: z.string().optional(),
   }),
   z.object({
@@ -1532,6 +1558,10 @@ export const AppEventSchema = z.discriminatedUnion('type', [
     type: z.literal('job/progress'),
     job_id: z.string(),
     application_id: z.number(),
+    // `status` is heterogeneous: insight services emit `'in_progress'`, the
+    // GitHub connector forwards raw `workflow_run.status` from the GitHub API
+    // (`queued`/`in_progress`/`completed`/`waiting`) plus webhook actions
+    // (`received`/`<payload.action>`). No registry to constrain against.
     status: z.string(),
     message: z.string().optional(),
     // Phase 4: sub-phase indicator for chained jobs (e.g. research -> segments -> personas).
@@ -1818,6 +1848,8 @@ export const GithubRepoSchema = z.object({
 export const GithubWorkflowRunSchema = z.object({
   id: z.number(),
   name: z.string(),
+  // External GitHub API field — left as `z.string()` so a new value GitHub
+  // ships (their docs list ~6 today) doesn't break ingest.
   status: z.string(),
   conclusion: z.string().nullable(),
   created_at: z.string(),
@@ -1942,6 +1974,8 @@ export const ConnectorCapabilitySchema = z.object({
 
 export const GithubPRFileItemSchema = z.object({
   filename: z.string(),
+  // External GitHub API field (added/modified/removed/renamed/copied/...).
+  // Left as `z.string()` so GitHub can introduce new values without breaking us.
   status: z.string(),
   additions: z.number(),
   deletions: z.number(),
@@ -2960,7 +2994,7 @@ export const SuggestedSimulationSchema = z.object({
   selected: z.boolean(),
   simulation_id: z.number().nullable().optional(),
   task_id: z.string().nullable().optional(),
-  status: z.string().nullable().optional(),
+  status: SimulationStatusSchema.nullable().optional(),
 });
 
 export const ReactionRunEntitySchema = z.object({
