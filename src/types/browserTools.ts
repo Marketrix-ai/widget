@@ -1,155 +1,21 @@
 /**
- * Browser Use Tools - TypeScript types for browser automation actions
- * Based on browser_use Python library views.py
+ * Browser Use Tools - widget tool registry.
  *
  * IMPORTANT: This file is the single source of truth for widget tool metadata.
- * ALLOWED_TOOLS in TaskContext.tsx and TOOL_NAME_MAPPING in chat.ts are derived from BROWSER_TOOLS.
+ * ALLOWED_TOOLS in TaskContext.tsx and TOOL_NAME_MAPPING in chat.ts are derived
+ * from BROWSER_TOOLS below.
  */
 
-// Base action interface
-export interface BaseBrowserAction {
-  type: string;
-}
-
-export interface ExtractAction extends BaseBrowserAction {
-  type: 'extract';
-  query: string;
-  extract_links?: boolean;
-  start_from_char?: number;
-}
-
-export interface SearchAction extends BaseBrowserAction {
-  type: 'search';
-  query: string;
-  engine?: 'duckduckgo' | 'google' | 'bing';
-}
-
-export interface NavigateAction extends BaseBrowserAction {
-  type: 'navigate';
-  url: string;
-  new_tab?: boolean;
-}
-
-export interface ClickElementAction extends BaseBrowserAction {
-  type: 'click_element';
-  index: number;
-  coordinate_x?: number | null;
-  coordinate_y?: number | null;
-}
-
-export interface TypeTextAction extends BaseBrowserAction {
-  type: 'type_text';
-  index: number;
-  text: string;
-  clear?: boolean;
-}
-
-export interface DoneAction extends BaseBrowserAction {
-  type: 'done';
-  text: string;
-  success?: boolean;
-  files_to_display?: string[] | null;
-}
-
-export interface SwitchTabAction extends BaseBrowserAction {
-  type: 'switch_tab';
-  tab_id: string;
-}
-
-export interface CloseTabAction extends BaseBrowserAction {
-  type: 'close_tab';
-}
-
-export interface ScrollAction extends BaseBrowserAction {
-  type: 'scroll';
-  down?: boolean;
-  pages?: number;
-  index?: number | null;
-}
-
-export interface ScrollToTextAction extends BaseBrowserAction {
-  type: 'scroll_to_text';
-  text: string;
-}
-
-export interface SendKeysAction extends BaseBrowserAction {
-  type: 'send_keys';
-  index: number;
-  keys: string;
-}
-
-export interface UploadFileAction extends BaseBrowserAction {
-  type: 'upload_file';
-  index: number;
-  path: string;
-}
-
-export interface GetDropdownOptionsAction extends BaseBrowserAction {
-  type: 'get_dropdown_options';
-  index: number;
-}
-
-export interface SelectDropdownOptionAction extends BaseBrowserAction {
-  type: 'select_dropdown_option';
-  index: number;
-  text: string;
-}
-
-export interface GoBackAction extends BaseBrowserAction {
-  type: 'go_back';
-}
-
-export interface WaitAction extends BaseBrowserAction {
-  type: 'wait';
-  seconds: number;
-}
-
-export interface GetHtmlAction extends BaseBrowserAction {
-  type: 'get_html';
-}
-
-export interface GetInteractableElementsAction extends BaseBrowserAction {
-  type: 'get_interactable_elements';
-}
-
-export interface GetScreenshotAction extends BaseBrowserAction {
-  type: 'get_screenshot';
-}
-
-// Union type for all browser actions
-export type BrowserAction =
-  | ExtractAction
-  | SearchAction
-  | NavigateAction
-  | ClickElementAction
-  | TypeTextAction
-  | DoneAction
-  | SwitchTabAction
-  | CloseTabAction
-  | ScrollAction
-  | ScrollToTextAction
-  | SendKeysAction
-  | UploadFileAction
-  | GetDropdownOptionsAction
-  | SelectDropdownOptionAction
-  | GoBackAction
-  | WaitAction
-  | GetHtmlAction
-  | GetInteractableElementsAction
-  | GetScreenshotAction;
-
-// Tool metadata for UI display
-export interface BrowserToolMetadata {
+interface BrowserToolMetadata {
   id: string;
   name: string;
   description: string;
   displayAction: string;
   icon?: string;
   category: 'navigation' | 'interaction' | 'extraction' | 'utility';
-  actionType: BrowserAction['type'];
+  actionType: string;
 }
 
-// Tool categories
 export const BROWSER_TOOL_CATEGORIES = {
   navigation: 'Navigation',
   interaction: 'Interaction',
@@ -157,12 +23,6 @@ export const BROWSER_TOOL_CATEGORIES = {
   utility: 'Utility',
 } as const;
 
-/**
- * Single source of truth for all widget tools.
- * - `id` = the wire tool name (matches ToolService switch, agent registry, ALLOWED_TOOLS)
- * - `actionType` = the discriminant used to build a default BrowserAction in the UI
- * - `displayAction` = friendly label shown in chat progress
- */
 export const BROWSER_TOOLS: BrowserToolMetadata[] = [
   {
     id: 'navigate',
