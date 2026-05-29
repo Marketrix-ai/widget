@@ -94,9 +94,6 @@ import {
   PlanCatalogSchema,
   PlanInfoSchema,
   PortalSessionSchema,
-  PreviewVideoChatEntitySchema,
-  PreviewVideoChatSearchSchema,
-  PreviewVideoChatUpsertSchema,
   ProviderEntitySchema,
   ProviderNameSchema,
   PublicConfigSchema,
@@ -681,39 +678,6 @@ const contract = {
       }),
     )
     .output(UserQuotaSchema),
-
-  previewVideoChatUpsert: oc
-    .route({
-      method: 'POST',
-      tags: ['Chat'],
-      path: '/preview-video-chat',
-      summary: 'Create or update preview video chat record',
-      description: 'Persists guide preview chat content, history, output, and related simulation metadata',
-    })
-    .input(PreviewVideoChatUpsertSchema)
-    .output(PreviewVideoChatEntitySchema),
-
-  previewVideoChatSearch: oc
-    .route({
-      method: 'GET',
-      tags: ['Chat'],
-      path: '/preview-video-chat',
-      summary: 'Search preview video chat records',
-      description: 'Returns preview chat records filtered by chat_id, agent_id, or simulation_id for current workspace',
-    })
-    .input(PreviewVideoChatSearchSchema)
-    .output(listOf(PreviewVideoChatEntitySchema)),
-
-  previewVideoChatGet: oc
-    .route({
-      method: 'GET',
-      tags: ['Chat'],
-      path: '/preview-video-chat/{id}',
-      summary: 'Get preview video chat record by ID',
-      description: 'Returns a single preview chat record for current workspace',
-    })
-    .input(ByIdSchema)
-    .output(PreviewVideoChatEntitySchema.nullable()),
 
   connectorUpsert: oc
     .route({
@@ -2520,38 +2484,6 @@ const contract = {
           overallPassed: z.number(),
           overallFailed: z.number(),
         }),
-      }),
-    ),
-
-  qaCrossBrowserComparison: oc
-    .route({
-      method: 'GET',
-      tags: ['QA'],
-      path: '/qa/document/{id}/cross-browser-comparison',
-      summary: 'Get cross-browser comparison',
-      description: 'Returns test cases comparison across different browsers',
-    })
-    .input(ByIdSchema)
-    .output(
-      z.object({
-        byTest: z.record(
-          z.string(),
-          z.record(
-            z.string(),
-            z.object({
-              status: z.string(),
-              runId: z.number(),
-            }),
-          ),
-        ),
-        byBrowser: z.record(
-          z.string(),
-          z.object({
-            passed: z.number(),
-            failed: z.number(),
-            total: z.number(),
-          }),
-        ),
       }),
     ),
 

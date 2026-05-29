@@ -18,13 +18,15 @@ export const KnowledgeSourceSchema = z.enum(['user', 'research']);
 export const QAFlowStatusSchema = z.enum(['pending', 'processing', 'waiting_review', 'completed', 'failed']);
 /**
  * Simulation parent status — canonical wire vocabulary matching the
- * `simulation_status` Postgres ENUM. `has_question` is intentionally absent;
- * it's a per-task state surfaced as a derived `has_question` boolean.
+ * `simulation_status` Postgres ENUM and the `SimulationStatus` proto enum.
+ * Wave-14 added `has_question` (parent reflects a task awaiting answer);
+ * V56 migration adds the corresponding PG enum value.
  */
 export const SimulationStatusSchema = z.enum([
   'queued',
   'running',
   'creating_knowledge',
+  'has_question',
   'completed',
   'failed',
   'stopped',
@@ -1007,7 +1009,6 @@ export const AgentEntitySchema = BaseEntitySchema.extend({
   instructions: z.string().nullish(),
   image_url: z.string().nullish(),
   graph_index_id: z.string().nullish(),
-  vector_store_id: z.string().nullish(),
   status: AgentStatusSchema,
   status_message: z.string().nullish(),
   learning_progress: LearningProgressSchema.nullish(),
