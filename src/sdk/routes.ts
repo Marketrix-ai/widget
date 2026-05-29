@@ -1329,18 +1329,6 @@ const contract = {
     .input(AgentSimulationIndexRequestSchema.extend({ agent_id: z.coerce.number() }))
     .output(AgentSimulationIndexResponseSchema),
 
-  agentResetLearning: oc
-    .route({
-      method: 'POST',
-      tags: ['Agent'],
-      path: '/agent/{agent_id}/reset-learning',
-      summary: 'Force reset agent from stuck learning state',
-      description:
-        'Resets an agent that is stuck in learning state, setting it to error status with a message explaining the reset',
-    })
-    .input(ByAgentIdSchema)
-    .output(AgentEntitySchema),
-
   activityLogCreate: oc
     .route({
       method: 'POST',
