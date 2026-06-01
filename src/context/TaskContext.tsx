@@ -296,6 +296,35 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({
             apiTaskId: pendingTaskRef.current.apiTaskId || event.task_id || undefined,
           };
           maybeActivateTask();
+        } else if (status === 'has_question') {
+          // Task is paused awaiting a user answer — not terminal. Stop the running
+          // spinner and flip the active message to the "waiting for you" indicator,
+          // but leave taskStatus unset (no done/failed icon) so a follow-up answer can resume.
+          pendingTaskRef.current = {};
+          setTaskState_(prev => {
+            chatService.setTaskState(false, null, []);
+            setMessages(msgPrev => {
+              const found = findMessageForProgress({
+                messages: msgPrev.messages,
+                isTaskRunning: prev.isTaskRunning,
+                currentMode: currentModeRef.current,
+                requireContent: false,
+              });
+              const newMessages = [...msgPrev.messages];
+              if (found) {
+                const cleared = updateThinkingMarker(found.message, false, currentModeRef.current);
+                newMessages[found.index] = {
+                  ...cleared,
+                  placeholderState: 'waiting-for-user',
+                  ...(statusMessage && { content: statusMessage }),
+                };
+                chatService.setMessages(newMessages);
+              }
+              return { messages: newMessages };
+            });
+            isTaskRunningRef.current = false;
+            return { ...prev, isTaskRunning: false, activeTaskId: null, taskProgress: [] };
+          });
         } else if (status === 'completed' || status === 'failed' || status === 'stopped') {
           processedRequestIds.current.clear();
           pendingTaskRef.current = {};
