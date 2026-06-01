@@ -2604,9 +2604,38 @@ const contract = {
       method: 'POST',
       tags: ['Insight'],
       path: '/insights/reactions',
-      summary: 'Create a new reaction (question)',
+      summary: 'Create a new reaction (multi-question study)',
+      description:
+        'Pass either {description} (AI-draft path; returns drafted_questions, no DB persistence yet) or {questions} (direct-paste path; persists immediately). Exactly one is required.',
     })
-    .input(z.object({ application_id: z.coerce.number(), question: z.string() }))
+    .input(
+      z
+        .object({
+          application_id: z.coerce.number(),
+          description: z.string().optional(),
+          questions: z.array(z.string().min(1).max(1000)).optional(),
+        })
+        .refine(v => Boolean(v.description?.trim()) !== Boolean(v.questions?.length), {
+          message: 'exactly one of description or questions required',
+        }),
+    )
+    .output(ReactionEntitySchema),
+
+  insightReactionTemplateConfirm: oc
+    .route({
+      method: 'POST',
+      tags: ['Insight'],
+      path: '/insights/reactions/{reaction_id}/template/confirm',
+      summary: 'Confirm (persist) the question template for a reaction',
+      description:
+        'Replaces the entire question list. 409 if any reaction_run already exists for this reaction (templates are immutable post-run).',
+    })
+    .input(
+      z.object({
+        reaction_id: z.coerce.number(),
+        questions: z.array(z.string().min(1).max(1000)).min(1),
+      }),
+    )
     .output(ReactionEntitySchema),
 
   insightReactionDelete: oc
@@ -2624,9 +2653,14 @@ const contract = {
       method: 'POST',
       tags: ['Insight'],
       path: '/insights/reactions/context',
-      summary: 'Get context for a reaction question',
+      summary: 'Get context for a reaction template',
     })
-    .input(z.object({ application_id: z.coerce.number(), question: z.string() }))
+    .input(
+      z.object({
+        application_id: z.coerce.number(),
+        questions: z.array(z.string().min(1)).min(1),
+      }),
+    )
     .output(ChatContextResponseSchema),
 
   insightReactionRun: oc
@@ -2639,12 +2673,24 @@ const contract = {
     .input(
       z.object({
         reaction_id: z.coerce.number(),
-        persona_ids: z.array(z.coerce.number()),
+        persona_ids: z.array(z.coerce.number()).min(1).max(50),
         context_refs: z.array(ContextRefSchema),
         simulations: z.array(SuggestedSimulationSchema.pick({ description: true, selected: true })),
       }),
     )
     .output(ReactionRunEntitySchema),
+
+  insightReactionReportGenerate: oc
+    .route({
+      method: 'POST',
+      tags: ['Insight'],
+      path: '/insights/reactions/run/{id}/report',
+      summary: 'Schedule background generation of a reaction run PDF report',
+      description:
+        'Kicks off PDF rendering in the background to avoid nginx timeouts. Listen for reaction-run/report-ready (or reaction-run/report-failed) SSE for the resulting URL. Pass force=true to bypass the cached URL and always render a fresh PDF.',
+    })
+    .input(z.object({ id: z.coerce.number(), force: z.boolean().optional() }))
+    .output(z.object({ status: z.literal('pending') })),
 };
 
 export { contract };

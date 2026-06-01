@@ -1524,6 +1524,16 @@ export const AppEventSchema = z.discriminatedUnion('type', [
     run_id: z.number(),
     error: z.string(),
   }),
+  z.object({
+    type: z.literal('reaction-run/report-ready'),
+    run_id: z.number(),
+    url: z.string(),
+  }),
+  z.object({
+    type: z.literal('reaction-run/report-failed'),
+    run_id: z.number(),
+    error: z.string(),
+  }),
 
   // User events
   z.object({
@@ -2907,6 +2917,34 @@ export const PersonaSnapshotSchema = z.object({
   age_range: z.string().optional(),
 });
 
+export const ReactionAnswerMomentSchema = z.object({
+  label: z.string(),
+  description: z.string().optional(),
+  simulation_id: z.number().optional(),
+  task_id: z.string().optional(),
+  sim_index: z.number().optional(),
+  step_index: z.number().optional(),
+});
+
+export const ReactionAnswerEntitySchema = z.object({
+  id: z.number(),
+  result_id: z.number(),
+  question_id: z.number(),
+  answer_text: z.string(),
+  dimension_scores: z.record(z.string(), ReactionScoreSchema),
+  overall_reactions: z.record(z.string(), ReactionScoreSchema),
+  moments: z.array(ReactionAnswerMomentSchema).optional(),
+});
+
+export const ReactionQuestionEntitySchema = z.object({
+  id: z.number(),
+  reaction_id: z.number(),
+  order_index: z.number(),
+  text: z.string(),
+  question_type: z.string(),
+  created_at: z.coerce.date().optional(),
+});
+
 export const ReactionResultEntitySchema = z.object({
   id: z.number(),
   run_id: z.number(),
@@ -2925,6 +2963,7 @@ export const ReactionResultEntitySchema = z.object({
   replay_evidence: ReactionReplayEvidenceSchema.nullable().optional(),
   error: z.string().nullable().optional(),
   persona_snapshot: PersonaSnapshotSchema.nullable().optional(),
+  answers: z.array(ReactionAnswerEntitySchema).optional(),
   created_at: z.coerce.date().optional(),
 });
 
@@ -2949,16 +2988,18 @@ export const ReactionRunEntitySchema = z.object({
   completed_at: z.coerce.date().nullable().optional(),
   failed_at: z.coerce.date().nullable().optional(),
   error: z.string().nullable().optional(),
+  report_pdf_url: z.string().nullish(),
   created_at: z.coerce.date().optional(),
 });
 
 export const ReactionEntitySchema = z.object({
   id: z.number(),
   application_id: z.number(),
-  question: z.string(),
+  questions: z.array(ReactionQuestionEntitySchema).default([]),
   run_count: z.number().optional(),
   last_run_at: z.coerce.date().optional(),
   runs: z.array(ReactionRunEntitySchema).optional(),
+  drafted_questions: z.array(z.string()).optional(),
   created_at: z.coerce.date().optional(),
 });
 
