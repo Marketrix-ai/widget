@@ -7,6 +7,8 @@
 import { describe, expect, it } from 'vitest';
 
 import { type WidgetEvent, WidgetEventSchema } from '@/sdk/schema';
+import type { ChatMessage } from '@/types';
+import { hasThinkingMarker, updateThinkingMarker } from '@/utils/chat';
 
 // All event types present in the discriminated union — pin this set.
 const ALL_WIDGET_EVENT_TYPES = [
@@ -154,6 +156,58 @@ describe('SSE event discriminated-union contract (WidgetEventSchema)', () => {
       expect(WidgetEventSchema.safeParse({ ...base, mode: 'show' }).success).toBe(true);
       expect(WidgetEventSchema.safeParse({ ...base, mode: 'do' }).success).toBe(true);
       expect(WidgetEventSchema.safeParse({ ...base, mode: 'auto' }).success).toBe(false);
+    });
+  });
+
+  describe('task/status "has_question" pauses the active message (clears running spinner)', () => {
+    // Mirrors the TaskContext SSE reducer for `has_question`: strip the thinking
+    // marker (kills the inline spinner) and flip to the paused "waiting for you"
+    // indicator without setting a terminal taskStatus icon.
+    const applyHasQuestionTransition = (message: ChatMessage, statusMessage?: string): ChatMessage => {
+      const cleared = updateThinkingMarker(message, false, 'do');
+      return {
+        ...cleared,
+        placeholderState: 'waiting-for-user',
+        ...(statusMessage && { content: statusMessage }),
+      };
+    };
+
+    const runningMessage = (): ChatMessage => ({
+      id: 'm1',
+      content: 'Working on it\n\n__THINKING__',
+      sender: 'agent',
+      timestamp: new Date(),
+      mode: 'do',
+      placeholderState: 'thinking',
+      taskStatus: 'ongoing',
+    });
+
+    it('"has_question" is a valid SSE event that carries an optional message', () => {
+      const event = { type: 'task/status', status: 'has_question', message: 'Which account?' };
+      const result = WidgetEventSchema.safeParse(event);
+      expect(result.success).toBe(true);
+    });
+
+    it('removes the thinking marker so the inline spinner stops', () => {
+      const before = runningMessage();
+      expect(hasThinkingMarker(before.content)).toBe(true);
+      const after = applyHasQuestionTransition(before);
+      expect(hasThinkingMarker(after.content)).toBe(false);
+    });
+
+    it('flips the message to "waiting-for-user" (paused, not terminal)', () => {
+      const after = applyHasQuestionTransition(runningMessage());
+      expect(after.placeholderState).toBe('waiting-for-user');
+      // Terminal icon statuses must NOT be applied — the task is paused, not finished.
+      expect(after.taskStatus).not.toBe('done');
+      expect(after.taskStatus).not.toBe('failed');
+      expect(after.taskStatus).not.toBe('stopped');
+    });
+
+    it('surfaces the question text when the event includes a message', () => {
+      const after = applyHasQuestionTransition(runningMessage(), 'Which account?');
+      expect(after.content).toContain('Which account?');
+      expect(hasThinkingMarker(after.content)).toBe(false);
     });
   });
 

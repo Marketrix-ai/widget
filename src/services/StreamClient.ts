@@ -101,8 +101,9 @@ export class StreamClient {
       const iterator = await sdk.widgetStream(streamInput as WidgetStreamInput, { signal });
 
       this.setStatus('connected');
-      this.reconnectAttempts = 0;
-      this.reconnectDelay = 1000;
+      // Reconnect counters reset only on `registered` (see handleMessage) — resetting
+      // here, before registration, would defeat the max-attempts cap if registration
+      // never lands and the stream flaps open→closed in a tight loop.
 
       // Consume events in the background; do not await here
       this.consumeEvents(iterator, myConnectionId);

@@ -6,8 +6,6 @@ import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { useResize } from '../../hooks/useResize';
 import { useWidget } from '../../hooks/useWidget';
 import { createUserMessage } from '../../services/ChatService';
-import { configManager } from '../../services/ConfigManager';
-import { sessionManager } from '../../services/SessionManager';
 import { StreamClient } from '../../services/StreamClient';
 import type { ChatMessage, InstructionType, MarketrixConfig, TaskProgress, WidgetView } from '../../types';
 import type { SuggestedActionItem } from '../../utils/suggestedActions';
@@ -20,7 +18,6 @@ import { Stack } from '../base/Stack';
 import { Surface } from '../base/Surface';
 import { Text } from '../base/Text';
 import { HeaderBar } from '../blocks/HeaderBar';
-import { DiagnosticModal } from '../ui/DiagnosticModal';
 import { ChatView } from '../views/ChatView';
 import { HomeView } from '../views/HomeView';
 import { ResizeHandles } from './ResizeHandles';
@@ -107,7 +104,6 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
   const panelPositionStyle = getPanelPositionStyle(effectivePosition);
 
   // All hooks must be above the early return — React requires stable hook count.
-  const [diagnosticOpen, setDiagnosticOpen] = useState(false);
   const [headerScreenSharing, setHeaderScreenSharing] = useState(false);
   const chatViewStartScreenShareRef = useRef<(() => void) | null>(null);
   const chatViewStopScreenShareRef = useRef<(() => void) | null>(null);
@@ -257,8 +253,7 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
                       API{' '}
                       {(() => {
                         try {
-                          const status = StreamClient.getInstance().getStatus();
-                          return status === 'connected' ? 'connected' : 'disconnected';
+                          return StreamClient.getInstance().isConnected() ? 'connected' : 'disconnected';
                         } catch {
                           return '—';
                         }
@@ -294,28 +289,6 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
       )}
 
       {!isMinimized && !isPreviewMode && <ResizeHandles onResizeStart={onResizeStart} />}
-      <DiagnosticModal
-        isOpen={diagnosticOpen}
-        onClose={() => setDiagnosticOpen(false)}
-        diagnosticData={{
-          chatId: sessionManager.getChatId(),
-          streamEndpoint: (() => {
-            const apiHost = configManager.getConfig()?.mtxApiHost || config.mtxApiHost;
-            return apiHost ? `${apiHost.replace(/\/$/, '')}/widget/stream` : null;
-          })(),
-          connectionStatus: (() => {
-            try {
-              return StreamClient.getInstance().getStatus();
-            } catch {
-              return 'disconnected';
-            }
-          })(),
-          applicationId: configManager.getConfig()?.mtxApp,
-          agentId: configManager.getConfig()?.mtxAgent,
-          version: packageJson.version,
-          build: typeof __BUILD_COMMIT__ !== 'undefined' ? __BUILD_COMMIT__ : 'dev',
-        }}
-      />
     </Stack>
   );
 };
