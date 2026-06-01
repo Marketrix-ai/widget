@@ -170,8 +170,7 @@ async function initWidgetInternal(config: MarketrixConfig, container?: HTMLEleme
   }
 
   setCurrentConfig(finalConfig);
-  const containerId = `marketrix-widget-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
-  const { mountEl } = createWidgetContainer(container, containerId);
+  const { mountEl } = createWidgetContainer(container);
   const instance = mountWidgetToContainer(mountEl, finalConfig);
   setWidgetInstance(instance);
   setProductionWidgetActive(true);
@@ -310,8 +309,6 @@ export const initWidget = async (config: MarketrixConfig, container?: HTMLElemen
   }
 };
 
-// Register auto-initialization immediately after function definition
-// This ensures the function is available when DOM becomes ready
 // Destroy the widget
 export const unmountWidget = (): void => {
   const instance = getWidgetInstance();
@@ -511,9 +508,7 @@ export const mountWidget = async (config: AddWidgetConfig): Promise<void> => {
       ...createConfigFromSettings(settings, restConfig),
       isPreviewMode: true,
     };
-    // Generate unique container ID for this widget instance
-    const containerId = `marketrix-widget-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
-    const { mountEl } = createWidgetContainer(container, containerId);
+    const { mountEl } = createWidgetContainer(container);
     // Mount with previewMode=true to disable all network operations
     mountWidgetToContainer(mountEl, finalConfig, true);
     // Don't set global widget instance for preview - it's independent
