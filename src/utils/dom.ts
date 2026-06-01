@@ -8,20 +8,6 @@
 import { domService } from '../services/DomService';
 
 /**
- * Safely remove an element by ID
- */
-export function removeElementById(id: string): void {
-  try {
-    const element = document.getElementById(id);
-    if (element) {
-      element.remove();
-    }
-  } catch (error) {
-    console.warn(`[DOM Utils] Failed to remove element with id "${id}":`, error);
-  }
-}
-
-/**
  * Get all interactive elements on the page, ordered by DOM position.
  * Interactive elements include: buttons, inputs, links, select elements, etc.
  */
@@ -115,12 +101,6 @@ function isElementInteractive(element: HTMLElement): boolean {
   if ((element as HTMLInputElement | HTMLButtonElement | HTMLSelectElement).disabled) {
     return false;
   }
-
-  // Skip elements that are not in the viewport (optional - you might want to include these)
-  // const rect = element.getBoundingClientRect();
-  // if (rect.bottom < 0 || rect.top > window.innerHeight) {
-  //   return false;
-  // }
 
   return true;
 }

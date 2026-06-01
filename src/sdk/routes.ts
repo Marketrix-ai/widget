@@ -26,8 +26,6 @@ import {
   AutomationRunSearchSchema,
   AutomationSearchSchema,
   AutomationUpdateSchema,
-  BatchUserCreateResultSchema,
-  BatchUserCreateSchema,
   BrowserConfigSchema,
   BrowserTypeSchema,
   ByAgentIdSchema,
@@ -45,8 +43,6 @@ import {
   DomainPersonaSuggestResponseSchema,
   EntityStatusSchema,
   FailureAnalysisSchema,
-  FileSchema,
-  FileUploadResponseSchema,
   HealthResponseSchema,
   HeatmapCandidateSchema,
   HeatmapJobStatusSchema,
@@ -406,79 +402,6 @@ const contract = {
       description: 'Returns all workspaces the authenticated user belongs to, including their role in each.',
     })
     .output(listOf(WorkspaceEntitySchema.extend({ role: WorkspaceMemberRoleSchema }))),
-
-  // Admin
-  adminReconcile: oc
-    .route({
-      method: 'POST',
-      path: '/admin/reconcile',
-      tags: ['Internal'],
-      summary: 'Reconcile Stripe customers and WorkOS users',
-      description:
-        'Backfills missing Stripe customer IDs for workspaces and real WorkOS user IDs for users. Idempotent and safe to run repeatedly. Requires super user role.',
-    })
-    .output(
-      z.object({
-        workspaces_stripe_created: z.number(),
-        users_workos_created: z.number(),
-        workspace_plans_synced: z.number(),
-        trials_provisioned: z.number(),
-        stripe_plans_refreshed: z.number(),
-        workos_profiles_synced: z.number(),
-        errors: z.array(
-          z.object({
-            type: z.string(),
-            id: z.number(),
-            error: z.string(),
-          }),
-        ),
-      }),
-    ),
-
-  adminMaintenance: oc
-    .route({
-      method: 'POST',
-      path: '/admin/maintenance',
-      tags: ['Internal'],
-      summary: 'Run periodic maintenance cleanup tasks',
-      description:
-        'Cleans up QA simulations not linked to existing runs and orphaned blob storage files. Idempotent and safe to run repeatedly. Requires super user role.',
-    })
-    .output(
-      z.object({
-        orphaned_qa_simulations_deleted: z.number(),
-        orphaned_blob_dirs_deleted: z.number(),
-        errors: z.array(
-          z.object({
-            type: z.string(),
-            detail: z.string(),
-          }),
-        ),
-      }),
-    ),
-
-  adminRebuild: oc
-    .route({
-      method: 'POST',
-      path: '/admin/rebuild',
-      tags: ['Internal'],
-      summary: 'Rebuild all agent indexes after cleanup',
-      description:
-        'Removes stale knowledge (missing files), stale simulations (0 steps or missing blobs), then deletes and recreates vector stores and knowledge graphs for every agent. Index creation is async. Requires super user role.',
-    })
-    .output(
-      z.object({
-        knowledge_removed: z.number(),
-        simulations_removed: z.number(),
-        agents_rebuilt: z.number(),
-        errors: z.array(
-          z.object({
-            type: z.string(),
-            detail: z.string(),
-          }),
-        ),
-      }),
-    ),
 
   applicationCreate: oc
     .route({
@@ -1066,17 +989,6 @@ const contract = {
     )
     .output(paginatedListOf(UserEntitySchema)),
 
-  userCreateBatch: oc
-    .route({
-      method: 'POST',
-      tags: ['User'],
-      path: '/user/batch',
-      summary: 'Create multiple users in batch operation',
-      description: 'Processes bulk user creation and returns results for each user',
-    })
-    .input(BatchUserCreateSchema)
-    .output(z.array(BatchUserCreateResultSchema)),
-
   userGet: oc
     .route({
       method: 'GET',
@@ -1098,40 +1010,6 @@ const contract = {
     })
     .input(UserUpdateSchema.extend({ user_id: z.coerce.number() }))
     .output(UserEntitySchema),
-
-  userUpdateImage: oc
-    .route({
-      method: 'PUT',
-      tags: ['User'],
-      path: '/user/{user_id}/image',
-      summary: 'Upload and update user profile image',
-      description: 'Handles file upload for user avatar and returns upload response',
-    })
-    .input(FileSchema.extend({ user_id: z.coerce.number() }))
-    .output(FileUploadResponseSchema),
-
-  userDelete: oc
-    .route({
-      method: 'DELETE',
-      tags: ['User'],
-      path: '/user/{user_id}',
-      summary: 'Delete user account and all associated data',
-      description:
-        'Permanently deletes a user account and cleans up all related resources. This action cannot be undone.',
-    })
-    .input(ByUserIdSchema)
-    .output(SuccessSchema),
-
-  userDeactivate: oc
-    .route({
-      method: 'POST',
-      tags: ['User'],
-      path: '/user/{user_id}/deactivate',
-      summary: 'Deactivate user account without deletion',
-      description: 'Deactivates user access while preserving data for potential reactivation',
-    })
-    .input(ByUserIdSchema.extend({ reason: z.string().optional() }))
-    .output(SuccessSchema),
 
   agentCreate: oc
     .route({
