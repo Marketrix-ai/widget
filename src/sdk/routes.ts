@@ -38,16 +38,11 @@ import {
   ChatContextResponseSchema,
   CheckoutSessionSchema,
   ConnectorCapabilitySchema,
-  ConnectorEntitySchema,
-  ConnectorSearchSchema,
-  ConnectorUpsertSchema,
   ContextRefSchema,
   DiffValueSchema,
   DomainPersonaSuggestResponseSchema,
   EntityStatusSchema,
   FailureAnalysisSchema,
-  GithubRepoSchema,
-  GithubWorkflowRunSchema,
   HealthResponseSchema,
   HeatmapCandidateSchema,
   HeatmapJobStatusSchema,
@@ -57,13 +52,10 @@ import {
   HeatmapVariationSchema,
   IndexResponseSchema,
   InsightAudienceCoverageSchema,
-  InsightFindingCreateInputSchema,
-  InsightFindingEntitySchema,
   InsightFindingsListInputSchema,
   InsightFindingsListResponseSchema,
   InsightFindingSummarizeInputSchema,
   InsightFindingSummarizeResponseSchema,
-  InsightFindingUpdateStatusInputSchema,
   InsightPersonaCompareInputSchema,
   InsightPersonaCompareResponseSchema,
   InsightPersonaEntitySchema,
@@ -73,7 +65,6 @@ import {
   InsightPersonasSaveDomainInputSchema,
   InsightPersonaStatsSchema,
   InsightPersonaUpdateInputSchema,
-  InsightSegmentEntitySchema,
   InsightSimulationTopPagesInputSchema,
   InsightSimulationTopPagesResponseSchema,
   KnowledgeEntitySchema,
@@ -97,7 +88,6 @@ import {
   PushSubscriptionUnregisterSchema,
   QAFlowCreateSchema,
   QAFlowEntitySchema,
-  QAFlowProcessingResponseSchema,
   QAFlowStatusSchema,
   QAHealingAttemptEntrySchema,
   QARunEntitySchema,
@@ -108,7 +98,6 @@ import {
   ReactionRunEntitySchema,
   SessionEntitySchema,
   SessionStatsResponseSchema,
-  SessionUpsertSchema,
   SimulationAnswerSchema,
   SimulationCreateSchema,
   SimulationEntitySchema,
@@ -124,7 +113,6 @@ import {
   SlackCommandLogSearchSchema,
   StateTriggerCreateSchema,
   StateTriggerEntitySchema,
-  StateTriggerUpdateSchema,
   StripeCheckoutSchema,
   StripeConfigSchema,
   StripeDowngradeResponseSchema,
@@ -353,17 +341,6 @@ const contract = {
     })
     .input(WorkspaceUpdateSchema.extend({ slug: z.string() }))
     .output(WorkspaceEntitySchema),
-
-  workspaceDelete: oc
-    .route({
-      method: 'DELETE',
-      tags: ['Workspace'],
-      path: '/workspaces/{slug}',
-      summary: 'Delete workspace and all associated data',
-      description: 'Permanently deletes a workspace and cleans up all related resources. This action cannot be undone.',
-    })
-    .input(BySlugSchema)
-    .output(SuccessSchema),
 
   // ── Workspace Members ───────────────────────────────────────────────
   workspaceMemberList: oc
@@ -601,86 +578,6 @@ const contract = {
       }),
     )
     .output(UserQuotaSchema),
-
-  connectorUpsert: oc
-    .route({
-      method: 'POST',
-      tags: ['Connector'],
-      path: '/connector',
-      summary: 'Create or update connector',
-      description: 'Stores provider credentials and API endpoint details for workspace connectors',
-    })
-    .input(ConnectorUpsertSchema)
-    .output(ConnectorEntitySchema),
-
-  connectorSearch: oc
-    .route({
-      method: 'GET',
-      tags: ['Connector'],
-      path: '/connector',
-      summary: 'Search connectors',
-      description: 'Returns workspace connectors filtered by provider/status',
-    })
-    .input(ConnectorSearchSchema)
-    .output(paginatedListOf(ConnectorEntitySchema)),
-
-  connectorGet: oc
-    .route({
-      method: 'GET',
-      tags: ['Connector'],
-      path: '/connector/{id}',
-      summary: 'Get connector by ID',
-      description: 'Returns a single workspace connector',
-    })
-    .input(ByIdSchema)
-    .output(ConnectorEntitySchema.nullable()),
-
-  connectorDelete: oc
-    .route({
-      method: 'DELETE',
-      tags: ['Connector'],
-      path: '/connector/{id}',
-      summary: 'Delete connector',
-      description: 'Permanently deletes a connector for current workspace. This action cannot be undone.',
-    })
-    .input(ByIdSchema)
-    .output(SuccessSchema),
-
-  connectorGithubRepos: oc
-    .route({
-      method: 'GET',
-      tags: ['Connector'],
-      path: '/connector/{id}/github/repos',
-      summary: 'List GitHub repositories for a GitHub connector',
-      description: 'Uses the stored GitHub PAT from the connector to call GitHub /user/repos.',
-    })
-    .input(
-      z.object({
-        id: z.coerce.number(),
-        per_page: z.coerce.number().int().min(1).max(100).optional(),
-        page: z.coerce.number().int().min(1).optional(),
-      }),
-    )
-    .output(z.array(GithubRepoSchema)),
-
-  connectorGithubWorkflowRuns: oc
-    .route({
-      method: 'GET',
-      tags: ['Connector'],
-      path: '/connector/{id}/github/repos/{owner}/{repo}/actions/runs',
-      summary: 'List GitHub Actions workflow runs',
-      description: 'Lists workflow runs for a repository (pass/fail status).',
-    })
-    .input(
-      z.object({
-        id: z.coerce.number(),
-        owner: z.string().min(1),
-        repo: z.string().min(1),
-        per_page: z.coerce.number().int().min(1).max(100).optional(),
-        page: z.coerce.number().int().min(1).optional(),
-      }),
-    )
-    .output(z.array(GithubWorkflowRunSchema)),
 
   mcpActivate: oc
     .route({
@@ -1237,17 +1134,6 @@ const contract = {
     )
     .output(paginatedListOf(ActionLogEntitySchema)),
 
-  stateTriggerSearch: oc
-    .route({
-      method: 'GET',
-      tags: ['State Trigger'],
-      path: '/state-trigger',
-      summary: 'Search state triggers by widget',
-      description: 'Returns list of state triggers for specified widget',
-    })
-    .input(ByWidgetIdSchema.extend(PaginationSchema.shape))
-    .output(paginatedListOf(StateTriggerEntitySchema)),
-
   stateTriggerCreate: oc
     .route({
       method: 'POST',
@@ -1258,55 +1144,6 @@ const contract = {
     })
     .input(StateTriggerCreateSchema)
     .output(StateTriggerEntitySchema),
-
-  stateTriggerGet: oc
-    .route({
-      method: 'GET',
-      tags: ['State Trigger'],
-      path: '/state-trigger/{id}',
-      summary: 'Get state trigger by ID',
-      description: 'Returns state trigger details',
-    })
-    .input(ByIdSchema)
-    .output(StateTriggerEntitySchema),
-
-  stateTriggerUpdate: oc
-    .route({
-      method: 'PUT',
-      tags: ['State Trigger'],
-      path: '/state-trigger/{id}',
-      summary: 'Update state trigger',
-      description: 'Updates state trigger properties',
-    })
-    .input(StateTriggerUpdateSchema.extend({ id: z.coerce.number() }))
-    .output(StateTriggerEntitySchema),
-
-  stateTriggerDelete: oc
-    .route({
-      method: 'DELETE',
-      tags: ['State Trigger'],
-      path: '/state-trigger/{id}',
-      summary: 'Delete state trigger',
-      description: 'Permanently deletes a state trigger. This action cannot be undone.',
-    })
-    .input(ByIdSchema)
-    .output(SuccessSchema),
-
-  stateTriggerMatch: oc
-    .route({
-      method: 'GET',
-      tags: ['State Trigger'],
-      path: '/state-trigger/match',
-      summary: 'Find matching state trigger for current URL',
-      description: 'Returns matching state trigger for a given URL pattern',
-    })
-    .input(
-      z.object({
-        widget_id: z.coerce.number(),
-        url: z.string(),
-      }),
-    )
-    .output(StateTriggerEntitySchema.nullable()),
 
   simulationGet: oc
     .route({
@@ -1593,39 +1430,6 @@ const contract = {
     .input(NotificationSlackTestSchema)
     .output(SuccessWithMessageSchema),
 
-  sessionUpsert: oc
-    .route({
-      method: 'POST',
-      tags: ['Session'],
-      path: '/sessions',
-      summary: 'Create or update session',
-      description: 'Creates a new session or updates an existing one',
-    })
-    .input(SessionUpsertSchema)
-    .output(SessionEntitySchema),
-
-  sessionGet: oc
-    .route({
-      method: 'GET',
-      tags: ['Session'],
-      path: '/sessions/{session_id}',
-      summary: 'Get session by session ID',
-      description: 'Retrieves a session by its session_id',
-    })
-    .input(z.object({ session_id: z.string().min(1) }))
-    .output(SessionEntitySchema.nullable()),
-
-  sessionGetByChat: oc
-    .route({
-      method: 'GET',
-      tags: ['Session'],
-      path: '/sessions/chat/{chat_id}',
-      summary: 'Get sessions by chat ID',
-      description: 'Retrieves all sessions for a given chat_id',
-    })
-    .input(z.object({ chat_id: z.string().min(1) }))
-    .output(listOf(SessionEntitySchema)),
-
   sessionSearch: oc
     .route({
       method: 'GET',
@@ -1845,21 +1649,6 @@ const contract = {
     })
     .input(ByIdSchema)
     .output(z.object({ document: QAFlowEntitySchema })),
-
-  qaFlowRefine: oc
-    .route({
-      method: 'POST',
-      tags: ['QA'],
-      path: '/qa/document/{id}/refine',
-      summary: 'Refine existing QA test cases',
-      description: 'Refines existing test cases with a refinement prompt via AI agent API',
-    })
-    .input(
-      ByIdSchema.extend({
-        refinementPrompt: z.string().min(5).max(2000),
-      }),
-    )
-    .output(QAFlowProcessingResponseSchema),
 
   qaFlowProcessStream: oc
     .route({
@@ -2557,31 +2346,6 @@ const contract = {
     .input(ByApplicationIdSchema)
     .output(InsightPersonasResponseSchema),
 
-  insightSegmentsGenerate: oc
-    .route({
-      method: 'POST',
-      tags: ['Insight'],
-      path: '/insights/segments/generate',
-      summary: 'Generate segments from session data (mocked)',
-    })
-    .input(ByApplicationIdSchema)
-    .output(z.object({ items: z.array(InsightSegmentEntitySchema) })),
-
-  insightSegmentDelete: oc
-    .route({ method: 'DELETE', tags: ['Insight'], path: '/insights/segments/{id}', summary: 'Delete a segment' })
-    .input(z.object({ id: z.coerce.number() }))
-    .output(SuccessSchema),
-
-  insightPersonasGenerate: oc
-    .route({
-      method: 'POST',
-      tags: ['Insight'],
-      path: '/insights/personas/generate',
-      summary: 'Generate personas from segments (mocked)',
-    })
-    .input(ByApplicationIdSchema)
-    .output(z.object({ items: z.array(InsightPersonaEntitySchema) })),
-
   insightPersonaDelete: oc
     .route({ method: 'DELETE', tags: ['Insight'], path: '/insights/personas/{id}', summary: 'Delete a persona' })
     .input(z.object({ id: z.coerce.number() }))
@@ -2615,16 +2379,6 @@ const contract = {
       summary: 'Update persona content (name, description, profile fields, tags, traits)',
     })
     .input(InsightPersonaUpdateInputSchema)
-    .output(SuccessSchema),
-
-  insightPersonaUpdateSelection: oc
-    .route({
-      method: 'PATCH',
-      tags: ['Insight'],
-      path: '/insights/personas/{id}/selection',
-      summary: 'Toggle the is_selected state of a persona',
-    })
-    .input(z.object({ id: z.coerce.number(), is_selected: z.boolean() }))
     .output(SuccessSchema),
 
   insightPersonaPin: oc
@@ -2734,26 +2488,6 @@ const contract = {
     })
     .input(InsightSimulationTopPagesInputSchema)
     .output(InsightSimulationTopPagesResponseSchema),
-
-  insightFindingCreate: oc
-    .route({
-      method: 'POST',
-      tags: ['Insight'],
-      path: '/insights/findings',
-      summary: 'Record a new finding for a persona (used by simulation/agent post-processing)',
-    })
-    .input(InsightFindingCreateInputSchema)
-    .output(InsightFindingEntitySchema),
-
-  insightFindingUpdateStatus: oc
-    .route({
-      method: 'PATCH',
-      tags: ['Insight'],
-      path: '/insights/findings/{id}/status',
-      summary: 'Update finding status (open / triaged / fixed / dismissed)',
-    })
-    .input(InsightFindingUpdateStatusInputSchema)
-    .output(SuccessSchema),
 
   insightFindingSummarize: oc
     .route({

@@ -517,27 +517,6 @@ export const QATestCaseCreateSchema = z.object({
   priority: z.enum(['Low', 'Medium', 'High']).optional(),
 });
 
-export const QAFlowProcessingResponseSchema = z.object({
-  ultimateGoal: z.string(),
-  document: QAFlowEntitySchema,
-  testCases: z.array(
-    z.object({
-      id: z.number(),
-      title: z.string(),
-      prompt: z.string(),
-      objective: z.string(),
-      steps: z.array(z.string()),
-      expectedOutcome: z.string(),
-      priority: z.enum(['Low', 'Medium', 'High']),
-    }),
-  ),
-  summary: z.object({
-    total: z.number(),
-    estimatedTime: z.string(),
-    complexity: z.enum(['Low', 'Medium', 'High']),
-  }),
-});
-
 // ── QA Insight Response (completion payload for process/refine streams) ──
 export const QAInsightResponseSchema = z.object({
   ultimate_goal: z.string(),
@@ -1835,31 +1814,6 @@ export const McpToolSchema = z.object({
   enabled: z.boolean(),
 });
 
-/** GitHub repo item (from GitHub API user/repos) */
-export const GithubRepoSchema = z.object({
-  id: z.number(),
-  full_name: z.string(),
-  name: z.string(),
-  private: z.boolean(),
-  html_url: z.string(),
-  default_branch: z.string().optional(),
-});
-
-/** GitHub Actions workflow run (from repos/.../actions/runs) */
-export const GithubWorkflowRunSchema = z.object({
-  id: z.number(),
-  name: z.string(),
-  // External GitHub API field — left as `z.string()` so a new value GitHub
-  // ships (their docs list ~6 today) doesn't break ingest.
-  status: z.string(),
-  conclusion: z.string().nullable(),
-  created_at: z.string(),
-  updated_at: z.string(),
-  html_url: z.string(),
-  head_branch: z.string(),
-  run_attempt: z.number(),
-});
-
 export const AutomationRunStatusSchema = z.enum(['pending', 'running', 'completed', 'failed', 'stopped']);
 
 export const AutomationNodeKindSchema = z.enum(['connector', 'condition']);
@@ -2389,7 +2343,6 @@ export type QAFlowListItemData = QAFlowData & {
 };
 export type QARunData = z.infer<typeof QARunEntitySchema>;
 export type QATestCaseData = z.infer<typeof QATestCaseEntitySchema>;
-export type QAFlowProcessingResponseData = z.infer<typeof QAFlowProcessingResponseSchema>;
 
 // ---------------------------------------------------------------------------
 // Preview Video Chat
@@ -2782,21 +2735,6 @@ export const InsightSimulationTopPagesInputSchema = z.object({
 export const InsightSimulationTopPagesResponseSchema = z.object({
   top_pages: z.array(InsightPersonaTopPageSchema),
   total_findings: z.number(),
-});
-
-export const InsightFindingUpdateStatusInputSchema = z.object({
-  id: z.coerce.number(),
-  status: InsightFindingStatusSchema,
-});
-
-export const InsightFindingCreateInputSchema = z.object({
-  persona_id: z.number(),
-  simulation_id: z.number().nullable().optional(),
-  title: z.string().min(3).max(280),
-  severity: InsightFindingSeveritySchema,
-  status: InsightFindingStatusSchema.optional().default('open'),
-  page_or_flow: z.string().nullable().optional(),
-  description: z.string().nullable().optional(),
 });
 
 export const InsightFindingSummarizeInputSchema = z.object({
