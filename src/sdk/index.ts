@@ -70,5 +70,8 @@ export const sdk = new Proxy({} as ContractRouterClient<typeof contract> & SdkEx
 // Export all types from schema
 export * from './schema';
 
-// Export contract from routes
-export { contract } from './routes';
+// Type-only export: the oRPC client builds requests from the proxied path and
+// never needs the `contract` VALUE at runtime. Re-exporting the value pulled the
+// whole routes.ts contract (and the 291 zod schemas it references) into the
+// embeddable bundle. Keeping it type-only drops all of that from the shipped JS.
+export type { contract } from './routes';
