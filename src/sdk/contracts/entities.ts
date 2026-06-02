@@ -1,4 +1,5 @@
 import { z } from 'zod';
+
 import { BaseEntitySchema, EntityStatusSchema } from './common';
 
 export const WorkspacePackageSchema = z.enum(['free', 'startup', 'growth', 'enterprise']);

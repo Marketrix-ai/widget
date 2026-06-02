@@ -1,7 +1,7 @@
 import { oc } from '@orpc/contract';
 import { z } from 'zod';
 
-import { ByApplicationIdSchema, PaginationSchema, SuccessSchema, paginatedListOf } from './common';
+import { ByApplicationIdSchema, paginatedListOf, PaginationSchema, SuccessSchema } from './common';
 import { ApplicationEntitySchema, ApplicationReadSchema, ApplicationTypeSchema, WidgetEntitySchema } from './entities';
 
 // ---- application-only schemas ----

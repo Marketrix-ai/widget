@@ -1,12 +1,8 @@
 import { oc } from '@orpc/contract';
 import { z } from 'zod';
 
-import { ByAgentIdSchema, MindMapSchema, PaginationSchema, SuccessSchema, paginatedListOf } from './common';
-import {
-  AgentEntitySchema,
-  AgentTypeSchema,
-  AgentVoiceSchema,
-} from './entities';
+import { ByAgentIdSchema, MindMapSchema, paginatedListOf, PaginationSchema, SuccessSchema } from './common';
+import { AgentEntitySchema, AgentTypeSchema, AgentVoiceSchema } from './entities';
 
 // ---- private helpers ----
 
