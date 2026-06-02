@@ -184,9 +184,7 @@ function main() {
     console.error(`  likely RENAME: "${removed[0]}" -> "${added[0]}"`);
   }
   if (removed.length) {
-    console.error(
-      `  MISSING from mirror (present in api, ${removed.length}): ${removed.join(', ')}`,
-    );
+    console.error(`  MISSING from mirror (present in api, ${removed.length}): ${removed.join(', ')}`);
     if (!args.allowSubset && removed.some(isAllowlisted)) {
       console.error(
         `    hint: these look like widget-subset identifiers — pass --allow-subset only in the widget repo.`,
@@ -194,18 +192,12 @@ function main() {
     }
   }
   if (added.length) {
-    console.error(
-      `  EXTRA in mirror (absent in api, ${added.length}): ${added.join(', ')}`,
-    );
+    console.error(`  EXTRA in mirror (absent in api, ${added.length}): ${added.join(', ')}`);
   }
   if (allowedAbsent.length) {
-    console.error(
-      `  (allowlisted subset, ignored: ${allowedAbsent.join(', ')})`,
-    );
+    console.error(`  (allowlisted subset, ignored: ${allowedAbsent.join(', ')})`);
   }
-  console.error(
-    `\nFix: re-run the sync-contracts skill to bring the mirror back in line with api ${args.kind}.`,
-  );
+  console.error(`\nFix: re-run the sync-contracts skill to bring the mirror back in line with api ${args.kind}.`);
   process.exit(1);
 }
 
