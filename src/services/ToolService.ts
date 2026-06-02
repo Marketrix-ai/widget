@@ -1,3 +1,4 @@
+import { WAIT_FOR_USER_TOOLS } from '../utils/chat';
 import { domService } from './DomService';
 import { startScreenShare } from './ScreenShareService';
 import { showModeService } from './ShowModeService';
@@ -209,7 +210,7 @@ export class ToolExecutionService {
   }
 
   private requiresHighlight(toolName: string): boolean {
-    return ['click_element', 'type_text', 'select_dropdown_option', 'send_keys', 'upload_file'].includes(toolName);
+    return WAIT_FOR_USER_TOOLS.has(toolName);
   }
 
   private navigate(args: NavigateParams): ToolExecutionResult {

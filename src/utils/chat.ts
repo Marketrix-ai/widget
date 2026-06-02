@@ -266,13 +266,26 @@ function ensureMessageStructure(message: ChatMessage): ChatMessage {
  * These are "mouse and keyboard" interactions.
  * All other tools will have hidden icons and muted text.
  */
-const INTERACTIVE_TOOLS = new Set([
+export const INTERACTIVE_TOOLS = new Set([
   'click_element',
   'type_text',
   'send_keys',
   'select_dropdown_option',
   'upload_file',
   'scroll',
+]);
+
+/**
+ * Tools that, in `show` mode, pause for the user to perform the action
+ * themselves (DOM-mutating "mouse and keyboard" actions, minus `scroll`).
+ * Also the set that requires element highlighting in ToolService.
+ */
+export const WAIT_FOR_USER_TOOLS = new Set([
+  'click_element',
+  'type_text',
+  'select_dropdown_option',
+  'send_keys',
+  'upload_file',
 ]);
 
 /**

@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useMemo, useState } from 'react';
 
-import { chatService } from '../services/ChatService';
 import type { InstructionType, WidgetView } from '../types';
 
 // ---------------------------------------------------------------------------
@@ -72,33 +71,17 @@ export const UIStateProvider: React.FC<UIStateProviderProps> = ({
       setActiveView: (view: WidgetView) => setUIState(prev => ({ ...prev, activeView: view })),
 
       toggleWidget: () =>
-        setUIState(prev => {
-          const newState = {
-            ...prev,
-            isOpen: !prev.isOpen,
-            isMinimized: !prev.isOpen ? false : true,
-          };
-          chatService.setWidgetState(newState.isOpen, newState.isMinimized);
-          return newState;
-        }),
+        setUIState(prev => ({
+          ...prev,
+          isOpen: !prev.isOpen,
+          isMinimized: !prev.isOpen ? false : true,
+        })),
 
-      closeWidget: () =>
-        setUIState(prev => {
-          const newState = { ...prev, isOpen: false, isMinimized: true };
-          chatService.setWidgetState(newState.isOpen, newState.isMinimized);
-          return newState;
-        }),
+      closeWidget: () => setUIState(prev => ({ ...prev, isOpen: false, isMinimized: true })),
 
-      setMode: (mode: InstructionType) =>
-        setUIState(prev => {
-          chatService.setMode(mode);
-          return { ...prev, currentMode: mode };
-        }),
+      setMode: (mode: InstructionType) => setUIState(prev => ({ ...prev, currentMode: mode })),
 
-      setLoading: (loading: boolean) => {
-        chatService.setIsLoading(loading);
-        setUIState(prev => ({ ...prev, isLoading: loading }));
-      },
+      setLoading: (loading: boolean) => setUIState(prev => ({ ...prev, isLoading: loading })),
 
       setAgentAvailable: (available: boolean) => setUIState(prev => ({ ...prev, agentAvailable: available })),
 

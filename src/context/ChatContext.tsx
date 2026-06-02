@@ -1,7 +1,7 @@
 import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
 
 import { MarketrixApiService } from '../services/ApiService';
-import { chatService, createAgentMessage, createUserMessage } from '../services/ChatService';
+import { createAgentMessage, createUserMessage } from '../services/ChatService';
 import { configManager } from '../services/ConfigManager';
 import { StreamClient } from '../services/StreamClient';
 import type { ChatMessage, InstructionType } from '../types';
@@ -70,35 +70,24 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
   currentModeRef.current = currentMode;
 
   const addMessage = useCallback((message: ChatMessage) => {
-    setChatState(prev => {
-      chatService.addMessage(message);
-      return { messages: [...prev.messages, message] };
-    });
+    setChatState(prev => ({ messages: [...prev.messages, message] }));
   }, []);
 
   const updateMessage = useCallback((messageId: string, updates: Partial<ChatMessage>) => {
-    setChatState(prev => {
-      chatService.updateMessage(messageId, updates);
-      return { messages: prev.messages.map(msg => (msg.id === messageId ? { ...msg, ...updates } : msg)) };
-    });
+    setChatState(prev => ({
+      messages: prev.messages.map(msg => (msg.id === messageId ? { ...msg, ...updates } : msg)),
+    }));
   }, []);
 
   const removeMessage = useCallback((messageId: string) => {
-    setChatState(prev => {
-      chatService.removeMessage(messageId);
-      return { messages: prev.messages.filter(msg => msg.id !== messageId) };
-    });
+    setChatState(prev => ({ messages: prev.messages.filter(msg => msg.id !== messageId) }));
   }, []);
 
   const setMessages = useCallback((messages: ChatMessage[]) => {
-    setChatState(() => {
-      chatService.setMessages(messages);
-      return { messages };
-    });
+    setChatState({ messages });
   }, []);
 
   const clearMessages = useCallback(() => {
-    chatService.clearMessages();
     setChatState({ messages: [] });
   }, []);
 
@@ -196,7 +185,6 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
             const newParts = [...(msg.parts ?? []), { type: 'text' as const, content: errorMessage }];
             return { ...msg, isPlaceholder: false, parts: newParts, content: errorMessage };
           });
-          chatService.setMessages(newMessages);
           return { messages: newMessages };
         });
       } finally {
