@@ -2,17 +2,32 @@ import type { ChatMessage, InstructionType, TaskProgress } from '../types';
 import { removeThinkingMarkers } from '../utils/chat';
 import { storageService } from './StorageService';
 
+/**
+ * Snapshot of widget state persisted to / restored from localStorage.
+ * React context is the single source of truth at runtime — this is the
+ * load/persist boundary only.
+ */
+export interface ChatSnapshot {
+  messages: ChatMessage[];
+  isTaskRunning: boolean;
+  activeTaskId: string | null;
+  taskProgress: TaskProgress[];
+  currentMode: InstructionType;
+  isOpen: boolean;
+  isMinimized: boolean;
+  isLoading: boolean;
+}
+
+/**
+ * ChatService — thin persistence layer.
+ *
+ * Owns only the localStorage read/write lifecycle for the widget chat context.
+ * It no longer mirrors runtime state; contexts call `persist(snapshot)` from a
+ * single effect and `restore()` once on mount.
+ */
 export class ChatService {
   private static instance: ChatService;
-  private messages: ChatMessage[] = [];
   private chatId: string | null = null;
-  private isTaskRunning: boolean = false;
-  private activeTaskId: string | null = null;
-  private taskProgress: TaskProgress[] = [];
-  private currentMode: InstructionType = 'tell';
-  private isOpen: boolean = false;
-  private isMinimized: boolean = false;
-  private isLoading: boolean = false;
   initError: Error | null = null;
 
   private constructor() {}
@@ -26,12 +41,10 @@ export class ChatService {
 
   initialize(chatId: string | null): void {
     this.chatId = chatId;
-    this.restoreState();
   }
 
   createInitialContext(chatId: string): void {
     try {
-      // Only create if no existing context
       if (storageService.hasValidContext()) {
         return;
       }
@@ -57,163 +70,70 @@ export class ChatService {
     return this.initError;
   }
 
-  getMessages(): ChatMessage[] {
-    return this.messages;
-  }
+  /** Read the persisted snapshot, rehydrating messages (dates, lost streams). */
+  restore(): ChatSnapshot {
+    const context = storageService.getContext();
 
-  getIsLoading(): boolean {
-    return this.isLoading;
-  }
-
-  getIsTaskRunning(): boolean {
-    return this.isTaskRunning;
-  }
-
-  getActiveTaskId(): string | null {
-    return this.activeTaskId;
-  }
-
-  getTaskProgress(): TaskProgress[] {
-    return this.taskProgress;
-  }
-
-  getCurrentMode(): InstructionType {
-    return this.currentMode;
-  }
-
-  getIsOpen(): boolean {
-    return this.isOpen;
-  }
-
-  getIsMinimized(): boolean {
-    return this.isMinimized;
-  }
-
-  addMessage(message: ChatMessage): void {
-    this.messages = [...this.messages, message];
-    this.persistState();
-  }
-
-  updateMessage(messageId: string, updates: Partial<ChatMessage>): void {
-    this.messages = this.messages.map(msg => (msg.id === messageId ? { ...msg, ...updates } : msg));
-    this.persistState();
-  }
-
-  removeMessage(messageId: string): void {
-    this.messages = this.messages.filter(msg => msg.id !== messageId);
-    this.persistState();
-  }
-
-  setMessages(messages: ChatMessage[]): void {
-    this.messages = messages;
-    this.persistState();
-  }
-
-  clearMessages(): void {
-    this.messages = [];
-    this.persistState();
-  }
-
-  setTaskState(isRunning: boolean, taskId: string | null, progress: TaskProgress[]): void {
-    this.isTaskRunning = isRunning;
-    this.activeTaskId = taskId;
-    this.taskProgress = progress;
-    this.persistState();
-  }
-
-  setMode(mode: InstructionType): void {
-    this.currentMode = mode;
-    this.persistState();
-  }
-
-  setWidgetState(isOpen: boolean, isMinimized: boolean): void {
-    this.isOpen = isOpen;
-    this.isMinimized = isMinimized;
-    this.persistState();
-  }
-
-  setIsLoading(loading: boolean): void {
-    this.isLoading = loading;
-    this.persistState();
-  }
-
-  // State Restoration & Persistence
-
-  private restoreState(): void {
-    try {
-      const context = storageService.getContext();
-
-      if (!context.chat_id) return;
-
-      if (this.chatId && context.chat_id !== this.chatId) {
-        // Chat ID mismatch - restoring history anyway
-      }
-
-      this.messages = context.messages.map(msg => {
-        // Handle restored screenshare messages
-        // If a message was a screenshare stream (id starts with 'screenshare-'),
-        // replace it with a "Screenshare ended" message since the stream is lost on refresh.
-        if (msg.id.startsWith('screenshare-')) {
-          return {
-            ...msg,
-            content: 'Screenshare ended',
-            videoStream: undefined,
-            isSystemMessage: true, // Treat as system message now
-            timestamp: new Date(msg.timestamp),
-            parts: [{ type: 'text', content: 'Screenshare ended' }],
-          };
-        }
-
-        const restoredMsg: ChatMessage = {
-          ...msg,
-          timestamp: new Date(msg.timestamp),
-          videoStream: undefined,
-          placeholderState: msg.placeholderState, // Restore placeholder state
-          taskStatus: msg.taskStatus, // Restore task status
-          parts: msg.parts || [], // Use stored parts or default to empty
-        };
-
-        // If no parts, create default text part from content (if any)
-        if (restoredMsg.parts?.length === 0 && restoredMsg.content) {
-          const cleanContent = restoredMsg.content.replace(/\n\n__THINKING__$/, '').trim();
-          if (cleanContent && restoredMsg.parts) {
-            restoredMsg.parts.push({
-              type: 'text',
-              content: cleanContent,
-            });
+    const messages: ChatMessage[] = context.chat_id
+      ? context.messages.map(msg => {
+          // A screenshare stream can't survive a reload — replace it with an
+          // "ended" system message rather than a dangling video placeholder.
+          if (msg.id.startsWith('screenshare-')) {
+            return {
+              ...msg,
+              content: 'Screenshare ended',
+              videoStream: undefined,
+              isSystemMessage: true,
+              timestamp: new Date(msg.timestamp),
+              parts: [{ type: 'text', content: 'Screenshare ended' }],
+            };
           }
-        }
 
-        return restoredMsg;
-      });
+          const restoredMsg: ChatMessage = {
+            ...msg,
+            timestamp: new Date(msg.timestamp),
+            videoStream: undefined,
+            placeholderState: msg.placeholderState,
+            taskStatus: msg.taskStatus,
+            parts: msg.parts || [],
+          };
 
-      this.isTaskRunning = context.isTaskRunning;
-      this.activeTaskId = context.activeTaskId;
-      this.taskProgress = context.taskProgress;
-      this.currentMode = context.currentMode;
-      this.isOpen = context.isOpen;
-      this.isMinimized = context.isMinimized;
-      this.isLoading = context.isLoading ?? false;
-    } catch (error) {
-      console.warn('[ChatService] Failed to restore state:', error);
-    }
+          if (restoredMsg.parts?.length === 0 && restoredMsg.content) {
+            const cleanContent = restoredMsg.content.replace(/\n\n__THINKING__$/, '').trim();
+            if (cleanContent && restoredMsg.parts) {
+              restoredMsg.parts.push({ type: 'text', content: cleanContent });
+            }
+          }
+
+          return restoredMsg;
+        })
+      : [];
+
+    return {
+      messages,
+      isTaskRunning: context.isTaskRunning,
+      activeTaskId: context.activeTaskId,
+      taskProgress: context.taskProgress,
+      currentMode: context.currentMode,
+      isOpen: context.isOpen,
+      isMinimized: context.isMinimized,
+      isLoading: context.isLoading ?? false,
+    };
   }
 
-  private persistState(): void {
+  /** Persist the current widget snapshot. No-op until a chatId is known. */
+  persist(snapshot: ChatSnapshot): void {
     if (!this.chatId) return;
 
     try {
-      const serializedMessages = this.messages
+      const serializedMessages = snapshot.messages
         .filter(msg => {
           if (!msg.isPlaceholder) return true;
-          // Keep placeholders if they have content, progress parts, OR are thinking/waiting
+          // Keep placeholders that are still thinking/waiting, or that carry parts.
           if (msg.placeholderState === 'thinking' || msg.placeholderState === 'waiting-for-user') {
             return true;
           }
-
-          // Only keep other placeholders if they have content or progress parts
-          const parts = msg.parts || [];
-          return parts.length > 0;
+          return (msg.parts || []).length > 0;
         })
         .filter(msg => !(msg.isSystemMessage && msg.content === 'Chat context changed'))
         .map(msg => ({
@@ -226,21 +146,21 @@ export class ChatService {
           screenShareStatus: msg.screenShareStatus,
           isSystemMessage: msg.isSystemMessage,
           isPlaceholder: msg.isPlaceholder,
-          placeholderState: msg.placeholderState, // Save placeholder state
-          taskStatus: msg.taskStatus, // Save task status
-          parts: msg.parts, // Save parts
+          placeholderState: msg.placeholderState,
+          taskStatus: msg.taskStatus,
+          parts: msg.parts,
         }));
 
       storageService.updateContext({
         chat_id: this.chatId,
         messages: serializedMessages,
-        isTaskRunning: this.isTaskRunning,
-        activeTaskId: this.activeTaskId,
-        taskProgress: this.taskProgress,
-        currentMode: this.currentMode,
-        isOpen: this.isOpen,
-        isMinimized: this.isMinimized,
-        isLoading: this.isLoading,
+        isTaskRunning: snapshot.isTaskRunning,
+        activeTaskId: snapshot.activeTaskId,
+        taskProgress: snapshot.taskProgress,
+        currentMode: snapshot.currentMode,
+        isOpen: snapshot.isOpen,
+        isMinimized: snapshot.isMinimized,
+        isLoading: snapshot.isLoading,
       });
     } catch (error) {
       console.warn('[ChatService] Failed to persist state:', error);

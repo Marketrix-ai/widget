@@ -2,8 +2,10 @@
  * WidgetProviders — composition root that wires UIStateProvider, ChatProvider,
  * and TaskProvider together.
  *
- * Initialization logic (SSE connection, ChatService hydration) lives in the
- * inner bridge component which has access to all three contexts.
+ * Initialization (SSE connection, ChatService hydration) and persistence both
+ * live in inner bridge components that have access to all three contexts.
+ * React context is the single source of truth; ChatService is the load/persist
+ * boundary only, driven by one effect here.
  */
 import React, { useEffect, useRef } from 'react';
 
@@ -11,9 +13,46 @@ import { chatService } from '../services/ChatService';
 import { configManager } from '../services/ConfigManager';
 import { sessionManager } from '../services/SessionManager';
 import { StreamClient } from '../services/StreamClient';
-import { ChatProvider, useChatContextInternal } from './ChatContext';
-import { TaskProvider } from './TaskContext';
+import type { ChatMessage } from '../types';
+import { ChatProvider, useChatContext, useChatContextInternal } from './ChatContext';
+import { TaskProvider, useTaskContext } from './TaskContext';
 import { UIStateProvider, useUIStateContext } from './UIStateContext';
+
+// ---------------------------------------------------------------------------
+// Persistence bridge — single context → storage effect (innermost, sees all)
+// ---------------------------------------------------------------------------
+
+const PersistBridge: React.FC<{ previewMode: boolean }> = ({ previewMode }) => {
+  const { uiState } = useUIStateContext();
+  const { chatState } = useChatContext();
+  const { taskState } = useTaskContext();
+
+  useEffect(() => {
+    if (previewMode) return;
+    chatService.persist({
+      messages: chatState.messages,
+      isTaskRunning: taskState.isTaskRunning,
+      activeTaskId: taskState.activeTaskId,
+      taskProgress: taskState.taskProgress,
+      currentMode: uiState.currentMode,
+      isOpen: uiState.isOpen,
+      isMinimized: uiState.isMinimized,
+      isLoading: uiState.isLoading,
+    });
+  }, [
+    previewMode,
+    chatState.messages,
+    taskState.isTaskRunning,
+    taskState.activeTaskId,
+    taskState.taskProgress,
+    uiState.currentMode,
+    uiState.isOpen,
+    uiState.isMinimized,
+    uiState.isLoading,
+  ]);
+
+  return null;
+};
 
 // ---------------------------------------------------------------------------
 // Inner bridge — has access to UIState and Chat, mounts TaskProvider
@@ -30,6 +69,8 @@ const TaskBridge: React.FC<BridgeProps> = ({ children, previewMode }) => {
 
   // Stable ref so TaskProvider's stopTask never stale-closes over activeTaskId
   const activeTaskIdRef = useRef<string | null>(null);
+  // Live messages snapshot the SSE reducer wiring reads without stale closures
+  const messagesRef = useRef<ChatMessage[]>([]);
 
   // -------------------------------------------------------------------------
   // One-time initialization: hydrate from ChatService + connect stream
@@ -48,22 +89,22 @@ const TaskBridge: React.FC<BridgeProps> = ({ children, previewMode }) => {
 
       chatService.initialize(chatId);
 
-      const isTaskRunning = chatService.getIsTaskRunning();
-      const activeTaskId = chatService.getActiveTaskId();
+      const snapshot = chatService.restore();
 
-      // Hydrate UIState from persisted ChatService values
+      // Hydrate UIState from persisted snapshot
       uiActions.applyState({
-        isLoading: chatService.getIsLoading(),
-        currentMode: chatService.getCurrentMode(),
-        isOpen: chatService.getIsOpen(),
-        isMinimized: chatService.getIsMinimized(),
+        isLoading: snapshot.isLoading,
+        currentMode: snapshot.currentMode,
+        isOpen: snapshot.isOpen,
+        isMinimized: snapshot.isMinimized,
       });
 
       // Hydrate ChatState
-      _setMessages({ messages: chatService.getMessages() });
+      messagesRef.current = snapshot.messages;
+      _setMessages({ messages: snapshot.messages });
 
       // Hydrate activeTaskId ref
-      activeTaskIdRef.current = isTaskRunning ? activeTaskId : null;
+      activeTaskIdRef.current = snapshot.isTaskRunning ? snapshot.activeTaskId : null;
 
       // Connect SSE stream
       if (chatId) {
@@ -94,10 +135,12 @@ const TaskBridge: React.FC<BridgeProps> = ({ children, previewMode }) => {
       previewMode={previewMode}
       currentMode={uiState.currentMode}
       setMessages={_setMessages}
+      messagesRef={messagesRef}
       uiActions={uiActions}
       activeTaskIdRef={activeTaskIdRef}
     >
       {children}
+      <PersistBridge previewMode={previewMode} />
     </TaskProvider>
   );
 };
