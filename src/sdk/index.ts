@@ -2,13 +2,13 @@ import { createORPCClient } from '@orpc/client';
 import { RPCLink } from '@orpc/client/fetch';
 import type { ContractRouterClient } from '@orpc/contract';
 
-import type { contract } from './routes';
+import type { widgetContract } from './contract';
 
 let authToken: string | null = null;
 let currentApiUrl: string = '';
-let client: ContractRouterClient<typeof contract>;
+let client: ContractRouterClient<typeof widgetContract>;
 
-function createClient(apiUrl: string): ContractRouterClient<typeof contract> {
+function createClient(apiUrl: string): ContractRouterClient<typeof widgetContract> {
   const link = new RPCLink({
     url: apiUrl,
     headers: () => {
@@ -58,7 +58,7 @@ type SdkExtras = typeof sdkExtras;
 // oRPC's client is a deep Proxy that intercepts all string property accesses
 // (including .bind, .call, etc.) as route path segments, so we must not call
 // .bind() on it — just return the property directly.
-export const sdk = new Proxy({} as ContractRouterClient<typeof contract> & SdkExtras, {
+export const sdk = new Proxy({} as ContractRouterClient<typeof widgetContract> & SdkExtras, {
   get(_target, prop) {
     if (prop in sdkExtras) {
       return sdkExtras[prop as keyof typeof sdkExtras];
@@ -67,11 +67,25 @@ export const sdk = new Proxy({} as ContractRouterClient<typeof contract> & SdkEx
   },
 });
 
-// Export all types from schema
-export * from './schema';
+// Runtime value re-exports (used by services, tests, and widget stream handler)
+export { WidgetSettingsDataSchema } from './contracts/entities';
+export { WidgetEventSchema } from './contracts/widget';
+
+// Type-only re-exports from entities
+export type {
+  AgentData,
+  ApplicationData,
+  InstructionType,
+  UserData,
+  WidgetChip,
+  WidgetData,
+  WidgetSettingsData,
+  WorkspaceData,
+} from './contracts/entities';
+
+// Type-only re-exports from widget contract
+export type { WidgetCommand, WidgetEvent, WidgetSettingsKey } from './contracts/widget';
 
 // Type-only export: the oRPC client builds requests from the proxied path and
-// never needs the `contract` VALUE at runtime. Re-exporting the value pulled the
-// whole routes.ts contract (and the 291 zod schemas it references) into the
-// embeddable bundle. Keeping it type-only drops all of that from the shipped JS.
-export type { contract } from './routes';
+// never needs the `widgetContract` VALUE at runtime.
+export type { widgetContract } from './contract';

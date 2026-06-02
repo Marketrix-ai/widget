@@ -1,5 +1,4 @@
-import { sdk } from '../sdk';
-import type { WidgetCommand, WidgetEvent } from '../sdk/schema';
+import { sdk, type WidgetCommand, type WidgetEvent } from '../sdk';
 
 export type StreamStatus = 'disconnected' | 'connecting' | 'connected' | 'registered' | 'error';
 

@@ -1,6 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
-import type { WidgetEvent } from '../sdk/schema';
+import type { WidgetEvent } from '../sdk';
 import { StreamClient, type StreamStatus } from '../services/StreamClient';
 import { toolExecutionService } from '../services/ToolService';
 import type { ChatMessage, InstructionType, TaskProgress } from '../types';
