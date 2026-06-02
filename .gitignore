@@ -24,3 +24,4 @@ Thumbs.db
 .env.*
 !.env.example
 .worktrees
+/node_modules
