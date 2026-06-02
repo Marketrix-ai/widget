@@ -1,5 +1,4 @@
-import { sdk } from '../sdk';
-import type { WidgetCommand } from '../sdk/schema';
+import { sdk, type WidgetCommand } from '../sdk';
 import type { MarketrixConfig, SendMessageRequest, SendMessageResponse } from '../types';
 import { sessionManager } from './SessionManager';
 import { StreamClient } from './StreamClient';

@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import { WidgetEventSchema } from '@/sdk/schema';
+import { WidgetEventSchema } from '@/sdk';
 
 describe('Widget task status contract — Wave 14 (C1 cutover)', () => {
   const SIM_TASK_STATUSES = ['queued', 'running', 'completed', 'failed', 'has_question', 'stopped'] as const;

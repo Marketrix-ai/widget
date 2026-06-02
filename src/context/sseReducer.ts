@@ -8,7 +8,7 @@
  * Keeping this pure makes the previously-untestable ~180-line SSE handler unit
  * testable and removes the nested setState-within-setState that hid bugs.
  */
-import type { WidgetEvent } from '../sdk/schema';
+import type { WidgetEvent } from '../sdk';
 import type { ChatMessage, InstructionType } from '../types';
 import {
   addProgressLine,

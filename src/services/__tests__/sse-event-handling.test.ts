@@ -6,7 +6,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { type WidgetEvent, WidgetEventSchema } from '@/sdk/schema';
+import { type WidgetEvent, WidgetEventSchema } from '@/sdk';
 import type { ChatMessage } from '@/types';
 import { hasThinkingMarker, updateThinkingMarker } from '@/utils/chat';
 
