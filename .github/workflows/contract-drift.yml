@@ -1,0 +1,90 @@
+name: Contract Drift
+# Fails the PR if widget's oRPC contract mirrors (src/sdk/routes.ts,
+# src/sdk/schema.ts) have drifted STRUCTURALLY from the source of truth in
+# Marketrix-ai/api (routes.ts, schema.ts). "Structural" = presence of routes,
+# exported schema identifiers, and discriminated-union event tags — comments,
+# import paths, and whitespace are ignored.
+#
+# Widget is a strict SUBSET of the api contract: it intentionally omits the
+# dashboard-only `simulationIssue*` routes and `SimulationIssue*` schemas. The
+# drift script is run with --allow-subset, which tolerates those (and only
+# those) being absent. Anything else missing — or anything EXTRA in the widget
+# mirror — is still drift. See scripts/check-contract-drift.mjs for the known
+# field-level gap.
+#
+# TOKEN REQUIREMENT
+# -----------------
+# This workflow reads two files from the PRIVATE Marketrix-ai/api repo, so it
+# needs a token with read access. Create a repo or org secret:
+#
+#   CONTRACTS_READ_TOKEN = fine-grained PAT with "Contents: read" on
+#                          Marketrix-ai/api (read-only, no write scopes).
+#
+# Without it the job fails fast with a clear message rather than a confusing
+# 404 from the GitHub API.
+on:
+  pull_request:
+    paths:
+      - src/sdk/routes.ts
+      - src/sdk/schema.ts
+      - scripts/check-contract-drift.mjs
+      - .github/workflows/contract-drift.yml
+  workflow_dispatch:
+  schedule:
+    # Weekly — catches api-side contract changes that never touched this mirror
+    # (those won't trigger the pull_request paths filter). Mondays 06:00 UTC.
+    - cron: '0 6 * * 1'
+
+permissions:
+  contents: read
+
+jobs:
+  drift:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Verify CONTRACTS_READ_TOKEN is present
+        env:
+          CONTRACTS_READ_TOKEN: ${{ secrets.CONTRACTS_READ_TOKEN }}
+        run: |
+          if [ -z "${CONTRACTS_READ_TOKEN}" ]; then
+            echo "::error::CONTRACTS_READ_TOKEN secret is not set. Add a fine-grained PAT with 'Contents: read' on Marketrix-ai/api as a repo or org secret named CONTRACTS_READ_TOKEN."
+            exit 1
+          fi
+
+      - name: Fetch api contract source (routes.ts, schema.ts) from Marketrix-ai/api@dev
+        env:
+          GH_TOKEN: ${{ secrets.CONTRACTS_READ_TOKEN }}
+        run: |
+          set -euo pipefail
+          mkdir -p .api-src
+          for f in routes.ts schema.ts; do
+            echo "Fetching api/${f}@dev ..."
+            gh api "repos/Marketrix-ai/api/contents/${f}?ref=dev" \
+              -H 'Accept: application/vnd.github.raw' > ".api-src/${f}"
+            if [ ! -s ".api-src/${f}" ]; then
+              echo "::error::Fetched empty .api-src/${f} — check the token has Contents:read on Marketrix-ai/api and that the file exists on dev."
+              exit 1
+            fi
+          done
+
+      - name: Check routes drift (subset mode)
+        run: |
+          node scripts/check-contract-drift.mjs \
+            --api .api-src/routes.ts \
+            --mirror src/sdk/routes.ts \
+            --kind routes \
+            --allow-subset
+
+      - name: Check schema drift (subset mode)
+        run: |
+          node scripts/check-contract-drift.mjs \
+            --api .api-src/schema.ts \
+            --mirror src/sdk/schema.ts \
+            --kind schema \
+            --allow-subset
