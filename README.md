@@ -152,14 +152,7 @@ interface MarketrixConfig {
 
 ### Prerequisites
 
-| Workflow       | Trigger                          | Action                                                              |
-| -------------- | -------------------------------- | ------------------------------------------------------------------- |
-| `validate.yml` | Push / PR to `dev`, `main`       | Type check, lint, format, tests, build, visual, a11y, bundle checks |
-| `build.yml`    | Tag push (`v*`) or push to `dev` | Build Docker image, push to ACR; publish to npm on tag              |
-
-Image builds produce `marketrix.azurecr.io/widget:{version}`. Tag pushes also publish `@marketrix.ai/widget` to npm. Deployment to dev/prod is handled by the centralized deploy workflow (e.g. `deploy.yml` in infra). Dev branch pushes do not build images.
-
-- Node.js 18+
+- Node.js 24 (CI pins `node-version: 24`)
 - npm
 
 ### Setup
@@ -168,8 +161,8 @@ Image builds produce `marketrix.azurecr.io/widget:{version}`. Tag pushes also pu
 git clone <repository-url>
 cd widget
 npm install
-npm start        # dev server on port 5174
-npm run build    # production build
+npm start        # dev server on port 9001 (widget.marketrix.localhost)
+npm run build    # production build → dist/widget.mjs
 ```
 
 ### Project Structure
@@ -177,15 +170,18 @@ npm run build    # production build
 ```
 widget/
 ├── src/
-│   ├── components/       # React components (chat, layout, UI, input)
+│   ├── components/       # React components (base, blocks, chat, navigation, ui, views)
+│   ├── design-system/    # design tokens + primitives
 │   ├── context/          # WidgetContext provider
 │   ├── hooks/            # Custom React hooks
-│   ├── services/         # Core services (stream, chat, recording, etc.)
-│   ├── sdk/              # oRPC client + contract mirrors
+│   ├── services/         # Core services (StreamClient, ChatService, SessionRecorder, ToolService, …)
+│   ├── sdk/              # oRPC client + scoped contract mirror (contract.ts + contracts/*)
 │   ├── types/            # TypeScript types
-│   ├── utils/            # Utility functions
-│   ├── constants/        # Config constants and theme tokens
-│   └── index.tsx         # Main entry point
+│   ├── utils/            # Utility functions (incl. bootstrap.tsx — closed Shadow DOM mount)
+│   ├── constants/        # Config constants
+│   ├── lib/              # shared helpers
+│   └── index.tsx         # Main entry point (public API)
+├── public/loader.js      # classic script-tag loader
 ├── vite.config.ts
 ├── tsconfig.json
 └── package.json
@@ -202,31 +198,44 @@ Output files:
 
 ## CI/CD
 
-| Workflow       | Trigger            | Action                                          |
-| -------------- | ------------------ | ----------------------------------------------- |
-| `validate.yml` | Push to `dev` / PR | Type check, lint, build                         |
-| `build.yml`    | Tag push (`v*`)    | Build Docker image, push to ACR, publish to npm |
+Single workflow `ci.yml` with three jobs:
+
+| Job       | Trigger              | Action                                                                           |
+| --------- | -------------------- | ------------------------------------------------------------------------------- |
+| `validate` | Push / PR to `dev`   | type-check, lint, build, format:check, test:run, visual/a11y/bundle checks      |
+| `build`    | Tag push (`v*`)      | Build Docker image → `marketrix.azurecr.io/widget:{version}` (v-prefix stripped) |
+| `publish`  | Tag push (`v*`)      | `npm publish @marketrix.ai/widget` (skipped if version already on registry)      |
+
+`contract-drift.yml` fails PRs whose `src/sdk/` mirror has drifted from `Marketrix-ai/api` (needs the `CONTRACTS_READ_TOKEN` secret). Dev branch pushes do not build images. Deployment to dev/prod is handled by the centralized `deploy.yml` in `infra`.
+
+### Release
+
+```bash
+npm run tag <version>            # bumps package.json, refreshes lockfile, builds, commits, tags vX
+git push origin HEAD && git push origin v<version>
+```
 
 ## Dependencies
 
-### Production
+### Production (peer + runtime)
 
-- `react` / `react-dom` v19 (peer dependency)
-- `@rrweb/record` - Session recording
-- `@orpc/client` / `@orpc/contract` v1 - Type-safe API client (oRPC)
-- `react-icons` - Icons
-- `zod` - Schema validation
+- `react` / `react-dom` ^19 — peer dependency
+- `@rrweb/record` — session recording
+- `@orpc/client` / `@orpc/contract` ^1 — type-safe API client (oRPC)
+- `@base-ui/react` — UI primitives
+- `zod` ^4 — schema validation
+- `tailwind-merge` — class merging
 
 ### Development
 
-- Vite 6
-- Tailwind CSS v4 (via `@tailwindcss/vite` plugin)
-- TypeScript 5
-- Vitest + Testing Library (unit and integration tests)
-- ESLint + Prettier
+- Vite 8
+- Tailwind CSS 4 (via `@tailwindcss/vite` plugin)
+- TypeScript 6
+- Vitest + Testing Library + axe (unit, integration, a11y)
+- ESLint 10 + Prettier
 - Terser for production minification
 
-**Quality gates (run before PR):** `npm run type-check`, `npm run lint:check`, `npm run format:check`, `npm run test:run`, `npm run build`, `npm run visual:check`, `npm run a11y:check`, `npm run bundle:check`. See `.github/pull_request_template.md` and `docs/release-ui-checklist.md`.
+**Quality gates (run before PR):** `npm run code:check` (type-check + lint + format), `npm run test:run`, `npm run build`, then `npm run visual:check`, `npm run a11y:check`, `npm run bundle:check`.
 
 ## License
 
@@ -237,4 +246,4 @@ Apache License 2.0 - see LICENSE file for details.
 For support and questions, please contact the Marketrix team or create an issue
 in the repository.
 
-[Back to top](#marketrix-in-app-support-widget)
+[Back to top](#marketrix-widget)
