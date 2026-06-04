@@ -1,249 +1,238 @@
 # Marketrix Widget
 
-Embeddable support widget for Marketrix. Integrates into any website via script tag.
+The embeddable Marketrix support widget. Drop it into any web page and your users get an in-product assistant that can **Tell** them how something works, **Show** them step-by-step with on-page highlighting, or **Do** the task for them in the browser.
 
-## Quick Start
+Published to npm as [`@marketrix.ai/widget`](https://www.npmjs.com/package/@marketrix.ai/widget). Ships as a single ES module (`widget.mjs`) plus a classic `loader.js` bootstrap.
+
+> **React 19 is required.** The widget treats `react` and `react-dom` as **peer dependencies** and does not bundle them — the host page must provide React 19. The script-tag loader injects a React 19 importmap for you; npm consumers already have React in their app.
+
+---
+
+## Install
+
+There are two integration paths. Most sites should use the **script tag** — it's the simplest and provides React for you.
+
+### 1. Script tag (recommended)
+
+Add one `<script>` to your page `<head>`, **before any `<script type="module">` tags** (the loader installs the React importmap that your module scripts rely on):
 
 ```html
 <script
   src="https://widget.marketrix.ai/loader.js"
-  mtx-api-host="https://api.marketrix.ai"
   mtx-id="your-marketrix-id"
   mtx-key="your-marketrix-key"
+  mtx-api-host="https://api.marketrix.ai"
 ></script>
 ```
 
-## Configuration Options
+`loader.js`:
 
-### Script Attributes
+1. Injects a React 19 importmap (defaults to `esm.sh/react@19`). If your page already has an importmap, the loader **merges** it and your mappings win — so a host that already ships React 19 keeps its own copy.
+2. Injects `<script type="module" src=".../widget.mjs">` from the same origin as the loader.
+3. Forwards every `mtx-*` attribute from the loader tag to the widget.
 
-| Attribute      | Type   | Required | Description                                       |
-| -------------- | ------ | -------- | ------------------------------------------------- |
-| `mtx-id`       | string | \*       | Your Marketrix ID (production mode)               |
-| `mtx-key`      | string | \*       | Your Marketrix API key (production mode)          |
-| `mtx-app`      | number | \*       | Application ID (dev mode)                         |
-| `mtx-agent`    | number | \*       | Agent ID (dev mode)                               |
-| `mtx-api-host` | string | yes      | API server URL (e.g., `https://api.marketrix.ai`) |
+The widget then **auto-initializes** from those attributes — no extra JavaScript required.
 
-\*Either `mtx-id` + `mtx-key` (production) OR `mtx-app` + `mtx-agent` (dev) must be provided.
+### 2. npm / programmatic
 
-### Widget Settings
+```bash
+npm install @marketrix.ai/widget
+# react@^19.2.3 and react-dom@^19.2.3 must already be installed in your app
+```
 
-Widget appearance and behavior are configured through the API. Settings include position, colors, border radius, dimensions, enabled features, device visibility, header/body/greeting text, and quick-action chips.
+```ts
+import { mountWidget } from '@marketrix.ai/widget';
 
-## Interaction Modes
-
-**Tell**: the agent explains concepts and answers questions. **Show**: the agent demonstrates tasks with step-by-step guidance and visual highlighting. **Do**: the agent performs actions in the browser on the user's behalf.
-
-## Programmatic Usage
-
-### `initWidget`
-
-```typescript
-import {
-  initWidget,
-  unmountWidget,
-  updateMarketrixConfig,
-  startRecording,
-  stopRecording,
-  getRecordingState,
-} from '@marketrix.ai/widget';
-
-// Production
-await initWidget({
+await mountWidget({
   mtxId: 'your-marketrix-id',
   mtxKey: 'your-marketrix-key',
   mtxApiHost: 'https://api.marketrix.ai',
 });
-
-// Dev
-await initWidget({
-  mtxApp: 123,
-  mtxAgent: 456,
-  mtxApiHost: 'https://api.marketrix.ai',
-});
-
-// Mount into a specific container
-await initWidget(config, document.getElementById('my-container')!);
-
-// Update config at runtime (unmounts and reinitializes)
-await updateMarketrixConfig({ mtxApiHost: 'https://new-api.marketrix.ai' });
-
-// Session recording
-await startRecording();
-stopRecording();
-const isRecording = getRecordingState();
-
-// Destroy widget
-unmountWidget();
 ```
 
-### React Component (Preview Mode)
+`mountWidget` auto-detects the credential mode (production / dev / preview) from the config you pass.
+
+---
+
+## Credential modes
+
+The widget supports three modes, auto-detected from the credentials you provide.
+
+| Mode | Credentials | Script attributes | Network |
+|------|-------------|-------------------|---------|
+| **Production** | `mtxId` + `mtxKey` | `mtx-id` + `mtx-key` | Fetches settings from the API, opens the live stream |
+| **Dev** | `mtxApp` (application id) + `mtxAgent` (agent id) | `mtx-app` + `mtx-agent` | Same as production, keyed by ids instead of credentials |
+| **Preview** | `settings` object passed in code | — | No network — renders appearance only from the supplied settings |
+
+All modes also accept the common options below.
+
+---
+
+## Configuration options
+
+These apply to every mode (script attribute → config key):
+
+| Config key | Script attribute | Type | Description |
+|------------|------------------|------|-------------|
+| `mtxApiHost` | `mtx-api-host` | string | API server URL, e.g. `https://api.marketrix.ai`. The widget has no baked-in API host — you must supply it. |
+| `container` | — | `HTMLElement` | Element to mount inside (programmatic only). Defaults to a container appended to `<body>`. |
+| `userId` | — | number | Associates widget activity with one of your users. |
+| `show_widget` | — | boolean | When `false`, the widget initializes fully but its UI stays hidden. Default `true`. |
+| `use_screenshare` | `mtx-use-screenshare` | boolean | When `false`, screen-share requests are auto-denied and the Share Screen button is hidden. Default `true`. Disable via `mtx-use-screenshare="false"`. |
+
+Widget **appearance and behavior** (position, colors, sizing, border radius, animation, enabled Tell/Show/Do/Human features, device visibility, header/body/greeting text, and quick-action chips) are configured in the Marketrix dashboard and fetched from the API at init. You don't set them in the embed — except in preview mode, where you pass them inline as `settings`.
+
+### Full script-tag example
+
+```html
+<!doctype html>
+<html>
+  <head>
+    <script
+      src="https://widget.marketrix.ai/loader.js"
+      mtx-id="your-marketrix-id"
+      mtx-key="your-marketrix-key"
+      mtx-api-host="https://api.marketrix.ai"
+      mtx-use-screenshare="false"
+    ></script>
+  </head>
+  <body>
+    <!-- your app -->
+  </body>
+</html>
+```
+
+The loader takes care of the React 19 importmap. If you manage your own importmap, place it before the loader and the loader will merge (and defer to) it:
+
+```html
+<script type="importmap">
+  {
+    "imports": {
+      "react": "https://esm.sh/react@19",
+      "react-dom": "https://esm.sh/react-dom@19",
+      "react-dom/client": "https://esm.sh/react-dom@19/client",
+      "react/jsx-runtime": "https://esm.sh/react@19/jsx-runtime"
+    }
+  }
+</script>
+<script src="https://widget.marketrix.ai/loader.js" mtx-id="..." mtx-key="..." mtx-api-host="..."></script>
+```
+
+---
+
+## Programmatic API
+
+All functions are named exports of `@marketrix.ai/widget` (also available on the default export).
+
+```ts
+import {
+  mountWidget,
+  initWidget,
+  unmountWidget,
+  updateMarketrixConfig,
+  getCurrentConfig,
+  startRecording,
+  stopRecording,
+  getRecordingState,
+  MarketrixWidget,
+} from '@marketrix.ai/widget';
+```
+
+### `mountWidget(config): Promise<void>`
+
+Auto-detects the mode (preview / production / dev) from `config` and initializes the widget. The recommended entry point for programmatic use.
+
+```ts
+// Production
+await mountWidget({ mtxId, mtxKey, mtxApiHost });
+
+// Dev
+await mountWidget({ mtxApp: 123, mtxAgent: 456, mtxApiHost });
+
+// Preview (no network — just renders the appearance)
+await mountWidget({ settings: { widget_enabled: true, widget_position: 'bottom_right' /* ... */ } });
+```
+
+### `initWidget(config, container?): Promise<void>`
+
+Lower-level production/dev initializer. Validates credentials, fetches settings from the API, mounts into a closed Shadow DOM, opens the event stream, and starts session recording once a chat id exists. Optionally mounts inside a specific `container`. Concurrent and duplicate calls are deduplicated; only one production widget runs per page.
+
+```ts
+await initWidget({ mtxId, mtxKey, mtxApiHost }, document.getElementById('my-container')!);
+```
+
+### `unmountWidget(): void`
+
+Destroys the widget, stops session recording, closes the stream connection, and cleans up all resources.
+
+### `updateMarketrixConfig(partial): Promise<void>`
+
+Merges `partial` into the current config and re-initializes (unmount + `initWidget`). Use to switch API host, credentials, etc. at runtime.
+
+### `getCurrentConfig(): MarketrixConfig | null`
+
+Returns the active configuration, or `null` if the widget isn't initialized.
+
+### Session recording
+
+The widget records user sessions (via rrweb) automatically once initialized. These helpers let you control it:
+
+- `startRecording(): Promise<void>` — start or resume recording. Throws if the widget wasn't initialized with `mtxApiHost` and an application (`mtxApp`).
+- `stopRecording(): void` — pause recording without unmounting the widget.
+- `getRecordingState(): boolean` — whether recording is currently active.
+
+### `MarketrixWidget` — React component (preview)
+
+For previewing appearance inside a React app (e.g. a settings/configuration screen). Renders into its own Shadow DOM and makes no network calls.
 
 ```tsx
 import { MarketrixWidget } from '@marketrix.ai/widget';
 
-function App() {
+function Preview() {
   return (
     <MarketrixWidget
-      settings={{ widget_enabled: true, widget_position: 'bottom_right' /* ... */ }}
-      mtxApiHost='https://api.marketrix.ai'
+      settings={{ widget_enabled: true, widget_position: 'bottom_right' /* ...WidgetSettingsData */ }}
+      mtxApiHost="https://api.marketrix.ai"
     />
   );
 }
 ```
 
-## API Reference
+Props: `settings` (required), `container?`, `mtxId?`, `mtxKey?`, `mtxApiHost?`.
 
-#### `initWidget(config: MarketrixConfig, container?: HTMLElement): Promise<void>`
+---
 
-Validates credentials, fetches settings from the API, and mounts the widget. Concurrent and duplicate calls are deduplicated.
+## Interaction modes
 
-#### `unmountWidget(): void`
+- **Tell** — the agent explains concepts and answers questions in chat.
+- **Show** — the agent walks the user through a task step-by-step, highlighting the relevant elements on the page.
+- **Do** — the agent performs the actions in the browser on the user's behalf.
 
-Destroys the widget, stops session recording, and cleans up all resources including the SSE stream connection.
+---
 
-#### `mountWidget(config: AddWidgetConfig): Promise<void>`
+## Exported types
 
-Auto-detects mode (preview, production, or dev) and initializes the widget.
+TypeScript types are bundled with the package:
 
-#### `getCurrentConfig(): MarketrixConfig | null`
+- `MarketrixConfig` — full config for `initWidget` / `updateMarketrixConfig` (`mtxId`, `mtxKey`, `mtxApp`, `mtxAgent`, `mtxApiHost`, `userId`, `show_widget`, `use_screenshare`, plus all widget appearance settings, optional).
+- `AddWidgetConfig` — discriminated config for `mountWidget` (production / dev / preview variants + common options).
+- `MarketrixWidgetProps` — props for the `MarketrixWidget` component.
+- `ChatMessage`, `WidgetState`, `InstructionType` (`'tell' | 'show' | 'do'`).
 
-Returns the current widget configuration, or `null` if not initialized.
+---
 
-#### `updateMarketrixConfig(newConfig: Partial<MarketrixConfig>): Promise<void>`
+## Requirements
 
-Updates the widget configuration at runtime. Unmounts the current widget and reinitializes with the merged config.
+- **React 19** (`react`/`react-dom` `^19.2.3`) on the host page — peer dependency, not bundled. The script-tag loader provides it via importmap; npm consumers supply it from their app.
+- A reachable Marketrix API host (`mtxApiHost` / `mtx-api-host`).
+- Valid credentials for production (`mtxId` + `mtxKey`) or dev (`mtxApp` + `mtxAgent`) mode.
 
-#### `startRecording(): Promise<void>`
-
-Starts RRWeb session recording. Throws if the widget was not initialized with `mtxApiHost` and `mtxApp`.
-
-#### `stopRecording(): void`
-
-Stops RRWeb session recording without unmounting the widget.
-
-#### `getRecordingState(): boolean`
-
-Returns whether RRWeb session recording is currently active.
-
-#### `MarketrixWidget` (React Component)
-
-React component for preview mode rendering. Accepts `settings`, `container`, `mtxId`, `mtxKey`, and `mtxApiHost` props.
-
-## Exported Types
-
-```typescript
-interface MarketrixConfig {
-  mtxId?: string;
-  mtxKey?: string;
-  mtxApp?: number;
-  mtxAgent?: number;
-  mtxApiHost?: string;
-  userId?: number;
-  widget_position_offset?: { x?: number; y?: number };
-  widget_position_z_index?: number;
-  isPreviewMode?: boolean;
-  // All WidgetSettingsData fields (optional)
-}
-```
-
-## Development
-
-### Prerequisites
-
-- Node.js 24 (CI pins `node-version: 24`)
-- npm
-
-### Setup
-
-```bash
-git clone <repository-url>
-cd widget
-npm install
-npm start        # dev server on port 9001 (widget.marketrix.localhost)
-npm run build    # production build → dist/widget.mjs
-```
-
-### Project Structure
-
-```
-widget/
-├── src/
-│   ├── components/       # React components (base, blocks, chat, navigation, ui, views)
-│   ├── design-system/    # design tokens + primitives
-│   ├── context/          # WidgetContext provider
-│   ├── hooks/            # Custom React hooks
-│   ├── services/         # Core services (StreamClient, ChatService, SessionRecorder, ToolService, …)
-│   ├── sdk/              # oRPC client + scoped contract mirror (contract.ts + contracts/*)
-│   ├── types/            # TypeScript types
-│   ├── utils/            # Utility functions (incl. bootstrap.tsx — closed Shadow DOM mount)
-│   ├── constants/        # Config constants
-│   ├── lib/              # shared helpers
-│   └── index.tsx         # Main entry point (public API)
-├── public/loader.js      # classic script-tag loader
-├── vite.config.ts
-├── tsconfig.json
-└── package.json
-```
-
-## Build System
-
-Vite with CSS injection, Shadow DOM isolation, ESM format, TypeScript declarations, and Terser minification.
-
-Output files:
-
-- `dist/widget.mjs` — Library build (React as peer dependency)
-- `dist/loader.js` — Classic loader script (loads widget.mjs with configured attributes)
-
-## CI/CD
-
-Single workflow `ci.yml` with three jobs:
-
-| Job       | Trigger              | Action                                                                           |
-| --------- | -------------------- | ------------------------------------------------------------------------------- |
-| `validate` | Push / PR to `dev`   | type-check, lint, build, format:check, test:run, visual/a11y/bundle checks      |
-| `build`    | Tag push (`v*`)      | Build Docker image → `marketrix.azurecr.io/widget:{version}` (v-prefix stripped) |
-| `publish`  | Tag push (`v*`)      | `npm publish @marketrix.ai/widget` (skipped if version already on registry)      |
-
-`contract-drift.yml` fails PRs whose `src/sdk/` mirror has drifted from `Marketrix-ai/api` (needs the `CONTRACTS_READ_TOKEN` secret). Dev branch pushes do not build images. Deployment to dev/prod is handled by the centralized `deploy.yml` in `infra`.
-
-### Release
-
-```bash
-npm run tag <version>            # bumps package.json, refreshes lockfile, builds, commits, tags vX
-git push origin HEAD && git push origin v<version>
-```
-
-## Dependencies
-
-### Production (peer + runtime)
-
-- `react` / `react-dom` ^19 — peer dependency
-- `@rrweb/record` — session recording
-- `@orpc/client` / `@orpc/contract` ^1 — type-safe API client (oRPC)
-- `@base-ui/react` — UI primitives
-- `zod` ^4 — schema validation
-- `tailwind-merge` — class merging
-
-### Development
-
-- Vite 8
-- Tailwind CSS 4 (via `@tailwindcss/vite` plugin)
-- TypeScript 6
-- Vitest + Testing Library + axe (unit, integration, a11y)
-- ESLint 10 + Prettier
-- Terser for production minification
-
-**Quality gates (run before PR):** `npm run code:check` (type-check + lint + format), `npm run test:run`, `npm run build`, then `npm run visual:check`, `npm run a11y:check`, `npm run bundle:check`.
+---
 
 ## License
 
-Apache License 2.0 - see LICENSE file for details.
+Apache License 2.0 — see the `LICENSE` file.
 
 ## Support
 
-For support and questions, please contact the Marketrix team or create an issue
-in the repository.
-
-[Back to top](#marketrix-widget)
+Contact the Marketrix team or open an issue in the repository.
