@@ -99,7 +99,7 @@ export interface TaskProgress {
   timestamp: number;
 }
 
-export type WidgetView = 'home' | 'chat' | 'help' | 'news';
+export type WidgetView = 'home' | 'chat';
 
 export interface WidgetState {
   isOpen: boolean;
