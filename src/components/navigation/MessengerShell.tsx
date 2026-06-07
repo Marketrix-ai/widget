@@ -13,7 +13,6 @@ import { Icon } from '../base/Icon';
 import { IconButton } from '../base/IconButton';
 import { Stack } from '../base/Stack';
 import { Surface } from '../base/Surface';
-import { Text } from '../base/Text';
 import { HeaderBar } from '../blocks/HeaderBar';
 import { ChatView } from '../views/ChatView';
 import { HomeView } from '../views/HomeView';
