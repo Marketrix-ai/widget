@@ -79,21 +79,21 @@ export const SlackWebhookUrlSchema = z
   });
 
 /**
- * Mindmap edge schema - transition from one node to another via an action
+ * Graph edge schema - transition from one node to another via an action
  */
-export const MindMapEdgeSchema = z
+export const GraphEdgeSchema = z
   .object({
     start: z.string(),
     end: z.string(),
     action: z.string(),
   })
   .passthrough();
-export type MindMapEdgeData = z.infer<typeof MindMapEdgeSchema>;
+export type GraphEdgeData = z.infer<typeof GraphEdgeSchema>;
 
 /**
- * Mindmap section schema - functional UI section within a page node
+ * Graph section schema - functional UI section within a page node
  */
-export const MindMapSectionSchema = z
+export const GraphSectionSchema = z
   .object({
     id: z.string(),
     label: z.string(),
@@ -106,29 +106,29 @@ export const MindMapSectionSchema = z
   .passthrough();
 
 /**
- * Mindmap node schema - unique page state observed during simulation.
+ * Graph node schema - unique page state observed during simulation.
  * Matches agent's PageNode model (perception/graph.py).
  * Uses passthrough() because the agent model may evolve faster than the schema.
  */
-export const MindMapNodeSchema = z
+export const GraphNodeSchema = z
   .object({
     id: z.string(),
     title: z.string(),
     url: z.string(),
     summary: z.string().default(''),
     screenshot: z.string().default(''),
-    sections: z.array(MindMapSectionSchema).default([]),
+    sections: z.array(GraphSectionSchema).default([]),
     sequence_ids: z.array(z.number()).default([]),
     embedding: z.array(z.number()).nullish(),
   })
   .passthrough();
-export type MindMapNodeData = z.infer<typeof MindMapNodeSchema>;
+export type GraphNodeData = z.infer<typeof GraphNodeSchema>;
 
-export const MindMapSchema = z.object({
-  nodes: z.array(MindMapNodeSchema),
-  edges: z.array(MindMapEdgeSchema),
+export const GraphSchema = z.object({
+  nodes: z.array(GraphNodeSchema),
+  edges: z.array(GraphEdgeSchema),
 });
-export type MindMapData = z.infer<typeof MindMapSchema>;
+export type GraphData = z.infer<typeof GraphSchema>;
 
 /**
  * Skill invocation request — used by SimulationCreateSchema to launch a
