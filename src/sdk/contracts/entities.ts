@@ -236,8 +236,8 @@ export const SimulationEntitySchema = BaseEntitySchema.extend({
   mindmap_error: z.string().nullish(),
   created_by_user_id: z.number().nullish(),
   // Persona selected for this run in the Generate Simulation modal. Nullable
-  // for "Generic" runs and for reaction-flow runs (which use
-  // reaction_result.persona_id for many-personas-per-run). See migration V54.
+  // for "Generic" runs and for user-study-flow runs (which use
+  // persona_reaction.persona_id for many-personas-per-run). See migration V54.
   persona_id: z.number().nullish(),
   // Derived flag: true if any per-task status is `has_question`. The parent
   // `status` itself never holds `has_question` — that's a per-task state. The
@@ -442,7 +442,7 @@ export const UserQuotaSchema = z.object({
 });
 export type UserQuotaData = z.infer<typeof UserQuotaSchema>;
 
-// Shared across root (AppEventSchema reaction/run payload) and insight domain.
+// Shared across root (AppEventSchema user-study/run payload) and insight domain.
 export const SuggestedSimulationSchema = z.object({
   description: z.string(),
   selected: z.boolean(),
