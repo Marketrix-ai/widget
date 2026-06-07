@@ -58,11 +58,11 @@ await mountWidget({
 
 The widget supports three modes, auto-detected from the credentials you provide.
 
-| Mode | Credentials | Script attributes | Network |
-|------|-------------|-------------------|---------|
-| **Production** | `mtxId` + `mtxKey` | `mtx-id` + `mtx-key` | Fetches settings from the API, opens the live stream |
-| **Dev** | `mtxApp` (application id) + `mtxAgent` (agent id) | `mtx-app` + `mtx-agent` | Same as production, keyed by ids instead of credentials |
-| **Preview** | `settings` object passed in code | — | No network — renders appearance only from the supplied settings |
+| Mode           | Credentials                                       | Script attributes       | Network                                                         |
+| -------------- | ------------------------------------------------- | ----------------------- | --------------------------------------------------------------- |
+| **Production** | `mtxId` + `mtxKey`                                | `mtx-id` + `mtx-key`    | Fetches settings from the API, opens the live stream            |
+| **Dev**        | `mtxApp` (application id) + `mtxAgent` (agent id) | `mtx-app` + `mtx-agent` | Same as production, keyed by ids instead of credentials         |
+| **Preview**    | `settings` object passed in code                  | —                       | No network — renders appearance only from the supplied settings |
 
 All modes also accept the common options below.
 
@@ -72,13 +72,13 @@ All modes also accept the common options below.
 
 These apply to every mode (script attribute → config key):
 
-| Config key | Script attribute | Type | Description |
-|------------|------------------|------|-------------|
-| `mtxApiHost` | `mtx-api-host` | string | API server URL, e.g. `https://api.marketrix.ai`. The widget has no baked-in API host — you must supply it. |
-| `container` | — | `HTMLElement` | Element to mount inside (programmatic only). Defaults to a container appended to `<body>`. |
-| `userId` | — | number | Associates widget activity with one of your users. |
-| `show_widget` | — | boolean | When `false`, the widget initializes fully but its UI stays hidden. Default `true`. |
-| `use_screenshare` | `mtx-use-screenshare` | boolean | When `false`, screen-share requests are auto-denied and the Share Screen button is hidden. Default `true`. Disable via `mtx-use-screenshare="false"`. |
+| Config key        | Script attribute      | Type          | Description                                                                                                                                           |
+| ----------------- | --------------------- | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `mtxApiHost`      | `mtx-api-host`        | string        | API server URL, e.g. `https://api.marketrix.ai`. The widget has no baked-in API host — you must supply it.                                            |
+| `container`       | —                     | `HTMLElement` | Element to mount inside (programmatic only). Defaults to a container appended to `<body>`.                                                            |
+| `userId`          | —                     | number        | Associates widget activity with one of your users.                                                                                                    |
+| `show_widget`     | —                     | boolean       | When `false`, the widget initializes fully but its UI stays hidden. Default `true`.                                                                   |
+| `use_screenshare` | `mtx-use-screenshare` | boolean       | When `false`, screen-share requests are auto-denied and the Share Screen button is hidden. Default `true`. Disable via `mtx-use-screenshare="false"`. |
 
 Widget **appearance and behavior** (position, colors, sizing, border radius, animation, enabled Tell/Show/Do/Human features, device visibility, header/body/greeting text, and quick-action chips) are configured in the Marketrix dashboard and fetched from the API at init. You don't set them in the embed — except in preview mode, where you pass them inline as `settings`.
 
@@ -192,7 +192,7 @@ function Preview() {
   return (
     <MarketrixWidget
       settings={{ widget_enabled: true, widget_position: 'bottom_right' /* ...WidgetSettingsData */ }}
-      mtxApiHost="https://api.marketrix.ai"
+      mtxApiHost='https://api.marketrix.ai'
     />
   );
 }
