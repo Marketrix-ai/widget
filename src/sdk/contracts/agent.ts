@@ -1,7 +1,7 @@
 import { oc } from '@orpc/contract';
 import { z } from 'zod';
 
-import { ByAgentIdSchema, MindMapSchema, paginatedListOf, PaginationSchema, SuccessSchema } from './common';
+import { ByAgentIdSchema, GraphSchema, paginatedListOf, PaginationSchema, SuccessSchema } from './common';
 import { AgentEntitySchema, AgentTypeSchema, AgentVoiceSchema } from './entities';
 
 // ---- private helpers ----
@@ -172,16 +172,16 @@ export const agentGet = oc
   .input(ByAgentIdSchema.extend({ include: z.array(z.enum(['knowledge', 'simulations'])).optional() }))
   .output(AgentEntitySchema);
 
-export const agentMindmap = oc
+export const agentGraph = oc
   .route({
     method: 'GET',
     tags: ['Agent'],
-    path: '/agent/{agent_id}/mindmap',
-    summary: 'Get agent mindmap by ID',
-    description: 'Returns the mindmap knowledge graph for the specified agent',
+    path: '/agent/{agent_id}/graph',
+    summary: 'Get agent graph by ID',
+    description: 'Returns the knowledge graph for the specified agent',
   })
   .input(ByAgentIdSchema)
-  .output(MindMapSchema);
+  .output(GraphSchema);
 
 export const agentUpdate = oc
   .route({
@@ -228,7 +228,7 @@ export const agentRoutes = {
   agentCreate,
   agentSearch,
   agentGet,
-  agentMindmap,
+  agentGraph,
   agentUpdate,
   agentDelete,
   agentIndexSimulation,

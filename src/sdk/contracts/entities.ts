@@ -48,11 +48,11 @@ export const SimulationStatusSchema = z.enum([
 export type SimulationStatus = z.infer<typeof SimulationStatusSchema>;
 
 /**
- * Mindmap generation lifecycle status on a simulation row. Values written by
- * `mindmapDispatch.ts` and `simulationHooks.ts`; relayed on the
- * `simulation/mindmap-updated` app event.
+ * Graph generation lifecycle status on a simulation row. Values written by
+ * `graphDispatch.ts` and `simulationHooks.ts`; relayed on the
+ * `simulation/graph-updated` app event.
  */
-export const MindmapStatusSchema = z.enum(['pending', 'generating', 'completed', 'failed']);
+export const GraphStatusSchema = z.enum(['pending', 'generating', 'completed', 'failed']);
 
 /**
  * Status carried on the `agent/updated` app event. The event has two emitter
@@ -230,10 +230,10 @@ export const SimulationEntitySchema = BaseEntitySchema.extend({
   source_metadata: z.record(z.string(), z.unknown()).nullish(),
   tasks: z.array(SimulationTaskEntrySchema).optional(),
   agents: z.array(AgentBadgeSchema).optional(),
-  mindmap_status: MindmapStatusSchema.optional(),
-  mindmap_steps_processed: z.number().int().nonnegative().optional(),
-  mindmap_steps_total: z.number().int().nonnegative().optional(),
-  mindmap_error: z.string().nullish(),
+  graph_status: GraphStatusSchema.optional(),
+  graph_steps_processed: z.number().int().nonnegative().optional(),
+  graph_steps_total: z.number().int().nonnegative().optional(),
+  graph_error: z.string().nullish(),
   created_by_user_id: z.number().nullish(),
   // Persona selected for this run in the Generate Simulation modal. Nullable
   // for "Generic" runs and for user-study-flow runs (which use
