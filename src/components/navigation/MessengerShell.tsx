@@ -1,22 +1,18 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import packageJson from '../../../package.json';
 import { SHADOW } from '../../design-system/shadows';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { useResize } from '../../hooks/useResize';
 import { useWidget } from '../../hooks/useWidget';
 import { createUserMessage } from '../../services/ChatService';
-import { StreamClient } from '../../services/StreamClient';
 import type { ChatMessage, InstructionType, MarketrixConfig, TaskProgress, WidgetView } from '../../types';
 import type { SuggestedActionItem } from '../../utils/suggestedActions';
 import { getPanelPositionStyle } from '../../utils/widgetPositioning';
 import { Badge } from '../base/Badge';
-import { Card } from '../base/Card';
 import { Icon } from '../base/Icon';
 import { IconButton } from '../base/IconButton';
 import { Stack } from '../base/Stack';
 import { Surface } from '../base/Surface';
-import { Text } from '../base/Text';
 import { HeaderBar } from '../blocks/HeaderBar';
 import { ChatView } from '../views/ChatView';
 import { HomeView } from '../views/HomeView';
@@ -234,52 +230,6 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
                   onStopScreenShareRef={chatViewStopScreenShareRef}
                   messageInputRef={messageInputRef}
                 />
-              )}
-              {activeView === 'help' && (
-                <Stack id='view-help' role='tabpanel' aria-labelledby='tab-help' height='full' padding='lg'>
-                  <Stack grow align='center' justify='center' gap='sm'>
-                    <Text as='span' variant='faint'>
-                      <Icon name='help' size={32} />
-                    </Text>
-                    <Text size='sm' variant='muted'>
-                      Help – coming soon
-                    </Text>
-                  </Stack>
-                  <Card style={{ margin: '0 12px 12px 12px' }}>
-                    <Text size='xs' variant='faint' style={{ display: 'block' }}>
-                      Widget v{packageJson.version}
-                    </Text>
-                    <Text size='xs' variant='faint' style={{ display: 'block' }}>
-                      API{' '}
-                      {(() => {
-                        try {
-                          return StreamClient.getInstance().isConnected() ? 'connected' : 'disconnected';
-                        } catch {
-                          return '—';
-                        }
-                      })()}
-                    </Text>
-                  </Card>
-                </Stack>
-              )}
-              {activeView === 'news' && (
-                <Stack
-                  id='view-news'
-                  role='tabpanel'
-                  aria-labelledby='tab-news'
-                  height='full'
-                  align='center'
-                  justify='center'
-                  gap='sm'
-                  padding='lg'
-                >
-                  <Text as='span' variant='faint'>
-                    <Icon name='info' size={32} />
-                  </Text>
-                  <Text size='sm' variant='muted'>
-                    News – coming soon
-                  </Text>
-                </Stack>
               )}
             </ViewTransition>
           </Surface>

@@ -6,7 +6,6 @@ import { TabBar } from '../blocks/TabBar';
 const TAB_DEFS = [
   { id: 'home' as const, icon: 'home' as const, label: 'Home' },
   { id: 'chat' as const, icon: 'chat' as const, label: 'Chat' },
-  { id: 'help' as const, icon: 'help' as const, label: 'Help' },
 ];
 
 export interface ShellTabBarProps {
