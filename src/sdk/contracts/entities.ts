@@ -168,8 +168,8 @@ export type KnowledgeData = z.infer<typeof KnowledgeEntitySchema>;
 export const QAVerdictSchema = z.enum(['passed', 'needs_healing', 'failed']);
 export type QAVerdict = z.infer<typeof QAVerdictSchema>;
 
-// ── QA Insight Response (completion payload for process/refine streams) ──
-export const QAInsightResponseSchema = z.object({
+// ── QA Uxr Response (completion payload for process/refine streams) ──
+export const QAProcessResponseSchema = z.object({
   ultimate_goal: z.string(),
   test_cases: z.array(
     z.object({
@@ -442,7 +442,7 @@ export const UserQuotaSchema = z.object({
 });
 export type UserQuotaData = z.infer<typeof UserQuotaSchema>;
 
-// Shared across root (AppEventSchema user-study/run payload) and insight domain.
+// Shared across root (AppEventSchema user-study/run payload) and UX-research domain.
 export const SuggestedSimulationSchema = z.object({
   description: z.string(),
   selected: z.boolean(),
