@@ -12,8 +12,6 @@ import {
   WorkspaceEntitySchema,
 } from './entities';
 
-// ---- widget-only schemas ----
-
 export const WidgetInfoSchema = WidgetEntitySchema.extend({
   application: ApplicationReadSchema.partial(),
   workspace: WorkspaceEntitySchema.partial(),
@@ -126,8 +124,6 @@ export const WidgetCommandSchema = z.discriminatedUnion('type', [
 ]);
 export type WidgetCommand = z.infer<typeof WidgetCommandSchema>;
 
-// ---- procedures ----
-
 export const widgetCreate = oc
   .route({
     method: 'POST',
@@ -229,8 +225,6 @@ export const widgetMessage = oc
     }),
   )
   .output(z.object({ ok: z.boolean() }));
-
-// ---- domain aggregate ----
 
 export const widgetRoutes = {
   widgetCreate,
