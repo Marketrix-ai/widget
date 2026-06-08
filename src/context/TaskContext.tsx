@@ -9,10 +9,6 @@ import type { ChatState } from './ChatContext';
 import { reduceSse, reduceStop, reduceToolDone, reduceToolProgress, type SseEffect, type SseState } from './sseReducer';
 import type { UIStateActions } from './UIStateContext';
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
 export interface TaskState {
   activeTaskId: string | null;
   isTaskRunning: boolean;
@@ -33,15 +29,7 @@ interface TaskContextType {
   taskActions: TaskActions;
 }
 
-// ---------------------------------------------------------------------------
-// Context
-// ---------------------------------------------------------------------------
-
 const TaskContext = createContext<TaskContextType | undefined>(undefined);
-
-// ---------------------------------------------------------------------------
-// Provider
-// ---------------------------------------------------------------------------
 
 interface TaskProviderProps {
   children: React.ReactNode;
@@ -82,7 +70,6 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({
   const currentModeRef = useRef(currentMode);
   currentModeRef.current = currentMode;
 
-  // Keep activeTaskIdRef in sync
   useEffect(() => {
     activeTaskIdRef.current = taskState.activeTaskId;
   }, [taskState.activeTaskId, activeTaskIdRef]);
@@ -97,13 +84,9 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({
     }
   }, []);
 
-  // -------------------------------------------------------------------------
-  // Run a pure transition against the live state and commit the result into the
-  // two React stores. The reducer owns every message/task transition; reading
-  // messages through the functional `setMessages` updater keeps the snapshot
-  // current even mid-burst (no stale ref). Task is read from `taskRef` — it only
-  // ever changes through this same path.
-  // -------------------------------------------------------------------------
+  // Run a pure transition against the live state and commit the result into the two React stores. The reducer owns
+  // every message/task transition; reading messages through the functional `setMessages` updater keeps the snapshot
+  // current even mid-burst (no stale ref). Task is read from `taskRef` — it only ever changes through this same path.
   const commit = useCallback(
     (transition: (state: SseState) => SseState) => {
       const taskBefore = { activeTaskId: taskRef.current.activeTaskId, isTaskRunning: taskRef.current.isTaskRunning };
@@ -122,9 +105,7 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({
     [setMessages, messagesRef],
   );
 
-  // -------------------------------------------------------------------------
-  // Activate pending task once both API response and SSE task/status running arrive
-  // -------------------------------------------------------------------------
+  // Activate pending task once both the API response and the SSE task/status running event arrive.
   const maybeActivateTask = useCallback(() => {
     const p = pendingTaskRef.current;
     if (p.apiTaskId && p.agentRunning) {
@@ -134,9 +115,7 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({
     }
   }, [commit]);
 
-  // -------------------------------------------------------------------------
-  // SSE Event Handler — thin wiring over the pure reducer.
-  // -------------------------------------------------------------------------
+  // SSE event handler — thin wiring over the pure reducer.
   useEffect(() => {
     if (previewMode) return;
 
@@ -280,9 +259,6 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({
     };
   }, [previewMode, commit, maybeActivateTask, addProcessedRequestId, uiActions]);
 
-  // -------------------------------------------------------------------------
-  // Public actions
-  // -------------------------------------------------------------------------
   const setTaskStateAction = useCallback(
     (payload: { activeTaskId: string | null; isTaskRunning: boolean; taskProgress?: TaskProgress[] }) => {
       setTaskState_(prev => {
@@ -312,10 +288,6 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({
 
   return <TaskContext.Provider value={{ taskState, taskActions }}>{children}</TaskContext.Provider>;
 };
-
-// ---------------------------------------------------------------------------
-// Hook
-// ---------------------------------------------------------------------------
 
 export const useTaskContext = (): TaskContextType => {
   const ctx = useContext(TaskContext);

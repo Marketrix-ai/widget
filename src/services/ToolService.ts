@@ -3,10 +3,6 @@ import { domService } from './DomService';
 import { startScreenShare } from './ScreenShareService';
 import { showModeService } from './ShowModeService';
 
-// =================================================================================================
-// Tool Data Types (the `data` field in ToolExecutionResult)
-// =================================================================================================
-
 export interface TextData {
   text: string;
 }
@@ -26,17 +22,12 @@ export interface ElementsData {
   elements: unknown[];
 }
 
-// =================================================================================================
-// Tool Response Type
-// =================================================================================================
-
 export interface ToolExecutionResult<T = TextData> {
   success: boolean;
   data: T;
   error?: string;
 }
 
-// TypeScript interfaces for tool parameters
 export interface NavigateParams {
   url: string;
   new_tab?: boolean;
@@ -868,11 +859,7 @@ export class ToolService {
       const base64 = canvas.toDataURL('image/jpeg', 0.75);
 
       video.remove();
-      // Don't stop stream as user might want to keep sharing,
-      // or we should stop if it was just for screenshot?
-      // The agent usually requests screenshot then keeps going.
-      // But if we just requested permissions for this, maybe we should stop?
-      // Original implementation reused active stream. `startScreenShare` handles reuse.
+      // Keep the stream alive — the agent usually requests a screenshot then keeps going; startScreenShare handles reuse.
 
       return { success: true, data: { text: base64 } };
     } catch (error) {

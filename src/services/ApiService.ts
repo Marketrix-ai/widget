@@ -146,5 +146,3 @@ export class ApiService {
     this.config = { ...this.config, ...newConfig };
   }
 }
-
-export default ApiService;

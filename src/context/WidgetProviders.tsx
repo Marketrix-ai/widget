@@ -18,10 +18,7 @@ import { ChatProvider, useChatContext, useChatContextInternal } from './ChatCont
 import { TaskProvider, useTaskContext } from './TaskContext';
 import { UIStateProvider, useUIStateContext } from './UIStateContext';
 
-// ---------------------------------------------------------------------------
-// Persistence bridge — single context → storage effect (innermost, sees all)
-// ---------------------------------------------------------------------------
-
+// Persistence bridge — single context → storage effect (innermost, sees all state).
 const PersistBridge: React.FC<{ previewMode: boolean }> = ({ previewMode }) => {
   const { uiState } = useUIStateContext();
   const { chatState } = useChatContext();
@@ -54,10 +51,7 @@ const PersistBridge: React.FC<{ previewMode: boolean }> = ({ previewMode }) => {
   return null;
 };
 
-// ---------------------------------------------------------------------------
-// Inner bridge — has access to UIState and Chat, mounts TaskProvider
-// ---------------------------------------------------------------------------
-
+// Inner bridge — has access to UIState and Chat, mounts TaskProvider.
 interface BridgeProps {
   children: React.ReactNode;
   previewMode: boolean;
@@ -72,9 +66,7 @@ const TaskBridge: React.FC<BridgeProps> = ({ children, previewMode }) => {
   // Live messages snapshot the SSE reducer wiring reads without stale closures
   const messagesRef = useRef<ChatMessage[]>([]);
 
-  // -------------------------------------------------------------------------
-  // One-time initialization: hydrate from ChatService + connect stream
-  // -------------------------------------------------------------------------
+  // One-time initialization: hydrate from ChatService + connect stream.
   useEffect(() => {
     if (previewMode) return;
 
@@ -91,7 +83,6 @@ const TaskBridge: React.FC<BridgeProps> = ({ children, previewMode }) => {
 
       const snapshot = chatService.restore();
 
-      // Hydrate UIState from persisted snapshot
       uiActions.applyState({
         isLoading: snapshot.isLoading,
         currentMode: snapshot.currentMode,
@@ -99,14 +90,11 @@ const TaskBridge: React.FC<BridgeProps> = ({ children, previewMode }) => {
         isMinimized: snapshot.isMinimized,
       });
 
-      // Hydrate ChatState
       messagesRef.current = snapshot.messages;
       _setMessages({ messages: snapshot.messages });
 
-      // Hydrate activeTaskId ref
       activeTaskIdRef.current = snapshot.isTaskRunning ? snapshot.activeTaskId : null;
 
-      // Connect SSE stream
       if (chatId) {
         const streamClient = StreamClient.getInstance();
         const streamConfig = configManager.getConfig();
@@ -127,7 +115,6 @@ const TaskBridge: React.FC<BridgeProps> = ({ children, previewMode }) => {
     };
 
     void init();
-    // Run once on mount
   }, []);
 
   return (
@@ -145,10 +132,7 @@ const TaskBridge: React.FC<BridgeProps> = ({ children, previewMode }) => {
   );
 };
 
-// ---------------------------------------------------------------------------
-// UIState → Chat bridge (reads UIState to inject into ChatProvider)
-// ---------------------------------------------------------------------------
-
+// UIState → Chat bridge (reads UIState to inject into ChatProvider).
 const UIStateBridge: React.FC<BridgeProps> = ({ children, previewMode }) => {
   const { uiState, uiActions } = useUIStateContext();
 
@@ -158,10 +142,6 @@ const UIStateBridge: React.FC<BridgeProps> = ({ children, previewMode }) => {
     </ChatProvider>
   );
 };
-
-// ---------------------------------------------------------------------------
-// Public export
-// ---------------------------------------------------------------------------
 
 interface WidgetProvidersProps {
   children: React.ReactNode;

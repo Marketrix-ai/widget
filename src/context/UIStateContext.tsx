@@ -2,10 +2,6 @@ import React, { createContext, useContext, useMemo, useState } from 'react';
 
 import type { InstructionType, WidgetView } from '../types';
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
 export interface UIState {
   isOpen: boolean;
   isMinimized: boolean;
@@ -34,15 +30,7 @@ interface UIStateContextType {
   uiActions: UIStateActions;
 }
 
-// ---------------------------------------------------------------------------
-// Context
-// ---------------------------------------------------------------------------
-
 const UIStateContext = createContext<UIStateContextType | undefined>(undefined);
-
-// ---------------------------------------------------------------------------
-// Provider
-// ---------------------------------------------------------------------------
 
 interface UIStateProviderProps {
   children: React.ReactNode;
@@ -96,10 +84,6 @@ export const UIStateProvider: React.FC<UIStateProviderProps> = ({
 
   return <UIStateContext.Provider value={{ uiState, uiActions }}>{children}</UIStateContext.Provider>;
 };
-
-// ---------------------------------------------------------------------------
-// Hook
-// ---------------------------------------------------------------------------
 
 export const useUIStateContext = (): UIStateContextType => {
   const ctx = useContext(UIStateContext);

@@ -40,7 +40,7 @@ export function addThinkingMarker(content: string): string {
 /**
  * Find the index of the last task message (agent message that's not system/placeholder/screen access)
  */
-export function findTaskMessageIndex(messages: ChatMessage[]): number {
+function findTaskMessageIndex(messages: ChatMessage[]): number {
   for (let i = messages.length - 1; i >= 0; i--) {
     const msg = messages[i];
     if (msg.sender === 'agent' && !msg.isSystemMessage && !msg.isScreenAccessRequest && !msg.isPlaceholder) {
@@ -244,11 +244,9 @@ export function findMessageForProgress(options: FindMessageOptions): {
 function ensureMessageStructure(message: ChatMessage): ChatMessage {
   const msg = { ...message };
 
-  // Ensure parts exist
   if (!msg.parts) {
     msg.parts = [];
 
-    // Check if content needs to be treated as a text part
     const cleanContent = msg.content.replace(/\n\n__THINKING__$/, '').trim();
     if (cleanContent) {
       msg.parts.push({
@@ -266,7 +264,7 @@ function ensureMessageStructure(message: ChatMessage): ChatMessage {
  * These are "mouse and keyboard" interactions.
  * All other tools will have hidden icons and muted text.
  */
-export const INTERACTIVE_TOOLS = new Set([
+const INTERACTIVE_TOOLS = new Set([
   'click_element',
   'type_text',
   'send_keys',
@@ -310,7 +308,6 @@ export function addProgressLine(message: ChatMessage, toolName: string, explanat
   const msg = ensureMessageStructure(message);
   const parts = msg.parts || [];
 
-  // Update Parts
   const newParts = [...parts];
   const existingPartIndex = parts.findIndex(
     part => part.type === 'progress' && part.toolName === toolName && part.status === 'in_progress',
@@ -354,7 +351,6 @@ export function markProgressLineComplete(message: ChatMessage, toolName?: string
   const msg = ensureMessageStructure(message);
   const parts = msg.parts || [];
 
-  // Update Parts
   const newParts = [...parts];
   let partIndex = -1;
   if (toolName) {
@@ -386,7 +382,6 @@ export function markProgressLineFailed(message: ChatMessage, toolName: string, e
   // when a new action starts before the previous one completes
   const shouldFilterError = error.toLowerCase().includes('cancelled by cleanup');
 
-  // Update Parts
   const newParts = [...parts];
   let partIndex = parts.map(p => (p.type === 'progress' ? p.toolName : '')).lastIndexOf(toolName);
   if (partIndex === -1) {
@@ -436,7 +431,6 @@ export function updateThinkingMarker(
   const msg = ensureMessageStructure(message);
 
   if (!isTaskRunning || (currentMode !== 'show' && currentMode !== 'do')) {
-    // Remove thinking marker
     if (hasThinkingMarker(msg.content)) {
       return {
         ...msg,
@@ -480,25 +474,16 @@ export const TOOL_NAME_MAPPING: Record<string, string> = Object.fromEntries(
  * Converts snake_case to Title Case if no mapping exists
  */
 export function getFriendlyToolName(toolName: string): string {
-  // Check explicit mapping first
   if (TOOL_NAME_MAPPING[toolName]) {
     return TOOL_NAME_MAPPING[toolName];
   }
 
-  // Fallback: Convert snake_case or camelCase to Title Case
-  // e.g. "my_custom_tool" -> "My Custom Tool"
-  // e.g. "myCustomTool" -> "My Custom Tool"
-  return (
-    toolName
-      // Insert space before capital letters (camelCase)
-      .replace(/([A-Z])/g, ' $1')
-      // Replace underscores with spaces (snake_case)
-      .replace(/_/g, ' ')
-      // Trim extra spaces
-      .trim()
-      // Capitalize first letter of each word
-      .split(' ')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-      .join(' ')
-  );
+  // Fallback: convert snake_case or camelCase to Title Case ("my_custom_tool"/"myCustomTool" -> "My Custom Tool")
+  return toolName
+    .replace(/([A-Z])/g, ' $1')
+    .replace(/_/g, ' ')
+    .trim()
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
 }

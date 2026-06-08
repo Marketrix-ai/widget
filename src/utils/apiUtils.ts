@@ -3,10 +3,6 @@
 import { getApiUrl } from '../constants/config';
 import type { MarketrixConfig } from '../types';
 
-// ============================================================================
-// Error Handling Utilities
-// ============================================================================
-
 /**
  * Check if error is a connection/network error
  * Consolidates the repeated pattern across widgetValidationService and other services

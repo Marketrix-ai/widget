@@ -40,7 +40,6 @@ import { isHTMLElement } from './utils/validation';
 // All widget CSS is isolated in Shadow DOM via bootstrap.tsx using 'index.css?inline'.
 // This ensures the widget's Tailwind CSS doesn't interfere with the app's responsive breakpoints.
 
-// Global session recorder instance
 let sessionRecorder: SessionRecorder | null = null;
 let isRecordingInitialized = false; // Flag to prevent multiple SessionRecorder instances
 let isRecorderStarting = false; // Flag to prevent concurrent initRecorder() calls
@@ -73,7 +72,6 @@ async function initializeWidgetWithConfig(
       throw new Error('WidgetService did not return widget settings');
     }
 
-    // Validate that all required settings fields exist
     const requiredSettings = [
       'widget_enabled',
       'widget_appearance',
@@ -219,7 +217,8 @@ async function initWidgetInternal(config: MarketrixConfig, container?: HTMLEleme
             if (sessionRecorder !== recorder) return;
             recordingStartPromise = null;
           });
-      } catch {
+      } catch (error) {
+        console.error('[Marketrix Widget] Failed to create SessionRecorder:', error);
         isRecorderStarting = false;
       }
     };
@@ -274,7 +273,6 @@ async function initWidgetInternal(config: MarketrixConfig, container?: HTMLEleme
   }
 }
 
-// Initialize the widget
 let isInitializing = false; // Atomic flag to prevent TOCTOU race condition
 
 export const initWidget = async (config: MarketrixConfig, container?: HTMLElement): Promise<void> => {
@@ -309,7 +307,6 @@ export const initWidget = async (config: MarketrixConfig, container?: HTMLElemen
   }
 };
 
-// Destroy the widget
 export const unmountWidget = (): void => {
   const instance = getWidgetInstance();
   if (instance) {
@@ -340,7 +337,6 @@ export const unmountWidget = (): void => {
   initPromise = null;
   window.__mtx = undefined;
 
-  // Also hide loader if present
   hideWidgetSettingsLoader();
 };
 
@@ -389,7 +385,6 @@ export const getRecordingState = (): boolean => {
   return sessionRecorder?.isActive() ?? false;
 };
 
-// Update widget configuration
 export const updateMarketrixConfig = async (newConfig: Partial<MarketrixConfig>): Promise<void> => {
   if (isWidgetInitialized()) {
     // Re-initialize with updated config
@@ -403,7 +398,6 @@ export const updateMarketrixConfig = async (newConfig: Partial<MarketrixConfig>)
   }
 };
 
-// Re-export lifecycle config getter (no wrapper / no alias)
 export { getCurrentConfig };
 
 /**
@@ -417,7 +411,6 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ settings, cont
   const containerIdRef = useRef<string | null>(null);
 
   useEffect(() => {
-    // Determine where to mount
     const parentContainer = container ?? containerRef?.current?.parentElement ?? document.body;
 
     if (!parentContainer || !isHTMLElement(parentContainer)) {
@@ -425,12 +418,10 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ settings, cont
       return;
     }
 
-    // Generate unique container ID for this widget instance
     if (!containerIdRef.current) {
       containerIdRef.current = `marketrix-widget-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
     }
 
-    // Create container and shadow DOM with unique ID
     const { container: widgetContainer, mountEl } = createWidgetContainer(
       parentContainer as HTMLElement,
       containerIdRef.current,
@@ -438,8 +429,6 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ settings, cont
 
     widgetContainerRef.current = widgetContainer;
 
-    // Create config from settings
-    // If settings are provided, this is preview mode
     const config = {
       ...createConfigFromSettings(settings, {
         mtxId,
@@ -479,8 +468,7 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ settings, cont
     };
   }, [settings, container]);
 
-  // If container is provided, return null (mounting handled in useEffect)
-  // Otherwise, return a div that will be mounted into its parent
+  // Mounting is handled in the useEffect when a container is provided; otherwise return a mount point div.
   if (container) {
     return null;
   }
@@ -493,15 +481,12 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ settings, cont
  * Supports preview, production, and dev modes
  */
 export const mountWidget = async (config: AddWidgetConfig): Promise<void> => {
-  // Signal that programmatic initialization is in progress
   setProgrammaticInitInProgress(true);
 
   const container = config.container;
 
-  // Detect mode based on provided config
   if ('settings' in config && config.settings !== undefined) {
-    // Preview mode: use settings directly, skip API calls and network ops
-    // Preview widgets are standalone - don't set global instance or production flag
+    // Preview mode: settings-driven and standalone — skip API/network ops and don't set the global production instance.
     const previewConfig = config as Extract<AddWidgetConfig, { settings: WidgetSettingsData }>;
     const { settings, container: _container, ...restConfig } = previewConfig;
     const finalConfig = {
@@ -509,10 +494,7 @@ export const mountWidget = async (config: AddWidgetConfig): Promise<void> => {
       isPreviewMode: true,
     };
     const { mountEl } = createWidgetContainer(container);
-    // Mount with previewMode=true to disable all network operations
     mountWidgetToContainer(mountEl, finalConfig, true);
-    // Don't set global widget instance for preview - it's independent
-    // Widget successfully initialized, reset flag
     setProgrammaticInitInProgress(false);
   } else if ('mtxId' in config && config.mtxId !== undefined && config.mtxKey !== undefined) {
     // Production mode: use marketrix credentials
@@ -557,11 +539,9 @@ if (typeof window !== 'undefined') {
   }, 0);
 }
 
-// Export types for external use
 export type { InstructionType } from './sdk';
 export type { AddWidgetConfig, ChatMessage, MarketrixConfig, MarketrixWidgetProps, WidgetState } from './types';
 
-// Export default for ES modules
 export default {
   MarketrixWidget,
   mountWidget,

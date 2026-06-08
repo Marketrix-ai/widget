@@ -1,5 +1,4 @@
 import { execSync } from 'node:child_process';
-import { copyFileSync, existsSync, mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { cwd } from 'node:process';
 
@@ -68,29 +67,9 @@ const getBuildConfig = (options: { minify: boolean | 'terser'; outDir: string })
     }),
     tailwindcss(),
     cssInjectedByJsPlugin(),
-    copyIndexHtmlPlugin(options.outDir),
     typescriptDeclarationPlugin(),
   ],
 });
-
-const copyIndexHtmlPlugin = (outDir: string) => {
-  return {
-    name: 'copy-index-html',
-    closeBundle() {
-      const indexPath = resolve(cwd(), 'index.html');
-      const destDir = resolve(cwd(), outDir);
-      const destPath = resolve(destDir, 'index.html');
-      if (existsSync(indexPath)) {
-        // Ensure destination directory exists
-        if (!existsSync(destDir)) {
-          mkdirSync(destDir, { recursive: true });
-        }
-        copyFileSync(indexPath, destPath);
-        console.log(`✓ Copied index.html to ${outDir}/`);
-      }
-    },
-  };
-};
 
 const typescriptDeclarationPlugin = () => {
   return {

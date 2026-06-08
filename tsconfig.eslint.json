@@ -3,6 +3,6 @@
   "compilerOptions": {
     "noEmit": true
   },
-  "include": ["src", "vite.config.ts", "vite.config.debug.ts"],
+  "include": ["src", "vite.config.ts"],
   "exclude": ["node_modules"]
 }

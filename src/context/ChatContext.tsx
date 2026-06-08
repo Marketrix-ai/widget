@@ -8,10 +8,6 @@ import type { ChatMessage, InstructionType } from '../types';
 import { addThinkingMarker } from '../utils/chat';
 import type { UIStateActions } from './UIStateContext';
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
 export interface ChatState {
   messages: ChatMessage[];
 }
@@ -38,15 +34,7 @@ interface ChatContextType {
   _setMessages: React.Dispatch<React.SetStateAction<ChatState>>;
 }
 
-// ---------------------------------------------------------------------------
-// Context
-// ---------------------------------------------------------------------------
-
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
-
-// ---------------------------------------------------------------------------
-// Provider
-// ---------------------------------------------------------------------------
 
 interface ChatProviderProps {
   children: React.ReactNode;
@@ -205,10 +193,6 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
     </ChatContext.Provider>
   );
 };
-
-// ---------------------------------------------------------------------------
-// Hook
-// ---------------------------------------------------------------------------
 
 export const useChatContext = (): Omit<ChatContextType, '_setMessages'> => {
   const ctx = useContext(ChatContext);

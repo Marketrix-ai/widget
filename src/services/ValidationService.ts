@@ -210,5 +210,3 @@ export class ValidationService {
     }
   }
 }
-
-export default ValidationService;
