@@ -1,6 +1,6 @@
 import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
 
-import { MarketrixApiService } from '../services/ApiService';
+import { ApiService } from '../services/ApiService';
 import { createAgentMessage, createUserMessage } from '../services/ChatService';
 import { configManager } from '../services/ConfigManager';
 import { StreamClient } from '../services/StreamClient';
@@ -140,7 +140,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
       addMessage(placeholderMsg);
       uiActions.setLoading(true);
 
-      const apiService = new MarketrixApiService(config);
+      const apiService = new ApiService(config);
       try {
         if (applicationId) {
           apiService.updateConfig({ mtxApp: applicationId });
