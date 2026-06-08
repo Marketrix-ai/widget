@@ -145,9 +145,6 @@ export const AgentBadgeSchema = z.object({
 });
 export type AgentBadgeData = z.infer<typeof AgentBadgeSchema>;
 
-/**
- * Knowledge base document schema
- */
 export const KnowledgeEntitySchema = BaseEntitySchema.extend({
   workspace_id: z.number(),
   application_id: z.number().optional(),
@@ -168,7 +165,6 @@ export type KnowledgeData = z.infer<typeof KnowledgeEntitySchema>;
 export const QAVerdictSchema = z.enum(['passed', 'needs_healing', 'failed']);
 export type QAVerdict = z.infer<typeof QAVerdictSchema>;
 
-// ── QA Process Response (completion payload for process/refine streams) ──
 export const QAProcessResponseSchema = z.object({
   ultimate_goal: z.string(),
   test_cases: z.array(
@@ -226,7 +222,7 @@ export const SimulationEntitySchema = BaseEntitySchema.extend({
   pinned: z.boolean().optional(),
   source: z.enum(['direct', 'qa']).optional(),
   agent_name: z.string().nullish(),
-  graph_index_id: z.string().nullish(),
+  graph_id: z.string().nullish(),
   source_metadata: z.record(z.string(), z.unknown()).nullish(),
   tasks: z.array(SimulationTaskEntrySchema).optional(),
   agents: z.array(AgentBadgeSchema).optional(),
@@ -256,7 +252,7 @@ export const AgentEntitySchema = BaseEntitySchema.extend({
   agent_description: z.string().nullish(),
   instructions: z.string().nullish(),
   image_url: z.string().nullish(),
-  graph_index_id: z.string().nullish(),
+  graph_id: z.string().nullish(),
   status: AgentStatusSchema,
   status_message: z.string().nullish(),
   learning_progress: LearningProgressSchema.nullish(),
@@ -359,8 +355,6 @@ export type StateTriggerData = z.infer<typeof StateTriggerEntitySchema>;
 export const QARunStatusSchema = z.enum(['pending', 'running', 'completed', 'failed', 'stopped']);
 export type QARunStatus = z.infer<typeof QARunStatusSchema>;
 
-// ── Activity Log ──
-
 export const ActionLogTypeSchema = z.enum([
   'user_login',
   'url_visit',
@@ -394,10 +388,6 @@ export const ActionLogTypeSchema = z.enum([
 ]);
 export type ActionLogType = z.infer<typeof ActionLogTypeSchema>;
 
-/**
- * Action log metadata schema
- * Captures common metadata fields used across different action log types
- */
 export const ActionLogMetadataSchema = z
   .object({
     details: z.string().optional(),
@@ -431,8 +421,6 @@ export type ActionLogData = z.infer<typeof ActionLogEntitySchema>;
 export const ActionLogCreateSchema = ActionLogEntitySchema.partial().extend({
   type: ActionLogTypeSchema,
 });
-
-// ── User Quota ──
 
 export const UserQuotaSchema = z.object({
   user_id: z.number(),

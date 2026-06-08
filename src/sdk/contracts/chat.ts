@@ -1,8 +1,6 @@
 import { oc } from '@orpc/contract';
 import { z } from 'zod';
 
-// ---- procedures ----
-
 export const chatCreate = oc
   .route({
     method: 'POST',
@@ -12,8 +10,6 @@ export const chatCreate = oc
     description: 'Initializes new chat thread and returns session ID',
   })
   .output(z.string());
-
-// ---- domain aggregate ----
 
 export const chatRoutes = {
   chatCreate,

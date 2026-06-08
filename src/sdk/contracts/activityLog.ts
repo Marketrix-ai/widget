@@ -4,8 +4,6 @@ import { z } from 'zod';
 import { paginatedListOf, PaginationSchema } from './common';
 import { ActionLogCreateSchema, ActionLogEntitySchema, ActionLogTypeSchema } from './entities';
 
-// ---- procedures ----
-
 export const activityLogCreate = oc
   .route({
     method: 'POST',
@@ -35,8 +33,6 @@ export const activityLogSearch = oc
       .extend(PaginationSchema.shape),
   )
   .output(paginatedListOf(ActionLogEntitySchema));
-
-// ---- domain aggregate ----
 
 export const activityLogRoutes = {
   activityLogCreate,

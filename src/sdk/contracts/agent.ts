@@ -4,8 +4,6 @@ import { z } from 'zod';
 import { ByAgentIdSchema, GraphSchema, paginatedListOf, PaginationSchema, SuccessSchema } from './common';
 import { AgentEntitySchema, AgentTypeSchema, AgentVoiceSchema } from './entities';
 
-// ---- private helpers ----
-
 const parseIds = (val: unknown): number[] => {
   if (Array.isArray(val)) return val.map(v => Number(v));
   if (typeof val === 'string') {
@@ -17,8 +15,6 @@ const parseIds = (val: unknown): number[] => {
 
 const KnowledgeIdsSchema = z.union([z.array(z.number()), z.string()]).transform(parseIds);
 const SimulationIdsSchema = z.union([z.array(z.number()), z.string()]).transform(parseIds);
-
-// ---- agent-only schemas ----
 
 export const AgentCreateSchema = AgentEntitySchema.partial().extend({
   application_id: z.coerce.number(),
@@ -41,30 +37,18 @@ export const AgentUpdateSchema = AgentEntitySchema.partial().extend({
 });
 export type AgentUpdateData = z.infer<typeof AgentUpdateSchema>;
 
-/**
- * Agent task start response schema
- * Response from agent server when starting a task
- */
 export const AgentTaskStartResponseSchema = z.object({
   text: z.string(),
   task_id: z.string().optional(),
 });
 export type AgentTaskStartResponse = z.infer<typeof AgentTaskStartResponseSchema>;
 
-/**
- * Agent task stop response schema
- * Response from agent server when stopping a task
- */
 export const AgentTaskStopResponseSchema = z.object({
   status: z.string(),
   message: z.string().optional(),
 });
 export type AgentTaskStopResponse = z.infer<typeof AgentTaskStopResponseSchema>;
 
-/**
- * Agent task status response schema
- * Response from agent server for task status queries
- */
 export const AgentTaskStatusResponseSchema = z.object({
   task_id: z.string().optional(),
   status: z.string().optional(),
@@ -126,8 +110,6 @@ export const AgentSimulationIndexResponseSchema = z.object({
   message: z.string(),
 });
 export type AgentSimulationIndexResponse = z.infer<typeof AgentSimulationIndexResponseSchema>;
-
-// ---- procedures ----
 
 export const agentCreate = oc
   .route({
@@ -221,8 +203,6 @@ export const agentIndexSimulation = oc
   })
   .input(AgentSimulationIndexRequestSchema.extend({ agent_id: z.coerce.number() }))
   .output(AgentSimulationIndexResponseSchema);
-
-// ---- domain aggregate ----
 
 export const agentRoutes = {
   agentCreate,
