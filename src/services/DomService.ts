@@ -39,8 +39,8 @@ export interface ValidatedElementResult extends ElementLookupResult {
   validation: ValidationResult;
 }
 
-export class DOMService {
-  private static instance: DOMService;
+export class DomService {
+  private static instance: DomService;
   private elementMap: Map<number, Element> = new Map();
   private elementToSequence: WeakMap<Element, number> = new WeakMap();
   private selectorMap: Map<number, string> = new Map();
@@ -54,11 +54,11 @@ export class DOMService {
     // No longer restoring state internally
   }
 
-  static getInstance(): DOMService {
-    if (!DOMService.instance) {
-      DOMService.instance = new DOMService();
+  static getInstance(): DomService {
+    if (!DomService.instance) {
+      DomService.instance = new DomService();
     }
-    return DOMService.instance;
+    return DomService.instance;
   }
 
   /**
@@ -228,11 +228,11 @@ export class DOMService {
       if (this.selectorMap.size > 0 || this.fingerprintMap.size > 0) {
         this.isIndexed = true;
         console.log(
-          `[DOMService] Restored ${this.selectorMap.size} selectors and ${this.fingerprintMap.size} fingerprints`,
+          `[DomService] Restored ${this.selectorMap.size} selectors and ${this.fingerprintMap.size} fingerprints`,
         );
       }
     } catch (e) {
-      console.warn('[DOMService] Failed to import state:', e);
+      console.warn('[DomService] Failed to import state:', e);
     }
   }
 
@@ -242,7 +242,7 @@ export class DOMService {
    */
   indexInteractableElements(): Array<[number, Element]> {
     if (this.indexingInProgress) {
-      console.warn('[DOMService] Indexing already in progress, skipping concurrent call');
+      console.warn('[DomService] Indexing already in progress, skipping concurrent call');
       return [];
     }
 
@@ -319,7 +319,7 @@ export class DOMService {
       this.isIndexed = true;
       this.indexVersion++;
 
-      console.log(`[DOMService] Indexed ${sequenceNumber} elements (version ${this.indexVersion})`);
+      console.log(`[DomService] Indexed ${sequenceNumber} elements (version ${this.indexVersion})`);
 
       return indexedElements;
     } finally {
@@ -523,7 +523,7 @@ export class DOMService {
             }
           } catch (e) {
             // Selector might be invalid, skip this element
-            console.warn(`[DOMService] Failed to apply data attributes for index ${index}:`, e);
+            console.warn(`[DomService] Failed to apply data attributes for index ${index}:`, e);
           }
         }
       }
@@ -673,7 +673,7 @@ export class DOMService {
             element = queriedElement;
           }
         } catch (e) {
-          console.warn(`[DOMService] Failed to find element by selector for index ${index}:`, e);
+          console.warn(`[DomService] Failed to find element by selector for index ${index}:`, e);
         }
       }
     }
@@ -749,4 +749,4 @@ export class DOMService {
   }
 }
 
-export const domService = DOMService.getInstance();
+export const domService = DomService.getInstance();

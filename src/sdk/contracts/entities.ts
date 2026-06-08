@@ -58,21 +58,21 @@ export const GraphStatusSchema = z.enum(['pending', 'generating', 'completed', '
  * Status carried on the `agent/updated` app event. The event has two emitter
  * lineages: (1) `agentService` + `agentLearningHooks` emit an agent-entity
  * status (`AgentStatusSchema`), and (2) the agentTask flow's `eventMapping`
- * emits a task-status (`SimulationTaskStatusSchema`). The union captures both
- * vocabularies so downstream consumers get exhaustiveness rather than `string`.
+ * emits a task-status. A `type` discriminant disambiguates the two vocabularies
+ * so consumers don't have to guess which status set a value belongs to.
  */
-export const AgentUpdatedStatusSchema = z.enum([
-  // Agent entity statuses (AgentStatusSchema)
-  'active',
-  'learning',
-  'error',
-  // Task-level statuses surfaced via agentTask flow transitions
+export const AgentUpdatedTaskStatusSchema = z.enum([
   'queued',
   'running',
   'completed',
   'failed',
   'has_question',
   'stopped',
+]);
+
+export const AgentUpdatedStatusSchema = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('agent'), status: AgentStatusSchema }),
+  z.object({ type: z.literal('task'), status: AgentUpdatedTaskStatusSchema }),
 ]);
 
 export const ApplicationTypeSchema = z.enum(['app', 'website']);
@@ -168,7 +168,7 @@ export type KnowledgeData = z.infer<typeof KnowledgeEntitySchema>;
 export const QAVerdictSchema = z.enum(['passed', 'needs_healing', 'failed']);
 export type QAVerdict = z.infer<typeof QAVerdictSchema>;
 
-// ── QA Uxr Response (completion payload for process/refine streams) ──
+// ── QA Process Response (completion payload for process/refine streams) ──
 export const QAProcessResponseSchema = z.object({
   ultimate_goal: z.string(),
   test_cases: z.array(
@@ -356,8 +356,8 @@ export type StateTriggerData = z.infer<typeof StateTriggerEntitySchema>;
  * Canonical wire vocabulary; `deriveQARunStats` returns `'running'` directly.
  * `'pending'` is the empty-task initial state.
  */
-export const QARunDerivedStatusSchema = z.enum(['pending', 'running', 'completed', 'failed', 'stopped']);
-export type QARunDerivedStatus = z.infer<typeof QARunDerivedStatusSchema>;
+export const QARunStatusSchema = z.enum(['pending', 'running', 'completed', 'failed', 'stopped']);
+export type QARunStatus = z.infer<typeof QARunStatusSchema>;
 
 // ── Activity Log ──
 

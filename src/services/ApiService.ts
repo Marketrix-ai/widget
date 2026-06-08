@@ -3,7 +3,7 @@ import type { MarketrixConfig, SendMessageRequest, SendMessageResponse } from '.
 import { sessionManager } from './SessionManager';
 import { StreamClient } from './StreamClient';
 
-export class MarketrixApiService {
+export class ApiService {
   private config: MarketrixConfig;
 
   constructor(config: MarketrixConfig) {
@@ -147,4 +147,4 @@ export class MarketrixApiService {
   }
 }
 
-export default MarketrixApiService;
+export default ApiService;

@@ -2,7 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useR
 
 import type { WidgetEvent } from '../sdk';
 import { StreamClient, type StreamStatus } from '../services/StreamClient';
-import { toolExecutionService } from '../services/ToolService';
+import { toolService } from '../services/ToolService';
 import type { ChatMessage, InstructionType, TaskProgress } from '../types';
 import { BROWSER_TOOLS } from '../types/browserTools';
 import type { ChatState } from './ChatContext';
@@ -159,7 +159,7 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({
 
     const executeToolCall = async (effect: Extract<SseEffect, { type: 'executeTool' }>) => {
       const { callId, tool, args, mode, explanation } = effect;
-      const result = await toolExecutionService.executeTool(tool, args, mode, explanation);
+      const result = await toolService.executeTool(tool, args, mode, explanation);
 
       if (result.success) {
         try {

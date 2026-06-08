@@ -11,13 +11,13 @@ export interface WidgetValidationResult {
 }
 
 /**
- * WidgetValidationService
+ * ValidationService
  *
  * Validates widget configuration by checking:
  * 1. Widget exists (via marketrix_id and marketrix_key) OR
  * 2. Agent ID and Application ID exist and match
  */
-export class WidgetValidationService {
+export class ValidationService {
   private config?: MarketrixConfig;
 
   /**
@@ -211,4 +211,4 @@ export class WidgetValidationService {
   }
 }
 
-export default WidgetValidationService;
+export default ValidationService;

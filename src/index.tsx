@@ -14,7 +14,7 @@ import { createConfigFromSettings } from './services/ConfigManager';
 import { SessionRecorder } from './services/SessionRecorder';
 import { storageService } from './services/StorageService';
 import { StreamClient } from './services/StreamClient';
-import { WidgetValidationService } from './services/ValidationService';
+import { ValidationService } from './services/ValidationService';
 import { WidgetService } from './services/WidgetService';
 import type { AddWidgetConfig, MarketrixConfig, MarketrixWidgetProps } from './types';
 import {
@@ -147,7 +147,7 @@ async function initWidgetInternal(config: MarketrixConfig, container?: HTMLEleme
   }
 
   showWidgetSettingsLoader('Validating widget configuration...');
-  const validationService = new WidgetValidationService();
+  const validationService = new ValidationService();
   const validationResult = await validationService.validateConfig(config);
 
   if (!validationResult.isValid) {

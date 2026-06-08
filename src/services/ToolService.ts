@@ -105,16 +105,16 @@ export interface ExtractParams {
   start_from_char?: number;
 }
 
-export class ToolExecutionService {
-  private static instance: ToolExecutionService;
+export class ToolService {
+  private static instance: ToolService;
 
   private constructor() {}
 
-  static getInstance(): ToolExecutionService {
-    if (!ToolExecutionService.instance) {
-      ToolExecutionService.instance = new ToolExecutionService();
+  static getInstance(): ToolService {
+    if (!ToolService.instance) {
+      ToolService.instance = new ToolService();
     }
-    return ToolExecutionService.instance;
+    return ToolService.instance;
   }
 
   async executeTool(
@@ -124,7 +124,7 @@ export class ToolExecutionService {
     explanation: string = '',
   ): Promise<ToolExecutionResult<unknown>> {
     try {
-      console.log(`[ToolExecutionService] Executing ${toolName} (mode: ${mode})`);
+      console.log(`[ToolService] Executing ${toolName} (mode: ${mode})`);
 
       if (mode === 'show' && this.requiresHighlight(toolName)) {
         const index = args.index as number | undefined;
@@ -254,11 +254,11 @@ export class ToolExecutionService {
       try {
         element.click();
       } catch (e) {
-        console.warn('[ToolExecutionService] Click error:', e);
+        console.warn('[ToolService] Click error:', e);
         try {
           element.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
         } catch (fallbackError) {
-          console.warn('[ToolExecutionService] Fallback click failed:', fallbackError);
+          console.warn('[ToolService] Fallback click failed:', fallbackError);
         }
       }
     }, 50);
@@ -881,4 +881,4 @@ export class ToolExecutionService {
   }
 }
 
-export const toolExecutionService = ToolExecutionService.getInstance();
+export const toolService = ToolService.getInstance();

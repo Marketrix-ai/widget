@@ -32,7 +32,7 @@ export const AgentCreateSchema = AgentEntitySchema.partial().extend({
   knowledge_ids: KnowledgeIdsSchema,
   simulation_ids: SimulationIdsSchema,
 });
-export type AgentCreationData = z.infer<typeof AgentCreateSchema>;
+export type AgentCreateData = z.infer<typeof AgentCreateSchema>;
 
 export const AgentUpdateSchema = AgentEntitySchema.partial().extend({
   file: z.instanceof(File).optional(),
@@ -49,7 +49,7 @@ export const AgentTaskStartResponseSchema = z.object({
   text: z.string(),
   task_id: z.string().optional(),
 });
-export type AgentTaskStartResponseData = z.infer<typeof AgentTaskStartResponseSchema>;
+export type AgentTaskStartResponse = z.infer<typeof AgentTaskStartResponseSchema>;
 
 /**
  * Agent task stop response schema
@@ -59,7 +59,7 @@ export const AgentTaskStopResponseSchema = z.object({
   status: z.string(),
   message: z.string().optional(),
 });
-export type AgentTaskStopResponseData = z.infer<typeof AgentTaskStopResponseSchema>;
+export type AgentTaskStopResponse = z.infer<typeof AgentTaskStopResponseSchema>;
 
 /**
  * Agent task status response schema
@@ -72,17 +72,17 @@ export const AgentTaskStatusResponseSchema = z.object({
   error: z.string().optional(),
   message: z.string().optional(),
 });
-export type AgentTaskStatusResponseData = z.infer<typeof AgentTaskStatusResponseSchema>;
+export type AgentTaskStatusResponse = z.infer<typeof AgentTaskStatusResponseSchema>;
 
 export const AgentSearchConfigSchema = z.object({
-  contentType: z.enum(['document', 'video', 'automation_log', 'screenshot', 'all']).optional(),
+  content_type: z.enum(['document', 'video', 'automation_log', 'screenshot', 'all']).optional(),
   context: z.string().optional(),
-  previousActions: z.array(z.string()).optional(),
+  previous_actions: z.array(z.string()).optional(),
   top: z.coerce.number().min(1).max(100).optional(),
-  minConfidence: z.coerce.number().min(0).max(1).optional(),
+  min_confidence: z.coerce.number().min(0).max(1).optional(),
   entities: z.array(z.string()).optional(),
-  useVectorSearch: z.boolean().optional(),
-  vectorThreshold: z.coerce.number().min(0).max(1).optional(),
+  use_vector_search: z.boolean().optional(),
+  vector_threshold: z.coerce.number().min(0).max(1).optional(),
 });
 export type AgentSearchConfig = z.infer<typeof AgentSearchConfigSchema>;
 
