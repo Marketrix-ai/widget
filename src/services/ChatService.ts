@@ -21,9 +21,8 @@ export interface ChatSnapshot {
 /**
  * ChatService — thin persistence layer.
  *
- * Owns only the localStorage read/write lifecycle for the widget chat context.
- * It no longer mirrors runtime state; contexts call `persist(snapshot)` from a
- * single effect and `restore()` once on mount.
+ * Owns only the localStorage read/write lifecycle for the widget chat context:
+ * contexts call `persist(snapshot)` from a single effect and `restore()` once on mount.
  */
 export class ChatService {
   private static instance: ChatService;
