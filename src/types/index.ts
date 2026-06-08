@@ -193,4 +193,4 @@ export interface MarketrixWidgetProps {
   mtxApiHost?: string;
 }
 
-export { BROWSER_TOOL_CATEGORIES, BROWSER_TOOLS } from './browserTools';
+export { BROWSER_TOOLS } from './browserTools';

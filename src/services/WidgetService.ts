@@ -118,5 +118,3 @@ export class WidgetService {
     return null;
   }
 }
-
-export default WidgetService;

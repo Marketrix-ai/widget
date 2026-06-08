@@ -1,7 +1,12 @@
 import React from 'react';
 
 import { controlSizeStyles } from '../../design-system/component-tokens';
-import { Button, Flex, Icon, type IconName, Indicator, Text } from '../base';
+import { Button } from '../base/Button';
+import { Flex } from '../base/Flex';
+import { Icon } from '../base/Icon';
+import type { IconName } from '../base/icons';
+import { Indicator } from '../base/Indicator';
+import { Text } from '../base/Text';
 
 export interface TabBarProps {
   tabs: { id: string; icon: IconName; label: string }[];

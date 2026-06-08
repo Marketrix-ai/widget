@@ -2,7 +2,12 @@ import React from 'react';
 
 import MarketrixIcon from '../../assets/marketrix-icon.svg';
 import { controlSizeStyles } from '../../design-system/component-tokens';
-import { Avatar, Flex, Icon, IconButton, Stack, Text } from '../base';
+import { Avatar } from '../base/Avatar';
+import { Flex } from '../base/Flex';
+import { Icon } from '../base/Icon';
+import { IconButton } from '../base/IconButton';
+import { Stack } from '../base/Stack';
+import { Text } from '../base/Text';
 
 export interface HeaderBarProps {
   title: string;

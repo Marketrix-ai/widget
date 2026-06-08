@@ -16,13 +16,6 @@ interface BrowserToolMetadata {
   actionType: string;
 }
 
-export const BROWSER_TOOL_CATEGORIES = {
-  navigation: 'Navigation',
-  interaction: 'Interaction',
-  extraction: 'Extraction',
-  utility: 'Utility',
-} as const;
-
 export const BROWSER_TOOLS: BrowserToolMetadata[] = [
   {
     id: 'navigate',

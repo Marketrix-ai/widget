@@ -7,10 +7,6 @@
 
 import type { WidgetSettingsData } from '../sdk';
 
-// ============================================================================
-// Generic Type Guards
-// ============================================================================
-
 /**
  * Check if an object has a specific property
  */
@@ -21,13 +17,9 @@ export function hasProperty<K extends string>(obj: unknown, key: K): obj is Reco
 /**
  * Check if a value is a non-null object
  */
-export function isNonNullObject(value: unknown): value is Record<string, unknown> {
+function isNonNullObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
-
-// ============================================================================
-// API Response Type Guards
-// ============================================================================
 
 /**
  * Type guard for WidgetSettingsData
@@ -46,10 +38,6 @@ export function isWidgetSettingsData(data: unknown): data is WidgetSettingsData 
     typeof data.widget_position === 'string'
   );
 }
-
-// ============================================================================
-// DOM Element Type Guards
-// ============================================================================
 
 /**
  * Type guard for HTMLElement

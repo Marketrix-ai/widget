@@ -15,21 +15,11 @@ import shadowStyles from '../index.css?inline';
 import type { MarketrixConfig } from '../types';
 import { isHTMLElement, isHTMLScriptElement } from './validation';
 
-// ============================================================================
-// Widget Lifecycle State
-// ============================================================================
-
-// Global widget instance state
 let widgetInstance: Root | null = null;
 let currentConfig: MarketrixConfig | null = null;
-
-// Global loader instance
 let loaderInstance: Root | null = null;
-
-// Programmatic initialization tracking flag (memoized)
 let programmaticInitInProgress = false;
-
-// Production widget singleton tracking - prevents duplicate widgets on same page
+// Prevents duplicate production widgets on the same page.
 let productionWidgetActive = false;
 
 /**
@@ -121,7 +111,6 @@ export const createWidgetContainer = (
  * @param previewMode - If true, disables network operations (for integration previews)
  */
 export const mountWidgetToContainer = (mountEl: HTMLElement, config: MarketrixConfig, previewMode = false): Root => {
-  // Create React root and render widget within the shadow root
   const root = createRoot(mountEl);
 
   root.render(
@@ -145,10 +134,6 @@ export const destroyWidgetContainer = (container: HTMLElement): void => {
   }
   container.remove();
 };
-
-// ============================================================================
-// Widget Lifecycle Management
-// ============================================================================
 
 /**
  * Get current widget instance
@@ -194,10 +179,6 @@ export const clearWidgetState = (): void => {
   productionWidgetActive = false;
 };
 
-// ============================================================================
-// Programmatic Initialization Tracking
-// ============================================================================
-
 /**
  * Set programmatic initialization in progress flag
  */
@@ -211,10 +192,6 @@ export const setProgrammaticInitInProgress = (inProgress: boolean): void => {
 export const isProgrammaticInitInProgress = (): boolean => {
   return programmaticInitInProgress;
 };
-
-// ============================================================================
-// Production Widget Singleton Guard
-// ============================================================================
 
 /**
  * Check if a production widget is already active on this page
@@ -231,10 +208,6 @@ export const isProductionWidgetActive = (): boolean => {
 export const setProductionWidgetActive = (active: boolean): void => {
   productionWidgetActive = active;
 };
-
-// ============================================================================
-// Widget Loader Management
-// ============================================================================
 
 /**
  * Show widget settings loader with optional message
@@ -267,17 +240,14 @@ export const showWidgetSettingsLoader = (message?: string): void => {
   // Attach Shadow DOM (closed) for loader
   const shadowRoot = loaderContainer.attachShadow({ mode: 'closed' });
 
-  // Inject styles
   const styleEl = document.createElement('style');
   styleEl.textContent = shadowStyles;
   shadowRoot.appendChild(styleEl);
 
-  // Create mount element
   const mountEl = document.createElement('div');
   mountEl.id = 'marketrix-widget-loader-root';
   shadowRoot.appendChild(mountEl);
 
-  // Render loader
   const root = createRoot(mountEl);
   loaderInstance = root;
 
@@ -350,7 +320,6 @@ export const autoInitializeWidget = (retryCount = 0): void => {
   if (!scriptElement || !isHTMLScriptElement(scriptElement)) {
     // If no script tags found at all, assume auto-init was not intended (e.g. using npm package)
     if (bySelector.length === 0) {
-      // Check if widget is already initialized or programmatic init is in progress
       if (isWidgetInitialized() || isProgrammaticInitInProgress()) {
         console.log(
           '[AutoInit] Script tag not found, but widget is initialized or programmatic init is in progress. Skipping.',
@@ -369,7 +338,6 @@ export const autoInitializeWidget = (retryCount = 0): void => {
       setTimeout(() => autoInitializeWidget(retryCount + 1), delay);
       return;
     }
-    // Check if widget is already initialized or programmatic init is in progress
     if (isWidgetInitialized() || isProgrammaticInitInProgress()) {
       console.log(
         '[AutoInit] Script tag not found, but widget is initialized or programmatic init is in progress. Skipping error message.',
@@ -392,7 +360,6 @@ export const autoInitializeWidget = (retryCount = 0): void => {
   }
 
   const script = scriptElement;
-  // Read widget credentials from script tag attributes
   const mtxId = script.getAttribute('mtx-id');
   const mtxKey = script.getAttribute('mtx-key');
   const mtxApiHost = script.getAttribute('mtx-api-host');
@@ -451,7 +418,6 @@ export const autoInitializeWidget = (retryCount = 0): void => {
       console.error('[AutoInit] Failed to initialize widget:', error);
     });
   } else {
-    // Check if widget is already initialized or programmatic init is in progress
     if (isWidgetInitialized() || isProgrammaticInitInProgress()) {
       console.log(
         '[AutoInit] Missing required attributes, but widget is initialized or programmatic init is in progress. Skipping error message.',

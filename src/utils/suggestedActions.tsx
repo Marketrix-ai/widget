@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { Icon } from '../components/base';
+import { Icon } from '../components/base/Icon';
 import type { MarketrixConfig } from '../types';
 
 type ChipData = {
