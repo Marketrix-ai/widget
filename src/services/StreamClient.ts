@@ -21,7 +21,7 @@ export class StreamClient {
   private reconnectDelay = 1000;
   private readonly maxReconnectDelay = 30000;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-  private config?: { mtxId?: string; mtxKey?: string; mtxAgent?: number; mtxApp?: number };
+  private config?: { mtxId?: string; mtxKey?: string; mtxApp?: number };
   private connectionId = 0;
 
   private constructor() {}
@@ -49,10 +49,7 @@ export class StreamClient {
     return this.status === 'registered';
   }
 
-  async connect(
-    chatId: string,
-    config?: { mtxId?: string; mtxKey?: string; mtxAgent?: number; mtxApp?: number },
-  ): Promise<void> {
+  async connect(chatId: string, config?: { mtxId?: string; mtxKey?: string; mtxApp?: number }): Promise<void> {
     if (this.isIntentionallyDisconnected) {
       this.isIntentionallyDisconnected = false;
     }
@@ -83,8 +80,7 @@ export class StreamClient {
       if (this.config?.mtxId && this.config?.mtxKey) {
         streamInput.marketrix_id = this.config.mtxId;
         streamInput.marketrix_key = this.config.mtxKey;
-      } else if (this.config?.mtxAgent && this.config?.mtxApp) {
-        streamInput.agent_id = this.config.mtxAgent;
+      } else if (this.config?.mtxApp) {
         streamInput.application_id = this.config.mtxApp;
       }
 
@@ -94,7 +90,6 @@ export class StreamClient {
         tab_id?: string;
         marketrix_id?: string;
         marketrix_key?: string;
-        agent_id?: number;
         application_id?: number;
       };
       const iterator = await sdk.widgetStream(streamInput as WidgetStreamInput, { signal });

@@ -73,7 +73,6 @@ export { WidgetEventSchema } from './contracts/widget';
 
 // Type-only re-exports from entities
 export type {
-  AgentData,
   ApplicationData,
   InstructionType,
   UserData,

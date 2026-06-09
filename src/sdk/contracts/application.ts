@@ -1,7 +1,7 @@
 import { oc } from '@orpc/contract';
 import { z } from 'zod';
 
-import { ByApplicationIdSchema, paginatedListOf, PaginationSchema, SuccessSchema } from './common';
+import { ByApplicationIdSchema, GraphSchema, paginatedListOf, PaginationSchema, SuccessSchema } from './common';
 import { ApplicationEntitySchema, ApplicationReadSchema, ApplicationTypeSchema, WidgetEntitySchema } from './entities';
 
 export const ApplicationFilterSchema = z.object({
@@ -70,6 +70,17 @@ export const applicationGet = oc
     }),
   );
 
+export const applicationGraph = oc
+  .route({
+    method: 'GET',
+    tags: ['Application'],
+    path: '/applications/{application_id}/graph',
+    summary: 'Get the Application Graph',
+    description: 'Returns the application-wide knowledge/experience graph aggregated from all simulations.',
+  })
+  .input(ByApplicationIdSchema)
+  .output(GraphSchema);
+
 export const applicationUpdate = oc
   .route({
     method: 'PUT',
@@ -96,6 +107,7 @@ export const applicationRoutes = {
   applicationCreate,
   applicationSearch,
   applicationGet,
+  applicationGraph,
   applicationUpdate,
   applicationDelete,
 };
