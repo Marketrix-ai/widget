@@ -48,11 +48,8 @@ export class DomService {
   private isIndexed: boolean = false;
   private indexingInProgress: boolean = false;
   private indexVersion: number = 0;
-  // Removed STORAGE_KEY as we now persist state via ChatService
 
-  private constructor() {
-    // No longer restoring state internally
-  }
+  private constructor() {}
 
   static getInstance(): DomService {
     if (!DomService.instance) {
@@ -288,7 +285,6 @@ export class DomService {
 
       while (node) {
         if (node instanceof HTMLElement) {
-          // ---- 🔥 ENHANCED INTERACTABLE DETECTION LOGIC HERE ----
           const semantic = node.matches('a[href], button, input, textarea, select, [role="button"]');
 
           const visuallyClickable = node.classList.contains('cursor-pointer') || node.classList.contains('clickable');
@@ -296,7 +292,6 @@ export class DomService {
           const hasClickHandler = 'onclick' in node && typeof (node as HTMLElement).onclick === 'function';
 
           const isNowInteractable = semantic || visuallyClickable || hasClickHandler || isInteractable(node);
-          // --------------------------------------------------------
 
           if (isNowInteractable) {
             this.elementMap.set(sequenceNumber, node);
@@ -570,7 +565,6 @@ export class DomService {
   }
 
   getElementByDataId(id: number): Element | undefined {
-    // Validate index freshness? (Optional)
     return this.elementMap.get(id);
   }
 

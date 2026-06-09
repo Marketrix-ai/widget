@@ -54,7 +54,6 @@ type ProgressStatus = 'in_progress' | 'completed' | 'failed';
 
 /**
  * Apply a progress-line transition to the message that owns the active task.
- * Mirrors the original `updateProgressForTool` body verbatim.
  */
 function applyProgress(
   messages: ChatMessage[],

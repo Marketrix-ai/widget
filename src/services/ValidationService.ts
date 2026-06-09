@@ -1,4 +1,4 @@
-import { type AgentData, type ApplicationData, sdk, type WidgetData } from '../sdk';
+import { type ApplicationData, sdk, type WidgetData } from '../sdk';
 import type { MarketrixConfig } from '../types';
 import { extractErrorMessage, handleApiError } from '../utils/apiUtils';
 
@@ -6,7 +6,6 @@ export interface WidgetValidationResult {
   isValid: boolean;
   error?: string;
   widget?: WidgetData;
-  agent?: AgentData;
   application?: ApplicationData;
 }
 
@@ -14,27 +13,27 @@ export interface WidgetValidationResult {
  * ValidationService
  *
  * Validates widget configuration by checking:
- * 1. Widget exists (via marketrix_id and marketrix_key) OR
- * 2. Agent ID and Application ID exist and match
+ * 1. Widget exists (via marketrix_id and marketrix_key) and its application exists, OR
+ * 2. The application ID exists
  */
 export class ValidationService {
   private config?: MarketrixConfig;
 
   /**
    * Validate widget configuration
-   * Handles both mtxId+mtxKey and mtxApp+mtxAgent cases
+   * Handles both mtxId+mtxKey and mtxApp cases
    */
   async validateConfig(config: MarketrixConfig): Promise<WidgetValidationResult> {
     this.config = config;
     if (config.mtxId && config.mtxKey) {
       return this.validateByMarketrixId(config.mtxId, config.mtxKey);
     }
-    if (config.mtxApp && config.mtxAgent) {
-      return this.validateByAgentAndApplication(config.mtxApp, config.mtxAgent);
+    if (config.mtxApp) {
+      return this.validateByApplication(config.mtxApp);
     }
     return {
       isValid: false,
-      error: 'Please provide either (mtxId + mtxKey) OR (mtxApp + mtxAgent)',
+      error: 'Please provide either (mtxId + mtxKey) OR mtxApp',
     };
   }
 
@@ -101,51 +100,35 @@ export class ValidationService {
         };
       }
 
-      // Step 2: Validate agent ID exists
-      if (!activeWidget.agent_id) {
+      // Step 2: Validate the application ID exists
+      if (!activeWidget.application_id) {
         return {
           isValid: false,
-          error: 'Widget missing agent_id',
+          error: 'Widget missing application_id',
           widget: activeWidget,
         };
       }
 
-      console.log('Validating agent ID...', activeWidget.agent_id);
+      console.log('Validating application ID...', activeWidget.application_id);
 
       try {
-        const agent = await sdk.agentGet({ agent_id: activeWidget.agent_id });
-
-        // Step 3: Validate application ID exists
-        if (!activeWidget.application_id) {
-          return {
-            isValid: false,
-            error: 'Widget missing application_id',
-            widget: activeWidget,
-            agent,
-          };
-        }
-
-        console.log('Validating application ID...', activeWidget.application_id);
-
         const application = await sdk.applicationGet({ application_id: activeWidget.application_id });
 
         console.log('Widget validation successful', {
           widget: activeWidget.id,
-          agent: agent.id,
           application: application.id,
         });
 
         return {
           isValid: true,
           widget: activeWidget,
-          agent,
           application,
         };
-      } catch (agentError) {
-        console.error('Error validating agent:', agentError);
+      } catch (applicationError) {
+        console.error('Error validating application:', applicationError);
         return {
           isValid: false,
-          error: `Failed to validate agent: ${extractErrorMessage(agentError)}`,
+          error: `Failed to validate application: ${extractErrorMessage(applicationError)}`,
           widget: activeWidget,
         };
       }
@@ -156,17 +139,15 @@ export class ValidationService {
   }
 
   /**
-   * Validate by mtxApp and mtxAgent directly
-   * Validates application and agent by ID
+   * Validate by mtxApp directly
+   * Validates the application by ID
    */
-  private async validateByAgentAndApplication(mtxApp: number, mtxAgent: number): Promise<WidgetValidationResult> {
+  private async validateByApplication(mtxApp: number): Promise<WidgetValidationResult> {
     try {
-      console.log('Validating application and agent by ID...', { mtxApp, mtxAgent });
+      console.log('Validating application by ID...', { mtxApp });
 
-      // Step 1: Validate application exists
       const application = await sdk.applicationGet({ application_id: mtxApp });
 
-      // Log application data as object
       console.log('Application found:', {
         id: application.id,
         name: application.name,
@@ -175,40 +156,15 @@ export class ValidationService {
         allowed_domains: application.allowed_domains,
       });
 
-      // Step 2: Validate agent exists
-      const agent = await sdk.agentGet({ agent_id: mtxAgent });
-
-      // Log agent data as object
-      console.log('Agent found:', {
-        id: agent.id,
-        agent_name: agent.agent_name,
-        application_id: agent.application_id,
-        agent_type: agent.agent_type,
-      });
-
-      // Step 3: Validate that agent's application_id matches the provided mtx-app
-      if (agent.application_id !== mtxApp) {
-        return {
-          isValid: false,
-          error: `Agent ID ${mtxAgent} belongs to application ID ${agent.application_id}, but provided application ID is ${mtxApp}. Please verify the application ID matches the agent's application_id.`,
-          application,
-          agent,
-        };
-      }
-
-      // Validation successful
-      console.log('Validation successful:', { application_id: mtxApp, agent_id: mtxAgent });
+      console.log('Validation successful:', { application_id: mtxApp });
 
       return {
         isValid: true,
         application,
-        agent,
       };
     } catch (error) {
-      console.error('Agent and application validation error:', error);
-      return handleApiError(error, 'Agent and application validation', this.config);
+      console.error('Application validation error:', error);
+      return handleApiError(error, 'Application validation', this.config);
     }
   }
 }
-
-export default ValidationService;

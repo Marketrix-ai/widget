@@ -2,7 +2,6 @@ import type { InstructionType, WidgetSettingsData } from '../sdk';
 
 // Re-export SDK types for proper type usage
 export type {
-  AgentData,
   ApplicationData,
   InstructionType,
   UserData,
@@ -30,13 +29,12 @@ export type {
  */
 export type MarketrixConfig = Partial<WidgetSettingsData> & {
   // Core SDK fields (from WidgetEntitySchema)
-  // Either mtxId/mtxKey OR mtxApp/mtxAgent must be provided
+  // Either mtxId/mtxKey OR mtxApp must be provided
   mtxId?: string; // maps to marketrix_id from SDK (production mode)
   mtxKey?: string; // maps to marketrix_key from SDK (production mode)
 
-  // Alternative: Direct application and agent IDs (dev mode)
+  // Alternative: Direct application ID (dev mode)
   mtxApp?: number; // Application ID
-  mtxAgent?: number; // Agent ID (maps to agent_id)
 
   // Optional user ID for logging widget questions
   userId?: number; // User ID to associate with widget questions
@@ -59,10 +57,6 @@ export type MarketrixConfig = Partial<WidgetSettingsData> & {
   show_widget?: boolean;
   /** Controls screen sharing prompts and button. When false, screen access requests are auto-denied and Share Screen button is hidden. Default: true */
   use_screenshare?: boolean;
-
-  // Agent identity fields (passed through from agent settings)
-  agent_name?: string;
-  agent_description?: string;
 };
 
 export interface ChatMessage {
@@ -146,7 +140,6 @@ export type AddWidgetConfig = (
       mtxId?: never;
       mtxKey?: never;
       mtxApp?: never;
-      mtxAgent?: never;
     }
   | {
       // Production mode: provide marketrix credentials
@@ -154,15 +147,13 @@ export type AddWidgetConfig = (
       mtxId: string;
       mtxKey: string;
       mtxApp?: never;
-      mtxAgent?: never;
     }
   | {
-      // Dev mode: provide application and agent IDs
+      // Dev mode: provide the application ID
       settings?: never;
       mtxId?: never;
       mtxKey?: never;
       mtxApp: number;
-      mtxAgent: number;
     }
 ) & {
   // Optional container to mount widget within
@@ -193,4 +184,4 @@ export interface MarketrixWidgetProps {
   mtxApiHost?: string;
 }
 
-export { BROWSER_TOOL_CATEGORIES, BROWSER_TOOLS } from './browserTools';
+export { BROWSER_TOOLS } from './browserTools';

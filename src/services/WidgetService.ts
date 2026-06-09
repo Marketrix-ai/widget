@@ -83,7 +83,6 @@ export class WidgetService {
       return {
         id: 0,
         application_id: this.mtxApp || 0,
-        agent_id: 0,
         type: 'widget' as const,
         settings: defaultSettings,
         status: 'active' as const,
@@ -118,5 +117,3 @@ export class WidgetService {
     return null;
   }
 }
-
-export default WidgetService;

@@ -11,10 +11,8 @@ export const BaseEntitySchema = z.object({
   updated_at: z.coerce.date().optional(),
 });
 
-// ── Shared input helpers ──
 export const ByIdSchema = z.object({ id: z.coerce.number() });
 export const BySlugSchema = z.object({ slug: z.string() });
-export const ByAgentIdSchema = z.object({ agent_id: z.coerce.number() });
 export const ByWidgetIdSchema = z.object({ widget_id: z.coerce.number() });
 export const BySimulationIdSchema = z.object({ simulation_id: z.coerce.number() });
 export const ByApplicationIdSchema = z.object({ application_id: z.coerce.number() });
@@ -24,8 +22,6 @@ export const PaginationSchema = z.object({
   limit: z.coerce.number().optional().default(50),
   offset: z.coerce.number().optional().default(0),
 });
-
-// ── List wrappers ──
 
 /** Paginated list for unbounded queries — includes total/limit/offset for pagination */
 export const paginatedListOf = <T extends z.ZodTypeAny>(schema: T) =>

@@ -59,15 +59,7 @@ export class ShowModeService {
     this.setupVisibilityMonitoring();
 
     if (isClickAction) {
-      // For click actions, we let the event propagate first (to trigger the actual click)
-      // and then we resolve. But the overlay is in the way.
-      // We used pointer-events: none on highlight, but the popup might be blocking?
-      // Or we want the overlay to catch the click (as confirmation) and THEN we click the element?
-      // The 'isClickAction' implies the user is clicking the element THROUGH the highlight.
-      // But highlight has pointer-events: none. So the click goes to the element directly?
-      // If the click goes to the element directly, our document listener catches it.
-      // But if the element has stopPropagation, our listener might not catch it in bubble phase.
-      // We use capture: true, so we catch it first.
+      // Highlight uses pointer-events:none so the click reaches the element; we capture it on document first.
       this.setupClickHandler();
     }
 
@@ -220,11 +212,6 @@ export class ShowModeService {
     const popupHeight = 120; // Approx height
     const spacing = 20;
     const padding = 10;
-
-    // Simple logic for now: prefer right, then left, then top, then bottom
-    // ... (Implementation of smart positioning logic similar to original)
-    // For brevity in this refactor, I'll implement a simpler version or copy logic.
-    // I will copy the logic because it's good.
 
     const elementCenterX = rect.left + rect.width / 2;
     const elementCenterY = rect.top + rect.height / 2;

@@ -5,23 +5,6 @@ import { BaseEntitySchema, EntityStatusSchema } from './common';
 export const WorkspacePackageSchema = z.enum(['free', 'startup', 'growth', 'enterprise']);
 export type WorkspacePackage = z.infer<typeof WorkspacePackageSchema>;
 
-export const AgentTypeSchema = z.enum(['human', 'ai']);
-export type AgentType = z.infer<typeof AgentTypeSchema>;
-
-export const AgentVoiceSchema = z.enum(['male', 'female']);
-export type AgentVoice = z.infer<typeof AgentVoiceSchema>;
-
-export const AgentStatusSchema = z.enum(['active', 'learning', 'error']);
-export type AgentStatus = z.infer<typeof AgentStatusSchema>;
-
-// Learning progress uses nullable boolean:
-// - null: callback not yet received
-// - true: callback received with success
-// - false: callback received with failure
-export const LearningProgressSchema = z.object({
-  graph_index_created: z.boolean().nullable(),
-});
-
 export const KnowledgeTypeSchema = z.enum(['document', 'video']);
 export type KnowledgeType = z.infer<typeof KnowledgeTypeSchema>;
 
@@ -30,12 +13,8 @@ export type KnowledgeSource = z.infer<typeof KnowledgeSourceSchema>;
 
 export const QAFlowStatusSchema = z.enum(['pending', 'processing', 'waiting_review', 'completed', 'failed']);
 
-/**
- * Simulation parent status — canonical wire vocabulary matching the
- * `simulation_status` Postgres ENUM and the `SimulationStatus` proto enum.
- * Wave-14 added `has_question` (parent reflects a task awaiting answer);
- * V56 migration adds the corresponding PG enum value.
- */
+// Canonical wire vocabulary matching the `simulation_status` Postgres ENUM and the
+// `SimulationStatus` proto enum.
 export const SimulationStatusSchema = z.enum([
   'queued',
   'running',
@@ -53,27 +32,6 @@ export type SimulationStatus = z.infer<typeof SimulationStatusSchema>;
  * `simulation/graph-updated` app event.
  */
 export const GraphStatusSchema = z.enum(['pending', 'generating', 'completed', 'failed']);
-
-/**
- * Status carried on the `agent/updated` app event. The event has two emitter
- * lineages: (1) `agentService` + `agentLearningHooks` emit an agent-entity
- * status (`AgentStatusSchema`), and (2) the agentTask flow's `eventMapping`
- * emits a task-status. A `type` discriminant disambiguates the two vocabularies
- * so consumers don't have to guess which status set a value belongs to.
- */
-export const AgentUpdatedTaskStatusSchema = z.enum([
-  'queued',
-  'running',
-  'completed',
-  'failed',
-  'has_question',
-  'stopped',
-]);
-
-export const AgentUpdatedStatusSchema = z.discriminatedUnion('type', [
-  z.object({ type: z.literal('agent'), status: AgentStatusSchema }),
-  z.object({ type: z.literal('task'), status: AgentUpdatedTaskStatusSchema }),
-]);
 
 export const ApplicationTypeSchema = z.enum(['app', 'website']);
 export type ApplicationType = z.infer<typeof ApplicationTypeSchema>;
@@ -135,19 +93,6 @@ export const WorkspaceEntitySchema = BaseEntitySchema.extend({
 });
 export type WorkspaceData = z.infer<typeof WorkspaceEntitySchema>;
 
-/**
- * Lightweight agent badge for embedding in other entities
- */
-export const AgentBadgeSchema = z.object({
-  id: z.number(),
-  agent_name: z.string(),
-  image_url: z.string().nullish(),
-});
-export type AgentBadgeData = z.infer<typeof AgentBadgeSchema>;
-
-/**
- * Knowledge base document schema
- */
 export const KnowledgeEntitySchema = BaseEntitySchema.extend({
   workspace_id: z.number(),
   application_id: z.number().optional(),
@@ -157,7 +102,6 @@ export const KnowledgeEntitySchema = BaseEntitySchema.extend({
   file_url: z.string(),
   source_url: z.string().nullish(), // Original URL for URL-based documents
   source: KnowledgeSourceSchema.default('user').optional(),
-  agents: z.array(AgentBadgeSchema).optional(),
 });
 export type KnowledgeData = z.infer<typeof KnowledgeEntitySchema>;
 
@@ -168,7 +112,6 @@ export type KnowledgeData = z.infer<typeof KnowledgeEntitySchema>;
 export const QAVerdictSchema = z.enum(['passed', 'needs_healing', 'failed']);
 export type QAVerdict = z.infer<typeof QAVerdictSchema>;
 
-// ── QA Process Response (completion payload for process/refine streams) ──
 export const QAProcessResponseSchema = z.object({
   ultimate_goal: z.string(),
   test_cases: z.array(
@@ -216,7 +159,6 @@ export type SimulationTaskEntry = z.infer<typeof SimulationTaskEntrySchema>;
 
 export const SimulationEntitySchema = BaseEntitySchema.extend({
   application_id: z.number(),
-  agent_id: z.number(),
   job_id: z.string(),
   browser_session_id: z.string().nullish(),
   status: SimulationStatusSchema,
@@ -225,11 +167,9 @@ export const SimulationEntitySchema = BaseEntitySchema.extend({
   instructions: z.string().nullish(),
   pinned: z.boolean().optional(),
   source: z.enum(['direct', 'qa']).optional(),
-  agent_name: z.string().nullish(),
-  graph_index_id: z.string().nullish(),
+  graph_id: z.string().nullish(),
   source_metadata: z.record(z.string(), z.unknown()).nullish(),
   tasks: z.array(SimulationTaskEntrySchema).optional(),
-  agents: z.array(AgentBadgeSchema).optional(),
   graph_status: GraphStatusSchema.optional(),
   graph_steps_processed: z.number().int().nonnegative().optional(),
   graph_steps_total: z.number().int().nonnegative().optional(),
@@ -245,30 +185,6 @@ export const SimulationEntitySchema = BaseEntitySchema.extend({
   has_question: z.boolean().optional(),
 });
 export type SimulationData = z.infer<typeof SimulationEntitySchema>;
-
-export const AgentEntitySchema = BaseEntitySchema.extend({
-  workspace_id: z.number(),
-  user_id: z.number().nullish(),
-  application_id: z.number(),
-  agent_name: z.string(),
-  agent_type: AgentTypeSchema,
-  agent_voice: AgentVoiceSchema,
-  agent_description: z.string().nullish(),
-  instructions: z.string().nullish(),
-  image_url: z.string().nullish(),
-  graph_index_id: z.string().nullish(),
-  status: AgentStatusSchema,
-  status_message: z.string().nullish(),
-  learning_progress: LearningProgressSchema.nullish(),
-  learning_started_at: z.coerce.date().nullish(),
-  workspace: WorkspaceEntitySchema.optional(),
-  user: UserEntitySchema.optional(),
-  knowledge: z.array(KnowledgeEntitySchema).optional(),
-  simulations: z.array(SimulationEntitySchema).optional(),
-  simulation_count: z.number().int().nonnegative().optional(),
-  knowledge_count: z.number().int().nonnegative().optional(),
-});
-export type AgentData = z.infer<typeof AgentEntitySchema>;
 
 export const ApplicationEntitySchema = BaseEntitySchema.extend({
   workspace_id: z.number(),
@@ -326,7 +242,6 @@ export type WidgetSettingsData = z.infer<typeof WidgetSettingsDataSchema>;
 
 export const WidgetEntitySchema = BaseEntitySchema.extend({
   application_id: z.number(),
-  agent_id: z.number(),
   type: WidgetTypeSchema,
   settings: WidgetSettingsDataSchema,
   status: EntityStatusSchema,
@@ -359,8 +274,6 @@ export type StateTriggerData = z.infer<typeof StateTriggerEntitySchema>;
 export const QARunStatusSchema = z.enum(['pending', 'running', 'completed', 'failed', 'stopped']);
 export type QARunStatus = z.infer<typeof QARunStatusSchema>;
 
-// ── Activity Log ──
-
 export const ActionLogTypeSchema = z.enum([
   'user_login',
   'url_visit',
@@ -368,9 +281,6 @@ export const ActionLogTypeSchema = z.enum([
   'create_user',
   'update_user',
   'delete_user',
-  'create_agent',
-  'update_agent',
-  'delete_agent',
   'create_application',
   'update_application',
   'delete_application',
@@ -394,10 +304,6 @@ export const ActionLogTypeSchema = z.enum([
 ]);
 export type ActionLogType = z.infer<typeof ActionLogTypeSchema>;
 
-/**
- * Action log metadata schema
- * Captures common metadata fields used across different action log types
- */
 export const ActionLogMetadataSchema = z
   .object({
     details: z.string().optional(),
@@ -431,8 +337,6 @@ export type ActionLogData = z.infer<typeof ActionLogEntitySchema>;
 export const ActionLogCreateSchema = ActionLogEntitySchema.partial().extend({
   type: ActionLogTypeSchema,
 });
-
-// ── User Quota ──
 
 export const UserQuotaSchema = z.object({
   user_id: z.number(),

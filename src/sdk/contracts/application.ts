@@ -1,10 +1,8 @@
 import { oc } from '@orpc/contract';
 import { z } from 'zod';
 
-import { ByApplicationIdSchema, paginatedListOf, PaginationSchema, SuccessSchema } from './common';
+import { ByApplicationIdSchema, GraphSchema, paginatedListOf, PaginationSchema, SuccessSchema } from './common';
 import { ApplicationEntitySchema, ApplicationReadSchema, ApplicationTypeSchema, WidgetEntitySchema } from './entities';
-
-// ---- application-only schemas ----
 
 export const ApplicationFilterSchema = z.object({
   application_id: z.coerce.number().optional(),
@@ -20,8 +18,6 @@ export type ApplicationCreateData = z.infer<typeof ApplicationCreateSchema>;
 
 export const ApplicationUpdateSchema = ApplicationEntitySchema.partial().omit({ workspace_id: true, slug: true });
 export type ApplicationUpdateData = z.infer<typeof ApplicationUpdateSchema>;
-
-// ---- procedures ----
 
 export const applicationCreate = oc
   .route({
@@ -74,6 +70,17 @@ export const applicationGet = oc
     }),
   );
 
+export const applicationGraph = oc
+  .route({
+    method: 'GET',
+    tags: ['Application'],
+    path: '/applications/{application_id}/graph',
+    summary: 'Get the Application Graph',
+    description: 'Returns the application-wide knowledge/experience graph aggregated from all simulations.',
+  })
+  .input(ByApplicationIdSchema)
+  .output(GraphSchema);
+
 export const applicationUpdate = oc
   .route({
     method: 'PUT',
@@ -96,12 +103,11 @@ export const applicationDelete = oc
   .input(ByApplicationIdSchema)
   .output(SuccessSchema);
 
-// ---- domain aggregate ----
-
 export const applicationRoutes = {
   applicationCreate,
   applicationSearch,
   applicationGet,
+  applicationGraph,
   applicationUpdate,
   applicationDelete,
 };

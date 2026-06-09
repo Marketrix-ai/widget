@@ -3,7 +3,6 @@ import { z } from 'zod';
 
 import { ByWidgetIdSchema, paginatedListOf, PaginationSchema } from './common';
 import {
-  AgentEntitySchema,
   ApplicationReadSchema,
   UserEntitySchema,
   WidgetEntitySchema,
@@ -12,36 +11,23 @@ import {
   WorkspaceEntitySchema,
 } from './entities';
 
-// ---- widget-only schemas ----
-
 export const WidgetInfoSchema = WidgetEntitySchema.extend({
   application: ApplicationReadSchema.partial(),
   workspace: WorkspaceEntitySchema.partial(),
   user: UserEntitySchema.partial(),
-  agent: AgentEntitySchema.partial(),
 });
 export type WidgetInfoData = z.infer<typeof WidgetInfoSchema>;
-
-/**
- * Widget search result schema — includes optional eager-loaded agent
- */
-export const WidgetWithAgentSchema = WidgetEntitySchema.extend({
-  agent: AgentEntitySchema.partial().optional(),
-});
-export type WidgetWithAgentData = z.infer<typeof WidgetWithAgentSchema>;
 
 /**
  * Application with widgets schema — matches API response structure
  */
 export const ApplicationWithWidgetsSchema = ApplicationReadSchema.extend({
   widgets: z.array(WidgetEntitySchema).optional(),
-  agents: z.array(AgentEntitySchema).optional(),
 });
 export type ApplicationWithWidgetsData = z.infer<typeof ApplicationWithWidgetsSchema>;
 
 export const WidgetCreateSchema = WidgetEntitySchema.partial().extend({
   application_id: z.number().positive(),
-  agent_id: z.number().positive(),
   type: WidgetTypeSchema,
   settings: WidgetSettingsDataSchema.optional(),
 });
@@ -126,8 +112,6 @@ export const WidgetCommandSchema = z.discriminatedUnion('type', [
 ]);
 export type WidgetCommand = z.infer<typeof WidgetCommandSchema>;
 
-// ---- procedures ----
-
 export const widgetCreate = oc
   .route({
     method: 'POST',
@@ -154,11 +138,10 @@ export const widgetSearch = oc
         application_id: z.coerce.number().optional(),
         marketrix_id: z.string().optional(),
         marketrix_key: z.string().optional(),
-        include: z.array(z.enum(['agent'])).optional(),
       })
       .extend(PaginationSchema.shape),
   )
-  .output(paginatedListOf(WidgetWithAgentSchema));
+  .output(paginatedListOf(WidgetEntitySchema));
 
 export const widgetGetDefaults = oc
   .route({
@@ -208,7 +191,6 @@ export const widgetStream = oc
       tab_id: z.string().optional(),
       marketrix_id: z.string().optional(),
       marketrix_key: z.string().optional(),
-      agent_id: z.coerce.number().optional(),
       application_id: z.coerce.number().optional(),
     }),
   )
@@ -229,8 +211,6 @@ export const widgetMessage = oc
     }),
   )
   .output(z.object({ ok: z.boolean() }));
-
-// ---- domain aggregate ----
 
 export const widgetRoutes = {
   widgetCreate,

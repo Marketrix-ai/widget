@@ -1,7 +1,9 @@
 import React from 'react';
 
 import { useWidget } from '../../hooks/useWidget';
-import { Button, Stack, Text } from '../base';
+import { Button } from '../base/Button';
+import { Stack } from '../base/Stack';
+import { Text } from '../base/Text';
 
 interface SuggestedAction {
   id: string;

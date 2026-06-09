@@ -11,7 +11,7 @@ import { domService } from '../services/DomService';
  * Get all interactive elements on the page, ordered by DOM position.
  * Interactive elements include: buttons, inputs, links, select elements, etc.
  */
-export function getAllInteractiveElements(): HTMLElement[] {
+function getAllInteractiveElements(): HTMLElement[] {
   const selectors = [
     'button',
     'input',
@@ -29,11 +29,9 @@ export function getAllInteractiveElements(): HTMLElement[] {
   const elements: HTMLElement[] = [];
   const seen = new Set<HTMLElement>();
 
-  // Collect all interactive elements
   for (const selector of selectors) {
     const matches = document.querySelectorAll<HTMLElement>(selector);
     for (const el of matches) {
-      // Skip hidden elements and elements that are not visible
       if (!seen.has(el) && isElementVisible(el) && isElementInteractive(el)) {
         elements.push(el);
         seen.add(el);
@@ -46,11 +44,9 @@ export function getAllInteractiveElements(): HTMLElement[] {
     const rectA = a.getBoundingClientRect();
     const rectB = b.getBoundingClientRect();
 
-    // First compare by vertical position
     if (Math.abs(rectA.top - rectB.top) > 10) {
       return rectA.top - rectB.top;
     }
-    // Then by horizontal position
     return rectA.left - rectB.left;
   });
 }

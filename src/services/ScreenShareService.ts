@@ -46,7 +46,7 @@ export async function startScreenShare(): Promise<MediaStream> {
  * Get the current active MediaStream, if any.
  * @returns The active MediaStream or null
  */
-export function getActiveStream(): MediaStream | null {
+function getActiveStream(): MediaStream | null {
   // Check if stream is still active
   if (activeStream?.active) {
     const videoTracks = activeStream.getVideoTracks();

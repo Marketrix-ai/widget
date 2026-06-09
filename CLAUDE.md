@@ -46,7 +46,7 @@ npm run tag <version>    # scripts/release.sh — see Release
 
 Two typed oRPC procedures, both defined in `src/sdk/contracts/widget.ts`:
 
-- **`widgetStream`** — GET `/widget/stream`, output `eventIterator(WidgetEventSchema)` (SSE). Input `{ chat_id, tab_id?, marketrix_id?, marketrix_key?, agent_id?, application_id? }`. Server → widget.
+- **`widgetStream`** — GET `/widget/stream`, output `eventIterator(WidgetEventSchema)` (SSE). Input `{ chat_id, tab_id?, marketrix_id?, marketrix_key?, application_id? }`. Server → widget.
 - **`widgetMessage`** — POST `/widget/message`, input `{ chat_id, command: WidgetCommandSchema }`, output `{ ok }`. Widget → server.
 
 Both payloads are Zod **discriminated unions on `type`**:
@@ -78,7 +78,7 @@ The widget's SDK is a **scoped mirror** of the api contract, generated from the 
 
 - `src/sdk/index.ts` exports the `sdk` proxy (forwards to the current oRPC client) + `configureSdk` + runtime/type re-exports (`WidgetEventSchema`, `WidgetSettingsDataSchema`, contract types).
 - `src/sdk/contract.ts` assembles `widgetContract`.
-- `src/sdk/contracts/*.ts` are the per-domain fragments: `widget.ts`, `agent.ts`, `application.ts`, `chat.ts`, `entities.ts`, `common.ts`, `activityLog.ts`. There is **no** `src/sdk/routes.ts` and **no** `src/sdk/schema.ts` (re-exports come from `index.ts`).
+- `src/sdk/contracts/*.ts` are the per-domain fragments: `widget.ts`, `application.ts`, `chat.ts`, `entities.ts`, `common.ts`, `activityLog.ts`. There is **no** `src/sdk/routes.ts` and **no** `src/sdk/schema.ts` (re-exports come from `index.ts`).
 
 Drift is enforced by `.github/workflows/contract-drift.yml` (PRs touching `src/sdk/**`, weekly Mon 06:00, manual): it sparse-checkouts `Marketrix-ai/api@dev` (`contracts/`, `sdk/`, `scripts/sync-consumers.mjs`) and runs `node .api-src/scripts/sync-consumers.mjs widget --check --api-root .api-src --dest src/sdk`. It **hard-requires the `CONTRACTS_READ_TOKEN` secret** (fine-grained PAT, Contents:read on `Marketrix-ai/api`) and fails fast without it. Don't hand-edit `src/sdk/contracts/*` — regenerate from the api side (root `sync-contracts` skill) and re-run the sync, or the gate fails.
 

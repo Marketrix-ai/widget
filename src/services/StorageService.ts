@@ -158,8 +158,6 @@ class StorageService {
     this.saveContext();
   }
 
-  // ========== Chat ID ==========
-
   /**
    * Check if a string is a valid chat_id
    */
@@ -201,8 +199,6 @@ class StorageService {
     }
   }
 
-  // ========== Messages ==========
-
   getMessages(): StoredMessage[] {
     return this.getContext().messages;
   }
@@ -210,8 +206,6 @@ class StorageService {
   setMessages(messages: StoredMessage[]): void {
     this.updateContext({ messages });
   }
-
-  // ========== Chat State ==========
 
   getChatState(): Pick<
     MarketrixChatContext,
@@ -240,8 +234,6 @@ class StorageService {
     this.updateContext(state);
   }
 
-  // ========== Config ==========
-
   getConfig(): MarketrixConfig | null {
     return this.getContext().config;
   }
@@ -249,8 +241,6 @@ class StorageService {
   setConfig(config: MarketrixConfig | null): void {
     this.updateContext({ config });
   }
-
-  // ========== Clear ==========
 
   clear(): void {
     this.context = { ...DEFAULT_CONTEXT };

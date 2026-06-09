@@ -105,5 +105,3 @@ export const WidgetSettingsLoader: React.FC<WidgetSettingsLoaderProps> = ({
     </Surface>
   );
 };
-
-export default WidgetSettingsLoader;

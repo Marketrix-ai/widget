@@ -8,10 +8,6 @@ import type { ChatMessage, InstructionType } from '../types';
 import { addThinkingMarker } from '../utils/chat';
 import type { UIStateActions } from './UIStateContext';
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
 export interface ChatState {
   messages: ChatMessage[];
 }
@@ -38,15 +34,7 @@ interface ChatContextType {
   _setMessages: React.Dispatch<React.SetStateAction<ChatState>>;
 }
 
-// ---------------------------------------------------------------------------
-// Context
-// ---------------------------------------------------------------------------
-
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
-
-// ---------------------------------------------------------------------------
-// Provider
-// ---------------------------------------------------------------------------
 
 interface ChatProviderProps {
   children: React.ReactNode;
@@ -113,7 +101,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
       let config = configManager.getConfig();
       if (!config) config = configManager.loadConfig();
 
-      if (!config || (!config.mtxId && !config.mtxKey && !config.mtxAgent)) {
+      if (!config || (!config.mtxId && !config.mtxKey && !config.mtxApp)) {
         console.error('Config not loaded or incomplete');
         addMessage(
           createAgentMessage('Configuration error: Missing API credentials. Please check your widget settings.'),
@@ -158,7 +146,6 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
                   ? {
                       mtxId: streamConfig.mtxId,
                       mtxKey: streamConfig.mtxKey,
-                      mtxAgent: streamConfig.mtxAgent,
                       mtxApp: streamConfig.mtxApp,
                     }
                   : undefined,
@@ -205,10 +192,6 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
     </ChatContext.Provider>
   );
 };
-
-// ---------------------------------------------------------------------------
-// Hook
-// ---------------------------------------------------------------------------
 
 export const useChatContext = (): Omit<ChatContextType, '_setMessages'> => {
   const ctx = useContext(ChatContext);
