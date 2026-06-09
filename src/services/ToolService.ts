@@ -136,15 +136,7 @@ export class ToolService {
             return { success: false, data: { text: '' }, error: 'User cancelled action' };
           }
 
-          if (toolName === 'click_element') {
-            // Execute the click after confirmation
-            // We proceed to the switch case below to actually execute the click
-          } else if (toolName === 'type_text' || toolName === 'select_dropdown_option' || toolName === 'send_keys') {
-            // Execute the action after confirmation
-            // We proceed to the switch case below to actually execute the action
-          } else {
-            // For other tools, proceed to execute as well if they were highlighted
-          }
+          // Confirmed: fall through to the switch below to execute the action.
         }
       }
 
