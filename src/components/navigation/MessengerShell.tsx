@@ -178,8 +178,8 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
       }}
     >
       <HeaderBar
-        title={config.agent_name ?? 'AI Agent'}
-        subtitle={isMinimized ? undefined : (config.agent_description ?? 'How can I help?')}
+        title={config.widget_header ?? 'AI Agent'}
+        subtitle={isMinimized ? undefined : (config.widget_body ?? 'How can I help?')}
         minimized={isMinimized}
         onClose={onClose}
         controls={

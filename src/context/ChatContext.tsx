@@ -101,7 +101,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
       let config = configManager.getConfig();
       if (!config) config = configManager.loadConfig();
 
-      if (!config || (!config.mtxId && !config.mtxKey && !config.mtxAgent)) {
+      if (!config || (!config.mtxId && !config.mtxKey && !config.mtxApp)) {
         console.error('Config not loaded or incomplete');
         addMessage(
           createAgentMessage('Configuration error: Missing API credentials. Please check your widget settings.'),
@@ -146,7 +146,6 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
                   ? {
                       mtxId: streamConfig.mtxId,
                       mtxKey: streamConfig.mtxKey,
-                      mtxAgent: streamConfig.mtxAgent,
                       mtxApp: streamConfig.mtxApp,
                     }
                   : undefined,

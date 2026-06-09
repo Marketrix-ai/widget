@@ -355,7 +355,7 @@ export const autoInitializeWidget = (retryCount = 0): void => {
         hasMtxApp: s.hasAttribute('mtx-app'),
       })),
     );
-    showWidgetSettingsLoader('Please configure mtx-id and mtx-key, or mtx-app and mtx-agent');
+    showWidgetSettingsLoader('Please configure mtx-id and mtx-key, or mtx-app');
     return;
   }
 
@@ -364,14 +364,12 @@ export const autoInitializeWidget = (retryCount = 0): void => {
   const mtxKey = script.getAttribute('mtx-key');
   const mtxApiHost = script.getAttribute('mtx-api-host');
   const mtxApp = script.getAttribute('mtx-app');
-  const mtxAgent = script.getAttribute('mtx-agent');
   const mtxUseScreenshare = script.getAttribute('mtx-use-screenshare');
 
   console.log('[AutoInit] Found script tag with attributes:', {
     mtxId: mtxId ? '***' : null,
     mtxKey: mtxKey ? '***' : null,
     mtxApp,
-    mtxAgent,
     mtxApiHost,
   });
 
@@ -390,19 +388,17 @@ export const autoInitializeWidget = (retryCount = 0): void => {
     initWidgetFunction(config).catch(error => {
       console.error('[AutoInit] Failed to initialize widget:', error);
     });
-  } else if (mtxApp && mtxAgent) {
+  } else if (mtxApp) {
     const appNum = Number.parseInt(mtxApp);
-    const agentNum = Number.parseInt(mtxAgent);
 
-    if (isNaN(appNum) || isNaN(agentNum)) {
-      console.error(`[AutoInit] Invalid mtx-app or mtx-agent values: mtx-app=${mtxApp}, mtx-agent=${mtxAgent}`);
-      showWidgetSettingsLoader('Invalid mtx-app or mtx-agent values');
+    if (isNaN(appNum)) {
+      console.error(`[AutoInit] Invalid mtx-app value: mtx-app=${mtxApp}`);
+      showWidgetSettingsLoader('Invalid mtx-app value');
       return;
     }
 
     const config: MarketrixConfig = {
       mtxApp: appNum,
-      mtxAgent: agentNum,
     };
     if (mtxApiHost) {
       config.mtxApiHost = mtxApiHost;
@@ -410,9 +406,8 @@ export const autoInitializeWidget = (retryCount = 0): void => {
     if (mtxUseScreenshare === 'false') {
       config.use_screenshare = false;
     }
-    console.log('[AutoInit] Initializing widget with mtx-app/mtx-agent config:', {
+    console.log('[AutoInit] Initializing widget with mtx-app config:', {
       mtxApp: appNum,
-      mtxAgent: agentNum,
     });
     initWidgetFunction(config).catch(error => {
       console.error('[AutoInit] Failed to initialize widget:', error);
@@ -428,9 +423,8 @@ export const autoInitializeWidget = (retryCount = 0): void => {
       hasMtxId: !!mtxId,
       hasMtxKey: !!mtxKey,
       hasMtxApp: !!mtxApp,
-      hasMtxAgent: !!mtxAgent,
     });
-    showWidgetSettingsLoader('Please configure mtx-id and mtx-key, or mtx-app and mtx-agent');
+    showWidgetSettingsLoader('Please configure mtx-id and mtx-key, or mtx-app');
   }
 };
 

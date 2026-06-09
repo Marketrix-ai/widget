@@ -13,7 +13,6 @@ export const BaseEntitySchema = z.object({
 
 export const ByIdSchema = z.object({ id: z.coerce.number() });
 export const BySlugSchema = z.object({ slug: z.string() });
-export const ByAgentIdSchema = z.object({ agent_id: z.coerce.number() });
 export const ByWidgetIdSchema = z.object({ widget_id: z.coerce.number() });
 export const BySimulationIdSchema = z.object({ simulation_id: z.coerce.number() });
 export const ByApplicationIdSchema = z.object({ application_id: z.coerce.number() });

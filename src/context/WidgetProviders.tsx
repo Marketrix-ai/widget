@@ -105,7 +105,6 @@ const TaskBridge: React.FC<BridgeProps> = ({ children, previewMode }) => {
               ? {
                   mtxId: streamConfig.mtxId,
                   mtxKey: streamConfig.mtxKey,
-                  mtxAgent: streamConfig.mtxAgent,
                   mtxApp: streamConfig.mtxApp,
                 }
               : undefined,

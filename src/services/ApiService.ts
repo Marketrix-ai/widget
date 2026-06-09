@@ -115,8 +115,8 @@ export class ApiService {
     }
 
     // Auth validation still needed
-    if (!(this.config.mtxId && this.config.mtxKey) && (!this.config.mtxApp || !this.config.mtxAgent)) {
-      throw new Error('Either mtxId + mtxKey or both mtxApp + mtxAgent are required');
+    if (!(this.config.mtxId && this.config.mtxKey) && !this.config.mtxApp) {
+      throw new Error('Either mtxId + mtxKey or mtxApp is required');
     }
 
     const requestId = request.requestId || `req_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
