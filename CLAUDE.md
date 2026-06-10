@@ -99,7 +99,6 @@ Drift is enforced by `.github/workflows/contract-drift.yml` (PRs touching `src/s
 
 - `ci.yml` (push `dev`/tags `v*`/PRs to `dev`): `validate` (non-tag) → `npm ci`, type-check, lint, build, format:check, test:run, visual/a11y/bundle checks (Node 24); `build` (`v*` only) → strip `v`, ACR login, build+push image; `publish` (`v*` only) → build, skip-if-already-published guard, `npm publish` with `NPM_TOKEN`.
 - `contract-drift.yml` — see SDK mirror above.
-- `project-sync.yml` — an **inlined copy** of the shared workflow (public repos can't call private reusable workflows), using `INFRA_PAT`.
 - Docker: 2-stage `Dockerfile` (`node:26-alpine` build → `nginx:1.31.1-alpine` serve as the `nginx` user; mime patched to serve `.mjs`). `Dockerfile.dev` runs `vite dev --host 0.0.0.0 --port 9001` with a 256 MB heap. Container `EXPOSE 9001`; nginx `/health` → `200 ok`.
 
 ## Gotchas
