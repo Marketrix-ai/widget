@@ -1,1 +1,16 @@
-{}
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "f=$(jq -r '.tool_input.file_path // .tool_response.filePath // empty'); case \"$f\" in *.ts|*.tsx) (cd \"$CLAUDE_PROJECT_DIR\" && node_modules/.bin/prettier --write \"$f\") >/dev/null 2>&1 || true ;; esac",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}
