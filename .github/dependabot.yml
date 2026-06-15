@@ -19,3 +19,8 @@ updates:
     schedule:
       interval: 'weekly'
     target-branch: 'dev'
+    # Shared CI is the PRIVATE Marketrix-ai/infra reusable workflow, pinned to a
+    # branch (@dev) Dependabot can't reach or version-bump; ignore it so the
+    # weekly run still updates the repo-local actions (checkout / setup-node).
+    ignore:
+      - dependency-name: 'Marketrix-ai/infra/*'

@@ -7,14 +7,9 @@ name: Contract Drift
 # TOKEN REQUIREMENT
 # -----------------
 # This workflow sparse-checkouts the relevant paths from the PRIVATE
-# Marketrix-ai/api repo, so it needs a token with read access. Create a
-# repo or org secret:
-#
-#   CONTRACTS_READ_TOKEN = fine-grained PAT with "Contents: read" on
-#                          Marketrix-ai/api (read-only, no write scopes).
-#
-# Without it the job fails fast with a clear message rather than a confusing
-# 404 from the GitHub API.
+# Marketrix-ai/api repo, so it needs a token with read access. It uses the
+# org-level INFRA_PAT secret (already provisioned for cross-repo access), so
+# no per-repo secret is required.
 on:
   pull_request:
     paths:
@@ -39,18 +34,9 @@ jobs:
         with:
           node-version: 24
 
-      - name: Verify CONTRACTS_READ_TOKEN is present
-        env:
-          CONTRACTS_READ_TOKEN: ${{ secrets.CONTRACTS_READ_TOKEN }}
-        run: |
-          if [ -z "${CONTRACTS_READ_TOKEN}" ]; then
-            echo "::error::CONTRACTS_READ_TOKEN secret is not set. Add a fine-grained PAT with 'Contents: read' on Marketrix-ai/api as a repo or org secret named CONTRACTS_READ_TOKEN."
-            exit 1
-          fi
-
       - name: Sparse-checkout api contracts + sync generator from Marketrix-ai/api@dev
         env:
-          GH_TOKEN: ${{ secrets.CONTRACTS_READ_TOKEN }}
+          GH_TOKEN: ${{ secrets.INFRA_PAT }}
         run: |
           set -euo pipefail
           mkdir -p .api-src
