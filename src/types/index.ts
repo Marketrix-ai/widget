@@ -84,15 +84,6 @@ export interface MessagePart {
   textStyle?: 'default' | 'muted';
 }
 
-export interface TaskProgress {
-  tool_name: string;
-  tool_params: Record<string, unknown>;
-  step: number;
-  explanation: string;
-  mode: string;
-  timestamp: number;
-}
-
 export type WidgetView = 'home' | 'chat';
 
 export interface WidgetState {
@@ -105,7 +96,6 @@ export interface WidgetState {
   error?: string;
   activeTaskId: string | null;
   isTaskRunning: boolean;
-  taskProgress: TaskProgress[];
   activeView: WidgetView;
 }
 

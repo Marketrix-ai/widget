@@ -1,7 +1,7 @@
 /**
  * Unit tests for the pure SSE reducer (src/context/sseReducer.ts).
- * These pin the state-transition behavior the TaskContext effect used to bury
- * inside a ~180-line nested-setState handler.
+ * These pin the state-transition behavior the ConversationContext effect used to
+ * bury inside a ~180-line nested-setState handler.
  */
 import { describe, expect, it } from 'vitest';
 

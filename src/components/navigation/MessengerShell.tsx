@@ -5,7 +5,7 @@ import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { useResize } from '../../hooks/useResize';
 import { useWidget } from '../../hooks/useWidget';
 import { createUserMessage } from '../../services/ChatService';
-import type { ChatMessage, InstructionType, MarketrixConfig, TaskProgress, WidgetView } from '../../types';
+import type { ChatMessage, InstructionType, MarketrixConfig, WidgetView } from '../../types';
 import type { SuggestedActionItem } from '../../utils/suggestedActions';
 import { getPanelPositionStyle } from '../../utils/widgetPositioning';
 import { Badge } from '../base/Badge';
@@ -27,7 +27,6 @@ export interface MessengerShellProps {
   messages: ChatMessage[];
   currentMode: InstructionType;
   isTaskRunning?: boolean;
-  taskProgress?: TaskProgress[];
   activeView: WidgetView;
   onClose: () => void;
   onSendMessage: (
@@ -54,7 +53,6 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
   messages,
   currentMode,
   isTaskRunning = false,
-  taskProgress = [],
   activeView,
   onClose,
   onSendMessage,
@@ -217,7 +215,6 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
                   messages={messages}
                   currentMode={currentMode}
                   isTaskRunning={isTaskRunning}
-                  taskProgress={taskProgress}
                   onSendMessage={onSendMessage}
                   onSetMode={onSetMode}
                   onAddMessage={onAddMessage}

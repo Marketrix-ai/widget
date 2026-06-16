@@ -1,4 +1,4 @@
-import type { ChatMessage, InstructionType, TaskProgress } from '../types';
+import type { ChatMessage, InstructionType } from '../types';
 import { removeThinkingMarkers } from '../utils/chat';
 import { storageService } from './StorageService';
 
@@ -11,7 +11,6 @@ export interface ChatSnapshot {
   messages: ChatMessage[];
   isTaskRunning: boolean;
   activeTaskId: string | null;
-  taskProgress: TaskProgress[];
   currentMode: InstructionType;
   isOpen: boolean;
   isMinimized: boolean;
@@ -53,7 +52,6 @@ export class ChatService {
         messages: [],
         isTaskRunning: false,
         activeTaskId: null,
-        taskProgress: [],
         currentMode: 'tell',
         isOpen: false,
         isMinimized: false,
@@ -112,7 +110,6 @@ export class ChatService {
       messages,
       isTaskRunning: context.isTaskRunning,
       activeTaskId: context.activeTaskId,
-      taskProgress: context.taskProgress,
       currentMode: context.currentMode,
       isOpen: context.isOpen,
       isMinimized: context.isMinimized,
@@ -155,7 +152,6 @@ export class ChatService {
         messages: serializedMessages,
         isTaskRunning: snapshot.isTaskRunning,
         activeTaskId: snapshot.activeTaskId,
-        taskProgress: snapshot.taskProgress,
         currentMode: snapshot.currentMode,
         isOpen: snapshot.isOpen,
         isMinimized: snapshot.isMinimized,

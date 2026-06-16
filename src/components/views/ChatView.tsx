@@ -4,10 +4,9 @@ import { type PendingMessage, useScreenShare } from '../../hooks/useScreenShare'
 import type { InstructionType } from '../../sdk';
 import { createSystemMessage, createUserMessage } from '../../services/ChatService';
 import { showModeService } from '../../services/ShowModeService';
-import type { ChatMessage, MarketrixConfig, TaskProgress } from '../../types';
-import { addOpacity, getModeDisplayName } from '../../utils/format';
+import type { ChatMessage, MarketrixConfig } from '../../types';
+import { getModeDisplayName } from '../../utils/format';
 import { Card } from '../base/Card';
-import { Flex } from '../base/Flex';
 import { Stack } from '../base/Stack';
 import { Surface } from '../base/Surface';
 import { Text } from '../base/Text';
@@ -46,7 +45,6 @@ export interface ChatViewProps {
   messages: ChatMessage[];
   currentMode: InstructionType;
   isTaskRunning?: boolean;
-  taskProgress?: TaskProgress[];
   onSendMessage: (
     message: string,
     mode?: InstructionType,
@@ -95,7 +93,6 @@ export const ChatView: React.FC<ChatViewProps> = ({
   messages,
   currentMode,
   isTaskRunning = false,
-  taskProgress = [],
   onSendMessage,
   onSetMode,
   onAddMessage,
@@ -201,46 +198,6 @@ export const ChatView: React.FC<ChatViewProps> = ({
       </Surface>
 
       <Card style={{ margin: '0 12px 12px 12px', marginTop: 'auto' }}>
-        {isTaskRunning && taskProgress.length > 0 && (
-          <Surface
-            rounded
-            overflowY='auto'
-            style={{
-              margin: '0 8px 8px',
-              padding: '8px',
-              maxHeight: '128px',
-              backgroundColor: addOpacity(config.widget_background_color ?? '#fff', 0.8),
-              borderColor: config.widget_border_color,
-              borderWidth: '1px',
-              borderStyle: 'solid',
-            }}
-          >
-            <Text as='div' weight='semibold' style={{ marginBottom: '4px', color: config.widget_text_color }}>
-              Task Progress ({taskProgress.length} steps)
-            </Text>
-            <Stack gap='xs'>
-              {taskProgress.map((progress, idx) => (
-                <Flex
-                  key={idx}
-                  align='start'
-                  gap='sm'
-                  style={{ fontSize: '12px', opacity: 0.8, color: config.widget_text_color }}
-                >
-                  <Text as='span' weight='medium'>
-                    Step {progress.step}:
-                  </Text>{' '}
-                  {progress.tool_name}
-                  {progress.tool_params && Object.keys(progress.tool_params).length > 0 && (
-                    <Text as='span' style={{ opacity: 0.7, marginLeft: '4px' }}>
-                      ({Object.keys(progress.tool_params).join(', ')})
-                    </Text>
-                  )}
-                </Flex>
-              ))}
-            </Stack>
-          </Surface>
-        )}
-
         <ChatInput
           ref={externalMessageInputRef}
           value={inputValue}

@@ -160,7 +160,7 @@ describe('SSE event discriminated-union contract (WidgetEventSchema)', () => {
   });
 
   describe('task/status "has_question" pauses the active message (clears running spinner)', () => {
-    // Mirrors the TaskContext SSE reducer for `has_question`: strip the thinking
+    // Mirrors the ConversationContext SSE reducer for `has_question`: strip the thinking
     // marker (kills the inline spinner) and flip to the paused "waiting for you"
     // indicator without setting a terminal taskStatus icon.
     const applyHasQuestionTransition = (message: ChatMessage, statusMessage?: string): ChatMessage => {

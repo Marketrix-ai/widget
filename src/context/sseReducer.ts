@@ -1,9 +1,9 @@
 /**
  * Pure SSE reducer — the single place where a `WidgetEvent` turns into the next
  * widget state. No transport, no tool execution, no localStorage: just
- * `(state, event) => { state, effects }`. The TaskContext effect wires this up,
- * runs the returned effects (tool exec, wsClient.send, setLoading), and re-enters
- * via `applyToolResult` once an async tool finishes.
+ * `(state, event) => { state, effects }`. The ConversationContext effect wires
+ * this up, runs the returned effects (tool exec, wsClient.send, setLoading), and
+ * re-enters via the tool-progress helpers once an async tool finishes.
  *
  * Keeping this pure makes the previously-untestable ~180-line SSE handler unit
  * testable and removes the nested setState-within-setState that hid bugs.
