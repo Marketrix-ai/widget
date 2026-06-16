@@ -16,7 +16,7 @@
  * the same shape for parity.
  */
 
-import type { ChatMessage, InstructionType, MarketrixConfig, TaskProgress } from '../types';
+import type { ChatMessage, InstructionType, MarketrixConfig } from '../types';
 
 const STORAGE_KEY = 'marketrix_chat_context';
 const CONTEXT_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
@@ -37,7 +37,6 @@ export interface MarketrixChatContext {
   messages: StoredMessage[];
   isTaskRunning: boolean;
   activeTaskId: string | null;
-  taskProgress: TaskProgress[];
   currentMode: InstructionType;
   isOpen: boolean;
   isMinimized: boolean;
@@ -58,7 +57,6 @@ const DEFAULT_CONTEXT: MarketrixChatContext = {
   messages: [],
   isTaskRunning: false,
   activeTaskId: null,
-  taskProgress: [],
   currentMode: 'tell',
   isOpen: false,
   isMinimized: false,
@@ -209,13 +207,12 @@ class StorageService {
 
   getChatState(): Pick<
     MarketrixChatContext,
-    'isTaskRunning' | 'activeTaskId' | 'taskProgress' | 'currentMode' | 'isOpen' | 'isMinimized' | 'isLoading'
+    'isTaskRunning' | 'activeTaskId' | 'currentMode' | 'isOpen' | 'isMinimized' | 'isLoading'
   > {
     const ctx = this.getContext();
     return {
       isTaskRunning: ctx.isTaskRunning,
       activeTaskId: ctx.activeTaskId,
-      taskProgress: ctx.taskProgress,
       currentMode: ctx.currentMode,
       isOpen: ctx.isOpen,
       isMinimized: ctx.isMinimized,
@@ -227,7 +224,7 @@ class StorageService {
     state: Partial<
       Pick<
         MarketrixChatContext,
-        'isTaskRunning' | 'activeTaskId' | 'taskProgress' | 'currentMode' | 'isOpen' | 'isMinimized' | 'isLoading'
+        'isTaskRunning' | 'activeTaskId' | 'currentMode' | 'isOpen' | 'isMinimized' | 'isLoading'
       >
     >,
   ): void {

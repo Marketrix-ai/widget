@@ -56,9 +56,9 @@ Both payloads are Zod **discriminated unions on `type`**:
 
 **Transport** — `src/services/StreamClient.ts` is a singleton wrapping the oRPC `sdk`. It calls `sdk.widgetStream(input, { signal })` and drains the async iterator in the background. Status machine: `disconnected → connecting → connected → registered → error`. Exponential-backoff reconnect (1000 ms ×2, cap 30000 ms, **max 10 attempts**; counters reset only on a `registered` event). A `chat/error` whose `request_id === 'auth'` is **non-retriable** and permanently stops reconnection (until re-init). `heartbeat` is ignored. Sending uses `sdk.widgetMessage({ chat_id, command })`.
 
-**Round-trip** — `ChatContext.sendMessage(content, mode)` → `apiService.sendMessage` builds `{ type: 'chat/${mode}', request_id, content }` (mode defaults to `tell`) and fire-and-forget POSTs it; the reply arrives asynchronously over SSE as `chat/response`, matched by `request_id`. Task lifecycle arrives as `task/status`; agent browser actions arrive as `tool/call`.
+**Round-trip** — `ConversationContext.sendMessage(content, mode)` → `apiService.sendMessage` builds `{ type: 'chat/${mode}', request_id, content }` (mode defaults to `tell`) and fire-and-forget POSTs it; the reply arrives asynchronously over SSE as `chat/response`, matched by `request_id`. Task lifecycle arrives as `task/status`; agent browser actions arrive as `tool/call`.
 
-**Tool execution** — `TaskContext` handles `tool/call`: dedupe by `call_id`, validate `tool` against `BROWSER_TOOLS`, execute via `toolExecutionService.executeTool`, increment `state_version`, reply with `tool/response`. The `done` tool ends the task. `task/status` drives state: `running` activates the task (captures `task_id`); `completed`/`failed`/`stopped` clear it; `has_question` clears the pending state. `state_version` is a monotonic counter that orders tool calls.
+**Tool execution** — `ConversationContext` handles `tool/call`: dedupe by `call_id`, validate `tool` against `BROWSER_TOOLS`, execute via `toolExecutionService.executeTool`, increment `state_version`, reply with `tool/response`. The `done` tool ends the task. `task/status` drives state: `running` activates the task (captures `task_id`); `completed`/`failed`/`stopped` clear it; `has_question` clears the pending state. `state_version` is a monotonic counter that orders tool calls.
 
 **Interaction modes** map to commands and `InstructionType` (`'tell' | 'show' | 'do'`): **Tell** = `chat/tell` (explain); **Show** = `chat/show` (`tool/call` with `mode: 'show'`, highlight via `ShowModeService`); **Do** = `chat/do` (`tool/call` with `mode: 'do'`, DOM actions via `DomService`/`ToolService`).
 
@@ -87,7 +87,7 @@ Drift is enforced by `.github/workflows/contract-drift.yml` (PRs touching `src/s
 - `src/index.tsx` — public entry; all exports (see `README.md` for the customer surface).
 - `src/services/` — `StreamClient`, `SessionRecorder`, `ToolService`, `ShowModeService`, `DomService`, `ChatService`, `SessionManager`, `StorageService`, `ConfigManager`, `ValidationService`, `WidgetService`, `ApiService`, `ScreenShareService`.
 - `src/components/` — UI (`base/`, `blocks/`, `chat/`, `navigation/`, `ui/`, `views/`, `MarketrixWidget.tsx`). `src/design-system/` — tokens + primitives.
-- `src/context/` — `ChatContext`, `TaskContext`, `UIStateContext`, `WidgetProviders`, `sseReducer.ts`. `src/hooks/`, `src/utils/` (incl. `bootstrap.tsx`), `src/lib/`, `src/constants/`, `src/types/`.
+- `src/context/` — `ConversationContext` (one store: `{ messages, task }`), `UIStateContext`, `WidgetProviders`, `sseReducer.ts`. `src/hooks/`, `src/utils/` (incl. `bootstrap.tsx`), `src/lib/`, `src/constants/`, `src/types/`.
 - `src/test/` + colocated `*.test.ts(x)` — vitest setup, fixtures, a11y helpers.
 - `public/loader.js` — classic script-tag bootstrap. `index.html` / `react.html` — playground harnesses. `dist/` — generated only.
 

@@ -175,7 +175,6 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
           messages={state.messages}
           currentMode={state.currentMode}
           isTaskRunning={state.isTaskRunning}
-          taskProgress={state.taskProgress}
           activeView={state.activeView}
           onClose={actions.closeWidget}
           onSendMessage={actions.sendMessage}

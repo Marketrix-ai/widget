@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo } from 'react';
 
-import { useChatContext } from '../context/ChatContext';
-import { useTaskContext } from '../context/TaskContext';
+import { useConversationContext } from '../context/ConversationContext';
 import { useUIStateContext } from '../context/UIStateContext';
 import { WidgetSettingsDataSchema } from '../sdk';
 import { configManager } from '../services/ConfigManager';
@@ -9,7 +8,6 @@ import type {
   ChatMessage,
   InstructionType,
   MarketrixConfig,
-  TaskProgress,
   WidgetSettingsData,
   WidgetState,
   WidgetView,
@@ -27,7 +25,6 @@ function isConfigComplete(config: MarketrixConfig): config is ValidWidgetConfig 
 }
 
 interface UseWidgetActions {
-  setState: (payload: Partial<WidgetState>) => void;
   setActiveView: (view: WidgetView) => void;
   toggleWidget: () => void;
   closeWidget: () => void;
@@ -36,16 +33,11 @@ interface UseWidgetActions {
   setAgentAvailable: (available: boolean) => void;
   setError: (error: string | undefined) => void;
   clearError: () => void;
-  setTaskState: (payload: {
-    activeTaskId: string | null;
-    isTaskRunning: boolean;
-    taskProgress?: TaskProgress[];
-  }) => void;
+  setTaskState: (payload: { activeTaskId: string | null; isTaskRunning: boolean }) => void;
   addMessage: (message: ChatMessage) => void;
   updateMessage: (messageId: string, updates: Partial<ChatMessage>) => void;
   removeMessage: (messageId: string) => void;
   setMessages: (messages: ChatMessage[]) => void;
-  resetState: () => void;
   stopTask: () => Promise<void>;
   clearChatHistory: () => void;
   sendMessage: (
@@ -58,14 +50,13 @@ interface UseWidgetActions {
 }
 
 /**
- * Composes UIStateContext, ChatContext, and TaskContext into the unified
+ * Composes UIStateContext and ConversationContext into the unified
  * `{ state, actions, config, … }` shape that the widget UI consumes. New code
  * can either keep using this hook or read the focused contexts directly.
  */
 export const useWidget = ({ config }: UseWidgetProps = {}) => {
   const { uiState, uiActions } = useUIStateContext();
-  const { chatState, chatActions } = useChatContext();
-  const { taskState, taskActions } = useTaskContext();
+  const { chatState, chatActions, taskState, taskActions } = useConversationContext();
 
   const state = useMemo<WidgetState>(
     () => ({
@@ -79,47 +70,18 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
       messages: chatState.messages,
       activeTaskId: taskState.activeTaskId,
       isTaskRunning: taskState.isTaskRunning,
-      taskProgress: taskState.taskProgress,
     }),
     [uiState, chatState, taskState],
   );
 
-  const setState = useCallback<UseWidgetActions['setState']>(
-    payload => {
-      uiActions.applyState({
-        ...(payload.isOpen !== undefined && { isOpen: payload.isOpen }),
-        ...(payload.isMinimized !== undefined && { isMinimized: payload.isMinimized }),
-        ...(payload.isLoading !== undefined && { isLoading: payload.isLoading }),
-        ...(payload.currentMode !== undefined && { currentMode: payload.currentMode }),
-        ...(payload.agentAvailable !== undefined && { agentAvailable: payload.agentAvailable }),
-        ...(payload.error !== undefined && { error: payload.error }),
-        ...(payload.activeView !== undefined && { activeView: payload.activeView }),
-      });
-      if (payload.messages !== undefined) chatActions.setMessages(payload.messages);
-      if (
-        payload.activeTaskId !== undefined ||
-        payload.isTaskRunning !== undefined ||
-        payload.taskProgress !== undefined
-      ) {
-        taskActions.setTaskState({
-          activeTaskId: payload.activeTaskId ?? taskState.activeTaskId,
-          isTaskRunning: payload.isTaskRunning ?? taskState.isTaskRunning,
-          taskProgress: payload.taskProgress ?? taskState.taskProgress,
-        });
-      }
-    },
-    [uiActions, chatActions, taskActions, taskState],
-  );
-
   const resetChat = useCallback(() => {
     chatActions.clearMessages();
-    taskActions.setTaskState({ activeTaskId: null, isTaskRunning: false, taskProgress: [] });
+    taskActions.setTaskState({ activeTaskId: null, isTaskRunning: false });
     uiActions.setError(undefined);
   }, [chatActions, taskActions, uiActions]);
 
   const actions = useMemo<UseWidgetActions>(
     () => ({
-      setState,
       setActiveView: uiActions.setActiveView,
       toggleWidget: uiActions.toggleWidget,
       closeWidget: uiActions.closeWidget,
@@ -135,10 +97,9 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
       removeMessage: chatActions.removeMessage,
       setMessages: chatActions.setMessages,
       sendMessage: chatActions.sendMessage,
-      resetState: resetChat,
       clearChatHistory: resetChat,
     }),
-    [setState, uiActions, taskActions, chatActions, resetChat],
+    [uiActions, taskActions, chatActions, resetChat],
   );
 
   const marketrixConfig = useMemo<MarketrixConfig>(() => config || configManager.getConfig() || {}, [config]);
