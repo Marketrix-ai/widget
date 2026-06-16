@@ -22,7 +22,7 @@ interface DialogProps {
 
 interface DialogContentProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode;
-  variant?: 'default' | 'confirm' | 'info';
+  variant?: 'default' | 'confirm';
 }
 
 const DialogContext = createContext<DialogContextValue | null>(null);
@@ -109,7 +109,6 @@ export function DialogContent({ children, className, onKeyDown, ...props }: Dial
         'fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[calc(var(--layer-dialog)+1)] flex flex-col w-full max-h-[85vh] overflow-auto bg-card animate-dialog-content-in',
         variant === 'default' && 'max-w-[500px] rounded-lg p-6',
         variant === 'confirm' && 'max-w-sm rounded-lg p-4',
-        variant === 'info' && 'w-64 rounded-md border border-border p-0',
         className,
       )}
       data-state='open'
@@ -121,7 +120,7 @@ export function DialogContent({ children, className, onKeyDown, ...props }: Dial
         }
       }}
       role='dialog'
-      style={{ ...getElevationStyle(variant === 'info' ? 'section' : 'panel'), ...style }}
+      style={{ ...getElevationStyle('panel'), ...style }}
       tabIndex={-1}
     >
       {children}
@@ -130,7 +129,7 @@ export function DialogContent({ children, className, onKeyDown, ...props }: Dial
 }
 
 interface DialogTitleProps extends React.HTMLAttributes<HTMLHeadingElement> {
-  variant?: 'default' | 'confirm' | 'info';
+  variant?: 'default' | 'confirm';
 }
 
 export function DialogTitle({ className, variant = 'default', ...props }: DialogTitleProps) {
@@ -142,7 +141,6 @@ export function DialogTitle({ className, variant = 'default', ...props }: Dialog
       className={cn(
         variant === 'default' && 'text-lg font-semibold text-card-foreground mb-2',
         variant === 'confirm' && 'text-base font-semibold text-foreground mb-1',
-        variant === 'info' && 'text-xs font-semibold text-foreground flex-1 text-center mb-0',
         className,
       )}
       id={context.titleId}
@@ -170,21 +168,16 @@ export function DialogDescription({ className, variant = 'default', ...props }: 
   );
 }
 
-interface DialogCloseProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'default' | 'info';
-}
+type DialogCloseProps = React.ButtonHTMLAttributes<HTMLButtonElement>;
 
-export function DialogClose({ children, className, onClick, variant = 'default', ...props }: DialogCloseProps) {
+export function DialogClose({ children, className, onClick, ...props }: DialogCloseProps) {
   const context = useDialogContext('DialogClose');
 
   return (
     <button
       {...props}
       className={cn(
-        variant === 'default' &&
-          'absolute top-4 right-4 flex items-center justify-center w-8 h-8 p-0 bg-transparent border-none rounded-lg text-muted-foreground cursor-pointer transition-colors hover:bg-muted',
-        variant === 'info' &&
-          'static -mr-1 flex h-5 w-5 items-center justify-center rounded-full border-none bg-transparent p-0 text-muted-foreground transition-colors hover:text-foreground',
+        'absolute top-4 right-4 flex items-center justify-center w-8 h-8 p-0 bg-transparent border-none rounded-lg text-muted-foreground cursor-pointer transition-colors hover:bg-muted',
         className,
       )}
       onClick={event => {

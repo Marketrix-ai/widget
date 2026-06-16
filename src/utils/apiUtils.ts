@@ -1,6 +1,5 @@
 /** Error-handling helpers for API calls. */
 
-import { getApiUrl } from '../constants/config';
 import type { MarketrixConfig } from '../types';
 
 /**
@@ -45,7 +44,7 @@ export function handleApiError(
   const errorMessage = extractErrorMessage(error);
 
   if (isConnectionError(error)) {
-    const apiUrl = getApiUrl(config) || 'configured API server';
+    const apiUrl = config?.mtxApiHost || 'configured API server';
     const connectionErrorMessage = `Cannot connect to API server. Please ensure the API server is running at ${apiUrl}. Error: ${errorMessage}`;
     return {
       isValid: false,

@@ -177,7 +177,6 @@ export const ChatView: React.FC<ChatViewProps> = ({
     <Stack height='full' id='view-chat' role='tabpanel' aria-labelledby='tab-chat'>
       {showScreenAccessDialog && (
         <WidgetDialog
-          variant='confirm'
           open={showScreenAccessDialog}
           onClose={handleScreenAccessDialogDeny}
           title='Can I take a look at your screen?'

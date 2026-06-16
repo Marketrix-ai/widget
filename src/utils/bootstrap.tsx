@@ -19,8 +19,6 @@ let widgetInstance: Root | null = null;
 let currentConfig: MarketrixConfig | null = null;
 let loaderInstance: Root | null = null;
 let programmaticInitInProgress = false;
-// Prevents duplicate production widgets on the same page.
-let productionWidgetActive = false;
 
 /**
  * Generate unique container ID for widget instances
@@ -176,7 +174,6 @@ export const isWidgetInitialized = (): boolean => {
 export const clearWidgetState = (): void => {
   widgetInstance = null;
   currentConfig = null;
-  productionWidgetActive = false;
 };
 
 /**
@@ -191,22 +188,6 @@ export const setProgrammaticInitInProgress = (inProgress: boolean): void => {
  */
 export const isProgrammaticInitInProgress = (): boolean => {
   return programmaticInitInProgress;
-};
-
-/**
- * Check if a production widget is already active on this page
- * Production widgets (non-preview) should be singletons - only one per page
- */
-export const isProductionWidgetActive = (): boolean => {
-  return productionWidgetActive;
-};
-
-/**
- * Set production widget active state
- * Call with true when initializing a production widget, false when unmounting
- */
-export const setProductionWidgetActive = (active: boolean): void => {
-  productionWidgetActive = active;
 };
 
 /**
