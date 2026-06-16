@@ -45,7 +45,6 @@ export class DomService {
   private elementToSequence: WeakMap<Element, number> = new WeakMap();
   private selectorMap: Map<number, string> = new Map();
   private fingerprintMap: Map<number, ElementFingerprint> = new Map();
-  private isIndexed: boolean = false;
   private indexingInProgress: boolean = false;
   private indexVersion: number = 0;
 
@@ -193,47 +192,6 @@ export class DomService {
   }
 
   /**
-   * Export state for external persistence (selectors and fingerprints)
-   */
-  exportState(): {
-    selectors: Array<[number, string]>;
-    fingerprints: Array<[number, ElementFingerprint]>;
-  } {
-    return {
-      selectors: Array.from(this.selectorMap.entries()),
-      fingerprints: Array.from(this.fingerprintMap.entries()),
-    };
-  }
-
-  /**
-   * Import state from external persistence (selectors and fingerprints)
-   */
-  importState(state: {
-    selectors?: Array<[number, string]>;
-    fingerprints?: Array<[number, ElementFingerprint]>;
-  }): void {
-    if (!state) return;
-
-    try {
-      if (state.selectors) {
-        this.selectorMap = new Map(state.selectors);
-      }
-      if (state.fingerprints) {
-        this.fingerprintMap = new Map(state.fingerprints);
-      }
-
-      if (this.selectorMap.size > 0 || this.fingerprintMap.size > 0) {
-        this.isIndexed = true;
-        console.log(
-          `[DomService] Restored ${this.selectorMap.size} selectors and ${this.fingerprintMap.size} fingerprints`,
-        );
-      }
-    } catch (e) {
-      console.warn('[DomService] Failed to import state:', e);
-    }
-  }
-
-  /**
    * Index all interactable elements in the live DOM.
    * Always clears previous index first.
    */
@@ -311,7 +269,6 @@ export class DomService {
         node = walker.nextNode();
       }
 
-      this.isIndexed = true;
       this.indexVersion++;
 
       console.log(`[DomService] Indexed ${sequenceNumber} elements (version ${this.indexVersion})`);
@@ -564,23 +521,14 @@ export class DomService {
     return elements;
   }
 
-  getElementByDataId(id: number): Element | undefined {
-    return this.elementMap.get(id);
-  }
-
   getSequenceForElement(element: Element): number | undefined {
     return this.elementToSequence.get(element);
-  }
-
-  isIndexActive(): boolean {
-    return this.isIndexed;
   }
 
   clearIndex(): void {
     this.elementMap.clear();
     this.elementToSequence = new WeakMap(); // Reset WeakMap
     this.fingerprintMap.clear();
-    this.isIndexed = false;
   }
 
   /**
@@ -719,27 +667,6 @@ export class DomService {
     }
 
     return { element, validation };
-  }
-
-  /**
-   * Get fingerprint for a given index (for debugging/testing)
-   */
-  getFingerprint(index: number): ElementFingerprint | undefined {
-    return this.fingerprintMap.get(index);
-  }
-
-  /**
-   * Get all fingerprints (for debugging/testing)
-   */
-  getAllFingerprints(): Array<[number, ElementFingerprint]> {
-    return Array.from(this.fingerprintMap.entries());
-  }
-
-  /**
-   * Get current index version
-   */
-  getIndexVersion(): number {
-    return this.indexVersion;
   }
 }
 
