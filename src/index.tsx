@@ -24,12 +24,10 @@ import {
   getCurrentConfig,
   getWidgetInstance,
   hideWidgetSettingsLoader,
-  isProductionWidgetActive,
   isWidgetInitialized,
   mountWidgetToContainer,
   registerAutoInit,
   setCurrentConfig,
-  setProductionWidgetActive,
   setProgrammaticInitInProgress,
   setWidgetInstance,
   showWidgetSettingsLoader,
@@ -125,18 +123,6 @@ async function initializeWidgetWithConfig(
 async function initWidgetInternal(config: MarketrixConfig, container?: HTMLElement): Promise<void> {
   setProgrammaticInitInProgress(true);
 
-  if (isWidgetInitialized()) {
-    console.warn('Marketrix Widget: already initialized');
-    setProgrammaticInitInProgress(false);
-    return;
-  }
-
-  if (isProductionWidgetActive()) {
-    console.warn('Marketrix Widget: production widget already active on this page, skipping duplicate initialization');
-    setProgrammaticInitInProgress(false);
-    return;
-  }
-
   // Window-level guard survives ES module re-execution
   window.__mtx = { state: 'initializing' };
 
@@ -171,7 +157,6 @@ async function initWidgetInternal(config: MarketrixConfig, container?: HTMLEleme
   const { mountEl } = createWidgetContainer(container);
   const instance = mountWidgetToContainer(mountEl, finalConfig);
   setWidgetInstance(instance);
-  setProductionWidgetActive(true);
   setProgrammaticInitInProgress(false);
   window.__mtx = { state: 'active' };
 
@@ -273,37 +258,26 @@ async function initWidgetInternal(config: MarketrixConfig, container?: HTMLEleme
   }
 }
 
-let isInitializing = false; // Atomic flag to prevent TOCTOU race condition
-
 export const initWidget = async (config: MarketrixConfig, container?: HTMLElement): Promise<void> => {
   // Window-level guard survives ES module re-execution (fresh module-level vars)
   if (window.__mtx?.state) {
     return;
   }
-  // Check for existing initialization or initialization in progress
+  // Concurrent callers await the in-flight init instead of starting a duplicate
   if (initPromise) {
     return initPromise;
-  }
-  if (isInitializing) {
-    return Promise.resolve();
   }
   if (isWidgetInitialized()) {
     console.warn('Marketrix Widget: already initialized');
     return;
   }
-  if (isProductionWidgetActive()) {
-    console.warn('Marketrix Widget: production widget already active on this page, skipping duplicate initialization');
-    return;
-  }
 
   // Set promise first so concurrent callers always get Promise<void>, not null
   initPromise = initWidgetInternal(config, container);
-  isInitializing = true;
   try {
     await initPromise;
   } finally {
     initPromise = null;
-    isInitializing = false;
   }
 };
 
