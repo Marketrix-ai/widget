@@ -2,9 +2,6 @@
  * Color utility functions for widget theming
  */
 
-/**
- * Converts hex color to RGB
- */
 export function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
   return result
@@ -16,9 +13,6 @@ export function hexToRgb(hex: string): { r: number; g: number; b: number } | nul
     : null;
 }
 
-/**
- * Converts RGB to hex
- */
 function rgbToHex(r: number, g: number, b: number): string {
   return `#${[r, g, b].map(x => x.toString(16).padStart(2, '0')).join('')}`;
 }
@@ -38,9 +32,6 @@ function getLuminance(color: string): number {
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
-/**
- * Gets a contrasting color (white or black) based on the background color
- */
 export function getContrastingColor(color: string): string {
   const luminance = getLuminance(color);
   return luminance > 0.5 ? '#000000' : '#ffffff';
@@ -51,16 +42,13 @@ export function getContrastingColor(color: string): string {
  * Supports hex colors (with or without #) and rgb/rgba strings
  */
 export function addOpacity(color: string, opacity: number): string {
-  // Handle rgba/rgb strings
   if (color.startsWith('rgba') || color.startsWith('rgb')) {
-    // Extract RGB values
     const match = color.match(/(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
     if (match) {
       return `rgba(${match[1]}, ${match[2]}, ${match[3]}, ${opacity})`;
     }
   }
 
-  // Handle hex colors
   const rgb = hexToRgb(color);
   if (rgb) {
     return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${opacity})`;
@@ -77,9 +65,6 @@ export function addOpacity(color: string, opacity: number): string {
   return color;
 }
 
-/**
- * Darkens a color by a specified amount (0-1)
- */
 export function darkenColor(color: string, amount: number): string {
   const rgb = hexToRgb(color);
   if (!rgb) return color;

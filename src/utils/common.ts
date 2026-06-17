@@ -32,23 +32,14 @@ const LOG_LEVELS: Record<LogLevel, number> = {
   error: 3,
 };
 
-/**
- * Check if a log level should be displayed
- */
 function shouldLog(level: LogLevel): boolean {
   return LOG_LEVELS[level] >= LOG_LEVELS[MIN_LOG_LEVEL];
 }
 
-/**
- * Format log message with prefix
- */
 function formatMessage(prefix: string, message: string, ...args: unknown[]): [string, ...unknown[]] {
   return [`[${prefix}] ${message}`, ...args];
 }
 
-/**
- * Create a scoped logger with a fixed prefix
- */
 export function createLogger(prefix: string) {
   return {
     debug: (message: string, ...args: unknown[]) => {

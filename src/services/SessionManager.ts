@@ -23,16 +23,12 @@ class SessionManager {
       return;
     }
 
-    // Load existing chat ID from storage
     this.chatId = this.getStoredChatId();
     if (this.chatId) {
       log.debug('Loaded existing chat ID from storage:', this.chatId);
     }
   }
 
-  /**
-   * Get singleton instance
-   */
   static getInstance(): SessionManager {
     // Guard against SSR - return a dummy instance that won't be used
     if (typeof window === 'undefined' || typeof document === 'undefined') {
@@ -51,9 +47,6 @@ class SessionManager {
     return SessionManager.instance;
   }
 
-  /**
-   * Get current chat ID without creating a new one
-   */
   getChatId(): string | null {
     return this.chatId;
   }
@@ -63,13 +56,11 @@ class SessionManager {
    * If multiple calls happen concurrently, they all wait for the same promise
    */
   async getOrCreateChatId(): Promise<string> {
-    // If we already have a chat ID, return it immediately
     if (this.chatId) {
       log.debug('Returning existing chat ID:', this.chatId);
       return this.chatId;
     }
 
-    // If initialization is in progress, wait for it
     if (this.initializationPromise) {
       log.debug('Chat ID initialization in progress, waiting...');
       return this.initializationPromise;
@@ -83,14 +74,12 @@ class SessionManager {
       return this.chatId;
     }
 
-    // Create new chat ID with promise-based locking
     this.initializationPromise = this.createChatId();
 
     try {
       const newChatId = await this.initializationPromise;
       return newChatId;
     } finally {
-      // Clear the promise after completion
       this.initializationPromise = null;
     }
   }

@@ -66,9 +66,6 @@ export class SessionRecorder {
     log.info('Initialized with sessionId:', this.sessionId);
   }
 
-  /**
-   * Send rrweb/metadata command via POST
-   */
   private async sendMetadata(): Promise<void> {
     if (this.metadataSent) {
       log.warn('Metadata already sent, skipping');
@@ -98,14 +95,10 @@ export class SessionRecorder {
     log.info('✅ rrweb/metadata sent successfully');
   }
 
-  /**
-   * Buffer an event and trigger flush if thresholds are met
-   */
   private bufferEvent(event: eventWithTime): void {
     this.eventQueue.push(event);
     this.estimatedQueueBytes += new Blob([JSON.stringify(event)]).size;
 
-    // Enforce max queue size
     if (this.eventQueue.length > MAX_QUEUE_SIZE) {
       const droppedCount = this.eventQueue.length - MAX_QUEUE_SIZE;
       const dropped = this.eventQueue.splice(0, droppedCount);
@@ -116,13 +109,11 @@ export class SessionRecorder {
       log.warn(`⚠️ Event queue exceeded ${MAX_QUEUE_SIZE}, dropped ${droppedCount} oldest events`);
     }
 
-    // Flush immediately if size threshold exceeded
     if (this.estimatedQueueBytes >= FLUSH_SIZE_THRESHOLD) {
       this.flush();
       return;
     }
 
-    // Otherwise ensure a flush timer is running
     if (!this.flushTimer) {
       this.flushTimer = setTimeout(() => {
         this.flushTimer = null;
@@ -277,7 +268,6 @@ export class SessionRecorder {
     try {
       log.info('🚀 start() called');
 
-      // Send metadata first
       await this.sendMetadata();
       if (this.stopRequested) throw new Error('Recording stopped during startup');
 
@@ -304,9 +294,6 @@ export class SessionRecorder {
     }
   }
 
-  /**
-   * Stop recording session. Flushes remaining events before stopping.
-   */
   stop(): void {
     this.stopRequested = true;
 
@@ -315,7 +302,6 @@ export class SessionRecorder {
       this.stopRecording = null;
     }
 
-    // Flush remaining events before stopping
     if (this.isRecording || this.eventQueue.length > 0) {
       this.flush();
     }
@@ -332,16 +318,10 @@ export class SessionRecorder {
     log.info('Recording stopped');
   }
 
-  /**
-   * Get current session ID
-   */
   getSessionId(): string {
     return this.sessionId;
   }
 
-  /**
-   * Check if recording is active
-   */
   isActive(): boolean {
     return this.isRecording;
   }

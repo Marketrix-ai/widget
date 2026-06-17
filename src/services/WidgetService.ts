@@ -20,7 +20,6 @@ export class WidgetService {
    * Returns null if no credentials provided (for preview mode)
    */
   async fetchWidgetSettings(): Promise<WidgetData | null> {
-    // Skip API call if no credentials provided (preview mode)
     if (!this.mtxId && !this.mtxKey && !this.mtxApp) {
       return null;
     }
@@ -38,7 +37,6 @@ export class WidgetService {
         throw new Error(error);
       }
 
-      // Then, try to fetch existing widget
       let widgetsData: WidgetData[] | null = null;
       if (this.mtxId && this.mtxKey) {
         const result = await sdk.widgetSearch({
@@ -57,15 +55,12 @@ export class WidgetService {
         return null;
       }
 
-      // Find active widget
       const matchedWidget =
         widgetsData?.find((widget: WidgetData) => widget.status === 'active' && widget.type === 'widget') || null;
 
-      // If widget found, merge its settings over defaults
       if (matchedWidget?.settings) {
         const widgetSettings = this.getWidgetSettings(matchedWidget);
         if (widgetSettings) {
-          // Merge defaults with widget settings (widget settings take precedence)
           const mergedSettings: WidgetSettingsData = {
             ...defaultSettings,
             ...widgetSettings,
@@ -78,7 +73,6 @@ export class WidgetService {
         }
       }
 
-      // No widget found, return defaults as a synthetic widget object
       const now = new Date();
       return {
         id: 0,

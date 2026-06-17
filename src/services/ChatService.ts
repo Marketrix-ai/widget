@@ -165,7 +165,6 @@ export class ChatService {
 
 export const chatService = ChatService.getInstance();
 
-// Exported Factory Functions
 export function createUserMessage(
   content: string,
   mode?: InstructionType,

@@ -1,8 +1,5 @@
 import { isInteractable } from '../utils/dom';
 
-/**
- * Fingerprint of an indexed element for validation
- */
 export interface ElementFingerprint {
   tagName: string;
   id: string | null;
@@ -16,25 +13,16 @@ export interface ElementFingerprint {
   indexVersion: number;
 }
 
-/**
- * Result of validating an element at a given index
- */
 export interface ValidationResult {
   isValid: boolean;
   mismatchReason?: 'element_removed' | 'element_changed';
 }
 
-/**
- * Result of looking up an element by index
- */
 export interface ElementLookupResult {
   element: HTMLElement | null;
   error?: string;
 }
 
-/**
- * Result of validated element lookup (includes validation info)
- */
 export interface ValidatedElementResult extends ElementLookupResult {
   validation: ValidationResult;
 }
@@ -57,11 +45,7 @@ export class DomService {
     return DomService.instance;
   }
 
-  /**
-   * Generate a unique CSS selector for an element
-   */
   private generateSelector(element: Element): string {
-    // Use ID if available and unique-ish (simple check)
     if (element.id) {
       // Escape CSS special characters in ID if needed, but simple #id is usually fine
       // Check if it's unique in document
@@ -70,7 +54,6 @@ export class DomService {
       }
     }
 
-    // Fallback to path
     const path: string[] = [];
     let current: Element | null = element;
 
@@ -99,9 +82,6 @@ export class DomService {
     return path.join(' > ');
   }
 
-  /**
-   * Generate a fingerprint for an element to enable validation later
-   */
   private generateFingerprint(element: Element, selector: string): ElementFingerprint {
     const truncate = (str: string | null, maxLen: number = 100): string | null => {
       if (!str) return null;
@@ -128,7 +108,6 @@ export class DomService {
    * Uses strict matching - fails if any key attribute differs.
    */
   private matchesFingerprint(element: Element, fingerprint: ElementFingerprint): boolean {
-    // Primary check: tagName must match
     if (element.tagName !== fingerprint.tagName) {
       return false;
     }
@@ -143,7 +122,6 @@ export class DomService {
       return false;
     }
 
-    // Check ARIA attributes if present in fingerprint
     if (fingerprint.ariaLabel && element.getAttribute('aria-label') !== fingerprint.ariaLabel) {
       return false;
     }
@@ -279,10 +257,6 @@ export class DomService {
     }
   }
 
-  /**
-   * Get element coordinates using getBoundingClientRect()
-   * Returns viewport-relative coordinates
-   */
   private getElementCoordinates(element: HTMLElement): {
     x: number;
     y: number;
@@ -301,14 +275,9 @@ export class DomService {
     };
   }
 
-  /**
-   * Check if an element creates a stacking context
-   * Based on CSS stacking context rules
-   */
   private isStackingContext(element: HTMLElement): boolean {
     const style = window.getComputedStyle(element);
 
-    // Positioned elements with z-index (not auto)
     const position = style.position;
     if (
       (position === 'fixed' || position === 'absolute' || position === 'relative' || position === 'sticky') &&
@@ -317,7 +286,6 @@ export class DomService {
       return true;
     }
 
-    // Flex or Grid child with z-index (not auto)
     if (style.zIndex !== 'auto' && element.parentElement) {
       const parentStyle = window.getComputedStyle(element.parentElement);
       const parentDisplay = parentStyle.display;
@@ -331,18 +299,15 @@ export class DomService {
       }
     }
 
-    // Opacity less than 1
     const opacity = parseFloat(style.opacity);
     if (!isNaN(opacity) && opacity < 1) {
       return true;
     }
 
-    // Transform (any value other than none)
     if (style.transform && style.transform !== 'none') {
       return true;
     }
 
-    // Filter (any value other than none)
     if (style.filter && style.filter !== 'none') {
       return true;
     }
@@ -353,7 +318,6 @@ export class DomService {
       return true;
     }
 
-    // Isolation: isolate
     if (style.isolation === 'isolate') {
       return true;
     }
@@ -367,19 +331,13 @@ export class DomService {
     return false;
   }
 
-  /**
-   * Calculate global z-order for an element
-   * Traverses up the DOM tree to identify stacking contexts and calculate z-order
-   */
   private calculateGlobalZOrder(element: HTMLElement): number {
     let current: HTMLElement | null = element;
     const stackingContexts: Array<{ element: HTMLElement; zIndex: number; domOrder: number }> = [];
 
-    // Walk up the DOM tree to document root
     while (current && current !== document.body && current.parentElement) {
       const style = window.getComputedStyle(current);
 
-      // Check if current element creates a stacking context
       if (this.isStackingContext(current)) {
         // Get z-index value (0 if auto)
         let zIndex = 0;
@@ -390,7 +348,6 @@ export class DomService {
           }
         }
 
-        // Calculate DOM order among siblings in the same stacking context
         let domOrder = 0;
         if (current.parentElement) {
           const siblings = Array.from(current.parentElement.children);
@@ -429,10 +386,8 @@ export class DomService {
    * This re-indexes the live DOM and then produces a corresponding HTML string.
    */
   getSnapshotHtml(): string {
-    // Re-index first to ensure we have latest state
     this.indexInteractableElements();
 
-    // Clone document for output
     const clone = document.documentElement.cloneNode(true) as Element;
 
     // Instead of walking both trees in sync (which can fail with modals/fixed elements),
@@ -441,15 +396,12 @@ export class DomService {
 
     for (const [index, element] of this.elementMap.entries()) {
       if (element instanceof HTMLElement) {
-        // Generate a selector for this element
         const selector = this.selectorMap.get(index);
         if (selector) {
           try {
-            // Find the same element in the clone
             const cloneBody = clone.querySelector('body') || clone;
             const cloneElement = cloneBody.querySelector(selector);
             if (cloneElement) {
-              // Add data-id attribute
               cloneElement.setAttribute('data-id', index.toString());
 
               // Get coordinates and z-order from the live element
@@ -484,16 +436,12 @@ export class DomService {
     return clone.outerHTML;
   }
 
-  /**
-   * Get actionable elements metadata
-   */
   getInteractableElements(): Array<{
     index: number;
     fingerprint: ElementFingerprint;
     coords: { x: number; y: number; w: number; h: number; z: number };
     cssClasses: string[];
   }> {
-    // Re-index first to ensure we have latest state
     this.indexInteractableElements();
 
     const elements: Array<{

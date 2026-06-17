@@ -20,9 +20,6 @@ let currentConfig: MarketrixConfig | null = null;
 let loaderInstance: Root | null = null;
 let programmaticInitInProgress = false;
 
-/**
- * Generate unique container ID for widget instances
- */
 let widgetInstanceCounter = 0;
 const generateContainerId = (): string => {
   return `marketrix-widget-container-${++widgetInstanceCounter}`;
@@ -122,10 +119,6 @@ export const mountWidgetToContainer = (mountEl: HTMLElement, config: MarketrixCo
   return root;
 };
 
-/**
- * Destroy widget container
- * @param container - Container to destroy
- */
 export const destroyWidgetContainer = (container: HTMLElement): void => {
   if (!container) {
     throw new Error('Container is required');
@@ -133,66 +126,39 @@ export const destroyWidgetContainer = (container: HTMLElement): void => {
   container.remove();
 };
 
-/**
- * Get current widget instance
- */
 export const getWidgetInstance = (): Root | null => {
   return widgetInstance;
 };
 
-/**
- * Set widget instance
- */
 export const setWidgetInstance = (instance: Root | null): void => {
   widgetInstance = instance;
 };
 
-/**
- * Get current configuration
- */
 export const getCurrentConfig = (): MarketrixConfig | null => {
   return currentConfig;
 };
 
-/**
- * Set current configuration
- */
 export const setCurrentConfig = (config: MarketrixConfig | null): void => {
   currentConfig = config;
 };
 
-/**
- * Check if widget is initialized
- */
 export const isWidgetInitialized = (): boolean => {
   return widgetInstance !== null;
 };
 
-/**
- * Clear widget instance and config
- */
 export const clearWidgetState = (): void => {
   widgetInstance = null;
   currentConfig = null;
 };
 
-/**
- * Set programmatic initialization in progress flag
- */
 export const setProgrammaticInitInProgress = (inProgress: boolean): void => {
   programmaticInitInProgress = inProgress;
 };
 
-/**
- * Check if programmatic initialization is in progress
- */
 export const isProgrammaticInitInProgress = (): boolean => {
   return programmaticInitInProgress;
 };
 
-/**
- * Show widget settings loader with optional message
- */
 export const showWidgetSettingsLoader = (message?: string): void => {
   // Guard against SSR - only run in browser
   if (typeof window === 'undefined' || typeof document === 'undefined') {
@@ -239,9 +205,6 @@ export const showWidgetSettingsLoader = (message?: string): void => {
   );
 };
 
-/**
- * Hide widget settings loader
- */
 export const hideWidgetSettingsLoader = (): void => {
   if (loaderInstance) {
     loaderInstance.unmount();

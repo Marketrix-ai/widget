@@ -1,6 +1,5 @@
 import type { InstructionType, WidgetSettingsData } from '../sdk';
 
-// Re-export SDK types for proper type usage
 export type {
   ApplicationData,
   InstructionType,
@@ -28,7 +27,6 @@ export type {
  * - Z-index default: 40
  */
 export type MarketrixConfig = Partial<WidgetSettingsData> & {
-  // Core SDK fields (from WidgetEntitySchema)
   // Either mtxId/mtxKey OR mtxApp must be provided
   mtxId?: string; // maps to marketrix_id from SDK (production mode)
   mtxKey?: string; // maps to marketrix_key from SDK (production mode)
@@ -119,10 +117,6 @@ export interface SendMessageResponse {
 
 export type WidgetPosition = WidgetSettingsData['widget_position'];
 
-/**
- * Configuration for addWidget function
- * Supports preview, production, and dev modes
- */
 export type AddWidgetConfig = (
   | {
       // Preview mode: provide settings directly
@@ -162,9 +156,6 @@ export type AddWidgetConfig = (
   use_screenshare?: boolean;
 };
 
-/**
- * Props for MarketrixWidget React component
- */
 export interface MarketrixWidgetProps {
   settings: WidgetSettingsData;
   container?: HTMLElement;

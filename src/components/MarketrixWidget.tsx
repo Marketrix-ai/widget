@@ -16,7 +16,6 @@ interface MarketrixWidgetProps {
   config: MarketrixConfig;
 }
 
-// Error Boundary for MessengerShell
 class WidgetErrorBoundary extends React.Component<
   { children: React.ReactNode },
   { hasError: boolean; error: Error | null }
@@ -97,7 +96,6 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
     setWidgetPosition(fallback);
   }, [isPreviewMode, positionStorageKey, settings.widget_position]);
 
-  // Show greeting toast after delay when widget is closed
   useEffect(() => {
     if (state.isOpen || isPreviewMode || settings.widget_appearance !== 'default') {
       setShowGreeting(false);
@@ -118,7 +116,6 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
     return null;
   }
 
-  // In preview mode, always show if widget_enabled is true in config
   const shouldRender = isPreviewMode
     ? (config.widget_enabled ?? settings.widget_enabled ?? false)
     : shouldShow && settings.widget_enabled && config.show_widget !== false;

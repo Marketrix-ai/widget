@@ -188,7 +188,6 @@ async function initWidgetInternal(config: MarketrixConfig, container?: HTMLEleme
         sessionRecorder = new SessionRecorder(chatId, applicationId);
         isRecordingInitialized = true;
 
-        // Start recording immediately — chatId is already available
         const recorder = sessionRecorder;
         recordingStartPromise = recorder
           .start()
@@ -231,7 +230,6 @@ async function initWidgetInternal(config: MarketrixConfig, container?: HTMLEleme
 
     const applicationId = finalConfig.mtxApp ?? config.mtxApp;
     if (applicationId) {
-      // applicationId available from config
       initRecorderWhenChatIdReady(applicationId);
     } else {
       // applicationId not in config — wait for it from the stream's registered event
@@ -413,13 +411,11 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ settings, cont
       widget_enabled: settings.widget_enabled ?? true, // Ensure widget is enabled in preview
     };
 
-    // Unmount existing root if it exists (handles settings changes)
     if (rootRef.current) {
       rootRef.current.unmount();
       rootRef.current = null;
     }
 
-    // Mount widget
     const root = createRoot(mountEl);
     rootRef.current = root;
 
@@ -450,10 +446,6 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ settings, cont
   return <div ref={containerRef} style={{ width: '100%', height: '100%', position: 'relative' }} />;
 };
 
-/**
- * addWidget - Function that auto-detects mode and initializes widget
- * Supports preview, production, and dev modes
- */
 export const mountWidget = async (config: AddWidgetConfig): Promise<void> => {
   setProgrammaticInitInProgress(true);
 

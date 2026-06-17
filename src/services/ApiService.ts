@@ -10,9 +10,6 @@ export class ApiService {
     this.config = config;
   }
 
-  /**
-   * Get the current chat ID (does not create if missing)
-   */
   getChatId(): string | null {
     return sessionManager.getChatId();
   }
@@ -21,12 +18,10 @@ export class ApiService {
    * Get user_id from various sources (config, localStorage, sessionStorage)
    */
   private getUserId(): number | null {
-    // Try to get from config first
     if (this.config.userId && typeof this.config.userId === 'number') {
       return this.config.userId;
     }
 
-    // Try to get from localStorage
     try {
       const storedUserId = localStorage.getItem('marketrix_user_id');
       if (storedUserId) {
@@ -39,7 +34,6 @@ export class ApiService {
       console.warn('[API Service] Failed to get user_id from localStorage:', error);
     }
 
-    // Try to get from sessionStorage
     try {
       const sessionUserId = sessionStorage.getItem('marketrix_user_id');
       if (sessionUserId) {
@@ -55,9 +49,6 @@ export class ApiService {
     return null;
   }
 
-  /**
-   * Log widget question to action_log
-   */
   async logWidgetQuestion(question: string, mode: string): Promise<void> {
     try {
       const userId = this.getUserId();
@@ -69,12 +60,10 @@ export class ApiService {
         timestamp: new Date().toISOString(),
       };
 
-      // Add user_id if available
       if (userId !== null) {
         metadata.user_id = userId;
       }
 
-      // Add application_id or marketrix credentials to metadata for workspace lookup
       if (this.config.mtxApp) {
         metadata.application_id = this.config.mtxApp;
       }
@@ -83,7 +72,6 @@ export class ApiService {
         metadata.marketrix_key = this.config.mtxKey;
       }
 
-      // Log the question (fire and forget - don't block on this)
       sdk
         .activityLogCreate({
           type: 'widget_question',
@@ -130,7 +118,6 @@ export class ApiService {
     const wsClient = StreamClient.getInstance();
     wsClient.send(command);
 
-    // Return immediately — the actual response text will come via stream
     return {
       messageId: requestId,
       response: '', // Will be populated by chat/response stream event

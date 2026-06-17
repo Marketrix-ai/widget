@@ -22,7 +22,6 @@ export class ConfigManager {
       return stored;
     }
 
-    // Return empty config - defaults should come from API
     this.config = {};
     return this.config;
   }
@@ -64,7 +63,6 @@ export function createConfigFromSettings(
   widgetSettings: WidgetSettingsData,
   baseConfig: Partial<MarketrixConfig> = {},
 ): MarketrixConfig {
-  // Direct merge - MarketrixConfig already extends WidgetSettingsData
   return {
     ...baseConfig,
     ...widgetSettings,

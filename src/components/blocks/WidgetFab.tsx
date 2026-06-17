@@ -26,7 +26,6 @@ export interface WidgetFabProps {
   tooltipBgColor?: string;
   tooltipTextColor?: string;
   zIndex?: number;
-  // Position
   position: WidgetPosition;
   onDrag: (position: WidgetPosition) => void;
   isPreviewMode?: boolean;
@@ -171,7 +170,6 @@ export const WidgetFab: React.FC<WidgetFabProps> = ({
                 </svg>
               )}
 
-              {/* Logo: visible when closed */}
               <Flex
                 className='absolute inset-0 items-center justify-center transition-[transform,opacity] duration-[160ms] linear'
                 style={{
@@ -200,7 +198,6 @@ export const WidgetFab: React.FC<WidgetFabProps> = ({
                 />
               </Flex>
 
-              {/* ChevronDown: visible when open */}
               <Flex
                 className='absolute inset-0 items-center justify-center transition-[transform,opacity] duration-[160ms] linear'
                 style={{
@@ -219,7 +216,6 @@ export const WidgetFab: React.FC<WidgetFabProps> = ({
         </Button>
       </Surface>
 
-      {/* Tooltip */}
       {!open && (
         <Surface
           className={`absolute bottom-16 ${position.includes('left') ? 'left-0' : 'right-0'} mb-2 px-3 py-2 text-sm rounded-lg shadow-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200`}

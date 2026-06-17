@@ -93,7 +93,6 @@ export function useResize(
       const startH = dimsRef.current.height;
       const { cursor } = getDeltaAndCursor(corner, startX, startY, startX, startY);
 
-      // Disable transitions during resize for instant visual feedback
       if (containerRef.current) {
         containerRef.current.dataset.resizing = 'true';
       }
@@ -120,12 +119,10 @@ export function useResize(
         document.body.style.cursor = '';
         document.body.style.userSelect = '';
 
-        // Re-enable transitions
         if (containerRef.current) {
           delete containerRef.current.dataset.resizing;
         }
 
-        // Sync React state once on mouseup
         setDimensions({ ...dimsRef.current });
 
         if (!isPreviewMode && typeof localStorage !== 'undefined') {

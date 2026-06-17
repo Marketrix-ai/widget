@@ -19,7 +19,6 @@ export const MessageContent: React.FC<MessageContentProps> = ({ message, isLastM
   const placeholderState = message.placeholderState || 'thinking';
   const isWaitingForUser = placeholderState === 'waiting-for-user';
 
-  // Render using structured parts
   if (message.parts && message.parts.length > 0) {
     return (
       <Stack gap='sm'>
@@ -67,7 +66,6 @@ export const MessageContent: React.FC<MessageContentProps> = ({ message, isLastM
           return null;
         })}
 
-        {/* Show thinking/waiting indicator at the bottom if task is running or it's a placeholder */}
         {((message.isPlaceholder && !message.parts.some(p => p.type === 'text')) ||
           (widgetState.isTaskRunning && isLastMessage && (message.mode === 'show' || message.mode === 'do'))) && (
           <ThinkingIndicator isWaitingForUser={isWaitingForUser} />
@@ -76,7 +74,6 @@ export const MessageContent: React.FC<MessageContentProps> = ({ message, isLastM
     );
   }
 
-  // Default empty state or if pure placeholder
   if (
     message.isPlaceholder ||
     (widgetState.isTaskRunning && isLastMessage && (message.mode === 'show' || message.mode === 'do'))
@@ -84,7 +81,6 @@ export const MessageContent: React.FC<MessageContentProps> = ({ message, isLastM
     return <ThinkingIndicator isWaitingForUser={isWaitingForUser} />;
   }
 
-  // Fallback: render plain content text
   if (message.content) {
     return (
       <Text
