@@ -7,7 +7,6 @@ describe('resolveLayoutClasses', () => {
     expect(resolveLayoutClasses({})).toBe('');
   });
 
-  // Spacing
   describe('padding', () => {
     it('padding: none', () => expect(resolveLayoutClasses({ padding: 'none' })).toBe('p-0'));
     it('padding: xs', () => expect(resolveLayoutClasses({ padding: 'xs' })).toBe('p-0.5'));
@@ -57,7 +56,6 @@ describe('resolveLayoutClasses', () => {
     it('gap: xl', () => expect(resolveLayoutClasses({ gap: 'xl' })).toBe('gap-4'));
   });
 
-  // Flex
   describe('align', () => {
     it('align: center', () => expect(resolveLayoutClasses({ align: 'center' })).toBe('items-center'));
     it('align: start', () => expect(resolveLayoutClasses({ align: 'start' })).toBe('items-start'));
@@ -89,7 +87,6 @@ describe('resolveLayoutClasses', () => {
     it('shrink: true produces no class', () => expect(resolveLayoutClasses({ shrink: true })).toBe(''));
   });
 
-  // Position
   describe('position', () => {
     it('position: relative', () => expect(resolveLayoutClasses({ position: 'relative' })).toBe('relative'));
     it('position: absolute', () => expect(resolveLayoutClasses({ position: 'absolute' })).toBe('absolute'));
@@ -103,7 +100,6 @@ describe('resolveLayoutClasses', () => {
     it('inset: lg', () => expect(resolveLayoutClasses({ inset: 'lg' })).toBe('inset-3'));
   });
 
-  // Box
   describe('overflow', () => {
     it('overflow: hidden', () => expect(resolveLayoutClasses({ overflow: 'hidden' })).toBe('overflow-hidden'));
     it('overflow: auto', () => expect(resolveLayoutClasses({ overflow: 'auto' })).toBe('overflow-auto'));
@@ -134,7 +130,6 @@ describe('resolveLayoutClasses', () => {
     it('minHeight: 0', () => expect(resolveLayoutClasses({ minHeight: '0' })).toBe('min-h-0'));
   });
 
-  // Decoration
   describe('border', () => {
     it('border: true', () => expect(resolveLayoutClasses({ border: true })).toBe('border border-border'));
     it('border: false produces no class', () => expect(resolveLayoutClasses({ border: false })).toBe(''));
@@ -158,7 +153,6 @@ describe('resolveLayoutClasses', () => {
     it('shadow: theme', () => expect(resolveLayoutClasses({ shadow: 'theme' })).toBe('shadow-[var(--shadow)]'));
   });
 
-  // Interaction
   describe('cursor', () => {
     it('cursor: pointer', () => expect(resolveLayoutClasses({ cursor: 'pointer' })).toBe('cursor-pointer'));
     it('cursor: default', () => expect(resolveLayoutClasses({ cursor: 'default' })).toBe('cursor-default'));
@@ -185,7 +179,6 @@ describe('resolveLayoutClasses', () => {
     it('hidden: false produces no class', () => expect(resolveLayoutClasses({ hidden: false })).toBe(''));
   });
 
-  // Combinations
   it('combines multiple props', () => {
     const result = resolveLayoutClasses({ padding: 'md', align: 'center', grow: true });
     expect(result).toBe('p-2 items-center flex-1');

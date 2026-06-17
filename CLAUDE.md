@@ -4,7 +4,7 @@ Embeddable customer-support widget that hosts drop into their own product via a 
 
 ## What this is
 
-- Embeddable React widget, npm `@marketrix.ai/widget` (currently **3.8.10**), ESM-only, `sideEffects: false`.
+- Embeddable React widget, npm `@marketrix.ai/widget`, ESM-only, `sideEffects: false`.
 - React **19** is a **peer dependency** (`react`/`react-dom` `^19.2.3`) and is **external** to the bundle — the host page must supply it.
 - Built with Vite **8** in **library mode** → a single ESM bundle `dist/widget.mjs`.
 - Mounts into a **closed Shadow DOM**; all CSS is injected as JS (no external stylesheet) and isolated inside the shadow root.
@@ -80,7 +80,7 @@ The widget's SDK is a **scoped mirror** of the api contract, generated from the 
 - `src/sdk/contract.ts` assembles `widgetContract`.
 - `src/sdk/contracts/*.ts` are the per-domain fragments: `widget.ts`, `application.ts`, `chat.ts`, `entities.ts`, `common.ts`, `activityLog.ts`. There is **no** `src/sdk/routes.ts` and **no** `src/sdk/schema.ts` (re-exports come from `index.ts`).
 
-Drift is enforced by `.github/workflows/contract-drift.yml` (PRs touching `src/sdk/**`, weekly Mon 06:00, manual): it sparse-checkouts `Marketrix-ai/api@dev` (`contracts/`, `sdk/`, `scripts/sync-consumers.mjs`) and runs `node .api-src/scripts/sync-consumers.mjs widget --check --api-root .api-src --dest src/sdk`. It **hard-requires the `CONTRACTS_READ_TOKEN` secret** (fine-grained PAT, Contents:read on `Marketrix-ai/api`) and fails fast without it. Don't hand-edit `src/sdk/contracts/*` — regenerate from the api side (root `sync-contracts` skill) and re-run the sync, or the gate fails.
+Drift is enforced by `.github/workflows/contract-drift.yml` (PRs touching `src/sdk/**`, weekly Mon 06:00, manual): it sparse-checkouts `Marketrix-ai/api@dev` (`contracts/`, `sdk/`, `scripts/sync-consumers.mjs`) and runs `node .api-src/scripts/sync-consumers.mjs widget --check --api-root .api-src --dest src/sdk`. It authenticates with the org-level **`INFRA_PAT`** secret (provisioned for cross-repo access) as `GH_TOKEN` — no per-repo secret required. Don't hand-edit `src/sdk/contracts/*` — regenerate from the api side (root `sync-contracts` skill) and re-run the sync, or the gate fails.
 
 ## Structure
 
@@ -89,7 +89,7 @@ Drift is enforced by `.github/workflows/contract-drift.yml` (PRs touching `src/s
 - `src/components/` — UI (`base/`, `blocks/`, `chat/`, `navigation/`, `ui/`, `views/`, `MarketrixWidget.tsx`). `src/design-system/` — tokens + primitives.
 - `src/context/` — `ConversationContext` (one store: `{ messages, task }`), `UIStateContext`, `WidgetProviders`, `sseReducer.ts`. `src/hooks/`, `src/utils/` (incl. `bootstrap.tsx`), `src/lib/`, `src/constants/`, `src/types/`.
 - `src/test/` + colocated `*.test.ts(x)` — vitest setup, fixtures, a11y helpers.
-- `public/loader.js` — classic script-tag bootstrap. `index.html` / `react.html` — playground harnesses. `dist/` — generated only.
+- `public/loader.js` — classic script-tag bootstrap. `index.html` — playground harness. `dist/` — generated only.
 
 ## Release
 
@@ -104,7 +104,7 @@ Drift is enforced by `.github/workflows/contract-drift.yml` (PRs touching `src/s
 ## Gotchas
 
 - **Lockfile discipline.** Any version bump or dependency change must run `npm install` and commit `package-lock.json` alongside `package.json`. `npm run tag` does this for you.
-- **v-prefix asymmetry.** Git tag `v3.8.10` → image `marketrix.azurecr.io/widget:3.8.10` (the build pipeline strips the `v`).
+- **v-prefix asymmetry.** Git tag `vX.Y.Z` → image `marketrix.azurecr.io/widget:X.Y.Z` (the build pipeline strips the `v`).
 - **React external + peer.** The host MUST provide React 19. The script-tag loader injects an `esm.sh` importmap, but **host importmap mappings win** — a host on a different React 19 build keeps its own.
 - **Closed Shadow DOM.** The host can't reach into the widget DOM by design — don't expect host scripts/CSS to style or query inside it.
 - **Sticky auth error.** A `chat/error` with `request_id: 'auth'` permanently stops SSE reconnection until the widget is re-initialized.

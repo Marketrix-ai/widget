@@ -1,10 +1,9 @@
-// / <reference lib="dom" />
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 import { SHADOW } from '../../design-system/shadows';
 import { useWidget } from '../../hooks/useWidget';
 import type { ChatMessage, MarketrixConfig } from '../../types';
-import { addOpacity } from '../../utils/format';
+import { addOpacity } from '../../utils/color';
 import { Button } from '../base/Button';
 import { Flex } from '../base/Flex';
 import { Icon } from '../base/Icon';
@@ -38,13 +37,11 @@ export const MessageList = ({
   onScreenAccessDeny,
   onClearChat,
 }: MessageListProps) => {
-  // Get widget config and state
   const { config: widgetConfig, state: widgetState, isPreviewMode } = useWidget({ config });
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [showScrollBottom, setShowScrollBottom] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Prepend greeting as first agent message
   const greetingMessage = useMemo<ChatMessage>(
     () => ({
       id: 'welcome',
@@ -57,7 +54,6 @@ export const MessageList = ({
   );
   const allMessages = useMemo(() => [greetingMessage, ...messages], [greetingMessage, messages]);
 
-  // Handle scroll visibility
   const handleScroll = () => {
     if (containerRef.current) {
       const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
@@ -70,12 +66,10 @@ export const MessageList = ({
     }
   };
 
-  // Scroll to top handler
   const scrollToTop = () => {
     containerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Scroll to bottom handler
   // Skip in preview mode to prevent scrolling the parent modal
   const scrollToBottom = () => {
     if (messagesEndRef.current) {
@@ -83,9 +77,7 @@ export const MessageList = ({
     }
   };
 
-  // Force scroll to bottom on mount (restoring history)
   useEffect(() => {
-    // Use requestAnimationFrame to ensure DOM is fully rendered
     // and scroll height is calculated correctly
     window.requestAnimationFrame(() => {
       if (messagesEndRef.current) {
@@ -118,10 +110,8 @@ export const MessageList = ({
           scrollbarWidth: 'thin',
         }}
       >
-        {/* Initial loading state when no messages yet */}
         {messages.length === 0 && widgetState.isLoading && <StateMessage variant='loading' message='Connecting…' />}
 
-        {/* Messages (greeting prepended as first agent message) */}
         {allMessages.map((message: ChatMessage, index: number) => (
           <MessageItem
             key={`message-${message.id}-${index}`}
@@ -133,7 +123,6 @@ export const MessageList = ({
           />
         ))}
 
-        {/* Clear conversation footer */}
         {messages.length > 0 && onClearChat && (
           <Flex justify='center' style={{ marginTop: '12px', marginBottom: '4px' }}>
             <Button
@@ -151,11 +140,9 @@ export const MessageList = ({
           </Flex>
         )}
 
-        {/* Auto-scroll anchor */}
         <Surface key='scroll-anchor' ref={messagesEndRef as React.RefObject<HTMLDivElement>} />
       </Surface>
 
-      {/* Scroll to Top Button */}
       {showScrollTop && (
         <Flex
           position='absolute'

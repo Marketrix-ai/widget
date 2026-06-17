@@ -213,7 +213,6 @@ export function useScreenShare({
     setScreenShareMessageId(null);
   };
 
-  // Expose screen share handlers to MessengerShell header via refs
   useEffect(() => {
     if (onStartScreenShareRef) onStartScreenShareRef.current = handleStartScreenShare;
     if (onStopScreenShareRef) onStopScreenShareRef.current = stopScreenSharing;

@@ -37,12 +37,8 @@ export class ValidationService {
     };
   }
 
-  /**
-   * Validate by mtxId and mtxKey
-   */
   private async validateByMarketrixId(mtxId: string, mtxKey: string): Promise<WidgetValidationResult> {
     try {
-      // Step 1: Fetch widget by marketrix_id and marketrix_key
       console.log('Validating widget - fetching widget...', { mtxId, mtxKey });
 
       const { items: widgets } = await sdk.widgetSearch({
@@ -57,7 +53,6 @@ export class ValidationService {
         };
       }
 
-      // Debug: Log what widgets were found
       console.log(
         'Found widgets:',
         widgets.length,
@@ -69,11 +64,9 @@ export class ValidationService {
         })),
       );
 
-      // Find the active widget
       const activeWidget = widgets.find((widget: WidgetData) => widget.type === 'widget' && widget.status === 'active');
 
       if (!activeWidget) {
-        // Check if there are any widgets with different status
         const widgetMatches = widgets.filter((widget: WidgetData) => widget.type === 'widget');
 
         if (widgetMatches.length > 0) {
@@ -84,7 +77,6 @@ export class ValidationService {
           };
         }
 
-        // Check if there are any widgets at all
         if (widgets.length === 0) {
           return {
             isValid: false,
@@ -92,7 +84,6 @@ export class ValidationService {
           };
         }
 
-        // There are widgets but no widget type
         const types = widgets.map((i: WidgetData) => i.type).join(', ');
         return {
           isValid: false,
@@ -100,7 +91,6 @@ export class ValidationService {
         };
       }
 
-      // Step 2: Validate the application ID exists
       if (!activeWidget.application_id) {
         return {
           isValid: false,
@@ -138,10 +128,6 @@ export class ValidationService {
     }
   }
 
-  /**
-   * Validate by mtxApp directly
-   * Validates the application by ID
-   */
   private async validateByApplication(mtxApp: number): Promise<WidgetValidationResult> {
     try {
       console.log('Validating application by ID...', { mtxApp });

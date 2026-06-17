@@ -30,7 +30,6 @@ export const HomeView: React.FC<HomeViewProps> = ({ config, messages, onNavigate
   return (
     <Stack height='full' overflow='hidden' id='view-home' role='tabpanel' aria-labelledby='tab-home'>
       <Stack grow overflowY='auto' padding='lg'>
-        {/* Block 1: Greeting */}
         <Surface style={{ textAlign: 'center', paddingTop: '8px', paddingBottom: '16px' }}>
           <Text as='h2' size='lg' weight='semibold'>
             {config.widget_greeting ?? 'Hey There!'}
@@ -40,7 +39,6 @@ export const HomeView: React.FC<HomeViewProps> = ({ config, messages, onNavigate
           </Text>
         </Surface>
 
-        {/* Block 2: Actions — CTA + chips as one unit */}
         <Stack gap='sm'>
           <Button
             type='button'
@@ -61,7 +59,6 @@ export const HomeView: React.FC<HomeViewProps> = ({ config, messages, onNavigate
         </Stack>
       </Stack>
 
-      {/* Block 3: Recent conversation — anchored at bottom */}
       {messages.length > 0 && (
         <Card style={{ margin: '0 12px 12px 12px' }}>
           <Text as='p' size='xs' weight='semibold' style={{ marginBottom: '2px' }}>

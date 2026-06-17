@@ -299,7 +299,6 @@ export class ToolService {
         }
       }
 
-      // Method 2: Direct value assignment
       if (!valueSet) {
         try {
           inputElement.value = finalValue;
@@ -311,7 +310,6 @@ export class ToolService {
         }
       }
 
-      // Method 3: Select all and use execCommand insertText
       if (!valueSet) {
         try {
           inputElement.focus();
@@ -362,7 +360,6 @@ export class ToolService {
         };
       }
 
-      // Dispatch events for React/Vue/Angular frameworks
       try {
         // InputEvent is more specific and carries data
         const inputEvent = new InputEvent('input', {
@@ -373,7 +370,6 @@ export class ToolService {
         });
         inputElement.dispatchEvent(inputEvent);
 
-        // Change event for form validation
         inputElement.dispatchEvent(new Event('change', { bubbles: true }));
 
         // Some frameworks need blur to trigger validation
@@ -565,7 +561,6 @@ export class ToolService {
       }
 
       case 'Shift+Tab': {
-        // Move focus to previous focusable element
         const focusables = Array.from(
           document.querySelectorAll<HTMLElement>(
             'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
@@ -582,7 +577,6 @@ export class ToolService {
       }
 
       case 'Enter': {
-        // Submit form or click button
         if (element instanceof HTMLButtonElement || element.getAttribute('role') === 'button') {
           element.click();
           return 'Enter: clicked button';
@@ -618,7 +612,6 @@ export class ToolService {
 
       case ' ':
       case 'Space': {
-        // Click checkboxes, radio buttons, or buttons
         if (element instanceof HTMLInputElement && (element.type === 'checkbox' || element.type === 'radio')) {
           element.click();
           return `Space: toggled ${element.type}`;
@@ -797,7 +790,6 @@ export class ToolService {
     if (!args.tab_id) {
       return { success: false, data: { text: '' }, error: 'tab_id is required' };
     }
-    // Tab switching not supported in browser context
     return { success: false, data: { text: '' }, error: 'Tab switching not supported' };
   }
 

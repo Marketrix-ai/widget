@@ -58,7 +58,6 @@ export class StreamClient {
       return;
     }
 
-    // Abort any existing stream connection
     if (this.abortController) {
       this.abortController.abort();
       this.abortController = null;
@@ -75,7 +74,6 @@ export class StreamClient {
     const signal = this.abortController.signal;
 
     try {
-      // Build the stream input with auth params
       const streamInput: Record<string, unknown> = { chat_id: chatId };
       if (this.config?.mtxId && this.config?.mtxKey) {
         streamInput.marketrix_id = this.config.mtxId;
@@ -99,7 +97,6 @@ export class StreamClient {
       // here, before registration, would defeat the max-attempts cap if registration
       // never lands and the stream flaps open→closed in a tight loop.
 
-      // Consume events in the background; do not await here
       this.consumeEvents(iterator, myConnectionId);
     } catch (error) {
       if (!signal.aborted) {

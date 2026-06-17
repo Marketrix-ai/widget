@@ -11,7 +11,6 @@ let activeStream: MediaStream | null = null;
  * @returns Promise resolving to the MediaStream
  */
 export async function startScreenShare(): Promise<MediaStream> {
-  // Check if stream already exists and is active
   if (activeStream?.active) {
     const videoTracks = activeStream.getVideoTracks();
     if (videoTracks.length > 0 && videoTracks[0].readyState === 'live') {
@@ -19,22 +18,18 @@ export async function startScreenShare(): Promise<MediaStream> {
     }
   }
 
-  // Request screen share with preferCurrentTab option
   const stream = await navigator.mediaDevices.getDisplayMedia({
     video: true,
     audio: false,
     preferCurrentTab: true,
   } as DisplayMediaStreamOptions);
 
-  // Validate stream
   if (!stream || stream.getVideoTracks().length === 0) {
     throw new Error('Screen sharing permission denied or no video track available');
   }
 
-  // Store stream reference
   activeStream = stream;
 
-  // Set up event listener for track 'ended' event to clear stream
   stream.getVideoTracks()[0].addEventListener('ended', () => {
     activeStream = null;
   });
@@ -42,10 +37,6 @@ export async function startScreenShare(): Promise<MediaStream> {
   return stream;
 }
 
-/**
- * Get the current active MediaStream, if any.
- * @returns The active MediaStream or null
- */
 function getActiveStream(): MediaStream | null {
   // Check if stream is still active
   if (activeStream?.active) {
@@ -55,14 +46,10 @@ function getActiveStream(): MediaStream | null {
     }
   }
 
-  // Stream is no longer active, clear reference
   activeStream = null;
   return null;
 }
 
-/**
- * Stop screen sharing and clear the stream reference.
- */
 export function stopScreenShare(): void {
   if (activeStream) {
     activeStream.getTracks().forEach(track => track.stop());
@@ -70,10 +57,6 @@ export function stopScreenShare(): void {
   }
 }
 
-/**
- * Check if screensharing is currently active.
- * @returns True if screensharing is active, false otherwise
- */
 export function isScreenSharing(): boolean {
   return getActiveStream() !== null;
 }

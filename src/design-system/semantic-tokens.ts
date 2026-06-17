@@ -1,5 +1,5 @@
 import type { WidgetSettingsData } from '../sdk';
-import { addOpacity, getContrastingColor } from '../utils/format';
+import { addOpacity, getContrastingColor } from '../utils/color';
 
 export type SemanticTokens = {
   color: {

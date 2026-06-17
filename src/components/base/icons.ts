@@ -24,9 +24,6 @@ export interface IconData {
 }
 
 export const icons = {
-  // ─── FontAwesome (fa) — fill-based, viewBox varies ───────────────────────
-
-  /** FaCheckCircle */
   checkCircle: {
     viewBox: '0 0 512 512',
     paths: [
@@ -37,7 +34,6 @@ export const icons = {
     ],
   },
 
-  /** FaCircle */
   circle: {
     viewBox: '0 0 512 512',
     paths: [
@@ -48,7 +44,6 @@ export const icons = {
     ],
   },
 
-  /** FaExclamationCircle */
   exclamationCircle: {
     viewBox: '0 0 512 512',
     paths: [
@@ -59,7 +54,6 @@ export const icons = {
     ],
   },
 
-  /** FaTimesCircle */
   timesCircle: {
     viewBox: '0 0 512 512',
     paths: [
@@ -70,7 +64,6 @@ export const icons = {
     ],
   },
 
-  /** FaBan */
   ban: {
     viewBox: '0 0 512 512',
     paths: [
@@ -81,7 +74,6 @@ export const icons = {
     ],
   },
 
-  /** FaArrowUp */
   arrowUp: {
     viewBox: '0 0 448 512',
     paths: [
@@ -92,7 +84,6 @@ export const icons = {
     ],
   },
 
-  /** FaArrowDown */
   arrowDown: {
     viewBox: '0 0 448 512',
     paths: [
@@ -103,9 +94,6 @@ export const icons = {
     ],
   },
 
-  // ─── Feather (fi) — stroke-based, 0 0 24 24 ──────────────────────────────
-
-  /** FiX */
   x: {
     viewBox: '0 0 24 24',
     paths: [
@@ -128,9 +116,6 @@ export const icons = {
     ],
   },
 
-  // ─── Ionicons 5 (io5) — mixed, 0 0 512 512 ───────────────────────────────
-
-  /** IoChatbubbleEllipsesOutline */
   chatBubble: {
     viewBox: '0 0 512 512',
     paths: [
@@ -141,16 +126,12 @@ export const icons = {
         strokeWidth: 32,
         strokeLinecap: 'round',
       },
-      // circle cx=160 cy=256 r=32
       { d: 'M160 256 m-32 0 a32 32 0 1 1 64 0 a32 32 0 1 1 -64 0', fill: 'currentColor' },
-      // circle cx=256 cy=256 r=32
       { d: 'M256 256 m-32 0 a32 32 0 1 1 64 0 a32 32 0 1 1 -64 0', fill: 'currentColor' },
-      // circle cx=352 cy=256 r=32
       { d: 'M352 256 m-32 0 a32 32 0 1 1 64 0 a32 32 0 1 1 -64 0', fill: 'currentColor' },
     ],
   },
 
-  /** IoStop */
   stop: {
     viewBox: '0 0 512 512',
     paths: [
@@ -161,9 +142,6 @@ export const icons = {
     ],
   },
 
-  // ─── Lucide (lu) — stroke-based, 0 0 24 24 ───────────────────────────────
-
-  /** LuMousePointerClick */
   mousePointerClick: {
     viewBox: '0 0 24 24',
     paths: [
@@ -210,9 +188,6 @@ export const icons = {
     ],
   },
 
-  // ─── Simple Icons (si) — fill-based, 0 0 24 24 ───────────────────────────
-
-  /** SiTicktick */
   ticktick: {
     viewBox: '0 0 24 24',
     paths: [
@@ -222,8 +197,6 @@ export const icons = {
       },
     ],
   },
-
-  // ─── Inline SVG icons (from component files) ─────────────────────────────
 
   /** Home icon — from MessengerShell TAB_ICONS.home, viewBox 0 0 24 24 */
   home: {

@@ -27,7 +27,6 @@ export const VideoStreamDisplay: React.FC<VideoStreamDisplayProps> = ({ stream }
     if (videoRef.current && stream) {
       const video = videoRef.current;
 
-      // Reset states
       setIsLoaded(false);
       setHasError(false);
 
@@ -39,10 +38,8 @@ export const VideoStreamDisplay: React.FC<VideoStreamDisplayProps> = ({ stream }
         playPromiseRef.current = null;
       }
 
-      // Set the stream source
       video.srcObject = stream;
 
-      // Handle video loaded event
       const handleLoadedMetadata = () => {
         setIsLoaded(true);
       };
@@ -108,7 +105,6 @@ export const VideoStreamDisplay: React.FC<VideoStreamDisplayProps> = ({ stream }
         boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)',
       }}
     >
-      {/* Loading overlay */}
       {!isLoaded && !hasError && (
         <Flex
           position='absolute'
@@ -132,7 +128,6 @@ export const VideoStreamDisplay: React.FC<VideoStreamDisplayProps> = ({ stream }
         </Flex>
       )}
 
-      {/* Error overlay */}
       {hasError && (
         <Flex
           position='absolute'
@@ -159,7 +154,6 @@ export const VideoStreamDisplay: React.FC<VideoStreamDisplayProps> = ({ stream }
         </Flex>
       )}
 
-      {/* Video element with smooth transitions */}
       <Video
         ref={videoRef}
         autoPlay
@@ -178,7 +172,6 @@ export const VideoStreamDisplay: React.FC<VideoStreamDisplayProps> = ({ stream }
         }}
       />
 
-      {/* Live indicator badge */}
       {isLoaded && !hasError && (
         <Flex
           position='absolute'
@@ -220,7 +213,6 @@ export const VideoStreamDisplay: React.FC<VideoStreamDisplayProps> = ({ stream }
         </Flex>
       )}
 
-      {/* Hover overlay with info */}
       <Flex
         position='absolute'
         inset='0'

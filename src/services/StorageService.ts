@@ -26,14 +26,9 @@ const CONTEXT_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
  */
 type StoredMessage = Omit<ChatMessage, 'videoStream' | 'timestamp'> & { timestamp: string };
 
-/**
- * Unified storage structure for all widget data
- */
 export interface MarketrixChatContext {
-  // Chat session
   chat_id: string | null;
 
-  // Chat state
   messages: StoredMessage[];
   isTaskRunning: boolean;
   activeTaskId: string | null;
@@ -42,16 +37,11 @@ export interface MarketrixChatContext {
   isMinimized: boolean;
   isLoading: boolean;
 
-  // Widget config
   config: MarketrixConfig | null;
 
-  // Metadata
   timestamp: number;
 }
 
-/**
- * Default empty context
- */
 const DEFAULT_CONTEXT: MarketrixChatContext = {
   chat_id: null,
   messages: [],
@@ -86,9 +76,6 @@ class StorageService {
     return StorageService.instance;
   }
 
-  /**
-   * Load context from localStorage
-   */
   private loadContext(): MarketrixChatContext {
     if (typeof window === 'undefined') {
       this.context = { ...DEFAULT_CONTEXT };
@@ -100,7 +87,6 @@ class StorageService {
       if (stored) {
         const parsed = JSON.parse(stored) as MarketrixChatContext;
 
-        // Check if expired
         if (Date.now() - parsed.timestamp > CONTEXT_EXPIRY_MS) {
           this.context = { ...DEFAULT_CONTEXT };
           this.saveContext();
@@ -118,9 +104,6 @@ class StorageService {
     return this.context;
   }
 
-  /**
-   * Save context to localStorage
-   */
   private saveContext(): void {
     if (typeof window === 'undefined' || !this.context) {
       return;
@@ -134,9 +117,6 @@ class StorageService {
     }
   }
 
-  /**
-   * Get the full context
-   */
   getContext(): MarketrixChatContext {
     if (!this.context) {
       return this.loadContext();
@@ -144,9 +124,6 @@ class StorageService {
     return this.context;
   }
 
-  /**
-   * Update context with partial data
-   */
   updateContext(updates: Partial<MarketrixChatContext>): void {
     if (!this.context) {
       this.loadContext();
@@ -156,9 +133,6 @@ class StorageService {
     this.saveContext();
   }
 
-  /**
-   * Check if a string is a valid chat_id
-   */
   private isValidChatId(value: string | null | undefined): value is string {
     return typeof value === 'string' && value.trim() !== '';
   }
@@ -246,9 +220,6 @@ class StorageService {
     }
   }
 
-  /**
-   * Check if context exists and has a valid chat_id
-   */
   hasValidContext(): boolean {
     const ctx = this.getContext();
     return ctx.chat_id !== null && ctx.chat_id.length > 0;

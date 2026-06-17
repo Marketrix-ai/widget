@@ -5,7 +5,6 @@ import type { ShadowToken } from '../../design-system/shadows';
 import { spacingScale, type SpacingToken } from './tokens';
 
 export interface LayoutProps {
-  // Spacing
   padding?: SpacingToken;
   paddingX?: SpacingToken;
   paddingY?: SpacingToken;
@@ -18,18 +17,15 @@ export interface LayoutProps {
   marginBottom?: SpacingToken;
   gap?: SpacingToken;
 
-  // Flex
   align?: 'start' | 'center' | 'end' | 'stretch' | 'baseline';
   justify?: 'start' | 'center' | 'end' | 'between' | 'around';
   wrap?: boolean;
   grow?: boolean;
   shrink?: boolean;
 
-  // Position
   position?: 'relative' | 'absolute' | 'fixed' | 'sticky';
   inset?: SpacingToken | '0';
 
-  // Box
   overflow?: 'hidden' | 'auto' | 'visible' | 'scroll';
   overflowY?: 'hidden' | 'auto';
   width?: 'full' | 'auto';
@@ -37,18 +33,15 @@ export interface LayoutProps {
   minWidth?: '0';
   minHeight?: '0';
 
-  // Decoration
   border?: boolean | 'top' | 'bottom' | 'left' | 'right';
   rounded?: boolean | 'none' | 'sm' | 'full' | 'lg' | 'theme' | 'md' | 'xl' | 'pill' | 'circle';
   shadow?: boolean | ShadowToken | 'theme';
 
-  // Interaction
   cursor?: 'pointer' | 'default' | 'not-allowed' | 'grab';
   opacity?: 0 | 50 | 80 | 100;
   animate?: 'spin' | 'ping' | 'pulse' | 'fadeIn' | 'none';
   hidden?: boolean;
 
-  // Polymorphism + style
   as?: ElementType;
   style?: CSSProperties;
 }
@@ -92,7 +85,6 @@ const LAYOUT_KEYS = new Set<keyof LayoutProps>([
 export function resolveLayoutClasses(props: LayoutProps): string {
   const classes: string[] = [];
 
-  // Spacing
   if (props.padding !== undefined) classes.push(`p-${spacingScale[props.padding]}`);
   if (props.paddingX !== undefined) classes.push(`px-${spacingScale[props.paddingX]}`);
   if (props.paddingY !== undefined) classes.push(`py-${spacingScale[props.paddingY]}`);
@@ -105,20 +97,17 @@ export function resolveLayoutClasses(props: LayoutProps): string {
   if (props.marginBottom !== undefined) classes.push(`mb-${spacingScale[props.marginBottom]}`);
   if (props.gap !== undefined) classes.push(`gap-${spacingScale[props.gap]}`);
 
-  // Flex
   if (props.align !== undefined) classes.push(`items-${props.align}`);
   if (props.justify !== undefined) classes.push(`justify-${props.justify}`);
   if (props.wrap === true) classes.push('flex-wrap');
   if (props.grow === true) classes.push('flex-1');
   if (props.shrink === false) classes.push('flex-shrink-0');
 
-  // Position
   if (props.position !== undefined) classes.push(props.position);
   if (props.inset !== undefined) {
     classes.push(props.inset === '0' ? 'inset-0' : `inset-${spacingScale[props.inset]}`);
   }
 
-  // Box
   if (props.overflow !== undefined) classes.push(`overflow-${props.overflow}`);
   if (props.overflowY !== undefined) classes.push(`overflow-y-${props.overflowY}`);
   if (props.width !== undefined) classes.push(`w-${props.width}`);
@@ -126,7 +115,6 @@ export function resolveLayoutClasses(props: LayoutProps): string {
   if (props.minWidth === '0') classes.push('min-w-0');
   if (props.minHeight === '0') classes.push('min-h-0');
 
-  // Decoration
   if (props.border !== undefined && props.border !== false) {
     if (props.border === true) {
       classes.push('border', 'border-border');
@@ -149,7 +137,6 @@ export function resolveLayoutClasses(props: LayoutProps): string {
     classes.push('shadow-[var(--shadow)]');
   }
 
-  // Interaction
   if (props.cursor !== undefined) classes.push(`cursor-${props.cursor}`);
   if (props.opacity !== undefined) classes.push(`opacity-${props.opacity}`);
 

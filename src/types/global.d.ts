@@ -1,4 +1,3 @@
-// Express types for file uploads
 declare global {
   namespace Express {
     namespace Multer {
@@ -20,12 +19,10 @@ declare global {
     }
   }
 
-  // Navigator extensions for media devices
   interface Navigator {
     mediaDevices: MediaDevices;
   }
 
-  // Document extensions for vendor-specific fullscreen properties
   interface Document {
     webkitFullscreenElement?: Element;
     mozFullScreenElement?: Element;

@@ -2,7 +2,7 @@ import React from 'react';
 
 import MarketrixIcon from '../../assets/marketrix-icon.svg';
 import type { ChatMessage } from '../../types';
-import { formatMessageTime } from '../../utils/format';
+import { formatMessageTime } from '../../utils/color';
 import { Avatar } from '../base/Avatar';
 import { Button } from '../base/Button';
 import { Flex } from '../base/Flex';
@@ -27,7 +27,6 @@ export const MessageItem: React.FC<MessageItemProps> = ({
   onScreenAccessAllow,
   onScreenAccessDeny,
 }) => {
-  // Render system messages differently (muted, centered)
   if (message.isSystemMessage) {
     return (
       <Flex key={`message-${message.id}-${index}`} justify='center' align='center'>
@@ -50,7 +49,6 @@ export const MessageItem: React.FC<MessageItemProps> = ({
       animate={isLastMessage ? 'fadeIn' : undefined}
     >
       <Flex align='start' gap='sm' width='full'>
-        {/* Logo (agent) or spacer (user) on left */}
         <Flex shrink={false} style={{ width: '20px', height: '20px', marginTop: '6px' }}>
           {!isUser && (
             <Avatar
@@ -69,7 +67,6 @@ export const MessageItem: React.FC<MessageItemProps> = ({
           )}
         </Flex>
 
-        {/* Message bubble */}
         <Stack
           grow
           position='relative'
@@ -82,12 +79,9 @@ export const MessageItem: React.FC<MessageItemProps> = ({
             color: isUser ? 'var(--primary-foreground)' : 'var(--foreground)',
           }}
         >
-          {/* Video stream display - edge-to-edge */}
           {message.videoStream && <VideoStreamDisplay stream={message.videoStream} />}
-          {/* Message content */}
           {!message.videoStream && <MessageContent message={message} isLastMessage={isLastMessage} />}
 
-          {/* Screen access request action buttons - show if not yet handled */}
           {message.isScreenAccessRequest && !message.screenShareStatus && (
             <Flex align='center' gap='sm' style={{ marginTop: '6px' }}>
               <Button type='button' variant='primary' size='sm' shape='pill' onClick={() => onScreenAccessAllow?.()}>
@@ -105,7 +99,6 @@ export const MessageItem: React.FC<MessageItemProps> = ({
             </Text>
           )}
 
-          {/* Task status icon at bottom right (only for agent messages with task status) */}
           {!isUser && message.taskStatus && (
             <Flex position='absolute' align='center' justify='center' style={{ bottom: '4px', right: '4px' }}>
               <TaskStatusIcon status={message.taskStatus} />
@@ -113,10 +106,8 @@ export const MessageItem: React.FC<MessageItemProps> = ({
           )}
         </Stack>
 
-        {/* Spacer on right for user messages */}
         <Flex shrink={false} style={{ width: '20px' }} />
       </Flex>
-      {/* Timestamp — right-aligned */}
       {!message.isPlaceholder && (
         <Text as='div' variant='faint' size='xxs' align='right' style={{ marginTop: '2px', marginRight: '26px' }}>
           {formatMessageTime(message.timestamp)}

@@ -48,14 +48,12 @@ export function useDragSnap({
   const velocityHistoryRef = useRef<Array<{ x: number; y: number; t: number }>>([]);
   const lastVelocitySampleRef = useRef(0);
 
-  // Cleanup RAF on unmount
   React.useEffect(() => {
     return () => {
       if (rafRef.current !== null) window.cancelAnimationFrame(rafRef.current);
     };
   }, []);
 
-  // Resize listener for viewport changes
   React.useEffect(() => {
     if (isPreviewMode) return;
     const onResize = () => setViewportTick(t => t + 1);

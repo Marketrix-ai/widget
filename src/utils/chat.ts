@@ -8,30 +8,18 @@
 import type { ChatMessage, InstructionType } from '../types';
 import { BROWSER_TOOLS } from '../types/browserTools';
 
-/**
- * Remove all __THINKING__ markers from message content
- */
 export function removeThinkingMarkers(content: string): string {
   return content.replace(/__THINKING__/g, '');
 }
 
-/**
- * Remove thinking marker from end of content (for display)
- */
 export function removeThinkingMarkerFromEnd(content: string): string {
   return content.replace(/\n\n__THINKING__$/, '').replace(/__THINKING__/g, '');
 }
 
-/**
- * Check if content has thinking marker
- */
 export function hasThinkingMarker(content: string): boolean {
   return content.includes('__THINKING__');
 }
 
-/**
- * Add thinking marker to content
- */
 export function addThinkingMarker(content: string): string {
   if (hasThinkingMarker(content)) return content;
   return `${content}\n\n__THINKING__`;
@@ -64,9 +52,6 @@ export interface FindMessageOptions {
   requireContent?: boolean;
 }
 
-/**
- * Helper function to check if a message matches the criteria for progress updates
- */
 function matchesProgressCriteria(
   msg: ChatMessage,
   isTaskRunning: boolean,
@@ -74,7 +59,6 @@ function matchesProgressCriteria(
   requireContent: boolean | undefined,
   checkMode: boolean,
 ): boolean {
-  // Basic sender and type checks
   if (msg.sender !== 'agent' || msg.isSystemMessage || msg.isScreenAccessRequest) {
     return false;
   }
@@ -98,7 +82,6 @@ function matchesProgressCriteria(
     }
   }
 
-  // Content requirement check
   // With object-based progress, content might be empty but progressSteps present
   if (requireContent) {
     const hasText = msg.content.trim().length > 0;
@@ -238,9 +221,6 @@ export function findMessageForProgress(options: FindMessageOptions): {
   return null;
 }
 
-/**
- * Ensure message has initialized parts
- */
 function ensureMessageStructure(message: ChatMessage): ChatMessage {
   const msg = { ...message };
 
@@ -301,9 +281,6 @@ function filterCancellationText(content: string): string {
     .trim();
 }
 
-/**
- * Add a new progress step to a message
- */
 export function addProgressLine(message: ChatMessage, toolName: string, explanation: string): ChatMessage {
   const msg = ensureMessageStructure(message);
   const parts = msg.parts || [];
@@ -317,7 +294,6 @@ export function addProgressLine(message: ChatMessage, toolName: string, explanat
   const hideIcon = !isInteractive;
   const textStyle = 'default';
 
-  // Filter cancellation text from explanation
   const cleanedExplanation = filterCancellationText(explanation);
 
   if (existingPartIndex >= 0) {
@@ -344,9 +320,6 @@ export function addProgressLine(message: ChatMessage, toolName: string, explanat
   };
 }
 
-/**
- * Mark the last incomplete progress step as completed
- */
 export function markProgressLineComplete(message: ChatMessage, toolName?: string): ChatMessage {
   const msg = ensureMessageStructure(message);
   const parts = msg.parts || [];
@@ -371,9 +344,6 @@ export function markProgressLineComplete(message: ChatMessage, toolName?: string
   return { ...msg, parts: newParts };
 }
 
-/**
- * Mark the last incomplete progress step as failed
- */
 export function markProgressLineFailed(message: ChatMessage, toolName: string, error: string): ChatMessage {
   const msg = ensureMessageStructure(message);
   const parts = msg.parts || [];
@@ -419,9 +389,6 @@ export function markProgressLineFailed(message: ChatMessage, toolName: string, e
   return { ...msg, parts: newParts };
 }
 
-/**
- * Add or remove thinking marker based on task state
- */
 export function updateThinkingMarker(
   message: ChatMessage,
   isTaskRunning: boolean,

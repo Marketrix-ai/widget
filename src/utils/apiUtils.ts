@@ -30,9 +30,6 @@ export function extractErrorMessage(error: unknown, fallback = 'Unknown error'):
   return fallback;
 }
 
-/**
- * Handle API error with consistent error message extraction
- */
 export function handleApiError(
   error: unknown,
   context = 'Operation',

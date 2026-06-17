@@ -96,7 +96,6 @@ export class ShowModeService {
       this.rafId = null;
     }
 
-    // Stop element monitoring
     if (this.mutationObserver) {
       this.mutationObserver.disconnect();
       this.mutationObserver = null;
@@ -109,7 +108,6 @@ export class ShowModeService {
 
     this.updateHighlightPosition = null;
 
-    // Remove popup and highlight elements
     if (this.currentPopup) {
       this.currentPopup.remove();
       this.currentPopup = null;
@@ -119,7 +117,6 @@ export class ShowModeService {
       this.currentHighlight = null;
     }
 
-    // Also remove by ID in case they weren't properly tracked
     const popupById = document.getElementById('marketrix-show-popup');
     if (popupById) {
       popupById.remove();
@@ -223,7 +220,6 @@ export class ShowModeService {
       { left: elementCenterX - popupWidth / 2, top: rect.bottom + spacing }, // Bottom
     ];
 
-    // Find first position that fits
     let bestPos = positions[0];
     for (const pos of positions) {
       if (
@@ -237,7 +233,6 @@ export class ShowModeService {
       }
     }
 
-    // Clamp to screen
     const left = Math.max(padding, Math.min(bestPos.left, window.innerWidth - popupWidth - padding));
     const top = Math.max(padding, Math.min(bestPos.top, window.innerHeight - popupHeight - padding));
 
@@ -318,7 +313,6 @@ export class ShowModeService {
     this.visibilityCheckInterval = setInterval(() => {
       if (!this.currentElement) return;
 
-      // Get the element's index for error messages
       const index = domService.getSequenceForElement(this.currentElement) ?? -1;
 
       // Use centralized interactability check from DomService
