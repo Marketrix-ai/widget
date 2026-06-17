@@ -1,7 +1,7 @@
 import React from 'react';
 
 import { useWidget } from '../../hooks/useWidget';
-import { addOpacity } from '../../utils/format';
+import { addOpacity } from '../../utils/color';
 import { Icon } from '../base/Icon';
 import { Spinner } from '../base/Spinner';
 

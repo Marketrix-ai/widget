@@ -6,7 +6,7 @@
  */
 
 import { sdk } from '../sdk';
-import { createLogger } from '../utils/common';
+import { createLogger } from '../utils/logger';
 import { chatService } from './ChatService';
 import { storageService } from './StorageService';
 

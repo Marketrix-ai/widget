@@ -3,7 +3,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { SHADOW } from '../../design-system/shadows';
 import { useWidget } from '../../hooks/useWidget';
 import type { ChatMessage, MarketrixConfig } from '../../types';
-import { addOpacity } from '../../utils/format';
+import { addOpacity } from '../../utils/color';
 import { Button } from '../base/Button';
 import { Flex } from '../base/Flex';
 import { Icon } from '../base/Icon';

@@ -2,7 +2,7 @@ import { record } from '@rrweb/record';
 import type { eventWithTime } from '@rrweb/types';
 
 import { sdk } from '../sdk';
-import { createLogger } from '../utils/common';
+import { createLogger } from '../utils/logger';
 
 type RecordOptions = Parameters<typeof record>[0];
 

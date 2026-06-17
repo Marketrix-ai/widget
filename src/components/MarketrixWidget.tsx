@@ -6,7 +6,7 @@ import { createSemanticTokens } from '../design-system/token-adapter';
 import { useScrollLock } from '../hooks/useScrollLock';
 import { useWidget } from '../hooks/useWidget';
 import type { MarketrixConfig, WidgetPosition } from '../types';
-import { addOpacity, darkenColor, getContrastingColor } from '../utils/format';
+import { addOpacity, darkenColor, getContrastingColor } from '../utils/color';
 import { Surface } from './base/Surface';
 import { NotificationToast } from './blocks/NotificationToast';
 import { WidgetFab } from './blocks/WidgetFab';

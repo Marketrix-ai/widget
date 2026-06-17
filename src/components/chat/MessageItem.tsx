@@ -2,7 +2,7 @@ import React from 'react';
 
 import MarketrixIcon from '../../assets/marketrix-icon.svg';
 import type { ChatMessage } from '../../types';
-import { formatMessageTime } from '../../utils/format';
+import { formatMessageTime } from '../../utils/color';
 import { Avatar } from '../base/Avatar';
 import { Button } from '../base/Button';
 import { Flex } from '../base/Flex';
