@@ -54,7 +54,10 @@ export class StreamClient {
       this.isIntentionallyDisconnected = false;
     }
 
-    if (this.isConnected() && this.chatId === chatId) {
+    if (
+      this.chatId === chatId &&
+      (this.status === 'connecting' || this.status === 'connected' || this.status === 'registered')
+    ) {
       return;
     }
 
