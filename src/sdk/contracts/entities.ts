@@ -11,8 +11,6 @@ export type KnowledgeType = z.infer<typeof KnowledgeTypeSchema>;
 export const KnowledgeSourceSchema = z.enum(['user', 'research']);
 export type KnowledgeSource = z.infer<typeof KnowledgeSourceSchema>;
 
-export const QAFlowStatusSchema = z.enum(['pending', 'processing', 'waiting_review', 'completed', 'failed']);
-
 // Canonical wire vocabulary matching the `simulation_status` Postgres ENUM and the
 // `SimulationStatus` proto enum.
 export const SimulationStatusSchema = z.enum([
@@ -106,11 +104,17 @@ export const KnowledgeEntitySchema = BaseEntitySchema.extend({
 export type KnowledgeData = z.infer<typeof KnowledgeEntitySchema>;
 
 /**
- * QA verdict entity schemas — LLM evaluator output per (qa_run, qa_test_case).
- * Independent of simulation task status (which keeps raw execution semantics).
+ * Device viewport — the only device dimension (Chrome-only). A simulation runs at exactly
+ * one viewport; selecting N viewports fans out into N simulations (one per viewport).
+ * Defined here (the widget/root import closure) so SSE + simulation + qa contracts can share it.
  */
-export const QAVerdictSchema = z.enum(['passed', 'needs_healing', 'failed']);
-export type QAVerdict = z.infer<typeof QAVerdictSchema>;
+export const ViewportNameSchema = z.enum(['desktop', 'tablet', 'mobile']);
+export type ViewportName = z.infer<typeof ViewportNameSchema>;
+export const VIEWPORT_DIMENSIONS: Record<ViewportName, { width: number; height: number }> = {
+  desktop: { width: 1920, height: 1080 },
+  tablet: { width: 768, height: 1024 },
+  mobile: { width: 393, height: 852 },
+};
 
 export const QAProcessResponseSchema = z.object({
   ultimate_goal: z.string(),
@@ -157,6 +161,41 @@ export const SimulationTaskEntrySchema = z.object({
 });
 export type SimulationTaskEntry = z.infer<typeof SimulationTaskEntrySchema>;
 
+export const SentimentSchema = z.enum(['positive', 'neutral', 'negative']);
+
+export const StepReactionSchema = z.object({
+  step_index: z.number(),
+  // fix #3: nullable to match the persisted rows. The live persistStepReaction path
+  // (simulationTerminal) inserts step rows with NULL screenshot_ref (and a not-yet-
+  // classified sentiment), and the read path re-parses this schema — a non-nullable
+  // shape would 500 simulationGet + every studies read.
+  screenshot_ref: z.string().nullable(),
+  reaction: z.string(),
+  sentiment: SentimentSchema.nullable(),
+});
+export const JourneyReactionSchema = z.object({ reaction: z.string(), sentiment: SentimentSchema });
+
+// One reactor's reaction to one simulation. run_id/user_index are null for a
+// direct sim's attached persona; set for a study persona-user. Shared by the
+// direct-sim read path AND the study replay.
+export const PersonaSimReactionEntitySchema = z.object({
+  id: z.number(),
+  run_id: z.number().nullable(),
+  persona_id: z.number().nullable(),
+  user_index: z.number().nullable(),
+  simulation_id: z.number().nullable(),
+  // A/B variant this reaction's sim belongs to. Set for abtest reactions (from the
+  // sim's variant at create), null for uxr/survey/direct. Lets the app build a
+  // {study_variant_id → simulation_id} map purely from the run's reactions — no
+  // positional zip of orderedVariants[i] → distinctSimIds[i] in DB row order.
+  study_variant_id: z.number().nullable(),
+  journey_reaction: z.string().nullable(),
+  journey_sentiment: SentimentSchema.nullable(),
+  status: z.enum(['pending', 'completed', 'failed']),
+  step_reactions: z.array(StepReactionSchema).default([]),
+  question_answers: z.array(z.object({ study_question_id: z.number(), answer: z.string() })).default([]),
+});
+
 export const SimulationEntitySchema = BaseEntitySchema.extend({
   application_id: z.number(),
   job_id: z.string(),
@@ -165,6 +204,10 @@ export const SimulationEntitySchema = BaseEntitySchema.extend({
   status_message: z.string().nullish(),
   path: z.string().nullish(),
   instructions: z.string().nullish(),
+  // Persisted display name `{TypeLabel} #{id} Run`.
+  name: z.string().nullish(),
+  // Origin type: direct/uxr/survey/ab/qa.
+  type: z.enum(['direct', 'uxr', 'survey', 'ab', 'qa']).nullish(),
   pinned: z.boolean().optional(),
   source: z.enum(['direct', 'qa']).optional(),
   graph_id: z.string().nullish(),
@@ -175,14 +218,16 @@ export const SimulationEntitySchema = BaseEntitySchema.extend({
   graph_steps_total: z.number().int().nonnegative().optional(),
   graph_error: z.string().nullish(),
   created_by_user_id: z.number().nullish(),
-  // Persona selected for this run in the Generate Simulation modal. Nullable
-  // for "Generic" runs and for user-study-flow runs (which use
-  // persona_reaction.persona_id for many-personas-per-run). See migration V54.
-  persona_id: z.number().nullish(),
   // Derived flag: true if any per-task status is `has_question`. The parent
   // `status` itself never holds `has_question` — that's a per-task state. The
   // flag drives the "Question" UI pill on the simulation header.
   has_question: z.boolean().optional(),
+  // Participants — personas that REACT to this sim; each carries persona_id + user_count (both required) + their reactions.
+  participants: z.array(z.object({ persona_id: z.number(), user_count: z.number().int().positive() })).default([]),
+  reactions: z.array(PersonaSimReactionEntitySchema).default([]),
+  // Driver — the single persona this sim RUNS AS (in-character; QA + survey); null = neutral.
+  driver_persona_id: z.number().nullable().default(null),
+  viewport: ViewportNameSchema.default('desktop'),
 });
 export type SimulationData = z.infer<typeof SimulationEntitySchema>;
 
@@ -264,15 +309,20 @@ export const StateTriggerEntitySchema = BaseEntitySchema.extend({
 export type StateTriggerData = z.infer<typeof StateTriggerEntitySchema>;
 
 /**
- * QA run derived status — set by `deriveQARunStats` based on aggregated
- * task states. Emitted by the API on `qa-run/updated` events and returned
- * in QA run oRPC payloads.
- *
- * Canonical wire vocabulary; `deriveQARunStats` returns `'running'` directly.
- * `'pending'` is the empty-task initial state.
+ * QA run status — first-class TEXT+CHECK column on qa_run (no longer derived).
+ * `synthesizing` = all sims terminal but per-journey verdicts still completing (QA has no
+ * run-level rollup like studies). Canonical wire vocabulary.
  */
-export const QARunStatusSchema = z.enum(['pending', 'running', 'completed', 'failed', 'stopped']);
+export const QARunStatusSchema = z.enum(['running', 'synthesizing', 'completed', 'failed', 'stopped']);
 export type QARunStatus = z.infer<typeof QARunStatusSchema>;
+
+/** QA verdict per (run, persona, journey, viewport) — DATA-derived by the api from qa_verdict; NOT a wire status. */
+export const QARunVerdictStatusSchema = z.enum(['passed', 'failed', 'indecisive']);
+export type QARunVerdictStatus = z.infer<typeof QARunVerdictStatusSchema>;
+
+/** A human resolution of an indecisive verdict — resolves to a decision, so no `indecisive`. */
+export const HumanRulingSchema = z.enum(['passed', 'failed']);
+export type HumanRuling = z.infer<typeof HumanRulingSchema>;
 
 export const ActionLogTypeSchema = z.enum([
   'user_login',
