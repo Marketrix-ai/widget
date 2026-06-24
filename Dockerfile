@@ -8,7 +8,7 @@ COPY . .
 ENV NODE_ENV=production
 RUN npm run build
 
-FROM nginx:1.31.1-alpine
+FROM nginx:1.31.2-alpine
 COPY --from=builder /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 RUN sed -i '/application\/javascript/s/;/ mjs;/' /etc/nginx/mime.types \
