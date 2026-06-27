@@ -124,7 +124,7 @@ export type TaskDependency = z.infer<typeof TaskDependencySchema>;
 
 /**
  * A single task within a simulation. Direct simulations have 1 task (the prompt).
- * QA simulations have N tasks (one per test case).
+ * QA simulations have N tasks (one per journey).
  */
 export const SimulationTaskEntrySchema = z.object({
   task_id: z.string(),
