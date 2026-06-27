@@ -94,7 +94,7 @@ export const GraphSectionSchema = z
 
 /**
  * Graph node schema - unique page state observed during simulation.
- * Matches agent's PageNode model (perception/graph.py).
+ * Matches agent's PageNode model (knowledge/graph.py).
  * Uses passthrough() because the agent model may evolve faster than the schema.
  */
 export const GraphNodeSchema = z
