@@ -116,26 +116,6 @@ export const VIEWPORT_DIMENSIONS: Record<ViewportName, { width: number; height: 
   mobile: { width: 393, height: 852 },
 };
 
-export const QAProcessResponseSchema = z.object({
-  ultimate_goal: z.string(),
-  test_cases: z.array(
-    z.object({
-      test_title: z.string(),
-      test_objective: z.string(),
-      test_steps: z.array(z.string()),
-      expected_outcome: z.string(),
-      priority: z.enum(['Low', 'Medium', 'High']),
-    }),
-  ),
-  summary: z.object({
-    total_tests: z.number(),
-    high_priority: z.number(),
-    medium_priority: z.number(),
-    low_priority: z.number(),
-    estimated_time_minutes: z.number(),
-  }),
-});
-
 export const TaskDependencySchema = z.object({
   task_id: z.string(),
   condition: z.enum(['pass']).optional(),
@@ -173,8 +153,6 @@ export const StepReactionSchema = z.object({
   reaction: z.string(),
   sentiment: SentimentSchema.nullable(),
 });
-export const JourneyReactionSchema = z.object({ reaction: z.string(), sentiment: SentimentSchema });
-
 // One reactor's reaction to one simulation. run_id/user_index are null for a
 // direct sim's attached persona; set for a study persona-user. Shared by the
 // direct-sim read path AND the study replay.

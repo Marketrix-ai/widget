@@ -39,15 +39,6 @@ export const listOf = <T extends z.ZodTypeAny>(schema: T) =>
     count: z.number(),
   });
 
-/** Value types in QA test case version diffs */
-export const DiffValueSchema = z.union([z.string(), z.number(), z.boolean(), z.array(z.string()), z.null()]);
-
-export const ContextRefSchema = z.object({
-  type: z.enum(['doc', 'sim', 'session']),
-  id: z.string(),
-  label: z.string(),
-});
-
 export const SuccessSchema = z.object({ success: z.literal(true) });
 export const SuccessWithMessageSchema = SuccessSchema.extend({ message: z.string() });
 
