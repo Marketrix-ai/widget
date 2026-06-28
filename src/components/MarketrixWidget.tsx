@@ -138,7 +138,7 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
     show_widget: config.show_widget,
     use_screenshare: config.use_screenshare,
   };
-  const showProcessingFeedback = state.isLoading || state.isTaskRunning;
+  const showProcessingFeedback = state.isLoading || state.isSimulationRunning;
   const customStyles = {
     ...semanticTokenStyles,
     '--widget-z-index': effectiveWidgetZIndex,
@@ -171,7 +171,7 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
           isMinimized={state.isMinimized}
           messages={state.messages}
           currentMode={state.currentMode}
-          isTaskRunning={state.isTaskRunning}
+          isSimulationRunning={state.isSimulationRunning}
           activeView={state.activeView}
           onClose={actions.closeWidget}
           onSendMessage={actions.sendMessage}
@@ -189,7 +189,7 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
         open={state.isOpen}
         processing={state.isLoading}
         error={!!state.error}
-        taskRunning={state.isTaskRunning}
+        taskRunning={state.isSimulationRunning}
         onClick={actions.toggleWidget}
         onStop={actions.stopTask}
         accentColor={effectiveConfig.widget_accent_color}

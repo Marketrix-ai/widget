@@ -5,11 +5,11 @@ import { addOpacity } from '../../utils/color';
 import { Icon } from '../base/Icon';
 import { Spinner } from '../base/Spinner';
 
-interface TaskStatusIconProps {
+interface SimulationStatusIconProps {
   status: 'ongoing' | 'done' | 'failed' | 'stopped';
 }
 
-export const TaskStatusIcon: React.FC<TaskStatusIconProps> = ({ status }) => {
+export const SimulationStatusIcon: React.FC<SimulationStatusIconProps> = ({ status }) => {
   const { config: widgetConfig } = useWidget();
   const accentColor = widgetConfig.widget_accent_color;
   const iconSize = 14;

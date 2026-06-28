@@ -98,12 +98,6 @@ describe('SSE event discriminated-union contract (WidgetEventSchema)', () => {
       expect(WidgetEventSchema.safeParse({ type: 'chat/response', text: 'hi' }).success).toBe(false);
       expect(WidgetEventSchema.safeParse({ type: 'chat/response', request_id: 'r1', text: 'hi' }).success).toBe(true);
     });
-
-    it('task_id is optional', () => {
-      const base = { type: 'chat/response', request_id: 'r1', text: 'hi' };
-      expect(WidgetEventSchema.safeParse({ ...base, task_id: 'task-1' }).success).toBe(true);
-      expect(WidgetEventSchema.safeParse(base).success).toBe(true);
-    });
   });
 
   describe('task/status event', () => {
@@ -162,7 +156,7 @@ describe('SSE event discriminated-union contract (WidgetEventSchema)', () => {
   describe('task/status "has_question" pauses the active message (clears running spinner)', () => {
     // Mirrors the ConversationContext SSE reducer for `has_question`: strip the thinking
     // marker (kills the inline spinner) and flip to the paused "waiting for you"
-    // indicator without setting a terminal taskStatus icon.
+    // indicator without setting a terminal simulationStatus icon.
     const applyHasQuestionTransition = (message: ChatMessage, statusMessage?: string): ChatMessage => {
       const cleared = updateThinkingMarker(message, false, 'do');
       return {
@@ -179,7 +173,7 @@ describe('SSE event discriminated-union contract (WidgetEventSchema)', () => {
       timestamp: new Date(),
       mode: 'do',
       placeholderState: 'thinking',
-      taskStatus: 'ongoing',
+      simulationStatus: 'ongoing',
     });
 
     it('"has_question" is a valid SSE event that carries an optional message', () => {
@@ -199,9 +193,9 @@ describe('SSE event discriminated-union contract (WidgetEventSchema)', () => {
       const after = applyHasQuestionTransition(runningMessage());
       expect(after.placeholderState).toBe('waiting-for-user');
       // Terminal icon statuses must NOT be applied — the task is paused, not finished.
-      expect(after.taskStatus).not.toBe('done');
-      expect(after.taskStatus).not.toBe('failed');
-      expect(after.taskStatus).not.toBe('stopped');
+      expect(after.simulationStatus).not.toBe('done');
+      expect(after.simulationStatus).not.toBe('failed');
+      expect(after.simulationStatus).not.toBe('stopped');
     });
 
     it('surfaces the question text when the event includes a message', () => {

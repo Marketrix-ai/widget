@@ -116,31 +116,6 @@ export const VIEWPORT_DIMENSIONS: Record<ViewportName, { width: number; height: 
   mobile: { width: 393, height: 852 },
 };
 
-export const TaskDependencySchema = z.object({
-  task_id: z.string(),
-  condition: z.enum(['pass']).optional(),
-});
-export type TaskDependency = z.infer<typeof TaskDependencySchema>;
-
-/**
- * A single task within a simulation. Direct simulations have 1 task (the prompt).
- * QA simulations have N tasks (one per journey).
- */
-export const SimulationTaskEntrySchema = z.object({
-  task_id: z.string(),
-  title: z.string(),
-  instructions: z.string(),
-  status: z.enum(['pending', 'running', 'has_question', 'passed', 'failed', 'skipped', 'stopped']),
-  error_message: z.string().nullish(),
-  started_at: z.string().nullish(),
-  completed_at: z.string().nullish(),
-  order_index: z.number().int().nonnegative().default(0),
-  tab_id: z.string().nullish(),
-  step_count: z.number().int().nonnegative().default(0),
-  blocked_by: z.array(TaskDependencySchema).default([]),
-});
-export type SimulationTaskEntry = z.infer<typeof SimulationTaskEntrySchema>;
-
 export const SentimentSchema = z.enum(['positive', 'neutral', 'negative']);
 
 export const StepReactionSchema = z.object({
@@ -190,7 +165,9 @@ export const SimulationEntitySchema = BaseEntitySchema.extend({
   source: z.enum(['direct', 'qa']).optional(),
   graph_id: z.string().nullish(),
   source_metadata: z.record(z.string(), z.unknown()).nullish(),
-  tasks: z.array(SimulationTaskEntrySchema).optional(),
+  step_count: z.number().int().nonnegative().nullish(),
+  started_at: z.string().nullish(),
+  completed_at: z.string().nullish(),
   graph_status: GraphStatusSchema.optional(),
   graph_steps_processed: z.number().int().nonnegative().optional(),
   graph_steps_total: z.number().int().nonnegative().optional(),
@@ -379,7 +356,6 @@ export const SuggestedSimulationSchema = z.object({
   description: z.string(),
   selected: z.boolean(),
   simulation_id: z.number().nullable().optional(),
-  task_id: z.string().nullable().optional(),
   status: SimulationStatusSchema.nullable().optional(),
 });
 export type SuggestedSimulation = z.infer<typeof SuggestedSimulationSchema>;

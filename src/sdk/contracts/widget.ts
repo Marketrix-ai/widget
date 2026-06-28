@@ -47,7 +47,6 @@ export const WidgetEventSchema = z.discriminatedUnion('type', [
     type: z.literal('chat/response'),
     request_id: z.string(),
     text: z.string(),
-    task_id: z.string().optional(),
   }),
   z.object({
     type: z.literal('chat/error'),
@@ -56,7 +55,7 @@ export const WidgetEventSchema = z.discriminatedUnion('type', [
   }),
   z.object({
     type: z.literal('task/status'),
-    // Matches SimulationTaskStatus / QATaskStatus on the agent side.
+    // Matches SimulationStatus on the agent side.
     status: z.enum(['running', 'completed', 'failed', 'stopped', 'has_question']),
     message: z.string().optional(),
     task_id: z.string().optional(),

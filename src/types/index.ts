@@ -70,7 +70,7 @@ export interface ChatMessage {
   isPlaceholder?: boolean; // Indicates this is a placeholder message with progress bar
   placeholderState?: 'thinking' | 'waiting-for-user'; // State of placeholder: thinking or waiting for user action
   parts?: MessagePart[];
-  taskStatus?: 'ongoing' | 'done' | 'failed' | 'stopped'; // Task status indicator for task messages
+  simulationStatus?: 'ongoing' | 'done' | 'failed' | 'stopped'; // Simulation status indicator for agent messages
 }
 
 export interface MessagePart {
@@ -92,8 +92,8 @@ export interface WidgetState {
   currentMode: InstructionType;
   agentAvailable: boolean;
   error?: string;
-  activeTaskId: string | null;
-  isTaskRunning: boolean;
+  activeSimulationId: string | null;
+  isSimulationRunning: boolean;
   activeView: WidgetView;
 }
 

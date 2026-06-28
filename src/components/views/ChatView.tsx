@@ -44,7 +44,7 @@ export interface ChatViewProps {
   config: MarketrixConfig;
   messages: ChatMessage[];
   currentMode: InstructionType;
-  isTaskRunning?: boolean;
+  isSimulationRunning?: boolean;
   onSendMessage: (
     message: string,
     mode?: InstructionType,
@@ -92,7 +92,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
   config,
   messages,
   currentMode,
-  isTaskRunning = false,
+  isSimulationRunning = false,
   onSendMessage,
   onSetMode,
   onAddMessage,
@@ -211,7 +211,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
           activeMode={currentMode}
           onModeChange={mode => handleModeChange(mode as InstructionType)}
           disabled={messages.some(msg => msg.isPlaceholder)}
-          taskRunning={isTaskRunning}
+          taskRunning={isSimulationRunning}
           onStop={() => {
             showModeService.cleanup();
             onStopTask?.();

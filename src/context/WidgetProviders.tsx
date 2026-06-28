@@ -27,8 +27,8 @@ const PersistBridge: React.FC<{ previewMode: boolean }> = ({ previewMode }) => {
     if (previewMode) return;
     chatService.persist({
       messages: chatState.messages,
-      isTaskRunning: taskState.isTaskRunning,
-      activeTaskId: taskState.activeTaskId,
+      isSimulationRunning: taskState.isSimulationRunning,
+      activeSimulationId: taskState.activeSimulationId,
       currentMode: uiState.currentMode,
       isOpen: uiState.isOpen,
       isMinimized: uiState.isMinimized,
@@ -37,8 +37,8 @@ const PersistBridge: React.FC<{ previewMode: boolean }> = ({ previewMode }) => {
   }, [
     previewMode,
     chatState.messages,
-    taskState.isTaskRunning,
-    taskState.activeTaskId,
+    taskState.isSimulationRunning,
+    taskState.activeSimulationId,
     uiState.currentMode,
     uiState.isOpen,
     uiState.isMinimized,
@@ -80,8 +80,8 @@ const InitBridge: React.FC<{ children: React.ReactNode; previewMode: boolean }> 
 
       chatActions.setMessages(snapshot.messages);
       taskActions.setTaskState({
-        activeTaskId: snapshot.isTaskRunning ? snapshot.activeTaskId : null,
-        isTaskRunning: snapshot.isTaskRunning,
+        activeSimulationId: snapshot.isSimulationRunning ? snapshot.activeSimulationId : null,
+        isSimulationRunning: snapshot.isSimulationRunning,
       });
 
       if (chatId) {

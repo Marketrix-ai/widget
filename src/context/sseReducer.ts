@@ -20,14 +20,14 @@ import {
   WAIT_FOR_USER_TOOLS,
 } from '../utils/chat';
 
-export interface SseTaskState {
-  activeTaskId: string | null;
-  isTaskRunning: boolean;
+export interface SseSimulationState {
+  activeSimulationId: string | null;
+  isSimulationRunning: boolean;
 }
 
 export interface SseState {
   messages: ChatMessage[];
-  task: SseTaskState;
+  task: SseSimulationState;
 }
 
 /** Side effects the wiring layer must run after applying a reduced state. */
@@ -40,8 +40,7 @@ export type SseEffect =
       mode: InstructionType;
       explanation: string;
     }
-  | { type: 'setLoading'; value: boolean }
-  | { type: 'activateApiTask'; taskId: string };
+  | { type: 'setLoading'; value: boolean };
 
 export interface ReduceResult {
   state: SseState;
@@ -57,7 +56,7 @@ type ProgressStatus = 'in_progress' | 'completed' | 'failed';
  */
 function applyProgress(
   messages: ChatMessage[],
-  isTaskRunning: boolean,
+  isSimulationRunning: boolean,
   currentMode: InstructionType,
   toolName: string,
   explanation: string,
@@ -67,14 +66,14 @@ function applyProgress(
   const friendlyName = getFriendlyToolName(toolName);
   const found = findMessageForProgress({
     messages,
-    isTaskRunning,
+    isSimulationRunning,
     currentMode,
     requireContent: status === 'failed',
   });
   if (!found) return messages;
 
   let updatedMsg = found.message;
-  const shouldWait = isTaskRunning && currentMode === 'show' && WAIT_FOR_USER_TOOLS.has(toolName);
+  const shouldWait = isSimulationRunning && currentMode === 'show' && WAIT_FOR_USER_TOOLS.has(toolName);
   const isDoneTool = toolName === 'done';
   const isShowOrDo = currentMode === 'show' || currentMode === 'do';
 
@@ -82,20 +81,20 @@ function applyProgress(
     if (!isDoneTool) {
       updatedMsg = addProgressLine(updatedMsg, friendlyName, explanation || friendlyName);
     }
-    if (isTaskRunning && isShowOrDo) {
-      updatedMsg = updateThinkingMarker(updatedMsg, isTaskRunning, currentMode, shouldWait);
+    if (isSimulationRunning && isShowOrDo) {
+      updatedMsg = updateThinkingMarker(updatedMsg, isSimulationRunning, currentMode, shouldWait);
     }
   } else if (status === 'completed') {
     if (!isDoneTool) {
       updatedMsg = markProgressLineComplete(updatedMsg);
     }
-    if (isTaskRunning && isShowOrDo) {
-      updatedMsg = updateThinkingMarker(updatedMsg, isTaskRunning, currentMode, false);
+    if (isSimulationRunning && isShowOrDo) {
+      updatedMsg = updateThinkingMarker(updatedMsg, isSimulationRunning, currentMode, false);
     }
   } else {
     updatedMsg = markProgressLineFailed(updatedMsg, friendlyName, error || '');
-    if (isTaskRunning && isShowOrDo) {
-      updatedMsg = updateThinkingMarker(updatedMsg, isTaskRunning, currentMode, false);
+    if (isSimulationRunning && isShowOrDo) {
+      updatedMsg = updateThinkingMarker(updatedMsg, isSimulationRunning, currentMode, false);
     }
   }
 
@@ -117,7 +116,7 @@ export function reduceToolProgress(
     ...state,
     messages: applyProgress(
       state.messages,
-      state.task.isTaskRunning,
+      state.task.isSimulationRunning,
       currentMode,
       toolName,
       explanation,
@@ -131,7 +130,7 @@ export function reduceToolProgress(
 export function reduceToolDone(state: SseState, currentMode: InstructionType): SseState {
   const found = findMessageForProgress({
     messages: state.messages,
-    isTaskRunning: state.task.isTaskRunning,
+    isSimulationRunning: state.task.isSimulationRunning,
     currentMode,
     requireContent: false,
   });
@@ -140,24 +139,24 @@ export function reduceToolDone(state: SseState, currentMode: InstructionType): S
     const updatedParts = (found.message.parts ?? []).filter(
       part => !(part.type === 'progress' && part.toolName === 'done'),
     );
-    messages[found.index] = { ...found.message, taskStatus: 'done', parts: updatedParts };
+    messages[found.index] = { ...found.message, simulationStatus: 'done', parts: updatedParts };
   }
-  return { messages, task: { isTaskRunning: false, activeTaskId: null } };
+  return { messages, task: { isSimulationRunning: false, activeSimulationId: null } };
 }
 
 /** Public: user-initiated stop — flag the active message `stopped` and end the task. */
 export function reduceStop(state: SseState, currentMode: InstructionType): SseState {
   const found = findMessageForProgress({
     messages: state.messages,
-    isTaskRunning: state.task.isTaskRunning,
+    isSimulationRunning: state.task.isSimulationRunning,
     currentMode,
     requireContent: false,
   });
   const messages = [...state.messages];
   if (found) {
-    messages[found.index] = { ...found.message, taskStatus: 'stopped' };
+    messages[found.index] = { ...found.message, simulationStatus: 'stopped' };
   }
-  return { messages, task: { isTaskRunning: false, activeTaskId: null } };
+  return { messages, task: { isSimulationRunning: false, activeSimulationId: null } };
 }
 
 /**
@@ -168,13 +167,13 @@ export function reduceSse(state: SseState, event: WidgetEvent, currentMode: Inst
   switch (event.type) {
     case 'tool/call': {
       // Auto-activate the task if a tool arrives before `task/status running`.
-      const task = state.task.isTaskRunning ? state.task : { ...state.task, isTaskRunning: true };
-      const isTaskRunning = task.isTaskRunning;
+      const task = state.task.isSimulationRunning ? state.task : { ...state.task, isSimulationRunning: true };
+      const isSimulationRunning = task.isSimulationRunning;
       const mode = event.mode || currentMode || 'do';
       const explanation = event.explanation || '';
       const messages = applyProgress(
         state.messages,
-        isTaskRunning,
+        isSimulationRunning,
         currentMode,
         event.tool,
         explanation,
@@ -198,10 +197,10 @@ export function reduceSse(state: SseState, event: WidgetEvent, currentMode: Inst
       }
       if (event.status === 'has_question') {
         // Paused awaiting a user answer — not terminal. Stop the spinner and flip
-        // the active message to "waiting for you", leaving taskStatus unset.
+        // the active message to "waiting for you", leaving simulationStatus unset.
         const found = findMessageForProgress({
           messages: state.messages,
-          isTaskRunning: state.task.isTaskRunning,
+          isSimulationRunning: state.task.isSimulationRunning,
           currentMode,
           requireContent: false,
         });
@@ -214,27 +213,27 @@ export function reduceSse(state: SseState, event: WidgetEvent, currentMode: Inst
             ...(statusMessage && { content: statusMessage }),
           };
         }
-        return { state: { messages, task: { isTaskRunning: false, activeTaskId: null } }, effects: [] };
+        return { state: { messages, task: { isSimulationRunning: false, activeSimulationId: null } }, effects: [] };
       }
       // completed | failed | stopped — terminal.
       const found = findMessageForProgress({
         messages: state.messages,
-        isTaskRunning: state.task.isTaskRunning,
+        isSimulationRunning: state.task.isSimulationRunning,
         currentMode,
         requireContent: false,
       });
       const messages = [...state.messages];
       if (found) {
-        let taskStatus: 'done' | 'failed' | 'stopped' = 'done';
-        if (event.status === 'failed') taskStatus = 'failed';
-        else if (event.status === 'stopped') taskStatus = 'stopped';
+        let simulationStatus: 'done' | 'failed' | 'stopped' = 'done';
+        if (event.status === 'failed') simulationStatus = 'failed';
+        else if (event.status === 'stopped') simulationStatus = 'stopped';
         messages[found.index] = {
           ...found.message,
-          taskStatus,
+          simulationStatus,
           ...(statusMessage && { content: statusMessage }),
         };
       }
-      return { state: { messages, task: { isTaskRunning: false, activeTaskId: null } }, effects: [] };
+      return { state: { messages, task: { isSimulationRunning: false, activeSimulationId: null } }, effects: [] };
     }
 
     case 'chat/response': {
@@ -247,11 +246,9 @@ export function reduceSse(state: SseState, event: WidgetEvent, currentMode: Inst
           isPlaceholder: false,
           placeholderState: undefined,
           parts: newParts,
-          ...(event.task_id && { taskId: event.task_id }),
         };
       });
       const effects: SseEffect[] = [{ type: 'setLoading', value: false }];
-      if (event.task_id) effects.push({ type: 'activateApiTask', taskId: event.task_id });
       return { state: { ...state, messages }, effects };
     }
 

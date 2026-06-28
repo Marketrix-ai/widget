@@ -24,9 +24,9 @@ import type { UIStateActions } from './UIStateContext';
  * concern.
  */
 
-export interface TaskState {
-  activeTaskId: string | null;
-  isTaskRunning: boolean;
+export interface SimulationState {
+  activeSimulationId: string | null;
+  isSimulationRunning: boolean;
 }
 
 export interface ChatState {
@@ -48,21 +48,21 @@ export interface ChatActions {
   ) => Promise<void>;
 }
 
-export interface TaskActions {
-  setTaskState: (payload: { activeTaskId: string | null; isTaskRunning: boolean }) => void;
+export interface SimulationActions {
+  setTaskState: (payload: { activeSimulationId: string | null; isSimulationRunning: boolean }) => void;
   stopTask: () => Promise<void>;
 }
 
 interface ConversationContextType {
   chatState: ChatState;
   chatActions: ChatActions;
-  taskState: TaskState;
-  taskActions: TaskActions;
+  taskState: SimulationState;
+  taskActions: SimulationActions;
 }
 
 const ConversationContext = createContext<ConversationContextType | undefined>(undefined);
 
-const EMPTY_TASK: TaskState = { activeTaskId: null, isTaskRunning: false };
+const EMPTY_TASK: SimulationState = { activeSimulationId: null, isSimulationRunning: false };
 
 interface ConversationProviderProps {
   children: React.ReactNode;
@@ -73,7 +73,7 @@ interface ConversationProviderProps {
   uiActions: Pick<UIStateActions, 'setLoading' | 'setAgentAvailable' | 'setError'>;
   /** One-time hydrated snapshot to seed the store (messages + task) on mount. */
   initialMessages?: ChatMessage[];
-  initialTask?: TaskState;
+  initialTask?: SimulationState;
 }
 
 export const ConversationProvider: React.FC<ConversationProviderProps> = ({
@@ -148,8 +148,11 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({
   }, [commit]);
 
   const setTaskState = useCallback(
-    (payload: { activeTaskId: string | null; isTaskRunning: boolean }) => {
-      commit(s => ({ ...s, task: { activeTaskId: payload.activeTaskId, isTaskRunning: payload.isTaskRunning } }));
+    (payload: { activeSimulationId: string | null; isSimulationRunning: boolean }) => {
+      commit(s => ({
+        ...s,
+        task: { activeSimulationId: payload.activeSimulationId, isSimulationRunning: payload.isSimulationRunning },
+      }));
     },
     [commit],
   );
@@ -272,7 +275,7 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({
     if (p.apiTaskId && p.agentRunning) {
       const taskId = p.apiTaskId;
       pendingTaskRef.current = {};
-      commit(s => ({ ...s, task: { isTaskRunning: true, activeTaskId: taskId } }));
+      commit(s => ({ ...s, task: { isSimulationRunning: true, activeSimulationId: taskId } }));
     }
   }, [commit]);
 
@@ -290,9 +293,6 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({
       for (const effect of effects) {
         if (effect.type === 'setLoading') {
           uiActions.setLoading(effect.value);
-        } else if (effect.type === 'activateApiTask') {
-          pendingTaskRef.current = { ...pendingTaskRef.current, apiTaskId: effect.taskId };
-          maybeActivateTask();
         }
       }
     };
@@ -370,7 +370,7 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({
           return;
         }
 
-        if (!stateRef.current.task.isTaskRunning) {
+        if (!stateRef.current.task.isSimulationRunning) {
           console.log('[Widget] Tool call received before task/status running — auto-activating task');
         }
         if (event.state_version !== undefined && event.state_version > stateVersion.current) {
@@ -421,7 +421,7 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({
   }, [previewMode, commit, maybeActivateTask, addProcessedRequestId, uiActions]);
 
   const stopTask = useCallback(async () => {
-    const taskId = stateRef.current.task.activeTaskId ?? undefined;
+    const taskId = stateRef.current.task.activeSimulationId ?? undefined;
     commit(s => reduceStop(s, currentModeRef.current));
 
     if (previewMode) return;
@@ -436,7 +436,7 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({
     [addMessage, updateMessage, removeMessage, setMessages, clearMessages, sendMessage],
   );
 
-  const taskActions = useMemo<TaskActions>(() => ({ setTaskState, stopTask }), [setTaskState, stopTask]);
+  const taskActions = useMemo<SimulationActions>(() => ({ setTaskState, stopTask }), [setTaskState, stopTask]);
 
   const chatState = useMemo<ChatState>(() => ({ messages: state.messages }), [state.messages]);
 

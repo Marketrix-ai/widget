@@ -141,7 +141,7 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(f
           variant={taskRunning ? 'secondary' : 'primary'}
           size='sm'
           disabled={!taskRunning && !canSend}
-          label={taskRunning ? 'Stop task' : 'Send message'}
+          label={taskRunning ? 'Stop simulation' : 'Send message'}
           onClick={e => {
             e.preventDefault();
             e.stopPropagation();
