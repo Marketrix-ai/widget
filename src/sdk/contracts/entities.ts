@@ -173,9 +173,8 @@ export const SimulationEntitySchema = BaseEntitySchema.extend({
   graph_steps_total: z.number().int().nonnegative().optional(),
   graph_error: z.string().nullish(),
   created_by_user_id: z.number().nullish(),
-  // Derived flag: true if any per-task status is `has_question`. The parent
-  // `status` itself never holds `has_question` — that's a per-task state. The
-  // flag drives the "Question" UI pill on the simulation header.
+  // Mirror of `status === 'has_question'`, surfaced as a standalone flag so the live SSE
+  // stream can toggle the header "Question" pill without refetching the status.
   has_question: z.boolean().optional(),
   // Participants — personas that REACT to this sim; each carries persona_id + user_count (both required) + their reactions.
   participants: z.array(z.object({ persona_id: z.number(), user_count: z.number().int().positive() })).default([]),
