@@ -120,7 +120,7 @@ export const SentimentSchema = z.enum(['positive', 'neutral', 'negative']);
 
 export const StepReactionSchema = z.object({
   step_index: z.number(),
-  // fix #3: nullable to match the persisted rows. The live persistStepReaction path
+  // Nullable to match the persisted rows. The live persistStepReaction path
   // (simulationTerminal) inserts step rows with NULL screenshot_ref (and a not-yet-
   // classified sentiment), and the read path re-parses this schema — a non-nullable
   // shape would 500 simulationGet + every studies read.
