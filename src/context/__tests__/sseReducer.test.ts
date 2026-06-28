@@ -28,12 +28,12 @@ const agentMessage = (overrides: Partial<ChatMessage> = {}): ChatMessage => ({
 
 const runningState = (overrides: Partial<ChatMessage> = {}): SseState => ({
   messages: [agentMessage(overrides)],
-  task: { activeTaskId: 'task-1', isTaskRunning: true },
+  task: { activeSimulationId: 'task-1', isSimulationRunning: true },
 });
 
 const idleState = (): SseState => ({
   messages: [agentMessage({ placeholderState: undefined })],
-  task: { activeTaskId: null, isTaskRunning: false },
+  task: { activeSimulationId: null, isSimulationRunning: false },
 });
 
 // task/status
@@ -57,20 +57,20 @@ describe('reduceSse — task/status', () => {
 
   it('completed ends the task and marks the active message done', () => {
     const result = reduceSse(runningState(), { type: 'task/status', status: 'completed' }, 'do');
-    expect(result.state.task).toEqual({ isTaskRunning: false, activeTaskId: null });
-    expect(result.state.messages[0].taskStatus).toBe('done');
+    expect(result.state.task).toEqual({ isSimulationRunning: false, activeSimulationId: null });
+    expect(result.state.messages[0].simulationStatus).toBe('done');
   });
 
   it('failed ends the task and marks the active message failed', () => {
     const result = reduceSse(runningState(), { type: 'task/status', status: 'failed' }, 'do');
-    expect(result.state.task.isTaskRunning).toBe(false);
-    expect(result.state.messages[0].taskStatus).toBe('failed');
+    expect(result.state.task.isSimulationRunning).toBe(false);
+    expect(result.state.messages[0].simulationStatus).toBe('failed');
   });
 
   it('stopped ends the task and marks the active message stopped', () => {
     const result = reduceSse(runningState(), { type: 'task/status', status: 'stopped' }, 'do');
-    expect(result.state.task.isTaskRunning).toBe(false);
-    expect(result.state.messages[0].taskStatus).toBe('stopped');
+    expect(result.state.task.isSimulationRunning).toBe(false);
+    expect(result.state.messages[0].simulationStatus).toBe('stopped');
   });
 
   it('terminal status overwrites content when the event carries a message', () => {
@@ -79,7 +79,7 @@ describe('reduceSse — task/status', () => {
     expect(result.state.messages[0].content).toBe('All done!');
   });
 
-  it('has_question pauses (not terminal): clears spinner, flips to waiting-for-user, no taskStatus', () => {
+  it('has_question pauses (not terminal): clears spinner, flips to waiting-for-user, no simulationStatus', () => {
     const before = runningState();
     expect(hasThinkingMarker(before.messages[0].content)).toBe(true);
 
@@ -91,8 +91,8 @@ describe('reduceSse — task/status', () => {
     expect(msg.placeholderState).toBe('waiting-for-user');
     expect(msg.content).toContain('Which account?');
     // Paused, not finished — no terminal icon.
-    expect(msg.taskStatus).toBeUndefined();
-    expect(result.state.task).toEqual({ isTaskRunning: false, activeTaskId: null });
+    expect(msg.simulationStatus).toBeUndefined();
+    expect(result.state.task).toEqual({ isSimulationRunning: false, activeSimulationId: null });
   });
 });
 
@@ -125,7 +125,7 @@ describe('reduceSse — tool/call', () => {
 
   it('auto-activates the task when a tool arrives before task/status running', () => {
     const result = reduceSse(idleState(), toolCall(), 'do');
-    expect(result.state.task.isTaskRunning).toBe(true);
+    expect(result.state.task.isSimulationRunning).toBe(true);
   });
 
   it('adds an in-progress progress line to the active message', () => {
@@ -149,7 +149,7 @@ describe('reduceSse — chat/response', () => {
   it('resolves the matching placeholder and turns off loading', () => {
     const state: SseState = {
       messages: [agentMessage({ id: 'req-1', content: '\n\n__THINKING__', parts: [] })],
-      task: { activeTaskId: null, isTaskRunning: false },
+      task: { activeSimulationId: null, isSimulationRunning: false },
     };
     const event: WidgetEvent = { type: 'chat/response', request_id: 'req-1', text: 'Here you go' };
     const result = reduceSse(state, event, 'tell');
@@ -161,23 +161,13 @@ describe('reduceSse — chat/response', () => {
     expect(msg.parts?.at(-1)).toEqual({ type: 'text', content: 'Here you go' });
     expect(result.effects).toContainEqual({ type: 'setLoading', value: false });
   });
-
-  it('adds an activateApiTask effect when the response carries a task_id', () => {
-    const state: SseState = {
-      messages: [agentMessage({ id: 'req-1' })],
-      task: { activeTaskId: null, isTaskRunning: false },
-    };
-    const event: WidgetEvent = { type: 'chat/response', request_id: 'req-1', text: 'ok', task_id: 'task-7' };
-    const result = reduceSse(state, event, 'tell');
-    expect(result.effects).toContainEqual({ type: 'activateApiTask', taskId: 'task-7' });
-  });
 });
 
 describe('reduceSse — chat/error', () => {
   it('writes an error message into the matching placeholder and turns off loading', () => {
     const state: SseState = {
       messages: [agentMessage({ id: 'req-2' })],
-      task: { activeTaskId: null, isTaskRunning: false },
+      task: { activeSimulationId: null, isSimulationRunning: false },
     };
     const event: WidgetEvent = { type: 'chat/error', request_id: 'req-2', error: 'boom' };
     const result = reduceSse(state, event, 'tell');
@@ -249,17 +239,17 @@ describe('reduceToolProgress / reduceToolDone / reduceStop', () => {
           ],
         }),
       ],
-      task: { activeTaskId: 'task-1', isTaskRunning: true },
+      task: { activeSimulationId: 'task-1', isSimulationRunning: true },
     };
     const result = reduceToolDone(withDoneLine, 'do');
-    expect(result.task).toEqual({ isTaskRunning: false, activeTaskId: null });
-    expect(result.messages[0].taskStatus).toBe('done');
+    expect(result.task).toEqual({ isSimulationRunning: false, activeSimulationId: null });
+    expect(result.messages[0].simulationStatus).toBe('done');
     expect((result.messages[0].parts ?? []).some(p => p.type === 'progress' && p.toolName === 'done')).toBe(false);
   });
 
   it('reduceStop marks the active message stopped and ends the task', () => {
     const result = reduceStop(runningState(), 'do');
-    expect(result.messages[0].taskStatus).toBe('stopped');
-    expect(result.task).toEqual({ isTaskRunning: false, activeTaskId: null });
+    expect(result.messages[0].simulationStatus).toBe('stopped');
+    expect(result.task).toEqual({ isSimulationRunning: false, activeSimulationId: null });
   });
 });

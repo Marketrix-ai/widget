@@ -9,7 +9,7 @@ import { Flex } from '../base/Flex';
 import { Stack } from '../base/Stack';
 import { Text } from '../base/Text';
 import { MessageContent } from './MessageContent';
-import { TaskStatusIcon } from './TaskStatusIcon';
+import { SimulationStatusIcon } from './SimulationStatusIcon';
 import { VideoStreamDisplay } from './VideoStreamDisplay';
 
 interface MessageItemProps {
@@ -99,9 +99,9 @@ export const MessageItem: React.FC<MessageItemProps> = ({
             </Text>
           )}
 
-          {!isUser && message.taskStatus && (
+          {!isUser && message.simulationStatus && (
             <Flex position='absolute' align='center' justify='center' style={{ bottom: '4px', right: '4px' }}>
-              <TaskStatusIcon status={message.taskStatus} />
+              <SimulationStatusIcon status={message.simulationStatus} />
             </Flex>
           )}
         </Stack>

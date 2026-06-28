@@ -9,8 +9,8 @@ import { storageService } from './StorageService';
  */
 export interface ChatSnapshot {
   messages: ChatMessage[];
-  isTaskRunning: boolean;
-  activeTaskId: string | null;
+  isSimulationRunning: boolean;
+  activeSimulationId: string | null;
   currentMode: InstructionType;
   isOpen: boolean;
   isMinimized: boolean;
@@ -50,8 +50,8 @@ export class ChatService {
       storageService.updateContext({
         chat_id: chatId,
         messages: [],
-        isTaskRunning: false,
-        activeTaskId: null,
+        isSimulationRunning: false,
+        activeSimulationId: null,
         currentMode: 'tell',
         isOpen: false,
         isMinimized: false,
@@ -91,7 +91,7 @@ export class ChatService {
             timestamp: new Date(msg.timestamp),
             videoStream: undefined,
             placeholderState: msg.placeholderState,
-            taskStatus: msg.taskStatus,
+            simulationStatus: msg.simulationStatus,
             parts: msg.parts || [],
           };
 
@@ -108,8 +108,8 @@ export class ChatService {
 
     return {
       messages,
-      isTaskRunning: context.isTaskRunning,
-      activeTaskId: context.activeTaskId,
+      isSimulationRunning: context.isSimulationRunning,
+      activeSimulationId: context.activeSimulationId,
       currentMode: context.currentMode,
       isOpen: context.isOpen,
       isMinimized: context.isMinimized,
@@ -143,15 +143,15 @@ export class ChatService {
           isSystemMessage: msg.isSystemMessage,
           isPlaceholder: msg.isPlaceholder,
           placeholderState: msg.placeholderState,
-          taskStatus: msg.taskStatus,
+          simulationStatus: msg.simulationStatus,
           parts: msg.parts,
         }));
 
       storageService.updateContext({
         chat_id: this.chatId,
         messages: serializedMessages,
-        isTaskRunning: snapshot.isTaskRunning,
-        activeTaskId: snapshot.activeTaskId,
+        isSimulationRunning: snapshot.isSimulationRunning,
+        activeSimulationId: snapshot.activeSimulationId,
         currentMode: snapshot.currentMode,
         isOpen: snapshot.isOpen,
         isMinimized: snapshot.isMinimized,
