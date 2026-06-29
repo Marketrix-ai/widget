@@ -159,15 +159,15 @@ export const SimulationEntitySchema = BaseEntitySchema.extend({
   instructions: z.string().nullish(),
   // Persisted display name `{TypeLabel} #{id} Run`.
   name: z.string().nullish(),
-  // Origin type: direct/uxr/survey/ab/qa.
-  type: z.enum(['direct', 'uxr', 'survey', 'ab', 'qa']).nullish(),
+  // Origin type: direct/uxr/survey/abtest/qa.
+  type: z.enum(['direct', 'uxr', 'survey', 'abtest', 'qa']).nullish(),
   pinned: z.boolean().optional(),
   source: z.enum(['direct', 'qa']).optional(),
   graph_id: z.string().nullish(),
   source_metadata: z.record(z.string(), z.unknown()).nullish(),
   step_count: z.number().int().nonnegative().nullish(),
-  started_at: z.string().nullish(),
-  completed_at: z.string().nullish(),
+  started_at: z.coerce.date().nullish(),
+  completed_at: z.coerce.date().nullish(),
   graph_status: GraphStatusSchema.optional(),
   graph_steps_processed: z.number().int().nonnegative().optional(),
   graph_steps_total: z.number().int().nonnegative().optional(),
@@ -275,8 +275,8 @@ export const QARunVerdictStatusSchema = z.enum(['passed', 'failed', 'indecisive'
 export type QARunVerdictStatus = z.infer<typeof QARunVerdictStatusSchema>;
 
 /** A human resolution of an indecisive verdict — resolves to a decision, so no `indecisive`. */
-export const HumanRulingSchema = z.enum(['passed', 'failed']);
-export type HumanRuling = z.infer<typeof HumanRulingSchema>;
+export const RulingSchema = z.enum(['passed', 'failed']);
+export type Ruling = z.infer<typeof RulingSchema>;
 
 export const ActivityLogTypeSchema = z.enum([
   'user_login',
