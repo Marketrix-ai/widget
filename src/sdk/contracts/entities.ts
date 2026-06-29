@@ -60,7 +60,6 @@ export const UserEntitySchema = BaseEntitySchema.extend({
   last_name: z.string().nullish(),
   password: z.string().nullish(),
   image_url: z.string().nullish(),
-  prompt_limit: z.number().nullish(),
   last_login_at: z.coerce.date().nullish(),
   auth_method: AuthMethodSchema.nullish(),
 });
