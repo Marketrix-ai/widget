@@ -77,7 +77,7 @@ export interface MessagePart {
   type: 'text' | 'progress';
   content: string;
   status?: 'in_progress' | 'completed' | 'failed' | 'stopped';
-  toolName?: string;
+  browserToolName?: string;
   hideIcon?: boolean;
   textStyle?: 'default' | 'muted';
 }
@@ -97,7 +97,7 @@ export interface WidgetState {
   activeView: WidgetView;
 }
 
-export interface SendMessageRequest {
+export interface MessageDispatchRequest {
   message?: string;
   mode?: InstructionType;
   mtxId?: string;
@@ -107,7 +107,7 @@ export interface SendMessageRequest {
   requestId?: string;
 }
 
-export interface SendMessageResponse {
+export interface MessageDispatchResponse {
   messageId: string;
   response: string;
   mode: InstructionType;

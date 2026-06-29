@@ -174,7 +174,7 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
           isSimulationRunning={state.isSimulationRunning}
           activeView={state.activeView}
           onClose={actions.closeWidget}
-          onSendMessage={actions.sendMessage}
+          onSendMessage={actions.messageDispatch}
           onSetMode={actions.setMode}
           onAddMessage={actions.addMessage}
           onUpdateMessage={actions.updateMessage}

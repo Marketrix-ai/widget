@@ -2,10 +2,10 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useR
 
 import type { WidgetEvent } from '../sdk';
 import { ApiService } from '../services/ApiService';
+import { browserToolService } from '../services/BrowserToolService';
 import { createAgentMessage, createUserMessage } from '../services/ChatService';
 import { configManager } from '../services/ConfigManager';
 import { StreamClient, type StreamStatus } from '../services/StreamClient';
-import { toolService } from '../services/ToolService';
 import type { ChatMessage, InstructionType } from '../types';
 import { BROWSER_TOOLS } from '../types/browserTools';
 import { addThinkingMarker } from '../utils/chat';
@@ -13,7 +13,7 @@ import { reduceSse, reduceStop, reduceToolDone, reduceToolProgress, type SseEffe
 import type { UIStateActions } from './UIStateContext';
 
 /**
- * ConversationContext — the single store for the widget's conversation.
+ * ChatContext — the single store for the widget's conversation.
  *
  * Holds `{ messages, task }` as ONE `SseState`, so the SSE effect commits each
  * transition through a single atomic `setState(prev => transition(prev))`. This
@@ -39,7 +39,7 @@ export interface ChatActions {
   removeMessage: (messageId: string) => void;
   setMessages: (messages: ChatMessage[]) => void;
   clearMessages: () => void;
-  sendMessage: (
+  messageDispatch: (
     content: string,
     mode?: InstructionType,
     applicationId?: number,
@@ -53,21 +53,21 @@ export interface SimulationActions {
   stopTask: () => Promise<void>;
 }
 
-interface ConversationContextType {
+interface ChatContextType {
   chatState: ChatState;
   chatActions: ChatActions;
   taskState: SimulationState;
   taskActions: SimulationActions;
 }
 
-const ConversationContext = createContext<ConversationContextType | undefined>(undefined);
+const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
 const EMPTY_TASK: SimulationState = { activeSimulationId: null, isSimulationRunning: false };
 
-interface ConversationProviderProps {
+interface ChatProviderProps {
   children: React.ReactNode;
   previewMode?: boolean;
-  /** Current mode from UIState — fallback for sendMessage and progress-line logic. */
+  /** Current mode from UIState — fallback for messageDispatch and progress-line logic. */
   currentMode: InstructionType;
   /** Injected UI actions so the conversation store drives loading/availability/error without nesting contexts. */
   uiActions: Pick<UIStateActions, 'setLoading' | 'setAgentAvailable' | 'setError'>;
@@ -76,7 +76,7 @@ interface ConversationProviderProps {
   initialTask?: SimulationState;
 }
 
-export const ConversationProvider: React.FC<ConversationProviderProps> = ({
+export const ChatProvider: React.FC<ChatProviderProps> = ({
   children,
   previewMode = false,
   currentMode,
@@ -157,7 +157,7 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({
     [commit],
   );
 
-  const sendMessage = useCallback(
+  const messageDispatch = useCallback(
     async (
       content: string,
       mode?: InstructionType,
@@ -234,7 +234,7 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({
           }
         }
 
-        await apiService.sendMessage({
+        await apiService.messageDispatch({
           message: content,
           mode: effectiveMode,
           question,
@@ -298,8 +298,8 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({
     };
 
     const executeToolCall = async (effect: Extract<SseEffect, { type: 'executeTool' }>) => {
-      const { callId, tool, args, mode, explanation } = effect;
-      const result = await toolService.executeTool(tool, args, mode, explanation);
+      const { toolCallId, tool, args, mode, explanation } = effect;
+      const result = await browserToolService.executeTool(tool, args, mode, explanation);
 
       if (result.success) {
         try {
@@ -307,7 +307,7 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({
           wsClient
             .send({
               type: 'tool/response',
-              call_id: callId,
+              tool_call_id: toolCallId,
               success: true,
               data: typeof result.data === 'string' ? result.data : JSON.stringify(result.data),
               state_version: stateVersion.current,
@@ -338,7 +338,7 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({
         wsClient
           .send({
             type: 'tool/response',
-            call_id: callId,
+            tool_call_id: toolCallId,
             success: false,
             data: typeof result.data === 'string' ? result.data : JSON.stringify(result.data),
             error: result.error ?? undefined,
@@ -351,19 +351,19 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({
     const handleMessage = async (event: WidgetEvent) => {
       // Transport bookkeeping that must run before the pure reducer.
       if (event.type === 'tool/call') {
-        const requestId = event.call_id;
+        const requestId = event.tool_call_id;
         if (processedRequestIds.current.has(requestId)) return;
         addProcessedRequestId(requestId);
 
         const ALLOWED_TOOLS = BROWSER_TOOLS.map(t => t.id);
-        if (!ALLOWED_TOOLS.includes(event.tool)) {
-          console.warn('[Widget] Unknown tool requested:', event.tool);
+        if (!ALLOWED_TOOLS.includes(event.browser_tool)) {
+          console.warn('[Widget] Unknown tool requested:', event.browser_tool);
           wsClient
             .send({
               type: 'tool/response',
-              call_id: requestId,
+              tool_call_id: requestId,
               success: false,
-              error: `Unknown tool: ${event.tool}`,
+              error: `Unknown tool: ${event.browser_tool}`,
               state_version: stateVersion.current,
             })
             .catch(err => console.error('Failed to send unknown-tool response:', err));
@@ -432,8 +432,8 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({
   }, [previewMode, commit]);
 
   const chatActions = useMemo<ChatActions>(
-    () => ({ addMessage, updateMessage, removeMessage, setMessages, clearMessages, sendMessage }),
-    [addMessage, updateMessage, removeMessage, setMessages, clearMessages, sendMessage],
+    () => ({ addMessage, updateMessage, removeMessage, setMessages, clearMessages, messageDispatch }),
+    [addMessage, updateMessage, removeMessage, setMessages, clearMessages, messageDispatch],
   );
 
   const taskActions = useMemo<SimulationActions>(() => ({ setTaskState, stopTask }), [setTaskState, stopTask]);
@@ -441,14 +441,14 @@ export const ConversationProvider: React.FC<ConversationProviderProps> = ({
   const chatState = useMemo<ChatState>(() => ({ messages: state.messages }), [state.messages]);
 
   return (
-    <ConversationContext.Provider value={{ chatState, chatActions, taskState: state.task, taskActions }}>
+    <ChatContext.Provider value={{ chatState, chatActions, taskState: state.task, taskActions }}>
       {children}
-    </ConversationContext.Provider>
+    </ChatContext.Provider>
   );
 };
 
-export const useConversationContext = (): ConversationContextType => {
-  const ctx = useContext(ConversationContext);
-  if (!ctx) throw new Error('useConversationContext must be used within ConversationProvider');
+export const useChatContext = (): ChatContextType => {
+  const ctx = useContext(ChatContext);
+  if (!ctx) throw new Error('useChatContext must be used within ChatProvider');
   return ctx;
 };

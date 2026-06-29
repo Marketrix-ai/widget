@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo } from 'react';
 
-import { useConversationContext } from '../context/ConversationContext';
+import { useChatContext } from '../context/ChatContext';
 import { useUIStateContext } from '../context/UIStateContext';
 import { WidgetSettingsDataSchema } from '../sdk';
 import { configManager } from '../services/ConfigManager';
@@ -40,7 +40,7 @@ interface UseWidgetActions {
   setMessages: (messages: ChatMessage[]) => void;
   stopTask: () => Promise<void>;
   clearChatHistory: () => void;
-  sendMessage: (
+  messageDispatch: (
     content: string,
     mode?: InstructionType,
     applicationId?: number,
@@ -50,13 +50,13 @@ interface UseWidgetActions {
 }
 
 /**
- * Composes UIStateContext and ConversationContext into the unified
+ * Composes UIStateContext and ChatContext into the unified
  * `{ state, actions, config, … }` shape that the widget UI consumes. New code
  * can either keep using this hook or read the focused contexts directly.
  */
 export const useWidget = ({ config }: UseWidgetProps = {}) => {
   const { uiState, uiActions } = useUIStateContext();
-  const { chatState, chatActions, taskState, taskActions } = useConversationContext();
+  const { chatState, chatActions, taskState, taskActions } = useChatContext();
 
   const state = useMemo<WidgetState>(
     () => ({
@@ -96,7 +96,7 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
       updateMessage: chatActions.updateMessage,
       removeMessage: chatActions.removeMessage,
       setMessages: chatActions.setMessages,
-      sendMessage: chatActions.sendMessage,
+      messageDispatch: chatActions.messageDispatch,
       clearChatHistory: resetChat,
     }),
     [uiActions, taskActions, chatActions, resetChat],

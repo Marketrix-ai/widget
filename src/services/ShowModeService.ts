@@ -3,7 +3,7 @@ import { domService } from './DomService';
 export interface ShowModeOptions {
   element: HTMLElement;
   explanation: string;
-  toolName: string;
+  browserToolName: string;
   isClickAction?: boolean;
 }
 
@@ -34,12 +34,12 @@ export class ShowModeService {
   }
 
   async showToolAction(options: ShowModeOptions): Promise<boolean> {
-    const { element, explanation, isClickAction = false, toolName } = options;
+    const { element, explanation, isClickAction = false, browserToolName } = options;
 
     if (
       this.currentOptions?.element === element &&
       this.currentOptions.explanation === explanation &&
-      this.currentOptions.toolName === toolName &&
+      this.currentOptions.browserToolName === browserToolName &&
       this.currentPromise
     ) {
       console.log('[ShowModeService] Duplicate tool action detected, returning existing promise');

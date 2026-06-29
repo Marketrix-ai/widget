@@ -6,7 +6,7 @@ import { createLogger } from '../utils/logger';
 
 type RecordOptions = Parameters<typeof record>[0];
 
-const log = createLogger('SessionRecorder');
+const log = createLogger('RrwebSessionRecorder');
 
 /** Max events to buffer in memory */
 const MAX_QUEUE_SIZE = 500;
@@ -32,10 +32,10 @@ const FLUSH_INTERVAL_MS = 500;
 const MAX_CONSECUTIVE_FAILURES = 5;
 
 /**
- * SessionRecorder manages real-time RRWeb session recording,
+ * RrwebSessionRecorder manages real-time RRWeb session recording,
  * sending batched events to the API via HTTP POST (widget message endpoint).
  */
-export class SessionRecorder {
+export class RrwebSessionRecorder {
   private eventQueue: eventWithTime[] = [];
   private estimatedQueueBytes = 0;
   private sessionId: string;
@@ -53,10 +53,10 @@ export class SessionRecorder {
 
   constructor(chatId: string, applicationId: number) {
     if (!chatId || chatId.trim() === '') {
-      throw new Error('chatId is required for SessionRecorder');
+      throw new Error('chatId is required for RrwebSessionRecorder');
     }
     if (!applicationId || applicationId <= 0) {
-      throw new Error('applicationId (mtxApp) is required for SessionRecorder');
+      throw new Error('applicationId (mtxApp) is required for RrwebSessionRecorder');
     }
     log.info('Constructor called with chatId:', chatId, 'applicationId:', applicationId);
     this.chatId = chatId;
@@ -66,7 +66,7 @@ export class SessionRecorder {
     log.info('Initialized with sessionId:', this.sessionId);
   }
 
-  private async sendMetadata(): Promise<void> {
+  private async metadataEmit(): Promise<void> {
     if (this.metadataSent) {
       log.warn('Metadata already sent, skipping');
       return;
@@ -78,7 +78,7 @@ export class SessionRecorder {
       chat_id: this.chatId,
       command: {
         type: 'rrweb/metadata' as const,
-        session_id: this.sessionId,
+        rrweb_session_id: this.sessionId,
         chat_id: this.chatId,
         application_id: this.applicationId,
         url: window.location.href,
@@ -184,7 +184,7 @@ export class SessionRecorder {
         chat_id: this.chatId,
         command: {
           type: 'rrweb/events' as const,
-          session_id: this.sessionId,
+          rrweb_session_id: this.sessionId,
           events: batchEvents,
         },
       })
@@ -268,7 +268,7 @@ export class SessionRecorder {
     try {
       log.info('🚀 start() called');
 
-      await this.sendMetadata();
+      await this.metadataEmit();
       if (this.stopRequested) throw new Error('Recording stopped during startup');
 
       const recordOptions: RecordOptions = {
