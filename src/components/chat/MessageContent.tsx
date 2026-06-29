@@ -49,7 +49,7 @@ export const MessageContent: React.FC<MessageContentProps> = ({ message, isLastM
             );
           } else if (part.type === 'progress') {
             // Hide progress line for "done" tool when task is completed (show icon instead)
-            if (part.toolName === 'done' && message.simulationStatus === 'done') {
+            if (part.browserToolName === 'done' && message.simulationStatus === 'done') {
               return null;
             }
 

@@ -268,7 +268,7 @@ const INTERACTIVE_TOOLS = new Set([
 /**
  * Tools that, in `show` mode, pause for the user to perform the action
  * themselves (DOM-mutating "mouse and keyboard" actions, minus `scroll`).
- * Also the set that requires element highlighting in ToolService.
+ * Also the set that requires element highlighting in BrowserToolService.
  */
 export const WAIT_FOR_USER_TOOLS = new Set([
   'click_element',
@@ -293,16 +293,16 @@ function filterCancellationText(content: string): string {
     .trim();
 }
 
-export function addProgressLine(message: ChatMessage, toolName: string, explanation: string): ChatMessage {
+export function addProgressLine(message: ChatMessage, browserToolName: string, explanation: string): ChatMessage {
   const msg = ensureMessageStructure(message);
   const parts = msg.parts || [];
 
   const newParts = [...parts];
   const existingPartIndex = parts.findIndex(
-    part => part.type === 'progress' && part.toolName === toolName && part.status === 'in_progress',
+    part => part.type === 'progress' && part.browserToolName === browserToolName && part.status === 'in_progress',
   );
 
-  const isInteractive = INTERACTIVE_TOOLS.has(toolName);
+  const isInteractive = INTERACTIVE_TOOLS.has(browserToolName);
   const hideIcon = !isInteractive;
   const textStyle = 'default';
 
@@ -320,7 +320,7 @@ export function addProgressLine(message: ChatMessage, toolName: string, explanat
       type: 'progress',
       content: cleanedExplanation,
       status: 'in_progress',
-      toolName,
+      browserToolName,
       hideIcon,
       textStyle,
     });
@@ -332,14 +332,14 @@ export function addProgressLine(message: ChatMessage, toolName: string, explanat
   };
 }
 
-export function markProgressLineComplete(message: ChatMessage, toolName?: string): ChatMessage {
+export function markProgressLineComplete(message: ChatMessage, browserToolName?: string): ChatMessage {
   const msg = ensureMessageStructure(message);
   const parts = msg.parts || [];
 
   const newParts = [...parts];
   let partIndex = -1;
-  if (toolName) {
-    partIndex = parts.map(p => (p.type === 'progress' ? p.toolName : '')).lastIndexOf(toolName);
+  if (browserToolName) {
+    partIndex = parts.map(p => (p.type === 'progress' ? p.browserToolName : '')).lastIndexOf(browserToolName);
   } else {
     for (let i = parts.length - 1; i >= 0; i--) {
       if (parts[i].type === 'progress' && parts[i].status === 'in_progress') {
@@ -356,7 +356,7 @@ export function markProgressLineComplete(message: ChatMessage, toolName?: string
   return { ...msg, parts: newParts };
 }
 
-export function markProgressLineFailed(message: ChatMessage, toolName: string, error: string): ChatMessage {
+export function markProgressLineFailed(message: ChatMessage, browserToolName: string, error: string): ChatMessage {
   const msg = ensureMessageStructure(message);
   const parts = msg.parts || [];
 
@@ -365,7 +365,7 @@ export function markProgressLineFailed(message: ChatMessage, toolName: string, e
   const shouldFilterError = error.toLowerCase().includes('cancelled by cleanup');
 
   const newParts = [...parts];
-  let partIndex = parts.map(p => (p.type === 'progress' ? p.toolName : '')).lastIndexOf(toolName);
+  let partIndex = parts.map(p => (p.type === 'progress' ? p.browserToolName : '')).lastIndexOf(browserToolName);
   if (partIndex === -1) {
     for (let i = parts.length - 1; i >= 0; i--) {
       if (parts[i].type === 'progress' && parts[i].status === 'in_progress') {
@@ -452,13 +452,13 @@ export const TOOL_NAME_MAPPING: Record<string, string> = Object.fromEntries(
  * Get a friendly display name for a tool
  * Converts snake_case to Title Case if no mapping exists
  */
-export function getFriendlyToolName(toolName: string): string {
-  if (TOOL_NAME_MAPPING[toolName]) {
-    return TOOL_NAME_MAPPING[toolName];
+export function getFriendlyToolName(browserToolName: string): string {
+  if (TOOL_NAME_MAPPING[browserToolName]) {
+    return TOOL_NAME_MAPPING[browserToolName];
   }
 
   // Fallback: convert snake_case or camelCase to Title Case ("my_custom_tool"/"myCustomTool" -> "My Custom Tool")
-  return toolName
+  return browserToolName
     .replace(/([A-Z])/g, ' $1')
     .replace(/_/g, ' ')
     .trim()

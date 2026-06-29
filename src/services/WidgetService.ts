@@ -19,7 +19,7 @@ export class WidgetService {
    * Always returns default settings merged with existing widget settings if found
    * Returns null if no credentials provided (for preview mode)
    */
-  async fetchWidgetSettings(): Promise<WidgetData | null> {
+  async widgetSettingsGet(): Promise<WidgetData | null> {
     if (!this.mtxId && !this.mtxKey && !this.mtxApp) {
       return null;
     }
@@ -27,7 +27,7 @@ export class WidgetService {
     try {
       // Fetch default widget settings (cached after first call — static per session)
       if (!cachedDefaults) {
-        cachedDefaults = (await sdk.widgetGetDefaults({ type: 'widget' })) as WidgetSettingsData;
+        cachedDefaults = (await sdk.widgetDefaultGet({ type: 'widget' })) as WidgetSettingsData;
       }
       const defaultSettings = cachedDefaults;
 

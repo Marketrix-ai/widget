@@ -1,7 +1,7 @@
 /**
  * Pure SSE reducer — the single place where a `WidgetEvent` turns into the next
  * widget state. No transport, no tool execution, no localStorage: just
- * `(state, event) => { state, effects }`. The ConversationContext effect wires
+ * `(state, event) => { state, effects }`. The ChatContext effect wires
  * this up, runs the returned effects (tool exec, wsClient.send, setLoading), and
  * re-enters via the tool-progress helpers once an async tool finishes.
  *
@@ -34,7 +34,7 @@ export interface SseState {
 export type SseEffect =
   | {
       type: 'executeTool';
-      callId: string;
+      toolCallId: string;
       tool: string;
       args: Record<string, unknown>;
       mode: InstructionType;
@@ -58,12 +58,12 @@ function applyProgress(
   messages: ChatMessage[],
   isSimulationRunning: boolean,
   currentMode: InstructionType,
-  toolName: string,
+  browserToolName: string,
   explanation: string,
   status: ProgressStatus,
   error?: string,
 ): ChatMessage[] {
-  const friendlyName = getFriendlyToolName(toolName);
+  const friendlyName = getFriendlyToolName(browserToolName);
   const found = findMessageForProgress({
     messages,
     isSimulationRunning,
@@ -73,8 +73,8 @@ function applyProgress(
   if (!found) return messages;
 
   let updatedMsg = found.message;
-  const shouldWait = isSimulationRunning && currentMode === 'show' && WAIT_FOR_USER_TOOLS.has(toolName);
-  const isDoneTool = toolName === 'done';
+  const shouldWait = isSimulationRunning && currentMode === 'show' && WAIT_FOR_USER_TOOLS.has(browserToolName);
+  const isDoneTool = browserToolName === 'done';
   const isShowOrDo = currentMode === 'show' || currentMode === 'do';
 
   if (status === 'in_progress') {
@@ -106,7 +106,7 @@ function applyProgress(
 /** Public: progress transition used by the wiring layer for tool lifecycle. */
 export function reduceToolProgress(
   state: SseState,
-  toolName: string,
+  browserToolName: string,
   explanation: string,
   status: ProgressStatus,
   currentMode: InstructionType,
@@ -118,7 +118,7 @@ export function reduceToolProgress(
       state.messages,
       state.task.isSimulationRunning,
       currentMode,
-      toolName,
+      browserToolName,
       explanation,
       status,
       error,
@@ -137,7 +137,7 @@ export function reduceToolDone(state: SseState, currentMode: InstructionType): S
   const messages = [...state.messages];
   if (found) {
     const updatedParts = (found.message.parts ?? []).filter(
-      part => !(part.type === 'progress' && part.toolName === 'done'),
+      part => !(part.type === 'progress' && part.browserToolName === 'done'),
     );
     messages[found.index] = { ...found.message, simulationStatus: 'done', parts: updatedParts };
   }
@@ -175,14 +175,21 @@ export function reduceSse(state: SseState, event: WidgetEvent, currentMode: Inst
         state.messages,
         isSimulationRunning,
         currentMode,
-        event.tool,
+        event.browser_tool,
         explanation,
         'in_progress',
       );
       return {
         state: { messages, task },
         effects: [
-          { type: 'executeTool', callId: event.call_id, tool: event.tool, args: event.args, mode, explanation },
+          {
+            type: 'executeTool',
+            toolCallId: event.tool_call_id,
+            tool: event.browser_tool,
+            args: event.args,
+            mode,
+            explanation,
+          },
         ],
       };
     }

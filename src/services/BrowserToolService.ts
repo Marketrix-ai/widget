@@ -96,28 +96,28 @@ export interface ExtractParams {
   start_from_char?: number;
 }
 
-export class ToolService {
-  private static instance: ToolService;
+export class BrowserToolService {
+  private static instance: BrowserToolService;
 
   private constructor() {}
 
-  static getInstance(): ToolService {
-    if (!ToolService.instance) {
-      ToolService.instance = new ToolService();
+  static getInstance(): BrowserToolService {
+    if (!BrowserToolService.instance) {
+      BrowserToolService.instance = new BrowserToolService();
     }
-    return ToolService.instance;
+    return BrowserToolService.instance;
   }
 
   async executeTool(
-    toolName: string,
+    browserToolName: string,
     args: Record<string, unknown>,
     mode: string = 'do',
     explanation: string = '',
   ): Promise<ToolExecutionResult<unknown>> {
     try {
-      console.log(`[ToolService] Executing ${toolName} (mode: ${mode})`);
+      console.log(`[BrowserToolService] Executing ${browserToolName} (mode: ${mode})`);
 
-      if (mode === 'show' && this.requiresHighlight(toolName)) {
+      if (mode === 'show' && this.requiresHighlight(browserToolName)) {
         const index = args.index as number | undefined;
         if (index !== undefined) {
           const { element, error } = domService.getElementByIndex(index);
@@ -127,9 +127,9 @@ export class ToolService {
 
           const confirmed = await showModeService.showToolAction({
             element,
-            explanation: explanation || `Execute ${toolName}`,
-            toolName,
-            isClickAction: toolName === 'click_element',
+            explanation: explanation || `Execute ${browserToolName}`,
+            browserToolName,
+            isClickAction: browserToolName === 'click_element',
           });
 
           if (!confirmed) {
@@ -140,7 +140,7 @@ export class ToolService {
         }
       }
 
-      switch (toolName) {
+      switch (browserToolName) {
         case 'navigate':
           return this.navigate(args as unknown as NavigateParams);
         case 'search':
@@ -180,7 +180,7 @@ export class ToolService {
         case 'get_screenshot':
           return await this.getScreenshot();
         default:
-          return { success: false, data: { text: '' }, error: `Unknown tool: ${toolName}` };
+          return { success: false, data: { text: '' }, error: `Unknown tool: ${browserToolName}` };
       }
     } catch (error) {
       showModeService.cleanup();
@@ -192,8 +192,8 @@ export class ToolService {
     }
   }
 
-  private requiresHighlight(toolName: string): boolean {
-    return WAIT_FOR_USER_TOOLS.has(toolName);
+  private requiresHighlight(browserToolName: string): boolean {
+    return WAIT_FOR_USER_TOOLS.has(browserToolName);
   }
 
   private navigate(args: NavigateParams): ToolExecutionResult {
@@ -237,11 +237,11 @@ export class ToolService {
       try {
         element.click();
       } catch (e) {
-        console.warn('[ToolService] Click error:', e);
+        console.warn('[BrowserToolService] Click error:', e);
         try {
           element.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
         } catch (fallbackError) {
-          console.warn('[ToolService] Fallback click failed:', fallbackError);
+          console.warn('[BrowserToolService] Fallback click failed:', fallbackError);
         }
       }
     }, 50);
@@ -272,7 +272,7 @@ export class ToolService {
       try {
         inputElement.focus();
       } catch (e) {
-        console.warn('[ToolService] Focus failed:', e);
+        console.warn('[BrowserToolService] Focus failed:', e);
       }
 
       const finalValue = clear ? args.text : inputElement.value + args.text;
@@ -291,11 +291,11 @@ export class ToolService {
           if (descriptor?.set) {
             descriptor.set.call(inputElement, finalValue);
             valueSet = true;
-            console.log('[ToolService] Native setter succeeded');
+            console.log('[BrowserToolService] Native setter succeeded');
           }
         } catch (e) {
           lastError = e;
-          console.warn('[ToolService] Native setter failed:', e);
+          console.warn('[BrowserToolService] Native setter failed:', e);
         }
       }
 
@@ -303,10 +303,10 @@ export class ToolService {
         try {
           inputElement.value = finalValue;
           valueSet = true;
-          console.log('[ToolService] Direct assignment succeeded');
+          console.log('[BrowserToolService] Direct assignment succeeded');
         } catch (e) {
           lastError = e;
-          console.warn('[ToolService] Direct assignment failed:', e);
+          console.warn('[BrowserToolService] Direct assignment failed:', e);
         }
       }
 
@@ -317,11 +317,11 @@ export class ToolService {
           const success = document.execCommand('insertText', false, args.text);
           if (success) {
             valueSet = true;
-            console.log('[ToolService] execCommand succeeded');
+            console.log('[BrowserToolService] execCommand succeeded');
           }
         } catch (e) {
           lastError = e;
-          console.warn('[ToolService] execCommand failed:', e);
+          console.warn('[BrowserToolService] execCommand failed:', e);
         }
       }
 
@@ -345,10 +345,10 @@ export class ToolService {
             inputElement.dispatchEvent(new KeyboardEvent('keyup', { key: char, bubbles: true, cancelable: true }));
           }
           valueSet = true;
-          console.log('[ToolService] Simulated typing succeeded');
+          console.log('[BrowserToolService] Simulated typing succeeded');
         } catch (e) {
           lastError = e;
-          console.warn('[ToolService] Simulated typing failed:', e);
+          console.warn('[BrowserToolService] Simulated typing failed:', e);
         }
       }
 
@@ -375,7 +375,7 @@ export class ToolService {
         // Some frameworks need blur to trigger validation
         inputElement.dispatchEvent(new Event('blur', { bubbles: true }));
       } catch (e) {
-        console.warn('[ToolService] Event dispatch failed:', e);
+        console.warn('[BrowserToolService] Event dispatch failed:', e);
       }
     } else if ('value' in element) {
       // Generic element with value property (e.g., select, custom elements)
@@ -852,4 +852,4 @@ export class ToolService {
   }
 }
 
-export const toolService = ToolService.getInstance();
+export const browserToolService = BrowserToolService.getInstance();

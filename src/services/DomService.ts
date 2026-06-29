@@ -583,7 +583,7 @@ export class DomService {
 
   /**
    * Get an element by index with validation.
-   * This is the main entry point for ToolService to use.
+   * This is the main entry point for BrowserToolService to use.
    * It validates the element matches its fingerprint and attempts recovery if not.
    * Returns element only if it's interactable.
    */

@@ -10,10 +10,10 @@ import { createLogger } from '../utils/logger';
 import { chatService } from './ChatService';
 import { storageService } from './StorageService';
 
-const log = createLogger('SessionManager');
+const log = createLogger('ChatSessionManager');
 
-class SessionManager {
-  private static instance: SessionManager | null = null;
+class ChatSessionManager {
+  private static instance: ChatSessionManager | null = null;
   private chatId: string | null = null;
   private initializationPromise: Promise<string> | null = null;
 
@@ -29,22 +29,22 @@ class SessionManager {
     }
   }
 
-  static getInstance(): SessionManager {
+  static getInstance(): ChatSessionManager {
     // Guard against SSR - return a dummy instance that won't be used
     if (typeof window === 'undefined' || typeof document === 'undefined') {
-      if (!SessionManager.instance) {
+      if (!ChatSessionManager.instance) {
         // Create a minimal instance that won't access browser APIs
-        SessionManager.instance = Object.create(SessionManager.prototype) as SessionManager;
-        SessionManager.instance.chatId = null;
-        SessionManager.instance.initializationPromise = null;
+        ChatSessionManager.instance = Object.create(ChatSessionManager.prototype) as ChatSessionManager;
+        ChatSessionManager.instance.chatId = null;
+        ChatSessionManager.instance.initializationPromise = null;
       }
-      return SessionManager.instance;
+      return ChatSessionManager.instance;
     }
 
-    if (!SessionManager.instance) {
-      SessionManager.instance = new SessionManager();
+    if (!ChatSessionManager.instance) {
+      ChatSessionManager.instance = new ChatSessionManager();
     }
-    return SessionManager.instance;
+    return ChatSessionManager.instance;
   }
 
   getChatId(): string | null {
@@ -119,4 +119,4 @@ class SessionManager {
   }
 }
 
-export const sessionManager = SessionManager.getInstance();
+export const chatSessionManager = ChatSessionManager.getInstance();

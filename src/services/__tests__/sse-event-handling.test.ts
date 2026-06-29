@@ -33,8 +33,8 @@ const MINIMAL_EVENT_FIXTURES: Record<ExpectedEventType, object> = {
   'task/status': { type: 'task/status', status: 'running' },
   'tool/call': {
     type: 'tool/call',
-    call_id: 'call-1',
-    tool: 'click_element',
+    tool_call_id: 'call-1',
+    browser_tool: 'click_element',
     args: { selector: '#btn' },
   },
 };
@@ -139,14 +139,19 @@ describe('SSE event discriminated-union contract (WidgetEventSchema)', () => {
   });
 
   describe('tool/call event', () => {
-    it('requires call_id, tool, and args', () => {
-      const base = { type: 'tool/call', call_id: 'c1', tool: 'navigate', args: { url: 'https://example.com' } };
+    it('requires tool_call_id, browser_tool, and args', () => {
+      const base = {
+        type: 'tool/call',
+        tool_call_id: 'c1',
+        browser_tool: 'navigate',
+        args: { url: 'https://example.com' },
+      };
       expect(WidgetEventSchema.safeParse(base).success).toBe(true);
-      expect(WidgetEventSchema.safeParse({ ...base, call_id: undefined }).success).toBe(false);
+      expect(WidgetEventSchema.safeParse({ ...base, tool_call_id: undefined }).success).toBe(false);
     });
 
     it('mode is optional and restricted to "show"|"do"', () => {
-      const base = { type: 'tool/call', call_id: 'c1', tool: 'navigate', args: {} };
+      const base = { type: 'tool/call', tool_call_id: 'c1', browser_tool: 'navigate', args: {} };
       expect(WidgetEventSchema.safeParse({ ...base, mode: 'show' }).success).toBe(true);
       expect(WidgetEventSchema.safeParse({ ...base, mode: 'do' }).success).toBe(true);
       expect(WidgetEventSchema.safeParse({ ...base, mode: 'auto' }).success).toBe(false);
@@ -154,7 +159,7 @@ describe('SSE event discriminated-union contract (WidgetEventSchema)', () => {
   });
 
   describe('task/status "has_question" pauses the active message (clears running spinner)', () => {
-    // Mirrors the ConversationContext SSE reducer for `has_question`: strip the thinking
+    // Mirrors the ChatContext SSE reducer for `has_question`: strip the thinking
     // marker (kills the inline spinner) and flip to the paused "waiting for you"
     // indicator without setting a terminal simulationStatus icon.
     const applyHasQuestionTransition = (message: ChatMessage, statusMessage?: string): ChatMessage => {

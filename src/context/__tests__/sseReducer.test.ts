@@ -1,6 +1,6 @@
 /**
  * Unit tests for the pure SSE reducer (src/context/sseReducer.ts).
- * These pin the state-transition behavior the ConversationContext effect used to
+ * These pin the state-transition behavior the ChatContext effect used to
  * bury inside a ~180-line nested-setState handler.
  */
 import { describe, expect, it } from 'vitest';
@@ -102,8 +102,8 @@ describe('reduceSse — task/status', () => {
 describe('reduceSse — tool/call', () => {
   const toolCall = (overrides: Partial<Extract<WidgetEvent, { type: 'tool/call' }>> = {}): WidgetEvent => ({
     type: 'tool/call',
-    call_id: 'call-1',
-    tool: 'click_element',
+    tool_call_id: 'call-1',
+    browser_tool: 'click_element',
     args: { index: 1 },
     explanation: 'Clicking the submit button',
     ...overrides,
@@ -114,7 +114,7 @@ describe('reduceSse — tool/call', () => {
     expect(result.effects).toEqual([
       {
         type: 'executeTool',
-        callId: 'call-1',
+        toolCallId: 'call-1',
         tool: 'click_element',
         args: { index: 1 },
         mode: 'do',
@@ -199,8 +199,8 @@ describe('reduceToolProgress / reduceToolDone / reduceStop', () => {
       runningState(),
       {
         type: 'tool/call',
-        call_id: 'c',
-        tool: 'click_element',
+        tool_call_id: 'c',
+        browser_tool: 'click_element',
         args: {},
         explanation: 'x',
       },
@@ -216,8 +216,8 @@ describe('reduceToolProgress / reduceToolDone / reduceStop', () => {
       runningState(),
       {
         type: 'tool/call',
-        call_id: 'c',
-        tool: 'click_element',
+        tool_call_id: 'c',
+        browser_tool: 'click_element',
         args: {},
         explanation: 'Clicking',
       },
@@ -235,7 +235,7 @@ describe('reduceToolProgress / reduceToolDone / reduceStop', () => {
         agentMessage({
           parts: [
             { type: 'text', content: 'Working on it' },
-            { type: 'progress', content: 'Finishing', status: 'in_progress', toolName: 'done' },
+            { type: 'progress', content: 'Finishing', status: 'in_progress', browserToolName: 'done' },
           ],
         }),
       ],
@@ -244,7 +244,9 @@ describe('reduceToolProgress / reduceToolDone / reduceStop', () => {
     const result = reduceToolDone(withDoneLine, 'do');
     expect(result.task).toEqual({ isSimulationRunning: false, activeSimulationId: null });
     expect(result.messages[0].simulationStatus).toBe('done');
-    expect((result.messages[0].parts ?? []).some(p => p.type === 'progress' && p.toolName === 'done')).toBe(false);
+    expect((result.messages[0].parts ?? []).some(p => p.type === 'progress' && p.browserToolName === 'done')).toBe(
+      false,
+    );
   });
 
   it('reduceStop marks the active message stopped and ends the task', () => {

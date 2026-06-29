@@ -2,7 +2,7 @@ import { oc } from '@orpc/contract';
 import { z } from 'zod';
 
 import { paginatedListOf, PaginationSchema } from './common';
-import { ActionLogCreateSchema, ActionLogEntitySchema, ActionLogTypeSchema } from './entities';
+import { ActivityLogCreateSchema, ActivityLogEntitySchema, ActivityLogTypeSchema } from './entities';
 
 export const activityLogCreate = oc
   .route({
@@ -12,8 +12,8 @@ export const activityLogCreate = oc
     summary: 'Create new activity log entry',
     description: 'Records user or system action for auditing and tracking purposes',
   })
-  .input(ActionLogCreateSchema)
-  .output(ActionLogEntitySchema);
+  .input(ActivityLogCreateSchema)
+  .output(ActivityLogEntitySchema);
 
 export const activityLogSearch = oc
   .route({
@@ -27,12 +27,12 @@ export const activityLogSearch = oc
     z
       .object({
         workspace_id: z.coerce.number().optional(),
-        type: ActionLogTypeSchema.optional(),
+        type: ActivityLogTypeSchema.optional(),
         application_id: z.coerce.number().optional(),
       })
       .extend(PaginationSchema.shape),
   )
-  .output(paginatedListOf(ActionLogEntitySchema));
+  .output(paginatedListOf(ActivityLogEntitySchema));
 
 export const activityLogRoutes = {
   activityLogCreate,

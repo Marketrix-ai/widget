@@ -11,7 +11,7 @@ import { MarketrixWidget as MarketrixWidgetComponent } from './components/Market
 import { WidgetProviders } from './context/WidgetProviders';
 import { configureSdk, type WidgetSettingsData } from './sdk';
 import { createConfigFromSettings } from './services/ConfigManager';
-import { SessionRecorder } from './services/SessionRecorder';
+import { RrwebSessionRecorder } from './services/RrwebSessionRecorder';
 import { storageService } from './services/StorageService';
 import { StreamClient } from './services/StreamClient';
 import { ValidationService } from './services/ValidationService';
@@ -38,8 +38,8 @@ import { isHTMLElement } from './utils/validation';
 // All widget CSS is isolated in Shadow DOM via bootstrap.tsx using 'index.css?inline'.
 // This ensures the widget's Tailwind CSS doesn't interfere with the app's responsive breakpoints.
 
-let sessionRecorder: SessionRecorder | null = null;
-let isRecordingInitialized = false; // Flag to prevent multiple SessionRecorder instances
+let rrwebSessionRecorder: RrwebSessionRecorder | null = null;
+let isRecordingInitialized = false; // Flag to prevent multiple RrwebSessionRecorder instances
 let isRecorderStarting = false; // Flag to prevent concurrent initRecorder() calls
 // Tracks in-flight start() promise to prevent concurrent starts and enable safe stop/teardown
 let recordingStartPromise: Promise<void> | null = null;
@@ -63,7 +63,7 @@ async function initializeWidgetWithConfig(
   try {
     const widgetService = new WidgetService(config.mtxId, config.mtxKey, config.mtxApp);
 
-    const widgetData = await widgetService.fetchWidgetSettings();
+    const widgetData = await widgetService.widgetSettingsGet();
     const widgetSettings = widgetData ? widgetService.getWidgetSettings(widgetData) : null;
 
     if (!widgetSettings) {
@@ -161,48 +161,48 @@ async function initWidgetInternal(config: MarketrixConfig, container?: HTMLEleme
   window.__mtx = { state: 'active' };
 
   try {
-    if (sessionRecorder && isRecordingInitialized) {
+    if (rrwebSessionRecorder && isRecordingInitialized) {
       console.warn(
-        '[Marketrix Widget] ⚠️ SessionRecorder already initialized, skipping creation. Reusing existing instance.',
+        '[Marketrix Widget] ⚠️ RrwebSessionRecorder already initialized, skipping creation. Reusing existing instance.',
       );
       return;
     }
 
-    if (sessionRecorder) {
-      console.warn('[Marketrix Widget] ⚠️ Stopping existing SessionRecorder before creating new one');
-      sessionRecorder.stop();
-      sessionRecorder = null;
+    if (rrwebSessionRecorder) {
+      console.warn('[Marketrix Widget] ⚠️ Stopping existing RrwebSessionRecorder before creating new one');
+      rrwebSessionRecorder.stop();
+      rrwebSessionRecorder = null;
       isRecordingInitialized = false;
     }
 
     recordingAbortController = new AbortController();
 
-    // SessionRecorder now requires chatId at construction (uses HTTP POST).
+    // RrwebSessionRecorder now requires chatId at construction (uses HTTP POST).
     // We need both applicationId and chatId before creating the recorder.
     const initRecorder = (applicationId: number, chatId: string) => {
-      if (sessionRecorder && isRecordingInitialized) return; // Already initialized
+      if (rrwebSessionRecorder && isRecordingInitialized) return; // Already initialized
       if (isRecorderStarting) return;
       isRecorderStarting = true;
 
       try {
-        sessionRecorder = new SessionRecorder(chatId, applicationId);
+        rrwebSessionRecorder = new RrwebSessionRecorder(chatId, applicationId);
         isRecordingInitialized = true;
 
-        const recorder = sessionRecorder;
+        const recorder = rrwebSessionRecorder;
         recordingStartPromise = recorder
           .start()
           .catch(error => {
-            if (sessionRecorder !== recorder) return;
+            if (rrwebSessionRecorder !== recorder) return;
             console.error('[Marketrix Widget] Failed to start session recording:', error);
             isRecordingInitialized = false;
           })
           .finally(() => {
             isRecorderStarting = false;
-            if (sessionRecorder !== recorder) return;
+            if (rrwebSessionRecorder !== recorder) return;
             recordingStartPromise = null;
           });
       } catch (error) {
-        console.error('[Marketrix Widget] Failed to create SessionRecorder:', error);
+        console.error('[Marketrix Widget] Failed to create RrwebSessionRecorder:', error);
         isRecorderStarting = false;
       }
     };
@@ -296,10 +296,10 @@ export const unmountWidget = (): void => {
   recordingAbortController?.abort();
   recordingAbortController = null;
 
-  // Stop session recording (SessionRecorder.stop() aborts in-flight start via stopRequested)
-  if (sessionRecorder) {
-    sessionRecorder.stop();
-    sessionRecorder = null;
+  // Stop session recording (RrwebSessionRecorder.stop() aborts in-flight start via stopRequested)
+  if (rrwebSessionRecorder) {
+    rrwebSessionRecorder.stop();
+    rrwebSessionRecorder = null;
     isRecordingInitialized = false;
     isRecorderStarting = false;
     recordingStartPromise = null;
@@ -314,12 +314,12 @@ export const unmountWidget = (): void => {
 
 /**
  * Stop RRWeb session recording without unmounting the widget.
- * Keeps the SessionRecorder instance so recording can be restarted with startRecording().
- * SessionRecorder.stop() aborts in-flight start() via stopRequested.
+ * Keeps the RrwebSessionRecorder instance so recording can be restarted with startRecording().
+ * RrwebSessionRecorder.stop() aborts in-flight start() via stopRequested.
  */
 export const stopRecording = (): void => {
-  if (!sessionRecorder) return;
-  sessionRecorder.stop();
+  if (!rrwebSessionRecorder) return;
+  rrwebSessionRecorder.stop();
   console.log('[Marketrix Widget] Session recording stopped (toggle)');
 };
 
@@ -329,19 +329,19 @@ export const stopRecording = (): void => {
  * @throws Error if session recorder was never created (e.g. missing mtxApiHost/mtxApp).
  */
 export const startRecording = async (): Promise<void> => {
-  if (!sessionRecorder) {
+  if (!rrwebSessionRecorder) {
     throw new Error('Session recording not available. Ensure the widget is initialized with mtxApiHost and mtxApp.');
   }
   // If a start is already in-flight (auto-start or previous call), wait for it
   if (recordingStartPromise) {
     await recordingStartPromise.catch(() => {});
     // After it settles, check if recording is already active
-    if (sessionRecorder?.isActive()) return;
+    if (rrwebSessionRecorder?.isActive()) return;
   }
-  // Already recording — no-op (SessionRecorder.start checks too, but avoid the promise tracking overhead)
-  if (sessionRecorder.isActive()) return;
+  // Already recording — no-op (RrwebSessionRecorder.start checks too, but avoid the promise tracking overhead)
+  if (rrwebSessionRecorder.isActive()) return;
 
-  const promise = sessionRecorder.start();
+  const promise = rrwebSessionRecorder.start();
   recordingStartPromise = promise;
   try {
     await promise;
@@ -354,7 +354,7 @@ export const startRecording = async (): Promise<void> => {
  * Returns whether RRWeb session recording is currently active.
  */
 export const getRecordingState = (): boolean => {
-  return sessionRecorder?.isActive() ?? false;
+  return rrwebSessionRecorder?.isActive() ?? false;
 };
 
 export const updateMarketrixConfig = async (newConfig: Partial<MarketrixConfig>): Promise<void> => {

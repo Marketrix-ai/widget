@@ -1,8 +1,8 @@
 /**
  * WidgetProviders — composition root that wires UIStateProvider and
- * ConversationProvider together.
+ * ChatProvider together.
  *
- * Conversation state ({ messages, task }) lives in ONE store (ConversationProvider);
+ * Conversation state ({ messages, task }) lives in ONE store (ChatProvider);
  * UI state (open/minimized/mode/loading/error) lives in UIStateProvider. Both
  * one-time initialization (SSE connection, ChatService hydration) and persistence
  * live in inner bridge components that can read every context. React context is
@@ -12,16 +12,16 @@
 import React, { useEffect } from 'react';
 
 import { chatService } from '../services/ChatService';
+import { chatSessionManager } from '../services/ChatSessionManager';
 import { configManager } from '../services/ConfigManager';
-import { sessionManager } from '../services/SessionManager';
 import { StreamClient } from '../services/StreamClient';
-import { ConversationProvider, useConversationContext } from './ConversationContext';
+import { ChatProvider, useChatContext } from './ChatContext';
 import { UIStateProvider, useUIStateContext } from './UIStateContext';
 
 // Persistence bridge — single context → storage effect (innermost, sees all state).
 const PersistBridge: React.FC<{ previewMode: boolean }> = ({ previewMode }) => {
   const { uiState } = useUIStateContext();
-  const { chatState, taskState } = useConversationContext();
+  const { chatState, taskState } = useChatContext();
 
   useEffect(() => {
     if (previewMode) return;
@@ -52,14 +52,14 @@ const PersistBridge: React.FC<{ previewMode: boolean }> = ({ previewMode }) => {
 // seeds the conversation store. Sees both UIState and Conversation contexts.
 const InitBridge: React.FC<{ children: React.ReactNode; previewMode: boolean }> = ({ children, previewMode }) => {
   const { uiActions } = useUIStateContext();
-  const { chatActions, taskActions } = useConversationContext();
+  const { chatActions, taskActions } = useChatContext();
 
   // One-time initialization: hydrate from ChatService + connect stream.
   useEffect(() => {
     if (previewMode) return;
 
     const init = async () => {
-      const chatId = await sessionManager.getOrCreateChatId();
+      const chatId = await chatSessionManager.getOrCreateChatId();
       chatService.createInitialContext(chatId);
 
       const initErr = chatService.getInitError();
@@ -113,14 +113,14 @@ const InitBridge: React.FC<{ children: React.ReactNode; previewMode: boolean }> 
   );
 };
 
-// UIState → Conversation bridge (reads UIState to inject into ConversationProvider).
+// UIState → Conversation bridge (reads UIState to inject into ChatProvider).
 const UIStateBridge: React.FC<{ children: React.ReactNode; previewMode: boolean }> = ({ children, previewMode }) => {
   const { uiState, uiActions } = useUIStateContext();
 
   return (
-    <ConversationProvider previewMode={previewMode} currentMode={uiState.currentMode} uiActions={uiActions}>
+    <ChatProvider previewMode={previewMode} currentMode={uiState.currentMode} uiActions={uiActions}>
       <InitBridge previewMode={previewMode}>{children}</InitBridge>
-    </ConversationProvider>
+    </ChatProvider>
   );
 };
 

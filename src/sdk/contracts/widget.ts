@@ -63,8 +63,8 @@ export const WidgetEventSchema = z.discriminatedUnion('type', [
   }),
   z.object({
     type: z.literal('tool/call'),
-    call_id: z.string(),
-    tool: z.string(),
+    tool_call_id: z.string(),
+    browser_tool: z.string(),
     args: z.record(z.string(), z.unknown()),
     mode: z.enum(['show', 'do']).optional(),
     explanation: z.string().optional(),
@@ -81,7 +81,7 @@ export const WidgetCommandSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('chat/stop'), task_id: z.string().optional() }),
   z.object({
     type: z.literal('tool/response'),
-    call_id: z.string(),
+    tool_call_id: z.string(),
     success: z.boolean(),
     data: z.string().optional(),
     error: z.string().optional(),
@@ -90,7 +90,7 @@ export const WidgetCommandSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('ping') }),
   z.object({
     type: z.literal('rrweb/metadata'),
-    session_id: z.string(),
+    rrweb_session_id: z.string(),
     chat_id: z.string(),
     application_id: z.number(),
     url: z.string().optional(),
@@ -105,7 +105,7 @@ export const WidgetCommandSchema = z.discriminatedUnion('type', [
   }),
   z.object({
     type: z.literal('rrweb/events'),
-    session_id: z.string(),
+    rrweb_session_id: z.string(),
     events: z.array(z.unknown()),
   }),
 ]);
@@ -142,7 +142,7 @@ export const widgetSearch = oc
   )
   .output(paginatedListOf(WidgetEntitySchema));
 
-export const widgetGetDefaults = oc
+export const widgetDefaultGet = oc
   .route({
     method: 'GET',
     tags: ['Widget'],
@@ -214,7 +214,7 @@ export const widgetMessage = oc
 export const widgetRoutes = {
   widgetCreate,
   widgetSearch,
-  widgetGetDefaults,
+  widgetDefaultGet,
   widgetUpdate,
   widgetDelete,
   widgetStream,

@@ -70,7 +70,7 @@ export const applicationGet = oc
     }),
   );
 
-export const applicationGraph = oc
+export const applicationGraphGet = oc
   .route({
     method: 'GET',
     tags: ['Application'],
@@ -107,7 +107,7 @@ export const applicationRoutes = {
   applicationCreate,
   applicationSearch,
   applicationGet,
-  applicationGraph,
+  applicationGraphGet,
   applicationUpdate,
   applicationDelete,
 };

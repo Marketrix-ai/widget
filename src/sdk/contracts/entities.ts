@@ -131,7 +131,7 @@ export const StepReactionSchema = z.object({
 // One reactor's reaction to one simulation. run_id/user_index are null for a
 // direct sim's attached persona; set for a study persona-user. Shared by the
 // direct-sim read path AND the study replay.
-export const PersonaSimReactionEntitySchema = z.object({
+export const SimPersonaReactionEntitySchema = z.object({
   id: z.number(),
   run_id: z.number().nullable(),
   persona_id: z.number().nullable(),
@@ -178,7 +178,7 @@ export const SimulationEntitySchema = BaseEntitySchema.extend({
   has_question: z.boolean().optional(),
   // Participants — personas that REACT to this sim; each carries persona_id + user_count (both required) + their reactions.
   participants: z.array(z.object({ persona_id: z.number(), user_count: z.number().int().positive() })).default([]),
-  reactions: z.array(PersonaSimReactionEntitySchema).default([]),
+  reactions: z.array(SimPersonaReactionEntitySchema).default([]),
   // Driver — the single persona this sim RUNS AS (in-character; QA + survey); null = neutral.
   driver_persona_id: z.number().nullable().default(null),
   viewport: ViewportNameSchema.default('desktop'),
@@ -267,7 +267,7 @@ export type StateTriggerData = z.infer<typeof StateTriggerEntitySchema>;
  * `synthesizing` = all sims terminal but per-journey verdicts still completing (QA has no
  * run-level rollup like studies). Canonical wire vocabulary.
  */
-export const QARunStatusSchema = z.enum(['running', 'synthesizing', 'completed', 'failed', 'stopped']);
+export const QARunStatusSchema = z.enum(['running', 'finalizing', 'completed', 'failed', 'stopped']);
 export type QARunStatus = z.infer<typeof QARunStatusSchema>;
 
 /** QA verdict per (run, persona, journey, viewport) — DATA-derived by the api from qa_verdict; NOT a wire status. */
@@ -278,7 +278,7 @@ export type QARunVerdictStatus = z.infer<typeof QARunVerdictStatusSchema>;
 export const HumanRulingSchema = z.enum(['passed', 'failed']);
 export type HumanRuling = z.infer<typeof HumanRulingSchema>;
 
-export const ActionLogTypeSchema = z.enum([
+export const ActivityLogTypeSchema = z.enum([
   'user_login',
   'url_visit',
   'update_workspace',
@@ -300,15 +300,15 @@ export const ActionLogTypeSchema = z.enum([
   'widget_question',
   'qa_run_started',
   'start_simulation',
-  'create_automation',
-  'update_automation',
-  'delete_automation',
-  'toggle_automation',
+  'create_workflow',
+  'update_workflow',
+  'delete_workflow',
+  'toggle_workflow',
   'slack_command',
 ]);
-export type ActionLogType = z.infer<typeof ActionLogTypeSchema>;
+export type ActivityLogType = z.infer<typeof ActivityLogTypeSchema>;
 
-export const ActionLogMetadataSchema = z
+export const ActivityLogMetadataSchema = z
   .object({
     details: z.string().optional(),
     id: z.number().optional(),
@@ -328,18 +328,18 @@ export const ActionLogMetadataSchema = z
     created_by: z.number().optional(),
   })
   .passthrough(); // Allow additional fields for flexibility (e.g., updatedData, previousData, createdData)
-export type ActionLogMetadataData = z.infer<typeof ActionLogMetadataSchema>;
+export type ActivityLogMetadataData = z.infer<typeof ActivityLogMetadataSchema>;
 
-export const ActionLogEntitySchema = BaseEntitySchema.extend({
+export const ActivityLogEntitySchema = BaseEntitySchema.extend({
   workspace_id: z.number(),
   user_id: z.number(),
-  type: ActionLogTypeSchema,
-  metadata: ActionLogMetadataSchema.optional(),
+  type: ActivityLogTypeSchema,
+  metadata: ActivityLogMetadataSchema.optional(),
 });
-export type ActionLogData = z.infer<typeof ActionLogEntitySchema>;
+export type ActivityLogData = z.infer<typeof ActivityLogEntitySchema>;
 
-export const ActionLogCreateSchema = ActionLogEntitySchema.partial().extend({
-  type: ActionLogTypeSchema,
+export const ActivityLogCreateSchema = ActivityLogEntitySchema.partial().extend({
+  type: ActivityLogTypeSchema,
 });
 
 export const UserQuotaSchema = z.object({
@@ -349,12 +349,3 @@ export const UserQuotaSchema = z.object({
   remaining: z.number(),
 });
 export type UserQuotaData = z.infer<typeof UserQuotaSchema>;
-
-// Shared across root (AppEventSchema user-study/run payload) and UX-research domain.
-export const SuggestedSimulationSchema = z.object({
-  description: z.string(),
-  selected: z.boolean(),
-  simulation_id: z.number().nullable().optional(),
-  status: SimulationStatusSchema.nullable().optional(),
-});
-export type SuggestedSimulation = z.infer<typeof SuggestedSimulationSchema>;
