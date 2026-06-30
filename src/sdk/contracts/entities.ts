@@ -119,13 +119,13 @@ export const SentimentSchema = z.enum(['positive', 'neutral', 'negative']);
 
 export const StepReactionSchema = z.object({
   step_index: z.number(),
-  // Nullable to match the persisted rows. The live persistStepReaction path
-  // (simulationTerminal) inserts step rows with NULL screenshot_ref (and a not-yet-
-  // classified sentiment), and the read path re-parses this schema — a non-nullable
-  // shape would 500 simulationGet + every studies read.
+  // screenshot_ref stays nullable: the live persistStepReaction path (simulationTerminal)
+  // inserts step rows with a NULL screenshot_ref, and the read path re-parses this schema —
+  // a non-nullable shape would 500 simulationGet + every studies read. reaction/sentiment
+  // are NOT NULL columns (always written).
   screenshot_ref: z.string().nullable(),
   reaction: z.string(),
-  sentiment: SentimentSchema.nullable(),
+  sentiment: SentimentSchema,
 });
 // One reactor's reaction to one simulation. run_id/user_index are null for a
 // direct sim's attached persona; set for a study persona-user. Shared by the
@@ -153,13 +153,13 @@ export const SimulationEntitySchema = BaseEntitySchema.extend({
   job_id: z.string(),
   browser_session_id: z.string().nullish(),
   status: SimulationStatusSchema,
-  status_message: z.string().nullish(),
+  status_message: z.string(),
   path: z.string().nullish(),
-  instructions: z.string().nullish(),
+  instructions: z.string(),
   // Persisted display name `{TypeLabel} #{id} Run`.
   name: z.string().nullish(),
   // Origin type: direct/uxr/survey/abtest/qa.
-  type: z.enum(['direct', 'uxr', 'survey', 'abtest', 'qa']).nullish(),
+  type: z.enum(['direct', 'uxr', 'survey', 'abtest', 'qa']),
   pinned: z.boolean().optional(),
   source: z.enum(['direct', 'qa']).optional(),
   graph_id: z.string().nullish(),
@@ -189,10 +189,10 @@ export const ApplicationEntitySchema = BaseEntitySchema.extend({
   name: z.string(),
   slug: z.string(),
   type: ApplicationTypeSchema,
-  url: z.string().nullish(),
+  url: z.string(),
   username: z.string().nullish(),
   password: z.string().nullish(),
-  allowed_domains: z.array(z.string()).nullish().default([]),
+  allowed_domains: z.array(z.string()).default([]),
 });
 export type ApplicationData = z.infer<typeof ApplicationEntitySchema>;
 
