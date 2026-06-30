@@ -330,8 +330,9 @@ export const ActivityLogMetadataSchema = z
 export type ActivityLogMetadataData = z.infer<typeof ActivityLogMetadataSchema>;
 
 export const ActivityLogEntitySchema = BaseEntitySchema.extend({
-  workspace_id: z.number(),
-  user_id: z.number(),
+  // nullable: an audit-log entry outlives a deleted user/workspace (FK ON DELETE SET NULL, V120)
+  workspace_id: z.number().nullable(),
+  user_id: z.number().nullable(),
   type: ActivityLogTypeSchema,
   metadata: ActivityLogMetadataSchema.optional(),
 });
