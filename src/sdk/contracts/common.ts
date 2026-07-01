@@ -116,14 +116,3 @@ export const GraphSchema = z.object({
   edges: z.array(GraphEdgeSchema),
 });
 export type GraphData = z.infer<typeof GraphSchema>;
-
-/**
- * Skill invocation request — used by SimulationCreateSchema to launch a
- * simulation against a specific skill. Lives in common so simulation.ts
- * can import it without crossing domain boundaries.
- */
-export const SkillInvocationRequestSchema = z.object({
-  skill_id: z.number().int(),
-  params: z.record(z.string(), z.string()),
-});
-export type SkillInvocationRequest = z.infer<typeof SkillInvocationRequestSchema>;

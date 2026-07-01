@@ -51,8 +51,8 @@ Two typed oRPC procedures, both defined in `src/sdk/contracts/widget.ts`:
 
 Both payloads are Zod **discriminated unions on `type`**:
 
-- `WidgetEvent` (server→widget): `registered` (`chat_id`, `application_id?`), `pong`, `heartbeat`, `chat/response` (`request_id`, `text`, `task_id?`), `chat/error` (`request_id`, `error`), `task/status` (`status`, `message?`, `task_id?`, `timestamp?`), `tool/call` (`tool_call_id`, `browser_tool`, `args`, `mode?` `'show'|'do'`, `explanation?`, `state_version?`).
-- `WidgetCommand` (widget→server): `chat/tell`, `chat/show`, `chat/do` (each `request_id` + `content`), `chat/stop` (`task_id?`), `tool/response` (`tool_call_id`, `success`, `data?`, `error?`, `state_version?`), `ping`, `rrweb/metadata` (`rrweb_session_id`, …), `rrweb/events` (`rrweb_session_id`, …).
+- `WidgetEvent` (server→widget): `registered` (`chat_id`, `application_id?`), `heartbeat`, `chat/response` (`request_id`, `text`, `task_id?`), `chat/error` (`request_id`, `error`), `task/status` (`status`, `message?`, `task_id?`, `timestamp?`), `tool/call` (`tool_call_id`, `browser_tool`, `args`, `mode?` `'show'|'do'`, `explanation?`, `state_version?`).
+- `WidgetCommand` (widget→server): `chat/tell`, `chat/show`, `chat/do` (each `request_id` + `content`), `chat/stop` (`task_id?`), `tool/response` (`tool_call_id`, `success`, `data?`, `error?`, `state_version?`), `rrweb/metadata` (`rrweb_session_id`, …), `rrweb/events` (`rrweb_session_id`, …).
 
 **Transport** — `src/services/StreamClient.ts` is a singleton wrapping the oRPC `sdk`. It calls `sdk.widgetStream(input, { signal })` and drains the async iterator in the background. Status machine: `disconnected → connecting → connected → registered → error`. Exponential-backoff reconnect (1000 ms ×2, cap 30000 ms, **max 10 attempts**; counters reset only on a `registered` event). A `chat/error` whose `request_id === 'auth'` is **non-retriable** and permanently stops reconnection (until re-init). `heartbeat` is ignored. Sending uses `sdk.widgetMessage({ chat_id, command })`.
 

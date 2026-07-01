@@ -181,7 +181,7 @@ describe('reduceSse — chat/error', () => {
 // ---------------------------------------------------------------------------
 
 describe('reduceSse — ignored events', () => {
-  it.each(['registered', 'pong', 'heartbeat'] as const)('%s is a no-op (same state, no effects)', type => {
+  it.each(['registered', 'heartbeat'] as const)('%s is a no-op (same state, no effects)', type => {
     const state = runningState();
     const event = { type, chat_id: 'c1' } as unknown as WidgetEvent;
     const result = reduceSse(state, event, 'do');
