@@ -175,11 +175,11 @@ Returns the active configuration, or `null` if the widget isn't initialized.
 
 ### Session recording
 
-The widget records user sessions (via rrweb) automatically once initialized. These helpers let you control it:
+Automatic session recording (via rrweb) is currently **disabled** — the widget no longer captures or transmits sessions on init. The control helpers remain exported for API compatibility but are inert while recording is disabled:
 
-- `startRecording(): Promise<void>` — start or resume recording. Throws if the widget wasn't initialized with `mtxApiHost` and an application (`mtxApp`).
-- `stopRecording(): void` — pause recording without unmounting the widget.
-- `getRecordingState(): boolean` — whether recording is currently active.
+- `startRecording(): Promise<void>` — currently rejects (no recorder is created while recording is disabled).
+- `stopRecording(): void` — no-op.
+- `getRecordingState(): boolean` — always `false`.
 
 ### `MarketrixWidget` — React component (preview)
 
