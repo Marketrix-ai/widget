@@ -340,11 +340,3 @@ export type ActivityLogData = z.infer<typeof ActivityLogEntitySchema>;
 export const ActivityLogCreateSchema = ActivityLogEntitySchema.partial().extend({
   type: ActivityLogTypeSchema,
 });
-
-export const UserQuotaSchema = z.object({
-  user_id: z.number(),
-  limit: z.number(),
-  used: z.number(),
-  remaining: z.number(),
-});
-export type UserQuotaData = z.infer<typeof UserQuotaSchema>;
