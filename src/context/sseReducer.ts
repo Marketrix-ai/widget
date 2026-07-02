@@ -161,7 +161,7 @@ export function reduceStop(state: SseState, currentMode: InstructionType): SseSt
 
 /**
  * Pure reducer. Returns the next state plus any side effects the wiring must run.
- * Unknown / non-stateful events (registered, pong, heartbeat) are ignored.
+ * Unknown / non-stateful events (registered, heartbeat) are ignored.
  */
 export function reduceSse(state: SseState, event: WidgetEvent, currentMode: InstructionType): ReduceResult {
   switch (event.type) {

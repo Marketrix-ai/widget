@@ -4,10 +4,6 @@ import { z } from 'zod';
 import { ByApplicationIdSchema, GraphSchema, paginatedListOf, PaginationSchema, SuccessSchema } from './common';
 import { ApplicationEntitySchema, ApplicationReadSchema, ApplicationTypeSchema, WidgetEntitySchema } from './entities';
 
-export const ApplicationFilterSchema = z.object({
-  application_id: z.coerce.number().optional(),
-});
-
 export const ApplicationCreateSchema = ApplicationEntitySchema.partial().extend({
   type: ApplicationTypeSchema,
   name: z.string().min(1),
