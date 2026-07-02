@@ -2,21 +2,7 @@ import { eventIterator, oc } from '@orpc/contract';
 import { z } from 'zod';
 
 import { ByWidgetIdSchema, paginatedListOf, PaginationSchema } from './common';
-import {
-  ApplicationReadSchema,
-  UserEntitySchema,
-  WidgetEntitySchema,
-  WidgetSettingsDataSchema,
-  WidgetTypeSchema,
-  WorkspaceEntitySchema,
-} from './entities';
-
-export const WidgetInfoSchema = WidgetEntitySchema.extend({
-  application: ApplicationReadSchema.partial(),
-  workspace: WorkspaceEntitySchema.partial(),
-  user: UserEntitySchema.partial(),
-});
-export type WidgetInfoData = z.infer<typeof WidgetInfoSchema>;
+import { ApplicationReadSchema, WidgetEntitySchema, WidgetSettingsDataSchema, WidgetTypeSchema } from './entities';
 
 /**
  * Application with widgets schema — matches API response structure
@@ -41,7 +27,6 @@ export type WidgetSettingsKey = keyof z.infer<typeof WidgetSettingsDataSchema>;
 /** Server → Widget event (discriminated union on `type`) */
 export const WidgetEventSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('registered'), chat_id: z.string(), application_id: z.number().optional() }),
-  z.object({ type: z.literal('pong') }),
   z.object({ type: z.literal('heartbeat') }),
   z.object({
     type: z.literal('chat/response'),
@@ -87,7 +72,6 @@ export const WidgetCommandSchema = z.discriminatedUnion('type', [
     error: z.string().optional(),
     state_version: z.number().optional(),
   }),
-  z.object({ type: z.literal('ping') }),
   z.object({
     type: z.literal('rrweb/metadata'),
     rrweb_session_id: z.string(),

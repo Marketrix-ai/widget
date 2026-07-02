@@ -3,13 +3,11 @@ import { z } from 'zod';
 import { BaseEntitySchema, EntityStatusSchema } from './common';
 
 export const WorkspacePackageSchema = z.enum(['free', 'startup', 'growth', 'enterprise']);
-export type WorkspacePackage = z.infer<typeof WorkspacePackageSchema>;
 
 export const KnowledgeTypeSchema = z.enum(['document', 'video']);
 export type KnowledgeType = z.infer<typeof KnowledgeTypeSchema>;
 
 export const KnowledgeSourceSchema = z.enum(['user', 'research']);
-export type KnowledgeSource = z.infer<typeof KnowledgeSourceSchema>;
 
 // Canonical wire vocabulary matching the `simulation_status` Postgres ENUM and the
 // `SimulationStatus` proto enum.
@@ -26,8 +24,7 @@ export type SimulationStatus = z.infer<typeof SimulationStatusSchema>;
 
 /**
  * Graph generation lifecycle status on a simulation row. Values written by
- * `graphDispatch.ts` and `simulationHooks.ts`; relayed on the
- * `simulation/graph-updated` app event.
+ * `graphDispatch.ts` and `simulationHooks.ts`.
  */
 export const GraphStatusSchema = z.enum(['pending', 'generating', 'completed', 'failed']);
 
@@ -45,7 +42,7 @@ export type InstructionType = z.infer<typeof InstructionTypeSchema>;
  * password: Email/password authentication
  * oauth: Social login (Google, Microsoft, Apple, etc.) or SSO
  */
-export const AuthMethodSchema = z.enum(['password', 'oauth']);
+const AuthMethodSchema = z.enum(['password', 'oauth']);
 
 /**
  * Complete user entity schema
@@ -64,12 +61,6 @@ export const UserEntitySchema = BaseEntitySchema.extend({
   auth_method: AuthMethodSchema.nullish(),
 });
 export type UserData = z.infer<typeof UserEntitySchema>;
-
-export const UserCreateSchema = UserEntitySchema.partial().extend({
-  email: z.string().email(),
-  password: z.string(),
-});
-export type UserCreateData = z.infer<typeof UserCreateSchema>;
 
 /**
  * Complete workspace entity schema
@@ -327,7 +318,6 @@ export const ActivityLogMetadataSchema = z
     created_by: z.number().optional(),
   })
   .passthrough(); // Allow additional fields for flexibility (e.g., updatedData, previousData, createdData)
-export type ActivityLogMetadataData = z.infer<typeof ActivityLogMetadataSchema>;
 
 export const ActivityLogEntitySchema = BaseEntitySchema.extend({
   workspace_id: z.number(),

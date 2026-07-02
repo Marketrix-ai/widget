@@ -13,7 +13,6 @@ import { hasThinkingMarker, updateThinkingMarker } from '@/utils/chat';
 // All event types present in the discriminated union — pin this set.
 const ALL_WIDGET_EVENT_TYPES = [
   'registered',
-  'pong',
   'heartbeat',
   'chat/response',
   'chat/error',
@@ -26,7 +25,6 @@ type ExpectedEventType = (typeof ALL_WIDGET_EVENT_TYPES)[number];
 /** Minimal valid fixtures for each event type */
 const MINIMAL_EVENT_FIXTURES: Record<ExpectedEventType, object> = {
   registered: { type: 'registered', chat_id: 'chat-001' },
-  pong: { type: 'pong' },
   heartbeat: { type: 'heartbeat' },
   'chat/response': { type: 'chat/response', request_id: 'req-1', text: 'Hello!' },
   'chat/error': { type: 'chat/error', request_id: 'req-2', error: 'Something went wrong' },
@@ -50,8 +48,8 @@ describe('SSE event discriminated-union contract (WidgetEventSchema)', () => {
       ).toBe(true);
     });
 
-    it('total distinct event types is 7 (regression guard — update if union changes)', () => {
-      expect(ALL_WIDGET_EVENT_TYPES).toHaveLength(7);
+    it('total distinct event types is 6 (regression guard — update if union changes)', () => {
+      expect(ALL_WIDGET_EVENT_TYPES).toHaveLength(6);
     });
   });
 
