@@ -321,7 +321,7 @@ export const ActivityLogMetadataSchema = z
 
 export const ActivityLogEntitySchema = BaseEntitySchema.extend({
   workspace_id: z.number(),
-  user_id: z.number(),
+  user_id: z.number().nullable(),
   type: ActivityLogTypeSchema,
   metadata: ActivityLogMetadataSchema.optional(),
 });
