@@ -90,8 +90,9 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
   }));
 
   // Live snapshot for SSE wiring / stopTask that must not stale-close over state.
+  // commit() is the ONLY writer — never re-sync from render, or a stale render could
+  // regress the ref between a commit and its paint.
   const stateRef = useRef<SseState>(state);
-  stateRef.current = state;
 
   const currentModeRef = useRef(currentMode);
   currentModeRef.current = currentMode;
@@ -100,16 +101,17 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
   const processedRequestIds = useRef(new Set<string>());
   const pendingTaskRef = useRef<{ apiTaskId?: string; agentRunning?: boolean }>({});
 
-  // Run a pure transition against the live state and commit the result in ONE atomic setState.
-  // The reducer owns every message/task transition; reading through the functional updater keeps
-  // the snapshot current even mid-burst, and committing both fields together can never tear.
+  // Run a pure transition SYNCHRONOUSLY against the live snapshot, then publish for render.
+  // The transition must NOT run inside the setState updater: React defers updaters unless its
+  // queue is idle (never in a background tab or mid-burst), so effects captured from inside one
+  // are silently lost — tool calls arrived but never executed. stateRef is the synchronous source
+  // of truth (commit is the only writer); setState only notifies React.
   const commit = useCallback((transition: (s: SseState) => SseState) => {
-    setState(prev => {
-      const next = transition(prev);
-      if (next === prev || (next.messages === prev.messages && next.task === prev.task)) return prev;
-      stateRef.current = next;
-      return next;
-    });
+    const prev = stateRef.current;
+    const next = transition(prev);
+    if (next === prev || (next.messages === prev.messages && next.task === prev.task)) return;
+    stateRef.current = next;
+    setState(next);
   }, []);
 
   const addMessage = useCallback(
