@@ -87,6 +87,18 @@ export const MessageList = ({
     });
   }, [messages.length, isPreviewMode]); // Run when messages length changes to handle history loading
 
+  // Follow a streaming reply: when the last message's content grows (chat/delta accumulation),
+  // keep the view pinned to the bottom — but only if the user hasn't scrolled away.
+  const lastContentLength = messages[messages.length - 1]?.content?.length ?? 0;
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el || isPreviewMode) return;
+    const isAtBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 120;
+    if (isAtBottom) {
+      window.requestAnimationFrame(() => messagesEndRef.current?.scrollIntoView({ behavior: 'auto' }));
+    }
+  }, [lastContentLength, isPreviewMode, messagesEndRef]);
+
   return (
     <Surface position='relative' height='full'>
       <Surface
