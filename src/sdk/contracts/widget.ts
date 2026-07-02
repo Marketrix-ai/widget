@@ -34,6 +34,13 @@ export const WidgetEventSchema = z.discriminatedUnion('type', [
     text: z.string(),
   }),
   z.object({
+    // One streamed text fragment of the in-flight reply; the widget appends fragments and the
+    // final chat/response (the full text) replaces the accumulated stream.
+    type: z.literal('chat/delta'),
+    request_id: z.string(),
+    text: z.string(),
+  }),
+  z.object({
     type: z.literal('chat/error'),
     request_id: z.string(),
     error: z.string(),
@@ -190,6 +197,7 @@ export const widgetMessage = oc
   .input(
     z.object({
       chat_id: z.string(),
+      tab_id: z.string().optional(),
       command: WidgetCommandSchema,
     }),
   )

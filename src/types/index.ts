@@ -80,6 +80,9 @@ export interface MessagePart {
   browserToolName?: string;
   hideIcon?: boolean;
   textStyle?: 'default' | 'muted';
+  /** An in-flight streamed reply part — chat/delta fragments accumulate into it and the final
+   *  chat/response replaces it. */
+  streaming?: boolean;
 }
 
 export type WidgetView = 'home' | 'chat';
