@@ -163,6 +163,42 @@ describe('reduceSse — chat/response', () => {
   });
 });
 
+describe('reduceSse — chat/delta', () => {
+  it('accumulates fragments into one streaming part and clears the placeholder', () => {
+    const state: SseState = {
+      messages: [agentMessage({ id: 'req-1', content: '\n\n__THINKING__', parts: [] })],
+      task: { activeSimulationId: null, isSimulationRunning: false },
+    };
+    const first = reduceSse(state, { type: 'chat/delta', request_id: 'req-1', text: 'Hel' }, 'tell');
+    const second = reduceSse(first.state, { type: 'chat/delta', request_id: 'req-1', text: 'lo' }, 'tell');
+
+    const msg = second.state.messages[0];
+    expect(msg.content).toBe('Hello');
+    expect(msg.isPlaceholder).toBe(false);
+    expect(msg.parts).toEqual([{ type: 'text', content: 'Hello', streaming: true }]);
+    // Still streaming — loading stays on until the final chat/response.
+    expect(second.effects).toEqual([]);
+  });
+
+  it('final chat/response replaces the streamed part (no duplication)', () => {
+    const state: SseState = {
+      messages: [agentMessage({ id: 'req-1', content: '\n\n__THINKING__', parts: [] })],
+      task: { activeSimulationId: null, isSimulationRunning: false },
+    };
+    const streamed = reduceSse(state, { type: 'chat/delta', request_id: 'req-1', text: 'Hello wor' }, 'tell');
+    const final = reduceSse(
+      streamed.state,
+      { type: 'chat/response', request_id: 'req-1', text: 'Hello world' },
+      'tell',
+    );
+
+    const msg = final.state.messages[0];
+    expect(msg.content).toBe('Hello world');
+    expect(msg.parts).toEqual([{ type: 'text', content: 'Hello world' }]);
+    expect(final.effects).toContainEqual({ type: 'setLoading', value: false });
+  });
+});
+
 describe('reduceSse — chat/error', () => {
   it('writes an error message into the matching placeholder and turns off loading', () => {
     const state: SseState = {
