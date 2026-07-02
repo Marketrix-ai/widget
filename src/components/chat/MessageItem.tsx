@@ -6,6 +6,7 @@ import { formatMessageTime } from '../../utils/color';
 import { Avatar } from '../base/Avatar';
 import { Button } from '../base/Button';
 import { Flex } from '../base/Flex';
+import { Icon } from '../base/Icon';
 import { Stack } from '../base/Stack';
 import { Text } from '../base/Text';
 import { MessageContent } from './MessageContent';
@@ -38,6 +39,14 @@ export const MessageItem: React.FC<MessageItemProps> = ({
   }
 
   const isUser = message.sender === 'user';
+  // Leading glyph: browser tasks (show/do inputs) get a pointer icon; agent questions a check.
+  const leadingIcon = isUser
+    ? message.mode === 'show' || message.mode === 'do'
+      ? ('mousePointerClick' as const)
+      : undefined
+    : message.isScreenAccessRequest || message.placeholderState === 'waiting-for-user'
+      ? ('checkCircle' as const)
+      : undefined;
 
   return (
     <Stack
@@ -80,7 +89,19 @@ export const MessageItem: React.FC<MessageItemProps> = ({
           }}
         >
           {message.videoStream && <VideoStreamDisplay stream={message.videoStream} />}
-          {!message.videoStream && <MessageContent message={message} isLastMessage={isLastMessage} />}
+          {!message.videoStream &&
+            (leadingIcon ? (
+              <Flex align='start' gap='sm'>
+                <Flex shrink={false} style={{ marginTop: '3px' }}>
+                  <Icon name={leadingIcon} size={13} />
+                </Flex>
+                <Stack grow>
+                  <MessageContent message={message} isLastMessage={isLastMessage} />
+                </Stack>
+              </Flex>
+            ) : (
+              <MessageContent message={message} isLastMessage={isLastMessage} />
+            ))}
 
           {message.isScreenAccessRequest && !message.screenShareStatus && (
             <Flex align='center' gap='sm' style={{ marginTop: '6px' }}>
