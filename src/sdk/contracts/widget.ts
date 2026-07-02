@@ -197,6 +197,7 @@ export const widgetMessage = oc
   .input(
     z.object({
       chat_id: z.string(),
+      tab_id: z.string().optional(),
       command: WidgetCommandSchema,
     }),
   )

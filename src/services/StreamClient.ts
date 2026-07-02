@@ -23,6 +23,9 @@ export class StreamClient {
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private config?: { mtxId?: string; mtxKey?: string; mtxApp?: number };
   private connectionId = 0;
+  // Per-tab identity: multiple tabs share the localStorage chat_id; the server keys SSE
+  // connections by (chat_id, tab_id) so tabs never evict each other's stream.
+  private readonly tabId = globalThis.crypto.randomUUID();
 
   private constructor() {}
 
@@ -77,7 +80,7 @@ export class StreamClient {
     const signal = this.abortController.signal;
 
     try {
-      const streamInput: Record<string, unknown> = { chat_id: chatId };
+      const streamInput: Record<string, unknown> = { chat_id: chatId, tab_id: this.tabId };
       if (this.config?.mtxId && this.config?.mtxKey) {
         streamInput.marketrix_id = this.config.mtxId;
         streamInput.marketrix_key = this.config.mtxKey;
@@ -154,6 +157,7 @@ export class StreamClient {
     return sdk
       .widgetMessage({
         chat_id: this.chatId,
+        tab_id: this.tabId,
         command,
       })
       .then(() => {})
