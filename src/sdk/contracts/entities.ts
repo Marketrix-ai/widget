@@ -320,8 +320,8 @@ export const ActivityLogMetadataSchema = z
   .passthrough(); // Allow additional fields for flexibility (e.g., updatedData, previousData, createdData)
 
 export const ActivityLogEntitySchema = BaseEntitySchema.extend({
-  workspace_id: z.number(),
-  user_id: z.number(),
+  workspace_id: z.number().nullable(),
+  user_id: z.number().nullable(),
   type: ActivityLogTypeSchema,
   metadata: ActivityLogMetadataSchema.optional(),
 });
