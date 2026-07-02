@@ -243,16 +243,40 @@ export function reduceSse(state: SseState, event: WidgetEvent, currentMode: Inst
       return { state: { messages, task: { isSimulationRunning: false, activeSimulationId: null } }, effects: [] };
     }
 
+    case 'chat/delta': {
+      const messages = state.messages.map(msg => {
+        if (msg.id !== event.request_id) return msg;
+        const parts = [...(msg.parts ?? [])];
+        const last = parts[parts.length - 1];
+        if (last?.type === 'text' && last.streaming) {
+          parts[parts.length - 1] = { ...last, content: last.content + event.text };
+        } else {
+          parts.push({ type: 'text' as const, content: event.text, streaming: true });
+        }
+        const streamed = parts[parts.length - 1]!.content;
+        return { ...msg, content: streamed, isPlaceholder: false, placeholderState: undefined, parts };
+      });
+      return { state: { ...state, messages }, effects: [] };
+    }
+
     case 'chat/response': {
       const messages = state.messages.map(msg => {
         if (msg.id !== event.request_id) return msg;
-        const newParts = [...(msg.parts ?? []), { type: 'text' as const, content: event.text }];
+        // The final full text REPLACES an in-flight streamed part (chat/delta accumulation);
+        // otherwise it appends as its own part.
+        const parts = [...(msg.parts ?? [])];
+        const last = parts[parts.length - 1];
+        if (last?.type === 'text' && last.streaming) {
+          parts[parts.length - 1] = { type: 'text' as const, content: event.text };
+        } else {
+          parts.push({ type: 'text' as const, content: event.text });
+        }
         return {
           ...msg,
           content: event.text,
           isPlaceholder: false,
           placeholderState: undefined,
-          parts: newParts,
+          parts,
         };
       });
       const effects: SseEffect[] = [{ type: 'setLoading', value: false }];
