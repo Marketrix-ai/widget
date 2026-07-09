@@ -132,6 +132,8 @@ export const SimPersonaReactionEntitySchema = z.object({
   // {study_variant_id → simulation_id} map purely from the run's reactions — no
   // positional zip of orderedVariants[i] → distinctSimIds[i] in DB row order.
   study_variant_id: z.number().nullable(),
+  // uxr browser-task the sim ran (null for abtest/survey/direct); mirrors study_variant_id.
+  study_task_id: z.number().nullable(),
   journey_reaction: z.string().nullable(),
   journey_sentiment: SentimentSchema.nullable(),
   status: z.enum(['pending', 'completed', 'failed']),
@@ -158,6 +160,8 @@ export const SimulationEntitySchema = BaseEntitySchema.extend({
   step_count: z.number().int().nonnegative().nullish(),
   started_at: z.coerce.date().nullish(),
   completed_at: z.coerce.date().nullish(),
+  // Stamped once this sim's study/QA terminal output is persisted — the synthesis gate's settle marker.
+  output_persisted_at: z.coerce.date().nullish(),
   graph_status: GraphStatusSchema.optional(),
   graph_steps_processed: z.number().int().nonnegative().optional(),
   graph_steps_total: z.number().int().nonnegative().optional(),
