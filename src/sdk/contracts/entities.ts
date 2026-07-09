@@ -131,7 +131,24 @@ export const SimPersonaReactionEntitySchema = z.object({
   journey_sentiment: SentimentSchema.nullable(),
   status: z.enum(['pending', 'completed', 'failed']),
   step_reactions: z.array(StepReactionSchema).default([]),
-  question_answers: z.array(z.object({ study_question_id: z.number(), answer: z.string() })).default([]),
+  // `answer` = the persona's free-text response for open_text, or its rationale for a closed
+  // (single/multi_select/rating) question. `structured` carries the actual selection for closed
+  // questions (null for open_text / legacy rows) so the results page can chart a distribution.
+  question_answers: z
+    .array(
+      z.object({
+        study_question_id: z.number(),
+        answer: z.string(),
+        structured: z
+          .object({
+            selected_option_ids: z.array(z.string()).optional(),
+            rating_value: z.number().nullable().optional(),
+          })
+          .nullable()
+          .default(null),
+      }),
+    )
+    .default([]),
 });
 
 export const SimulationEntitySchema = BaseEntitySchema.extend({
