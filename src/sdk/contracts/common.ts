@@ -2,9 +2,6 @@ import { z } from 'zod';
 
 export const EntityStatusSchema = z.enum(['created', 'active', 'suspended', 'pending_approval']);
 
-/**
- * Base entity schema with common fields for all database entities
- */
 export const BaseEntitySchema = z.object({
   id: z.number().optional(),
   created_at: z.coerce.date().optional(),
