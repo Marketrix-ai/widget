@@ -1,15 +1,8 @@
-/**
- * Screen Share Service
- * Manages screensharing state and provides shared access to the active MediaStream
- * for use across the widget (chatWindow, toolExecutor, etc.)
- */
+// Shared access to the active screenshare MediaStream across the widget (chatWindow, toolExecutor, etc.).
 
 let activeStream: MediaStream | null = null;
 
-/**
- * Start screen sharing. If already active, returns the existing stream.
- * @returns Promise resolving to the MediaStream
- */
+/** Reuses the existing stream if one is still active. */
 export async function startScreenShare(): Promise<MediaStream> {
   if (activeStream?.active) {
     const videoTracks = activeStream.getVideoTracks();
@@ -38,7 +31,6 @@ export async function startScreenShare(): Promise<MediaStream> {
 }
 
 function getActiveStream(): MediaStream | null {
-  // Check if stream is still active
   if (activeStream?.active) {
     const videoTracks = activeStream.getVideoTracks();
     if (videoTracks.length > 0 && videoTracks[0].readyState === 'live') {

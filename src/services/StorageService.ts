@@ -1,19 +1,9 @@
 /**
- * StorageService - Unified localStorage management for widget
+ * Unified widget localStorage under a single key (`marketrix_chat_context`): chat_id, messages, widget state, config.
  *
- * Consolidates all widget localStorage into a single key: marketrix_chat_context
- * Contains: chat_id, messages, widget state, and config
- *
- * **Canonical implementation.** This file is the source of truth for the
- * `StorageService` mirror pair. The matching `app/src/services/StorageService.ts`
- * in the dashboard repo should be byte-identical to this file (modulo its
- * own `'../types'` import path). When updating storage semantics, change
- * this file first and copy the result over to the app mirror.
- *
- * Why widget is canonical: the chat context object (chat_id, messages,
- * task progress, widget config) originates in the embeddable widget — the
- * widget owns the read/write lifecycle, and the dashboard only ever reads
- * the same shape for parity.
+ * **Canonical implementation** of the `StorageService` mirror pair — the widget owns the read/write
+ * lifecycle; `app/src/services/StorageService.ts` must stay byte-identical (modulo its `'../types'`
+ * import path). Change storage semantics here first, then copy over to the app mirror.
  */
 
 import type { ChatMessage, InstructionType, MarketrixConfig } from '../types';
@@ -21,9 +11,7 @@ import type { ChatMessage, InstructionType, MarketrixConfig } from '../types';
 const STORAGE_KEY = 'marketrix_chat_context';
 const CONTEXT_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
-/**
- * Serializable version of ChatMessage (timestamp as string, no videoStream)
- */
+/** Serializable ChatMessage: timestamp as string, no videoStream. */
 type StoredMessage = Omit<ChatMessage, 'videoStream' | 'timestamp'> & { timestamp: string };
 
 export interface MarketrixChatContext {
@@ -55,12 +43,7 @@ const DEFAULT_CONTEXT: MarketrixChatContext = {
   timestamp: Date.now(),
 };
 
-/**
- * Singleton wrapper around `localStorage` for the unified widget chat context.
- *
- * Canonical implementation — see file header. Mirror in `app/src/services/StorageService.ts`
- * must be byte-identical (modulo the relative path of the `../types` import).
- */
+/** Singleton wrapper around `localStorage` for the unified widget chat context. Canonical — see file header. */
 class StorageService {
   private static instance: StorageService;
   private context: MarketrixChatContext | null = null;
@@ -137,31 +120,22 @@ class StorageService {
     return typeof value === 'string' && value.trim() !== '';
   }
 
-  /**
-   * Get chat_id with window.name fallback for cross-page navigation
-   * Priority: window.name (if valid) -> localStorage
-   */
+  /** window.name takes priority over localStorage — it persists across page navigations. */
   getChatId(): string | null {
-    // First check window.name for chat_id (persists across page navigations)
     if (typeof window !== 'undefined' && this.isValidChatId(window.name)) {
       const windowChatId = window.name;
       const storedChatId = this.getContext().chat_id;
 
-      // If window.name has a valid chat_id different from localStorage, update localStorage
       if (windowChatId !== storedChatId) {
         this.updateContext({ chat_id: windowChatId });
       }
       return windowChatId;
     }
 
-    // Fall back to localStorage
     return this.getContext().chat_id;
   }
 
-  /**
-   * Set chat_id in both localStorage and window.name.
-   * Dispatches a 'marketrix:chatid' event so other services (e.g. RrwebSessionRecorder) can react.
-   */
+  /** Dispatches a 'marketrix:chatid' event so other services (e.g. RrwebSessionRecorder) can react. */
   setChatId(chatId: string | null): void {
     this.updateContext({ chat_id: chatId });
 

@@ -1,13 +1,5 @@
-/**
- * Pure SSE reducer — the single place where a `WidgetEvent` turns into the next
- * widget state. No transport, no tool execution, no localStorage: just
- * `(state, event) => { state, effects }`. The ChatContext effect wires
- * this up, runs the returned effects (tool exec, wsClient.send, setLoading), and
- * re-enters via the tool-progress helpers once an async tool finishes.
- *
- * Keeping this pure makes the previously-untestable ~180-line SSE handler unit
- * testable and removes the nested setState-within-setState that hid bugs.
- */
+// Pure SSE reducer: `(state, event) => { state, effects }`. No transport/tool-exec/storage —
+// ChatContext wires it up and runs the returned effects. Pure so it stays unit-testable.
 import type { WidgetEvent } from '../sdk';
 import type { ChatMessage, InstructionType } from '../types';
 import {
@@ -51,9 +43,6 @@ const noChange = (state: SseState): ReduceResult => ({ state, effects: [] });
 
 type ProgressStatus = 'in_progress' | 'completed' | 'failed';
 
-/**
- * Apply a progress-line transition to the message that owns the active task.
- */
 function applyProgress(
   messages: ChatMessage[],
   isSimulationRunning: boolean,
@@ -103,7 +92,6 @@ function applyProgress(
   return next;
 }
 
-/** Public: progress transition used by the wiring layer for tool lifecycle. */
 export function reduceToolProgress(
   state: SseState,
   browserToolName: string,
@@ -126,7 +114,7 @@ export function reduceToolProgress(
   };
 }
 
-/** Public: terminal `done` tool — strip the in-flight `done` progress line and end the task. */
+// Terminal `done` tool — strip the in-flight `done` progress line and end the task.
 export function reduceToolDone(state: SseState, currentMode: InstructionType): SseState {
   const found = findMessageForProgress({
     messages: state.messages,
@@ -144,7 +132,7 @@ export function reduceToolDone(state: SseState, currentMode: InstructionType): S
   return { messages, task: { isSimulationRunning: false, activeSimulationId: null } };
 }
 
-/** Public: user-initiated stop — flag the active message `stopped` and end the task. */
+// User-initiated stop — flag the active message `stopped` and end the task.
 export function reduceStop(state: SseState, currentMode: InstructionType): SseState {
   const found = findMessageForProgress({
     messages: state.messages,
@@ -159,10 +147,7 @@ export function reduceStop(state: SseState, currentMode: InstructionType): SseSt
   return { messages, task: { isSimulationRunning: false, activeSimulationId: null } };
 }
 
-/**
- * Pure reducer. Returns the next state plus any side effects the wiring must run.
- * Unknown / non-stateful events (registered, heartbeat) are ignored.
- */
+// Returns next state + effects. Unknown / non-stateful events (registered, heartbeat) are ignored.
 export function reduceSse(state: SseState, event: WidgetEvent, currentMode: InstructionType): ReduceResult {
   switch (event.type) {
     case 'tool/call': {
@@ -197,14 +182,11 @@ export function reduceSse(state: SseState, event: WidgetEvent, currentMode: Inst
     case 'task/status': {
       const statusMessage = event.message || '';
       if (event.status === 'running') {
-        // Activation is gated on both the API task_id and `agentRunning` being
-        // present — that bookkeeping lives in the wiring (pendingTaskRef), so the
-        // pure reducer leaves state untouched here.
+        // Activation is gated on API task_id + agentRunning, tracked in the wiring (pendingTaskRef).
         return noChange(state);
       }
       if (event.status === 'has_question') {
-        // Paused awaiting a user answer — not terminal. Stop the spinner and flip
-        // the active message to "waiting for you", leaving simulationStatus unset.
+        // Paused awaiting a user answer — not terminal. Stop spinner, flip to "waiting for you".
         const found = findMessageForProgress({
           messages: state.messages,
           isSimulationRunning: state.task.isSimulationRunning,

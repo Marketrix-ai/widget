@@ -14,18 +14,14 @@ export class WidgetService {
     this.mtxApp = mtxApp;
   }
 
-  /**
-   * Fetch widget settings from the API
-   * Always returns default settings merged with existing widget settings if found
-   * Returns null if no credentials provided (for preview mode)
-   */
+  /** Default settings merged with the matched widget's settings; null with no credentials (preview mode). */
   async widgetSettingsGet(): Promise<WidgetData | null> {
     if (!this.mtxId && !this.mtxKey && !this.mtxApp) {
       return null;
     }
 
     try {
-      // Fetch default widget settings (cached after first call — static per session)
+      // Defaults are static per session — cache after the first fetch.
       if (!cachedDefaults) {
         cachedDefaults = (await sdk.widgetDefaultGet({ type: 'widget' })) as WidgetSettingsData;
       }
@@ -94,10 +90,6 @@ export class WidgetService {
     }
   }
 
-  /**
-   * Get widget settings from widget data
-   * Settings are always objects (current API format)
-   */
   getWidgetSettings(widget: WidgetData): WidgetSettingsData | null {
     if (!widget?.settings) return null;
 

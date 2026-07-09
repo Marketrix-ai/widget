@@ -45,7 +45,6 @@ export const NotificationToast: React.FC<NotificationToastProps> = ({
     setTimeout(onDismiss, 300);
   }, [onDismiss]);
 
-  // Auto-dismiss after 8s for info tone
   useEffect(() => {
     if (tone !== 'info') return;
     const timer = setTimeout(dismiss, AUTO_DISMISS_MS);

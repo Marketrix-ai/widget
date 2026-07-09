@@ -3,13 +3,13 @@ import { isInteractable } from '../utils/dom';
 export interface ElementFingerprint {
   tagName: string;
   id: string | null;
-  textContent: string | null; // Truncated to 100 chars
-  type: string | null; // For inputs
-  role: string | null; // ARIA role
+  textContent: string | null; // truncated to 100 chars
+  type: string | null; // inputs
+  role: string | null;
   ariaLabel: string | null;
   name: string | null;
-  href: string | null; // For anchors
-  selector: string; // CSS selector
+  href: string | null; // anchors
+  selector: string;
   indexVersion: number;
 }
 
@@ -47,8 +47,7 @@ export class DomService {
 
   private generateSelector(element: Element): string {
     if (element.id) {
-      // Escape CSS special characters in ID if needed, but simple #id is usually fine
-      // Check if it's unique in document
+      // Use the id selector only if it's unique in the document.
       if (document.querySelectorAll(`#${CSS.escape(element.id)}`).length === 1) {
         return `#${CSS.escape(element.id)}`;
       }
@@ -63,7 +62,7 @@ export class DomService {
       if (current.id) {
         selector += `#${CSS.escape(current.id)}`;
         path.unshift(selector);
-        break; // ID is usually enough anchor
+        break; // an id anchors the path
       } else {
         const parent = current.parentElement;
         if (!parent) break;
@@ -103,21 +102,17 @@ export class DomService {
     };
   }
 
-  /**
-   * Check if an element matches a stored fingerprint.
-   * Uses strict matching - fails if any key attribute differs.
-   */
+  /** Strict match against a stored fingerprint — fails if any key attribute differs. */
   private matchesFingerprint(element: Element, fingerprint: ElementFingerprint): boolean {
     if (element.tagName !== fingerprint.tagName) {
       return false;
     }
 
-    // Strong identifier: if ID exists and matches, high confidence
+    // A matching id is high-confidence — accept without checking other attributes.
     if (fingerprint.id && element.id === fingerprint.id) {
       return true;
     }
 
-    // For inputs, type must match
     if (fingerprint.type && element.getAttribute('type') !== fingerprint.type) {
       return false;
     }
@@ -130,7 +125,6 @@ export class DomService {
       return false;
     }
 
-    // For anchors, href is important
     if (fingerprint.href && fingerprint.tagName === 'A') {
       const currentHref = element.getAttribute('href');
       if (currentHref !== fingerprint.href) {
@@ -138,7 +132,6 @@ export class DomService {
       }
     }
 
-    // For form elements, name attribute is important
     if (fingerprint.name && element.getAttribute('name') !== fingerprint.name) {
       return false;
     }
@@ -146,14 +139,10 @@ export class DomService {
     return true;
   }
 
-  /**
-   * Validate that the element at a given index still matches its fingerprint.
-   * No recovery - just check if element exists and matches.
-   */
+  /** Check the element at an index still matches its fingerprint; no recovery. */
   private validateElementAtIndex(index: number): ValidationResult {
     const fingerprint = this.fingerprintMap.get(index);
     if (!fingerprint) {
-      // No fingerprint stored - assume OK
       return { isValid: true };
     }
 
@@ -169,10 +158,7 @@ export class DomService {
     return { isValid: true };
   }
 
-  /**
-   * Index all interactable elements in the live DOM.
-   * Always clears previous index first.
-   */
+  /** Index all interactable elements in the live DOM, clearing any previous index first. */
   indexInteractableElements(): Array<[number, Element]> {
     if (this.indexingInProgress) {
       console.warn('[DomService] Indexing already in progress, skipping concurrent call');
@@ -181,9 +167,8 @@ export class DomService {
 
     try {
       this.indexingInProgress = true;
-      this.clearIndex(); // Clear existing index
+      this.clearIndex();
 
-      // Walk the DOM with your visibility logic preserved
       const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_ELEMENT, {
         acceptNode: (node: Node) => {
           if (node instanceof HTMLElement) {
@@ -312,7 +297,6 @@ export class DomService {
       return true;
     }
 
-    // Will-change with transform or opacity
     const willChange = style.willChange;
     if (willChange && (willChange.includes('transform') || willChange.includes('opacity'))) {
       return true;
@@ -322,7 +306,6 @@ export class DomService {
       return true;
     }
 
-    // Contain: layout, style, or paint
     const contain = style.contain;
     if (contain && (contain.includes('layout') || contain.includes('style') || contain.includes('paint'))) {
       return true;
@@ -339,7 +322,6 @@ export class DomService {
       const style = window.getComputedStyle(current);
 
       if (this.isStackingContext(current)) {
-        // Get z-index value (0 if auto)
         let zIndex = 0;
         if (style.zIndex !== 'auto') {
           const parsedZIndex = parseInt(style.zIndex, 10);
@@ -360,18 +342,14 @@ export class DomService {
       current = current.parentElement as HTMLElement;
     }
 
-    // Calculate final z-order from stacking contexts
-    // Start with a base value and add contributions from each stacking context
-    let baseZOrder = 1000000; // Base value to ensure positive numbers
+    let baseZOrder = 1000000; // base offset keeps the result positive
 
     for (let i = stackingContexts.length - 1; i >= 0; i--) {
       const ctx = stackingContexts[i];
-      // Each stacking context level contributes: zIndex * 10000 + domOrder
-      // This ensures z-index has more weight than DOM order
+      // zIndex * 10000 weights z-index above DOM order.
       baseZOrder += ctx.zIndex * 10000 + ctx.domOrder;
     }
 
-    // Add final DOM order for the element itself among its siblings
     if (element.parentElement) {
       const siblings = Array.from(element.parentElement.children);
       const finalDomOrder = siblings.indexOf(element);
@@ -381,19 +359,14 @@ export class DomService {
     return baseZOrder;
   }
 
-  /**
-   * Get HTML snapshot with data-id attributes injected.
-   * This re-indexes the live DOM and then produces a corresponding HTML string.
-   */
+  /** Re-index the live DOM and return an HTML snapshot with data-id attributes injected. */
   getSnapshotHtml(): string {
     this.indexInteractableElements();
 
     const clone = document.documentElement.cloneNode(true) as Element;
 
-    // Instead of walking both trees in sync (which can fail with modals/fixed elements),
-    // we directly inject data-id attributes based on our element map
-    // by finding matching elements in the clone via selectors
-
+    // Inject data-id by matching each mapped element in the clone via its selector, rather than
+    // walking both trees in sync — the sync walk breaks on modals/fixed elements.
     for (const [index, element] of this.elementMap.entries()) {
       if (element instanceof HTMLElement) {
         const selector = this.selectorMap.get(index);
@@ -416,7 +389,6 @@ export class DomService {
                 cloneElement.setAttribute('data-h', '0');
                 cloneElement.setAttribute('data-z', '0');
               } else {
-                // Extract coordinates
                 const coords = this.getElementCoordinates(element);
                 cloneElement.setAttribute('data-x', coords.x.toString());
                 cloneElement.setAttribute('data-y', coords.y.toString());
@@ -426,7 +398,7 @@ export class DomService {
               }
             }
           } catch (e) {
-            // Selector might be invalid, skip this element
+            // Selector may be invalid — skip this element.
             console.warn(`[DomService] Failed to apply data attributes for index ${index}:`, e);
           }
         }
@@ -475,14 +447,11 @@ export class DomService {
 
   clearIndex(): void {
     this.elementMap.clear();
-    this.elementToSequence = new WeakMap(); // Reset WeakMap
+    this.elementToSequence = new WeakMap();
     this.fingerprintMap.clear();
   }
 
-  /**
-   * Check if an element is interactable (visible, not hidden, not obscured).
-   * Returns error string if not interactable, null if OK.
-   */
+  /** Returns an error string if the element isn't interactable (hidden/obscured/off-screen), null if OK. */
   private checkInteractability(element: HTMLElement, index: number): string | null {
     if (!document.body.contains(element)) {
       return `ELEMENT_NOT_INTERACTABLE: Element ${index} is not in the DOM`;
@@ -528,24 +497,19 @@ export class DomService {
       }
     }
 
-    return null; // Element is interactable
+    return null;
   }
 
-  /**
-   * Public method to check element interactability (for use by ShowModeService).
-   */
+  /** Public interactability check for ShowModeService. */
   checkElementInteractable(element: HTMLElement, index: number): string | null {
     return this.checkInteractability(element, index);
   }
 
-  /**
-   * Get an interactive element by its index.
-   * Returns element only if it's interactable, otherwise returns null with error.
-   */
+  /** Look up an element by index; returns it only if interactable, else null + error. */
   getElementByIndex(index: number): ElementLookupResult {
     let element: HTMLElement | null = null;
 
-    // Try live map first
+    // Live map first.
     if (this.elementMap.has(index)) {
       const mapElement = this.elementMap.get(index);
       if (mapElement && mapElement instanceof HTMLElement) {
@@ -553,7 +517,7 @@ export class DomService {
       }
     }
 
-    // Fallback to selector map (persistence)
+    // Fall back to the persisted selector map.
     if (!element && this.selectorMap.has(index)) {
       const selector = this.selectorMap.get(index);
       if (selector) {
@@ -572,7 +536,6 @@ export class DomService {
       return { element: null, error: `Element ${index} not found` };
     }
 
-    // Check interactability
     const interactError = this.checkInteractability(element, index);
     if (interactError) {
       return { element: null, error: interactError };
@@ -581,12 +544,7 @@ export class DomService {
     return { element };
   }
 
-  /**
-   * Get an element by index with validation.
-   * This is the main entry point for BrowserToolService to use.
-   * It validates the element matches its fingerprint and attempts recovery if not.
-   * Returns element only if it's interactable.
-   */
+  /** Main entry point for BrowserToolService: validate against fingerprint, then return if interactable. */
   getValidatedElement(index: number): ValidatedElementResult {
     const validation = this.validateElementAtIndex(index);
 
@@ -608,7 +566,6 @@ export class DomService {
       };
     }
 
-    // Check interactability
     const interactError = this.checkInteractability(element, index);
     if (interactError) {
       return { element: null, validation, error: interactError };

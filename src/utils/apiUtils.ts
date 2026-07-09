@@ -2,10 +2,6 @@
 
 import type { MarketrixConfig } from '../types';
 
-/**
- * Check if error is a connection/network error
- * Consolidates the repeated pattern across widgetValidationService and other services
- */
 function isConnectionError(error: unknown): boolean {
   const errorMessage = error instanceof Error ? error.message : String(error);
   return (
@@ -16,10 +12,6 @@ function isConnectionError(error: unknown): boolean {
   );
 }
 
-/**
- * Extract error message from unknown error type
- * Consolidates error instanceof Error ? error.message : String(error)
- */
 export function extractErrorMessage(error: unknown, fallback = 'Unknown error'): string {
   if (error instanceof Error) {
     return error.message;

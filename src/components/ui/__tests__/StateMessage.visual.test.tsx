@@ -3,9 +3,6 @@ import { describe, expect, it } from 'vitest';
 
 import { StateMessage } from '../StateMessage';
 
-/**
- * Visual regression baselines for StateMessage (Phase 1 deliverable).
- */
 describe('StateMessage visual snapshots', () => {
   it('loading variant matches snapshot', () => {
     const { container } = render(<StateMessage variant='loading' message='Connecting…' />);

@@ -3,10 +3,6 @@ import { describe, expect, it } from 'vitest';
 
 import { Button } from '../Button';
 
-/**
- * Visual regression baselines for Button (Phase 1 deliverable).
- * Update snapshots intentionally when design changes.
- */
 describe('Button visual snapshots', () => {
   it('primary default matches snapshot', () => {
     const { container } = render(<Button variant='primary'>Submit</Button>);

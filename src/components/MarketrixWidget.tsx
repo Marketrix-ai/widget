@@ -38,7 +38,7 @@ class WidgetErrorBoundary extends React.Component<
       {
         console.error('Widget render error', this.state.error);
       }
-      return null; // Fail gracefully by rendering nothing instead of crashing
+      return null; // render nothing rather than crash the host page
     }
 
     return this.props.children;
@@ -133,8 +133,7 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
     ...settings,
     widget_position: widgetPosition,
     widget_position_z_index: effectiveWidgetZIndex,
-    // Preserve top-level config props that come from script tag attributes / init config
-    // (not from API settings) so they propagate to child components like MessengerShell
+    // These come from script-tag attrs / init config, not API settings — pass through so children see them
     show_widget: config.show_widget,
     use_screenshare: config.use_screenshare,
   };

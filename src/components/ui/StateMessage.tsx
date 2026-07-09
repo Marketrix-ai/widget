@@ -11,10 +11,6 @@ interface StateMessageProps {
   message: string;
 }
 
-/**
- * Standardized skeleton/loading, empty, and error states using design tokens.
- * Use in message list, composer, or any surface that needs consistent state UI.
- */
 export const StateMessage: React.FC<StateMessageProps> = ({ variant, message }) => {
   const isError = variant === 'error';
   const isLoading = variant === 'loading';

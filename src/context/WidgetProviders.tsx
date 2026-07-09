@@ -1,14 +1,6 @@
-/**
- * WidgetProviders — composition root that wires UIStateProvider and
- * ChatProvider together.
- *
- * Conversation state ({ messages, task }) lives in ONE store (ChatProvider);
- * UI state (open/minimized/mode/loading/error) lives in UIStateProvider. Both
- * one-time initialization (SSE connection, ChatService hydration) and persistence
- * live in inner bridge components that can read every context. React context is
- * the single source of truth; ChatService is the load/persist boundary only,
- * driven by one effect here.
- */
+// Composition root wiring UIStateProvider + ChatProvider. Init (SSE + hydration) and persistence
+// live in inner bridge components so they can read every context; ChatService is the load/persist
+// boundary only. React context is the single source of truth.
 import React, { useEffect } from 'react';
 
 import { chatService } from '../services/ChatService';

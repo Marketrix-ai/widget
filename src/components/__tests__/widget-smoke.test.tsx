@@ -1,7 +1,3 @@
-/**
- * Smoke tests: widget and script-tag embed parity (plan Phase 5, 7.7).
- * Ensures the widget mounts and key surfaces are present.
- */
 import { render, screen } from '@testing-library/react';
 import React from 'react';
 

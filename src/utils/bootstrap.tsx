@@ -1,10 +1,3 @@
-/**
- * Widget Initialization, Lifecycle, and Loader Utilities
- *
- * Handles widget container creation, shadow DOM setup, mounting, lifecycle management,
- * and loader display. Consolidates all widget-related DOM manipulation and state management.
- */
-
 import React from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 
@@ -25,12 +18,6 @@ const generateContainerId = (): string => {
   return `marketrix-widget-container-${++widgetInstanceCounter}`;
 };
 
-/**
- * Create widget container and shadow DOM
- * Returns the container element and shadow root
- * @param parentContainer - Optional parent container to mount within. If provided, shadow DOM will be created within this container.
- * @param containerId - Optional unique container ID. If not provided, a unique ID will be generated.
- */
 export const createWidgetContainer = (
   parentContainer?: HTMLElement,
   containerId?: string,
@@ -98,13 +85,7 @@ export const createWidgetContainer = (
   return { container, shadowRoot, mountEl };
 };
 
-/**
- * Mount widget component to the provided mount element
- * Returns the React root instance
- * @param mountEl - The mount element inside shadow DOM
- * @param config - Widget configuration
- * @param previewMode - If true, disables network operations (for integration previews)
- */
+// previewMode disables all network operations (for integration previews).
 export const mountWidgetToContainer = (mountEl: HTMLElement, config: MarketrixConfig, previewMode = false): Root => {
   const root = createRoot(mountEl);
 
@@ -160,7 +141,7 @@ export const isProgrammaticInitInProgress = (): boolean => {
 };
 
 export const showWidgetSettingsLoader = (message?: string): void => {
-  // Guard against SSR - only run in browser
+  // SSR guard.
   if (typeof window === 'undefined' || typeof document === 'undefined') {
     return;
   }
@@ -184,7 +165,6 @@ export const showWidgetSettingsLoader = (message?: string): void => {
   loaderContainer.className = 'marketrix-widget-loader-container';
   document.body.appendChild(loaderContainer);
 
-  // Attach Shadow DOM (closed) for loader
   const shadowRoot = loaderContainer.attachShadow({ mode: 'closed' });
 
   const styleEl = document.createElement('style');
@@ -216,27 +196,18 @@ export const hideWidgetSettingsLoader = (): void => {
     }
   }
 };
-/**
- * Auto-Initialization Utilities
- *
- * Handles automatic widget initialization from script tag data attributes.
- * Parses script attributes and initializes the widget accordingly.
- */
 
-// Store the init function - set synchronously during registration
+// Set synchronously during registration.
 let initWidgetFunction: ((config: MarketrixConfig) => Promise<void>) | null = null;
 
-/**
- * Auto-initialize widget from script tag attributes
- * Retries if script tag not found to handle timing issues with ES module loading
- */
+// Auto-init from script-tag attributes; retries to handle ES-module load timing.
 export const autoInitializeWidget = (retryCount = 0): void => {
-  // Guard against SSR - only run in browser
+  // SSR guard.
   if (typeof window === 'undefined' || typeof document === 'undefined') {
     return;
   }
 
-  // Window-level guard survives ES module re-execution
+  // Window-level guard survives ES module re-execution.
   if (window.__mtx?.state) {
     return;
   }
@@ -249,8 +220,8 @@ export const autoInitializeWidget = (retryCount = 0): void => {
     return;
   }
 
-  // Prefer the currently executing script when it has config (injected script tag in playground).
-  // Fall back to last matching script for static script tags.
+  // Prefer the currently executing script when it carries config (injected tag in playground);
+  // fall back to the last matching script for static script tags.
   const bySelector = document.querySelectorAll('script[mtx-id], script[mtx-app]');
   const current =
     typeof document.currentScript !== 'undefined' &&
@@ -262,7 +233,7 @@ export const autoInitializeWidget = (retryCount = 0): void => {
   const scriptElement = current ?? bySelector[bySelector.length - 1];
 
   if (!scriptElement || !isHTMLScriptElement(scriptElement)) {
-    // If no script tags found at all, assume auto-init was not intended (e.g. using npm package)
+    // No script tags at all → auto-init wasn't intended (e.g. the npm package path).
     if (bySelector.length === 0) {
       if (isWidgetInitialized() || isProgrammaticInitInProgress()) {
         console.log(
@@ -372,11 +343,7 @@ export const autoInitializeWidget = (retryCount = 0): void => {
   }
 };
 
-/**
- * Register the widget initialization function and set up auto-initialization
- *
- * @param initWidget - Function to initialize the widget (passed to avoid circular dependency)
- */
+// initWidget is passed in (not imported) to avoid a circular dependency.
 export const registerAutoInit = (initWidget: (config: MarketrixConfig) => Promise<void>): void => {
   if (typeof initWidget !== 'function') {
     console.error('[AutoInit] initWidget must be a function');

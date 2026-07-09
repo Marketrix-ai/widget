@@ -8,33 +8,19 @@ type RecordOptions = Parameters<typeof record>[0];
 
 const log = createLogger('RrwebSessionRecorder');
 
-/** Max events to buffer in memory */
 const MAX_QUEUE_SIZE = 500;
 
-/** Flush when estimated serialized size reaches this threshold (bytes) */
 const FLUSH_SIZE_THRESHOLD = 50_000; // 50 KB
 
-/**
- * Hard cap on the serialized byte size of a single POST body.
- * Must stay well under the API body-parser limit (currently 5mb).
- * Batches exceeding this are split across multiple flushes.
- */
+/** Per-POST-body cap; must stay well under the API body-parser limit (5mb). Larger batches split across flushes. */
 const MAX_BATCH_BYTES = 500_000; // 500 KB
 
-/** Flush at most every this many ms */
 const FLUSH_INTERVAL_MS = 500;
 
-/**
- * Maximum consecutive flush failures before the recorder gives up retrying
- * and starts dropping events.  This prevents an infinite loop when the server
- * consistently rejects the payload (e.g. 413 or 400).
- */
+/** After this many consecutive flush failures, drop events — avoids an infinite retry loop when the server keeps rejecting (413/400). */
 const MAX_CONSECUTIVE_FAILURES = 5;
 
-/**
- * RrwebSessionRecorder manages real-time RRWeb session recording,
- * sending batched events to the API via HTTP POST (widget message endpoint).
- */
+/** Real-time RRWeb recording; batched events POSTed to the API widget-message endpoint. */
 export class RrwebSessionRecorder {
   private eventQueue: eventWithTime[] = [];
   private estimatedQueueBytes = 0;
@@ -102,7 +88,6 @@ export class RrwebSessionRecorder {
     if (this.eventQueue.length > MAX_QUEUE_SIZE) {
       const droppedCount = this.eventQueue.length - MAX_QUEUE_SIZE;
       const dropped = this.eventQueue.splice(0, droppedCount);
-      // Recalculate estimated size (approximate — subtract average per event)
       for (const d of dropped) {
         this.estimatedQueueBytes -= JSON.stringify(d).length;
       }
@@ -123,13 +108,8 @@ export class RrwebSessionRecorder {
   }
 
   /**
-   * Flush buffered events via POST.
-   *
-   * Batches are capped at MAX_BATCH_BYTES to stay within the API body-parser limit.
-   * On transient server errors (5xx / network) the batch is re-queued up to
-   * MAX_CONSECUTIVE_FAILURES times before being dropped.
-   * On permanent client errors (4xx) the batch is dropped immediately — re-sending
-   * would never succeed and would create an infinite retry loop.
+   * POST buffered events (batch capped at MAX_BATCH_BYTES). Transient errors (5xx/network) re-queue
+   * up to MAX_CONSECUTIVE_FAILURES; permanent errors (4xx) drop immediately (a retry never succeeds).
    */
   private flush(): void {
     if (this.isFlushing) return;
@@ -144,8 +124,7 @@ export class RrwebSessionRecorder {
       return;
     }
 
-    // Build a batch that fits within MAX_BATCH_BYTES.
-    // If the whole queue fits, take it all; otherwise slice until we hit the cap.
+    // Take the whole queue if it fits MAX_BATCH_BYTES, else slice up to the cap.
     let batchEvents: eventWithTime[];
     let batchBytes: number;
 
@@ -168,7 +147,7 @@ export class RrwebSessionRecorder {
         this.estimatedQueueBytes -= nextSize;
       }
 
-      // If there are still events remaining, schedule the next flush immediately.
+      // Remaining events: flush again immediately.
       if (this.eventQueue.length > 0 && !this.flushTimer) {
         this.flushTimer = setTimeout(() => {
           this.flushTimer = null;
@@ -192,13 +171,12 @@ export class RrwebSessionRecorder {
         this.consecutiveFailures = 0;
       })
       .catch((err: unknown) => {
-        // Determine whether this is a permanent client error (4xx) or a transient one.
         const status =
           err != null && typeof err === 'object' && 'status' in err ? (err as { status: unknown }).status : null;
         const isPermanent = typeof status === 'number' && status >= 400 && status < 500;
 
         if (isPermanent) {
-          // 4xx: drop the batch — retrying the same payload will never succeed.
+          // 4xx: drop — retrying the same payload never succeeds.
           log.error(`Dropping ${batchEvents.length} events after permanent ${String(status)} error:`, err);
           this.consecutiveFailures = 0;
           return;
@@ -219,11 +197,10 @@ export class RrwebSessionRecorder {
           err,
         );
 
-        // Prepend failed events back to the buffer for the next flush attempt.
+        // Re-queue failed events ahead of newer ones for the next attempt.
         this.eventQueue = batchEvents.concat(this.eventQueue);
         this.estimatedQueueBytes += batchBytes;
 
-        // Enforce max queue size after re-queuing.
         if (this.eventQueue.length > MAX_QUEUE_SIZE) {
           const excess = this.eventQueue.length - MAX_QUEUE_SIZE;
           const dropped = this.eventQueue.splice(0, excess);
@@ -238,10 +215,7 @@ export class RrwebSessionRecorder {
       });
   }
 
-  /**
-   * Start recording session.
-   * Safe against concurrent calls (returns existing startPromise).
-   */
+  /** Concurrent-call safe — returns the in-flight startPromise. */
   async start(): Promise<void> {
     if (this.isRecording) {
       log.warn('Recording already started');
@@ -259,9 +233,7 @@ export class RrwebSessionRecorder {
     }
   }
 
-  /**
-   * Internal start implementation. Checks stopRequested at each async boundary.
-   */
+  /** Rechecks stopRequested at each async boundary so a mid-startup stop aborts cleanly. */
   private async doStart(): Promise<void> {
     this.stopRequested = false;
 

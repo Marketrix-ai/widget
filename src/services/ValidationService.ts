@@ -10,19 +10,13 @@ export interface WidgetValidationResult {
 }
 
 /**
- * ValidationService
- *
- * Validates widget configuration by checking:
- * 1. Widget exists (via marketrix_id and marketrix_key) and its application exists, OR
- * 2. The application ID exists
+ * Validates widget config: either the widget (marketrix_id + marketrix_key) and its application exist,
+ * or the application id exists.
  */
 export class ValidationService {
   private config?: MarketrixConfig;
 
-  /**
-   * Validate widget configuration
-   * Handles both mtxId+mtxKey and mtxApp cases
-   */
+  /** Handles both the mtxId+mtxKey and mtxApp cases. */
   async validateConfig(config: MarketrixConfig): Promise<WidgetValidationResult> {
     this.config = config;
     if (config.mtxId && config.mtxKey) {

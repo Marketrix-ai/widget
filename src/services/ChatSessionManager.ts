@@ -1,9 +1,4 @@
-/**
- * Chat ID Manager Service
- *
- * Centralized chat ID management with promise-based locking to prevent
- * concurrent chat ID creation. Ensures only one chat ID is created per session.
- */
+// Centralized chat-ID management; promise-based locking ensures only one chat ID is created per session.
 
 import { sdk } from '../sdk';
 import { createLogger } from '../utils/logger';
@@ -18,7 +13,7 @@ class ChatSessionManager {
   private initializationPromise: Promise<string> | null = null;
 
   private constructor() {
-    // Guard against SSR - only initialize in browser
+    // SSR guard — only touch storage in the browser.
     if (typeof window === 'undefined' || typeof document === 'undefined') {
       return;
     }
@@ -30,10 +25,9 @@ class ChatSessionManager {
   }
 
   static getInstance(): ChatSessionManager {
-    // Guard against SSR - return a dummy instance that won't be used
+    // SSR guard — return a minimal instance that never touches browser APIs.
     if (typeof window === 'undefined' || typeof document === 'undefined') {
       if (!ChatSessionManager.instance) {
-        // Create a minimal instance that won't access browser APIs
         ChatSessionManager.instance = Object.create(ChatSessionManager.prototype) as ChatSessionManager;
         ChatSessionManager.instance.chatId = null;
         ChatSessionManager.instance.initializationPromise = null;
@@ -51,10 +45,7 @@ class ChatSessionManager {
     return this.chatId;
   }
 
-  /**
-   * Get or create chat ID with promise-based locking
-   * If multiple calls happen concurrently, they all wait for the same promise
-   */
+  /** Promise-based lock: concurrent callers all await the same creation promise. */
   async getOrCreateChatId(): Promise<string> {
     if (this.chatId) {
       log.debug('Returning existing chat ID:', this.chatId);
@@ -66,7 +57,7 @@ class ChatSessionManager {
       return this.initializationPromise;
     }
 
-    // Check storage one more time (in case it was set by another instance)
+    // Re-check storage in case another instance set it meanwhile.
     const storedChatId = this.getStoredChatId();
     if (storedChatId) {
       this.chatId = storedChatId;
@@ -84,9 +75,6 @@ class ChatSessionManager {
     }
   }
 
-  /**
-   * Create a new chat ID - oRPC returns data directly
-   */
   private async createChatId(): Promise<string> {
     try {
       log.info('Creating new chat ID...');
@@ -104,7 +92,7 @@ class ChatSessionManager {
       return chatId;
     } catch (error) {
       log.error('Failed to create chat ID:', error);
-      // Clear the promise on error so retry is possible
+      // Clear the promise so a retry can start fresh.
       this.initializationPromise = null;
       throw error;
     }

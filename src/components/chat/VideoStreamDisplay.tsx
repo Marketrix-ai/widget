@@ -30,10 +30,9 @@ export const VideoStreamDisplay: React.FC<VideoStreamDisplayProps> = ({ stream }
       setIsLoaded(false);
       setHasError(false);
 
-      // Cancel any pending play() request
       if (playPromiseRef.current) {
         playPromiseRef.current.catch(() => {
-          // Ignore errors from cancelled play requests
+          // ignore errors from cancelled play requests
         });
         playPromiseRef.current = null;
       }
@@ -52,7 +51,6 @@ export const VideoStreamDisplay: React.FC<VideoStreamDisplayProps> = ({ stream }
       video.addEventListener('loadedmetadata', handleLoadedMetadata);
       video.addEventListener('error', handleError);
 
-      // Attempt to play, handling AbortError gracefully
       const playPromise = video.play();
       playPromiseRef.current = playPromise;
 
@@ -61,7 +59,7 @@ export const VideoStreamDisplay: React.FC<VideoStreamDisplayProps> = ({ stream }
           setIsLoaded(true);
         })
         .catch(error => {
-          // AbortError is expected when a new stream loads - don't log it as an error
+          // AbortError is expected when a new stream loads mid-play; not a real error
           if (error instanceof Error && error.name !== 'AbortError') {
             console.error('Error playing video stream:', error);
             setHasError(true);
@@ -76,10 +74,9 @@ export const VideoStreamDisplay: React.FC<VideoStreamDisplayProps> = ({ stream }
     }
 
     return () => {
-      // Clean up: cancel any pending play() and clear srcObject
       if (playPromiseRef.current) {
         playPromiseRef.current.catch(() => {
-          // Ignore errors from cancelled play requests
+          // ignore errors from cancelled play requests
         });
         playPromiseRef.current = null;
       }

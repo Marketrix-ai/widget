@@ -101,13 +101,9 @@ export function mapWidgetSettingsToSemanticTokens(settings: WidgetStyleSettingsD
 export const DEFAULT_SEMANTIC_TOKENS: SemanticTokens =
   mapWidgetSettingsToSemanticTokens(WIDGET_STYLE_SETTINGS_DEFAULTS);
 
-/**
- * Convert tokens to CSS custom properties.
- * Applied as inline styles on the widget root to override static CSS defaults
- * set by `:host` in index.css. Must cover every variable that Tailwind utilities
- * or base-component classes reference so the widget renders correctly inside
- * closed Shadow DOM regardless of host page styles.
- */
+// Applied as inline styles on the widget root, overriding the `:host` defaults in index.css. Must
+// cover every var Tailwind/base-component classes reference so rendering is correct inside the
+// closed Shadow DOM regardless of host page styles.
 export function semanticTokensToCssCustomProperties(tokens: SemanticTokens): Record<string, string> {
   return {
     '--background': tokens.color.background,

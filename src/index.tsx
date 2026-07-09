@@ -32,21 +32,15 @@ import {
 } from './utils/bootstrap';
 import { isHTMLElement } from './utils/validation';
 
-// CSS is NOT imported globally here to prevent conflicts with the host app's Tailwind CSS.
-// All widget CSS is isolated in Shadow DOM via bootstrap.tsx using 'index.css?inline'.
-// This ensures the widget's Tailwind CSS doesn't interfere with the app's responsive breakpoints.
+// CSS is not imported globally — it's isolated in Shadow DOM via bootstrap.tsx ('index.css?inline')
+// so the widget's Tailwind doesn't collide with the host app's.
 
-// Session recording is currently disabled — the recorder is never auto-started on init.
-// These remain so the public startRecording/stopRecording/getRecordingState API still compiles.
+// Session recording disabled: the recorder is never auto-started. These remain so the public
+// startRecording/stopRecording/getRecordingState API still compiles.
 let rrwebSessionRecorder: RrwebSessionRecorder | null = null;
-// Tracks in-flight start() promise to prevent concurrent starts and enable safe stop/teardown
-let recordingStartPromise: Promise<void> | null = null;
-// Prevents concurrent initWidget() calls from creating duplicate widgets
-let initPromise: Promise<void> | null = null;
+let recordingStartPromise: Promise<void> | null = null; // in-flight start() — guards concurrent starts, enables safe teardown
+let initPromise: Promise<void> | null = null; // guards concurrent initWidget() calls from duplicating widgets
 
-/**
- * Initialize widget with validated configuration
- */
 async function initializeWidgetWithConfig(
   config: MarketrixConfig,
   validationResult: { isValid: boolean; error?: string },
@@ -113,13 +107,11 @@ async function initializeWidgetWithConfig(
   }
 }
 
-/**
- * Internal init implementation. Call only via initWidget() which guards with initPromise.
- */
+// Call only via initWidget(), which guards with initPromise.
 async function initWidgetInternal(config: MarketrixConfig, container?: HTMLElement): Promise<void> {
   setProgrammaticInitInProgress(true);
 
-  // Window-level guard survives ES module re-execution
+  // window-level guard survives ES module re-execution
   window.__mtx = { state: 'initializing' };
 
   if (config.mtxApiHost) {
@@ -156,16 +148,15 @@ async function initWidgetInternal(config: MarketrixConfig, container?: HTMLEleme
   setProgrammaticInitInProgress(false);
   window.__mtx = { state: 'active' };
 
-  // Session recording intentionally disabled: the RrwebSessionRecorder is no longer
-  // auto-started on init, so no rrweb capture runs and no rrweb/* messages are sent.
+  // Session recording intentionally disabled: recorder is never auto-started, so no rrweb/* is sent.
 }
 
 export const initWidget = async (config: MarketrixConfig, container?: HTMLElement): Promise<void> => {
-  // Window-level guard survives ES module re-execution (fresh module-level vars)
+  // window-level guard survives ES module re-execution (fresh module-level vars)
   if (window.__mtx?.state) {
     return;
   }
-  // Concurrent callers await the in-flight init instead of starting a duplicate
+  // concurrent callers await the in-flight init instead of starting a duplicate
   if (initPromise) {
     return initPromise;
   }
@@ -174,7 +165,7 @@ export const initWidget = async (config: MarketrixConfig, container?: HTMLElemen
     return;
   }
 
-  // Set promise first so concurrent callers always get Promise<void>, not null
+  // set promise first so concurrent callers always get Promise<void>, not null
   initPromise = initWidgetInternal(config, container);
   try {
     await initPromise;
@@ -197,8 +188,7 @@ export const unmountWidget = (): void => {
     console.log('Marketrix Widget destroyed');
   }
 
-  // Stop session recording if one was ever started manually via startRecording().
-  // (Auto-start on init is disabled, so this is normally a no-op.)
+  // stops recording only if started manually via startRecording() (auto-start is disabled → usually a no-op)
   if (rrwebSessionRecorder) {
     rrwebSessionRecorder.stop();
     rrwebSessionRecorder = null;
@@ -212,33 +202,24 @@ export const unmountWidget = (): void => {
   hideWidgetSettingsLoader();
 };
 
-/**
- * Stop RRWeb session recording without unmounting the widget.
- * Keeps the RrwebSessionRecorder instance so recording can be restarted with startRecording().
- * RrwebSessionRecorder.stop() aborts in-flight start() via stopRequested.
- */
+// Stops recording without unmounting; keeps the recorder instance so startRecording() can resume.
 export const stopRecording = (): void => {
   if (!rrwebSessionRecorder) return;
   rrwebSessionRecorder.stop();
   console.log('[Marketrix Widget] Session recording stopped (toggle)');
 };
 
-/**
- * Start RRWeb session recording. Use after stopRecording() to resume, or when recording was not started on init.
- * Safe to call while auto-start is in-flight — awaits the pending start instead of creating a concurrent one.
- * @throws Error if session recorder was never created (e.g. missing mtxApiHost/mtxApp).
- */
+// Safe to call while a start is in-flight — awaits the pending start instead of racing a concurrent one.
+// Throws if the recorder was never created (e.g. missing mtxApiHost/mtxApp).
 export const startRecording = async (): Promise<void> => {
   if (!rrwebSessionRecorder) {
     throw new Error('Session recording not available. Ensure the widget is initialized with mtxApiHost and mtxApp.');
   }
-  // If a start is already in-flight (auto-start or previous call), wait for it
+  // an in-flight start (auto-start or previous call) — wait for it, then bail if it left us active
   if (recordingStartPromise) {
     await recordingStartPromise.catch(() => {});
-    // After it settles, check if recording is already active
     if (rrwebSessionRecorder?.isActive()) return;
   }
-  // Already recording — no-op (RrwebSessionRecorder.start checks too, but avoid the promise tracking overhead)
   if (rrwebSessionRecorder.isActive()) return;
 
   const promise = rrwebSessionRecorder.start();
@@ -250,16 +231,12 @@ export const startRecording = async (): Promise<void> => {
   }
 };
 
-/**
- * Returns whether RRWeb session recording is currently active.
- */
 export const getRecordingState = (): boolean => {
   return rrwebSessionRecorder?.isActive() ?? false;
 };
 
 export const updateMarketrixConfig = async (newConfig: Partial<MarketrixConfig>): Promise<void> => {
   if (isWidgetInitialized()) {
-    // Re-initialize with updated config
     const currentConfig = getCurrentConfig();
     if (!currentConfig) {
       throw new Error('Widget not initialized');
@@ -272,10 +249,7 @@ export const updateMarketrixConfig = async (newConfig: Partial<MarketrixConfig>)
 
 export { getCurrentConfig };
 
-/**
- * MarketrixWidget - React component for preview mode
- * Renders widget into parent container with shadow DOM
- */
+// Preview-mode React component: renders the widget into a parent container with its own shadow DOM.
 export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ settings, container, mtxId, mtxKey, mtxApiHost }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const rootRef = useRef<Root | null>(null);
@@ -307,8 +281,8 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ settings, cont
         mtxKey,
         mtxApiHost,
       }),
-      isPreviewMode: true, // Settings provided = preview mode
-      widget_enabled: settings.widget_enabled ?? true, // Ensure widget is enabled in preview
+      isPreviewMode: true,
+      widget_enabled: settings.widget_enabled ?? true,
     };
 
     if (rootRef.current) {
@@ -338,7 +312,7 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ settings, cont
     };
   }, [settings, container]);
 
-  // Mounting is handled in the useEffect when a container is provided; otherwise return a mount point div.
+  // with an explicit container the useEffect mounts into it; otherwise render a mount-point div
   if (container) {
     return null;
   }
@@ -352,7 +326,7 @@ export const mountWidget = async (config: AddWidgetConfig): Promise<void> => {
   const container = config.container;
 
   if ('settings' in config && config.settings !== undefined) {
-    // Preview mode: settings-driven and standalone — skip API/network ops and don't set the global production instance.
+    // preview mode: standalone, no API/network ops, doesn't set the global production instance
     const previewConfig = config as Extract<AddWidgetConfig, { settings: WidgetSettingsData }>;
     const { settings, container: _container, ...restConfig } = previewConfig;
     const finalConfig = {
@@ -363,7 +337,7 @@ export const mountWidget = async (config: AddWidgetConfig): Promise<void> => {
     mountWidgetToContainer(mountEl, finalConfig, true);
     setProgrammaticInitInProgress(false);
   } else if ('mtxId' in config && config.mtxId !== undefined && config.mtxKey !== undefined) {
-    // Production mode: use marketrix credentials
+    // production mode: marketrix credentials
     const prodConfig = config as Extract<AddWidgetConfig, { mtxId: string; mtxKey: string }>;
     const { mtxId, mtxKey, container: _container, ...restConfig } = prodConfig;
     await initWidget(
@@ -375,7 +349,7 @@ export const mountWidget = async (config: AddWidgetConfig): Promise<void> => {
       container,
     );
   } else if ('mtxApp' in config && config.mtxApp !== undefined) {
-    // Dev mode: use the application ID
+    // dev mode: application ID
     const devConfig = config as Extract<AddWidgetConfig, { mtxApp: number }>;
     const { mtxApp, container: _container, ...restConfig } = devConfig;
     await initWidget(
@@ -393,7 +367,6 @@ export const mountWidget = async (config: AddWidgetConfig): Promise<void> => {
   }
 };
 
-// Register auto-initialization (only in browser)
 if (typeof window !== 'undefined') {
   setTimeout(() => {
     try {
