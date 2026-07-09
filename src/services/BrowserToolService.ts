@@ -135,8 +135,6 @@ export class BrowserToolService {
           if (!confirmed) {
             return { success: false, data: { text: '' }, error: 'User cancelled action' };
           }
-
-          // Confirmed: fall through to the switch below to execute the action.
         }
       }
 
@@ -277,11 +275,11 @@ export class BrowserToolService {
 
       const finalValue = clear ? args.text : inputElement.value + args.text;
 
-      // Try multiple methods to set the value
+      // Value-setter fallback ladder — first that works wins.
       let valueSet = false;
       let lastError: unknown = null;
 
-      // Method 1: Native value setter (works with React controlled components)
+      // Native value setter — works with React controlled components.
       if (!valueSet) {
         try {
           const isTextArea = inputElement.tagName.toUpperCase() === 'TEXTAREA';
@@ -325,11 +323,10 @@ export class BrowserToolService {
         }
       }
 
-      // Method 4: Simulate keyboard input character by character (last resort)
+      // Last resort: simulate keyboard input character by character.
       if (!valueSet) {
         try {
           inputElement.focus();
-          // Clear existing value first if clear=true
           if (clear) inputElement.value = '';
           for (const char of args.text) {
             inputElement.dispatchEvent(new KeyboardEvent('keydown', { key: char, bubbles: true, cancelable: true }));
@@ -361,7 +358,6 @@ export class BrowserToolService {
       }
 
       try {
-        // InputEvent is more specific and carries data
         const inputEvent = new InputEvent('input', {
           bubbles: true,
           cancelable: true,
@@ -378,7 +374,7 @@ export class BrowserToolService {
         console.warn('[BrowserToolService] Event dispatch failed:', e);
       }
     } else if ('value' in element) {
-      // Generic element with value property (e.g., select, custom elements)
+      // Generic element with a value property (select, custom elements).
       try {
         (element as HTMLInputElement).value = args.text;
         element.dispatchEvent(new Event('input', { bubbles: true }));
@@ -391,7 +387,7 @@ export class BrowserToolService {
         };
       }
     } else {
-      // For contenteditable or text-based elements
+      // contenteditable / text-based elements.
       try {
         element.textContent = args.text;
         element.dispatchEvent(new Event('input', { bubbles: true }));
@@ -536,15 +532,10 @@ export class BrowserToolService {
     return { success: true, data: { text: actionResult || `Sent keys ${args.keys}` } };
   }
 
-  /**
-   * Simulate actual browser behavior for special keys
-   * Since programmatic KeyboardEvents are not "trusted", we need to
-   * manually trigger the expected behavior
-   */
+  /** Programmatic KeyboardEvents aren't "trusted", so manually reproduce each key's expected behavior. */
   private simulateKeyAction(element: HTMLElement, key: string): string | null {
     switch (key) {
       case 'Tab': {
-        // Move focus to next focusable element
         const focusables = Array.from(
           document.querySelectorAll<HTMLElement>(
             'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
@@ -584,7 +575,6 @@ export class BrowserToolService {
         if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
           const form = element.closest('form');
           if (form) {
-            // Find submit button and click it, or submit form
             const submitBtn = form.querySelector<HTMLButtonElement>('button[type="submit"], input[type="submit"]');
             if (submitBtn) {
               submitBtn.click();
@@ -603,9 +593,8 @@ export class BrowserToolService {
       }
 
       case 'Escape': {
-        // Blur current element (common behavior)
         element.blur();
-        // Also dispatch to document for modal close handlers
+        // Dispatch to document too, for modal close handlers.
         document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
         return 'Escape: blurred element and dispatched to document';
       }
@@ -624,7 +613,6 @@ export class BrowserToolService {
       }
 
       case 'ArrowDown': {
-        // For select elements, move to next option
         if (element instanceof HTMLSelectElement) {
           const currentIdx = element.selectedIndex;
           if (currentIdx < element.options.length - 1) {
@@ -638,7 +626,6 @@ export class BrowserToolService {
       }
 
       case 'ArrowUp': {
-        // For select elements, move to previous option
         if (element instanceof HTMLSelectElement) {
           const currentIdx = element.selectedIndex;
           if (currentIdx > 0) {
@@ -652,7 +639,6 @@ export class BrowserToolService {
       }
 
       case 'Home': {
-        // For inputs, move cursor to start
         if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
           element.setSelectionRange(0, 0);
           return 'Home: moved cursor to start';
@@ -661,7 +647,6 @@ export class BrowserToolService {
       }
 
       case 'End': {
-        // For inputs, move cursor to end
         if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
           const len = element.value.length;
           element.setSelectionRange(len, len);
@@ -671,7 +656,6 @@ export class BrowserToolService {
       }
 
       case 'Backspace': {
-        // Delete character before cursor (or last character if cursor position unknown)
         if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
           const value = element.value;
 
@@ -679,11 +663,10 @@ export class BrowserToolService {
             return 'Backspace: input is empty, nothing to delete';
           }
 
-          // Get cursor position, default to end of input if not set
           let start: number = element.selectionStart ?? value.length;
           let end: number = element.selectionEnd ?? value.length;
 
-          // If cursor position is at 0, assume we want to delete from end
+          // Cursor at 0 with no known position → delete from the end instead.
           if (start === 0 && end === 0) {
             start = value.length;
             end = value.length;
@@ -693,18 +676,16 @@ export class BrowserToolService {
           let newCursorPos: number;
 
           if (start === end && start > 0) {
-            // No selection, delete char before cursor
             newValue = value.slice(0, start - 1) + value.slice(end);
             newCursorPos = start - 1;
           } else if (start !== end) {
-            // Delete selection
             newValue = value.slice(0, start) + value.slice(end);
             newCursorPos = start;
           } else {
             return 'Backspace: cursor at start, nothing to delete';
           }
 
-          // Use native input value setter to work with React/Vue controlled inputs
+          // Native value setter so React/Vue controlled inputs pick up the change.
           const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
             element instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype,
             'value',
@@ -716,11 +697,9 @@ export class BrowserToolService {
             element.value = newValue;
           }
 
-          // Dispatch input event for React/Vue to pick up the change
           element.dispatchEvent(new Event('input', { bubbles: true }));
           element.dispatchEvent(new Event('change', { bubbles: true }));
 
-          // Set cursor position after value change
           element.setSelectionRange(newCursorPos, newCursorPos);
 
           return `Backspace: deleted character, value is now "${newValue}"`;
@@ -729,7 +708,6 @@ export class BrowserToolService {
       }
 
       case 'Delete': {
-        // Delete character after cursor
         if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
           const start = element.selectionStart || 0;
           const end = element.selectionEnd || 0;
@@ -738,16 +716,14 @@ export class BrowserToolService {
           let newValue: string;
 
           if (start === end && start < value.length) {
-            // No selection, delete char after cursor
             newValue = value.slice(0, start) + value.slice(end + 1);
           } else if (start !== end) {
-            // Delete selection
             newValue = value.slice(0, start) + value.slice(end);
           } else {
             return 'Delete: cursor at end, nothing to delete';
           }
 
-          // Use native input value setter to work with React/Vue controlled inputs
+          // Native value setter so React/Vue controlled inputs pick up the change.
           const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
             element instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype,
             'value',
@@ -759,11 +735,9 @@ export class BrowserToolService {
             element.value = newValue;
           }
 
-          // Dispatch input event for React/Vue to pick up the change
           element.dispatchEvent(new Event('input', { bubbles: true }));
           element.dispatchEvent(new Event('change', { bubbles: true }));
 
-          // Maintain cursor position
           element.setSelectionRange(start, start);
 
           return `Delete: deleted character, value is now "${newValue}"`;
@@ -772,7 +746,7 @@ export class BrowserToolService {
       }
 
       default:
-        // For other keys, just dispatch events (already done above)
+        // Other keys: generic events already dispatched by the caller.
         return null;
     }
   }

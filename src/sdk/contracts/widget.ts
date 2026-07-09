@@ -4,9 +4,6 @@ import { z } from 'zod';
 import { ByWidgetIdSchema, paginatedListOf, PaginationSchema } from './common';
 import { ApplicationReadSchema, WidgetEntitySchema, WidgetSettingsDataSchema, WidgetTypeSchema } from './entities';
 
-/**
- * Application with widgets schema — matches API response structure
- */
 export const ApplicationWithWidgetsSchema = ApplicationReadSchema.extend({
   widgets: z.array(WidgetEntitySchema).optional(),
 });
@@ -24,7 +21,7 @@ export type WidgetUpdateData = z.infer<typeof WidgetUpdateSchema>;
 
 export type WidgetSettingsKey = keyof z.infer<typeof WidgetSettingsDataSchema>;
 
-/** Server → Widget event (discriminated union on `type`) */
+/** Server → Widget events. */
 export const WidgetEventSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('registered'), chat_id: z.string(), application_id: z.number().optional() }),
   z.object({ type: z.literal('heartbeat') }),
@@ -65,7 +62,7 @@ export const WidgetEventSchema = z.discriminatedUnion('type', [
 ]);
 export type WidgetEvent = z.infer<typeof WidgetEventSchema>;
 
-/** Widget → Server command (discriminated union on `type`) */
+/** Widget → Server commands. */
 export const WidgetCommandSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('chat/tell'), request_id: z.string(), content: z.string() }),
   z.object({ type: z.literal('chat/show'), request_id: z.string(), content: z.string() }),

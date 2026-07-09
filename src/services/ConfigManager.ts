@@ -54,11 +54,7 @@ export class ConfigManager {
 
 export const configManager = ConfigManager.getInstance();
 
-/**
- * Creates MarketrixConfig from WidgetSettingsData
- * Since MarketrixConfig extends WidgetSettingsData, this is just a direct merge.
- * API settings (which include defaults) override base config.
- */
+/** API settings (defaults included) override the base config. */
 export function createConfigFromSettings(
   widgetSettings: WidgetSettingsData,
   baseConfig: Partial<MarketrixConfig> = {},

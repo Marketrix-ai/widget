@@ -21,7 +21,6 @@ export interface UIStateActions {
   setAgentAvailable: (available: boolean) => void;
   setError: (error: string | undefined) => void;
   clearError: () => void;
-  /** Bulk-apply partial state overrides. */
   applyState: (payload: Partial<UIState>) => void;
 }
 

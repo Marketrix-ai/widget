@@ -14,9 +14,7 @@ export class ApiService {
     return chatSessionManager.getChatId();
   }
 
-  /**
-   * Get user_id from various sources (config, localStorage, sessionStorage)
-   */
+  /** Resolves user_id from config, then localStorage, then sessionStorage. */
   private getUserId(): number | null {
     if (this.config.userId && typeof this.config.userId === 'number') {
       return this.config.userId;
@@ -78,31 +76,25 @@ export class ApiService {
           metadata,
         })
         .catch((error: unknown) => {
-          // Silently fail - logging is not critical for widget functionality
+          // Best-effort: logging isn't critical to widget function.
           console.warn('[API Service] Failed to log widget question:', error);
         });
     } catch (error) {
-      // Silently fail - logging is not critical
       console.warn('[API Service] Error logging widget question:', error);
     }
   }
 
-  /**
-   * Send a message via the typed stream (fire-and-forget).
-   * The actual response arrives asynchronously as a chat/response stream event.
-   */
+  /** Fire-and-forget send over the typed stream; the reply arrives asynchronously as a chat/response event. */
   async messageDispatch(request: MessageDispatchRequest): Promise<MessageDispatchResponse> {
     const chatId = await chatSessionManager.getOrCreateChatId();
     if (!chatId) throw new Error('Failed to initialize chat session');
 
     const mode = request.mode || 'tell';
 
-    // Log the question and mode to action_log
     if (request.message) {
       await this.logWidgetQuestion(request.message, mode);
     }
 
-    // Auth validation still needed
     if (!(this.config.mtxId && this.config.mtxKey) && !this.config.mtxApp) {
       throw new Error('Either mtxId + mtxKey or mtxApp is required');
     }
@@ -114,21 +106,17 @@ export class ApiService {
       content: request.message || '',
     };
 
-    // Send command via stream (fire-and-forget — response arrives as chat/response event)
     const wsClient = StreamClient.getInstance();
     wsClient.send(command);
 
     return {
       messageId: requestId,
-      response: '', // Will be populated by chat/response stream event
+      response: '', // populated later by the chat/response stream event
       mode,
       timestamp: new Date(),
     };
   }
 
-  /**
-   * Update configuration
-   */
   updateConfig(newConfig: Partial<MarketrixConfig>): void {
     this.config = { ...this.config, ...newConfig };
   }

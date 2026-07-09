@@ -1,10 +1,3 @@
-/**
- * Type Guard Utilities
- *
- * Generic type guard functions for data validation and type checking.
- * These are shared utilities used across the codebase.
- */
-
 import type { WidgetSettingsData } from '../sdk';
 
 function hasProperty<K extends string>(obj: unknown, key: K): obj is Record<K, unknown> {

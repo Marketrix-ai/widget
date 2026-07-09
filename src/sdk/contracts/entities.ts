@@ -44,10 +44,7 @@ export type InstructionType = z.infer<typeof InstructionTypeSchema>;
  */
 const AuthMethodSchema = z.enum(['password', 'oauth']);
 
-/**
- * Complete user entity schema
- * Note: Users don't have plans - plans belong to workspaces (via workspace_plan table)
- */
+// Users don't have plans — plans belong to workspaces (via the workspace_plan table).
 export const UserEntitySchema = BaseEntitySchema.extend({
   is_super: z.boolean(),
   status: EntityStatusSchema,
@@ -62,11 +59,7 @@ export const UserEntitySchema = BaseEntitySchema.extend({
 });
 export type UserData = z.infer<typeof UserEntitySchema>;
 
-/**
- * Complete workspace entity schema
- * Note: package and ending_date come from workspace_plan table (joined when fetching workspace data).
- * They are NOT stored on the workspace table itself.
- */
+// package and ending_date come from the workspace_plan table (joined on fetch), NOT the workspace row.
 export const WorkspaceEntitySchema = BaseEntitySchema.extend({
   name: z.string(),
   slug: z.string(),
@@ -151,7 +144,6 @@ export const SimulationEntitySchema = BaseEntitySchema.extend({
   instructions: z.string(),
   // Persisted display name `{TypeLabel} #{id} Run`.
   name: z.string().nullish(),
-  // Origin type: direct/uxr/survey/abtest/qa.
   type: z.enum(['direct', 'uxr', 'survey', 'abtest', 'qa']),
   pinned: z.boolean().optional(),
   source: z.enum(['direct', 'qa']).optional(),

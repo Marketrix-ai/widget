@@ -1,10 +1,6 @@
 import { axe } from 'vitest-axe';
 
-/**
- * Run axe-core on a container and assert no a11y violations.
- * Use in tests: await assertNoA11yViolations(container);
- * Color-contrast is disabled in jsdom (no canvas).
- */
+// color-contrast is disabled: jsdom has no canvas to measure it.
 export async function assertNoA11yViolations(container: Element): Promise<void> {
   const results = await axe(container, {
     rules: { 'color-contrast': { enabled: false } },

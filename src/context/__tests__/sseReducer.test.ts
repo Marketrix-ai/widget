@@ -1,8 +1,4 @@
-/**
- * Unit tests for the pure SSE reducer (src/context/sseReducer.ts).
- * These pin the state-transition behavior the ChatContext effect used to
- * bury inside a ~180-line nested-setState handler.
- */
+// Unit tests for the pure SSE reducer — pin the state transitions the ChatContext effect drives.
 import { describe, expect, it } from 'vitest';
 
 import type { WidgetEvent } from '@/sdk';

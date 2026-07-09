@@ -2,11 +2,7 @@ import { useEffect } from 'react';
 
 const MOBILE_MAX_WIDTH = 767;
 
-/**
- * Locks body scroll when enabled (e.g. widget open on mobile).
- * Uses matchMedia('(max-width: 767px)') for mobile detection.
- * Restores overflow on disable or unmount.
- */
+// Locks body scroll while enabled on mobile-width viewports; restores on disable/unmount.
 export function useScrollLock(enabled: boolean): void {
   useEffect(() => {
     if (!enabled) return;

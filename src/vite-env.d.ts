@@ -1,4 +1,3 @@
-// Extend DisplayMediaStreamOptions to include preferCurrentTab
 interface DisplayMediaStreamOptions {
   video?: boolean | MediaTrackConstraints;
   audio?: boolean | MediaTrackConstraints;

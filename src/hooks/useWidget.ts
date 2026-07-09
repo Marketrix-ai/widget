@@ -49,11 +49,7 @@ interface UseWidgetActions {
   ) => Promise<void>;
 }
 
-/**
- * Composes UIStateContext and ChatContext into the unified
- * `{ state, actions, config, … }` shape that the widget UI consumes. New code
- * can either keep using this hook or read the focused contexts directly.
- */
+// Composes UIStateContext + ChatContext into the unified shape the widget UI consumes.
 export const useWidget = ({ config }: UseWidgetProps = {}) => {
   const { uiState, uiActions } = useUIStateContext();
   const { chatState, chatActions, taskState, taskActions } = useChatContext();

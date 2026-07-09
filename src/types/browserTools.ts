@@ -1,10 +1,5 @@
-/**
- * Browser Use Tools - widget tool registry.
- *
- * IMPORTANT: This file is the single source of truth for widget tool metadata.
- * ALLOWED_TOOLS in ChatContext.tsx and TOOL_NAME_MAPPING in chat.ts are
- * derived from BROWSER_TOOLS below.
- */
+// Single source of truth for widget tool metadata: ALLOWED_TOOLS (ChatContext.tsx) and
+// TOOL_NAME_MAPPING (chat.ts) are derived from BROWSER_TOOLS below.
 
 interface BrowserToolMetadata {
   id: string;

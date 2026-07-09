@@ -12,17 +12,8 @@ import { addThinkingMarker } from '../utils/chat';
 import { reduceSse, reduceStop, reduceToolDone, reduceToolProgress, type SseEffect, type SseState } from './sseReducer';
 import type { UIStateActions } from './UIStateContext';
 
-/**
- * ChatContext — the single store for the widget's conversation.
- *
- * Holds `{ messages, task }` as ONE `SseState`, so the SSE effect commits each
- * transition through a single atomic `setState(prev => transition(prev))`. This
- * removes the previous two-store split (ChatContext + TaskContext), which forced
- * a raw-setState escape hatch and `messagesRef`/`taskRef` snapshots and could
- * tear (messages updating while task lagged across an await). UIStateContext
- * (open/minimized/mode/loading/error) stays separate — a genuinely different
- * concern.
- */
+// Single store for the conversation: `{ messages, task }` as one `SseState` committed
+// atomically, so messages and task can't tear across an await. UIStateContext stays separate.
 
 export interface SimulationState {
   activeSimulationId: string | null;
@@ -67,11 +58,9 @@ const EMPTY_TASK: SimulationState = { activeSimulationId: null, isSimulationRunn
 interface ChatProviderProps {
   children: React.ReactNode;
   previewMode?: boolean;
-  /** Current mode from UIState — fallback for messageDispatch and progress-line logic. */
   currentMode: InstructionType;
-  /** Injected UI actions so the conversation store drives loading/availability/error without nesting contexts. */
+  // Injected so the conversation store drives loading/availability/error without nesting contexts.
   uiActions: Pick<UIStateActions, 'setLoading' | 'setAgentAvailable' | 'setError'>;
-  /** One-time hydrated snapshot to seed the store (messages + task) on mount. */
   initialMessages?: ChatMessage[];
   initialTask?: SimulationState;
 }
@@ -89,9 +78,8 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
     task: initialTask ?? EMPTY_TASK,
   }));
 
-  // Live snapshot for SSE wiring / stopTask that must not stale-close over state.
-  // commit() is the ONLY writer — never re-sync from render, or a stale render could
-  // regress the ref between a commit and its paint.
+  // Live snapshot for SSE wiring / stopTask. commit() is the ONLY writer — never re-sync from
+  // render, or a stale render could regress the ref between a commit and its paint.
   const stateRef = useRef<SseState>(state);
 
   const currentModeRef = useRef(currentMode);
@@ -101,11 +89,9 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
   const processedRequestIds = useRef(new Set<string>());
   const pendingTaskRef = useRef<{ apiTaskId?: string; agentRunning?: boolean }>({});
 
-  // Run a pure transition SYNCHRONOUSLY against the live snapshot, then publish for render.
-  // The transition must NOT run inside the setState updater: React defers updaters unless its
-  // queue is idle (never in a background tab or mid-burst), so effects captured from inside one
-  // are silently lost — tool calls arrived but never executed. stateRef is the synchronous source
-  // of truth (commit is the only writer); setState only notifies React.
+  // Run the transition SYNCHRONOUSLY against stateRef, then publish. It must NOT run inside the
+  // setState updater: React defers updaters (background tab / mid-burst), so effects captured
+  // inside one are silently lost — tool calls arrived but never executed.
   const commit = useCallback((transition: (s: SseState) => SseState) => {
     const prev = stateRef.current;
     const next = transition(prev);
@@ -193,7 +179,6 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
         addMessage(createUserMessage(content, effectiveMode));
       }
 
-      // Create thinking placeholder
       const placeholderId = `temp-${globalThis.crypto.randomUUID()}`;
       const placeholderMsg: ChatMessage = {
         id: placeholderId,

@@ -57,10 +57,8 @@ export const MessageList = ({
   const handleScroll = () => {
     if (containerRef.current) {
       const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
-      // Show top button if scrolled down more than 200px
       setShowScrollTop(scrollTop > 200);
 
-      // Show bottom button if not at the bottom (with 50px threshold)
       const isAtBottom = Math.abs(scrollHeight - scrollTop - clientHeight) < 50;
       setShowScrollBottom(!isAtBottom && scrollHeight > clientHeight);
     }
@@ -78,7 +76,7 @@ export const MessageList = ({
   };
 
   useEffect(() => {
-    // and scroll height is calculated correctly
+    // rAF so the DOM is laid out and scroll height is final before we scroll
     window.requestAnimationFrame(() => {
       if (messagesEndRef.current) {
         !isPreviewMode && messagesEndRef.current.scrollIntoView({ behavior: 'auto' });

@@ -24,7 +24,6 @@ export const MessageContent: React.FC<MessageContentProps> = ({ message, isLastM
       <Stack gap='sm'>
         {message.parts.map((part, index) => {
           if (part.type === 'text') {
-            // Clean thinking marker if present in text part
             let text = removeThinkingMarkerFromEnd(part.content).trim();
             text = text
               .replace(/\(Cancelled by cleanup\)/gi, '')
@@ -48,7 +47,7 @@ export const MessageContent: React.FC<MessageContentProps> = ({ message, isLastM
               </Text>
             );
           } else if (part.type === 'progress') {
-            // Hide progress line for "done" tool when task is completed (show icon instead)
+            // Completed "done" shows a status icon instead of a progress line
             if (part.browserToolName === 'done' && message.simulationStatus === 'done') {
               return null;
             }

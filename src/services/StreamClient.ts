@@ -88,7 +88,6 @@ export class StreamClient {
         streamInput.application_id = this.config.mtxApp;
       }
 
-      // Call the oRPC streaming endpoint — returns an async iterator for eventIterator outputs
       type WidgetStreamInput = {
         chat_id: string;
         tab_id?: string;

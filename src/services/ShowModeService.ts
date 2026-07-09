@@ -253,12 +253,12 @@ export class ShowModeService {
     this.clickHandler = (e: MouseEvent) => {
       if (!this.currentElement || !this.resolvePromise) return;
 
-      // Use composedPath to handle Shadow DOM retargeting and event bubbling properly
+      // composedPath sees through Shadow DOM retargeting and bubbling.
       const path = e.composedPath();
       const isClickOnElement = path.includes(this.currentElement);
 
       if (isClickOnElement) {
-        // Intercept the click to prevent immediate navigation/action before we can process the tool result
+        // Intercept so navigation/action doesn't fire before we process the tool result.
         e.preventDefault();
         e.stopPropagation();
 
@@ -270,7 +270,7 @@ export class ShowModeService {
       }
     };
 
-    // Attach with capture to ensure we see it, but we must be careful not to stop propagation if we want the click to happen
+    // Capture phase so we see the click first; don't stopPropagation when the click should still happen.
     document.addEventListener('click', this.clickHandler, { capture: true });
   }
 
@@ -295,7 +295,6 @@ export class ShowModeService {
   private setupElementMonitoring(): void {
     if (!this.currentElement) return;
 
-    // Monitor for element removal from DOM
     this.mutationObserver = new MutationObserver(() => {
       if (this.currentElement && !document.body.contains(this.currentElement)) {
         this.failWithElementGone('Element was removed from DOM');
@@ -309,13 +308,11 @@ export class ShowModeService {
   }
 
   private setupVisibilityMonitoring(): void {
-    // Check every 200ms if element is still interactable
     this.visibilityCheckInterval = setInterval(() => {
       if (!this.currentElement) return;
 
       const index = domService.getSequenceForElement(this.currentElement) ?? -1;
 
-      // Use centralized interactability check from DomService
       const error = domService.checkElementInteractable(this.currentElement, index);
       if (error) {
         this.failWithElementGone(error);

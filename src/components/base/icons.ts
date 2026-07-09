@@ -198,7 +198,6 @@ export const icons = {
     ],
   },
 
-  /** Home icon — from MessengerShell TAB_ICONS.home, viewBox 0 0 24 24 */
   home: {
     viewBox: '0 0 24 24',
     paths: [
@@ -213,7 +212,6 @@ export const icons = {
     ],
   },
 
-  /** Chat bubble dots icon — from MessengerShell TAB_ICONS.chat and HomeView CTA */
   chat: {
     viewBox: '0 0 24 24',
     paths: [
@@ -228,7 +226,6 @@ export const icons = {
     ],
   },
 
-  /** Send / arrow right — from MessageInput send button */
   send: {
     viewBox: '0 0 24 24',
     paths: [
@@ -243,7 +240,6 @@ export const icons = {
     ],
   },
 
-  /** Close X (small) — 12×12 viewBox used in NotificationToast, WidgetSettingsLoader */
   closeSmall: {
     viewBox: '0 0 12 12',
     paths: [
@@ -258,7 +254,6 @@ export const icons = {
     ],
   },
 
-  /** Close X (fill) — 20×20 fill variant used in MessengerShell header/minimized state */
   close: {
     viewBox: '0 0 20 20',
     paths: [
@@ -271,7 +266,6 @@ export const icons = {
     ],
   },
 
-  /** Chevron down — from WidgetButton open/close toggle */
   chevronDown: {
     viewBox: '0 0 24 24',
     paths: [
@@ -286,7 +280,6 @@ export const icons = {
     ],
   },
 
-  /** Screen share / video camera — from MessengerShell header screen share button */
   screenShare: {
     viewBox: '0 0 24 24',
     paths: [
@@ -301,7 +294,6 @@ export const icons = {
     ],
   },
 
-  /** Alert circle / error — from VideoStreamDisplay stream error state */
   alertCircle: {
     viewBox: '0 0 24 24',
     paths: [

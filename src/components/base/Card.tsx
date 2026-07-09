@@ -14,10 +14,6 @@ export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   className?: string;
 }
 
-/**
- * A card surface with consistent border-radius, shadow, and white background.
- * Used for: recent conversation card, help about card, chat input container, etc.
- */
 export const Card = forwardRef<HTMLDivElement, CardProps>(function Card(
   {
     background = 'card',

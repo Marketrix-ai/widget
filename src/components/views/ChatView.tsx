@@ -59,7 +59,6 @@ export interface ChatViewProps {
   onStopTask?: () => void;
   onClearChat?: () => void | Promise<void>;
   onScreenSharingChange?: (isSharing: boolean) => void;
-  /** Refs for header buttons to trigger screen share start/stop */
   onStartScreenShareRef?: React.MutableRefObject<(() => void) | null>;
   onStopScreenShareRef?: React.MutableRefObject<(() => void) | null>;
   /** Optional ref for focus trap to focus the message input */

@@ -1,13 +1,6 @@
-/**
- * Logger Utility
- *
- * Centralized logging utility with log levels and environment-based filtering.
- * Only logs in development mode to reduce noise in production.
- */
-
 type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
-// Check if we're in development mode (SSR-safe)
+// SSR-safe development-mode check (localhost hostnames).
 const getIsDevelopment = (): boolean => {
   if (typeof window === 'undefined') {
     return false;
@@ -19,10 +12,6 @@ const getIsDevelopment = (): boolean => {
   );
 };
 
-/**
- * Log levels configuration
- * Set to 'error' in production to only show errors
- */
 const MIN_LOG_LEVEL: LogLevel = getIsDevelopment() ? 'debug' : 'error';
 
 const LOG_LEVELS: Record<LogLevel, number> = {

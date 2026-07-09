@@ -1,10 +1,3 @@
-/**
- * Message Content Utilities
- *
- * Centralized utilities for message content transformation, including:
- * - Removing thinking markers
- */
-
 import type { ChatMessage, InstructionType } from '../types';
 import { BROWSER_TOOLS } from '../types/browserTools';
 
@@ -25,9 +18,6 @@ export function addThinkingMarker(content: string): string {
   return `${content}\n\n__THINKING__`;
 }
 
-/**
- * Find the index of the last task message (agent message that's not system/placeholder/screen access)
- */
 function findTaskMessageIndex(messages: ChatMessage[]): number {
   for (let i = messages.length - 1; i >= 0; i--) {
     const msg = messages[i];
@@ -37,13 +27,6 @@ function findTaskMessageIndex(messages: ChatMessage[]): number {
   }
   return -1;
 }
-/**
- * Message Finder Utility
- *
- * Centralized logic for finding messages in the chat that should receive
- * progress updates, tool call results, or errors. Eliminates duplicate
- * message finding code across stream handlers.
- */
 
 export interface FindMessageOptions {
   messages: ChatMessage[];
@@ -63,26 +46,21 @@ function matchesProgressCriteria(
     return false;
   }
 
-  // For active show/do tasks, check mode matching
-  // BUT: Be lenient for placeholders - allow mode mismatch if placeholder mode is undefined
-  // This handles race conditions where tool calls arrive before mode is set
+  // Active show/do: require mode match, but stay lenient on placeholders whose mode is still
+  // undefined — tool calls can race ahead of the mode being set.
   if (checkMode && isSimulationRunning && (currentMode === 'show' || currentMode === 'do')) {
-    // For placeholders, allow mode mismatch if mode is undefined (will be set later)
-    // For non-placeholders, require strict mode matching
     if (msg.isPlaceholder) {
-      // Placeholder: allow if mode matches OR mode is undefined
       if (msg.mode !== undefined && msg.mode !== currentMode) {
         return false;
       }
     } else {
-      // Non-placeholder: require strict mode matching
       if (msg.mode !== currentMode) {
         return false;
       }
     }
   }
 
-  // With object-based progress, content might be empty but progressSteps present
+  // Content may be empty when progress lives in parts instead.
   if (requireContent) {
     const hasText = msg.content.trim().length > 0;
     const hasProgress = msg.parts && msg.parts.length > 0;
@@ -94,18 +72,9 @@ function matchesProgressCriteria(
   return true;
 }
 
-/**
- * Find the message that should receive progress updates
- * ALWAYS returns the LAST (most recent) matching message by searching backwards.
- * Priority order for active show/do tasks:
- * 1. Placeholder message in show/do mode that has content (the "Let me try this" message)
- * 2. Placeholder message in show/do mode (even without content yet)
- * 3. Non-placeholder agent message in show/do mode
- * For other cases:
- * 4. Last placeholder message
- * 5. Last task message
- * 6. Any agent message as fallback
- */
+// Returns the LAST matching message (searches backwards). For active show/do tasks it prefers
+// a mode-matching placeholder (with content, then without), then a non-placeholder; otherwise
+// falls back to last placeholder → last task message → any agent message.
 export function findMessageForProgress(options: FindMessageOptions): {
   index: number;
   message: ChatMessage;
@@ -113,11 +82,10 @@ export function findMessageForProgress(options: FindMessageOptions): {
   const { messages, isSimulationRunning, currentMode, requireContent } = options;
   let taskMessageIndex = -1;
 
-  // For active show/do tasks, find the message that matches the current mode and task state
   if (isSimulationRunning && (currentMode === 'show' || currentMode === 'do')) {
     const checkMode = true;
 
-    // Priority 1: Find LAST placeholder with content in matching mode
+    // Priority 1: last placeholder with content in matching mode.
     for (let i = messages.length - 1; i >= 0; i--) {
       const msg = messages[i];
       const matchesCriteria = matchesProgressCriteria(msg, isSimulationRunning, currentMode, requireContent, checkMode);
@@ -130,7 +98,7 @@ export function findMessageForProgress(options: FindMessageOptions): {
       }
     }
 
-    // Priority 2: Find LAST placeholder in matching mode (even without content)
+    // Priority 2: last placeholder in matching mode, even without content.
     if (taskMessageIndex < 0 && !requireContent) {
       for (let i = messages.length - 1; i >= 0; i--) {
         const msg = messages[i];
@@ -150,7 +118,7 @@ export function findMessageForProgress(options: FindMessageOptions): {
       }
     }
 
-    // Priority 3: Find LAST non-placeholder agent message in matching mode
+    // Priority 3: last non-placeholder agent message in matching mode.
     if (taskMessageIndex < 0) {
       for (let i = messages.length - 1; i >= 0; i--) {
         const msg = messages[i];
@@ -171,11 +139,10 @@ export function findMessageForProgress(options: FindMessageOptions): {
     }
   }
 
-  // Fallback: If not in active task or no matching message found, use general logic
-  // This is critical - tool calls can arrive before isSimulationRunning is set to true
+  // Fallback (no active task or no match) — critical: tool calls can arrive before
+  // isSimulationRunning flips true.
   if (taskMessageIndex < 0) {
-    // Priority 1: Check LAST placeholder message (preferred for progress updates)
-    // Don't require mode matching or content when task isn't running yet
+    // Priority 1: last placeholder message, no mode/content requirement.
     for (let i = messages.length - 1; i >= 0; i--) {
       const msg = messages[i];
       const isAgent = msg.sender === 'agent';
@@ -190,7 +157,7 @@ export function findMessageForProgress(options: FindMessageOptions): {
       }
     }
 
-    // Priority 2: If still not found, try placeholder without content requirement
+    // Priority 2: placeholder without content requirement.
     if (taskMessageIndex < 0 && !requireContent) {
       for (let i = messages.length - 1; i >= 0; i--) {
         const msg = messages[i];
@@ -201,12 +168,12 @@ export function findMessageForProgress(options: FindMessageOptions): {
       }
     }
 
-    // Priority 3: Try to find the last task message (non-placeholder agent message)
+    // Priority 3: last task message.
     if (taskMessageIndex < 0) {
       taskMessageIndex = findTaskMessageIndex(messages);
     }
 
-    // Priority 4: Last resort - find ANY agent message (ensures we always find something if possible)
+    // Priority 4: any agent message.
     if (taskMessageIndex < 0) {
       for (let i = messages.length - 1; i >= 0; i--) {
         const msg = messages[i];
@@ -251,11 +218,7 @@ function ensureMessageStructure(message: ChatMessage): ChatMessage {
   return msg;
 }
 
-/**
- * Tools that should show an icon and standard text style.
- * These are "mouse and keyboard" interactions.
- * All other tools will have hidden icons and muted text.
- */
+// "Mouse and keyboard" tools shown with an icon + standard text; all others get hidden icon + muted text.
 const INTERACTIVE_TOOLS = new Set([
   'click_element',
   'type_text',
@@ -265,11 +228,8 @@ const INTERACTIVE_TOOLS = new Set([
   'scroll',
 ]);
 
-/**
- * Tools that, in `show` mode, pause for the user to perform the action
- * themselves (DOM-mutating "mouse and keyboard" actions, minus `scroll`).
- * Also the set that requires element highlighting in BrowserToolService.
- */
+// In `show` mode these pause for the user to act (DOM-mutating tools, minus `scroll`); also the
+// set that requires element highlighting in BrowserToolService.
 export const WAIT_FOR_USER_TOOLS = new Set([
   'click_element',
   'type_text',
@@ -278,18 +238,14 @@ export const WAIT_FOR_USER_TOOLS = new Set([
   'upload_file',
 ]);
 
-/**
- * Remove "(Cancelled by cleanup)" and similar cancellation messages from content
- * This filters out expected cancellation messages that shouldn't be shown to users
- */
+// Strip "(Cancelled by cleanup)" text — an expected internal message users shouldn't see.
 function filterCancellationText(content: string): string {
   if (!content) return content;
-  // Remove "(Cancelled by cleanup)" in various forms
   return content
     .replace(/\(Cancelled by cleanup\)/gi, '')
     .replace(/\(cancelled by cleanup\)/gi, '')
     .replace(/Cancelled by cleanup/gi, '')
-    .replace(/\s+/g, ' ') // Clean up multiple spaces
+    .replace(/\s+/g, ' ')
     .trim();
 }
 
@@ -360,8 +316,7 @@ export function markProgressLineFailed(message: ChatMessage, browserToolName: st
   const msg = ensureMessageStructure(message);
   const parts = msg.parts || [];
 
-  // Filter out "Cancelled by cleanup" errors - these are expected in show mode
-  // when a new action starts before the previous one completes
+  // "Cancelled by cleanup" errors are expected in show mode when a new action supersedes a pending one.
   const shouldFilterError = error.toLowerCase().includes('cancelled by cleanup');
 
   const newParts = [...parts];
@@ -376,10 +331,8 @@ export function markProgressLineFailed(message: ChatMessage, browserToolName: st
   }
 
   if (partIndex >= 0) {
-    // If error should be filtered, just mark as completed instead of failed
-    // This prevents showing confusing "Cancelled by cleanup" messages to users
+    // Filtered errors mark as completed rather than showing a confusing cancellation failure.
     if (shouldFilterError) {
-      // Clean any cancellation text from content and mark as completed
       const cleanedContent = filterCancellationText(newParts[partIndex].content);
       newParts[partIndex] = {
         ...newParts[partIndex],
@@ -387,7 +340,6 @@ export function markProgressLineFailed(message: ChatMessage, browserToolName: st
         content: cleanedContent,
       };
     } else {
-      // Filter cancellation text from error before appending
       const cleanedError = filterCancellationText(error);
       const cleanedContent = filterCancellationText(newParts[partIndex].content);
       newParts[partIndex] = {
@@ -414,7 +366,7 @@ export function updateThinkingMarker(
       return {
         ...msg,
         content: msg.content.replace(/\n\n__THINKING__$/, '').replace(/__THINKING__/g, ''),
-        placeholderState: undefined, // Clear placeholder state when not thinking
+        placeholderState: undefined,
       };
     }
     return msg;
@@ -422,8 +374,6 @@ export function updateThinkingMarker(
 
   const targetState = isWaitingForUser ? 'waiting-for-user' : 'thinking';
 
-  // Add thinking marker if not present and it is the latest message
-  // Here we just ensure the marker exists if the caller decided to update this message.
   if (!hasThinkingMarker(msg.content)) {
     return {
       ...msg,
@@ -431,7 +381,6 @@ export function updateThinkingMarker(
       placeholderState: targetState,
     };
   } else if (msg.placeholderState !== targetState) {
-    // Ensure state aligns with marker presence if needed
     return {
       ...msg,
       placeholderState: targetState,
@@ -440,24 +389,17 @@ export function updateThinkingMarker(
 
   return msg;
 }
-/**
- * Tool Name Mapping — derived from BROWSER_TOOLS (single source of truth).
- * Provides friendly display names for technical tool names.
- */
+// Friendly display names, derived from BROWSER_TOOLS (single source of truth).
 export const TOOL_NAME_MAPPING: Record<string, string> = Object.fromEntries(
   BROWSER_TOOLS.map(t => [t.id, t.displayAction]),
 );
 
-/**
- * Get a friendly display name for a tool
- * Converts snake_case to Title Case if no mapping exists
- */
 export function getFriendlyToolName(browserToolName: string): string {
   if (TOOL_NAME_MAPPING[browserToolName]) {
     return TOOL_NAME_MAPPING[browserToolName];
   }
 
-  // Fallback: convert snake_case or camelCase to Title Case ("my_custom_tool"/"myCustomTool" -> "My Custom Tool")
+  // Fallback: snake_case / camelCase → Title Case ("my_custom_tool" -> "My Custom Tool").
   return browserToolName
     .replace(/([A-Z])/g, ' $1')
     .replace(/_/g, ' ')

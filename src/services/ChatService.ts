@@ -2,11 +2,7 @@ import type { ChatMessage, InstructionType } from '../types';
 import { removeThinkingMarkers } from '../utils/chat';
 import { storageService } from './StorageService';
 
-/**
- * Snapshot of widget state persisted to / restored from localStorage.
- * React context is the single source of truth at runtime — this is the
- * load/persist boundary only.
- */
+/** Widget state persisted to / restored from localStorage; React context is the runtime source of truth. */
 export interface ChatSnapshot {
   messages: ChatMessage[];
   isSimulationRunning: boolean;
@@ -17,12 +13,7 @@ export interface ChatSnapshot {
   isLoading: boolean;
 }
 
-/**
- * ChatService — thin persistence layer.
- *
- * Owns only the localStorage read/write lifecycle for the widget chat context:
- * contexts call `persist(snapshot)` from a single effect and `restore()` once on mount.
- */
+/** localStorage read/write lifecycle for the widget chat context: `persist(snapshot)` from an effect, `restore()` once on mount. */
 export class ChatService {
   private static instance: ChatService;
   private chatId: string | null = null;
@@ -67,7 +58,6 @@ export class ChatService {
     return this.initError;
   }
 
-  /** Read the persisted snapshot, rehydrating messages (dates, lost streams). */
   restore(): ChatSnapshot {
     const context = storageService.getContext();
 
@@ -117,7 +107,7 @@ export class ChatService {
     };
   }
 
-  /** Persist the current widget snapshot. No-op until a chatId is known. */
+  /** No-op until a chatId is known. */
   persist(snapshot: ChatSnapshot): void {
     if (!this.chatId) return;
 
@@ -125,7 +115,7 @@ export class ChatService {
       const serializedMessages = snapshot.messages
         .filter(msg => {
           if (!msg.isPlaceholder) return true;
-          // Keep placeholders that are still thinking/waiting, or that carry parts.
+          // Keep placeholders still thinking/waiting, or carrying parts.
           if (msg.placeholderState === 'thinking' || msg.placeholderState === 'waiting-for-user') {
             return true;
           }

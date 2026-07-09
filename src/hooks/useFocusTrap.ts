@@ -9,11 +9,7 @@ function getFocusables(container: HTMLElement): HTMLElement[] {
   );
 }
 
-/**
- * Trap focus inside container when active. On mount when active, focus first focusable
- * (or focusTargetRef if provided). Tab cycles within container. On deactivate, return focus
- * to previously focused element. Escape calls onEscape when provided.
- */
+// a11y focus trap: while active, Tab cycles within container; deactivation restores prior focus.
 export function useFocusTrap(
   containerRef: React.RefObject<HTMLElement | null>,
   isActive: boolean,

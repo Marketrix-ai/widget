@@ -14,7 +14,6 @@ export interface HeaderBarProps {
   subtitle?: string;
   minimized?: boolean;
   onClose: () => void;
-  /** Optional control buttons rendered before the close button */
   controls?: React.ReactNode;
 }
 
