@@ -55,7 +55,7 @@ export class WidgetService {
         widgetsData?.find((widget: WidgetData) => widget.status === 'active' && widget.type === 'widget') || null;
 
       if (matchedWidget?.settings) {
-        const widgetSettings = this.getWidgetSettings(matchedWidget);
+        const widgetSettings = this.getSettings(matchedWidget);
         if (widgetSettings) {
           const mergedSettings: WidgetSettingsData = {
             ...defaultSettings,
@@ -90,7 +90,7 @@ export class WidgetService {
     }
   }
 
-  getWidgetSettings(widget: WidgetData): WidgetSettingsData | null {
+  getSettings(widget: WidgetData): WidgetSettingsData | null {
     if (!widget?.settings) return null;
 
     const settings = widget.settings;

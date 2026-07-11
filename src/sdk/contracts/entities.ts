@@ -114,7 +114,7 @@ export const StepReactionSchema = z.object({
 // One reactor's reaction to one simulation. run_id/user_index are null for a
 // direct sim's attached persona; set for a study persona-user. Shared by the
 // direct-sim read path AND the study replay.
-export const SimPersonaReactionEntitySchema = z.object({
+export const SimulationReactionEntitySchema = z.object({
   id: z.number(),
   run_id: z.number().nullable(),
   persona_id: z.number().nullable(),
@@ -164,7 +164,7 @@ export const SimulationEntitySchema = BaseEntitySchema.extend({
   has_question: z.boolean().optional(),
   // Participants — personas that REACT to this sim; each carries persona_id + user_count (both required) + their reactions.
   participants: z.array(z.object({ persona_id: z.number(), user_count: z.number().int().positive() })).default([]),
-  reactions: z.array(SimPersonaReactionEntitySchema).default([]),
+  reactions: z.array(SimulationReactionEntitySchema).default([]),
   // Driver — the single persona this sim RUNS AS (in-character; QA + survey); null = neutral.
   driver_persona_id: z.number().nullable().default(null),
   viewport: ViewportNameSchema.default('desktop'),
