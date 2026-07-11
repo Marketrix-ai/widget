@@ -2,7 +2,19 @@ import type { CSSProperties, ElementType } from 'react';
 
 import { radiusClasses } from '../../design-system/component-tokens';
 import type { ShadowToken } from '../../design-system/shadows';
-import { spacingScale, type SpacingToken } from './tokens';
+
+export type SpacingToken = 'none' | '2xs' | 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
+
+const spacingScale: Record<SpacingToken, string> = {
+  none: '0',
+  '2xs': '1',
+  xs: '0.5',
+  sm: '1.5',
+  md: '2',
+  lg: '3',
+  xl: '4',
+  '2xl': '6',
+};
 
 export interface LayoutProps {
   padding?: SpacingToken;
