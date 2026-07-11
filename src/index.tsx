@@ -54,7 +54,7 @@ async function initializeWidgetWithConfig(
     const widgetService = new WidgetService(config.mtxId, config.mtxKey, config.mtxApp);
 
     const widgetData = await widgetService.widgetSettingsGet();
-    const widgetSettings = widgetData ? widgetService.getWidgetSettings(widgetData) : null;
+    const widgetSettings = widgetData ? widgetService.getSettings(widgetData) : null;
 
     if (!widgetSettings) {
       throw new Error('WidgetService did not return widget settings');
