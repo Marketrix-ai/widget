@@ -13,8 +13,8 @@ import {
 } from '../utils/chat';
 
 export interface SseSimulationState {
-  activeSimulationId: string | null;
-  isSimulationRunning: boolean;
+  activeTaskId: string | null;
+  isTaskRunning: boolean;
 }
 
 export interface SseState {
@@ -45,7 +45,7 @@ type ProgressStatus = 'in_progress' | 'completed' | 'failed';
 
 function applyProgress(
   messages: ChatMessage[],
-  isSimulationRunning: boolean,
+  isTaskRunning: boolean,
   currentMode: InstructionType,
   browserToolName: string,
   explanation: string,
@@ -55,14 +55,14 @@ function applyProgress(
   const friendlyName = getFriendlyToolName(browserToolName);
   const found = findMessageForProgress({
     messages,
-    isSimulationRunning,
+    isTaskRunning,
     currentMode,
     requireContent: status === 'failed',
   });
   if (!found) return messages;
 
   let updatedMsg = found.message;
-  const shouldWait = isSimulationRunning && currentMode === 'show' && WAIT_FOR_USER_TOOLS.has(browserToolName);
+  const shouldWait = isTaskRunning && currentMode === 'show' && WAIT_FOR_USER_TOOLS.has(browserToolName);
   const isDoneTool = browserToolName === 'done';
   const isShowOrDo = currentMode === 'show' || currentMode === 'do';
 
@@ -70,20 +70,20 @@ function applyProgress(
     if (!isDoneTool) {
       updatedMsg = addProgressLine(updatedMsg, friendlyName, explanation || friendlyName);
     }
-    if (isSimulationRunning && isShowOrDo) {
-      updatedMsg = updateThinkingMarker(updatedMsg, isSimulationRunning, currentMode, shouldWait);
+    if (isTaskRunning && isShowOrDo) {
+      updatedMsg = updateThinkingMarker(updatedMsg, isTaskRunning, currentMode, shouldWait);
     }
   } else if (status === 'completed') {
     if (!isDoneTool) {
       updatedMsg = markProgressLineComplete(updatedMsg);
     }
-    if (isSimulationRunning && isShowOrDo) {
-      updatedMsg = updateThinkingMarker(updatedMsg, isSimulationRunning, currentMode, false);
+    if (isTaskRunning && isShowOrDo) {
+      updatedMsg = updateThinkingMarker(updatedMsg, isTaskRunning, currentMode, false);
     }
   } else {
     updatedMsg = markProgressLineFailed(updatedMsg, friendlyName, error || '');
-    if (isSimulationRunning && isShowOrDo) {
-      updatedMsg = updateThinkingMarker(updatedMsg, isSimulationRunning, currentMode, false);
+    if (isTaskRunning && isShowOrDo) {
+      updatedMsg = updateThinkingMarker(updatedMsg, isTaskRunning, currentMode, false);
     }
   }
 
@@ -104,7 +104,7 @@ export function reduceToolProgress(
     ...state,
     messages: applyProgress(
       state.messages,
-      state.task.isSimulationRunning,
+      state.task.isTaskRunning,
       currentMode,
       browserToolName,
       explanation,
@@ -118,7 +118,7 @@ export function reduceToolProgress(
 export function reduceToolDone(state: SseState, currentMode: InstructionType): SseState {
   const found = findMessageForProgress({
     messages: state.messages,
-    isSimulationRunning: state.task.isSimulationRunning,
+    isTaskRunning: state.task.isTaskRunning,
     currentMode,
     requireContent: false,
   });
@@ -127,24 +127,24 @@ export function reduceToolDone(state: SseState, currentMode: InstructionType): S
     const updatedParts = (found.message.parts ?? []).filter(
       part => !(part.type === 'progress' && part.browserToolName === 'done'),
     );
-    messages[found.index] = { ...found.message, simulationStatus: 'done', parts: updatedParts };
+    messages[found.index] = { ...found.message, taskStatus: 'done', parts: updatedParts };
   }
-  return { messages, task: { isSimulationRunning: false, activeSimulationId: null } };
+  return { messages, task: { isTaskRunning: false, activeTaskId: null } };
 }
 
 // User-initiated stop — flag the active message `stopped` and end the task.
 export function reduceStop(state: SseState, currentMode: InstructionType): SseState {
   const found = findMessageForProgress({
     messages: state.messages,
-    isSimulationRunning: state.task.isSimulationRunning,
+    isTaskRunning: state.task.isTaskRunning,
     currentMode,
     requireContent: false,
   });
   const messages = [...state.messages];
   if (found) {
-    messages[found.index] = { ...found.message, simulationStatus: 'stopped' };
+    messages[found.index] = { ...found.message, taskStatus: 'stopped' };
   }
-  return { messages, task: { isSimulationRunning: false, activeSimulationId: null } };
+  return { messages, task: { isTaskRunning: false, activeTaskId: null } };
 }
 
 // Returns next state + effects. Unknown / non-stateful events (registered, heartbeat) are ignored.
@@ -152,13 +152,13 @@ export function reduceSse(state: SseState, event: WidgetEvent, currentMode: Inst
   switch (event.type) {
     case 'tool/call': {
       // Auto-activate the task if a tool arrives before `task/status running`.
-      const task = state.task.isSimulationRunning ? state.task : { ...state.task, isSimulationRunning: true };
-      const isSimulationRunning = task.isSimulationRunning;
+      const task = state.task.isTaskRunning ? state.task : { ...state.task, isTaskRunning: true };
+      const isTaskRunning = task.isTaskRunning;
       const mode = event.mode || currentMode || 'do';
       const explanation = event.explanation || '';
       const messages = applyProgress(
         state.messages,
-        isSimulationRunning,
+        isTaskRunning,
         currentMode,
         event.browser_tool,
         explanation,
@@ -189,7 +189,7 @@ export function reduceSse(state: SseState, event: WidgetEvent, currentMode: Inst
         // Paused awaiting a user answer — not terminal. Stop spinner, flip to "waiting for you".
         const found = findMessageForProgress({
           messages: state.messages,
-          isSimulationRunning: state.task.isSimulationRunning,
+          isTaskRunning: state.task.isTaskRunning,
           currentMode,
           requireContent: false,
         });
@@ -202,27 +202,27 @@ export function reduceSse(state: SseState, event: WidgetEvent, currentMode: Inst
             ...(statusMessage && { content: statusMessage }),
           };
         }
-        return { state: { messages, task: { isSimulationRunning: false, activeSimulationId: null } }, effects: [] };
+        return { state: { messages, task: { isTaskRunning: false, activeTaskId: null } }, effects: [] };
       }
       // completed | failed | stopped — terminal.
       const found = findMessageForProgress({
         messages: state.messages,
-        isSimulationRunning: state.task.isSimulationRunning,
+        isTaskRunning: state.task.isTaskRunning,
         currentMode,
         requireContent: false,
       });
       const messages = [...state.messages];
       if (found) {
-        let simulationStatus: 'done' | 'failed' | 'stopped' = 'done';
-        if (event.status === 'failed') simulationStatus = 'failed';
-        else if (event.status === 'stopped') simulationStatus = 'stopped';
+        let taskStatus: 'done' | 'failed' | 'stopped' = 'done';
+        if (event.status === 'failed') taskStatus = 'failed';
+        else if (event.status === 'stopped') taskStatus = 'stopped';
         messages[found.index] = {
           ...found.message,
-          simulationStatus,
+          taskStatus,
           ...(statusMessage && { content: statusMessage }),
         };
       }
-      return { state: { messages, task: { isSimulationRunning: false, activeSimulationId: null } }, effects: [] };
+      return { state: { messages, task: { isTaskRunning: false, activeTaskId: null } }, effects: [] };
     }
 
     case 'chat/delta': {

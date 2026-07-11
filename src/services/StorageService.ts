@@ -18,8 +18,8 @@ export interface MarketrixChatContext {
   chat_id: string | null;
 
   messages: StoredMessage[];
-  isSimulationRunning: boolean;
-  activeSimulationId: string | null;
+  isTaskRunning: boolean;
+  activeTaskId: string | null;
   currentMode: InstructionType;
   isOpen: boolean;
   isMinimized: boolean;
@@ -33,8 +33,8 @@ export interface MarketrixChatContext {
 const DEFAULT_CONTEXT: MarketrixChatContext = {
   chat_id: null,
   messages: [],
-  isSimulationRunning: false,
-  activeSimulationId: null,
+  isTaskRunning: false,
+  activeTaskId: null,
   currentMode: 'tell',
   isOpen: false,
   isMinimized: false,
@@ -155,12 +155,12 @@ class StorageService {
 
   getChatState(): Pick<
     MarketrixChatContext,
-    'isSimulationRunning' | 'activeSimulationId' | 'currentMode' | 'isOpen' | 'isMinimized' | 'isLoading'
+    'isTaskRunning' | 'activeTaskId' | 'currentMode' | 'isOpen' | 'isMinimized' | 'isLoading'
   > {
     const ctx = this.getContext();
     return {
-      isSimulationRunning: ctx.isSimulationRunning,
-      activeSimulationId: ctx.activeSimulationId,
+      isTaskRunning: ctx.isTaskRunning,
+      activeTaskId: ctx.activeTaskId,
       currentMode: ctx.currentMode,
       isOpen: ctx.isOpen,
       isMinimized: ctx.isMinimized,
@@ -172,7 +172,7 @@ class StorageService {
     state: Partial<
       Pick<
         MarketrixChatContext,
-        'isSimulationRunning' | 'activeSimulationId' | 'currentMode' | 'isOpen' | 'isMinimized' | 'isLoading'
+        'isTaskRunning' | 'activeTaskId' | 'currentMode' | 'isOpen' | 'isMinimized' | 'isLoading'
       >
     >,
   ): void {

@@ -16,8 +16,8 @@ import type { UIStateActions } from './UIStateContext';
 // atomically, so messages and task can't tear across an await. UIStateContext stays separate.
 
 export interface SimulationState {
-  activeSimulationId: string | null;
-  isSimulationRunning: boolean;
+  activeTaskId: string | null;
+  isTaskRunning: boolean;
 }
 
 export interface ChatState {
@@ -40,7 +40,7 @@ export interface ChatActions {
 }
 
 export interface SimulationActions {
-  setTaskState: (payload: { activeSimulationId: string | null; isSimulationRunning: boolean }) => void;
+  setTaskState: (payload: { activeTaskId: string | null; isTaskRunning: boolean }) => void;
   stopTask: () => Promise<void>;
 }
 
@@ -53,7 +53,7 @@ interface ChatContextType {
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
-const EMPTY_TASK: SimulationState = { activeSimulationId: null, isSimulationRunning: false };
+const EMPTY_TASK: SimulationState = { activeTaskId: null, isTaskRunning: false };
 
 interface ChatProviderProps {
   children: React.ReactNode;
@@ -136,10 +136,10 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
   }, [commit]);
 
   const setTaskState = useCallback(
-    (payload: { activeSimulationId: string | null; isSimulationRunning: boolean }) => {
+    (payload: { activeTaskId: string | null; isTaskRunning: boolean }) => {
       commit(s => ({
         ...s,
-        task: { activeSimulationId: payload.activeSimulationId, isSimulationRunning: payload.isSimulationRunning },
+        task: { activeTaskId: payload.activeTaskId, isTaskRunning: payload.isTaskRunning },
       }));
     },
     [commit],
@@ -150,7 +150,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
       content: string,
       mode?: InstructionType,
       applicationId?: number,
-      question?: string,
+      _question?: string,
       skipUserMessage?: boolean,
     ) => {
       const effectiveMode = mode ?? currentModeRef.current;
@@ -224,7 +224,6 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
         await apiService.messageDispatch({
           message: content,
           mode: effectiveMode,
-          question,
           requestId: placeholderId,
         });
         // Response arrives via SSE; placeholder stays "thinking"
@@ -262,7 +261,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
     if (p.apiTaskId && p.agentRunning) {
       const taskId = p.apiTaskId;
       pendingTaskRef.current = {};
-      commit(s => ({ ...s, task: { isSimulationRunning: true, activeSimulationId: taskId } }));
+      commit(s => ({ ...s, task: { isTaskRunning: true, activeTaskId: taskId } }));
     }
   }, [commit]);
 
@@ -357,7 +356,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
           return;
         }
 
-        if (!stateRef.current.task.isSimulationRunning) {
+        if (!stateRef.current.task.isTaskRunning) {
           console.log('[Widget] Tool call received before task/status running — auto-activating task');
         }
         if (event.state_version !== undefined && event.state_version > stateVersion.current) {
@@ -408,7 +407,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
   }, [previewMode, commit, maybeActivateTask, addProcessedRequestId, uiActions]);
 
   const stopTask = useCallback(async () => {
-    const taskId = stateRef.current.task.activeSimulationId ?? undefined;
+    const taskId = stateRef.current.task.activeTaskId ?? undefined;
     commit(s => reduceStop(s, currentModeRef.current));
 
     if (previewMode) return;

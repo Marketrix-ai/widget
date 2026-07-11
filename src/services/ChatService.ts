@@ -5,8 +5,8 @@ import { storageService } from './StorageService';
 /** Widget state persisted to / restored from localStorage; React context is the runtime source of truth. */
 export interface ChatSnapshot {
   messages: ChatMessage[];
-  isSimulationRunning: boolean;
-  activeSimulationId: string | null;
+  isTaskRunning: boolean;
+  activeTaskId: string | null;
   currentMode: InstructionType;
   isOpen: boolean;
   isMinimized: boolean;
@@ -41,8 +41,8 @@ export class ChatService {
       storageService.updateContext({
         chat_id: chatId,
         messages: [],
-        isSimulationRunning: false,
-        activeSimulationId: null,
+        isTaskRunning: false,
+        activeTaskId: null,
         currentMode: 'tell',
         isOpen: false,
         isMinimized: false,
@@ -81,7 +81,7 @@ export class ChatService {
             timestamp: new Date(msg.timestamp),
             videoStream: undefined,
             placeholderState: msg.placeholderState,
-            simulationStatus: msg.simulationStatus,
+            taskStatus: msg.taskStatus,
             parts: msg.parts || [],
           };
 
@@ -98,8 +98,8 @@ export class ChatService {
 
     return {
       messages,
-      isSimulationRunning: context.isSimulationRunning,
-      activeSimulationId: context.activeSimulationId,
+      isTaskRunning: context.isTaskRunning,
+      activeTaskId: context.activeTaskId,
       currentMode: context.currentMode,
       isOpen: context.isOpen,
       isMinimized: context.isMinimized,
@@ -133,15 +133,15 @@ export class ChatService {
           isSystemMessage: msg.isSystemMessage,
           isPlaceholder: msg.isPlaceholder,
           placeholderState: msg.placeholderState,
-          simulationStatus: msg.simulationStatus,
+          taskStatus: msg.taskStatus,
           parts: msg.parts,
         }));
 
       storageService.updateContext({
         chat_id: this.chatId,
         messages: serializedMessages,
-        isSimulationRunning: snapshot.isSimulationRunning,
-        activeSimulationId: snapshot.activeSimulationId,
+        isTaskRunning: snapshot.isTaskRunning,
+        activeTaskId: snapshot.activeTaskId,
         currentMode: snapshot.currentMode,
         isOpen: snapshot.isOpen,
         isMinimized: snapshot.isMinimized,

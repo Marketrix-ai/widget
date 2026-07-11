@@ -47,7 +47,7 @@ export interface ChatMessage {
   isPlaceholder?: boolean;
   placeholderState?: 'thinking' | 'waiting-for-user';
   parts?: MessagePart[];
-  simulationStatus?: 'ongoing' | 'done' | 'failed' | 'stopped';
+  taskStatus?: 'ongoing' | 'done' | 'failed' | 'stopped';
 }
 
 export interface MessagePart {
@@ -72,27 +72,15 @@ export interface WidgetState {
   currentMode: InstructionType;
   agentAvailable: boolean;
   error?: string;
-  activeSimulationId: string | null;
-  isSimulationRunning: boolean;
+  activeTaskId: string | null;
+  isTaskRunning: boolean;
   activeView: WidgetView;
 }
 
 export interface MessageDispatchRequest {
   message?: string;
   mode?: InstructionType;
-  mtxId?: string;
-  mtxKey?: string;
-  application_id?: number;
-  question?: string;
   requestId?: string;
-}
-
-export interface MessageDispatchResponse {
-  messageId: string;
-  response: string;
-  mode: InstructionType;
-  timestamp: Date;
-  task_id?: string;
 }
 
 export type WidgetPosition = WidgetSettingsData['widget_position'];

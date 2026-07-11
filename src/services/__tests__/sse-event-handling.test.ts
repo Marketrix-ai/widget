@@ -158,7 +158,7 @@ describe('SSE event discriminated-union contract (WidgetEventSchema)', () => {
 
   describe('task/status "has_question" pauses the active message (clears running spinner)', () => {
     // Mirrors the ChatContext `has_question` reducer: strip the thinking marker (stops the spinner)
-    // and flip to "waiting-for-user" without setting a terminal simulationStatus icon.
+    // and flip to "waiting-for-user" without setting a terminal taskStatus icon.
     const applyHasQuestionTransition = (message: ChatMessage, statusMessage?: string): ChatMessage => {
       const cleared = updateThinkingMarker(message, false, 'do');
       return {
@@ -175,7 +175,7 @@ describe('SSE event discriminated-union contract (WidgetEventSchema)', () => {
       timestamp: new Date(),
       mode: 'do',
       placeholderState: 'thinking',
-      simulationStatus: 'ongoing',
+      taskStatus: 'ongoing',
     });
 
     it('"has_question" is a valid SSE event that carries an optional message', () => {
@@ -195,9 +195,9 @@ describe('SSE event discriminated-union contract (WidgetEventSchema)', () => {
       const after = applyHasQuestionTransition(runningMessage());
       expect(after.placeholderState).toBe('waiting-for-user');
       // Terminal icon statuses must NOT be applied — the task is paused, not finished.
-      expect(after.simulationStatus).not.toBe('done');
-      expect(after.simulationStatus).not.toBe('failed');
-      expect(after.simulationStatus).not.toBe('stopped');
+      expect(after.taskStatus).not.toBe('done');
+      expect(after.taskStatus).not.toBe('failed');
+      expect(after.taskStatus).not.toBe('stopped');
     });
 
     it('surfaces the question text when the event includes a message', () => {

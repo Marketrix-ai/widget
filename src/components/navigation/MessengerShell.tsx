@@ -26,7 +26,7 @@ export interface MessengerShellProps {
   isMinimized: boolean;
   messages: ChatMessage[];
   currentMode: InstructionType;
-  isSimulationRunning?: boolean;
+  isTaskRunning?: boolean;
   activeView: WidgetView;
   onClose: () => void;
   onSendMessage: (
@@ -52,7 +52,7 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
   isMinimized,
   messages,
   currentMode,
-  isSimulationRunning = false,
+  isTaskRunning = false,
   activeView,
   onClose,
   onSendMessage,
@@ -214,7 +214,7 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
                   config={config}
                   messages={messages}
                   currentMode={currentMode}
-                  isSimulationRunning={isSimulationRunning}
+                  isTaskRunning={isTaskRunning}
                   onSendMessage={onSendMessage}
                   onSetMode={onSetMode}
                   onAddMessage={onAddMessage}
