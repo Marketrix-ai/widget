@@ -359,9 +359,6 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
         if (!stateRef.current.task.isTaskRunning) {
           console.log('[Widget] Tool call received before task/status running — auto-activating task');
         }
-        if (event.state_version !== undefined && event.state_version > stateVersion.current) {
-          stateVersion.current = event.state_version;
-        }
       } else if (
         event.type === 'task/status' &&
         (event.status === 'completed' || event.status === 'failed' || event.status === 'stopped')
