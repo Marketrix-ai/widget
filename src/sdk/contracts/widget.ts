@@ -57,7 +57,6 @@ export const WidgetEventSchema = z.discriminatedUnion('type', [
     args: z.record(z.string(), z.unknown()),
     mode: z.enum(['show', 'do']).optional(),
     explanation: z.string().optional(),
-    state_version: z.number().optional(),
   }),
 ]);
 export type WidgetEvent = z.infer<typeof WidgetEventSchema>;
