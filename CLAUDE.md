@@ -47,16 +47,16 @@ npm run tag <version>    # scripts/release.sh — see Release
 Two typed oRPC procedures, both defined in `src/sdk/contracts/widget.ts`:
 
 - **`widgetStream`** — GET `/widget/stream`, output `eventIterator(WidgetEventSchema)` (SSE). Input `{ chat_id, tab_id?, marketrix_id?, marketrix_key?, application_id? }`. Server → widget.
-- **`widgetMessage`** — POST `/widget/message`, input `{ chat_id, command: WidgetCommandSchema }`, output `{ ok }`. Widget → server.
+- **`widgetMessage`** — POST `/widget/message`, input `{ chat_id, tab_id?, command: WidgetCommandSchema }`, output `{ ok }`. Widget → server.
 
 Both payloads are Zod **discriminated unions on `type`**:
 
-- `WidgetEvent` (server→widget): `registered` (`chat_id`, `application_id?`), `heartbeat`, `chat/response` (`request_id`, `text`, `task_id?`), `chat/error` (`request_id`, `error`), `task/status` (`status`, `message?`, `task_id?`, `timestamp?`), `tool/call` (`tool_call_id`, `browser_tool`, `args`, `mode?` `'show'|'do'`, `explanation?`, `state_version?`).
+- `WidgetEvent` (server→widget): `registered` (`chat_id`, `application_id?`), `heartbeat`, `chat/response` (`request_id`, `text`), `chat/delta` (`request_id`, `text` — one streamed reply fragment; deltas accumulate, the final `chat/response` full text replaces them), `chat/error` (`request_id`, `error`), `task/status` (`status`, `message?`, `task_id?`, `timestamp?`), `tool/call` (`tool_call_id`, `browser_tool`, `args`, `mode?` `'show'|'do'`, `explanation?`, `state_version?`).
 - `WidgetCommand` (widget→server): `chat/tell`, `chat/show`, `chat/do` (each `request_id` + `content`), `chat/stop` (`task_id?`), `tool/response` (`tool_call_id`, `success`, `data?`, `error?`, `state_version?`), `rrweb/metadata` (`rrweb_session_id`, …), `rrweb/events` (`rrweb_session_id`, …).
 
 **Transport** — `src/services/StreamClient.ts` is a singleton wrapping the oRPC `sdk`. It calls `sdk.widgetStream(input, { signal })` and drains the async iterator in the background. Status machine: `disconnected → connecting → connected → registered → error`. Exponential-backoff reconnect (1000 ms ×2, cap 30000 ms, **max 10 attempts**; counters reset only on a `registered` event). A `chat/error` whose `request_id === 'auth'` is **non-retriable** and permanently stops reconnection (until re-init). `heartbeat` is ignored. Sending uses `sdk.widgetMessage({ chat_id, command })`.
 
-**Round-trip** — `ChatContext.messageDispatch(content, mode)` → `apiService.messageDispatch` builds `{ type: 'chat/${mode}', request_id, content }` (mode defaults to `tell`) and fire-and-forget POSTs it; the reply arrives asynchronously over SSE as `chat/response`, matched by `request_id`. Task lifecycle arrives as `task/status`; agent browser actions arrive as `tool/call`.
+**Round-trip** — `ChatContext.messageDispatch(content, mode)` → `apiService.messageDispatch` builds `{ type: 'chat/${mode}', request_id, content }` (mode defaults to `tell`) and fire-and-forget POSTs it; the reply arrives asynchronously over SSE — streamed as `chat/delta` fragments that accumulate, then the final `chat/response` (full text) replaces them — matched by `request_id`. Task lifecycle arrives as `task/status`; agent browser actions arrive as `tool/call`.
 
 **Tool execution** — `ChatContext` handles `tool/call`: dedupe by `tool_call_id`, validate `browser_tool` against `BROWSER_TOOLS`, execute via `browserToolService.executeTool`, increment `state_version`, reply with `tool/response`. The `done` tool ends the task. `task/status` drives state: `running` activates the task (captures `task_id`); `completed`/`failed`/`stopped` clear it; `has_question` clears the pending state. `state_version` is a monotonic counter that orders tool calls.
 
@@ -87,7 +87,7 @@ Drift is enforced by `.github/workflows/contract-drift.yml` (PRs touching `src/s
 - `src/index.tsx` — public entry; all exports (see `README.md` for the customer surface).
 - `src/services/` — `StreamClient`, `RrwebSessionRecorder`, `BrowserToolService`, `ShowModeService`, `DomService`, `ChatService`, `ChatSessionManager`, `StorageService`, `ConfigManager`, `ValidationService`, `WidgetService`, `ApiService`, `ScreenShareService`.
 - `src/components/` — UI (`base/`, `blocks/`, `chat/`, `navigation/`, `ui/`, `views/`, `MarketrixWidget.tsx`). `src/design-system/` — tokens + primitives.
-- `src/context/` — `ChatContext` (one store: `{ messages, task }`), `UIStateContext`, `WidgetProviders`, `sseReducer.ts`. `src/hooks/`, `src/utils/` (incl. `bootstrap.tsx`), `src/lib/`, `src/constants/`, `src/types/`.
+- `src/context/` — `ChatContext` (one store: `{ messages, task }`), `UIStateContext`, `WidgetProviders`, `sseReducer.ts`. `src/hooks/`, `src/utils/` (incl. `bootstrap.tsx`), `src/lib/`, `src/types/`.
 - `src/test/` + colocated `*.test.ts(x)` — vitest setup, fixtures, a11y helpers.
 - `public/loader.js` — classic script-tag bootstrap. `index.html` — playground harness. `dist/` — generated only.
 

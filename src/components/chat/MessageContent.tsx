@@ -48,7 +48,7 @@ export const MessageContent: React.FC<MessageContentProps> = ({ message, isLastM
             );
           } else if (part.type === 'progress') {
             // Completed "done" shows a status icon instead of a progress line
-            if (part.browserToolName === 'done' && message.simulationStatus === 'done') {
+            if (part.browserToolName === 'done' && message.taskStatus === 'done') {
               return null;
             }
 
@@ -66,7 +66,7 @@ export const MessageContent: React.FC<MessageContentProps> = ({ message, isLastM
         })}
 
         {((message.isPlaceholder && !message.parts.some(p => p.type === 'text')) ||
-          (widgetState.isSimulationRunning && isLastMessage && (message.mode === 'show' || message.mode === 'do'))) && (
+          (widgetState.isTaskRunning && isLastMessage && (message.mode === 'show' || message.mode === 'do'))) && (
           <ThinkingIndicator isWaitingForUser={isWaitingForUser} />
         )}
       </Stack>
@@ -75,7 +75,7 @@ export const MessageContent: React.FC<MessageContentProps> = ({ message, isLastM
 
   if (
     message.isPlaceholder ||
-    (widgetState.isSimulationRunning && isLastMessage && (message.mode === 'show' || message.mode === 'do'))
+    (widgetState.isTaskRunning && isLastMessage && (message.mode === 'show' || message.mode === 'do'))
   ) {
     return <ThinkingIndicator isWaitingForUser={isWaitingForUser} />;
   }

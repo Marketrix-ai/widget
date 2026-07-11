@@ -30,14 +30,14 @@ function findTaskMessageIndex(messages: ChatMessage[]): number {
 
 export interface FindMessageOptions {
   messages: ChatMessage[];
-  isSimulationRunning: boolean;
+  isTaskRunning: boolean;
   currentMode: InstructionType;
   requireContent?: boolean;
 }
 
 function matchesProgressCriteria(
   msg: ChatMessage,
-  isSimulationRunning: boolean,
+  isTaskRunning: boolean,
   currentMode: InstructionType,
   requireContent: boolean | undefined,
   checkMode: boolean,
@@ -48,7 +48,7 @@ function matchesProgressCriteria(
 
   // Active show/do: require mode match, but stay lenient on placeholders whose mode is still
   // undefined — tool calls can race ahead of the mode being set.
-  if (checkMode && isSimulationRunning && (currentMode === 'show' || currentMode === 'do')) {
+  if (checkMode && isTaskRunning && (currentMode === 'show' || currentMode === 'do')) {
     if (msg.isPlaceholder) {
       if (msg.mode !== undefined && msg.mode !== currentMode) {
         return false;
@@ -79,16 +79,16 @@ export function findMessageForProgress(options: FindMessageOptions): {
   index: number;
   message: ChatMessage;
 } | null {
-  const { messages, isSimulationRunning, currentMode, requireContent } = options;
+  const { messages, isTaskRunning, currentMode, requireContent } = options;
   let taskMessageIndex = -1;
 
-  if (isSimulationRunning && (currentMode === 'show' || currentMode === 'do')) {
+  if (isTaskRunning && (currentMode === 'show' || currentMode === 'do')) {
     const checkMode = true;
 
     // Priority 1: last placeholder with content in matching mode.
     for (let i = messages.length - 1; i >= 0; i--) {
       const msg = messages[i];
-      const matchesCriteria = matchesProgressCriteria(msg, isSimulationRunning, currentMode, requireContent, checkMode);
+      const matchesCriteria = matchesProgressCriteria(msg, isTaskRunning, currentMode, requireContent, checkMode);
       const isPlaceholder = msg.isPlaceholder;
       const hasContent = !requireContent || msg.content.trim().length > 0 || (msg.parts && msg.parts.length > 0);
 
@@ -102,13 +102,7 @@ export function findMessageForProgress(options: FindMessageOptions): {
     if (taskMessageIndex < 0 && !requireContent) {
       for (let i = messages.length - 1; i >= 0; i--) {
         const msg = messages[i];
-        const matchesCriteria = matchesProgressCriteria(
-          msg,
-          isSimulationRunning,
-          currentMode,
-          requireContent,
-          checkMode,
-        );
+        const matchesCriteria = matchesProgressCriteria(msg, isTaskRunning, currentMode, requireContent, checkMode);
         const isPlaceholder = msg.isPlaceholder;
 
         if (matchesCriteria && isPlaceholder) {
@@ -122,13 +116,7 @@ export function findMessageForProgress(options: FindMessageOptions): {
     if (taskMessageIndex < 0) {
       for (let i = messages.length - 1; i >= 0; i--) {
         const msg = messages[i];
-        const matchesCriteria = matchesProgressCriteria(
-          msg,
-          isSimulationRunning,
-          currentMode,
-          requireContent,
-          checkMode,
-        );
+        const matchesCriteria = matchesProgressCriteria(msg, isTaskRunning, currentMode, requireContent, checkMode);
         const isPlaceholder = msg.isPlaceholder;
 
         if (matchesCriteria && !isPlaceholder) {
@@ -140,7 +128,7 @@ export function findMessageForProgress(options: FindMessageOptions): {
   }
 
   // Fallback (no active task or no match) — critical: tool calls can arrive before
-  // isSimulationRunning flips true.
+  // isTaskRunning flips true.
   if (taskMessageIndex < 0) {
     // Priority 1: last placeholder message, no mode/content requirement.
     for (let i = messages.length - 1; i >= 0; i--) {
@@ -194,7 +182,7 @@ export function findMessageForProgress(options: FindMessageOptions): {
 
   console.warn('[MessageFinder] No message found for progress update', {
     totalMessages: messages.length,
-    isSimulationRunning,
+    isTaskRunning,
     currentMode,
   });
   return null;
@@ -355,13 +343,13 @@ export function markProgressLineFailed(message: ChatMessage, browserToolName: st
 
 export function updateThinkingMarker(
   message: ChatMessage,
-  isSimulationRunning: boolean,
+  isTaskRunning: boolean,
   currentMode: 'show' | 'tell' | 'do',
   isWaitingForUser: boolean = false,
 ): ChatMessage {
   const msg = ensureMessageStructure(message);
 
-  if (!isSimulationRunning || (currentMode !== 'show' && currentMode !== 'do')) {
+  if (!isTaskRunning || (currentMode !== 'show' && currentMode !== 'do')) {
     if (hasThinkingMarker(msg.content)) {
       return {
         ...msg,

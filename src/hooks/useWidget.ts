@@ -33,7 +33,7 @@ interface UseWidgetActions {
   setAgentAvailable: (available: boolean) => void;
   setError: (error: string | undefined) => void;
   clearError: () => void;
-  setTaskState: (payload: { activeSimulationId: string | null; isSimulationRunning: boolean }) => void;
+  setTaskState: (payload: { activeTaskId: string | null; isTaskRunning: boolean }) => void;
   addMessage: (message: ChatMessage) => void;
   updateMessage: (messageId: string, updates: Partial<ChatMessage>) => void;
   removeMessage: (messageId: string) => void;
@@ -64,15 +64,15 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
       error: uiState.error,
       activeView: uiState.activeView,
       messages: chatState.messages,
-      activeSimulationId: taskState.activeSimulationId,
-      isSimulationRunning: taskState.isSimulationRunning,
+      activeTaskId: taskState.activeTaskId,
+      isTaskRunning: taskState.isTaskRunning,
     }),
     [uiState, chatState, taskState],
   );
 
   const resetChat = useCallback(() => {
     chatActions.clearMessages();
-    taskActions.setTaskState({ activeSimulationId: null, isSimulationRunning: false });
+    taskActions.setTaskState({ activeTaskId: null, isTaskRunning: false });
     uiActions.setError(undefined);
   }, [chatActions, taskActions, uiActions]);
 

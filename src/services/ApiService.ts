@@ -1,5 +1,5 @@
 import { sdk, type WidgetCommand } from '../sdk';
-import type { MarketrixConfig, MessageDispatchRequest, MessageDispatchResponse } from '../types';
+import type { MarketrixConfig, MessageDispatchRequest } from '../types';
 import { chatSessionManager } from './ChatSessionManager';
 import { StreamClient } from './StreamClient';
 
@@ -85,7 +85,7 @@ export class ApiService {
   }
 
   /** Fire-and-forget send over the typed stream; the reply arrives asynchronously as a chat/response event. */
-  async messageDispatch(request: MessageDispatchRequest): Promise<MessageDispatchResponse> {
+  async messageDispatch(request: MessageDispatchRequest): Promise<void> {
     const chatId = await chatSessionManager.getOrCreateChatId();
     if (!chatId) throw new Error('Failed to initialize chat session');
 
@@ -108,13 +108,6 @@ export class ApiService {
 
     const wsClient = StreamClient.getInstance();
     wsClient.send(command);
-
-    return {
-      messageId: requestId,
-      response: '', // populated later by the chat/response stream event
-      mode,
-      timestamp: new Date(),
-    };
   }
 
   updateConfig(newConfig: Partial<MarketrixConfig>): void {
