@@ -230,12 +230,14 @@ export function reduceSse(state: SseState, event: WidgetEvent, currentMode: Inst
         if (msg.id !== event.request_id) return msg;
         const parts = [...(msg.parts ?? [])];
         const last = parts[parts.length - 1];
+        let streamed: string;
         if (last?.type === 'text' && last.streaming) {
-          parts[parts.length - 1] = { ...last, content: last.content + event.text };
+          streamed = last.content + event.text;
+          parts[parts.length - 1] = { ...last, content: streamed };
         } else {
-          parts.push({ type: 'text' as const, content: event.text, streaming: true });
+          streamed = event.text;
+          parts.push({ type: 'text' as const, content: streamed, streaming: true });
         }
-        const streamed = parts[parts.length - 1]!.content;
         return { ...msg, content: streamed, isPlaceholder: false, placeholderState: undefined, parts };
       });
       return { state: { ...state, messages }, effects: [] };
