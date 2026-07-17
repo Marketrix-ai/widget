@@ -20,6 +20,18 @@ export const PaginationSchema = z.object({
   offset: z.coerce.number().optional().default(0),
 });
 
+/**
+ * Query-string boolean: 'true'/'false' (or a real boolean) → boolean, anything else → undefined.
+ * `z.coerce.boolean()` is WRONG for query strings — it's `Boolean(val)`, so `Boolean('false') === true`
+ * and `?enabled=false` would match enabled rows. Parse the two tokens explicitly instead.
+ */
+// `.optional()` is outermost so the object key stays optional (omittable); an absent param is
+// undefined, `'true'`/`'false'` decode correctly (z.coerce.boolean's Boolean('false')===true was the bug).
+export const booleanQueryParam = z
+  .union([z.boolean(), z.string()])
+  .transform(val => (typeof val === 'boolean' ? val : val === 'true' ? true : val === 'false' ? false : undefined))
+  .optional();
+
 /** Paginated list for unbounded queries — includes total/limit/offset for pagination */
 export const paginatedListOf = <T extends z.ZodTypeAny>(schema: T) =>
   z.object({
@@ -48,7 +60,6 @@ export const ToolCallRecordSchema = z.object({
   params: z.record(z.string(), z.unknown()).default({}),
   result: z.record(z.string(), z.unknown()).default({}),
 });
-export type ToolCallRecord = z.infer<typeof ToolCallRecordSchema>;
 
 /**
  * Slack incoming-webhook URL validator — shared by the workspace update path

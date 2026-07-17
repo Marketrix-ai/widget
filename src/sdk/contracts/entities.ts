@@ -86,6 +86,19 @@ export const KnowledgeEntitySchema = BaseEntitySchema.extend({
 });
 export type KnowledgeData = z.infer<typeof KnowledgeEntitySchema>;
 
+// A file uploaded under a persona (meeting minutes, transcripts, …). `file_type` is the raw
+// upload MIME type (free-form) — persona files aren't constrained to the document/video vocabulary.
+export const PersonaFileEntitySchema = BaseEntitySchema.extend({
+  workspace_id: z.number(),
+  application_id: z.number(),
+  persona_id: z.number(),
+  file_name: z.string().min(1),
+  file_size: z.coerce.number(),
+  file_type: z.string(),
+  file_url: z.string(),
+});
+export type PersonaFileData = z.infer<typeof PersonaFileEntitySchema>;
+
 /**
  * Device viewport — the only device dimension (Chrome-only). A simulation runs at exactly
  * one viewport; selecting N viewports fans out into N simulations (one per viewport).
@@ -162,8 +175,8 @@ export const SimulationEntitySchema = BaseEntitySchema.extend({
   // Mirror of `status === 'has_question'`, surfaced as a standalone flag so the live SSE
   // stream can toggle the header "Question" pill without refetching the status.
   has_question: z.boolean().optional(),
-  // Participants — personas that REACT to this sim; each carries persona_id + user_count (both required) + their reactions.
-  participants: z.array(z.object({ persona_id: z.number(), user_count: z.number().int().positive() })).default([]),
+  // Riders — personas that REACT to this sim; each carries persona_id + user_count (both required) + their reactions.
+  riders: z.array(z.object({ persona_id: z.number(), user_count: z.number().int().positive() })).default([]),
   reactions: z.array(SimulationReactionEntitySchema).default([]),
   // Driver — the single persona this sim RUNS AS (in-character; QA + survey); null = neutral.
   driver_persona_id: z.number().nullable().default(null),
@@ -250,11 +263,10 @@ export type StateTriggerData = z.infer<typeof StateTriggerEntitySchema>;
 
 /**
  * QA run status — first-class TEXT+CHECK column on qa_run (no longer derived).
- * `synthesizing` = all sims terminal but per-journey verdicts still completing (QA has no
+ * `finalizing` = all sims terminal but per-journey verdicts still completing (QA has no
  * run-level rollup like studies). Canonical wire vocabulary.
  */
-export const QARunStatusSchema = z.enum(['running', 'finalizing', 'completed', 'failed', 'stopped']);
-export type QARunStatus = z.infer<typeof QARunStatusSchema>;
+export const QARunStatusSchema = z.enum(['created', 'running', 'finalizing', 'completed', 'failed', 'stopped']);
 
 /** QA verdict per (run, persona, journey, viewport) — DATA-derived by the api from qa_verdict; NOT a wire status. */
 export const QARunVerdictStatusSchema = z.enum(['passed', 'failed', 'indecisive']);
