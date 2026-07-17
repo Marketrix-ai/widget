@@ -263,16 +263,16 @@ export type StateTriggerData = z.infer<typeof StateTriggerEntitySchema>;
 
 /**
  * QA run status — first-class TEXT+CHECK column on qa_run (no longer derived).
- * `finalizing` = all sims terminal but per-journey verdicts still completing (QA has no
+ * `finalizing` = all sims terminal but per-journey outcomes still completing (QA has no
  * run-level rollup like studies). Canonical wire vocabulary.
  */
 export const QARunStatusSchema = z.enum(['created', 'running', 'finalizing', 'completed', 'failed', 'stopped']);
 
-/** QA verdict per (run, persona, journey, viewport) — DATA-derived by the api from qa_verdict; NOT a wire status. */
-export const QARunVerdictStatusSchema = z.enum(['passed', 'failed', 'indecisive']);
-export type QARunVerdictStatus = z.infer<typeof QARunVerdictStatusSchema>;
+/** QA outcome per (run, persona, journey, viewport) — DATA-derived by the api from qa_outcomes; NOT a wire status. */
+export const QARunOutcomeStatusSchema = z.enum(['passed', 'failed', 'indecisive']);
+export type QARunOutcomeStatus = z.infer<typeof QARunOutcomeStatusSchema>;
 
-/** A human resolution of an indecisive verdict — resolves to a decision, so no `indecisive`. */
+/** A human resolution of an indecisive outcome — resolves to a decision, so no `indecisive`. */
 export const RulingSchema = z.enum(['passed', 'failed']);
 export type Ruling = z.infer<typeof RulingSchema>;
 
