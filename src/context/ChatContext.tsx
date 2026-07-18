@@ -15,7 +15,7 @@ import type { UIStateActions } from './UIStateContext';
 // Single store for the conversation: `{ messages, task }` as one `SseState` committed
 // atomically, so messages and task can't tear across an await. UIStateContext stays separate.
 
-export interface SimulationState {
+export interface TaskState {
   activeTaskId: string | null;
   isTaskRunning: boolean;
 }
@@ -39,7 +39,7 @@ export interface ChatActions {
   ) => Promise<void>;
 }
 
-export interface SimulationActions {
+export interface TaskActions {
   setTaskState: (payload: { activeTaskId: string | null; isTaskRunning: boolean }) => void;
   stopTask: () => Promise<void>;
 }
@@ -47,13 +47,13 @@ export interface SimulationActions {
 interface ChatContextType {
   chatState: ChatState;
   chatActions: ChatActions;
-  taskState: SimulationState;
-  taskActions: SimulationActions;
+  taskState: TaskState;
+  taskActions: TaskActions;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
-const EMPTY_TASK: SimulationState = { activeTaskId: null, isTaskRunning: false };
+const EMPTY_TASK: TaskState = { activeTaskId: null, isTaskRunning: false };
 
 interface ChatProviderProps {
   children: React.ReactNode;
@@ -62,7 +62,7 @@ interface ChatProviderProps {
   // Injected so the conversation store drives loading/availability/error without nesting contexts.
   uiActions: Pick<UIStateActions, 'setLoading' | 'setAgentAvailable' | 'setError'>;
   initialMessages?: ChatMessage[];
-  initialTask?: SimulationState;
+  initialTask?: TaskState;
 }
 
 export const ChatProvider: React.FC<ChatProviderProps> = ({
@@ -419,7 +419,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
     [addMessage, updateMessage, removeMessage, setMessages, clearMessages, messageDispatch],
   );
 
-  const taskActions = useMemo<SimulationActions>(() => ({ setTaskState, stopTask }), [setTaskState, stopTask]);
+  const taskActions = useMemo<TaskActions>(() => ({ setTaskState, stopTask }), [setTaskState, stopTask]);
 
   const chatState = useMemo<ChatState>(() => ({ messages: state.messages }), [state.messages]);
 
