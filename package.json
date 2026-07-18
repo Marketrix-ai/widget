@@ -39,8 +39,8 @@
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
-    "@orpc/client": "^1.14.7",
-    "@orpc/contract": "^1.14.7",
+    "@orpc/client": "^1.14.8",
+    "@orpc/contract": "^1.14.8",
     "@rrweb/record": "^2.1.0",
     "tailwind-merge": "^3.6.0",
     "zod": "^4.4.3"
@@ -52,13 +52,13 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@rrweb/types": "^2.0.0-alpha.20",
-    "@tailwindcss/vite": "^4.3.2",
+    "@tailwindcss/vite": "^4.3.3",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@types/node": "^26.1.1",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
-    "@typescript-eslint/eslint-plugin": "^8.63.0",
+    "@typescript-eslint/eslint-plugin": "^8.64.0",
     "@typescript-eslint/parser": "^8.59.0",
     "@vitejs/plugin-react": "^6.0.3",
     "@vitest/coverage-v8": "^4.1.10",
@@ -76,8 +76,8 @@
     "tailwindcss": "^4.2.4",
     "terser": "^5.49.0",
     "typescript": "^6.0.3",
-    "vite": "^8.1.4",
-    "vite-plugin-css-injected-by-js": "^5.0.1",
+    "vite": "^8.1.5",
+    "vite-plugin-css-injected-by-js": "^5.0.2",
     "vitest": "^4.1.5",
     "vitest-axe": "^0.1.0"
   }
