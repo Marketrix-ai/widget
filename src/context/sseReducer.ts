@@ -12,14 +12,14 @@ import {
   WAIT_FOR_USER_TOOLS,
 } from '../utils/chat';
 
-export interface SseSimulationState {
+export interface SseTaskState {
   activeTaskId: string | null;
   isTaskRunning: boolean;
 }
 
 export interface SseState {
   messages: ChatMessage[];
-  task: SseSimulationState;
+  task: SseTaskState;
 }
 
 /** Side effects the wiring layer must run after applying a reduced state. */
