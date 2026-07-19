@@ -131,9 +131,6 @@ import {
   unmountWidget,
   updateMarketrixConfig,
   getCurrentConfig,
-  startRecording,
-  stopRecording,
-  getRecordingState,
   MarketrixWidget,
 } from '@marketrix.ai/widget';
 ```
@@ -155,7 +152,7 @@ await mountWidget({ settings: { widget_enabled: true, widget_position: 'bottom_r
 
 ### `initWidget(config, container?): Promise<void>`
 
-Lower-level production/dev initializer. Validates credentials, fetches settings from the API, mounts into a closed Shadow DOM, opens the event stream, and starts session recording once a chat id exists. Optionally mounts inside a specific `container`. Concurrent and duplicate calls are deduplicated; only one production widget runs per page.
+Lower-level production/dev initializer. Validates credentials, fetches settings from the API, mounts into a closed Shadow DOM, and opens the event stream. Optionally mounts inside a specific `container`. Concurrent and duplicate calls are deduplicated; only one production widget runs per page.
 
 ```ts
 await initWidget({ mtxId, mtxKey, mtxApiHost }, document.getElementById('my-container')!);
@@ -163,7 +160,7 @@ await initWidget({ mtxId, mtxKey, mtxApiHost }, document.getElementById('my-cont
 
 ### `unmountWidget(): void`
 
-Destroys the widget, stops session recording, closes the stream connection, and cleans up all resources.
+Destroys the widget, closes the stream connection, and cleans up all resources.
 
 ### `updateMarketrixConfig(partial): Promise<void>`
 
@@ -172,14 +169,6 @@ Merges `partial` into the current config and re-initializes (unmount + `initWidg
 ### `getCurrentConfig(): MarketrixConfig | null`
 
 Returns the active configuration, or `null` if the widget isn't initialized.
-
-### Session recording
-
-Automatic session recording (via rrweb) is currently **disabled** — the widget no longer captures or transmits sessions on init. The control helpers remain exported for API compatibility but are inert while recording is disabled:
-
-- `startRecording(): Promise<void>` — currently rejects (no recorder is created while recording is disabled).
-- `stopRecording(): void` — no-op.
-- `getRecordingState(): boolean` — always `false`.
 
 ### `MarketrixWidget` — React component (preview)
 

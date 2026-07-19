@@ -73,27 +73,6 @@ export const WidgetCommandSchema = z.discriminatedUnion('type', [
     success: z.boolean(),
     data: z.string().optional(),
     error: z.string().optional(),
-    state_version: z.number().optional(),
-  }),
-  z.object({
-    type: z.literal('rrweb/metadata'),
-    rrweb_session_id: z.string(),
-    chat_id: z.string(),
-    application_id: z.number(),
-    url: z.string().optional(),
-    user_agent: z.string().optional(),
-    timestamp: z.number().optional(),
-    viewport: z
-      .object({
-        width: z.number(),
-        height: z.number(),
-      })
-      .optional(),
-  }),
-  z.object({
-    type: z.literal('rrweb/events'),
-    rrweb_session_id: z.string(),
-    events: z.array(z.unknown()),
   }),
 ]);
 export type WidgetCommand = z.infer<typeof WidgetCommandSchema>;

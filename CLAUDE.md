@@ -8,7 +8,7 @@ Embeddable customer-support widget that hosts drop into their own product via a 
 - React **19** is a **peer dependency** (`react`/`react-dom` `^19.2.3`) and is **external** to the bundle — the host page must supply it.
 - Built with Vite **8** in **library mode** → a single ESM bundle `dist/widget.mjs`.
 - Mounts into a **closed Shadow DOM**; all CSS is injected as JS (no external stylesheet) and isolated inside the shadow root.
-- Stack: TypeScript 6, Tailwind CSS 4 (`@tailwindcss/vite`), Zod 4, oRPC 1, `@rrweb/record` (session recording), `@base-ui/react` (primitives). ESLint 10 flat config. npm + `package-lock.json`.
+- Stack: TypeScript 6, Tailwind CSS 4 (`@tailwindcss/vite`), Zod 4, oRPC 1, `@base-ui/react` (primitives). ESLint 10 flat config. npm + `package-lock.json`.
 
 Customer-facing integration docs live in `README.md` — keep that file accurate; it is the real public API surface.
 
@@ -52,17 +52,15 @@ Two typed oRPC procedures, both defined in `src/sdk/contracts/widget.ts`:
 Both payloads are Zod **discriminated unions on `type`**:
 
 - `WidgetEvent` (server→widget): `registered` (`chat_id`, `application_id?`), `heartbeat`, `chat/response` (`request_id`, `text`), `chat/delta` (`request_id`, `text` — one streamed reply fragment; deltas accumulate, the final `chat/response` full text replaces them), `chat/error` (`request_id`, `error`), `task/status` (`status`, `message?`, `task_id?`, `timestamp?`), `tool/call` (`tool_call_id`, `browser_tool`, `args`, `mode?` `'show'|'do'`, `explanation?`, `state_version?`).
-- `WidgetCommand` (widget→server): `chat/tell`, `chat/show`, `chat/do` (each `request_id` + `content`), `chat/stop` (`task_id?`), `tool/response` (`tool_call_id`, `success`, `data?`, `error?`, `state_version?`), `rrweb/metadata` (`rrweb_session_id`, …), `rrweb/events` (`rrweb_session_id`, …).
+- `WidgetCommand` (widget→server): `chat/tell`, `chat/show`, `chat/do` (each `request_id` + `content`), `chat/stop` (`task_id?`), `tool/response` (`tool_call_id`, `success`, `data?`, `error?`).
 
 **Transport** — `src/services/StreamClient.ts` is a singleton wrapping the oRPC `sdk`. It calls `sdk.widgetStream(input, { signal })` and drains the async iterator in the background. Status machine: `disconnected → connecting → connected → registered → error`. Exponential-backoff reconnect (1000 ms ×2, cap 30000 ms, **max 10 attempts**; counters reset only on a `registered` event). A `chat/error` whose `request_id === 'auth'` is **non-retriable** and permanently stops reconnection (until re-init). `heartbeat` is ignored. Sending uses `sdk.widgetMessage({ chat_id, command })`.
 
 **Round-trip** — `ChatContext.messageDispatch(content, mode)` → `apiService.messageDispatch` builds `{ type: 'chat/${mode}', request_id, content }` (mode defaults to `tell`) and fire-and-forget POSTs it; the reply arrives asynchronously over SSE — streamed as `chat/delta` fragments that accumulate, then the final `chat/response` (full text) replaces them — matched by `request_id`. Task lifecycle arrives as `task/status`; agent browser actions arrive as `tool/call`.
 
-**Tool execution** — `ChatContext` handles `tool/call`: dedupe by `tool_call_id`, validate `browser_tool` against `BROWSER_TOOLS`, execute via `browserToolService.executeTool`, increment `state_version`, reply with `tool/response`. The `done` tool ends the task. `task/status` drives state: `running` activates the task (captures `task_id`); `completed`/`failed`/`stopped` clear it; `has_question` clears the pending state. `state_version` is a monotonic counter that orders tool calls.
+**Tool execution** — `ChatContext` handles `tool/call`: dedupe by `tool_call_id`, validate `browser_tool` against `BROWSER_TOOLS`, execute via `browserToolService.executeTool`, then reply with `tool/response`. The `done` tool ends the task. `task/status` drives state: `running` activates the task (captures `task_id`); `completed`/`failed`/`stopped` clear it; `has_question` clears the pending state.
 
 **Interaction modes** map to commands and `InstructionType` (`'tell' | 'show' | 'do'`): **Tell** = `chat/tell` (explain); **Show** = `chat/show` (`tool/call` with `mode: 'show'`, highlight via `ShowModeService`); **Do** = `chat/do` (`tool/call` with `mode: 'do'`, DOM actions via `DomService`/`BrowserToolService`).
-
-**Session recording** — currently **disabled**: `src/index.tsx` no longer auto-starts the recorder on init, so no rrweb capture runs and no `rrweb/*` messages are sent. The `RrwebSessionRecorder` class, the `@rrweb/record` dep, the public `startRecording`/`stopRecording`/`getRecordingState` exports, and the generated `rrweb/metadata`+`rrweb/events` contract entries are all retained, so re-enabling is just restoring the auto-start wiring. `src/services/RrwebSessionRecorder.ts` batches rrweb events and POSTs them via the sdk (`rrweb/metadata` + `rrweb/events`). Requires both `chatId` and `applicationId`. Thresholds: queue cap 500 events, flush at 50 KB queued (`FLUSH_SIZE_THRESHOLD`), batch cap 500 KB (`MAX_BATCH_BYTES`, under the API 5 MB body limit), flush interval 500 ms, drop after 5 consecutive flush failures. `chat_id` is created via `sdk.chatCreate(undefined)` in `ChatSessionManager`. Don't change these without updating the API's expectations.
 
 **Status vocabulary** — `task/status.status ∈ { running, completed, failed, stopped, has_question }` (this is the canonical wire vocabulary; legacy `'started'`/`'in_progress'` are absent — code branches on `'running'`). Separately, the presentational `ChatMessage.taskStatus` (`'ongoing'|'done'|'failed'|'stopped'`) and `MessagePart.status` (`'in_progress'|'completed'|'failed'|'stopped'`) are **UI-only** and are NOT the wire vocabulary — don't conflate them.
 
@@ -85,7 +83,7 @@ Drift is enforced by `.github/workflows/contract-drift.yml` (PRs touching `src/s
 ## Structure
 
 - `src/index.tsx` — public entry; all exports (see `README.md` for the customer surface).
-- `src/services/` — `StreamClient`, `RrwebSessionRecorder`, `BrowserToolService`, `ShowModeService`, `DomService`, `ChatService`, `ChatSessionManager`, `StorageService`, `ConfigManager`, `ValidationService`, `WidgetService`, `ApiService`, `ScreenShareService`.
+- `src/services/` — `StreamClient`, `BrowserToolService`, `ShowModeService`, `DomService`, `ChatService`, `ChatSessionManager`, `StorageService`, `ConfigManager`, `ValidationService`, `WidgetService`, `ApiService`, `ScreenShareService`.
 - `src/components/` — UI (`base/`, `blocks/`, `chat/`, `navigation/`, `ui/`, `views/`, `MarketrixWidget.tsx`). `src/design-system/` — tokens + primitives.
 - `src/context/` — `ChatContext` (one store: `{ messages, task }`), `UIStateContext`, `WidgetProviders`, `sseReducer.ts`. `src/hooks/`, `src/utils/` (incl. `bootstrap.tsx`), `src/lib/`, `src/types/`.
 - `src/test/` + colocated `*.test.ts(x)` — vitest setup, fixtures, a11y helpers.

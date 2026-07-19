@@ -12,7 +12,8 @@ export const ApplicationCreateSchema = ApplicationEntitySchema.partial().extend(
 });
 export type ApplicationCreateData = z.infer<typeof ApplicationCreateSchema>;
 
-export const ApplicationUpdateSchema = ApplicationEntitySchema.partial().omit({ workspace_id: true, slug: true });
+// slug is editable on update (normalized + uniqueness-checked in updateApplication); workspace_id stays immutable.
+export const ApplicationUpdateSchema = ApplicationEntitySchema.partial().omit({ workspace_id: true });
 export type ApplicationUpdateData = z.infer<typeof ApplicationUpdateSchema>;
 
 export const applicationCreate = oc

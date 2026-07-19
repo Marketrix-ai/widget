@@ -135,13 +135,11 @@ class StorageService {
     return this.getContext().chat_id;
   }
 
-  /** Dispatches a 'marketrix:chatid' event so other services (e.g. RrwebSessionRecorder) can react. */
   setChatId(chatId: string | null): void {
     this.updateContext({ chat_id: chatId });
 
     if (typeof window !== 'undefined' && chatId) {
       window.name = chatId;
-      window.dispatchEvent(new CustomEvent('marketrix:chatid', { detail: { chatId } }));
     }
   }
 

@@ -85,7 +85,6 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
   const currentModeRef = useRef(currentMode);
   currentModeRef.current = currentMode;
 
-  const stateVersion = useRef(0);
   const processedRequestIds = useRef(new Set<string>());
   const pendingTaskRef = useRef<{ apiTaskId?: string; agentRunning?: boolean }>({});
 
@@ -289,14 +288,12 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
 
       if (result.success) {
         try {
-          stateVersion.current++;
           wsClient
             .send({
               type: 'tool/response',
               tool_call_id: toolCallId,
               success: true,
               data: typeof result.data === 'string' ? result.data : JSON.stringify(result.data),
-              state_version: stateVersion.current,
             })
             .catch(err => console.error('Failed to send tool success response:', err));
           commit(s => reduceToolProgress(s, tool, explanation, 'completed', currentModeRef.current));
@@ -320,7 +317,6 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
             result.error || 'Tool execution failed',
           ),
         );
-        stateVersion.current++;
         wsClient
           .send({
             type: 'tool/response',
@@ -328,7 +324,6 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
             success: false,
             data: typeof result.data === 'string' ? result.data : JSON.stringify(result.data),
             error: result.error ?? undefined,
-            state_version: stateVersion.current,
           })
           .catch(err => console.error('Failed to send tool error response:', err));
       }
@@ -350,7 +345,6 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
               tool_call_id: requestId,
               success: false,
               error: `Unknown tool: ${event.browser_tool}`,
-              state_version: stateVersion.current,
             })
             .catch(err => console.error('Failed to send unknown-tool response:', err));
           return;
