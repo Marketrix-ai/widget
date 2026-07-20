@@ -98,10 +98,7 @@ async function initializeWidgetWithConfig(
       );
     }
 
-    return {
-      ...createConfigFromSettings(widgetSettings, config),
-      mtxApp: widgetData!.application_id,
-    };
+    return { ...createConfigFromSettings(widgetSettings, config), mtxApp: widgetData?.application_id ?? config.mtxApp };
   } catch (err) {
     console.error('Error fetching widget settings:', err);
     throw err;
