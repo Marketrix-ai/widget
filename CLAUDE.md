@@ -87,8 +87,8 @@ Drift is enforced by `.github/workflows/contract-drift.yml` (PRs touching `src/s
 ## Structure
 
 - `src/index.tsx` — public entry; all exports (see `README.md` for the customer surface).
-- `src/services/` — `StreamClient`, `RrwebSessionRecorder`, `BrowserToolService`, `ShowModeService`, `DomService`, `ChatService`, `ChatSessionManager`, `StorageService`, `ConfigManager`, `ValidationService`, `WidgetService`, `ApiService`, `ScreenShareService`.
-- `src/components/` — UI (`base/`, `blocks/`, `chat/`, `navigation/`, `ui/`, `views/`, `MarketrixWidget.tsx`). `src/design-system/` — tokens + primitives.
+- `src/services/` — stateful runtime owners (`StreamClient`, `RrwebSessionRecorder`, `BrowserToolService`, `ShowModeService`, `DomService`, `ChatService`, `ChatSessionManager`, `StorageService`, `ConfigManager`, `ScreenShareService`) plus stateless API/widget-validation functions.
+- `src/components/` — UI (`base/`, `blocks/`, `chat/`, `navigation/`, `ui/`, `views/`, `MarketrixWidget.tsx`). `Surface` is the canonical container primitive; `WidgetDialog` is the one specialized modal. `src/design-system/semantic-tokens.ts` owns settings-to-token adaptation and CSS variables.
 - `src/context/` — `ChatContext` (one store: `{ messages, task }`), `UIStateContext`, `WidgetProviders`, `sseReducer.ts`. `src/hooks/`, `src/utils/` (incl. `bootstrap.tsx`), `src/lib/`, `src/types/`.
 - `src/test/` + colocated `*.test.ts(x)` — vitest setup, fixtures, a11y helpers.
 - `public/loader.js` — classic script-tag bootstrap. `index.html` — playground harness. `dist/` — generated only.
@@ -116,4 +116,4 @@ Drift is enforced by `.github/workflows/contract-drift.yml` (PRs touching `src/s
 
 - TS, 2-space indent, single quotes, semicolons, trailing commas, ~120-char lines. `type` imports, sorted imports (`simple-import-sort`), `unused-imports`. `PascalCase` components/services/context, `useCamelCase` hooks, `camelCase` utils.
 - Don't develop on `dev` — use a worktree/feature branch; link the PR with `Closes #N`. Issue/PR body is the scope source of truth (see root workflow).
-- Prefer extending a shared service/util over one-off logic in a component.
+- Keep stateful services only for shared lifecycle/session ownership; use functions for stateless operations. Inline one-use presentation instead of adding base components.

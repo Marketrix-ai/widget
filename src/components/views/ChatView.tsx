@@ -6,7 +6,6 @@ import { createSystemMessage, createUserMessage } from '../../services/ChatServi
 import { showModeService } from '../../services/ShowModeService';
 import type { ChatMessage, MarketrixConfig } from '../../types';
 import { getModeDisplayName } from '../../utils/color';
-import { Card } from '../base/Card';
 import { Stack } from '../base/Stack';
 import { Surface } from '../base/Surface';
 import { Text } from '../base/Text';
@@ -196,7 +195,14 @@ export const ChatView: React.FC<ChatViewProps> = ({
         </ChatErrorBoundary>
       </Surface>
 
-      <Card style={{ margin: '0 12px 12px 12px', marginTop: 'auto' }}>
+      <Surface
+        background='card'
+        border
+        elevation='card'
+        paddingPreset='card'
+        radius='xl'
+        style={{ margin: '0 12px 12px 12px', marginTop: 'auto' }}
+      >
         <ChatInput
           ref={externalMessageInputRef}
           value={inputValue}
@@ -216,7 +222,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
             onStopTask?.();
           }}
         />
-      </Card>
+      </Surface>
     </Stack>
   );
 };

@@ -6,7 +6,6 @@ import { Button } from '../base/Button';
 import { Flex } from '../base/Flex';
 import { Icon } from '../base/Icon';
 import type { IconName } from '../base/icons';
-import { Indicator } from '../base/Indicator';
 import { Text } from '../base/Text';
 
 const TAB_DEFS: { id: WidgetView; icon: IconName; label: string }[] = [
@@ -38,7 +37,7 @@ export const ShellTabBar: React.FC<ShellTabBarProps> = ({ activeView, onChange }
           >
             {isActive && (
               <Text as='span' inheritColor style={{ position: 'absolute', top: 0, left: '25%', right: '25%' }}>
-                <Indicator variant='bar' color='accent' />
+                <span className='block h-0.5 w-full rounded-full bg-primary' />
               </Text>
             )}
             <Text as='span' inheritColor aria-hidden='true'>

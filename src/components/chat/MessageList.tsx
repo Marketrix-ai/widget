@@ -8,9 +8,10 @@ import { Button } from '../base/Button';
 import { Flex } from '../base/Flex';
 import { Icon } from '../base/Icon';
 import { IconButton } from '../base/IconButton';
+import { Spinner } from '../base/Spinner';
+import { Stack } from '../base/Stack';
 import { Surface } from '../base/Surface';
 import { Text } from '../base/Text';
-import { StateMessage } from '../ui/StateMessage';
 import { MessageItem } from './MessageItem';
 
 const scrollButtonStyle: React.CSSProperties = {
@@ -120,7 +121,14 @@ export const MessageList = ({
           scrollbarWidth: 'thin',
         }}
       >
-        {messages.length === 0 && widgetState.isLoading && <StateMessage variant='loading' message='Connecting…' />}
+        {messages.length === 0 && widgetState.isLoading && (
+          <Stack align='center' justify='center' gap='lg' paddingY='2xl' paddingX='xl' role='status' aria-live='polite'>
+            <Spinner size='lg' />
+            <Text as='p' size='sm' align='center'>
+              Connecting…
+            </Text>
+          </Stack>
+        )}
 
         {allMessages.map((message: ChatMessage, index: number) => (
           <MessageItem

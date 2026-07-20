@@ -1,8 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 
 import { LAYER_TOKENS } from '../design-system/layers';
-import { semanticTokensToCssCustomProperties } from '../design-system/semantic-tokens';
-import { createSemanticTokens } from '../design-system/token-adapter';
+import { createSemanticTokens, semanticTokensToCssCustomProperties } from '../design-system/semantic-tokens';
 import { useScrollLock } from '../hooks/useScrollLock';
 import { useWidget } from '../hooks/useWidget';
 import type { MarketrixConfig, WidgetPosition } from '../types';

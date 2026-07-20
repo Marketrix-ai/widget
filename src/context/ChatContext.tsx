@@ -1,7 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { WidgetEvent } from '../sdk';
-import { ApiService } from '../services/ApiService';
+import { getChatId, messageDispatch as dispatchMessage } from '../services/ApiService';
 import { browserToolService } from '../services/BrowserToolService';
 import { createAgentMessage, createUserMessage } from '../services/ChatService';
 import { configManager } from '../services/ConfigManager';
@@ -192,13 +192,9 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
       addMessage(placeholderMsg);
       uiActions.setLoading(true);
 
-      const apiService = new ApiService(config);
+      const requestConfig = applicationId ? { ...config, mtxApp: applicationId } : config;
       try {
-        if (applicationId) {
-          apiService.updateConfig({ mtxApp: applicationId });
-        }
-
-        const chatId = apiService.getChatId();
+        const chatId = getChatId();
         if (chatId) {
           const streamClient = StreamClient.getInstance();
           if (!streamClient.isConnected()) {
@@ -220,7 +216,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
           }
         }
 
-        await apiService.messageDispatch({
+        await dispatchMessage(requestConfig, {
           message: content,
           mode: effectiveMode,
           requestId: placeholderId,

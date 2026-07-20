@@ -1,13 +1,14 @@
 import React, { useCallback, useEffect, useRef } from 'react';
 
+import { cn } from '@/lib/utils';
+
+import { radiusClasses } from '../../design-system/component-tokens';
 import { Flex } from '../base/Flex';
 import { Icon } from '../base/Icon';
 import { IconButton } from '../base/IconButton';
 import type { IconName } from '../base/icons';
-import { Pill } from '../base/Pill';
 import { Stack } from '../base/Stack';
 import { Text } from '../base/Text';
-import { Textarea } from '../base/Textarea';
 
 export interface ChatInputMode {
   id: string;
@@ -98,7 +99,7 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(f
       overflow='hidden'
       className='focus-within:border-foreground-faint transition-colors'
     >
-      <Textarea
+      <textarea
         ref={mergeRefs(textareaRef, ref)}
         value={value}
         onChange={handleChange}
@@ -106,7 +107,7 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(f
         placeholder={placeholder}
         disabled={disabled}
         rows={1}
-        variant='chat'
+        className='block w-full min-h-0 resize-none rounded-none border-none bg-transparent px-3 text-sm text-foreground transition-colors placeholder:text-foreground-faint focus:ring-0 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50'
         style={{
           lineHeight: '20px',
           paddingTop: '4px',
@@ -119,10 +120,14 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(f
           {modes.map(mode => {
             const isActive = activeMode === mode.id;
             return (
-              <Pill
+              <button
                 key={mode.id}
-                active={isActive}
-                size='sm'
+                type='button'
+                className={cn(
+                  'inline-flex cursor-pointer items-center gap-0.5 border-none px-2 py-0.5 text-[11px] font-medium transition-all duration-200',
+                  radiusClasses.pill,
+                  isActive ? 'bg-primary text-primary-foreground shadow-sm' : 'bg-secondary-bg text-foreground-muted',
+                )}
                 onClick={e => {
                   e.preventDefault();
                   e.stopPropagation();
@@ -133,7 +138,7 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(f
                 <Text as='span' inheritColor>
                   {mode.label}
                 </Text>
-              </Pill>
+              </button>
             );
           })}
         </Flex>

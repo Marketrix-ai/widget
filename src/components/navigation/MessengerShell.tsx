@@ -8,7 +8,6 @@ import { createUserMessage } from '../../services/ChatService';
 import type { ChatMessage, InstructionType, MarketrixConfig, WidgetView } from '../../types';
 import type { SuggestedActionItem } from '../../utils/suggestedActions';
 import { getPanelPositionStyle } from '../../utils/widgetPositioning';
-import { Badge } from '../base/Badge';
 import { Icon } from '../base/Icon';
 import { IconButton } from '../base/IconButton';
 import { Stack } from '../base/Stack';
@@ -18,7 +17,6 @@ import { ChatView } from '../views/ChatView';
 import { HomeView } from '../views/HomeView';
 import { ResizeHandles } from './ResizeHandles';
 import { ShellTabBar } from './ShellTabBar';
-import { ViewTransition } from './ViewTransition';
 
 export interface MessengerShellProps {
   config: MarketrixConfig;
@@ -189,7 +187,10 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
               onClick={screenShareHandler}
             >
               {headerScreenSharing && (
-                <Badge variant='live' style={{ position: 'absolute', top: '2px', right: '2px' }} />
+                <span className='absolute top-0.5 right-0.5 inline-flex h-1.5 w-1.5'>
+                  <span className='absolute inline-flex h-full w-full animate-ping rounded-full bg-current opacity-75' />
+                  <span className='relative inline-flex h-1.5 w-1.5 rounded-full bg-current' />
+                </span>
               )}
               <Icon name='screenShare' size={16} />
             </IconButton>
@@ -200,7 +201,12 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
       {!isMinimized && (
         <>
           <Surface grow overflow='hidden' style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-            <ViewTransition key={activeView} direction={navDirection}>
+            <Surface
+              key={activeView}
+              data-view-transition
+              data-direction={navDirection}
+              style={{ width: '100%', height: '100%' }}
+            >
               {activeView === 'home' && (
                 <HomeView
                   config={config}
@@ -228,7 +234,7 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
                   messageInputRef={messageInputRef}
                 />
               )}
-            </ViewTransition>
+            </Surface>
           </Surface>
 
           <ShellTabBar activeView={activeView} onChange={setActiveView} />

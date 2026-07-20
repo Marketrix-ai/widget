@@ -1,7 +1,7 @@
 // Composition root wiring UIStateProvider + ChatProvider. Init (SSE + hydration) and persistence
 // live in inner bridge components so they can read every context; ChatService is the load/persist
 // boundary only. React context is the single source of truth.
-import React, { useEffect } from 'react';
+import React, { createContext, useContext, useEffect } from 'react';
 
 import { chatService } from '../services/ChatService';
 import { chatSessionManager } from '../services/ChatSessionManager';
@@ -9,6 +9,10 @@ import { configManager } from '../services/ConfigManager';
 import { StreamClient } from '../services/StreamClient';
 import { ChatProvider, useChatContext } from './ChatContext';
 import { UIStateProvider, useUIStateContext } from './UIStateContext';
+
+const PortalContainerContext = createContext<HTMLElement | ShadowRoot | null>(null);
+
+export const usePortalContainer = (): HTMLElement | ShadowRoot => useContext(PortalContainerContext) ?? document.body;
 
 // Persistence bridge — single context → storage effect (innermost, sees all state).
 const PersistBridge: React.FC<{ previewMode: boolean }> = ({ previewMode }) => {
@@ -119,10 +123,13 @@ const UIStateBridge: React.FC<{ children: React.ReactNode; previewMode: boolean 
 interface WidgetProvidersProps {
   children: React.ReactNode;
   previewMode?: boolean;
+  portalContainer?: HTMLElement | ShadowRoot;
 }
 
-export const WidgetProviders: React.FC<WidgetProvidersProps> = ({ children, previewMode = false }) => (
-  <UIStateProvider>
-    <UIStateBridge previewMode={previewMode}>{children}</UIStateBridge>
-  </UIStateProvider>
+export const WidgetProviders: React.FC<WidgetProvidersProps> = ({ children, previewMode = false, portalContainer }) => (
+  <PortalContainerContext value={portalContainer ?? null}>
+    <UIStateProvider>
+      <UIStateBridge previewMode={previewMode}>{children}</UIStateBridge>
+    </UIStateProvider>
+  </PortalContainerContext>
 );
