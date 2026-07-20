@@ -12,7 +12,12 @@ const ENTRY_FILE = 'src/index.tsx';
 
 const getBuildConfig = (options: { minify: boolean | 'terser'; outDir: string }): UserConfig => ({
   mode: 'production',
-  resolve: { alias: { '@': resolve(cwd(), 'src') } },
+  resolve: {
+    alias: [
+      { find: '@', replacement: resolve(cwd(), 'src') },
+      { find: /^use-sync-external-store\/shim(?:\/with-selector)?$/, replacement: resolve(cwd(), 'src/react19.ts') },
+    ],
+  },
   define: {
     'process.env.NODE_ENV': '"production"',
     'process.env': '{}',
