@@ -211,12 +211,14 @@ export type WidgetChip = z.infer<typeof WidgetChipSchema>;
 
 export const WidgetSettingsDataSchema = z.object({
   widget_enabled: z.boolean(),
-  widget_appearance: z.enum(['default', 'compact', 'full']),
+  widget_appearance: z.enum(['default', 'compact', 'full', 'hidden']),
   widget_position: z.enum(['bottom_left', 'bottom_right', 'top_left', 'top_right']),
   widget_device: z.enum(['desktop', 'mobile', 'desktop_mobile']),
   widget_header: z.string(),
   widget_body: z.string(),
   widget_greeting: z.string(),
+  widget_greeting_toast: z.boolean(),
+  widget_recording: z.boolean(),
   widget_feature_tell: z.boolean(),
   widget_feature_show: z.boolean(),
   widget_feature_do: z.boolean(),

@@ -10,6 +10,8 @@ export function getMockWidgetConfig(overrides: Partial<MarketrixConfig> = {}): M
     widget_header: 'Support',
     widget_body: 'How can we help?',
     widget_greeting: 'Hi! Need help?',
+    widget_greeting_toast: true,
+    widget_recording: false,
     widget_feature_tell: true,
     widget_feature_show: true,
     widget_feature_do: true,

@@ -10,7 +10,9 @@ import { createRoot, type Root } from 'react-dom/client';
 import { MarketrixWidget as MarketrixWidgetComponent } from './components/MarketrixWidget';
 import { WidgetProviders } from './context/WidgetProviders';
 import { configureSdk, type WidgetSettingsData } from './sdk';
+import { chatSessionManager } from './services/ChatSessionManager';
 import { createConfigFromSettings } from './services/ConfigManager';
+import { RrwebSessionRecorder } from './services/RrwebSessionRecorder';
 import { ValidationService } from './services/ValidationService';
 import { WidgetService } from './services/WidgetService';
 import type { AddWidgetConfig, MarketrixConfig, MarketrixWidgetProps } from './types';
@@ -35,6 +37,7 @@ import { isHTMLElement } from './utils/validation';
 // so the widget's Tailwind doesn't collide with the host app's.
 
 let initPromise: Promise<void> | null = null; // guards concurrent initWidget() calls from duplicating widgets
+let rrwebSessionRecorder: RrwebSessionRecorder | null = null;
 
 async function initializeWidgetWithConfig(
   config: MarketrixConfig,
@@ -63,6 +66,8 @@ async function initializeWidgetWithConfig(
       'widget_header',
       'widget_body',
       'widget_greeting',
+      'widget_greeting_toast',
+      'widget_recording',
       'widget_feature_tell',
       'widget_feature_show',
       'widget_feature_do',
@@ -93,7 +98,10 @@ async function initializeWidgetWithConfig(
       );
     }
 
-    return createConfigFromSettings(widgetSettings, config);
+    return {
+      ...createConfigFromSettings(widgetSettings, config),
+      mtxApp: widgetData!.application_id,
+    };
   } catch (err) {
     console.error('Error fetching widget settings:', err);
     throw err;
@@ -142,6 +150,12 @@ async function initWidgetInternal(config: MarketrixConfig, container?: HTMLEleme
   setWidgetInstance(instance);
   setProgrammaticInitInProgress(false);
   window.__mtx = { state: 'active' };
+
+  if (finalConfig.widget_recording && finalConfig.mtxApp) {
+    const chatId = await chatSessionManager.getOrCreateChatId();
+    rrwebSessionRecorder = new RrwebSessionRecorder(chatId, finalConfig.mtxApp);
+    await rrwebSessionRecorder.start();
+  }
 }
 
 export const initWidget = async (config: MarketrixConfig, container?: HTMLElement): Promise<void> => {
@@ -168,6 +182,8 @@ export const initWidget = async (config: MarketrixConfig, container?: HTMLElemen
 };
 
 export const unmountWidget = (): void => {
+  rrwebSessionRecorder?.stop();
+  rrwebSessionRecorder = null;
   const instance = getWidgetInstance();
   if (instance) {
     instance.unmount();

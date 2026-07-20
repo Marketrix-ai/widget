@@ -97,13 +97,13 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
   }, [isPreviewMode, positionStorageKey, settings.widget_position]);
 
   useEffect(() => {
-    if (state.isOpen || isPreviewMode || settings.widget_appearance !== 'default') {
+    if (state.isOpen || isPreviewMode || settings.widget_appearance !== 'default' || !settings.widget_greeting_toast) {
       setShowGreeting(false);
       return;
     }
     const timer = setTimeout(() => setShowGreeting(true), 2000);
     return () => clearTimeout(timer);
-  }, [state.isOpen, isPreviewMode, settings.widget_appearance]);
+  }, [state.isOpen, isPreviewMode, settings.widget_appearance, settings.widget_greeting_toast]);
 
   const handlePositionChange = (position: WidgetPosition) => {
     setWidgetPosition(position);
@@ -116,9 +116,9 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
     return null;
   }
 
-  const shouldRender = isPreviewMode
-    ? (config.widget_enabled ?? settings.widget_enabled ?? false)
-    : shouldShow && settings.widget_enabled && config.show_widget !== false;
+  const shouldRender =
+    isPreviewMode ||
+    (shouldShow && settings.widget_enabled && config.show_widget !== false && settings.widget_appearance !== 'hidden');
 
   if (!shouldRender) {
     return null;

@@ -27,4 +27,13 @@ describe('Widget smoke', () => {
     expect(widget).toBeInTheDocument();
     expect(widget).toHaveStyle({ '--primary': '#2563eb' });
   });
+
+  it('keeps a hidden widget visible in preview mode', () => {
+    render(
+      <WidgetProviders previewMode>
+        <MarketrixWidget config={getMockWidgetConfig({ widget_appearance: 'hidden' })} />
+      </WidgetProviders>,
+    );
+    expect(screen.getByRole('button', { name: /open/i })).toBeInTheDocument();
+  });
 });

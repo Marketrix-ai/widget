@@ -80,7 +80,7 @@ These apply to every mode (script attribute → config key):
 | `show_widget`     | —                     | boolean       | When `false`, the widget initializes fully but its UI stays hidden. Default `true`.                                                                   |
 | `use_screenshare` | `mtx-use-screenshare` | boolean       | When `false`, screen-share requests are auto-denied and the Share Screen button is hidden. Default `true`. Disable via `mtx-use-screenshare="false"`. |
 
-Widget **appearance and behavior** (position, colors, sizing, border radius, animation, enabled Tell/Show/Do/Human features, device visibility, header/body/greeting text, and quick-action chips) are configured in the Marketrix dashboard and fetched from the API at init. You don't set them in the embed — except in preview mode, where you pass them inline as `settings`.
+Widget **appearance and behavior** (position, colors, sizing, border radius, animation, enabled Tell/Show/Do/Human features, device visibility, visibility, greeting toast, optional session recording, header/body/greeting text, and quick-action chips) are configured in the Marketrix dashboard and fetched from the API at init. A hidden widget stays visible in the dashboard preview.
 
 ### Full script-tag example
 
@@ -169,6 +169,10 @@ Merges `partial` into the current config and re-initializes (unmount + `initWidg
 ### `getCurrentConfig(): MarketrixConfig | null`
 
 Returns the active configuration, or `null` if the widget isn't initialized.
+
+### Settings
+
+Widget settings are managed in the dashboard. `widget_appearance: 'hidden'` keeps the widget initialized but suppresses its visible UI on the host page; previews remain visible. `widget_greeting_toast` controls the welcome toast, and `widget_recording` enables rrweb session recording. Recording is off by default.
 
 ### `MarketrixWidget` — React component (preview)
 
