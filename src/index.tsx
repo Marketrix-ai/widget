@@ -13,6 +13,7 @@ import { configureSdk, type WidgetSettingsData } from './sdk';
 import { chatSessionManager } from './services/ChatSessionManager';
 import { createConfigFromSettings } from './services/ConfigManager';
 import { RrwebSessionRecorder } from './services/RrwebSessionRecorder';
+import { StreamClient } from './services/StreamClient';
 import { ValidationService } from './services/ValidationService';
 import { WidgetService } from './services/WidgetService';
 import type { AddWidgetConfig, MarketrixConfig, MarketrixWidgetProps } from './types';
@@ -38,6 +39,7 @@ import { isHTMLElement } from './utils/validation';
 
 let initPromise: Promise<void> | null = null; // guards concurrent initWidget() calls from duplicating widgets
 let rrwebSessionRecorder: RrwebSessionRecorder | null = null;
+let widgetMounted = false;
 
 async function initializeWidgetWithConfig(
   config: MarketrixConfig,
@@ -147,11 +149,19 @@ async function initWidgetInternal(config: MarketrixConfig, container?: HTMLEleme
   setWidgetInstance(instance);
   setProgrammaticInitInProgress(false);
   window.__mtx = { state: 'active' };
+  widgetMounted = true;
 
   if (finalConfig.widget_recording && finalConfig.mtxApp) {
-    const chatId = await chatSessionManager.getOrCreateChatId();
-    rrwebSessionRecorder = new RrwebSessionRecorder(chatId, finalConfig.mtxApp);
-    await rrwebSessionRecorder.start();
+    void StreamClient.getInstance()
+      .waitUntilRegistered()
+      .then(async () => {
+        if (!widgetMounted) return;
+        const chatId = await chatSessionManager.getOrCreateChatId();
+        if (!widgetMounted) return;
+        rrwebSessionRecorder = new RrwebSessionRecorder(chatId, finalConfig.mtxApp as number);
+        await rrwebSessionRecorder.start();
+      })
+      .catch(error => console.error('Failed to start session recording:', error));
   }
 }
 
@@ -179,6 +189,7 @@ export const initWidget = async (config: MarketrixConfig, container?: HTMLElemen
 };
 
 export const unmountWidget = (): void => {
+  widgetMounted = false;
   rrwebSessionRecorder?.stop();
   rrwebSessionRecorder = null;
   const instance = getWidgetInstance();

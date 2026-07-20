@@ -26,6 +26,7 @@ export class StreamClient {
   // Per-tab identity: multiple tabs share the localStorage chat_id; the server keys SSE
   // connections by (chat_id, tab_id) so tabs never evict each other's stream.
   private readonly tabId = globalThis.crypto.randomUUID();
+  private registrationWaiters = new Set<() => void>();
 
   private constructor() {}
 
@@ -50,6 +51,11 @@ export class StreamClient {
 
   isConnected(): boolean {
     return this.status === 'registered';
+  }
+
+  async waitUntilRegistered(): Promise<void> {
+    if (this.isConnected()) return;
+    await new Promise<void>(resolve => this.registrationWaiters.add(resolve));
   }
 
   async connect(chatId: string, config?: { mtxId?: string; mtxKey?: string; mtxApp?: number }): Promise<void> {
@@ -188,6 +194,8 @@ export class StreamClient {
         this.setStatus('registered');
         this.reconnectAttempts = 0;
         this.reconnectDelay = 1000;
+        for (const resolve of this.registrationWaiters) resolve();
+        this.registrationWaiters.clear();
         this.callbacks.forEach(cb => cb.onRegistered?.(event.application_id));
       }
     }
