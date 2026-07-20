@@ -5,7 +5,6 @@ import { Icon } from '../base/Icon';
 import { Spinner } from '../base/Spinner';
 import { Surface } from '../base/Surface';
 import { Text } from '../base/Text';
-import { Video } from '../base/Video';
 
 interface VideoStreamDisplayProps {
   stream: MediaStream | null;
@@ -151,7 +150,7 @@ export const VideoStreamDisplay: React.FC<VideoStreamDisplayProps> = ({ stream }
         </Flex>
       )}
 
-      <Video
+      <video
         ref={videoRef}
         autoPlay
         muted

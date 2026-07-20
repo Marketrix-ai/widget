@@ -3,7 +3,6 @@ import React from 'react';
 import type { ChatMessage, MarketrixConfig } from '../../types';
 import { getSuggestedActionsFromConfig, type SuggestedActionItem } from '../../utils/suggestedActions';
 import { Button } from '../base/Button';
-import { Card } from '../base/Card';
 import { Icon } from '../base/Icon';
 import { Stack } from '../base/Stack';
 import { Surface } from '../base/Surface';
@@ -60,7 +59,14 @@ export const HomeView: React.FC<HomeViewProps> = ({ config, messages, onNavigate
       </Stack>
 
       {messages.length > 0 && (
-        <Card style={{ margin: '0 12px 12px 12px' }}>
+        <Surface
+          background='card'
+          border
+          elevation='card'
+          paddingPreset='card'
+          radius='xl'
+          style={{ margin: '0 12px 12px 12px' }}
+        >
           <Text as='p' size='xs' weight='semibold' style={{ marginBottom: '2px' }}>
             Recent conversation
           </Text>
@@ -81,7 +87,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ config, messages, onNavigate
           >
             Continue conversation →
           </Text>
-        </Card>
+        </Surface>
       )}
     </Stack>
   );

@@ -3,103 +3,89 @@ import { isWidgetSettingsData } from '../utils/validation';
 
 let cachedDefaults: WidgetSettingsData | null = null;
 
-export class WidgetService {
-  private mtxId?: string;
-  private mtxKey?: string;
-  private mtxApp?: number;
+export function getWidgetSettings(widget: WidgetData): WidgetSettingsData | null {
+  if (!widget.settings) return null;
+  if (isWidgetSettingsData(widget.settings)) return widget.settings;
+  console.warn('Settings are not widget settings');
+  return null;
+}
 
-  constructor(mtxId?: string, mtxKey?: string, mtxApp?: number) {
-    this.mtxId = mtxId;
-    this.mtxKey = mtxKey;
-    this.mtxApp = mtxApp;
+/** Default settings merged with the matched widget's settings; null with no credentials (preview mode). */
+export async function fetchWidgetSettings(
+  mtxId?: string,
+  mtxKey?: string,
+  mtxApp?: number,
+): Promise<WidgetData | null> {
+  if (!mtxId && !mtxKey && !mtxApp) {
+    return null;
   }
 
-  /** Default settings merged with the matched widget's settings; null with no credentials (preview mode). */
-  async widgetSettingsGet(): Promise<WidgetData | null> {
-    if (!this.mtxId && !this.mtxKey && !this.mtxApp) {
+  try {
+    // Defaults are static per session — cache after the first fetch.
+    if (!cachedDefaults) {
+      cachedDefaults = (await sdk.widgetDefaultGet({ type: 'widget' })) as WidgetSettingsData;
+    }
+    const defaultSettings = cachedDefaults;
+
+    if (!defaultSettings) {
+      const error = 'Failed to fetch default widget settings from API. The API must return widget settings.';
+      console.error(error);
+      throw new Error(error);
+    }
+
+    let widgetsData: WidgetData[] | null = null;
+    if (mtxId && mtxKey) {
+      const result = await sdk.widgetSearch({
+        type: 'widget',
+        marketrix_id: mtxId,
+        marketrix_key: mtxKey,
+      });
+      widgetsData = result.items;
+    } else if (mtxApp) {
+      const result = await sdk.widgetSearch({
+        type: 'widget',
+        application_id: mtxApp,
+      });
+      widgetsData = result.items;
+    } else {
       return null;
     }
 
-    try {
-      // Defaults are static per session — cache after the first fetch.
-      if (!cachedDefaults) {
-        cachedDefaults = (await sdk.widgetDefaultGet({ type: 'widget' })) as WidgetSettingsData;
+    const matchedWidget =
+      widgetsData?.find((widget: WidgetData) => widget.status === 'active' && widget.type === 'widget') || null;
+
+    if (matchedWidget?.settings) {
+      const widgetSettings = getWidgetSettings(matchedWidget);
+      if (widgetSettings) {
+        const mergedSettings: WidgetSettingsData = {
+          ...defaultSettings,
+          ...widgetSettings,
+        };
+
+        return {
+          ...matchedWidget,
+          settings: mergedSettings,
+        };
       }
-      const defaultSettings = cachedDefaults;
-
-      if (!defaultSettings) {
-        const error = 'Failed to fetch default widget settings from API. The API must return widget settings.';
-        console.error(error);
-        throw new Error(error);
-      }
-
-      let widgetsData: WidgetData[] | null = null;
-      if (this.mtxId && this.mtxKey) {
-        const result = await sdk.widgetSearch({
-          type: 'widget',
-          marketrix_id: this.mtxId,
-          marketrix_key: this.mtxKey,
-        });
-        widgetsData = result.items;
-      } else if (this.mtxApp) {
-        const result = await sdk.widgetSearch({
-          type: 'widget',
-          application_id: this.mtxApp,
-        });
-        widgetsData = result.items;
-      } else {
-        return null;
-      }
-
-      const matchedWidget =
-        widgetsData?.find((widget: WidgetData) => widget.status === 'active' && widget.type === 'widget') || null;
-
-      if (matchedWidget?.settings) {
-        const widgetSettings = this.getSettings(matchedWidget);
-        if (widgetSettings) {
-          const mergedSettings: WidgetSettingsData = {
-            ...defaultSettings,
-            ...widgetSettings,
-          };
-
-          return {
-            ...matchedWidget,
-            settings: mergedSettings,
-          };
-        }
-      }
-
-      const now = new Date();
-      return {
-        id: 0,
-        application_id: this.mtxApp || 0,
-        type: 'widget' as const,
-        settings: defaultSettings,
-        status: 'active' as const,
-        marketrix_id: this.mtxId || '',
-        marketrix_key: this.mtxKey || '',
-        created_at: now,
-        updated_at: now,
-      } as WidgetData;
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error('Failed to fetch widget settings:', error);
-      const err = new Error(`Failed to fetch widget settings from API: ${errorMessage}`);
-      (err as unknown as { cause: unknown }).cause = error;
-      throw err;
-    }
-  }
-
-  getSettings(widget: WidgetData): WidgetSettingsData | null {
-    if (!widget?.settings) return null;
-
-    const settings = widget.settings;
-
-    if (isWidgetSettingsData(settings)) {
-      return settings;
     }
 
-    console.warn('Settings are not widget settings');
-    return null;
+    const now = new Date();
+    return {
+      id: 0,
+      application_id: mtxApp || 0,
+      type: 'widget' as const,
+      settings: defaultSettings,
+      status: 'active' as const,
+      marketrix_id: mtxId || '',
+      marketrix_key: mtxKey || '',
+      created_at: now,
+      updated_at: now,
+    } as WidgetData;
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Failed to fetch widget settings:', error);
+    const wrappedError = new Error(`Failed to fetch widget settings from API: ${errorMessage}`);
+    (wrappedError as Error & { cause: unknown }).cause = error;
+    throw wrappedError;
   }
 }

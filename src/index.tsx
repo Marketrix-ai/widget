@@ -14,8 +14,8 @@ import { chatSessionManager } from './services/ChatSessionManager';
 import { createConfigFromSettings } from './services/ConfigManager';
 import { RrwebSessionRecorder } from './services/RrwebSessionRecorder';
 import { StreamClient } from './services/StreamClient';
-import { ValidationService } from './services/ValidationService';
-import { WidgetService } from './services/WidgetService';
+import { validateConfig } from './services/ValidationService';
+import { fetchWidgetSettings, getWidgetSettings } from './services/WidgetService';
 import type { AddWidgetConfig, MarketrixConfig, MarketrixWidgetProps } from './types';
 import {
   clearWidgetState,
@@ -51,13 +51,11 @@ async function initializeWidgetWithConfig(
 
   showWidgetSettingsLoader('Loading widget settings...');
   try {
-    const widgetService = new WidgetService(config.mtxId, config.mtxKey, config.mtxApp);
-
-    const widgetData = await widgetService.widgetSettingsGet();
-    const widgetSettings = widgetData ? widgetService.getSettings(widgetData) : null;
+    const widgetData = await fetchWidgetSettings(config.mtxId, config.mtxKey, config.mtxApp);
+    const widgetSettings = widgetData ? getWidgetSettings(widgetData) : null;
 
     if (!widgetSettings) {
-      throw new Error('WidgetService did not return widget settings');
+      throw new Error('Widget settings request did not return settings');
     }
 
     const requiredSettings = [
@@ -121,8 +119,7 @@ async function initWidgetInternal(config: MarketrixConfig, container?: HTMLEleme
   }
 
   showWidgetSettingsLoader('Validating widget configuration...');
-  const validationService = new ValidationService();
-  const validationResult = await validationService.validateConfig(config);
+  const validationResult = await validateConfig(config);
 
   if (!validationResult.isValid) {
     console.error('Marketrix Widget validation failed:', validationResult.error);
@@ -244,10 +241,11 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ settings, cont
       containerIdRef.current = `marketrix-widget-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
     }
 
-    const { container: widgetContainer, mountEl } = createWidgetContainer(
-      parentContainer as HTMLElement,
-      containerIdRef.current,
-    );
+    const {
+      container: widgetContainer,
+      shadowRoot,
+      mountEl,
+    } = createWidgetContainer(parentContainer as HTMLElement, containerIdRef.current);
 
     widgetContainerRef.current = widgetContainer;
 
@@ -270,7 +268,7 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ settings, cont
     rootRef.current = root;
 
     root.render(
-      <WidgetProviders previewMode>
+      <WidgetProviders previewMode portalContainer={shadowRoot}>
         <MarketrixWidgetComponent config={config} />
       </WidgetProviders>,
     );

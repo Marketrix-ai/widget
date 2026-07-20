@@ -3,114 +3,101 @@ import type { MarketrixConfig, MessageDispatchRequest } from '../types';
 import { chatSessionManager } from './ChatSessionManager';
 import { StreamClient } from './StreamClient';
 
-export class ApiService {
-  private config: MarketrixConfig;
+export function getChatId(): string | null {
+  return chatSessionManager.getChatId();
+}
 
-  constructor(config: MarketrixConfig) {
-    this.config = config;
+/** Resolves user_id from config, then localStorage, then sessionStorage. */
+function getUserId(config: MarketrixConfig): number | null {
+  if (config.userId && typeof config.userId === 'number') {
+    return config.userId;
   }
 
-  getChatId(): string | null {
-    return chatSessionManager.getChatId();
+  try {
+    const storedUserId = localStorage.getItem('marketrix_user_id');
+    if (storedUserId) {
+      const userId = Number(storedUserId);
+      if (!isNaN(userId)) {
+        return userId;
+      }
+    }
+  } catch (error) {
+    console.warn('[API Service] Failed to get user_id from localStorage:', error);
   }
 
-  /** Resolves user_id from config, then localStorage, then sessionStorage. */
-  private getUserId(): number | null {
-    if (this.config.userId && typeof this.config.userId === 'number') {
-      return this.config.userId;
-    }
-
-    try {
-      const storedUserId = localStorage.getItem('marketrix_user_id');
-      if (storedUserId) {
-        const userId = Number(storedUserId);
-        if (!isNaN(userId)) {
-          return userId;
-        }
+  try {
+    const sessionUserId = sessionStorage.getItem('marketrix_user_id');
+    if (sessionUserId) {
+      const userId = Number(sessionUserId);
+      if (!isNaN(userId)) {
+        return userId;
       }
-    } catch (error) {
-      console.warn('[API Service] Failed to get user_id from localStorage:', error);
     }
-
-    try {
-      const sessionUserId = sessionStorage.getItem('marketrix_user_id');
-      if (sessionUserId) {
-        const userId = Number(sessionUserId);
-        if (!isNaN(userId)) {
-          return userId;
-        }
-      }
-    } catch (error) {
-      console.warn('[API Service] Failed to get user_id from sessionStorage:', error);
-    }
-
-    return null;
+  } catch (error) {
+    console.warn('[API Service] Failed to get user_id from sessionStorage:', error);
   }
 
-  async logWidgetQuestion(question: string, mode: string): Promise<void> {
-    try {
-      const userId = this.getUserId();
+  return null;
+}
 
-      const metadata: Record<string, unknown> = {
-        question,
-        mode,
-        chat_id: this.getChatId(),
-        timestamp: new Date().toISOString(),
-      };
+async function logWidgetQuestion(config: MarketrixConfig, question: string, mode: string): Promise<void> {
+  try {
+    const userId = getUserId(config);
 
-      if (userId !== null) {
-        metadata.user_id = userId;
-      }
-
-      if (this.config.mtxApp) {
-        metadata.application_id = this.config.mtxApp;
-      }
-      if (this.config.mtxId && this.config.mtxKey) {
-        metadata.marketrix_id = this.config.mtxId;
-        metadata.marketrix_key = this.config.mtxKey;
-      }
-
-      sdk
-        .activityLogCreate({
-          type: 'widget_question',
-          metadata,
-        })
-        .catch((error: unknown) => {
-          // Best-effort: logging isn't critical to widget function.
-          console.warn('[API Service] Failed to log widget question:', error);
-        });
-    } catch (error) {
-      console.warn('[API Service] Error logging widget question:', error);
-    }
-  }
-
-  /** Fire-and-forget send over the typed stream; the reply arrives asynchronously as a chat/response event. */
-  async messageDispatch(request: MessageDispatchRequest): Promise<void> {
-    const chatId = await chatSessionManager.getOrCreateChatId();
-    if (!chatId) throw new Error('Failed to initialize chat session');
-
-    const mode = request.mode || 'tell';
-
-    if (request.message) {
-      await this.logWidgetQuestion(request.message, mode);
-    }
-
-    if (!(this.config.mtxId && this.config.mtxKey) && !this.config.mtxApp) {
-      throw new Error('Either mtxId + mtxKey or mtxApp is required');
-    }
-
-    const requestId = request.requestId || `req_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-    const command: WidgetCommand = {
-      type: `chat/${mode}` as 'chat/tell' | 'chat/show' | 'chat/do',
-      request_id: requestId,
-      content: request.message || '',
+    const metadata: Record<string, unknown> = {
+      question,
+      mode,
+      chat_id: getChatId(),
+      timestamp: new Date().toISOString(),
     };
 
-    const wsClient = StreamClient.getInstance();
-    wsClient.send(command);
+    if (userId !== null) {
+      metadata.user_id = userId;
+    }
+
+    if (config.mtxApp) {
+      metadata.application_id = config.mtxApp;
+    }
+    if (config.mtxId && config.mtxKey) {
+      metadata.marketrix_id = config.mtxId;
+      metadata.marketrix_key = config.mtxKey;
+    }
+
+    sdk
+      .activityLogCreate({
+        type: 'widget_question',
+        metadata,
+      })
+      .catch((error: unknown) => {
+        // Best-effort: logging isn't critical to widget function.
+        console.warn('[API Service] Failed to log widget question:', error);
+      });
+  } catch (error) {
+    console.warn('[API Service] Error logging widget question:', error);
+  }
+}
+
+/** Fire-and-forget send over the typed stream; the reply arrives asynchronously as a chat/response event. */
+export async function messageDispatch(config: MarketrixConfig, request: MessageDispatchRequest): Promise<void> {
+  const chatId = await chatSessionManager.getOrCreateChatId();
+  if (!chatId) throw new Error('Failed to initialize chat session');
+
+  const mode = request.mode || 'tell';
+
+  if (request.message) {
+    await logWidgetQuestion(config, request.message, mode);
   }
 
-  updateConfig(newConfig: Partial<MarketrixConfig>): void {
-    this.config = { ...this.config, ...newConfig };
+  if (!(config.mtxId && config.mtxKey) && !config.mtxApp) {
+    throw new Error('Either mtxId + mtxKey or mtxApp is required');
   }
+
+  const requestId = request.requestId || `req_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const command: WidgetCommand = {
+    type: `chat/${mode}` as 'chat/tell' | 'chat/show' | 'chat/do',
+    request_id: requestId,
+    content: request.message || '',
+  };
+
+  StreamClient.getInstance().send(command);
 }
