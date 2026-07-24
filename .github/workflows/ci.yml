@@ -79,10 +79,8 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
       - run: npm ci
       - run: npm run build
-      # Sync-tagging an unchanged widget doesn't bump package.json, so the
-      # version we'd publish is already on the registry. Skip in that case
-      # rather than fail the run with "cannot publish over previously
-      # published versions". Mirrors infra/.github/workflows/ci-service.yml.
+      # Widget may tag a package version already on the registry. Skip it here
+      # rather than fail with "cannot publish over previously published versions".
       - name: Publish to npm
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
