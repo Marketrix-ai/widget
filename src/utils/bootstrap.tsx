@@ -223,12 +223,12 @@ export const autoInitializeWidget = (retryCount = 0): void => {
 
   // Prefer the currently executing script when it carries config (injected tag in playground);
   // fall back to the last matching script for static script tags.
-  const bySelector = document.querySelectorAll('script[mtx-id], script[mtx-app]');
+  const bySelector = document.querySelectorAll('script[mtx-id]');
   const current =
     typeof document.currentScript !== 'undefined' &&
     document.currentScript != null &&
     isHTMLScriptElement(document.currentScript) &&
-    (document.currentScript.hasAttribute('mtx-id') || document.currentScript.hasAttribute('mtx-app'))
+    document.currentScript.hasAttribute('mtx-id')
       ? document.currentScript
       : null;
   const scriptElement = current ?? bySelector[bySelector.length - 1];
@@ -268,10 +268,9 @@ export const autoInitializeWidget = (retryCount = 0): void => {
         src: s.src,
         type: s.type,
         hasMtxId: s.hasAttribute('mtx-id'),
-        hasMtxApp: s.hasAttribute('mtx-app'),
       })),
     );
-    showWidgetSettingsLoader('Please configure mtx-id and mtx-key, or mtx-app');
+    showWidgetSettingsLoader('Please configure mtx-id and mtx-key');
     return;
   }
 
@@ -279,13 +278,11 @@ export const autoInitializeWidget = (retryCount = 0): void => {
   const mtxId = script.getAttribute('mtx-id');
   const mtxKey = script.getAttribute('mtx-key');
   const mtxApiHost = script.getAttribute('mtx-api-host');
-  const mtxApp = script.getAttribute('mtx-app');
   const mtxUseScreenshare = script.getAttribute('mtx-use-screenshare');
 
   console.log('[AutoInit] Found script tag with attributes:', {
     mtxId: mtxId ? '***' : null,
     mtxKey: mtxKey ? '***' : null,
-    mtxApp,
     mtxApiHost,
   });
 
@@ -304,30 +301,6 @@ export const autoInitializeWidget = (retryCount = 0): void => {
     initWidgetFunction(config).catch(error => {
       console.error('[AutoInit] Failed to initialize widget:', error);
     });
-  } else if (mtxApp) {
-    const appNum = Number.parseInt(mtxApp);
-
-    if (isNaN(appNum)) {
-      console.error(`[AutoInit] Invalid mtx-app value: mtx-app=${mtxApp}`);
-      showWidgetSettingsLoader('Invalid mtx-app value');
-      return;
-    }
-
-    const config: MarketrixConfig = {
-      mtxApp: appNum,
-    };
-    if (mtxApiHost) {
-      config.mtxApiHost = mtxApiHost;
-    }
-    if (mtxUseScreenshare === 'false') {
-      config.use_screenshare = false;
-    }
-    console.log('[AutoInit] Initializing widget with mtx-app config:', {
-      mtxApp: appNum,
-    });
-    initWidgetFunction(config).catch(error => {
-      console.error('[AutoInit] Failed to initialize widget:', error);
-    });
   } else {
     if (isWidgetInitialized() || isProgrammaticInitInProgress()) {
       console.log(
@@ -338,9 +311,8 @@ export const autoInitializeWidget = (retryCount = 0): void => {
     console.error('[AutoInit] Missing required attributes:', {
       hasMtxId: !!mtxId,
       hasMtxKey: !!mtxKey,
-      hasMtxApp: !!mtxApp,
     });
-    showWidgetSettingsLoader('Please configure mtx-id and mtx-key, or mtx-app');
+    showWidgetSettingsLoader('Please configure mtx-id and mtx-key');
   }
 };
 

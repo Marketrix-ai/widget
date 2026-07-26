@@ -1172,7 +1172,8 @@
         script.src = './loader.js';
         script.setAttribute('mtx-id', params.get('mtx-id') || '');
         script.setAttribute('mtx-key', params.get('mtx-key') || '');
-        script.setAttribute('mtx-app', params.get('mtx-app') || '1');
+        script.setAttribute('mtx-id', params.get('mtx-id') || '');
+        script.setAttribute('mtx-key', params.get('mtx-key') || '');
         script.setAttribute('mtx-api-host', params.get('mtx-api-host') || 'https://api.marketrix.co');
         script.setAttribute('mtx-ai-host', params.get('mtx-ai-host') || 'https://agent.marketrix.co');
         document.head.appendChild(script);

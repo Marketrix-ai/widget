@@ -11,12 +11,8 @@ export function getWidgetSettings(widget: WidgetData): WidgetSettingsData | null
 }
 
 /** Default settings merged with the matched widget's settings; null with no credentials (preview mode). */
-export async function fetchWidgetSettings(
-  mtxId?: string,
-  mtxKey?: string,
-  mtxApp?: number,
-): Promise<WidgetData | null> {
-  if (!mtxId && !mtxKey && !mtxApp) {
+export async function fetchWidgetSettings(mtxId?: string, mtxKey?: string): Promise<WidgetData | null> {
+  if (!mtxId || !mtxKey) {
     return null;
   }
 
@@ -33,23 +29,11 @@ export async function fetchWidgetSettings(
       throw new Error(error);
     }
 
-    let widgetsData: WidgetData[] | null = null;
-    if (mtxId && mtxKey) {
-      const result = await sdk.widgetSearch({
-        type: 'widget',
-        marketrix_id: mtxId,
-        marketrix_key: mtxKey,
-      });
-      widgetsData = result.items;
-    } else if (mtxApp) {
-      const result = await sdk.widgetSearch({
-        type: 'widget',
-        application_id: mtxApp,
-      });
-      widgetsData = result.items;
-    } else {
-      return null;
-    }
+    const { items: widgetsData } = await sdk.widgetSearch({
+      type: 'widget',
+      marketrix_id: mtxId,
+      marketrix_key: mtxKey,
+    });
 
     const matchedWidget =
       widgetsData?.find((widget: WidgetData) => widget.status === 'active' && widget.type === 'widget') || null;
@@ -72,12 +56,12 @@ export async function fetchWidgetSettings(
     const now = new Date();
     return {
       id: 0,
-      application_id: mtxApp || 0,
+      application_id: 0,
       type: 'widget' as const,
       settings: defaultSettings,
       status: 'active' as const,
-      marketrix_id: mtxId || '',
-      marketrix_key: mtxKey || '',
+      marketrix_id: mtxId,
+      marketrix_key: mtxKey,
       created_at: now,
       updated_at: now,
     } as WidgetData;

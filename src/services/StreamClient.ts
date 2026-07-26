@@ -90,8 +90,6 @@ export class StreamClient {
       if (this.config?.mtxId && this.config?.mtxKey) {
         streamInput.marketrix_id = this.config.mtxId;
         streamInput.marketrix_key = this.config.mtxKey;
-      } else if (this.config?.mtxApp) {
-        streamInput.application_id = this.config.mtxApp;
       }
 
       type WidgetStreamInput = {

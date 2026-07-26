@@ -10,20 +10,18 @@ export interface WidgetValidationResult {
 }
 
 /**
- * Validates widget config: either the widget (marketrix_id + marketrix_key) and its application exist,
- * or the application id exists.
+ * Validates widget config: the widget (marketrix_id + marketrix_key) and its application exist.
+ *
+ * The keyless `mtxApp` mode is retired — an application id is a guessable integer, not a secret, so
+ * it authenticated nothing while granting full agent access under the owning workspace.
  */
-/** Handles both the mtxId+mtxKey and mtxApp cases. */
 export async function validateConfig(config: MarketrixConfig): Promise<WidgetValidationResult> {
   if (config.mtxId && config.mtxKey) {
     return validateByMarketrixId(config.mtxId, config.mtxKey, config);
   }
-  if (config.mtxApp) {
-    return validateByApplication(config.mtxApp, config);
-  }
   return {
     isValid: false,
-    error: 'Please provide either (mtxId + mtxKey) OR mtxApp',
+    error: 'Please provide mtxId + mtxKey',
   };
 }
 
@@ -119,31 +117,5 @@ async function validateByMarketrixId(
   } catch (error) {
     console.error('Widget validation error:', error);
     return handleApiError(error, 'Widget validation', config);
-  }
-}
-
-async function validateByApplication(mtxApp: number, config: MarketrixConfig): Promise<WidgetValidationResult> {
-  try {
-    console.log('Validating application by ID...', { mtxApp });
-
-    const application = await sdk.applicationGet({ application_id: mtxApp });
-
-    console.log('Application found:', {
-      id: application.id,
-      name: application.name,
-      type: application.type,
-      url: application.url,
-      allowed_domains: application.allowed_domains,
-    });
-
-    console.log('Validation successful:', { application_id: mtxApp });
-
-    return {
-      isValid: true,
-      application,
-    };
-  } catch (error) {
-    console.error('Application validation error:', error);
-    return handleApiError(error, 'Application validation', config);
   }
 }
