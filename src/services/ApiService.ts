@@ -55,9 +55,6 @@ async function logWidgetQuestion(config: MarketrixConfig, question: string, mode
       metadata.user_id = userId;
     }
 
-    if (config.mtxApp) {
-      metadata.application_id = config.mtxApp;
-    }
     if (config.mtxId && config.mtxKey) {
       metadata.marketrix_id = config.mtxId;
       metadata.marketrix_key = config.mtxKey;
@@ -88,8 +85,8 @@ export async function messageDispatch(config: MarketrixConfig, request: MessageD
     await logWidgetQuestion(config, request.message, mode);
   }
 
-  if (!(config.mtxId && config.mtxKey) && !config.mtxApp) {
-    throw new Error('Either mtxId + mtxKey or mtxApp is required');
+  if (!(config.mtxId && config.mtxKey)) {
+    throw new Error('mtxId + mtxKey is required');
   }
 
   const requestId = request.requestId || `req_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;

@@ -56,12 +56,11 @@ await mountWidget({
 
 ## Credential modes
 
-The widget supports three modes, auto-detected from the credentials you provide.
+The widget supports two modes, auto-detected from the credentials you provide.
 
 | Mode           | Credentials                      | Script attributes    | Network                                                         |
 | -------------- | -------------------------------- | -------------------- | --------------------------------------------------------------- |
 | **Production** | `mtxId` + `mtxKey`               | `mtx-id` + `mtx-key` | Fetches settings from the API, opens the live stream            |
-| **Dev**        | `mtxApp` (application id)        | `mtx-app`            | Same as production, keyed by id instead of credentials          |
 | **Preview**    | `settings` object passed in code | —                    | No network — renders appearance only from the supplied settings |
 
 All modes also accept the common options below.
@@ -143,9 +142,6 @@ Auto-detects the mode (preview / production / dev) from `config` and initializes
 // Production
 await mountWidget({ mtxId, mtxKey, mtxApiHost });
 
-// Dev
-await mountWidget({ mtxApp: 123, mtxApiHost });
-
 // Preview (no network — just renders the appearance)
 await mountWidget({ settings: { widget_enabled: true, widget_position: 'bottom_right' /* ... */ } });
 ```
@@ -207,8 +203,8 @@ Props: `settings` (required), `container?`, `mtxId?`, `mtxKey?`, `mtxApiHost?`.
 
 TypeScript types are bundled with the package:
 
-- `MarketrixConfig` — full config for `initWidget` / `updateMarketrixConfig` (`mtxId`, `mtxKey`, `mtxApp`, `mtxApiHost`, `userId`, `show_widget`, `use_screenshare`, plus all widget appearance settings, optional).
-- `AddWidgetConfig` — discriminated config for `mountWidget` (production / dev / preview variants + common options).
+- `MarketrixConfig` — full config for `initWidget` / `updateMarketrixConfig` (`mtxId`, `mtxKey`, `mtxApiHost`, `userId`, `show_widget`, `use_screenshare`, plus all widget appearance settings, optional).
+- `AddWidgetConfig` — discriminated config for `mountWidget` (production / preview variants + common options).
 - `MarketrixWidgetProps` — props for the `MarketrixWidget` component.
 - `ChatMessage`, `WidgetState`, `InstructionType` (`'tell' | 'show' | 'do'`).
 
@@ -218,7 +214,7 @@ TypeScript types are bundled with the package:
 
 - **React 19** (`react`/`react-dom` `^19.2.3`) on the host page — peer dependency, not bundled. The script-tag loader provides it via importmap; npm consumers supply it from their app.
 - A reachable Marketrix API host (`mtxApiHost` / `mtx-api-host`).
-- Valid credentials for production (`mtxId` + `mtxKey`) or dev (`mtxApp`) mode.
+- Valid credentials (`mtxId` + `mtxKey`) for production mode.
 
 ---
 

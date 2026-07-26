@@ -11,11 +11,12 @@ export type {
 } from '../sdk';
 
 // All widget config at top level so API settings spread in directly ({ ...config, ...apiSettings }).
-// Provide mtxId+mtxKey (production) OR mtxApp (dev).
+// mtxId + mtxKey is the one credential; mtxApp is the resolved application id, set internally after
+// validation (never an input — an application id is guessable and authenticates nothing).
 export type MarketrixConfig = Partial<WidgetSettingsData> & {
-  mtxId?: string; // marketrix_id (production mode)
-  mtxKey?: string; // marketrix_key (production mode)
-  mtxApp?: number; // application ID (dev mode)
+  mtxId?: string; // marketrix_id
+  mtxKey?: string; // marketrix_key
+  mtxApp?: number; // resolved application id (internal, not a credential)
   userId?: number;
   mtxApiHost?: string;
 
@@ -91,21 +92,12 @@ export type AddWidgetConfig = (
       settings: WidgetSettingsData;
       mtxId?: never;
       mtxKey?: never;
-      mtxApp?: never;
     }
   | {
       // Production mode: provide marketrix credentials
       settings?: never;
       mtxId: string;
       mtxKey: string;
-      mtxApp?: never;
-    }
-  | {
-      // Dev mode: provide the application ID
-      settings?: never;
-      mtxId?: never;
-      mtxKey?: never;
-      mtxApp: number;
     }
 ) & {
   container?: HTMLElement;

@@ -176,7 +176,6 @@ export const widgetStream = oc
       tab_id: z.string().optional(),
       marketrix_id: z.string().optional(),
       marketrix_key: z.string().optional(),
-      application_id: z.coerce.number().optional(),
     }),
   )
   .output(eventIterator(WidgetEventSchema));

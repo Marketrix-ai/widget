@@ -51,7 +51,7 @@ async function initializeWidgetWithConfig(
 
   showWidgetSettingsLoader('Loading widget settings...');
   try {
-    const widgetData = await fetchWidgetSettings(config.mtxId, config.mtxKey, config.mtxApp);
+    const widgetData = await fetchWidgetSettings(config.mtxId, config.mtxKey);
     const widgetSettings = widgetData ? getWidgetSettings(widgetData) : null;
 
     if (!widgetSettings) {
@@ -322,22 +322,9 @@ export const mountWidget = async (config: AddWidgetConfig): Promise<void> => {
       },
       container,
     );
-  } else if ('mtxApp' in config && config.mtxApp !== undefined) {
-    // dev mode: application ID
-    const devConfig = config as Extract<AddWidgetConfig, { mtxApp: number }>;
-    const { mtxApp, container: _container, ...restConfig } = devConfig;
-    await initWidget(
-      {
-        mtxApp,
-        ...restConfig,
-      },
-      container,
-    );
   } else {
     setProgrammaticInitInProgress(false);
-    throw new Error(
-      'Invalid configuration: provide either settings (preview), mtxId+mtxKey (production), or mtxApp (dev)',
-    );
+    throw new Error('Invalid configuration: provide either settings (preview) or mtxId+mtxKey (production)');
   }
 };
 
