@@ -1,5 +1,4 @@
-// Pure SSE reducer: `(state, event) => { state, effects }`. No transport/tool-exec/storage —
-// ChatContext wires it up and runs the returned effects. Pure so it stays unit-testable.
+// Pure SSE reducer `(state, event) => { state, effects }` — no transport/tool-exec/storage (ChatContext wires it up); pure so it stays unit-testable.
 import type { WidgetEvent } from '../sdk';
 import type { ChatMessage, InstructionType } from '../types';
 import {
@@ -246,8 +245,7 @@ export function reduceSse(state: SseState, event: WidgetEvent, currentMode: Inst
     case 'chat/response': {
       const messages = state.messages.map(msg => {
         if (msg.id !== event.request_id) return msg;
-        // The final full text REPLACES an in-flight streamed part (chat/delta accumulation);
-        // otherwise it appends as its own part.
+        // Final full text REPLACES an in-flight streamed part (chat/delta accumulation), else appends its own.
         const parts = [...(msg.parts ?? [])];
         const last = parts[parts.length - 1];
         if (last?.type === 'text' && last.streaming) {

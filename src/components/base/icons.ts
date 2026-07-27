@@ -1,10 +1,4 @@
-// SVG icon registry — single source of truth for all icons used in the widget.
-//
-// Stroke-based families (Feather/fi, Lucide/lu, Heroicons/hi2, Tabler/tb):
-//   stroke: 'currentColor', fill: 'none', varying strokeWidth
-// Fill-based families (FontAwesome/fa, Material/md, SimpleIcons/si):
-//   fill: 'currentColor'
-// Mixed (Ionicons/io5): per-icon attributes
+// SVG icon registry (single source of truth). Stroke families (Feather/Lucide/Heroicons/Tabler): stroke='currentColor', fill='none'; fill families (FontAwesome/Material/SimpleIcons): fill='currentColor'; Ionicons: per-icon.
 
 export interface IconPath {
   d: string;

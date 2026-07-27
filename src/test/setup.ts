@@ -1,7 +1,6 @@
 import '@testing-library/jest-dom/vitest';
 
-// jsdom 29 localStorage methods live on the prototype and don't transfer
-// to globalThis properly in vitest — provide a working Storage implementation
+// jsdom 29 localStorage lives on the prototype and doesn't transfer to globalThis in vitest — supply a working Storage.
 if (typeof globalThis.localStorage?.setItem !== 'function') {
   const store = new Map<string, string>();
   globalThis.localStorage = {

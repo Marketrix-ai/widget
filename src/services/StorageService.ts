@@ -1,10 +1,4 @@
-/**
- * Unified widget localStorage under a single key (`marketrix_chat_context`): chat_id, messages, widget state, config.
- *
- * **Canonical implementation** of the `StorageService` mirror pair — the widget owns the read/write
- * lifecycle; `app/src/services/StorageService.ts` must stay byte-identical (modulo its `'../types'`
- * import path). Change storage semantics here first, then copy over to the app mirror.
- */
+/** Unified widget localStorage (key `marketrix_chat_context`). Canonical StorageService — `app/src/services/StorageService.ts` must stay byte-identical (modulo its `'../types'` import); change semantics here first, then copy to the app mirror. */
 
 import type { ChatMessage, InstructionType, MarketrixConfig } from '../types';
 

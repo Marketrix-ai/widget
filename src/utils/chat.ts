@@ -46,8 +46,7 @@ function matchesProgressCriteria(
     return false;
   }
 
-  // Active show/do: require mode match, but stay lenient on placeholders whose mode is still
-  // undefined — tool calls can race ahead of the mode being set.
+  // Active show/do: require mode match, but stay lenient on placeholders with undefined mode — tool calls can race ahead of the mode being set.
   if (checkMode && isTaskRunning && (currentMode === 'show' || currentMode === 'do')) {
     if (msg.isPlaceholder) {
       if (msg.mode !== undefined && msg.mode !== currentMode) {
@@ -72,9 +71,7 @@ function matchesProgressCriteria(
   return true;
 }
 
-// Returns the LAST matching message (searches backwards). For active show/do tasks it prefers
-// a mode-matching placeholder (with content, then without), then a non-placeholder; otherwise
-// falls back to last placeholder → last task message → any agent message.
+// Returns the LAST matching message; active show/do prefers a mode-matching placeholder (content, then without), then non-placeholder, else last placeholder → task message → any agent message.
 export function findMessageForProgress(options: FindMessageOptions): {
   index: number;
   message: ChatMessage;
@@ -127,8 +124,7 @@ export function findMessageForProgress(options: FindMessageOptions): {
     }
   }
 
-  // Fallback (no active task or no match) — critical: tool calls can arrive before
-  // isTaskRunning flips true.
+  // Fallback (no active task or no match) — critical: tool calls can arrive before isTaskRunning flips true.
   if (taskMessageIndex < 0) {
     // Priority 1: last placeholder message, no mode/content requirement.
     for (let i = messages.length - 1; i >= 0; i--) {
@@ -216,8 +212,7 @@ const INTERACTIVE_TOOLS = new Set([
   'scroll',
 ]);
 
-// In `show` mode these pause for the user to act (DOM-mutating tools, minus `scroll`); also the
-// set that requires element highlighting in BrowserToolService.
+// In `show` mode these pause for the user to act (DOM-mutating tools, minus `scroll`); also the highlight set in BrowserToolService.
 export const WAIT_FOR_USER_TOOLS = new Set([
   'click_element',
   'type_text',

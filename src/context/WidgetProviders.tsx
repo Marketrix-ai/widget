@@ -1,6 +1,4 @@
-// Composition root wiring UIStateProvider + ChatProvider. Init (SSE + hydration) and persistence
-// live in inner bridge components so they can read every context; ChatService is the load/persist
-// boundary only. React context is the single source of truth.
+// Composition root: init (SSE + hydration) and persistence live in inner bridge components so they can read every context; React context is the single source of truth.
 import React, { createContext, useContext, useEffect } from 'react';
 
 import { chatService } from '../services/ChatService';
@@ -44,13 +42,11 @@ const PersistBridge: React.FC<{ previewMode: boolean }> = ({ previewMode }) => {
   return null;
 };
 
-// Initialization bridge — hydrates from ChatService + connects the stream, then
-// seeds the conversation store. Sees both UIState and Conversation contexts.
+// Initialization bridge — hydrates from ChatService, connects the stream, seeds the store; sees both contexts.
 const InitBridge: React.FC<{ children: React.ReactNode; previewMode: boolean }> = ({ children, previewMode }) => {
   const { uiActions } = useUIStateContext();
   const { chatActions, taskActions } = useChatContext();
 
-  // One-time initialization: hydrate from ChatService + connect stream.
   useEffect(() => {
     if (previewMode) return;
 
