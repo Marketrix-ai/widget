@@ -8,7 +8,6 @@ import { hasThinkingMarker } from '@/utils/chat';
 import { reduceSse, reduceStop, reduceToolDone, reduceToolProgress, type SseState } from '../sseReducer';
 
 // Fixtures
-// ---------------------------------------------------------------------------
 
 const agentMessage = (overrides: Partial<ChatMessage> = {}): ChatMessage => ({
   id: 'agent-1',
@@ -33,7 +32,6 @@ const idleState = (): SseState => ({
 });
 
 // task/status
-// ---------------------------------------------------------------------------
 
 describe('reduceSse — task/status', () => {
   it('running is a pure no-op — activation is gated on pendingTaskRef in the wiring', () => {
@@ -93,7 +91,6 @@ describe('reduceSse — task/status', () => {
 });
 
 // tool/call
-// ---------------------------------------------------------------------------
 
 describe('reduceSse — tool/call', () => {
   const toolCall = (overrides: Partial<Extract<WidgetEvent, { type: 'tool/call' }>> = {}): WidgetEvent => ({
@@ -139,7 +136,6 @@ describe('reduceSse — tool/call', () => {
 });
 
 // chat/response & chat/error
-// ---------------------------------------------------------------------------
 
 describe('reduceSse — chat/response', () => {
   it('resolves the matching placeholder and turns off loading', () => {
@@ -210,7 +206,6 @@ describe('reduceSse — chat/error', () => {
 });
 
 // Unknown / non-stateful events
-// ---------------------------------------------------------------------------
 
 describe('reduceSse — ignored events', () => {
   it.each(['registered', 'heartbeat'] as const)('%s is a no-op (same state, no effects)', type => {
@@ -223,7 +218,6 @@ describe('reduceSse — ignored events', () => {
 });
 
 // Tool lifecycle helpers
-// ---------------------------------------------------------------------------
 
 describe('reduceToolProgress / reduceToolDone / reduceStop', () => {
   it('completed marks the in-progress line complete', () => {
