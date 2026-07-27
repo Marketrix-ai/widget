@@ -23,8 +23,7 @@ export class StreamClient {
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private config?: { mtxId?: string; mtxKey?: string; mtxApp?: number };
   private connectionId = 0;
-  // Per-tab identity: multiple tabs share the localStorage chat_id; the server keys SSE
-  // connections by (chat_id, tab_id) so tabs never evict each other's stream.
+  // Per-tab identity: tabs share the localStorage chat_id, so the server keys SSE by (chat_id, tab_id) to stop tabs evicting each other's stream.
   private readonly tabId = globalThis.crypto.randomUUID();
   private registrationWaiters = new Set<() => void>();
 
@@ -102,9 +101,7 @@ export class StreamClient {
       const iterator = await sdk.widgetStream(streamInput as WidgetStreamInput, { signal });
 
       this.setStatus('connected');
-      // Reconnect counters reset only on `registered` (see handleMessage) — resetting
-      // here, before registration, would defeat the max-attempts cap if registration
-      // never lands and the stream flaps open→closed in a tight loop.
+      // Reconnect counters reset only on `registered` (handleMessage); resetting here would defeat the max-attempts cap if registration never lands and the stream flaps open→closed.
 
       this.consumeEvents(iterator, myConnectionId);
     } catch (error) {

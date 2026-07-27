@@ -1,8 +1,4 @@
-/**
- * Characterization tests — SSE discriminated-union event contract.
- * WidgetEventSchema (src/sdk/schema.ts) is the canonical runtime validator;
- * task/status union is `'running' | 'completed' | 'failed' | 'stopped' | 'has_question'`.
- */
+// Characterization tests for the SSE discriminated-union contract: WidgetEventSchema is the canonical runtime validator; task/status union = `'running' | 'completed' | 'failed' | 'stopped' | 'has_question'`.
 
 import { describe, expect, it } from 'vitest';
 
@@ -153,8 +149,7 @@ describe('SSE event discriminated-union contract (WidgetEventSchema)', () => {
   });
 
   describe('task/status "has_question" pauses the active message (clears running spinner)', () => {
-    // Mirrors the ChatContext `has_question` reducer: strip the thinking marker (stops the spinner)
-    // and flip to "waiting-for-user" without setting a terminal taskStatus icon.
+    // Mirrors the ChatContext `has_question` reducer: strip the thinking marker (stops spinner), flip to "waiting-for-user", no terminal taskStatus icon.
     const applyHasQuestionTransition = (message: ChatMessage, statusMessage?: string): ChatMessage => {
       const cleared = updateThinkingMarker(message, false, 'do');
       return {

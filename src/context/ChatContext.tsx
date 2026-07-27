@@ -12,8 +12,7 @@ import { addThinkingMarker } from '../utils/chat';
 import { reduceSse, reduceStop, reduceToolDone, reduceToolProgress, type SseEffect, type SseState } from './sseReducer';
 import type { UIStateActions } from './UIStateContext';
 
-// Single store for the conversation: `{ messages, task }` as one `SseState` committed
-// atomically, so messages and task can't tear across an await. UIStateContext stays separate.
+// One SseState `{ messages, task }` committed atomically so messages and task can't tear across an await; UIStateContext stays separate.
 
 export interface TaskState {
   activeTaskId: string | null;
@@ -78,8 +77,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
     task: initialTask ?? EMPTY_TASK,
   }));
 
-  // Live snapshot for SSE wiring / stopTask. commit() is the ONLY writer — never re-sync from
-  // render, or a stale render could regress the ref between a commit and its paint.
+  // commit() is the ONLY writer — re-syncing from render could regress the ref between a commit and its paint.
   const stateRef = useRef<SseState>(state);
 
   const currentModeRef = useRef(currentMode);
@@ -88,9 +86,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
   const processedRequestIds = useRef(new Set<string>());
   const pendingTaskRef = useRef<{ apiTaskId?: string; agentRunning?: boolean }>({});
 
-  // Run the transition SYNCHRONOUSLY against stateRef, then publish. It must NOT run inside the
-  // setState updater: React defers updaters (background tab / mid-burst), so effects captured
-  // inside one are silently lost — tool calls arrived but never executed.
+  // Transition runs synchronously against stateRef, not inside the setState updater: React defers updaters (background tab / mid-burst), silently losing captured effects — tool calls that never executed.
   const commit = useCallback((transition: (s: SseState) => SseState) => {
     const prev = stateRef.current;
     const next = transition(prev);

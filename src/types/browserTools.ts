@@ -1,5 +1,4 @@
-// Single source of truth for widget tool metadata: ALLOWED_TOOLS (ChatContext.tsx) and
-// TOOL_NAME_MAPPING (chat.ts) are derived from BROWSER_TOOLS below.
+// Source of truth: ALLOWED_TOOLS (ChatContext.tsx) and TOOL_NAME_MAPPING (chat.ts) derive from BROWSER_TOOLS.
 
 interface BrowserToolMetadata {
   id: string;

@@ -117,9 +117,7 @@ export function createSemanticTokens(settings: Partial<WidgetSettingsData> = {})
   });
 }
 
-// Applied as inline styles on the widget root, overriding the `:host` defaults in index.css. Must
-// cover every var Tailwind/base-component classes reference so rendering is correct inside the
-// closed Shadow DOM regardless of host page styles.
+// Inline styles on the widget root, overriding index.css `:host` defaults; must cover every var Tailwind/base components reference so the closed Shadow DOM renders correctly regardless of host styles.
 export function semanticTokensToCssCustomProperties(tokens: SemanticTokens): Record<string, string> {
   return {
     '--background': tokens.color.background,

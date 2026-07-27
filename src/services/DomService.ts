@@ -365,8 +365,7 @@ export class DomService {
 
     const clone = document.documentElement.cloneNode(true) as Element;
 
-    // Inject data-id by matching each mapped element in the clone via its selector, rather than
-    // walking both trees in sync — the sync walk breaks on modals/fixed elements.
+    // Inject data-id by matching each mapped element in the clone via its selector; a synced two-tree walk breaks on modals/fixed elements.
     for (const [index, element] of this.elementMap.entries()) {
       if (element instanceof HTMLElement) {
         const selector = this.selectorMap.get(index);
@@ -377,11 +376,9 @@ export class DomService {
             if (cloneElement) {
               cloneElement.setAttribute('data-id', index.toString());
 
-              // Get coordinates and z-order from the live element
               const style = window.getComputedStyle(element);
               const isDisplayNone = style.display === 'none';
 
-              // Handle edge cases: skip hidden elements or set coordinates to 0
               if (isDisplayNone) {
                 cloneElement.setAttribute('data-x', '0');
                 cloneElement.setAttribute('data-y', '0');

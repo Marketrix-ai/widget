@@ -35,8 +35,7 @@ export class RrwebSessionRecorder {
     this.stopRecording = record({
       emit: event => this.buffer(event as eventWithTime),
       maskAllInputs: true,
-      // Regex, not a plain string: a bare 'mtx-*' would REPLACE rrweb's rr-* defaults and silently
-      // un-block elements a customer already blocks with .rr-block.
+      // Regex, not a plain string: a bare 'mtx-*' would REPLACE rrweb's rr-* defaults and un-block elements a customer blocks with .rr-block.
       maskTextClass: /^(rr-mask|mtx-mask)$/,
       blockClass: /^(rr-block|mtx-block)$/,
     });

@@ -82,8 +82,7 @@ export function isInteractable(el: Element | null): boolean {
       return false;
     }
 
-    // Only display:none and pointer-events:none disqualify. Not opacity/visibility — those can be
-    // revealed by user interaction (expanding sections, opening modals).
+    // Only display:none and pointer-events:none disqualify — not opacity/visibility, which user interaction can reveal (expanding sections, modals).
     if (style.display === 'none') {
       logButtonFailure('display', 'display is none');
       return false;

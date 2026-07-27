@@ -63,8 +63,7 @@ export class ChatService {
 
     const messages: ChatMessage[] = context.chat_id
       ? context.messages.map(msg => {
-          // A screenshare stream can't survive a reload — replace it with an
-          // "ended" system message rather than a dangling video placeholder.
+          // A screenshare stream can't survive a reload — replace it with an "ended" system message, not a dangling video placeholder.
           if (msg.id.startsWith('screenshare-')) {
             return {
               ...msg,

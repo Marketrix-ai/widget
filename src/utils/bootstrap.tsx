@@ -221,8 +221,7 @@ export const autoInitializeWidget = (retryCount = 0): void => {
     return;
   }
 
-  // Prefer the currently executing script when it carries config (injected tag in playground);
-  // fall back to the last matching script for static script tags.
+  // Prefer the currently executing script when it carries config (playground injected tag), else the last matching static tag.
   const bySelector = document.querySelectorAll('script[mtx-id]');
   const current =
     typeof document.currentScript !== 'undefined' &&

@@ -10,9 +10,7 @@ export type {
   WorkspaceData,
 } from '../sdk';
 
-// All widget config at top level so API settings spread in directly ({ ...config, ...apiSettings }).
-// mtxId + mtxKey is the one credential; mtxApp is the resolved application id, set internally after
-// validation (never an input — an application id is guessable and authenticates nothing).
+// Flat so API settings spread in directly. mtxId+mtxKey is the credential; mtxApp is set internally post-validation, never an input (an application id is guessable and authenticates nothing).
 export type MarketrixConfig = Partial<WidgetSettingsData> & {
   mtxId?: string; // marketrix_id
   mtxKey?: string; // marketrix_key

@@ -34,8 +34,7 @@ import {
 } from './utils/bootstrap';
 import { isHTMLElement } from './utils/validation';
 
-// CSS is not imported globally — it's isolated in Shadow DOM via bootstrap.tsx ('index.css?inline')
-// so the widget's Tailwind doesn't collide with the host app's.
+// CSS rides in the JS bundle, mounted into the Shadow DOM (bootstrap.tsx, 'index.css?inline') so the widget's Tailwind can't collide with the host app's.
 
 let initPromise: Promise<void> | null = null; // guards concurrent initWidget() calls from duplicating widgets
 let rrwebSessionRecorder: RrwebSessionRecorder | null = null;
@@ -311,7 +310,6 @@ export const mountWidget = async (config: AddWidgetConfig): Promise<void> => {
     mountWidgetToContainer(mountEl, finalConfig, true);
     setProgrammaticInitInProgress(false);
   } else if ('mtxId' in config && config.mtxId !== undefined && config.mtxKey !== undefined) {
-    // production mode: marketrix credentials
     const prodConfig = config as Extract<AddWidgetConfig, { mtxId: string; mtxKey: string }>;
     const { mtxId, mtxKey, container: _container, ...restConfig } = prodConfig;
     await initWidget(

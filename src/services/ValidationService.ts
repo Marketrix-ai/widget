@@ -9,12 +9,7 @@ export interface WidgetValidationResult {
   application?: ApplicationData;
 }
 
-/**
- * Validates widget config: the widget (marketrix_id + marketrix_key) and its application exist.
- *
- * The keyless `mtxApp` mode is retired — an application id is a guessable integer, not a secret, so
- * it authenticated nothing while granting full agent access under the owning workspace.
- */
+/** Validates that the widget (marketrix_id + marketrix_key) and its application exist. Keyless `mtxApp` mode is retired — an application id is a guessable integer, so it authenticated nothing while granting full agent access under the workspace. */
 export async function validateConfig(config: MarketrixConfig): Promise<WidgetValidationResult> {
   if (config.mtxId && config.mtxKey) {
     return validateByMarketrixId(config.mtxId, config.mtxKey, config);
