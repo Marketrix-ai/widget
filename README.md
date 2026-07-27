@@ -170,6 +170,17 @@ Returns the active configuration, or `null` if the widget isn't initialized.
 
 Widget settings are managed in the dashboard. `widget_appearance: 'hidden'` keeps the widget initialized but suppresses its visible UI on the host page; previews remain visible. `widget_greeting_toast` controls the welcome toast, and `widget_recording` enables rrweb session recording. Recording is off by default.
 
+#### Session recording privacy
+
+When recording is enabled, **every input value is masked** — recordings capture that a field was typed into, never what was typed. To exclude more of your page, add either class to any element:
+
+| Class                    | Effect                                                      |
+| ------------------------ | ----------------------------------------------------------- |
+| `mtx-mask` / `rr-mask`   | Text content inside the element is masked                   |
+| `mtx-block` / `rr-block` | The element is replaced by a placeholder and never recorded |
+
+Both the `mtx-` and rrweb's native `rr-` prefixes are honoured, so existing `rr-block` / `rr-mask` markup keeps working.
+
 ### `MarketrixWidget` — React component (preview)
 
 For previewing appearance inside a React app (e.g. a settings/configuration screen). Renders into its own Shadow DOM and makes no network calls.
