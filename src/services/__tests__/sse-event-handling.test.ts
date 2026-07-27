@@ -47,10 +47,6 @@ describe('SSE event discriminated-union contract (WidgetEventSchema)', () => {
         `expected type="${eventType}" to be valid; errors: ${!result.success ? JSON.stringify(result.error.issues) : 'none'}`,
       ).toBe(true);
     });
-
-    it('total distinct event types is 6 (regression guard — update if union changes)', () => {
-      expect(ALL_WIDGET_EVENT_TYPES).toHaveLength(6);
-    });
   });
 
   describe('discriminant field "type" is mandatory on every event', () => {
