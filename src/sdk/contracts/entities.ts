@@ -133,12 +133,12 @@ export const SimulationReactionEntitySchema = z.object({
   persona_id: z.number().nullable(),
   user_index: z.number().nullable(),
   simulation_id: z.number().nullable(),
-  // A/B variant this reaction's sim belongs to. Set for abtest reactions (from the
+  // A/B variant this reaction's sim belongs to. Set for ab study reactions (from the
   // sim's variant at create), null for uxr/survey/direct. Lets the app build a
   // {study_variant_id → simulation_id} map purely from the run's reactions — no
   // positional zip of orderedVariants[i] → distinctSimIds[i] in DB row order.
   study_variant_id: z.number().nullable(),
-  // uxr browser-task the sim ran (null for abtest/survey/direct); mirrors study_variant_id.
+  // uxr browser-task the sim ran (null for ab study/survey/direct); mirrors study_variant_id.
   study_task_id: z.number().nullable(),
   journey_reaction: z.string().nullable(),
   journey_sentiment: SentimentSchema.nullable(),
@@ -157,7 +157,7 @@ export const SimulationEntitySchema = BaseEntitySchema.extend({
   instructions: z.string(),
   // Persisted display name `{TypeLabel} #{id} Run`.
   name: z.string().nullish(),
-  type: z.enum(['direct', 'uxr', 'survey', 'abtest', 'qa']),
+  type: z.enum(['direct', 'uxr', 'survey', 'ab', 'qa']),
   pinned: z.boolean().optional(),
   source: z.enum(['direct', 'qa']).optional(),
   graph_id: z.string().nullish(),
