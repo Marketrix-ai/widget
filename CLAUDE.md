@@ -66,7 +66,7 @@ Both payloads are Zod **discriminated unions on `type`**:
 
 **Visibility and greeting** — `widget_appearance: 'hidden'` suppresses host-page UI while retaining initialization; the dashboard preview deliberately stays visible. `widget_greeting_toast` independently controls the welcome toast and does not alter the greeting message in chat.
 
-**Status vocabulary** — `task/status.status ∈ { running, completed, failed, stopped, has_question }` (this is the canonical wire vocabulary; legacy `'started'`/`'in_progress'` are absent — code branches on `'running'`). Separately, the presentational `ChatMessage.taskStatus` (`'ongoing'|'done'|'failed'|'stopped'`) and `MessagePart.status` (`'in_progress'|'completed'|'failed'|'stopped'`) are **UI-only** and are NOT the wire vocabulary — don't conflate them.
+**Status vocabulary** — `task/status.status ∈ { running, completed, failed, stopped, has_question }` (this is the canonical wire vocabulary — code branches on `'running'`). Separately, the presentational `ChatMessage.taskStatus` (`'ongoing'|'done'|'failed'|'stopped'`) and `MessagePart.status` (`'in_progress'|'completed'|'failed'|'stopped'`) are **UI-only** and are NOT the wire vocabulary — don't conflate them.
 
 ## Init & isolation
 
