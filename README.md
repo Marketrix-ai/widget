@@ -50,7 +50,7 @@ await mountWidget({
 });
 ```
 
-`mountWidget` auto-detects the credential mode (production / dev / preview) from the config you pass.
+`mountWidget` auto-detects the credential mode (production / preview) from the config you pass.
 
 ---
 
@@ -136,7 +136,7 @@ import {
 
 ### `mountWidget(config): Promise<void>`
 
-Auto-detects the mode (preview / production / dev) from `config` and initializes the widget. The recommended entry point for programmatic use.
+Auto-detects the mode (preview / production) from `config` and initializes the widget, throwing if neither `settings` nor `mtxId` + `mtxKey` is present. The recommended entry point for programmatic use.
 
 ```ts
 // Production
@@ -148,7 +148,7 @@ await mountWidget({ settings: { widget_enabled: true, widget_position: 'bottom_r
 
 ### `initWidget(config, container?): Promise<void>`
 
-Lower-level production/dev initializer. Validates credentials, fetches settings from the API, mounts into a closed Shadow DOM, and opens the event stream. Optionally mounts inside a specific `container`. Concurrent and duplicate calls are deduplicated; only one production widget runs per page.
+Lower-level production initializer. Validates credentials, fetches settings from the API, mounts into a closed Shadow DOM, and opens the event stream. Optionally mounts inside a specific `container`. Concurrent and duplicate calls are deduplicated; only one production widget runs per page.
 
 ```ts
 await initWidget({ mtxId, mtxKey, mtxApiHost }, document.getElementById('my-container')!);

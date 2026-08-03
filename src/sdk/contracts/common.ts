@@ -21,12 +21,9 @@ export const PaginationSchema = z.object({
 });
 
 /**
- * Query-string boolean: 'true'/'false' (or a real boolean) → boolean, anything else → undefined.
- * `z.coerce.boolean()` is WRONG for query strings — it's `Boolean(val)`, so `Boolean('false') === true`
- * and `?enabled=false` would match enabled rows. Parse the two tokens explicitly instead.
+ * Query-string boolean. NOT `z.coerce.boolean()` — that is `Boolean(val)`, so `Boolean('false') === true`
+ * and `?enabled=false` would match enabled rows. `.optional()` is outermost so the object key stays omittable.
  */
-// `.optional()` is outermost so the object key stays optional (omittable); an absent param is
-// undefined, `'true'`/`'false'` decode correctly (z.coerce.boolean's Boolean('false')===true was the bug).
 export const booleanQueryParam = z
   .union([z.boolean(), z.string()])
   .transform(val => (typeof val === 'boolean' ? val : val === 'true' ? true : val === 'false' ? false : undefined))
