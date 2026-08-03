@@ -37,11 +37,6 @@ export type WidgetType = z.infer<typeof WidgetTypeSchema>;
 export const InstructionTypeSchema = z.enum(['tell', 'show', 'do']);
 export type InstructionType = z.infer<typeof InstructionTypeSchema>;
 
-/**
- * Authentication method schema
- * password: Email/password authentication
- * oauth: Social login (Google, Microsoft, Apple, etc.) or SSO
- */
 const AuthMethodSchema = z.enum(['password', 'oauth']);
 
 // Users don't have plans — plans belong to workspaces (via the workspace_plan table).
@@ -264,11 +259,12 @@ export const StateTriggerEntitySchema = BaseEntitySchema.extend({
 export type StateTriggerData = z.infer<typeof StateTriggerEntitySchema>;
 
 /**
- * QA run status — first-class TEXT+CHECK column on qa_run (no longer derived).
- * `finalizing` = all sims terminal but per-journey outcomes still completing (QA has no
- * run-level rollup like studies). Canonical wire vocabulary.
+ * Run status — first-class TEXT+CHECK column on qa_run and study_run (no longer derived).
+ * `finalizing` = all sims terminal but the run-level fold still completing.
+ * Canonical wire vocabulary shared by QA runs and study runs.
  */
-export const QARunStatusSchema = z.enum(['created', 'running', 'finalizing', 'completed', 'failed', 'stopped']);
+export const RunStatusSchema = z.enum(['created', 'running', 'finalizing', 'completed', 'failed', 'stopped']);
+export type RunStatus = z.infer<typeof RunStatusSchema>;
 
 /** QA outcome per (run, persona, journey, viewport) — DATA-derived by the api from qa_outcomes; NOT a wire status. */
 export const QARunOutcomeStatusSchema = z.enum(['passed', 'failed', 'indecisive']);

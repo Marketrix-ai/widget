@@ -51,7 +51,7 @@ Two typed oRPC procedures, both defined in `src/sdk/contracts/widget.ts`:
 
 Both payloads are Zod **discriminated unions on `type`**:
 
-- `WidgetEvent` (server→widget): `registered` (`chat_id`, `application_id?`), `heartbeat`, `chat/response` (`request_id`, `text`), `chat/delta` (`request_id`, `text` — one streamed reply fragment; deltas accumulate, the final `chat/response` full text replaces them), `chat/error` (`request_id`, `error`), `task/status` (`status`, `message?`, `task_id?`, `timestamp?`), `tool/call` (`tool_call_id`, `browser_tool`, `args`, `mode?` `'show'|'do'`, `explanation?`, `state_version?`).
+- `WidgetEvent` (server→widget): `registered` (`chat_id`, `application_id?`), `heartbeat`, `chat/response` (`request_id`, `text`), `chat/delta` (`request_id`, `text` — one streamed reply fragment; deltas accumulate, the final `chat/response` full text replaces them), `chat/error` (`request_id`, `error`), `task/status` (`status`, `message?`, `task_id?`, `timestamp?`), `tool/call` (`tool_call_id`, `browser_tool`, `args`, `mode?` `'show'|'do'`, `explanation?`).
 - `WidgetCommand` (widget→server): `chat/tell`, `chat/show`, `chat/do` (each `request_id` + `content`), `chat/stop` (`task_id?`), `tool/response` (`tool_call_id`, `success`, `data?`, `error?`), `rrweb/metadata`, `rrweb/events` (only when `widget_recording` is enabled).
 
 **Transport** — `src/services/StreamClient.ts` is a singleton wrapping the oRPC `sdk`. It calls `sdk.widgetStream(input, { signal })` and drains the async iterator in the background. Status machine: `disconnected → connecting → connected → registered → error`. Exponential-backoff reconnect (1000 ms ×2, cap 30000 ms, **max 10 attempts**; counters reset only on a `registered` event). A `chat/error` whose `request_id === 'auth'` is **non-retriable** and permanently stops reconnection (until re-init). `heartbeat` is ignored. Sending uses `sdk.widgetMessage({ chat_id, command })`.
@@ -101,7 +101,7 @@ Drift is enforced by `.github/workflows/contract-drift.yml` (PRs touching `src/s
 
 - `ci.yml` (push `dev`/tags `v*`/PRs to `dev`): `validate` (non-tag) → `npm ci`, type-check, lint, build, format:check, test:run, visual/a11y/bundle checks (Node 24); `build` (`v*` only) → strip `v`, ACR login, build+push image; `publish` (`v*` only) → build, skip-if-already-published guard, `npm publish` with `NPM_TOKEN`.
 - `contract-drift.yml` — see SDK mirror above.
-- Docker: 2-stage `Dockerfile` (`node:26-alpine` build → `nginx:1.31.1-alpine` serve as the `nginx` user; mime patched to serve `.mjs`). `Dockerfile.dev` runs `vite dev --host 0.0.0.0 --port 9001` with a 256 MB heap. Container `EXPOSE 9001`; nginx `/health` → `200 ok`.
+- Docker: 2-stage `Dockerfile` (`node:26-alpine` build → `nginx:1.31.3-alpine` serve as the `nginx` user; mime patched to serve `.mjs`). `Dockerfile.dev` runs `vite dev --host 0.0.0.0 --port 9001` with a 256 MB heap. Container `EXPOSE 9001`; nginx `/health` → `200 ok`.
 
 ## Gotchas
 
