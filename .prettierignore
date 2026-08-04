@@ -4,4 +4,6 @@ build/
 coverage/
 package-lock.json
 *.tsbuildinfo
+
+# Design-hook cache (generated)
 .impeccable/

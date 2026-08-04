@@ -78,6 +78,15 @@ export const KnowledgeEntitySchema = BaseEntitySchema.extend({
   file_url: z.string(),
   source_url: z.string().nullish(), // Original URL for URL-based documents
   source: KnowledgeSourceSchema.default('user').optional(),
+  // Non-null ⇒ respondent evidence (an interview transcript / persona file) rather than product
+  // knowledge; the unfiltered chunk search excludes those rows.
+  persona_id: z.number().nullish(),
+  // `.default().optional()` is load-bearing on the two NOT NULL fields (same idiom as `source` above):
+  // Knowledge is `Model<KnowledgeData>`, so a key that is required in the inferred output is required
+  // by `CreationAttributes` too, and every existing `Knowledge.create({...})` call site stops compiling.
+  ingest_status: z.enum(['pending', 'embedding', 'ready', 'failed', 'unsupported']).default('pending').optional(),
+  ingest_error: z.string().nullish(),
+  extracted_chars: z.number().default(0).optional(),
 });
 export type KnowledgeData = z.infer<typeof KnowledgeEntitySchema>;
 
@@ -301,6 +310,15 @@ export const ActivityLogTypeSchema = z.enum([
   'delete_workflow',
   'toggle_workflow',
   'slack_command',
+  'create_form',
+  'update_form',
+  'delete_form',
+  'duplicate_form',
+  'publish_form',
+  'unpublish_form',
+  'archive_form',
+  'submit_form_response',
+  'delete_form_response',
 ]);
 export type ActivityLogType = z.infer<typeof ActivityLogTypeSchema>;
 
