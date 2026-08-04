@@ -1,8 +1,0 @@
-FROM node:26-alpine
-ENV NODE_OPTIONS="--max-old-space-size=256"
-WORKDIR /app
-COPY package.json package-lock.json ./
-RUN npm ci
-COPY . .
-EXPOSE 9001
-CMD ["npx", "vite", "dev", "--host", "0.0.0.0", "--port", "9001"]
