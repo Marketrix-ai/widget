@@ -1,14 +1,5 @@
-/**
- * Marketrix Widget Loader
- *
- * Static bootstrap script that:
- * 1. Injects an importmap for React dependencies (merges with existing if present)
- * 2. Creates a module script that loads widget.mjs from the same origin
- * 3. Passes through all mtx-* attributes from this script tag
- *
- * Usage: <script src="https://widget.marketrix.ai/loader.js" mtx-id="..." mtx-key="..."></script>
- * Must be placed in <head> before any <script type="module"> tags.
- */
+// Injects a React importmap (merging with any existing one), loads widget.mjs from the same origin,
+// and passes through every mtx-* attribute. MUST sit in <head> before any <script type="module">.
 (function () {
   // Collect existing importmap entries (if any)
   var existing = {};
