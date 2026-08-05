@@ -101,7 +101,7 @@ Drift is enforced by `.github/workflows/contract-drift.yml` (PRs touching `src/s
 
 - `ci.yml` (push `dev`/tags `v*`/PRs to `dev`): `validate` (non-tag) → `npm ci`, type-check, lint, build, format:check, test:run, visual/a11y/bundle checks (Node 24); `build` (`v*` only) → strip `v`, ACR login, build+push image; `publish` (`v*` only) → build, skip-if-already-published guard, `npm publish` with `NPM_TOKEN`.
 - `contract-drift.yml` — see SDK mirror above.
-- Docker: 2-stage `Dockerfile` (`node:26-alpine` build → `nginx:1.31.3-alpine` serve as the `nginx` user; mime patched to serve `.mjs`). `Dockerfile.dev` runs `vite dev --host 0.0.0.0 --port 9001` with a 256 MB heap. Container `EXPOSE 9001`; nginx `/health` → `200 ok`.
+- Docker: one `Dockerfile`, stages `base` → `dev` / `builder` → `runtime` (`node:26-alpine` build → `nginx:1.31.3-alpine` serve as the `nginx` user; mime patched to serve `.mjs`). The **`dev` target** runs `vite dev --host 0.0.0.0 --port 9001` with a 256 MB heap and is what Tilt builds; CI builds the final `runtime` stage. Both inherit `base`'s `npm ci`, so local and shipped images cannot drift in their dependency set. Container `EXPOSE 9001`; nginx `/health` → `200 ok`.
 
 ## Gotchas
 
