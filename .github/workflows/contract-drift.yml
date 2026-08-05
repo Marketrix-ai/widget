@@ -1,15 +1,8 @@
 name: Contract Drift
-# Fails the PR if widget's scoped SDK mirror (src/sdk/contract.ts + contracts/*)
-# has drifted from the source of truth in Marketrix-ai/api (sdk/widget.ts +
-# contracts/*). Uses the same sync-consumers.mjs generator in --check mode so
-# the gate and the write path are provably equivalent.
-#
-# TOKEN REQUIREMENT
-# -----------------
-# This workflow sparse-checkouts the relevant paths from the PRIVATE
-# Marketrix-ai/api repo, so it needs a token with read access. It uses the
-# org-level INFRA_PAT secret (already provisioned for cross-repo access), so
-# no per-repo secret is required.
+# Fails the PR if widget's SDK mirror has drifted from Marketrix-ai/api. Runs the same
+# sync-consumers.mjs generator in --check mode, so the gate and the write path are provably equal.
+# Sparse-checkouts the PRIVATE Marketrix-ai/api repo, so it needs read access. Uses the org-level
+# INFRA_PAT secret, already provisioned for cross-repo access, so no per-repo secret is required.
 on:
   pull_request:
     paths:
