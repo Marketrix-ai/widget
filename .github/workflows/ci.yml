@@ -49,23 +49,15 @@ jobs:
       - uses: azure/login@v3
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
-      - name: Log in to ACR
-        run: az acr login --name marketrix
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
-      - name: Build and push image
-        uses: docker/build-push-action@v7
-        with:
-          context: .
-          file: Dockerfile
-          push: true
-          tags: marketrix.azurecr.io/widget:${{ steps.tag.outputs.image_tag }}
-          build-args: BUILD_COMMIT=${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          labels: |
-            org.opencontainers.image.revision=${{ github.sha }}
-            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+      # ACR builds the image; this runner only fires the run. `az acr run` is the ONE build path, so
+      # the same command works from any authenticated machine when Actions is unavailable — which is
+      # not hypothetical: every image in the 3.8.412-415 releases was built this way during an outage.
+      # Tags, build-args and OCI labels all live in acr-build.yaml, so they cannot drift from it.
+      - name: Build and push image in ACR
+        run: |
+          az acr run --registry marketrix --file acr-build.yaml \
+            --set tag=${{ steps.tag.outputs.image_tag }} \
+            --set commit=${{ github.sha }} .
 
   publish:
     if: startsWith(github.ref, 'refs/tags/v')
