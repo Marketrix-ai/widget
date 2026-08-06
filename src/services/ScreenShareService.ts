@@ -1,4 +1,4 @@
-// Shared access to the active screenshare MediaStream across the widget (chatWindow, toolExecutor, etc.).
+// Shared access to the active screenshare MediaStream across the widget (useScreenShare, BrowserToolService).
 
 let activeStream: MediaStream | null = null;
 

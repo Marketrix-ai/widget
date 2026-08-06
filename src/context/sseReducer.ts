@@ -146,7 +146,7 @@ export function reduceStop(state: SseState, currentMode: InstructionType): SseSt
   return { messages, task: { isTaskRunning: false, activeTaskId: null } };
 }
 
-// Returns next state + effects. Unknown / non-stateful events (registered, heartbeat) are ignored.
+// Non-stateful events (registered, heartbeat) fall through unchanged.
 export function reduceSse(state: SseState, event: WidgetEvent, currentMode: InstructionType): ReduceResult {
   switch (event.type) {
     case 'tool/call': {

@@ -37,7 +37,6 @@ const DEFAULT_CONTEXT: MarketrixChatContext = {
   timestamp: Date.now(),
 };
 
-/** Singleton wrapper around `localStorage` for the unified widget chat context. Canonical — see file header. */
 class StorageService {
   private static instance: StorageService;
   private context: MarketrixChatContext | null = null;

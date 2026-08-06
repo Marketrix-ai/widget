@@ -6,7 +6,7 @@ interface DisplayMediaStreamOptions {
 
 declare const __BUILD_COMMIT__: string;
 
-// Allow importing CSS as a string for Shadow DOM style injection
+// Backs the Shadow DOM style injection in bootstrap.tsx.
 declare module '*.css?inline' {
   const content: string;
   export default content;

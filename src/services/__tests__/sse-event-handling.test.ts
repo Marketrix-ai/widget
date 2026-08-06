@@ -18,7 +18,6 @@ const ALL_WIDGET_EVENT_TYPES = [
 
 type ExpectedEventType = (typeof ALL_WIDGET_EVENT_TYPES)[number];
 
-/** Minimal valid fixtures for each event type */
 const MINIMAL_EVENT_FIXTURES: Record<ExpectedEventType, object> = {
   registered: { type: 'registered', chat_id: 'chat-001' },
   heartbeat: { type: 'heartbeat' },

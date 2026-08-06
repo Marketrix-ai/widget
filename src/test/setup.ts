@@ -15,7 +15,7 @@ if (typeof globalThis.localStorage?.setItem !== 'function') {
   } as Storage;
 }
 
-// jsdom does not provide ResizeObserver (required by WidgetButton and others)
+// jsdom does not provide ResizeObserver (required by useDragSnap)
 if (typeof globalThis.ResizeObserver === 'undefined') {
   globalThis.ResizeObserver = class ResizeObserver {
     observe() {}
