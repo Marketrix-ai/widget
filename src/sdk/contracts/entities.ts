@@ -40,6 +40,14 @@ export type InstructionType = z.infer<typeof InstructionTypeSchema>;
 const AuthMethodSchema = z.enum(['password', 'oauth']);
 
 // Users don't have plans — plans belong to workspaces (via the workspace_plan table).
+/**
+ * The workspace role vocabulary — `admin` administers the workspace, `member` does not. One spelling
+ * everywhere: the same two words in the database enum, in this contract, in the dashboard, and as the
+ * WorkOS role slug. Declared here rather than in `workspace.ts` because `UserEntitySchema` needs it and
+ * `workspace.ts` already imports from this file.
+ */
+export const WorkspaceMemberRoleSchema = z.enum(['admin', 'member']);
+
 export const UserEntitySchema = BaseEntitySchema.extend({
   is_super: z.boolean(),
   status: EntityStatusSchema,
@@ -51,6 +59,9 @@ export const UserEntitySchema = BaseEntitySchema.extend({
   image_url: z.string().nullish(),
   last_login_at: z.coerce.date().nullish(),
   auth_method: AuthMethodSchema.nullish(),
+  // Present only when the user was looked up THROUGH a workspace (`userSearch` with a workspace_id) —
+  // a role is a property of the membership, not of the person, so a user read on its own has none.
+  workspace_role: WorkspaceMemberRoleSchema.nullish(),
 });
 export type UserData = z.infer<typeof UserEntitySchema>;
 
@@ -299,9 +310,13 @@ export const ActivityLogTypeSchema = z.enum([
   'create_knowledge',
   'update_knowledge',
   'delete_knowledge',
-  'approve_user',
-  'deny_user',
-  'request_workspace',
+  // The membership vocabulary is exactly two verbs: someone REQUESTS membership, an admin INVITES them.
+  // There is no approving — a request is answered with a WorkOS invitation or not at all, and the
+  // invitation still has to be accepted. The retired `approve_user` / `deny_user` / `request_workspace`
+  // are gone from the wire; both databases hold zero rows using them (checked 2026-08-06) and Postgres
+  // keeps the dead labels because an enum value cannot be dropped without rewriting the type.
+  'request_membership',
+  'invite_user',
   'widget_question',
   'qa_run_started',
   'start_simulation',
