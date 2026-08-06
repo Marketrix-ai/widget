@@ -1,12 +1,14 @@
-# Cloud build straight to ACR, bypassing GitHub Actions entirely.
+# Cloud build straight to ACR. GitHub Actions only fires this — the image is built by ACR.
 #   az acr run --registry marketrix --file acr-build.yaml \
-#     --set tag=<version> --set commit=$(git rev-parse HEAD) .
-# Mirrors infra's ci-service.yml build step, with one difference that matters: DOCKER_BUILDKIT=1.
-# ACR's classic builder has BuildKit OFF, and this Dockerfile uses `RUN --mount=type=cache`, which
-# fails there with "the --mount option requires BuildKit" — so `az acr build` cannot build this repo.
+#     --set tag=<bare-semver> --set commit=$(git rev-parse HEAD) .
+# DOCKER_BUILDKIT=1 is load-bearing: ACR's classic builder has BuildKit OFF and this Dockerfile uses
+# `RUN --mount=type=cache`, which fails there with "the --mount option requires BuildKit". That is
+# why this is a task file and not a plain `az acr build`.
+# Only BUILD_COMMIT is passed: it is the sole ARG any Dockerfile here declares. MTX_API_URL is read at
+# RUNTIME from the k8s ConfigMap, so passing it as a build-arg was always a silent no-op.
 version: v1.1.0
 steps:
-  - build: -t marketrix.azurecr.io/widget:{{.Values.tag}} --build-arg BUILD_COMMIT={{.Values.commit}} -f Dockerfile .
+  - build: -t marketrix.azurecr.io/widget:{{.Values.tag}} --build-arg BUILD_COMMIT={{.Values.commit}} --label org.opencontainers.image.revision={{.Values.commit}} --label org.opencontainers.image.source=https://github.com/Marketrix-ai/widget --label org.opencontainers.image.version={{.Values.tag}} -f Dockerfile .
     env:
       - DOCKER_BUILDKIT=1
   - push:
