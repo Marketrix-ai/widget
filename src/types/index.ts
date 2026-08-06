@@ -19,12 +19,6 @@ export type MarketrixConfig = Partial<WidgetSettingsData> & {
   mtxApiHost?: string;
 
   // Local-only styling, not from API.
-  // ponytail: widget_position_offset is currently read by nothing — drop it from both public
-  // config types on the next breaking release unless a consumer appears.
-  widget_position_offset?: {
-    x?: number;
-    y?: number;
-  };
   widget_position_z_index?: number;
 
   isPreviewMode?: boolean;
@@ -103,10 +97,6 @@ export type AddWidgetConfig = (
   container?: HTMLElement;
   mtxApiHost?: string;
   userId?: number;
-  widget_position_offset?: {
-    x?: number;
-    y?: number;
-  };
   widget_position_z_index?: number;
   /** When false, widget initializes fully but UI is hidden. Default: true */
   show_widget?: boolean;
