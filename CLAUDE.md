@@ -82,7 +82,9 @@ The widget's SDK is a **scoped mirror** of the api contract, generated from the 
 - `src/sdk/contract.ts` assembles `widgetContract`.
 - `src/sdk/contracts/*.ts` are the per-domain fragments: `widget.ts`, `application.ts`, `chat.ts`, `entities.ts`, `common.ts`, `activityLog.ts`. There is **no** `src/sdk/routes.ts` and **no** `src/sdk/schema.ts` (re-exports come from `index.ts`).
 
-Drift is enforced by `.github/workflows/contract-drift.yml` (PRs touching `src/sdk/**`, weekly Mon 06:00, manual): it sparse-checkouts `Marketrix-ai/api@dev` (`contracts/`, `sdk/`, `scripts/sync-consumers.mjs`) and runs `node .api-src/scripts/sync-consumers.mjs widget --check --api-root .api-src --dest src/sdk`. It authenticates with the org-level **`INFRA_PAT`** secret (provisioned for cross-repo access) as `GH_TOKEN` — no per-repo secret required. Don't hand-edit `src/sdk/contracts/*` — regenerate from the api side (root `sync-contracts` skill) and re-run the sync, or the gate fails.
+Drift is enforced in **infra**, at the api tag this widget is pinned beside — `check-contract-stack.sh`, run by `contract-verify.yml` on a version-set commit, by `deploy.yml` before it writes one, and weekly at branch tips by `contract-tip-watch.yml`. The old per-repo `contract-drift.yml` diffed against `api@dev`, which is neither deployed version.
+
+Widget gets a second check the others do not need: **`app` bundles this package from npm at whatever its own lockfile pins**, which is not the widget image tag deployed beside it, and `publish` runs at tag push with no gate in front of it. So infra also checks the mirror of the widget version `app` actually bundles — the build a browser really loads. Don't hand-edit `src/sdk/contracts/*`; regenerate from the api side (root `sync-contracts` skill).
 
 ## Structure
 
@@ -100,7 +102,6 @@ Drift is enforced by `.github/workflows/contract-drift.yml` (PRs touching `src/s
 ## CI/CD
 
 - `ci.yml` (push `dev`/tags `v*`/PRs to `dev`): `validate` (non-tag) → `npm ci`, type-check, lint, build, format:check, test:run, visual/a11y/bundle checks (Node 24); `build` (`v*` only) → strip `v`, ACR login, build+push image; `publish` (`v*` only) → build, skip-if-already-published guard, `npm publish` with `NPM_TOKEN`.
-- `contract-drift.yml` — see SDK mirror above.
 - Docker: one `Dockerfile`, stages `base` → `dev` / `builder` → `runtime` (`node:26-alpine` build → `nginx:1.31.3-alpine` serve as the `nginx` user; mime patched to serve `.mjs`). The **`dev` target** runs `vite dev --host 0.0.0.0 --port 9001` with a 256 MB heap and is what Tilt builds; CI builds the final `runtime` stage. Both inherit `base`'s `npm ci`, so local and shipped images cannot drift in their dependency set. Container `EXPOSE 9001`; nginx `/health` → `200 ok`.
 
 ## Gotchas
@@ -110,7 +111,7 @@ Drift is enforced by `.github/workflows/contract-drift.yml` (PRs touching `src/s
 - **React external + peer.** The host MUST provide React 19. The script-tag loader injects an `esm.sh` importmap, but **host importmap mappings win** — a host on a different React 19 build keeps its own.
 - **Closed Shadow DOM.** The host can't reach into the widget DOM by design — don't expect host scripts/CSS to style or query inside it.
 - **Sticky auth error.** A `chat/error` with `request_id: 'auth'` permanently stops SSE reconnection until the widget is re-initialized.
-- **SDK mirror is generated.** Don't hand-edit `src/sdk/contracts/*` — regenerate from api or `contract-drift.yml` fails.
+- **SDK mirror is generated.** Don't hand-edit `src/sdk/contracts/*` — regenerate from api, or infra's contract gate fails the deploy.
 
 ## Conventions
 
