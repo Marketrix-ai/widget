@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const EntityStatusSchema = z.enum(['created', 'active', 'suspended', 'pending_approval']);
+export const EntityStatusSchema = z.enum(['created', 'active', 'suspended']);
 
 export const BaseEntitySchema = z.object({
   id: z.number().optional(),
