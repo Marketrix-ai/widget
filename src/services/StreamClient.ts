@@ -96,7 +96,6 @@ export class StreamClient {
         tab_id?: string;
         marketrix_id?: string;
         marketrix_key?: string;
-        application_id?: number;
       };
       const iterator = await sdk.widgetStream(streamInput as WidgetStreamInput, { signal });
 
