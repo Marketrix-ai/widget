@@ -23,13 +23,9 @@ function createClient(apiUrl: string): ContractRouterClient<typeof widgetContrac
   return createORPCClient(link);
 }
 
-// Initialize with empty client - must be configured via configureSdk() before use
 client = createClient('');
 
-/**
- * Re-initialize the SDK client with a new base URL
- * Must be called before any SDK operations
- */
+/** Must be called before any SDK operation — the widget has no baked-in API host. */
 export const configureSdk = (apiUrl: string) => {
   if (!apiUrl?.trim()) throw new Error('API URL is required for SDK configuration');
 
@@ -40,7 +36,6 @@ export const configureSdk = (apiUrl: string) => {
   }
 };
 
-// Base object for auth methods and dynamic config
 const sdkExtras = {
   setAuthToken: (token: string) => {
     authToken = token;
@@ -54,7 +49,6 @@ const sdkExtras = {
 
 type SdkExtras = typeof sdkExtras;
 
-// Create a proxy to forward calls to the current client instance.
 // oRPC's client is a deep Proxy that intercepts all string property accesses
 // (including .bind, .call, etc.) as route path segments, so we must not call
 // .bind() on it — just return the property directly.
@@ -67,11 +61,9 @@ export const sdk = new Proxy({} as ContractRouterClient<typeof widgetContract> &
   },
 });
 
-// Runtime value re-exports (used by services, tests, and widget stream handler)
 export { WidgetSettingsDataSchema } from './contracts/entities';
 export { WidgetEventSchema } from './contracts/widget';
 
-// Type-only re-exports from entities
 export type {
   ApplicationData,
   InstructionType,
@@ -82,7 +74,6 @@ export type {
   WorkspaceData,
 } from './contracts/entities';
 
-// Type-only re-exports from widget contract
 export type { WidgetCommand, WidgetEvent, WidgetSettingsKey } from './contracts/widget';
 
 // Type-only export: the oRPC client builds requests from the proxied path and

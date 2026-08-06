@@ -14,15 +14,11 @@ export type {
 export type MarketrixConfig = Partial<WidgetSettingsData> & {
   mtxId?: string; // marketrix_id
   mtxKey?: string; // marketrix_key
-  mtxApp?: number; // resolved application id (internal, not a credential)
+  mtxApp?: number; // resolved application id
   userId?: number;
   mtxApiHost?: string;
 
-  // local-only styling, not from API
-  widget_position_offset?: {
-    x?: number;
-    y?: number;
-  };
+  // Local-only styling, not from API.
   widget_position_z_index?: number;
 
   isPreviewMode?: boolean;
@@ -86,13 +82,13 @@ export type WidgetPosition = WidgetSettingsData['widget_position'];
 
 export type AddWidgetConfig = (
   | {
-      // Preview mode: provide settings directly
+      // Preview mode
       settings: WidgetSettingsData;
       mtxId?: never;
       mtxKey?: never;
     }
   | {
-      // Production mode: provide marketrix credentials
+      // Production mode
       settings?: never;
       mtxId: string;
       mtxKey: string;
@@ -101,14 +97,10 @@ export type AddWidgetConfig = (
   container?: HTMLElement;
   mtxApiHost?: string;
   userId?: number;
-  widget_position_offset?: {
-    x?: number;
-    y?: number;
-  };
   widget_position_z_index?: number;
-  /** Controls visual rendering of the widget. When false, widget initializes fully but UI is hidden. Default: true */
+  /** When false, widget initializes fully but UI is hidden. Default: true */
   show_widget?: boolean;
-  /** Controls screen sharing prompts and button. When false, screen access requests are auto-denied and Share Screen button is hidden. Default: true */
+  /** When false, screen access requests are auto-denied and Share Screen button is hidden. Default: true */
   use_screenshare?: boolean;
 };
 

@@ -30,7 +30,6 @@ export function getContrastingColor(color: string): string {
   return luminance > 0.5 ? '#000000' : '#ffffff';
 }
 
-// Adds opacity to a hex or rgb/rgba color.
 export function addOpacity(color: string, opacity: number): string {
   if (color.startsWith('rgba') || color.startsWith('rgb')) {
     const match = color.match(/(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);

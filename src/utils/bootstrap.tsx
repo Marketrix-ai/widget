@@ -142,7 +142,6 @@ export const isProgrammaticInitInProgress = (): boolean => {
 };
 
 export const showWidgetSettingsLoader = (message?: string): void => {
-  // SSR guard.
   if (typeof window === 'undefined' || typeof document === 'undefined') {
     return;
   }
@@ -198,12 +197,10 @@ export const hideWidgetSettingsLoader = (): void => {
   }
 };
 
-// Set synchronously during registration.
 let initWidgetFunction: ((config: MarketrixConfig) => Promise<void>) | null = null;
 
 // Auto-init from script-tag attributes; retries to handle ES-module load timing.
 export const autoInitializeWidget = (retryCount = 0): void => {
-  // SSR guard.
   if (typeof window === 'undefined' || typeof document === 'undefined') {
     return;
   }

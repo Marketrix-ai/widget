@@ -71,7 +71,7 @@ function matchesProgressCriteria(
   return true;
 }
 
-// Returns the LAST matching message; active show/do prefers a mode-matching placeholder (content, then without), then non-placeholder, else last placeholder → task message → any agent message.
+// Returns the LAST matching message, by the priority cascade labelled below.
 export function findMessageForProgress(options: FindMessageOptions): {
   index: number;
   message: ChatMessage;

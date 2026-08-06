@@ -60,7 +60,6 @@ export interface ChatViewProps {
   onScreenSharingChange?: (isSharing: boolean) => void;
   onStartScreenShareRef?: React.MutableRefObject<(() => void) | null>;
   onStopScreenShareRef?: React.MutableRefObject<(() => void) | null>;
-  /** Optional ref for focus trap to focus the message input */
   messageInputRef?: React.RefObject<HTMLTextAreaElement | null>;
 }
 

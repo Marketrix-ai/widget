@@ -13,7 +13,6 @@ class ChatSessionManager {
   private initializationPromise: Promise<string> | null = null;
 
   private constructor() {
-    // SSR guard — only touch storage in the browser.
     if (typeof window === 'undefined' || typeof document === 'undefined') {
       return;
     }
@@ -25,7 +24,7 @@ class ChatSessionManager {
   }
 
   static getInstance(): ChatSessionManager {
-    // SSR guard — return a minimal instance that never touches browser APIs.
+    // Under SSR, bypass the constructor entirely so no browser API is touched.
     if (typeof window === 'undefined' || typeof document === 'undefined') {
       if (!ChatSessionManager.instance) {
         ChatSessionManager.instance = Object.create(ChatSessionManager.prototype) as ChatSessionManager;

@@ -1,6 +1,5 @@
 type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
-// SSR-safe development-mode check (localhost hostnames).
 const getIsDevelopment = (): boolean => {
   if (typeof window === 'undefined') {
     return false;

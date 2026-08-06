@@ -41,7 +41,6 @@ export function isInteractable(el: Element | null): boolean {
       }
     };
 
-    // Disabled or inert: <button disabled>, <input disabled>, aria-disabled, inert subtree.
     if ((el as HTMLButtonElement).disabled === true) {
       logButtonFailure('disabled', 'button is disabled');
       return false;

@@ -157,7 +157,6 @@ export const WidgetFab: React.FC<WidgetFabProps> = ({
               }}
             >
               {showProcessingGlow && (
-                // Activity ring: dynamic SVG with computed strokeDasharray — documented exception
                 <svg className={activityRingClass} viewBox='0 0 54 54' fill='none' aria-hidden>
                   <rect
                     x='1.25'

@@ -1,7 +1,6 @@
 // Injects a React importmap (merging with any existing one), loads widget.mjs from the same origin,
 // and passes through every mtx-* attribute. MUST sit in <head> before any <script type="module">.
 (function () {
-  // Collect existing importmap entries (if any)
   var existing = {};
   var oldMap = document.querySelector('script[type="importmap"]');
   if (oldMap) {
@@ -11,7 +10,7 @@
     oldMap.remove();
   }
 
-  // React dependencies — host mappings win, our defaults fill gaps
+  // Host mappings win — `existing` is spread last so a host already on React 19 keeps its own build.
   var defaults = {
     react: 'https://esm.sh/react@19',
     'react-dom': 'https://esm.sh/react-dom@19',
@@ -26,16 +25,13 @@
   map.textContent = JSON.stringify({ imports: merged });
   document.head.appendChild(map);
 
-  // Derive base URL from our own script src
   var self = document.currentScript;
   var base = new URL('.', self.src).href;
 
-  // Create module script for the widget
   var widget = document.createElement('script');
   widget.type = 'module';
   widget.src = base + 'widget.mjs';
 
-  // Pass through all mtx-* attributes
   Array.from(self.attributes).forEach(function (attr) {
     if (attr.name.startsWith('mtx-')) widget.setAttribute(attr.name, attr.value);
   });

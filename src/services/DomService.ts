@@ -102,7 +102,6 @@ export class DomService {
     };
   }
 
-  /** Strict match against a stored fingerprint — fails if any key attribute differs. */
   private matchesFingerprint(element: Element, fingerprint: ElementFingerprint): boolean {
     if (element.tagName !== fingerprint.tagName) {
       return false;
@@ -139,7 +138,6 @@ export class DomService {
     return true;
   }
 
-  /** Check the element at an index still matches its fingerprint; no recovery. */
   private validateElementAtIndex(index: number): ValidationResult {
     const fingerprint = this.fingerprintMap.get(index);
     if (!fingerprint) {
@@ -158,7 +156,6 @@ export class DomService {
     return { isValid: true };
   }
 
-  /** Index all interactable elements in the live DOM, clearing any previous index first. */
   indexInteractableElements(): Array<[number, Element]> {
     if (this.indexingInProgress) {
       console.warn('[DomService] Indexing already in progress, skipping concurrent call');
@@ -448,7 +445,6 @@ export class DomService {
     this.fingerprintMap.clear();
   }
 
-  /** Returns an error string if the element isn't interactable (hidden/obscured/off-screen), null if OK. */
   private checkInteractability(element: HTMLElement, index: number): string | null {
     if (!document.body.contains(element)) {
       return `ELEMENT_NOT_INTERACTABLE: Element ${index} is not in the DOM`;
@@ -474,7 +470,6 @@ export class DomService {
       return `ELEMENT_NOT_INTERACTABLE: Element ${index} is off-screen`;
     }
 
-    // Occlusion check
     const centerX = rect.left + rect.width / 2;
     const centerY = rect.top + rect.height / 2;
     const topElement = document.elementFromPoint(centerX, centerY);
@@ -502,11 +497,9 @@ export class DomService {
     return this.checkInteractability(element, index);
   }
 
-  /** Look up an element by index; returns it only if interactable, else null + error. */
   getElementByIndex(index: number): ElementLookupResult {
     let element: HTMLElement | null = null;
 
-    // Live map first.
     if (this.elementMap.has(index)) {
       const mapElement = this.elementMap.get(index);
       if (mapElement && mapElement instanceof HTMLElement) {
@@ -514,7 +507,6 @@ export class DomService {
       }
     }
 
-    // Fall back to the persisted selector map.
     if (!element && this.selectorMap.has(index)) {
       const selector = this.selectorMap.get(index);
       if (selector) {
@@ -541,7 +533,7 @@ export class DomService {
     return { element };
   }
 
-  /** Main entry point for BrowserToolService: validate against fingerprint, then return if interactable. */
+  /** Main entry point for BrowserToolService — prefer this over the looser getElementByIndex. */
   getValidatedElement(index: number): ValidatedElementResult {
     const validation = this.validateElementAtIndex(index);
 
