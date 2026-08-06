@@ -30,7 +30,9 @@ npm run code:fix         # eslint --fix && prettier --write
 npm run tag <version>    # scripts/release.sh — see Release
 ```
 
-**Pre-handoff gates** (mirror `ci.yml` `validate`, Node 24): `type-check`, `lint`, `build`, `format:check`, `test:run`, then `visual:check` + `a11y:check` + `bundle:check`. Git hooks (lefthook `pre-commit`: `check` + `lint` with `stage_fixed`) autofix but are not a substitute — run the full set. Lefthook is the only hook runner; it installs its shims into `.husky/_` because `core.hooksPath` still points there from a previous husky setup — there is no husky dependency.
+**Pre-handoff gates** (mirror `ci.yml` `validate`, Node 24): `type-check`, `lint`, `build`, `format:check`, `test:run`, then `visual:check` + `a11y:check` + `bundle:check`. Git hooks (lefthook `pre-commit`: `check` + `lint` with `stage_fixed`) autofix but are not a substitute — run the full set. Lefthook is the only hook runner; it installs its shim into `.husky/_` because `core.hooksPath` points there from a previous husky setup — there is no husky dependency and lefthook is not a devDependency (install it yourself, e.g. `brew install lefthook`).
+
+**Hook setup is not automatic.** `core.hooksPath` is _local_ git config, so a fresh clone runs no hooks at all until you point it at the committed shim: `git config core.hooksPath .husky/_`. The shim sources **`.lefthookrc`** first, which puts node/npm back on `PATH` — git hooks launched from GUI clients and other non-login shells inherit a minimal environment, and without it every command dies `npm: command not found` (exit 127), blocking the commit. That rc path is baked into the shim when hooks are generated, not read at run time, so after changing `rc:` in `lefthook.yml` you must re-run `lefthook install --force`.
 
 ## Distribution & packaging
 
