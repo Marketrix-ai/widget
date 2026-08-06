@@ -22,7 +22,7 @@ jobs:
       - name: Type check
         run: npm run type-check
       - name: Lint
-        run: npm run lint 2>/dev/null || echo "No lint script"
+        run: npm run lint:check
       - name: Build
         run: npm run build
       - name: Format check
