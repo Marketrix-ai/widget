@@ -7,8 +7,6 @@ import { hasThinkingMarker } from '@/utils/chat';
 
 import { reduceSse, reduceStop, reduceToolDone, reduceToolProgress, type SseState } from '../sseReducer';
 
-// Fixtures
-
 const agentMessage = (overrides: Partial<ChatMessage> = {}): ChatMessage => ({
   id: 'agent-1',
   content: 'Working on it\n\n__THINKING__',
@@ -30,8 +28,6 @@ const idleState = (): SseState => ({
   messages: [agentMessage({ placeholderState: undefined })],
   task: { activeTaskId: null, isTaskRunning: false },
 });
-
-// task/status
 
 describe('reduceSse — task/status', () => {
   it('running is a pure no-op — activation is gated on pendingTaskRef in the wiring', () => {
@@ -90,8 +86,6 @@ describe('reduceSse — task/status', () => {
   });
 });
 
-// tool/call
-
 describe('reduceSse — tool/call', () => {
   const toolCall = (overrides: Partial<Extract<WidgetEvent, { type: 'tool/call' }>> = {}): WidgetEvent => ({
     type: 'tool/call',
@@ -134,8 +128,6 @@ describe('reduceSse — tool/call', () => {
     expect(effect.type === 'executeTool' && effect.mode).toBe('show');
   });
 });
-
-// chat/response & chat/error
 
 describe('reduceSse — chat/response', () => {
   it('resolves the matching placeholder and turns off loading', () => {
@@ -205,8 +197,6 @@ describe('reduceSse — chat/error', () => {
   });
 });
 
-// Unknown / non-stateful events
-
 describe('reduceSse — ignored events', () => {
   it.each(['registered', 'heartbeat'] as const)('%s is a no-op (same state, no effects)', type => {
     const state = runningState();
@@ -216,8 +206,6 @@ describe('reduceSse — ignored events', () => {
     expect(result.effects).toEqual([]);
   });
 });
-
-// Tool lifecycle helpers
 
 describe('reduceToolProgress / reduceToolDone / reduceStop', () => {
   it('completed marks the in-progress line complete', () => {

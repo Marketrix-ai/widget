@@ -1,6 +1,4 @@
-# Lefthook git hooks configuration
 # https://github.com/evilmartians/lefthook
-
 pre-commit:
   commands:
     check:

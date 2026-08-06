@@ -1,5 +1,3 @@
-/** Error-handling helpers for API calls. */
-
 import type { MarketrixConfig } from '../types';
 
 function isConnectionError(error: unknown): boolean {

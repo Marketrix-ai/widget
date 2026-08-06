@@ -70,7 +70,7 @@ export function useResize(
           return { width: w, height: h };
         }
       } catch {
-        /* ignore */
+        // Corrupt stored dimensions — fall through to the settings defaults below.
       }
     }
     const w = parsePx(settingsWidth);

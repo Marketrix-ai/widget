@@ -15,7 +15,7 @@ Customer-facing integration docs live in `README.md` — keep that file accurate
 ## Commands
 
 ```bash
-npm start                # vite dev server on :9001 (override PORT / VITE_PORT; CORS '*')
+npm start                # vite dev server on :9001 (override PORT / VITE_PORT; CORS enabled)
 npm run build            # vite build → dist/widget.mjs (terser, single ESM) + tsc declarations
 npm run type-check       # tsc --noEmit  (alias: npm run check)
 npm run lint             # eslint --fix (max-warnings 200); lint:check = max-warnings 0
@@ -30,16 +30,16 @@ npm run code:fix         # eslint --fix && prettier --write
 npm run tag <version>    # scripts/release.sh — see Release
 ```
 
-**Pre-handoff gates** (mirror `ci.yml` `validate`, Node 24): `type-check`, `lint`, `build`, `format:check`, `test:run`, then `visual:check` + `a11y:check` + `bundle:check`. Git hooks (lefthook `pre-commit`: `check` + `lint` with `stage_fixed`; plus a `.husky/` dir) autofix but are not a substitute — run the full set.
+**Pre-handoff gates** (mirror `ci.yml` `validate`, Node 24): `type-check`, `lint`, `build`, `format:check`, `test:run`, then `visual:check` + `a11y:check` + `bundle:check`. Git hooks (lefthook `pre-commit`: `check` + `lint` with `stage_fixed`) autofix but are not a substitute — run the full set. Lefthook is the only hook runner; it installs its shims into `.husky/_` because `core.hooksPath` still points there from a previous husky setup — there is no husky dependency.
 
 ## Distribution & packaging
 
-- `main`/`module` = `./dist/widget.mjs`; `types` = `./dist/src/index.d.ts`. `exports` map: `"."` → types + import `./dist/widget.mjs`, plus `"./package.json"`. `files: ["dist"]`.
+- `main`/`module` = `./dist/widget.mjs`; `types` = `./dist/src/index.d.ts`. `exports` map: `"."` → types + import/default `./dist/widget.mjs`, plus `"./package.json"`. `files: ["dist"]`.
 - Vite lib mode: `formats: ['es']`, `entryFileNames: 'widget.mjs'`, `codeSplitting: false`, `cssCodeSplit: false`, target `esnext`, terser (`drop_console`).
 - **CSS is injected via JS** (`vite-plugin-css-injected-by-js`) — no external stylesheet; the CSS rides in the bundle and is mounted into the Shadow DOM from `index.css?inline`.
 - Externals (not bundled, resolved via the host importmap): `react`, `react-dom`, `react-dom/client`, `react/jsx-runtime`.
 - Declarations: a custom closeBundle Vite plugin runs `tsc -p tsconfig.build.json` → `.d.ts` into `dist/src/`.
-- `public/loader.js` is copied to `dist/loader.js` (classic script-tag bootstrap). `.npmignore` strips `src/`, `*.ts(x)` (except `*.d.ts`), configs, `*.html`, `*.map`.
+- `public/loader.js` is copied to `dist/loader.js` (classic script-tag bootstrap). There is no `.npmignore` — `files: ["dist"]` is the allowlist, so nothing outside `dist/` is published.
 - Build defines: `process.env.NODE_ENV='production'`, `__BUILD_COMMIT__` from the `BUILD_COMMIT` env (Docker build-arg, default `'dev'`).
 
 ## Architecture (widget ↔ api)

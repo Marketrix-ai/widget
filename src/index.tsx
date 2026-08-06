@@ -36,7 +36,7 @@ import { isHTMLElement } from './utils/validation';
 
 // CSS rides in the JS bundle, mounted into the Shadow DOM (bootstrap.tsx, 'index.css?inline') so the widget's Tailwind can't collide with the host app's.
 
-let initPromise: Promise<void> | null = null; // guards concurrent initWidget() calls from duplicating widgets
+let initPromise: Promise<void> | null = null;
 let rrwebSessionRecorder: RrwebSessionRecorder | null = null;
 let widgetMounted = false;
 
@@ -110,7 +110,6 @@ async function initializeWidgetWithConfig(
 async function initWidgetInternal(config: MarketrixConfig, container?: HTMLElement): Promise<void> {
   setProgrammaticInitInProgress(true);
 
-  // window-level guard survives ES module re-execution
   window.__mtx = { state: 'initializing' };
 
   if (config.mtxApiHost) {
@@ -166,7 +165,6 @@ export const initWidget = async (config: MarketrixConfig, container?: HTMLElemen
   if (window.__mtx?.state) {
     return;
   }
-  // concurrent callers await the in-flight init instead of starting a duplicate
   if (initPromise) {
     return initPromise;
   }
@@ -221,7 +219,7 @@ export const updateMarketrixConfig = async (newConfig: Partial<MarketrixConfig>)
 
 export { getCurrentConfig };
 
-// Preview-mode React component: renders the widget into a parent container with its own shadow DOM.
+// Preview-mode React entry point — mounts into its own shadow DOM inside a parent container.
 export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ settings, container, mtxId, mtxKey, mtxApiHost }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const rootRef = useRef<Root | null>(null);
