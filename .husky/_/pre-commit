@@ -8,6 +8,8 @@ if [ "$LEFTHOOK" = "0" ]; then
   exit 0
 fi
 
+[ -f .lefthookrc ] && . .lefthookrc
+
 call_lefthook()
 {
   if test -n "$LEFTHOOK_BIN"

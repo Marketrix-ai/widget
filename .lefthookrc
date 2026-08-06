@@ -1,0 +1,17 @@
+# Sourced by the generated git hook before lefthook runs anything (wired up by `rc:` in lefthook.yml).
+#
+# Git hooks launched by GUI clients (Tower, GitKraken, the VS Code / JetBrains git UIs) and by other
+# non-login shells inherit a minimal PATH that has no node or npm on it. Every command in lefthook.yml
+# shells out to npm, so they all died with `npm: command not found` and exit 127 — which blocks the
+# commit outright rather than degrading. Put the usual node locations back before anything runs.
+
+for dir in /opt/homebrew/bin /usr/local/bin "$HOME/.local/bin"; do
+  case ":$PATH:" in
+    *":$dir:"*) ;;
+    *) [ -d "$dir" ] && PATH="$dir:$PATH" ;;
+  esac
+done
+export PATH
+
+# nvm/fnm users keep node outside those directories, so let a version manager win if one is present.
+[ -s "${NVM_DIR:-$HOME/.nvm}/nvm.sh" ] && . "${NVM_DIR:-$HOME/.nvm}/nvm.sh"
