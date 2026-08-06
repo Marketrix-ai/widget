@@ -8,17 +8,17 @@ updates:
       minor-and-patch:
         update-types: ['minor', 'patch']
     open-pull-requests-limit: 5
-    target-branch: 'dev'
+    target-branch: 'main'
   - package-ecosystem: 'docker'
     directory: '/'
     schedule:
       interval: 'weekly'
-    target-branch: 'dev'
+    target-branch: 'main'
   - package-ecosystem: 'github-actions'
     directory: '/'
     schedule:
       interval: 'weekly'
-    target-branch: 'dev'
+    target-branch: 'main'
     # Shared CI is the PRIVATE infra reusable workflow, pinned to a branch Dependabot cannot reach.
     # Ignoring it lets the weekly run still update the repo-local actions.
     ignore:

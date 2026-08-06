@@ -84,7 +84,7 @@ The widget's SDK is a **scoped mirror** of the api contract, generated from the 
 - `src/sdk/contract.ts` assembles `widgetContract`.
 - `src/sdk/contracts/*.ts` are the per-domain fragments: `widget.ts`, `application.ts`, `chat.ts`, `entities.ts`, `common.ts`, `activityLog.ts`. There is **no** `src/sdk/routes.ts` and **no** `src/sdk/schema.ts` (re-exports come from `index.ts`).
 
-Drift is enforced in **infra**, at the api tag this widget is pinned beside — `check-contract-stack.sh`, run by `contract-verify.yml` on a version-set commit, by `deploy.yml` before it writes one, and weekly at branch tips by `contract-tip-watch.yml`. The old per-repo `contract-drift.yml` diffed against `api@dev`, which is neither deployed version.
+Drift is enforced in **infra**, at the api tag this widget is pinned beside — `check-contract-stack.sh`, run by `contract-verify.yml` on a version-set commit, by `deploy.yml` before it writes one, and weekly at branch tips by `contract-tip-watch.yml`. The old per-repo `contract-drift.yml` diffed against `api@main`, which is neither deployed version.
 
 Widget gets a second check the others do not need: **`app` bundles this package from npm at whatever its own lockfile pins**, which is not the widget image tag deployed beside it, and `publish` runs at tag push with no gate in front of it. So infra also checks the mirror of the widget version `app` actually bundles — the build a browser really loads. Don't hand-edit `src/sdk/contracts/*`; regenerate from the api side (root `sync-contracts` skill).
 
@@ -103,7 +103,7 @@ Widget gets a second check the others do not need: **`app` bundles this package 
 
 ## CI/CD
 
-- `ci.yml` (push `dev`/tags `v*`/PRs to `dev`): `validate` (non-tag) → `npm ci`, type-check, lint, build, format:check, test:run, visual/a11y/bundle checks (Node 24); `build` (`v*` only) → strip `v`, ACR login, build+push image; `publish` (`v*` only) → build, skip-if-already-published guard, `npm publish` with `NPM_TOKEN`.
+- `ci.yml` (push `main`/tags `v*`/PRs to `main`): `validate` (non-tag) → `npm ci`, type-check, lint, build, format:check, test:run, visual/a11y/bundle checks (Node 24); `build` (`v*` only) → strip `v`, ACR login, build+push image; `publish` (`v*` only) → build, skip-if-already-published guard, `npm publish` with `NPM_TOKEN`.
 - Docker: one `Dockerfile`, stages `base` → `dev` / `builder` → `runtime` (`node:26-alpine` build → `nginx:1.31.3-alpine` serve as the `nginx` user; mime patched to serve `.mjs`). The **`dev` target** runs `vite dev --host 0.0.0.0 --port 9001` with a 256 MB heap and is what Tilt builds; CI builds the final `runtime` stage. Both inherit `base`'s `npm ci`, so local and shipped images cannot drift in their dependency set. Container `EXPOSE 9001`; nginx `/health` → `200 ok`.
 
 ## Gotchas
@@ -118,5 +118,5 @@ Widget gets a second check the others do not need: **`app` bundles this package 
 ## Conventions
 
 - TS, 2-space indent, single quotes, semicolons, trailing commas, ~120-char lines. `type` imports, sorted imports (`simple-import-sort`), `unused-imports`. `PascalCase` components/services/context, `useCamelCase` hooks, `camelCase` utils.
-- Don't develop on `dev` — use a worktree/feature branch; link the PR with `Closes #N`. Issue/PR body is the scope source of truth (see root workflow).
+- Don't develop on `main` — use a worktree/feature branch; link the PR with `Closes #N`. Issue/PR body is the scope source of truth (see root workflow).
 - Keep stateful services only for shared lifecycle/session ownership; use functions for stateless operations. Inline one-use presentation instead of adding base components.
