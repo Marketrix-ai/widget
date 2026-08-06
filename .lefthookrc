@@ -14,4 +14,9 @@ done
 export PATH
 
 # nvm/fnm users keep node outside those directories, so let a version manager win if one is present.
-[ -s "${NVM_DIR:-$HOME/.nvm}/nvm.sh" ] && . "${NVM_DIR:-$HOME/.nvm}/nvm.sh"
+# Deliberately an `if` rather than `[ -s … ] && . …`: as the last line, that form leaves the whole
+# file exiting non-zero on every machine without nvm — the exact class of environment-dependent hook
+# failure this file exists to remove.
+if [ -s "${NVM_DIR:-$HOME/.nvm}/nvm.sh" ]; then
+  . "${NVM_DIR:-$HOME/.nvm}/nvm.sh"
+fi
