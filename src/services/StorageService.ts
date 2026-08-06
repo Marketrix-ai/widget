@@ -1,4 +1,4 @@
-/** Unified widget localStorage (key `marketrix_chat_context`). Canonical StorageService — `app/src/services/StorageService.ts` must stay byte-identical (modulo its `'../types'` import); change semantics here first, then copy to the app mirror. */
+/** Unified widget localStorage (key `marketrix_chat_context`). */
 
 import type { ChatMessage, InstructionType, MarketrixConfig } from '../types';
 

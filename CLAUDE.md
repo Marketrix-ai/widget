@@ -46,7 +46,7 @@ npm run tag <version>    # scripts/release.sh — see Release
 
 Two typed oRPC procedures, both defined in `src/sdk/contracts/widget.ts`:
 
-- **`widgetStream`** — GET `/widget/stream`, output `eventIterator(WidgetEventSchema)` (SSE). Input `{ chat_id, tab_id?, marketrix_id?, marketrix_key?, application_id? }`. Server → widget.
+- **`widgetStream`** — GET `/widget/stream`, output `eventIterator(WidgetEventSchema)` (SSE). Input `{ chat_id, tab_id?, marketrix_id?, marketrix_key? }`. Server → widget. **`application_id` is deliberately not an input** — accepting a bare (guessable) application id as a credential let an anonymous caller drive any tenant's agent, closed by api#886. It appears only on the `registered` event, as output.
 - **`widgetMessage`** — POST `/widget/message`, input `{ chat_id, tab_id?, command: WidgetCommandSchema }`, output `{ ok }`. Widget → server.
 
 Both payloads are Zod **discriminated unions on `type`**:
