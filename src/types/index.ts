@@ -18,7 +18,9 @@ export type MarketrixConfig = Partial<WidgetSettingsData> & {
   userId?: number;
   mtxApiHost?: string;
 
-  // local-only styling, not from API
+  // Local-only styling, not from API.
+  // ponytail: widget_position_offset is currently read by nothing — drop it from both public
+  // config types on the next breaking release unless a consumer appears.
   widget_position_offset?: {
     x?: number;
     y?: number;

@@ -71,13 +71,14 @@ All modes also accept the common options below.
 
 These apply to every mode (script attribute → config key):
 
-| Config key        | Script attribute      | Type          | Description                                                                                                                                           |
-| ----------------- | --------------------- | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `mtxApiHost`      | `mtx-api-host`        | string        | API server URL, e.g. `https://api.marketrix.ai`. The widget has no baked-in API host — you must supply it.                                            |
-| `container`       | —                     | `HTMLElement` | Element to mount inside (programmatic only). Defaults to a container appended to `<body>`.                                                            |
-| `userId`          | —                     | number        | Associates widget activity with one of your users.                                                                                                    |
-| `show_widget`     | —                     | boolean       | When `false`, the widget initializes fully but its UI stays hidden. Default `true`.                                                                   |
-| `use_screenshare` | `mtx-use-screenshare` | boolean       | When `false`, screen-share requests are auto-denied and the Share Screen button is hidden. Default `true`. Disable via `mtx-use-screenshare="false"`. |
+| Config key                | Script attribute      | Type          | Description                                                                                                                                           |
+| ------------------------- | --------------------- | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `mtxApiHost`              | `mtx-api-host`        | string        | API server URL, e.g. `https://api.marketrix.ai`. The widget has no baked-in API host — you must supply it.                                            |
+| `container`               | —                     | `HTMLElement` | Element to mount inside (programmatic only). Defaults to a container appended to `<body>`.                                                            |
+| `userId`                  | —                     | number        | Associates widget activity with one of your users.                                                                                                    |
+| `widget_position_z_index` | —                     | number        | `z-index` floor for the launcher and panel. Raised to the widget's own layer token if you pass a lower value.                                         |
+| `show_widget`             | —                     | boolean       | When `false`, the widget initializes fully but its UI stays hidden. Default `true`.                                                                   |
+| `use_screenshare`         | `mtx-use-screenshare` | boolean       | When `false`, screen-share requests are auto-denied and the Share Screen button is hidden. Default `true`. Disable via `mtx-use-screenshare="false"`. |
 
 Widget **appearance and behavior** (position, colors, sizing, border radius, animation, enabled Tell/Show/Do/Human features, device visibility, visibility, greeting toast, optional session recording, header/body/greeting text, and quick-action chips) are configured in the Marketrix dashboard and fetched from the API at init. A hidden widget stays visible in the dashboard preview.
 
