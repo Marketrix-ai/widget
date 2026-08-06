@@ -29,7 +29,7 @@ export const booleanQueryParam = z
   .transform(val => (typeof val === 'boolean' ? val : val === 'true' ? true : val === 'false' ? false : undefined))
   .optional();
 
-/** Paginated list for unbounded queries — includes total/limit/offset for pagination */
+/** Paginated list for unbounded queries */
 export const paginatedListOf = <T extends z.ZodTypeAny>(schema: T) =>
   z.object({
     items: z.array(schema),
@@ -38,7 +38,7 @@ export const paginatedListOf = <T extends z.ZodTypeAny>(schema: T) =>
     offset: z.number(),
   });
 
-/** Simple list for bounded results (scoped to parent entity) — includes count */
+/** Simple list for bounded results (scoped to parent entity) */
 export const listOf = <T extends z.ZodTypeAny>(schema: T) =>
   z.object({
     items: z.array(schema),
@@ -70,9 +70,6 @@ export const SlackWebhookUrlSchema = z
     message: 'Slack webhook URL must start with https://hooks.slack.com/',
   });
 
-/**
- * Graph edge schema - transition from one node to another via an action
- */
 export const GraphEdgeSchema = z
   .object({
     start: z.string(),
@@ -82,9 +79,6 @@ export const GraphEdgeSchema = z
   .passthrough();
 export type GraphEdgeData = z.infer<typeof GraphEdgeSchema>;
 
-/**
- * Graph section schema - functional UI section within a page node
- */
 export const GraphSectionSchema = z
   .object({
     id: z.string(),

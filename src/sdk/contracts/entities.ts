@@ -190,7 +190,7 @@ export const SimulationEntitySchema = BaseEntitySchema.extend({
   // Mirror of `status === 'has_question'`, surfaced as a standalone flag so the live SSE
   // stream can toggle the header "Question" pill without refetching the status.
   has_question: z.boolean().optional(),
-  // Riders — personas that REACT to this sim; each carries persona_id + user_count (both required) + their reactions.
+  // Riders — personas that REACT to this sim.
   riders: z.array(z.object({ persona_id: z.number(), user_count: z.number().int().positive() })).default([]),
   reactions: z.array(SimulationReactionEntitySchema).default([]),
   // Driver — the single persona this sim RUNS AS (in-character; QA + survey); null = neutral.
@@ -211,10 +211,7 @@ export const ApplicationEntitySchema = BaseEntitySchema.extend({
 });
 export type ApplicationData = z.infer<typeof ApplicationEntitySchema>;
 
-/**
- * Application read schema — entity minus password. Used for all API
- * responses; password is write-only and never returned to clients.
- */
+/** Used for all API responses; password is write-only and never returned to clients. */
 export const ApplicationReadSchema = ApplicationEntitySchema.omit({ password: true });
 export type ApplicationReadData = z.infer<typeof ApplicationReadSchema>;
 
@@ -266,10 +263,7 @@ export const WidgetEntitySchema = BaseEntitySchema.extend({
 });
 export type WidgetData = z.infer<typeof WidgetEntitySchema>;
 
-/**
- * State Trigger entity schema - stores URL patterns and messages to show in widget
- * `message` is one or more chip texts shown by the widget when the URL pattern matches.
- */
+/** `message` is one or more chip texts shown by the widget when the URL pattern matches. */
 export const StateTriggerEntitySchema = BaseEntitySchema.extend({
   widget_id: z.number(),
   url_pattern: z.string(),
@@ -356,7 +350,7 @@ export const ActivityLogMetadataSchema = z
     widget_type: z.string().optional(),
     created_by: z.number().optional(),
   })
-  .passthrough(); // Allow additional fields for flexibility (e.g., updatedData, previousData, createdData)
+  .passthrough();
 
 export const ActivityLogEntitySchema = BaseEntitySchema.extend({
   workspace_id: z.number(),
