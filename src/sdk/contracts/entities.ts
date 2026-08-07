@@ -120,6 +120,14 @@ export type PersonaFileData = z.infer<typeof PersonaFileEntitySchema>;
  * Defined here (the widget/root import closure) so SSE + simulation + qa contracts can share it.
  */
 export const ViewportNameSchema = z.enum(['desktop', 'tablet', 'mobile']);
+
+// A run's selected (journey × persona) cells. persona_id 0 = the generic lane. Empty = run every
+// applicable cell (back-compat / generic flows). Each cell fans out one sim per viewport.
+//
+// Here rather than in `qa` because the run-quote input in `stripe` needs it too, and `qa` already
+// imports `stripe` — defining it there and reaching back for it makes the two fragments a cycle, which
+// evaluates one of them to `undefined` at import time rather than failing loudly.
+export const QARunCellSchema = z.object({ journey_id: z.number().int(), persona_id: z.number().int() });
 export type ViewportName = z.infer<typeof ViewportNameSchema>;
 export const VIEWPORT_DIMENSIONS: Record<ViewportName, { width: number; height: number }> = {
   desktop: { width: 1920, height: 1080 },
