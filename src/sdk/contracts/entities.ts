@@ -311,6 +311,18 @@ export const ActivityLogTypeSchema = z.enum([
   // keeps the dead labels because an enum value cannot be dropped without rewriting the type.
   'request_membership',
   'invite_user',
+  // Workspace + subscription lifecycle. These are the transparency record a customer reads in settings,
+  // so they are written for the SYSTEM's actions too (Stripe webhooks) with `user_id: null` — nobody
+  // clicked anything when a trial lapsed, and attributing it to the last admin would be a lie.
+  'create_workspace',
+  'trial_started',
+  'trial_ending_soon',
+  'trial_ended',
+  'subscription_created',
+  'subscription_canceled',
+  'plan_changed',
+  'payment_succeeded',
+  'payment_failed',
   'widget_question',
   'qa_run_started',
   'start_simulation',
