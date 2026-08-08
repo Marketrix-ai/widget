@@ -58,7 +58,7 @@ Two typed oRPC procedures, both in `src/sdk/contracts/widget.ts`:
   **`application_id` is deliberately NOT an input** — accepting a bare, guessable application id as a
   credential let an anonymous caller drive any tenant's agent. It appears only on the `registered`
   event, as output.
-- **`widgetMessage`** — POST, widget → server.
+- **`widgetMessagePost`** — POST, widget → server.
 
 Both payloads are Zod **discriminated unions on `type`**:
 

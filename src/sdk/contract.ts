@@ -1,7 +1,7 @@
 import { activityLogCreate } from './contracts/activityLog';
 import { applicationGet } from './contracts/application';
 import { chatCreate } from './contracts/chat';
-import { widgetDefaultGet, widgetMessage, widgetSearch, widgetStream } from './contracts/widget';
+import { widgetDefaultGet, widgetMessagePost, widgetSearch, widgetStream } from './contracts/widget';
 
 export const widgetContract = {
   activityLogCreate,
@@ -9,6 +9,6 @@ export const widgetContract = {
   chatCreate,
   widgetDefaultGet,
   widgetSearch,
-  widgetMessage,
+  widgetMessagePost,
   widgetStream,
 };

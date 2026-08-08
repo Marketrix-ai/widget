@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const recordMock = vi.fn(() => () => {});
 vi.mock('@rrweb/record', () => ({ record: (opts: unknown) => recordMock(opts as never) }));
-vi.mock('../../sdk', () => ({ sdk: { widgetMessage: vi.fn().mockResolvedValue({ ok: true }) } }));
+vi.mock('../../sdk', () => ({ sdk: { widgetMessagePost: vi.fn().mockResolvedValue({ ok: true }) } }));
 
 const { RrwebSessionRecorder } = await import('../RrwebSessionRecorder');
 
