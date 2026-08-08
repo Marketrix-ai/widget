@@ -1,4 +1,3 @@
-// Unit tests for the pure SSE reducer — pin the state transitions the ChatContext effect drives.
 import { describe, expect, it } from 'vitest';
 
 import type { WidgetEvent } from '@/sdk';

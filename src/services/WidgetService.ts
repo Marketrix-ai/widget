@@ -10,14 +10,13 @@ export function getWidgetSettings(widget: WidgetData): WidgetSettingsData | null
   return null;
 }
 
-/** Default settings merged with the matched widget's settings; null with no credentials (preview mode). */
+/** Null without credentials — that is the dashboard preview, which has none. */
 export async function fetchWidgetSettings(mtxId?: string, mtxKey?: string): Promise<WidgetData | null> {
   if (!mtxId || !mtxKey) {
     return null;
   }
 
   try {
-    // Defaults are static per session — cache after the first fetch.
     if (!cachedDefaults) {
       cachedDefaults = (await sdk.widgetDefaultGet({ type: 'widget' })) as WidgetSettingsData;
     }

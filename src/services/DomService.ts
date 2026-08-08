@@ -4,11 +4,11 @@ export interface ElementFingerprint {
   tagName: string;
   id: string | null;
   textContent: string | null; // truncated to 100 chars
-  type: string | null; // inputs
+  type: string | null;
   role: string | null;
   ariaLabel: string | null;
   name: string | null;
-  href: string | null; // anchors
+  href: string | null;
   selector: string;
   indexVersion: number;
 }
@@ -47,7 +47,6 @@ export class DomService {
 
   private generateSelector(element: Element): string {
     if (element.id) {
-      // Use the id selector only if it's unique in the document.
       if (document.querySelectorAll(`#${CSS.escape(element.id)}`).length === 1) {
         return `#${CSS.escape(element.id)}`;
       }
@@ -107,7 +106,6 @@ export class DomService {
       return false;
     }
 
-    // A matching id is high-confidence — accept without checking other attributes.
     if (fingerprint.id && element.id === fingerprint.id) {
       return true;
     }
@@ -356,13 +354,12 @@ export class DomService {
     return baseZOrder;
   }
 
-  /** Re-index the live DOM and return an HTML snapshot with data-id attributes injected. */
   getSnapshotHtml(): string {
     this.indexInteractableElements();
 
     const clone = document.documentElement.cloneNode(true) as Element;
 
-    // Inject data-id by matching each mapped element in the clone via its selector; a synced two-tree walk breaks on modals/fixed elements.
+    // Match into the clone by selector — a synced two-tree walk breaks on modals and fixed elements.
     for (const [index, element] of this.elementMap.entries()) {
       if (element instanceof HTMLElement) {
         const selector = this.selectorMap.get(index);
@@ -392,7 +389,6 @@ export class DomService {
               }
             }
           } catch (e) {
-            // Selector may be invalid — skip this element.
             console.warn(`[DomService] Failed to apply data attributes for index ${index}:`, e);
           }
         }
@@ -492,7 +488,6 @@ export class DomService {
     return null;
   }
 
-  /** Public interactability check for ShowModeService. */
   checkElementInteractable(element: HTMLElement, index: number): string | null {
     return this.checkInteractability(element, index);
   }
@@ -533,7 +528,7 @@ export class DomService {
     return { element };
   }
 
-  /** Main entry point for BrowserToolService — prefer this over the looser getElementByIndex. */
+  /** Prefer this over the looser getElementByIndex — it also fingerprint-checks the index. */
   getValidatedElement(index: number): ValidatedElementResult {
     const validation = this.validateElementAtIndex(index);
 

@@ -14,7 +14,6 @@ describe('rrweb capture privacy', () => {
     expect(recordMock.mock.calls[0]?.[0]).toMatchObject({ maskAllInputs: true });
   });
 
-  // A plain string would REPLACE rrweb's rr-* defaults, un-blocking a customer's existing .rr-block markup.
   it('honours both the mtx- and the native rr- privacy classes', async () => {
     await new RrwebSessionRecorder('chat_1', 1).start();
     const opts = recordMock.mock.calls[0]?.[0] as { maskTextClass: RegExp; blockClass: RegExp };

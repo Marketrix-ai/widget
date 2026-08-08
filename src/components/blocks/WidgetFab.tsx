@@ -19,7 +19,6 @@ export interface WidgetFabProps {
   taskRunning?: boolean;
   onClick: () => void;
   onStop?: () => void;
-  // Styling props resolved by consumer from widget config
   accentColor?: string;
   backgroundColor?: string;
   borderRadius?: string;

@@ -213,11 +213,12 @@ export class ShowModeService {
     const elementCenterX = rect.left + rect.width / 2;
     const elementCenterY = rect.top + rect.height / 2;
 
+    // Right, left, above, below — first that fits the viewport wins.
     const positions = [
-      { left: rect.right + spacing, top: elementCenterY - popupHeight / 2 }, // Right
-      { left: rect.left - popupWidth - spacing, top: elementCenterY - popupHeight / 2 }, // Left
-      { left: elementCenterX - popupWidth / 2, top: rect.top - popupHeight - spacing }, // Top
-      { left: elementCenterX - popupWidth / 2, top: rect.bottom + spacing }, // Bottom
+      { left: rect.right + spacing, top: elementCenterY - popupHeight / 2 },
+      { left: rect.left - popupWidth - spacing, top: elementCenterY - popupHeight / 2 },
+      { left: elementCenterX - popupWidth / 2, top: rect.top - popupHeight - spacing },
+      { left: elementCenterX - popupWidth / 2, top: rect.bottom + spacing },
     ];
 
     let bestPos = positions[0];
@@ -270,7 +271,6 @@ export class ShowModeService {
       }
     };
 
-    // Capture phase so we see the click first; don't stopPropagation when the click should still happen.
     document.addEventListener('click', this.clickHandler, { capture: true });
   }
 

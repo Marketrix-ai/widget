@@ -20,16 +20,12 @@ export const PaginationSchema = z.object({
   offset: z.coerce.number().optional().default(0),
 });
 
-/**
- * Query-string boolean. NOT `z.coerce.boolean()` — that is `Boolean(val)`, so `Boolean('false') === true`
- * and `?enabled=false` would match enabled rows. `.optional()` is outermost so the object key stays omittable.
- */
+// NOT z.coerce.boolean() — that's Boolean(val), so `?enabled=false` would coerce true.
 export const booleanQueryParam = z
   .union([z.boolean(), z.string()])
   .transform(val => (typeof val === 'boolean' ? val : val === 'true' ? true : val === 'false' ? false : undefined))
   .optional();
 
-/** Paginated list for unbounded queries */
 export const paginatedListOf = <T extends z.ZodTypeAny>(schema: T) =>
   z.object({
     items: z.array(schema),
@@ -38,7 +34,7 @@ export const paginatedListOf = <T extends z.ZodTypeAny>(schema: T) =>
     offset: z.number(),
   });
 
-/** Simple list for bounded results (scoped to parent entity) */
+// Bounded results (scoped to a parent entity) — no limit/offset.
 export const listOf = <T extends z.ZodTypeAny>(schema: T) =>
   z.object({
     items: z.array(schema),
@@ -48,21 +44,14 @@ export const listOf = <T extends z.ZodTypeAny>(schema: T) =>
 export const SuccessSchema = z.object({ success: z.literal(true) });
 export const SuccessWithMessageSchema = SuccessSchema.extend({ message: z.string() });
 
-/**
- * One tool_call recorded inside a SimulationStep — the underlying browser_op
- * invocation that contributed to the step's action.
- */
+// One browser_op invocation recorded inside a SimulationStep's action.
 export const ToolCallRecordSchema = z.object({
   name: z.string().min(1),
   params: z.record(z.string(), z.unknown()).default({}),
   result: z.record(z.string(), z.unknown()).default({}),
 });
 
-/**
- * Slack incoming-webhook URL validator — shared by the workspace update path
- * and the slack-test endpoint so both surface a 400 BAD_REQUEST for the same
- * malformed input.
- */
+// Shared by workspace update + slack-test so both 400 on the same malformed input.
 export const SlackWebhookUrlSchema = z
   .string()
   .url()
@@ -91,11 +80,8 @@ export const GraphSectionSchema = z
   })
   .passthrough();
 
-/**
- * Graph node schema - unique page state observed during simulation.
- * Matches agent's PageNode model (knowledge/graph.py).
- * Uses passthrough() because the agent model may evolve faster than the schema.
- */
+// Unique page state observed during simulation; matches agent's PageNode (knowledge/graph.py).
+// passthrough() because the agent model may evolve faster than this schema.
 export const GraphNodeSchema = z
   .object({
     id: z.string(),

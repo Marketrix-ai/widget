@@ -59,7 +59,6 @@ function matchesProgressCriteria(
     }
   }
 
-  // Content may be empty when progress lives in parts instead.
   if (requireContent) {
     const hasText = msg.content.trim().length > 0;
     const hasProgress = msg.parts && msg.parts.length > 0;
@@ -71,7 +70,6 @@ function matchesProgressCriteria(
   return true;
 }
 
-// Returns the LAST matching message, by the priority cascade labelled below.
 export function findMessageForProgress(options: FindMessageOptions): {
   index: number;
   message: ChatMessage;
@@ -82,7 +80,6 @@ export function findMessageForProgress(options: FindMessageOptions): {
   if (isTaskRunning && (currentMode === 'show' || currentMode === 'do')) {
     const checkMode = true;
 
-    // Priority 1: last placeholder with content in matching mode.
     for (let i = messages.length - 1; i >= 0; i--) {
       const msg = messages[i];
       const matchesCriteria = matchesProgressCriteria(msg, isTaskRunning, currentMode, requireContent, checkMode);
@@ -95,7 +92,6 @@ export function findMessageForProgress(options: FindMessageOptions): {
       }
     }
 
-    // Priority 2: last placeholder in matching mode, even without content.
     if (taskMessageIndex < 0 && !requireContent) {
       for (let i = messages.length - 1; i >= 0; i--) {
         const msg = messages[i];
@@ -109,7 +105,6 @@ export function findMessageForProgress(options: FindMessageOptions): {
       }
     }
 
-    // Priority 3: last non-placeholder agent message in matching mode.
     if (taskMessageIndex < 0) {
       for (let i = messages.length - 1; i >= 0; i--) {
         const msg = messages[i];
@@ -124,9 +119,8 @@ export function findMessageForProgress(options: FindMessageOptions): {
     }
   }
 
-  // Fallback (no active task or no match) — critical: tool calls can arrive before isTaskRunning flips true.
+  // Tool calls can arrive before isTaskRunning flips true, so always fall back to a mode-agnostic match.
   if (taskMessageIndex < 0) {
-    // Priority 1: last placeholder message, no mode/content requirement.
     for (let i = messages.length - 1; i >= 0; i--) {
       const msg = messages[i];
       const isAgent = msg.sender === 'agent';
@@ -141,7 +135,6 @@ export function findMessageForProgress(options: FindMessageOptions): {
       }
     }
 
-    // Priority 2: placeholder without content requirement.
     if (taskMessageIndex < 0 && !requireContent) {
       for (let i = messages.length - 1; i >= 0; i--) {
         const msg = messages[i];
@@ -152,12 +145,10 @@ export function findMessageForProgress(options: FindMessageOptions): {
       }
     }
 
-    // Priority 3: last task message.
     if (taskMessageIndex < 0) {
       taskMessageIndex = findTaskMessageIndex(messages);
     }
 
-    // Priority 4: any agent message.
     if (taskMessageIndex < 0) {
       for (let i = messages.length - 1; i >= 0; i--) {
         const msg = messages[i];
@@ -202,7 +193,6 @@ function ensureMessageStructure(message: ChatMessage): ChatMessage {
   return msg;
 }
 
-// "Mouse and keyboard" tools shown with an icon + standard text; all others get hidden icon + muted text.
 const INTERACTIVE_TOOLS = new Set([
   'click_element',
   'type_text',
@@ -221,7 +211,7 @@ export const WAIT_FOR_USER_TOOLS = new Set([
   'upload_file',
 ]);
 
-// Strip "(Cancelled by cleanup)" text — an expected internal message users shouldn't see.
+// "Cancelled by cleanup" is expected internal chatter users shouldn't see.
 function filterCancellationText(content: string): string {
   if (!content) return content;
   return content
@@ -314,7 +304,6 @@ export function markProgressLineFailed(message: ChatMessage, browserToolName: st
   }
 
   if (partIndex >= 0) {
-    // Filtered errors mark as completed rather than showing a confusing cancellation failure.
     if (shouldFilterError) {
       const cleanedContent = filterCancellationText(newParts[partIndex].content);
       newParts[partIndex] = {
@@ -372,7 +361,7 @@ export function updateThinkingMarker(
 
   return msg;
 }
-// Friendly display names, derived from BROWSER_TOOLS (single source of truth).
+
 export const TOOL_NAME_MAPPING: Record<string, string> = Object.fromEntries(
   BROWSER_TOOLS.map(t => [t.id, t.displayAction]),
 );
@@ -382,7 +371,6 @@ export function getFriendlyToolName(browserToolName: string): string {
     return TOOL_NAME_MAPPING[browserToolName];
   }
 
-  // Fallback: snake_case / camelCase → Title Case ("my_custom_tool" -> "My Custom Tool").
   return browserToolName
     .replace(/([A-Z])/g, ' $1')
     .replace(/_/g, ' ')

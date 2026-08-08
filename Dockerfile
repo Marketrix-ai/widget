@@ -1,6 +1,4 @@
 # syntax=docker/dockerfile:1.7
-# One image, two targets: `dev` runs the dev server for Tilt, the final stage serves the built
-# output through nginx for CI. Both install from the same lockfile in the same base.
 FROM node:26-alpine AS base
 WORKDIR /app
 COPY package.json package-lock.json ./

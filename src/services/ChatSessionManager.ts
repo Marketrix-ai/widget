@@ -1,5 +1,3 @@
-// Centralized chat-ID management; promise-based locking ensures only one chat ID is created per session.
-
 import { sdk } from '../sdk';
 import { createLogger } from '../utils/logger';
 import { chatService } from './ChatService';
@@ -91,7 +89,6 @@ class ChatSessionManager {
       return chatId;
     } catch (error) {
       log.error('Failed to create chat ID:', error);
-      // Clear the promise so a retry can start fresh.
       this.initializationPromise = null;
       throw error;
     }

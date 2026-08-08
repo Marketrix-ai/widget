@@ -275,7 +275,6 @@ export class BrowserToolService {
 
       const finalValue = clear ? args.text : inputElement.value + args.text;
 
-      // Value-setter fallback ladder — first that works wins.
       let valueSet = false;
       let lastError: unknown = null;
 
@@ -323,7 +322,6 @@ export class BrowserToolService {
         }
       }
 
-      // Last resort: simulate keyboard input character by character.
       if (!valueSet) {
         try {
           inputElement.focus();
@@ -374,7 +372,6 @@ export class BrowserToolService {
         console.warn('[BrowserToolService] Event dispatch failed:', e);
       }
     } else if ('value' in element) {
-      // Generic element with a value property (select, custom elements).
       try {
         (element as HTMLInputElement).value = args.text;
         element.dispatchEvent(new Event('input', { bubbles: true }));
@@ -387,7 +384,6 @@ export class BrowserToolService {
         };
       }
     } else {
-      // contenteditable / text-based elements.
       try {
         element.textContent = args.text;
         element.dispatchEvent(new Event('input', { bubbles: true }));
@@ -540,7 +536,7 @@ export class BrowserToolService {
           document.querySelectorAll<HTMLElement>(
             'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
           ),
-        ).filter(el => el.offsetParent !== null); // Only visible elements
+        ).filter(el => el.offsetParent !== null);
 
         const currentIndex = focusables.indexOf(element);
         if (currentIndex !== -1 && currentIndex < focusables.length - 1) {
@@ -746,7 +742,7 @@ export class BrowserToolService {
       }
 
       default:
-        // Other keys: generic events already dispatched by the caller.
+        // The caller already dispatched the generic key events.
         return null;
     }
   }

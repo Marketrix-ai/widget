@@ -211,7 +211,7 @@ export const autoInitializeWidget = (retryCount = 0): void => {
   }
 
   const MAX_RETRIES = 5;
-  const RETRY_DELAYS = [0, 100, 500, 1000, 2000]; // ms
+  const RETRY_DELAYS_MS = [0, 100, 500, 1000, 2000];
 
   if (!initWidgetFunction) {
     console.error('[AutoInit] initWidget function not registered');
@@ -243,7 +243,7 @@ export const autoInitializeWidget = (retryCount = 0): void => {
     }
 
     if (retryCount < MAX_RETRIES) {
-      const delay = RETRY_DELAYS[retryCount] || 2000;
+      const delay = RETRY_DELAYS_MS[retryCount] || 2000;
       console.warn(
         `[AutoInit] Script tag not found (attempt ${retryCount + 1}/${MAX_RETRIES}), retrying in ${delay}ms...`,
       );

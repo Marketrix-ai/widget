@@ -1,5 +1,4 @@
-// Injects a React importmap (merging with any existing one), loads widget.mjs from the same origin,
-// and passes through every mtx-* attribute. MUST sit in <head> before any <script type="module">.
+// Must sit in <head> before any <script type="module"> — it defines the importmap they resolve against.
 (function () {
   var existing = {};
   var oldMap = document.querySelector('script[type="importmap"]');

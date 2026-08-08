@@ -1,4 +1,3 @@
-// Pure SSE reducer `(state, event) => { state, effects }` — no transport/tool-exec/storage (ChatContext wires it up); pure so it stays unit-testable.
 import type { WidgetEvent } from '../sdk';
 import type { ChatMessage, InstructionType } from '../types';
 import {
@@ -21,7 +20,6 @@ export interface SseState {
   task: SseTaskState;
 }
 
-/** Side effects the wiring layer must run after applying a reduced state. */
 export type SseEffect =
   | {
       type: 'executeTool';
@@ -113,7 +111,6 @@ export function reduceToolProgress(
   };
 }
 
-// Terminal `done` tool — strip the in-flight `done` progress line and end the task.
 export function reduceToolDone(state: SseState, currentMode: InstructionType): SseState {
   const found = findMessageForProgress({
     messages: state.messages,
@@ -131,7 +128,6 @@ export function reduceToolDone(state: SseState, currentMode: InstructionType): S
   return { messages, task: { isTaskRunning: false, activeTaskId: null } };
 }
 
-// User-initiated stop — flag the active message `stopped` and end the task.
 export function reduceStop(state: SseState, currentMode: InstructionType): SseState {
   const found = findMessageForProgress({
     messages: state.messages,
@@ -146,11 +142,10 @@ export function reduceStop(state: SseState, currentMode: InstructionType): SseSt
   return { messages, task: { isTaskRunning: false, activeTaskId: null } };
 }
 
-// Non-stateful events (registered, heartbeat) fall through unchanged.
 export function reduceSse(state: SseState, event: WidgetEvent, currentMode: InstructionType): ReduceResult {
   switch (event.type) {
     case 'tool/call': {
-      // Auto-activate the task if a tool arrives before `task/status running`.
+      // A tool/call can arrive before `task/status running`, so activate here too.
       const task = state.task.isTaskRunning ? state.task : { ...state.task, isTaskRunning: true };
       const isTaskRunning = task.isTaskRunning;
       const mode = event.mode || currentMode || 'do';
@@ -185,7 +180,7 @@ export function reduceSse(state: SseState, event: WidgetEvent, currentMode: Inst
         return noChange(state);
       }
       if (event.status === 'has_question') {
-        // Paused awaiting a user answer — not terminal. Stop spinner, flip to "waiting for you".
+        // has_question is a pause, not a terminal status.
         const found = findMessageForProgress({
           messages: state.messages,
           isTaskRunning: state.task.isTaskRunning,
@@ -203,7 +198,6 @@ export function reduceSse(state: SseState, event: WidgetEvent, currentMode: Inst
         }
         return { state: { messages, task: { isTaskRunning: false, activeTaskId: null } }, effects: [] };
       }
-      // completed | failed | stopped — terminal.
       const found = findMessageForProgress({
         messages: state.messages,
         isTaskRunning: state.task.isTaskRunning,
@@ -245,7 +239,7 @@ export function reduceSse(state: SseState, event: WidgetEvent, currentMode: Inst
     case 'chat/response': {
       const messages = state.messages.map(msg => {
         if (msg.id !== event.request_id) return msg;
-        // Final full text REPLACES an in-flight streamed part (chat/delta accumulation), else appends its own.
+        // Final text replaces the streamed part chat/delta accumulated, else appends its own.
         const parts = [...(msg.parts ?? [])];
         const last = parts[parts.length - 1];
         if (last?.type === 'text' && last.streaming) {
@@ -275,6 +269,7 @@ export function reduceSse(state: SseState, event: WidgetEvent, currentMode: Inst
       return { state: { ...state, messages }, effects: [{ type: 'setLoading', value: false }] };
     }
 
+    // registered / heartbeat carry no state.
     default:
       return noChange(state);
   }

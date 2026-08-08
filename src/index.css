@@ -2,14 +2,7 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* ════════════════════════════════════════════════════════════════
-   THEME
-   ════════════════════════════════════════════════════════════════ */
-
-/*
- * :host is required so variables cascade inside closed Shadow DOM.
- * :root provides defaults for non-shadow contexts (dev preview, tests).
- */
+/* :host so vars cascade inside the closed Shadow DOM; :root covers non-shadow contexts (dev preview, tests). */
 :root,
 :host {
   --background: oklch(1 0 0);
@@ -237,10 +230,6 @@
   }
 }
 
-/* ════════════════════════════════════════════════════════════════
-   KEYFRAMES
-   ════════════════════════════════════════════════════════════════ */
-
 @keyframes dialog-overlay-in {
   from {
     opacity: 0;
@@ -338,11 +327,6 @@
   }
 }
 
-/* ════════════════════════════════════════════════════════════════
-   WIDGET SHELL — pseudo-elements & complex selectors that
-   can't be expressed as Tailwind utilities
-   ════════════════════════════════════════════════════════════════ */
-
 .marketrix-widget,
 [data-marketrix-widget] {
   font-family: var(--font-sans);
@@ -388,13 +372,7 @@
   font: inherit;
 }
 
-/*
- * !important exceptions:
- * - [data-resizing]: transition none during drag
-
- * - scrollbar rules: hide buttons/corners across browsers
- */
-
+/* !important here and in the scrollbar rules beats the blanket transition/scrollbar defaults above. */
 [data-resizing='true'],
 [data-resizing='true'] * {
   transition: none !important;
@@ -405,7 +383,6 @@
   border-image: linear-gradient(to right, var(--foreground), var(--foreground)) 1;
 }
 
-/* Scrollbar */
 .marketrix-widget ::-webkit-scrollbar,
 .marketrix-widget * ::-webkit-scrollbar {
   width: 6px;
@@ -470,7 +447,6 @@
   border: none !important;
 }
 
-/* Glow effects */
 @keyframes glow-border-pulse {
   0%,
   100% {
@@ -632,10 +608,6 @@
   animation: widget-glow-red 1.5s ease-in-out infinite;
 }
 
-/* ════════════════════════════════════════════════════════════════
-   FIN INTEGRATION — launcher, messenger, message animations
-   ════════════════════════════════════════════════════════════════ */
-
 @keyframes launcher-entrance {
   from {
     opacity: 0;
@@ -698,7 +670,6 @@
   animation: message-enter 200ms ease-out;
 }
 
-/* View slide transitions (Phase 3) */
 .view-slide-enter.forward {
   transform: translateX(20px);
   opacity: 0;
@@ -737,7 +708,6 @@
     opacity 150ms;
 }
 
-/* ViewTransition semantic-props variant — data-direction drives animation */
 [data-view-transition][data-direction='forward'] {
   animation: viewSlideForward 300ms both;
 }

@@ -49,9 +49,7 @@ const sdkExtras = {
 
 type SdkExtras = typeof sdkExtras;
 
-// oRPC's client is a deep Proxy that intercepts all string property accesses
-// (including .bind, .call, etc.) as route path segments, so we must not call
-// .bind() on it — just return the property directly.
+// oRPC's client Proxy reads every string property (.bind, .call included) as a route segment — return it, never bind it.
 export const sdk = new Proxy({} as ContractRouterClient<typeof widgetContract> & SdkExtras, {
   get(_target, prop) {
     if (prop in sdkExtras) {
@@ -76,6 +74,5 @@ export type {
 
 export type { WidgetCommand, WidgetEvent, WidgetSettingsKey } from './contracts/widget';
 
-// Type-only export: the oRPC client builds requests from the proxied path and
-// never needs the `widgetContract` VALUE at runtime.
+// Type-only: the oRPC client builds requests from the proxied path, so the contract value never ships.
 export type { widgetContract } from './contract';

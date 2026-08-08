@@ -132,7 +132,7 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
     ...settings,
     widget_position: widgetPosition,
     widget_position_z_index: effectiveWidgetZIndex,
-    // These come from script-tag attrs / init config, not API settings — pass through so children see them
+    // From script-tag attrs / init config, not API settings
     show_widget: config.show_widget,
     use_screenshare: config.use_screenshare,
   };

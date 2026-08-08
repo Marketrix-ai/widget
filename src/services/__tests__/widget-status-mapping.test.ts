@@ -1,4 +1,3 @@
-// Widget task-status contract (WidgetEventSchema): `task/status` union = `'running' | 'completed' | 'failed' | 'stopped' | 'has_question'`.
 import { describe, expect, it } from 'vitest';
 
 import { WidgetEventSchema } from '@/sdk';

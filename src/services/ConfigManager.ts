@@ -54,7 +54,6 @@ export class ConfigManager {
 
 export const configManager = ConfigManager.getInstance();
 
-/** API settings (defaults included) override the base config. */
 export function createConfigFromSettings(
   widgetSettings: WidgetSettingsData,
   baseConfig: Partial<MarketrixConfig> = {},

@@ -1,4 +1,3 @@
-// Composition root: init (SSE + hydration) and persistence live in inner bridge components so they can read every context; React context is the single source of truth.
 import React, { createContext, useContext, useEffect } from 'react';
 
 import { chatService } from '../services/ChatService';
@@ -12,7 +11,6 @@ const PortalContainerContext = createContext<HTMLElement | ShadowRoot | null>(nu
 
 export const usePortalContainer = (): HTMLElement | ShadowRoot => useContext(PortalContainerContext) ?? document.body;
 
-// Persistence bridge — single context → storage effect (innermost, sees all state).
 const PersistBridge: React.FC<{ previewMode: boolean }> = ({ previewMode }) => {
   const { uiState } = useUIStateContext();
   const { chatState, taskState } = useChatContext();
@@ -42,7 +40,6 @@ const PersistBridge: React.FC<{ previewMode: boolean }> = ({ previewMode }) => {
   return null;
 };
 
-// Initialization bridge — hydrates from ChatService, connects the stream, seeds the store; sees both contexts.
 const InitBridge: React.FC<{ children: React.ReactNode; previewMode: boolean }> = ({ children, previewMode }) => {
   const { uiActions } = useUIStateContext();
   const { chatActions, taskActions } = useChatContext();
@@ -105,7 +102,6 @@ const InitBridge: React.FC<{ children: React.ReactNode; previewMode: boolean }> 
   );
 };
 
-// UIState → Conversation bridge (reads UIState to inject into ChatProvider).
 const UIStateBridge: React.FC<{ children: React.ReactNode; previewMode: boolean }> = ({ children, previewMode }) => {
   const { uiState, uiActions } = useUIStateContext();
 

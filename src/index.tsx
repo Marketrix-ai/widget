@@ -34,8 +34,6 @@ import {
 } from './utils/bootstrap';
 import { isHTMLElement } from './utils/validation';
 
-// CSS rides in the JS bundle, mounted into the Shadow DOM (bootstrap.tsx, 'index.css?inline') so the widget's Tailwind can't collide with the host app's.
-
 let initPromise: Promise<void> | null = null;
 let rrwebSessionRecorder: RrwebSessionRecorder | null = null;
 let widgetMounted = false;
@@ -161,7 +159,7 @@ async function initWidgetInternal(config: MarketrixConfig, container?: HTMLEleme
 }
 
 export const initWidget = async (config: MarketrixConfig, container?: HTMLElement): Promise<void> => {
-  // window-level guard survives ES module re-execution (fresh module-level vars)
+  // window-level guard survives ES module re-execution, which resets module-level vars.
   if (window.__mtx?.state) {
     return;
   }
@@ -173,7 +171,7 @@ export const initWidget = async (config: MarketrixConfig, container?: HTMLElemen
     return;
   }
 
-  // set promise first so concurrent callers always get Promise<void>, not null
+  // Assign before awaiting so concurrent callers see the promise, not null.
   initPromise = initWidgetInternal(config, container);
   try {
     await initPromise;
@@ -219,7 +217,7 @@ export const updateMarketrixConfig = async (newConfig: Partial<MarketrixConfig>)
 
 export { getCurrentConfig };
 
-// Preview-mode React entry point — mounts into its own shadow DOM inside a parent container.
+// Preview-mode React entry point — mounts its own shadow DOM inside the parent container.
 export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ settings, container, mtxId, mtxKey, mtxApiHost }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const rootRef = useRef<Root | null>(null);
@@ -283,7 +281,7 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ settings, cont
     };
   }, [settings, container]);
 
-  // with an explicit container the useEffect mounts into it; otherwise render a mount-point div
+  // An explicit container is mounted into by the effect; otherwise render a mount point.
   if (container) {
     return null;
   }
@@ -297,7 +295,7 @@ export const mountWidget = async (config: AddWidgetConfig): Promise<void> => {
   const container = config.container;
 
   if ('settings' in config && config.settings !== undefined) {
-    // preview mode: standalone, no API/network ops, doesn't set the global production instance
+    // Preview: no network, and deliberately no global production instance.
     const previewConfig = config as Extract<AddWidgetConfig, { settings: WidgetSettingsData }>;
     const { settings, container: _container, ...restConfig } = previewConfig;
     const finalConfig = {

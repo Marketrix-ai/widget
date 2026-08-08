@@ -1,11 +1,8 @@
-/** Unified widget localStorage (key `marketrix_chat_context`). */
-
 import type { ChatMessage, InstructionType, MarketrixConfig } from '../types';
 
 const STORAGE_KEY = 'marketrix_chat_context';
-const CONTEXT_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+const CONTEXT_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000;
 
-/** Serializable ChatMessage: timestamp as string, no videoStream. */
 type StoredMessage = Omit<ChatMessage, 'videoStream' | 'timestamp'> & { timestamp: string };
 
 export interface MarketrixChatContext {

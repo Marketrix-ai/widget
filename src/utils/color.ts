@@ -13,10 +13,10 @@ function rgbToHex(r: number, g: number, b: number): string {
   return `#${[r, g, b].map(x => x.toString(16).padStart(2, '0')).join('')}`;
 }
 
-// Relative luminance (0-1) per the WCAG formula.
+// WCAG relative luminance.
 function getLuminance(color: string): number {
   const rgb = hexToRgb(color);
-  if (!rgb) return 0.5; // medium luminance if parsing fails
+  if (!rgb) return 0.5;
 
   const [r, g, b] = [rgb.r / 255, rgb.g / 255, rgb.b / 255].map(val => {
     return val <= 0.03928 ? val / 12.92 : Math.pow((val + 0.055) / 1.055, 2.4);
@@ -41,11 +41,6 @@ export function addOpacity(color: string, opacity: number): string {
   const rgb = hexToRgb(color);
   if (rgb) {
     return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${opacity})`;
-  }
-
-  // Gradients can't take an opacity channel — return unchanged.
-  if (color.includes('gradient') || color.includes('linear-gradient')) {
-    return color;
   }
 
   return color;
