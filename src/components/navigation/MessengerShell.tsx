@@ -95,7 +95,7 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
   const zIndex = settings.widget_position_z_index ?? 40;
   const panelPositionStyle = getPanelPositionStyle(effectivePosition);
 
-  // All hooks must be above the early return — React requires stable hook count.
+  // Must stay above the early return below.
   const [headerScreenSharing, setHeaderScreenSharing] = useState(false);
   const chatViewStartScreenShareRef = useRef<(() => void) | null>(null);
   const chatViewStopScreenShareRef = useRef<(() => void) | null>(null);

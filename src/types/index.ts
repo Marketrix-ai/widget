@@ -12,9 +12,9 @@ export type {
 
 // Flat so API settings spread in directly. mtxId+mtxKey is the credential; mtxApp is set internally post-validation, never an input (an application id is guessable and authenticates nothing).
 export type MarketrixConfig = Partial<WidgetSettingsData> & {
-  mtxId?: string; // marketrix_id
-  mtxKey?: string; // marketrix_key
-  mtxApp?: number; // resolved application id
+  mtxId?: string;
+  mtxKey?: string;
+  mtxApp?: number;
   userId?: number;
   mtxApiHost?: string;
 
@@ -52,8 +52,7 @@ export interface MessagePart {
   browserToolName?: string;
   hideIcon?: boolean;
   textStyle?: 'default' | 'muted';
-  /** An in-flight streamed reply part — chat/delta fragments accumulate into it and the final
-   *  chat/response replaces it. */
+  /** chat/delta fragments accumulate into this part; the final chat/response replaces it. */
   streaming?: boolean;
 }
 
@@ -82,13 +81,11 @@ export type WidgetPosition = WidgetSettingsData['widget_position'];
 
 export type AddWidgetConfig = (
   | {
-      // Preview mode
       settings: WidgetSettingsData;
       mtxId?: never;
       mtxKey?: never;
     }
   | {
-      // Production mode
       settings?: never;
       mtxId: string;
       mtxKey: string;

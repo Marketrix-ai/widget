@@ -2,8 +2,7 @@ import type React from 'react';
 
 import type { WidgetPosition } from '../types';
 
-// Must equal Tailwind's `-5` spacing (1.25rem) used by getPositionClasses — the launcher is placed
-// by class, the panel by inline style, and the two must land on the same edge offset.
+// Must equal Tailwind's `-5` (1.25rem) in getPositionClasses: launcher positions by class, panel by inline style.
 const EDGE_OFFSET_PX = 20;
 
 export const getPositionClasses = (position: WidgetPosition): string => {
@@ -21,7 +20,6 @@ export const getPositionClasses = (position: WidgetPosition): string => {
   }
 };
 
-/** Anchored to the same corner as the launcher button. */
 export const getPanelPositionStyle = (position: WidgetPosition): React.CSSProperties => {
   const primary = `${EDGE_OFFSET_PX}px`;
   const secondary = `${EDGE_OFFSET_PX}px`;

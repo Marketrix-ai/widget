@@ -2,7 +2,6 @@ import { useEffect } from 'react';
 
 const MOBILE_MAX_WIDTH = 767;
 
-// Locks body scroll while enabled on mobile-width viewports; restores on disable/unmount.
 export function useScrollLock(enabled: boolean): void {
   useEffect(() => {
     if (!enabled) return;

@@ -49,10 +49,8 @@ jobs:
       - uses: azure/login@v3
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
-      # ACR builds the image; this runner only fires the run. `az acr run` is the ONE build path, so
-      # the same command works from any authenticated machine when Actions is unavailable — which is
-      # not hypothetical: every image in the 3.8.412-415 releases was built this way during an outage.
-      # Tags, build-args and OCI labels all live in acr-build.yaml, so they cannot drift from it.
+      # `az acr run` is the one build path, reusable from any authenticated machine if Actions is
+      # down (true during the 3.8.412-415 outage); tags/build-args/labels live in acr-build.yaml.
       - name: Build and push image in ACR
         run: |
           az acr run --registry marketrix --file acr-build.yaml \
@@ -71,8 +69,6 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
       - run: npm ci
       - run: npm run build
-      # Widget may tag a package version already on the registry. Skip it here
-      # rather than fail with "cannot publish over previously published versions".
       - name: Publish to npm
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

@@ -1,12 +1,9 @@
-// Characterization tests for the SSE discriminated-union contract: WidgetEventSchema is the canonical runtime validator; task/status union = `'running' | 'completed' | 'failed' | 'stopped' | 'has_question'`.
-
 import { describe, expect, it } from 'vitest';
 
 import { type WidgetEvent, WidgetEventSchema } from '@/sdk';
 import type { ChatMessage } from '@/types';
 import { hasThinkingMarker, updateThinkingMarker } from '@/utils/chat';
 
-// All event types present in the discriminated union — pin this set.
 const ALL_WIDGET_EVENT_TYPES = [
   'registered',
   'heartbeat',
@@ -148,7 +145,7 @@ describe('SSE event discriminated-union contract (WidgetEventSchema)', () => {
   });
 
   describe('task/status "has_question" pauses the active message (clears running spinner)', () => {
-    // Mirrors the ChatContext `has_question` reducer: strip the thinking marker (stops spinner), flip to "waiting-for-user", no terminal taskStatus icon.
+    // Mirrors the ChatContext `has_question` reducer.
     const applyHasQuestionTransition = (message: ChatMessage, statusMessage?: string): ChatMessage => {
       const cleared = updateThinkingMarker(message, false, 'do');
       return {
@@ -184,7 +181,6 @@ describe('SSE event discriminated-union contract (WidgetEventSchema)', () => {
     it('flips the message to "waiting-for-user" (paused, not terminal)', () => {
       const after = applyHasQuestionTransition(runningMessage());
       expect(after.placeholderState).toBe('waiting-for-user');
-      // Terminal icon statuses must NOT be applied — the task is paused, not finished.
       expect(after.taskStatus).not.toBe('done');
       expect(after.taskStatus).not.toBe('failed');
       expect(after.taskStatus).not.toBe('stopped');

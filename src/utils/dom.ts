@@ -2,7 +2,6 @@ export function isInteractable(el: Element | null): boolean {
   if (!el || !(el instanceof Element)) return false;
 
   try {
-    // Cheap type check before the expensive layout/style checks below.
     const tagName = el.tagName.toLowerCase();
     const isButton = tagName === 'button';
     const isInteractiveType =
@@ -27,7 +26,6 @@ export function isInteractable(el: Element | null): boolean {
       return false;
     }
 
-    // Diagnostic logging, buttons only to avoid noise.
     const logButtonFailure = (checkName: string, reason?: string): void => {
       if (isButton) {
         const buttonInfo = {
@@ -50,7 +48,6 @@ export function isInteractable(el: Element | null): boolean {
       return false;
     }
 
-    // Walk ancestors (crossing shadow hosts) for an inert subtree.
     try {
       let p: Element | null | ShadowRoot = el;
       while (p) {
@@ -62,11 +59,9 @@ export function isInteractable(el: Element | null): boolean {
         p = p instanceof Element ? p.parentElement || (root instanceof ShadowRoot ? root.host : null) : null;
       }
     } catch (error) {
-      // Inert check is best-effort; don't block on it.
       console.warn('[isInteractable] Error checking inert:', error);
     }
 
-    // Buttons with onclick are definitely interactive — skip visibility/occlusion checks.
     const hasOnclick = el.hasAttribute('onclick');
     if (isButton && hasOnclick) {
       return true;
@@ -107,7 +102,6 @@ export function isInteractable(el: Element | null): boolean {
 
     // No off-screen check: elements outside the viewport can be scrolled to, so still interactable.
 
-    // Overflow clipping by ancestors. Buttons: only fail if completely outside parent bounds.
     try {
       let node: Element | null = el;
       while (node && node !== document.body) {
@@ -146,13 +140,12 @@ export function isInteractable(el: Element | null): boolean {
         node = parent;
       }
     } catch (error) {
-      // Overflow check is best-effort; don't block on it.
       console.warn('[isInteractable] Error checking overflow:', error);
     }
 
     // No occlusion check: occluded elements can be scrolled to and interacted with, so still indexed.
 
-    // Shadow DOM host visibility — a zero-size host hides everything inside it.
+    // A zero-size shadow host hides everything inside it.
     try {
       let root: Node | null = el.getRootNode();
       while (root instanceof ShadowRoot) {
@@ -167,7 +160,6 @@ export function isInteractable(el: Element | null): boolean {
         root = host.getRootNode();
       }
     } catch (error) {
-      // Shadow-DOM check is best-effort; don't block on it.
       console.warn('[isInteractable] Error checking shadow DOM:', error);
     }
 

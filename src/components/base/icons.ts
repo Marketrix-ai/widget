@@ -1,5 +1,3 @@
-// SVG icon registry (single source of truth). Stroke families (Feather/Lucide/Heroicons/Tabler): stroke='currentColor', fill='none'; fill families (FontAwesome/Material/SimpleIcons): fill='currentColor'; Ionicons: per-icon.
-
 export interface IconPath {
   d: string;
   fill?: string;

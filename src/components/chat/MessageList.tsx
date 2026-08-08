@@ -84,7 +84,7 @@ export const MessageList = ({
         !isPreviewMode && handleScroll();
       }
     });
-  }, [messages.length, isPreviewMode]); // Run when messages length changes to handle history loading
+  }, [messages.length, isPreviewMode]);
 
   // Follow a streaming reply: pin to bottom as the last message grows (chat/delta), unless the user scrolled away.
   const lastContentLength = messages[messages.length - 1]?.content?.length ?? 0;

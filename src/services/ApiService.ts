@@ -7,7 +7,6 @@ export function getChatId(): string | null {
   return chatSessionManager.getChatId();
 }
 
-/** Resolves user_id from config, then localStorage, then sessionStorage. */
 function getUserId(config: MarketrixConfig): number | null {
   if (config.userId && typeof config.userId === 'number') {
     return config.userId;
@@ -66,7 +65,6 @@ async function logWidgetQuestion(config: MarketrixConfig, question: string, mode
         metadata,
       })
       .catch((error: unknown) => {
-        // Best-effort: logging isn't critical to widget function.
         console.warn('[API Service] Failed to log widget question:', error);
       });
   } catch (error) {

@@ -1,8 +1,5 @@
-// Shared access to the active screenshare MediaStream across the widget (useScreenShare, BrowserToolService).
-
 let activeStream: MediaStream | null = null;
 
-/** Reuses the existing stream if one is still active. */
 export async function startScreenShare(): Promise<MediaStream> {
   if (activeStream?.active) {
     const videoTracks = activeStream.getVideoTracks();

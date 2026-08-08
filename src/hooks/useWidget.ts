@@ -49,7 +49,6 @@ interface UseWidgetActions {
   ) => Promise<void>;
 }
 
-// Composes UIStateContext + ChatContext into the unified shape the widget UI consumes.
 export const useWidget = ({ config }: UseWidgetProps = {}) => {
   const { uiState, uiActions } = useUIStateContext();
   const { chatState, chatActions, taskState, taskActions } = useChatContext();

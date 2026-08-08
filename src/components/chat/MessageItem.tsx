@@ -39,7 +39,6 @@ export const MessageItem: React.FC<MessageItemProps> = ({
   }
 
   const isUser = message.sender === 'user';
-  // Leading glyph: browser tasks (show/do inputs) get a pointer icon; agent questions a check.
   const leadingIcon = isUser
     ? message.mode === 'show' || message.mode === 'do'
       ? ('mousePointerClick' as const)

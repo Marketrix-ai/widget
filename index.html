@@ -178,14 +178,12 @@
         color: var(--foreground);
       }
 
-      /* App Container */
       .app-container {
         max-width: 1200px;
         margin: 0 auto;
         padding: 60px 40px;
       }
 
-      /* Header */
       .app-header {
         display: flex;
         justify-content: space-between;
@@ -239,7 +237,6 @@
         gap: 12px;
       }
 
-      /* Theme Toggle */
       .theme-toggle {
         width: 40px;
         height: 40px;
@@ -264,7 +261,6 @@
         height: 18px;
       }
 
-      /* Hero */
       .hero {
         text-align: center;
         margin-bottom: 64px;
@@ -307,7 +303,6 @@
         line-height: 1.7;
       }
 
-      /* Section */
       .section {
         margin-bottom: 56px;
         animation: fadeIn 0.5s ease-out both;
@@ -344,7 +339,6 @@
         color: var(--muted-foreground);
       }
 
-      /* Card */
       .card {
         background: var(--card);
         border: 1px solid var(--border);
@@ -357,7 +351,6 @@
         box-shadow: var(--shadow-md);
       }
 
-      /* Navigation Panel */
       .nav-panel {
         display: flex;
         flex-wrap: wrap;
@@ -407,7 +400,6 @@
         border-color: transparent;
       }
 
-      /* Metrics Grid */
       .metrics-grid {
         display: grid;
         grid-template-columns: repeat(4, 1fr);
@@ -490,7 +482,6 @@
         letter-spacing: 0.03em;
       }
 
-      /* Workflow */
       .workflow-container {
         padding: 20px;
       }
@@ -603,7 +594,6 @@
         letter-spacing: 0.02em;
       }
 
-      /* Insights Grid */
       .insights-grid {
         display: grid;
         grid-template-columns: repeat(2, 1fr);
@@ -681,7 +671,6 @@
         text-align: right;
       }
 
-      /* Stats Row */
       .stats-row {
         display: grid;
         grid-template-columns: repeat(3, 1fr);
@@ -709,7 +698,6 @@
         letter-spacing: 0.02em;
       }
 
-      /* Tools Grid */
       .tools-grid {
         display: grid;
         grid-template-columns: repeat(3, 1fr);
@@ -791,7 +779,6 @@
         opacity: 0.85;
       }
 
-      /* Test Panel */
       .test-panel {
         padding: 24px;
       }
@@ -808,7 +795,6 @@
         gap: 8px;
       }
 
-      /* Modal */
       .modal-overlay {
         position: fixed;
         inset: 0;
@@ -1004,7 +990,6 @@
         opacity: 0.9;
       }
 
-      /* Notification */
       .notification {
         position: fixed;
         top: 50%;
@@ -1082,7 +1067,6 @@
         line-height: 1.5;
       }
 
-      /* Demo element hover */
       [data-demo-element] {
         transition:
           outline 0.15s ease,
@@ -1094,7 +1078,6 @@
         outline-offset: 2px;
       }
 
-      /* Responsive */
       @media (max-width: 1024px) {
         .metrics-grid {
           grid-template-columns: repeat(2, 1fr);
@@ -1165,7 +1148,6 @@
       }
     </style>
     <script>
-      // Read query params and inject loader with mtx-* attributes
       (function () {
         var params = new URLSearchParams(window.location.search);
         var script = document.createElement('script');
@@ -1182,7 +1164,6 @@
   </head>
   <body>
     <div class="app-container">
-      <!-- Header -->
       <header class="app-header">
         <div class="logo">
           <div class="logo-icon">
@@ -1198,7 +1179,6 @@
         </div>
       </header>
 
-      <!-- Hero -->
       <section class="hero">
         <div class="hero-badge">
           <i data-lucide="sparkles"></i>
@@ -1211,7 +1191,6 @@
         </p>
       </section>
 
-      <!-- Navigation -->
       <section class="section">
         <div class="section-header">
           <h2 class="section-title">Quick Actions</h2>
@@ -1237,7 +1216,6 @@
         </div>
       </section>
 
-      <!-- Metrics -->
       <section class="section">
         <div class="section-header">
           <h2 class="section-title">Performance Overview</h2>
@@ -1299,7 +1277,6 @@
         </div>
       </section>
 
-      <!-- Product Management -->
       <section class="section">
         <div class="section-header">
           <h2 class="section-title">Product Management</h2>
@@ -1325,7 +1302,6 @@
         </div>
       </section>
 
-      <!-- Order Workflow -->
       <section class="section">
         <div class="section-header">
           <h2 class="section-title">Order Processing</h2>
@@ -1365,7 +1341,6 @@
         </div>
       </section>
 
-      <!-- Insights -->
       <section class="section">
         <div class="section-header">
           <h2 class="section-title">Customer Insights</h2>
@@ -1420,7 +1395,6 @@
         </div>
       </section>
 
-      <!-- Marketing Tools -->
       <section class="section">
         <div class="section-header">
           <h2 class="section-title">Marketing Tools</h2>
@@ -1463,7 +1437,6 @@
         </div>
       </section>
 
-      <!-- Notification Test -->
       <section class="section">
         <div class="section-header">
           <h2 class="section-title">Notification System</h2>
@@ -1505,7 +1478,6 @@
       </section>
     </div>
 
-    <!-- Login Modal -->
     <div class="modal-overlay" id="login-modal">
       <div class="modal">
         <div class="modal-header">
@@ -1545,7 +1517,6 @@
       </div>
     </div>
 
-    <!-- Notification -->
     <div class="notification" id="notification">
       <div class="notification-content">
         <div class="notification-icon" id="notification-icon">
@@ -1559,10 +1530,8 @@
     </div>
 
     <script>
-      // Initialize Lucide icons
       lucide.createIcons();
 
-      // Theme Management
       function toggleTheme() {
         const body = document.body;
         const isDark = body.classList.contains('dark');
@@ -1599,7 +1568,6 @@
 
       loadTheme();
 
-      // Modal Functions
       function showLoginModal() {
         document.getElementById('login-modal').classList.add('active');
         document.body.style.overflow = 'hidden';
@@ -1626,7 +1594,6 @@
         document.getElementById('login-form').reset();
       }
 
-      // Notification System
       let notificationTimeout;
 
       function showNotification(title, message, type = 'info') {
@@ -1659,7 +1626,6 @@
         }, 3000);
       }
 
-      // Keyboard shortcuts
       document.addEventListener('keydown', e => {
         if (e.key === 'Escape') {
           hideLoginModal();
@@ -1673,7 +1639,6 @@
         }
       });
 
-      // Scroll animations
       const observer = new IntersectionObserver(
         entries => {
           entries.forEach(entry => {

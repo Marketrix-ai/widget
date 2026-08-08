@@ -10,7 +10,6 @@ interface VideoStreamDisplayProps {
   stream: MediaStream | null;
 }
 
-// Top corners are always rounded; match message bubble shape
 const TOP_RADIUS = '8px';
 const OVERLAY_BORDER_RADIUS = `${TOP_RADIUS} ${TOP_RADIUS} 0 0`;
 const OVERLAY_BG = '#111827';

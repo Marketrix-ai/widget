@@ -2,7 +2,6 @@ import type { ChatMessage, InstructionType } from '../types';
 import { removeThinkingMarkers } from '../utils/chat';
 import { storageService } from './StorageService';
 
-/** Widget state persisted to / restored from localStorage; React context is the runtime source of truth. */
 export interface ChatSnapshot {
   messages: ChatMessage[];
   isTaskRunning: boolean;
@@ -13,7 +12,6 @@ export interface ChatSnapshot {
   isLoading: boolean;
 }
 
-/** localStorage read/write lifecycle for the widget chat context: `persist(snapshot)` from an effect, `restore()` once on mount. */
 export class ChatService {
   private static instance: ChatService;
   private chatId: string | null = null;
@@ -63,7 +61,7 @@ export class ChatService {
 
     const messages: ChatMessage[] = context.chat_id
       ? context.messages.map(msg => {
-          // A screenshare stream can't survive a reload — replace it with an "ended" system message, not a dangling video placeholder.
+          // A MediaStream can't survive a reload, so a restored screenshare becomes an "ended" notice.
           if (msg.id.startsWith('screenshare-')) {
             return {
               ...msg,
@@ -106,7 +104,6 @@ export class ChatService {
     };
   }
 
-  /** No-op until a chatId is known. */
   persist(snapshot: ChatSnapshot): void {
     if (!this.chatId) return;
 
@@ -114,7 +111,6 @@ export class ChatService {
       const serializedMessages = snapshot.messages
         .filter(msg => {
           if (!msg.isPlaceholder) return true;
-          // Keep placeholders still thinking/waiting, or carrying parts.
           if (msg.placeholderState === 'thinking' || msg.placeholderState === 'waiting-for-user') {
             return true;
           }

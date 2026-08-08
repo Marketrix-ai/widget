@@ -55,7 +55,6 @@ export default [
         Element: 'readonly',
         EventTarget: 'readonly',
         Express: 'readonly',
-        // Vitest (test files)
         describe: 'readonly',
         it: 'readonly',
         test: 'readonly',
@@ -75,12 +74,11 @@ export default [
       prettier: prettier,
     },
     rules: {
-      // TypeScript specific rules
       '@typescript-eslint/no-unused-vars': 'off', // handled by unused-imports plugin
-      '@typescript-eslint/no-explicit-any': 'warn', // Prevent explicit any usage (warn to allow existing code)
+      '@typescript-eslint/no-explicit-any': 'warn',
       '@typescript-eslint/explicit-function-return-type': 'off',
       '@typescript-eslint/explicit-module-boundary-types': 'off',
-      '@typescript-eslint/no-non-null-assertion': 'warn', // Allow with warning
+      '@typescript-eslint/no-non-null-assertion': 'warn',
       '@typescript-eslint/no-var-requires': 'error',
       '@typescript-eslint/consistent-type-imports': [
         'error',
@@ -88,15 +86,15 @@ export default [
       ],
       '@typescript-eslint/consistent-type-exports': 'error',
       '@typescript-eslint/no-import-type-side-effects': 'error',
-      '@typescript-eslint/no-unsafe-assignment': 'warn', // Allow with warning
-      '@typescript-eslint/no-unsafe-call': 'warn', // Allow with warning
-      '@typescript-eslint/no-unsafe-member-access': 'warn', // Allow with warning
-      '@typescript-eslint/no-unsafe-return': 'warn', // Allow with warning
-      '@typescript-eslint/prefer-nullish-coalescing': 'off', // Disabled due to strictNullChecks requirement
-      '@typescript-eslint/prefer-optional-chain': 'warn', // Allow with warning
+      '@typescript-eslint/no-unsafe-assignment': 'warn',
+      '@typescript-eslint/no-unsafe-call': 'warn',
+      '@typescript-eslint/no-unsafe-member-access': 'warn',
+      '@typescript-eslint/no-unsafe-return': 'warn',
+      '@typescript-eslint/prefer-nullish-coalescing': 'off', // strictNullChecks requirement
+      '@typescript-eslint/prefer-optional-chain': 'warn',
       '@typescript-eslint/require-array-sort-compare': 'error',
       '@typescript-eslint/restrict-plus-operands': 'error',
-      '@typescript-eslint/restrict-template-expressions': 'warn', // Allow with warning
+      '@typescript-eslint/restrict-template-expressions': 'warn',
 
       // Import/Export rules
       'import-x/no-duplicates': 'error',
@@ -115,8 +113,7 @@ export default [
         },
       ],
 
-      // General rules
-      'no-console': 'off', // Allow console in development
+      'no-console': 'off',
       'no-debugger': 'error',
       'no-duplicate-imports': 'error',
       'no-unused-vars': 'off', // handled by unused-imports plugin
@@ -161,7 +158,6 @@ export default [
           ignoreRegExpLiterals: true,
         },
       ],
-      // Prettier integration
       'prettier/prettier': 'error',
     },
   },

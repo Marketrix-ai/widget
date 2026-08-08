@@ -32,9 +32,8 @@ are not a substitute — run the full set.
 
 **Hook setup is not automatic.** `core.hooksPath` is _local_ git config, so a fresh clone runs no hooks
 until you point it at the committed shim: `git config core.hooksPath .husky/_`. Lefthook is the only
-hook runner (there is no husky dependency, and lefthook is not a devDependency — install it yourself);
-it lives in `.husky/_` because `core.hooksPath` points there from a previous setup. The shim sources
-**`.lefthookrc`** first to put node/npm back on `PATH` — hooks launched from GUI clients inherit a
+hook runner (there is no husky dependency, and lefthook is not a devDependency — install it yourself).
+The shim sources **`.lefthookrc`** first to put node/npm back on `PATH` — hooks launched from GUI clients inherit a
 minimal environment and otherwise die `npm: command not found`. **That rc path is baked in when hooks
 are generated**, so after changing `rc:` you must re-run `lefthook install --force`.
 
@@ -149,11 +148,8 @@ and shipped images cannot drift in their dependency set.
 
 - **Lockfile discipline** — any version or dependency change must run `npm install` and commit
   `package-lock.json` alongside `package.json`. `npm run tag` does it for you.
-- **v-prefix asymmetry** — git tag `vX.Y.Z` → image `…/widget:X.Y.Z`.
-- **React external + peer** — the host MUST provide React 19. The loader injects an `esm.sh` importmap,
-  but **host importmap mappings win**, so a host on a different React 19 build keeps its own.
-- **Sticky auth error** — `chat/error` with `request_id: 'auth'` stops SSE reconnection until re-init.
-- **The SDK mirror is generated** — hand-edits fail infra's contract gate at deploy.
+- **React importmap wins** — the loader's `esm.sh` importmap only fills gaps; a host on a different
+  React 19 build keeps its own.
 
 ## Conventions
 

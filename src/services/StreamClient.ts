@@ -179,7 +179,6 @@ export class StreamClient {
 
   private handleMessage(event: WidgetEvent): void {
     if (this.isIntentionallyDisconnected) return;
-    // Heartbeats are keepalive-only — ignore silently
     if (event.type === 'heartbeat') return;
 
     if (event.type === 'registered') {
@@ -194,7 +193,7 @@ export class StreamClient {
       }
     }
 
-    // Auth errors are non-retriable — stop reconnecting with same bad credentials
+    // Auth failures are non-retriable: borrow the intentional-disconnect flag so nothing reconnects until re-init.
     if (event.type === 'chat/error' && event.request_id === 'auth') {
       console.error('[StreamClient] Authentication failed — will not reconnect');
       this.isIntentionallyDisconnected = true;

@@ -12,7 +12,7 @@ import { addThinkingMarker } from '../utils/chat';
 import { reduceSse, reduceStop, reduceToolDone, reduceToolProgress, type SseEffect, type SseState } from './sseReducer';
 import type { UIStateActions } from './UIStateContext';
 
-// One SseState `{ messages, task }` committed atomically so messages and task can't tear across an await; UIStateContext stays separate.
+// messages + task share one committed state so they can't tear across an await.
 
 export interface TaskState {
   activeTaskId: string | null;
@@ -58,7 +58,6 @@ interface ChatProviderProps {
   children: React.ReactNode;
   previewMode?: boolean;
   currentMode: InstructionType;
-  // Injected so the conversation store drives loading/availability/error without nesting contexts.
   uiActions: Pick<UIStateActions, 'setLoading' | 'setAgentAvailable' | 'setError'>;
   initialMessages?: ChatMessage[];
   initialTask?: TaskState;
@@ -86,7 +85,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
   const processedRequestIds = useRef(new Set<string>());
   const pendingTaskRef = useRef<{ apiTaskId?: string; agentRunning?: boolean }>({});
 
-  // Transition runs synchronously against stateRef, not inside the setState updater: React defers updaters (background tab / mid-burst), silently losing captured effects — tool calls that never executed.
+  // Transition runs synchronously here, not in a setState updater: React defers updaters (background tab, mid-burst) and captured effects are lost — tool calls that never execute.
   const commit = useCallback((transition: (s: SseState) => SseState) => {
     const prev = stateRef.current;
     const next = transition(prev);
@@ -150,7 +149,6 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
     ) => {
       const effectiveMode = mode ?? currentModeRef.current;
 
-      // Preview mode: synthetic response, no network
       if (previewMode) {
         if (!skipUserMessage) {
           addMessage(createUserMessage(content, effectiveMode));
@@ -246,7 +244,6 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
     }
   }, []);
 
-  // Activate pending task once both the API response and the SSE task/status running event arrive.
   const maybeActivateTask = useCallback(() => {
     const p = pendingTaskRef.current;
     if (p.apiTaskId && p.agentRunning) {
@@ -256,7 +253,6 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
     }
   }, [commit]);
 
-  // SSE event handler — thin wiring over the pure reducer.
   useEffect(() => {
     if (previewMode) return;
 

@@ -22,10 +22,7 @@ export const SimulationStatusSchema = z.enum([
 ]);
 export type SimulationStatus = z.infer<typeof SimulationStatusSchema>;
 
-/**
- * Graph generation lifecycle status on a simulation row. Values written by
- * `graphDispatch.ts` and `simulationHooks.ts`.
- */
+// Graph generation lifecycle status on a simulation row; written by graphDispatch.ts and simulationHooks.ts.
 export const GraphStatusSchema = z.enum(['pending', 'generating', 'completed', 'failed']);
 
 export const ApplicationTypeSchema = z.enum(['app', 'website']);
@@ -41,10 +38,9 @@ const AuthMethodSchema = z.enum(['password', 'oauth']);
 
 // Users don't have plans — plans belong to workspaces (via the workspace_plan table).
 /**
- * The workspace role vocabulary — `admin` administers the workspace, `member` does not. One spelling
- * everywhere: the same two words in the database enum, in this contract, in the dashboard, and as the
- * WorkOS role slug. Declared here rather than in `workspace.ts` because `UserEntitySchema` needs it and
- * `workspace.ts` already imports from this file.
+ * The workspace role vocabulary — `admin` administers, `member` does not. One spelling everywhere:
+ * DB enum, this contract, the dashboard, and the WorkOS role slug. Declared here (not `workspace.ts`)
+ * because `UserEntitySchema` needs it and `workspace.ts` already imports from this file.
  */
 export const WorkspaceMemberRoleSchema = z.enum(['admin', 'member']);
 
@@ -87,22 +83,22 @@ export const KnowledgeEntitySchema = BaseEntitySchema.extend({
   file_size: z.coerce.number(),
   file_type: KnowledgeTypeSchema,
   file_url: z.string(),
-  source_url: z.string().nullish(), // Original URL for URL-based documents
+  source_url: z.string().nullish(),
   source: KnowledgeSourceSchema.default('user').optional(),
   // Non-null ⇒ respondent evidence (an interview transcript / persona file) rather than product
   // knowledge; the unfiltered chunk search excludes those rows.
   persona_id: z.number().nullish(),
-  // `.default().optional()` is load-bearing on the two NOT NULL fields (same idiom as `source` above):
-  // Knowledge is `Model<KnowledgeData>`, so a key that is required in the inferred output is required
-  // by `CreationAttributes` too, and every existing `Knowledge.create({...})` call site stops compiling.
+  // `.default().optional()` is load-bearing here (same idiom as `source` above): Knowledge is
+  // `Model<KnowledgeData>`, so a required inferred-output key is required by `CreationAttributes`
+  // too, and every existing `Knowledge.create({...})` call site stops compiling.
   ingest_status: z.enum(['pending', 'embedding', 'ready', 'failed', 'unsupported']).default('pending').optional(),
   ingest_error: z.string().nullish(),
   extracted_chars: z.number().default(0).optional(),
 });
 export type KnowledgeData = z.infer<typeof KnowledgeEntitySchema>;
 
-// A file uploaded under a persona (meeting minutes, transcripts, …). `file_type` is the raw
-// upload MIME type (free-form) — persona files aren't constrained to the document/video vocabulary.
+// A file uploaded under a persona (meeting minutes, transcripts, …); `file_type` is the raw upload
+// MIME type — persona files aren't constrained to the document/video vocabulary.
 export const PersonaFileEntitySchema = BaseEntitySchema.extend({
   workspace_id: z.number(),
   application_id: z.number(),
@@ -115,18 +111,16 @@ export const PersonaFileEntitySchema = BaseEntitySchema.extend({
 export type PersonaFileData = z.infer<typeof PersonaFileEntitySchema>;
 
 /**
- * Device viewport — the only device dimension (Chrome-only). A simulation runs at exactly
- * one viewport; selecting N viewports fans out into N simulations (one per viewport).
- * Defined here (the widget/root import closure) so SSE + simulation + qa contracts can share it.
+ * Device viewport — the only device dimension (Chrome-only). A simulation runs at exactly one
+ * viewport; selecting N viewports fans out into N simulations. Defined here so SSE + simulation +
+ * qa contracts can share it.
  */
 export const ViewportNameSchema = z.enum(['desktop', 'tablet', 'mobile']);
 
-// A run's selected (journey × persona) cells. persona_id 0 = the generic lane. Empty = run every
-// applicable cell (back-compat / generic flows). Each cell fans out one sim per viewport.
-//
-// Here rather than in `qa` because the run-quote input in `stripe` needs it too, and `qa` already
-// imports `stripe` — defining it there and reaching back for it makes the two fragments a cycle, which
-// evaluates one of them to `undefined` at import time rather than failing loudly.
+// A run's selected (journey × persona) cells. persona_id 0 = the generic lane; empty = run every
+// applicable cell. Each cell fans out one sim per viewport. Declared here rather than in `qa`
+// because the run-quote input in `stripe` needs it too, and `qa` already imports `stripe` —
+// defining it there would make the two fragments a cycle (evaluates one to `undefined` at import).
 export const QARunCellSchema = z.object({ journey_id: z.number().int(), persona_id: z.number().int() });
 export type ViewportName = z.infer<typeof ViewportNameSchema>;
 export const VIEWPORT_DIMENSIONS: Record<ViewportName, { width: number; height: number }> = {
@@ -156,9 +150,8 @@ export const SimulationReactionEntitySchema = z.object({
   persona_id: z.number().nullable(),
   user_index: z.number().nullable(),
   simulation_id: z.number().nullable(),
-  // A/B variant this reaction's sim belongs to. Set for ab study reactions (from the
-  // sim's variant at create), null for uxr/survey/direct. Lets the app build a
-  // {study_variant_id → simulation_id} map purely from the run's reactions — no
+  // A/B variant this reaction's sim belongs to (set for ab, null for uxr/survey/direct). Lets the
+  // app build a {study_variant_id → simulation_id} map from the run's reactions alone — no
   // positional zip of orderedVariants[i] → distinctSimIds[i] in DB row order.
   study_variant_id: z.number().nullable(),
   // uxr browser-task the sim ran (null for ab study/survey/direct); mirrors study_variant_id.
@@ -281,9 +274,8 @@ export const StateTriggerEntitySchema = BaseEntitySchema.extend({
 export type StateTriggerData = z.infer<typeof StateTriggerEntitySchema>;
 
 /**
- * Run status — first-class TEXT+CHECK column on qa_run and study_run (no longer derived).
- * `finalizing` = all sims terminal but the run-level fold still completing.
- * Canonical wire vocabulary shared by QA runs and study runs.
+ * Run status — TEXT+CHECK column on qa_run and study_run. `finalizing` = all sims terminal but the
+ * run-level fold still completing. Canonical wire vocabulary shared by QA runs and study runs.
  */
 export const RunStatusSchema = z.enum(['created', 'running', 'finalizing', 'completed', 'failed', 'stopped']);
 export type RunStatus = z.infer<typeof RunStatusSchema>;
@@ -312,16 +304,12 @@ export const ActivityLogTypeSchema = z.enum([
   'create_knowledge',
   'update_knowledge',
   'delete_knowledge',
-  // The membership vocabulary is exactly two verbs: someone REQUESTS membership, an admin INVITES them.
-  // There is no approving — a request is answered with a WorkOS invitation or not at all, and the
-  // invitation still has to be accepted. The retired `approve_user` / `deny_user` / `request_workspace`
-  // are gone from the wire; both databases hold zero rows using them (checked 2026-08-06) and Postgres
-  // keeps the dead labels because an enum value cannot be dropped without rewriting the type.
+  // Exactly two membership verbs: someone REQUESTS membership, an admin INVITES them — no approving;
+  // a request is answered with a WorkOS invitation or not at all, and it still must be accepted.
   'request_membership',
   'invite_user',
-  // Workspace + subscription lifecycle. These are the transparency record a customer reads in settings,
-  // so they are written for the SYSTEM's actions too (Stripe webhooks) with `user_id: null` — nobody
-  // clicked anything when a trial lapsed, and attributing it to the last admin would be a lie.
+  // Workspace + subscription lifecycle — the transparency record a customer reads in settings, so
+  // SYSTEM actions (Stripe webhooks) write these too with `user_id: null` rather than a fabricated admin.
   'create_workspace',
   'trial_started',
   'trial_ending_soon',
