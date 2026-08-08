@@ -38,9 +38,9 @@
     "code:check": "tsc --noEmit && eslint . --ext .ts,.tsx && prettier --check ."
   },
   "dependencies": {
-    "@base-ui/react": "^1.6.0",
-    "@orpc/client": "^1.14.13",
-    "@orpc/contract": "^1.14.13",
+    "@base-ui/react": "^1.7.0",
+    "@orpc/client": "^1.14.14",
+    "@orpc/contract": "^1.14.14",
     "@rrweb/record": "^2.1.1",
     "tailwind-merge": "^3.6.0",
     "zod": "^4.4.3"
@@ -73,7 +73,7 @@
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "tailwindcss": "^4.2.4",
-    "terser": "^5.49.0",
+    "terser": "^5.49.2",
     "typescript": "^6.0.3",
     "vite": "^8.2.0",
     "vite-plugin-css-injected-by-js": "^5.0.2",
