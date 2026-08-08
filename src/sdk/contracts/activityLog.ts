@@ -4,6 +4,13 @@ import { z } from 'zod';
 import { paginatedListOf, PaginationSchema } from './common';
 import { ActivityLogCreateSchema, ActivityLogEntitySchema, ActivityLogTypeSchema } from './entities';
 
+/**
+ * How long an activity row is kept. The timeline is informational, not an audit record, so it is
+ * bounded rather than grown forever. It lives on the contract because the reader clamp, the purge cron
+ * and the retention notice shown to the customer must all quote the SAME number.
+ */
+export const ACTIVITY_RETENTION_DAYS = 90;
+
 export const activityLogCreate = oc
   .route({
     method: 'POST',
@@ -29,6 +36,8 @@ export const activityLogSearch = oc
         workspace_id: z.coerce.number().optional(),
         type: ActivityLogTypeSchema.optional(),
         application_id: z.coerce.number().optional(),
+        /** Restrict to the caller's OWN activity. A flag rather than a user_id so one member can never read another's. */
+        mine: z.coerce.boolean().optional(),
       })
       .extend(PaginationSchema.shape),
   )
