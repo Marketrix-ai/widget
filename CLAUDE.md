@@ -30,7 +30,7 @@ npm run tag <version>    # scripts/release.sh
 `format:check`, `test:run`, then `visual:check` + `a11y:check` + `bundle:check`. Git hooks autofix but
 are not a substitute — run the full set.
 
-**Hook setup is not automatic.** `core.hooksPath` is *local* git config, so a fresh clone runs no hooks
+**Hook setup is not automatic.** `core.hooksPath` is _local_ git config, so a fresh clone runs no hooks
 until you point it at the committed shim: `git config core.hooksPath .husky/_`. Lefthook is the only
 hook runner (there is no husky dependency, and lefthook is not a devDependency — install it yourself);
 it lives in `.husky/_` because `core.hooksPath` points there from a previous setup. The shim sources
@@ -62,6 +62,7 @@ Two typed oRPC procedures, both in `src/sdk/contracts/widget.ts`:
 - **`widgetMessage`** — POST, widget → server.
 
 Both payloads are Zod **discriminated unions on `type`**:
+
 - `WidgetEvent` — `registered`, `heartbeat`, `chat/response`, `chat/delta`, `chat/error`,
   `task/status`, `tool/call`.
 - `WidgetCommand` — `chat/tell`, `chat/show`, `chat/do`, `chat/stop`, `tool/response`,
