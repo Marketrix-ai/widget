@@ -1,122 +1,162 @@
 # Widget
 
-Embeddable customer-support widget that hosts drop into their own product via a script tag or npm package; published to npm as `@marketrix.ai/widget`. Runs inside arbitrary host pages, so host-page isolation, a predictable runtime, and bundle size are first-class concerns. Part of the Marketrix workspace — root `../CLAUDE.md` owns cross-cutting conventions (the widget↔api SSE+POST contract at the boundary, status enums, contract sync, ports, release/deploy order, the lockfile rule). Read it for anything cross-cutting. This file covers only what's specific to `widget/`.
+Embeddable customer-support widget hosts drop into their own product via a script tag or npm
+(`@marketrix.ai/widget`). It runs inside **arbitrary host pages**, so host isolation, a predictable
+runtime and bundle size are first-class concerns.
 
-## What this is
+ESM-only, `sideEffects: false`. **React 19 is a peer dependency and external to the bundle — the host
+page must supply it.** Built with Vite 8 in **library mode** → a single ESM bundle `dist/widget.mjs`,
+mounted into a **closed Shadow DOM** with all CSS injected as JS. Stack: TypeScript 6, Tailwind 4,
+Zod 4, oRPC 1, `@rrweb/record` (optional), `@base-ui/react`.
 
-- Embeddable React widget, npm `@marketrix.ai/widget`, ESM-only, `sideEffects: false`.
-- React **19** is a **peer dependency** (`react`/`react-dom` `^19.2.3`) and is **external** to the bundle — the host page must supply it.
-- Built with Vite **8** in **library mode** → a single ESM bundle `dist/widget.mjs`.
-- Mounts into a **closed Shadow DOM**; all CSS is injected as JS (no external stylesheet) and isolated inside the shadow root.
-- Stack: TypeScript 6, Tailwind CSS 4 (`@tailwindcss/vite`), Zod 4, oRPC 1, `@rrweb/record` (optional session recording), `@base-ui/react` (primitives). ESLint 10 flat config. npm + `package-lock.json`.
-
-Customer-facing integration docs live in `README.md` — keep that file accurate; it is the real public API surface.
+**`README.md` is the real public API surface** — customer-facing integration docs live there; keep it
+accurate. The root `../CLAUDE.md` owns cross-cutting rules (the widget↔api contract at the boundary,
+status vocabulary, contract sync, ports, release order).
 
 ## Commands
 
 ```bash
-npm start                # vite dev server on :9001 (override PORT / VITE_PORT; CORS enabled)
-npm run build            # vite build → dist/widget.mjs (terser, single ESM) + tsc declarations
-npm run type-check       # tsc --noEmit  (alias: npm run check)
-npm run lint             # eslint --fix (max-warnings 200); lint:check = max-warnings 0
-npm run format:check     # prettier --check  (format = --write)
-npm run test:run         # vitest run (jsdom + Testing Library + axe); test = watch
-npm run test:coverage    # vitest run --coverage (v8); test:ui = watch
-npm run visual:check     # node scripts/visual-check.mjs   — rendered-UI gate
-npm run a11y:check       # node scripts/a11y-check.mjs      — accessibility gate
-npm run bundle:check     # node scripts/bundle-check.mjs    — bundle-size gate
-npm run code:check       # tsc --noEmit && eslint && prettier --check  (one-shot)
-npm run code:fix         # eslint --fix && prettier --write
-npm run tag <version>    # scripts/release.sh — see Release
+npm start                # vite dev on :9001 (override PORT / VITE_PORT; CORS enabled)
+npm run build            # → dist/widget.mjs (terser, single ESM) + tsc declarations
+npm run type-check       # alias: check          npm run lint    # --fix, max-warnings 200
+npm run test:run         # vitest (jsdom + Testing Library + axe)
+npm run visual:check     # rendered-UI gate      npm run a11y:check    # accessibility gate
+npm run bundle:check     # bundle-size gate
+npm run code:check       # tsc + eslint + prettier --check (one-shot)
+npm run tag <version>    # scripts/release.sh
 ```
 
-**Pre-handoff gates** (mirror `ci.yml` `validate`, Node 24): `type-check`, `lint`, `build`, `format:check`, `test:run`, then `visual:check` + `a11y:check` + `bundle:check`. Git hooks (lefthook `pre-commit`: `check` + `lint` with `stage_fixed`) autofix but are not a substitute — run the full set. Lefthook is the only hook runner; it installs its shim into `.husky/_` because `core.hooksPath` points there from a previous husky setup — there is no husky dependency and lefthook is not a devDependency (install it yourself, e.g. `brew install lefthook`).
+**Pre-handoff gates** (mirroring `ci.yml` `validate`, Node 24): `type-check`, `lint`, `build`,
+`format:check`, `test:run`, then `visual:check` + `a11y:check` + `bundle:check`. Git hooks autofix but
+are not a substitute — run the full set.
 
-**Hook setup is not automatic.** `core.hooksPath` is _local_ git config, so a fresh clone runs no hooks at all until you point it at the committed shim: `git config core.hooksPath .husky/_`. The shim sources **`.lefthookrc`** first, which puts node/npm back on `PATH` — git hooks launched from GUI clients and other non-login shells inherit a minimal environment, and without it every command dies `npm: command not found` (exit 127), blocking the commit. That rc path is baked into the shim when hooks are generated, not read at run time, so after changing `rc:` in `lefthook.yml` you must re-run `lefthook install --force`.
+**Hook setup is not automatic.** `core.hooksPath` is *local* git config, so a fresh clone runs no hooks
+until you point it at the committed shim: `git config core.hooksPath .husky/_`. Lefthook is the only
+hook runner (there is no husky dependency, and lefthook is not a devDependency — install it yourself);
+it lives in `.husky/_` because `core.hooksPath` points there from a previous setup. The shim sources
+**`.lefthookrc`** first to put node/npm back on `PATH` — hooks launched from GUI clients inherit a
+minimal environment and otherwise die `npm: command not found`. **That rc path is baked in when hooks
+are generated**, so after changing `rc:` you must re-run `lefthook install --force`.
 
-## Distribution & packaging
+## Packaging
 
-- `main`/`module` = `./dist/widget.mjs`; `types` = `./dist/src/index.d.ts`. `exports` map: `"."` → types + import/default `./dist/widget.mjs`, plus `"./package.json"`. `files: ["dist"]`.
-- Vite lib mode: `formats: ['es']`, `entryFileNames: 'widget.mjs'`, `codeSplitting: false`, `cssCodeSplit: false`, target `esnext`, terser (`drop_console`).
-- **CSS is injected via JS** (`vite-plugin-css-injected-by-js`) — no external stylesheet; the CSS rides in the bundle and is mounted into the Shadow DOM from `index.css?inline`.
-- Externals (not bundled, resolved via the host importmap): `react`, `react-dom`, `react-dom/client`, `react/jsx-runtime`.
-- Declarations: a custom closeBundle Vite plugin runs `tsc -p tsconfig.build.json` → `.d.ts` into `dist/src/`.
-- `public/loader.js` is copied to `dist/loader.js` (classic script-tag bootstrap). There is no `.npmignore` — `files: ["dist"]` is the allowlist, so nothing outside `dist/` is published.
-- Build defines: `process.env.NODE_ENV='production'`, `__BUILD_COMMIT__` from the `BUILD_COMMIT` env (Docker build-arg, default `'dev'`).
+- `main`/`module` = `./dist/widget.mjs`, `types` = `./dist/src/index.d.ts`, `files: ["dist"]` (there is
+  no `.npmignore` — that allowlist is the whole publish surface).
+- Vite lib mode: `formats: ['es']`, no code splitting, no CSS splitting, target `esnext`, terser with
+  `drop_console`.
+- **CSS is injected via JS** — no external stylesheet; it rides in the bundle and is mounted into the
+  Shadow DOM from `index.css?inline`.
+- **Externals** (resolved via the host importmap): `react`, `react-dom`, `react-dom/client`,
+  `react/jsx-runtime`.
+- Declarations come from a custom `closeBundle` plugin running `tsc -p tsconfig.build.json`.
+- `public/loader.js` → `dist/loader.js` is the classic script-tag bootstrap.
 
-## Architecture (widget ↔ api)
+## Widget ↔ api
 
-Two typed oRPC procedures, both defined in `src/sdk/contracts/widget.ts`:
+Two typed oRPC procedures, both in `src/sdk/contracts/widget.ts`:
 
-- **`widgetStream`** — GET `/widget/stream`, output `eventIterator(WidgetEventSchema)` (SSE). Input `{ chat_id, tab_id?, marketrix_id?, marketrix_key? }`. Server → widget. **`application_id` is deliberately not an input** — accepting a bare (guessable) application id as a credential let an anonymous caller drive any tenant's agent, closed by api#886. It appears only on the `registered` event, as output.
-- **`widgetMessage`** — POST `/widget/message`, input `{ chat_id, tab_id?, command: WidgetCommandSchema }`, output `{ ok }`. Widget → server.
+- **`widgetStream`** — GET, output `eventIterator(WidgetEventSchema)` (SSE), server → widget.
+  **`application_id` is deliberately NOT an input** — accepting a bare, guessable application id as a
+  credential let an anonymous caller drive any tenant's agent. It appears only on the `registered`
+  event, as output.
+- **`widgetMessage`** — POST, widget → server.
 
 Both payloads are Zod **discriminated unions on `type`**:
+- `WidgetEvent` — `registered`, `heartbeat`, `chat/response`, `chat/delta`, `chat/error`,
+  `task/status`, `tool/call`.
+- `WidgetCommand` — `chat/tell`, `chat/show`, `chat/do`, `chat/stop`, `tool/response`,
+  `rrweb/metadata`, `rrweb/events`.
 
-- `WidgetEvent` (server→widget): `registered` (`chat_id`, `application_id?`), `heartbeat`, `chat/response` (`request_id`, `text`), `chat/delta` (`request_id`, `text` — one streamed reply fragment; deltas accumulate, the final `chat/response` full text replaces them), `chat/error` (`request_id`, `error`), `task/status` (`status`, `message?`, `task_id?`, `timestamp?`), `tool/call` (`tool_call_id`, `browser_tool`, `args`, `mode?` `'show'|'do'`, `explanation?`).
-- `WidgetCommand` (widget→server): `chat/tell`, `chat/show`, `chat/do` (each `request_id` + `content`), `chat/stop` (`task_id?`), `tool/response` (`tool_call_id`, `success`, `data?`, `error?`), `rrweb/metadata`, `rrweb/events` (only when `widget_recording` is enabled).
+**Transport** — `src/services/StreamClient.ts` is a singleton wrapping the oRPC `sdk`, draining the
+async iterator in the background. Status machine `disconnected → connecting → connected → registered →
+error`, exponential-backoff reconnect (1000ms ×2, cap 30000ms, **max 10 attempts**; counters reset only
+on `registered`). **A `chat/error` whose `request_id === 'auth'` is non-retriable and permanently stops
+reconnection until re-init.**
 
-**Transport** — `src/services/StreamClient.ts` is a singleton wrapping the oRPC `sdk`. It calls `sdk.widgetStream(input, { signal })` and drains the async iterator in the background. Status machine: `disconnected → connecting → connected → registered → error`. Exponential-backoff reconnect (1000 ms ×2, cap 30000 ms, **max 10 attempts**; counters reset only on a `registered` event). A `chat/error` whose `request_id === 'auth'` is **non-retriable** and permanently stops reconnection (until re-init). `heartbeat` is ignored. Sending uses `sdk.widgetMessage({ chat_id, command })`.
+**Round-trip** — `ChatContext.messageDispatch(content, mode)` fire-and-forget POSTs
+`{type: 'chat/${mode}', request_id, content}` (mode defaults to `tell`); the reply arrives over SSE as
+`chat/delta` fragments that **accumulate**, then a final `chat/response` carrying the full text
+**replaces** them, matched by `request_id`.
 
-**Round-trip** — `ChatContext.messageDispatch(content, mode)` → `apiService.messageDispatch` builds `{ type: 'chat/${mode}', request_id, content }` (mode defaults to `tell`) and fire-and-forget POSTs it; the reply arrives asynchronously over SSE — streamed as `chat/delta` fragments that accumulate, then the final `chat/response` (full text) replaces them — matched by `request_id`. Task lifecycle arrives as `task/status`; agent browser actions arrive as `tool/call`.
+**Tool execution** — `ChatContext` dedupes `tool/call` by `tool_call_id`, validates `browser_tool`
+against `BROWSER_TOOLS`, executes via `browserToolService.executeTool`, then replies `tool/response`.
+The `done` tool ends the task. `task/status` drives state: `running` activates (capturing `task_id`),
+the terminal three clear it, `has_question` clears the pending state.
 
-**Tool execution** — `ChatContext` handles `tool/call`: dedupe by `tool_call_id`, validate `browser_tool` against `BROWSER_TOOLS`, execute via `browserToolService.executeTool`, then reply with `tool/response`. The `done` tool ends the task. `task/status` drives state: `running` activates the task (captures `task_id`); `completed`/`failed`/`stopped` clear it; `has_question` clears the pending state.
+**Interaction modes** map to commands and `InstructionType`: **Tell** = explain · **Show** =
+`tool/call` with `mode: 'show'`, highlight via `ShowModeService` · **Do** = `mode: 'do'`, DOM actions
+via `DomService`/`BrowserToolService`.
 
-**Interaction modes** map to commands and `InstructionType` (`'tell' | 'show' | 'do'`): **Tell** = `chat/tell` (explain); **Show** = `chat/show` (`tool/call` with `mode: 'show'`, highlight via `ShowModeService`); **Do** = `chat/do` (`tool/call` with `mode: 'do'`, DOM actions via `DomService`/`BrowserToolService`).
+**Status vocabulary** — `task/status.status ∈ {running, completed, failed, stopped, has_question}` is
+the canonical **wire** vocabulary (code branches on `'running'`). The presentational
+`ChatMessage.taskStatus` and `MessagePart.status` are **UI-only and NOT the wire vocabulary** — don't
+conflate them.
 
-**Session recording** — when `widget_recording` is enabled, `RrwebSessionRecorder` records and batches rrweb events to `rrweb/metadata` and `rrweb/events`. It is disabled by default.
+**Session recording** — `RrwebSessionRecorder` batches to `rrweb/metadata` / `rrweb/events` only when
+`widget_recording` is enabled. Disabled by default.
 
-**Visibility and greeting** — `widget_appearance: 'hidden'` suppresses host-page UI while retaining initialization; the dashboard preview deliberately stays visible. `widget_greeting_toast` independently controls the welcome toast and does not alter the greeting message in chat.
-
-**Status vocabulary** — `task/status.status ∈ { running, completed, failed, stopped, has_question }` (this is the canonical wire vocabulary — code branches on `'running'`). Separately, the presentational `ChatMessage.taskStatus` (`'ongoing'|'done'|'failed'|'stopped'`) and `MessagePart.status` (`'in_progress'|'completed'|'failed'|'stopped'`) are **UI-only** and are NOT the wire vocabulary — don't conflate them.
+**Visibility** — `widget_appearance: 'hidden'` suppresses host-page UI while retaining initialization
+(the dashboard preview deliberately stays visible); `widget_greeting_toast` independently controls the
+welcome toast and does not alter the greeting message in chat.
 
 ## Init & isolation
 
-- `window.__mtx = { state: 'initializing' | 'active' }` is the singleton guard; it survives ES-module re-execution and dedupes init. `initPromise` / `isInitializing` guard concurrent `initWidget` calls. One production widget per page (`isProductionWidgetActive`).
-- **Closed Shadow DOM**: `attachShadow({ mode: 'closed' })` in `src/utils/bootstrap.tsx`; CSS injected as a `<style>` (from `index.css?inline`) into the shadow root. The host cannot reach into the widget DOM (intentional).
-- The runtime API host is NOT an env var — it's supplied per-init as `mtxApiHost` (config) / `mtx-api-host` (script attr). `configureSdk(apiUrl)` rebuilds the oRPC client; there is no baked-in API URL.
+- `window.__mtx = { state: 'initializing' | 'active' }` is the singleton guard — it survives ES-module
+  re-execution and dedupes init; `initPromise` / `isInitializing` guard concurrent `initWidget` calls.
+- **Closed Shadow DOM** (`attachShadow({ mode: 'closed' })`): the host cannot reach into the widget DOM,
+  intentionally — don't expect host scripts or CSS to style or query inside it.
+- **The runtime API host is not an env var** — it is supplied per-init as `mtxApiHost` (config) /
+  `mtx-api-host` (script attr), and `configureSdk(apiUrl)` rebuilds the oRPC client. There is no
+  baked-in API URL.
 
 ## SDK mirror (generated)
 
-The widget's SDK is a **scoped mirror** of the api contract, generated from the source of truth in the `api` repo.
+`src/sdk/contract.ts` + `contracts/*` are a **generated scoped mirror** of the api's widget audience —
+**never hand-edit; regenerate from the api side.** `src/sdk/index.ts` is hand-written (the `sdk` proxy,
+`configureSdk`, runtime/type re-exports). There is **no `routes.ts` and no `schema.ts`**.
 
-- `src/sdk/index.ts` exports the `sdk` proxy (forwards to the current oRPC client) + `configureSdk` + runtime/type re-exports (`WidgetEventSchema`, `WidgetSettingsDataSchema`, contract types).
-- `src/sdk/contract.ts` assembles `widgetContract`.
-- `src/sdk/contracts/*.ts` are the per-domain fragments: `widget.ts`, `application.ts`, `chat.ts`, `entities.ts`, `common.ts`, `activityLog.ts`. There is **no** `src/sdk/routes.ts` and **no** `src/sdk/schema.ts` (re-exports come from `index.ts`).
-
-Drift is enforced in **infra**, at the api tag this widget is pinned beside — `check-contract-stack.sh`, run by `contract-verify.yml` on a version-set commit, by `deploy.yml` before it writes one, and weekly at branch tips by `contract-tip-watch.yml`. The old per-repo `contract-drift.yml` diffed against `api@main`, which is neither deployed version.
-
-Widget gets a second check the others do not need: **`app` bundles this package from npm at whatever its own lockfile pins**, which is not the widget image tag deployed beside it, and `publish` runs at tag push with no gate in front of it. So infra also checks the mirror of the widget version `app` actually bundles — the build a browser really loads. Don't hand-edit `src/sdk/contracts/*`; regenerate from the api side (root `sync-contracts` skill).
+Drift is enforced in **infra**, at the api tag this widget is pinned beside. **Widget gets a second
+check the other consumers don't need**: `app` bundles this package **from npm at whatever its own
+lockfile pins**, which is not the widget image tag deployed beside it, and `publish` runs at tag push
+with no gate in front of it — so infra also checks the mirror of the widget version `app` actually
+bundles, i.e. the build a browser really loads.
 
 ## Structure
 
-- `src/index.tsx` — public entry; all exports (see `README.md` for the customer surface).
-- `src/services/` — stateful runtime owners (`StreamClient`, `RrwebSessionRecorder`, `BrowserToolService`, `ShowModeService`, `DomService`, `ChatService`, `ChatSessionManager`, `StorageService`, `ConfigManager`, `ScreenShareService`) plus stateless API/widget-validation functions.
-- `src/components/` — UI (`base/`, `blocks/`, `chat/`, `navigation/`, `ui/`, `views/`, `MarketrixWidget.tsx`). `Surface` is the canonical container primitive; `WidgetDialog` is the one specialized modal. `src/design-system/semantic-tokens.ts` owns settings-to-token adaptation and CSS variables.
-- `src/context/` — `ChatContext` (one store: `{ messages, task }`), `UIStateContext`, `WidgetProviders`, `sseReducer.ts`. `src/hooks/`, `src/utils/` (incl. `bootstrap.tsx`), `src/lib/`, `src/types/`.
-- `src/test/` + colocated `*.test.ts(x)` — vitest setup, fixtures, a11y helpers.
-- `public/loader.js` — classic script-tag bootstrap. `index.html` — playground harness. `dist/` — generated only.
+`src/index.tsx` (public entry — see `README.md` for the customer surface) · `src/services/` (stateful
+runtime owners: `StreamClient`, `RrwebSessionRecorder`, `BrowserToolService`, `ShowModeService`,
+`DomService`, `ChatService`, `ChatSessionManager`, `StorageService`, `ConfigManager`,
+`ScreenShareService`, plus stateless functions) · `src/components/` (`Surface` is the canonical
+container primitive; `WidgetDialog` the one specialized modal;
+`src/design-system/semantic-tokens.ts` owns settings-to-token adaptation) · `src/context/`
+(`ChatContext` is one store `{messages, task}`, plus `UIStateContext`, `sseReducer`) · `src/test/` +
+colocated `*.test.ts(x)`.
 
-## Release
+## Release & CI
 
-`npm run tag <version>` (`scripts/release.sh`): bumps `package.json`, runs `npm install` to refresh `package-lock.json`, `npm run build`, commits both files as `chore(widget): release vX`, and creates annotated tag `vX`. Then `git push origin HEAD && git push origin v<version>`. The `v*` tag triggers `ci.yml`: `build` → `marketrix.azurecr.io/widget:<version>` (v-prefix stripped; `BUILD_COMMIT`), `publish` → `npm publish --access public` (skipped via `npm view` if that version already exists). See root `../CLAUDE.md` for the full widget release order (push tag → bump app dep → deploy both via `infra/deploy.yml`).
+`npm run tag <version>` bumps `package.json`, refreshes `package-lock.json`, builds, commits and
+creates the annotated tag. Pushing `v*` fires `ci.yml`: `build` → `marketrix.azurecr.io/widget:<version>`
+(**v-prefix stripped**) and `publish` → `npm publish --access public`, skipped via `npm view` if that
+version already exists. Root `../CLAUDE.md` carries the full release order (push tag → bump app dep →
+deploy both).
 
-## CI/CD
-
-- `ci.yml` (push `main`/tags `v*`/PRs to `main`): `validate` (non-tag) → `npm ci`, type-check, lint, build, format:check, test:run, visual/a11y/bundle checks (Node 24); `build` (`v*` only) → strip `v`, ACR login, build+push image; `publish` (`v*` only) → build, skip-if-already-published guard, `npm publish` with `NPM_TOKEN`.
-- Docker: one `Dockerfile`, stages `base` → `dev` / `builder` → `runtime` (`node:26-alpine` build → `nginx:1.31.3-alpine` serve as the `nginx` user; mime patched to serve `.mjs`). The **`dev` target** runs `vite dev --host 0.0.0.0 --port 9001` with a 256 MB heap and is what Tilt builds; CI builds the final `runtime` stage. Both inherit `base`'s `npm ci`, so local and shipped images cannot drift in their dependency set. Container `EXPOSE 9001`; nginx `/health` → `200 ok`.
+Docker: one file, stages `base` → `dev` / `builder` → `runtime` (node build → nginx serve, mime patched
+to serve `.mjs`). Tilt builds `dev`, CI builds `runtime`, both inheriting `base`'s `npm ci`, so local
+and shipped images cannot drift in their dependency set.
 
 ## Gotchas
 
-- **Lockfile discipline.** Any version bump or dependency change must run `npm install` and commit `package-lock.json` alongside `package.json`. `npm run tag` does this for you.
-- **v-prefix asymmetry.** Git tag `vX.Y.Z` → image `marketrix.azurecr.io/widget:X.Y.Z` (the build pipeline strips the `v`).
-- **React external + peer.** The host MUST provide React 19. The script-tag loader injects an `esm.sh` importmap, but **host importmap mappings win** — a host on a different React 19 build keeps its own.
-- **Closed Shadow DOM.** The host can't reach into the widget DOM by design — don't expect host scripts/CSS to style or query inside it.
-- **Sticky auth error.** A `chat/error` with `request_id: 'auth'` permanently stops SSE reconnection until the widget is re-initialized.
-- **SDK mirror is generated.** Don't hand-edit `src/sdk/contracts/*` — regenerate from api, or infra's contract gate fails the deploy.
+- **Lockfile discipline** — any version or dependency change must run `npm install` and commit
+  `package-lock.json` alongside `package.json`. `npm run tag` does it for you.
+- **v-prefix asymmetry** — git tag `vX.Y.Z` → image `…/widget:X.Y.Z`.
+- **React external + peer** — the host MUST provide React 19. The loader injects an `esm.sh` importmap,
+  but **host importmap mappings win**, so a host on a different React 19 build keeps its own.
+- **Sticky auth error** — `chat/error` with `request_id: 'auth'` stops SSE reconnection until re-init.
+- **The SDK mirror is generated** — hand-edits fail infra's contract gate at deploy.
 
 ## Conventions
 
-- TS, 2-space indent, single quotes, semicolons, trailing commas, ~120-char lines. `type` imports, sorted imports (`simple-import-sort`), `unused-imports`. `PascalCase` components/services/context, `useCamelCase` hooks, `camelCase` utils.
-- Don't develop on `main` — use a worktree/feature branch; link the PR with `Closes #N`. Issue/PR body is the scope source of truth (see root workflow).
-- Keep stateful services only for shared lifecycle/session ownership; use functions for stateless operations. Inline one-use presentation instead of adding base components.
+TS, 2-space indent, single quotes, semicolons, trailing commas, ~120-char lines; `type` imports, sorted
+imports, no unused imports. `PascalCase` components/services/context, `useCamelCase` hooks, `camelCase`
+utils. **Keep stateful services only for shared lifecycle/session ownership** — use plain functions for
+stateless operations, and inline one-use presentation rather than adding a base component.
