@@ -281,7 +281,6 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ settings, cont
     };
   }, [settings, container]);
 
-  // An explicit container is mounted into by the effect; otherwise render a mount point.
   if (container) {
     return null;
   }

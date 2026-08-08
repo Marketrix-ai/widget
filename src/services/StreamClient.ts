@@ -154,7 +154,7 @@ export class StreamClient {
       return Promise.reject(new Error('No active chat'));
     }
     return sdk
-      .widgetMessage({
+      .widgetMessagePost({
         chat_id: this.chatId,
         tab_id: this.tabId,
         command,

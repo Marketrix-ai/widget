@@ -47,7 +47,6 @@ export const MessageContent: React.FC<MessageContentProps> = ({ message, isLastM
               </Text>
             );
           } else if (part.type === 'progress') {
-            // Completed "done" shows a status icon instead of a progress line
             if (part.browserToolName === 'done' && message.taskStatus === 'done') {
               return null;
             }

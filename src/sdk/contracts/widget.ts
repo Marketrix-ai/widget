@@ -179,7 +179,7 @@ export const widgetStream = oc
   )
   .output(eventIterator(WidgetEventSchema));
 
-export const widgetMessage = oc
+export const widgetMessagePost = oc
   .route({
     method: 'POST',
     tags: ['Widget'],
@@ -203,5 +203,5 @@ export const widgetRoutes = {
   widgetUpdate,
   widgetDelete,
   widgetStream,
-  widgetMessage,
+  widgetMessagePost,
 };

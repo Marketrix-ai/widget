@@ -19,7 +19,7 @@ export class RrwebSessionRecorder {
 
   async start(): Promise<void> {
     if (this.stopRecording) return;
-    await sdk.widgetMessage({
+    await sdk.widgetMessagePost({
       chat_id: this.chatId,
       command: {
         type: 'rrweb/metadata',
@@ -61,7 +61,7 @@ export class RrwebSessionRecorder {
       const events = this.events.splice(0);
       if (!events.length) return;
       try {
-        await sdk.widgetMessage({
+        await sdk.widgetMessagePost({
           chat_id: this.chatId,
           command: { type: 'rrweb/events', rrweb_session_id: this.sessionId, events },
         });
