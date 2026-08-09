@@ -27,8 +27,8 @@ npm run ci               # every CI validation gate
 npm run tag <version>    # scripts/release.sh
 ```
 
-**Pre-handoff gate** (mirroring the input-free `ci-node-service` workflow, Node 26): `npm run ci`.
-Git hooks autofix but are not a substitute.
+**Pre-handoff gate** (matching the repository-local Node 26 workflow): `npm run ci`. This public repo
+cannot call private infra workflows. Git hooks autofix but are not a substitute.
 
 **Hook setup is not automatic.** `core.hooksPath` is _local_ git config, so a fresh clone runs no hooks
 until you point it at the committed shim: `git config core.hooksPath .husky/_`. Lefthook is the only
