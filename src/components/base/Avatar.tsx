@@ -1,4 +1,4 @@
-import { forwardRef } from 'react';
+import type { ComponentPropsWithRef } from 'react';
 
 import { cn } from '@/lib/utils';
 
@@ -7,7 +7,7 @@ import type { ShadowToken } from '../../design-system/shadows';
 
 type AvatarSize = 'sm' | 'md' | 'lg';
 
-export interface AvatarProps extends Omit<React.ImgHTMLAttributes<HTMLImageElement>, 'size'> {
+export interface AvatarProps extends Omit<ComponentPropsWithRef<'img'>, 'size'> {
   src: string;
   alt: string;
   elevation?: ShadowToken;
@@ -22,10 +22,8 @@ const sizeStyles: Record<AvatarSize, string> = {
   lg: 'w-12 h-12',
 };
 
-export const Avatar = forwardRef<HTMLImageElement, AvatarProps>(function Avatar(
-  { src, alt, elevation, fit = 'contain', size = 'md', rounded, className, style, ...props },
-  ref,
-) {
+export function Avatar(props: AvatarProps) {
+  const { src, alt, elevation, fit = 'contain', size = 'md', rounded, className, style, ref, ...imgProps } = props;
   const isPreset = typeof size === 'string';
   const sizeClass = isPreset ? sizeStyles[size] : undefined;
   const sizeStyle = !isPreset ? { width: size, height: size, ...style } : style;
@@ -40,7 +38,7 @@ export const Avatar = forwardRef<HTMLImageElement, AvatarProps>(function Avatar(
 
   return (
     <img
-      {...props}
+      {...imgProps}
       ref={ref}
       alt={alt}
       className={cn(
@@ -54,4 +52,4 @@ export const Avatar = forwardRef<HTMLImageElement, AvatarProps>(function Avatar(
       style={{ ...getElevationStyle(elevation), ...sizeStyle }}
     />
   );
-});
+}

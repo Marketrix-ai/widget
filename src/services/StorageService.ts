@@ -133,53 +133,12 @@ class StorageService {
     }
   }
 
-  getMessages(): StoredMessage[] {
-    return this.getContext().messages;
-  }
-
-  setMessages(messages: StoredMessage[]): void {
-    this.updateContext({ messages });
-  }
-
-  getChatState(): Pick<
-    MarketrixChatContext,
-    'isTaskRunning' | 'activeTaskId' | 'currentMode' | 'isOpen' | 'isMinimized' | 'isLoading'
-  > {
-    const ctx = this.getContext();
-    return {
-      isTaskRunning: ctx.isTaskRunning,
-      activeTaskId: ctx.activeTaskId,
-      currentMode: ctx.currentMode,
-      isOpen: ctx.isOpen,
-      isMinimized: ctx.isMinimized,
-      isLoading: ctx.isLoading,
-    };
-  }
-
-  setChatState(
-    state: Partial<
-      Pick<
-        MarketrixChatContext,
-        'isTaskRunning' | 'activeTaskId' | 'currentMode' | 'isOpen' | 'isMinimized' | 'isLoading'
-      >
-    >,
-  ): void {
-    this.updateContext(state);
-  }
-
   getConfig(): MarketrixConfig | null {
     return this.getContext().config;
   }
 
   setConfig(config: MarketrixConfig | null): void {
     this.updateContext({ config });
-  }
-
-  clear(): void {
-    this.context = { ...DEFAULT_CONTEXT };
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem(STORAGE_KEY);
-    }
   }
 
   hasValidContext(): boolean {

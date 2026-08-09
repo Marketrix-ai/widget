@@ -47,7 +47,7 @@ export const WorkspaceMemberRoleSchema = z.enum(['admin', 'member']);
 export const UserEntitySchema = BaseEntitySchema.extend({
   is_super: z.boolean(),
   status: EntityStatusSchema,
-  email: z.string().email(),
+  email: z.email(),
   external_id: z.string().nullish(),
   first_name: z.string().nullish(),
   last_name: z.string().nullish(),

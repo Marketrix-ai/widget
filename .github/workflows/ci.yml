@@ -2,81 +2,20 @@ name: CI
 on:
   push:
     branches: [main]
-    tags: ['v*']
   pull_request:
     branches: [main]
 concurrency:
   group: ci-${{ startsWith(github.ref, 'refs/tags/') && github.sha || github.ref }}
   cancel-in-progress: true
+# This public repository cannot call reusable workflows from the private infra repository.
 jobs:
-  validate:
-    if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+  ci:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
-          node-version: 24
+          node-version: 26
           cache: 'npm'
       - run: npm ci
-      - name: Type check
-        run: npm run type-check
-      - name: Lint
-        run: npm run lint:check
-      - name: Build
-        run: npm run build
-      - name: Format check
-        run: npm run format:check
-      - name: Tests
-        run: npm run test:run
-      - name: Visual check
-        run: npm run visual:check
-      - name: Accessibility check
-        run: npm run a11y:check
-      - name: Bundle check
-        run: npm run bundle:check
-
-  build:
-    if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - name: Resolve image tag
-        id: tag
-        run: |
-          RAW="${GITHUB_REF#refs/tags/}"
-          echo "image_tag=${RAW#v}" >> $GITHUB_OUTPUT
-      - uses: azure/login@v3
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-      # `az acr run` is the one build path, reusable from any authenticated machine if Actions is
-      # down (true during the 3.8.412-415 outage); tags/build-args/labels live in acr-build.yaml.
-      - name: Build and push image in ACR
-        run: |
-          az acr run --registry marketrix --file acr-build.yaml \
-            --set tag=${{ steps.tag.outputs.image_tag }} \
-            --set commit=${{ github.sha }} .
-
-  publish:
-    if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 24
-          cache: 'npm'
-          registry-url: 'https://registry.npmjs.org'
-      - run: npm ci
-      - run: npm run build
-      - name: Publish to npm
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: |
-          NAME=$(node -p "require('./package.json').name")
-          VER=$(node -p "require('./package.json').version")
-          if npm view "$NAME@$VER" version >/dev/null 2>&1; then
-            echo "Already on registry: $NAME@$VER — skipping publish"
-            exit 0
-          fi
-          npm publish --access public
+      - run: npm run ci

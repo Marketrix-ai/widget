@@ -199,8 +199,7 @@ export const hideWidgetSettingsLoader = (): void => {
 
 let initWidgetFunction: ((config: MarketrixConfig) => Promise<void>) | null = null;
 
-// Auto-init from script-tag attributes; retries to handle ES-module load timing.
-export const autoInitializeWidget = (retryCount = 0): void => {
+export const autoInitializeWidget = (): void => {
   if (typeof window === 'undefined' || typeof document === 'undefined') {
     return;
   }
@@ -210,63 +209,16 @@ export const autoInitializeWidget = (retryCount = 0): void => {
     return;
   }
 
-  const MAX_RETRIES = 5;
-  const RETRY_DELAYS_MS = [0, 100, 500, 1000, 2000];
-
   if (!initWidgetFunction) {
     console.error('[AutoInit] initWidget function not registered');
     return;
   }
 
-  // Prefer the currently executing script when it carries config (playground injected tag), else the last matching static tag.
-  const bySelector = document.querySelectorAll('script[mtx-id]');
-  const current =
-    typeof document.currentScript !== 'undefined' &&
-    document.currentScript != null &&
-    isHTMLScriptElement(document.currentScript) &&
-    document.currentScript.hasAttribute('mtx-id')
-      ? document.currentScript
-      : null;
-  const scriptElement = current ?? bySelector[bySelector.length - 1];
+  const scripts = document.querySelectorAll('script[mtx-id]');
+  const scriptElement = scripts[scripts.length - 1];
 
   if (!scriptElement || !isHTMLScriptElement(scriptElement)) {
-    // No script tags at all → auto-init wasn't intended (e.g. the npm package path).
-    if (bySelector.length === 0) {
-      if (isWidgetInitialized() || isProgrammaticInitInProgress()) {
-        console.log(
-          '[AutoInit] Script tag not found, but widget is initialized or programmatic init is in progress. Skipping.',
-        );
-        return;
-      }
-      console.log('[AutoInit] No marketrix script tags found. Skipping auto-initialization.');
-      return;
-    }
-
-    if (retryCount < MAX_RETRIES) {
-      const delay = RETRY_DELAYS_MS[retryCount] || 2000;
-      console.warn(
-        `[AutoInit] Script tag not found (attempt ${retryCount + 1}/${MAX_RETRIES}), retrying in ${delay}ms...`,
-      );
-      setTimeout(() => autoInitializeWidget(retryCount + 1), delay);
-      return;
-    }
-    if (isWidgetInitialized() || isProgrammaticInitInProgress()) {
-      console.log(
-        '[AutoInit] Script tag not found, but widget is initialized or programmatic init is in progress. Skipping error message.',
-      );
-      return;
-    }
-    console.error('[AutoInit] Script tag not found after all retries');
-    console.error(
-      '[AutoInit] Available scripts:',
-      Array.from(document.querySelectorAll('script')).map(s => ({
-        id: s.id,
-        src: s.src,
-        type: s.type,
-        hasMtxId: s.hasAttribute('mtx-id'),
-      })),
-    );
-    showWidgetSettingsLoader('Please configure mtx-id and mtx-key');
+    console.log('[AutoInit] No marketrix script tags found. Skipping auto-initialization.');
     return;
   }
 

@@ -27,6 +27,7 @@ export interface ChatInputProps {
   taskRunning?: boolean;
   onStop?: () => void;
   placeholder?: string;
+  ref?: React.Ref<HTMLTextAreaElement>;
 }
 
 function mergeRefs<T>(...refs: (React.Ref<T> | undefined)[]) {
@@ -38,21 +39,19 @@ function mergeRefs<T>(...refs: (React.Ref<T> | undefined)[]) {
   };
 }
 
-export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(function ChatInput(
-  {
-    value,
-    onChange,
-    onSubmit,
-    modes = [],
-    activeMode,
-    onModeChange,
-    disabled = false,
-    taskRunning = false,
-    onStop,
-    placeholder = 'Ask anything',
-  },
+export function ChatInput({
+  value,
+  onChange,
+  onSubmit,
+  modes = [],
+  activeMode,
+  onModeChange,
+  disabled = false,
+  taskRunning = false,
+  onStop,
+  placeholder = 'Ask anything',
   ref,
-) {
+}: ChatInputProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const maxTextareaHeight = 66; // 3 lines (20px each) + 6px padding
 
@@ -162,4 +161,4 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(f
       </Flex>
     </Stack>
   );
-});
+}

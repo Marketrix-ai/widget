@@ -1,0 +1,35 @@
+name: Image
+on:
+  push:
+    tags: ['v*']
+concurrency:
+  group: ci-${{ startsWith(github.ref, 'refs/tags/') && github.sha || github.ref }}
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Resolve image tag
+        id: tag
+        run: |
+          RAW="${GITHUB_REF#refs/tags/}"
+          echo "image_tag=${RAW#v}" >> "$GITHUB_OUTPUT"
+      - name: Azure login
+        uses: azure/login@v3
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - name: Log in to ACR
+        run: az acr login --name marketrix
+      - name: Build and push image in ACR
+        run: |
+          az acr run --registry marketrix --file acr-build.yaml \
+            --set tag=${{ steps.tag.outputs.image_tag }} \
+            --set commit=${{ github.sha }} .
+      - name: Scan image with Trivy
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: marketrix.azurecr.io/widget:${{ steps.tag.outputs.image_tag }}
+          format: table
+          severity: CRITICAL,HIGH
+        continue-on-error: true

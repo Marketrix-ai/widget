@@ -1,5 +1,5 @@
 import { Button as BaseButton } from '@base-ui/react/button';
-import { forwardRef } from 'react';
+import type { ComponentPropsWithRef } from 'react';
 
 import { cn } from '@/lib/utils';
 
@@ -10,7 +10,7 @@ type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'bare' | 'chip' | 'tab'
 type ButtonSize = 'sm' | 'md';
 type ButtonShape = 'default' | 'theme' | 'pill';
 
-export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+export interface ButtonProps extends ComponentPropsWithRef<'button'> {
   active?: boolean;
   elevation?: ShadowToken;
   loading?: boolean;
@@ -43,24 +43,22 @@ const shapeClasses: Record<ButtonShape, string> = {
   pill: radiusClasses.pill,
 };
 
-export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
-  {
-    active = false,
-    className,
-    disabled,
-    elevation,
-    full,
-    loading = false,
-    shape = 'default',
-    size = 'md',
-    stacked = false,
-    type = 'button',
-    variant = 'primary',
-    style,
-    ...props
-  },
+export function Button({
+  active = false,
+  className,
+  disabled,
+  elevation,
+  full,
+  loading = false,
+  shape = 'default',
+  size = 'md',
+  stacked = false,
+  type = 'button',
+  variant = 'primary',
+  style,
   ref,
-) {
+  ...props
+}: ButtonProps) {
   const hasChrome = !['bare', 'inline', 'tab', 'toolbar'].includes(variant);
   const isDisabled = disabled || loading;
 
@@ -92,4 +90,4 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       type={type}
     />
   );
-});
+}

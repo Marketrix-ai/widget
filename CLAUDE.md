@@ -23,12 +23,12 @@ npm run test:run         # vitest (jsdom + Testing Library + axe)
 npm run visual:check     # rendered-UI gate      npm run a11y:check    # accessibility gate
 npm run bundle:check     # bundle-size gate
 npm run code:check       # tsc + eslint + prettier --check (one-shot)
+npm run ci               # every CI validation gate
 npm run tag <version>    # scripts/release.sh
 ```
 
-**Pre-handoff gates** (mirroring `ci.yml` `validate`, Node 24): `type-check`, `lint`, `build`,
-`format:check`, `test:run`, then `visual:check` + `a11y:check` + `bundle:check`. Git hooks autofix but
-are not a substitute — run the full set.
+**Pre-handoff gate** (matching the repository-local Node 26 workflow): `npm run ci`. This public repo
+cannot call private infra workflows. Git hooks autofix but are not a substitute.
 
 **Hook setup is not automatic.** `core.hooksPath` is _local_ git config, so a fresh clone runs no hooks
 until you point it at the committed shim: `git config core.hooksPath .husky/_`. Lefthook is the only
@@ -135,10 +135,11 @@ colocated `*.test.ts(x)`.
 ## Release & CI
 
 `npm run tag <version>` bumps `package.json`, refreshes `package-lock.json`, builds, commits and
-creates the annotated tag. Pushing `v*` fires `ci.yml`: `build` → `marketrix.azurecr.io/widget:<version>`
-(**v-prefix stripped**) and `publish` → `npm publish --access public`, skipped via `npm view` if that
-version already exists. Root `../CLAUDE.md` carries the full release order (push tag → bump app dep →
-deploy both).
+creates the annotated tag. Pushing `v*` independently fires `image.yml` →
+`marketrix.azurecr.io/widget:<version>` (**v-prefix stripped**) and `publish.yml` →
+`npm publish --access public`, skipped via `npm view` if that version already exists. `ci.yml` runs
+only for pull requests and pushes to `main`. Root `../CLAUDE.md` carries the full release order (push
+tag → bump app dep → deploy both).
 
 Docker: one file, stages `base` → `dev` / `builder` → `runtime` (node build → nginx serve, mime patched
 to serve `.mjs`). Tilt builds `dev`, CI builds `runtime`, both inheriting `base`'s `npm ci`, so local

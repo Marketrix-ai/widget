@@ -5,7 +5,6 @@ import { cwd } from 'node:process';
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import { defineConfig, type UserConfig, type ViteDevServer } from 'vite';
-import cssInjectedByJsPlugin from 'vite-plugin-css-injected-by-js';
 
 const BUNDLE_FILE = 'widget.mjs';
 const ENTRY_FILE = 'src/index.tsx';
@@ -23,7 +22,6 @@ const getBuildConfig = (options: { minify: boolean | 'terser'; outDir: string })
     'process.env': '{}',
     'global.process': 'undefined',
     process: 'undefined',
-    __BUILD_COMMIT__: JSON.stringify(process.env.BUILD_COMMIT || 'dev'),
   },
   css: { devSourcemap: false },
   build: {
@@ -39,17 +37,11 @@ const getBuildConfig = (options: { minify: boolean | 'terser'; outDir: string })
       formats: ['es'],
       fileName: 'widget',
     },
-    rollupOptions: {
+    rolldownOptions: {
       external: ['react', 'react-dom', 'react-dom/client', 'react/jsx-runtime'],
       output: {
         entryFileNames: BUNDLE_FILE,
         format: 'es',
-        globals: {
-          react: 'React',
-          'react-dom': 'ReactDOM',
-          'react-dom/client': 'ReactDOMClient',
-          'react/jsx-runtime': 'jsxRuntime',
-        },
       },
     },
     ...(options.minify === 'terser' && {
@@ -65,15 +57,7 @@ const getBuildConfig = (options: { minify: boolean | 'terser'; outDir: string })
       },
     }),
   },
-  plugins: [
-    react({
-      jsxRuntime: 'automatic',
-      jsxImportSource: 'react',
-    }),
-    tailwindcss(),
-    cssInjectedByJsPlugin(),
-    typescriptDeclarationPlugin(),
-  ],
+  plugins: [react(), tailwindcss(), typescriptDeclarationPlugin()],
 });
 
 const typescriptDeclarationPlugin = () => {

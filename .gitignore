@@ -19,3 +19,7 @@ Thumbs.db
 .env.*
 !.env.example
 .worktrees
+
+.superpowers/
+.claude/plans/
+.pi-subagents/

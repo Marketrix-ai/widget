@@ -1,4 +1,4 @@
-import { type CSSProperties, forwardRef } from 'react';
+import type { CSSProperties, Ref } from 'react';
 
 import { cn } from '@/lib/utils';
 
@@ -10,6 +10,7 @@ export interface SpinnerProps {
   /** @internal blocks/ only */
   className?: string;
   style?: CSSProperties;
+  ref?: Ref<HTMLDivElement>;
 }
 
 const sizeStyles: Record<SpinnerSize, string> = {
@@ -18,10 +19,7 @@ const sizeStyles: Record<SpinnerSize, string> = {
   lg: 'h-6 w-6 border-2',
 };
 
-export const Spinner = forwardRef<HTMLDivElement, SpinnerProps>(function Spinner(
-  { label, size = 'md', className, style },
-  ref,
-) {
+export function Spinner({ label, size = 'md', className, style, ref }: SpinnerProps) {
   return (
     <div
       ref={ref}
@@ -38,4 +36,4 @@ export const Spinner = forwardRef<HTMLDivElement, SpinnerProps>(function Spinner
       <span className='sr-only'>Loading</span>
     </div>
   );
-});
+}

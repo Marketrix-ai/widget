@@ -21,6 +21,7 @@
     "tag": "bash scripts/release.sh",
     "start": "vite",
     "build": "vite build",
+    "ci": "npm run type-check && npm run lint:check && npm run build && npm run format:check && npm run test:run && npm run visual:check && npm run a11y:check && npm run bundle:check",
     "lint": "eslint . --ext .ts,.tsx --max-warnings 200 --fix",
     "lint:check": "eslint . --ext .ts,.tsx --max-warnings 0",
     "check": "tsc --noEmit",
@@ -76,7 +77,6 @@
     "terser": "^5.49.2",
     "typescript": "^6.0.3",
     "vite": "^8.2.0",
-    "vite-plugin-css-injected-by-js": "^5.0.2",
     "vitest": "^4.1.5",
     "vitest-axe": "^0.1.0"
   }

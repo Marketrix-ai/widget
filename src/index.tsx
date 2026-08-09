@@ -182,6 +182,7 @@ export const initWidget = async (config: MarketrixConfig, container?: HTMLElemen
 
 export const unmountWidget = (): void => {
   widgetMounted = false;
+  StreamClient.getInstance().disconnect();
   rrwebSessionRecorder?.stop();
   rrwebSessionRecorder = null;
   const instance = getWidgetInstance();
