@@ -6,7 +6,7 @@ concurrency:
   group: ci-${{ startsWith(github.ref, 'refs/tags/') && github.sha || github.ref }}
   cancel-in-progress: true
 jobs:
-  image:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
