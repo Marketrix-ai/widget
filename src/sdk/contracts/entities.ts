@@ -118,9 +118,7 @@ export type PersonaFileData = z.infer<typeof PersonaFileEntitySchema>;
 export const ViewportNameSchema = z.enum(['desktop', 'tablet', 'mobile']);
 
 // A run's selected (journey × persona) cells. persona_id 0 = the generic lane; empty = run every
-// applicable cell. Each cell fans out one sim per viewport. Declared here rather than in `qa`
-// because the run-quote input in `stripe` needs it too, and `qa` already imports `stripe` —
-// defining it there would make the two fragments a cycle (evaluates one to `undefined` at import).
+// applicable cell. Each cell fans out one sim per viewport.
 export const QARunCellSchema = z.object({ journey_id: z.number().int(), persona_id: z.number().int() });
 export type ViewportName = z.infer<typeof ViewportNameSchema>;
 export const VIEWPORT_DIMENSIONS: Record<ViewportName, { width: number; height: number }> = {
