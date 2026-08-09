@@ -1,17 +1,17 @@
-import { forwardRef } from 'react';
+import type { ComponentPropsWithRef } from 'react';
 
 import { cn } from '@/lib/utils';
 
 import { type IconData, type IconName, icons } from './icons';
 
-export interface IconProps extends React.SVGAttributes<SVGElement> {
+export interface IconProps extends ComponentPropsWithRef<'svg'> {
   name: IconName;
   size?: number;
   /** @internal blocks/ only */
   className?: string;
 }
 
-export const Icon = forwardRef<SVGSVGElement, IconProps>(function Icon({ name, size = 16, className, ...props }, ref) {
+export function Icon({ name, size = 16, className, ref, ...props }: IconProps) {
   const icon = icons[name] as IconData | undefined;
   if (!icon) return null;
 
@@ -43,4 +43,4 @@ export const Icon = forwardRef<SVGSVGElement, IconProps>(function Icon({ name, s
       ))}
     </svg>
   );
-});
+}

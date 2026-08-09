@@ -1,4 +1,4 @@
-import { type ElementType, forwardRef } from 'react';
+import type { ElementType, Ref } from 'react';
 
 import { cn } from '@/lib/utils';
 
@@ -30,6 +30,7 @@ export interface TextProps extends React.HTMLAttributes<HTMLElement> {
   align?: TextAlign;
   /** @internal blocks/ only */
   className?: string;
+  ref?: Ref<HTMLElement>;
 }
 
 const sizeStyles: Record<TextSize, string> = {
@@ -51,27 +52,25 @@ const alignStyles: Record<TextAlign, string> = {
   right: 'text-right',
 };
 
-export const Text = forwardRef<HTMLElement, TextProps>(function Text(
-  {
-    as: Component = 'span',
-    block = false,
-    clamp,
-    code = false,
-    inheritColor = false,
-    italic = false,
-    leading,
-    tone,
-    variant = 'default',
-    size,
-    weight,
-    truncate,
-    align,
-    className,
-    style,
-    ...props
-  },
+export function Text({
+  as: Component = 'span',
+  block = false,
+  clamp,
+  code = false,
+  inheritColor = false,
+  italic = false,
+  leading,
+  tone,
+  variant = 'default',
+  size,
+  weight,
+  truncate,
+  align,
+  className,
   ref,
-) {
+  style,
+  ...props
+}: TextProps) {
   const resolvedTone: TextTone = inheritColor
     ? 'inherit'
     : (tone ?? ({ default: 'default', muted: 'muted', faint: 'faint' }[variant] as TextTone));
@@ -105,4 +104,4 @@ export const Text = forwardRef<HTMLElement, TextProps>(function Text(
       }
     />
   );
-});
+}

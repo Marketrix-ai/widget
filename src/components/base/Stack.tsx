@@ -1,4 +1,4 @@
-import { forwardRef, type ReactNode } from 'react';
+import type { ComponentPropsWithRef, ReactNode } from 'react';
 
 import { cn } from '@/lib/utils';
 
@@ -7,7 +7,7 @@ import type { ShadowToken } from '../../design-system/shadows';
 import { type LayoutProps, resolveLayoutClasses, stripLayoutProps } from './layoutProps';
 import { backgroundClasses, paddingPresetClasses, type SurfaceBackground, type SurfacePadding } from './Surface';
 
-export interface StackProps extends LayoutProps, Omit<React.HTMLAttributes<HTMLDivElement>, 'className'> {
+export interface StackProps extends LayoutProps, Omit<ComponentPropsWithRef<'div'>, 'className'> {
   background?: SurfaceBackground;
   elevation?: ShadowToken;
   paddingPreset?: SurfacePadding;
@@ -17,8 +17,8 @@ export interface StackProps extends LayoutProps, Omit<React.HTMLAttributes<HTMLD
   children?: ReactNode;
 }
 
-export const Stack = forwardRef<HTMLDivElement, StackProps>(function Stack(props, ref) {
-  const { background = 'default', className, elevation, paddingPreset = 'none', radius, style, ...rest } = props;
+export function Stack(props: StackProps) {
+  const { background = 'default', className, elevation, paddingPreset = 'none', radius, ref, style, ...rest } = props;
   const layoutClasses = resolveLayoutClasses(props);
   const domProps = stripLayoutProps(rest);
 
@@ -37,4 +37,4 @@ export const Stack = forwardRef<HTMLDivElement, StackProps>(function Stack(props
       style={{ ...getElevationStyle(elevation), ...style }}
     />
   );
-});
+}

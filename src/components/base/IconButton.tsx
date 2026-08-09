@@ -1,4 +1,4 @@
-import { forwardRef } from 'react';
+import type { ComponentPropsWithRef } from 'react';
 
 import { cn } from '@/lib/utils';
 
@@ -9,7 +9,7 @@ type IconButtonVariant = 'primary' | 'secondary' | 'ghost' | 'toolbar';
 type IconButtonSize = 'xs' | 'sm';
 type IconButtonShape = 'circle' | 'theme';
 
-export interface IconButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+export interface IconButtonProps extends ComponentPropsWithRef<'button'> {
   elevation?: ShadowToken;
   variant?: IconButtonVariant;
   size?: IconButtonSize;
@@ -37,22 +37,20 @@ const shapeClasses: Record<IconButtonShape, string> = {
   theme: radiusClasses.theme,
 };
 
-export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(function IconButton(
-  {
-    variant = 'ghost',
-    size = 'sm',
-    shape = 'circle',
-    tone,
-    label,
-    disabled,
-    elevation,
-    className: userClassName,
-    children,
-    style,
-    ...props
-  },
+export function IconButton({
+  variant = 'ghost',
+  size = 'sm',
+  shape = 'circle',
+  tone,
+  label,
+  disabled,
+  elevation,
+  className: userClassName,
+  children,
+  style,
   ref,
-) {
+  ...props
+}: IconButtonProps) {
   return (
     <button
       {...props}
@@ -74,4 +72,4 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(functio
       {children}
     </button>
   );
-});
+}
