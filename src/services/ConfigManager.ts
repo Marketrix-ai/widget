@@ -31,24 +31,8 @@ export class ConfigManager {
     this.config = config;
   }
 
-  updateConfig(updates: Partial<MarketrixConfig>): void {
-    if (!this.config) {
-      this.config = {};
-    }
-
-    this.config = { ...this.config, ...updates };
-    this.saveConfig(this.config);
-  }
-
   getConfig(): MarketrixConfig | null {
     return this.config;
-  }
-
-  shouldShowWidget(): boolean {
-    if (!this.config) {
-      return false;
-    }
-    return this.config.widget_enabled ?? false;
   }
 }
 

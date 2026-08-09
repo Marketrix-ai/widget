@@ -22,7 +22,6 @@ const getBuildConfig = (options: { minify: boolean | 'terser'; outDir: string })
     'process.env': '{}',
     'global.process': 'undefined',
     process: 'undefined',
-    __BUILD_COMMIT__: JSON.stringify(process.env.BUILD_COMMIT || 'dev'),
   },
   css: { devSourcemap: false },
   build: {
