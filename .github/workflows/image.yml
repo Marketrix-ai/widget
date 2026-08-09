@@ -1,0 +1,13 @@
+name: Image
+on:
+  push:
+    tags: ['v*']
+concurrency:
+  group: ci-${{ startsWith(github.ref, 'refs/tags/') && github.sha || github.ref }}
+  cancel-in-progress: true
+jobs:
+  image:
+    uses: Marketrix-ai/infra/.github/workflows/build-service-image.yml@main
+    with:
+      service: widget
+    secrets: inherit
