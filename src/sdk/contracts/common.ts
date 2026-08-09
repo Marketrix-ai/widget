@@ -26,7 +26,7 @@ export const booleanQueryParam = z
   .transform(val => (typeof val === 'boolean' ? val : val === 'true' ? true : val === 'false' ? false : undefined))
   .optional();
 
-export const paginatedListOf = <T extends z.ZodTypeAny>(schema: T) =>
+export const paginatedListOf = <T extends z.ZodType>(schema: T) =>
   z.object({
     items: z.array(schema),
     total: z.number(),
@@ -35,7 +35,7 @@ export const paginatedListOf = <T extends z.ZodTypeAny>(schema: T) =>
   });
 
 // Bounded results (scoped to a parent entity) — no limit/offset.
-export const listOf = <T extends z.ZodTypeAny>(schema: T) =>
+export const listOf = <T extends z.ZodType>(schema: T) =>
   z.object({
     items: z.array(schema),
     count: z.number(),
@@ -52,12 +52,9 @@ export const ToolCallRecordSchema = z.object({
 });
 
 // Shared by workspace update + slack-test so both 400 on the same malformed input.
-export const SlackWebhookUrlSchema = z
-  .string()
-  .url()
-  .refine(u => /^https:\/\/hooks\.slack\.com\//.test(u), {
-    message: 'Slack webhook URL must start with https://hooks.slack.com/',
-  });
+export const SlackWebhookUrlSchema = z.url().refine(u => /^https:\/\/hooks\.slack\.com\//.test(u), {
+  message: 'Slack webhook URL must start with https://hooks.slack.com/',
+});
 
 export const GraphEdgeSchema = z
   .object({
