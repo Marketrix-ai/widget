@@ -1,8 +1,11 @@
-import { cleanup } from '@testing-library/react';
+import { act, cleanup } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { unmountWidget } from './index';
+import { mountWidget, unmountWidget } from './index';
+import { WidgetSettingsDataSchema } from './sdk';
 import { StreamClient } from './services/StreamClient';
+import * as WidgetService from './services/WidgetService';
+import { getMockWidgetConfig } from './test/fixtures';
 
 afterEach(() => {
   cleanup();
@@ -20,5 +23,21 @@ describe('public widget lifecycle', () => {
     unmountWidget();
 
     expect(disconnect).toHaveBeenCalledOnce();
+  });
+
+  it('mounts programmatic preview settings without an API fetch', async () => {
+    const fetchSettings = vi.spyOn(WidgetService, 'fetchWidgetSettings');
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+
+    await act(() =>
+      mountWidget({
+        settings: WidgetSettingsDataSchema.parse(getMockWidgetConfig()),
+        container,
+      }),
+    );
+
+    expect(fetchSettings).not.toHaveBeenCalled();
+    expect(container.querySelector('.marketrix-widget-container')).toBeTruthy();
   });
 });
