@@ -135,11 +135,11 @@ colocated `*.test.ts(x)`.
 ## Release & CI
 
 `npm run tag <version>` bumps `package.json`, refreshes `package-lock.json`, builds, commits and
-creates the annotated tag. Pushing `v*` independently fires `image.yml` →
-`marketrix.azurecr.io/widget:<version>` (**v-prefix stripped**) and `publish.yml` →
-`npm publish --access public`, skipped via `npm view` if that version already exists. `ci.yml` runs
-only for pull requests and pushes to `main`. Root `../CLAUDE.md` carries the full release order (push
-tag → bump app dep → deploy both).
+creates the annotated tag. Pushing `v*` independently fires the repo-local `image.yml` →
+`marketrix.azurecr.io/widget:<version>` (**v-prefix stripped**) and `publish.yml` → npm. This public
+repo cannot call Infra's private reusable image workflow, so its local build stays equivalent;
+publication remains separate and skips an existing npm version. `ci.yml` runs only for pull requests
+and pushes to `main`. Root `../CLAUDE.md` carries the full release order.
 
 Docker: one file, stages `base` → `dev` / `builder` → `runtime` (node build → nginx serve, mime patched
 to serve `.mjs`). Tilt builds `dev`, CI builds `runtime`, both inheriting `base`'s `npm ci`, so local
