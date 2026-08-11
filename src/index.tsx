@@ -228,11 +228,11 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ settings, cont
 };
 
 export const mountWidget = async (config: AddWidgetConfig): Promise<void> => {
-  setProgrammaticInitInProgress(true);
-
   const container = config.container;
 
   if ('settings' in config && config.settings !== undefined) {
+    unmountWidget();
+    setProgrammaticInitInProgress(true);
     // Preview: no network, and deliberately no global production instance.
     const previewConfig = config as Extract<AddWidgetConfig, { settings: WidgetSettingsData }>;
     const { settings, container: _container, ...restConfig } = previewConfig;
@@ -258,7 +258,6 @@ export const mountWidget = async (config: AddWidgetConfig): Promise<void> => {
       container,
     );
   } else {
-    setProgrammaticInitInProgress(false);
     throw new Error('Invalid configuration: provide either settings (preview) or mtxId+mtxKey (production)');
   }
 };

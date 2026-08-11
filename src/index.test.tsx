@@ -30,9 +30,10 @@ describe('public widget lifecycle', () => {
   it('mounts programmatic preview settings without an API fetch and owns its cleanup', async () => {
     const loadConfig = vi.spyOn(WidgetService, 'loadWidgetConfig');
     const container = document.createElement('div');
+    const replacement = document.createElement('div');
     const unrelated = document.createElement('div');
     unrelated.className = 'marketrix-widget-container';
-    document.body.append(container, unrelated);
+    document.body.append(container, replacement, unrelated);
 
     await act(() =>
       mountWidget({
@@ -44,10 +45,41 @@ describe('public widget lifecycle', () => {
     expect(loadConfig).not.toHaveBeenCalled();
     expect(container.querySelector('.marketrix-widget-container')).toBeTruthy();
 
-    unmountWidget();
+    await act(() =>
+      mountWidget({
+        settings: WidgetSettingsDataSchema.parse(getMockWidgetConfig()),
+        container: replacement,
+      }),
+    );
 
     expect(container.querySelector('.marketrix-widget-container')).toBeNull();
+    expect(replacement.querySelector('.marketrix-widget-container')).toBeTruthy();
+
+    unmountWidget();
+
+    expect(replacement.querySelector('.marketrix-widget-container')).toBeNull();
     expect(unrelated).toBeInTheDocument();
+  });
+
+  it('lets a preview invalidate pending production initialization', async () => {
+    const settings = WidgetSettingsDataSchema.parse(getMockWidgetConfig());
+    let resolveProduction!: (config: typeof settings & { mtxId: string; mtxKey: string; mtxApp: number }) => void;
+    vi.spyOn(WidgetService, 'loadWidgetConfig').mockReturnValueOnce(
+      new Promise(resolve => {
+        resolveProduction = resolve;
+      }),
+    );
+    const productionContainer = document.createElement('div');
+    const previewContainer = document.createElement('div');
+    document.body.append(productionContainer, previewContainer);
+
+    const production = initWidget({ mtxId: 'production', mtxKey: 'key' }, productionContainer);
+    await act(() => mountWidget({ settings, container: previewContainer }));
+    resolveProduction({ ...settings, mtxId: 'production', mtxKey: 'key', mtxApp: 1 });
+    await production;
+
+    expect(productionContainer.querySelector('.marketrix-widget-container')).toBeNull();
+    expect(previewContainer.querySelectorAll('.marketrix-widget-container')).toHaveLength(1);
   });
 
   it('cancels stale production initialization and shares one in-flight promise', async () => {
