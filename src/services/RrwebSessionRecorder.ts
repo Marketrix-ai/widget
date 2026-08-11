@@ -11,6 +11,7 @@ export class RrwebSessionRecorder {
   private stopRecording: ReturnType<typeof record> | null = null;
   private flushTimer: ReturnType<typeof setTimeout> | null = null;
   private flushPromise = Promise.resolve();
+  private stopped = false;
 
   constructor(
     private readonly chatId: string,
@@ -18,7 +19,7 @@ export class RrwebSessionRecorder {
   ) {}
 
   async start(): Promise<void> {
-    if (this.stopRecording) return;
+    if (this.stopRecording || this.stopped) return;
     await sdk.widgetMessagePost({
       chat_id: this.chatId,
       command: {
@@ -32,6 +33,7 @@ export class RrwebSessionRecorder {
         viewport: { width: window.innerWidth, height: window.innerHeight },
       },
     });
+    if (this.stopped) return;
     this.stopRecording = record({
       emit: event => this.buffer(event as eventWithTime),
       maskAllInputs: true,
@@ -42,6 +44,7 @@ export class RrwebSessionRecorder {
   }
 
   stop(): void {
+    this.stopped = true;
     this.stopRecording?.();
     this.stopRecording = null;
     if (this.flushTimer) clearTimeout(this.flushTimer);

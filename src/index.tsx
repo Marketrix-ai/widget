@@ -14,8 +14,7 @@ import { chatSessionManager } from './services/ChatSessionManager';
 import { createConfigFromSettings } from './services/ConfigManager';
 import { RrwebSessionRecorder } from './services/RrwebSessionRecorder';
 import { StreamClient } from './services/StreamClient';
-import { validateConfig } from './services/ValidationService';
-import { fetchWidgetSettings, getWidgetSettings } from './services/WidgetService';
+import { loadWidgetConfig } from './services/WidgetService';
 import type { AddWidgetConfig, MarketrixConfig, MarketrixWidgetProps } from './types';
 import {
   clearWidgetState,
@@ -35,77 +34,16 @@ import {
 import { isHTMLElement } from './utils/validation';
 
 let initPromise: Promise<void> | null = null;
+let lifecycleGeneration = 0;
+let ownedWidgetContainer: HTMLElement | null = null;
 let rrwebSessionRecorder: RrwebSessionRecorder | null = null;
-let widgetMounted = false;
-
-async function initializeWidgetWithConfig(
-  config: MarketrixConfig,
-  validationResult: { isValid: boolean; error?: string },
-): Promise<MarketrixConfig> {
-  if (!validationResult.isValid) {
-    throw new Error(validationResult.error || 'Widget validation failed');
-  }
-
-  showWidgetSettingsLoader('Loading widget settings...');
-  try {
-    const widgetData = await fetchWidgetSettings(config.mtxId, config.mtxKey);
-    const widgetSettings = widgetData ? getWidgetSettings(widgetData) : null;
-
-    if (!widgetSettings) {
-      throw new Error('Widget settings request did not return settings');
-    }
-
-    const requiredSettings = [
-      'widget_enabled',
-      'widget_appearance',
-      'widget_position',
-      'widget_device',
-      'widget_header',
-      'widget_body',
-      'widget_greeting',
-      'widget_greeting_toast',
-      'widget_recording',
-      'widget_feature_tell',
-      'widget_feature_show',
-      'widget_feature_do',
-      'widget_feature_human',
-      'widget_background_color',
-      'widget_text_color',
-      'widget_border_color',
-      'widget_accent_color',
-      'widget_secondary_color',
-      'widget_border_radius',
-      'widget_font_size',
-      'widget_width',
-      'widget_height',
-      'widget_shadow',
-      'widget_animation_duration',
-      'widget_fade_duration',
-      'widget_bounce_effect',
-      'widget_chips',
-    ] as const;
-
-    const missingSettings = requiredSettings.filter(
-      key => widgetSettings[key as keyof typeof widgetSettings] === undefined,
-    );
-
-    if (missingSettings.length > 0) {
-      throw new Error(
-        `Widget settings are incomplete. Missing required fields: ${missingSettings.join(', ')}. The API must return all widget settings.`,
-      );
-    }
-
-    return { ...createConfigFromSettings(widgetSettings, config), mtxApp: widgetData?.application_id ?? config.mtxApp };
-  } catch (err) {
-    console.error('Error fetching widget settings:', err);
-    throw err;
-  } finally {
-    hideWidgetSettingsLoader();
-  }
-}
 
 // Call only via initWidget(), which guards with initPromise.
-async function initWidgetInternal(config: MarketrixConfig, container?: HTMLElement): Promise<void> {
+async function initWidgetInternal(
+  config: MarketrixConfig,
+  container: HTMLElement | undefined,
+  generation: number,
+): Promise<void> {
   setProgrammaticInitInProgress(true);
 
   window.__mtx = { state: 'initializing' };
@@ -114,92 +52,92 @@ async function initWidgetInternal(config: MarketrixConfig, container?: HTMLEleme
     configureSdk(config.mtxApiHost);
   }
 
-  showWidgetSettingsLoader('Validating widget configuration...');
-  const validationResult = await validateConfig(config);
-
-  if (!validationResult.isValid) {
-    console.error('Marketrix Widget validation failed:', validationResult.error);
-    showWidgetSettingsLoader(validationResult.error || 'Widget validation failed. Please check your configuration.');
-    setProgrammaticInitInProgress(false);
-    window.__mtx = undefined;
-    return;
-  }
-
+  showWidgetSettingsLoader('Loading widget settings...');
   let finalConfig: MarketrixConfig;
   try {
-    finalConfig = await initializeWidgetWithConfig(config, validationResult);
+    finalConfig = await loadWidgetConfig(config);
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Failed to initialize widget';
-    showWidgetSettingsLoader(errorMessage);
+    if (generation !== lifecycleGeneration) return;
+    console.error('Marketrix Widget initialization failed:', error);
+    showWidgetSettingsLoader(error instanceof Error ? error.message : 'Failed to initialize widget');
     setProgrammaticInitInProgress(false);
     window.__mtx = undefined;
     return;
   }
+  if (generation !== lifecycleGeneration) return;
+  hideWidgetSettingsLoader();
 
   setCurrentConfig(finalConfig);
-  const { mountEl } = createWidgetContainer(container);
+  const { container: widgetContainer, mountEl } = createWidgetContainer(container);
+  ownedWidgetContainer = widgetContainer;
   const instance = mountWidgetToContainer(mountEl, finalConfig);
   setWidgetInstance(instance);
   setProgrammaticInitInProgress(false);
   window.__mtx = { state: 'active' };
-  widgetMounted = true;
 
   if (finalConfig.widget_recording && finalConfig.mtxApp) {
-    void StreamClient.getInstance()
-      .waitUntilRegistered()
-      .then(async () => {
-        if (!widgetMounted) return;
+    void (async () => {
+      try {
+        await StreamClient.getInstance().waitUntilRegistered();
+        if (generation !== lifecycleGeneration) return;
         const chatId = await chatSessionManager.getOrCreateChatId();
-        if (!widgetMounted) return;
-        rrwebSessionRecorder = new RrwebSessionRecorder(chatId, finalConfig.mtxApp as number);
-        await rrwebSessionRecorder.start();
-      })
-      .catch(error => console.error('Failed to start session recording:', error));
+        if (generation !== lifecycleGeneration) return;
+        const recorder = new RrwebSessionRecorder(chatId, finalConfig.mtxApp as number);
+        rrwebSessionRecorder = recorder;
+        await recorder.start();
+        if (generation !== lifecycleGeneration) {
+          recorder.stop();
+          if (rrwebSessionRecorder === recorder) rrwebSessionRecorder = null;
+        }
+      } catch (error) {
+        if (generation === lifecycleGeneration) console.error('Failed to start session recording:', error);
+      }
+    })();
   }
 }
 
-export const initWidget = async (config: MarketrixConfig, container?: HTMLElement): Promise<void> => {
+export const initWidget = (config: MarketrixConfig, container?: HTMLElement): Promise<void> => {
+  if (initPromise) return initPromise;
+
   // window-level guard survives ES module re-execution, which resets module-level vars.
-  if (window.__mtx?.state) {
-    return;
-  }
-  if (initPromise) {
-    return initPromise;
-  }
+  if (window.__mtx?.state) return Promise.resolve();
   if (isWidgetInitialized()) {
     console.warn('Marketrix Widget: already initialized');
-    return;
+    return Promise.resolve();
   }
 
-  // Assign before awaiting so concurrent callers see the promise, not null.
-  initPromise = initWidgetInternal(config, container);
-  try {
-    await initPromise;
-  } finally {
-    initPromise = null;
-  }
+  const generation = ++lifecycleGeneration;
+  const pending = initWidgetInternal(config, container, generation);
+  initPromise = pending;
+  void pending.then(
+    () => {
+      if (initPromise === pending) initPromise = null;
+    },
+    () => {
+      if (initPromise === pending) initPromise = null;
+    },
+  );
+  return pending;
 };
 
 export const unmountWidget = (): void => {
-  widgetMounted = false;
+  lifecycleGeneration++;
   StreamClient.getInstance().disconnect();
   rrwebSessionRecorder?.stop();
   rrwebSessionRecorder = null;
   const instance = getWidgetInstance();
-  if (instance) {
-    instance.unmount();
-    clearWidgetState();
+  if (instance) instance.unmount();
+  clearWidgetState();
 
-    const container = document.querySelector('.marketrix-widget-container');
-    if (container) {
-      destroyWidgetContainer(container as HTMLElement);
-    }
-
-    console.log('Marketrix Widget destroyed');
+  if (ownedWidgetContainer) {
+    destroyWidgetContainer(ownedWidgetContainer);
+    ownedWidgetContainer = null;
   }
+  if (instance) console.log('Marketrix Widget destroyed');
 
   initPromise = null;
   window.__mtx = undefined;
+  setProgrammaticInitInProgress(false);
 
   hideWidgetSettingsLoader();
 };
@@ -280,7 +218,7 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ settings, cont
         containerIdRef.current = null;
       }
     };
-  }, [settings, container]);
+  }, [settings, container, mtxId, mtxKey, mtxApiHost]);
 
   if (container) {
     return null;
@@ -290,11 +228,11 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ settings, cont
 };
 
 export const mountWidget = async (config: AddWidgetConfig): Promise<void> => {
-  setProgrammaticInitInProgress(true);
-
   const container = config.container;
 
   if ('settings' in config && config.settings !== undefined) {
+    unmountWidget();
+    setProgrammaticInitInProgress(true);
     // Preview: no network, and deliberately no global production instance.
     const previewConfig = config as Extract<AddWidgetConfig, { settings: WidgetSettingsData }>;
     const { settings, container: _container, ...restConfig } = previewConfig;
@@ -302,8 +240,11 @@ export const mountWidget = async (config: AddWidgetConfig): Promise<void> => {
       ...createConfigFromSettings(settings, restConfig),
       isPreviewMode: true,
     };
-    const { mountEl } = createWidgetContainer(container);
-    mountWidgetToContainer(mountEl, finalConfig, true);
+    const { container: widgetContainer, mountEl } = createWidgetContainer(container);
+    const instance = mountWidgetToContainer(mountEl, finalConfig, true);
+    ownedWidgetContainer = widgetContainer;
+    setWidgetInstance(instance);
+    setCurrentConfig(finalConfig);
     setProgrammaticInitInProgress(false);
   } else if ('mtxId' in config && config.mtxId !== undefined && config.mtxKey !== undefined) {
     const prodConfig = config as Extract<AddWidgetConfig, { mtxId: string; mtxKey: string }>;
@@ -317,7 +258,6 @@ export const mountWidget = async (config: AddWidgetConfig): Promise<void> => {
       container,
     );
   } else {
-    setProgrammaticInitInProgress(false);
     throw new Error('Invalid configuration: provide either settings (preview) or mtxId+mtxKey (production)');
   }
 };

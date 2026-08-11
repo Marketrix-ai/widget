@@ -25,7 +25,7 @@ export class StreamClient {
   private connectionId = 0;
   // Per-tab identity: tabs share the localStorage chat_id, so the server keys SSE by (chat_id, tab_id) to stop tabs evicting each other's stream.
   private readonly tabId = globalThis.crypto.randomUUID();
-  private registrationWaiters = new Set<() => void>();
+  private registrationWaiters = new Set<{ resolve: () => void; reject: (error: Error) => void }>();
 
   private constructor() {}
 
@@ -54,7 +54,7 @@ export class StreamClient {
 
   async waitUntilRegistered(): Promise<void> {
     if (this.isConnected()) return;
-    await new Promise<void>(resolve => this.registrationWaiters.add(resolve));
+    await new Promise<void>((resolve, reject) => this.registrationWaiters.add({ resolve, reject }));
   }
 
   async connect(chatId: string, config?: { mtxId?: string; mtxKey?: string; mtxApp?: number }): Promise<void> {
@@ -147,6 +147,10 @@ export class StreamClient {
     }
     this.setStatus('disconnected');
     this.chatId = null;
+    for (const waiter of this.registrationWaiters) {
+      waiter.reject(new Error('Stream disconnected before registration'));
+    }
+    this.registrationWaiters.clear();
   }
 
   send(command: WidgetCommand): Promise<void> {
@@ -187,7 +191,7 @@ export class StreamClient {
         this.setStatus('registered');
         this.reconnectAttempts = 0;
         this.reconnectDelay = 1000;
-        for (const resolve of this.registrationWaiters) resolve();
+        for (const waiter of this.registrationWaiters) waiter.resolve();
         this.registrationWaiters.clear();
         this.callbacks.forEach(cb => cb.onRegistered?.(event.application_id));
       }
