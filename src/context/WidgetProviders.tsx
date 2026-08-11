@@ -46,9 +46,11 @@ const InitBridge: React.FC<{ children: React.ReactNode; previewMode: boolean }> 
 
   useEffect(() => {
     if (previewMode) return;
+    let cancelled = false;
 
     const init = async () => {
       const chatId = await chatSessionManager.getOrCreateChatId();
+      if (cancelled) return;
       chatService.createInitialContext(chatId);
 
       const initErr = chatService.getInitError();
@@ -92,9 +94,14 @@ const InitBridge: React.FC<{ children: React.ReactNode; previewMode: boolean }> 
     };
 
     void init().catch(error => {
+      if (cancelled) return;
       console.error('Widget initialization failed:', error);
       uiActions.setError('Widget failed to initialise — please refresh the page.');
     });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   return (

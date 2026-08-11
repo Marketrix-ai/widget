@@ -54,6 +54,19 @@ describe('loadWidgetConfig', () => {
     expect(config).toMatchObject({ mtxId: 'test-id', mtxKey: 'test-key', mtxApp: 42, show_widget: false });
   });
 
+  it('fills settings omitted by the widget from the API defaults', async () => {
+    const { widget_header: _header, ...partialSettings } = settings;
+    mockSdk.widgetSearch.mockResolvedValue({
+      ...searchResult,
+      items: [{ ...activeWidget, settings: partialSettings as typeof settings }],
+    });
+    mockSdk.widgetDefaultGet.mockResolvedValue({ ...settings, widget_header: 'Default header' });
+
+    const config = await loadWidgetConfig({ mtxId: 'test-id', mtxKey: 'test-key' });
+
+    expect(config.widget_header).toBe('Default header');
+  });
+
   it('rejects an invalid merged settings response with the schema field', async () => {
     mockSdk.widgetSearch.mockResolvedValue({
       ...searchResult,
