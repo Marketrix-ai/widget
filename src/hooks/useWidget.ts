@@ -20,8 +20,7 @@ interface UseWidgetProps {
 }
 
 function isConfigComplete(config: MarketrixConfig): config is ValidWidgetConfig {
-  const requiredKeys = Object.keys(WidgetSettingsDataSchema.shape) as Array<keyof WidgetSettingsData>;
-  return requiredKeys.every(key => config[key] !== undefined);
+  return WidgetSettingsDataSchema.safeParse(config).success;
 }
 
 interface UseWidgetActions {

@@ -4,7 +4,6 @@ import typescriptParser from '@typescript-eslint/parser';
 import importPlugin from 'eslint-plugin-import-x';
 import simpleImportSort from 'eslint-plugin-simple-import-sort';
 import unusedImports from 'eslint-plugin-unused-imports';
-import prettier from 'eslint-plugin-prettier';
 import prettierConfig from 'eslint-config-prettier';
 
 export default [
@@ -23,8 +22,6 @@ export default [
         },
       },
       globals: {
-        node: true,
-        es2022: true,
         console: 'readonly',
         alert: 'readonly',
         confirm: 'readonly',
@@ -69,7 +66,6 @@ export default [
       'import-x': importPlugin,
       'simple-import-sort': simpleImportSort,
       'unused-imports': unusedImports,
-      prettier: prettier,
     },
     rules: {
       '@typescript-eslint/no-unused-vars': 'off', // handled by unused-imports plugin
@@ -119,33 +115,7 @@ export default [
       'no-var': 'error',
       'object-shorthand': 'error',
       'prefer-template': 'error',
-      'template-curly-spacing': 'error',
-      'arrow-spacing': 'error',
-      'comma-dangle': ['error', 'always-multiline'],
-      'comma-spacing': 'error',
-      'comma-style': 'error',
-      'computed-property-spacing': 'error',
-      'func-call-spacing': 'error',
-      'key-spacing': 'error',
-      'keyword-spacing': 'error',
-      'object-curly-spacing': ['error', 'always'],
-      semi: ['error', 'always'],
-      'semi-spacing': 'error',
-      'space-before-blocks': 'error',
-      'space-before-function-paren': [
-        'error',
-        {
-          anonymous: 'always',
-          named: 'never',
-          asyncArrow: 'always',
-        },
-      ],
-      'space-in-parens': 'error',
-      'space-infix-ops': 'error',
-      'space-unary-ops': 'error',
       'spaced-comment': 'error',
-      quotes: ['error', 'single', { avoidEscape: true }],
-      indent: ['error', 2, { SwitchCase: 1, ignoredNodes: ['PropertyDefinition'] }],
       'max-len': [
         'warn',
         {
@@ -156,11 +126,9 @@ export default [
           ignoreRegExpLiterals: true,
         },
       ],
-      'prettier/prettier': 'error',
     },
   },
   prettierConfig,
-  // Test files: relax type-strict rules so lint:check passes with --max-warnings 0
   {
     files: ['**/*.test.ts', '**/*.test.tsx'],
     rules: {
@@ -168,20 +136,6 @@ export default [
       '@typescript-eslint/no-unsafe-member-access': 'off',
       '@typescript-eslint/no-unsafe-assignment': 'off',
       '@typescript-eslint/no-unsafe-return': 'off',
-    },
-  },
-  // Node script files: allow console/process (only applied if not ignored)
-  {
-    files: ['scripts/**/*.mjs'],
-    languageOptions: {
-      globals: {
-        console: 'readonly',
-        process: 'readonly',
-        Buffer: 'readonly',
-        module: 'readonly',
-        require: 'readonly',
-        exports: 'writable',
-      },
     },
   },
   {

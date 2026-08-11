@@ -91,7 +91,10 @@ const InitBridge: React.FC<{ children: React.ReactNode; previewMode: boolean }> 
       }
     };
 
-    void init();
+    void init().catch(error => {
+      console.error('Widget initialization failed:', error);
+      uiActions.setError('Widget failed to initialise — please refresh the page.');
+    });
   }, []);
 
   return (
