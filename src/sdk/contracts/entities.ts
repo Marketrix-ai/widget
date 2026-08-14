@@ -59,25 +59,27 @@ export const PersonaAttributeInputSchema = PersonaAttributeSchema.omit({ persona
   .extend({ evidence: z.array(PersonaEvidenceRefInputSchema) })
   .strict();
 
-export const PersonaContentSchema = z.object({
-  name: z.string().min(1).nullable(),
-  initials: z.string().nullable(),
-  summary: z.string().nullable(),
-  category: z.string().nullable(),
-  industries: z.array(z.string()).nullable(),
-  tags: z.array(z.string()).nullable(),
-  source: PersonaSourceSchema.nullable(),
-  status: PersonaStatusSchema,
-  big5_scores: PersonaBig5Schema.nullable(),
-  mbti_category: z.string().nullable(),
-  profile: z.array(PersonaAttributeSchema),
-  propensities: z.array(PersonaAttributeSchema),
-  goals: z.array(PersonaAttributeSchema),
-  voice: z.array(PersonaAttributeSchema),
-  modulators: z.array(PersonaAttributeSchema),
-  memory: z.array(PersonaAttributeSchema),
-  constraints: z.array(PersonaAttributeSchema),
-});
+export const PersonaContentSchema = z
+  .object({
+    name: z.string().min(1).nullable(),
+    initials: z.string().nullable(),
+    summary: z.string().nullable(),
+    category: z.string().nullable(),
+    industries: z.array(z.string()).nullable(),
+    tags: z.array(z.string()).nullable(),
+    source: PersonaSourceSchema.nullable(),
+    status: PersonaStatusSchema,
+    big5_scores: PersonaBig5Schema.nullable(),
+    mbti_category: z.string().nullable(),
+    profile: z.array(PersonaAttributeSchema),
+    propensities: z.array(PersonaAttributeSchema),
+    goals: z.array(PersonaAttributeSchema),
+    voice: z.array(PersonaAttributeSchema),
+    modulators: z.array(PersonaAttributeSchema),
+    memory: z.array(PersonaAttributeSchema),
+    constraints: z.array(PersonaAttributeSchema),
+  })
+  .strict();
 
 export const PersonaSchema = PersonaContentSchema.extend({
   id: z.number().int().positive(),
@@ -88,38 +90,43 @@ export const PersonaSchema = PersonaContentSchema.extend({
   version: z.number().int().positive(),
   created_at: z.coerce.date(),
   updated_at: z.coerce.date(),
-}).superRefine((persona, ctx) => {
-  const publicScope = persona.scope === 'public';
-  if (publicScope && (persona.parent_id !== null || persona.workspace_id !== null || persona.application_id !== null)) {
-    ctx.addIssue({ code: 'custom', message: 'A public persona cannot have private ancestry' });
-  }
-  if (
-    publicScope &&
-    [
-      persona.name,
-      persona.initials,
-      persona.summary,
-      persona.category,
-      persona.industries,
-      persona.tags,
-      persona.source,
-    ].some(value => value === null)
-  ) {
-    ctx.addIssue({ code: 'custom', message: 'A public persona requires display metadata' });
-  }
-  if (
-    persona.scope === 'workspace' &&
-    (persona.parent_id === null || persona.workspace_id === null || persona.application_id !== null)
-  ) {
-    ctx.addIssue({ code: 'custom', message: 'A workspace persona requires a public parent and workspace' });
-  }
-  if (
-    persona.scope === 'application' &&
-    (persona.parent_id === null || persona.workspace_id === null || persona.application_id === null)
-  ) {
-    ctx.addIssue({ code: 'custom', message: 'An application persona requires workspace ancestry and application' });
-  }
-});
+})
+  .strict()
+  .superRefine((persona, ctx) => {
+    const publicScope = persona.scope === 'public';
+    if (
+      publicScope &&
+      (persona.parent_id !== null || persona.workspace_id !== null || persona.application_id !== null)
+    ) {
+      ctx.addIssue({ code: 'custom', message: 'A public persona cannot have private ancestry' });
+    }
+    if (
+      publicScope &&
+      [
+        persona.name,
+        persona.initials,
+        persona.summary,
+        persona.category,
+        persona.industries,
+        persona.tags,
+        persona.source,
+      ].some(value => value === null)
+    ) {
+      ctx.addIssue({ code: 'custom', message: 'A public persona requires display metadata' });
+    }
+    if (
+      persona.scope === 'workspace' &&
+      (persona.parent_id === null || persona.workspace_id === null || persona.application_id !== null)
+    ) {
+      ctx.addIssue({ code: 'custom', message: 'A workspace persona requires a public parent and workspace' });
+    }
+    if (
+      persona.scope === 'application' &&
+      (persona.parent_id === null || persona.workspace_id === null || persona.application_id === null)
+    ) {
+      ctx.addIssue({ code: 'custom', message: 'An application persona requires workspace ancestry and application' });
+    }
+  });
 
 export const PersonaCreateSchema = PersonaContentSchema.pick({
   big5_scores: true,
@@ -170,18 +177,22 @@ export const PersonaChangeSetSchema = z
 
 export const PersonaVersionSnapshotSchema = PersonaContentSchema.omit({ status: true });
 
-export const PersonaVersionTupleSchema = z.object({
-  public: z.number().int().positive(),
-  workspace: z.number().int().positive().nullable(),
-  application: z.number().int().positive().nullable(),
-});
+export const PersonaVersionTupleSchema = z
+  .object({
+    public: z.number().int().positive(),
+    workspace: z.number().int().positive().nullable(),
+    application: z.number().int().positive().nullable(),
+  })
+  .strict();
 export const PersonaSnapshotMapSchema = z.record(z.string(), PersonaSchema);
 export const PersonaVersionMapSchema = z.record(z.string(), PersonaVersionTupleSchema);
 
-export const ResolvedPersonaEnvelopeSchema = z.object({
-  persona: PersonaSchema,
-  versions: PersonaVersionTupleSchema,
-});
+export const ResolvedPersonaEnvelopeSchema = z
+  .object({
+    persona: PersonaSchema,
+    versions: PersonaVersionTupleSchema,
+  })
+  .strict();
 
 export type PersonaData = z.infer<typeof PersonaSchema>;
 export type PersonaAttribute = z.infer<typeof PersonaAttributeSchema>;
