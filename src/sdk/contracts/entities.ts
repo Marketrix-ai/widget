@@ -170,13 +170,17 @@ export const PersonaChangeSetSchema = z
 
 export const PersonaVersionSnapshotSchema = PersonaContentSchema.omit({ status: true });
 
+export const PersonaVersionTupleSchema = z.object({
+  public: z.number().int().positive(),
+  workspace: z.number().int().positive().nullable(),
+  application: z.number().int().positive().nullable(),
+});
+export const PersonaSnapshotMapSchema = z.record(z.string(), PersonaSchema);
+export const PersonaVersionMapSchema = z.record(z.string(), PersonaVersionTupleSchema);
+
 export const ResolvedPersonaEnvelopeSchema = z.object({
   persona: PersonaSchema,
-  versions: z.object({
-    public: z.number().int().positive(),
-    workspace: z.number().int().positive().nullable(),
-    application: z.number().int().positive().nullable(),
-  }),
+  versions: PersonaVersionTupleSchema,
 });
 
 export type PersonaData = z.infer<typeof PersonaSchema>;
@@ -277,7 +281,7 @@ export type KnowledgeData = z.infer<typeof KnowledgeEntitySchema>;
 export const PersonaFileEntitySchema = BaseEntitySchema.extend({
   workspace_id: z.number(),
   application_id: z.number(),
-  persona_id: z.number(),
+  application_persona_id: z.number(),
   file_name: z.string().min(1),
   file_size: z.coerce.number(),
   file_type: z.string(),
@@ -369,6 +373,8 @@ export const SimulationEntitySchema = BaseEntitySchema.extend({
   reactions: z.array(SimulationReactionEntitySchema).default([]),
   // Driver — the single persona this sim RUNS AS (in-character; QA + survey); null = neutral.
   driver_persona_id: z.number().nullable().default(null),
+  persona_snapshots: PersonaSnapshotMapSchema.default({}),
+  persona_versions: PersonaVersionMapSchema.default({}),
   viewport: ViewportNameSchema.default('desktop'),
 });
 export type SimulationData = z.infer<typeof SimulationEntitySchema>;
