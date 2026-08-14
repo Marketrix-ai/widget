@@ -9,6 +9,181 @@ export type KnowledgeType = z.infer<typeof KnowledgeTypeSchema>;
 
 export const KnowledgeSourceSchema = z.enum(['user', 'research']);
 
+export const PersonaScopeSchema = z.enum(['public', 'workspace', 'application']);
+export const PersonaAttributeOriginSchema = z.enum(['learned', 'generated', 'imported', 'manual', 'migration']);
+export const PersonaCollectionSchema = z.enum([
+  'profile',
+  'propensities',
+  'goals',
+  'voice',
+  'modulators',
+  'memory',
+  'constraints',
+]);
+export const PersonaSourceSchema = z.enum(['generated', 'description', 'domain', 'manual', 'imported']);
+export const PersonaStatusSchema = z.enum(['active', 'archived']);
+
+export const PersonaBig5Schema = z
+  .object({
+    o: z.number().int().min(0).max(100),
+    c: z.number().int().min(0).max(100),
+    e: z.number().int().min(0).max(100),
+    a: z.number().int().min(0).max(100),
+    n: z.number().int().min(0).max(100),
+  })
+  .strict();
+
+export const PersonaEvidenceRefSchema = z
+  .object({
+    persona_id: z.number().int().positive(),
+    source_id: z.number().int().positive().nullable(),
+    source_type: z.enum(['file', 'transcript', 'interview', 'material']).nullable(),
+    quote: z.string(),
+    location: z.string().nullable(),
+  })
+  .strict();
+export const PersonaEvidenceRefInputSchema = PersonaEvidenceRefSchema.omit({ persona_id: true }).strict();
+
+export const PersonaAttributeSchema = z
+  .object({
+    id: z.string().min(1),
+    persona_id: z.number().int().positive(),
+    key: z.string().min(1),
+    value: z.string(),
+    origin: PersonaAttributeOriginSchema,
+    confidence: z.number().min(0).max(1).nullable(),
+    evidence: z.array(PersonaEvidenceRefSchema),
+  })
+  .strict();
+export const PersonaAttributeInputSchema = PersonaAttributeSchema.omit({ persona_id: true, evidence: true })
+  .extend({ evidence: z.array(PersonaEvidenceRefInputSchema) })
+  .strict();
+
+export const PersonaContentSchema = z.object({
+  name: z.string().min(1).nullable(),
+  initials: z.string().nullable(),
+  summary: z.string().nullable(),
+  category: z.string().nullable(),
+  industries: z.array(z.string()).nullable(),
+  tags: z.array(z.string()).nullable(),
+  source: PersonaSourceSchema.nullable(),
+  status: PersonaStatusSchema,
+  big5_scores: PersonaBig5Schema.nullable(),
+  mbti_category: z.string().nullable(),
+  profile: z.array(PersonaAttributeSchema),
+  propensities: z.array(PersonaAttributeSchema),
+  goals: z.array(PersonaAttributeSchema),
+  voice: z.array(PersonaAttributeSchema),
+  modulators: z.array(PersonaAttributeSchema),
+  memory: z.array(PersonaAttributeSchema),
+  constraints: z.array(PersonaAttributeSchema),
+});
+
+export const PersonaSchema = PersonaContentSchema.extend({
+  id: z.number().int().positive(),
+  scope: PersonaScopeSchema,
+  parent_id: z.number().int().positive().nullable(),
+  workspace_id: z.number().int().positive().nullable(),
+  application_id: z.number().int().positive().nullable(),
+  version: z.number().int().positive(),
+  created_at: z.coerce.date(),
+  updated_at: z.coerce.date(),
+}).superRefine((persona, ctx) => {
+  const publicScope = persona.scope === 'public';
+  if (publicScope && (persona.parent_id !== null || persona.workspace_id !== null || persona.application_id !== null)) {
+    ctx.addIssue({ code: 'custom', message: 'A public persona cannot have private ancestry' });
+  }
+  if (
+    publicScope &&
+    [
+      persona.name,
+      persona.initials,
+      persona.summary,
+      persona.category,
+      persona.industries,
+      persona.tags,
+      persona.source,
+    ].some(value => value === null)
+  ) {
+    ctx.addIssue({ code: 'custom', message: 'A public persona requires display metadata' });
+  }
+  if (
+    persona.scope === 'workspace' &&
+    (persona.parent_id === null || persona.workspace_id === null || persona.application_id !== null)
+  ) {
+    ctx.addIssue({ code: 'custom', message: 'A workspace persona requires a public parent and workspace' });
+  }
+  if (
+    persona.scope === 'application' &&
+    (persona.parent_id === null || persona.workspace_id === null || persona.application_id === null)
+  ) {
+    ctx.addIssue({ code: 'custom', message: 'An application persona requires workspace ancestry and application' });
+  }
+});
+
+export const PersonaCreateSchema = PersonaContentSchema.pick({
+  big5_scores: true,
+  mbti_category: true,
+})
+  .extend({
+    name: z.string().min(1),
+    initials: z.string(),
+    summary: z.string(),
+    category: z.string(),
+    industries: z.array(z.string()),
+    tags: z.array(z.string()),
+    source: PersonaSourceSchema,
+    application_id: z.coerce.number().int().positive().optional(),
+    workspace_id: z.coerce.number().int().positive().optional(),
+    profile: z.array(PersonaAttributeInputSchema).default([]),
+    propensities: z.array(PersonaAttributeInputSchema).default([]),
+    goals: z.array(PersonaAttributeInputSchema).default([]),
+    voice: z.array(PersonaAttributeInputSchema).default([]),
+    modulators: z.array(PersonaAttributeInputSchema).default([]),
+    memory: z.array(PersonaAttributeInputSchema).default([]),
+    constraints: z.array(PersonaAttributeInputSchema).default([]),
+  })
+  .strict();
+
+export const PersonaChangeSetSchema = z
+  .object({
+    persona_id: z.coerce.number().int().positive(),
+    base_version: z.number().int().positive().optional(),
+    metadata: PersonaContentSchema.pick({
+      name: true,
+      initials: true,
+      summary: true,
+      category: true,
+      industries: true,
+      tags: true,
+      source: true,
+      big5_scores: true,
+      mbti_category: true,
+    })
+      .partial()
+      .strict(),
+    attribute_upserts: z.array(PersonaAttributeInputSchema.extend({ collection: PersonaCollectionSchema })),
+    attribute_delete_ids: z.array(z.string().min(1)),
+    change_note: z.string().max(300),
+  })
+  .strict();
+
+export const PersonaVersionSnapshotSchema = PersonaContentSchema.omit({ status: true });
+
+export const ResolvedPersonaEnvelopeSchema = z.object({
+  persona: PersonaSchema,
+  versions: z.object({
+    public: z.number().int().positive(),
+    workspace: z.number().int().positive().nullable(),
+    application: z.number().int().positive().nullable(),
+  }),
+});
+
+export type PersonaData = z.infer<typeof PersonaSchema>;
+export type PersonaAttribute = z.infer<typeof PersonaAttributeSchema>;
+export type PersonaCreate = z.infer<typeof PersonaCreateSchema>;
+export type PersonaChangeSet = z.infer<typeof PersonaChangeSetSchema>;
+
 // Canonical wire vocabulary matching the `simulation_status` Postgres ENUM and the
 // `SimulationStatus` proto enum.
 export const SimulationStatusSchema = z.enum([
