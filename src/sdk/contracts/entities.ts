@@ -9,6 +9,7 @@ export type KnowledgeType = z.infer<typeof KnowledgeTypeSchema>;
 
 export const KnowledgeSourceSchema = z.enum(['user', 'research']);
 
+export const PersonaNonBlankStringSchema = z.string().refine(value => value.trim().length > 0, 'Must not be blank');
 export const PersonaScopeSchema = z.enum(['public', 'workspace', 'application']);
 export const PersonaAttributeOriginSchema = z.enum(['learned', 'generated', 'imported', 'manual', 'migration']);
 export const PersonaCollectionSchema = z.enum([
@@ -20,6 +21,7 @@ export const PersonaCollectionSchema = z.enum([
   'memory',
   'constraints',
 ]);
+export const PERSONA_COLLECTIONS = PersonaCollectionSchema.options;
 export const PersonaSourceSchema = z.enum(['generated', 'description', 'domain', 'manual', 'imported']);
 export const PersonaStatusSchema = z.enum(['active', 'archived']);
 
@@ -46,9 +48,9 @@ export const PersonaEvidenceRefInputSchema = PersonaEvidenceRefSchema.omit({ per
 
 export const PersonaAttributeSchema = z
   .object({
-    id: z.string().min(1),
+    id: PersonaNonBlankStringSchema,
     persona_id: z.number().int().positive(),
-    key: z.string().min(1),
+    key: PersonaNonBlankStringSchema,
     value: z.string(),
     origin: PersonaAttributeOriginSchema,
     confidence: z.number().min(0).max(1).nullable(),
@@ -61,7 +63,7 @@ export const PersonaAttributeInputSchema = PersonaAttributeSchema.omit({ persona
 
 export const PersonaContentSchema = z
   .object({
-    name: z.string().min(1).nullable(),
+    name: PersonaNonBlankStringSchema.nullable(),
     initials: z.string().nullable(),
     summary: z.string().nullable(),
     category: z.string().nullable(),
@@ -133,7 +135,7 @@ export const PersonaCreateSchema = PersonaContentSchema.pick({
   mbti_category: true,
 })
   .extend({
-    name: z.string().min(1),
+    name: PersonaNonBlankStringSchema,
     initials: z.string(),
     summary: z.string(),
     category: z.string(),
@@ -170,7 +172,7 @@ export const PersonaChangeSetSchema = z
       .partial()
       .strict(),
     attribute_upserts: z.array(PersonaAttributeInputSchema.extend({ collection: PersonaCollectionSchema })),
-    attribute_delete_ids: z.array(z.string().min(1)),
+    attribute_delete_ids: z.array(PersonaNonBlankStringSchema),
     change_note: z.string().max(300),
   })
   .strict();
@@ -184,17 +186,33 @@ export const PersonaVersionTupleSchema = z
     application: z.number().int().positive().nullable(),
   })
   .strict();
-export const PersonaSnapshotMapSchema = z.record(z.string(), PersonaSchema);
+export const ResolvedPersonaSchema = PersonaSchema.superRefine((persona, ctx) => {
+  if (
+    [
+      persona.name,
+      persona.initials,
+      persona.summary,
+      persona.category,
+      persona.industries,
+      persona.tags,
+      persona.source,
+    ].some(value => value === null)
+  ) {
+    ctx.addIssue({ code: 'custom', message: 'A resolved persona requires public display metadata' });
+  }
+});
+
+export const PersonaSnapshotMapSchema = z.record(z.string(), ResolvedPersonaSchema);
 export const PersonaVersionMapSchema = z.record(z.string(), PersonaVersionTupleSchema);
 
 export const ResolvedPersonaEnvelopeSchema = z
   .object({
-    persona: PersonaSchema,
+    persona: ResolvedPersonaSchema,
     versions: PersonaVersionTupleSchema,
   })
   .strict();
 
-export type PersonaData = z.infer<typeof PersonaSchema>;
+export type PersonaData = z.infer<typeof ResolvedPersonaSchema>;
 export type PersonaAttribute = z.infer<typeof PersonaAttributeSchema>;
 export type PersonaCreate = z.infer<typeof PersonaCreateSchema>;
 export type PersonaChangeSet = z.infer<typeof PersonaChangeSetSchema>;
