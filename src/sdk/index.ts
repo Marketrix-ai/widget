@@ -49,7 +49,6 @@ const sdkExtras = {
 
 type SdkExtras = typeof sdkExtras;
 
-// oRPC's client Proxy reads every string property (.bind, .call included) as a route segment — return it, never bind it.
 export const sdk = new Proxy({} as ContractRouterClient<typeof widgetContract> & SdkExtras, {
   get(_target, prop) {
     if (prop in sdkExtras) {
