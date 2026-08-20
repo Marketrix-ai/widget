@@ -123,7 +123,7 @@ export class BrowserToolService {
       if (mode === 'show' && this.requiresHighlight(browserToolName)) {
         const index = args.index as number | undefined;
         if (index !== undefined) {
-          const { element, error } = domService.getElementByIndex(index);
+          const { element, error } = domService.getValidatedElement(index);
           if (!element) {
             return { success: false, data: { text: '' }, error: error || `Element ${index} not found` };
           }
