@@ -21,19 +21,18 @@ export const getPositionClasses = (position: WidgetPosition): string => {
 };
 
 export const getPanelPositionStyle = (position: WidgetPosition): React.CSSProperties => {
-  const primary = `${EDGE_OFFSET_PX}px`;
-  const secondary = `${EDGE_OFFSET_PX}px`;
+  const offset = `${EDGE_OFFSET_PX}px`;
   switch (position) {
     case 'bottom_right':
-      return { bottom: primary, right: secondary };
+      return { bottom: offset, right: offset };
     case 'bottom_left':
-      return { bottom: primary, left: secondary };
+      return { bottom: offset, left: offset };
     case 'top_right':
-      return { top: primary, right: secondary };
+      return { top: offset, right: offset };
     case 'top_left':
-      return { top: primary, left: secondary };
+      return { top: offset, left: offset };
     default:
-      return { bottom: primary, right: secondary };
+      return { bottom: offset, right: offset };
   }
 };
 
