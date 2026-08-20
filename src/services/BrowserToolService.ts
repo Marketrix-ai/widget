@@ -96,6 +96,9 @@ export interface ExtractParams {
   start_from_char?: number;
 }
 
+const TAB_ORDER_SELECTOR =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
 export class BrowserToolService {
   private static instance: BrowserToolService;
 
@@ -531,36 +534,17 @@ export class BrowserToolService {
   /** Programmatic KeyboardEvents aren't "trusted", so manually reproduce each key's expected behavior. */
   private simulateKeyAction(element: HTMLElement, key: string): string | null {
     switch (key) {
-      case 'Tab': {
-        const focusables = Array.from(
-          document.querySelectorAll<HTMLElement>(
-            'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
-          ),
-        ).filter(el => el.offsetParent !== null);
-
-        const currentIndex = focusables.indexOf(element);
-        if (currentIndex !== -1 && currentIndex < focusables.length - 1) {
-          const nextElement = focusables[currentIndex + 1];
-          nextElement.focus();
-          return `Tab: moved focus to ${nextElement.tagName.toLowerCase()}${nextElement.id ? `#${nextElement.id}` : ''}`;
-        }
-        return 'Tab: no next focusable element';
-      }
-
+      case 'Tab':
       case 'Shift+Tab': {
-        const focusables = Array.from(
-          document.querySelectorAll<HTMLElement>(
-            'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
-          ),
-        ).filter(el => el.offsetParent !== null);
-
+        const step = key === 'Tab' ? 1 : -1;
+        const focusables = Array.from(document.querySelectorAll<HTMLElement>(TAB_ORDER_SELECTOR)).filter(
+          el => el.offsetParent !== null,
+        );
         const currentIndex = focusables.indexOf(element);
-        if (currentIndex > 0) {
-          const prevElement = focusables[currentIndex - 1];
-          prevElement.focus();
-          return `Shift+Tab: moved focus to ${prevElement.tagName.toLowerCase()}${prevElement.id ? `#${prevElement.id}` : ''}`;
-        }
-        return 'Shift+Tab: no previous focusable element';
+        const next = currentIndex === -1 ? undefined : focusables[currentIndex + step];
+        if (!next) return `${key}: no ${step > 0 ? 'next' : 'previous'} focusable element`;
+        next.focus();
+        return `${key}: moved focus to ${next.tagName.toLowerCase()}${next.id ? `#${next.id}` : ''}`;
       }
 
       case 'Enter': {
