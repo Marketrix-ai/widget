@@ -4,7 +4,6 @@ import type { InstructionType } from '../sdk';
 import {
   createScreenAccessRequestMessage,
   createScreenshareMessage,
-  createStartedScreenshareMessage,
   createSystemMessage,
 } from '../services/ChatService';
 import {
@@ -126,7 +125,7 @@ export function useScreenShare({
       setIsScreenSharing(true);
       setScreenStream(stream);
       onScreenSharingChange?.(true);
-      const startedMessage = createStartedScreenshareMessage('show');
+      const startedMessage = createSystemMessage('Started screenshare', 'show', 'user', 'started-screenshare');
       onAddMessage(startedMessage);
       const screenshareMessage = createScreenshareMessage(stream, 'show');
       setScreenShareMessageId(screenshareMessage.id);
@@ -153,7 +152,7 @@ export function useScreenShare({
         onUpdateMessage(screenAccessRequestMessageId, { screenShareStatus: 'allowed' });
         setScreenAccessRequestMessageId(null);
       }
-      const startedMessage = createStartedScreenshareMessage('show');
+      const startedMessage = createSystemMessage('Started screenshare', 'show', 'user', 'started-screenshare');
       onAddMessage(startedMessage);
       const screenshareMessage = createScreenshareMessage(stream, 'show');
       setScreenShareMessageId(screenshareMessage.id);

@@ -228,19 +228,6 @@ export function createScreenAccessRequestMessage(mode?: InstructionType): ChatMe
   };
 }
 
-export function createStartedScreenshareMessage(mode: InstructionType = 'show'): ChatMessage {
-  const content = 'Started screenshare';
-  return {
-    id: `started-screenshare-${Date.now()}`,
-    content,
-    sender: 'user',
-    timestamp: new Date(),
-    mode,
-    isSystemMessage: true,
-    parts: [{ type: 'text', content }],
-  };
-}
-
 export function createScreenshareMessage(stream: MediaStream, mode: InstructionType = 'show'): ChatMessage {
   return {
     id: `screenshare-${Date.now()}`,
