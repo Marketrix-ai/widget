@@ -286,6 +286,19 @@ export class BrowserToolService {
         }
       }
 
+      // Only reachable when the assignment above threw, i.e. a host page froze the element. execCommand
+      // acts on the editing host rather than the JS object, so it is the one path that can still recover.
+      if (!valueSet) {
+        try {
+          inputElement.focus();
+          if (clear) inputElement.select();
+          if (document.execCommand('insertText', false, args.text)) valueSet = true;
+        } catch (e) {
+          lastError = e;
+          console.warn('[BrowserToolService] execCommand failed:', e);
+        }
+      }
+
       if (!valueSet) {
         return {
           success: false,
