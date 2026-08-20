@@ -26,25 +26,10 @@ export function isInteractable(el: Element | null): boolean {
       return false;
     }
 
-    const logButtonFailure = (checkName: string, reason?: string): void => {
-      if (isButton) {
-        const buttonInfo = {
-          tag: el.tagName,
-          id: el.id || '(no id)',
-          class: el.className || '(no class)',
-          check: checkName,
-          reason: reason || '',
-        };
-        console.debug('[isInteractable] Button failed check:', buttonInfo);
-      }
-    };
-
     if ((el as HTMLButtonElement).disabled === true) {
-      logButtonFailure('disabled', 'button is disabled');
       return false;
     }
     if (el.getAttribute('aria-disabled') === 'true') {
-      logButtonFailure('aria-disabled', 'aria-disabled is true');
       return false;
     }
 
@@ -52,7 +37,6 @@ export function isInteractable(el: Element | null): boolean {
       let p: Element | null | ShadowRoot = el;
       while (p) {
         if (p instanceof HTMLElement && p.inert) {
-          logButtonFailure('inert', 'ancestor is inert');
           return false;
         }
         const root: Node | null = p instanceof Element ? p.getRootNode() : null;
@@ -71,18 +55,15 @@ export function isInteractable(el: Element | null): boolean {
     try {
       style = window.getComputedStyle(el);
     } catch (error) {
-      logButtonFailure('computed-style', 'failed to get computed style');
       console.warn('[isInteractable] Error getting computed style:', error);
       return false;
     }
 
     // Only display:none and pointer-events:none disqualify — not opacity/visibility, which user interaction can reveal (expanding sections, modals).
     if (style.display === 'none') {
-      logButtonFailure('display', 'display is none');
       return false;
     }
     if (style.pointerEvents === 'none') {
-      logButtonFailure('pointer-events', 'pointer-events is none');
       return false;
     }
 
@@ -90,13 +71,11 @@ export function isInteractable(el: Element | null): boolean {
     try {
       rect = el.getBoundingClientRect();
     } catch (error) {
-      logButtonFailure('bounding-rect', 'failed to get bounding rect');
       console.warn('[isInteractable] Error getting bounding rect:', error);
       return false;
     }
 
     if (rect.width <= 0 || rect.height <= 0) {
-      logButtonFailure('dimensions', `width=${rect.width}, height=${rect.height}`);
       return false;
     }
 
@@ -124,17 +103,7 @@ export function isInteractable(el: Element | null): boolean {
         if (parentStyle.overflow === 'hidden' || parentStyle.overflow === 'clip') {
           const isCompletelyOutside =
             rect.right < pr.left || rect.left > pr.right || rect.bottom < pr.top || rect.top > pr.bottom;
-
-          if (isButton) {
-            if (isCompletelyOutside) {
-              logButtonFailure('overflow-clipping', 'completely outside parent bounds');
-              return false;
-            }
-          } else {
-            if (isCompletelyOutside) {
-              return false;
-            }
-          }
+          if (isCompletelyOutside) return false;
         }
 
         node = parent;
