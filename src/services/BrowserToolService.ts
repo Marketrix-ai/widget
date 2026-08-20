@@ -73,10 +73,6 @@ export interface UploadFileParams {
   path: string;
 }
 
-export interface SwitchTabParams {
-  tab_id: string;
-}
-
 export interface DoneParams {
   success: boolean;
   message?: string;
@@ -155,8 +151,6 @@ export class BrowserToolService {
           return this.uploadFile(args as unknown as UploadFileParams);
         case 'close_tab':
           return this.closeTab();
-        case 'switch_tab':
-          return this.switchTab(args as unknown as SwitchTabParams);
         case 'done':
           return this.done(args as unknown as DoneParams);
         case 'get_html':
@@ -673,13 +667,6 @@ export class BrowserToolService {
   private closeTab(): ToolExecutionResult {
     window.close();
     return { success: true, data: { text: 'Attempted close' } };
-  }
-
-  private switchTab(args: SwitchTabParams): ToolExecutionResult {
-    if (!args.tab_id) {
-      return { success: false, data: { text: '' }, error: 'tab_id is required' };
-    }
-    return { success: false, data: { text: '' }, error: 'Tab switching not supported' };
   }
 
   private done(args: DoneParams): ToolExecutionResult {

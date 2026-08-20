@@ -376,11 +376,9 @@ export const BROWSER_TOOLS = new Map<string, string>([
   ['upload_file', 'Uploading file'],
   ['go_back', 'Going back'],
   ['wait', 'Waiting'],
-  ['switch_tab', 'Switching tab'],
   ['close_tab', 'Closing tab'],
   ['done', 'Done'],
   ['get_html', 'Viewed your screen'],
-  ['get_interactable_elements', 'Scanning elements'],
   ['get_screenshot', 'Taking screenshot'],
 ]);
 

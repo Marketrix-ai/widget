@@ -4,23 +4,11 @@ import type { ContractRouterClient } from '@orpc/contract';
 
 import type { widgetContract } from './contract';
 
-let authToken: string | null = null;
 let currentApiUrl: string = '';
 let client: ContractRouterClient<typeof widgetContract>;
 
 function createClient(apiUrl: string): ContractRouterClient<typeof widgetContract> {
-  const link = new RPCLink({
-    url: apiUrl,
-    headers: () => {
-      const headers: Record<string, string> = {};
-      if (authToken) {
-        headers['Authorization'] = `Bearer ${authToken}`;
-      }
-      return headers;
-    },
-  });
-
-  return createORPCClient(link);
+  return createORPCClient(new RPCLink({ url: apiUrl }));
 }
 
 client = createClient('');
@@ -36,24 +24,8 @@ export const configureSdk = (apiUrl: string) => {
   }
 };
 
-const sdkExtras = {
-  setAuthToken: (token: string) => {
-    authToken = token;
-  },
-  clearAuthToken: () => {
-    authToken = null;
-  },
-  getAuthToken: () => authToken,
-  configure: configureSdk,
-};
-
-type SdkExtras = typeof sdkExtras;
-
-export const sdk = new Proxy({} as ContractRouterClient<typeof widgetContract> & SdkExtras, {
+export const sdk = new Proxy({} as ContractRouterClient<typeof widgetContract>, {
   get(_target, prop) {
-    if (prop in sdkExtras) {
-      return sdkExtras[prop as keyof typeof sdkExtras];
-    }
     return client[prop as keyof typeof client];
   },
 });
