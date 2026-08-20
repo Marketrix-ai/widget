@@ -17,8 +17,6 @@ import type { ChatMessage } from '../types';
 export interface PendingMessage {
   content: string;
   mode?: InstructionType;
-  applicationId?: number;
-  question?: string;
   alreadyAdded?: boolean;
 }
 
@@ -29,13 +27,7 @@ export interface UseScreenShareOptions {
   onAddMessage: (message: ChatMessage) => void;
   onUpdateMessage: (messageId: string, updates: Partial<ChatMessage>) => void;
   onRemoveMessage?: (messageId: string) => void;
-  onSendMessage: (
-    message: string,
-    mode?: InstructionType,
-    applicationId?: number,
-    question?: string,
-    skipUserMessage?: boolean,
-  ) => void;
+  onSendMessage: (message: string, mode?: InstructionType, skipUserMessage?: boolean) => void;
   pendingMessage: PendingMessage | null;
   setPendingMessage: (message: PendingMessage | null) => void;
 }
@@ -169,7 +161,7 @@ export function useScreenShare({
       if (pendingMessage) {
         const message = pendingMessage;
         setPendingMessage(null);
-        onSendMessage(message.content, message.mode, message.applicationId, message.question, message.alreadyAdded);
+        onSendMessage(message.content, message.mode, message.alreadyAdded);
       }
     } catch (error) {
       console.error('Failed to start screen sharing:', error);
@@ -183,7 +175,7 @@ export function useScreenShare({
       if (pendingMessage) {
         const message = pendingMessage;
         setPendingMessage(null);
-        onSendMessage(message.content, message.mode, message.applicationId, message.question, message.alreadyAdded);
+        onSendMessage(message.content, message.mode, message.alreadyAdded);
       }
     }
   };
@@ -196,7 +188,7 @@ export function useScreenShare({
     if (pendingMessage) {
       const message = pendingMessage;
       setPendingMessage(null);
-      onSendMessage(message.content, message.mode, message.applicationId, message.question, message.alreadyAdded);
+      onSendMessage(message.content, message.mode, message.alreadyAdded);
     }
   };
 
