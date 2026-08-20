@@ -44,3 +44,42 @@ describe('simulateKeyAction Tab/Shift+Tab', () => {
     expect(document.activeElement).toBe(document.body);
   });
 });
+
+describe('simulateKeyAction Backspace/Delete', () => {
+  const input = (value: string, start: number, end = start) => {
+    document.body.innerHTML = '<input />';
+    const el = document.querySelector('input') as HTMLInputElement;
+    el.value = value;
+    el.setSelectionRange(start, end);
+    return el;
+  };
+
+  it('deletes around the caret and leaves it in the right place', () => {
+    const back = input('abcd', 3);
+    expect(simulateKeyAction(back, 'Backspace')).toBe('Backspace: deleted character, value is now "abd"');
+    expect([back.value, back.selectionStart]).toEqual(['abd', 2]);
+
+    const del = input('abcd', 1);
+    expect(simulateKeyAction(del, 'Delete')).toBe('Delete: deleted character, value is now "acd"');
+    expect([del.value, del.selectionStart]).toEqual(['acd', 1]);
+  });
+
+  it('deletes the selection when there is one', () => {
+    const el = input('abcdef', 1, 4);
+    expect(simulateKeyAction(el, 'Backspace')).toBe('Backspace: deleted character, value is now "aef"');
+    expect([el.value, el.selectionStart]).toEqual(['aef', 1]);
+  });
+
+  it('fires input and change so controlled inputs see the edit', () => {
+    const el = input('abcd', 4);
+    const seen: string[] = [];
+    for (const type of ['input', 'change']) el.addEventListener(type, e => seen.push(e.type));
+    simulateKeyAction(el, 'Backspace');
+    expect(seen).toEqual(['input', 'change']);
+  });
+
+  it('refuses when there is nothing to delete', () => {
+    expect(simulateKeyAction(input('', 0), 'Backspace')).toBe('Backspace: input is empty, nothing to delete');
+    expect(simulateKeyAction(input('abcd', 4), 'Delete')).toBe('Delete: cursor at end, nothing to delete');
+  });
+});

@@ -665,22 +665,7 @@ export class BrowserToolService {
             return 'Backspace: cursor at start, nothing to delete';
           }
 
-          // Native value setter so React/Vue controlled inputs pick up the change.
-          const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
-            element instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype,
-            'value',
-          )?.set;
-
-          if (nativeInputValueSetter) {
-            nativeInputValueSetter.call(element, newValue);
-          } else {
-            element.value = newValue;
-          }
-
-          element.dispatchEvent(new Event('input', { bubbles: true }));
-          element.dispatchEvent(new Event('change', { bubbles: true }));
-
-          element.setSelectionRange(newCursorPos, newCursorPos);
+          this.setValueAndCaret(element, newValue, newCursorPos);
 
           return `Backspace: deleted character, value is now "${newValue}"`;
         }
@@ -703,22 +688,7 @@ export class BrowserToolService {
             return 'Delete: cursor at end, nothing to delete';
           }
 
-          // Native value setter so React/Vue controlled inputs pick up the change.
-          const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
-            element instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype,
-            'value',
-          )?.set;
-
-          if (nativeInputValueSetter) {
-            nativeInputValueSetter.call(element, newValue);
-          } else {
-            element.value = newValue;
-          }
-
-          element.dispatchEvent(new Event('input', { bubbles: true }));
-          element.dispatchEvent(new Event('change', { bubbles: true }));
-
-          element.setSelectionRange(start, start);
+          this.setValueAndCaret(element, newValue, start);
 
           return `Delete: deleted character, value is now "${newValue}"`;
         }
@@ -729,6 +699,19 @@ export class BrowserToolService {
         // The caller already dispatched the generic key events.
         return null;
     }
+  }
+
+  /** Native value setter so React/Vue controlled inputs pick up the change. */
+  private setValueAndCaret(el: HTMLInputElement | HTMLTextAreaElement, value: string, caret: number): void {
+    const setter = Object.getOwnPropertyDescriptor(
+      el instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype,
+      'value',
+    )?.set;
+    if (setter) setter.call(el, value);
+    else el.value = value;
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+    el.setSelectionRange(caret, caret);
   }
 
   private uploadFile(_args: UploadFileParams): ToolExecutionResult {
