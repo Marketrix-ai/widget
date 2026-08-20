@@ -21,19 +21,18 @@ export const getPositionClasses = (position: WidgetPosition): string => {
 };
 
 export const getPanelPositionStyle = (position: WidgetPosition): React.CSSProperties => {
-  const primary = `${EDGE_OFFSET_PX}px`;
-  const secondary = `${EDGE_OFFSET_PX}px`;
+  const offset = `${EDGE_OFFSET_PX}px`;
   switch (position) {
     case 'bottom_right':
-      return { bottom: primary, right: secondary };
+      return { bottom: offset, right: offset };
     case 'bottom_left':
-      return { bottom: primary, left: secondary };
+      return { bottom: offset, left: offset };
     case 'top_right':
-      return { top: primary, right: secondary };
+      return { top: offset, right: offset };
     case 'top_left':
-      return { top: primary, left: secondary };
+      return { top: offset, left: offset };
     default:
-      return { bottom: primary, right: secondary };
+      return { bottom: offset, right: offset };
   }
 };
 
@@ -57,47 +56,6 @@ export const getAnchorTopLeft = (
   }
 };
 
-/** Measured center-to-center, not top-left-to-top-left. */
-const getDeltaToCorner = (
-  position: WidgetPosition,
-  corner: WidgetPosition,
-  vw: number,
-  vh: number,
-  w: number,
-  h: number,
-): { dx: number; dy: number } => {
-  const anchor = getAnchorTopLeft(position, vw, vh, w, h);
-  const centerX = anchor.x + w / 2;
-  const centerY = anchor.y + h / 2;
-
-  let targetCenterX: number;
-  let targetCenterY: number;
-  switch (corner) {
-    case 'top_left':
-      targetCenterX = EDGE_OFFSET_PX + w / 2;
-      targetCenterY = EDGE_OFFSET_PX + h / 2;
-      break;
-    case 'top_right':
-      targetCenterX = vw - EDGE_OFFSET_PX - w / 2;
-      targetCenterY = EDGE_OFFSET_PX + h / 2;
-      break;
-    case 'bottom_left':
-      targetCenterX = EDGE_OFFSET_PX + w / 2;
-      targetCenterY = vh - EDGE_OFFSET_PX - h / 2;
-      break;
-    case 'bottom_right':
-    default:
-      targetCenterX = vw - EDGE_OFFSET_PX - w / 2;
-      targetCenterY = vh - EDGE_OFFSET_PX - h / 2;
-      break;
-  }
-
-  return {
-    dx: targetCenterX - centerX,
-    dy: targetCenterY - centerY,
-  };
-};
-
 export const getNearestCornerByTranslation = (
   translation: { dx: number; dy: number },
   position: WidgetPosition,
@@ -107,11 +65,14 @@ export const getNearestCornerByTranslation = (
   h: number,
 ): WidgetPosition => {
   const corners: WidgetPosition[] = ['top_left', 'top_right', 'bottom_left', 'bottom_right'];
+  const anchor = getAnchorTopLeft(position, vw, vh, w, h);
+  const x = anchor.x + translation.dx;
+  const y = anchor.y + translation.dy;
   let nearest: WidgetPosition = position;
   let minDist = Infinity;
   for (const corner of corners) {
-    const target = getDeltaToCorner(position, corner, vw, vh, w, h);
-    const dist = Math.hypot(translation.dx - target.dx, translation.dy - target.dy);
+    const target = getAnchorTopLeft(corner, vw, vh, w, h);
+    const dist = Math.hypot(x - target.x, y - target.y);
     if (dist < minDist) {
       minDist = dist;
       nearest = corner;

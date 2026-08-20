@@ -92,6 +92,9 @@ export interface ExtractParams {
   start_from_char?: number;
 }
 
+const TAB_ORDER_SELECTOR =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
 export class BrowserToolService {
   async executeTool(
     browserToolName: string,
@@ -105,7 +108,7 @@ export class BrowserToolService {
       if (mode === 'show' && this.requiresHighlight(browserToolName)) {
         const index = args.index as number | undefined;
         if (index !== undefined) {
-          const { element, error } = domService.getElementByIndex(index);
+          const { element, error } = domService.getValidatedElement(index);
           if (!element) {
             return { success: false, data: { text: '' }, error: error || `Element ${index} not found` };
           }
@@ -483,36 +486,17 @@ export class BrowserToolService {
   /** Programmatic KeyboardEvents aren't "trusted", so manually reproduce each key's expected behavior. */
   private simulateKeyAction(element: HTMLElement, key: string): string | null {
     switch (key) {
-      case 'Tab': {
-        const focusables = Array.from(
-          document.querySelectorAll<HTMLElement>(
-            'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
-          ),
-        ).filter(el => el.offsetParent !== null);
-
-        const currentIndex = focusables.indexOf(element);
-        if (currentIndex !== -1 && currentIndex < focusables.length - 1) {
-          const nextElement = focusables[currentIndex + 1];
-          nextElement.focus();
-          return `Tab: moved focus to ${nextElement.tagName.toLowerCase()}${nextElement.id ? `#${nextElement.id}` : ''}`;
-        }
-        return 'Tab: no next focusable element';
-      }
-
+      case 'Tab':
       case 'Shift+Tab': {
-        const focusables = Array.from(
-          document.querySelectorAll<HTMLElement>(
-            'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
-          ),
-        ).filter(el => el.offsetParent !== null);
-
+        const step = key === 'Tab' ? 1 : -1;
+        const focusables = Array.from(document.querySelectorAll<HTMLElement>(TAB_ORDER_SELECTOR)).filter(
+          el => el.offsetParent !== null,
+        );
         const currentIndex = focusables.indexOf(element);
-        if (currentIndex > 0) {
-          const prevElement = focusables[currentIndex - 1];
-          prevElement.focus();
-          return `Shift+Tab: moved focus to ${prevElement.tagName.toLowerCase()}${prevElement.id ? `#${prevElement.id}` : ''}`;
-        }
-        return 'Shift+Tab: no previous focusable element';
+        const next = currentIndex === -1 ? undefined : focusables[currentIndex + step];
+        if (!next) return `${key}: no ${step > 0 ? 'next' : 'previous'} focusable element`;
+        next.focus();
+        return `${key}: moved focus to ${next.tagName.toLowerCase()}${next.id ? `#${next.id}` : ''}`;
       }
 
       case 'Enter': {
@@ -633,22 +617,7 @@ export class BrowserToolService {
             return 'Backspace: cursor at start, nothing to delete';
           }
 
-          // Native value setter so React/Vue controlled inputs pick up the change.
-          const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
-            element instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype,
-            'value',
-          )?.set;
-
-          if (nativeInputValueSetter) {
-            nativeInputValueSetter.call(element, newValue);
-          } else {
-            element.value = newValue;
-          }
-
-          element.dispatchEvent(new Event('input', { bubbles: true }));
-          element.dispatchEvent(new Event('change', { bubbles: true }));
-
-          element.setSelectionRange(newCursorPos, newCursorPos);
+          this.setValueAndCaret(element, newValue, newCursorPos);
 
           return `Backspace: deleted character, value is now "${newValue}"`;
         }
@@ -671,22 +640,7 @@ export class BrowserToolService {
             return 'Delete: cursor at end, nothing to delete';
           }
 
-          // Native value setter so React/Vue controlled inputs pick up the change.
-          const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
-            element instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype,
-            'value',
-          )?.set;
-
-          if (nativeInputValueSetter) {
-            nativeInputValueSetter.call(element, newValue);
-          } else {
-            element.value = newValue;
-          }
-
-          element.dispatchEvent(new Event('input', { bubbles: true }));
-          element.dispatchEvent(new Event('change', { bubbles: true }));
-
-          element.setSelectionRange(start, start);
+          this.setValueAndCaret(element, newValue, start);
 
           return `Delete: deleted character, value is now "${newValue}"`;
         }
@@ -697,6 +651,19 @@ export class BrowserToolService {
         // The caller already dispatched the generic key events.
         return null;
     }
+  }
+
+  /** Native value setter so React/Vue controlled inputs pick up the change. */
+  private setValueAndCaret(el: HTMLInputElement | HTMLTextAreaElement, value: string, caret: number): void {
+    const setter = Object.getOwnPropertyDescriptor(
+      el instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype,
+      'value',
+    )?.set;
+    if (setter) setter.call(el, value);
+    else el.value = value;
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+    el.setSelectionRange(caret, caret);
   }
 
   private uploadFile(_args: UploadFileParams): ToolExecutionResult {

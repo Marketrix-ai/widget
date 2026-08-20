@@ -4,7 +4,7 @@ import MarketrixIcon from '../../assets/marketrix-icon.svg';
 import { SHADOW } from '../../design-system/shadows';
 import { useDragSnap } from '../../hooks/useDragSnap';
 import type { WidgetPosition } from '../../types';
-import { getPositionClasses } from '../../utils/widgetPositioning';
+import { getPanelPositionStyle, getPositionClasses } from '../../utils/widgetPositioning';
 import { Avatar } from '../base/Avatar';
 import { Button } from '../base/Button';
 import { Flex } from '../base/Flex';
@@ -71,18 +71,6 @@ export const WidgetFab: React.FC<WidgetFabProps> = ({
   const effectivePositionClasses = getPositionClasses(position);
   const positionClass = isPreviewMode ? 'absolute' : 'fixed';
 
-  const previewPositionStyle = isPreviewMode
-    ? position.includes('top')
-      ? {
-          top: '20px',
-          ...(position.includes('right') ? { right: '20px' } : { left: '20px' }),
-        }
-      : {
-          bottom: '20px',
-          ...(position.includes('right') ? { right: '20px' } : { left: '20px' }),
-        }
-    : {};
-
   return (
     <Surface
       ref={wrapperRef as React.Ref<HTMLElement>}
@@ -90,7 +78,7 @@ export const WidgetFab: React.FC<WidgetFabProps> = ({
       style={{
         zIndex,
         pointerEvents: open ? 'none' : 'auto',
-        ...previewPositionStyle,
+        ...(isPreviewMode ? getPanelPositionStyle(position) : {}),
         ...pixelPositionStyle,
       }}
     >

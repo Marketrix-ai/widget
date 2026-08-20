@@ -1,5 +1,4 @@
 import type { ChatMessage, InstructionType } from '../types';
-import { BROWSER_TOOLS } from '../types/browserTools';
 
 export function removeThinkingMarkers(content: string): string {
   return content.replace(/__THINKING__/g, '');
@@ -337,7 +336,7 @@ export function updateThinkingMarker(
     if (hasThinkingMarker(msg.content)) {
       return {
         ...msg,
-        content: msg.content.replace(/\n\n__THINKING__$/, '').replace(/__THINKING__/g, ''),
+        content: removeThinkingMarkerFromEnd(msg.content),
         placeholderState: undefined,
       };
     }
@@ -362,14 +361,32 @@ export function updateThinkingMarker(
   return msg;
 }
 
-export const TOOL_NAME_MAPPING: Record<string, string> = Object.fromEntries(
-  BROWSER_TOOLS.map(t => [t.id, t.displayAction]),
-);
+/** Tool id -> the phrase shown in the activity log. Also the allowlist of tools the agent may call. */
+export const BROWSER_TOOLS = new Map<string, string>([
+  ['navigate', 'Navigating'],
+  ['search', 'Searching'],
+  ['click_element', 'Clicking element'],
+  ['type_text', 'Typing text'],
+  ['scroll', 'Scrolling'],
+  ['scroll_to_text', 'Scrolling to text'],
+  ['send_keys', 'Pressing key'],
+  ['extract', 'Extracting content'],
+  ['get_dropdown_options', 'Reading dropdown options'],
+  ['select_dropdown_option', 'Selecting option'],
+  ['upload_file', 'Uploading file'],
+  ['go_back', 'Going back'],
+  ['wait', 'Waiting'],
+  ['switch_tab', 'Switching tab'],
+  ['close_tab', 'Closing tab'],
+  ['done', 'Done'],
+  ['get_html', 'Viewed your screen'],
+  ['get_interactable_elements', 'Scanning elements'],
+  ['get_screenshot', 'Taking screenshot'],
+]);
 
 export function getFriendlyToolName(browserToolName: string): string {
-  if (TOOL_NAME_MAPPING[browserToolName]) {
-    return TOOL_NAME_MAPPING[browserToolName];
-  }
+  const friendly = BROWSER_TOOLS.get(browserToolName);
+  if (friendly) return friendly;
 
   return browserToolName
     .replace(/([A-Z])/g, ' $1')

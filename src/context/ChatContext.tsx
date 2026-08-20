@@ -7,8 +7,7 @@ import { createAgentMessage, createUserMessage } from '../services/ChatService';
 import { configManager } from '../services/ConfigManager';
 import { StreamClient, type StreamStatus } from '../services/StreamClient';
 import type { ChatMessage, InstructionType } from '../types';
-import { BROWSER_TOOLS } from '../types/browserTools';
-import { addThinkingMarker } from '../utils/chat';
+import { addThinkingMarker, BROWSER_TOOLS } from '../utils/chat';
 import { reduceSse, reduceStop, reduceToolDone, reduceToolProgress, type SseEffect, type SseState } from './sseReducer';
 import type { UIStateActions } from './UIStateContext';
 
@@ -311,8 +310,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
         if (processedRequestIds.current.has(requestId)) return;
         addProcessedRequestId(requestId);
 
-        const ALLOWED_TOOLS = BROWSER_TOOLS.map(t => t.id);
-        if (!ALLOWED_TOOLS.includes(event.browser_tool)) {
+        if (!BROWSER_TOOLS.has(event.browser_tool)) {
           console.warn('[Widget] Unknown tool requested:', event.browser_tool);
           wsClient
             .send({

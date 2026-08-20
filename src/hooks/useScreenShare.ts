@@ -4,7 +4,6 @@ import type { InstructionType } from '../sdk';
 import {
   createScreenAccessRequestMessage,
   createScreenshareMessage,
-  createStartedScreenshareMessage,
   createSystemMessage,
 } from '../services/ChatService';
 import {
@@ -34,7 +33,6 @@ export interface UseScreenShareOptions {
 
 export interface UseScreenShareReturn {
   isScreenSharing: boolean;
-  screenStream: MediaStream | null;
   showScreenAccessDialog: boolean;
   handleScreenAccessDialogAllow: () => Promise<void>;
   handleScreenAccessDialogDeny: () => void;
@@ -55,7 +53,6 @@ export function useScreenShare({
   setPendingMessage,
 }: UseScreenShareOptions): UseScreenShareReturn {
   const [isScreenSharing, setIsScreenSharing] = useState(false);
-  const [screenStream, setScreenStream] = useState<MediaStream | null>(null);
   const [screenShareMessageId, setScreenShareMessageId] = useState<string | null>(null);
   const [screenAccessRequestMessageId, setScreenAccessRequestMessageId] = useState<string | null>(null);
   const [showScreenAccessDialog, setShowScreenAccessDialog] = useState(false);
@@ -119,83 +116,57 @@ export function useScreenShare({
     setShowScreenAccessDialog(true);
   };
 
-  const handleScreenAccessDialogAllow = async () => {
-    setShowScreenAccessDialog(false);
+  const flushPendingMessage = () => {
+    if (!pendingMessage) return;
+    const message = pendingMessage;
+    setPendingMessage(null);
+    onSendMessage(message.content, message.mode, message.alreadyAdded);
+  };
+
+  const resolveAccessRequest = (screenShareStatus: 'allowed' | 'denied') => {
+    if (!screenAccessRequestMessageId) return;
+    onUpdateMessage(screenAccessRequestMessageId, { screenShareStatus });
+    setScreenAccessRequestMessageId(null);
+  };
+
+  const beginScreenShare = async () => {
     try {
       const stream = await startScreenShare();
       setIsScreenSharing(true);
-      setScreenStream(stream);
       onScreenSharingChange?.(true);
-      const startedMessage = createStartedScreenshareMessage('show');
-      onAddMessage(startedMessage);
+      resolveAccessRequest('allowed');
+      onAddMessage(createSystemMessage('Started screenshare', 'show', 'user', 'started-screenshare'));
       const screenshareMessage = createScreenshareMessage(stream, 'show');
       setScreenShareMessageId(screenshareMessage.id);
       onAddMessage(screenshareMessage);
     } catch (error) {
       console.error('Failed to start screen sharing:', error);
       setIsScreenSharing(false);
-      setScreenStream(null);
       onScreenSharingChange?.(false);
+      resolveAccessRequest('denied');
     }
+    flushPendingMessage();
+  };
+
+  const handleScreenAccessAllow = beginScreenShare;
+
+  const handleScreenAccessDialogAllow = async () => {
+    setShowScreenAccessDialog(false);
+    await beginScreenShare();
   };
 
   const handleScreenAccessDialogDeny = () => {
     setShowScreenAccessDialog(false);
   };
 
-  const handleScreenAccessAllow = async () => {
-    try {
-      const stream = await startScreenShare();
-      setIsScreenSharing(true);
-      setScreenStream(stream);
-      onScreenSharingChange?.(true);
-      if (screenAccessRequestMessageId) {
-        onUpdateMessage(screenAccessRequestMessageId, { screenShareStatus: 'allowed' });
-        setScreenAccessRequestMessageId(null);
-      }
-      const startedMessage = createStartedScreenshareMessage('show');
-      onAddMessage(startedMessage);
-      const screenshareMessage = createScreenshareMessage(stream, 'show');
-      setScreenShareMessageId(screenshareMessage.id);
-      onAddMessage(screenshareMessage);
-      if (pendingMessage) {
-        const message = pendingMessage;
-        setPendingMessage(null);
-        onSendMessage(message.content, message.mode, message.alreadyAdded);
-      }
-    } catch (error) {
-      console.error('Failed to start screen sharing:', error);
-      setIsScreenSharing(false);
-      setScreenStream(null);
-      onScreenSharingChange?.(false);
-      if (screenAccessRequestMessageId) {
-        onUpdateMessage(screenAccessRequestMessageId, { screenShareStatus: 'denied' });
-        setScreenAccessRequestMessageId(null);
-      }
-      if (pendingMessage) {
-        const message = pendingMessage;
-        setPendingMessage(null);
-        onSendMessage(message.content, message.mode, message.alreadyAdded);
-      }
-    }
-  };
-
   const handleScreenAccessDeny = () => {
-    if (screenAccessRequestMessageId) {
-      onUpdateMessage(screenAccessRequestMessageId, { screenShareStatus: 'denied' });
-      setScreenAccessRequestMessageId(null);
-    }
-    if (pendingMessage) {
-      const message = pendingMessage;
-      setPendingMessage(null);
-      onSendMessage(message.content, message.mode, message.alreadyAdded);
-    }
+    resolveAccessRequest('denied');
+    flushPendingMessage();
   };
 
   const stopScreenSharing = () => {
     stopScreenShare();
     setIsScreenSharing(false);
-    setScreenStream(null);
     onScreenSharingChange?.(false);
     if (screenShareMessageId && onRemoveMessage) {
       onRemoveMessage(screenShareMessageId);
@@ -216,7 +187,6 @@ export function useScreenShare({
 
   return {
     isScreenSharing,
-    screenStream,
     showScreenAccessDialog,
     handleScreenAccessDialogAllow,
     handleScreenAccessDialogDeny,

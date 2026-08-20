@@ -108,5 +108,3 @@ export interface MarketrixWidgetProps {
   mtxKey?: string;
   mtxApiHost?: string;
 }
-
-export { BROWSER_TOOLS } from './browserTools';

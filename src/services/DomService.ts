@@ -13,18 +13,14 @@ export interface ElementFingerprint {
   indexVersion: number;
 }
 
-export interface ValidationResult {
+interface ValidationResult {
   isValid: boolean;
   mismatchReason?: 'element_removed' | 'element_changed';
 }
 
-export interface ElementLookupResult {
+export interface ValidatedElementResult {
   element: HTMLElement | null;
   error?: string;
-}
-
-export interface ValidatedElementResult extends ElementLookupResult {
-  validation: ValidationResult;
 }
 
 export class DomService {
@@ -449,30 +445,18 @@ export class DomService {
     return this.checkInteractability(element, index);
   }
 
-  getElementByIndex(index: number): ElementLookupResult {
-    let element: HTMLElement | null = null;
+  getValidatedElement(index: number): ValidatedElementResult {
+    const validation = this.validateElementAtIndex(index);
 
-    if (this.elementMap.has(index)) {
-      const mapElement = this.elementMap.get(index);
-      if (mapElement && mapElement instanceof HTMLElement) {
-        element = mapElement;
-      }
+    if (!validation.isValid) {
+      const reason = validation.mismatchReason === 'element_removed' ? 'no longer exists' : 'has changed';
+      return {
+        element: null,
+        error: `DOM_CHANGED: Element at index ${index} ${reason}. Call get_html to get updated indices.`,
+      };
     }
 
-    if (!element && this.selectorMap.has(index)) {
-      const selector = this.selectorMap.get(index);
-      if (selector) {
-        try {
-          const queriedElement = document.querySelector(selector);
-          if (queriedElement && queriedElement instanceof HTMLElement) {
-            element = queriedElement;
-          }
-        } catch (e) {
-          console.warn(`[DomService] Failed to find element by selector for index ${index}:`, e);
-        }
-      }
-    }
-
+    const element = this.elementMap.get(index) as HTMLElement | undefined;
     if (!element) {
       return { element: null, error: `Element ${index} not found` };
     }
@@ -483,36 +467,6 @@ export class DomService {
     }
 
     return { element };
-  }
-
-  /** Prefer this over the looser getElementByIndex — it also fingerprint-checks the index. */
-  getValidatedElement(index: number): ValidatedElementResult {
-    const validation = this.validateElementAtIndex(index);
-
-    if (!validation.isValid) {
-      const reason = validation.mismatchReason === 'element_removed' ? 'no longer exists' : 'has changed';
-      return {
-        element: null,
-        validation,
-        error: `DOM_CHANGED: Element at index ${index} ${reason}. Call get_html to get updated indices.`,
-      };
-    }
-
-    const element = this.elementMap.get(index) as HTMLElement | undefined;
-    if (!element) {
-      return {
-        element: null,
-        validation,
-        error: `Element ${index} not found`,
-      };
-    }
-
-    const interactError = this.checkInteractability(element, index);
-    if (interactError) {
-      return { element: null, validation, error: interactError };
-    }
-
-    return { element, validation };
   }
 }
 

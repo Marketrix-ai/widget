@@ -117,12 +117,6 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
   };
 
   const positionClass = isPreviewMode ? 'absolute' : 'fixed';
-  const previewPositionStyle = isPreviewMode
-    ? effectivePosition.includes('top')
-      ? { top: '20px', ...(effectivePosition.includes('right') ? { right: '20px' } : { left: '20px' }) }
-      : { bottom: '20px', ...(effectivePosition.includes('right') ? { right: '20px' } : { left: '20px' }) }
-    : {};
-
   const transformOrigin =
     `${effectivePosition.includes('top') ? 'top' : 'bottom'} ${effectivePosition.includes('right') ? 'right' : 'left'}` as const;
 
@@ -160,7 +154,7 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
         backgroundImage,
         transformOrigin,
         ...customStyles,
-        ...(isPreviewMode ? previewPositionStyle : panelPositionStyle),
+        ...panelPositionStyle,
         pointerEvents: 'auto',
         scrollbarWidth: 'thin',
         animation: 'messenger-entrance 300ms cubic-bezier(0, 1.2, 1, 1)',
