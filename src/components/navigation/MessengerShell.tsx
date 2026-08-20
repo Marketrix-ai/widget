@@ -27,13 +27,7 @@ export interface MessengerShellProps {
   isTaskRunning?: boolean;
   activeView: WidgetView;
   onClose: () => void;
-  onSendMessage: (
-    message: string,
-    mode?: InstructionType,
-    applicationId?: number,
-    question?: string,
-    skipUserMessage?: boolean,
-  ) => void;
+  onSendMessage: (message: string, mode?: InstructionType, skipUserMessage?: boolean) => void;
   onSetMode: (mode: InstructionType) => void;
   onAddMessage: (message: ChatMessage) => void;
   onUpdateMessage: (messageId: string, updates: Partial<ChatMessage>) => void;
@@ -123,12 +117,6 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
   };
 
   const positionClass = isPreviewMode ? 'absolute' : 'fixed';
-  const previewPositionStyle = isPreviewMode
-    ? effectivePosition.includes('top')
-      ? { top: '20px', ...(effectivePosition.includes('right') ? { right: '20px' } : { left: '20px' }) }
-      : { bottom: '20px', ...(effectivePosition.includes('right') ? { right: '20px' } : { left: '20px' }) }
-    : {};
-
   const transformOrigin =
     `${effectivePosition.includes('top') ? 'top' : 'bottom'} ${effectivePosition.includes('right') ? 'right' : 'left'}` as const;
 
@@ -140,7 +128,7 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
   const handleChipClick = (action: SuggestedActionItem) => {
     onAddMessage(createUserMessage(action.text, action.type, 'chip-message'));
     onSetMode(action.type);
-    onSendMessage(action.text, action.type, undefined, undefined, true);
+    onSendMessage(action.text, action.type, true);
   };
 
   const screenShareHandler =
@@ -166,7 +154,7 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
         backgroundImage,
         transformOrigin,
         ...customStyles,
-        ...(isPreviewMode ? previewPositionStyle : panelPositionStyle),
+        ...panelPositionStyle,
         pointerEvents: 'auto',
         scrollbarWidth: 'thin',
         animation: 'messenger-entrance 300ms cubic-bezier(0, 1.2, 1, 1)',
