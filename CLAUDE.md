@@ -20,8 +20,7 @@ npm start                # vite dev on :9001 (override PORT / VITE_PORT; CORS en
 npm run build            # → dist/widget.mjs (terser, single ESM) + tsc declarations
 npm run type-check       # alias: check          npm run lint    # --fix, max-warnings 200
 npm run test:run         # vitest (jsdom + Testing Library + axe)
-npm run visual:check     # rendered-UI gate      npm run a11y:check    # accessibility gate
-npm run bundle:check     # bundle-size gate
+npm run bundle:check     # bundle-size gate (artifact presence + size + sourcemap)
 npm run code:check       # tsc + eslint + prettier --check (one-shot)
 npm run ci               # every CI validation gate
 npm run tag <version>    # scripts/release.sh

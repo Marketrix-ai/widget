@@ -8,8 +8,6 @@ export interface ShowModeOptions {
 }
 
 export class ShowModeService {
-  private static instance: ShowModeService;
-
   private currentPopup: HTMLElement | null = null;
   private currentHighlight: HTMLElement | null = null;
   private currentElement: HTMLElement | null = null;
@@ -23,15 +21,6 @@ export class ShowModeService {
   private rafId: number | null = null;
   private mutationObserver: MutationObserver | null = null;
   private visibilityCheckInterval: ReturnType<typeof setInterval> | null = null;
-
-  private constructor() {}
-
-  static getInstance(): ShowModeService {
-    if (!ShowModeService.instance) {
-      ShowModeService.instance = new ShowModeService();
-    }
-    return ShowModeService.instance;
-  }
 
   async showToolAction(options: ShowModeOptions): Promise<boolean> {
     const { element, explanation, isClickAction = false, browserToolName } = options;
@@ -338,4 +327,4 @@ export class ShowModeService {
   }
 }
 
-export const showModeService = ShowModeService.getInstance();
+export const showModeService = new ShowModeService();

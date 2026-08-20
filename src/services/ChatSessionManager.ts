@@ -1,41 +1,21 @@
 import { sdk } from '../sdk';
-import { createLogger } from '../utils/logger';
 import { chatService } from './ChatService';
 import { storageService } from './StorageService';
 
-const log = createLogger('ChatSessionManager');
-
 class ChatSessionManager {
-  private static instance: ChatSessionManager | null = null;
   private chatId: string | null = null;
   private initializationPromise: Promise<string> | null = null;
 
-  private constructor() {
+  constructor() {
+    // Runs at module load, so under SSR it must not reach storage; the field initializers are the idle state.
     if (typeof window === 'undefined' || typeof document === 'undefined') {
       return;
     }
 
     this.chatId = this.getStoredChatId();
     if (this.chatId) {
-      log.debug('Loaded existing chat ID from storage:', this.chatId);
+      console.debug('[ChatSessionManager] Loaded existing chat ID from storage:', this.chatId);
     }
-  }
-
-  static getInstance(): ChatSessionManager {
-    // Under SSR, bypass the constructor entirely so no browser API is touched.
-    if (typeof window === 'undefined' || typeof document === 'undefined') {
-      if (!ChatSessionManager.instance) {
-        ChatSessionManager.instance = Object.create(ChatSessionManager.prototype) as ChatSessionManager;
-        ChatSessionManager.instance.chatId = null;
-        ChatSessionManager.instance.initializationPromise = null;
-      }
-      return ChatSessionManager.instance;
-    }
-
-    if (!ChatSessionManager.instance) {
-      ChatSessionManager.instance = new ChatSessionManager();
-    }
-    return ChatSessionManager.instance;
   }
 
   getChatId(): string | null {
@@ -45,12 +25,12 @@ class ChatSessionManager {
   /** Promise-based lock: concurrent callers all await the same creation promise. */
   async getOrCreateChatId(): Promise<string> {
     if (this.chatId) {
-      log.debug('Returning existing chat ID:', this.chatId);
+      console.debug('[ChatSessionManager] Returning existing chat ID:', this.chatId);
       return this.chatId;
     }
 
     if (this.initializationPromise) {
-      log.debug('Chat ID initialization in progress, waiting...');
+      console.debug('[ChatSessionManager] Chat ID initialization in progress, waiting...');
       return this.initializationPromise;
     }
 
@@ -58,7 +38,7 @@ class ChatSessionManager {
     const storedChatId = this.getStoredChatId();
     if (storedChatId) {
       this.chatId = storedChatId;
-      log.debug('Found chat ID in storage:', this.chatId);
+      console.debug('[ChatSessionManager] Found chat ID in storage:', this.chatId);
       return this.chatId;
     }
 
@@ -74,7 +54,7 @@ class ChatSessionManager {
 
   private async createChatId(): Promise<string> {
     try {
-      log.info('Creating new chat ID...');
+      console.info('[ChatSessionManager] Creating new chat ID...');
       const chatId = await sdk.chatCreate(undefined);
       if (!chatId) {
         throw new Error('API returned empty chat ID');
@@ -82,13 +62,13 @@ class ChatSessionManager {
 
       this.chatId = chatId;
       this.storeChatId(chatId);
-      log.info('Created and stored new chat ID:', this.chatId);
+      console.info('[ChatSessionManager] Created and stored new chat ID:', this.chatId);
 
       chatService.createInitialContext(chatId);
 
       return chatId;
     } catch (error) {
-      log.error('Failed to create chat ID:', error);
+      console.error('[ChatSessionManager] Failed to create chat ID:', error);
       this.initializationPromise = null;
       throw error;
     }
@@ -103,4 +83,4 @@ class ChatSessionManager {
   }
 }
 
-export const chatSessionManager = ChatSessionManager.getInstance();
+export const chatSessionManager = new ChatSessionManager();

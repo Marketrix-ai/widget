@@ -35,18 +35,10 @@ const DEFAULT_CONTEXT: MarketrixChatContext = {
 };
 
 class StorageService {
-  private static instance: StorageService;
   private context: MarketrixChatContext | null = null;
 
-  private constructor() {
+  constructor() {
     this.loadContext();
-  }
-
-  static getInstance(): StorageService {
-    if (!StorageService.instance) {
-      StorageService.instance = new StorageService();
-    }
-    return StorageService.instance;
   }
 
   private loadContext(): MarketrixChatContext {
@@ -147,4 +139,4 @@ class StorageService {
   }
 }
 
-export const storageService = StorageService.getInstance();
+export const storageService = new StorageService();

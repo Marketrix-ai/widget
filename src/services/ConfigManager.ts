@@ -3,17 +3,7 @@ import type { MarketrixConfig } from '../types';
 import { storageService } from './StorageService';
 
 export class ConfigManager {
-  private static instance: ConfigManager;
   private config: MarketrixConfig | null = null;
-
-  private constructor() {}
-
-  static getInstance(): ConfigManager {
-    if (!ConfigManager.instance) {
-      ConfigManager.instance = new ConfigManager();
-    }
-    return ConfigManager.instance;
-  }
 
   loadConfig(): MarketrixConfig {
     const stored = storageService.getConfig();
@@ -36,7 +26,7 @@ export class ConfigManager {
   }
 }
 
-export const configManager = ConfigManager.getInstance();
+export const configManager = new ConfigManager();
 
 export function createConfigFromSettings(
   widgetSettings: WidgetSettingsData,
