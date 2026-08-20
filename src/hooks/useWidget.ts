@@ -39,13 +39,7 @@ interface UseWidgetActions {
   setMessages: (messages: ChatMessage[]) => void;
   stopTask: () => Promise<void>;
   clearChatHistory: () => void;
-  messageDispatch: (
-    content: string,
-    mode?: InstructionType,
-    applicationId?: number,
-    question?: string,
-    skipUserMessage?: boolean,
-  ) => Promise<void>;
+  messageDispatch: (content: string, mode?: InstructionType, skipUserMessage?: boolean) => Promise<void>;
 }
 
 export const useWidget = ({ config }: UseWidgetProps = {}) => {

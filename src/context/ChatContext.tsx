@@ -29,13 +29,7 @@ export interface ChatActions {
   removeMessage: (messageId: string) => void;
   setMessages: (messages: ChatMessage[]) => void;
   clearMessages: () => void;
-  messageDispatch: (
-    content: string,
-    mode?: InstructionType,
-    applicationId?: number,
-    question?: string,
-    skipUserMessage?: boolean,
-  ) => Promise<void>;
+  messageDispatch: (content: string, mode?: InstructionType, skipUserMessage?: boolean) => Promise<void>;
 }
 
 export interface TaskActions {
@@ -140,13 +134,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
   );
 
   const messageDispatch = useCallback(
-    async (
-      content: string,
-      mode?: InstructionType,
-      applicationId?: number,
-      _question?: string,
-      skipUserMessage?: boolean,
-    ) => {
+    async (content: string, mode?: InstructionType, skipUserMessage?: boolean) => {
       const effectiveMode = mode ?? currentModeRef.current;
 
       if (previewMode) {
@@ -186,7 +174,6 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
       addMessage(placeholderMsg);
       uiActions.setLoading(true);
 
-      const requestConfig = applicationId ? { ...config, mtxApp: applicationId } : config;
       try {
         const chatId = getChatId();
         if (chatId) {
@@ -210,7 +197,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
           }
         }
 
-        await dispatchMessage(requestConfig, {
+        await dispatchMessage(config, {
           message: content,
           mode: effectiveMode,
           requestId: placeholderId,

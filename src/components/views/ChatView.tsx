@@ -44,13 +44,7 @@ export interface ChatViewProps {
   messages: ChatMessage[];
   currentMode: InstructionType;
   isTaskRunning?: boolean;
-  onSendMessage: (
-    message: string,
-    mode?: InstructionType,
-    applicationId?: number,
-    question?: string,
-    skipUserMessage?: boolean,
-  ) => void;
+  onSendMessage: (message: string, mode?: InstructionType, skipUserMessage?: boolean) => void;
   onSetMode: (mode: InstructionType) => void;
   onAddMessage: (message: ChatMessage) => void;
   onUpdateMessage: (messageId: string, updates: Partial<ChatMessage>) => void;
@@ -138,7 +132,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
         setPendingMessage({ content: messageContent, mode: currentMode, alreadyAdded: true });
         requestScreenAccess(currentMode);
       } else {
-        onSendMessage(messageContent, currentMode, undefined, undefined, true);
+        onSendMessage(messageContent, currentMode, true);
       }
     }
   };

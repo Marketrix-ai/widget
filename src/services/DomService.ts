@@ -28,22 +28,12 @@ export interface ValidatedElementResult extends ElementLookupResult {
 }
 
 export class DomService {
-  private static instance: DomService;
   private elementMap: Map<number, Element> = new Map();
   private elementToSequence: WeakMap<Element, number> = new WeakMap();
   private selectorMap: Map<number, string> = new Map();
   private fingerprintMap: Map<number, ElementFingerprint> = new Map();
   private indexingInProgress: boolean = false;
   private indexVersion: number = 0;
-
-  private constructor() {}
-
-  static getInstance(): DomService {
-    if (!DomService.instance) {
-      DomService.instance = new DomService();
-    }
-    return DomService.instance;
-  }
 
   private generateSelector(element: Element): string {
     if (element.id) {
@@ -398,39 +388,6 @@ export class DomService {
     return clone.outerHTML;
   }
 
-  getInteractableElements(): Array<{
-    index: number;
-    fingerprint: ElementFingerprint;
-    coords: { x: number; y: number; w: number; h: number; z: number };
-    cssClasses: string[];
-  }> {
-    this.indexInteractableElements();
-
-    const elements: Array<{
-      index: number;
-      fingerprint: ElementFingerprint;
-      coords: { x: number; y: number; w: number; h: number; z: number };
-      cssClasses: string[];
-    }> = [];
-
-    for (const [index, element] of this.elementMap.entries()) {
-      if (element instanceof HTMLElement) {
-        const fingerprint = this.fingerprintMap.get(index);
-
-        if (fingerprint) {
-          elements.push({
-            index,
-            fingerprint,
-            coords: this.getElementCoordinates(element),
-            cssClasses: Array.from(element.classList),
-          });
-        }
-      }
-    }
-
-    return elements;
-  }
-
   getSequenceForElement(element: Element): number | undefined {
     return this.elementToSequence.get(element);
   }
@@ -559,4 +516,4 @@ export class DomService {
   }
 }
 
-export const domService = DomService.getInstance();
+export const domService = new DomService();

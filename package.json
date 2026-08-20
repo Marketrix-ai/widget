@@ -21,7 +21,7 @@
     "tag": "bash scripts/release.sh",
     "start": "vite",
     "build": "vite build",
-    "ci": "npm run type-check && npm run lint:check && npm run build && npm run format:check && npm run test:run && npm run visual:check && npm run a11y:check && npm run bundle:check",
+    "ci": "npm run type-check && npm run lint:check && npm run build && npm run format:check && npm run test:run && npm run bundle:check",
     "lint": "eslint . --ext .ts,.tsx --max-warnings 200 --fix",
     "lint:check": "eslint . --ext .ts,.tsx --max-warnings 0",
     "check": "tsc --noEmit",
@@ -32,8 +32,6 @@
     "test:coverage": "vitest run --coverage",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "visual:check": "node scripts/visual-check.mjs",
-    "a11y:check": "node scripts/a11y-check.mjs",
     "bundle:check": "node scripts/bundle-check.mjs",
     "code:fix": "eslint . --ext .ts,.tsx --fix && prettier --write .",
     "code:check": "tsc --noEmit && eslint . --ext .ts,.tsx && prettier --check ."

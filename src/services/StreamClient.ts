@@ -6,7 +6,6 @@ export interface StreamClientCallbacks {
   onStatusChange?: (status: StreamStatus) => void;
   onMessage?: (event: WidgetEvent) => void;
   onError?: (error: Error) => void;
-  onRegistered?: (applicationId: number | undefined) => void;
 }
 
 export class StreamClient {
@@ -42,10 +41,6 @@ export class StreamClient {
 
   removeCallbacks(callbacks: StreamClientCallbacks): void {
     this.callbacks.delete(callbacks);
-  }
-
-  getStatus(): StreamStatus {
-    return this.status;
   }
 
   isConnected(): boolean {
@@ -193,7 +188,6 @@ export class StreamClient {
         this.reconnectDelay = 1000;
         for (const waiter of this.registrationWaiters) waiter.resolve();
         this.registrationWaiters.clear();
-        this.callbacks.forEach(cb => cb.onRegistered?.(event.application_id));
       }
     }
 

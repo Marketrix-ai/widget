@@ -148,14 +148,6 @@ export const BROWSER_TOOLS: BrowserToolMetadata[] = [
     actionType: 'get_html',
   },
   {
-    id: 'get_interactable_elements',
-    name: 'Get Interactable Elements',
-    description: 'Get list of interactable elements',
-    displayAction: 'Scanning elements',
-    category: 'extraction',
-    actionType: 'get_interactable_elements',
-  },
-  {
     id: 'get_screenshot',
     name: 'Get Screenshot',
     description: 'Capture a screenshot of the page',

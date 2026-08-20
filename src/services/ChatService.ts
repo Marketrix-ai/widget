@@ -13,18 +13,8 @@ export interface ChatSnapshot {
 }
 
 export class ChatService {
-  private static instance: ChatService;
   private chatId: string | null = null;
   initError: Error | null = null;
-
-  private constructor() {}
-
-  static getInstance(): ChatService {
-    if (!ChatService.instance) {
-      ChatService.instance = new ChatService();
-    }
-    return ChatService.instance;
-  }
 
   initialize(chatId: string | null): void {
     this.chatId = chatId;
@@ -148,7 +138,7 @@ export class ChatService {
   }
 }
 
-export const chatService = ChatService.getInstance();
+export const chatService = new ChatService();
 
 export function createUserMessage(
   content: string,

@@ -18,10 +18,6 @@ export interface DropdownOptionsData {
   options: Array<{ value: string; text: string }>;
 }
 
-export interface ElementsData {
-  elements: unknown[];
-}
-
 export interface ToolExecutionResult<T = TextData> {
   success: boolean;
   data: T;
@@ -97,17 +93,6 @@ export interface ExtractParams {
 }
 
 export class BrowserToolService {
-  private static instance: BrowserToolService;
-
-  private constructor() {}
-
-  static getInstance(): BrowserToolService {
-    if (!BrowserToolService.instance) {
-      BrowserToolService.instance = new BrowserToolService();
-    }
-    return BrowserToolService.instance;
-  }
-
   async executeTool(
     browserToolName: string,
     args: Record<string, unknown>,
@@ -173,8 +158,6 @@ export class BrowserToolService {
           return this.done(args as unknown as DoneParams);
         case 'get_html':
           return this.getHtml();
-        case 'get_interactable_elements':
-          return this.getInteractableElements();
         case 'get_screenshot':
           return await this.getScreenshot();
         default:
@@ -278,72 +261,28 @@ export class BrowserToolService {
       let valueSet = false;
       let lastError: unknown = null;
 
-      // Native value setter — works with React controlled components.
-      if (!valueSet) {
-        try {
-          const isTextArea = inputElement.tagName.toUpperCase() === 'TEXTAREA';
-          const prototype = isTextArea ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
-          const descriptor = Object.getOwnPropertyDescriptor(prototype, 'value');
+      // Native value setter, not `.value =` — React tracks the prototype setter and reverts a direct assignment.
+      try {
+        const isTextArea = inputElement.tagName.toUpperCase() === 'TEXTAREA';
+        const prototype = isTextArea ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+        const descriptor = Object.getOwnPropertyDescriptor(prototype, 'value');
 
-          if (descriptor?.set) {
-            descriptor.set.call(inputElement, finalValue);
-            valueSet = true;
-            console.log('[BrowserToolService] Native setter succeeded');
-          }
-        } catch (e) {
-          lastError = e;
-          console.warn('[BrowserToolService] Native setter failed:', e);
+        if (descriptor?.set) {
+          descriptor.set.call(inputElement, finalValue);
+          valueSet = true;
         }
+      } catch (e) {
+        lastError = e;
+        console.warn('[BrowserToolService] Native setter failed:', e);
       }
 
       if (!valueSet) {
         try {
           inputElement.value = finalValue;
           valueSet = true;
-          console.log('[BrowserToolService] Direct assignment succeeded');
         } catch (e) {
           lastError = e;
           console.warn('[BrowserToolService] Direct assignment failed:', e);
-        }
-      }
-
-      if (!valueSet) {
-        try {
-          inputElement.focus();
-          if (clear) inputElement.select();
-          const success = document.execCommand('insertText', false, args.text);
-          if (success) {
-            valueSet = true;
-            console.log('[BrowserToolService] execCommand succeeded');
-          }
-        } catch (e) {
-          lastError = e;
-          console.warn('[BrowserToolService] execCommand failed:', e);
-        }
-      }
-
-      if (!valueSet) {
-        try {
-          inputElement.focus();
-          if (clear) inputElement.value = '';
-          for (const char of args.text) {
-            inputElement.dispatchEvent(new KeyboardEvent('keydown', { key: char, bubbles: true, cancelable: true }));
-            inputElement.value += char;
-            inputElement.dispatchEvent(
-              new InputEvent('input', {
-                bubbles: true,
-                cancelable: true,
-                inputType: 'insertText',
-                data: char,
-              }),
-            );
-            inputElement.dispatchEvent(new KeyboardEvent('keyup', { key: char, bubbles: true, cancelable: true }));
-          }
-          valueSet = true;
-          console.log('[BrowserToolService] Simulated typing succeeded');
-        } catch (e) {
-          lastError = e;
-          console.warn('[BrowserToolService] Simulated typing failed:', e);
         }
       }
 
@@ -780,15 +719,6 @@ export class BrowserToolService {
     }
   }
 
-  private getInteractableElements(): ToolExecutionResult<ElementsData> {
-    try {
-      const elements = domService.getInteractableElements();
-      return { success: true, data: { elements } };
-    } catch (error) {
-      return { success: false, data: { elements: [] }, error: String(error) };
-    }
-  }
-
   private async getScreenshot(): Promise<ToolExecutionResult> {
     try {
       const stream = await startScreenShare();
@@ -822,4 +752,4 @@ export class BrowserToolService {
   }
 }
 
-export const browserToolService = BrowserToolService.getInstance();
+export const browserToolService = new BrowserToolService();
