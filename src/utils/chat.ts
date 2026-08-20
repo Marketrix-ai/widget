@@ -336,7 +336,7 @@ export function updateThinkingMarker(
     if (hasThinkingMarker(msg.content)) {
       return {
         ...msg,
-        content: msg.content.replace(/\n\n__THINKING__$/, '').replace(/__THINKING__/g, ''),
+        content: removeThinkingMarkerFromEnd(msg.content),
         placeholderState: undefined,
       };
     }
