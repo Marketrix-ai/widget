@@ -242,24 +242,10 @@ describe('reduceToolProgress / reduceToolDone / reduceStop', () => {
     expect(part?.content).toContain('no element');
   });
 
-  it('reduceToolDone ends the task, marks done, and strips the lingering done progress line', () => {
-    const withDoneLine: SseState = {
-      messages: [
-        agentMessage({
-          parts: [
-            { type: 'text', content: 'Working on it' },
-            { type: 'progress', content: 'Finishing', status: 'in_progress', browserToolName: 'done' },
-          ],
-        }),
-      ],
-      task: { activeTaskId: 'task-1', isTaskRunning: true },
-    };
-    const result = reduceToolDone(withDoneLine, 'do');
+  it('reduceToolDone ends the task and marks the message done', () => {
+    const result = reduceToolDone(runningState(), 'do');
     expect(result.task).toEqual({ isTaskRunning: false, activeTaskId: null });
     expect(result.messages[0].taskStatus).toBe('done');
-    expect((result.messages[0].parts ?? []).some(p => p.type === 'progress' && p.browserToolName === 'done')).toBe(
-      false,
-    );
   });
 
   it('reduceStop marks the active message stopped and ends the task', () => {

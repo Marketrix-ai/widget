@@ -120,10 +120,7 @@ export function reduceToolDone(state: SseState, currentMode: InstructionType): S
   });
   const messages = [...state.messages];
   if (found) {
-    const updatedParts = (found.message.parts ?? []).filter(
-      part => !(part.type === 'progress' && part.browserToolName === 'done'),
-    );
-    messages[found.index] = { ...found.message, taskStatus: 'done', parts: updatedParts };
+    messages[found.index] = { ...found.message, taskStatus: 'done' };
   }
   return { messages, task: { isTaskRunning: false, activeTaskId: null } };
 }
