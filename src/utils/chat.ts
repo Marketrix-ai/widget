@@ -192,15 +192,6 @@ function ensureMessageStructure(message: ChatMessage): ChatMessage {
   return msg;
 }
 
-const INTERACTIVE_TOOLS = new Set([
-  'click_element',
-  'type_text',
-  'send_keys',
-  'select_dropdown_option',
-  'upload_file',
-  'scroll',
-]);
-
 // In `show` mode these pause for the user to act (DOM-mutating tools, minus `scroll`); also the highlight set in BrowserToolService.
 export const WAIT_FOR_USER_TOOLS = new Set([
   'click_element',
@@ -230,18 +221,12 @@ export function addProgressLine(message: ChatMessage, browserToolName: string, e
     part => part.type === 'progress' && part.browserToolName === browserToolName && part.status === 'in_progress',
   );
 
-  const isInteractive = INTERACTIVE_TOOLS.has(browserToolName);
-  const hideIcon = !isInteractive;
-  const textStyle = 'default';
-
   const cleanedExplanation = filterCancellationText(explanation);
 
   if (existingPartIndex >= 0) {
     newParts[existingPartIndex] = {
       ...newParts[existingPartIndex],
       content: cleanedExplanation,
-      hideIcon,
-      textStyle,
     };
   } else {
     newParts.push({
@@ -249,8 +234,6 @@ export function addProgressLine(message: ChatMessage, browserToolName: string, e
       content: cleanedExplanation,
       status: 'in_progress',
       browserToolName,
-      hideIcon,
-      textStyle,
     });
   }
 
@@ -260,20 +243,16 @@ export function addProgressLine(message: ChatMessage, browserToolName: string, e
   };
 }
 
-export function markProgressLineComplete(message: ChatMessage, browserToolName?: string): ChatMessage {
+export function markProgressLineComplete(message: ChatMessage): ChatMessage {
   const msg = ensureMessageStructure(message);
   const parts = msg.parts || [];
 
   const newParts = [...parts];
   let partIndex = -1;
-  if (browserToolName) {
-    partIndex = parts.map(p => (p.type === 'progress' ? p.browserToolName : '')).lastIndexOf(browserToolName);
-  } else {
-    for (let i = parts.length - 1; i >= 0; i--) {
-      if (parts[i].type === 'progress' && parts[i].status === 'in_progress') {
-        partIndex = i;
-        break;
-      }
+  for (let i = parts.length - 1; i >= 0; i--) {
+    if (parts[i].type === 'progress' && parts[i].status === 'in_progress') {
+      partIndex = i;
+      break;
     }
   }
 

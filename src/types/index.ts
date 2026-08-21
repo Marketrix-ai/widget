@@ -50,8 +50,6 @@ export interface MessagePart {
   content: string;
   status?: 'in_progress' | 'completed' | 'failed' | 'stopped';
   browserToolName?: string;
-  hideIcon?: boolean;
-  textStyle?: 'default' | 'muted';
   /** chat/delta fragments accumulate into this part; the final chat/response replaces it. */
   streaming?: boolean;
 }

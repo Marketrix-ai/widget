@@ -47,19 +47,7 @@ export const MessageContent: React.FC<MessageContentProps> = ({ message, isLastM
               </Text>
             );
           } else if (part.type === 'progress') {
-            if (part.browserToolName === 'done' && message.taskStatus === 'done') {
-              return null;
-            }
-
-            return (
-              <ProgressLine
-                key={`part-${index}`}
-                content={part.content}
-                status={part.status || 'in_progress'}
-                {...(part.hideIcon !== undefined ? { hideIcon: part.hideIcon } : {})}
-                {...(part.textStyle !== undefined ? { textStyle: part.textStyle } : {})}
-              />
-            );
+            return <ProgressLine key={`part-${index}`} content={part.content} />;
           }
           return null;
         })}

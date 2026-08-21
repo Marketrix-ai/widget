@@ -38,8 +38,6 @@ export const textLeadingClasses: Record<TextLeading, string> = {
 export const controlSizeStyles = {
   header: { height: 40 },
   tabBar: { height: 48 },
-  launcher: { width: 56, height: 56 },
-  launcherCore: { width: 48, height: 48 },
 } satisfies Record<string, CSSProperties>;
 
 export const notificationToneStyles: Record<
@@ -50,7 +48,6 @@ export const notificationToneStyles: Record<
     titleColor: string;
     bodyColor: string;
     closeColor: string;
-    closeHoverColor: string;
     actionBackground: string;
   }
 > = {
@@ -60,7 +57,6 @@ export const notificationToneStyles: Record<
     titleColor: '#0c4a6e',
     bodyColor: '#0369a1',
     closeColor: '#7dd3fc',
-    closeHoverColor: '#38bdf8',
     actionBackground: '#e0f2fe',
   },
   error: {
@@ -69,7 +65,6 @@ export const notificationToneStyles: Record<
     titleColor: '#b91c1c',
     bodyColor: '#b91c1c',
     closeColor: '#f87171',
-    closeHoverColor: '#ef4444',
     actionBackground: '#fee2e2',
   },
 };
