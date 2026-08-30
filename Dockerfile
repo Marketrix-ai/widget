@@ -14,7 +14,7 @@ FROM base AS builder
 ENV NODE_ENV=production
 RUN npm run build
 
-FROM nginx:1.31.3-alpine AS runtime
+FROM nginx:1.31.4-alpine AS runtime
 COPY --from=builder /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 RUN sed -i '/application\/javascript/s/;/ mjs;/' /etc/nginx/mime.types \
