@@ -1,12 +1,16 @@
 let activeStream: MediaStream | null = null;
 
-export async function startScreenShare(): Promise<MediaStream> {
-  if (activeStream?.active) {
-    const videoTracks = activeStream.getVideoTracks();
-    if (videoTracks.length > 0 && videoTracks[0].readyState === 'live') {
-      return activeStream;
-    }
+function getLiveStream(): MediaStream | null {
+  if (activeStream?.active && activeStream.getVideoTracks()[0]?.readyState === 'live') {
+    return activeStream;
   }
+  activeStream = null;
+  return null;
+}
+
+export async function startScreenShare(): Promise<MediaStream> {
+  const liveStream = getLiveStream();
+  if (liveStream) return liveStream;
 
   const stream = await navigator.mediaDevices.getDisplayMedia({
     video: true,
@@ -27,18 +31,6 @@ export async function startScreenShare(): Promise<MediaStream> {
   return stream;
 }
 
-function getActiveStream(): MediaStream | null {
-  if (activeStream?.active) {
-    const videoTracks = activeStream.getVideoTracks();
-    if (videoTracks.length > 0 && videoTracks[0].readyState === 'live') {
-      return activeStream;
-    }
-  }
-
-  activeStream = null;
-  return null;
-}
-
 export function stopScreenShare(): void {
   if (activeStream) {
     activeStream.getTracks().forEach(track => track.stop());
@@ -47,5 +39,5 @@ export function stopScreenShare(): void {
 }
 
 export function isScreenSharing(): boolean {
-  return getActiveStream() !== null;
+  return getLiveStream() !== null;
 }

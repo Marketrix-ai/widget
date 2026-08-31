@@ -2,7 +2,6 @@ import React, { createContext, useContext, useEffect } from 'react';
 
 import { chatService } from '../services/ChatService';
 import { chatSessionManager } from '../services/ChatSessionManager';
-import { configManager } from '../services/ConfigManager';
 import { StreamClient } from '../services/StreamClient';
 import { ChatProvider, useChatContext } from './ChatContext';
 import { UIStateProvider, useUIStateContext } from './UIStateContext';
@@ -17,25 +16,9 @@ const PersistBridge: React.FC<{ previewMode: boolean }> = ({ previewMode }) => {
 
   useEffect(() => {
     if (previewMode) return;
-    chatService.persist({
-      messages: chatState.messages,
-      isTaskRunning: taskState.isTaskRunning,
-      activeTaskId: taskState.activeTaskId,
-      currentMode: uiState.currentMode,
-      isOpen: uiState.isOpen,
-      isMinimized: uiState.isMinimized,
-      isLoading: uiState.isLoading,
-    });
-  }, [
-    previewMode,
-    chatState.messages,
-    taskState.isTaskRunning,
-    taskState.activeTaskId,
-    uiState.currentMode,
-    uiState.isOpen,
-    uiState.isMinimized,
-    uiState.isLoading,
-  ]);
+    const { currentMode, isOpen, isMinimized, isLoading } = uiState;
+    chatService.persist({ messages: chatState.messages, ...taskState, currentMode, isOpen, isMinimized, isLoading });
+  }, [previewMode, chatState, taskState, uiState]);
 
   return null;
 };
@@ -51,46 +34,15 @@ const InitBridge: React.FC<{ children: React.ReactNode; previewMode: boolean }> 
     const init = async () => {
       const chatId = await chatSessionManager.getOrCreateChatId();
       if (cancelled) return;
-      chatService.createInitialContext(chatId);
 
-      const initErr = chatService.getInitError();
-      if (initErr) {
-        uiActions.setError('Widget failed to initialise — please refresh the page.');
-      }
+      const { messages, isTaskRunning, activeTaskId, ...ui } = chatService.restore();
+      uiActions.applyState(ui);
+      chatActions.setMessages(messages);
+      taskActions.setTaskState({ activeTaskId: isTaskRunning ? activeTaskId : null, isTaskRunning });
 
-      chatService.initialize(chatId);
-
-      const snapshot = chatService.restore();
-
-      uiActions.applyState({
-        isLoading: snapshot.isLoading,
-        currentMode: snapshot.currentMode,
-        isOpen: snapshot.isOpen,
-        isMinimized: snapshot.isMinimized,
-      });
-
-      chatActions.setMessages(snapshot.messages);
-      taskActions.setTaskState({
-        activeTaskId: snapshot.isTaskRunning ? snapshot.activeTaskId : null,
-        isTaskRunning: snapshot.isTaskRunning,
-      });
-
-      if (chatId) {
-        const streamClient = StreamClient.getInstance();
-        const streamConfig = configManager.getConfig();
-        streamClient
-          .connect(
-            chatId,
-            streamConfig
-              ? {
-                  mtxId: streamConfig.mtxId,
-                  mtxKey: streamConfig.mtxKey,
-                  mtxApp: streamConfig.mtxApp,
-                }
-              : undefined,
-          )
-          .catch((err: unknown) => console.error('Initial stream connection failed:', err));
-      }
+      StreamClient.getInstance()
+        .connect(chatId)
+        .catch((err: unknown) => console.error('Initial stream connection failed:', err));
     };
 
     void init().catch(error => {

@@ -1,6 +1,20 @@
 import { sdk, type WidgetData, type WidgetSettingsData, WidgetSettingsDataSchema } from '../sdk';
 import type { MarketrixConfig } from '../types';
-import { createConfigFromSettings } from './ConfigManager';
+
+export function createConfigFromSettings(
+  widgetSettings: WidgetSettingsData,
+  baseConfig: Partial<MarketrixConfig> = {},
+): MarketrixConfig {
+  return {
+    ...baseConfig,
+    ...widgetSettings,
+  } as MarketrixConfig;
+}
+
+/** Per-tenant scope for browser-local keys: the credential id, else the application id. */
+export function tenantScope(config: MarketrixConfig): string {
+  return config.mtxId ?? (config.mtxApp != null ? String(config.mtxApp) : 'default');
+}
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : typeof error === 'string' ? error : 'Unknown error';

@@ -25,8 +25,7 @@ describe('WidgetProviders initialization', () => {
         resolveChatId = resolve;
       }),
     );
-    const createContext = vi.spyOn(chatService, 'createInitialContext');
-    const initialize = vi.spyOn(chatService, 'initialize');
+    const restore = vi.spyOn(chatService, 'restore');
     const connect = vi.spyOn(StreamClient.getInstance(), 'connect');
 
     const view = render(
@@ -40,8 +39,7 @@ describe('WidgetProviders initialization', () => {
     resolveChatId('chat-id');
     await Promise.resolve();
 
-    expect(createContext).not.toHaveBeenCalled();
-    expect(initialize).not.toHaveBeenCalled();
+    expect(restore).not.toHaveBeenCalled();
     expect(connect).not.toHaveBeenCalled();
   });
 

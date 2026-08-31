@@ -88,6 +88,15 @@ export interface ExtractParams {
   start_from_char?: number;
 }
 
+const ok = (text: string): ToolExecutionResult => ({ success: true, data: { text } });
+const okData = <T>(data: T): ToolExecutionResult<T> => ({ success: true, data });
+const fail = (error: string): ToolExecutionResult => ({ success: false, data: { text: '' }, error });
+const failOptions = (error: string): ToolExecutionResult<DropdownOptionsData> => ({
+  success: false,
+  data: { options: [] },
+  error,
+});
+
 const TAB_ORDER_SELECTOR =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
@@ -101,13 +110,11 @@ export class BrowserToolService {
     try {
       console.log(`[BrowserToolService] Executing ${browserToolName} (mode: ${mode})`);
 
-      if (mode === 'show' && this.requiresHighlight(browserToolName)) {
+      if (mode === 'show' && WAIT_FOR_USER_TOOLS.has(browserToolName)) {
         const index = args.index as number | undefined;
         if (index !== undefined) {
           const { element, error } = domService.getValidatedElement(index);
-          if (!element) {
-            return { success: false, data: { text: '' }, error: error || `Element ${index} not found` };
-          }
+          if (!element) return fail(error || `Element ${index} not found`);
 
           const confirmed = await showModeService.showToolAction({
             element,
@@ -117,7 +124,7 @@ export class BrowserToolService {
           });
 
           if (!confirmed) {
-            return { success: false, data: { text: '' }, error: 'User cancelled action' };
+            return fail('User cancelled action');
           }
         }
       }
@@ -158,35 +165,27 @@ export class BrowserToolService {
         case 'get_screenshot':
           return await this.getScreenshot();
         default:
-          return { success: false, data: { text: '' }, error: `Unknown tool: ${browserToolName}` };
+          return fail(`Unknown tool: ${browserToolName}`);
       }
     } catch (error) {
       showModeService.cleanup();
-      return {
-        success: false,
-        data: { text: '' },
-        error: error instanceof Error ? error.message : String(error),
-      };
+      return fail(error instanceof Error ? error.message : String(error));
     }
-  }
-
-  private requiresHighlight(browserToolName: string): boolean {
-    return WAIT_FOR_USER_TOOLS.has(browserToolName);
   }
 
   private navigate(args: NavigateParams): ToolExecutionResult {
-    if (!args.url) return { success: false, data: { text: '' }, error: 'URL is required' };
+    if (!args.url) return fail('URL is required');
 
     if (args.new_tab) {
       window.open(args.url, '_blank');
-      return { success: true, data: { text: `Opened ${args.url} in new tab` } };
+      return ok(`Opened ${args.url} in new tab`);
     }
     window.location.href = args.url;
-    return { success: true, data: { text: `Navigating to ${args.url}` } };
+    return ok(`Navigating to ${args.url}`);
   }
 
   private search(args: SearchParams): ToolExecutionResult {
-    if (!args.query) return { success: false, data: { text: '' }, error: 'Query is required' };
+    if (!args.query) return fail('Query is required');
 
     const engine = args.engine || 'duckduckgo';
     const encoded = encodeURIComponent(args.query);
@@ -196,17 +195,14 @@ export class BrowserToolService {
     if (engine === 'bing') url = `https://www.bing.com/search?q=${encoded}`;
 
     window.location.href = url;
-    return { success: true, data: { text: `Searching for "${args.query}" on ${engine}` } };
+    return ok(`Searching for "${args.query}" on ${engine}`);
   }
 
   private async clickElement(args: ClickElementParams): Promise<ToolExecutionResult> {
-    if (args.index === undefined) return { success: false, data: { text: '' }, error: 'Index required' };
+    if (args.index === undefined) return fail('Index required');
 
     const { element, error } = domService.getValidatedElement(args.index);
-
-    if (!element) {
-      return { success: false, data: { text: '' }, error: error || `Element ${args.index} not found` };
-    }
+    if (!element) return fail(error || `Element ${args.index} not found`);
 
     element.scrollIntoView({ behavior: 'smooth', block: 'center' });
     await new Promise(resolve => setTimeout(resolve, 100));
@@ -224,20 +220,16 @@ export class BrowserToolService {
       }
     }, 50);
 
-    return { success: true, data: { text: `Clicked element ${args.index}` } };
+    return ok(`Clicked element ${args.index}`);
   }
 
   private typeText(args: TypeTextParams): ToolExecutionResult {
-    if (args.index === undefined || args.text === undefined)
-      return { success: false, data: { text: '' }, error: 'Index and text required' };
+    if (args.index === undefined || args.text === undefined) return fail('Index and text required');
 
     const clear = args.clear !== false;
 
     const { element, error } = domService.getValidatedElement(args.index);
-
-    if (!element) {
-      return { success: false, data: { text: '' }, error: error || `Element ${args.index} not found` };
-    }
+    if (!element) return fail(error || `Element ${args.index} not found`);
 
     const isInputLike =
       element instanceof HTMLInputElement ||
@@ -255,53 +247,42 @@ export class BrowserToolService {
 
       const finalValue = clear ? args.text : inputElement.value + args.text;
 
-      let valueSet = false;
       let lastError: unknown = null;
-
-      // Native value setter, not `.value =` — React tracks the prototype setter and reverts a direct assignment.
-      try {
-        const isTextArea = inputElement.tagName.toUpperCase() === 'TEXTAREA';
-        const prototype = isTextArea ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
-        const descriptor = Object.getOwnPropertyDescriptor(prototype, 'value');
-
-        if (descriptor?.set) {
-          descriptor.set.call(inputElement, finalValue);
-          valueSet = true;
-        }
-      } catch (e) {
-        lastError = e;
-        console.warn('[BrowserToolService] Native setter failed:', e);
-      }
-
-      if (!valueSet) {
+      const attempt = (name: string, set: () => boolean): boolean => {
         try {
-          inputElement.value = finalValue;
-          valueSet = true;
+          return set();
         } catch (e) {
           lastError = e;
-          console.warn('[BrowserToolService] Direct assignment failed:', e);
+          console.warn(`[BrowserToolService] ${name} failed:`, e);
+          return false;
         }
-      }
+      };
 
-      // Only reachable when the assignment above threw, i.e. a host page froze the element. execCommand
-      // acts on the editing host rather than the JS object, so it is the one path that can still recover.
-      if (!valueSet) {
-        try {
+      // Ordered by fidelity: React tracks the prototype setter and reverts a plain `.value =`; execCommand acts on
+      // the editing host rather than the JS object, so it is the only path left once an assignment has thrown.
+      const valueSet =
+        attempt('Native setter', () => {
+          const isTextArea = inputElement.tagName.toUpperCase() === 'TEXTAREA';
+          const descriptor = Object.getOwnPropertyDescriptor(
+            isTextArea ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype,
+            'value',
+          );
+          if (!descriptor?.set) return false;
+          descriptor.set.call(inputElement, finalValue);
+          return true;
+        }) ||
+        attempt('Direct assignment', () => {
+          inputElement.value = finalValue;
+          return true;
+        }) ||
+        attempt('execCommand', () => {
           inputElement.focus();
           if (clear) inputElement.select();
-          if (document.execCommand('insertText', false, args.text)) valueSet = true;
-        } catch (e) {
-          lastError = e;
-          console.warn('[BrowserToolService] execCommand failed:', e);
-        }
-      }
+          return document.execCommand('insertText', false, args.text);
+        });
 
       if (!valueSet) {
-        return {
-          success: false,
-          data: { text: '' },
-          error: `Failed to set value: ${lastError instanceof Error ? lastError.message : String(lastError)}`,
-        };
+        return fail(`Failed to set value: ${lastError instanceof Error ? lastError.message : String(lastError)}`);
       }
 
       try {
@@ -326,26 +307,18 @@ export class BrowserToolService {
         element.dispatchEvent(new Event('input', { bubbles: true }));
         element.dispatchEvent(new Event('change', { bubbles: true }));
       } catch (e) {
-        return {
-          success: false,
-          data: { text: '' },
-          error: `Failed to set value on element: ${e instanceof Error ? e.message : String(e)}`,
-        };
+        return fail(`Failed to set value on element: ${e instanceof Error ? e.message : String(e)}`);
       }
     } else {
       try {
         element.textContent = args.text;
         element.dispatchEvent(new Event('input', { bubbles: true }));
       } catch (e) {
-        return {
-          success: false,
-          data: { text: '' },
-          error: `Failed to set textContent: ${e instanceof Error ? e.message : String(e)}`,
-        };
+        return fail(`Failed to set textContent: ${e instanceof Error ? e.message : String(e)}`);
       }
     }
 
-    return { success: true, data: { text: `Typed text into element ${args.index}` } };
+    return ok(`Typed text into element ${args.index}`);
   }
 
   private scroll(args: ScrollParams): ToolExecutionResult {
@@ -365,23 +338,23 @@ export class BrowserToolService {
         window.scrollBy({ left: amount, behavior: 'smooth' });
         break;
       default:
-        return { success: false, data: { text: '' }, error: 'Invalid direction' };
+        return fail('Invalid direction');
     }
-    return { success: true, data: { text: `Scrolled ${args.direction}` } };
+    return ok(`Scrolled ${args.direction}`);
   }
 
   private scrollToText(args: ScrollToTextParams): ToolExecutionResult {
-    if (!args.text) return { success: false, data: { text: '' }, error: 'Text required' };
+    if (!args.text) return fail('Text required');
 
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
     let node: Node | null;
     while ((node = walker.nextNode())) {
       if (node.textContent?.includes(args.text) && node.parentElement) {
         node.parentElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        return { success: true, data: { text: `Scrolled to "${args.text}"` } };
+        return ok(`Scrolled to "${args.text}"`);
       }
     }
-    return { success: false, data: { text: '' }, error: `Text "${args.text}" not found` };
+    return fail(`Text "${args.text}" not found`);
   }
 
   private extract(args: ExtractParams): ToolExecutionResult<ExtractData> {
@@ -401,72 +374,61 @@ export class BrowserToolService {
             }))
         : [],
     };
-    return { success: true, data: extractResult };
+    return okData(extractResult);
   }
 
   private goBack(): ToolExecutionResult {
     if (window.history.length > 1) {
       window.history.back();
-      return { success: true, data: { text: 'Navigated back' } };
+      return ok('Navigated back');
     }
-    return { success: false, data: { text: '' }, error: 'No history' };
+    return fail('No history');
   }
 
   private async wait(args: WaitParams): Promise<ToolExecutionResult> {
-    if (args.seconds === undefined) return { success: false, data: { text: '' }, error: 'Seconds required' };
+    if (args.seconds === undefined) return fail('Seconds required');
     await new Promise(resolve => setTimeout(resolve, args.seconds * 1000));
-    return { success: true, data: { text: `Waited ${args.seconds}s` } };
+    return ok(`Waited ${args.seconds}s`);
   }
 
   private selectDropdownOption(args: SelectDropdownOptionParams): ToolExecutionResult {
-    if (args.index === undefined || !args.option)
-      return { success: false, data: { text: '' }, error: 'Index/Option required' };
+    if (args.index === undefined || !args.option) return fail('Index/Option required');
 
     const { element, error } = domService.getValidatedElement(args.index);
-
-    if (!element) {
-      return { success: false, data: { text: '' }, error: error || `Select ${args.index} not found` };
-    }
+    if (!element) return fail(error || `Select ${args.index} not found`);
 
     if (!(element instanceof HTMLSelectElement)) {
-      return { success: false, data: { text: '' }, error: `Element ${args.index} is not a select element` };
+      return fail(`Element ${args.index} is not a select element`);
     }
 
     const opt = Array.from(element.options).find(o => o.value === args.option || o.text === args.option);
-    if (!opt) return { success: false, data: { text: '' }, error: `Option ${args.option} not found` };
+    if (!opt) return fail(`Option ${args.option} not found`);
 
     element.value = opt.value;
     element.dispatchEvent(new Event('change', { bubbles: true }));
 
-    return { success: true, data: { text: `Selected ${args.option}` } };
+    return ok(`Selected ${args.option}`);
   }
 
   private getDropdownOptions(args: GetDropdownOptionsParams): ToolExecutionResult<DropdownOptionsData> {
     const index = args.index;
 
     const { element, error } = domService.getValidatedElement(index);
-
-    if (!element) {
-      return { success: false, data: { options: [] }, error: error || `Select ${index} not found` };
-    }
+    if (!element) return failOptions(error || `Select ${index} not found`);
 
     if (!(element instanceof HTMLSelectElement)) {
-      return { success: false, data: { options: [] }, error: `Element ${index} is not a select element` };
+      return failOptions(`Element ${index} is not a select element`);
     }
 
     const options = Array.from(element.options).map(o => ({ value: o.value, text: o.text }));
-    return { success: true, data: { options } };
+    return okData({ options });
   }
 
   private sendKeys(args: SendKeysParams): ToolExecutionResult {
-    if (args.index === undefined || !args.keys)
-      return { success: false, data: { text: '' }, error: 'Index/Keys required' };
+    if (args.index === undefined || !args.keys) return fail('Index/Keys required');
 
     const { element, error } = domService.getValidatedElement(args.index);
-
-    if (!element) {
-      return { success: false, data: { text: '' }, error: error || `Element ${args.index} not found` };
-    }
+    if (!element) return fail(error || `Element ${args.index} not found`);
 
     element.focus();
     element.dispatchEvent(new KeyboardEvent('keydown', { key: args.keys, bubbles: true, cancelable: true }));
@@ -474,7 +436,7 @@ export class BrowserToolService {
 
     const actionResult = this.simulateKeyAction(element, args.keys);
 
-    return { success: true, data: { text: actionResult || `Sent keys ${args.keys}` } };
+    return ok(actionResult || `Sent keys ${args.keys}`);
   }
 
   /** Programmatic KeyboardEvents aren't "trusted", so manually reproduce each key's expected behavior. */
@@ -661,35 +623,35 @@ export class BrowserToolService {
   }
 
   private uploadFile(_args: UploadFileParams): ToolExecutionResult {
-    return { success: false, data: { text: '' }, error: 'File upload not supported via script' };
+    return fail('File upload not supported via script');
   }
 
   private closeTab(): ToolExecutionResult {
     window.close();
-    return { success: true, data: { text: 'Attempted close' } };
+    return ok('Attempted close');
   }
 
   private done(args: DoneParams): ToolExecutionResult {
     if (args.success === undefined) {
-      return { success: false, data: { text: '' }, error: 'success parameter is required' };
+      return fail('success parameter is required');
     }
     const resultMessage = args.message || (args.success ? 'Task completed' : 'Task failed');
-    return { success: true, data: { text: resultMessage } };
+    return ok(resultMessage);
   }
 
   private getHtml(): ToolExecutionResult {
     try {
       const html = domService.getSnapshotHtml();
-      return { success: true, data: { text: html } };
+      return ok(html);
     } catch (error) {
-      return { success: false, data: { text: '' }, error: String(error) };
+      return fail(String(error));
     }
   }
 
   private async getScreenshot(): Promise<ToolExecutionResult> {
     try {
       const stream = await startScreenShare();
-      if (!stream) return { success: false, data: { text: '' }, error: 'Failed to get stream' };
+      if (!stream) return fail('Failed to get stream');
 
       const video = document.createElement('video');
       video.srcObject = stream;
@@ -712,9 +674,9 @@ export class BrowserToolService {
       video.remove();
       // Keep the stream alive — the agent usually requests a screenshot then keeps going; startScreenShare handles reuse.
 
-      return { success: true, data: { text: base64 } };
+      return ok(base64);
     } catch (error) {
-      return { success: false, data: { text: '' }, error: String(error) };
+      return fail(String(error));
     }
   }
 }

@@ -2,38 +2,27 @@ import type React from 'react';
 
 import type { WidgetPosition } from '../types';
 
-// Must equal Tailwind's `-5` (1.25rem) in getPositionClasses: launcher positions by class, panel by inline style.
+// Must equal Tailwind's `-5` (1.25rem) in the class strings: the launcher positions by class, the panel by inline style.
 const EDGE_OFFSET_PX = 20;
 
-export const getPositionClasses = (position: WidgetPosition): string => {
-  switch (position) {
-    case 'bottom_right':
-      return 'bottom-5 right-5';
-    case 'bottom_left':
-      return 'bottom-5 left-5';
-    case 'top_right':
-      return 'top-5 right-5';
-    case 'top_left':
-      return 'top-5 left-5';
-    default:
-      return 'bottom-5 right-5';
-  }
-};
+// Class strings are spelled out because Tailwind only emits what it can see literally in the source.
+const CORNERS = {
+  bottom_right: { classes: 'bottom-5 right-5', vertical: 'bottom', horizontal: 'right' },
+  bottom_left: { classes: 'bottom-5 left-5', vertical: 'bottom', horizontal: 'left' },
+  top_right: { classes: 'top-5 right-5', vertical: 'top', horizontal: 'right' },
+  top_left: { classes: 'top-5 left-5', vertical: 'top', horizontal: 'left' },
+} as const;
+
+export const getCorner = (position: WidgetPosition) => CORNERS[position] ?? CORNERS.bottom_right;
+
+export const isWidgetPosition = (value: unknown): value is WidgetPosition =>
+  typeof value === 'string' && value in CORNERS;
+
+export const getPositionClasses = (position: WidgetPosition): string => getCorner(position).classes;
 
 export const getPanelPositionStyle = (position: WidgetPosition): React.CSSProperties => {
-  const offset = `${EDGE_OFFSET_PX}px`;
-  switch (position) {
-    case 'bottom_right':
-      return { bottom: offset, right: offset };
-    case 'bottom_left':
-      return { bottom: offset, left: offset };
-    case 'top_right':
-      return { top: offset, right: offset };
-    case 'top_left':
-      return { top: offset, left: offset };
-    default:
-      return { bottom: offset, right: offset };
-  }
+  const { vertical, horizontal } = getCorner(position);
+  return { [vertical]: `${EDGE_OFFSET_PX}px`, [horizontal]: `${EDGE_OFFSET_PX}px` };
 };
 
 export const getAnchorTopLeft = (
@@ -43,17 +32,11 @@ export const getAnchorTopLeft = (
   w: number,
   h: number,
 ): { x: number; y: number } => {
-  switch (position) {
-    case 'top_left':
-      return { x: EDGE_OFFSET_PX, y: EDGE_OFFSET_PX };
-    case 'top_right':
-      return { x: vw - EDGE_OFFSET_PX - w, y: EDGE_OFFSET_PX };
-    case 'bottom_left':
-      return { x: EDGE_OFFSET_PX, y: vh - EDGE_OFFSET_PX - h };
-    case 'bottom_right':
-    default:
-      return { x: vw - EDGE_OFFSET_PX - w, y: vh - EDGE_OFFSET_PX - h };
-  }
+  const { vertical, horizontal } = getCorner(position);
+  return {
+    x: horizontal === 'left' ? EDGE_OFFSET_PX : vw - EDGE_OFFSET_PX - w,
+    y: vertical === 'top' ? EDGE_OFFSET_PX : vh - EDGE_OFFSET_PX - h,
+  };
 };
 
 export const getNearestCornerByTranslation = (
@@ -64,18 +47,18 @@ export const getNearestCornerByTranslation = (
   w: number,
   h: number,
 ): WidgetPosition => {
-  const corners: WidgetPosition[] = ['top_left', 'top_right', 'bottom_left', 'bottom_right'];
   const anchor = getAnchorTopLeft(position, vw, vh, w, h);
   const x = anchor.x + translation.dx;
   const y = anchor.y + translation.dy;
+
   let nearest: WidgetPosition = position;
   let minDist = Infinity;
-  for (const corner of corners) {
-    const target = getAnchorTopLeft(corner, vw, vh, w, h);
+  for (const candidate of Object.keys(CORNERS) as WidgetPosition[]) {
+    const target = getAnchorTopLeft(candidate, vw, vh, w, h);
     const dist = Math.hypot(x - target.x, y - target.y);
     if (dist < minDist) {
       minDist = dist;
-      nearest = corner;
+      nearest = candidate;
     }
   }
   return nearest;

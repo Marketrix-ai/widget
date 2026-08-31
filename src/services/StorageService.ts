@@ -3,23 +3,25 @@ import type { ChatMessage, InstructionType, MarketrixConfig } from '../types';
 const STORAGE_KEY = 'marketrix_chat_context';
 const CONTEXT_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000;
 
-type StoredMessage = Omit<ChatMessage, 'videoStream' | 'timestamp'> & { timestamp: string };
+export type StoredMessage = Omit<ChatMessage, 'videoStream' | 'timestamp'> & { timestamp: string };
 
-export interface MarketrixChatContext {
-  chat_id: string | null;
-
-  messages: StoredMessage[];
+/** The live half of the persisted context: exactly what the widget's three React stores hold between them. */
+export interface ChatSnapshot {
+  messages: ChatMessage[];
   isTaskRunning: boolean;
   activeTaskId: string | null;
   currentMode: InstructionType;
   isOpen: boolean;
   isMinimized: boolean;
   isLoading: boolean;
-
-  config: MarketrixConfig | null;
-
-  timestamp: number;
 }
+
+export type MarketrixChatContext = Omit<ChatSnapshot, 'messages'> & {
+  chat_id: string | null;
+  messages: StoredMessage[];
+  config: MarketrixConfig | null;
+  timestamp: number;
+};
 
 const DEFAULT_CONTEXT: MarketrixChatContext = {
   chat_id: null,
@@ -31,111 +33,60 @@ const DEFAULT_CONTEXT: MarketrixChatContext = {
   isMinimized: false,
   isLoading: false,
   config: null,
-  timestamp: Date.now(),
+  timestamp: 0,
 };
 
-class StorageService {
-  private context: MarketrixChatContext | null = null;
-
-  constructor() {
-    this.loadContext();
+// Merged over the defaults so a payload written by an older widget version reads as incomplete, not corrupt.
+function loadContext(): MarketrixChatContext {
+  if (typeof window === 'undefined') return { ...DEFAULT_CONTEXT };
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      const parsed = { ...DEFAULT_CONTEXT, ...(JSON.parse(stored) as Partial<MarketrixChatContext>) };
+      if (Date.now() - parsed.timestamp <= CONTEXT_EXPIRY_MS) return parsed;
+    }
+  } catch (error) {
+    console.warn('[StorageService] Failed to load context:', error);
   }
+  return { ...DEFAULT_CONTEXT };
+}
 
-  private loadContext(): MarketrixChatContext {
-    if (typeof window === 'undefined') {
-      this.context = { ...DEFAULT_CONTEXT };
-      return this.context;
-    }
+class StorageService {
+  private context = loadContext();
 
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored) as MarketrixChatContext;
-
-        if (Date.now() - parsed.timestamp > CONTEXT_EXPIRY_MS) {
-          this.context = { ...DEFAULT_CONTEXT };
-          this.saveContext();
-          return this.context;
-        }
-
-        this.context = parsed;
-        return this.context;
-      }
-    } catch (error) {
-      console.warn('[StorageService] Failed to load context:', error);
-    }
-
-    this.context = { ...DEFAULT_CONTEXT };
+  getContext(): MarketrixChatContext {
     return this.context;
   }
 
-  private saveContext(): void {
-    if (typeof window === 'undefined' || !this.context) {
-      return;
-    }
-
+  updateContext(updates: Partial<MarketrixChatContext>): void {
+    this.context = { ...this.context, ...updates, timestamp: Date.now() };
+    if (typeof window === 'undefined') return;
     try {
-      this.context.timestamp = Date.now();
       localStorage.setItem(STORAGE_KEY, JSON.stringify(this.context));
     } catch (error) {
       console.error('[StorageService] Failed to save context:', error);
     }
   }
 
-  getContext(): MarketrixChatContext {
-    if (!this.context) {
-      return this.loadContext();
-    }
-    return this.context;
-  }
-
-  updateContext(updates: Partial<MarketrixChatContext>): void {
-    if (!this.context) {
-      this.loadContext();
-    }
-    const currentContext = this.context as MarketrixChatContext;
-    this.context = { ...currentContext, ...updates };
-    this.saveContext();
-  }
-
-  private isValidChatId(value: string | null | undefined): value is string {
-    return typeof value === 'string' && value.trim() !== '';
-  }
-
-  /** window.name takes priority over localStorage — it persists across page navigations. */
+  /** window.name takes priority over localStorage — it is what survives host-page navigation. */
   getChatId(): string | null {
-    if (typeof window !== 'undefined' && this.isValidChatId(window.name)) {
-      const windowChatId = window.name;
-      const storedChatId = this.getContext().chat_id;
-
-      if (windowChatId !== storedChatId) {
-        this.updateContext({ chat_id: windowChatId });
-      }
-      return windowChatId;
-    }
-
-    return this.getContext().chat_id;
+    const windowChatId = typeof window === 'undefined' ? '' : window.name;
+    if (!windowChatId.trim()) return this.context.chat_id;
+    if (windowChatId !== this.context.chat_id) this.updateContext({ chat_id: windowChatId });
+    return windowChatId;
   }
 
-  setChatId(chatId: string | null): void {
+  setChatId(chatId: string): void {
     this.updateContext({ chat_id: chatId });
-
-    if (typeof window !== 'undefined' && chatId) {
-      window.name = chatId;
-    }
+    if (typeof window !== 'undefined') window.name = chatId;
   }
 
   getConfig(): MarketrixConfig | null {
-    return this.getContext().config;
+    return this.context.config;
   }
 
-  setConfig(config: MarketrixConfig | null): void {
+  setConfig(config: MarketrixConfig): void {
     this.updateContext({ config });
-  }
-
-  hasValidContext(): boolean {
-    const ctx = this.getContext();
-    return ctx.chat_id !== null && ctx.chat_id.length > 0;
   }
 }
 

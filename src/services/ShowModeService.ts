@@ -7,6 +7,9 @@ export interface ShowModeOptions {
   isClickAction?: boolean;
 }
 
+// scroll is capture-phase so the highlight tracks a scrolling container, not just the window.
+const REPOSITION_EVENTS = ['scroll', 'resize', 'touchmove', 'wheel'] as const;
+
 export class ShowModeService {
   private currentPopup: HTMLElement | null = null;
   private currentHighlight: HTMLElement | null = null;
@@ -17,8 +20,6 @@ export class ShowModeService {
   private rejectPromise: ((reason?: unknown) => void) | null = null;
   private clickHandler: ((e: MouseEvent) => void) | null = null;
   private scrollHandler: (() => void) | null = null;
-  private updateHighlightPosition: (() => void) | null = null;
-  private rafId: number | null = null;
   private mutationObserver: MutationObserver | null = null;
   private visibilityCheckInterval: ReturnType<typeof setInterval> | null = null;
 
@@ -63,63 +64,46 @@ export class ShowModeService {
   }
 
   cleanup(): void {
-    if (this.rejectPromise) {
-      this.rejectPromise('Cancelled by cleanup');
-      this.rejectPromise = null;
-    }
-    this.resolvePromise = null;
+    this.takeSettlers().reject?.('Cancelled by cleanup');
 
     if (this.clickHandler) {
       document.removeEventListener('click', this.clickHandler, { capture: true });
       this.clickHandler = null;
     }
     if (this.scrollHandler) {
-      window.removeEventListener('scroll', this.scrollHandler, { capture: true });
-      window.removeEventListener('resize', this.scrollHandler);
-      window.removeEventListener('touchmove', this.scrollHandler);
-      window.removeEventListener('wheel', this.scrollHandler);
+      for (const event of REPOSITION_EVENTS) {
+        window.removeEventListener(event, this.scrollHandler, { capture: true });
+      }
       this.scrollHandler = null;
     }
-    if (this.rafId !== null) {
-      window.cancelAnimationFrame(this.rafId);
-      this.rafId = null;
-    }
 
-    if (this.mutationObserver) {
-      this.mutationObserver.disconnect();
-      this.mutationObserver = null;
-    }
+    this.mutationObserver?.disconnect();
+    this.mutationObserver = null;
 
     if (this.visibilityCheckInterval) {
       clearInterval(this.visibilityCheckInterval);
       this.visibilityCheckInterval = null;
     }
 
-    this.updateHighlightPosition = null;
+    this.currentPopup?.remove();
+    this.currentHighlight?.remove();
+    // A node whose cleanup was interrupted outlives its handle.
+    document.getElementById('marketrix-show-popup')?.remove();
+    document.getElementById('marketrix-show-highlight')?.remove();
 
-    if (this.currentPopup) {
-      this.currentPopup.remove();
-      this.currentPopup = null;
-    }
-    if (this.currentHighlight) {
-      this.currentHighlight.remove();
-      this.currentHighlight = null;
-    }
-
-    const popupById = document.getElementById('marketrix-show-popup');
-    if (popupById) {
-      popupById.remove();
-    }
-    const highlightById = document.getElementById('marketrix-show-highlight');
-    if (highlightById) {
-      highlightById.remove();
-    }
-
+    this.currentPopup = null;
+    this.currentHighlight = null;
     this.currentElement = null;
     this.currentOptions = null;
     this.currentPromise = null;
+  }
+
+  /** Detach both settlers before calling one — the click handler, the Continue button and the two watchdogs race. */
+  private takeSettlers(): { resolve: ((value: boolean) => void) | null; reject: ((reason?: unknown) => void) | null } {
+    const settlers = { resolve: this.resolvePromise, reject: this.rejectPromise };
     this.resolvePromise = null;
     this.rejectPromise = null;
+    return settlers;
   }
 
   private createHighlight(element: HTMLElement): void {
@@ -169,25 +153,21 @@ export class ShowModeService {
   }
 
   private setupPositionUpdates(): void {
-    this.updateHighlightPosition = () => {
+    this.scrollHandler = () => {
       if (!this.currentElement || !this.currentHighlight) return;
       const rect = this.currentElement.getBoundingClientRect();
-      this.currentHighlight.style.top = `${rect.top}px`;
-      this.currentHighlight.style.left = `${rect.left}px`;
-      this.currentHighlight.style.width = `${rect.width}px`;
-      this.currentHighlight.style.height = `${rect.height}px`;
+      Object.assign(this.currentHighlight.style, {
+        top: `${rect.top}px`,
+        left: `${rect.left}px`,
+        width: `${rect.width}px`,
+        height: `${rect.height}px`,
+      });
       this.updatePopupPosition();
     };
 
-    this.scrollHandler = () => {
-      if (this.rafId !== null) window.cancelAnimationFrame(this.rafId);
-      this.updateHighlightPosition?.();
-    };
-
-    window.addEventListener('scroll', this.scrollHandler, { capture: true, passive: true });
-    window.addEventListener('resize', this.scrollHandler, { passive: true });
-    window.addEventListener('touchmove', this.scrollHandler, { passive: true });
-    window.addEventListener('wheel', this.scrollHandler, { passive: true });
+    for (const event of REPOSITION_EVENTS) {
+      window.addEventListener(event, this.scrollHandler, { capture: true, passive: true });
+    }
   }
 
   private updatePopupPosition(): void {
@@ -252,11 +232,7 @@ export class ShowModeService {
         e.preventDefault();
         e.stopPropagation();
 
-        console.log('[ShowModeService] Click detected on element, resolving promise');
-        const resolve = this.resolvePromise;
-        this.resolvePromise = null;
-        this.rejectPromise = null;
-        resolve(true);
+        this.takeSettlers().resolve?.(true);
       }
     };
 
@@ -265,19 +241,10 @@ export class ShowModeService {
 
   private setupContinueButton(popup: HTMLElement): void {
     window.requestAnimationFrame(() => {
-      const btn = popup.querySelector('#marketrix-show-continue') as HTMLButtonElement;
-      if (btn) {
-        btn.addEventListener('click', e => {
-          e.stopPropagation();
-          if (this.resolvePromise) {
-            console.log('[ShowModeService] Continue clicked, resolving promise immediately');
-            const resolve = this.resolvePromise;
-            this.resolvePromise = null;
-            this.rejectPromise = null;
-            resolve(true);
-          }
-        });
-      }
+      popup.querySelector('#marketrix-show-continue')?.addEventListener('click', e => {
+        e.stopPropagation();
+        this.takeSettlers().resolve?.(true);
+      });
     });
   }
 
@@ -310,13 +277,7 @@ export class ShowModeService {
   }
 
   private failWithElementGone(reason: string): void {
-    console.log(`[ShowModeService] Element gone: ${reason}`);
-    if (this.rejectPromise) {
-      const reject = this.rejectPromise;
-      this.rejectPromise = null;
-      this.resolvePromise = null;
-      reject(new Error(`ELEMENT_GONE: ${reason}`));
-    }
+    this.takeSettlers().reject?.(new Error(`ELEMENT_GONE: ${reason}`));
     this.cleanup();
   }
 

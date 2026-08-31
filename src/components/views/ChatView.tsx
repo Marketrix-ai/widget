@@ -57,27 +57,12 @@ export interface ChatViewProps {
   messageInputRef?: React.RefObject<HTMLTextAreaElement | null>;
 }
 
-const MODE_ICON_MAP: Record<InstructionType, ChatInputMode['icon']> = {
-  show: 'mousePointerClick',
-  tell: 'chatBubble',
-  do: 'ticktick',
-};
-
-const ORDERED_MODES: InstructionType[] = ['tell', 'show', 'do'];
-
-function getEnabledModes(
-  settings: MarketrixConfig & {
-    widget_feature_show?: boolean;
-    widget_feature_tell?: boolean;
-    widget_feature_do?: boolean;
-  },
-) {
-  return [
-    ...(settings.widget_feature_show ? ['show' as const] : []),
-    ...(settings.widget_feature_tell ? ['tell' as const] : []),
-    ...(settings.widget_feature_do ? ['do' as const] : []),
-  ];
-}
+// Display order, and the setting that enables each.
+const MODES: Array<{ id: InstructionType; icon: ChatInputMode['icon']; flag: keyof MarketrixConfig }> = [
+  { id: 'tell', icon: 'chatBubble', flag: 'widget_feature_tell' },
+  { id: 'show', icon: 'mousePointerClick', flag: 'widget_feature_show' },
+  { id: 'do', icon: 'ticktick', flag: 'widget_feature_do' },
+];
 
 export const ChatView: React.FC<ChatViewProps> = ({
   config,
@@ -139,26 +124,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
   const handleModeChange = (mode: InstructionType) => {
     if (mode === currentMode) return;
-    const modeDisplayNames: Record<InstructionType, string> = {
-      show: 'Show',
-      tell: 'Tell',
-      do: 'Do',
-    };
-    const systemMessage = createSystemMessage(
-      `Switched to ${modeDisplayNames[mode]} mode`,
-      mode,
-      'agent',
-      'mode-change',
-    );
-    onAddMessage(systemMessage);
+    onAddMessage(createSystemMessage(`Switched to ${getModeDisplayName(mode)} mode`, mode, 'agent', 'mode-change'));
     onSetMode(mode);
-  };
-
-  const settings = config as MarketrixConfig & {
-    widget_greeting?: string;
-    widget_feature_show?: boolean;
-    widget_feature_tell?: boolean;
-    widget_feature_do?: boolean;
   };
 
   return (
@@ -201,10 +168,10 @@ export const ChatView: React.FC<ChatViewProps> = ({
           value={inputValue}
           onChange={setInputValue}
           onSubmit={handleSendMessage}
-          modes={ORDERED_MODES.filter(m => getEnabledModes(settings).includes(m)).map(m => ({
-            id: m,
-            icon: MODE_ICON_MAP[m],
-            label: getModeDisplayName(m),
+          modes={MODES.filter(({ flag }) => config[flag]).map(({ id, icon }) => ({
+            id,
+            icon,
+            label: getModeDisplayName(id),
           }))}
           activeMode={currentMode}
           onModeChange={mode => handleModeChange(mode as InstructionType)}

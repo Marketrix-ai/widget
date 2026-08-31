@@ -1,4 +1,5 @@
 import { sdk, type WidgetCommand, type WidgetEvent } from '../sdk';
+import { storageService } from './StorageService';
 
 export type StreamStatus = 'disconnected' | 'connecting' | 'connected' | 'registered' | 'error';
 
@@ -20,7 +21,6 @@ export class StreamClient {
   private reconnectDelay = 1000;
   private readonly maxReconnectDelay = 30000;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-  private config?: { mtxId?: string; mtxKey?: string; mtxApp?: number };
   private connectionId = 0;
   // Per-tab identity: tabs share the localStorage chat_id, so the server keys SSE by (chat_id, tab_id) to stop tabs evicting each other's stream.
   private readonly tabId = globalThis.crypto.randomUUID();
@@ -52,7 +52,7 @@ export class StreamClient {
     await new Promise<void>((resolve, reject) => this.registrationWaiters.add({ resolve, reject }));
   }
 
-  async connect(chatId: string, config?: { mtxId?: string; mtxKey?: string; mtxApp?: number }): Promise<void> {
+  async connect(chatId: string): Promise<void> {
     if (this.isIntentionallyDisconnected) {
       this.isIntentionallyDisconnected = false;
     }
@@ -70,9 +70,6 @@ export class StreamClient {
     }
 
     this.chatId = chatId;
-    if (config) {
-      this.config = config;
-    }
     this.setStatus('connecting');
     const myConnectionId = ++this.connectionId;
 
@@ -80,10 +77,12 @@ export class StreamClient {
     const signal = this.abortController.signal;
 
     try {
+      // Read at connect time, not captured at init: a reconnect after updateMarketrixConfig must use the current credentials.
+      const { mtxId, mtxKey } = storageService.getConfig() ?? {};
       const streamInput: Record<string, unknown> = { chat_id: chatId, tab_id: this.tabId };
-      if (this.config?.mtxId && this.config?.mtxKey) {
-        streamInput.marketrix_id = this.config.mtxId;
-        streamInput.marketrix_key = this.config.mtxKey;
+      if (mtxId && mtxKey) {
+        streamInput.marketrix_id = mtxId;
+        streamInput.marketrix_key = mtxKey;
       }
 
       type WidgetStreamInput = {
@@ -213,7 +212,7 @@ export class StreamClient {
     );
     this.reconnectTimer = setTimeout(() => {
       if (!this.isIntentionallyDisconnected && this.chatId) {
-        this.connect(this.chatId, this.config).catch(console.error);
+        this.connect(this.chatId).catch(console.error);
       }
     }, delay);
   }

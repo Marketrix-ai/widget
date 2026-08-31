@@ -21,6 +21,12 @@ export const VideoStreamDisplay: React.FC<VideoStreamDisplayProps> = ({ stream }
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
 
+  // A superseded play() rejects with AbortError; nothing can act on it, but an unhandled rejection is noisy.
+  const discardPendingPlay = () => {
+    playPromiseRef.current?.catch(() => undefined);
+    playPromiseRef.current = null;
+  };
+
   useEffect(() => {
     if (videoRef.current && stream) {
       const video = videoRef.current;
@@ -28,13 +34,7 @@ export const VideoStreamDisplay: React.FC<VideoStreamDisplayProps> = ({ stream }
       setIsLoaded(false);
       setHasError(false);
 
-      if (playPromiseRef.current) {
-        playPromiseRef.current.catch(() => {
-          // ignore errors from cancelled play requests
-        });
-        playPromiseRef.current = null;
-      }
-
+      discardPendingPlay();
       video.srcObject = stream;
 
       const handleLoadedMetadata = () => {
@@ -72,12 +72,7 @@ export const VideoStreamDisplay: React.FC<VideoStreamDisplayProps> = ({ stream }
     }
 
     return () => {
-      if (playPromiseRef.current) {
-        playPromiseRef.current.catch(() => {
-          // ignore errors from cancelled play requests
-        });
-        playPromiseRef.current = null;
-      }
+      discardPendingPlay();
       if (videoRef.current) {
         videoRef.current.srcObject = null;
       }
@@ -111,7 +106,6 @@ export const VideoStreamDisplay: React.FC<VideoStreamDisplayProps> = ({ stream }
             borderRadius: OVERLAY_BORDER_RADIUS,
             zIndex: 10,
             transition: 'opacity 300ms',
-            opacity: isLoaded ? 0 : 1,
           }}
         >
           <Flex direction='column' align='center' gap='md'>

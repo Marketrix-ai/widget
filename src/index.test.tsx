@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { initWidget, MarketrixWidget, mountWidget, unmountWidget } from './index';
 import { WidgetSettingsDataSchema } from './sdk';
-import { configManager } from './services/ConfigManager';
+import { storageService } from './services/StorageService';
 import { StreamClient } from './services/StreamClient';
 import * as WidgetService from './services/WidgetService';
 import { getMockWidgetConfig } from './test/fixtures';
@@ -126,7 +126,7 @@ describe('public widget lifecycle', () => {
 
   it('refreshes preview configuration when credentials and API host change', async () => {
     const settings = WidgetSettingsDataSchema.parse(getMockWidgetConfig());
-    const saveConfig = vi.spyOn(configManager, 'saveConfig');
+    const saveConfig = vi.spyOn(storageService, 'setConfig');
     const container = document.createElement('div');
     document.body.appendChild(container);
 
