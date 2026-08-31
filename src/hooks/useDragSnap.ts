@@ -48,11 +48,12 @@ export function useDragSnap({
   const velocityHistoryRef = useRef<Array<{ x: number; y: number; t: number }>>([]);
   const lastVelocitySampleRef = useRef(0);
 
-  React.useEffect(() => {
-    return () => {
-      if (rafRef.current !== null) window.cancelAnimationFrame(rafRef.current);
-    };
-  }, []);
+  const cancelRaf = () => {
+    if (rafRef.current !== null) window.cancelAnimationFrame(rafRef.current);
+    rafRef.current = null;
+  };
+
+  React.useEffect(() => cancelRaf, []);
 
   React.useEffect(() => {
     if (isPreviewMode) return;
@@ -95,10 +96,7 @@ export function useDragSnap({
   };
 
   const resetDragStyles = () => {
-    if (rafRef.current !== null) {
-      window.cancelAnimationFrame(rafRef.current);
-      rafRef.current = null;
-    }
+    cancelRaf();
     if (wrapperRef.current) {
       wrapperRef.current.style.transform = '';
       wrapperRef.current.style.willChange = '';
@@ -144,10 +142,7 @@ export function useDragSnap({
         setIsDragging(false);
         return;
       }
-      if (rafRef.current !== null) {
-        window.cancelAnimationFrame(rafRef.current);
-        rafRef.current = null;
-      }
+      cancelRaf();
       const wrapper = wrapperRef.current;
       const oldAnchor = getAnchorTopLeft(position, vw, vh, wrapperSize.w, wrapperSize.h);
       const newAnchor = getAnchorTopLeft(nextCorner, vw, vh, wrapperSize.w, wrapperSize.h);
@@ -175,6 +170,13 @@ export function useDragSnap({
       wrapperRef,
     ],
   );
+
+  const endDrag = (event: React.PointerEvent<HTMLButtonElement>) => {
+    resetDragStyles();
+    dragRef.current = null;
+    setIsDragging(false);
+    event.currentTarget.releasePointerCapture(event.pointerId);
+  };
 
   const onPointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
     dragRef.current = {
@@ -240,20 +242,17 @@ export function useDragSnap({
       const projY = projectVelocity(v.y);
       const projected = { dx: drag.lastX + projX, dy: drag.lastY + projY };
 
-      let nextCorner: WidgetPosition;
-      if (typeof window !== 'undefined' && wrapperRef.current) {
-        const rect = wrapperRef.current.getBoundingClientRect();
-        nextCorner = getNearestCornerByTranslation(
-          projected,
-          position,
-          window.innerWidth,
-          window.innerHeight,
-          rect.width,
-          rect.height,
-        );
-      } else {
-        nextCorner = position;
-      }
+      const rect = wrapperRef.current?.getBoundingClientRect();
+      const nextCorner = rect
+        ? getNearestCornerByTranslation(
+            projected,
+            position,
+            window.innerWidth,
+            window.innerHeight,
+            rect.width,
+            rect.height,
+          )
+        : position;
 
       snapToCorner(nextCorner, drag.lastX, drag.lastY);
       suppressUntilRef.current = Date.now() + 600;
@@ -261,19 +260,12 @@ export function useDragSnap({
       event.currentTarget.releasePointerCapture(event.pointerId);
       return;
     }
-    resetDragStyles();
-    dragRef.current = null;
-    setIsDragging(false);
-    event.currentTarget.releasePointerCapture(event.pointerId);
+    endDrag(event);
   };
 
   const onPointerCancel = (event: React.PointerEvent<HTMLButtonElement>) => {
-    const drag = dragRef.current;
-    if (drag?.pointerId !== event.pointerId) return;
-    resetDragStyles();
-    dragRef.current = null;
-    setIsDragging(false);
-    event.currentTarget.releasePointerCapture(event.pointerId);
+    if (dragRef.current?.pointerId !== event.pointerId) return;
+    endDrag(event);
   };
 
   return {
