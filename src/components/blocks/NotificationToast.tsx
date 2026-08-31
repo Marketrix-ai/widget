@@ -14,13 +14,6 @@ import { Text } from '../base/Text';
 
 const AUTO_DISMISS_MS = 8000;
 
-function getPositionStyle(position: 'bottom-center' | 'above-fab'): React.CSSProperties {
-  if (position === 'above-fab') {
-    return { bottom: '90px', left: '50%', transform: 'translateX(-50%)' };
-  }
-  return { bottom: '20px', left: '50%', transform: 'translateX(-50%)' };
-}
-
 export interface NotificationToastProps {
   tone: 'info' | 'error';
   title: string;
@@ -62,7 +55,9 @@ export const NotificationToast: React.FC<NotificationToastProps> = ({
         opacity: isExiting ? 0 : 1,
         transition: 'opacity 0.3s ease-out',
         animation: isExiting ? 'none' : 'fadeIn 0.3s ease-out',
-        ...getPositionStyle(position),
+        bottom: position === 'above-fab' ? '90px' : '20px',
+        left: '50%',
+        transform: 'translateX(-50%)',
       }}
     >
       <Flex
