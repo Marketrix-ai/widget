@@ -140,10 +140,10 @@ export class DomService {
     return { isValid: true };
   }
 
-  indexInteractableElements(): Array<[number, Element]> {
+  private indexInteractableElements(): void {
     if (this.indexingInProgress) {
       console.warn('[DomService] Indexing already in progress, skipping concurrent call');
-      return [];
+      return;
     }
 
     try {
@@ -183,7 +183,6 @@ export class DomService {
 
       let node: Node | null = walker.nextNode();
       let sequenceNumber = 0;
-      const indexedElements: Array<[number, Element]> = [];
 
       while (node) {
         if (node instanceof HTMLElement) {
@@ -205,7 +204,6 @@ export class DomService {
             const fingerprint = this.generateFingerprint(node, selector);
             this.fingerprintMap.set(sequenceNumber, fingerprint);
 
-            indexedElements.push([sequenceNumber, node]);
             sequenceNumber++;
           }
         }
@@ -216,8 +214,6 @@ export class DomService {
       this.indexVersion++;
 
       console.log(`[DomService] Indexed ${sequenceNumber} elements (version ${this.indexVersion})`);
-
-      return indexedElements;
     } finally {
       this.indexingInProgress = false;
     }
@@ -243,56 +239,17 @@ export class DomService {
 
   private isStackingContext(element: HTMLElement): boolean {
     const style = window.getComputedStyle(element);
-
-    const position = style.position;
-    if (
-      (position === 'fixed' || position === 'absolute' || position === 'relative' || position === 'sticky') &&
-      style.zIndex !== 'auto'
-    ) {
-      return true;
-    }
-
-    if (style.zIndex !== 'auto' && element.parentElement) {
-      const parentStyle = window.getComputedStyle(element.parentElement);
-      const parentDisplay = parentStyle.display;
-      if (
-        parentDisplay === 'flex' ||
-        parentDisplay === 'inline-flex' ||
-        parentDisplay === 'grid' ||
-        parentDisplay === 'inline-grid'
-      ) {
-        return true;
-      }
-    }
-
-    const opacity = parseFloat(style.opacity);
-    if (!isNaN(opacity) && opacity < 1) {
-      return true;
-    }
-
-    if (style.transform && style.transform !== 'none') {
-      return true;
-    }
-
-    if (style.filter && style.filter !== 'none') {
-      return true;
-    }
-
-    const willChange = style.willChange;
-    if (willChange && (willChange.includes('transform') || willChange.includes('opacity'))) {
-      return true;
-    }
-
-    if (style.isolation === 'isolate') {
-      return true;
-    }
-
-    const contain = style.contain;
-    if (contain && (contain.includes('layout') || contain.includes('style') || contain.includes('paint'))) {
-      return true;
-    }
-
-    return false;
+    const parentDisplay = element.parentElement ? window.getComputedStyle(element.parentElement).display : '';
+    return (
+      (['fixed', 'absolute', 'relative', 'sticky'].includes(style.position) && style.zIndex !== 'auto') ||
+      (style.zIndex !== 'auto' && ['flex', 'inline-flex', 'grid', 'inline-grid'].includes(parentDisplay)) ||
+      parseFloat(style.opacity) < 1 ||
+      (!!style.transform && style.transform !== 'none') ||
+      (!!style.filter && style.filter !== 'none') ||
+      /transform|opacity/.test(style.willChange) ||
+      style.isolation === 'isolate' ||
+      /layout|style|paint/.test(style.contain)
+    );
   }
 
   private calculateGlobalZOrder(element: HTMLElement): number {
@@ -347,37 +304,20 @@ export class DomService {
 
     // Match into the clone by selector — a synced two-tree walk breaks on modals and fixed elements.
     for (const [index, element] of this.elementMap.entries()) {
-      if (element instanceof HTMLElement) {
-        const selector = this.selectorMap.get(index);
-        if (selector) {
-          try {
-            const cloneBody = clone.querySelector('body') || clone;
-            const cloneElement = cloneBody.querySelector(selector);
-            if (cloneElement) {
-              cloneElement.setAttribute('data-id', index.toString());
+      const selector = this.selectorMap.get(index);
+      if (!(element instanceof HTMLElement) || !selector) continue;
+      try {
+        const cloneElement = (clone.querySelector('body') || clone).querySelector(selector);
+        if (!cloneElement) continue;
+        cloneElement.setAttribute('data-id', index.toString());
 
-              const style = window.getComputedStyle(element);
-              const isDisplayNone = style.display === 'none';
-
-              if (isDisplayNone) {
-                cloneElement.setAttribute('data-x', '0');
-                cloneElement.setAttribute('data-y', '0');
-                cloneElement.setAttribute('data-w', '0');
-                cloneElement.setAttribute('data-h', '0');
-                cloneElement.setAttribute('data-z', '0');
-              } else {
-                const coords = this.getElementCoordinates(element);
-                cloneElement.setAttribute('data-x', coords.x.toString());
-                cloneElement.setAttribute('data-y', coords.y.toString());
-                cloneElement.setAttribute('data-w', coords.w.toString());
-                cloneElement.setAttribute('data-h', coords.h.toString());
-                cloneElement.setAttribute('data-z', coords.z.toString());
-              }
-            }
-          } catch (e) {
-            console.warn(`[DomService] Failed to apply data attributes for index ${index}:`, e);
-          }
+        const hidden = window.getComputedStyle(element).display === 'none';
+        const coords = hidden ? { x: 0, y: 0, w: 0, h: 0, z: 0 } : this.getElementCoordinates(element);
+        for (const [key, value] of Object.entries(coords)) {
+          cloneElement.setAttribute(`data-${key}`, value.toString());
         }
+      } catch (e) {
+        console.warn(`[DomService] Failed to apply data attributes for index ${index}:`, e);
       }
     }
 
@@ -388,13 +328,14 @@ export class DomService {
     return this.elementToSequence.get(element);
   }
 
-  clearIndex(): void {
+  private clearIndex(): void {
     this.elementMap.clear();
     this.elementToSequence = new WeakMap();
+    this.selectorMap.clear();
     this.fingerprintMap.clear();
   }
 
-  private checkInteractability(element: HTMLElement, index: number): string | null {
+  checkElementInteractable(element: HTMLElement, index: number): string | null {
     if (!document.body.contains(element)) {
       return `ELEMENT_NOT_INTERACTABLE: Element ${index} is not in the DOM`;
     }
@@ -441,10 +382,6 @@ export class DomService {
     return null;
   }
 
-  checkElementInteractable(element: HTMLElement, index: number): string | null {
-    return this.checkInteractability(element, index);
-  }
-
   getValidatedElement(index: number): ValidatedElementResult {
     const validation = this.validateElementAtIndex(index);
 
@@ -461,7 +398,7 @@ export class DomService {
       return { element: null, error: `Element ${index} not found` };
     }
 
-    const interactError = this.checkInteractability(element, index);
+    const interactError = this.checkElementInteractable(element, index);
     if (interactError) {
       return { element: null, error: interactError };
     }
