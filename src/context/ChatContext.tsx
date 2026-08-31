@@ -1,7 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { WidgetEvent } from '../sdk';
-import { getChatId, messageDispatch as dispatchMessage } from '../services/ApiService';
+import { messageDispatch as dispatchMessage } from '../services/ApiService';
 import { browserToolService } from '../services/BrowserToolService';
 import { createAgentMessage, createUserMessage } from '../services/ChatService';
 import { storageService } from '../services/StorageService';
@@ -173,26 +173,10 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
       uiActions.setLoading(true);
 
       try {
-        const chatId = getChatId();
-        if (chatId) {
-          const streamClient = StreamClient.getInstance();
-          if (!streamClient.isConnected()) {
-            const streamConfig = storageService.getConfig();
-            try {
-              await streamClient.connect(
-                chatId,
-                streamConfig
-                  ? {
-                      mtxId: streamConfig.mtxId,
-                      mtxKey: streamConfig.mtxKey,
-                      mtxApp: streamConfig.mtxApp,
-                    }
-                  : undefined,
-              );
-            } catch (err) {
-              console.error('Stream connection failed:', err);
-            }
-          }
+        const chatId = storageService.getChatId();
+        const streamClient = StreamClient.getInstance();
+        if (chatId && !streamClient.isConnected()) {
+          await streamClient.connect(chatId).catch(err => console.error('Stream connection failed:', err));
         }
 
         await dispatchMessage(config, {

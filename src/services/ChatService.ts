@@ -1,140 +1,54 @@
 import type { ChatMessage, InstructionType } from '../types';
 import { removeThinkingMarkers } from '../utils/chat';
-import { storageService } from './StorageService';
+import { type ChatSnapshot, storageService, type StoredMessage } from './StorageService';
 
-export interface ChatSnapshot {
-  messages: ChatMessage[];
-  isTaskRunning: boolean;
-  activeTaskId: string | null;
-  currentMode: InstructionType;
-  isOpen: boolean;
-  isMinimized: boolean;
-  isLoading: boolean;
-}
-
-export class ChatService {
-  private chatId: string | null = null;
-  initError: Error | null = null;
-
-  initialize(chatId: string | null): void {
-    this.chatId = chatId;
-  }
-
-  createInitialContext(chatId: string): void {
-    try {
-      if (storageService.hasValidContext()) {
-        return;
-      }
-
-      storageService.updateContext({
-        chat_id: chatId,
-        messages: [],
-        isTaskRunning: false,
-        activeTaskId: null,
-        currentMode: 'tell',
-        isOpen: false,
-        isMinimized: false,
-        isLoading: false,
-      });
-    } catch (error) {
-      console.error('[ChatService] Failed to create initial chat context:', error);
-      this.initError = error instanceof Error ? error : new Error(String(error));
-    }
-  }
-
-  getInitError(): Error | null {
-    return this.initError;
-  }
-
-  restore(): ChatSnapshot {
-    const context = storageService.getContext();
-
-    const messages: ChatMessage[] = context.chat_id
-      ? context.messages.map(msg => {
-          // A MediaStream can't survive a reload, so a restored screenshare becomes an "ended" notice.
-          if (msg.id.startsWith('screenshare-')) {
-            return {
-              ...msg,
-              content: 'Screenshare ended',
-              videoStream: undefined,
-              isSystemMessage: true,
-              timestamp: new Date(msg.timestamp),
-              parts: [{ type: 'text', content: 'Screenshare ended' }],
-            };
-          }
-
-          const restoredMsg: ChatMessage = {
-            ...msg,
-            timestamp: new Date(msg.timestamp),
-            videoStream: undefined,
-            placeholderState: msg.placeholderState,
-            taskStatus: msg.taskStatus,
-            parts: msg.parts || [],
-          };
-
-          if (restoredMsg.parts?.length === 0 && restoredMsg.content) {
-            const cleanContent = restoredMsg.content.replace(/\n\n__THINKING__$/, '').trim();
-            if (cleanContent && restoredMsg.parts) {
-              restoredMsg.parts.push({ type: 'text', content: cleanContent });
-            }
-          }
-
-          return restoredMsg;
-        })
-      : [];
-
+function reviveMessage(msg: StoredMessage): ChatMessage {
+  // A MediaStream can't survive a reload, so a restored screenshare becomes an "ended" notice.
+  if (msg.id.startsWith('screenshare-')) {
+    const content = 'Screenshare ended';
     return {
-      messages,
-      isTaskRunning: context.isTaskRunning,
-      activeTaskId: context.activeTaskId,
-      currentMode: context.currentMode,
-      isOpen: context.isOpen,
-      isMinimized: context.isMinimized,
-      isLoading: context.isLoading ?? false,
+      ...msg,
+      content,
+      isSystemMessage: true,
+      timestamp: new Date(msg.timestamp),
+      parts: [{ type: 'text', content }],
     };
   }
 
+  const parts = [...(msg.parts ?? [])];
+  const text = msg.content.replace(/\n\n__THINKING__$/, '').trim();
+  if (parts.length === 0 && text) parts.push({ type: 'text', content: text });
+  return { ...msg, timestamp: new Date(msg.timestamp), parts };
+}
+
+function serializeMessage({ videoStream: _videoStream, ...msg }: ChatMessage): StoredMessage {
+  return { ...msg, content: removeThinkingMarkers(msg.content), timestamp: msg.timestamp.toISOString() };
+}
+
+/** A placeholder with nothing to show yet would restore as a permanently empty bubble. */
+function isPersistable(msg: ChatMessage): boolean {
+  if (!msg.isPlaceholder) return true;
+  return (
+    msg.placeholderState === 'thinking' || msg.placeholderState === 'waiting-for-user' || (msg.parts?.length ?? 0) > 0
+  );
+}
+
+export class ChatService {
+  private restored = false;
+
+  restore(): ChatSnapshot {
+    const { chat_id: _chatId, config: _config, timestamp: _timestamp, messages, ...rest } = storageService.getContext();
+    this.restored = true;
+    return { ...rest, messages: messages.map(reviveMessage) };
+  }
+
   persist(snapshot: ChatSnapshot): void {
-    if (!this.chatId) return;
-
-    try {
-      const serializedMessages = snapshot.messages
-        .filter(msg => {
-          if (!msg.isPlaceholder) return true;
-          if (msg.placeholderState === 'thinking' || msg.placeholderState === 'waiting-for-user') {
-            return true;
-          }
-          return (msg.parts || []).length > 0;
-        })
-        .filter(msg => !(msg.isSystemMessage && msg.content === 'Chat context changed'))
-        .map(msg => ({
-          id: msg.id,
-          content: removeThinkingMarkers(msg.content),
-          sender: msg.sender,
-          timestamp: msg.timestamp.toISOString(),
-          mode: msg.mode,
-          isScreenAccessRequest: msg.isScreenAccessRequest,
-          screenShareStatus: msg.screenShareStatus,
-          isSystemMessage: msg.isSystemMessage,
-          isPlaceholder: msg.isPlaceholder,
-          placeholderState: msg.placeholderState,
-          taskStatus: msg.taskStatus,
-          parts: msg.parts,
-        }));
-
-      storageService.updateContext({
-        chat_id: this.chatId,
-        messages: serializedMessages,
-        isTaskRunning: snapshot.isTaskRunning,
-        activeTaskId: snapshot.activeTaskId,
-        currentMode: snapshot.currentMode,
-        isOpen: snapshot.isOpen,
-        isMinimized: snapshot.isMinimized,
-        isLoading: snapshot.isLoading,
-      });
-    } catch (error) {
-      console.warn('[ChatService] Failed to persist state:', error);
-    }
+    // The mount-time render fires before restore() lands; persisting then would write [] over the stored messages.
+    if (!this.restored) return;
+    storageService.updateContext({
+      ...snapshot,
+      messages: snapshot.messages.filter(isPersistable).map(serializeMessage),
+    });
   }
 }
 
