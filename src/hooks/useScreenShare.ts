@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useImperativeHandle, useRef, useState } from 'react';
 
 import type { InstructionType } from '../sdk';
 import {
@@ -12,6 +12,13 @@ import {
   stopScreenShare,
 } from '../services/ScreenShareService';
 import type { ChatMessage } from '../types';
+
+/** Keeps a value readable from a callback that must not be re-created (the polling interval, mounted once). */
+function useLatest<T>(value: T): React.RefObject<T> {
+  const ref = useRef(value);
+  ref.current = value;
+  return ref;
+}
 
 export interface PendingMessage {
   content: string;
@@ -57,32 +64,20 @@ export function useScreenShare({
   const [screenAccessRequestMessageId, setScreenAccessRequestMessageId] = useState<string | null>(null);
   const [showScreenAccessDialog, setShowScreenAccessDialog] = useState(false);
 
-  const wasSharingRef = useRef(isScreenSharing);
-  const screenShareMessageIdRef = useRef(screenShareMessageId);
-  const onAddMessageRef = useRef(onAddMessage);
-  const onRemoveMessageRef = useRef(onRemoveMessage);
-  const onScreenSharingChangeRef = useRef(onScreenSharingChange);
+  const wasSharingRef = useLatest(isScreenSharing);
+  const screenShareMessageIdRef = useLatest(screenShareMessageId);
+  const onAddMessageRef = useLatest(onAddMessage);
+  const onRemoveMessageRef = useLatest(onRemoveMessage);
+  const onScreenSharingChangeRef = useLatest(onScreenSharingChange);
 
-  useEffect(() => {
-    wasSharingRef.current = isScreenSharing;
-  }, [isScreenSharing]);
+  const announceStopped = (messageId: string | null) => {
+    if (messageId) onRemoveMessageRef.current?.(messageId);
+    onAddMessageRef.current(createSystemMessage('Stopped screenshare', 'show', 'user', 'stopped-sharing'));
+    setScreenShareMessageId(null);
+  };
+  const announceStoppedRef = useLatest(announceStopped);
 
-  useEffect(() => {
-    screenShareMessageIdRef.current = screenShareMessageId;
-  }, [screenShareMessageId]);
-
-  useEffect(() => {
-    onAddMessageRef.current = onAddMessage;
-  }, [onAddMessage]);
-
-  useEffect(() => {
-    onRemoveMessageRef.current = onRemoveMessage;
-  }, [onRemoveMessage]);
-
-  useEffect(() => {
-    onScreenSharingChangeRef.current = onScreenSharingChange;
-  }, [onScreenSharingChange]);
-
+  // The user can end the share from the browser's own UI, which fires no event we can subscribe to.
   useEffect(() => {
     const checkScreenSharing = () => {
       const isSharing = isScreenSharingActive();
@@ -94,10 +89,7 @@ export function useScreenShare({
         onScreenSharingChangeRef.current?.(isSharing);
       }
       if (wasSharing && !isSharing && currentMessageId) {
-        onRemoveMessageRef.current?.(currentMessageId);
-        const stoppedMessage = createSystemMessage('Stopped screenshare', 'show', 'user', 'stopped-sharing');
-        onAddMessageRef.current(stoppedMessage);
-        setScreenShareMessageId(null);
+        announceStoppedRef.current(currentMessageId);
       }
     };
     checkScreenSharing();
@@ -168,22 +160,11 @@ export function useScreenShare({
     stopScreenShare();
     setIsScreenSharing(false);
     onScreenSharingChange?.(false);
-    if (screenShareMessageId && onRemoveMessage) {
-      onRemoveMessage(screenShareMessageId);
-    }
-    const stoppedMessage = createSystemMessage('Stopped screenshare', 'show', 'user', 'stopped-sharing');
-    onAddMessage(stoppedMessage);
-    setScreenShareMessageId(null);
+    announceStopped(screenShareMessageId);
   };
 
-  useEffect(() => {
-    if (onStartScreenShareRef) onStartScreenShareRef.current = handleStartScreenShare;
-    if (onStopScreenShareRef) onStopScreenShareRef.current = stopScreenSharing;
-    return () => {
-      if (onStartScreenShareRef) onStartScreenShareRef.current = null;
-      if (onStopScreenShareRef) onStopScreenShareRef.current = null;
-    };
-  });
+  useImperativeHandle(onStartScreenShareRef, () => handleStartScreenShare);
+  useImperativeHandle(onStopScreenShareRef, () => stopScreenSharing);
 
   return {
     isScreenSharing,
