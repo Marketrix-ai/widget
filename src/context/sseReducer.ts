@@ -1,5 +1,5 @@
 import type { WidgetEvent } from '../sdk';
-import type { ChatMessage, InstructionType } from '../types';
+import type { ChatMessage, InstructionType, MessagePart } from '../types';
 import {
   addProgressLine,
   findMessageForProgress,
@@ -111,7 +111,12 @@ export function reduceToolProgress(
   };
 }
 
-export function reduceToolDone(state: SseState, currentMode: InstructionType): SseState {
+/** The four terminal/pause transitions all stamp the progress message and clear the task; only the stamp differs. */
+function stampProgressMessage(
+  state: SseState,
+  currentMode: InstructionType,
+  stamp: (msg: ChatMessage) => ChatMessage,
+): SseState {
   const found = findMessageForProgress({
     messages: state.messages,
     isTaskRunning: state.task.isTaskRunning,
@@ -119,24 +124,34 @@ export function reduceToolDone(state: SseState, currentMode: InstructionType): S
     requireContent: false,
   });
   const messages = [...state.messages];
-  if (found) {
-    messages[found.index] = { ...found.message, taskStatus: 'done' };
-  }
+  if (found) messages[found.index] = stamp(found.message);
   return { messages, task: { isTaskRunning: false, activeTaskId: null } };
 }
 
+export function reduceToolDone(state: SseState, currentMode: InstructionType): SseState {
+  return stampProgressMessage(state, currentMode, msg => ({ ...msg, taskStatus: 'done' }));
+}
+
 export function reduceStop(state: SseState, currentMode: InstructionType): SseState {
-  const found = findMessageForProgress({
-    messages: state.messages,
-    isTaskRunning: state.task.isTaskRunning,
-    currentMode,
-    requireContent: false,
+  return stampProgressMessage(state, currentMode, msg => ({ ...msg, taskStatus: 'stopped' }));
+}
+
+const TASK_STATUS = { completed: 'done', failed: 'failed', stopped: 'stopped' } as const;
+
+function reduceText(state: SseState, requestId: string, text: string, streaming: boolean): SseState {
+  const messages = state.messages.map(msg => {
+    if (msg.id !== requestId) return msg;
+    const parts = [...(msg.parts ?? [])];
+    const last = parts[parts.length - 1];
+    // chat/delta fragments accumulate into the open streaming part; the final chat/response replaces it.
+    const isOpenStream = last?.type === 'text' && last.streaming === true;
+    const content = streaming && isOpenStream ? last.content + text : text;
+    const part: MessagePart = { type: 'text', content, ...(streaming && { streaming: true }) };
+    if (isOpenStream) parts[parts.length - 1] = part;
+    else parts.push(part);
+    return { ...msg, content, isPlaceholder: false, placeholderState: undefined, parts };
   });
-  const messages = [...state.messages];
-  if (found) {
-    messages[found.index] = { ...found.message, taskStatus: 'stopped' };
-  }
-  return { messages, task: { isTaskRunning: false, activeTaskId: null } };
+  return { ...state, messages };
 }
 
 export function reduceSse(state: SseState, event: WidgetEvent, currentMode: InstructionType): ReduceResult {
@@ -144,12 +159,10 @@ export function reduceSse(state: SseState, event: WidgetEvent, currentMode: Inst
     case 'tool/call': {
       // A tool/call can arrive before `task/status running`, so activate here too.
       const task = state.task.isTaskRunning ? state.task : { ...state.task, isTaskRunning: true };
-      const isTaskRunning = task.isTaskRunning;
-      const mode = event.mode || currentMode || 'do';
       const explanation = event.explanation || '';
       const messages = applyProgress(
         state.messages,
-        isTaskRunning,
+        task.isTaskRunning,
         currentMode,
         event.browser_tool,
         explanation,
@@ -163,7 +176,7 @@ export function reduceSse(state: SseState, event: WidgetEvent, currentMode: Inst
             toolCallId: event.tool_call_id,
             tool: event.browser_tool,
             args: event.args,
-            mode,
+            mode: event.mode || currentMode || 'do',
             explanation,
           },
         ],
@@ -171,98 +184,46 @@ export function reduceSse(state: SseState, event: WidgetEvent, currentMode: Inst
     }
 
     case 'task/status': {
-      const statusMessage = event.message || '';
       if (event.status === 'running') {
         // Activation is gated on API task_id + agentRunning, tracked in the wiring (pendingTaskRef).
         return noChange(state);
       }
-      if (event.status === 'has_question') {
-        // has_question is a pause, not a terminal status.
-        const found = findMessageForProgress({
-          messages: state.messages,
-          isTaskRunning: state.task.isTaskRunning,
-          currentMode,
-          requireContent: false,
-        });
-        const messages = [...state.messages];
-        if (found) {
-          const cleared = updateThinkingMarker(found.message, false, currentMode);
-          messages[found.index] = {
-            ...cleared,
-            placeholderState: 'waiting-for-user',
-            ...(statusMessage && { content: statusMessage }),
-          };
-        }
-        return { state: { messages, task: { isTaskRunning: false, activeTaskId: null } }, effects: [] };
-      }
-      const found = findMessageForProgress({
-        messages: state.messages,
-        isTaskRunning: state.task.isTaskRunning,
-        currentMode,
-        requireContent: false,
-      });
-      const messages = [...state.messages];
-      if (found) {
-        let taskStatus: 'done' | 'failed' | 'stopped' = 'done';
-        if (event.status === 'failed') taskStatus = 'failed';
-        else if (event.status === 'stopped') taskStatus = 'stopped';
-        messages[found.index] = {
-          ...found.message,
-          taskStatus,
-          ...(statusMessage && { content: statusMessage }),
-        };
-      }
-      return { state: { messages, task: { isTaskRunning: false, activeTaskId: null } }, effects: [] };
+      const content = event.message ? { content: event.message } : {};
+      const status = event.status;
+      // has_question is a pause, not a terminal status.
+      const stamp =
+        status === 'has_question'
+          ? (msg: ChatMessage) => ({
+              ...updateThinkingMarker(msg, false, currentMode),
+              placeholderState: 'waiting-for-user' as const,
+              ...content,
+            })
+          : (msg: ChatMessage) => ({ ...msg, taskStatus: TASK_STATUS[status], ...content });
+      return { state: stampProgressMessage(state, currentMode, stamp), effects: [] };
     }
 
-    case 'chat/delta': {
-      const messages = state.messages.map(msg => {
-        if (msg.id !== event.request_id) return msg;
-        const parts = [...(msg.parts ?? [])];
-        const last = parts[parts.length - 1];
-        let streamed: string;
-        if (last?.type === 'text' && last.streaming) {
-          streamed = last.content + event.text;
-          parts[parts.length - 1] = { ...last, content: streamed };
-        } else {
-          streamed = event.text;
-          parts.push({ type: 'text' as const, content: streamed, streaming: true });
-        }
-        return { ...msg, content: streamed, isPlaceholder: false, placeholderState: undefined, parts };
-      });
-      return { state: { ...state, messages }, effects: [] };
-    }
+    case 'chat/delta':
+      return { state: reduceText(state, event.request_id, event.text, true), effects: [] };
 
-    case 'chat/response': {
-      const messages = state.messages.map(msg => {
-        if (msg.id !== event.request_id) return msg;
-        // Final text replaces the streamed part chat/delta accumulated, else appends its own.
-        const parts = [...(msg.parts ?? [])];
-        const last = parts[parts.length - 1];
-        if (last?.type === 'text' && last.streaming) {
-          parts[parts.length - 1] = { type: 'text' as const, content: event.text };
-        } else {
-          parts.push({ type: 'text' as const, content: event.text });
-        }
-        return {
-          ...msg,
-          content: event.text,
-          isPlaceholder: false,
-          placeholderState: undefined,
-          parts,
-        };
-      });
-      const effects: SseEffect[] = [{ type: 'setLoading', value: false }];
-      return { state: { ...state, messages }, effects };
-    }
+    case 'chat/response':
+      return {
+        state: reduceText(state, event.request_id, event.text, false),
+        effects: [{ type: 'setLoading', value: false }],
+      };
 
     case 'chat/error': {
-      const messages = state.messages.map(msg => {
-        if (msg.id !== event.request_id) return msg;
-        const errorMessage = `Error: ${event.error}`;
-        const newParts = [...(msg.parts ?? []), { type: 'text' as const, content: errorMessage }];
-        return { ...msg, content: errorMessage, isPlaceholder: false, placeholderState: undefined, parts: newParts };
-      });
+      const errorMessage = `Error: ${event.error}`;
+      const messages = state.messages.map(msg =>
+        msg.id !== event.request_id
+          ? msg
+          : {
+              ...msg,
+              content: errorMessage,
+              isPlaceholder: false,
+              placeholderState: undefined,
+              parts: [...(msg.parts ?? []), { type: 'text' as const, content: errorMessage }],
+            },
+      );
       return { state: { ...state, messages }, effects: [{ type: 'setLoading', value: false }] };
     }
 
