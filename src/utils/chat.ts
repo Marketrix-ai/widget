@@ -17,16 +17,6 @@ export function addThinkingMarker(content: string): string {
   return `${content}\n\n__THINKING__`;
 }
 
-function findTaskMessageIndex(messages: ChatMessage[]): number {
-  for (let i = messages.length - 1; i >= 0; i--) {
-    const msg = messages[i];
-    if (msg.sender === 'agent' && !msg.isSystemMessage && !msg.isScreenAccessRequest && !msg.isPlaceholder) {
-      return i;
-    }
-  }
-  return -1;
-}
-
 export interface FindMessageOptions {
   messages: ChatMessage[];
   isTaskRunning: boolean;
@@ -34,136 +24,45 @@ export interface FindMessageOptions {
   requireContent?: boolean;
 }
 
-function matchesProgressCriteria(
-  msg: ChatMessage,
-  isTaskRunning: boolean,
-  currentMode: InstructionType,
-  requireContent: boolean | undefined,
-  checkMode: boolean,
-): boolean {
-  if (msg.sender !== 'agent' || msg.isSystemMessage || msg.isScreenAccessRequest) {
-    return false;
+function lastMatch(messages: ChatMessage[], matches: (msg: ChatMessage) => boolean): number {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    if (matches(messages[i])) return i;
   }
-
-  // Active show/do: require mode match, but stay lenient on placeholders with undefined mode — tool calls can race ahead of the mode being set.
-  if (checkMode && isTaskRunning && (currentMode === 'show' || currentMode === 'do')) {
-    if (msg.isPlaceholder) {
-      if (msg.mode !== undefined && msg.mode !== currentMode) {
-        return false;
-      }
-    } else {
-      if (msg.mode !== currentMode) {
-        return false;
-      }
-    }
-  }
-
-  if (requireContent) {
-    const hasText = msg.content.trim().length > 0;
-    const hasProgress = msg.parts && msg.parts.length > 0;
-    if (!hasText && !hasProgress) {
-      return false;
-    }
-  }
-
-  return true;
+  return -1;
 }
 
-export function findMessageForProgress(options: FindMessageOptions): {
-  index: number;
-  message: ChatMessage;
-} | null {
-  const { messages, isTaskRunning, currentMode, requireContent } = options;
-  let taskMessageIndex = -1;
+/** Ranked predicates: the first rank matching anything wins, and within it the newest message. */
+export function findMessageForProgress({
+  messages,
+  isTaskRunning,
+  currentMode,
+  requireContent,
+}: FindMessageOptions): { index: number; message: ChatMessage } | null {
+  const isAgentReply = (msg: ChatMessage) =>
+    msg.sender === 'agent' && !msg.isSystemMessage && !msg.isScreenAccessRequest;
+  const hasContent = (msg: ChatMessage) =>
+    !requireContent || msg.content.trim().length > 0 || (msg.parts?.length ?? 0) > 0;
+  // Lenient on placeholders with an undefined mode — tool calls can race ahead of the mode being set.
+  const modeMatches = (msg: ChatMessage) =>
+    msg.isPlaceholder ? msg.mode === undefined || msg.mode === currentMode : msg.mode === currentMode;
 
+  const ranked: Array<(msg: ChatMessage) => boolean> = [];
   if (isTaskRunning && (currentMode === 'show' || currentMode === 'do')) {
-    const checkMode = true;
-
-    for (let i = messages.length - 1; i >= 0; i--) {
-      const msg = messages[i];
-      const matchesCriteria = matchesProgressCriteria(msg, isTaskRunning, currentMode, requireContent, checkMode);
-      const isPlaceholder = msg.isPlaceholder;
-      const hasContent = !requireContent || msg.content.trim().length > 0 || (msg.parts && msg.parts.length > 0);
-
-      if (matchesCriteria && isPlaceholder && hasContent) {
-        taskMessageIndex = i;
-        break;
-      }
-    }
-
-    if (taskMessageIndex < 0 && !requireContent) {
-      for (let i = messages.length - 1; i >= 0; i--) {
-        const msg = messages[i];
-        const matchesCriteria = matchesProgressCriteria(msg, isTaskRunning, currentMode, requireContent, checkMode);
-        const isPlaceholder = msg.isPlaceholder;
-
-        if (matchesCriteria && isPlaceholder) {
-          taskMessageIndex = i;
-          break;
-        }
-      }
-    }
-
-    if (taskMessageIndex < 0) {
-      for (let i = messages.length - 1; i >= 0; i--) {
-        const msg = messages[i];
-        const matchesCriteria = matchesProgressCriteria(msg, isTaskRunning, currentMode, requireContent, checkMode);
-        const isPlaceholder = msg.isPlaceholder;
-
-        if (matchesCriteria && !isPlaceholder) {
-          taskMessageIndex = i;
-          break;
-        }
-      }
-    }
+    ranked.push(
+      msg => isAgentReply(msg) && modeMatches(msg) && hasContent(msg) && !!msg.isPlaceholder,
+      msg => isAgentReply(msg) && modeMatches(msg) && hasContent(msg) && !msg.isPlaceholder,
+    );
   }
-
   // Tool calls can arrive before isTaskRunning flips true, so always fall back to a mode-agnostic match.
-  if (taskMessageIndex < 0) {
-    for (let i = messages.length - 1; i >= 0; i--) {
-      const msg = messages[i];
-      const isAgent = msg.sender === 'agent';
-      const isPlaceholder = msg.isPlaceholder;
-      const notSystem = !msg.isSystemMessage;
-      const notScreenAccess = !msg.isScreenAccessRequest;
-      const hasContent = !requireContent || msg.content.trim().length > 0 || (msg.parts && msg.parts.length > 0);
+  ranked.push(
+    msg => isAgentReply(msg) && !!msg.isPlaceholder && hasContent(msg),
+    msg => isAgentReply(msg) && !msg.isPlaceholder,
+    isAgentReply,
+  );
 
-      if (isAgent && isPlaceholder && notSystem && notScreenAccess && hasContent) {
-        taskMessageIndex = i;
-        break;
-      }
-    }
-
-    if (taskMessageIndex < 0 && !requireContent) {
-      for (let i = messages.length - 1; i >= 0; i--) {
-        const msg = messages[i];
-        if (msg.sender === 'agent' && msg.isPlaceholder && !msg.isSystemMessage && !msg.isScreenAccessRequest) {
-          taskMessageIndex = i;
-          break;
-        }
-      }
-    }
-
-    if (taskMessageIndex < 0) {
-      taskMessageIndex = findTaskMessageIndex(messages);
-    }
-
-    if (taskMessageIndex < 0) {
-      for (let i = messages.length - 1; i >= 0; i--) {
-        const msg = messages[i];
-        if (msg.sender === 'agent' && !msg.isSystemMessage && !msg.isScreenAccessRequest) {
-          taskMessageIndex = i;
-          break;
-        }
-      }
-    }
-  }
-
-  if (taskMessageIndex >= 0) {
-    return {
-      index: taskMessageIndex,
-      message: messages[taskMessageIndex],
-    };
+  for (const matches of ranked) {
+    const index = lastMatch(messages, matches);
+    if (index >= 0) return { index, message: messages[index] };
   }
 
   console.warn('[MessageFinder] No message found for progress update', {
