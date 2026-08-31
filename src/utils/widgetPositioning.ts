@@ -15,6 +15,9 @@ const CORNERS = {
 
 const corner = (position: WidgetPosition) => CORNERS[position] ?? CORNERS.bottom_right;
 
+export const isWidgetPosition = (value: unknown): value is WidgetPosition =>
+  typeof value === 'string' && value in CORNERS;
+
 export const getPositionClasses = (position: WidgetPosition): string => corner(position).classes;
 
 export const getPanelPositionStyle = (position: WidgetPosition): React.CSSProperties => {
