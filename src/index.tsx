@@ -11,10 +11,9 @@ import { MarketrixWidget as MarketrixWidgetComponent } from './components/Market
 import { WidgetProviders } from './context/WidgetProviders';
 import { configureSdk, type WidgetSettingsData } from './sdk';
 import { chatSessionManager } from './services/ChatSessionManager';
-import { createConfigFromSettings } from './services/ConfigManager';
 import { RrwebSessionRecorder } from './services/RrwebSessionRecorder';
 import { StreamClient } from './services/StreamClient';
-import { loadWidgetConfig } from './services/WidgetService';
+import { createConfigFromSettings, loadWidgetConfig } from './services/WidgetService';
 import type { AddWidgetConfig, MarketrixConfig, MarketrixWidgetProps } from './types';
 import {
   clearWidgetState,

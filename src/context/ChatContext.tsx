@@ -4,7 +4,7 @@ import type { WidgetEvent } from '../sdk';
 import { getChatId, messageDispatch as dispatchMessage } from '../services/ApiService';
 import { browserToolService } from '../services/BrowserToolService';
 import { createAgentMessage, createUserMessage } from '../services/ChatService';
-import { configManager } from '../services/ConfigManager';
+import { storageService } from '../services/StorageService';
 import { StreamClient, type StreamStatus } from '../services/StreamClient';
 import type { ChatMessage, InstructionType } from '../types';
 import { addThinkingMarker, BROWSER_TOOLS } from '../utils/chat';
@@ -144,8 +144,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
         return;
       }
 
-      let config = configManager.getConfig();
-      if (!config) config = configManager.loadConfig();
+      const config = storageService.getConfig();
 
       if (!config || (!config.mtxId && !config.mtxKey && !config.mtxApp)) {
         console.error('Config not loaded or incomplete');
@@ -178,7 +177,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
         if (chatId) {
           const streamClient = StreamClient.getInstance();
           if (!streamClient.isConnected()) {
-            const streamConfig = configManager.getConfig();
+            const streamConfig = storageService.getConfig();
             try {
               await streamClient.connect(
                 chatId,

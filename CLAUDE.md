@@ -124,7 +124,7 @@ bundles, i.e. the build a browser really loads.
 
 `src/index.tsx` (public entry — see `README.md` for the customer surface) · `src/services/` (stateful
 runtime owners: `StreamClient`, `RrwebSessionRecorder`, `BrowserToolService`, `ShowModeService`,
-`DomService`, `ChatService`, `ChatSessionManager`, `StorageService`, `ConfigManager`,
+`DomService`, `ChatService`, `ChatSessionManager`, `StorageService`,
 `ScreenShareService`, plus stateless functions) · `src/components/` (`Surface` is the canonical
 container primitive; `WidgetDialog` the one specialized modal;
 `src/design-system/semantic-tokens.ts` owns settings-to-token adaptation) · `src/context/`

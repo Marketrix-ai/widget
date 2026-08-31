@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo } from 'react';
 import { useChatContext } from '../context/ChatContext';
 import { useUIStateContext } from '../context/UIStateContext';
 import { WidgetSettingsDataSchema } from '../sdk';
-import { configManager } from '../services/ConfigManager';
+import { storageService } from '../services/StorageService';
 import type {
   ChatMessage,
   InstructionType,
@@ -90,11 +90,11 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
     [uiActions, taskActions, chatActions, resetChat],
   );
 
-  const marketrixConfig = useMemo<MarketrixConfig>(() => config || configManager.getConfig() || {}, [config]);
+  const marketrixConfig = useMemo<MarketrixConfig>(() => config || storageService.getConfig() || {}, [config]);
   const configValid = isConfigComplete(marketrixConfig);
 
   useEffect(() => {
-    if (configValid) configManager.saveConfig(marketrixConfig);
+    if (configValid) storageService.setConfig(marketrixConfig);
   }, [marketrixConfig, configValid]);
 
   const isPreviewMode = marketrixConfig.isPreviewMode ?? false;

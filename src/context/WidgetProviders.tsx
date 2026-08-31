@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect } from 'react';
 
 import { chatService } from '../services/ChatService';
 import { chatSessionManager } from '../services/ChatSessionManager';
-import { configManager } from '../services/ConfigManager';
+import { storageService } from '../services/StorageService';
 import { StreamClient } from '../services/StreamClient';
 import { ChatProvider, useChatContext } from './ChatContext';
 import { UIStateProvider, useUIStateContext } from './UIStateContext';
@@ -77,7 +77,7 @@ const InitBridge: React.FC<{ children: React.ReactNode; previewMode: boolean }> 
 
       if (chatId) {
         const streamClient = StreamClient.getInstance();
-        const streamConfig = configManager.getConfig();
+        const streamConfig = storageService.getConfig();
         streamClient
           .connect(
             chatId,

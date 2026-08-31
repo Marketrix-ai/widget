@@ -1,6 +1,15 @@
 import { sdk, type WidgetData, type WidgetSettingsData, WidgetSettingsDataSchema } from '../sdk';
 import type { MarketrixConfig } from '../types';
-import { createConfigFromSettings } from './ConfigManager';
+
+export function createConfigFromSettings(
+  widgetSettings: WidgetSettingsData,
+  baseConfig: Partial<MarketrixConfig> = {},
+): MarketrixConfig {
+  return {
+    ...baseConfig,
+    ...widgetSettings,
+  } as MarketrixConfig;
+}
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : typeof error === 'string' ? error : 'Unknown error';

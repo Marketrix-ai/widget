@@ -54,22 +54,9 @@ export function darkenColor(color: string, amount: number): string {
   return rgbToHex(Math.round(rgb.r * factor), Math.round(rgb.g * factor), Math.round(rgb.b * factor));
 }
 
-export const formatMessageTime = (date: Date | undefined): string => {
-  if (!date) {
-    return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  }
-  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-};
+export const formatMessageTime = (date: Date | undefined): string =>
+  (date ?? new Date()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-export const getModeDisplayName = (mode: 'show' | 'tell' | 'do'): string => {
-  switch (mode) {
-    case 'show':
-      return 'Show';
-    case 'tell':
-      return 'Tell';
-    case 'do':
-      return 'Do';
-    default:
-      return mode;
-  }
-};
+const MODE_DISPLAY_NAMES: Record<'show' | 'tell' | 'do', string> = { show: 'Show', tell: 'Tell', do: 'Do' };
+
+export const getModeDisplayName = (mode: 'show' | 'tell' | 'do'): string => MODE_DISPLAY_NAMES[mode];
