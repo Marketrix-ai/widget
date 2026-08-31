@@ -1,14 +1,6 @@
 import type { InstructionType, WidgetSettingsData } from '../sdk';
 
-export type {
-  ApplicationData,
-  InstructionType,
-  UserData,
-  WidgetChip,
-  WidgetData,
-  WidgetSettingsData,
-  WorkspaceData,
-} from '../sdk';
+export type { InstructionType, WidgetSettingsData } from '../sdk';
 
 // Flat so API settings spread in directly. mtxId+mtxKey is the credential; mtxApp is set internally post-validation, never an input (an application id is guessable and authenticates nothing).
 export type MarketrixConfig = Partial<WidgetSettingsData> & {
