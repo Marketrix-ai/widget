@@ -13,15 +13,15 @@ const CORNERS = {
   top_left: { classes: 'top-5 left-5', vertical: 'top', horizontal: 'left' },
 } as const;
 
-const corner = (position: WidgetPosition) => CORNERS[position] ?? CORNERS.bottom_right;
+export const getCorner = (position: WidgetPosition) => CORNERS[position] ?? CORNERS.bottom_right;
 
 export const isWidgetPosition = (value: unknown): value is WidgetPosition =>
   typeof value === 'string' && value in CORNERS;
 
-export const getPositionClasses = (position: WidgetPosition): string => corner(position).classes;
+export const getPositionClasses = (position: WidgetPosition): string => getCorner(position).classes;
 
 export const getPanelPositionStyle = (position: WidgetPosition): React.CSSProperties => {
-  const { vertical, horizontal } = corner(position);
+  const { vertical, horizontal } = getCorner(position);
   return { [vertical]: `${EDGE_OFFSET_PX}px`, [horizontal]: `${EDGE_OFFSET_PX}px` };
 };
 
@@ -32,7 +32,7 @@ export const getAnchorTopLeft = (
   w: number,
   h: number,
 ): { x: number; y: number } => {
-  const { vertical, horizontal } = corner(position);
+  const { vertical, horizontal } = getCorner(position);
   return {
     x: horizontal === 'left' ? EDGE_OFFSET_PX : vw - EDGE_OFFSET_PX - w,
     y: vertical === 'top' ? EDGE_OFFSET_PX : vh - EDGE_OFFSET_PX - h,

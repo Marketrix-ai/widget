@@ -1,13 +1,14 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 import { SHADOW } from '../../design-system/shadows';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { useResize } from '../../hooks/useResize';
 import { useWidget } from '../../hooks/useWidget';
 import { createUserMessage } from '../../services/ChatService';
-import type { ChatMessage, InstructionType, MarketrixConfig, WidgetView } from '../../types';
+import { tenantScope } from '../../services/WidgetService';
+import type { ChatMessage, InstructionType, MarketrixConfig, WidgetPosition, WidgetView } from '../../types';
 import type { SuggestedActionItem } from '../../utils/suggestedActions';
-import { getPanelPositionStyle } from '../../utils/widgetPositioning';
+import { getCorner, getPanelPositionStyle } from '../../utils/widgetPositioning';
 import { Icon } from '../base/Icon';
 import { IconButton } from '../base/IconButton';
 import { Stack } from '../base/Stack';
@@ -58,10 +59,7 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
   setActiveView,
 }) => {
   const { config: settings, isPreviewMode } = useWidget({ config });
-  const tenantId = useMemo(
-    () => config.mtxId ?? (config.mtxApp != null ? String(config.mtxApp) : 'default'),
-    [config.mtxId, config.mtxApp],
-  );
+  const tenantId = tenantScope(config);
   const { widthPx, heightPx, onResizeStart, containerRef } = useResize(
     settings.widget_width,
     settings.widget_height,
@@ -85,7 +83,7 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
     focusTargetRef: activeView === 'chat' ? messageInputRef : undefined,
   });
 
-  const effectivePosition = settings.widget_position as 'bottom_left' | 'bottom_right' | 'top_left' | 'top_right';
+  const effectivePosition = settings.widget_position as WidgetPosition;
   const zIndex = settings.widget_position_z_index ?? 40;
   const panelPositionStyle = getPanelPositionStyle(effectivePosition);
 
@@ -108,17 +106,7 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
     ? settings.widget_background_color
     : `linear-gradient(135deg, ${settings.widget_background_color} 0%, ${settings.widget_background_color} 100%)`;
 
-  const customStyles: React.CSSProperties = {
-    width: widthPx,
-    height: isMinimized ? '48px' : heightPx,
-    fontSize: settings.widget_font_size,
-    backgroundImage,
-    zIndex,
-  };
-
-  const positionClass = isPreviewMode ? 'absolute' : 'fixed';
-  const transformOrigin =
-    `${effectivePosition.includes('top') ? 'top' : 'bottom'} ${effectivePosition.includes('right') ? 'right' : 'left'}` as const;
+  const { vertical, horizontal } = getCorner(effectivePosition);
 
   const handleNavigateToChat = () => {
     setNavDirection('forward');
@@ -145,15 +133,17 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
   return (
     <Stack
       ref={containerRef}
-      position={positionClass as 'fixed' | 'absolute'}
+      position={isPreviewMode ? 'absolute' : 'fixed'}
       rounded='theme'
       border
       overflow='hidden'
       style={{
         zIndex,
         backgroundImage,
-        transformOrigin,
-        ...customStyles,
+        transformOrigin: `${vertical} ${horizontal}`,
+        width: widthPx,
+        height: isMinimized ? '48px' : heightPx,
+        fontSize: settings.widget_font_size,
         ...panelPositionStyle,
         pointerEvents: 'auto',
         scrollbarWidth: 'thin',

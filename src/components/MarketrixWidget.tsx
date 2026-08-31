@@ -1,12 +1,13 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 import { LAYER_TOKENS } from '../design-system/layers';
 import { createSemanticTokens, semanticTokensToCssCustomProperties } from '../design-system/semantic-tokens';
 import { useScrollLock } from '../hooks/useScrollLock';
 import { useWidget } from '../hooks/useWidget';
+import { tenantScope } from '../services/WidgetService';
 import type { MarketrixConfig, WidgetPosition } from '../types';
 import { addOpacity, darkenColor, getContrastingColor } from '../utils/color';
-import { isWidgetPosition } from '../utils/widgetPositioning';
+import { getCorner, isWidgetPosition } from '../utils/widgetPositioning';
 import { Surface } from './base/Surface';
 import { NotificationToast } from './blocks/NotificationToast';
 import { WidgetFab } from './blocks/WidgetFab';
@@ -61,10 +62,7 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
     (config.widget_position as WidgetPosition | undefined) ?? 'bottom_right',
   );
 
-  const positionStorageKey = useMemo(() => {
-    const scopedId = config.mtxId ?? (config.mtxApp != null ? String(config.mtxApp) : 'default');
-    return `marketrix_widget_position_${scopedId}`;
-  }, [config.mtxApp, config.mtxId]);
+  const positionStorageKey = `marketrix_widget_position_${tenantScope(config)}`;
 
   useEffect(() => {
     const fallback = (settings.widget_position as WidgetPosition | undefined) ?? 'bottom_right';
@@ -195,7 +193,7 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
           title={state.error}
           onDismiss={() => actions.clearError()}
           onRetry={() => actions.clearError()}
-          position={widgetPosition.includes('top') ? 'bottom-center' : 'above-fab'}
+          position={getCorner(widgetPosition).vertical === 'top' ? 'bottom-center' : 'above-fab'}
         />
       )}
 
