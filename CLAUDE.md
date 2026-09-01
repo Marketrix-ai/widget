@@ -79,8 +79,9 @@ reconnection until re-init.**
 
 **Tool execution** — `ChatContext` dedupes `tool/call` by `tool_call_id`, validates `browser_tool`
 against `BROWSER_TOOLS`, executes via `browserToolService.executeTool`, then replies `tool/response`.
-The `done` tool ends the task. `task/status` drives state: `running` activates (capturing `task_id`),
-the terminal three clear it, `has_question` clears the pending state.
+The `done` tool ends the task. `task/status` drives state: `running` **with a `task_id`** activates it
+(one without is the agent starting before the api has minted one), the terminal three clear it and the
+dedupe set.
 
 **Interaction modes** map to commands and `InstructionType`: **Tell** = explain · **Show** =
 `tool/call` with `mode: 'show'`, highlight via `ShowModeService` · **Do** = `mode: 'do'`, DOM actions
@@ -88,8 +89,9 @@ via `DomService`/`BrowserToolService`.
 
 **Status vocabulary** — `task/status.status ∈ {running, completed, failed, stopped, has_question}` is
 the canonical **wire** vocabulary (code branches on `'running'`). The presentational
-`ChatMessage.taskStatus` and `MessagePart.status` are **UI-only and NOT the wire vocabulary** — don't
-conflate them.
+`ChatMessage.taskStatus` (`done`/`failed`/`stopped`) and `MessagePart.status`
+(`in_progress`/`completed`/`failed`) are **UI-only and NOT the wire vocabulary** — don't conflate them,
+and don't widen either to a value nothing assigns.
 
 **Session recording** — `RrwebSessionRecorder` batches to `rrweb/metadata` / `rrweb/events` only when
 `widget_recording` is enabled. Disabled by default.
@@ -121,6 +123,12 @@ with no gate in front of it — so infra also checks the mirror of the widget ve
 bundles, i.e. the build a browser really loads.
 
 ## Structure
+
+**One config, one store, read from context.** `MarketrixWidget` is the only component that touches the
+raw config prop — it validates it, persists it and publishes the resolved config (position and z-index
+layered on) through `WidgetConfigContext`. Everything below calls `useWidgetConfig()` for settings and
+`useWidget()` for the store; **never thread either down as props.** The widget is open or closed —
+there is no minimized panel.
 
 `src/index.tsx` (public entry — see `README.md` for the customer surface) · `src/services/` (stateful
 runtime owners: `StreamClient`, `RrwebSessionRecorder`, `BrowserToolService`, `ShowModeService`,

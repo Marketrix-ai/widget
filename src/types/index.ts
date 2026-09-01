@@ -33,14 +33,14 @@ export interface ChatMessage {
   isSystemMessage?: boolean;
   isPlaceholder?: boolean;
   placeholderState?: 'thinking' | 'waiting-for-user';
-  parts?: MessagePart[];
-  taskStatus?: 'ongoing' | 'done' | 'failed' | 'stopped';
+  parts: MessagePart[];
+  taskStatus?: 'done' | 'failed' | 'stopped';
 }
 
 export interface MessagePart {
   type: 'text' | 'progress';
   content: string;
-  status?: 'in_progress' | 'completed' | 'failed' | 'stopped';
+  status?: 'in_progress' | 'completed' | 'failed';
   browserToolName?: string;
   /** chat/delta fragments accumulate into this part; the final chat/response replaces it. */
   streaming?: boolean;
@@ -50,21 +50,13 @@ export type WidgetView = 'home' | 'chat';
 
 export interface WidgetState {
   isOpen: boolean;
-  isMinimized: boolean;
   isLoading: boolean;
   messages: ChatMessage[];
   currentMode: InstructionType;
-  agentAvailable: boolean;
   error?: string;
   activeTaskId: string | null;
   isTaskRunning: boolean;
   activeView: WidgetView;
-}
-
-export interface MessageDispatchRequest {
-  message?: string;
-  mode?: InstructionType;
-  requestId?: string;
 }
 
 export type WidgetPosition = WidgetSettingsData['widget_position'];

@@ -1,25 +1,18 @@
 import React from 'react';
 
-import { useWidget } from '../../hooks/useWidget';
+import { useWidgetConfig } from '../../hooks/useWidget';
+import type { SuggestedActionItem } from '../../utils/suggestedActions';
 import { Button } from '../base/Button';
 import { Stack } from '../base/Stack';
 import { Text } from '../base/Text';
 
-interface SuggestedAction {
-  id: string;
-  text: string;
-  icon: React.ReactElement;
-  type: 'tell' | 'show' | 'do';
-  isShow: boolean;
-}
-
 interface SuggestedActionsProps {
-  actions: SuggestedAction[];
-  onActionClick: (action: SuggestedAction, event: React.MouseEvent) => Promise<void>;
+  actions: SuggestedActionItem[];
+  onActionClick: (action: SuggestedActionItem, event: React.MouseEvent) => Promise<void>;
 }
 
 export const SuggestedActions: React.FC<SuggestedActionsProps> = ({ actions, onActionClick }) => {
-  const { config: widgetConfig } = useWidget();
+  const widgetConfig = useWidgetConfig();
   if (actions.length === 0) return null;
 
   return (

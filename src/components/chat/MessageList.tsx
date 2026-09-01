@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 import { SHADOW } from '../../design-system/shadows';
-import { useWidget } from '../../hooks/useWidget';
-import type { ChatMessage, MarketrixConfig } from '../../types';
+import { useWidget, useWidgetConfig } from '../../hooks/useWidget';
+import type { ChatMessage } from '../../types';
 import { addOpacity } from '../../utils/color';
 import { Button } from '../base/Button';
 import { Flex } from '../base/Flex';
@@ -22,23 +22,16 @@ const scrollButtonStyle: React.CSSProperties = {
 };
 
 interface MessageListProps {
-  messages: ChatMessage[];
   messagesEndRef: React.RefObject<HTMLDivElement | null>;
-  config?: MarketrixConfig;
-  onScreenAccessAllow?: () => void;
-  onScreenAccessDeny?: () => void;
-  onClearChat?: () => void | Promise<void>;
+  onScreenAccessAllow: () => void;
+  onScreenAccessDeny: () => void;
 }
 
-export const MessageList = ({
-  messages,
-  messagesEndRef,
-  config,
-  onScreenAccessAllow,
-  onScreenAccessDeny,
-  onClearChat,
-}: MessageListProps) => {
-  const { config: widgetConfig, state: widgetState, isPreviewMode } = useWidget({ config });
+export const MessageList = ({ messagesEndRef, onScreenAccessAllow, onScreenAccessDeny }: MessageListProps) => {
+  const widgetConfig = useWidgetConfig();
+  const { state: widgetState, actions } = useWidget();
+  const { messages } = widgetState;
+  const isPreviewMode = widgetConfig.isPreviewMode ?? false;
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [showScrollBottom, setShowScrollBottom] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -50,6 +43,7 @@ export const MessageList = ({
       sender: 'agent',
       timestamp: new Date(),
       isPlaceholder: false,
+      parts: [],
     }),
     [widgetConfig.widget_body],
   );
@@ -140,16 +134,9 @@ export const MessageList = ({
           />
         ))}
 
-        {messages.length > 0 && onClearChat && (
+        {messages.length > 0 && (
           <Flex justify='center' style={{ marginTop: '12px', marginBottom: '4px' }}>
-            <Button
-              type='button'
-              variant='bare'
-              onClick={() => {
-                const result = onClearChat();
-                if (result instanceof Promise) result.catch(e => console.error(e));
-              }}
-            >
+            <Button type='button' variant='bare' onClick={actions.clearChatHistory}>
               <Text size='xs' variant='muted' style={{ cursor: 'pointer' }}>
                 Clear conversation
               </Text>

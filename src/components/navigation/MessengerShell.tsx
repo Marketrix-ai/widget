@@ -1,12 +1,12 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 import { SHADOW } from '../../design-system/shadows';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { useResize } from '../../hooks/useResize';
-import { useWidget } from '../../hooks/useWidget';
+import { useWidget, useWidgetConfig } from '../../hooks/useWidget';
 import { createUserMessage } from '../../services/ChatService';
 import { tenantScope } from '../../services/WidgetService';
-import type { ChatMessage, InstructionType, MarketrixConfig, WidgetPosition, WidgetView } from '../../types';
+import type { WidgetView } from '../../types';
 import type { SuggestedActionItem } from '../../utils/suggestedActions';
 import { getCorner, getPanelPositionStyle } from '../../utils/widgetPositioning';
 import { Icon } from '../base/Icon';
@@ -19,52 +19,16 @@ import { HomeView } from '../views/HomeView';
 import { ResizeHandles } from './ResizeHandles';
 import { ShellTabBar } from './ShellTabBar';
 
-export interface MessengerShellProps {
-  config: MarketrixConfig;
-  isOpen: boolean;
-  isMinimized: boolean;
-  messages: ChatMessage[];
-  currentMode: InstructionType;
-  isTaskRunning?: boolean;
-  activeView: WidgetView;
-  onClose: () => void;
-  onSendMessage: (message: string, mode?: InstructionType, skipUserMessage?: boolean) => void;
-  onSetMode: (mode: InstructionType) => void;
-  onAddMessage: (message: ChatMessage) => void;
-  onUpdateMessage: (messageId: string, updates: Partial<ChatMessage>) => void;
-  onRemoveMessage?: (messageId: string) => void;
-  onStopTask?: () => void;
-  onClearChat?: () => void | Promise<void>;
-  onScreenSharingChange?: (isSharing: boolean) => void;
-  setActiveView: (view: WidgetView) => void;
-}
+export const MessengerShell: React.FC = () => {
+  const config = useWidgetConfig();
+  const { state, actions } = useWidget();
+  const { isOpen, activeView } = state;
+  const isPreviewMode = config.isPreviewMode ?? false;
 
-export const MessengerShell: React.FC<MessengerShellProps> = ({
-  config,
-  isOpen,
-  isMinimized,
-  messages,
-  currentMode,
-  isTaskRunning = false,
-  activeView,
-  onClose,
-  onSendMessage,
-  onSetMode,
-  onAddMessage,
-  onUpdateMessage,
-  onRemoveMessage,
-  onStopTask,
-  onClearChat,
-  onScreenSharingChange,
-  setActiveView,
-}) => {
-  const { config: settings, isPreviewMode } = useWidget({ config });
-  const tenantId = tenantScope(config);
   const { widthPx, heightPx, onResizeStart, containerRef } = useResize(
-    settings.widget_width,
-    settings.widget_height,
-    tenantId,
-    isMinimized,
+    config.widget_width,
+    config.widget_height,
+    tenantScope(config),
     isPreviewMode,
   );
 
@@ -79,12 +43,11 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
   }, [activeView]);
 
   useFocusTrap(containerRef, isOpen, {
-    onEscape: onClose,
+    onEscape: actions.closeWidget,
     focusTargetRef: activeView === 'chat' ? messageInputRef : undefined,
   });
 
-  const effectivePosition = settings.widget_position as WidgetPosition;
-  const zIndex = settings.widget_position_z_index ?? 40;
+  const effectivePosition = config.widget_position;
   const panelPositionStyle = getPanelPositionStyle(effectivePosition);
 
   // Must stay above the early return below.
@@ -92,31 +55,23 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
   const chatViewStartScreenShareRef = useRef<(() => void) | null>(null);
   const chatViewStopScreenShareRef = useRef<(() => void) | null>(null);
 
-  const handleHeaderScreenSharingChange = useCallback(
-    (isSharing: boolean) => {
-      setHeaderScreenSharing(isSharing);
-      onScreenSharingChange?.(isSharing);
-    },
-    [onScreenSharingChange],
-  );
-
   if (!isOpen) return null;
 
-  const backgroundImage = settings.widget_background_color.includes('gradient')
-    ? settings.widget_background_color
-    : `linear-gradient(135deg, ${settings.widget_background_color} 0%, ${settings.widget_background_color} 100%)`;
+  const backgroundImage = config.widget_background_color.includes('gradient')
+    ? config.widget_background_color
+    : `linear-gradient(135deg, ${config.widget_background_color} 0%, ${config.widget_background_color} 100%)`;
 
   const { vertical, horizontal } = getCorner(effectivePosition);
 
   const handleNavigateToChat = () => {
     setNavDirection('forward');
-    setActiveView('chat');
+    actions.setActiveView('chat');
   };
 
   const handleChipClick = (action: SuggestedActionItem) => {
-    onAddMessage(createUserMessage(action.text, action.type, 'chip-message'));
-    onSetMode(action.type);
-    onSendMessage(action.text, action.type, true);
+    actions.addMessage(createUserMessage(action.text, action.type, 'chip-message'));
+    actions.setMode(action.type);
+    void actions.messageDispatch(action.text, action.type, true);
   };
 
   const screenShareHandler =
@@ -138,12 +93,12 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
       border
       overflow='hidden'
       style={{
-        zIndex,
+        zIndex: config.widget_position_z_index,
         backgroundImage,
         transformOrigin: `${vertical} ${horizontal}`,
         width: widthPx,
-        height: isMinimized ? '48px' : heightPx,
-        fontSize: settings.widget_font_size,
+        height: heightPx,
+        fontSize: config.widget_font_size,
         ...panelPositionStyle,
         pointerEvents: 'auto',
         scrollbarWidth: 'thin',
@@ -153,9 +108,8 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
     >
       <HeaderBar
         title={config.widget_header ?? 'AI Agent'}
-        subtitle={isMinimized ? undefined : (config.widget_body ?? 'How can I help?')}
-        minimized={isMinimized}
-        onClose={onClose}
+        subtitle={config.widget_body ?? 'How can I help?'}
+        onClose={actions.closeWidget}
         controls={
           screenShareHandler && (
             <IconButton
@@ -176,50 +130,28 @@ export const MessengerShell: React.FC<MessengerShellProps> = ({
         }
       />
 
-      {!isMinimized && (
-        <>
-          <Surface grow overflow='hidden' style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-            <Surface
-              key={activeView}
-              data-view-transition
-              data-direction={navDirection}
-              style={{ width: '100%', height: '100%' }}
-            >
-              {activeView === 'home' && (
-                <HomeView
-                  config={config}
-                  messages={messages}
-                  onNavigateToChat={handleNavigateToChat}
-                  onChipClick={handleChipClick}
-                />
-              )}
-              {activeView === 'chat' && (
-                <ChatView
-                  config={config}
-                  messages={messages}
-                  currentMode={currentMode}
-                  isTaskRunning={isTaskRunning}
-                  onSendMessage={onSendMessage}
-                  onSetMode={onSetMode}
-                  onAddMessage={onAddMessage}
-                  onUpdateMessage={onUpdateMessage}
-                  onRemoveMessage={onRemoveMessage}
-                  onStopTask={onStopTask}
-                  onClearChat={onClearChat}
-                  onScreenSharingChange={handleHeaderScreenSharingChange}
-                  onStartScreenShareRef={chatViewStartScreenShareRef}
-                  onStopScreenShareRef={chatViewStopScreenShareRef}
-                  messageInputRef={messageInputRef}
-                />
-              )}
-            </Surface>
-          </Surface>
+      <Surface grow overflow='hidden' style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+        <Surface
+          key={activeView}
+          data-view-transition
+          data-direction={navDirection}
+          style={{ width: '100%', height: '100%' }}
+        >
+          {activeView === 'home' && <HomeView onNavigateToChat={handleNavigateToChat} onChipClick={handleChipClick} />}
+          {activeView === 'chat' && (
+            <ChatView
+              onScreenSharingChange={setHeaderScreenSharing}
+              onStartScreenShareRef={chatViewStartScreenShareRef}
+              onStopScreenShareRef={chatViewStopScreenShareRef}
+              messageInputRef={messageInputRef}
+            />
+          )}
+        </Surface>
+      </Surface>
 
-          <ShellTabBar activeView={activeView} onChange={setActiveView} />
-        </>
-      )}
+      <ShellTabBar activeView={activeView} onChange={actions.setActiveView} />
 
-      {!isMinimized && !isPreviewMode && <ResizeHandles onResizeStart={onResizeStart} />}
+      {!isPreviewMode && <ResizeHandles onResizeStart={onResizeStart} />}
     </Stack>
   );
 };

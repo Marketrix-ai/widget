@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { controlSizeStyles } from '../../design-system/component-tokens';
+import { TAB_BAR_HEIGHT } from '../../design-system/component-tokens';
 import type { WidgetView } from '../../types';
 import { Button } from '../base/Button';
 import { Flex } from '../base/Flex';
@@ -20,7 +20,7 @@ export interface ShellTabBarProps {
 
 export const ShellTabBar: React.FC<ShellTabBarProps> = ({ activeView, onChange }) => {
   return (
-    <Flex role='tablist' align='center' justify='around' shrink={false} border='top' style={controlSizeStyles.tabBar}>
+    <Flex role='tablist' align='center' justify='around' shrink={false} border='top' style={{ height: TAB_BAR_HEIGHT }}>
       {TAB_DEFS.map(tab => {
         const isActive = activeView === tab.id;
         return (

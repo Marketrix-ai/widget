@@ -1,13 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
 import { type WidgetEvent, WidgetEventSchema } from '@/sdk';
-import type { ChatMessage } from '@/types';
-import { hasThinkingMarker, updateThinkingMarker } from '@/utils/chat';
 
 const ALL_WIDGET_EVENT_TYPES = [
   'registered',
   'heartbeat',
   'chat/response',
+  'chat/delta',
   'chat/error',
   'task/status',
   'tool/call',
@@ -19,6 +18,7 @@ const MINIMAL_EVENT_FIXTURES: Record<ExpectedEventType, object> = {
   registered: { type: 'registered', chat_id: 'chat-001' },
   heartbeat: { type: 'heartbeat' },
   'chat/response': { type: 'chat/response', request_id: 'req-1', text: 'Hello!' },
+  'chat/delta': { type: 'chat/delta', request_id: 'req-1', text: 'Hel' },
   'chat/error': { type: 'chat/error', request_id: 'req-2', error: 'Something went wrong' },
   'task/status': { type: 'task/status', status: 'running' },
   'tool/call': {
@@ -91,24 +91,13 @@ describe('SSE event discriminated-union contract (WidgetEventSchema)', () => {
       expect(WidgetEventSchema.safeParse({ type: 'task/status' }).success).toBe(false);
     });
 
-    it('"running" is a valid status (Wave 14 canonical wire vocab)', () => {
-      const result = WidgetEventSchema.safeParse({ type: 'task/status', status: 'running' });
-      expect(result.success).toBe(true);
+    // Wave 14 canonical wire vocab; has_question is the sim-only pause propagated to the widget.
+    it.each(['running', 'completed', 'failed', 'stopped', 'has_question'] as const)('accepts "%s"', status => {
+      expect(WidgetEventSchema.safeParse({ type: 'task/status', status }).success).toBe(true);
     });
 
-    it('legacy "started" is REJECTED post-Wave-14 (BREAKING contract change)', () => {
-      const result = WidgetEventSchema.safeParse({ type: 'task/status', status: 'started' });
-      expect(result.success).toBe(false);
-    });
-
-    it('legacy "in_progress" is REJECTED post-Wave-14 (BREAKING contract change)', () => {
-      const result = WidgetEventSchema.safeParse({ type: 'task/status', status: 'in_progress' });
-      expect(result.success).toBe(false);
-    });
-
-    it('"has_question" remains a valid status (sim-only state propagated to widget)', () => {
-      const result = WidgetEventSchema.safeParse({ type: 'task/status', status: 'has_question' });
-      expect(result.success).toBe(true);
+    it.each(['started', 'in_progress'] as const)('REJECTS legacy "%s" (BREAKING contract change)', status => {
+      expect(WidgetEventSchema.safeParse({ type: 'task/status', status }).success).toBe(false);
     });
 
     it('all optional fields parse correctly', () => {
@@ -119,8 +108,7 @@ describe('SSE event discriminated-union contract (WidgetEventSchema)', () => {
         task_id: 'task-xyz',
         timestamp: 1700000000,
       };
-      const result = WidgetEventSchema.safeParse(full);
-      expect(result.success).toBe(true);
+      expect(WidgetEventSchema.safeParse(full).success).toBe(true);
     });
   });
 
@@ -141,55 +129,6 @@ describe('SSE event discriminated-union contract (WidgetEventSchema)', () => {
       expect(WidgetEventSchema.safeParse({ ...base, mode: 'show' }).success).toBe(true);
       expect(WidgetEventSchema.safeParse({ ...base, mode: 'do' }).success).toBe(true);
       expect(WidgetEventSchema.safeParse({ ...base, mode: 'auto' }).success).toBe(false);
-    });
-  });
-
-  describe('task/status "has_question" pauses the active message (clears running spinner)', () => {
-    // Mirrors the ChatContext `has_question` reducer.
-    const applyHasQuestionTransition = (message: ChatMessage, statusMessage?: string): ChatMessage => {
-      const cleared = updateThinkingMarker(message, false, 'do');
-      return {
-        ...cleared,
-        placeholderState: 'waiting-for-user',
-        ...(statusMessage && { content: statusMessage }),
-      };
-    };
-
-    const runningMessage = (): ChatMessage => ({
-      id: 'm1',
-      content: 'Working on it\n\n__THINKING__',
-      sender: 'agent',
-      timestamp: new Date(),
-      mode: 'do',
-      placeholderState: 'thinking',
-      taskStatus: 'ongoing',
-    });
-
-    it('"has_question" is a valid SSE event that carries an optional message', () => {
-      const event = { type: 'task/status', status: 'has_question', message: 'Which account?' };
-      const result = WidgetEventSchema.safeParse(event);
-      expect(result.success).toBe(true);
-    });
-
-    it('removes the thinking marker so the inline spinner stops', () => {
-      const before = runningMessage();
-      expect(hasThinkingMarker(before.content)).toBe(true);
-      const after = applyHasQuestionTransition(before);
-      expect(hasThinkingMarker(after.content)).toBe(false);
-    });
-
-    it('flips the message to "waiting-for-user" (paused, not terminal)', () => {
-      const after = applyHasQuestionTransition(runningMessage());
-      expect(after.placeholderState).toBe('waiting-for-user');
-      expect(after.taskStatus).not.toBe('done');
-      expect(after.taskStatus).not.toBe('failed');
-      expect(after.taskStatus).not.toBe('stopped');
-    });
-
-    it('surfaces the question text when the event includes a message', () => {
-      const after = applyHasQuestionTransition(runningMessage(), 'Which account?');
-      expect(after.content).toContain('Which account?');
-      expect(hasThinkingMarker(after.content)).toBe(false);
     });
   });
 

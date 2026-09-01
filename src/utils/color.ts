@@ -53,10 +53,3 @@ export function darkenColor(color: string, amount: number): string {
   const factor = 1 - amount;
   return rgbToHex(Math.round(rgb.r * factor), Math.round(rgb.g * factor), Math.round(rgb.b * factor));
 }
-
-export const formatMessageTime = (date: Date | undefined): string =>
-  (date ?? new Date()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-const MODE_DISPLAY_NAMES: Record<'show' | 'tell' | 'do', string> = { show: 'Show', tell: 'Tell', do: 'Do' };
-
-export const getModeDisplayName = (mode: 'show' | 'tell' | 'do'): string => MODE_DISPLAY_NAMES[mode];

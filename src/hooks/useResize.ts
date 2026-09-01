@@ -1,5 +1,7 @@
 import { useCallback, useRef, useState } from 'react';
 
+import { readLocal, writeLocal } from '../services/StorageService';
+
 const MIN_WIDTH = 280;
 const MAX_WIDTH = 600;
 const MIN_HEIGHT = 320;
@@ -29,14 +31,14 @@ const RESIZE_CORNERS: Record<ResizeCorner, { growX: 1 | -1; growY: 1 | -1; curso
 
 function readStoredSize(storageKey: string): { width: number; height: number } | null {
   try {
-    const stored = JSON.parse(localStorage.getItem(storageKey) ?? 'null') as { width?: unknown; height?: unknown };
+    const stored = JSON.parse(readLocal(storageKey) ?? 'null') as { width?: unknown; height?: unknown };
     if (typeof stored?.width !== 'number' || typeof stored?.height !== 'number') return null;
     return {
       width: clamp(stored.width, MIN_WIDTH, MAX_WIDTH),
       height: clamp(stored.height, MIN_HEIGHT, Math.floor(window.innerHeight * MAX_HEIGHT)),
     };
   } catch (error) {
-    console.debug('[useResize] Ignoring unreadable stored size:', error);
+    console.debug('[useResize] Ignoring an unparseable stored size:', error);
     return null;
   }
 }
@@ -45,7 +47,6 @@ export function useResize(
   settingsWidth: string | undefined,
   settingsHeight: string | undefined,
   workspaceId: string,
-  isMinimized: boolean,
   isPreviewMode: boolean,
 ) {
   const storageKey = `${STORAGE_KEY_PREFIX}${workspaceId}`;
@@ -53,11 +54,7 @@ export function useResize(
   const containerRef = useRef<HTMLDivElement>(null);
 
   const [dimensions, setDimensions] = useState<{ width: number; height: number }>(
-    () =>
-      (typeof localStorage === 'undefined' ? null : readStoredSize(storageKey)) ?? {
-        width: parsePx(settingsWidth),
-        height: parsePx(settingsHeight),
-      },
+    () => readStoredSize(storageKey) ?? { width: parsePx(settingsWidth), height: parsePx(settingsHeight) },
   );
 
   dimsRef.current = dimensions;
@@ -66,7 +63,7 @@ export function useResize(
     (corner: ResizeCorner) => (e: React.MouseEvent) => {
       e.preventDefault();
       e.stopPropagation();
-      if (isMinimized || isPreviewMode) return;
+      if (isPreviewMode) return;
 
       const startX = e.clientX;
       const startY = e.clientY;
@@ -108,9 +105,9 @@ export function useResize(
 
         setDimensions({ ...dimsRef.current });
 
-        if (!isPreviewMode && typeof localStorage !== 'undefined') {
+        if (!isPreviewMode) {
           const { width, height } = dimsRef.current;
-          localStorage.setItem(storageKey, JSON.stringify({ width, height }));
+          writeLocal(storageKey, JSON.stringify({ width, height }));
         }
       };
 
@@ -119,7 +116,7 @@ export function useResize(
       document.addEventListener('mousemove', onMove);
       document.addEventListener('mouseup', onUp);
     },
-    [isMinimized, isPreviewMode, storageKey],
+    [isPreviewMode, storageKey],
   );
 
   return {

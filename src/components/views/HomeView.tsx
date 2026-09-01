@@ -1,6 +1,6 @@
 import React from 'react';
 
-import type { ChatMessage, MarketrixConfig } from '../../types';
+import { useWidget, useWidgetConfig } from '../../hooks/useWidget';
 import { getSuggestedActionsFromConfig, type SuggestedActionItem } from '../../utils/suggestedActions';
 import { Button } from '../base/Button';
 import { Icon } from '../base/Icon';
@@ -10,13 +10,13 @@ import { Text } from '../base/Text';
 import { SuggestedActions } from '../chat/SuggestedActions';
 
 interface HomeViewProps {
-  config: MarketrixConfig;
-  messages: ChatMessage[];
   onNavigateToChat: () => void;
   onChipClick: (action: SuggestedActionItem) => void;
 }
 
-export const HomeView: React.FC<HomeViewProps> = ({ config, messages, onNavigateToChat, onChipClick }) => {
+export const HomeView: React.FC<HomeViewProps> = ({ onNavigateToChat, onChipClick }) => {
+  const config = useWidgetConfig();
+  const { messages } = useWidget().state;
   const suggestedActions = getSuggestedActionsFromConfig(config);
 
   const handleActionClick = async (action: SuggestedActionItem, event: React.MouseEvent) => {

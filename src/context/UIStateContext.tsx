@@ -4,10 +4,8 @@ import type { InstructionType, WidgetView } from '../types';
 
 export interface UIState {
   isOpen: boolean;
-  isMinimized: boolean;
   activeView: WidgetView;
   currentMode: InstructionType;
-  agentAvailable: boolean;
   isLoading: boolean;
   error?: string;
 }
@@ -18,7 +16,6 @@ export interface UIStateActions {
   closeWidget: () => void;
   setMode: (mode: InstructionType) => void;
   setLoading: (loading: boolean) => void;
-  setAgentAvailable: (available: boolean) => void;
   setError: (error: string | undefined) => void;
   clearError: () => void;
   applyState: (payload: Partial<UIState>) => void;
@@ -31,25 +28,11 @@ interface UIStateContextType {
 
 const UIStateContext = createContext<UIStateContextType | undefined>(undefined);
 
-interface UIStateProviderProps {
-  children: React.ReactNode;
-  initialMode?: InstructionType;
-  initialIsOpen?: boolean;
-  initialIsMinimized?: boolean;
-}
-
-export const UIStateProvider: React.FC<UIStateProviderProps> = ({
-  children,
-  initialMode = 'tell',
-  initialIsOpen = false,
-  initialIsMinimized = false,
-}) => {
+export const UIStateProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [uiState, setUIState] = useState<UIState>({
-    isOpen: initialIsOpen,
-    isMinimized: initialIsMinimized,
+    isOpen: false,
     activeView: 'home',
-    currentMode: initialMode,
-    agentAvailable: false,
+    currentMode: 'tell',
     isLoading: false,
   });
 
@@ -57,20 +40,13 @@ export const UIStateProvider: React.FC<UIStateProviderProps> = ({
     () => ({
       setActiveView: (view: WidgetView) => setUIState(prev => ({ ...prev, activeView: view })),
 
-      toggleWidget: () =>
-        setUIState(prev => ({
-          ...prev,
-          isOpen: !prev.isOpen,
-          isMinimized: !prev.isOpen ? false : true,
-        })),
+      toggleWidget: () => setUIState(prev => ({ ...prev, isOpen: !prev.isOpen })),
 
-      closeWidget: () => setUIState(prev => ({ ...prev, isOpen: false, isMinimized: true })),
+      closeWidget: () => setUIState(prev => ({ ...prev, isOpen: false })),
 
       setMode: (mode: InstructionType) => setUIState(prev => ({ ...prev, currentMode: mode })),
 
       setLoading: (loading: boolean) => setUIState(prev => ({ ...prev, isLoading: loading })),
-
-      setAgentAvailable: (available: boolean) => setUIState(prev => ({ ...prev, agentAvailable: available })),
 
       setError: (error: string | undefined) => setUIState(prev => ({ ...prev, error })),
 

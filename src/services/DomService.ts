@@ -1,21 +1,14 @@
 import { isInteractable } from '../utils/dom';
 
-export interface ElementFingerprint {
-  tagName: string;
-  id: string | null;
-  textContent: string | null; // truncated to 100 chars
-  type: string | null;
-  role: string | null;
-  ariaLabel: string | null;
-  name: string | null;
-  href: string | null;
-  selector: string;
-  indexVersion: number;
-}
+// The agent addresses elements by index, so an index must not survive the element changing underneath it: the node
+// object stays the same across a re-render while its attributes are rewritten.
+const IDENTITY_ATTRIBUTES = ['type', 'role', 'aria-label', 'name', 'href'] as const;
 
-interface ValidationResult {
-  isValid: boolean;
-  mismatchReason?: 'element_removed' | 'element_changed';
+interface IndexedElement {
+  element: HTMLElement;
+  selector: string;
+  id: string;
+  identity: Array<string | null>;
 }
 
 export interface ValidatedElementResult {
@@ -24,12 +17,8 @@ export interface ValidatedElementResult {
 }
 
 export class DomService {
-  private elementMap: Map<number, Element> = new Map();
+  private index: Map<number, IndexedElement> = new Map();
   private elementToSequence: WeakMap<Element, number> = new WeakMap();
-  private selectorMap: Map<number, string> = new Map();
-  private fingerprintMap: Map<number, ElementFingerprint> = new Map();
-  private indexingInProgress: boolean = false;
-  private indexVersion: number = 0;
 
   private generateSelector(element: Element): string {
     if (element.id) {
@@ -66,157 +55,76 @@ export class DomService {
     return path.join(' > ');
   }
 
-  private generateFingerprint(element: Element, selector: string): ElementFingerprint {
-    const truncate = (str: string | null, maxLen: number = 100): string | null => {
-      if (!str) return null;
-      const normalized = str.trim().replace(/\s+/g, ' ');
-      return normalized.length > maxLen ? normalized.slice(0, maxLen) : normalized;
-    };
-
-    return {
-      tagName: element.tagName,
-      id: element.id || null,
-      textContent: truncate(element.textContent),
-      type: element.getAttribute('type'),
-      role: element.getAttribute('role'),
-      ariaLabel: element.getAttribute('aria-label'),
-      name: element.getAttribute('name'),
-      href: element.getAttribute('href'),
-      selector,
-      indexVersion: this.indexVersion,
-    };
-  }
-
-  private matchesFingerprint(element: Element, fingerprint: ElementFingerprint): boolean {
-    if (element.tagName !== fingerprint.tagName) {
-      return false;
-    }
-
-    if (fingerprint.id && element.id === fingerprint.id) {
-      return true;
-    }
-
-    if (fingerprint.type && element.getAttribute('type') !== fingerprint.type) {
-      return false;
-    }
-
-    if (fingerprint.ariaLabel && element.getAttribute('aria-label') !== fingerprint.ariaLabel) {
-      return false;
-    }
-
-    if (fingerprint.role && element.getAttribute('role') !== fingerprint.role) {
-      return false;
-    }
-
-    if (fingerprint.href && fingerprint.tagName === 'A') {
-      const currentHref = element.getAttribute('href');
-      if (currentHref !== fingerprint.href) {
-        return false;
-      }
-    }
-
-    if (fingerprint.name && element.getAttribute('name') !== fingerprint.name) {
-      return false;
-    }
-
-    return true;
-  }
-
-  private validateElementAtIndex(index: number): ValidationResult {
-    const fingerprint = this.fingerprintMap.get(index);
-    if (!fingerprint) {
-      return { isValid: true };
-    }
-
-    const element = this.elementMap.get(index);
-    if (!element || !document.contains(element)) {
-      return { isValid: false, mismatchReason: 'element_removed' };
-    }
-
-    if (element instanceof HTMLElement && !this.matchesFingerprint(element, fingerprint)) {
-      return { isValid: false, mismatchReason: 'element_changed' };
-    }
-
-    return { isValid: true };
+  private staleReason(entry: IndexedElement): string | null {
+    if (!document.contains(entry.element)) return 'no longer exists';
+    if (entry.id && entry.element.id === entry.id) return null;
+    const changed = IDENTITY_ATTRIBUTES.some(
+      (attribute, i) => entry.identity[i] && entry.element.getAttribute(attribute) !== entry.identity[i],
+    );
+    return changed ? 'has changed' : null;
   }
 
   private indexInteractableElements(): void {
-    if (this.indexingInProgress) {
-      console.warn('[DomService] Indexing already in progress, skipping concurrent call');
-      return;
-    }
+    this.clearIndex();
 
-    try {
-      this.indexingInProgress = true;
-      this.clearIndex();
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_ELEMENT, {
+      acceptNode: (node: Node) => {
+        if (node instanceof HTMLElement) {
+          if (node.offsetParent === null && node.tagName !== 'BODY') {
+            const style = window.getComputedStyle(node);
+            const isFixedOrSticky = style.position === 'fixed' || style.position === 'sticky';
+            const isDisplayNone = style.display === 'none';
 
-      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_ELEMENT, {
-        acceptNode: (node: Node) => {
-          if (node instanceof HTMLElement) {
-            if (node.offsetParent === null && node.tagName !== 'BODY') {
-              const style = window.getComputedStyle(node);
-              const isFixedOrSticky = style.position === 'fixed' || style.position === 'sticky';
-              const isDisplayNone = style.display === 'none';
+            if (isDisplayNone) return NodeFilter.FILTER_REJECT;
 
-              if (isDisplayNone) return NodeFilter.FILTER_REJECT;
+            if (!isFixedOrSticky) {
+              let parent = node.parentElement;
+              let insideFixedParent = false;
 
-              if (!isFixedOrSticky) {
-                let parent = node.parentElement;
-                let insideFixedParent = false;
-
-                while (parent && parent !== document.body) {
-                  const parentStyle = window.getComputedStyle(parent);
-                  if (parentStyle.position === 'fixed' || parentStyle.position === 'sticky') {
-                    insideFixedParent = true;
-                    break;
-                  }
-                  parent = parent.parentElement;
+              while (parent && parent !== document.body) {
+                const parentStyle = window.getComputedStyle(parent);
+                if (parentStyle.position === 'fixed' || parentStyle.position === 'sticky') {
+                  insideFixedParent = true;
+                  break;
                 }
-
-                if (!insideFixedParent) return NodeFilter.FILTER_REJECT;
+                parent = parent.parentElement;
               }
+
+              if (!insideFixedParent) return NodeFilter.FILTER_REJECT;
             }
           }
-          return NodeFilter.FILTER_ACCEPT;
-        },
-      });
-
-      let node: Node | null = walker.nextNode();
-      let sequenceNumber = 0;
-
-      while (node) {
-        if (node instanceof HTMLElement) {
-          const semantic = node.matches('a[href], button, input, textarea, select, [role="button"]');
-
-          const visuallyClickable = node.classList.contains('cursor-pointer') || node.classList.contains('clickable');
-
-          const hasClickHandler = 'onclick' in node && typeof (node as HTMLElement).onclick === 'function';
-
-          const isNowInteractable = semantic || visuallyClickable || hasClickHandler || isInteractable(node);
-
-          if (isNowInteractable) {
-            this.elementMap.set(sequenceNumber, node);
-            this.elementToSequence.set(node, sequenceNumber);
-
-            const selector = this.generateSelector(node);
-            this.selectorMap.set(sequenceNumber, selector);
-
-            const fingerprint = this.generateFingerprint(node, selector);
-            this.fingerprintMap.set(sequenceNumber, fingerprint);
-
-            sequenceNumber++;
-          }
         }
+        return NodeFilter.FILTER_ACCEPT;
+      },
+    });
 
-        node = walker.nextNode();
+    let node: Node | null = walker.nextNode();
+    let sequenceNumber = 0;
+
+    while (node) {
+      const element = node instanceof HTMLElement ? node : null;
+      if (element) {
+        const semantic = element.matches('a[href], button, input, textarea, select, [role="button"]');
+        const visuallyClickable =
+          element.classList.contains('cursor-pointer') || element.classList.contains('clickable');
+        const hasClickHandler = typeof element.onclick === 'function';
+
+        if (semantic || visuallyClickable || hasClickHandler || isInteractable(element)) {
+          this.index.set(sequenceNumber, {
+            element,
+            selector: this.generateSelector(element),
+            id: element.id,
+            identity: IDENTITY_ATTRIBUTES.map(attribute => element.getAttribute(attribute)),
+          });
+          this.elementToSequence.set(element, sequenceNumber);
+          sequenceNumber++;
+        }
       }
 
-      this.indexVersion++;
-
-      console.log(`[DomService] Indexed ${sequenceNumber} elements (version ${this.indexVersion})`);
-    } finally {
-      this.indexingInProgress = false;
+      node = walker.nextNode();
     }
+
+    console.log(`[DomService] Indexed ${sequenceNumber} elements`);
   }
 
   private getElementCoordinates(element: HTMLElement): {
@@ -303,9 +211,7 @@ export class DomService {
     const clone = document.documentElement.cloneNode(true) as Element;
 
     // Match into the clone by selector — a synced two-tree walk breaks on modals and fixed elements.
-    for (const [index, element] of this.elementMap.entries()) {
-      const selector = this.selectorMap.get(index);
-      if (!(element instanceof HTMLElement) || !selector) continue;
+    for (const [index, { element, selector }] of this.index.entries()) {
       try {
         const cloneElement = (clone.querySelector('body') || clone).querySelector(selector);
         if (!cloneElement) continue;
@@ -329,10 +235,8 @@ export class DomService {
   }
 
   private clearIndex(): void {
-    this.elementMap.clear();
+    this.index.clear();
     this.elementToSequence = new WeakMap();
-    this.selectorMap.clear();
-    this.fingerprintMap.clear();
   }
 
   checkElementInteractable(element: HTMLElement, index: number): string | null {
@@ -383,27 +287,25 @@ export class DomService {
   }
 
   getValidatedElement(index: number): ValidatedElementResult {
-    const validation = this.validateElementAtIndex(index);
-
-    if (!validation.isValid) {
-      const reason = validation.mismatchReason === 'element_removed' ? 'no longer exists' : 'has changed';
-      return {
-        element: null,
-        error: `DOM_CHANGED: Element at index ${index} ${reason}. Call get_html to get updated indices.`,
-      };
-    }
-
-    const element = this.elementMap.get(index) as HTMLElement | undefined;
-    if (!element) {
+    const entry = this.index.get(index);
+    if (!entry) {
       return { element: null, error: `Element ${index} not found` };
     }
 
-    const interactError = this.checkElementInteractable(element, index);
+    const stale = this.staleReason(entry);
+    if (stale) {
+      return {
+        element: null,
+        error: `DOM_CHANGED: Element at index ${index} ${stale}. Call get_html to get updated indices.`,
+      };
+    }
+
+    const interactError = this.checkElementInteractable(entry.element, index);
     if (interactError) {
       return { element: null, error: interactError };
     }
 
-    return { element };
+    return { element: entry.element };
   }
 }
 

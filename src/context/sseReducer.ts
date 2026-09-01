@@ -10,14 +10,14 @@ import {
   WAIT_FOR_USER_TOOLS,
 } from '../utils/chat';
 
-export interface SseTaskState {
+export interface TaskState {
   activeTaskId: string | null;
   isTaskRunning: boolean;
 }
 
 export interface SseState {
   messages: ChatMessage[];
-  task: SseTaskState;
+  task: TaskState;
 }
 
 export type SseEffect =

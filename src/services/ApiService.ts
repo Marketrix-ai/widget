@@ -1,10 +1,10 @@
-import { sdk, type WidgetCommand } from '../sdk';
-import type { MarketrixConfig, MessageDispatchRequest } from '../types';
+import { type InstructionType, sdk, type WidgetCommand } from '../sdk';
+import type { MarketrixConfig } from '../types';
 import { chatSessionManager } from './ChatSessionManager';
 import { storageService } from './StorageService';
 import { StreamClient } from './StreamClient';
 
-function logWidgetQuestion(config: MarketrixConfig, question: string, mode: string): void {
+function logWidgetQuestion(config: MarketrixConfig, question: string, mode: InstructionType): void {
   const metadata: Record<string, unknown> = {
     question,
     mode,
@@ -23,25 +23,26 @@ function logWidgetQuestion(config: MarketrixConfig, question: string, mode: stri
     .catch((error: unknown) => console.warn('[API Service] Failed to log widget question:', error));
 }
 
-/** Fire-and-forget send over the typed stream; the reply arrives asynchronously as a chat/response event. */
-export async function messageDispatch(config: MarketrixConfig, request: MessageDispatchRequest): Promise<void> {
-  await chatSessionManager.getOrCreateChatId();
-
-  const mode = request.mode || 'tell';
-
-  if (request.message) {
-    logWidgetQuestion(config, request.message, mode);
-  }
-
+/** The reply does not come back from here — it arrives asynchronously as a chat/response event on the stream. */
+export async function messageDispatch(
+  config: MarketrixConfig,
+  message: string,
+  mode: InstructionType,
+  requestId: string,
+): Promise<void> {
   if (!(config.mtxId && config.mtxKey)) {
     throw new Error('mtxId + mtxKey is required');
   }
 
-  const command: WidgetCommand = {
-    type: `chat/${mode}` as 'chat/tell' | 'chat/show' | 'chat/do',
-    request_id: request.requestId || `req_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-    content: request.message || '',
-  };
+  const chatId = await chatSessionManager.getOrCreateChatId();
+  logWidgetQuestion(config, message, mode);
 
-  StreamClient.getInstance().send(command);
+  const command: WidgetCommand = { type: `chat/${mode}`, request_id: requestId, content: message };
+
+  // send() addresses the chat id that connect() records, so connect first — on a cold first message there is none yet.
+  const streamClient = StreamClient.getInstance();
+  if (!streamClient.isConnected()) {
+    await streamClient.connect(chatId);
+  }
+  await streamClient.send(command);
 }

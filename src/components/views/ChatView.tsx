@@ -1,11 +1,12 @@
 import React, { useRef, useState } from 'react';
 
 import { type PendingMessage, useScreenShare } from '../../hooks/useScreenShare';
+import { useWidget, useWidgetConfig } from '../../hooks/useWidget';
 import type { InstructionType } from '../../sdk';
 import { createSystemMessage, createUserMessage } from '../../services/ChatService';
 import { showModeService } from '../../services/ShowModeService';
-import type { ChatMessage, MarketrixConfig } from '../../types';
-import { getModeDisplayName } from '../../utils/color';
+import type { MarketrixConfig } from '../../types';
+import { getModeDisplayName } from '../../utils/chat';
 import { Stack } from '../base/Stack';
 import { Surface } from '../base/Surface';
 import { Text } from '../base/Text';
@@ -39,22 +40,11 @@ class ChatErrorBoundary extends React.Component<{ children: React.ReactNode }, {
   }
 }
 
-export interface ChatViewProps {
-  config: MarketrixConfig;
-  messages: ChatMessage[];
-  currentMode: InstructionType;
-  isTaskRunning?: boolean;
-  onSendMessage: (message: string, mode?: InstructionType, skipUserMessage?: boolean) => void;
-  onSetMode: (mode: InstructionType) => void;
-  onAddMessage: (message: ChatMessage) => void;
-  onUpdateMessage: (messageId: string, updates: Partial<ChatMessage>) => void;
-  onRemoveMessage?: (messageId: string) => void;
-  onStopTask?: () => void;
-  onClearChat?: () => void | Promise<void>;
-  onScreenSharingChange?: (isSharing: boolean) => void;
-  onStartScreenShareRef?: React.MutableRefObject<(() => void) | null>;
-  onStopScreenShareRef?: React.MutableRefObject<(() => void) | null>;
-  messageInputRef?: React.RefObject<HTMLTextAreaElement | null>;
+interface ChatViewProps {
+  onScreenSharingChange: (isSharing: boolean) => void;
+  onStartScreenShareRef: React.MutableRefObject<(() => void) | null>;
+  onStopScreenShareRef: React.MutableRefObject<(() => void) | null>;
+  messageInputRef: React.RefObject<HTMLTextAreaElement | null>;
 }
 
 // Display order, and the setting that enables each.
@@ -65,22 +55,15 @@ const MODES: Array<{ id: InstructionType; icon: ChatInputMode['icon']; flag: key
 ];
 
 export const ChatView: React.FC<ChatViewProps> = ({
-  config,
-  messages,
-  currentMode,
-  isTaskRunning = false,
-  onSendMessage,
-  onSetMode,
-  onAddMessage,
-  onUpdateMessage,
-  onRemoveMessage,
-  onStopTask,
-  onClearChat,
   onScreenSharingChange,
   onStartScreenShareRef,
   onStopScreenShareRef,
-  messageInputRef: externalMessageInputRef,
+  messageInputRef,
 }) => {
+  const config = useWidgetConfig();
+  const { state, actions } = useWidget();
+  const { messages, currentMode, isTaskRunning } = state;
+
   const [inputValue, setInputValue] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -98,10 +81,10 @@ export const ChatView: React.FC<ChatViewProps> = ({
     onScreenSharingChange,
     onStartScreenShareRef,
     onStopScreenShareRef,
-    onAddMessage,
-    onUpdateMessage,
-    onRemoveMessage,
-    onSendMessage,
+    onAddMessage: actions.addMessage,
+    onUpdateMessage: actions.updateMessage,
+    onRemoveMessage: actions.removeMessage,
+    onSendMessage: actions.messageDispatch,
     pendingMessage,
     setPendingMessage,
   });
@@ -111,21 +94,22 @@ export const ChatView: React.FC<ChatViewProps> = ({
     if (inputValue.trim() && !hasPendingMessage) {
       const messageContent = inputValue.trim();
       setInputValue('');
-      const userMessage = createUserMessage(messageContent, currentMode);
-      onAddMessage(userMessage);
+      actions.addMessage(createUserMessage(messageContent, currentMode));
       if (config.use_screenshare !== false && (currentMode === 'show' || currentMode === 'do') && !isScreenSharing) {
         setPendingMessage({ content: messageContent, mode: currentMode, alreadyAdded: true });
         requestScreenAccess(currentMode);
       } else {
-        onSendMessage(messageContent, currentMode, true);
+        void actions.messageDispatch(messageContent, currentMode, true);
       }
     }
   };
 
   const handleModeChange = (mode: InstructionType) => {
     if (mode === currentMode) return;
-    onAddMessage(createSystemMessage(`Switched to ${getModeDisplayName(mode)} mode`, mode, 'agent', 'mode-change'));
-    onSetMode(mode);
+    actions.addMessage(
+      createSystemMessage(`Switched to ${getModeDisplayName(mode)} mode`, mode, 'agent', 'mode-change'),
+    );
+    actions.setMode(mode);
   };
 
   return (
@@ -145,12 +129,9 @@ export const ChatView: React.FC<ChatViewProps> = ({
       <Surface grow overflow='hidden' paddingY='xs' style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
         <ChatErrorBoundary>
           <MessageList
-            messages={messages}
             messagesEndRef={messagesEndRef}
-            config={config}
             onScreenAccessAllow={handleScreenAccessAllow}
             onScreenAccessDeny={handleScreenAccessDeny}
-            onClearChat={onClearChat}
           />
         </ChatErrorBoundary>
       </Surface>
@@ -164,7 +145,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
         style={{ margin: '0 12px 12px 12px', marginTop: 'auto' }}
       >
         <ChatInput
-          ref={externalMessageInputRef}
+          ref={messageInputRef}
           value={inputValue}
           onChange={setInputValue}
           onSubmit={handleSendMessage}
@@ -179,7 +160,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
           taskRunning={isTaskRunning}
           onStop={() => {
             showModeService.cleanup();
-            onStopTask?.();
+            void actions.stopTask();
           }}
         />
       </Surface>

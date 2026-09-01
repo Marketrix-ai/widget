@@ -12,7 +12,6 @@ export interface ChatSnapshot {
   activeTaskId: string | null;
   currentMode: InstructionType;
   isOpen: boolean;
-  isMinimized: boolean;
   isLoading: boolean;
 }
 
@@ -30,23 +29,38 @@ const DEFAULT_CONTEXT: MarketrixChatContext = {
   activeTaskId: null,
   currentMode: 'tell',
   isOpen: false,
-  isMinimized: false,
   isLoading: false,
   config: null,
   timestamp: 0,
 };
 
+// A host page can deny storage outright (third-party cookies off, sandboxed iframe), where even reading throws.
+export function readLocal(key: string): string | null {
+  try {
+    return typeof localStorage === 'undefined' ? null : localStorage.getItem(key);
+  } catch (error) {
+    console.warn('[StorageService] localStorage is unreadable:', error);
+    return null;
+  }
+}
+
+export function writeLocal(key: string, value: string): void {
+  try {
+    if (typeof localStorage !== 'undefined') localStorage.setItem(key, value);
+  } catch (error) {
+    console.warn('[StorageService] localStorage is unwritable:', error);
+  }
+}
+
 // Merged over the defaults so a payload written by an older widget version reads as incomplete, not corrupt.
 function loadContext(): MarketrixChatContext {
-  if (typeof window === 'undefined') return { ...DEFAULT_CONTEXT };
+  const stored = readLocal(STORAGE_KEY);
+  if (!stored) return { ...DEFAULT_CONTEXT };
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      const parsed = { ...DEFAULT_CONTEXT, ...(JSON.parse(stored) as Partial<MarketrixChatContext>) };
-      if (Date.now() - parsed.timestamp <= CONTEXT_EXPIRY_MS) return parsed;
-    }
+    const parsed = { ...DEFAULT_CONTEXT, ...(JSON.parse(stored) as Partial<MarketrixChatContext>) };
+    if (Date.now() - parsed.timestamp <= CONTEXT_EXPIRY_MS) return parsed;
   } catch (error) {
-    console.warn('[StorageService] Failed to load context:', error);
+    console.warn('[StorageService] Failed to parse the stored context:', error);
   }
   return { ...DEFAULT_CONTEXT };
 }
@@ -60,12 +74,7 @@ class StorageService {
 
   updateContext(updates: Partial<MarketrixChatContext>): void {
     this.context = { ...this.context, ...updates, timestamp: Date.now() };
-    if (typeof window === 'undefined') return;
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(this.context));
-    } catch (error) {
-      console.error('[StorageService] Failed to save context:', error);
-    }
+    writeLocal(STORAGE_KEY, JSON.stringify(this.context));
   }
 
   /** window.name takes priority over localStorage — it is what survives host-page navigation. */
