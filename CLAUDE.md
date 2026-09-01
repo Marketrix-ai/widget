@@ -20,7 +20,7 @@ npm start                # vite dev on :9001 (override PORT / VITE_PORT; CORS en
 npm run build            # → dist/widget.mjs (terser, single ESM) + tsc declarations
 npm run type-check       # alias: check          npm run lint    # --fix, max-warnings 200
 npm run test:run         # vitest (jsdom + Testing Library + axe)
-npm run bundle:check     # bundle-size gate (artifact presence + size + sourcemap)
+npm run bundle:check     # packaging gate (size, single chunk, no CSS file, React external)
 npm run code:check       # tsc + eslint + prettier --check (one-shot)
 npm run ci               # every CI validation gate
 npm run tag <version>    # scripts/release.sh
@@ -161,8 +161,9 @@ and shipped images cannot drift in their dependency set.
 - **React importmap wins** — the loader's `esm.sh` importmap only fills gaps; a host on a different
   React 19 build keeps its own.
 - **Interpolated Tailwind classes need the `@source inline(...)` safelist in `index.css`** —
-  `resolveLayoutClasses` builds `p-*`/`gap-*`/`inset-*` from `spacingScale`, which the scanner cannot
-  see; widen the scale and you must widen the safelist or the class silently never ships.
+  `resolveLayoutClasses` builds `p-*`/`gap-*`/`inset-*` from `SPACING_SCALE`, which the scanner cannot
+  see; widen the scale and you must widen the safelist or the class silently never ships
+  (`src/__tests__/stylesheet-contract.test.ts` fails both ways round).
 - **The widget has no dark mode** — no `.dark` block, no `dark:` variant. Theming is the per-tenant
   settings → CSS custom properties in `semantic-tokens.ts`, nothing else.
 - **Every shadow is a `SHADOW.*` token applied inline** — there is no settings-driven shadow; the four
@@ -177,7 +178,8 @@ and shipped images cannot drift in their dependency set.
   `config.widget_position` would pin the dashboard's setting at whatever it was on a visitor's first load.
 - **Inside a closed shadow root, `document.activeElement` is the HOST** and a stylesheet's `:root`
   matches nothing — read focus through `getRootNode()`, and scope host-level rules to `:host` or
-  `[data-marketrix-widget]`.
+  `[data-marketrix-widget]`. `useFocusTrap.activeElementIn` is the one home for the retargeting and
+  eslint's `no-restricted-properties` bans the bare read everywhere else.
 
 ## Conventions
 

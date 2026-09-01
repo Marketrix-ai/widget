@@ -4,7 +4,7 @@ import { radiusClasses } from '../../design-system/component-tokens';
 
 export type SpacingToken = 'none' | '2xs' | 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
 
-const spacingScale: Record<SpacingToken, string> = {
+export const SPACING_SCALE: Record<SpacingToken, string> = {
   none: '0',
   '2xs': '1',
   xs: '0.5',
@@ -76,12 +76,12 @@ const LAYOUT_KEYS = new Set<keyof LayoutProps>([
 export function resolveLayoutClasses(props: LayoutProps): string {
   const classes: string[] = [];
 
-  if (props.padding !== undefined) classes.push(`p-${spacingScale[props.padding]}`);
-  if (props.paddingX !== undefined) classes.push(`px-${spacingScale[props.paddingX]}`);
-  if (props.paddingY !== undefined) classes.push(`py-${spacingScale[props.paddingY]}`);
-  if (props.paddingTop !== undefined) classes.push(`pt-${spacingScale[props.paddingTop]}`);
-  if (props.paddingBottom !== undefined) classes.push(`pb-${spacingScale[props.paddingBottom]}`);
-  if (props.gap !== undefined) classes.push(`gap-${spacingScale[props.gap]}`);
+  if (props.padding !== undefined) classes.push(`p-${SPACING_SCALE[props.padding]}`);
+  if (props.paddingX !== undefined) classes.push(`px-${SPACING_SCALE[props.paddingX]}`);
+  if (props.paddingY !== undefined) classes.push(`py-${SPACING_SCALE[props.paddingY]}`);
+  if (props.paddingTop !== undefined) classes.push(`pt-${SPACING_SCALE[props.paddingTop]}`);
+  if (props.paddingBottom !== undefined) classes.push(`pb-${SPACING_SCALE[props.paddingBottom]}`);
+  if (props.gap !== undefined) classes.push(`gap-${SPACING_SCALE[props.gap]}`);
 
   if (props.align !== undefined) classes.push(`items-${props.align}`);
   if (props.justify !== undefined) classes.push(`justify-${props.justify}`);
@@ -90,7 +90,7 @@ export function resolveLayoutClasses(props: LayoutProps): string {
 
   if (props.position !== undefined) classes.push(props.position);
   if (props.inset !== undefined) {
-    classes.push(props.inset === '0' ? 'inset-0' : `inset-${spacingScale[props.inset]}`);
+    classes.push(props.inset === '0' ? 'inset-0' : `inset-${SPACING_SCALE[props.inset]}`);
   }
 
   if (props.overflow !== undefined) classes.push(`overflow-${props.overflow}`);

@@ -3,6 +3,13 @@ import { useCallback, useEffect, useRef } from 'react';
 const FOCUSABLE_SELECTOR =
   'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
+/** Inside the closed shadow root `document.activeElement` retargets to the HOST, so it never names an
+ *  element of the widget's own tree — read focus through the container's own root instead. */
+function activeElementIn(container: HTMLElement): HTMLElement | null {
+  const root = container.getRootNode();
+  return ((root instanceof ShadowRoot ? root.activeElement : document.activeElement) as HTMLElement) ?? null;
+}
+
 function getFocusables(container: HTMLElement): HTMLElement[] {
   return Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
     el => el.offsetParent !== null && !el.hasAttribute('aria-hidden'),
@@ -42,13 +49,13 @@ export function useFocusTrap(
       return;
     }
 
-    if (!previousActiveRef.current) {
-      previouslyFocusedRef.current = (document.activeElement as HTMLElement) || null;
-    }
-    previousActiveRef.current = true;
-
     const container = containerRef.current;
     if (!container) return;
+
+    if (!previousActiveRef.current) {
+      previouslyFocusedRef.current = activeElementIn(container);
+    }
+    previousActiveRef.current = true;
 
     focusFirst();
 
@@ -60,10 +67,8 @@ export function useFocusTrap(
       if (e.key !== 'Tab') return;
       const focusables = getFocusables(container);
       if (focusables.length === 0) return;
-      // document.activeElement retargets to the shadow HOST, so it never matches anything in this list.
-      const root = container.getRootNode();
-      const current = (root instanceof ShadowRoot ? root.activeElement : document.activeElement) as HTMLElement;
-      const idx = focusables.indexOf(current);
+      const current = activeElementIn(container);
+      const idx = current ? focusables.indexOf(current) : -1;
       if (idx === -1) return;
       if (e.shiftKey) {
         if (idx === 0) {

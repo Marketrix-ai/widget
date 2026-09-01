@@ -68,6 +68,18 @@ export default [
       'unused-imports': unusedImports,
     },
     rules: {
+      // Inside the closed shadow root `document.activeElement` retargets to the HOST, so it never names
+      // an element of the widget's own tree — read focus through `getRootNode()`. `useFocusTrap`'s
+      // `activeElementIn` is the one home for that and is exempted below.
+      'no-restricted-properties': [
+        'error',
+        {
+          object: 'document',
+          property: 'activeElement',
+          message:
+            'reads the shadow HOST, not the focused widget element — use activeElementIn() from hooks/useFocusTrap',
+        },
+      ],
       '@typescript-eslint/no-unused-vars': 'off', // handled by unused-imports plugin
       '@typescript-eslint/no-explicit-any': 'warn',
       '@typescript-eslint/explicit-function-return-type': 'off',
@@ -129,6 +141,13 @@ export default [
     },
   },
   prettierConfig,
+  {
+    // The one home for the retargeting itself, plus jsdom tests that mount no shadow root.
+    files: ['src/hooks/useFocusTrap.ts', '**/*.test.ts', '**/*.test.tsx'],
+    rules: {
+      'no-restricted-properties': 'off',
+    },
+  },
   {
     files: ['**/*.test.ts', '**/*.test.tsx'],
     rules: {
