@@ -54,92 +54,40 @@ export class ChatService {
 
 export const chatService = new ChatService();
 
-export function createUserMessage(
+function createMessage(
+  idPrefix: string,
+  sender: 'user' | 'agent',
   content: string,
-  mode?: InstructionType,
-  idPrefix: string = 'user-message',
+  extra: Partial<ChatMessage> = {},
 ): ChatMessage {
-  const parts = [];
-  const cleanContent = content.trim();
-  if (cleanContent) {
-    parts.push({ type: 'text' as const, content: cleanContent });
-  }
-
-  return {
-    id: `${idPrefix}-${Date.now()}`,
-    content: cleanContent,
-    sender: 'user',
-    timestamp: new Date(),
-    mode,
-    parts,
-  };
-}
-
-export function createAgentMessage(
-  content: string,
-  mode?: InstructionType,
-  messageId?: string,
-  idPrefix: string = 'agent-message',
-): ChatMessage {
-  const parts = [];
-  const cleanContent = content.trim();
-  if (cleanContent) {
-    parts.push({ type: 'text' as const, content: cleanContent });
-  }
-
-  return {
-    id: messageId || `${idPrefix}-${Date.now()}`,
-    content,
-    sender: 'agent',
-    timestamp: new Date(),
-    mode,
-    parts,
-  };
-}
-
-export function createSystemMessage(
-  content: string,
-  mode?: InstructionType,
-  sender: 'user' | 'agent' = 'agent',
-  idPrefix: string = 'system-message',
-): ChatMessage {
-  const parts = [];
-  if (content) {
-    parts.push({ type: 'text' as const, content });
-  }
-
   return {
     id: `${idPrefix}-${Date.now()}`,
     content,
     sender,
     timestamp: new Date(),
-    mode,
-    isSystemMessage: true,
-    parts,
+    parts: content ? [{ type: 'text', content }] : [],
+    ...extra,
   };
 }
 
-export function createScreenAccessRequestMessage(mode?: InstructionType): ChatMessage {
-  const content = 'Can I take a look at your screen?';
-  return {
-    id: `screen-access-request-${Date.now()}`,
-    content,
-    sender: 'agent',
-    timestamp: new Date(),
+export const createUserMessage = (content: string, mode?: InstructionType, idPrefix = 'user-message'): ChatMessage =>
+  createMessage(idPrefix, 'user', content.trim(), { mode });
+
+export const createAgentMessage = (content: string): ChatMessage =>
+  createMessage('agent-message', 'agent', content.trim());
+
+export const createSystemMessage = (
+  content: string,
+  mode: InstructionType,
+  sender: 'user' | 'agent',
+  idPrefix: string,
+): ChatMessage => createMessage(idPrefix, sender, content, { mode, isSystemMessage: true });
+
+export const createScreenAccessRequestMessage = (mode?: InstructionType): ChatMessage =>
+  createMessage('screen-access-request', 'agent', 'Can I take a look at your screen?', {
     mode,
     isScreenAccessRequest: true,
-    parts: [{ type: 'text', content }],
-  };
-}
+  });
 
-export function createScreenshareMessage(stream: MediaStream, mode: InstructionType = 'show'): ChatMessage {
-  return {
-    id: `screenshare-${Date.now()}`,
-    content: '',
-    sender: 'user',
-    timestamp: new Date(),
-    mode,
-    videoStream: stream,
-    parts: [],
-  };
-}
+export const createScreenshareMessage = (stream: MediaStream, mode: InstructionType = 'show'): ChatMessage =>
+  createMessage('screenshare', 'user', '', { mode, videoStream: stream });
