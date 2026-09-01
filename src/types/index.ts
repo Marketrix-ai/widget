@@ -34,13 +34,13 @@ export interface ChatMessage {
   isPlaceholder?: boolean;
   placeholderState?: 'thinking' | 'waiting-for-user';
   parts?: MessagePart[];
-  taskStatus?: 'ongoing' | 'done' | 'failed' | 'stopped';
+  taskStatus?: 'done' | 'failed' | 'stopped';
 }
 
 export interface MessagePart {
   type: 'text' | 'progress';
   content: string;
-  status?: 'in_progress' | 'completed' | 'failed' | 'stopped';
+  status?: 'in_progress' | 'completed' | 'failed';
   browserToolName?: string;
   /** chat/delta fragments accumulate into this part; the final chat/response replaces it. */
   streaming?: boolean;

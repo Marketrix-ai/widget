@@ -1,33 +1,24 @@
 import React from 'react';
 
 import { useWidgetConfig } from '../../hooks/useWidget';
+import type { ChatMessage } from '../../types';
 import { addOpacity } from '../../utils/color';
 import { Icon } from '../base/Icon';
-import { Spinner } from '../base/Spinner';
+import type { IconName } from '../base/icons';
 
-interface TaskStatusIconProps {
-  status: 'ongoing' | 'done' | 'failed' | 'stopped';
-}
+const STATUS_ICONS: Record<NonNullable<ChatMessage['taskStatus']>, { name: IconName; opacity: number }> = {
+  done: { name: 'checkCircle', opacity: 1 },
+  failed: { name: 'exclamationCircle', opacity: 0.75 },
+  stopped: { name: 'circle', opacity: 0.5 },
+};
 
-export const TaskStatusIcon: React.FC<TaskStatusIconProps> = ({ status }) => {
-  const accentColor = useWidgetConfig().widget_accent_color;
-  const iconSize = 14;
-
-  switch (status) {
-    case 'done':
-      return <Icon name='checkCircle' style={{ color: accentColor, flexShrink: 0 }} size={iconSize} />;
-    case 'failed':
-      return (
-        <Icon
-          name='exclamationCircle'
-          style={{ color: addOpacity(accentColor, 0.75), flexShrink: 0 }}
-          size={iconSize}
-        />
-      );
-    case 'stopped':
-      return <Icon name='circle' style={{ color: addOpacity(accentColor, 0.5), flexShrink: 0 }} size={iconSize} />;
-    case 'ongoing':
-    default:
-      return <Spinner size='sm' style={{ color: accentColor }} />;
-  }
+export const TaskStatusIcon: React.FC<{ status: NonNullable<ChatMessage['taskStatus']> }> = ({ status }) => {
+  const { name, opacity } = STATUS_ICONS[status];
+  return (
+    <Icon
+      name={name}
+      size={14}
+      style={{ color: addOpacity(useWidgetConfig().widget_accent_color, opacity), flexShrink: 0 }}
+    />
+  );
 };

@@ -91,24 +91,13 @@ describe('SSE event discriminated-union contract (WidgetEventSchema)', () => {
       expect(WidgetEventSchema.safeParse({ type: 'task/status' }).success).toBe(false);
     });
 
-    it('"running" is a valid status (Wave 14 canonical wire vocab)', () => {
-      const result = WidgetEventSchema.safeParse({ type: 'task/status', status: 'running' });
-      expect(result.success).toBe(true);
+    // Wave 14 canonical wire vocab; has_question is the sim-only pause propagated to the widget.
+    it.each(['running', 'completed', 'failed', 'stopped', 'has_question'] as const)('accepts "%s"', status => {
+      expect(WidgetEventSchema.safeParse({ type: 'task/status', status }).success).toBe(true);
     });
 
-    it('legacy "started" is REJECTED post-Wave-14 (BREAKING contract change)', () => {
-      const result = WidgetEventSchema.safeParse({ type: 'task/status', status: 'started' });
-      expect(result.success).toBe(false);
-    });
-
-    it('legacy "in_progress" is REJECTED post-Wave-14 (BREAKING contract change)', () => {
-      const result = WidgetEventSchema.safeParse({ type: 'task/status', status: 'in_progress' });
-      expect(result.success).toBe(false);
-    });
-
-    it('"has_question" remains a valid status (sim-only state propagated to widget)', () => {
-      const result = WidgetEventSchema.safeParse({ type: 'task/status', status: 'has_question' });
-      expect(result.success).toBe(true);
+    it.each(['started', 'in_progress'] as const)('REJECTS legacy "%s" (BREAKING contract change)', status => {
+      expect(WidgetEventSchema.safeParse({ type: 'task/status', status }).success).toBe(false);
     });
 
     it('all optional fields parse correctly', () => {
@@ -119,8 +108,7 @@ describe('SSE event discriminated-union contract (WidgetEventSchema)', () => {
         task_id: 'task-xyz',
         timestamp: 1700000000,
       };
-      const result = WidgetEventSchema.safeParse(full);
-      expect(result.success).toBe(true);
+      expect(WidgetEventSchema.safeParse(full).success).toBe(true);
     });
   });
 
