@@ -5,11 +5,9 @@ declare global {
 }
 
 import React, { useEffect, useRef } from 'react';
-import { createRoot, type Root } from 'react-dom/client';
+import type { Root } from 'react-dom/client';
 
-import { MarketrixWidget as MarketrixWidgetComponent } from './components/MarketrixWidget';
-import { WidgetProviders } from './context/WidgetProviders';
-import { configureSdk, type WidgetSettingsData } from './sdk';
+import { configureSdk } from './sdk';
 import { chatSessionManager } from './services/ChatSessionManager';
 import { RrwebSessionRecorder } from './services/RrwebSessionRecorder';
 import { StreamClient } from './services/StreamClient';
@@ -31,6 +29,15 @@ let initPromise: Promise<void> | null = null;
 let lifecycleGeneration = 0;
 let ownedWidgetContainer: HTMLElement | null = null;
 let rrwebSessionRecorder: RrwebSessionRecorder | null = null;
+
+/** The one production/imperative-preview mount: owns the container and the module-global instance. */
+function mount(config: MarketrixConfig, container: HTMLElement | undefined, previewMode = false): void {
+  const { container: widgetContainer, mountEl } = createWidgetContainer(container);
+  ownedWidgetContainer = widgetContainer;
+  widgetState.instance = mountWidgetToContainer(mountEl, config, previewMode);
+  widgetState.config = config;
+  widgetState.programmaticInit = false;
+}
 
 // Call only via initWidget(), which guards with initPromise.
 async function initWidgetInternal(
@@ -61,12 +68,7 @@ async function initWidgetInternal(
   if (generation !== lifecycleGeneration) return;
   hideWidgetSettingsLoader();
 
-  widgetState.config = finalConfig;
-  const { container: widgetContainer, mountEl } = createWidgetContainer(container);
-  ownedWidgetContainer = widgetContainer;
-  const instance = mountWidgetToContainer(mountEl, finalConfig);
-  widgetState.instance = instance;
-  widgetState.programmaticInit = false;
+  mount(finalConfig, container);
   window.__mtx = { state: 'active' };
 
   if (finalConfig.widget_recording && finalConfig.mtxApp) {
@@ -170,36 +172,17 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ settings, cont
       containerIdRef.current = `marketrix-widget-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
     }
 
-    const {
-      container: widgetContainer,
-      shadowRoot,
-      mountEl,
-    } = createWidgetContainer(parentContainer as HTMLElement, containerIdRef.current);
+    const { container: widgetContainer, mountEl } = createWidgetContainer(
+      parentContainer as HTMLElement,
+      containerIdRef.current,
+    );
 
     widgetContainerRef.current = widgetContainer;
 
-    const config = {
-      ...createConfigFromSettings(settings, {
-        mtxId,
-        mtxKey,
-        mtxApiHost,
-      }),
-      isPreviewMode: true,
-      widget_enabled: settings.widget_enabled ?? true,
-    };
-
-    if (rootRef.current) {
-      rootRef.current.unmount();
-      rootRef.current = null;
-    }
-
-    const root = createRoot(mountEl);
-    rootRef.current = root;
-
-    root.render(
-      <WidgetProviders previewMode portalContainer={shadowRoot}>
-        <MarketrixWidgetComponent config={config} />
-      </WidgetProviders>,
+    rootRef.current = mountWidgetToContainer(
+      mountEl,
+      { ...createConfigFromSettings(settings, { mtxId, mtxKey, mtxApiHost }), isPreviewMode: true },
+      true,
     );
 
     return () => {
@@ -225,33 +208,15 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ settings, cont
 export const mountWidget = async (config: AddWidgetConfig): Promise<void> => {
   const container = config.container;
 
-  if ('settings' in config && config.settings !== undefined) {
+  if (config.settings !== undefined) {
     unmountWidget();
     widgetState.programmaticInit = true;
     // Preview: no network, and deliberately no global production instance.
-    const previewConfig = config as Extract<AddWidgetConfig, { settings: WidgetSettingsData }>;
-    const { settings, container: _container, ...restConfig } = previewConfig;
-    const finalConfig = {
-      ...createConfigFromSettings(settings, restConfig),
-      isPreviewMode: true,
-    };
-    const { container: widgetContainer, mountEl } = createWidgetContainer(container);
-    const instance = mountWidgetToContainer(mountEl, finalConfig, true);
-    ownedWidgetContainer = widgetContainer;
-    widgetState.instance = instance;
-    widgetState.config = finalConfig;
-    widgetState.programmaticInit = false;
-  } else if ('mtxId' in config && config.mtxId !== undefined && config.mtxKey !== undefined) {
-    const prodConfig = config as Extract<AddWidgetConfig, { mtxId: string; mtxKey: string }>;
-    const { mtxId, mtxKey, container: _container, ...restConfig } = prodConfig;
-    await initWidget(
-      {
-        mtxId,
-        mtxKey,
-        ...restConfig,
-      },
-      container,
-    );
+    const { settings, container: _container, ...restConfig } = config;
+    mount({ ...createConfigFromSettings(settings, restConfig), isPreviewMode: true }, container, true);
+  } else if (config.mtxId !== undefined && config.mtxKey !== undefined) {
+    const { container: _container, ...restConfig } = config;
+    await initWidget(restConfig, container);
   } else {
     throw new Error('Invalid configuration: provide either settings (preview) or mtxId+mtxKey (production)');
   }
