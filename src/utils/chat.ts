@@ -1,5 +1,12 @@
 import type { ChatMessage, InstructionType } from '../types';
 
+const MODE_DISPLAY_NAMES: Record<InstructionType, string> = { show: 'Show', tell: 'Tell', do: 'Do' };
+
+export const getModeDisplayName = (mode: InstructionType): string => MODE_DISPLAY_NAMES[mode];
+
+export const formatMessageTime = (date: Date | undefined): string =>
+  (date ?? new Date()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
 export function removeThinkingMarkers(content: string): string {
   return content.replace(/__THINKING__/g, '');
 }

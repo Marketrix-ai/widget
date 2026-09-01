@@ -6,7 +6,7 @@ import type { InstructionType } from '../../sdk';
 import { createSystemMessage, createUserMessage } from '../../services/ChatService';
 import { showModeService } from '../../services/ShowModeService';
 import type { MarketrixConfig } from '../../types';
-import { getModeDisplayName } from '../../utils/color';
+import { getModeDisplayName } from '../../utils/chat';
 import { Stack } from '../base/Stack';
 import { Surface } from '../base/Surface';
 import { Text } from '../base/Text';
