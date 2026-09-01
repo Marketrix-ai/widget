@@ -10,7 +10,6 @@ import {
 } from '../utils/chat';
 
 export interface TaskState {
-  activeTaskId: string | null;
   isTaskRunning: boolean;
 }
 
@@ -108,7 +107,7 @@ function stampProgressMessage(
   });
   const messages = [...state.messages];
   if (found) messages[found.index] = stamp(found.message);
-  return { messages, task: { isTaskRunning: false, activeTaskId: null } };
+  return { messages, task: { isTaskRunning: false } };
 }
 
 export function reduceToolDone(state: SseState, currentMode: InstructionType): SseState {
@@ -157,7 +156,7 @@ export function reduceSse(state: SseState, event: WidgetEvent, currentMode: Inst
   switch (event.type) {
     case 'tool/call': {
       // A tool/call can arrive before `task/status running`, so activate here too.
-      const task = state.task.isTaskRunning ? state.task : { ...state.task, isTaskRunning: true };
+      const task = state.task.isTaskRunning ? state.task : { isTaskRunning: true };
       const explanation = event.explanation || '';
       const messages = applyProgress(
         state.messages,
@@ -183,11 +182,8 @@ export function reduceSse(state: SseState, event: WidgetEvent, currentMode: Inst
     }
 
     case 'task/status': {
-      if (event.status === 'running') {
-        // The api mints the task id, so a `running` that arrives before it has one activates nothing yet.
-        if (!event.task_id) return noChange(state);
-        return { state: { ...state, task: { isTaskRunning: true, activeTaskId: event.task_id } }, effects: [] };
-      }
+      // `running` activates nothing: the first tool/call is what flips isTaskRunning, and a tell-mode reply never has a task.
+      if (event.status === 'running') return noChange(state);
       const content = event.message ? { content: event.message } : {};
       const status = event.status;
       // has_question is a pause, not a terminal status.

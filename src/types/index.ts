@@ -54,7 +54,6 @@ export interface WidgetState {
   messages: ChatMessage[];
   currentMode: InstructionType;
   error?: string;
-  activeTaskId: string | null;
   isTaskRunning: boolean;
   activeView: WidgetView;
 }

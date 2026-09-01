@@ -81,9 +81,9 @@ reconnection until re-init.**
 against `BROWSER_TOOLS`, executes via `browserToolService.executeTool`, then replies `tool/response`.
 `get_html` ships a clone of the page stamped with **`data-id` and nothing else** — that attribute is the
 whole contract with the agent's HTML parser, which reads no geometry, and the raw HTML never reaches a prompt.
-The `done` tool ends the task. `task/status` drives state: `running` **with a `task_id`** activates it
-(one without is the agent starting before the api has minted one), the terminal three clear it and the
-dedupe set.
+The `done` tool ends the task. **The first `tool/call` is what activates the task**, not
+`task/status running` — the api mints no task id, so the widget holds none and `chat/stop` carries none;
+the terminal three clear the task and the dedupe set.
 
 **Interaction modes** map to commands and `InstructionType`: **Tell** = explain · **Show** =
 `tool/call` with `mode: 'show'`, highlight via `ShowModeService` · **Do** = `mode: 'do'`, DOM actions
@@ -165,6 +165,9 @@ and shipped images cannot drift in their dependency set.
   see; widen the scale and you must widen the safelist or the class silently never ships.
 - **The widget has no dark mode** — no `.dark` block, no `dark:` variant. Theming is the per-tenant
   settings → CSS custom properties in `semantic-tokens.ts`, nothing else.
+- **`widget_device` and `widget_bounce_effect` reach nothing here** — the widget reads neither, so the
+  dashboard's Device Support select changes no behaviour; `widget_appearance` only distinguishes
+  `hidden` and not-`default` (the greeting toast), making `compact` and `full` identical.
 
 ## Conventions
 

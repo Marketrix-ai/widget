@@ -16,7 +16,6 @@ const message = (overrides: Partial<ChatMessage> = {}): ChatMessage => ({
 const snapshot = (messages: ChatMessage[]) => ({
   messages,
   isTaskRunning: false,
-  activeTaskId: null,
   currentMode: 'tell' as const,
   isOpen: true,
 });
