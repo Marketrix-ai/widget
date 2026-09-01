@@ -1,6 +1,6 @@
 {
   "name": "@marketrix.ai/widget",
-  "version": "3.8.459",
+  "version": "3.8.460",
   "type": "module",
   "sideEffects": false,
   "main": "./dist/widget.mjs",
