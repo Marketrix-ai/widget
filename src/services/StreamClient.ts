@@ -52,9 +52,7 @@ export class StreamClient {
   }
 
   async connect(chatId: string): Promise<void> {
-    if (this.isIntentionallyDisconnected) {
-      this.isIntentionallyDisconnected = false;
-    }
+    this.isIntentionallyDisconnected = false;
 
     if (
       this.chatId === chatId &&

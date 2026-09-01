@@ -167,11 +167,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
       uiActions.setLoading(true);
 
       try {
-        await dispatchMessage(config, {
-          message: content,
-          mode: effectiveMode,
-          requestId: placeholderId,
-        });
+        await dispatchMessage(config, content, effectiveMode, placeholderId);
         // Response arrives via SSE; placeholder stays "thinking"
       } catch (error) {
         console.error('Failed to send message:', error);

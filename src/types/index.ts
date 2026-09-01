@@ -59,12 +59,6 @@ export interface WidgetState {
   activeView: WidgetView;
 }
 
-export interface MessageDispatchRequest {
-  message?: string;
-  mode?: InstructionType;
-  requestId?: string;
-}
-
 export type WidgetPosition = WidgetSettingsData['widget_position'];
 
 export type AddWidgetConfig = (
