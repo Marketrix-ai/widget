@@ -76,19 +76,14 @@ export class StreamClient {
     try {
       // Read at connect time, not captured at init: a reconnect after updateMarketrixConfig must use the current credentials.
       const { mtxId, mtxKey } = storageService.getConfig() ?? {};
-      const streamInput: Record<string, unknown> = { chat_id: chatId, tab_id: this.tabId };
-      if (mtxId && mtxKey) {
-        streamInput.marketrix_id = mtxId;
-        streamInput.marketrix_key = mtxKey;
-      }
-
-      type WidgetStreamInput = {
-        chat_id: string;
-        tab_id?: string;
-        marketrix_id?: string;
-        marketrix_key?: string;
-      };
-      const iterator = await sdk.widgetStream(streamInput as WidgetStreamInput, { signal });
+      const iterator = await sdk.widgetStream(
+        {
+          chat_id: chatId,
+          tab_id: this.tabId,
+          ...(mtxId && mtxKey && { marketrix_id: mtxId, marketrix_key: mtxKey }),
+        },
+        { signal },
+      );
 
       this.status = 'connected';
       // Reconnect counters reset only on `registered` (handleMessage); resetting here would defeat the max-attempts cap if registration never lands and the stream flaps open→closed.

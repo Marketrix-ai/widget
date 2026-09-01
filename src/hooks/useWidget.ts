@@ -23,7 +23,7 @@ export const useWidget = () => {
 
   const resetChat = useCallback(() => {
     chatActions.clearMessages();
-    taskActions.setTaskState({ activeTaskId: null, isTaskRunning: false });
+    taskActions.setTaskState(false);
     uiActions.setError(undefined);
   }, [chatActions, taskActions, uiActions]);
 

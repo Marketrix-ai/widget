@@ -36,10 +36,10 @@ const InitBridge: React.FC<{ children: React.ReactNode; previewMode: boolean }> 
       const chatId = await chatSessionManager.getOrCreateChatId();
       if (cancelled) return;
 
-      const { messages, isTaskRunning, activeTaskId, ...ui } = chatService.restore();
+      const { messages, isTaskRunning, ...ui } = chatService.restore();
       uiActions.applyState(ui);
       chatActions.setMessages(messages);
-      taskActions.setTaskState({ activeTaskId: isTaskRunning ? activeTaskId : null, isTaskRunning });
+      taskActions.setTaskState(isTaskRunning);
 
       StreamClient.getInstance()
         .connect(chatId)

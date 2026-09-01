@@ -32,7 +32,7 @@ export interface ChatActions {
 }
 
 export interface TaskActions {
-  setTaskState: (payload: { activeTaskId: string | null; isTaskRunning: boolean }) => void;
+  setTaskState: (isTaskRunning: boolean) => void;
   stopTask: () => Promise<void>;
 }
 
@@ -54,10 +54,7 @@ interface ChatProviderProps {
 
 export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMode = false }) => {
   const { uiState, uiActions } = useUIStateContext();
-  const [state, setState] = useState<SseState>(() => ({
-    messages: [],
-    task: { activeTaskId: null, isTaskRunning: false },
-  }));
+  const [state, setState] = useState<SseState>(() => ({ messages: [], task: { isTaskRunning: false } }));
 
   // commit() is the ONLY writer — re-syncing from render could regress the ref between a commit and its paint.
   const stateRef = useRef<SseState>(state);
@@ -112,11 +109,8 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
   }, [commit]);
 
   const setTaskState = useCallback(
-    (payload: { activeTaskId: string | null; isTaskRunning: boolean }) => {
-      commit(s => ({
-        ...s,
-        task: { activeTaskId: payload.activeTaskId, isTaskRunning: payload.isTaskRunning },
-      }));
+    (isTaskRunning: boolean) => {
+      commit(s => ({ ...s, task: { isTaskRunning } }));
     },
     [commit],
   );
@@ -259,13 +253,13 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
   }, [previewMode, commit, uiActions]);
 
   const stopTask = useCallback(async () => {
-    const taskId = stateRef.current.task.activeTaskId ?? undefined;
     commit(s => reduceStop(s, currentModeRef.current));
 
     if (previewMode) return;
 
+    // chat/stop carries no task id: the api stops the one dispatch it holds for this chat.
     StreamClient.getInstance()
-      .send({ type: 'chat/stop' as const, ...(taskId && { task_id: taskId }) })
+      .send({ type: 'chat/stop' })
       .catch(err => console.error('Failed to stop task remotely:', err));
   }, [previewMode, commit]);
 
