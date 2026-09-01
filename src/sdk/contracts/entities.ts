@@ -90,7 +90,6 @@ export const WidgetSettingsDataSchema = z.object({
   // `compact`/`full` rendered identically to `default`, so db-V246 folds them onto it.
   widget_appearance: z.enum(['default', 'hidden']),
   widget_position: z.enum(['bottom_left', 'bottom_right', 'top_left', 'top_right']),
-  widget_device: z.enum(['desktop', 'mobile', 'desktop_mobile']),
   widget_header: z.string(),
   widget_body: z.string(),
   widget_greeting: z.string(),
@@ -99,7 +98,6 @@ export const WidgetSettingsDataSchema = z.object({
   widget_feature_tell: z.boolean(),
   widget_feature_show: z.boolean(),
   widget_feature_do: z.boolean(),
-  widget_feature_human: z.boolean(),
   widget_background_color: z.string(),
   widget_text_color: z.string(),
   widget_border_color: z.string(),
@@ -109,10 +107,8 @@ export const WidgetSettingsDataSchema = z.object({
   widget_font_size: z.string(),
   widget_width: z.string(),
   widget_height: z.string(),
-  widget_shadow: z.string(),
   widget_animation_duration: z.string(),
   widget_fade_duration: z.string(),
-  widget_bounce_effect: z.boolean(),
   widget_chips: z.array(WidgetChipSchema),
 });
 
@@ -129,16 +125,6 @@ export const WidgetEntitySchema = BaseEntitySchema.extend({
 });
 
 export type WidgetData = z.infer<typeof WidgetEntitySchema>;
-
-/** `message` is one or more chip texts shown by the widget when the URL pattern matches. */
-export const StateTriggerEntitySchema = BaseEntitySchema.extend({
-  widget_id: z.number(),
-  url_pattern: z.string(),
-  message: z.array(z.string()),
-  description: z.string().optional(),
-});
-
-export type StateTriggerData = z.infer<typeof StateTriggerEntitySchema>;
 
 export const ActivityLogTypeSchema = z.enum([
   'user_login',

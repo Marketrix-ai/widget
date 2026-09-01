@@ -165,10 +165,11 @@ and shipped images cannot drift in their dependency set.
   see; widen the scale and you must widen the safelist or the class silently never ships.
 - **The widget has no dark mode** — no `.dark` block, no `dark:` variant. Theming is the per-tenant
   settings → CSS custom properties in `semantic-tokens.ts`, nothing else.
-- **`widget_device`, `widget_bounce_effect`, `widget_shadow` and `widget_feature_human` reach nothing
-  here** — the widget reads none of them, so those dashboard controls change no behaviour; every shadow
-  is a `SHADOW.*` token. `widget_appearance` is `default | hidden` — `compact`/`full` were retired in
-  db-V246 because this widget rendered them identically to `default`.
+- **Every shadow is a `SHADOW.*` token applied inline** — there is no settings-driven shadow; the four
+  settings that reached nothing here (`widget_device`, `widget_bounce_effect`, `widget_shadow`,
+  `widget_feature_human`) were dropped from the contract in db-V247. `widget_appearance` is
+  `default | hidden` — `compact`/`full` were retired in db-V246 because this widget rendered them
+  identically to `default`.
 - **A portal must land inside `[data-marketrix-widget]`** — that element carries every tenant token as
   an inline style, so anything portaled to the shadow root instead falls back to `index.css`'s hardcoded
   palette. `MarketrixWidget` publishes its own root through `PortalContainerContext` for exactly that.
