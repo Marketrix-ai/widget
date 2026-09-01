@@ -47,6 +47,8 @@ const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
 const EMPTY_TASK: TaskState = { activeTaskId: null, isTaskRunning: false };
 
+const MAX_PROCESSED_IDS = 1000;
+
 interface ChatProviderProps {
   children: React.ReactNode;
   previewMode?: boolean;
@@ -76,7 +78,6 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
   currentModeRef.current = currentMode;
 
   const processedRequestIds = useRef(new Set<string>());
-  const pendingTaskRef = useRef<{ apiTaskId?: string; agentRunning?: boolean }>({});
 
   // Transition runs synchronously here, not in a setState updater: React defers updaters (background tab, mid-burst) and captured effects are lost — tool calls that never execute.
   const commit = useCallback((transition: (s: SseState) => SseState) => {
@@ -173,12 +174,6 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
       uiActions.setLoading(true);
 
       try {
-        const chatId = storageService.getChatId();
-        const streamClient = StreamClient.getInstance();
-        if (chatId && !streamClient.isConnected()) {
-          await streamClient.connect(chatId).catch(err => console.error('Stream connection failed:', err));
-        }
-
         await dispatchMessage(config, {
           message: content,
           mode: effectiveMode,
@@ -203,25 +198,6 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
     [previewMode, addMessage, commit, uiActions],
   );
 
-  const MAX_PROCESSED_IDS = 1000;
-
-  const addProcessedRequestId = useCallback((requestId: string) => {
-    processedRequestIds.current.add(requestId);
-    if (processedRequestIds.current.size > MAX_PROCESSED_IDS) {
-      const entries = Array.from(processedRequestIds.current);
-      processedRequestIds.current = new Set(entries.slice(-MAX_PROCESSED_IDS / 2));
-    }
-  }, []);
-
-  const maybeActivateTask = useCallback(() => {
-    const p = pendingTaskRef.current;
-    if (p.apiTaskId && p.agentRunning) {
-      const taskId = p.apiTaskId;
-      pendingTaskRef.current = {};
-      commit(s => ({ ...s, task: { isTaskRunning: true, activeTaskId: taskId } }));
-    }
-  }, [commit]);
-
   useEffect(() => {
     if (previewMode) return;
 
@@ -231,59 +207,27 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
       uiActions.setAgentAvailable(status === 'registered');
     };
 
-    const runEffects = (effects: SseEffect[]) => {
-      for (const effect of effects) {
-        if (effect.type === 'setLoading') {
-          uiActions.setLoading(effect.value);
-        }
-      }
-    };
-
     const executeToolCall = async (effect: Extract<SseEffect, { type: 'executeTool' }>) => {
       const { toolCallId, tool, args, mode, explanation } = effect;
       const result = await browserToolService.executeTool(tool, args, mode, explanation);
+      const error = result.success ? undefined : (result.error ?? 'Tool execution failed');
 
-      if (result.success) {
-        try {
-          wsClient
-            .send({
-              type: 'tool/response',
-              tool_call_id: toolCallId,
-              success: true,
-              data: typeof result.data === 'string' ? result.data : JSON.stringify(result.data),
-            })
-            .catch(err => console.error('Failed to send tool success response:', err));
-          commit(s => reduceToolProgress(s, tool, explanation, 'completed', currentModeRef.current));
-
-          if (tool === 'done') {
-            pendingTaskRef.current = {};
-            commit(s => reduceToolDone(s, currentModeRef.current));
-          }
-        } catch (error) {
-          console.error('Failed to send tool result:', error);
-          commit(s => reduceToolProgress(s, tool, explanation, 'failed', currentModeRef.current, 'Connection error'));
-        }
-      } else {
-        commit(s =>
-          reduceToolProgress(
-            s,
-            tool,
-            explanation,
-            'failed',
-            currentModeRef.current,
-            result.error || 'Tool execution failed',
-          ),
-        );
-        wsClient
-          .send({
-            type: 'tool/response',
-            tool_call_id: toolCallId,
-            success: false,
-            data: typeof result.data === 'string' ? result.data : JSON.stringify(result.data),
-            error: result.error ?? undefined,
-          })
-          .catch(err => console.error('Failed to send tool error response:', err));
+      commit(s =>
+        reduceToolProgress(s, tool, explanation, error ? 'failed' : 'completed', currentModeRef.current, error),
+      );
+      if (!error && tool === 'done') {
+        commit(s => reduceToolDone(s, currentModeRef.current));
       }
+
+      wsClient
+        .send({
+          type: 'tool/response',
+          tool_call_id: toolCallId,
+          success: result.success,
+          data: JSON.stringify(result.data),
+          error,
+        })
+        .catch(err => console.error('Failed to send tool response:', err));
     };
 
     const handleMessage = async (event: WidgetEvent) => {
@@ -291,7 +235,10 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
       if (event.type === 'tool/call') {
         const requestId = event.tool_call_id;
         if (processedRequestIds.current.has(requestId)) return;
-        addProcessedRequestId(requestId);
+        processedRequestIds.current.add(requestId);
+        if (processedRequestIds.current.size > MAX_PROCESSED_IDS) {
+          processedRequestIds.current = new Set([...processedRequestIds.current].slice(-MAX_PROCESSED_IDS / 2));
+        }
 
         if (!BROWSER_TOOLS.has(event.browser_tool)) {
           console.warn('[Widget] Unknown tool requested:', event.browser_tool);
@@ -305,25 +252,15 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
             .catch(err => console.error('Failed to send unknown-tool response:', err));
           return;
         }
-
-        if (!stateRef.current.task.isTaskRunning) {
-          console.log('[Widget] Tool call received before task/status running — auto-activating task');
-        }
       } else if (
         event.type === 'task/status' &&
         (event.status === 'completed' || event.status === 'failed' || event.status === 'stopped')
       ) {
         processedRequestIds.current.clear();
-        pendingTaskRef.current = {};
-      } else if (event.type === 'task/status' && event.status === 'has_question') {
-        pendingTaskRef.current = {};
       } else if (event.type === 'task/status' && event.status === 'running') {
-        pendingTaskRef.current = {
-          ...pendingTaskRef.current,
-          agentRunning: true,
-          apiTaskId: pendingTaskRef.current.apiTaskId || event.task_id || undefined,
-        };
-        maybeActivateTask();
+        // The api mints the task id, so a `running` that arrives before it has one activates nothing yet.
+        const taskId = event.task_id;
+        if (taskId) commit(s => ({ ...s, task: { isTaskRunning: true, activeTaskId: taskId } }));
         return;
       }
 
@@ -333,11 +270,10 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
         effects = result.effects;
         return result.state;
       });
-      runEffects(effects);
 
-      const toolCall = effects.find(e => e.type === 'executeTool');
-      if (toolCall?.type === 'executeTool') {
-        await executeToolCall(toolCall);
+      for (const effect of effects) {
+        if (effect.type === 'setLoading') uiActions.setLoading(effect.value);
+        else await executeToolCall(effect);
       }
     };
 
@@ -351,7 +287,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
     return () => {
       wsClient.removeCallbacks(callbacks);
     };
-  }, [previewMode, commit, maybeActivateTask, addProcessedRequestId, uiActions]);
+  }, [previewMode, commit, uiActions]);
 
   const stopTask = useCallback(async () => {
     const taskId = stateRef.current.task.activeTaskId ?? undefined;

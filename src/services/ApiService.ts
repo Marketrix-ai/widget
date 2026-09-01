@@ -25,7 +25,7 @@ function logWidgetQuestion(config: MarketrixConfig, question: string, mode: stri
 
 /** Fire-and-forget send over the typed stream; the reply arrives asynchronously as a chat/response event. */
 export async function messageDispatch(config: MarketrixConfig, request: MessageDispatchRequest): Promise<void> {
-  await chatSessionManager.getOrCreateChatId();
+  const chatId = await chatSessionManager.getOrCreateChatId();
 
   const mode = request.mode || 'tell';
 
@@ -43,5 +43,10 @@ export async function messageDispatch(config: MarketrixConfig, request: MessageD
     content: request.message || '',
   };
 
-  StreamClient.getInstance().send(command);
+  // The stream carries the reply, and send() needs the chat id connect() records — so connect before sending, not after.
+  const streamClient = StreamClient.getInstance();
+  if (!streamClient.isConnected()) {
+    await streamClient.connect(chatId);
+  }
+  await streamClient.send(command);
 }
