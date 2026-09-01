@@ -7,8 +7,9 @@ import { createAgentMessage, createUserMessage } from '../services/ChatService';
 import { storageService } from '../services/StorageService';
 import { StreamClient } from '../services/StreamClient';
 import type { ChatMessage, InstructionType } from '../types';
-import { addThinkingMarker, BROWSER_TOOLS } from '../utils/chat';
+import { BROWSER_TOOLS } from '../utils/chat';
 import {
+  reduceError,
   reduceSse,
   reduceStop,
   reduceToolDone,
@@ -17,7 +18,7 @@ import {
   type SseState,
   type TaskState,
 } from './sseReducer';
-import type { UIStateActions } from './UIStateContext';
+import { useUIStateContext } from './UIStateContext';
 
 // messages + task share one committed state so they can't tear across an await.
 
@@ -49,16 +50,10 @@ const MAX_PROCESSED_IDS = 1000;
 interface ChatProviderProps {
   children: React.ReactNode;
   previewMode?: boolean;
-  currentMode: InstructionType;
-  uiActions: Pick<UIStateActions, 'setLoading' | 'setError'>;
 }
 
-export const ChatProvider: React.FC<ChatProviderProps> = ({
-  children,
-  previewMode = false,
-  currentMode,
-  uiActions,
-}) => {
+export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMode = false }) => {
+  const { uiState, uiActions } = useUIStateContext();
   const [state, setState] = useState<SseState>(() => ({
     messages: [],
     task: { activeTaskId: null, isTaskRunning: false },
@@ -67,8 +62,8 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
   // commit() is the ONLY writer — re-syncing from render could regress the ref between a commit and its paint.
   const stateRef = useRef<SseState>(state);
 
-  const currentModeRef = useRef(currentMode);
-  currentModeRef.current = currentMode;
+  const currentModeRef = useRef(uiState.currentMode);
+  currentModeRef.current = uiState.currentMode;
 
   const processedRequestIds = useRef(new Set<string>());
 
@@ -155,7 +150,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
       const placeholderId = `temp-${globalThis.crypto.randomUUID()}`;
       const placeholderMsg: ChatMessage = {
         id: placeholderId,
-        content: addThinkingMarker(''),
+        content: '',
         sender: 'agent',
         timestamp: new Date(),
         mode: effectiveMode,
@@ -171,15 +166,9 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
         // Response arrives via SSE; placeholder stays "thinking"
       } catch (error) {
         console.error('Failed to send message:', error);
-        commit(s => {
-          const errorMessage = "I'm sorry, I encountered an error processing your request. Please try again.";
-          const newMessages = s.messages.map(msg => {
-            if (msg.id !== placeholderId) return msg;
-            const newParts = [...(msg.parts ?? []), { type: 'text' as const, content: errorMessage }];
-            return { ...msg, isPlaceholder: false, parts: newParts, content: errorMessage };
-          });
-          return { ...s, messages: newMessages };
-        });
+        commit(s =>
+          reduceError(s, placeholderId, "I'm sorry, I encountered an error processing your request. Please try again."),
+        );
       } finally {
         uiActions.setLoading(false);
       }
@@ -242,11 +231,6 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
         (event.status === 'completed' || event.status === 'failed' || event.status === 'stopped')
       ) {
         processedRequestIds.current.clear();
-      } else if (event.type === 'task/status' && event.status === 'running') {
-        // The api mints the task id, so a `running` that arrives before it has one activates nothing yet.
-        const taskId = event.task_id;
-        if (taskId) commit(s => ({ ...s, task: { isTaskRunning: true, activeTaskId: taskId } }));
-        return;
       }
 
       let effects: SseEffect[] = [];

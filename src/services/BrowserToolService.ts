@@ -36,8 +36,6 @@ export interface SearchParams {
 
 export interface ClickElementParams {
   index: number;
-  coordinate_x?: number;
-  coordinate_y?: number;
 }
 
 export interface TypeTextParams {
@@ -83,9 +81,7 @@ export interface WaitParams {
 }
 
 export interface ExtractParams {
-  query?: string;
   extract_links?: boolean;
-  start_from_char?: number;
 }
 
 const ok = (text: string): ToolExecutionResult => ({ success: true, data: { text } });
@@ -358,13 +354,11 @@ export class BrowserToolService {
   }
 
   private extract(args: ExtractParams): ToolExecutionResult<ExtractData> {
-    const startFrom = args.start_from_char ?? 0;
     const includeLinks = args.extract_links !== false;
-    const fullText = document.body.innerText;
     const extractResult: ExtractData = {
       title: document.title,
       url: window.location.href,
-      text: fullText.slice(startFrom, startFrom + 10000),
+      text: document.body.innerText.slice(0, 10000),
       links: includeLinks
         ? Array.from(document.querySelectorAll('a[href]'))
             .slice(0, 100)

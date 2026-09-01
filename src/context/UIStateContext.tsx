@@ -17,7 +17,6 @@ export interface UIStateActions {
   setMode: (mode: InstructionType) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | undefined) => void;
-  clearError: () => void;
   applyState: (payload: Partial<UIState>) => void;
 }
 
@@ -49,8 +48,6 @@ export const UIStateProvider: React.FC<{ children: React.ReactNode }> = ({ child
       setLoading: (loading: boolean) => setUIState(prev => ({ ...prev, isLoading: loading })),
 
       setError: (error: string | undefined) => setUIState(prev => ({ ...prev, error })),
-
-      clearError: () => setUIState(prev => ({ ...prev, error: undefined })),
 
       applyState: (payload: Partial<UIState>) => setUIState(prev => ({ ...prev, ...payload })),
     }),

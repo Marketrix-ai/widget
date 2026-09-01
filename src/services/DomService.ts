@@ -127,103 +127,19 @@ export class DomService {
     console.log(`[DomService] Indexed ${sequenceNumber} elements`);
   }
 
-  private getElementCoordinates(element: HTMLElement): {
-    x: number;
-    y: number;
-    w: number;
-    h: number;
-    z: number;
-  } {
-    const rect = element.getBoundingClientRect();
-    const zIndex = this.calculateGlobalZOrder(element);
-    return {
-      x: Math.round(rect.left),
-      y: Math.round(rect.top),
-      w: Math.round(rect.width),
-      h: Math.round(rect.height),
-      z: zIndex,
-    };
-  }
-
-  private isStackingContext(element: HTMLElement): boolean {
-    const style = window.getComputedStyle(element);
-    const parentDisplay = element.parentElement ? window.getComputedStyle(element.parentElement).display : '';
-    return (
-      (['fixed', 'absolute', 'relative', 'sticky'].includes(style.position) && style.zIndex !== 'auto') ||
-      (style.zIndex !== 'auto' && ['flex', 'inline-flex', 'grid', 'inline-grid'].includes(parentDisplay)) ||
-      parseFloat(style.opacity) < 1 ||
-      (!!style.transform && style.transform !== 'none') ||
-      (!!style.filter && style.filter !== 'none') ||
-      /transform|opacity/.test(style.willChange) ||
-      style.isolation === 'isolate' ||
-      /layout|style|paint/.test(style.contain)
-    );
-  }
-
-  private calculateGlobalZOrder(element: HTMLElement): number {
-    let current: HTMLElement | null = element;
-    const stackingContexts: Array<{ element: HTMLElement; zIndex: number; domOrder: number }> = [];
-
-    while (current && current !== document.body && current.parentElement) {
-      const style = window.getComputedStyle(current);
-
-      if (this.isStackingContext(current)) {
-        let zIndex = 0;
-        if (style.zIndex !== 'auto') {
-          const parsedZIndex = parseInt(style.zIndex, 10);
-          if (!isNaN(parsedZIndex)) {
-            zIndex = parsedZIndex;
-          }
-        }
-
-        let domOrder = 0;
-        if (current.parentElement) {
-          const siblings = Array.from(current.parentElement.children);
-          domOrder = siblings.indexOf(current);
-        }
-
-        stackingContexts.push({ element: current, zIndex, domOrder });
-      }
-
-      current = current.parentElement as HTMLElement;
-    }
-
-    let baseZOrder = 1000000; // base offset keeps the result positive
-
-    for (let i = stackingContexts.length - 1; i >= 0; i--) {
-      const ctx = stackingContexts[i];
-      // zIndex * 10000 weights z-index above DOM order.
-      baseZOrder += ctx.zIndex * 10000 + ctx.domOrder;
-    }
-
-    if (element.parentElement) {
-      const siblings = Array.from(element.parentElement.children);
-      const finalDomOrder = siblings.indexOf(element);
-      baseZOrder += finalDomOrder;
-    }
-
-    return baseZOrder;
-  }
-
+  /** `data-id` is the whole contract: the agent parses the snapshot for `[data-id]` and reads nothing else off it. */
   getSnapshotHtml(): string {
     this.indexInteractableElements();
 
     const clone = document.documentElement.cloneNode(true) as Element;
 
     // Match into the clone by selector — a synced two-tree walk breaks on modals and fixed elements.
-    for (const [index, { element, selector }] of this.index.entries()) {
+    for (const [index, { selector }] of this.index.entries()) {
       try {
-        const cloneElement = (clone.querySelector('body') || clone).querySelector(selector);
-        if (!cloneElement) continue;
-        cloneElement.setAttribute('data-id', index.toString());
-
-        const hidden = window.getComputedStyle(element).display === 'none';
-        const coords = hidden ? { x: 0, y: 0, w: 0, h: 0, z: 0 } : this.getElementCoordinates(element);
-        for (const [key, value] of Object.entries(coords)) {
-          cloneElement.setAttribute(`data-${key}`, value.toString());
-        }
+        (clone.querySelector('body') || clone).querySelector(selector)?.setAttribute('data-id', index.toString());
       } catch (e) {
-        console.warn(`[DomService] Failed to apply data attributes for index ${index}:`, e);
+        // A host tag name that is not a valid selector token makes querySelector throw; that element just goes unindexed.
+        console.warn(`[DomService] Failed to tag index ${index}:`, e);
       }
     }
 

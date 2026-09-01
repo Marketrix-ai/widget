@@ -66,13 +66,11 @@ export function useScreenShare({
 
   const wasSharingRef = useLatest(isScreenSharing);
   const screenShareMessageIdRef = useLatest(screenShareMessageId);
-  const onAddMessageRef = useLatest(onAddMessage);
-  const onRemoveMessageRef = useLatest(onRemoveMessage);
   const onScreenSharingChangeRef = useLatest(onScreenSharingChange);
 
   const announceStopped = (messageId: string | null) => {
-    if (messageId) onRemoveMessageRef.current?.(messageId);
-    onAddMessageRef.current(createSystemMessage('Stopped screenshare', 'show', 'user', 'stopped-sharing'));
+    if (messageId) onRemoveMessage?.(messageId);
+    onAddMessage(createSystemMessage('Stopped screenshare', 'show', 'user', 'stopped-sharing'));
     setScreenShareMessageId(null);
   };
   const announceStoppedRef = useLatest(announceStopped);

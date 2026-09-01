@@ -27,29 +27,6 @@ describe('resolveLayoutClasses', () => {
     it('paddingY: xl', () => expect(resolveLayoutClasses({ paddingY: 'xl' })).toBe('py-4'));
   });
 
-  describe('margin', () => {
-    it('margin: md', () => expect(resolveLayoutClasses({ margin: 'md' })).toBe('m-2'));
-    it('margin: none', () => expect(resolveLayoutClasses({ margin: 'none' })).toBe('m-0'));
-  });
-
-  describe('marginX', () => {
-    it('marginX: lg', () => expect(resolveLayoutClasses({ marginX: 'lg' })).toBe('mx-3'));
-  });
-
-  describe('marginY', () => {
-    it('marginY: xs', () => expect(resolveLayoutClasses({ marginY: 'xs' })).toBe('my-0.5'));
-  });
-
-  describe('marginTop', () => {
-    it('marginTop: xs', () => expect(resolveLayoutClasses({ marginTop: 'xs' })).toBe('mt-0.5'));
-    it('marginTop: 2xl', () => expect(resolveLayoutClasses({ marginTop: '2xl' })).toBe('mt-6'));
-  });
-
-  describe('marginBottom', () => {
-    it('marginBottom: sm', () => expect(resolveLayoutClasses({ marginBottom: 'sm' })).toBe('mb-1.5'));
-    it('marginBottom: md', () => expect(resolveLayoutClasses({ marginBottom: 'md' })).toBe('mb-2'));
-  });
-
   describe('gap', () => {
     it('gap: sm', () => expect(resolveLayoutClasses({ gap: 'sm' })).toBe('gap-1.5'));
     it('gap: md', () => expect(resolveLayoutClasses({ gap: 'md' })).toBe('gap-2'));
@@ -70,11 +47,6 @@ describe('resolveLayoutClasses', () => {
     it('justify: start', () => expect(resolveLayoutClasses({ justify: 'start' })).toBe('justify-start'));
     it('justify: end', () => expect(resolveLayoutClasses({ justify: 'end' })).toBe('justify-end'));
     it('justify: around', () => expect(resolveLayoutClasses({ justify: 'around' })).toBe('justify-around'));
-  });
-
-  describe('wrap', () => {
-    it('wrap: true', () => expect(resolveLayoutClasses({ wrap: true })).toBe('flex-wrap'));
-    it('wrap: false produces no class', () => expect(resolveLayoutClasses({ wrap: false })).toBe(''));
   });
 
   describe('grow', () => {
@@ -126,10 +98,6 @@ describe('resolveLayoutClasses', () => {
     it('minWidth: 0', () => expect(resolveLayoutClasses({ minWidth: '0' })).toBe('min-w-0'));
   });
 
-  describe('minHeight', () => {
-    it('minHeight: 0', () => expect(resolveLayoutClasses({ minHeight: '0' })).toBe('min-h-0'));
-  });
-
   describe('border', () => {
     it('border: true', () => expect(resolveLayoutClasses({ border: true })).toBe('border border-border'));
     it('border: false produces no class', () => expect(resolveLayoutClasses({ border: false })).toBe(''));
@@ -145,25 +113,6 @@ describe('resolveLayoutClasses', () => {
     it('rounded: theme', () => expect(resolveLayoutClasses({ rounded: 'theme' })).toBe('rounded-[var(--radius)]'));
     it('rounded: full', () => expect(resolveLayoutClasses({ rounded: 'full' })).toBe('rounded-full'));
     it('rounded: lg', () => expect(resolveLayoutClasses({ rounded: 'lg' })).toBe('rounded-lg'));
-  });
-
-  describe('shadow', () => {
-    it('shadow: true', () => expect(resolveLayoutClasses({ shadow: true })).toBe('shadow-[var(--shadow)]'));
-    it('shadow: false produces no class', () => expect(resolveLayoutClasses({ shadow: false })).toBe(''));
-    it('shadow: theme', () => expect(resolveLayoutClasses({ shadow: 'theme' })).toBe('shadow-[var(--shadow)]'));
-  });
-
-  describe('cursor', () => {
-    it('cursor: pointer', () => expect(resolveLayoutClasses({ cursor: 'pointer' })).toBe('cursor-pointer'));
-    it('cursor: default', () => expect(resolveLayoutClasses({ cursor: 'default' })).toBe('cursor-default'));
-    it('cursor: not-allowed', () => expect(resolveLayoutClasses({ cursor: 'not-allowed' })).toBe('cursor-not-allowed'));
-    it('cursor: grab', () => expect(resolveLayoutClasses({ cursor: 'grab' })).toBe('cursor-grab'));
-  });
-
-  describe('opacity', () => {
-    it('opacity: 50', () => expect(resolveLayoutClasses({ opacity: 50 })).toBe('opacity-50'));
-    it('opacity: 0', () => expect(resolveLayoutClasses({ opacity: 0 })).toBe('opacity-0'));
-    it('opacity: 100', () => expect(resolveLayoutClasses({ opacity: 100 })).toBe('opacity-100'));
   });
 
   describe('animate', () => {
@@ -191,15 +140,9 @@ describe('stripLayoutProps', () => {
       padding: 'md' as const,
       paddingX: 'sm' as const,
       paddingY: 'lg' as const,
-      margin: 'xs' as const,
-      marginX: 'md' as const,
-      marginY: 'sm' as const,
-      marginTop: 'xl' as const,
-      marginBottom: '2xl' as const,
       gap: 'none' as const,
       align: 'center' as const,
       justify: 'between' as const,
-      wrap: true,
       grow: true,
       shrink: false,
       position: 'absolute' as const,
@@ -209,12 +152,8 @@ describe('stripLayoutProps', () => {
       width: 'full' as const,
       height: 'auto' as const,
       minWidth: '0' as const,
-      minHeight: '0' as const,
       border: true,
       rounded: 'lg' as const,
-      shadow: true,
-      cursor: 'pointer' as const,
-      opacity: 80,
       animate: 'spin' as const,
       hidden: true,
       as: 'div' as const,

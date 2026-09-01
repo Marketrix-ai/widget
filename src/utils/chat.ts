@@ -1,4 +1,4 @@
-import type { ChatMessage, InstructionType } from '../types';
+import type { ChatMessage, InstructionType, MessagePart } from '../types';
 
 const MODE_DISPLAY_NAMES: Record<InstructionType, string> = { show: 'Show', tell: 'Tell', do: 'Do' };
 
@@ -7,28 +7,10 @@ export const getModeDisplayName = (mode: InstructionType): string => MODE_DISPLA
 export const formatMessageTime = (date: Date | undefined): string =>
   (date ?? new Date()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-export function removeThinkingMarkers(content: string): string {
-  return content.replace(/__THINKING__/g, '');
-}
-
-export function removeThinkingMarkerFromEnd(content: string): string {
-  return content.replace(/\n\n__THINKING__$/, '').replace(/__THINKING__/g, '');
-}
-
-export function hasThinkingMarker(content: string): boolean {
-  return content.includes('__THINKING__');
-}
-
-export function addThinkingMarker(content: string): string {
-  if (hasThinkingMarker(content)) return content;
-  return `${content}\n\n__THINKING__`;
-}
-
 export interface FindMessageOptions {
   messages: ChatMessage[];
   isTaskRunning: boolean;
   currentMode: InstructionType;
-  requireContent?: boolean;
 }
 
 function lastMatch(messages: ChatMessage[], matches: (msg: ChatMessage) => boolean): number {
@@ -43,11 +25,9 @@ export function findMessageForProgress({
   messages,
   isTaskRunning,
   currentMode,
-  requireContent,
 }: FindMessageOptions): { index: number; message: ChatMessage } | null {
   const isAgentReply = (msg: ChatMessage) =>
     msg.sender === 'agent' && !msg.isSystemMessage && !msg.isScreenAccessRequest;
-  const hasContent = (msg: ChatMessage) => !requireContent || msg.content.trim().length > 0 || msg.parts.length > 0;
   // Lenient on placeholders with an undefined mode — tool calls can race ahead of the mode being set.
   const modeMatches = (msg: ChatMessage) =>
     msg.isPlaceholder ? msg.mode === undefined || msg.mode === currentMode : msg.mode === currentMode;
@@ -55,16 +35,12 @@ export function findMessageForProgress({
   const ranked: Array<(msg: ChatMessage) => boolean> = [];
   if (isTaskRunning && (currentMode === 'show' || currentMode === 'do')) {
     ranked.push(
-      msg => isAgentReply(msg) && modeMatches(msg) && hasContent(msg) && !!msg.isPlaceholder,
-      msg => isAgentReply(msg) && modeMatches(msg) && hasContent(msg) && !msg.isPlaceholder,
+      msg => isAgentReply(msg) && modeMatches(msg) && !!msg.isPlaceholder,
+      msg => isAgentReply(msg) && modeMatches(msg),
     );
   }
   // Tool calls can arrive before isTaskRunning flips true, so always fall back to a mode-agnostic match.
-  ranked.push(
-    msg => isAgentReply(msg) && !!msg.isPlaceholder && hasContent(msg),
-    msg => isAgentReply(msg) && !msg.isPlaceholder,
-    isAgentReply,
-  );
+  ranked.push(msg => isAgentReply(msg) && !!msg.isPlaceholder, isAgentReply);
 
   for (const matches of ranked) {
     const index = lastMatch(messages, matches);
@@ -92,116 +68,58 @@ export const WAIT_FOR_USER_TOOLS = new Set([
 export function filterCancellationText(content: string): string {
   if (!content) return content;
   return content
-    .replace(/\(Cancelled by cleanup\)/gi, '')
-    .replace(/\(cancelled by cleanup\)/gi, '')
-    .replace(/Cancelled by cleanup/gi, '')
+    .replace(/\(?cancelled by cleanup\)?/gi, '')
     .replace(/\s+/g, ' ')
     .trim();
 }
 
-export function addProgressLine(message: ChatMessage, browserToolName: string, explanation: string): ChatMessage {
-  const parts = message.parts;
-  const newParts = [...parts];
-  const existingPartIndex = parts.findIndex(
-    part => part.type === 'progress' && part.browserToolName === browserToolName && part.status === 'in_progress',
-  );
+const isOpenProgress = (part: MessagePart): boolean => part.type === 'progress' && part.status === 'in_progress';
 
-  const cleanedExplanation = filterCancellationText(explanation);
-
-  if (existingPartIndex >= 0) {
-    newParts[existingPartIndex] = {
-      ...newParts[existingPartIndex],
-      content: cleanedExplanation,
-    };
-  } else {
-    newParts.push({
-      type: 'progress',
-      content: cleanedExplanation,
-      status: 'in_progress',
-      browserToolName,
-    });
-  }
-
-  return { ...message, parts: newParts };
-}
-
-export function markProgressLineComplete(message: ChatMessage): ChatMessage {
-  const parts = message.parts;
-  const newParts = [...parts];
-  let partIndex = -1;
+function lastPartIndex(parts: MessagePart[], matches: (part: MessagePart) => boolean): number {
   for (let i = parts.length - 1; i >= 0; i--) {
-    if (parts[i].type === 'progress' && parts[i].status === 'in_progress') {
-      partIndex = i;
-      break;
-    }
+    if (matches(parts[i])) return i;
   }
-
-  if (partIndex >= 0) {
-    newParts[partIndex] = { ...newParts[partIndex], status: 'completed' };
-  }
-
-  return { ...message, parts: newParts };
+  return -1;
 }
+
+function patchPart(message: ChatMessage, index: number, patch: Partial<MessagePart>): ChatMessage {
+  if (index < 0) return message;
+  const parts = [...message.parts];
+  parts[index] = { ...parts[index], ...patch };
+  return { ...message, parts };
+}
+
+export function addProgressLine(message: ChatMessage, browserToolName: string, explanation: string): ChatMessage {
+  const content = filterCancellationText(explanation);
+  const open = message.parts.findIndex(part => isOpenProgress(part) && part.browserToolName === browserToolName);
+  if (open >= 0) return patchPart(message, open, { content });
+  return {
+    ...message,
+    parts: [...message.parts, { type: 'progress', content, status: 'in_progress', browserToolName }],
+  };
+}
+
+export const markProgressLineComplete = (message: ChatMessage): ChatMessage =>
+  patchPart(message, lastPartIndex(message.parts, isOpenProgress), { status: 'completed' });
 
 export function markProgressLineFailed(message: ChatMessage, browserToolName: string, error: string): ChatMessage {
-  const parts = message.parts;
+  const named = lastPartIndex(
+    message.parts,
+    part => part.type === 'progress' && part.browserToolName === browserToolName,
+  );
+  const index = named >= 0 ? named : lastPartIndex(message.parts, isOpenProgress);
+  if (index < 0) return message;
 
-  // "Cancelled by cleanup" errors are expected in show mode when a new action supersedes a pending one.
-  const shouldFilterError = error.toLowerCase().includes('cancelled by cleanup');
+  const content = filterCancellationText(message.parts[index].content);
+  // In show mode a new action supersedes a pending one and cancels it — that is a completed step, not a failure.
+  if (error.toLowerCase().includes('cancelled by cleanup'))
+    return patchPart(message, index, { status: 'completed', content });
 
-  const newParts = [...parts];
-  let partIndex = parts.map(p => (p.type === 'progress' ? p.browserToolName : '')).lastIndexOf(browserToolName);
-  if (partIndex === -1) {
-    for (let i = parts.length - 1; i >= 0; i--) {
-      if (parts[i].type === 'progress' && parts[i].status === 'in_progress') {
-        partIndex = i;
-        break;
-      }
-    }
-  }
-
-  if (partIndex >= 0) {
-    if (shouldFilterError) {
-      const cleanedContent = filterCancellationText(newParts[partIndex].content);
-      newParts[partIndex] = {
-        ...newParts[partIndex],
-        status: 'completed',
-        content: cleanedContent,
-      };
-    } else {
-      const cleanedError = filterCancellationText(error);
-      const cleanedContent = filterCancellationText(newParts[partIndex].content);
-      newParts[partIndex] = {
-        ...newParts[partIndex],
-        status: 'failed',
-        content: cleanedError ? `${cleanedContent} (${cleanedError})` : cleanedContent,
-      };
-    }
-  }
-
-  return { ...message, parts: newParts };
-}
-
-export function updateThinkingMarker(
-  message: ChatMessage,
-  isTaskRunning: boolean,
-  currentMode: 'show' | 'tell' | 'do',
-  isWaitingForUser: boolean = false,
-): ChatMessage {
-  if (!isTaskRunning || (currentMode !== 'show' && currentMode !== 'do')) {
-    if (!hasThinkingMarker(message.content)) return message;
-    return { ...message, content: removeThinkingMarkerFromEnd(message.content), placeholderState: undefined };
-  }
-
-  const targetState = isWaitingForUser ? 'waiting-for-user' : 'thinking';
-
-  if (!hasThinkingMarker(message.content)) {
-    return { ...message, content: addThinkingMarker(message.content), placeholderState: targetState };
-  }
-  if (message.placeholderState !== targetState) {
-    return { ...message, placeholderState: targetState };
-  }
-  return message;
+  const cleanedError = filterCancellationText(error);
+  return patchPart(message, index, {
+    status: 'failed',
+    content: cleanedError ? `${content} (${cleanedError})` : content,
+  });
 }
 
 /** Tool id -> the phrase shown in the activity log. Also the allowlist of tools the agent may call. */

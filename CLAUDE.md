@@ -79,6 +79,8 @@ reconnection until re-init.**
 
 **Tool execution** — `ChatContext` dedupes `tool/call` by `tool_call_id`, validates `browser_tool`
 against `BROWSER_TOOLS`, executes via `browserToolService.executeTool`, then replies `tool/response`.
+`get_html` ships a clone of the page stamped with **`data-id` and nothing else** — that attribute is the
+whole contract with the agent's HTML parser, which reads no geometry, and the raw HTML never reaches a prompt.
 The `done` tool ends the task. `task/status` drives state: `running` **with a `task_id`** activates it
 (one without is the agent starting before the api has minted one), the terminal three clear it and the
 dedupe set.
