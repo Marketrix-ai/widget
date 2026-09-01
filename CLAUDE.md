@@ -48,6 +48,14 @@ are generated**, so after changing `rc:` you must re-run `lefthook install --for
   `react/jsx-runtime`.
 - Declarations come from a custom `closeBundle` plugin running `tsc -p tsconfig.build.json`.
 - `public/loader.js` → `dist/loader.js` is the classic script-tag bootstrap.
+- **`bundle:check` budgets each bundled dependency, not just the total.** 392,685 bytes against a
+  455,000 cap leaves 62 kB of blind headroom, and four dependencies are already 56% of the bundle:
+  `@rrweb/record` 75,867 (a feature off by default), `zod` 73,337 (two `safeParse` calls),
+  `@base-ui/react` + `/utils` 53,517 (one confirm Dialog, plus Button), `tailwind-merge` 28,386. A
+  package missing from `DEPENDENCY_BUDGETS` fails the gate, so a new import is a deliberate line.
+- **No code splitting means an import is unconditional** — a heavy dependency behind an off-by-default
+  flag still ships to every host page. Weigh that at the import, because the packaging contract has no
+  later escape.
 
 ## Widget ↔ api
 
