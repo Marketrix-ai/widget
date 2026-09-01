@@ -1,8 +1,11 @@
 import { readFileSync, statSync } from 'node:fs';
 
+// Budgets sit ~15% above the current build so growth is actually noticed. They were 2 MB and 10 kB —
+// 5.1x and 7.8x the real artifacts — which is a guard that can never fire: the bundle could quintuple
+// silently. Raise a limit deliberately when a feature justifies it; do not raise it to make CI pass.
 const requiredFiles = [
-  { path: 'dist/widget.mjs', maxBytes: 2_000_000 },
-  { path: 'dist/loader.js', maxBytes: 10_000 },
+  { path: 'dist/widget.mjs', maxBytes: 455_000 },
+  { path: 'dist/loader.js', maxBytes: 2_000 },
 ];
 
 const errors = [];
