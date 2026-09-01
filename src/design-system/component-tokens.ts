@@ -35,10 +35,7 @@ export const textLeadingClasses: Record<TextLeading, string> = {
   relaxed: 'leading-relaxed',
 };
 
-export const controlSizeStyles = {
-  header: { height: 40 },
-  tabBar: { height: 48 },
-} satisfies Record<string, CSSProperties>;
+export const TAB_BAR_HEIGHT = 48;
 
 export const notificationToneStyles: Record<
   NotificationTone,

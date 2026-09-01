@@ -47,7 +47,6 @@ export function useResize(
   settingsWidth: string | undefined,
   settingsHeight: string | undefined,
   workspaceId: string,
-  isMinimized: boolean,
   isPreviewMode: boolean,
 ) {
   const storageKey = `${STORAGE_KEY_PREFIX}${workspaceId}`;
@@ -64,7 +63,7 @@ export function useResize(
     (corner: ResizeCorner) => (e: React.MouseEvent) => {
       e.preventDefault();
       e.stopPropagation();
-      if (isMinimized || isPreviewMode) return;
+      if (isPreviewMode) return;
 
       const startX = e.clientX;
       const startY = e.clientY;
@@ -117,7 +116,7 @@ export function useResize(
       document.addEventListener('mousemove', onMove);
       document.addEventListener('mouseup', onUp);
     },
-    [isMinimized, isPreviewMode, storageKey],
+    [isPreviewMode, storageKey],
   );
 
   return {

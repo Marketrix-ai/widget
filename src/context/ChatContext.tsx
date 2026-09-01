@@ -45,8 +45,6 @@ interface ChatContextType {
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
-const EMPTY_TASK: TaskState = { activeTaskId: null, isTaskRunning: false };
-
 const MAX_PROCESSED_IDS = 1000;
 
 interface ChatProviderProps {
@@ -54,8 +52,6 @@ interface ChatProviderProps {
   previewMode?: boolean;
   currentMode: InstructionType;
   uiActions: Pick<UIStateActions, 'setLoading' | 'setAgentAvailable' | 'setError'>;
-  initialMessages?: ChatMessage[];
-  initialTask?: TaskState;
 }
 
 export const ChatProvider: React.FC<ChatProviderProps> = ({
@@ -63,12 +59,10 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
   previewMode = false,
   currentMode,
   uiActions,
-  initialMessages,
-  initialTask,
 }) => {
   const [state, setState] = useState<SseState>(() => ({
-    messages: initialMessages ?? [],
-    task: initialTask ?? EMPTY_TASK,
+    messages: [],
+    task: { activeTaskId: null, isTaskRunning: false },
   }));
 
   // commit() is the ONLY writer — re-syncing from render could regress the ref between a commit and its paint.

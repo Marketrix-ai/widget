@@ -12,7 +12,6 @@ export interface ChatSnapshot {
   activeTaskId: string | null;
   currentMode: InstructionType;
   isOpen: boolean;
-  isMinimized: boolean;
   isLoading: boolean;
 }
 
@@ -30,7 +29,6 @@ const DEFAULT_CONTEXT: MarketrixChatContext = {
   activeTaskId: null,
   currentMode: 'tell',
   isOpen: false,
-  isMinimized: false,
   isLoading: false,
   config: null,
   timestamp: 0,

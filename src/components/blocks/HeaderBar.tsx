@@ -1,7 +1,6 @@
 import React from 'react';
 
 import MarketrixIcon from '../../assets/marketrix-icon.svg';
-import { controlSizeStyles } from '../../design-system/component-tokens';
 import { Avatar } from '../base/Avatar';
 import { Flex } from '../base/Flex';
 import { Icon } from '../base/Icon';
@@ -9,35 +8,14 @@ import { IconButton } from '../base/IconButton';
 import { Stack } from '../base/Stack';
 import { Text } from '../base/Text';
 
-export interface HeaderBarProps {
+interface HeaderBarProps {
   title: string;
   subtitle?: string;
-  minimized?: boolean;
   onClose: () => void;
   controls?: React.ReactNode;
 }
 
-export const HeaderBar: React.FC<HeaderBarProps> = ({ title, subtitle, minimized = false, onClose, controls }) => {
-  if (minimized) {
-    return (
-      <Flex
-        align='center'
-        justify='between'
-        paddingX='lg'
-        border='bottom'
-        shrink={false}
-        style={controlSizeStyles.header}
-      >
-        <Text size='sm' weight='medium'>
-          {title}
-        </Text>
-        <IconButton variant='toolbar' size='sm' label='Close' onClick={onClose}>
-          <Icon name='close' size={16} />
-        </IconButton>
-      </Flex>
-    );
-  }
-
+export const HeaderBar: React.FC<HeaderBarProps> = ({ title, subtitle, onClose, controls }) => {
   return (
     <Flex
       align='center'

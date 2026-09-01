@@ -22,14 +22,13 @@ import { ShellTabBar } from './ShellTabBar';
 export const MessengerShell: React.FC = () => {
   const config = useWidgetConfig();
   const { state, actions } = useWidget();
-  const { isOpen, isMinimized, activeView } = state;
+  const { isOpen, activeView } = state;
   const isPreviewMode = config.isPreviewMode ?? false;
 
   const { widthPx, heightPx, onResizeStart, containerRef } = useResize(
     config.widget_width,
     config.widget_height,
     tenantScope(config),
-    isMinimized,
     isPreviewMode,
   );
 
@@ -98,7 +97,7 @@ export const MessengerShell: React.FC = () => {
         backgroundImage,
         transformOrigin: `${vertical} ${horizontal}`,
         width: widthPx,
-        height: isMinimized ? '48px' : heightPx,
+        height: heightPx,
         fontSize: config.widget_font_size,
         ...panelPositionStyle,
         pointerEvents: 'auto',
@@ -109,8 +108,7 @@ export const MessengerShell: React.FC = () => {
     >
       <HeaderBar
         title={config.widget_header ?? 'AI Agent'}
-        subtitle={isMinimized ? undefined : (config.widget_body ?? 'How can I help?')}
-        minimized={isMinimized}
+        subtitle={config.widget_body ?? 'How can I help?'}
         onClose={actions.closeWidget}
         controls={
           screenShareHandler && (
@@ -132,34 +130,28 @@ export const MessengerShell: React.FC = () => {
         }
       />
 
-      {!isMinimized && (
-        <>
-          <Surface grow overflow='hidden' style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-            <Surface
-              key={activeView}
-              data-view-transition
-              data-direction={navDirection}
-              style={{ width: '100%', height: '100%' }}
-            >
-              {activeView === 'home' && (
-                <HomeView onNavigateToChat={handleNavigateToChat} onChipClick={handleChipClick} />
-              )}
-              {activeView === 'chat' && (
-                <ChatView
-                  onScreenSharingChange={setHeaderScreenSharing}
-                  onStartScreenShareRef={chatViewStartScreenShareRef}
-                  onStopScreenShareRef={chatViewStopScreenShareRef}
-                  messageInputRef={messageInputRef}
-                />
-              )}
-            </Surface>
-          </Surface>
+      <Surface grow overflow='hidden' style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+        <Surface
+          key={activeView}
+          data-view-transition
+          data-direction={navDirection}
+          style={{ width: '100%', height: '100%' }}
+        >
+          {activeView === 'home' && <HomeView onNavigateToChat={handleNavigateToChat} onChipClick={handleChipClick} />}
+          {activeView === 'chat' && (
+            <ChatView
+              onScreenSharingChange={setHeaderScreenSharing}
+              onStartScreenShareRef={chatViewStartScreenShareRef}
+              onStopScreenShareRef={chatViewStopScreenShareRef}
+              messageInputRef={messageInputRef}
+            />
+          )}
+        </Surface>
+      </Surface>
 
-          <ShellTabBar activeView={activeView} onChange={actions.setActiveView} />
-        </>
-      )}
+      <ShellTabBar activeView={activeView} onChange={actions.setActiveView} />
 
-      {!isMinimized && !isPreviewMode && <ResizeHandles onResizeStart={onResizeStart} />}
+      {!isPreviewMode && <ResizeHandles onResizeStart={onResizeStart} />}
     </Stack>
   );
 };

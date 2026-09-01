@@ -19,7 +19,6 @@ const snapshot = (messages: ChatMessage[]) => ({
   activeTaskId: null,
   currentMode: 'tell' as const,
   isOpen: true,
-  isMinimized: false,
   isLoading: false,
 });
 

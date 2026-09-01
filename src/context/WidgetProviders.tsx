@@ -16,8 +16,8 @@ const PersistBridge: React.FC<{ previewMode: boolean }> = ({ previewMode }) => {
 
   useEffect(() => {
     if (previewMode) return;
-    const { currentMode, isOpen, isMinimized, isLoading } = uiState;
-    chatService.persist({ messages: chatState.messages, ...taskState, currentMode, isOpen, isMinimized, isLoading });
+    const { currentMode, isOpen, isLoading } = uiState;
+    chatService.persist({ messages: chatState.messages, ...taskState, currentMode, isOpen, isLoading });
   }, [previewMode, chatState, taskState, uiState]);
 
   return null;
