@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 
-import { NotificationToast } from '../../blocks/NotificationToast';
+import { NotificationToast } from '../NotificationToast';
 
 describe('NotificationToast (error)', () => {
   it('shows error message and calls onDismiss when close is clicked', () => {

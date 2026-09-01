@@ -3,9 +3,9 @@ import type { CSSProperties } from 'react';
 import { SHADOW, type ShadowToken } from './shadows';
 
 export type RadiusToken = 'none' | 'sm' | 'md' | 'lg' | 'xl' | 'theme' | 'pill' | 'circle';
-export type TextTone = 'default' | 'muted' | 'faint' | 'primary' | 'success' | 'warning' | 'inherit';
+export type TextTone = 'default' | 'muted' | 'faint' | 'primary' | 'inherit';
 export type TextLeading = 'tight' | 'snug' | 'normal' | 'relaxed';
-export type NotificationTone = 'info' | 'error';
+export type NotificationTone = 'info' | 'error' | 'neutral';
 
 export const radiusClasses: Record<RadiusToken, string> = {
   none: 'rounded-none',
@@ -23,8 +23,6 @@ export const textToneClasses: Record<TextTone, string> = {
   muted: 'text-foreground-muted',
   faint: 'text-foreground-faint',
   primary: 'text-primary',
-  success: 'text-success',
-  warning: 'text-warning',
   inherit: 'text-inherit',
 };
 
@@ -63,6 +61,14 @@ export const notificationToneStyles: Record<
     bodyColor: '#b91c1c',
     closeColor: '#f87171',
     actionBackground: '#fee2e2',
+  },
+  neutral: {
+    background: 'rgba(255, 255, 255, 0.95)',
+    border: '1px solid rgba(255, 255, 255, 0.2)',
+    titleColor: '#1f2937',
+    bodyColor: '#1f2937',
+    closeColor: '#6b7280',
+    actionBackground: 'transparent',
   },
 };
 

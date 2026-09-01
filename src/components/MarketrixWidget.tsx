@@ -104,10 +104,7 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
   } as ValidWidgetConfig;
 
   const showProcessingFeedback = state.isLoading || state.isTaskRunning;
-  const customStyles = {
-    ...semanticTokensToCssCustomProperties(createSemanticTokens(config)),
-    '--widget-z-index': effectiveWidgetZIndex,
-  } as React.CSSProperties;
+  const customStyles = semanticTokensToCssCustomProperties(createSemanticTokens(config)) as React.CSSProperties;
 
   return (
     <WidgetConfigContext value={effectiveConfig}>

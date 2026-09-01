@@ -160,6 +160,11 @@ and shipped images cannot drift in their dependency set.
   `package-lock.json` alongside `package.json`. `npm run tag` does it for you.
 - **React importmap wins** — the loader's `esm.sh` importmap only fills gaps; a host on a different
   React 19 build keeps its own.
+- **Interpolated Tailwind classes need the `@source inline(...)` safelist in `index.css`** —
+  `resolveLayoutClasses` builds `p-*`/`gap-*`/`inset-*` from `spacingScale`, which the scanner cannot
+  see; widen the scale and you must widen the safelist or the class silently never ships.
+- **The widget has no dark mode** — no `.dark` block, no `dark:` variant. Theming is the per-tenant
+  settings → CSS custom properties in `semantic-tokens.ts`, nothing else.
 
 ## Conventions
 

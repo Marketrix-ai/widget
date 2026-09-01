@@ -14,12 +14,12 @@ import { StreamClient } from './services/StreamClient';
 import { createConfigFromSettings, loadWidgetConfig } from './services/WidgetService';
 import type { AddWidgetConfig, MarketrixConfig, MarketrixWidgetProps } from './types';
 import {
+  autoInitializeWidget,
   createWidgetContainer,
   getCurrentConfig,
   hideWidgetSettingsLoader,
   isWidgetInitialized,
   mountWidgetToContainer,
-  registerAutoInit,
   showWidgetSettingsLoader,
   widgetState,
 } from './utils/bootstrap';
@@ -210,7 +210,7 @@ export const mountWidget = async (config: AddWidgetConfig): Promise<void> => {
 if (typeof window !== 'undefined') {
   setTimeout(() => {
     try {
-      registerAutoInit(initWidget);
+      autoInitializeWidget(initWidget);
     } catch (error) {
       console.debug('Marketrix Widget: Auto-init registration skipped', error);
     }
