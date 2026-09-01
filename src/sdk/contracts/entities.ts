@@ -86,7 +86,9 @@ export type WidgetChip = z.infer<typeof WidgetChipSchema>;
 
 export const WidgetSettingsDataSchema = z.object({
   widget_enabled: z.boolean(),
-  widget_appearance: z.enum(['default', 'compact', 'full', 'hidden']),
+  // The widget reads this only as `!== 'default'` (greeting toast) and `=== 'hidden'`; the retired
+  // `compact`/`full` rendered identically to `default`, so db-V246 folds them onto it.
+  widget_appearance: z.enum(['default', 'hidden']),
   widget_position: z.enum(['bottom_left', 'bottom_right', 'top_left', 'top_right']),
   widget_device: z.enum(['desktop', 'mobile', 'desktop_mobile']),
   widget_header: z.string(),
