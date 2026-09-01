@@ -2,7 +2,7 @@ import React from 'react';
 
 import { useWidget } from '../../hooks/useWidget';
 import type { ChatMessage } from '../../types';
-import { removeThinkingMarkerFromEnd } from '../../utils/chat';
+import { filterCancellationText, removeThinkingMarkerFromEnd } from '../../utils/chat';
 import { Stack } from '../base/Stack';
 import { Surface } from '../base/Surface';
 import { Text } from '../base/Text';
@@ -16,19 +16,15 @@ interface MessageContentProps {
 
 export const MessageContent: React.FC<MessageContentProps> = ({ message, isLastMessage }) => {
   const { isTaskRunning } = useWidget().state;
-  const placeholderState = message.placeholderState || 'thinking';
-  const isWaitingForUser = placeholderState === 'waiting-for-user';
+  const isWaitingForUser = message.placeholderState === 'waiting-for-user';
+  const showThinking = isTaskRunning && isLastMessage && (message.mode === 'show' || message.mode === 'do');
 
-  if (message.parts && message.parts.length > 0) {
+  if (message.parts.length > 0) {
     return (
       <Stack gap='sm'>
         {message.parts.map((part, index) => {
           if (part.type === 'text') {
-            let text = removeThinkingMarkerFromEnd(part.content).trim();
-            text = text
-              .replace(/\(Cancelled by cleanup\)/gi, '')
-              .replace(/\s+/g, ' ')
-              .trim();
+            const text = filterCancellationText(removeThinkingMarkerFromEnd(part.content));
             if (!text) return null;
             return (
               <Text
@@ -52,8 +48,7 @@ export const MessageContent: React.FC<MessageContentProps> = ({ message, isLastM
           return null;
         })}
 
-        {((message.isPlaceholder && !message.parts.some(p => p.type === 'text')) ||
-          (isTaskRunning && isLastMessage && (message.mode === 'show' || message.mode === 'do'))) && (
+        {((message.isPlaceholder && !message.parts.some(p => p.type === 'text')) || showThinking) && (
           <ThinkingIndicator isWaitingForUser={isWaitingForUser} />
         )}
       </Stack>

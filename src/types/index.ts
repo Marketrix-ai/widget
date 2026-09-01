@@ -33,7 +33,7 @@ export interface ChatMessage {
   isSystemMessage?: boolean;
   isPlaceholder?: boolean;
   placeholderState?: 'thinking' | 'waiting-for-user';
-  parts?: MessagePart[];
+  parts: MessagePart[];
   taskStatus?: 'done' | 'failed' | 'stopped';
 }
 

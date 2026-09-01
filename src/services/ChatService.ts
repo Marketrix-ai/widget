@@ -28,9 +28,7 @@ function serializeMessage({ videoStream: _videoStream, ...msg }: ChatMessage): S
 /** A placeholder with nothing to show yet would restore as a permanently empty bubble. */
 function isPersistable(msg: ChatMessage): boolean {
   if (!msg.isPlaceholder) return true;
-  return (
-    msg.placeholderState === 'thinking' || msg.placeholderState === 'waiting-for-user' || (msg.parts?.length ?? 0) > 0
-  );
+  return msg.placeholderState === 'thinking' || msg.placeholderState === 'waiting-for-user' || msg.parts.length > 0;
 }
 
 export class ChatService {

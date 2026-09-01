@@ -47,8 +47,7 @@ export function findMessageForProgress({
 }: FindMessageOptions): { index: number; message: ChatMessage } | null {
   const isAgentReply = (msg: ChatMessage) =>
     msg.sender === 'agent' && !msg.isSystemMessage && !msg.isScreenAccessRequest;
-  const hasContent = (msg: ChatMessage) =>
-    !requireContent || msg.content.trim().length > 0 || (msg.parts?.length ?? 0) > 0;
+  const hasContent = (msg: ChatMessage) => !requireContent || msg.content.trim().length > 0 || msg.parts.length > 0;
   // Lenient on placeholders with an undefined mode — tool calls can race ahead of the mode being set.
   const modeMatches = (msg: ChatMessage) =>
     msg.isPlaceholder ? msg.mode === undefined || msg.mode === currentMode : msg.mode === currentMode;
@@ -80,24 +79,6 @@ export function findMessageForProgress({
   return null;
 }
 
-function ensureMessageStructure(message: ChatMessage): ChatMessage {
-  const msg = { ...message };
-
-  if (!msg.parts) {
-    msg.parts = [];
-
-    const cleanContent = msg.content.replace(/\n\n__THINKING__$/, '').trim();
-    if (cleanContent) {
-      msg.parts.push({
-        type: 'text',
-        content: cleanContent,
-      });
-    }
-  }
-
-  return msg;
-}
-
 // In `show` mode these pause for the user to act (DOM-mutating tools, minus `scroll`); also the highlight set in BrowserToolService.
 export const WAIT_FOR_USER_TOOLS = new Set([
   'click_element',
@@ -108,7 +89,7 @@ export const WAIT_FOR_USER_TOOLS = new Set([
 ]);
 
 // "Cancelled by cleanup" is expected internal chatter users shouldn't see.
-function filterCancellationText(content: string): string {
+export function filterCancellationText(content: string): string {
   if (!content) return content;
   return content
     .replace(/\(Cancelled by cleanup\)/gi, '')
@@ -119,9 +100,7 @@ function filterCancellationText(content: string): string {
 }
 
 export function addProgressLine(message: ChatMessage, browserToolName: string, explanation: string): ChatMessage {
-  const msg = ensureMessageStructure(message);
-  const parts = msg.parts || [];
-
+  const parts = message.parts;
   const newParts = [...parts];
   const existingPartIndex = parts.findIndex(
     part => part.type === 'progress' && part.browserToolName === browserToolName && part.status === 'in_progress',
@@ -143,16 +122,11 @@ export function addProgressLine(message: ChatMessage, browserToolName: string, e
     });
   }
 
-  return {
-    ...msg,
-    parts: newParts,
-  };
+  return { ...message, parts: newParts };
 }
 
 export function markProgressLineComplete(message: ChatMessage): ChatMessage {
-  const msg = ensureMessageStructure(message);
-  const parts = msg.parts || [];
-
+  const parts = message.parts;
   const newParts = [...parts];
   let partIndex = -1;
   for (let i = parts.length - 1; i >= 0; i--) {
@@ -166,12 +140,11 @@ export function markProgressLineComplete(message: ChatMessage): ChatMessage {
     newParts[partIndex] = { ...newParts[partIndex], status: 'completed' };
   }
 
-  return { ...msg, parts: newParts };
+  return { ...message, parts: newParts };
 }
 
 export function markProgressLineFailed(message: ChatMessage, browserToolName: string, error: string): ChatMessage {
-  const msg = ensureMessageStructure(message);
-  const parts = msg.parts || [];
+  const parts = message.parts;
 
   // "Cancelled by cleanup" errors are expected in show mode when a new action supersedes a pending one.
   const shouldFilterError = error.toLowerCase().includes('cancelled by cleanup');
@@ -206,7 +179,7 @@ export function markProgressLineFailed(message: ChatMessage, browserToolName: st
     }
   }
 
-  return { ...msg, parts: newParts };
+  return { ...message, parts: newParts };
 }
 
 export function updateThinkingMarker(
@@ -215,35 +188,20 @@ export function updateThinkingMarker(
   currentMode: 'show' | 'tell' | 'do',
   isWaitingForUser: boolean = false,
 ): ChatMessage {
-  const msg = ensureMessageStructure(message);
-
   if (!isTaskRunning || (currentMode !== 'show' && currentMode !== 'do')) {
-    if (hasThinkingMarker(msg.content)) {
-      return {
-        ...msg,
-        content: removeThinkingMarkerFromEnd(msg.content),
-        placeholderState: undefined,
-      };
-    }
-    return msg;
+    if (!hasThinkingMarker(message.content)) return message;
+    return { ...message, content: removeThinkingMarkerFromEnd(message.content), placeholderState: undefined };
   }
 
   const targetState = isWaitingForUser ? 'waiting-for-user' : 'thinking';
 
-  if (!hasThinkingMarker(msg.content)) {
-    return {
-      ...msg,
-      content: addThinkingMarker(msg.content),
-      placeholderState: targetState,
-    };
-  } else if (msg.placeholderState !== targetState) {
-    return {
-      ...msg,
-      placeholderState: targetState,
-    };
+  if (!hasThinkingMarker(message.content)) {
+    return { ...message, content: addThinkingMarker(message.content), placeholderState: targetState };
   }
-
-  return msg;
+  if (message.placeholderState !== targetState) {
+    return { ...message, placeholderState: targetState };
+  }
+  return message;
 }
 
 /** Tool id -> the phrase shown in the activity log. Also the allowlist of tools the agent may call. */
