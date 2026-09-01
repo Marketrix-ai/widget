@@ -4,6 +4,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { NotificationToast } from '../components/blocks/NotificationToast';
 import { MarketrixWidget } from '../components/MarketrixWidget';
 import { WidgetProviders } from '../context/WidgetProviders';
+import type { NotificationTone } from '../design-system/component-tokens';
 import shadowStyles from '../index.css?inline';
 import type { MarketrixConfig } from '../types';
 import { isHTMLScriptElement } from './validation';
@@ -81,7 +82,9 @@ export const isWidgetInitialized = (): boolean => widgetState.instance !== null;
 
 export const getCurrentConfig = (): MarketrixConfig | null => widgetState.config;
 
-export const showWidgetSettingsLoader = (message: string): void => {
+/** ``tone`` because this one surface carries both the loading notice and the two hard init failures, and
+ * a failure painted in the neutral palette reads as an informational notice on the host's page. */
+export const showWidgetSettingsLoader = (message: string, tone: NotificationTone = 'neutral'): void => {
   if (typeof window === 'undefined' || typeof document === 'undefined') {
     return;
   }
@@ -98,7 +101,7 @@ export const showWidgetSettingsLoader = (message: string): void => {
   loaderInstance = createRoot(mountEl);
   loaderInstance.render(
     <React.StrictMode>
-      <NotificationToast tone='neutral' title={message} onDismiss={hideWidgetSettingsLoader} />
+      <NotificationToast tone={tone} title={message} onDismiss={hideWidgetSettingsLoader} />
     </React.StrictMode>,
   );
 };
@@ -134,7 +137,7 @@ export const autoInitializeWidget = (initWidget: (config: MarketrixConfig) => Pr
   if (!mtxId || !mtxKey) {
     if (isWidgetInitialized()) return;
     console.error('[AutoInit] Missing required attributes:', { hasMtxId: !!mtxId, hasMtxKey: !!mtxKey });
-    showWidgetSettingsLoader('Please configure mtx-id and mtx-key');
+    showWidgetSettingsLoader('Please configure mtx-id and mtx-key', 'error');
     return;
   }
 

@@ -7,6 +7,7 @@ import { useScrollLock } from '../hooks/useScrollLock';
 import { useWidget, type ValidWidgetConfig, WidgetConfigContext } from '../hooks/useWidget';
 import { WidgetSettingsDataSchema } from '../sdk';
 import { readLocal, storageService, writeLocal } from '../services/StorageService';
+import { StreamClient } from '../services/StreamClient';
 import { tenantScope } from '../services/WidgetService';
 import type { MarketrixConfig, WidgetPosition } from '../types';
 import { addOpacity } from '../utils/color';
@@ -49,6 +50,7 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
   const [showGreeting, setShowGreeting] = useState(false);
   const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null);
   const { state, actions } = useWidget();
+  const streamClient = StreamClient.getInstance();
   const isPreviewMode = config.isPreviewMode ?? false;
   const configValid = WidgetSettingsDataSchema.safeParse(config).success;
 
@@ -140,7 +142,15 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
               tone='error'
               title={state.error}
               onDismiss={() => actions.setError(undefined)}
-              onRetry={() => actions.setError(undefined)}
+              // Offered only when it can achieve something, and it now reconnects — it used to be
+              // byte-identical to onDismiss, so the one error where reconnecting IS the remedy showed a
+              // Retry button that only hid the toast.
+              {...(streamClient.canReconnect() && {
+                onRetry: () => {
+                  actions.setError(undefined);
+                  streamClient.reconnectNow();
+                },
+              })}
               position={getCorner(widgetPosition).vertical === 'top' ? 'bottom-center' : 'above-fab'}
             />
           )}

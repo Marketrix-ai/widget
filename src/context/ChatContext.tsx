@@ -260,8 +260,14 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
     // chat/stop carries no task id: the api stops the one dispatch it holds for this chat.
     StreamClient.getInstance()
       .send({ type: 'chat/stop' })
-      .catch(err => console.error('Failed to stop task remotely:', err));
-  }, [previewMode, commit]);
+      .catch(err => {
+        console.error('Failed to stop task remotely:', err);
+        // reduceStop already stamped the message "stopped" — in `do` mode the agent may still be
+        // clicking through the visitor's page, and `send`'s own "Failed to send message" toast names
+        // the transport rather than the thing the user asked for and did not get.
+        uiActions.setError('Could not stop the assistant — it may still be working.');
+      });
+  }, [previewMode, commit, uiActions]);
 
   const chatActions = useMemo<ChatActions>(
     () => ({ addMessage, updateMessage, removeMessage, setMessages, clearMessages, messageDispatch }),

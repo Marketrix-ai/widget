@@ -46,6 +46,23 @@ export class StreamClient {
     return this.status === 'registered';
   }
 
+  /** Whether a user-driven retry can achieve anything: there is a chat to rejoin and the stream is not
+   * auth-latched (reconnecting on a rejected credential just re-earns the same 401). */
+  canReconnect(): boolean {
+    return this.chatId !== null && !this.isIntentionallyDisconnected && !this.isConnected();
+  }
+
+  /** The user asked to retry. `scheduleReconnect` gives up permanently at `maxReconnectAttempts` and only
+   * `registered` resets the counters, so without this reset the widget's Retry button had nothing it
+   * could do — which is why it was wired to plain dismiss. */
+  reconnectNow(): void {
+    if (!this.canReconnect() || this.chatId === null) return;
+    this.clearReconnectTimer();
+    this.reconnectAttempts = 0;
+    this.reconnectDelay = 1000;
+    this.connect(this.chatId).catch(console.error);
+  }
+
   async waitUntilRegistered(): Promise<void> {
     if (this.isConnected()) return;
     await new Promise<void>((resolve, reject) => this.registrationWaiters.add({ resolve, reject }));
@@ -179,6 +196,10 @@ export class StreamClient {
     if (event.type === 'chat/error' && event.request_id === 'auth') {
       console.error('[StreamClient] Authentication failed — will not reconnect');
       this.isIntentionallyDisconnected = true;
+      // The event is ALSO handed to the reducer below, where `chat/error` settles the message whose id is
+      // the request id — and no message is ever id 'auth', so the branch matched nothing and the widget
+      // went permanently silent with no toast, no bubble and (console being dropped by terser) no trace.
+      this.notifyError(new Error('Chat is unavailable — the widget credentials were rejected.'));
     }
 
     this.callbacks.forEach(cb => cb.onMessage?.(event));
@@ -186,7 +207,8 @@ export class StreamClient {
 
   private scheduleReconnect(): void {
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      this.notifyError(new Error('Max reconnect attempts reached'));
+      // What the visitor on a customer's page reads, so it names the state and the way out rather than the counter.
+      this.notifyError(new Error('Could not reconnect to the assistant. Try again.'));
       return;
     }
     this.clearReconnectTimer();
