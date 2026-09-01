@@ -30,6 +30,8 @@ export interface ChatInputProps {
   ref?: React.Ref<HTMLTextAreaElement>;
 }
 
+const MAX_TEXTAREA_HEIGHT = 66; // 3 lines (20px each) + 6px padding
+
 function mergeRefs<T>(...refs: (React.Ref<T> | undefined)[]) {
   return (el: T | null) => {
     refs.forEach(r => {
@@ -53,30 +55,15 @@ export function ChatInput({
   ref,
 }: ChatInputProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const maxTextareaHeight = 66; // 3 lines (20px each) + 6px padding
 
   useEffect(() => {
     const textarea = textareaRef.current;
-    if (textarea) {
-      textarea.style.height = 'auto';
-      const scrollHeight = textarea.scrollHeight;
-      const clamped = Math.min(scrollHeight, maxTextareaHeight);
-      textarea.style.height = `${clamped}px`;
-      textarea.style.overflowY = scrollHeight > maxTextareaHeight ? 'auto' : 'hidden';
-    }
+    if (!textarea) return;
+    textarea.style.height = 'auto';
+    const { scrollHeight } = textarea;
+    textarea.style.height = `${Math.min(scrollHeight, MAX_TEXTAREA_HEIGHT)}px`;
+    textarea.style.overflowY = scrollHeight > MAX_TEXTAREA_HEIGHT ? 'auto' : 'hidden';
   }, [value]);
-
-  const handleChange = useCallback(
-    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-      onChange(e.target.value);
-      const ta = e.target;
-      ta.style.height = 'auto';
-      const clamped = Math.min(ta.scrollHeight, maxTextareaHeight);
-      ta.style.height = `${clamped}px`;
-      ta.style.overflowY = ta.scrollHeight > maxTextareaHeight ? 'auto' : 'hidden';
-    },
-    [onChange],
-  );
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -101,7 +88,7 @@ export function ChatInput({
       <textarea
         ref={mergeRefs(textareaRef, ref)}
         value={value}
-        onChange={handleChange}
+        onChange={e => onChange(e.target.value)}
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
         disabled={disabled}

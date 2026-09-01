@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 
 import MarketrixIcon from '../../assets/marketrix-icon.svg';
-import { notificationToneStyles } from '../../design-system/component-tokens';
+import { type NotificationTone, notificationToneStyles } from '../../design-system/component-tokens';
 import { LAYER_TOKENS } from '../../design-system/layers';
 import { Avatar } from '../base/Avatar';
 import { Button } from '../base/Button';
@@ -15,7 +15,7 @@ import { Text } from '../base/Text';
 const AUTO_DISMISS_MS = 8000;
 
 export interface NotificationToastProps {
-  tone: 'info' | 'error';
+  tone: NotificationTone;
   title: string;
   body?: string;
   onDismiss: () => void;
@@ -38,6 +38,7 @@ export const NotificationToast: React.FC<NotificationToastProps> = ({
     setTimeout(onDismiss, 300);
   }, [onDismiss]);
 
+  // Only the greeting toast times out; error and neutral stay until dismissed.
   useEffect(() => {
     if (tone !== 'info') return;
     const timer = setTimeout(dismiss, AUTO_DISMISS_MS);
@@ -49,12 +50,12 @@ export const NotificationToast: React.FC<NotificationToastProps> = ({
   return (
     <Surface
       position='fixed'
+      animate={isExiting ? 'none' : 'fadeIn'}
       style={{
         zIndex: LAYER_TOKENS.toast,
         maxWidth: '420px',
         opacity: isExiting ? 0 : 1,
         transition: 'opacity 0.3s ease-out',
-        animation: isExiting ? 'none' : 'fadeIn 0.3s ease-out',
         bottom: position === 'above-fab' ? '90px' : '20px',
         left: '50%',
         transform: 'translateX(-50%)',

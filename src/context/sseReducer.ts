@@ -48,18 +48,17 @@ function applyProgress(
   status: ProgressStatus,
   error?: string,
 ): ChatMessage[] {
-  const friendlyName = getFriendlyToolName(browserToolName);
   const found = findMessageForProgress({ messages, isTaskRunning, currentMode });
   if (!found) return messages;
 
   let updatedMsg = found.message;
   // `done` carries no progress line of its own — it only ends the run.
   if (status === 'failed') {
-    updatedMsg = markProgressLineFailed(updatedMsg, friendlyName, error || '');
+    updatedMsg = markProgressLineFailed(updatedMsg, browserToolName, error || '');
   } else if (browserToolName !== 'done') {
     updatedMsg =
       status === 'in_progress'
-        ? addProgressLine(updatedMsg, friendlyName, explanation || friendlyName)
+        ? addProgressLine(updatedMsg, browserToolName, explanation || getFriendlyToolName(browserToolName))
         : markProgressLineComplete(updatedMsg);
   }
 

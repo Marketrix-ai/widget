@@ -6,8 +6,8 @@ import { getElevationStyle, type RadiusToken } from '../../design-system/compone
 import type { ShadowToken } from '../../design-system/shadows';
 import { type LayoutProps, resolveLayoutClasses, stripLayoutProps } from './layoutProps';
 
-export type SurfaceBackground = 'default' | 'card' | 'transparent' | 'muted' | 'secondary' | 'primary';
-export type SurfacePadding = 'none' | 'compact' | 'card' | 'dialog' | 'toast';
+export type SurfaceBackground = 'default' | 'card';
+export type SurfacePadding = 'none' | 'card' | 'toast';
 
 export interface SurfaceProps extends LayoutProps, Omit<React.HTMLAttributes<HTMLElement>, 'className'> {
   as?: ElementType;
@@ -22,17 +22,11 @@ export interface SurfaceProps extends LayoutProps, Omit<React.HTMLAttributes<HTM
 export const backgroundClasses: Record<SurfaceBackground, string> = {
   default: '',
   card: 'bg-card text-card-foreground',
-  transparent: 'bg-transparent',
-  muted: 'bg-muted',
-  secondary: 'bg-secondary-bg',
-  primary: 'bg-primary text-primary-foreground',
 };
 
 export const paddingPresetClasses: Record<SurfacePadding, string> = {
   none: '',
-  compact: 'px-2 py-1.5',
   card: 'px-3 py-2',
-  dialog: 'p-4',
   toast: 'py-2 pl-2 pr-3',
 };
 

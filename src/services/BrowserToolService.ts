@@ -24,64 +24,23 @@ export interface ToolExecutionResult<T = TextData> {
   error?: string;
 }
 
-export interface NavigateParams {
-  url: string;
-  new_tab?: boolean;
-}
-
-export interface SearchParams {
-  query: string;
-  engine?: 'duckduckgo' | 'google' | 'bing';
-}
-
-export interface ClickElementParams {
-  index: number;
-}
-
-export interface TypeTextParams {
-  index: number;
-  text: string;
+/** One shape for every widget tool's arguments: the wire carries a bare JSON object, so nothing is
+ * guaranteed present and each handler guards the fields it needs. */
+interface ToolArgs {
   clear?: boolean;
-}
-
-export interface ScrollParams {
-  direction: 'up' | 'down' | 'left' | 'right';
-}
-
-export interface ScrollToTextParams {
-  text: string;
-}
-
-export interface SendKeysParams {
-  index: number;
-  keys: string;
-}
-
-export interface SelectDropdownOptionParams {
-  index: number;
-  option: string;
-}
-
-export interface GetDropdownOptionsParams {
-  index: number;
-}
-
-export interface UploadFileParams {
-  index: number;
-  path: string;
-}
-
-export interface DoneParams {
-  success: boolean;
-  message?: string;
-}
-
-export interface WaitParams {
-  seconds: number;
-}
-
-export interface ExtractParams {
+  direction?: 'up' | 'down' | 'left' | 'right';
+  engine?: 'duckduckgo' | 'google' | 'bing';
   extract_links?: boolean;
+  index?: number;
+  keys?: string;
+  message?: string;
+  new_tab?: boolean;
+  option?: string;
+  query?: string;
+  seconds?: number;
+  success?: boolean;
+  text?: string;
+  url?: string;
 }
 
 const ok = (text: string): ToolExecutionResult => ({ success: true, data: { text } });
@@ -103,11 +62,12 @@ export class BrowserToolService {
     mode: string = 'do',
     explanation: string = '',
   ): Promise<ToolExecutionResult<unknown>> {
+    const toolArgs = args as ToolArgs;
     try {
       console.log(`[BrowserToolService] Executing ${browserToolName} (mode: ${mode})`);
 
       if (mode === 'show' && WAIT_FOR_USER_TOOLS.has(browserToolName)) {
-        const index = args.index as number | undefined;
+        const index = toolArgs.index;
         if (index !== undefined) {
           const { element, error } = domService.getValidatedElement(index);
           if (!element) return fail(error || `Element ${index} not found`);
@@ -127,35 +87,35 @@ export class BrowserToolService {
 
       switch (browserToolName) {
         case 'navigate':
-          return this.navigate(args as unknown as NavigateParams);
+          return this.navigate(toolArgs);
         case 'search':
-          return this.search(args as unknown as SearchParams);
+          return this.search(toolArgs);
         case 'click_element':
-          return await this.clickElement(args as unknown as ClickElementParams);
+          return await this.clickElement(toolArgs);
         case 'type_text':
-          return this.typeText(args as unknown as TypeTextParams);
+          return this.typeText(toolArgs);
         case 'scroll':
-          return this.scroll(args as unknown as ScrollParams);
+          return this.scroll(toolArgs);
         case 'scroll_to_text':
-          return this.scrollToText(args as unknown as ScrollToTextParams);
+          return this.scrollToText(toolArgs);
         case 'extract':
-          return this.extract(args as unknown as ExtractParams);
+          return this.extract(toolArgs);
         case 'go_back':
           return this.goBack();
         case 'wait':
-          return await this.wait(args as unknown as WaitParams);
+          return await this.wait(toolArgs);
         case 'select_dropdown_option':
-          return this.selectDropdownOption(args as unknown as SelectDropdownOptionParams);
+          return this.selectDropdownOption(toolArgs);
         case 'get_dropdown_options':
-          return this.getDropdownOptions(args as unknown as GetDropdownOptionsParams);
+          return this.getDropdownOptions(toolArgs);
         case 'send_keys':
-          return this.sendKeys(args as unknown as SendKeysParams);
+          return this.sendKeys(toolArgs);
         case 'upload_file':
-          return this.uploadFile(args as unknown as UploadFileParams);
+          return this.uploadFile();
         case 'close_tab':
           return this.closeTab();
         case 'done':
-          return this.done(args as unknown as DoneParams);
+          return this.done(toolArgs);
         case 'get_html':
           return this.getHtml();
         case 'get_screenshot':
@@ -169,7 +129,7 @@ export class BrowserToolService {
     }
   }
 
-  private navigate(args: NavigateParams): ToolExecutionResult {
+  private navigate(args: ToolArgs): ToolExecutionResult {
     if (!args.url) return fail('URL is required');
 
     if (args.new_tab) {
@@ -180,7 +140,7 @@ export class BrowserToolService {
     return ok(`Navigating to ${args.url}`);
   }
 
-  private search(args: SearchParams): ToolExecutionResult {
+  private search(args: ToolArgs): ToolExecutionResult {
     if (!args.query) return fail('Query is required');
 
     const engine = args.engine || 'duckduckgo';
@@ -194,7 +154,7 @@ export class BrowserToolService {
     return ok(`Searching for "${args.query}" on ${engine}`);
   }
 
-  private async clickElement(args: ClickElementParams): Promise<ToolExecutionResult> {
+  private async clickElement(args: ToolArgs): Promise<ToolExecutionResult> {
     if (args.index === undefined) return fail('Index required');
 
     const { element, error } = domService.getValidatedElement(args.index);
@@ -219,7 +179,7 @@ export class BrowserToolService {
     return ok(`Clicked element ${args.index}`);
   }
 
-  private typeText(args: TypeTextParams): ToolExecutionResult {
+  private typeText(args: ToolArgs): ToolExecutionResult {
     if (args.index === undefined || args.text === undefined) return fail('Index and text required');
 
     const clear = args.clear !== false;
@@ -317,7 +277,7 @@ export class BrowserToolService {
     return ok(`Typed text into element ${args.index}`);
   }
 
-  private scroll(args: ScrollParams): ToolExecutionResult {
+  private scroll(args: ToolArgs): ToolExecutionResult {
     const amount = window.innerHeight * 0.8;
 
     switch (args.direction) {
@@ -339,7 +299,7 @@ export class BrowserToolService {
     return ok(`Scrolled ${args.direction}`);
   }
 
-  private scrollToText(args: ScrollToTextParams): ToolExecutionResult {
+  private scrollToText(args: ToolArgs): ToolExecutionResult {
     if (!args.text) return fail('Text required');
 
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
@@ -353,7 +313,7 @@ export class BrowserToolService {
     return fail(`Text "${args.text}" not found`);
   }
 
-  private extract(args: ExtractParams): ToolExecutionResult<ExtractData> {
+  private extract(args: ToolArgs): ToolExecutionResult<ExtractData> {
     const includeLinks = args.extract_links !== false;
     const extractResult: ExtractData = {
       title: document.title,
@@ -379,13 +339,13 @@ export class BrowserToolService {
     return fail('No history');
   }
 
-  private async wait(args: WaitParams): Promise<ToolExecutionResult> {
-    if (args.seconds === undefined) return fail('Seconds required');
-    await new Promise(resolve => setTimeout(resolve, args.seconds * 1000));
-    return ok(`Waited ${args.seconds}s`);
+  private async wait({ seconds }: ToolArgs): Promise<ToolExecutionResult> {
+    if (seconds === undefined) return fail('Seconds required');
+    await new Promise(resolve => setTimeout(resolve, seconds * 1000));
+    return ok(`Waited ${seconds}s`);
   }
 
-  private selectDropdownOption(args: SelectDropdownOptionParams): ToolExecutionResult {
+  private selectDropdownOption(args: ToolArgs): ToolExecutionResult {
     if (args.index === undefined || !args.option) return fail('Index/Option required');
 
     const { element, error } = domService.getValidatedElement(args.index);
@@ -404,8 +364,9 @@ export class BrowserToolService {
     return ok(`Selected ${args.option}`);
   }
 
-  private getDropdownOptions(args: GetDropdownOptionsParams): ToolExecutionResult<DropdownOptionsData> {
+  private getDropdownOptions(args: ToolArgs): ToolExecutionResult<DropdownOptionsData> {
     const index = args.index;
+    if (index === undefined) return failOptions('Index required');
 
     const { element, error } = domService.getValidatedElement(index);
     if (!element) return failOptions(error || `Select ${index} not found`);
@@ -418,7 +379,7 @@ export class BrowserToolService {
     return okData({ options });
   }
 
-  private sendKeys(args: SendKeysParams): ToolExecutionResult {
+  private sendKeys(args: ToolArgs): ToolExecutionResult {
     if (args.index === undefined || !args.keys) return fail('Index/Keys required');
 
     const { element, error } = domService.getValidatedElement(args.index);
@@ -616,7 +577,7 @@ export class BrowserToolService {
     el.setSelectionRange(caret, caret);
   }
 
-  private uploadFile(_args: UploadFileParams): ToolExecutionResult {
+  private uploadFile(): ToolExecutionResult {
     return fail('File upload not supported via script');
   }
 
@@ -625,7 +586,7 @@ export class BrowserToolService {
     return ok('Attempted close');
   }
 
-  private done(args: DoneParams): ToolExecutionResult {
+  private done(args: ToolArgs): ToolExecutionResult {
     if (args.success === undefined) {
       return fail('success parameter is required');
     }
@@ -645,8 +606,6 @@ export class BrowserToolService {
   private async getScreenshot(): Promise<ToolExecutionResult> {
     try {
       const stream = await startScreenShare();
-      if (!stream) return fail('Failed to get stream');
-
       const video = document.createElement('video');
       video.srcObject = stream;
       video.autoplay = true;

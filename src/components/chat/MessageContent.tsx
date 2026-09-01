@@ -3,10 +3,10 @@ import React from 'react';
 import { useWidget } from '../../hooks/useWidget';
 import type { ChatMessage } from '../../types';
 import { filterCancellationText } from '../../utils/chat';
+import { Flex } from '../base/Flex';
 import { Stack } from '../base/Stack';
 import { Surface } from '../base/Surface';
 import { Text } from '../base/Text';
-import { ProgressLine } from './ProgressLine';
 import { ThinkingIndicator } from './ThinkingIndicator';
 
 interface MessageContentProps {
@@ -43,7 +43,18 @@ export const MessageContent: React.FC<MessageContentProps> = ({ message, isLastM
               </Text>
             );
           } else if (part.type === 'progress') {
-            return <ProgressLine key={`part-${index}`} content={part.content} />;
+            return (
+              <Flex key={`part-${index}`} align='start' gap='md'>
+                <Text
+                  as='span'
+                  size='xs'
+                  weight='medium'
+                  style={{ flex: 1, whiteSpace: 'pre-wrap', lineHeight: 'tight' }}
+                >
+                  {part.content}
+                </Text>
+              </Flex>
+            );
           }
           return null;
         })}

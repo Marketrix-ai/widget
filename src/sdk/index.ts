@@ -31,17 +31,9 @@ export const sdk = new Proxy({} as ContractRouterClient<typeof widgetContract>, 
 export { WidgetSettingsDataSchema } from './contracts/entities';
 export { WidgetEventSchema } from './contracts/widget';
 
-export type {
-  ApplicationData,
-  InstructionType,
-  UserData,
-  WidgetChip,
-  WidgetData,
-  WidgetSettingsData,
-  WorkspaceData,
-} from './contracts/entities';
+export type { InstructionType, WidgetData, WidgetSettingsData } from './contracts/entities';
 
-export type { WidgetCommand, WidgetEvent, WidgetSettingsKey } from './contracts/widget';
+export type { WidgetCommand, WidgetEvent } from './contracts/widget';
 
 // Type-only: the oRPC client builds requests from the proxied path, so the contract value never ships.
 export type { widgetContract } from './contract';

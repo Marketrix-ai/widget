@@ -1,8 +1,8 @@
 import React from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 
+import { NotificationToast } from '../components/blocks/NotificationToast';
 import { MarketrixWidget } from '../components/MarketrixWidget';
-import { WidgetSettingsLoader } from '../components/ui/WidgetSettingsLoader';
 import { WidgetProviders } from '../context/WidgetProviders';
 import shadowStyles from '../index.css?inline';
 import type { MarketrixConfig } from '../types';
@@ -18,6 +18,24 @@ let loaderInstance: Root | null = null;
 let widgetInstanceCounter = 0;
 const generateContainerId = (): string => {
   return `marketrix-widget-container-${++widgetInstanceCounter}`;
+};
+
+/** The one place a closed shadow root is opened and the widget CSS injected into it. */
+const attachShadowMount = (
+  container: HTMLElement,
+  mountId: string,
+): { shadowRoot: ShadowRoot; mountEl: HTMLElement } => {
+  const shadowRoot = container.attachShadow({ mode: 'closed' });
+
+  const styleEl = document.createElement('style');
+  styleEl.textContent = shadowStyles;
+  shadowRoot.appendChild(styleEl);
+
+  const mountEl = document.createElement('div');
+  mountEl.id = mountId;
+  shadowRoot.appendChild(mountEl);
+
+  return { shadowRoot, mountEl };
 };
 
 export const createWidgetContainer = (
@@ -38,16 +56,8 @@ export const createWidgetContainer = (
   }
   parent.appendChild(container);
 
-  const shadowRoot = container.attachShadow({ mode: 'closed' });
-
-  const styleEl = document.createElement('style');
-  styleEl.textContent = shadowStyles;
-  shadowRoot.appendChild(styleEl);
-
-  const mountEl = document.createElement('div');
-  mountEl.id = 'marketrix-widget-root';
+  const { shadowRoot, mountEl } = attachShadowMount(container, 'marketrix-widget-root');
   Object.assign(mountEl.style, { pointerEvents: 'auto', width: '100%', height: '100%', position: 'relative' });
-  shadowRoot.appendChild(mountEl);
 
   return { container, shadowRoot, mountEl };
 };
@@ -72,7 +82,7 @@ export const isWidgetInitialized = (): boolean => widgetState.instance !== null;
 
 export const getCurrentConfig = (): MarketrixConfig | null => widgetState.config;
 
-export const showWidgetSettingsLoader = (message?: string): void => {
+export const showWidgetSettingsLoader = (message: string): void => {
   if (typeof window === 'undefined' || typeof document === 'undefined') {
     return;
   }
@@ -84,20 +94,12 @@ export const showWidgetSettingsLoader = (message?: string): void => {
   loaderContainer.className = 'marketrix-widget-loader-container';
   document.body.appendChild(loaderContainer);
 
-  const shadowRoot = loaderContainer.attachShadow({ mode: 'closed' });
-
-  const styleEl = document.createElement('style');
-  styleEl.textContent = shadowStyles;
-  shadowRoot.appendChild(styleEl);
-
-  const mountEl = document.createElement('div');
-  mountEl.id = 'marketrix-widget-loader-root';
-  shadowRoot.appendChild(mountEl);
+  const { mountEl } = attachShadowMount(loaderContainer, 'marketrix-widget-loader-root');
 
   loaderInstance = createRoot(mountEl);
   loaderInstance.render(
     <React.StrictMode>
-      <WidgetSettingsLoader message={message} />
+      <NotificationToast tone='neutral' title={message} onDismiss={hideWidgetSettingsLoader} />
     </React.StrictMode>,
   );
 };
@@ -108,20 +110,14 @@ export const hideWidgetSettingsLoader = (): void => {
   document.getElementById('marketrix-widget-loader-container')?.remove();
 };
 
-let initWidgetFunction: ((config: MarketrixConfig) => Promise<void>) | null = null;
-
-export const autoInitializeWidget = (): void => {
+// initWidget is passed in (not imported) to avoid a circular dependency.
+export const autoInitializeWidget = (initWidget: (config: MarketrixConfig) => Promise<void>): void => {
   if (typeof window === 'undefined' || typeof document === 'undefined') {
     return;
   }
 
   // Window-level guard survives ES module re-execution.
   if (window.__mtx?.state) {
-    return;
-  }
-
-  if (!initWidgetFunction) {
-    console.error('[AutoInit] initWidget function not registered');
     return;
   }
 
@@ -147,11 +143,5 @@ export const autoInitializeWidget = (): void => {
   if (mtxApiHost) config.mtxApiHost = mtxApiHost;
   if (script.getAttribute('mtx-use-screenshare') === 'false') config.use_screenshare = false;
 
-  initWidgetFunction(config).catch(error => console.error('[AutoInit] Failed to initialize widget:', error));
-};
-
-// initWidget is passed in (not imported) to avoid a circular dependency.
-export const registerAutoInit = (initWidget: (config: MarketrixConfig) => Promise<void>): void => {
-  initWidgetFunction = initWidget;
-  autoInitializeWidget();
+  initWidget(config).catch(error => console.error('[AutoInit] Failed to initialize widget:', error));
 };

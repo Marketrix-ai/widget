@@ -113,8 +113,7 @@ export function resolveLayoutClasses(props: LayoutProps): string {
     } else if (props.rounded === 'full') {
       classes.push(radiusClasses.pill);
     } else {
-      const roundedKey = props.rounded === 'lg' ? 'lg' : props.rounded;
-      classes.push(radiusClasses[roundedKey]);
+      classes.push(radiusClasses[props.rounded]);
     }
   }
 

@@ -71,9 +71,9 @@ describe('widget public entry paths', () => {
     script.setAttribute('mtx-use-screenshare', 'false');
     document.head.appendChild(script);
     const init = vi.fn().mockResolvedValue(undefined);
-    const { registerAutoInit } = await import('./bootstrap');
+    const { autoInitializeWidget } = await import('./bootstrap');
 
-    registerAutoInit(init);
+    autoInitializeWidget(init);
 
     expect(init).toHaveBeenCalledOnce();
     expect(init).toHaveBeenCalledWith({
@@ -88,9 +88,9 @@ describe('widget public entry paths', () => {
     vi.useFakeTimers();
     const init = vi.fn().mockResolvedValue(undefined);
     const timer = vi.spyOn(globalThis, 'setTimeout');
-    const { registerAutoInit } = await import('./bootstrap');
+    const { autoInitializeWidget } = await import('./bootstrap');
 
-    registerAutoInit(init);
+    autoInitializeWidget(init);
 
     expect(init).not.toHaveBeenCalled();
     expect(timer).not.toHaveBeenCalled();
