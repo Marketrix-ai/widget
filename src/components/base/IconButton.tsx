@@ -2,18 +2,14 @@ import type { ComponentPropsWithRef } from 'react';
 
 import { cn } from '@/lib/utils';
 
-import { getElevationStyle, radiusClasses, type TextTone, textToneClasses } from '../../design-system/component-tokens';
-import type { ShadowToken } from '../../design-system/shadows';
+import { radiusClasses, type TextTone, textToneClasses } from '../../design-system/component-tokens';
 
 type IconButtonVariant = 'primary' | 'secondary' | 'ghost';
 type IconButtonSize = 'xs' | 'sm';
-type IconButtonShape = 'circle' | 'theme';
 
 export interface IconButtonProps extends ComponentPropsWithRef<'button'> {
-  elevation?: ShadowToken;
   variant?: IconButtonVariant;
   size?: IconButtonSize;
-  shape?: IconButtonShape;
   tone?: TextTone;
   label: string;
   /** @internal blocks/ only */
@@ -31,19 +27,12 @@ const sizeStyles: Record<IconButtonSize, string> = {
   sm: 'w-7 h-7 min-w-7',
 };
 
-const shapeClasses: Record<IconButtonShape, string> = {
-  circle: radiusClasses.circle,
-  theme: radiusClasses.theme,
-};
-
 export function IconButton({
   variant = 'ghost',
   size = 'sm',
-  shape = 'circle',
   tone,
   label,
   disabled,
-  elevation,
   className: userClassName,
   children,
   style,
@@ -59,14 +48,14 @@ export function IconButton({
       aria-label={label}
       className={cn(
         'inline-flex items-center justify-center flex-shrink-0 border-none cursor-pointer transition-all',
-        shapeClasses[shape],
+        radiusClasses.circle,
         variantStyles[variant],
         tone && textToneClasses[tone],
         sizeStyles[size],
         disabled && 'opacity-50 cursor-not-allowed pointer-events-none',
         userClassName,
       )}
-      style={{ ...getElevationStyle(elevation), ...style }}
+      style={style}
     >
       {children}
     </button>

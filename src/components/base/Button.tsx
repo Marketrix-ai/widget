@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 import { getElevationStyle, radiusClasses } from '../../design-system/component-tokens';
 import type { ShadowToken } from '../../design-system/shadows';
 
-type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'bare' | 'chip' | 'tab' | 'inline' | 'toolbar';
+type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'bare' | 'chip' | 'tab';
 type ButtonSize = 'sm' | 'md';
 type ButtonShape = 'default' | 'theme' | 'pill';
 
@@ -28,8 +28,6 @@ const variantStyles: Record<ButtonVariant, string> = {
   bare: 'bg-transparent text-inherit border-transparent hover:bg-transparent p-0 min-h-0',
   chip: 'bg-secondary-bg text-foreground border-transparent hover:bg-primary hover:text-primary-foreground hover:border-primary',
   tab: 'bg-transparent text-foreground-muted border-transparent hover:text-foreground hover:bg-transparent p-0 min-h-0',
-  inline: 'bg-transparent text-primary border-transparent hover:bg-transparent hover:text-primary p-0 min-h-0',
-  toolbar: 'bg-transparent text-foreground border-transparent opacity-60 hover:opacity-100',
 };
 
 const sizeStyles: Record<ButtonSize, string> = {
@@ -59,7 +57,7 @@ export function Button({
   ref,
   ...props
 }: ButtonProps) {
-  const hasChrome = !['bare', 'inline', 'tab', 'toolbar'].includes(variant);
+  const hasChrome = !['bare', 'tab'].includes(variant);
   const isDisabled = disabled || loading;
 
   return (
@@ -71,7 +69,7 @@ export function Button({
         hasChrome && 'border',
         shapeClasses[shape],
         variantStyles[variant],
-        variant !== 'bare' && variant !== 'inline' && variant !== 'tab' && sizeStyles[size],
+        variant !== 'bare' && variant !== 'tab' && sizeStyles[size],
         stacked && 'flex-col gap-0.5',
         variant === 'tab' && 'h-full min-w-0 flex-1',
         active && variant === 'tab' && 'text-primary font-semibold',

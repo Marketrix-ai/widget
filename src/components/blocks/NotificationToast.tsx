@@ -136,7 +136,6 @@ export const NotificationToast: React.FC<NotificationToastProps> = ({
             e.stopPropagation();
             dismiss();
           }}
-          shape='circle'
           size='xs'
           tone='inherit'
           style={{
