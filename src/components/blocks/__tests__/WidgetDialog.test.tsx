@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { useState } from 'react';
 import { describe, expect, it } from 'vitest';
 
-import { WidgetProviders } from '../../../context/WidgetProviders';
+import { PortalContainerContext, WidgetProviders } from '../../../context/WidgetProviders';
 import { createWidgetContainer } from '../../../utils/bootstrap';
 import { WidgetDialog } from '../WidgetDialog';
 
@@ -37,19 +37,21 @@ describe('WidgetDialog', () => {
     await waitFor(() => expect(trigger).toHaveFocus());
   });
 
-  it('portals into the widget shadow root', async () => {
+  it('portals into the container it is given, never the host page', async () => {
+    // Appended to the shadow root, not to mountEl: createRoot() clears its own container's children.
     const { container, shadowRoot, mountEl } = createWidgetContainer();
+    const widgetRoot = shadowRoot.appendChild(document.createElement('div'));
 
     render(
-      <WidgetProviders previewMode portalContainer={shadowRoot}>
-        <WidgetDialog open onClose={() => undefined} title='Shadow dialog' />
+      <WidgetProviders previewMode>
+        <PortalContainerContext value={widgetRoot}>
+          <WidgetDialog open onClose={() => undefined} title='Shadow dialog' />
+        </PortalContainerContext>
       </WidgetProviders>,
       { container: mountEl },
     );
 
-    expect(
-      await within(shadowRoot as unknown as HTMLElement).findByRole('dialog', { name: 'Shadow dialog' }),
-    ).toBeTruthy();
+    expect(await within(widgetRoot).findByRole('dialog', { name: 'Shadow dialog' })).toBeTruthy();
     expect(document.body.querySelector('[role="dialog"]')).toBeNull();
     container.remove();
   });

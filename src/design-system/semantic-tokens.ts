@@ -17,7 +17,6 @@ type SemanticTokens = {
     secondaryHover: string;
   };
   radius: string;
-  shadow: string;
   motion: {
     durationAnimation: string;
     durationFade: string;
@@ -32,7 +31,6 @@ type WidgetStyleSettingsDefaults = Pick<
   | 'widget_accent_color'
   | 'widget_secondary_color'
   | 'widget_border_radius'
-  | 'widget_shadow'
   | 'widget_animation_duration'
   | 'widget_fade_duration'
 >;
@@ -44,7 +42,6 @@ const WIDGET_STYLE_SETTINGS_DEFAULTS: WidgetStyleSettingsDefaults = {
   widget_accent_color: '#3b82f6',
   widget_secondary_color: '#6b7280',
   widget_border_radius: '20px',
-  widget_shadow: '0 5px 40px 0 rgba(0, 0, 0, 0.3)',
   widget_animation_duration: '300ms',
   widget_fade_duration: '200ms',
 };
@@ -66,7 +63,6 @@ function mapWidgetSettingsToSemanticTokens(settings: WidgetStyleSettingsDefaults
       secondaryHover: addOpacity(settings.widget_secondary_color, 0.3),
     },
     radius: settings.widget_border_radius,
-    shadow: settings.widget_shadow,
     motion: {
       durationAnimation: settings.widget_animation_duration,
       durationFade: settings.widget_fade_duration,
@@ -103,7 +99,6 @@ export function semanticTokensToCssCustomProperties(tokens: SemanticTokens): Rec
     '--border': tokens.color.border,
     '--ring': tokens.color.primary,
     '--radius': tokens.radius,
-    '--shadow': tokens.shadow,
     '--duration-animation': tokens.motion.durationAnimation,
     '--duration-fade': tokens.motion.durationFade,
   };

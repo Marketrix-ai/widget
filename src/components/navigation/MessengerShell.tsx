@@ -47,8 +47,7 @@ export const MessengerShell: React.FC = () => {
     focusTargetRef: activeView === 'chat' ? messageInputRef : undefined,
   });
 
-  const effectivePosition = config.widget_position;
-  const panelPositionStyle = getPanelPositionStyle(effectivePosition);
+  const panelPositionStyle = getPanelPositionStyle(config.widget_position);
 
   // Must stay above the early return below.
   const [headerScreenSharing, setHeaderScreenSharing] = useState(false);
@@ -61,7 +60,7 @@ export const MessengerShell: React.FC = () => {
     ? config.widget_background_color
     : `linear-gradient(135deg, ${config.widget_background_color} 0%, ${config.widget_background_color} 100%)`;
 
-  const { vertical, horizontal } = getCorner(effectivePosition);
+  const { vertical, horizontal } = getCorner(config.widget_position);
 
   const handleNavigateToChat = () => {
     setNavDirection('forward');

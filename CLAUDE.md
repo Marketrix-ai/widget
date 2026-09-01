@@ -128,9 +128,9 @@ bundles, i.e. the build a browser really loads.
 
 **One config, one store, read from context.** `MarketrixWidget` is the only component that touches the
 raw config prop — it validates it, persists it and publishes the resolved config (position and z-index
-layered on) through `WidgetConfigContext`. Everything below calls `useWidgetConfig()` for settings and
-`useWidget()` for the store; **never thread either down as props.** The widget is open or closed —
-there is no minimized panel.
+layered on) through `WidgetConfigContext`, plus its own root element through `PortalContainerContext`.
+Everything below calls `useWidgetConfig()` for settings and `useWidget()` for the store; **never thread
+either down as props.** The widget is open or closed — there is no minimized panel.
 
 `src/index.tsx` (public entry — see `README.md` for the customer surface) · `src/services/` (stateful
 runtime owners: `StreamClient`, `RrwebSessionRecorder`, `BrowserToolService`, `ShowModeService`,
@@ -165,9 +165,18 @@ and shipped images cannot drift in their dependency set.
   see; widen the scale and you must widen the safelist or the class silently never ships.
 - **The widget has no dark mode** — no `.dark` block, no `dark:` variant. Theming is the per-tenant
   settings → CSS custom properties in `semantic-tokens.ts`, nothing else.
-- **`widget_device` and `widget_bounce_effect` reach nothing here** — the widget reads neither, so the
-  dashboard's Device Support select changes no behaviour; `widget_appearance` only distinguishes
-  `hidden` and not-`default` (the greeting toast), making `compact` and `full` identical.
+- **`widget_device`, `widget_bounce_effect`, `widget_shadow` and `widget_feature_human` reach nothing
+  here** — the widget reads none of them, so those dashboard controls change no behaviour; every shadow
+  is a `SHADOW.*` token. `widget_appearance` is `default | hidden` — `compact`/`full` were retired in
+  db-V246 because this widget rendered them identically to `default`.
+- **A portal must land inside `[data-marketrix-widget]`** — that element carries every tenant token as
+  an inline style, so anything portaled to the shadow root instead falls back to `index.css`'s hardcoded
+  palette. `MarketrixWidget` publishes its own root through `PortalContainerContext` for exactly that.
+- **`marketrix_widget_position_<tenant>` is written only by a drag** — seeding it with
+  `config.widget_position` would pin the dashboard's setting at whatever it was on a visitor's first load.
+- **Inside a closed shadow root, `document.activeElement` is the HOST** and a stylesheet's `:root`
+  matches nothing — read focus through `getRootNode()`, and scope host-level rules to `:host` or
+  `[data-marketrix-widget]`.
 
 ## Conventions
 

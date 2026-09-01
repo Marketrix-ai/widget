@@ -15,6 +15,21 @@ if (typeof globalThis.localStorage?.setItem !== 'function') {
   } as Storage;
 }
 
+// jsdom does not provide matchMedia (required by useScrollLock)
+if (typeof globalThis.matchMedia !== 'function') {
+  globalThis.matchMedia = (media: string) =>
+    ({
+      media,
+      matches: false,
+      onchange: null,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      addListener: () => {},
+      removeListener: () => {},
+      dispatchEvent: () => false,
+    }) as MediaQueryList;
+}
+
 // jsdom does not provide ResizeObserver (required by useDragSnap)
 if (typeof globalThis.ResizeObserver === 'undefined') {
   globalThis.ResizeObserver = class ResizeObserver {

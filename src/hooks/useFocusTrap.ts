@@ -60,7 +60,9 @@ export function useFocusTrap(
       if (e.key !== 'Tab') return;
       const focusables = getFocusables(container);
       if (focusables.length === 0) return;
-      const current = document.activeElement as HTMLElement;
+      // document.activeElement retargets to the shadow HOST, so it never matches anything in this list.
+      const root = container.getRootNode();
+      const current = (root instanceof ShadowRoot ? root.activeElement : document.activeElement) as HTMLElement;
       const idx = focusables.indexOf(current);
       if (idx === -1) return;
       if (e.shiftKey) {
