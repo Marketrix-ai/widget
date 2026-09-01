@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { useWidget } from '../../hooks/useWidget';
+import { useWidgetConfig } from '../../hooks/useWidget';
 import type { SuggestedActionItem } from '../../utils/suggestedActions';
 import { Button } from '../base/Button';
 import { Stack } from '../base/Stack';
@@ -12,7 +12,7 @@ interface SuggestedActionsProps {
 }
 
 export const SuggestedActions: React.FC<SuggestedActionsProps> = ({ actions, onActionClick }) => {
-  const { config: widgetConfig } = useWidget();
+  const widgetConfig = useWidgetConfig();
   if (actions.length === 0) return null;
 
   return (

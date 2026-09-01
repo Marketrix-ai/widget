@@ -1,22 +1,21 @@
-import { useCallback, useEffect, useMemo } from 'react';
+import { createContext, useCallback, useContext, useMemo } from 'react';
 
 import { useChatContext } from '../context/ChatContext';
 import { useUIStateContext } from '../context/UIStateContext';
-import { WidgetSettingsDataSchema } from '../sdk';
-import { storageService } from '../services/StorageService';
 import type { MarketrixConfig, WidgetSettingsData, WidgetState } from '../types';
 
 export type ValidWidgetConfig = MarketrixConfig & Required<Pick<MarketrixConfig, keyof WidgetSettingsData>>;
 
-interface UseWidgetProps {
-  config?: MarketrixConfig;
-}
+/** Every setting resolved: API settings plus the position and script-tag overrides MarketrixWidget layers on top. */
+export const WidgetConfigContext = createContext<ValidWidgetConfig | null>(null);
 
-function isConfigComplete(config: MarketrixConfig): config is ValidWidgetConfig {
-  return WidgetSettingsDataSchema.safeParse(config).success;
-}
+export const useWidgetConfig = (): ValidWidgetConfig => {
+  const config = useContext(WidgetConfigContext);
+  if (!config) throw new Error('useWidgetConfig must be used within MarketrixWidget');
+  return config;
+};
 
-export const useWidget = ({ config }: UseWidgetProps = {}) => {
+export const useWidget = () => {
   const { uiState, uiActions } = useUIStateContext();
   const { chatState, chatActions, taskState, taskActions } = useChatContext();
 
@@ -36,20 +35,5 @@ export const useWidget = ({ config }: UseWidgetProps = {}) => {
     [uiActions, taskActions, chatActions, resetChat],
   );
 
-  const marketrixConfig = useMemo<MarketrixConfig>(() => config || storageService.getConfig() || {}, [config]);
-  const configValid = isConfigComplete(marketrixConfig);
-
-  useEffect(() => {
-    if (configValid) storageService.setConfig(marketrixConfig);
-  }, [marketrixConfig, configValid]);
-
-  return {
-    state,
-    actions,
-    // Cast is safe: callers must check configValid before accessing widget setting fields.
-    config: marketrixConfig as ValidWidgetConfig,
-    shouldShow: configValid && marketrixConfig.widget_enabled === true,
-    isPreviewMode: marketrixConfig.isPreviewMode ?? false,
-    configValid,
-  };
+  return { state, actions };
 };

@@ -15,7 +15,7 @@ interface MessageContentProps {
 }
 
 export const MessageContent: React.FC<MessageContentProps> = ({ message, isLastMessage }) => {
-  const { state: widgetState } = useWidget();
+  const { isTaskRunning } = useWidget().state;
   const placeholderState = message.placeholderState || 'thinking';
   const isWaitingForUser = placeholderState === 'waiting-for-user';
 
@@ -53,17 +53,14 @@ export const MessageContent: React.FC<MessageContentProps> = ({ message, isLastM
         })}
 
         {((message.isPlaceholder && !message.parts.some(p => p.type === 'text')) ||
-          (widgetState.isTaskRunning && isLastMessage && (message.mode === 'show' || message.mode === 'do'))) && (
+          (isTaskRunning && isLastMessage && (message.mode === 'show' || message.mode === 'do'))) && (
           <ThinkingIndicator isWaitingForUser={isWaitingForUser} />
         )}
       </Stack>
     );
   }
 
-  if (
-    message.isPlaceholder ||
-    (widgetState.isTaskRunning && isLastMessage && (message.mode === 'show' || message.mode === 'do'))
-  ) {
+  if (message.isPlaceholder || (isTaskRunning && isLastMessage && (message.mode === 'show' || message.mode === 'do'))) {
     return <ThinkingIndicator isWaitingForUser={isWaitingForUser} />;
   }
 

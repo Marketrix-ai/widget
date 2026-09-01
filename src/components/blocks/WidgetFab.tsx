@@ -3,7 +3,9 @@ import React, { useRef } from 'react';
 import MarketrixIcon from '../../assets/marketrix-icon.svg';
 import { SHADOW } from '../../design-system/shadows';
 import { useDragSnap } from '../../hooks/useDragSnap';
+import { useWidget, useWidgetConfig } from '../../hooks/useWidget';
 import type { WidgetPosition } from '../../types';
+import { darkenColor, getContrastingColor } from '../../utils/color';
 import { getPanelPositionStyle, getPositionClasses } from '../../utils/widgetPositioning';
 import { Avatar } from '../base/Avatar';
 import { Button } from '../base/Button';
@@ -12,43 +14,27 @@ import { Icon } from '../base/Icon';
 import { Surface } from '../base/Surface';
 import { Text } from '../base/Text';
 
-export interface WidgetFabProps {
-  open: boolean;
-  processing?: boolean;
-  error?: boolean;
-  taskRunning?: boolean;
-  onClick: () => void;
-  onStop?: () => void;
-  accentColor?: string;
-  backgroundColor?: string;
-  borderRadius?: string;
-  tooltipBgColor?: string;
-  tooltipTextColor?: string;
-  zIndex?: number;
-  position: WidgetPosition;
+interface WidgetFabProps {
   onDrag: (position: WidgetPosition) => void;
-  isPreviewMode?: boolean;
 }
 
-export const WidgetFab: React.FC<WidgetFabProps> = ({
-  open,
-  processing = false,
-  error = false,
-  taskRunning = false,
-  onClick,
-  onStop,
-  accentColor,
-  backgroundColor,
-  borderRadius = '12px',
-  tooltipBgColor,
-  tooltipTextColor,
-  zIndex = 50,
-  position,
-  onDrag,
-  isPreviewMode = false,
-}) => {
-  const showProcessingGlow = !open && (processing || taskRunning);
-  const showStopControl = !open && taskRunning && onStop != null;
+export const WidgetFab: React.FC<WidgetFabProps> = ({ onDrag }) => {
+  const {
+    isPreviewMode = false,
+    widget_accent_color: accentColor,
+    widget_background_color: backgroundColor,
+    widget_border_radius: borderRadius,
+    widget_position: position,
+    widget_position_z_index: zIndex,
+  } = useWidgetConfig();
+  const { state, actions } = useWidget();
+  const open = state.isOpen;
+  const taskRunning = state.isTaskRunning;
+  const error = !!state.error;
+  const tooltipBgColor = darkenColor(accentColor, 0.3);
+
+  const showProcessingGlow = !open && (state.isLoading || taskRunning);
+  const showStopControl = !open && taskRunning;
   const glowClass = error ? 'marketrix-widget-button-error-glow' : 'marketrix-widget-button-processing-glow';
   const activityRingClass = error
     ? 'marketrix-widget-button-error-activity-ring'
@@ -98,7 +84,7 @@ export const WidgetFab: React.FC<WidgetFabProps> = ({
             onClick={e => {
               e.preventDefault();
               e.stopPropagation();
-              onStop?.();
+              actions.stopTask();
             }}
             className={`absolute top-1/2 z-20 -translate-y-1/2 rounded-full border border-white/25 bg-gray-900 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-white shadow-lg opacity-0 transition-opacity duration-150 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto group-focus-within:opacity-100 group-focus-within:pointer-events-auto ${position.includes('left') ? 'left-full ml-2' : 'right-full mr-2'}`}
             style={{ border: '1px solid rgba(255,255,255,0.25)' }}
@@ -113,7 +99,7 @@ export const WidgetFab: React.FC<WidgetFabProps> = ({
           variant='bare'
           onClick={() => {
             if (Date.now() < suppressUntilRef.current) return;
-            onClick();
+            actions.toggleWidget();
           }}
           onDragStart={e => e.preventDefault()}
           onPointerDown={onPointerDown}
@@ -207,7 +193,7 @@ export const WidgetFab: React.FC<WidgetFabProps> = ({
           className={`absolute bottom-16 ${position.includes('left') ? 'left-0' : 'right-0'} mb-2 px-3 py-2 text-sm rounded-lg shadow-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200`}
           style={{
             backgroundColor: tooltipBgColor,
-            color: tooltipTextColor,
+            color: getContrastingColor(tooltipBgColor),
           }}
         >
           <Text as='span' className='text-inherit'>

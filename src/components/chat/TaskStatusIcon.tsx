@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { useWidget } from '../../hooks/useWidget';
+import { useWidgetConfig } from '../../hooks/useWidget';
 import { addOpacity } from '../../utils/color';
 import { Icon } from '../base/Icon';
 import { Spinner } from '../base/Spinner';
@@ -10,8 +10,7 @@ interface TaskStatusIconProps {
 }
 
 export const TaskStatusIcon: React.FC<TaskStatusIconProps> = ({ status }) => {
-  const { config: widgetConfig } = useWidget();
-  const accentColor = widgetConfig.widget_accent_color;
+  const accentColor = useWidgetConfig().widget_accent_color;
   const iconSize = 14;
 
   switch (status) {
