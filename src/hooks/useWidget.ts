@@ -17,12 +17,9 @@ export const useWidgetConfig = (): ValidWidgetConfig => {
 
 export const useWidget = () => {
   const { uiState, uiActions } = useUIStateContext();
-  const { chatState, chatActions, taskState, taskActions } = useChatContext();
+  const { messages, chatActions, taskState, taskActions } = useChatContext();
 
-  const state = useMemo<WidgetState>(
-    () => ({ ...uiState, ...taskState, messages: chatState.messages }),
-    [uiState, chatState, taskState],
-  );
+  const state = useMemo<WidgetState>(() => ({ ...uiState, ...taskState, messages }), [uiState, messages, taskState]);
 
   const resetChat = useCallback(() => {
     chatActions.clearMessages();

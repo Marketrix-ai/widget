@@ -4,7 +4,6 @@ import { storageService } from './StorageService';
 export type StreamStatus = 'disconnected' | 'connecting' | 'connected' | 'registered' | 'error';
 
 export interface StreamClientCallbacks {
-  onStatusChange?: (status: StreamStatus) => void;
   onMessage?: (event: WidgetEvent) => void;
   onError?: (error: Error) => void;
 }
@@ -70,7 +69,7 @@ export class StreamClient {
     }
 
     this.chatId = chatId;
-    this.setStatus('connecting');
+    this.status = 'connecting';
     const myConnectionId = ++this.connectionId;
 
     this.abortController = new AbortController();
@@ -93,14 +92,14 @@ export class StreamClient {
       };
       const iterator = await sdk.widgetStream(streamInput as WidgetStreamInput, { signal });
 
-      this.setStatus('connected');
+      this.status = 'connected';
       // Reconnect counters reset only on `registered` (handleMessage); resetting here would defeat the max-attempts cap if registration never lands and the stream flaps open→closed.
 
       this.consumeEvents(iterator, myConnectionId);
     } catch (error) {
       if (!signal.aborted) {
         console.error('[StreamClient] Connection failed:', error);
-        this.setStatus('error');
+        this.status = 'error';
         this.notifyError(new Error('Stream connection failed'));
         this.scheduleReconnect();
       }
@@ -122,11 +121,11 @@ export class StreamClient {
         stale = true;
       } else if (!this.isIntentionallyDisconnected) {
         console.warn('[StreamClient] Stream error:', error);
-        this.setStatus('error');
+        this.status = 'error';
       }
     } finally {
       if (!stale && this.connectionId === connectionId && !this.isIntentionallyDisconnected) {
-        this.setStatus('disconnected');
+        this.status = 'disconnected';
         this.scheduleReconnect();
       }
     }
@@ -139,7 +138,7 @@ export class StreamClient {
       this.abortController.abort();
       this.abortController = null;
     }
-    this.setStatus('disconnected');
+    this.status = 'disconnected';
     this.chatId = null;
     for (const waiter of this.registrationWaiters) {
       waiter.reject(new Error('Stream disconnected before registration'));
@@ -164,13 +163,6 @@ export class StreamClient {
       });
   }
 
-  private setStatus(status: StreamStatus): void {
-    if (this.status !== status) {
-      this.status = status;
-      this.callbacks.forEach(cb => cb.onStatusChange?.(status));
-    }
-  }
-
   private notifyError(error: Error): void {
     this.callbacks.forEach(cb => cb.onError?.(error));
   }
@@ -182,7 +174,7 @@ export class StreamClient {
     if (event.type === 'registered') {
       if (event.chat_id === this.chatId) {
         console.log('[StreamClient] Successfully registered with server');
-        this.setStatus('registered');
+        this.status = 'registered';
         this.reconnectAttempts = 0;
         this.reconnectDelay = 1000;
         for (const waiter of this.registrationWaiters) waiter.resolve();

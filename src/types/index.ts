@@ -53,7 +53,6 @@ export interface WidgetState {
   isLoading: boolean;
   messages: ChatMessage[];
   currentMode: InstructionType;
-  agentAvailable: boolean;
   error?: string;
   activeTaskId: string | null;
   isTaskRunning: boolean;

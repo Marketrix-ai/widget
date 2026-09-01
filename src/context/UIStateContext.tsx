@@ -6,7 +6,6 @@ export interface UIState {
   isOpen: boolean;
   activeView: WidgetView;
   currentMode: InstructionType;
-  agentAvailable: boolean;
   isLoading: boolean;
   error?: string;
 }
@@ -17,7 +16,6 @@ export interface UIStateActions {
   closeWidget: () => void;
   setMode: (mode: InstructionType) => void;
   setLoading: (loading: boolean) => void;
-  setAgentAvailable: (available: boolean) => void;
   setError: (error: string | undefined) => void;
   clearError: () => void;
   applyState: (payload: Partial<UIState>) => void;
@@ -35,7 +33,6 @@ export const UIStateProvider: React.FC<{ children: React.ReactNode }> = ({ child
     isOpen: false,
     activeView: 'home',
     currentMode: 'tell',
-    agentAvailable: false,
     isLoading: false,
   });
 
@@ -50,8 +47,6 @@ export const UIStateProvider: React.FC<{ children: React.ReactNode }> = ({ child
       setMode: (mode: InstructionType) => setUIState(prev => ({ ...prev, currentMode: mode })),
 
       setLoading: (loading: boolean) => setUIState(prev => ({ ...prev, isLoading: loading })),
-
-      setAgentAvailable: (available: boolean) => setUIState(prev => ({ ...prev, agentAvailable: available })),
 
       setError: (error: string | undefined) => setUIState(prev => ({ ...prev, error })),
 

@@ -12,13 +12,13 @@ export const usePortalContainer = (): HTMLElement | ShadowRoot => useContext(Por
 
 const PersistBridge: React.FC<{ previewMode: boolean }> = ({ previewMode }) => {
   const { uiState } = useUIStateContext();
-  const { chatState, taskState } = useChatContext();
+  const { messages, taskState } = useChatContext();
 
   useEffect(() => {
     if (previewMode) return;
     const { currentMode, isOpen, isLoading } = uiState;
-    chatService.persist({ messages: chatState.messages, ...taskState, currentMode, isOpen, isLoading });
-  }, [previewMode, chatState, taskState, uiState]);
+    chatService.persist({ messages, ...taskState, currentMode, isOpen, isLoading });
+  }, [previewMode, messages, taskState, uiState]);
 
   return null;
 };

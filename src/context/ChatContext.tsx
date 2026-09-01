@@ -5,22 +5,21 @@ import { messageDispatch as dispatchMessage } from '../services/ApiService';
 import { browserToolService } from '../services/BrowserToolService';
 import { createAgentMessage, createUserMessage } from '../services/ChatService';
 import { storageService } from '../services/StorageService';
-import { StreamClient, type StreamStatus } from '../services/StreamClient';
+import { StreamClient } from '../services/StreamClient';
 import type { ChatMessage, InstructionType } from '../types';
 import { addThinkingMarker, BROWSER_TOOLS } from '../utils/chat';
-import { reduceSse, reduceStop, reduceToolDone, reduceToolProgress, type SseEffect, type SseState } from './sseReducer';
+import {
+  reduceSse,
+  reduceStop,
+  reduceToolDone,
+  reduceToolProgress,
+  type SseEffect,
+  type SseState,
+  type TaskState,
+} from './sseReducer';
 import type { UIStateActions } from './UIStateContext';
 
 // messages + task share one committed state so they can't tear across an await.
-
-export interface TaskState {
-  activeTaskId: string | null;
-  isTaskRunning: boolean;
-}
-
-export interface ChatState {
-  messages: ChatMessage[];
-}
 
 export interface ChatActions {
   addMessage: (message: ChatMessage) => void;
@@ -37,7 +36,7 @@ export interface TaskActions {
 }
 
 interface ChatContextType {
-  chatState: ChatState;
+  messages: ChatMessage[];
   chatActions: ChatActions;
   taskState: TaskState;
   taskActions: TaskActions;
@@ -51,7 +50,7 @@ interface ChatProviderProps {
   children: React.ReactNode;
   previewMode?: boolean;
   currentMode: InstructionType;
-  uiActions: Pick<UIStateActions, 'setLoading' | 'setAgentAvailable' | 'setError'>;
+  uiActions: Pick<UIStateActions, 'setLoading' | 'setError'>;
 }
 
 export const ChatProvider: React.FC<ChatProviderProps> = ({
@@ -197,10 +196,6 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
 
     const wsClient = StreamClient.getInstance();
 
-    const handleStatusChange = (status: StreamStatus) => {
-      uiActions.setAgentAvailable(status === 'registered');
-    };
-
     const executeToolCall = async (effect: Extract<SseEffect, { type: 'executeTool' }>) => {
       const { toolCallId, tool, args, mode, explanation } = effect;
       const result = await browserToolService.executeTool(tool, args, mode, explanation);
@@ -275,7 +270,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
       uiActions.setError(error.message);
     };
 
-    const callbacks = { onStatusChange: handleStatusChange, onMessage: handleMessage, onError: handleError };
+    const callbacks = { onMessage: handleMessage, onError: handleError };
     wsClient.addCallbacks(callbacks);
 
     return () => {
@@ -301,10 +296,8 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({
 
   const taskActions = useMemo<TaskActions>(() => ({ setTaskState, stopTask }), [setTaskState, stopTask]);
 
-  const chatState = useMemo<ChatState>(() => ({ messages: state.messages }), [state.messages]);
-
   return (
-    <ChatContext.Provider value={{ chatState, chatActions, taskState: state.task, taskActions }}>
+    <ChatContext.Provider value={{ messages: state.messages, chatActions, taskState: state.task, taskActions }}>
       {children}
     </ChatContext.Provider>
   );
