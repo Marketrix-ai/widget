@@ -10,14 +10,15 @@ const PortalContainerContext = createContext<HTMLElement | ShadowRoot | null>(nu
 
 export const usePortalContainer = (): HTMLElement | ShadowRoot => useContext(PortalContainerContext) ?? document.body;
 
+/** Its own component so the subscription to every message change cannot re-render the tree InitBridge wraps. */
 const PersistBridge: React.FC<{ previewMode: boolean }> = ({ previewMode }) => {
   const { uiState } = useUIStateContext();
   const { messages, taskState } = useChatContext();
 
   useEffect(() => {
     if (previewMode) return;
-    const { currentMode, isOpen, isLoading } = uiState;
-    chatService.persist({ messages, ...taskState, currentMode, isOpen, isLoading });
+    const { currentMode, isOpen } = uiState;
+    chatService.persist({ messages, ...taskState, currentMode, isOpen });
   }, [previewMode, messages, taskState, uiState]);
 
   return null;
@@ -64,16 +65,6 @@ const InitBridge: React.FC<{ children: React.ReactNode; previewMode: boolean }> 
   );
 };
 
-const UIStateBridge: React.FC<{ children: React.ReactNode; previewMode: boolean }> = ({ children, previewMode }) => {
-  const { uiState, uiActions } = useUIStateContext();
-
-  return (
-    <ChatProvider previewMode={previewMode} currentMode={uiState.currentMode} uiActions={uiActions}>
-      <InitBridge previewMode={previewMode}>{children}</InitBridge>
-    </ChatProvider>
-  );
-};
-
 interface WidgetProvidersProps {
   children: React.ReactNode;
   previewMode?: boolean;
@@ -83,7 +74,9 @@ interface WidgetProvidersProps {
 export const WidgetProviders: React.FC<WidgetProvidersProps> = ({ children, previewMode = false, portalContainer }) => (
   <PortalContainerContext value={portalContainer ?? null}>
     <UIStateProvider>
-      <UIStateBridge previewMode={previewMode}>{children}</UIStateBridge>
+      <ChatProvider previewMode={previewMode}>
+        <InitBridge previewMode={previewMode}>{children}</InitBridge>
+      </ChatProvider>
     </UIStateProvider>
   </PortalContainerContext>
 );

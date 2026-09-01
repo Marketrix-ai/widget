@@ -4,14 +4,12 @@ import type { ContractRouterClient } from '@orpc/contract';
 
 import type { widgetContract } from './contract';
 
-let currentApiUrl: string = '';
-let client: ContractRouterClient<typeof widgetContract>;
-
 function createClient(apiUrl: string): ContractRouterClient<typeof widgetContract> {
   return createORPCClient(new RPCLink({ url: apiUrl }));
 }
 
-client = createClient('');
+let currentApiUrl = '';
+let client = createClient('');
 
 /** Must be called before any SDK operation — the widget has no baked-in API host. */
 export const configureSdk = (apiUrl: string) => {

@@ -1,9 +1,9 @@
-import type { MarketrixConfig } from '../types';
+import type { InstructionType, MarketrixConfig } from '../types';
 
 export interface SuggestedActionItem {
   id: string;
   text: string;
-  type: 'tell' | 'show' | 'do';
+  type: InstructionType;
 }
 
 const DEFAULT_CHIPS: SuggestedActionItem[] = [

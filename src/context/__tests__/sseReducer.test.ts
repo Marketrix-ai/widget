@@ -2,13 +2,12 @@ import { describe, expect, it } from 'vitest';
 
 import type { WidgetEvent } from '@/sdk';
 import type { ChatMessage } from '@/types';
-import { hasThinkingMarker } from '@/utils/chat';
 
 import { reduceSse, reduceStop, reduceToolDone, reduceToolProgress, type SseState } from '../sseReducer';
 
 const agentMessage = (overrides: Partial<ChatMessage> = {}): ChatMessage => ({
   id: 'agent-1',
-  content: 'Working on it\n\n__THINKING__',
+  content: 'Working on it',
   sender: 'agent',
   timestamp: new Date(),
   mode: 'do',
@@ -29,15 +28,14 @@ const idleState = (): SseState => ({
 });
 
 describe('reduceSse — task/status', () => {
-  it('running is a pure no-op — activation is gated on pendingTaskRef in the wiring', () => {
-    const state = idleState();
+  it('running with a task_id activates the task', () => {
     const event: WidgetEvent = { type: 'task/status', status: 'running', task_id: 'task-9' };
-    const result = reduceSse(state, event, 'do');
-    expect(result.state).toBe(state);
+    const result = reduceSse(idleState(), event, 'do');
+    expect(result.state.task).toEqual({ isTaskRunning: true, activeTaskId: 'task-9' });
     expect(result.effects).toEqual([]);
   });
 
-  it('running without task_id is also a no-op', () => {
+  it('running without a task_id is a no-op — the api has not minted one yet', () => {
     const state = idleState();
     const result = reduceSse(state, { type: 'task/status', status: 'running' }, 'do');
     expect(result.state).toBe(state);
@@ -68,15 +66,14 @@ describe('reduceSse — task/status', () => {
     expect(result.state.messages[0].content).toBe('All done!');
   });
 
-  it('has_question pauses (not terminal): clears spinner, flips to waiting-for-user, no taskStatus', () => {
+  it('has_question pauses (not terminal): flips the spinner to waiting-for-user, no taskStatus', () => {
     const before = runningState();
-    expect(hasThinkingMarker(before.messages[0].content)).toBe(true);
+    expect(before.messages[0].placeholderState).toBe('thinking');
 
     const event: WidgetEvent = { type: 'task/status', status: 'has_question', message: 'Which account?' };
     const result = reduceSse(before, event, 'do');
 
     const msg = result.state.messages[0];
-    expect(hasThinkingMarker(msg.content)).toBe(false);
     expect(msg.placeholderState).toBe('waiting-for-user');
     expect(msg.content).toContain('Which account?');
     // Paused, not finished — no terminal icon.
@@ -131,7 +128,7 @@ describe('reduceSse — tool/call', () => {
 describe('reduceSse — chat/response', () => {
   it('resolves the matching placeholder and turns off loading', () => {
     const state: SseState = {
-      messages: [agentMessage({ id: 'req-1', content: '\n\n__THINKING__', parts: [] })],
+      messages: [agentMessage({ id: 'req-1', content: '', parts: [] })],
       task: { activeTaskId: null, isTaskRunning: false },
     };
     const event: WidgetEvent = { type: 'chat/response', request_id: 'req-1', text: 'Here you go' };
@@ -149,7 +146,7 @@ describe('reduceSse — chat/response', () => {
 describe('reduceSse — chat/delta', () => {
   it('accumulates fragments into one streaming part and clears the placeholder', () => {
     const state: SseState = {
-      messages: [agentMessage({ id: 'req-1', content: '\n\n__THINKING__', parts: [] })],
+      messages: [agentMessage({ id: 'req-1', content: '', parts: [] })],
       task: { activeTaskId: null, isTaskRunning: false },
     };
     const first = reduceSse(state, { type: 'chat/delta', request_id: 'req-1', text: 'Hel' }, 'tell');
@@ -165,7 +162,7 @@ describe('reduceSse — chat/delta', () => {
 
   it('final chat/response replaces the streamed part (no duplication)', () => {
     const state: SseState = {
-      messages: [agentMessage({ id: 'req-1', content: '\n\n__THINKING__', parts: [] })],
+      messages: [agentMessage({ id: 'req-1', content: '', parts: [] })],
       task: { activeTaskId: null, isTaskRunning: false },
     };
     const streamed = reduceSse(state, { type: 'chat/delta', request_id: 'req-1', text: 'Hello wor' }, 'tell');

@@ -5,14 +5,14 @@ const CONTEXT_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000;
 
 export type StoredMessage = Omit<ChatMessage, 'videoStream' | 'timestamp'> & { timestamp: string };
 
-/** The live half of the persisted context: exactly what the widget's three React stores hold between them. */
+/** The durable half of the widget's React state. `isLoading` is deliberately absent — restoring it would
+ * leave the FAB glowing for a request that died with the previous page. */
 export interface ChatSnapshot {
   messages: ChatMessage[];
   isTaskRunning: boolean;
   activeTaskId: string | null;
   currentMode: InstructionType;
   isOpen: boolean;
-  isLoading: boolean;
 }
 
 export type MarketrixChatContext = Omit<ChatSnapshot, 'messages'> & {
@@ -29,7 +29,6 @@ const DEFAULT_CONTEXT: MarketrixChatContext = {
   activeTaskId: null,
   currentMode: 'tell',
   isOpen: false,
-  isLoading: false,
   config: null,
   timestamp: 0,
 };

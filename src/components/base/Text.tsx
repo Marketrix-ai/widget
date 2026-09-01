@@ -17,8 +17,6 @@ type TextAlign = 'center' | 'right';
 export interface TextProps extends React.HTMLAttributes<HTMLElement> {
   as?: ElementType;
   block?: boolean;
-  clamp?: 1 | 2 | 3;
-  code?: boolean;
   inheritColor?: boolean;
   italic?: boolean;
   leading?: TextLeading;
@@ -55,8 +53,6 @@ const alignStyles: Record<TextAlign, string> = {
 export function Text({
   as: Component = 'span',
   block = false,
-  clamp,
-  code = false,
   inheritColor = false,
   italic = false,
   leading,
@@ -86,22 +82,11 @@ export function Text({
         align && alignStyles[align],
         leading && textLeadingClasses[leading],
         block && 'block',
-        code && 'font-mono',
         italic && 'italic',
         truncate && 'truncate',
         className,
       )}
-      style={
-        clamp
-          ? {
-              ...style,
-              display: '-webkit-box',
-              WebkitBoxOrient: 'vertical',
-              WebkitLineClamp: clamp,
-              overflow: 'hidden',
-            }
-          : style
-      }
+      style={style}
     />
   );
 }

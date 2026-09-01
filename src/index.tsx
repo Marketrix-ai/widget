@@ -36,7 +36,6 @@ function mount(config: MarketrixConfig, container: HTMLElement | undefined, prev
   ownedWidgetContainer = widgetContainer;
   widgetState.instance = mountWidgetToContainer(mountEl, config, previewMode);
   widgetState.config = config;
-  widgetState.programmaticInit = false;
 }
 
 // Call only via initWidget(), which guards with initPromise.
@@ -45,8 +44,6 @@ async function initWidgetInternal(
   container: HTMLElement | undefined,
   generation: number,
 ): Promise<void> {
-  widgetState.programmaticInit = true;
-
   window.__mtx = { state: 'initializing' };
 
   if (config.mtxApiHost) {
@@ -61,7 +58,6 @@ async function initWidgetInternal(
     if (generation !== lifecycleGeneration) return;
     console.error('Marketrix Widget initialization failed:', error);
     showWidgetSettingsLoader(error instanceof Error ? error.message : 'Failed to initialize widget');
-    widgetState.programmaticInit = false;
     window.__mtx = undefined;
     return;
   }
@@ -134,7 +130,6 @@ export const unmountWidget = (): void => {
 
   initPromise = null;
   window.__mtx = undefined;
-  widgetState.programmaticInit = false;
 
   hideWidgetSettingsLoader();
 };
@@ -158,7 +153,6 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ settings, cont
   const containerRef = useRef<HTMLDivElement | null>(null);
   const rootRef = useRef<Root | null>(null);
   const widgetContainerRef = useRef<HTMLElement | null>(null);
-  const containerIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     const parentContainer = container ?? containerRef?.current?.parentElement ?? document.body;
@@ -168,14 +162,7 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ settings, cont
       return;
     }
 
-    if (!containerIdRef.current) {
-      containerIdRef.current = `marketrix-widget-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
-    }
-
-    const { container: widgetContainer, mountEl } = createWidgetContainer(
-      parentContainer as HTMLElement,
-      containerIdRef.current,
-    );
+    const { container: widgetContainer, mountEl } = createWidgetContainer(parentContainer);
 
     widgetContainerRef.current = widgetContainer;
 
@@ -193,7 +180,6 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ settings, cont
       if (widgetContainerRef.current) {
         widgetContainerRef.current.remove();
         widgetContainerRef.current = null;
-        containerIdRef.current = null;
       }
     };
   }, [settings, container, mtxId, mtxKey, mtxApiHost]);
@@ -210,7 +196,6 @@ export const mountWidget = async (config: AddWidgetConfig): Promise<void> => {
 
   if (config.settings !== undefined) {
     unmountWidget();
-    widgetState.programmaticInit = true;
     // Preview: no network, and deliberately no global production instance.
     const { settings, container: _container, ...restConfig } = config;
     mount({ ...createConfigFromSettings(settings, restConfig), isPreviewMode: true }, container, true);

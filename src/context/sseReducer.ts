@@ -6,7 +6,6 @@ import {
   getFriendlyToolName,
   markProgressLineComplete,
   markProgressLineFailed,
-  updateThinkingMarker,
   WAIT_FOR_USER_TOOLS,
 } from '../utils/chat';
 
@@ -50,38 +49,24 @@ function applyProgress(
   error?: string,
 ): ChatMessage[] {
   const friendlyName = getFriendlyToolName(browserToolName);
-  const found = findMessageForProgress({
-    messages,
-    isTaskRunning,
-    currentMode,
-    requireContent: status === 'failed',
-  });
+  const found = findMessageForProgress({ messages, isTaskRunning, currentMode });
   if (!found) return messages;
 
   let updatedMsg = found.message;
-  const shouldWait = isTaskRunning && currentMode === 'show' && WAIT_FOR_USER_TOOLS.has(browserToolName);
-  const isDoneTool = browserToolName === 'done';
-  const isShowOrDo = currentMode === 'show' || currentMode === 'do';
-
-  if (status === 'in_progress') {
-    if (!isDoneTool) {
-      updatedMsg = addProgressLine(updatedMsg, friendlyName, explanation || friendlyName);
-    }
-    if (isTaskRunning && isShowOrDo) {
-      updatedMsg = updateThinkingMarker(updatedMsg, isTaskRunning, currentMode, shouldWait);
-    }
-  } else if (status === 'completed') {
-    if (!isDoneTool) {
-      updatedMsg = markProgressLineComplete(updatedMsg);
-    }
-    if (isTaskRunning && isShowOrDo) {
-      updatedMsg = updateThinkingMarker(updatedMsg, isTaskRunning, currentMode, false);
-    }
-  } else {
+  // `done` carries no progress line of its own — it only ends the run.
+  if (status === 'failed') {
     updatedMsg = markProgressLineFailed(updatedMsg, friendlyName, error || '');
-    if (isTaskRunning && isShowOrDo) {
-      updatedMsg = updateThinkingMarker(updatedMsg, isTaskRunning, currentMode, false);
-    }
+  } else if (browserToolName !== 'done') {
+    updatedMsg =
+      status === 'in_progress'
+        ? addProgressLine(updatedMsg, friendlyName, explanation || friendlyName)
+        : markProgressLineComplete(updatedMsg);
+  }
+
+  if (isTaskRunning && (currentMode === 'show' || currentMode === 'do')) {
+    // In show mode a DOM-mutating tool parks the spinner on "your turn" until the user acts.
+    const waiting = status === 'in_progress' && currentMode === 'show' && WAIT_FOR_USER_TOOLS.has(browserToolName);
+    updatedMsg = { ...updatedMsg, placeholderState: waiting ? 'waiting-for-user' : 'thinking' };
   }
 
   const next = [...messages];
@@ -121,7 +106,6 @@ function stampProgressMessage(
     messages: state.messages,
     isTaskRunning: state.task.isTaskRunning,
     currentMode,
-    requireContent: false,
   });
   const messages = [...state.messages];
   if (found) messages[found.index] = stamp(found.message);
@@ -141,7 +125,7 @@ const TASK_STATUS = { completed: 'done', failed: 'failed', stopped: 'stopped' } 
 function reduceText(state: SseState, requestId: string, text: string, streaming: boolean): SseState {
   const messages = state.messages.map(msg => {
     if (msg.id !== requestId) return msg;
-    const parts = [...(msg.parts ?? [])];
+    const parts = [...msg.parts];
     const last = parts[parts.length - 1];
     // chat/delta fragments accumulate into the open streaming part; the final chat/response replaces it.
     const isOpenStream = last?.type === 'text' && last.streaming === true;
@@ -151,6 +135,22 @@ function reduceText(state: SseState, requestId: string, text: string, streaming:
     else parts.push(part);
     return { ...msg, content, isPlaceholder: false, placeholderState: undefined, parts };
   });
+  return { ...state, messages };
+}
+
+/** Settles a pending message into a plain error bubble — the one shape for both a failed POST and a chat/error. */
+export function reduceError(state: SseState, messageId: string, text: string): SseState {
+  const messages = state.messages.map(msg =>
+    msg.id !== messageId
+      ? msg
+      : {
+          ...msg,
+          content: text,
+          isPlaceholder: false,
+          placeholderState: undefined,
+          parts: [...msg.parts, { type: 'text' as const, content: text }],
+        },
+  );
   return { ...state, messages };
 }
 
@@ -185,19 +185,16 @@ export function reduceSse(state: SseState, event: WidgetEvent, currentMode: Inst
 
     case 'task/status': {
       if (event.status === 'running') {
-        // Activation is gated on API task_id + agentRunning, tracked in the wiring (pendingTaskRef).
-        return noChange(state);
+        // The api mints the task id, so a `running` that arrives before it has one activates nothing yet.
+        if (!event.task_id) return noChange(state);
+        return { state: { ...state, task: { isTaskRunning: true, activeTaskId: event.task_id } }, effects: [] };
       }
       const content = event.message ? { content: event.message } : {};
       const status = event.status;
       // has_question is a pause, not a terminal status.
       const stamp =
         status === 'has_question'
-          ? (msg: ChatMessage) => ({
-              ...updateThinkingMarker(msg, false, currentMode),
-              placeholderState: 'waiting-for-user' as const,
-              ...content,
-            })
+          ? (msg: ChatMessage) => ({ ...msg, placeholderState: 'waiting-for-user' as const, ...content })
           : (msg: ChatMessage) => ({ ...msg, taskStatus: TASK_STATUS[status], ...content });
       return { state: stampProgressMessage(state, currentMode, stamp), effects: [] };
     }
@@ -211,21 +208,11 @@ export function reduceSse(state: SseState, event: WidgetEvent, currentMode: Inst
         effects: [{ type: 'setLoading', value: false }],
       };
 
-    case 'chat/error': {
-      const errorMessage = `Error: ${event.error}`;
-      const messages = state.messages.map(msg =>
-        msg.id !== event.request_id
-          ? msg
-          : {
-              ...msg,
-              content: errorMessage,
-              isPlaceholder: false,
-              placeholderState: undefined,
-              parts: [...(msg.parts ?? []), { type: 'text' as const, content: errorMessage }],
-            },
-      );
-      return { state: { ...state, messages }, effects: [{ type: 'setLoading', value: false }] };
-    }
+    case 'chat/error':
+      return {
+        state: reduceError(state, event.request_id, `Error: ${event.error}`),
+        effects: [{ type: 'setLoading', value: false }],
+      };
 
     // registered / heartbeat carry no state.
     default:

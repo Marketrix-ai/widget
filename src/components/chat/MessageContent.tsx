@@ -2,7 +2,7 @@ import React from 'react';
 
 import { useWidget } from '../../hooks/useWidget';
 import type { ChatMessage } from '../../types';
-import { filterCancellationText, removeThinkingMarkerFromEnd } from '../../utils/chat';
+import { filterCancellationText } from '../../utils/chat';
 import { Stack } from '../base/Stack';
 import { Surface } from '../base/Surface';
 import { Text } from '../base/Text';
@@ -24,7 +24,7 @@ export const MessageContent: React.FC<MessageContentProps> = ({ message, isLastM
       <Stack gap='sm'>
         {message.parts.map((part, index) => {
           if (part.type === 'text') {
-            const text = filterCancellationText(removeThinkingMarkerFromEnd(part.content));
+            const text = filterCancellationText(part.content);
             if (!text) return null;
             return (
               <Text

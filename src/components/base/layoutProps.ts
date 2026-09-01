@@ -1,7 +1,6 @@
 import type { CSSProperties, ElementType } from 'react';
 
 import { radiusClasses } from '../../design-system/component-tokens';
-import type { ShadowToken } from '../../design-system/shadows';
 
 export type SpacingToken = 'none' | '2xs' | 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
 
@@ -22,16 +21,10 @@ export interface LayoutProps {
   paddingY?: SpacingToken;
   paddingTop?: SpacingToken;
   paddingBottom?: SpacingToken;
-  margin?: SpacingToken;
-  marginX?: SpacingToken;
-  marginY?: SpacingToken;
-  marginTop?: SpacingToken;
-  marginBottom?: SpacingToken;
   gap?: SpacingToken;
 
   align?: 'start' | 'center' | 'end' | 'stretch' | 'baseline';
   justify?: 'start' | 'center' | 'end' | 'between' | 'around';
-  wrap?: boolean;
   grow?: boolean;
   shrink?: boolean;
 
@@ -43,14 +36,10 @@ export interface LayoutProps {
   width?: 'full' | 'auto';
   height?: 'full' | 'auto';
   minWidth?: '0';
-  minHeight?: '0';
 
   border?: boolean | 'top' | 'bottom' | 'left' | 'right';
   rounded?: boolean | 'none' | 'sm' | 'full' | 'lg' | 'theme' | 'md' | 'xl' | 'pill' | 'circle';
-  shadow?: boolean | ShadowToken | 'theme';
 
-  cursor?: 'pointer' | 'default' | 'not-allowed' | 'grab';
-  opacity?: 0 | 50 | 80 | 100;
   animate?: 'spin' | 'ping' | 'pulse' | 'fadeIn' | 'none';
   hidden?: boolean;
 
@@ -64,15 +53,9 @@ const LAYOUT_KEYS = new Set<keyof LayoutProps>([
   'paddingY',
   'paddingTop',
   'paddingBottom',
-  'margin',
-  'marginX',
-  'marginY',
-  'marginTop',
-  'marginBottom',
   'gap',
   'align',
   'justify',
-  'wrap',
   'grow',
   'shrink',
   'position',
@@ -82,12 +65,8 @@ const LAYOUT_KEYS = new Set<keyof LayoutProps>([
   'width',
   'height',
   'minWidth',
-  'minHeight',
   'border',
   'rounded',
-  'shadow',
-  'cursor',
-  'opacity',
   'animate',
   'hidden',
   'as',
@@ -102,16 +81,10 @@ export function resolveLayoutClasses(props: LayoutProps): string {
   if (props.paddingY !== undefined) classes.push(`py-${spacingScale[props.paddingY]}`);
   if (props.paddingTop !== undefined) classes.push(`pt-${spacingScale[props.paddingTop]}`);
   if (props.paddingBottom !== undefined) classes.push(`pb-${spacingScale[props.paddingBottom]}`);
-  if (props.margin !== undefined) classes.push(`m-${spacingScale[props.margin]}`);
-  if (props.marginX !== undefined) classes.push(`mx-${spacingScale[props.marginX]}`);
-  if (props.marginY !== undefined) classes.push(`my-${spacingScale[props.marginY]}`);
-  if (props.marginTop !== undefined) classes.push(`mt-${spacingScale[props.marginTop]}`);
-  if (props.marginBottom !== undefined) classes.push(`mb-${spacingScale[props.marginBottom]}`);
   if (props.gap !== undefined) classes.push(`gap-${spacingScale[props.gap]}`);
 
   if (props.align !== undefined) classes.push(`items-${props.align}`);
   if (props.justify !== undefined) classes.push(`justify-${props.justify}`);
-  if (props.wrap === true) classes.push('flex-wrap');
   if (props.grow === true) classes.push('flex-1');
   if (props.shrink === false) classes.push('flex-shrink-0');
 
@@ -125,7 +98,6 @@ export function resolveLayoutClasses(props: LayoutProps): string {
   if (props.width !== undefined) classes.push(`w-${props.width}`);
   if (props.height !== undefined) classes.push(`h-${props.height}`);
   if (props.minWidth === '0') classes.push('min-w-0');
-  if (props.minHeight === '0') classes.push('min-h-0');
 
   if (props.border !== undefined && props.border !== false) {
     if (props.border === true) {
@@ -145,12 +117,6 @@ export function resolveLayoutClasses(props: LayoutProps): string {
       classes.push(radiusClasses[roundedKey]);
     }
   }
-  if (props.shadow === true || props.shadow === 'theme') {
-    classes.push('shadow-[var(--shadow)]');
-  }
-
-  if (props.cursor !== undefined) classes.push(`cursor-${props.cursor}`);
-  if (props.opacity !== undefined) classes.push(`opacity-${props.opacity}`);
 
   if (props.animate !== undefined && props.animate !== 'none') {
     const animateMap: Record<string, string> = {

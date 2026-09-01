@@ -19,7 +19,6 @@ const snapshot = (messages: ChatMessage[]) => ({
   activeTaskId: null,
   currentMode: 'tell' as const,
   isOpen: true,
-  isLoading: false,
 });
 
 describe('ChatService persistence', () => {
@@ -42,18 +41,12 @@ describe('ChatService persistence', () => {
     expect(service.restore().messages).toEqual([message()]);
   });
 
-  it('drops the __THINKING__ marker and a placeholder with nothing to show', () => {
+  it('drops a placeholder with nothing to show, which would restore as an empty bubble', () => {
     const service = new ChatService();
     service.restore();
-    service.persist(
-      snapshot([
-        message({ content: 'thinking\n\n__THINKING__' }),
-        message({ id: 'empty', isPlaceholder: true, parts: [] }),
-      ]),
-    );
+    service.persist(snapshot([message(), message({ id: 'empty', isPlaceholder: true, parts: [] })]));
 
     expect(storageService.getContext().messages.map(m => m.id)).toEqual(['agent-1']);
-    expect(storageService.getContext().messages[0].content).toBe('thinking\n\n');
   });
 
   it('restores a screenshare as an ended notice, because a MediaStream cannot survive a reload', () => {

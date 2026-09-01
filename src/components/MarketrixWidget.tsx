@@ -140,8 +140,8 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
           <NotificationToast
             tone='error'
             title={state.error}
-            onDismiss={() => actions.clearError()}
-            onRetry={() => actions.clearError()}
+            onDismiss={() => actions.setError(undefined)}
+            onRetry={() => actions.setError(undefined)}
             position={getCorner(widgetPosition).vertical === 'top' ? 'bottom-center' : 'above-fab'}
           />
         )}

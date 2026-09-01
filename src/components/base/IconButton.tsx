@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 import { getElevationStyle, radiusClasses, type TextTone, textToneClasses } from '../../design-system/component-tokens';
 import type { ShadowToken } from '../../design-system/shadows';
 
-type IconButtonVariant = 'primary' | 'secondary' | 'ghost' | 'toolbar';
+type IconButtonVariant = 'primary' | 'secondary' | 'ghost';
 type IconButtonSize = 'xs' | 'sm';
 type IconButtonShape = 'circle' | 'theme';
 
@@ -24,7 +24,6 @@ const variantStyles: Record<IconButtonVariant, string> = {
   primary: 'bg-primary text-primary-foreground hover:bg-primary-hover',
   secondary: 'bg-secondary-bg text-foreground hover:bg-secondary-hover',
   ghost: 'bg-transparent text-foreground opacity-60 hover:opacity-100',
-  toolbar: 'bg-transparent text-foreground opacity-60 hover:opacity-100',
 };
 
 const sizeStyles: Record<IconButtonSize, string> = {

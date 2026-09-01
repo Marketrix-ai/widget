@@ -1,5 +1,4 @@
 import type { ChatMessage, InstructionType } from '../types';
-import { removeThinkingMarkers } from '../utils/chat';
 import { type ChatSnapshot, storageService, type StoredMessage } from './StorageService';
 
 function reviveMessage(msg: StoredMessage): ChatMessage {
@@ -15,14 +14,14 @@ function reviveMessage(msg: StoredMessage): ChatMessage {
     };
   }
 
-  const parts = [...(msg.parts ?? [])];
-  const text = msg.content.replace(/\n\n__THINKING__$/, '').trim();
+  const parts = [...msg.parts];
+  const text = msg.content.trim();
   if (parts.length === 0 && text) parts.push({ type: 'text', content: text });
   return { ...msg, timestamp: new Date(msg.timestamp), parts };
 }
 
 function serializeMessage({ videoStream: _videoStream, ...msg }: ChatMessage): StoredMessage {
-  return { ...msg, content: removeThinkingMarkers(msg.content), timestamp: msg.timestamp.toISOString() };
+  return { ...msg, timestamp: msg.timestamp.toISOString() };
 }
 
 /** A placeholder with nothing to show yet would restore as a permanently empty bubble. */

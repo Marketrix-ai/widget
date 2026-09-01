@@ -10,6 +10,11 @@ export interface ShowModeOptions {
 // scroll is capture-phase so the highlight tracks a scrolling container, not just the window.
 const REPOSITION_EVENTS = ['scroll', 'resize', 'touchmove', 'wheel'] as const;
 
+const POPUP_WIDTH_PX = 320;
+// Painted once at create time — reposition only writes top/left, so scrolling cannot grow the style attribute.
+const POPUP_CHROME_CSS = `position: fixed; width: ${POPUP_WIDTH_PX}px; background: white; border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); z-index: 2147483646; padding: 16px;`;
+
 export class ShowModeService {
   private currentPopup: HTMLElement | null = null;
   private currentHighlight: HTMLElement | null = null;
@@ -20,7 +25,6 @@ export class ShowModeService {
   private rejectPromise: ((reason?: unknown) => void) | null = null;
   private clickHandler: ((e: MouseEvent) => void) | null = null;
   private scrollHandler: (() => void) | null = null;
-  private mutationObserver: MutationObserver | null = null;
   private visibilityCheckInterval: ReturnType<typeof setInterval> | null = null;
 
   async showToolAction(options: ShowModeOptions): Promise<boolean> {
@@ -45,7 +49,6 @@ export class ShowModeService {
     this.createHighlight(element);
     this.createPopup(explanation, isClickAction);
     this.setupPositionUpdates();
-    this.setupElementMonitoring();
     this.setupVisibilityMonitoring();
 
     if (isClickAction) {
@@ -76,9 +79,6 @@ export class ShowModeService {
       }
       this.scrollHandler = null;
     }
-
-    this.mutationObserver?.disconnect();
-    this.mutationObserver = null;
 
     if (this.visibilityCheckInterval) {
       clearInterval(this.visibilityCheckInterval);
@@ -142,6 +142,7 @@ export class ShowModeService {
          </div>`;
 
     popup.innerHTML = content;
+    popup.style.cssText = POPUP_CHROME_CSS;
     document.body.appendChild(popup);
     this.currentPopup = popup;
 
@@ -174,7 +175,6 @@ export class ShowModeService {
     if (!this.currentPopup || !this.currentElement) return;
 
     const rect = this.currentElement.getBoundingClientRect();
-    const popupWidth = 320;
     const popupHeight = 120; // Approx height
     const spacing = 20;
     const padding = 10;
@@ -185,16 +185,16 @@ export class ShowModeService {
     // Right, left, above, below — first that fits the viewport wins.
     const positions = [
       { left: rect.right + spacing, top: elementCenterY - popupHeight / 2 },
-      { left: rect.left - popupWidth - spacing, top: elementCenterY - popupHeight / 2 },
-      { left: elementCenterX - popupWidth / 2, top: rect.top - popupHeight - spacing },
-      { left: elementCenterX - popupWidth / 2, top: rect.bottom + spacing },
+      { left: rect.left - POPUP_WIDTH_PX - spacing, top: elementCenterY - popupHeight / 2 },
+      { left: elementCenterX - POPUP_WIDTH_PX / 2, top: rect.top - popupHeight - spacing },
+      { left: elementCenterX - POPUP_WIDTH_PX / 2, top: rect.bottom + spacing },
     ];
 
     let bestPos = positions[0];
     for (const pos of positions) {
       if (
         pos.left >= padding &&
-        pos.left + popupWidth <= window.innerWidth - padding &&
+        pos.left + POPUP_WIDTH_PX <= window.innerWidth - padding &&
         pos.top >= padding &&
         pos.top + popupHeight <= window.innerHeight - padding
       ) {
@@ -203,20 +203,8 @@ export class ShowModeService {
       }
     }
 
-    const left = Math.max(padding, Math.min(bestPos.left, window.innerWidth - popupWidth - padding));
-    const top = Math.max(padding, Math.min(bestPos.top, window.innerHeight - popupHeight - padding));
-
-    this.currentPopup.style.cssText += `
-    position: fixed;
-      top: ${top}px;
-      left: ${left}px;
-    width: ${popupWidth}px;
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    z-index: 2147483646;
-    padding: 16px;
-    `;
+    this.currentPopup.style.left = `${Math.max(padding, Math.min(bestPos.left, window.innerWidth - POPUP_WIDTH_PX - padding))}px`;
+    this.currentPopup.style.top = `${Math.max(padding, Math.min(bestPos.top, window.innerHeight - popupHeight - padding))}px`;
   }
 
   private setupClickHandler(): void {
@@ -248,31 +236,13 @@ export class ShowModeService {
     });
   }
 
-  private setupElementMonitoring(): void {
-    if (!this.currentElement) return;
-
-    this.mutationObserver = new MutationObserver(() => {
-      if (this.currentElement && !document.body.contains(this.currentElement)) {
-        this.failWithElementGone('Element was removed from DOM');
-      }
-    });
-
-    this.mutationObserver.observe(document.body, {
-      childList: true,
-      subtree: true,
-    });
-  }
-
+  /** checkElementInteractable's first test is `document.body.contains`, so this one watchdog also covers removal. */
   private setupVisibilityMonitoring(): void {
     this.visibilityCheckInterval = setInterval(() => {
       if (!this.currentElement) return;
-
       const index = domService.getSequenceForElement(this.currentElement) ?? -1;
-
       const error = domService.checkElementInteractable(this.currentElement, index);
-      if (error) {
-        this.failWithElementGone(error);
-      }
+      if (error) this.failWithElementGone(error);
     }, 200);
   }
 

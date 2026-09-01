@@ -42,7 +42,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({ title, subtitle, onClose, 
 
       <Flex align='center' gap='xs' shrink={false}>
         {controls}
-        <IconButton variant='toolbar' size='sm' label='Close' onClick={onClose}>
+        <IconButton size='sm' label='Close' onClick={onClose}>
           <Icon name='close' size={16} />
         </IconButton>
       </Flex>

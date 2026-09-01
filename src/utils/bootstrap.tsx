@@ -8,10 +8,9 @@ import shadowStyles from '../index.css?inline';
 import type { MarketrixConfig } from '../types';
 import { isHTMLScriptElement } from './validation';
 
-export const widgetState: { instance: Root | null; config: MarketrixConfig | null; programmaticInit: boolean } = {
+export const widgetState: { instance: Root | null; config: MarketrixConfig | null } = {
   instance: null,
   config: null,
-  programmaticInit: false,
 };
 
 let loaderInstance: Root | null = null;
@@ -23,13 +22,8 @@ const generateContainerId = (): string => {
 
 export const createWidgetContainer = (
   parentContainer?: HTMLElement,
-  containerId?: string,
-): {
-  container: HTMLElement;
-  shadowRoot: ShadowRoot;
-  mountEl: HTMLElement;
-} => {
-  const uniqueContainerId = containerId || generateContainerId();
+): { container: HTMLElement; shadowRoot: ShadowRoot; mountEl: HTMLElement } => {
+  const uniqueContainerId = generateContainerId();
   const parent = parentContainer ?? document.body;
   if (parent.querySelector(`#${uniqueContainerId}`)) {
     throw new Error(`Widget container with ID ${uniqueContainerId} already exists`);
@@ -143,7 +137,7 @@ export const autoInitializeWidget = (): void => {
   const mtxApiHost = script.getAttribute('mtx-api-host');
 
   if (!mtxId || !mtxKey) {
-    if (isWidgetInitialized() || widgetState.programmaticInit) return;
+    if (isWidgetInitialized()) return;
     console.error('[AutoInit] Missing required attributes:', { hasMtxId: !!mtxId, hasMtxKey: !!mtxKey });
     showWidgetSettingsLoader('Please configure mtx-id and mtx-key');
     return;

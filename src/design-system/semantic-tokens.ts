@@ -1,7 +1,7 @@
 import type { WidgetSettingsData } from '../sdk';
 import { addOpacity, getContrastingColor } from '../utils/color';
 
-export type SemanticTokens = {
+type SemanticTokens = {
   color: {
     background: string;
     foreground: string;
@@ -20,9 +20,6 @@ export type SemanticTokens = {
   };
   radius: string;
   shadow: string;
-  typography: {
-    fontSizeBase: string;
-  };
   motion: {
     durationAnimation: string;
     durationFade: string;
@@ -33,7 +30,7 @@ export type SemanticTokens = {
   };
 };
 
-export type WidgetStyleSettingsDefaults = Pick<
+type WidgetStyleSettingsDefaults = Pick<
   WidgetSettingsData,
   | 'widget_background_color'
   | 'widget_text_color'
@@ -41,7 +38,6 @@ export type WidgetStyleSettingsDefaults = Pick<
   | 'widget_accent_color'
   | 'widget_secondary_color'
   | 'widget_border_radius'
-  | 'widget_font_size'
   | 'widget_width'
   | 'widget_height'
   | 'widget_shadow'
@@ -49,14 +45,13 @@ export type WidgetStyleSettingsDefaults = Pick<
   | 'widget_fade_duration'
 >;
 
-export const WIDGET_STYLE_SETTINGS_DEFAULTS: WidgetStyleSettingsDefaults = {
+const WIDGET_STYLE_SETTINGS_DEFAULTS: WidgetStyleSettingsDefaults = {
   widget_background_color: '#ffffff',
   widget_text_color: '#1f2937',
   widget_border_color: '#e5e7eb',
   widget_accent_color: '#3b82f6',
   widget_secondary_color: '#6b7280',
   widget_border_radius: '20px',
-  widget_font_size: '14px',
   widget_width: '400px',
   widget_height: '600px',
   widget_shadow: '0 5px 40px 0 rgba(0, 0, 0, 0.3)',
@@ -64,7 +59,7 @@ export const WIDGET_STYLE_SETTINGS_DEFAULTS: WidgetStyleSettingsDefaults = {
   widget_fade_duration: '200ms',
 };
 
-export function mapWidgetSettingsToSemanticTokens(settings: WidgetStyleSettingsDefaults): SemanticTokens {
+function mapWidgetSettingsToSemanticTokens(settings: WidgetStyleSettingsDefaults): SemanticTokens {
   return {
     color: {
       background: settings.widget_background_color,
@@ -84,9 +79,6 @@ export function mapWidgetSettingsToSemanticTokens(settings: WidgetStyleSettingsD
     },
     radius: settings.widget_border_radius,
     shadow: settings.widget_shadow,
-    typography: {
-      fontSizeBase: settings.widget_font_size,
-    },
     motion: {
       durationAnimation: settings.widget_animation_duration,
       durationFade: settings.widget_fade_duration,
