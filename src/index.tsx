@@ -57,7 +57,7 @@ async function initWidgetInternal(
   } catch (error) {
     if (generation !== lifecycleGeneration) return;
     console.error('Marketrix Widget initialization failed:', error);
-    showWidgetSettingsLoader(error instanceof Error ? error.message : 'Failed to initialize widget');
+    showWidgetSettingsLoader(error instanceof Error ? error.message : 'Failed to initialize widget', 'error');
     window.__mtx = undefined;
     return;
   }
