@@ -33,7 +33,6 @@ export const MessageContent: React.FC<MessageContentProps> = ({ message, isLastM
                 size='sm'
                 weight='medium'
                 style={{
-                  lineHeight: 'tight',
                   wordBreak: 'break-word',
                   whiteSpace: 'pre-wrap',
                   marginBottom: '4px',
@@ -45,12 +44,7 @@ export const MessageContent: React.FC<MessageContentProps> = ({ message, isLastM
           } else if (part.type === 'progress') {
             return (
               <Flex key={`part-${index}`} align='start' gap='md'>
-                <Text
-                  as='span'
-                  size='xs'
-                  weight='medium'
-                  style={{ flex: 1, whiteSpace: 'pre-wrap', lineHeight: 'tight' }}
-                >
+                <Text as='span' size='xs' weight='medium' style={{ flex: 1, whiteSpace: 'pre-wrap' }}>
                   {part.content}
                 </Text>
               </Flex>
@@ -72,12 +66,7 @@ export const MessageContent: React.FC<MessageContentProps> = ({ message, isLastM
 
   if (message.content) {
     return (
-      <Text
-        as='div'
-        size='sm'
-        weight='medium'
-        style={{ lineHeight: 'tight', wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}
-      >
+      <Text as='div' size='sm' weight='medium' style={{ wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>
         {message.content}
       </Text>
     );

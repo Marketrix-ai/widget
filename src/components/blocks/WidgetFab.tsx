@@ -5,14 +5,12 @@ import { SHADOW } from '../../design-system/shadows';
 import { useDragSnap } from '../../hooks/useDragSnap';
 import { useWidget, useWidgetConfig } from '../../hooks/useWidget';
 import type { WidgetPosition } from '../../types';
-import { darkenColor, getContrastingColor } from '../../utils/color';
 import { getPanelPositionStyle, getPositionClasses } from '../../utils/widgetPositioning';
 import { Avatar } from '../base/Avatar';
 import { Button } from '../base/Button';
 import { Flex } from '../base/Flex';
 import { Icon } from '../base/Icon';
 import { Surface } from '../base/Surface';
-import { Text } from '../base/Text';
 
 interface WidgetFabProps {
   onDrag: (position: WidgetPosition) => void;
@@ -31,7 +29,6 @@ export const WidgetFab: React.FC<WidgetFabProps> = ({ onDrag }) => {
   const open = state.isOpen;
   const taskRunning = state.isTaskRunning;
   const error = !!state.error;
-  const tooltipBgColor = darkenColor(accentColor, 0.3);
 
   const showProcessingGlow = !open && (state.isLoading || taskRunning);
   const showStopControl = !open && taskRunning;
@@ -187,27 +184,6 @@ export const WidgetFab: React.FC<WidgetFabProps> = ({ onDrag }) => {
           </Flex>
         </Button>
       </Surface>
-
-      {!open && (
-        <Surface
-          className={`absolute bottom-16 ${position.includes('left') ? 'left-0' : 'right-0'} mb-2 px-3 py-2 text-sm rounded-lg shadow-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200`}
-          style={{
-            backgroundColor: tooltipBgColor,
-            color: getContrastingColor(tooltipBgColor),
-          }}
-        >
-          <Text as='span' className='text-inherit'>
-            Support Agent
-          </Text>
-          <Surface
-            aria-hidden
-            className={`absolute top-full ${position.includes('left') ? 'left-4' : 'right-4'} w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent`}
-            style={{
-              borderTopColor: tooltipBgColor,
-            }}
-          />
-        </Surface>
-      )}
     </Surface>
   );
 };

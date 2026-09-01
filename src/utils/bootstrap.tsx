@@ -65,11 +65,10 @@ export const createWidgetContainer = (
 // previewMode disables all network operations (for integration previews).
 export const mountWidgetToContainer = (mountEl: HTMLElement, config: MarketrixConfig, previewMode = false): Root => {
   const root = createRoot(mountEl);
-  const portalContainer = mountEl.getRootNode() as HTMLElement | ShadowRoot;
 
   root.render(
     <React.StrictMode>
-      <WidgetProviders previewMode={previewMode} portalContainer={portalContainer}>
+      <WidgetProviders previewMode={previewMode}>
         <MarketrixWidget config={config} />
       </WidgetProviders>
     </React.StrictMode>,

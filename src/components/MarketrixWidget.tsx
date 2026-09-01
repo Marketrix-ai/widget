@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 
+import { PortalContainerContext } from '../context/WidgetProviders';
 import { LAYER_TOKENS } from '../design-system/layers';
 import { createSemanticTokens, semanticTokensToCssCustomProperties } from '../design-system/semantic-tokens';
 import { useScrollLock } from '../hooks/useScrollLock';
@@ -46,6 +47,7 @@ class WidgetErrorBoundary extends React.Component<
 
 export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
   const [showGreeting, setShowGreeting] = useState(false);
+  const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null);
   const { state, actions } = useWidget();
   const isPreviewMode = config.isPreviewMode ?? false;
   const configValid = WidgetSettingsDataSchema.safeParse(config).success;
@@ -66,9 +68,8 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
       setWidgetPosition(stored);
       return;
     }
-    const fallback = config.widget_position ?? 'bottom_right';
-    setWidgetPosition(fallback);
-    if (!isPreviewMode) writeLocal(positionStorageKey, fallback);
+    // Only a drag writes the key: seeding it with the dashboard default would pin that value forever.
+    setWidgetPosition(config.widget_position ?? 'bottom_right');
   }, [isPreviewMode, positionStorageKey, config.widget_position]);
 
   useEffect(() => {
@@ -109,49 +110,51 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
   return (
     <WidgetConfigContext value={effectiveConfig}>
       <Surface
+        ref={setPortalContainer}
         data-marketrix-widget
         position='relative'
         style={{ ...customStyles, ...(isPreviewMode && { width: '100%', height: '100%' }) }}
-        data-widget-mode={config.widget_feature_human ? 'hybrid' : 'ai'}
       >
-        {showProcessingFeedback && (
-          <Surface
-            data-screen-edge-glow
-            position='fixed'
-            inset='0'
-            style={{
-              boxShadow: `inset 0 0 22px 2px ${addOpacity(effectiveConfig.widget_accent_color, 0.72)}, inset 0 0 46px 10px ${addOpacity(effectiveConfig.widget_accent_color, 0.28)}`,
-              pointerEvents: 'none',
-              zIndex: LAYER_TOKENS.overlay,
-            }}
-          />
-        )}
+        <PortalContainerContext value={portalContainer}>
+          {showProcessingFeedback && (
+            <Surface
+              data-screen-edge-glow
+              position='fixed'
+              inset='0'
+              style={{
+                boxShadow: `inset 0 0 22px 2px ${addOpacity(effectiveConfig.widget_accent_color, 0.72)}, inset 0 0 46px 10px ${addOpacity(effectiveConfig.widget_accent_color, 0.28)}`,
+                pointerEvents: 'none',
+                zIndex: LAYER_TOKENS.overlay,
+              }}
+            />
+          )}
 
-        <WidgetErrorBoundary>
-          <MessengerShell />
-        </WidgetErrorBoundary>
+          <WidgetErrorBoundary>
+            <MessengerShell />
+          </WidgetErrorBoundary>
 
-        <WidgetFab onDrag={handlePositionChange} />
+          <WidgetFab onDrag={handlePositionChange} />
 
-        {state.error && (
-          <NotificationToast
-            tone='error'
-            title={state.error}
-            onDismiss={() => actions.setError(undefined)}
-            onRetry={() => actions.setError(undefined)}
-            position={getCorner(widgetPosition).vertical === 'top' ? 'bottom-center' : 'above-fab'}
-          />
-        )}
+          {state.error && (
+            <NotificationToast
+              tone='error'
+              title={state.error}
+              onDismiss={() => actions.setError(undefined)}
+              onRetry={() => actions.setError(undefined)}
+              position={getCorner(widgetPosition).vertical === 'top' ? 'bottom-center' : 'above-fab'}
+            />
+          )}
 
-        {showGreeting && !state.error && config.widget_greeting && (
-          <NotificationToast
-            tone='info'
-            title={config.widget_greeting}
-            body={config.widget_body}
-            onDismiss={() => setShowGreeting(false)}
-            position='bottom-center'
-          />
-        )}
+          {showGreeting && !state.error && config.widget_greeting && (
+            <NotificationToast
+              tone='info'
+              title={config.widget_greeting}
+              body={config.widget_body}
+              onDismiss={() => setShowGreeting(false)}
+              position='bottom-center'
+            />
+          )}
+        </PortalContainerContext>
       </Surface>
     </WidgetConfigContext>
   );

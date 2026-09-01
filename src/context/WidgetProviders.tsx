@@ -6,9 +6,10 @@ import { StreamClient } from '../services/StreamClient';
 import { ChatProvider, useChatContext } from './ChatContext';
 import { UIStateProvider, useUIStateContext } from './UIStateContext';
 
-const PortalContainerContext = createContext<HTMLElement | ShadowRoot | null>(null);
+/** MarketrixWidget publishes its own root here: a portal outside it escapes the element carrying the tenant tokens. */
+export const PortalContainerContext = createContext<HTMLElement | null>(null);
 
-export const usePortalContainer = (): HTMLElement | ShadowRoot => useContext(PortalContainerContext) ?? document.body;
+export const usePortalContainer = (): HTMLElement => useContext(PortalContainerContext) ?? document.body;
 
 /** Its own component so the subscription to every message change cannot re-render the tree InitBridge wraps. */
 const PersistBridge: React.FC<{ previewMode: boolean }> = ({ previewMode }) => {
@@ -68,15 +69,12 @@ const InitBridge: React.FC<{ children: React.ReactNode; previewMode: boolean }> 
 interface WidgetProvidersProps {
   children: React.ReactNode;
   previewMode?: boolean;
-  portalContainer?: HTMLElement | ShadowRoot;
 }
 
-export const WidgetProviders: React.FC<WidgetProvidersProps> = ({ children, previewMode = false, portalContainer }) => (
-  <PortalContainerContext value={portalContainer ?? null}>
-    <UIStateProvider>
-      <ChatProvider previewMode={previewMode}>
-        <InitBridge previewMode={previewMode}>{children}</InitBridge>
-      </ChatProvider>
-    </UIStateProvider>
-  </PortalContainerContext>
+export const WidgetProviders: React.FC<WidgetProvidersProps> = ({ children, previewMode = false }) => (
+  <UIStateProvider>
+    <ChatProvider previewMode={previewMode}>
+      <InitBridge previewMode={previewMode}>{children}</InitBridge>
+    </ChatProvider>
+  </UIStateProvider>
 );

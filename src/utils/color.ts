@@ -1,4 +1,4 @@
-export function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
+function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
   return result
     ? {
@@ -7,10 +7,6 @@ export function hexToRgb(hex: string): { r: number; g: number; b: number } | nul
         b: parseInt(result[3], 16),
       }
     : null;
-}
-
-function rgbToHex(r: number, g: number, b: number): string {
-  return `#${[r, g, b].map(x => x.toString(16).padStart(2, '0')).join('')}`;
 }
 
 // WCAG relative luminance.
@@ -44,12 +40,4 @@ export function addOpacity(color: string, opacity: number): string {
   }
 
   return color;
-}
-
-export function darkenColor(color: string, amount: number): string {
-  const rgb = hexToRgb(color);
-  if (!rgb) return color;
-
-  const factor = 1 - amount;
-  return rgbToHex(Math.round(rgb.r * factor), Math.round(rgb.g * factor), Math.round(rgb.b * factor));
 }

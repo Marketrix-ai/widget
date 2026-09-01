@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import React from 'react';
 
 import { WidgetProviders } from '../../context/WidgetProviders';
@@ -26,6 +26,23 @@ describe('Widget smoke', () => {
     const widget = container.querySelector('[data-marketrix-widget]');
     expect(widget).toBeInTheDocument();
     expect(widget).toHaveStyle({ '--primary': '#2563eb' });
+  });
+
+  it('portals the modal inside the token-bearing widget root', async () => {
+    const { container } = render(
+      <WidgetProviders previewMode>
+        <MarketrixWidget config={getMockWidgetConfig()} />
+      </WidgetProviders>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /open/i }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Chat' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Start screen sharing' }));
+
+    const dialog = await screen.findByRole('dialog');
+    const widgetRoot = container.querySelector('[data-marketrix-widget]');
+    expect(widgetRoot).toHaveStyle({ '--primary': '#3b82f6' });
+    expect(widgetRoot?.contains(dialog)).toBe(true);
   });
 
   it('keeps a hidden widget visible in preview mode', () => {

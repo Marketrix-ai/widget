@@ -28,7 +28,6 @@
     'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
   --radius: 0.625rem;
   --shadow-sm: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
-  --shadow: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
   --shadow-lg: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 4px 6px -1px hsl(0 0% 0% / 0.1);
   --spacing: 0.25rem;
   --duration-animation: 300ms;
@@ -63,7 +62,6 @@
   --radius-xl: calc(var(--radius) + 4px);
 
   --shadow-sm: var(--shadow-sm);
-  --shadow: var(--shadow);
   --shadow-lg: var(--shadow-lg);
 
   --animate-dialog-overlay-in: dialog-overlay-in var(--duration-fade) ease-out;
@@ -80,10 +78,12 @@
   }
 }
 
+/* On the widget root, not :root: the tenant durations are inline styles on that element, and a shadow-tree
+   stylesheet's :root matches nothing at all. */
 @media (prefers-reduced-motion: reduce) {
-  :root {
-    --duration-animation: 0ms;
-    --duration-fade: 0ms;
+  [data-marketrix-widget] {
+    --duration-animation: 0ms !important;
+    --duration-fade: 0ms !important;
   }
 }
 
