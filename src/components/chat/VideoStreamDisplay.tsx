@@ -15,6 +15,23 @@ const OVERLAY_BORDER_RADIUS = `${TOP_RADIUS} ${TOP_RADIUS} 0 0`;
 const OVERLAY_BG = '#111827';
 const MUTED_TEXT_COLOR = 'rgba(255,255,255,0.7)';
 
+const Overlay: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
+  <Flex
+    position='absolute'
+    inset='0'
+    align='center'
+    justify='center'
+    style={{ backgroundColor: OVERLAY_BG, borderRadius: OVERLAY_BORDER_RADIUS, zIndex: 10 }}
+  >
+    <Flex direction='column' align='center' gap='md' style={{ textAlign: 'center', padding: '0 16px' }}>
+      {children}
+      <Text as='span' size='xs' weight='medium' style={{ color: MUTED_TEXT_COLOR }}>
+        {label}
+      </Text>
+    </Flex>
+  </Flex>
+);
+
 export const VideoStreamDisplay: React.FC<VideoStreamDisplayProps> = ({ stream }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const playPromiseRef = useRef<Promise<void> | null>(null);
@@ -96,51 +113,15 @@ export const VideoStreamDisplay: React.FC<VideoStreamDisplayProps> = ({ stream }
       }}
     >
       {!isLoaded && !hasError && (
-        <Flex
-          position='absolute'
-          inset='0'
-          align='center'
-          justify='center'
-          style={{
-            backgroundColor: OVERLAY_BG,
-            borderRadius: OVERLAY_BORDER_RADIUS,
-            zIndex: 10,
-            transition: 'opacity 300ms',
-          }}
-        >
-          <Flex direction='column' align='center' gap='md'>
-            <Spinner size='lg' style={{ color: 'white' }} />
-            <Text as='span' size='xs' weight='medium' style={{ color: MUTED_TEXT_COLOR }}>
-              Loading stream...
-            </Text>
-          </Flex>
-        </Flex>
+        <Overlay label='Loading stream...'>
+          <Spinner size='lg' style={{ color: 'white' }} />
+        </Overlay>
       )}
 
       {hasError && (
-        <Flex
-          position='absolute'
-          inset='0'
-          align='center'
-          justify='center'
-          style={{
-            backgroundColor: OVERLAY_BG,
-            borderRadius: OVERLAY_BORDER_RADIUS,
-            zIndex: 10,
-          }}
-        >
-          <Flex
-            direction='column'
-            align='center'
-            gap='md'
-            style={{ textAlign: 'center', paddingLeft: '16px', paddingRight: '16px' }}
-          >
-            <Icon name='alertCircle' size={32} style={{ color: '#9ca3af' }} />
-            <Text as='span' size='xs' weight='medium' style={{ color: MUTED_TEXT_COLOR }}>
-              Failed to load stream
-            </Text>
-          </Flex>
-        </Flex>
+        <Overlay label='Failed to load stream'>
+          <Icon name='alertCircle' size={32} style={{ color: '#9ca3af' }} />
+        </Overlay>
       )}
 
       <video
