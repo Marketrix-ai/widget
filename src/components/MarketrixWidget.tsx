@@ -5,7 +5,7 @@ import { createSemanticTokens, semanticTokensToCssCustomProperties } from '../de
 import { useScrollLock } from '../hooks/useScrollLock';
 import { useWidget, type ValidWidgetConfig, WidgetConfigContext } from '../hooks/useWidget';
 import { WidgetSettingsDataSchema } from '../sdk';
-import { storageService } from '../services/StorageService';
+import { readLocal, storageService, writeLocal } from '../services/StorageService';
 import { tenantScope } from '../services/WidgetService';
 import type { MarketrixConfig, WidgetPosition } from '../types';
 import { addOpacity } from '../utils/color';
@@ -61,20 +61,14 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
   }, [config, configValid]);
 
   useEffect(() => {
-    const fallback = config.widget_position ?? 'bottom_right';
-    if (isPreviewMode || typeof localStorage === 'undefined') {
-      setWidgetPosition(fallback);
-      return;
-    }
-
-    const stored = localStorage.getItem(positionStorageKey);
+    const stored = isPreviewMode ? null : readLocal(positionStorageKey);
     if (isWidgetPosition(stored)) {
       setWidgetPosition(stored);
       return;
     }
-
-    localStorage.setItem(positionStorageKey, fallback);
+    const fallback = config.widget_position ?? 'bottom_right';
     setWidgetPosition(fallback);
+    if (!isPreviewMode) writeLocal(positionStorageKey, fallback);
   }, [isPreviewMode, positionStorageKey, config.widget_position]);
 
   useEffect(() => {
@@ -88,9 +82,7 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
 
   const handlePositionChange = (position: WidgetPosition) => {
     setWidgetPosition(position);
-    if (!isPreviewMode && typeof localStorage !== 'undefined') {
-      localStorage.setItem(positionStorageKey, position);
-    }
+    if (!isPreviewMode) writeLocal(positionStorageKey, position);
   };
 
   if (!configValid) {
