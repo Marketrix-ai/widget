@@ -19,8 +19,6 @@ export type WidgetCreateData = z.infer<typeof WidgetCreateSchema>;
 export const WidgetUpdateSchema = WidgetEntitySchema.partial();
 export type WidgetUpdateData = z.infer<typeof WidgetUpdateSchema>;
 
-export type WidgetSettingsKey = keyof z.infer<typeof WidgetSettingsDataSchema>;
-
 /** Server → Widget events. */
 export const WidgetEventSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('registered'), chat_id: z.string(), application_id: z.number().optional() }),
