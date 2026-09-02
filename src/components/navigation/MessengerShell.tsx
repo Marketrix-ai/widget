@@ -97,7 +97,7 @@ export const MessengerShell: React.FC = () => {
         transformOrigin: `${vertical} ${horizontal}`,
         width: widthPx,
         height: heightPx,
-        fontSize: config.widget_font_size,
+        fontSize: '14px',
         ...panelPositionStyle,
         pointerEvents: 'auto',
         scrollbarWidth: 'thin',
