@@ -39,7 +39,7 @@ export const MessageList = ({ messagesEndRef, onScreenAccessAllow, onScreenAcces
   const greetingMessage = useMemo<ChatMessage>(
     () => ({
       id: 'welcome',
-      content: widgetConfig.widget_body ?? 'How can I help you today?',
+      content: widgetConfig.widget_body,
       sender: 'agent',
       timestamp: new Date(),
       isPlaceholder: false,

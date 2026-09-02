@@ -178,7 +178,7 @@ export function reduceSse(state: SseState, event: WidgetEvent, currentMode: Inst
             toolCallId: event.tool_call_id,
             tool: event.browser_tool,
             args: event.args,
-            mode: event.mode || currentMode || 'do',
+            mode: event.mode || currentMode,
             explanation,
           },
         ],
