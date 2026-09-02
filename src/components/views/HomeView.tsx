@@ -31,10 +31,10 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigateToChat, onChipClic
       <Stack grow overflowY='auto' padding='lg'>
         <Surface style={{ textAlign: 'center', paddingTop: '8px', paddingBottom: '16px' }}>
           <Text as='h2' size='lg' weight='semibold'>
-            {config.widget_greeting ?? 'Hey There!'}
+            {config.widget_greeting}
           </Text>
           <Text as='p' variant='muted' size='sm' style={{ marginTop: '2px' }}>
-            {config.widget_body ?? 'How can I help you today?'}
+            {config.widget_body}
           </Text>
         </Surface>
 

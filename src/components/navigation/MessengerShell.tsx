@@ -106,8 +106,8 @@ export const MessengerShell: React.FC = () => {
       }}
     >
       <HeaderBar
-        title={config.widget_header ?? 'AI Agent'}
-        subtitle={config.widget_body ?? 'How can I help?'}
+        title={config.widget_header}
+        subtitle={config.widget_body}
         onClose={actions.closeWidget}
         controls={
           screenShareHandler && (
