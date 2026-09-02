@@ -2,7 +2,7 @@ import { eventIterator, oc } from '@orpc/contract';
 import { z } from 'zod';
 
 import { ByWidgetIdSchema, paginatedListOf, PaginationSchema } from './common';
-import { ApplicationReadSchema, WidgetEntitySchema, WidgetSettingsDataSchema } from './entities';
+import { ApplicationReadSchema, WidgetEntitySchema, WidgetSettingsDataSchema, WidgetTypeSchema } from './entities';
 
 export const ApplicationWithWidgetsSchema = ApplicationReadSchema.extend({
   widgets: z.array(WidgetEntitySchema).optional(),
@@ -11,6 +11,7 @@ export type ApplicationWithWidgetsData = z.infer<typeof ApplicationWithWidgetsSc
 
 export const WidgetCreateSchema = WidgetEntitySchema.partial().extend({
   application_id: z.number().positive(),
+  type: WidgetTypeSchema,
   settings: WidgetSettingsDataSchema.optional(),
 });
 export type WidgetCreateData = z.infer<typeof WidgetCreateSchema>;
@@ -108,11 +109,12 @@ export const widgetSearch = oc
     tags: ['Widget'],
     path: '/widgets',
     summary: 'Search widgets for workspace',
-    description: 'Search widgets by application, marketrix_id, or marketrix_key',
+    description: 'Search widgets by type, application, marketrix_id, or marketrix_key',
   })
   .input(
     z
       .object({
+        type: WidgetTypeSchema.optional(),
         application_id: z.coerce.number().optional(),
         marketrix_id: z.string().optional(),
         marketrix_key: z.string().optional(),
@@ -125,10 +127,11 @@ export const widgetDefaultGet = oc
   .route({
     method: 'GET',
     tags: ['Widget'],
-    path: '/widgets/defaults',
-    summary: 'Get default widget settings',
-    description: 'Returns the settings a newly created widget starts from',
+    path: '/widgets/defaults/{type}',
+    summary: 'Get default settings for widget type',
+    description: 'Returns default settings for the specified widget type',
   })
+  .input(z.object({ type: WidgetTypeSchema }))
   .output(WidgetSettingsDataSchema);
 
 export const widgetUpdate = oc

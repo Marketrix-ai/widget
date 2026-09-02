@@ -79,7 +79,7 @@ export async function loadWidgetConfig(config: MarketrixConfig): Promise<Marketr
 
   let defaults: WidgetSettingsData;
   try {
-    defaults = await sdk.widgetDefaultGet();
+    defaults = await sdk.widgetDefaultGet({ type: 'widget' });
   } catch (error) {
     throw withCause(`Failed to fetch widget settings from API: ${errorMessage(error)}`, error);
   }
