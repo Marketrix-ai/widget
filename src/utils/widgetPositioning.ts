@@ -2,7 +2,9 @@ import type React from 'react';
 
 import type { WidgetPosition } from '../types';
 
-// Must equal Tailwind's `-5` (1.25rem) in the class strings: the launcher positions by class, the panel by inline style.
+// Must equal Tailwind's `-5` (1.25rem) in the class strings below: the launcher positions by class,
+// the panel by inline style, and neither can be derived from the other (see CORNERS) — pinned by
+// widgetPositioning.test.ts.
 const EDGE_OFFSET_PX = 20;
 
 // Class strings are spelled out because Tailwind only emits what it can see literally in the source.
