@@ -1,6 +1,7 @@
 import React, { useRef } from 'react';
 
 import MarketrixIcon from '../../assets/marketrix-icon.svg';
+import { WIDGET_RADIUS_PX } from '../../design-system/semantic-tokens';
 import { SHADOW } from '../../design-system/shadows';
 import { useDragSnap } from '../../hooks/useDragSnap';
 import { useWidget, useWidgetConfig } from '../../hooks/useWidget';
@@ -21,7 +22,6 @@ export const WidgetFab: React.FC<WidgetFabProps> = ({ onDrag }) => {
     isPreviewMode = false,
     widget_accent_color: accentColor,
     widget_background_color: backgroundColor,
-    widget_border_radius: borderRadius,
     widget_position: position,
     widget_position_z_index: zIndex,
   } = useWidgetConfig();
@@ -36,8 +36,6 @@ export const WidgetFab: React.FC<WidgetFabProps> = ({ onDrag }) => {
   const activityRingClass = error
     ? 'marketrix-widget-button-error-activity-ring'
     : 'marketrix-widget-button-processing-activity-ring';
-
-  const activityRingRadius = Math.max(6, Math.min(22, Number.parseFloat(borderRadius) || 12));
 
   const wrapperRef = useRef<HTMLDivElement | null>(null);
 
@@ -121,7 +119,7 @@ export const WidgetFab: React.FC<WidgetFabProps> = ({ onDrag }) => {
                 animate-launcher-entrance
               `}
               style={{
-                borderRadius,
+                borderRadius: `${WIDGET_RADIUS_PX}px`,
                 backgroundColor: open ? backgroundColor : accentColor,
                 boxShadow: SHADOW.fab,
               }}
@@ -133,8 +131,8 @@ export const WidgetFab: React.FC<WidgetFabProps> = ({ onDrag }) => {
                     y='1.25'
                     width='51.5'
                     height='51.5'
-                    rx={activityRingRadius + 1}
-                    ry={activityRingRadius + 1}
+                    rx={WIDGET_RADIUS_PX + 1}
+                    ry={WIDGET_RADIUS_PX + 1}
                   />
                 </svg>
               )}
@@ -157,7 +155,7 @@ export const WidgetFab: React.FC<WidgetFabProps> = ({ onDrag }) => {
                   draggable={false}
                   onDragStart={e => e.preventDefault()}
                   style={{
-                    borderRadius,
+                    borderRadius: `${WIDGET_RADIUS_PX}px`,
                     border: 'none',
                     outline: 'none',
                     backgroundColor: 'transparent',

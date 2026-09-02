@@ -23,6 +23,11 @@ type SemanticTokens = {
   };
 };
 
+// Fixed, not per-tenant: every widget row in production holds these, and no surface writes them.
+export const WIDGET_RADIUS_PX = 12;
+const DURATION_ANIMATION = '300ms';
+const DURATION_FADE = '200ms';
+
 type WidgetStyleSettingsDefaults = Pick<
   WidgetSettingsData,
   | 'widget_background_color'
@@ -30,9 +35,6 @@ type WidgetStyleSettingsDefaults = Pick<
   | 'widget_border_color'
   | 'widget_accent_color'
   | 'widget_secondary_color'
-  | 'widget_border_radius'
-  | 'widget_animation_duration'
-  | 'widget_fade_duration'
 >;
 
 const WIDGET_STYLE_SETTINGS_DEFAULTS: WidgetStyleSettingsDefaults = {
@@ -41,9 +43,6 @@ const WIDGET_STYLE_SETTINGS_DEFAULTS: WidgetStyleSettingsDefaults = {
   widget_border_color: '#e5e7eb',
   widget_accent_color: '#3b82f6',
   widget_secondary_color: '#6b7280',
-  widget_border_radius: '20px',
-  widget_animation_duration: '300ms',
-  widget_fade_duration: '200ms',
 };
 
 function mapWidgetSettingsToSemanticTokens(settings: WidgetStyleSettingsDefaults): SemanticTokens {
@@ -62,10 +61,10 @@ function mapWidgetSettingsToSemanticTokens(settings: WidgetStyleSettingsDefaults
       secondaryBg: addOpacity(settings.widget_secondary_color, 0.2),
       secondaryHover: addOpacity(settings.widget_secondary_color, 0.3),
     },
-    radius: settings.widget_border_radius,
+    radius: `${WIDGET_RADIUS_PX}px`,
     motion: {
-      durationAnimation: settings.widget_animation_duration,
-      durationFade: settings.widget_fade_duration,
+      durationAnimation: DURATION_ANIMATION,
+      durationFade: DURATION_FADE,
     },
   };
 }
