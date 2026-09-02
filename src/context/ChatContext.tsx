@@ -5,15 +5,18 @@ import { messageDispatch as dispatchMessage } from '../services/ApiService';
 import { browserToolService } from '../services/BrowserToolService';
 import { createAgentMessage, createUserMessage } from '../services/ChatService';
 import { storageService } from '../services/StorageService';
-import { StreamClient } from '../services/StreamClient';
+import { StreamClient, StreamGaveUpError } from '../services/StreamClient';
 import type { ChatMessage, InstructionType } from '../types';
 import { BROWSER_TOOLS } from '../utils/chat';
 import {
+  isTerminalTaskStatus,
   reduceError,
   reduceSse,
+  reduceStaleReply,
   reduceStop,
   reduceToolDone,
   reduceToolProgress,
+  reduceTransportFailure,
   type SseEffect,
   type SseState,
   type TaskState,
@@ -46,6 +49,11 @@ interface ChatContextType {
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
 const MAX_PROCESSED_IDS = 1000;
+
+// How long a dispatch may sit with zero events before the composer gives up waiting on it —
+// see `reduceStaleReply`. Generous on purpose: this only guards a request that never showed any
+// sign of life at all, never one that is visibly still working.
+const STALE_REPLY_TIMEOUT_MS = 120_000;
 
 interface ChatProviderProps {
   children: React.ReactNode;
@@ -154,6 +162,12 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
       };
       addMessage(placeholderMsg);
       uiActions.setLoading(true);
+      // Arms unconditionally: `reduceStaleReply` itself checks the message is still untouched before
+      // acting, so this is a no-op on the common path where a reply (or even just the first tool/call)
+      // arrives well within the window.
+      setTimeout(() => {
+        commit(s => reduceStaleReply(s, placeholderId, 'This is taking longer than expected. Please try again.'));
+      }, STALE_REPLY_TIMEOUT_MS);
 
       try {
         await dispatchMessage(config, content, effectiveMode, placeholderId);
@@ -220,10 +234,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
             .catch(err => console.error('Failed to send unknown-tool response:', err));
           return;
         }
-      } else if (
-        event.type === 'task/status' &&
-        (event.status === 'completed' || event.status === 'failed' || event.status === 'stopped')
-      ) {
+      } else if (event.type === 'task/status' && isTerminalTaskStatus(event.status)) {
         processedRequestIds.current.clear();
       }
 
@@ -242,6 +253,9 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
 
     const handleError = (error: Error) => {
       uiActions.setError(error.message);
+      // A retriable blip settles when the reply lands on the reconnected stream; a give-up never does,
+      // and the composer stays disabled for as long as one bubble is still waiting.
+      if (error instanceof StreamGaveUpError) commit(s => reduceTransportFailure(s, error.message));
     };
 
     const callbacks = { onMessage: handleMessage, onError: handleError };
@@ -260,8 +274,14 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
     // chat/stop carries no task id: the api stops the one dispatch it holds for this chat.
     StreamClient.getInstance()
       .send({ type: 'chat/stop' })
-      .catch(err => console.error('Failed to stop task remotely:', err));
-  }, [previewMode, commit]);
+      .catch(err => {
+        console.error('Failed to stop task remotely:', err);
+        // reduceStop already stamped the message "stopped" — in `do` mode the agent may still be
+        // clicking through the visitor's page, and `send`'s own "Failed to send message" toast names
+        // the transport rather than the thing the user asked for and did not get.
+        uiActions.setError('Could not stop the assistant — it may still be working.');
+      });
+  }, [previewMode, commit, uiActions]);
 
   const chatActions = useMemo<ChatActions>(
     () => ({ addMessage, updateMessage, removeMessage, setMessages, clearMessages, messageDispatch }),

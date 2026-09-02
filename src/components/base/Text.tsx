@@ -10,7 +10,7 @@ import {
 } from '../../design-system/component-tokens';
 
 type TextVariant = 'default' | 'muted' | 'faint';
-type TextSize = 'xxs' | 'xs' | 'sm' | 'base' | 'lg';
+type TextSize = 'xxs' | 'xs' | 'sm' | 'lg';
 type TextWeight = 'normal' | 'medium' | 'semibold';
 type TextAlign = 'center' | 'right';
 
@@ -20,7 +20,6 @@ export interface TextProps extends React.HTMLAttributes<HTMLElement> {
   inheritColor?: boolean;
   italic?: boolean;
   leading?: TextLeading;
-  tone?: TextTone;
   variant?: TextVariant;
   size?: TextSize;
   weight?: TextWeight;
@@ -35,7 +34,6 @@ const sizeStyles: Record<TextSize, string> = {
   xxs: 'text-[10px]',
   xs: 'text-xs',
   sm: 'text-sm',
-  base: 'text-base',
   lg: 'text-lg',
 };
 
@@ -56,7 +54,6 @@ export function Text({
   inheritColor = false,
   italic = false,
   leading,
-  tone,
   variant = 'default',
   size,
   weight,
@@ -67,9 +64,7 @@ export function Text({
   style,
   ...props
 }: TextProps) {
-  const resolvedTone: TextTone = inheritColor
-    ? 'inherit'
-    : (tone ?? ({ default: 'default', muted: 'muted', faint: 'faint' }[variant] as TextTone));
+  const resolvedTone: TextTone = inheritColor ? 'inherit' : variant;
 
   return (
     <Component

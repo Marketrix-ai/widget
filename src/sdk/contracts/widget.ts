@@ -2,7 +2,13 @@ import { eventIterator, oc } from '@orpc/contract';
 import { z } from 'zod';
 
 import { ByWidgetIdSchema, paginatedListOf, PaginationSchema } from './common';
-import { ApplicationReadSchema, WidgetEntitySchema, WidgetSettingsDataSchema, WidgetTypeSchema } from './entities';
+import {
+  ApplicationReadSchema,
+  WidgetEntitySchema,
+  WidgetSettingsDataSchema,
+  WidgetSettingsWriteSchema,
+  WidgetTypeSchema,
+} from './entities';
 
 export const ApplicationWithWidgetsSchema = ApplicationReadSchema.extend({
   widgets: z.array(WidgetEntitySchema).optional(),
@@ -12,14 +18,14 @@ export type ApplicationWithWidgetsData = z.infer<typeof ApplicationWithWidgetsSc
 export const WidgetCreateSchema = WidgetEntitySchema.partial().extend({
   application_id: z.number().positive(),
   type: WidgetTypeSchema,
-  settings: WidgetSettingsDataSchema.optional(),
+  settings: WidgetSettingsWriteSchema.optional(),
 });
 export type WidgetCreateData = z.infer<typeof WidgetCreateSchema>;
 
-export const WidgetUpdateSchema = WidgetEntitySchema.partial();
+export const WidgetUpdateSchema = WidgetEntitySchema.partial().extend({
+  settings: WidgetSettingsWriteSchema.optional(),
+});
 export type WidgetUpdateData = z.infer<typeof WidgetUpdateSchema>;
-
-export type WidgetSettingsKey = keyof z.infer<typeof WidgetSettingsDataSchema>;
 
 /** Server → Widget events. */
 export const WidgetEventSchema = z.discriminatedUnion('type', [
@@ -46,8 +52,6 @@ export const WidgetEventSchema = z.discriminatedUnion('type', [
     // Matches SimulationStatus on the agent side.
     status: z.enum(['running', 'completed', 'failed', 'stopped', 'has_question']),
     message: z.string().optional(),
-    task_id: z.string().optional(),
-    timestamp: z.number().optional(),
   }),
   z.object({
     type: z.literal('tool/call'),

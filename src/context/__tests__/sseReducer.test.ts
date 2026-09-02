@@ -3,7 +3,15 @@ import { describe, expect, it } from 'vitest';
 import type { WidgetEvent } from '@/sdk';
 import type { ChatMessage } from '@/types';
 
-import { reduceSse, reduceStop, reduceToolDone, reduceToolProgress, type SseState } from '../sseReducer';
+import {
+  reduceSse,
+  reduceStaleReply,
+  reduceStop,
+  reduceToolDone,
+  reduceToolProgress,
+  reduceTransportFailure,
+  type SseState,
+} from '../sseReducer';
 
 const agentMessage = (overrides: Partial<ChatMessage> = {}): ChatMessage => ({
   id: 'agent-1',
@@ -72,6 +80,65 @@ describe('reduceSse — task/status', () => {
     // Paused, not finished — no terminal icon.
     expect(msg.taskStatus).toBeUndefined();
     expect(result.state.task).toEqual({ isTaskRunning: false });
+  });
+
+  // The composer is disabled while a placeholder stands, and both `has_question` and every terminal
+  // status also clear isTaskRunning — so leaving one pending left no control able to release it.
+  it.each(['completed', 'failed', 'stopped', 'has_question'] as const)('%s settles the placeholder', status => {
+    const result = reduceSse(runningState(), { type: 'task/status', status }, 'do');
+    expect(result.state.messages[0].isPlaceholder).toBe(false);
+  });
+});
+
+describe('reduceTransportFailure', () => {
+  it('settles every pending bubble into an error and ends the task', () => {
+    const state: SseState = {
+      messages: [agentMessage({ id: 'settled', isPlaceholder: false }), agentMessage({ id: 'pending' })],
+      task: { isTaskRunning: true },
+    };
+    const result = reduceTransportFailure(state, 'Could not reconnect to the assistant. Try again.');
+
+    expect(result.messages[0]).toBe(state.messages[0]);
+    expect(result.messages[1].isPlaceholder).toBe(false);
+    expect(result.messages[1].content).toBe('Could not reconnect to the assistant. Try again.');
+    expect(result.task).toEqual({ isTaskRunning: false });
+  });
+});
+
+describe('reduceStaleReply', () => {
+  it('settles a placeholder that showed zero signs of life', () => {
+    const state: SseState = { messages: [agentMessage({ parts: [] })], task: { isTaskRunning: false } };
+    const result = reduceStaleReply(state, 'agent-1', 'This is taking longer than expected. Please try again.');
+
+    expect(result.messages[0].isPlaceholder).toBe(false);
+    expect(result.messages[0].content).toBe('This is taking longer than expected. Please try again.');
+  });
+
+  it('never overwrites a message that already made progress — a slow task is not a dead one', () => {
+    // Default fixture already carries one progress part, matching a `tool/call` having landed.
+    const state: SseState = { messages: [agentMessage()], task: { isTaskRunning: true } };
+    expect(reduceStaleReply(state, 'agent-1', 'timeout text')).toBe(state);
+  });
+
+  it('never overwrites a message already paused on the visitor, even with no text yet', () => {
+    const state: SseState = {
+      messages: [agentMessage({ placeholderState: 'waiting-for-user', parts: [] })],
+      task: { isTaskRunning: false },
+    };
+    expect(reduceStaleReply(state, 'agent-1', 'timeout text')).toBe(state);
+  });
+
+  it('never overwrites a message that already settled', () => {
+    const state: SseState = {
+      messages: [agentMessage({ isPlaceholder: false, content: 'All done' })],
+      task: { isTaskRunning: false },
+    };
+    expect(reduceStaleReply(state, 'agent-1', 'timeout text')).toBe(state);
+  });
+
+  it('is a no-op for a message id it does not recognize', () => {
+    const state: SseState = { messages: [agentMessage({ parts: [] })], task: { isTaskRunning: false } };
+    expect(reduceStaleReply(state, 'missing', 'timeout text')).toBe(state);
   });
 });
 

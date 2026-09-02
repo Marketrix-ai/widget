@@ -1,7 +1,12 @@
 import { sdk, type WidgetCommand, type WidgetEvent } from '../sdk';
 import { storageService } from './StorageService';
 
-export type StreamStatus = 'disconnected' | 'connecting' | 'connected' | 'registered' | 'error';
+// `open` is the transport, `registered` is the chat: only the latter can carry a reply, which is why
+// `isConnected` reads `registered` and nothing waits on `open`.
+type StreamStatus = 'disconnected' | 'connecting' | 'open' | 'registered' | 'error';
+
+/** The stream has stopped retrying, so nothing further will arrive for anything still in flight. */
+export class StreamGaveUpError extends Error {}
 
 export interface StreamClientCallbacks {
   onMessage?: (event: WidgetEvent) => void;
@@ -14,7 +19,8 @@ export class StreamClient {
   private chatId: string | null = null;
   private status: StreamStatus = 'disconnected';
   private callbacks: Set<StreamClientCallbacks> = new Set();
-  private isIntentionallyDisconnected = false;
+  // Set by teardown AND by a rejected credential: both mean nothing may reconnect until re-init.
+  private reconnectSuppressed = false;
   private reconnectAttempts = 0;
   private readonly maxReconnectAttempts = 10;
   private reconnectDelay = 1000;
@@ -46,17 +52,34 @@ export class StreamClient {
     return this.status === 'registered';
   }
 
+  /** Whether a user-driven retry can achieve anything: there is a chat to rejoin and nothing has
+   * suppressed reconnection. */
+  canReconnect(): boolean {
+    return this.chatId !== null && !this.reconnectSuppressed && !this.isConnected();
+  }
+
+  /** The user asked to retry. `scheduleReconnect` gives up permanently at `maxReconnectAttempts` and only
+   * `registered` resets the counters, so without this reset the widget's Retry button had nothing it
+   * could do — which is why it was wired to plain dismiss. */
+  reconnectNow(): void {
+    if (!this.canReconnect() || this.chatId === null) return;
+    this.clearReconnectTimer();
+    this.reconnectAttempts = 0;
+    this.reconnectDelay = 1000;
+    this.connect(this.chatId).catch(console.error);
+  }
+
   async waitUntilRegistered(): Promise<void> {
     if (this.isConnected()) return;
     await new Promise<void>((resolve, reject) => this.registrationWaiters.add({ resolve, reject }));
   }
 
   async connect(chatId: string): Promise<void> {
-    this.isIntentionallyDisconnected = false;
+    this.reconnectSuppressed = false;
 
     if (
       this.chatId === chatId &&
-      (this.status === 'connecting' || this.status === 'connected' || this.status === 'registered')
+      (this.status === 'connecting' || this.status === 'open' || this.status === 'registered')
     ) {
       return;
     }
@@ -85,7 +108,7 @@ export class StreamClient {
         { signal },
       );
 
-      this.status = 'connected';
+      this.status = 'open';
       // Reconnect counters reset only on `registered` (handleMessage); resetting here would defeat the max-attempts cap if registration never lands and the stream flaps open→closed.
 
       this.consumeEvents(iterator, myConnectionId);
@@ -112,12 +135,12 @@ export class StreamClient {
     } catch (error) {
       if (this.connectionId !== connectionId) {
         stale = true;
-      } else if (!this.isIntentionallyDisconnected) {
+      } else if (!this.reconnectSuppressed) {
         console.warn('[StreamClient] Stream error:', error);
         this.status = 'error';
       }
     } finally {
-      if (!stale && this.connectionId === connectionId && !this.isIntentionallyDisconnected) {
+      if (!stale && this.connectionId === connectionId && !this.reconnectSuppressed) {
         this.status = 'disconnected';
         this.scheduleReconnect();
       }
@@ -125,7 +148,7 @@ export class StreamClient {
   }
 
   disconnect(): void {
-    this.isIntentionallyDisconnected = true;
+    this.reconnectSuppressed = true;
     this.clearReconnectTimer();
     if (this.abortController) {
       this.abortController.abort();
@@ -161,7 +184,7 @@ export class StreamClient {
   }
 
   private handleMessage(event: WidgetEvent): void {
-    if (this.isIntentionallyDisconnected) return;
+    if (this.reconnectSuppressed) return;
     if (event.type === 'heartbeat') return;
 
     if (event.type === 'registered') {
@@ -175,10 +198,14 @@ export class StreamClient {
       }
     }
 
-    // Auth failures are non-retriable: borrow the intentional-disconnect flag so nothing reconnects until re-init.
+    // Reconnecting on a rejected credential just re-earns the same 401, so only a re-init clears this.
     if (event.type === 'chat/error' && event.request_id === 'auth') {
       console.error('[StreamClient] Authentication failed — will not reconnect');
-      this.isIntentionallyDisconnected = true;
+      this.reconnectSuppressed = true;
+      // The event is ALSO handed to the reducer below, where `chat/error` settles the message whose id is
+      // the request id — and no message is ever id 'auth', so the branch matched nothing and the widget
+      // went permanently silent with no toast, no bubble and (console being dropped by terser) no trace.
+      this.notifyError(new StreamGaveUpError('Chat is unavailable — the widget credentials were rejected.'));
     }
 
     this.callbacks.forEach(cb => cb.onMessage?.(event));
@@ -186,7 +213,8 @@ export class StreamClient {
 
   private scheduleReconnect(): void {
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      this.notifyError(new Error('Max reconnect attempts reached'));
+      // What the visitor on a customer's page reads, so it names the state and the way out rather than the counter.
+      this.notifyError(new StreamGaveUpError('Could not reconnect to the assistant. Try again.'));
       return;
     }
     this.clearReconnectTimer();
@@ -196,7 +224,7 @@ export class StreamClient {
       `[StreamClient] Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`,
     );
     this.reconnectTimer = setTimeout(() => {
-      if (!this.isIntentionallyDisconnected && this.chatId) {
+      if (!this.reconnectSuppressed && this.chatId) {
         this.connect(this.chatId).catch(console.error);
       }
     }, delay);

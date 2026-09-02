@@ -1,7 +1,14 @@
 import { oc } from '@orpc/contract';
 import { z } from 'zod';
 
-import { ByApplicationIdSchema, GraphSchema, paginatedListOf, PaginationSchema, SuccessSchema } from './common';
+import {
+  ByApplicationIdSchema,
+  GraphSchema,
+  paginatedListOf,
+  PaginationSchema,
+  partialPatch,
+  SuccessSchema,
+} from './common';
 import { ApplicationEntitySchema, ApplicationReadSchema, ApplicationTypeSchema, WidgetEntitySchema } from './entities';
 
 export const ApplicationCreateSchema = ApplicationEntitySchema.partial().extend({
@@ -13,7 +20,10 @@ export const ApplicationCreateSchema = ApplicationEntitySchema.partial().extend(
 export type ApplicationCreateData = z.infer<typeof ApplicationCreateSchema>;
 
 // slug is editable on update (normalized + uniqueness-checked in updateApplication); workspace_id stays immutable.
-export const ApplicationUpdateSchema = ApplicationEntitySchema.partial().omit({ workspace_id: true });
+// partialPatch, not `.partial()`: `allowed_domains` carries a `.default([])` that `.partial()` alone
+// would still backfill on omission, silently wiping the domain allowlist on every update that doesn't
+// resend it.
+export const ApplicationUpdateSchema = partialPatch(ApplicationEntitySchema.omit({ workspace_id: true }));
 export type ApplicationUpdateData = z.infer<typeof ApplicationUpdateSchema>;
 
 export const applicationCreate = oc

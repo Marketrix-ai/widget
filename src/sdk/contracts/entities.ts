@@ -24,6 +24,7 @@ const AuthMethodSchema = z.enum(['password', 'oauth']);
  * because `UserEntitySchema` needs it and `workspace.ts` already imports from this file.
  */
 export const WorkspaceMemberRoleSchema = z.enum(['admin', 'member']);
+export type WorkspaceMemberRole = z.infer<typeof WorkspaceMemberRoleSchema>;
 
 export const UserEntitySchema = BaseEntitySchema.extend({
   is_super: z.boolean(),
@@ -78,7 +79,7 @@ export const ApplicationReadSchema = ApplicationEntitySchema.omit({ password: tr
 export type ApplicationReadData = z.infer<typeof ApplicationReadSchema>;
 
 export const WidgetChipSchema = z.object({
-  chip_mode: z.enum(['show', 'tell', 'do']),
+  chip_mode: InstructionTypeSchema,
   chip_text: z.string(),
 });
 
@@ -113,6 +114,23 @@ export const WidgetSettingsDataSchema = z.object({
 });
 
 export type WidgetSettingsData = z.infer<typeof WidgetSettingsDataSchema>;
+
+// The widget renders these from its own constants, so a write is a no-op; they stay in the read shape
+// because published bundles safeParse them out of widgetDefaultGet.
+export const WIDGET_RENDER_CONSTANTS = [
+  'widget_border_radius',
+  'widget_font_size',
+  'widget_animation_duration',
+  'widget_fade_duration',
+] as const;
+
+export const WidgetSettingsWriteSchema = WidgetSettingsDataSchema.omit({
+  widget_border_radius: true,
+  widget_font_size: true,
+  widget_animation_duration: true,
+  widget_fade_duration: true,
+});
+export type WidgetSettingsWriteData = z.infer<typeof WidgetSettingsWriteSchema>;
 
 export const WidgetEntitySchema = BaseEntitySchema.extend({
   application_id: z.number(),

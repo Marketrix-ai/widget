@@ -17,11 +17,11 @@ describe('StreamClient registration lifecycle', () => {
 
     const internals = client as unknown as {
       chatId: string;
-      isIntentionallyDisconnected: boolean;
+      reconnectSuppressed: boolean;
       handleMessage: (event: { type: 'registered'; chat_id: string; application_id: number }) => void;
     };
     internals.chatId = 'new-chat';
-    internals.isIntentionallyDisconnected = false;
+    internals.reconnectSuppressed = false;
     const remountRegistration = client.waitUntilRegistered();
     internals.handleMessage({ type: 'registered', chat_id: 'new-chat', application_id: 2 });
 

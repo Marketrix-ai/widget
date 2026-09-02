@@ -97,7 +97,7 @@ export const MessengerShell: React.FC = () => {
         transformOrigin: `${vertical} ${horizontal}`,
         width: widthPx,
         height: heightPx,
-        fontSize: config.widget_font_size,
+        fontSize: '14px',
         ...panelPositionStyle,
         pointerEvents: 'auto',
         scrollbarWidth: 'thin',
@@ -106,8 +106,8 @@ export const MessengerShell: React.FC = () => {
       }}
     >
       <HeaderBar
-        title={config.widget_header ?? 'AI Agent'}
-        subtitle={config.widget_body ?? 'How can I help?'}
+        title={config.widget_header}
+        subtitle={config.widget_body}
         onClose={actions.closeWidget}
         controls={
           screenShareHandler && (
