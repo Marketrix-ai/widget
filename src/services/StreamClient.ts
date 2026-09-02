@@ -3,6 +3,9 @@ import { storageService } from './StorageService';
 
 export type StreamStatus = 'disconnected' | 'connecting' | 'connected' | 'registered' | 'error';
 
+/** The stream has stopped retrying, so nothing further will arrive for anything still in flight. */
+export class StreamGaveUpError extends Error {}
+
 export interface StreamClientCallbacks {
   onMessage?: (event: WidgetEvent) => void;
   onError?: (error: Error) => void;
@@ -199,7 +202,7 @@ export class StreamClient {
       // The event is ALSO handed to the reducer below, where `chat/error` settles the message whose id is
       // the request id — and no message is ever id 'auth', so the branch matched nothing and the widget
       // went permanently silent with no toast, no bubble and (console being dropped by terser) no trace.
-      this.notifyError(new Error('Chat is unavailable — the widget credentials were rejected.'));
+      this.notifyError(new StreamGaveUpError('Chat is unavailable — the widget credentials were rejected.'));
     }
 
     this.callbacks.forEach(cb => cb.onMessage?.(event));
@@ -208,7 +211,7 @@ export class StreamClient {
   private scheduleReconnect(): void {
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
       // What the visitor on a customer's page reads, so it names the state and the way out rather than the counter.
-      this.notifyError(new Error('Could not reconnect to the assistant. Try again.'));
+      this.notifyError(new StreamGaveUpError('Could not reconnect to the assistant. Try again.'));
       return;
     }
     this.clearReconnectTimer();

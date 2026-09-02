@@ -5,7 +5,7 @@ import { messageDispatch as dispatchMessage } from '../services/ApiService';
 import { browserToolService } from '../services/BrowserToolService';
 import { createAgentMessage, createUserMessage } from '../services/ChatService';
 import { storageService } from '../services/StorageService';
-import { StreamClient } from '../services/StreamClient';
+import { StreamClient, StreamGaveUpError } from '../services/StreamClient';
 import type { ChatMessage, InstructionType } from '../types';
 import { BROWSER_TOOLS } from '../utils/chat';
 import {
@@ -15,6 +15,7 @@ import {
   reduceStop,
   reduceToolDone,
   reduceToolProgress,
+  reduceTransportFailure,
   type SseEffect,
   type SseState,
   type TaskState,
@@ -240,6 +241,9 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
 
     const handleError = (error: Error) => {
       uiActions.setError(error.message);
+      // A retriable blip settles when the reply lands on the reconnected stream; a give-up never does,
+      // and the composer stays disabled for as long as one bubble is still waiting.
+      if (error instanceof StreamGaveUpError) commit(s => reduceTransportFailure(s, error.message));
     };
 
     const callbacks = { onMessage: handleMessage, onError: handleError };
