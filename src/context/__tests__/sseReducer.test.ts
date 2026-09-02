@@ -3,7 +3,14 @@ import { describe, expect, it } from 'vitest';
 import type { WidgetEvent } from '@/sdk';
 import type { ChatMessage } from '@/types';
 
-import { reduceSse, reduceStop, reduceToolDone, reduceToolProgress, type SseState } from '../sseReducer';
+import {
+  reduceSse,
+  reduceStop,
+  reduceToolDone,
+  reduceToolProgress,
+  reduceTransportFailure,
+  type SseState,
+} from '../sseReducer';
 
 const agentMessage = (overrides: Partial<ChatMessage> = {}): ChatMessage => ({
   id: 'agent-1',
@@ -72,6 +79,28 @@ describe('reduceSse — task/status', () => {
     // Paused, not finished — no terminal icon.
     expect(msg.taskStatus).toBeUndefined();
     expect(result.state.task).toEqual({ isTaskRunning: false });
+  });
+
+  // The composer is disabled while a placeholder stands, and both `has_question` and every terminal
+  // status also clear isTaskRunning — so leaving one pending left no control able to release it.
+  it.each(['completed', 'failed', 'stopped', 'has_question'] as const)('%s settles the placeholder', status => {
+    const result = reduceSse(runningState(), { type: 'task/status', status }, 'do');
+    expect(result.state.messages[0].isPlaceholder).toBe(false);
+  });
+});
+
+describe('reduceTransportFailure', () => {
+  it('settles every pending bubble into an error and ends the task', () => {
+    const state: SseState = {
+      messages: [agentMessage({ id: 'settled', isPlaceholder: false }), agentMessage({ id: 'pending' })],
+      task: { isTaskRunning: true },
+    };
+    const result = reduceTransportFailure(state, 'Could not reconnect to the assistant. Try again.');
+
+    expect(result.messages[0]).toBe(state.messages[0]);
+    expect(result.messages[1].isPlaceholder).toBe(false);
+    expect(result.messages[1].content).toBe('Could not reconnect to the assistant. Try again.');
+    expect(result.task).toEqual({ isTaskRunning: false });
   });
 });
 

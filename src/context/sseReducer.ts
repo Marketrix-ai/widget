@@ -94,6 +94,11 @@ export function reduceToolProgress(
   };
 }
 
+// The composer is disabled while any message is still a placeholder, so a bubble nothing will write to
+// again has to stop being one — `has_question` most of all, where the agent asks for an answer the
+// visitor could not then type.
+const settled = (msg: ChatMessage): ChatMessage => ({ ...msg, isPlaceholder: false });
+
 /** The four terminal/pause transitions all stamp the progress message and clear the task; only the stamp differs. */
 function stampProgressMessage(
   state: SseState,
@@ -106,7 +111,7 @@ function stampProgressMessage(
     currentMode,
   });
   const messages = [...state.messages];
-  if (found) messages[found.index] = stamp(found.message);
+  if (found) messages[found.index] = settled(stamp(found.message));
   return { messages, task: { isTaskRunning: false } };
 }
 
@@ -140,20 +145,23 @@ function reduceText(state: SseState, requestId: string, text: string, streaming:
   return { ...state, messages };
 }
 
+const errorBubble = (msg: ChatMessage, text: string): ChatMessage => ({
+  ...settled(msg),
+  content: text,
+  placeholderState: undefined,
+  parts: [...msg.parts, { type: 'text' as const, content: text }],
+});
+
 /** Settles a pending message into a plain error bubble — the one shape for both a failed POST and a chat/error. */
 export function reduceError(state: SseState, messageId: string, text: string): SseState {
-  const messages = state.messages.map(msg =>
-    msg.id !== messageId
-      ? msg
-      : {
-          ...msg,
-          content: text,
-          isPlaceholder: false,
-          placeholderState: undefined,
-          parts: [...msg.parts, { type: 'text' as const, content: text }],
-        },
-  );
+  const messages = state.messages.map(msg => (msg.id === messageId ? errorBubble(msg, text) : msg));
   return { ...state, messages };
+}
+
+/** The transport gave up, so no id-bearing event is coming for whatever is still pending. */
+export function reduceTransportFailure(state: SseState, text: string): SseState {
+  const messages = state.messages.map(msg => (msg.isPlaceholder ? errorBubble(msg, text) : msg));
+  return { messages, task: { isTaskRunning: false } };
 }
 
 export function reduceSse(state: SseState, event: WidgetEvent, currentMode: InstructionType): ReduceResult {
