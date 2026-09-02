@@ -5,6 +5,7 @@ import type { ChatMessage } from '@/types';
 
 import {
   reduceSse,
+  reduceStaleReply,
   reduceStop,
   reduceToolDone,
   reduceToolProgress,
@@ -101,6 +102,43 @@ describe('reduceTransportFailure', () => {
     expect(result.messages[1].isPlaceholder).toBe(false);
     expect(result.messages[1].content).toBe('Could not reconnect to the assistant. Try again.');
     expect(result.task).toEqual({ isTaskRunning: false });
+  });
+});
+
+describe('reduceStaleReply', () => {
+  it('settles a placeholder that showed zero signs of life', () => {
+    const state: SseState = { messages: [agentMessage({ parts: [] })], task: { isTaskRunning: false } };
+    const result = reduceStaleReply(state, 'agent-1', 'This is taking longer than expected. Please try again.');
+
+    expect(result.messages[0].isPlaceholder).toBe(false);
+    expect(result.messages[0].content).toBe('This is taking longer than expected. Please try again.');
+  });
+
+  it('never overwrites a message that already made progress — a slow task is not a dead one', () => {
+    // Default fixture already carries one progress part, matching a `tool/call` having landed.
+    const state: SseState = { messages: [agentMessage()], task: { isTaskRunning: true } };
+    expect(reduceStaleReply(state, 'agent-1', 'timeout text')).toBe(state);
+  });
+
+  it('never overwrites a message already paused on the visitor, even with no text yet', () => {
+    const state: SseState = {
+      messages: [agentMessage({ placeholderState: 'waiting-for-user', parts: [] })],
+      task: { isTaskRunning: false },
+    };
+    expect(reduceStaleReply(state, 'agent-1', 'timeout text')).toBe(state);
+  });
+
+  it('never overwrites a message that already settled', () => {
+    const state: SseState = {
+      messages: [agentMessage({ isPlaceholder: false, content: 'All done' })],
+      task: { isTaskRunning: false },
+    };
+    expect(reduceStaleReply(state, 'agent-1', 'timeout text')).toBe(state);
+  });
+
+  it('is a no-op for a message id it does not recognize', () => {
+    const state: SseState = { messages: [agentMessage({ parts: [] })], task: { isTaskRunning: false } };
+    expect(reduceStaleReply(state, 'missing', 'timeout text')).toBe(state);
   });
 });
 
