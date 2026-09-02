@@ -2,7 +2,13 @@ import { eventIterator, oc } from '@orpc/contract';
 import { z } from 'zod';
 
 import { ByWidgetIdSchema, paginatedListOf, PaginationSchema } from './common';
-import { ApplicationReadSchema, WidgetEntitySchema, WidgetSettingsDataSchema, WidgetTypeSchema } from './entities';
+import {
+  ApplicationReadSchema,
+  WidgetEntitySchema,
+  WidgetSettingsDataSchema,
+  WidgetSettingsWriteSchema,
+  WidgetTypeSchema,
+} from './entities';
 
 export const ApplicationWithWidgetsSchema = ApplicationReadSchema.extend({
   widgets: z.array(WidgetEntitySchema).optional(),
@@ -12,11 +18,13 @@ export type ApplicationWithWidgetsData = z.infer<typeof ApplicationWithWidgetsSc
 export const WidgetCreateSchema = WidgetEntitySchema.partial().extend({
   application_id: z.number().positive(),
   type: WidgetTypeSchema,
-  settings: WidgetSettingsDataSchema.optional(),
+  settings: WidgetSettingsWriteSchema.optional(),
 });
 export type WidgetCreateData = z.infer<typeof WidgetCreateSchema>;
 
-export const WidgetUpdateSchema = WidgetEntitySchema.partial();
+export const WidgetUpdateSchema = WidgetEntitySchema.partial().extend({
+  settings: WidgetSettingsWriteSchema.optional(),
+});
 export type WidgetUpdateData = z.infer<typeof WidgetUpdateSchema>;
 
 /** Server → Widget events. */
