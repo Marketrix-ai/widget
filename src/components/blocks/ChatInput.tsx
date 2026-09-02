@@ -26,7 +26,6 @@ export interface ChatInputProps {
   disabled?: boolean;
   taskRunning?: boolean;
   onStop?: () => void;
-  placeholder?: string;
   ref?: React.Ref<HTMLTextAreaElement>;
 }
 
@@ -51,7 +50,6 @@ export function ChatInput({
   disabled = false,
   taskRunning = false,
   onStop,
-  placeholder = 'Ask anything',
   ref,
 }: ChatInputProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -90,7 +88,7 @@ export function ChatInput({
         value={value}
         onChange={e => onChange(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder={placeholder}
+        placeholder='Ask anything'
         disabled={disabled}
         rows={1}
         className='block w-full min-h-0 resize-none rounded-none border-none bg-transparent px-3 text-sm text-foreground transition-colors placeholder:text-foreground-faint focus:ring-0 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50'

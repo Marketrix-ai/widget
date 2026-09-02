@@ -143,15 +143,6 @@ export const BROWSER_TOOLS = new Map<string, string>([
   ['get_screenshot', 'Taking screenshot'],
 ]);
 
-export function getFriendlyToolName(browserToolName: string): string {
-  const friendly = BROWSER_TOOLS.get(browserToolName);
-  if (friendly) return friendly;
-
-  return browserToolName
-    .replace(/([A-Z])/g, ' $1')
-    .replace(/_/g, ' ')
-    .trim()
-    .split(' ')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join(' ');
-}
+// ChatContext rejects a tool/call whose name is not in BROWSER_TOOLS before the reducer sees it.
+export const getFriendlyToolName = (browserToolName: string): string =>
+  BROWSER_TOOLS.get(browserToolName) ?? browserToolName;
