@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 export const EntityStatusSchema = z.enum(['created', 'active', 'suspended']);
+export type EntityStatus = z.infer<typeof EntityStatusSchema>;
 
 export const BaseEntitySchema = z.object({
   id: z.number().optional(),

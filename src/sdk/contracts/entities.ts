@@ -24,6 +24,7 @@ const AuthMethodSchema = z.enum(['password', 'oauth']);
  * because `UserEntitySchema` needs it and `workspace.ts` already imports from this file.
  */
 export const WorkspaceMemberRoleSchema = z.enum(['admin', 'member']);
+export type WorkspaceMemberRole = z.infer<typeof WorkspaceMemberRoleSchema>;
 
 export const UserEntitySchema = BaseEntitySchema.extend({
   is_super: z.boolean(),
