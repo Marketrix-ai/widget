@@ -125,3 +125,16 @@ export type GraphData = z.infer<typeof GraphSchema>;
 
 export const NotificationResolvedReasonSchema = z.enum(['answered', 'dismissed', 'cancelled']);
 export type NotificationResolvedReason = z.infer<typeof NotificationResolvedReasonSchema>;
+
+/** Every live-progress stream the api opens. The app keys `useAgentProgress` on these, so a kind it
+ *  cannot name is a generator whose progress never renders. */
+export const AGENT_PROGRESS_KINDS = [
+  'study_plan',
+  'qa_generate_journeys',
+  'qa_prefill_values',
+  'persona_generate',
+  'persona_from_description',
+  'persona_autocomplete',
+] as const;
+export const AgentProgressKindSchema = z.enum(AGENT_PROGRESS_KINDS);
+export type AgentProgressKind = z.infer<typeof AgentProgressKindSchema>;
