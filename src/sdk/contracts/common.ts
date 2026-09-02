@@ -41,6 +41,17 @@ export const listOf = <T extends z.ZodType>(schema: T) =>
     count: z.number(),
   });
 
+// Lives here, not in `notification.ts`, because BOTH the notification entity and the `notification/*`
+// members of root's AppEvent union need it, and root.ts importing the notification domain would drag
+// nine procedures persona-hub never calls into its mirror.
+//
+// `run_finished` covers every terminal (and cycle-allowance-paused) run the owner is told about — a
+// study run, a QA run, or a standalone simulation. The outcome word lives in the row's payload, not in
+// a type per outcome: the recipient rule, the deep link and the dedupe are identical for all of them,
+// and only the sentence differs.
+export const NotificationTypeSchema = z.enum(['simulation_question', 'run_finished']);
+export type NotificationType = z.infer<typeof NotificationTypeSchema>;
+
 export const SuccessSchema = z.object({ success: z.literal(true) });
 export const SuccessWithMessageSchema = SuccessSchema.extend({ message: z.string() });
 

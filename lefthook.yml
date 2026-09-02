@@ -2,8 +2,10 @@
 
 # Restores node/npm onto PATH before any command runs — GUI git clients start hooks with a minimal
 # environment. Changing this line requires re-running `lefthook install`: the path is baked into the
-# generated hook shims, not read at run time.
-rc: .lefthookrc
+# generated hook shims, not read at run time. Keep the leading `./`: the shim sources this with the
+# POSIX `.` builtin, which searches $PATH for any operand without a slash and never looks in the
+# repository root.
+rc: ./.lefthookrc
 
 pre-commit:
   commands:
