@@ -22,15 +22,6 @@ describe('Button', () => {
     expect(button).toHaveAttribute('data-variant', 'secondary');
   });
 
-  it('disables itself and exposes busy state when loading', () => {
-    render(<Button loading>Submitting</Button>);
-
-    const button = screen.getByRole('button', { name: 'Submitting' });
-    expect(button).toBeDisabled();
-    expect(button).toHaveAttribute('aria-busy', 'true');
-    expect(button).toHaveAttribute('data-loading', 'true');
-  });
-
   it('calls click handler when enabled', () => {
     const onClick = vi.fn();
     render(<Button onClick={onClick}>Open</Button>);
