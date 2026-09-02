@@ -44,8 +44,6 @@ export const WidgetEventSchema = z.discriminatedUnion('type', [
     // Matches SimulationStatus on the agent side.
     status: z.enum(['running', 'completed', 'failed', 'stopped', 'has_question']),
     message: z.string().optional(),
-    task_id: z.string().optional(),
-    timestamp: z.number().optional(),
   }),
   z.object({
     type: z.literal('tool/call'),

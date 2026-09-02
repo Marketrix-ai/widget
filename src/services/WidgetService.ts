@@ -59,18 +59,12 @@ export async function loadWidgetConfig(config: MarketrixConfig): Promise<Marketr
     throw new Error('Widget not found or invalid credentials');
   }
 
-  const activeWidget = widgets.find(widget => widget.type === 'widget' && widget.status === 'active');
+  const activeWidget = widgets.find(widget => widget.status === 'active');
   if (!activeWidget) {
-    const widgetMatches = widgets.filter(widget => widget.type === 'widget');
-    if (widgetMatches.length) {
-      const statuses = widgetMatches.map(widget => widget.status).join(', ');
-      throw new Error(
-        `Found widget(s) but none are active. Current status(es): ${statuses}. Please activate the widget in the dashboard.`,
-      );
-    }
-
-    const types = widgets.map(widget => widget.type).join(', ');
-    throw new Error(`No widget found. Found widget type(s): ${types}. Please create a widget.`);
+    const statuses = widgets.map(widget => widget.status).join(', ');
+    throw new Error(
+      `Found widget(s) but none are active. Current status(es): ${statuses}. Please activate the widget in the dashboard.`,
+    );
   }
 
   if (!activeWidget.application_id) {
