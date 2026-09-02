@@ -120,6 +120,10 @@ export function reduceStop(state: SseState, currentMode: InstructionType): SseSt
 
 const TASK_STATUS = { completed: 'done', failed: 'failed', stopped: 'stopped' } as const;
 
+// The terminal set, read off the map that stamps it — `has_question` is a pause and `running` stamps
+// nothing, so a fourth terminal status added to TASK_STATUS reaches every caller at once.
+export const isTerminalTaskStatus = (status: string): status is keyof typeof TASK_STATUS => status in TASK_STATUS;
+
 function reduceText(state: SseState, requestId: string, text: string, streaming: boolean): SseState {
   const messages = state.messages.map(msg => {
     if (msg.id !== requestId) return msg;

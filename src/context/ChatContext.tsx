@@ -9,6 +9,7 @@ import { StreamClient } from '../services/StreamClient';
 import type { ChatMessage, InstructionType } from '../types';
 import { BROWSER_TOOLS } from '../utils/chat';
 import {
+  isTerminalTaskStatus,
   reduceError,
   reduceSse,
   reduceStop,
@@ -220,10 +221,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
             .catch(err => console.error('Failed to send unknown-tool response:', err));
           return;
         }
-      } else if (
-        event.type === 'task/status' &&
-        (event.status === 'completed' || event.status === 'failed' || event.status === 'stopped')
-      ) {
+      } else if (event.type === 'task/status' && isTerminalTaskStatus(event.status)) {
         processedRequestIds.current.clear();
       }
 
