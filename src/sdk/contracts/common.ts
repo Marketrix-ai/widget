@@ -20,6 +20,29 @@ export const PaginationSchema = z.object({
   offset: z.coerce.number().optional().default(0),
 });
 
+type StripDefault<T> = T extends z.ZodDefault<infer Inner> ? Inner : T;
+
+/**
+ * The ONE way to build a PATCH schema from an entity/input schema. Zod's `.partial()` makes every
+ * field optional but does NOT stop a `.default(...)` field from being backfilled when omitted — an
+ * update caller who sends only `{ title }` gets `options: []`/`config: {}` re-applied by parsing, so a
+ * `field !== undefined` merge guard downstream never sees the omission and silently wipes the column.
+ * This strips each field's default before making it optional, so "not sent" really does parse to
+ * `undefined`.
+ */
+export function partialPatch<Shape extends z.ZodRawShape>(
+  schema: z.ZodObject<Shape>,
+): z.ZodObject<{ [K in keyof Shape]: z.ZodOptional<StripDefault<Shape[K]>> }> {
+  const stripped = Object.fromEntries(
+    Object.entries(schema.shape).map(([key, field]) => {
+      const base = field as z.ZodTypeAny;
+      const unwrapped = base instanceof z.ZodDefault ? (base.removeDefault() as z.ZodTypeAny) : base;
+      return [key, unwrapped.optional()];
+    }),
+  );
+  return z.object(stripped) as unknown as z.ZodObject<{ [K in keyof Shape]: z.ZodOptional<StripDefault<Shape[K]>> }>;
+}
+
 // NOT z.coerce.boolean() — that's Boolean(val), so `?enabled=false` would coerce true.
 export const booleanQueryParam = z
   .union([z.boolean(), z.string()])
@@ -98,3 +121,6 @@ export const GraphSchema = z.object({
   edges: z.array(GraphEdgeSchema),
 });
 export type GraphData = z.infer<typeof GraphSchema>;
+
+export const NotificationResolvedReasonSchema = z.enum(['answered', 'dismissed', 'cancelled']);
+export type NotificationResolvedReason = z.infer<typeof NotificationResolvedReasonSchema>;

@@ -78,7 +78,7 @@ export const ApplicationReadSchema = ApplicationEntitySchema.omit({ password: tr
 export type ApplicationReadData = z.infer<typeof ApplicationReadSchema>;
 
 export const WidgetChipSchema = z.object({
-  chip_mode: z.enum(['show', 'tell', 'do']),
+  chip_mode: InstructionTypeSchema,
   chip_text: z.string(),
 });
 
