@@ -164,6 +164,24 @@ export function reduceTransportFailure(state: SseState, text: string): SseState 
   return { messages, task: { isTaskRunning: false } };
 }
 
+/**
+ * A per-request watchdog: the stream can stay healthy (no `StreamGaveUpError`) while a single
+ * dispatch's reply never arrives — a dropped correlation or a silent backend failure before it ever
+ * acknowledges the request. `reduceTransportFailure` cannot see that, since nothing told the transport
+ * it failed, so without this the bubble sits on "thinking" and the composer stays disabled forever.
+ *
+ * Only fires on a message that received ZERO signs of life — still `thinking` with no progress line
+ * and no streamed text. A `do`/`show` task that is genuinely still running has already advanced past
+ * this (a `tool/call` flips `placeholderState` or adds a line, a `chat/delta` adds a part) and must
+ * never be cut off just because it is taking a while; a task that never even started is what this
+ * catches.
+ */
+export function reduceStaleReply(state: SseState, messageId: string, text: string): SseState {
+  const pending = state.messages.find(msg => msg.id === messageId);
+  const untouched = pending?.isPlaceholder && pending.placeholderState === 'thinking' && pending.parts.length === 0;
+  return untouched ? reduceError(state, messageId, text) : state;
+}
+
 export function reduceSse(state: SseState, event: WidgetEvent, currentMode: InstructionType): ReduceResult {
   switch (event.type) {
     case 'tool/call': {

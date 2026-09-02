@@ -12,6 +12,7 @@ import {
   isTerminalTaskStatus,
   reduceError,
   reduceSse,
+  reduceStaleReply,
   reduceStop,
   reduceToolDone,
   reduceToolProgress,
@@ -48,6 +49,11 @@ interface ChatContextType {
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
 const MAX_PROCESSED_IDS = 1000;
+
+// How long a dispatch may sit with zero events before the composer gives up waiting on it —
+// see `reduceStaleReply`. Generous on purpose: this only guards a request that never showed any
+// sign of life at all, never one that is visibly still working.
+const STALE_REPLY_TIMEOUT_MS = 120_000;
 
 interface ChatProviderProps {
   children: React.ReactNode;
@@ -156,6 +162,12 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
       };
       addMessage(placeholderMsg);
       uiActions.setLoading(true);
+      // Arms unconditionally: `reduceStaleReply` itself checks the message is still untouched before
+      // acting, so this is a no-op on the common path where a reply (or even just the first tool/call)
+      // arrives well within the window.
+      setTimeout(() => {
+        commit(s => reduceStaleReply(s, placeholderId, 'This is taking longer than expected. Please try again.'));
+      }, STALE_REPLY_TIMEOUT_MS);
 
       try {
         await dispatchMessage(config, content, effectiveMode, placeholderId);
