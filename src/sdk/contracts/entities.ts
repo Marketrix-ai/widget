@@ -7,10 +7,6 @@ export const ApplicationTypeSchema = z.enum(['app', 'website']);
 
 export type ApplicationType = z.infer<typeof ApplicationTypeSchema>;
 
-export const WidgetTypeSchema = z.enum(['widget']);
-
-export type WidgetType = z.infer<typeof WidgetTypeSchema>;
-
 export const InstructionTypeSchema = z.enum(['tell', 'show', 'do']);
 
 export type InstructionType = z.infer<typeof InstructionTypeSchema>;
@@ -116,7 +112,6 @@ export type WidgetSettingsData = z.infer<typeof WidgetSettingsDataSchema>;
 
 export const WidgetEntitySchema = BaseEntitySchema.extend({
   application_id: z.number(),
-  type: WidgetTypeSchema,
   settings: WidgetSettingsDataSchema,
   status: EntityStatusSchema,
   marketrix_id: z.string(),
@@ -189,7 +184,6 @@ export const ActivityLogMetadataSchema = z
     reason: z.string().optional(),
     ip_address: z.string().optional(),
     user_agent: z.string().optional(),
-    widget_type: z.string().optional(),
     created_by: z.number().optional(),
   })
   .passthrough();

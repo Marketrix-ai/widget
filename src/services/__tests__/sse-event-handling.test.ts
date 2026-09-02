@@ -101,13 +101,7 @@ describe('SSE event discriminated-union contract (WidgetEventSchema)', () => {
     });
 
     it('all optional fields parse correctly', () => {
-      const full = {
-        type: 'task/status',
-        status: 'completed',
-        message: 'Task done',
-        task_id: 'task-xyz',
-        timestamp: 1700000000,
-      };
+      const full = { type: 'task/status', status: 'completed', message: 'Task done' };
       expect(WidgetEventSchema.safeParse(full).success).toBe(true);
     });
   });

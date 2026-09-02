@@ -21,7 +21,6 @@ const settings = WidgetSettingsDataSchema.parse(getMockWidgetConfig());
 const activeWidget = {
   id: 7,
   application_id: 42,
-  type: 'widget' as const,
   settings,
   status: 'active' as const,
   marketrix_id: 'test-id',
@@ -50,7 +49,7 @@ describe('loadWidgetConfig', () => {
 
     expect(mockSdk.widgetSearch).toHaveBeenCalledOnce();
     expect(mockSdk.applicationGet).toHaveBeenCalledWith({ application_id: 42 });
-    expect(mockSdk.widgetDefaultGet).toHaveBeenCalledWith({ type: 'widget' });
+    expect(mockSdk.widgetDefaultGet).toHaveBeenCalledOnce();
     expect(config).toMatchObject({ mtxId: 'test-id', mtxKey: 'test-key', mtxApp: 42, show_widget: false });
   });
 
@@ -83,7 +82,6 @@ describe('loadWidgetConfig', () => {
         {
           id: 7,
           application_id: 42,
-          type: 'widget',
           settings,
           status: 'inactive',
           marketrix_id: 'test-id',
