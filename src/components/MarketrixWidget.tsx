@@ -12,6 +12,7 @@ import { tenantScope } from '../services/WidgetService';
 import type { MarketrixConfig, WidgetPosition } from '../types';
 import { addOpacity } from '../utils/color';
 import { getCorner, isWidgetPosition } from '../utils/widgetPositioning';
+import { ErrorBoundary } from './base/ErrorBoundary';
 import { Surface } from './base/Surface';
 import { NotificationToast } from './blocks/NotificationToast';
 import { WidgetFab } from './blocks/WidgetFab';
@@ -19,31 +20,6 @@ import { MessengerShell } from './navigation/MessengerShell';
 
 interface MarketrixWidgetProps {
   config: MarketrixConfig;
-}
-
-class WidgetErrorBoundary extends React.Component<
-  { children: React.ReactNode },
-  { hasError: boolean; error: Error | null }
-> {
-  constructor(props: { children: React.ReactNode }) {
-    super(props);
-    this.state = { hasError: false, error: null };
-  }
-
-  static getDerivedStateFromError(error: Error) {
-    return { hasError: true, error };
-  }
-
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('Widget Error Boundary caught error:', error, errorInfo);
-  }
-
-  render() {
-    // Render nothing rather than crash the host page; componentDidCatch already logged it.
-    if (this.state.hasError) return null;
-
-    return this.props.children;
-  }
 }
 
 export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
@@ -131,9 +107,9 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
             />
           )}
 
-          <WidgetErrorBoundary>
+          <ErrorBoundary label='Widget'>
             <MessengerShell />
-          </WidgetErrorBoundary>
+          </ErrorBoundary>
 
           <WidgetFab onDrag={handlePositionChange} />
 
