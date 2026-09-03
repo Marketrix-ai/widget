@@ -64,7 +64,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigateToChat, onChipClic
           border
           elevation='card'
           paddingPreset='card'
-          radius='xl'
+          rounded='xl'
           style={{ margin: '0 12px 12px 12px' }}
         >
           <Text as='p' size='xs' weight='semibold' style={{ marginBottom: '2px' }}>
