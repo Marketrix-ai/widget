@@ -13,9 +13,9 @@ export interface FindMessageOptions {
   currentMode: InstructionType;
 }
 
-function lastMatch(messages: ChatMessage[], matches: (msg: ChatMessage) => boolean): number {
-  for (let i = messages.length - 1; i >= 0; i--) {
-    if (matches(messages[i])) return i;
+function lastIndexWhere<T>(items: T[], matches: (item: T) => boolean): number {
+  for (let i = items.length - 1; i >= 0; i--) {
+    if (matches(items[i])) return i;
   }
   return -1;
 }
@@ -43,7 +43,7 @@ export function findMessageForProgress({
   ranked.push(msg => isAgentReply(msg) && !!msg.isPlaceholder, isAgentReply);
 
   for (const matches of ranked) {
-    const index = lastMatch(messages, matches);
+    const index = lastIndexWhere(messages, matches);
     if (index >= 0) return { index, message: messages[index] };
   }
 
@@ -75,13 +75,6 @@ export function filterCancellationText(content: string): string {
 
 const isOpenProgress = (part: MessagePart): boolean => part.type === 'progress' && part.status === 'in_progress';
 
-function lastPartIndex(parts: MessagePart[], matches: (part: MessagePart) => boolean): number {
-  for (let i = parts.length - 1; i >= 0; i--) {
-    if (matches(parts[i])) return i;
-  }
-  return -1;
-}
-
 function patchPart(message: ChatMessage, index: number, patch: Partial<MessagePart>): ChatMessage {
   if (index < 0) return message;
   const parts = [...message.parts];
@@ -100,14 +93,14 @@ export function addProgressLine(message: ChatMessage, browserToolName: string, e
 }
 
 export const markProgressLineComplete = (message: ChatMessage): ChatMessage =>
-  patchPart(message, lastPartIndex(message.parts, isOpenProgress), { status: 'completed' });
+  patchPart(message, lastIndexWhere(message.parts, isOpenProgress), { status: 'completed' });
 
 export function markProgressLineFailed(message: ChatMessage, browserToolName: string, error: string): ChatMessage {
-  const named = lastPartIndex(
+  const named = lastIndexWhere(
     message.parts,
     part => part.type === 'progress' && part.browserToolName === browserToolName,
   );
-  const index = named >= 0 ? named : lastPartIndex(message.parts, isOpenProgress);
+  const index = named >= 0 ? named : lastIndexWhere(message.parts, isOpenProgress);
   if (index < 0) return message;
 
   const content = filterCancellationText(message.parts[index].content);

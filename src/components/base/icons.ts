@@ -15,6 +15,15 @@ export interface IconData {
   paths: IconPath[];
 }
 
+/** Icon.tsx resolves an absent `fill` to 'none' whenever a stroke is set, so a stroked path omits it. */
+const stroked = (d: string, strokeWidth = 2): IconPath => ({
+  d,
+  stroke: 'currentColor',
+  strokeWidth,
+  strokeLinecap: 'round',
+  strokeLinejoin: 'round',
+});
+
 export const icons = {
   checkCircle: {
     viewBox: '0 0 512 512',
@@ -95,46 +104,13 @@ export const icons = {
   mousePointerClick: {
     viewBox: '0 0 24 24',
     paths: [
-      {
-        d: 'M14 4.1 12 6',
-        fill: 'none',
-        stroke: 'currentColor',
-        strokeWidth: 2,
-        strokeLinecap: 'round',
-        strokeLinejoin: 'round',
-      },
-      {
-        d: 'm5.1 8-2.9-.8',
-        fill: 'none',
-        stroke: 'currentColor',
-        strokeWidth: 2,
-        strokeLinecap: 'round',
-        strokeLinejoin: 'round',
-      },
-      {
-        d: 'm6 12-1.9 2',
-        fill: 'none',
-        stroke: 'currentColor',
-        strokeWidth: 2,
-        strokeLinecap: 'round',
-        strokeLinejoin: 'round',
-      },
-      {
-        d: 'M7.2 2.2 8 5.1',
-        fill: 'none',
-        stroke: 'currentColor',
-        strokeWidth: 2,
-        strokeLinecap: 'round',
-        strokeLinejoin: 'round',
-      },
-      {
-        d: 'M9.037 9.69a.498.498 0 0 1 .653-.653l11 4.5a.5.5 0 0 1-.074.949l-4.349 1.041a1 1 0 0 0-.74.739l-1.04 4.35a.5.5 0 0 1-.95.074z',
-        fill: 'none',
-        stroke: 'currentColor',
-        strokeWidth: 2,
-        strokeLinecap: 'round',
-        strokeLinejoin: 'round',
-      },
+      stroked('M14 4.1 12 6'),
+      stroked('m5.1 8-2.9-.8'),
+      stroked('m6 12-1.9 2'),
+      stroked('M7.2 2.2 8 5.1'),
+      stroked(
+        'M9.037 9.69a.498.498 0 0 1 .653-.653l11 4.5a.5.5 0 0 1-.074.949l-4.349 1.041a1 1 0 0 0-.74.739l-1.04 4.35a.5.5 0 0 1-.95.074z',
+      ),
     ],
   },
 
@@ -151,57 +127,29 @@ export const icons = {
   home: {
     viewBox: '0 0 24 24',
     paths: [
-      {
-        d: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6',
-        fill: 'none',
-        stroke: 'currentColor',
-        strokeWidth: 2,
-        strokeLinecap: 'round',
-        strokeLinejoin: 'round',
-      },
+      stroked(
+        'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6',
+      ),
     ],
   },
 
   chat: {
     viewBox: '0 0 24 24',
     paths: [
-      {
-        d: 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z',
-        fill: 'none',
-        stroke: 'currentColor',
-        strokeWidth: 2,
-        strokeLinecap: 'round',
-        strokeLinejoin: 'round',
-      },
+      stroked(
+        'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z',
+      ),
     ],
   },
 
   send: {
     viewBox: '0 0 24 24',
-    paths: [
-      {
-        d: 'M5 12h14m-7-7l7 7-7 7',
-        fill: 'none',
-        stroke: 'currentColor',
-        strokeWidth: 2,
-        strokeLinecap: 'round',
-        strokeLinejoin: 'round',
-      },
-    ],
+    paths: [stroked('M5 12h14m-7-7l7 7-7 7')],
   },
 
   closeSmall: {
     viewBox: '0 0 12 12',
-    paths: [
-      {
-        d: 'M9 3L3 9M3 3l6 6',
-        fill: 'none',
-        stroke: 'currentColor',
-        strokeWidth: 1.5,
-        strokeLinecap: 'round',
-        strokeLinejoin: 'round',
-      },
-    ],
+    paths: [stroked('M9 3L3 9M3 3l6 6', 1.5)],
   },
 
   close: {
@@ -218,44 +166,21 @@ export const icons = {
 
   chevronDown: {
     viewBox: '0 0 24 24',
-    paths: [
-      {
-        d: 'M19 9l-7 7-7-7',
-        fill: 'none',
-        stroke: 'currentColor',
-        strokeWidth: 2.5,
-        strokeLinecap: 'round',
-        strokeLinejoin: 'round',
-      },
-    ],
+    paths: [stroked('M19 9l-7 7-7-7', 2.5)],
   },
 
   screenShare: {
     viewBox: '0 0 24 24',
     paths: [
-      {
-        d: 'M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z',
-        fill: 'none',
-        stroke: 'currentColor',
-        strokeWidth: 2,
-        strokeLinecap: 'round',
-        strokeLinejoin: 'round',
-      },
+      stroked(
+        'M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z',
+      ),
     ],
   },
 
   alertCircle: {
     viewBox: '0 0 24 24',
-    paths: [
-      {
-        d: 'M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
-        fill: 'none',
-        stroke: 'currentColor',
-        strokeWidth: 2,
-        strokeLinecap: 'round',
-        strokeLinejoin: 'round',
-      },
-    ],
+    paths: [stroked('M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z')],
   },
 } as const satisfies Record<string, IconData>;
 
