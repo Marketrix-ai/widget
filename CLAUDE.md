@@ -29,9 +29,15 @@ npm run tag <version>    # scripts/release.sh
 **Pre-handoff gate** (matching the repository-local Node 26 workflow): `npm run ci`. This public repo
 cannot call private infra workflows. Git hooks autofix but are not a substitute.
 
-**Hook setup is not automatic.** `core.hooksPath` is _local_ git config, so a fresh clone runs no hooks
-until you point it at the committed shim: `git config core.hooksPath .husky/_`. Lefthook is the only
-hook runner (there is no husky dependency, and lefthook is not a devDependency — install it yourself).
+**Hooks install themselves.** `lefthook` is a devDependency whose `postinstall` runs `lefthook install -f`,
+so a plain `npm install` writes the pre-commit shim into the effective hooks path — `.git/hooks` by
+default — and a fresh clone needs no `git config core.hooksPath`. It is skipped only when `CI` is
+set. **A global `core.hooksPath` hijacks the target**: lefthook installs there instead, unscoping
+this repo's hook to every repo on the machine. **Never point `core.hooksPath` at the committed
+`.husky/_`** — that directory is tracked, so each install rewrites `.husky/_/pre-commit` with a
+machine-local absolute path; it is a vestige, never where lefthook generates. Lefthook is the only
+hook runner (there is no husky dependency, and `npm install` puts the binary at
+`node_modules/lefthook/bin/index.js`, where the shim looks).
 The shim sources **`.lefthookrc`** first to put node/npm back on `PATH` — hooks launched from GUI clients inherit a
 minimal environment and otherwise die `npm: command not found`. **That rc path is baked in when hooks
 are generated**, so after changing `rc:` you must re-run `lefthook install --force`.

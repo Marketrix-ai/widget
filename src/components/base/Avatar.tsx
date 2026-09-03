@@ -2,8 +2,9 @@ import type { ComponentPropsWithRef } from 'react';
 
 import { cn } from '@/lib/utils';
 
-import { getElevationStyle, radiusClasses, type RadiusToken } from '../../design-system/component-tokens';
+import { getElevationStyle, type RadiusToken } from '../../design-system/component-tokens';
 import type { ShadowToken } from '../../design-system/shadows';
+import { resolveLayoutClasses } from './layoutProps';
 
 type AvatarSize = 'sm' | 'md' | 'lg';
 
@@ -27,14 +28,7 @@ export function Avatar(props: AvatarProps) {
   const isPreset = typeof size === 'string';
   const sizeClass = isPreset ? sizeStyles[size] : undefined;
   const sizeStyle = !isPreset ? { width: size, height: size, ...style } : style;
-  const roundedClass =
-    rounded === true || rounded === 'theme'
-      ? radiusClasses.theme
-      : rounded === 'full'
-        ? radiusClasses.pill
-        : rounded
-          ? radiusClasses[rounded]
-          : undefined;
+  const roundedClass = resolveLayoutClasses({ rounded });
 
   return (
     <img

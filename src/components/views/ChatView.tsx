@@ -7,38 +7,13 @@ import { createSystemMessage, createUserMessage } from '../../services/ChatServi
 import { showModeService } from '../../services/ShowModeService';
 import type { MarketrixConfig } from '../../types';
 import { getModeDisplayName } from '../../utils/chat';
+import { ErrorBoundary } from '../base/ErrorBoundary';
 import { Stack } from '../base/Stack';
 import { Surface } from '../base/Surface';
 import { Text } from '../base/Text';
 import { ChatInput, type ChatInputMode } from '../blocks/ChatInput';
 import { WidgetDialog } from '../blocks/WidgetDialog';
 import { MessageList } from '../chat/MessageList';
-
-class ChatErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean }> {
-  constructor(props: { children: React.ReactNode }) {
-    super(props);
-    this.state = { hasError: false };
-  }
-
-  static getDerivedStateFromError() {
-    return { hasError: true };
-  }
-
-  override componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('Chat Error Boundary caught error:', error, errorInfo);
-  }
-
-  override render() {
-    if (this.state.hasError) {
-      return (
-        <Text as='div' size='xs' align='center' style={{ padding: '16px', color: 'var(--muted-foreground)' }}>
-          Something went wrong displaying messages. Please refresh.
-        </Text>
-      );
-    }
-    return this.props.children;
-  }
-}
 
 interface ChatViewProps {
   onScreenSharingChange: (isSharing: boolean) => void;
@@ -127,13 +102,20 @@ export const ChatView: React.FC<ChatViewProps> = ({
       )}
 
       <Surface grow overflow='hidden' paddingY='xs' style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-        <ChatErrorBoundary>
+        <ErrorBoundary
+          label='Chat'
+          fallback={
+            <Text as='div' size='xs' align='center' style={{ padding: '16px', color: 'var(--muted-foreground)' }}>
+              Something went wrong displaying messages. Please refresh.
+            </Text>
+          }
+        >
           <MessageList
             messagesEndRef={messagesEndRef}
             onScreenAccessAllow={handleScreenAccessAllow}
             onScreenAccessDeny={handleScreenAccessDeny}
           />
-        </ChatErrorBoundary>
+        </ErrorBoundary>
       </Surface>
 
       <Surface
@@ -141,7 +123,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
         border
         elevation='card'
         paddingPreset='card'
-        radius='xl'
+        rounded='xl'
         style={{ margin: '0 12px 12px 12px', marginTop: 'auto' }}
       >
         <ChatInput

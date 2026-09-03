@@ -2,7 +2,7 @@ import { type ElementType, forwardRef } from 'react';
 
 import { cn } from '@/lib/utils';
 
-import { getElevationStyle, type RadiusToken } from '../../design-system/component-tokens';
+import { getElevationStyle } from '../../design-system/component-tokens';
 import type { ShadowToken } from '../../design-system/shadows';
 import { type LayoutProps, resolveLayoutClasses, stripLayoutProps } from './layoutProps';
 
@@ -14,7 +14,6 @@ export interface SurfaceProps extends LayoutProps, Omit<React.HTMLAttributes<HTM
   background?: SurfaceBackground;
   elevation?: ShadowToken;
   paddingPreset?: SurfacePadding;
-  radius?: RadiusToken;
   /** @internal blocks/ only */
   className?: string;
 }
@@ -37,7 +36,6 @@ export const Surface = forwardRef<HTMLElement, SurfaceProps>(function Surface(pr
     className,
     elevation,
     paddingPreset = 'none',
-    radius,
     style,
     ...rest
   } = props;
@@ -48,13 +46,7 @@ export const Surface = forwardRef<HTMLElement, SurfaceProps>(function Surface(pr
     <Component
       {...domProps}
       ref={ref}
-      className={cn(
-        backgroundClasses[background],
-        paddingPresetClasses[paddingPreset],
-        radius && resolveLayoutClasses({ rounded: radius }),
-        layoutClasses,
-        className,
-      )}
+      className={cn(backgroundClasses[background], paddingPresetClasses[paddingPreset], layoutClasses, className)}
       style={{ ...getElevationStyle(elevation), ...style }}
     />
   );
