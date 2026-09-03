@@ -75,13 +75,15 @@ Both payloads are Zod **discriminated unions on `type`**:
   `rrweb/metadata`, `rrweb/events`.
 
 **Transport** — `src/services/StreamClient.ts` is a singleton wrapping the oRPC `sdk`, draining the
-async iterator in the background. Status machine `disconnected → connecting → connected → registered →
-error`, exponential-backoff reconnect (1000ms ×2, cap 30000ms, **max 10 attempts**; counters reset only
-on `registered`). **A `chat/error` whose `request_id === 'auth'` is non-retriable and permanently stops
-reconnection until re-init.**
+async iterator in the background. Status machine `disconnected → connecting → open → registered`, plus
+`error` from any failed connect or stream — **`open` is the transport, `registered` is the chat**, so
+`isConnected()` reads `registered` and nothing waits on `open`. Exponential-backoff reconnect (1000ms
+×2, cap 30000ms, **max 10 attempts**; counters reset only on `registered`). **A `chat/error` whose
+`request_id === 'auth'` is non-retriable and permanently stops reconnection until re-init.**
 
 **Round-trip** — `ChatContext.messageDispatch(content, mode)` fire-and-forget POSTs
-`{type: 'chat/${mode}', request_id, content}` (mode defaults to `tell`); the reply arrives over SSE as
+`{type: 'chat/${mode}', request_id, content}` (an omitted mode takes the composer's current mode,
+`tell` only until the visitor switches); the reply arrives over SSE as
 `chat/delta` fragments that **accumulate**, then a final `chat/response` carrying the full text
 **replaces** them, matched by `request_id`.
 
@@ -113,7 +115,8 @@ welcome toast and does not alter the greeting message in chat.
 ## Init & isolation
 
 - `window.__mtx = { state: 'initializing' | 'active' }` is the singleton guard — it survives ES-module
-  re-execution and dedupes init; `initPromise` / `isInitializing` guard concurrent `initWidget` calls.
+  re-execution and dedupes init; the module-level `initPromise` coalesces concurrent `initWidget` calls
+  onto one in-flight init and is cleared when it settles.
 - **Closed Shadow DOM** (`attachShadow({ mode: 'closed' })`): the host cannot reach into the widget DOM,
   intentionally — don't expect host scripts or CSS to style or query inside it.
 - **The runtime API host is not an env var** — it is supplied per-init as `mtxApiHost` (config) /
@@ -174,7 +177,8 @@ and shipped images cannot drift in their dependency set.
   (`src/__tests__/stylesheet-contract.test.ts` fails both ways round).
 - **The widget has no dark mode** — no `.dark` block, no `dark:` variant. Theming is the per-tenant
   settings → CSS custom properties in `semantic-tokens.ts`, nothing else.
-- **Every shadow is a `SHADOW.*` token applied inline** — there is no settings-driven shadow; the four
+- **Elevation is a `SHADOW.*` token** (`design-system/shadows.ts`), applied inline through `Surface`'s
+  `elevation` prop / `getElevationStyle` — **there is no settings-driven shadow**; the four
   settings that reached nothing here (`widget_device`, `widget_bounce_effect`, `widget_shadow`,
   `widget_feature_human`) were dropped from the contract in db-V247. `widget_appearance` is
   `default | hidden` — `compact`/`full` were retired in db-V246 because this widget rendered them

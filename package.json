@@ -67,6 +67,7 @@
     "eslint-plugin-simple-import-sort": "^14.0.0",
     "eslint-plugin-unused-imports": "^4.4.1",
     "jsdom": "^30.0.1",
+    "lefthook": "^2.1.12",
     "prettier": "^3.9.6",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
