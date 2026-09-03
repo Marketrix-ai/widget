@@ -31,7 +31,8 @@ cannot call private infra workflows. Git hooks autofix but are not a substitute.
 
 **Hook setup is not automatic.** `core.hooksPath` is _local_ git config, so a fresh clone runs no hooks
 until you point it at the committed shim: `git config core.hooksPath .husky/_`. Lefthook is the only
-hook runner (there is no husky dependency, and lefthook is not a devDependency — install it yourself).
+hook runner (there is no husky dependency, and lefthook is a devDependency — `npm install` puts it at
+`node_modules/lefthook/bin/index.js`, where the shim looks).
 The shim sources **`.lefthookrc`** first to put node/npm back on `PATH` — hooks launched from GUI clients inherit a
 minimal environment and otherwise die `npm: command not found`. **That rc path is baked in when hooks
 are generated**, so after changing `rc:` you must re-run `lefthook install --force`.
