@@ -22,8 +22,8 @@
     "start": "vite",
     "build": "vite build",
     "ci": "npm run type-check && npm run lint:check && npm run build && npm run format:check && npm run test:run && npm run bundle:check",
-    "lint": "eslint . --ext .ts,.tsx --max-warnings 200 --fix",
-    "lint:check": "eslint . --ext .ts,.tsx --max-warnings 0",
+    "lint": "eslint . --max-warnings 200 --fix",
+    "lint:check": "eslint . --max-warnings 0",
     "check": "tsc --noEmit",
     "type-check": "tsc --noEmit",
     "test": "vitest",
@@ -33,8 +33,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "bundle:check": "node scripts/bundle-check.mjs",
-    "code:fix": "eslint . --ext .ts,.tsx --fix && prettier --write .",
-    "code:check": "tsc --noEmit && eslint . --ext .ts,.tsx && prettier --check ."
+    "code:fix": "eslint . --fix && prettier --write .",
+    "code:check": "tsc --noEmit && eslint . && prettier --check ."
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
