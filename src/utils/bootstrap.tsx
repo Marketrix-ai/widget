@@ -134,15 +134,21 @@ export const autoInitializeWidget = (initWidget: (config: MarketrixConfig) => Pr
   const mtxKey = script.getAttribute('mtx-key');
   const mtxApiHost = script.getAttribute('mtx-api-host');
 
-  if (!mtxId || !mtxKey) {
+  // mtx-api-host is as required as the credentials: there is no default, and an unconfigured SDK
+  // resolves every request against the HOST PAGE's origin, so omitting it silently posts widget
+  // traffic at the customer's own site instead of failing.
+  if (!mtxId || !mtxKey || !mtxApiHost) {
     if (isWidgetInitialized()) return;
-    console.error('[AutoInit] Missing required attributes:', { hasMtxId: !!mtxId, hasMtxKey: !!mtxKey });
-    showWidgetSettingsLoader('Please configure mtx-id and mtx-key', 'error');
+    console.error('[AutoInit] Missing required attributes:', {
+      hasMtxId: !!mtxId,
+      hasMtxKey: !!mtxKey,
+      hasMtxApiHost: !!mtxApiHost,
+    });
+    showWidgetSettingsLoader('Please configure mtx-id, mtx-key and mtx-api-host', 'error');
     return;
   }
 
-  const config: MarketrixConfig = { mtxId, mtxKey };
-  if (mtxApiHost) config.mtxApiHost = mtxApiHost;
+  const config: MarketrixConfig = { mtxId, mtxKey, mtxApiHost };
   if (script.getAttribute('mtx-use-screenshare') === 'false') config.use_screenshare = false;
 
   initWidget(config).catch(error => console.error('[AutoInit] Failed to initialize widget:', error));

@@ -46,13 +46,12 @@ async function initWidgetInternal(
 ): Promise<void> {
   window.__mtx = { state: 'initializing' };
 
-  if (config.mtxApiHost) {
-    configureSdk(config.mtxApiHost);
-  }
-
   showWidgetSettingsLoader('Loading widget settings...');
   let finalConfig: MarketrixConfig;
   try {
+    // Production only: every preview path mounts directly and never reaches here. There is no default
+    // host, so leaving the SDK unconfigured would resolve each request against the HOST PAGE's origin.
+    configureSdk(config.mtxApiHost ?? '');
     finalConfig = await loadWidgetConfig(config);
   } catch (error) {
     if (generation !== lifecycleGeneration) return;

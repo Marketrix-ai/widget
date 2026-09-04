@@ -84,6 +84,21 @@ describe('widget public entry paths', () => {
     });
   });
 
+  it('refuses to initialize without mtx-api-host, which would post at the host page instead', async () => {
+    const script = document.createElement('script');
+    script.type = 'module';
+    script.src = 'https://cdn.test/widget.mjs';
+    script.setAttribute('mtx-id', 'widget-id');
+    script.setAttribute('mtx-key', 'widget-key');
+    document.head.appendChild(script);
+    const init = vi.fn().mockResolvedValue(undefined);
+    const { autoInitializeWidget } = await import('./bootstrap');
+
+    autoInitializeWidget(init);
+
+    expect(init).not.toHaveBeenCalled();
+  });
+
   it('does nothing for npm consumers without an auto-init script', async () => {
     vi.useFakeTimers();
     const init = vi.fn().mockResolvedValue(undefined);

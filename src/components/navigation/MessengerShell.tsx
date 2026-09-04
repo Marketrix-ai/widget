@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 
 import { SHADOW } from '../../design-system/shadows';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
@@ -6,7 +6,6 @@ import { useResize } from '../../hooks/useResize';
 import { useWidget, useWidgetConfig } from '../../hooks/useWidget';
 import { createUserMessage } from '../../services/ChatService';
 import { tenantScope } from '../../services/WidgetService';
-import type { WidgetView } from '../../types';
 import type { SuggestedActionItem } from '../../utils/suggestedActions';
 import { getCorner, getPanelPositionStyle } from '../../utils/widgetPositioning';
 import { Icon } from '../base/Icon';
@@ -33,14 +32,7 @@ export const MessengerShell: React.FC = () => {
   );
 
   const messageInputRef = useRef<HTMLTextAreaElement | null>(null);
-  const [navDirection, setNavDirection] = useState<'forward' | 'back'>('forward');
-  const prevViewRef = useRef<WidgetView>(activeView);
-  useEffect(() => {
-    if (prevViewRef.current !== activeView) {
-      setNavDirection(activeView === 'chat' ? 'forward' : 'back');
-      prevViewRef.current = activeView;
-    }
-  }, [activeView]);
+  const navDirection = activeView === 'chat' ? 'forward' : 'back';
 
   useFocusTrap(containerRef, isOpen, {
     onEscape: actions.closeWidget,
@@ -63,7 +55,6 @@ export const MessengerShell: React.FC = () => {
   const { vertical, horizontal } = getCorner(config.widget_position);
 
   const handleNavigateToChat = () => {
-    setNavDirection('forward');
     actions.setActiveView('chat');
   };
 
