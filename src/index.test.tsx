@@ -73,13 +73,28 @@ describe('public widget lifecycle', () => {
     const previewContainer = document.createElement('div');
     document.body.append(productionContainer, previewContainer);
 
-    const production = initWidget({ mtxId: 'production', mtxKey: 'key' }, productionContainer);
+    const production = initWidget(
+      { mtxId: 'production', mtxKey: 'key', mtxApiHost: 'https://api.test' },
+      productionContainer,
+    );
     await act(() => mountWidget({ settings, container: previewContainer }));
     resolveProduction({ ...settings, mtxId: 'production', mtxKey: 'key', mtxApp: 1 });
     await production;
 
     expect(productionContainer.querySelector('.marketrix-widget-container')).toBeNull();
     expect(previewContainer.querySelectorAll('.marketrix-widget-container')).toHaveLength(1);
+  });
+
+  it('refuses production init without an API host instead of posting at the host page', async () => {
+    const load = vi.spyOn(WidgetService, 'loadWidgetConfig');
+    const container = document.createElement('div');
+    document.body.append(container);
+
+    await initWidget({ mtxId: 'no-host', mtxKey: 'key' }, container);
+
+    expect(load).not.toHaveBeenCalled();
+    expect(container.querySelector('.marketrix-widget-container')).toBeNull();
+    expect(window.__mtx).toBeUndefined();
   });
 
   it('cancels stale production initialization and shares one in-flight promise', async () => {
@@ -99,14 +114,20 @@ describe('public widget lifecycle', () => {
     unrelated.className = 'marketrix-widget-container';
     document.body.append(firstContainer, secondContainer, unrelated);
 
-    const first = initWidget({ mtxId: 'first', mtxKey: 'first-key' }, firstContainer);
-    const concurrent = initWidget({ mtxId: 'ignored', mtxKey: 'ignored-key' }, secondContainer);
+    const first = initWidget({ mtxId: 'first', mtxKey: 'first-key', mtxApiHost: 'https://api.test' }, firstContainer);
+    const concurrent = initWidget(
+      { mtxId: 'ignored', mtxKey: 'ignored-key', mtxApiHost: 'https://api.test' },
+      secondContainer,
+    );
 
     expect(concurrent).toBe(first);
     expect(WidgetService.loadWidgetConfig).toHaveBeenCalledOnce();
 
     unmountWidget();
-    const second = initWidget({ mtxId: 'second', mtxKey: 'second-key' }, secondContainer);
+    const second = initWidget(
+      { mtxId: 'second', mtxKey: 'second-key', mtxApiHost: 'https://api.test' },
+      secondContainer,
+    );
     resolveFirst({ ...settings, mtxId: 'first', mtxKey: 'first-key', mtxApp: 1 });
     await first;
 
