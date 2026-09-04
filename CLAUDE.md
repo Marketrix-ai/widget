@@ -95,8 +95,11 @@ async iterator in the background. Status machine `disconnected → connecting �
 
 **Tool execution** — `ChatContext` dedupes `tool/call` by `tool_call_id`, validates `browser_tool`
 against `BROWSER_TOOLS`, executes via `browserToolService.executeTool`, then replies `tool/response`.
-`get_html` ships a clone of the page stamped with **`data-id` and nothing else** — that attribute is the
-whole contract with the agent's HTML parser, which reads no geometry, and the raw HTML never reaches a prompt.
+`get_html` ships a clone of the **whole document** with **`data-id` added** to each indexed element —
+that added attribute is the entire contract with the agent's HTML parser, which reads no geometry and
+keeps only selector, tag and a truncated label, so the markup itself never reaches a prompt. The
+snapshot is neither stripped nor size-capped, unlike `extract`, which truncates at 10k: the parser
+indexes by `data-id`, and a trimmed tree silently loses elements the loop then cannot click.
 The `done` tool ends the task. **The first `tool/call` is what activates the task**, not
 `task/status running` — the api mints no task id, so the widget holds none and `chat/stop` carries none;
 the terminal three clear the task and the dedupe set.
