@@ -1,22 +1,19 @@
 import { type InstructionType, sdk, type WidgetCommand } from '../sdk';
-import type { MarketrixConfig } from '../types';
 import { chatSessionManager } from './ChatSessionManager';
-import { storageService } from './StorageService';
+import { type CredentialedConfig, storageService } from './StorageService';
 import { StreamClient } from './StreamClient';
 
-function logWidgetQuestion(config: MarketrixConfig, question: string, mode: InstructionType): void {
+function logWidgetQuestion(config: CredentialedConfig, question: string, mode: InstructionType): void {
   const metadata: Record<string, unknown> = {
     question,
     mode,
     chat_id: storageService.getChatId(),
     timestamp: new Date().toISOString(),
+    marketrix_id: config.mtxId,
+    marketrix_key: config.mtxKey,
   };
 
   if (config.userId) metadata.user_id = config.userId;
-  if (config.mtxId && config.mtxKey) {
-    metadata.marketrix_id = config.mtxId;
-    metadata.marketrix_key = config.mtxKey;
-  }
 
   sdk
     .activityLogCreate({ type: 'widget_question', metadata })
@@ -25,15 +22,11 @@ function logWidgetQuestion(config: MarketrixConfig, question: string, mode: Inst
 
 /** The reply does not come back from here — it arrives asynchronously as a chat/response event on the stream. */
 export async function messageDispatch(
-  config: MarketrixConfig,
+  config: CredentialedConfig,
   message: string,
   mode: InstructionType,
   requestId: string,
 ): Promise<void> {
-  if (!(config.mtxId && config.mtxKey)) {
-    throw new Error('mtxId + mtxKey is required');
-  }
-
   const chatId = await chatSessionManager.getOrCreateChatId();
   logWidgetQuestion(config, message, mode);
 

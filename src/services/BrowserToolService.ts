@@ -22,6 +22,7 @@ export interface ToolExecutionResult<T = TextData> {
   success: boolean;
   data: T;
   error?: string;
+  afterResponseSent?: () => void;
 }
 
 /** One shape for every widget tool's arguments: the wire carries a bare JSON object, so nothing is
@@ -72,16 +73,12 @@ export class BrowserToolService {
           const { element, error } = domService.getValidatedElement(index);
           if (!element) return fail(error || `Element ${index} not found`);
 
-          const confirmed = await showModeService.showToolAction({
+          await showModeService.showToolAction({
             element,
             explanation: explanation || `Execute ${browserToolName}`,
             browserToolName,
             isClickAction: browserToolName === 'click_element',
           });
-
-          if (!confirmed) {
-            return fail('User cancelled action');
-          }
         }
       }
 
@@ -163,20 +160,7 @@ export class BrowserToolService {
     element.scrollIntoView({ behavior: 'smooth', block: 'center' });
     await new Promise(resolve => setTimeout(resolve, 100));
 
-    setTimeout(() => {
-      try {
-        element.click();
-      } catch (e) {
-        console.warn('[BrowserToolService] Click error:', e);
-        try {
-          element.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
-        } catch (fallbackError) {
-          console.warn('[BrowserToolService] Fallback click failed:', fallbackError);
-        }
-      }
-    }, 50);
-
-    return ok(`Clicked element ${args.index}`);
+    return { ...ok(`Clicked element ${args.index}`), afterResponseSent: () => element.click() };
   }
 
   private typeText(args: ToolArgs): ToolExecutionResult {
@@ -187,75 +171,24 @@ export class BrowserToolService {
     const { element, error } = domService.getValidatedElement(args.index);
     if (!element) return fail(error || `Element ${args.index} not found`);
 
-    const isInputLike =
-      element instanceof HTMLInputElement ||
-      element instanceof HTMLTextAreaElement ||
-      (element as HTMLElement).isContentEditable;
+    if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
+      element.focus();
+      this.setNativeValue(element, clear ? args.text : element.value + args.text);
 
-    if (isInputLike) {
-      const inputElement = element as HTMLInputElement | HTMLTextAreaElement;
+      element.dispatchEvent(
+        new InputEvent('input', { bubbles: true, cancelable: true, inputType: 'insertText', data: args.text }),
+      );
+      element.dispatchEvent(new Event('change', { bubbles: true }));
+      // Some frameworks need blur to trigger validation
+      element.dispatchEvent(new Event('blur', { bubbles: true }));
+    } else if (element.isContentEditable) {
+      element.focus();
+      const selection = window.getSelection();
+      if (clear) selection?.selectAllChildren(element);
+      else selection?.collapse(element, element.childNodes.length);
 
-      try {
-        inputElement.focus();
-      } catch (e) {
-        console.warn('[BrowserToolService] Focus failed:', e);
-      }
-
-      const finalValue = clear ? args.text : inputElement.value + args.text;
-
-      let lastError: unknown = null;
-      const attempt = (name: string, set: () => boolean): boolean => {
-        try {
-          return set();
-        } catch (e) {
-          lastError = e;
-          console.warn(`[BrowserToolService] ${name} failed:`, e);
-          return false;
-        }
-      };
-
-      // Ordered by fidelity: React tracks the prototype setter and reverts a plain `.value =`; execCommand acts on
-      // the editing host rather than the JS object, so it is the only path left once an assignment has thrown.
-      const valueSet =
-        attempt('Native setter', () => {
-          const isTextArea = inputElement.tagName.toUpperCase() === 'TEXTAREA';
-          const descriptor = Object.getOwnPropertyDescriptor(
-            isTextArea ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype,
-            'value',
-          );
-          if (!descriptor?.set) return false;
-          descriptor.set.call(inputElement, finalValue);
-          return true;
-        }) ||
-        attempt('Direct assignment', () => {
-          inputElement.value = finalValue;
-          return true;
-        }) ||
-        attempt('execCommand', () => {
-          inputElement.focus();
-          if (clear) inputElement.select();
-          return document.execCommand('insertText', false, args.text);
-        });
-
-      if (!valueSet) {
-        return fail(`Failed to set value: ${lastError instanceof Error ? lastError.message : String(lastError)}`);
-      }
-
-      try {
-        const inputEvent = new InputEvent('input', {
-          bubbles: true,
-          cancelable: true,
-          inputType: 'insertText',
-          data: args.text,
-        });
-        inputElement.dispatchEvent(inputEvent);
-
-        inputElement.dispatchEvent(new Event('change', { bubbles: true }));
-
-        // Some frameworks need blur to trigger validation
-        inputElement.dispatchEvent(new Event('blur', { bubbles: true }));
-      } catch (e) {
-        console.warn('[BrowserToolService] Event dispatch failed:', e);
+      if (!document.execCommand('insertText', false, args.text)) {
+        return fail(`Could not insert text into element ${args.index}`);
       }
     } else if ('value' in element) {
       try {
@@ -565,13 +498,17 @@ export class BrowserToolService {
   }
 
   /** Native value setter so React/Vue controlled inputs pick up the change. */
-  private setValueAndCaret(el: HTMLInputElement | HTMLTextAreaElement, value: string, caret: number): void {
+  private setNativeValue(el: HTMLInputElement | HTMLTextAreaElement, value: string): void {
     const setter = Object.getOwnPropertyDescriptor(
       el instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype,
       'value',
     )?.set;
     if (setter) setter.call(el, value);
     else el.value = value;
+  }
+
+  private setValueAndCaret(el: HTMLInputElement | HTMLTextAreaElement, value: string, caret: number): void {
+    this.setNativeValue(el, value);
     el.dispatchEvent(new Event('input', { bubbles: true }));
     el.dispatchEvent(new Event('change', { bubbles: true }));
     el.setSelectionRange(caret, caret);

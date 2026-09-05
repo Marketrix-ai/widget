@@ -9,10 +9,15 @@ import shadowStyles from '../index.css?inline';
 import type { MarketrixConfig } from '../types';
 import { isHTMLScriptElement } from './validation';
 
-export const widgetState: { instance: Root | null; config: MarketrixConfig | null } = {
-  instance: null,
-  config: null,
-};
+export interface WidgetMount {
+  instance: Root;
+  config: MarketrixConfig;
+  container: HTMLElement;
+  host: HTMLElement | undefined;
+  previewMode: boolean;
+}
+
+export const widgetState: { mount: WidgetMount | null } = { mount: null };
 
 let loaderInstance: Root | null = null;
 
@@ -78,9 +83,9 @@ export const mountWidgetToContainer = (mountEl: HTMLElement, config: MarketrixCo
   return root;
 };
 
-export const isWidgetInitialized = (): boolean => widgetState.instance !== null;
+export const isWidgetInitialized = (): boolean => widgetState.mount !== null;
 
-export const getCurrentConfig = (): MarketrixConfig | null => widgetState.config;
+export const getCurrentConfig = (): MarketrixConfig | null => widgetState.mount?.config ?? null;
 
 /** ``tone`` because this one surface carries both the loading notice and the two hard init failures, and
  * a failure painted in the neutral palette reads as an informational notice on the host's page. */

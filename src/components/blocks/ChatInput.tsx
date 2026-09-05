@@ -99,8 +99,8 @@ export function ChatInput({
           minHeight: 'unset',
         }}
       />
-      <Flex align='center' justify='between' paddingX='sm' paddingTop='2xs' paddingBottom='sm'>
-        <Flex align='center' gap='2xs'>
+      <Flex align='center' justify='between' paddingX='sm' paddingTop='xs' paddingBottom='sm'>
+        <Flex align='center' gap='xs'>
           {modes.map(mode => {
             const isActive = activeMode === mode.id;
             return (

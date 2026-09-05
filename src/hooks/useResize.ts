@@ -46,10 +46,10 @@ function readStoredSize(storageKey: string): { width: number; height: number } |
 export function useResize(
   settingsWidth: string | undefined,
   settingsHeight: string | undefined,
-  workspaceId: string,
+  tenantScope: string,
   isPreviewMode: boolean,
 ) {
-  const storageKey = `${STORAGE_KEY_PREFIX}${workspaceId}`;
+  const storageKey = `${STORAGE_KEY_PREFIX}${tenantScope}`;
   const dimsRef = useRef<{ width: number; height: number }>({ width: 360, height: 450 });
   const containerRef = useRef<HTMLDivElement>(null);
 

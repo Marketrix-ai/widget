@@ -98,12 +98,12 @@ export class StreamClient {
 
     try {
       // Read at connect time, not captured at init: a reconnect after updateMarketrixConfig must use the current credentials.
-      const { mtxId, mtxKey } = storageService.getConfig() ?? {};
+      const credentials = storageService.getCredentialedConfig();
       const iterator = await sdk.widgetStream(
         {
           chat_id: chatId,
           tab_id: this.tabId,
-          ...(mtxId && mtxKey && { marketrix_id: mtxId, marketrix_key: mtxKey }),
+          ...(credentials && { marketrix_id: credentials.mtxId, marketrix_key: credentials.mtxKey }),
         },
         { signal },
       );
@@ -156,10 +156,7 @@ export class StreamClient {
     }
     this.status = 'disconnected';
     this.chatId = null;
-    for (const waiter of this.registrationWaiters) {
-      waiter.reject(new Error('Stream disconnected before registration'));
-    }
-    this.registrationWaiters.clear();
+    this.settleWaiters(new Error('Stream disconnected before registration'));
   }
 
   send(command: WidgetCommand): Promise<void> {
@@ -181,6 +178,17 @@ export class StreamClient {
 
   private notifyError(error: Error): void {
     this.callbacks.forEach(cb => cb.onError?.(error));
+  }
+
+  private settleWaiters(error: Error): void {
+    for (const waiter of this.registrationWaiters) waiter.reject(error);
+    this.registrationWaiters.clear();
+  }
+
+  private giveUp(message: string): void {
+    const error = new StreamGaveUpError(message);
+    this.notifyError(error);
+    this.settleWaiters(error);
   }
 
   private handleMessage(event: WidgetEvent): void {
@@ -205,7 +213,7 @@ export class StreamClient {
       // The event is ALSO handed to the reducer below, where `chat/error` settles the message whose id is
       // the request id — and no message is ever id 'auth', so the branch matched nothing and the widget
       // went permanently silent with no toast, no bubble and (console being dropped by terser) no trace.
-      this.notifyError(new StreamGaveUpError('Chat is unavailable — the widget credentials were rejected.'));
+      this.giveUp('Chat is unavailable — the widget credentials were rejected.');
     }
 
     this.callbacks.forEach(cb => cb.onMessage?.(event));
@@ -214,7 +222,7 @@ export class StreamClient {
   private scheduleReconnect(): void {
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
       // What the visitor on a customer's page reads, so it names the state and the way out rather than the counter.
-      this.notifyError(new StreamGaveUpError('Could not reconnect to the assistant. Try again.'));
+      this.giveUp('Could not reconnect to the assistant. Try again.');
       return;
     }
     this.clearReconnectTimer();

@@ -1,15 +1,21 @@
 import { describe, expect, it } from 'vitest';
 
-import { resolveLayoutClasses, stripLayoutProps } from '../layoutProps';
+import { resolveLayoutClasses, SPACING_SCALE, stripLayoutProps } from '../layoutProps';
 
 describe('resolveLayoutClasses', () => {
   it('returns empty string for empty props', () => {
     expect(resolveLayoutClasses({})).toBe('');
   });
 
+  it('declares SPACING_SCALE smallest-first, so a token name orders the same way as the pixels it emits', () => {
+    const steps = Object.values(SPACING_SCALE).map(Number);
+    expect(steps).toEqual([...steps].sort((a, b) => a - b));
+  });
+
   describe('padding', () => {
     it('padding: none', () => expect(resolveLayoutClasses({ padding: 'none' })).toBe('p-0'));
-    it('padding: xs', () => expect(resolveLayoutClasses({ padding: 'xs' })).toBe('p-0.5'));
+    it('padding: 2xs', () => expect(resolveLayoutClasses({ padding: '2xs' })).toBe('p-0.5'));
+    it('padding: xs', () => expect(resolveLayoutClasses({ padding: 'xs' })).toBe('p-1'));
     it('padding: sm', () => expect(resolveLayoutClasses({ padding: 'sm' })).toBe('p-1.5'));
     it('padding: md', () => expect(resolveLayoutClasses({ padding: 'md' })).toBe('p-2'));
     it('padding: lg', () => expect(resolveLayoutClasses({ padding: 'lg' })).toBe('p-3'));

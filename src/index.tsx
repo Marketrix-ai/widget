@@ -27,15 +27,13 @@ import { isHTMLElement } from './utils/validation';
 
 let initPromise: Promise<void> | null = null;
 let lifecycleGeneration = 0;
-let ownedWidgetContainer: HTMLElement | null = null;
 let rrwebSessionRecorder: RrwebSessionRecorder | null = null;
 
-/** The one production/imperative-preview mount: owns the container and the module-global instance. */
-function mount(config: MarketrixConfig, container: HTMLElement | undefined, previewMode = false): void {
-  const { container: widgetContainer, mountEl } = createWidgetContainer(container);
-  ownedWidgetContainer = widgetContainer;
-  widgetState.instance = mountWidgetToContainer(mountEl, config, previewMode);
-  widgetState.config = config;
+/** The one production/imperative-preview mount. */
+function mount(config: MarketrixConfig, host: HTMLElement | undefined, previewMode = false): void {
+  const { container, mountEl } = createWidgetContainer(host);
+  const instance = mountWidgetToContainer(mountEl, config, previewMode);
+  widgetState.mount = { instance, config, container, host, previewMode };
 }
 
 // Call only via initWidget(), which guards with initPromise.
@@ -116,16 +114,14 @@ export const unmountWidget = (): void => {
   StreamClient.getInstance().disconnect();
   rrwebSessionRecorder?.stop();
   rrwebSessionRecorder = null;
-  const instance = widgetState.instance;
-  if (instance) instance.unmount();
-  widgetState.instance = null;
-  widgetState.config = null;
 
-  if (ownedWidgetContainer) {
-    ownedWidgetContainer.remove();
-    ownedWidgetContainer = null;
+  const active = widgetState.mount;
+  widgetState.mount = null;
+  if (active) {
+    active.instance.unmount();
+    active.container.remove();
+    console.log('Marketrix Widget destroyed');
   }
-  if (instance) console.log('Marketrix Widget destroyed');
 
   initPromise = null;
   window.__mtx = undefined;
@@ -134,15 +130,14 @@ export const unmountWidget = (): void => {
 };
 
 export const updateMarketrixConfig = async (newConfig: Partial<MarketrixConfig>): Promise<void> => {
-  if (isWidgetInitialized()) {
-    const currentConfig = getCurrentConfig();
-    if (!currentConfig) {
-      throw new Error('Widget not initialized');
-    }
-    const updatedConfig = { ...currentConfig, ...newConfig };
-    unmountWidget();
-    await initWidget(updatedConfig);
-  }
+  const active = widgetState.mount;
+  if (!active) return;
+
+  const { config, host, previewMode } = active;
+  const updatedConfig = { ...config, ...newConfig };
+  unmountWidget();
+  if (previewMode) mount(updatedConfig, host, true);
+  else await initWidget(updatedConfig, host);
 };
 
 export { getCurrentConfig };

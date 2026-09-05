@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { StreamClient } from './StreamClient';
+import { StreamClient, StreamGaveUpError } from './StreamClient';
 
 afterEach(() => {
   StreamClient.getInstance().disconnect();
@@ -26,6 +26,41 @@ describe('StreamClient registration lifecycle', () => {
     internals.handleMessage({ type: 'registered', chat_id: 'new-chat', application_id: 2 });
 
     await expect(remountRegistration).resolves.toBeUndefined();
+  });
+
+  it('rejects a pending registration when reconnection gives up, rather than leaving it hanging', async () => {
+    const client = StreamClient.getInstance();
+    const internals = client as unknown as {
+      chatId: string;
+      reconnectSuppressed: boolean;
+      reconnectAttempts: number;
+      maxReconnectAttempts: number;
+      scheduleReconnect: () => void;
+    };
+    internals.chatId = 'chat-1';
+    internals.reconnectSuppressed = false;
+
+    const registration = client.waitUntilRegistered();
+    internals.reconnectAttempts = internals.maxReconnectAttempts;
+    internals.scheduleReconnect();
+
+    await expect(registration).rejects.toBeInstanceOf(StreamGaveUpError);
+  });
+
+  it('rejects a pending registration when the credentials are refused', async () => {
+    const client = StreamClient.getInstance();
+    const internals = client as unknown as {
+      chatId: string;
+      reconnectSuppressed: boolean;
+      handleMessage: (event: { type: 'chat/error'; request_id: string; error: string }) => void;
+    };
+    internals.chatId = 'chat-1';
+    internals.reconnectSuppressed = false;
+
+    const registration = client.waitUntilRegistered();
+    internals.handleMessage({ type: 'chat/error', request_id: 'auth', error: 'unauthorized' });
+
+    await expect(registration).rejects.toBeInstanceOf(StreamGaveUpError);
   });
 
   it('does not report a stream that has only reached open as connected', () => {
