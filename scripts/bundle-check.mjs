@@ -68,7 +68,10 @@ try {
 // fails outright, so a new dependency is a deliberate line rather than a number nobody reads.
 const DEPENDENCY_BUDGETS = {
   '@rrweb/record': 84_000, // 75,867 (19.3%) — session recording, imported for a feature off by default
-  zod: 81_000, // 73,337 (18.7%) — the generated contract's validator; two safeParse calls reach it
+  // 73,337 (18.7%) — the generated contract's validator; two safeParse calls reach it. Held at
+  // `~4.4.3` in package.json: 4.5.4 measures 91,018, and the widget uses one object schema, so it
+  // gains nothing from the minor that costs a customer's page 17.7 kB.
+  zod: 81_000,
   '@base-ui/react': 47_000, // 42,210 (10.7%) — Dialog, plus Button
   'tailwind-merge': 32_000, // 28,386 (7.2%) — cn()
   '@base-ui/utils': 13_000, // 11,307
