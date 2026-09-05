@@ -1,7 +1,7 @@
 import { act, cleanup, render, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { initWidget, MarketrixWidget, mountWidget, unmountWidget } from './index';
+import { initWidget, MarketrixWidget, mountWidget, unmountWidget, updateMarketrixConfig } from './index';
 import { WidgetSettingsDataSchema } from './sdk';
 import { storageService } from './services/StorageService';
 import { StreamClient } from './services/StreamClient';
@@ -143,6 +143,38 @@ describe('public widget lifecycle', () => {
 
     expect(secondContainer.querySelector('.marketrix-widget-container')).toBeNull();
     expect(unrelated).toBeInTheDocument();
+  });
+
+  it('re-mounts an updated config into the container it was given, not the body', async () => {
+    const settings = WidgetSettingsDataSchema.parse(getMockWidgetConfig());
+    vi.spyOn(WidgetService, 'loadWidgetConfig').mockImplementation(async config => ({
+      ...settings,
+      ...config,
+      mtxApp: 1,
+    }));
+    const container = document.createElement('div');
+    document.body.append(container);
+
+    await act(() => initWidget({ mtxId: 'first', mtxKey: 'key', mtxApiHost: 'https://api.test' }, container));
+    expect(container.querySelector('.marketrix-widget-container')).toBeTruthy();
+
+    await act(() => updateMarketrixConfig({ mtxKey: 'rotated' }));
+
+    expect(container.querySelectorAll('.marketrix-widget-container')).toHaveLength(1);
+    expect(document.body.querySelector(':scope > .marketrix-widget-container')).toBeNull();
+  });
+
+  it('keeps an imperative preview a preview when its config is updated', async () => {
+    const settings = WidgetSettingsDataSchema.parse(getMockWidgetConfig());
+    const loadConfig = vi.spyOn(WidgetService, 'loadWidgetConfig');
+    const container = document.createElement('div');
+    document.body.append(container);
+
+    await act(() => mountWidget({ settings, container }));
+    await act(() => updateMarketrixConfig({ widget_greeting_toast: 'updated' }));
+
+    expect(loadConfig).not.toHaveBeenCalled();
+    expect(container.querySelectorAll('.marketrix-widget-container')).toHaveLength(1);
   });
 
   it('refreshes preview configuration when credentials and API host change', async () => {

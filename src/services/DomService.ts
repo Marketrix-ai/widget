@@ -176,10 +176,6 @@ export class DomService {
       return `ELEMENT_NOT_INTERACTABLE: Element ${index} has zero dimensions`;
     }
 
-    if (rect.bottom < 0 || rect.top > window.innerHeight || rect.right < 0 || rect.left > window.innerWidth) {
-      return `ELEMENT_NOT_INTERACTABLE: Element ${index} is off-screen`;
-    }
-
     const centerX = rect.left + rect.width / 2;
     const centerY = rect.top + rect.height / 2;
     const topElement = document.elementFromPoint(centerX, centerY);

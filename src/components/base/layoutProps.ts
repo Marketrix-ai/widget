@@ -6,8 +6,8 @@ export type SpacingToken = 'none' | '2xs' | 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '
 
 export const SPACING_SCALE: Record<SpacingToken, string> = {
   none: '0',
-  '2xs': '1',
-  xs: '0.5',
+  '2xs': '0.5',
+  xs: '1',
   sm: '1.5',
   md: '2',
   lg: '3',

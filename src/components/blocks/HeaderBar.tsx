@@ -40,7 +40,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({ title, subtitle, onClose, 
         </Stack>
       </Flex>
 
-      <Flex align='center' gap='xs' shrink={false}>
+      <Flex align='center' gap='2xs' shrink={false}>
         {controls}
         <IconButton size='sm' label='Close' onClick={onClose}>
           <Icon name='close' size={16} />

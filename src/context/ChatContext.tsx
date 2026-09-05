@@ -135,9 +135,9 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
         return;
       }
 
-      const config = storageService.getConfig();
+      const config = storageService.getCredentialedConfig();
 
-      if (!config || (!config.mtxId && !config.mtxKey && !config.mtxApp)) {
+      if (!config) {
         console.error('Config not loaded or incomplete');
         addMessage(
           createAgentMessage('Configuration error: Missing API credentials. Please check your widget settings.'),
@@ -201,7 +201,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
         commit(s => reduceToolDone(s, currentModeRef.current));
       }
 
-      wsClient
+      await wsClient
         .send({
           type: 'tool/response',
           tool_call_id: toolCallId,
@@ -210,6 +210,8 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
           error,
         })
         .catch(err => console.error('Failed to send tool response:', err));
+
+      result.afterResponseSent?.();
     };
 
     const handleMessage = async (event: WidgetEvent) => {
