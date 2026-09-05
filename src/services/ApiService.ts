@@ -39,10 +39,8 @@ export async function messageDispatch(
 
   const command: WidgetCommand = { type: `chat/${mode}`, request_id: requestId, content: message };
 
-  // send() addresses the chat id that connect() records, so connect first — on a cold first message there is none yet.
   const streamClient = StreamClient.getInstance();
-  if (!streamClient.isConnected()) {
-    await streamClient.connect(chatId);
-  }
+  await streamClient.connect(chatId);
+  await streamClient.waitUntilRegistered();
   await streamClient.send(command);
 }
