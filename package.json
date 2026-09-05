@@ -42,7 +42,7 @@
     "@orpc/contract": "^1.15.0",
     "@rrweb/record": "^2.1.1",
     "tailwind-merge": "^3.6.0",
-    "zod": "~4.4.3"
+    "zod": "~4.5.4"
   },
   "peerDependencies": {
     "react": "^19.2.3",
