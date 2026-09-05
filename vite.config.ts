@@ -4,61 +4,10 @@ import { cwd } from 'node:process';
 
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
-import { defineConfig, type UserConfig, type ViteDevServer } from 'vite';
+import { defineConfig, type ViteDevServer } from 'vite';
 
 const BUNDLE_FILE = 'widget.mjs';
 const ENTRY_FILE = 'src/index.tsx';
-
-const getBuildConfig = (options: { minify: boolean | 'terser'; outDir: string }): UserConfig => ({
-  mode: 'production',
-  resolve: {
-    alias: [
-      { find: '@', replacement: resolve(cwd(), 'src') },
-      { find: /^use-sync-external-store\/shim(?:\/with-selector)?$/, replacement: resolve(cwd(), 'src/react19.ts') },
-    ],
-  },
-  define: {
-    'process.env.NODE_ENV': '"production"',
-    'process.env': '{}',
-    'global.process': 'undefined',
-    process: 'undefined',
-  },
-  css: { devSourcemap: false },
-  build: {
-    outDir: options.outDir,
-    emptyOutDir: true,
-    sourcemap: true,
-    minify: options.minify,
-    target: 'esnext',
-    codeSplitting: false,
-    cssCodeSplit: false,
-    lib: {
-      entry: ENTRY_FILE,
-      formats: ['es'],
-      fileName: 'widget',
-    },
-    rolldownOptions: {
-      external: ['react', 'react-dom', 'react-dom/client', 'react/jsx-runtime'],
-      output: {
-        entryFileNames: BUNDLE_FILE,
-        format: 'es',
-      },
-    },
-    ...(options.minify === 'terser' && {
-      terserOptions: {
-        compress: {
-          drop_console: true,
-          drop_debugger: true,
-          pure_funcs: ['console.log', 'console.info', 'console.debug'],
-        },
-        format: {
-          comments: false,
-        },
-      },
-    }),
-  },
-  plugins: [react(), tailwindcss(), typescriptDeclarationPlugin()],
-});
 
 const typescriptDeclarationPlugin = () => {
   return {
@@ -80,7 +29,57 @@ export default defineConfig(({ command }) => {
   const isProduction = command === 'build';
 
   if (isProduction) {
-    return getBuildConfig({ minify: 'terser', outDir: 'dist' });
+    return {
+      mode: 'production',
+      resolve: {
+        alias: [
+          { find: '@', replacement: resolve(cwd(), 'src') },
+          {
+            find: /^use-sync-external-store\/shim(?:\/with-selector)?$/,
+            replacement: resolve(cwd(), 'src/react19.ts'),
+          },
+        ],
+      },
+      define: {
+        'process.env.NODE_ENV': '"production"',
+        'process.env': '{}',
+        'global.process': 'undefined',
+        process: 'undefined',
+      },
+      css: { devSourcemap: false },
+      build: {
+        outDir: 'dist',
+        emptyOutDir: true,
+        sourcemap: true,
+        minify: 'terser',
+        target: 'esnext',
+        codeSplitting: false,
+        cssCodeSplit: false,
+        lib: {
+          entry: ENTRY_FILE,
+          formats: ['es'],
+          fileName: 'widget',
+        },
+        rolldownOptions: {
+          external: ['react', 'react-dom', 'react-dom/client', 'react/jsx-runtime'],
+          output: {
+            entryFileNames: BUNDLE_FILE,
+            format: 'es',
+          },
+        },
+        terserOptions: {
+          compress: {
+            drop_console: true,
+            drop_debugger: true,
+            pure_funcs: ['console.log', 'console.info', 'console.debug'],
+          },
+          format: {
+            comments: false,
+          },
+        },
+      },
+      plugins: [react(), tailwindcss(), typescriptDeclarationPlugin()],
+    };
   }
 
   return {

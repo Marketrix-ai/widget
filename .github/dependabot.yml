@@ -19,6 +19,3 @@ updates:
     schedule:
       interval: 'weekly'
     target-branch: 'main'
-    # infra's reusable workflow is private and pinned to a branch Dependabot can't reach.
-    ignore:
-      - dependency-name: 'Marketrix-ai/infra/*'
