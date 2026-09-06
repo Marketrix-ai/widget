@@ -27,7 +27,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigateToChat, onChipClic
   };
 
   return (
-    <Stack height='full' overflow='hidden' id='view-home' role='tabpanel' aria-labelledby='tab-home'>
+    <Stack height='full' overflow='hidden'>
       <Stack grow overflowY='auto' padding='lg'>
         <Surface style={{ textAlign: 'center', paddingTop: '8px', paddingBottom: '16px' }}>
           <Text as='h2' size='lg' weight='semibold'>

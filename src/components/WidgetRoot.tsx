@@ -15,7 +15,7 @@ import { invalidSettingsMessage } from '../utils/validation';
 import { getCorner, isWidgetPosition } from '../utils/widgetPositioning';
 import { ErrorBoundary } from './base/ErrorBoundary';
 import { Surface } from './base/Surface';
-import { NotificationToast } from './blocks/NotificationToast';
+import { NotificationProvider, WidgetNotifications } from './blocks/Notifications';
 import { WidgetFab } from './blocks/WidgetFab';
 import { MessengerShell } from './navigation/MessengerShell';
 
@@ -97,31 +97,33 @@ export const WidgetRoot: React.FC<WidgetRootProps> = ({ config }) => {
         style={{ ...customStyles, ...(isPreviewMode && { width: '100%', height: '100%' }) }}
       >
         <PortalContainerContext value={portalContainer}>
-          {showProcessingFeedback && (
-            <Surface
-              data-screen-edge-glow
-              position='fixed'
-              inset='0'
-              style={{
-                boxShadow: `inset 0 0 22px 2px ${addOpacity(effectiveConfig.widget_accent_color, 0.72)}, inset 0 0 46px 10px ${addOpacity(effectiveConfig.widget_accent_color, 0.28)}`,
-                pointerEvents: 'none',
-                zIndex: LAYER_TOKENS.screenEdgeGlow,
-              }}
-            />
-          )}
+          <NotificationProvider
+            container={portalContainer}
+            offsetBottom={getCorner(widgetPosition).vertical === 'top' ? 20 : 90}
+          >
+            {showProcessingFeedback && (
+              <Surface
+                data-screen-edge-glow
+                position='fixed'
+                inset='0'
+                style={{
+                  boxShadow: `inset 0 0 22px 2px ${addOpacity(effectiveConfig.widget_accent_color, 0.72)}, inset 0 0 46px 10px ${addOpacity(effectiveConfig.widget_accent_color, 0.28)}`,
+                  pointerEvents: 'none',
+                  zIndex: LAYER_TOKENS.screenEdgeGlow,
+                }}
+              />
+            )}
 
-          <ErrorBoundary label='Widget'>
-            <MessengerShell />
-          </ErrorBoundary>
+            <ErrorBoundary label='Widget'>
+              <MessengerShell />
+            </ErrorBoundary>
 
-          <WidgetFab onPositionCommit={handlePositionChange} />
+            <WidgetFab onPositionCommit={handlePositionChange} />
 
-          {state.error && (
-            <NotificationToast
-              tone='error'
-              title={state.error}
-              onDismiss={() => actions.setError(undefined)}
-              // Offered only when it can achieve something, and it now reconnects — it used to be
+            <WidgetNotifications
+              error={state.error}
+              onClearError={() => actions.setError(undefined)}
+              // Offered only when it can achieve something, and it reconnects — it used to be
               // byte-identical to onDismiss, so the one error where reconnecting IS the remedy showed a
               // Retry button that only hid the toast.
               {...(streamClient.canReconnect() && {
@@ -130,19 +132,11 @@ export const WidgetRoot: React.FC<WidgetRootProps> = ({ config }) => {
                   streamClient.reconnectNow();
                 },
               })}
-              position={getCorner(widgetPosition).vertical === 'top' ? 'bottom-center' : 'above-fab'}
+              greeting={showGreeting && !state.error ? config.widget_greeting : undefined}
+              greetingBody={config.widget_body}
+              onGreetingDismiss={() => setShowGreeting(false)}
             />
-          )}
-
-          {showGreeting && !state.error && config.widget_greeting && (
-            <NotificationToast
-              tone='info'
-              title={config.widget_greeting}
-              body={config.widget_body}
-              onDismiss={() => setShowGreeting(false)}
-              position='bottom-center'
-            />
-          )}
+          </NotificationProvider>
         </PortalContainerContext>
       </Surface>
     </WidgetConfigContext>

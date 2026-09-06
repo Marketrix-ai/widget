@@ -78,8 +78,8 @@ const DEPENDENCY_BUDGETS = {
   // `.partial()`, `.omit()`, `.passthrough()`), so an alias builds green and then throws
   // `.optional is not a function` at module load in the host page.
   zod: 95_000,
-  '@base-ui/react': 47_000, // 42,210 (10.7%) — Dialog, plus Button
-  '@base-ui/utils': 13_000, // 11,307
+  '@base-ui/react': 82_000, // 74,739 (19.1%) — Dialog, Button, Tabs and Toast
+  '@base-ui/utils': 13_000, // 11,637
   '@orpc/client': 11_000, // 9,500
   '@orpc/standard-server-fetch': 4_100, // 3,693
   '@orpc/standard-server': 4_000, // 3,578

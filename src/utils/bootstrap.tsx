@@ -1,7 +1,7 @@
 import React from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 
-import { NotificationToast } from '../components/blocks/NotificationToast';
+import { NotificationProvider, WidgetNotifications } from '../components/blocks/Notifications';
 import { WidgetRoot } from '../components/WidgetRoot';
 import { WidgetProviders } from '../context/WidgetProviders';
 import type { NotificationTone } from '../design-system/component-tokens';
@@ -95,7 +95,15 @@ export const showHostPageNotice = (message: string, tone: NotificationTone = 'ne
   noticeRoot = createRoot(mountEl);
   noticeRoot.render(
     <React.StrictMode>
-      <NotificationToast tone={tone} title={message} onDismiss={hideHostPageNotice} />
+      {/* Its own provider: this root is a separate shadow tree mounted before the widget exists. */}
+      <NotificationProvider container={mountEl}>
+        <WidgetNotifications
+          error={tone === 'error' ? message : undefined}
+          onClearError={hideHostPageNotice}
+          greeting={tone === 'error' ? undefined : message}
+          onGreetingDismiss={hideHostPageNotice}
+        />
+      </NotificationProvider>
     </React.StrictMode>,
   );
 };

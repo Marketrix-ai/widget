@@ -89,7 +89,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
   };
 
   return (
-    <Stack height='full' id='view-chat' role='tabpanel' aria-labelledby='tab-chat'>
+    <Stack height='full'>
       {showScreenAccessDialog && (
         <WidgetDialog
           open={showScreenAccessDialog}
@@ -99,6 +99,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
           onConfirm={handleScreenAccessDialogAllow}
           confirmLabel='Yes'
           cancelLabel='No'
+          finalFocusRef={messageInputRef}
         />
       )}
 
