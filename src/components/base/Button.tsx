@@ -9,7 +9,6 @@ type ButtonSize = 'sm' | 'md';
 type ButtonShape = 'default' | 'theme' | 'pill';
 
 export interface ButtonProps extends ComponentPropsWithRef<'button'> {
-  active?: boolean;
   elevation?: ShadowToken;
   size?: ButtonSize;
   shape?: ButtonShape;
@@ -25,7 +24,6 @@ const SHAPE_RADIUS: Record<ButtonShape, string> = {
 };
 
 export function Button({
-  active = false,
   className,
   disabled,
   elevation,
@@ -44,7 +42,6 @@ export function Button({
       {...props}
       ref={ref}
       className={className ? `mtx-button ${className}` : 'mtx-button'}
-      data-active={active ? 'true' : 'false'}
       data-disabled={disabled ? 'true' : 'false'}
       data-full={full ? 'true' : 'false'}
       data-size={size}

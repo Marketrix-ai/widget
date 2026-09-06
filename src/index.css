@@ -33,7 +33,12 @@
 
 /* Scoped reset. UA defaults DO apply inside a shadow root, so the elements this widget actually
    renders still need normalizing — but only those; there is no table, list, form control or rich
-   text anywhere in the tree. */
+   text anywhere in the tree.
+
+   Every element-targeting rule is wrapped in :where() so the whole reset weighs ZERO. Without it a
+   descendant selector like `[data-marketrix-widget] button` scores (0,1,1) and silently outranks a
+   plain component class like `.mtx-button` (0,1,0) — which is exactly how `font: inherit` flattened
+   every button to weight 400 and `border-radius: 0` un-rounded .mtx-icon-button. */
 *,
 *::before,
 *::after {
@@ -53,41 +58,33 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-[data-marketrix-widget] h1,
-[data-marketrix-widget] h2,
-[data-marketrix-widget] h3 {
+:where([data-marketrix-widget]) :where(h1, h2, h3) {
   font-size: inherit;
   font-weight: inherit;
 }
 
-[data-marketrix-widget] img,
-[data-marketrix-widget] svg,
-[data-marketrix-widget] video,
-[data-marketrix-widget] canvas {
+:where([data-marketrix-widget]) :where(img, svg, video, canvas) {
   display: block;
   vertical-align: middle;
 }
 
-[data-marketrix-widget] img,
-[data-marketrix-widget] video {
+:where([data-marketrix-widget]) :where(img, video) {
   max-width: 100%;
   height: auto;
 }
 
-[data-marketrix-widget] button,
-[data-marketrix-widget] input,
-[data-marketrix-widget] textarea {
+:where([data-marketrix-widget]) :where(button, input, textarea) {
   font: inherit;
   color: inherit;
   background: transparent;
   border-radius: 0;
 }
 
-[data-marketrix-widget] button {
+:where([data-marketrix-widget]) :where(button) {
   appearance: button;
 }
 
-[data-marketrix-widget] textarea {
+:where([data-marketrix-widget]) :where(textarea) {
   resize: vertical;
 }
 
@@ -217,8 +214,9 @@
   color: var(--foreground);
 }
 
-/* Tabs.Tab owns selection, so it is `data-selected` here and not the Button's own `data-active`. */
-.mtx-button[data-variant='tab'][data-selected] {
+/* Tabs.Tab exposes selection as `aria-selected` — it emits no `data-selected`, and it OVERWRITES a
+   `data-active` of its own onto the element, so neither of those can carry this. */
+.mtx-button[data-variant='tab'][aria-selected='true'] {
   color: var(--primary);
   font-weight: 600;
 }
@@ -587,7 +585,7 @@
   opacity: 0;
 }
 
-[data-selected] > .mtx-tab-underline {
+[aria-selected='true'] > .mtx-tab-underline {
   opacity: 1;
 }
 
