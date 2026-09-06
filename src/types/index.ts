@@ -46,6 +46,14 @@ export interface MessagePart {
   streaming?: boolean;
 }
 
+/** A message's text is the text it shows: its text parts joined. `content` is this value, kept by the
+ *  writers, so a reader never has to know which of the two fields is authoritative. */
+export const messageText = (parts: MessagePart[]): string =>
+  parts
+    .filter(part => part.type === 'text')
+    .map(part => part.content)
+    .join('\n');
+
 export type WidgetView = 'home' | 'chat';
 
 export interface WidgetState {
