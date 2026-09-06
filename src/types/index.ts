@@ -50,7 +50,7 @@ export type WidgetView = 'home' | 'chat';
 
 export interface WidgetState {
   isOpen: boolean;
-  isLoading: boolean;
+  isAwaitingReply: boolean;
   messages: ChatMessage[];
   currentMode: InstructionType;
   error?: string;

@@ -70,7 +70,7 @@ export class RrwebSessionRecorder {
           command: { type: 'rrweb/events', rrweb_session_id: this.sessionId, events },
         });
       } catch (error) {
-        this.events = events.concat(this.events).slice(-MAX_BUFFERED_EVENTS);
+        this.events = events.concat(this.events).slice(0, MAX_BUFFERED_EVENTS);
         console.error('Failed to record session events:', error);
       }
     });

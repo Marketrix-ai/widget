@@ -78,7 +78,7 @@ export const WidgetRoot: React.FC<WidgetRootProps> = ({ config }) => {
     widget_position_z_index: effectiveWidgetZIndex,
   } as ValidWidgetConfig;
 
-  const showProcessingFeedback = state.isLoading || state.isTaskRunning;
+  const showProcessingFeedback = state.isAwaitingReply || state.isTaskRunning;
   const customStyles = semanticTokensToCssCustomProperties(createSemanticTokens(config)) as React.CSSProperties;
 
   return (

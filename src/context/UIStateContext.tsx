@@ -6,7 +6,6 @@ export interface UIState {
   isOpen: boolean;
   activeView: WidgetView;
   currentMode: InstructionType;
-  isLoading: boolean;
   error?: string;
 }
 
@@ -15,7 +14,6 @@ export interface UIStateActions {
   toggleWidget: () => void;
   closeWidget: () => void;
   setMode: (mode: InstructionType) => void;
-  setLoading: (loading: boolean) => void;
   setError: (error: string | undefined) => void;
   applyState: (payload: Partial<UIState>) => void;
 }
@@ -32,7 +30,6 @@ export const UIStateProvider: React.FC<{ children: React.ReactNode }> = ({ child
     isOpen: false,
     activeView: 'home',
     currentMode: 'tell',
-    isLoading: false,
   });
 
   const uiActions = useMemo<UIStateActions>(
@@ -44,8 +41,6 @@ export const UIStateProvider: React.FC<{ children: React.ReactNode }> = ({ child
       closeWidget: () => setUIState(prev => ({ ...prev, isOpen: false })),
 
       setMode: (mode: InstructionType) => setUIState(prev => ({ ...prev, currentMode: mode })),
-
-      setLoading: (loading: boolean) => setUIState(prev => ({ ...prev, isLoading: loading })),
 
       setError: (error: string | undefined) => setUIState(prev => ({ ...prev, error })),
 

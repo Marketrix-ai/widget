@@ -8,8 +8,6 @@ import { Button } from '../base/Button';
 import { Flex } from '../base/Flex';
 import { Icon } from '../base/Icon';
 import { IconButton } from '../base/IconButton';
-import { Spinner } from '../base/Spinner';
-import { Stack } from '../base/Stack';
 import { Surface } from '../base/Surface';
 import { Text } from '../base/Text';
 import { MessageItem } from './MessageItem';
@@ -29,8 +27,8 @@ interface MessageListProps {
 
 export const MessageList = ({ messagesEndRef, onScreenAccessAllow, onScreenAccessDeny }: MessageListProps) => {
   const widgetConfig = useWidgetConfig();
-  const { state: widgetState, actions } = useWidget();
-  const { messages } = widgetState;
+  const { state, actions } = useWidget();
+  const { messages } = state;
   const isPreviewMode = widgetConfig.isPreviewMode ?? false;
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [showScrollBottom, setShowScrollBottom] = useState(false);
@@ -114,15 +112,6 @@ export const MessageList = ({ messagesEndRef, onScreenAccessAllow, onScreenAcces
           scrollbarWidth: 'thin',
         }}
       >
-        {messages.length === 0 && widgetState.isLoading && (
-          <Stack align='center' justify='center' gap='lg' paddingY='2xl' paddingX='xl' role='status' aria-live='polite'>
-            <Spinner size='lg' />
-            <Text as='p' size='sm' align='center'>
-              Connecting…
-            </Text>
-          </Stack>
-        )}
-
         {allMessages.map((message: ChatMessage, index: number) => (
           <MessageItem
             key={`message-${message.id}-${index}`}

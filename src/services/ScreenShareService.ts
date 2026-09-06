@@ -11,7 +11,7 @@ function getLiveStream(): MediaStream | null {
 }
 
 export async function startScreenShare(): Promise<MediaStream> {
-  if (storageService.getCredentialedConfig()?.use_screenshare === false) {
+  if (storageService.getContext().config?.use_screenshare === false) {
     throw new Error('Screen sharing is disabled for this widget');
   }
 

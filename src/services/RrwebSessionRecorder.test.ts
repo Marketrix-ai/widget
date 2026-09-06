@@ -1,4 +1,5 @@
 import { record } from '@rrweb/record';
+import { EventType } from '@rrweb/types';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { sdk } from '../sdk';
@@ -29,20 +30,24 @@ const startRecorder = async (): Promise<{ recorder: RrwebSessionRecorder; emit: 
 };
 
 describe('a flush the api rejects', () => {
-  it('requeues the batch newest-first up to a cap, instead of growing for the life of the page', async () => {
+  it('caps the buffer without discarding the Meta and FullSnapshot every later event is replayed against', async () => {
     vi.useFakeTimers();
     const { emit } = await startRecorder();
     mockSdk.widgetMessagePost.mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce(undefined);
 
-    for (let i = 0; i < 20_005; i++) emit({ type: 3, data: {}, timestamp: i });
+    emit({ type: EventType.Meta, data: {}, timestamp: 0 });
+    emit({ type: EventType.FullSnapshot, data: {}, timestamp: 1 });
+    for (let i = 2; i < 20_005; i++) emit({ type: EventType.IncrementalSnapshot, data: {}, timestamp: i });
     await vi.advanceTimersByTimeAsync(500);
 
-    emit({ type: 3, data: {}, timestamp: 99_999 });
+    emit({ type: EventType.IncrementalSnapshot, data: {}, timestamp: 99_999 });
     await vi.advanceTimersByTimeAsync(500);
 
-    const posted = mockSdk.widgetMessagePost.mock.lastCall?.[0].command as { events: Array<{ timestamp: number }> };
+    const posted = mockSdk.widgetMessagePost.mock.lastCall?.[0].command as {
+      events: Array<{ type: number; timestamp: number }>;
+    };
     expect(posted.events).toHaveLength(20_001);
-    expect(posted.events[0].timestamp).toBe(5);
+    expect(posted.events.slice(0, 2).map(event => event.type)).toEqual([EventType.Meta, EventType.FullSnapshot]);
     expect(posted.events.at(-1)?.timestamp).toBe(99_999);
     vi.useRealTimers();
   });

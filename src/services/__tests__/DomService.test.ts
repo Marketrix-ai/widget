@@ -5,7 +5,7 @@ import { DomService } from '../DomService';
 const interactable = (html: string): DomService => {
   document.body.innerHTML = html;
   const service = new DomService();
-  service.getSnapshotHtml();
+  service.reindexAndSnapshot();
   return service;
 };
 
@@ -55,7 +55,7 @@ describe('a data-id lands on the element the index really points at', () => {
     ].join('');
     const service = new DomService();
 
-    const snapshot = new DOMParser().parseFromString(service.getSnapshotHtml(), 'text/html');
+    const snapshot = new DOMParser().parseFromString(service.reindexAndSnapshot(), 'text/html');
     const tagged = [...snapshot.querySelectorAll('[data-id]')];
 
     expect(tagged).toHaveLength(2);

@@ -30,7 +30,7 @@ export const WidgetFab: React.FC<WidgetFabProps> = ({ onDrag }) => {
   const taskRunning = state.isTaskRunning;
   const error = !!state.error;
 
-  const showProcessingGlow = !open && (state.isLoading || taskRunning);
+  const showProcessingGlow = !open && (state.isAwaitingReply || taskRunning);
   const showStopControl = !open && taskRunning;
   const glowClass = error ? 'marketrix-widget-button-error-glow' : 'marketrix-widget-button-processing-glow';
   const activityRingClass = error

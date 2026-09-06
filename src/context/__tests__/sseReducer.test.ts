@@ -184,15 +184,21 @@ describe('reduceSse — tool/call', () => {
     expect(progressParts[0].status).toBe('in_progress');
   });
 
+  it('announces a DOM read as reading the page — nothing but screen sharing views the visitor screen', () => {
+    const result = reduceSse(runningState(), toolCall({ browser_tool: 'get_html', explanation: '' }), 'do');
+    const line = (result.state.messages[0].parts ?? []).find(part => part.type === 'progress');
+    expect(line?.content).toBe('Reading the page');
+    expect(line?.content).not.toMatch(/screen/i);
+  });
+
   it('falls back to event.mode then "do" when currentMode is absent on the call', () => {
     const result = reduceSse(runningState(), toolCall({ mode: 'show' }), 'show');
-    const effect = result.effects[0];
-    expect(effect.type === 'executeTool' && effect.mode).toBe('show');
+    expect(result.effects[0].mode).toBe('show');
   });
 });
 
 describe('reduceSse — chat/response', () => {
-  it('resolves the matching placeholder and turns off loading', () => {
+  it('resolves the matching placeholder', () => {
     const state: SseState = {
       messages: [agentMessage({ id: 'req-1', content: '', parts: [] })],
       task: { isTaskRunning: false },
@@ -205,7 +211,7 @@ describe('reduceSse — chat/response', () => {
     expect(msg.isPlaceholder).toBe(false);
     expect(msg.placeholderState).toBeUndefined();
     expect(msg.parts?.at(-1)).toEqual({ type: 'text', content: 'Here you go' });
-    expect(result.effects).toContainEqual({ type: 'setLoading', value: false });
+    expect(result.effects).toEqual([]);
   });
 });
 
@@ -222,7 +228,6 @@ describe('reduceSse — chat/delta', () => {
     expect(msg.content).toBe('Hello');
     expect(msg.isPlaceholder).toBe(false);
     expect(msg.parts).toEqual([{ type: 'text', content: 'Hello', streaming: true }]);
-    // Still streaming — loading stays on until the final chat/response.
     expect(second.effects).toEqual([]);
   });
 
@@ -241,12 +246,12 @@ describe('reduceSse — chat/delta', () => {
     const msg = final.state.messages[0];
     expect(msg.content).toBe('Hello world');
     expect(msg.parts).toEqual([{ type: 'text', content: 'Hello world' }]);
-    expect(final.effects).toContainEqual({ type: 'setLoading', value: false });
+    expect(final.effects).toEqual([]);
   });
 });
 
 describe('reduceSse — chat/error', () => {
-  it('writes an error message into the matching placeholder and turns off loading', () => {
+  it('writes an error message into the matching placeholder', () => {
     const state: SseState = {
       messages: [agentMessage({ id: 'req-2' })],
       task: { isTaskRunning: false },
@@ -255,7 +260,7 @@ describe('reduceSse — chat/error', () => {
     const result = reduceSse(state, event, 'tell');
     expect(result.state.messages[0].content).toBe('Error: boom');
     expect(result.state.messages[0].isPlaceholder).toBe(false);
-    expect(result.effects).toEqual([{ type: 'setLoading', value: false }]);
+    expect(result.effects).toEqual([]);
   });
 });
 
