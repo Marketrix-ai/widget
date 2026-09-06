@@ -1,10 +1,8 @@
 import type { ComponentPropsWithRef } from 'react';
 
-import { cn } from '@/lib/utils';
-
 import { getElevationStyle, type RadiusToken } from '../../design-system/component-tokens';
 import type { ShadowToken } from '../../design-system/shadows';
-import { resolveLayoutClasses } from './layoutProps';
+import { resolveLayoutStyle } from './layoutProps';
 
 type AvatarSize = 'sm' | 'md' | 'lg';
 
@@ -17,33 +15,27 @@ export interface AvatarProps extends Omit<ComponentPropsWithRef<'img'>, 'size'> 
   rounded?: boolean | 'full' | 'theme' | RadiusToken;
 }
 
-const sizeStyles: Record<AvatarSize, string> = {
-  sm: 'w-5 h-5',
-  md: 'w-8 h-8',
-  lg: 'w-12 h-12',
-};
+const SIZE: Record<AvatarSize, number> = { sm: 20, md: 32, lg: 48 };
 
 export function Avatar(props: AvatarProps) {
   const { src, alt, elevation, fit = 'contain', size = 'md', rounded, className, style, ref, ...imgProps } = props;
-  const isPreset = typeof size === 'string';
-  const sizeClass = isPreset ? sizeStyles[size] : undefined;
-  const sizeStyle = !isPreset ? { width: size, height: size, ...style } : style;
-  const roundedClass = resolveLayoutClasses({ rounded });
+  const resolved = typeof size === 'string' ? SIZE[size] : size;
 
   return (
     <img
       {...imgProps}
       ref={ref}
       alt={alt}
-      className={cn(
-        'flex-shrink-0',
-        fit === 'contain' ? 'object-contain' : 'object-cover',
-        sizeClass,
-        roundedClass,
-        className,
-      )}
+      className={className ? `mtx-avatar ${className}` : 'mtx-avatar'}
       src={src}
-      style={{ ...getElevationStyle(elevation), ...sizeStyle }}
+      style={{
+        objectFit: fit,
+        width: resolved,
+        height: resolved,
+        ...resolveLayoutStyle({ rounded }),
+        ...getElevationStyle(elevation),
+        ...style,
+      }}
     />
   );
 }

@@ -1,8 +1,6 @@
 import type { ComponentPropsWithRef } from 'react';
 
-import { cn } from '@/lib/utils';
-
-import { radiusClasses, type TextTone, textToneClasses } from '../../design-system/component-tokens';
+import { TEXT_TONE, type TextTone } from '../../design-system/component-tokens';
 
 type IconButtonVariant = 'primary' | 'secondary' | 'ghost';
 type IconButtonSize = 'xs' | 'sm';
@@ -12,20 +10,7 @@ export interface IconButtonProps extends ComponentPropsWithRef<'button'> {
   size?: IconButtonSize;
   tone?: TextTone;
   label: string;
-  /** @internal blocks/ only */
-  className?: string;
 }
-
-const variantStyles: Record<IconButtonVariant, string> = {
-  primary: 'bg-primary text-primary-foreground hover:bg-primary-hover',
-  secondary: 'bg-secondary-bg text-foreground hover:bg-secondary-hover',
-  ghost: 'bg-transparent text-foreground opacity-60 hover:opacity-100',
-};
-
-const sizeStyles: Record<IconButtonSize, string> = {
-  xs: 'w-5 h-5 min-w-5',
-  sm: 'w-7 h-7 min-w-7',
-};
 
 export function IconButton({
   variant = 'ghost',
@@ -33,7 +18,6 @@ export function IconButton({
   tone,
   label,
   disabled,
-  className: userClassName,
   children,
   style,
   ref,
@@ -46,16 +30,11 @@ export function IconButton({
       type='button'
       disabled={disabled}
       aria-label={label}
-      className={cn(
-        'inline-flex items-center justify-center flex-shrink-0 border-none cursor-pointer transition-all',
-        radiusClasses.circle,
-        variantStyles[variant],
-        tone && textToneClasses[tone],
-        sizeStyles[size],
-        disabled && 'opacity-50 cursor-not-allowed pointer-events-none',
-        userClassName,
-      )}
-      style={style}
+      className='mtx-icon-button'
+      data-disabled={disabled ? 'true' : 'false'}
+      data-size={size}
+      data-variant={variant}
+      style={tone ? { color: TEXT_TONE[tone], ...style } : style}
     >
       {children}
     </button>

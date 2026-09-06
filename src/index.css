@@ -1,7 +1,7 @@
-@import 'tailwindcss';
-
-/* resolveLayoutClasses builds these by interpolation, which Tailwind's source scanner cannot see. */
-@source inline("{p,px,py,pt,pb,gap,inset}-{0,0.5,1,1.5,2,3,4,6}");
+/* The widget mounts into a CLOSED shadow root, so this file is the entire style surface — nothing
+   cascades in from the host page and nothing here escapes. Layout and one-off values are inline
+   styles from `resolveLayoutStyle`; this file carries what a style attribute cannot express:
+   pseudo-classes, pseudo-elements, keyframes, and the variant matrices keyed on `data-*`. */
 
 /* :host so vars cascade inside the closed Shadow DOM; :root covers non-shadow contexts (dev preview, tests). */
 :root,
@@ -27,103 +27,77 @@
   --radius: 0.625rem;
   --shadow-sm: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
   --shadow-lg: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 4px 6px -1px hsl(0 0% 0% / 0.1);
-  --spacing: 0.25rem;
   --duration-animation: 300ms;
   --duration-fade: 200ms;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-border: var(--border);
-  --color-ring: var(--ring);
-  --color-foreground-muted: var(--foreground-muted);
-  --color-foreground-faint: var(--foreground-faint);
-  --color-primary-hover: var(--primary-hover);
-  --color-secondary-bg: var(--secondary-bg);
-  --color-secondary-hover: var(--secondary-hover);
-
-  --font-sans: var(--font-sans);
-
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-
-  --shadow-sm: var(--shadow-sm);
-  --shadow-lg: var(--shadow-lg);
-
-  --animate-dialog-overlay-in: dialog-overlay-in var(--duration-fade) ease-out;
-  --animate-dialog-content-in: dialog-content-in var(--duration-animation) ease-out;
-  --animate-fade-in: fade-in 0.5s ease-out;
-}
-
-@layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
-}
-
-/* On the widget root, not :root: the tenant durations are inline styles on that element, and a shadow-tree
-   stylesheet's :root matches nothing at all. */
-@media (prefers-reduced-motion: reduce) {
-  [data-marketrix-widget] {
-    --duration-animation: 0ms !important;
-    --duration-fade: 0ms !important;
-  }
-}
-
-@keyframes dialog-overlay-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes dialog-content-in {
-  from {
-    opacity: 0;
-    scale: 0.96;
-  }
-  to {
-    opacity: 1;
-    scale: 1;
-  }
-}
-
-@keyframes fade-in {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+/* Scoped reset. UA defaults DO apply inside a shadow root, so the elements this widget actually
+   renders still need normalizing — but only those; there is no table, list, form control or rich
+   text anywhere in the tree. */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  border: 0 solid var(--border);
 }
 
 :host,
 [data-marketrix-widget] {
   font-family: var(--font-sans);
+  line-height: 1.5;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+[data-marketrix-widget] h1,
+[data-marketrix-widget] h2,
+[data-marketrix-widget] h3 {
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+[data-marketrix-widget] img,
+[data-marketrix-widget] svg,
+[data-marketrix-widget] video,
+[data-marketrix-widget] canvas {
+  display: block;
+  vertical-align: middle;
+}
+
+[data-marketrix-widget] img,
+[data-marketrix-widget] video {
+  max-width: 100%;
+  height: auto;
+}
+
+[data-marketrix-widget] button,
+[data-marketrix-widget] input,
+[data-marketrix-widget] textarea {
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border-radius: 0;
+}
+
+[data-marketrix-widget] button {
+  appearance: button;
+}
+
+[data-marketrix-widget] textarea {
+  resize: vertical;
+}
+
+[data-marketrix-widget] [hidden] {
+  display: none !important;
 }
 
 [data-marketrix-widget],
 [data-marketrix-widget] * {
   pointer-events: auto;
-  box-sizing: border-box;
   transition:
     color 0.2s ease-in-out,
     background-color 0.2s ease-in-out,
@@ -133,32 +107,490 @@
     transform 0.2s ease-in-out;
 }
 
-[data-marketrix-widget] button,
-[data-marketrix-widget] input,
-[data-marketrix-widget] textarea,
-[data-marketrix-widget] select {
-  font: inherit;
-}
-
 /* !important beats the blanket transition above. */
 [data-resizing='true'],
 [data-resizing='true'] * {
   transition: none !important;
 }
 
-@keyframes marketrix-screen-edge-pulse {
-  0%,
-  100% {
-    opacity: 0.55;
-  }
-  50% {
-    opacity: 1;
+/* On the widget root, not :root: the tenant durations are inline styles on that element, and a
+   shadow-tree stylesheet's :root matches nothing at all. */
+@media (prefers-reduced-motion: reduce) {
+  [data-marketrix-widget] {
+    --duration-animation: 0ms !important;
+    --duration-fade: 0ms !important;
   }
 }
 
-[data-screen-edge-glow] {
-  animation: marketrix-screen-edge-pulse 1.6s ease-in-out infinite;
+/* ---- Button ---------------------------------------------------------------------------------- */
+
+.mtx-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.2s ease-in-out;
 }
+
+.mtx-button:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.mtx-button[data-size='sm'] {
+  padding: 4px 8px;
+  font-size: 0.75rem;
+  min-height: 28px;
+}
+
+.mtx-button[data-size='md'] {
+  padding: 8px 16px;
+  font-size: 0.875rem;
+  min-height: 36px;
+}
+
+.mtx-button[data-variant='primary'] {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.mtx-button[data-variant='primary']:hover {
+  background: color-mix(in oklab, var(--primary) 90%, transparent);
+}
+
+.mtx-button[data-variant='secondary'] {
+  background: var(--secondary);
+  color: var(--secondary-foreground);
+}
+
+.mtx-button[data-variant='secondary']:hover {
+  background: color-mix(in oklab, var(--secondary) 80%, transparent);
+}
+
+.mtx-button[data-variant='ghost'] {
+  background: transparent;
+  color: var(--foreground);
+  border-color: var(--border);
+}
+
+.mtx-button[data-variant='ghost']:hover {
+  background: var(--border);
+}
+
+.mtx-button[data-variant='chip'] {
+  background: var(--secondary-bg);
+  color: var(--foreground);
+}
+
+.mtx-button[data-variant='chip']:hover {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border-color: var(--primary);
+}
+
+/* `bare` and `tab` opt out of chrome entirely — the reason the old class build needed twMerge to
+   undo the size padding it had already applied. */
+.mtx-button[data-variant='bare'],
+.mtx-button[data-variant='tab'] {
+  background: transparent;
+  border-color: transparent;
+  padding: 0;
+  min-height: 0;
+}
+
+.mtx-button[data-variant='bare'] {
+  color: inherit;
+}
+
+.mtx-button[data-variant='tab'] {
+  color: var(--foreground-muted);
+  height: 100%;
+  min-width: 0;
+  flex: 1 1 0%;
+}
+
+.mtx-button[data-variant='tab']:hover {
+  color: var(--foreground);
+}
+
+.mtx-button[data-variant='tab'][data-active='true'] {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.mtx-button[data-stacked='true'] {
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mtx-button[data-full='true'] {
+  width: 100%;
+}
+
+.mtx-button[data-disabled='true'] {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* ---- IconButton ------------------------------------------------------------------------------ */
+
+.mtx-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: none;
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+}
+
+.mtx-icon-button[data-size='xs'] {
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+}
+
+.mtx-icon-button[data-size='sm'] {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+}
+
+.mtx-icon-button[data-variant='primary'] {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.mtx-icon-button[data-variant='primary']:hover {
+  background: var(--primary-hover);
+}
+
+.mtx-icon-button[data-variant='secondary'] {
+  background: var(--secondary-bg);
+  color: var(--foreground);
+}
+
+.mtx-icon-button[data-variant='secondary']:hover {
+  background: var(--secondary-hover);
+}
+
+.mtx-icon-button[data-variant='ghost'] {
+  background: transparent;
+  color: var(--foreground);
+  opacity: 0.6;
+}
+
+.mtx-icon-button[data-variant='ghost']:hover {
+  opacity: 1;
+}
+
+/* After the variant rules so a disabled ghost reads 0.5, not 0.6. */
+.mtx-icon-button[data-disabled='true'] {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* ---- Primitives ------------------------------------------------------------------------------ */
+
+.mtx-icon {
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.mtx-avatar {
+  flex-shrink: 0;
+}
+
+.mtx-spinner-ring {
+  border-style: solid;
+  border-color: currentColor;
+  border-top-color: transparent;
+  border-radius: 9999px;
+  flex-shrink: 0;
+  animation: mtx-spin 1s linear infinite;
+}
+
+.mtx-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* ---- Composer -------------------------------------------------------------------------------- */
+
+.mtx-composer:focus-within {
+  border-color: var(--foreground-faint);
+}
+
+.mtx-composer-input {
+  display: block;
+  width: 100%;
+  min-height: 0;
+  resize: none;
+  border: none;
+  background: transparent;
+  padding-left: 12px;
+  padding-right: 12px;
+  font-size: 0.875rem;
+  color: var(--foreground);
+}
+
+.mtx-composer-input::placeholder {
+  color: var(--foreground-faint);
+}
+
+.mtx-composer-input:focus {
+  outline: none;
+}
+
+.mtx-composer-input:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.mtx-mode-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  border: none;
+  border-radius: 9999px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  background: var(--secondary-bg);
+  color: var(--foreground-muted);
+  transition: all 0.2s ease-in-out;
+}
+
+.mtx-mode-chip[data-active='true'] {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ---- Dialog ---------------------------------------------------------------------------------- */
+
+.mtx-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgb(0 0 0 / 0.2);
+  animation: mtx-dialog-overlay-in var(--duration-fade) ease-out;
+}
+
+.mtx-dialog-popup {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 24rem;
+  max-height: 85vh;
+  overflow: auto;
+  border-radius: var(--radius);
+  background: var(--card);
+  padding: 16px;
+  animation: mtx-dialog-content-in var(--duration-animation) ease-out;
+}
+
+.mtx-dialog-title {
+  margin-bottom: 4px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.mtx-dialog-description {
+  margin-bottom: 16px;
+  font-size: 0.875rem;
+  line-height: 1.625;
+  color: var(--foreground-muted);
+}
+
+/* ---- Launcher -------------------------------------------------------------------------------- */
+
+.mtx-fab-anchor {
+  position: fixed;
+}
+
+.mtx-fab-anchor[data-preview='true'] {
+  position: absolute;
+}
+
+.mtx-fab-anchor[data-animated='true'] {
+  transition: transform var(--duration-animation) ease-in-out;
+}
+
+.mtx-fab {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  overflow: visible;
+  transition: all var(--duration-animation) ease-in-out;
+}
+
+.mtx-fab[data-open='false']:hover {
+  transform: scale(1.1);
+}
+
+.mtx-fab[data-open='true'] {
+  transform: scale(0);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.mtx-fab-trigger {
+  position: relative;
+  z-index: 10;
+  width: 56px;
+  height: 56px;
+  min-width: 56px;
+}
+
+.mtx-fab-center {
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.mtx-fab-badge {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  overflow: hidden;
+  transition:
+    transform 167ms cubic-bezier(0.33, 0, 0, 1),
+    opacity 167ms cubic-bezier(0.33, 0, 0, 1),
+    background-color 167ms cubic-bezier(0.33, 0, 0, 1);
+  animation: mtx-launcher-entrance 0.25s ease-out forwards;
+}
+
+.mtx-fab-badge:hover {
+  transform: scale(1.1);
+  transition-duration: 250ms;
+}
+
+.mtx-fab-badge:active {
+  transform: scale(0.85);
+  transition-duration: 134ms;
+  transition-timing-function: cubic-bezier(0.45, 0, 0.2, 1);
+}
+
+.mtx-fab-icon-layer {
+  position: absolute;
+  inset: 0;
+  align-items: center;
+  justify-content: center;
+}
+
+.mtx-fab-avatar {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.mtx-fab-chevron {
+  position: relative;
+  z-index: 10;
+  color: var(--foreground);
+  pointer-events: none;
+}
+
+/* Revealed by hovering or focusing anywhere in the launcher, so it cannot be a :hover on itself. */
+.mtx-fab-stop {
+  position: absolute;
+  top: 50%;
+  z-index: 20;
+  transform: translateY(-50%);
+  border-radius: 9999px;
+  border: 1px solid rgb(255 255 255 / 0.25);
+  background: #111827;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+  color: #fff;
+  box-shadow: var(--shadow-lg);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 150ms ease-in-out;
+}
+
+.mtx-fab-stop[data-side='left'] {
+  left: 100%;
+  margin-left: 8px;
+}
+
+.mtx-fab-stop[data-side='right'] {
+  right: 100%;
+  margin-right: 8px;
+}
+
+.mtx-fab:hover .mtx-fab-stop,
+.mtx-fab:focus-within .mtx-fab-stop {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* ---- Tab bar and screen-share indicator ------------------------------------------------------ */
+
+.mtx-tab-underline {
+  display: block;
+  height: 2px;
+  width: 100%;
+  border-radius: 9999px;
+  background: var(--primary);
+}
+
+.mtx-screenshare-dot {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  display: inline-flex;
+  height: 6px;
+  width: 6px;
+}
+
+.mtx-screenshare-dot-ping {
+  position: absolute;
+  display: inline-flex;
+  height: 100%;
+  width: 100%;
+  border-radius: 9999px;
+  background: currentColor;
+  opacity: 0.75;
+  animation: mtx-ping 1s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+.mtx-screenshare-dot-core {
+  position: relative;
+  display: inline-flex;
+  height: 6px;
+  width: 6px;
+  border-radius: 9999px;
+  background: currentColor;
+}
+
+/* ---- Activity glow and ring ------------------------------------------------------------------ */
 
 .marketrix-widget-button-processing-glow,
 .marketrix-widget-button-error-glow {
@@ -172,33 +604,6 @@
   border-radius: 50%;
   filter: blur(14px);
   will-change: transform, opacity;
-}
-
-@keyframes widget-activity-dash-travel {
-  0% {
-    stroke-dashoffset: 0;
-    opacity: 0.5;
-  }
-  18% {
-    stroke-dashoffset: -112;
-    opacity: 1;
-  }
-  35% {
-    stroke-dashoffset: -160;
-    opacity: 0.65;
-  }
-  60% {
-    stroke-dashoffset: -160;
-    opacity: 0.45;
-  }
-  82% {
-    stroke-dashoffset: -272;
-    opacity: 1;
-  }
-  100% {
-    stroke-dashoffset: -320;
-    opacity: 0.6;
-  }
 }
 
 .marketrix-widget-button-processing-activity-ring,
@@ -230,6 +635,127 @@
   filter: drop-shadow(0 0 3px rgba(208, 52, 44, 0.7));
 }
 
+.marketrix-widget-button-processing-glow {
+  animation: widget-glow-green 2s ease-in-out infinite;
+}
+
+.marketrix-widget-button-error-glow {
+  animation: widget-glow-red 1.5s ease-in-out infinite;
+}
+
+[data-screen-edge-glow] {
+  animation: marketrix-screen-edge-pulse 1.6s ease-in-out infinite;
+}
+
+[data-view-transition][data-direction='forward'] {
+  animation: viewSlideForward 300ms both;
+}
+
+[data-view-transition][data-direction='back'] {
+  animation: viewSlideBack 300ms both;
+}
+
+/* ---- Keyframes ------------------------------------------------------------------------------- */
+
+@keyframes mtx-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes mtx-ping {
+  75%,
+  100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+@keyframes mtx-pulse {
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes mtx-dialog-overlay-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes mtx-dialog-content-in {
+  from {
+    opacity: 0;
+    scale: 0.96;
+  }
+  to {
+    opacity: 1;
+    scale: 1;
+  }
+}
+
+@keyframes mtx-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes mtx-launcher-entrance {
+  from {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes marketrix-screen-edge-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes widget-activity-dash-travel {
+  0% {
+    stroke-dashoffset: 0;
+    opacity: 0.5;
+  }
+  18% {
+    stroke-dashoffset: -112;
+    opacity: 1;
+  }
+  35% {
+    stroke-dashoffset: -160;
+    opacity: 0.65;
+  }
+  60% {
+    stroke-dashoffset: -160;
+    opacity: 0.45;
+  }
+  82% {
+    stroke-dashoffset: -272;
+    opacity: 1;
+  }
+  100% {
+    stroke-dashoffset: -320;
+    opacity: 0.6;
+  }
+}
+
 @keyframes widget-glow-green {
   0%,
   100% {
@@ -254,10 +780,6 @@
       transparent 80%
     );
   }
-}
-
-.marketrix-widget-button-processing-glow {
-  animation: widget-glow-green 2s ease-in-out infinite;
 }
 
 @keyframes widget-glow-red {
@@ -286,44 +808,6 @@
   }
 }
 
-.marketrix-widget-button-error-glow {
-  animation: widget-glow-red 1.5s ease-in-out infinite;
-}
-
-@keyframes launcher-entrance {
-  from {
-    opacity: 0;
-    transform: scale(0.5);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-.animate-launcher-entrance {
-  animation: launcher-entrance 0.25s ease-out forwards;
-}
-
-@keyframes messenger-entrance {
-  0% {
-    opacity: 0;
-    transform: scale(0);
-  }
-  40% {
-    opacity: 1;
-  }
-  100% {
-    transform: scale(1);
-  }
-}
-
-[data-view-transition][data-direction='forward'] {
-  animation: viewSlideForward 300ms both;
-}
-[data-view-transition][data-direction='back'] {
-  animation: viewSlideBack 300ms both;
-}
 @keyframes viewSlideForward {
   from {
     transform: translateX(20px);
@@ -334,6 +818,7 @@
     opacity: 1;
   }
 }
+
 @keyframes viewSlideBack {
   from {
     transform: translateX(-20px);

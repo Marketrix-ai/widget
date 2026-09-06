@@ -37,7 +37,7 @@ export const ShellTabBar: React.FC<ShellTabBarProps> = ({ activeView, onChange }
           >
             {isActive && (
               <Text as='span' inheritColor style={{ position: 'absolute', top: 0, left: '25%', right: '25%' }}>
-                <span className='block h-0.5 w-full rounded-full bg-primary' />
+                <span className='mtx-tab-underline' />
               </Text>
             )}
             <Text as='span' inheritColor aria-hidden='true'>

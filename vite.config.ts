@@ -2,7 +2,6 @@ import { execSync } from 'node:child_process';
 import { resolve } from 'node:path';
 import { cwd } from 'node:process';
 
-import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import { defineConfig, type ViteDevServer } from 'vite';
 
@@ -79,7 +78,7 @@ export default defineConfig(({ command }) => {
           },
         },
       },
-      plugins: [react(), tailwindcss(), typescriptDeclarationPlugin()],
+      plugins: [react(), typescriptDeclarationPlugin()],
     };
   }
 
@@ -87,7 +86,6 @@ export default defineConfig(({ command }) => {
     resolve: { alias: { '@': resolve(cwd(), 'src') } },
     plugins: [
       react(),
-      tailwindcss(),
       // Rewrite /widget.mjs to the source entry so the production URL works in dev
       {
         name: 'widget-dev-routing',

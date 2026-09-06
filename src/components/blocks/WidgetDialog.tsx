@@ -36,19 +36,14 @@ export const WidgetDialog: React.FC<WidgetDialogProps> = ({
       }}
     >
       <Dialog.Portal container={portalContainer}>
-        <Dialog.Backdrop
-          className='fixed inset-0 bg-black/20 animate-dialog-overlay-in'
-          style={{ zIndex: LAYER_TOKENS.dialog }}
-        />
+        <Dialog.Backdrop className='mtx-dialog-backdrop' style={{ zIndex: LAYER_TOKENS.dialog }} />
         <Dialog.Popup
-          className='fixed top-1/2 left-1/2 flex max-h-[85vh] w-full max-w-sm -translate-x-1/2 -translate-y-1/2 flex-col overflow-auto rounded-lg bg-card p-4 animate-dialog-content-in'
+          className='mtx-dialog-popup'
           style={{ ...getElevationStyle('panel'), zIndex: LAYER_TOKENS.dialog }}
         >
-          <Dialog.Title className='mb-1 text-base font-semibold text-foreground'>{title}</Dialog.Title>
+          <Dialog.Title className='mtx-dialog-title'>{title}</Dialog.Title>
           {description != null && (
-            <Dialog.Description className='mb-4 text-sm leading-relaxed text-foreground-muted'>
-              {description}
-            </Dialog.Description>
+            <Dialog.Description className='mtx-dialog-description'>{description}</Dialog.Description>
           )}
           <Flex gap='md' justify='end'>
             <Button

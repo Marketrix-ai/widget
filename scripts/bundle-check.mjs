@@ -79,7 +79,6 @@ const DEPENDENCY_BUDGETS = {
   // `.optional is not a function` at module load in the host page.
   zod: 95_000,
   '@base-ui/react': 47_000, // 42,210 (10.7%) — Dialog, plus Button
-  'tailwind-merge': 32_000, // 28,386 (7.2%) — cn()
   '@base-ui/utils': 13_000, // 11,307
   '@orpc/client': 11_000, // 9,500
   '@orpc/standard-server-fetch': 4_100, // 3,693

@@ -6,7 +6,7 @@ import { SHADOW } from '../../design-system/shadows';
 import { useDragSnap } from '../../hooks/useDragSnap';
 import { useWidget, useWidgetConfig } from '../../hooks/useWidget';
 import type { WidgetPosition } from '../../types';
-import { getPanelPositionStyle, getPositionClasses } from '../../utils/widgetPositioning';
+import { getPanelPositionStyle } from '../../utils/widgetPositioning';
 import { Avatar } from '../base/Avatar';
 import { Button } from '../base/Button';
 import { Flex } from '../base/Flex';
@@ -49,26 +49,20 @@ export const WidgetFab: React.FC<WidgetFabProps> = ({ onPositionCommit }) => {
     suppressUntilRef,
   } = useDragSnap({ position, onPositionCommit, isPreviewMode, wrapperRef });
 
-  const effectivePositionClasses = getPositionClasses(position);
-  const positionClass = isPreviewMode ? 'absolute' : 'fixed';
-
   return (
     <Surface
       ref={wrapperRef as React.Ref<HTMLElement>}
-      className={`${positionClass} ${pixelPositionStyle ? '' : effectivePositionClasses} ${isDragging ? '' : 'transition-transform duration-300 ease-in-out'}`}
+      className='mtx-fab-anchor'
+      data-animated={isDragging ? 'false' : 'true'}
+      data-preview={isPreviewMode ? 'true' : 'false'}
       style={{
         zIndex,
         pointerEvents: open ? 'none' : 'auto',
-        ...(isPreviewMode ? getPanelPositionStyle(position) : {}),
+        ...getPanelPositionStyle(position),
         ...pixelPositionStyle,
       }}
     >
-      <Surface
-        className={`
-          group relative w-14 h-14 overflow-visible transition-all duration-300 ease-in-out
-          ${open ? 'scale-0 opacity-0 pointer-events-none' : 'scale-100 opacity-100 hover:scale-110'}
-        `}
-      >
+      <Surface className='mtx-fab' data-open={open ? 'true' : 'false'}>
         {showProcessingGlow && <Surface className={glowClass} aria-hidden />}
 
         {showStopControl && !isDragging && (
@@ -76,13 +70,13 @@ export const WidgetFab: React.FC<WidgetFabProps> = ({ onPositionCommit }) => {
             type='button'
             variant='secondary'
             size='sm'
+            className='mtx-fab-stop'
+            data-side={position.includes('left') ? 'left' : 'right'}
             onClick={e => {
               e.preventDefault();
               e.stopPropagation();
               actions.stopTask();
             }}
-            className={`absolute top-1/2 z-20 -translate-y-1/2 rounded-full border border-white/25 bg-gray-900 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-white shadow-lg opacity-0 transition-opacity duration-150 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto group-focus-within:opacity-100 group-focus-within:pointer-events-auto ${position.includes('left') ? 'left-full ml-2' : 'right-full mr-2'}`}
-            style={{ border: '1px solid rgba(255,255,255,0.25)' }}
           >
             Stop
           </Button>
@@ -100,7 +94,7 @@ export const WidgetFab: React.FC<WidgetFabProps> = ({ onPositionCommit }) => {
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerCancel}
-          className='relative z-10 w-14 h-14 min-w-14'
+          className='mtx-fab-trigger'
           style={{
             touchAction: 'none',
             cursor: isDragging ? 'grabbing' : 'grab',
@@ -110,13 +104,9 @@ export const WidgetFab: React.FC<WidgetFabProps> = ({ onPositionCommit }) => {
           aria-label={open ? 'Close' : 'Open'}
           aria-live='polite'
         >
-          <Flex className='w-full h-full items-center justify-center relative'>
+          <Flex className='mtx-fab-center'>
             <Surface
-              className={`
-                relative w-12 h-12 overflow-hidden transition-[transform,opacity,background-color] duration-[167ms] ease-[cubic-bezier(0.33,0,0,1)]
-                hover:scale-110 hover:duration-[250ms] active:scale-[0.85] active:duration-[134ms] active:ease-[cubic-bezier(0.45,0,0.2,1)]
-                animate-launcher-entrance
-              `}
+              className='mtx-fab-badge'
               style={{
                 borderRadius: `${WIDGET_RADIUS_PX}px`,
                 backgroundColor: open ? backgroundColor : accentColor,
@@ -137,7 +127,7 @@ export const WidgetFab: React.FC<WidgetFabProps> = ({ onPositionCommit }) => {
               )}
 
               <Flex
-                className='absolute inset-0 items-center justify-center transition-[transform,opacity] duration-[160ms] linear'
+                className='mtx-fab-icon-layer'
                 style={{
                   transform: open ? 'rotate(30deg) scale(0)' : 'rotate(0deg) scale(1)',
                   opacity: open ? 0 : 1,
@@ -150,7 +140,7 @@ export const WidgetFab: React.FC<WidgetFabProps> = ({ onPositionCommit }) => {
                 <Avatar
                   src={MarketrixIcon}
                   alt=''
-                  className='relative z-10 w-full h-full object-contain'
+                  className='mtx-fab-avatar'
                   draggable={false}
                   onDragStart={e => e.preventDefault()}
                   style={{
@@ -165,7 +155,7 @@ export const WidgetFab: React.FC<WidgetFabProps> = ({ onPositionCommit }) => {
               </Flex>
 
               <Flex
-                className='absolute inset-0 items-center justify-center transition-[transform,opacity] duration-[160ms] linear'
+                className='mtx-fab-icon-layer'
                 style={{
                   transform: open ? 'rotate(0deg) scale(1)' : 'rotate(-30deg) scale(0)',
                   opacity: open ? 1 : 0,
@@ -175,7 +165,7 @@ export const WidgetFab: React.FC<WidgetFabProps> = ({ onPositionCommit }) => {
                 }}
                 aria-hidden={!open}
               >
-                <Icon name='chevronDown' size={24} className='relative z-10 text-foreground pointer-events-none' />
+                <Icon name='chevronDown' size={24} className='mtx-fab-chevron' />
               </Flex>
             </Surface>
           </Flex>
