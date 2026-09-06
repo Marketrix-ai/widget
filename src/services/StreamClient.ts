@@ -19,8 +19,8 @@ export class StreamClient {
   private chatId: string | null = null;
   private status: StreamStatus = 'disconnected';
   private callbacks: Set<StreamClientCallbacks> = new Set();
-  // Set by teardown AND by a rejected credential: both mean nothing may reconnect until re-init.
-  private reconnectSuppressed = false;
+  private tornDown = false;
+  private credentialRejected = false;
   private reconnectAttempts = 0;
   private readonly maxReconnectAttempts = 10;
   private reconnectDelay = 1000;
@@ -52,10 +52,14 @@ export class StreamClient {
     return this.status === 'registered';
   }
 
+  private reconnectSuppressed(): boolean {
+    return this.tornDown || this.credentialRejected;
+  }
+
   /** Whether a user-driven retry can achieve anything: there is a chat to rejoin and nothing has
    * suppressed reconnection. */
   canReconnect(): boolean {
-    return this.chatId !== null && !this.reconnectSuppressed && !this.isConnected();
+    return this.chatId !== null && !this.reconnectSuppressed() && !this.isConnected();
   }
 
   /** The user asked to retry. `scheduleReconnect` gives up permanently at `maxReconnectAttempts` and only
@@ -71,11 +75,15 @@ export class StreamClient {
 
   async waitUntilRegistered(): Promise<void> {
     if (this.isConnected()) return;
+    if (this.credentialRejected) {
+      throw new StreamGaveUpError('Chat is unavailable — the widget credentials were rejected.');
+    }
     await new Promise<void>((resolve, reject) => this.registrationWaiters.add({ resolve, reject }));
   }
 
   async connect(chatId: string): Promise<void> {
-    this.reconnectSuppressed = false;
+    if (this.credentialRejected) return;
+    this.tornDown = false;
 
     if (
       this.chatId === chatId &&
@@ -135,12 +143,12 @@ export class StreamClient {
     } catch (error) {
       if (this.connectionId !== connectionId) {
         stale = true;
-      } else if (!this.reconnectSuppressed) {
+      } else if (!this.reconnectSuppressed()) {
         console.warn('[StreamClient] Stream error:', error);
         this.status = 'error';
       }
     } finally {
-      if (!stale && this.connectionId === connectionId && !this.reconnectSuppressed) {
+      if (!stale && this.connectionId === connectionId && !this.reconnectSuppressed()) {
         this.status = 'disconnected';
         this.scheduleReconnect();
       }
@@ -148,7 +156,8 @@ export class StreamClient {
   }
 
   disconnect(): void {
-    this.reconnectSuppressed = true;
+    this.tornDown = true;
+    this.credentialRejected = false;
     this.clearReconnectTimer();
     if (this.abortController) {
       this.abortController.abort();
@@ -192,7 +201,7 @@ export class StreamClient {
   }
 
   private handleMessage(event: WidgetEvent): void {
-    if (this.reconnectSuppressed) return;
+    if (this.reconnectSuppressed()) return;
     if (event.type === 'heartbeat') return;
 
     if (event.type === 'registered') {
@@ -206,10 +215,9 @@ export class StreamClient {
       }
     }
 
-    // Reconnecting on a rejected credential just re-earns the same 401, so only a re-init clears this.
     if (event.type === 'chat/error' && event.request_id === 'auth') {
       console.error('[StreamClient] Authentication failed — will not reconnect');
-      this.reconnectSuppressed = true;
+      this.credentialRejected = true;
       // The event is ALSO handed to the reducer below, where `chat/error` settles the message whose id is
       // the request id — and no message is ever id 'auth', so the branch matched nothing and the widget
       // went permanently silent with no toast, no bubble and (console being dropped by terser) no trace.
@@ -232,7 +240,7 @@ export class StreamClient {
       `[StreamClient] Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`,
     );
     this.reconnectTimer = setTimeout(() => {
-      if (!this.reconnectSuppressed && this.chatId) {
+      if (!this.reconnectSuppressed() && this.chatId) {
         this.connect(this.chatId).catch(console.error);
       }
     }, delay);
