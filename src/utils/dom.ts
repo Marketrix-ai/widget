@@ -1,3 +1,5 @@
+export const WIDGET_SHADOW_HOST_CLASS = 'marketrix-widget-container';
+
 const INTERACTIVE_ROLES = new Set(['button', 'link', 'textbox', 'checkbox', 'radio', 'switch', 'tab', 'menuitem']);
 
 function isInteractiveKind(el: Element): boolean {

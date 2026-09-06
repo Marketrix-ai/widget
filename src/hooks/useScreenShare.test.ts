@@ -42,7 +42,7 @@ beforeEach(() => {
 describe('useScreenShare', () => {
   it('allow: resolves the request card, posts both messages, flushes the pending message', async () => {
     const { result, opts } = setup(PENDING);
-    await act(async () => await result.current.handleScreenAccessAllow());
+    await act(async () => await result.current.handleScreenAccessRequestAllow());
 
     expect(opts.onUpdateMessage).toHaveBeenCalledWith(REQUEST_ID, { screenShareStatus: 'allowed' });
     expect(opts.onAddMessage.mock.calls.map(([m]) => m.content)).toEqual(['Started screenshare', '']);
@@ -54,7 +54,7 @@ describe('useScreenShare', () => {
   it('allow, but the picker was cancelled: marks the card denied and still flushes', async () => {
     startScreenShare.mockRejectedValue(new Error('permission denied'));
     const { result, opts } = setup(PENDING);
-    await act(async () => await result.current.handleScreenAccessAllow());
+    await act(async () => await result.current.handleScreenAccessRequestAllow());
 
     expect(opts.onUpdateMessage).toHaveBeenCalledWith(REQUEST_ID, { screenShareStatus: 'denied' });
     expect(opts.onAddMessage).not.toHaveBeenCalled();
@@ -64,11 +64,24 @@ describe('useScreenShare', () => {
 
   it('deny: resolves the card and flushes without starting a share', async () => {
     const { result, opts } = setup(PENDING);
-    act(() => result.current.handleScreenAccessDeny());
+    expect(result.current.isAwaitingScreenAccess).toBe(true);
+
+    act(() => result.current.handleScreenAccessRequestDeny());
 
     expect(opts.onUpdateMessage).toHaveBeenCalledWith(REQUEST_ID, { screenShareStatus: 'denied' });
     expect(startScreenShare).not.toHaveBeenCalled();
     expect(opts.onSendMessage).toHaveBeenCalledWith('do the thing', 'do', true);
+    expect(result.current.isAwaitingScreenAccess).toBe(false);
+  });
+
+  it('dialog dismiss: closes the dialog only, leaving the separate request card unanswered', () => {
+    const { result, opts } = setup(PENDING);
+    act(() => result.current.handleScreenAccessDialogDismiss());
+
+    expect(result.current.showScreenAccessDialog).toBe(false);
+    expect(result.current.isAwaitingScreenAccess).toBe(true);
+    expect(opts.onUpdateMessage).not.toHaveBeenCalled();
+    expect(opts.onSendMessage).not.toHaveBeenCalled();
   });
 
   it('dialog allow: same start, and now resolves an open card and flushes too', async () => {
@@ -83,7 +96,7 @@ describe('useScreenShare', () => {
 
   it('flushes nothing when there is no pending message', async () => {
     const { result, opts } = setup(null);
-    await act(async () => await result.current.handleScreenAccessAllow());
+    await act(async () => await result.current.handleScreenAccessRequestAllow());
 
     expect(opts.onSendMessage).not.toHaveBeenCalled();
     expect(opts.setPendingMessage).not.toHaveBeenCalled();

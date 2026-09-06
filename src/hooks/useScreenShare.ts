@@ -40,11 +40,12 @@ export interface UseScreenShareOptions {
 
 export interface UseScreenShareReturn {
   isScreenSharing: boolean;
+  isAwaitingScreenAccess: boolean;
   showScreenAccessDialog: boolean;
   handleScreenAccessDialogAllow: () => Promise<void>;
-  handleScreenAccessDialogDeny: () => void;
-  handleScreenAccessAllow: () => Promise<void>;
-  handleScreenAccessDeny: () => void;
+  handleScreenAccessDialogDismiss: () => void;
+  handleScreenAccessRequestAllow: () => Promise<void>;
+  handleScreenAccessRequestDeny: () => void;
   requestScreenAccess: (mode: InstructionType) => void;
 }
 
@@ -138,20 +139,20 @@ export function useScreenShare({
     flushPendingMessage();
   };
 
-  const handleScreenAccessAllow = beginScreenShare;
+  const handleScreenAccessRequestAllow = beginScreenShare;
+
+  const handleScreenAccessRequestDeny = () => {
+    resolveAccessRequest('denied');
+    flushPendingMessage();
+  };
 
   const handleScreenAccessDialogAllow = async () => {
     setShowScreenAccessDialog(false);
     await beginScreenShare();
   };
 
-  const handleScreenAccessDialogDeny = () => {
+  const handleScreenAccessDialogDismiss = () => {
     setShowScreenAccessDialog(false);
-  };
-
-  const handleScreenAccessDeny = () => {
-    resolveAccessRequest('denied');
-    flushPendingMessage();
   };
 
   const stopScreenSharing = () => {
@@ -166,11 +167,12 @@ export function useScreenShare({
 
   return {
     isScreenSharing,
+    isAwaitingScreenAccess: screenAccessRequestMessageId !== null,
     showScreenAccessDialog,
     handleScreenAccessDialogAllow,
-    handleScreenAccessDialogDeny,
-    handleScreenAccessAllow,
-    handleScreenAccessDeny,
+    handleScreenAccessDialogDismiss,
+    handleScreenAccessRequestAllow,
+    handleScreenAccessRequestDeny,
     requestScreenAccess,
   };
 }

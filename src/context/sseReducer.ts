@@ -145,11 +145,15 @@ function reduceText(state: SseState, requestId: string, text: string, streaming:
   return { ...state, messages };
 }
 
-const errorBubble = (msg: ChatMessage, text: string): ChatMessage => ({
-  ...settled(msg),
+const appendText = (msg: ChatMessage, text: string): ChatMessage => ({
+  ...msg,
   content: text,
-  placeholderState: undefined,
   parts: [...msg.parts, { type: 'text' as const, content: text }],
+});
+
+const errorBubble = (msg: ChatMessage, text: string): ChatMessage => ({
+  ...settled(appendText(msg, text)),
+  placeholderState: undefined,
 });
 
 /** Settles a pending message into a plain error bubble — the one shape for both a failed POST and a chat/error. */
@@ -215,13 +219,13 @@ export function reduceSse(state: SseState, event: WidgetEvent, currentMode: Inst
     case 'task/status': {
       // `running` activates nothing: the first tool/call is what flips isTaskRunning, and a tell-mode reply never has a task.
       if (event.status === 'running') return noChange(state);
-      const content = event.message ? { content: event.message } : {};
       const status = event.status;
+      const withMessage = (msg: ChatMessage) => (event.message ? appendText(msg, event.message) : msg);
       // has_question is a pause, not a terminal status.
       const stamp =
         status === 'has_question'
-          ? (msg: ChatMessage) => ({ ...msg, placeholderState: 'waiting-for-user' as const, ...content })
-          : (msg: ChatMessage) => ({ ...msg, taskStatus: TASK_STATUS[status], ...content });
+          ? (msg: ChatMessage) => ({ ...withMessage(msg), placeholderState: 'waiting-for-user' as const })
+          : (msg: ChatMessage) => ({ ...withMessage(msg), taskStatus: TASK_STATUS[status] });
       return { state: stampProgressMessage(state, currentMode, stamp), effects: [] };
     }
 

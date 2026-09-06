@@ -59,13 +59,7 @@ export function findMessageForProgress({
 export const WAIT_FOR_USER_TOOLS = new Set(['click_element', 'type_text', 'select_dropdown_option', 'send_keys']);
 
 // "Cancelled by cleanup" is expected internal chatter users shouldn't see.
-export function filterCancellationText(content: string): string {
-  if (!content) return content;
-  return content
-    .replace(/\(?cancelled by cleanup\)?/gi, '')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
+const filterCancellationText = (content: string): string => content.replace(/\(?cancelled by cleanup\)?/gi, '').trim();
 
 const isOpenProgress = (part: MessagePart): boolean => part.type === 'progress' && part.status === 'in_progress';
 

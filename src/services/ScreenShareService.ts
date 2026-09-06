@@ -1,3 +1,5 @@
+import { storageService } from './StorageService';
+
 let activeStream: MediaStream | null = null;
 
 function getLiveStream(): MediaStream | null {
@@ -9,6 +11,10 @@ function getLiveStream(): MediaStream | null {
 }
 
 export async function startScreenShare(): Promise<MediaStream> {
+  if (storageService.getCredentialedConfig()?.use_screenshare === false) {
+    throw new Error('Screen sharing is disabled for this widget');
+  }
+
   const liveStream = getLiveStream();
   if (liveStream) return liveStream;
 
