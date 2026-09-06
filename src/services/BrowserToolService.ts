@@ -559,7 +559,8 @@ export class BrowserToolService {
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
       const ctx = canvas.getContext('2d');
-      ctx?.drawImage(video, 0, 0);
+      if (!ctx) return fail('Could not read the shared screen: the browser refused a 2d canvas context.');
+      ctx.drawImage(video, 0, 0);
 
       // Keep the stream alive — the agent usually requests a screenshot then keeps going; startScreenShare handles reuse.
       return ok(canvas.toDataURL('image/jpeg', 0.75));

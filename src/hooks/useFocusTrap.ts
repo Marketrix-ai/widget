@@ -60,6 +60,8 @@ export function useFocusTrap(
     focusFirst();
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      const current = activeElementIn(container);
+      if (!current || !container.contains(current)) return;
       if (e.key === 'Escape') {
         options?.onEscape?.();
         return;
@@ -67,8 +69,7 @@ export function useFocusTrap(
       if (e.key !== 'Tab') return;
       const focusables = getFocusables(container);
       if (focusables.length === 0) return;
-      const current = activeElementIn(container);
-      const idx = current ? focusables.indexOf(current) : -1;
+      const idx = focusables.indexOf(current);
       if (idx === -1) return;
       if (e.shiftKey) {
         if (idx === 0) {
