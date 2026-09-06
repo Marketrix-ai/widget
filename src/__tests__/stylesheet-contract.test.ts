@@ -69,3 +69,13 @@ describe('the component tree and the stylesheet name the same classes', () => {
     expect([...defined].filter(name => !referenced.has(name))).toEqual([]);
   });
 });
+
+it('keeps the reset at zero specificity so component classes always win', () => {
+  // `[data-marketrix-widget] button` scores (0,1,1) and outranks `.mtx-button` (0,1,0) — that is how
+  // `font: inherit` flattened every button to weight 400 and `border-radius: 0` un-rounded the icon
+  // buttons. Wrapping the reset in :where() drops it to zero, so this must stay true.
+  const hazards = [...css.matchAll(/(^|[,}])\s*(\[data-marketrix-widget\]\s+(?!:where)[a-z][\w-]*)/gm)].map(match =>
+    match[2].trim(),
+  );
+  expect(hazards, 'wrap these reset selectors in :where() or they outrank the component classes').toEqual([]);
+});
