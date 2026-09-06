@@ -58,7 +58,7 @@ function applyProgress(
     updatedMsg =
       status === 'in_progress'
         ? addProgressLine(updatedMsg, browserToolName, explanation || getFriendlyToolName(browserToolName))
-        : markProgressLineComplete(updatedMsg);
+        : markProgressLineComplete(updatedMsg, browserToolName);
   }
 
   if (isTaskRunning && (currentMode === 'show' || currentMode === 'do')) {

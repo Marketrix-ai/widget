@@ -89,7 +89,7 @@ class StorageService {
     return config?.mtxId && config.mtxKey ? (config as CredentialedConfig) : null;
   }
 
-  setConfig(config: MarketrixConfig): void {
+  setConfig(config: CredentialedConfig): void {
     this.updateContext({ config });
   }
 }

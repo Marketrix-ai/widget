@@ -189,7 +189,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
 
     const streamClient = StreamClient.getInstance();
 
-    const executeToolCall = async (effect: Extract<SseEffect, { type: 'executeTool' }>) => {
+    const startToolCall = async (effect: Extract<SseEffect, { type: 'executeTool' }>) => {
       const { toolCallId, tool, args, mode, explanation } = effect;
       const result = await browserToolService.executeTool(tool, args, mode, explanation);
       const error = result.success ? undefined : (result.error ?? 'Tool execution failed');
@@ -214,7 +214,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
       result.afterResponseSent?.();
     };
 
-    const handleMessage = async (event: WidgetEvent) => {
+    const handleMessage = (event: WidgetEvent): void => {
       // Transport bookkeeping that must run before the pure reducer.
       if (event.type === 'tool/call') {
         const toolCallId = event.tool_call_id;
@@ -251,7 +251,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
 
       for (const effect of effects) {
         if (effect.type === 'setLoading') uiActions.setLoading(effect.value);
-        else await executeToolCall(effect);
+        else startToolCall(effect).catch(error => console.error('[Widget] Tool call failed:', error));
       }
     };
 

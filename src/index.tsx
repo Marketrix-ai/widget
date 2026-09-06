@@ -10,6 +10,7 @@ import type { Root } from 'react-dom/client';
 import { configureSdk } from './sdk';
 import { chatSessionManager } from './services/ChatSessionManager';
 import { RrwebSessionRecorder } from './services/RrwebSessionRecorder';
+import { type CredentialedConfig, storageService } from './services/StorageService';
 import { StreamClient } from './services/StreamClient';
 import { createConfigFromSettings, loadWidgetConfig } from './services/WidgetService';
 import type { AddWidgetConfig, MarketrixConfig, MarketrixWidgetProps } from './types';
@@ -45,7 +46,7 @@ async function initWidgetInternal(
   window.__mtx = { state: 'initializing' };
 
   showHostPageNotice('Loading widget settings...');
-  let finalConfig: MarketrixConfig;
+  let finalConfig: CredentialedConfig;
   try {
     // Production only: every preview path mounts directly and never reaches here. There is no default
     // host, so leaving the SDK unconfigured would resolve each request against the HOST PAGE's origin.
@@ -61,6 +62,7 @@ async function initWidgetInternal(
   if (generation !== lifecycleGeneration) return;
   hideHostPageNotice();
 
+  storageService.setConfig(finalConfig);
   mount(finalConfig, container);
   window.__mtx = { state: 'active' };
 
@@ -143,7 +145,7 @@ export const updateMarketrixConfig = async (newConfig: Partial<MarketrixConfig>)
 export { getCurrentConfig };
 
 // Preview-mode React entry point — mounts its own shadow DOM inside the parent container.
-export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ settings, container, mtxId, mtxKey, mtxApiHost }) => {
+export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ settings, container }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const rootRef = useRef<Root | null>(null);
   const widgetContainerRef = useRef<HTMLElement | null>(null);
@@ -162,7 +164,7 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ settings, cont
 
     rootRef.current = mountWidgetToContainer(
       mountEl,
-      { ...createConfigFromSettings(settings, { mtxId, mtxKey, mtxApiHost }), isPreviewMode: true },
+      { ...createConfigFromSettings(settings), isPreviewMode: true },
       true,
     );
 
@@ -176,7 +178,7 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ settings, cont
         widgetContainerRef.current = null;
       }
     };
-  }, [settings, container, mtxId, mtxKey, mtxApiHost]);
+  }, [settings, container]);
 
   if (container) {
     return null;

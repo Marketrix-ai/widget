@@ -82,9 +82,12 @@ function patchPart(message: ChatMessage, index: number, patch: Partial<MessagePa
   return { ...message, parts };
 }
 
+const openLineFor = (message: ChatMessage, browserToolName: string): number =>
+  message.parts.findIndex(part => isOpenProgress(part) && part.browserToolName === browserToolName);
+
 export function addProgressLine(message: ChatMessage, browserToolName: string, explanation: string): ChatMessage {
   const content = filterCancellationText(explanation);
-  const open = message.parts.findIndex(part => isOpenProgress(part) && part.browserToolName === browserToolName);
+  const open = openLineFor(message, browserToolName);
   if (open >= 0) return patchPart(message, open, { content });
   return {
     ...message,
@@ -92,22 +95,14 @@ export function addProgressLine(message: ChatMessage, browserToolName: string, e
   };
 }
 
-export const markProgressLineComplete = (message: ChatMessage): ChatMessage =>
-  patchPart(message, lastIndexWhere(message.parts, isOpenProgress), { status: 'completed' });
+export const markProgressLineComplete = (message: ChatMessage, browserToolName: string): ChatMessage =>
+  patchPart(message, openLineFor(message, browserToolName), { status: 'completed' });
 
 export function markProgressLineFailed(message: ChatMessage, browserToolName: string, error: string): ChatMessage {
-  const named = lastIndexWhere(
-    message.parts,
-    part => part.type === 'progress' && part.browserToolName === browserToolName,
-  );
-  const index = named >= 0 ? named : lastIndexWhere(message.parts, isOpenProgress);
+  const index = openLineFor(message, browserToolName);
   if (index < 0) return message;
 
   const content = filterCancellationText(message.parts[index].content);
-  // In show mode a new action supersedes a pending one and cancels it — that is a completed step, not a failure.
-  if (error.toLowerCase().includes('cancelled by cleanup'))
-    return patchPart(message, index, { status: 'completed', content });
-
   const cleanedError = filterCancellationText(error);
   return patchPart(message, index, {
     status: 'failed',

@@ -2,12 +2,11 @@ import { isInteractable } from '../utils/dom';
 
 // The agent addresses elements by index, so an index must not survive the element changing underneath it: the node
 // object stays the same across a re-render while its attributes are rewritten.
-const IDENTITY_ATTRIBUTES = ['type', 'role', 'aria-label', 'name', 'href'] as const;
+const IDENTITY_ATTRIBUTES = ['id', 'type', 'role', 'aria-label', 'name', 'href'] as const;
 
 interface IndexedElement {
   element: HTMLElement;
   selector: string;
-  id: string;
   identity: Array<string | null>;
 }
 
@@ -57,9 +56,8 @@ export class DomService {
 
   private staleReason(entry: IndexedElement): string | null {
     if (!document.contains(entry.element)) return 'no longer exists';
-    if (entry.id && entry.element.id === entry.id) return null;
     const changed = IDENTITY_ATTRIBUTES.some(
-      (attribute, i) => entry.identity[i] && entry.element.getAttribute(attribute) !== entry.identity[i],
+      (attribute, i) => entry.element.getAttribute(attribute) !== entry.identity[i],
     );
     return changed ? 'has changed' : null;
   }
@@ -113,7 +111,6 @@ export class DomService {
           this.index.set(sequenceNumber, {
             element,
             selector: this.generateSelector(element),
-            id: element.id,
             identity: IDENTITY_ATTRIBUTES.map(attribute => element.getAttribute(attribute)),
           });
           this.elementToSequence.set(element, sequenceNumber);

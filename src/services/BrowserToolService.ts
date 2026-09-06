@@ -148,8 +148,13 @@ export class BrowserToolService {
       window.open(args.url, '_blank');
       return ok(`Opened ${args.url} in new tab`);
     }
-    window.location.href = args.url;
-    return ok(`Navigating to ${args.url}`);
+    const url = args.url;
+    return {
+      ...ok(`Navigating to ${url}`),
+      afterResponseSent: () => {
+        window.location.href = url;
+      },
+    };
   }
 
   private search(args: ToolArgs): ToolExecutionResult {
@@ -162,8 +167,12 @@ export class BrowserToolService {
     if (engine === 'google') url = `https://www.google.com/search?q=${encoded}`;
     if (engine === 'bing') url = `https://www.bing.com/search?q=${encoded}`;
 
-    window.location.href = url;
-    return ok(`Searching for "${args.query}" on ${engine}`);
+    return {
+      ...ok(`Searching for "${args.query}" on ${engine}`),
+      afterResponseSent: () => {
+        window.location.href = url;
+      },
+    };
   }
 
   private async clickElement(args: ToolArgs): Promise<ToolExecutionResult> {
@@ -280,11 +289,8 @@ export class BrowserToolService {
   }
 
   private goBack(): ToolExecutionResult {
-    if (window.history.length > 1) {
-      window.history.back();
-      return ok('Navigated back');
-    }
-    return fail('No history');
+    if (window.history.length <= 1) return fail('No history');
+    return { ...ok('Navigated back'), afterResponseSent: () => window.history.back() };
   }
 
   private async wait({ seconds }: ToolArgs): Promise<ToolExecutionResult> {
@@ -529,7 +535,7 @@ export class BrowserToolService {
 
   private closeTab(): ToolExecutionResult {
     window.close();
-    return ok('Attempted close');
+    return window.closed ? ok('Tab closed') : fail('The browser refused to close a tab this script did not open');
   }
 
   private done(args: ToolArgs): ToolExecutionResult {

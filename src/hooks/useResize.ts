@@ -2,20 +2,29 @@ import { useCallback, useRef, useState } from 'react';
 
 import { readLocal, writeLocal } from '../services/StorageService';
 
+interface Size {
+  width: number;
+  height: number;
+}
+
 const MIN_WIDTH = 280;
 const MAX_WIDTH = 600;
 const MIN_HEIGHT = 320;
+const DEFAULT_SIZE: Size = { width: 360, height: 450 };
 
 const maxHeightPx = (): number => Math.floor(window.innerHeight * 0.85);
 
-function parsePx(value: string | undefined): number {
-  if (!value) return 360;
-  const num = parseInt(value.replace(/px|rem|em/gi, ''), 10);
-  return isNaN(num) ? 360 : num;
-}
-
 function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
+}
+
+function clampSize({ width, height }: Size): Size {
+  return { width: clamp(width, MIN_WIDTH, MAX_WIDTH), height: clamp(height, MIN_HEIGHT, maxHeightPx()) };
+}
+
+function parsePx(value: string | undefined, fallback: number): number {
+  const px = /^\s*(\d+(?:\.\d+)?)px\s*$/.exec(value ?? '');
+  return px ? Number(px[1]) : fallback;
 }
 
 const STORAGE_KEY_PREFIX = 'marketrix_widget_size_';
@@ -30,14 +39,11 @@ export const RESIZE_CORNERS = {
 
 export type ResizeCorner = keyof typeof RESIZE_CORNERS;
 
-function readStoredSize(storageKey: string): { width: number; height: number } | null {
+function readStoredSize(storageKey: string): Size | null {
   try {
     const stored = JSON.parse(readLocal(storageKey) ?? 'null') as { width?: unknown; height?: unknown };
     if (typeof stored?.width !== 'number' || typeof stored?.height !== 'number') return null;
-    return {
-      width: clamp(stored.width, MIN_WIDTH, MAX_WIDTH),
-      height: clamp(stored.height, MIN_HEIGHT, maxHeightPx()),
-    };
+    return clampSize({ width: stored.width, height: stored.height });
   } catch (error) {
     console.debug('[useResize] Ignoring an unparseable stored size:', error);
     return null;
@@ -51,13 +57,18 @@ export function useResize(
   isPreviewMode: boolean,
 ) {
   const storageKey = `${STORAGE_KEY_PREFIX}${tenantScope}`;
-  const dimsRef = useRef<{ width: number; height: number }>({ width: 360, height: 450 });
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const [dimensions, setDimensions] = useState<{ width: number; height: number }>(
-    () => readStoredSize(storageKey) ?? { width: parsePx(settingsWidth), height: parsePx(settingsHeight) },
+  const [dimensions, setDimensions] = useState<Size>(
+    () =>
+      readStoredSize(storageKey) ??
+      clampSize({
+        width: parsePx(settingsWidth, DEFAULT_SIZE.width),
+        height: parsePx(settingsHeight, DEFAULT_SIZE.height),
+      }),
   );
 
+  const dimsRef = useRef<Size>(dimensions);
   dimsRef.current = dimensions;
 
   const handleResizeStart = useCallback(
@@ -77,10 +88,10 @@ export function useResize(
       }
 
       const onMove = (moveEvent: MouseEvent) => {
-        const next = {
-          width: clamp(startW + (moveEvent.clientX - startX) * growX, MIN_WIDTH, MAX_WIDTH),
-          height: clamp(startH + (moveEvent.clientY - startY) * growY, MIN_HEIGHT, maxHeightPx()),
-        };
+        const next = clampSize({
+          width: startW + (moveEvent.clientX - startX) * growX,
+          height: startH + (moveEvent.clientY - startY) * growY,
+        });
         dimsRef.current = next;
 
         // Direct DOM update — skip React re-renders during drag
