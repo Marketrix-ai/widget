@@ -2,26 +2,17 @@ import type { ChatMessage, InstructionType } from '../types';
 import { type ChatSnapshot, storageService, type StoredMessage } from './StorageService';
 
 function reviveMessage(msg: StoredMessage): ChatMessage {
-  // A MediaStream can't survive a reload, so a restored screenshare becomes an "ended" notice.
-  if (msg.id.startsWith('screenshare-')) {
-    const content = 'Screenshare ended';
-    return {
-      ...msg,
-      content,
-      isSystemMessage: true,
-      timestamp: new Date(msg.timestamp),
-      parts: [{ type: 'text', content }],
-    };
-  }
-
   const parts = [...msg.parts];
   const text = msg.content.trim();
   if (parts.length === 0 && text) parts.push({ type: 'text', content: text });
   return { ...msg, timestamp: new Date(msg.timestamp), parts };
 }
 
-function serializeMessage({ videoStream: _videoStream, ...msg }: ChatMessage): StoredMessage {
-  return { ...msg, timestamp: msg.timestamp.toISOString() };
+function serializeMessage({ videoStream, ...msg }: ChatMessage): StoredMessage {
+  const timestamp = msg.timestamp.toISOString();
+  if (!videoStream) return { ...msg, timestamp };
+  const content = 'Screenshare ended';
+  return { ...msg, timestamp, content, isSystemMessage: true, parts: [{ type: 'text', content }] };
 }
 
 export class ChatService {

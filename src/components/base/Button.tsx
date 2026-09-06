@@ -23,7 +23,7 @@ export interface ButtonProps extends ComponentPropsWithRef<'button'> {
 const variantStyles: Record<ButtonVariant, string> = {
   primary: 'bg-primary text-primary-foreground border-transparent hover:bg-primary/90',
   secondary: 'bg-secondary text-secondary-foreground border-transparent hover:bg-secondary/80',
-  ghost: 'bg-transparent text-foreground border-border hover:bg-muted',
+  ghost: 'bg-transparent text-foreground border-border hover:bg-border',
   bare: 'bg-transparent text-inherit border-transparent hover:bg-transparent p-0 min-h-0',
   chip: 'bg-secondary-bg text-foreground border-transparent hover:bg-primary hover:text-primary-foreground hover:border-primary',
   tab: 'bg-transparent text-foreground-muted border-transparent hover:text-foreground hover:bg-transparent p-0 min-h-0',

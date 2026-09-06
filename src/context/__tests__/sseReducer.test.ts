@@ -61,10 +61,15 @@ describe('reduceSse — task/status', () => {
     expect(result.state.messages[0].taskStatus).toBe('stopped');
   });
 
-  it('terminal status overwrites content when the event carries a message', () => {
+  it('terminal status renders its closing message as a text part, not content alone', () => {
     const event: WidgetEvent = { type: 'task/status', status: 'completed', message: 'All done!' };
-    const result = reduceSse(runningState(), event, 'do');
+    const result = reduceSse(runningState({ parts: [{ type: 'progress', content: 'Clicking element' }] }), event, 'do');
+
     expect(result.state.messages[0].content).toBe('All done!');
+    expect(result.state.messages[0].parts).toEqual([
+      { type: 'progress', content: 'Clicking element' },
+      { type: 'text', content: 'All done!' },
+    ]);
   });
 
   it('has_question pauses (not terminal): flips the spinner to waiting-for-user, no taskStatus', () => {
@@ -77,6 +82,7 @@ describe('reduceSse — task/status', () => {
     const msg = result.state.messages[0];
     expect(msg.placeholderState).toBe('waiting-for-user');
     expect(msg.content).toContain('Which account?');
+    expect(msg.parts.at(-1)).toEqual({ type: 'text', content: 'Which account?' });
     // Paused, not finished — no terminal icon.
     expect(msg.taskStatus).toBeUndefined();
     expect(result.state.task).toEqual({ isTaskRunning: false });

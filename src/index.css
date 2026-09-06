@@ -14,8 +14,6 @@
   --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
   --border: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
   --foreground-muted: rgba(31, 41, 55, 0.6);
@@ -32,7 +30,6 @@
   --spacing: 0.25rem;
   --duration-animation: 300ms;
   --duration-fade: 200ms;
-  --layer-dialog: 1100;
 }
 
 @theme inline {
@@ -44,8 +41,6 @@
   --color-primary-foreground: var(--primary-foreground);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
   --color-border: var(--border);
   --color-ring: var(--ring);
   --color-foreground-muted: var(--foreground-muted);

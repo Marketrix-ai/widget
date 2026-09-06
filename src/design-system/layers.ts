@@ -1,11 +1,15 @@
 export type LayerTokens = {
+  screenEdgeGlow: number;
   panel: number;
-  overlay: number;
+  dialog: number;
   toast: number;
 };
 
+const WIDGET_LAYER_BASE = 2147483001;
+
 export const LAYER_TOKENS: LayerTokens = {
-  panel: 2147483002,
-  overlay: 2147483001,
-  toast: 2147483005,
+  screenEdgeGlow: WIDGET_LAYER_BASE,
+  panel: WIDGET_LAYER_BASE + 1,
+  dialog: WIDGET_LAYER_BASE + 2,
+  toast: WIDGET_LAYER_BASE + 3,
 };

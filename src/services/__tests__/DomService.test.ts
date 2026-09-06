@@ -65,3 +65,25 @@ describe('a data-id lands on the element the index really points at', () => {
     }
   });
 });
+
+describe('the widget covering a target is not an obstacle the agent can clear', () => {
+  beforeEach(() => {
+    Element.prototype.getBoundingClientRect = () => ({ top: 0, left: 0, width: 10, height: 10 }) as DOMRect;
+  });
+
+  it('exempts the shadow host, which is what elementFromPoint reports for any hit on the widget', () => {
+    const service = interactable(
+      '<button style="position: fixed">Buy</button><div class="marketrix-widget-container"></div>',
+    );
+    document.elementFromPoint = () => document.querySelector('.marketrix-widget-container');
+
+    expect(service.getValidatedElement(0).error).toBeUndefined();
+  });
+
+  it('still reports a host-page overlay as obscuring', () => {
+    const service = interactable('<button style="position: fixed">Buy</button><div class="cookie-banner"></div>');
+    document.elementFromPoint = () => document.querySelector('.cookie-banner');
+
+    expect(service.getValidatedElement(0).error).toContain('ELEMENT_OBSCURED');
+  });
+});
