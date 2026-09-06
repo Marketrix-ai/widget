@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { WidgetEvent } from '@/sdk';
-import type { ChatMessage } from '@/types';
+import { type ChatMessage, messageText } from '@/types';
 
 import {
   reduceSse,
@@ -106,7 +106,7 @@ describe('reduceTransportFailure', () => {
 
     expect(result.messages[0]).toBe(state.messages[0]);
     expect(result.messages[1].isPlaceholder).toBe(false);
-    expect(result.messages[1].content).toBe('Could not reconnect to the assistant. Try again.');
+    expect(result.messages[1].content).toBe('Working on it\nCould not reconnect to the assistant. Try again.');
     expect(result.task).toEqual({ isTaskRunning: false });
   });
 });
@@ -138,7 +138,7 @@ describe('reduceStaleReply', () => {
     const result = reduceStaleReply(state, 'agent-1', 'timeout text');
 
     expect(result.messages[0].isPlaceholder).toBe(false);
-    expect(result.messages[0].content).toBe('timeout text');
+    expect(result.messages[0].content).toBe('Working on it\ntimeout text');
   });
 
   it('never overwrites a message that already settled', () => {
@@ -265,7 +265,7 @@ describe('reduceSse — chat/error', () => {
     };
     const event: WidgetEvent = { type: 'chat/error', request_id: 'req-2', error: 'boom' };
     const result = reduceSse(state, event, 'tell');
-    expect(result.state.messages[0].content).toBe('Error: boom');
+    expect(result.state.messages[0].content).toBe('Working on it\nError: boom');
     expect(result.state.messages[0].isPlaceholder).toBe(false);
     expect(result.effects).toEqual([]);
   });
@@ -350,5 +350,30 @@ describe('reduceToolProgress / reduceToolDone / reduceStop', () => {
     const result = reduceStop(runningState(), 'do');
     expect(result.messages[0].taskStatus).toBe('stopped');
     expect(result.task).toEqual({ isTaskRunning: false });
+  });
+});
+
+describe('a message reports the text it shows', () => {
+  it('carries every text part, not only the last one written', () => {
+    const state: SseState = {
+      messages: [agentMessage({ parts: [{ type: 'text', content: 'first' }] })],
+      task: { isTaskRunning: true },
+    };
+
+    const event: WidgetEvent = { type: 'chat/response', request_id: 'agent-1', text: 'second' };
+    const result = reduceSse(state, event, 'tell');
+
+    const [message] = result.state.messages;
+    expect(message?.parts.filter(part => part.type === 'text').map(part => part.content)).toEqual(['first', 'second']);
+    expect(message?.content).toBe(messageText(message?.parts ?? []));
+  });
+
+  it('leaves a progress line out of the text, because a progress line is not the answer', () => {
+    expect(
+      messageText([
+        { type: 'progress', content: 'Reading the page' },
+        { type: 'text', content: 'Here you go' },
+      ]),
+    ).toBe('Here you go');
   });
 });
