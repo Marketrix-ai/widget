@@ -6,7 +6,7 @@ import { StreamClient } from '../services/StreamClient';
 import { ChatProvider, useChatContext } from './ChatContext';
 import { UIStateProvider, useUIStateContext } from './UIStateContext';
 
-/** MarketrixWidget publishes its own root here: a portal outside it escapes the element carrying the tenant tokens. */
+/** WidgetRoot publishes its own root here: a portal outside it escapes the element carrying the tenant tokens. */
 export const PortalContainerContext = createContext<HTMLElement | null>(null);
 
 export const usePortalContainer = (): HTMLElement => useContext(PortalContainerContext) ?? document.body;

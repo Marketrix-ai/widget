@@ -18,11 +18,11 @@ import { NotificationToast } from './blocks/NotificationToast';
 import { WidgetFab } from './blocks/WidgetFab';
 import { MessengerShell } from './navigation/MessengerShell';
 
-interface MarketrixWidgetProps {
+interface WidgetRootProps {
   config: MarketrixConfig;
 }
 
-export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
+export const WidgetRoot: React.FC<WidgetRootProps> = ({ config }) => {
   const [showGreeting, setShowGreeting] = useState(false);
   const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null);
   const { state, actions } = useWidget();

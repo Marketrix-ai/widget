@@ -29,6 +29,13 @@ describe('the Tailwind safelist covers every interpolated layout class', () => {
     expect(missing, 'widen @source inline(...) in index.css or the class silently never ships').toEqual([]);
   });
 
+  it('is the only interpolation — every other layout class is a literal the scanner can read', () => {
+    const source = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), '../components/base/layoutProps.ts'));
+    const interpolated = [...String(source).matchAll(/`([a-z-]+)-\$\{/g)].map(match => match[1]);
+    const unsafelisted = [...new Set(interpolated)].filter(prefix => !safelist().prefixes.includes(prefix));
+    expect(unsafelisted, 'safelist these prefixes or emit the class as a literal string').toEqual([]);
+  });
+
   it('carries no suffix the scale cannot produce', () => {
     const values = new Set<string>(Object.values(SPACING_SCALE));
     const dead = safelist().suffixes.filter(suffix => !values.has(suffix));
