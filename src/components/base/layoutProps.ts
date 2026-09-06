@@ -1,6 +1,6 @@
 import type { CSSProperties, ElementType } from 'react';
 
-import { RADIUS } from '../../design-system/component-tokens';
+import { RADIUS, type RadiusToken } from '../../design-system/component-tokens';
 
 export type SpacingToken = 'none' | '2xs' | 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
 
@@ -68,7 +68,7 @@ export interface LayoutProps {
   minWidth?: '0';
 
   border?: boolean | keyof typeof BORDER_SIDE;
-  rounded?: boolean | 'none' | 'sm' | 'full' | 'lg' | 'theme' | 'md' | 'xl' | 'pill' | 'circle';
+  rounded?: boolean | RadiusToken;
 
   animate?: 'spin' | 'ping' | 'pulse' | 'fadeIn' | 'none';
   hidden?: boolean;
@@ -147,8 +147,7 @@ export function resolveLayoutStyle(props: LayoutProps): CSSProperties {
   }
 
   if (props.rounded !== undefined && props.rounded !== false) {
-    if (props.rounded === true) style.borderRadius = RADIUS.theme;
-    else if (props.rounded === 'full') style.borderRadius = RADIUS.pill;
+    if (props.rounded === true) style.borderRadius = RADIUS.lg;
     else style.borderRadius = RADIUS[props.rounded];
   }
 

@@ -39,7 +39,7 @@ const NotificationList: React.FC = () => {
           />
         }
       >
-        <Avatar src={MarketrixIcon} alt='' size={28} rounded='full' />
+        <Avatar src={MarketrixIcon} alt='' size={28} rounded='pill' />
 
         <Stack grow minWidth='0'>
           <Toast.Title

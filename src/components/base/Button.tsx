@@ -6,7 +6,7 @@ import type { ShadowToken } from '../../design-system/shadows';
 
 type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'bare' | 'chip' | 'tab';
 type ButtonSize = 'sm' | 'md';
-type ButtonShape = 'default' | 'theme' | 'pill';
+type ButtonShape = 'default' | 'pill';
 
 export interface ButtonProps extends ComponentPropsWithRef<'button'> {
   elevation?: ShadowToken;
@@ -19,7 +19,6 @@ export interface ButtonProps extends ComponentPropsWithRef<'button'> {
 
 const SHAPE_RADIUS: Record<ButtonShape, string> = {
   default: RADIUS.lg,
-  theme: RADIUS.theme,
   pill: RADIUS.pill,
 };
 

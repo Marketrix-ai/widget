@@ -2,7 +2,7 @@ import type { CSSProperties } from 'react';
 
 import { SHADOW, type ShadowToken } from './shadows';
 
-export type RadiusToken = 'none' | 'sm' | 'md' | 'lg' | 'xl' | 'theme' | 'pill' | 'circle';
+export type RadiusToken = 'none' | 'sm' | 'md' | 'lg' | 'xl' | 'pill';
 export type TextTone = 'default' | 'muted' | 'faint' | 'primary' | 'inherit';
 export type TextLeading = 'tight' | 'snug' | 'normal' | 'relaxed';
 export type NotificationTone = 'info' | 'error' | 'neutral';
@@ -13,9 +13,7 @@ export const RADIUS: Record<RadiusToken, string> = {
   md: 'calc(var(--radius) - 2px)',
   lg: 'var(--radius)',
   xl: 'calc(var(--radius) + 4px)',
-  theme: 'var(--radius)',
   pill: '9999px',
-  circle: '9999px',
 };
 
 export const TEXT_TONE: Record<TextTone, string> = {
