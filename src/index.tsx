@@ -208,7 +208,7 @@ if (typeof window !== 'undefined') {
     try {
       autoInitializeWidget(initWidget);
     } catch (error) {
-      console.debug('Marketrix Widget: Auto-init registration skipped', error);
+      console.error('Marketrix Widget: Auto-init registration failed', error);
     }
   }, 0);
 }
