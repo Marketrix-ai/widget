@@ -56,13 +56,7 @@ export function findMessageForProgress({
 }
 
 // In `show` mode these pause for the user to act (DOM-mutating tools, minus `scroll`); also the highlight set in BrowserToolService.
-export const WAIT_FOR_USER_TOOLS = new Set([
-  'click_element',
-  'type_text',
-  'select_dropdown_option',
-  'send_keys',
-  'upload_file',
-]);
+export const WAIT_FOR_USER_TOOLS = new Set(['click_element', 'type_text', 'select_dropdown_option', 'send_keys']);
 
 // "Cancelled by cleanup" is expected internal chatter users shouldn't see.
 export function filterCancellationText(content: string): string {
@@ -122,7 +116,6 @@ export const BROWSER_TOOLS = new Map<string, string>([
   ['extract', 'Extracting content'],
   ['get_dropdown_options', 'Reading dropdown options'],
   ['select_dropdown_option', 'Selecting option'],
-  ['upload_file', 'Uploading file'],
   ['go_back', 'Going back'],
   ['wait', 'Waiting'],
   ['close_tab', 'Closing tab'],

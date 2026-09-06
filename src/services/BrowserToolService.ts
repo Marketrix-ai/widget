@@ -123,8 +123,6 @@ export class BrowserToolService {
           return this.getDropdownOptions(toolArgs);
         case 'send_keys':
           return this.sendKeys(toolArgs);
-        case 'upload_file':
-          return this.uploadFile();
         case 'close_tab':
           return this.closeTab();
         case 'done':
@@ -145,8 +143,9 @@ export class BrowserToolService {
     if (!args.url) return fail('URL is required');
 
     if (args.new_tab) {
-      window.open(args.url, '_blank');
-      return ok(`Opened ${args.url} in new tab`);
+      return window.open(args.url, '_blank')
+        ? ok(`Opened ${args.url} in new tab`)
+        : fail('The browser blocked opening a new tab');
     }
     const url = args.url;
     return {
@@ -527,10 +526,6 @@ export class BrowserToolService {
     el.dispatchEvent(new Event('input', { bubbles: true }));
     el.dispatchEvent(new Event('change', { bubbles: true }));
     el.setSelectionRange(caret, caret);
-  }
-
-  private uploadFile(): ToolExecutionResult {
-    return fail('File upload not supported via script');
   }
 
   private closeTab(): ToolExecutionResult {

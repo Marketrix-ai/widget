@@ -69,9 +69,8 @@ export default defineConfig(({ command }) => {
         },
         terserOptions: {
           compress: {
-            drop_console: true,
+            drop_console: ['log', 'info', 'debug'],
             drop_debugger: true,
-            pure_funcs: ['console.log', 'console.info', 'console.debug'],
           },
           format: {
             comments: false,

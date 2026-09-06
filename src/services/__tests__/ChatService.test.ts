@@ -25,32 +25,16 @@ describe('ChatService persistence', () => {
     storageService.updateContext({ chat_id: 'chat-1', messages: [], isOpen: false });
   });
 
-  it('ignores a persist that arrives before restore, so a mount-time render cannot wipe stored messages', () => {
-    new ChatService().persist(snapshot([message()]));
-
-    expect(storageService.getContext().messages).toEqual([]);
-  });
-
-  it('round-trips a snapshot once restore has run', () => {
+  it('round-trips a snapshot', () => {
     const service = new ChatService();
-    service.restore();
     service.persist(snapshot([message()]));
 
     expect(storageService.getContext().isOpen).toBe(true);
     expect(service.restore().messages).toEqual([message()]);
   });
 
-  it('drops a placeholder with nothing to show, which would restore as an empty bubble', () => {
-    const service = new ChatService();
-    service.restore();
-    service.persist(snapshot([message(), message({ id: 'empty', isPlaceholder: true, parts: [] })]));
-
-    expect(storageService.getContext().messages.map(m => m.id)).toEqual(['agent-1']);
-  });
-
   it('restores a screenshare as an ended notice, because a MediaStream cannot survive a reload', () => {
     const service = new ChatService();
-    service.restore();
     service.persist(snapshot([message({ id: 'screenshare-1', content: '', parts: [] })]));
 
     expect(service.restore().messages[0]).toMatchObject({

@@ -137,7 +137,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
             label: getModeDisplayName(id),
           }))}
           activeMode={currentMode}
-          onModeChange={mode => handleModeChange(mode as InstructionType)}
+          onModeChange={handleModeChange}
           disabled={messages.some(msg => msg.isPlaceholder)}
           taskRunning={isTaskRunning}
           onStop={() => {

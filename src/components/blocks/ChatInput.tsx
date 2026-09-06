@@ -3,6 +3,7 @@ import React, { useCallback, useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
 
 import { radiusClasses } from '../../design-system/component-tokens';
+import type { InstructionType } from '../../types';
 import { Flex } from '../base/Flex';
 import { Icon } from '../base/Icon';
 import { IconButton } from '../base/IconButton';
@@ -11,7 +12,7 @@ import { Stack } from '../base/Stack';
 import { Text } from '../base/Text';
 
 export interface ChatInputMode {
-  id: string;
+  id: InstructionType;
   icon: IconName;
   label: string;
 }
@@ -21,8 +22,8 @@ export interface ChatInputProps {
   onChange: (value: string) => void;
   onSubmit: () => void;
   modes?: ChatInputMode[];
-  activeMode?: string;
-  onModeChange?: (mode: string) => void;
+  activeMode?: InstructionType;
+  onModeChange?: (mode: InstructionType) => void;
   disabled?: boolean;
   taskRunning?: boolean;
   onStop?: () => void;
@@ -130,7 +131,7 @@ export function ChatInput({
           variant={taskRunning ? 'secondary' : 'primary'}
           size='sm'
           disabled={!taskRunning && !canSend}
-          label={taskRunning ? 'Stop simulation' : 'Send message'}
+          label={taskRunning ? 'Stop the assistant' : 'Send message'}
           onClick={e => {
             e.preventDefault();
             e.stopPropagation();

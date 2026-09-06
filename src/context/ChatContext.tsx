@@ -50,10 +50,8 @@ const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
 const MAX_PROCESSED_TOOL_CALL_IDS = 1000;
 
-// How long a dispatch may sit with zero events before the composer gives up waiting on it —
-// see `reduceStaleReply`. Generous on purpose: this only guards a request that never showed any
-// sign of life at all, never one that is visibly still working.
 const STALE_REPLY_TIMEOUT_MS = 120_000;
+const STALE_REPLY_TEXT = 'This is taking longer than expected. Please try again.';
 
 interface ChatProviderProps {
   children: React.ReactNode;
@@ -123,6 +121,14 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
     [commit],
   );
 
+  useEffect(() => {
+    const watchdogs = state.messages
+      .filter(msg => msg.isPlaceholder)
+      .map(msg => setTimeout(() => commit(s => reduceStaleReply(s, msg.id, STALE_REPLY_TEXT)), STALE_REPLY_TIMEOUT_MS));
+
+    return () => watchdogs.forEach(clearTimeout);
+  }, [state.messages, commit]);
+
   const messageDispatch = useCallback(
     async (content: string, mode?: InstructionType, skipUserMessage?: boolean) => {
       const effectiveMode = mode ?? currentModeRef.current;
@@ -162,12 +168,6 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
       };
       addMessage(placeholderMsg);
       uiActions.setLoading(true);
-      // Arms unconditionally: `reduceStaleReply` itself checks the message is still untouched before
-      // acting, so this is a no-op on the common path where a reply (or even just the first tool/call)
-      // arrives well within the window.
-      setTimeout(() => {
-        commit(s => reduceStaleReply(s, placeholderId, 'This is taking longer than expected. Please try again.'));
-      }, STALE_REPLY_TIMEOUT_MS);
 
       try {
         await dispatchMessage(config, content, effectiveMode, placeholderId);

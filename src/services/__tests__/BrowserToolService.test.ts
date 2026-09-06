@@ -1,6 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { BROWSER_TOOLS, WAIT_FOR_USER_TOOLS } from '../../utils/chat';
 import { browserToolService } from '../BrowserToolService';
+import { domService } from '../DomService';
+import { showModeService } from '../ShowModeService';
 
 const locationDescriptor = Object.getOwnPropertyDescriptor(window, 'location') as PropertyDescriptor;
 let navigations: string[] = [];
@@ -59,6 +62,26 @@ describe('a tool that leaves the page reports itself before it goes', () => {
   });
 });
 
+describe('navigate reports what the browser did with a new tab', () => {
+  it('succeeds when the popup really opened', async () => {
+    const open = vi.spyOn(window, 'open').mockReturnValue({} as Window);
+
+    const result = await browserToolService.executeTool('navigate', { url: 'https://host.test/next', new_tab: true });
+
+    expect(open).toHaveBeenCalledWith('https://host.test/next', '_blank');
+    expect(result.success).toBe(true);
+  });
+
+  it('fails when a popup blocker refuses it', async () => {
+    vi.spyOn(window, 'open').mockReturnValue(null);
+
+    const result = await browserToolService.executeTool('navigate', { url: 'https://host.test/next', new_tab: true });
+
+    expect(result.success).toBe(false);
+    expect(result.error).toBe('The browser blocked opening a new tab');
+  });
+});
+
 describe('close_tab reports what the browser did', () => {
   it('fails when the browser refuses to close a tab the script did not open', async () => {
     vi.spyOn(window, 'close').mockImplementation(() => {});
@@ -77,5 +100,20 @@ describe('close_tab reports what the browser did', () => {
 
     expect(result.success).toBe(true);
     Object.defineProperty(window, 'closed', { configurable: true, value: false });
+  });
+});
+
+describe('a tool nothing can perform is not offered at all', () => {
+  it('upload_file is unknown, so show mode never asks the visitor to confirm it', async () => {
+    vi.spyOn(domService, 'getValidatedElement').mockReturnValue({ element: document.createElement('input') });
+    const staged = vi.spyOn(showModeService, 'showToolAction').mockResolvedValue();
+
+    const result = await browserToolService.executeTool('upload_file', { index: 0 }, 'show');
+
+    expect(result.success).toBe(false);
+    expect(result.error).toBe('Unknown tool: upload_file');
+    expect(staged).not.toHaveBeenCalled();
+    expect(BROWSER_TOOLS.has('upload_file')).toBe(false);
+    expect(WAIT_FOR_USER_TOOLS.has('upload_file')).toBe(false);
   });
 });
