@@ -62,7 +62,7 @@ are generated**, so after changing `rc:` you must re-run `lefthook install --for
   covers brotli. Nothing is compressed per request.
 - **`bundle:check` budgets each bundled dependency, not just the total** — a total cap cannot see
   which dependency grew. Three are 63% of the bundle: `zod` 91,018 (two `safeParse` calls),
-  `@rrweb/record` 76,564 (a feature off by default), `@base-ui/react` + `/utils` 50,956. A package
+  `@rrweb/record` 76,564 (a feature off by default), `@base-ui/react` + `/utils` 86,376. A package
   missing from `DEPENDENCY_BUDGETS` fails the gate, so a new import is a deliberate line.
 - **A single chunk means an import is unconditional** — a heavy dependency behind an off-by-default
   flag still ships to every host page. Weigh that at the import, because the packaging contract has no
@@ -208,7 +208,16 @@ and shipped images cannot drift in their dependency set.
 - **Inside a closed shadow root, `document.activeElement` is the HOST** and a stylesheet's `:root`
   matches nothing — read focus through `getRootNode()`, and scope host-level rules to `:host` or
   `[data-marketrix-widget]`. `useFocusTrap.activeElementIn` is the one home for the retargeting and
-  eslint's `no-restricted-properties` bans the bare read everywhere else.
+  eslint's `no-restricted-properties` bans the bare read everywhere else. **Base UI has the same bug
+  and cannot see it**: its focus restore descends `element.shadowRoot.activeElement`, which is null for
+  a closed root, so it records the host and hands focus to the host page on close — `WidgetDialog`
+  passes an explicit `finalFocus` ref rather than relying on the default.
+- **Base UI owns the interaction primitives; the two remaining hand-rolled hooks are not a gap.**
+  Dialog, Button, Tabs (`ShellTabBar` + the view panels) and Toast (`Notifications.tsx`) come from the
+  library. `useFocusTrap` and `useScrollLock` stay hand-rolled because they serve `MessengerShell`,
+  a **non-modal** panel that is not a Dialog: Base UI exposes no standalone focus-trap or scroll-lock,
+  and making the panel a Dialog to reach them would inert the customer's page and mutate its
+  `<html>`/`<body>` — the thing an embedded widget must not do.
 
 ## Conventions
 

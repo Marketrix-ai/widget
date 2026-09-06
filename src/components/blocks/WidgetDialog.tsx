@@ -15,6 +15,12 @@ export interface WidgetDialogProps {
   onConfirm?: () => void;
   confirmLabel?: string;
   cancelLabel?: string;
+  /**
+   * Where focus lands on close. Base UI's default restore is broken here: it descends
+   * `element.shadowRoot.activeElement`, which is null for a CLOSED root, so it records the shadow
+   * HOST and hands focus to a host-page element on close. Naming the target sidesteps that.
+   */
+  finalFocusRef?: React.RefObject<HTMLElement | null>;
 }
 
 export const WidgetDialog: React.FC<WidgetDialogProps> = ({
@@ -25,6 +31,7 @@ export const WidgetDialog: React.FC<WidgetDialogProps> = ({
   onConfirm,
   confirmLabel = 'Confirm',
   cancelLabel = 'Cancel',
+  finalFocusRef,
 }) => {
   const portalContainer = usePortalContainer();
 
@@ -39,6 +46,7 @@ export const WidgetDialog: React.FC<WidgetDialogProps> = ({
         <Dialog.Backdrop className='mtx-dialog-backdrop' style={{ zIndex: LAYER_TOKENS.dialog }} />
         <Dialog.Popup
           className='mtx-dialog-popup'
+          finalFocus={finalFocusRef}
           style={{ ...getElevationStyle('panel'), zIndex: LAYER_TOKENS.dialog }}
         >
           <Dialog.Title className='mtx-dialog-title'>{title}</Dialog.Title>

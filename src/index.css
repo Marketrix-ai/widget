@@ -210,13 +210,15 @@
   height: 100%;
   min-width: 0;
   flex: 1 1 0%;
+  position: relative;
 }
 
 .mtx-button[data-variant='tab']:hover {
   color: var(--foreground);
 }
 
-.mtx-button[data-variant='tab'][data-active='true'] {
+/* Tabs.Tab owns selection, so it is `data-selected` here and not the Button's own `data-active`. */
+.mtx-button[data-variant='tab'][data-selected] {
   color: var(--primary);
   font-weight: 600;
 }
@@ -379,6 +381,27 @@
   background: var(--primary);
   color: var(--primary-foreground);
   box-shadow: var(--shadow-sm);
+}
+
+/* ---- Notifications --------------------------------------------------------------------------- */
+
+.mtx-toast-viewport {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 420px;
+}
+
+.mtx-toast {
+  animation: mtx-fade-in var(--duration-animation) ease-out;
+}
+
+.mtx-toast[data-ending-style] {
+  opacity: 0;
+  transition: opacity var(--duration-animation) ease-out;
 }
 
 /* ---- Dialog ---------------------------------------------------------------------------------- */
@@ -554,11 +577,18 @@
 /* ---- Tab bar and screen-share indicator ------------------------------------------------------ */
 
 .mtx-tab-underline {
-  display: block;
+  position: absolute;
+  top: 0;
+  left: 25%;
+  right: 25%;
   height: 2px;
-  width: 100%;
   border-radius: 9999px;
   background: var(--primary);
+  opacity: 0;
+}
+
+[data-selected] > .mtx-tab-underline {
+  opacity: 1;
 }
 
 .mtx-screenshare-dot {
