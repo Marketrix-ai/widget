@@ -1,6 +1,6 @@
 {
   "name": "@marketrix.ai/widget",
-  "version": "3.8.474",
+  "version": "3.8.475",
   "type": "module",
   "sideEffects": false,
   "main": "./dist/widget.mjs",
@@ -15,7 +15,8 @@
     "./package.json": "./package.json"
   },
   "files": [
-    "dist"
+    "dist",
+    "!dist/**/*.map"
   ],
   "scripts": {
     "tag": "bash scripts/release.sh",

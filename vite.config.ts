@@ -50,10 +50,9 @@ export default defineConfig(({ command }) => {
       build: {
         outDir: 'dist',
         emptyOutDir: true,
-        sourcemap: true,
+        sourcemap: 'hidden',
         minify: 'terser',
         target: 'esnext',
-        codeSplitting: false,
         cssCodeSplit: false,
         lib: {
           entry: ENTRY_FILE,
@@ -65,6 +64,9 @@ export default defineConfig(({ command }) => {
           output: {
             entryFileNames: BUNDLE_FILE,
             format: 'es',
+            // Vite reads this from the rolldown output, never from `build` — one level up it is a
+            // no-op that reads like a guarantee, and the single-chunk packaging contract had none.
+            codeSplitting: false,
           },
         },
         terserOptions: {

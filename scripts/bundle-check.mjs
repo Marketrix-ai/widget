@@ -38,7 +38,10 @@ const EXTERNALS = ['react', 'react-dom', 'react-dom/client', 'react/jsx-runtime'
 
 const emitted = readdirSync('dist');
 
-const extraChunks = emitted.filter(name => name.endsWith('.mjs') && name !== 'widget.mjs');
+// `type: "module"` makes rolldown name split chunks `[name]-[hash].js`, so matching only `.mjs`
+// let a genuinely split build pass. The allowlist is every file the runtime image serves.
+const SERVED_SCRIPTS = ['widget.mjs', 'loader.js'];
+const extraChunks = emitted.filter(name => /\.[cm]?js$/.test(name) && !SERVED_SCRIPTS.includes(name));
 if (extraChunks.length > 0) {
   errors.push(`dist/ has code-split chunks beside widget.mjs: ${extraChunks.join(', ')}`);
 }
