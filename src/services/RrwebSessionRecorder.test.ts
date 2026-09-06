@@ -1,9 +1,10 @@
 import { record } from '@rrweb/record';
 import { EventType } from '@rrweb/types';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { sdk } from '../sdk';
 import { RrwebSessionRecorder } from './RrwebSessionRecorder';
+import { StreamClient } from './StreamClient';
 
 vi.mock('@rrweb/record', () => ({ record: vi.fn(() => vi.fn()) }));
 vi.mock('../sdk', async importOriginal => {
@@ -16,7 +17,12 @@ vi.mock('../sdk', async importOriginal => {
 
 const mockSdk = vi.mocked(sdk);
 
+beforeEach(() => {
+  vi.spyOn(StreamClient.getInstance(), 'ready').mockResolvedValue();
+});
+
 afterEach(() => {
+  vi.restoreAllMocks();
   vi.clearAllMocks();
 });
 
@@ -69,5 +75,28 @@ describe('RrwebSessionRecorder lifecycle', () => {
     await start;
 
     expect(record).not.toHaveBeenCalled();
+  });
+});
+
+describe('a recorder posting into a chat the api has not registered', () => {
+  it('holds the metadata post until the stream is registered', async () => {
+    let register!: () => void;
+    const ready = vi.spyOn(StreamClient.getInstance(), 'ready').mockReturnValue(
+      new Promise<void>(resolve => {
+        register = resolve;
+      }),
+    );
+    mockSdk.widgetMessagePost.mockResolvedValueOnce(undefined);
+
+    const start = new RrwebSessionRecorder('chat-1', 1).start();
+    await Promise.resolve();
+
+    expect(ready).toHaveBeenCalledWith('chat-1');
+    expect(mockSdk.widgetMessagePost).not.toHaveBeenCalled();
+
+    register();
+    await start;
+
+    expect(mockSdk.widgetMessagePost).toHaveBeenCalledOnce();
   });
 });

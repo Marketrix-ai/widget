@@ -7,7 +7,6 @@ import { createAgentMessage, createUserMessage } from '../services/ChatService';
 import { storageService } from '../services/StorageService';
 import { StreamClient, StreamGaveUpError } from '../services/StreamClient';
 import type { ChatMessage, InstructionType } from '../types';
-import { BROWSER_TOOLS } from '../utils/chat';
 import {
   isTerminalTaskStatus,
   reduceError,
@@ -121,13 +120,19 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
     [commit],
   );
 
+  const placeholderIds = state.messages
+    .filter(msg => msg.isPlaceholder)
+    .map(msg => msg.id)
+    .join(' ');
+
   useEffect(() => {
-    const watchdogs = state.messages
-      .filter(msg => msg.isPlaceholder)
-      .map(msg => setTimeout(() => commit(s => reduceStaleReply(s, msg.id, STALE_REPLY_TEXT)), STALE_REPLY_TIMEOUT_MS));
+    const watchdogs = placeholderIds
+      .split(' ')
+      .filter(Boolean)
+      .map(id => setTimeout(() => commit(s => reduceStaleReply(s, id, STALE_REPLY_TEXT)), STALE_REPLY_TIMEOUT_MS));
 
     return () => watchdogs.forEach(clearTimeout);
-  }, [state.messages, commit]);
+  }, [placeholderIds, commit]);
 
   const messageDispatch = useCallback(
     async (content: string, mode?: InstructionType, skipUserMessage?: boolean) => {
@@ -221,19 +226,6 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
           processedToolCallIds.current = new Set(
             [...processedToolCallIds.current].slice(-MAX_PROCESSED_TOOL_CALL_IDS / 2),
           );
-        }
-
-        if (!BROWSER_TOOLS.has(event.browser_tool)) {
-          console.warn('[Widget] Unknown tool requested:', event.browser_tool);
-          streamClient
-            .send({
-              type: 'tool/response',
-              tool_call_id: toolCallId,
-              success: false,
-              error: `Unknown tool: ${event.browser_tool}`,
-            })
-            .catch(err => console.error('Failed to send unknown-tool response:', err));
-          return;
         }
       } else if (event.type === 'task/status' && isTerminalTaskStatus(event.status)) {
         processedToolCallIds.current.clear();

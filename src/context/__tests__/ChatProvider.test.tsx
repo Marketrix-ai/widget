@@ -61,6 +61,59 @@ describe('a placeholder that never receives an event', () => {
   });
 });
 
+const ChurningTranscript = () => {
+  const { messages, chatActions } = useChatContext();
+
+  useEffect(() => {
+    chatActions.setMessages([restoredPlaceholder]);
+  }, [chatActions]);
+
+  return (
+    <>
+      <div data-testid='transcript'>{messages.map(msg => `${msg.id}:${msg.isPlaceholder}:${msg.content}`)}</div>
+      <button
+        data-testid='churn'
+        onClick={() =>
+          chatActions.addMessage({
+            id: `system-${messages.length}`,
+            content: 'Mode changed',
+            sender: 'user',
+            timestamp: new Date(),
+            isSystemMessage: true,
+            parts: [],
+          })
+        }
+      />
+    </>
+  );
+};
+
+describe('the stale-reply deadline belongs to the placeholder', () => {
+  it('is not pushed back by an unrelated message the visitor adds while waiting', () => {
+    render(
+      <UIStateProvider>
+        <ChatProvider previewMode>
+          <ChurningTranscript />
+        </ChatProvider>
+      </UIStateProvider>,
+    );
+
+    act(() => {
+      vi.advanceTimersByTime(100_000);
+    });
+    act(() => {
+      screen.getByTestId('churn').click();
+    });
+    act(() => {
+      vi.advanceTimersByTime(25_000);
+    });
+
+    expect(screen.getByTestId('transcript')).toHaveTextContent(
+      'temp-restored:false:This is taking longer than expected. Please try again.',
+    );
+  });
+});
+
 const ProcessingProbe = () => {
   const { state, actions } = useWidget();
 

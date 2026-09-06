@@ -7,7 +7,6 @@ export type StoredMessage = Omit<ChatMessage, 'videoStream' | 'timestamp'> & { t
 
 export interface ChatSnapshot {
   messages: ChatMessage[];
-  isTaskRunning: boolean;
   currentMode: InstructionType;
   isOpen: boolean;
 }
@@ -24,7 +23,6 @@ export type MarketrixChatContext = Omit<ChatSnapshot, 'messages'> & {
 const DEFAULT_CONTEXT: MarketrixChatContext = {
   chat_id: null,
   messages: [],
-  isTaskRunning: false,
   currentMode: 'tell',
   isOpen: false,
   config: null,

@@ -15,10 +15,12 @@ const CORNERS = {
   top_left: { classes: 'top-5 left-5', vertical: 'top', horizontal: 'left' },
 } as const;
 
-export const getCorner = (position: WidgetPosition) => CORNERS[position] ?? CORNERS.bottom_right;
+const CORNER_NAMES = Object.keys(CORNERS) as WidgetPosition[];
+
+export const getCorner = (position: WidgetPosition) => CORNERS[position];
 
 export const isWidgetPosition = (value: unknown): value is WidgetPosition =>
-  typeof value === 'string' && value in CORNERS;
+  CORNER_NAMES.includes(value as WidgetPosition);
 
 export const getPositionClasses = (position: WidgetPosition): string => getCorner(position).classes;
 
@@ -55,7 +57,7 @@ export const getNearestCornerByTranslation = (
 
   let nearest: WidgetPosition = position;
   let minDist = Infinity;
-  for (const candidate of Object.keys(CORNERS) as WidgetPosition[]) {
+  for (const candidate of CORNER_NAMES) {
     const target = getAnchorTopLeft(candidate, vw, vh, w, h);
     const dist = Math.hypot(x - target.x, y - target.y);
     if (dist < minDist) {

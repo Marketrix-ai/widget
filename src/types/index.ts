@@ -2,24 +2,24 @@ import type { InstructionType, WidgetSettingsData } from '../sdk';
 
 export type { InstructionType, WidgetSettingsData } from '../sdk';
 
-// Flat so API settings spread in directly. mtxId+mtxKey is the credential; mtxApp is set internally post-validation, never an input (an application id is guessable and authenticates nothing).
-export type MarketrixConfig = Partial<WidgetSettingsData> & {
-  mtxId?: string;
-  mtxKey?: string;
-  mtxApp?: number;
-  userId?: number;
+export interface ClientOwnedConfig {
   mtxApiHost?: string;
-
-  // Local-only styling, not from API.
+  userId?: number;
   widget_position_z_index?: number;
-
-  isPreviewMode?: boolean;
-
   /** When false, widget initializes fully but UI is hidden. Default: true */
   show_widget?: boolean;
   /** When false, screen access requests are auto-denied and Share Screen button is hidden. Default: true */
   use_screenshare?: boolean;
-};
+}
+
+// Flat so API settings spread in directly. mtxId+mtxKey is the credential; mtxApp is set internally post-validation, never an input (an application id is guessable and authenticates nothing).
+export type MarketrixConfig = Partial<WidgetSettingsData> &
+  ClientOwnedConfig & {
+    mtxId?: string;
+    mtxKey?: string;
+    mtxApp?: number;
+    isPreviewMode?: boolean;
+  };
 
 export interface ChatMessage {
   id: string;
@@ -71,16 +71,8 @@ export type AddWidgetConfig = (
       mtxId: string;
       mtxKey: string;
     }
-) & {
-  container?: HTMLElement;
-  mtxApiHost?: string;
-  userId?: number;
-  widget_position_z_index?: number;
-  /** When false, widget initializes fully but UI is hidden. Default: true */
-  show_widget?: boolean;
-  /** When false, screen access requests are auto-denied and Share Screen button is hidden. Default: true */
-  use_screenshare?: boolean;
-};
+) &
+  ClientOwnedConfig & { container?: HTMLElement };
 
 export interface MarketrixWidgetProps {
   settings: WidgetSettingsData;

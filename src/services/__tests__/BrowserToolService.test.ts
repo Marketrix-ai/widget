@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { BROWSER_TOOLS, WAIT_FOR_USER_TOOLS } from '../../utils/chat';
+import { TOOL_LABELS, WAIT_FOR_USER_TOOLS } from '../../utils/chat';
 import { browserToolService } from '../BrowserToolService';
 import { domService } from '../DomService';
 import { showModeService } from '../ShowModeService';
@@ -113,7 +113,7 @@ describe('a tool nothing can perform is not offered at all', () => {
     expect(result.success).toBe(false);
     expect(result.error).toBe('Unknown tool: upload_file');
     expect(staged).not.toHaveBeenCalled();
-    expect(BROWSER_TOOLS.has('upload_file')).toBe(false);
+    expect(TOOL_LABELS.has('upload_file')).toBe(false);
     expect(WAIT_FOR_USER_TOOLS.has('upload_file')).toBe(false);
   });
 });

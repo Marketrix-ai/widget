@@ -28,8 +28,8 @@ export interface PendingMessage {
 
 export interface UseScreenShareOptions {
   onScreenSharingChange?: (isSharing: boolean) => void;
-  onStartScreenShareRef?: React.MutableRefObject<(() => void) | null>;
-  onStopScreenShareRef?: React.MutableRefObject<(() => void) | null>;
+  startScreenShareRef?: React.MutableRefObject<(() => void) | null>;
+  stopScreenShareRef?: React.MutableRefObject<(() => void) | null>;
   onAddMessage: (message: ChatMessage) => void;
   onUpdateMessage: (messageId: string, updates: Partial<ChatMessage>) => void;
   onRemoveMessage?: (messageId: string) => void;
@@ -51,8 +51,8 @@ export interface UseScreenShareReturn {
 
 export function useScreenShare({
   onScreenSharingChange,
-  onStartScreenShareRef,
-  onStopScreenShareRef,
+  startScreenShareRef,
+  stopScreenShareRef,
   onAddMessage,
   onUpdateMessage,
   onRemoveMessage,
@@ -162,8 +162,8 @@ export function useScreenShare({
     announceStopped(screenShareMessageId);
   };
 
-  useImperativeHandle(onStartScreenShareRef, () => handleStartScreenShare);
-  useImperativeHandle(onStopScreenShareRef, () => stopScreenSharing);
+  useImperativeHandle(startScreenShareRef, () => handleStartScreenShare);
+  useImperativeHandle(stopScreenShareRef, () => stopScreenSharing);
 
   return {
     isScreenSharing,

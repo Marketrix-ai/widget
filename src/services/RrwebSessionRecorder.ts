@@ -2,6 +2,7 @@ import { record } from '@rrweb/record';
 import type { eventWithTime } from '@rrweb/types';
 
 import { sdk } from '../sdk';
+import { StreamClient } from './StreamClient';
 
 const FLUSH_INTERVAL_MS = 500;
 const MAX_BUFFERED_EVENTS = 20_000;
@@ -21,6 +22,8 @@ export class RrwebSessionRecorder {
 
   async start(): Promise<void> {
     if (this.stopRecording || this.stopped) return;
+    await StreamClient.getInstance().ready(this.chatId);
+    if (this.stopped) return;
     await sdk.widgetMessagePost({
       chat_id: this.chatId,
       command: {
