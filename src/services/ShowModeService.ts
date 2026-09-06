@@ -113,19 +113,12 @@ export class ShowModeService {
     const rect = element.getBoundingClientRect();
     const highlight = document.createElement('div');
     highlight.id = 'marketrix-show-highlight';
-    highlight.style.cssText = `
-    position: fixed;
-    top: ${rect.top}px;
-    left: ${rect.left}px;
-    width: ${rect.width}px;
-    height: ${rect.height}px;
-    border: 3px solid #3b82f6;
-    border-radius: 4px;
-    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2), 0 0 20px rgba(59, 130, 246, 0.4);
-    z-index: 2147483645;
-    pointer-events: none;
-    transition: none;
-  `;
+    // One line: template-literal whitespace is not minified, so indentation here ships to every host page.
+    highlight.style.cssText =
+      `position:fixed;top:${rect.top}px;left:${rect.left}px;width:${rect.width}px;height:${rect.height}px;` +
+      'border:3px solid #3b82f6;border-radius:4px;' +
+      'box-shadow:0 0 0 4px rgba(59,130,246,0.2),0 0 20px rgba(59,130,246,0.4);' +
+      'z-index:2147483645;pointer-events:none;transition:none;';
     document.body.appendChild(highlight);
     this.currentHighlight = highlight;
   }
@@ -136,13 +129,10 @@ export class ShowModeService {
 
     const content = isClickAction
       ? `<div style="font-weight: 500; color: #1f2937; font-size: 12px;">${this.escapeHtml(explanation)}</div>`
-      : `<div style="margin-bottom: 12px; font-weight: 500; color: #1f2937; font-size: 12px;">${this.escapeHtml(explanation)}</div>
-         <div style="display: flex; gap: 8px; justify-content: flex-end;">
-           <button id="marketrix-show-continue" style="
-             background: #3b82f6; color: white; border: none; border-radius: 6px;
-             padding: 8px 16px; font-size: 12px; font-weight: 500; cursor: pointer;
-           ">Continue</button>
-         </div>`;
+      : `<div style="margin-bottom:12px;font-weight:500;color:#1f2937;font-size:12px;">${this.escapeHtml(explanation)}</div>` +
+        '<div style="display:flex;gap:8px;justify-content:flex-end;">' +
+        '<button id="marketrix-show-continue" style="background:#3b82f6;color:white;border:none;' +
+        'border-radius:6px;padding:8px 16px;font-size:12px;font-weight:500;cursor:pointer;">Continue</button></div>';
 
     popup.innerHTML = content;
     popup.style.cssText = POPUP_CHROME_CSS;

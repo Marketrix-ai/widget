@@ -69,10 +69,17 @@ export default defineConfig(({ command }) => {
           },
         },
         terserOptions: {
+          // ESM-only output, so terser can assume module scope and mangle top-level names.
+          module: true,
+          toplevel: true,
           compress: {
             drop_console: ['log', 'info', 'debug'],
             drop_debugger: true,
+            module: true,
+            toplevel: true,
+            passes: 3,
           },
+          mangle: { toplevel: true },
           format: {
             comments: false,
           },
