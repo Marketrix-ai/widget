@@ -22,6 +22,7 @@ export interface ToolExecutionResult<T = TextData> {
   success: boolean;
   data: T;
   error?: string;
+  afterResponseSent?: () => void;
 }
 
 /** One shape for every widget tool's arguments: the wire carries a bare JSON object, so nothing is
@@ -52,6 +53,22 @@ const failOptions = (error: string): ToolExecutionResult<DropdownOptionsData> =>
   error,
 });
 
+const SCREENSHOT_FRAME_TIMEOUT_MS = 5000;
+
+function firstFrame(video: HTMLVideoElement, timeoutMs: number): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('Screen capture produced no frame')), timeoutMs);
+    video.onloadeddata = () => {
+      clearTimeout(timer);
+      resolve();
+    };
+    video.onerror = () => {
+      clearTimeout(timer);
+      reject(new Error('Screen capture failed'));
+    };
+  });
+}
+
 const TAB_ORDER_SELECTOR =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
@@ -72,16 +89,12 @@ export class BrowserToolService {
           const { element, error } = domService.getValidatedElement(index);
           if (!element) return fail(error || `Element ${index} not found`);
 
-          const confirmed = await showModeService.showToolAction({
+          await showModeService.showToolAction({
             element,
             explanation: explanation || `Execute ${browserToolName}`,
             browserToolName,
             isClickAction: browserToolName === 'click_element',
           });
-
-          if (!confirmed) {
-            return fail('User cancelled action');
-          }
         }
       }
 
@@ -110,8 +123,6 @@ export class BrowserToolService {
           return this.getDropdownOptions(toolArgs);
         case 'send_keys':
           return this.sendKeys(toolArgs);
-        case 'upload_file':
-          return this.uploadFile();
         case 'close_tab':
           return this.closeTab();
         case 'done':
@@ -124,7 +135,6 @@ export class BrowserToolService {
           return fail(`Unknown tool: ${browserToolName}`);
       }
     } catch (error) {
-      showModeService.cleanup();
       return fail(error instanceof Error ? error.message : String(error));
     }
   }
@@ -133,11 +143,17 @@ export class BrowserToolService {
     if (!args.url) return fail('URL is required');
 
     if (args.new_tab) {
-      window.open(args.url, '_blank');
-      return ok(`Opened ${args.url} in new tab`);
+      return window.open(args.url, '_blank')
+        ? ok(`Opened ${args.url} in new tab`)
+        : fail('The browser blocked opening a new tab');
     }
-    window.location.href = args.url;
-    return ok(`Navigating to ${args.url}`);
+    const url = args.url;
+    return {
+      ...ok(`Navigating to ${url}`),
+      afterResponseSent: () => {
+        window.location.href = url;
+      },
+    };
   }
 
   private search(args: ToolArgs): ToolExecutionResult {
@@ -150,8 +166,12 @@ export class BrowserToolService {
     if (engine === 'google') url = `https://www.google.com/search?q=${encoded}`;
     if (engine === 'bing') url = `https://www.bing.com/search?q=${encoded}`;
 
-    window.location.href = url;
-    return ok(`Searching for "${args.query}" on ${engine}`);
+    return {
+      ...ok(`Searching for "${args.query}" on ${engine}`),
+      afterResponseSent: () => {
+        window.location.href = url;
+      },
+    };
   }
 
   private async clickElement(args: ToolArgs): Promise<ToolExecutionResult> {
@@ -163,20 +183,7 @@ export class BrowserToolService {
     element.scrollIntoView({ behavior: 'smooth', block: 'center' });
     await new Promise(resolve => setTimeout(resolve, 100));
 
-    setTimeout(() => {
-      try {
-        element.click();
-      } catch (e) {
-        console.warn('[BrowserToolService] Click error:', e);
-        try {
-          element.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
-        } catch (fallbackError) {
-          console.warn('[BrowserToolService] Fallback click failed:', fallbackError);
-        }
-      }
-    }, 50);
-
-    return ok(`Clicked element ${args.index}`);
+    return { ...ok(`Clicked element ${args.index}`), afterResponseSent: () => element.click() };
   }
 
   private typeText(args: ToolArgs): ToolExecutionResult {
@@ -187,75 +194,24 @@ export class BrowserToolService {
     const { element, error } = domService.getValidatedElement(args.index);
     if (!element) return fail(error || `Element ${args.index} not found`);
 
-    const isInputLike =
-      element instanceof HTMLInputElement ||
-      element instanceof HTMLTextAreaElement ||
-      (element as HTMLElement).isContentEditable;
+    if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
+      element.focus();
+      this.setNativeValue(element, clear ? args.text : element.value + args.text);
 
-    if (isInputLike) {
-      const inputElement = element as HTMLInputElement | HTMLTextAreaElement;
+      element.dispatchEvent(
+        new InputEvent('input', { bubbles: true, cancelable: true, inputType: 'insertText', data: args.text }),
+      );
+      element.dispatchEvent(new Event('change', { bubbles: true }));
+      // Some frameworks need blur to trigger validation
+      element.dispatchEvent(new Event('blur', { bubbles: true }));
+    } else if (element.isContentEditable) {
+      element.focus();
+      const selection = window.getSelection();
+      if (clear) selection?.selectAllChildren(element);
+      else selection?.collapse(element, element.childNodes.length);
 
-      try {
-        inputElement.focus();
-      } catch (e) {
-        console.warn('[BrowserToolService] Focus failed:', e);
-      }
-
-      const finalValue = clear ? args.text : inputElement.value + args.text;
-
-      let lastError: unknown = null;
-      const attempt = (name: string, set: () => boolean): boolean => {
-        try {
-          return set();
-        } catch (e) {
-          lastError = e;
-          console.warn(`[BrowserToolService] ${name} failed:`, e);
-          return false;
-        }
-      };
-
-      // Ordered by fidelity: React tracks the prototype setter and reverts a plain `.value =`; execCommand acts on
-      // the editing host rather than the JS object, so it is the only path left once an assignment has thrown.
-      const valueSet =
-        attempt('Native setter', () => {
-          const isTextArea = inputElement.tagName.toUpperCase() === 'TEXTAREA';
-          const descriptor = Object.getOwnPropertyDescriptor(
-            isTextArea ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype,
-            'value',
-          );
-          if (!descriptor?.set) return false;
-          descriptor.set.call(inputElement, finalValue);
-          return true;
-        }) ||
-        attempt('Direct assignment', () => {
-          inputElement.value = finalValue;
-          return true;
-        }) ||
-        attempt('execCommand', () => {
-          inputElement.focus();
-          if (clear) inputElement.select();
-          return document.execCommand('insertText', false, args.text);
-        });
-
-      if (!valueSet) {
-        return fail(`Failed to set value: ${lastError instanceof Error ? lastError.message : String(lastError)}`);
-      }
-
-      try {
-        const inputEvent = new InputEvent('input', {
-          bubbles: true,
-          cancelable: true,
-          inputType: 'insertText',
-          data: args.text,
-        });
-        inputElement.dispatchEvent(inputEvent);
-
-        inputElement.dispatchEvent(new Event('change', { bubbles: true }));
-
-        // Some frameworks need blur to trigger validation
-        inputElement.dispatchEvent(new Event('blur', { bubbles: true }));
-      } catch (e) {
-        console.warn('[BrowserToolService] Event dispatch failed:', e);
+      if (!document.execCommand('insertText', false, args.text)) {
+        return fail(`Could not insert text into element ${args.index}`);
       }
     } else if ('value' in element) {
       try {
@@ -332,11 +288,8 @@ export class BrowserToolService {
   }
 
   private goBack(): ToolExecutionResult {
-    if (window.history.length > 1) {
-      window.history.back();
-      return ok('Navigated back');
-    }
-    return fail('No history');
+    if (window.history.length <= 1) return fail('No history');
+    return { ...ok('Navigated back'), afterResponseSent: () => window.history.back() };
   }
 
   private async wait({ seconds }: ToolArgs): Promise<ToolExecutionResult> {
@@ -506,14 +459,8 @@ export class BrowserToolService {
             return 'Backspace: input is empty, nothing to delete';
           }
 
-          let start: number = element.selectionStart ?? value.length;
-          let end: number = element.selectionEnd ?? value.length;
-
-          // Cursor at 0 with no known position → delete from the end instead.
-          if (start === 0 && end === 0) {
-            start = value.length;
-            end = value.length;
-          }
+          const start: number = element.selectionStart ?? value.length;
+          const end: number = element.selectionEnd ?? value.length;
 
           let newValue: string;
           let newCursorPos: number;
@@ -565,25 +512,25 @@ export class BrowserToolService {
   }
 
   /** Native value setter so React/Vue controlled inputs pick up the change. */
-  private setValueAndCaret(el: HTMLInputElement | HTMLTextAreaElement, value: string, caret: number): void {
+  private setNativeValue(el: HTMLInputElement | HTMLTextAreaElement, value: string): void {
     const setter = Object.getOwnPropertyDescriptor(
       el instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype,
       'value',
     )?.set;
     if (setter) setter.call(el, value);
     else el.value = value;
+  }
+
+  private setValueAndCaret(el: HTMLInputElement | HTMLTextAreaElement, value: string, caret: number): void {
+    this.setNativeValue(el, value);
     el.dispatchEvent(new Event('input', { bubbles: true }));
     el.dispatchEvent(new Event('change', { bubbles: true }));
     el.setSelectionRange(caret, caret);
   }
 
-  private uploadFile(): ToolExecutionResult {
-    return fail('File upload not supported via script');
-  }
-
   private closeTab(): ToolExecutionResult {
     window.close();
-    return ok('Attempted close');
+    return window.closed ? ok('Tab closed') : fail('The browser refused to close a tab this script did not open');
   }
 
   private done(args: ToolArgs): ToolExecutionResult {
@@ -604,17 +551,14 @@ export class BrowserToolService {
   }
 
   private async getScreenshot(): Promise<ToolExecutionResult> {
+    const video = document.createElement('video');
     try {
-      const stream = await startScreenShare();
-      const video = document.createElement('video');
-      video.srcObject = stream;
+      video.srcObject = await startScreenShare();
       video.autoplay = true;
       video.style.display = 'none';
       document.body.appendChild(video);
 
-      await new Promise<void>(resolve => {
-        video.onloadeddata = () => resolve();
-      });
+      await firstFrame(video, SCREENSHOT_FRAME_TIMEOUT_MS);
 
       const canvas = document.createElement('canvas');
       canvas.width = video.videoWidth;
@@ -622,14 +566,12 @@ export class BrowserToolService {
       const ctx = canvas.getContext('2d');
       ctx?.drawImage(video, 0, 0);
 
-      const base64 = canvas.toDataURL('image/jpeg', 0.75);
-
-      video.remove();
       // Keep the stream alive — the agent usually requests a screenshot then keeps going; startScreenShare handles reuse.
-
-      return ok(base64);
+      return ok(canvas.toDataURL('image/jpeg', 0.75));
     } catch (error) {
       return fail(String(error));
+    } finally {
+      video.remove();
     }
   }
 }

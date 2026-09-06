@@ -15,4 +15,14 @@ describe('ChatInput', () => {
     expect(ref.current?.style.height).toBe('0px');
     expect(ref.current?.style.overflowY).toBe('hidden');
   });
+
+  it('names the icon-only action button in the words a visitor uses', () => {
+    const { rerender } = render(<ChatInput value='Question' onChange={vi.fn()} onSubmit={vi.fn()} />);
+
+    expect(screen.getByRole('button', { name: 'Send message' })).toBeInTheDocument();
+
+    rerender(<ChatInput value='Question' onChange={vi.fn()} onSubmit={vi.fn()} taskRunning onStop={vi.fn()} />);
+
+    expect(screen.getByRole('button', { name: 'Stop the assistant' })).toBeInTheDocument();
+  });
 });

@@ -1,5 +1,6 @@
 import { sdk, type WidgetData, type WidgetSettingsData, WidgetSettingsDataSchema } from '../sdk';
 import type { MarketrixConfig } from '../types';
+import type { CredentialedConfig } from './StorageService';
 
 export function createConfigFromSettings(
   widgetSettings: WidgetSettingsData,
@@ -42,7 +43,7 @@ function widgetSearchError(error: unknown, config: MarketrixConfig): Error {
   return withCause(`Widget validation failed: ${message}`, error);
 }
 
-export async function loadWidgetConfig(config: MarketrixConfig): Promise<MarketrixConfig> {
+export async function loadWidgetConfig(config: MarketrixConfig): Promise<CredentialedConfig> {
   const { mtxId, mtxKey } = config;
   if (!mtxId || !mtxKey) {
     throw new Error('Please provide mtxId + mtxKey');
@@ -92,6 +93,8 @@ export async function loadWidgetConfig(config: MarketrixConfig): Promise<Marketr
 
   return {
     ...createConfigFromSettings(parsedSettings.data, config),
+    mtxId,
+    mtxKey,
     mtxApp: activeWidget.application_id,
   };
 }

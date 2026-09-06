@@ -101,7 +101,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
         />
       )}
 
-      <Surface grow overflow='hidden' paddingY='xs' style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+      <Surface grow overflow='hidden' paddingY='2xs' style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
         <ErrorBoundary
           label='Chat'
           fallback={
@@ -137,7 +137,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
             label: getModeDisplayName(id),
           }))}
           activeMode={currentMode}
-          onModeChange={mode => handleModeChange(mode as InstructionType)}
+          onModeChange={handleModeChange}
           disabled={messages.some(msg => msg.isPlaceholder)}
           taskRunning={isTaskRunning}
           onStop={() => {

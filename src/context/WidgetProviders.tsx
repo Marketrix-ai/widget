@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 
 import { chatService } from '../services/ChatService';
 import { chatSessionManager } from '../services/ChatSessionManager';
@@ -6,21 +6,20 @@ import { StreamClient } from '../services/StreamClient';
 import { ChatProvider, useChatContext } from './ChatContext';
 import { UIStateProvider, useUIStateContext } from './UIStateContext';
 
-/** MarketrixWidget publishes its own root here: a portal outside it escapes the element carrying the tenant tokens. */
+/** WidgetRoot publishes its own root here: a portal outside it escapes the element carrying the tenant tokens. */
 export const PortalContainerContext = createContext<HTMLElement | null>(null);
 
 export const usePortalContainer = (): HTMLElement => useContext(PortalContainerContext) ?? document.body;
 
 /** Its own component so the subscription to every message change cannot re-render the tree InitBridge wraps. */
-const PersistBridge: React.FC<{ previewMode: boolean }> = ({ previewMode }) => {
+const PersistBridge: React.FC = () => {
   const { uiState } = useUIStateContext();
   const { messages, taskState } = useChatContext();
 
   useEffect(() => {
-    if (previewMode) return;
     const { currentMode, isOpen } = uiState;
     chatService.persist({ messages, ...taskState, currentMode, isOpen });
-  }, [previewMode, messages, taskState, uiState]);
+  }, [messages, taskState, uiState]);
 
   return null;
 };
@@ -28,6 +27,7 @@ const PersistBridge: React.FC<{ previewMode: boolean }> = ({ previewMode }) => {
 const InitBridge: React.FC<{ children: React.ReactNode; previewMode: boolean }> = ({ children, previewMode }) => {
   const { uiActions } = useUIStateContext();
   const { chatActions, taskActions } = useChatContext();
+  const [restored, setRestored] = useState(false);
 
   useEffect(() => {
     if (previewMode) return;
@@ -41,6 +41,7 @@ const InitBridge: React.FC<{ children: React.ReactNode; previewMode: boolean }> 
       uiActions.applyState(ui);
       chatActions.setMessages(messages);
       taskActions.setTaskState(isTaskRunning);
+      setRestored(true);
 
       StreamClient.getInstance()
         .connect(chatId)
@@ -61,7 +62,7 @@ const InitBridge: React.FC<{ children: React.ReactNode; previewMode: boolean }> 
   return (
     <>
       {children}
-      <PersistBridge previewMode={previewMode} />
+      {restored && <PersistBridge />}
     </>
   );
 };

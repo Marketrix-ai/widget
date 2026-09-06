@@ -109,7 +109,22 @@ describe('widget public entry paths', () => {
 
     expect(init).not.toHaveBeenCalled();
     expect(timer).not.toHaveBeenCalled();
-    expect(document.getElementById('marketrix-widget-loader-container')).toBeNull();
+    expect(document.getElementById('marketrix-widget-notice-container')).toBeNull();
+  });
+
+  it('mounts every widget a parent is given, in this module instance and the next', async () => {
+    const parent = document.createElement('div');
+    document.body.appendChild(parent);
+
+    const first = await import('./bootstrap');
+    first.createWidgetContainer(parent);
+    first.createWidgetContainer(parent);
+
+    vi.resetModules();
+    const reExecuted = await import('./bootstrap');
+    reExecuted.createWidgetContainer(parent);
+
+    expect(parent.querySelectorAll('.marketrix-widget-container')).toHaveLength(3);
   });
 
   it('owns non-empty widget CSS inside the closed shadow root', async () => {

@@ -2,24 +2,24 @@ import React from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 
 import { NotificationToast } from '../components/blocks/NotificationToast';
-import { MarketrixWidget } from '../components/MarketrixWidget';
+import { WidgetRoot } from '../components/WidgetRoot';
 import { WidgetProviders } from '../context/WidgetProviders';
 import type { NotificationTone } from '../design-system/component-tokens';
 import shadowStyles from '../index.css?inline';
 import type { MarketrixConfig } from '../types';
 import { isHTMLScriptElement } from './validation';
 
-export const widgetState: { instance: Root | null; config: MarketrixConfig | null } = {
-  instance: null,
-  config: null,
-};
+export interface WidgetMount {
+  instance: Root;
+  config: MarketrixConfig;
+  container: HTMLElement;
+  host: HTMLElement | undefined;
+  previewMode: boolean;
+}
 
-let loaderInstance: Root | null = null;
+export const widgetState: { mount: WidgetMount | null } = { mount: null };
 
-let widgetInstanceCounter = 0;
-const generateContainerId = (): string => {
-  return `marketrix-widget-container-${++widgetInstanceCounter}`;
-};
+let noticeRoot: Root | null = null;
 
 /** The one place a closed shadow root is opened and the widget CSS injected into it. */
 const attachShadowMount = (
@@ -42,14 +42,9 @@ const attachShadowMount = (
 export const createWidgetContainer = (
   parentContainer?: HTMLElement,
 ): { container: HTMLElement; shadowRoot: ShadowRoot; mountEl: HTMLElement } => {
-  const uniqueContainerId = generateContainerId();
   const parent = parentContainer ?? document.body;
-  if (parent.querySelector(`#${uniqueContainerId}`)) {
-    throw new Error(`Widget container with ID ${uniqueContainerId} already exists`);
-  }
 
   const container = document.createElement('div');
-  container.id = uniqueContainerId;
   container.className = 'marketrix-widget-container';
   container.style.pointerEvents = 'auto';
   if (parentContainer) {
@@ -70,7 +65,7 @@ export const mountWidgetToContainer = (mountEl: HTMLElement, config: MarketrixCo
   root.render(
     <React.StrictMode>
       <WidgetProviders previewMode={previewMode}>
-        <MarketrixWidget config={config} />
+        <WidgetRoot config={config} />
       </WidgetProviders>
     </React.StrictMode>,
   );
@@ -78,38 +73,36 @@ export const mountWidgetToContainer = (mountEl: HTMLElement, config: MarketrixCo
   return root;
 };
 
-export const isWidgetInitialized = (): boolean => widgetState.instance !== null;
+export const isWidgetInitialized = (): boolean => widgetState.mount !== null;
 
-export const getCurrentConfig = (): MarketrixConfig | null => widgetState.config;
+export const getCurrentConfig = (): MarketrixConfig | null => widgetState.mount?.config ?? null;
 
-/** ``tone`` because this one surface carries both the loading notice and the two hard init failures, and
- * a failure painted in the neutral palette reads as an informational notice on the host's page. */
-export const showWidgetSettingsLoader = (message: string, tone: NotificationTone = 'neutral'): void => {
+export const showHostPageNotice = (message: string, tone: NotificationTone = 'neutral'): void => {
   if (typeof window === 'undefined' || typeof document === 'undefined') {
     return;
   }
 
-  hideWidgetSettingsLoader();
+  hideHostPageNotice();
 
-  const loaderContainer = document.createElement('div');
-  loaderContainer.id = 'marketrix-widget-loader-container';
-  loaderContainer.className = 'marketrix-widget-loader-container';
-  document.body.appendChild(loaderContainer);
+  const noticeContainer = document.createElement('div');
+  noticeContainer.id = 'marketrix-widget-notice-container';
+  noticeContainer.className = 'marketrix-widget-notice-container';
+  document.body.appendChild(noticeContainer);
 
-  const { mountEl } = attachShadowMount(loaderContainer, 'marketrix-widget-loader-root');
+  const { mountEl } = attachShadowMount(noticeContainer, 'marketrix-widget-notice-root');
 
-  loaderInstance = createRoot(mountEl);
-  loaderInstance.render(
+  noticeRoot = createRoot(mountEl);
+  noticeRoot.render(
     <React.StrictMode>
-      <NotificationToast tone={tone} title={message} onDismiss={hideWidgetSettingsLoader} />
+      <NotificationToast tone={tone} title={message} onDismiss={hideHostPageNotice} />
     </React.StrictMode>,
   );
 };
 
-export const hideWidgetSettingsLoader = (): void => {
-  loaderInstance?.unmount();
-  loaderInstance = null;
-  document.getElementById('marketrix-widget-loader-container')?.remove();
+export const hideHostPageNotice = (): void => {
+  noticeRoot?.unmount();
+  noticeRoot = null;
+  document.getElementById('marketrix-widget-notice-container')?.remove();
 };
 
 // initWidget is passed in (not imported) to avoid a circular dependency.
@@ -144,7 +137,7 @@ export const autoInitializeWidget = (initWidget: (config: MarketrixConfig) => Pr
       hasMtxKey: !!mtxKey,
       hasMtxApiHost: !!mtxApiHost,
     });
-    showWidgetSettingsLoader('Please configure mtx-id, mtx-key and mtx-api-host', 'error');
+    showHostPageNotice('Please configure mtx-id, mtx-key and mtx-api-host', 'error');
     return;
   }
 

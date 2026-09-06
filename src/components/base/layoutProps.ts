@@ -6,14 +6,42 @@ export type SpacingToken = 'none' | '2xs' | 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '
 
 export const SPACING_SCALE: Record<SpacingToken, string> = {
   none: '0',
-  '2xs': '1',
-  xs: '0.5',
+  '2xs': '0.5',
+  xs: '1',
   sm: '1.5',
   md: '2',
   lg: '3',
   xl: '4',
   '2xl': '6',
 };
+
+const alignClasses = {
+  start: 'items-start',
+  center: 'items-center',
+  end: 'items-end',
+  stretch: 'items-stretch',
+  baseline: 'items-baseline',
+} as const;
+
+const justifyClasses = {
+  start: 'justify-start',
+  center: 'justify-center',
+  end: 'justify-end',
+  between: 'justify-between',
+  around: 'justify-around',
+} as const;
+
+const overflowClasses = {
+  hidden: 'overflow-hidden',
+  auto: 'overflow-auto',
+  visible: 'overflow-visible',
+  scroll: 'overflow-scroll',
+} as const;
+
+const overflowYClasses = { hidden: 'overflow-y-hidden', auto: 'overflow-y-auto' } as const;
+const widthClasses = { full: 'w-full', auto: 'w-auto' } as const;
+const heightClasses = { full: 'h-full', auto: 'h-auto' } as const;
+const borderSideClasses = { top: 'border-t', bottom: 'border-b', left: 'border-l', right: 'border-r' } as const;
 
 export interface LayoutProps {
   padding?: SpacingToken;
@@ -23,21 +51,21 @@ export interface LayoutProps {
   paddingBottom?: SpacingToken;
   gap?: SpacingToken;
 
-  align?: 'start' | 'center' | 'end' | 'stretch' | 'baseline';
-  justify?: 'start' | 'center' | 'end' | 'between' | 'around';
+  align?: keyof typeof alignClasses;
+  justify?: keyof typeof justifyClasses;
   grow?: boolean;
   shrink?: boolean;
 
   position?: 'relative' | 'absolute' | 'fixed' | 'sticky';
   inset?: SpacingToken | '0';
 
-  overflow?: 'hidden' | 'auto' | 'visible' | 'scroll';
-  overflowY?: 'hidden' | 'auto';
-  width?: 'full' | 'auto';
-  height?: 'full' | 'auto';
+  overflow?: keyof typeof overflowClasses;
+  overflowY?: keyof typeof overflowYClasses;
+  width?: keyof typeof widthClasses;
+  height?: keyof typeof heightClasses;
   minWidth?: '0';
 
-  border?: boolean | 'top' | 'bottom' | 'left' | 'right';
+  border?: boolean | keyof typeof borderSideClasses;
   rounded?: boolean | 'none' | 'sm' | 'full' | 'lg' | 'theme' | 'md' | 'xl' | 'pill' | 'circle';
 
   animate?: 'spin' | 'ping' | 'pulse' | 'fadeIn' | 'none';
@@ -83,8 +111,8 @@ export function resolveLayoutClasses(props: LayoutProps): string {
   if (props.paddingBottom !== undefined) classes.push(`pb-${SPACING_SCALE[props.paddingBottom]}`);
   if (props.gap !== undefined) classes.push(`gap-${SPACING_SCALE[props.gap]}`);
 
-  if (props.align !== undefined) classes.push(`items-${props.align}`);
-  if (props.justify !== undefined) classes.push(`justify-${props.justify}`);
+  if (props.align !== undefined) classes.push(alignClasses[props.align]);
+  if (props.justify !== undefined) classes.push(justifyClasses[props.justify]);
   if (props.grow === true) classes.push('flex-1');
   if (props.shrink === false) classes.push('flex-shrink-0');
 
@@ -93,18 +121,17 @@ export function resolveLayoutClasses(props: LayoutProps): string {
     classes.push(props.inset === '0' ? 'inset-0' : `inset-${SPACING_SCALE[props.inset]}`);
   }
 
-  if (props.overflow !== undefined) classes.push(`overflow-${props.overflow}`);
-  if (props.overflowY !== undefined) classes.push(`overflow-y-${props.overflowY}`);
-  if (props.width !== undefined) classes.push(`w-${props.width}`);
-  if (props.height !== undefined) classes.push(`h-${props.height}`);
+  if (props.overflow !== undefined) classes.push(overflowClasses[props.overflow]);
+  if (props.overflowY !== undefined) classes.push(overflowYClasses[props.overflowY]);
+  if (props.width !== undefined) classes.push(widthClasses[props.width]);
+  if (props.height !== undefined) classes.push(heightClasses[props.height]);
   if (props.minWidth === '0') classes.push('min-w-0');
 
   if (props.border !== undefined && props.border !== false) {
     if (props.border === true) {
       classes.push('border', 'border-border');
     } else {
-      const side = { top: 't', bottom: 'b', left: 'l', right: 'r' }[props.border];
-      classes.push(`border-${side}`, 'border-border');
+      classes.push(borderSideClasses[props.border], 'border-border');
     }
   }
   if (props.rounded !== undefined && props.rounded !== false) {

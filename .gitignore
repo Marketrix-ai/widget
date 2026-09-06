@@ -2,7 +2,6 @@ node_modules/
 /node_modules
 
 dist/
-.vite-dev-build/
 
 logs/
 *.log

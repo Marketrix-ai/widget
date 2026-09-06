@@ -20,14 +20,14 @@ export class ShowModeService {
   private currentHighlight: HTMLElement | null = null;
   private currentElement: HTMLElement | null = null;
   private currentOptions: ShowModeOptions | null = null;
-  private currentPromise: Promise<boolean> | null = null;
-  private resolvePromise: ((value: boolean) => void) | null = null;
+  private currentPromise: Promise<void> | null = null;
+  private resolvePromise: (() => void) | null = null;
   private rejectPromise: ((reason?: unknown) => void) | null = null;
   private clickHandler: ((e: MouseEvent) => void) | null = null;
   private scrollHandler: (() => void) | null = null;
   private visibilityCheckInterval: ReturnType<typeof setInterval> | null = null;
 
-  async showToolAction(options: ShowModeOptions): Promise<boolean> {
+  async showToolAction(options: ShowModeOptions): Promise<void> {
     const { element, explanation, isClickAction = false, browserToolName } = options;
 
     if (
@@ -44,7 +44,7 @@ export class ShowModeService {
     this.currentOptions = options;
     this.currentElement = element;
 
-    element.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+    element.scrollIntoView({ behavior: 'instant', block: 'center', inline: 'center' });
 
     this.createHighlight(element);
     this.createPopup(explanation, isClickAction);
@@ -56,18 +56,16 @@ export class ShowModeService {
       this.setupClickHandler();
     }
 
-    this.currentPromise = new Promise<boolean>((resolve, reject) => {
+    this.currentPromise = new Promise<void>((resolve, reject) => {
       this.resolvePromise = resolve;
       this.rejectPromise = reject;
-    }).finally(() => {
-      this.cleanup();
     });
 
     return this.currentPromise;
   }
 
   cleanup(): void {
-    this.takeSettlers().reject?.('Cancelled by cleanup');
+    this.takeSettlers().reject?.(new Error('Cancelled by cleanup'));
 
     if (this.clickHandler) {
       document.removeEventListener('click', this.clickHandler, { capture: true });
@@ -98,8 +96,13 @@ export class ShowModeService {
     this.currentPromise = null;
   }
 
+  private completeAction(): void {
+    this.takeSettlers().resolve?.();
+    this.cleanup();
+  }
+
   /** Detach both settlers before calling one — the click handler, the Continue button and the two watchdogs race. */
-  private takeSettlers(): { resolve: ((value: boolean) => void) | null; reject: ((reason?: unknown) => void) | null } {
+  private takeSettlers(): { resolve: (() => void) | null; reject: ((reason?: unknown) => void) | null } {
     const settlers = { resolve: this.resolvePromise, reject: this.rejectPromise };
     this.resolvePromise = null;
     this.rejectPromise = null;
@@ -220,7 +223,7 @@ export class ShowModeService {
         e.preventDefault();
         e.stopPropagation();
 
-        this.takeSettlers().resolve?.(true);
+        this.completeAction();
       }
     };
 
@@ -231,7 +234,7 @@ export class ShowModeService {
     window.requestAnimationFrame(() => {
       popup.querySelector('#marketrix-show-continue')?.addEventListener('click', e => {
         e.stopPropagation();
-        this.takeSettlers().resolve?.(true);
+        this.completeAction();
       });
     });
   }
@@ -239,9 +242,15 @@ export class ShowModeService {
   /** checkElementInteractable's first test is `document.body.contains`, so this one watchdog also covers removal. */
   private setupVisibilityMonitoring(): void {
     this.visibilityCheckInterval = setInterval(() => {
-      if (!this.currentElement) return;
-      const index = domService.getSequenceForElement(this.currentElement) ?? -1;
-      const error = domService.checkElementInteractable(this.currentElement, index);
+      const element = this.currentElement;
+      if (!element) return;
+      const rect = element.getBoundingClientRect();
+      if (rect.bottom < 0 || rect.top > window.innerHeight || rect.right < 0 || rect.left > window.innerWidth) {
+        this.failWithElementGone('The highlighted element scrolled out of view');
+        return;
+      }
+      const index = domService.getSequenceForElement(element) ?? -1;
+      const error = domService.checkElementInteractable(element, index);
       if (error) this.failWithElementGone(error);
     }, 200);
   }

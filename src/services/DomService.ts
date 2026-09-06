@@ -2,12 +2,11 @@ import { isInteractable } from '../utils/dom';
 
 // The agent addresses elements by index, so an index must not survive the element changing underneath it: the node
 // object stays the same across a re-render while its attributes are rewritten.
-const IDENTITY_ATTRIBUTES = ['type', 'role', 'aria-label', 'name', 'href'] as const;
+const IDENTITY_ATTRIBUTES = ['id', 'type', 'role', 'aria-label', 'name', 'href'] as const;
 
 interface IndexedElement {
   element: HTMLElement;
   selector: string;
-  id: string;
   identity: Array<string | null>;
 }
 
@@ -20,46 +19,35 @@ export class DomService {
   private index: Map<number, IndexedElement> = new Map();
   private elementToSequence: WeakMap<Element, number> = new WeakMap();
 
-  private generateSelector(element: Element): string {
-    if (element.id) {
-      if (document.querySelectorAll(`#${CSS.escape(element.id)}`).length === 1) {
-        return `#${CSS.escape(element.id)}`;
-      }
-    }
-
+  private generateAnchoredSelector(element: Element): string {
     const path: string[] = [];
-    let current: Element | null = element;
+    let current: Element = element;
 
-    while (current && current !== document.body && current.parentElement) {
-      let selector = current.tagName.toLowerCase();
-
-      if (current.id) {
-        selector += `#${CSS.escape(current.id)}`;
-        path.unshift(selector);
-        break; // an id anchors the path
-      } else {
-        const parent = current.parentElement;
-        if (!parent) break;
-        const currentTagName = current.tagName;
-        const siblings = Array.from(parent.children).filter(c => c.tagName === currentTagName);
-        if (siblings.length > 1) {
-          const index = siblings.indexOf(current) + 1;
-          selector += `:nth-of-type(${index})`;
-        }
+    while (current !== document.body) {
+      const idSelector = current.id ? `#${CSS.escape(current.id)}` : '';
+      if (idSelector && document.querySelectorAll(idSelector).length === 1) {
+        path.unshift(idSelector);
+        return path.join(' > ');
       }
 
-      path.unshift(selector);
-      current = current.parentElement;
+      const parent = current.parentElement;
+      if (!parent) break;
+
+      const tagName = current.tagName;
+      const siblings = Array.from(parent.children).filter(child => child.tagName === tagName);
+      const position = siblings.length > 1 ? `:nth-of-type(${siblings.indexOf(current) + 1})` : '';
+
+      path.unshift(tagName.toLowerCase() + position);
+      current = parent;
     }
 
-    return path.join(' > ');
+    return ['body', ...path].join(' > ');
   }
 
   private staleReason(entry: IndexedElement): string | null {
     if (!document.contains(entry.element)) return 'no longer exists';
-    if (entry.id && entry.element.id === entry.id) return null;
     const changed = IDENTITY_ATTRIBUTES.some(
-      (attribute, i) => entry.identity[i] && entry.element.getAttribute(attribute) !== entry.identity[i],
+      (attribute, i) => entry.element.getAttribute(attribute) !== entry.identity[i],
     );
     return changed ? 'has changed' : null;
   }
@@ -112,8 +100,7 @@ export class DomService {
         if (semantic || visuallyClickable || hasClickHandler || isInteractable(element)) {
           this.index.set(sequenceNumber, {
             element,
-            selector: this.generateSelector(element),
-            id: element.id,
+            selector: this.generateAnchoredSelector(element),
             identity: IDENTITY_ATTRIBUTES.map(attribute => element.getAttribute(attribute)),
           });
           this.elementToSequence.set(element, sequenceNumber);
@@ -136,7 +123,7 @@ export class DomService {
     // Match into the clone by selector — a synced two-tree walk breaks on modals and fixed elements.
     for (const [index, { selector }] of this.index.entries()) {
       try {
-        (clone.querySelector('body') || clone).querySelector(selector)?.setAttribute('data-id', index.toString());
+        clone.querySelector(selector)?.setAttribute('data-id', index.toString());
       } catch (e) {
         // A host tag name that is not a valid selector token makes querySelector throw; that element just goes unindexed.
         console.warn(`[DomService] Failed to tag index ${index}:`, e);
@@ -174,10 +161,6 @@ export class DomService {
     const rect = element.getBoundingClientRect();
     if (rect.width === 0 || rect.height === 0) {
       return `ELEMENT_NOT_INTERACTABLE: Element ${index} has zero dimensions`;
-    }
-
-    if (rect.bottom < 0 || rect.top > window.innerHeight || rect.right < 0 || rect.left > window.innerWidth) {
-      return `ELEMENT_NOT_INTERACTABLE: Element ${index} is off-screen`;
     }
 
     const centerX = rect.left + rect.width / 2;

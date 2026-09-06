@@ -48,12 +48,10 @@ interface ChatContextType {
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
-const MAX_PROCESSED_IDS = 1000;
+const MAX_PROCESSED_TOOL_CALL_IDS = 1000;
 
-// How long a dispatch may sit with zero events before the composer gives up waiting on it —
-// see `reduceStaleReply`. Generous on purpose: this only guards a request that never showed any
-// sign of life at all, never one that is visibly still working.
 const STALE_REPLY_TIMEOUT_MS = 120_000;
+const STALE_REPLY_TEXT = 'This is taking longer than expected. Please try again.';
 
 interface ChatProviderProps {
   children: React.ReactNode;
@@ -70,7 +68,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
   const currentModeRef = useRef(uiState.currentMode);
   currentModeRef.current = uiState.currentMode;
 
-  const processedRequestIds = useRef(new Set<string>());
+  const processedToolCallIds = useRef(new Set<string>());
 
   // Transition runs synchronously here, not in a setState updater: React defers updaters (background tab, mid-burst) and captured effects are lost — tool calls that never execute.
   const commit = useCallback((transition: (s: SseState) => SseState) => {
@@ -123,6 +121,14 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
     [commit],
   );
 
+  useEffect(() => {
+    const watchdogs = state.messages
+      .filter(msg => msg.isPlaceholder)
+      .map(msg => setTimeout(() => commit(s => reduceStaleReply(s, msg.id, STALE_REPLY_TEXT)), STALE_REPLY_TIMEOUT_MS));
+
+    return () => watchdogs.forEach(clearTimeout);
+  }, [state.messages, commit]);
+
   const messageDispatch = useCallback(
     async (content: string, mode?: InstructionType, skipUserMessage?: boolean) => {
       const effectiveMode = mode ?? currentModeRef.current;
@@ -135,9 +141,9 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
         return;
       }
 
-      const config = storageService.getConfig();
+      const config = storageService.getCredentialedConfig();
 
-      if (!config || (!config.mtxId && !config.mtxKey && !config.mtxApp)) {
+      if (!config) {
         console.error('Config not loaded or incomplete');
         addMessage(
           createAgentMessage('Configuration error: Missing API credentials. Please check your widget settings.'),
@@ -162,12 +168,6 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
       };
       addMessage(placeholderMsg);
       uiActions.setLoading(true);
-      // Arms unconditionally: `reduceStaleReply` itself checks the message is still untouched before
-      // acting, so this is a no-op on the common path where a reply (or even just the first tool/call)
-      // arrives well within the window.
-      setTimeout(() => {
-        commit(s => reduceStaleReply(s, placeholderId, 'This is taking longer than expected. Please try again.'));
-      }, STALE_REPLY_TIMEOUT_MS);
 
       try {
         await dispatchMessage(config, content, effectiveMode, placeholderId);
@@ -187,9 +187,9 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
   useEffect(() => {
     if (previewMode) return;
 
-    const wsClient = StreamClient.getInstance();
+    const streamClient = StreamClient.getInstance();
 
-    const executeToolCall = async (effect: Extract<SseEffect, { type: 'executeTool' }>) => {
+    const startToolCall = async (effect: Extract<SseEffect, { type: 'executeTool' }>) => {
       const { toolCallId, tool, args, mode, explanation } = effect;
       const result = await browserToolService.executeTool(tool, args, mode, explanation);
       const error = result.success ? undefined : (result.error ?? 'Tool execution failed');
@@ -201,7 +201,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
         commit(s => reduceToolDone(s, currentModeRef.current));
       }
 
-      wsClient
+      await streamClient
         .send({
           type: 'tool/response',
           tool_call_id: toolCallId,
@@ -210,24 +210,28 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
           error,
         })
         .catch(err => console.error('Failed to send tool response:', err));
+
+      result.afterResponseSent?.();
     };
 
-    const handleMessage = async (event: WidgetEvent) => {
+    const handleMessage = (event: WidgetEvent): void => {
       // Transport bookkeeping that must run before the pure reducer.
       if (event.type === 'tool/call') {
-        const requestId = event.tool_call_id;
-        if (processedRequestIds.current.has(requestId)) return;
-        processedRequestIds.current.add(requestId);
-        if (processedRequestIds.current.size > MAX_PROCESSED_IDS) {
-          processedRequestIds.current = new Set([...processedRequestIds.current].slice(-MAX_PROCESSED_IDS / 2));
+        const toolCallId = event.tool_call_id;
+        if (processedToolCallIds.current.has(toolCallId)) return;
+        processedToolCallIds.current.add(toolCallId);
+        if (processedToolCallIds.current.size > MAX_PROCESSED_TOOL_CALL_IDS) {
+          processedToolCallIds.current = new Set(
+            [...processedToolCallIds.current].slice(-MAX_PROCESSED_TOOL_CALL_IDS / 2),
+          );
         }
 
         if (!BROWSER_TOOLS.has(event.browser_tool)) {
           console.warn('[Widget] Unknown tool requested:', event.browser_tool);
-          wsClient
+          streamClient
             .send({
               type: 'tool/response',
-              tool_call_id: requestId,
+              tool_call_id: toolCallId,
               success: false,
               error: `Unknown tool: ${event.browser_tool}`,
             })
@@ -235,7 +239,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
           return;
         }
       } else if (event.type === 'task/status' && isTerminalTaskStatus(event.status)) {
-        processedRequestIds.current.clear();
+        processedToolCallIds.current.clear();
       }
 
       let effects: SseEffect[] = [];
@@ -247,7 +251,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
 
       for (const effect of effects) {
         if (effect.type === 'setLoading') uiActions.setLoading(effect.value);
-        else await executeToolCall(effect);
+        else startToolCall(effect).catch(error => console.error('[Widget] Tool call failed:', error));
       }
     };
 
@@ -259,10 +263,10 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
     };
 
     const callbacks = { onMessage: handleMessage, onError: handleError };
-    wsClient.addCallbacks(callbacks);
+    streamClient.addCallbacks(callbacks);
 
     return () => {
-      wsClient.removeCallbacks(callbacks);
+      streamClient.removeCallbacks(callbacks);
     };
   }, [previewMode, commit, uiActions]);
 

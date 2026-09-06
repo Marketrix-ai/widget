@@ -85,7 +85,4 @@ export type AddWidgetConfig = (
 export interface MarketrixWidgetProps {
   settings: WidgetSettingsData;
   container?: HTMLElement;
-  mtxId?: string;
-  mtxKey?: string;
-  mtxApiHost?: string;
 }

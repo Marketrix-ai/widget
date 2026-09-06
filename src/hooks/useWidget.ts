@@ -6,12 +6,12 @@ import type { MarketrixConfig, WidgetSettingsData, WidgetState } from '../types'
 
 export type ValidWidgetConfig = MarketrixConfig & Required<Pick<MarketrixConfig, keyof WidgetSettingsData>>;
 
-/** Every setting resolved: API settings plus the position and script-tag overrides MarketrixWidget layers on top. */
+/** Every setting resolved: API settings plus the position and script-tag overrides WidgetRoot layers on top. */
 export const WidgetConfigContext = createContext<ValidWidgetConfig | null>(null);
 
 export const useWidgetConfig = (): ValidWidgetConfig => {
   const config = useContext(WidgetConfigContext);
-  if (!config) throw new Error('useWidgetConfig must be used within MarketrixWidget');
+  if (!config) throw new Error('useWidgetConfig must be used within WidgetRoot');
   return config;
 };
 

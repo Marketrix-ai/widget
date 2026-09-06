@@ -6,7 +6,7 @@ import { createSemanticTokens, semanticTokensToCssCustomProperties } from '../de
 import { useScrollLock } from '../hooks/useScrollLock';
 import { useWidget, type ValidWidgetConfig, WidgetConfigContext } from '../hooks/useWidget';
 import { WidgetSettingsDataSchema } from '../sdk';
-import { readLocal, storageService, writeLocal } from '../services/StorageService';
+import { readLocal, writeLocal } from '../services/StorageService';
 import { StreamClient } from '../services/StreamClient';
 import { tenantScope } from '../services/WidgetService';
 import type { MarketrixConfig, WidgetPosition } from '../types';
@@ -18,11 +18,11 @@ import { NotificationToast } from './blocks/NotificationToast';
 import { WidgetFab } from './blocks/WidgetFab';
 import { MessengerShell } from './navigation/MessengerShell';
 
-interface MarketrixWidgetProps {
+interface WidgetRootProps {
   config: MarketrixConfig;
 }
 
-export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
+export const WidgetRoot: React.FC<WidgetRootProps> = ({ config }) => {
   const [showGreeting, setShowGreeting] = useState(false);
   const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null);
   const { state, actions } = useWidget();
@@ -35,10 +35,6 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ config }) => {
   const [widgetPosition, setWidgetPosition] = useState<WidgetPosition>(config.widget_position ?? 'bottom_right');
 
   const positionStorageKey = `marketrix_widget_position_${tenantScope(config)}`;
-
-  useEffect(() => {
-    if (configValid) storageService.setConfig(config);
-  }, [config, configValid]);
 
   useEffect(() => {
     const stored = isPreviewMode ? null : readLocal(positionStorageKey);

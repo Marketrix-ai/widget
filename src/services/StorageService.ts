@@ -5,14 +5,14 @@ const CONTEXT_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000;
 
 export type StoredMessage = Omit<ChatMessage, 'videoStream' | 'timestamp'> & { timestamp: string };
 
-/** The durable half of the widget's React state. `isLoading` is deliberately absent — restoring it would
- * leave the FAB glowing for a request that died with the previous page. */
 export interface ChatSnapshot {
   messages: ChatMessage[];
   isTaskRunning: boolean;
   currentMode: InstructionType;
   isOpen: boolean;
 }
+
+export type CredentialedConfig = MarketrixConfig & { mtxId: string; mtxKey: string };
 
 export type MarketrixChatContext = Omit<ChatSnapshot, 'messages'> & {
   chat_id: string | null;
@@ -74,24 +74,20 @@ class StorageService {
     writeLocal(STORAGE_KEY, JSON.stringify(this.context));
   }
 
-  /** window.name takes priority over localStorage — it is what survives host-page navigation. */
   getChatId(): string | null {
-    const windowChatId = typeof window === 'undefined' ? '' : window.name;
-    if (!windowChatId.trim()) return this.context.chat_id;
-    if (windowChatId !== this.context.chat_id) this.updateContext({ chat_id: windowChatId });
-    return windowChatId;
+    return this.context.chat_id;
   }
 
   setChatId(chatId: string): void {
     this.updateContext({ chat_id: chatId });
-    if (typeof window !== 'undefined') window.name = chatId;
   }
 
-  getConfig(): MarketrixConfig | null {
-    return this.context.config;
+  getCredentialedConfig(): CredentialedConfig | null {
+    const { config } = this.context;
+    return config?.mtxId && config.mtxKey ? (config as CredentialedConfig) : null;
   }
 
-  setConfig(config: MarketrixConfig): void {
+  setConfig(config: CredentialedConfig): void {
     this.updateContext({ config });
   }
 }

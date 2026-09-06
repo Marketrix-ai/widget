@@ -80,7 +80,7 @@ These apply to every mode (script attribute → config key):
 | `show_widget`             | —                     | boolean       | When `false`, the widget initializes fully but its UI stays hidden. Default `true`.                                                                   |
 | `use_screenshare`         | `mtx-use-screenshare` | boolean       | When `false`, screen-share requests are auto-denied and the Share Screen button is hidden. Default `true`. Disable via `mtx-use-screenshare="false"`. |
 
-Widget **appearance and behavior** (position, colors, sizing, border radius, animation, enabled Tell/Show/Do/Human features, device visibility, visibility, greeting toast, optional session recording, header/body/greeting text, and quick-action chips) are configured in the Marketrix dashboard and fetched from the API at init. A hidden widget stays visible in the dashboard preview.
+Widget **appearance and behavior** (position, colors, sizing, border radius, animation, enabled Tell/Show/Do features, visibility, greeting toast, optional session recording, header/body/greeting text, and quick-action chips) are configured in the Marketrix dashboard and fetched from the API at init. A hidden widget stays visible in the dashboard preview.
 
 ### Full script-tag example
 
