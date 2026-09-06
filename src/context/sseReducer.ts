@@ -165,10 +165,11 @@ export function reduceTransportFailure(state: SseState, text: string): SseState 
 }
 
 /**
- * A per-request watchdog: the stream can stay healthy (no `StreamGaveUpError`) while a single
- * dispatch's reply never arrives — a dropped correlation or a silent backend failure before it ever
- * acknowledges the request. `reduceTransportFailure` cannot see that, since nothing told the transport
- * it failed, so without this the bubble sits on "thinking" and the composer stays disabled forever.
+ * The stream can stay healthy (no `StreamGaveUpError`) while a single dispatch's reply never arrives —
+ * a dropped correlation, a silent backend failure before it ever acknowledges the request, or a reload
+ * into the gap where the api has no tab to push to. `reduceTransportFailure` cannot see that, since
+ * nothing told the transport it failed, so without this the bubble sits on "thinking" and the composer
+ * stays disabled forever.
  *
  * Only fires on a message that received ZERO signs of life — still `thinking` with no progress line
  * and no streamed text. A `do`/`show` task that is genuinely still running has already advanced past

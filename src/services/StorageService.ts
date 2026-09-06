@@ -5,8 +5,6 @@ const CONTEXT_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000;
 
 export type StoredMessage = Omit<ChatMessage, 'videoStream' | 'timestamp'> & { timestamp: string };
 
-/** The durable half of the widget's React state. `isLoading` is deliberately absent — restoring it would
- * leave the FAB glowing for a request that died with the previous page. */
 export interface ChatSnapshot {
   messages: ChatMessage[];
   isTaskRunning: boolean;

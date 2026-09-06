@@ -24,28 +24,14 @@ function serializeMessage({ videoStream: _videoStream, ...msg }: ChatMessage): S
   return { ...msg, timestamp: msg.timestamp.toISOString() };
 }
 
-/** A placeholder with nothing to show yet would restore as a permanently empty bubble. */
-function isPersistable(msg: ChatMessage): boolean {
-  if (!msg.isPlaceholder) return true;
-  return msg.placeholderState === 'thinking' || msg.placeholderState === 'waiting-for-user' || msg.parts.length > 0;
-}
-
 export class ChatService {
-  private restored = false;
-
   restore(): ChatSnapshot {
     const { chat_id: _chatId, config: _config, timestamp: _timestamp, messages, ...rest } = storageService.getContext();
-    this.restored = true;
     return { ...rest, messages: messages.map(reviveMessage) };
   }
 
   persist(snapshot: ChatSnapshot): void {
-    // The mount-time render fires before restore() lands; persisting then would write [] over the stored messages.
-    if (!this.restored) return;
-    storageService.updateContext({
-      ...snapshot,
-      messages: snapshot.messages.filter(isPersistable).map(serializeMessage),
-    });
+    storageService.updateContext({ ...snapshot, messages: snapshot.messages.map(serializeMessage) });
   }
 }
 

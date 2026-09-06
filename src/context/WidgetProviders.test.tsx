@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { chatService } from '../services/ChatService';
 import { chatSessionManager } from '../services/ChatSessionManager';
+import { storageService } from '../services/StorageService';
 import { StreamClient } from '../services/StreamClient';
 import { useUIStateContext } from './UIStateContext';
 import { WidgetProviders } from './WidgetProviders';
@@ -41,6 +42,39 @@ describe('WidgetProviders initialization', () => {
 
     expect(restore).not.toHaveBeenCalled();
     expect(connect).not.toHaveBeenCalled();
+  });
+
+  it('keeps the stored transcript when the widget is mounted a second time in the same page', async () => {
+    storageService.updateContext({
+      chat_id: 'chat-1',
+      messages: [
+        {
+          id: 'agent-1',
+          content: 'hello',
+          sender: 'agent',
+          timestamp: new Date('2026-01-01T00:00:00.000Z').toISOString(),
+          parts: [{ type: 'text', content: 'hello' }],
+        },
+      ],
+    });
+    vi.spyOn(chatSessionManager, 'getOrCreateChatId').mockResolvedValue('chat-1');
+    const connect = vi.spyOn(StreamClient.getInstance(), 'connect').mockResolvedValue();
+
+    const first = render(
+      <WidgetProviders>
+        <div />
+      </WidgetProviders>,
+    );
+    await waitFor(() => expect(connect).toHaveBeenCalled());
+    first.unmount();
+
+    render(
+      <WidgetProviders>
+        <div />
+      </WidgetProviders>,
+    );
+
+    expect(storageService.getContext().messages.map(msg => msg.id)).toEqual(['agent-1']);
   });
 
   it('routes chat initialization failures to the widget error state', async () => {
