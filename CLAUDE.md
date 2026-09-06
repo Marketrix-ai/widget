@@ -6,8 +6,8 @@ runtime and bundle size are first-class concerns.
 
 ESM-only, `sideEffects: false`. **React 19 is a peer dependency and external to the bundle — the host
 page must supply it.** Built with Vite 8 in **library mode** → a single ESM bundle `dist/widget.mjs`,
-mounted into a **closed Shadow DOM** with all CSS injected as JS. Stack: TypeScript 6, Tailwind 4,
-Zod 4, oRPC 1, `@rrweb/record` (optional), `@base-ui/react`.
+mounted into a **closed Shadow DOM** with all CSS injected as JS. Stack: TypeScript 6, hand-written
+CSS, Zod 4, oRPC 1, `@rrweb/record` (optional), `@base-ui/react`.
 
 **`README.md` is the real public API surface** — customer-facing integration docs live there; keep it
 accurate. The root `../CLAUDE.md` owns cross-cutting rules (the widget↔api contract at the boundary,
@@ -60,11 +60,10 @@ are generated**, so after changing `rc:` you must re-run `lefthook install --for
   artifact must be added there by hand. `widget.mjs.gz`/`.br` are precompressed in the builder stage,
   and nginx has no brotli module — `gzip_static` covers gzip, a `try_files` on `Accept-Encoding`
   covers brotli. Nothing is compressed per request.
-- **`bundle:check` budgets each bundled dependency, not just the total.** 392,685 bytes against a
-  455,000 cap leaves 62 kB of blind headroom, and four dependencies are already 59% of the bundle:
-  `@rrweb/record` 75,867 (a feature off by default), `zod` 73,337 (two `safeParse` calls),
-  `@base-ui/react` + `/utils` 53,517 (one confirm Dialog, plus Button), `tailwind-merge` 28,386. A
-  package missing from `DEPENDENCY_BUDGETS` fails the gate, so a new import is a deliberate line.
+- **`bundle:check` budgets each bundled dependency, not just the total** — a total cap cannot see
+  which dependency grew. Three are 63% of the bundle: `zod` 91,018 (two `safeParse` calls),
+  `@rrweb/record` 76,564 (a feature off by default), `@base-ui/react` + `/utils` 50,956. A package
+  missing from `DEPENDENCY_BUDGETS` fails the gate, so a new import is a deliberate line.
 - **A single chunk means an import is unconditional** — a heavy dependency behind an off-by-default
   flag still ships to every host page. Weigh that at the import, because the packaging contract has no
   later escape.
@@ -186,10 +185,13 @@ and shipped images cannot drift in their dependency set.
   `package-lock.json` alongside `package.json`. `npm run tag` does it for you.
 - **React importmap wins** — the loader's `esm.sh` importmap only fills gaps; a host on a different
   React 19 build keeps its own.
-- **Interpolated Tailwind classes need the `@source inline(...)` safelist in `index.css`** —
-  `resolveLayoutClasses` builds `p-*`/`gap-*`/`inset-*` from `SPACING_SCALE`, which the scanner cannot
-  see; widen the scale and you must widen the safelist or the class silently never ships
-  (`src/__tests__/stylesheet-contract.test.ts` fails both ways round).
+- **Styling is `index.css` plus inline styles — there is no CSS framework and no `cn()`.** Layout
+  props resolve to a style object (`resolveLayoutStyle`), never class names: as classes they were
+  interpolated, so a build-time safelist was the only thing keeping them alive and a missing entry
+  failed silently at runtime. Variants are CSS keyed on the `data-*` attributes the components emit
+  (`data-variant`/`data-size`/`data-active`/`data-disabled`/`data-stacked`/`data-full`), which is also
+  why `bare` and `tab` can simply not have padding rather than needing a merge pass to undo it.
+  A new `animate` token needs a matching `@keyframes` — `stylesheet-contract.test.ts` pins that.
 - **The widget has no dark mode** — no `.dark` block, no `dark:` variant. Theming is the per-tenant
   settings → CSS custom properties in `semantic-tokens.ts`, nothing else.
 - **Elevation is a `SHADOW.*` token** (`design-system/shadows.ts`), applied inline through `Surface`'s

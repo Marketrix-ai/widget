@@ -1,13 +1,6 @@
-import type { ElementType, Ref } from 'react';
+import type { CSSProperties, ElementType, Ref } from 'react';
 
-import { cn } from '@/lib/utils';
-
-import {
-  type TextLeading,
-  textLeadingClasses,
-  type TextTone,
-  textToneClasses,
-} from '../../design-system/component-tokens';
+import { TEXT_LEADING, TEXT_TONE, type TextLeading } from '../../design-system/component-tokens';
 
 type TextVariant = 'default' | 'muted' | 'faint';
 type TextSize = 'xxs' | 'xs' | 'sm' | 'lg';
@@ -30,23 +23,16 @@ export interface TextProps extends React.HTMLAttributes<HTMLElement> {
   ref?: Ref<HTMLElement>;
 }
 
-const sizeStyles: Record<TextSize, string> = {
-  xxs: 'text-[10px]',
-  xs: 'text-xs',
-  sm: 'text-sm',
-  lg: 'text-lg',
+const SIZE: Record<TextSize, string> = {
+  xxs: '10px',
+  xs: '0.75rem',
+  sm: '0.875rem',
+  lg: '1.125rem',
 };
 
-const weightStyles: Record<TextWeight, string> = {
-  normal: 'font-normal',
-  medium: 'font-medium',
-  semibold: 'font-semibold',
-};
+const WEIGHT: Record<TextWeight, number> = { normal: 400, medium: 500, semibold: 600 };
 
-const alignStyles: Record<TextAlign, string> = {
-  center: 'text-center',
-  right: 'text-right',
-};
+const TRUNCATE: CSSProperties = { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' };
 
 export function Text({
   as: Component = 'span',
@@ -64,24 +50,22 @@ export function Text({
   style,
   ...props
 }: TextProps) {
-  const resolvedTone: TextTone = inheritColor ? 'inherit' : variant;
-
   return (
     <Component
       {...props}
       ref={ref}
-      className={cn(
-        textToneClasses[resolvedTone],
-        size && sizeStyles[size],
-        weight && weightStyles[weight],
-        align && alignStyles[align],
-        leading && textLeadingClasses[leading],
-        block && 'block',
-        italic && 'italic',
-        truncate && 'truncate',
-        className,
-      )}
-      style={style}
+      className={className}
+      style={{
+        color: TEXT_TONE[inheritColor ? 'inherit' : variant],
+        ...(size && { fontSize: SIZE[size] }),
+        ...(weight && { fontWeight: WEIGHT[weight] }),
+        ...(align && { textAlign: align }),
+        ...(leading && { lineHeight: TEXT_LEADING[leading] }),
+        ...(block && { display: 'block' }),
+        ...(italic && { fontStyle: 'italic' }),
+        ...(truncate && TRUNCATE),
+        ...style,
+      }}
     />
   );
 }

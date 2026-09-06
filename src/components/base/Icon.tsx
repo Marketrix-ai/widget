@@ -1,7 +1,5 @@
 import type { ComponentPropsWithRef } from 'react';
 
-import { cn } from '@/lib/utils';
-
 import { type IconData, type IconName, icons } from './icons';
 
 export interface IconProps extends ComponentPropsWithRef<'svg'> {
@@ -20,7 +18,7 @@ export function Icon({ name, size = 16, className, ref, ...props }: IconProps) {
       {...props}
       ref={ref}
       aria-hidden='true'
-      className={cn('inline-block flex-shrink-0', className)}
+      className={className ? `mtx-icon ${className}` : 'mtx-icon'}
       fill='none'
       height={size}
       viewBox={icon.viewBox}

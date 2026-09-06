@@ -17,25 +17,21 @@ describe('Avatar', () => {
     expect(img.alt).toBe('Jane Doe');
   });
 
-  it('applies preset size class for sm', () => {
-    const { container } = render(<Avatar alt='x' size='sm' src='/a.png' />);
+  it.each([
+    ['sm', '20px'],
+    ['md', '32px'],
+    ['lg', '48px'],
+  ] as const)('resolves preset size %s to %s', (size, px) => {
+    const { container } = render(<Avatar alt='x' size={size} src='/a.png' />);
     const img = container.querySelector('img') as HTMLImageElement;
-    expect(img.classList.contains('w-5')).toBe(true);
-    expect(img.classList.contains('h-5')).toBe(true);
+    expect(img.style.width).toBe(px);
+    expect(img.style.height).toBe(px);
   });
 
-  it('applies preset size class for md (default)', () => {
+  it('defaults to the md preset', () => {
     const { container } = render(<Avatar alt='x' src='/a.png' />);
     const img = container.querySelector('img') as HTMLImageElement;
-    expect(img.classList.contains('w-8')).toBe(true);
-    expect(img.classList.contains('h-8')).toBe(true);
-  });
-
-  it('applies preset size class for lg', () => {
-    const { container } = render(<Avatar alt='x' size='lg' src='/a.png' />);
-    const img = container.querySelector('img') as HTMLImageElement;
-    expect(img.classList.contains('w-12')).toBe(true);
-    expect(img.classList.contains('h-12')).toBe(true);
+    expect(img.style.width).toBe('32px');
   });
 
   it('applies numeric size as inline style', () => {
@@ -51,8 +47,10 @@ describe('Avatar', () => {
     expect(ref.current?.tagName).toBe('IMG');
   });
 
-  it('merges className', () => {
-    const { container } = render(<Avatar alt='x' className='rounded-full' src='/a.png' />);
-    expect(container.querySelector('img')?.classList.contains('rounded-full')).toBe(true);
+  it('keeps its own class alongside a caller className', () => {
+    const { container } = render(<Avatar alt='x' className='mtx-fab-avatar' src='/a.png' />);
+    const img = container.querySelector('img') as HTMLImageElement;
+    expect(img.classList.contains('mtx-fab-avatar')).toBe(true);
+    expect(img.classList.contains('mtx-avatar')).toBe(true);
   });
 });

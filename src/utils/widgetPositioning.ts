@@ -2,17 +2,15 @@ import type React from 'react';
 
 import type { WidgetPosition } from '../types';
 
-// Must equal Tailwind's `-5` (1.25rem) in the class strings below: the launcher positions by class,
-// the panel by inline style, and neither can be derived from the other (see CORNERS) — pinned by
-// widgetPositioning.test.ts.
+// The one edge offset. Launcher and panel both position through getPanelPositionStyle, so there is
+// no second declaration to drift from — this used to be pinned against a Tailwind class string.
 const EDGE_OFFSET_PX = 20;
 
-// Class strings are spelled out because Tailwind only emits what it can see literally in the source.
 const CORNERS = {
-  bottom_right: { classes: 'bottom-5 right-5', vertical: 'bottom', horizontal: 'right' },
-  bottom_left: { classes: 'bottom-5 left-5', vertical: 'bottom', horizontal: 'left' },
-  top_right: { classes: 'top-5 right-5', vertical: 'top', horizontal: 'right' },
-  top_left: { classes: 'top-5 left-5', vertical: 'top', horizontal: 'left' },
+  bottom_right: { vertical: 'bottom', horizontal: 'right' },
+  bottom_left: { vertical: 'bottom', horizontal: 'left' },
+  top_right: { vertical: 'top', horizontal: 'right' },
+  top_left: { vertical: 'top', horizontal: 'left' },
 } as const;
 
 const CORNER_NAMES = Object.keys(CORNERS) as WidgetPosition[];
@@ -21,8 +19,6 @@ export const getCorner = (position: WidgetPosition) => CORNERS[position];
 
 export const isWidgetPosition = (value: unknown): value is WidgetPosition =>
   CORNER_NAMES.includes(value as WidgetPosition);
-
-export const getPositionClasses = (position: WidgetPosition): string => getCorner(position).classes;
 
 export const getPanelPositionStyle = (position: WidgetPosition): React.CSSProperties => {
   const { vertical, horizontal } = getCorner(position);

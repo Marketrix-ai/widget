@@ -7,30 +7,30 @@ export type TextTone = 'default' | 'muted' | 'faint' | 'primary' | 'inherit';
 export type TextLeading = 'tight' | 'snug' | 'normal' | 'relaxed';
 export type NotificationTone = 'info' | 'error' | 'neutral';
 
-export const radiusClasses: Record<RadiusToken, string> = {
-  none: 'rounded-none',
-  sm: 'rounded-sm',
-  md: 'rounded-md',
-  lg: 'rounded-lg',
-  xl: 'rounded-xl',
-  theme: 'rounded-[var(--radius)]',
-  pill: 'rounded-full',
-  circle: 'rounded-full',
+export const RADIUS: Record<RadiusToken, string> = {
+  none: '0',
+  sm: 'calc(var(--radius) - 4px)',
+  md: 'calc(var(--radius) - 2px)',
+  lg: 'var(--radius)',
+  xl: 'calc(var(--radius) + 4px)',
+  theme: 'var(--radius)',
+  pill: '9999px',
+  circle: '9999px',
 };
 
-export const textToneClasses: Record<TextTone, string> = {
-  default: 'text-foreground',
-  muted: 'text-foreground-muted',
-  faint: 'text-foreground-faint',
-  primary: 'text-primary',
-  inherit: 'text-inherit',
+export const TEXT_TONE: Record<TextTone, string> = {
+  default: 'var(--foreground)',
+  muted: 'var(--foreground-muted)',
+  faint: 'var(--foreground-faint)',
+  primary: 'var(--primary)',
+  inherit: 'inherit',
 };
 
-export const textLeadingClasses: Record<TextLeading, string> = {
-  tight: 'leading-tight',
-  snug: 'leading-snug',
-  normal: 'leading-normal',
-  relaxed: 'leading-relaxed',
+export const TEXT_LEADING: Record<TextLeading, string> = {
+  tight: '1.25',
+  snug: '1.375',
+  normal: '1.5',
+  relaxed: '1.625',
 };
 
 export const TAB_BAR_HEIGHT = 48;

@@ -1,142 +1,143 @@
 import { describe, expect, it } from 'vitest';
 
-import { resolveLayoutClasses, SPACING_SCALE, stripLayoutProps } from '../layoutProps';
+import { resolveLayoutStyle, SPACING_SCALE, stripLayoutProps } from '../layoutProps';
 
-describe('resolveLayoutClasses', () => {
-  it('returns empty string for empty props', () => {
-    expect(resolveLayoutClasses({})).toBe('');
+describe('resolveLayoutStyle', () => {
+  it('returns an empty style for empty props', () => {
+    expect(resolveLayoutStyle({})).toEqual({});
   });
 
   it('declares SPACING_SCALE smallest-first, so a token name orders the same way as the pixels it emits', () => {
-    const steps = Object.values(SPACING_SCALE).map(Number);
+    const steps = Object.values(SPACING_SCALE).map(value => parseFloat(value));
     expect(steps).toEqual([...steps].sort((a, b) => a - b));
   });
 
   describe('padding', () => {
-    it('padding: none', () => expect(resolveLayoutClasses({ padding: 'none' })).toBe('p-0'));
-    it('padding: 2xs', () => expect(resolveLayoutClasses({ padding: '2xs' })).toBe('p-0.5'));
-    it('padding: xs', () => expect(resolveLayoutClasses({ padding: 'xs' })).toBe('p-1'));
-    it('padding: sm', () => expect(resolveLayoutClasses({ padding: 'sm' })).toBe('p-1.5'));
-    it('padding: md', () => expect(resolveLayoutClasses({ padding: 'md' })).toBe('p-2'));
-    it('padding: lg', () => expect(resolveLayoutClasses({ padding: 'lg' })).toBe('p-3'));
-    it('padding: xl', () => expect(resolveLayoutClasses({ padding: 'xl' })).toBe('p-4'));
-    it('padding: 2xl', () => expect(resolveLayoutClasses({ padding: '2xl' })).toBe('p-6'));
+    it('padding: none', () => expect(resolveLayoutStyle({ padding: 'none' })).toEqual({ padding: '0' }));
+    it('padding: 2xs', () => expect(resolveLayoutStyle({ padding: '2xs' })).toEqual({ padding: '2px' }));
+    it('padding: xs', () => expect(resolveLayoutStyle({ padding: 'xs' })).toEqual({ padding: '4px' }));
+    it('padding: sm', () => expect(resolveLayoutStyle({ padding: 'sm' })).toEqual({ padding: '6px' }));
+    it('padding: md', () => expect(resolveLayoutStyle({ padding: 'md' })).toEqual({ padding: '8px' }));
+    it('padding: lg', () => expect(resolveLayoutStyle({ padding: 'lg' })).toEqual({ padding: '12px' }));
+    it('padding: xl', () => expect(resolveLayoutStyle({ padding: 'xl' })).toEqual({ padding: '16px' }));
+    it('padding: 2xl', () => expect(resolveLayoutStyle({ padding: '2xl' })).toEqual({ padding: '24px' }));
   });
 
-  describe('paddingX', () => {
-    it('paddingX: md', () => expect(resolveLayoutClasses({ paddingX: 'md' })).toBe('px-2'));
-    it('paddingX: lg', () => expect(resolveLayoutClasses({ paddingX: 'lg' })).toBe('px-3'));
-  });
+  describe('axis padding writes both sides', () => {
+    it('paddingX: md', () =>
+      expect(resolveLayoutStyle({ paddingX: 'md' })).toEqual({ paddingLeft: '8px', paddingRight: '8px' }));
+    it('paddingY: sm', () =>
+      expect(resolveLayoutStyle({ paddingY: 'sm' })).toEqual({ paddingTop: '6px', paddingBottom: '6px' }));
 
-  describe('paddingY', () => {
-    it('paddingY: sm', () => expect(resolveLayoutClasses({ paddingY: 'sm' })).toBe('py-1.5'));
-    it('paddingY: xl', () => expect(resolveLayoutClasses({ paddingY: 'xl' })).toBe('py-4'));
+    it('a specific side wins over the axis it belongs to', () => {
+      expect(resolveLayoutStyle({ paddingY: 'sm', paddingTop: 'xl' })).toEqual({
+        paddingTop: '16px',
+        paddingBottom: '6px',
+      });
+    });
   });
 
   describe('gap', () => {
-    it('gap: sm', () => expect(resolveLayoutClasses({ gap: 'sm' })).toBe('gap-1.5'));
-    it('gap: md', () => expect(resolveLayoutClasses({ gap: 'md' })).toBe('gap-2'));
-    it('gap: xl', () => expect(resolveLayoutClasses({ gap: 'xl' })).toBe('gap-4'));
+    it('gap: sm', () => expect(resolveLayoutStyle({ gap: 'sm' })).toEqual({ gap: '6px' }));
+    it('gap: xl', () => expect(resolveLayoutStyle({ gap: 'xl' })).toEqual({ gap: '16px' }));
   });
 
   describe('align', () => {
-    it('align: center', () => expect(resolveLayoutClasses({ align: 'center' })).toBe('items-center'));
-    it('align: start', () => expect(resolveLayoutClasses({ align: 'start' })).toBe('items-start'));
-    it('align: end', () => expect(resolveLayoutClasses({ align: 'end' })).toBe('items-end'));
-    it('align: stretch', () => expect(resolveLayoutClasses({ align: 'stretch' })).toBe('items-stretch'));
-    it('align: baseline', () => expect(resolveLayoutClasses({ align: 'baseline' })).toBe('items-baseline'));
+    it('align: center', () => expect(resolveLayoutStyle({ align: 'center' })).toEqual({ alignItems: 'center' }));
+    it('align: start', () => expect(resolveLayoutStyle({ align: 'start' })).toEqual({ alignItems: 'flex-start' }));
+    it('align: end', () => expect(resolveLayoutStyle({ align: 'end' })).toEqual({ alignItems: 'flex-end' }));
+    it('align: stretch', () => expect(resolveLayoutStyle({ align: 'stretch' })).toEqual({ alignItems: 'stretch' }));
+    it('align: baseline', () => expect(resolveLayoutStyle({ align: 'baseline' })).toEqual({ alignItems: 'baseline' }));
   });
 
   describe('justify', () => {
-    it('justify: center', () => expect(resolveLayoutClasses({ justify: 'center' })).toBe('justify-center'));
-    it('justify: between', () => expect(resolveLayoutClasses({ justify: 'between' })).toBe('justify-between'));
-    it('justify: start', () => expect(resolveLayoutClasses({ justify: 'start' })).toBe('justify-start'));
-    it('justify: end', () => expect(resolveLayoutClasses({ justify: 'end' })).toBe('justify-end'));
-    it('justify: around', () => expect(resolveLayoutClasses({ justify: 'around' })).toBe('justify-around'));
+    it('justify: center', () =>
+      expect(resolveLayoutStyle({ justify: 'center' })).toEqual({ justifyContent: 'center' }));
+    it('justify: between', () =>
+      expect(resolveLayoutStyle({ justify: 'between' })).toEqual({ justifyContent: 'space-between' }));
+    it('justify: around', () =>
+      expect(resolveLayoutStyle({ justify: 'around' })).toEqual({ justifyContent: 'space-around' }));
+    it('justify: start', () =>
+      expect(resolveLayoutStyle({ justify: 'start' })).toEqual({ justifyContent: 'flex-start' }));
+    it('justify: end', () => expect(resolveLayoutStyle({ justify: 'end' })).toEqual({ justifyContent: 'flex-end' }));
   });
 
-  describe('grow', () => {
-    it('grow: true', () => expect(resolveLayoutClasses({ grow: true })).toBe('flex-1'));
-    it('grow: false produces no class', () => expect(resolveLayoutClasses({ grow: false })).toBe(''));
-  });
-
-  describe('shrink', () => {
-    it('shrink: false', () => expect(resolveLayoutClasses({ shrink: false })).toBe('flex-shrink-0'));
-    it('shrink: true produces no class', () => expect(resolveLayoutClasses({ shrink: true })).toBe(''));
+  describe('flex', () => {
+    it('grow: true', () => expect(resolveLayoutStyle({ grow: true })).toEqual({ flex: '1 1 0%' }));
+    it('grow: false emits nothing', () => expect(resolveLayoutStyle({ grow: false })).toEqual({}));
+    it('shrink: false', () => expect(resolveLayoutStyle({ shrink: false })).toEqual({ flexShrink: 0 }));
+    it('shrink: true emits nothing', () => expect(resolveLayoutStyle({ shrink: true })).toEqual({}));
   });
 
   describe('position', () => {
-    it('position: relative', () => expect(resolveLayoutClasses({ position: 'relative' })).toBe('relative'));
-    it('position: absolute', () => expect(resolveLayoutClasses({ position: 'absolute' })).toBe('absolute'));
-    it('position: fixed', () => expect(resolveLayoutClasses({ position: 'fixed' })).toBe('fixed'));
-    it('position: sticky', () => expect(resolveLayoutClasses({ position: 'sticky' })).toBe('sticky'));
+    it('position: relative', () =>
+      expect(resolveLayoutStyle({ position: 'relative' })).toEqual({ position: 'relative' }));
+    it('position: fixed', () => expect(resolveLayoutStyle({ position: 'fixed' })).toEqual({ position: 'fixed' }));
+    it('inset: 0', () => expect(resolveLayoutStyle({ inset: '0' })).toEqual({ inset: '0' }));
+    it('inset: md', () => expect(resolveLayoutStyle({ inset: 'md' })).toEqual({ inset: '8px' }));
   });
 
-  describe('inset', () => {
-    it('inset: 0', () => expect(resolveLayoutClasses({ inset: '0' })).toBe('inset-0'));
-    it('inset: md', () => expect(resolveLayoutClasses({ inset: 'md' })).toBe('inset-2'));
-    it('inset: lg', () => expect(resolveLayoutClasses({ inset: 'lg' })).toBe('inset-3'));
-  });
-
-  describe('overflow', () => {
-    it('overflow: hidden', () => expect(resolveLayoutClasses({ overflow: 'hidden' })).toBe('overflow-hidden'));
-    it('overflow: auto', () => expect(resolveLayoutClasses({ overflow: 'auto' })).toBe('overflow-auto'));
-    it('overflow: visible', () => expect(resolveLayoutClasses({ overflow: 'visible' })).toBe('overflow-visible'));
-    it('overflow: scroll', () => expect(resolveLayoutClasses({ overflow: 'scroll' })).toBe('overflow-scroll'));
-  });
-
-  describe('overflowY', () => {
-    it('overflowY: auto', () => expect(resolveLayoutClasses({ overflowY: 'auto' })).toBe('overflow-y-auto'));
-    it('overflowY: hidden', () => expect(resolveLayoutClasses({ overflowY: 'hidden' })).toBe('overflow-y-hidden'));
-  });
-
-  describe('width', () => {
-    it('width: full', () => expect(resolveLayoutClasses({ width: 'full' })).toBe('w-full'));
-    it('width: auto', () => expect(resolveLayoutClasses({ width: 'auto' })).toBe('w-auto'));
-  });
-
-  describe('height', () => {
-    it('height: full', () => expect(resolveLayoutClasses({ height: 'full' })).toBe('h-full'));
-    it('height: auto', () => expect(resolveLayoutClasses({ height: 'auto' })).toBe('h-auto'));
-  });
-
-  describe('minWidth', () => {
-    it('minWidth: 0', () => expect(resolveLayoutClasses({ minWidth: '0' })).toBe('min-w-0'));
+  describe('overflow and sizing', () => {
+    it('overflow: hidden', () => expect(resolveLayoutStyle({ overflow: 'hidden' })).toEqual({ overflow: 'hidden' }));
+    it('overflowY: auto', () => expect(resolveLayoutStyle({ overflowY: 'auto' })).toEqual({ overflowY: 'auto' }));
+    it('width: full', () => expect(resolveLayoutStyle({ width: 'full' })).toEqual({ width: '100%' }));
+    it('width: auto', () => expect(resolveLayoutStyle({ width: 'auto' })).toEqual({ width: 'auto' }));
+    it('height: full', () => expect(resolveLayoutStyle({ height: 'full' })).toEqual({ height: '100%' }));
+    it('minWidth: 0', () => expect(resolveLayoutStyle({ minWidth: '0' })).toEqual({ minWidth: 0 }));
   });
 
   describe('border', () => {
-    it('border: true', () => expect(resolveLayoutClasses({ border: true })).toBe('border border-border'));
-    it('border: false produces no class', () => expect(resolveLayoutClasses({ border: false })).toBe(''));
-    it('border: top', () => expect(resolveLayoutClasses({ border: 'top' })).toBe('border-t border-border'));
-    it('border: bottom', () => expect(resolveLayoutClasses({ border: 'bottom' })).toBe('border-b border-border'));
-    it('border: left', () => expect(resolveLayoutClasses({ border: 'left' })).toBe('border-l border-border'));
-    it('border: right', () => expect(resolveLayoutClasses({ border: 'right' })).toBe('border-r border-border'));
+    it('border: true', () =>
+      expect(resolveLayoutStyle({ border: true })).toEqual({
+        borderColor: 'var(--border)',
+        borderStyle: 'solid',
+        borderWidth: '1px',
+      }));
+    it('border: false emits nothing', () => expect(resolveLayoutStyle({ border: false })).toEqual({}));
+    it('border: top', () =>
+      expect(resolveLayoutStyle({ border: 'top' })).toEqual({
+        borderColor: 'var(--border)',
+        borderStyle: 'solid',
+        borderTopWidth: '1px',
+      }));
+    it('border: bottom', () =>
+      expect(resolveLayoutStyle({ border: 'bottom' })).toEqual({
+        borderColor: 'var(--border)',
+        borderStyle: 'solid',
+        borderBottomWidth: '1px',
+      }));
   });
 
   describe('rounded', () => {
-    it('rounded: true', () => expect(resolveLayoutClasses({ rounded: true })).toBe('rounded-[var(--radius)]'));
-    it('rounded: false produces no class', () => expect(resolveLayoutClasses({ rounded: false })).toBe(''));
-    it('rounded: theme', () => expect(resolveLayoutClasses({ rounded: 'theme' })).toBe('rounded-[var(--radius)]'));
-    it('rounded: full', () => expect(resolveLayoutClasses({ rounded: 'full' })).toBe('rounded-full'));
-    it('rounded: lg', () => expect(resolveLayoutClasses({ rounded: 'lg' })).toBe('rounded-lg'));
+    it('rounded: true is the theme radius', () =>
+      expect(resolveLayoutStyle({ rounded: true })).toEqual({ borderRadius: 'var(--radius)' }));
+    it('rounded: theme', () =>
+      expect(resolveLayoutStyle({ rounded: 'theme' })).toEqual({ borderRadius: 'var(--radius)' }));
+    it('rounded: full is the pill radius', () =>
+      expect(resolveLayoutStyle({ rounded: 'full' })).toEqual({ borderRadius: '9999px' }));
+    it('rounded: none', () => expect(resolveLayoutStyle({ rounded: 'none' })).toEqual({ borderRadius: '0' }));
+    it('rounded: false emits nothing', () => expect(resolveLayoutStyle({ rounded: false })).toEqual({}));
   });
 
-  describe('animate', () => {
-    it('animate: spin', () => expect(resolveLayoutClasses({ animate: 'spin' })).toBe('animate-spin'));
-    it('animate: ping', () => expect(resolveLayoutClasses({ animate: 'ping' })).toBe('animate-ping'));
-    it('animate: pulse', () => expect(resolveLayoutClasses({ animate: 'pulse' })).toBe('animate-pulse'));
-    it('animate: fadeIn', () => expect(resolveLayoutClasses({ animate: 'fadeIn' })).toBe('animate-fade-in'));
-    it('animate: none produces no class', () => expect(resolveLayoutClasses({ animate: 'none' })).toBe(''));
+  describe('animate references a keyframe this stylesheet defines', () => {
+    it('animate: spin', () => expect(resolveLayoutStyle({ animate: 'spin' }).animation).toContain('mtx-spin'));
+    it('animate: ping', () => expect(resolveLayoutStyle({ animate: 'ping' }).animation).toContain('mtx-ping'));
+    it('animate: pulse', () => expect(resolveLayoutStyle({ animate: 'pulse' }).animation).toContain('mtx-pulse'));
+    it('animate: fadeIn', () => expect(resolveLayoutStyle({ animate: 'fadeIn' }).animation).toContain('mtx-fade-in'));
+    it('animate: none emits nothing', () => expect(resolveLayoutStyle({ animate: 'none' })).toEqual({}));
   });
 
   describe('hidden', () => {
-    it('hidden: true', () => expect(resolveLayoutClasses({ hidden: true })).toBe('hidden'));
-    it('hidden: false produces no class', () => expect(resolveLayoutClasses({ hidden: false })).toBe(''));
+    it('hidden: true', () => expect(resolveLayoutStyle({ hidden: true })).toEqual({ display: 'none' }));
+    it('hidden: false emits nothing', () => expect(resolveLayoutStyle({ hidden: false })).toEqual({}));
   });
 
   it('combines multiple props', () => {
-    const result = resolveLayoutClasses({ padding: 'md', align: 'center', grow: true });
-    expect(result).toBe('p-2 items-center flex-1');
+    expect(resolveLayoutStyle({ padding: 'md', align: 'center', grow: true })).toEqual({
+      padding: '8px',
+      alignItems: 'center',
+      flex: '1 1 0%',
+    });
   });
 });
 

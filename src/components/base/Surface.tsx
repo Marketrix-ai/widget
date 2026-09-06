@@ -1,10 +1,8 @@
-import { type ElementType, forwardRef } from 'react';
-
-import { cn } from '@/lib/utils';
+import { type CSSProperties, type ElementType, forwardRef } from 'react';
 
 import { getElevationStyle } from '../../design-system/component-tokens';
 import type { ShadowToken } from '../../design-system/shadows';
-import { type LayoutProps, resolveLayoutClasses, stripLayoutProps } from './layoutProps';
+import { type LayoutProps, resolveLayoutStyle, stripLayoutProps } from './layoutProps';
 
 export type SurfaceBackground = 'default' | 'card';
 export type SurfacePadding = 'none' | 'card' | 'toast';
@@ -18,15 +16,15 @@ export interface SurfaceProps extends LayoutProps, Omit<React.HTMLAttributes<HTM
   className?: string;
 }
 
-export const backgroundClasses: Record<SurfaceBackground, string> = {
-  default: '',
-  card: 'bg-card text-card-foreground',
+export const backgroundStyles: Record<SurfaceBackground, CSSProperties> = {
+  default: {},
+  card: { backgroundColor: 'var(--card)', color: 'var(--card-foreground)' },
 };
 
-export const paddingPresetClasses: Record<SurfacePadding, string> = {
-  none: '',
-  card: 'px-3 py-2',
-  toast: 'py-2 pl-2 pr-3',
+export const paddingPresetStyles: Record<SurfacePadding, CSSProperties> = {
+  none: {},
+  card: { padding: '8px 12px' },
+  toast: { padding: '8px 12px 8px 8px' },
 };
 
 export const Surface = forwardRef<HTMLElement, SurfaceProps>(function Surface(props, ref) {
@@ -39,15 +37,20 @@ export const Surface = forwardRef<HTMLElement, SurfaceProps>(function Surface(pr
     style,
     ...rest
   } = props;
-  const layoutClasses = resolveLayoutClasses(props);
   const domProps = stripLayoutProps(rest);
 
   return (
     <Component
       {...domProps}
       ref={ref}
-      className={cn(backgroundClasses[background], paddingPresetClasses[paddingPreset], layoutClasses, className)}
-      style={{ ...getElevationStyle(elevation), ...style }}
+      className={className}
+      style={{
+        ...backgroundStyles[background],
+        ...paddingPresetStyles[paddingPreset],
+        ...getElevationStyle(elevation),
+        ...resolveLayoutStyle(props),
+        ...style,
+      }}
     />
   );
 });

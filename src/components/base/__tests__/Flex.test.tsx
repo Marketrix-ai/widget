@@ -5,16 +5,21 @@ import { Flex } from '../Flex';
 import { Stack } from '../Stack';
 
 describe('Flex', () => {
-  it('renders a div with flex class', () => {
+  it('renders a div that is display:flex', () => {
     const { container } = render(<Flex>content</Flex>);
-    const el = container.firstElementChild;
-    expect(el?.tagName).toBe('DIV');
-    expect(el?.classList.contains('flex')).toBe(true);
+    const el = container.firstElementChild as HTMLElement;
+    expect(el.tagName).toBe('DIV');
+    expect(el.style.display).toBe('flex');
   });
 
-  it('merges className', () => {
-    const { container } = render(<Flex className='items-center gap-2'>content</Flex>);
-    expect(container.firstElementChild?.classList.contains('items-center')).toBe(true);
+  it('passes className through', () => {
+    const { container } = render(<Flex className='mtx-fab-center'>content</Flex>);
+    expect(container.firstElementChild?.classList.contains('mtx-fab-center')).toBe(true);
+  });
+
+  it('lets hidden win over its own display, which is applied last', () => {
+    const { container } = render(<Flex hidden>content</Flex>);
+    expect((container.firstElementChild as HTMLElement).style.display).toBe('none');
   });
 
   it('supports as prop', () => {
@@ -29,10 +34,10 @@ describe('Flex', () => {
 });
 
 describe('Stack', () => {
-  it('renders with flex flex-col', () => {
+  it('renders a flex column', () => {
     const { container } = render(<Stack>content</Stack>);
-    const el = container.firstElementChild;
-    expect(el?.classList.contains('flex')).toBe(true);
-    expect(el?.classList.contains('flex-col')).toBe(true);
+    const el = container.firstElementChild as HTMLElement;
+    expect(el.style.display).toBe('flex');
+    expect(el.style.flexDirection).toBe('column');
   });
 });
