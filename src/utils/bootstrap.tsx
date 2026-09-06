@@ -21,11 +21,6 @@ export const widgetState: { mount: WidgetMount | null } = { mount: null };
 
 let noticeRoot: Root | null = null;
 
-let widgetInstanceCounter = 0;
-const generateContainerId = (): string => {
-  return `marketrix-widget-container-${++widgetInstanceCounter}`;
-};
-
 /** The one place a closed shadow root is opened and the widget CSS injected into it. */
 const attachShadowMount = (
   container: HTMLElement,
@@ -47,14 +42,9 @@ const attachShadowMount = (
 export const createWidgetContainer = (
   parentContainer?: HTMLElement,
 ): { container: HTMLElement; shadowRoot: ShadowRoot; mountEl: HTMLElement } => {
-  const uniqueContainerId = generateContainerId();
   const parent = parentContainer ?? document.body;
-  if (parent.querySelector(`#${uniqueContainerId}`)) {
-    throw new Error(`Widget container with ID ${uniqueContainerId} already exists`);
-  }
 
   const container = document.createElement('div');
-  container.id = uniqueContainerId;
   container.className = 'marketrix-widget-container';
   container.style.pointerEvents = 'auto';
   if (parentContainer) {

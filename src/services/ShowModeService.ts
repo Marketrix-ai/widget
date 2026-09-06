@@ -65,7 +65,7 @@ export class ShowModeService {
   }
 
   cleanup(): void {
-    this.takeSettlers().reject?.('Cancelled by cleanup');
+    this.takeSettlers().reject?.(new Error('Cancelled by cleanup'));
 
     if (this.clickHandler) {
       document.removeEventListener('click', this.clickHandler, { capture: true });

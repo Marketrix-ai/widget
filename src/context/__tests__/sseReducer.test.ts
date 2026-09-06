@@ -299,6 +299,29 @@ describe('reduceToolProgress / reduceToolDone / reduceStop', () => {
     expect(part?.content).toContain('no element');
   });
 
+  it('closes the line of the tool that finished, not the newest open one', () => {
+    const call = (browser_tool: string, tool_call_id: string): WidgetEvent => ({
+      type: 'tool/call',
+      tool_call_id,
+      browser_tool,
+      args: {},
+      explanation: browser_tool,
+    });
+    const twoOpen = reduceSse(
+      reduceSse(runningState(), call('click_element', 'c1'), 'show').state,
+      call('get_html', 'c2'),
+      'show',
+    ).state;
+
+    const done = reduceToolProgress(twoOpen, 'click_element', 'click_element', 'completed', 'show');
+
+    const lines = (done.messages[0].parts ?? []).filter(p => p.type === 'progress');
+    expect(lines.map(line => [line.browserToolName, line.status])).toEqual([
+      ['click_element', 'completed'],
+      ['get_html', 'in_progress'],
+    ]);
+  });
+
   it('reduceToolDone ends the task and marks the message done', () => {
     const result = reduceToolDone(runningState(), 'do');
     expect(result.task).toEqual({ isTaskRunning: false });
