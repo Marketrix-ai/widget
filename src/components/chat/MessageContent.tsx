@@ -2,7 +2,6 @@ import React from 'react';
 
 import { useWidget } from '../../hooks/useWidget';
 import type { ChatMessage } from '../../types';
-import { filterCancellationText } from '../../utils/chat';
 import { Flex } from '../base/Flex';
 import { Stack } from '../base/Stack';
 import { Surface } from '../base/Surface';
@@ -24,8 +23,7 @@ export const MessageContent: React.FC<MessageContentProps> = ({ message, isLastM
       <Stack gap='sm'>
         {message.parts.map((part, index) => {
           if (part.type === 'text') {
-            const text = filterCancellationText(part.content);
-            if (!text) return null;
+            if (!part.content) return null;
             return (
               <Text
                 as='div'
@@ -38,7 +36,7 @@ export const MessageContent: React.FC<MessageContentProps> = ({ message, isLastM
                   marginBottom: '4px',
                 }}
               >
-                {text}
+                {part.content}
               </Text>
             );
           } else if (part.type === 'progress') {

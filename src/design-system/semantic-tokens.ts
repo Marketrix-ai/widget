@@ -93,8 +93,6 @@ export function semanticTokensToCssCustomProperties(tokens: SemanticTokens): Rec
     '--secondary-foreground': tokens.color.secondaryForeground,
     '--secondary-bg': tokens.color.secondaryBg,
     '--secondary-hover': tokens.color.secondaryHover,
-    '--muted': tokens.color.border,
-    '--muted-foreground': tokens.color.secondary,
     '--border': tokens.color.border,
     '--ring': tokens.color.primary,
     '--radius': tokens.radius,

@@ -1,4 +1,4 @@
-import { isInteractable } from '../utils/dom';
+import { isInteractable, WIDGET_SHADOW_HOST_CLASS } from '../utils/dom';
 
 // The agent addresses elements by index, so an index must not survive the element changing underneath it: the node
 // object stays the same across a re-render while its attributes are rewritten.
@@ -168,10 +168,9 @@ export class DomService {
     const topElement = document.elementFromPoint(centerX, centerY);
 
     if (topElement && topElement !== element && !element.contains(topElement)) {
-      const isMarketrixUI =
-        topElement.closest('#marketrix-show-highlight') ||
-        topElement.closest('#marketrix-show-popup') ||
-        topElement.closest('[data-marketrix-widget]');
+      const isMarketrixUI = topElement.closest(
+        `#marketrix-show-highlight, #marketrix-show-popup, .${WIDGET_SHADOW_HOST_CLASS}`,
+      );
       if (!isMarketrixUI) {
         const tagName = topElement.tagName.toLowerCase();
         const obscurerInfo = topElement.className ? `${tagName}.${topElement.className.split(' ')[0]}` : tagName;

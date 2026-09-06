@@ -45,6 +45,22 @@ describe('Widget smoke', () => {
     expect(widgetRoot?.contains(dialog)).toBe(true);
   });
 
+  it('paints the modal above the panel it is portalled beside', async () => {
+    render(
+      <WidgetProviders previewMode>
+        <WidgetRoot config={getMockWidgetConfig()} />
+      </WidgetProviders>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /open/i }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Chat' }));
+    const panel = screen.getByRole('tab', { name: 'Chat' }).closest<HTMLElement>('[style*="z-index"]');
+    fireEvent.click(screen.getByRole('button', { name: 'Start screen sharing' }));
+
+    const dialog = await screen.findByRole('dialog');
+    expect(Number(dialog.style.zIndex)).toBeGreaterThan(Number(panel?.style.zIndex));
+  });
+
   it('keeps a hidden widget visible in preview mode', () => {
     render(
       <WidgetProviders previewMode>

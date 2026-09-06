@@ -4,6 +4,7 @@ import type { eventWithTime } from '@rrweb/types';
 import { sdk } from '../sdk';
 
 const FLUSH_INTERVAL_MS = 500;
+const MAX_BUFFERED_EVENTS = 20_000;
 
 export class RrwebSessionRecorder {
   private events: eventWithTime[] = [];
@@ -69,7 +70,7 @@ export class RrwebSessionRecorder {
           command: { type: 'rrweb/events', rrweb_session_id: this.sessionId, events },
         });
       } catch (error) {
-        this.events.unshift(...events);
+        this.events = events.concat(this.events).slice(-MAX_BUFFERED_EVENTS);
         console.error('Failed to record session events:', error);
       }
     });

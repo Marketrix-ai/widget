@@ -98,7 +98,7 @@ export const WidgetRoot: React.FC<WidgetRootProps> = ({ config }) => {
               style={{
                 boxShadow: `inset 0 0 22px 2px ${addOpacity(effectiveConfig.widget_accent_color, 0.72)}, inset 0 0 46px 10px ${addOpacity(effectiveConfig.widget_accent_color, 0.28)}`,
                 pointerEvents: 'none',
-                zIndex: LAYER_TOKENS.overlay,
+                zIndex: LAYER_TOKENS.screenEdgeGlow,
               }}
             />
           )}

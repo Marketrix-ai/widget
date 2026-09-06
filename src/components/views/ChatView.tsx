@@ -46,11 +46,12 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
   const {
     isScreenSharing,
+    isAwaitingScreenAccess,
     showScreenAccessDialog,
     handleScreenAccessDialogAllow,
-    handleScreenAccessDialogDeny,
-    handleScreenAccessAllow,
-    handleScreenAccessDeny,
+    handleScreenAccessDialogDismiss,
+    handleScreenAccessRequestAllow,
+    handleScreenAccessRequestDeny,
     requestScreenAccess,
   } = useScreenShare({
     onScreenSharingChange,
@@ -64,18 +65,18 @@ export const ChatView: React.FC<ChatViewProps> = ({
     setPendingMessage,
   });
 
+  const composerLocked = isAwaitingScreenAccess || messages.some(msg => msg.isPlaceholder);
+
   const handleSendMessage = () => {
-    const hasPendingMessage = messages.some(msg => msg.isPlaceholder);
-    if (inputValue.trim() && !hasPendingMessage) {
-      const messageContent = inputValue.trim();
-      setInputValue('');
-      actions.addMessage(createUserMessage(messageContent, currentMode));
-      if (config.use_screenshare !== false && (currentMode === 'show' || currentMode === 'do') && !isScreenSharing) {
-        setPendingMessage({ content: messageContent, mode: currentMode, alreadyAdded: true });
-        requestScreenAccess(currentMode);
-      } else {
-        void actions.messageDispatch(messageContent, currentMode, true);
-      }
+    if (!inputValue.trim() || composerLocked) return;
+    const messageContent = inputValue.trim();
+    setInputValue('');
+    actions.addMessage(createUserMessage(messageContent, currentMode));
+    if (config.use_screenshare !== false && (currentMode === 'show' || currentMode === 'do') && !isScreenSharing) {
+      setPendingMessage({ content: messageContent, mode: currentMode, alreadyAdded: true });
+      requestScreenAccess(currentMode);
+    } else {
+      void actions.messageDispatch(messageContent, currentMode, true);
     }
   };
 
@@ -92,7 +93,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
       {showScreenAccessDialog && (
         <WidgetDialog
           open={showScreenAccessDialog}
-          onClose={handleScreenAccessDialogDeny}
+          onClose={handleScreenAccessDialogDismiss}
           title='Can I take a look at your screen?'
           description='By allowing screen access, Marketrix can understand your current context to guide you better and complete tasks on your behalf.'
           onConfirm={handleScreenAccessDialogAllow}
@@ -105,15 +106,15 @@ export const ChatView: React.FC<ChatViewProps> = ({
         <ErrorBoundary
           label='Chat'
           fallback={
-            <Text as='div' size='xs' align='center' style={{ padding: '16px', color: 'var(--muted-foreground)' }}>
+            <Text as='div' size='xs' align='center' variant='muted' style={{ padding: '16px' }}>
               Something went wrong displaying messages. Please refresh.
             </Text>
           }
         >
           <MessageList
             messagesEndRef={messagesEndRef}
-            onScreenAccessAllow={handleScreenAccessAllow}
-            onScreenAccessDeny={handleScreenAccessDeny}
+            onScreenAccessAllow={handleScreenAccessRequestAllow}
+            onScreenAccessDeny={handleScreenAccessRequestDeny}
           />
         </ErrorBoundary>
       </Surface>
@@ -138,7 +139,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
           }))}
           activeMode={currentMode}
           onModeChange={handleModeChange}
-          disabled={messages.some(msg => msg.isPlaceholder)}
+          disabled={composerLocked}
           taskRunning={isTaskRunning}
           onStop={() => {
             showModeService.cleanup();

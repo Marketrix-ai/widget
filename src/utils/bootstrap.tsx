@@ -7,6 +7,7 @@ import { WidgetProviders } from '../context/WidgetProviders';
 import type { NotificationTone } from '../design-system/component-tokens';
 import shadowStyles from '../index.css?inline';
 import type { MarketrixConfig } from '../types';
+import { WIDGET_SHADOW_HOST_CLASS } from './dom';
 import { isHTMLScriptElement } from './validation';
 
 export interface WidgetMount {
@@ -45,7 +46,7 @@ export const createWidgetContainer = (
   const parent = parentContainer ?? document.body;
 
   const container = document.createElement('div');
-  container.className = 'marketrix-widget-container';
+  container.className = WIDGET_SHADOW_HOST_CLASS;
   container.style.pointerEvents = 'auto';
   if (parentContainer) {
     Object.assign(container.style, { width: '100%', height: '100%', position: 'relative', overflow: 'visible' });

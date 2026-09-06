@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { ChatService } from '@/services/ChatService';
+import { ChatService, createScreenshareMessage } from '@/services/ChatService';
 import { storageService } from '@/services/StorageService';
 import type { ChatMessage } from '@/types';
 
@@ -33,9 +33,9 @@ describe('ChatService persistence', () => {
     expect(service.restore().messages).toEqual([message()]);
   });
 
-  it('restores a screenshare as an ended notice, because a MediaStream cannot survive a reload', () => {
+  it('stores a screenshare as an ended notice, because a MediaStream cannot survive a reload', () => {
     const service = new ChatService();
-    service.persist(snapshot([message({ id: 'screenshare-1', content: '', parts: [] })]));
+    service.persist(snapshot([createScreenshareMessage({ id: 'stream' } as unknown as MediaStream)]));
 
     expect(service.restore().messages[0]).toMatchObject({
       content: 'Screenshare ended',
