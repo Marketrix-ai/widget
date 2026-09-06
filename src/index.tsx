@@ -17,10 +17,10 @@ import {
   autoInitializeWidget,
   createWidgetContainer,
   getCurrentConfig,
-  hideWidgetSettingsLoader,
+  hideHostPageNotice,
   isWidgetInitialized,
   mountWidgetToContainer,
-  showWidgetSettingsLoader,
+  showHostPageNotice,
   widgetState,
 } from './utils/bootstrap';
 import { isHTMLElement } from './utils/validation';
@@ -44,7 +44,7 @@ async function initWidgetInternal(
 ): Promise<void> {
   window.__mtx = { state: 'initializing' };
 
-  showWidgetSettingsLoader('Loading widget settings...');
+  showHostPageNotice('Loading widget settings...');
   let finalConfig: MarketrixConfig;
   try {
     // Production only: every preview path mounts directly and never reaches here. There is no default
@@ -54,12 +54,12 @@ async function initWidgetInternal(
   } catch (error) {
     if (generation !== lifecycleGeneration) return;
     console.error('Marketrix Widget initialization failed:', error);
-    showWidgetSettingsLoader(error instanceof Error ? error.message : 'Failed to initialize widget', 'error');
+    showHostPageNotice(error instanceof Error ? error.message : 'Failed to initialize widget', 'error');
     window.__mtx = undefined;
     return;
   }
   if (generation !== lifecycleGeneration) return;
-  hideWidgetSettingsLoader();
+  hideHostPageNotice();
 
   mount(finalConfig, container);
   window.__mtx = { state: 'active' };
@@ -126,7 +126,7 @@ export const unmountWidget = (): void => {
   initPromise = null;
   window.__mtx = undefined;
 
-  hideWidgetSettingsLoader();
+  hideHostPageNotice();
 };
 
 export const updateMarketrixConfig = async (newConfig: Partial<MarketrixConfig>): Promise<void> => {

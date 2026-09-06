@@ -59,8 +59,6 @@ export class ShowModeService {
     this.currentPromise = new Promise<void>((resolve, reject) => {
       this.resolvePromise = resolve;
       this.rejectPromise = reject;
-    }).finally(() => {
-      this.cleanup();
     });
 
     return this.currentPromise;
@@ -96,6 +94,11 @@ export class ShowModeService {
     this.currentElement = null;
     this.currentOptions = null;
     this.currentPromise = null;
+  }
+
+  private completeAction(): void {
+    this.takeSettlers().resolve?.();
+    this.cleanup();
   }
 
   /** Detach both settlers before calling one — the click handler, the Continue button and the two watchdogs race. */
@@ -220,7 +223,7 @@ export class ShowModeService {
         e.preventDefault();
         e.stopPropagation();
 
-        this.takeSettlers().resolve?.();
+        this.completeAction();
       }
     };
 
@@ -231,7 +234,7 @@ export class ShowModeService {
     window.requestAnimationFrame(() => {
       popup.querySelector('#marketrix-show-continue')?.addEventListener('click', e => {
         e.stopPropagation();
-        this.takeSettlers().resolve?.();
+        this.completeAction();
       });
     });
   }

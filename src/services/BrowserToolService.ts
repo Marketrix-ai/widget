@@ -53,6 +53,22 @@ const failOptions = (error: string): ToolExecutionResult<DropdownOptionsData> =>
   error,
 });
 
+const SCREENSHOT_FRAME_TIMEOUT_MS = 5000;
+
+function firstFrame(video: HTMLVideoElement, timeoutMs: number): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('Screen capture produced no frame')), timeoutMs);
+    video.onloadeddata = () => {
+      clearTimeout(timer);
+      resolve();
+    };
+    video.onerror = () => {
+      clearTimeout(timer);
+      reject(new Error('Screen capture failed'));
+    };
+  });
+}
+
 const TAB_ORDER_SELECTOR =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
@@ -121,7 +137,6 @@ export class BrowserToolService {
           return fail(`Unknown tool: ${browserToolName}`);
       }
     } catch (error) {
-      showModeService.cleanup();
       return fail(error instanceof Error ? error.message : String(error));
     }
   }
@@ -439,14 +454,8 @@ export class BrowserToolService {
             return 'Backspace: input is empty, nothing to delete';
           }
 
-          let start: number = element.selectionStart ?? value.length;
-          let end: number = element.selectionEnd ?? value.length;
-
-          // Cursor at 0 with no known position → delete from the end instead.
-          if (start === 0 && end === 0) {
-            start = value.length;
-            end = value.length;
-          }
+          const start: number = element.selectionStart ?? value.length;
+          const end: number = element.selectionEnd ?? value.length;
 
           let newValue: string;
           let newCursorPos: number;
@@ -541,17 +550,14 @@ export class BrowserToolService {
   }
 
   private async getScreenshot(): Promise<ToolExecutionResult> {
+    const video = document.createElement('video');
     try {
-      const stream = await startScreenShare();
-      const video = document.createElement('video');
-      video.srcObject = stream;
+      video.srcObject = await startScreenShare();
       video.autoplay = true;
       video.style.display = 'none';
       document.body.appendChild(video);
 
-      await new Promise<void>(resolve => {
-        video.onloadeddata = () => resolve();
-      });
+      await firstFrame(video, SCREENSHOT_FRAME_TIMEOUT_MS);
 
       const canvas = document.createElement('canvas');
       canvas.width = video.videoWidth;
@@ -559,14 +565,12 @@ export class BrowserToolService {
       const ctx = canvas.getContext('2d');
       ctx?.drawImage(video, 0, 0);
 
-      const base64 = canvas.toDataURL('image/jpeg', 0.75);
-
-      video.remove();
       // Keep the stream alive — the agent usually requests a screenshot then keeps going; startScreenShare handles reuse.
-
-      return ok(base64);
+      return ok(canvas.toDataURL('image/jpeg', 0.75));
     } catch (error) {
       return fail(String(error));
+    } finally {
+      video.remove();
     }
   }
 }

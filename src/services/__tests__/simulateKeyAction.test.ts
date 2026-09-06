@@ -82,4 +82,11 @@ describe('simulateKeyAction Backspace/Delete', () => {
     expect(simulateKeyAction(input('', 0), 'Backspace')).toBe('Backspace: input is empty, nothing to delete');
     expect(simulateKeyAction(input('abcd', 4), 'Delete')).toBe('Delete: cursor at end, nothing to delete');
   });
+
+  it('leaves the value alone at the start — a caret Home put at 0 is a position, not a missing one', () => {
+    const el = input('abcd', 4);
+    expect(simulateKeyAction(el, 'Home')).toBe('Home: moved cursor to start');
+    expect(simulateKeyAction(el, 'Backspace')).toBe('Backspace: cursor at start, nothing to delete');
+    expect(el.value).toBe('abcd');
+  });
 });

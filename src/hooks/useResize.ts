@@ -5,7 +5,8 @@ import { readLocal, writeLocal } from '../services/StorageService';
 const MIN_WIDTH = 280;
 const MAX_WIDTH = 600;
 const MIN_HEIGHT = 320;
-const MAX_HEIGHT = 0.85; // fraction of viewport
+
+const maxHeightPx = (): number => Math.floor(window.innerHeight * 0.85);
 
 function parsePx(value: string | undefined): number {
   if (!value) return 360;
@@ -19,15 +20,15 @@ function clamp(value: number, min: number, max: number): number {
 
 const STORAGE_KEY_PREFIX = 'marketrix_widget_size_';
 
-export type ResizeCorner = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
-
 // growX/growY: which way a corner grows the panel when the pointer moves in +x / +y.
-const RESIZE_CORNERS: Record<ResizeCorner, { growX: 1 | -1; growY: 1 | -1; cursor: string }> = {
-  'bottom-right': { growX: 1, growY: 1, cursor: 'nwse-resize' },
-  'bottom-left': { growX: -1, growY: 1, cursor: 'nesw-resize' },
-  'top-right': { growX: 1, growY: -1, cursor: 'nesw-resize' },
+export const RESIZE_CORNERS = {
   'top-left': { growX: -1, growY: -1, cursor: 'nwse-resize' },
-};
+  'top-right': { growX: 1, growY: -1, cursor: 'nesw-resize' },
+  'bottom-left': { growX: -1, growY: 1, cursor: 'nesw-resize' },
+  'bottom-right': { growX: 1, growY: 1, cursor: 'nwse-resize' },
+} as const;
+
+export type ResizeCorner = keyof typeof RESIZE_CORNERS;
 
 function readStoredSize(storageKey: string): { width: number; height: number } | null {
   try {
@@ -35,7 +36,7 @@ function readStoredSize(storageKey: string): { width: number; height: number } |
     if (typeof stored?.width !== 'number' || typeof stored?.height !== 'number') return null;
     return {
       width: clamp(stored.width, MIN_WIDTH, MAX_WIDTH),
-      height: clamp(stored.height, MIN_HEIGHT, Math.floor(window.innerHeight * MAX_HEIGHT)),
+      height: clamp(stored.height, MIN_HEIGHT, maxHeightPx()),
     };
   } catch (error) {
     console.debug('[useResize] Ignoring an unparseable stored size:', error);
@@ -78,11 +79,7 @@ export function useResize(
       const onMove = (moveEvent: MouseEvent) => {
         const next = {
           width: clamp(startW + (moveEvent.clientX - startX) * growX, MIN_WIDTH, MAX_WIDTH),
-          height: clamp(
-            startH + (moveEvent.clientY - startY) * growY,
-            MIN_HEIGHT,
-            Math.floor(window.innerHeight * MAX_HEIGHT),
-          ),
+          height: clamp(startH + (moveEvent.clientY - startY) * growY, MIN_HEIGHT, maxHeightPx()),
         };
         dimsRef.current = next;
 

@@ -109,7 +109,7 @@ describe('widget public entry paths', () => {
 
     expect(init).not.toHaveBeenCalled();
     expect(timer).not.toHaveBeenCalled();
-    expect(document.getElementById('marketrix-widget-loader-container')).toBeNull();
+    expect(document.getElementById('marketrix-widget-notice-container')).toBeNull();
   });
 
   it('owns non-empty widget CSS inside the closed shadow root', async () => {

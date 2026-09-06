@@ -3,14 +3,14 @@ import React from 'react';
 
 import { WidgetProviders } from '../../context/WidgetProviders';
 import { getMockWidgetConfig } from '../../test/fixtures';
-import { MarketrixWidget } from '../MarketrixWidget';
+import { WidgetRoot } from '../WidgetRoot';
 
 describe('Widget smoke', () => {
   it('mounts and shows launcher button', () => {
     const config = getMockWidgetConfig();
     render(
       <WidgetProviders previewMode>
-        <MarketrixWidget config={config} />
+        <WidgetRoot config={config} />
       </WidgetProviders>,
     );
     expect(screen.getByRole('button', { name: /open/i })).toBeInTheDocument();
@@ -20,7 +20,7 @@ describe('Widget smoke', () => {
     const config = getMockWidgetConfig({ widget_accent_color: '#2563eb' });
     const { container } = render(
       <WidgetProviders previewMode>
-        <MarketrixWidget config={config} />
+        <WidgetRoot config={config} />
       </WidgetProviders>,
     );
     const widget = container.querySelector('[data-marketrix-widget]');
@@ -31,7 +31,7 @@ describe('Widget smoke', () => {
   it('portals the modal inside the token-bearing widget root', async () => {
     const { container } = render(
       <WidgetProviders previewMode>
-        <MarketrixWidget config={getMockWidgetConfig()} />
+        <WidgetRoot config={getMockWidgetConfig()} />
       </WidgetProviders>,
     );
 
@@ -48,7 +48,7 @@ describe('Widget smoke', () => {
   it('keeps a hidden widget visible in preview mode', () => {
     render(
       <WidgetProviders previewMode>
-        <MarketrixWidget config={getMockWidgetConfig({ widget_appearance: 'hidden' })} />
+        <WidgetRoot config={getMockWidgetConfig({ widget_appearance: 'hidden' })} />
       </WidgetProviders>,
     );
     expect(screen.getByRole('button', { name: /open/i })).toBeInTheDocument();

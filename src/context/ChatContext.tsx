@@ -48,7 +48,7 @@ interface ChatContextType {
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
-const MAX_PROCESSED_IDS = 1000;
+const MAX_PROCESSED_TOOL_CALL_IDS = 1000;
 
 // How long a dispatch may sit with zero events before the composer gives up waiting on it —
 // see `reduceStaleReply`. Generous on purpose: this only guards a request that never showed any
@@ -70,7 +70,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
   const currentModeRef = useRef(uiState.currentMode);
   currentModeRef.current = uiState.currentMode;
 
-  const processedRequestIds = useRef(new Set<string>());
+  const processedToolCallIds = useRef(new Set<string>());
 
   // Transition runs synchronously here, not in a setState updater: React defers updaters (background tab, mid-burst) and captured effects are lost — tool calls that never execute.
   const commit = useCallback((transition: (s: SseState) => SseState) => {
@@ -187,7 +187,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
   useEffect(() => {
     if (previewMode) return;
 
-    const wsClient = StreamClient.getInstance();
+    const streamClient = StreamClient.getInstance();
 
     const executeToolCall = async (effect: Extract<SseEffect, { type: 'executeTool' }>) => {
       const { toolCallId, tool, args, mode, explanation } = effect;
@@ -201,7 +201,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
         commit(s => reduceToolDone(s, currentModeRef.current));
       }
 
-      await wsClient
+      await streamClient
         .send({
           type: 'tool/response',
           tool_call_id: toolCallId,
@@ -217,19 +217,21 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
     const handleMessage = async (event: WidgetEvent) => {
       // Transport bookkeeping that must run before the pure reducer.
       if (event.type === 'tool/call') {
-        const requestId = event.tool_call_id;
-        if (processedRequestIds.current.has(requestId)) return;
-        processedRequestIds.current.add(requestId);
-        if (processedRequestIds.current.size > MAX_PROCESSED_IDS) {
-          processedRequestIds.current = new Set([...processedRequestIds.current].slice(-MAX_PROCESSED_IDS / 2));
+        const toolCallId = event.tool_call_id;
+        if (processedToolCallIds.current.has(toolCallId)) return;
+        processedToolCallIds.current.add(toolCallId);
+        if (processedToolCallIds.current.size > MAX_PROCESSED_TOOL_CALL_IDS) {
+          processedToolCallIds.current = new Set(
+            [...processedToolCallIds.current].slice(-MAX_PROCESSED_TOOL_CALL_IDS / 2),
+          );
         }
 
         if (!BROWSER_TOOLS.has(event.browser_tool)) {
           console.warn('[Widget] Unknown tool requested:', event.browser_tool);
-          wsClient
+          streamClient
             .send({
               type: 'tool/response',
-              tool_call_id: requestId,
+              tool_call_id: toolCallId,
               success: false,
               error: `Unknown tool: ${event.browser_tool}`,
             })
@@ -237,7 +239,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
           return;
         }
       } else if (event.type === 'task/status' && isTerminalTaskStatus(event.status)) {
-        processedRequestIds.current.clear();
+        processedToolCallIds.current.clear();
       }
 
       let effects: SseEffect[] = [];
@@ -261,10 +263,10 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
     };
 
     const callbacks = { onMessage: handleMessage, onError: handleError };
-    wsClient.addCallbacks(callbacks);
+    streamClient.addCallbacks(callbacks);
 
     return () => {
-      wsClient.removeCallbacks(callbacks);
+      streamClient.removeCallbacks(callbacks);
     };
   }, [previewMode, commit, uiActions]);
 

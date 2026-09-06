@@ -1,8 +1,6 @@
 import React from 'react';
 
-import type { ResizeCorner } from '../../hooks/useResize';
-
-const RESIZE_CORNERS: ResizeCorner[] = ['top-left', 'top-right', 'bottom-left', 'bottom-right'];
+import { RESIZE_CORNERS, type ResizeCorner } from '../../hooks/useResize';
 
 function getCornerStyle(corner: ResizeCorner): React.CSSProperties {
   const isTop = corner.startsWith('top');
@@ -17,7 +15,7 @@ function getCornerStyle(corner: ResizeCorner): React.CSSProperties {
     display: 'flex',
     alignItems: isTop ? 'flex-start' : 'flex-end',
     justifyContent: isLeft ? 'flex-start' : 'flex-end',
-    cursor: (isTop && isLeft) || (!isTop && !isLeft) ? 'nwse-resize' : 'nesw-resize',
+    cursor: RESIZE_CORNERS[corner].cursor,
     top: isTop ? 0 : undefined,
     bottom: isTop ? undefined : 0,
     left: isLeft ? 0 : undefined,
@@ -31,7 +29,7 @@ export interface ResizeHandlesProps {
 
 export const ResizeHandles: React.FC<ResizeHandlesProps> = ({ onResizeStart }) => (
   <>
-    {RESIZE_CORNERS.map(corner => (
+    {(Object.keys(RESIZE_CORNERS) as ResizeCorner[]).map(corner => (
       <div
         key={corner}
         role='separator'
