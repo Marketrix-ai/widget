@@ -17,8 +17,8 @@ import { MessageList } from '../chat/MessageList';
 
 interface ChatViewProps {
   onScreenSharingChange: (isSharing: boolean) => void;
-  onStartScreenShareRef: React.MutableRefObject<(() => void) | null>;
-  onStopScreenShareRef: React.MutableRefObject<(() => void) | null>;
+  startScreenShareRef: React.MutableRefObject<(() => void) | null>;
+  stopScreenShareRef: React.MutableRefObject<(() => void) | null>;
   messageInputRef: React.RefObject<HTMLTextAreaElement | null>;
 }
 
@@ -31,8 +31,8 @@ const MODES: Array<{ id: InstructionType; icon: ChatInputMode['icon']; flag: key
 
 export const ChatView: React.FC<ChatViewProps> = ({
   onScreenSharingChange,
-  onStartScreenShareRef,
-  onStopScreenShareRef,
+  startScreenShareRef,
+  stopScreenShareRef,
   messageInputRef,
 }) => {
   const config = useWidgetConfig();
@@ -55,8 +55,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
     requestScreenAccess,
   } = useScreenShare({
     onScreenSharingChange,
-    onStartScreenShareRef,
-    onStopScreenShareRef,
+    startScreenShareRef,
+    stopScreenShareRef,
     onAddMessage: actions.addMessage,
     onUpdateMessage: actions.updateMessage,
     onRemoveMessage: actions.removeMessage,

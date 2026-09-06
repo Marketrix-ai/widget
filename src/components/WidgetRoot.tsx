@@ -11,6 +11,7 @@ import { StreamClient } from '../services/StreamClient';
 import { tenantScope } from '../services/WidgetService';
 import type { MarketrixConfig, WidgetPosition } from '../types';
 import { addOpacity } from '../utils/color';
+import { invalidSettingsMessage } from '../utils/validation';
 import { getCorner, isWidgetPosition } from '../utils/widgetPositioning';
 import { ErrorBoundary } from './base/ErrorBoundary';
 import { Surface } from './base/Surface';
@@ -28,7 +29,7 @@ export const WidgetRoot: React.FC<WidgetRootProps> = ({ config }) => {
   const { state, actions } = useWidget();
   const streamClient = StreamClient.getInstance();
   const isPreviewMode = config.isPreviewMode ?? false;
-  const configValid = WidgetSettingsDataSchema.safeParse(config).success;
+  const parsedConfig = WidgetSettingsDataSchema.safeParse(config);
 
   useScrollLock(state.isOpen);
 
@@ -55,12 +56,18 @@ export const WidgetRoot: React.FC<WidgetRootProps> = ({ config }) => {
     return () => clearTimeout(timer);
   }, [state.isOpen, isPreviewMode, config.widget_appearance, config.widget_greeting_toast]);
 
+  const settingsError = parsedConfig.success ? null : invalidSettingsMessage(parsedConfig.error);
+
+  useEffect(() => {
+    if (settingsError) console.error(`Marketrix Widget: ${settingsError}`);
+  }, [settingsError]);
+
   const handlePositionChange = (position: WidgetPosition) => {
     setWidgetPosition(position);
     if (!isPreviewMode) writeLocal(positionStorageKey, position);
   };
 
-  if (!configValid) {
+  if (settingsError) {
     return null;
   }
 
@@ -107,7 +114,7 @@ export const WidgetRoot: React.FC<WidgetRootProps> = ({ config }) => {
             <MessengerShell />
           </ErrorBoundary>
 
-          <WidgetFab onDrag={handlePositionChange} />
+          <WidgetFab onPositionCommit={handlePositionChange} />
 
           {state.error && (
             <NotificationToast

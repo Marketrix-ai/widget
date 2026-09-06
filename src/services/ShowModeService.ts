@@ -246,17 +246,17 @@ export class ShowModeService {
       if (!element) return;
       const rect = element.getBoundingClientRect();
       if (rect.bottom < 0 || rect.top > window.innerHeight || rect.right < 0 || rect.left > window.innerWidth) {
-        this.failWithElementGone('The highlighted element scrolled out of view');
+        this.failShowAction('ELEMENT_OFF_SCREEN: The highlighted element scrolled out of view');
         return;
       }
       const index = domService.getSequenceForElement(element) ?? -1;
       const error = domService.checkElementInteractable(element, index);
-      if (error) this.failWithElementGone(error);
+      if (error) this.failShowAction(error);
     }, 200);
   }
 
-  private failWithElementGone(reason: string): void {
-    this.takeSettlers().reject?.(new Error(`ELEMENT_GONE: ${reason}`));
+  private failShowAction(reason: string): void {
+    this.takeSettlers().reject?.(new Error(reason));
     this.cleanup();
   }
 

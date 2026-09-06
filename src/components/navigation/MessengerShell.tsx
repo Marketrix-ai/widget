@@ -131,8 +131,8 @@ export const MessengerShell: React.FC = () => {
           {activeView === 'chat' && (
             <ChatView
               onScreenSharingChange={setHeaderScreenSharing}
-              onStartScreenShareRef={chatViewStartScreenShareRef}
-              onStopScreenShareRef={chatViewStopScreenShareRef}
+              startScreenShareRef={chatViewStartScreenShareRef}
+              stopScreenShareRef={chatViewStopScreenShareRef}
               messageInputRef={messageInputRef}
             />
           )}

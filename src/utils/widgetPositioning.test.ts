@@ -6,6 +6,7 @@ import {
   getNearestCornerByTranslation,
   getPanelPositionStyle,
   getPositionClasses,
+  isWidgetPosition,
 } from './widgetPositioning';
 
 const CORNERS: WidgetPosition[] = ['top_left', 'top_right', 'bottom_left', 'bottom_right'];
@@ -48,5 +49,18 @@ describe('getNearestCornerByTranslation', () => {
     expect(getNearestCornerByTranslation({ dx: -900, dy: -600 }, 'bottom_right', VW, VH, W, H)).toBe('top_left');
     expect(getNearestCornerByTranslation({ dx: 0, dy: -600 }, 'bottom_right', VW, VH, W, H)).toBe('top_right');
     expect(getNearestCornerByTranslation({ dx: 900, dy: 0 }, 'bottom_left', VW, VH, W, H)).toBe('bottom_right');
+  });
+});
+
+describe('isWidgetPosition', () => {
+  it('admits the four corners', () => {
+    for (const position of CORNERS) expect(isWidgetPosition(position)).toBe(true);
+  });
+
+  it('rejects the names every object inherits, which no corner is', () => {
+    const inherited = ['toString', 'constructor', 'valueOf', 'hasOwnProperty', '__proto__', 'isPrototypeOf'];
+    for (const name of inherited) expect(isWidgetPosition(name)).toBe(false);
+    expect(isWidgetPosition('bogus')).toBe(false);
+    expect(isWidgetPosition(null)).toBe(false);
   });
 });

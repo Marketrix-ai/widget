@@ -14,10 +14,10 @@ import { Icon } from '../base/Icon';
 import { Surface } from '../base/Surface';
 
 interface WidgetFabProps {
-  onDrag: (position: WidgetPosition) => void;
+  onPositionCommit: (position: WidgetPosition) => void;
 }
 
-export const WidgetFab: React.FC<WidgetFabProps> = ({ onDrag }) => {
+export const WidgetFab: React.FC<WidgetFabProps> = ({ onPositionCommit }) => {
   const {
     isPreviewMode = false,
     widget_accent_color: accentColor,
@@ -47,7 +47,7 @@ export const WidgetFab: React.FC<WidgetFabProps> = ({ onDrag }) => {
     onPointerUp,
     onPointerCancel,
     suppressUntilRef,
-  } = useDragSnap({ position, onDrag, isPreviewMode, wrapperRef });
+  } = useDragSnap({ position, onPositionCommit, isPreviewMode, wrapperRef });
 
   const effectivePositionClasses = getPositionClasses(position);
   const positionClass = isPreviewMode ? 'absolute' : 'fixed';

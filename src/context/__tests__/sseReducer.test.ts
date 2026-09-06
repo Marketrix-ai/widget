@@ -120,18 +120,25 @@ describe('reduceStaleReply', () => {
     expect(result.messages[0].content).toBe('This is taking longer than expected. Please try again.');
   });
 
-  it('never overwrites a message that already made progress — a slow task is not a dead one', () => {
-    // Default fixture already carries one progress part, matching a `tool/call` having landed.
+  it('never overwrites a message while its task is running — a slow task is not a dead one', () => {
     const state: SseState = { messages: [agentMessage()], task: { isTaskRunning: true } };
     expect(reduceStaleReply(state, 'agent-1', 'timeout text')).toBe(state);
   });
 
-  it('never overwrites a message already paused on the visitor, even with no text yet', () => {
+  it('never overwrites a running task paused on the visitor, even with no text yet', () => {
     const state: SseState = {
       messages: [agentMessage({ placeholderState: 'waiting-for-user', parts: [] })],
-      task: { isTaskRunning: false },
+      task: { isTaskRunning: true },
     };
     expect(reduceStaleReply(state, 'agent-1', 'timeout text')).toBe(state);
+  });
+
+  it('releases a placeholder left behind by a reload, progress lines and all, once no task is running', () => {
+    const state: SseState = { messages: [agentMessage()], task: { isTaskRunning: false } };
+    const result = reduceStaleReply(state, 'agent-1', 'timeout text');
+
+    expect(result.messages[0].isPlaceholder).toBe(false);
+    expect(result.messages[0].content).toBe('timeout text');
   });
 
   it('never overwrites a message that already settled', () => {

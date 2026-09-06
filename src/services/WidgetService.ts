@@ -1,5 +1,6 @@
 import { sdk, type WidgetData, type WidgetSettingsData, WidgetSettingsDataSchema } from '../sdk';
 import type { MarketrixConfig } from '../types';
+import { invalidSettingsMessage } from '../utils/validation';
 import type { CredentialedConfig } from './StorageService';
 
 export function createConfigFromSettings(
@@ -87,8 +88,7 @@ export async function loadWidgetConfig(config: MarketrixConfig): Promise<Credent
 
   const parsedSettings = WidgetSettingsDataSchema.safeParse({ ...defaults, ...activeWidget.settings });
   if (!parsedSettings.success) {
-    const fields = [...new Set(parsedSettings.error.issues.map(issue => issue.path.join('.') || 'settings'))];
-    throw new Error(`Widget settings are invalid: ${fields.join(', ')}`);
+    throw new Error(invalidSettingsMessage(parsedSettings.error));
   }
 
   return {
