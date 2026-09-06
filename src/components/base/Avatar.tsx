@@ -12,7 +12,7 @@ export interface AvatarProps extends Omit<ComponentPropsWithRef<'img'>, 'size'> 
   elevation?: ShadowToken;
   fit?: 'contain' | 'cover';
   size?: AvatarSize | number;
-  rounded?: boolean | 'full' | 'theme' | RadiusToken;
+  rounded?: boolean | RadiusToken;
 }
 
 const SIZE: Record<AvatarSize, number> = { sm: 20, md: 32, lg: 48 };

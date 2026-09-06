@@ -81,7 +81,7 @@ export const MessengerShell: React.FC = () => {
     <Stack
       ref={containerRef}
       position={isPreviewMode ? 'absolute' : 'fixed'}
-      rounded='theme'
+      rounded='lg'
       border
       overflow='hidden'
       style={{

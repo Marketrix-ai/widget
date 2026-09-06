@@ -111,10 +111,9 @@ describe('resolveLayoutStyle', () => {
   describe('rounded', () => {
     it('rounded: true is the theme radius', () =>
       expect(resolveLayoutStyle({ rounded: true })).toEqual({ borderRadius: 'var(--radius)' }));
-    it('rounded: theme', () =>
-      expect(resolveLayoutStyle({ rounded: 'theme' })).toEqual({ borderRadius: 'var(--radius)' }));
-    it('rounded: full is the pill radius', () =>
-      expect(resolveLayoutStyle({ rounded: 'full' })).toEqual({ borderRadius: '9999px' }));
+    it('rounded: lg is the theme radius', () =>
+      expect(resolveLayoutStyle({ rounded: 'lg' })).toEqual({ borderRadius: 'var(--radius)' }));
+    it('rounded: pill', () => expect(resolveLayoutStyle({ rounded: 'pill' })).toEqual({ borderRadius: '9999px' }));
     it('rounded: none', () => expect(resolveLayoutStyle({ rounded: 'none' })).toEqual({ borderRadius: '0' }));
     it('rounded: false emits nothing', () => expect(resolveLayoutStyle({ rounded: false })).toEqual({}));
   });

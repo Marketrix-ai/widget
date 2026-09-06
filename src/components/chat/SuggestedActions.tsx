@@ -21,7 +21,6 @@ export const SuggestedActions: React.FC<SuggestedActionsProps> = ({ actions, onA
         <Button
           key={`welcome-chip-${action.id}-${chipIndex}`}
           elevation='card'
-          shape='theme'
           size='sm'
           variant='chip'
           full
