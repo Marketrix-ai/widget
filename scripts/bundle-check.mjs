@@ -71,13 +71,6 @@ try {
 // fails outright, so a new dependency is a deliberate line rather than a number nobody reads.
 const DEPENDENCY_BUDGETS = {
   '@rrweb/record': 84_000, // 75,867 (19.3%) — session recording, imported for a feature off by default
-  // 91,018 (22.3%) — the generated contract's validator; two safeParse calls reach it. The 4.4.3 pin
-  // was lifted deliberately: latest zod costs a customer's page 17.7 kB for a schema surface the
-  // widget does not grow into. `zod/mini` is NOT the escape — it drops the chained methods the
-  // generated mirror is built from (`.optional()`, `.extend()`, `.default()`, `.nullish()`,
-  // `.partial()`, `.omit()`, `.passthrough()`), so an alias builds green and then throws
-  // `.optional is not a function` at module load in the host page.
-  zod: 95_000,
   '@base-ui/react': 82_000, // 74,739 (19.1%) — Dialog, Button, Tabs and Toast
   '@base-ui/utils': 13_000, // 11,637
   '@orpc/client': 11_000, // 9,500

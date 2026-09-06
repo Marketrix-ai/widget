@@ -7,7 +7,7 @@ runtime and bundle size are first-class concerns.
 ESM-only, `sideEffects: false`. **React 19 is a peer dependency and external to the bundle — the host
 page must supply it.** Built with Vite 8 in **library mode** → a single ESM bundle `dist/widget.mjs`,
 mounted into a **closed Shadow DOM** with all CSS injected as JS. Stack: TypeScript 6, hand-written
-CSS, Zod 4, oRPC 1, `@rrweb/record` (optional), `@base-ui/react`.
+CSS, oRPC 1, `@rrweb/record` (optional), `@base-ui/react`.
 
 **`README.md` is the real public API surface** — customer-facing integration docs live there; keep it
 accurate. The root `../CLAUDE.md` owns cross-cutting rules (the widget↔api contract at the boundary,
@@ -61,9 +61,18 @@ are generated**, so after changing `rc:` you must re-run `lefthook install --for
   and nginx has no brotli module — `gzip_static` covers gzip, a `try_files` on `Accept-Encoding`
   covers brotli. Nothing is compressed per request.
 - **`bundle:check` budgets each bundled dependency, not just the total** — a total cap cannot see
-  which dependency grew. Three are 63% of the bundle: `zod` 91,018 (two `safeParse` calls),
-  `@rrweb/record` 76,564 (a feature off by default), `@base-ui/react` + `/utils` 86,376. A package
-  missing from `DEPENDENCY_BUDGETS` fails the gate, so a new import is a deliberate line.
+  which dependency grew. Two are 54% of the bundle: `@base-ui/react` + `/utils` 86,376 and
+  `@rrweb/record` 76,564 (a feature off by default). A package missing from `DEPENDENCY_BUDGETS`
+  fails the gate, so a new import is a deliberate line.
+- **zod is a type-only dependency of the BUNDLE, and a real one of the package.** Nothing in
+  `src/` imports it as a value any more — `parseWidgetSettings` in `utils/validation.ts` is the one
+  home for settings validation, a `satisfies`-checked guard table that a contract change breaks at
+  compile time. Importing `WidgetSettingsDataSchema` (or any schema) as a VALUE anywhere reachable
+  from `src/index.tsx` pulls zod's whole runtime back into every host page: rolldown cannot prove
+  `z.object(...)` pure, so one value import retains the entire mirror's schema graph. It stays in
+  `dependencies` because the published `.d.ts` files still reference it, and it stays importable in
+  tests — `utils/__tests__/validation.test.ts` uses the real schema as the oracle the guard is
+  checked against.
 - **A single chunk means an import is unconditional** — a heavy dependency behind an off-by-default
   flag still ships to every host page. Weigh that at the import, because the packaging contract has no
   later escape.

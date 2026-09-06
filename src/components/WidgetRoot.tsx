@@ -5,13 +5,12 @@ import { LAYER_TOKENS } from '../design-system/layers';
 import { createSemanticTokens, semanticTokensToCssCustomProperties } from '../design-system/semantic-tokens';
 import { useScrollLock } from '../hooks/useScrollLock';
 import { useWidget, type ValidWidgetConfig, WidgetConfigContext } from '../hooks/useWidget';
-import { WidgetSettingsDataSchema } from '../sdk';
 import { readLocal, writeLocal } from '../services/StorageService';
 import { StreamClient } from '../services/StreamClient';
 import { tenantScope } from '../services/WidgetService';
 import type { MarketrixConfig, WidgetPosition } from '../types';
 import { addOpacity } from '../utils/color';
-import { invalidSettingsMessage } from '../utils/validation';
+import { invalidSettingsMessage, parseWidgetSettings } from '../utils/validation';
 import { getCorner, isWidgetPosition } from '../utils/widgetPositioning';
 import { ErrorBoundary } from './base/ErrorBoundary';
 import { Surface } from './base/Surface';
@@ -29,7 +28,7 @@ export const WidgetRoot: React.FC<WidgetRootProps> = ({ config }) => {
   const { state, actions } = useWidget();
   const streamClient = StreamClient.getInstance();
   const isPreviewMode = config.isPreviewMode ?? false;
-  const parsedConfig = WidgetSettingsDataSchema.safeParse(config);
+  const parsedConfig = parseWidgetSettings(config);
 
   useScrollLock(state.isOpen);
 
@@ -56,7 +55,7 @@ export const WidgetRoot: React.FC<WidgetRootProps> = ({ config }) => {
     return () => clearTimeout(timer);
   }, [state.isOpen, isPreviewMode, config.widget_appearance, config.widget_greeting_toast]);
 
-  const settingsError = parsedConfig.success ? null : invalidSettingsMessage(parsedConfig.error);
+  const settingsError = parsedConfig.invalidFields ? invalidSettingsMessage(parsedConfig.invalidFields) : null;
 
   useEffect(() => {
     if (settingsError) console.error(`Marketrix Widget: ${settingsError}`);
