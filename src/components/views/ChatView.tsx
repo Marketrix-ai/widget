@@ -37,7 +37,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
 }) => {
   const config = useWidgetConfig();
   const { state, actions } = useWidget();
-  const { messages, currentMode, isTaskRunning } = state;
+  const { currentMode, isTaskRunning, isAwaitingReply } = state;
 
   const [inputValue, setInputValue] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -65,7 +65,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
     setPendingMessage,
   });
 
-  const composerLocked = isAwaitingScreenAccess || messages.some(msg => msg.isPlaceholder);
+  const composerLocked = isAwaitingScreenAccess || isAwaitingReply;
 
   const handleSendMessage = () => {
     if (!inputValue.trim() || composerLocked) return;

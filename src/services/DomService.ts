@@ -115,7 +115,7 @@ export class DomService {
   }
 
   /** `data-id` is the whole contract: the agent parses the snapshot for `[data-id]` and reads nothing else off it. */
-  getSnapshotHtml(): string {
+  reindexAndSnapshot(): string {
     this.indexInteractableElements();
 
     const clone = document.documentElement.cloneNode(true) as Element;

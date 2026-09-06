@@ -18,16 +18,14 @@ export interface SseState {
   task: TaskState;
 }
 
-export type SseEffect =
-  | {
-      type: 'executeTool';
-      toolCallId: string;
-      tool: string;
-      args: Record<string, unknown>;
-      mode: InstructionType;
-      explanation: string;
-    }
-  | { type: 'setLoading'; value: boolean };
+export interface SseEffect {
+  type: 'executeTool';
+  toolCallId: string;
+  tool: string;
+  args: Record<string, unknown>;
+  mode: InstructionType;
+  explanation: string;
+}
 
 export interface ReduceResult {
   state: SseState;
@@ -233,16 +231,10 @@ export function reduceSse(state: SseState, event: WidgetEvent, currentMode: Inst
       return { state: reduceText(state, event.request_id, event.text, true), effects: [] };
 
     case 'chat/response':
-      return {
-        state: reduceText(state, event.request_id, event.text, false),
-        effects: [{ type: 'setLoading', value: false }],
-      };
+      return { state: reduceText(state, event.request_id, event.text, false), effects: [] };
 
     case 'chat/error':
-      return {
-        state: reduceError(state, event.request_id, `Error: ${event.error}`),
-        effects: [{ type: 'setLoading', value: false }],
-      };
+      return { state: reduceError(state, event.request_id, `Error: ${event.error}`), effects: [] };
 
     // registered / heartbeat carry no state.
     default:

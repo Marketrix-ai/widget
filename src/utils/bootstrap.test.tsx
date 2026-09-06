@@ -38,14 +38,20 @@ describe('widget public entry paths', () => {
 
     Function(loaderSource)();
 
-    const mergedMap = JSON.parse(document.querySelector('script[type="importmap"]')?.textContent ?? '{}');
-    expect(mergedMap.imports).toMatchObject({
-      react: 'https://host.test/react.js',
-      host: '/host.js',
-      'react-dom': 'https://esm.sh/react-dom@19',
-      'react-dom/client': 'https://esm.sh/react-dom@19/client',
-      'react/jsx-runtime': 'https://esm.sh/react@19/jsx-runtime',
-    });
+    const maps = [...document.querySelectorAll('script[type="importmap"]')].map(node =>
+      JSON.parse(node.textContent ?? '{}'),
+    );
+    expect(maps).toEqual([
+      { imports: { react: 'https://host.test/react.js', host: '/host.js' } },
+      {
+        imports: {
+          react: 'https://esm.sh/react@19',
+          'react-dom': 'https://esm.sh/react-dom@19',
+          'react-dom/client': 'https://esm.sh/react-dom@19/client',
+          'react/jsx-runtime': 'https://esm.sh/react@19/jsx-runtime',
+        },
+      },
+    ]);
     const modules = document.querySelectorAll('script[type="module"]');
     expect(modules).toHaveLength(1);
     expect(modules[0]).toMatchObject({ src: 'https://cdn.test/widgets/widget.mjs' });

@@ -33,7 +33,7 @@ describe('a tool that leaves the page reports itself before it goes', () => {
     expect(result.success).toBe(true);
     expect(navigations).toEqual([]);
 
-    result.afterResponseSent?.();
+    result.afterResponseAttempt?.();
 
     expect(navigations).toEqual(['https://host.test/next']);
   });
@@ -43,7 +43,7 @@ describe('a tool that leaves the page reports itself before it goes', () => {
 
     expect(navigations).toEqual([]);
 
-    result.afterResponseSent?.();
+    result.afterResponseAttempt?.();
 
     expect(navigations).toEqual(['https://duckduckgo.com/?q=widgets']);
   });
@@ -56,7 +56,7 @@ describe('a tool that leaves the page reports itself before it goes', () => {
 
     expect(back).not.toHaveBeenCalled();
 
-    result.afterResponseSent?.();
+    result.afterResponseAttempt?.();
 
     expect(back).toHaveBeenCalledOnce();
   });
@@ -115,5 +115,14 @@ describe('a tool nothing can perform is not offered at all', () => {
     expect(staged).not.toHaveBeenCalled();
     expect(BROWSER_TOOLS.has('upload_file')).toBe(false);
     expect(WAIT_FOR_USER_TOOLS.has('upload_file')).toBe(false);
+  });
+});
+
+describe('a run the model ends is not a widget tool failure', () => {
+  it('reports done as executed when the agent sends only the closing message', async () => {
+    const result = await browserToolService.executeTool('done', { message: 'Could not find the checkout button' });
+
+    expect(result.success).toBe(true);
+    expect(result.data).toEqual({ text: 'Could not find the checkout button' });
   });
 });

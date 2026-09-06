@@ -114,7 +114,7 @@ export const BROWSER_TOOLS = new Map<string, string>([
   ['wait', 'Waiting'],
   ['close_tab', 'Closing tab'],
   ['done', 'Done'],
-  ['get_html', 'Viewed your screen'],
+  ['get_html', 'Reading the page'],
   ['get_screenshot', 'Taking screenshot'],
 ]);
 

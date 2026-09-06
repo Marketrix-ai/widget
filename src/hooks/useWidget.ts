@@ -19,7 +19,10 @@ export const useWidget = () => {
   const { uiState, uiActions } = useUIStateContext();
   const { messages, chatActions, taskState, taskActions } = useChatContext();
 
-  const state = useMemo<WidgetState>(() => ({ ...uiState, ...taskState, messages }), [uiState, messages, taskState]);
+  const state = useMemo<WidgetState>(
+    () => ({ ...uiState, ...taskState, messages, isAwaitingReply: messages.some(msg => msg.isPlaceholder) }),
+    [uiState, messages, taskState],
+  );
 
   const resetChat = useCallback(() => {
     chatActions.clearMessages();

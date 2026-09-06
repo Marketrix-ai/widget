@@ -22,7 +22,7 @@ export interface ToolExecutionResult<T = TextData> {
   success: boolean;
   data: T;
   error?: string;
-  afterResponseSent?: () => void;
+  afterResponseAttempt?: () => void;
 }
 
 /** One shape for every widget tool's arguments: the wire carries a bare JSON object, so nothing is
@@ -39,7 +39,6 @@ interface ToolArgs {
   option?: string;
   query?: string;
   seconds?: number;
-  success?: boolean;
   text?: string;
   url?: string;
 }
@@ -150,7 +149,7 @@ export class BrowserToolService {
     const url = args.url;
     return {
       ...ok(`Navigating to ${url}`),
-      afterResponseSent: () => {
+      afterResponseAttempt: () => {
         window.location.href = url;
       },
     };
@@ -168,7 +167,7 @@ export class BrowserToolService {
 
     return {
       ...ok(`Searching for "${args.query}" on ${engine}`),
-      afterResponseSent: () => {
+      afterResponseAttempt: () => {
         window.location.href = url;
       },
     };
@@ -183,7 +182,7 @@ export class BrowserToolService {
     element.scrollIntoView({ behavior: 'smooth', block: 'center' });
     await new Promise(resolve => setTimeout(resolve, 100));
 
-    return { ...ok(`Clicked element ${args.index}`), afterResponseSent: () => element.click() };
+    return { ...ok(`Clicked element ${args.index}`), afterResponseAttempt: () => element.click() };
   }
 
   private typeText(args: ToolArgs): ToolExecutionResult {
@@ -289,7 +288,7 @@ export class BrowserToolService {
 
   private goBack(): ToolExecutionResult {
     if (window.history.length <= 1) return fail('No history');
-    return { ...ok('Navigated back'), afterResponseSent: () => window.history.back() };
+    return { ...ok('Navigated back'), afterResponseAttempt: () => window.history.back() };
   }
 
   private async wait({ seconds }: ToolArgs): Promise<ToolExecutionResult> {
@@ -534,16 +533,12 @@ export class BrowserToolService {
   }
 
   private done(args: ToolArgs): ToolExecutionResult {
-    if (args.success === undefined) {
-      return fail('success parameter is required');
-    }
-    const resultMessage = args.message || (args.success ? 'Task completed' : 'Task failed');
-    return ok(resultMessage);
+    return ok(args.message || 'Task ended');
   }
 
   private getHtml(): ToolExecutionResult {
     try {
-      const html = domService.getSnapshotHtml();
+      const html = domService.reindexAndSnapshot();
       return ok(html);
     } catch (error) {
       return fail(String(error));
