@@ -6,7 +6,7 @@ import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { useResize } from '../../hooks/useResize';
 import { useWidget, useWidgetConfig } from '../../hooks/useWidget';
 import { createUserMessage } from '../../services/ChatService';
-import { tenantScope } from '../../services/WidgetService';
+import { tenantScope } from '../../services/StorageService';
 import type { WidgetView } from '../../types';
 import type { SuggestedActionItem } from '../../utils/suggestedActions';
 import { getCorner, getPanelPositionStyle } from '../../utils/widgetPositioning';

@@ -115,7 +115,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
 
           {message.isScreenAccessRequest && message.screenShareStatus && (
             <Text as='div' variant='faint' size='xs' italic style={{ marginTop: '2px' }}>
-              {message.screenShareStatus === 'allowed' ? 'Sure' : 'Check HTML Instead'}
+              {message.screenShareStatus === 'allowed' ? 'Sure' : 'No'}
             </Text>
           )}
 

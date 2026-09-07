@@ -45,7 +45,7 @@ describe('a send that is waiting on screen access', () => {
     fireEvent.click(screen.getByRole('button', { name: 'No' }));
 
     expect(composer.disabled).toBe(false);
-    expect(screen.getByText('Check HTML Instead')).toBeInTheDocument();
+    expect(screen.getByText('No')).toBeInTheDocument();
   });
 });
 

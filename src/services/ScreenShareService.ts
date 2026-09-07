@@ -2,7 +2,7 @@ import { storageService } from './StorageService';
 
 let activeStream: MediaStream | null = null;
 
-function getLiveStream(): MediaStream | null {
+export function activeScreenStream(): MediaStream | null {
   if (activeStream?.active && activeStream.getVideoTracks()[0]?.readyState === 'live') {
     return activeStream;
   }
@@ -15,7 +15,7 @@ export async function startScreenShare(): Promise<MediaStream> {
     throw new Error('Screen sharing is disabled for this widget');
   }
 
-  const liveStream = getLiveStream();
+  const liveStream = activeScreenStream();
   if (liveStream) return liveStream;
 
   const stream = await navigator.mediaDevices.getDisplayMedia({
@@ -45,5 +45,5 @@ export function stopScreenShare(): void {
 }
 
 export function isScreenSharing(): boolean {
-  return getLiveStream() !== null;
+  return activeScreenStream() !== null;
 }
