@@ -28,7 +28,7 @@ afterEach(() => {
 
 describe('a tool that leaves the page reports itself before it goes', () => {
   it('navigate holds the navigation until the response is sent', async () => {
-    const result = await browserToolService.executeTool('navigate', { url: 'https://host.test/next' });
+    const result = await browserToolService.executeTool('navigate', { url: 'https://host.test/next' }, 'do');
 
     expect(result.success).toBe(true);
     expect(navigations).toEqual([]);
@@ -39,7 +39,7 @@ describe('a tool that leaves the page reports itself before it goes', () => {
   });
 
   it('search holds the navigation until the response is sent', async () => {
-    const result = await browserToolService.executeTool('search', { query: 'widgets' });
+    const result = await browserToolService.executeTool('search', { query: 'widgets' }, 'do');
 
     expect(navigations).toEqual([]);
 
@@ -52,7 +52,7 @@ describe('a tool that leaves the page reports itself before it goes', () => {
     window.history.pushState({}, '', '/second');
     const back = vi.spyOn(window.history, 'back').mockImplementation(() => {});
 
-    const result = await browserToolService.executeTool('go_back', {});
+    const result = await browserToolService.executeTool('go_back', {}, 'do');
 
     expect(back).not.toHaveBeenCalled();
 
@@ -64,7 +64,7 @@ describe('a tool that leaves the page reports itself before it goes', () => {
 
 describe('navigate constrains its target to http(s)', () => {
   it('refuses a javascript: URL instead of running it in the host page', async () => {
-    const result = await browserToolService.executeTool('navigate', { url: 'javascript:alert(document.cookie)' });
+    const result = await browserToolService.executeTool('navigate', { url: 'javascript:alert(document.cookie)' }, 'do');
 
     expect(result.success).toBe(false);
     expect(result.error).toBe('An http(s) URL is required');
@@ -72,7 +72,7 @@ describe('navigate constrains its target to http(s)', () => {
   });
 
   it('resolves a relative URL against the current page', async () => {
-    const result = await browserToolService.executeTool('navigate', { url: '/next' });
+    const result = await browserToolService.executeTool('navigate', { url: '/next' }, 'do');
 
     expect(result.success).toBe(true);
     result.afterResponseAttempt?.();
@@ -85,7 +85,11 @@ describe('navigate reports what the browser did with a new tab', () => {
   it('succeeds when the popup really opened', async () => {
     const open = vi.spyOn(window, 'open').mockReturnValue({} as Window);
 
-    const result = await browserToolService.executeTool('navigate', { url: 'https://host.test/next', new_tab: true });
+    const result = await browserToolService.executeTool(
+      'navigate',
+      { url: 'https://host.test/next', new_tab: true },
+      'do',
+    );
 
     expect(open).toHaveBeenCalledWith('https://host.test/next', '_blank');
     expect(result.success).toBe(true);
@@ -94,7 +98,11 @@ describe('navigate reports what the browser did with a new tab', () => {
   it('fails when a popup blocker refuses it', async () => {
     vi.spyOn(window, 'open').mockReturnValue(null);
 
-    const result = await browserToolService.executeTool('navigate', { url: 'https://host.test/next', new_tab: true });
+    const result = await browserToolService.executeTool(
+      'navigate',
+      { url: 'https://host.test/next', new_tab: true },
+      'do',
+    );
 
     expect(result.success).toBe(false);
     expect(result.error).toBe('The browser blocked opening a new tab');
@@ -105,7 +113,7 @@ describe('close_tab reports what the browser did', () => {
   it('fails when the browser refuses to close a tab the script did not open', async () => {
     vi.spyOn(window, 'close').mockImplementation(() => {});
 
-    const result = await browserToolService.executeTool('close_tab', {});
+    const result = await browserToolService.executeTool('close_tab', {}, 'do');
 
     expect(result.success).toBe(false);
   });
@@ -115,7 +123,7 @@ describe('close_tab reports what the browser did', () => {
       Object.defineProperty(window, 'closed', { configurable: true, value: true });
     });
 
-    const result = await browserToolService.executeTool('close_tab', {});
+    const result = await browserToolService.executeTool('close_tab', {}, 'do');
 
     expect(result.success).toBe(true);
     Object.defineProperty(window, 'closed', { configurable: true, value: false });
@@ -139,7 +147,11 @@ describe('a tool nothing can perform is not offered at all', () => {
 
 describe('a run the model ends is not a widget tool failure', () => {
   it('reports done as executed when the agent sends only the closing message', async () => {
-    const result = await browserToolService.executeTool('done', { message: 'Could not find the checkout button' });
+    const result = await browserToolService.executeTool(
+      'done',
+      { message: 'Could not find the checkout button' },
+      'do',
+    );
 
     expect(result.success).toBe(true);
     expect(result.data).toEqual({ text: 'Could not find the checkout button' });

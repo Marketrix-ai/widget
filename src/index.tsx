@@ -14,7 +14,13 @@ import { stopScreenShare } from './services/ScreenShareService';
 import { type CredentialedConfig, storageService } from './services/StorageService';
 import { StreamClient } from './services/StreamClient';
 import { createConfigFromSettings, loadWidgetConfig } from './services/WidgetService';
-import type { AddWidgetConfig, ClientOwnedConfig, MarketrixConfig, MarketrixWidgetProps } from './types';
+import type {
+  AddWidgetConfig,
+  ClientOwnedConfig,
+  MarketrixConfig,
+  MarketrixWidgetProps,
+  ValidWidgetConfig,
+} from './types';
 import {
   autoInitializeWidget,
   createWidgetContainer,
@@ -25,14 +31,14 @@ import {
   showHostPageNotice,
   widgetState,
 } from './utils/bootstrap';
-import { isHTMLElement } from './utils/validation';
+import { invalidSettingsMessage, isHTMLElement, parseWidgetSettings } from './utils/validation';
 
 let initPromise: Promise<void> | null = null;
 let lifecycleGeneration = 0;
 let rrwebSessionRecorder: RrwebSessionRecorder | null = null;
 
 /** The one production/imperative-preview mount. */
-function mount(config: MarketrixConfig, host: HTMLElement | undefined, previewMode = false): void {
+function mount(config: ValidWidgetConfig, host: HTMLElement | undefined, previewMode = false): void {
   const { container, mountEl } = createWidgetContainer(host);
   const instance = mountWidgetToContainer(mountEl, config, previewMode);
   widgetState.mount = { instance, config, container, host, previewMode };
@@ -168,13 +174,19 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ settings, cont
       return;
     }
 
+    const parsed = parseWidgetSettings(settings);
+    if (parsed.invalidFields) {
+      console.error(`Marketrix Widget: ${invalidSettingsMessage(parsed.invalidFields)}`);
+      return;
+    }
+
     const { container: widgetContainer, mountEl } = createWidgetContainer(parentContainer);
 
     widgetContainerRef.current = widgetContainer;
 
     rootRef.current = mountWidgetToContainer(
       mountEl,
-      { ...createConfigFromSettings(settings), isPreviewMode: true },
+      { ...createConfigFromSettings(parsed.settings), isPreviewMode: true },
       true,
     );
 
@@ -201,10 +213,15 @@ export const mountWidget = async (config: AddWidgetConfig): Promise<void> => {
   const container = config.container;
 
   if (config.settings !== undefined) {
+    const parsed = parseWidgetSettings(config.settings);
+    if (parsed.invalidFields) {
+      console.error(`Marketrix Widget: ${invalidSettingsMessage(parsed.invalidFields)}`);
+      return;
+    }
     unmountWidget();
     // Preview: no network, and deliberately no global production instance.
-    const { settings, container: _container, ...restConfig } = config;
-    mount({ ...createConfigFromSettings(settings, restConfig), isPreviewMode: true }, container, true);
+    const { settings: _settings, container: _container, ...restConfig } = config;
+    mount({ ...createConfigFromSettings(parsed.settings, restConfig), isPreviewMode: true }, container, true);
   } else if (config.mtxId !== undefined && config.mtxKey !== undefined) {
     const { container: _container, ...restConfig } = config;
     await initWidget(restConfig, container);

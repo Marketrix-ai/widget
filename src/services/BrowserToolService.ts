@@ -1,3 +1,4 @@
+import type { InstructionType } from '../types';
 import { WAIT_FOR_USER_TOOLS } from '../utils/chat';
 import { domService } from './DomService';
 import { activeScreenStream } from './ScreenShareService';
@@ -95,8 +96,8 @@ export class BrowserToolService {
   async executeTool(
     browserToolName: string,
     args: Record<string, unknown>,
-    mode: string = 'do',
-    explanation: string = '',
+    mode: InstructionType,
+    explanation = '',
   ): Promise<ToolExecutionResult<unknown>> {
     const toolArgs = args as ToolArgs;
     try {

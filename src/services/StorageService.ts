@@ -1,4 +1,4 @@
-import type { ChatMessage, InstructionType, MarketrixConfig } from '../types';
+import type { ChatMessage, InstructionType, MarketrixConfig, ValidWidgetConfig } from '../types';
 
 const STORAGE_KEY = 'marketrix_chat_context';
 const CONTEXT_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000;
@@ -11,7 +11,7 @@ export interface ChatSnapshot {
   isOpen: boolean;
 }
 
-export type CredentialedConfig = MarketrixConfig & { mtxId: string; mtxKey: string };
+export type CredentialedConfig = ValidWidgetConfig & { mtxId: string; mtxKey: string };
 
 export type MarketrixChatContext = Omit<ChatSnapshot, 'messages'> & {
   chat_id: string | null;
@@ -101,3 +101,26 @@ class StorageService {
 }
 
 export const storageService = new StorageService();
+
+function reviveMessage(msg: StoredMessage): ChatMessage {
+  const parts = [...msg.parts];
+  const text = msg.content.trim();
+  if (parts.length === 0 && text) parts.push({ type: 'text', content: text });
+  return { ...msg, timestamp: new Date(msg.timestamp), parts };
+}
+
+function serializeMessage({ videoStream, ...msg }: ChatMessage): StoredMessage {
+  const timestamp = msg.timestamp.toISOString();
+  if (!videoStream) return { ...msg, timestamp };
+  const content = 'Screenshare ended';
+  return { ...msg, timestamp, content, isSystemMessage: true, parts: [{ type: 'text', content }] };
+}
+
+export function readChatSnapshot(): ChatSnapshot {
+  const { chat_id: _chatId, config: _config, timestamp: _timestamp, messages, ...rest } = storageService.getContext();
+  return { ...rest, messages: messages.map(reviveMessage) };
+}
+
+export function writeChatSnapshot(snapshot: ChatSnapshot): void {
+  storageService.updateContext({ ...snapshot, messages: snapshot.messages.map(serializeMessage) });
+}

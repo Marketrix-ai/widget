@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
-import { chatService } from '../services/ChatService';
 import { chatSessionManager } from '../services/ChatSessionManager';
+import { readChatSnapshot, writeChatSnapshot } from '../services/StorageService';
 import { StreamClient } from '../services/StreamClient';
 import { ChatProvider, useChatContext } from './ChatContext';
 import { UIStateProvider, useUIStateContext } from './UIStateContext';
@@ -18,7 +18,7 @@ const PersistBridge: React.FC = () => {
 
   useEffect(() => {
     const { currentMode, isOpen } = uiState;
-    chatService.persist({ messages, currentMode, isOpen });
+    writeChatSnapshot({ messages, currentMode, isOpen });
   }, [messages, uiState]);
 
   return null;
@@ -34,7 +34,7 @@ const InitBridge: React.FC<{ children: React.ReactNode; previewMode: boolean }> 
     let cancelled = false;
 
     const init = async () => {
-      const { messages, ...ui } = chatService.restore();
+      const { messages, ...ui } = readChatSnapshot();
       uiActions.applyState(ui);
       chatActions.setMessages(messages);
       setRestored(true);

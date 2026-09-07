@@ -126,3 +126,45 @@ export const TOOL_LABELS = new Map<string, string>([
 
 export const getFriendlyToolName = (browserToolName: string): string =>
   TOOL_LABELS.get(browserToolName) ?? browserToolName;
+
+function createMessage(
+  idPrefix: string,
+  sender: 'user' | 'agent',
+  content: string,
+  extra: Partial<ChatMessage> = {},
+): ChatMessage {
+  return {
+    id: `${idPrefix}-${Date.now()}`,
+    content,
+    sender,
+    timestamp: new Date(),
+    parts: content ? [{ type: 'text', content }] : [],
+    ...extra,
+  };
+}
+
+export const createUserMessage = (content: string, mode?: InstructionType, idPrefix = 'user-message'): ChatMessage =>
+  createMessage(idPrefix, 'user', content.trim(), { mode });
+
+export const createAgentMessage = (content: string): ChatMessage =>
+  createMessage('agent-message', 'agent', content.trim());
+
+export const createSystemMessage = (
+  content: string,
+  mode: InstructionType,
+  sender: 'user' | 'agent',
+  idPrefix: string,
+): ChatMessage => createMessage(idPrefix, sender, content, { mode, isSystemMessage: true });
+
+export const createScreenAccessRequestMessage = (
+  mode: InstructionType | undefined,
+  pendingContent?: string,
+): ChatMessage =>
+  createMessage('screen-access-request', 'agent', 'Can I take a look at your screen?', {
+    mode,
+    isScreenAccessRequest: true,
+    pendingContent,
+  });
+
+export const createScreenshareMessage = (stream: MediaStream, mode: InstructionType = 'show'): ChatMessage =>
+  createMessage('screenshare', 'user', '', { mode, videoStream: stream });

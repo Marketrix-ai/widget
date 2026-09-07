@@ -3,25 +3,7 @@ import React from 'react';
 
 import { WidgetProviders } from '../../context/WidgetProviders';
 import { getMockWidgetConfig } from '../../test/fixtures';
-import type { MarketrixConfig } from '../../types';
 import { WidgetRoot } from '../WidgetRoot';
-
-describe('a config the settings schema refuses', () => {
-  it('names the fields that failed instead of rendering nothing and saying nothing', () => {
-    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
-    const config = { ...getMockWidgetConfig(), widget_position: 'middle' } as MarketrixConfig;
-
-    const { container } = render(
-      <WidgetProviders previewMode>
-        <WidgetRoot config={config} />
-      </WidgetProviders>,
-    );
-
-    expect(container.querySelector('[data-marketrix-widget]')).toBeNull();
-    expect(consoleError).toHaveBeenCalledWith(expect.stringContaining('widget_position'));
-    consoleError.mockRestore();
-  });
-});
 
 describe('Widget smoke', () => {
   it('mounts and shows launcher button', () => {

@@ -4,12 +4,11 @@ import { PortalContainerContext } from '../context/WidgetProviders';
 import { LAYER_TOKENS } from '../design-system/layers';
 import { createSemanticTokens, semanticTokensToCssCustomProperties } from '../design-system/semantic-tokens';
 import { useScrollLock } from '../hooks/useScrollLock';
-import { useWidget, type ValidWidgetConfig, WidgetConfigContext } from '../hooks/useWidget';
+import { useWidget, WidgetConfigContext } from '../hooks/useWidget';
 import { readLocal, tenantScope, writeLocal } from '../services/StorageService';
 import { StreamClient } from '../services/StreamClient';
-import type { MarketrixConfig, WidgetPosition } from '../types';
+import type { ValidWidgetConfig, WidgetPosition } from '../types';
 import { addOpacity } from '../utils/color';
-import { invalidSettingsMessage, parseWidgetSettings } from '../utils/validation';
 import { getCorner, isWidgetPosition } from '../utils/widgetPositioning';
 import { ErrorBoundary } from './base/ErrorBoundary';
 import { Surface } from './base/Surface';
@@ -18,7 +17,7 @@ import { WidgetFab } from './blocks/WidgetFab';
 import { MessengerShell } from './navigation/MessengerShell';
 
 interface WidgetRootProps {
-  config: MarketrixConfig;
+  config: ValidWidgetConfig;
 }
 
 export const WidgetRoot: React.FC<WidgetRootProps> = ({ config }) => {
@@ -27,7 +26,6 @@ export const WidgetRoot: React.FC<WidgetRootProps> = ({ config }) => {
   const { state, actions } = useWidget();
   const streamClient = StreamClient.getInstance();
   const isPreviewMode = config.isPreviewMode ?? false;
-  const parsedConfig = parseWidgetSettings(config);
 
   useScrollLock(state.isOpen);
 
@@ -54,20 +52,10 @@ export const WidgetRoot: React.FC<WidgetRootProps> = ({ config }) => {
     return () => clearTimeout(timer);
   }, [state.isOpen, isPreviewMode, config.widget_greeting_toast]);
 
-  const settingsError = parsedConfig.invalidFields ? invalidSettingsMessage(parsedConfig.invalidFields) : null;
-
-  useEffect(() => {
-    if (settingsError) console.error(`Marketrix Widget: ${settingsError}`);
-  }, [settingsError]);
-
   const handlePositionChange = (position: WidgetPosition) => {
     setWidgetPosition(position);
     if (!isPreviewMode) writeLocal(positionStorageKey, position);
   };
-
-  if (settingsError) {
-    return null;
-  }
 
   const hiddenByConfig = config.show_widget === false || config.widget_appearance === 'hidden';
   if (!isPreviewMode && hiddenByConfig) {
@@ -80,7 +68,7 @@ export const WidgetRoot: React.FC<WidgetRootProps> = ({ config }) => {
     ...config,
     widget_position: widgetPosition,
     widget_position_z_index: effectiveWidgetZIndex,
-  } as ValidWidgetConfig;
+  };
 
   const showProcessingFeedback = state.isAwaitingReply || state.isTaskRunning;
   const customStyles = semanticTokensToCssCustomProperties(createSemanticTokens(config)) as React.CSSProperties;
@@ -120,10 +108,7 @@ export const WidgetRoot: React.FC<WidgetRootProps> = ({ config }) => {
             <WidgetNotifications
               error={state.error}
               onClearError={() => actions.setError(undefined)}
-              // Offered only when it can achieve something, and it reconnects — it used to be
-              // byte-identical to onDismiss, so the one error where reconnecting IS the remedy showed a
-              // Retry button that only hid the toast.
-              {...(streamClient.canReconnect() && {
+              {...(state.errorRetryable && {
                 onRetry: () => {
                   actions.setError(undefined);
                   streamClient.reconnectNow();

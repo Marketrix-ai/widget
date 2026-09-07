@@ -22,6 +22,9 @@ export type MarketrixConfig = Partial<WidgetRenderedSettings> &
     isPreviewMode?: boolean;
   };
 
+/** A MarketrixConfig that has been through parseWidgetSettings — every rendered setting present. */
+export type ValidWidgetConfig = MarketrixConfig & Required<Pick<MarketrixConfig, keyof WidgetRenderedSettings>>;
+
 export interface ChatMessage {
   id: string;
   content: string;
@@ -65,6 +68,7 @@ export interface WidgetState {
   messages: ChatMessage[];
   currentMode: InstructionType;
   error?: string;
+  errorRetryable?: boolean;
   isTaskRunning: boolean;
   activeView: WidgetView;
 }
