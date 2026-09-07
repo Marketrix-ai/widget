@@ -6,7 +6,7 @@ on:
     branches: [main]
 concurrency:
   group: ci-${{ startsWith(github.ref, 'refs/tags/') && github.sha || github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 # This public repository cannot call reusable workflows from the private infra repository.
 jobs:
   ci:
