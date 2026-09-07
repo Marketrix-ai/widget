@@ -2,14 +2,19 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ShowModeService } from '../ShowModeService';
 
+const { checkElementInteractable } = vi.hoisted(() => ({
+  checkElementInteractable: vi.fn<() => string | null>(() => null),
+}));
+
 vi.mock('../DomService', () => ({
-  domService: { getSequenceForElement: () => 0, checkElementInteractable: () => null },
+  domService: { getSequenceForElement: () => 0, checkElementInteractable },
 }));
 
 describe('a second show action supersedes the first', () => {
   let service: ShowModeService;
 
   beforeEach(() => {
+    checkElementInteractable.mockReturnValue(null);
     Element.prototype.scrollIntoView = vi.fn();
     document.body.innerHTML = '<button id="a"></button><button id="b"></button>';
     service = new ShowModeService();
@@ -48,5 +53,42 @@ describe('a second show action supersedes the first', () => {
     expect(await second).toBe('resolved');
     expect(document.getElementById('marketrix-show-highlight')).toBeNull();
     expect(document.getElementById('marketrix-show-popup')).toBeNull();
+  });
+});
+
+describe('a show action the page invalidates', () => {
+  let service: ShowModeService;
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    Element.prototype.scrollIntoView = vi.fn();
+    document.body.innerHTML = '<button id="a"></button>';
+    service = new ShowModeService();
+  });
+
+  afterEach(() => {
+    service.cleanup();
+    vi.useRealTimers();
+    document.body.innerHTML = '';
+  });
+
+  it('rejects with the one reason DomService gave, not a second code contradicting it', async () => {
+    const obscured = 'ELEMENT_OBSCURED: Element 0 is covered by div.modal. Dismiss it first.';
+    checkElementInteractable.mockReturnValue(obscured);
+
+    const rejection = service
+      .showToolAction({
+        element: document.getElementById('a') as HTMLElement,
+        explanation: 'a',
+        browserToolName: 'click_element',
+        isClickAction: true,
+      })
+      .then(
+        () => 'resolved',
+        (error: Error) => error.message,
+      );
+    await vi.advanceTimersByTimeAsync(200);
+
+    expect(await rejection).toBe(obscured);
   });
 });

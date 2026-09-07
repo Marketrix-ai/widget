@@ -38,7 +38,10 @@ const EXTERNALS = ['react', 'react-dom', 'react-dom/client', 'react/jsx-runtime'
 
 const emitted = readdirSync('dist');
 
-const extraChunks = emitted.filter(name => name.endsWith('.mjs') && name !== 'widget.mjs');
+// `type: "module"` makes rolldown name split chunks `[name]-[hash].js`, so matching only `.mjs`
+// let a genuinely split build pass. The allowlist is every file the runtime image serves.
+const SERVED_SCRIPTS = ['widget.mjs', 'loader.js'];
+const extraChunks = emitted.filter(name => /\.[cm]?js$/.test(name) && !SERVED_SCRIPTS.includes(name));
 if (extraChunks.length > 0) {
   errors.push(`dist/ has code-split chunks beside widget.mjs: ${extraChunks.join(', ')}`);
 }
@@ -68,16 +71,8 @@ try {
 // fails outright, so a new dependency is a deliberate line rather than a number nobody reads.
 const DEPENDENCY_BUDGETS = {
   '@rrweb/record': 84_000, // 75,867 (19.3%) — session recording, imported for a feature off by default
-  // 91,018 (22.3%) — the generated contract's validator; two safeParse calls reach it. The 4.4.3 pin
-  // was lifted deliberately: latest zod costs a customer's page 17.7 kB for a schema surface the
-  // widget does not grow into. `zod/mini` is NOT the escape — it drops the chained methods the
-  // generated mirror is built from (`.optional()`, `.extend()`, `.default()`, `.nullish()`,
-  // `.partial()`, `.omit()`, `.passthrough()`), so an alias builds green and then throws
-  // `.optional is not a function` at module load in the host page.
-  zod: 95_000,
-  '@base-ui/react': 47_000, // 42,210 (10.7%) — Dialog, plus Button
-  'tailwind-merge': 32_000, // 28,386 (7.2%) — cn()
-  '@base-ui/utils': 13_000, // 11,307
+  '@base-ui/react': 82_000, // 74,739 (19.1%) — Dialog, Button, Tabs and Toast
+  '@base-ui/utils': 13_000, // 11,637
   '@orpc/client': 11_000, // 9,500
   '@orpc/standard-server-fetch': 4_100, // 3,693
   '@orpc/standard-server': 4_000, // 3,578

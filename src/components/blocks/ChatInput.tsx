@@ -1,8 +1,5 @@
 import React, { useCallback, useEffect, useRef } from 'react';
 
-import { cn } from '@/lib/utils';
-
-import { radiusClasses } from '../../design-system/component-tokens';
 import type { InstructionType } from '../../types';
 import { Flex } from '../base/Flex';
 import { Icon } from '../base/Icon';
@@ -77,13 +74,7 @@ export function ChatInput({
   const canSend = Boolean(value.trim()) && !disabled;
 
   return (
-    <Stack
-      background='card'
-      rounded='xl'
-      border
-      overflow='hidden'
-      className='focus-within:border-foreground-faint transition-colors'
-    >
+    <Stack background='card' rounded='xl' border overflow='hidden' className='mtx-composer'>
       <textarea
         ref={mergeRefs(textareaRef, ref)}
         value={value}
@@ -92,7 +83,7 @@ export function ChatInput({
         placeholder='Ask anything'
         disabled={disabled}
         rows={1}
-        className='block w-full min-h-0 resize-none rounded-none border-none bg-transparent px-3 text-sm text-foreground transition-colors placeholder:text-foreground-faint focus:ring-0 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50'
+        className='mtx-composer-input'
         style={{
           lineHeight: '20px',
           paddingTop: '4px',
@@ -108,11 +99,8 @@ export function ChatInput({
               <button
                 key={mode.id}
                 type='button'
-                className={cn(
-                  'inline-flex cursor-pointer items-center gap-0.5 border-none px-2 py-0.5 text-[11px] font-medium transition-all duration-200',
-                  radiusClasses.pill,
-                  isActive ? 'bg-primary text-primary-foreground shadow-sm' : 'bg-secondary-bg text-foreground-muted',
-                )}
+                className='mtx-mode-chip'
+                data-active={isActive ? 'true' : 'false'}
                 onClick={e => {
                   e.preventDefault();
                   e.stopPropagation();

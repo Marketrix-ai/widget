@@ -9,7 +9,7 @@ const SNAP_EASING = 'cubic-bezier(0.16, 1, 0.3, 1)';
 
 export interface UseDragSnapOptions {
   position: WidgetPosition;
-  onDrag: (position: WidgetPosition) => void;
+  onPositionCommit: (position: WidgetPosition) => void;
   isPreviewMode?: boolean;
   wrapperRef: React.RefObject<HTMLDivElement | null>;
 }
@@ -26,7 +26,7 @@ export interface UseDragSnapResult {
 
 export function useDragSnap({
   position,
-  onDrag,
+  onPositionCommit,
   isPreviewMode = false,
   wrapperRef,
 }: UseDragSnapOptions): UseDragSnapResult {
@@ -114,7 +114,7 @@ export function useDragSnap({
         transitionEndRef.current = null;
         wrapper.style.transition = 'none';
         wrapper.style.willChange = '';
-        onDrag(nextCorner);
+        onPositionCommit(nextCorner);
         setIsDragging(false);
         requestAnimationFrame(() => {
           if (wrapperRef.current) {
@@ -131,14 +131,14 @@ export function useDragSnap({
         done();
       });
     },
-    [onDrag, wrapperRef],
+    [onPositionCommit, wrapperRef],
   );
 
   const snapToCorner = useCallback(
     (nextCorner: WidgetPosition, fromX: number, fromY: number) => {
       if (!wrapperRef.current || !pixelPositionStyle) {
         resetDragStyles();
-        onDrag(nextCorner);
+        onPositionCommit(nextCorner);
         setIsDragging(false);
         return;
       }
@@ -160,7 +160,7 @@ export function useDragSnap({
     },
     [
       commitPositionAfterAnimation,
-      onDrag,
+      onPositionCommit,
       pixelPositionStyle,
       position,
       vw,

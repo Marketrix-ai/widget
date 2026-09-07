@@ -45,7 +45,7 @@ function readStoredSize(storageKey: string): Size | null {
     if (typeof stored?.width !== 'number' || typeof stored?.height !== 'number') return null;
     return clampSize({ width: stored.width, height: stored.height });
   } catch (error) {
-    console.debug('[useResize] Ignoring an unparseable stored size:', error);
+    console.warn('[useResize] Ignoring an unparseable stored size:', error);
     return null;
   }
 }

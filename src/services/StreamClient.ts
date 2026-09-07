@@ -73,6 +73,11 @@ export class StreamClient {
     this.connect(this.chatId).catch(console.error);
   }
 
+  async ready(chatId: string): Promise<void> {
+    await this.connect(chatId);
+    await this.waitUntilRegistered();
+  }
+
   async waitUntilRegistered(): Promise<void> {
     if (this.isConnected()) return;
     if (this.credentialRejected) {

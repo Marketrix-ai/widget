@@ -162,13 +162,13 @@ export const VideoStreamDisplay: React.FC<VideoStreamDisplayProps> = ({ stream }
           <Flex position='relative' align='center' justify='center'>
             <Surface
               position='absolute'
-              rounded='full'
+              rounded='pill'
               animate='ping'
               style={{ width: '8px', height: '8px', backgroundColor: 'white', opacity: 0.75 }}
             />
             <Surface
               position='relative'
-              rounded='full'
+              rounded='pill'
               style={{ width: '6px', height: '6px', backgroundColor: 'white' }}
             />
           </Flex>

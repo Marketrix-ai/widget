@@ -98,8 +98,7 @@ export function markProgressLineFailed(message: ChatMessage, browserToolName: st
   });
 }
 
-/** Tool id -> the phrase shown in the activity log. Also the allowlist of tools the agent may call. */
-export const BROWSER_TOOLS = new Map<string, string>([
+export const TOOL_LABELS = new Map<string, string>([
   ['navigate', 'Navigating'],
   ['search', 'Searching'],
   ['click_element', 'Clicking element'],
@@ -114,10 +113,9 @@ export const BROWSER_TOOLS = new Map<string, string>([
   ['wait', 'Waiting'],
   ['close_tab', 'Closing tab'],
   ['done', 'Done'],
-  ['get_html', 'Viewed your screen'],
+  ['get_html', 'Reading the page'],
   ['get_screenshot', 'Taking screenshot'],
 ]);
 
-// ChatContext rejects a tool/call whose name is not in BROWSER_TOOLS before the reducer sees it.
 export const getFriendlyToolName = (browserToolName: string): string =>
-  BROWSER_TOOLS.get(browserToolName) ?? browserToolName;
+  TOOL_LABELS.get(browserToolName) ?? browserToolName;

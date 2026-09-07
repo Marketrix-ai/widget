@@ -1,45 +1,34 @@
 /**
- * Two `index.css` invariants that fail SILENTLY — the class simply never ships, or the rule matches
- * nothing — so neither tsc, eslint, prettier nor a rendering test can see them.
+ * `index.css` invariants that fail SILENTLY — the rule matches nothing, or an animation resolves to
+ * no keyframe — so neither tsc, eslint, prettier nor a rendering test can see them.
  *
- * 1. `resolveLayoutClasses` interpolates `p-*`/`gap-*`/`inset-*` from `SPACING_SCALE`, which Tailwind's
- *    source scanner cannot see; the `@source inline(...)` safelist is the only thing that emits them.
- * 2. A shadow-tree stylesheet's `:root` matches nothing, so every host-level rule needs `:host` too.
+ * The old safelist invariant is gone with Tailwind: layout props now resolve to a style object, so
+ * there is no interpolated class for a scanner to miss. What replaces it is the animation contract —
+ * `resolveLayoutStyle` and the component classes name keyframes this file must actually define.
  */
-import { readFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
-import { SPACING_SCALE } from '../components/base/layoutProps';
+import { resolveLayoutStyle } from '../components/base/layoutProps';
 
-const css = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), '../index.css'), 'utf8');
+const here = dirname(fileURLToPath(import.meta.url));
+const css = readFileSync(resolve(here, '../index.css'), 'utf8');
 
-/** The two `{a,b}` groups of `@source inline("{p,px,…}-{0,0.5,…}")`, as prefixes and suffixes. */
-function safelist(): { prefixes: string[]; suffixes: string[] } {
-  const directive = /@source inline\("\{([^}]+)\}-\{([^}]+)\}"\)/.exec(css);
-  if (!directive) throw new Error('index.css has no `@source inline("{…}-{…}")` safelist');
-  return { prefixes: directive[1].split(','), suffixes: directive[2].split(',') };
-}
+const definedKeyframes = new Set([...css.matchAll(/@keyframes\s+([\w-]+)/g)].map(match => match[1]));
 
-describe('the Tailwind safelist covers every interpolated layout class', () => {
-  it('emits a class for every spacing token', () => {
-    const missing = Object.values(SPACING_SCALE).filter(value => !safelist().suffixes.includes(value));
-    expect(missing, 'widen @source inline(...) in index.css or the class silently never ships').toEqual([]);
+describe('every animation resolves to a keyframe this stylesheet defines', () => {
+  it.each(['spin', 'ping', 'pulse', 'fadeIn'] as const)('layout prop animate: %s', token => {
+    const name = String(resolveLayoutStyle({ animate: token }).animation).split(' ')[0];
+    expect(definedKeyframes, `resolveLayoutStyle emits ${name}, which index.css never defines`).toContain(name);
   });
 
-  it('is the only interpolation — every other layout class is a literal the scanner can read', () => {
-    const source = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), '../components/base/layoutProps.ts'));
-    const interpolated = [...String(source).matchAll(/`([a-z-]+)-\$\{/g)].map(match => match[1]);
-    const unsafelisted = [...new Set(interpolated)].filter(prefix => !safelist().prefixes.includes(prefix));
-    expect(unsafelisted, 'safelist these prefixes or emit the class as a literal string').toEqual([]);
-  });
-
-  it('carries no suffix the scale cannot produce', () => {
-    const values = new Set<string>(Object.values(SPACING_SCALE));
-    const dead = safelist().suffixes.filter(suffix => !values.has(suffix));
-    expect(dead, 'these safelisted classes ship in the bundle and nothing can ever apply them').toEqual([]);
+  it('every animation named in a CSS rule is defined in the same file', () => {
+    const used = [...css.matchAll(/(?:^|[;{\s])animation:\s*([A-Za-z][\w-]*)/gm)].map(match => match[1]);
+    const undefinedNames = [...new Set(used)].filter(name => !definedKeyframes.has(name));
+    expect(undefinedNames, 'these animations name a keyframe that does not exist').toEqual([]);
   });
 });
 
@@ -50,4 +39,43 @@ it('scopes every host-level rule to :host as well as :root', () => {
     .map(match => match[1])
     .filter(selectors => /(^|,)\s*:root\b/.test(selectors) && !selectors.includes(':host'));
   expect(unpaired, ':root alone matches nothing inside the closed shadow root — pair it with :host').toEqual([]);
+});
+
+describe('the component tree and the stylesheet name the same classes', () => {
+  // The one silent failure this architecture can still have: a class on an element that no rule
+  // matches renders unstyled, and a rule nothing references is dead weight shipped to every host page.
+  function sourceFiles(dir: string, acc: string[] = []): string[] {
+    for (const entry of readdirSync(dir)) {
+      const path = join(dir, entry);
+      if (statSync(path).isDirectory()) sourceFiles(path, acc);
+      else if (/\.tsx?$/.test(path) && !/__tests__|\.test\./.test(path)) acc.push(path);
+    }
+    return acc;
+  }
+
+  const defined = new Set([...css.matchAll(/\.(mtx-[\w-]+)/g)].map(match => match[1]));
+  const referenced = new Set(
+    sourceFiles(resolve(here, '../components'))
+      .flatMap(file => [...readFileSync(file, 'utf8').matchAll(/['`](mtx-[\w-]+)[\s'`]/g)].map(match => match[1]))
+      // Animation shorthands name a keyframe, not a class; the suite above covers those.
+      .filter(name => !definedKeyframes.has(name)),
+  );
+
+  it('every class a component puts on an element has a rule', () => {
+    expect([...referenced].filter(name => !defined.has(name))).toEqual([]);
+  });
+
+  it('every rule in the stylesheet is reachable from a component', () => {
+    expect([...defined].filter(name => !referenced.has(name))).toEqual([]);
+  });
+});
+
+it('keeps the reset at zero specificity so component classes always win', () => {
+  // `[data-marketrix-widget] button` scores (0,1,1) and outranks `.mtx-button` (0,1,0) — that is how
+  // `font: inherit` flattened every button to weight 400 and `border-radius: 0` un-rounded the icon
+  // buttons. Wrapping the reset in :where() drops it to zero, so this must stay true.
+  const hazards = [...css.matchAll(/(^|[,}])\s*(\[data-marketrix-widget\]\s+(?!:where)[a-z][\w-]*)/gm)].map(match =>
+    match[2].trim(),
+  );
+  expect(hazards, 'wrap these reset selectors in :where() or they outrank the component classes').toEqual([]);
 });

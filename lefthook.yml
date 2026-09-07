@@ -7,10 +7,28 @@
 # repository root.
 rc: ./.lefthookrc
 
+# Formatting is APPLIED here, not reported. A pre-push hook cannot do this job: git resolves the
+# commits it will send before running that hook, so anything the hook rewrites is not what gets
+# pushed. Fixing it at commit time is what keeps `code:check`'s prettier arm from ever failing in CI.
 pre-commit:
+  parallel: false
   commands:
-    check:
-      run: npm run check
+    format:
+      glob: '*.{ts,tsx,js,mjs,cjs,json,md,yml,yaml,css}'
+      run: npx prettier --write {staged_files}
+      stage_fixed: true
     lint:
       run: npm run lint
       stage_fixed: true
+    check:
+      run: npm run check
+
+# The safety net for a commit made with --no-verify: by now formatting is already applied, so this
+# only reports what the auto-fix could not reach.
+pre-push:
+  parallel: false
+  commands:
+    code-check:
+      run: npm run code:check
+    test:
+      run: npm run test:run

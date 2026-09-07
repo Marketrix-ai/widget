@@ -1,6 +1,6 @@
 {
   "name": "@marketrix.ai/widget",
-  "version": "3.8.472",
+  "version": "3.8.483",
   "type": "module",
   "sideEffects": false,
   "main": "./dist/widget.mjs",
@@ -15,7 +15,8 @@
     "./package.json": "./package.json"
   },
   "files": [
-    "dist"
+    "dist",
+    "!dist/**/*.map"
   ],
   "scripts": {
     "tag": "bash scripts/release.sh",
@@ -41,7 +42,6 @@
     "@orpc/client": "^1.15.0",
     "@orpc/contract": "^1.15.0",
     "@rrweb/record": "^2.1.1",
-    "tailwind-merge": "^3.6.0",
     "zod": "~4.5.4"
   },
   "peerDependencies": {
@@ -51,7 +51,6 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@rrweb/types": "^2.0.0-alpha.20",
-    "@tailwindcss/vite": "^4.3.3",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
     "@types/node": "^26.4.1",
@@ -71,7 +70,6 @@
     "prettier": "^3.9.6",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "tailwindcss": "^4.2.4",
     "terser": "^5.51.2",
     "typescript": "^6.0.3",
     "vite": "^8.2.2",

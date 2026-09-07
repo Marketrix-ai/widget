@@ -26,6 +26,13 @@ describe('use_screenshare', () => {
     expect(getDisplayMedia).not.toHaveBeenCalled();
   });
 
+  it('denies on the switch alone — a stored config that lost its credentials must not reopen the picker', async () => {
+    storageService.updateContext({ config: { use_screenshare: false } });
+
+    await expect(startScreenShare()).rejects.toThrow('Screen sharing is disabled for this widget');
+    expect(getDisplayMedia).not.toHaveBeenCalled();
+  });
+
   it('prompts when the tenant left screen sharing on', async () => {
     storageService.setConfig({ mtxId: 'id', mtxKey: 'key' });
     const stream = liveStream();

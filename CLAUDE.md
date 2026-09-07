@@ -6,8 +6,8 @@ runtime and bundle size are first-class concerns.
 
 ESM-only, `sideEffects: false`. **React 19 is a peer dependency and external to the bundle — the host
 page must supply it.** Built with Vite 8 in **library mode** → a single ESM bundle `dist/widget.mjs`,
-mounted into a **closed Shadow DOM** with all CSS injected as JS. Stack: TypeScript 6, Tailwind 4,
-Zod 4, oRPC 1, `@rrweb/record` (optional), `@base-ui/react`.
+mounted into a **closed Shadow DOM** with all CSS injected as JS. Stack: TypeScript 6, hand-written
+CSS, oRPC 1, `@rrweb/record` (optional), `@base-ui/react`.
 
 **`README.md` is the real public API surface** — customer-facing integration docs live there; keep it
 accurate. The root `../CLAUDE.md` owns cross-cutting rules (the widget↔api contract at the boundary,
@@ -42,22 +42,38 @@ are generated**, so after changing `rc:` you must re-run `lefthook install --for
 
 ## Packaging
 
-- `main`/`module` = `./dist/widget.mjs`, `types` = `./dist/src/index.d.ts`, `files: ["dist"]` (there is
-  no `.npmignore` — that allowlist is the whole publish surface).
-- Vite lib mode: `formats: ['es']`, no code splitting, no CSS splitting, target `esnext`, terser with
-  `drop_console`.
+- `main`/`module` = `./dist/widget.mjs`, `types` = `./dist/src/index.d.ts`,
+  `files: ["dist", "!dist/**/*.map"]` (there is no `.npmignore` — that allowlist is the whole publish
+  surface). The map is built but never published; `sourcemap: 'hidden'` keeps the bundle from
+  advertising one it does not ship.
+- Vite lib mode: `formats: ['es']`, no CSS splitting, target `esnext`, terser with `drop_console`.
+  **`codeSplitting: false` belongs on `rolldownOptions.output`** — Vite never reads it from `build`,
+  where it was a no-op that read like a guarantee.
 - **CSS is injected via JS** — no external stylesheet; it rides in the bundle and is mounted into the
   Shadow DOM from `index.css?inline`.
 - **Externals** (resolved via the host importmap): `react`, `react-dom`, `react-dom/client`,
   `react/jsx-runtime`.
 - Declarations come from a custom `closeBundle` plugin running `tsc -p tsconfig.build.json`.
 - `public/loader.js` → `dist/loader.js` is the classic script-tag bootstrap.
-- **`bundle:check` budgets each bundled dependency, not just the total.** 392,685 bytes against a
-  455,000 cap leaves 62 kB of blind headroom, and four dependencies are already 59% of the bundle:
-  `@rrweb/record` 75,867 (a feature off by default), `zod` 73,337 (two `safeParse` calls),
-  `@base-ui/react` + `/utils` 53,517 (one confirm Dialog, plus Button), `tailwind-merge` 28,386. A
-  package missing from `DEPENDENCY_BUDGETS` fails the gate, so a new import is a deliberate line.
-- **No code splitting means an import is unconditional** — a heavy dependency behind an off-by-default
+- **The runtime image serves an allowlist, not `dist/`.** The Dockerfile names each served file, so
+  the sourcemap (which embeds the whole source) and the `.d.ts` tree stay unpublished; a new served
+  artifact must be added there by hand. `widget.mjs.gz`/`.br` are precompressed in the builder stage,
+  and nginx has no brotli module — `gzip_static` covers gzip, a `try_files` on `Accept-Encoding`
+  covers brotli. Nothing is compressed per request.
+- **`bundle:check` budgets each bundled dependency, not just the total** — a total cap cannot see
+  which dependency grew. Two are 54% of the bundle: `@base-ui/react` + `/utils` 86,376 and
+  `@rrweb/record` 76,564 (a feature off by default). A package missing from `DEPENDENCY_BUDGETS`
+  fails the gate, so a new import is a deliberate line.
+- **zod is a type-only dependency of the BUNDLE, and a real one of the package.** Nothing in
+  `src/` imports it as a value any more — `parseWidgetSettings` in `utils/validation.ts` is the one
+  home for settings validation, a `satisfies`-checked guard table that a contract change breaks at
+  compile time. Importing `WidgetSettingsDataSchema` (or any schema) as a VALUE anywhere reachable
+  from `src/index.tsx` pulls zod's whole runtime back into every host page: rolldown cannot prove
+  `z.object(...)` pure, so one value import retains the entire mirror's schema graph. It stays in
+  `dependencies` because the published `.d.ts` files still reference it, and it stays importable in
+  tests — `utils/__tests__/validation.test.ts` uses the real schema as the oracle the guard is
+  checked against.
+- **A single chunk means an import is unconditional** — a heavy dependency behind an off-by-default
   flag still ships to every host page. Weigh that at the import, because the packaging contract has no
   later escape.
 
@@ -178,10 +194,13 @@ and shipped images cannot drift in their dependency set.
   `package-lock.json` alongside `package.json`. `npm run tag` does it for you.
 - **React importmap wins** — the loader's `esm.sh` importmap only fills gaps; a host on a different
   React 19 build keeps its own.
-- **Interpolated Tailwind classes need the `@source inline(...)` safelist in `index.css`** —
-  `resolveLayoutClasses` builds `p-*`/`gap-*`/`inset-*` from `SPACING_SCALE`, which the scanner cannot
-  see; widen the scale and you must widen the safelist or the class silently never ships
-  (`src/__tests__/stylesheet-contract.test.ts` fails both ways round).
+- **Styling is `index.css` plus inline styles — there is no CSS framework and no `cn()`.** Layout
+  props resolve to a style object (`resolveLayoutStyle`), never class names: as classes they were
+  interpolated, so a build-time safelist was the only thing keeping them alive and a missing entry
+  failed silently at runtime. Variants are CSS keyed on the `data-*` attributes the components emit
+  (`data-variant`/`data-size`/`data-active`/`data-disabled`/`data-stacked`/`data-full`), which is also
+  why `bare` and `tab` can simply not have padding rather than needing a merge pass to undo it.
+  A new `animate` token needs a matching `@keyframes` — `stylesheet-contract.test.ts` pins that.
 - **The widget has no dark mode** — no `.dark` block, no `dark:` variant. Theming is the per-tenant
   settings → CSS custom properties in `semantic-tokens.ts`, nothing else.
 - **Elevation is a `SHADOW.*` token** (`design-system/shadows.ts`), applied inline through `Surface`'s
@@ -198,7 +217,16 @@ and shipped images cannot drift in their dependency set.
 - **Inside a closed shadow root, `document.activeElement` is the HOST** and a stylesheet's `:root`
   matches nothing — read focus through `getRootNode()`, and scope host-level rules to `:host` or
   `[data-marketrix-widget]`. `useFocusTrap.activeElementIn` is the one home for the retargeting and
-  eslint's `no-restricted-properties` bans the bare read everywhere else.
+  eslint's `no-restricted-properties` bans the bare read everywhere else. **Base UI has the same bug
+  and cannot see it**: its focus restore descends `element.shadowRoot.activeElement`, which is null for
+  a closed root, so it records the host and hands focus to the host page on close — `WidgetDialog`
+  passes an explicit `finalFocus` ref rather than relying on the default.
+- **Base UI owns the interaction primitives; the two remaining hand-rolled hooks are not a gap.**
+  Dialog, Button, Tabs (`ShellTabBar` + the view panels) and Toast (`Notifications.tsx`) come from the
+  library. `useFocusTrap` and `useScrollLock` stay hand-rolled because they serve `MessengerShell`,
+  a **non-modal** panel that is not a Dialog: Base UI exposes no standalone focus-trap or scroll-lock,
+  and making the panel a Dialog to reach them would inert the customer's page and mutate its
+  `<html>`/`<body>` — the thing an embedded widget must not do.
 
 ## Conventions
 

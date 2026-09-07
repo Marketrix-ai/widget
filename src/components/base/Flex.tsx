@@ -1,7 +1,5 @@
 import { forwardRef, type ReactNode } from 'react';
 
-import { cn } from '@/lib/utils';
-
 import { Surface, type SurfaceProps } from './Surface';
 
 export interface FlexProps extends SurfaceProps {
@@ -10,6 +8,19 @@ export interface FlexProps extends SurfaceProps {
 }
 
 export const Flex = forwardRef<HTMLElement, FlexProps>(function Flex(props, ref) {
-  const { className, direction, ...rest } = props;
-  return <Surface {...rest} ref={ref} className={cn('flex', direction === 'column' && 'flex-col', className)} />;
+  const { direction, hidden, style, ...rest } = props;
+  return (
+    <Surface
+      {...rest}
+      ref={ref}
+      hidden={hidden}
+      style={{
+        // Resolved here rather than left to `resolveLayoutStyle`, which Surface applies first: a
+        // `display: flex` arriving later would otherwise silently defeat `hidden`.
+        display: hidden === true ? 'none' : 'flex',
+        ...(direction === 'column' && { flexDirection: 'column' }),
+        ...style,
+      }}
+    />
+  );
 });

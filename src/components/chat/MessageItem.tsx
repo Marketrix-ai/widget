@@ -64,7 +64,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
               alt='Marketrix AI'
               size={20}
               fit='cover'
-              rounded='theme'
+              rounded='lg'
               style={{
                 border: 'none',
                 outline: 'none',
@@ -78,7 +78,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
         <Stack
           grow
           position='relative'
-          rounded='theme'
+          rounded='lg'
           elevation='card'
           style={{
             padding: message.videoStream ? '0' : '8px 10px',

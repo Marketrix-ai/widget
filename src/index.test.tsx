@@ -171,7 +171,7 @@ describe('public widget lifecycle', () => {
     document.body.append(container);
 
     await act(() => mountWidget({ settings, container }));
-    await act(() => updateMarketrixConfig({ widget_greeting_toast: 'updated' }));
+    await act(() => updateMarketrixConfig({ userId: 7 }));
 
     expect(loadConfig).not.toHaveBeenCalled();
     expect(container.querySelectorAll('.marketrix-widget-container')).toHaveLength(1);

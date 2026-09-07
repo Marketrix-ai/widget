@@ -21,7 +21,6 @@ export const SuggestedActions: React.FC<SuggestedActionsProps> = ({ actions, onA
         <Button
           key={`welcome-chip-${action.id}-${chipIndex}`}
           elevation='card'
-          shape='theme'
           size='sm'
           variant='chip'
           full
@@ -34,9 +33,9 @@ export const SuggestedActions: React.FC<SuggestedActionsProps> = ({ actions, onA
         >
           <Text as='span' weight='normal' leading='tight'>
             {action.type === 'show' ? (
-              <>Show me {action.text.replace(/^Show me\s*/i, '')}</>
+              <>Show me {action.text.replace(/^Show me\s+/i, '')}</>
             ) : action.type === 'do' ? (
-              <>Do {action.text.replace(/^Do\s*/i, '')}</>
+              <>Do {action.text.replace(/^Do\s+/i, '')}</>
             ) : (
               action.text
             )}

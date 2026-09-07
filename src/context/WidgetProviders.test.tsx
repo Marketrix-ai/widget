@@ -2,9 +2,10 @@ import { render, screen, waitFor } from '@testing-library/react';
 import React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { useWidget } from '../hooks/useWidget';
 import { chatService } from '../services/ChatService';
 import { chatSessionManager } from '../services/ChatSessionManager';
-import { storageService } from '../services/StorageService';
+import { type ChatSnapshot, storageService } from '../services/StorageService';
 import { StreamClient } from '../services/StreamClient';
 import { useUIStateContext } from './UIStateContext';
 import { WidgetProviders } from './WidgetProviders';
@@ -13,6 +14,8 @@ const ErrorProbe = () => {
   const { uiState } = useUIStateContext();
   return <div>{uiState.error}</div>;
 };
+
+const TaskProbe = () => <div data-testid='task'>{String(useWidget().state.isTaskRunning)}</div>;
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -75,6 +78,26 @@ describe('WidgetProviders initialization', () => {
     );
 
     expect(storageService.getContext().messages.map(msg => msg.id)).toEqual(['agent-1']);
+  });
+
+  it('starts with no task running, whatever a previous page left on disk', async () => {
+    vi.spyOn(chatSessionManager, 'getOrCreateChatId').mockResolvedValue('chat-1');
+    const connect = vi.spyOn(StreamClient.getInstance(), 'connect').mockResolvedValue();
+    vi.spyOn(chatService, 'restore').mockReturnValue({
+      messages: [],
+      currentMode: 'tell',
+      isOpen: false,
+      isTaskRunning: true,
+    } as ChatSnapshot);
+
+    render(
+      <WidgetProviders>
+        <TaskProbe />
+      </WidgetProviders>,
+    );
+    await waitFor(() => expect(connect).toHaveBeenCalled());
+
+    expect(screen.getByTestId('task')).toHaveTextContent('false');
   });
 
   it('routes chat initialization failures to the widget error state', async () => {

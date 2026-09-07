@@ -14,19 +14,19 @@ export const usePortalContainer = (): HTMLElement => useContext(PortalContainerC
 /** Its own component so the subscription to every message change cannot re-render the tree InitBridge wraps. */
 const PersistBridge: React.FC = () => {
   const { uiState } = useUIStateContext();
-  const { messages, taskState } = useChatContext();
+  const { messages } = useChatContext();
 
   useEffect(() => {
     const { currentMode, isOpen } = uiState;
-    chatService.persist({ messages, ...taskState, currentMode, isOpen });
-  }, [messages, taskState, uiState]);
+    chatService.persist({ messages, currentMode, isOpen });
+  }, [messages, uiState]);
 
   return null;
 };
 
 const InitBridge: React.FC<{ children: React.ReactNode; previewMode: boolean }> = ({ children, previewMode }) => {
   const { uiActions } = useUIStateContext();
-  const { chatActions, taskActions } = useChatContext();
+  const { chatActions } = useChatContext();
   const [restored, setRestored] = useState(false);
 
   useEffect(() => {
@@ -37,10 +37,9 @@ const InitBridge: React.FC<{ children: React.ReactNode; previewMode: boolean }> 
       const chatId = await chatSessionManager.getOrCreateChatId();
       if (cancelled) return;
 
-      const { messages, isTaskRunning, ...ui } = chatService.restore();
+      const { messages, ...ui } = chatService.restore();
       uiActions.applyState(ui);
       chatActions.setMessages(messages);
-      taskActions.setTaskState(isTaskRunning);
       setRestored(true);
 
       StreamClient.getInstance()

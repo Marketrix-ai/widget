@@ -1,5 +1,5 @@
 import type { WidgetEvent } from '../sdk';
-import type { ChatMessage, InstructionType, MessagePart } from '../types';
+import { type ChatMessage, type InstructionType, type MessagePart, messageText } from '../types';
 import {
   addProgressLine,
   findMessageForProgress,
@@ -18,16 +18,14 @@ export interface SseState {
   task: TaskState;
 }
 
-export type SseEffect =
-  | {
-      type: 'executeTool';
-      toolCallId: string;
-      tool: string;
-      args: Record<string, unknown>;
-      mode: InstructionType;
-      explanation: string;
-    }
-  | { type: 'setLoading'; value: boolean };
+export interface SseEffect {
+  type: 'executeTool';
+  toolCallId: string;
+  tool: string;
+  args: Record<string, unknown>;
+  mode: InstructionType;
+  explanation: string;
+}
 
 export interface ReduceResult {
   state: SseState;
@@ -140,16 +138,15 @@ function reduceText(state: SseState, requestId: string, text: string, streaming:
     const part: MessagePart = { type: 'text', content, ...(streaming && { streaming: true }) };
     if (isOpenStream) parts[parts.length - 1] = part;
     else parts.push(part);
-    return { ...msg, content, isPlaceholder: false, placeholderState: undefined, parts };
+    return { ...msg, content: messageText(parts), isPlaceholder: false, placeholderState: undefined, parts };
   });
   return { ...state, messages };
 }
 
-const appendText = (msg: ChatMessage, text: string): ChatMessage => ({
-  ...msg,
-  content: text,
-  parts: [...msg.parts, { type: 'text' as const, content: text }],
-});
+const appendText = (msg: ChatMessage, text: string): ChatMessage => {
+  const parts = [...msg.parts, { type: 'text' as const, content: text }];
+  return { ...msg, content: messageText(parts), parts };
+};
 
 const errorBubble = (msg: ChatMessage, text: string): ChatMessage => ({
   ...settled(appendText(msg, text)),
@@ -174,17 +171,11 @@ export function reduceTransportFailure(state: SseState, text: string): SseState 
  * into the gap where the api has no tab to push to. `reduceTransportFailure` cannot see that, since
  * nothing told the transport it failed, so without this the bubble sits on "thinking" and the composer
  * stays disabled forever.
- *
- * Only fires on a message that received ZERO signs of life — still `thinking` with no progress line
- * and no streamed text. A `do`/`show` task that is genuinely still running has already advanced past
- * this (a `tool/call` flips `placeholderState` or adds a line, a `chat/delta` adds a part) and must
- * never be cut off just because it is taking a while; a task that never even started is what this
- * catches.
  */
 export function reduceStaleReply(state: SseState, messageId: string, text: string): SseState {
+  if (state.task.isTaskRunning) return state;
   const pending = state.messages.find(msg => msg.id === messageId);
-  const untouched = pending?.isPlaceholder && pending.placeholderState === 'thinking' && pending.parts.length === 0;
-  return untouched ? reduceError(state, messageId, text) : state;
+  return pending?.isPlaceholder ? reduceError(state, messageId, text) : state;
 }
 
 export function reduceSse(state: SseState, event: WidgetEvent, currentMode: InstructionType): ReduceResult {
@@ -233,16 +224,10 @@ export function reduceSse(state: SseState, event: WidgetEvent, currentMode: Inst
       return { state: reduceText(state, event.request_id, event.text, true), effects: [] };
 
     case 'chat/response':
-      return {
-        state: reduceText(state, event.request_id, event.text, false),
-        effects: [{ type: 'setLoading', value: false }],
-      };
+      return { state: reduceText(state, event.request_id, event.text, false), effects: [] };
 
     case 'chat/error':
-      return {
-        state: reduceError(state, event.request_id, `Error: ${event.error}`),
-        effects: [{ type: 'setLoading', value: false }],
-      };
+      return { state: reduceError(state, event.request_id, `Error: ${event.error}`), effects: [] };
 
     // registered / heartbeat carry no state.
     default:

@@ -1,17 +1,14 @@
 import { Button as BaseButton } from '@base-ui/react/button';
 import type { ComponentPropsWithRef } from 'react';
 
-import { cn } from '@/lib/utils';
-
-import { getElevationStyle, radiusClasses } from '../../design-system/component-tokens';
+import { getElevationStyle, RADIUS } from '../../design-system/component-tokens';
 import type { ShadowToken } from '../../design-system/shadows';
 
 type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'bare' | 'chip' | 'tab';
 type ButtonSize = 'sm' | 'md';
-type ButtonShape = 'default' | 'theme' | 'pill';
+type ButtonShape = 'default' | 'pill';
 
 export interface ButtonProps extends ComponentPropsWithRef<'button'> {
-  active?: boolean;
   elevation?: ShadowToken;
   size?: ButtonSize;
   shape?: ButtonShape;
@@ -20,28 +17,12 @@ export interface ButtonProps extends ComponentPropsWithRef<'button'> {
   full?: boolean;
 }
 
-const variantStyles: Record<ButtonVariant, string> = {
-  primary: 'bg-primary text-primary-foreground border-transparent hover:bg-primary/90',
-  secondary: 'bg-secondary text-secondary-foreground border-transparent hover:bg-secondary/80',
-  ghost: 'bg-transparent text-foreground border-border hover:bg-border',
-  bare: 'bg-transparent text-inherit border-transparent hover:bg-transparent p-0 min-h-0',
-  chip: 'bg-secondary-bg text-foreground border-transparent hover:bg-primary hover:text-primary-foreground hover:border-primary',
-  tab: 'bg-transparent text-foreground-muted border-transparent hover:text-foreground hover:bg-transparent p-0 min-h-0',
-};
-
-const sizeStyles: Record<ButtonSize, string> = {
-  sm: 'px-2 py-1 text-xs min-h-7',
-  md: 'px-4 py-2 text-sm min-h-9',
-};
-
-const shapeClasses: Record<ButtonShape, string> = {
-  default: 'rounded-lg',
-  theme: radiusClasses.theme,
-  pill: radiusClasses.pill,
+const SHAPE_RADIUS: Record<ButtonShape, string> = {
+  default: RADIUS.lg,
+  pill: RADIUS.pill,
 };
 
 export function Button({
-  active = false,
   className,
   disabled,
   elevation,
@@ -55,30 +36,18 @@ export function Button({
   ref,
   ...props
 }: ButtonProps) {
-  const hasChrome = !['bare', 'tab'].includes(variant);
-
   return (
     <BaseButton
       {...props}
       ref={ref}
-      className={cn(
-        'inline-flex items-center justify-center gap-2 font-medium cursor-pointer transition-all focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2',
-        hasChrome && 'border',
-        shapeClasses[shape],
-        variantStyles[variant],
-        variant !== 'bare' && variant !== 'tab' && sizeStyles[size],
-        stacked && 'flex-col gap-0.5',
-        variant === 'tab' && 'h-full min-w-0 flex-1',
-        active && variant === 'tab' && 'text-primary font-semibold',
-        disabled && 'opacity-50 cursor-not-allowed pointer-events-none',
-        full && 'w-full',
-        className,
-      )}
+      className={className ? `mtx-button ${className}` : 'mtx-button'}
       data-disabled={disabled ? 'true' : 'false'}
+      data-full={full ? 'true' : 'false'}
       data-size={size}
+      data-stacked={stacked ? 'true' : 'false'}
       data-variant={variant}
       disabled={disabled}
-      style={{ ...getElevationStyle(elevation), ...style }}
+      style={{ borderRadius: SHAPE_RADIUS[shape], ...getElevationStyle(elevation), ...style }}
       type={type}
     />
   );

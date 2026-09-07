@@ -2,9 +2,13 @@ import { act, render, screen } from '@testing-library/react';
 import { useEffect } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { useWidget } from '../../hooks/useWidget';
+import { storageService } from '../../services/StorageService';
 import type { ChatMessage } from '../../types';
 import { ChatProvider, useChatContext } from '../ChatContext';
 import { UIStateProvider } from '../UIStateContext';
+
+vi.mock('../../services/ApiService', () => ({ messageDispatch: vi.fn().mockResolvedValue(undefined) }));
 
 const restoredPlaceholder: ChatMessage = {
   id: 'temp-restored',
@@ -54,5 +58,90 @@ describe('a placeholder that never receives an event', () => {
     expect(screen.getByTestId('transcript')).toHaveTextContent(
       'temp-restored:false:This is taking longer than expected. Please try again.',
     );
+  });
+});
+
+const ChurningTranscript = () => {
+  const { messages, chatActions } = useChatContext();
+
+  useEffect(() => {
+    chatActions.setMessages([restoredPlaceholder]);
+  }, [chatActions]);
+
+  return (
+    <>
+      <div data-testid='transcript'>{messages.map(msg => `${msg.id}:${msg.isPlaceholder}:${msg.content}`)}</div>
+      <button
+        data-testid='churn'
+        onClick={() =>
+          chatActions.addMessage({
+            id: `system-${messages.length}`,
+            content: 'Mode changed',
+            sender: 'user',
+            timestamp: new Date(),
+            isSystemMessage: true,
+            parts: [],
+          })
+        }
+      />
+    </>
+  );
+};
+
+describe('the stale-reply deadline belongs to the placeholder', () => {
+  it('is not pushed back by an unrelated message the visitor adds while waiting', () => {
+    render(
+      <UIStateProvider>
+        <ChatProvider previewMode>
+          <ChurningTranscript />
+        </ChatProvider>
+      </UIStateProvider>,
+    );
+
+    act(() => {
+      vi.advanceTimersByTime(100_000);
+    });
+    act(() => {
+      screen.getByTestId('churn').click();
+    });
+    act(() => {
+      vi.advanceTimersByTime(25_000);
+    });
+
+    expect(screen.getByTestId('transcript')).toHaveTextContent(
+      'temp-restored:false:This is taking longer than expected. Please try again.',
+    );
+  });
+});
+
+const ProcessingProbe = () => {
+  const { state, actions } = useWidget();
+
+  return (
+    <button data-testid='probe' onClick={() => void actions.messageDispatch('hi', 'tell', true)}>
+      {String(state.isAwaitingReply || state.isTaskRunning)}
+    </button>
+  );
+};
+
+describe('the processing signal both glows read', () => {
+  it('outlives the outbound post — the visitor waits on the reply, not on the request', async () => {
+    storageService.setConfig({ mtxId: 'id', mtxKey: 'key' });
+
+    render(
+      <UIStateProvider>
+        <ChatProvider previewMode={false}>
+          <ProcessingProbe />
+        </ChatProvider>
+      </UIStateProvider>,
+    );
+
+    expect(screen.getByTestId('probe')).toHaveTextContent('false');
+
+    await act(async () => {
+      screen.getByTestId('probe').click();
+    });
+
+    expect(screen.getByTestId('probe')).toHaveTextContent('true');
   });
 });

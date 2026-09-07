@@ -1,3 +1,4 @@
+import { Tabs } from '@base-ui/react/tabs';
 import React, { useRef, useState } from 'react';
 
 import { SHADOW } from '../../design-system/shadows';
@@ -6,6 +7,7 @@ import { useResize } from '../../hooks/useResize';
 import { useWidget, useWidgetConfig } from '../../hooks/useWidget';
 import { createUserMessage } from '../../services/ChatService';
 import { tenantScope } from '../../services/WidgetService';
+import type { WidgetView } from '../../types';
 import type { SuggestedActionItem } from '../../utils/suggestedActions';
 import { getCorner, getPanelPositionStyle } from '../../utils/widgetPositioning';
 import { Icon } from '../base/Icon';
@@ -79,7 +81,7 @@ export const MessengerShell: React.FC = () => {
     <Stack
       ref={containerRef}
       position={isPreviewMode ? 'absolute' : 'fixed'}
-      rounded='theme'
+      rounded='lg'
       border
       overflow='hidden'
       style={{
@@ -109,9 +111,9 @@ export const MessengerShell: React.FC = () => {
               onClick={screenShareHandler}
             >
               {headerScreenSharing && (
-                <span className='absolute top-0.5 right-0.5 inline-flex h-1.5 w-1.5'>
-                  <span className='absolute inline-flex h-full w-full animate-ping rounded-full bg-current opacity-75' />
-                  <span className='relative inline-flex h-1.5 w-1.5 rounded-full bg-current' />
+                <span className='mtx-screenshare-dot'>
+                  <span className='mtx-screenshare-dot-ping' />
+                  <span className='mtx-screenshare-dot-core' />
                 </span>
               )}
               <Icon name='screenShare' size={16} />
@@ -120,26 +122,38 @@ export const MessengerShell: React.FC = () => {
         }
       />
 
-      <Surface grow overflow='hidden' style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-        <Surface
-          key={activeView}
-          data-view-transition
-          data-direction={navDirection}
-          style={{ width: '100%', height: '100%' }}
-        >
-          {activeView === 'home' && <HomeView onNavigateToChat={handleNavigateToChat} onChipClick={handleChipClick} />}
-          {activeView === 'chat' && (
+      <Tabs.Root
+        value={activeView}
+        onValueChange={value => actions.setActiveView(value as WidgetView)}
+        style={{ display: 'flex', flexDirection: 'column', flex: '1 1 0%', minHeight: 0 }}
+      >
+        <Surface grow overflow='hidden' style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+          {/* Panels unmount when deselected, so the active one remounts and replays the slide. */}
+          <Tabs.Panel
+            value='home'
+            data-view-transition
+            data-direction={navDirection}
+            style={{ width: '100%', height: '100%' }}
+          >
+            <HomeView onNavigateToChat={handleNavigateToChat} onChipClick={handleChipClick} />
+          </Tabs.Panel>
+          <Tabs.Panel
+            value='chat'
+            data-view-transition
+            data-direction={navDirection}
+            style={{ width: '100%', height: '100%' }}
+          >
             <ChatView
               onScreenSharingChange={setHeaderScreenSharing}
-              onStartScreenShareRef={chatViewStartScreenShareRef}
-              onStopScreenShareRef={chatViewStopScreenShareRef}
+              startScreenShareRef={chatViewStartScreenShareRef}
+              stopScreenShareRef={chatViewStopScreenShareRef}
               messageInputRef={messageInputRef}
             />
-          )}
+          </Tabs.Panel>
         </Surface>
-      </Surface>
 
-      <ShellTabBar activeView={activeView} onChange={actions.setActiveView} />
+        <ShellTabBar />
+      </Tabs.Root>
 
       {!isPreviewMode && <ResizeHandles onResizeStart={onResizeStart} />}
     </Stack>

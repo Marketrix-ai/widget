@@ -2,7 +2,6 @@ import { execSync } from 'node:child_process';
 import { resolve } from 'node:path';
 import { cwd } from 'node:process';
 
-import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import { defineConfig, type ViteDevServer } from 'vite';
 
@@ -50,10 +49,9 @@ export default defineConfig(({ command }) => {
       build: {
         outDir: 'dist',
         emptyOutDir: true,
-        sourcemap: true,
+        sourcemap: 'hidden',
         minify: 'terser',
         target: 'esnext',
-        codeSplitting: false,
         cssCodeSplit: false,
         lib: {
           entry: ENTRY_FILE,
@@ -65,19 +63,29 @@ export default defineConfig(({ command }) => {
           output: {
             entryFileNames: BUNDLE_FILE,
             format: 'es',
+            // Vite reads this from the rolldown output, never from `build` — one level up it is a
+            // no-op that reads like a guarantee, and the single-chunk packaging contract had none.
+            codeSplitting: false,
           },
         },
         terserOptions: {
+          // ESM-only output, so terser can assume module scope and mangle top-level names.
+          module: true,
+          toplevel: true,
           compress: {
             drop_console: ['log', 'info', 'debug'],
             drop_debugger: true,
+            module: true,
+            toplevel: true,
+            passes: 3,
           },
+          mangle: { toplevel: true },
           format: {
             comments: false,
           },
         },
       },
-      plugins: [react(), tailwindcss(), typescriptDeclarationPlugin()],
+      plugins: [react(), typescriptDeclarationPlugin()],
     };
   }
 
@@ -85,7 +93,6 @@ export default defineConfig(({ command }) => {
     resolve: { alias: { '@': resolve(cwd(), 'src') } },
     plugins: [
       react(),
-      tailwindcss(),
       // Rewrite /widget.mjs to the source entry so the production URL works in dev
       {
         name: 'widget-dev-routing',

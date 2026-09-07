@@ -33,7 +33,6 @@ export async function messageDispatch(
   const command: WidgetCommand = { type: `chat/${mode}`, request_id: requestId, content: message };
 
   const streamClient = StreamClient.getInstance();
-  await streamClient.connect(chatId);
-  await streamClient.waitUntilRegistered();
+  await streamClient.ready(chatId);
   await streamClient.send(command);
 }

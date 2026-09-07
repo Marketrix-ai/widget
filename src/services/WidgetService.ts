@@ -1,5 +1,6 @@
-import { sdk, type WidgetData, type WidgetSettingsData, WidgetSettingsDataSchema } from '../sdk';
+import { sdk, type WidgetData, type WidgetSettingsData } from '../sdk';
 import type { MarketrixConfig } from '../types';
+import { invalidSettingsMessage, parseWidgetSettings } from '../utils/validation';
 import type { CredentialedConfig } from './StorageService';
 
 export function createConfigFromSettings(
@@ -85,14 +86,13 @@ export async function loadWidgetConfig(config: MarketrixConfig): Promise<Credent
     throw withCause(`Failed to fetch widget settings from API: ${errorMessage(error)}`, error);
   }
 
-  const parsedSettings = WidgetSettingsDataSchema.safeParse({ ...defaults, ...activeWidget.settings });
-  if (!parsedSettings.success) {
-    const fields = [...new Set(parsedSettings.error.issues.map(issue => issue.path.join('.') || 'settings'))];
-    throw new Error(`Widget settings are invalid: ${fields.join(', ')}`);
+  const parsedSettings = parseWidgetSettings({ ...defaults, ...activeWidget.settings });
+  if (parsedSettings.invalidFields) {
+    throw new Error(invalidSettingsMessage(parsedSettings.invalidFields));
   }
 
   return {
-    ...createConfigFromSettings(parsedSettings.data, config),
+    ...createConfigFromSettings(parsedSettings.settings, config),
     mtxId,
     mtxKey,
     mtxApp: activeWidget.application_id,

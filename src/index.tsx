@@ -13,7 +13,7 @@ import { RrwebSessionRecorder } from './services/RrwebSessionRecorder';
 import { type CredentialedConfig, storageService } from './services/StorageService';
 import { StreamClient } from './services/StreamClient';
 import { createConfigFromSettings, loadWidgetConfig } from './services/WidgetService';
-import type { AddWidgetConfig, MarketrixConfig, MarketrixWidgetProps } from './types';
+import type { AddWidgetConfig, ClientOwnedConfig, MarketrixConfig, MarketrixWidgetProps } from './types';
 import {
   autoInitializeWidget,
   createWidgetContainer,
@@ -69,8 +69,6 @@ async function initWidgetInternal(
   if (finalConfig.widget_recording && finalConfig.mtxApp) {
     void (async () => {
       try {
-        await StreamClient.getInstance().waitUntilRegistered();
-        if (generation !== lifecycleGeneration) return;
         const chatId = await chatSessionManager.getOrCreateChatId();
         if (generation !== lifecycleGeneration) return;
         const recorder = new RrwebSessionRecorder(chatId, finalConfig.mtxApp as number);
@@ -131,7 +129,9 @@ export const unmountWidget = (): void => {
   hideHostPageNotice();
 };
 
-export const updateMarketrixConfig = async (newConfig: Partial<MarketrixConfig>): Promise<void> => {
+export const updateMarketrixConfig = async (
+  newConfig: ClientOwnedConfig & { mtxId?: string; mtxKey?: string },
+): Promise<void> => {
   const active = widgetState.mount;
   if (!active) return;
 
@@ -208,13 +208,20 @@ if (typeof window !== 'undefined') {
     try {
       autoInitializeWidget(initWidget);
     } catch (error) {
-      console.debug('Marketrix Widget: Auto-init registration skipped', error);
+      console.error('Marketrix Widget: Auto-init registration failed', error);
     }
   }, 0);
 }
 
 export type { InstructionType } from './sdk';
-export type { AddWidgetConfig, ChatMessage, MarketrixConfig, MarketrixWidgetProps, WidgetState } from './types';
+export type {
+  AddWidgetConfig,
+  ChatMessage,
+  ClientOwnedConfig,
+  MarketrixConfig,
+  MarketrixWidgetProps,
+  WidgetState,
+} from './types';
 
 export default {
   MarketrixWidget,

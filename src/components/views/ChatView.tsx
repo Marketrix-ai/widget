@@ -17,8 +17,8 @@ import { MessageList } from '../chat/MessageList';
 
 interface ChatViewProps {
   onScreenSharingChange: (isSharing: boolean) => void;
-  onStartScreenShareRef: React.MutableRefObject<(() => void) | null>;
-  onStopScreenShareRef: React.MutableRefObject<(() => void) | null>;
+  startScreenShareRef: React.MutableRefObject<(() => void) | null>;
+  stopScreenShareRef: React.MutableRefObject<(() => void) | null>;
   messageInputRef: React.RefObject<HTMLTextAreaElement | null>;
 }
 
@@ -31,13 +31,13 @@ const MODES: Array<{ id: InstructionType; icon: ChatInputMode['icon']; flag: key
 
 export const ChatView: React.FC<ChatViewProps> = ({
   onScreenSharingChange,
-  onStartScreenShareRef,
-  onStopScreenShareRef,
+  startScreenShareRef,
+  stopScreenShareRef,
   messageInputRef,
 }) => {
   const config = useWidgetConfig();
   const { state, actions } = useWidget();
-  const { messages, currentMode, isTaskRunning } = state;
+  const { currentMode, isTaskRunning, isAwaitingReply } = state;
 
   const [inputValue, setInputValue] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -55,8 +55,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
     requestScreenAccess,
   } = useScreenShare({
     onScreenSharingChange,
-    onStartScreenShareRef,
-    onStopScreenShareRef,
+    startScreenShareRef,
+    stopScreenShareRef,
     onAddMessage: actions.addMessage,
     onUpdateMessage: actions.updateMessage,
     onRemoveMessage: actions.removeMessage,
@@ -65,7 +65,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
     setPendingMessage,
   });
 
-  const composerLocked = isAwaitingScreenAccess || messages.some(msg => msg.isPlaceholder);
+  const composerLocked = isAwaitingScreenAccess || isAwaitingReply;
 
   const handleSendMessage = () => {
     if (!inputValue.trim() || composerLocked) return;
@@ -89,7 +89,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
   };
 
   return (
-    <Stack height='full' id='view-chat' role='tabpanel' aria-labelledby='tab-chat'>
+    <Stack height='full'>
       {showScreenAccessDialog && (
         <WidgetDialog
           open={showScreenAccessDialog}
@@ -99,6 +99,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
           onConfirm={handleScreenAccessDialogAllow}
           confirmLabel='Yes'
           cancelLabel='No'
+          finalFocusRef={messageInputRef}
         />
       )}
 

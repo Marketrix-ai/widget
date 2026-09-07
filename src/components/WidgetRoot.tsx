@@ -5,16 +5,16 @@ import { LAYER_TOKENS } from '../design-system/layers';
 import { createSemanticTokens, semanticTokensToCssCustomProperties } from '../design-system/semantic-tokens';
 import { useScrollLock } from '../hooks/useScrollLock';
 import { useWidget, type ValidWidgetConfig, WidgetConfigContext } from '../hooks/useWidget';
-import { WidgetSettingsDataSchema } from '../sdk';
 import { readLocal, writeLocal } from '../services/StorageService';
 import { StreamClient } from '../services/StreamClient';
 import { tenantScope } from '../services/WidgetService';
 import type { MarketrixConfig, WidgetPosition } from '../types';
 import { addOpacity } from '../utils/color';
+import { invalidSettingsMessage, parseWidgetSettings } from '../utils/validation';
 import { getCorner, isWidgetPosition } from '../utils/widgetPositioning';
 import { ErrorBoundary } from './base/ErrorBoundary';
 import { Surface } from './base/Surface';
-import { NotificationToast } from './blocks/NotificationToast';
+import { NotificationProvider, WidgetNotifications } from './blocks/Notifications';
 import { WidgetFab } from './blocks/WidgetFab';
 import { MessengerShell } from './navigation/MessengerShell';
 
@@ -28,7 +28,7 @@ export const WidgetRoot: React.FC<WidgetRootProps> = ({ config }) => {
   const { state, actions } = useWidget();
   const streamClient = StreamClient.getInstance();
   const isPreviewMode = config.isPreviewMode ?? false;
-  const configValid = WidgetSettingsDataSchema.safeParse(config).success;
+  const parsedConfig = parseWidgetSettings(config);
 
   useScrollLock(state.isOpen);
 
@@ -55,12 +55,18 @@ export const WidgetRoot: React.FC<WidgetRootProps> = ({ config }) => {
     return () => clearTimeout(timer);
   }, [state.isOpen, isPreviewMode, config.widget_appearance, config.widget_greeting_toast]);
 
+  const settingsError = parsedConfig.invalidFields ? invalidSettingsMessage(parsedConfig.invalidFields) : null;
+
+  useEffect(() => {
+    if (settingsError) console.error(`Marketrix Widget: ${settingsError}`);
+  }, [settingsError]);
+
   const handlePositionChange = (position: WidgetPosition) => {
     setWidgetPosition(position);
     if (!isPreviewMode) writeLocal(positionStorageKey, position);
   };
 
-  if (!configValid) {
+  if (settingsError) {
     return null;
   }
 
@@ -78,7 +84,7 @@ export const WidgetRoot: React.FC<WidgetRootProps> = ({ config }) => {
     widget_position_z_index: effectiveWidgetZIndex,
   } as ValidWidgetConfig;
 
-  const showProcessingFeedback = state.isLoading || state.isTaskRunning;
+  const showProcessingFeedback = state.isAwaitingReply || state.isTaskRunning;
   const customStyles = semanticTokensToCssCustomProperties(createSemanticTokens(config)) as React.CSSProperties;
 
   return (
@@ -90,31 +96,33 @@ export const WidgetRoot: React.FC<WidgetRootProps> = ({ config }) => {
         style={{ ...customStyles, ...(isPreviewMode && { width: '100%', height: '100%' }) }}
       >
         <PortalContainerContext value={portalContainer}>
-          {showProcessingFeedback && (
-            <Surface
-              data-screen-edge-glow
-              position='fixed'
-              inset='0'
-              style={{
-                boxShadow: `inset 0 0 22px 2px ${addOpacity(effectiveConfig.widget_accent_color, 0.72)}, inset 0 0 46px 10px ${addOpacity(effectiveConfig.widget_accent_color, 0.28)}`,
-                pointerEvents: 'none',
-                zIndex: LAYER_TOKENS.screenEdgeGlow,
-              }}
-            />
-          )}
+          <NotificationProvider
+            container={portalContainer}
+            offsetBottom={getCorner(widgetPosition).vertical === 'top' ? 20 : 90}
+          >
+            {showProcessingFeedback && (
+              <Surface
+                data-screen-edge-glow
+                position='fixed'
+                inset='0'
+                style={{
+                  boxShadow: `inset 0 0 22px 2px ${addOpacity(effectiveConfig.widget_accent_color, 0.72)}, inset 0 0 46px 10px ${addOpacity(effectiveConfig.widget_accent_color, 0.28)}`,
+                  pointerEvents: 'none',
+                  zIndex: LAYER_TOKENS.screenEdgeGlow,
+                }}
+              />
+            )}
 
-          <ErrorBoundary label='Widget'>
-            <MessengerShell />
-          </ErrorBoundary>
+            <ErrorBoundary label='Widget'>
+              <MessengerShell />
+            </ErrorBoundary>
 
-          <WidgetFab onDrag={handlePositionChange} />
+            <WidgetFab onPositionCommit={handlePositionChange} />
 
-          {state.error && (
-            <NotificationToast
-              tone='error'
-              title={state.error}
-              onDismiss={() => actions.setError(undefined)}
-              // Offered only when it can achieve something, and it now reconnects — it used to be
+            <WidgetNotifications
+              error={state.error}
+              onClearError={() => actions.setError(undefined)}
+              // Offered only when it can achieve something, and it reconnects — it used to be
               // byte-identical to onDismiss, so the one error where reconnecting IS the remedy showed a
               // Retry button that only hid the toast.
               {...(streamClient.canReconnect() && {
@@ -123,19 +131,11 @@ export const WidgetRoot: React.FC<WidgetRootProps> = ({ config }) => {
                   streamClient.reconnectNow();
                 },
               })}
-              position={getCorner(widgetPosition).vertical === 'top' ? 'bottom-center' : 'above-fab'}
+              greeting={showGreeting && !state.error ? config.widget_greeting : undefined}
+              greetingBody={config.widget_body}
+              onGreetingDismiss={() => setShowGreeting(false)}
             />
-          )}
-
-          {showGreeting && !state.error && config.widget_greeting && (
-            <NotificationToast
-              tone='info'
-              title={config.widget_greeting}
-              body={config.widget_body}
-              onDismiss={() => setShowGreeting(false)}
-              position='bottom-center'
-            />
-          )}
+          </NotificationProvider>
         </PortalContainerContext>
       </Surface>
     </WidgetConfigContext>
