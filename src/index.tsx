@@ -10,6 +10,7 @@ import type { Root } from 'react-dom/client';
 import { configureSdk } from './sdk';
 import { chatSessionManager } from './services/ChatSessionManager';
 import { RrwebSessionRecorder } from './services/RrwebSessionRecorder';
+import { stopScreenShare } from './services/ScreenShareService';
 import { type CredentialedConfig, storageService } from './services/StorageService';
 import { StreamClient } from './services/StreamClient';
 import { createConfigFromSettings, loadWidgetConfig } from './services/WidgetService';
@@ -114,6 +115,7 @@ export const unmountWidget = (): void => {
   StreamClient.getInstance().disconnect();
   rrwebSessionRecorder?.stop();
   rrwebSessionRecorder = null;
+  stopScreenShare();
 
   const active = widgetState.mount;
   widgetState.mount = null;

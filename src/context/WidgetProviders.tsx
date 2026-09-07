@@ -34,13 +34,13 @@ const InitBridge: React.FC<{ children: React.ReactNode; previewMode: boolean }> 
     let cancelled = false;
 
     const init = async () => {
-      const chatId = await chatSessionManager.getOrCreateChatId();
-      if (cancelled) return;
-
       const { messages, ...ui } = chatService.restore();
       uiActions.applyState(ui);
       chatActions.setMessages(messages);
       setRestored(true);
+
+      const chatId = await chatSessionManager.getOrCreateChatId();
+      if (cancelled) return;
 
       StreamClient.getInstance()
         .connect(chatId)

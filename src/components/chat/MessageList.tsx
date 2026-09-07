@@ -41,7 +41,7 @@ export const MessageList = ({ messagesEndRef, onScreenAccessAllow, onScreenAcces
       sender: 'agent',
       timestamp: new Date(),
       isPlaceholder: false,
-      parts: [],
+      parts: [{ type: 'text', content: widgetConfig.widget_body }],
     }),
     [widgetConfig.widget_body],
   );

@@ -47,13 +47,13 @@ export const WidgetRoot: React.FC<WidgetRootProps> = ({ config }) => {
   }, [isPreviewMode, positionStorageKey, config.widget_position]);
 
   useEffect(() => {
-    if (state.isOpen || isPreviewMode || config.widget_appearance !== 'default' || !config.widget_greeting_toast) {
+    if (state.isOpen || isPreviewMode || !config.widget_greeting_toast) {
       setShowGreeting(false);
       return;
     }
     const timer = setTimeout(() => setShowGreeting(true), 2000);
     return () => clearTimeout(timer);
-  }, [state.isOpen, isPreviewMode, config.widget_appearance, config.widget_greeting_toast]);
+  }, [state.isOpen, isPreviewMode, config.widget_greeting_toast]);
 
   const settingsError = parsedConfig.invalidFields ? invalidSettingsMessage(parsedConfig.invalidFields) : null;
 
