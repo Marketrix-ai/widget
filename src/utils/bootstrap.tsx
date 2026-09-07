@@ -6,13 +6,13 @@ import { WidgetRoot } from '../components/WidgetRoot';
 import { WidgetProviders } from '../context/WidgetProviders';
 import type { NotificationTone } from '../design-system/component-tokens';
 import shadowStyles from '../index.css?inline';
-import type { MarketrixConfig } from '../types';
+import type { MarketrixConfig, ValidWidgetConfig } from '../types';
 import { WIDGET_SHADOW_HOST_CLASS } from './dom';
 import { isHTMLScriptElement } from './validation';
 
 export interface WidgetMount {
   instance: Root;
-  config: MarketrixConfig;
+  config: ValidWidgetConfig;
   container: HTMLElement;
   host: HTMLElement | undefined;
   previewMode: boolean;
@@ -60,7 +60,7 @@ export const createWidgetContainer = (
 };
 
 // previewMode disables all network operations (for integration previews).
-export const mountWidgetToContainer = (mountEl: HTMLElement, config: MarketrixConfig, previewMode = false): Root => {
+export const mountWidgetToContainer = (mountEl: HTMLElement, config: ValidWidgetConfig, previewMode = false): Root => {
   const root = createRoot(mountEl);
 
   root.render(
@@ -76,7 +76,7 @@ export const mountWidgetToContainer = (mountEl: HTMLElement, config: MarketrixCo
 
 export const isWidgetInitialized = (): boolean => widgetState.mount !== null;
 
-export const getCurrentConfig = (): MarketrixConfig | null => widgetState.mount?.config ?? null;
+export const getCurrentConfig = (): ValidWidgetConfig | null => widgetState.mount?.config ?? null;
 
 export const showHostPageNotice = (message: string, tone: NotificationTone = 'neutral'): void => {
   if (typeof window === 'undefined' || typeof document === 'undefined') {

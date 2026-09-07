@@ -2,17 +2,17 @@ import { useEffect, useImperativeHandle, useRef, useState } from 'react';
 
 import type { InstructionType } from '../sdk';
 import {
-  createScreenAccessRequestMessage,
-  createScreenshareMessage,
-  createSystemMessage,
-} from '../services/ChatService';
-import {
   isScreenSharing as isScreenSharingActive,
   startScreenShare,
   stopScreenShare,
 } from '../services/ScreenShareService';
 import type { ChatMessage } from '../types';
-import { lastIndexWhere } from '../utils/chat';
+import {
+  createScreenAccessRequestMessage,
+  createScreenshareMessage,
+  createSystemMessage,
+  lastIndexWhere,
+} from '../utils/chat';
 
 /** Keeps a value readable from a callback that must not be re-created (the polling interval, mounted once). */
 function useLatest<T>(value: T): React.RefObject<T> {

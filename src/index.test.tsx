@@ -2,7 +2,7 @@ import { act, cleanup, render, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { initWidget, MarketrixWidget, mountWidget, unmountWidget, updateMarketrixConfig } from './index';
-import { WidgetSettingsDataSchema } from './sdk';
+import { type WidgetSettingsData, WidgetSettingsDataSchema } from './sdk';
 import * as ScreenShareService from './services/ScreenShareService';
 import { storageService } from './services/StorageService';
 import { StreamClient } from './services/StreamClient';
@@ -68,6 +68,21 @@ describe('public widget lifecycle', () => {
 
     expect(replacement.querySelector('.marketrix-widget-container')).toBeNull();
     expect(unrelated).toBeInTheDocument();
+  });
+
+  it('a config the settings schema refuses names the fields that failed instead of mounting silently', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const container = document.createElement('div');
+    document.body.append(container);
+    const broken = {
+      ...WidgetSettingsDataSchema.parse(getMockWidgetConfig()),
+      widget_position: 'middle',
+    } as WidgetSettingsData;
+
+    await act(() => mountWidget({ settings: broken, container }));
+
+    expect(container.querySelector('.marketrix-widget-container')).toBeNull();
+    expect(consoleError).toHaveBeenCalledWith(expect.stringContaining('widget_position'));
   });
 
   it('lets a preview invalidate pending production initialization', async () => {

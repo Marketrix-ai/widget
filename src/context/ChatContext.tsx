@@ -1,12 +1,12 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { WidgetEvent } from '../sdk';
-import { chatPost } from '../services/ApiService';
 import { browserToolService } from '../services/BrowserToolService';
-import { createAgentMessage, createUserMessage } from '../services/ChatService';
+import { chatPost } from '../services/ChatService';
 import { storageService } from '../services/StorageService';
 import { StreamClient, StreamGaveUpError } from '../services/StreamClient';
 import type { ChatMessage, InstructionType } from '../types';
+import { createAgentMessage, createUserMessage } from '../utils/chat';
 import {
   isTerminalTaskStatus,
   reduceDispatch,
@@ -245,7 +245,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
     };
 
     const handleError = (error: Error) => {
-      uiActions.setError(error.message);
+      uiActions.setError(error.message, true);
       // A retriable blip settles when the reply lands on the reconnected stream; a give-up never does,
       // and the composer stays disabled for as long as one bubble is still waiting.
       if (error instanceof StreamGaveUpError) commit(s => reduceTransportFailure(s, error.message));
@@ -272,7 +272,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
         // reduceStop already stamped the message "stopped" — in `do` mode the agent may still be
         // clicking through the visitor's page, and `send`'s own "Failed to send message" toast names
         // the transport rather than the thing the user asked for and did not get.
-        uiActions.setError('Could not stop the assistant — it may still be working.');
+        uiActions.setError('Could not stop the assistant — it may still be working.', true);
       });
   }, [previewMode, commit, uiActions]);
 

@@ -1,18 +1,18 @@
 import { sdk, type WidgetData, type WidgetSettingsData } from '../sdk';
-import type { MarketrixConfig } from '../types';
+import type { MarketrixConfig, ValidWidgetConfig } from '../types';
 import { invalidSettingsMessage, parseWidgetSettings, type WidgetRenderedSettings } from '../utils/validation';
 import type { CredentialedConfig } from './StorageService';
 
-// Accepts the full wire shape (the imperative preview's settings prop) or the already-picked,
-// render-constants-dropped shape parseWidgetSettings returns for production.
+// Takes the already-validated, render-constants-dropped shape parseWidgetSettings returns —
+// callers with a raw WidgetSettingsData (the imperative preview's settings prop) parse it first.
 export function createConfigFromSettings(
-  widgetSettings: WidgetSettingsData | WidgetRenderedSettings,
+  widgetSettings: WidgetRenderedSettings,
   baseConfig: Partial<MarketrixConfig> = {},
-): MarketrixConfig {
+): ValidWidgetConfig {
   return {
     ...baseConfig,
     ...widgetSettings,
-  } as MarketrixConfig;
+  } as ValidWidgetConfig;
 }
 
 function errorMessage(error: unknown): string {
