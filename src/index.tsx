@@ -63,6 +63,13 @@ async function initWidgetInternal(
   if (generation !== lifecycleGeneration) return;
   hideHostPageNotice();
 
+  // The kill switch: unlike show_widget/widget_appearance (hidden but still initialized), disabled
+  // means off — no chat id, no stream, no recording.
+  if (!finalConfig.widget_enabled) {
+    window.__mtx = undefined;
+    return;
+  }
+
   storageService.setConfig(finalConfig);
   mount(finalConfig, container);
   window.__mtx = { state: 'active' };

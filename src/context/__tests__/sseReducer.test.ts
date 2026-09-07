@@ -360,6 +360,18 @@ describe('reduceToolProgress / reduceToolDone / reduceStop', () => {
     expect(result.messages[0].taskStatus).toBe('done');
   });
 
+  it('a duplicate completion does not fall back past the stamp onto an older settled reply', () => {
+    const oldReply = agentMessage({ id: 'agent-0', isPlaceholder: false, content: 'Old answer' });
+    const state: SseState = { messages: [oldReply, agentMessage()], task: { phase: 'running' } };
+
+    const afterFirst = reduceToolDone(state, 'do');
+    expect(afterFirst.messages[1].taskStatus).toBe('done');
+
+    const afterDuplicate = reduceToolDone(afterFirst, 'do');
+
+    expect(afterDuplicate.messages[0]).toEqual(oldReply);
+  });
+
   it('reduceStop marks the active message stopped and ends the task', () => {
     const result = reduceStop(runningState(), 'do');
     expect(result.messages[0].taskStatus).toBe('stopped');

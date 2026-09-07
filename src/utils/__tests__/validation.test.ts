@@ -23,8 +23,27 @@ describe('parseWidgetSettings agrees with the zod schema it replaced', () => {
   it('strips unknown keys exactly as zod did — widgetDefaultGet returns render constants too', () => {
     const withExtras = { ...valid, widget_render_constant: 'x', another: 1 };
     const result = parseWidgetSettings(withExtras);
-    expect(result.settings).toEqual(WidgetSettingsDataSchema.parse(withExtras));
+    const {
+      widget_border_radius: _radius,
+      widget_font_size: _fontSize,
+      widget_animation_duration: _animation,
+      widget_fade_duration: _fade,
+      ...rendered
+    } = WidgetSettingsDataSchema.parse(withExtras);
+    expect(result.settings).toEqual(rendered);
     expect(result.settings).not.toHaveProperty('widget_render_constant');
+  });
+
+  it('also drops the render constants the widget renders from its own hard-coded values', () => {
+    const result = parseWidgetSettings(valid);
+    for (const field of [
+      'widget_border_radius',
+      'widget_font_size',
+      'widget_animation_duration',
+      'widget_fade_duration',
+    ]) {
+      expect(result.settings).not.toHaveProperty(field);
+    }
   });
 
   it.each(FIELDS)('rejects a wrong-typed %s, and names it', field => {

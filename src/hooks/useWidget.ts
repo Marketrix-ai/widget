@@ -2,9 +2,10 @@ import { createContext, useCallback, useContext, useMemo } from 'react';
 
 import { useChatContext } from '../context/ChatContext';
 import { useUIStateContext } from '../context/UIStateContext';
-import type { MarketrixConfig, WidgetSettingsData, WidgetState } from '../types';
+import type { MarketrixConfig, WidgetState } from '../types';
+import type { WidgetRenderedSettings } from '../utils/validation';
 
-export type ValidWidgetConfig = MarketrixConfig & Required<Pick<MarketrixConfig, keyof WidgetSettingsData>>;
+export type ValidWidgetConfig = MarketrixConfig & Required<Pick<MarketrixConfig, keyof WidgetRenderedSettings>>;
 
 /** Every setting resolved: API settings plus the position and script-tag overrides WidgetRoot layers on top. */
 export const WidgetConfigContext = createContext<ValidWidgetConfig | null>(null);

@@ -1,10 +1,12 @@
 import { sdk, type WidgetData, type WidgetSettingsData } from '../sdk';
 import type { MarketrixConfig } from '../types';
-import { invalidSettingsMessage, parseWidgetSettings } from '../utils/validation';
+import { invalidSettingsMessage, parseWidgetSettings, type WidgetRenderedSettings } from '../utils/validation';
 import type { CredentialedConfig } from './StorageService';
 
+// Accepts the full wire shape (the imperative preview's settings prop) or the already-picked,
+// render-constants-dropped shape parseWidgetSettings returns for production.
 export function createConfigFromSettings(
-  widgetSettings: WidgetSettingsData,
+  widgetSettings: WidgetSettingsData | WidgetRenderedSettings,
   baseConfig: Partial<MarketrixConfig> = {},
 ): MarketrixConfig {
   return {
