@@ -1,5 +1,4 @@
 import type { InstructionType } from '../types';
-import { WAIT_FOR_USER_TOOLS } from '../utils/chat';
 import { domService } from './DomService';
 import { activeScreenStream } from './ScreenShareService';
 import { showModeService } from './ShowModeService';
@@ -85,7 +84,46 @@ function firstFrame(video: HTMLVideoElement, timeoutMs: number): Promise<void> {
 const TAB_ORDER_SELECTOR =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
+// The agent's completion signal — kept as one named export so every check against it (dispatch,
+// progress-line suppression, task settlement) reads the same name instead of a copy of the string.
+export const FINISH_TOOL = 'finish';
+
+interface WidgetToolDef {
+  label: string;
+  waitForUser?: boolean;
+  run: (args: ToolArgs) => ToolExecutionResult<unknown> | Promise<ToolExecutionResult<unknown>>;
+}
+
 export class BrowserToolService {
+  // The one registry: a tool's name, label and handler live together, so a tool that exists here
+  // exists everywhere — no separate label list or wait-for-user set to fall out of sync with it.
+  private readonly tools: Record<string, WidgetToolDef> = {
+    navigate: { label: 'Navigating', run: args => this.navigate(args) },
+    search_web: { label: 'Searching', run: args => this.search(args) },
+    click_element: { label: 'Clicking element', waitForUser: true, run: args => this.clickElement(args) },
+    type_text: { label: 'Typing text', waitForUser: true, run: args => this.typeText(args) },
+    scroll: { label: 'Scrolling', run: args => this.scroll(args) },
+    scroll_to_text: { label: 'Scrolling to text', run: args => this.scrollToText(args) },
+    extract: { label: 'Extracting content', run: args => this.extract(args) },
+    go_back: { label: 'Going back', run: () => this.goBack() },
+    wait_seconds: { label: 'Waiting', run: args => this.wait(args) },
+    select_dropdown: { label: 'Selecting option', waitForUser: true, run: args => this.selectDropdownOption(args) },
+    get_dropdown_options: { label: 'Reading dropdown options', run: args => this.getDropdownOptions(args) },
+    send_keys: { label: 'Pressing key', waitForUser: true, run: args => this.sendKeys(args) },
+    close_tab: { label: 'Closing tab', run: () => this.closeTab() },
+    [FINISH_TOOL]: { label: 'Done', run: args => this.done(args) },
+    get_html: { label: 'Reading the page', run: () => this.getHtml() },
+    get_screenshot: { label: 'Taking screenshot', run: () => this.getScreenshot() },
+  };
+
+  getFriendlyToolName(browserToolName: string): string {
+    return this.tools[browserToolName]?.label ?? browserToolName;
+  }
+
+  isWaitForUserTool(browserToolName: string): boolean {
+    return !!this.tools[browserToolName]?.waitForUser;
+  }
+
   async executeTool(
     browserToolName: string,
     args: Record<string, unknown>,
@@ -93,10 +131,11 @@ export class BrowserToolService {
     explanation = '',
   ): Promise<ToolExecutionResult<unknown>> {
     const toolArgs = args as ToolArgs;
+    const tool = this.tools[browserToolName];
     try {
       console.log(`[BrowserToolService] Executing ${browserToolName} (mode: ${mode})`);
 
-      if (mode === 'show' && WAIT_FOR_USER_TOOLS.has(browserToolName)) {
+      if (mode === 'show' && tool?.waitForUser) {
         const index = toolArgs.index;
         if (index !== undefined) {
           const { element, error } = domService.getValidatedElement(index);
@@ -111,42 +150,7 @@ export class BrowserToolService {
         }
       }
 
-      switch (browserToolName) {
-        case 'navigate':
-          return this.navigate(toolArgs);
-        case 'search':
-          return this.search(toolArgs);
-        case 'click_element':
-          return await this.clickElement(toolArgs);
-        case 'type_text':
-          return this.typeText(toolArgs);
-        case 'scroll':
-          return this.scroll(toolArgs);
-        case 'scroll_to_text':
-          return this.scrollToText(toolArgs);
-        case 'extract':
-          return this.extract(toolArgs);
-        case 'go_back':
-          return this.goBack();
-        case 'wait':
-          return await this.wait(toolArgs);
-        case 'select_dropdown_option':
-          return this.selectDropdownOption(toolArgs);
-        case 'get_dropdown_options':
-          return this.getDropdownOptions(toolArgs);
-        case 'send_keys':
-          return this.sendKeys(toolArgs);
-        case 'close_tab':
-          return this.closeTab();
-        case 'done':
-          return this.done(toolArgs);
-        case 'get_html':
-          return this.getHtml();
-        case 'get_screenshot':
-          return await this.getScreenshot();
-        default:
-          return fail(`Unknown tool: ${browserToolName}`);
-      }
+      return tool ? await tool.run(toolArgs) : fail(`Unknown tool: ${browserToolName}`);
     } catch (error) {
       return fail(error instanceof Error ? error.message : String(error));
     }

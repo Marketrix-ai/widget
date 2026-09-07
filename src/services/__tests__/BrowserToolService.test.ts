@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { TOOL_LABELS, WAIT_FOR_USER_TOOLS } from '../../utils/chat';
-import { browserToolService } from '../BrowserToolService';
+import { browserToolService, FINISH_TOOL } from '../BrowserToolService';
 import { domService } from '../DomService';
 import { showModeService } from '../ShowModeService';
 
@@ -38,8 +37,8 @@ describe('a tool that leaves the page reports itself before it goes', () => {
     expect(navigations).toEqual(['https://host.test/next']);
   });
 
-  it('search holds the navigation until the response is sent', async () => {
-    const result = await browserToolService.executeTool('search', { query: 'widgets' }, 'do');
+  it('search_web holds the navigation until the response is sent', async () => {
+    const result = await browserToolService.executeTool('search_web', { query: 'widgets' }, 'do');
 
     expect(navigations).toEqual([]);
 
@@ -140,15 +139,15 @@ describe('a tool nothing can perform is not offered at all', () => {
     expect(result.success).toBe(false);
     expect(result.error).toBe('Unknown tool: upload_file');
     expect(staged).not.toHaveBeenCalled();
-    expect(TOOL_LABELS.has('upload_file')).toBe(false);
-    expect(WAIT_FOR_USER_TOOLS.has('upload_file')).toBe(false);
+    expect(browserToolService.getFriendlyToolName('upload_file')).toBe('upload_file');
+    expect(browserToolService.isWaitForUserTool('upload_file')).toBe(false);
   });
 });
 
 describe('a run the model ends is not a widget tool failure', () => {
-  it('reports done as executed when the agent sends only the closing message', async () => {
+  it('reports finish as executed when the agent sends only the closing message', async () => {
     const result = await browserToolService.executeTool(
-      'done',
+      FINISH_TOOL,
       { message: 'Could not find the checkout button' },
       'do',
     );

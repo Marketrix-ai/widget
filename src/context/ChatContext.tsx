@@ -1,7 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { WidgetEvent } from '../sdk';
-import { browserToolService } from '../services/BrowserToolService';
+import { browserToolService, FINISH_TOOL } from '../services/BrowserToolService';
 import { chatPost } from '../services/ChatService';
 import { storageService } from '../services/StorageService';
 import { StreamClient, StreamGaveUpError } from '../services/StreamClient';
@@ -200,7 +200,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
       commit(s =>
         reduceToolProgress(s, tool, explanation, error ? 'failed' : 'completed', currentModeRef.current, error),
       );
-      if (!error && tool === 'done') {
+      if (!error && tool === FINISH_TOOL) {
         commit(s => reduceToolDone(s, currentModeRef.current));
       }
 
