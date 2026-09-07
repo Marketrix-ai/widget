@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 import { BaseEntitySchema, EntityStatusSchema } from './common';
 export const WorkspacePackageSchema = z.enum(['free', 'startup', 'growth', 'enterprise']);
+export type PlanTier = z.infer<typeof WorkspacePackageSchema>;
 
 export const ApplicationTypeSchema = z.enum(['app', 'website']);
 
