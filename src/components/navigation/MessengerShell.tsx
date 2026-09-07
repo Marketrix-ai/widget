@@ -17,7 +17,7 @@ import { Surface } from '../base/Surface';
 import { HeaderBar } from '../blocks/HeaderBar';
 import { ChatView } from '../views/ChatView';
 import { HomeView } from '../views/HomeView';
-import { ResizeHandles } from './ResizeHandles';
+import { ResizeHandle } from './ResizeHandle';
 import { ShellTabBar } from './ShellTabBar';
 
 export const MessengerShell: React.FC = () => {
@@ -26,9 +26,10 @@ export const MessengerShell: React.FC = () => {
   const { isOpen, activeView } = state;
   const isPreviewMode = config.isPreviewMode ?? false;
 
-  const { widthPx, heightPx, onResizeStart, containerRef } = useResize(
+  const { widthPx, heightPx, grip, onResizeStart, containerRef } = useResize(
     config.widget_width,
     config.widget_height,
+    config.widget_position,
     tenantScope(config),
     isPreviewMode,
   );
@@ -155,7 +156,7 @@ export const MessengerShell: React.FC = () => {
         <ShellTabBar />
       </Tabs.Root>
 
-      {!isPreviewMode && <ResizeHandles onResizeStart={onResizeStart} />}
+      {!isPreviewMode && <ResizeHandle grip={grip} onMouseDown={onResizeStart} />}
     </Stack>
   );
 };

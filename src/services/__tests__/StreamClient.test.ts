@@ -49,6 +49,20 @@ describe('StreamClient retry affordance', () => {
     vi.useRealTimers();
   });
 
+  it('reconnectNow redials a stream stuck mid-dial, which canReconnect already offers Retry for', () => {
+    const client = freshClient();
+    mockSdk.widgetStream.mockReturnValue(new Promise(() => {}));
+    void client.connect('chat-3');
+
+    expect(mockSdk.widgetStream).toHaveBeenCalledTimes(1);
+    expect(client.canReconnect()).toBe(true);
+
+    client.reconnectNow();
+
+    expect(mockSdk.widgetStream).toHaveBeenCalledTimes(2);
+    client.disconnect();
+  });
+
   it('canReconnect is false once auth is rejected — retrying only re-earns the 401', async () => {
     const client = freshClient();
     const errors: string[] = [];

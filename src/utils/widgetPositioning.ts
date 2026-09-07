@@ -25,6 +25,23 @@ export const getPanelPositionStyle = (position: WidgetPosition): React.CSSProper
   return { [vertical]: `${EDGE_OFFSET_PX}px`, [horizontal]: `${EDGE_OFFSET_PX}px` };
 };
 
+const OPPOSITE = { top: 'bottom', bottom: 'top', left: 'right', right: 'left' } as const;
+
+export const getResizeGrip = (position: WidgetPosition) => {
+  const pinned = getCorner(position);
+  const vertical = OPPOSITE[pinned.vertical];
+  const horizontal = OPPOSITE[pinned.horizontal];
+  return {
+    vertical,
+    horizontal,
+    growX: horizontal === 'left' ? -1 : 1,
+    growY: vertical === 'top' ? -1 : 1,
+    cursor: (vertical === 'top') === (horizontal === 'left') ? 'nwse-resize' : 'nesw-resize',
+  };
+};
+
+export type ResizeGrip = ReturnType<typeof getResizeGrip>;
+
 export const getAnchorTopLeft = (
   position: WidgetPosition,
   vw: number,

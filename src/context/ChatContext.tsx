@@ -9,6 +9,7 @@ import { StreamClient, StreamGaveUpError } from '../services/StreamClient';
 import type { ChatMessage, InstructionType } from '../types';
 import {
   isTerminalTaskStatus,
+  reduceDispatch,
   reduceError,
   reduceSse,
   reduceStaleReply,
@@ -34,7 +35,7 @@ export interface ChatActions {
 }
 
 export interface TaskActions {
-  setTaskState: (isTaskRunning: boolean) => void;
+  resetTask: () => void;
   stopTask: () => Promise<void>;
 }
 
@@ -59,7 +60,7 @@ interface ChatProviderProps {
 
 export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMode = false }) => {
   const { uiState, uiActions } = useUIStateContext();
-  const [state, setState] = useState<SseState>(() => ({ messages: [], task: { isTaskRunning: false } }));
+  const [state, setState] = useState<SseState>(() => ({ messages: [], task: { phase: 'idle' } }));
 
   // commit() is the ONLY writer — re-syncing from render could regress the ref between a commit and its paint.
   const stateRef = useRef<SseState>(state);
@@ -113,12 +114,9 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
     commit(s => ({ ...s, messages: [] }));
   }, [commit]);
 
-  const setTaskState = useCallback(
-    (isTaskRunning: boolean) => {
-      commit(s => ({ ...s, task: { isTaskRunning } }));
-    },
-    [commit],
-  );
+  const resetTask = useCallback(() => {
+    commit(s => ({ ...s, task: { phase: 'idle' } }));
+  }, [commit]);
 
   const placeholderIds = state.messages
     .filter(msg => msg.isPlaceholder)
@@ -171,7 +169,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
         placeholderState: 'thinking',
         parts: [],
       };
-      addMessage(placeholderMsg);
+      commit(s => reduceDispatch(s, placeholderMsg));
 
       try {
         await dispatchMessage(config, content, effectiveMode, placeholderId);
@@ -280,7 +278,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
     [addMessage, updateMessage, removeMessage, setMessages, clearMessages, messageDispatch],
   );
 
-  const taskActions = useMemo<TaskActions>(() => ({ setTaskState, stopTask }), [setTaskState, stopTask]);
+  const taskActions = useMemo<TaskActions>(() => ({ resetTask, stopTask }), [resetTask, stopTask]);
 
   return (
     <ChatContext.Provider value={{ messages: state.messages, chatActions, taskState: state.task, taskActions }}>

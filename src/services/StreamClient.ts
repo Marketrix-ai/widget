@@ -56,20 +56,16 @@ export class StreamClient {
     return this.tornDown || this.credentialRejected;
   }
 
-  /** Whether a user-driven retry can achieve anything: there is a chat to rejoin and nothing has
-   * suppressed reconnection. */
   canReconnect(): boolean {
     return this.chatId !== null && !this.reconnectSuppressed() && !this.isConnected();
   }
 
-  /** The user asked to retry. `scheduleReconnect` gives up permanently at `maxReconnectAttempts` and only
-   * `registered` resets the counters, so without this reset the widget's Retry button had nothing it
-   * could do — which is why it was wired to plain dismiss. */
   reconnectNow(): void {
     if (!this.canReconnect() || this.chatId === null) return;
     this.clearReconnectTimer();
     this.reconnectAttempts = 0;
     this.reconnectDelay = 1000;
+    this.abortConnection();
     this.connect(this.chatId).catch(console.error);
   }
 
@@ -97,10 +93,7 @@ export class StreamClient {
       return;
     }
 
-    if (this.abortController) {
-      this.abortController.abort();
-      this.abortController = null;
-    }
+    this.abortConnection();
 
     this.chatId = chatId;
     this.status = 'connecting';
@@ -164,11 +157,7 @@ export class StreamClient {
     this.tornDown = true;
     this.credentialRejected = false;
     this.clearReconnectTimer();
-    if (this.abortController) {
-      this.abortController.abort();
-      this.abortController = null;
-    }
-    this.status = 'disconnected';
+    this.abortConnection();
     this.chatId = null;
     this.settleWaiters(new Error('Stream disconnected before registration'));
   }
@@ -249,6 +238,12 @@ export class StreamClient {
         this.connect(this.chatId).catch(console.error);
       }
     }, delay);
+  }
+
+  private abortConnection(): void {
+    this.abortController?.abort();
+    this.abortController = null;
+    this.status = 'disconnected';
   }
 
   private clearReconnectTimer(): void {
