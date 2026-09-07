@@ -57,10 +57,14 @@ export const createSystemMessage = (
   idPrefix: string,
 ): ChatMessage => createMessage(idPrefix, sender, content, { mode, isSystemMessage: true });
 
-export const createScreenAccessRequestMessage = (mode?: InstructionType): ChatMessage =>
+export const createScreenAccessRequestMessage = (
+  mode: InstructionType | undefined,
+  pendingContent?: string,
+): ChatMessage =>
   createMessage('screen-access-request', 'agent', 'Can I take a look at your screen?', {
     mode,
     isScreenAccessRequest: true,
+    pendingContent,
   });
 
 export const createScreenshareMessage = (stream: MediaStream, mode: InstructionType = 'show'): ChatMessage =>

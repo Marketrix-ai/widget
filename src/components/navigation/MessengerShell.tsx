@@ -46,8 +46,7 @@ export const MessengerShell: React.FC = () => {
 
   // Must stay above the early return below.
   const [headerScreenSharing, setHeaderScreenSharing] = useState(false);
-  const chatViewStartScreenShareRef = useRef<(() => void) | null>(null);
-  const chatViewStopScreenShareRef = useRef<(() => void) | null>(null);
+  const chatViewToggleScreenShareRef = useRef<(() => void) | null>(null);
 
   if (!isOpen) return null;
 
@@ -69,13 +68,7 @@ export const MessengerShell: React.FC = () => {
 
   const screenShareHandler =
     activeView === 'chat' && config.use_screenshare !== false
-      ? () => {
-          if (headerScreenSharing) {
-            chatViewStopScreenShareRef.current?.();
-          } else {
-            chatViewStartScreenShareRef.current?.();
-          }
-        }
+      ? () => chatViewToggleScreenShareRef.current?.()
       : undefined;
 
   return (
@@ -146,8 +139,7 @@ export const MessengerShell: React.FC = () => {
           >
             <ChatView
               onScreenSharingChange={setHeaderScreenSharing}
-              startScreenShareRef={chatViewStartScreenShareRef}
-              stopScreenShareRef={chatViewStopScreenShareRef}
+              toggleScreenShareRef={chatViewToggleScreenShareRef}
               messageInputRef={messageInputRef}
             />
           </Tabs.Panel>

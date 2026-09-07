@@ -121,9 +121,12 @@ describe('reduceStaleReply', () => {
     expect(result.messages[0].content).toBe('This is taking longer than expected. Please try again.');
   });
 
-  it('never overwrites a message while its task is running — a slow task is not a dead one', () => {
+  it('settles a placeholder that has gone silent for the deadline even while its task is still running', () => {
     const state: SseState = { messages: [agentMessage()], task: { phase: 'running' } };
-    expect(reduceStaleReply(state, 'agent-1', 'timeout text')).toBe(state);
+    const result = reduceStaleReply(state, 'agent-1', 'timeout text');
+
+    expect(result.messages[0].isPlaceholder).toBe(false);
+    expect(result.messages[0].content).toBe('Working on it\ntimeout text');
   });
 
   it('never overwrites a running task paused on the visitor, even with no text yet', () => {

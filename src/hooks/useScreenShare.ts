@@ -12,6 +12,7 @@ import {
   stopScreenShare,
 } from '../services/ScreenShareService';
 import type { ChatMessage } from '../types';
+import { lastIndexWhere } from '../utils/chat';
 
 /** Keeps a value readable from a callback that must not be re-created (the polling interval, mounted once). */
 function useLatest<T>(value: T): React.RefObject<T> {
@@ -20,22 +21,14 @@ function useLatest<T>(value: T): React.RefObject<T> {
   return ref;
 }
 
-export interface PendingMessage {
-  content: string;
-  mode?: InstructionType;
-  alreadyAdded?: boolean;
-}
-
 export interface UseScreenShareOptions {
   onScreenSharingChange?: (isSharing: boolean) => void;
-  startScreenShareRef?: React.MutableRefObject<(() => void) | null>;
-  stopScreenShareRef?: React.MutableRefObject<(() => void) | null>;
+  toggleScreenShareRef?: React.MutableRefObject<(() => void) | null>;
   onAddMessage: (message: ChatMessage) => void;
   onUpdateMessage: (messageId: string, updates: Partial<ChatMessage>) => void;
   onRemoveMessage?: (messageId: string) => void;
   onSendMessage: (message: string, mode?: InstructionType, skipUserMessage?: boolean) => void;
-  pendingMessage: PendingMessage | null;
-  setPendingMessage: (message: PendingMessage | null) => void;
+  messages: ChatMessage[];
 }
 
 export interface UseScreenShareReturn {
@@ -46,23 +39,20 @@ export interface UseScreenShareReturn {
   handleScreenAccessDialogDismiss: () => void;
   handleScreenAccessRequestAllow: () => Promise<void>;
   handleScreenAccessRequestDeny: () => void;
-  requestScreenAccess: (mode: InstructionType) => void;
+  requestScreenAccess: (mode: InstructionType, content: string) => void;
 }
 
 export function useScreenShare({
   onScreenSharingChange,
-  startScreenShareRef,
-  stopScreenShareRef,
+  toggleScreenShareRef,
   onAddMessage,
   onUpdateMessage,
   onRemoveMessage,
   onSendMessage,
-  pendingMessage,
-  setPendingMessage,
+  messages,
 }: UseScreenShareOptions): UseScreenShareReturn {
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [screenShareMessageId, setScreenShareMessageId] = useState<string | null>(null);
-  const [screenAccessRequestMessageId, setScreenAccessRequestMessageId] = useState<string | null>(null);
   const [showScreenAccessDialog, setShowScreenAccessDialog] = useState(false);
 
   const wasSharingRef = useLatest(isScreenSharing);
@@ -96,28 +86,25 @@ export function useScreenShare({
     return () => clearInterval(interval);
   }, []);
 
-  const requestScreenAccess = (mode: InstructionType) => {
-    if (screenAccessRequestMessageId) return;
-    const screenAccessRequestMessage = createScreenAccessRequestMessage(mode);
-    setScreenAccessRequestMessageId(screenAccessRequestMessage.id);
-    onAddMessage(screenAccessRequestMessage);
-  };
+  // Transcript-derived, not component state: the request card survives an unmount/remount (tab switch,
+  // panel close) because it is persisted, so the resolving state has to be too, or the buttons stay live
+  // on a request neither Allow nor Deny can reach anymore.
+  const openRequest =
+    messages[lastIndexWhere(messages, msg => !!msg.isScreenAccessRequest && !msg.screenShareStatus)] ?? null;
 
-  const handleStartScreenShare = () => {
-    setShowScreenAccessDialog(true);
+  const requestScreenAccess = (mode: InstructionType, content: string) => {
+    if (openRequest) return;
+    onAddMessage(createScreenAccessRequestMessage(mode, content));
   };
 
   const flushPendingMessage = () => {
-    if (!pendingMessage) return;
-    const message = pendingMessage;
-    setPendingMessage(null);
-    onSendMessage(message.content, message.mode, message.alreadyAdded);
+    if (!openRequest?.pendingContent) return;
+    onSendMessage(openRequest.pendingContent, openRequest.mode, true);
   };
 
   const resolveAccessRequest = (screenShareStatus: 'allowed' | 'denied') => {
-    if (!screenAccessRequestMessageId) return;
-    onUpdateMessage(screenAccessRequestMessageId, { screenShareStatus });
-    setScreenAccessRequestMessageId(null);
+    if (!openRequest) return;
+    onUpdateMessage(openRequest.id, { screenShareStatus });
   };
 
   const beginScreenShare = async () => {
@@ -162,12 +149,14 @@ export function useScreenShare({
     announceStopped(screenShareMessageId);
   };
 
-  useImperativeHandle(startScreenShareRef, () => handleStartScreenShare);
-  useImperativeHandle(stopScreenShareRef, () => stopScreenSharing);
+  useImperativeHandle(toggleScreenShareRef, () => () => {
+    if (isScreenSharing) stopScreenSharing();
+    else setShowScreenAccessDialog(true);
+  });
 
   return {
     isScreenSharing,
-    isAwaitingScreenAccess: screenAccessRequestMessageId !== null,
+    isAwaitingScreenAccess: openRequest !== null,
     showScreenAccessDialog,
     handleScreenAccessDialogAllow,
     handleScreenAccessDialogDismiss,

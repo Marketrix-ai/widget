@@ -142,7 +142,7 @@ export class DomService {
     this.elementToSequence = new WeakMap();
   }
 
-  checkElementInteractable(element: HTMLElement, index: number): string | null {
+  notInteractableReason(element: HTMLElement, index: number): string | null {
     if (!document.body.contains(element)) {
       return `ELEMENT_NOT_INTERACTABLE: Element ${index} is not in the DOM`;
     }
@@ -203,9 +203,9 @@ export class DomService {
       };
     }
 
-    const interactError = this.checkElementInteractable(entry.element, index);
-    if (interactError) {
-      return { element: null, error: interactError };
+    const reason = this.notInteractableReason(entry.element, index);
+    if (reason) {
+      return { element: null, error: reason };
     }
 
     return { element: entry.element };

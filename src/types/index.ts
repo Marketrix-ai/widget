@@ -30,6 +30,8 @@ export interface ChatMessage {
   videoStream?: MediaStream;
   isScreenAccessRequest?: boolean;
   screenShareStatus?: 'allowed' | 'denied';
+  /** The message queued behind an open screen-access request, sent once it resolves. */
+  pendingContent?: string;
   isSystemMessage?: boolean;
   isPlaceholder?: boolean;
   placeholderState?: 'thinking' | 'waiting-for-user';

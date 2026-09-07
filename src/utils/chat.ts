@@ -13,7 +13,7 @@ export interface FindMessageOptions {
   currentMode: InstructionType;
 }
 
-function lastIndexWhere<T>(items: T[], matches: (item: T) => boolean): number {
+export function lastIndexWhere<T>(items: T[], matches: (item: T) => boolean): number {
   for (let i = items.length - 1; i >= 0; i--) {
     if (matches(items[i])) return i;
   }
@@ -26,8 +26,10 @@ export function findMessageForProgress({
   isTaskRunning,
   currentMode,
 }: FindMessageOptions): { index: number; message: ChatMessage } | null {
+  // A terminal-stamped message already ended — a duplicate or late-arriving progress/terminal event
+  // must fall through to no match rather than flip its icon (e.g. a late `completed` overwriting a `stopped`).
   const isAgentReply = (msg: ChatMessage) =>
-    msg.sender === 'agent' && !msg.isSystemMessage && !msg.isScreenAccessRequest;
+    msg.sender === 'agent' && !msg.isSystemMessage && !msg.isScreenAccessRequest && !msg.taskStatus;
   // Lenient on placeholders with an undefined mode — tool calls can race ahead of the mode being set.
   const modeMatches = (msg: ChatMessage) =>
     msg.isPlaceholder ? msg.mode === undefined || msg.mode === currentMode : msg.mode === currentMode;

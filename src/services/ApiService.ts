@@ -21,7 +21,7 @@ function logWidgetQuestion(config: CredentialedConfig, question: string, mode: I
 }
 
 /** The reply does not come back from here — it arrives asynchronously as a chat/response event on the stream. */
-export async function messageDispatch(
+export async function chatPost(
   config: CredentialedConfig,
   message: string,
   mode: InstructionType,

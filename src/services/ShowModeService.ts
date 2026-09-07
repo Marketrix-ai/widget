@@ -229,7 +229,7 @@ export class ShowModeService {
     });
   }
 
-  /** checkElementInteractable's first test is `document.body.contains`, so this one watchdog also covers removal. */
+  /** notInteractableReason's first test is `document.body.contains`, so this one watchdog also covers removal. */
   private setupVisibilityMonitoring(): void {
     this.visibilityCheckInterval = setInterval(() => {
       const element = this.currentElement;
@@ -240,8 +240,8 @@ export class ShowModeService {
         return;
       }
       const index = domService.getSequenceForElement(element) ?? -1;
-      const error = domService.checkElementInteractable(element, index);
-      if (error) this.failShowAction(error);
+      const reason = domService.notInteractableReason(element, index);
+      if (reason) this.failShowAction(reason);
     }, 200);
   }
 
