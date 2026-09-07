@@ -1,7 +1,7 @@
 import { act, cleanup, render, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { initWidget, MarketrixWidget, mountWidget, unmountWidget, updateMarketrixConfig } from './index';
+import { initWidget, MarketrixWidgetPreview, mountWidget, unmountWidget, updateMarketrixConfig } from './index';
 import { type WidgetSettingsData, WidgetSettingsDataSchema } from './sdk';
 import * as ScreenShareService from './services/ScreenShareService';
 import { storageService } from './services/StorageService';
@@ -242,7 +242,7 @@ describe('public widget lifecycle', () => {
     const preview = document.createElement('div');
     document.body.appendChild(preview);
 
-    render(<MarketrixWidget settings={settings} container={preview} />);
+    render(<MarketrixWidgetPreview settings={settings} container={preview} />);
     await waitFor(() => expect(preview.querySelector('.marketrix-widget-container')).toBeTruthy());
 
     expect(storageService.getCredentialedConfig()).toMatchObject({ mtxId: 'prod-id', mtxKey: 'prod-key' });
@@ -251,7 +251,7 @@ describe('public widget lifecycle', () => {
   it('with no container prop, mounts into its own rendered div rather than beside it', async () => {
     const settings = WidgetSettingsDataSchema.parse(getMockWidgetConfig());
 
-    const { container: renderedRoot } = render(<MarketrixWidget settings={settings} />);
+    const { container: renderedRoot } = render(<MarketrixWidgetPreview settings={settings} />);
     const ownDiv = renderedRoot.firstElementChild as HTMLElement;
 
     await waitFor(() => expect(ownDiv.querySelector('.marketrix-widget-container')).toBeTruthy());

@@ -92,5 +92,3 @@ export interface MarketrixWidgetPreviewProps {
   settings: WidgetSettingsData;
   container?: HTMLElement;
 }
-
-export type MarketrixWidgetProps = MarketrixWidgetPreviewProps;
