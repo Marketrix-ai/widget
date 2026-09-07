@@ -1,12 +1,11 @@
 import type { WidgetEvent } from '../sdk';
+import { browserToolService, FINISH_TOOL } from '../services/BrowserToolService';
 import { type ChatMessage, type InstructionType, type MessagePart, messageText } from '../types';
 import {
   addProgressLine,
   findMessageForProgress,
-  getFriendlyToolName,
   markProgressLineComplete,
   markProgressLineFailed,
-  WAIT_FOR_USER_TOOLS,
 } from '../utils/chat';
 
 export type TaskPhase = 'idle' | 'running' | 'stopped';
@@ -52,19 +51,24 @@ function applyProgress(
   if (!found) return messages;
 
   let updatedMsg = found.message;
-  // `done` carries no progress line of its own — it only ends the run.
+  // finish carries no progress line of its own — it only ends the run.
   if (status === 'failed') {
     updatedMsg = markProgressLineFailed(updatedMsg, browserToolName, error || '');
-  } else if (browserToolName !== 'done') {
+  } else if (browserToolName !== FINISH_TOOL) {
     updatedMsg =
       status === 'in_progress'
-        ? addProgressLine(updatedMsg, browserToolName, explanation || getFriendlyToolName(browserToolName))
+        ? addProgressLine(
+            updatedMsg,
+            browserToolName,
+            explanation || browserToolService.getFriendlyToolName(browserToolName),
+          )
         : markProgressLineComplete(updatedMsg, browserToolName);
   }
 
   if (isTaskRunning && (currentMode === 'show' || currentMode === 'do')) {
     // In show mode a DOM-mutating tool parks the spinner on "your turn" until the user acts.
-    const waiting = status === 'in_progress' && currentMode === 'show' && WAIT_FOR_USER_TOOLS.has(browserToolName);
+    const waiting =
+      status === 'in_progress' && currentMode === 'show' && browserToolService.isWaitForUserTool(browserToolName);
     updatedMsg = { ...updatedMsg, placeholderState: waiting ? 'waiting-for-user' : 'thinking' };
   }
 
@@ -121,8 +125,15 @@ function stampProgressMessage(
   return { messages, task: ended(state.task) };
 }
 
+// finish is the transient-trajectory boundary: the progress trail was scaffolding for "still working",
+// not part of the answer, so it drops out of the bubble the moment the run actually finishes.
+const clearTrajectory = (msg: ChatMessage): ChatMessage => ({
+  ...msg,
+  parts: msg.parts.filter(part => part.type !== 'progress'),
+});
+
 export function reduceToolDone(state: SseState, currentMode: InstructionType): SseState {
-  return stampProgressMessage(state, currentMode, msg => ({ ...msg, taskStatus: 'done' }));
+  return stampProgressMessage(state, currentMode, msg => clearTrajectory({ ...msg, taskStatus: 'done' }));
 }
 
 export function reduceStop(state: SseState, currentMode: InstructionType): SseState {
