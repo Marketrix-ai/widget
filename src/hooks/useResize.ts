@@ -1,6 +1,8 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 
 import { readLocal, writeLocal } from '../services/StorageService';
+import type { WidgetPosition } from '../types';
+import { getResizeGrip } from '../utils/widgetPositioning';
 
 interface Size {
   width: number;
@@ -29,16 +31,6 @@ function parsePx(value: string | undefined, fallback: number): number {
 
 const STORAGE_KEY_PREFIX = 'marketrix_widget_size_';
 
-// growX/growY: which way a corner grows the panel when the pointer moves in +x / +y.
-export const RESIZE_CORNERS = {
-  'top-left': { growX: -1, growY: -1, cursor: 'nwse-resize' },
-  'top-right': { growX: 1, growY: -1, cursor: 'nesw-resize' },
-  'bottom-left': { growX: -1, growY: 1, cursor: 'nesw-resize' },
-  'bottom-right': { growX: 1, growY: 1, cursor: 'nwse-resize' },
-} as const;
-
-export type ResizeCorner = keyof typeof RESIZE_CORNERS;
-
 function readStoredSize(storageKey: string): Size | null {
   try {
     const stored = JSON.parse(readLocal(storageKey) ?? 'null') as { width?: unknown; height?: unknown };
@@ -53,11 +45,13 @@ function readStoredSize(storageKey: string): Size | null {
 export function useResize(
   settingsWidth: string | undefined,
   settingsHeight: string | undefined,
+  position: WidgetPosition,
   tenantScope: string,
   isPreviewMode: boolean,
 ) {
   const storageKey = `${STORAGE_KEY_PREFIX}${tenantScope}`;
   const containerRef = useRef<HTMLDivElement>(null);
+  const grip = useMemo(() => getResizeGrip(position), [position]);
 
   const [dimensions, setDimensions] = useState<Size>(
     () =>
@@ -72,7 +66,7 @@ export function useResize(
   dimsRef.current = dimensions;
 
   const handleResizeStart = useCallback(
-    (corner: ResizeCorner) => (e: React.MouseEvent) => {
+    (e: React.MouseEvent) => {
       e.preventDefault();
       e.stopPropagation();
       if (isPreviewMode) return;
@@ -81,7 +75,7 @@ export function useResize(
       const startY = e.clientY;
       const startW = dimsRef.current.width;
       const startH = dimsRef.current.height;
-      const { growX, growY, cursor } = RESIZE_CORNERS[corner];
+      const { growX, growY, cursor } = grip;
 
       if (containerRef.current) {
         containerRef.current.dataset.resizing = 'true';
@@ -124,12 +118,13 @@ export function useResize(
       document.addEventListener('mousemove', onMove);
       document.addEventListener('mouseup', onUp);
     },
-    [isPreviewMode, storageKey],
+    [isPreviewMode, storageKey, grip],
   );
 
   return {
     widthPx: `${dimensions.width}px`,
     heightPx: `${dimensions.height}px`,
+    grip,
     onResizeStart: handleResizeStart,
     containerRef,
   };

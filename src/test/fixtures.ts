@@ -1,6 +1,14 @@
-import type { MarketrixConfig } from '../types';
+import type { MarketrixConfig, WidgetSettingsData } from '../types';
 
-export function getMockWidgetConfig(overrides: Partial<MarketrixConfig> = {}): MarketrixConfig {
+// Widened past MarketrixConfig with the render-constant fields (widget_border_radius and siblings),
+// which callers still need to build a full WidgetSettingsData for WidgetSettingsDataSchema.parse().
+type MockWidgetConfig = MarketrixConfig &
+  Pick<
+    WidgetSettingsData,
+    'widget_border_radius' | 'widget_font_size' | 'widget_animation_duration' | 'widget_fade_duration'
+  >;
+
+export function getMockWidgetConfig(overrides: Partial<MockWidgetConfig> = {}): MockWidgetConfig {
   return {
     widget_enabled: true,
     widget_appearance: 'default',

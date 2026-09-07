@@ -49,6 +49,24 @@ describe('WidgetNotifications', () => {
     expect(onRetry).toHaveBeenCalledTimes(1);
   });
 
+  it('keeps the error toast up across a re-render that passes new callback references', async () => {
+    const { rerender } = render(
+      <NotificationProvider>
+        <WidgetNotifications error='Disconnected' onClearError={() => {}} onGreetingDismiss={noop} />
+      </NotificationProvider>,
+    );
+
+    await screen.findAllByText('Disconnected');
+
+    rerender(
+      <NotificationProvider>
+        <WidgetNotifications error='Disconnected' onClearError={() => {}} onGreetingDismiss={noop} />
+      </NotificationProvider>,
+    );
+
+    expect(await screen.findAllByText('Disconnected')).not.toHaveLength(0);
+  });
+
   it('shows the greeting with its body', async () => {
     render(
       <NotificationProvider>

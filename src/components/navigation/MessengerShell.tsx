@@ -5,9 +5,9 @@ import { SHADOW } from '../../design-system/shadows';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { useResize } from '../../hooks/useResize';
 import { useWidget, useWidgetConfig } from '../../hooks/useWidget';
-import { createUserMessage } from '../../services/ChatService';
-import { tenantScope } from '../../services/WidgetService';
+import { tenantScope } from '../../services/StorageService';
 import type { WidgetView } from '../../types';
+import { createUserMessage } from '../../utils/chat';
 import type { SuggestedActionItem } from '../../utils/suggestedActions';
 import { getCorner, getPanelPositionStyle } from '../../utils/widgetPositioning';
 import { Icon } from '../base/Icon';
@@ -17,7 +17,7 @@ import { Surface } from '../base/Surface';
 import { HeaderBar } from '../blocks/HeaderBar';
 import { ChatView } from '../views/ChatView';
 import { HomeView } from '../views/HomeView';
-import { ResizeHandles } from './ResizeHandles';
+import { ResizeHandle } from './ResizeHandle';
 import { ShellTabBar } from './ShellTabBar';
 
 export const MessengerShell: React.FC = () => {
@@ -26,9 +26,10 @@ export const MessengerShell: React.FC = () => {
   const { isOpen, activeView } = state;
   const isPreviewMode = config.isPreviewMode ?? false;
 
-  const { widthPx, heightPx, onResizeStart, containerRef } = useResize(
+  const { widthPx, heightPx, grip, onResizeStart, containerRef } = useResize(
     config.widget_width,
     config.widget_height,
+    config.widget_position,
     tenantScope(config),
     isPreviewMode,
   );
@@ -45,8 +46,7 @@ export const MessengerShell: React.FC = () => {
 
   // Must stay above the early return below.
   const [headerScreenSharing, setHeaderScreenSharing] = useState(false);
-  const chatViewStartScreenShareRef = useRef<(() => void) | null>(null);
-  const chatViewStopScreenShareRef = useRef<(() => void) | null>(null);
+  const chatViewToggleScreenShareRef = useRef<(() => void) | null>(null);
 
   if (!isOpen) return null;
 
@@ -68,13 +68,7 @@ export const MessengerShell: React.FC = () => {
 
   const screenShareHandler =
     activeView === 'chat' && config.use_screenshare !== false
-      ? () => {
-          if (headerScreenSharing) {
-            chatViewStopScreenShareRef.current?.();
-          } else {
-            chatViewStartScreenShareRef.current?.();
-          }
-        }
+      ? () => chatViewToggleScreenShareRef.current?.()
       : undefined;
 
   return (
@@ -145,8 +139,7 @@ export const MessengerShell: React.FC = () => {
           >
             <ChatView
               onScreenSharingChange={setHeaderScreenSharing}
-              startScreenShareRef={chatViewStartScreenShareRef}
-              stopScreenShareRef={chatViewStopScreenShareRef}
+              toggleScreenShareRef={chatViewToggleScreenShareRef}
               messageInputRef={messageInputRef}
             />
           </Tabs.Panel>
@@ -155,7 +148,7 @@ export const MessengerShell: React.FC = () => {
         <ShellTabBar />
       </Tabs.Root>
 
-      {!isPreviewMode && <ResizeHandles onResizeStart={onResizeStart} />}
+      {!isPreviewMode && <ResizeHandle grip={grip} onMouseDown={onResizeStart} />}
     </Stack>
   );
 };

@@ -1,12 +1,11 @@
 import React, { useRef, useState } from 'react';
 
-import { type PendingMessage, useScreenShare } from '../../hooks/useScreenShare';
+import { useScreenShare } from '../../hooks/useScreenShare';
 import { useWidget, useWidgetConfig } from '../../hooks/useWidget';
 import type { InstructionType } from '../../sdk';
-import { createSystemMessage, createUserMessage } from '../../services/ChatService';
 import { showModeService } from '../../services/ShowModeService';
 import type { MarketrixConfig } from '../../types';
-import { getModeDisplayName } from '../../utils/chat';
+import { createSystemMessage, createUserMessage, getModeDisplayName } from '../../utils/chat';
 import { ErrorBoundary } from '../base/ErrorBoundary';
 import { Stack } from '../base/Stack';
 import { Surface } from '../base/Surface';
@@ -17,8 +16,7 @@ import { MessageList } from '../chat/MessageList';
 
 interface ChatViewProps {
   onScreenSharingChange: (isSharing: boolean) => void;
-  startScreenShareRef: React.MutableRefObject<(() => void) | null>;
-  stopScreenShareRef: React.MutableRefObject<(() => void) | null>;
+  toggleScreenShareRef: React.MutableRefObject<(() => void) | null>;
   messageInputRef: React.RefObject<HTMLTextAreaElement | null>;
 }
 
@@ -29,20 +27,13 @@ const MODES: Array<{ id: InstructionType; icon: ChatInputMode['icon']; flag: key
   { id: 'do', icon: 'ticktick', flag: 'widget_feature_do' },
 ];
 
-export const ChatView: React.FC<ChatViewProps> = ({
-  onScreenSharingChange,
-  startScreenShareRef,
-  stopScreenShareRef,
-  messageInputRef,
-}) => {
+export const ChatView: React.FC<ChatViewProps> = ({ onScreenSharingChange, toggleScreenShareRef, messageInputRef }) => {
   const config = useWidgetConfig();
   const { state, actions } = useWidget();
   const { currentMode, isTaskRunning, isAwaitingReply } = state;
 
   const [inputValue, setInputValue] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  const [pendingMessage, setPendingMessage] = useState<PendingMessage | null>(null);
 
   const {
     isScreenSharing,
@@ -55,14 +46,12 @@ export const ChatView: React.FC<ChatViewProps> = ({
     requestScreenAccess,
   } = useScreenShare({
     onScreenSharingChange,
-    startScreenShareRef,
-    stopScreenShareRef,
+    toggleScreenShareRef,
     onAddMessage: actions.addMessage,
     onUpdateMessage: actions.updateMessage,
     onRemoveMessage: actions.removeMessage,
     onSendMessage: actions.messageDispatch,
-    pendingMessage,
-    setPendingMessage,
+    messages: state.messages,
   });
 
   const composerLocked = isAwaitingScreenAccess || isAwaitingReply;
@@ -73,8 +62,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
     setInputValue('');
     actions.addMessage(createUserMessage(messageContent, currentMode));
     if (config.use_screenshare !== false && (currentMode === 'show' || currentMode === 'do') && !isScreenSharing) {
-      setPendingMessage({ content: messageContent, mode: currentMode, alreadyAdded: true });
-      requestScreenAccess(currentMode);
+      requestScreenAccess(currentMode, messageContent);
     } else {
       void actions.messageDispatch(messageContent, currentMode, true);
     }
@@ -82,9 +70,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
   const handleModeChange = (mode: InstructionType) => {
     if (mode === currentMode) return;
-    actions.addMessage(
-      createSystemMessage(`Switched to ${getModeDisplayName(mode)} mode`, mode, 'agent', 'mode-change'),
-    );
+    actions.addMessage(createSystemMessage(`Switched to ${getModeDisplayName(mode)} mode`, 'mode-change'));
     actions.setMode(mode);
   };
 

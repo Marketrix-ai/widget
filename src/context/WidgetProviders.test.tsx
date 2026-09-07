@@ -3,8 +3,8 @@ import React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { useWidget } from '../hooks/useWidget';
-import { chatService } from '../services/ChatService';
 import { chatSessionManager } from '../services/ChatSessionManager';
+import * as StorageService from '../services/StorageService';
 import { type ChatSnapshot, storageService } from '../services/StorageService';
 import { StreamClient } from '../services/StreamClient';
 import { useUIStateContext } from './UIStateContext';
@@ -29,7 +29,6 @@ describe('WidgetProviders initialization', () => {
         resolveChatId = resolve;
       }),
     );
-    const restore = vi.spyOn(chatService, 'restore');
     const connect = vi.spyOn(StreamClient.getInstance(), 'connect');
 
     const view = render(
@@ -43,7 +42,6 @@ describe('WidgetProviders initialization', () => {
     resolveChatId('chat-id');
     await Promise.resolve();
 
-    expect(restore).not.toHaveBeenCalled();
     expect(connect).not.toHaveBeenCalled();
   });
 
@@ -83,7 +81,7 @@ describe('WidgetProviders initialization', () => {
   it('starts with no task running, whatever a previous page left on disk', async () => {
     vi.spyOn(chatSessionManager, 'getOrCreateChatId').mockResolvedValue('chat-1');
     const connect = vi.spyOn(StreamClient.getInstance(), 'connect').mockResolvedValue();
-    vi.spyOn(chatService, 'restore').mockReturnValue({
+    vi.spyOn(StorageService, 'readChatSnapshot').mockReturnValue({
       messages: [],
       currentMode: 'tell',
       isOpen: false,

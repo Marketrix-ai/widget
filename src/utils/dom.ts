@@ -27,25 +27,26 @@ function* ancestry(el: Element): Generator<Element> {
   }
 }
 
-export function isInteractable(el: Element | null): boolean {
+export function disabledReason(el: Element): string | null {
+  if ((el as HTMLButtonElement).disabled === true) return 'is a disabled control';
+  if (el.getAttribute('aria-disabled') === 'true') return 'is aria-disabled';
+  for (const node of ancestry(el)) {
+    if (node.hasAttribute('inert')) return 'is inside an inert subtree';
+  }
+  return null;
+}
+
+export function isIndexable(el: Element | null): boolean {
   if (!(el instanceof Element)) return false;
 
   // One net, because the host page owns this DOM and may have patched anything on it; an indexing pass must not throw.
   try {
     if (!isInteractiveKind(el)) return false;
-    if ((el as HTMLButtonElement).disabled === true) return false;
-    if (el.getAttribute('aria-disabled') === 'true') return false;
-
-    for (const node of ancestry(el)) {
-      if (node instanceof HTMLElement && node.inert) return false;
-    }
 
     const style = window.getComputedStyle(el);
-    // Only display:none and pointer-events:none disqualify — not opacity/visibility, which user interaction can reveal (expanding sections, modals).
     if (style.display === 'none' || style.pointerEvents === 'none') return false;
 
     const rect = el.getBoundingClientRect();
-    // No off-screen and no occlusion check: both can be scrolled to or dismissed, so the element stays indexable.
     if (rect.width <= 0 || rect.height <= 0) return false;
 
     for (const parent of ancestry(el)) {
@@ -68,7 +69,7 @@ export function isInteractable(el: Element | null): boolean {
 
     return true;
   } catch (error) {
-    console.error('[isInteractable] Unexpected error:', error);
+    console.error('[isIndexable] Unexpected error:', error);
     return false;
   }
 }

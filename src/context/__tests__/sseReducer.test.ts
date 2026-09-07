@@ -4,6 +4,7 @@ import type { WidgetEvent } from '@/sdk';
 import { type ChatMessage, messageText } from '@/types';
 
 import {
+  reduceDispatch,
   reduceSse,
   reduceStaleReply,
   reduceStop,
@@ -27,12 +28,12 @@ const agentMessage = (overrides: Partial<ChatMessage> = {}): ChatMessage => ({
 
 const runningState = (overrides: Partial<ChatMessage> = {}): SseState => ({
   messages: [agentMessage(overrides)],
-  task: { isTaskRunning: true },
+  task: { phase: 'running' },
 });
 
 const idleState = (): SseState => ({
   messages: [agentMessage({ placeholderState: undefined })],
-  task: { isTaskRunning: false },
+  task: { phase: 'idle' },
 });
 
 describe('reduceSse — task/status', () => {
@@ -45,19 +46,19 @@ describe('reduceSse — task/status', () => {
 
   it('completed ends the task and marks the active message done', () => {
     const result = reduceSse(runningState(), { type: 'task/status', status: 'completed' }, 'do');
-    expect(result.state.task).toEqual({ isTaskRunning: false });
+    expect(result.state.task).toEqual({ phase: 'idle' });
     expect(result.state.messages[0].taskStatus).toBe('done');
   });
 
   it('failed ends the task and marks the active message failed', () => {
     const result = reduceSse(runningState(), { type: 'task/status', status: 'failed' }, 'do');
-    expect(result.state.task.isTaskRunning).toBe(false);
+    expect(result.state.task.phase).toBe('idle');
     expect(result.state.messages[0].taskStatus).toBe('failed');
   });
 
   it('stopped ends the task and marks the active message stopped', () => {
     const result = reduceSse(runningState(), { type: 'task/status', status: 'stopped' }, 'do');
-    expect(result.state.task.isTaskRunning).toBe(false);
+    expect(result.state.task.phase).toBe('idle');
     expect(result.state.messages[0].taskStatus).toBe('stopped');
   });
 
@@ -85,11 +86,11 @@ describe('reduceSse — task/status', () => {
     expect(msg.parts.at(-1)).toEqual({ type: 'text', content: 'Which account?' });
     // Paused, not finished — no terminal icon.
     expect(msg.taskStatus).toBeUndefined();
-    expect(result.state.task).toEqual({ isTaskRunning: false });
+    expect(result.state.task).toEqual({ phase: 'idle' });
   });
 
   // The composer is disabled while a placeholder stands, and both `has_question` and every terminal
-  // status also clear isTaskRunning — so leaving one pending left no control able to release it.
+  // status also end the task — so leaving one pending left no control able to release it.
   it.each(['completed', 'failed', 'stopped', 'has_question'] as const)('%s settles the placeholder', status => {
     const result = reduceSse(runningState(), { type: 'task/status', status }, 'do');
     expect(result.state.messages[0].isPlaceholder).toBe(false);
@@ -100,41 +101,44 @@ describe('reduceTransportFailure', () => {
   it('settles every pending bubble into an error and ends the task', () => {
     const state: SseState = {
       messages: [agentMessage({ id: 'settled', isPlaceholder: false }), agentMessage({ id: 'pending' })],
-      task: { isTaskRunning: true },
+      task: { phase: 'running' },
     };
     const result = reduceTransportFailure(state, 'Could not reconnect to the assistant. Try again.');
 
     expect(result.messages[0]).toBe(state.messages[0]);
     expect(result.messages[1].isPlaceholder).toBe(false);
     expect(result.messages[1].content).toBe('Working on it\nCould not reconnect to the assistant. Try again.');
-    expect(result.task).toEqual({ isTaskRunning: false });
+    expect(result.task).toEqual({ phase: 'idle' });
   });
 });
 
 describe('reduceStaleReply', () => {
   it('settles a placeholder that showed zero signs of life', () => {
-    const state: SseState = { messages: [agentMessage({ parts: [] })], task: { isTaskRunning: false } };
+    const state: SseState = { messages: [agentMessage({ parts: [] })], task: { phase: 'idle' } };
     const result = reduceStaleReply(state, 'agent-1', 'This is taking longer than expected. Please try again.');
 
     expect(result.messages[0].isPlaceholder).toBe(false);
     expect(result.messages[0].content).toBe('This is taking longer than expected. Please try again.');
   });
 
-  it('never overwrites a message while its task is running — a slow task is not a dead one', () => {
-    const state: SseState = { messages: [agentMessage()], task: { isTaskRunning: true } };
-    expect(reduceStaleReply(state, 'agent-1', 'timeout text')).toBe(state);
+  it('settles a placeholder that has gone silent for the deadline even while its task is still running', () => {
+    const state: SseState = { messages: [agentMessage()], task: { phase: 'running' } };
+    const result = reduceStaleReply(state, 'agent-1', 'timeout text');
+
+    expect(result.messages[0].isPlaceholder).toBe(false);
+    expect(result.messages[0].content).toBe('Working on it\ntimeout text');
   });
 
   it('never overwrites a running task paused on the visitor, even with no text yet', () => {
     const state: SseState = {
       messages: [agentMessage({ placeholderState: 'waiting-for-user', parts: [] })],
-      task: { isTaskRunning: true },
+      task: { phase: 'running' },
     };
     expect(reduceStaleReply(state, 'agent-1', 'timeout text')).toBe(state);
   });
 
   it('releases a placeholder left behind by a reload, progress lines and all, once no task is running', () => {
-    const state: SseState = { messages: [agentMessage()], task: { isTaskRunning: false } };
+    const state: SseState = { messages: [agentMessage()], task: { phase: 'idle' } };
     const result = reduceStaleReply(state, 'agent-1', 'timeout text');
 
     expect(result.messages[0].isPlaceholder).toBe(false);
@@ -144,14 +148,24 @@ describe('reduceStaleReply', () => {
   it('never overwrites a message that already settled', () => {
     const state: SseState = {
       messages: [agentMessage({ isPlaceholder: false, content: 'All done' })],
-      task: { isTaskRunning: false },
+      task: { phase: 'idle' },
     };
     expect(reduceStaleReply(state, 'agent-1', 'timeout text')).toBe(state);
   });
 
   it('is a no-op for a message id it does not recognize', () => {
-    const state: SseState = { messages: [agentMessage({ parts: [] })], task: { isTaskRunning: false } };
+    const state: SseState = { messages: [agentMessage({ parts: [] })], task: { phase: 'idle' } };
     expect(reduceStaleReply(state, 'missing', 'timeout text')).toBe(state);
+  });
+
+  it('stamps taskStatus failed so a late completed status cannot re-target the watchdog bubble', () => {
+    const state: SseState = { messages: [agentMessage({ parts: [] })], task: { phase: 'idle' } };
+    const stale = reduceStaleReply(state, 'agent-1', 'This is taking longer than expected. Please try again.');
+    expect(stale.messages[0].taskStatus).toBe('failed');
+
+    const late = reduceSse(stale, { type: 'task/status', status: 'completed' }, 'do');
+    expect(late.state.messages[0].taskStatus).toBe('failed');
+    expect(late.state.messages[0].content).toBe('This is taking longer than expected. Please try again.');
   });
 });
 
@@ -181,7 +195,7 @@ describe('reduceSse — tool/call', () => {
 
   it('auto-activates the task when a tool arrives before task/status running', () => {
     const result = reduceSse(idleState(), toolCall(), 'do');
-    expect(result.state.task.isTaskRunning).toBe(true);
+    expect(result.state.task.phase).toBe('running');
   });
 
   it('adds an in-progress progress line to the active message', () => {
@@ -208,7 +222,7 @@ describe('reduceSse — chat/response', () => {
   it('resolves the matching placeholder', () => {
     const state: SseState = {
       messages: [agentMessage({ id: 'req-1', content: '', parts: [] })],
-      task: { isTaskRunning: false },
+      task: { phase: 'idle' },
     };
     const event: WidgetEvent = { type: 'chat/response', request_id: 'req-1', text: 'Here you go' };
     const result = reduceSse(state, event, 'tell');
@@ -226,7 +240,7 @@ describe('reduceSse — chat/delta', () => {
   it('accumulates fragments into one streaming part and clears the placeholder', () => {
     const state: SseState = {
       messages: [agentMessage({ id: 'req-1', content: '', parts: [] })],
-      task: { isTaskRunning: false },
+      task: { phase: 'idle' },
     };
     const first = reduceSse(state, { type: 'chat/delta', request_id: 'req-1', text: 'Hel' }, 'tell');
     const second = reduceSse(first.state, { type: 'chat/delta', request_id: 'req-1', text: 'lo' }, 'tell');
@@ -241,7 +255,7 @@ describe('reduceSse — chat/delta', () => {
   it('final chat/response replaces the streamed part (no duplication)', () => {
     const state: SseState = {
       messages: [agentMessage({ id: 'req-1', content: '', parts: [] })],
-      task: { isTaskRunning: false },
+      task: { phase: 'idle' },
     };
     const streamed = reduceSse(state, { type: 'chat/delta', request_id: 'req-1', text: 'Hello wor' }, 'tell');
     const final = reduceSse(
@@ -261,7 +275,7 @@ describe('reduceSse — chat/error', () => {
   it('writes an error message into the matching placeholder', () => {
     const state: SseState = {
       messages: [agentMessage({ id: 'req-2' })],
-      task: { isTaskRunning: false },
+      task: { phase: 'idle' },
     };
     const event: WidgetEvent = { type: 'chat/error', request_id: 'req-2', error: 'boom' };
     const result = reduceSse(state, event, 'tell');
@@ -342,14 +356,63 @@ describe('reduceToolProgress / reduceToolDone / reduceStop', () => {
 
   it('reduceToolDone ends the task and marks the message done', () => {
     const result = reduceToolDone(runningState(), 'do');
-    expect(result.task).toEqual({ isTaskRunning: false });
+    expect(result.task).toEqual({ phase: 'idle' });
     expect(result.messages[0].taskStatus).toBe('done');
+  });
+
+  it('a duplicate completion does not fall back past the stamp onto an older settled reply', () => {
+    const oldReply = agentMessage({ id: 'agent-0', isPlaceholder: false, content: 'Old answer' });
+    const state: SseState = { messages: [oldReply, agentMessage()], task: { phase: 'running' } };
+
+    const afterFirst = reduceToolDone(state, 'do');
+    expect(afterFirst.messages[1].taskStatus).toBe('done');
+
+    const afterDuplicate = reduceToolDone(afterFirst, 'do');
+
+    expect(afterDuplicate.messages[0]).toEqual(oldReply);
   });
 
   it('reduceStop marks the active message stopped and ends the task', () => {
     const result = reduceStop(runningState(), 'do');
     expect(result.messages[0].taskStatus).toBe('stopped');
-    expect(result.task).toEqual({ isTaskRunning: false });
+    expect(result.task).toEqual({ phase: 'stopped' });
+  });
+});
+
+describe('Stop is the visitor withdrawing their page from the agent', () => {
+  const toolCall: WidgetEvent = {
+    type: 'tool/call',
+    tool_call_id: 'call-late',
+    browser_tool: 'click_element',
+    args: { index: 1 },
+    explanation: 'Clicking the submit button',
+  };
+
+  it('a tool call that raced the stop is not executed on the visitor page', () => {
+    const stopped = reduceStop(runningState(), 'do');
+
+    const result = reduceSse(stopped, toolCall, 'do');
+
+    expect(result.effects).toEqual([]);
+    expect(result.state).toBe(stopped);
+  });
+
+  it('the run reporting itself finished does not take the refusal off', () => {
+    const stopped = reduceStop(runningState(), 'do');
+
+    const settledByAgent = reduceSse(stopped, { type: 'task/status', status: 'completed' }, 'do').state;
+
+    expect(reduceSse(settledByAgent, toolCall, 'do').effects).toEqual([]);
+  });
+
+  it('the next request the visitor sends takes the refusal off', () => {
+    const stopped = reduceStop(runningState(), 'do');
+    const redispatched = reduceDispatch(stopped, agentMessage({ id: 'agent-2' }));
+
+    const result = reduceSse(redispatched, toolCall, 'do');
+
+    expect(result.effects).toHaveLength(1);
+    expect(result.state.task.phase).toBe('running');
   });
 });
 
@@ -357,7 +420,7 @@ describe('a message reports the text it shows', () => {
   it('carries every text part, not only the last one written', () => {
     const state: SseState = {
       messages: [agentMessage({ parts: [{ type: 'text', content: 'first' }] })],
-      task: { isTaskRunning: true },
+      task: { phase: 'running' },
     };
 
     const event: WidgetEvent = { type: 'chat/response', request_id: 'agent-1', text: 'second' };

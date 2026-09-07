@@ -131,7 +131,7 @@ import {
   unmountWidget,
   updateMarketrixConfig,
   getCurrentConfig,
-  MarketrixWidget,
+  MarketrixWidgetPreview,
 } from '@marketrix.ai/widget';
 ```
 
@@ -182,16 +182,16 @@ When recording is enabled, **every input value is masked** — recordings captur
 
 Both the `mtx-` and rrweb's native `rr-` prefixes are honoured, so existing `rr-block` / `rr-mask` markup keeps working.
 
-### `MarketrixWidget` — React component (preview)
+### `MarketrixWidgetPreview` — React component
 
 For previewing appearance inside a React app (e.g. a settings/configuration screen). Renders into its own Shadow DOM and makes no network calls.
 
 ```tsx
-import { MarketrixWidget } from '@marketrix.ai/widget';
+import { MarketrixWidgetPreview } from '@marketrix.ai/widget';
 
 function Preview() {
   return (
-    <MarketrixWidget
+    <MarketrixWidgetPreview
       settings={{ widget_enabled: true, widget_position: 'bottom_right' /* ...WidgetSettingsData */ }}
       mtxApiHost='https://api.marketrix.ai'
     />
@@ -217,7 +217,7 @@ TypeScript types are bundled with the package:
 
 - `MarketrixConfig` — full config for `initWidget` / `updateMarketrixConfig` (`mtxId`, `mtxKey`, `mtxApiHost`, `userId`, `show_widget`, `use_screenshare`, plus all widget appearance settings, optional).
 - `AddWidgetConfig` — discriminated config for `mountWidget` (production / preview variants + common options).
-- `MarketrixWidgetProps` — props for the `MarketrixWidget` component.
+- `MarketrixWidgetPreviewProps` — props for the `MarketrixWidgetPreview` component.
 - `ChatMessage`, `WidgetState`, `InstructionType` (`'tell' | 'show' | 'do'`).
 
 ---

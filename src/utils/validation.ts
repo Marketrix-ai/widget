@@ -1,4 +1,5 @@
 import type { WidgetSettingsData } from '../sdk';
+import type { WIDGET_RENDER_CONSTANTS } from '../sdk/contracts/entities';
 
 export function isHTMLElement(element: Element | null): element is HTMLElement {
   return element instanceof HTMLElement;
@@ -59,13 +60,27 @@ const FIELD_GUARDS = {
 
 const FIELD_NAMES = Object.keys(FIELD_GUARDS) as (keyof WidgetSettingsData)[];
 
+// Hand-written to match api's WIDGET_RENDER_CONSTANTS, for the same reason FIELD_GUARDS is
+// hand-written: importing it as a value pulls zod's whole runtime into the bundle (see repo CLAUDE.md).
+const RENDER_CONSTANT_NAMES = [
+  'widget_border_radius',
+  'widget_font_size',
+  'widget_animation_duration',
+  'widget_fade_duration',
+] as const satisfies readonly (typeof WIDGET_RENDER_CONSTANTS)[number][];
+const RENDER_CONSTANT_SET: ReadonlySet<string> = new Set(RENDER_CONSTANT_NAMES);
+
+/** The wire shape minus the fields the widget renders from its own constants — see WIDGET_RENDER_CONSTANTS. */
+export type WidgetRenderedSettings = Omit<WidgetSettingsData, (typeof RENDER_CONSTANT_NAMES)[number]>;
+
 export type WidgetSettingsResult =
-  { settings: WidgetSettingsData; invalidFields?: undefined } | { settings?: undefined; invalidFields: string[] };
+  { settings: WidgetRenderedSettings; invalidFields?: undefined } | { settings?: undefined; invalidFields: string[] };
 
 /**
  * Validates and PICKS, because stripping is load-bearing: `widgetDefaultGet` returns the render
  * constants too, and the settings object is spread into the widget config — passing unknown keys
- * through would leak them where zod used to drop them.
+ * through would leak them where zod used to drop them. The render constants are guarded (a legacy
+ * bundle's stored value must still pass) but dropped from the picked result, since nothing renders them.
  */
 export function parseWidgetSettings(value: unknown): WidgetSettingsResult {
   if (typeof value !== 'object' || value === null) return { invalidFields: ['settings'] };
@@ -75,8 +90,10 @@ export function parseWidgetSettings(value: unknown): WidgetSettingsResult {
   if (invalidFields.length > 0) return { invalidFields };
 
   const settings = {} as Record<string, unknown>;
-  for (const name of FIELD_NAMES) settings[name] = record[name];
-  return { settings: settings as WidgetSettingsData };
+  for (const name of FIELD_NAMES) {
+    if (!RENDER_CONSTANT_SET.has(name)) settings[name] = record[name];
+  }
+  return { settings: settings as WidgetRenderedSettings };
 }
 
 export const invalidSettingsMessage = (invalidFields: string[]): string =>

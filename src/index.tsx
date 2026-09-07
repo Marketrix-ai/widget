@@ -10,10 +10,17 @@ import type { Root } from 'react-dom/client';
 import { configureSdk } from './sdk';
 import { chatSessionManager } from './services/ChatSessionManager';
 import { RrwebSessionRecorder } from './services/RrwebSessionRecorder';
+import { stopScreenShare } from './services/ScreenShareService';
 import { type CredentialedConfig, storageService } from './services/StorageService';
 import { StreamClient } from './services/StreamClient';
 import { createConfigFromSettings, loadWidgetConfig } from './services/WidgetService';
-import type { AddWidgetConfig, ClientOwnedConfig, MarketrixConfig, MarketrixWidgetProps } from './types';
+import type {
+  AddWidgetConfig,
+  ClientOwnedConfig,
+  MarketrixConfig,
+  MarketrixWidgetPreviewProps,
+  ValidWidgetConfig,
+} from './types';
 import {
   autoInitializeWidget,
   createWidgetContainer,
@@ -24,14 +31,14 @@ import {
   showHostPageNotice,
   widgetState,
 } from './utils/bootstrap';
-import { isHTMLElement } from './utils/validation';
+import { invalidSettingsMessage, isHTMLElement, parseWidgetSettings } from './utils/validation';
 
 let initPromise: Promise<void> | null = null;
 let lifecycleGeneration = 0;
 let rrwebSessionRecorder: RrwebSessionRecorder | null = null;
 
 /** The one production/imperative-preview mount. */
-function mount(config: MarketrixConfig, host: HTMLElement | undefined, previewMode = false): void {
+function mount(config: ValidWidgetConfig, host: HTMLElement | undefined, previewMode = false): void {
   const { container, mountEl } = createWidgetContainer(host);
   const instance = mountWidgetToContainer(mountEl, config, previewMode);
   widgetState.mount = { instance, config, container, host, previewMode };
@@ -61,6 +68,13 @@ async function initWidgetInternal(
   }
   if (generation !== lifecycleGeneration) return;
   hideHostPageNotice();
+
+  // The kill switch: unlike show_widget/widget_appearance (hidden but still initialized), disabled
+  // means off — no chat id, no stream, no recording.
+  if (!finalConfig.widget_enabled) {
+    window.__mtx = undefined;
+    return;
+  }
 
   storageService.setConfig(finalConfig);
   mount(finalConfig, container);
@@ -114,6 +128,7 @@ export const unmountWidget = (): void => {
   StreamClient.getInstance().disconnect();
   rrwebSessionRecorder?.stop();
   rrwebSessionRecorder = null;
+  stopScreenShare();
 
   const active = widgetState.mount;
   widgetState.mount = null;
@@ -144,17 +159,24 @@ export const updateMarketrixConfig = async (
 
 export { getCurrentConfig };
 
-// Preview-mode React entry point — mounts its own shadow DOM inside the parent container.
-export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ settings, container }) => {
+export const MarketrixWidgetPreview: React.FC<MarketrixWidgetPreviewProps> = ({ settings, container }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const rootRef = useRef<Root | null>(null);
   const widgetContainerRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
-    const parentContainer = container ?? containerRef?.current?.parentElement ?? document.body;
+    // With no `container` prop, mount into the div this component renders below — never its parent,
+    // which would size the widget to the wrong box and leave that div an empty, dead sibling.
+    const parentContainer = container ?? containerRef.current ?? document.body;
 
     if (!parentContainer || !isHTMLElement(parentContainer)) {
-      console.error('MarketrixWidget: Invalid container');
+      console.error('MarketrixWidgetPreview: Invalid container');
+      return;
+    }
+
+    const parsed = parseWidgetSettings(settings);
+    if (parsed.invalidFields) {
+      console.error(`Marketrix Widget: ${invalidSettingsMessage(parsed.invalidFields)}`);
       return;
     }
 
@@ -164,7 +186,7 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ settings, cont
 
     rootRef.current = mountWidgetToContainer(
       mountEl,
-      { ...createConfigFromSettings(settings), isPreviewMode: true },
+      { ...createConfigFromSettings(parsed.settings), isPreviewMode: true },
       true,
     );
 
@@ -191,10 +213,15 @@ export const mountWidget = async (config: AddWidgetConfig): Promise<void> => {
   const container = config.container;
 
   if (config.settings !== undefined) {
+    const parsed = parseWidgetSettings(config.settings);
+    if (parsed.invalidFields) {
+      console.error(`Marketrix Widget: ${invalidSettingsMessage(parsed.invalidFields)}`);
+      return;
+    }
     unmountWidget();
     // Preview: no network, and deliberately no global production instance.
-    const { settings, container: _container, ...restConfig } = config;
-    mount({ ...createConfigFromSettings(settings, restConfig), isPreviewMode: true }, container, true);
+    const { settings: _settings, container: _container, ...restConfig } = config;
+    mount({ ...createConfigFromSettings(parsed.settings, restConfig), isPreviewMode: true }, container, true);
   } else if (config.mtxId !== undefined && config.mtxKey !== undefined) {
     const { container: _container, ...restConfig } = config;
     await initWidget(restConfig, container);
@@ -219,12 +246,12 @@ export type {
   ChatMessage,
   ClientOwnedConfig,
   MarketrixConfig,
-  MarketrixWidgetProps,
+  MarketrixWidgetPreviewProps,
   WidgetState,
 } from './types';
 
 export default {
-  MarketrixWidget,
+  MarketrixWidgetPreview,
   mountWidget,
   initWidget,
   unmountWidget,

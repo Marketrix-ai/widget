@@ -1,4 +1,4 @@
-import type { ChatMessage, InstructionType, MarketrixConfig } from '../types';
+import type { ChatMessage, InstructionType, MarketrixConfig, ValidWidgetConfig } from '../types';
 
 const STORAGE_KEY = 'marketrix_chat_context';
 const CONTEXT_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000;
@@ -11,7 +11,7 @@ export interface ChatSnapshot {
   isOpen: boolean;
 }
 
-export type CredentialedConfig = MarketrixConfig & { mtxId: string; mtxKey: string };
+export type CredentialedConfig = ValidWidgetConfig & { mtxId: string; mtxKey: string };
 
 export type MarketrixChatContext = Omit<ChatSnapshot, 'messages'> & {
   chat_id: string | null;
@@ -19,6 +19,11 @@ export type MarketrixChatContext = Omit<ChatSnapshot, 'messages'> & {
   config: MarketrixConfig | null;
   timestamp: number;
 };
+
+/** Per-tenant scope for browser-local keys: the credential id, else the application id. */
+export function tenantScope(config: MarketrixConfig): string {
+  return config.mtxId ?? (config.mtxApp != null ? String(config.mtxApp) : 'default');
+}
 
 const DEFAULT_CONTEXT: MarketrixChatContext = {
   chat_id: null,
@@ -48,8 +53,8 @@ export function writeLocal(key: string, value: string): void {
 }
 
 // Merged over the defaults so a payload written by an older widget version reads as incomplete, not corrupt.
-function loadContext(): MarketrixChatContext {
-  const stored = readLocal(STORAGE_KEY);
+function loadContext(key: string): MarketrixChatContext {
+  const stored = readLocal(key);
   if (!stored) return { ...DEFAULT_CONTEXT };
   try {
     const parsed = { ...DEFAULT_CONTEXT, ...(JSON.parse(stored) as Partial<MarketrixChatContext>) };
@@ -61,7 +66,8 @@ function loadContext(): MarketrixChatContext {
 }
 
 class StorageService {
-  private context = loadContext();
+  private key = STORAGE_KEY;
+  private context = loadContext(this.key);
 
   getContext(): MarketrixChatContext {
     return this.context;
@@ -69,7 +75,7 @@ class StorageService {
 
   updateContext(updates: Partial<MarketrixChatContext>): void {
     this.context = { ...this.context, ...updates, timestamp: Date.now() };
-    writeLocal(STORAGE_KEY, JSON.stringify(this.context));
+    writeLocal(this.key, JSON.stringify(this.context));
   }
 
   getChatId(): string | null {
@@ -85,9 +91,36 @@ class StorageService {
     return config?.mtxId && config.mtxKey ? (config as CredentialedConfig) : null;
   }
 
+  // Scopes the chat transcript/chat_id to the tenant — without this, two applications embedded on one
+  // origin would share a stored chat_id and one tenant's transcript would leak into another's.
   setConfig(config: CredentialedConfig): void {
+    this.key = `${STORAGE_KEY}_${tenantScope(config)}`;
+    this.context = loadContext(this.key);
     this.updateContext({ config });
   }
 }
 
 export const storageService = new StorageService();
+
+function reviveMessage(msg: StoredMessage): ChatMessage {
+  const parts = [...msg.parts];
+  const text = msg.content.trim();
+  if (parts.length === 0 && text) parts.push({ type: 'text', content: text });
+  return { ...msg, timestamp: new Date(msg.timestamp), parts };
+}
+
+function serializeMessage({ videoStream, ...msg }: ChatMessage): StoredMessage {
+  const timestamp = msg.timestamp.toISOString();
+  if (!videoStream) return { ...msg, timestamp };
+  const content = 'Screenshare ended';
+  return { ...msg, timestamp, content, isSystemMessage: true, parts: [{ type: 'text', content }] };
+}
+
+export function readChatSnapshot(): ChatSnapshot {
+  const { chat_id: _chatId, config: _config, timestamp: _timestamp, messages, ...rest } = storageService.getContext();
+  return { ...rest, messages: messages.map(reviveMessage) };
+}
+
+export function writeChatSnapshot(snapshot: ChatSnapshot): void {
+  storageService.updateContext({ ...snapshot, messages: snapshot.messages.map(serializeMessage) });
+}

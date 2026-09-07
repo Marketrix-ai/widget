@@ -87,3 +87,34 @@ describe('the widget covering a target is not an obstacle the agent can clear', 
     expect(service.getValidatedElement(0).error).toContain('ELEMENT_OBSCURED');
   });
 });
+
+describe('a control the visitor could not operate is refused at act time, not hidden from the index', () => {
+  beforeEach(() => {
+    Element.prototype.getBoundingClientRect = () => ({ top: 0, left: 0, width: 10, height: 10 }) as DOMRect;
+    document.elementFromPoint = () => null;
+  });
+
+  it('refuses a disabled button, whose click() would have fired no handler', () => {
+    const service = interactable('<button disabled style="position: fixed">Submit</button>');
+
+    expect(service.getValidatedElement(0).error).toContain('is a disabled control');
+  });
+
+  it('refuses an aria-disabled widget the same way as a native disabled one', () => {
+    const service = interactable('<div role="button" aria-disabled="true" style="position: fixed">Submit</div>');
+
+    expect(service.getValidatedElement(0).error).toContain('is aria-disabled');
+  });
+
+  it('refuses anything inside an inert subtree', () => {
+    const service = interactable('<div inert style="position: fixed"><button>Submit</button></div>');
+
+    expect(service.getValidatedElement(0).error).toContain('is inside an inert subtree');
+  });
+
+  it('still indexes the disabled control, so the agent can see what it may not click', () => {
+    const service = interactable('<button disabled style="position: fixed">Submit</button>');
+
+    expect(service.reindexAndSnapshot()).toContain('data-id="0"');
+  });
+});

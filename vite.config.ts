@@ -35,7 +35,7 @@ export default defineConfig(({ command }) => {
           { find: '@', replacement: resolve(cwd(), 'src') },
           {
             find: /^use-sync-external-store\/shim(?:\/with-selector)?$/,
-            replacement: resolve(cwd(), 'src/react19.ts'),
+            replacement: resolve(cwd(), 'src/useSyncExternalStoreShim.ts'),
           },
         ],
       },

@@ -1,4 +1,4 @@
-import { isInteractable, WIDGET_SHADOW_HOST_CLASS } from '../utils/dom';
+import { disabledReason, isIndexable, WIDGET_SHADOW_HOST_CLASS } from '../utils/dom';
 
 // The agent addresses elements by index, so an index must not survive the element changing underneath it: the node
 // object stays the same across a re-render while its attributes are rewritten.
@@ -52,7 +52,7 @@ export class DomService {
     return changed ? 'has changed' : null;
   }
 
-  private indexInteractableElements(): void {
+  private indexElements(): void {
     this.clearIndex();
 
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_ELEMENT, {
@@ -97,7 +97,7 @@ export class DomService {
           element.classList.contains('cursor-pointer') || element.classList.contains('clickable');
         const hasClickHandler = typeof element.onclick === 'function';
 
-        if (semantic || visuallyClickable || hasClickHandler || isInteractable(element)) {
+        if (semantic || visuallyClickable || hasClickHandler || isIndexable(element)) {
           this.index.set(sequenceNumber, {
             element,
             selector: this.generateAnchoredSelector(element),
@@ -116,7 +116,7 @@ export class DomService {
 
   /** `data-id` is the whole contract: the agent parses the snapshot for `[data-id]` and reads nothing else off it. */
   reindexAndSnapshot(): string {
-    this.indexInteractableElements();
+    this.indexElements();
 
     const clone = document.documentElement.cloneNode(true) as Element;
 
@@ -142,9 +142,14 @@ export class DomService {
     this.elementToSequence = new WeakMap();
   }
 
-  checkElementInteractable(element: HTMLElement, index: number): string | null {
+  notInteractableReason(element: HTMLElement, index: number): string | null {
     if (!document.body.contains(element)) {
       return `ELEMENT_NOT_INTERACTABLE: Element ${index} is not in the DOM`;
+    }
+
+    const disabled = disabledReason(element);
+    if (disabled) {
+      return `ELEMENT_NOT_INTERACTABLE: Element ${index} ${disabled}`;
     }
 
     const style = window.getComputedStyle(element);
@@ -198,9 +203,9 @@ export class DomService {
       };
     }
 
-    const interactError = this.checkElementInteractable(entry.element, index);
-    if (interactError) {
-      return { element: null, error: interactError };
+    const reason = this.notInteractableReason(entry.element, index);
+    if (reason) {
+      return { element: null, error: reason };
     }
 
     return { element: entry.element };

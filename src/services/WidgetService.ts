@@ -1,21 +1,18 @@
 import { sdk, type WidgetData, type WidgetSettingsData } from '../sdk';
-import type { MarketrixConfig } from '../types';
-import { invalidSettingsMessage, parseWidgetSettings } from '../utils/validation';
+import type { MarketrixConfig, ValidWidgetConfig } from '../types';
+import { invalidSettingsMessage, parseWidgetSettings, type WidgetRenderedSettings } from '../utils/validation';
 import type { CredentialedConfig } from './StorageService';
 
+// Takes the already-validated, render-constants-dropped shape parseWidgetSettings returns —
+// callers with a raw WidgetSettingsData (the imperative preview's settings prop) parse it first.
 export function createConfigFromSettings(
-  widgetSettings: WidgetSettingsData,
+  widgetSettings: WidgetRenderedSettings,
   baseConfig: Partial<MarketrixConfig> = {},
-): MarketrixConfig {
+): ValidWidgetConfig {
   return {
     ...baseConfig,
     ...widgetSettings,
-  } as MarketrixConfig;
-}
-
-/** Per-tenant scope for browser-local keys: the credential id, else the application id. */
-export function tenantScope(config: MarketrixConfig): string {
-  return config.mtxId ?? (config.mtxApp != null ? String(config.mtxApp) : 'default');
+  } as ValidWidgetConfig;
 }
 
 function errorMessage(error: unknown): string {

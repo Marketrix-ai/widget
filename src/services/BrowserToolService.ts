@@ -1,6 +1,7 @@
+import type { InstructionType } from '../types';
 import { WAIT_FOR_USER_TOOLS } from '../utils/chat';
 import { domService } from './DomService';
-import { startScreenShare } from './ScreenShareService';
+import { activeScreenStream } from './ScreenShareService';
 import { showModeService } from './ShowModeService';
 
 export interface TextData {
@@ -18,12 +19,10 @@ export interface DropdownOptionsData {
   options: Array<{ value: string; text: string }>;
 }
 
-export interface ToolExecutionResult<T = TextData> {
-  success: boolean;
-  data: T;
-  error?: string;
-  afterResponseAttempt?: () => void;
-}
+type ToolFailure = { success: false; error: string };
+
+export type ToolExecutionResult<T = TextData> =
+  { success: true; data: T; afterResponseAttempt?: () => void } | ToolFailure;
 
 /** One shape for every widget tool's arguments: the wire carries a bare JSON object, so nothing is
  * guaranteed present and each handler guards the fields it needs. */
@@ -45,12 +44,27 @@ interface ToolArgs {
 
 const ok = (text: string): ToolExecutionResult => ({ success: true, data: { text } });
 const okData = <T>(data: T): ToolExecutionResult<T> => ({ success: true, data });
-const fail = (error: string): ToolExecutionResult => ({ success: false, data: { text: '' }, error });
-const failOptions = (error: string): ToolExecutionResult<DropdownOptionsData> => ({
-  success: false,
-  data: { options: [] },
-  error,
+const fail = (error: string): ToolFailure => ({ success: false, error });
+// A tool result the agent will still read once its deed lands: it reports the action as dispatched,
+// never completed, because a click or navigation can tear down the page before the report is seen.
+const deferred = (text: string, action: () => void): ToolExecutionResult => ({
+  success: true,
+  data: { text },
+  afterResponseAttempt: action,
 });
+
+// Model output can be steered by page content it just read (extract() returns every a[href]), so a
+// navigation target is untrusted input — constrain it to http(s) rather than passing it through raw,
+// which would let a `javascript:` URL run in the HOST PAGE's origin via window.location.
+const httpUrl = (value: string | undefined): string | null => {
+  if (!value) return null;
+  try {
+    const url = new URL(value, window.location.href);
+    return url.protocol === 'http:' || url.protocol === 'https:' ? url.href : null;
+  } catch {
+    return null;
+  }
+};
 
 const SCREENSHOT_FRAME_TIMEOUT_MS = 5000;
 
@@ -75,8 +89,8 @@ export class BrowserToolService {
   async executeTool(
     browserToolName: string,
     args: Record<string, unknown>,
-    mode: string = 'do',
-    explanation: string = '',
+    mode: InstructionType,
+    explanation = '',
   ): Promise<ToolExecutionResult<unknown>> {
     const toolArgs = args as ToolArgs;
     try {
@@ -139,20 +153,17 @@ export class BrowserToolService {
   }
 
   private navigate(args: ToolArgs): ToolExecutionResult {
-    if (!args.url) return fail('URL is required');
+    const url = httpUrl(args.url);
+    if (!url) return fail('An http(s) URL is required');
 
     if (args.new_tab) {
-      return window.open(args.url, '_blank')
-        ? ok(`Opened ${args.url} in new tab`)
+      return window.open(url, '_blank')
+        ? ok(`Opened ${url} in new tab`)
         : fail('The browser blocked opening a new tab');
     }
-    const url = args.url;
-    return {
-      ...ok(`Navigating to ${url}`),
-      afterResponseAttempt: () => {
-        window.location.href = url;
-      },
-    };
+    return deferred(`Navigating to ${url}`, () => {
+      window.location.href = url;
+    });
   }
 
   private search(args: ToolArgs): ToolExecutionResult {
@@ -165,12 +176,9 @@ export class BrowserToolService {
     if (engine === 'google') url = `https://www.google.com/search?q=${encoded}`;
     if (engine === 'bing') url = `https://www.bing.com/search?q=${encoded}`;
 
-    return {
-      ...ok(`Searching for "${args.query}" on ${engine}`),
-      afterResponseAttempt: () => {
-        window.location.href = url;
-      },
-    };
+    return deferred(`Searching for "${args.query}" on ${engine}`, () => {
+      window.location.href = url;
+    });
   }
 
   private async clickElement(args: ToolArgs): Promise<ToolExecutionResult> {
@@ -182,7 +190,7 @@ export class BrowserToolService {
     element.scrollIntoView({ behavior: 'smooth', block: 'center' });
     await new Promise(resolve => setTimeout(resolve, 100));
 
-    return { ...ok(`Clicked element ${args.index}`), afterResponseAttempt: () => element.click() };
+    return deferred(`Clicking element ${args.index}`, () => element.click());
   }
 
   private typeText(args: ToolArgs): ToolExecutionResult {
@@ -288,7 +296,7 @@ export class BrowserToolService {
 
   private goBack(): ToolExecutionResult {
     if (window.history.length <= 1) return fail('No history');
-    return { ...ok('Navigated back'), afterResponseAttempt: () => window.history.back() };
+    return deferred('Going back', () => window.history.back());
   }
 
   private async wait({ seconds }: ToolArgs): Promise<ToolExecutionResult> {
@@ -318,13 +326,13 @@ export class BrowserToolService {
 
   private getDropdownOptions(args: ToolArgs): ToolExecutionResult<DropdownOptionsData> {
     const index = args.index;
-    if (index === undefined) return failOptions('Index required');
+    if (index === undefined) return fail('Index required');
 
     const { element, error } = domService.getValidatedElement(index);
-    if (!element) return failOptions(error || `Select ${index} not found`);
+    if (!element) return fail(error || `Select ${index} not found`);
 
     if (!(element instanceof HTMLSelectElement)) {
-      return failOptions(`Element ${index} is not a select element`);
+      return fail(`Element ${index} is not a select element`);
     }
 
     const options = Array.from(element.options).map(o => ({ value: o.value, text: o.text }));
@@ -546,9 +554,12 @@ export class BrowserToolService {
   }
 
   private async getScreenshot(): Promise<ToolExecutionResult> {
+    const stream = activeScreenStream();
+    if (!stream) return fail('The visitor is not sharing their screen.');
+
     const video = document.createElement('video');
     try {
-      video.srcObject = await startScreenShare();
+      video.srcObject = stream;
       video.autoplay = true;
       video.style.display = 'none';
       document.body.appendChild(video);
@@ -562,7 +573,6 @@ export class BrowserToolService {
       if (!ctx) return fail('Could not read the shared screen: the browser refused a 2d canvas context.');
       ctx.drawImage(video, 0, 0);
 
-      // Keep the stream alive — the agent usually requests a screenshot then keeps going; startScreenShare handles reuse.
       return ok(canvas.toDataURL('image/jpeg', 0.75));
     } catch (error) {
       return fail(String(error));

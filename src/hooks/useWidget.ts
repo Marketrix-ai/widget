@@ -2,9 +2,7 @@ import { createContext, useCallback, useContext, useMemo } from 'react';
 
 import { useChatContext } from '../context/ChatContext';
 import { useUIStateContext } from '../context/UIStateContext';
-import type { MarketrixConfig, WidgetSettingsData, WidgetState } from '../types';
-
-export type ValidWidgetConfig = MarketrixConfig & Required<Pick<MarketrixConfig, keyof WidgetSettingsData>>;
+import type { ValidWidgetConfig, WidgetState } from '../types';
 
 /** Every setting resolved: API settings plus the position and script-tag overrides WidgetRoot layers on top. */
 export const WidgetConfigContext = createContext<ValidWidgetConfig | null>(null);
@@ -20,13 +18,18 @@ export const useWidget = () => {
   const { messages, chatActions, taskState, taskActions } = useChatContext();
 
   const state = useMemo<WidgetState>(
-    () => ({ ...uiState, ...taskState, messages, isAwaitingReply: messages.some(msg => msg.isPlaceholder) }),
+    () => ({
+      ...uiState,
+      messages,
+      isTaskRunning: taskState.phase === 'running',
+      isAwaitingReply: messages.some(msg => msg.isPlaceholder),
+    }),
     [uiState, messages, taskState],
   );
 
   const resetChat = useCallback(() => {
     chatActions.clearMessages();
-    taskActions.setTaskState(false);
+    taskActions.resetTask();
     uiActions.setError(undefined);
   }, [chatActions, taskActions, uiActions]);
 

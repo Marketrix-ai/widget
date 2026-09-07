@@ -1,67 +1,38 @@
-import type { ChatMessage, InstructionType } from '../types';
-import { type ChatSnapshot, storageService, type StoredMessage } from './StorageService';
+import { type InstructionType, sdk, type WidgetCommand } from '../sdk';
+import { chatSessionManager } from './ChatSessionManager';
+import { type CredentialedConfig, storageService } from './StorageService';
+import { StreamClient } from './StreamClient';
 
-function reviveMessage(msg: StoredMessage): ChatMessage {
-  const parts = [...msg.parts];
-  const text = msg.content.trim();
-  if (parts.length === 0 && text) parts.push({ type: 'text', content: text });
-  return { ...msg, timestamp: new Date(msg.timestamp), parts };
-}
-
-function serializeMessage({ videoStream, ...msg }: ChatMessage): StoredMessage {
-  const timestamp = msg.timestamp.toISOString();
-  if (!videoStream) return { ...msg, timestamp };
-  const content = 'Screenshare ended';
-  return { ...msg, timestamp, content, isSystemMessage: true, parts: [{ type: 'text', content }] };
-}
-
-export class ChatService {
-  restore(): ChatSnapshot {
-    const { chat_id: _chatId, config: _config, timestamp: _timestamp, messages, ...rest } = storageService.getContext();
-    return { ...rest, messages: messages.map(reviveMessage) };
-  }
-
-  persist(snapshot: ChatSnapshot): void {
-    storageService.updateContext({ ...snapshot, messages: snapshot.messages.map(serializeMessage) });
-  }
-}
-
-export const chatService = new ChatService();
-
-function createMessage(
-  idPrefix: string,
-  sender: 'user' | 'agent',
-  content: string,
-  extra: Partial<ChatMessage> = {},
-): ChatMessage {
-  return {
-    id: `${idPrefix}-${Date.now()}`,
-    content,
-    sender,
-    timestamp: new Date(),
-    parts: content ? [{ type: 'text', content }] : [],
-    ...extra,
-  };
-}
-
-export const createUserMessage = (content: string, mode?: InstructionType, idPrefix = 'user-message'): ChatMessage =>
-  createMessage(idPrefix, 'user', content.trim(), { mode });
-
-export const createAgentMessage = (content: string): ChatMessage =>
-  createMessage('agent-message', 'agent', content.trim());
-
-export const createSystemMessage = (
-  content: string,
-  mode: InstructionType,
-  sender: 'user' | 'agent',
-  idPrefix: string,
-): ChatMessage => createMessage(idPrefix, sender, content, { mode, isSystemMessage: true });
-
-export const createScreenAccessRequestMessage = (mode?: InstructionType): ChatMessage =>
-  createMessage('screen-access-request', 'agent', 'Can I take a look at your screen?', {
+function logWidgetQuestion(config: CredentialedConfig, question: string, mode: InstructionType): void {
+  const metadata: Record<string, unknown> = {
+    question,
     mode,
-    isScreenAccessRequest: true,
-  });
+    chat_id: storageService.getChatId(),
+    timestamp: new Date().toISOString(),
+    marketrix_id: config.mtxId,
+    marketrix_key: config.mtxKey,
+  };
 
-export const createScreenshareMessage = (stream: MediaStream, mode: InstructionType = 'show'): ChatMessage =>
-  createMessage('screenshare', 'user', '', { mode, videoStream: stream });
+  if (config.userId) metadata.user_id = config.userId;
+
+  sdk
+    .activityLogCreate({ type: 'widget_question', metadata })
+    .catch((error: unknown) => console.warn('[API Service] Failed to log widget question:', error));
+}
+
+/** The reply does not come back from here — it arrives asynchronously as a chat/response event on the stream. */
+export async function chatPost(
+  config: CredentialedConfig,
+  message: string,
+  mode: InstructionType,
+  requestId: string,
+): Promise<void> {
+  const chatId = await chatSessionManager.getOrCreateChatId();
+  logWidgetQuestion(config, message, mode);
+
+  const command: WidgetCommand = { type: `chat/${mode}`, request_id: requestId, content: message };
+
+  const streamClient = StreamClient.getInstance();
+  await streamClient.ready(chatId);
+  await streamClient.send(command);
+}

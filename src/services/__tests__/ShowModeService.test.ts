@@ -2,19 +2,19 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ShowModeService } from '../ShowModeService';
 
-const { checkElementInteractable } = vi.hoisted(() => ({
-  checkElementInteractable: vi.fn<() => string | null>(() => null),
+const { notInteractableReason } = vi.hoisted(() => ({
+  notInteractableReason: vi.fn<() => string | null>(() => null),
 }));
 
 vi.mock('../DomService', () => ({
-  domService: { getSequenceForElement: () => 0, checkElementInteractable },
+  domService: { getSequenceForElement: () => 0, notInteractableReason },
 }));
 
 describe('a second show action supersedes the first', () => {
   let service: ShowModeService;
 
   beforeEach(() => {
-    checkElementInteractable.mockReturnValue(null);
+    notInteractableReason.mockReturnValue(null);
     Element.prototype.scrollIntoView = vi.fn();
     document.body.innerHTML = '<button id="a"></button><button id="b"></button>';
     service = new ShowModeService();
@@ -74,7 +74,7 @@ describe('a show action the page invalidates', () => {
 
   it('rejects with the one reason DomService gave, not a second code contradicting it', async () => {
     const obscured = 'ELEMENT_OBSCURED: Element 0 is covered by div.modal. Dismiss it first.';
-    checkElementInteractable.mockReturnValue(obscured);
+    notInteractableReason.mockReturnValue(obscured);
 
     const rejection = service
       .showToolAction({

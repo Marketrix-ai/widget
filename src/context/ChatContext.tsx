@@ -1,14 +1,15 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { WidgetEvent } from '../sdk';
-import { messageDispatch as dispatchMessage } from '../services/ApiService';
 import { browserToolService } from '../services/BrowserToolService';
-import { createAgentMessage, createUserMessage } from '../services/ChatService';
+import { chatPost } from '../services/ChatService';
 import { storageService } from '../services/StorageService';
 import { StreamClient, StreamGaveUpError } from '../services/StreamClient';
 import type { ChatMessage, InstructionType } from '../types';
+import { createAgentMessage, createUserMessage } from '../utils/chat';
 import {
   isTerminalTaskStatus,
+  reduceDispatch,
   reduceError,
   reduceSse,
   reduceStaleReply,
@@ -34,7 +35,7 @@ export interface ChatActions {
 }
 
 export interface TaskActions {
-  setTaskState: (isTaskRunning: boolean) => void;
+  resetTask: () => void;
   stopTask: () => Promise<void>;
 }
 
@@ -59,7 +60,7 @@ interface ChatProviderProps {
 
 export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMode = false }) => {
   const { uiState, uiActions } = useUIStateContext();
-  const [state, setState] = useState<SseState>(() => ({ messages: [], task: { isTaskRunning: false } }));
+  const [state, setState] = useState<SseState>(() => ({ messages: [], task: { phase: 'idle' } }));
 
   // commit() is the ONLY writer — re-syncing from render could regress the ref between a commit and its paint.
   const stateRef = useRef<SseState>(state);
@@ -113,26 +114,26 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
     commit(s => ({ ...s, messages: [] }));
   }, [commit]);
 
-  const setTaskState = useCallback(
-    (isTaskRunning: boolean) => {
-      commit(s => ({ ...s, task: { isTaskRunning } }));
-    },
-    [commit],
-  );
+  const resetTask = useCallback(() => {
+    commit(s => ({ ...s, task: { phase: 'idle' } }));
+  }, [commit]);
 
-  const placeholderIds = state.messages
+  // Keyed on id AND part count so the watchdog re-arms on every progress line — a placeholder mid-run
+  // is silent, not finished, and the previous id-only key left it with no second timer.
+  const pendingReplies = state.messages
     .filter(msg => msg.isPlaceholder)
-    .map(msg => msg.id)
+    .map(msg => `${msg.id}:${msg.parts.length}`)
     .join(' ');
 
   useEffect(() => {
-    const watchdogs = placeholderIds
+    const watchdogs = pendingReplies
       .split(' ')
       .filter(Boolean)
+      .map(entry => entry.split(':')[0])
       .map(id => setTimeout(() => commit(s => reduceStaleReply(s, id, STALE_REPLY_TEXT)), STALE_REPLY_TIMEOUT_MS));
 
     return () => watchdogs.forEach(clearTimeout);
-  }, [placeholderIds, commit]);
+  }, [pendingReplies, commit]);
 
   const messageDispatch = useCallback(
     async (content: string, mode?: InstructionType, skipUserMessage?: boolean) => {
@@ -171,10 +172,10 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
         placeholderState: 'thinking',
         parts: [],
       };
-      addMessage(placeholderMsg);
+      commit(s => reduceDispatch(s, placeholderMsg));
 
       try {
-        await dispatchMessage(config, content, effectiveMode, placeholderId);
+        await chatPost(config, content, effectiveMode, placeholderId);
         // Response arrives via SSE; placeholder stays "thinking"
       } catch (error) {
         console.error('Failed to send message:', error);
@@ -194,7 +195,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
     const startToolCall = async (effect: Extract<SseEffect, { type: 'executeTool' }>) => {
       const { toolCallId, tool, args, mode, explanation } = effect;
       const result = await browserToolService.executeTool(tool, args, mode, explanation);
-      const error = result.success ? undefined : (result.error ?? 'Tool execution failed');
+      const error = result.success ? undefined : result.error;
 
       commit(s =>
         reduceToolProgress(s, tool, explanation, error ? 'failed' : 'completed', currentModeRef.current, error),
@@ -208,12 +209,12 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
           type: 'tool/response',
           tool_call_id: toolCallId,
           success: result.success,
-          data: JSON.stringify(result.data),
+          ...(result.success && { data: JSON.stringify(result.data) }),
           error,
         })
         .catch(err => console.error('Failed to send tool response:', err));
 
-      result.afterResponseAttempt?.();
+      if (result.success) result.afterResponseAttempt?.();
     };
 
     const handleMessage = (event: WidgetEvent): void => {
@@ -280,7 +281,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
     [addMessage, updateMessage, removeMessage, setMessages, clearMessages, messageDispatch],
   );
 
-  const taskActions = useMemo<TaskActions>(() => ({ setTaskState, stopTask }), [setTaskState, stopTask]);
+  const taskActions = useMemo<TaskActions>(() => ({ resetTask, stopTask }), [resetTask, stopTask]);
 
   return (
     <ChatContext.Provider value={{ messages: state.messages, chatActions, taskState: state.task, taskActions }}>

@@ -31,4 +31,4 @@ pre-push:
     code-check:
       run: npm run code:check
     test:
-      run: npm run test:run
+      run: npm run test

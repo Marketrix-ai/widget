@@ -9,8 +9,11 @@ import {
   WAIT_FOR_USER_TOOLS,
 } from '../utils/chat';
 
+export type TaskPhase = 'idle' | 'running' | 'stopped';
+
 export interface TaskState {
-  isTaskRunning: boolean;
+  phase: TaskPhase;
+  mode?: InstructionType;
 }
 
 export interface SseState {
@@ -70,6 +73,9 @@ function applyProgress(
   return next;
 }
 
+const runningMode = (state: SseState, currentMode: InstructionType): InstructionType =>
+  state.task.phase === 'running' ? (state.task.mode ?? currentMode) : currentMode;
+
 export function reduceToolProgress(
   state: SseState,
   browserToolName: string,
@@ -82,8 +88,8 @@ export function reduceToolProgress(
     ...state,
     messages: applyProgress(
       state.messages,
-      state.task.isTaskRunning,
-      currentMode,
+      state.task.phase === 'running',
+      runningMode(state, currentMode),
       browserToolName,
       explanation,
       status,
@@ -97,6 +103,8 @@ export function reduceToolProgress(
 // visitor could not then type.
 const settled = (msg: ChatMessage): ChatMessage => ({ ...msg, isPlaceholder: false });
 
+const ended = (task: TaskState): TaskState => (task.phase === 'stopped' ? task : { phase: 'idle' });
+
 /** The four terminal/pause transitions all stamp the progress message and clear the task; only the stamp differs. */
 function stampProgressMessage(
   state: SseState,
@@ -105,12 +113,12 @@ function stampProgressMessage(
 ): SseState {
   const found = findMessageForProgress({
     messages: state.messages,
-    isTaskRunning: state.task.isTaskRunning,
-    currentMode,
+    isTaskRunning: state.task.phase === 'running',
+    currentMode: runningMode(state, currentMode),
   });
   const messages = [...state.messages];
   if (found) messages[found.index] = settled(stamp(found.message));
-  return { messages, task: { isTaskRunning: false } };
+  return { messages, task: ended(state.task) };
 }
 
 export function reduceToolDone(state: SseState, currentMode: InstructionType): SseState {
@@ -118,7 +126,12 @@ export function reduceToolDone(state: SseState, currentMode: InstructionType): S
 }
 
 export function reduceStop(state: SseState, currentMode: InstructionType): SseState {
-  return stampProgressMessage(state, currentMode, msg => ({ ...msg, taskStatus: 'stopped' }));
+  const stopped = stampProgressMessage(state, currentMode, msg => ({ ...msg, taskStatus: 'stopped' }));
+  return { ...stopped, task: { phase: 'stopped' } };
+}
+
+export function reduceDispatch(state: SseState, placeholder: ChatMessage): SseState {
+  return { messages: [...state.messages, placeholder], task: { phase: 'idle' } };
 }
 
 const TASK_STATUS = { completed: 'done', failed: 'failed', stopped: 'stopped' } as const;
@@ -151,6 +164,7 @@ const appendText = (msg: ChatMessage, text: string): ChatMessage => {
 const errorBubble = (msg: ChatMessage, text: string): ChatMessage => ({
   ...settled(appendText(msg, text)),
   placeholderState: undefined,
+  taskStatus: 'failed',
 });
 
 /** Settles a pending message into a plain error bubble — the one shape for both a failed POST and a chat/error. */
@@ -162,7 +176,7 @@ export function reduceError(state: SseState, messageId: string, text: string): S
 /** The transport gave up, so no id-bearing event is coming for whatever is still pending. */
 export function reduceTransportFailure(state: SseState, text: string): SseState {
   const messages = state.messages.map(msg => (msg.isPlaceholder ? errorBubble(msg, text) : msg));
-  return { messages, task: { isTaskRunning: false } };
+  return { messages, task: ended(state.task) };
 }
 
 /**
@@ -173,21 +187,24 @@ export function reduceTransportFailure(state: SseState, text: string): SseState 
  * stays disabled forever.
  */
 export function reduceStaleReply(state: SseState, messageId: string, text: string): SseState {
-  if (state.task.isTaskRunning) return state;
   const pending = state.messages.find(msg => msg.id === messageId);
-  return pending?.isPlaceholder ? reduceError(state, messageId, text) : state;
+  return pending?.isPlaceholder && pending.placeholderState !== 'waiting-for-user'
+    ? reduceError(state, messageId, text)
+    : state;
 }
 
 export function reduceSse(state: SseState, event: WidgetEvent, currentMode: InstructionType): ReduceResult {
   switch (event.type) {
     case 'tool/call': {
+      if (state.task.phase === 'stopped') return noChange(state);
       // A tool/call can arrive before `task/status running`, so activate here too.
-      const task = state.task.isTaskRunning ? state.task : { isTaskRunning: true };
+      const task: TaskState =
+        state.task.phase === 'running' ? state.task : { phase: 'running', mode: event.mode || currentMode };
       const explanation = event.explanation || '';
       const messages = applyProgress(
         state.messages,
-        task.isTaskRunning,
-        currentMode,
+        true,
+        task.mode ?? currentMode,
         event.browser_tool,
         explanation,
         'in_progress',
@@ -208,7 +225,7 @@ export function reduceSse(state: SseState, event: WidgetEvent, currentMode: Inst
     }
 
     case 'task/status': {
-      // `running` activates nothing: the first tool/call is what flips isTaskRunning, and a tell-mode reply never has a task.
+      // `running` activates nothing: the first tool/call is what starts the run, and a tell-mode reply never has a task.
       if (event.status === 'running') return noChange(state);
       const status = event.status;
       const withMessage = (msg: ChatMessage) => (event.message ? appendText(msg, event.message) : msg);

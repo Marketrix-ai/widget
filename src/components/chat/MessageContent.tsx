@@ -62,13 +62,5 @@ export const MessageContent: React.FC<MessageContentProps> = ({ message, isLastM
     return <ThinkingIndicator isWaitingForUser={isWaitingForUser} />;
   }
 
-  if (message.content) {
-    return (
-      <Text as='div' size='sm' weight='medium' style={{ wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>
-        {message.content}
-      </Text>
-    );
-  }
-
   return <Surface />;
 };

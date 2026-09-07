@@ -5,7 +5,7 @@ import { sdk } from '../sdk';
 import { StreamClient } from './StreamClient';
 
 const FLUSH_INTERVAL_MS = 500;
-const MAX_BUFFERED_EVENTS = 20_000;
+const MAX_REQUEUED_EVENTS = 20_000;
 
 export class RrwebSessionRecorder {
   private events: eventWithTime[] = [];
@@ -73,7 +73,7 @@ export class RrwebSessionRecorder {
           command: { type: 'rrweb/events', rrweb_session_id: this.sessionId, events },
         });
       } catch (error) {
-        this.events = events.concat(this.events).slice(0, MAX_BUFFERED_EVENTS);
+        this.events = events.concat(this.events).slice(0, MAX_REQUEUED_EVENTS);
         console.error('Failed to record session events:', error);
       }
     });

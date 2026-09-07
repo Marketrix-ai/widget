@@ -1,8 +1,9 @@
 import { act, cleanup, render, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { initWidget, MarketrixWidget, mountWidget, unmountWidget, updateMarketrixConfig } from './index';
-import { WidgetSettingsDataSchema } from './sdk';
+import { initWidget, MarketrixWidgetPreview, mountWidget, unmountWidget, updateMarketrixConfig } from './index';
+import { type WidgetSettingsData, WidgetSettingsDataSchema } from './sdk';
+import * as ScreenShareService from './services/ScreenShareService';
 import { storageService } from './services/StorageService';
 import { StreamClient } from './services/StreamClient';
 import * as WidgetService from './services/WidgetService';
@@ -25,6 +26,14 @@ describe('public widget lifecycle', () => {
     unmountWidget();
 
     expect(disconnect).toHaveBeenCalledOnce();
+  });
+
+  it('ends an in-flight screen share on public unmount', () => {
+    const stopScreenShare = vi.spyOn(ScreenShareService, 'stopScreenShare');
+
+    unmountWidget();
+
+    expect(stopScreenShare).toHaveBeenCalledOnce();
   });
 
   it('mounts programmatic preview settings without an API fetch and owns its cleanup', async () => {
@@ -61,6 +70,21 @@ describe('public widget lifecycle', () => {
     expect(unrelated).toBeInTheDocument();
   });
 
+  it('a config the settings schema refuses names the fields that failed instead of mounting silently', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const container = document.createElement('div');
+    document.body.append(container);
+    const broken = {
+      ...WidgetSettingsDataSchema.parse(getMockWidgetConfig()),
+      widget_position: 'middle',
+    } as WidgetSettingsData;
+
+    await act(() => mountWidget({ settings: broken, container }));
+
+    expect(container.querySelector('.marketrix-widget-container')).toBeNull();
+    expect(consoleError).toHaveBeenCalledWith(expect.stringContaining('widget_position'));
+  });
+
   it('lets a preview invalidate pending production initialization', async () => {
     const settings = WidgetSettingsDataSchema.parse(getMockWidgetConfig());
     let resolveProduction!: (config: typeof settings & { mtxId: string; mtxKey: string; mtxApp: number }) => void;
@@ -93,6 +117,24 @@ describe('public widget lifecycle', () => {
     await initWidget({ mtxId: 'no-host', mtxKey: 'key' }, container);
 
     expect(load).not.toHaveBeenCalled();
+    expect(container.querySelector('.marketrix-widget-container')).toBeNull();
+    expect(window.__mtx).toBeUndefined();
+  });
+
+  it('stops short of mounting, connecting or recording when the resolved config is disabled', async () => {
+    const settings = WidgetSettingsDataSchema.parse(getMockWidgetConfig({ widget_enabled: false }));
+    const load = vi.spyOn(WidgetService, 'loadWidgetConfig').mockResolvedValue({
+      ...settings,
+      mtxId: 'disabled',
+      mtxKey: 'key',
+      mtxApp: 1,
+    });
+    const container = document.createElement('div');
+    document.body.append(container);
+
+    await initWidget({ mtxId: 'disabled', mtxKey: 'key', mtxApiHost: 'https://api.test' }, container);
+
+    expect(load).toHaveBeenCalledOnce();
     expect(container.querySelector('.marketrix-widget-container')).toBeNull();
     expect(window.__mtx).toBeUndefined();
   });
@@ -200,9 +242,19 @@ describe('public widget lifecycle', () => {
     const preview = document.createElement('div');
     document.body.appendChild(preview);
 
-    render(<MarketrixWidget settings={settings} container={preview} />);
+    render(<MarketrixWidgetPreview settings={settings} container={preview} />);
     await waitFor(() => expect(preview.querySelector('.marketrix-widget-container')).toBeTruthy());
 
     expect(storageService.getCredentialedConfig()).toMatchObject({ mtxId: 'prod-id', mtxKey: 'prod-key' });
+  });
+
+  it('with no container prop, mounts into its own rendered div rather than beside it', async () => {
+    const settings = WidgetSettingsDataSchema.parse(getMockWidgetConfig());
+
+    const { container: renderedRoot } = render(<MarketrixWidgetPreview settings={settings} />);
+    const ownDiv = renderedRoot.firstElementChild as HTMLElement;
+
+    await waitFor(() => expect(ownDiv.querySelector('.marketrix-widget-container')).toBeTruthy());
+    expect(renderedRoot.querySelectorAll(':scope > .marketrix-widget-container')).toHaveLength(0);
   });
 });

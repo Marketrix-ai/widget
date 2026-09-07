@@ -1,4 +1,5 @@
 import type { InstructionType, WidgetSettingsData } from '../sdk';
+import type { WidgetRenderedSettings } from '../utils/validation';
 
 export type { InstructionType, WidgetSettingsData } from '../sdk';
 
@@ -13,13 +14,16 @@ export interface ClientOwnedConfig {
 }
 
 // Flat so API settings spread in directly. mtxId+mtxKey is the credential; mtxApp is set internally post-validation, never an input (an application id is guessable and authenticates nothing).
-export type MarketrixConfig = Partial<WidgetSettingsData> &
+export type MarketrixConfig = Partial<WidgetRenderedSettings> &
   ClientOwnedConfig & {
     mtxId?: string;
     mtxKey?: string;
     mtxApp?: number;
     isPreviewMode?: boolean;
   };
+
+/** A MarketrixConfig that has been through parseWidgetSettings — every rendered setting present. */
+export type ValidWidgetConfig = MarketrixConfig & Required<Pick<MarketrixConfig, keyof WidgetRenderedSettings>>;
 
 export interface ChatMessage {
   id: string;
@@ -30,6 +34,8 @@ export interface ChatMessage {
   videoStream?: MediaStream;
   isScreenAccessRequest?: boolean;
   screenShareStatus?: 'allowed' | 'denied';
+  /** The message queued behind an open screen-access request, sent once it resolves. */
+  pendingContent?: string;
   isSystemMessage?: boolean;
   isPlaceholder?: boolean;
   placeholderState?: 'thinking' | 'waiting-for-user';
@@ -82,7 +88,7 @@ export type AddWidgetConfig = (
 ) &
   ClientOwnedConfig & { container?: HTMLElement };
 
-export interface MarketrixWidgetProps {
+export interface MarketrixWidgetPreviewProps {
   settings: WidgetSettingsData;
   container?: HTMLElement;
 }

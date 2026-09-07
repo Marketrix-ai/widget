@@ -32,13 +32,7 @@ export const SuggestedActions: React.FC<SuggestedActionsProps> = ({ actions, onA
           }}
         >
           <Text as='span' weight='normal' leading='tight'>
-            {action.type === 'show' ? (
-              <>Show me {action.text.replace(/^Show me\s+/i, '')}</>
-            ) : action.type === 'do' ? (
-              <>Do {action.text.replace(/^Do\s+/i, '')}</>
-            ) : (
-              action.text
-            )}
+            {action.text}
           </Text>
         </Button>
       ))}
