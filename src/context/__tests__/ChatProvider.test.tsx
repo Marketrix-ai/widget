@@ -8,7 +8,7 @@ import type { ChatMessage } from '../../types';
 import { ChatProvider, useChatContext } from '../ChatContext';
 import { UIStateProvider } from '../UIStateContext';
 
-vi.mock('../../services/ApiService', () => ({ messageDispatch: vi.fn().mockResolvedValue(undefined) }));
+vi.mock('../../services/ApiService', () => ({ chatPost: vi.fn().mockResolvedValue(undefined) }));
 
 const restoredPlaceholder: ChatMessage = {
   id: 'temp-restored',

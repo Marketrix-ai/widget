@@ -1,7 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { WidgetEvent } from '../sdk';
-import { messageDispatch as dispatchMessage } from '../services/ApiService';
+import { chatPost } from '../services/ApiService';
 import { browserToolService } from '../services/BrowserToolService';
 import { createAgentMessage, createUserMessage } from '../services/ChatService';
 import { storageService } from '../services/StorageService';
@@ -118,19 +118,22 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
     commit(s => ({ ...s, task: { phase: 'idle' } }));
   }, [commit]);
 
-  const placeholderIds = state.messages
+  // Keyed on id AND part count so the watchdog re-arms on every progress line — a placeholder mid-run
+  // is silent, not finished, and the previous id-only key left it with no second timer.
+  const pendingReplies = state.messages
     .filter(msg => msg.isPlaceholder)
-    .map(msg => msg.id)
+    .map(msg => `${msg.id}:${msg.parts.length}`)
     .join(' ');
 
   useEffect(() => {
-    const watchdogs = placeholderIds
+    const watchdogs = pendingReplies
       .split(' ')
       .filter(Boolean)
+      .map(entry => entry.split(':')[0])
       .map(id => setTimeout(() => commit(s => reduceStaleReply(s, id, STALE_REPLY_TEXT)), STALE_REPLY_TIMEOUT_MS));
 
     return () => watchdogs.forEach(clearTimeout);
-  }, [placeholderIds, commit]);
+  }, [pendingReplies, commit]);
 
   const messageDispatch = useCallback(
     async (content: string, mode?: InstructionType, skipUserMessage?: boolean) => {
@@ -172,7 +175,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
       commit(s => reduceDispatch(s, placeholderMsg));
 
       try {
-        await dispatchMessage(config, content, effectiveMode, placeholderId);
+        await chatPost(config, content, effectiveMode, placeholderId);
         // Response arrives via SSE; placeholder stays "thinking"
       } catch (error) {
         console.error('Failed to send message:', error);

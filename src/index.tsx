@@ -146,14 +146,15 @@ export const updateMarketrixConfig = async (
 
 export { getCurrentConfig };
 
-// Preview-mode React entry point — mounts its own shadow DOM inside the parent container.
 export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ settings, container }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const rootRef = useRef<Root | null>(null);
   const widgetContainerRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
-    const parentContainer = container ?? containerRef?.current?.parentElement ?? document.body;
+    // With no `container` prop, mount into the div this component renders below — never its parent,
+    // which would size the widget to the wrong box and leave that div an empty, dead sibling.
+    const parentContainer = container ?? containerRef.current ?? document.body;
 
     if (!parentContainer || !isHTMLElement(parentContainer)) {
       console.error('MarketrixWidget: Invalid container');

@@ -182,9 +182,10 @@ export function reduceTransportFailure(state: SseState, text: string): SseState 
  * stays disabled forever.
  */
 export function reduceStaleReply(state: SseState, messageId: string, text: string): SseState {
-  if (state.task.phase === 'running') return state;
   const pending = state.messages.find(msg => msg.id === messageId);
-  return pending?.isPlaceholder ? reduceError(state, messageId, text) : state;
+  return pending?.isPlaceholder && pending.placeholderState !== 'waiting-for-user'
+    ? reduceError(state, messageId, text)
+    : state;
 }
 
 export function reduceSse(state: SseState, event: WidgetEvent, currentMode: InstructionType): ReduceResult {

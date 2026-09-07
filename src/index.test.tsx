@@ -214,4 +214,14 @@ describe('public widget lifecycle', () => {
 
     expect(storageService.getCredentialedConfig()).toMatchObject({ mtxId: 'prod-id', mtxKey: 'prod-key' });
   });
+
+  it('with no container prop, mounts into its own rendered div rather than beside it', async () => {
+    const settings = WidgetSettingsDataSchema.parse(getMockWidgetConfig());
+
+    const { container: renderedRoot } = render(<MarketrixWidget settings={settings} />);
+    const ownDiv = renderedRoot.firstElementChild as HTMLElement;
+
+    await waitFor(() => expect(ownDiv.querySelector('.marketrix-widget-container')).toBeTruthy());
+    expect(renderedRoot.querySelectorAll(':scope > .marketrix-widget-container')).toHaveLength(0);
+  });
 });
