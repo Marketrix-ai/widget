@@ -157,6 +157,16 @@ describe('reduceStaleReply', () => {
     const state: SseState = { messages: [agentMessage({ parts: [] })], task: { phase: 'idle' } };
     expect(reduceStaleReply(state, 'missing', 'timeout text')).toBe(state);
   });
+
+  it('stamps taskStatus failed so a late completed status cannot re-target the watchdog bubble', () => {
+    const state: SseState = { messages: [agentMessage({ parts: [] })], task: { phase: 'idle' } };
+    const stale = reduceStaleReply(state, 'agent-1', 'This is taking longer than expected. Please try again.');
+    expect(stale.messages[0].taskStatus).toBe('failed');
+
+    const late = reduceSse(stale, { type: 'task/status', status: 'completed' }, 'do');
+    expect(late.state.messages[0].taskStatus).toBe('failed');
+    expect(late.state.messages[0].content).toBe('This is taking longer than expected. Please try again.');
+  });
 });
 
 describe('reduceSse — tool/call', () => {

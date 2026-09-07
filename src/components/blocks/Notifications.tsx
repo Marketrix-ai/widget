@@ -166,7 +166,10 @@ export const WidgetNotifications: React.FC<WidgetNotificationsProps> = ({
   const { add, close } = useNotifications();
 
   useEffect(() => {
-    if (error == null) return;
+    if (error == null) {
+      close('error');
+      return;
+    }
     add({
       id: 'error',
       type: 'error',
@@ -177,11 +180,13 @@ export const WidgetNotifications: React.FC<WidgetNotificationsProps> = ({
       onClose: onClearError,
       ...(onRetry && { actionProps: { children: 'Retry', onClick: onRetry } }),
     });
-    return () => close('error');
   }, [error, onRetry, add, close, onClearError]);
 
   useEffect(() => {
-    if (!greeting) return;
+    if (!greeting) {
+      close('greeting');
+      return;
+    }
     add({
       id: 'greeting',
       type: 'info',
@@ -190,7 +195,6 @@ export const WidgetNotifications: React.FC<WidgetNotificationsProps> = ({
       timeout: GREETING_TIMEOUT_MS,
       onClose: onGreetingDismiss,
     });
-    return () => close('greeting');
   }, [greeting, greetingBody, add, close, onGreetingDismiss]);
 
   return null;

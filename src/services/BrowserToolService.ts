@@ -1,6 +1,6 @@
 import { WAIT_FOR_USER_TOOLS } from '../utils/chat';
 import { domService } from './DomService';
-import { startScreenShare } from './ScreenShareService';
+import { activeScreenStream } from './ScreenShareService';
 import { showModeService } from './ShowModeService';
 
 export interface TextData {
@@ -546,9 +546,12 @@ export class BrowserToolService {
   }
 
   private async getScreenshot(): Promise<ToolExecutionResult> {
+    const stream = activeScreenStream();
+    if (!stream) return fail('The visitor is not sharing their screen.');
+
     const video = document.createElement('video');
     try {
-      video.srcObject = await startScreenShare();
+      video.srcObject = stream;
       video.autoplay = true;
       video.style.display = 'none';
       document.body.appendChild(video);
@@ -562,7 +565,6 @@ export class BrowserToolService {
       if (!ctx) return fail('Could not read the shared screen: the browser refused a 2d canvas context.');
       ctx.drawImage(video, 0, 0);
 
-      // Keep the stream alive — the agent usually requests a screenshot then keeps going; startScreenShare handles reuse.
       return ok(canvas.toDataURL('image/jpeg', 0.75));
     } catch (error) {
       return fail(String(error));

@@ -1,14 +1,26 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { browserToolService } from '../BrowserToolService';
-import { startScreenShare } from '../ScreenShareService';
+import { activeScreenStream } from '../ScreenShareService';
 
-vi.mock('../ScreenShareService', () => ({ startScreenShare: vi.fn() }));
+vi.mock('../ScreenShareService', () => ({ activeScreenStream: vi.fn() }));
+
+describe('get_screenshot with no active screen share', () => {
+  beforeEach(() => {
+    vi.mocked(activeScreenStream).mockReturnValue(null);
+  });
+
+  it('fails instead of prompting a new share, which would bypass the visitor Deny', async () => {
+    const result = await browserToolService.executeTool('get_screenshot', {});
+    expect(result).toMatchObject({ success: false, error: expect.stringContaining('not sharing') });
+    expect(document.querySelector('video')).toBeNull();
+  });
+});
 
 describe('get_screenshot on a stream that never delivers a frame', () => {
   beforeEach(() => {
     vi.useFakeTimers();
-    vi.mocked(startScreenShare).mockResolvedValue({} as MediaStream);
+    vi.mocked(activeScreenStream).mockReturnValue({} as MediaStream);
   });
 
   afterEach(() => {
@@ -32,7 +44,7 @@ describe('get_screenshot when the browser refuses a 2d canvas context', () => {
   let getContext: typeof HTMLCanvasElement.prototype.getContext;
 
   beforeEach(() => {
-    vi.mocked(startScreenShare).mockResolvedValue({} as MediaStream);
+    vi.mocked(activeScreenStream).mockReturnValue({} as MediaStream);
     getContext = HTMLCanvasElement.prototype.getContext;
     HTMLCanvasElement.prototype.getContext = vi.fn(() => null) as unknown as typeof getContext;
     Object.defineProperty(HTMLVideoElement.prototype, 'videoWidth', { configurable: true, value: 320 });

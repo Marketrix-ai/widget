@@ -160,6 +160,7 @@ const appendText = (msg: ChatMessage, text: string): ChatMessage => {
 const errorBubble = (msg: ChatMessage, text: string): ChatMessage => ({
   ...settled(appendText(msg, text)),
   placeholderState: undefined,
+  taskStatus: 'failed',
 });
 
 /** Settles a pending message into a plain error bubble — the one shape for both a failed POST and a chat/error. */

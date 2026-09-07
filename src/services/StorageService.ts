@@ -20,6 +20,11 @@ export type MarketrixChatContext = Omit<ChatSnapshot, 'messages'> & {
   timestamp: number;
 };
 
+/** Per-tenant scope for browser-local keys: the credential id, else the application id. */
+export function tenantScope(config: MarketrixConfig): string {
+  return config.mtxId ?? (config.mtxApp != null ? String(config.mtxApp) : 'default');
+}
+
 const DEFAULT_CONTEXT: MarketrixChatContext = {
   chat_id: null,
   messages: [],
@@ -48,8 +53,8 @@ export function writeLocal(key: string, value: string): void {
 }
 
 // Merged over the defaults so a payload written by an older widget version reads as incomplete, not corrupt.
-function loadContext(): MarketrixChatContext {
-  const stored = readLocal(STORAGE_KEY);
+function loadContext(key: string): MarketrixChatContext {
+  const stored = readLocal(key);
   if (!stored) return { ...DEFAULT_CONTEXT };
   try {
     const parsed = { ...DEFAULT_CONTEXT, ...(JSON.parse(stored) as Partial<MarketrixChatContext>) };
@@ -61,7 +66,8 @@ function loadContext(): MarketrixChatContext {
 }
 
 class StorageService {
-  private context = loadContext();
+  private key = STORAGE_KEY;
+  private context = loadContext(this.key);
 
   getContext(): MarketrixChatContext {
     return this.context;
@@ -69,7 +75,7 @@ class StorageService {
 
   updateContext(updates: Partial<MarketrixChatContext>): void {
     this.context = { ...this.context, ...updates, timestamp: Date.now() };
-    writeLocal(STORAGE_KEY, JSON.stringify(this.context));
+    writeLocal(this.key, JSON.stringify(this.context));
   }
 
   getChatId(): string | null {
@@ -85,7 +91,11 @@ class StorageService {
     return config?.mtxId && config.mtxKey ? (config as CredentialedConfig) : null;
   }
 
+  // Scopes the chat transcript/chat_id to the tenant — without this, two applications embedded on one
+  // origin would share a stored chat_id and one tenant's transcript would leak into another's.
   setConfig(config: CredentialedConfig): void {
+    this.key = `${STORAGE_KEY}_${tenantScope(config)}`;
+    this.context = loadContext(this.key);
     this.updateContext({ config });
   }
 }
