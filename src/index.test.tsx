@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { initWidget, MarketrixWidget, mountWidget, unmountWidget, updateMarketrixConfig } from './index';
 import { WidgetSettingsDataSchema } from './sdk';
+import * as ScreenShareService from './services/ScreenShareService';
 import { storageService } from './services/StorageService';
 import { StreamClient } from './services/StreamClient';
 import * as WidgetService from './services/WidgetService';
@@ -25,6 +26,14 @@ describe('public widget lifecycle', () => {
     unmountWidget();
 
     expect(disconnect).toHaveBeenCalledOnce();
+  });
+
+  it('ends an in-flight screen share on public unmount', () => {
+    const stopScreenShare = vi.spyOn(ScreenShareService, 'stopScreenShare');
+
+    unmountWidget();
+
+    expect(stopScreenShare).toHaveBeenCalledOnce();
   });
 
   it('mounts programmatic preview settings without an API fetch and owns its cleanup', async () => {

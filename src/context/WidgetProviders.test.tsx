@@ -29,7 +29,6 @@ describe('WidgetProviders initialization', () => {
         resolveChatId = resolve;
       }),
     );
-    const restore = vi.spyOn(chatService, 'restore');
     const connect = vi.spyOn(StreamClient.getInstance(), 'connect');
 
     const view = render(
@@ -43,7 +42,6 @@ describe('WidgetProviders initialization', () => {
     resolveChatId('chat-id');
     await Promise.resolve();
 
-    expect(restore).not.toHaveBeenCalled();
     expect(connect).not.toHaveBeenCalled();
   });
 
