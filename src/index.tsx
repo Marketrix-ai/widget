@@ -170,7 +170,7 @@ export const MarketrixWidgetPreview: React.FC<MarketrixWidgetPreviewProps> = ({ 
     const parentContainer = container ?? containerRef.current ?? document.body;
 
     if (!parentContainer || !isHTMLElement(parentContainer)) {
-      console.error('MarketrixWidget: Invalid container');
+      console.error('MarketrixWidgetPreview: Invalid container');
       return;
     }
 
@@ -208,8 +208,6 @@ export const MarketrixWidgetPreview: React.FC<MarketrixWidgetPreviewProps> = ({ 
 
   return <div ref={containerRef} style={{ width: '100%', height: '100%', position: 'relative' }} />;
 };
-
-export { MarketrixWidgetPreview as MarketrixWidget };
 
 export const mountWidget = async (config: AddWidgetConfig): Promise<void> => {
   const container = config.container;
@@ -249,12 +247,11 @@ export type {
   ClientOwnedConfig,
   MarketrixConfig,
   MarketrixWidgetPreviewProps,
-  MarketrixWidgetProps,
   WidgetState,
 } from './types';
 
 export default {
-  MarketrixWidget: MarketrixWidgetPreview,
+  MarketrixWidgetPreview,
   mountWidget,
   initWidget,
   unmountWidget,
