@@ -68,7 +68,6 @@ export interface WidgetState {
   messages: ChatMessage[];
   currentMode: InstructionType;
   error?: string;
-  errorRetryable?: boolean;
   isTaskRunning: boolean;
   activeView: WidgetView;
 }
@@ -89,7 +88,9 @@ export type AddWidgetConfig = (
 ) &
   ClientOwnedConfig & { container?: HTMLElement };
 
-export interface MarketrixWidgetProps {
+export interface MarketrixWidgetPreviewProps {
   settings: WidgetSettingsData;
   container?: HTMLElement;
 }
+
+export type MarketrixWidgetProps = MarketrixWidgetPreviewProps;

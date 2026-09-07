@@ -108,7 +108,7 @@ export const WidgetRoot: React.FC<WidgetRootProps> = ({ config }) => {
             <WidgetNotifications
               error={state.error}
               onClearError={() => actions.setError(undefined)}
-              {...(state.errorRetryable && {
+              {...(streamClient.canReconnect() && {
                 onRetry: () => {
                   actions.setError(undefined);
                   streamClient.reconnectNow();

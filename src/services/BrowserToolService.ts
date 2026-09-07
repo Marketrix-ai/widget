@@ -19,12 +19,10 @@ export interface DropdownOptionsData {
   options: Array<{ value: string; text: string }>;
 }
 
-export interface ToolExecutionResult<T = TextData> {
-  success: boolean;
-  data: T;
-  error?: string;
-  afterResponseAttempt?: () => void;
-}
+type ToolFailure = { success: false; error: string };
+
+export type ToolExecutionResult<T = TextData> =
+  { success: true; data: T; afterResponseAttempt?: () => void } | ToolFailure;
 
 /** One shape for every widget tool's arguments: the wire carries a bare JSON object, so nothing is
  * guaranteed present and each handler guards the fields it needs. */
@@ -46,12 +44,7 @@ interface ToolArgs {
 
 const ok = (text: string): ToolExecutionResult => ({ success: true, data: { text } });
 const okData = <T>(data: T): ToolExecutionResult<T> => ({ success: true, data });
-const fail = (error: string): ToolExecutionResult => ({ success: false, data: { text: '' }, error });
-const failOptions = (error: string): ToolExecutionResult<DropdownOptionsData> => ({
-  success: false,
-  data: { options: [] },
-  error,
-});
+const fail = (error: string): ToolFailure => ({ success: false, error });
 // A tool result the agent will still read once its deed lands: it reports the action as dispatched,
 // never completed, because a click or navigation can tear down the page before the report is seen.
 const deferred = (text: string, action: () => void): ToolExecutionResult => ({
@@ -333,13 +326,13 @@ export class BrowserToolService {
 
   private getDropdownOptions(args: ToolArgs): ToolExecutionResult<DropdownOptionsData> {
     const index = args.index;
-    if (index === undefined) return failOptions('Index required');
+    if (index === undefined) return fail('Index required');
 
     const { element, error } = domService.getValidatedElement(index);
-    if (!element) return failOptions(error || `Select ${index} not found`);
+    if (!element) return fail(error || `Select ${index} not found`);
 
     if (!(element instanceof HTMLSelectElement)) {
-      return failOptions(`Element ${index} is not a select element`);
+      return fail(`Element ${index} is not a select element`);
     }
 
     const options = Array.from(element.options).map(o => ({ value: o.value, text: o.text }));

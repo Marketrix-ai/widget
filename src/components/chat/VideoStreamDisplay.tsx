@@ -7,7 +7,7 @@ import { Surface } from '../base/Surface';
 import { Text } from '../base/Text';
 
 interface VideoStreamDisplayProps {
-  stream: MediaStream | null;
+  stream: MediaStream;
 }
 
 const TOP_RADIUS = '8px';
@@ -34,71 +34,44 @@ const Overlay: React.FC<{ label: string; children: React.ReactNode }> = ({ label
 
 export const VideoStreamDisplay: React.FC<VideoStreamDisplayProps> = ({ stream }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const playPromiseRef = useRef<Promise<void> | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
 
-  // A superseded play() rejects with AbortError; nothing can act on it, but an unhandled rejection is noisy.
-  const discardPendingPlay = () => {
-    playPromiseRef.current?.catch(() => undefined);
-    playPromiseRef.current = null;
-  };
-
   useEffect(() => {
-    if (videoRef.current && stream) {
-      const video = videoRef.current;
+    const video = videoRef.current;
+    if (!video) return;
 
+    setIsLoaded(false);
+    setHasError(false);
+
+    video.srcObject = stream;
+
+    const handleLoadedMetadata = () => {
+      setIsLoaded(true);
+    };
+
+    const handleError = () => {
+      setHasError(true);
       setIsLoaded(false);
-      setHasError(false);
+    };
 
-      discardPendingPlay();
-      video.srcObject = stream;
+    video.addEventListener('loadedmetadata', handleLoadedMetadata);
+    video.addEventListener('error', handleError);
 
-      const handleLoadedMetadata = () => {
-        setIsLoaded(true);
-      };
-
-      const handleError = () => {
+    video.play().catch(error => {
+      // AbortError is expected when a new stream loads mid-play; not a real error
+      if (error instanceof Error && error.name !== 'AbortError') {
+        console.error('Error playing video stream:', error);
         setHasError(true);
-        setIsLoaded(false);
-      };
-
-      video.addEventListener('loadedmetadata', handleLoadedMetadata);
-      video.addEventListener('error', handleError);
-
-      const playPromise = video.play();
-      playPromiseRef.current = playPromise;
-
-      playPromise
-        .then(() => {
-          setIsLoaded(true);
-        })
-        .catch(error => {
-          // AbortError is expected when a new stream loads mid-play; not a real error
-          if (error instanceof Error && error.name !== 'AbortError') {
-            console.error('Error playing video stream:', error);
-            setHasError(true);
-          }
-          playPromiseRef.current = null;
-        });
-
-      return () => {
-        video.removeEventListener('loadedmetadata', handleLoadedMetadata);
-        video.removeEventListener('error', handleError);
-      };
-    }
+      }
+    });
 
     return () => {
-      discardPendingPlay();
-      if (videoRef.current) {
-        videoRef.current.srcObject = null;
-      }
-      setIsLoaded(false);
-      setHasError(false);
+      video.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      video.removeEventListener('error', handleError);
+      video.srcObject = null;
     };
   }, [stream]);
-
-  if (!stream) return null;
 
   return (
     <Surface
