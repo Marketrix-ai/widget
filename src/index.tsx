@@ -18,7 +18,7 @@ import type {
   AddWidgetConfig,
   ClientOwnedConfig,
   MarketrixConfig,
-  MarketrixWidgetProps,
+  MarketrixWidgetPreviewProps,
   ValidWidgetConfig,
 } from './types';
 import {
@@ -159,7 +159,7 @@ export const updateMarketrixConfig = async (
 
 export { getCurrentConfig };
 
-export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ settings, container }) => {
+export const MarketrixWidgetPreview: React.FC<MarketrixWidgetPreviewProps> = ({ settings, container }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const rootRef = useRef<Root | null>(null);
   const widgetContainerRef = useRef<HTMLElement | null>(null);
@@ -209,6 +209,8 @@ export const MarketrixWidget: React.FC<MarketrixWidgetProps> = ({ settings, cont
   return <div ref={containerRef} style={{ width: '100%', height: '100%', position: 'relative' }} />;
 };
 
+export { MarketrixWidgetPreview as MarketrixWidget };
+
 export const mountWidget = async (config: AddWidgetConfig): Promise<void> => {
   const container = config.container;
 
@@ -246,12 +248,13 @@ export type {
   ChatMessage,
   ClientOwnedConfig,
   MarketrixConfig,
+  MarketrixWidgetPreviewProps,
   MarketrixWidgetProps,
   WidgetState,
 } from './types';
 
 export default {
-  MarketrixWidget,
+  MarketrixWidget: MarketrixWidgetPreview,
   mountWidget,
   initWidget,
   unmountWidget,

@@ -195,7 +195,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
     const startToolCall = async (effect: Extract<SseEffect, { type: 'executeTool' }>) => {
       const { toolCallId, tool, args, mode, explanation } = effect;
       const result = await browserToolService.executeTool(tool, args, mode, explanation);
-      const error = result.success ? undefined : (result.error ?? 'Tool execution failed');
+      const error = result.success ? undefined : result.error;
 
       commit(s =>
         reduceToolProgress(s, tool, explanation, error ? 'failed' : 'completed', currentModeRef.current, error),
@@ -209,12 +209,12 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
           type: 'tool/response',
           tool_call_id: toolCallId,
           success: result.success,
-          data: JSON.stringify(result.data),
+          ...(result.success && { data: JSON.stringify(result.data) }),
           error,
         })
         .catch(err => console.error('Failed to send tool response:', err));
 
-      result.afterResponseAttempt?.();
+      if (result.success) result.afterResponseAttempt?.();
     };
 
     const handleMessage = (event: WidgetEvent): void => {
@@ -245,7 +245,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
     };
 
     const handleError = (error: Error) => {
-      uiActions.setError(error.message, true);
+      uiActions.setError(error.message);
       // A retriable blip settles when the reply lands on the reconnected stream; a give-up never does,
       // and the composer stays disabled for as long as one bubble is still waiting.
       if (error instanceof StreamGaveUpError) commit(s => reduceTransportFailure(s, error.message));
@@ -272,7 +272,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
         // reduceStop already stamped the message "stopped" — in `do` mode the agent may still be
         // clicking through the visitor's page, and `send`'s own "Failed to send message" toast names
         // the transport rather than the thing the user asked for and did not get.
-        uiActions.setError('Could not stop the assistant — it may still be working.', true);
+        uiActions.setError('Could not stop the assistant — it may still be working.');
       });
   }, [previewMode, commit, uiActions]);
 

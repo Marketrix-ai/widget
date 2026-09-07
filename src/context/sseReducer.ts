@@ -13,6 +13,7 @@ export type TaskPhase = 'idle' | 'running' | 'stopped';
 
 export interface TaskState {
   phase: TaskPhase;
+  mode?: InstructionType;
 }
 
 export interface SseState {
@@ -72,6 +73,9 @@ function applyProgress(
   return next;
 }
 
+const runningMode = (state: SseState, currentMode: InstructionType): InstructionType =>
+  state.task.phase === 'running' ? (state.task.mode ?? currentMode) : currentMode;
+
 export function reduceToolProgress(
   state: SseState,
   browserToolName: string,
@@ -85,7 +89,7 @@ export function reduceToolProgress(
     messages: applyProgress(
       state.messages,
       state.task.phase === 'running',
-      currentMode,
+      runningMode(state, currentMode),
       browserToolName,
       explanation,
       status,
@@ -110,7 +114,7 @@ function stampProgressMessage(
   const found = findMessageForProgress({
     messages: state.messages,
     isTaskRunning: state.task.phase === 'running',
-    currentMode,
+    currentMode: runningMode(state, currentMode),
   });
   const messages = [...state.messages];
   if (found) messages[found.index] = settled(stamp(found.message));
@@ -194,9 +198,17 @@ export function reduceSse(state: SseState, event: WidgetEvent, currentMode: Inst
     case 'tool/call': {
       if (state.task.phase === 'stopped') return noChange(state);
       // A tool/call can arrive before `task/status running`, so activate here too.
-      const task: TaskState = state.task.phase === 'running' ? state.task : { phase: 'running' };
+      const task: TaskState =
+        state.task.phase === 'running' ? state.task : { phase: 'running', mode: event.mode || currentMode };
       const explanation = event.explanation || '';
-      const messages = applyProgress(state.messages, true, currentMode, event.browser_tool, explanation, 'in_progress');
+      const messages = applyProgress(
+        state.messages,
+        true,
+        task.mode ?? currentMode,
+        event.browser_tool,
+        explanation,
+        'in_progress',
+      );
       return {
         state: { messages, task },
         effects: [

@@ -149,12 +149,8 @@ export const createUserMessage = (content: string, mode?: InstructionType, idPre
 export const createAgentMessage = (content: string): ChatMessage =>
   createMessage('agent-message', 'agent', content.trim());
 
-export const createSystemMessage = (
-  content: string,
-  mode: InstructionType,
-  sender: 'user' | 'agent',
-  idPrefix: string,
-): ChatMessage => createMessage(idPrefix, sender, content, { mode, isSystemMessage: true });
+export const createSystemMessage = (content: string, idPrefix: string): ChatMessage =>
+  createMessage(idPrefix, 'agent', content, { isSystemMessage: true });
 
 export const createScreenAccessRequestMessage = (
   mode: InstructionType | undefined,

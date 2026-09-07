@@ -7,7 +7,6 @@ export interface UIState {
   activeView: WidgetView;
   currentMode: InstructionType;
   error?: string;
-  errorRetryable?: boolean;
 }
 
 export interface UIStateActions {
@@ -15,7 +14,7 @@ export interface UIStateActions {
   toggleWidget: () => void;
   closeWidget: () => void;
   setMode: (mode: InstructionType) => void;
-  setError: (error: string | undefined, retryable?: boolean) => void;
+  setError: (error: string | undefined) => void;
   applyState: (payload: Partial<UIState>) => void;
 }
 
@@ -43,8 +42,7 @@ export const UIStateProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
       setMode: (mode: InstructionType) => setUIState(prev => ({ ...prev, currentMode: mode })),
 
-      setError: (error: string | undefined, retryable?: boolean) =>
-        setUIState(prev => ({ ...prev, error, errorRetryable: retryable })),
+      setError: (error: string | undefined) => setUIState(prev => ({ ...prev, error })),
 
       applyState: (payload: Partial<UIState>) => setUIState(prev => ({ ...prev, ...payload })),
     }),

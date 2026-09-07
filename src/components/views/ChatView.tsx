@@ -70,9 +70,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ onScreenSharingChange, toggl
 
   const handleModeChange = (mode: InstructionType) => {
     if (mode === currentMode) return;
-    actions.addMessage(
-      createSystemMessage(`Switched to ${getModeDisplayName(mode)} mode`, mode, 'agent', 'mode-change'),
-    );
+    actions.addMessage(createSystemMessage(`Switched to ${getModeDisplayName(mode)} mode`, 'mode-change'));
     actions.setMode(mode);
   };
 
