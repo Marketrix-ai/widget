@@ -33,7 +33,7 @@ export function useDragSnap({
   const [isDragging, setIsDragging] = useState(false);
   const [wrapperSize, setWrapperSize] = useState({ w: 56, h: 56 });
   const [, setViewportTick] = useState(0);
-  const transitionEndRef = useRef<(() => void) | null>(null);
+  const abandonSnapRef = useRef<(() => void) | null>(null);
 
   const dragRef = useRef<{
     pointerId: number;
@@ -106,12 +106,14 @@ export function useDragSnap({
 
   const commitPositionAfterAnimation = useCallback(
     (nextCorner: WidgetPosition, wrapper: HTMLDivElement) => {
-      if (transitionEndRef.current) return;
+      abandonSnapRef.current?.();
       let finished = false;
       const done = () => {
         if (finished) return;
         finished = true;
-        transitionEndRef.current = null;
+        window.clearTimeout(fallbackTimer);
+        wrapper.removeEventListener('transitionend', onEnd);
+        abandonSnapRef.current = null;
         wrapper.style.transition = 'none';
         wrapper.style.willChange = '';
         onPositionCommit(nextCorner);
@@ -122,14 +124,18 @@ export function useDragSnap({
           }
         });
       };
-      transitionEndRef.current = done;
       const fallbackTimer = window.setTimeout(done, SNAP_DURATION_MS + 50);
-      wrapper.addEventListener('transitionend', function onEnd(e: TransitionEvent) {
+      const onEnd = (e: TransitionEvent) => {
         if (e.target !== wrapper || e.propertyName !== 'left') return;
+        done();
+      };
+      wrapper.addEventListener('transitionend', onEnd);
+      abandonSnapRef.current = () => {
+        finished = true;
         window.clearTimeout(fallbackTimer);
         wrapper.removeEventListener('transitionend', onEnd);
-        done();
-      });
+        abandonSnapRef.current = null;
+      };
     },
     [onPositionCommit, wrapperRef],
   );
