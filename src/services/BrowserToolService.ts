@@ -51,6 +51,26 @@ const failOptions = (error: string): ToolExecutionResult<DropdownOptionsData> =>
   data: { options: [] },
   error,
 });
+// A tool result the agent will still read once its deed lands: it reports the action as dispatched,
+// never completed, because a click or navigation can tear down the page before the report is seen.
+const deferred = (text: string, action: () => void): ToolExecutionResult => ({
+  success: true,
+  data: { text },
+  afterResponseAttempt: action,
+});
+
+// Model output can be steered by page content it just read (extract() returns every a[href]), so a
+// navigation target is untrusted input — constrain it to http(s) rather than passing it through raw,
+// which would let a `javascript:` URL run in the HOST PAGE's origin via window.location.
+const httpUrl = (value: string | undefined): string | null => {
+  if (!value) return null;
+  try {
+    const url = new URL(value, window.location.href);
+    return url.protocol === 'http:' || url.protocol === 'https:' ? url.href : null;
+  } catch {
+    return null;
+  }
+};
 
 const SCREENSHOT_FRAME_TIMEOUT_MS = 5000;
 
@@ -139,20 +159,17 @@ export class BrowserToolService {
   }
 
   private navigate(args: ToolArgs): ToolExecutionResult {
-    if (!args.url) return fail('URL is required');
+    const url = httpUrl(args.url);
+    if (!url) return fail('An http(s) URL is required');
 
     if (args.new_tab) {
-      return window.open(args.url, '_blank')
-        ? ok(`Opened ${args.url} in new tab`)
+      return window.open(url, '_blank')
+        ? ok(`Opened ${url} in new tab`)
         : fail('The browser blocked opening a new tab');
     }
-    const url = args.url;
-    return {
-      ...ok(`Navigating to ${url}`),
-      afterResponseAttempt: () => {
-        window.location.href = url;
-      },
-    };
+    return deferred(`Navigating to ${url}`, () => {
+      window.location.href = url;
+    });
   }
 
   private search(args: ToolArgs): ToolExecutionResult {
@@ -165,12 +182,9 @@ export class BrowserToolService {
     if (engine === 'google') url = `https://www.google.com/search?q=${encoded}`;
     if (engine === 'bing') url = `https://www.bing.com/search?q=${encoded}`;
 
-    return {
-      ...ok(`Searching for "${args.query}" on ${engine}`),
-      afterResponseAttempt: () => {
-        window.location.href = url;
-      },
-    };
+    return deferred(`Searching for "${args.query}" on ${engine}`, () => {
+      window.location.href = url;
+    });
   }
 
   private async clickElement(args: ToolArgs): Promise<ToolExecutionResult> {
@@ -182,7 +196,7 @@ export class BrowserToolService {
     element.scrollIntoView({ behavior: 'smooth', block: 'center' });
     await new Promise(resolve => setTimeout(resolve, 100));
 
-    return { ...ok(`Clicked element ${args.index}`), afterResponseAttempt: () => element.click() };
+    return deferred(`Clicking element ${args.index}`, () => element.click());
   }
 
   private typeText(args: ToolArgs): ToolExecutionResult {
@@ -288,7 +302,7 @@ export class BrowserToolService {
 
   private goBack(): ToolExecutionResult {
     if (window.history.length <= 1) return fail('No history');
-    return { ...ok('Navigated back'), afterResponseAttempt: () => window.history.back() };
+    return deferred('Going back', () => window.history.back());
   }
 
   private async wait({ seconds }: ToolArgs): Promise<ToolExecutionResult> {

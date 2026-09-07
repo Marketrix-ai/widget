@@ -44,9 +44,14 @@ export function findMessageForProgress({
   // Tool calls can arrive before isTaskRunning flips true, so always fall back to a mode-agnostic match.
   ranked.push(msg => isAgentReply(msg) && !!msg.isPlaceholder, isAgentReply);
 
+  // Bound every rank to messages newer than the last ended run — otherwise a duplicate or late-arriving
+  // event with nothing left to claim falls back past a taskStatus stamp onto an older, already-settled reply.
+  const start = lastIndexWhere(messages, msg => msg.sender === 'agent' && !!msg.taskStatus) + 1;
+  const open = messages.slice(start);
+
   for (const matches of ranked) {
-    const index = lastIndexWhere(messages, matches);
-    if (index >= 0) return { index, message: messages[index] };
+    const index = lastIndexWhere(open, matches);
+    if (index >= 0) return { index: start + index, message: open[index] };
   }
 
   console.warn('[MessageFinder] No message found for progress update', {

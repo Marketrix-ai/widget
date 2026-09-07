@@ -106,6 +106,24 @@ describe('public widget lifecycle', () => {
     expect(window.__mtx).toBeUndefined();
   });
 
+  it('stops short of mounting, connecting or recording when the resolved config is disabled', async () => {
+    const settings = WidgetSettingsDataSchema.parse(getMockWidgetConfig({ widget_enabled: false }));
+    const load = vi.spyOn(WidgetService, 'loadWidgetConfig').mockResolvedValue({
+      ...settings,
+      mtxId: 'disabled',
+      mtxKey: 'key',
+      mtxApp: 1,
+    });
+    const container = document.createElement('div');
+    document.body.append(container);
+
+    await initWidget({ mtxId: 'disabled', mtxKey: 'key', mtxApiHost: 'https://api.test' }, container);
+
+    expect(load).toHaveBeenCalledOnce();
+    expect(container.querySelector('.marketrix-widget-container')).toBeNull();
+    expect(window.__mtx).toBeUndefined();
+  });
+
   it('cancels stale production initialization and shares one in-flight promise', async () => {
     const settings = WidgetSettingsDataSchema.parse(getMockWidgetConfig());
     let resolveFirst!: (config: typeof settings & { mtxId: string; mtxKey: string; mtxApp: number }) => void;

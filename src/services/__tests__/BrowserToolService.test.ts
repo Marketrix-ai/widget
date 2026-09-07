@@ -62,6 +62,25 @@ describe('a tool that leaves the page reports itself before it goes', () => {
   });
 });
 
+describe('navigate constrains its target to http(s)', () => {
+  it('refuses a javascript: URL instead of running it in the host page', async () => {
+    const result = await browserToolService.executeTool('navigate', { url: 'javascript:alert(document.cookie)' });
+
+    expect(result.success).toBe(false);
+    expect(result.error).toBe('An http(s) URL is required');
+    expect(navigations).toEqual([]);
+  });
+
+  it('resolves a relative URL against the current page', async () => {
+    const result = await browserToolService.executeTool('navigate', { url: '/next' });
+
+    expect(result.success).toBe(true);
+    result.afterResponseAttempt?.();
+
+    expect(navigations).toEqual(['https://host.test/next']);
+  });
+});
+
 describe('navigate reports what the browser did with a new tab', () => {
   it('succeeds when the popup really opened', async () => {
     const open = vi.spyOn(window, 'open').mockReturnValue({} as Window);

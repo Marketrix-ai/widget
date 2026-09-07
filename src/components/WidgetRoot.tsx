@@ -69,8 +69,7 @@ export const WidgetRoot: React.FC<WidgetRootProps> = ({ config }) => {
     return null;
   }
 
-  const hiddenByConfig =
-    !config.widget_enabled || config.show_widget === false || config.widget_appearance === 'hidden';
+  const hiddenByConfig = config.show_widget === false || config.widget_appearance === 'hidden';
   if (!isPreviewMode && hiddenByConfig) {
     return null;
   }
