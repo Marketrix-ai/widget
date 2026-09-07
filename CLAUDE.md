@@ -19,7 +19,7 @@ status vocabulary, contract sync, ports, release order).
 npm start                # vite dev on :9001 (override PORT / VITE_PORT; CORS enabled)
 npm run build            # → dist/widget.mjs (terser, single ESM) + tsc declarations
 npm run type-check       # alias: check          npm run lint    # --fix, max-warnings 200
-npm run test:run         # vitest (jsdom + Testing Library + axe)
+npm run test         # vitest (jsdom + Testing Library + axe)
 npm run bundle:check     # packaging gate (size, single chunk, no CSS file, React external)
 npm run code:check       # tsc + eslint + prettier --check (one-shot)
 npm run ci               # every CI validation gate
