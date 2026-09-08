@@ -58,8 +58,7 @@ export const WidgetFab: React.FC<WidgetFabProps> = ({ onPositionCommit }) => {
       style={{
         zIndex,
         pointerEvents: open ? 'none' : 'auto',
-        ...getPanelPositionStyle(position),
-        ...pixelPositionStyle,
+        ...(isDragging ? pixelPositionStyle : getPanelPositionStyle(position)),
       }}
     >
       <Surface className='mtx-fab' data-open={open ? 'true' : 'false'}>
