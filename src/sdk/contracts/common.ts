@@ -123,9 +123,6 @@ export const GraphSchema = z.object({
 });
 export type GraphData = z.infer<typeof GraphSchema>;
 
-export const NotificationResolvedReasonSchema = z.enum(['answered', 'dismissed', 'cancelled']);
-export type NotificationResolvedReason = z.infer<typeof NotificationResolvedReasonSchema>;
-
 /** Every live-progress stream the api opens. The app keys `useAgentProgress` on these, so a kind it
  *  cannot name is a generator whose progress never renders. */
 export const AGENT_PROGRESS_KINDS = [
