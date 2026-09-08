@@ -1,3 +1,30 @@
+/**
+ * Widget mount plumbing: creating the closed-shadow host, rendering the React roots, holding the
+ * single live-mount record, and the script-tag auto-init path.
+ *
+ * Contents: `WidgetMount` / `widgetState` are the module singleton describing the one live mount
+ * (React root, validated config, shadow host container, optional caller-supplied host, previewMode),
+ * read back by `isWidgetInitialized` and `getCurrentConfig` and written by `src/index.tsx`.
+ * `attachShadowMount` is the ONE place a closed shadow root is opened and the widget CSS injected
+ * into it. `createWidgetContainer` appends a shadow host to `document.body`, or fills a caller's
+ * container edge-to-edge when one is given. `mountWidgetToContainer` renders `WidgetRoot` under the
+ * providers, its `previewMode` flag disabling all network operations for integration previews.
+ * `showHostPageNotice` / `hideHostPageNotice` mount and tear down a standalone toast in its own
+ * shadow tree. `autoInitializeWidget` reads the last `script[mtx-id]` on the page and hands its
+ * attributes to the init function.
+ *
+ * The notice root carries its OWN `NotificationProvider`: it is a separate shadow tree, mounted
+ * before the widget — and so before the widget's providers — exists.
+ *
+ * `initWidget` is passed into `autoInitializeWidget` rather than imported, to avoid a circular
+ * dependency, and `autoInitializeWidget`'s own `window.__mtx.state` guard — which survives ES-module
+ * re-execution — is what dedupes init.
+ *
+ * `mtx-api-host` is as required as the credentials: there is no default, and an unconfigured SDK
+ * resolves every request against the HOST PAGE's origin, so omitting it silently posts widget traffic
+ * at the customer's own site instead of failing. When a widget is already mounted that branch stays
+ * silent — a later misconfigured script tag must not log over, or notice against, a working widget.
+ */
 import React from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 
@@ -22,7 +49,6 @@ export const widgetState: { mount: WidgetMount | null } = { mount: null };
 
 let noticeRoot: Root | null = null;
 
-/** The one place a closed shadow root is opened and the widget CSS injected into it. */
 const attachShadowMount = (
   container: HTMLElement,
   mountId: string,
@@ -59,7 +85,6 @@ export const createWidgetContainer = (
   return { container, shadowRoot, mountEl };
 };
 
-// previewMode disables all network operations (for integration previews).
 export const mountWidgetToContainer = (mountEl: HTMLElement, config: ValidWidgetConfig, previewMode = false): Root => {
   const root = createRoot(mountEl);
 
@@ -95,7 +120,6 @@ export const showHostPageNotice = (message: string, tone: NotificationTone = 'ne
   noticeRoot = createRoot(mountEl);
   noticeRoot.render(
     <React.StrictMode>
-      {/* Its own provider: this root is a separate shadow tree mounted before the widget exists. */}
       <NotificationProvider container={mountEl}>
         <WidgetNotifications
           error={tone === 'error' ? message : undefined}
@@ -114,13 +138,11 @@ export const hideHostPageNotice = (): void => {
   document.getElementById('marketrix-widget-notice-container')?.remove();
 };
 
-// initWidget is passed in (not imported) to avoid a circular dependency.
 export const autoInitializeWidget = (initWidget: (config: MarketrixConfig) => Promise<void>): void => {
   if (typeof window === 'undefined' || typeof document === 'undefined') {
     return;
   }
 
-  // Window-level guard survives ES module re-execution.
   if (window.__mtx?.state) {
     return;
   }
@@ -136,9 +158,6 @@ export const autoInitializeWidget = (initWidget: (config: MarketrixConfig) => Pr
   const mtxKey = script.getAttribute('mtx-key');
   const mtxApiHost = script.getAttribute('mtx-api-host');
 
-  // mtx-api-host is as required as the credentials: there is no default, and an unconfigured SDK
-  // resolves every request against the HOST PAGE's origin, so omitting it silently posts widget
-  // traffic at the customer's own site instead of failing.
   if (!mtxId || !mtxKey || !mtxApiHost) {
     if (isWidgetInitialized()) return;
     console.error('[AutoInit] Missing required attributes:', {

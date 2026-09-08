@@ -1,3 +1,24 @@
+/**
+ * Per-chat rrweb session recorder: captures the host page as an rrweb event stream and ships it to the api as
+ * one `rrweb/metadata` command followed by `rrweb/events` batches, all correlated by the client-minted
+ * `rrweb_session_id` (the user-facing "Session"). `index.tsx` constructs one only when `widget_recording` is
+ * enabled, so this file is the whole recording feature.
+ *
+ * `start()` first awaits `StreamClient.ready(chatId)` — the api accepts commands only into a chat its stream
+ * has registered — then posts the metadata (url, user agent and viewport, captured once for playback fidelity)
+ * and finally arms rrweb, whose `emit` appends to `events` and arms a 500ms coalescing timer. `stopped` is
+ * re-checked after every await so a `stop()` racing an in-flight start never arms rrweb against a chat nobody
+ * is listening to any more; a recorder is single-use, since `start()` is a no-op once recording or once
+ * stopped. `stop()` tears down rrweb and the timer and drains whatever is buffered. `flush()` posts one batch
+ * and chains onto `flushPromise` so batches reach the api in emit order and never overlap.
+ *
+ * The privacy classes are REGEXPs, not plain strings: a bare 'mtx-*' would REPLACE rrweb's rr-* defaults and
+ * un-block elements a customer blocks with .rr-block.
+ *
+ * A rejected flush is degraded-but-handled rather than swallowed — logged, then the batch is requeued at the
+ * FRONT and the overflow trimmed off the TAIL, because the head carries the Meta and FullSnapshot every later
+ * incremental event replays against and dropping it would leave an unplayable recording; the next timer retries.
+ */
 import { record } from '@rrweb/record';
 import type { eventWithTime } from '@rrweb/types';
 
@@ -39,9 +60,11 @@ export class RrwebSessionRecorder {
     });
     if (this.stopped) return;
     this.stopRecording = record({
-      emit: event => this.buffer(event as eventWithTime),
+      emit: event => {
+        this.events.push(event as eventWithTime);
+        if (!this.flushTimer) this.flushTimer = setTimeout(() => void this.flush(), FLUSH_INTERVAL_MS);
+      },
       maskAllInputs: true,
-      // Regex, not a plain string: a bare 'mtx-*' would REPLACE rrweb's rr-* defaults and un-block elements a customer blocks with .rr-block.
       maskTextClass: /^(rr-mask|mtx-mask)$/,
       blockClass: /^(rr-block|mtx-block)$/,
     });
@@ -54,11 +77,6 @@ export class RrwebSessionRecorder {
     if (this.flushTimer) clearTimeout(this.flushTimer);
     this.flushTimer = null;
     void this.flush();
-  }
-
-  private buffer(event: eventWithTime): void {
-    this.events.push(event);
-    if (!this.flushTimer) this.flushTimer = setTimeout(() => void this.flush(), FLUSH_INTERVAL_MS);
   }
 
   private flush(): Promise<void> {

@@ -1,3 +1,28 @@
+/**
+ * Widget-wide shared types: the config shapes a host supplies, the chat message/part model, the UI store
+ * shape, and `messageText` — the one place a message's displayed text is derived.
+ *
+ * Contents: `ClientOwnedConfig`, the host-supplied knobs the api never sends (`show_widget: false` still
+ * initializes the widget fully and only hides its UI; `use_screenshare: false` auto-denies screen-access
+ * requests and hides the Share Screen button; both default true) · `MarketrixConfig`, deliberately FLAT so
+ * api settings spread straight in — `mtxId`+`mtxKey` is the credential, while `mtxApp` is stamped internally
+ * after validation and is never an input, because an application id is guessable and authenticates nothing ·
+ * `ValidWidgetConfig`, a `MarketrixConfig` that has been through `parseWidgetSettings`, so every rendered
+ * setting is present · `ChatMessage` + `MessagePart`, the chat model · `messageText` · `WidgetView`, the shell's
+ * active tab · `WidgetState`, nothing stored but the flattened read model `useWidget()` folds out of
+ * `UIStateContext` + `ChatContext` · `WidgetPosition`, the api's `widget_position` re-aliased as the corner
+ * vocabulary drag-snap and resize share · `AddWidgetConfig`, the public `mountWidget` argument, whose union makes
+ * `settings` and the `mtxId`/`mtxKey` pair mutually exclusive · `MarketrixWidgetPreviewProps`, the props of the
+ * no-network dashboard preview · re-exported `InstructionType` and `WidgetSettingsData` from the sdk.
+ *
+ * `ChatMessage.pendingContent` is the message queued behind an open screen-access request, sent once that
+ * request resolves. A `MessagePart` marked `streaming` accumulates `chat/delta` fragments; the final
+ * `chat/response` replaces it. `ChatMessage.taskStatus` and `MessagePart.status` are presentational only —
+ * the wire vocabulary is `task/status.status`, and neither of these is it.
+ *
+ * `messageText` joins a message's text parts, and that IS the message's text; `content` is kept equal to it
+ * by every writer, so a reader never has to know which of the two fields is authoritative.
+ */
 import type { InstructionType, WidgetSettingsData } from '../sdk';
 import type { WidgetRenderedSettings } from '../utils/validation';
 
@@ -7,13 +32,10 @@ export interface ClientOwnedConfig {
   mtxApiHost?: string;
   userId?: number;
   widget_position_z_index?: number;
-  /** When false, widget initializes fully but UI is hidden. Default: true */
   show_widget?: boolean;
-  /** When false, screen access requests are auto-denied and Share Screen button is hidden. Default: true */
   use_screenshare?: boolean;
 }
 
-// Flat so API settings spread in directly. mtxId+mtxKey is the credential; mtxApp is set internally post-validation, never an input (an application id is guessable and authenticates nothing).
 export type MarketrixConfig = Partial<WidgetRenderedSettings> &
   ClientOwnedConfig & {
     mtxId?: string;
@@ -22,7 +44,6 @@ export type MarketrixConfig = Partial<WidgetRenderedSettings> &
     isPreviewMode?: boolean;
   };
 
-/** A MarketrixConfig that has been through parseWidgetSettings — every rendered setting present. */
 export type ValidWidgetConfig = MarketrixConfig & Required<Pick<MarketrixConfig, keyof WidgetRenderedSettings>>;
 
 export interface ChatMessage {
@@ -34,7 +55,6 @@ export interface ChatMessage {
   videoStream?: MediaStream;
   isScreenAccessRequest?: boolean;
   screenShareStatus?: 'allowed' | 'denied';
-  /** The message queued behind an open screen-access request, sent once it resolves. */
   pendingContent?: string;
   isSystemMessage?: boolean;
   isPlaceholder?: boolean;
@@ -48,12 +68,9 @@ export interface MessagePart {
   content: string;
   status?: 'in_progress' | 'completed' | 'failed';
   browserToolName?: string;
-  /** chat/delta fragments accumulate into this part; the final chat/response replaces it. */
   streaming?: boolean;
 }
 
-/** A message's text is the text it shows: its text parts joined. `content` is this value, kept by the
- *  writers, so a reader never has to know which of the two fields is authoritative. */
 export const messageText = (parts: MessagePart[]): string =>
   parts
     .filter(part => part.type === 'text')

@@ -1,3 +1,19 @@
+/**
+ * Colour handling for tenant widget settings: the one home for reading a settings colour into channels,
+ * picking text that reads over it, and re-emitting it with an alpha.
+ *
+ * `toRgb` parses a hex (3- or 6-digit, leading `#` optional — the dashboard accepts both spellings) or an
+ * `rgb()`/`rgba()` string into channels, and returns null for anything else. Only those two notations are
+ * read: a named colour, `hsl()` or a `var(--…)` custom property is unreadable here by design, and a channel
+ * above 255 is refused rather than clamped, so a malformed setting never silently becomes a valid colour.
+ * `getContrastingColor` picks the black or white foreground for a background from that colour's WCAG
+ * relative luminance — sRGB gamma-decoded per channel, weighted .2126/.7152/.0722, split at 0.5. An
+ * unreadable background falls back to BLACK, never white: tenant surfaces skew light, so black stays
+ * legible where white would vanish. `addOpacity` re-emits a colour as `rgba()` at the given alpha and
+ * passes an unreadable one through UNCHANGED — it stays a CSS value the browser can still resolve, where
+ * an `rgba(NaN, …)` would render nothing.
+ */
+
 type Rgb = { r: number; g: number; b: number };
 
 const HEX = /^#?([a-f\d]{3}|[a-f\d]{6})$/i;
@@ -20,24 +36,13 @@ export function toRgb(color: string): Rgb | null {
   return r > 255 || g > 255 || b > 255 ? null : { r, g, b };
 }
 
-// WCAG relative luminance, or null for a colour this cannot read.
-function getLuminance(color: string): number | null {
-  const rgb = toRgb(color);
-  if (!rgb) return null;
-
-  const [r, g, b] = [rgb.r / 255, rgb.g / 255, rgb.b / 255].map(val => {
-    return val <= 0.03928 ? val / 12.92 : Math.pow((val + 0.055) / 1.055, 2.4);
-  });
-
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-}
-
-const TEXT_ON_UNREADABLE_BACKGROUND = '#000000';
-
 export function getContrastingColor(color: string): string {
-  const luminance = getLuminance(color);
-  if (luminance === null) return TEXT_ON_UNREADABLE_BACKGROUND;
-  return luminance > 0.5 ? '#000000' : '#ffffff';
+  const rgb = toRgb(color);
+  if (!rgb) return '#000000';
+  const [r, g, b] = [rgb.r / 255, rgb.g / 255, rgb.b / 255].map(val =>
+    val <= 0.03928 ? val / 12.92 : Math.pow((val + 0.055) / 1.055, 2.4),
+  );
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.5 ? '#000000' : '#ffffff';
 }
 
 export function addOpacity(color: string, opacity: number): string {

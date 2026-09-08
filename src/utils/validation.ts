@@ -1,3 +1,33 @@
+/**
+ * Runtime validation of the widget's untrusted inputs: two DOM type guards, and the one home for
+ * settings validation — `parseWidgetSettings`, which checks an arbitrary value against the widget
+ * audience's `WidgetSettingsData` and returns either the picked settings or the offending field names.
+ *
+ * `isHTMLElement` / `isHTMLScriptElement` narrow a possibly-null `Element` off a host-page lookup.
+ * `isString`, `isBoolean`, `isOneOf(...allowed)` and `isChipArray` (an array of `{chip_mode, chip_text}`
+ * objects) are the per-field predicates; `FIELD_GUARDS` pairs one with every settings field and
+ * `FIELD_NAMES` is its key list. `RENDER_CONSTANT_NAMES` / `RENDER_CONSTANT_SET` name the fields the
+ * widget renders from its own constants — the set is annotated `ReadonlySet<string>` because `.has()` on
+ * the literal tuple's own element type rejects the wider `keyof WidgetSettingsData` the loop passes it.
+ * `WidgetRenderedSettings` is the wire shape minus those, and `WidgetSettingsResult` the
+ * settings-or-invalidFields union `parseWidgetSettings` returns; `invalidSettingsMessage` folds those
+ * field names into the one message the widget logs or throws.
+ *
+ * Hand-written rather than a zod `safeParse` because importing a schema as a VALUE anywhere reachable
+ * from `src/index.tsx` pulls zod's whole runtime into every host page: rolldown cannot prove
+ * `z.object(...)` pure, so one value import retains the entire mirror's schema graph.
+ * `satisfies Record<keyof WidgetSettingsData, …>` is what keeps the table honest — a field added to the
+ * api-side schema fails to compile here until it is guarded, and a field removed there fails as an
+ * unknown key. `RENDER_CONSTANT_NAMES` likewise mirrors api's `WIDGET_RENDER_CONSTANTS` by hand, under
+ * the same `satisfies` check and for the same bundle reason.
+ *
+ * `parseWidgetSettings` PICKS as well as validates, and the stripping is load-bearing: `widgetDefaultGet`
+ * returns the render constants too and the result is spread into the widget config, so passing unknown
+ * keys through would leak them where zod used to drop them. The render constants are still guarded — a
+ * legacy bundle's stored value must keep passing — but dropped from the picked result, since nothing
+ * renders them.
+ */
+
 import type { WidgetSettingsData } from '../sdk';
 import type { WIDGET_RENDER_CONSTANTS } from '../sdk/contracts/entities';
 
@@ -26,12 +56,6 @@ const isChipArray = (value: unknown): boolean =>
       isString((chip as Record<string, unknown>).chip_text),
   );
 
-/**
- * One guard per field of the generated contract. `satisfies` over `keyof WidgetSettingsData` is what
- * keeps this honest: a field added to the api-side schema fails to compile here until it is guarded,
- * and a field removed there fails as an unknown key. Hand-written because the alternative is shipping
- * zod's whole runtime to every host page for this one check.
- */
 const FIELD_GUARDS = {
   widget_enabled: isBoolean,
   widget_appearance: isOneOf('default', 'hidden'),
@@ -60,8 +84,6 @@ const FIELD_GUARDS = {
 
 const FIELD_NAMES = Object.keys(FIELD_GUARDS) as (keyof WidgetSettingsData)[];
 
-// Hand-written to match api's WIDGET_RENDER_CONSTANTS, for the same reason FIELD_GUARDS is
-// hand-written: importing it as a value pulls zod's whole runtime into the bundle (see repo CLAUDE.md).
 const RENDER_CONSTANT_NAMES = [
   'widget_border_radius',
   'widget_font_size',
@@ -70,18 +92,11 @@ const RENDER_CONSTANT_NAMES = [
 ] as const satisfies readonly (typeof WIDGET_RENDER_CONSTANTS)[number][];
 const RENDER_CONSTANT_SET: ReadonlySet<string> = new Set(RENDER_CONSTANT_NAMES);
 
-/** The wire shape minus the fields the widget renders from its own constants — see WIDGET_RENDER_CONSTANTS. */
 export type WidgetRenderedSettings = Omit<WidgetSettingsData, (typeof RENDER_CONSTANT_NAMES)[number]>;
 
 export type WidgetSettingsResult =
   { settings: WidgetRenderedSettings; invalidFields?: undefined } | { settings?: undefined; invalidFields: string[] };
 
-/**
- * Validates and PICKS, because stripping is load-bearing: `widgetDefaultGet` returns the render
- * constants too, and the settings object is spread into the widget config — passing unknown keys
- * through would leak them where zod used to drop them. The render constants are guarded (a legacy
- * bundle's stored value must still pass) but dropped from the picked result, since nothing renders them.
- */
 export function parseWidgetSettings(value: unknown): WidgetSettingsResult {
   if (typeof value !== 'object' || value === null) return { invalidFields: ['settings'] };
 

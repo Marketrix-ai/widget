@@ -1,6 +1,19 @@
+/**
+ * Vitest global setup (`setupFiles` in `vitest.config.ts`), run once per test file before any suite:
+ * registers the jest-dom matchers and fills the three browser globals jsdom does not usably provide here.
+ *
+ * `localStorage` — a Map-backed `Storage` (getItem/setItem/removeItem/clear/length/key). jsdom defines it
+ * on the prototype, and that does not transfer to vitest's `globalThis`, leaving `StorageService` — the one
+ * door to it in `src/` — an object with no `setItem`; hence the guard probes for the method, not the property.
+ * `matchMedia` — a never-matching `MediaQueryList` with inert listener registration, required by
+ * `useScrollLock`. `ResizeObserver` — an inert observe/unobserve/disconnect class, required by
+ * `useDragSnap`.
+ *
+ * Every fill is conditional, so a real implementation — a future jsdom, or a per-test override
+ * installed before this file — wins.
+ */
 import '@testing-library/jest-dom/vitest';
 
-// jsdom 29 localStorage lives on the prototype and doesn't transfer to globalThis in vitest — supply a working Storage.
 if (typeof globalThis.localStorage?.setItem !== 'function') {
   const store = new Map<string, string>();
   globalThis.localStorage = {
@@ -15,7 +28,6 @@ if (typeof globalThis.localStorage?.setItem !== 'function') {
   } as Storage;
 }
 
-// jsdom does not provide matchMedia (required by useScrollLock)
 if (typeof globalThis.matchMedia !== 'function') {
   globalThis.matchMedia = (media: string) =>
     ({
@@ -30,7 +42,6 @@ if (typeof globalThis.matchMedia !== 'function') {
     }) as MediaQueryList;
 }
 
-// jsdom does not provide ResizeObserver (required by useDragSnap)
 if (typeof globalThis.ResizeObserver === 'undefined') {
   globalThis.ResizeObserver = class ResizeObserver {
     observe() {}

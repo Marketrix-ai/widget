@@ -1,7 +1,40 @@
+/**
+ * The numbered address space the agent drives the host page by: an index of its interactive elements, the document
+ * snapshot that publishes those numbers, and the resolution of a number back to a live, actionable element.
+ *
+ * Contents. `reindexAndSnapshot` rewalks the live document and returns a clone of it with `data-id="<n>"` stamped on
+ * every indexed element. `getSequenceForElement` is the reverse lookup, element → index. `notInteractableReason`
+ * phrases why an element cannot be acted on right now, or null. `getValidatedElement` resolves an index to a live
+ * element or to the `ValidatedElementResult` error saying why it cannot — unknown index, stale entry, or not
+ * interactable. `generateAnchoredSelector` builds the body-anchored `>` path each entry is relocated by inside the
+ * snapshot clone, short-circuiting the moment it reaches a document-unique `#id`. `indexElements` is the walk itself.
+ * `domService` is the process-wide singleton; the class is exported for tests.
+ *
+ * `data-id` is the whole contract with the agent: it parses the snapshot for `[data-id]` and reads nothing else off
+ * it. The clone is tagged by re-querying each stored selector rather than walking the two trees in step — a synced
+ * two-tree walk breaks on modals and fixed elements. A host tag name that is not a valid selector token makes
+ * `querySelector` throw; that one element goes untagged and the rest of the snapshot still ships.
+ *
+ * Indices are addresses the agent holds across turns, so an index must not survive the element changing underneath
+ * it: the node object stays the same across a re-render while its attributes are rewritten. Each entry therefore
+ * snapshots IDENTITY_ATTRIBUTES, and a mismatch reads as DOM_CHANGED rather than silently acting on a control that
+ * is no longer the one the agent chose.
+ *
+ * The tree walker rejects a `display:none` subtree outright, but keeps an element with a null `offsetParent` when it
+ * or an ancestor is `position: fixed|sticky` — the browser reports no offsetParent for those even when they are
+ * plainly visible, so the cheap offsetParent test alone would drop every sticky header and modal. Membership is the
+ * union of a semantic match, the `cursor-pointer`/`clickable` affordance classes, an `onclick` property and
+ * `isIndexable` (the strict geometry/clipping test), because host pages express clickability all four ways.
+ *
+ * The error strings are read by the agent loop, not by a human: the `DOM_CHANGED` / `ELEMENT_NOT_INTERACTABLE` /
+ * `ELEMENT_OBSCURED` prefixes and the "call get_html" instruction are what steer its next move. The obscured test
+ * ignores Marketrix's own chrome — the Show-mode highlight and popup and the widget's shadow host sit over the very
+ * element they point at. `notInteractableReason`'s first test must stay the `document.body.contains` check:
+ * ShowModeService leans on it as its removal watchdog and carries no identity snapshot of its own to detect that.
+ */
+
 import { disabledReason, isIndexable, WIDGET_SHADOW_HOST_CLASS } from '../utils/dom';
 
-// The agent addresses elements by index, so an index must not survive the element changing underneath it: the node
-// object stays the same across a re-render while its attributes are rewritten.
 const IDENTITY_ATTRIBUTES = ['id', 'type', 'role', 'aria-label', 'name', 'href'] as const;
 
 interface IndexedElement {
@@ -44,16 +77,9 @@ export class DomService {
     return ['body', ...path].join(' > ');
   }
 
-  private staleReason(entry: IndexedElement): string | null {
-    if (!document.contains(entry.element)) return 'no longer exists';
-    const changed = IDENTITY_ATTRIBUTES.some(
-      (attribute, i) => entry.element.getAttribute(attribute) !== entry.identity[i],
-    );
-    return changed ? 'has changed' : null;
-  }
-
   private indexElements(): void {
-    this.clearIndex();
+    this.index.clear();
+    this.elementToSequence = new WeakMap();
 
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_ELEMENT, {
       acceptNode: (node: Node) => {
@@ -114,18 +140,15 @@ export class DomService {
     console.log(`[DomService] Indexed ${sequenceNumber} elements`);
   }
 
-  /** `data-id` is the whole contract: the agent parses the snapshot for `[data-id]` and reads nothing else off it. */
   reindexAndSnapshot(): string {
     this.indexElements();
 
     const clone = document.documentElement.cloneNode(true) as Element;
 
-    // Match into the clone by selector — a synced two-tree walk breaks on modals and fixed elements.
     for (const [index, { selector }] of this.index.entries()) {
       try {
         clone.querySelector(selector)?.setAttribute('data-id', index.toString());
       } catch (e) {
-        // A host tag name that is not a valid selector token makes querySelector throw; that element just goes unindexed.
         console.warn(`[DomService] Failed to tag index ${index}:`, e);
       }
     }
@@ -135,11 +158,6 @@ export class DomService {
 
   getSequenceForElement(element: Element): number | undefined {
     return this.elementToSequence.get(element);
-  }
-
-  private clearIndex(): void {
-    this.index.clear();
-    this.elementToSequence = new WeakMap();
   }
 
   notInteractableReason(element: HTMLElement, index: number): string | null {
@@ -195,8 +213,12 @@ export class DomService {
       return { element: null, error: `Element ${index} not found` };
     }
 
-    const stale = this.staleReason(entry);
-    if (stale) {
+    const gone = !document.contains(entry.element);
+    const changed = IDENTITY_ATTRIBUTES.some(
+      (attribute, i) => entry.element.getAttribute(attribute) !== entry.identity[i],
+    );
+    if (gone || changed) {
+      const stale = gone ? 'no longer exists' : 'has changed';
       return {
         element: null,
         error: `DOM_CHANGED: Element at index ${index} ${stale}. Call get_html to get updated indices.`,

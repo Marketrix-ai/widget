@@ -1,3 +1,20 @@
+/**
+ * Icon registry: the SVG path data behind every `<Icon name=... />`, plus the shapes Icon.tsx renders.
+ *
+ * Contents — `IconPath` (one `<path>`'s attributes; Icon.tsx forwards them field by field, so an attribute added
+ * here stays inert until it is forwarded there too); `IconData` (an icon's own `viewBox` plus its paths — entries
+ * come from source sets drawn on different grids and are never renormalized, so the viewBox travels per icon);
+ * `stroked()` (builds an outline path in `currentColor` with round caps and joins, strokeWidth 2 unless
+ * overridden); `icons` (the registry itself); `IconName` (its keys).
+ *
+ * Icon.tsx resolves an absent `fill` to 'none' when a stroke is set and to 'currentColor' otherwise, so
+ * a stroked path omits `fill` and a solid path omits both `fill` and `stroke`.
+ *
+ * `as const satisfies Record<string, IconData>` is load-bearing twice over: `as const` keeps `IconName` a
+ * literal union of the keys, and `satisfies` fails a malformed entry at compile time without widening the
+ * value type. The bundle is a single chunk, so every entry here is unconditional weight in each host page.
+ */
+
 export interface IconPath {
   d: string;
   fill?: string;
@@ -15,7 +32,6 @@ export interface IconData {
   paths: IconPath[];
 }
 
-/** Icon.tsx resolves an absent `fill` to 'none' whenever a stroke is set, so a stroked path omits it. */
 const stroked = (d: string, strokeWidth = 2): IconPath => ({
   d,
   stroke: 'currentColor',

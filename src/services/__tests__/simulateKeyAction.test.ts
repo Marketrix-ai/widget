@@ -1,3 +1,32 @@
+/**
+ * Vitest suite over `BrowserToolService.simulateKeyAction` — the hand-rolled key behaviour the widget
+ * runs because a programmatic KeyboardEvent is untrusted and fires no default action. It covers the two
+ * key groups with real state to get wrong: Tab/Shift+Tab focus movement and Backspace/Delete text editing.
+ *
+ * `simulateKeyAction` is private on the service, so the local wrapper casts through `unknown` to reach it
+ * rather than widening the service's surface for tests. `render` mounts three sibling buttons and returns
+ * them; `input` mounts one `<input>` with a value and a caret or selection range; the `afterEach` empties
+ * the body because the service resolves tab order with a document-wide query, so a node left behind
+ * would join the next test's focus order.
+ *
+ * The prototype `offsetParent` override is load-bearing: jsdom does no layout, so every element reports
+ * `offsetParent === null` and the service's visibility filter over TAB_ORDER_SELECTOR would drop the
+ * entire tab order, leaving every Tab assertion trivially "no next focusable element".
+ *
+ * Contents:
+ * - Tab/Shift+Tab — steps focus to the next/previous focusable and names it by tag and id; refuses at
+ *   either end of the order; refuses an element that is not in the order at all, pinning the guard on
+ *   `indexOf` === -1, without which -1 + 1 indexes the FIRST element and silently wraps focus to the top
+ *   of the page.
+ * - Backspace/Delete — removes the character on the correct side of the caret and leaves the caret where
+ *   a browser would; removes the whole range when there is a selection; dispatches `input` then `change`
+ *   so a React/Vue controlled input observes the edit; refuses on an empty input and with the caret at
+ *   the end.
+ * - The Home case pins that caret position 0 is a position, not a missing one: `selectionStart` is read
+ *   with `??`, and a `||` fallback would treat 0 as absent, fall back to `value.length`, and delete the
+ *   LAST character instead of refusing.
+ */
+
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { browserToolService } from '../BrowserToolService';
@@ -9,7 +38,6 @@ const simulateKeyAction = (element: HTMLElement, key: string) =>
     }
   ).simulateKeyAction(element, key);
 
-// jsdom has no layout, so every element reports offsetParent === null and the visibility filter would drop them all.
 Object.defineProperty(HTMLElement.prototype, 'offsetParent', { configurable: true, get: () => document.body });
 
 const render = () => {

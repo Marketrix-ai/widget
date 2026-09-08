@@ -1,11 +1,42 @@
+/**
+ * Singleton SSE transport between the widget and the api: one `widgetStream` iterator drained in the
+ * background, with `widgetMessagePost` as the write path back. `StreamStatus` spans
+ * `disconnected → connecting → open → registered`, plus `error` from any failed dial or stream.
+ *
+ * `open` is the transport, `registered` is the chat: only the latter can carry a reply, which is why
+ * `isConnected` reads `registered` and nothing waits on `open`. Backoff counters therefore reset only on
+ * `registered` — resetting them at `open` would defeat the max-attempts cap if registration never lands and
+ * the stream flaps open→closed. Tabs share the localStorage chat id, so the server keys SSE by
+ * (chat_id, tab_id) and `tabId` stops tabs from evicting each other's stream. Credentials are read at
+ * connect time rather than captured at init, so a reconnect after `updateMarketrixConfig` dials with the
+ * current ones.
+ *
+ * A `chat/error` whose `request_id === 'auth'` is non-retriable. It is still forwarded to the reducer, but
+ * there `chat/error` settles the message whose id is the request id and no message is ever id 'auth', so
+ * the branch matched nothing and the widget went permanently silent — no toast, no bubble, and (console
+ * being dropped by terser) no trace; hence the explicit `giveUp` here. Both give-up messages are read by a
+ * visitor on a customer's page, so they name the state and the way out rather than the counter.
+ *
+ * Contents. `StreamGaveUpError` — the stream has stopped retrying, so nothing further will arrive for
+ * anything still in flight. `StreamClientCallbacks` — a subscriber's `onMessage`/`onError` pair.
+ * `StreamClient`: `getInstance` returns the process-wide instance; `addCallbacks`/`removeCallbacks`
+ * (un)subscribe; `isConnected` reports registration; `reconnectSuppressed` covers teardown and refused
+ * credentials, the two states no retry may escape; `canReconnect` gates the Retry affordance and
+ * `reconnectNow` clears the backoff and redials; `ready` connects then waits; `waitUntilRegistered` parks a
+ * caller until the chat is usable; `connect` dials a chat id, deduping an in-flight or live stream for the
+ * same one; `consumeEvents` drains the iterator, ignoring a superseded connection's events and scheduling a
+ * reconnect when the live one ends; `disconnect` tears down and rejects parked callers; `send` POSTs a
+ * command; `notifyError` fans an error out to subscribers; `settleWaiters` drains the parked callers,
+ * rejecting with the given error or resolving when none; `giveUp` reports a terminal failure to subscribers
+ * and waiters alike; `handleMessage` runs the status machine over each event before forwarding it;
+ * `scheduleReconnect` runs the capped exponential backoff; `abortConnection` and `clearReconnectTimer` are
+ * the teardown pair.
+ */
 import { sdk, type WidgetCommand, type WidgetEvent } from '../sdk';
 import { storageService } from './StorageService';
 
-// `open` is the transport, `registered` is the chat: only the latter can carry a reply, which is why
-// `isConnected` reads `registered` and nothing waits on `open`.
 type StreamStatus = 'disconnected' | 'connecting' | 'open' | 'registered' | 'error';
 
-/** The stream has stopped retrying, so nothing further will arrive for anything still in flight. */
 export class StreamGaveUpError extends Error {}
 
 export interface StreamClientCallbacks {
@@ -27,7 +58,6 @@ export class StreamClient {
   private readonly maxReconnectDelay = 30000;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private connectionId = 0;
-  // Per-tab identity: tabs share the localStorage chat_id, so the server keys SSE by (chat_id, tab_id) to stop tabs evicting each other's stream.
   private readonly tabId = globalThis.crypto.randomUUID();
   private registrationWaiters = new Set<{ resolve: () => void; reject: (error: Error) => void }>();
 
@@ -103,7 +133,6 @@ export class StreamClient {
     const signal = this.abortController.signal;
 
     try {
-      // Read at connect time, not captured at init: a reconnect after updateMarketrixConfig must use the current credentials.
       const credentials = storageService.getCredentialedConfig();
       const iterator = await sdk.widgetStream(
         {
@@ -115,7 +144,6 @@ export class StreamClient {
       );
 
       this.status = 'open';
-      // Reconnect counters reset only on `registered` (handleMessage); resetting here would defeat the max-attempts cap if registration never lands and the stream flaps open→closed.
 
       this.consumeEvents(iterator, myConnectionId);
     } catch (error) {
@@ -183,8 +211,11 @@ export class StreamClient {
     this.callbacks.forEach(cb => cb.onError?.(error));
   }
 
-  private settleWaiters(error: Error): void {
-    for (const waiter of this.registrationWaiters) waiter.reject(error);
+  private settleWaiters(error?: Error): void {
+    for (const waiter of this.registrationWaiters) {
+      if (error) waiter.reject(error);
+      else waiter.resolve();
+    }
     this.registrationWaiters.clear();
   }
 
@@ -204,17 +235,13 @@ export class StreamClient {
         this.status = 'registered';
         this.reconnectAttempts = 0;
         this.reconnectDelay = 1000;
-        for (const waiter of this.registrationWaiters) waiter.resolve();
-        this.registrationWaiters.clear();
+        this.settleWaiters();
       }
     }
 
     if (event.type === 'chat/error' && event.request_id === 'auth') {
       console.error('[StreamClient] Authentication failed — will not reconnect');
       this.credentialRejected = true;
-      // The event is ALSO handed to the reducer below, where `chat/error` settles the message whose id is
-      // the request id — and no message is ever id 'auth', so the branch matched nothing and the widget
-      // went permanently silent with no toast, no bubble and (console being dropped by terser) no trace.
       this.giveUp('Chat is unavailable — the widget credentials were rejected.');
     }
 
@@ -223,7 +250,6 @@ export class StreamClient {
 
   private scheduleReconnect(): void {
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      // What the visitor on a customer's page reads, so it names the state and the way out rather than the counter.
       this.giveUp('Could not reconnect to the assistant. Try again.');
       return;
     }
