@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { WidgetEvent } from '@/sdk';
+import { FINISH_TOOL } from '@/services/BrowserToolService';
 import { type ChatMessage, messageText } from '@/types';
 
 import {
@@ -376,6 +377,27 @@ describe('reduceToolProgress / reduceToolDone / reduceStop', () => {
     const result = reduceStop(runningState(), 'do');
     expect(result.messages[0].taskStatus).toBe('stopped');
     expect(result.task).toEqual({ phase: 'stopped' });
+  });
+
+  it('finish carries no progress line and clears whatever trajectory came before it', () => {
+    const withTrajectory = runningState({
+      parts: [
+        { type: 'text', content: 'Working on it' },
+        { type: 'progress', content: 'Reading the page', status: 'completed', browserToolName: 'get_html' },
+      ],
+    });
+
+    const called = reduceSse(
+      withTrajectory,
+      { type: 'tool/call', tool_call_id: 'c', browser_tool: FINISH_TOOL, args: {}, explanation: 'Wrapping up' },
+      'tell',
+    ).state;
+    const succeeded = reduceToolProgress(called, FINISH_TOOL, 'Wrapping up', 'completed', 'tell');
+    const done = reduceToolDone(succeeded, 'tell');
+
+    const parts = done.messages[0].parts;
+    expect(parts.some(p => p.type === 'progress')).toBe(false);
+    expect(JSON.stringify(parts)).not.toContain('Unknown tool');
   });
 });
 

@@ -62,9 +62,6 @@ export function findMessageForProgress({
   return null;
 }
 
-// In `show` mode these pause for the user to act (DOM-mutating tools, minus `scroll`); also the highlight set in BrowserToolService.
-export const WAIT_FOR_USER_TOOLS = new Set(['click_element', 'type_text', 'select_dropdown_option', 'send_keys']);
-
 // "Cancelled by cleanup" is expected internal chatter users shouldn't see.
 const filterCancellationText = (content: string): string => content.replace(/\(?cancelled by cleanup\)?/gi, '').trim();
 
@@ -104,28 +101,6 @@ export function markProgressLineFailed(message: ChatMessage, browserToolName: st
     content: cleanedError ? `${content} (${cleanedError})` : content,
   });
 }
-
-export const TOOL_LABELS = new Map<string, string>([
-  ['navigate', 'Navigating'],
-  ['search', 'Searching'],
-  ['click_element', 'Clicking element'],
-  ['type_text', 'Typing text'],
-  ['scroll', 'Scrolling'],
-  ['scroll_to_text', 'Scrolling to text'],
-  ['send_keys', 'Pressing key'],
-  ['extract', 'Extracting content'],
-  ['get_dropdown_options', 'Reading dropdown options'],
-  ['select_dropdown_option', 'Selecting option'],
-  ['go_back', 'Going back'],
-  ['wait', 'Waiting'],
-  ['close_tab', 'Closing tab'],
-  ['done', 'Done'],
-  ['get_html', 'Reading the page'],
-  ['get_screenshot', 'Taking screenshot'],
-]);
-
-export const getFriendlyToolName = (browserToolName: string): string =>
-  TOOL_LABELS.get(browserToolName) ?? browserToolName;
 
 function createMessage(
   idPrefix: string,
