@@ -101,6 +101,8 @@ export function useDragSnap({
       wrapperRef.current.style.transform = '';
       wrapperRef.current.style.willChange = '';
       wrapperRef.current.style.transition = '';
+      wrapperRef.current.style.left = '';
+      wrapperRef.current.style.top = '';
     }
   };
 
@@ -116,6 +118,8 @@ export function useDragSnap({
         abandonSnapRef.current = null;
         wrapper.style.transition = 'none';
         wrapper.style.willChange = '';
+        wrapper.style.left = '';
+        wrapper.style.top = '';
         onPositionCommit(nextCorner);
         setIsDragging(false);
         requestAnimationFrame(() => {
