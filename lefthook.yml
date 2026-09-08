@@ -15,6 +15,11 @@ pre-commit:
   commands:
     format:
       glob: '*.{ts,tsx,js,mjs,cjs,json,md,yml,yaml,css}'
+      # `AGENTS.md` is a symlink to `CLAUDE.md`; prettier EXITS 2 on a symlink passed explicitly rather
+      # than skipping it, so without this the hook fails every commit that stages it — and the tempting
+      # "fix" is to replace the link with a real file.
+      exclude:
+        - AGENTS.md
       run: npx prettier --write {staged_files}
       stage_fixed: true
     lint:
