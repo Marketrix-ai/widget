@@ -10,6 +10,9 @@
  * millisecond used to collide; empty content yields no `text` part, since the screenshare bubble renders
  * from `videoStream` alone and a placeholder has nothing to say yet).
  *
+ * `SCREEN_ACCESS_PROMPT` is the one wording of the screen-access ask — the transcript card and the
+ * toolbar dialog are two renderings of the same question and must not drift apart.
+ *
  * `findMessageForProgress` is ranked predicates: the first rank matching anything wins, and within a rank the
  * newest message. Every rank is bounded to messages after the last agent message carrying a `taskStatus`, since a
  * terminal stamp means that run already ended — unbounded, a late-arriving event reaches back past the stamp onto
@@ -140,11 +143,13 @@ export const createAgentMessage = (content: string): ChatMessage =>
 export const createSystemMessage = (content: string, idPrefix: string): ChatMessage =>
   createMessage(idPrefix, 'agent', content, { isSystemMessage: true });
 
+export const SCREEN_ACCESS_PROMPT = 'Can I take a look at your screen?';
+
 export const createScreenAccessRequestMessage = (
   mode: InstructionType | undefined,
   pendingContent?: string,
 ): ChatMessage =>
-  createMessage('screen-access-request', 'agent', 'Can I take a look at your screen?', {
+  createMessage('screen-access-request', 'agent', SCREEN_ACCESS_PROMPT, {
     mode,
     isScreenAccessRequest: true,
     pendingContent,

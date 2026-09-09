@@ -4,7 +4,9 @@
  *
  * `WidgetDialogProps` carries `open`/`onClose`, the copy (`title`, `description`, `confirmLabel`,
  * `cancelLabel`), an optional `onConfirm`, and `finalFocusRef` naming where focus lands on close.
- * `WidgetDialog` renders the backdrop and popup into the portal container published by the widget root.
+ * `WidgetDialog` renders the backdrop and popup into the portal container published by the widget root;
+ * cancel and confirm are one button rendered twice from a (variant, label, action) table, since they
+ * differ in nothing else.
  *
  * The portal target comes from `usePortalContainer()` rather than defaulting to the shadow root: the
  * widget root element carries every tenant token as an inline style, so anything portaled beside it
@@ -67,32 +69,27 @@ export const WidgetDialog: React.FC<WidgetDialogProps> = ({
             <Dialog.Description className='mtx-dialog-description'>{description}</Dialog.Description>
           )}
           <Flex gap='md' justify='end'>
-            <Button
-              type='button'
-              variant='secondary'
-              size='sm'
-              shape='pill'
-              onClick={e => {
-                e.preventDefault();
-                e.stopPropagation();
-                onClose();
-              }}
-            >
-              {cancelLabel}
-            </Button>
-            <Button
-              type='button'
-              variant='primary'
-              size='sm'
-              shape='pill'
-              onClick={e => {
-                e.preventDefault();
-                e.stopPropagation();
-                onConfirm?.();
-              }}
-            >
-              {confirmLabel}
-            </Button>
+            {(
+              [
+                ['secondary', cancelLabel, onClose],
+                ['primary', confirmLabel, () => onConfirm?.()],
+              ] as const
+            ).map(([variant, label, act]) => (
+              <Button
+                key={variant}
+                type='button'
+                variant={variant}
+                size='sm'
+                shape='pill'
+                onClick={e => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  act();
+                }}
+              >
+                {label}
+              </Button>
+            ))}
           </Flex>
         </Dialog.Popup>
       </Dialog.Portal>
