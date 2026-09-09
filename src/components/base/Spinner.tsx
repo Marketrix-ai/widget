@@ -1,3 +1,7 @@
+/**
+ * `Spinner` — a `role=status` ring in three sizes with a visually-hidden "Loading" label, so the
+ * state is announced without visible text.
+ */
 import type { CSSProperties, Ref } from 'react';
 
 type SpinnerSize = 'sm' | 'md' | 'lg';

@@ -1,18 +1,49 @@
+/**
+ * The open widget panel: the corner-pinned, resizable surface carrying the header bar, the Home/Chat
+ * tab views and the resize grip. `MessengerShell` renders null while the store says closed, and
+ * `WidgetRoot` is its only caller.
+ *
+ * Geometry comes from the tenant config, never from props. `useResize` owns the persisted size, keyed
+ * by `tenantScope(config)` so two tenants on one host page cannot share a stored size;
+ * `getPanelPositionStyle` pins the panel to the configured corner and `getCorner` supplies the
+ * matching `transformOrigin`, so the entrance animation scales out of the anchored corner instead of
+ * the panel's centre. `widget_background_color` is painted through `backgroundGradient`, the one home
+ * for that expansion. Preview mode (the dashboard embed)
+ * positions `absolute` rather than `fixed` and drops the resize handle, because it lives inside a page
+ * element instead of the viewport.
+ *
+ * `useFocusTrap` closes on Escape and, on the chat view, lands focus in the composer through
+ * `messageInputRef` — the same ref `ChatView` attaches to its textarea.
+ *
+ * The screen-share control sits in the header, but its machinery lives in `ChatView`'s
+ * `useScreenShare`: `chatViewToggleScreenShareRef` is what that hook's `useImperativeHandle` fills, and
+ * `onScreenSharingChange` mirrors sharing state back up for the button's label and live dot. That ref
+ * and `headerScreenSharing` are declared ABOVE the closed-panel early return — a hook below a
+ * conditional return changes hook order between renders. The control is offered only on the chat view
+ * and only when `use_screenshare` is not explicitly false; absent means enabled.
+ *
+ * `handleChipClick` treats a home-screen suggestion as a typed message: the caption is appended as a
+ * user message, the composer's mode switches to the chip's, and the same caption is dispatched.
+ * `navDirection` is what `index.css` reads off `data-direction` to slide the incoming view; Base UI
+ * unmounts a deselected `Tabs.Panel`, so the selected one remounts and replays that slide on each
+ * switch.
+ */
 import { Tabs } from '@base-ui/react/tabs';
 import React, { useRef, useState } from 'react';
 
-import { SHADOW } from '../../design-system/shadows';
+import { SHADOW } from '../../design-system/component-tokens';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { useResize } from '../../hooks/useResize';
 import { useWidget, useWidgetConfig } from '../../hooks/useWidget';
 import { tenantScope } from '../../services/StorageService';
 import type { WidgetView } from '../../types';
 import { createUserMessage } from '../../utils/chat';
+import { backgroundGradient } from '../../utils/color';
 import type { SuggestedActionItem } from '../../utils/suggestedActions';
 import { getCorner, getPanelPositionStyle } from '../../utils/widgetPositioning';
+import { Stack } from '../base/Flex';
 import { Icon } from '../base/Icon';
 import { IconButton } from '../base/IconButton';
-import { Stack } from '../base/Stack';
 import { Surface } from '../base/Surface';
 import { HeaderBar } from '../blocks/HeaderBar';
 import { ChatView } from '../views/ChatView';
@@ -44,21 +75,14 @@ export const MessengerShell: React.FC = () => {
 
   const panelPositionStyle = getPanelPositionStyle(config.widget_position);
 
-  // Must stay above the early return below.
   const [headerScreenSharing, setHeaderScreenSharing] = useState(false);
   const chatViewToggleScreenShareRef = useRef<(() => void) | null>(null);
 
   if (!isOpen) return null;
 
-  const backgroundImage = config.widget_background_color.includes('gradient')
-    ? config.widget_background_color
-    : `linear-gradient(135deg, ${config.widget_background_color} 0%, ${config.widget_background_color} 100%)`;
+  const backgroundImage = backgroundGradient(config.widget_background_color);
 
   const { vertical, horizontal } = getCorner(config.widget_position);
-
-  const handleNavigateToChat = () => {
-    actions.setActiveView('chat');
-  };
 
   const handleChipClick = (action: SuggestedActionItem) => {
     actions.addMessage(createUserMessage(action.text, action.type, 'chip-message'));
@@ -122,14 +146,13 @@ export const MessengerShell: React.FC = () => {
         style={{ display: 'flex', flexDirection: 'column', flex: '1 1 0%', minHeight: 0 }}
       >
         <Surface grow overflow='hidden' style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-          {/* Panels unmount when deselected, so the active one remounts and replays the slide. */}
           <Tabs.Panel
             value='home'
             data-view-transition
             data-direction={navDirection}
             style={{ width: '100%', height: '100%' }}
           >
-            <HomeView onNavigateToChat={handleNavigateToChat} onChipClick={handleChipClick} />
+            <HomeView onNavigateToChat={() => actions.setActiveView('chat')} onChipClick={handleChipClick} />
           </Tabs.Panel>
           <Tabs.Panel
             value='chat'

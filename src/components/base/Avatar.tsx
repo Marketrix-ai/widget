@@ -1,7 +1,10 @@
+/**
+ * `Avatar` — an `<img>` sized by preset or number, with fit, radius (via `resolveLayoutStyle`) and
+ * elevation from the design tokens; keeps its own class beside a caller className.
+ */
 import type { ComponentPropsWithRef } from 'react';
 
-import { getElevationStyle, type RadiusToken } from '../../design-system/component-tokens';
-import type { ShadowToken } from '../../design-system/shadows';
+import { getElevationStyle, type RadiusToken, type ShadowToken } from '../../design-system/component-tokens';
 import { resolveLayoutStyle } from './layoutProps';
 
 type AvatarSize = 'sm' | 'md' | 'lg';

@@ -1,3 +1,9 @@
+/**
+ * Entry-path tests: the classic loader preserves host React importmap entries and injects the module;
+ * a direct module script auto-initializes once from its `mtx-*` attributes and refuses without
+ * `mtx-api-host`; npm consumers get no auto-init; every widget a parent mounts is owned in this module
+ * instance and the next; and the widget CSS lands, non-empty, inside the closed shadow root.
+ */
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 

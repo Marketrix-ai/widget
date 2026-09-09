@@ -1,3 +1,8 @@
+/**
+ * `UIStateProvider` / `useUIStateContext` — the widget's view state: open/closed, active view, current
+ * mode (tell/show/do) and the error banner. Actions are stable (memoised once) so consumers can depend
+ * on them without re-rendering; `applyState` merges a partial for restore-from-storage.
+ */
 import React, { createContext, useContext, useMemo, useState } from 'react';
 
 import type { InstructionType, WidgetView } from '../types';

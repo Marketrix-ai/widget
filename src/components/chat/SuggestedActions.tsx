@@ -1,9 +1,13 @@
+/**
+ * `SuggestedActions` — the chip list rendered from `SuggestedActionItem`s, captions verbatim (the
+ * mode prefix is applied in the config layer, not here), coloured with the tenant text colour.
+ */
 import React from 'react';
 
 import { useWidgetConfig } from '../../hooks/useWidget';
 import type { SuggestedActionItem } from '../../utils/suggestedActions';
 import { Button } from '../base/Button';
-import { Stack } from '../base/Stack';
+import { Stack } from '../base/Flex';
 import { Text } from '../base/Text';
 
 interface SuggestedActionsProps {

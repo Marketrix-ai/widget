@@ -1,3 +1,45 @@
+/**
+ * Public entry point of the embeddable widget package (`@marketrix.ai/widget`): the imperative
+ * lifecycle API, the React preview component, and the script-tag auto-init hook. Everything a host
+ * page or `app` can reach is exported here — the named exports README documents, the public config
+ * and message types, `getCurrentConfig` re-exported from `utils/bootstrap`, and the same functions
+ * again as a default object.
+ *
+ * Contents:
+ * - `mount` — the one production/imperative-preview mount: builds the shadow-DOM container, renders
+ *   into it, and records the live instance in `widgetState.mount`.
+ * - `initWidgetInternal` — the production path: configure the SDK, load remote settings, mount, then
+ *   optionally start session recording. Call it only through `initWidget()`, which owns the guards.
+ * - `initWidget` — guarded, coalescing production entry.
+ * - `unmountWidget` — tears down stream, recorder, screen share and the mounted tree.
+ * - `updateMarketrixConfig` — re-mounts the live widget with client-owned settings merged in, staying
+ *   on whichever path (preview or production) the current mount came from.
+ * - `MarketrixWidgetPreview` — React wrapper for the dashboard preview: validates settings, mounts a
+ *   preview instance, unmounts it again when `settings`/`container` change.
+ * - `mountWidget` — the npm-facing entry, dispatching on config shape: `settings` → preview,
+ *   `mtxId` + `mtxKey` → production, neither → throw.
+ *
+ * Why it is shaped this way:
+ * - `configureSdk` runs on the production path only — every preview path mounts directly and never
+ *   reaches it. There is no default host, so an unconfigured SDK would resolve each request against
+ *   the HOST PAGE's origin.
+ * - `widget_enabled` is the kill switch: unlike `show_widget`/`widget_appearance` (hidden but still
+ *   initialized), disabled means off — no chat id, no stream, no recording.
+ * - `window.__mtx` is the singleton guard because it survives ES-module re-execution, which resets
+ *   module-level vars; `initPromise` only coalesces concurrent calls within one module instance.
+ * - Every init and every unmount bumps `lifecycleGeneration`, so an init still in flight — or a
+ *   recorder that finishes starting after teardown — abandons its work instead of mounting over, or
+ *   logging against, a newer lifecycle.
+ * - With no `container` prop, `MarketrixWidgetPreview` mounts into the div it renders below, never
+ *   into that div's parent: the parent would size the widget to the wrong box and leave the rendered
+ *   div an empty, dead sibling.
+ * - The `settings` branch of `mountWidget` is preview: no network, and deliberately no global
+ *   production instance.
+ * - Auto-init runs on import, browser-guarded so the package stays importable from a server render and
+ *   deferred a tick so every export exists before `autoInitializeWidget` scans for the host's
+ *   `script[mtx-id]` tag; a registration failure logs rather than surfacing as an unhandled error.
+ */
+
 declare global {
   interface Window {
     __mtx?: { state?: 'initializing' | 'active' };
@@ -37,14 +79,12 @@ let initPromise: Promise<void> | null = null;
 let lifecycleGeneration = 0;
 let rrwebSessionRecorder: RrwebSessionRecorder | null = null;
 
-/** The one production/imperative-preview mount. */
 function mount(config: ValidWidgetConfig, host: HTMLElement | undefined, previewMode = false): void {
   const { container, mountEl } = createWidgetContainer(host);
   const instance = mountWidgetToContainer(mountEl, config, previewMode);
   widgetState.mount = { instance, config, container, host, previewMode };
 }
 
-// Call only via initWidget(), which guards with initPromise.
 async function initWidgetInternal(
   config: MarketrixConfig,
   container: HTMLElement | undefined,
@@ -55,8 +95,6 @@ async function initWidgetInternal(
   showHostPageNotice('Loading widget settings...');
   let finalConfig: CredentialedConfig;
   try {
-    // Production only: every preview path mounts directly and never reaches here. There is no default
-    // host, so leaving the SDK unconfigured would resolve each request against the HOST PAGE's origin.
     configureSdk(config.mtxApiHost ?? '');
     finalConfig = await loadWidgetConfig(config);
   } catch (error) {
@@ -69,8 +107,6 @@ async function initWidgetInternal(
   if (generation !== lifecycleGeneration) return;
   hideHostPageNotice();
 
-  // The kill switch: unlike show_widget/widget_appearance (hidden but still initialized), disabled
-  // means off — no chat id, no stream, no recording.
   if (!finalConfig.widget_enabled) {
     window.__mtx = undefined;
     return;
@@ -102,7 +138,6 @@ async function initWidgetInternal(
 export const initWidget = (config: MarketrixConfig, container?: HTMLElement): Promise<void> => {
   if (initPromise) return initPromise;
 
-  // window-level guard survives ES module re-execution, which resets module-level vars.
   if (window.__mtx?.state) return Promise.resolve();
   if (isWidgetInitialized()) {
     console.warn('Marketrix Widget: already initialized');
@@ -165,8 +200,6 @@ export const MarketrixWidgetPreview: React.FC<MarketrixWidgetPreviewProps> = ({ 
   const widgetContainerRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
-    // With no `container` prop, mount into the div this component renders below — never its parent,
-    // which would size the widget to the wrong box and leave that div an empty, dead sibling.
     const parentContainer = container ?? containerRef.current ?? document.body;
 
     if (!parentContainer || !isHTMLElement(parentContainer)) {
@@ -219,7 +252,6 @@ export const mountWidget = async (config: AddWidgetConfig): Promise<void> => {
       return;
     }
     unmountWidget();
-    // Preview: no network, and deliberately no global production instance.
     const { settings: _settings, container: _container, ...restConfig } = config;
     mount({ ...createConfigFromSettings(parsed.settings, restConfig), isPreviewMode: true }, container, true);
   } else if (config.mtxId !== undefined && config.mtxKey !== undefined) {

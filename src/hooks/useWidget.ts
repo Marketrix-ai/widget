@@ -1,10 +1,21 @@
-import { createContext, useCallback, useContext, useMemo } from 'react';
+/**
+ * The two context hooks every widget component reads: `useWidgetConfig` for settings, `useWidget` for the store.
+ *
+ * `WidgetConfigContext` publishes every setting resolved — API settings plus the position and z-index `WidgetRoot`
+ * layers on top — and `useWidgetConfig` reads it, throwing outside `WidgetRoot` rather than defaulting, so nothing
+ * below ever touches the raw config prop or threads it down as props. `useWidget` folds the two independent stores
+ * (`UIStateContext`, `ChatContext`) into one memoized `{state, actions}`: `isTaskRunning` reads the canonical *wire*
+ * status `'running'`, never the UI-only `ChatMessage.taskStatus` vocabulary, and `isAwaitingReply` the placeholder
+ * message held open while a reply streams. `clearChatHistory` resets messages, task and the UI error together — an
+ * error left standing would outlive the chat it described.
+ */
+
+import { createContext, useContext, useMemo } from 'react';
 
 import { useChatContext } from '../context/ChatContext';
 import { useUIStateContext } from '../context/UIStateContext';
 import type { ValidWidgetConfig, WidgetState } from '../types';
 
-/** Every setting resolved: API settings plus the position and script-tag overrides WidgetRoot layers on top. */
 export const WidgetConfigContext = createContext<ValidWidgetConfig | null>(null);
 
 export const useWidgetConfig = (): ValidWidgetConfig => {
@@ -27,15 +38,18 @@ export const useWidget = () => {
     [uiState, messages, taskState],
   );
 
-  const resetChat = useCallback(() => {
-    chatActions.clearMessages();
-    taskActions.resetTask();
-    uiActions.setError(undefined);
-  }, [chatActions, taskActions, uiActions]);
-
   const actions = useMemo(
-    () => ({ ...uiActions, ...taskActions, ...chatActions, clearChatHistory: resetChat }),
-    [uiActions, taskActions, chatActions, resetChat],
+    () => ({
+      ...uiActions,
+      ...taskActions,
+      ...chatActions,
+      clearChatHistory: () => {
+        chatActions.clearMessages();
+        taskActions.resetTask();
+        uiActions.setError(undefined);
+      },
+    }),
+    [uiActions, taskActions, chatActions],
   );
 
   return { state, actions };

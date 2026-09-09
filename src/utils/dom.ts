@@ -1,23 +1,31 @@
+/**
+ * Predicates the agent's element index runs against the HOST page's DOM — what counts as a control, and whether it
+ * is actually reachable — plus the class that marks the widget's own shadow host inside that page.
+ *
+ * Contents:
+ * - `WIDGET_SHADOW_HOST_CLASS` — set by `bootstrap` on the shadow host and read by `DomService`, which uses it to
+ *   recognise our own overlay chrome instead of reporting it as an element obscuring the host page.
+ * - `INTERACTIVE_ROLES` — the ARIA roles that make a non-interactive tag count as a control.
+ * - `ancestry` — walks element → `parentElement`, crossing each shadow boundary at its host; a bare `parentElement`
+ *   walk stops dead at a `ShadowRoot`, so a control inside a host-page web component would read as top-level.
+ * - `disabledReason` — the phrase saying why an element cannot be operated (disabled control, `aria-disabled`, or an
+ *   `inert` ancestor), or null. The strings are sentence fragments completing `DomService`'s `Element <n> …` message,
+ *   so reword them in both places at once; `disabled` is read duck-typed because it sits on several unrelated
+ *   control interfaces.
+ * - `isIndexable` — whether an element is a visible, reachable control. It is `DomService`'s geometry-aware fallback
+ *   after its cheap selector/handler checks.
+ *
+ * Visibility is more than computed style: an element scrolled out of an `overflow: hidden|clip` ancestor is
+ * unreachable despite a non-zero rect (that walk stops at `document.body`), and a zero-size shadow host hides its
+ * whole tree, so both chains are climbed. The one `try` is deliberate — the host page owns this DOM and may have
+ * patched anything on it, so a poisoned element is logged with the real error and skipped rather than aborting the
+ * whole indexing pass.
+ */
+
 export const WIDGET_SHADOW_HOST_CLASS = 'marketrix-widget-container';
 
 const INTERACTIVE_ROLES = new Set(['button', 'link', 'textbox', 'checkbox', 'radio', 'switch', 'tab', 'menuitem']);
 
-function isInteractiveKind(el: Element): boolean {
-  const tag = el.tagName.toLowerCase();
-  return (
-    tag === 'button' ||
-    tag === 'input' ||
-    tag === 'textarea' ||
-    tag === 'select' ||
-    (tag === 'a' && el.hasAttribute('href')) ||
-    INTERACTIVE_ROLES.has(el.getAttribute('role') ?? '') ||
-    el.getAttribute('contenteditable') === 'true' ||
-    el.hasAttribute('onclick') ||
-    parseInt(el.getAttribute('tabindex') ?? '-1', 10) >= 0
-  );
-}
-
-/** Walks element → parentElement, crossing each shadow boundary at its host. */
 function* ancestry(el: Element): Generator<Element> {
   let node: Element | null = el;
   while (node) {
@@ -39,9 +47,19 @@ export function disabledReason(el: Element): string | null {
 export function isIndexable(el: Element | null): boolean {
   if (!(el instanceof Element)) return false;
 
-  // One net, because the host page owns this DOM and may have patched anything on it; an indexing pass must not throw.
   try {
-    if (!isInteractiveKind(el)) return false;
+    const tag = el.tagName.toLowerCase();
+    const interactive =
+      tag === 'button' ||
+      tag === 'input' ||
+      tag === 'textarea' ||
+      tag === 'select' ||
+      (tag === 'a' && el.hasAttribute('href')) ||
+      INTERACTIVE_ROLES.has(el.getAttribute('role') ?? '') ||
+      el.getAttribute('contenteditable') === 'true' ||
+      el.hasAttribute('onclick') ||
+      parseInt(el.getAttribute('tabindex') ?? '-1', 10) >= 0;
+    if (!interactive) return false;
 
     const style = window.getComputedStyle(el);
     if (style.display === 'none' || style.pointerEvents === 'none') return false;
@@ -61,7 +79,6 @@ export function isIndexable(el: Element | null): boolean {
       }
     }
 
-    // A zero-size shadow host hides everything inside it.
     for (let root = el.getRootNode(); root instanceof ShadowRoot; root = root.host.getRootNode()) {
       const hostRect = root.host.getBoundingClientRect();
       if (hostRect.width <= 0 || hostRect.height <= 0) return false;

@@ -2,8 +2,13 @@
 
 # Restores node/npm onto PATH before any command runs — GUI git clients start hooks with a minimal
 # environment. Changing this line requires re-running `lefthook install`: the path is baked into the
-# generated hook shims, not read at run time.
-rc: .lefthookrc
+# generated hook shims, not read at run time. Keep the leading `./`: the shim sources this with the
+# POSIX `.` builtin, which searches $PATH for an operand containing no slash. Shells differ on whether
+# they then fall back to the current directory — measured here: macOS `/bin/sh` (bash 3.2.57 posix)
+# sources it fine, `dash` and `zsh` do not. So the bare name works on most developers' machines and
+# fails on a minimal shell, which is the worst way for it to be wrong. The failure is at least LOUD:
+# `.` is a special builtin, so dash exits 2 and the commit is blocked rather than silently unhooked.
+rc: ./.lefthookrc
 
 # Formatting is APPLIED here, not reported. A pre-push hook cannot do this job: git resolves the
 # commits it will send before running that hook, so anything the hook rewrites is not what gets
@@ -13,6 +18,11 @@ pre-commit:
   commands:
     format:
       glob: '*.{ts,tsx,js,mjs,cjs,json,md,yml,yaml,css}'
+      # `AGENTS.md` is a symlink to `CLAUDE.md`; prettier EXITS 2 on a symlink passed explicitly rather
+      # than skipping it, so without this the hook fails every commit that stages it — and the tempting
+      # "fix" is to replace the link with a real file.
+      exclude:
+        - AGENTS.md
       run: npx prettier --write {staged_files}
       stage_fixed: true
     lint:

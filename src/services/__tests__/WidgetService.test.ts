@@ -1,3 +1,8 @@
+/**
+ * `loadWidgetConfig` tests: one load returns one schema-validated config, settings the widget omits are
+ * filled from the API defaults, an invalid merged response is rejected naming the schema field, and the
+ * inactive-widget diagnostic is preserved without loading defaults or the application.
+ */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { sdk, WidgetSettingsDataSchema } from '../../sdk';

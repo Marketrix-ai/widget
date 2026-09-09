@@ -27,7 +27,7 @@ Add one `<script>` to your page `<head>`, **before any `<script type="module">` 
 
 `loader.js`:
 
-1. Injects a React 19 importmap (defaults to `esm.sh/react@19`). If your page already has an importmap, the loader **merges** it and your mappings win — so a host that already ships React 19 keeps its own copy.
+1. Injects a React 19 importmap pointing at `esm.sh/react@19`. If your page already has an importmap before the loader, the browser keeps your entries — a later import map never overrides an earlier key — so a host that already ships React 19 keeps its own copy.
 2. Injects `<script type="module" src=".../widget.mjs">` from the same origin as the loader.
 3. Forwards every `mtx-*` attribute from the loader tag to the widget.
 
@@ -102,7 +102,7 @@ Widget **appearance and behavior** (position, colors, sizing, border radius, ani
 </html>
 ```
 
-The loader takes care of the React 19 importmap. If you manage your own importmap, place it before the loader and the loader will merge (and defer to) it:
+The loader takes care of the React 19 importmap. If you manage your own importmap, place it before the loader; your entries win and the loader's map only fills what is missing:
 
 ```html
 <script type="importmap">
@@ -193,13 +193,12 @@ function Preview() {
   return (
     <MarketrixWidgetPreview
       settings={{ widget_enabled: true, widget_position: 'bottom_right' /* ...WidgetSettingsData */ }}
-      mtxApiHost='https://api.marketrix.ai'
     />
   );
 }
 ```
 
-Props: `settings` (required), `container?`, `mtxId?`, `mtxKey?`, `mtxApiHost?`.
+Props: `settings` (required) and `container?`.
 
 ---
 
@@ -217,6 +216,7 @@ TypeScript types are bundled with the package:
 
 - `MarketrixConfig` — full config for `initWidget` / `updateMarketrixConfig` (`mtxId`, `mtxKey`, `mtxApiHost`, `userId`, `show_widget`, `use_screenshare`, plus all widget appearance settings, optional).
 - `AddWidgetConfig` — discriminated config for `mountWidget` (production / preview variants + common options).
+- `ClientOwnedConfig` — the host-supplied options the API never sends (`mtxApiHost`, `userId`, `widget_position_z_index`, `show_widget`, `use_screenshare`).
 - `MarketrixWidgetPreviewProps` — props for the `MarketrixWidgetPreview` component.
 - `ChatMessage`, `WidgetState`, `InstructionType` (`'tell' | 'show' | 'do'`).
 

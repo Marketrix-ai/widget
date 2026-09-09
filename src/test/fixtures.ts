@@ -1,7 +1,15 @@
+/**
+ * The shared widget-settings fixture the config-driven tests build from: `getMockWidgetConfig(overrides)`
+ * returns a complete, schema-valid tenant config — every rendered setting plus the `mtxId`/`mtxKey` credential,
+ * api host and preview flag a mounted widget needs — shallow-merged with `overrides`.
+ *
+ * `MockWidgetConfig` widens `MarketrixConfig` with the four render constants (`widget_border_radius`,
+ * `widget_font_size`, `widget_animation_duration`, `widget_fade_duration`). `MarketrixConfig` is built on
+ * `WidgetRenderedSettings`, which omits them, but callers hand this fixture straight to
+ * `WidgetSettingsDataSchema.parse()`, which demands the whole wire shape.
+ */
 import type { MarketrixConfig, WidgetSettingsData } from '../types';
 
-// Widened past MarketrixConfig with the render-constant fields (widget_border_radius and siblings),
-// which callers still need to build a full WidgetSettingsData for WidgetSettingsDataSchema.parse().
 type MockWidgetConfig = MarketrixConfig &
   Pick<
     WidgetSettingsData,

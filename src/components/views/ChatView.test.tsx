@@ -1,3 +1,7 @@
+/**
+ * `ChatView` tests: a send waiting on screen access locks the composer so no later send overwrites the
+ * queued message, and unlocks to deliver it once answered; a multi-line message keeps its line breaks.
+ */
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 

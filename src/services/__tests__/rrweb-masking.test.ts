@@ -1,3 +1,7 @@
+/**
+ * rrweb privacy tests: every input is masked by default, and both the `mtx-` and native `rr-` privacy
+ * classes are honoured.
+ */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const recordMock = vi.fn(() => () => {});

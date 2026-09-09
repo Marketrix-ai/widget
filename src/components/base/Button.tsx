@@ -1,8 +1,13 @@
+/**
+ * `Button` — the one button primitive, over Base UI's `Button`. Variant, size, stacking and disabled
+ * state are exposed as `data-*` attributes and styled in CSS; shape and elevation resolve to inline
+ * radius and shadow from the design tokens. `type` defaults to `button` so a widget button inside a
+ * host form never submits it.
+ */
 import { Button as BaseButton } from '@base-ui/react/button';
 import type { ComponentPropsWithRef } from 'react';
 
-import { getElevationStyle, RADIUS } from '../../design-system/component-tokens';
-import type { ShadowToken } from '../../design-system/shadows';
+import { getElevationStyle, RADIUS, type ShadowToken } from '../../design-system/component-tokens';
 
 type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'bare' | 'chip' | 'tab';
 type ButtonSize = 'sm' | 'md';

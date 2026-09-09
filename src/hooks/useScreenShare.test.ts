@@ -1,3 +1,9 @@
+/**
+ * `useScreenShare` tests: allow resolves the request card, posts both messages and flushes the queued
+ * message (also when the picker was cancelled, marking the card denied); deny flushes without sharing;
+ * dismissing the dialog leaves the separate request card unanswered; a persisted open request survives
+ * remount; an already-resolved request is ignored so a new one can be raised.
+ */
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 

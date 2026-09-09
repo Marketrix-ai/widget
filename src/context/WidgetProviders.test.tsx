@@ -1,3 +1,8 @@
+/**
+ * `WidgetProviders` initialization tests: no work after a StrictMode effect cleanup, the stored
+ * transcript survives a second mount in the same page, no task is running on mount whatever a previous
+ * page left on disk, and a chat initialization failure routes to the widget error state.
+ */
 import { render, screen, waitFor } from '@testing-library/react';
 import React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';

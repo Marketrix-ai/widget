@@ -1,11 +1,20 @@
+/**
+ * The widget's chat input: an auto-growing textarea with send and stop.
+ *
+ * `MAX_TEXTAREA_HEIGHT` caps growth at three lines — 20px each plus 6px of padding — after which it
+ * scrolls, so a long message cannot push the conversation off a small host page.
+ *
+ * `mergeRefs` combines the caller's ref with the internal one, since the component needs its own
+ * handle to measure and resize.
+ */
+
 import React, { useCallback, useEffect, useRef } from 'react';
 
 import type { InstructionType } from '../../types';
-import { Flex } from '../base/Flex';
+import { Flex, Stack } from '../base/Flex';
 import { Icon } from '../base/Icon';
 import { IconButton } from '../base/IconButton';
 import type { IconName } from '../base/icons';
-import { Stack } from '../base/Stack';
 import { Text } from '../base/Text';
 
 export interface ChatInputMode {
@@ -27,7 +36,7 @@ export interface ChatInputProps {
   ref?: React.Ref<HTMLTextAreaElement>;
 }
 
-const MAX_TEXTAREA_HEIGHT = 66; // 3 lines (20px each) + 6px padding
+const MAX_TEXTAREA_HEIGHT = 66;
 
 function mergeRefs<T>(...refs: (React.Ref<T> | undefined)[]) {
   return (el: T | null) => {

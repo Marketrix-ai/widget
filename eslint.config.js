@@ -1,3 +1,16 @@
+/**
+ * The widget's ESLint config.
+ *
+ * The load-bearing rule is the ban on `document.activeElement`. Inside the CLOSED shadow root it
+ * retargets to the HOST, so it never names an element of the widget's own tree — focus must be read
+ * through `getRootNode()`. `useFocusTrap`'s `activeElementIn` is the one home for that retargeting and
+ * is exempted, along with the jsdom tests that mount no shadow root.
+ *
+ * Unused imports and identifiers are owned by the unused-imports plugin and import ordering by
+ * simple-import-sort, so `import-x/order` is off. `import-x/no-unresolved` is off because TypeScript
+ * already resolves, and `prefer-nullish-coalescing` is off because it needs `strictNullChecks`.
+ */
+
 import js from '@eslint/js';
 import typescript from '@typescript-eslint/eslint-plugin';
 import typescriptParser from '@typescript-eslint/parser';
@@ -68,9 +81,6 @@ export default [
       'unused-imports': unusedImports,
     },
     rules: {
-      // Inside the closed shadow root `document.activeElement` retargets to the HOST, so it never names
-      // an element of the widget's own tree — read focus through `getRootNode()`. `useFocusTrap`'s
-      // `activeElementIn` is the one home for that and is exempted below.
       'no-restricted-properties': [
         'error',
         {
@@ -80,7 +90,7 @@ export default [
             'reads the shadow HOST, not the focused widget element — use activeElementIn() from hooks/useFocusTrap',
         },
       ],
-      '@typescript-eslint/no-unused-vars': 'off', // handled by unused-imports plugin
+      '@typescript-eslint/no-unused-vars': 'off',
       '@typescript-eslint/no-explicit-any': 'warn',
       '@typescript-eslint/explicit-function-return-type': 'off',
       '@typescript-eslint/explicit-module-boundary-types': 'off',
@@ -96,16 +106,15 @@ export default [
       '@typescript-eslint/no-unsafe-call': 'warn',
       '@typescript-eslint/no-unsafe-member-access': 'warn',
       '@typescript-eslint/no-unsafe-return': 'warn',
-      '@typescript-eslint/prefer-nullish-coalescing': 'off', // strictNullChecks requirement
+      '@typescript-eslint/prefer-nullish-coalescing': 'off',
       '@typescript-eslint/prefer-optional-chain': 'warn',
       '@typescript-eslint/require-array-sort-compare': 'error',
       '@typescript-eslint/restrict-plus-operands': 'error',
       '@typescript-eslint/restrict-template-expressions': 'warn',
 
-      // Import/Export rules
       'import-x/no-duplicates': 'error',
-      'import-x/no-unresolved': 'off', // TypeScript handles this
-      'import-x/order': 'off', // handled by simple-import-sort
+      'import-x/no-unresolved': 'off',
+      'import-x/order': 'off',
       'simple-import-sort/imports': 'error',
       'simple-import-sort/exports': 'error',
       'unused-imports/no-unused-imports': 'error',
@@ -122,7 +131,7 @@ export default [
       'no-console': 'off',
       'no-debugger': 'error',
       'no-duplicate-imports': 'error',
-      'no-unused-vars': 'off', // handled by unused-imports plugin
+      'no-unused-vars': 'off',
       'prefer-const': 'error',
       'no-var': 'error',
       'object-shorthand': 'error',
@@ -142,7 +151,6 @@ export default [
   },
   prettierConfig,
   {
-    // The one home for the retargeting itself, plus jsdom tests that mount no shadow root.
     files: ['src/hooks/useFocusTrap.ts', '**/*.test.ts', '**/*.test.tsx'],
     rules: {
       'no-restricted-properties': 'off',

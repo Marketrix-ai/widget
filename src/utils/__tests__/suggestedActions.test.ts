@@ -1,3 +1,8 @@
+/**
+ * Suggested-action prefixing tests: the mode caption prefixes without editing the tenant text (never
+ * eating letters from a word that merely begins with the mode word, collapsing a prefix already
+ * written), the dispatched value carries the same prefix as the label, and a tell chip is untouched.
+ */
 import { describe, expect, it } from 'vitest';
 
 import { getMockWidgetConfig } from '../../test/fixtures';

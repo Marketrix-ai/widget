@@ -1,9 +1,31 @@
+/**
+ * The chat transcript pane: a scrolling `role='log'` list of `MessageItem`s with the "Clear conversation"
+ * action beneath it and two floating scroll affordances layered over it.
+ *
+ * `scrollButtonStyle` is the card-on-surface look shared by both affordances. `MessageListProps` carries the
+ * end-of-list anchor ref owned by `ChatView` plus the screen-access answers, which are only forwarded to
+ * `MessageItem`. `MessageList` prepends a synthetic `welcome` message built from `widget_body`; it never
+ * enters the store, which is why "Clear conversation" is gated on `messages.length` rather than on the
+ * rendered list. `handleScroll` derives both affordances from container geometry — top once scrolled past
+ * 200px, bottom while the list overflows and sits more than 50px off the end — and the affordance table
+ * carries each one's edge, label, icon and scroll action.
+ *
+ * The transcript paints `widget_background_color` through `backgroundGradient`, the one home for that
+ * expansion, and zeroes `backgroundColor` for a gradient setting so the two declarations cannot fight.
+ *
+ * Every scroll is suppressed in preview mode: there the widget is embedded in the dashboard's modal, and
+ * `scrollIntoView` would scroll that parent modal rather than this list. The scroll on a new message waits a
+ * `requestAnimationFrame` so layout has settled and `scrollHeight` is final before it fires. A streaming reply
+ * arrives as `chat/delta` fragments that grow the last message in place without changing the message count, so
+ * a second effect keys on that message's content length and re-pins to the bottom only while the reader is
+ * already within 120px of it — a reader who scrolled away is left where they are.
+ */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 
-import { SHADOW } from '../../design-system/shadows';
+import { SHADOW } from '../../design-system/component-tokens';
 import { useWidget, useWidgetConfig } from '../../hooks/useWidget';
 import type { ChatMessage } from '../../types';
-import { addOpacity } from '../../utils/color';
+import { addOpacity, backgroundGradient } from '../../utils/color';
 import { Button } from '../base/Button';
 import { Flex } from '../base/Flex';
 import { Icon } from '../base/Icon';
@@ -57,19 +79,7 @@ export const MessageList = ({ messagesEndRef, onScreenAccessAllow, onScreenAcces
     }
   };
 
-  const scrollToTop = () => {
-    containerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  // Skip in preview mode to prevent scrolling the parent modal
-  const scrollToBottom = () => {
-    if (messagesEndRef.current) {
-      !isPreviewMode && messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
-  };
-
   useEffect(() => {
-    // rAF so the DOM is laid out and scroll height is final before we scroll
     window.requestAnimationFrame(() => {
       if (messagesEndRef.current) {
         !isPreviewMode && messagesEndRef.current.scrollIntoView({ behavior: 'auto' });
@@ -78,7 +88,6 @@ export const MessageList = ({ messagesEndRef, onScreenAccessAllow, onScreenAcces
     });
   }, [messages.length, isPreviewMode]);
 
-  // Follow a streaming reply: pin to bottom as the last message grows (chat/delta), unless the user scrolled away.
   const lastContentLength = messages[messages.length - 1]?.content?.length ?? 0;
   useEffect(() => {
     const el = containerRef.current;
@@ -105,9 +114,7 @@ export const MessageList = ({ messagesEndRef, onScreenAccessAllow, onScreenAcces
           backgroundColor: widgetConfig.widget_background_color.includes('gradient')
             ? 'transparent'
             : widgetConfig.widget_background_color,
-          backgroundImage: widgetConfig.widget_background_color.includes('gradient')
-            ? widgetConfig.widget_background_color
-            : `linear-gradient(135deg, ${widgetConfig.widget_background_color} 0%, ${widgetConfig.widget_background_color} 100%)`,
+          backgroundImage: backgroundGradient(widgetConfig.widget_background_color),
           scrollbarColor: `${addOpacity(widgetConfig.widget_border_color, 0.3)} ${addOpacity(widgetConfig.widget_border_color, 0.1)}`,
           scrollbarWidth: 'thin',
         }}
@@ -136,40 +143,35 @@ export const MessageList = ({ messagesEndRef, onScreenAccessAllow, onScreenAcces
         <Surface key='scroll-anchor' ref={messagesEndRef as React.RefObject<HTMLDivElement>} />
       </Surface>
 
-      {showScrollTop && (
-        <Flex
-          position='absolute'
-          justify='center'
-          style={{ top: '8px', left: 0, right: 0, zIndex: 10, pointerEvents: 'none' }}
-        >
-          <IconButton
-            variant='secondary'
-            size='sm'
-            label='Scroll to top'
-            onClick={scrollToTop}
-            style={scrollButtonStyle}
-          >
-            <Icon name='arrowUp' size={10} style={{ color: widgetConfig.widget_accent_color }} />
-          </IconButton>
-        </Flex>
-      )}
-
-      {showScrollBottom && (
-        <Flex
-          position='absolute'
-          justify='center'
-          style={{ bottom: '8px', left: 0, right: 0, zIndex: 10, pointerEvents: 'none' }}
-        >
-          <IconButton
-            variant='secondary'
-            size='sm'
-            label='Scroll to bottom'
-            onClick={scrollToBottom}
-            style={scrollButtonStyle}
-          >
-            <Icon name='arrowDown' size={10} style={{ color: widgetConfig.widget_accent_color }} />
-          </IconButton>
-        </Flex>
+      {[
+        {
+          show: showScrollTop,
+          edge: { top: '8px' },
+          label: 'Scroll to top',
+          icon: 'arrowUp' as const,
+          onClick: () => containerRef.current?.scrollTo({ top: 0, behavior: 'smooth' }),
+        },
+        {
+          show: showScrollBottom,
+          edge: { bottom: '8px' },
+          label: 'Scroll to bottom',
+          icon: 'arrowDown' as const,
+          onClick: () => !isPreviewMode && messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }),
+        },
+      ].map(
+        ({ show, edge, label, icon, onClick }) =>
+          show && (
+            <Flex
+              key={label}
+              position='absolute'
+              justify='center'
+              style={{ ...edge, left: 0, right: 0, zIndex: 10, pointerEvents: 'none' }}
+            >
+              <IconButton variant='secondary' size='sm' label={label} onClick={onClick} style={scrollButtonStyle}>
+                <Icon name={icon} size={10} style={{ color: widgetConfig.widget_accent_color }} />
+              </IconButton>
+            </Flex>
+          ),
       )}
     </Surface>
   );

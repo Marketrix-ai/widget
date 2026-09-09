@@ -1,3 +1,15 @@
+/**
+ * The widget's one door to the api: the oRPC client bound to `widgetContract`, plus the schemas and types
+ * the embedding page consumes.
+ *
+ * Contents: `createClient` builds an oRPC client for one api host; `configureSdk` points the SDK at that
+ * host and MUST be called before any SDK operation, because one published bundle is loaded from any
+ * customer's page and so carries no baked-in api host; `sdk` is a Proxy over the current client, so a
+ * caller may hold one stable reference across reconfiguration.
+ *
+ * The `widgetContract` re-export is type-only: the oRPC client builds each request from the proxied
+ * property path, so the contract value itself never ships in the bundle.
+ */
 import { createORPCClient } from '@orpc/client';
 import { RPCLink } from '@orpc/client/fetch';
 import type { ContractRouterClient } from '@orpc/contract';
@@ -11,7 +23,6 @@ function createClient(apiUrl: string): ContractRouterClient<typeof widgetContrac
 let currentApiUrl = '';
 let client = createClient('');
 
-/** Must be called before any SDK operation — the widget has no baked-in API host. */
 export const configureSdk = (apiUrl: string) => {
   if (!apiUrl?.trim()) throw new Error('API URL is required for SDK configuration');
 
@@ -35,5 +46,4 @@ export type { InstructionType, WidgetData, WidgetSettingsData } from './contract
 
 export type { WidgetCommand, WidgetEvent } from './contracts/widget';
 
-// Type-only: the oRPC client builds requests from the proxied path, so the contract value never ships.
 export type { widgetContract } from './contract';

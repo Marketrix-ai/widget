@@ -1,4 +1,11 @@
-// Must sit in <head> before any <script type="module"> — it defines the importmap they resolve against.
+/**
+ * The classic script-tag bootstrap, served as `dist/loader.js`. Must sit in <head> before any
+ * <script type="module">: it writes the importmap those modules resolve `react`/`react-dom` against
+ * (esm.sh, React 19 — the bundle keeps React external and the host must supply it), then appends
+ * `widget.mjs` as a module script next to itself, copying every `mtx-*` attribute from its own tag so
+ * the widget auto-initializes with the host's settings. Plain ES5 on purpose — this file runs unbundled
+ * in whatever browser the host page has.
+ */
 (function () {
   var map = document.createElement('script');
   map.type = 'importmap';

@@ -1,3 +1,7 @@
+/**
+ * `Avatar` tests: an `img` with src/alt, the md preset by default, numeric size as inline style, ref
+ * forwarding, and its own class kept beside a caller className.
+ */
 import { render } from '@testing-library/react';
 import { createRef } from 'react';
 import { describe, expect, it } from 'vitest';

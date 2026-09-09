@@ -1,3 +1,44 @@
+/**
+ * Unit tests for `../sseReducer` — the pure widget chat state machine that folds SSE `WidgetEvent`s and local
+ * actions into `{messages, task}` plus the effects the caller performs.
+ *
+ * Fixtures: `agentMessage` builds a thinking agent placeholder bubble; `runningState` wraps one in a running
+ * task and `idleState` is that same bubble already settled beside an idle task; `toolCall` builds a `tool/call`
+ * event, defaulting to `click_element` on index 1.
+ *
+ * Contents — what each suite pins down:
+ * - `reduceSse — task/status`: `running` is inert, because the first `tool/call` is what activates the task
+ *   (the api mints no task id, so the widget holds none); `completed`/`failed`/`stopped` end the task and stamp
+ *   `taskStatus` done/failed/stopped; a terminal status renders its closing message as an appended text part
+ *   beside the trajectory, not as `content` alone; `has_question` is a PAUSE, not a terminal — the spinner
+ *   flips to `waiting-for-user` and the task goes idle, but `taskStatus` stays undefined so no terminal icon
+ *   shows. All four settle `isPlaceholder`: the composer is disabled while a placeholder stands, and since all
+ *   four also end the task, a placeholder left pending leaves no control able to release it.
+ * - `reduceTransportFailure`: settles every still-pending bubble into an error and ends the task, leaving an
+ *   already-settled bubble referentially untouched.
+ * - `reduceStaleReply` (the watchdog): settles a placeholder gone silent for the deadline whether or not a task
+ *   is still running, and releases one stranded by a reload; never touches a run paused on the visitor
+ *   (`waiting-for-user`), an already-settled message, or an unknown id. It stamps `taskStatus: 'failed'` so a
+ *   late `completed` cannot re-target the bubble it just closed.
+ * - `reduceSse — tool/call`: emits the `executeTool` effect with the call details, auto-activates an idle task,
+ *   appends an `in_progress` progress line, and takes the mode off the event. A DOM read reads as "Reading the
+ *   page" and must never mention the screen — only screen sharing views the visitor's screen.
+ * - `reduceSse — chat/response` and `chat/delta`: a response resolves the placeholder matched by `request_id`;
+ *   deltas accumulate into one streaming text part, and the final response REPLACES that part rather than
+ *   appending, so the answer is not duplicated.
+ * - `reduceSse — chat/error`: writes the error text into the matching placeholder and settles it.
+ * - `reduceSse — ignored events`: `registered` and `heartbeat` return the same state object and no effects.
+ * - `reduceToolProgress / reduceToolDone / reduceStop`: progress lines close by the tool that finished, not the
+ *   newest open one, and a failure surfaces its error text; `reduceToolDone` ends the task and marks the active
+ *   bubble done, and a duplicate completion must not fall back past that stamp onto an older settled reply;
+ *   `reduceStop` stamps stopped and parks the task in `stopped`; `FINISH_TOOL` carries no progress line and
+ *   clears whatever trajectory preceded it.
+ * - Stop semantics: a stop is the visitor withdrawing their page, so a `tool/call` that raced it executes
+ *   nothing and the run reporting itself `completed` does not lift the refusal — only the visitor's next
+ *   `reduceDispatch` does.
+ * - Message text: `content` is every text part joined, not merely the last one written, and excludes progress
+ *   lines because a progress line is not the answer.
+ */
 import { describe, expect, it } from 'vitest';
 
 import type { WidgetEvent } from '@/sdk';
@@ -32,9 +73,15 @@ const runningState = (overrides: Partial<ChatMessage> = {}): SseState => ({
   task: { phase: 'running' },
 });
 
-const idleState = (): SseState => ({
-  messages: [agentMessage({ placeholderState: undefined })],
-  task: { phase: 'idle' },
+const idleState = (): SseState => ({ ...runningState({ placeholderState: undefined }), task: { phase: 'idle' } });
+
+const toolCall = (overrides: Partial<Extract<WidgetEvent, { type: 'tool/call' }>> = {}): WidgetEvent => ({
+  type: 'tool/call',
+  tool_call_id: 'call-1',
+  browser_tool: 'click_element',
+  args: { index: 1 },
+  explanation: 'Clicking the submit button',
+  ...overrides,
 });
 
 describe('reduceSse — task/status', () => {
@@ -85,13 +132,10 @@ describe('reduceSse — task/status', () => {
     expect(msg.placeholderState).toBe('waiting-for-user');
     expect(msg.content).toContain('Which account?');
     expect(msg.parts.at(-1)).toEqual({ type: 'text', content: 'Which account?' });
-    // Paused, not finished — no terminal icon.
     expect(msg.taskStatus).toBeUndefined();
     expect(result.state.task).toEqual({ phase: 'idle' });
   });
 
-  // The composer is disabled while a placeholder stands, and both `has_question` and every terminal
-  // status also end the task — so leaving one pending left no control able to release it.
   it.each(['completed', 'failed', 'stopped', 'has_question'] as const)('%s settles the placeholder', status => {
     const result = reduceSse(runningState(), { type: 'task/status', status }, 'do');
     expect(result.state.messages[0].isPlaceholder).toBe(false);
@@ -171,15 +215,6 @@ describe('reduceStaleReply', () => {
 });
 
 describe('reduceSse — tool/call', () => {
-  const toolCall = (overrides: Partial<Extract<WidgetEvent, { type: 'tool/call' }>> = {}): WidgetEvent => ({
-    type: 'tool/call',
-    tool_call_id: 'call-1',
-    browser_tool: 'click_element',
-    args: { index: 1 },
-    explanation: 'Clicking the submit button',
-    ...overrides,
-  });
-
   it('emits an executeTool effect carrying the call details', () => {
     const result = reduceSse(runningState(), toolCall(), 'do');
     expect(result.effects).toEqual([
@@ -300,13 +335,7 @@ describe('reduceToolProgress / reduceToolDone / reduceStop', () => {
   it('completed marks the in-progress line complete', () => {
     const inProgress = reduceSse(
       runningState(),
-      {
-        type: 'tool/call',
-        tool_call_id: 'c',
-        browser_tool: 'click_element',
-        args: {},
-        explanation: 'x',
-      },
+      toolCall({ tool_call_id: 'c', args: {}, explanation: 'x' }),
       'do',
     ).state;
     const done = reduceToolProgress(inProgress, 'click_element', 'x', 'completed', 'do');
@@ -317,13 +346,7 @@ describe('reduceToolProgress / reduceToolDone / reduceStop', () => {
   it('failed marks the line failed and surfaces the error text', () => {
     const inProgress = reduceSse(
       runningState(),
-      {
-        type: 'tool/call',
-        tool_call_id: 'c',
-        browser_tool: 'click_element',
-        args: {},
-        explanation: 'Clicking',
-      },
+      toolCall({ tool_call_id: 'c', args: {}, explanation: 'Clicking' }),
       'do',
     ).state;
     const failed = reduceToolProgress(inProgress, 'click_element', 'Clicking', 'failed', 'do', 'no element');
@@ -333,13 +356,8 @@ describe('reduceToolProgress / reduceToolDone / reduceStop', () => {
   });
 
   it('closes the line of the tool that finished, not the newest open one', () => {
-    const call = (browser_tool: string, tool_call_id: string): WidgetEvent => ({
-      type: 'tool/call',
-      tool_call_id,
-      browser_tool,
-      args: {},
-      explanation: browser_tool,
-    });
+    const call = (browser_tool: string, tool_call_id: string): WidgetEvent =>
+      toolCall({ tool_call_id, browser_tool, args: {}, explanation: browser_tool });
     const twoOpen = reduceSse(
       reduceSse(runningState(), call('click_element', 'c1'), 'show').state,
       call('get_html', 'c2'),
@@ -389,7 +407,7 @@ describe('reduceToolProgress / reduceToolDone / reduceStop', () => {
 
     const called = reduceSse(
       withTrajectory,
-      { type: 'tool/call', tool_call_id: 'c', browser_tool: FINISH_TOOL, args: {}, explanation: 'Wrapping up' },
+      toolCall({ tool_call_id: 'c', browser_tool: FINISH_TOOL, args: {}, explanation: 'Wrapping up' }),
       'tell',
     ).state;
     const succeeded = reduceToolProgress(called, FINISH_TOOL, 'Wrapping up', 'completed', 'tell');
@@ -402,18 +420,12 @@ describe('reduceToolProgress / reduceToolDone / reduceStop', () => {
 });
 
 describe('Stop is the visitor withdrawing their page from the agent', () => {
-  const toolCall: WidgetEvent = {
-    type: 'tool/call',
-    tool_call_id: 'call-late',
-    browser_tool: 'click_element',
-    args: { index: 1 },
-    explanation: 'Clicking the submit button',
-  };
+  const lateCall = toolCall({ tool_call_id: 'call-late' });
 
   it('a tool call that raced the stop is not executed on the visitor page', () => {
     const stopped = reduceStop(runningState(), 'do');
 
-    const result = reduceSse(stopped, toolCall, 'do');
+    const result = reduceSse(stopped, lateCall, 'do');
 
     expect(result.effects).toEqual([]);
     expect(result.state).toBe(stopped);
@@ -424,14 +436,14 @@ describe('Stop is the visitor withdrawing their page from the agent', () => {
 
     const settledByAgent = reduceSse(stopped, { type: 'task/status', status: 'completed' }, 'do').state;
 
-    expect(reduceSse(settledByAgent, toolCall, 'do').effects).toEqual([]);
+    expect(reduceSse(settledByAgent, lateCall, 'do').effects).toEqual([]);
   });
 
   it('the next request the visitor sends takes the refusal off', () => {
     const stopped = reduceStop(runningState(), 'do');
     const redispatched = reduceDispatch(stopped, agentMessage({ id: 'agent-2' }));
 
-    const result = reduceSse(redispatched, toolCall, 'do');
+    const result = reduceSse(redispatched, lateCall, 'do');
 
     expect(result.effects).toHaveLength(1);
     expect(result.state.task.phase).toBe('running');

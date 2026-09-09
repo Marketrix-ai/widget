@@ -1,3 +1,8 @@
+/**
+ * `RrwebSessionRecorder` tests: a rejected flush caps the buffer without discarding the Meta and
+ * FullSnapshot every later event replays against; stopping while metadata is in flight never begins
+ * recording; and the metadata post waits until the stream has registered the chat.
+ */
 import { record } from '@rrweb/record';
 import { EventType } from '@rrweb/types';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';

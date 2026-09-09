@@ -1,3 +1,21 @@
+/**
+ * The one home for turning per-tenant widget settings into semantic design tokens and the CSS custom
+ * properties inlined on the widget root — the widget's entire theming mechanism (no dark mode, no
+ * class-based themes).
+ *
+ * Contents: the `SemanticTokens` shape (color / radius / motion); `WIDGET_RADIUS_PX`, exported because
+ * `WidgetFab` needs the raw number for its SVG `rx`/`ry`, not a CSS string; `DURATION_ANIMATION` and
+ * `DURATION_FADE`; `WidgetStyleSettingsDefaults` and `WIDGET_STYLE_SETTINGS_DEFAULTS`, the five colour
+ * settings this file consumes and their fallbacks; `createSemanticTokens`, which resolves a partial
+ * settings object against those defaults and derives the muted/faint/hover/contrast variants;
+ * `semanticTokensToCssCustomProperties`, the token → `--var` map.
+ *
+ * Radius and both durations are fixed rather than per-tenant: every widget row in production holds these
+ * values and no surface writes them. Settings are filtered for explicit `undefined` before merging —
+ * a plain spread would let an `undefined` key shadow its default instead of falling back to it. The
+ * `--var` map must cover every variable `index.css` `:host` declares, or that hardcoded fallback palette
+ * shows through on the widget root.
+ */
 import type { WidgetSettingsData } from '../sdk';
 import { addOpacity, getContrastingColor } from '../utils/color';
 
@@ -23,7 +41,6 @@ type SemanticTokens = {
   };
 };
 
-// Fixed, not per-tenant: every widget row in production holds these, and no surface writes them.
 export const WIDGET_RADIUS_PX = 12;
 const DURATION_ANIMATION = '300ms';
 const DURATION_FADE = '200ms';
@@ -45,21 +62,25 @@ const WIDGET_STYLE_SETTINGS_DEFAULTS: WidgetStyleSettingsDefaults = {
   widget_secondary_color: '#6b7280',
 };
 
-function mapWidgetSettingsToSemanticTokens(settings: WidgetStyleSettingsDefaults): SemanticTokens {
+export function createSemanticTokens(settings: Partial<WidgetSettingsData> = {}): SemanticTokens {
+  const overrides = Object.fromEntries(
+    Object.entries(settings).filter(([, value]) => value !== undefined),
+  ) as Partial<WidgetStyleSettingsDefaults>;
+  const resolved = { ...WIDGET_STYLE_SETTINGS_DEFAULTS, ...overrides };
   return {
     color: {
-      background: settings.widget_background_color,
-      foreground: settings.widget_text_color,
-      foregroundMuted: addOpacity(settings.widget_text_color, 0.6),
-      foregroundFaint: addOpacity(settings.widget_text_color, 0.4),
-      border: settings.widget_border_color,
-      primary: settings.widget_accent_color,
-      primaryForeground: getContrastingColor(settings.widget_accent_color),
-      primaryHover: addOpacity(settings.widget_accent_color, 0.85),
-      secondary: settings.widget_secondary_color,
+      background: resolved.widget_background_color,
+      foreground: resolved.widget_text_color,
+      foregroundMuted: addOpacity(resolved.widget_text_color, 0.6),
+      foregroundFaint: addOpacity(resolved.widget_text_color, 0.4),
+      border: resolved.widget_border_color,
+      primary: resolved.widget_accent_color,
+      primaryForeground: getContrastingColor(resolved.widget_accent_color),
+      primaryHover: addOpacity(resolved.widget_accent_color, 0.85),
+      secondary: resolved.widget_secondary_color,
       secondaryForeground: '#ffffff',
-      secondaryBg: addOpacity(settings.widget_secondary_color, 0.2),
-      secondaryHover: addOpacity(settings.widget_secondary_color, 0.3),
+      secondaryBg: addOpacity(resolved.widget_secondary_color, 0.2),
+      secondaryHover: addOpacity(resolved.widget_secondary_color, 0.3),
     },
     radius: `${WIDGET_RADIUS_PX}px`,
     motion: {
@@ -69,15 +90,6 @@ function mapWidgetSettingsToSemanticTokens(settings: WidgetStyleSettingsDefaults
   };
 }
 
-export function createSemanticTokens(settings: Partial<WidgetSettingsData> = {}): SemanticTokens {
-  // An explicit undefined must not shadow its default, which is what a plain spread would do.
-  const overrides = Object.fromEntries(
-    Object.entries(settings).filter(([, value]) => value !== undefined),
-  ) as Partial<WidgetStyleSettingsDefaults>;
-  return mapWidgetSettingsToSemanticTokens({ ...WIDGET_STYLE_SETTINGS_DEFAULTS, ...overrides });
-}
-
-// Inline styles on the widget root: must cover every var index.css `:host` defines, or that fallback shows through.
 export function semanticTokensToCssCustomProperties(tokens: SemanticTokens): Record<string, string> {
   return {
     '--background': tokens.color.background,
