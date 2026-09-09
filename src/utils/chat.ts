@@ -1,25 +1,21 @@
 /**
- * Pure helpers for the chat message list. `getModeDisplayName` labels an `InstructionType`; `formatMessageTime`
- * formats hh:mm, defaulting to now for an undated message; `lastIndexWhere` is a newest-first index search (also
- * used by `useScreenShare`); `findMessageForProgress` picks the agent reply a `tool/call` or progress event should
- * render into. `addProgressLine` / `markProgressLineComplete` / `markProgressLineFailed` append or settle the open
- * progress part for one `browserToolName`, via `openLineFor` and the shared `patchPart` copy-on-write.
- * `createMessage` and its per-sender constructors are the ONLY way a `ChatMessage` is built: ids are
- * `<prefix>-<uuid>` since two messages minted in one millisecond used to collide, and empty content yields
- * no `text` part, the screen-share bubble rendering from `videoStream` alone and a placeholder having
- * nothing to say yet.
+ * Pure helpers for the chat message list — the mode label, the hh:mm timestamp, the newest-first
+ * `lastIndexWhere` (also used by `useScreenShare`), and `addProgressLine` / `markProgressLineComplete` /
+ * `markProgressLineFailed`, which append or settle the open progress part for one `browserToolName` via
+ * `openLineFor` and the shared `patchPart` copy-on-write. `createMessage` and its per-sender constructors are
+ * the ONLY way a `ChatMessage` is built: ids are `<prefix>-<uuid>` since two messages minted in one millisecond
+ * used to collide, and empty content yields no `text` part, the screen-share bubble rendering from `videoStream`
+ * alone and a placeholder having nothing to say yet. `SCREEN_ACCESS_PROMPT` is the one wording of the
+ * screen-access ask, the transcript card and the toolbar dialog being two renderings of one question.
  *
- * `SCREEN_ACCESS_PROMPT` is the one wording of the screen-access ask — the transcript card and the
- * toolbar dialog are two renderings of the same question and must not drift apart.
- *
- * `findMessageForProgress` is ranked predicates: the first rank matching anything wins, and within a rank the
- * newest message. Every rank is bounded to messages after the last agent message carrying a `taskStatus`, since a
- * terminal stamp means that run already ended — unbounded, a late-arriving event reaches back past the stamp onto
- * an already-settled reply, and a late `completed` overwrites a `stopped` icon. Placeholders with `mode` still
- * undefined match leniently, and a mode-agnostic rank is always appended, since a `tool/call` can arrive before
- * the mode is set. No match is a legitimate outcome, warned not thrown. `filterCancellationText` strips "cancelled
- * by cleanup" from progress content and error text — expected chatter from a torn-down run a visitor should never
- * see.
+ * `findMessageForProgress` picks the agent reply a `tool/call` or progress event renders into, by ranked
+ * predicates: the first rank matching anything wins, within a rank the newest message, and no match at all is a
+ * legitimate outcome, warned not thrown. Every rank is bounded to messages after the last agent message carrying
+ * a `taskStatus`, since a terminal stamp means that run already ended — unbounded, a late event reaches back past
+ * the stamp onto an already-settled reply and a late `completed` overwrites a `stopped` icon. Placeholders with
+ * `mode` still undefined match leniently and a mode-agnostic rank is always appended, since a `tool/call` can
+ * arrive before the mode is set. `filterCancellationText` strips "cancelled by cleanup" from progress content
+ * and error text — chatter from a torn-down run a visitor should never see.
  */
 import type { ChatMessage, InstructionType, MessagePart } from '../types';
 

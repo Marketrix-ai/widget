@@ -1,13 +1,12 @@
 /**
- * Vitest suite over `BrowserToolService.simulateKeyAction` — the hand-rolled key behaviour the widget runs because
- * a programmatic KeyboardEvent is untrusted and fires no default action. Covers Tab/Shift+Tab focus movement and
- * Backspace/Delete text editing, the two key groups with real state to get wrong. `simulateKeyAction` is private
- * on the service, so the local wrapper casts through `unknown` rather than widening its surface for tests; `render`
- * mounts three sibling buttons, `input` mounts one `<input>` with a value and a caret or selection range, and
- * `afterEach` empties the body since the service resolves tab order with a document-wide query and a leftover node
- * would join the next test's focus order. The prototype `offsetParent` override is load-bearing: jsdom does no
- * layout, so every element reports `offsetParent === null` and the visibility filter over TAB_ORDER_SELECTOR would
- * drop the entire tab order, leaving every Tab assertion trivially "no next focusable element".
+ * Vitest suite over `simulateKeyAction` — the hand-rolled key behaviour the widget runs because a programmatic
+ * KeyboardEvent is untrusted and fires no default action. Covers Tab/Shift+Tab focus movement and
+ * Backspace/Delete text editing, the two key groups with real state to get wrong. `render` mounts three sibling
+ * buttons, `input` mounts one `<input>` with a value and a caret or selection range, and `afterEach` empties the
+ * body since tab order is resolved with a document-wide query and a leftover node would join the next test's
+ * focus order. The prototype `offsetParent` override is load-bearing: jsdom does no layout, so every element
+ * reports `offsetParent === null` and the visibility filter over `TABBABLE_SELECTOR` would drop the entire tab
+ * order, leaving every Tab assertion trivially "no next focusable element".
  *
  * Tab/Shift+Tab: steps focus to the next/previous focusable, named by tag and id; refuses at either end of the
  * order and refuses an element not in the order at all, pinning the guard on `indexOf` === -1, without which -1 +
@@ -20,14 +19,7 @@
 
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { browserToolService } from '../BrowserToolService';
-
-const simulateKeyAction = (element: HTMLElement, key: string) =>
-  (
-    browserToolService as unknown as {
-      simulateKeyAction(element: HTMLElement, key: string): string | null;
-    }
-  ).simulateKeyAction(element, key);
+import { simulateKeyAction } from '../keySimulation';
 
 Object.defineProperty(HTMLElement.prototype, 'offsetParent', { configurable: true, get: () => document.body });
 

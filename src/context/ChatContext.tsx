@@ -1,15 +1,13 @@
 /**
  * React context owning the widget's chat store and its live SSE wiring: one committed `{messages, task}`
- * state, the `ChatActions`/`TaskActions` mutators reached through `useChatContext` (which throws outside
- * `ChatProvider`), turn dispatch, tool execution, the stop path. Messages and task share ONE state object
- * so they cannot tear across an await.
+ * state and the `ChatActions`/`TaskActions` mutators reached through `useChatContext`, which throws
+ * outside `ChatProvider`. Messages and task share ONE object so they cannot tear across an await.
  *
  * `commit` is the ONLY writer of the `stateRef` mirror — re-syncing from render could regress it between a
  * commit and its paint — and runs the transition synchronously, not inside a `setState` updater: React
  * defers updaters and loses the effects captured in them, so tool calls never execute. `messageDispatch`
- * short-circuits in preview mode, refuses without credentialed config, appends the user bubble and a
- * `thinking` placeholder, then POSTs fire-and-forget — the reply arrives over SSE, so only a POST failure
- * resolves it locally. A stale-reply watchdog keyed on id AND part count re-arms on every progress line.
+ * POSTs fire-and-forget: the reply arrives over SSE, so only a POST failure resolves the placeholder
+ * locally, and a stale-reply watchdog keyed on id AND part count re-arms on every progress line.
  *
  * The stream effect subscribes to the `StreamClient` singleton: `handleMessage` does the bookkeeping the
  * pure reducer cannot hold (`tool_call_id` dedupe in a bounded set, cleared on a terminal status), then

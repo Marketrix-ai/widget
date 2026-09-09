@@ -6,18 +6,15 @@
  * `cancelLabel`), an optional `onConfirm`, and `finalFocusRef` naming where focus lands on close.
  * `WidgetDialog` renders the backdrop and popup into the portal container published by the widget root;
  * cancel and confirm are one button rendered twice from a (variant, label, action) table, since they
- * differ in nothing else.
- *
- * The portal target comes from `usePortalContainer()` rather than defaulting to the shadow root: the
- * widget root element carries every tenant token as an inline style, so anything portaled beside it
- * renders in `index.css`'s hardcoded fallback palette instead of the tenant's theme.
+ * differ in nothing else. That portal target comes from `usePortalContainer()` rather than defaulting to
+ * the shadow root: the widget root element carries every tenant token as an inline style, so anything
+ * portaled beside it renders in `index.css`'s hardcoded fallback palette instead of the tenant's theme.
  *
  * `finalFocus` is named explicitly because Base UI's default focus restore is broken inside a closed
  * shadow root: it descends `element.shadowRoot.activeElement`, which is null for a CLOSED root, so it
- * records the shadow HOST and hands focus to a host-page element on close.
- *
- * Base UI stamps `reason === 'none'` on an open-state change it makes itself with no originating event
- * (a popup whose active trigger unmounted); `onOpenChange` skips those and reports only real closes.
+ * records the shadow HOST and hands focus to a host-page element on close. Base UI also stamps
+ * `reason === 'none'` on an open-state change it makes itself with no originating event (a popup whose
+ * active trigger unmounted); `onOpenChange` skips those and reports only real closes.
  */
 import { Dialog } from '@base-ui/react/dialog';
 import React from 'react';

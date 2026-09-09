@@ -1,10 +1,9 @@
 /**
  * Predicates the agent's element index runs against the HOST page's DOM — what counts as a control and
  * whether it is reachable — plus `WIDGET_SHADOW_HOST_CLASS`, set by `bootstrap` on the shadow host so
- * `DomService` can recognise its own overlay chrome instead of reporting it as obscuring the host page,
- * and `TABBABLE_SELECTOR`, the one tab-order candidate query — `send_keys`' Tab simulation walks the host
- * page with it and `useFocusTrap` walks the widget's own tree with it, and they must agree on what the
- * browser would focus next.
+ * `DomService` can recognise its own overlay chrome instead of reporting it as obscuring the host page, and
+ * `TABBABLE_SELECTOR`, the one tab-order candidate query: `send_keys`' Tab simulation walks the host page
+ * with it and `useFocusTrap` the widget's own tree, and they must agree on what the browser would focus next.
  *
  * `ancestry` walks element → `parentElement`, crossing each shadow boundary at its host; a bare
  * `parentElement` walk stops dead at a `ShadowRoot`, so a control inside a host-page web component
@@ -12,13 +11,12 @@
  * `aria-disabled`, or an `inert` ancestor) as a sentence fragment completing `DomService`'s
  * `Element <n> …` message — reword both together; `disabled` is read duck-typed since it sits on
  * several unrelated control interfaces. `isIndexable`, checked against `INTERACTIVE_ROLES`, is
- * `DomService`'s geometry-aware fallback after its cheap selector/handler checks.
- *
- * Visibility is more than computed style: an element scrolled out of an `overflow: hidden|clip`
- * ancestor is unreachable despite a non-zero rect (that walk stops at `document.body`), and a
- * zero-size shadow host hides its whole tree, so both chains are climbed. The one `try` is deliberate —
- * the host page owns this DOM and may have patched anything on it, so a poisoned element is logged
- * with the real error and skipped rather than aborting the whole indexing pass.
+ * `DomService`'s geometry-aware fallback after its cheap selector/handler checks. Visibility there is more
+ * than computed style: an element scrolled out of an `overflow: hidden|clip` ancestor is unreachable despite
+ * a non-zero rect (that walk stops at `document.body`), and a zero-size shadow host hides its whole tree, so
+ * both chains are climbed. Its one `try` is deliberate — the host page owns this DOM and may have patched
+ * anything on it, so a poisoned element is logged with the real error and skipped rather than aborting the
+ * whole indexing pass.
  */
 
 export const WIDGET_SHADOW_HOST_CLASS = 'marketrix-widget-container';

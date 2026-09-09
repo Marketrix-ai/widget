@@ -3,16 +3,15 @@
  * that drives toasts from widget state. Base UI owns the live region, the dismiss timers, hover-to-pause
  * and stacking; before this the widget announced nothing to a screen reader and ran its own setTimeout.
  *
- * `NotificationList` renders every live toast (avatar, title, optional description, optional action,
- * close) — both lines truncate through `Text`'s own prop, and a toast carrying an action lets its title
- * wrap instead — and stays a component of its own because `useToastManager` only resolves inside
- * `Toast.Provider`; a toast's `type` is a free string in Base UI, so it is narrowed inline to the three
- * tones `notificationToneStyles` understands, anything else falling back to `neutral`.
- * `NotificationProvider` wraps the provider, portal and viewport — `container` is the widget's CLOSED
- * shadow root, since portalling to `document.body` instead would leave the injected styles behind, and
- * `offsetBottom` raises the viewport above the launcher when the launcher also sits at the bottom, so
- * the two cannot overlap. `useNotifications` re-exports Base UI's toast manager as the one door for
- * adding and closing toasts.
+ * `NotificationList` renders every live toast and stays a component of its own because `useToastManager`
+ * only resolves inside `Toast.Provider`; both text lines truncate through `Text`'s own prop, a toast
+ * carrying an action lets its title wrap instead, and a toast's `type` is a free string in Base UI, so it
+ * is narrowed inline to the three tones `notificationToneStyles` understands, anything else falling back
+ * to `neutral`. `NotificationProvider` wraps the provider, portal and viewport — `container` is the
+ * widget's CLOSED shadow root, since portalling to `document.body` instead would leave the injected
+ * styles behind, and `offsetBottom` raises the viewport above the launcher when the launcher also sits
+ * at the bottom, so the two cannot overlap. `useNotifications` re-exports Base UI's toast manager as the
+ * one door for adding and closing toasts.
  *
  * `WidgetNotifications` renders nothing; it mirrors the `error` and `greeting` props into toasts and
  * closes them when the prop clears. Both use a STABLE id, so `add` upserts and a re-render cannot stack

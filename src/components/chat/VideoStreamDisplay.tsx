@@ -1,17 +1,16 @@
 /**
- * Inline screen-share viewport for a chat message: a live MediaStream rendered as a muted,
- * auto-playing <video>, with a loading overlay, a failure overlay, a "Live" pill and a persistent
- * "Screen Sharing Active" banner. `Overlay` is the centred full-bleed scrim carrying a spinner or icon
- * above a caption, shared by the loading and failure states; `VideoStreamDisplay` binds the stream,
- * tracks loaded/failed and layers the rest over it.
+ * Inline screen-share viewport for a chat message: a live MediaStream as a muted, auto-playing <video>
+ * under a loading overlay, a failure overlay, a "Live" pill and a persistent banner. `Overlay` is the
+ * centred full-bleed scrim carrying a spinner or icon above a caption, shared by the loading and failure
+ * states; `VideoStreamDisplay` binds the stream, tracks loaded/failed and layers the rest over it.
  *
  * The bind effect is keyed on `stream`: a replacement clears both flags and rebinds the
- * `loadedmetadata`/`error` listeners, and cleanup nulls `srcObject` so a stopped stream is not
- * retained. `play()` rejecting with AbortError is exactly that replacement racing the previous play —
- * the one benign rejection; anything else is logged with its error and surfaced as the failure
- * overlay. `muted` + `autoPlay` is what makes autoplay legal without a user gesture, and `playsInline`
- * stops iOS Safari taking the stream fullscreen over the host page. The video stays mounted at
- * opacity 0 while loading, since unmounting it leaves nothing for `loadedmetadata` to fire on.
+ * `loadedmetadata`/`error` listeners, and cleanup nulls `srcObject` so a stopped stream is not retained.
+ * `play()` rejecting with AbortError is exactly that replacement racing the previous play — the one
+ * benign rejection; anything else is logged with its error and surfaced as the failure overlay.
+ * `muted` + `autoPlay` is what makes autoplay legal without a user gesture, and `playsInline` stops iOS
+ * Safari taking the stream fullscreen over the host page. The video stays mounted at opacity 0 while
+ * loading, since unmounting it leaves nothing for `loadedmetadata` to fire on.
  *
  * Corners are rounded on top only because `MessageItem` collapses the bubble padding to 0 for a video
  * message, so this sits flush in the bubble's top corners. Stacking is deliberate — overlays 10, Live
