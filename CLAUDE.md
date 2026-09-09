@@ -234,3 +234,14 @@ TS, 2-space indent, single quotes, semicolons, trailing commas, ~120-char lines;
 imports, no unused imports. `PascalCase` components/services/context, `useCamelCase` hooks, `camelCase`
 utils. **Keep stateful services only for shared lifecycle/session ownership** — use plain functions for
 stateless operations, and inline one-use presentation rather than adding a base component.
+
+## Field notes
+
+Standing gotchas folded in from session memory so they travel with the repo. Every bullet is a live invariant or trap; delete one when the code it describes is gone.
+
+### Gotchas
+
+- **A green `publish` job never proves a publish** — the step is idempotent (`npm view` hit ⇒ exit 0), and a skipped publish leaves npm behind the tag so app's `npm install @marketrix.ai/widget@<ver>` fails. Check `npm view @marketrix.ai/widget version` before pinning app. Publishing from a tag cut off stale local `main` ships `latest` without the fix and burns the version number.
+- `.husky/_/pre-commit` is still TRACKED — a lefthook-generated shim nothing points at. Never aim `core.hooksPath` at it: an install there rewrites it with machine-local paths and dirties the tree.
+- Diff the BUILT artefact, not just source: an `@layer utilities` block not migrated to Tailwind v4's `@utility` compiles `hover:`/`placeholder:` variants to NOTHING with no error, and over half of `index.css` was once unreachable that way. The prod bundle drops `console.*` (terser) — debug via api/agent logs.
+- **The contract gate checks the widget version the app BUNDLES**, not the widget image — a types-only mirror change still needs: tag widget → wait for npm → `npm install @marketrix.ai/widget@<ver>` in app → commit lockfile → tag app.
