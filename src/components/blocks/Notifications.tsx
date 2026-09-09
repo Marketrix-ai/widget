@@ -4,7 +4,8 @@
  * and stacking; before this the widget announced nothing to a screen reader and ran its own setTimeout.
  *
  * `NotificationList` renders every live toast (avatar, title, optional description, optional action,
- * close), and stays a component of its own because `useToastManager` only resolves inside
+ * close) — both lines truncate through `Text`'s own prop, and a toast carrying an action lets its title
+ * wrap instead — and stays a component of its own because `useToastManager` only resolves inside
  * `Toast.Provider`; a toast's `type` is a free string in Base UI, so it is narrowed inline to the three
  * tones `notificationToneStyles` understands, anything else falling back to `neutral`.
  * `NotificationProvider` wraps the provider, portal and viewport — `container` is the widget's CLOSED
@@ -63,13 +64,12 @@ const NotificationList: React.FC = () => {
                 as='span'
                 block
                 inheritColor
+                truncate
                 weight='medium'
                 style={{
                   fontSize: '13px',
                   color: colors.titleColor,
-                  whiteSpace: toast.actionProps ? 'normal' : 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
+                  ...(toast.actionProps && { whiteSpace: 'normal' }),
                 }}
               />
             }
@@ -81,14 +81,8 @@ const NotificationList: React.FC = () => {
                   as='span'
                   block
                   inheritColor
-                  style={{
-                    fontSize: '12px',
-                    color: colors.bodyColor,
-                    opacity: 0.8,
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                  }}
+                  truncate
+                  style={{ fontSize: '12px', color: colors.bodyColor, opacity: 0.8 }}
                 />
               }
             />

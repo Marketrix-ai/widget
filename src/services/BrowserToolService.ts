@@ -25,6 +25,7 @@
  */
 
 import type { InstructionType } from '../types';
+import { TABBABLE_SELECTOR } from '../utils/dom';
 import { errorMessage } from '../utils/errors';
 import { domService } from './DomService';
 import { activeScreenStream } from './ScreenShareService';
@@ -89,9 +90,6 @@ const httpUrl = (value: string | undefined): string | null => {
 };
 
 const SCREENSHOT_FRAME_TIMEOUT_MS = 5000;
-
-const TAB_ORDER_SELECTOR =
-  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 export const FINISH_TOOL = 'finish';
 
@@ -351,7 +349,7 @@ export class BrowserToolService {
       case 'Tab':
       case 'Shift+Tab': {
         const step = key === 'Tab' ? 1 : -1;
-        const focusables = Array.from(document.querySelectorAll<HTMLElement>(TAB_ORDER_SELECTOR)).filter(
+        const focusables = Array.from(document.querySelectorAll<HTMLElement>(TABBABLE_SELECTOR)).filter(
           el => el.offsetParent !== null,
         );
         const currentIndex = focusables.indexOf(element);
