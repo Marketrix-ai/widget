@@ -1,5 +1,5 @@
 /**
- * The byte budget and packaging contract on `dist/`, run as the last step of `bun run ci`.
+ * The byte budget and packaging contract on `dist/`, run as the last step of `npm run ci`.
  *
  * BUDGETS sit ~15% above the current build so growth is actually noticed. They were 2 MB and 10 kB —
  * 5.1x and 7.8x the real artifacts — which is a guard that can never fire: the bundle could quintuple
@@ -15,12 +15,12 @@
  * extension: `type: "module"` makes rolldown name split chunks `[name]-[hash].js`, so matching only
  * `.mjs` let a genuinely split build pass.
  *
- * `DEPENDENCY_BUDGETS` exists because half the bundle is four dependencies and the total cap cannot see
- * which. At 392,685 bytes against a 455,000 limit there is 62 kB of silent headroom — enough for a heavy
- * import to land, or an existing one to grow 80%, unnoticed. Each budget is ~10% over the bytes measured
- * on 2026-09-01, and a package ABSENT from the table fails outright, so a new dependency is a deliberate
- * line rather than a number nobody reads. The largest two are session recording, imported for a feature
- * that is off by default, and the Dialog/Button/Tabs/Toast primitives.
+ * `DEPENDENCY_BUDGETS` exists because half the bundle is a handful of dependencies and the total cap
+ * cannot see which. The build sits far enough under that cap for a heavy import to land, or an existing
+ * one to grow substantially, without tripping it — the per-package table is what catches that. Each budget
+ * is ~10% over the bytes measured on 2026-09-01, and a package ABSENT from the table fails outright, so a
+ * new dependency is a deliberate line rather than a number nobody reads. The largest two are session
+ * recording, imported for a feature that is off by default, and the Dialog/Button/Tabs/Toast primitives.
  *
  * Per-package bytes come from walking the sourcemap segments, which is the only view of what each source
  * file actually contributed to the output.
