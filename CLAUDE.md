@@ -226,10 +226,10 @@ and shipped images cannot drift in their dependency set.
   passes an explicit `finalFocus` ref rather than relying on the default.
 - **Base UI owns the interaction primitives; the two remaining hand-rolled hooks are not a gap.**
   Dialog, Button, Tabs (`ShellTabBar` + the view panels) and Toast (`Notifications.tsx`) come from the
-  library. `useFocusTrap` and `useScrollLock` stay hand-rolled because they serve `MessengerShell`,
-  a **non-modal** panel that is not a Dialog: Base UI exposes no standalone focus-trap or scroll-lock,
-  and making the panel a Dialog to reach them would inert the customer's page and mutate its
-  `<html>`/`<body>` — the thing an embedded widget must not do.
+  library. `useFocusTrap` (in `MessengerShell`) and `useScrollLock` (in `WidgetRoot`) stay hand-rolled
+  because they serve a **non-modal** panel that is not a Dialog: Base UI exposes no standalone
+  focus-trap or scroll-lock, and making the panel a Dialog to reach them would inert the customer's
+  page and mutate its `<html>`/`<body>` — the thing an embedded widget must not do.
 
 ## Conventions
 

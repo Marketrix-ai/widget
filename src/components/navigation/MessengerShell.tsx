@@ -6,8 +6,8 @@
  * `tenantScope(config)` so two tenants on one host page cannot share a stored size; `getPanelPositionStyle` pins
  * the panel to the configured corner and `getCorner` supplies the matching `transformOrigin`, so the entrance
  * animation scales out of the anchored corner instead of the panel's centre. Preview mode (the dashboard embed)
- * positions `absolute` rather than `fixed` and drops the resize handle, since it lives inside a page element
- * instead of the viewport. `useFocusTrap` closes on Escape and, on the chat view, lands focus in the composer
+ * positions `absolute` rather than `fixed` and drops the 20px corner resize grip — a labelled `separator` with
+ * `touchAction: none`, so a drag is not hijacked by scrolling — since it lives inside a page element. `useFocusTrap` closes on Escape and, on the chat view, lands focus in the composer
  * through `messageInputRef` — the same ref `ChatView` attaches to its textarea.
  *
  * The screen-share control sits in the header, but its machinery lives in `ChatView`'s `useScreenShare`:
@@ -38,7 +38,6 @@ import { Surface } from '../base/Surface';
 import { HeaderBar } from '../blocks/HeaderBar';
 import { ChatView } from '../views/ChatView';
 import { HomeView } from '../views/HomeView';
-import { ResizeHandle } from './ResizeHandle';
 import { ShellTabBar } from './ShellTabBar';
 
 export const MessengerShell: React.FC = () => {
@@ -161,7 +160,28 @@ export const MessengerShell: React.FC = () => {
         <ShellTabBar />
       </Tabs.Root>
 
-      {!isPreviewMode && <ResizeHandle grip={grip} onMouseDown={onResizeStart} />}
+      {!isPreviewMode && (
+        <div
+          role='separator'
+          aria-label={`Resize widget from ${grip.vertical} ${grip.horizontal}`}
+          title='Drag to resize'
+          style={{
+            position: 'absolute',
+            [grip.vertical]: 0,
+            [grip.horizontal]: 0,
+            width: '20px',
+            height: '20px',
+            padding: '4px',
+            touchAction: 'none',
+            zIndex: 10,
+            display: 'flex',
+            alignItems: grip.vertical === 'top' ? 'flex-start' : 'flex-end',
+            justifyContent: grip.horizontal === 'left' ? 'flex-start' : 'flex-end',
+            cursor: grip.cursor,
+          }}
+          onMouseDown={onResizeStart}
+        />
+      )}
     </Stack>
   );
 };
