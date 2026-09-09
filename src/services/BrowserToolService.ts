@@ -12,6 +12,11 @@
  * getHtml, uncapped because the agent's parser indexes by `data-id` and a trimmed tree loses elements the
  * loop then cannot click · getScreenshot, off the EXISTING share since a fresh prompt bypasses a Deny.
  *
+ * `element` / `selectElement` are the ONE way a handler reaches a host-page node: they resolve an index
+ * through `domService` and THROW, which `executeTool`'s catch turns into the failure the agent reads — so
+ * no handler repeats the resolve-or-fail dance and every one of them reports the same way. `isTextField`
+ * is the input-or-textarea guard those handlers share.
+ *
  * `deferred` reports an action DISPATCHED, never completed: a click or navigation can tear the page down
  * before the report is read. `httpUrl` admits only http(s) — `extract` feeds the model page-controlled
  * hrefs, so a raw target would let `javascript:` run in the HOST origin. `simulateKeyAction` reproduces
@@ -70,6 +75,9 @@ const deferred = (text: string, action: () => void): ToolExecutionResult => ({
   afterResponseAttempt: action,
 });
 
+const isTextField = (el: Element): el is HTMLInputElement | HTMLTextAreaElement =>
+  el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement;
+
 const httpUrl = (value: string | undefined): string | null => {
   if (!value) return null;
   try {
@@ -113,6 +121,19 @@ export class BrowserToolService {
     get_screenshot: { label: 'Taking screenshot', run: () => this.getScreenshot() },
   };
 
+  private element(index: number | undefined): HTMLElement {
+    if (index === undefined) throw new Error('Index required');
+    const { element, error } = domService.getValidatedElement(index);
+    if (!element) throw new Error(error || `Element ${index} not found`);
+    return element;
+  }
+
+  private selectElement(index: number | undefined): HTMLSelectElement {
+    const element = this.element(index);
+    if (!(element instanceof HTMLSelectElement)) throw new Error(`Element ${index} is not a select element`);
+    return element;
+  }
+
   getFriendlyToolName(browserToolName: string): string {
     return this.tools[browserToolName]?.label ?? browserToolName;
   }
@@ -132,19 +153,13 @@ export class BrowserToolService {
     try {
       console.log(`[BrowserToolService] Executing ${browserToolName} (mode: ${mode})`);
 
-      if (mode === 'show' && tool?.waitForUser) {
-        const index = toolArgs.index;
-        if (index !== undefined) {
-          const { element, error } = domService.getValidatedElement(index);
-          if (!element) return fail(error || `Element ${index} not found`);
-
-          await showModeService.showToolAction({
-            element,
-            explanation: explanation || `Execute ${browserToolName}`,
-            browserToolName,
-            isClickAction: browserToolName === 'click_element',
-          });
-        }
+      if (mode === 'show' && tool?.waitForUser && toolArgs.index !== undefined) {
+        await showModeService.showToolAction({
+          element: this.element(toolArgs.index),
+          explanation: explanation || `Execute ${browserToolName}`,
+          browserToolName,
+          isClickAction: browserToolName === 'click_element',
+        });
       }
 
       return tool ? await tool.run(toolArgs) : fail(`Unknown tool: ${browserToolName}`);
@@ -183,10 +198,7 @@ export class BrowserToolService {
   }
 
   private async clickElement(args: ToolArgs): Promise<ToolExecutionResult> {
-    if (args.index === undefined) return fail('Index required');
-
-    const { element, error } = domService.getValidatedElement(args.index);
-    if (!element) return fail(error || `Element ${args.index} not found`);
+    const element = this.element(args.index);
 
     element.scrollIntoView({ behavior: 'smooth', block: 'center' });
     await new Promise(resolve => setTimeout(resolve, 100));
@@ -195,14 +207,12 @@ export class BrowserToolService {
   }
 
   private typeText(args: ToolArgs): ToolExecutionResult {
-    if (args.index === undefined || args.text === undefined) return fail('Index and text required');
+    if (args.text === undefined) return fail('Text required');
 
     const clear = args.clear !== false;
+    const element = this.element(args.index);
 
-    const { element, error } = domService.getValidatedElement(args.index);
-    if (!element) return fail(error || `Element ${args.index} not found`);
-
-    if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
+    if (isTextField(element)) {
       element.focus();
       this.setNativeValue(element, clear ? args.text : element.value + args.text);
 
@@ -306,15 +316,9 @@ export class BrowserToolService {
   }
 
   private selectDropdownOption(args: ToolArgs): ToolExecutionResult {
-    if (args.index === undefined || !args.option) return fail('Index/Option required');
+    if (!args.option) return fail('Option required');
 
-    const { element, error } = domService.getValidatedElement(args.index);
-    if (!element) return fail(error || `Select ${args.index} not found`);
-
-    if (!(element instanceof HTMLSelectElement)) {
-      return fail(`Element ${args.index} is not a select element`);
-    }
-
+    const element = this.selectElement(args.index);
     const opt = Array.from(element.options).find(o => o.value === args.option || o.text === args.option);
     if (!opt) return fail(`Option ${args.option} not found`);
 
@@ -325,26 +329,14 @@ export class BrowserToolService {
   }
 
   private getDropdownOptions(args: ToolArgs): ToolExecutionResult<DropdownOptionsData> {
-    const index = args.index;
-    if (index === undefined) return fail('Index required');
-
-    const { element, error } = domService.getValidatedElement(index);
-    if (!element) return fail(error || `Select ${index} not found`);
-
-    if (!(element instanceof HTMLSelectElement)) {
-      return fail(`Element ${index} is not a select element`);
-    }
-
-    const options = Array.from(element.options).map(o => ({ value: o.value, text: o.text }));
+    const options = Array.from(this.selectElement(args.index).options).map(o => ({ value: o.value, text: o.text }));
     return okData({ options });
   }
 
   private sendKeys(args: ToolArgs): ToolExecutionResult {
-    if (args.index === undefined || !args.keys) return fail('Index/Keys required');
+    if (!args.keys) return fail('Keys required');
 
-    const { element, error } = domService.getValidatedElement(args.index);
-    if (!element) return fail(error || `Element ${args.index} not found`);
-
+    const element = this.element(args.index);
     element.focus();
     element.dispatchEvent(new KeyboardEvent('keydown', { key: args.keys, bubbles: true, cancelable: true }));
     element.dispatchEvent(new KeyboardEvent('keyup', { key: args.keys, bubbles: true, cancelable: true }));
@@ -374,7 +366,7 @@ export class BrowserToolService {
           element.click();
           return 'Enter: clicked button';
         }
-        if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
+        if (isTextField(element)) {
           const form = element.closest('form');
           if (form) {
             const submitBtn = form.querySelector<HTMLButtonElement>('button[type="submit"], input[type="submit"]');
@@ -440,7 +432,7 @@ export class BrowserToolService {
       }
 
       case 'Home': {
-        if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
+        if (isTextField(element)) {
           element.setSelectionRange(0, 0);
           return 'Home: moved cursor to start';
         }
@@ -448,7 +440,7 @@ export class BrowserToolService {
       }
 
       case 'End': {
-        if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
+        if (isTextField(element)) {
           const len = element.value.length;
           element.setSelectionRange(len, len);
           return 'End: moved cursor to end';
@@ -457,7 +449,7 @@ export class BrowserToolService {
       }
 
       case 'Backspace': {
-        if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
+        if (isTextField(element)) {
           const value = element.value;
 
           if (!value || value.length === 0) {
@@ -488,7 +480,7 @@ export class BrowserToolService {
       }
 
       case 'Delete': {
-        if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
+        if (isTextField(element)) {
           const start = element.selectionStart || 0;
           const end = element.selectionEnd || 0;
           const value = element.value;
