@@ -27,7 +27,6 @@ export const configureSdk = (apiUrl: string) => {
   if (!apiUrl?.trim()) throw new Error('API URL is required for SDK configuration');
 
   if (apiUrl !== currentApiUrl) {
-    console.log(`[SDK] Reconfiguring API URL to: ${apiUrl}`);
     currentApiUrl = apiUrl;
     client = createClient(apiUrl);
   }

@@ -11,7 +11,8 @@
  *   broken host page. Rendering `null` with no fallback is that degradation, not a swallowed exception —
  *   `componentDidCatch` has already surfaced the error with its stack.
  * - `console.error` specifically: terser's `drop_console` strips `log`/`info`/`debug` from the shipped
- *   bundle, so `error` is the only level that reaches a host page's console.
+ *   bundle, so only `warn` and `error` reach a host page's console, and a contained render crash is the
+ *   unexpected failure `error` is reserved for.
  * - Two call sites, each deliberate: `WidgetRoot` wraps `MessengerShell` with no fallback, so a panel crash
  *   leaves the launcher and toasts alive, while `ChatView` wraps only the transcript with a refresh prompt,
  *   so one unrenderable message cannot take the composer down with it.

@@ -120,8 +120,6 @@ export class DomService {
 
       node = walker.nextNode();
     }
-
-    console.log(`[DomService] Indexed ${sequenceNumber} elements`);
   }
 
   reindexAndSnapshot(): string {

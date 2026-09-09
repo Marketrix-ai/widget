@@ -57,7 +57,6 @@ export class ShowModeService {
       this.currentOptions.browserToolName === browserToolName &&
       this.currentPromise
     ) {
-      console.log('[ShowModeService] Duplicate tool action detected, returning existing promise');
       return this.currentPromise;
     }
 
