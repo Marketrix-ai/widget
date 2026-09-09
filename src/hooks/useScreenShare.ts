@@ -3,24 +3,20 @@
  * the live share message, and ending a share.
  *
  * `useLatest` keeps a value readable from a callback that must not be re-created (the polling interval
- * below, mounted once). `UseScreenShareOptions`/`UseScreenShareReturn` are the hook's props and surface.
- * `useScreenShare` owns the sharing state and returns `requestScreenAccess` — which posts a request card
- * carrying the turn the composer just queued, and no-ops while one is already open — plus that card's
- * Allow/Deny handlers and the toolbar dialog's Allow/Dismiss handlers; `toggleScreenShareRef` receives a
- * toggle that stops a live share or opens that dialog. Internally: `beginScreenShare` opens the stream
- * and posts the started/live messages, `stopScreenSharing` and `announceStopped` tear the share down
- * (dropping the live video message for a system line), `resolveAccessRequest` stamps the open card
- * allowed or denied, and `flushPendingMessage` sends whatever that card was holding.
+ * below, mounted once). `useScreenShare` owns the sharing state and returns `requestScreenAccess` —
+ * posting a request card carrying the queued turn, no-oping if one is already open — plus that card's
+ * Allow/Deny handlers, the toolbar dialog's Allow/Dismiss handlers, and `toggleScreenShareRef`, a
+ * toggle stopping a live share or opening that dialog. `beginScreenShare` opens the stream and posts
+ * the started/live messages; `stopScreenSharing`/`announceStopped` tear it down (video message → a
+ * system line); `resolveAccessRequest` stamps allowed/denied; `flushPendingMessage` sends the hold.
  *
- * - The user can end the share from the browser's own UI, which fires no event we can subscribe to, so a
- *   1s interval reconciles `isScreenSharingActive()` against local state and announces the stop.
- * - `openRequest` is transcript-derived, not component state: the request card survives an
- *   unmount/remount (tab switch, panel close) because it is persisted, so the resolving state has to be
- *   too, or the buttons stay live on a request neither Allow nor Deny can reach anymore.
- * - Every outcome flushes the pending content — allowed, denied, or a rejected picker, where a user
- *   cancel is indistinguishable from a real failure and so resolves `denied` — leaving no queued turn
- *   stranded. It goes out with `skipUserMessage` because ChatView writes the user's bubble before it
- *   asks for access.
+ * The user can end the share from the browser's own UI, which fires no subscribable event, so a 1s
+ * interval reconciles `isScreenSharingActive()` against local state and announces the stop.
+ * `openRequest` is transcript-derived, not component state, since the request card survives an
+ * unmount/remount because it is persisted — the resolving state must be too, or the buttons stay live
+ * on a request neither Allow nor Deny can reach. Every outcome flushes the pending content (a cancel
+ * resolves `denied` like a real failure), leaving no queued turn stranded, going out `skipUserMessage`
+ * since `ChatView` writes the user's bubble first.
  */
 import { useEffect, useImperativeHandle, useRef, useState } from 'react';
 

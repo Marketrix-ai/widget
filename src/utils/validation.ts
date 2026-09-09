@@ -1,31 +1,22 @@
 /**
- * Runtime validation of the widget's untrusted inputs: two DOM type guards, and the one home for
- * settings validation — `parseWidgetSettings`, which checks an arbitrary value against the widget
- * audience's `WidgetSettingsData` and returns either the picked settings or the offending field names.
+ * Runtime validation of the widget's untrusted inputs: two DOM type guards (`isHTMLElement`, `isHTMLScriptElement`,
+ * narrowing a possibly-null `Element` off a host-page lookup), and the one home for settings validation —
+ * `parseWidgetSettings`, checking a value against the widget audience's `WidgetSettingsData` and returning either
+ * the picked settings or the offending field names, via the per-field predicates behind `FIELD_GUARDS` /
+ * `FIELD_NAMES`. `RENDER_CONSTANT_NAMES` / `RENDER_CONSTANT_SET` name the fields the widget renders from its own
+ * constants; `WidgetRenderedSettings` is the wire shape minus those, `WidgetSettingsResult` the
+ * settings-or-invalidFields union returned, and `invalidSettingsMessage` folds invalid field names into one message.
  *
- * `isHTMLElement` / `isHTMLScriptElement` narrow a possibly-null `Element` off a host-page lookup.
- * `isString`, `isBoolean`, `isOneOf(...allowed)` and `isChipArray` (an array of `{chip_mode, chip_text}`
- * objects) are the per-field predicates; `FIELD_GUARDS` pairs one with every settings field and
- * `FIELD_NAMES` is its key list. `RENDER_CONSTANT_NAMES` / `RENDER_CONSTANT_SET` name the fields the
- * widget renders from its own constants — the set is annotated `ReadonlySet<string>` because `.has()` on
- * the literal tuple's own element type rejects the wider `keyof WidgetSettingsData` the loop passes it.
- * `WidgetRenderedSettings` is the wire shape minus those, and `WidgetSettingsResult` the
- * settings-or-invalidFields union `parseWidgetSettings` returns; `invalidSettingsMessage` folds those
- * field names into the one message the widget logs or throws.
+ * Hand-written rather than a zod `safeParse` because importing a schema as a VALUE anywhere reachable from
+ * `src/index.tsx` pulls zod's whole runtime into every host page: rolldown cannot prove `z.object(...)` pure, so
+ * one value import retains the entire mirror's schema graph. `satisfies Record<keyof WidgetSettingsData, …>` keeps
+ * the table honest — a field added api-side fails to compile here until guarded, one removed fails as an unknown
+ * key — and `RENDER_CONSTANT_NAMES` mirrors api's `WIDGET_RENDER_CONSTANTS` by hand under the same check.
  *
- * Hand-written rather than a zod `safeParse` because importing a schema as a VALUE anywhere reachable
- * from `src/index.tsx` pulls zod's whole runtime into every host page: rolldown cannot prove
- * `z.object(...)` pure, so one value import retains the entire mirror's schema graph.
- * `satisfies Record<keyof WidgetSettingsData, …>` is what keeps the table honest — a field added to the
- * api-side schema fails to compile here until it is guarded, and a field removed there fails as an
- * unknown key. `RENDER_CONSTANT_NAMES` likewise mirrors api's `WIDGET_RENDER_CONSTANTS` by hand, under
- * the same `satisfies` check and for the same bundle reason.
- *
- * `parseWidgetSettings` PICKS as well as validates, and the stripping is load-bearing: `widgetDefaultGet`
- * returns the render constants too and the result is spread into the widget config, so passing unknown
- * keys through would leak them where zod used to drop them. The render constants are still guarded — a
- * legacy bundle's stored value must keep passing — but dropped from the picked result, since nothing
- * renders them.
+ * `parseWidgetSettings` PICKS as well as validates: `widgetDefaultGet` returns the render constants too and the
+ * result is spread into the widget config, so unknown keys passing through would leak them where zod used to drop
+ * them. Render constants stay guarded, since a legacy bundle's stored value must keep passing, but are dropped
+ * from the picked result, since nothing renders them.
  */
 
 import type { WidgetSettingsData } from '../sdk';

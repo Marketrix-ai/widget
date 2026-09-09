@@ -1,52 +1,22 @@
 /**
  * Every browser action the agent can ask the widget to take on the HOST page, as one name → handler
- * registry: `ChatContext` validates a `tool/call`'s `browser_tool`, calls `executeTool`, and posts the
- * outcome back as `tool/response`.
+ * registry (`tools`: label, wait-for-user flag and handler together, so no parallel list can drift);
+ * `getFriendlyToolName` and `isWaitForUserTool` read it, `browserToolService` is the singleton.
+ * `ChatContext` calls `executeTool` — in `show` mode it highlights the target and waits for the visitor
+ * first — and posts back a `ToolExecutionResult`: `TextData`, `ExtractData`, `DropdownOptionsData` or a failure.
  *
- * Results: `TextData`, `ExtractData` and `DropdownOptionsData` are the payloads a handler can return
- * inside `ToolExecutionResult`, a success-or-`ToolFailure` union built by `ok`, `okData` and `fail`.
- * `deferred` builds a success carrying an `afterResponseAttempt` callback — it reports the action as
- * DISPATCHED, never completed, because a click or navigation can tear the page down before the report is
- * read, so the report goes out first and the deed lands after.
+ * Handlers: navigate · search · clickElement · typeText (input/textarea, contenteditable, any `value`,
+ * else textContent; trailing `blur` because some frameworks validate only on it) · scroll · scrollToText ·
+ * extract (10k cap) · goBack · wait · selectDropdownOption · getDropdownOptions · sendKeys · closeTab ·
+ * done (`FINISH_TOOL`, one named export so dispatch, progress lines and settlement check one string) ·
+ * getHtml, uncapped because the agent's parser indexes by `data-id` and a trimmed tree loses elements the
+ * loop then cannot click · getScreenshot, off the EXISTING share since a fresh prompt bypasses a Deny.
  *
- * `ToolArgs` is one shape for every tool's arguments: the wire carries a bare JSON object, so nothing is
- * guaranteed present and each handler guards the fields it needs. `httpUrl` resolves a candidate against
- * the current document and admits only http(s) — model output can be steered by page content it just read
- * (`extract` returns every `a[href]`), so a navigation target is untrusted input, and passing it through
- * raw would let a `javascript:` URL run in the HOST PAGE's origin via `window.location`. `FINISH_TOOL` is
- * the agent's completion signal, one named export so dispatch, progress-line suppression and task
- * settlement all check the same name instead of copies of the string.
- *
- * `BrowserToolService.tools` is the one registry: a tool's name, label, wait-for-user flag and handler
- * (`WidgetToolDef`) live together, so no separate label list or wait-for-user set can drift from it.
- * `getFriendlyToolName` and `isWaitForUserTool` read it; `executeTool` dispatches through it and, in
- * `show` mode for a wait-for-user tool given an index, first highlights the target through
- * `showModeService` and waits for the visitor. `browserToolService` is the shared singleton.
- *
- * Handlers: `navigate` opens a new tab or defers a same-tab location assignment · `search` defers one to
- * DuckDuckGo (default), Google or Bing · `clickElement` scrolls the element into view, settles, then
- * defers the click · `typeText` writes through the four input flavours (native input/textarea,
- * contenteditable via `execCommand`, anything else carrying a `value`, else `textContent`), appending
- * unless `clear`, and fires a trailing `blur` because some frameworks validate only on it · `scroll`
- * moves 80% of the viewport · `scrollToText` walks text nodes for the first match · `extract` returns
- * title, url, capped body text and links · `goBack` defers a history step and refuses an empty history ·
- * `wait` sleeps for `seconds` · `selectDropdownOption` and `getDropdownOptions`, both rejecting a
- * non-`<select>` · `sendKeys` dispatches the generic key events, then `simulateKeyAction` · `closeTab`,
- * which reports failure because a tab this script did not open cannot be closed · `done`, the
- * FINISH_TOOL handler · `getHtml`, which re-indexes and snapshots the whole document for the agent's
- * parser · `getScreenshot`, which grabs one frame off the visitor's EXISTING share, never prompting for
- * a new one (that would bypass a visitor's Deny), times out rather than waiting forever on a stream that
- * delivers no frame, and always removes its offscreen video from the host page.
- *
- * `simulateKeyAction` reproduces each key's expected behaviour by hand, because programmatic
- * KeyboardEvents are not "trusted" and the browser runs no default action for them: Tab/Shift+Tab move
- * focus along `TAB_ORDER_SELECTOR` (visible elements only), Enter activates a button/link or submits the
- * enclosing form, Escape blurs AND re-dispatches to `document` so modal close handlers see it, Space
- * toggles a checkbox/radio or clicks a button, the Arrow keys step a `<select>`, Home/End move the caret,
- * and Backspace/Delete edit the value themselves. It returns null for any other key, whose generic
- * keydown/keyup `sendKeys` has already dispatched. `setNativeValue` writes through the prototype's
- * `value` setter so React/Vue controlled inputs pick up the change; `setValueAndCaret` adds the
- * input/change events and caret restore the editing keys need.
+ * `deferred` reports an action DISPATCHED, never completed: a click or navigation can tear the page down
+ * before the report is read. `httpUrl` admits only http(s) — `extract` feeds the model page-controlled
+ * hrefs, so a raw target would let `javascript:` run in the HOST origin. `simulateKeyAction` reproduces
+ * each key by hand because synthetic KeyboardEvents run no default action, returning null for keys
+ * `sendKeys` already dispatched; `setNativeValue` writes through the prototype setter for React/Vue inputs.
  */
 
 import type { InstructionType } from '../types';

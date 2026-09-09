@@ -1,30 +1,22 @@
 /**
- * Browser-local persistence for the widget: the one door to `localStorage`, and the per-tenant chat
- * context (chat_id, transcript, composer mode, open state, resolved config) behind the `storageService`
- * singleton.
+ * Browser-local persistence for the widget: the one door to `localStorage`, and the per-tenant chat context
+ * (chat_id, transcript, composer mode, open state, resolved config) behind the `storageService` singleton.
+ * `tenantScope` is the scope suffix for every browser-local key — the credential id, else the application id, else
+ * `default` — shared with the drag-position and resize keys so all of them partition the same way. `readLocal` /
+ * `writeLocal` are the only `localStorage` access in `src/`; a host page can deny storage outright (third-party
+ * cookies off, sandboxed iframe) where even reading throws, so both degrade to a warn and the widget keeps working
+ * unpersisted. `loadContext` parses one key merged over `DEFAULT_CONTEXT`, so a payload from an older widget
+ * version reads as incomplete rather than corrupt, and discards anything older than `CONTEXT_EXPIRY_MS` (7 days).
+ * `StorageService`'s `getContext`, `updateContext` (merges, restamps `timestamp`, writes through), `getChatId` /
+ * `setChatId`, `getCredentialedConfig` (null unless both `mtxId` and `mtxKey` are present, so callers cannot
+ * dispatch half-credentialed) and `setConfig` sit behind the singleton; `readChatSnapshot` / `writeChatSnapshot`
+ * are the UI-facing view of the context. `setConfig` re-keys storage to `${STORAGE_KEY}_${tenantScope}` and
+ * reloads from that key, since without it two applications embedded on one origin would share a stored chat_id and
+ * one tenant's transcript would leak into another's.
  *
- * Contents: `tenantScope`, the scope suffix for every browser-local key — the credential id, else the
- * application id, else `default`; it is shared with the drag-position and resize keys, so all of them
- * partition the same way · `readLocal` / `writeLocal`, the only `localStorage` access in `src/` — a host
- * page can deny storage outright (third-party cookies off, sandboxed iframe) where even *reading* throws,
- * so both degrade to a warn and the widget keeps working unpersisted rather than breaking the customer's
- * page · `loadContext`, which parses one key merged over `DEFAULT_CONTEXT` so a payload written by an older
- * widget version reads as incomplete rather than corrupt, and discards anything older than
- * `CONTEXT_EXPIRY_MS` (7 days) · `StorageService` and its singleton `storageService` — `getContext`,
- * `updateContext` (merges, restamps `timestamp`, writes through), `getChatId` / `setChatId`,
- * `getCredentialedConfig` (null unless both `mtxId` and `mtxKey` are present, so callers cannot dispatch
- * half-credentialed) and `setConfig` · `readChatSnapshot` / `writeChatSnapshot`, the UI-facing view of the
- * context.
- *
- * `setConfig` re-keys storage to `${STORAGE_KEY}_${tenantScope}` and reloads from that key: without it two
- * applications embedded on one origin would share a stored chat_id and one tenant's transcript would leak
- * into another's.
- *
- * The snapshot is `{messages, currentMode, isOpen}` — chat_id, config and timestamp are deliberately not
- * part of it. Reading revives `timestamp` to a `Date` and backfills a text part from `content` for messages
- * stored before `parts` existed, so `messageText` is not empty for them. Writing drops `videoStream`, which
- * is not serializable and is dead on reload anyway, and rewrites that message as the `Screenshare ended`
- * system line.
+ * The snapshot is `{messages, currentMode, isOpen}` — chat_id, config and timestamp are deliberately excluded.
+ * Reading revives `timestamp` to a `Date` and backfills a text part for messages stored before `parts` existed;
+ * writing drops `videoStream` (unserializable, dead on reload), rewriting it as `Screenshare ended`.
  */
 import type { ChatMessage, InstructionType, MarketrixConfig, ValidWidgetConfig } from '../types';
 

@@ -1,45 +1,22 @@
 /**
- * React context owning the widget's whole chat store and its live SSE wiring: one committed
- * `{messages, task}` state, the mutators the UI calls, dispatch of a visitor turn, execution of
- * agent tool calls, and the stop path. Messages and task live in ONE state object so they cannot
- * tear across an await.
+ * React context owning the widget's chat store and its live SSE wiring: one committed `{messages, task}`
+ * state, the `ChatActions`/`TaskActions` mutators reached through `useChatContext` (which throws outside
+ * `ChatProvider`), turn dispatch, tool execution, the stop path. Messages and task share ONE state object
+ * so they cannot tear across an await.
  *
- * Contents: `ChatActions` / `TaskActions` / `ChatContextType` — the context surface consumed via
- * `useChatContext` (which throws outside `ChatProvider`). `ChatProvider` holds `SseState` plus a
- * `stateRef` mirror and a `currentModeRef` mirror of the composer mode. `commit` applies a
- * transition and skips a no-op write. `addMessage`, `updateMessage`, `removeMessage`,
- * `setMessages`, `clearMessages` and `resetTask` are its one-line mutators. A `pendingReplies` key
- * drives the stale-reply watchdog effect, which after `STALE_REPLY_TIMEOUT_MS` folds
- * `STALE_REPLY_TEXT` into a still-waiting placeholder. `messageDispatch` short-circuits in preview
- * mode, refuses without credentialed config, appends the user bubble plus a `thinking` placeholder
- * and POSTs — fire-and-forget: the reply arrives over SSE, so the placeholder stays `thinking` and
- * only a POST failure resolves it locally. The stream effect subscribes to the `StreamClient`
- * singleton with `handleMessage` (dedupe/reset bookkeeping, then the pure reducer, then its
- * effects) and `handleError`; each `executeTool` effect is handed to `startToolCall`, which runs the
- * browser tool, stamps progress, finishes on `FINISH_TOOL`, replies `tool/response` and then calls
- * `afterResponseAttempt`. `stopTask` stamps the message stopped and sends `chat/stop`. `chatActions`
- * / `taskActions` are the memoized bundles.
+ * `commit` is the ONLY writer of the `stateRef` mirror — re-syncing from render could regress it between a
+ * commit and its paint — and runs the transition synchronously, not inside a `setState` updater: React
+ * defers updaters and loses the effects captured in them, so tool calls never execute. `messageDispatch`
+ * short-circuits in preview mode, refuses without credentialed config, appends the user bubble and a
+ * `thinking` placeholder, then POSTs fire-and-forget — the reply arrives over SSE, so only a POST failure
+ * resolves it locally. A stale-reply watchdog keyed on id AND part count re-arms on every progress line.
  *
- * `commit` is the ONLY writer of `stateRef` — re-syncing it from render could regress the ref
- * between a commit and its paint. It also runs the transition synchronously rather than inside a
- * `setState` updater: React defers updaters (background tab, mid-burst) and the effects captured in
- * them are lost, which showed up as tool calls that never executed.
- *
- * The watchdog key is id AND part count so the timer re-arms on every progress line — a placeholder
- * mid-run is silent, not finished, and the previous id-only key left it with no second timer.
- *
- * `handleMessage` does the transport bookkeeping (`tool_call_id` dedupe with a bounded set, cleared
- * on a terminal `task/status`) before the pure reducer, which cannot hold that state.
- *
- * `handleError` surfaces every stream error to the UI but only converts a `StreamGaveUpError` into a
- * transport failure: a retriable blip settles when the reply lands on the reconnected stream, a
- * give-up never does, and the composer stays disabled for as long as one bubble is still waiting.
- *
- * `chat/stop` carries no task id — the api stops the one dispatch it holds for this chat. When that
- * send fails the user gets an explicit error even though `reduceStop` already stamped the message
- * "stopped": in `do` mode the agent may still be clicking through the visitor's page, and `send`'s
- * own "Failed to send message" toast names the transport rather than the thing the user asked for
- * and did not get.
+ * The stream effect subscribes to the `StreamClient` singleton: `handleMessage` does the bookkeeping the
+ * pure reducer cannot hold (`tool_call_id` dedupe in a bounded set, cleared on a terminal status), then
+ * each effect runs its browser tool, stamps progress, replies `tool/response` and only then fires
+ * `afterResponseAttempt`. `handleError` converts only a `StreamGaveUpError` into a transport failure, as a
+ * retriable blip settles when the reply lands on the reconnected stream. `stopTask` sends `chat/stop`,
+ * which carries no task id, and surfaces a send failure explicitly since `do` mode may still be clicking.
  */
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 

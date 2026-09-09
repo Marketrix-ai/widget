@@ -2,22 +2,20 @@
  * The chat transcript pane: a scrolling `role='log'` list of `MessageItem`s with the "Clear conversation"
  * action beneath it and two floating scroll affordances layered over it.
  *
- * `scrollButtonStyle` is the card-on-surface look shared by both affordances. `MessageListProps` carries the
- * end-of-list anchor ref owned by `ChatView` plus the screen-access answers, which are only forwarded to
+ * `scrollButtonStyle` is the card-on-surface look shared by both affordances. `MessageListProps` carries
+ * the end-of-list anchor ref owned by `ChatView` plus the screen-access answers, forwarded only to
  * `MessageItem`. `MessageList` prepends a synthetic `welcome` message built from `widget_body`; it never
  * enters the store, which is why "Clear conversation" is gated on `messages.length` rather than on the
  * rendered list. `handleScroll` derives both affordances from container geometry — top once scrolled past
- * 200px, bottom while the list overflows and sits more than 50px off the end — and the affordance table
- * carries each one's edge, label, icon and scroll action.
- *
- * The transcript paints `widget_background_color` through `backgroundGradient`, the one home for that
- * expansion, and zeroes `backgroundColor` for a gradient setting so the two declarations cannot fight.
+ * 200px, bottom while the list overflows and sits more than 50px off the end. The transcript paints
+ * `widget_background_color` through `backgroundGradient`, the one home for that expansion, zeroing
+ * `backgroundColor` for a gradient setting so the two declarations cannot fight.
  *
  * Every scroll is suppressed in preview mode: there the widget is embedded in the dashboard's modal, and
- * `scrollIntoView` would scroll that parent modal rather than this list. The scroll on a new message waits a
- * `requestAnimationFrame` so layout has settled and `scrollHeight` is final before it fires. A streaming reply
- * arrives as `chat/delta` fragments that grow the last message in place without changing the message count, so
- * a second effect keys on that message's content length and re-pins to the bottom only while the reader is
+ * `scrollIntoView` would scroll that parent modal rather than this list. The scroll on a new message waits
+ * a `requestAnimationFrame` so layout has settled before it fires. A streaming reply arrives as
+ * `chat/delta` fragments that grow the last message in place without changing the message count, so a
+ * second effect keys on that message's content length and re-pins to the bottom only while the reader is
  * already within 120px of it — a reader who scrolled away is left where they are.
  */
 import React, { useEffect, useMemo, useRef, useState } from 'react';

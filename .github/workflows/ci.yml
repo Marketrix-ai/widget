@@ -1,3 +1,6 @@
+# Repository-local CI for pull requests and pushes to `main`: Node 26, `npm ci`, then `npm run ci`, which
+# is the whole validation gate. This public repository cannot call the private infra repository's reusable
+# workflows, so the gate is duplicated here rather than shared.
 name: CI
 on:
   push:
@@ -7,7 +10,6 @@ on:
 concurrency:
   group: ci-${{ startsWith(github.ref, 'refs/tags/') && github.sha || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
-# This public repository cannot call reusable workflows from the private infra repository.
 jobs:
   ci:
     runs-on: ubuntu-latest

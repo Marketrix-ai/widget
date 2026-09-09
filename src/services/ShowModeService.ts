@@ -1,37 +1,22 @@
 /**
- * Show mode's on-page coaching overlay: it highlights one host-page element, explains the step beside it, and
- * returns a promise that settles when the visitor acts — so `BrowserToolService` can await a `show`-mode tool
- * call before running the tool. `showModeService` is the singleton every caller uses (`BrowserToolService` to
- * stage an action, `ChatView` to tear one down).
+ * Show mode's on-page coaching overlay: highlights one host-page element, explains the step beside it and
+ * returns a promise that settles when the visitor acts, so `BrowserToolService` can await a `show`-mode tool
+ * call before running the tool. `ShowModeOptions` names the element, explanation, tool, and whether the
+ * visitor completes by clicking the element rather than a Continue button. `showToolAction` mounts highlight
+ * and popup and returns the pending promise, or the in-flight one for an identical restage (a duplicate tool
+ * call); `cleanup` cancels and unwinds; `showModeService` is the singleton every caller uses.
  *
- * Contents. `ShowModeOptions` — the element, its explanation, the browser tool name, and whether the visitor
- * completes the step by clicking the element itself rather than a Continue button. `showToolAction` scrolls the
- * element to centre, mounts highlight and popup, arms the handlers and hands back the pending promise; a restage
- * with identical element, explanation and tool returns the in-flight promise instead of rebuilding the overlay
- * (a duplicate tool call). `cleanup` cancels an in-flight action and unwinds listeners, watchdog and nodes.
- * `settle` resolves, or rejects with `failure`, then cleans up. `takeSettlers` detaches both settlers and hands
- * them back. `createHighlight` and `createPopup` build the two overlay nodes. `setupPositionUpdates` repins them
- * to a moving element; `updatePopupPosition` chooses the popup's spot. `setupClickHandler` watches for the click
- * on the element itself. `setupVisibilityMonitoring` is the 200ms watchdog that fails the action once the element
- * stops being usable. `escapeHtml` renders the explanation as text.
- *
- * Why it is shaped this way:
- * - Exactly one settle. The element click, the Continue button and both watchdog branches race, so `takeSettlers`
- *   detaches resolve AND reject before either is called; the off-screen branch also returns instead of falling
- *   through, so a rejection carries the one reason that actually fired and never a second contradicting code.
- * - The highlight is `pointer-events:none` so the visitor's click reaches the real element; the handler sits on
- *   `document` in the capture phase, tests `composedPath` (which sees through Shadow DOM retargeting and
- *   bubbling), and preventDefault/stopPropagation so navigation cannot fire before the tool result is processed.
- * - `#marketrix-show-highlight` and `#marketrix-show-popup` are load-bearing ids: `DomService.notInteractableReason`
- *   allowlists them in its occlusion test, so our own overlay never reads as an element-obscuring modal, and
- *   `cleanup` re-finds them by id because a node whose cleanup was interrupted outlives its handle.
- * - Reposition listens in the capture phase so the highlight tracks a scrolling CONTAINER, not just the window.
- * - Popup chrome is painted once at create time and reposition writes only top/left, so scrolling cannot grow the
- *   style attribute. The highlight's cssText is built on one line because template-literal whitespace is not
- *   minified — indentation there would ship to every host page.
- * - Placement tries right, left, above, below and takes the first that fits the viewport, then clamps into it;
- *   the 120px popup height is an assumption, not a measurement.
- * - `notInteractableReason`'s first test is `document.body.contains`, so that one watchdog also covers removal.
+ * Exactly one settle: the element click, the Continue button and both watchdog branches race, so both
+ * settlers are DETACHED before either fires and the off-screen branch returns rather than falling through.
+ * The highlight is `pointer-events:none` so the visitor's click reaches the real element; click and
+ * reposition handlers sit on `document` in the CAPTURE phase — the former tests `composedPath`, which sees
+ * through Shadow DOM retargeting, and prevents default so navigation cannot precede the result; the latter
+ * tracks a scrolling container, not just the window. `#marketrix-show-highlight` and `#marketrix-show-popup`
+ * are load-bearing ids: `DomService.notInteractableReason` allowlists them so the overlay never reads as an
+ * obscuring modal, and cleanup re-finds them because an interrupted node outlives its handle. The highlight's
+ * cssText is one line because template-literal whitespace is not minified. Placement takes the first of
+ * right/left/above/below that fits then clamps, its 120px height an assumption, and the watchdog tests
+ * `document.body.contains` first, so it covers removal as well as occlusion.
  */
 
 import { domService } from './DomService';

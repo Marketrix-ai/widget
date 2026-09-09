@@ -1,34 +1,22 @@
 /**
- * The whole `StreamClient` suite: registration lifecycle and the Retry affordance, over an `sdk` module
- * mock whose `widgetStream` / `widgetMessagePost` are `vi.fn()`s (`mockSdk`), so no SSE transport is
- * involved. Both halves drive the one singleton, which is why they share a file — split across two, each
- * left the other's leaked instance state behind.
- *
- * Contents: `emptyStream()` yields a stream that opens and immediately ends, so `consumeEvents` runs its
- * reconnect tail; `freshClient()` disconnects the shared instance before handing it back, because
- * `StreamClient` is a singleton and state leaks between tests otherwise; the `beforeEach` clears the mocks,
- * so every `widgetStream` call count asserted below is absolute rather than cumulative across the suite.
- * `internals` reaches the private fields a test has to stage — there is no public way to park the client in
+ * The whole `StreamClient` suite: registration lifecycle and the Retry affordance, over an `sdk` module mock whose
+ * `widgetStream` / `widgetMessagePost` are `vi.fn()`s (`mockSdk`), so no SSE transport is involved. Both halves
+ * drive the one singleton, which is why they share a file — split across two, each left the other's leaked
+ * instance state behind. `freshClient()` disconnects the shared instance before handing it back for that reason;
+ * `internals()` reaches the private fields a test has to stage, since there is no public way to park the client in
  * "open but never registered".
  *
  * Registration lifecycle pins that a caller parked on registration is always settled: disconnect rejects old
  * waiters without leaking into a remount, giving up reconnection or a refused credential rejects rather than
- * hanging, a refused credential outlives `connect`, and an open-but-unregistered stream is still pending — so
- * a send can never outrun registration.
+ * hanging, a refused credential outlives `connect`, and an open-but-unregistered stream is still pending — so a
+ * send can never outrun registration.
  *
- * The retry cases pin:
- * - **`reconnectNow` after a failed dial redials at once, not after the backoff.** Failed and not
- *   registered means a backoff timer is pending, and only `registered` ever resets the counters — so at
- *   the cap `scheduleReconnect` gives up for good and Retry is the only way back; fake timers keep the
- *   pending timer from firing, proving the second `widgetStream` call came from `reconnectNow` itself.
- * - **`reconnectNow` redials a stream stuck mid-dial** (`widgetStream` returning a never-settling
- *   promise) — a state `canReconnect()` already offers Retry for, so it must abort and redial rather
- *   than no-op on a connection that will never resolve.
- * - **auth rejection is terminal**: `canReconnect()` is false after it, since retrying only re-earns the
- *   401. The surfaced error must read "credentials were rejected" — `chat/error` otherwise settles the
- *   message whose id is the request id, and no message is ever id `'auth'`, so before the explicit
- *   branch the widget went permanently silent with no toast and no trace, terser dropping console in the
- *   bundle.
+ * The retry cases pin that `reconnectNow` after a failed dial redials at once rather than after the backoff (only
+ * `registered` ever resets the counters, so at the cap `scheduleReconnect` gives up for good and Retry is the only
+ * way back — fake timers keep the pending timer from firing, proving the second `widgetStream` call came from
+ * `reconnectNow` itself); that it also redials a stream stuck mid-dial rather than no-op on a connection that will
+ * never resolve; and that auth rejection is terminal, with the surfaced error naming "credentials were rejected"
+ * rather than going silent the way an unmatched `chat/error` would.
  */
 
 import type * as SdkModule from '../../sdk';

@@ -1,11 +1,9 @@
 /**
  * Inline screen-share viewport for a chat message: a live MediaStream rendered as a muted,
  * auto-playing <video>, with a loading overlay, a failure overlay, a "Live" pill and a persistent
- * "Screen Sharing Active" banner.
- *
- * `Overlay` is the centred full-bleed scrim carrying a spinner or icon above a caption, shared by the
- * loading and failure states; `VideoStreamDisplay` binds the stream, tracks loaded/failed and layers
- * the rest over it.
+ * "Screen Sharing Active" banner. `Overlay` is the centred full-bleed scrim carrying a spinner or icon
+ * above a caption, shared by the loading and failure states; `VideoStreamDisplay` binds the stream,
+ * tracks loaded/failed and layers the rest over it.
  *
  * The bind effect is keyed on `stream`: a replacement clears both flags and rebinds the
  * `loadedmetadata`/`error` listeners, and cleanup nulls `srcObject` so a stopped stream is not

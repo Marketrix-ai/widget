@@ -1,26 +1,27 @@
-# https://github.com/evilmartians/lefthook
-
-# Restores node/npm onto PATH before any command runs — GUI git clients start hooks with a minimal
-# environment. Changing this line requires re-running `lefthook install`: the path is baked into the
-# generated hook shims, not read at run time. Keep the leading `./`: the shim sources this with the
-# POSIX `.` builtin, which searches $PATH for an operand containing no slash. Shells differ on whether
-# they then fall back to the current directory — measured here: macOS `/bin/sh` (bash 3.2.57 posix)
-# sources it fine, `dash` and `zsh` do not. So the bare name works on most developers' machines and
-# fails on a minimal shell, which is the worst way for it to be wrong. The failure is at least LOUD:
-# `.` is a special builtin, so dash exits 2 and the commit is blocked rather than silently unhooked.
+# Git hook definitions for lefthook (https://github.com/evilmartians/lefthook).
+#
+# `rc: ./.lefthookrc` restores node/npm onto PATH before any command runs, because GUI git clients start
+# hooks with a minimal environment. Changing it requires re-running `lefthook install`: the path is baked
+# into the generated shims, not read at run time. Keep the leading `./` — the shim sources this with the
+# POSIX `.` builtin, which searches $PATH for an operand containing no slash, and shells differ on whether
+# they then fall back to the current directory (macOS `/bin/sh` does, `dash` and `zsh` do not). The bare
+# name would work on most machines and fail on a minimal shell, though at least loudly: `.` is a special
+# builtin, so dash exits 2 and blocks the commit rather than leaving it silently unhooked.
+#
+# pre-commit APPLIES formatting rather than reporting it, which is what keeps `code:check`'s prettier arm
+# from failing in CI. A pre-push hook cannot do this job: git resolves the commits it will send before
+# running that hook, so anything it rewrites is not what gets pushed. `AGENTS.md` is excluded because it
+# is a symlink to `CLAUDE.md` and prettier EXITS 2 on a symlink passed explicitly rather than skipping it,
+# so without the exclusion every commit that stages it fails — and the tempting "fix" is to replace the
+# link with a real file. pre-push is the safety net for a `--no-verify` commit: formatting is already
+# applied by then, so it only reports what the auto-fix could not reach.
 rc: ./.lefthookrc
 
-# Formatting is APPLIED here, not reported. A pre-push hook cannot do this job: git resolves the
-# commits it will send before running that hook, so anything the hook rewrites is not what gets
-# pushed. Fixing it at commit time is what keeps `code:check`'s prettier arm from ever failing in CI.
 pre-commit:
   parallel: false
   commands:
     format:
       glob: '*.{ts,tsx,js,mjs,cjs,json,md,yml,yaml,css}'
-      # `AGENTS.md` is a symlink to `CLAUDE.md`; prettier EXITS 2 on a symlink passed explicitly rather
-      # than skipping it, so without this the hook fails every commit that stages it — and the tempting
-      # "fix" is to replace the link with a real file.
       exclude:
         - AGENTS.md
       run: npx prettier --write {staged_files}
@@ -31,8 +32,6 @@ pre-commit:
     check:
       run: npm run check
 
-# The safety net for a commit made with --no-verify: by now formatting is already applied, so this
-# only reports what the auto-fix could not reach.
 pre-push:
   parallel: false
   commands:

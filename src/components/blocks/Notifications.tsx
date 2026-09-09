@@ -1,23 +1,22 @@
 /**
- * The widget's one notification surface: a Base UI Toast provider, the toast renderer, and the effect that
- * drives toasts from widget state. Base UI owns the live region, the dismiss timers, hover-to-pause and
- * stacking; before this the widget announced nothing to a screen reader and ran its own setTimeout.
+ * The widget's one notification surface: a Base UI Toast provider, the toast renderer, and the effect
+ * that drives toasts from widget state. Base UI owns the live region, the dismiss timers, hover-to-pause
+ * and stacking; before this the widget announced nothing to a screen reader and ran its own setTimeout.
  *
- * Contents:
- * - `GREETING_TIMEOUT_MS` — how long the welcome toast lingers before Base UI auto-dismisses it.
- * - `NotificationList` — renders every live toast (avatar, title, optional description, optional action,
- *   close). It stays a component of its own because `useToastManager` only resolves inside `Toast.Provider`.
- *   A toast's `type` is a free string in Base UI, so it is narrowed inline to the three tones
- *   `notificationToneStyles` understands, anything else falling back to `neutral`.
- * - `NotificationProviderProps` / `NotificationProvider` — the provider plus its portal and viewport.
- *   `container` is the widget's CLOSED shadow root: portalling to `document.body` instead would leave the
- *   injected styles behind. `offsetBottom` raises the viewport above the launcher when the launcher also
- *   sits at the bottom, so the two cannot overlap.
- * - `useNotifications` — Base UI's toast manager, re-exported as the one door for adding and closing toasts.
- * - `WidgetNotificationsProps` / `WidgetNotifications` — renders nothing; it mirrors the `error` and
- *   `greeting` props into toasts and closes them when the prop clears. Both use a STABLE id, so `add`
- *   upserts and a re-render cannot stack duplicates of the same condition. The error toast carries
- *   `timeout: 0` — it stays until acted on (dismissed or retried); only the greeting is transient.
+ * `NotificationList` renders every live toast (avatar, title, optional description, optional action,
+ * close), and stays a component of its own because `useToastManager` only resolves inside
+ * `Toast.Provider`; a toast's `type` is a free string in Base UI, so it is narrowed inline to the three
+ * tones `notificationToneStyles` understands, anything else falling back to `neutral`.
+ * `NotificationProvider` wraps the provider, portal and viewport — `container` is the widget's CLOSED
+ * shadow root, since portalling to `document.body` instead would leave the injected styles behind, and
+ * `offsetBottom` raises the viewport above the launcher when the launcher also sits at the bottom, so
+ * the two cannot overlap. `useNotifications` re-exports Base UI's toast manager as the one door for
+ * adding and closing toasts.
+ *
+ * `WidgetNotifications` renders nothing; it mirrors the `error` and `greeting` props into toasts and
+ * closes them when the prop clears. Both use a STABLE id, so `add` upserts and a re-render cannot stack
+ * duplicates of the same condition. The error toast carries `timeout: 0` — it stays until acted on
+ * (dismissed or retried); only the greeting is transient.
  */
 import { Toast } from '@base-ui/react/toast';
 import React, { useEffect } from 'react';

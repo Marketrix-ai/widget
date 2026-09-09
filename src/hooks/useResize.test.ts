@@ -2,27 +2,20 @@
  * Unit tests for `useResize`, the panel-sizing hook: how a dashboard width/height setting resolves to
  * a starting size, and how dragging the one grip resizes the panel from each pinned corner.
  *
- * `sizeFor` renders the hook with only the two settings varying and returns its result. The first
- * suite pins that a `px` setting is used verbatim; that a length the hook cannot convert to px (`rem`,
- * `em` — it parses `<number>px` and nothing else) falls back to the 360x450 default rather than to a
- * mis-read number; and that a setting outside the drag range is clamped to exactly the bounds a drag
- * clamps to (280/600 wide, 320 tall minimum). The over-max case passes no height and asserts width
- * only: the height ceiling is 85% of `window.innerHeight`, so pinning it would pin jsdom's viewport.
+ * `sizeFor` renders the hook with only the two settings varying and returns its result: a `px` setting
+ * is used verbatim; a length the hook can't convert to px (`rem`, `em` — it parses `<number>px` only)
+ * falls back to the 360x450 default; a setting outside the drag range clamps to the same bounds a drag
+ * clamps to (280/600 wide, 320 tall min). The over-max case asserts width only, since the height
+ * ceiling is 85% of `window.innerHeight`, pinning jsdom's viewport.
  *
- * `OUTWARD` is the pointer delta that moves the grip away from the pinned corner, per corner: the grip
- * sits on the diagonally OPPOSITE corner, so the sign flips with the anchor, and negating it gives the
- * inward drag. `drag` runs a whole mousedown → mousemove → mouseup against a detached div and returns
- * that element's inline style; the second suite runs it over all four corners and pins symmetric growth
- * and shrink. Reading `panel.style` rather than the hook's return is the point — the drag path writes
- * width/height straight to the element to avoid a re-render per mousemove, and only the settled size
- * reaches React state. The move and up events go to `document`, where the hook attaches them, inside
- * `act` because mouseup commits that state; the mousedown argument is a bare object cast to
- * `React.MouseEvent` since the handler reads only preventDefault, stopPropagation and the coordinates.
- *
- * Each `drag` mints a fresh `tenant-N` scope (`dragCount`) because a settled drag is persisted to
- * localStorage under `marketrix_widget_size_<scope>` and a stored size wins over the settings on the
- * next mount — one shared scope would silently feed one case's result into the next. `isPreviewMode` is
- * false because preview mode returns from `onResizeStart` before binding anything: no drag, no write.
+ * `OUTWARD` is the pointer delta moving the grip away from the pinned corner — the grip sits diagonally
+ * opposite, so the sign flips with the anchor and negating it gives the inward drag. `drag` runs a
+ * whole mousedown → mousemove → mouseup against a detached div and returns its inline style: the drag
+ * path writes width/height straight to the element (skipping a re-render per mousemove), only the
+ * settled size reaching React state via `act`. Each `drag` mints a fresh `tenant-N` scope (`dragCount`)
+ * since a settled drag persists to localStorage under `marketrix_widget_size_<scope>`, and a stored
+ * size wins on the next mount — one shared scope would leak a case's result into the next.
+ * `isPreviewMode` is false: preview mode returns before binding anything, so no drag, no write.
  */
 import { act, renderHook } from '@testing-library/react';
 import type React from 'react';

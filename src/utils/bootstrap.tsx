@@ -2,28 +2,21 @@
  * Widget mount plumbing: creating the closed-shadow host, rendering the React roots, holding the
  * single live-mount record, and the script-tag auto-init path.
  *
- * Contents: `WidgetMount` / `widgetState` are the module singleton describing the one live mount
- * (React root, validated config, shadow host container, optional caller-supplied host, previewMode),
- * read back by `isWidgetInitialized` and `getCurrentConfig` and written by `src/index.tsx`.
- * `attachShadowMount` is the ONE place a closed shadow root is opened and the widget CSS injected
- * into it. `createWidgetContainer` appends a shadow host to `document.body`, or fills a caller's
- * container edge-to-edge when one is given. `mountWidgetToContainer` renders `WidgetRoot` under the
- * providers, its `previewMode` flag disabling all network operations for integration previews.
- * `showHostPageNotice` / `hideHostPageNotice` mount and tear down a standalone toast in its own
- * shadow tree. `autoInitializeWidget` reads the last `script[mtx-id]` on the page and hands its
- * attributes to the init function.
+ * `WidgetMount`/`widgetState` are the module singleton describing the one live mount (React root,
+ * validated config, shadow host, optional caller container, previewMode), read via
+ * `isWidgetInitialized`/`getCurrentConfig`, written by `src/index.tsx`. `attachShadowMount` is the ONE
+ * place a closed shadow root is opened and widget CSS injected into it; `createWidgetContainer` appends
+ * a shadow host to `document.body`, or fills a caller's container edge-to-edge. `mountWidgetToContainer`
+ * renders `WidgetRoot` under the providers, `previewMode` disabling network for integration previews.
+ * `showHostPageNotice`/`hideHostPageNotice` mount and tear down a standalone toast in its own shadow
+ * tree with its own `NotificationProvider`, mounted before the widget's providers exist. `autoInitializeWidget`
+ * reads the last `script[mtx-id]`, hands its attributes to the init function (passed in to dodge a
+ * circular dependency), and dedupes via `window.__mtx.state`, which survives ES-module re-execution.
  *
- * The notice root carries its OWN `NotificationProvider`: it is a separate shadow tree, mounted
- * before the widget — and so before the widget's providers — exists.
- *
- * `initWidget` is passed into `autoInitializeWidget` rather than imported, to avoid a circular
- * dependency, and `autoInitializeWidget`'s own `window.__mtx.state` guard — which survives ES-module
- * re-execution — is what dedupes init.
- *
- * `mtx-api-host` is as required as the credentials: there is no default, and an unconfigured SDK
- * resolves every request against the HOST PAGE's origin, so omitting it silently posts widget traffic
- * at the customer's own site instead of failing. When a widget is already mounted that branch stays
- * silent — a later misconfigured script tag must not log over, or notice against, a working widget.
+ * `mtx-api-host` is as required as the credentials — there is no default, and an unconfigured SDK
+ * resolves requests against the HOST PAGE's origin, so omitting it silently posts widget traffic at the
+ * customer's own site instead of failing. A widget already mounted stays silent there, since a later
+ * misconfigured script tag must not log over a working one.
  */
 import React from 'react';
 import { createRoot, type Root } from 'react-dom/client';

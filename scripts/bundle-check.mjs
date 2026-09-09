@@ -1,29 +1,22 @@
 /**
- * The byte budget and packaging contract on `dist/`, run as the last step of `npm run ci`.
+ * Byte-budget and packaging gate on `dist/`, run as the last step of `npm run ci`.
  *
- * BUDGETS sit ~15% above the current build so growth is actually noticed. They were 2 MB and 10 kB —
- * 5.1x and 7.8x the real artifacts — which is a guard that can never fire: the bundle could quintuple
- * silently. Raise a limit deliberately when a feature justifies it; never to make CI pass.
+ * BUDGETS sit ~15% above the current build so growth is actually noticed — they were once 5.1x/7.8x
+ * the real artifacts, a guard that could never fire while the bundle quintupled silently. Raise a
+ * limit deliberately when a feature justifies it, never to make CI pass.
  *
- * SIZE IS NOT THE PACKAGING CONTRACT. `formats: ['es']` with no code splitting, `cssCodeSplit: false`
- * and the four React externals are what make this package embeddable: an extra chunk breaks the
+ * Size alone is not the packaging contract: `formats: ['es']` with no code splitting, no CSS file,
+ * and the four React externals are what make this package embeddable — an extra chunk breaks the
  * single-file script-tag bootstrap, an emitted stylesheet never reaches the closed Shadow DOM, and a
- * bundled React gives the host page a SECOND React, across which hooks throw. Each of those leaves
- * `dist/widget.mjs` present and under budget, so none of them was caught before.
- *
- * The output allowlist is every file the runtime image serves, matched by name rather than by
- * extension: `type: "module"` makes rolldown name split chunks `[name]-[hash].js`, so matching only
- * `.mjs` let a genuinely split build pass.
+ * bundled React gives the host page a second React, across which hooks throw. Each of those leaves
+ * `dist/widget.mjs` present and under budget, so none was caught before this gate existed. The output
+ * allowlist matches served files by NAME rather than extension, because rolldown names split chunks
+ * `[name]-[hash].js` and matching only `.mjs` let a genuinely split build pass.
  *
  * `DEPENDENCY_BUDGETS` exists because half the bundle is a handful of dependencies and the total cap
- * cannot see which. The build sits far enough under that cap for a heavy import to land, or an existing
- * one to grow substantially, without tripping it — the per-package table is what catches that. Each budget
- * is ~10% over the bytes measured on 2026-09-01, and a package ABSENT from the table fails outright, so a
- * new dependency is a deliberate line rather than a number nobody reads. The largest two are session
- * recording, imported for a feature that is off by default, and the Dialog/Button/Tabs/Toast primitives.
- *
- * Per-package bytes come from walking the sourcemap segments, which is the only view of what each source
- * file actually contributed to the output.
+ * can't see which; each budget is ~10% over bytes measured on 2026-09-01, and a package absent from
+ * the table fails outright, making a new dependency a deliberate line. Per-package bytes come from
+ * walking the sourcemap segments, the only view of what each source file contributed to the output.
  */
 
 import { readdirSync, readFileSync, statSync } from 'node:fs';

@@ -2,25 +2,21 @@
  * Vitest suite for `utils/validation.ts` — `parseWidgetSettings` and `invalidSettingsMessage`.
  *
  * `parseWidgetSettings` replaced `WidgetSettingsDataSchema.safeParse` to keep zod's 91 kB runtime out
- * of every host page. zod is still a dependency of the generated mirror, so it is importable HERE —
- * which makes the schema the oracle. These tests assert the two agree rather than asserting the
- * hand-written guard against itself: `valid` is the mock config run through the schema, and `FIELDS`
- * its key list, which drives the per-field cases.
+ * of every host page. zod is still a dependency of the generated mirror, so it is importable HERE,
+ * making the schema the oracle these tests assert agreement against. `valid` is the mock config run
+ * through the schema, `FIELDS` its key list driving the per-field cases.
  *
- * Contents: a valid object is accepted by both. Unknown keys are stripped exactly as zod did —
- * load-bearing, because `widgetDefaultGet` returns the render constants too and the result is spread
- * into the widget config, so a passed-through key would leak; the expectation is the schema's own
- * parse minus those constants. The four render constants (`widget_border_radius`, `widget_font_size`,
- * `widget_animation_duration`, `widget_fade_duration`) are separately asserted absent — still guarded
- * so a legacy bundle's stored value keeps passing, but never picked, since the widget renders them
- * from its own hard-coded values. Then, per field, a wrong-typed and a missing value are both rejected
- * and named: `12345` is wrong for every field in this schema — booleans, strings, enums and the chip
- * array — so one mutation covers the whole guard table. Off-enum values (`widget_appearance: 'compact'`,
- * retired in db-V246, and `widget_position: 'middle'`) and a malformed chip name their own field; a
- * non-object input (null, undefined, a string, a number, an array) is only asserted rejected, since an
- * array clears the object gate and comes back with the whole guard table rather than one name. The last
- * case pins that every invalid field is reported, in guard-table order, not just the first.
- * `invalidSettingsMessage` folds those names into the one console string.
+ * A valid object is accepted by both. Unknown keys are stripped exactly as zod did — load-bearing,
+ * since `widgetDefaultGet` returns render constants too and the result spreads into the widget config,
+ * so a passed-through key would leak; the expectation is the schema's parse minus those constants. The
+ * four render constants (`widget_border_radius`, `widget_font_size`, `widget_animation_duration`,
+ * `widget_fade_duration`) are separately asserted absent — still guarded so a legacy stored value keeps
+ * passing but is never picked, since the widget renders them from its own hard-coded values. Per field,
+ * a wrong-typed and a missing value are both rejected and named, since `12345` is wrong for every field
+ * — booleans, strings, enums, the chip array. Off-enum values (`widget_appearance: 'compact'`, retired
+ * in db-V246, and `widget_position: 'middle'`) and a malformed chip name their own field; a non-object
+ * input only asserts rejected, since an array returns the whole table rather than one name — the last
+ * case pins every invalid field reported, in guard-table order.
  */
 import { describe, expect, it } from 'vitest';
 

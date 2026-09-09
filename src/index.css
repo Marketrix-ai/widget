@@ -1,9 +1,24 @@
 /* The widget mounts into a CLOSED shadow root, so this file is the entire style surface — nothing
-   cascades in from the host page and nothing here escapes. Layout and one-off values are inline
-   styles from `resolveLayoutStyle`; this file carries what a style attribute cannot express:
-   pseudo-classes, pseudo-elements, keyframes, and the variant matrices keyed on `data-*`. */
+   cascades in from the host page and nothing here escapes. Layout and one-off values are inline styles
+   from `resolveLayoutStyle`; this file carries only what a style attribute cannot express: pseudo-classes,
+   pseudo-elements, keyframes, and the variant matrices keyed on `data-*`. Tokens are declared on
+   `:root, :host` — `:host` so they cascade inside the shadow root, `:root` for dev preview and tests.
 
-/* :host so vars cascade inside the closed Shadow DOM; :root covers non-shadow contexts (dev preview, tests). */
+   The reset is scoped and every element-targeting rule wrapped in `:where()`, so it weighs ZERO. UA
+   defaults DO apply inside a shadow root, so the elements this widget renders still need normalizing —
+   only those, since the tree holds no table, list, form control or rich text. Without `:where()` a
+   descendant selector like `[data-marketrix-widget] button` scores (0,1,1) and silently outranks a plain
+   component class like `.mtx-button` (0,1,0), which is how `font: inherit` once flattened every button to
+   weight 400 and `border-radius: 0` un-rounded `.mtx-icon-button`.
+
+   Rules not self-evident from their selector: `[data-resizing]` needs `!important` to beat the blanket
+   transition above it; reduced motion overrides on `[data-marketrix-widget]` rather than `:root`, because
+   the tenant durations are inline styles there and a shadow-tree `:root` matches nothing; `bare` and `tab`
+   opt out of chrome entirely rather than undoing padding; a selected tab is `aria-selected`, since Base
+   UI's `Tabs.Tab` emits no `data-selected` and overwrites its own `data-active`; the disabled icon-button
+   rule follows the variants so a disabled ghost reads 0.5, not 0.6; and `.mtx-fab-stop` is revealed by
+   hover or focus anywhere in the launcher, never on itself. */
+
 :root,
 :host {
   --background: oklch(1 0 0);
@@ -31,14 +46,6 @@
   --duration-fade: 200ms;
 }
 
-/* Scoped reset. UA defaults DO apply inside a shadow root, so the elements this widget actually
-   renders still need normalizing — but only those; there is no table, list, form control or rich
-   text anywhere in the tree.
-
-   Every element-targeting rule is wrapped in :where() so the whole reset weighs ZERO. Without it a
-   descendant selector like `[data-marketrix-widget] button` scores (0,1,1) and silently outranks a
-   plain component class like `.mtx-button` (0,1,0) — which is exactly how `font: inherit` flattened
-   every button to weight 400 and `border-radius: 0` un-rounded .mtx-icon-button. */
 *,
 *::before,
 *::after {
@@ -104,22 +111,17 @@
     transform 0.2s ease-in-out;
 }
 
-/* !important beats the blanket transition above. */
 [data-resizing='true'],
 [data-resizing='true'] * {
   transition: none !important;
 }
 
-/* On the widget root, not :root: the tenant durations are inline styles on that element, and a
-   shadow-tree stylesheet's :root matches nothing at all. */
 @media (prefers-reduced-motion: reduce) {
   [data-marketrix-widget] {
     --duration-animation: 0ms !important;
     --duration-fade: 0ms !important;
   }
 }
-
-/* ---- Button ---------------------------------------------------------------------------------- */
 
 .mtx-button {
   display: inline-flex;
@@ -188,8 +190,6 @@
   border-color: var(--primary);
 }
 
-/* `bare` and `tab` opt out of chrome entirely — the reason the old class build needed twMerge to
-   undo the size padding it had already applied. */
 .mtx-button[data-variant='bare'],
 .mtx-button[data-variant='tab'] {
   background: transparent;
@@ -214,8 +214,6 @@
   color: var(--foreground);
 }
 
-/* Tabs.Tab exposes selection as `aria-selected` — it emits no `data-selected`, and it OVERWRITES a
-   `data-active` of its own onto the element, so neither of those can carry this. */
 .mtx-button[data-variant='tab'][aria-selected='true'] {
   color: var(--primary);
   font-weight: 600;
@@ -235,8 +233,6 @@
   cursor: not-allowed;
   pointer-events: none;
 }
-
-/* ---- IconButton ------------------------------------------------------------------------------ */
 
 .mtx-icon-button {
   display: inline-flex;
@@ -289,14 +285,11 @@
   opacity: 1;
 }
 
-/* After the variant rules so a disabled ghost reads 0.5, not 0.6. */
 .mtx-icon-button[data-disabled='true'] {
   opacity: 0.5;
   cursor: not-allowed;
   pointer-events: none;
 }
-
-/* ---- Primitives ------------------------------------------------------------------------------ */
 
 .mtx-icon {
   display: inline-block;
@@ -327,8 +320,6 @@
   white-space: nowrap;
   border-width: 0;
 }
-
-/* ---- Composer -------------------------------------------------------------------------------- */
 
 .mtx-composer:focus-within {
   border-color: var(--foreground-faint);
@@ -381,8 +372,6 @@
   box-shadow: var(--shadow-sm);
 }
 
-/* ---- Notifications --------------------------------------------------------------------------- */
-
 .mtx-toast-viewport {
   position: fixed;
   left: 50%;
@@ -401,8 +390,6 @@
   opacity: 0;
   transition: opacity var(--duration-animation) ease-out;
 }
-
-/* ---- Dialog ---------------------------------------------------------------------------------- */
 
 .mtx-dialog-backdrop {
   position: fixed;
@@ -441,8 +428,6 @@
   line-height: 1.625;
   color: var(--foreground-muted);
 }
-
-/* ---- Launcher -------------------------------------------------------------------------------- */
 
 .mtx-fab-anchor {
   position: fixed;
@@ -535,7 +520,6 @@
   pointer-events: none;
 }
 
-/* Revealed by hovering or focusing anywhere in the launcher, so it cannot be a :hover on itself. */
 .mtx-fab-stop {
   position: absolute;
   top: 50%;
@@ -571,8 +555,6 @@
   opacity: 1;
   pointer-events: auto;
 }
-
-/* ---- Tab bar and screen-share indicator ------------------------------------------------------ */
 
 .mtx-tab-underline {
   position: absolute;
@@ -617,8 +599,6 @@
   border-radius: 9999px;
   background: currentColor;
 }
-
-/* ---- Activity glow and ring ------------------------------------------------------------------ */
 
 .marketrix-widget-button-processing-glow,
 .marketrix-widget-button-error-glow {
@@ -682,8 +662,6 @@
 [data-view-transition][data-direction='back'] {
   animation: viewSlideBack 300ms both;
 }
-
-/* ---- Keyframes ------------------------------------------------------------------------------- */
 
 @keyframes mtx-spin {
   to {
