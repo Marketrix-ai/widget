@@ -2,8 +2,8 @@
  * Focus trap for the messenger panel: while `isActive`, focus starts inside `containerRef`, Tab cycles
  * within it, Escape calls `onEscape`, and on deactivation focus returns to whatever held it before.
  *
- * `FOCUSABLE_SELECTOR` is the tabbable-candidate query; `activeElementIn` reads the focused element as
- * seen from a container's own root; `getFocusables` lists a container's visible tabbable elements; and
+ * The tabbable-candidate query is `utils/dom`'s shared `TABBABLE_SELECTOR`; `activeElementIn` reads the
+ * focused element as seen from a container's own root; `getFocusables` lists a container's visible tabbable elements; and
  * `useFocusTrap(containerRef, isActive, {onEscape, focusTargetRef})` focuses `focusTargetRef` (else the
  * first focusable), installs one capture-phase `keydown` listener on `document`, and restores focus on
  * the active→inactive edge.
@@ -21,8 +21,7 @@
 
 import { useEffect, useRef } from 'react';
 
-const FOCUSABLE_SELECTOR =
-  'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+import { TABBABLE_SELECTOR } from '../utils/dom';
 
 function activeElementIn(container: HTMLElement): HTMLElement | null {
   const root = container.getRootNode();
@@ -30,7 +29,7 @@ function activeElementIn(container: HTMLElement): HTMLElement | null {
 }
 
 function getFocusables(container: HTMLElement): HTMLElement[] {
-  return Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
+  return Array.from(container.querySelectorAll<HTMLElement>(TABBABLE_SELECTOR)).filter(
     el => el.offsetParent !== null && !el.hasAttribute('aria-hidden'),
   );
 }

@@ -14,9 +14,11 @@
  * tracks a scrolling container, not just the window. `#marketrix-show-highlight` and `#marketrix-show-popup`
  * are load-bearing ids: `DomService.notInteractableReason` allowlists them so the overlay never reads as an
  * obscuring modal, and cleanup re-finds them because an interrupted node outlives its handle. The highlight's
- * cssText is one line because template-literal whitespace is not minified. Placement takes the first of
- * right/left/above/below that fits then clamps, its 120px height an assumption, and the watchdog tests
- * `document.body.contains` first, so it covers removal as well as occlusion.
+ * cssText is one line because template-literal whitespace is not minified. `trackElement` is the one place
+ * the highlight is sized and placed over its element — both the first paint and every reposition event run
+ * through it. Placement takes the first of right/left/above/below that fits then clamps, its 120px height an
+ * assumption, and the watchdog tests `document.body.contains` first, so it covers removal as well as
+ * occlusion.
  */
 
 import { domService } from './DomService';
@@ -65,7 +67,7 @@ export class ShowModeService {
 
     element.scrollIntoView({ behavior: 'instant', block: 'center', inline: 'center' });
 
-    this.createHighlight(element);
+    this.createHighlight();
     this.createPopup(explanation, isClickAction);
     this.setupPositionUpdates();
     this.setupVisibilityMonitoring();
@@ -127,17 +129,28 @@ export class ShowModeService {
     return settlers;
   }
 
-  private createHighlight(element: HTMLElement): void {
-    const rect = element.getBoundingClientRect();
+  private createHighlight(): void {
     const highlight = document.createElement('div');
     highlight.id = 'marketrix-show-highlight';
     highlight.style.cssText =
-      `position:fixed;top:${rect.top}px;left:${rect.left}px;width:${rect.width}px;height:${rect.height}px;` +
-      'border:3px solid #3b82f6;border-radius:4px;' +
+      'position:fixed;border:3px solid #3b82f6;border-radius:4px;' +
       'box-shadow:0 0 0 4px rgba(59,130,246,0.2),0 0 20px rgba(59,130,246,0.4);' +
       'z-index:2147483645;pointer-events:none;transition:none;';
     document.body.appendChild(highlight);
     this.currentHighlight = highlight;
+    this.trackElement();
+  }
+
+  private trackElement(): void {
+    if (!this.currentElement || !this.currentHighlight) return;
+    const rect = this.currentElement.getBoundingClientRect();
+    Object.assign(this.currentHighlight.style, {
+      top: `${rect.top}px`,
+      left: `${rect.left}px`,
+      width: `${rect.width}px`,
+      height: `${rect.height}px`,
+    });
+    this.updatePopupPosition();
   }
 
   private createPopup(explanation: string, isClickAction: boolean): void {
@@ -169,17 +182,7 @@ export class ShowModeService {
   }
 
   private setupPositionUpdates(): void {
-    this.scrollHandler = () => {
-      if (!this.currentElement || !this.currentHighlight) return;
-      const rect = this.currentElement.getBoundingClientRect();
-      Object.assign(this.currentHighlight.style, {
-        top: `${rect.top}px`,
-        left: `${rect.left}px`,
-        width: `${rect.width}px`,
-        height: `${rect.height}px`,
-      });
-      this.updatePopupPosition();
-    };
+    this.scrollHandler = () => this.trackElement();
 
     for (const event of REPOSITION_EVENTS) {
       window.addEventListener(event, this.scrollHandler, { capture: true, passive: true });

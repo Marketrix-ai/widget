@@ -2,22 +2,15 @@
  * `ChatView` tests: a send waiting on screen access locks the composer so no later send overwrites the
  * queued message, and unlocks to deliver it once answered; a multi-line message keeps its line breaks.
  */
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
-import { WidgetProviders } from '@/context/WidgetProviders';
-import { getMockWidgetConfig } from '@/test/fixtures';
-
-import { WidgetRoot } from '../WidgetRoot';
+import { openChatTab, openWidget, renderWidget } from '@/test/renderWidget';
 
 const openChat = (mode?: 'Show') => {
-  render(
-    <WidgetProviders previewMode>
-      <WidgetRoot config={getMockWidgetConfig()} />
-    </WidgetProviders>,
-  );
-  fireEvent.click(screen.getByRole('button', { name: /open/i }));
-  fireEvent.click(screen.getByRole('tab', { name: 'Chat' }));
+  renderWidget();
+  openWidget();
+  openChatTab();
   if (mode) fireEvent.click(screen.getByRole('button', { name: mode }));
   return screen.getByPlaceholderText('Ask anything') as HTMLTextAreaElement;
 };

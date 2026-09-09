@@ -13,13 +13,13 @@
  * the base that the tenant's own `settings` are spread OVER, so a field the tenant never set falls back to the api's
  * default rather than to undefined.
  *
- * `errorMessage` normalises an unknown throw to a string and `withCause` wraps a caller-facing message around it while
- * retaining the original as `cause`, so nothing here swallows the underlying failure. The probe strings matched on a
- * failed `widgetSearch` are the platform-specific texts browsers emit for an unreachable host — matching them turns a
- * dead api into "start the API server at <host>" instead of a misleading "widget validation failed".
+ * Every failure reports through `utils/errors`, so nothing here swallows the throw underneath it. The probe strings
+ * matched on a failed `widgetSearch` are the platform-specific texts browsers emit for an unreachable host — matching
+ * them turns a dead api into "start the API server at <host>" instead of a misleading "widget validation failed".
  */
 import { sdk, type WidgetData, type WidgetSettingsData } from '../sdk';
 import type { MarketrixConfig, ValidWidgetConfig } from '../types';
+import { errorMessage, withCause } from '../utils/errors';
 import { invalidSettingsMessage, parseWidgetSettings, type WidgetRenderedSettings } from '../utils/validation';
 import type { CredentialedConfig } from './StorageService';
 
@@ -31,16 +31,6 @@ export function createConfigFromSettings(
     ...baseConfig,
     ...widgetSettings,
   } as ValidWidgetConfig;
-}
-
-function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : typeof error === 'string' ? error : 'Unknown error';
-}
-
-function withCause(message: string, cause: unknown): Error {
-  const error = new Error(message);
-  (error as Error & { cause: unknown }).cause = cause;
-  return error;
 }
 
 export async function loadWidgetConfig(config: MarketrixConfig): Promise<CredentialedConfig> {

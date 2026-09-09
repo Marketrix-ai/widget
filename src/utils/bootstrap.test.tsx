@@ -13,6 +13,14 @@ const loaderSource = readFileSync(resolve(process.cwd(), 'public/loader.js'), 'u
 
 vi.mock('../index.css?inline', () => ({ default: '.marketrix-widget-container { display: block; }' }));
 
+const appendModuleScript = (attributes: Record<string, string>) => {
+  const script = document.createElement('script');
+  script.type = 'module';
+  script.src = 'https://cdn.test/widget.mjs';
+  for (const [name, value] of Object.entries(attributes)) script.setAttribute(name, value);
+  document.head.appendChild(script);
+};
+
 const resetDocument = () => {
   document.head.replaceChildren();
   document.body.replaceChildren();
@@ -74,14 +82,12 @@ describe('widget public entry paths', () => {
   });
 
   it('auto-initializes once from the direct module script attributes', async () => {
-    const script = document.createElement('script');
-    script.type = 'module';
-    script.src = 'https://cdn.test/widget.mjs';
-    script.setAttribute('mtx-id', 'widget-id');
-    script.setAttribute('mtx-key', 'widget-key');
-    script.setAttribute('mtx-api-host', 'https://api.test');
-    script.setAttribute('mtx-use-screenshare', 'false');
-    document.head.appendChild(script);
+    appendModuleScript({
+      'mtx-id': 'widget-id',
+      'mtx-key': 'widget-key',
+      'mtx-api-host': 'https://api.test',
+      'mtx-use-screenshare': 'false',
+    });
     const init = vi.fn().mockResolvedValue(undefined);
     const { autoInitializeWidget } = await import('./bootstrap');
 
@@ -97,12 +103,7 @@ describe('widget public entry paths', () => {
   });
 
   it('refuses to initialize without mtx-api-host, which would post at the host page instead', async () => {
-    const script = document.createElement('script');
-    script.type = 'module';
-    script.src = 'https://cdn.test/widget.mjs';
-    script.setAttribute('mtx-id', 'widget-id');
-    script.setAttribute('mtx-key', 'widget-key');
-    document.head.appendChild(script);
+    appendModuleScript({ 'mtx-id': 'widget-id', 'mtx-key': 'widget-key' });
     const init = vi.fn().mockResolvedValue(undefined);
     const { autoInitializeWidget } = await import('./bootstrap');
 

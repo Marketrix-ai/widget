@@ -123,12 +123,15 @@ export function useDragSnap({
     (nextCorner: WidgetPosition, wrapper: HTMLDivElement) => {
       abandonSnapRef.current?.();
       let finished = false;
-      const done = () => {
-        if (finished) return;
+      const detach = () => {
         finished = true;
         window.clearTimeout(fallbackTimer);
         wrapper.removeEventListener('transitionend', onEnd);
         abandonSnapRef.current = null;
+      };
+      const done = () => {
+        if (finished) return;
+        detach();
         wrapper.style.transition = 'none';
         wrapper.style.willChange = '';
         wrapper.style.left = '';
@@ -147,12 +150,7 @@ export function useDragSnap({
         done();
       };
       wrapper.addEventListener('transitionend', onEnd);
-      abandonSnapRef.current = () => {
-        finished = true;
-        window.clearTimeout(fallbackTimer);
-        wrapper.removeEventListener('transitionend', onEnd);
-        abandonSnapRef.current = null;
-      };
+      abandonSnapRef.current = detach;
     },
     [onPositionCommit, wrapperRef],
   );

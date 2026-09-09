@@ -78,6 +78,11 @@ export function useScreenShare({
   const screenShareMessageIdRef = useLatest(screenShareMessageId);
   const onScreenSharingChangeRef = useLatest(onScreenSharingChange);
 
+  const applySharing = (sharing: boolean) => {
+    setIsScreenSharing(sharing);
+    onScreenSharingChange?.(sharing);
+  };
+
   const announceStopped = (messageId: string | null) => {
     if (messageId) onRemoveMessage?.(messageId);
     onAddMessage(createSystemMessage('Stopped screenshare', 'stopped-sharing'));
@@ -125,8 +130,7 @@ export function useScreenShare({
   const beginScreenShare = async () => {
     try {
       const stream = await startScreenShare();
-      setIsScreenSharing(true);
-      onScreenSharingChange?.(true);
+      applySharing(true);
       resolveAccessRequest('allowed');
       onAddMessage(createSystemMessage('Started screenshare', 'started-screenshare'));
       const screenshareMessage = createScreenshareMessage(stream, 'show');
@@ -134,8 +138,7 @@ export function useScreenShare({
       onAddMessage(screenshareMessage);
     } catch (error) {
       console.error('Failed to start screen sharing:', error);
-      setIsScreenSharing(false);
-      onScreenSharingChange?.(false);
+      applySharing(false);
       resolveAccessRequest('denied');
     }
     flushPendingMessage();
@@ -159,8 +162,7 @@ export function useScreenShare({
 
   const stopScreenSharing = () => {
     stopScreenShare();
-    setIsScreenSharing(false);
-    onScreenSharingChange?.(false);
+    applySharing(false);
     announceStopped(screenShareMessageId);
   };
 

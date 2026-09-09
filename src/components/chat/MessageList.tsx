@@ -4,9 +4,9 @@
  *
  * `scrollButtonStyle` is the card-on-surface look shared by both affordances. `MessageListProps` carries
  * the end-of-list anchor ref owned by `ChatView` plus the screen-access answers, forwarded only to
- * `MessageItem`. `MessageList` prepends a synthetic `welcome` message built from `widget_body`; it never
- * enters the store, which is why "Clear conversation" is gated on `messages.length` rather than on the
- * rendered list. `handleScroll` derives both affordances from container geometry — top once scrolled past
+ * `MessageItem`. `MessageList` prepends a greeting message built from `widget_body` through the shared
+ * `createAgentMessage`, the one home for a `ChatMessage`; it never enters the store, which is why
+ * "Clear conversation" is gated on `messages.length` rather than on the rendered list. `handleScroll` derives both affordances from container geometry — top once scrolled past
  * 200px, bottom while the list overflows and sits more than 50px off the end. The transcript paints
  * `widget_background_color` through `backgroundGradient`, the one home for that expansion, zeroing
  * `backgroundColor` for a gradient setting so the two declarations cannot fight.
@@ -23,6 +23,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { SHADOW } from '../../design-system/component-tokens';
 import { useWidget, useWidgetConfig } from '../../hooks/useWidget';
 import type { ChatMessage } from '../../types';
+import { createAgentMessage } from '../../utils/chat';
 import { addOpacity, backgroundGradient } from '../../utils/color';
 import { Button } from '../base/Button';
 import { Flex } from '../base/Flex';
@@ -54,17 +55,7 @@ export const MessageList = ({ messagesEndRef, onScreenAccessAllow, onScreenAcces
   const [showScrollBottom, setShowScrollBottom] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const greetingMessage = useMemo<ChatMessage>(
-    () => ({
-      id: 'welcome',
-      content: widgetConfig.widget_body,
-      sender: 'agent',
-      timestamp: new Date(),
-      isPlaceholder: false,
-      parts: [{ type: 'text', content: widgetConfig.widget_body }],
-    }),
-    [widgetConfig.widget_body],
-  );
+  const greetingMessage = useMemo(() => createAgentMessage(widgetConfig.widget_body), [widgetConfig.widget_body]);
   const allMessages = useMemo(() => [greetingMessage, ...messages], [greetingMessage, messages]);
 
   const handleScroll = () => {

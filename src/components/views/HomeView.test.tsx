@@ -2,21 +2,14 @@
  * `HomeView` renders each suggested-action chip caption verbatim — a `show`/`do` caption is already
  * prefixed by `getSuggestedActionsFromConfig`, so prefixing again in the view would double it.
  */
-import { fireEvent, render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
-import { WidgetProviders } from '@/context/WidgetProviders';
-import { getMockWidgetConfig } from '@/test/fixtures';
-
-import { WidgetRoot } from '../WidgetRoot';
+import { openWidget, renderWidget } from '@/test/renderWidget';
 
 const openHome = (chips: Array<{ chip_text: string; chip_mode: 'tell' | 'show' | 'do' }>) => {
-  render(
-    <WidgetProviders previewMode>
-      <WidgetRoot config={getMockWidgetConfig({ widget_chips: chips })} />
-    </WidgetProviders>,
-  );
-  fireEvent.click(screen.getByRole('button', { name: /open/i }));
+  renderWidget({ widget_chips: chips });
+  openWidget();
 };
 
 describe('HomeView suggested actions', () => {

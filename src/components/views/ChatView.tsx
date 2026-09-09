@@ -25,7 +25,7 @@ import { useWidget, useWidgetConfig } from '../../hooks/useWidget';
 import type { InstructionType } from '../../sdk';
 import { showModeService } from '../../services/ShowModeService';
 import type { MarketrixConfig } from '../../types';
-import { createSystemMessage, createUserMessage, getModeDisplayName } from '../../utils/chat';
+import { createSystemMessage, createUserMessage, getModeDisplayName, SCREEN_ACCESS_PROMPT } from '../../utils/chat';
 import { ErrorBoundary } from '../base/ErrorBoundary';
 import { Stack } from '../base/Flex';
 import { Surface } from '../base/Surface';
@@ -99,7 +99,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ onScreenSharingChange, toggl
         <WidgetDialog
           open={showScreenAccessDialog}
           onClose={handleScreenAccessDialogDismiss}
-          title='Can I take a look at your screen?'
+          title={SCREEN_ACCESS_PROMPT}
           description='By allowing screen access, Marketrix can understand your current context to guide you better and complete tasks on your behalf.'
           onConfirm={handleScreenAccessDialogAllow}
           confirmLabel='Yes'

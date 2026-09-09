@@ -26,7 +26,7 @@ import { chatPost } from '../services/ChatService';
 import { storageService } from '../services/StorageService';
 import { StreamClient, StreamGaveUpError } from '../services/StreamClient';
 import type { ChatMessage, InstructionType } from '../types';
-import { createAgentMessage, createUserMessage } from '../utils/chat';
+import { createAgentMessage, createPlaceholderMessage, createUserMessage } from '../utils/chat';
 import {
   isTerminalTaskStatus,
   reduceDispatch,
@@ -175,25 +175,19 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
         addMessage(createUserMessage(content, effectiveMode));
       }
 
-      const placeholderId = `temp-${globalThis.crypto.randomUUID()}`;
-      const placeholderMsg: ChatMessage = {
-        id: placeholderId,
-        content: '',
-        sender: 'agent',
-        timestamp: new Date(),
-        mode: effectiveMode,
-        isPlaceholder: true,
-        placeholderState: 'thinking',
-        parts: [],
-      };
-      commit(s => reduceDispatch(s, placeholderMsg));
+      const placeholder = createPlaceholderMessage(effectiveMode);
+      commit(s => reduceDispatch(s, placeholder));
 
       try {
-        await chatPost(config, content, effectiveMode, placeholderId);
+        await chatPost(config, content, effectiveMode, placeholder.id);
       } catch (error) {
         console.error('Failed to send message:', error);
         commit(s =>
-          reduceError(s, placeholderId, "I'm sorry, I encountered an error processing your request. Please try again."),
+          reduceError(
+            s,
+            placeholder.id,
+            "I'm sorry, I encountered an error processing your request. Please try again.",
+          ),
         );
       }
     },

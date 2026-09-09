@@ -201,7 +201,7 @@ and shipped images cannot drift in their dependency set.
   props resolve to a style object (`resolveLayoutStyle`), never class names: as classes they were
   interpolated, so a build-time safelist was the only thing keeping them alive and a missing entry
   failed silently at runtime. Variants are CSS keyed on the `data-*` attributes the components emit
-  (`data-variant`/`data-size`/`data-active`/`data-disabled`/`data-stacked`/`data-full`), which is also
+  (`data-variant`/`data-size`/`data-active`/`data-disabled`/`data-stacked`/`data-full`/`data-tone`), which is also
   why `bare` and `tab` can simply not have padding rather than needing a merge pass to undo it.
   A new `animate` token needs a matching `@keyframes` — `stylesheet-contract.test.ts` pins that.
 - **The widget has no dark mode** — no `.dark` block, no `dark:` variant. Theming is the per-tenant

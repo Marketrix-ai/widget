@@ -1,7 +1,10 @@
 /**
  * Predicates the agent's element index runs against the HOST page's DOM — what counts as a control and
  * whether it is reachable — plus `WIDGET_SHADOW_HOST_CLASS`, set by `bootstrap` on the shadow host so
- * `DomService` can recognise its own overlay chrome instead of reporting it as obscuring the host page.
+ * `DomService` can recognise its own overlay chrome instead of reporting it as obscuring the host page,
+ * and `TABBABLE_SELECTOR`, the one tab-order candidate query — `send_keys`' Tab simulation walks the host
+ * page with it and `useFocusTrap` walks the widget's own tree with it, and they must agree on what the
+ * browser would focus next.
  *
  * `ancestry` walks element → `parentElement`, crossing each shadow boundary at its host; a bare
  * `parentElement` walk stops dead at a `ShadowRoot`, so a control inside a host-page web component
@@ -19,6 +22,9 @@
  */
 
 export const WIDGET_SHADOW_HOST_CLASS = 'marketrix-widget-container';
+
+export const TABBABLE_SELECTOR =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 const INTERACTIVE_ROLES = new Set(['button', 'link', 'textbox', 'checkbox', 'radio', 'switch', 'tab', 'menuitem']);
 

@@ -118,9 +118,9 @@ export const MessengerShell: React.FC = () => {
               onClick={screenShareHandler}
             >
               {headerScreenSharing && (
-                <span className='mtx-screenshare-dot'>
-                  <span className='mtx-screenshare-dot-ping' />
-                  <span className='mtx-screenshare-dot-core' />
+                <span className='mtx-live-dot' style={{ position: 'absolute', top: '2px', right: '2px' }}>
+                  <span className='mtx-live-dot-ping' />
+                  <span className='mtx-live-dot-core' />
                 </span>
               )}
               <Icon name='screenShare' size={16} />
