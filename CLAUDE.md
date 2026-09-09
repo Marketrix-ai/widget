@@ -204,6 +204,11 @@ and shipped images cannot drift in their dependency set.
   (`data-variant`/`data-size`/`data-active`/`data-disabled`/`data-stacked`/`data-full`/`data-tone`), which is also
   why `bare` and `tab` can simply not have padding rather than needing a merge pass to undo it.
   A new `animate` token needs a matching `@keyframes` — `stylesheet-contract.test.ts` pins that.
+- **The widget stays quiet on a customer's console.** There is no `console.log`/`console.info` in `src/`:
+  terser drops `log`/`info`/`debug`, so such a line only ever reaches a developer running the dev server,
+  and it reads in review like shipped telemetry. Severity follows the root `../CLAUDE.md` — a
+  degraded-but-handled failure (a reconnect, unreadable `localStorage`, dropped telemetry) is `warn`, an
+  unexpected one is `error`, and each failure logs exactly one record.
 - **The widget has no dark mode** — no `.dark` block, no `dark:` variant. Theming is the per-tenant
   settings → CSS custom properties in `semantic-tokens.ts`, nothing else.
 - **Elevation is a `SHADOW.*` token** (`design-system/component-tokens.ts`), applied inline through `Surface`'s

@@ -11,7 +11,6 @@
  *
  * `previewConfig` is the one home for the preview path's validate-then-resolve, shared by the React
  * component and the imperative `mountWidget`; a null return means it has already reported why.
- *
  * `configureSdk` runs on the production path only, and there is no default host, so an unconfigured SDK
  * would resolve every request against the HOST PAGE's origin. `widget_enabled` is the kill switch: unlike
  * `show_widget`/`widget_appearance`, hidden but initialized, disabled means no chat id, stream or recording.
@@ -166,7 +165,6 @@ export const unmountWidget = (): void => {
   if (active) {
     active.instance.unmount();
     active.container.remove();
-    console.log('Marketrix Widget destroyed');
   }
 
   initPromise = null;

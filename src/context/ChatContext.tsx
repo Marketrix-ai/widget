@@ -16,7 +16,9 @@
  * each effect runs its browser tool, stamps progress, replies `tool/response` and only then fires
  * `afterResponseAttempt`. `handleError` converts only a `StreamGaveUpError` into a transport failure, as a
  * retriable blip settles when the reply lands on the reconnected stream. `stopTask` sends `chat/stop`,
- * which carries no task id, and surfaces a send failure explicitly since `do` mode may still be clicking.
+ * which carries no task id. Every failure on the tool and stop paths reaches `uiActions.setError` as well
+ * as the console: an undelivered `tool/response` leaves the agent waiting on a reply that never comes, so
+ * the run stalls with nothing on screen unless the visitor is told, and `do` mode may still be clicking.
  */
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -219,7 +221,10 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
           ...(result.success && { data: JSON.stringify(result.data) }),
           error,
         })
-        .catch(err => console.error('Failed to send tool response:', err));
+        .catch((err: unknown) => {
+          console.error('Failed to send tool response:', err);
+          uiActions.setError('Could not report that step back to the assistant — it may stop responding.');
+        });
 
       if (result.success) result.afterResponseAttempt?.();
     };
@@ -246,7 +251,10 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
       });
 
       for (const effect of effects) {
-        startToolCall(effect).catch(error => console.error('[Widget] Tool call failed:', error));
+        startToolCall(effect).catch((error: unknown) => {
+          console.error('[Widget] Tool call failed:', error);
+          uiActions.setError('Something went wrong running that step. Please try again.');
+        });
       }
     };
 

@@ -3,25 +3,25 @@
  * registry (`tools`: label, wait-for-user flag and handler together, so no parallel list can drift);
  * `getFriendlyToolName` and `isWaitForUserTool` read it, `browserToolService` is the singleton.
  * `ChatContext` calls `executeTool` — in `show` mode it highlights the target and waits for the visitor
- * first — and posts back a `ToolExecutionResult`: `TextData`, `ExtractData`, `DropdownOptionsData` or a failure.
+ * first — and posts back a `ToolExecutionResult`.
  *
- * Handlers: navigate · search · clickElement · typeText (input/textarea, contenteditable, any `value`,
- * else textContent; trailing `blur` because some frameworks validate only on it) · scroll · scrollToText ·
- * extract (10k cap) · goBack · wait · selectDropdownOption · getDropdownOptions · sendKeys · closeTab ·
- * done (`FINISH_TOOL`, one named export so dispatch, progress lines and settlement check one string) ·
- * getHtml, uncapped because the agent's parser indexes by `data-id` and a trimmed tree loses elements the
- * loop then cannot click · getScreenshot, off the EXISTING share since a fresh prompt bypasses a Deny.
+ * `typeText` branches input/textarea, contenteditable, any `value`, else textContent, and trails a `blur`
+ * because some frameworks validate only on it. `extract` truncates at 10k while `getHtml` is uncapped —
+ * the agent's parser indexes by `data-id`, and a trimmed tree loses elements the loop then cannot click.
+ * `getScreenshot` reads the EXISTING share, since a fresh prompt bypasses an earlier Deny. `FINISH_TOOL`
+ * is one named export so dispatch, progress lines and the settlement check read one string.
  *
  * `element` / `selectElement` are the ONE way a handler reaches a host-page node: they resolve an index
- * through `domService` and THROW, which `executeTool`'s catch turns into the failure the agent reads — so
- * no handler repeats the resolve-or-fail dance and every one of them reports the same way. `isTextField`
- * is the input-or-textarea guard those handlers share.
+ * through `domService` and THROW. `executeTool`'s catch is this file's ONLY error handler and no handler
+ * may add a second — a throw already reaches the agent verbatim, so a local try/catch just rewrites the
+ * same failure. `isTextField` is the input-or-textarea guard those handlers share.
  *
  * `deferred` reports an action DISPATCHED, never completed: a click or navigation can tear the page down
  * before the report is read. `httpUrl` admits only http(s) — `extract` feeds the model page-controlled
- * hrefs, so a raw target would let `javascript:` run in the HOST origin. `simulateKeyAction` reproduces
- * each key by hand because synthetic KeyboardEvents run no default action, returning null for keys
- * `sendKeys` already dispatched; `setNativeValue` writes through the prototype setter for React/Vue inputs.
+ * hrefs, so a raw target would let `javascript:` run in the HOST origin; its bare catch is the same verdict
+ * as a rejected protocol, an unparseable string being exactly a value that is not a URL. `simulateKeyAction`
+ * reproduces each key by hand because synthetic KeyboardEvents run no default action, returning null for
+ * keys `sendKeys` already dispatched; `setNativeValue` writes through the prototype setter for React/Vue.
  */
 
 import type { InstructionType } from '../types';
@@ -149,8 +149,6 @@ export class BrowserToolService {
     const toolArgs = args as ToolArgs;
     const tool = this.tools[browserToolName];
     try {
-      console.log(`[BrowserToolService] Executing ${browserToolName} (mode: ${mode})`);
-
       if (mode === 'show' && tool?.waitForUser && toolArgs.index !== undefined) {
         await showModeService.showToolAction({
           element: this.element(toolArgs.index),
@@ -229,20 +227,12 @@ export class BrowserToolService {
         return fail(`Could not insert text into element ${args.index}`);
       }
     } else if ('value' in element) {
-      try {
-        (element as HTMLInputElement).value = args.text;
-        element.dispatchEvent(new Event('input', { bubbles: true }));
-        element.dispatchEvent(new Event('change', { bubbles: true }));
-      } catch (e) {
-        return fail(`Failed to set value on element: ${errorMessage(e)}`);
-      }
+      (element as HTMLInputElement).value = args.text;
+      element.dispatchEvent(new Event('input', { bubbles: true }));
+      element.dispatchEvent(new Event('change', { bubbles: true }));
     } else {
-      try {
-        element.textContent = args.text;
-        element.dispatchEvent(new Event('input', { bubbles: true }));
-      } catch (e) {
-        return fail(`Failed to set textContent: ${errorMessage(e)}`);
-      }
+      element.textContent = args.text;
+      element.dispatchEvent(new Event('input', { bubbles: true }));
     }
 
     return ok(`Typed text into element ${args.index}`);
@@ -531,12 +521,7 @@ export class BrowserToolService {
   }
 
   private getHtml(): ToolExecutionResult {
-    try {
-      const html = domService.reindexAndSnapshot();
-      return ok(html);
-    } catch (error) {
-      return fail(errorMessage(error));
-    }
+    return ok(domService.reindexAndSnapshot());
   }
 
   private async getScreenshot(): Promise<ToolExecutionResult> {
@@ -573,8 +558,6 @@ export class BrowserToolService {
       ctx.drawImage(video, 0, 0);
 
       return ok(canvas.toDataURL('image/jpeg', 0.75));
-    } catch (error) {
-      return fail(errorMessage(error));
     } finally {
       video.remove();
     }

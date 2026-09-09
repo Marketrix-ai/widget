@@ -27,7 +27,6 @@ class ChatSessionManager {
       const chatId = await sdk.chatCreate(undefined);
       if (!chatId) throw new Error('API returned empty chat ID');
       storageService.setChatId(chatId);
-      console.info('[ChatSessionManager] Created chat ID:', chatId);
       return chatId;
     })().finally(() => {
       this.creation = null;

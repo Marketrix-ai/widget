@@ -15,7 +15,9 @@
  * A `chat/error` whose `request_id === 'auth'` is non-retriable: `chat/error` otherwise settles the message whose
  * id is the request id, and no message is ever id `'auth'`, so without the explicit `giveUp` here the widget went
  * permanently silent — no toast, no bubble, and (console dropped by terser) no trace. Both give-up messages are
- * read by a visitor on a customer's page, so they name the state and the way out rather than the counter.
+ * read by a visitor on a customer's page, so they name the state and the way out rather than the counter, and
+ * `giveUp` needs no console line of its own for the same reason. A dial or stream that will be retried warns;
+ * only the rejected credential is an error, being the one failure nothing here recovers from.
  */
 import { sdk, type WidgetCommand, type WidgetEvent } from '../sdk';
 import { errorMessage } from '../utils/errors';
@@ -136,7 +138,7 @@ export class StreamClient {
       this.consumeEvents(iterator, myConnectionId);
     } catch (error) {
       if (!signal.aborted) {
-        console.error('[StreamClient] Connection failed:', error);
+        console.warn('[StreamClient] Connection failed, will retry:', error);
         this.status = 'error';
         this.notifyError(new Error('Stream connection failed'));
         this.scheduleReconnect();
@@ -224,7 +226,6 @@ export class StreamClient {
 
     if (event.type === 'registered') {
       if (event.chat_id === this.chatId) {
-        console.log('[StreamClient] Successfully registered with server');
         this.status = 'registered';
         this.resetBackoff();
         this.settleWaiters();
@@ -248,9 +249,6 @@ export class StreamClient {
     this.clearReconnectTimer();
     this.reconnectAttempts++;
     const delay = Math.min(this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1), this.maxReconnectDelay);
-    console.log(
-      `[StreamClient] Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`,
-    );
     this.reconnectTimer = setTimeout(() => {
       if (!this.reconnectSuppressed() && this.chatId) {
         this.connect(this.chatId).catch(console.error);

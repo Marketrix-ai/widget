@@ -59,7 +59,7 @@ describe('useScreenShare', () => {
     await act(async () => await result.current.handleScreenAccessRequestAllow());
 
     expect(opts.onUpdateMessage).toHaveBeenCalledWith(REQUEST_ID, { screenShareStatus: 'allowed' });
-    expect(opts.onAddMessage.mock.calls.map(([m]) => m.content)).toEqual(['Started screenshare', '']);
+    expect(opts.onAddMessage.mock.calls.map(([m]) => m.content)).toEqual(['Screen sharing started', '']);
     expect(opts.onSendMessage).toHaveBeenCalledWith('do the thing', 'do', true);
     expect(result.current.isScreenSharing).toBe(true);
   });
@@ -101,7 +101,7 @@ describe('useScreenShare', () => {
     await act(async () => await result.current.handleScreenAccessDialogAllow());
 
     expect(result.current.showScreenAccessDialog).toBe(false);
-    expect(opts.onAddMessage.mock.calls.map(([m]) => m.content)).toEqual(['Started screenshare', '']);
+    expect(opts.onAddMessage.mock.calls.map(([m]) => m.content)).toEqual(['Screen sharing started', '']);
     expect(opts.onUpdateMessage).toHaveBeenCalledWith(REQUEST_ID, { screenShareStatus: 'allowed' });
     expect(opts.onSendMessage).toHaveBeenCalledWith('do the thing', 'do', true);
   });
