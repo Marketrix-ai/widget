@@ -1,3 +1,9 @@
+/**
+ * `MessageItem` — one transcript row. System messages render centred and faint; otherwise a user or
+ * agent row with a leading glyph (a pointer for show/do requests, a check for a screen-access request or
+ * a waiting-for-user placeholder), the sender label as an aria-label, `MessageContent` for the body,
+ * and the allow/deny controls when the message is a screen-access request. The last message fades in.
+ */
 import React from 'react';
 
 import MarketrixIcon from '../../assets/marketrix-icon.svg';

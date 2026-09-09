@@ -1,3 +1,9 @@
+/**
+ * ChatProvider tests around the reply placeholder: it gives up on its own even when no dispatch in this
+ * page created it (a reload mid-reply), its stale-reply deadline is not pushed back by an unrelated
+ * message the visitor adds while waiting, and the processing signal both glows read outlives the
+ * outbound POST — the visitor waits on the reply, not on the request.
+ */
 import { act, render, screen } from '@testing-library/react';
 import { useEffect } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';

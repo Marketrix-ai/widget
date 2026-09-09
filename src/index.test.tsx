@@ -1,3 +1,12 @@
+/**
+ * Public lifecycle tests for the widget entry (`init` / `update` / `unmount` / preview): unmount
+ * disconnects the stream and ends an in-flight screen share; a preview mounts without an API fetch and
+ * can invalidate pending production init; a config the settings schema refuses names its failing
+ * fields instead of mounting; production init refuses without an API host (it would otherwise POST at
+ * the host page), stops short of mounting/connecting/recording when the resolved config is disabled,
+ * shares one in-flight promise and cancels a stale one; updates re-mount into the given container and a
+ * preview stays a preview; and production stores the credentials it was initialized with.
+ */
 import { act, cleanup, render, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 

@@ -1,3 +1,8 @@
+/**
+ * `getNearestCornerByTranslation` picks the corner a drag lands on from every start, keeps the corner
+ * on a barely-moved drag, and snaps by proximity rather than axis; `isWidgetPosition` admits the four
+ * corners and rejects inherited object property names.
+ */
 import { describe, expect, it } from 'vitest';
 
 import type { WidgetPosition } from '../types';

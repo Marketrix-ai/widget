@@ -1,3 +1,8 @@
+/**
+ * Widget smoke: it mounts with the launcher, uses semantic and layer tokens, portals the modal inside
+ * the token-bearing widget root, paints it above the panel, and keeps a hidden widget visible in
+ * preview mode.
+ */
 import { fireEvent, render, screen } from '@testing-library/react';
 import React from 'react';
 

@@ -1,3 +1,8 @@
+/**
+ * `resolveLayoutStyle` tests: every spacing prop (padding, margin, gap …) across every token maps to
+ * its pixel value, empty props give an empty style, and SPACING_SCALE is declared smallest-first so a
+ * token name orders the same way as the pixels it emits.
+ */
 import { describe, expect, it } from 'vitest';
 
 import { resolveLayoutStyle, SPACING_SCALE, stripLayoutProps } from '../layoutProps';

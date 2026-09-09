@@ -1,3 +1,6 @@
+/**
+ * `SHADOW` — the elevation scale (none, card, section, panel, fab, button) and its `ShadowToken` type.
+ */
 export const SHADOW = {
   none: 'none',
   card: '0 1px 4px rgba(0,0,0,0.1)',

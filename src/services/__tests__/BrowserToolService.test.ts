@@ -1,3 +1,9 @@
+/**
+ * Browser-tool tests. A tool that leaves the page (`navigate`, `search_web`, `go_back`) holds the
+ * navigation until its response has been sent, so the agent hears the result before the page is gone.
+ * `navigate` refuses `javascript:` (it would run in the host page) and resolves relative URLs; opening a
+ * new tab reports whether the popup really opened; `close_tab` fails on a tab the script did not open.
+ */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { browserToolService, FINISH_TOOL } from '../BrowserToolService';

@@ -1,3 +1,7 @@
+/**
+ * Vitest config — jsdom, globals, the shared `src/test/setup.ts` (Testing Library + axe), `@` → `src`,
+ * v8 coverage.
+ */
 import { resolve } from 'node:path';
 
 import { defineConfig } from 'vitest/config';

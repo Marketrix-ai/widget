@@ -1,3 +1,9 @@
+/**
+ * `StreamClient` registration tests: disconnect rejects old waiters without leaking into a remount,
+ * giving up reconnection or a refused credential rejects a pending registration rather than hanging it,
+ * a refused credential outlives `connect`, and an open-but-unregistered stream is still pending — so a
+ * send can never outrun registration.
+ */
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { StreamClient, StreamGaveUpError } from './StreamClient';

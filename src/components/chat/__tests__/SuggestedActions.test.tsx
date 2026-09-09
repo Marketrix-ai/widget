@@ -1,3 +1,6 @@
+/**
+ * `SuggestedActions` renders each caption verbatim — prefixing is the config layer's job.
+ */
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 

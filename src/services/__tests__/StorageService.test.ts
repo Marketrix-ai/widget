@@ -1,3 +1,9 @@
+/**
+ * `StorageService` tests: `tenantScope` prefers the credential id, then the application id, then a
+ * fixed default; `setConfig` never carries one tenant's `chat_id` into another's scope; a chat snapshot
+ * round-trips, with an active screen share stored as an ended notice because a MediaStream cannot
+ * survive a reload.
+ */
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import type { ChatMessage } from '../../types';

@@ -1,3 +1,7 @@
+/**
+ * `Flex` and `Stack` tests: display flex, className/style/as pass-through, `hidden` winning over its
+ * own display, and Stack rendering a column.
+ */
 import { render } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 

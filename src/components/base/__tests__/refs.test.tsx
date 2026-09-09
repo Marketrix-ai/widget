@@ -1,3 +1,6 @@
+/**
+ * Every base component's ref resolves to its rendered host element.
+ */
 import { render } from '@testing-library/react';
 import { createRef, type RefObject } from 'react';
 import { describe, expect, it } from 'vitest';

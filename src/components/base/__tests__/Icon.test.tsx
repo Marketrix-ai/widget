@@ -1,3 +1,6 @@
+/**
+ * `Icon` tests: an SVG sized by `size` (default 16), className merged, null for an unknown name.
+ */
 import { render } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 

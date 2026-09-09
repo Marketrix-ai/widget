@@ -1,3 +1,7 @@
+/**
+ * `ResizeHandle` — a 20px corner grip for resizing the panel, positioned from its `ResizeGrip` and
+ * exposed as a labelled `separator`; `touchAction: none` so the drag is not hijacked by scrolling.
+ */
 import React from 'react';
 
 import type { ResizeGrip } from '../../utils/widgetPositioning';

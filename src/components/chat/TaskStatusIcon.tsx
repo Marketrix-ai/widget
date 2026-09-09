@@ -1,3 +1,7 @@
+/**
+ * `TaskStatusIcon` — the done / failed / stopped glyph at the end of a task message, in the tenant
+ * accent colour at a per-status opacity.
+ */
 import React from 'react';
 
 import { useWidgetConfig } from '../../hooks/useWidget';

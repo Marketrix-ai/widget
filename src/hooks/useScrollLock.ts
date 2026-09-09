@@ -1,3 +1,8 @@
+/**
+ * `useScrollLock` — hides `overflow` on html and body while enabled, but only under MOBILE_MAX_WIDTH,
+ * where the open panel covers the page; on desktop the host page keeps scrolling. Restores the exact
+ * previous values on release.
+ */
 import { useEffect } from 'react';
 
 const MOBILE_MAX_WIDTH = 767;
