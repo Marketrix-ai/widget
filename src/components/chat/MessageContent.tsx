@@ -7,8 +7,7 @@ import React from 'react';
 
 import { useWidget } from '../../hooks/useWidget';
 import type { ChatMessage } from '../../types';
-import { Flex } from '../base/Flex';
-import { Stack } from '../base/Stack';
+import { Flex, Stack } from '../base/Flex';
 import { Surface } from '../base/Surface';
 import { Text } from '../base/Text';
 import { ThinkingIndicator } from './ThinkingIndicator';

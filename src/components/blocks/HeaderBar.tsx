@@ -6,10 +6,9 @@ import React from 'react';
 
 import MarketrixIcon from '../../assets/marketrix-icon.svg';
 import { Avatar } from '../base/Avatar';
-import { Flex } from '../base/Flex';
+import { Flex, Stack } from '../base/Flex';
 import { Icon } from '../base/Icon';
 import { IconButton } from '../base/IconButton';
-import { Stack } from '../base/Stack';
 import { Text } from '../base/Text';
 
 interface HeaderBarProps {

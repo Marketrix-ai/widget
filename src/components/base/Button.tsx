@@ -7,8 +7,7 @@
 import { Button as BaseButton } from '@base-ui/react/button';
 import type { ComponentPropsWithRef } from 'react';
 
-import { getElevationStyle, RADIUS } from '../../design-system/component-tokens';
-import type { ShadowToken } from '../../design-system/shadows';
+import { getElevationStyle, RADIUS, type ShadowToken } from '../../design-system/component-tokens';
 
 type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'bare' | 'chip' | 'tab';
 type ButtonSize = 'sm' | 'md';

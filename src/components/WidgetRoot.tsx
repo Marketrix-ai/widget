@@ -34,7 +34,7 @@
 import React, { useEffect, useState } from 'react';
 
 import { PortalContainerContext } from '../context/WidgetProviders';
-import { LAYER_TOKENS } from '../design-system/layers';
+import { LAYER_TOKENS } from '../design-system/component-tokens';
 import { createSemanticTokens, semanticTokensToCssCustomProperties } from '../design-system/semantic-tokens';
 import { useScrollLock } from '../hooks/useScrollLock';
 import { useWidget, WidgetConfigContext } from '../hooks/useWidget';

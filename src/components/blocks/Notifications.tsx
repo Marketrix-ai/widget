@@ -23,14 +23,12 @@ import { Toast } from '@base-ui/react/toast';
 import React, { useEffect } from 'react';
 
 import MarketrixIcon from '../../assets/marketrix-icon.svg';
-import { notificationToneStyles } from '../../design-system/component-tokens';
-import { LAYER_TOKENS } from '../../design-system/layers';
+import { LAYER_TOKENS, notificationToneStyles } from '../../design-system/component-tokens';
 import { Avatar } from '../base/Avatar';
 import { Button } from '../base/Button';
-import { Flex } from '../base/Flex';
+import { Flex, Stack } from '../base/Flex';
 import { Icon } from '../base/Icon';
 import { IconButton } from '../base/IconButton';
-import { Stack } from '../base/Stack';
 import { Text } from '../base/Text';
 
 export const GREETING_TIMEOUT_MS = 8000;

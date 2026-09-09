@@ -31,7 +31,7 @@ import { showModeService } from '../../services/ShowModeService';
 import type { MarketrixConfig } from '../../types';
 import { createSystemMessage, createUserMessage, getModeDisplayName } from '../../utils/chat';
 import { ErrorBoundary } from '../base/ErrorBoundary';
-import { Stack } from '../base/Stack';
+import { Stack } from '../base/Flex';
 import { Surface } from '../base/Surface';
 import { Text } from '../base/Text';
 import { ChatInput, type ChatInputMode } from '../blocks/ChatInput';

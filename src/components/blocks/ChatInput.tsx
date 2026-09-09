@@ -11,11 +11,10 @@
 import React, { useCallback, useEffect, useRef } from 'react';
 
 import type { InstructionType } from '../../types';
-import { Flex } from '../base/Flex';
+import { Flex, Stack } from '../base/Flex';
 import { Icon } from '../base/Icon';
 import { IconButton } from '../base/IconButton';
 import type { IconName } from '../base/icons';
-import { Stack } from '../base/Stack';
 import { Text } from '../base/Text';
 
 export interface ChatInputMode {

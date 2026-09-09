@@ -1,11 +1,12 @@
 /**
  * Colour tests: the text colour a background gets is readable on every spelling of white and black and
  * falls back to black (never white) for an unreadable value; the one parser reads shorthand hex, refuses
- * out-of-range channels, and `addOpacity` gets the same reach.
+ * out-of-range channels, and `addOpacity` gets the same reach; `backgroundGradient` passes a gradient
+ * setting through and expands a flat colour, so panel and transcript paint the same thing.
  */
 import { describe, expect, it } from 'vitest';
 
-import { addOpacity, getContrastingColor, toRgb } from './color';
+import { addOpacity, backgroundGradient, getContrastingColor, toRgb } from './color';
 
 describe('the text colour a widget background gets', () => {
   it('is readable on every spelling of white, not only the six-digit one', () => {
@@ -42,5 +43,17 @@ describe('the one colour parser', () => {
     expect(addOpacity('#fff', 0.5)).toBe('rgba(255, 255, 255, 0.5)');
     expect(addOpacity('rgb(1, 2, 3)', 0.25)).toBe('rgba(1, 2, 3, 0.25)');
     expect(addOpacity('var(--brand)', 0.5)).toBe('var(--brand)');
+  });
+});
+
+describe('the widget background as a backgroundImage', () => {
+  it('passes a gradient setting through, since it is already legal as backgroundImage', () => {
+    const gradient = 'linear-gradient(90deg, #fff 0%, #000 100%)';
+    expect(backgroundGradient(gradient)).toBe(gradient);
+    expect(backgroundGradient('radial-gradient(#fff, #000)')).toBe('radial-gradient(#fff, #000)');
+  });
+
+  it('expands a flat colour to a same-stop gradient, so one declaration covers both spellings', () => {
+    expect(backgroundGradient('#ffffff')).toBe('linear-gradient(135deg, #ffffff 0%, #ffffff 100%)');
   });
 });

@@ -7,8 +7,8 @@
 import React, { useRef } from 'react';
 
 import MarketrixIcon from '../../assets/marketrix-icon.svg';
+import { SHADOW } from '../../design-system/component-tokens';
 import { WIDGET_RADIUS_PX } from '../../design-system/semantic-tokens';
-import { SHADOW } from '../../design-system/shadows';
 import { useDragSnap } from '../../hooks/useDragSnap';
 import { useWidget, useWidgetConfig } from '../../hooks/useWidget';
 import type { WidgetPosition } from '../../types';

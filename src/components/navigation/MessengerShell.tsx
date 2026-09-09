@@ -7,8 +7,8 @@
  * by `tenantScope(config)` so two tenants on one host page cannot share a stored size;
  * `getPanelPositionStyle` pins the panel to the configured corner and `getCorner` supplies the
  * matching `transformOrigin`, so the entrance animation scales out of the anchored corner instead of
- * the panel's centre. A flat `widget_background_color` is expanded into a two-stop gradient so one
- * `backgroundImage` covers both a colour and a gradient setting. Preview mode (the dashboard embed)
+ * the panel's centre. `widget_background_color` is painted through `backgroundGradient`, the one home
+ * for that expansion. Preview mode (the dashboard embed)
  * positions `absolute` rather than `fixed` and drops the resize handle, because it lives inside a page
  * element instead of the viewport.
  *
@@ -31,18 +31,19 @@
 import { Tabs } from '@base-ui/react/tabs';
 import React, { useRef, useState } from 'react';
 
-import { SHADOW } from '../../design-system/shadows';
+import { SHADOW } from '../../design-system/component-tokens';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { useResize } from '../../hooks/useResize';
 import { useWidget, useWidgetConfig } from '../../hooks/useWidget';
 import { tenantScope } from '../../services/StorageService';
 import type { WidgetView } from '../../types';
 import { createUserMessage } from '../../utils/chat';
+import { backgroundGradient } from '../../utils/color';
 import type { SuggestedActionItem } from '../../utils/suggestedActions';
 import { getCorner, getPanelPositionStyle } from '../../utils/widgetPositioning';
+import { Stack } from '../base/Flex';
 import { Icon } from '../base/Icon';
 import { IconButton } from '../base/IconButton';
-import { Stack } from '../base/Stack';
 import { Surface } from '../base/Surface';
 import { HeaderBar } from '../blocks/HeaderBar';
 import { ChatView } from '../views/ChatView';
@@ -79,9 +80,7 @@ export const MessengerShell: React.FC = () => {
 
   if (!isOpen) return null;
 
-  const backgroundImage = config.widget_background_color.includes('gradient')
-    ? config.widget_background_color
-    : `linear-gradient(135deg, ${config.widget_background_color} 0%, ${config.widget_background_color} 100%)`;
+  const backgroundImage = backgroundGradient(config.widget_background_color);
 
   const { vertical, horizontal } = getCorner(config.widget_position);
 
