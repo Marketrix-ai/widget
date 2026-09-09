@@ -1,8 +1,12 @@
 /**
  * `WidgetFab` — the launcher button: draggable via `useDragSnap`, positioned at the configured corner,
- * glowing while a reply or task is in flight (an error switches the glow class), and showing the stop
- * control while a task runs and the panel is closed. Colours and z-index come from the tenant config;
- * `pointerEvents: none` while open so the panel beneath receives the clicks.
+ * glowing while a reply or task is in flight, and showing the stop control while a task runs and the
+ * panel is closed. Colours and z-index come from the tenant config; `pointerEvents: none` while open so
+ * the panel beneath receives the clicks.
+ *
+ * Glow and activity ring are ONE class each, red or green keyed on the `data-tone` the error state
+ * picks — the same data-attribute variant convention every other component here uses. The two icon
+ * layers carry only their own transform and opacity; the transition they share is `.mtx-fab-icon-layer`.
  */
 import React, { useRef } from 'react';
 
@@ -38,10 +42,7 @@ export const WidgetFab: React.FC<WidgetFabProps> = ({ onPositionCommit }) => {
 
   const showProcessingGlow = !open && (state.isAwaitingReply || taskRunning);
   const showStopControl = !open && taskRunning;
-  const glowClass = error ? 'marketrix-widget-button-error-glow' : 'marketrix-widget-button-processing-glow';
-  const activityRingClass = error
-    ? 'marketrix-widget-button-error-activity-ring'
-    : 'marketrix-widget-button-processing-activity-ring';
+  const tone = error ? 'error' : 'processing';
 
   const wrapperRef = useRef<HTMLDivElement | null>(null);
 
@@ -68,7 +69,7 @@ export const WidgetFab: React.FC<WidgetFabProps> = ({ onPositionCommit }) => {
       }}
     >
       <Surface className='mtx-fab' data-open={open ? 'true' : 'false'}>
-        {showProcessingGlow && <Surface className={glowClass} aria-hidden />}
+        {showProcessingGlow && <Surface className='mtx-fab-glow' data-tone={tone} aria-hidden />}
 
         {showStopControl && !isDragging && (
           <Button
@@ -119,7 +120,7 @@ export const WidgetFab: React.FC<WidgetFabProps> = ({ onPositionCommit }) => {
               }}
             >
               {showProcessingGlow && (
-                <svg className={activityRingClass} viewBox='0 0 54 54' fill='none' aria-hidden>
+                <svg className='mtx-fab-ring' data-tone={tone} viewBox='0 0 54 54' fill='none' aria-hidden>
                   <rect
                     x='1.25'
                     y='1.25'
@@ -133,13 +134,7 @@ export const WidgetFab: React.FC<WidgetFabProps> = ({ onPositionCommit }) => {
 
               <Flex
                 className='mtx-fab-icon-layer'
-                style={{
-                  transform: open ? 'rotate(30deg) scale(0)' : 'rotate(0deg) scale(1)',
-                  opacity: open ? 0 : 1,
-                  transitionProperty: 'transform, opacity',
-                  transitionDuration: '0.16s, 0.08s',
-                  transitionTimingFunction: 'linear',
-                }}
+                style={{ transform: open ? 'rotate(30deg) scale(0)' : 'rotate(0deg) scale(1)', opacity: open ? 0 : 1 }}
                 aria-hidden={open}
               >
                 <Avatar
@@ -161,13 +156,7 @@ export const WidgetFab: React.FC<WidgetFabProps> = ({ onPositionCommit }) => {
 
               <Flex
                 className='mtx-fab-icon-layer'
-                style={{
-                  transform: open ? 'rotate(0deg) scale(1)' : 'rotate(-30deg) scale(0)',
-                  opacity: open ? 1 : 0,
-                  transitionProperty: 'transform, opacity',
-                  transitionDuration: '0.16s, 0.08s',
-                  transitionTimingFunction: 'linear',
-                }}
+                style={{ transform: open ? 'rotate(0deg) scale(1)' : 'rotate(-30deg) scale(0)', opacity: open ? 1 : 0 }}
                 aria-hidden={!open}
               >
                 <Icon name='chevronDown' size={24} className='mtx-fab-chevron' />

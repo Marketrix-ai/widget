@@ -15,9 +15,9 @@
    transition above it; reduced motion overrides on `[data-marketrix-widget]` rather than `:root`, because
    the tenant durations are inline styles there and a shadow-tree `:root` matches nothing; `bare` and `tab`
    opt out of chrome entirely rather than undoing padding; a selected tab is `aria-selected`, since Base
-   UI's `Tabs.Tab` emits no `data-selected` and overwrites its own `data-active`; the disabled icon-button
-   rule follows the variants so a disabled ghost reads 0.5, not 0.6; and `.mtx-fab-stop` is revealed by
-   hover or focus anywhere in the launcher, never on itself. */
+   UI's `Tabs.Tab` emits no `data-selected` and overwrites its own `data-active`; the disabled rule the two
+   button classes share follows the variants, so a disabled ghost icon button reads 0.5, not 0.6; and
+   `.mtx-fab-stop` is revealed by hover or focus anywhere in the launcher, never on itself. */
 
 :root,
 :host {
@@ -123,15 +123,19 @@
   }
 }
 
-.mtx-button {
+.mtx-button,
+.mtx-icon-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+}
+
+.mtx-button {
   gap: 8px;
   font-weight: 500;
-  cursor: pointer;
   border: 1px solid transparent;
-  transition: all 0.2s ease-in-out;
 }
 
 .mtx-button:focus-visible {
@@ -228,21 +232,10 @@
   width: 100%;
 }
 
-.mtx-button[data-disabled='true'] {
-  opacity: 0.5;
-  cursor: not-allowed;
-  pointer-events: none;
-}
-
 .mtx-icon-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
   flex-shrink: 0;
   border: none;
   border-radius: 9999px;
-  cursor: pointer;
-  transition: all 0.2s ease-in-out;
 }
 
 .mtx-icon-button[data-size='xs'] {
@@ -285,6 +278,7 @@
   opacity: 1;
 }
 
+.mtx-button[data-disabled='true'],
 .mtx-icon-button[data-disabled='true'] {
   opacity: 0.5;
   cursor: not-allowed;
@@ -503,6 +497,9 @@
   inset: 0;
   align-items: center;
   justify-content: center;
+  transition-property: transform, opacity;
+  transition-duration: 0.16s, 0.08s;
+  transition-timing-function: linear;
 }
 
 .mtx-fab-avatar {
@@ -571,16 +568,14 @@
   opacity: 1;
 }
 
-.mtx-screenshare-dot {
-  position: absolute;
-  top: 2px;
-  right: 2px;
+.mtx-live-dot {
+  position: relative;
   display: inline-flex;
   height: 6px;
   width: 6px;
 }
 
-.mtx-screenshare-dot-ping {
+.mtx-live-dot-ping {
   position: absolute;
   display: inline-flex;
   height: 100%;
@@ -591,7 +586,7 @@
   animation: mtx-ping 1s cubic-bezier(0, 0, 0.2, 1) infinite;
 }
 
-.mtx-screenshare-dot-core {
+.mtx-live-dot-core {
   position: relative;
   display: inline-flex;
   height: 6px;
@@ -600,8 +595,7 @@
   background: currentColor;
 }
 
-.marketrix-widget-button-processing-glow,
-.marketrix-widget-button-error-glow {
+.mtx-fab-glow {
   position: absolute;
   pointer-events: none;
   top: 50%;
@@ -614,8 +608,7 @@
   will-change: transform, opacity;
 }
 
-.marketrix-widget-button-processing-activity-ring,
-.marketrix-widget-button-error-activity-ring {
+.mtx-fab-ring {
   position: absolute;
   inset: -3px;
   pointer-events: none;
@@ -623,44 +616,43 @@
   overflow: visible;
 }
 
-.marketrix-widget-button-processing-activity-ring rect,
-.marketrix-widget-button-error-activity-ring rect {
+.mtx-fab-ring rect {
   fill: none;
   stroke-width: 2.5;
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-dasharray: 40 120;
-  animation: widget-activity-dash-travel 1.9s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  animation: mtx-fab-ring-travel 1.9s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 
-.marketrix-widget-button-processing-activity-ring rect {
+.mtx-fab-ring[data-tone='processing'] rect {
   stroke: #31d06d;
   filter: drop-shadow(0 0 3px rgba(49, 208, 109, 0.7));
 }
 
-.marketrix-widget-button-error-activity-ring rect {
+.mtx-fab-ring[data-tone='error'] rect {
   stroke: #d0342c;
   filter: drop-shadow(0 0 3px rgba(208, 52, 44, 0.7));
 }
 
-.marketrix-widget-button-processing-glow {
-  animation: widget-glow-green 2s ease-in-out infinite;
+.mtx-fab-glow[data-tone='processing'] {
+  animation: mtx-fab-glow-processing 2s ease-in-out infinite;
 }
 
-.marketrix-widget-button-error-glow {
-  animation: widget-glow-red 1.5s ease-in-out infinite;
+.mtx-fab-glow[data-tone='error'] {
+  animation: mtx-fab-glow-error 1.5s ease-in-out infinite;
 }
 
 [data-screen-edge-glow] {
-  animation: marketrix-screen-edge-pulse 1.6s ease-in-out infinite;
+  animation: mtx-screen-edge-pulse 1.6s ease-in-out infinite;
 }
 
 [data-view-transition][data-direction='forward'] {
-  animation: viewSlideForward 300ms both;
+  animation: mtx-view-slide-forward 300ms both;
 }
 
 [data-view-transition][data-direction='back'] {
-  animation: viewSlideBack 300ms both;
+  animation: mtx-view-slide-back 300ms both;
 }
 
 @keyframes mtx-spin {
@@ -725,7 +717,7 @@
   }
 }
 
-@keyframes marketrix-screen-edge-pulse {
+@keyframes mtx-screen-edge-pulse {
   0%,
   100% {
     opacity: 0.55;
@@ -735,7 +727,7 @@
   }
 }
 
-@keyframes widget-activity-dash-travel {
+@keyframes mtx-fab-ring-travel {
   0% {
     stroke-dashoffset: 0;
     opacity: 0.5;
@@ -762,7 +754,7 @@
   }
 }
 
-@keyframes widget-glow-green {
+@keyframes mtx-fab-glow-processing {
   0%,
   100% {
     transform: translate(-50%, -50%) scale(1);
@@ -788,7 +780,7 @@
   }
 }
 
-@keyframes widget-glow-red {
+@keyframes mtx-fab-glow-error {
   0%,
   100% {
     transform: translate(-50%, -50%) scale(1);
@@ -814,7 +806,7 @@
   }
 }
 
-@keyframes viewSlideForward {
+@keyframes mtx-view-slide-forward {
   from {
     transform: translateX(20px);
     opacity: 0;
@@ -825,7 +817,7 @@
   }
 }
 
-@keyframes viewSlideBack {
+@keyframes mtx-view-slide-back {
   from {
     transform: translateX(-20px);
     opacity: 0;

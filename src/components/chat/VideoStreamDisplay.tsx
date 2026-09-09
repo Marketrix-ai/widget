@@ -16,7 +16,8 @@
  * Corners are rounded on top only because `MessageItem` collapses the bubble padding to 0 for a video
  * message, so this sits flush in the bubble's top corners. Stacking is deliberate — overlays 10, Live
  * pill 20, banner 30 — and the banner is `pointerEvents: 'none'` so its full-bleed wrapper never
- * swallows clicks meant for the message.
+ * swallows clicks meant for the message. The pulsing dot in the Live pill is the shared `mtx-live-dot`,
+ * the same one the header's screen-share button wears; it paints in `currentColor`.
  */
 import React, { useEffect, useRef, useState } from 'react';
 
@@ -151,19 +152,10 @@ export const VideoStreamDisplay: React.FC<VideoStreamDisplayProps> = ({ stream }
             boxShadow: '0 2px 8px rgba(31, 41, 55, 0.4)',
           }}
         >
-          <Flex position='relative' align='center' justify='center'>
-            <Surface
-              position='absolute'
-              rounded='pill'
-              animate='ping'
-              style={{ width: '8px', height: '8px', backgroundColor: 'white', opacity: 0.75 }}
-            />
-            <Surface
-              position='relative'
-              rounded='pill'
-              style={{ width: '6px', height: '6px', backgroundColor: 'white' }}
-            />
-          </Flex>
+          <span className='mtx-live-dot' style={{ color: 'white' }}>
+            <span className='mtx-live-dot-ping' />
+            <span className='mtx-live-dot-core' />
+          </span>
           <Text
             as='span'
             size='xs'
