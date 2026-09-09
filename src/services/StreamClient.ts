@@ -23,6 +23,9 @@ import { storageService } from './StorageService';
 
 type StreamStatus = 'disconnected' | 'connecting' | 'open' | 'registered' | 'error';
 
+const INITIAL_RECONNECT_DELAY_MS = 1000;
+const CREDENTIALS_REJECTED = 'Chat is unavailable — the widget credentials were rejected.';
+
 export class StreamGaveUpError extends Error {}
 
 export interface StreamClientCallbacks {
@@ -40,7 +43,7 @@ export class StreamClient {
   private credentialRejected = false;
   private reconnectAttempts = 0;
   private readonly maxReconnectAttempts = 10;
-  private reconnectDelay = 1000;
+  private reconnectDelay = INITIAL_RECONNECT_DELAY_MS;
   private readonly maxReconnectDelay = 30000;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private connectionId = 0;
@@ -79,8 +82,7 @@ export class StreamClient {
   reconnectNow(): void {
     if (!this.canReconnect() || this.chatId === null) return;
     this.clearReconnectTimer();
-    this.reconnectAttempts = 0;
-    this.reconnectDelay = 1000;
+    this.resetBackoff();
     this.abortConnection();
     this.connect(this.chatId).catch(console.error);
   }
@@ -93,7 +95,7 @@ export class StreamClient {
   async waitUntilRegistered(): Promise<void> {
     if (this.isConnected()) return;
     if (this.credentialRejected) {
-      throw new StreamGaveUpError('Chat is unavailable — the widget credentials were rejected.');
+      throw new StreamGaveUpError(CREDENTIALS_REJECTED);
     }
     await new Promise<void>((resolve, reject) => this.registrationWaiters.add({ resolve, reject }));
   }
@@ -193,6 +195,11 @@ export class StreamClient {
       });
   }
 
+  private resetBackoff(): void {
+    this.reconnectAttempts = 0;
+    this.reconnectDelay = INITIAL_RECONNECT_DELAY_MS;
+  }
+
   private notifyError(error: Error): void {
     this.callbacks.forEach(cb => cb.onError?.(error));
   }
@@ -219,8 +226,7 @@ export class StreamClient {
       if (event.chat_id === this.chatId) {
         console.log('[StreamClient] Successfully registered with server');
         this.status = 'registered';
-        this.reconnectAttempts = 0;
-        this.reconnectDelay = 1000;
+        this.resetBackoff();
         this.settleWaiters();
       }
     }
@@ -228,7 +234,7 @@ export class StreamClient {
     if (event.type === 'chat/error' && event.request_id === 'auth') {
       console.error('[StreamClient] Authentication failed — will not reconnect');
       this.credentialRejected = true;
-      this.giveUp('Chat is unavailable — the widget credentials were rejected.');
+      this.giveUp(CREDENTIALS_REJECTED);
     }
 
     this.callbacks.forEach(cb => cb.onMessage?.(event));

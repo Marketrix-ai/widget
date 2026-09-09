@@ -9,6 +9,9 @@
  * merged in, on whichever path the current mount came from; `MarketrixWidgetPreview` is the dashboard
  * wrapper; `mountWidget` dispatches on shape — `settings` → preview (no network), `mtxId`+`mtxKey` → live.
  *
+ * `previewConfig` is the one home for the preview path's validate-then-resolve, shared by the React
+ * component and the imperative `mountWidget`; a null return means it has already reported why.
+ *
  * `configureSdk` runs on the production path only, and there is no default host, so an unconfigured SDK
  * would resolve every request against the HOST PAGE's origin. `widget_enabled` is the kill switch: unlike
  * `show_widget`/`widget_appearance`, hidden but initialized, disabled means no chat id, stream or recording.
@@ -41,6 +44,7 @@ import type {
   MarketrixConfig,
   MarketrixWidgetPreviewProps,
   ValidWidgetConfig,
+  WidgetSettingsData,
 } from './types';
 import {
   autoInitializeWidget,
@@ -58,6 +62,18 @@ import { invalidSettingsMessage, isHTMLElement, parseWidgetSettings } from './ut
 let initPromise: Promise<void> | null = null;
 let lifecycleGeneration = 0;
 let rrwebSessionRecorder: RrwebSessionRecorder | null = null;
+
+function previewConfig(
+  settings: WidgetSettingsData,
+  baseConfig: Partial<MarketrixConfig> = {},
+): ValidWidgetConfig | null {
+  const parsed = parseWidgetSettings(settings);
+  if (parsed.invalidFields) {
+    console.error(`Marketrix Widget: ${invalidSettingsMessage(parsed.invalidFields)}`);
+    return null;
+  }
+  return { ...createConfigFromSettings(parsed.settings, baseConfig), isPreviewMode: true };
+}
 
 function mount(config: ValidWidgetConfig, host: HTMLElement | undefined, previewMode = false): void {
   const { container, mountEl } = createWidgetContainer(host);
@@ -187,21 +203,14 @@ export const MarketrixWidgetPreview: React.FC<MarketrixWidgetPreviewProps> = ({ 
       return;
     }
 
-    const parsed = parseWidgetSettings(settings);
-    if (parsed.invalidFields) {
-      console.error(`Marketrix Widget: ${invalidSettingsMessage(parsed.invalidFields)}`);
-      return;
-    }
+    const config = previewConfig(settings);
+    if (!config) return;
 
     const { container: widgetContainer, mountEl } = createWidgetContainer(parentContainer);
 
     widgetContainerRef.current = widgetContainer;
 
-    rootRef.current = mountWidgetToContainer(
-      mountEl,
-      { ...createConfigFromSettings(parsed.settings), isPreviewMode: true },
-      true,
-    );
+    rootRef.current = mountWidgetToContainer(mountEl, config, true);
 
     return () => {
       if (rootRef.current) {
@@ -226,14 +235,11 @@ export const mountWidget = async (config: AddWidgetConfig): Promise<void> => {
   const container = config.container;
 
   if (config.settings !== undefined) {
-    const parsed = parseWidgetSettings(config.settings);
-    if (parsed.invalidFields) {
-      console.error(`Marketrix Widget: ${invalidSettingsMessage(parsed.invalidFields)}`);
-      return;
-    }
-    unmountWidget();
     const { settings: _settings, container: _container, ...restConfig } = config;
-    mount({ ...createConfigFromSettings(parsed.settings, restConfig), isPreviewMode: true }, container, true);
+    const previewed = previewConfig(config.settings, restConfig);
+    if (!previewed) return;
+    unmountWidget();
+    mount(previewed, container, true);
   } else if (config.mtxId !== undefined && config.mtxKey !== undefined) {
     const { container: _container, ...restConfig } = config;
     await initWidget(restConfig, container);
