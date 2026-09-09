@@ -18,6 +18,7 @@
  * read by a visitor on a customer's page, so they name the state and the way out rather than the counter.
  */
 import { sdk, type WidgetCommand, type WidgetEvent } from '../sdk';
+import { errorMessage } from '../utils/errors';
 import { storageService } from './StorageService';
 
 type StreamStatus = 'disconnected' | 'connecting' | 'open' | 'registered' | 'error';
@@ -187,7 +188,7 @@ export class StreamClient {
       })
       .then(() => {})
       .catch(err => {
-        this.notifyError(new Error(`Failed to send message: ${String(err)}`));
+        this.notifyError(new Error(`Failed to send message: ${errorMessage(err)}`));
         throw err;
       });
   }

@@ -20,6 +20,7 @@
  */
 
 import type { InstructionType } from '../types';
+import { errorMessage } from '../utils/errors';
 import { domService } from './DomService';
 import { activeScreenStream } from './ScreenShareService';
 import { showModeService } from './ShowModeService';
@@ -148,7 +149,7 @@ export class BrowserToolService {
 
       return tool ? await tool.run(toolArgs) : fail(`Unknown tool: ${browserToolName}`);
     } catch (error) {
-      return fail(error instanceof Error ? error.message : String(error));
+      return fail(errorMessage(error));
     }
   }
 
@@ -225,14 +226,14 @@ export class BrowserToolService {
         element.dispatchEvent(new Event('input', { bubbles: true }));
         element.dispatchEvent(new Event('change', { bubbles: true }));
       } catch (e) {
-        return fail(`Failed to set value on element: ${e instanceof Error ? e.message : String(e)}`);
+        return fail(`Failed to set value on element: ${errorMessage(e)}`);
       }
     } else {
       try {
         element.textContent = args.text;
         element.dispatchEvent(new Event('input', { bubbles: true }));
       } catch (e) {
-        return fail(`Failed to set textContent: ${e instanceof Error ? e.message : String(e)}`);
+        return fail(`Failed to set textContent: ${errorMessage(e)}`);
       }
     }
 
@@ -544,7 +545,7 @@ export class BrowserToolService {
       const html = domService.reindexAndSnapshot();
       return ok(html);
     } catch (error) {
-      return fail(String(error));
+      return fail(errorMessage(error));
     }
   }
 
@@ -583,7 +584,7 @@ export class BrowserToolService {
 
       return ok(canvas.toDataURL('image/jpeg', 0.75));
     } catch (error) {
-      return fail(String(error));
+      return fail(errorMessage(error));
     } finally {
       video.remove();
     }

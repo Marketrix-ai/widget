@@ -52,6 +52,7 @@ import {
   showHostPageNotice,
   widgetState,
 } from './utils/bootstrap';
+import { errorMessage } from './utils/errors';
 import { invalidSettingsMessage, isHTMLElement, parseWidgetSettings } from './utils/validation';
 
 let initPromise: Promise<void> | null = null;
@@ -79,7 +80,7 @@ async function initWidgetInternal(
   } catch (error) {
     if (generation !== lifecycleGeneration) return;
     console.error('Marketrix Widget initialization failed:', error);
-    showHostPageNotice(error instanceof Error ? error.message : 'Failed to initialize widget', 'error');
+    showHostPageNotice(errorMessage(error, 'Failed to initialize widget'), 'error');
     window.__mtx = undefined;
     return;
   }
