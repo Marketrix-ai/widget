@@ -1,3 +1,32 @@
+/**
+ * Contract tests for `WidgetEventSchema`, the server -> widget SSE discriminated union of the generated
+ * SDK mirror. `StreamClient` consumes the typed iterator and branches on `event.type` without ever
+ * re-parsing a frame, so these safeParse calls are the only place the union's shape is asserted; and the
+ * mirror is regenerated from the api and never hand-edited, so this file is what catches a regenerate
+ * that drops, renames or loosens a member.
+ *
+ * Fixtures: `ALL_WIDGET_EVENT_TYPES` / `ExpectedEventType` are the seven `type` discriminants, and
+ * `MINIMAL_EVENT_FIXTURES` the smallest payload that must parse for each.
+ *
+ * Suites, and what each pins:
+ * - all event types are present in the union - every discriminant still parses from its minimal fixture.
+ * - discriminant field "type" - a payload with no `type`, and one with an unrecognised `type`, are both
+ *   rejected (no member acts as a catch-all), and every parsed fixture carries a non-empty string `type`,
+ *   so `StreamClient` can always branch on it.
+ * - registered - `chat_id` required; `application_id` optional, being output-only (it is deliberately not
+ *   an input anywhere, so an event lacking it must still parse).
+ * - chat/response - `request_id` and `text` both required; the reply is matched back to its POST by
+ *   `request_id`.
+ * - task/status - `status` required; accepts the Wave 14 canonical wire vocabulary
+ *   `running | completed | failed | stopped | has_question` (`has_question` is the sim-only pause
+ *   propagated to the widget) and REJECTS legacy `started` / `in_progress`, a deliberate breaking change
+ *   pinned here so neither creeps back; optional `message` parses.
+ * - tool/call - the full fixture parses and dropping `tool_call_id` is rejected; `mode` is optional and
+ *   accepts only `show` | `do`.
+ * - StreamClient heartbeat/registered handling - `heartbeat` parses (StreamClient ignores it silently),
+ *   and `chat/error` with `request_id === 'auth'` parses as an ordinary event: treating it as the
+ *   non-retriable stop-reconnecting case is StreamClient's job, so the schema must not reject it.
+ */
 import { describe, expect, it } from 'vitest';
 
 import { type WidgetEvent, WidgetEventSchema } from '@/sdk';
@@ -91,7 +120,6 @@ describe('SSE event discriminated-union contract (WidgetEventSchema)', () => {
       expect(WidgetEventSchema.safeParse({ type: 'task/status' }).success).toBe(false);
     });
 
-    // Wave 14 canonical wire vocab; has_question is the sim-only pause propagated to the widget.
     it.each(['running', 'completed', 'failed', 'stopped', 'has_question'] as const)('accepts "%s"', status => {
       expect(WidgetEventSchema.safeParse({ type: 'task/status', status }).success).toBe(true);
     });

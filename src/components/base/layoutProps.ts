@@ -1,3 +1,26 @@
+/**
+ * Layout vocabulary shared by the base components: the token props `LayoutProps` accepts,
+ * `resolveLayoutStyle` which reduces them to a `CSSProperties` object, and `stripLayoutProps` which
+ * removes them from a props bag so the remainder can be spread onto a DOM element. `SPACING_SCALE` is
+ * the exported `SpacingToken`→pixel table, declared smallest-first so a token name orders the same way as the
+ * pixels it emits (`__tests__/layoutProps.test.ts` pins that); `ALIGN`, `JUSTIFY`, `ANIMATION` and
+ * `BORDER_SIDE` are the private lookups for the remaining token families.
+ *
+ * Layout props resolve to a style object rather than class names. As classes they were interpolated
+ * (`p-${token}`), which no scanner could see — a build-time safelist was the only thing keeping them
+ * alive, it emitted the whole 8x7 matrix whether used or not, and a missing entry failed silently at
+ * runtime. A style object makes every token work by construction and costs nothing per unused one.
+ *
+ * `resolveLayoutStyle` emits a property only for a prop set to a non-default value: `grow: false`,
+ * `shrink: true`, `border: false`, `rounded: false` and `animate: 'none'` deliberately emit nothing.
+ * The `ANIMATION` values name `mtx-*` keyframes `index.css` must define —
+ * `__tests__/stylesheet-contract.test.ts` pins that pairing, so a new animate token needs a matching
+ * `@keyframes`.
+ *
+ * `LAYOUT_KEYS` must list every key of `LayoutProps`: `stripLayoutProps` filters by that set, so a
+ * layout prop missing from it reaches the DOM as an unknown attribute. `as` and `style` are in it
+ * because the consuming component (`Surface`) applies them itself rather than forwarding them.
+ */
 import type { CSSProperties, ElementType } from 'react';
 
 import { RADIUS, type RadiusToken } from '../../design-system/component-tokens';
@@ -103,12 +126,6 @@ const LAYOUT_KEYS = new Set<keyof LayoutProps>([
   'style',
 ]);
 
-/**
- * Layout props resolve to a style object rather than class names. As classes they were interpolated
- * (`p-${token}`), which no scanner could see — a build-time safelist was the only thing keeping them
- * alive, it emitted the whole 8x7 matrix whether used or not, and a missing entry failed silently at
- * runtime. A style object makes every token work by construction and costs nothing per unused one.
- */
 export function resolveLayoutStyle(props: LayoutProps): CSSProperties {
   const style: CSSProperties = {};
 

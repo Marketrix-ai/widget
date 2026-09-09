@@ -1,8 +1,29 @@
+/**
+ * The widget's one notification surface: a Base UI Toast provider, the toast renderer, and the effect that
+ * drives toasts from widget state. Base UI owns the live region, the dismiss timers, hover-to-pause and
+ * stacking; before this the widget announced nothing to a screen reader and ran its own setTimeout.
+ *
+ * Contents:
+ * - `GREETING_TIMEOUT_MS` — how long the welcome toast lingers before Base UI auto-dismisses it.
+ * - `NotificationList` — renders every live toast (avatar, title, optional description, optional action,
+ *   close). It stays a component of its own because `useToastManager` only resolves inside `Toast.Provider`.
+ *   A toast's `type` is a free string in Base UI, so it is narrowed inline to the three tones
+ *   `notificationToneStyles` understands, anything else falling back to `neutral`.
+ * - `NotificationProviderProps` / `NotificationProvider` — the provider plus its portal and viewport.
+ *   `container` is the widget's CLOSED shadow root: portalling to `document.body` instead would leave the
+ *   injected styles behind. `offsetBottom` raises the viewport above the launcher when the launcher also
+ *   sits at the bottom, so the two cannot overlap.
+ * - `useNotifications` — Base UI's toast manager, re-exported as the one door for adding and closing toasts.
+ * - `WidgetNotificationsProps` / `WidgetNotifications` — renders nothing; it mirrors the `error` and
+ *   `greeting` props into toasts and closes them when the prop clears. Both use a STABLE id, so `add`
+ *   upserts and a re-render cannot stack duplicates of the same condition. The error toast carries
+ *   `timeout: 0` — it stays until acted on (dismissed or retried); only the greeting is transient.
+ */
 import { Toast } from '@base-ui/react/toast';
 import React, { useEffect } from 'react';
 
 import MarketrixIcon from '../../assets/marketrix-icon.svg';
-import { type NotificationTone, notificationToneStyles } from '../../design-system/component-tokens';
+import { notificationToneStyles } from '../../design-system/component-tokens';
 import { LAYER_TOKENS } from '../../design-system/layers';
 import { Avatar } from '../base/Avatar';
 import { Button } from '../base/Button';
@@ -14,14 +35,11 @@ import { Text } from '../base/Text';
 
 export const GREETING_TIMEOUT_MS = 8000;
 
-/** `type` on a Base UI toast is a free string; these are the three the tone styling understands. */
-const toneOf = (type: string | undefined): NotificationTone => (type === 'error' || type === 'info' ? type : 'neutral');
-
 const NotificationList: React.FC = () => {
   const { toasts } = Toast.useToastManager();
 
   return toasts.map(toast => {
-    const colors = notificationToneStyles[toneOf(toast.type)];
+    const colors = notificationToneStyles[toast.type === 'error' || toast.type === 'info' ? toast.type : 'neutral'];
 
     return (
       <Toast.Root
@@ -112,16 +130,10 @@ const NotificationList: React.FC = () => {
 
 export interface NotificationProviderProps {
   children?: React.ReactNode;
-  /** The closed shadow root to portal into — a portal to document.body would leave the styles behind. */
   container?: HTMLElement | null;
-  /** Raised above the launcher when the launcher sits at the bottom, so the two cannot overlap. */
   offsetBottom?: number;
 }
 
-/**
- * The one notification surface. Base UI owns the live region, the dismiss timers, hover-to-pause and
- * stacking; before this the widget announced nothing to a screen reader and ran its own setTimeout.
- */
 export const NotificationProvider: React.FC<NotificationProviderProps> = ({
   children,
   container,
@@ -151,10 +163,6 @@ export interface WidgetNotificationsProps {
   onGreetingDismiss: () => void;
 }
 
-/**
- * Drives the toasts from widget state. Both use a stable id, so `add` upserts and a re-render cannot
- * stack duplicates of the same condition.
- */
 export const WidgetNotifications: React.FC<WidgetNotificationsProps> = ({
   error,
   onClearError,
@@ -174,7 +182,6 @@ export const WidgetNotifications: React.FC<WidgetNotificationsProps> = ({
       id: 'error',
       type: 'error',
       title: error,
-      // An error stays until it is acted on; only the greeting is transient.
       timeout: 0,
       priority: 'high',
       onClose: onClearError,

@@ -1,3 +1,13 @@
+/**
+ * The Home/Chat tab strip pinned to the bottom of `MessengerShell`. `TAB_DEFS` is the ordered
+ * (view id, icon, label) table it renders; `ShellTabBar` maps that table to `Tabs.Tab` buttons inside
+ * a `Tabs.List` fixed at `TAB_BAR_HEIGHT`.
+ *
+ * It holds no state of its own: selection, roles, ids and arrow-key navigation all come from the
+ * controlled `Tabs.Root` in `MessengerShell`, and the `.mtx-tab-underline` span is always rendered —
+ * `index.css` reveals it off the selected tab's `aria-selected='true'`, so nothing here reads or
+ * tracks which tab is active.
+ */
 import { Tabs } from '@base-ui/react/tabs';
 import React from 'react';
 
@@ -14,7 +24,6 @@ const TAB_DEFS: { id: WidgetView; icon: IconName; label: string }[] = [
   { id: 'chat', icon: 'chat', label: 'Chat' },
 ];
 
-/** Selection, roles, ids and arrow-key navigation come from Tabs.Root — see MessengerShell. */
 export const ShellTabBar: React.FC = () => (
   <Tabs.List
     render={<Flex align='center' justify='around' shrink={false} border='top' />}
@@ -22,7 +31,6 @@ export const ShellTabBar: React.FC = () => (
   >
     {TAB_DEFS.map(tab => (
       <Tabs.Tab key={tab.id} value={tab.id} render={<Button stacked variant='tab' />}>
-        {/* Always rendered; `[data-selected]` reveals it, so nothing here tracks selection. */}
         <span className='mtx-tab-underline' />
         <Text as='span' inheritColor aria-hidden='true'>
           <Icon name={tab.icon} size={20} />

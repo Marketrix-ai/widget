@@ -1,3 +1,52 @@
+/**
+ * Pure state machine behind `ChatContext`: folds SSE `WidgetEvent`s and local transitions into
+ * `{messages, task}` and returns the tool executions the caller must run. No I/O, no React.
+ *
+ * Types: `TaskPhase`/`TaskState` (the run's phase plus the mode it was dispatched in), `SseState`,
+ * `SseEffect` (the one effect — execute a browser tool), `ReduceResult`.
+ *
+ * Contents:
+ * - `noChange` — the identity result, for an event that carries no state.
+ * - `applyProgress` — writes one tool's progress line into the message `findMessageForProgress` picks,
+ *   then sets that bubble's spinner. `FINISH_TOOL` carries no progress line of its own — it only ends
+ *   the run — so nothing is added or completed for it, though a *failed* finish is still stamped
+ *   failed. In `show` mode a DOM-mutating tool (`isWaitForUserTool`) parks the spinner on
+ *   "waiting-for-user" until the visitor acts; every other running show/do step reads "thinking".
+ * - `runningMode` — an active run judges progress by the mode it started in, not by whatever the
+ *   composer shows now.
+ * - `ProgressStatus` / `reduceToolProgress` — in_progress / completed / failed for a single tool, from the
+ *   executor.
+ * - `settled` — clears `isPlaceholder`. The composer is disabled while any message is still a
+ *   placeholder, so a bubble nothing will write to again has to stop being one — `has_question` most
+ *   of all, where the agent asks for an answer the visitor could not then type.
+ * - `ended` — a task the visitor stopped stays `stopped`, so late `tool/call`s are ignored until
+ *   `reduceDispatch` opens the next turn; every other ending lands on `idle`.
+ * - `stampProgressMessage` — the four terminal/pause transitions all stamp the progress message and
+ *   clear the task; only the stamp differs.
+ * - `reduceToolDone` — the `done` tool ran: stamps `done` and drops the progress parts. finish is the
+ *   transient-trajectory boundary — the trail was scaffolding for "still working", not part of the
+ *   answer, so it leaves the bubble the moment the run actually finishes.
+ * - `reduceStop` — visitor stop; `reduceDispatch` — appends the next placeholder and drops the task back to
+ *   `idle`, which is what lets the following turn's `tool/call` activate it again.
+ * - `TASK_STATUS` / `isTerminalTaskStatus` — wire status → presentational `taskStatus`. The terminal
+ *   set is read off the map that stamps it (`has_question` is a pause, and `running` stamps nothing),
+ *   so a fourth terminal status added to `TASK_STATUS` reaches every caller at once.
+ * - `reduceText` — `chat/delta` fragments accumulate into the open streaming part; the final
+ *   `chat/response` replaces it.
+ * - `appendText` / `errorBubble` — append a plain text part; settle a message as a failed bubble.
+ * - `reduceError` — settles one pending message into that error bubble: the one shape for both a failed
+ *   POST and a `chat/error`.
+ * - `reduceTransportFailure` — the transport gave up, so no id-bearing event is coming for anything
+ *   still pending; every placeholder becomes an error bubble.
+ * - `reduceStaleReply` — the stream can stay healthy (no `StreamGaveUpError`) while a single dispatch's
+ *   reply never arrives: a dropped correlation, a silent backend failure before it ever acknowledges
+ *   the request, or a reload into the gap where the api has no tab to push to. `reduceTransportFailure`
+ *   cannot see that, since nothing told the transport it failed, so without this the bubble sits on
+ *   "thinking" and the composer stays disabled forever. A `waiting-for-user` pause is not stale.
+ * - `reduceSse` — the event switch. `tool/call` also activates the task, because it can arrive before
+ *   `task/status running`; `running` itself activates nothing (the first `tool/call` is what starts the
+ *   run, and a tell-mode reply never has a task); `registered`/`heartbeat` carry no state.
+ */
 import type { WidgetEvent } from '../sdk';
 import { browserToolService, FINISH_TOOL } from '../services/BrowserToolService';
 import { type ChatMessage, type InstructionType, type MessagePart, messageText } from '../types';
@@ -51,7 +100,6 @@ function applyProgress(
   if (!found) return messages;
 
   let updatedMsg = found.message;
-  // finish carries no progress line of its own — it only ends the run.
   if (status === 'failed') {
     updatedMsg = markProgressLineFailed(updatedMsg, browserToolName, error || '');
   } else if (browserToolName !== FINISH_TOOL) {
@@ -66,7 +114,6 @@ function applyProgress(
   }
 
   if (isTaskRunning && (currentMode === 'show' || currentMode === 'do')) {
-    // In show mode a DOM-mutating tool parks the spinner on "your turn" until the user acts.
     const waiting =
       status === 'in_progress' && currentMode === 'show' && browserToolService.isWaitForUserTool(browserToolName);
     updatedMsg = { ...updatedMsg, placeholderState: waiting ? 'waiting-for-user' : 'thinking' };
@@ -102,14 +149,10 @@ export function reduceToolProgress(
   };
 }
 
-// The composer is disabled while any message is still a placeholder, so a bubble nothing will write to
-// again has to stop being one — `has_question` most of all, where the agent asks for an answer the
-// visitor could not then type.
 const settled = (msg: ChatMessage): ChatMessage => ({ ...msg, isPlaceholder: false });
 
 const ended = (task: TaskState): TaskState => (task.phase === 'stopped' ? task : { phase: 'idle' });
 
-/** The four terminal/pause transitions all stamp the progress message and clear the task; only the stamp differs. */
 function stampProgressMessage(
   state: SseState,
   currentMode: InstructionType,
@@ -125,15 +168,12 @@ function stampProgressMessage(
   return { messages, task: ended(state.task) };
 }
 
-// finish is the transient-trajectory boundary: the progress trail was scaffolding for "still working",
-// not part of the answer, so it drops out of the bubble the moment the run actually finishes.
-const clearTrajectory = (msg: ChatMessage): ChatMessage => ({
-  ...msg,
-  parts: msg.parts.filter(part => part.type !== 'progress'),
-});
-
 export function reduceToolDone(state: SseState, currentMode: InstructionType): SseState {
-  return stampProgressMessage(state, currentMode, msg => clearTrajectory({ ...msg, taskStatus: 'done' }));
+  return stampProgressMessage(state, currentMode, msg => ({
+    ...msg,
+    taskStatus: 'done',
+    parts: msg.parts.filter(part => part.type !== 'progress'),
+  }));
 }
 
 export function reduceStop(state: SseState, currentMode: InstructionType): SseState {
@@ -147,8 +187,6 @@ export function reduceDispatch(state: SseState, placeholder: ChatMessage): SseSt
 
 const TASK_STATUS = { completed: 'done', failed: 'failed', stopped: 'stopped' } as const;
 
-// The terminal set, read off the map that stamps it — `has_question` is a pause and `running` stamps
-// nothing, so a fourth terminal status added to TASK_STATUS reaches every caller at once.
 export const isTerminalTaskStatus = (status: string): status is keyof typeof TASK_STATUS => status in TASK_STATUS;
 
 function reduceText(state: SseState, requestId: string, text: string, streaming: boolean): SseState {
@@ -156,7 +194,6 @@ function reduceText(state: SseState, requestId: string, text: string, streaming:
     if (msg.id !== requestId) return msg;
     const parts = [...msg.parts];
     const last = parts[parts.length - 1];
-    // chat/delta fragments accumulate into the open streaming part; the final chat/response replaces it.
     const isOpenStream = last?.type === 'text' && last.streaming === true;
     const content = streaming && isOpenStream ? last.content + text : text;
     const part: MessagePart = { type: 'text', content, ...(streaming && { streaming: true }) };
@@ -178,25 +215,16 @@ const errorBubble = (msg: ChatMessage, text: string): ChatMessage => ({
   taskStatus: 'failed',
 });
 
-/** Settles a pending message into a plain error bubble — the one shape for both a failed POST and a chat/error. */
 export function reduceError(state: SseState, messageId: string, text: string): SseState {
   const messages = state.messages.map(msg => (msg.id === messageId ? errorBubble(msg, text) : msg));
   return { ...state, messages };
 }
 
-/** The transport gave up, so no id-bearing event is coming for whatever is still pending. */
 export function reduceTransportFailure(state: SseState, text: string): SseState {
   const messages = state.messages.map(msg => (msg.isPlaceholder ? errorBubble(msg, text) : msg));
   return { messages, task: ended(state.task) };
 }
 
-/**
- * The stream can stay healthy (no `StreamGaveUpError`) while a single dispatch's reply never arrives —
- * a dropped correlation, a silent backend failure before it ever acknowledges the request, or a reload
- * into the gap where the api has no tab to push to. `reduceTransportFailure` cannot see that, since
- * nothing told the transport it failed, so without this the bubble sits on "thinking" and the composer
- * stays disabled forever.
- */
 export function reduceStaleReply(state: SseState, messageId: string, text: string): SseState {
   const pending = state.messages.find(msg => msg.id === messageId);
   return pending?.isPlaceholder && pending.placeholderState !== 'waiting-for-user'
@@ -208,7 +236,6 @@ export function reduceSse(state: SseState, event: WidgetEvent, currentMode: Inst
   switch (event.type) {
     case 'tool/call': {
       if (state.task.phase === 'stopped') return noChange(state);
-      // A tool/call can arrive before `task/status running`, so activate here too.
       const task: TaskState =
         state.task.phase === 'running' ? state.task : { phase: 'running', mode: event.mode || currentMode };
       const explanation = event.explanation || '';
@@ -236,11 +263,9 @@ export function reduceSse(state: SseState, event: WidgetEvent, currentMode: Inst
     }
 
     case 'task/status': {
-      // `running` activates nothing: the first tool/call is what starts the run, and a tell-mode reply never has a task.
       if (event.status === 'running') return noChange(state);
       const status = event.status;
       const withMessage = (msg: ChatMessage) => (event.message ? appendText(msg, event.message) : msg);
-      // has_question is a pause, not a terminal status.
       const stamp =
         status === 'has_question'
           ? (msg: ChatMessage) => ({ ...withMessage(msg), placeholderState: 'waiting-for-user' as const })
@@ -257,7 +282,6 @@ export function reduceSse(state: SseState, event: WidgetEvent, currentMode: Inst
     case 'chat/error':
       return { state: reduceError(state, event.request_id, `Error: ${event.error}`), effects: [] };
 
-    // registered / heartbeat carry no state.
     default:
       return noChange(state);
   }

@@ -1,3 +1,34 @@
+/**
+ * Pure helpers for the chat message list: mode labels and timestamps, locating the message a
+ * streaming progress event belongs to, settling a message's progress lines, and the shared
+ * `ChatMessage` constructors.
+ *
+ * Contents:
+ * - `getModeDisplayName` — the user-facing label for an `InstructionType`.
+ * - `formatMessageTime` — hh:mm in the visitor's locale, defaulting to now for an undated message.
+ * - `lastIndexWhere` — newest-first index search, also used by `useScreenShare`.
+ * - `findMessageForProgress` / `FindMessageOptions` — picks the agent reply a `tool/call` or progress
+ *   event should render into.
+ * - `addProgressLine`, `markProgressLineComplete`, `markProgressLineFailed` — append or settle the open
+ *   progress part for one `browserToolName`; `openLineFor` finds it and `patchPart` is the shared
+ *   copy-on-write.
+ * - `createMessage` and the `createUserMessage` / `createAgentMessage` / `createSystemMessage` /
+ *   `createScreenAccessRequestMessage` / `createScreenshareMessage` constructors — id is
+ *   `<prefix>-<Date.now()>`, and empty content yields no `text` part (the screenshare bubble renders
+ *   from `videoStream` alone).
+ *
+ * `findMessageForProgress` is ranked predicates: the first rank matching anything wins, and within a
+ * rank the newest message. Every rank is bounded to messages after the last agent message carrying a
+ * `taskStatus`, because a terminal stamp means that run already ended — unbounded, a duplicate or
+ * late-arriving event with nothing left to claim reaches back past the stamp onto an already-settled
+ * reply, and a late `completed` then overwrites a `stopped` icon. Placeholders whose `mode` is still
+ * undefined match leniently, and a mode-agnostic rank is always appended, because a `tool/call` can
+ * arrive before the mode is set and before `isTaskRunning` flips true. No match is a legitimate
+ * outcome: it is warned, not thrown.
+ *
+ * `filterCancellationText` strips "cancelled by cleanup" from both progress content and error text —
+ * expected internal chatter from a torn-down run that a visitor should never see.
+ */
 import type { ChatMessage, InstructionType, MessagePart } from '../types';
 
 const MODE_DISPLAY_NAMES: Record<InstructionType, string> = { show: 'Show', tell: 'Tell', do: 'Do' };
@@ -20,17 +51,13 @@ export function lastIndexWhere<T>(items: T[], matches: (item: T) => boolean): nu
   return -1;
 }
 
-/** Ranked predicates: the first rank matching anything wins, and within it the newest message. */
 export function findMessageForProgress({
   messages,
   isTaskRunning,
   currentMode,
 }: FindMessageOptions): { index: number; message: ChatMessage } | null {
-  // A terminal-stamped message already ended — a duplicate or late-arriving progress/terminal event
-  // must fall through to no match rather than flip its icon (e.g. a late `completed` overwriting a `stopped`).
   const isAgentReply = (msg: ChatMessage) =>
     msg.sender === 'agent' && !msg.isSystemMessage && !msg.isScreenAccessRequest && !msg.taskStatus;
-  // Lenient on placeholders with an undefined mode — tool calls can race ahead of the mode being set.
   const modeMatches = (msg: ChatMessage) =>
     msg.isPlaceholder ? msg.mode === undefined || msg.mode === currentMode : msg.mode === currentMode;
 
@@ -41,11 +68,8 @@ export function findMessageForProgress({
       msg => isAgentReply(msg) && modeMatches(msg),
     );
   }
-  // Tool calls can arrive before isTaskRunning flips true, so always fall back to a mode-agnostic match.
   ranked.push(msg => isAgentReply(msg) && !!msg.isPlaceholder, isAgentReply);
 
-  // Bound every rank to messages newer than the last ended run — otherwise a duplicate or late-arriving
-  // event with nothing left to claim falls back past a taskStatus stamp onto an older, already-settled reply.
   const start = lastIndexWhere(messages, msg => msg.sender === 'agent' && !!msg.taskStatus) + 1;
   const open = messages.slice(start);
 
@@ -62,10 +86,7 @@ export function findMessageForProgress({
   return null;
 }
 
-// "Cancelled by cleanup" is expected internal chatter users shouldn't see.
 const filterCancellationText = (content: string): string => content.replace(/\(?cancelled by cleanup\)?/gi, '').trim();
-
-const isOpenProgress = (part: MessagePart): boolean => part.type === 'progress' && part.status === 'in_progress';
 
 function patchPart(message: ChatMessage, index: number, patch: Partial<MessagePart>): ChatMessage {
   if (index < 0) return message;
@@ -75,7 +96,9 @@ function patchPart(message: ChatMessage, index: number, patch: Partial<MessagePa
 }
 
 const openLineFor = (message: ChatMessage, browserToolName: string): number =>
-  message.parts.findIndex(part => isOpenProgress(part) && part.browserToolName === browserToolName);
+  message.parts.findIndex(
+    part => part.type === 'progress' && part.status === 'in_progress' && part.browserToolName === browserToolName,
+  );
 
 export function addProgressLine(message: ChatMessage, browserToolName: string, explanation: string): ChatMessage {
   const content = filterCancellationText(explanation);

@@ -1,3 +1,46 @@
+/**
+ * React context owning the widget's whole chat store and its live SSE wiring: one committed
+ * `{messages, task}` state, the mutators the UI calls, dispatch of a visitor turn, execution of
+ * agent tool calls, and the stop path. Messages and task live in ONE state object so they cannot
+ * tear across an await.
+ *
+ * Contents: `ChatActions` / `TaskActions` / `ChatContextType` — the context surface consumed via
+ * `useChatContext` (which throws outside `ChatProvider`). `ChatProvider` holds `SseState` plus a
+ * `stateRef` mirror and a `currentModeRef` mirror of the composer mode. `commit` applies a
+ * transition and skips a no-op write. `addMessage`, `updateMessage`, `removeMessage`,
+ * `setMessages`, `clearMessages` and `resetTask` are its one-line mutators. A `pendingReplies` key
+ * drives the stale-reply watchdog effect, which after `STALE_REPLY_TIMEOUT_MS` folds
+ * `STALE_REPLY_TEXT` into a still-waiting placeholder. `messageDispatch` short-circuits in preview
+ * mode, refuses without credentialed config, appends the user bubble plus a `thinking` placeholder
+ * and POSTs — fire-and-forget: the reply arrives over SSE, so the placeholder stays `thinking` and
+ * only a POST failure resolves it locally. The stream effect subscribes to the `StreamClient`
+ * singleton with `handleMessage` (dedupe/reset bookkeeping, then the pure reducer, then its
+ * effects) and `handleError`; each `executeTool` effect is handed to `startToolCall`, which runs the
+ * browser tool, stamps progress, finishes on `FINISH_TOOL`, replies `tool/response` and then calls
+ * `afterResponseAttempt`. `stopTask` stamps the message stopped and sends `chat/stop`. `chatActions`
+ * / `taskActions` are the memoized bundles.
+ *
+ * `commit` is the ONLY writer of `stateRef` — re-syncing it from render could regress the ref
+ * between a commit and its paint. It also runs the transition synchronously rather than inside a
+ * `setState` updater: React defers updaters (background tab, mid-burst) and the effects captured in
+ * them are lost, which showed up as tool calls that never executed.
+ *
+ * The watchdog key is id AND part count so the timer re-arms on every progress line — a placeholder
+ * mid-run is silent, not finished, and the previous id-only key left it with no second timer.
+ *
+ * `handleMessage` does the transport bookkeeping (`tool_call_id` dedupe with a bounded set, cleared
+ * on a terminal `task/status`) before the pure reducer, which cannot hold that state.
+ *
+ * `handleError` surfaces every stream error to the UI but only converts a `StreamGaveUpError` into a
+ * transport failure: a retriable blip settles when the reply lands on the reconnected stream, a
+ * give-up never does, and the composer stays disabled for as long as one bubble is still waiting.
+ *
+ * `chat/stop` carries no task id — the api stops the one dispatch it holds for this chat. When that
+ * send fails the user gets an explicit error even though `reduceStop` already stamped the message
+ * "stopped": in `do` mode the agent may still be clicking through the visitor's page, and `send`'s
+ * own "Failed to send message" toast names the transport rather than the thing the user asked for
+ * and did not get.
+ */
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { WidgetEvent } from '../sdk';
@@ -22,8 +65,6 @@ import {
   type TaskState,
 } from './sseReducer';
 import { useUIStateContext } from './UIStateContext';
-
-// messages + task share one committed state so they can't tear across an await.
 
 export interface ChatActions {
   addMessage: (message: ChatMessage) => void;
@@ -62,7 +103,6 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
   const { uiState, uiActions } = useUIStateContext();
   const [state, setState] = useState<SseState>(() => ({ messages: [], task: { phase: 'idle' } }));
 
-  // commit() is the ONLY writer — re-syncing from render could regress the ref between a commit and its paint.
   const stateRef = useRef<SseState>(state);
 
   const currentModeRef = useRef(uiState.currentMode);
@@ -70,7 +110,6 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
 
   const processedToolCallIds = useRef(new Set<string>());
 
-  // Transition runs synchronously here, not in a setState updater: React defers updaters (background tab, mid-burst) and captured effects are lost — tool calls that never execute.
   const commit = useCallback((transition: (s: SseState) => SseState) => {
     const prev = stateRef.current;
     const next = transition(prev);
@@ -118,8 +157,6 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
     commit(s => ({ ...s, task: { phase: 'idle' } }));
   }, [commit]);
 
-  // Keyed on id AND part count so the watchdog re-arms on every progress line — a placeholder mid-run
-  // is silent, not finished, and the previous id-only key left it with no second timer.
   const pendingReplies = state.messages
     .filter(msg => msg.isPlaceholder)
     .map(msg => `${msg.id}:${msg.parts.length}`)
@@ -176,7 +213,6 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
 
       try {
         await chatPost(config, content, effectiveMode, placeholderId);
-        // Response arrives via SSE; placeholder stays "thinking"
       } catch (error) {
         console.error('Failed to send message:', error);
         commit(s =>
@@ -218,7 +254,6 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
     };
 
     const handleMessage = (event: WidgetEvent): void => {
-      // Transport bookkeeping that must run before the pure reducer.
       if (event.type === 'tool/call') {
         const toolCallId = event.tool_call_id;
         if (processedToolCallIds.current.has(toolCallId)) return;
@@ -246,8 +281,6 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
 
     const handleError = (error: Error) => {
       uiActions.setError(error.message);
-      // A retriable blip settles when the reply lands on the reconnected stream; a give-up never does,
-      // and the composer stays disabled for as long as one bubble is still waiting.
       if (error instanceof StreamGaveUpError) commit(s => reduceTransportFailure(s, error.message));
     };
 
@@ -264,14 +297,10 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
 
     if (previewMode) return;
 
-    // chat/stop carries no task id: the api stops the one dispatch it holds for this chat.
     StreamClient.getInstance()
       .send({ type: 'chat/stop' })
       .catch(err => {
         console.error('Failed to stop task remotely:', err);
-        // reduceStop already stamped the message "stopped" — in `do` mode the agent may still be
-        // clicking through the visitor's page, and `send`'s own "Failed to send message" toast names
-        // the transport rather than the thing the user asked for and did not get.
         uiActions.setError('Could not stop the assistant — it may still be working.');
       });
   }, [previewMode, commit, uiActions]);

@@ -1,9 +1,27 @@
+/**
+ * Corner geometry for the widget: the four pinnable corners, the CSS offsets that place launcher and
+ * panel at one, the resize grip each corner implies, and the drag-snap math.
+ *
+ * `getCorner` maps a `WidgetPosition` to its `{vertical, horizontal}` CSS sides. `isWidgetPosition`
+ * narrows an unknown — a value read back out of localStorage — to one of the four, testing a list of
+ * names rather than `in CORNERS`, so the keys every object inherits (`toString`, `__proto__`) are
+ * rejected. `getPanelPositionStyle` turns a corner into the inline style pinning an element to it.
+ * `getResizeGrip`, whose return type is exported as `ResizeGrip`, describes the handle on the corner
+ * diagonally OPPOSITE the pinned one — the panel grows away from its anchor, so that is the only
+ * corner free to move; `growX`/`growY` are the signs converting pointer delta into size delta, and
+ * `cursor` is the diagonal the grip itself lies on. `getAnchorTopLeft` resolves a corner to viewport
+ * top-left pixels so drag math runs in one coordinate space, and `getNearestCornerByTranslation` adds
+ * a drag's translation to that anchor and returns the corner whose own anchor is nearest by
+ * straight-line distance — proximity, never per-axis resolution.
+ *
+ * EDGE_OFFSET_PX is the one edge offset: launcher and panel both position through
+ * `getPanelPositionStyle`, so there is no second declaration to drift from — it used to be pinned
+ * against a Tailwind class string.
+ */
 import type React from 'react';
 
 import type { WidgetPosition } from '../types';
 
-// The one edge offset. Launcher and panel both position through getPanelPositionStyle, so there is
-// no second declaration to drift from — this used to be pinned against a Tailwind class string.
 const EDGE_OFFSET_PX = 20;
 
 const CORNERS = {

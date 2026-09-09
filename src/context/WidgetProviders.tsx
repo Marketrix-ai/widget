@@ -1,3 +1,27 @@
+/**
+ * The widget's provider stack and the two bridges under it: `WidgetProviders` wraps children in
+ * `UIStateProvider` → `ChatProvider` → `InitBridge`, so everything below reads UI state and the chat
+ * store from context. Also the home of `PortalContainerContext` and `usePortalContainer` — `WidgetRoot`
+ * publishes its own root element here, because a portal landing outside that element escapes the one
+ * carrying the tenant tokens and falls back to `index.css`'s hardcoded palette; the default is
+ * `document.body`.
+ *
+ * `InitBridge` runs the one-shot mount init: read the stored snapshot, apply `{currentMode, isOpen}` to
+ * UI state and the transcript to the chat store, then get-or-create the chat_id and open the stream.
+ * Task state is deliberately not restored — a run never survives a reload. `PersistBridge` writes the
+ * snapshot back on every message or UI-state change; it is its own component so that subscription to
+ * every message change cannot re-render the tree `InitBridge` wraps, and it mounts only once `restored`
+ * is true — mounted before the read, its first effect would write an empty transcript over the stored
+ * one on every remount.
+ *
+ * `previewMode` (the dashboard preview) skips init entirely: no chat session is minted and no stream is
+ * opened, and since `restored` stays false nothing is persisted either.
+ *
+ * The init effect's deps are empty on purpose — once per mount — and `cancelled` drops the connect when
+ * a StrictMode double-invoke or an unmount cleans up before the chat_id resolves. A failed connect is
+ * logged only, since `StreamClient` owns the backoff reconnect; a failed init is logged AND surfaced
+ * through `uiActions.setError`.
+ */
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
 import { chatSessionManager } from '../services/ChatSessionManager';
@@ -6,12 +30,10 @@ import { StreamClient } from '../services/StreamClient';
 import { ChatProvider, useChatContext } from './ChatContext';
 import { UIStateProvider, useUIStateContext } from './UIStateContext';
 
-/** WidgetRoot publishes its own root here: a portal outside it escapes the element carrying the tenant tokens. */
 export const PortalContainerContext = createContext<HTMLElement | null>(null);
 
 export const usePortalContainer = (): HTMLElement => useContext(PortalContainerContext) ?? document.body;
 
-/** Its own component so the subscription to every message change cannot re-render the tree InitBridge wraps. */
 const PersistBridge: React.FC = () => {
   const { uiState } = useUIStateContext();
   const { messages } = useChatContext();
