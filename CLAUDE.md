@@ -19,7 +19,7 @@ status vocabulary, contract sync, ports, release order).
 npm start                # vite dev on :9001 (override PORT / VITE_PORT; CORS enabled)
 npm run build            # → dist/widget.mjs (terser, single ESM) + tsc declarations
 npm run type-check       # alias: check          npm run lint    # --fix, max-warnings 200
-npm run test         # vitest (jsdom + Testing Library + axe)
+npm run test             # vitest (jsdom + Testing Library + axe)
 npm run bundle:check     # packaging gate (size, single chunk, no CSS file, React external)
 npm run code:check       # tsc + eslint + prettier --check (one-shot)
 npm run ci               # every CI validation gate
@@ -61,8 +61,8 @@ are generated**, so after changing `rc:` you must re-run `lefthook install --for
   and nginx has no brotli module — `gzip_static` covers gzip, a `try_files` on `Accept-Encoding`
   covers brotli. Nothing is compressed per request.
 - **`bundle:check` budgets each bundled dependency, not just the total** — a total cap cannot see
-  which dependency grew. Two are 54% of the bundle: `@base-ui/react` + `/utils` 86,376 and
-  `@rrweb/record` 76,564 (a feature off by default). A package missing from `DEPENDENCY_BUDGETS`
+  which dependency grew. Two are about half of it: `@base-ui/react` + `/utils` and `@rrweb/record`
+  (a feature off by default). A package missing from `DEPENDENCY_BUDGETS`
   fails the gate, so a new import is a deliberate line.
 - **zod is a type-only dependency of the BUNDLE, and a real one of the package.** Nothing in
   `src/` imports it as a value any more — `parseWidgetSettings` in `utils/validation.ts` is the one
@@ -107,14 +107,15 @@ async iterator in the background. Status machine `disconnected → connecting �
 `chat/delta` fragments that **accumulate**, then a final `chat/response` carrying the full text
 **replaces** them, matched by `request_id`.
 
-**Tool execution** — `ChatContext` dedupes `tool/call` by `tool_call_id`, validates `browser_tool`
-against `BROWSER_TOOLS`, executes via `browserToolService.executeTool`, then replies `tool/response`.
+**Tool execution** — `ChatContext` dedupes `tool/call` by `tool_call_id`, executes `browser_tool` via
+`browserToolService.executeTool` (an unknown name fails the call against its `tools` registry), then
+replies `tool/response`.
 `get_html` ships a clone of the **whole document** with **`data-id` added** to each indexed element —
 that added attribute is the entire contract with the agent's HTML parser, which reads no geometry and
 keeps only selector, tag and a truncated label, so the markup itself never reaches a prompt. The
 snapshot is neither stripped nor size-capped, unlike `extract`, which truncates at 10k: the parser
 indexes by `data-id`, and a trimmed tree silently loses elements the loop then cannot click.
-The `done` tool ends the task. **The first `tool/call` is what activates the task**, not
+The `finish` tool (`FINISH_TOOL`, labelled Done) ends the task. **The first `tool/call` is what activates the task**, not
 `task/status running` — the api mints no task id, so the widget holds none and `chat/stop` carries none;
 the terminal three clear the task and the dedupe set.
 
@@ -192,8 +193,9 @@ and shipped images cannot drift in their dependency set.
 
 - **Lockfile discipline** — any version or dependency change must run `npm install` and commit
   `package-lock.json` alongside `package.json`. `npm run tag` does it for you.
-- **React importmap wins** — the loader's `esm.sh` importmap only fills gaps; a host on a different
-  React 19 build keeps its own.
+- **The loader always injects its `esm.sh` React importmap** — it neither reads nor merges an existing
+  one. A host importmap placed before the loader keeps its entries because browsers never let a later
+  import map override an earlier key, so the loader's map only fills what the host left out.
 - **Styling is `index.css` plus inline styles — there is no CSS framework and no `cn()`.** Layout
   props resolve to a style object (`resolveLayoutStyle`), never class names: as classes they were
   interpolated, so a build-time safelist was the only thing keeping them alive and a missing entry
