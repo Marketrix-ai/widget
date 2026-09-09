@@ -3,14 +3,15 @@
  * returns a complete, schema-valid tenant config — every rendered setting plus the `mtxId`/`mtxKey` credential,
  * api host and preview flag a mounted widget needs — shallow-merged with `overrides`.
  *
- * `MockWidgetConfig` widens `MarketrixConfig` with the four render constants (`widget_border_radius`,
- * `widget_font_size`, `widget_animation_duration`, `widget_fade_duration`). `MarketrixConfig` is built on
+ * `MockWidgetConfig` widens `ValidWidgetConfig` with the four render constants (`widget_border_radius`,
+ * `widget_font_size`, `widget_animation_duration`, `widget_fade_duration`). `ValidWidgetConfig` is built on
  * `WidgetRenderedSettings`, which omits them, but callers hand this fixture straight to
- * `WidgetSettingsDataSchema.parse()`, which demands the whole wire shape.
+ * `WidgetSettingsDataSchema.parse()`, which demands the whole wire shape. It is `Valid`, not partial, so
+ * `renderWidget` can hand it to `WidgetRoot` without a cast — the fixture really does set every field.
  */
-import type { MarketrixConfig, WidgetSettingsData } from '../types';
+import type { ValidWidgetConfig, WidgetSettingsData } from '../types';
 
-type MockWidgetConfig = MarketrixConfig &
+type MockWidgetConfig = ValidWidgetConfig &
   Pick<
     WidgetSettingsData,
     'widget_border_radius' | 'widget_font_size' | 'widget_animation_duration' | 'widget_fade_duration'

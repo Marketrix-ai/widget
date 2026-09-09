@@ -3,45 +3,28 @@
  * the token-bearing widget root, paints it above the panel, and keeps a hidden widget visible in
  * preview mode.
  */
-import { fireEvent, render, screen } from '@testing-library/react';
-import React from 'react';
+import { fireEvent, screen } from '@testing-library/react';
 
-import { WidgetProviders } from '../../context/WidgetProviders';
-import { getMockWidgetConfig } from '../../test/fixtures';
-import { WidgetRoot } from '../WidgetRoot';
+import { openChatTab, openWidget, renderWidget } from '../../test/renderWidget';
 
 describe('Widget smoke', () => {
   it('mounts and shows launcher button', () => {
-    const config = getMockWidgetConfig();
-    render(
-      <WidgetProviders previewMode>
-        <WidgetRoot config={config} />
-      </WidgetProviders>,
-    );
+    renderWidget();
     expect(screen.getByRole('button', { name: /open/i })).toBeInTheDocument();
   });
 
   it('uses semantic tokens and layer tokens', () => {
-    const config = getMockWidgetConfig({ widget_accent_color: '#2563eb' });
-    const { container } = render(
-      <WidgetProviders previewMode>
-        <WidgetRoot config={config} />
-      </WidgetProviders>,
-    );
+    const { container } = renderWidget({ widget_accent_color: '#2563eb' });
     const widget = container.querySelector('[data-marketrix-widget]');
     expect(widget).toBeInTheDocument();
     expect(widget).toHaveStyle({ '--primary': '#2563eb' });
   });
 
   it('portals the modal inside the token-bearing widget root', async () => {
-    const { container } = render(
-      <WidgetProviders previewMode>
-        <WidgetRoot config={getMockWidgetConfig()} />
-      </WidgetProviders>,
-    );
+    const { container } = renderWidget();
 
-    fireEvent.click(screen.getByRole('button', { name: /open/i }));
-    fireEvent.click(screen.getByRole('tab', { name: 'Chat' }));
+    openWidget();
+    openChatTab();
     fireEvent.click(screen.getByRole('button', { name: 'Start screen sharing' }));
 
     const dialog = await screen.findByRole('dialog');
@@ -51,14 +34,10 @@ describe('Widget smoke', () => {
   });
 
   it('paints the modal above the panel it is portalled beside', async () => {
-    render(
-      <WidgetProviders previewMode>
-        <WidgetRoot config={getMockWidgetConfig()} />
-      </WidgetProviders>,
-    );
+    renderWidget();
 
-    fireEvent.click(screen.getByRole('button', { name: /open/i }));
-    fireEvent.click(screen.getByRole('tab', { name: 'Chat' }));
+    openWidget();
+    openChatTab();
     const panel = screen.getByRole('tab', { name: 'Chat' }).closest<HTMLElement>('[style*="z-index"]');
     fireEvent.click(screen.getByRole('button', { name: 'Start screen sharing' }));
 
@@ -67,11 +46,7 @@ describe('Widget smoke', () => {
   });
 
   it('keeps a hidden widget visible in preview mode', () => {
-    render(
-      <WidgetProviders previewMode>
-        <WidgetRoot config={getMockWidgetConfig({ widget_appearance: 'hidden' })} />
-      </WidgetProviders>,
-    );
+    renderWidget({ widget_appearance: 'hidden' });
     expect(screen.getByRole('button', { name: /open/i })).toBeInTheDocument();
   });
 });

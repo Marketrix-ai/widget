@@ -8,20 +8,13 @@
  * resolves top against. The two disagreed by 70px on app.marketrix.co and the launcher climbed out of
  * the viewport a step per measurement.
  */
-import { render } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
-import { WidgetProviders } from '../../../context/WidgetProviders';
-import { getMockWidgetConfig } from '../../../test/fixtures';
-import { WidgetRoot } from '../../WidgetRoot';
+import { renderWidget } from '../../../test/renderWidget';
 
 describe('the resting launcher anchor', () => {
   it('pins two edges, never four', () => {
-    const { container } = render(
-      <WidgetProviders>
-        <WidgetRoot config={getMockWidgetConfig()} />
-      </WidgetProviders>,
-    );
+    const { container } = renderWidget({}, { previewMode: false });
 
     const anchor = container.querySelector<HTMLElement>('.mtx-fab-anchor');
     expect(anchor).not.toBeNull();
