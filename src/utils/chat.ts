@@ -5,9 +5,10 @@
  * render into. `addProgressLine` / `markProgressLineComplete` / `markProgressLineFailed` append or settle the open
  * progress part for one `browserToolName`, via `openLineFor` and the shared `patchPart` copy-on-write.
  * `createMessage` and the `createUserMessage` / `createAgentMessage` / `createSystemMessage` /
- * `createScreenAccessRequestMessage` / `createScreenshareMessage` constructors build a `ChatMessage` (id
- * `<prefix>-<Date.now()>`; empty content yields no `text` part, since the screenshare bubble renders from
- * `videoStream` alone).
+ * `createScreenAccessRequestMessage` / `createScreenshareMessage` / `createPlaceholderMessage` constructors
+ * are the ONLY way a `ChatMessage` is built (id `<prefix>-<uuid>`, since two messages minted in one
+ * millisecond used to collide; empty content yields no `text` part, since the screenshare bubble renders
+ * from `videoStream` alone and a placeholder has nothing to say yet).
  *
  * `findMessageForProgress` is ranked predicates: the first rank matching anything wins, and within a rank the
  * newest message. Every rank is bounded to messages after the last agent message carrying a `taskStatus`, since a
@@ -121,7 +122,7 @@ function createMessage(
   extra: Partial<ChatMessage> = {},
 ): ChatMessage {
   return {
-    id: `${idPrefix}-${Date.now()}`,
+    id: `${idPrefix}-${globalThis.crypto.randomUUID()}`,
     content,
     sender,
     timestamp: new Date(),
@@ -151,3 +152,6 @@ export const createScreenAccessRequestMessage = (
 
 export const createScreenshareMessage = (stream: MediaStream, mode: InstructionType = 'show'): ChatMessage =>
   createMessage('screenshare', 'user', '', { mode, videoStream: stream });
+
+export const createPlaceholderMessage = (mode: InstructionType): ChatMessage =>
+  createMessage('temp', 'agent', '', { mode, isPlaceholder: true, placeholderState: 'thinking' });
