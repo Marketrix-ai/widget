@@ -1,9 +1,8 @@
 /**
  * Singleton SSE transport between the widget and the api: `StreamClient.getInstance` drains one `widgetStream`
- * iterator in the background, `send` posts via `widgetMessagePost`. `StreamStatus` spans
- * `disconnected → connecting → open → registered`, plus `error` from a failed dial or stream; `ready` connects then
- * waits, `waitUntilRegistered` parks a caller, `canReconnect`/`reconnectNow` back the Retry affordance, and
- * `disconnect` tears down and rejects parked callers. `StreamGaveUpError` marks a stream that has stopped retrying.
+ * iterator in the background, `send` posts via `widgetMessagePost`, `ready` connects then waits,
+ * `waitUntilRegistered` parks a caller, `canReconnect`/`reconnectNow` back the Retry affordance, `disconnect`
+ * tears down and rejects parked callers, and `StreamGaveUpError` marks a stream that has stopped retrying.
  *
  * `open` is the transport, `registered` is the chat: only the latter can carry a reply, so `isConnected` reads
  * `registered` and nothing waits on `open`. Backoff counters reset only on `registered` — resetting at `open` would

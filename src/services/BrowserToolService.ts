@@ -1,33 +1,28 @@
 /**
  * Every browser action the agent can ask the widget to take on the HOST page, as one name → handler
- * registry (`tools`: label, wait-for-user flag and handler together, so no parallel list can drift);
- * `getFriendlyToolName` and `isWaitForUserTool` read it, `browserToolService` is the singleton.
- * `ChatContext` calls `executeTool` — in `show` mode it highlights the target and waits for the visitor
- * first — and posts back a `ToolExecutionResult`.
+ * registry: `tools` holds label, wait-for-user flag and handler together so no parallel list can drift, and
+ * `executeTool` in `show` mode highlights the target and waits for the visitor before running the handler.
  *
- * `typeText` branches input/textarea, contenteditable, any `value`, else textContent, and trails a `blur`
- * because some frameworks validate only on it. `extract` truncates at 10k while `getHtml` is uncapped —
- * the agent's parser indexes by `data-id`, and a trimmed tree loses elements the loop then cannot click.
- * `getScreenshot` reads the EXISTING share, since a fresh prompt bypasses an earlier Deny. `FINISH_TOOL`
- * is one named export so dispatch, progress lines and the settlement check read one string.
+ * `typeText` trails a `blur` because some frameworks validate only on it. `extract` truncates at 10k while
+ * `getHtml` is uncapped — the agent's parser indexes by `data-id`, and a trimmed tree loses elements the
+ * loop then cannot click. `getScreenshot` reads the EXISTING share, since a fresh prompt bypasses an
+ * earlier Deny. `FINISH_TOOL` is one named export so dispatch, progress lines and the settlement check read
+ * one string. `sendKeys` dispatches the KeyboardEvent and delegates the default action the browser
+ * withholds to `keySimulation`. `deferred` reports an action DISPATCHED, never completed: a click or
+ * navigation can tear the page down before the report is read.
  *
  * `element` / `selectElement` are the ONE way a handler reaches a host-page node: they resolve an index
  * through `domService` and THROW. `executeTool`'s catch is this file's ONLY error handler and no handler
  * may add a second — a throw already reaches the agent verbatim, so a local try/catch just rewrites the
- * same failure. `isTextField` is the input-or-textarea guard those handlers share.
- *
- * `deferred` reports an action DISPATCHED, never completed: a click or navigation can tear the page down
- * before the report is read. `httpUrl` admits only http(s) — `extract` feeds the model page-controlled
- * hrefs, so a raw target would let `javascript:` run in the HOST origin; its bare catch is the same verdict
- * as a rejected protocol, an unparseable string being exactly a value that is not a URL. `simulateKeyAction`
- * reproduces each key by hand because synthetic KeyboardEvents run no default action, returning null for
- * keys `sendKeys` already dispatched; `setNativeValue` writes through the prototype setter for React/Vue.
+ * same failure. `httpUrl` admits only http(s) — `extract` feeds the model page-controlled hrefs, so a raw
+ * target would let `javascript:` run in the HOST origin; its bare catch is the same verdict as a rejected
+ * protocol, an unparseable string being exactly a value that is not a URL.
  */
 
 import type { InstructionType } from '../types';
-import { TABBABLE_SELECTOR } from '../utils/dom';
 import { errorMessage } from '../utils/errors';
 import { domService } from './DomService';
+import { isTextField, setNativeValue, simulateKeyAction } from './keySimulation';
 import { activeScreenStream } from './ScreenShareService';
 import { showModeService } from './ShowModeService';
 
@@ -75,9 +70,6 @@ const deferred = (text: string, action: () => void): ToolExecutionResult => ({
   data: { text },
   afterResponseAttempt: action,
 });
-
-const isTextField = (el: Element): el is HTMLInputElement | HTMLTextAreaElement =>
-  el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement;
 
 const httpUrl = (value: string | undefined): string | null => {
   if (!value) return null;
@@ -210,7 +202,7 @@ export class BrowserToolService {
 
     if (isTextField(element)) {
       element.focus();
-      this.setNativeValue(element, clear ? args.text : element.value + args.text);
+      setNativeValue(element, clear ? args.text : element.value + args.text);
 
       element.dispatchEvent(
         new InputEvent('input', { bubbles: true, cancelable: true, inputType: 'insertText', data: args.text }),
@@ -329,186 +321,9 @@ export class BrowserToolService {
     element.dispatchEvent(new KeyboardEvent('keydown', { key: args.keys, bubbles: true, cancelable: true }));
     element.dispatchEvent(new KeyboardEvent('keyup', { key: args.keys, bubbles: true, cancelable: true }));
 
-    const actionResult = this.simulateKeyAction(element, args.keys);
+    const actionResult = simulateKeyAction(element, args.keys);
 
     return ok(actionResult || `Sent keys ${args.keys}`);
-  }
-
-  private simulateKeyAction(element: HTMLElement, key: string): string | null {
-    switch (key) {
-      case 'Tab':
-      case 'Shift+Tab': {
-        const step = key === 'Tab' ? 1 : -1;
-        const focusables = Array.from(document.querySelectorAll<HTMLElement>(TABBABLE_SELECTOR)).filter(
-          el => el.offsetParent !== null,
-        );
-        const currentIndex = focusables.indexOf(element);
-        const next = currentIndex === -1 ? undefined : focusables[currentIndex + step];
-        if (!next) return `${key}: no ${step > 0 ? 'next' : 'previous'} focusable element`;
-        next.focus();
-        return `${key}: moved focus to ${next.tagName.toLowerCase()}${next.id ? `#${next.id}` : ''}`;
-      }
-
-      case 'Enter': {
-        if (element instanceof HTMLButtonElement || element.getAttribute('role') === 'button') {
-          element.click();
-          return 'Enter: clicked button';
-        }
-        if (isTextField(element)) {
-          const form = element.closest('form');
-          if (form) {
-            const submitBtn = form.querySelector<HTMLButtonElement>('button[type="submit"], input[type="submit"]');
-            if (submitBtn) {
-              submitBtn.click();
-              return 'Enter: clicked form submit button';
-            } else {
-              form.requestSubmit();
-              return 'Enter: submitted form';
-            }
-          }
-        }
-        if (element instanceof HTMLAnchorElement) {
-          element.click();
-          return 'Enter: clicked link';
-        }
-        return 'Enter: dispatched event';
-      }
-
-      case 'Escape': {
-        element.blur();
-        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
-        return 'Escape: blurred element and dispatched to document';
-      }
-
-      case ' ':
-      case 'Space': {
-        if (element instanceof HTMLInputElement && (element.type === 'checkbox' || element.type === 'radio')) {
-          element.click();
-          return `Space: toggled ${element.type}`;
-        }
-        if (element instanceof HTMLButtonElement || element.getAttribute('role') === 'button') {
-          element.click();
-          return 'Space: clicked button';
-        }
-        return 'Space: dispatched event';
-      }
-
-      case 'ArrowDown': {
-        if (element instanceof HTMLSelectElement) {
-          const currentIdx = element.selectedIndex;
-          if (currentIdx < element.options.length - 1) {
-            element.selectedIndex = currentIdx + 1;
-            element.dispatchEvent(new Event('change', { bubbles: true }));
-            return `ArrowDown: selected "${element.options[element.selectedIndex].text}"`;
-          }
-          return 'ArrowDown: already at last option';
-        }
-        return 'ArrowDown: dispatched event';
-      }
-
-      case 'ArrowUp': {
-        if (element instanceof HTMLSelectElement) {
-          const currentIdx = element.selectedIndex;
-          if (currentIdx > 0) {
-            element.selectedIndex = currentIdx - 1;
-            element.dispatchEvent(new Event('change', { bubbles: true }));
-            return `ArrowUp: selected "${element.options[element.selectedIndex].text}"`;
-          }
-          return 'ArrowUp: already at first option';
-        }
-        return 'ArrowUp: dispatched event';
-      }
-
-      case 'Home': {
-        if (isTextField(element)) {
-          element.setSelectionRange(0, 0);
-          return 'Home: moved cursor to start';
-        }
-        return 'Home: dispatched event';
-      }
-
-      case 'End': {
-        if (isTextField(element)) {
-          const len = element.value.length;
-          element.setSelectionRange(len, len);
-          return 'End: moved cursor to end';
-        }
-        return 'End: dispatched event';
-      }
-
-      case 'Backspace': {
-        if (isTextField(element)) {
-          const value = element.value;
-
-          if (!value || value.length === 0) {
-            return 'Backspace: input is empty, nothing to delete';
-          }
-
-          const start: number = element.selectionStart ?? value.length;
-          const end: number = element.selectionEnd ?? value.length;
-
-          let newValue: string;
-          let newCursorPos: number;
-
-          if (start === end && start > 0) {
-            newValue = value.slice(0, start - 1) + value.slice(end);
-            newCursorPos = start - 1;
-          } else if (start !== end) {
-            newValue = value.slice(0, start) + value.slice(end);
-            newCursorPos = start;
-          } else {
-            return 'Backspace: cursor at start, nothing to delete';
-          }
-
-          this.setValueAndCaret(element, newValue, newCursorPos);
-
-          return `Backspace: deleted character, value is now "${newValue}"`;
-        }
-        return 'Backspace: dispatched event';
-      }
-
-      case 'Delete': {
-        if (isTextField(element)) {
-          const start = element.selectionStart || 0;
-          const end = element.selectionEnd || 0;
-          const value = element.value;
-
-          let newValue: string;
-
-          if (start === end && start < value.length) {
-            newValue = value.slice(0, start) + value.slice(end + 1);
-          } else if (start !== end) {
-            newValue = value.slice(0, start) + value.slice(end);
-          } else {
-            return 'Delete: cursor at end, nothing to delete';
-          }
-
-          this.setValueAndCaret(element, newValue, start);
-
-          return `Delete: deleted character, value is now "${newValue}"`;
-        }
-        return 'Delete: dispatched event';
-      }
-
-      default:
-        return null;
-    }
-  }
-
-  private setNativeValue(el: HTMLInputElement | HTMLTextAreaElement, value: string): void {
-    const setter = Object.getOwnPropertyDescriptor(
-      el instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype,
-      'value',
-    )?.set;
-    if (setter) setter.call(el, value);
-    else el.value = value;
-  }
-
-  private setValueAndCaret(el: HTMLInputElement | HTMLTextAreaElement, value: string, caret: number): void {
-    this.setNativeValue(el, value);
-    el.dispatchEvent(new Event('input', { bubbles: true }));
-    el.dispatchEvent(new Event('change', { bubbles: true }));
-    el.setSelectionRange(caret, caret);
   }
 
   private closeTab(): ToolExecutionResult {

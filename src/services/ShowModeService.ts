@@ -1,10 +1,9 @@
 /**
  * Show mode's on-page coaching overlay: highlights one host-page element, explains the step beside it and
  * returns a promise that settles when the visitor acts, so `BrowserToolService` can await a `show`-mode tool
- * call before running the tool. `ShowModeOptions` names the element, explanation, tool, and whether the
- * visitor completes by clicking the element rather than a Continue button. `showToolAction` mounts highlight
- * and popup and returns the pending promise, or the in-flight one for an identical restage (a duplicate tool
- * call); `cleanup` cancels and unwinds; `showModeService` is the singleton every caller uses.
+ * call before running the tool. `showToolAction` mounts highlight and popup and returns the pending promise,
+ * or the in-flight one for an identical restage (a duplicate tool call); `cleanup` cancels and unwinds;
+ * `showModeService` is the singleton every caller uses.
  *
  * Exactly one settle: the element click, the Continue button and both watchdog branches race, so both
  * settlers are DETACHED before either fires and the off-screen branch returns rather than falling through.
@@ -14,11 +13,10 @@
  * tracks a scrolling container, not just the window. `#marketrix-show-highlight` and `#marketrix-show-popup`
  * are load-bearing ids: `DomService.notInteractableReason` allowlists them so the overlay never reads as an
  * obscuring modal, and cleanup re-finds them because an interrupted node outlives its handle. The highlight's
- * cssText is one line because template-literal whitespace is not minified. `trackElement` is the one place
- * the highlight is sized and placed over its element — both the first paint and every reposition event run
- * through it. Placement takes the first of right/left/above/below that fits then clamps, its 120px height an
- * assumption, and the watchdog tests `document.body.contains` first, so it covers removal as well as
- * occlusion.
+ * cssText is one line because template-literal whitespace is not minified. `trackElement` is the one place the
+ * highlight is sized and placed over its element, so the first paint and every reposition run through it;
+ * placement takes the first of right/left/above/below that fits then clamps, its 120px height an assumption,
+ * and the watchdog tests `document.body.contains` first, covering removal as well as occlusion.
  */
 
 import { domService } from './DomService';

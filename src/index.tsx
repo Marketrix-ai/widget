@@ -1,24 +1,22 @@
 /**
- * Public entry point of `@marketrix.ai/widget`: the imperative lifecycle API, the React preview component
- * and the script-tag auto-init hook. Everything a host page or `app` can reach is exported here — the README's
- * named exports, the public config and message types, `getCurrentConfig`, and the same functions as a default.
- *
- * `initWidget` is the guarded, coalescing production entry over `initWidgetInternal` (configure the SDK,
- * load settings, mount, optionally record); `mount` builds the shadow-DOM container; `unmountWidget` tears
- * down stream, recorder, screen share and tree; `updateMarketrixConfig` re-mounts with client settings
- * merged in, on whichever path the current mount came from; `MarketrixWidgetPreview` is the dashboard
- * wrapper; `mountWidget` dispatches on shape — `settings` → preview (no network), `mtxId`+`mtxKey` → live.
+ * Public entry point of `@marketrix.ai/widget`: the imperative lifecycle API, the `MarketrixWidgetPreview`
+ * dashboard wrapper and the script-tag auto-init hook. `README.md` is the customer-facing surface these
+ * exports make up, named and default alike. `initWidget` is the guarded, coalescing production entry over
+ * `initWidgetInternal`; `mount` builds the shadow-DOM container; `unmountWidget` tears down stream,
+ * recorder, screen share and tree;
+ * `updateMarketrixConfig` re-mounts with client settings merged in, on whichever path the current mount
+ * came from; `mountWidget` dispatches on shape — `settings` → preview (no network), credentials → live.
  *
  * `previewConfig` is the one home for the preview path's validate-then-resolve, shared by the React
- * component and the imperative `mountWidget`; a null return means it has already reported why.
- * `configureSdk` runs on the production path only, and there is no default host, so an unconfigured SDK
- * would resolve every request against the HOST PAGE's origin. `widget_enabled` is the kill switch: unlike
- * `show_widget`/`widget_appearance`, hidden but initialized, disabled means no chat id, stream or recording.
- * `window.__mtx` guards the singleton because it survives ES-module re-execution, which resets module-level
- * vars, and every init and unmount bumps `lifecycleGeneration` so in-flight work abandons itself rather than
- * mounting over a newer one. Preview with no `container` mounts into the div it renders, never the parent,
- * which would size the widget to the wrong box. Auto-init runs on import, browser-guarded so the package
- * stays importable from a server render and deferred a tick so every export exists before the tag scan.
+ * component and the imperative `mountWidget`; a null return means it has already reported why. There is
+ * no default api host, so an unconfigured SDK would resolve every request against the HOST PAGE's origin
+ * and `configureSdk` runs before anything else on the production path. `widget_enabled` is the kill switch:
+ * unlike `show_widget`/`widget_appearance`, hidden but initialized, disabled means no chat id, stream or
+ * recording. `window.__mtx` guards the singleton because it survives ES-module re-execution, and every init
+ * and unmount bumps `lifecycleGeneration` so in-flight work abandons itself rather than mounting over a
+ * newer one. Preview with no `container` mounts into the div it renders, never the parent, which would size
+ * the widget to the wrong box. Auto-init runs on import, browser-guarded so the package stays importable from
+ * a server render, deferred a tick so every export exists before the tag scan.
  */
 
 declare global {
