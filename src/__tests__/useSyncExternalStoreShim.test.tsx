@@ -1,3 +1,7 @@
+/**
+ * Shim tests: the selected slice tracks the store and a fresh object per call does not loop; with
+ * `isEqual` the previous selection is held when the slice is unchanged.
+ */
 import { act, render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 

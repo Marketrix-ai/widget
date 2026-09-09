@@ -1,3 +1,9 @@
+/**
+ * A local stand-in for `use-sync-external-store/shim/with-selector`, so the package is not a runtime
+ * dependency of the bundle. `useSyncExternalStoreWithSelector` memoises the selection per snapshot
+ * identity and, when `isEqual` says the slice did not change, returns the previous selection — which is
+ * what keeps a selector returning a fresh object from re-rendering forever.
+ */
 import { useRef, useSyncExternalStore as useReactSyncExternalStore } from 'react';
 
 export { useSyncExternalStore } from 'react';

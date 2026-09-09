@@ -1,3 +1,7 @@
+/**
+ * `IconButton` — an icon-only button that REQUIRES a `label` (its aria-label), so no unnamed control
+ * can ship; variant and size ride as `data-*`, tone as an inline colour from `TEXT_TONE`.
+ */
 import type { ComponentPropsWithRef } from 'react';
 
 import { TEXT_TONE, type TextTone } from '../../design-system/component-tokens';

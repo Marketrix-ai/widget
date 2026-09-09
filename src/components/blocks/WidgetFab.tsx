@@ -1,3 +1,9 @@
+/**
+ * `WidgetFab` — the launcher button: draggable via `useDragSnap`, positioned at the configured corner,
+ * glowing while a reply or task is in flight (an error switches the glow class), and showing the stop
+ * control while a task runs and the panel is closed. Colours and z-index come from the tenant config;
+ * `pointerEvents: none` while open so the panel beneath receives the clicks.
+ */
 import React, { useRef } from 'react';
 
 import MarketrixIcon from '../../assets/marketrix-icon.svg';

@@ -1,3 +1,8 @@
+/**
+ * `get_screenshot` tests: no active share fails instead of prompting a new one (which would bypass the
+ * visitor's Deny), a stream that never delivers a frame fails instead of waiting forever and leaves no
+ * video in the host page, and a refused 2d canvas context reports failure rather than an all-black frame.
+ */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { browserToolService } from '../BrowserToolService';

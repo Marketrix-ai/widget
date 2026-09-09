@@ -1,3 +1,7 @@
+/**
+ * `ChatInput` tests: the auto-resize ref merges with a caller textarea ref, and the icon-only action
+ * button is named in the words a visitor uses.
+ */
 import { render, screen } from '@testing-library/react';
 import { createRef } from 'react';
 import { describe, expect, it, vi } from 'vitest';

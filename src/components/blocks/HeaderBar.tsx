@@ -1,3 +1,7 @@
+/**
+ * `HeaderBar` — the panel header: Marketrix avatar, title and optional subtitle (both truncating), an
+ * optional controls slot, and the Close button.
+ */
 import React from 'react';
 
 import MarketrixIcon from '../../assets/marketrix-icon.svg';

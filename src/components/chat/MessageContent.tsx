@@ -1,3 +1,8 @@
+/**
+ * `MessageContent` — the body of a message, rendered from its `parts` (text and progress lines). Shows
+ * the `ThinkingIndicator` while a placeholder has no text yet, or while the task is still running on the
+ * last show/do message, switching its copy when the agent is waiting on the visitor.
+ */
 import React from 'react';
 
 import { useWidget } from '../../hooks/useWidget';

@@ -1,3 +1,10 @@
+/**
+ * `DomService` tests: an index expires when the element behind it changes (a rewritten href, a gained
+ * attribute) while an untouched one stays addressable; a `data-id` lands on the element the index really
+ * points at; the widget's own shadow host is exempt from obstruction (it is what `elementFromPoint`
+ * reports for any hit on the widget) while a host overlay still obscures; and a disabled or
+ * aria-disabled control is refused at act time rather than hidden from the index.
+ */
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { DomService } from '../DomService';

@@ -1,3 +1,7 @@
+/**
+ * With two snaps in flight, `useDragSnap` commits the corner the widget is animating to, not the one
+ * it left.
+ */
 import { act, renderHook } from '@testing-library/react';
 import { createRef } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';

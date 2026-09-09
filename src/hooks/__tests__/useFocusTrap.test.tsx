@@ -1,3 +1,7 @@
+/**
+ * `useFocusTrap` tests: Escape closes the widget when focus is inside the trapped container and is
+ * declined when focus is on the host page — the key belongs to the widget only while it has focus.
+ */
 import { render } from '@testing-library/react';
 import React, { useRef } from 'react';
 import { describe, expect, it, vi } from 'vitest';

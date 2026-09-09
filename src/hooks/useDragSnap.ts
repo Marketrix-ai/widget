@@ -1,3 +1,16 @@
+/**
+ * `useDragSnap` — drag the launcher (FAB) and snap it to the nearest corner. Pointer events are tracked
+ * in a ref; movement under DRAG_THRESHOLD_PX stays a click, beyond it the wrapper is translated on a
+ * rAF loop with velocity sampled so a flick lands where it was heading. On release
+ * `getNearestCornerByTranslation` picks the corner, the wrapper animates there for SNAP_DURATION_MS via
+ * `left`/`top` transitions, and `commitPositionAfterAnimation` calls `onPositionCommit` on
+ * `transitionend` (with a timeout fallback, since a hidden tab fires no transition events) — the
+ * committed corner is the one being animated TO, so two snaps in flight cannot commit the abandoned
+ * one (`abandonSnapRef`). `suppressUntilRef` stamps a time after which a click may open the widget
+ * again, so the pointer-up that ends a drag is not read as a tap. The wrapper is measured with a
+ * ResizeObserver in a layout effect so the pixel position is right on the first paint; preview mode
+ * disables everything.
+ */
 import React, { useCallback, useLayoutEffect, useRef, useState } from 'react';
 
 import type { WidgetPosition } from '../types';

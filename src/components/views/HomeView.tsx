@@ -1,3 +1,8 @@
+/**
+ * `HomeView` — the opening screen: tenant greeting and body, the Ask-a-question button that switches to
+ * the chat view, and the suggested-action chips (`getSuggestedActionsFromConfig`), which navigate and
+ * dispatch in one click.
+ */
 import React from 'react';
 
 import { useWidget, useWidgetConfig } from '../../hooks/useWidget';

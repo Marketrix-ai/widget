@@ -1,3 +1,8 @@
+/**
+ * Colour tests: the text colour a background gets is readable on every spelling of white and black and
+ * falls back to black (never white) for an unreadable value; the one parser reads shorthand hex, refuses
+ * out-of-range channels, and `addOpacity` gets the same reach.
+ */
 import { describe, expect, it } from 'vitest';
 
 import { addOpacity, getContrastingColor, toRgb } from './color';

@@ -1,3 +1,6 @@
+/**
+ * `Stack` — `Flex` with `direction='column'` fixed.
+ */
 import { forwardRef } from 'react';
 
 import { Flex, type FlexProps } from './Flex';

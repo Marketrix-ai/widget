@@ -1,3 +1,9 @@
+/**
+ * Component-level design tokens shared by the base components: `RADIUS`, `TEXT_TONE` and
+ * `TEXT_LEADING` scales, `TAB_BAR_HEIGHT`, the `notificationToneStyles` palette per notification tone,
+ * and `getElevationStyle`, which turns a `ShadowToken` into a `boxShadow` (none → undefined so a caller
+ * can spread it). Each radius value has exactly one name — a test pins that no two tokens are synonyms.
+ */
 import type { CSSProperties } from 'react';
 
 import { SHADOW, type ShadowToken } from './shadows';

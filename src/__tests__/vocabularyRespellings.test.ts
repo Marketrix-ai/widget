@@ -1,3 +1,7 @@
+/**
+ * No hand-written string-literal union in `src/` may respell a canonical `src/sdk` vocabulary — the
+ * contract enums are the one source, so a value the api adds cannot be silently missing here.
+ */
 import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';

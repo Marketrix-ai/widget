@@ -1,3 +1,7 @@
+/**
+ * `Avatar` — an `<img>` sized by preset or number, with fit, radius (via `resolveLayoutStyle`) and
+ * elevation from the design tokens; keeps its own class beside a caller className.
+ */
 import type { ComponentPropsWithRef } from 'react';
 
 import { getElevationStyle, type RadiusToken } from '../../design-system/component-tokens';

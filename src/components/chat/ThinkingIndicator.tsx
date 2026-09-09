@@ -1,3 +1,7 @@
+/**
+ * `ThinkingIndicator` — the small spinner-and-caption row shown while a reply is pending; the caption
+ * switches to "Waiting for you to complete the action" when the agent is blocked on the visitor.
+ */
 import React from 'react';
 
 import { Flex } from '../base/Flex';

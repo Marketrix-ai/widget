@@ -1,3 +1,8 @@
+/**
+ * `ShowModeService` tests: a second show action cancels the one it replaced and leaves the replacement
+ * live; an action the page invalidates rejects with the one reason `DomService` gave, never a second
+ * contradicting code.
+ */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ShowModeService } from '../ShowModeService';
