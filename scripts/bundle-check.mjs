@@ -1,8 +1,33 @@
+/**
+ * The byte budget and packaging contract on `dist/`, run as the last step of `bun run ci`.
+ *
+ * BUDGETS sit ~15% above the current build so growth is actually noticed. They were 2 MB and 10 kB —
+ * 5.1x and 7.8x the real artifacts — which is a guard that can never fire: the bundle could quintuple
+ * silently. Raise a limit deliberately when a feature justifies it; never to make CI pass.
+ *
+ * SIZE IS NOT THE PACKAGING CONTRACT. `formats: ['es']` with no code splitting, `cssCodeSplit: false`
+ * and the four React externals are what make this package embeddable: an extra chunk breaks the
+ * single-file script-tag bootstrap, an emitted stylesheet never reaches the closed Shadow DOM, and a
+ * bundled React gives the host page a SECOND React, across which hooks throw. Each of those leaves
+ * `dist/widget.mjs` present and under budget, so none of them was caught before.
+ *
+ * The output allowlist is every file the runtime image serves, matched by name rather than by
+ * extension: `type: "module"` makes rolldown name split chunks `[name]-[hash].js`, so matching only
+ * `.mjs` let a genuinely split build pass.
+ *
+ * `DEPENDENCY_BUDGETS` exists because half the bundle is four dependencies and the total cap cannot see
+ * which. At 392,685 bytes against a 455,000 limit there is 62 kB of silent headroom — enough for a heavy
+ * import to land, or an existing one to grow 80%, unnoticed. Each budget is ~10% over the bytes measured
+ * on 2026-09-01, and a package ABSENT from the table fails outright, so a new dependency is a deliberate
+ * line rather than a number nobody reads. The largest two are session recording, imported for a feature
+ * that is off by default, and the Dialog/Button/Tabs/Toast primitives.
+ *
+ * Per-package bytes come from walking the sourcemap segments, which is the only view of what each source
+ * file actually contributed to the output.
+ */
+
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 
-// Budgets sit ~15% above the current build so growth is actually noticed. They were 2 MB and 10 kB —
-// 5.1x and 7.8x the real artifacts — which is a guard that can never fire: the bundle could quintuple
-// silently. Raise a limit deliberately when a feature justifies it; do not raise it to make CI pass.
 const requiredFiles = [
   { path: 'dist/widget.mjs', maxBytes: 455_000 },
   { path: 'dist/loader.js', maxBytes: 2_000 },
@@ -29,17 +54,10 @@ for (const artifact of requiredFiles) {
   }
 }
 
-// Size is not the packaging contract. `formats: ['es']` with no code splitting, `cssCodeSplit: false`
-// and the four React externals are what make this package embeddable: an extra chunk breaks the
-// single-file script-tag bootstrap, an emitted stylesheet never reaches the closed Shadow DOM, and a
-// bundled React gives the host page a SECOND React — hooks throw across that boundary. Each one leaves
-// `dist/widget.mjs` present and under budget, so none of them was caught before.
 const EXTERNALS = ['react', 'react-dom', 'react-dom/client', 'react/jsx-runtime'];
 
 const emitted = readdirSync('dist');
 
-// `type: "module"` makes rolldown name split chunks `[name]-[hash].js`, so matching only `.mjs`
-// let a genuinely split build pass. The allowlist is every file the runtime image serves.
 const SERVED_SCRIPTS = ['widget.mjs', 'loader.js'];
 const extraChunks = emitted.filter(name => /\.[cm]?js$/.test(name) && !SERVED_SCRIPTS.includes(name));
 if (extraChunks.length > 0) {
@@ -65,24 +83,19 @@ try {
   errors.push('dist/widget.mjs is unreadable');
 }
 
-// Half the bundle is four dependencies and the total cap cannot see which: at 392,685 bytes against a
-// 455,000 limit there is 62 kB of silent headroom, enough for a heavy import to land or an existing one
-// to grow 80% unnoticed. Budgets are ~10% over the bytes measured on 2026-09-01; a package absent here
-// fails outright, so a new dependency is a deliberate line rather than a number nobody reads.
 const DEPENDENCY_BUDGETS = {
-  '@rrweb/record': 84_000, // 75,867 (19.3%) — session recording, imported for a feature off by default
-  '@base-ui/react': 82_000, // 74,739 (19.1%) — Dialog, Button, Tabs and Toast
-  '@base-ui/utils': 13_000, // 11,637
-  '@orpc/client': 11_000, // 9,500
-  '@orpc/standard-server-fetch': 4_100, // 3,693
-  '@orpc/standard-server': 4_000, // 3,578
-  '@orpc/shared': 3_600, // 3,235
-  '@floating-ui/utils': 1_200, // 1,065
+  '@rrweb/record': 84_000,
+  '@base-ui/react': 82_000,
+  '@base-ui/utils': 13_000,
+  '@orpc/client': 11_000,
+  '@orpc/standard-server-fetch': 4_100,
+  '@orpc/standard-server': 4_000,
+  '@orpc/shared': 3_600,
+  '@floating-ui/utils': 1_200,
 };
 
 const B64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 
-/** Output bytes per source file, by walking the sourcemap segments — the only view of what is actually in the bundle. */
 function bytesPerSource(sourceMap, bundle) {
   const lines = bundle.split('\n');
   const bytes = new Map();
