@@ -14,7 +14,6 @@ import { Text } from '../base/Text';
 
 export const GREETING_TIMEOUT_MS = 8000;
 
-/** `type` on a Base UI toast is a free string; these are the three the tone styling understands. */
 const toneOf = (type: string | undefined): NotificationTone => (type === 'error' || type === 'info' ? type : 'neutral');
 
 const NotificationList: React.FC = () => {
@@ -99,6 +98,7 @@ const NotificationList: React.FC = () => {
         )}
 
         <Toast.Close
+          onMouseDown={event => event.preventDefault()}
           render={
             <IconButton label='Dismiss' size='xs' tone='inherit' style={{ color: colors.closeColor, padding: '2px' }} />
           }
@@ -112,16 +112,10 @@ const NotificationList: React.FC = () => {
 
 export interface NotificationProviderProps {
   children?: React.ReactNode;
-  /** The closed shadow root to portal into — a portal to document.body would leave the styles behind. */
   container?: HTMLElement | null;
-  /** Raised above the launcher when the launcher sits at the bottom, so the two cannot overlap. */
   offsetBottom?: number;
 }
 
-/**
- * The one notification surface. Base UI owns the live region, the dismiss timers, hover-to-pause and
- * stacking; before this the widget announced nothing to a screen reader and ran its own setTimeout.
- */
 export const NotificationProvider: React.FC<NotificationProviderProps> = ({
   children,
   container,
@@ -151,10 +145,6 @@ export interface WidgetNotificationsProps {
   onGreetingDismiss: () => void;
 }
 
-/**
- * Drives the toasts from widget state. Both use a stable id, so `add` upserts and a re-render cannot
- * stack duplicates of the same condition.
- */
 export const WidgetNotifications: React.FC<WidgetNotificationsProps> = ({
   error,
   onClearError,
@@ -174,7 +164,6 @@ export const WidgetNotifications: React.FC<WidgetNotificationsProps> = ({
       id: 'error',
       type: 'error',
       title: error,
-      // An error stays until it is acted on; only the greeting is transient.
       timeout: 0,
       priority: 'high',
       onClose: onClearError,
