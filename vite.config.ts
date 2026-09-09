@@ -19,6 +19,8 @@
  * the local React-backed shim so the legacy CJS package never enters the bundle. Terser gets `module` and
  * `toplevel` because the output is ESM-only and may therefore assume module scope and mangle top-level names.
  * `sourcemap: 'hidden'` still builds the map but keeps the bundle from advertising one it never publishes.
+ * `SRC_ALIAS` is declared once and reused by both branches — the two of them held separate copies of the
+ * same `@` → `src` mapping, which is the kind of pair that drifts silently.
  */
 import { execSync } from 'node:child_process';
 import { resolve } from 'node:path';
@@ -29,6 +31,7 @@ import { defineConfig, type ViteDevServer } from 'vite';
 
 const BUNDLE_FILE = 'widget.mjs';
 const ENTRY_FILE = 'src/index.tsx';
+const SRC_ALIAS = { find: '@', replacement: resolve(cwd(), 'src') };
 
 export default defineConfig(({ command }) => {
   const isProduction = command === 'build';
@@ -38,7 +41,7 @@ export default defineConfig(({ command }) => {
       mode: 'production',
       resolve: {
         alias: [
-          { find: '@', replacement: resolve(cwd(), 'src') },
+          SRC_ALIAS,
           {
             find: /^use-sync-external-store\/shim(?:\/with-selector)?$/,
             replacement: resolve(cwd(), 'src/useSyncExternalStoreShim.ts'),
@@ -108,7 +111,7 @@ export default defineConfig(({ command }) => {
   }
 
   return {
-    resolve: { alias: { '@': resolve(cwd(), 'src') } },
+    resolve: { alias: [SRC_ALIAS] },
     plugins: [
       react(),
       {

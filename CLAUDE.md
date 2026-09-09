@@ -172,7 +172,8 @@ runtime owners: `StreamClient`, `RrwebSessionRecorder`, `BrowserToolService`, `S
 `DomService`, `ChatService`, `ChatSessionManager`, `StorageService`,
 `ScreenShareService`, plus stateless functions) · `src/components/` (`Surface` is the canonical
 container primitive; `WidgetDialog` the one specialized modal;
-`src/design-system/semantic-tokens.ts` owns settings-to-token adaptation) · `src/context/`
+`src/design-system/semantic-tokens.ts` owns settings-to-token adaptation and
+`component-tokens.ts` every fixed token — radius, text, shadow, layer) · `src/context/`
 (`ChatContext` is one store `{messages, task}`, plus `UIStateContext`, `sseReducer`) · `src/test/` +
 colocated `*.test.ts(x)`.
 
@@ -205,7 +206,7 @@ and shipped images cannot drift in their dependency set.
   A new `animate` token needs a matching `@keyframes` — `stylesheet-contract.test.ts` pins that.
 - **The widget has no dark mode** — no `.dark` block, no `dark:` variant. Theming is the per-tenant
   settings → CSS custom properties in `semantic-tokens.ts`, nothing else.
-- **Elevation is a `SHADOW.*` token** (`design-system/shadows.ts`), applied inline through `Surface`'s
+- **Elevation is a `SHADOW.*` token** (`design-system/component-tokens.ts`), applied inline through `Surface`'s
   `elevation` prop / `getElevationStyle` — **there is no settings-driven shadow**; the four
   settings that reached nothing here (`widget_device`, `widget_bounce_effect`, `widget_shadow`,
   `widget_feature_human`) were dropped from the contract in db-V247. `widget_appearance` is

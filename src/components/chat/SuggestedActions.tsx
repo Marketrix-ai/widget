@@ -7,7 +7,7 @@ import React from 'react';
 import { useWidgetConfig } from '../../hooks/useWidget';
 import type { SuggestedActionItem } from '../../utils/suggestedActions';
 import { Button } from '../base/Button';
-import { Stack } from '../base/Stack';
+import { Stack } from '../base/Flex';
 import { Text } from '../base/Text';
 
 interface SuggestedActionsProps {

@@ -21,8 +21,7 @@ import { Dialog } from '@base-ui/react/dialog';
 import React from 'react';
 
 import { usePortalContainer } from '../../context/WidgetProviders';
-import { getElevationStyle } from '../../design-system/component-tokens';
-import { LAYER_TOKENS } from '../../design-system/layers';
+import { getElevationStyle, LAYER_TOKENS } from '../../design-system/component-tokens';
 import { Button } from '../base/Button';
 import { Flex } from '../base/Flex';
 

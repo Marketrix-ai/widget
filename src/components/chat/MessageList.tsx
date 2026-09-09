@@ -10,8 +10,8 @@
  * 200px, bottom while the list overflows and sits more than 50px off the end — and the affordance table
  * carries each one's edge, label, icon and scroll action.
  *
- * `widget_background_color` may be a gradient, which is only legal as `backgroundImage`; a plain colour is
- * emitted as a same-stop gradient so one declaration covers both forms.
+ * The transcript paints `widget_background_color` through `backgroundGradient`, the one home for that
+ * expansion, and zeroes `backgroundColor` for a gradient setting so the two declarations cannot fight.
  *
  * Every scroll is suppressed in preview mode: there the widget is embedded in the dashboard's modal, and
  * `scrollIntoView` would scroll that parent modal rather than this list. The scroll on a new message waits a
@@ -22,10 +22,10 @@
  */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 
-import { SHADOW } from '../../design-system/shadows';
+import { SHADOW } from '../../design-system/component-tokens';
 import { useWidget, useWidgetConfig } from '../../hooks/useWidget';
 import type { ChatMessage } from '../../types';
-import { addOpacity } from '../../utils/color';
+import { addOpacity, backgroundGradient } from '../../utils/color';
 import { Button } from '../base/Button';
 import { Flex } from '../base/Flex';
 import { Icon } from '../base/Icon';
@@ -114,9 +114,7 @@ export const MessageList = ({ messagesEndRef, onScreenAccessAllow, onScreenAcces
           backgroundColor: widgetConfig.widget_background_color.includes('gradient')
             ? 'transparent'
             : widgetConfig.widget_background_color,
-          backgroundImage: widgetConfig.widget_background_color.includes('gradient')
-            ? widgetConfig.widget_background_color
-            : `linear-gradient(135deg, ${widgetConfig.widget_background_color} 0%, ${widgetConfig.widget_background_color} 100%)`,
+          backgroundImage: backgroundGradient(widgetConfig.widget_background_color),
           scrollbarColor: `${addOpacity(widgetConfig.widget_border_color, 0.3)} ${addOpacity(widgetConfig.widget_border_color, 0.1)}`,
           scrollbarWidth: 'thin',
         }}

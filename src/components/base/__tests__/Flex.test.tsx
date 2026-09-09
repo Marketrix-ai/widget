@@ -5,8 +5,7 @@
 import { render } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
-import { Flex } from '../Flex';
-import { Stack } from '../Stack';
+import { Flex, Stack } from '../Flex';
 
 describe('Flex', () => {
   it('renders a div that is display:flex', () => {

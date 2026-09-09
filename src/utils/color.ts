@@ -12,6 +12,11 @@
  * legible where white would vanish. `addOpacity` re-emits a colour as `rgba()` at the given alpha and
  * passes an unreadable one through UNCHANGED — it stays a CSS value the browser can still resolve, where
  * an `rgba(NaN, …)` would render nothing.
+ *
+ * `backgroundGradient` is the one home for `widget_background_color` as a `backgroundImage`: the setting may
+ * already be a gradient, which is legal only as `backgroundImage`, so a flat colour is emitted as a same-stop
+ * gradient and one declaration covers both spellings. Panel and transcript both paint through it, so there is
+ * no second expansion to drift from.
  */
 
 type Rgb = { r: number; g: number; b: number };
@@ -48,4 +53,8 @@ export function getContrastingColor(color: string): string {
 export function addOpacity(color: string, opacity: number): string {
   const rgb = toRgb(color);
   return rgb ? `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${opacity})` : color;
+}
+
+export function backgroundGradient(color: string): string {
+  return color.includes('gradient') ? color : `linear-gradient(135deg, ${color} 0%, ${color} 100%)`;
 }

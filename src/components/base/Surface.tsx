@@ -20,8 +20,7 @@
  */
 import { type CSSProperties, type ElementType, forwardRef } from 'react';
 
-import { getElevationStyle } from '../../design-system/component-tokens';
-import type { ShadowToken } from '../../design-system/shadows';
+import { getElevationStyle, type ShadowToken } from '../../design-system/component-tokens';
 import { type LayoutProps, resolveLayoutStyle, stripLayoutProps } from './layoutProps';
 
 export type SurfaceBackground = 'default' | 'card';
