@@ -16,7 +16,7 @@
  *
  * The snapshot is `{messages, currentMode, isOpen}` — chat_id, config and timestamp are deliberately excluded.
  * Reading revives `timestamp` to a `Date` and backfills a text part for messages stored before `parts` existed;
- * writing drops `videoStream` (unserializable, dead on reload), rewriting it as `Screenshare ended`.
+ * writing drops `videoStream` (unserializable, dead on reload), rewriting it as `Screen sharing ended`.
  */
 import type { ChatMessage, InstructionType, MarketrixConfig, ValidWidgetConfig } from '../types';
 
@@ -136,7 +136,7 @@ export function writeChatSnapshot(snapshot: ChatSnapshot): void {
     messages: snapshot.messages.map(({ videoStream, ...msg }): StoredMessage => {
       const timestamp = msg.timestamp.toISOString();
       if (!videoStream) return { ...msg, timestamp };
-      const content = 'Screenshare ended';
+      const content = 'Screen sharing ended';
       return { ...msg, timestamp, content, isSystemMessage: true, parts: [{ type: 'text', content }] };
     }),
   });

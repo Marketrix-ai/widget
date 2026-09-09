@@ -82,9 +82,9 @@ describe('chat snapshot persistence', () => {
     writeChatSnapshot(snapshot([createScreenshareMessage({ id: 'stream' } as unknown as MediaStream)]));
 
     expect(readChatSnapshot().messages[0]).toMatchObject({
-      content: 'Screenshare ended',
+      content: 'Screen sharing ended',
       isSystemMessage: true,
-      parts: [{ type: 'text', content: 'Screenshare ended' }],
+      parts: [{ type: 'text', content: 'Screen sharing ended' }],
     });
   });
 });

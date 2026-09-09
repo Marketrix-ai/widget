@@ -131,7 +131,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
       style={{ marginTop: '10px' }}
       role='article'
       aria-roledescription='message'
-      aria-label={isUser ? 'You said…' : 'Agent says…'}
+      aria-label={isUser ? 'You said…' : 'Assistant says…'}
       animate={isLastMessage ? 'fadeIn' : undefined}
     >
       <Flex align='start' gap='sm' width='full'>
