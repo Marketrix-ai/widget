@@ -1,27 +1,22 @@
 /**
- * Widget-wide shared types: the config shapes a host supplies, the chat message/part model, the UI store
- * shape, and `messageText` — the one place a message's displayed text is derived.
+ * Widget-wide shared types: the config shapes a host supplies, the chat message/part model, the UI
+ * store shape, and `messageText` — the one place a message's displayed text is derived.
  *
- * Contents: `ClientOwnedConfig`, the host-supplied knobs the api never sends (`show_widget: false` still
- * initializes the widget fully and only hides its UI; `use_screenshare: false` auto-denies screen-access
- * requests and hides the Share Screen button; both default true) · `MarketrixConfig`, deliberately FLAT so
- * api settings spread straight in — `mtxId`+`mtxKey` is the credential, while `mtxApp` is stamped internally
- * after validation and is never an input, because an application id is guessable and authenticates nothing ·
- * `ValidWidgetConfig`, a `MarketrixConfig` that has been through `parseWidgetSettings`, so every rendered
- * setting is present · `ChatMessage` + `MessagePart`, the chat model · `messageText` · `WidgetView`, the shell's
- * active tab · `WidgetState`, nothing stored but the flattened read model `useWidget()` folds out of
- * `UIStateContext` + `ChatContext` · `WidgetPosition`, the api's `widget_position` re-aliased as the corner
- * vocabulary drag-snap and resize share · `AddWidgetConfig`, the public `mountWidget` argument, whose union makes
- * `settings` and the `mtxId`/`mtxKey` pair mutually exclusive · `MarketrixWidgetPreviewProps`, the props of the
- * no-network dashboard preview · re-exported `InstructionType` and `WidgetSettingsData` from the sdk.
- *
- * `ChatMessage.pendingContent` is the message queued behind an open screen-access request, sent once that
- * request resolves. A `MessagePart` marked `streaming` accumulates `chat/delta` fragments; the final
- * `chat/response` replaces it. `ChatMessage.taskStatus` and `MessagePart.status` are presentational only —
- * the wire vocabulary is `task/status.status`, and neither of these is it.
- *
- * `messageText` joins a message's text parts, and that IS the message's text; `content` is kept equal to it
- * by every writer, so a reader never has to know which of the two fields is authoritative.
+ * `ClientOwnedConfig` holds host-supplied knobs the api never sends (`show_widget: false` still
+ * initializes the widget fully and only hides its UI; `use_screenshare: false` auto-denies
+ * screen-access requests and hides the Share Screen button; both default true). `MarketrixConfig` is
+ * deliberately FLAT so api settings spread straight in — `mtxId`+`mtxKey` is the credential, while
+ * `mtxApp` is stamped internally after validation and never an input, since an application id is
+ * guessable and authenticates nothing. `ValidWidgetConfig` is a `MarketrixConfig` run through
+ * `parseWidgetSettings`, so every rendered setting is present. `ChatMessage`+`MessagePart` are the chat
+ * model; `WidgetState` is the flattened read model `useWidget()` folds from `UIStateContext`+
+ * `ChatContext`; `WidgetPosition` re-aliases `widget_position` as the drag-snap/resize corner
+ * vocabulary; `AddWidgetConfig`'s union makes `settings` and `mtxId`/`mtxKey` mutually exclusive.
+ * `ChatMessage.pendingContent` queues a message behind an open screen-access request, sent once it
+ * resolves. A `streaming` `MessagePart` accumulates `chat/delta` fragments until the final
+ * `chat/response` replaces it. `taskStatus`/`MessagePart.status` are presentational only, not the wire
+ * vocabulary (`task/status.status`). `messageText` joins text parts and IS the text; `content` is kept
+ * equal to it by every writer.
  */
 import type { InstructionType, WidgetSettingsData } from '../sdk';
 import type { WidgetRenderedSettings } from '../utils/validation';

@@ -1,7 +1,11 @@
 /**
  * `HomeView` — the opening screen: tenant greeting and body, the Ask-a-question button that switches to
- * the chat view, and the suggested-action chips (`getSuggestedActionsFromConfig`), which navigate and
- * dispatch in one click.
+ * the chat view, the suggested-action chips (`getSuggestedActionsFromConfig`), which navigate and dispatch
+ * in one click, and a card linking back into a conversation already in progress.
+ *
+ * Chip captions render VERBATIM in the tenant text colour: a `show`/`do` caption doubles as the
+ * instruction dispatched on click and is given its mode prefix in the config layer, so prefixing here
+ * would double it.
  */
 import React from 'react';
 
@@ -12,7 +16,6 @@ import { Stack } from '../base/Flex';
 import { Icon } from '../base/Icon';
 import { Surface } from '../base/Surface';
 import { Text } from '../base/Text';
-import { SuggestedActions } from '../chat/SuggestedActions';
 
 interface HomeViewProps {
   onNavigateToChat: () => void;
@@ -59,7 +62,21 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigateToChat, onChipClic
             Ask a question
           </Button>
 
-          <SuggestedActions actions={suggestedActions} onActionClick={handleActionClick} />
+          {suggestedActions.map((action, chipIndex) => (
+            <Button
+              key={`welcome-chip-${action.id}-${chipIndex}`}
+              elevation='card'
+              size='sm'
+              variant='chip'
+              full
+              onClick={e => handleActionClick(action, e)}
+              style={{ color: config.widget_text_color, paddingTop: '8px', paddingBottom: '8px' }}
+            >
+              <Text as='span' weight='normal' leading='tight'>
+                {action.text}
+              </Text>
+            </Button>
+          ))}
         </Stack>
       </Stack>
 

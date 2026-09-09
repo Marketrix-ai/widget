@@ -1,31 +1,22 @@
 /**
- * Contract tests for `WidgetEventSchema`, the server -> widget SSE discriminated union of the generated
- * SDK mirror. `StreamClient` consumes the typed iterator and branches on `event.type` without ever
- * re-parsing a frame, so these safeParse calls are the only place the union's shape is asserted; and the
- * mirror is regenerated from the api and never hand-edited, so this file is what catches a regenerate
- * that drops, renames or loosens a member.
+ * Contract tests for `WidgetEventSchema`, the server → widget SSE discriminated union of the generated SDK mirror.
+ * `StreamClient` consumes the typed iterator and branches on `event.type` without ever re-parsing a frame, so
+ * these safeParse calls are the only place the union's shape is asserted; the mirror is regenerated from the api
+ * and never hand-edited, so this file is what catches a regenerate that drops, renames or loosens a member.
+ * `ALL_WIDGET_EVENT_TYPES` / `ExpectedEventType` are the seven `type` discriminants, and `MINIMAL_EVENT_FIXTURES`
+ * the smallest payload that must parse for each.
  *
- * Fixtures: `ALL_WIDGET_EVENT_TYPES` / `ExpectedEventType` are the seven `type` discriminants, and
- * `MINIMAL_EVENT_FIXTURES` the smallest payload that must parse for each.
- *
- * Suites, and what each pins:
- * - all event types are present in the union - every discriminant still parses from its minimal fixture.
- * - discriminant field "type" - a payload with no `type`, and one with an unrecognised `type`, are both
- *   rejected (no member acts as a catch-all), and every parsed fixture carries a non-empty string `type`,
- *   so `StreamClient` can always branch on it.
- * - registered - `chat_id` required; `application_id` optional, being output-only (it is deliberately not
- *   an input anywhere, so an event lacking it must still parse).
- * - chat/response - `request_id` and `text` both required; the reply is matched back to its POST by
- *   `request_id`.
- * - task/status - `status` required; accepts the Wave 14 canonical wire vocabulary
- *   `running | completed | failed | stopped | has_question` (`has_question` is the sim-only pause
- *   propagated to the widget) and REJECTS legacy `started` / `in_progress`, a deliberate breaking change
- *   pinned here so neither creeps back; optional `message` parses.
- * - tool/call - the full fixture parses and dropping `tool_call_id` is rejected; `mode` is optional and
- *   accepts only `show` | `do`.
- * - StreamClient heartbeat/registered handling - `heartbeat` parses (StreamClient ignores it silently),
- *   and `chat/error` with `request_id === 'auth'` parses as an ordinary event: treating it as the
- *   non-retriable stop-reconnecting case is StreamClient's job, so the schema must not reject it.
+ * Suites pin: every discriminant still parses from its minimal fixture; a payload with no `type` or an
+ * unrecognised `type` is rejected (no member acts as a catch-all) and every parsed fixture carries a non-empty
+ * string `type` so `StreamClient` can always branch on it; `registered` requires `chat_id` while `application_id`
+ * is optional, being output-only (deliberately not an input anywhere); `chat/response` requires both `request_id`
+ * and `text`, matched back to its POST by `request_id`; `task/status` requires `status` and accepts the Wave 14
+ * canonical wire vocabulary `running | completed | failed | stopped | has_question` (`has_question` is the
+ * sim-only pause propagated to the widget) while REJECTING legacy `started` / `in_progress`, a deliberate breaking
+ * change pinned here so neither creeps back; `tool/call` requires `tool_call_id` and accepts `mode` only as
+ * `show` | `do`; `heartbeat` parses (StreamClient ignores it silently) and `chat/error` with `request_id ===
+ * 'auth'` parses as an ordinary event, since treating it as the non-retriable stop-reconnecting case is
+ * StreamClient's job, not the schema's.
  */
 import { describe, expect, it } from 'vitest';
 

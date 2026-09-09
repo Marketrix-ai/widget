@@ -1,26 +1,22 @@
 /**
- * The messenger panel's chat view: the scrolling transcript, the composer, and the screen-access dialog
- * that gates Show/Do.
+ * The messenger panel's chat view: the scrolling transcript, the composer, and the screen-access
+ * dialog that gates Show/Do.
  *
  * `ChatViewProps` are the shell's three wires — a screen-sharing flag lifted to the header, a ref the
- * shell's toolbar button fills with a share toggle, and the composer textarea ref. `MODES` is the mode
- * chips' display order paired with the tenant setting that enables each, so the composer offers only what
- * the workspace turned on. `ChatView` renders the view and owns the draft text; `handleSendMessage` posts
- * the turn and `handleModeChange` announces a mode switch in the transcript before flipping the store.
+ * shell's toolbar button fills with a share toggle, and the composer textarea ref. `MODES` pairs the
+ * mode chips' display order with the tenant setting enabling each, so the composer offers only what
+ * the workspace turned on. `ChatView` owns the draft text; `handleSendMessage` posts the turn and
+ * `handleModeChange` announces a mode switch in the transcript before flipping state.
  *
- * - The composer is locked both while a reply is outstanding and while a screen-access request is open —
- *   a second turn queued behind an unanswered permission card has nowhere to land.
- * - `use_screenshare` absent means enabled; only an explicit `false` skips the ask. Show and Do request
- *   screen access first unless a share is already live, and `useScreenShare` flushes the held turn on
- *   every outcome (allowed, denied, cancelled picker).
- * - This view writes the user's bubble itself, so every dispatch from here is `skipUserMessage` — both the
- *   direct call and the deferred flush inside `useScreenShare`.
- * - Stop tears down `showModeService` before `stopTask`: an in-flight highlight owns listeners, a watchdog
- *   and injected nodes that outlive the task otherwise.
- * - `WidgetDialog` gets an explicit `finalFocusRef` because Base UI's focus restore resolves to the host
- *   page inside a closed shadow root (see the repo CLAUDE.md gotcha), which would hand focus away on close.
- * - The transcript sits under its own `ErrorBoundary` so one unrenderable message cannot take the composer
- *   down with it.
+ * The composer is locked both while a reply is outstanding and while a screen-access request is open,
+ * since a second turn queued behind an unanswered permission card has nowhere to land. `use_screenshare`
+ * absent means enabled; only an explicit `false` skips the ask — Show and Do request screen access first
+ * unless a share is already live, and `useScreenShare` flushes the held turn on every outcome. This view
+ * writes the user's bubble itself, so every dispatch from here is `skipUserMessage`. Stop tears down
+ * `showModeService` before `stopTask`, since an in-flight highlight owns listeners, a watchdog and
+ * injected nodes that outlive the task otherwise. `WidgetDialog` gets an explicit `finalFocusRef`
+ * since Base UI's focus restore resolves to the host page inside a closed shadow root otherwise. The
+ * transcript sits under its own `ErrorBoundary` so one unrenderable message can't take the composer down.
  */
 import React, { useRef, useState } from 'react';
 

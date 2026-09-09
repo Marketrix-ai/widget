@@ -1,51 +1,22 @@
 /**
- * Pure state machine behind `ChatContext`: folds SSE `WidgetEvent`s and local transitions into
- * `{messages, task}` and returns the tool executions the caller must run. No I/O, no React.
+ * Pure state machine behind `ChatContext`: folds SSE `WidgetEvent`s and local transitions into `{messages,
+ * task}` (`SseState`; `TaskPhase`/`TaskState` carry the mode the run was dispatched in) and returns the tool
+ * runs the caller must perform (`SseEffect`, `ReduceResult`). No I/O, no React.
  *
- * Types: `TaskPhase`/`TaskState` (the run's phase plus the mode it was dispatched in), `SseState`,
- * `SseEffect` (the one effect — execute a browser tool), `ReduceResult`.
+ * `reduceToolProgress` writes a tool's progress line and sets the bubble's spinner, judging by the mode the
+ * run STARTED in, not what the composer shows now; `FINISH_TOOL` gets no line, only ending the run, though a
+ * failed finish is still stamped failed, and a `show`-mode DOM-mutating tool parks on "waiting-for-user".
+ * `reduceToolDone` stamps done and drops the progress parts, scaffolding for "still working" not answer.
+ * `reduceStop` stamps stopped and a stopped task STAYS stopped, so late `tool/call`s are ignored until
+ * `reduceDispatch` appends the next placeholder and returns to `idle`, reopening the task for the next turn.
  *
- * Contents:
- * - `noChange` — the identity result, for an event that carries no state.
- * - `applyProgress` — writes one tool's progress line into the message `findMessageForProgress` picks,
- *   then sets that bubble's spinner. `FINISH_TOOL` carries no progress line of its own — it only ends
- *   the run — so nothing is added or completed for it, though a *failed* finish is still stamped
- *   failed. In `show` mode a DOM-mutating tool (`isWaitForUserTool`) parks the spinner on
- *   "waiting-for-user" until the visitor acts; every other running show/do step reads "thinking".
- * - `runningMode` — an active run judges progress by the mode it started in, not by whatever the
- *   composer shows now.
- * - `ProgressStatus` / `reduceToolProgress` — in_progress / completed / failed for a single tool, from the
- *   executor.
- * - `settled` — clears `isPlaceholder`. The composer is disabled while any message is still a
- *   placeholder, so a bubble nothing will write to again has to stop being one — `has_question` most
- *   of all, where the agent asks for an answer the visitor could not then type.
- * - `ended` — a task the visitor stopped stays `stopped`, so late `tool/call`s are ignored until
- *   `reduceDispatch` opens the next turn; every other ending lands on `idle`.
- * - `stampProgressMessage` — the four terminal/pause transitions all stamp the progress message and
- *   clear the task; only the stamp differs.
- * - `reduceToolDone` — the `done` tool ran: stamps `done` and drops the progress parts. finish is the
- *   transient-trajectory boundary — the trail was scaffolding for "still working", not part of the
- *   answer, so it leaves the bubble the moment the run actually finishes.
- * - `reduceStop` — visitor stop; `reduceDispatch` — appends the next placeholder and drops the task back to
- *   `idle`, which is what lets the following turn's `tool/call` activate it again.
- * - `TASK_STATUS` / `isTerminalTaskStatus` — wire status → presentational `taskStatus`. The terminal
- *   set is read off the map that stamps it (`has_question` is a pause, and `running` stamps nothing),
- *   so a fourth terminal status added to `TASK_STATUS` reaches every caller at once.
- * - `reduceText` — `chat/delta` fragments accumulate into the open streaming part; the final
- *   `chat/response` replaces it.
- * - `appendText` / `errorBubble` — append a plain text part; settle a message as a failed bubble.
- * - `reduceError` — settles one pending message into that error bubble: the one shape for both a failed
- *   POST and a `chat/error`.
- * - `reduceTransportFailure` — the transport gave up, so no id-bearing event is coming for anything
- *   still pending; every placeholder becomes an error bubble.
- * - `reduceStaleReply` — the stream can stay healthy (no `StreamGaveUpError`) while a single dispatch's
- *   reply never arrives: a dropped correlation, a silent backend failure before it ever acknowledges
- *   the request, or a reload into the gap where the api has no tab to push to. `reduceTransportFailure`
- *   cannot see that, since nothing told the transport it failed, so without this the bubble sits on
- *   "thinking" and the composer stays disabled forever. A `waiting-for-user` pause is not stale.
- * - `reduceSse` — the event switch. `tool/call` also activates the task, because it can arrive before
- *   `task/status running`; `running` itself activates nothing (the first `tool/call` is what starts the
- *   run, and a tell-mode reply never has a task); `registered`/`heartbeat` carry no state.
+ * Terminal transitions clear `isPlaceholder` — the composer is disabled while any message is one, and
+ * `has_question` would otherwise ask for an answer the visitor could not type. `isTerminalTaskStatus` reads
+ * the very map that stamps the status, so a fourth reaches every caller at once. `reduceError` settles one
+ * pending message as a failed bubble, `reduceTransportFailure` does it to every placeholder since after a
+ * give-up no id-bearing event is coming, and `reduceStaleReply` covers a HEALTHY stream whose one reply
+ * never arrives and nothing else can see (a `waiting-for-user` pause is not stale). `reduceSse` switches:
+ * `chat/delta` accumulates, `chat/response` replaces, `tool/call` ACTIVATES the task before `task/status`.
  */
 import type { WidgetEvent } from '../sdk';
 import { browserToolService, FINISH_TOOL } from '../services/BrowserToolService';

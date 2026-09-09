@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# Cuts a widget release: bumps package.json to <version> without tagging, refreshes package-lock.json,
+# builds, commits both manifests and creates the annotated `v<version>` tag. It deliberately does NOT
+# push — pushing the tag is what fires image.yml and publish.yml, so that stays a separate step.
+
 set -euo pipefail
 
 VERSION="${1:?Usage: release.sh <version> (e.g. 1.0.45)}"

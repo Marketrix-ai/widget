@@ -1,3 +1,6 @@
+# Builds and pushes the runtime image on a `v*` tag, delegating the build itself to ACR Tasks
+# (`acr-build.yaml`) rather than the runner. The image tag is the BARE semver — the leading `v` is
+# stripped — which is what infra's Helm values pin. The Trivy scan reports and never blocks.
 name: Image
 on:
   push:

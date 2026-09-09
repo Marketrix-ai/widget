@@ -1,36 +1,21 @@
 /**
- * Singleton SSE transport between the widget and the api: one `widgetStream` iterator drained in the
- * background, with `widgetMessagePost` as the write path back. `StreamStatus` spans
- * `disconnected → connecting → open → registered`, plus `error` from any failed dial or stream.
+ * Singleton SSE transport between the widget and the api: `StreamClient.getInstance` drains one `widgetStream`
+ * iterator in the background, `send` posts via `widgetMessagePost`. `StreamStatus` spans
+ * `disconnected → connecting → open → registered`, plus `error` from a failed dial or stream; `ready` connects then
+ * waits, `waitUntilRegistered` parks a caller, `canReconnect`/`reconnectNow` back the Retry affordance, and
+ * `disconnect` tears down and rejects parked callers. `StreamGaveUpError` marks a stream that has stopped retrying.
  *
- * `open` is the transport, `registered` is the chat: only the latter can carry a reply, which is why
- * `isConnected` reads `registered` and nothing waits on `open`. Backoff counters therefore reset only on
- * `registered` — resetting them at `open` would defeat the max-attempts cap if registration never lands and
- * the stream flaps open→closed. Tabs share the localStorage chat id, so the server keys SSE by
- * (chat_id, tab_id) and `tabId` stops tabs from evicting each other's stream. Credentials are read at
- * connect time rather than captured at init, so a reconnect after `updateMarketrixConfig` dials with the
- * current ones.
+ * `open` is the transport, `registered` is the chat: only the latter can carry a reply, so `isConnected` reads
+ * `registered` and nothing waits on `open`. Backoff counters reset only on `registered` — resetting at `open` would
+ * defeat the max-attempts cap if registration never lands and the stream flaps open→closed. Tabs share the
+ * localStorage chat id, so the server keys SSE by (chat_id, tab_id) and `tabId` stops tabs evicting each other's
+ * stream. Credentials are read at connect time, not captured at init, so a reconnect after `updateMarketrixConfig`
+ * dials with the current ones.
  *
- * A `chat/error` whose `request_id === 'auth'` is non-retriable. It is still forwarded to the reducer, but
- * there `chat/error` settles the message whose id is the request id and no message is ever id 'auth', so
- * the branch matched nothing and the widget went permanently silent — no toast, no bubble, and (console
- * being dropped by terser) no trace; hence the explicit `giveUp` here. Both give-up messages are read by a
- * visitor on a customer's page, so they name the state and the way out rather than the counter.
- *
- * Contents. `StreamGaveUpError` — the stream has stopped retrying, so nothing further will arrive for
- * anything still in flight. `StreamClientCallbacks` — a subscriber's `onMessage`/`onError` pair.
- * `StreamClient`: `getInstance` returns the process-wide instance; `addCallbacks`/`removeCallbacks`
- * (un)subscribe; `isConnected` reports registration; `reconnectSuppressed` covers teardown and refused
- * credentials, the two states no retry may escape; `canReconnect` gates the Retry affordance and
- * `reconnectNow` clears the backoff and redials; `ready` connects then waits; `waitUntilRegistered` parks a
- * caller until the chat is usable; `connect` dials a chat id, deduping an in-flight or live stream for the
- * same one; `consumeEvents` drains the iterator, ignoring a superseded connection's events and scheduling a
- * reconnect when the live one ends; `disconnect` tears down and rejects parked callers; `send` POSTs a
- * command; `notifyError` fans an error out to subscribers; `settleWaiters` drains the parked callers,
- * rejecting with the given error or resolving when none; `giveUp` reports a terminal failure to subscribers
- * and waiters alike; `handleMessage` runs the status machine over each event before forwarding it;
- * `scheduleReconnect` runs the capped exponential backoff; `abortConnection` and `clearReconnectTimer` are
- * the teardown pair.
+ * A `chat/error` whose `request_id === 'auth'` is non-retriable: `chat/error` otherwise settles the message whose
+ * id is the request id, and no message is ever id `'auth'`, so without the explicit `giveUp` here the widget went
+ * permanently silent — no toast, no bubble, and (console dropped by terser) no trace. Both give-up messages are
+ * read by a visitor on a customer's page, so they name the state and the way out rather than the counter.
  */
 import { sdk, type WidgetCommand, type WidgetEvent } from '../sdk';
 import { storageService } from './StorageService';

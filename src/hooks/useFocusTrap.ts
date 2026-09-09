@@ -2,27 +2,21 @@
  * Focus trap for the messenger panel: while `isActive`, focus starts inside `containerRef`, Tab cycles
  * within it, Escape calls `onEscape`, and on deactivation focus returns to whatever held it before.
  *
- * Contents: `FOCUSABLE_SELECTOR`, the tabbable-candidate query; `activeElementIn`, the focused element as
- * seen from a container's own root; `getFocusables`, a container's visible tabbable elements; and
- * `useFocusTrap(containerRef, isActive, {onEscape, focusTargetRef})` — it focuses `focusTargetRef` (else
- * the first focusable), installs one capture-phase `keydown` listener on `document`, and restores focus on
+ * `FOCUSABLE_SELECTOR` is the tabbable-candidate query; `activeElementIn` reads the focused element as
+ * seen from a container's own root; `getFocusables` lists a container's visible tabbable elements; and
+ * `useFocusTrap(containerRef, isActive, {onEscape, focusTargetRef})` focuses `focusTargetRef` (else the
+ * first focusable), installs one capture-phase `keydown` listener on `document`, and restores focus on
  * the active→inactive edge.
  *
- * Inside the widget's closed shadow root `document.activeElement` retargets to the HOST, so it never names
- * an element of the widget's own tree; `activeElementIn` reads through `container.getRootNode()` instead
- * and is the ONE home for that retargeting — eslint's `no-restricted-properties` bans the bare
- * `document.activeElement` read everywhere else.
- *
- * Hand-rolled on purpose: `MessengerShell` is a NON-modal panel, not a Dialog, and Base UI exposes no
- * standalone focus trap — reaching its trap by making the panel a Dialog would inert the customer's page.
- *
- * Both key arms bail unless focus is currently inside the container: the listener sits on `document` in the
- * capture phase, ahead of host-page handlers, so an unguarded Escape would close the widget while the
- * visitor types on the host page. Tab `preventDefault`s only at the two ends — the native tab order covers
- * the middle — and a focused element absent from the list is left alone rather than snapped back.
- * `previousActiveRef` edge-triggers the restore so it fires once on close, not on every inactive render;
- * every focus call passes `preventScroll` so trapping never scrolls the host page. `getFocusables` also
- * drops hidden (`offsetParent === null`) and `aria-hidden` elements, which the selector cannot express.
+ * Inside the widget's closed shadow root `document.activeElement` retargets to the HOST, never naming
+ * an element of the widget's own tree; `activeElementIn` reads through `container.getRootNode()`
+ * instead and is the ONE home for that retargeting — eslint's `no-restricted-properties` bans the bare
+ * read everywhere else. Hand-rolled on purpose: `MessengerShell` is a NON-modal panel, not a Dialog,
+ * and Base UI exposes no standalone focus trap; reaching it by making the panel a Dialog would inert
+ * the customer's page. Both key arms bail unless focus is currently inside the container, since the
+ * listener sits on `document` ahead of host-page handlers and an unguarded Escape would close the
+ * widget mid-typing. Tab `preventDefault`s only at the two ends; `previousActiveRef` edge-triggers the
+ * restore once on close, and `getFocusables` drops hidden/`aria-hidden` elements the selector can't express.
  */
 
 import { useEffect, useRef } from 'react';

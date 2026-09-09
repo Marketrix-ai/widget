@@ -1,33 +1,22 @@
 /**
- * Pure helpers for the chat message list: mode labels and timestamps, locating the message a
- * streaming progress event belongs to, settling a message's progress lines, and the shared
- * `ChatMessage` constructors.
+ * Pure helpers for the chat message list. `getModeDisplayName` labels an `InstructionType`; `formatMessageTime`
+ * formats hh:mm, defaulting to now for an undated message; `lastIndexWhere` is a newest-first index search (also
+ * used by `useScreenShare`); `findMessageForProgress` picks the agent reply a `tool/call` or progress event should
+ * render into. `addProgressLine` / `markProgressLineComplete` / `markProgressLineFailed` append or settle the open
+ * progress part for one `browserToolName`, via `openLineFor` and the shared `patchPart` copy-on-write.
+ * `createMessage` and the `createUserMessage` / `createAgentMessage` / `createSystemMessage` /
+ * `createScreenAccessRequestMessage` / `createScreenshareMessage` constructors build a `ChatMessage` (id
+ * `<prefix>-<Date.now()>`; empty content yields no `text` part, since the screenshare bubble renders from
+ * `videoStream` alone).
  *
- * Contents:
- * - `getModeDisplayName` — the user-facing label for an `InstructionType`.
- * - `formatMessageTime` — hh:mm in the visitor's locale, defaulting to now for an undated message.
- * - `lastIndexWhere` — newest-first index search, also used by `useScreenShare`.
- * - `findMessageForProgress` / `FindMessageOptions` — picks the agent reply a `tool/call` or progress
- *   event should render into.
- * - `addProgressLine`, `markProgressLineComplete`, `markProgressLineFailed` — append or settle the open
- *   progress part for one `browserToolName`; `openLineFor` finds it and `patchPart` is the shared
- *   copy-on-write.
- * - `createMessage` and the `createUserMessage` / `createAgentMessage` / `createSystemMessage` /
- *   `createScreenAccessRequestMessage` / `createScreenshareMessage` constructors — id is
- *   `<prefix>-<Date.now()>`, and empty content yields no `text` part (the screenshare bubble renders
- *   from `videoStream` alone).
- *
- * `findMessageForProgress` is ranked predicates: the first rank matching anything wins, and within a
- * rank the newest message. Every rank is bounded to messages after the last agent message carrying a
- * `taskStatus`, because a terminal stamp means that run already ended — unbounded, a duplicate or
- * late-arriving event with nothing left to claim reaches back past the stamp onto an already-settled
- * reply, and a late `completed` then overwrites a `stopped` icon. Placeholders whose `mode` is still
- * undefined match leniently, and a mode-agnostic rank is always appended, because a `tool/call` can
- * arrive before the mode is set and before `isTaskRunning` flips true. No match is a legitimate
- * outcome: it is warned, not thrown.
- *
- * `filterCancellationText` strips "cancelled by cleanup" from both progress content and error text —
- * expected internal chatter from a torn-down run that a visitor should never see.
+ * `findMessageForProgress` is ranked predicates: the first rank matching anything wins, and within a rank the
+ * newest message. Every rank is bounded to messages after the last agent message carrying a `taskStatus`, since a
+ * terminal stamp means that run already ended — unbounded, a late-arriving event reaches back past the stamp onto
+ * an already-settled reply, and a late `completed` overwrites a `stopped` icon. Placeholders with `mode` still
+ * undefined match leniently, and a mode-agnostic rank is always appended, since a `tool/call` can arrive before
+ * the mode is set. No match is a legitimate outcome, warned not thrown. `filterCancellationText` strips "cancelled
+ * by cleanup" from progress content and error text — expected chatter from a torn-down run a visitor should never
+ * see.
  */
 import type { ChatMessage, InstructionType, MessagePart } from '../types';
 

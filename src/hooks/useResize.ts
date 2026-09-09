@@ -2,27 +2,21 @@
  * Drag-to-resize for the messenger panel: the size it opens at, the bounds it is held to, and the one
  * grip that drives it.
  *
- * `useResize` returns `widthPx`/`heightPx` for the panel, the `grip` its handle renders from,
- * `onResizeStart` for that handle's mousedown, and `containerRef` for the element being sized. The
- * opening size is this tenant's stored one if there is one, else the dashboard's
- * `widget_width`/`widget_height` — both through `clampSize`, so a setting outside the drag range lands
- * on the same bounds a drag has. `parsePx` accepts a bare px length only: a `rem`/`em`/`%` setting
- * cannot be resolved without layout, so it falls back to the default rather than guessing.
- * `readStoredSize` parses the tenant-scoped `marketrix_widget_size_<scope>` entry and warns-then-defaults
- * on anything unparseable or non-numeric — a host page's corrupted localStorage must not leave the panel
- * unsizable. `clampSize` bounds width to MIN_WIDTH..MAX_WIDTH and height to MIN_HEIGHT..85% of the
- * viewport, measured at call time so a resized window re-clamps on the next drag.
+ * `useResize` returns `widthPx`/`heightPx`, the `grip` its handle renders from, `onResizeStart` for
+ * that handle's mousedown, and `containerRef` for the element being sized. The opening size is this
+ * tenant's stored one if there is one, else the dashboard's `widget_width`/`widget_height` — both
+ * through `clampSize`, so a setting outside the drag range lands on the same bounds a drag has.
+ * `parsePx` accepts a bare px length only, since `rem`/`em`/`%` can't be resolved without layout, and
+ * `readStoredSize` parses the tenant-scoped `marketrix_widget_size_<scope>` entry, warning-then-defaulting
+ * on anything unparseable since corrupted host-page localStorage must not leave the panel unsizable.
+ * `clampSize` bounds width to MIN_WIDTH..MAX_WIDTH, height to MIN_HEIGHT..85% of the viewport, measured
+ * at call time so a resize re-clamps on the next drag.
  *
  * The grip is on the corner diagonally opposite the pinned one (`getResizeGrip`); `growX`/`growY` turn
  * pointer delta into size delta for whichever corner that is. During a drag the new size is written
- * straight to the element's inline style and held in `dimsRef` — React state is committed once, on
- * mouseup, so pointer motion never re-renders the tree. `data-resizing` on the container is what
- * `index.css` keys the blanket CSS transition off, without which the panel eases behind the pointer.
- * Move/up listeners and the cursor / `user-select` overrides sit on `document`/`body` because the
- * pointer leaves the grip immediately.
- *
- * Preview mode has no grip at all — `onResizeStart` returns before anything is bound — so the dashboard
- * preview can never write a visitor-scoped size, the same rule `marketrix_widget_position_<tenant>` follows.
+ * straight to the element's inline style and held in `dimsRef` — React state commits once, on mouseup,
+ * so pointer motion never re-renders the tree. `data-resizing` keys `index.css`'s CSS transition off.
+ * Preview mode has no grip — `onResizeStart` returns before binding, so it never writes a visitor size.
  */
 import { useCallback, useMemo, useRef, useState } from 'react';
 

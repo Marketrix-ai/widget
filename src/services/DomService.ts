@@ -1,36 +1,20 @@
 /**
- * The numbered address space the agent drives the host page by: an index of its interactive elements, the document
- * snapshot that publishes those numbers, and the resolution of a number back to a live, actionable element.
+ * The numbered address space the agent drives the host page by: `reindexAndSnapshot` walks the live document and
+ * returns a clone stamped with `data-id="<n>"` on every interactive element; `getSequenceForElement` is the reverse
+ * lookup; `getValidatedElement` resolves an index back to a live element or a `ValidatedElementResult` error;
+ * `notInteractableReason` phrases why an element cannot be acted on; `generateAnchoredSelector` and `indexElements`
+ * build the walk and its body-anchored selectors. `domService` is the process-wide singleton.
  *
- * Contents. `reindexAndSnapshot` rewalks the live document and returns a clone of it with `data-id="<n>"` stamped on
- * every indexed element. `getSequenceForElement` is the reverse lookup, element → index. `notInteractableReason`
- * phrases why an element cannot be acted on right now, or null. `getValidatedElement` resolves an index to a live
- * element or to the `ValidatedElementResult` error saying why it cannot — unknown index, stale entry, or not
- * interactable. `generateAnchoredSelector` builds the body-anchored `>` path each entry is relocated by inside the
- * snapshot clone, short-circuiting the moment it reaches a document-unique `#id`. `indexElements` is the walk itself.
- * `domService` is the process-wide singleton; the class is exported for tests.
+ * `data-id` is the whole contract with the agent, so the clone is tagged by re-querying each stored selector rather
+ * than walking the two trees in step — a synced walk breaks on modals and fixed elements. Indices are addresses the
+ * agent holds across turns: each entry snapshots IDENTITY_ATTRIBUTES so a changed element reads as DOM_CHANGED
+ * rather than silently acting on a control the agent no longer means.
  *
- * `data-id` is the whole contract with the agent: it parses the snapshot for `[data-id]` and reads nothing else off
- * it. The clone is tagged by re-querying each stored selector rather than walking the two trees in step — a synced
- * two-tree walk breaks on modals and fixed elements. A host tag name that is not a valid selector token makes
- * `querySelector` throw; that one element goes untagged and the rest of the snapshot still ships.
- *
- * Indices are addresses the agent holds across turns, so an index must not survive the element changing underneath
- * it: the node object stays the same across a re-render while its attributes are rewritten. Each entry therefore
- * snapshots IDENTITY_ATTRIBUTES, and a mismatch reads as DOM_CHANGED rather than silently acting on a control that
- * is no longer the one the agent chose.
- *
- * The tree walker rejects a `display:none` subtree outright, but keeps an element with a null `offsetParent` when it
- * or an ancestor is `position: fixed|sticky` — the browser reports no offsetParent for those even when they are
- * plainly visible, so the cheap offsetParent test alone would drop every sticky header and modal. Membership is the
- * union of a semantic match, the `cursor-pointer`/`clickable` affordance classes, an `onclick` property and
- * `isIndexable` (the strict geometry/clipping test), because host pages express clickability all four ways.
- *
- * The error strings are read by the agent loop, not by a human: the `DOM_CHANGED` / `ELEMENT_NOT_INTERACTABLE` /
- * `ELEMENT_OBSCURED` prefixes and the "call get_html" instruction are what steer its next move. The obscured test
- * ignores Marketrix's own chrome — the Show-mode highlight and popup and the widget's shadow host sit over the very
- * element they point at. `notInteractableReason`'s first test must stay the `document.body.contains` check:
- * ShowModeService leans on it as its removal watchdog and carries no identity snapshot of its own to detect that.
+ * The tree walker keeps an element with a null `offsetParent` when it or an ancestor is fixed/sticky, since the
+ * browser reports no offsetParent for those even when visible. The obscured test ignores Marketrix's own chrome
+ * (Show-mode highlight/popup, the widget's shadow host) since those legitimately sit over the element they point
+ * at. `notInteractableReason`'s `document.body.contains` check must stay first: ShowModeService uses it as its
+ * removal watchdog and keeps no identity snapshot of its own.
  */
 
 import { disabledReason, isIndexable, WIDGET_SHADOW_HOST_CLASS } from '../utils/dom';

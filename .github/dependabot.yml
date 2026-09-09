@@ -1,3 +1,6 @@
+# Weekly dependency updates against `main` for npm, docker and github-actions. npm minor and patch bumps
+# are grouped into one pull request, capped at five open at a time, so a lockfile change arrives as a
+# single reviewable diff rather than a flood.
 version: 2
 updates:
   - package-ecosystem: 'npm'

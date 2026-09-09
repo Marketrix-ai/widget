@@ -1,43 +1,22 @@
 /**
- * Unit tests for `../sseReducer` — the pure widget chat state machine that folds SSE `WidgetEvent`s and local
- * actions into `{messages, task}` plus the effects the caller performs.
+ * Unit tests for `../sseReducer`, the pure chat state machine folding SSE `WidgetEvent`s and local actions
+ * into `{messages, task}` plus the effects the caller performs. Fixtures: `agentMessage` (a thinking
+ * placeholder), `runningState`/`idleState` around it, `toolCall` (`click_element` on index 1 by default).
  *
- * Fixtures: `agentMessage` builds a thinking agent placeholder bubble; `runningState` wraps one in a running
- * task and `idleState` is that same bubble already settled beside an idle task; `toolCall` builds a `tool/call`
- * event, defaulting to `click_element` on index 1.
+ * `task/status running` is inert because the first `tool/call` activates the task — the api mints no task
+ * id, so the widget holds none. The three terminal statuses end the task and stamp done/failed/stopped,
+ * rendering the closing message as an appended text part, not `content` alone; `has_question` is a PAUSE,
+ * flipping the spinner to `waiting-for-user` with `taskStatus` undefined so no terminal icon shows. All four
+ * settle `isPlaceholder`, since they also end the task and would leave nothing able to re-enable the
+ * composer. `reduceTransportFailure` settles every pending bubble, leaving a settled one untouched; the
+ * `reduceStaleReply` watchdog settles one gone silent or stranded by a reload, never a `waiting-for-user`
+ * pause, a settled message or an unknown id, and stamps failed so a late `completed` cannot re-target it.
  *
- * Contents — what each suite pins down:
- * - `reduceSse — task/status`: `running` is inert, because the first `tool/call` is what activates the task
- *   (the api mints no task id, so the widget holds none); `completed`/`failed`/`stopped` end the task and stamp
- *   `taskStatus` done/failed/stopped; a terminal status renders its closing message as an appended text part
- *   beside the trajectory, not as `content` alone; `has_question` is a PAUSE, not a terminal — the spinner
- *   flips to `waiting-for-user` and the task goes idle, but `taskStatus` stays undefined so no terminal icon
- *   shows. All four settle `isPlaceholder`: the composer is disabled while a placeholder stands, and since all
- *   four also end the task, a placeholder left pending leaves no control able to release it.
- * - `reduceTransportFailure`: settles every still-pending bubble into an error and ends the task, leaving an
- *   already-settled bubble referentially untouched.
- * - `reduceStaleReply` (the watchdog): settles a placeholder gone silent for the deadline whether or not a task
- *   is still running, and releases one stranded by a reload; never touches a run paused on the visitor
- *   (`waiting-for-user`), an already-settled message, or an unknown id. It stamps `taskStatus: 'failed'` so a
- *   late `completed` cannot re-target the bubble it just closed.
- * - `reduceSse — tool/call`: emits the `executeTool` effect with the call details, auto-activates an idle task,
- *   appends an `in_progress` progress line, and takes the mode off the event. A DOM read reads as "Reading the
- *   page" and must never mention the screen — only screen sharing views the visitor's screen.
- * - `reduceSse — chat/response` and `chat/delta`: a response resolves the placeholder matched by `request_id`;
- *   deltas accumulate into one streaming text part, and the final response REPLACES that part rather than
- *   appending, so the answer is not duplicated.
- * - `reduceSse — chat/error`: writes the error text into the matching placeholder and settles it.
- * - `reduceSse — ignored events`: `registered` and `heartbeat` return the same state object and no effects.
- * - `reduceToolProgress / reduceToolDone / reduceStop`: progress lines close by the tool that finished, not the
- *   newest open one, and a failure surfaces its error text; `reduceToolDone` ends the task and marks the active
- *   bubble done, and a duplicate completion must not fall back past that stamp onto an older settled reply;
- *   `reduceStop` stamps stopped and parks the task in `stopped`; `FINISH_TOOL` carries no progress line and
- *   clears whatever trajectory preceded it.
- * - Stop semantics: a stop is the visitor withdrawing their page, so a `tool/call` that raced it executes
- *   nothing and the run reporting itself `completed` does not lift the refusal — only the visitor's next
- *   `reduceDispatch` does.
- * - Message text: `content` is every text part joined, not merely the last one written, and excludes progress
- *   lines because a progress line is not the answer.
+ * `tool/call` emits the effect, auto-activates an idle task, appends an in-progress line and takes the mode
+ * off the event, announcing a DOM read as "Reading the page" — only screen sharing views the visitor's
+ * screen. Deltas accumulate into one streaming part the final response REPLACES. Progress lines close by the
+ * tool that finished, not the newest open one, and `FINISH_TOOL` carries none. A stop is the visitor
+ * withdrawing their page, so only their next dispatch lifts it; `content` joins text parts, never progress.
  */
 import { describe, expect, it } from 'vitest';
 

@@ -3,20 +3,15 @@
  * `error` and `greeting` props into Base UI toasts — mounted inside a real `NotificationProvider`.
  *
  * Base UI keeps the VISIBLE toast `aria-hidden` and announces through a separate `role="alert"` live
- * region, so every text assertion here sees TWO copies and every role query passes `hidden: true`. The old
- * hand-rolled toast had no live region at all, so nothing was ever announced — that is what these tests
- * guard. Inside the hidden subtree an accessible name computes to `""`, so the close control cannot be
- * found by role or name and is queried by its `aria-label` attribute instead.
- *
- * Contents:
- * - `noop` — placeholder for the callbacks a given case does not assert on.
- * - 'announces an error and dismisses it' — the error text reaches both the toast and the live region, and
- *   clicking the close control calls `onClearError` exactly once.
- * - 'offers Retry only when a retry is possible' — no Retry button without an `onRetry` prop; supplying one
- *   on re-render adds it, and clicking it fires the callback once.
- * - 'keeps the error toast up across a re-render that passes new callback references' — the toast uses a
- *   stable id, so fresh inline `onClearError` identities each render must not close or restack it.
- * - 'shows the greeting with its body' — `greeting` and `greetingBody` both render.
+ * region, so every text assertion here sees TWO copies and every role query passes `hidden: true`. The
+ * old hand-rolled toast had no live region at all, so nothing was ever announced — that is what these
+ * tests guard. Inside the hidden subtree an accessible name computes to `""`, so the close control
+ * cannot be found by role or name and is queried by its `aria-label` attribute instead. `noop` is the
+ * placeholder for callbacks a given case does not assert on. The cases cover: an error reaching both the
+ * toast and the live region with its close control calling `onClearError` once; Retry appearing only
+ * once `onRetry` is supplied, and firing once when clicked; the error toast's stable id surviving a
+ * re-render with fresh inline callback identities without closing or restacking; and the greeting
+ * rendering with its body.
  */
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 

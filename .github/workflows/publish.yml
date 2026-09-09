@@ -1,3 +1,6 @@
+# Publishes the package to npm on a `v*` tag, independently of the image build. The publish step is
+# idempotent by design: an `npm view` hit exits 0, so a green run does NOT prove a publish happened —
+# check `npm view @marketrix.ai/widget version` before pinning `app`'s lockfile to a version.
 name: Publish
 on:
   push:
