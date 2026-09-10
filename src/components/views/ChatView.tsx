@@ -108,7 +108,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ onScreenSharingChange, toggl
         />
       )}
 
-      <Surface grow overflow='hidden' paddingY='2xs' style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+      <Stack grow overflow='hidden' paddingY='2xs' minHeight='0'>
         <ErrorBoundary
           label='Chat'
           fallback={
@@ -123,16 +123,9 @@ export const ChatView: React.FC<ChatViewProps> = ({ onScreenSharingChange, toggl
             onScreenAccessDeny={handleScreenAccessRequestDeny}
           />
         </ErrorBoundary>
-      </Surface>
+      </Stack>
 
-      <Surface
-        background='card'
-        border
-        elevation='card'
-        paddingPreset='card'
-        rounded='xl'
-        style={{ margin: '0 12px 12px 12px', marginTop: 'auto' }}
-      >
+      <Surface variant='floatingCard' style={{ marginTop: 'auto' }}>
         <ChatInput
           ref={messageInputRef}
           value={inputValue}

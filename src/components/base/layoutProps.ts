@@ -86,6 +86,7 @@ export interface LayoutProps {
   width?: 'full' | 'auto';
   height?: 'full' | 'auto';
   minWidth?: '0';
+  minHeight?: '0';
 
   border?: boolean | keyof typeof BORDER_SIDE;
   rounded?: boolean | RadiusToken;
@@ -115,6 +116,7 @@ const LAYOUT_KEYS = new Set<keyof LayoutProps>([
   'width',
   'height',
   'minWidth',
+  'minHeight',
   'border',
   'rounded',
   'animate',
@@ -152,6 +154,7 @@ export function resolveLayoutStyle(props: LayoutProps): CSSProperties {
   if (props.width !== undefined) style.width = props.width === 'full' ? '100%' : 'auto';
   if (props.height !== undefined) style.height = props.height === 'full' ? '100%' : 'auto';
   if (props.minWidth === '0') style.minWidth = 0;
+  if (props.minHeight === '0') style.minHeight = 0;
 
   if (props.border !== undefined && props.border !== false) {
     style.borderColor = 'var(--border)';

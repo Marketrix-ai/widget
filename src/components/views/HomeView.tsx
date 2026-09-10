@@ -81,14 +81,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigateToChat, onChipClic
       </Stack>
 
       {messages.length > 0 && (
-        <Surface
-          background='card'
-          border
-          elevation='card'
-          paddingPreset='card'
-          rounded='xl'
-          style={{ margin: '0 12px 12px 12px' }}
-        >
+        <Surface variant='floatingCard'>
           <Text as='p' size='xs' weight='semibold' style={{ marginBottom: '2px' }}>
             Recent conversation
           </Text>

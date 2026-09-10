@@ -89,6 +89,7 @@ describe('resolveLayoutStyle', () => {
     it('width: auto', () => expect(resolveLayoutStyle({ width: 'auto' })).toEqual({ width: 'auto' }));
     it('height: full', () => expect(resolveLayoutStyle({ height: 'full' })).toEqual({ height: '100%' }));
     it('minWidth: 0', () => expect(resolveLayoutStyle({ minWidth: '0' })).toEqual({ minWidth: 0 }));
+    it('minHeight: 0', () => expect(resolveLayoutStyle({ minHeight: '0' })).toEqual({ minHeight: 0 }));
   });
 
   describe('border', () => {
@@ -163,6 +164,7 @@ describe('stripLayoutProps', () => {
       width: 'full' as const,
       height: 'auto' as const,
       minWidth: '0' as const,
+      minHeight: '0' as const,
       border: true,
       rounded: 'lg' as const,
       animate: 'spin' as const,

@@ -9,12 +9,25 @@
  * `WidgetSettingsDataSchema.parse()`, which demands the whole wire shape. It is `Valid`, not partial, so
  * `renderWidget` can hand it to `WidgetRoot` without a cast — the fixture really does set every field.
  *
+ * `validSettings(overrides)` is the parsed form most call sites actually want —
+ * `WidgetSettingsDataSchema.parse(getMockWidgetConfig(overrides))` — and lives here rather than at each
+ * call site so the schema import stays confined to test-only files even where it is used repeatedly.
+ * `validation.test.ts` keeps its own inline parse: there the schema is the oracle under test, not fixture
+ * noise.
+ *
+ * `mountTarget()` names the other repeated pattern, a fresh detached `<div>` to mount or render into —
+ * every call yields an independent element, so using it more than once in one test for distinct
+ * containers is still correct.
+ *
  * `flushMicrotasks` names the common one-microtask-tick wait (`await Promise.resolve()`) explicitly, for
  * tests that need pending promise callbacks to settle before asserting.
  */
+import { WidgetSettingsDataSchema } from '../sdk';
 import type { ValidWidgetConfig, WidgetSettingsData } from '../types';
 
 export const flushMicrotasks = (): Promise<void> => Promise.resolve();
+
+export const mountTarget = (): HTMLDivElement => document.createElement('div');
 
 type MockWidgetConfig = ValidWidgetConfig &
   Pick<
@@ -54,4 +67,8 @@ export function getMockWidgetConfig(overrides: Partial<MockWidgetConfig> = {}): 
     isPreviewMode: true,
     ...overrides,
   };
+}
+
+export function validSettings(overrides: Partial<MockWidgetConfig> = {}): WidgetSettingsData {
+  return WidgetSettingsDataSchema.parse(getMockWidgetConfig(overrides));
 }
