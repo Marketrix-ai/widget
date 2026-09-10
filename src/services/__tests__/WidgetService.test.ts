@@ -5,8 +5,8 @@
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { sdk, WidgetSettingsDataSchema } from '../../sdk';
-import { getMockWidgetConfig } from '../../test/fixtures';
+import { sdk } from '../../sdk';
+import { validSettings } from '../../test/fixtures';
 import { loadWidgetConfig } from '../WidgetService';
 
 vi.mock('../../sdk', async importOriginal => {
@@ -22,7 +22,7 @@ vi.mock('../../sdk', async importOriginal => {
 });
 
 const mockSdk = vi.mocked(sdk);
-const settings = WidgetSettingsDataSchema.parse(getMockWidgetConfig());
+const settings = validSettings();
 const activeWidget = {
   id: 7,
   application_id: 42,

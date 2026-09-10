@@ -34,7 +34,6 @@ import { getCorner, getPanelPositionStyle } from '../../utils/widgetPositioning'
 import { Stack } from '../base/Flex';
 import { Icon } from '../base/Icon';
 import { IconButton } from '../base/IconButton';
-import { Surface } from '../base/Surface';
 import { HeaderBar } from '../blocks/HeaderBar';
 import { ChatView } from '../views/ChatView';
 import { HomeView } from '../views/HomeView';
@@ -132,9 +131,9 @@ export const MessengerShell: React.FC = () => {
       <Tabs.Root
         value={activeView}
         onValueChange={value => actions.setActiveView(value as WidgetView)}
-        style={{ display: 'flex', flexDirection: 'column', flex: '1 1 0%', minHeight: 0 }}
+        render={<Stack grow minHeight='0' />}
       >
-        <Surface grow overflow='hidden' style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+        <Stack grow overflow='hidden' minHeight='0'>
           <Tabs.Panel
             value='home'
             data-view-transition
@@ -155,7 +154,7 @@ export const MessengerShell: React.FC = () => {
               messageInputRef={messageInputRef}
             />
           </Tabs.Panel>
-        </Surface>
+        </Stack>
 
         <ShellTabBar />
       </Tabs.Root>
