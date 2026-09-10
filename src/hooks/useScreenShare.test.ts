@@ -5,7 +5,7 @@
  * remount; an already-resolved request is ignored so a new one can be raised.
  */
 import { act, renderHook } from '@testing-library/react';
-import { afterAll, beforeEach, describe, expect, it, vi } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 
 import * as ScreenShareService from '../services/ScreenShareService';
 import { agentMessage } from '../test/fixtures';
@@ -17,22 +17,13 @@ import { useScreenShare, type UseScreenShareOptions } from './useScreenShare';
 // (the real implementation's own suite) statically imports the same path, and every test file's
 // top-level imports resolve during one shared collection pass before any test body or `afterAll` runs,
 // so a later restore can't un-poison a binding another file already captured. `vi.spyOn` on the shared
-// `ScreenShareService` namespace object sidesteps this entirely: it patches the SAME object every
-// importer already holds, restorable per test via `vi.restoreAllMocks()`, with no module-registry
-// entry left behind for another file to inherit.
-const startScreenShare = vi.spyOn(ScreenShareService, 'startScreenShare').mockImplementation(vi.fn());
-const stopScreenShare = vi.spyOn(ScreenShareService, 'stopScreenShare').mockImplementation(vi.fn());
-const isScreenSharing = vi.spyOn(ScreenShareService, 'isScreenSharing').mockReturnValue(false);
-
-// Unlike a module mock, a spy patches the ONE shared `ScreenShareService` object every importer
-// already holds a reference to, so it stays applied process-wide until explicitly restored — this
-// file is the only one that needs the fake, so it undoes its own spies once its suite is done rather
-// than leaving `../services/__tests__/ScreenShareService.test.ts` calling these fakes too.
-afterAll(() => {
-  startScreenShare.mockRestore();
-  stopScreenShare.mockRestore();
-  isScreenSharing.mockRestore();
-});
+// `ScreenShareService` namespace object sidesteps the module-registry problem, but a spy is STILL a
+// patch on that one shared object — set up once at module scope, it would stay applied for every file
+// that runs afterward regardless of file order (which is exactly what CI's non-macOS test-file
+// discovery order exposed: a fixed `afterAll` restore only helps files that happen to run later than
+// this one). Creating and restoring the spies inside `beforeEach`/`afterEach` instead scopes the fake
+// to each individual test in THIS file, leaving no window for another file's tests to observe it.
+let startScreenShare: ReturnType<typeof vi.spyOn<typeof ScreenShareService, 'startScreenShare'>>;
 
 const REQUEST_ID = 'screen-access-request-1';
 
@@ -60,11 +51,18 @@ const setup = (messages: ChatMessage[]) => {
 };
 
 beforeEach(() => {
-  vi.clearAllMocks();
+  startScreenShare = vi
+    .spyOn(ScreenShareService, 'startScreenShare')
+    .mockResolvedValue({ id: 'stream' } as unknown as MediaStream);
+  vi.spyOn(ScreenShareService, 'stopScreenShare').mockImplementation(vi.fn());
+  vi.spyOn(ScreenShareService, 'isScreenSharing').mockReturnValue(false);
   vi.spyOn(console, 'error').mockImplementation(() => {});
-  startScreenShare.mockResolvedValue({ id: 'stream' } as unknown as MediaStream);
   let n = 0;
   vi.spyOn(Date, 'now').mockImplementation(() => ++n);
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
 });
 
 describe('useScreenShare', () => {
