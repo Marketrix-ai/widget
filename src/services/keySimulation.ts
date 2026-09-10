@@ -5,31 +5,41 @@
  * `simulateKeyAction` for the behaviour the browser withheld. An unhandled key returns null, which the
  * caller reports as a plain dispatch, and every handled key returns the sentence the agent reads.
  *
- * `isTextField` is the input-or-textarea guard the cases share, also used by `BrowserToolService.typeText`.
- * `setNativeValue` writes through the PROTOTYPE `value` setter rather than assigning the property, since
- * React and Vue install their own instance-level setter and an assignment through it is invisible to their
- * change tracking; `setValueAndCaret` adds the `input` and `change` a controlled input needs to observe the
- * edit, then restores the caret, which assigning `value` collapses to the end.
+ * `isTextField` is the input-or-textarea guard the cases share, also used by `BrowserToolService.typeText`;
+ * `isButtonish` is the button-or-`role="button"` guard Enter and Space share. `setNativeValue` writes
+ * through the PROTOTYPE `value` setter rather than assigning the property, since React and Vue install
+ * their own instance-level setter and an assignment through it is invisible to their change tracking;
+ * `setValueAndCaret` adds the `input` and `change` a controlled input needs to observe the edit, then
+ * restores the caret, which assigning `value` collapses to the end.
  *
- * Tab order comes from a document-wide `TABBABLE_SELECTOR` query filtered on `offsetParent`, so an element
- * not in the order at all reads as index -1 and refuses; without that guard -1 + 1 indexes the FIRST
- * element and silently wraps focus to the top of the page. Backspace reads `selectionStart` with `??` and
- * not `||`: caret position 0 is a position, and a falsy fallback to `value.length` would delete the LAST
- * character instead of refusing at the start.
+ * Tab order comes from `utils/dom`'s shared `focusablesIn(document)` — the same tabbable-plus-visible-
+ * plus-not-`aria-hidden` filter `useFocusTrap` runs over its own container, so the host page's tab order
+ * and the widget's own agree on what the browser would actually focus next. An element not in that order
+ * at all reads as index -1 and refuses; without that guard -1 + 1 indexes the FIRST element and silently
+ * wraps focus to the top of the page.
+ *
+ * `stepSelect` is the ArrowDown/ArrowUp shape on an `HTMLSelectElement`, `step` being +1/-1. `deleteAt` is
+ * the Backspace/Delete shape on a text field: both read `selectionStart`/`selectionEnd` with `??`, not
+ * `||`, and fall back to `value.length` (not 0) — caret position 0 is a position, so a falsy fallback
+ * would misread it as absent, and defaulting an unknown caret to the END of the value (rather than the
+ * start) matches what a real caret does when a field doesn't expose a selection range. A ranged selection
+ * always deletes the range regardless of direction; direction only decides which single character goes
+ * when start === end.
  */
-import { TABBABLE_SELECTOR } from '../utils/dom';
+import { focusablesIn } from '../utils/dom';
 
 export const isTextField = (el: Element): el is HTMLInputElement | HTMLTextAreaElement =>
   el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement;
+
+export const isButtonish = (el: Element): boolean =>
+  el instanceof HTMLButtonElement || el.getAttribute('role') === 'button';
 
 export function simulateKeyAction(element: HTMLElement, key: string): string | null {
   switch (key) {
     case 'Tab':
     case 'Shift+Tab': {
       const step = key === 'Tab' ? 1 : -1;
-      const focusables = Array.from(document.querySelectorAll<HTMLElement>(TABBABLE_SELECTOR)).filter(
-        el => el.offsetParent !== null,
-      );
+      const focusables = focusablesIn(document);
       const currentIndex = focusables.indexOf(element);
       const next = currentIndex === -1 ? undefined : focusables[currentIndex + step];
       if (!next) return `${key}: no ${step > 0 ? 'next' : 'previous'} focusable element`;
@@ -38,7 +48,7 @@ export function simulateKeyAction(element: HTMLElement, key: string): string | n
     }
 
     case 'Enter': {
-      if (element instanceof HTMLButtonElement || element.getAttribute('role') === 'button') {
+      if (isButtonish(element)) {
         element.click();
         return 'Enter: clicked button';
       }
@@ -74,7 +84,7 @@ export function simulateKeyAction(element: HTMLElement, key: string): string | n
         element.click();
         return `Space: toggled ${element.type}`;
       }
-      if (element instanceof HTMLButtonElement || element.getAttribute('role') === 'button') {
+      if (isButtonish(element)) {
         element.click();
         return 'Space: clicked button';
       }
@@ -82,29 +92,11 @@ export function simulateKeyAction(element: HTMLElement, key: string): string | n
     }
 
     case 'ArrowDown': {
-      if (element instanceof HTMLSelectElement) {
-        const currentIdx = element.selectedIndex;
-        if (currentIdx < element.options.length - 1) {
-          element.selectedIndex = currentIdx + 1;
-          element.dispatchEvent(new Event('change', { bubbles: true }));
-          return `ArrowDown: selected "${element.options[element.selectedIndex].text}"`;
-        }
-        return 'ArrowDown: already at last option';
-      }
-      return 'ArrowDown: dispatched event';
+      return element instanceof HTMLSelectElement ? stepSelect(element, 1) : 'ArrowDown: dispatched event';
     }
 
     case 'ArrowUp': {
-      if (element instanceof HTMLSelectElement) {
-        const currentIdx = element.selectedIndex;
-        if (currentIdx > 0) {
-          element.selectedIndex = currentIdx - 1;
-          element.dispatchEvent(new Event('change', { bubbles: true }));
-          return `ArrowUp: selected "${element.options[element.selectedIndex].text}"`;
-        }
-        return 'ArrowUp: already at first option';
-      }
-      return 'ArrowUp: dispatched event';
+      return element instanceof HTMLSelectElement ? stepSelect(element, -1) : 'ArrowUp: dispatched event';
     }
 
     case 'Home': {
@@ -124,63 +116,51 @@ export function simulateKeyAction(element: HTMLElement, key: string): string | n
       return 'End: dispatched event';
     }
 
-    case 'Backspace': {
-      if (isTextField(element)) {
-        const value = element.value;
+    case 'Backspace':
+      return isTextField(element) ? deleteAt(element, 'Backspace') : 'Backspace: dispatched event';
 
-        if (!value || value.length === 0) {
-          return 'Backspace: input is empty, nothing to delete';
-        }
-
-        const start: number = element.selectionStart ?? value.length;
-        const end: number = element.selectionEnd ?? value.length;
-
-        let newValue: string;
-        let newCursorPos: number;
-
-        if (start === end && start > 0) {
-          newValue = value.slice(0, start - 1) + value.slice(end);
-          newCursorPos = start - 1;
-        } else if (start !== end) {
-          newValue = value.slice(0, start) + value.slice(end);
-          newCursorPos = start;
-        } else {
-          return 'Backspace: cursor at start, nothing to delete';
-        }
-
-        setValueAndCaret(element, newValue, newCursorPos);
-
-        return `Backspace: deleted character, value is now "${newValue}"`;
-      }
-      return 'Backspace: dispatched event';
-    }
-
-    case 'Delete': {
-      if (isTextField(element)) {
-        const start = element.selectionStart || 0;
-        const end = element.selectionEnd || 0;
-        const value = element.value;
-
-        let newValue: string;
-
-        if (start === end && start < value.length) {
-          newValue = value.slice(0, start) + value.slice(end + 1);
-        } else if (start !== end) {
-          newValue = value.slice(0, start) + value.slice(end);
-        } else {
-          return 'Delete: cursor at end, nothing to delete';
-        }
-
-        setValueAndCaret(element, newValue, start);
-
-        return `Delete: deleted character, value is now "${newValue}"`;
-      }
-      return 'Delete: dispatched event';
-    }
+    case 'Delete':
+      return isTextField(element) ? deleteAt(element, 'Delete') : 'Delete: dispatched event';
 
     default:
       return null;
   }
+}
+
+function stepSelect(element: HTMLSelectElement, step: 1 | -1): string {
+  const key = step === 1 ? 'ArrowDown' : 'ArrowUp';
+  const next = element.selectedIndex + step;
+  if (next < 0 || next >= element.options.length) {
+    return `${key}: already at ${step === 1 ? 'last' : 'first'} option`;
+  }
+  element.selectedIndex = next;
+  element.dispatchEvent(new Event('change', { bubbles: true }));
+  return `${key}: selected "${element.options[next].text}"`;
+}
+
+function deleteAt(element: HTMLInputElement | HTMLTextAreaElement, direction: 'Backspace' | 'Delete'): string {
+  const value = element.value;
+  const start = element.selectionStart ?? value.length;
+  const end = element.selectionEnd ?? value.length;
+
+  let newValue: string;
+  let newCursorPos: number;
+
+  if (start !== end) {
+    newValue = value.slice(0, start) + value.slice(end);
+    newCursorPos = start;
+  } else if (direction === 'Backspace' && start > 0) {
+    newValue = value.slice(0, start - 1) + value.slice(end);
+    newCursorPos = start - 1;
+  } else if (direction === 'Delete' && start < value.length) {
+    newValue = value.slice(0, start) + value.slice(start + 1);
+    newCursorPos = start;
+  } else {
+    return `${direction}: ${direction === 'Backspace' ? 'cursor at start' : 'cursor at end'}, nothing to delete`;
+  }
+
+  setValueAndCaret(element, newValue, newCursorPos);
+  return `${direction}: deleted character, value is now "${newValue}"`;
 }
 
 export function setNativeValue(el: HTMLInputElement | HTMLTextAreaElement, value: string): void {

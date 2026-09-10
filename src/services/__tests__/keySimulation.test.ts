@@ -12,9 +12,11 @@
  * order and refuses an element not in the order at all, pinning the guard on `indexOf` === -1, without which -1 +
  * 1 indexes the FIRST element and silently wraps focus to the top of the page. Backspace/Delete: removes the
  * character on the correct side of the caret, or the whole selection when there is one; dispatches `input` then
- * `change` so a controlled input observes the edit; refuses on an empty input and at the end. The Home case pins
- * that caret position 0 is a position, not a missing one — `selectionStart` is read with `??`, since a `||`
- * fallback would treat 0 as absent, fall back to `value.length`, and delete the LAST character instead of refusing.
+ * `change` so a controlled input observes the edit; refuses at the start (Backspace) and at the end (Delete). The
+ * Home case, and the "no explicit selection" case, pin that caret position 0 is a position, not a missing one —
+ * `selectionStart`/`selectionEnd` are read with `??`, since a `||` fallback would treat 0 as absent; the fallback
+ * value is `value.length`, i.e. an element that exposes no selection range (some browsers, some input types)
+ * reads as having its caret at the END, not the start.
  */
 
 import { afterEach, describe, expect, it } from 'vitest';
@@ -91,7 +93,7 @@ describe('simulateKeyAction Backspace/Delete', () => {
   });
 
   it('refuses when there is nothing to delete', () => {
-    expect(simulateKeyAction(input('', 0), 'Backspace')).toBe('Backspace: input is empty, nothing to delete');
+    expect(simulateKeyAction(input('', 0), 'Backspace')).toBe('Backspace: cursor at start, nothing to delete');
     expect(simulateKeyAction(input('abcd', 4), 'Delete')).toBe('Delete: cursor at end, nothing to delete');
   });
 
@@ -100,5 +102,32 @@ describe('simulateKeyAction Backspace/Delete', () => {
     expect(simulateKeyAction(el, 'Home')).toBe('Home: moved cursor to start');
     expect(simulateKeyAction(el, 'Backspace')).toBe('Backspace: cursor at start, nothing to delete');
     expect(el.value).toBe('abcd');
+  });
+
+  it('reads an unknown caret as being at the END of the value, not the start', () => {
+    const el = input('abcd', 4);
+    Object.defineProperty(el, 'selectionStart', { configurable: true, get: () => null });
+    Object.defineProperty(el, 'selectionEnd', { configurable: true, get: () => null });
+
+    expect(simulateKeyAction(el, 'Backspace')).toBe('Backspace: deleted character, value is now "abc"');
+    expect(el.value).toBe('abc');
+  });
+});
+
+describe('simulateKeyAction ArrowDown/ArrowUp on a select', () => {
+  const select = (options: string[], selectedIndex: number) => {
+    document.body.innerHTML = `<select>${options.map(o => `<option>${o}</option>`).join('')}</select>`;
+    const el = document.querySelector('select') as HTMLSelectElement;
+    el.selectedIndex = selectedIndex;
+    return el;
+  };
+
+  it('steps forward and backward, refusing at either end', () => {
+    const el = select(['a', 'b', 'c'], 0);
+    expect(simulateKeyAction(el, 'ArrowDown')).toBe('ArrowDown: selected "b"');
+    expect(simulateKeyAction(el, 'ArrowDown')).toBe('ArrowDown: selected "c"');
+    expect(simulateKeyAction(el, 'ArrowDown')).toBe('ArrowDown: already at last option');
+    expect(simulateKeyAction(el, 'ArrowUp')).toBe('ArrowUp: selected "b"');
+    expect(simulateKeyAction(select(['a'], 0), 'ArrowUp')).toBe('ArrowUp: already at first option');
   });
 });
