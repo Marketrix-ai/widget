@@ -7,7 +7,7 @@ import { beforeEach, describe, expect, it, vi } from 'bun:test';
 
 import { sdk } from '../../sdk';
 import { validSettings } from '../../test/fixtures';
-import { mocked } from '../../test/vi-compat';
+import { mocked, restoreModuleAfterAll } from '../../test/vi-compat';
 import { loadWidgetConfig } from '../WidgetService';
 
 vi.mock('../../sdk', () => ({
@@ -17,6 +17,7 @@ vi.mock('../../sdk', () => ({
     widgetSearch: vi.fn(),
   },
 }));
+restoreModuleAfterAll('../../sdk', () => import('../../sdk/index.ts?real'));
 
 const mockSdk = mocked(sdk);
 const settings = validSettings();

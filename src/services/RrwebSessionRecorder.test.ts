@@ -9,12 +9,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 
 import { sdk } from '../sdk';
 import { flushMicrotasks } from '../test/fixtures';
-import { advanceTimersByTimeAsync, mocked } from '../test/vi-compat';
+import { advanceTimersByTimeAsync, mocked, restoreModuleAfterAll } from '../test/vi-compat';
 import { RrwebSessionRecorder } from './RrwebSessionRecorder';
 import { streamClient } from './StreamClient';
 
 vi.mock('@rrweb/record', () => ({ record: vi.fn(() => vi.fn()) }));
 vi.mock('../sdk', () => ({ sdk: { widgetMessagePost: vi.fn() } }));
+restoreModuleAfterAll('../sdk', () => import('../sdk/index.ts?real'));
 
 const mockSdk = mocked(sdk);
 
