@@ -19,6 +19,7 @@
 
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { resetDom } from '../../test/setup';
 import { simulateKeyAction } from '../keySimulation';
 
 Object.defineProperty(HTMLElement.prototype, 'offsetParent', { configurable: true, get: () => document.body });
@@ -29,7 +30,7 @@ const render = () => {
 };
 
 afterEach(() => {
-  document.body.innerHTML = '';
+  resetDom();
 });
 
 describe('simulateKeyAction Tab/Shift+Tab', () => {

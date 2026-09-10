@@ -5,6 +5,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { resetDom } from '../../test/setup';
 import { ShowModeService } from '../ShowModeService';
 
 const { notInteractableReason } = vi.hoisted(() => ({
@@ -27,7 +28,7 @@ describe('a second show action supersedes the first', () => {
 
   afterEach(() => {
     service.cleanup();
-    document.body.innerHTML = '';
+    resetDom();
   });
 
   const show = (id: string) =>
@@ -74,7 +75,7 @@ describe('a show action the page invalidates', () => {
   afterEach(() => {
     service.cleanup();
     vi.useRealTimers();
-    document.body.innerHTML = '';
+    resetDom();
   });
 
   it('rejects with the one reason DomService gave, not a second code contradicting it', async () => {

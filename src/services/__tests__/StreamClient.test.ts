@@ -21,6 +21,7 @@
 
 import type * as SdkModule from '../../sdk';
 import { sdk, type WidgetEvent } from '../../sdk';
+import { flushMicrotasks } from '../../test/fixtures';
 import { type StreamClient, streamClient, StreamGaveUpError } from '../StreamClient';
 
 vi.mock('../../sdk', async importOriginal => {
@@ -147,7 +148,7 @@ describe('StreamClient registration lifecycle', () => {
       registered = true;
     });
 
-    await Promise.resolve();
+    await flushMicrotasks();
     expect(registered).toBe(false);
 
     inner.handleMessage({ type: 'registered', chat_id: 'chat-1', application_id: 1 });

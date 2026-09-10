@@ -7,7 +7,7 @@
  * shares one in-flight promise and cancels a stale one; updates re-mount into the given container and a
  * preview stays a preview; and production stores the credentials it was initialized with.
  */
-import { act, cleanup, render, waitFor } from '@testing-library/react';
+import { act, render, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { initWidget, MarketrixWidgetPreview, mountWidget, unmountWidget, updateMarketrixConfig } from './index';
@@ -19,7 +19,6 @@ import * as WidgetService from './services/WidgetService';
 import { getMockWidgetConfig } from './test/fixtures';
 
 afterEach(() => {
-  cleanup();
   unmountWidget();
   vi.clearAllTimers();
   vi.restoreAllMocks();

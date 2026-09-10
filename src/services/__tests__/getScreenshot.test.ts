@@ -5,6 +5,8 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { flushMicrotasks } from '../../test/fixtures';
+import { resetDom } from '../../test/setup';
 import { browserToolService } from '../BrowserToolService';
 import { activeScreenStream } from '../ScreenShareService';
 
@@ -30,7 +32,7 @@ describe('get_screenshot on a stream that never delivers a frame', () => {
 
   afterEach(() => {
     vi.useRealTimers();
-    document.body.innerHTML = '';
+    resetDom();
   });
 
   it('fails instead of waiting forever, and leaves no video behind in the host page', async () => {
@@ -58,13 +60,13 @@ describe('get_screenshot when the browser refuses a 2d canvas context', () => {
 
   afterEach(() => {
     HTMLCanvasElement.prototype.getContext = getContext;
-    document.body.innerHTML = '';
+    resetDom();
     vi.restoreAllMocks();
   });
 
   it('reports a failure rather than a well-formed all-black frame', async () => {
     const result = browserToolService.executeTool('get_screenshot', {});
-    await Promise.resolve();
+    await flushMicrotasks();
     document.querySelector('video')?.dispatchEvent(new Event('loadeddata'));
 
     expect(await result).toMatchObject({ success: false });
