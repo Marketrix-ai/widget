@@ -34,9 +34,17 @@ a hand-installed jsdom `Window`, with `window` made self-referential to `globalT
 browser's top frame and vitest's own jsdom environment) so tests that redefine `window.location` via
 `Object.defineProperty` keep working despite jsdom's own `Window.prototype.location` being
 non-configurable. `src/test/vi-compat.ts` is the one home for the handful of `vi.*` helpers bun's
-`vitest`-compat shim doesn't implement (`mocked`, `hoisted`, `advanceTimersByTimeAsync`, `waitFor`) —
-reach for it before hand-rolling another one-off shim. Filter a run with `bun test <pattern>`; a single
-file with `bun test path/to/file.test.ts`.
+`vitest`-compat shim doesn't implement (`mocked`, `hoisted`, `advanceTimersByTimeAsync`, `waitFor`,
+`restoreModuleAfterAll`) — reach for it before hand-rolling another one-off shim. **`bun test` always
+runs with `--isolate`** (every `test`/`test:watch`/`test:coverage` script bakes it in): unlike vitest,
+plain `bun test` runs every file in ONE process/global object, so a `vi.mock`/`vi.spyOn`/module-level
+singleton state from one file can leak into another purely by file-discovery order — the exact bug
+class behind three real cross-file pollution failures found porting this suite (a `vi.spyOn` leak, a
+`vi.mock('../sdk')` leak, and `ScreenShareService`'s own real module state outliving its test file),
+one of which reproduced ONLY on CI's Linux runner, never locally on macOS or in a `linux/amd64` Docker
+container. `--isolate` closes the whole class at the runner level; keep any new mock/spy scoped to its
+own file regardless; don't remove the flag to "speed up" a run. Filter a run with `bun test <pattern>`;
+a single file with `bun test path/to/file.test.ts`.
 
 **Pre-handoff gate** (matching the repository-local bun workflow): `bun run ci`. This public repo
 cannot call private infra workflows. Git hooks autofix but are not a substitute.
