@@ -19,17 +19,15 @@
  * rather than going silent the way an unmatched `chat/error` would.
  */
 
-import type * as SdkModule from '../../sdk';
 import { sdk, type WidgetEvent } from '../../sdk';
 import { flushMicrotasks } from '../../test/fixtures';
+import { mocked, restoreModuleAfterAll, waitFor } from '../../test/vi-compat';
 import { type StreamClient, streamClient, StreamGaveUpError } from '../StreamClient';
 
-vi.mock('../../sdk', async importOriginal => {
-  const actual = await importOriginal<typeof SdkModule>();
-  return { ...actual, sdk: { widgetStream: vi.fn(), widgetMessagePost: vi.fn() } };
-});
+vi.mock('../../sdk', () => ({ sdk: { widgetStream: vi.fn(), widgetMessagePost: vi.fn() } }));
+restoreModuleAfterAll('../../sdk', () => import('../../sdk/index.ts?real'));
 
-const mockSdk = vi.mocked(sdk);
+const mockSdk = mocked(sdk);
 
 interface StreamClientInternals {
   chatId: string;
@@ -201,7 +199,7 @@ describe('StreamClient retry affordance', () => {
     });
 
     await client.connect('chat-2');
-    await vi.waitFor(() => expect(errors.length).toBe(1));
+    await waitFor(() => expect(errors.length).toBe(1));
 
     expect(errors[0]).toContain('credentials were rejected');
     expect(client.canReconnect()).toBe(false);

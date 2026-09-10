@@ -4,7 +4,7 @@
  * out-of-range channels, and `addOpacity` gets the same reach; `backgroundGradient` passes a gradient
  * setting through and expands a flat colour, so panel and transcript paint the same thing.
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'bun:test';
 
 import { addOpacity, backgroundGradient, getContrastingColor, toRgb } from './color';
 

@@ -2,7 +2,7 @@
  * `use_screenshare` tests: denied without a prompt when the tenant turned sharing off — on the switch
  * alone, so a stored config that lost its credentials cannot reopen the picker — and prompted when on.
  */
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 
 import { startScreenShare, stopScreenShare } from '@/services/ScreenShareService';
 import { storageService } from '@/services/StorageService';
@@ -20,6 +20,15 @@ beforeEach(() => {
   vi.clearAllMocks();
   stopScreenShare();
   Object.defineProperty(navigator, 'mediaDevices', { value: { getDisplayMedia }, configurable: true });
+});
+
+// `startScreenShare`/`stopScreenShare` own MODULE-LEVEL state (the active `MediaStream`) shared by the
+// whole `bun test` process — "prompts when the tenant left screen sharing on" leaves it genuinely
+// active on success, and with no other file's `beforeEach` calling `stopScreenShare()` for it, a widget
+// mounted afterward (`widget-smoke.test.tsx`, `ChatView.test.tsx`) reads `isScreenSharing()` as true and
+// renders "Stop screen sharing" — hiding the "Start screen sharing" button those tests click.
+afterEach(() => {
+  stopScreenShare();
 });
 
 describe('use_screenshare', () => {

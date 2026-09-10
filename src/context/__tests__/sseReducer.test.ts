@@ -18,7 +18,7 @@
  * tool that finished, not the newest open one, and `FINISH_TOOL` carries none. A stop is the visitor
  * withdrawing their page, so only their next dispatch lifts it; `content` joins text parts, never progress.
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'bun:test';
 
 import type { WidgetEvent } from '@/sdk';
 import { FINISH_TOOL } from '@/services/BrowserToolService';

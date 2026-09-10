@@ -18,8 +18,8 @@
  * `isPreviewMode` is false: preview mode returns before binding anything, so no drag, no write.
  */
 import { act, renderHook } from '@testing-library/react';
+import { describe, expect, it } from 'bun:test';
 import type React from 'react';
-import { describe, expect, it } from 'vitest';
 
 import type { MarketrixConfig, WidgetPosition } from '../types';
 import { useResize } from './useResize';

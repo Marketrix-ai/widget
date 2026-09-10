@@ -5,23 +5,19 @@
  */
 import { record } from '@rrweb/record';
 import { EventType } from '@rrweb/types';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 
 import { sdk } from '../sdk';
 import { flushMicrotasks } from '../test/fixtures';
+import { advanceTimersByTimeAsync, mocked, restoreModuleAfterAll } from '../test/vi-compat';
 import { RrwebSessionRecorder } from './RrwebSessionRecorder';
 import { streamClient } from './StreamClient';
 
 vi.mock('@rrweb/record', () => ({ record: vi.fn(() => vi.fn()) }));
-vi.mock('../sdk', async importOriginal => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  return {
-    ...actual,
-    sdk: { widgetMessagePost: vi.fn() },
-  };
-});
+vi.mock('../sdk', () => ({ sdk: { widgetMessagePost: vi.fn() } }));
+restoreModuleAfterAll('../sdk', () => import('../sdk/index.ts?real'));
 
-const mockSdk = vi.mocked(sdk);
+const mockSdk = mocked(sdk);
 
 beforeEach(() => {
   vi.spyOn(streamClient, 'ready').mockResolvedValue();
@@ -38,7 +34,7 @@ const startRecorder = async (): Promise<{ recorder: RrwebSessionRecorder; emit: 
   mockSdk.widgetMessagePost.mockResolvedValueOnce(undefined);
   const recorder = new RrwebSessionRecorder('chat-1', 1);
   await recorder.start();
-  return { recorder, emit: vi.mocked(record).mock.calls[0][0].emit as unknown as Emit };
+  return { recorder, emit: mocked(record).mock.calls[0][0].emit as unknown as Emit };
 };
 
 describe('a flush the api rejects', () => {
@@ -50,10 +46,10 @@ describe('a flush the api rejects', () => {
     emit({ type: EventType.Meta, data: {}, timestamp: 0 });
     emit({ type: EventType.FullSnapshot, data: {}, timestamp: 1 });
     for (let i = 2; i < 20_005; i++) emit({ type: EventType.IncrementalSnapshot, data: {}, timestamp: i });
-    await vi.advanceTimersByTimeAsync(500);
+    await advanceTimersByTimeAsync(500);
 
     emit({ type: EventType.IncrementalSnapshot, data: {}, timestamp: 99_999 });
-    await vi.advanceTimersByTimeAsync(500);
+    await advanceTimersByTimeAsync(500);
 
     const posted = mockSdk.widgetMessagePost.mock.lastCall?.[0].command as {
       events: Array<{ type: number; timestamp: number }>;

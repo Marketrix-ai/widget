@@ -5,8 +5,8 @@
  * outbound POST — the visitor waits on the reply, not on the request.
  */
 import { act, render, screen } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 import { useEffect } from 'react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useWidget } from '../../hooks/useWidget';
 import { storageService } from '../../services/StorageService';

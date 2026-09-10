@@ -19,9 +19,9 @@
  * reads as having its caret at the END, not the start.
  */
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'bun:test';
 
-import { resetDom } from '../../test/setup';
+import { resetDom } from '../../test/preload';
 import { simulateKeyAction } from '../keySimulation';
 
 Object.defineProperty(HTMLElement.prototype, 'offsetParent', { configurable: true, get: () => document.body });

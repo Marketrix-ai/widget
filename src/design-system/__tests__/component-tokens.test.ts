@@ -1,7 +1,7 @@
 /**
  * The radius scale gives each value exactly one name, so no two tokens are silent synonyms.
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'bun:test';
 
 import { RADIUS } from '../component-tokens';
 

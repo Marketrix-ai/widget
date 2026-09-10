@@ -2,17 +2,14 @@
  * rrweb privacy tests: every input is masked by default, and both the `mtx-` and native `rr-` privacy
  * classes are honoured.
  */
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'bun:test';
+
+import { restoreModuleAfterAll } from '../../test/vi-compat';
 
 const recordMock = vi.fn(() => () => {});
 vi.mock('@rrweb/record', () => ({ record: (opts: unknown) => recordMock(opts as never) }));
-vi.mock('../../sdk', async importOriginal => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  return {
-    ...actual,
-    sdk: { widgetMessagePost: vi.fn().mockResolvedValue({ ok: true }) },
-  };
-});
+vi.mock('../../sdk', () => ({ sdk: { widgetMessagePost: vi.fn().mockResolvedValue({ ok: true }) } }));
+restoreModuleAfterAll('../../sdk', () => import('../../sdk/index.ts?real'));
 
 const { RrwebSessionRecorder } = await import('../RrwebSessionRecorder');
 const { streamClient } = await import('../StreamClient');

@@ -7,9 +7,9 @@
  * `aria-hidden` of its own. The `offsetParent` override is load-bearing: jsdom does no layout, so every
  * element reports `offsetParent === null` and the visibility filter would drop the entire tab order.
  */
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'bun:test';
 
-import { resetDom } from '../../test/setup';
+import { resetDom } from '../../test/preload';
 import { focusablesIn } from '../dom';
 
 Object.defineProperty(HTMLElement.prototype, 'offsetParent', { configurable: true, get: () => document.body });

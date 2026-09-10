@@ -3,7 +3,7 @@
  * own display, and Stack rendering a column.
  */
 import { render } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'bun:test';
 
 import { Flex, Stack } from '../Flex';
 

@@ -3,7 +3,7 @@
  * its pixel value, empty props give an empty style, and SPACING_SCALE is declared smallest-first so a
  * token name orders the same way as the pixels it emits.
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'bun:test';
 
 import { resolveLayoutStyle, SPACING_SCALE, stripLayoutProps } from '../layoutProps';
 

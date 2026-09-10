@@ -8,7 +8,7 @@
  * preview stays a preview; and production stores the credentials it was initialized with.
  */
 import { act, render, waitFor } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'bun:test';
 
 import { initWidget, MarketrixWidgetPreview, mountWidget, unmountWidget, updateMarketrixConfig } from './index';
 import type { WidgetSettingsData } from './sdk';
@@ -20,7 +20,6 @@ import { mountTarget, validSettings } from './test/fixtures';
 
 afterEach(() => {
   unmountWidget();
-  vi.clearAllTimers();
   vi.restoreAllMocks();
   document.head.replaceChildren();
   document.body.replaceChildren();

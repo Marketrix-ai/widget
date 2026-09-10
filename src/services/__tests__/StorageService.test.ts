@@ -4,7 +4,7 @@
  * round-trips, with an active screen share stored as an ended notice because a MediaStream cannot
  * survive a reload.
  */
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'bun:test';
 
 import { agentMessage } from '../../test/fixtures';
 import type { ChatMessage } from '../../types';

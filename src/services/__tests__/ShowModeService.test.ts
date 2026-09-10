@@ -3,12 +3,13 @@
  * live; an action the page invalidates rejects with the one reason `DomService` gave, never a second
  * contradicting code.
  */
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 
-import { resetDom } from '../../test/setup';
+import { resetDom } from '../../test/preload';
+import { advanceTimersByTimeAsync, hoisted } from '../../test/vi-compat';
 import { ShowModeService } from '../ShowModeService';
 
-const { notInteractableReason } = vi.hoisted(() => ({
+const { notInteractableReason } = hoisted(() => ({
   notInteractableReason: vi.fn<() => string | null>(() => null),
 }));
 
@@ -93,7 +94,7 @@ describe('a show action the page invalidates', () => {
         () => 'resolved',
         (error: Error) => error.message,
       );
-    await vi.advanceTimersByTimeAsync(200);
+    await advanceTimersByTimeAsync(200);
 
     expect(await rejection).toBe(obscured);
   });

@@ -18,7 +18,7 @@
  * input only asserts rejected, since an array returns the whole table rather than one name — the last
  * case pins every invalid field reported, in guard-table order.
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'bun:test';
 
 import { WidgetSettingsDataSchema } from '../../sdk';
 import { getMockWidgetConfig } from '../../test/fixtures';
@@ -90,7 +90,12 @@ describe('parseWidgetSettings agrees with the zod schema it replaced', () => {
     expect(parseWidgetSettings(broken).invalidFields).toEqual(['widget_chips']);
   });
 
-  it.each([null, undefined, 'settings', 42, []])('rejects a non-object input (%s)', input => {
+  // Each case wrapped as its own single-element array (`[[]]`, not a bare `[]` in the outer list):
+  // bun's `it.each` spreads an array-shaped entry into positional arguments, so a bare `[]` entry
+  // passes ZERO arguments to the test function — with none supplied, bun assumes the sole declared
+  // parameter must be an async-`done` callback and hangs the whole case for a `done()` that never
+  // comes, timing out at 5000ms instead of running with `input` unset.
+  it.each([[null], [undefined], ['settings'], [42], [[]]])('rejects a non-object input (%s)', input => {
     expect(parseWidgetSettings(input).invalidFields).toBeDefined();
   });
 

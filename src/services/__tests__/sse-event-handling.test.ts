@@ -18,7 +18,7 @@
  * 'auth'` parses as an ordinary event, since treating it as the non-retriable stop-reconnecting case is
  * StreamClient's job, not the schema's.
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'bun:test';
 
 import { type WidgetEvent, WidgetEventSchema } from '@/sdk';
 
@@ -51,7 +51,9 @@ const MINIMAL_EVENT_FIXTURES: Record<ExpectedEventType, object> = {
 
 describe('SSE event discriminated-union contract (WidgetEventSchema)', () => {
   describe('all event types are present in the union', () => {
-    it.each(ALL_WIDGET_EVENT_TYPES)('event type "%s" is a valid WidgetEvent', eventType => {
+    // bun's `it.each` type overload for a flat array (as opposed to an array of tuples) infers the
+    // callback parameter as `unknown` — an explicit annotation restores it, matching `ExpectedEventType`.
+    it.each(ALL_WIDGET_EVENT_TYPES)('event type "%s" is a valid WidgetEvent', (eventType: ExpectedEventType) => {
       const fixture = MINIMAL_EVENT_FIXTURES[eventType];
       const result = WidgetEventSchema.safeParse(fixture);
       expect(

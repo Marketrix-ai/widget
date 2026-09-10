@@ -3,7 +3,7 @@
  * queued message, and unlocks to deliver it once answered; a multi-line message keeps its line breaks.
  */
 import { fireEvent, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'bun:test';
 
 import { openChatTab, openWidget, renderWidget } from '@/test/renderWidget';
 

@@ -5,7 +5,7 @@
  * reports for any hit on the widget) while a host overlay still obscures; and a disabled or
  * aria-disabled control is refused at act time rather than hidden from the index.
  */
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'bun:test';
 
 import { DomService } from '../DomService';
 

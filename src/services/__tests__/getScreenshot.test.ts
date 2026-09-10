@@ -3,18 +3,28 @@
  * visitor's Deny), a stream that never delivers a frame fails instead of waiting forever and leaves no
  * video in the host page, and a refused 2d canvas context reports failure rather than an all-black frame.
  */
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 
 import { flushMicrotasks } from '../../test/fixtures';
-import { resetDom } from '../../test/setup';
+import { resetDom } from '../../test/preload';
+import { advanceTimersByTimeAsync } from '../../test/vi-compat';
 import { browserToolService } from '../BrowserToolService';
-import { activeScreenStream } from '../ScreenShareService';
+import * as ScreenShareService from '../ScreenShareService';
 
-vi.mock('../ScreenShareService', () => ({ activeScreenStream: vi.fn() }));
+// A `vi.mock('../ScreenShareService', factory)` replaces the module for the whole `bun test` process
+// by resolved path, not just this file — `../services/__tests__/ScreenShareService.test.ts` resolves
+// the SAME absolute file (via its own `@/services/ScreenShareService` alias) and would inherit
+// whichever describe block's factory happened to register last, depending on file discovery order
+// (which differs between local runs and CI). `vi.spyOn`, scoped to `beforeEach`/`afterEach` per describe
+// block below, only ever overrides the one export each block needs and is undone immediately after.
 
 describe('get_screenshot with no active screen share', () => {
   beforeEach(() => {
-    vi.mocked(activeScreenStream).mockReturnValue(null);
+    vi.spyOn(ScreenShareService, 'activeScreenStream').mockReturnValue(null);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it('fails instead of prompting a new share, which would bypass the visitor Deny', async () => {
@@ -27,20 +37,21 @@ describe('get_screenshot with no active screen share', () => {
 describe('get_screenshot on a stream that never delivers a frame', () => {
   beforeEach(() => {
     vi.useFakeTimers();
-    vi.mocked(activeScreenStream).mockReturnValue({} as MediaStream);
+    vi.spyOn(ScreenShareService, 'activeScreenStream').mockReturnValue({} as MediaStream);
   });
 
   afterEach(() => {
     vi.useRealTimers();
+    vi.restoreAllMocks();
     resetDom();
   });
 
   it('fails instead of waiting forever, and leaves no video behind in the host page', async () => {
     const result = browserToolService.executeTool('get_screenshot', {});
-    await vi.advanceTimersByTimeAsync(0);
+    await advanceTimersByTimeAsync(0);
     expect(document.querySelector('video')).not.toBeNull();
 
-    await vi.advanceTimersByTimeAsync(5000);
+    await advanceTimersByTimeAsync(5000);
 
     expect(await result).toMatchObject({ success: false, error: expect.stringContaining('no frame') });
     expect(document.querySelector('video')).toBeNull();
@@ -51,7 +62,7 @@ describe('get_screenshot when the browser refuses a 2d canvas context', () => {
   let getContext: typeof HTMLCanvasElement.prototype.getContext;
 
   beforeEach(() => {
-    vi.mocked(activeScreenStream).mockReturnValue({} as MediaStream);
+    vi.spyOn(ScreenShareService, 'activeScreenStream').mockReturnValue({} as MediaStream);
     getContext = HTMLCanvasElement.prototype.getContext;
     HTMLCanvasElement.prototype.getContext = vi.fn(() => null) as unknown as typeof getContext;
     Object.defineProperty(HTMLVideoElement.prototype, 'videoWidth', { configurable: true, value: 320 });

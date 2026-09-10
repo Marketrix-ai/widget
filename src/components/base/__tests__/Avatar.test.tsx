@@ -3,8 +3,8 @@
  * forwarding, and its own class kept beside a caller className.
  */
 import { render } from '@testing-library/react';
+import { describe, expect, it } from 'bun:test';
 import { createRef } from 'react';
-import { describe, expect, it } from 'vitest';
 
 import { Avatar } from '../Avatar';
 
