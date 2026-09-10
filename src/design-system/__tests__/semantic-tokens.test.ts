@@ -2,7 +2,7 @@
  * `createSemanticTokens` tests: every colour var derives from the tenant settings, a radius or duration
  * left in a stored settings blob is ignored, and the fixed radius and durations are emitted.
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'bun:test';
 
 import { getMockWidgetConfig } from '../../test/fixtures';
 import { createSemanticTokens, semanticTokensToCssCustomProperties } from '../semantic-tokens';

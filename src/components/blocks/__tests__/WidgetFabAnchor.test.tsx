@@ -8,7 +8,7 @@
  * resolves top against. The two disagreed by 70px on app.marketrix.co and the launcher climbed out of
  * the viewport a step per measurement.
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'bun:test';
 
 import { renderWidget } from '../../../test/renderWidget';
 

@@ -4,7 +4,7 @@
  * `navigate` refuses `javascript:` (it would run in the host page) and resolves relative URLs; opening a
  * new tab reports whether the popup really opened; `close_tab` fails on a tab the script did not open.
  */
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 
 import { browserToolService, FINISH_TOOL } from '../BrowserToolService';
 import { domService } from '../DomService';

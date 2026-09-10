@@ -7,7 +7,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'bun:test';
 
 const loaderSource = readFileSync(resolve(process.cwd(), 'public/loader.js'), 'utf8');
 
@@ -27,10 +27,18 @@ const resetDocument = () => {
   window.__mtx = undefined;
 };
 
+// bun has no `vi.resetModules`: an ES module import is cached forever by resolved specifier, so a
+// module carrying top-level state (`./bootstrap`'s own auto-init guard) can only be re-evaluated
+// fresh by asking for a DIFFERENT specifier. A `?t=<n>` query bumped once per import does that —
+// bun treats the query as part of the module identity — which is what every `import('./bootstrap')`
+// call below now goes through instead of relying on a `resetModules()` between tests.
+let bootstrapImportCount = 0;
+const importBootstrap = () => import(`./bootstrap.tsx?t=${bootstrapImportCount++}`);
+
 afterEach(() => {
   vi.useRealTimers();
   vi.restoreAllMocks();
-  vi.resetModules();
+  delete (document as { currentScript?: unknown }).currentScript;
   resetDocument();
 });
 
@@ -48,7 +56,10 @@ describe('widget public entry paths', () => {
     loader.setAttribute('mtx-api-host', 'https://api.test');
     loader.setAttribute('mtx-use-screenshare', 'false');
     document.head.appendChild(loader);
-    vi.spyOn(document, 'currentScript', 'get').mockReturnValue(loader);
+    // bun's `spyOn` does not support accessor properties yet, so `document.currentScript` (a getter)
+    // is shadowed directly with an own, configurable property instead — `resetDocument`'s
+    // `document.head.replaceChildren()` doesn't touch it, so the `delete` below undoes it explicitly.
+    Object.defineProperty(document, 'currentScript', { configurable: true, get: () => loader });
 
     Function(loaderSource)();
 
@@ -89,7 +100,7 @@ describe('widget public entry paths', () => {
       'mtx-use-screenshare': 'false',
     });
     const init = vi.fn().mockResolvedValue(undefined);
-    const { autoInitializeWidget } = await import('./bootstrap');
+    const { autoInitializeWidget } = await importBootstrap();
 
     autoInitializeWidget(init);
 
@@ -105,7 +116,7 @@ describe('widget public entry paths', () => {
   it('refuses to initialize without mtx-api-host, which would post at the host page instead', async () => {
     appendModuleScript({ 'mtx-id': 'widget-id', 'mtx-key': 'widget-key' });
     const init = vi.fn().mockResolvedValue(undefined);
-    const { autoInitializeWidget } = await import('./bootstrap');
+    const { autoInitializeWidget } = await importBootstrap();
 
     autoInitializeWidget(init);
 
@@ -116,7 +127,7 @@ describe('widget public entry paths', () => {
     vi.useFakeTimers();
     const init = vi.fn().mockResolvedValue(undefined);
     const timer = vi.spyOn(globalThis, 'setTimeout');
-    const { autoInitializeWidget } = await import('./bootstrap');
+    const { autoInitializeWidget } = await importBootstrap();
 
     autoInitializeWidget(init);
 
@@ -129,19 +140,18 @@ describe('widget public entry paths', () => {
     const parent = document.createElement('div');
     document.body.appendChild(parent);
 
-    const first = await import('./bootstrap');
+    const first = await importBootstrap();
     first.createWidgetContainer(parent);
     first.createWidgetContainer(parent);
 
-    vi.resetModules();
-    const reExecuted = await import('./bootstrap');
+    const reExecuted = await importBootstrap();
     reExecuted.createWidgetContainer(parent);
 
     expect(parent.querySelectorAll('.marketrix-widget-container')).toHaveLength(3);
   });
 
   it('owns non-empty widget CSS inside the closed shadow root', async () => {
-    const { createWidgetContainer } = await import('./bootstrap');
+    const { createWidgetContainer } = await importBootstrap();
 
     const { shadowRoot } = createWidgetContainer();
 

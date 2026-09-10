@@ -72,6 +72,7 @@ export default [
         afterEach: 'readonly',
         beforeAll: 'readonly',
         afterAll: 'readonly',
+        require: 'readonly',
       },
     },
     plugins: {
@@ -136,7 +137,7 @@ export default [
       'no-var': 'error',
       'object-shorthand': 'error',
       'prefer-template': 'error',
-      'spaced-comment': 'error',
+      'spaced-comment': ['error', 'always', { markers: ['/'] }],
       'max-len': [
         'warn',
         {

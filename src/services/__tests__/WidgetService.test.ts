@@ -3,25 +3,22 @@
  * filled from the API defaults, an invalid merged response is rejected naming the schema field, and the
  * inactive-widget diagnostic is preserved without loading defaults or the application.
  */
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'bun:test';
 
 import { sdk } from '../../sdk';
 import { validSettings } from '../../test/fixtures';
+import { mocked } from '../../test/vi-compat';
 import { loadWidgetConfig } from '../WidgetService';
 
-vi.mock('../../sdk', async importOriginal => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  return {
-    ...actual,
-    sdk: {
-      applicationGet: vi.fn(),
-      widgetDefaultGet: vi.fn(),
-      widgetSearch: vi.fn(),
-    },
-  };
-});
+vi.mock('../../sdk', () => ({
+  sdk: {
+    applicationGet: vi.fn(),
+    widgetDefaultGet: vi.fn(),
+    widgetSearch: vi.fn(),
+  },
+}));
 
-const mockSdk = vi.mocked(sdk);
+const mockSdk = mocked(sdk);
 const settings = validSettings();
 const activeWidget = {
   id: 7,

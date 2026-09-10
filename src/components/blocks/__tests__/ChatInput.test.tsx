@@ -3,8 +3,8 @@
  * button is named in the words a visitor uses.
  */
 import { render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'bun:test';
 import { createRef } from 'react';
-import { describe, expect, it, vi } from 'vitest';
 
 import { ChatInput } from '../ChatInput';
 

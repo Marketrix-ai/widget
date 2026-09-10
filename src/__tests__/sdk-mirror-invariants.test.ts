@@ -15,7 +15,7 @@
  * - `still reads a real input shape` checks the accessor against a known answer (`chat_id` on
  *   `widgetStream`): a silent `[]` would make the assertions above vacuously pass.
  */
-import { expect, it } from 'vitest';
+import { expect, it } from 'bun:test';
 
 import { widgetMessagePost, widgetStream } from '../sdk/contracts/widget';
 

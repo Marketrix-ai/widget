@@ -19,8 +19,8 @@
  * container `createRoot()` renders into, and React clears its own container's children.
  */
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { describe, expect, it } from 'bun:test';
 import { useState } from 'react';
-import { describe, expect, it } from 'vitest';
 
 import { PortalContainerContext, WidgetProviders } from '../../../context/WidgetProviders';
 import { createWidgetContainer } from '../../../utils/bootstrap';

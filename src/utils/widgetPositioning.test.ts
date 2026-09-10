@@ -3,7 +3,7 @@
  * on a barely-moved drag, and snaps by proximity rather than axis; `isWidgetPosition` admits the four
  * corners and rejects inherited object property names.
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'bun:test';
 
 import type { WidgetPosition } from '../types';
 import { getAnchorTopLeft, getNearestCornerByTranslation, isWidgetPosition } from './widgetPositioning';

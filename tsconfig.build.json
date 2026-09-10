@@ -12,5 +12,13 @@
     "esModuleInterop": true
   },
   "include": ["src/index.tsx", "src/**/*.ts", "src/**/*.tsx"],
-  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.test.tsx", "**/*.css"]
+  "exclude": [
+    "node_modules",
+    "dist",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/*.css",
+    "src/test/preload.ts",
+    "src/test/vi-compat.ts"
+  ]
 }

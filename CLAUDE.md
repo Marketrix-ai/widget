@@ -19,12 +19,24 @@ status vocabulary, contract sync, ports, release order).
 bun start                # vite dev on :9001 (override PORT / VITE_PORT; CORS enabled)
 bun run build            # → dist/widget.mjs (terser, single ESM) + tsc declarations
 bun run type-check       # alias: check          bun run lint    # --fix, max-warnings 200
-bun run test             # vitest (jsdom + Testing Library + axe)
+bun run test             # bun test (jsdom preload + Testing Library + axe-core)
+bun run test:watch       # bun test --watch
+bun run test:coverage    # bun test --coverage
 bun run bundle:check     # packaging gate (size, single chunk, no CSS file, React external)
 bun run code:check       # tsc + eslint + prettier --check (one-shot)
 bun run ci               # every CI validation gate
 bun run tag <version>    # scripts/release.sh
 ```
+
+**Tests run on `bun test`, not vitest** — vitest, `@vitest/coverage-v8` and `vitest-axe` are gone from
+devDependencies. `src/test/preload.ts` (the `bunfig.toml` `[test] preload`) is the sole DOM bootstrap:
+a hand-installed jsdom `Window`, with `window` made self-referential to `globalThis` (matching a real
+browser's top frame and vitest's own jsdom environment) so tests that redefine `window.location` via
+`Object.defineProperty` keep working despite jsdom's own `Window.prototype.location` being
+non-configurable. `src/test/vi-compat.ts` is the one home for the handful of `vi.*` helpers bun's
+`vitest`-compat shim doesn't implement (`mocked`, `hoisted`, `advanceTimersByTimeAsync`, `waitFor`) —
+reach for it before hand-rolling another one-off shim. Filter a run with `bun test <pattern>`; a single
+file with `bun test path/to/file.test.ts`.
 
 **Pre-handoff gate** (matching the repository-local bun workflow): `bun run ci`. This public repo
 cannot call private infra workflows. Git hooks autofix but are not a substitute.

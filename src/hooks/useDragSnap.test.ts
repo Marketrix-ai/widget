@@ -3,10 +3,10 @@
  * it left.
  */
 import { act, renderHook } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 import { createRef } from 'react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { resetDom } from '../test/setup';
+import { resetDom } from '../test/preload';
 import type { WidgetPosition } from '../types';
 import { useDragSnap } from './useDragSnap';
 

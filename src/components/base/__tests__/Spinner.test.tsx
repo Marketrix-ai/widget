@@ -2,7 +2,7 @@
  * `Spinner` tests: `role=status`, the sr-only Loading label, size data attribute, md by default.
  */
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'bun:test';
 
 import { Spinner } from '../Spinner';
 

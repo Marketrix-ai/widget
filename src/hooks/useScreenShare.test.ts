@@ -5,20 +5,34 @@
  * remount; an already-resolved request is ignored so a new one can be raised.
  */
 import { act, renderHook } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeEach, describe, expect, it, vi } from 'bun:test';
 
 import * as ScreenShareService from '../services/ScreenShareService';
 import { agentMessage } from '../test/fixtures';
 import type { ChatMessage } from '../types';
 import { useScreenShare, type UseScreenShareOptions } from './useScreenShare';
 
-vi.mock('../services/ScreenShareService', () => ({
-  isScreenSharing: () => false,
-  startScreenShare: vi.fn(),
-  stopScreenShare: vi.fn(),
-}));
+// `vi.mock('../services/ScreenShareService', ...)` registers against that resolved specifier for the
+// WHOLE `bun test` process, not just this file — `../services/__tests__/ScreenShareService.test.ts`
+// (the real implementation's own suite) statically imports the same path, and every test file's
+// top-level imports resolve during one shared collection pass before any test body or `afterAll` runs,
+// so a later restore can't un-poison a binding another file already captured. `vi.spyOn` on the shared
+// `ScreenShareService` namespace object sidesteps this entirely: it patches the SAME object every
+// importer already holds, restorable per test via `vi.restoreAllMocks()`, with no module-registry
+// entry left behind for another file to inherit.
+const startScreenShare = vi.spyOn(ScreenShareService, 'startScreenShare').mockImplementation(vi.fn());
+const stopScreenShare = vi.spyOn(ScreenShareService, 'stopScreenShare').mockImplementation(vi.fn());
+const isScreenSharing = vi.spyOn(ScreenShareService, 'isScreenSharing').mockReturnValue(false);
 
-const startScreenShare = vi.mocked(ScreenShareService.startScreenShare);
+// Unlike a module mock, a spy patches the ONE shared `ScreenShareService` object every importer
+// already holds a reference to, so it stays applied process-wide until explicitly restored — this
+// file is the only one that needs the fake, so it undoes its own spies once its suite is done rather
+// than leaving `../services/__tests__/ScreenShareService.test.ts` calling these fakes too.
+afterAll(() => {
+  startScreenShare.mockRestore();
+  stopScreenShare.mockRestore();
+  isScreenSharing.mockRestore();
+});
 
 const REQUEST_ID = 'screen-access-request-1';
 

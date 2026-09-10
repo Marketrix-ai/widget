@@ -2,7 +2,7 @@
  * `use_screenshare` tests: denied without a prompt when the tenant turned sharing off — on the switch
  * alone, so a stored config that lost its credentials cannot reopen the picker — and prompted when on.
  */
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'bun:test';
 
 import { startScreenShare, stopScreenShare } from '@/services/ScreenShareService';
 import { storageService } from '@/services/StorageService';

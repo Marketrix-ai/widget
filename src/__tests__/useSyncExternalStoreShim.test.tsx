@@ -3,7 +3,7 @@
  * `isEqual` the previous selection is held when the slice is unchanged.
  */
 import { act, render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'bun:test';
 
 import { useSyncExternalStoreWithSelector } from '../useSyncExternalStoreShim';
 
