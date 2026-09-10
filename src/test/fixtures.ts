@@ -21,13 +21,32 @@
  *
  * `flushMicrotasks` names the common one-microtask-tick wait (`await Promise.resolve()`) explicitly, for
  * tests that need pending promise callbacks to settle before asserting.
+ *
+ * `agentMessage(overrides)` is the shared `ChatMessage` builder — an agent bubble with id `agent-1`, a
+ * single text part echoing `content`, and a fixed `timestamp` — for every test that needs one message
+ * without caring about its exact shape; a test asserting placeholder/mode semantics overrides those
+ * fields explicitly.
  */
 import { WidgetSettingsDataSchema } from '../sdk';
-import type { ValidWidgetConfig, WidgetSettingsData } from '../types';
+import type { ChatMessage, ValidWidgetConfig, WidgetSettingsData } from '../types';
 
 export const flushMicrotasks = (): Promise<void> => Promise.resolve();
 
 export const mountTarget = (): HTMLDivElement => document.createElement('div');
+
+export function agentMessage(overrides: Partial<ChatMessage> = {}): ChatMessage {
+  return {
+    id: 'agent-1',
+    content: 'Working on it',
+    sender: 'agent',
+    timestamp: new Date('2026-01-01T00:00:00.000Z'),
+    mode: 'do',
+    isPlaceholder: true,
+    placeholderState: 'thinking',
+    parts: [{ type: 'text', content: 'Working on it' }],
+    ...overrides,
+  };
+}
 
 type MockWidgetConfig = ValidWidgetConfig &
   Pick<

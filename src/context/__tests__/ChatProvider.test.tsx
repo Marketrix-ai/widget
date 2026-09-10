@@ -10,22 +10,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useWidget } from '../../hooks/useWidget';
 import { storageService } from '../../services/StorageService';
-import type { ChatMessage } from '../../types';
+import { agentMessage } from '../../test/fixtures';
 import { ChatProvider, useChatContext } from '../ChatContext';
 import { UIStateProvider } from '../UIStateContext';
 
 vi.mock('../../services/ChatService', () => ({ chatPost: vi.fn().mockResolvedValue(undefined) }));
 
-const restoredPlaceholder: ChatMessage = {
+const restoredPlaceholder = agentMessage({
   id: 'temp-restored',
   content: '',
-  sender: 'agent',
-  timestamp: new Date('2026-01-01T00:00:00.000Z'),
   mode: 'tell',
-  isPlaceholder: true,
-  placeholderState: 'thinking',
   parts: [],
-};
+});
 
 const Transcript = () => {
   const { messages, chatActions } = useChatContext();

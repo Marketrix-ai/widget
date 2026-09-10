@@ -6,11 +6,13 @@
  */
 import { beforeEach, describe, expect, it } from 'vitest';
 
+import { agentMessage } from '../../test/fixtures';
 import type { ChatMessage } from '../../types';
 import { createScreenshareMessage } from '../../utils/chat';
 import {
   type CredentialedConfig,
   readChatSnapshot,
+  scopedKey,
   storageService,
   tenantScope,
   writeChatSnapshot,
@@ -27,6 +29,15 @@ describe('tenantScope', () => {
 
   it('falls back to a fixed default with neither', () => {
     expect(tenantScope({})).toBe('default');
+  });
+});
+
+describe('scopedKey', () => {
+  it('keeps the three tenant-scoped browser-local keys byte-identical', () => {
+    const config = { mtxId: 'cred-1' };
+    expect(scopedKey('marketrix_chat_context', config)).toBe('marketrix_chat_context_cred-1');
+    expect(scopedKey('marketrix_widget_position', config)).toBe('marketrix_widget_position_cred-1');
+    expect(scopedKey('marketrix_widget_size', config)).toBe('marketrix_widget_size_cred-1');
   });
 });
 
@@ -52,14 +63,15 @@ describe('setConfig scopes the chat context to the tenant', () => {
 });
 
 describe('chat snapshot persistence', () => {
-  const message = (overrides: Partial<ChatMessage> = {}): ChatMessage => ({
-    id: 'agent-1',
-    content: 'hello',
-    sender: 'agent',
-    timestamp: new Date('2026-01-01T00:00:00.000Z'),
-    parts: [{ type: 'text', content: 'hello' }],
-    ...overrides,
-  });
+  const message = (overrides: Partial<ChatMessage> = {}): ChatMessage =>
+    agentMessage({
+      content: 'hello',
+      mode: undefined,
+      isPlaceholder: undefined,
+      placeholderState: undefined,
+      parts: [{ type: 'text', content: 'hello' }],
+      ...overrides,
+    });
 
   const snapshot = (messages: ChatMessage[]) => ({
     messages,

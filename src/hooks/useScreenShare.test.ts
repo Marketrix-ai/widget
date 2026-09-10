@@ -8,6 +8,7 @@ import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import * as ScreenShareService from '../services/ScreenShareService';
+import { agentMessage } from '../test/fixtures';
 import type { ChatMessage } from '../types';
 import { useScreenShare, type UseScreenShareOptions } from './useScreenShare';
 
@@ -21,16 +22,15 @@ const startScreenShare = vi.mocked(ScreenShareService.startScreenShare);
 
 const REQUEST_ID = 'screen-access-request-1';
 
-const openRequestMessage: ChatMessage = {
+const openRequestMessage: ChatMessage = agentMessage({
   id: REQUEST_ID,
   content: 'Can I take a look at your screen?',
-  sender: 'agent',
-  timestamp: new Date(),
-  mode: 'do',
+  isPlaceholder: undefined,
+  placeholderState: undefined,
   isScreenAccessRequest: true,
   pendingContent: 'do the thing',
   parts: [{ type: 'text', content: 'Can I take a look at your screen?' }],
-};
+});
 
 const setup = (messages: ChatMessage[]) => {
   const opts = {

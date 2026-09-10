@@ -12,7 +12,7 @@ import { chatSessionManager } from '../services/ChatSessionManager';
 import * as StorageService from '../services/StorageService';
 import { type ChatSnapshot, storageService } from '../services/StorageService';
 import { streamClient } from '../services/StreamClient';
-import { flushMicrotasks } from '../test/fixtures';
+import { agentMessage, flushMicrotasks } from '../test/fixtures';
 import { useUIStateContext } from './UIStateContext';
 import { WidgetProviders } from './WidgetProviders';
 
@@ -56,11 +56,14 @@ describe('WidgetProviders initialization', () => {
       chat_id: 'chat-1',
       messages: [
         {
-          id: 'agent-1',
-          content: 'hello',
-          sender: 'agent',
+          ...agentMessage({
+            content: 'hello',
+            mode: undefined,
+            isPlaceholder: undefined,
+            placeholderState: undefined,
+            parts: [{ type: 'text', content: 'hello' }],
+          }),
           timestamp: new Date('2026-01-01T00:00:00.000Z').toISOString(),
-          parts: [{ type: 'text', content: 'hello' }],
         },
       ],
     });

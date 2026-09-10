@@ -22,6 +22,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { WidgetEvent } from '@/sdk';
 import { FINISH_TOOL } from '@/services/BrowserToolService';
+import { agentMessage } from '@/test/fixtures';
 import { type ChatMessage, messageText } from '@/types';
 
 import {
@@ -34,18 +35,6 @@ import {
   reduceTransportFailure,
   type SseState,
 } from '../sseReducer';
-
-const agentMessage = (overrides: Partial<ChatMessage> = {}): ChatMessage => ({
-  id: 'agent-1',
-  content: 'Working on it',
-  sender: 'agent',
-  timestamp: new Date(),
-  mode: 'do',
-  isPlaceholder: true,
-  placeholderState: 'thinking',
-  parts: [{ type: 'text', content: 'Working on it' }],
-  ...overrides,
-});
 
 const runningState = (overrides: Partial<ChatMessage> = {}): SseState => ({
   messages: [agentMessage(overrides)],
