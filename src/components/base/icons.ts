@@ -15,7 +15,7 @@
  * value type. The bundle is a single chunk, so every entry here is unconditional weight in each host page.
  */
 
-export interface IconPath {
+interface IconPath {
   d: string;
   fill?: string;
   stroke?: string;

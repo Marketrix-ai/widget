@@ -17,12 +17,17 @@
  * `LAYOUT_KEYS` must list every key of `LayoutProps`: `stripLayoutProps` filters by that set, so a
  * layout prop missing from it reaches the DOM as an unknown attribute. `as` and `style` are in it
  * because the consuming component (`Surface`) applies them itself rather than forwarding them.
+ *
+ * `withClass(base, extra)` appends an optional caller `className` to a component's fixed base class
+ * (`Button`, `Icon`, `Avatar`). It is NOT the banned `cn()`: there is no variant list to merge or
+ * dedup, just a plain conditional concat of one fixed string and one optional string — variants stay
+ * on `data-*` attributes per the styling rule in `../../../CLAUDE.md`.
  */
 import type { CSSProperties, ElementType } from 'react';
 
 import { RADIUS, type RadiusToken } from '../../design-system/component-tokens';
 
-export type SpacingToken = 'none' | '2xs' | 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
+type SpacingToken = 'none' | '2xs' | 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
 
 export const SPACING_SCALE: Record<SpacingToken, string> = {
   none: '0',
@@ -183,3 +188,5 @@ export function stripLayoutProps<T extends LayoutProps>(props: T): Omit<T, keyof
   }
   return result as Omit<T, keyof LayoutProps>;
 }
+
+export const withClass = (base: string, extra?: string): string => (extra ? `${base} ${extra}` : base);

@@ -29,7 +29,7 @@ const CREDENTIALS_REJECTED = 'Chat is unavailable — the widget credentials wer
 
 export class StreamGaveUpError extends Error {}
 
-export interface StreamClientCallbacks {
+interface StreamClientCallbacks {
   onMessage?: (event: WidgetEvent) => void;
   onError?: (error: Error) => void;
 }

@@ -27,7 +27,7 @@ interface IndexedElement {
   identity: Array<string | null>;
 }
 
-export interface ValidatedElementResult {
+interface ValidatedElementResult {
   element: HTMLElement | null;
   error?: string;
 }

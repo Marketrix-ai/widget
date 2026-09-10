@@ -30,7 +30,7 @@ import type { MarketrixConfig, ValidWidgetConfig } from '../types';
 import { WIDGET_SHADOW_HOST_CLASS } from './dom';
 import { isHTMLScriptElement } from './validation';
 
-export interface WidgetMount {
+interface WidgetMount {
   instance: Root;
   config: ValidWidgetConfig;
   container: HTMLElement;

@@ -39,7 +39,8 @@ export type MarketrixConfig = Partial<WidgetRenderedSettings> &
     isPreviewMode?: boolean;
   };
 
-export type ValidWidgetConfig = MarketrixConfig & Required<Pick<MarketrixConfig, keyof WidgetRenderedSettings>>;
+export type ValidWidgetConfig = MarketrixConfig &
+  Required<Pick<MarketrixConfig, keyof WidgetRenderedSettings | 'isPreviewMode'>>;
 
 export interface ChatMessage {
   id: string;
