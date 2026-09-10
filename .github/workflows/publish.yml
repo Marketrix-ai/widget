@@ -1,6 +1,9 @@
-# Publishes the package to npm on a `v*` tag, independently of the image build. The publish step is
-# idempotent by design: an `npm view` hit exits 0, so a green run does NOT prove a publish happened —
-# check `npm view @marketrix.ai/widget version` before pinning `app`'s lockfile to a version.
+# Publishes the package to npm on a `v*` tag, independently of the image build. Auth is a classic npm
+# token (`secrets.NPM_TOKEN`), not OIDC/provenance, so `bun publish` reads it via `NPM_CONFIG_TOKEN` —
+# no `actions/setup-node`/registry-url dance needed. `--tolerate-republish` replaces the old manual
+# `npm view` idempotency check with bun's own equivalent: exit 0 (not a failed re-run) when the version
+# is already on the registry, so a green run still does NOT prove a NEW publish happened — check
+# `npm view @marketrix.ai/widget version` before pinning `app`'s lockfile to a version.
 name: Publish
 on:
   push:
@@ -13,21 +16,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: oven-sh/setup-bun@v2
         with:
-          node-version: 26
-          cache: 'npm'
-          registry-url: 'https://registry.npmjs.org'
-      - run: npm ci
-      - run: npm run build
+          bun-version-file: package.json
+      - run: bun install --frozen-lockfile
+      - run: bun run build
       - name: Publish to npm
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: |
-          NAME=$(node -p "require('./package.json').name")
-          VER=$(node -p "require('./package.json').version")
-          if npm view "$NAME@$VER" version >/dev/null 2>&1; then
-            echo "Already on registry: $NAME@$VER — skipping publish"
-            exit 0
-          fi
-          npm publish --access public
+          NPM_CONFIG_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: bun publish --access public --tolerate-republish

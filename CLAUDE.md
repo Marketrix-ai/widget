@@ -16,28 +16,28 @@ status vocabulary, contract sync, ports, release order).
 ## Commands
 
 ```bash
-npm start                # vite dev on :9001 (override PORT / VITE_PORT; CORS enabled)
-npm run build            # → dist/widget.mjs (terser, single ESM) + tsc declarations
-npm run type-check       # alias: check          npm run lint    # --fix, max-warnings 200
-npm run test             # vitest (jsdom + Testing Library + axe)
-npm run bundle:check     # packaging gate (size, single chunk, no CSS file, React external)
-npm run code:check       # tsc + eslint + prettier --check (one-shot)
-npm run ci               # every CI validation gate
-npm run tag <version>    # scripts/release.sh
+bun start                # vite dev on :9001 (override PORT / VITE_PORT; CORS enabled)
+bun run build            # → dist/widget.mjs (terser, single ESM) + tsc declarations
+bun run type-check       # alias: check          bun run lint    # --fix, max-warnings 200
+bun run test             # vitest (jsdom + Testing Library + axe)
+bun run bundle:check     # packaging gate (size, single chunk, no CSS file, React external)
+bun run code:check       # tsc + eslint + prettier --check (one-shot)
+bun run ci               # every CI validation gate
+bun run tag <version>    # scripts/release.sh
 ```
 
-**Pre-handoff gate** (matching the repository-local Node 26 workflow): `npm run ci`. This public repo
+**Pre-handoff gate** (matching the repository-local bun workflow): `bun run ci`. This public repo
 cannot call private infra workflows. Git hooks autofix but are not a substitute.
 
 **Hooks install themselves.** `lefthook` is a devDependency whose `postinstall` runs `lefthook install -f`,
-so a plain `npm install` writes the pre-commit shim into the effective hooks path — `.git/hooks` by
+so a plain `bun install` writes the pre-commit shim into the effective hooks path — `.git/hooks` by
 default — and a fresh clone needs no `git config core.hooksPath`. It is skipped only when `CI` is
 set. **A global `core.hooksPath` hijacks the target**: lefthook installs there instead, unscoping
 this repo's hook to every repo on the machine. Lefthook is the only hook runner (there is no husky
-dependency, and `npm install` puts the binary at `node_modules/lefthook/bin/index.js`, where the shim
+dependency, and `bun install` puts the binary at `node_modules/lefthook/bin/index.js`, where the shim
 looks).
-The shim sources **`.lefthookrc`** first to put node/npm back on `PATH` — hooks launched from GUI clients inherit a
-minimal environment and otherwise die `npm: command not found`. **That rc path is baked in when hooks
+The shim sources **`.lefthookrc`** first to put bun back on `PATH` — hooks launched from GUI clients inherit a
+minimal environment and otherwise die `bun: command not found`. **That rc path is baked in when hooks
 are generated**, so after changing `rc:` you must re-run `lefthook install --force`.
 
 ## Packaging
@@ -179,21 +179,22 @@ colocated `*.test.ts(x)`.
 
 ## Release & CI
 
-`npm run tag <version>` bumps `package.json`, refreshes `package-lock.json`, builds, commits and
+`bun run tag <version>` bumps `package.json`, refreshes `bun.lock`, builds, commits and
 creates the annotated tag. Pushing `v*` independently fires the repo-local `image.yml` →
 `marketrix.azurecr.io/widget:<version>` (**v-prefix stripped**) and `publish.yml` → npm. This public
 repo cannot call Infra's private reusable image workflow, so its local build stays equivalent;
 publication remains separate and skips an existing npm version. `ci.yml` runs only for pull requests
 and pushes to `main`. Root `../CLAUDE.md` carries the full release order.
 
-Docker: one file, stages `base` → `dev` / `builder` → `runtime` (node build → nginx serve, mime patched
-to serve `.mjs`). Tilt builds `dev`, CI builds `runtime`, both inheriting `base`'s `npm ci`, so local
-and shipped images cannot drift in their dependency set.
+Docker: one file, stages `base` → `dev` / `builder` → `runtime` (bun build → nginx serve, mime patched
+to serve `.mjs`; the `runtime` stage's nginx base carries no bun/node, only the built static assets).
+Tilt builds `dev`, CI builds `runtime`, both inheriting `base`'s `bun install --frozen-lockfile`, so
+local and shipped images cannot drift in their dependency set.
 
 ## Gotchas
 
-- **Lockfile discipline** — any version or dependency change must run `npm install` and commit
-  `package-lock.json` alongside `package.json`. `npm run tag` does it for you.
+- **Lockfile discipline** — any version or dependency change must run `bun install` and commit
+  `bun.lock` alongside `package.json`. `bun run tag` does it for you.
 - **The loader always injects its `esm.sh` React importmap** — it neither reads nor merges an existing
   one. A host importmap placed before the loader keeps its entries because browsers never let a later
   import map override an earlier key, so the loader's map only fills what the host left out.
@@ -249,7 +250,7 @@ Standing gotchas folded in from session memory so they travel with the repo. Eve
 
 ### Gotchas
 
-- **A green `publish` job never proves a publish** — the step is idempotent (`npm view` hit ⇒ exit 0), and a skipped publish leaves npm behind the tag so app's `npm install @marketrix.ai/widget@<ver>` fails. Check `npm view @marketrix.ai/widget version` before pinning app. Publishing from a tag cut off stale local `main` ships `latest` without the fix and burns the version number.
+- **A green `publish` job never proves a publish** — the step is idempotent (`bun publish --tolerate-republish` exits 0 on an already-published version), and a skipped publish leaves npm behind the tag so app's `npm install @marketrix.ai/widget@<ver>` fails. Check `npm view @marketrix.ai/widget version` before pinning app. Publishing from a tag cut off stale local `main` ships `latest` without the fix and burns the version number.
 - `.husky/_/pre-commit` is still TRACKED — a lefthook-generated shim nothing points at. Never aim `core.hooksPath` at it: an install there rewrites it with machine-local paths and dirties the tree.
 - Diff the BUILT artefact, not just source: an `@layer utilities` block not migrated to Tailwind v4's `@utility` compiles `hover:`/`placeholder:` variants to NOTHING with no error, and over half of `index.css` was once unreachable that way. The prod bundle drops `console.*` (terser) — debug via api/agent logs.
 - **The contract gate checks the widget version the app BUNDLES**, not the widget image — a types-only mirror change still needs: tag widget → wait for npm → `npm install @marketrix.ai/widget@<ver>` in app → commit lockfile → tag app.
