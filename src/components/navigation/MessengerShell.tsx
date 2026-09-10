@@ -3,7 +3,7 @@
  * the resize grip. `MessengerShell` renders null while the store says closed; `WidgetRoot` is its only caller.
  *
  * Geometry comes from the tenant config, never from props. `useResize` owns the persisted size, keyed by
- * `tenantScope(config)` so two tenants on one host page cannot share a stored size; `getPanelPositionStyle` pins
+ * `useResize` keys its storage by `config`, via the shared `scopedKey`, so two tenants on one host page cannot share a stored size; `getPanelPositionStyle` pins
  * the panel to the configured corner and `getCorner` supplies the matching `transformOrigin`, so the entrance
  * animation scales out of the anchored corner instead of the panel's centre. Preview mode (the dashboard embed)
  * positions `absolute` rather than `fixed` and drops the 20px corner resize grip — a labelled `separator` with
@@ -25,7 +25,6 @@ import { SHADOW } from '../../design-system/component-tokens';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { useResize } from '../../hooks/useResize';
 import { useWidget, useWidgetConfig } from '../../hooks/useWidget';
-import { tenantScope } from '../../services/StorageService';
 import type { WidgetView } from '../../types';
 import { createUserMessage } from '../../utils/chat';
 import { backgroundGradient } from '../../utils/color';
@@ -34,6 +33,7 @@ import { getCorner, getPanelPositionStyle } from '../../utils/widgetPositioning'
 import { Stack } from '../base/Flex';
 import { Icon } from '../base/Icon';
 import { IconButton } from '../base/IconButton';
+import { LiveDot } from '../base/LiveDot';
 import { HeaderBar } from '../blocks/HeaderBar';
 import { ChatView } from '../views/ChatView';
 import { HomeView } from '../views/HomeView';
@@ -49,7 +49,7 @@ export const MessengerShell: React.FC = () => {
     config.widget_width,
     config.widget_height,
     config.widget_position,
-    tenantScope(config),
+    config,
     isPreviewMode,
   );
 
@@ -116,12 +116,7 @@ export const MessengerShell: React.FC = () => {
               label={headerScreenSharing ? 'Stop screen sharing' : 'Start screen sharing'}
               onClick={screenShareHandler}
             >
-              {headerScreenSharing && (
-                <span className='mtx-live-dot' style={{ position: 'absolute', top: '2px', right: '2px' }}>
-                  <span className='mtx-live-dot-ping' />
-                  <span className='mtx-live-dot-core' />
-                </span>
-              )}
+              {headerScreenSharing && <LiveDot style={{ position: 'absolute', top: '2px', right: '2px' }} />}
               <Icon name='screenShare' size={16} />
             </IconButton>
           )

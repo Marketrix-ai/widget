@@ -22,6 +22,7 @@ import React, { useEffect, useRef, useState } from 'react';
 
 import { Flex } from '../base/Flex';
 import { Icon } from '../base/Icon';
+import { LiveDot } from '../base/LiveDot';
 import { Spinner } from '../base/Spinner';
 import { Surface } from '../base/Surface';
 import { Text } from '../base/Text';
@@ -151,10 +152,7 @@ export const VideoStreamDisplay: React.FC<VideoStreamDisplayProps> = ({ stream }
             boxShadow: '0 2px 8px rgba(31, 41, 55, 0.4)',
           }}
         >
-          <span className='mtx-live-dot' style={{ color: 'white' }}>
-            <span className='mtx-live-dot-ping' />
-            <span className='mtx-live-dot-core' />
-          </span>
+          <LiveDot style={{ color: 'white' }} />
           <Text
             as='span'
             size='xs'

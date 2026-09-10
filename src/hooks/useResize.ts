@@ -7,8 +7,9 @@
  * tenant's stored one if there is one, else the dashboard's `widget_width`/`widget_height` — both
  * through `clampSize`, so a setting outside the drag range lands on the same bounds a drag has.
  * `parsePx` accepts a bare px length only, since `rem`/`em`/`%` can't be resolved without layout, and
- * `readStoredSize` parses the tenant-scoped `marketrix_widget_size_<scope>` entry, warning-then-defaulting
- * on anything unparseable since corrupted host-page localStorage must not leave the panel unsizable.
+ * `readStoredSize` parses the tenant-scoped `marketrix_widget_size_<scope>` entry (keyed through the shared
+ * `scopedKey`, like its two `readLocal`/`writeLocal` siblings), warning-then-defaulting on anything unparseable
+ * since corrupted host-page localStorage must not leave the panel unsizable.
  * `clampSize` bounds width to MIN_WIDTH..MAX_WIDTH, height to MIN_HEIGHT..85% of the viewport, measured
  * at call time so a resize re-clamps on the next drag.
  *
@@ -20,8 +21,8 @@
  */
 import { useCallback, useMemo, useRef, useState } from 'react';
 
-import { readLocal, writeLocal } from '../services/StorageService';
-import type { WidgetPosition } from '../types';
+import { readLocal, scopedKey, writeLocal } from '../services/StorageService';
+import type { MarketrixConfig, WidgetPosition } from '../types';
 import { getResizeGrip } from '../utils/widgetPositioning';
 
 interface Size {
@@ -46,7 +47,7 @@ function parsePx(value: string | undefined, fallback: number): number {
   return px ? Number(px[1]) : fallback;
 }
 
-const STORAGE_KEY_PREFIX = 'marketrix_widget_size_';
+const STORAGE_KEY_NAME = 'marketrix_widget_size';
 
 function readStoredSize(storageKey: string): Size | null {
   try {
@@ -63,10 +64,10 @@ export function useResize(
   settingsWidth: string | undefined,
   settingsHeight: string | undefined,
   position: WidgetPosition,
-  tenantScope: string,
+  config: MarketrixConfig,
   isPreviewMode: boolean,
 ) {
-  const storageKey = `${STORAGE_KEY_PREFIX}${tenantScope}`;
+  const storageKey = scopedKey(STORAGE_KEY_NAME, config);
   const containerRef = useRef<HTMLDivElement>(null);
   const grip = useMemo(() => getResizeGrip(position), [position]);
 

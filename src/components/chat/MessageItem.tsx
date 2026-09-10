@@ -30,7 +30,6 @@ import { VideoStreamDisplay } from './VideoStreamDisplay';
 
 interface MessageItemProps {
   message: ChatMessage;
-  index: number;
   isLastMessage: boolean;
   onScreenAccessAllow?: () => void;
   onScreenAccessDeny?: () => void;
@@ -98,7 +97,6 @@ const MessageBody: React.FC<{ message: ChatMessage; isLastMessage: boolean }> = 
 
 export const MessageItem: React.FC<MessageItemProps> = ({
   message,
-  index,
   isLastMessage,
   onScreenAccessAllow,
   onScreenAccessDeny,
@@ -107,7 +105,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
 
   if (message.isSystemMessage) {
     return (
-      <Flex key={`message-${message.id}-${index}`} justify='center' align='center'>
+      <Flex justify='center' align='center'>
         <Text as='span' variant='faint' weight='normal' style={{ fontSize: '10px' }}>
           {message.content}
         </Text>
@@ -127,7 +125,6 @@ export const MessageItem: React.FC<MessageItemProps> = ({
 
   return (
     <Stack
-      key={`message-${message.id}-${index}`}
       style={{ marginTop: '10px' }}
       role='article'
       aria-roledescription='message'

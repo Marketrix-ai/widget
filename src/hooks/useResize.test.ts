@@ -21,11 +21,11 @@ import { act, renderHook } from '@testing-library/react';
 import type React from 'react';
 import { describe, expect, it } from 'vitest';
 
-import type { WidgetPosition } from '../types';
+import type { MarketrixConfig, WidgetPosition } from '../types';
 import { useResize } from './useResize';
 
 const sizeFor = (width: string | undefined, height: string | undefined) =>
-  renderHook(() => useResize(width, height, 'bottom_right', 'tenant', false)).result.current;
+  renderHook(() => useResize(width, height, 'bottom_right', { mtxId: 'tenant' }, false)).result.current;
 
 describe('the panel size a dashboard setting produces', () => {
   it('uses a px setting as written', () => {
@@ -52,8 +52,8 @@ const OUTWARD: Record<WidgetPosition, { dx: number; dy: number }> = {
 let dragCount = 0;
 
 const drag = (position: WidgetPosition, dx: number, dy: number): CSSStyleDeclaration => {
-  const scope = `tenant-${(dragCount += 1)}`;
-  const { result } = renderHook(() => useResize('400px', '500px', position, scope, false));
+  const config: MarketrixConfig = { mtxId: `tenant-${(dragCount += 1)}` };
+  const { result } = renderHook(() => useResize('400px', '500px', position, config, false));
   const panel = document.createElement('div');
   result.current.containerRef.current = panel;
 

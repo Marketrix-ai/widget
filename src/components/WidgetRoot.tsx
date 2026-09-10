@@ -24,7 +24,7 @@ import { LAYER_TOKENS } from '../design-system/component-tokens';
 import { createSemanticTokens, semanticTokensToCssCustomProperties } from '../design-system/semantic-tokens';
 import { useScrollLock } from '../hooks/useScrollLock';
 import { useWidget, WidgetConfigContext } from '../hooks/useWidget';
-import { readLocal, tenantScope, writeLocal } from '../services/StorageService';
+import { readLocal, scopedKey, writeLocal } from '../services/StorageService';
 import { streamClient } from '../services/StreamClient';
 import type { ValidWidgetConfig, WidgetPosition } from '../types';
 import { addOpacity } from '../utils/color';
@@ -49,7 +49,7 @@ export const WidgetRoot: React.FC<WidgetRootProps> = ({ config }) => {
 
   const [widgetPosition, setWidgetPosition] = useState<WidgetPosition>(config.widget_position ?? 'bottom_right');
 
-  const positionStorageKey = `marketrix_widget_position_${tenantScope(config)}`;
+  const positionStorageKey = scopedKey('marketrix_widget_position', config);
 
   useEffect(() => {
     const stored = isPreviewMode ? null : readLocal(positionStorageKey);

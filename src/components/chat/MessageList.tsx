@@ -112,7 +112,6 @@ export const MessageList = ({ messagesEndRef, onScreenAccessAllow, onScreenAcces
           <MessageItem
             key={`message-${message.id}-${index}`}
             message={message}
-            index={index}
             isLastMessage={index === allMessages.length - 1}
             onScreenAccessAllow={onScreenAccessAllow}
             onScreenAccessDeny={onScreenAccessDeny}

@@ -17,6 +17,9 @@
  * The snapshot is `{messages, currentMode, isOpen}` — chat_id, config and timestamp are deliberately excluded.
  * Reading revives `timestamp` to a `Date` and backfills a text part for messages stored before `parts` existed;
  * writing drops `videoStream` (unserializable, dead on reload), rewriting it as `Screen sharing ended`.
+ *
+ * `scopedKey(name, config)` is the one place `<name>_<tenantScope>` is assembled — the position and resize-size
+ * keys share it with the chat context key, so all three browser-local entries partition by tenant identically.
  */
 import type { ChatMessage, InstructionType, MarketrixConfig, ValidWidgetConfig } from '../types';
 
@@ -42,6 +45,10 @@ export type MarketrixChatContext = Omit<ChatSnapshot, 'messages'> & {
 
 export function tenantScope(config: MarketrixConfig): string {
   return config.mtxId ?? (config.mtxApp != null ? String(config.mtxApp) : 'default');
+}
+
+export function scopedKey(name: string, config: MarketrixConfig): string {
+  return `${name}_${tenantScope(config)}`;
 }
 
 const DEFAULT_CONTEXT: MarketrixChatContext = {
@@ -109,7 +116,7 @@ class StorageService {
   }
 
   setConfig(config: CredentialedConfig): void {
-    this.key = `${STORAGE_KEY}_${tenantScope(config)}`;
+    this.key = scopedKey(STORAGE_KEY, config);
     this.context = loadContext(this.key);
     this.updateContext({ config });
   }
