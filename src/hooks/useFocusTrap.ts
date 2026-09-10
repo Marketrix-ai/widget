@@ -2,11 +2,12 @@
  * Focus trap for the messenger panel: while `isActive`, focus starts inside `containerRef`, Tab cycles
  * within it, Escape calls `onEscape`, and on deactivation focus returns to whatever held it before.
  *
- * The tabbable-candidate query is `utils/dom`'s shared `TABBABLE_SELECTOR`; `activeElementIn` reads the
- * focused element as seen from a container's own root; `getFocusables` lists a container's visible tabbable elements; and
- * `useFocusTrap(containerRef, isActive, {onEscape, focusTargetRef})` focuses `focusTargetRef` (else the
- * first focusable), installs one capture-phase `keydown` listener on `document`, and restores focus on
- * the active→inactive edge.
+ * The tabbable candidates come from `utils/dom`'s shared `focusablesIn` (built on `TABBABLE_SELECTOR`,
+ * visibility and `aria-hidden` ancestry — the same filter `keySimulation`'s Tab simulation uses, so the
+ * widget's own tab order and the host page's can't re-diverge); `activeElementIn` reads the focused
+ * element as seen from a container's own root; and `useFocusTrap(containerRef, isActive, {onEscape,
+ * focusTargetRef})` focuses `focusTargetRef` (else the first focusable), installs one capture-phase
+ * `keydown` listener on `document`, and restores focus on the active→inactive edge.
  *
  * Inside the widget's closed shadow root `document.activeElement` retargets to the HOST, never naming
  * an element of the widget's own tree; `activeElementIn` reads through `container.getRootNode()`
@@ -16,22 +17,16 @@
  * the customer's page. Both key arms bail unless focus is currently inside the container, since the
  * listener sits on `document` ahead of host-page handlers and an unguarded Escape would close the
  * widget mid-typing. Tab `preventDefault`s only at the two ends; `previousActiveRef` edge-triggers the
- * restore once on close, and `getFocusables` drops hidden/`aria-hidden` elements the selector can't express.
+ * restore once on close.
  */
 
 import { useEffect, useRef } from 'react';
 
-import { TABBABLE_SELECTOR } from '../utils/dom';
+import { focusablesIn } from '../utils/dom';
 
 function activeElementIn(container: HTMLElement): HTMLElement | null {
   const root = container.getRootNode();
   return ((root instanceof ShadowRoot ? root.activeElement : document.activeElement) as HTMLElement) ?? null;
-}
-
-function getFocusables(container: HTMLElement): HTMLElement[] {
-  return Array.from(container.querySelectorAll<HTMLElement>(TABBABLE_SELECTOR)).filter(
-    el => el.offsetParent !== null && !el.hasAttribute('aria-hidden'),
-  );
 }
 
 export function useFocusTrap(
@@ -63,7 +58,7 @@ export function useFocusTrap(
     }
     previousActiveRef.current = true;
 
-    const target = options?.focusTargetRef?.current ?? getFocusables(container)[0];
+    const target = options?.focusTargetRef?.current ?? focusablesIn(container)[0];
     target?.focus({ preventScroll: true });
 
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -74,7 +69,7 @@ export function useFocusTrap(
         return;
       }
       if (e.key !== 'Tab') return;
-      const focusables = getFocusables(container);
+      const focusables = focusablesIn(container);
       if (focusables.length === 0) return;
       const idx = focusables.indexOf(current);
       if (idx === -1) return;

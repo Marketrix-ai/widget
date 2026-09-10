@@ -17,6 +17,13 @@
  * both chains are climbed. Its one `try` is deliberate — the host page owns this DOM and may have patched
  * anything on it, so a poisoned element is logged with the real error and skipped rather than aborting the
  * whole indexing pass.
+ *
+ * `focusablesIn` is the one home for "which `TABBABLE_SELECTOR` matches are actually reachable" —
+ * `useFocusTrap` (the widget's own tree) and `keySimulation`'s Tab simulation (the host page) both call
+ * it so they can't re-diverge. Per WAI-ARIA, `aria-hidden="true"` removes an element (and its whole
+ * subtree) from the accessibility tree, so it must not receive focus — `isAriaHidden` walks ancestors,
+ * not just the element itself, since a hidden container hides everything under it even though none of
+ * those descendants carry the attribute.
  */
 
 export const WIDGET_SHADOW_HOST_CLASS = 'marketrix-widget-container';
@@ -25,6 +32,19 @@ export const TABBABLE_SELECTOR =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 const INTERACTIVE_ROLES = new Set(['button', 'link', 'textbox', 'checkbox', 'radio', 'switch', 'tab', 'menuitem']);
+
+function isAriaHidden(el: Element): boolean {
+  for (let node: Element | null = el; node; node = node.parentElement) {
+    if (node.getAttribute('aria-hidden') === 'true') return true;
+  }
+  return false;
+}
+
+export function focusablesIn(root: ParentNode): HTMLElement[] {
+  return Array.from(root.querySelectorAll<HTMLElement>(TABBABLE_SELECTOR)).filter(
+    el => el.offsetParent !== null && !isAriaHidden(el),
+  );
+}
 
 function* ancestry(el: Element): Generator<Element> {
   let node: Element | null = el;
