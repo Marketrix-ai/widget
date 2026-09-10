@@ -1,6 +1,6 @@
 # Git hook definitions for lefthook (https://github.com/evilmartians/lefthook).
 #
-# `rc: ./.lefthookrc` restores node/npm onto PATH before any command runs, because GUI git clients start
+# `rc: ./.lefthookrc` restores bun onto PATH before any command runs, because GUI git clients start
 # hooks with a minimal environment. Changing it requires re-running `lefthook install`: the path is baked
 # into the generated shims, not read at run time. Keep the leading `./` — the shim sources this with the
 # POSIX `.` builtin, which searches $PATH for an operand containing no slash, and shells differ on whether
@@ -24,18 +24,18 @@ pre-commit:
       glob: '*.{ts,tsx,js,mjs,cjs,json,md,yml,yaml,css}'
       exclude:
         - AGENTS.md
-      run: npx prettier --write {staged_files}
+      run: bunx prettier --write {staged_files}
       stage_fixed: true
     lint:
-      run: npm run lint
+      run: bun run lint
       stage_fixed: true
     check:
-      run: npm run check
+      run: bun run check
 
 pre-push:
   parallel: false
   commands:
     code-check:
-      run: npm run code:check
+      run: bun run code:check
     test:
-      run: npm run test
+      run: bun run test

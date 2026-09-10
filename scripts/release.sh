@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Cuts a widget release: bumps package.json to <version> without tagging, refreshes package-lock.json,
+# Cuts a widget release: bumps package.json to <version> without tagging, refreshes bun.lock,
 # builds, commits both manifests and creates the annotated `v<version>` tag. It deliberately does NOT
 # push — pushing the tag is what fires image.yml and publish.yml, so that stays a separate step.
 
@@ -12,12 +12,12 @@ TAG="v${VERSION}"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-npm version "$VERSION" --no-git-tag-version --ignore-scripts
+bun pm version "$VERSION" --no-git-tag-version
 
-npm install
-npm run build
+bun install
+bun run build
 
-git add package.json package-lock.json
+git add package.json bun.lock
 git commit -m "chore(${PROJECT}): release v${VERSION}"
 
 git tag -a "$TAG" -m "Release ${TAG}"

@@ -2,6 +2,7 @@
   "name": "@marketrix.ai/widget",
   "version": "3.8.497",
   "type": "module",
+  "packageManager": "bun@1.3.14",
   "sideEffects": false,
   "main": "./dist/widget.mjs",
   "module": "./dist/widget.mjs",
@@ -22,7 +23,7 @@
     "tag": "bash scripts/release.sh",
     "start": "vite",
     "build": "vite build",
-    "ci": "npm run type-check && npm run lint:check && npm run build && npm run format:check && npm run test && npm run bundle:check",
+    "ci": "bun run type-check && bun run lint:check && bun run build && bun run format:check && bun run test && bun run bundle:check",
     "lint": "eslint . --max-warnings 200 --fix",
     "lint:check": "eslint . --max-warnings 0",
     "check": "tsc --noEmit",
@@ -32,7 +33,7 @@
     "test:coverage": "vitest run --coverage",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "bundle:check": "node scripts/bundle-check.mjs",
+    "bundle:check": "bun scripts/bundle-check.mjs",
     "code:fix": "eslint . --fix && prettier --write .",
     "code:check": "tsc --noEmit && eslint . && prettier --check ."
   },
@@ -74,5 +75,8 @@
     "vite": "^8.2.2",
     "vitest": "^5.0.0",
     "vitest-axe": "^0.1.0"
-  }
+  },
+  "trustedDependencies": [
+    "unrs-resolver"
+  ]
 }
