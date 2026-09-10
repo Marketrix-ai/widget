@@ -12,6 +12,7 @@ import { chatSessionManager } from '../services/ChatSessionManager';
 import * as StorageService from '../services/StorageService';
 import { type ChatSnapshot, storageService } from '../services/StorageService';
 import { streamClient } from '../services/StreamClient';
+import { flushMicrotasks } from '../test/fixtures';
 import { useUIStateContext } from './UIStateContext';
 import { WidgetProviders } from './WidgetProviders';
 
@@ -45,7 +46,7 @@ describe('WidgetProviders initialization', () => {
     );
     view.unmount();
     resolveChatId('chat-id');
-    await Promise.resolve();
+    await flushMicrotasks();
 
     expect(connect).not.toHaveBeenCalled();
   });

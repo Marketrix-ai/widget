@@ -6,6 +6,7 @@ import { act, renderHook } from '@testing-library/react';
 import { createRef } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { resetDom } from '../test/setup';
 import type { WidgetPosition } from '../types';
 import { useDragSnap } from './useDragSnap';
 
@@ -28,7 +29,7 @@ describe('two snaps in flight', () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => {
     vi.useRealTimers();
-    document.body.innerHTML = '';
+    resetDom();
   });
 
   it('commits the corner the widget is animating to, not the one it left', () => {

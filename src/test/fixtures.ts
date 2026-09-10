@@ -8,8 +8,13 @@
  * `WidgetRenderedSettings`, which omits them, but callers hand this fixture straight to
  * `WidgetSettingsDataSchema.parse()`, which demands the whole wire shape. It is `Valid`, not partial, so
  * `renderWidget` can hand it to `WidgetRoot` without a cast — the fixture really does set every field.
+ *
+ * `flushMicrotasks` names the common one-microtask-tick wait (`await Promise.resolve()`) explicitly, for
+ * tests that need pending promise callbacks to settle before asserting.
  */
 import type { ValidWidgetConfig, WidgetSettingsData } from '../types';
+
+export const flushMicrotasks = (): Promise<void> => Promise.resolve();
 
 type MockWidgetConfig = ValidWidgetConfig &
   Pick<

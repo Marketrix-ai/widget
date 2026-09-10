@@ -11,8 +11,16 @@
  *
  * Every fill is conditional, so a real implementation — a future jsdom, or a per-test override
  * installed before this file — wins.
+ *
+ * `resetDom` is the shared body-clearing helper for tests that mount outside Testing Library's own
+ * render tree (so RTL's automatic per-test cleanup does not reach them) — `replaceChildren()` over
+ * `innerHTML = ''` avoids re-parsing a fresh, empty document fragment on every reset.
  */
 import '@testing-library/jest-dom/vitest';
+
+export function resetDom(): void {
+  document.body.replaceChildren();
+}
 
 if (typeof globalThis.localStorage?.setItem !== 'function') {
   const store = new Map<string, string>();

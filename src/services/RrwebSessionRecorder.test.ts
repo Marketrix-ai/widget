@@ -8,6 +8,7 @@ import { EventType } from '@rrweb/types';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { sdk } from '../sdk';
+import { flushMicrotasks } from '../test/fixtures';
 import { RrwebSessionRecorder } from './RrwebSessionRecorder';
 import { streamClient } from './StreamClient';
 
@@ -94,7 +95,7 @@ describe('a recorder posting into a chat the api has not registered', () => {
     mockSdk.widgetMessagePost.mockResolvedValueOnce(undefined);
 
     const start = new RrwebSessionRecorder('chat-1', 1).start();
-    await Promise.resolve();
+    await flushMicrotasks();
 
     expect(ready).toHaveBeenCalledWith('chat-1');
     expect(mockSdk.widgetMessagePost).not.toHaveBeenCalled();

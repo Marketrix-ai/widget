@@ -6,7 +6,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const recordMock = vi.fn(() => () => {});
 vi.mock('@rrweb/record', () => ({ record: (opts: unknown) => recordMock(opts as never) }));
-vi.mock('../../sdk', () => ({ sdk: { widgetMessagePost: vi.fn().mockResolvedValue({ ok: true }) } }));
+vi.mock('../../sdk', async importOriginal => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  return {
+    ...actual,
+    sdk: { widgetMessagePost: vi.fn().mockResolvedValue({ ok: true }) },
+  };
+});
 
 const { RrwebSessionRecorder } = await import('../RrwebSessionRecorder');
 const { streamClient } = await import('../StreamClient');
