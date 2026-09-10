@@ -8,6 +8,7 @@ import { Button as BaseButton } from '@base-ui/react/button';
 import type { ComponentPropsWithRef } from 'react';
 
 import { getElevationStyle, RADIUS, type ShadowToken } from '../../design-system/component-tokens';
+import { withClass } from './layoutProps';
 
 type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'bare' | 'chip' | 'tab';
 type ButtonSize = 'sm' | 'md';
@@ -45,7 +46,7 @@ export function Button({
     <BaseButton
       {...props}
       ref={ref}
-      className={className ? `mtx-button ${className}` : 'mtx-button'}
+      className={withClass('mtx-button', className)}
       data-disabled={disabled ? 'true' : 'false'}
       data-full={full ? 'true' : 'false'}
       data-size={size}

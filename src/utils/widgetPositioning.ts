@@ -6,7 +6,7 @@
  * narrows an unknown — a value read back out of localStorage — to one of the four, testing a list of
  * names rather than `in CORNERS`, so the keys every object inherits (`toString`, `__proto__`) are
  * rejected. `getPanelPositionStyle` turns a corner into the inline style pinning an element to it.
- * `getResizeGrip`, whose return type is exported as `ResizeGrip`, describes the handle on the corner
+ * `getResizeGrip` describes the handle on the corner
  * diagonally OPPOSITE the pinned one — the panel grows away from its anchor, so that is the only
  * corner free to move; `growX`/`growY` are the signs converting pointer delta into size delta, and
  * `cursor` is the diagonal the grip itself lies on. `getAnchorTopLeft` resolves a corner to viewport
@@ -57,8 +57,6 @@ export const getResizeGrip = (position: WidgetPosition) => {
     cursor: (vertical === 'top') === (horizontal === 'left') ? 'nwse-resize' : 'nesw-resize',
   };
 };
-
-export type ResizeGrip = ReturnType<typeof getResizeGrip>;
 
 export const getAnchorTopLeft = (
   position: WidgetPosition,

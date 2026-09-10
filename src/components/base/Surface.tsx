@@ -28,10 +28,10 @@ import { type CSSProperties, type ElementType, forwardRef } from 'react';
 import { getElevationStyle, type ShadowToken } from '../../design-system/component-tokens';
 import { type LayoutProps, resolveLayoutStyle, stripLayoutProps } from './layoutProps';
 
-export type SurfaceBackground = 'default' | 'card';
-export type SurfacePadding = 'none' | 'card' | 'toast';
+type SurfaceBackground = 'default' | 'card';
+type SurfacePadding = 'none' | 'card' | 'toast';
 
-export type SurfaceVariant = 'floatingCard';
+type SurfaceVariant = 'floatingCard';
 
 export interface SurfaceProps extends LayoutProps, Omit<React.HTMLAttributes<HTMLElement>, 'className'> {
   as?: ElementType;

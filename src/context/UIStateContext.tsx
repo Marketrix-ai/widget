@@ -14,7 +14,7 @@ export interface UIState {
   error?: string;
 }
 
-export interface UIStateActions {
+interface UIStateActions {
   setActiveView: (view: WidgetView) => void;
   toggleWidget: () => void;
   closeWidget: () => void;

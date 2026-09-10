@@ -5,7 +5,7 @@
 import type { ComponentPropsWithRef } from 'react';
 
 import { getElevationStyle, type RadiusToken, type ShadowToken } from '../../design-system/component-tokens';
-import { resolveLayoutStyle } from './layoutProps';
+import { resolveLayoutStyle, withClass } from './layoutProps';
 
 type AvatarSize = 'sm' | 'md' | 'lg';
 
@@ -29,7 +29,7 @@ export function Avatar(props: AvatarProps) {
       {...imgProps}
       ref={ref}
       alt={alt}
-      className={className ? `mtx-avatar ${className}` : 'mtx-avatar'}
+      className={withClass('mtx-avatar', className)}
       src={src}
       style={{
         objectFit: fit,

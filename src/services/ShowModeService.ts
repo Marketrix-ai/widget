@@ -21,7 +21,7 @@
 
 import { domService } from './DomService';
 
-export interface ShowModeOptions {
+interface ShowModeOptions {
   element: HTMLElement;
   explanation: string;
   browserToolName: string;

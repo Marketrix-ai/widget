@@ -85,6 +85,7 @@ export const WidgetRoot: React.FC<WidgetRootProps> = ({ config }) => {
     ...config,
     widget_position: widgetPosition,
     widget_position_z_index: effectiveWidgetZIndex,
+    isPreviewMode,
   };
 
   const showProcessingFeedback = state.isAwaitingReply || state.isTaskRunning;

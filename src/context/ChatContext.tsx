@@ -43,7 +43,7 @@ import {
 } from './sseReducer';
 import { useUIStateContext } from './UIStateContext';
 
-export interface ChatActions {
+interface ChatActions {
   addMessage: (message: ChatMessage) => void;
   updateMessage: (messageId: string, updates: Partial<ChatMessage>) => void;
   removeMessage: (messageId: string) => void;
@@ -52,7 +52,7 @@ export interface ChatActions {
   messageDispatch: (content: string, mode?: InstructionType, skipUserMessage?: boolean) => Promise<void>;
 }
 
-export interface TaskActions {
+interface TaskActions {
   resetTask: () => void;
   stopTask: () => Promise<void>;
 }

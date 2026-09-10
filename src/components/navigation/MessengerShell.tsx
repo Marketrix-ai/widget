@@ -43,7 +43,7 @@ export const MessengerShell: React.FC = () => {
   const config = useWidgetConfig();
   const { state, actions } = useWidget();
   const { isOpen, activeView } = state;
-  const isPreviewMode = config.isPreviewMode ?? false;
+  const { isPreviewMode } = config;
 
   const { widthPx, heightPx, grip, onResizeStart, containerRef } = useResize(
     config.widget_width,

@@ -31,8 +31,7 @@ import { focusablesIn } from '../utils/dom';
 export const isTextField = (el: Element): el is HTMLInputElement | HTMLTextAreaElement =>
   el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement;
 
-export const isButtonish = (el: Element): boolean =>
-  el instanceof HTMLButtonElement || el.getAttribute('role') === 'button';
+const isButtonish = (el: Element): boolean => el instanceof HTMLButtonElement || el.getAttribute('role') === 'button';
 
 export function simulateKeyAction(element: HTMLElement, key: string): string | null {
   switch (key) {

@@ -10,8 +10,8 @@
  * to `neutral`. `NotificationProvider` wraps the provider, portal and viewport — `container` is the
  * widget's CLOSED shadow root, since portalling to `document.body` instead would leave the injected
  * styles behind, and `offsetBottom` raises the viewport above the launcher when the launcher also sits
- * at the bottom, so the two cannot overlap. `useNotifications` re-exports Base UI's toast manager as the
- * one door for adding and closing toasts.
+ * at the bottom, so the two cannot overlap. `WidgetNotifications` calls Base UI's `Toast.useToastManager`
+ * directly as the one door for adding and closing toasts.
  *
  * `WidgetNotifications` renders nothing; it mirrors the `error` and `greeting` props into toasts and
  * closes them when the prop clears. Both use a STABLE id, so `add` upserts and a re-render cannot stack
@@ -30,7 +30,7 @@ import { Icon } from '../base/Icon';
 import { IconButton } from '../base/IconButton';
 import { Text } from '../base/Text';
 
-export const GREETING_TIMEOUT_MS = 8000;
+const GREETING_TIMEOUT_MS = 8000;
 
 const NotificationList: React.FC = () => {
   const { toasts } = Toast.useToastManager();
@@ -143,8 +143,6 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
   </Toast.Provider>
 );
 
-export const useNotifications = Toast.useToastManager;
-
 export interface WidgetNotificationsProps {
   error?: string;
   onClearError: () => void;
@@ -162,7 +160,7 @@ export const WidgetNotifications: React.FC<WidgetNotificationsProps> = ({
   greetingBody,
   onGreetingDismiss,
 }) => {
-  const { add, close } = useNotifications();
+  const { add, close } = Toast.useToastManager();
 
   useEffect(() => {
     if (error == null) {

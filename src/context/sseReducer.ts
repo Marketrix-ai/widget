@@ -28,7 +28,7 @@ import {
   markProgressLineFailed,
 } from '../utils/chat';
 
-export type TaskPhase = 'idle' | 'running' | 'stopped';
+type TaskPhase = 'idle' | 'running' | 'stopped';
 
 export interface TaskState {
   phase: TaskPhase;
@@ -49,7 +49,7 @@ export interface SseEffect {
   explanation: string;
 }
 
-export interface ReduceResult {
+interface ReduceResult {
   state: SseState;
   effects: SseEffect[];
 }

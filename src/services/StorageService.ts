@@ -26,7 +26,7 @@ import type { ChatMessage, InstructionType, MarketrixConfig, ValidWidgetConfig }
 const STORAGE_KEY = 'marketrix_chat_context';
 const CONTEXT_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000;
 
-export type StoredMessage = Omit<ChatMessage, 'videoStream' | 'timestamp'> & { timestamp: string };
+type StoredMessage = Omit<ChatMessage, 'videoStream' | 'timestamp'> & { timestamp: string };
 
 export interface ChatSnapshot {
   messages: ChatMessage[];
@@ -36,7 +36,7 @@ export interface ChatSnapshot {
 
 export type CredentialedConfig = ValidWidgetConfig & { mtxId: string; mtxKey: string };
 
-export type MarketrixChatContext = Omit<ChatSnapshot, 'messages'> & {
+type MarketrixChatContext = Omit<ChatSnapshot, 'messages'> & {
   chat_id: string | null;
   messages: StoredMessage[];
   config: MarketrixConfig | null;

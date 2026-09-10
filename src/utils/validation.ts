@@ -85,7 +85,7 @@ const RENDER_CONSTANT_SET: ReadonlySet<string> = new Set(RENDER_CONSTANT_NAMES);
 
 export type WidgetRenderedSettings = Omit<WidgetSettingsData, (typeof RENDER_CONSTANT_NAMES)[number]>;
 
-export type WidgetSettingsResult =
+type WidgetSettingsResult =
   { settings: WidgetRenderedSettings; invalidFields?: undefined } | { settings?: undefined; invalidFields: string[] };
 
 export function parseWidgetSettings(value: unknown): WidgetSettingsResult {

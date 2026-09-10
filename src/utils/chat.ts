@@ -26,7 +26,7 @@ export const getModeDisplayName = (mode: InstructionType): string => MODE_DISPLA
 export const formatMessageTime = (date: Date | undefined): string =>
   (date ?? new Date()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-export interface FindMessageOptions {
+interface FindMessageOptions {
   messages: ChatMessage[];
   isTaskRunning: boolean;
   currentMode: InstructionType;
