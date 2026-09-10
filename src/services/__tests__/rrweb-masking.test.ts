@@ -9,12 +9,12 @@ vi.mock('@rrweb/record', () => ({ record: (opts: unknown) => recordMock(opts as 
 vi.mock('../../sdk', () => ({ sdk: { widgetMessagePost: vi.fn().mockResolvedValue({ ok: true }) } }));
 
 const { RrwebSessionRecorder } = await import('../RrwebSessionRecorder');
-const { StreamClient } = await import('../StreamClient');
+const { streamClient } = await import('../StreamClient');
 
 describe('rrweb capture privacy', () => {
   beforeEach(() => {
     recordMock.mockClear();
-    vi.spyOn(StreamClient.getInstance(), 'ready').mockResolvedValue();
+    vi.spyOn(streamClient, 'ready').mockResolvedValue();
   });
 
   it('masks every input by default', async () => {

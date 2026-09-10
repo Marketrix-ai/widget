@@ -25,7 +25,7 @@ import { createSemanticTokens, semanticTokensToCssCustomProperties } from '../de
 import { useScrollLock } from '../hooks/useScrollLock';
 import { useWidget, WidgetConfigContext } from '../hooks/useWidget';
 import { readLocal, tenantScope, writeLocal } from '../services/StorageService';
-import { StreamClient } from '../services/StreamClient';
+import { streamClient } from '../services/StreamClient';
 import type { ValidWidgetConfig, WidgetPosition } from '../types';
 import { addOpacity } from '../utils/color';
 import { getCorner, isWidgetPosition } from '../utils/widgetPositioning';
@@ -43,7 +43,6 @@ export const WidgetRoot: React.FC<WidgetRootProps> = ({ config }) => {
   const [showGreeting, setShowGreeting] = useState(false);
   const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null);
   const { state, actions } = useWidget();
-  const streamClient = StreamClient.getInstance();
   const isPreviewMode = config.isPreviewMode ?? false;
 
   useScrollLock(state.isOpen);

@@ -16,7 +16,7 @@
 import { type InstructionType, sdk, type WidgetCommand } from '../sdk';
 import { chatSessionManager } from './ChatSessionManager';
 import { type CredentialedConfig, storageService } from './StorageService';
-import { StreamClient } from './StreamClient';
+import { streamClient } from './StreamClient';
 
 export async function chatPost(
   config: CredentialedConfig,
@@ -40,7 +40,6 @@ export async function chatPost(
     .catch((error: unknown) => console.warn('[ChatService] Failed to log widget question:', error));
 
   const command: WidgetCommand = { type: `chat/${mode}`, request_id: requestId, content: message };
-  const streamClient = StreamClient.getInstance();
   await streamClient.ready(chatId);
   await streamClient.send(command);
 }

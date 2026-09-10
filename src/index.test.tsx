@@ -14,7 +14,7 @@ import { initWidget, MarketrixWidgetPreview, mountWidget, unmountWidget, updateM
 import { type WidgetSettingsData, WidgetSettingsDataSchema } from './sdk';
 import * as ScreenShareService from './services/ScreenShareService';
 import { storageService } from './services/StorageService';
-import { StreamClient } from './services/StreamClient';
+import { streamClient } from './services/StreamClient';
 import * as WidgetService from './services/WidgetService';
 import { getMockWidgetConfig } from './test/fixtures';
 
@@ -30,7 +30,7 @@ afterEach(() => {
 
 describe('public widget lifecycle', () => {
   it('disconnects the stream on public unmount', () => {
-    const disconnect = vi.spyOn(StreamClient.getInstance(), 'disconnect');
+    const disconnect = vi.spyOn(streamClient, 'disconnect');
 
     unmountWidget();
 
