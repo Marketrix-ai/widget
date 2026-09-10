@@ -161,8 +161,8 @@ bundles, i.e. the build a browser really loads.
 
 ## Structure
 
-**One config, one store, read from context.** `MarketrixWidget` is the only component that touches the
-raw config prop — it validates it, persists it and publishes the resolved config (position and z-index
+**One config, one store, read from context.** `WidgetRoot` is the only component that touches the
+raw config prop — it persists it and publishes the resolved config (position and z-index
 layered on) through `WidgetConfigContext`, plus its own root element through `PortalContainerContext`.
 Everything below calls `useWidgetConfig()` for settings and `useWidget()` for the store; **never thread
 either down as props.** The widget is open or closed — there is no minimized panel.
@@ -219,7 +219,7 @@ and shipped images cannot drift in their dependency set.
   identically to `default`.
 - **A portal must land inside `[data-marketrix-widget]`** — that element carries every tenant token as
   an inline style, so anything portaled to the shadow root instead falls back to `index.css`'s hardcoded
-  palette. `MarketrixWidget` publishes its own root through `PortalContainerContext` for exactly that.
+  palette. `WidgetRoot` publishes its own root through `PortalContainerContext` for exactly that.
 - **`marketrix_widget_position_<tenant>` is written only by a drag** — seeding it with
   `config.widget_position` would pin the dashboard's setting at whatever it was on a visitor's first load.
 - **Inside a closed shadow root, `document.activeElement` is the HOST** and a stylesheet's `:root`
