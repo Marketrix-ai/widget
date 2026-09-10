@@ -21,7 +21,7 @@
 
 import type * as SdkModule from '../../sdk';
 import { sdk, type WidgetEvent } from '../../sdk';
-import { StreamClient, StreamGaveUpError } from '../StreamClient';
+import { type StreamClient, streamClient, StreamGaveUpError } from '../StreamClient';
 
 vi.mock('../../sdk', async importOriginal => {
   const actual = await importOriginal<typeof SdkModule>();
@@ -52,9 +52,8 @@ function emptyStream(): AsyncIterable<WidgetEvent> {
 }
 
 function freshClient(): StreamClient {
-  const client = StreamClient.getInstance();
-  client.disconnect();
-  return client;
+  streamClient.disconnect();
+  return streamClient;
 }
 
 beforeEach(() => {
@@ -63,7 +62,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  StreamClient.getInstance().disconnect();
+  streamClient.disconnect();
 });
 
 describe('StreamClient registration lifecycle', () => {

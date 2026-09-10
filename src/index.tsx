@@ -33,7 +33,7 @@ import { chatSessionManager } from './services/ChatSessionManager';
 import { RrwebSessionRecorder } from './services/RrwebSessionRecorder';
 import { stopScreenShare } from './services/ScreenShareService';
 import { type CredentialedConfig, storageService } from './services/StorageService';
-import { StreamClient } from './services/StreamClient';
+import { streamClient } from './services/StreamClient';
 import { createConfigFromSettings, loadWidgetConfig } from './services/WidgetService';
 import type {
   AddWidgetConfig,
@@ -153,7 +153,7 @@ export const initWidget = (config: MarketrixConfig, container?: HTMLElement): Pr
 
 export const unmountWidget = (): void => {
   lifecycleGeneration++;
-  StreamClient.getInstance().disconnect();
+  streamClient.disconnect();
   rrwebSessionRecorder?.stop();
   rrwebSessionRecorder = null;
   stopScreenShare();

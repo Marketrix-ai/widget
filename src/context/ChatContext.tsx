@@ -24,7 +24,7 @@ import type { WidgetEvent } from '../sdk';
 import { browserToolService, FINISH_TOOL } from '../services/BrowserToolService';
 import { chatPost } from '../services/ChatService';
 import { storageService } from '../services/StorageService';
-import { StreamClient, StreamGaveUpError } from '../services/StreamClient';
+import { streamClient, StreamGaveUpError } from '../services/StreamClient';
 import type { ChatMessage, InstructionType } from '../types';
 import { createAgentMessage, createPlaceholderMessage, createUserMessage } from '../utils/chat';
 import {
@@ -197,8 +197,6 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
   useEffect(() => {
     if (previewMode) return;
 
-    const streamClient = StreamClient.getInstance();
-
     const startToolCall = async (effect: Extract<SseEffect, { type: 'executeTool' }>) => {
       const { toolCallId, tool, args, mode, explanation } = effect;
       const result = await browserToolService.executeTool(tool, args, mode, explanation);
@@ -274,12 +272,10 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
 
     if (previewMode) return;
 
-    StreamClient.getInstance()
-      .send({ type: 'chat/stop' })
-      .catch(err => {
-        console.error('Failed to stop task remotely:', err);
-        uiActions.setError('Could not stop the assistant — it may still be working.');
-      });
+    streamClient.send({ type: 'chat/stop' }).catch(err => {
+      console.error('Failed to stop task remotely:', err);
+      uiActions.setError('Could not stop the assistant — it may still be working.');
+    });
   }, [previewMode, commit, uiActions]);
 
   const chatActions = useMemo<ChatActions>(

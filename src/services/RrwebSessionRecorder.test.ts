@@ -9,7 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { sdk } from '../sdk';
 import { RrwebSessionRecorder } from './RrwebSessionRecorder';
-import { StreamClient } from './StreamClient';
+import { streamClient } from './StreamClient';
 
 vi.mock('@rrweb/record', () => ({ record: vi.fn(() => vi.fn()) }));
 vi.mock('../sdk', async importOriginal => {
@@ -23,7 +23,7 @@ vi.mock('../sdk', async importOriginal => {
 const mockSdk = vi.mocked(sdk);
 
 beforeEach(() => {
-  vi.spyOn(StreamClient.getInstance(), 'ready').mockResolvedValue();
+  vi.spyOn(streamClient, 'ready').mockResolvedValue();
 });
 
 afterEach(() => {
@@ -86,7 +86,7 @@ describe('RrwebSessionRecorder lifecycle', () => {
 describe('a recorder posting into a chat the api has not registered', () => {
   it('holds the metadata post until the stream is registered', async () => {
     let register!: () => void;
-    const ready = vi.spyOn(StreamClient.getInstance(), 'ready').mockReturnValue(
+    const ready = vi.spyOn(streamClient, 'ready').mockReturnValue(
       new Promise<void>(resolve => {
         register = resolve;
       }),

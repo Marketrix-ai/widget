@@ -1,5 +1,5 @@
 /**
- * Singleton SSE transport between the widget and the api: `StreamClient.getInstance` drains one `widgetStream`
+ * Singleton SSE transport between the widget and the api, exported as `streamClient` like every other service: it drains one `widgetStream`
  * iterator in the background, `send` posts via `widgetMessagePost`, `ready` connects then waits,
  * `waitUntilRegistered` parks a caller, `canReconnect`/`reconnectNow` back the Retry affordance, `disconnect`
  * tears down and rejects parked callers, and `StreamGaveUpError` marks a stream that has stopped retrying.
@@ -35,7 +35,6 @@ export interface StreamClientCallbacks {
 }
 
 export class StreamClient {
-  private static instance: StreamClient | null = null;
   private abortController: AbortController | null = null;
   private chatId: string | null = null;
   private status: StreamStatus = 'disconnected';
@@ -50,15 +49,6 @@ export class StreamClient {
   private connectionId = 0;
   private readonly tabId = globalThis.crypto.randomUUID();
   private registrationWaiters = new Set<{ resolve: () => void; reject: (error: Error) => void }>();
-
-  private constructor() {}
-
-  static getInstance(): StreamClient {
-    if (!StreamClient.instance) {
-      StreamClient.instance = new StreamClient();
-    }
-    return StreamClient.instance;
-  }
 
   addCallbacks(callbacks: StreamClientCallbacks): void {
     this.callbacks.add(callbacks);
@@ -268,3 +258,5 @@ export class StreamClient {
     }
   }
 }
+
+export const streamClient = new StreamClient();

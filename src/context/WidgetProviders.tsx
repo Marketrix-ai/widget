@@ -22,7 +22,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 
 import { chatSessionManager } from '../services/ChatSessionManager';
 import { readChatSnapshot, writeChatSnapshot } from '../services/StorageService';
-import { StreamClient } from '../services/StreamClient';
+import { streamClient } from '../services/StreamClient';
 import { ChatProvider, useChatContext } from './ChatContext';
 import { UIStateProvider, useUIStateContext } from './UIStateContext';
 
@@ -60,9 +60,7 @@ const InitBridge: React.FC<{ children: React.ReactNode; previewMode: boolean }> 
       const chatId = await chatSessionManager.getOrCreateChatId();
       if (cancelled) return;
 
-      StreamClient.getInstance()
-        .connect(chatId)
-        .catch((err: unknown) => console.error('Initial stream connection failed:', err));
+      streamClient.connect(chatId).catch((err: unknown) => console.error('Initial stream connection failed:', err));
     };
 
     void init().catch(error => {
