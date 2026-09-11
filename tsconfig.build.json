@@ -6,10 +6,7 @@
     "declaration": true,
     "declarationMap": false,
     "emitDeclarationOnly": true,
-    "outDir": "dist",
-    "skipLibCheck": true,
-    "allowSyntheticDefaultImports": true,
-    "esModuleInterop": true
+    "outDir": "dist"
   },
   "include": ["src/index.tsx", "src/**/*.ts", "src/**/*.tsx"],
   "exclude": [
