@@ -23,16 +23,13 @@
     "tag": "bash scripts/release.sh",
     "start": "vite",
     "build": "vite build",
-    "ci": "bun run code:check && bun run build && bun run test && bun run bundle:check",
+    "ci": "bun run code:check && bun run test && bun run build && bun run bundle:check",
     "lint": "eslint . --max-warnings 200 --fix",
     "lint:check": "eslint . --max-warnings 0",
-    "check": "tsc --noEmit",
     "type-check": "tsc --noEmit",
     "test": "bun test --isolate",
     "test:watch": "bun test --watch --isolate",
     "test:coverage": "bun test --coverage --isolate",
-    "format": "prettier --write .",
-    "format:check": "prettier --check .",
     "bundle:check": "bun scripts/bundle-check.mjs",
     "code:fix": "eslint . --fix && prettier --write .",
     "code:check": "tsc --noEmit && eslint . --max-warnings 0 && prettier --check ."
@@ -75,8 +72,5 @@
     "terser": "^5.51.2",
     "typescript": "^6.0.3",
     "vite": "^8.2.2"
-  },
-  "trustedDependencies": [
-    "unrs-resolver"
-  ]
+  }
 }

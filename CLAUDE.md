@@ -18,7 +18,7 @@ status vocabulary, contract sync, ports, release order).
 ```bash
 bun start                # vite dev on :9001 (override PORT / VITE_PORT; CORS enabled)
 bun run build            # → dist/widget.mjs (terser, single ESM) + tsc declarations
-bun run type-check       # alias: check          bun run lint    # --fix, max-warnings 200
+bun run type-check       # tsc --noEmit         bun run lint    # --fix, max-warnings 200
 bun run test             # bun test (jsdom preload + Testing Library + axe-core)
 bun run test:watch       # bun test --watch
 bun run test:coverage    # bun test --coverage
