@@ -23,7 +23,7 @@
     "tag": "bash scripts/release.sh",
     "start": "vite",
     "build": "vite build",
-    "ci": "bun run type-check && bun run lint:check && bun run build && bun run format:check && bun run test && bun run bundle:check",
+    "ci": "bun run code:check && bun run build && bun run test && bun run bundle:check",
     "lint": "eslint . --max-warnings 200 --fix",
     "lint:check": "eslint . --max-warnings 0",
     "check": "tsc --noEmit",
@@ -35,7 +35,7 @@
     "format:check": "prettier --check .",
     "bundle:check": "bun scripts/bundle-check.mjs",
     "code:fix": "eslint . --fix && prettier --write .",
-    "code:check": "tsc --noEmit && eslint . && prettier --check ."
+    "code:check": "tsc --noEmit && eslint . --max-warnings 0 && prettier --check ."
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
