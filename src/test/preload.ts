@@ -37,6 +37,24 @@
  * no `matchMedia`, and no `ResizeObserver` — `useDragSnap` needs the observer, `useScrollLock` needs
  * `matchMedia`, and `StorageService` (the one door to storage in `src/`) needs a real `setItem`. Since
  * `window` now IS `globalThis`, a single fill on `globalThis` covers both spellings.
+ *
+ * `forceOverride` lists the event constructors that must be copied from jsdom even though Bun already
+ * has its own native `Event`/`EventTarget`/`CustomEvent`/…: `document.createElement`'s elements
+ * brand-check `dispatchEvent`'s argument against JSDOM's OWN `Event` class, so a `new Event(...)` built
+ * from Bun's native class fails jsdom's internal `exports.is()` check — the rest of the loop leaves an
+ * already-present global alone so Bun's `fetch`/`Request`/`Response`/etc. keep working.
+ *
+ * `isNamespaceLike` copies a `class` (or a plain-function namespace like jsdom's `NodeFilter`, which
+ * carries `SHOW_ELEMENT`/`FILTER_ACCEPT`/… as own properties) UNBOUND: `Function.prototype.bind` strips
+ * `.prototype` and any own properties off the result, which would silence prototype patching
+ * (`Element.prototype.foo = …`, used by bun compat shims and this repo's own tests) and break
+ * `NodeFilter`'s constants (making every `TreeWalker`'s `acceptNode` silently match nothing).
+ *
+ * The bulk-copy loop's `try/catch` swallows only the case where a window accessor (e.g. `crypto`) is
+ * already non-configurable on `globalThis` and cannot be redefined; anything else copies cleanly.
+ *
+ * `resetDom` is the shared body-clearing helper for tests that mount outside Testing Library's render
+ * tree, run automatically in `afterEach` here so every test file gets it for free.
  */
 import { afterEach, expect } from 'bun:test';
 import { JSDOM } from 'jsdom';
@@ -48,13 +66,6 @@ const dom = new JSDOM('<!doctype html><html><body></body></html>', {
 
 const { window } = dom;
 const skip = new Set(['window', 'globalThis', 'self', 'top', 'parent']);
-// Bun ships its OWN native `Event`/`EventTarget`/`CustomEvent`/… (Web-standard globals that predate
-// this loop running), and the general copy below leaves any already-present global alone so Bun's
-// `fetch`/`Request`/`Response`/etc. keep working for code that never touches the DOM. But an element
-// created via `document.createElement` brand-checks `dispatchEvent`'s argument against JSDOM's OWN
-// `Event` class, so `new Event(...)` built from Bun's native class fails jsdom's internal
-// `exports.is()` check with "parameter 1 is not of type 'Event'" — these specific event constructors
-// must be jsdom's, unconditionally, for anything dispatched at a jsdom element to be accepted.
 const forceOverride = new Set([
   'Event',
   'CustomEvent',
@@ -68,16 +79,6 @@ const forceOverride = new Set([
   'TransitionEvent',
   'EventTarget',
 ]);
-// A `class` declaration is a function too, and `Element`/`HTMLElement`/`Node`/`MouseEvent`/… must be
-// copied UNBOUND: `Function.prototype.bind` strips `.prototype` off the result, so binding a
-// constructor would silence every `Element.prototype.foo = …` a test installs (bun compat shims and
-// this repo's own tests both rely on prototype patching, e.g. `getBoundingClientRect`). `NodeFilter`
-// is the same trap in a different shape: jsdom implements it as a plain arrow function (not a `class`)
-// that carries its `SHOW_ELEMENT`/`FILTER_ACCEPT`/… constants as own properties — `bind` drops those
-// too, silently breaking every `TreeWalker` in `src/` (its `acceptNode` return value stops matching any
-// `FILTER_*` constant, so the walk silently visits nothing). Anything carrying its own extra
-// properties beyond a function's intrinsic ones is a namespace/constructor, never a `this`-bound
-// method, so it is copied unbound the same way a class is.
 const OWN_FUNCTION_PROPS = new Set(['length', 'name', 'prototype', 'arguments', 'caller']);
 const isNamespaceLike = (value: unknown): boolean =>
   typeof value === 'function' &&
@@ -91,7 +92,7 @@ for (const key of Object.getOwnPropertyNames(window)) {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- `value` is genuinely untyped window surface
     globalThis[key] = typeof value === 'function' && !isNamespaceLike(value) ? value.bind(window) : value;
   } catch {
-    // Some window accessors (e.g. `crypto`) are non-configurable on globalThis already; skip those.
+    /* empty */
   }
 }
 globalThis.window = globalThis as unknown as Window & typeof globalThis;
@@ -138,7 +139,6 @@ if (typeof globalThis.ResizeObserver === 'undefined') {
 const matchers = require('@testing-library/jest-dom/matchers') as typeof import('@testing-library/jest-dom/matchers');
 expect.extend(matchers);
 
-/** Shared body-clearing helper for tests that mount outside Testing Library's render tree. */
 export function resetDom(): void {
   document.body.replaceChildren();
 }

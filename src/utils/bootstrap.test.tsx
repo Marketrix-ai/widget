@@ -3,6 +3,15 @@
  * a direct module script auto-initializes once from its `mtx-*` attributes and refuses without
  * `mtx-api-host`; npm consumers get no auto-init; every widget a parent mounts is owned in this module
  * instance and the next; and the widget CSS lands, non-empty, inside the closed shadow root.
+ *
+ * `importBootstrap` re-imports `./bootstrap.tsx` with a bumped `?t=<n>` query per call to force a fresh
+ * module evaluation: Bun has no `vi.resetModules`, an ES import is cached forever by resolved
+ * specifier, and `./bootstrap`'s own auto-init guard is top-level module state, so only a different
+ * specifier re-runs it.
+ *
+ * `document.currentScript` is a getter Bun's `spyOn` can't stub, so the classic-loader test shadows it
+ * directly with an own, configurable property; `resetDocument`'s `replaceChildren()` doesn't touch it,
+ * hence the explicit `delete` in `afterEach`.
  */
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -27,11 +36,6 @@ const resetDocument = () => {
   window.__mtx = undefined;
 };
 
-// bun has no `vi.resetModules`: an ES module import is cached forever by resolved specifier, so a
-// module carrying top-level state (`./bootstrap`'s own auto-init guard) can only be re-evaluated
-// fresh by asking for a DIFFERENT specifier. A `?t=<n>` query bumped once per import does that —
-// bun treats the query as part of the module identity — which is what every `import('./bootstrap')`
-// call below now goes through instead of relying on a `resetModules()` between tests.
 let bootstrapImportCount = 0;
 const importBootstrap = () => import(`./bootstrap.tsx?t=${bootstrapImportCount++}`);
 
@@ -56,9 +60,6 @@ describe('widget public entry paths', () => {
     loader.setAttribute('mtx-api-host', 'https://api.test');
     loader.setAttribute('mtx-use-screenshare', 'false');
     document.head.appendChild(loader);
-    // bun's `spyOn` does not support accessor properties yet, so `document.currentScript` (a getter)
-    // is shadowed directly with an own, configurable property instead — `resetDocument`'s
-    // `document.head.replaceChildren()` doesn't touch it, so the `delete` below undoes it explicitly.
     Object.defineProperty(document, 'currentScript', { configurable: true, get: () => loader });
 
     Function(loaderSource)();

@@ -2,6 +2,11 @@
  * `get_screenshot` tests: no active share fails instead of prompting a new one (which would bypass the
  * visitor's Deny), a stream that never delivers a frame fails instead of waiting forever and leaves no
  * video in the host page, and a refused 2d canvas context reports failure rather than an all-black frame.
+ *
+ * `ScreenShareService` is faked with `vi.spyOn`, scoped per describe block to `beforeEach`/`afterEach`
+ * rather than `vi.mock` — `../services/__tests__/ScreenShareService.test.ts` resolves the same module
+ * via its own alias, so a module-scope mock here would leak into it by file-discovery order (root
+ * `CLAUDE.md` has the general mechanism); each block's spy overrides only the one export it needs.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 
@@ -10,13 +15,6 @@ import { resetDom } from '../../test/preload';
 import { advanceTimersByTimeAsync } from '../../test/vi-compat';
 import { browserToolService } from '../BrowserToolService';
 import * as ScreenShareService from '../ScreenShareService';
-
-// A `vi.mock('../ScreenShareService', factory)` replaces the module for the whole `bun test` process
-// by resolved path, not just this file — `../services/__tests__/ScreenShareService.test.ts` resolves
-// the SAME absolute file (via its own `@/services/ScreenShareService` alias) and would inherit
-// whichever describe block's factory happened to register last, depending on file discovery order
-// (which differs between local runs and CI). `vi.spyOn`, scoped to `beforeEach`/`afterEach` per describe
-// block below, only ever overrides the one export each block needs and is undone immediately after.
 
 describe('get_screenshot with no active screen share', () => {
   beforeEach(() => {

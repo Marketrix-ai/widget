@@ -270,6 +270,6 @@ Standing gotchas folded in from session memory so they travel with the repo. Eve
 
 ### Gotchas
 
-- **A green `publish` job never proves a publish** — the step is idempotent (`bun publish --tolerate-republish` exits 0 on an already-published version), and a skipped publish leaves npm behind the tag so app's `npm install @marketrix.ai/widget@<ver>` fails. Check `npm view @marketrix.ai/widget version` before pinning app. Publishing from a tag cut off stale local `main` ships `latest` without the fix and burns the version number.
+- **A green `publish` job never proves a publish** — the step is idempotent (`bun publish --tolerate-republish` exits 0 on an already-published version), and a skipped publish leaves npm behind the tag so app's `bun add @marketrix.ai/widget@<ver>` fails. Check `npm view @marketrix.ai/widget version` before pinning app. Publishing from a tag cut off stale local `main` ships `latest` without the fix and burns the version number.
 - Diff the BUILT artefact, not just source: an `@layer utilities` block not migrated to Tailwind v4's `@utility` compiles `hover:`/`placeholder:` variants to NOTHING with no error, and over half of `index.css` was once unreachable that way. The prod bundle drops `console.*` (terser) — debug via api/agent logs.
-- **The contract gate checks the widget version the app BUNDLES**, not the widget image — a types-only mirror change still needs: tag widget → wait for npm → `npm install @marketrix.ai/widget@<ver>` in app → commit lockfile → tag app.
+- **The contract gate checks the widget version the app BUNDLES**, not the widget image — a types-only mirror change still needs: tag widget → wait for npm → `bun add @marketrix.ai/widget@<ver>` in app → commit `bun.lock` → tag app.
