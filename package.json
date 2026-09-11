@@ -25,7 +25,6 @@
     "build": "vite build",
     "ci": "bun run code:check && bun run test && bun run build && bun run bundle:check",
     "lint": "eslint . --max-warnings 200 --fix",
-    "lint:check": "eslint . --max-warnings 0",
     "type-check": "tsc --noEmit",
     "test": "bun test --isolate",
     "test:watch": "bun test --watch --isolate",

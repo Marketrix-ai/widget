@@ -1,6 +1,11 @@
 /**
  * `use_screenshare` tests: denied without a prompt when the tenant turned sharing off — on the switch
  * alone, so a stored config that lost its credentials cannot reopen the picker — and prompted when on.
+ *
+ * `startScreenShare`/`stopScreenShare` own module-level state (the active `MediaStream`) shared by the
+ * whole `bun test` process (root `CLAUDE.md` has the general leak mechanism); the success case here
+ * leaves it genuinely active, so `afterEach` calls `stopScreenShare()` to keep it from being read as
+ * still sharing by `widget-smoke.test.tsx`/`ChatView.test.tsx`, mounted afterward.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 
@@ -22,11 +27,6 @@ beforeEach(() => {
   Object.defineProperty(navigator, 'mediaDevices', { value: { getDisplayMedia }, configurable: true });
 });
 
-// `startScreenShare`/`stopScreenShare` own MODULE-LEVEL state (the active `MediaStream`) shared by the
-// whole `bun test` process — "prompts when the tenant left screen sharing on" leaves it genuinely
-// active on success, and with no other file's `beforeEach` calling `stopScreenShare()` for it, a widget
-// mounted afterward (`widget-smoke.test.tsx`, `ChatView.test.tsx`) reads `isScreenSharing()` as true and
-// renders "Stop screen sharing" — hiding the "Start screen sharing" button those tests click.
 afterEach(() => {
   stopScreenShare();
 });
