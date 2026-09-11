@@ -7,7 +7,7 @@
  * is exempted, along with the jsdom tests that mount no shadow root.
  *
  * Unused imports and identifiers are owned by the unused-imports plugin and import ordering by
- * simple-import-sort, so `import-x/order` is off. `import-x/no-unresolved` is off because TypeScript
+ * simple-import-sort, so `import/order` is off. `import/no-unresolved` is off because TypeScript
  * already resolves, and `prefer-nullish-coalescing` is off because it needs `strictNullChecks`.
  */
 
@@ -77,7 +77,7 @@ export default [
     },
     plugins: {
       '@typescript-eslint': typescript,
-      'import-x': importPlugin,
+      import: importPlugin,
       'simple-import-sort': simpleImportSort,
       'unused-imports': unusedImports,
     },
@@ -96,7 +96,7 @@ export default [
       '@typescript-eslint/explicit-function-return-type': 'off',
       '@typescript-eslint/explicit-module-boundary-types': 'off',
       '@typescript-eslint/no-non-null-assertion': 'warn',
-      '@typescript-eslint/no-var-requires': 'error',
+      '@typescript-eslint/no-require-imports': 'error',
       '@typescript-eslint/consistent-type-imports': [
         'error',
         { prefer: 'type-imports', fixStyle: 'inline-type-imports' },
@@ -113,9 +113,9 @@ export default [
       '@typescript-eslint/restrict-plus-operands': 'error',
       '@typescript-eslint/restrict-template-expressions': 'warn',
 
-      'import-x/no-duplicates': 'error',
-      'import-x/no-unresolved': 'off',
-      'import-x/order': 'off',
+      'import/no-duplicates': 'error',
+      'import/no-unresolved': 'off',
+      'import/order': 'off',
       'simple-import-sort/imports': 'error',
       'simple-import-sort/exports': 'error',
       'unused-imports/no-unused-imports': 'error',
@@ -174,9 +174,9 @@ export default [
       '*.js',
       'scripts/*.mjs',
       '*.d.ts',
-      'vitest.config.ts',
       'public/',
       'src/sdk/**/*',
+      '.claude/**',
     ],
   },
 ];

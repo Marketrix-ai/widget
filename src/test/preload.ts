@@ -134,7 +134,7 @@ if (typeof globalThis.ResizeObserver === 'undefined') {
   };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/consistent-type-imports -- see file header: must run after `document` exists
+// eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/consistent-type-imports -- see file header: must run after `document` exists
 const matchers = require('@testing-library/jest-dom/matchers') as typeof import('@testing-library/jest-dom/matchers');
 expect.extend(matchers);
 

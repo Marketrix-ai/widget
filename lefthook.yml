@@ -30,7 +30,7 @@ pre-commit:
       run: bun run lint
       stage_fixed: true
     check:
-      run: bun run check
+      run: bun run type-check
 
 pre-push:
   parallel: false
