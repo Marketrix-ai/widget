@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
-# Cuts a widget release: bumps package.json, refreshes bun.lock,
-# builds, commits both manifests and creates the annotated `v<version>` tag. It deliberately does NOT
-# push — pushing the tag is what fires image.yml and publish.yml, so that stays a separate step.
-# Refuses a dirty tree or a HEAD that is not origin/main, since the tag would capture a tree the build
-# never validated or one that cannot deploy.
+# Cuts a widget release: bumps package.json, builds, commits both manifests and creates the annotated
+# `v<version>` tag. It deliberately does NOT push — pushing the tag is what fires image.yml and
+# publish.yml, so that stays a separate step. `--frozen-lockfile` (not a bare `bun install`) is safe
+# here and elsewhere unlike a fresh dependency add: `bun.lock`'s root workspace entry carries no
+# "version" field for `bun pm version` to leave stale, so the lockfile needs no refresh after the bump —
+# only an install-matches-manifest check, done without ever rewriting the file. Refuses a dirty tree or
+# a HEAD that is not origin/main, since the tag would capture a tree the build never validated or one
+# that cannot deploy.
 set -euo pipefail
 
 BUMP="${1:?Usage: release.sh <version|patch|minor|major> (e.g. 1.0.45)}"
@@ -18,7 +21,7 @@ git fetch --quiet origin main
 
 TAG="$(bun pm version "$BUMP" --no-git-tag-version)"
 
-bun install
+bun install --frozen-lockfile
 bun run build
 
 git add package.json bun.lock
