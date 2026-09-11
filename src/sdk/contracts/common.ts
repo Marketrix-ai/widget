@@ -64,6 +64,19 @@ export const ToolCallRecordSchema = z.object({
   result: z.record(z.string(), z.unknown()).default({}),
 });
 
+/** One vocabulary for a persona-chat SSE stream, shared by `contracts/personaChat.ts`'s
+ * `personaOSChatStream` and `contracts/studies.ts`'s `personaChatStream` — the two INPUT schemas that
+ * feed them differ (`public_persona_id` vs `application_persona_id` + `application_id`) and stay
+ * separate, but the chunk shape they emit is the same event union either way. Lives here rather than on
+ * either domain file so moving it widens no audience closure — it is already inside every consumer's
+ * mirror. */
+export const PersonaChatChunkSchema = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('usage'), usage_key: z.string() }),
+  z.object({ type: z.literal('delta'), text: z.string() }),
+  z.object({ type: z.literal('done'), text: z.string() }),
+  z.object({ type: z.literal('error'), message: z.string() }),
+]);
+
 export const SlackWebhookUrlSchema = z.url().refine(u => /^https:\/\/hooks\.slack\.com\//.test(u), {
   message: 'Slack webhook URL must start with https://hooks.slack.com/',
 });
