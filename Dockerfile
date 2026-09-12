@@ -8,7 +8,7 @@
 # allowlist rather than all of `dist/`: the sourcemap embeds the entire widget source and the 77
 # `.d.ts` files are for tsc, so copying the directory would publish all of it into the served image — a
 # new served artifact must be added to that COPY by hand.
-FROM oven/bun:1.3.14-alpine AS base
+FROM oven/bun:1.4.2-alpine AS base
 WORKDIR /app
 COPY package.json bun.lock ./
 RUN --mount=type=cache,target=/root/.bun/install/cache bun install --frozen-lockfile
