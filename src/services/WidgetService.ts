@@ -9,18 +9,18 @@
  * inactive-only result reports the statuses it did find, because "no such widget" and "not activated in the dashboard"
  * are the two failures a host integrator actually hits and the credentials look identical in both. `mtxApp` comes from
  * that widget's `application_id` and never from caller config — the application id is a consequence of valid
- * credentials, never a host-supplied input. `widgetDefaultGet` supplies the base that the tenant's own `settings` are
- * spread OVER, so a field the tenant never set falls back to the api's default rather than to undefined.
+ * credentials, never a host-supplied input. The api serializes a widget's `settings` already layered over its
+ * defaults, so a field the tenant never set arrives as the default rather than undefined.
  *
- * This runs on every page load of every host site, so it is two requests IN PARALLEL: the credentialed search and the
- * defaults, which depend on nothing the search returns. A failed search still wins: its error is reported before a
- * defaults failure is.
+ * This runs on every page load of every host site, so it is ONE request. It used to read `widgetDefaultGet` beside
+ * the search and spread those defaults under settings that already carried them; the endpoint stays for bundles
+ * already published, but this build no longer calls it.
  *
  * Every failure reports through `utils/errors`, so nothing here swallows the throw underneath it. The probe strings
  * matched on a failed `widgetSearch` are the platform-specific texts browsers emit for an unreachable host — matching
  * them turns a dead api into "start the API server at <host>" instead of a misleading "widget validation failed".
  */
-import { sdk, type WidgetData, type WidgetSettingsData } from '../sdk';
+import { sdk, type WidgetData } from '../sdk';
 import type { MarketrixConfig, ValidWidgetConfig } from '../types';
 import { errorMessage, withCause } from '../utils/errors';
 import { invalidSettingsMessage, parseWidgetSettings, type WidgetRenderedSettings } from '../utils/validation';
@@ -41,9 +41,6 @@ export async function loadWidgetConfig(config: MarketrixConfig): Promise<Credent
   if (!mtxId || !mtxKey) {
     throw new Error('Please provide mtxId + mtxKey');
   }
-
-  const defaultsRead = sdk.widgetDefaultGet({ type: 'widget' });
-  defaultsRead.catch(() => undefined);
 
   let widgets: WidgetData[];
   try {
@@ -77,14 +74,7 @@ export async function loadWidgetConfig(config: MarketrixConfig): Promise<Credent
     throw new Error('Widget missing application_id');
   }
 
-  let defaults: WidgetSettingsData;
-  try {
-    defaults = await defaultsRead;
-  } catch (error) {
-    throw withCause(`Failed to fetch widget settings from API: ${errorMessage(error)}`, error);
-  }
-
-  const parsedSettings = parseWidgetSettings({ ...defaults, ...activeWidget.settings });
+  const parsedSettings = parseWidgetSettings(activeWidget.settings);
   if (parsedSettings.invalidFields) {
     throw new Error(invalidSettingsMessage(parsedSettings.invalidFields));
   }
