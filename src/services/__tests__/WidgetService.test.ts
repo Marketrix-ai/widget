@@ -1,7 +1,7 @@
 /**
- * `loadWidgetConfig` tests: one load returns one schema-validated config, settings the widget omits are
- * filled from the API defaults, an invalid merged response is rejected naming the schema field, and the
- * inactive-widget diagnostic is preserved without loading defaults or the application.
+ * `loadWidgetConfig` tests: one load is one search and returns one schema-validated config, never a defaults
+ * read; an invalid settings response is rejected naming the schema field, and the inactive-widget diagnostic is
+ * preserved.
  */
 import { beforeEach, describe, expect, it, vi } from 'bun:test';
 
@@ -12,7 +12,6 @@ import { loadWidgetConfig } from '../WidgetService';
 
 vi.mock('../../sdk', () => ({
   sdk: {
-    widgetDefaultGet: vi.fn(),
     widgetSearch: vi.fn(),
   },
 }));
@@ -41,29 +40,14 @@ const searchResult = {
 beforeEach(() => {
   vi.clearAllMocks();
   mockSdk.widgetSearch.mockResolvedValue(searchResult);
-  mockSdk.widgetDefaultGet.mockResolvedValue(settings);
 });
 
 describe('loadWidgetConfig', () => {
-  it('loads the widget once and returns one schema-validated config', async () => {
+  it('loads the widget in one search and returns one schema-validated config', async () => {
     const config = await loadWidgetConfig({ mtxId: 'test-id', mtxKey: 'test-key', show_widget: false });
 
     expect(mockSdk.widgetSearch).toHaveBeenCalledOnce();
-    expect(mockSdk.widgetDefaultGet).toHaveBeenCalledOnce();
     expect(config).toMatchObject({ mtxId: 'test-id', mtxKey: 'test-key', mtxApp: 42, show_widget: false });
-  });
-
-  it('fills settings omitted by the widget from the API defaults', async () => {
-    const { widget_header: _header, ...partialSettings } = settings;
-    mockSdk.widgetSearch.mockResolvedValue({
-      ...searchResult,
-      items: [{ ...activeWidget, settings: partialSettings as typeof settings }],
-    });
-    mockSdk.widgetDefaultGet.mockResolvedValue({ ...settings, widget_header: 'Default header' });
-
-    const config = await loadWidgetConfig({ mtxId: 'test-id', mtxKey: 'test-key' });
-
-    expect(config.widget_header).toBe('Default header');
   });
 
   it('rejects an invalid merged settings response with the schema field', async () => {
@@ -76,20 +60,8 @@ describe('loadWidgetConfig', () => {
     expect(mockSdk.widgetSearch).toHaveBeenCalledOnce();
   });
 
-  it('reads the defaults alongside the search rather than after it', async () => {
-    let releaseSearch: (value: typeof searchResult) => void = () => undefined;
-    mockSdk.widgetSearch.mockReturnValue(new Promise(resolve => (releaseSearch = resolve)));
-
-    const loading = loadWidgetConfig({ mtxId: 'test-id', mtxKey: 'test-key' });
-    expect(mockSdk.widgetDefaultGet).toHaveBeenCalledOnce();
-
-    releaseSearch(searchResult);
-    await expect(loading).resolves.toMatchObject({ mtxApp: 42 });
-  });
-
-  it('reports a failed search even when the defaults read also fails', async () => {
+  it('reports a failed search', async () => {
     mockSdk.widgetSearch.mockRejectedValue(new Error('bad credentials'));
-    mockSdk.widgetDefaultGet.mockRejectedValue(new Error('defaults down'));
 
     await expect(loadWidgetConfig({ mtxId: 'test-id', mtxKey: 'test-key' })).rejects.toThrow(/bad credentials/);
   });

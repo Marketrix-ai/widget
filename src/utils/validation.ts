@@ -13,7 +13,7 @@
  * the table honest — a field added api-side fails to compile here until guarded, one removed fails as an unknown
  * key — and `RENDER_CONSTANT_NAMES` mirrors api's `WIDGET_RENDER_CONSTANTS` by hand under the same check.
  *
- * `parseWidgetSettings` PICKS as well as validates: `widgetDefaultGet` returns the render constants too and the
+ * `parseWidgetSettings` PICKS as well as validates: a widget's settings arrive carrying the render constants and the
  * result is spread into the widget config, so unknown keys passing through would leak them where zod used to drop
  * them. Render constants stay guarded, since a legacy bundle's stored value must keep passing, but are dropped
  * from the picked result, since nothing renders them.

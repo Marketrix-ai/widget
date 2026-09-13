@@ -7,7 +7,7 @@
  * through the schema, `FIELDS` its key list driving the per-field cases.
  *
  * A valid object is accepted by both. Unknown keys are stripped exactly as zod did — load-bearing,
- * since `widgetDefaultGet` returns render constants too and the result spreads into the widget config,
+ * since a widget's settings carry render constants too and the result spreads into the widget config,
  * so a passed-through key would leak; the expectation is the schema's parse minus those constants. The
  * four render constants (`widget_border_radius`, `widget_font_size`, `widget_animation_duration`,
  * `widget_fade_duration`) are separately asserted absent — still guarded so a legacy stored value keeps
@@ -38,7 +38,7 @@ describe('parseWidgetSettings agrees with the zod schema it replaced', () => {
     expect(WidgetSettingsDataSchema.safeParse(valid).success).toBe(true);
   });
 
-  it('strips unknown keys exactly as zod did — widgetDefaultGet returns render constants too', () => {
+  it('strips unknown keys exactly as zod did — settings carry render constants too', () => {
     const withExtras = { ...valid, widget_render_constant: 'x', another: 1 };
     const result = parseWidgetSettings(withExtras);
     const {
