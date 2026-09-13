@@ -9,9 +9,14 @@
  * inactive-only result reports the statuses it did find, because "no such widget" and "not activated in the dashboard"
  * are the two failures a host integrator actually hits and the credentials look identical in both. `mtxApp` comes from
  * that widget's `application_id` and never from caller config — the application id is a consequence of valid
- * credentials, never a host-supplied input. `applicationGet` confirms it still resolves; `widgetDefaultGet` supplies
- * the base that the tenant's own `settings` are spread OVER, so a field the tenant never set falls back to the api's
- * default rather than to undefined.
+ * credentials, never a host-supplied input. `widgetDefaultGet` supplies the base that the tenant's own `settings` are
+ * spread OVER, so a field the tenant never set falls back to the api's default rather than to undefined.
+ *
+ * This runs on every page load of every host site, so it is two requests IN PARALLEL: the credentialed search and the
+ * defaults, which depend on nothing the search returns. It used to be three in sequence — the third an `applicationGet`
+ * whose result was discarded, "confirming" an application the widget row already references by foreign key, and
+ * reading it through an unauthenticated lookup. A failed search still wins: its error is reported before a defaults
+ * failure is.
  *
  * Every failure reports through `utils/errors`, so nothing here swallows the throw underneath it. The probe strings
  * matched on a failed `widgetSearch` are the platform-specific texts browsers emit for an unreachable host — matching
@@ -38,6 +43,9 @@ export async function loadWidgetConfig(config: MarketrixConfig): Promise<Credent
   if (!mtxId || !mtxKey) {
     throw new Error('Please provide mtxId + mtxKey');
   }
+
+  const defaultsRead = sdk.widgetDefaultGet({ type: 'widget' });
+  defaultsRead.catch(() => undefined);
 
   let widgets: WidgetData[];
   try {
@@ -71,15 +79,9 @@ export async function loadWidgetConfig(config: MarketrixConfig): Promise<Credent
     throw new Error('Widget missing application_id');
   }
 
-  try {
-    await sdk.applicationGet({ application_id: activeWidget.application_id });
-  } catch (error) {
-    throw withCause(`Failed to validate application: ${errorMessage(error)}`, error);
-  }
-
   let defaults: WidgetSettingsData;
   try {
-    defaults = await sdk.widgetDefaultGet({ type: 'widget' });
+    defaults = await defaultsRead;
   } catch (error) {
     throw withCause(`Failed to fetch widget settings from API: ${errorMessage(error)}`, error);
   }
