@@ -28,13 +28,15 @@ export const activityLogSearch = oc
     tags: ['Activity Log'],
     path: '/log',
     summary: 'Search and filter activity logs',
-    description: 'Returns list of activity logs matching search parameters (workspace, type)',
+    description:
+      'Returns activity logs newest first, matching the workspace, any of `types`, an application, or only the ' +
+      "caller's own. `types` takes several values so a page showing a few kinds reads them in one request.",
   })
   .input(
     z
       .object({
         workspace_id: z.coerce.number().optional(),
-        type: ActivityLogTypeSchema.optional(),
+        types: z.array(ActivityLogTypeSchema).min(1).optional(),
         application_id: z.coerce.number().optional(),
         /** Restrict to the caller's OWN activity. A flag rather than a user_id so one member can never read another's. */
         mine: z.coerce.boolean().optional(),

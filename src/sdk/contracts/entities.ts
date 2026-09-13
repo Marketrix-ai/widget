@@ -34,7 +34,6 @@ export const UserEntitySchema = BaseEntitySchema.extend({
   external_id: z.string().nullish(),
   first_name: z.string().nullish(),
   last_name: z.string().nullish(),
-  password: z.string().nullish(),
   image_url: z.string().nullish(),
   last_login_at: z.coerce.date().nullish(),
   auth_method: AuthMethodSchema.nullish(),
