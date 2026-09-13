@@ -15,7 +15,7 @@
  */
 import { type InstructionType, sdk, type WidgetCommand } from '../sdk';
 import { chatSessionManager } from './ChatSessionManager';
-import { type CredentialedConfig, storageService } from './StorageService';
+import type { CredentialedConfig } from './StorageService';
 import { streamClient } from './StreamClient';
 
 export async function chatPost(
@@ -26,15 +26,15 @@ export async function chatPost(
 ): Promise<void> {
   const chatId = await chatSessionManager.getOrCreateChatId();
 
-  const metadata: Record<string, unknown> = {
+  const metadata = {
     question: message,
     mode,
-    chat_id: storageService.getChatId(),
+    chat_id: chatId,
     timestamp: new Date().toISOString(),
     marketrix_id: config.mtxId,
     marketrix_key: config.mtxKey,
+    ...(config.userId ? { user_id: config.userId } : {}),
   };
-  if (config.userId) metadata.user_id = config.userId;
   sdk
     .activityLogCreate({ type: 'widget_question', metadata })
     .catch((error: unknown) => console.warn('[ChatService] Failed to log widget question:', error));
