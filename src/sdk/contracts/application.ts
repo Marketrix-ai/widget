@@ -9,7 +9,7 @@ import {
   partialPatch,
   SuccessSchema,
 } from './common';
-import { ApplicationEntitySchema, ApplicationReadSchema, ApplicationTypeSchema, WidgetEntitySchema } from './entities';
+import { ApplicationEntitySchema, ApplicationReadSchema, ApplicationTypeSchema } from './entities';
 
 export const ApplicationCreateSchema = ApplicationEntitySchema.partial().extend({
   type: ApplicationTypeSchema,
@@ -43,24 +43,16 @@ export const applicationSearch = oc
     tags: ['Application'],
     path: '/applications',
     summary: 'Search applications for workspace',
-    description:
-      'Returns applications for the authenticated workspace, optionally filtered by type, always includes widgets',
+    description: 'Returns applications for the authenticated workspace, optionally filtered by type',
   })
   .input(
     z
       .object({
         type: ApplicationTypeSchema.optional(),
-        include: z.array(z.enum(['widgets'])).optional(),
       })
       .extend(PaginationSchema.shape),
   )
-  .output(
-    paginatedListOf(
-      ApplicationReadSchema.extend({
-        widgets: z.array(WidgetEntitySchema).optional(),
-      }),
-    ),
-  );
+  .output(paginatedListOf(ApplicationReadSchema));
 
 export const applicationGet = oc
   .route({
@@ -68,14 +60,10 @@ export const applicationGet = oc
     tags: ['Application'],
     path: '/applications/{application_id}',
     summary: 'Get application by ID',
-    description: 'Returns specific application details by ID, always includes widgets',
+    description: 'Returns specific application details by ID',
   })
   .input(ByApplicationIdSchema)
-  .output(
-    ApplicationReadSchema.extend({
-      widgets: z.array(WidgetEntitySchema),
-    }),
-  );
+  .output(ApplicationReadSchema);
 
 export const applicationGraphGet = oc
   .route({
