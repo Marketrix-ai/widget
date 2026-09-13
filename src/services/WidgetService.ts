@@ -13,10 +13,8 @@
  * spread OVER, so a field the tenant never set falls back to the api's default rather than to undefined.
  *
  * This runs on every page load of every host site, so it is two requests IN PARALLEL: the credentialed search and the
- * defaults, which depend on nothing the search returns. It used to be three in sequence — the third an `applicationGet`
- * whose result was discarded, "confirming" an application the widget row already references by foreign key, and
- * reading it through an unauthenticated lookup. A failed search still wins: its error is reported before a defaults
- * failure is.
+ * defaults, which depend on nothing the search returns. A failed search still wins: its error is reported before a
+ * defaults failure is.
  *
  * Every failure reports through `utils/errors`, so nothing here swallows the throw underneath it. The probe strings
  * matched on a failed `widgetSearch` are the platform-specific texts browsers emit for an unreachable host — matching

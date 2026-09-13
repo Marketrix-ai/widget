@@ -12,7 +12,6 @@ import { loadWidgetConfig } from '../WidgetService';
 
 vi.mock('../../sdk', () => ({
   sdk: {
-    applicationGet: vi.fn(),
     widgetDefaultGet: vi.fn(),
     widgetSearch: vi.fn(),
   },
@@ -50,7 +49,6 @@ describe('loadWidgetConfig', () => {
     const config = await loadWidgetConfig({ mtxId: 'test-id', mtxKey: 'test-key', show_widget: false });
 
     expect(mockSdk.widgetSearch).toHaveBeenCalledOnce();
-    expect(mockSdk.applicationGet).not.toHaveBeenCalled();
     expect(mockSdk.widgetDefaultGet).toHaveBeenCalledOnce();
     expect(config).toMatchObject({ mtxId: 'test-id', mtxKey: 'test-key', mtxApp: 42, show_widget: false });
   });
@@ -119,6 +117,5 @@ describe('loadWidgetConfig', () => {
     await expect(loadWidgetConfig({ mtxId: 'test-id', mtxKey: 'test-key' })).rejects.toThrow(
       'Found widget(s) but none are active',
     );
-    expect(mockSdk.applicationGet).not.toHaveBeenCalled();
   });
 });
