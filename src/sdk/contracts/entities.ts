@@ -145,12 +145,8 @@ export const WidgetEntitySchema = BaseEntitySchema.extend({
 export type WidgetData = z.infer<typeof WidgetEntitySchema>;
 
 export const ActivityLogTypeSchema = z.enum([
-  'user_login',
-  'url_visit',
   'update_workspace',
-  'create_user',
   'update_user',
-  'delete_user',
   'create_application',
   'update_application',
   'delete_application',
@@ -176,22 +172,15 @@ export const ActivityLogTypeSchema = z.enum([
   'payment_succeeded',
   'payment_failed',
   'widget_question',
-  'qa_run_started',
   'start_simulation',
   'create_workflow',
   'update_workflow',
   'delete_workflow',
   'toggle_workflow',
   'slack_command',
-  'create_form',
-  'update_form',
-  'delete_form',
-  'duplicate_form',
-  'publish_form',
-  'unpublish_form',
-  'archive_form',
-  'submit_form_response',
-  'delete_form_response',
+  'publish_survey',
+  'unpublish_survey',
+  'delete_survey_response',
 ]);
 
 export type ActivityLogType = z.infer<typeof ActivityLogTypeSchema>;
