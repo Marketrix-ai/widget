@@ -2,18 +2,7 @@ import { eventIterator, oc } from '@orpc/contract';
 import { z } from 'zod';
 
 import { ByWidgetIdSchema, paginatedListOf, PaginationSchema } from './common';
-import {
-  ApplicationReadSchema,
-  WidgetEntitySchema,
-  WidgetSettingsDataSchema,
-  WidgetSettingsWriteSchema,
-  WidgetTypeSchema,
-} from './entities';
-
-export const ApplicationWithWidgetsSchema = ApplicationReadSchema.extend({
-  widgets: z.array(WidgetEntitySchema).optional(),
-});
-export type ApplicationWithWidgetsData = z.infer<typeof ApplicationWithWidgetsSchema>;
+import { WidgetEntitySchema, WidgetSettingsDataSchema, WidgetSettingsWriteSchema, WidgetTypeSchema } from './entities';
 
 export const WidgetCreateSchema = WidgetEntitySchema.partial().extend({
   application_id: z.number().positive(),
