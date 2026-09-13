@@ -1,8 +1,8 @@
 import { oc } from '@orpc/contract';
 import { z } from 'zod';
 
-import { paginatedListOf, PaginationSchema } from './common';
-import { ActivityLogCreateSchema, ActivityLogEntitySchema, ActivityLogTypeSchema } from './entities';
+import { paginatedListOf, PaginationSchema, SuccessSchema } from './common';
+import { ActivityLogEntitySchema, ActivityLogTypeSchema, WidgetQuestionLogSchema } from './entities';
 
 /**
  * How long an activity row is kept. The timeline is informational, not an audit record, so it is
@@ -16,11 +16,11 @@ export const activityLogCreate = oc
     method: 'POST',
     tags: ['Activity Log'],
     path: '/log',
-    summary: 'Create new activity log entry',
-    description: 'Records user or system action for auditing and tracking purposes',
+    summary: 'Log a widget question',
+    description: 'Records a question asked through the widget, authenticated by the widget credentials it carries',
   })
-  .input(ActivityLogCreateSchema)
-  .output(ActivityLogEntitySchema);
+  .input(WidgetQuestionLogSchema)
+  .output(SuccessSchema);
 
 export const activityLogSearch = oc
   .route({

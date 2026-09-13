@@ -66,9 +66,9 @@ export const ApplicationEntitySchema = BaseEntitySchema.extend({
   slug: z.string(),
   type: ApplicationTypeSchema,
   url: z.string(),
-  username: z.string().nullish(),
-  password: z.string().nullish(),
-  allowed_domains: z.array(z.string()).default([]),
+  username: z.string().nullable(),
+  password: z.string().nullable(),
+  allowed_domains: z.array(z.string()),
 });
 
 export type ApplicationData = z.infer<typeof ApplicationEntitySchema>;
@@ -210,6 +210,21 @@ export const ActivityLogEntitySchema = BaseEntitySchema.extend({
 
 export type ActivityLogData = z.infer<typeof ActivityLogEntitySchema>;
 
-export const ActivityLogCreateSchema = ActivityLogEntitySchema.partial().extend({
-  type: ActivityLogTypeSchema,
-});
+// The one activity a client writes: the widget logging a visitor's question. Every other activity is written by
+// the api itself, so the input is closed to this shape. The credentials resolve the application and are not stored.
+export const WidgetQuestionLogSchema = z
+  .object({
+    type: z.literal('widget_question'),
+    metadata: z
+      .object({
+        question: z.string(),
+        mode: InstructionTypeSchema,
+        chat_id: z.string(),
+        timestamp: z.string(),
+        marketrix_id: z.string(),
+        marketrix_key: z.string(),
+        user_id: z.number().int().positive().optional(),
+      })
+      .strict(),
+  })
+  .strict();
