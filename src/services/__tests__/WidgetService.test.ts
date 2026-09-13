@@ -42,7 +42,6 @@ const searchResult = {
 beforeEach(() => {
   vi.clearAllMocks();
   mockSdk.widgetSearch.mockResolvedValue(searchResult);
-  mockSdk.applicationGet.mockResolvedValue({ id: 42 } as Awaited<ReturnType<typeof sdk.applicationGet>>);
   mockSdk.widgetDefaultGet.mockResolvedValue(settings);
 });
 
@@ -51,7 +50,7 @@ describe('loadWidgetConfig', () => {
     const config = await loadWidgetConfig({ mtxId: 'test-id', mtxKey: 'test-key', show_widget: false });
 
     expect(mockSdk.widgetSearch).toHaveBeenCalledOnce();
-    expect(mockSdk.applicationGet).toHaveBeenCalledWith({ application_id: 42 });
+    expect(mockSdk.applicationGet).not.toHaveBeenCalled();
     expect(mockSdk.widgetDefaultGet).toHaveBeenCalledOnce();
     expect(config).toMatchObject({ mtxId: 'test-id', mtxKey: 'test-key', mtxApp: 42, show_widget: false });
   });
@@ -79,7 +78,25 @@ describe('loadWidgetConfig', () => {
     expect(mockSdk.widgetSearch).toHaveBeenCalledOnce();
   });
 
-  it('preserves the inactive-widget diagnostic without loading defaults or the application', async () => {
+  it('reads the defaults alongside the search rather than after it', async () => {
+    let releaseSearch: (value: typeof searchResult) => void = () => undefined;
+    mockSdk.widgetSearch.mockReturnValue(new Promise(resolve => (releaseSearch = resolve)));
+
+    const loading = loadWidgetConfig({ mtxId: 'test-id', mtxKey: 'test-key' });
+    expect(mockSdk.widgetDefaultGet).toHaveBeenCalledOnce();
+
+    releaseSearch(searchResult);
+    await expect(loading).resolves.toMatchObject({ mtxApp: 42 });
+  });
+
+  it('reports a failed search even when the defaults read also fails', async () => {
+    mockSdk.widgetSearch.mockRejectedValue(new Error('bad credentials'));
+    mockSdk.widgetDefaultGet.mockRejectedValue(new Error('defaults down'));
+
+    await expect(loadWidgetConfig({ mtxId: 'test-id', mtxKey: 'test-key' })).rejects.toThrow(/bad credentials/);
+  });
+
+  it('preserves the inactive-widget diagnostic without reading the application', async () => {
     mockSdk.widgetSearch.mockResolvedValue({
       items: [
         {
@@ -103,6 +120,5 @@ describe('loadWidgetConfig', () => {
       'Found widget(s) but none are active',
     );
     expect(mockSdk.applicationGet).not.toHaveBeenCalled();
-    expect(mockSdk.widgetDefaultGet).not.toHaveBeenCalled();
   });
 });
