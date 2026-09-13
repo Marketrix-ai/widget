@@ -58,11 +58,13 @@ export const listOf = <T extends z.ZodType>(schema: T) =>
 export const SuccessSchema = z.object({ success: z.literal(true) });
 export const SuccessWithMessageSchema = SuccessSchema.extend({ message: z.string() });
 
-export const ToolCallRecordSchema = z.object({
-  name: z.string().min(1),
-  params: z.record(z.string(), z.unknown()).default({}),
-  result: z.record(z.string(), z.unknown()).default({}),
-});
+export const ToolCallRecordSchema = z
+  .object({
+    name: z.string().min(1),
+    params: z.record(z.string(), z.unknown()),
+    result: z.record(z.string(), z.unknown()),
+  })
+  .strict();
 
 export const SlackWebhookUrlSchema = z.url().refine(u => /^https:\/\/hooks\.slack\.com\//.test(u), {
   message: 'Slack webhook URL must start with https://hooks.slack.com/',
@@ -74,33 +76,35 @@ export const GraphEdgeSchema = z
     end: z.string(),
     action: z.string(),
   })
-  .passthrough();
+  .strict();
 export type GraphEdgeData = z.infer<typeof GraphEdgeSchema>;
+
+const GraphBoxSchema = z.object({ x: z.number(), y: z.number(), w: z.number(), h: z.number() }).strict();
 
 export const GraphSectionSchema = z
   .object({
     id: z.string(),
     label: z.string(),
     purpose: z.string(),
-    elements: z.array(z.record(z.string(), z.unknown())).default([]),
-    bbox: z.record(z.string(), z.unknown()).default({}),
-    screenshot: z.string().default(''),
-    embedding: z.array(z.number()).nullish(),
+    elements: z.array(z.object({ label: z.string(), text: z.string(), bbox: GraphBoxSchema }).strict()),
+    bbox: GraphBoxSchema,
+    screenshot: z.string(),
+    embedding: z.array(z.number()).nullable(),
   })
-  .passthrough();
+  .strict();
 
 export const GraphNodeSchema = z
   .object({
     id: z.string(),
     title: z.string(),
     url: z.string(),
-    summary: z.string().default(''),
-    screenshot: z.string().default(''),
-    sections: z.array(GraphSectionSchema).default([]),
-    sequence_ids: z.array(z.number()).default([]),
-    embedding: z.array(z.number()).nullish(),
+    summary: z.string(),
+    screenshot: z.string(),
+    sections: z.array(GraphSectionSchema),
+    sequence_ids: z.array(z.number()),
+    embedding: z.array(z.number()).nullable().optional(),
   })
-  .passthrough();
+  .strict();
 export type GraphNodeData = z.infer<typeof GraphNodeSchema>;
 
 export const GraphSchema = z.object({
