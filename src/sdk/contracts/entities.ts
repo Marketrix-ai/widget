@@ -43,13 +43,18 @@ export const UserEntitySchema = BaseEntitySchema.extend({
 });
 
 // The session-read tier of a user: neither app nor personaOS reads `image_url` (avatars render
-// initials), `external_id` or `last_login_at` off `authMe` or `userSearch` — only `userUpdate`'s
-// output and the `UserUpdateSchema` input it derives still need the full entity.
+// initials), `external_id`, `last_login_at`, `created_at` or `updated_at` off `authMe` or `userSearch` —
+// only `userUpdate`'s output and the `UserUpdateSchema` input it derives still need the full entity.
+// `authMe` builds this projection by hand without timestamps, so a timestamp here is not an over-send but
+// an outage: `z.coerce.date()` of `undefined` is an Invalid Date and every login fails validation.
 export const UserSummarySchema = UserEntitySchema.omit({
   image_url: true,
   external_id: true,
   last_login_at: true,
+  created_at: true,
+  updated_at: true,
 });
+export type UserSummary = z.infer<typeof UserSummarySchema>;
 
 export type UserData = z.infer<typeof UserEntitySchema>;
 
