@@ -214,6 +214,9 @@ export const ActivityLogTypeSchema = z.enum([
 
 export type ActivityLogType = z.infer<typeof ActivityLogTypeSchema>;
 
+// `ip_address`/`user_agent`/`created_by` are gone: `models/columnSchemas.ts`'s `ActivityMetadataByType`
+// registry is the actual write-time gate, and every one of its per-type shapes is `.strict()` — none of
+// them ever admits these three keys, so no stored row carries them and no migration is needed.
 export const ActivityLogMetadataSchema = z
   .object({
     details: z.string().optional(),
@@ -223,10 +226,7 @@ export const ActivityLogMetadataSchema = z
     target_user_id: z.number().optional(),
     target_user_email: z.string().optional(),
     reason: z.string().optional(),
-    ip_address: z.string().optional(),
-    user_agent: z.string().optional(),
     widget_type: z.string().optional(),
-    created_by: z.number().optional(),
   })
   .passthrough();
 

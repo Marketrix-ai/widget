@@ -83,7 +83,6 @@ export const WidgetCommandSchema = z.discriminatedUnion('type', [
     chat_id: z.string(),
     application_id: z.number(),
     url: z.string().optional(),
-    user_agent: z.string().optional(),
     timestamp: z.number().optional(),
     viewport: z
       .object({
