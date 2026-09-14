@@ -102,22 +102,25 @@ export const GraphSectionSchema = z
   })
   .strict();
 
-export const GraphNodeSchema = z
+// The whole-graph tier — `applicationGraphGet`/`simulationGraphGet` load nodes with `readGraph`, which
+// always resolves sections to `[]` for speed; a node's real sections are a lazy drill-in fetched one at
+// a time by `graphNodeSectionsGet` (its own `GraphSectionSchema`-shaped output), so this tier never
+// carries them.
+export const GraphNodeSummarySchema = z
   .object({
     id: z.string(),
     title: z.string(),
     url: z.string(),
     summary: z.string(),
     screenshot: z.string(),
-    sections: z.array(GraphSectionSchema),
     sequence_ids: z.array(z.number()),
     embedding: z.array(z.number()).nullable().optional(),
   })
   .strict();
-export type GraphNodeData = z.infer<typeof GraphNodeSchema>;
+export type GraphNodeData = z.infer<typeof GraphNodeSummarySchema>;
 
 export const GraphSchema = z.object({
-  nodes: z.array(GraphNodeSchema),
+  nodes: z.array(GraphNodeSummarySchema),
   edges: z.array(GraphEdgeSchema),
 });
 export type GraphData = z.infer<typeof GraphSchema>;

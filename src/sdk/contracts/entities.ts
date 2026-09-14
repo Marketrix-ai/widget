@@ -54,8 +54,8 @@ export const WorkspaceEntitySchema = BaseEntitySchema.extend({
   external_workspace_id: z.string().nullish(),
   // Read-only flag derived from `slack_webhook_url`'s presence. The URL itself
   // is a secret and is never returned to clients — only this boolean is.
-  slack_webhook_configured: z.boolean().optional(),
-  notify_all_members_on_question: z.boolean().optional(),
+  slack_webhook_configured: z.boolean(),
+  notify_all_members_on_question: z.boolean(),
 });
 
 export type WorkspaceData = z.infer<typeof WorkspaceEntitySchema>;
