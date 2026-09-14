@@ -70,11 +70,11 @@ export const WorkspaceEntitySchema = BaseEntitySchema.extend({
 export type WorkspaceData = z.infer<typeof WorkspaceEntitySchema>;
 
 // `workspaceGet`'s shape: neither app nor any other consumer's settings pages read
-// `external_workspace_id`, `notify_all_members_on_question` or `status` off it — `workspaceCreate` and
-// `workspaceUpdate` still return the full entity.
+// `external_workspace_id` or `status` off it — `workspaceCreate` and `workspaceUpdate` still return the
+// full entity. `notify_all_members_on_question` IS read here now, by the app's workspace Notifications
+// settings toggle.
 export const WorkspaceSummarySchema = WorkspaceEntitySchema.omit({
   external_workspace_id: true,
-  notify_all_members_on_question: true,
   status: true,
 });
 export type WorkspaceSummary = z.infer<typeof WorkspaceSummarySchema>;
