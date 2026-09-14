@@ -4,9 +4,9 @@ export const EntityStatusSchema = z.enum(['created', 'active', 'suspended']);
 export type EntityStatus = z.infer<typeof EntityStatusSchema>;
 
 export const BaseEntitySchema = z.object({
-  id: z.number().optional(),
-  created_at: z.coerce.date().optional(),
-  updated_at: z.coerce.date().optional(),
+  id: z.number(),
+  created_at: z.coerce.date(),
+  updated_at: z.coerce.date(),
 });
 
 export const ByIdSchema = z.object({ id: z.coerce.number() });
