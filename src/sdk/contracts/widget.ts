@@ -69,7 +69,7 @@ export const WidgetCommandSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('chat/tell'), request_id: z.string(), content: z.string() }),
   z.object({ type: z.literal('chat/show'), request_id: z.string(), content: z.string() }),
   z.object({ type: z.literal('chat/do'), request_id: z.string(), content: z.string() }),
-  z.object({ type: z.literal('chat/stop'), task_id: z.string().optional() }),
+  z.object({ type: z.literal('chat/stop') }),
   z.object({
     type: z.literal('tool/response'),
     tool_call_id: z.string(),
