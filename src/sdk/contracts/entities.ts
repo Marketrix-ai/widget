@@ -76,6 +76,7 @@ export const WorkspaceSummarySchema = WorkspaceEntitySchema.omit({
   external_workspace_id: true,
   notify_all_members_on_question: true,
 });
+export type WorkspaceSummary = z.infer<typeof WorkspaceSummarySchema>;
 
 export const ApplicationEntitySchema = BaseEntitySchema.extend({
   workspace_id: z.number(),
