@@ -55,6 +55,15 @@ export const listOf = <T extends z.ZodType>(schema: T) =>
     count: z.number(),
   });
 
+// A plain (non-discriminated) union of every variant in a `{ <discriminant value>: ZodType }` map — the
+// shape `TriggerSourceConfigSchemas`/`WorkflowActionTargetConfigSchemas` are declared in, and the
+// registry (`models/columnSchemas.ts`) keys by the same discriminant separately. Typed off the map's
+// own value type rather than a bare `z.ZodType`, whose inferred output is `unknown` and would erase
+// every variant's real shape from the union.
+export const unionOfRecord = <T extends Record<string, z.ZodType>>(
+  schemas: T,
+): z.ZodUnion<[T[keyof T], ...T[keyof T][]]> => z.union(Object.values(schemas) as [T[keyof T], ...T[keyof T][]]);
+
 export const SuccessSchema = z.object({ success: z.literal(true) });
 export const SuccessWithMessageSchema = SuccessSchema.extend({ message: z.string() });
 
