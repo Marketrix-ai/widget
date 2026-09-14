@@ -179,7 +179,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
       commit(s => reduceDispatch(s, placeholder));
 
       try {
-        await chatPost(config, content, effectiveMode, placeholder.id);
+        await chatPost(content, effectiveMode, placeholder.id);
       } catch (error) {
         console.error('Failed to send message:', error);
         commit(s =>

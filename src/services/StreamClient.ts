@@ -117,7 +117,11 @@ export class StreamClient {
         {
           chat_id: chatId,
           tab_id: this.tabId,
-          ...(credentials && { marketrix_id: credentials.mtxId, marketrix_key: credentials.mtxKey }),
+          ...(credentials && {
+            marketrix_id: credentials.mtxId,
+            marketrix_key: credentials.mtxKey,
+            ...(credentials.userId ? { user_id: credentials.userId } : {}),
+          }),
         },
         { signal },
       );

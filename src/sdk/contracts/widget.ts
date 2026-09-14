@@ -1,7 +1,7 @@
 import { eventIterator, oc } from '@orpc/contract';
 import { z } from 'zod';
 
-import { ByWidgetIdSchema, paginatedListOf, PaginationSchema } from './common';
+import { ByWidgetIdSchema, paginatedListOf, PaginationSchema, SuccessSchema } from './common';
 import {
   WidgetEntitySchema,
   WidgetPublicSchema,
@@ -197,10 +197,19 @@ export const widgetStream = oc
       tab_id: z.string().optional(),
       marketrix_id: z.string().optional(),
       marketrix_key: z.string().optional(),
+      // The embedding page's visitor identity, when supplied. Carried at registration time — not on
+      // widgetMessagePost — because it is what lets the server derive the `widget_question` activity-log
+      // row from `chat_id` alone, with no per-message credential re-send.
+      user_id: z.coerce.number().optional(),
     }),
   )
   .output(eventIterator(WidgetEventSchema));
 
+// Fire-and-forget from the widget's own point of view: every soft-drop condition (no open stream, no
+// active dispatch to relay a tool response, an unhandled command type) is logged server-side and never
+// surfaced to the caller — neither `StreamClient.send` nor `RrwebSessionRecorder` branched on the old
+// `{ ok }` boolean, so the ack is the same unconditional `SuccessSchema` every other fire-and-forget
+// mutation returns.
 export const widgetMessagePost = oc
   .route({
     method: 'POST',
@@ -216,7 +225,7 @@ export const widgetMessagePost = oc
       command: WidgetCommandSchema,
     }),
   )
-  .output(z.object({ ok: z.boolean() }));
+  .output(SuccessSchema);
 
 export const widgetRoutes = {
   widgetCreate,
