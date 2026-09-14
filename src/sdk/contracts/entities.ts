@@ -42,6 +42,15 @@ export const UserEntitySchema = BaseEntitySchema.extend({
   workspace_role: WorkspaceMemberRoleSchema.nullish(),
 });
 
+// The session-read tier of a user: neither app nor personaOS reads `image_url` (avatars render
+// initials), `external_id` or `last_login_at` off `authMe` or `userSearch` — only `userUpdate`'s
+// output and the `UserUpdateSchema` input it derives still need the full entity.
+export const UserSummarySchema = UserEntitySchema.omit({
+  image_url: true,
+  external_id: true,
+  last_login_at: true,
+});
+
 export type UserData = z.infer<typeof UserEntitySchema>;
 
 // package and ending_date come from the workspace_plan table (joined on fetch), NOT the workspace row.
@@ -59,6 +68,14 @@ export const WorkspaceEntitySchema = BaseEntitySchema.extend({
 });
 
 export type WorkspaceData = z.infer<typeof WorkspaceEntitySchema>;
+
+// `workspaceGet`'s shape: neither app nor any other consumer's settings pages read
+// `external_workspace_id` or `notify_all_members_on_question` off it — `workspaceCreate` and
+// `workspaceUpdate` still return the full entity.
+export const WorkspaceSummarySchema = WorkspaceEntitySchema.omit({
+  external_workspace_id: true,
+  notify_all_members_on_question: true,
+});
 
 export const ApplicationEntitySchema = BaseEntitySchema.extend({
   workspace_id: z.number(),
