@@ -77,7 +77,7 @@ describe('StreamClient registration lifecycle', () => {
     inner.chatId = 'new-chat';
     inner.tornDown = false;
     const remountRegistration = client.waitUntilRegistered();
-    inner.handleMessage({ type: 'registered', chat_id: 'new-chat', application_id: 2 });
+    inner.handleMessage({ type: 'registered', chat_id: 'new-chat' });
 
     await expect(remountRegistration).resolves.toBeUndefined();
   });
@@ -149,7 +149,7 @@ describe('StreamClient registration lifecycle', () => {
     await flushMicrotasks();
     expect(registered).toBe(false);
 
-    inner.handleMessage({ type: 'registered', chat_id: 'chat-1', application_id: 1 });
+    inner.handleMessage({ type: 'registered', chat_id: 'chat-1' });
     await pending;
     expect(registered).toBe(true);
   });
