@@ -12,13 +12,13 @@
  */
 import { activityLogCreate } from './contracts/activityLog';
 import { chatCreate } from './contracts/chat';
-import { widgetDefaultGet, widgetMessagePost, widgetSearch, widgetStream } from './contracts/widget';
+import { widgetDefaultGet, widgetMessagePost, widgetPublicSearch, widgetStream } from './contracts/widget';
 
 export const widgetContract = {
   activityLogCreate,
   chatCreate,
   widgetDefaultGet,
-  widgetSearch,
+  widgetPublicSearch,
   widgetMessagePost,
   widgetStream,
 };

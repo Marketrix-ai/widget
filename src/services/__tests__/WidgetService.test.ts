@@ -12,7 +12,7 @@ import { loadWidgetConfig } from '../WidgetService';
 
 vi.mock('../../sdk', () => ({
   sdk: {
-    widgetSearch: vi.fn(),
+    widgetPublicSearch: vi.fn(),
   },
 }));
 restoreModuleAfterAll('../../sdk', () => import('../../sdk/index.ts?real'));
@@ -39,35 +39,35 @@ const searchResult = {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mockSdk.widgetSearch.mockResolvedValue(searchResult);
+  mockSdk.widgetPublicSearch.mockResolvedValue(searchResult);
 });
 
 describe('loadWidgetConfig', () => {
   it('loads the widget in one search and returns one schema-validated config', async () => {
     const config = await loadWidgetConfig({ mtxId: 'test-id', mtxKey: 'test-key', show_widget: false });
 
-    expect(mockSdk.widgetSearch).toHaveBeenCalledOnce();
+    expect(mockSdk.widgetPublicSearch).toHaveBeenCalledOnce();
     expect(config).toMatchObject({ mtxId: 'test-id', mtxKey: 'test-key', mtxApp: 42, show_widget: false });
   });
 
   it('rejects an invalid merged settings response with the schema field', async () => {
-    mockSdk.widgetSearch.mockResolvedValue({
+    mockSdk.widgetPublicSearch.mockResolvedValue({
       ...searchResult,
       items: [{ ...activeWidget, settings: { ...settings, widget_position: 'somewhere' } as typeof settings }],
     });
 
     await expect(loadWidgetConfig({ mtxId: 'test-id', mtxKey: 'test-key' })).rejects.toThrow(/widget_position/);
-    expect(mockSdk.widgetSearch).toHaveBeenCalledOnce();
+    expect(mockSdk.widgetPublicSearch).toHaveBeenCalledOnce();
   });
 
   it('reports a failed search', async () => {
-    mockSdk.widgetSearch.mockRejectedValue(new Error('bad credentials'));
+    mockSdk.widgetPublicSearch.mockRejectedValue(new Error('bad credentials'));
 
     await expect(loadWidgetConfig({ mtxId: 'test-id', mtxKey: 'test-key' })).rejects.toThrow(/bad credentials/);
   });
 
   it('preserves the inactive-widget diagnostic without reading the application', async () => {
-    mockSdk.widgetSearch.mockResolvedValue({
+    mockSdk.widgetPublicSearch.mockResolvedValue({
       items: [
         {
           id: 7,

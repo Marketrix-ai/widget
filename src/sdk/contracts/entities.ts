@@ -144,6 +144,17 @@ export const WidgetEntitySchema = BaseEntitySchema.extend({
 
 export type WidgetData = z.infer<typeof WidgetEntitySchema>;
 
+// The widget's own boot call (`widgetPublicSearch`) authenticates by marketrix_id/marketrix_key, so the
+// response must never carry that pair back, nor `marketrix_id`/the rendered embed `snippet` — an
+// unauthenticated visitor's browser is the caller.
+export const WidgetPublicSchema = WidgetEntitySchema.pick({
+  status: true,
+  application_id: true,
+  settings: true,
+});
+
+export type WidgetPublicData = z.infer<typeof WidgetPublicSchema>;
+
 export const ActivityLogTypeSchema = z.enum([
   'update_workspace',
   'update_user',

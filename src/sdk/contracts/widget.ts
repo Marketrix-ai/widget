@@ -2,7 +2,13 @@ import { eventIterator, oc } from '@orpc/contract';
 import { z } from 'zod';
 
 import { ByWidgetIdSchema, paginatedListOf, PaginationSchema } from './common';
-import { WidgetEntitySchema, WidgetSettingsDataSchema, WidgetSettingsWriteSchema, WidgetTypeSchema } from './entities';
+import {
+  WidgetEntitySchema,
+  WidgetPublicSchema,
+  WidgetSettingsDataSchema,
+  WidgetSettingsWriteSchema,
+  WidgetTypeSchema,
+} from './entities';
 
 export const WidgetCreateSchema = WidgetEntitySchema.partial().extend({
   application_id: z.number().positive(),
@@ -106,19 +112,38 @@ export const widgetSearch = oc
     tags: ['Widget'],
     path: '/widgets',
     summary: 'Search widgets for workspace',
-    description: 'Search widgets by type, application, marketrix_id, or marketrix_key',
+    description: 'Search the calling workspace’s widgets by type or application (dashboard-only; session-scoped)',
   })
   .input(
     z
       .object({
         type: WidgetTypeSchema.optional(),
         application_id: z.coerce.number().optional(),
-        marketrix_id: z.string().optional(),
-        marketrix_key: z.string().optional(),
       })
       .extend(PaginationSchema.shape),
   )
   .output(paginatedListOf(WidgetEntitySchema));
+
+// The widget's own boot call: session-less, credentialed by marketrix_id + marketrix_key. Output is
+// the minimal `WidgetPublicSchema` — every visitor's browser is the caller, so the credentials that
+// authenticated the call and the rendered embed snippet must never round-trip back.
+export const widgetPublicSearch = oc
+  .route({
+    method: 'GET',
+    tags: ['Widget'],
+    path: '/widgets/public',
+    summary: 'Resolve a widget by its embed credentials',
+    description: 'Session-less lookup by marketrix_id + marketrix_key, for the widget boot call',
+  })
+  .input(
+    z
+      .object({
+        marketrix_id: z.string(),
+        marketrix_key: z.string(),
+      })
+      .extend(PaginationSchema.shape),
+  )
+  .output(paginatedListOf(WidgetPublicSchema));
 
 export const widgetDefaultGet = oc
   .route({
@@ -192,6 +217,7 @@ export const widgetMessagePost = oc
 export const widgetRoutes = {
   widgetCreate,
   widgetSearch,
+  widgetPublicSearch,
   widgetDefaultGet,
   widgetUpdate,
   widgetDelete,
