@@ -105,7 +105,9 @@ export const GraphSectionSchema = z
 // The whole-graph tier — `applicationGraphGet`/`simulationGraphGet` load nodes with `readGraph`, which
 // always resolves sections to `[]` for speed; a node's real sections are a lazy drill-in fetched one at
 // a time by `graphNodeSectionsGet` (its own `GraphSectionSchema`-shaped output), so this tier never
-// carries them.
+// carries them. `sequence_ids` is DROPPED (not just unselected) — the stored `graph.graph_nodes` column
+// stays for the agent's own write-side dedupe, but no app/widget graph or heatmap component ever read the
+// wire field, and `common.ts` is in the WIDGET audience closure, so this narrowing republishes the widget.
 export const GraphNodeSummarySchema = z
   .object({
     id: z.string(),
@@ -113,7 +115,6 @@ export const GraphNodeSummarySchema = z
     url: z.string(),
     summary: z.string(),
     screenshot: z.string(),
-    sequence_ids: z.array(z.number()),
     embedding: z.array(z.number()).nullable().optional(),
   })
   .strict();

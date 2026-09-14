@@ -70,11 +70,12 @@ export const WorkspaceEntitySchema = BaseEntitySchema.extend({
 export type WorkspaceData = z.infer<typeof WorkspaceEntitySchema>;
 
 // `workspaceGet`'s shape: neither app nor any other consumer's settings pages read
-// `external_workspace_id` or `notify_all_members_on_question` off it — `workspaceCreate` and
+// `external_workspace_id`, `notify_all_members_on_question` or `status` off it — `workspaceCreate` and
 // `workspaceUpdate` still return the full entity.
 export const WorkspaceSummarySchema = WorkspaceEntitySchema.omit({
   external_workspace_id: true,
   notify_all_members_on_question: true,
+  status: true,
 });
 export type WorkspaceSummary = z.infer<typeof WorkspaceSummarySchema>;
 
@@ -217,16 +218,16 @@ export type ActivityLogType = z.infer<typeof ActivityLogTypeSchema>;
 // `ip_address`/`user_agent`/`created_by` are gone: `models/columnSchemas.ts`'s `ActivityMetadataByType`
 // registry is the actual write-time gate, and every one of its per-type shapes is `.strict()` — none of
 // them ever admits these three keys, so no stored row carries them and no migration is needed.
+// `target_user_id`/`target_user_email`/`reason`/`widget_type` are written for some activity kinds (member
+// removal, email change, widget CRUD) but no reader renders anything off `metadata` beyond `.details` —
+// dropped from the wire in `handlers/activityLog.ts`'s `wireMetadata`, which this stays `.passthrough()`
+// to make possible: a schema field here would still ship over a passthrough object regardless.
 export const ActivityLogMetadataSchema = z
   .object({
     details: z.string().optional(),
     id: z.number().optional(),
     type: z.string().optional(),
     name: z.string().optional(),
-    target_user_id: z.number().optional(),
-    target_user_email: z.string().optional(),
-    reason: z.string().optional(),
-    widget_type: z.string().optional(),
   })
   .passthrough();
 
