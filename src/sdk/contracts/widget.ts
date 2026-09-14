@@ -10,16 +10,20 @@ import {
   WidgetTypeSchema,
 } from './entities';
 
-export const WidgetCreateSchema = WidgetEntitySchema.partial().extend({
-  application_id: z.number().positive(),
-  type: WidgetTypeSchema,
-  settings: WidgetSettingsWriteSchema.optional(),
-});
+export const WidgetCreateSchema = WidgetEntitySchema.omit({ id: true, created_at: true, updated_at: true })
+  .partial()
+  .extend({
+    application_id: z.number().positive(),
+    type: WidgetTypeSchema,
+    settings: WidgetSettingsWriteSchema.optional(),
+  });
 export type WidgetCreateData = z.infer<typeof WidgetCreateSchema>;
 
-export const WidgetUpdateSchema = WidgetEntitySchema.partial().extend({
-  settings: WidgetSettingsWriteSchema.optional(),
-});
+export const WidgetUpdateSchema = WidgetEntitySchema.omit({ id: true, created_at: true, updated_at: true })
+  .partial()
+  .extend({
+    settings: WidgetSettingsWriteSchema.optional(),
+  });
 export type WidgetUpdateData = z.infer<typeof WidgetUpdateSchema>;
 
 /** Server → Widget events. */
