@@ -34,7 +34,7 @@ export function useFocusTrap(
   isActive: boolean,
   options?: {
     onEscape?: () => void;
-    focusTargetRef?: React.RefObject<HTMLElement | null>;
+    focusTargetRef?: React.RefObject<HTMLElement | null> | undefined;
   },
 ) {
   const previousActiveRef = useRef(false);
@@ -76,12 +76,12 @@ export function useFocusTrap(
       if (e.shiftKey) {
         if (idx === 0) {
           e.preventDefault();
-          focusables[focusables.length - 1].focus();
+          focusables[focusables.length - 1]?.focus();
         }
       } else {
         if (idx === focusables.length - 1) {
           e.preventDefault();
-          focusables[0].focus();
+          focusables[0]?.focus();
         }
       }
     };

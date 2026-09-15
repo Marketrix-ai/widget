@@ -134,7 +134,7 @@ function stepSelect(element: HTMLSelectElement, step: 1 | -1): string {
   }
   element.selectedIndex = next;
   element.dispatchEvent(new Event('change', { bubbles: true }));
-  return `${key}: selected "${element.options[next].text}"`;
+  return `${key}: selected "${element.options[next]?.text ?? ''}"`;
 }
 
 function deleteAt(element: HTMLInputElement | HTMLTextAreaElement, direction: 'Backspace' | 'Delete'): string {

@@ -49,11 +49,19 @@ function parsePx(value: string | undefined, fallback: number): number {
 
 const STORAGE_KEY_NAME = 'marketrix_widget_size';
 
+function isSize(value: unknown): value is Size {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    typeof (value as Record<string, unknown>)['width'] === 'number' &&
+    typeof (value as Record<string, unknown>)['height'] === 'number'
+  );
+}
+
 function readStoredSize(storageKey: string): Size | null {
   try {
-    const stored = JSON.parse(readLocal(storageKey) ?? 'null') as { width?: unknown; height?: unknown };
-    if (typeof stored?.width !== 'number' || typeof stored?.height !== 'number') return null;
-    return clampSize({ width: stored.width, height: stored.height });
+    const stored: unknown = JSON.parse(readLocal(storageKey) ?? 'null');
+    return isSize(stored) ? clampSize(stored) : null;
   } catch (error) {
     console.warn('[useResize] Ignoring an unparseable stored size:', error);
     return null;
@@ -96,7 +104,7 @@ export function useResize(
       const { growX, growY, cursor } = grip;
 
       if (containerRef.current) {
-        containerRef.current.dataset.resizing = 'true';
+        containerRef.current.dataset['resizing'] = 'true';
       }
 
       const onMove = (moveEvent: MouseEvent) => {
@@ -119,7 +127,7 @@ export function useResize(
         document.body.style.userSelect = '';
 
         if (containerRef.current) {
-          delete containerRef.current.dataset.resizing;
+          delete containerRef.current.dataset['resizing'];
         }
 
         setDimensions({ ...dimsRef.current });

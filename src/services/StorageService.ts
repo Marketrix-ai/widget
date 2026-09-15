@@ -20,6 +20,12 @@
  *
  * `scopedKey(name, config)` is the one place `<name>_<tenantScope>` is assembled — the position and resize-size
  * keys share it with the chat context key, so all three browser-local entries partition by tenant identically.
+ *
+ * `sanitizeStoredContext` is the boundary guard for the parsed JSON: hand-rolled (not zod) per the
+ * package-level rule that a schema imported as a VALUE anywhere reachable from `src/index.tsx` pulls
+ * zod's whole runtime into the bundle. Each field is checked against its own type and falls back to
+ * `DEFAULT_CONTEXT`'s value individually, so a partially-corrupt payload (e.g. a bad `currentMode` from
+ * an older widget version) keeps the fields that DID parse rather than discarding the whole context.
  */
 import type { ChatMessage, InstructionType, MarketrixConfig, ValidWidgetConfig } from '../types';
 
@@ -77,11 +83,43 @@ export function writeLocal(key: string, value: string): void {
   }
 }
 
+function isStoredMessage(value: unknown): value is StoredMessage {
+  if (typeof value !== 'object' || value === null) return false;
+  const msg = value as Record<string, unknown>;
+  return (
+    typeof msg['id'] === 'string' &&
+    typeof msg['content'] === 'string' &&
+    (msg['sender'] === 'user' || msg['sender'] === 'agent') &&
+    typeof msg['timestamp'] === 'string' &&
+    Array.isArray(msg['parts'])
+  );
+}
+
+function sanitizeStoredContext(value: unknown): MarketrixChatContext {
+  if (typeof value !== 'object' || value === null) return { ...DEFAULT_CONTEXT };
+  const parsed = value as Record<string, unknown>;
+  const chatId = parsed['chat_id'];
+  const currentMode = parsed['currentMode'];
+  const config = parsed['config'];
+  const timestamp = parsed['timestamp'];
+  return {
+    chat_id: typeof chatId === 'string' || chatId === null ? chatId : DEFAULT_CONTEXT.chat_id,
+    messages: Array.isArray(parsed['messages']) ? parsed['messages'].filter(isStoredMessage) : DEFAULT_CONTEXT.messages,
+    currentMode:
+      currentMode === 'tell' || currentMode === 'show' || currentMode === 'do'
+        ? currentMode
+        : DEFAULT_CONTEXT.currentMode,
+    isOpen: typeof parsed['isOpen'] === 'boolean' ? parsed['isOpen'] : DEFAULT_CONTEXT.isOpen,
+    config: typeof config === 'object' ? (config as MarketrixConfig | null) : DEFAULT_CONTEXT.config,
+    timestamp: typeof timestamp === 'number' ? timestamp : DEFAULT_CONTEXT.timestamp,
+  };
+}
+
 function loadContext(key: string): MarketrixChatContext {
   const stored = readLocal(key);
   if (!stored) return { ...DEFAULT_CONTEXT };
   try {
-    const parsed = { ...DEFAULT_CONTEXT, ...(JSON.parse(stored) as Partial<MarketrixChatContext>) };
+    const parsed = sanitizeStoredContext(JSON.parse(stored));
     if (Date.now() - parsed.timestamp <= CONTEXT_EXPIRY_MS) return parsed;
   } catch (error) {
     console.warn('[StorageService] Failed to parse the stored context:', error);

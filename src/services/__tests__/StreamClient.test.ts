@@ -17,6 +17,10 @@
  * `reconnectNow` itself); that it also redials a stream stuck mid-dial rather than no-op on a connection that will
  * never resolve; and that auth rejection is terminal, with the surfaced error naming "credentials were rejected"
  * rather than going silent the way an unmatched `chat/error` would.
+ *
+ * `asMockedStream`/`emptyStream` cast a plain async iterable to `MockedStream`: oRPC's real `widgetStream`
+ * resolves to its own private-field `AsyncIteratorClass`, which no plain async generator can structurally
+ * satisfy, and the cast stands in for it — sufficient here since `StreamClient` only ever iterates the result.
  */
 
 import { sdk, type WidgetEvent } from '../../sdk';
@@ -44,10 +48,16 @@ function internals(client: StreamClient): StreamClientInternals {
   return client as unknown as StreamClientInternals;
 }
 
-function emptyStream(): AsyncIterable<WidgetEvent> {
-  return {
+type MockedStream = Awaited<ReturnType<typeof sdk.widgetStream>>;
+
+function asMockedStream(iterable: AsyncIterable<WidgetEvent>): MockedStream {
+  return iterable as unknown as MockedStream;
+}
+
+function emptyStream(): MockedStream {
+  return asMockedStream({
     async *[Symbol.asyncIterator]() {},
-  };
+  });
 }
 
 function freshClient(): StreamClient {
@@ -192,11 +202,13 @@ describe('StreamClient retry affordance', () => {
     const errors: string[] = [];
     const callbacks = { onError: (e: Error) => errors.push(e.message) };
     client.addCallbacks(callbacks);
-    mockSdk.widgetStream.mockResolvedValue({
-      async *[Symbol.asyncIterator]() {
-        yield { type: 'chat/error', request_id: 'auth', error: 'Authentication failed' } as WidgetEvent;
-      },
-    });
+    mockSdk.widgetStream.mockResolvedValue(
+      asMockedStream({
+        async *[Symbol.asyncIterator]() {
+          yield { type: 'chat/error', request_id: 'auth', error: 'Authentication failed' } as WidgetEvent;
+        },
+      }),
+    );
 
     await client.connect('chat-2');
     await waitFor(() => expect(errors.length).toBe(1));

@@ -91,7 +91,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigateToChat, onChipClic
             variant='muted'
             style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
           >
-            {messages[messages.length - 1].content || 'Message'}
+            {messages[messages.length - 1]?.content || 'Message'}
           </Text>
           <Text
             as='p'

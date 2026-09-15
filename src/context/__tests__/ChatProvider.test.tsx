@@ -9,8 +9,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 import { useEffect } from 'react';
 
 import { useWidget } from '../../hooks/useWidget';
-import { storageService } from '../../services/StorageService';
-import { agentMessage } from '../../test/fixtures';
+import { type CredentialedConfig, storageService } from '../../services/StorageService';
+import { agentMessage, getMockWidgetConfig } from '../../test/fixtures';
 import { ChatProvider, useChatContext } from '../ChatContext';
 import { UIStateProvider } from '../UIStateContext';
 
@@ -34,7 +34,7 @@ const Transcript = () => {
 };
 
 beforeEach(() => {
-  vi.useFakeTimers({ shouldAdvanceTime: true });
+  vi.useFakeTimers();
 });
 
 afterEach(() => {
@@ -128,7 +128,7 @@ const ProcessingProbe = () => {
 
 describe('the processing signal both glows read', () => {
   it('outlives the outbound post — the visitor waits on the reply, not on the request', async () => {
-    storageService.setConfig({ mtxId: 'id', mtxKey: 'key' });
+    storageService.setConfig(getMockWidgetConfig({ mtxId: 'id', mtxKey: 'key' }) as CredentialedConfig);
 
     render(
       <UIStateProvider>

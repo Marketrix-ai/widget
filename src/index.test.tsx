@@ -13,10 +13,10 @@ import { afterEach, describe, expect, it, vi } from 'bun:test';
 import { initWidget, MarketrixWidgetPreview, mountWidget, unmountWidget, updateMarketrixConfig } from './index';
 import type { WidgetSettingsData } from './sdk';
 import * as ScreenShareService from './services/ScreenShareService';
-import { storageService } from './services/StorageService';
+import { type CredentialedConfig, storageService } from './services/StorageService';
 import { streamClient } from './services/StreamClient';
 import * as WidgetService from './services/WidgetService';
-import { mountTarget, validSettings } from './test/fixtures';
+import { credentialedConfig, mountTarget, validSettings } from './test/fixtures';
 
 afterEach(() => {
   unmountWidget();
@@ -32,7 +32,7 @@ describe('public widget lifecycle', () => {
 
     unmountWidget();
 
-    expect(disconnect).toHaveBeenCalledOnce();
+    expect(disconnect).toHaveBeenCalledTimes(1);
   });
 
   it('ends an in-flight screen share on public unmount', () => {
@@ -40,7 +40,7 @@ describe('public widget lifecycle', () => {
 
     unmountWidget();
 
-    expect(stopScreenShare).toHaveBeenCalledOnce();
+    expect(stopScreenShare).toHaveBeenCalledTimes(1);
   });
 
   it('mounts programmatic preview settings without an API fetch and owns its cleanup', async () => {
@@ -84,7 +84,7 @@ describe('public widget lifecycle', () => {
     const broken = {
       ...validSettings(),
       widget_position: 'middle',
-    } as WidgetSettingsData;
+    } as unknown as WidgetSettingsData;
 
     await act(() => mountWidget({ settings: broken, container }));
 
@@ -94,7 +94,7 @@ describe('public widget lifecycle', () => {
 
   it('lets a preview invalidate pending production initialization', async () => {
     const settings = validSettings();
-    let resolveProduction!: (config: typeof settings & { mtxId: string; mtxKey: string; mtxApp: number }) => void;
+    let resolveProduction!: (config: CredentialedConfig) => void;
     vi.spyOn(WidgetService, 'loadWidgetConfig').mockReturnValueOnce(
       new Promise(resolve => {
         resolveProduction = resolve;
@@ -109,7 +109,7 @@ describe('public widget lifecycle', () => {
       productionContainer,
     );
     await act(() => mountWidget({ settings, container: previewContainer }));
-    resolveProduction({ ...settings, mtxId: 'production', mtxKey: 'key', mtxApp: 1 });
+    resolveProduction(credentialedConfig({ mtxId: 'production', mtxKey: 'key' }));
     await production;
 
     expect(productionContainer.querySelector('.marketrix-widget-container')).toBeNull();
@@ -129,31 +129,26 @@ describe('public widget lifecycle', () => {
   });
 
   it('stops short of mounting, connecting or recording when the resolved config is disabled', async () => {
-    const settings = validSettings({ widget_enabled: false });
-    const load = vi.spyOn(WidgetService, 'loadWidgetConfig').mockResolvedValue({
-      ...settings,
-      mtxId: 'disabled',
-      mtxKey: 'key',
-      mtxApp: 1,
-    });
+    const load = vi
+      .spyOn(WidgetService, 'loadWidgetConfig')
+      .mockResolvedValue(credentialedConfig({ widget_enabled: false, mtxId: 'disabled', mtxKey: 'key' }));
     const container = mountTarget();
     document.body.append(container);
 
     await initWidget({ mtxId: 'disabled', mtxKey: 'key', mtxApiHost: 'https://api.test' }, container);
 
-    expect(load).toHaveBeenCalledOnce();
+    expect(load).toHaveBeenCalledTimes(1);
     expect(container.querySelector('.marketrix-widget-container')).toBeNull();
     expect(window.__mtx).toBeUndefined();
   });
 
   it('cancels stale production initialization and shares one in-flight promise', async () => {
-    const settings = validSettings();
-    let resolveFirst!: (config: typeof settings & { mtxId: string; mtxKey: string; mtxApp: number }) => void;
-    let resolveSecond!: (config: typeof settings & { mtxId: string; mtxKey: string; mtxApp: number }) => void;
-    const firstLoad = new Promise<typeof settings & { mtxId: string; mtxKey: string; mtxApp: number }>(resolve => {
+    let resolveFirst!: (config: CredentialedConfig) => void;
+    let resolveSecond!: (config: CredentialedConfig) => void;
+    const firstLoad = new Promise<CredentialedConfig>(resolve => {
       resolveFirst = resolve;
     });
-    const secondLoad = new Promise<typeof settings & { mtxId: string; mtxKey: string; mtxApp: number }>(resolve => {
+    const secondLoad = new Promise<CredentialedConfig>(resolve => {
       resolveSecond = resolve;
     });
     vi.spyOn(WidgetService, 'loadWidgetConfig').mockReturnValueOnce(firstLoad).mockReturnValueOnce(secondLoad);
@@ -170,20 +165,20 @@ describe('public widget lifecycle', () => {
     );
 
     expect(concurrent).toBe(first);
-    expect(WidgetService.loadWidgetConfig).toHaveBeenCalledOnce();
+    expect(WidgetService.loadWidgetConfig).toHaveBeenCalledTimes(1);
 
     unmountWidget();
     const second = initWidget(
       { mtxId: 'second', mtxKey: 'second-key', mtxApiHost: 'https://api.test' },
       secondContainer,
     );
-    resolveFirst({ ...settings, mtxId: 'first', mtxKey: 'first-key', mtxApp: 1 });
+    resolveFirst(credentialedConfig({ mtxId: 'first', mtxKey: 'first-key', mtxApp: 1 }));
     await first;
 
     expect(firstContainer.querySelector('.marketrix-widget-container')).toBeNull();
     expect(secondContainer.querySelector('.marketrix-widget-container')).toBeNull();
 
-    resolveSecond({ ...settings, mtxId: 'second', mtxKey: 'second-key', mtxApp: 2 });
+    resolveSecond(credentialedConfig({ mtxId: 'second', mtxKey: 'second-key', mtxApp: 2 }));
     await second;
 
     expect(secondContainer.querySelector('.marketrix-widget-container')).toBeTruthy();
@@ -195,12 +190,9 @@ describe('public widget lifecycle', () => {
   });
 
   it('re-mounts an updated config into the container it was given, not the body', async () => {
-    const settings = validSettings();
-    vi.spyOn(WidgetService, 'loadWidgetConfig').mockImplementation(async config => ({
-      ...settings,
-      ...config,
-      mtxApp: 1,
-    }));
+    vi.spyOn(WidgetService, 'loadWidgetConfig').mockImplementation(async config =>
+      credentialedConfig({ ...config, mtxApp: 1 }),
+    );
     const container = mountTarget();
     document.body.append(container);
 
@@ -227,14 +219,9 @@ describe('public widget lifecycle', () => {
   });
 
   it('stores the credentials production was initialized with', async () => {
-    const settings = validSettings();
-    vi.spyOn(WidgetService, 'loadWidgetConfig').mockImplementation(async config => ({
-      ...settings,
-      ...config,
-      mtxId: 'prod-id',
-      mtxKey: 'prod-key',
-      mtxApp: 1,
-    }));
+    vi.spyOn(WidgetService, 'loadWidgetConfig').mockImplementation(async config =>
+      credentialedConfig({ ...config, mtxId: 'prod-id', mtxKey: 'prod-key', mtxApp: 1 }),
+    );
     const container = mountTarget();
     document.body.appendChild(container);
 
@@ -245,7 +232,7 @@ describe('public widget lifecycle', () => {
 
   it('leaves the stored production credentials alone when a preview mounts beside it', async () => {
     const settings = validSettings();
-    storageService.setConfig({ ...settings, mtxId: 'prod-id', mtxKey: 'prod-key' });
+    storageService.setConfig(credentialedConfig({ mtxId: 'prod-id', mtxKey: 'prod-key' }));
     const preview = mountTarget();
     document.body.appendChild(preview);
 

@@ -32,9 +32,8 @@ const activeWidget = {
 const searchResult = {
   items: [activeWidget],
   total: 1,
-  page: 1,
   limit: 20,
-  total_pages: 1,
+  offset: 0,
 };
 
 beforeEach(() => {
@@ -46,18 +45,20 @@ describe('loadWidgetConfig', () => {
   it('loads the widget in one search and returns one schema-validated config', async () => {
     const config = await loadWidgetConfig({ mtxId: 'test-id', mtxKey: 'test-key', show_widget: false });
 
-    expect(mockSdk.widgetPublicSearch).toHaveBeenCalledOnce();
+    expect(mockSdk.widgetPublicSearch).toHaveBeenCalledTimes(1);
     expect(config).toMatchObject({ mtxId: 'test-id', mtxKey: 'test-key', mtxApp: 42, show_widget: false });
   });
 
   it('rejects an invalid merged settings response with the schema field', async () => {
     mockSdk.widgetPublicSearch.mockResolvedValue({
       ...searchResult,
-      items: [{ ...activeWidget, settings: { ...settings, widget_position: 'somewhere' } as typeof settings }],
+      items: [
+        { ...activeWidget, settings: { ...settings, widget_position: 'somewhere' } as unknown as typeof settings },
+      ],
     });
 
     await expect(loadWidgetConfig({ mtxId: 'test-id', mtxKey: 'test-key' })).rejects.toThrow(/widget_position/);
-    expect(mockSdk.widgetPublicSearch).toHaveBeenCalledOnce();
+    expect(mockSdk.widgetPublicSearch).toHaveBeenCalledTimes(1);
   });
 
   it('reports a failed search', async () => {
@@ -68,22 +69,10 @@ describe('loadWidgetConfig', () => {
 
   it('preserves the inactive-widget diagnostic without reading the application', async () => {
     mockSdk.widgetPublicSearch.mockResolvedValue({
-      items: [
-        {
-          id: 7,
-          application_id: 42,
-          settings,
-          status: 'inactive',
-          marketrix_id: 'test-id',
-          marketrix_key: 'test-key',
-          created_at: new Date(),
-          updated_at: new Date(),
-        },
-      ],
+      items: [{ application_id: 42, settings, status: 'suspended' }],
       total: 1,
-      page: 1,
       limit: 20,
-      total_pages: 1,
+      offset: 0,
     });
 
     await expect(loadWidgetConfig({ mtxId: 'test-id', mtxKey: 'test-key' })).rejects.toThrow(

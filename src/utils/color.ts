@@ -26,27 +26,37 @@ const RGB = /^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i;
 
 export function toRgb(color: string): Rgb | null {
   const hex = HEX.exec(color.trim());
-  if (hex) {
-    const digits = hex[1];
-    const pairs =
+  const digits = hex?.[1];
+  if (digits) {
+    const [p0, p1, p2] =
       digits.length === 3
-        ? [digits[0] + digits[0], digits[1] + digits[1], digits[2] + digits[2]]
+        ? [
+            digits.charAt(0) + digits.charAt(0),
+            digits.charAt(1) + digits.charAt(1),
+            digits.charAt(2) + digits.charAt(2),
+          ]
         : [digits.slice(0, 2), digits.slice(2, 4), digits.slice(4, 6)];
-    const [r, g, b] = pairs.map(pair => parseInt(pair, 16));
+    const r = parseInt(p0 ?? '', 16);
+    const g = parseInt(p1 ?? '', 16);
+    const b = parseInt(p2 ?? '', 16);
     return { r, g, b };
   }
   const rgb = RGB.exec(color.trim());
   if (!rgb) return null;
-  const [r, g, b] = [rgb[1], rgb[2], rgb[3]].map(Number);
+  const r = Number(rgb[1]);
+  const g = Number(rgb[2]);
+  const b = Number(rgb[3]);
   return r > 255 || g > 255 || b > 255 ? null : { r, g, b };
 }
 
 export function getContrastingColor(color: string): string {
   const rgb = toRgb(color);
   if (!rgb) return '#000000';
-  const [r, g, b] = [rgb.r / 255, rgb.g / 255, rgb.b / 255].map(val =>
-    val <= 0.03928 ? val / 12.92 : Math.pow((val + 0.055) / 1.055, 2.4),
-  );
+  const linearize = (channel: number): number =>
+    channel <= 0.03928 ? channel / 12.92 : Math.pow((channel + 0.055) / 1.055, 2.4);
+  const r = linearize(rgb.r / 255);
+  const g = linearize(rgb.g / 255);
+  const b = linearize(rgb.b / 255);
   return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.5 ? '#000000' : '#ffffff';
 }
 

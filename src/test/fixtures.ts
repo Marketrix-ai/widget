@@ -26,8 +26,14 @@
  * single text part echoing `content`, and a fixed `timestamp` — for every test that needs one message
  * without caring about its exact shape; a test asserting placeholder/mode semantics overrides those
  * fields explicitly.
+ *
+ * `credentialedConfig(overrides)` is `validSettings()` plus the `mtxId`/`mtxKey`/`mtxApp` triple and
+ * `isPreviewMode: false` a resolved PRODUCTION config carries — the shape `WidgetService.loadWidgetConfig`
+ * actually resolves to, so a mocked resolution stays a real `CredentialedConfig` rather than a narrower
+ * stand-in that would hide a field `loadWidgetConfig` forgets to set.
  */
 import { WidgetSettingsDataSchema } from '../sdk';
+import type { CredentialedConfig } from '../services/StorageService';
 import type { ChatMessage, ValidWidgetConfig, WidgetSettingsData } from '../types';
 
 export const flushMicrotasks = (): Promise<void> => Promise.resolve();
@@ -90,4 +96,15 @@ export function getMockWidgetConfig(overrides: Partial<MockWidgetConfig> = {}): 
 
 export function validSettings(overrides: Partial<MockWidgetConfig> = {}): WidgetSettingsData {
   return WidgetSettingsDataSchema.parse(getMockWidgetConfig(overrides));
+}
+
+export function credentialedConfig(overrides: Partial<CredentialedConfig> = {}): CredentialedConfig {
+  return {
+    ...validSettings(),
+    mtxId: 'test-id',
+    mtxKey: 'test-key',
+    mtxApp: 1,
+    isPreviewMode: false,
+    ...overrides,
+  } as CredentialedConfig;
 }

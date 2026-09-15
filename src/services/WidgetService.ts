@@ -87,5 +87,6 @@ export async function loadWidgetConfig(config: MarketrixConfig): Promise<Credent
     mtxId,
     mtxKey,
     mtxApp: activeWidget.application_id,
+    isPreviewMode: false,
   };
 }

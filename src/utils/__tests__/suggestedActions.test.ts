@@ -34,6 +34,7 @@ describe('a suggested-action dispatch text matches its caption', () => {
     const [action] = getSuggestedActionsFromConfig(
       getMockWidgetConfig({ widget_chips: [{ chip_mode: 'show', chip_text: 'Walk me through checkout' }] }),
     );
+    if (!action) throw new Error('expected a suggested action');
     expect(action.text).toBe('Show me Walk me through checkout');
   });
 
@@ -41,6 +42,7 @@ describe('a suggested-action dispatch text matches its caption', () => {
     const [action] = getSuggestedActionsFromConfig(
       getMockWidgetConfig({ widget_chips: [{ chip_mode: 'tell', chip_text: 'What does conversion rate mean?' }] }),
     );
+    if (!action) throw new Error('expected a suggested action');
     expect(action.text).toBe('What does conversion rate mean?');
   });
 });

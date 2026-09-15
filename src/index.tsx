@@ -21,7 +21,7 @@
 
 declare global {
   interface Window {
-    __mtx?: { state?: 'initializing' | 'active' };
+    __mtx?: { state?: 'initializing' | 'active' } | undefined;
   }
 }
 

@@ -34,7 +34,8 @@ interface FindMessageOptions {
 
 export function lastIndexWhere<T>(items: T[], matches: (item: T) => boolean): number {
   for (let i = items.length - 1; i >= 0; i--) {
-    if (matches(items[i])) return i;
+    const item = items[i];
+    if (item !== undefined && matches(item)) return i;
   }
   return -1;
 }
@@ -63,7 +64,8 @@ export function findMessageForProgress({
 
   for (const matches of ranked) {
     const index = lastIndexWhere(open, matches);
-    if (index >= 0) return { index: start + index, message: open[index] };
+    const message = index >= 0 ? open[index] : undefined;
+    if (message) return { index: start + index, message };
   }
 
   console.warn('[MessageFinder] No message found for progress update', {
@@ -77,9 +79,10 @@ export function findMessageForProgress({
 const filterCancellationText = (content: string): string => content.replace(/\(?cancelled by cleanup\)?/gi, '').trim();
 
 function patchPart(message: ChatMessage, index: number, patch: Partial<MessagePart>): ChatMessage {
-  if (index < 0) return message;
+  const current = index >= 0 ? message.parts[index] : undefined;
+  if (!current) return message;
   const parts = [...message.parts];
-  parts[index] = { ...parts[index], ...patch };
+  parts[index] = { ...current, ...patch };
   return { ...message, parts };
 }
 
@@ -103,9 +106,10 @@ export const markProgressLineComplete = (message: ChatMessage, browserToolName: 
 
 export function markProgressLineFailed(message: ChatMessage, browserToolName: string, error: string): ChatMessage {
   const index = openLineFor(message, browserToolName);
-  if (index < 0) return message;
+  const part = index >= 0 ? message.parts[index] : undefined;
+  if (!part) return message;
 
-  const content = filterCancellationText(message.parts[index].content);
+  const content = filterCancellationText(part.content);
   const cleanedError = filterCancellationText(error);
   return patchPart(message, index, {
     status: 'failed',

@@ -38,7 +38,7 @@ export async function startScreenShare(): Promise<MediaStream> {
 
   activeStream = stream;
 
-  stream.getVideoTracks()[0].addEventListener('ended', () => {
+  stream.getVideoTracks()[0]?.addEventListener('ended', () => {
     activeStream = null;
   });
 
