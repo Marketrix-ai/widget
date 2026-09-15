@@ -144,10 +144,10 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
 );
 
 export interface WidgetNotificationsProps {
-  error?: string;
+  error?: string | undefined;
   onClearError: () => void;
-  onRetry?: () => void;
-  greeting?: string;
+  onRetry?: (() => void) | undefined;
+  greeting?: string | undefined;
   greetingBody?: string;
   onGreetingDismiss: () => void;
 }

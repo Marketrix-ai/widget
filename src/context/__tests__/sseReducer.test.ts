@@ -63,27 +63,27 @@ describe('reduceSse — task/status', () => {
   it('completed ends the task and marks the active message done', () => {
     const result = reduceSse(runningState(), { type: 'task/status', status: 'completed' }, 'do');
     expect(result.state.task).toEqual({ phase: 'idle' });
-    expect(result.state.messages[0].taskStatus).toBe('done');
+    expect(result.state.messages[0]!.taskStatus).toBe('done');
   });
 
   it('failed ends the task and marks the active message failed', () => {
     const result = reduceSse(runningState(), { type: 'task/status', status: 'failed' }, 'do');
     expect(result.state.task.phase).toBe('idle');
-    expect(result.state.messages[0].taskStatus).toBe('failed');
+    expect(result.state.messages[0]!.taskStatus).toBe('failed');
   });
 
   it('stopped ends the task and marks the active message stopped', () => {
     const result = reduceSse(runningState(), { type: 'task/status', status: 'stopped' }, 'do');
     expect(result.state.task.phase).toBe('idle');
-    expect(result.state.messages[0].taskStatus).toBe('stopped');
+    expect(result.state.messages[0]!.taskStatus).toBe('stopped');
   });
 
   it('terminal status renders its closing message as a text part, not content alone', () => {
     const event: WidgetEvent = { type: 'task/status', status: 'completed', message: 'All done!' };
     const result = reduceSse(runningState({ parts: [{ type: 'progress', content: 'Clicking element' }] }), event, 'do');
 
-    expect(result.state.messages[0].content).toBe('All done!');
-    expect(result.state.messages[0].parts).toEqual([
+    expect(result.state.messages[0]!.content).toBe('All done!');
+    expect(result.state.messages[0]!.parts).toEqual([
       { type: 'progress', content: 'Clicking element' },
       { type: 'text', content: 'All done!' },
     ]);
@@ -91,22 +91,22 @@ describe('reduceSse — task/status', () => {
 
   it('has_question pauses (not terminal): flips the spinner to waiting-for-user, no taskStatus', () => {
     const before = runningState();
-    expect(before.messages[0].placeholderState).toBe('thinking');
+    expect(before.messages[0]!.placeholderState).toBe('thinking');
 
     const event: WidgetEvent = { type: 'task/status', status: 'has_question', message: 'Which account?' };
     const result = reduceSse(before, event, 'do');
 
-    const msg = result.state.messages[0];
+    const msg = result.state.messages[0]!;
     expect(msg.placeholderState).toBe('waiting-for-user');
     expect(msg.content).toContain('Which account?');
-    expect(msg.parts.at(-1)).toEqual({ type: 'text', content: 'Which account?' });
+    expect(msg.parts[msg.parts.length - 1]).toEqual({ type: 'text', content: 'Which account?' });
     expect(msg.taskStatus).toBeUndefined();
     expect(result.state.task).toEqual({ phase: 'idle' });
   });
 
   it.each(['completed', 'failed', 'stopped', 'has_question'] as const)('%s settles the placeholder', status => {
     const result = reduceSse(runningState(), { type: 'task/status', status }, 'do');
-    expect(result.state.messages[0].isPlaceholder).toBe(false);
+    expect(result.state.messages[0]!.isPlaceholder).toBe(false);
   });
 });
 
@@ -119,8 +119,8 @@ describe('reduceTransportFailure', () => {
     const result = reduceTransportFailure(state, 'Could not reconnect to the assistant. Try again.');
 
     expect(result.messages[0]).toBe(state.messages[0]);
-    expect(result.messages[1].isPlaceholder).toBe(false);
-    expect(result.messages[1].content).toBe('Working on it\nCould not reconnect to the assistant. Try again.');
+    expect(result.messages[1]!.isPlaceholder).toBe(false);
+    expect(result.messages[1]!.content).toBe('Working on it\nCould not reconnect to the assistant. Try again.');
     expect(result.task).toEqual({ phase: 'idle' });
   });
 });
@@ -130,16 +130,16 @@ describe('reduceStaleReply', () => {
     const state: SseState = { messages: [agentMessage({ parts: [] })], task: { phase: 'idle' } };
     const result = reduceStaleReply(state, 'agent-1', 'This is taking longer than expected. Please try again.');
 
-    expect(result.messages[0].isPlaceholder).toBe(false);
-    expect(result.messages[0].content).toBe('This is taking longer than expected. Please try again.');
+    expect(result.messages[0]!.isPlaceholder).toBe(false);
+    expect(result.messages[0]!.content).toBe('This is taking longer than expected. Please try again.');
   });
 
   it('settles a placeholder that has gone silent for the deadline even while its task is still running', () => {
     const state: SseState = { messages: [agentMessage()], task: { phase: 'running' } };
     const result = reduceStaleReply(state, 'agent-1', 'timeout text');
 
-    expect(result.messages[0].isPlaceholder).toBe(false);
-    expect(result.messages[0].content).toBe('Working on it\ntimeout text');
+    expect(result.messages[0]!.isPlaceholder).toBe(false);
+    expect(result.messages[0]!.content).toBe('Working on it\ntimeout text');
   });
 
   it('never overwrites a running task paused on the visitor, even with no text yet', () => {
@@ -154,8 +154,8 @@ describe('reduceStaleReply', () => {
     const state: SseState = { messages: [agentMessage()], task: { phase: 'idle' } };
     const result = reduceStaleReply(state, 'agent-1', 'timeout text');
 
-    expect(result.messages[0].isPlaceholder).toBe(false);
-    expect(result.messages[0].content).toBe('Working on it\ntimeout text');
+    expect(result.messages[0]!.isPlaceholder).toBe(false);
+    expect(result.messages[0]!.content).toBe('Working on it\ntimeout text');
   });
 
   it('never overwrites a message that already settled', () => {
@@ -174,11 +174,11 @@ describe('reduceStaleReply', () => {
   it('stamps taskStatus failed so a late completed status cannot re-target the watchdog bubble', () => {
     const state: SseState = { messages: [agentMessage({ parts: [] })], task: { phase: 'idle' } };
     const stale = reduceStaleReply(state, 'agent-1', 'This is taking longer than expected. Please try again.');
-    expect(stale.messages[0].taskStatus).toBe('failed');
+    expect(stale.messages[0]!.taskStatus).toBe('failed');
 
     const late = reduceSse(stale, { type: 'task/status', status: 'completed' }, 'do');
-    expect(late.state.messages[0].taskStatus).toBe('failed');
-    expect(late.state.messages[0].content).toBe('This is taking longer than expected. Please try again.');
+    expect(late.state.messages[0]!.taskStatus).toBe('failed');
+    expect(late.state.messages[0]!.content).toBe('This is taking longer than expected. Please try again.');
   });
 });
 
@@ -204,21 +204,21 @@ describe('reduceSse — tool/call', () => {
 
   it('adds an in-progress progress line to the active message', () => {
     const result = reduceSse(runningState(), toolCall(), 'do');
-    const progressParts = (result.state.messages[0].parts ?? []).filter(p => p.type === 'progress');
+    const progressParts = (result.state.messages[0]!.parts ?? []).filter(p => p.type === 'progress');
     expect(progressParts).toHaveLength(1);
-    expect(progressParts[0].status).toBe('in_progress');
+    expect(progressParts[0]!.status).toBe('in_progress');
   });
 
   it('announces a DOM read as reading the page — nothing but screen sharing views the visitor screen', () => {
     const result = reduceSse(runningState(), toolCall({ browser_tool: 'get_html', explanation: '' }), 'do');
-    const line = (result.state.messages[0].parts ?? []).find(part => part.type === 'progress');
+    const line = (result.state.messages[0]!.parts ?? []).find(part => part.type === 'progress');
     expect(line?.content).toBe('Reading the page');
     expect(line?.content).not.toMatch(/screen/i);
   });
 
   it('falls back to event.mode then "do" when currentMode is absent on the call', () => {
     const result = reduceSse(runningState(), toolCall({ mode: 'show' }), 'show');
-    expect(result.effects[0].mode).toBe('show');
+    expect(result.effects[0]!.mode).toBe('show');
   });
 });
 
@@ -231,11 +231,11 @@ describe('reduceSse — chat/response', () => {
     const event: WidgetEvent = { type: 'chat/response', request_id: 'req-1', text: 'Here you go' };
     const result = reduceSse(state, event, 'tell');
 
-    const msg = result.state.messages[0];
+    const msg = result.state.messages[0]!;
     expect(msg.content).toBe('Here you go');
     expect(msg.isPlaceholder).toBe(false);
     expect(msg.placeholderState).toBeUndefined();
-    expect(msg.parts?.at(-1)).toEqual({ type: 'text', content: 'Here you go' });
+    expect(msg.parts?.[msg.parts.length - 1]).toEqual({ type: 'text', content: 'Here you go' });
     expect(result.effects).toEqual([]);
   });
 });
@@ -249,7 +249,7 @@ describe('reduceSse — chat/delta', () => {
     const first = reduceSse(state, { type: 'chat/delta', request_id: 'req-1', text: 'Hel' }, 'tell');
     const second = reduceSse(first.state, { type: 'chat/delta', request_id: 'req-1', text: 'lo' }, 'tell');
 
-    const msg = second.state.messages[0];
+    const msg = second.state.messages[0]!;
     expect(msg.content).toBe('Hello');
     expect(msg.isPlaceholder).toBe(false);
     expect(msg.parts).toEqual([{ type: 'text', content: 'Hello', streaming: true }]);
@@ -268,7 +268,7 @@ describe('reduceSse — chat/delta', () => {
       'tell',
     );
 
-    const msg = final.state.messages[0];
+    const msg = final.state.messages[0]!;
     expect(msg.content).toBe('Hello world');
     expect(msg.parts).toEqual([{ type: 'text', content: 'Hello world' }]);
     expect(final.effects).toEqual([]);
@@ -283,8 +283,8 @@ describe('reduceSse — chat/error', () => {
     };
     const event: WidgetEvent = { type: 'chat/error', request_id: 'req-2', error: 'boom' };
     const result = reduceSse(state, event, 'tell');
-    expect(result.state.messages[0].content).toBe('Working on it\nError: boom');
-    expect(result.state.messages[0].isPlaceholder).toBe(false);
+    expect(result.state.messages[0]!.content).toBe('Working on it\nError: boom');
+    expect(result.state.messages[0]!.isPlaceholder).toBe(false);
     expect(result.effects).toEqual([]);
   });
 });
@@ -307,7 +307,7 @@ describe('reduceToolProgress / reduceToolDone / reduceStop', () => {
       'do',
     ).state;
     const done = reduceToolProgress(inProgress, 'click_element', 'x', 'completed', 'do');
-    const part = (done.messages[0].parts ?? []).find(p => p.type === 'progress');
+    const part = (done.messages[0]!.parts ?? []).find(p => p.type === 'progress');
     expect(part?.status).toBe('completed');
   });
 
@@ -318,7 +318,7 @@ describe('reduceToolProgress / reduceToolDone / reduceStop', () => {
       'do',
     ).state;
     const failed = reduceToolProgress(inProgress, 'click_element', 'Clicking', 'failed', 'do', 'no element');
-    const part = (failed.messages[0].parts ?? []).find(p => p.type === 'progress');
+    const part = (failed.messages[0]!.parts ?? []).find(p => p.type === 'progress');
     expect(part?.status).toBe('failed');
     expect(part?.content).toContain('no element');
   });
@@ -334,7 +334,7 @@ describe('reduceToolProgress / reduceToolDone / reduceStop', () => {
 
     const done = reduceToolProgress(twoOpen, 'click_element', 'click_element', 'completed', 'show');
 
-    const lines = (done.messages[0].parts ?? []).filter(p => p.type === 'progress');
+    const lines = (done.messages[0]!.parts ?? []).filter(p => p.type === 'progress');
     expect(lines.map(line => [line.browserToolName, line.status])).toEqual([
       ['click_element', 'completed'],
       ['get_html', 'in_progress'],
@@ -344,7 +344,7 @@ describe('reduceToolProgress / reduceToolDone / reduceStop', () => {
   it('reduceToolDone ends the task and marks the message done', () => {
     const result = reduceToolDone(runningState(), 'do');
     expect(result.task).toEqual({ phase: 'idle' });
-    expect(result.messages[0].taskStatus).toBe('done');
+    expect(result.messages[0]!.taskStatus).toBe('done');
   });
 
   it('a duplicate completion does not fall back past the stamp onto an older settled reply', () => {
@@ -352,7 +352,7 @@ describe('reduceToolProgress / reduceToolDone / reduceStop', () => {
     const state: SseState = { messages: [oldReply, agentMessage()], task: { phase: 'running' } };
 
     const afterFirst = reduceToolDone(state, 'do');
-    expect(afterFirst.messages[1].taskStatus).toBe('done');
+    expect(afterFirst.messages[1]!.taskStatus).toBe('done');
 
     const afterDuplicate = reduceToolDone(afterFirst, 'do');
 
@@ -361,7 +361,7 @@ describe('reduceToolProgress / reduceToolDone / reduceStop', () => {
 
   it('reduceStop marks the active message stopped and ends the task', () => {
     const result = reduceStop(runningState(), 'do');
-    expect(result.messages[0].taskStatus).toBe('stopped');
+    expect(result.messages[0]!.taskStatus).toBe('stopped');
     expect(result.task).toEqual({ phase: 'stopped' });
   });
 
@@ -381,7 +381,7 @@ describe('reduceToolProgress / reduceToolDone / reduceStop', () => {
     const succeeded = reduceToolProgress(called, FINISH_TOOL, 'Wrapping up', 'completed', 'tell');
     const done = reduceToolDone(succeeded, 'tell');
 
-    const parts = done.messages[0].parts;
+    const parts = done.messages[0]!.parts;
     expect(parts.some(p => p.type === 'progress')).toBe(false);
     expect(JSON.stringify(parts)).not.toContain('Unknown tool');
   });

@@ -144,6 +144,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
       .split(' ')
       .filter(Boolean)
       .map(entry => entry.split(':')[0])
+      .filter((id): id is string => id !== undefined)
       .map(id => setTimeout(() => commit(s => reduceStaleReply(s, id, STALE_REPLY_TEXT)), STALE_REPLY_TIMEOUT_MS));
 
     return () => watchdogs.forEach(clearTimeout);

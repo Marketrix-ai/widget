@@ -100,11 +100,14 @@ export function useDragSnap({
   const getVelocityFromHistory = (): { x: number; y: number } => {
     const h = velocityHistoryRef.current;
     if (h.length < 2) return { x: 0, y: 0 };
-    const dt = h[h.length - 1].t - h[0].t;
+    const first = h[0];
+    const last = h[h.length - 1];
+    if (!first || !last) return { x: 0, y: 0 };
+    const dt = last.t - first.t;
     if (dt <= 0) return { x: 0, y: 0 };
     return {
-      x: ((h[h.length - 1].x - h[0].x) / dt) * 1000,
-      y: ((h[h.length - 1].y - h[0].y) / dt) * 1000,
+      x: ((last.x - first.x) / dt) * 1000,
+      y: ((last.y - first.y) / dt) * 1000,
     };
   };
 

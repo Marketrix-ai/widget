@@ -46,7 +46,7 @@ describe('every animation resolves to a keyframe this stylesheet defines', () =>
 
 it('scopes every host-level rule to :host as well as :root', () => {
   const unpaired = [...css.matchAll(/(?:^|[{};])\s*([^{};]*?)\s*\{/g)]
-    .map(match => match[1])
+    .map(match => match[1] ?? '')
     .filter(selectors => /(^|,)\s*:root\b/.test(selectors) && !selectors.includes(':host'));
   expect(unpaired, ':root alone matches nothing inside the closed shadow root — pair it with :host').toEqual([]);
 });
@@ -79,7 +79,7 @@ describe('the component tree and the stylesheet name the same classes', () => {
 
 it('keeps the reset at zero specificity so component classes always win', () => {
   const hazards = [...css.matchAll(/(^|[,}])\s*(\[data-marketrix-widget\]\s+(?!:where)[a-z][\w-]*)/gm)].map(match =>
-    match[2].trim(),
+    (match[2] ?? '').trim(),
   );
   expect(hazards, 'wrap these reset selectors in :where() or they outrank the component classes').toEqual([]);
 });

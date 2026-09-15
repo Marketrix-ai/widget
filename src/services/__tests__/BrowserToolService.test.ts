@@ -6,9 +6,20 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 
-import { browserToolService, FINISH_TOOL } from '../BrowserToolService';
+import { browserToolService, FINISH_TOOL, type ToolExecutionResult } from '../BrowserToolService';
 import { domService } from '../DomService';
 import { showModeService } from '../ShowModeService';
+
+type ToolSuccess<T> = Extract<ToolExecutionResult<T>, { success: true }>;
+type ToolFailure<T> = Extract<ToolExecutionResult<T>, { success: false }>;
+
+function assertSuccess<T>(result: ToolExecutionResult<T>): asserts result is ToolSuccess<T> {
+  if (!result.success) throw new Error(`expected success, got failure: ${result.error}`);
+}
+
+function assertFailure<T>(result: ToolExecutionResult<T>): asserts result is ToolFailure<T> {
+  if (result.success) throw new Error('expected failure, got success');
+}
 
 const locationDescriptor = Object.getOwnPropertyDescriptor(window, 'location') as PropertyDescriptor;
 let navigations: string[] = [];
@@ -36,6 +47,7 @@ describe('a tool that leaves the page reports itself before it goes', () => {
     const result = await browserToolService.executeTool('navigate', { url: 'https://host.test/next' }, 'do');
 
     expect(result.success).toBe(true);
+    assertSuccess(result);
     expect(navigations).toEqual([]);
 
     result.afterResponseAttempt?.();
@@ -47,6 +59,7 @@ describe('a tool that leaves the page reports itself before it goes', () => {
     const result = await browserToolService.executeTool('search_web', { query: 'widgets' }, 'do');
 
     expect(navigations).toEqual([]);
+    assertSuccess(result);
 
     result.afterResponseAttempt?.();
 
@@ -60,10 +73,11 @@ describe('a tool that leaves the page reports itself before it goes', () => {
     const result = await browserToolService.executeTool('go_back', {}, 'do');
 
     expect(back).not.toHaveBeenCalled();
+    assertSuccess(result);
 
     result.afterResponseAttempt?.();
 
-    expect(back).toHaveBeenCalledOnce();
+    expect(back).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -72,6 +86,7 @@ describe('navigate constrains its target to http(s)', () => {
     const result = await browserToolService.executeTool('navigate', { url: 'javascript:alert(document.cookie)' }, 'do');
 
     expect(result.success).toBe(false);
+    assertFailure(result);
     expect(result.error).toBe('An http(s) URL is required');
     expect(navigations).toEqual([]);
   });
@@ -80,6 +95,7 @@ describe('navigate constrains its target to http(s)', () => {
     const result = await browserToolService.executeTool('navigate', { url: '/next' }, 'do');
 
     expect(result.success).toBe(true);
+    assertSuccess(result);
     result.afterResponseAttempt?.();
 
     expect(navigations).toEqual(['https://host.test/next']);
@@ -110,6 +126,7 @@ describe('navigate reports what the browser did with a new tab', () => {
     );
 
     expect(result.success).toBe(false);
+    assertFailure(result);
     expect(result.error).toBe('The browser blocked opening a new tab');
   });
 });
@@ -143,6 +160,7 @@ describe('a tool nothing can perform is not offered at all', () => {
     const result = await browserToolService.executeTool('upload_file', { index: 0 }, 'show');
 
     expect(result.success).toBe(false);
+    assertFailure(result);
     expect(result.error).toBe('Unknown tool: upload_file');
     expect(staged).not.toHaveBeenCalled();
     expect(browserToolService.getFriendlyToolName('upload_file')).toBe('upload_file');
@@ -159,6 +177,7 @@ describe('a run the model ends is not a widget tool failure', () => {
     );
 
     expect(result.success).toBe(true);
+    assertSuccess(result);
     expect(result.data).toEqual({ text: 'Could not find the checkout button' });
   });
 });

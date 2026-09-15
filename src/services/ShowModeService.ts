@@ -28,6 +28,11 @@ interface ShowModeOptions {
   isClickAction?: boolean;
 }
 
+interface Position {
+  left: number;
+  top: number;
+}
+
 const REPOSITION_EVENTS = ['scroll', 'resize', 'touchmove', 'wheel'] as const;
 
 const POPUP_WIDTH_PX = 320;
@@ -197,7 +202,7 @@ export class ShowModeService {
     const elementCenterX = rect.left + rect.width / 2;
     const elementCenterY = rect.top + rect.height / 2;
 
-    const positions = [
+    const positions: [Position, Position, Position, Position] = [
       { left: rect.right + spacing, top: elementCenterY - popupHeight / 2 },
       { left: rect.left - POPUP_WIDTH_PX - spacing, top: elementCenterY - popupHeight / 2 },
       { left: elementCenterX - POPUP_WIDTH_PX / 2, top: rect.top - popupHeight - spacing },

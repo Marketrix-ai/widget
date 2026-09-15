@@ -80,10 +80,15 @@ describe('widget public entry paths', () => {
     ]);
     const modules = document.querySelectorAll('script[type="module"]');
     expect(modules).toHaveLength(1);
-    expect(modules[0]).toMatchObject({ src: 'https://cdn.test/widgets/widget.mjs' });
+    const scriptModule = modules[0];
+    if (!scriptModule) throw new Error('expected the loader to inject one module script');
+    expect(scriptModule).toMatchObject({ src: 'https://cdn.test/widgets/widget.mjs' });
     expect(
       Object.fromEntries(
-        ['mtx-id', 'mtx-key', 'mtx-api-host', 'mtx-use-screenshare'].map(name => [name, modules[0].getAttribute(name)]),
+        ['mtx-id', 'mtx-key', 'mtx-api-host', 'mtx-use-screenshare'].map(name => [
+          name,
+          scriptModule.getAttribute(name),
+        ]),
       ),
     ).toEqual({
       'mtx-id': 'widget-id',
@@ -105,7 +110,7 @@ describe('widget public entry paths', () => {
 
     autoInitializeWidget(init);
 
-    expect(init).toHaveBeenCalledOnce();
+    expect(init).toHaveBeenCalledTimes(1);
     expect(init).toHaveBeenCalledWith({
       mtxId: 'widget-id',
       mtxKey: 'widget-key',

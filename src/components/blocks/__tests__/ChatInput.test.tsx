@@ -14,7 +14,7 @@ describe('ChatInput', () => {
 
     render(<ChatInput ref={ref} value='Question' onChange={vi.fn()} onSubmit={vi.fn()} />);
 
-    const textarea = screen.getByRole('textbox');
+    const textarea = screen.getByRole('textbox') as HTMLTextAreaElement;
     expect(ref.current).toBe(textarea);
     expect(ref.current?.style.height).toBe('0px');
     expect(ref.current?.style.overflowY).toBe('hidden');

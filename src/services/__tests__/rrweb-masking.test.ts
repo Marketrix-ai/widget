@@ -6,8 +6,8 @@ import { beforeEach, describe, expect, it, vi } from 'bun:test';
 
 import { restoreModuleAfterAll } from '../../test/vi-compat';
 
-const recordMock = vi.fn(() => () => {});
-vi.mock('@rrweb/record', () => ({ record: (opts: unknown) => recordMock(opts as never) }));
+const recordMock = vi.fn((_opts: unknown) => () => {});
+vi.mock('@rrweb/record', () => ({ record: (opts: unknown) => recordMock(opts) }));
 vi.mock('../../sdk', () => ({ sdk: { widgetMessagePost: vi.fn().mockResolvedValue({ ok: true }) } }));
 restoreModuleAfterAll('../../sdk', () => import('../../sdk/index.ts?real'));
 

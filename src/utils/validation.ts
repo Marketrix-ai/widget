@@ -43,8 +43,8 @@ const isChipArray = (value: unknown): boolean =>
     chip =>
       typeof chip === 'object' &&
       chip !== null &&
-      isOneOf('tell', 'show', 'do')((chip as Record<string, unknown>).chip_mode) &&
-      isString((chip as Record<string, unknown>).chip_text),
+      isOneOf('tell', 'show', 'do')((chip as Record<string, unknown>)['chip_mode']) &&
+      isString((chip as Record<string, unknown>)['chip_text']),
   );
 
 const FIELD_GUARDS = {

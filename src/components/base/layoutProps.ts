@@ -94,13 +94,13 @@ export interface LayoutProps {
   minHeight?: '0';
 
   border?: boolean | keyof typeof BORDER_SIDE;
-  rounded?: boolean | RadiusToken;
+  rounded?: boolean | RadiusToken | undefined;
 
-  animate?: 'spin' | 'ping' | 'pulse' | 'fadeIn' | 'none';
-  hidden?: boolean;
+  animate?: 'spin' | 'ping' | 'pulse' | 'fadeIn' | 'none' | undefined;
+  hidden?: boolean | undefined;
 
   as?: ElementType;
-  style?: CSSProperties;
+  style?: CSSProperties | undefined;
 }
 
 const LAYOUT_KEYS = new Set<keyof LayoutProps>([

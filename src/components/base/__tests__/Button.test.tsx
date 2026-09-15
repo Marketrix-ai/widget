@@ -15,13 +15,13 @@ describe('Button', () => {
 
   it('renders variant and size data attributes', () => {
     render(
-      <Button size='lg' variant='secondary'>
+      <Button size='md' variant='secondary'>
         Save
       </Button>,
     );
 
     const button = screen.getByRole('button', { name: 'Save' });
-    expect(button).toHaveAttribute('data-size', 'lg');
+    expect(button).toHaveAttribute('data-size', 'md');
     expect(button).toHaveAttribute('data-variant', 'secondary');
   });
 

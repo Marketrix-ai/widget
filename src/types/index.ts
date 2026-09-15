@@ -47,14 +47,14 @@ export interface ChatMessage {
   content: string;
   sender: 'user' | 'agent';
   timestamp: Date;
-  mode?: InstructionType;
+  mode?: InstructionType | undefined;
   videoStream?: MediaStream;
   isScreenAccessRequest?: boolean;
   screenShareStatus?: 'allowed' | 'denied';
-  pendingContent?: string;
+  pendingContent?: string | undefined;
   isSystemMessage?: boolean;
-  isPlaceholder?: boolean;
-  placeholderState?: 'thinking' | 'waiting-for-user';
+  isPlaceholder?: boolean | undefined;
+  placeholderState?: 'thinking' | 'waiting-for-user' | undefined;
   parts: MessagePart[];
   taskStatus?: 'done' | 'failed' | 'stopped';
 }
@@ -80,7 +80,7 @@ export interface WidgetState {
   isAwaitingReply: boolean;
   messages: ChatMessage[];
   currentMode: InstructionType;
-  error?: string;
+  error?: string | undefined;
   isTaskRunning: boolean;
   activeView: WidgetView;
 }

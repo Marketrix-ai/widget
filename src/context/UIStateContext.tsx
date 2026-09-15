@@ -11,7 +11,7 @@ export interface UIState {
   isOpen: boolean;
   activeView: WidgetView;
   currentMode: InstructionType;
-  error?: string;
+  error?: string | undefined;
 }
 
 interface UIStateActions {

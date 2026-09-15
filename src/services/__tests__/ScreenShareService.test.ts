@@ -11,6 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 
 import { startScreenShare, stopScreenShare } from '@/services/ScreenShareService';
 import { storageService } from '@/services/StorageService';
+import { credentialedConfig } from '@/test/fixtures';
 
 const getDisplayMedia = vi.fn();
 
@@ -33,7 +34,7 @@ afterEach(() => {
 
 describe('use_screenshare', () => {
   it('denies the request instead of prompting when the tenant turned screen sharing off', async () => {
-    storageService.setConfig({ mtxId: 'id', mtxKey: 'key', use_screenshare: false });
+    storageService.setConfig(credentialedConfig({ mtxId: 'id', mtxKey: 'key', use_screenshare: false }));
 
     await expect(startScreenShare()).rejects.toThrow('Screen sharing is disabled for this widget');
     expect(getDisplayMedia).not.toHaveBeenCalled();
@@ -47,7 +48,7 @@ describe('use_screenshare', () => {
   });
 
   it('prompts when the tenant left screen sharing on', async () => {
-    storageService.setConfig({ mtxId: 'id', mtxKey: 'key' });
+    storageService.setConfig(credentialedConfig({ mtxId: 'id', mtxKey: 'key' }));
     const stream = liveStream();
     getDisplayMedia.mockResolvedValue(stream);
 

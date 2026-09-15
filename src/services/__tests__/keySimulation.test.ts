@@ -26,9 +26,13 @@ import { simulateKeyAction } from '../keySimulation';
 
 Object.defineProperty(HTMLElement.prototype, 'offsetParent', { configurable: true, get: () => document.body });
 
-const render = () => {
+const render = (): [HTMLElement, HTMLElement, HTMLElement] => {
   document.body.innerHTML = '<button id="a"></button><button id="b"></button><button id="c"></button>';
-  return ['a', 'b', 'c'].map(id => document.getElementById(id) as HTMLElement);
+  return ['a', 'b', 'c'].map(id => document.getElementById(id) as HTMLElement) as [
+    HTMLElement,
+    HTMLElement,
+    HTMLElement,
+  ];
 };
 
 afterEach(() => {
