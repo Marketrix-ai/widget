@@ -231,16 +231,30 @@ export type ActivityLogType = z.infer<typeof ActivityLogTypeSchema>;
 // `ip_address`/`user_agent`/`created_by` are gone: `models/columnSchemas.ts`'s `ActivityMetadataByType`
 // registry is the actual write-time gate, and every one of its per-type shapes is `.strict()` — none of
 // them ever admits these three keys, so no stored row carries them and no migration is needed.
-// `target_user_id`/`target_user_email`/`reason`/`widget_type` are written for some activity kinds (member
-// removal, email change, widget CRUD) but no reader renders anything off `metadata` beyond `.details` —
-// dropped from the wire in `handlers/activityLog.ts`'s `wireMetadata`, which this stays `.passthrough()`
-// to make possible: a schema field here would still ship over a passthrough object regardless.
+//
+// This schema itself CANNOT be derived from that registry, and stays `.passthrough()` rather than
+// `.strict()`: `ActivityMetadataByType` lives in `models/columnSchemas.ts`, which already imports
+// `ActivityLogTypeSchema`/`ApplicationTypeSchema`/`WidgetTypeSchema` FROM this file, so importing it back
+// would cycle; moving the registry here instead would drag `contracts/slack.ts` (the `slack_command`
+// variant's `status` enum) into this file's import closure, which is mirrored byte-for-byte into the
+// widget/persona-os/internal SDKs (`tests/unit/syncConsumers.test.ts` pins each one's file list) — a
+// widget-facing change like that needs an npm republish and a `bun.lock` repin, not a side effect of a
+// typing pass. `target_user_id`/`target_user_email`/`reason`/`widget_type`/`reminder` are declared
+// because they carry PII or an internal enum a reader must never see; every other per-type field (a
+// widget's `chat_id`, a knowledge row's `file_name`, …) rides through the passthrough untouched, since
+// several ARE read (`support/widget/index.tsx` reads `widget_question`'s `question`) and this schema has
+// no closure-safe way to enumerate them precisely without restating the registry above.
 export const ActivityLogMetadataSchema = z
   .object({
     details: z.string().optional(),
     id: z.number().optional(),
     type: z.string().optional(),
     name: z.string().optional(),
+    target_user_id: z.number().optional(),
+    target_user_email: z.string().optional(),
+    reason: z.string().optional(),
+    widget_type: WidgetTypeSchema.optional(),
+    reminder: z.literal(true).optional(),
   })
   .passthrough();
 
