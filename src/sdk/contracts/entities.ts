@@ -4,6 +4,14 @@ import { BaseEntitySchema, EntityStatusSchema } from './common';
 export const WorkspacePackageSchema = z.enum(['free', 'startup', 'growth', 'enterprise']);
 export type PlanTier = z.infer<typeof WorkspacePackageSchema>;
 
+/** The plan a Billing Cycle was opened on. `legacy_unknown` is pre-ledger history, which no plan sells. */
+export const PlanSnapshotSchema = z.enum([...WorkspacePackageSchema.options, 'legacy_unknown']);
+export type PlanSnapshot = z.infer<typeof PlanSnapshotSchema>;
+export const AllowanceStatusSchema = z.enum(['known', 'unlimited', 'unknown']);
+export type AllowanceStatus = z.infer<typeof AllowanceStatusSchema>;
+export const RevenueStatusSchema = z.enum(['zero', 'known', 'unknown']);
+export type RevenueStatus = z.infer<typeof RevenueStatusSchema>;
+
 export const ApplicationTypeSchema = z.enum(['app', 'website']);
 
 export type ApplicationType = z.infer<typeof ApplicationTypeSchema>;
