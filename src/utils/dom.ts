@@ -54,7 +54,7 @@ function* ancestry(el: Element): Generator<Element> {
 }
 
 export function disabledReason(el: Element): string | null {
-  if ((el as HTMLButtonElement).disabled === true) return 'is a disabled control';
+  if ('disabled' in el && el.disabled === true) return 'is a disabled control';
   if (el.getAttribute('aria-disabled') === 'true') return 'is aria-disabled';
   for (const node of ancestry(el)) {
     if (node.hasAttribute('inert')) return 'is inside an inert subtree';
