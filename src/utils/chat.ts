@@ -159,8 +159,8 @@ export const createScreenAccessRequestMessage = (
     pendingContent,
   });
 
-export const createScreenshareMessage = (stream: MediaStream, mode: InstructionType = 'show'): ChatMessage =>
-  createMessage('screenshare', 'user', '', { mode, videoStream: stream });
+export const createScreenshareMessage = (stream: MediaStream): ChatMessage =>
+  createMessage('screenshare', 'user', '', { mode: 'show', videoStream: stream });
 
 export const createPlaceholderMessage = (mode: InstructionType): ChatMessage =>
   createMessage('temp', 'agent', '', { mode, isPlaceholder: true, placeholderState: 'thinking' });

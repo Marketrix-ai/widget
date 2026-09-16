@@ -179,7 +179,7 @@ export function useScreenShare({
       applySharing(true);
       resolveAccessRequest('allowed');
       onAddMessage(createSystemMessage('Screen sharing started', 'started-screenshare'));
-      const screenshareMessage = createScreenshareMessage(stream, 'show');
+      const screenshareMessage = createScreenshareMessage(stream);
       setScreenShareMessageId(screenshareMessage.id);
       onAddMessage(screenshareMessage);
     } catch (error) {
