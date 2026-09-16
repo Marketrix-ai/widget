@@ -1,27 +1,22 @@
 /**
- * Resolves a host page's `mtxId`/`mtxKey` into the fully-populated widget config the rest of the runtime reads.
+ * Resolves a host page's `mtxId`/`mtxKey` into the fully-populated widget config the rest of the
+ * runtime reads. `createConfigFromSettings` layers rendered settings over a partial `MarketrixConfig`;
+ * it takes the already-validated, render-constants-dropped shape `parseWidgetSettings` returns — a
+ * caller holding a raw `WidgetSettingsData` (the imperative preview's `settings` prop) parses it first.
  *
- * `createConfigFromSettings` layers rendered settings over a partial `MarketrixConfig`. It takes the already-validated,
- * render-constants-dropped shape `parseWidgetSettings` returns — a caller holding a raw `WidgetSettingsData` (the
- * imperative preview's `settings` prop) parses it first.
+ * `loadWidgetConfig` is the credentialed lookup: `widgetPublicSearch` by id+key, then the first `active`
+ * widget wins. An inactive-only result reports the statuses it did find, because "no such widget" and
+ * "not activated in the dashboard" are the two failures a host integrator actually hits and the
+ * credentials look identical in both. `mtxApp` comes from that widget's `application_id` and never from
+ * caller config, since the application id is a consequence of valid credentials, never a host-supplied
+ * input. `widgetPublicSearch`'s response is `WidgetPublicData` — status/application_id/settings only,
+ * never the `marketrix_id`/`marketrix_key` pair this call authenticated with, nor the rendered embed
+ * snippet. This runs on every page load of every host site, so it is ONE request.
  *
- * `loadWidgetConfig` is the credentialed lookup: `widgetPublicSearch` by id+key, then the first `active` widget
- * wins. An inactive-only result reports the statuses it did find, because "no such widget" and "not activated in
- * the dashboard" are the two failures a host integrator actually hits and the credentials look identical in both.
- * `mtxApp` comes from that widget's `application_id` and never from caller config — the application id is a
- * consequence of valid credentials, never a host-supplied input. The api serializes a widget's `settings` already
- * layered over its defaults, so a field the tenant never set arrives as the default rather than undefined.
- * `widgetPublicSearch`'s response is `WidgetPublicData` — status/application_id/settings only, never the
- * `marketrix_id`/`marketrix_key` pair this call authenticated with, nor the rendered embed snippet.
- *
- * This runs on every page load of every host site, so it is ONE request. It used to read `widgetDefaultGet` beside
- * the search and spread those defaults under settings that already carried them; the endpoint stays for bundles
- * already published, but this build no longer calls it.
- *
- * Every failure reports through `utils/errors`, so nothing here swallows the throw underneath it. The probe strings
- * matched on a failed `widgetPublicSearch` are the platform-specific texts browsers emit for an unreachable host —
- * matching them turns a dead api into "start the API server at <host>" instead of a misleading "widget validation
- * failed".
+ * Every failure reports through `utils/errors`, so nothing here swallows the throw underneath it. The
+ * probe strings matched on a failed `widgetPublicSearch` are the platform-specific texts browsers emit
+ * for an unreachable host — matching them turns a dead api into "start the API server at <host>" instead
+ * of a misleading "widget validation failed".
  */
 import { sdk, type WidgetPublicData } from '../sdk';
 import type { MarketrixConfig, ValidWidgetConfig } from '../types';
