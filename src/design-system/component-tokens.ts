@@ -8,7 +8,10 @@
  *
  * `LAYER_TOKENS` is the z-index ladder (screen-edge glow < panel < dialog < toast), based just above the
  * 2^31-ish ceiling most host pages use so the widget sits over everything without the values overflowing a
- * 32-bit int.
+ * 32-bit int. `showHighlight`/`showPopup` are a separate, much higher pair near the int32 ceiling: Show
+ * mode's coaching overlay (`ShowModeService`) mounts to the HOST page, outside the shadow root, to point at
+ * the widget's OWN chrome — it must outrank every value in this ladder by a wide margin, not sit one step
+ * above `toast`.
  */
 import type { CSSProperties } from 'react';
 
@@ -23,7 +26,7 @@ export const RADIUS: Record<RadiusToken, string> = {
   md: 'calc(var(--radius) - 2px)',
   lg: 'var(--radius)',
   xl: 'calc(var(--radius) + 4px)',
-  pill: '9999px',
+  pill: 'var(--radius-pill)',
 };
 
 export const TEXT_TONE: Record<TextTone, string> = {
@@ -61,6 +64,8 @@ export const LAYER_TOKENS = {
   panel: WIDGET_LAYER_BASE + 1,
   dialog: WIDGET_LAYER_BASE + 2,
   toast: WIDGET_LAYER_BASE + 3,
+  showHighlight: 2147483645,
+  showPopup: 2147483646,
 };
 
 export const notificationToneStyles: Record<

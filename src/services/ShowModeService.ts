@@ -17,8 +17,12 @@
  * highlight is sized and placed over its element, so the first paint and every reposition run through it;
  * placement takes the first of right/left/above/below that fits then clamps, its 120px height an assumption,
  * and the watchdog tests `document.body.contains` first, covering removal as well as occlusion.
+ * `ACCENT_COLOR`/`TEXT_COLOR` are raw literals rather than design-system tokens: the highlight and popup
+ * mount to `document.body` on the HOST page, outside the shadow root, so `index.css`'s `:host`-scoped
+ * CSS custom properties never reach them.
  */
 
+import { LAYER_TOKENS } from '../design-system/component-tokens';
 import { domService } from './DomService';
 
 interface ShowModeOptions {
@@ -36,8 +40,10 @@ interface Position {
 const REPOSITION_EVENTS = ['scroll', 'resize', 'touchmove', 'wheel'] as const;
 
 const POPUP_WIDTH_PX = 320;
+const ACCENT_COLOR = '#3b82f6';
+const TEXT_COLOR = '#1f2937';
 const POPUP_CHROME_CSS = `position: fixed; width: ${POPUP_WIDTH_PX}px; background: white; border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); z-index: 2147483646; padding: 16px;`;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); z-index: ${LAYER_TOKENS.showPopup}; padding: 16px;`;
 
 export class ShowModeService {
   private currentPopup: HTMLElement | null = null;
@@ -135,9 +141,9 @@ export class ShowModeService {
     const highlight = document.createElement('div');
     highlight.id = 'marketrix-show-highlight';
     highlight.style.cssText =
-      'position:fixed;border:3px solid #3b82f6;border-radius:4px;' +
-      'box-shadow:0 0 0 4px rgba(59,130,246,0.2),0 0 20px rgba(59,130,246,0.4);' +
-      'z-index:2147483645;pointer-events:none;transition:none;';
+      `position:fixed;border:3px solid ${ACCENT_COLOR};border-radius:4px;` +
+      `box-shadow:0 0 0 4px rgba(59,130,246,0.2),0 0 20px rgba(59,130,246,0.4);` +
+      `z-index:${LAYER_TOKENS.showHighlight};pointer-events:none;transition:none;`;
     document.body.appendChild(highlight);
     this.currentHighlight = highlight;
     this.trackElement();
@@ -160,10 +166,10 @@ export class ShowModeService {
     popup.id = 'marketrix-show-popup';
 
     const content = isClickAction
-      ? `<div style="font-weight: 500; color: #1f2937; font-size: 12px;">${this.escapeHtml(explanation)}</div>`
-      : `<div style="margin-bottom:12px;font-weight:500;color:#1f2937;font-size:12px;">${this.escapeHtml(explanation)}</div>` +
+      ? `<div style="font-weight: 500; color: ${TEXT_COLOR}; font-size: 12px;">${this.escapeHtml(explanation)}</div>`
+      : `<div style="margin-bottom:12px;font-weight:500;color:${TEXT_COLOR};font-size:12px;">${this.escapeHtml(explanation)}</div>` +
         '<div style="display:flex;gap:8px;justify-content:flex-end;">' +
-        '<button id="marketrix-show-continue" style="background:#3b82f6;color:white;border:none;' +
+        `<button id="marketrix-show-continue" style="background:${ACCENT_COLOR};color:white;border:none;` +
         'border-radius:6px;padding:8px 16px;font-size:12px;font-weight:500;cursor:pointer;">Continue</button></div>';
 
     popup.innerHTML = content;
