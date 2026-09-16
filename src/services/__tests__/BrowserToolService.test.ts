@@ -181,3 +181,81 @@ describe('a run the model ends is not a widget tool failure', () => {
     expect(result.data).toEqual({ text: 'Could not find the checkout button' });
   });
 });
+
+describe('a Do tool call against a missing index fails typed, never throws', () => {
+  beforeEach(() => {
+    Element.prototype.scrollIntoView = () => {};
+  });
+
+  it.each(['click_element', 'type_text', 'send_keys', 'select_dropdown', 'get_dropdown_options'])(
+    '%s reports element-not-found instead of throwing out of the loop',
+    async toolName => {
+      const result = await browserToolService.executeTool(
+        toolName,
+        { index: 999, text: 'x', keys: 'Enter', option: 'x' },
+        'do',
+      );
+
+      expect(result.success).toBe(false);
+      assertFailure(result);
+      expect(result.error).toBe('Element 999 not found');
+    },
+  );
+
+  it('selecting a dropdown on a non-select element is rejected as typed, not thrown', async () => {
+    document.body.innerHTML = '<input style="position: fixed" />';
+    vi.spyOn(domService, 'getValidatedElement').mockReturnValue({ element: document.querySelector('input') });
+
+    const result = await browserToolService.executeTool('select_dropdown', { index: 0, option: 'x' }, 'do');
+
+    expect(result.success).toBe(false);
+    assertFailure(result);
+    expect(result.error).toBe('Element 0 is not a select element');
+  });
+});
+
+describe('typeText writes through the same native setter for input and textarea', () => {
+  it.each(['input', 'textarea'])('produces identical resulting value and event order for %s', async tag => {
+    document.body.innerHTML = `<${tag} style="position: fixed"></${tag}>`;
+    const element = document.querySelector(tag) as HTMLInputElement | HTMLTextAreaElement;
+    vi.spyOn(domService, 'getValidatedElement').mockReturnValue({ element });
+    const seen: string[] = [];
+    for (const type of ['input', 'change', 'blur']) element.addEventListener(type, e => seen.push(e.type));
+
+    const result = await browserToolService.executeTool('type_text', { index: 0, text: 'hello' }, 'do');
+
+    expect(result.success).toBe(true);
+    expect(element.value).toBe('hello');
+    expect(seen).toEqual(['input', 'change', 'blur']);
+  });
+});
+
+describe("show mode's real visitor click reaches the element's handler exactly once", () => {
+  beforeEach(() => {
+    Element.prototype.getBoundingClientRect = () => ({ top: 0, left: 0, width: 10, height: 10 }) as DOMRect;
+    document.elementFromPoint = () => null;
+    Element.prototype.scrollIntoView = () => {};
+  });
+
+  afterEach(() => {
+    showModeService.cleanup();
+  });
+
+  it('fires the deferred click once, not once for the staging click and once for the confirm', async () => {
+    document.body.innerHTML = '<button style="position: fixed">Buy</button>';
+    const button = document.querySelector('button') as HTMLButtonElement;
+    domService.reindexAndSnapshot();
+    let clicks = 0;
+    button.addEventListener('click', () => clicks++);
+
+    const pending = browserToolService.executeTool('click_element', { index: 0 }, 'show', 'Click Buy');
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, composed: true }));
+
+    const result = await pending;
+    assertSuccess(result);
+    expect(clicks).toBe(0);
+
+    result.afterResponseAttempt?.();
+    expect(clicks).toBe(1);
+  });
+});

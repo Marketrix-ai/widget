@@ -72,6 +72,19 @@ describe('simulateKeyAction Backspace/Delete', () => {
     return el;
   };
 
+  it.each(['input', 'textarea'])(
+    'writes through the same prototype setter for %s, so a controlled component observes it identically',
+    tag => {
+      document.body.innerHTML = `<${tag}></${tag}>`;
+      const el = document.querySelector(tag) as HTMLInputElement | HTMLTextAreaElement;
+      el.value = 'abcd';
+      el.setSelectionRange(3, 3);
+
+      expect(simulateKeyAction(el, 'Backspace')).toBe('Backspace: deleted character, value is now "abd"');
+      expect([el.value, el.selectionStart]).toEqual(['abd', 2]);
+    },
+  );
+
   it('deletes around the caret and leaves it in the right place', () => {
     const back = input('abcd', 3);
     expect(simulateKeyAction(back, 'Backspace')).toBe('Backspace: deleted character, value is now "abd"');

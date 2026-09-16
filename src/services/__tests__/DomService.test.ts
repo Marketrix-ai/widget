@@ -16,12 +16,14 @@ const interactable = (html: string): DomService => {
   return service;
 };
 
-describe('an index expires when the element behind it changes', () => {
-  beforeEach(() => {
-    Element.prototype.getBoundingClientRect = () => ({ top: 0, left: 0, width: 10, height: 10 }) as DOMRect;
-    document.elementFromPoint = () => null;
-  });
+// Shared by every describe below: a fixed 10x10 rect and no elementFromPoint occluder, so an
+// indexed element reads as interactable unless a test overrides elementFromPoint itself.
+beforeEach(() => {
+  Element.prototype.getBoundingClientRect = () => ({ top: 0, left: 0, width: 10, height: 10 }) as DOMRect;
+  document.elementFromPoint = () => null;
+});
 
+describe('an index expires when the element behind it changes', () => {
   it('a rewritten href on the same node with the same id is stale', () => {
     const service = interactable('<a id="cta" href="/signup" style="position: fixed">Sign up</a>');
     expect(service.getValidatedElement(0).element).not.toBeNull();
@@ -48,11 +50,6 @@ describe('an index expires when the element behind it changes', () => {
 });
 
 describe('a data-id lands on the element the index really points at', () => {
-  beforeEach(() => {
-    Element.prototype.getBoundingClientRect = () => ({ top: 0, left: 0, width: 10, height: 10 }) as DOMRect;
-    document.elementFromPoint = () => null;
-  });
-
   it('a deeper div chain earlier in the page cannot steal a shallower element tag', () => {
     document.body.innerHTML = [
       '<div class="page" style="position: fixed">',
@@ -74,10 +71,6 @@ describe('a data-id lands on the element the index really points at', () => {
 });
 
 describe('the widget covering a target is not an obstacle the agent can clear', () => {
-  beforeEach(() => {
-    Element.prototype.getBoundingClientRect = () => ({ top: 0, left: 0, width: 10, height: 10 }) as DOMRect;
-  });
-
   it('exempts the shadow host, which is what elementFromPoint reports for any hit on the widget', () => {
     const service = interactable(
       '<button style="position: fixed">Buy</button><div class="marketrix-widget-container"></div>',
@@ -96,11 +89,6 @@ describe('the widget covering a target is not an obstacle the agent can clear', 
 });
 
 describe('a control the visitor could not operate is refused at act time, not hidden from the index', () => {
-  beforeEach(() => {
-    Element.prototype.getBoundingClientRect = () => ({ top: 0, left: 0, width: 10, height: 10 }) as DOMRect;
-    document.elementFromPoint = () => null;
-  });
-
   it('refuses a disabled button, whose click() would have fired no handler', () => {
     const service = interactable('<button disabled style="position: fixed">Submit</button>');
 
@@ -123,5 +111,36 @@ describe('a control the visitor could not operate is refused at act time, not hi
     const service = interactable('<button disabled style="position: fixed">Submit</button>');
 
     expect(service.reindexAndSnapshot()).toContain('data-id="0"');
+  });
+});
+
+describe('re-scanning an unchanged page is idempotent', () => {
+  it('assigns the same node the same index across repeated scans, never two ids to one node', () => {
+    document.body.innerHTML = '<button style="position: fixed">A</button><a href="/b" style="position: fixed">B</a>';
+    const service = new DomService();
+    const a = document.querySelector('button') as HTMLElement;
+    const b = document.querySelector('a') as HTMLElement;
+
+    service.reindexAndSnapshot();
+    const firstScan = [service.getSequenceForElement(a), service.getSequenceForElement(b)];
+
+    service.reindexAndSnapshot();
+    const secondScan = [service.getSequenceForElement(a), service.getSequenceForElement(b)];
+
+    expect(secondScan).toEqual(firstScan);
+    expect(new Set(secondScan).size).toBe(2);
+  });
+
+  it('drops a stale index for a node removed before the re-scan', () => {
+    document.body.innerHTML = '<button style="position: fixed">A</button>';
+    const service = new DomService();
+    const button = document.querySelector('button') as HTMLElement;
+    service.reindexAndSnapshot();
+    expect(service.getSequenceForElement(button)).toBe(0);
+
+    document.body.innerHTML = '<a href="/b" style="position: fixed">B</a>';
+    service.reindexAndSnapshot();
+
+    expect(service.getSequenceForElement(button)).toBeUndefined();
   });
 });

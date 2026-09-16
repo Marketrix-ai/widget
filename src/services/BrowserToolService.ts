@@ -91,7 +91,7 @@ interface WidgetToolDef {
   run: (args: ToolArgs) => ToolExecutionResult<unknown> | Promise<ToolExecutionResult<unknown>>;
 }
 
-export class BrowserToolService {
+class BrowserToolService {
   private readonly tools: Record<string, WidgetToolDef> = {
     navigate: { label: 'Navigating', run: args => this.navigate(args) },
     search_web: { label: 'Searching', run: args => this.search(args) },
