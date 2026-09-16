@@ -177,10 +177,12 @@ export function resolveLayoutStyle(props: LayoutProps): CSSProperties {
   return style;
 }
 
+const isLayoutKey = (key: string): key is keyof LayoutProps => (LAYOUT_KEYS as ReadonlySet<string>).has(key);
+
 export function stripLayoutProps<T extends LayoutProps>(props: T): Omit<T, keyof LayoutProps> {
   const result: Record<string, unknown> = {};
   for (const key in props) {
-    if (!LAYOUT_KEYS.has(key as keyof LayoutProps)) {
+    if (!isLayoutKey(key)) {
       result[key] = props[key];
     }
   }

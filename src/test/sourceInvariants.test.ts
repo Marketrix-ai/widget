@@ -22,7 +22,9 @@
  * native `<button>`, or an explicitly-roled element with its own keyboard handling · `tsconfig.json` keeps
  * `strict` plus every measured strictness flag (`noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`,
  * `noImplicitOverride`, `noPropertyAccessFromIndexSignature`, `noFallthroughCasesInSwitch`,
- * `verbatimModuleSyntax`) on, so a later pass can't silently drop one back off.
+ * `verbatimModuleSyntax`) on, so a later pass can't silently drop one back off · pass 31's three
+ * narrowing casts stay replaced by their type guards (`disabledReason`'s `'disabled' in el`,
+ * `stripLayoutProps`'s `isLayoutKey`, `MessengerShell`'s `isWidgetView`) rather than reverting to a cast.
  */
 import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
@@ -323,5 +325,17 @@ describe('interactive elements', () => {
       }
     }
     expect(offenders).toEqual([]);
+  });
+});
+
+describe('as-cast floor (pass 31)', () => {
+  it('never reintroduces the three narrowing casts a type guard replaced', () => {
+    const banned = [
+      /\(el as HTMLButtonElement\)\.disabled/,
+      /LAYOUT_KEYS\.has\(key as keyof LayoutProps\)/,
+      /setActiveView\(value as WidgetView\)/,
+    ];
+    const offenders = contentsExcept(nonTestSrcFiles, f => banned.some(re => re.test(readFileSync(f, 'utf8'))));
+    expect(offenders.map(o => o.file)).toEqual([]);
   });
 });
