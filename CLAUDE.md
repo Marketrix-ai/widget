@@ -187,16 +187,8 @@ layered on) through `WidgetConfigContext`, plus its own root element through `Po
 Everything below calls `useWidgetConfig()` for settings and `useWidget()` for the store; **never thread
 either down as props.** The widget is open or closed — there is no minimized panel.
 
-`src/index.tsx` (public entry — see `README.md` for the customer surface) · `src/services/` (stateful
-runtime owners: `StreamClient`, `RrwebSessionRecorder`, `BrowserToolService`, `ShowModeService`,
-`DomService`, `ChatService`, `ChatSessionManager`, `StorageService`,
-`ScreenShareService`, plus stateless functions) · `src/components/` (`Surface` is the canonical
-container primitive; `WidgetDialog` the one specialized modal;
-`src/design-system/semantic-tokens.ts` owns settings-to-token adaptation and
-`component-tokens.ts` every fixed token — radius, text, shadow, layer) · `src/context/`
-(`ChatContext` is one store `{messages, task}`, plus `UIStateContext`, `sseReducer`) · `src/test/` +
-colocated `*.test.ts(x)`. **`src/hooks/` holds only a hook with 2+ consumers** (`useWidget`); a
-single-consumer hook lives in that consumer's own file, exported for its `renderHook` tests.
+**`src/hooks/` holds only a hook with 2+ consumers.** A single-consumer hook lives beside its one
+caller instead, exported for its `renderHook` tests — rule 6/7's file-flattening applied to hooks.
 
 ## Release & CI
 
@@ -267,10 +259,10 @@ local and shipped images cannot drift in their dependency set.
 
 ## Conventions
 
-TS, 2-space indent, single quotes, semicolons, trailing commas, ~120-char lines; `type` imports, sorted
-imports, no unused imports. `PascalCase` components/services/context, `useCamelCase` hooks, `camelCase`
-utils. **Keep stateful services only for shared lifecycle/session ownership** — use plain functions for
-stateless operations, and inline one-use presentation rather than adding a base component.
+Formatting and import order are prettier/eslint-enforced, not a convention to remember. `PascalCase`
+components/services/context, `useCamelCase` hooks, `camelCase` utils. **Keep stateful services only for
+shared lifecycle/session ownership** — use plain functions for stateless operations, and inline one-use
+presentation rather than adding a base component.
 
 ## Field notes
 
