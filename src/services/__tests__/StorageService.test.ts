@@ -7,7 +7,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 
-import { agentMessage } from '../../test/fixtures';
+import { agentMessage, mockMediaStream } from '../../test/fixtures';
 import type { ChatMessage } from '../../types';
 import { createScreenshareMessage } from '../../utils/chat';
 import {
@@ -117,7 +117,7 @@ describe('chat snapshot persistence', () => {
   });
 
   it('stores a screenshare as an ended notice, because a MediaStream cannot survive a reload', () => {
-    writeChatSnapshot(snapshot([createScreenshareMessage({ id: 'stream' } as unknown as MediaStream)]));
+    writeChatSnapshot(snapshot([createScreenshareMessage(mockMediaStream({ id: 'stream' }))]));
 
     expect(readChatSnapshot().messages[0]).toMatchObject({
       content: 'Screen sharing ended',
