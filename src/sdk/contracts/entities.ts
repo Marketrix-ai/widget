@@ -83,7 +83,7 @@ export const WorkspaceEntitySchema = BaseEntitySchema.extend({
   status: EntityStatusSchema,
   package: WorkspacePackageSchema,
   ending_date: z.coerce.date().nullish(),
-  external_workspace_id: z.string().nullish(),
+  external_workspace_id: z.string().max(255).nullish(),
   // Read-only flag derived from `slack_webhook_url`'s presence. The URL itself
   // is a secret and is never returned to clients — only this boolean is.
   slack_webhook_configured: z.boolean(),
@@ -179,8 +179,8 @@ export const WidgetEntitySchema = BaseEntitySchema.extend({
   type: WidgetTypeSchema,
   settings: WidgetSettingsDataSchema,
   status: EntityStatusSchema,
-  marketrix_id: z.string(),
-  marketrix_key: z.string(),
+  marketrix_id: z.string().max(100),
+  marketrix_key: z.string().max(100),
   snippet: z.string().nullish(),
 });
 
