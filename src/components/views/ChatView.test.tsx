@@ -17,7 +17,7 @@ import { act, fireEvent, renderHook, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 
 import * as ScreenShareService from '../../services/ScreenShareService';
-import { agentMessage } from '../../test/fixtures';
+import { agentMessage, mockMediaStream } from '../../test/fixtures';
 import { openChatTab, openWidget, renderWidget } from '../../test/renderWidget';
 import type { ChatMessage } from '../../types';
 import { useScreenShare, type UseScreenShareOptions } from './ChatView';
@@ -101,7 +101,7 @@ const setup = (messages: ChatMessage[]) => {
 beforeEach(() => {
   startScreenShare = vi
     .spyOn(ScreenShareService, 'startScreenShare')
-    .mockResolvedValue({ id: 'stream' } as unknown as MediaStream);
+    .mockResolvedValue(mockMediaStream({ id: 'stream' }));
   vi.spyOn(ScreenShareService, 'stopScreenShare').mockImplementation(vi.fn());
   vi.spyOn(ScreenShareService, 'isScreenSharing').mockReturnValue(false);
   vi.spyOn(console, 'error').mockImplementation(() => {});

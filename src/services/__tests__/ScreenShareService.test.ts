@@ -14,16 +14,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 
 import { startScreenShare, stopScreenShare } from '@/services/ScreenShareService';
 import { storageService } from '@/services/StorageService';
-import { credentialedConfig } from '@/test/fixtures';
+import { credentialedConfig, mockMediaStream } from '@/test/fixtures';
 
 const getDisplayMedia = vi.fn();
 
 const liveStream = () =>
-  ({
-    active: true,
+  mockMediaStream({
     getVideoTracks: () => [{ readyState: 'live', addEventListener: vi.fn() }],
     getTracks: () => [{ stop: vi.fn() }],
-  }) as unknown as MediaStream;
+  });
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -81,11 +80,10 @@ describe('use_screenshare', () => {
   it('releases every track on stop, and is a no-op when nothing is sharing', async () => {
     storageService.setConfig(credentialedConfig({ mtxId: 'id', mtxKey: 'key' }));
     const stopTrack = vi.fn();
-    const stream = {
-      active: true,
+    const stream = mockMediaStream({
       getVideoTracks: () => [{ readyState: 'live', addEventListener: vi.fn() }],
       getTracks: () => [{ stop: stopTrack }, { stop: stopTrack }],
-    } as unknown as MediaStream;
+    });
     getDisplayMedia.mockResolvedValue(stream);
 
     await startScreenShare();

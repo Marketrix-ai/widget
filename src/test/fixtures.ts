@@ -15,6 +15,10 @@
  * about its exact shape. `credentialedConfig(overrides)` is `validSettings()` plus the
  * `mtxId`/`mtxKey`/`mtxApp` triple and `isPreviewMode: false` a resolved PRODUCTION config carries — the
  * real shape `WidgetService.loadWidgetConfig` resolves to, so a mock never hides a field it forgets to set.
+ *
+ * `mockMediaStream(overrides)` is the one home for the browser's un-mockable `MediaStream`: the DOM lib
+ * type has no constructor a test can call, so every caller needs the same `as unknown as MediaStream`
+ * bridge — centralizing it here means that bridge exists exactly once instead of once per test file.
  */
 import { WidgetSettingsDataSchema } from '../sdk';
 import type { CredentialedConfig } from '../services/StorageService';
@@ -91,4 +95,13 @@ export function credentialedConfig(overrides: Partial<CredentialedConfig> = {}):
     isPreviewMode: false,
     ...overrides,
   } as CredentialedConfig;
+}
+
+export function mockMediaStream(overrides: Record<string, unknown> = {}): MediaStream {
+  return {
+    active: true,
+    getVideoTracks: () => [],
+    getTracks: () => [],
+    ...overrides,
+  } as unknown as MediaStream;
 }
