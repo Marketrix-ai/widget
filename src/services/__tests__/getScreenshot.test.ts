@@ -10,7 +10,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 
-import { flushMicrotasks } from '../../test/fixtures';
+import { flushMicrotasks, mockMediaStream } from '../../test/fixtures';
 import { resetDom } from '../../test/preload';
 import { advanceTimersByTimeAsync } from '../../test/vi-compat';
 import { browserToolService } from '../BrowserToolService';
@@ -35,7 +35,7 @@ describe('get_screenshot with no active screen share', () => {
 describe('get_screenshot on a stream that never delivers a frame', () => {
   beforeEach(() => {
     vi.useFakeTimers();
-    vi.spyOn(ScreenShareService, 'activeScreenStream').mockReturnValue({} as MediaStream);
+    vi.spyOn(ScreenShareService, 'activeScreenStream').mockReturnValue(mockMediaStream());
   });
 
   afterEach(() => {
@@ -60,7 +60,7 @@ describe('get_screenshot when the browser refuses a 2d canvas context', () => {
   let getContext: typeof HTMLCanvasElement.prototype.getContext;
 
   beforeEach(() => {
-    vi.spyOn(ScreenShareService, 'activeScreenStream').mockReturnValue({} as MediaStream);
+    vi.spyOn(ScreenShareService, 'activeScreenStream').mockReturnValue(mockMediaStream());
     getContext = HTMLCanvasElement.prototype.getContext;
     HTMLCanvasElement.prototype.getContext = vi.fn(() => null) as unknown as typeof getContext;
     Object.defineProperty(HTMLVideoElement.prototype, 'videoWidth', { configurable: true, value: 320 });
