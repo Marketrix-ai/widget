@@ -14,7 +14,7 @@ import { forwardRef, type ReactNode } from 'react';
 
 import { Surface, type SurfaceProps } from './Surface';
 
-export interface FlexProps extends SurfaceProps {
+interface FlexProps extends SurfaceProps {
   direction?: 'row' | 'column';
   children?: ReactNode;
 }

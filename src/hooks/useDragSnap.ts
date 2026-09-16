@@ -20,14 +20,14 @@ const DRAG_THRESHOLD_PX = 5;
 const SNAP_DURATION_MS = 600;
 const SNAP_EASING = 'cubic-bezier(0.16, 1, 0.3, 1)';
 
-export interface UseDragSnapOptions {
+interface UseDragSnapOptions {
   position: WidgetPosition;
   onPositionCommit: (position: WidgetPosition) => void;
   isPreviewMode?: boolean;
   wrapperRef: React.RefObject<HTMLDivElement | null>;
 }
 
-export interface UseDragSnapResult {
+interface UseDragSnapResult {
   isDragging: boolean;
   pixelPositionStyle: { left: number; top: number } | undefined;
   onPointerDown: (event: React.PointerEvent<HTMLButtonElement>) => void;

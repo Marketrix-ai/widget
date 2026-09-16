@@ -9,7 +9,7 @@ import { TEXT_TONE, type TextTone } from '../../design-system/component-tokens';
 type IconButtonVariant = 'primary' | 'secondary' | 'ghost';
 type IconButtonSize = 'xs' | 'sm';
 
-export interface IconButtonProps extends ComponentPropsWithRef<'button'> {
+interface IconButtonProps extends ComponentPropsWithRef<'button'> {
   variant?: IconButtonVariant;
   size?: IconButtonSize;
   tone?: TextTone;

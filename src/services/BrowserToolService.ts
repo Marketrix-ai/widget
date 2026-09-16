@@ -26,18 +26,18 @@ import { isTextField, setNativeValue, simulateKeyAction } from './keySimulation'
 import { activeScreenStream } from './ScreenShareService';
 import { showModeService } from './ShowModeService';
 
-export interface TextData {
+interface TextData {
   text: string;
 }
 
-export interface ExtractData {
+interface ExtractData {
   title: string;
   url: string;
   text: string;
   links: Array<{ text: string; href: string | null }>;
 }
 
-export interface DropdownOptionsData {
+interface DropdownOptionsData {
   options: Array<{ value: string; text: string }>;
 }
 

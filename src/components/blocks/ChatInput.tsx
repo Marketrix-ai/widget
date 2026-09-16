@@ -23,7 +23,7 @@ export interface ChatInputMode {
   label: string;
 }
 
-export interface ChatInputProps {
+interface ChatInputProps {
   value: string;
   onChange: (value: string) => void;
   onSubmit: () => void;

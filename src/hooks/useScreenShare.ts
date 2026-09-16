@@ -50,7 +50,7 @@ export interface UseScreenShareOptions {
   messages: ChatMessage[];
 }
 
-export interface UseScreenShareReturn {
+interface UseScreenShareReturn {
   isScreenSharing: boolean;
   isAwaitingScreenAccess: boolean;
   showScreenAccessDialog: boolean;

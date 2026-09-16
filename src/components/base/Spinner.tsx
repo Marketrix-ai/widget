@@ -6,7 +6,7 @@ import type { CSSProperties, Ref } from 'react';
 
 type SpinnerSize = 'sm' | 'md' | 'lg';
 
-export interface SpinnerProps {
+interface SpinnerProps {
   size?: SpinnerSize;
   style?: CSSProperties;
   ref?: Ref<HTMLDivElement>;

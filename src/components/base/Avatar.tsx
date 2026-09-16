@@ -9,7 +9,7 @@ import { resolveLayoutStyle, withClass } from './layoutProps';
 
 type AvatarSize = 'sm' | 'md' | 'lg';
 
-export interface AvatarProps extends Omit<ComponentPropsWithRef<'img'>, 'size'> {
+interface AvatarProps extends Omit<ComponentPropsWithRef<'img'>, 'size'> {
   src: string;
   alt: string;
   elevation?: ShadowToken;
