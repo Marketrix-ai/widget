@@ -1,6 +1,9 @@
 /**
- * Unit tests for `useResize`, the panel-sizing hook: how a dashboard width/height setting resolves to
- * a starting size, and how dragging the one grip resizes the panel from each pinned corner.
+ * `useFocusTrap` tests: Escape closes the widget when focus is inside the trapped container and is
+ * declined when focus is on the host page — the key belongs to the widget only while it has focus.
+ *
+ * `useResize` tests: how a dashboard width/height setting resolves to a starting size, and how
+ * dragging the one grip resizes the panel from each pinned corner.
  *
  * `sizeFor` renders the hook with only the two settings varying and returns its result: a `px` setting
  * is used verbatim; a length the hook can't convert to px (`rem`, `em` — it parses `<number>px` only)
@@ -17,12 +20,53 @@
  * size wins on the next mount — one shared scope would leak a case's result into the next.
  * `isPreviewMode` is false: preview mode returns before binding anything, so no drag, no write.
  */
-import { act, renderHook } from '@testing-library/react';
-import { describe, expect, it } from 'bun:test';
-import type React from 'react';
+import { act, render, renderHook } from '@testing-library/react';
+import { describe, expect, it, vi } from 'bun:test';
+import React, { useRef } from 'react';
 
-import type { MarketrixConfig, WidgetPosition } from '../types';
-import { useResize } from './useResize';
+import type { MarketrixConfig, WidgetPosition } from '../../../types';
+import { useFocusTrap, useResize } from '../MessengerShell';
+
+const Harness: React.FC<{ onEscape: () => void }> = ({ onEscape }) => {
+  const ref = useRef<HTMLDivElement>(null);
+  useFocusTrap(ref, true, { onEscape });
+  return (
+    <div>
+      <button type='button' data-testid='host'>
+        host page control
+      </button>
+      <div ref={ref}>
+        <button type='button' data-testid='inside'>
+          widget control
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const pressEscape = () => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+describe('the widget escape key belongs to the widget, not to the host page', () => {
+  it('closes when focus is inside the trapped container', () => {
+    const onEscape = vi.fn();
+    const { getByTestId } = render(<Harness onEscape={onEscape} />);
+    getByTestId('inside').focus();
+
+    pressEscape();
+
+    expect(onEscape).toHaveBeenCalledTimes(1);
+  });
+
+  it('declines when focus is on the host page, as the Tab arm already does', () => {
+    const onEscape = vi.fn();
+    const { getByTestId } = render(<Harness onEscape={onEscape} />);
+    getByTestId('host').focus();
+
+    pressEscape();
+
+    expect(onEscape).not.toHaveBeenCalled();
+  });
+});
 
 const sizeFor = (width: string | undefined, height: string | undefined) =>
   renderHook(() => useResize(width, height, 'bottom_right', { mtxId: 'tenant' }, false)).result.current;

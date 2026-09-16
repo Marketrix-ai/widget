@@ -18,19 +18,46 @@
  * renders. `handleChipClick` treats a home-screen suggestion as a typed message, dispatching it under the chip's
  * mode; `navDirection` is what `index.css` reads off `data-direction` to slide the incoming view, since Base UI
  * unmounts a deselected `Tabs.Panel` and the selected one remounts and replays that slide on each switch.
+ *
+ * `useFocusTrap` (below) is hand-rolled on purpose: this panel is a NON-modal surface, not a Dialog, and Base UI
+ * exposes no standalone focus-trap or scroll-lock — reaching either by making the panel a Dialog would inert the
+ * customer's host page and mutate its `<html>`/`<body>`, which an embedded widget must not do. While `isActive`,
+ * focus starts inside `containerRef`, Tab cycles within it, Escape calls `onEscape`, and on deactivation focus
+ * returns to whatever held it before; the tabbable candidates come from `utils/dom`'s shared `focusablesIn`, the
+ * same filter `keySimulation`'s Tab simulation uses, so the widget's own tab order and the host page's can't
+ * re-diverge. Inside the widget's closed shadow root `document.activeElement` retargets to the HOST, never naming
+ * an element of the widget's own tree; `activeElementIn` reads through `container.getRootNode()` instead and is
+ * the ONE home for that retargeting — eslint's `no-restricted-properties` bans the bare read everywhere else.
+ * Both key arms bail unless focus is currently inside the container, since the listener sits on `document` ahead
+ * of host-page handlers and an unguarded Escape would close the widget mid-typing.
+ *
+ * `useResize` returns `widthPx`/`heightPx`, the `grip` its handle renders from, `onResizeStart` for that handle's
+ * mousedown, and `containerRef` for the element being sized. The opening size is this tenant's stored one if
+ * there is one, else the dashboard's `widget_width`/`widget_height` — both through `clampSize`, so a setting
+ * outside the drag range lands on the same bounds a drag has. `parsePx` accepts a bare px length only, since
+ * `rem`/`em`/`%` can't be resolved without layout, and `readStoredSize` parses the tenant-scoped
+ * `marketrix_widget_size_<scope>` entry (keyed through the shared `scopedKey`, like its two `readLocal`/
+ * `writeLocal` siblings), warning-then-defaulting on anything unparseable since corrupted host-page localStorage
+ * must not leave the panel unsizable. `clampSize` bounds width to MIN_WIDTH..MAX_WIDTH, height to MIN_HEIGHT..85%
+ * of the viewport, measured at call time so a resize re-clamps on the next drag. The grip is on the corner
+ * diagonally opposite the pinned one (`getResizeGrip`); `growX`/`growY` turn pointer delta into size delta for
+ * whichever corner that is. During a drag the new size is written straight to the element's inline style and
+ * held in `dimsRef` — React state commits once, on mouseup, so pointer motion never re-renders the tree.
+ * `data-resizing` keys `index.css`'s CSS transition off. Preview mode has no grip — `onResizeStart` returns
+ * before binding, so it never writes a visitor size.
  */
 import { Tabs } from '@base-ui/react/tabs';
-import React, { useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { SHADOW } from '../../design-system/component-tokens';
-import { useFocusTrap } from '../../hooks/useFocusTrap';
-import { useResize } from '../../hooks/useResize';
 import { useWidget, useWidgetConfig } from '../../hooks/useWidget';
-import type { WidgetView } from '../../types';
+import { readLocal, scopedKey, writeLocal } from '../../services/StorageService';
+import type { MarketrixConfig, WidgetPosition, WidgetView } from '../../types';
 import { createUserMessage } from '../../utils/chat';
 import { backgroundGradient } from '../../utils/color';
+import { focusablesIn } from '../../utils/dom';
 import type { SuggestedActionItem } from '../../utils/suggestedActions';
-import { getCorner, getPanelPositionStyle } from '../../utils/widgetPositioning';
+import { getCorner, getPanelPositionStyle, getResizeGrip } from '../../utils/widgetPositioning';
 import { Stack } from '../base/Flex';
 import { Icon } from '../base/Icon';
 import { IconButton } from '../base/IconButton';
@@ -39,6 +66,199 @@ import { HeaderBar } from '../blocks/HeaderBar';
 import { ChatView } from '../views/ChatView';
 import { HomeView } from '../views/HomeView';
 import { ShellTabBar } from './ShellTabBar';
+
+function activeElementIn(container: HTMLElement): HTMLElement | null {
+  const root = container.getRootNode();
+  return ((root instanceof ShadowRoot ? root.activeElement : document.activeElement) as HTMLElement) ?? null;
+}
+
+export function useFocusTrap(
+  containerRef: React.RefObject<HTMLElement | null>,
+  isActive: boolean,
+  options?: {
+    onEscape?: () => void;
+    focusTargetRef?: React.RefObject<HTMLElement | null> | undefined;
+  },
+) {
+  const previousActiveRef = useRef(false);
+  const previouslyFocusedRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (!isActive) {
+      if (previousActiveRef.current) {
+        previouslyFocusedRef.current?.focus({ preventScroll: true });
+        previouslyFocusedRef.current = null;
+      }
+      previousActiveRef.current = false;
+      return;
+    }
+
+    const container = containerRef.current;
+    if (!container) return;
+
+    if (!previousActiveRef.current) {
+      previouslyFocusedRef.current = activeElementIn(container);
+    }
+    previousActiveRef.current = true;
+
+    const target = options?.focusTargetRef?.current ?? focusablesIn(container)[0];
+    target?.focus({ preventScroll: true });
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const current = activeElementIn(container);
+      if (!current || !container.contains(current)) return;
+      if (e.key === 'Escape') {
+        options?.onEscape?.();
+        return;
+      }
+      if (e.key !== 'Tab') return;
+      const focusables = focusablesIn(container);
+      if (focusables.length === 0) return;
+      const idx = focusables.indexOf(current);
+      if (idx === -1) return;
+      if (e.shiftKey) {
+        if (idx === 0) {
+          e.preventDefault();
+          focusables[focusables.length - 1]?.focus();
+        }
+      } else {
+        if (idx === focusables.length - 1) {
+          e.preventDefault();
+          focusables[0]?.focus();
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown, true);
+    return () => document.removeEventListener('keydown', handleKeyDown, true);
+  }, [isActive, containerRef, options?.focusTargetRef, options?.onEscape]);
+}
+
+interface Size {
+  width: number;
+  height: number;
+}
+
+const MIN_WIDTH = 280;
+const MAX_WIDTH = 600;
+const MIN_HEIGHT = 320;
+const DEFAULT_SIZE: Size = { width: 360, height: 450 };
+
+function clampSize({ width, height }: Size): Size {
+  return {
+    width: Math.min(Math.max(width, MIN_WIDTH), MAX_WIDTH),
+    height: Math.min(Math.max(height, MIN_HEIGHT), Math.floor(window.innerHeight * 0.85)),
+  };
+}
+
+function parsePx(value: string | undefined, fallback: number): number {
+  const px = /^\s*(\d+(?:\.\d+)?)px\s*$/.exec(value ?? '');
+  return px ? Number(px[1]) : fallback;
+}
+
+const STORAGE_KEY_NAME = 'marketrix_widget_size';
+
+function isSize(value: unknown): value is Size {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    typeof (value as Record<string, unknown>)['width'] === 'number' &&
+    typeof (value as Record<string, unknown>)['height'] === 'number'
+  );
+}
+
+function readStoredSize(storageKey: string): Size | null {
+  try {
+    const stored: unknown = JSON.parse(readLocal(storageKey) ?? 'null');
+    return isSize(stored) ? clampSize(stored) : null;
+  } catch (error) {
+    console.warn('[useResize] Ignoring an unparseable stored size:', error);
+    return null;
+  }
+}
+
+export function useResize(
+  settingsWidth: string | undefined,
+  settingsHeight: string | undefined,
+  position: WidgetPosition,
+  config: MarketrixConfig,
+  isPreviewMode: boolean,
+) {
+  const storageKey = scopedKey(STORAGE_KEY_NAME, config);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const grip = useMemo(() => getResizeGrip(position), [position]);
+
+  const [dimensions, setDimensions] = useState<Size>(
+    () =>
+      readStoredSize(storageKey) ??
+      clampSize({
+        width: parsePx(settingsWidth, DEFAULT_SIZE.width),
+        height: parsePx(settingsHeight, DEFAULT_SIZE.height),
+      }),
+  );
+
+  const dimsRef = useRef<Size>(dimensions);
+  dimsRef.current = dimensions;
+
+  const handleResizeStart = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (isPreviewMode) return;
+
+      const startX = e.clientX;
+      const startY = e.clientY;
+      const startW = dimsRef.current.width;
+      const startH = dimsRef.current.height;
+      const { growX, growY, cursor } = grip;
+
+      if (containerRef.current) {
+        containerRef.current.dataset['resizing'] = 'true';
+      }
+
+      const onMove = (moveEvent: MouseEvent) => {
+        const next = clampSize({
+          width: startW + (moveEvent.clientX - startX) * growX,
+          height: startH + (moveEvent.clientY - startY) * growY,
+        });
+        dimsRef.current = next;
+
+        if (containerRef.current) {
+          containerRef.current.style.width = `${next.width}px`;
+          containerRef.current.style.height = `${next.height}px`;
+        }
+      };
+
+      const onUp = () => {
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+
+        if (containerRef.current) {
+          delete containerRef.current.dataset['resizing'];
+        }
+
+        setDimensions({ ...dimsRef.current });
+        writeLocal(storageKey, JSON.stringify(dimsRef.current));
+      };
+
+      document.body.style.cursor = cursor;
+      document.body.style.userSelect = 'none';
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    },
+    [isPreviewMode, storageKey, grip],
+  );
+
+  return {
+    widthPx: `${dimensions.width}px`,
+    heightPx: `${dimensions.height}px`,
+    grip,
+    onResizeStart: handleResizeStart,
+    containerRef,
+  };
+}
 
 export const MessengerShell: React.FC = () => {
   const config = useWidgetConfig();

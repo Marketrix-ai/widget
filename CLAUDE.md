@@ -195,7 +195,8 @@ container primitive; `WidgetDialog` the one specialized modal;
 `src/design-system/semantic-tokens.ts` owns settings-to-token adaptation and
 `component-tokens.ts` every fixed token — radius, text, shadow, layer) · `src/context/`
 (`ChatContext` is one store `{messages, task}`, plus `UIStateContext`, `sseReducer`) · `src/test/` +
-colocated `*.test.ts(x)`.
+colocated `*.test.ts(x)`. **`src/hooks/` holds only a hook with 2+ consumers** (`useWidget`); a
+single-consumer hook lives in that consumer's own file, exported for its `renderHook` tests.
 
 ## Release & CI
 
@@ -245,17 +246,21 @@ local and shipped images cannot drift in their dependency set.
   `config.widget_position` would pin the dashboard's setting at whatever it was on a visitor's first load.
 - **Inside a closed shadow root, `document.activeElement` is the HOST** and a stylesheet's `:root`
   matches nothing — read focus through `getRootNode()`, and scope host-level rules to `:host` or
-  `[data-marketrix-widget]`. `useFocusTrap.activeElementIn` is the one home for the retargeting and
-  eslint's `no-restricted-properties` bans the bare read everywhere else. **Base UI has the same bug
-  and cannot see it**: its focus restore descends `element.shadowRoot.activeElement`, which is null for
-  a closed root, so it records the host and hands focus to the host page on close — `WidgetDialog`
-  passes an explicit `finalFocus` ref rather than relying on the default.
-- **Base UI owns the interaction primitives; the two remaining hand-rolled hooks are not a gap.**
-  Dialog, Button, Tabs (`ShellTabBar` + the view panels) and Toast (`Notifications.tsx`) come from the
-  library. `useFocusTrap` (in `MessengerShell`) and `useScrollLock` (in `WidgetRoot`) stay hand-rolled
-  because they serve a **non-modal** panel that is not a Dialog: Base UI exposes no standalone
-  focus-trap or scroll-lock, and making the panel a Dialog to reach them would inert the customer's
-  page and mutate its `<html>`/`<body>` — the thing an embedded widget must not do.
+  `[data-marketrix-widget]`. `activeElementIn`, a module-private helper next to `useFocusTrap` in
+  `MessengerShell.tsx`, is the one home for the retargeting and eslint's `no-restricted-properties` bans
+  the bare read everywhere else. **Base UI has the same bug and cannot see it**: its focus restore
+  descends `element.shadowRoot.activeElement`, which is null for a closed root, so it records the host
+  and hands focus to the host page on close — `WidgetDialog` passes an explicit `finalFocus` ref rather
+  than relying on the default.
+- **Base UI owns the interaction primitives; the remaining hand-rolled hooks are not a gap.** Dialog,
+  Button, Tabs (`ShellTabBar` + the view panels) and Toast (`Notifications.tsx`) come from the library.
+  `useFocusTrap` and `useResize` (both in `MessengerShell.tsx`), `useScrollLock` (in `WidgetRoot.tsx`),
+  `useDragSnap` (in `WidgetFab.tsx`) and `useScreenShare` (in `ChatView.tsx`) live beside their one
+  consumer rather than in `src/hooks/` — each hook file had exactly one caller, so rule 6/7 folds it in.
+  `useFocusTrap`/`useScrollLock` stay hand-rolled because they serve a **non-modal** panel that is not a
+  Dialog: Base UI exposes no standalone focus-trap or scroll-lock, and making the panel a Dialog to
+  reach them would inert the customer's page and mutate its `<html>`/`<body>` — the thing an embedded
+  widget must not do.
 
 ## Conventions
 

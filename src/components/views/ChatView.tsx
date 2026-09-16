@@ -17,15 +17,43 @@
  * injected nodes that outlive the task otherwise. `WidgetDialog` gets an explicit `finalFocusRef`
  * since Base UI's focus restore resolves to the host page inside a closed shadow root otherwise. The
  * transcript sits under its own `ErrorBoundary` so one unrenderable message can't take the composer down.
+ *
+ * `useScreenShare` (this file's only other consumer) owns the screen-share lifecycle: the in-transcript
+ * permission card, the browser picker, the live share message, and ending a share. `useLatest` keeps a
+ * value readable from a callback that must not be re-created (the polling interval below, mounted once).
+ * The hook returns `requestScreenAccess` — posting a request card carrying the queued turn, no-oping if
+ * one is already open — plus that card's Allow/Deny handlers, the toolbar dialog's Allow/Dismiss
+ * handlers, and `toggleScreenShareRef`, a toggle stopping a live share or opening that dialog.
+ * `beginScreenShare` opens the stream and posts the started/live messages; `stopScreenSharing`/
+ * `announceStopped` tear it down (video message → a system line); `resolveAccessRequest` stamps
+ * allowed/denied; `flushPendingMessage` sends the hold. The user can end the share from the browser's
+ * own UI, which fires no subscribable event, so a 1s interval reconciles `isScreenSharingActive()`
+ * against local state and announces the stop. `openRequest` is transcript-derived, not component state,
+ * since the request card survives an unmount/remount because it is persisted — the resolving state must
+ * be too, or the buttons stay live on a request neither Allow nor Deny can reach. Every outcome flushes
+ * the pending content (a cancel resolves `denied` like a real failure), leaving no queued turn stranded.
+ * `useScreenShare` is exported so `ChatView.test.tsx`'s `renderHook` cases can drive it directly.
  */
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useImperativeHandle, useRef, useState } from 'react';
 
-import { useScreenShare } from '../../hooks/useScreenShare';
 import { useWidget, useWidgetConfig } from '../../hooks/useWidget';
 import type { InstructionType } from '../../sdk';
+import {
+  isScreenSharing as isScreenSharingActive,
+  startScreenShare,
+  stopScreenShare,
+} from '../../services/ScreenShareService';
 import { showModeService } from '../../services/ShowModeService';
-import type { MarketrixConfig } from '../../types';
-import { createSystemMessage, createUserMessage, getModeDisplayName, SCREEN_ACCESS_PROMPT } from '../../utils/chat';
+import type { ChatMessage, MarketrixConfig } from '../../types';
+import {
+  createScreenAccessRequestMessage,
+  createScreenshareMessage,
+  createSystemMessage,
+  createUserMessage,
+  getModeDisplayName,
+  lastIndexWhere,
+  SCREEN_ACCESS_PROMPT,
+} from '../../utils/chat';
 import { ErrorBoundary } from '../base/ErrorBoundary';
 import { Stack } from '../base/Flex';
 import { Surface } from '../base/Surface';
@@ -45,6 +73,155 @@ const MODES: Array<{ id: InstructionType; icon: ChatInputMode['icon']; flag: key
   { id: 'show', icon: 'mousePointerClick', flag: 'widget_feature_show' },
   { id: 'do', icon: 'ticktick', flag: 'widget_feature_do' },
 ];
+
+function useLatest<T>(value: T): React.RefObject<T> {
+  const ref = useRef(value);
+  ref.current = value;
+  return ref;
+}
+
+export interface UseScreenShareOptions {
+  onScreenSharingChange?: (isSharing: boolean) => void;
+  toggleScreenShareRef?: React.MutableRefObject<(() => void) | null>;
+  onAddMessage: (message: ChatMessage) => void;
+  onUpdateMessage: (messageId: string, updates: Partial<ChatMessage>) => void;
+  onRemoveMessage?: (messageId: string) => void;
+  onSendMessage: (message: string, mode?: InstructionType, skipUserMessage?: boolean) => void;
+  messages: ChatMessage[];
+}
+
+interface UseScreenShareReturn {
+  isScreenSharing: boolean;
+  isAwaitingScreenAccess: boolean;
+  showScreenAccessDialog: boolean;
+  handleScreenAccessDialogAllow: () => Promise<void>;
+  handleScreenAccessDialogDismiss: () => void;
+  handleScreenAccessRequestAllow: () => Promise<void>;
+  handleScreenAccessRequestDeny: () => void;
+  requestScreenAccess: (mode: InstructionType, content: string) => void;
+}
+
+export function useScreenShare({
+  onScreenSharingChange,
+  toggleScreenShareRef,
+  onAddMessage,
+  onUpdateMessage,
+  onRemoveMessage,
+  onSendMessage,
+  messages,
+}: UseScreenShareOptions): UseScreenShareReturn {
+  const [isScreenSharing, setIsScreenSharing] = useState(false);
+  const [screenShareMessageId, setScreenShareMessageId] = useState<string | null>(null);
+  const [showScreenAccessDialog, setShowScreenAccessDialog] = useState(false);
+
+  const wasSharingRef = useLatest(isScreenSharing);
+  const screenShareMessageIdRef = useLatest(screenShareMessageId);
+  const onScreenSharingChangeRef = useLatest(onScreenSharingChange);
+
+  const applySharing = (sharing: boolean) => {
+    setIsScreenSharing(sharing);
+    onScreenSharingChange?.(sharing);
+  };
+
+  const announceStopped = (messageId: string | null) => {
+    if (messageId) onRemoveMessage?.(messageId);
+    onAddMessage(createSystemMessage('Screen sharing stopped', 'stopped-sharing'));
+    setScreenShareMessageId(null);
+  };
+  const announceStoppedRef = useLatest(announceStopped);
+
+  useEffect(() => {
+    const checkScreenSharing = () => {
+      const isSharing = isScreenSharingActive();
+      const wasSharing = wasSharingRef.current;
+      const currentMessageId = screenShareMessageIdRef.current;
+      if (isSharing !== wasSharing) {
+        wasSharingRef.current = isSharing;
+        setIsScreenSharing(isSharing);
+        onScreenSharingChangeRef.current?.(isSharing);
+      }
+      if (wasSharing && !isSharing && currentMessageId) {
+        announceStoppedRef.current(currentMessageId);
+      }
+    };
+    checkScreenSharing();
+    const interval = setInterval(checkScreenSharing, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const openRequest =
+    messages[lastIndexWhere(messages, msg => !!msg.isScreenAccessRequest && !msg.screenShareStatus)] ?? null;
+
+  const requestScreenAccess = (mode: InstructionType, content: string) => {
+    if (openRequest) return;
+    onAddMessage(createScreenAccessRequestMessage(mode, content));
+  };
+
+  const flushPendingMessage = () => {
+    if (!openRequest?.pendingContent) return;
+    onSendMessage(openRequest.pendingContent, openRequest.mode, true);
+  };
+
+  const resolveAccessRequest = (screenShareStatus: 'allowed' | 'denied') => {
+    if (!openRequest) return;
+    onUpdateMessage(openRequest.id, { screenShareStatus });
+  };
+
+  const beginScreenShare = async () => {
+    try {
+      const stream = await startScreenShare();
+      applySharing(true);
+      resolveAccessRequest('allowed');
+      onAddMessage(createSystemMessage('Screen sharing started', 'started-screenshare'));
+      const screenshareMessage = createScreenshareMessage(stream, 'show');
+      setScreenShareMessageId(screenshareMessage.id);
+      onAddMessage(screenshareMessage);
+    } catch (error) {
+      console.error('Failed to start screen sharing:', error);
+      applySharing(false);
+      resolveAccessRequest('denied');
+    }
+    flushPendingMessage();
+  };
+
+  const handleScreenAccessRequestAllow = beginScreenShare;
+
+  const handleScreenAccessRequestDeny = () => {
+    resolveAccessRequest('denied');
+    flushPendingMessage();
+  };
+
+  const handleScreenAccessDialogAllow = async () => {
+    setShowScreenAccessDialog(false);
+    await beginScreenShare();
+  };
+
+  const handleScreenAccessDialogDismiss = () => {
+    setShowScreenAccessDialog(false);
+  };
+
+  const stopScreenSharing = () => {
+    stopScreenShare();
+    applySharing(false);
+    announceStopped(screenShareMessageId);
+  };
+
+  useImperativeHandle(toggleScreenShareRef, () => () => {
+    if (isScreenSharing) stopScreenSharing();
+    else setShowScreenAccessDialog(true);
+  });
+
+  return {
+    isScreenSharing,
+    isAwaitingScreenAccess: openRequest !== null,
+    showScreenAccessDialog,
+    handleScreenAccessDialogAllow,
+    handleScreenAccessDialogDismiss,
+    handleScreenAccessRequestAllow,
+    handleScreenAccessRequestDeny,
+    requestScreenAccess,
+  };
+}
 
 export const ChatView: React.FC<ChatViewProps> = ({ onScreenSharingChange, toggleScreenShareRef, messageInputRef }) => {
   const config = useWidgetConfig();

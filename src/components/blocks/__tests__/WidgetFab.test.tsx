@@ -6,9 +6,9 @@ import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 import { createRef } from 'react';
 
-import { resetDom } from '../test/preload';
-import type { WidgetPosition } from '../types';
-import { useDragSnap } from './useDragSnap';
+import { resetDom } from '../../../test/preload';
+import type { WidgetPosition } from '../../../types';
+import { useDragSnap } from '../WidgetFab';
 
 const wrapperFor = () => {
   const el = document.createElement('div');
