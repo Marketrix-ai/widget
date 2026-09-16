@@ -33,7 +33,7 @@ interface VideoStreamDisplayProps {
 
 const TOP_RADIUS = '8px';
 const OVERLAY_BORDER_RADIUS = `${TOP_RADIUS} ${TOP_RADIUS} 0 0`;
-const OVERLAY_BG = '#111827';
+const OVERLAY_BG = 'var(--overlay-dark)';
 const MUTED_TEXT_COLOR = 'rgba(255,255,255,0.7)';
 
 const Overlay: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
@@ -131,7 +131,7 @@ export const VideoStreamDisplay: React.FC<VideoStreamDisplayProps> = ({ stream }
           transition: 'opacity 500ms',
           opacity: isLoaded ? 1 : 0,
           minHeight: '120px',
-          background: 'linear-gradient(135deg, #111827 0%, #374151 100%)',
+          background: 'linear-gradient(135deg, var(--overlay-dark) 0%, #374151 100%)',
         }}
       />
 
@@ -145,11 +145,11 @@ export const VideoStreamDisplay: React.FC<VideoStreamDisplayProps> = ({ stream }
             top: '8px',
             right: '8px',
             padding: '4px 8px',
-            borderRadius: '9999px',
+            borderRadius: 'var(--radius-pill)',
             backgroundColor: 'rgba(55,65,81,0.9)',
             backdropFilter: 'blur(4px)',
             zIndex: 20,
-            boxShadow: '0 2px 8px rgba(31, 41, 55, 0.4)',
+            boxShadow: '0 2px 8px var(--foreground-faint)',
           }}
         >
           <LiveDot style={{ color: 'white' }} />
