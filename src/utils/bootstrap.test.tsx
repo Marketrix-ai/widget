@@ -39,6 +39,13 @@ const resetDocument = () => {
 let bootstrapImportCount = 0;
 const importBootstrap = () => import(`./bootstrap.tsx?t=${bootstrapImportCount++}`);
 
+const runAutoInit = async () => {
+  const init = vi.fn().mockResolvedValue(undefined);
+  const { autoInitializeWidget } = await importBootstrap();
+  autoInitializeWidget(init);
+  return init;
+};
+
 afterEach(() => {
   vi.useRealTimers();
   vi.restoreAllMocks();
@@ -105,10 +112,7 @@ describe('widget public entry paths', () => {
       'mtx-api-host': 'https://api.test',
       'mtx-use-screenshare': 'false',
     });
-    const init = vi.fn().mockResolvedValue(undefined);
-    const { autoInitializeWidget } = await importBootstrap();
-
-    autoInitializeWidget(init);
+    const init = await runAutoInit();
 
     expect(init).toHaveBeenCalledTimes(1);
     expect(init).toHaveBeenCalledWith({
@@ -121,10 +125,7 @@ describe('widget public entry paths', () => {
 
   it('refuses to initialize without mtx-api-host, which would post at the host page instead', async () => {
     appendModuleScript({ 'mtx-id': 'widget-id', 'mtx-key': 'widget-key' });
-    const init = vi.fn().mockResolvedValue(undefined);
-    const { autoInitializeWidget } = await importBootstrap();
-
-    autoInitializeWidget(init);
+    const init = await runAutoInit();
 
     expect(init).not.toHaveBeenCalled();
   });
