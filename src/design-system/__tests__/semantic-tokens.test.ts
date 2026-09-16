@@ -11,7 +11,7 @@ describe('createSemanticTokens', () => {
   it('derives every colour var from the tenant settings', () => {
     const css = semanticTokensToCssCustomProperties(createSemanticTokens(getMockWidgetConfig()));
 
-    expect(css['--background']).toBe('#111827');
+    expect(css['--card']).toBe('#111827');
     expect(css['--foreground']).toBe('#f9fafb');
     expect(css['--primary']).toBe('#3b82f6');
     expect(css['--border']).toBe('#374151');

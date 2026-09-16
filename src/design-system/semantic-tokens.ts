@@ -92,7 +92,6 @@ export function createSemanticTokens(settings: Partial<WidgetSettingsData> = {})
 
 export function semanticTokensToCssCustomProperties(tokens: SemanticTokens): Record<string, string> {
   return {
-    '--background': tokens.color.background,
     '--foreground': tokens.color.foreground,
     '--card': tokens.color.background,
     '--card-foreground': tokens.color.foreground,

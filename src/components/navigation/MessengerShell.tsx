@@ -29,7 +29,10 @@
  * an element of the widget's own tree; `activeElementIn` reads through `container.getRootNode()` instead and is
  * the ONE home for that retargeting — eslint's `no-restricted-properties` bans the bare read everywhere else.
  * Both key arms bail unless focus is currently inside the container, since the listener sits on `document` ahead
- * of host-page handlers and an unguarded Escape would close the widget mid-typing.
+ * of host-page handlers and an unguarded Escape would close the widget mid-typing. The effect deliberately
+ * depends on `options?.focusTargetRef`/`options?.onEscape`, not `options` itself: the caller passes a fresh
+ * object literal every render, so depending on the whole object would re-run (and re-focus) the trap on every
+ * render instead of only when the callback or target actually changes.
  *
  * `useResize` returns `widthPx`/`heightPx`, the `grip` its handle renders from, `onResizeStart` for that handle's
  * mousedown, and `containerRef` for the element being sized. The opening size is this tenant's stored one if

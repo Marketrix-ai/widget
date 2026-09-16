@@ -134,7 +134,7 @@ export function useDragSnap({
   const anchor = getAnchorTopLeft(position, vw, vh, wrapperSize.w, wrapperSize.h);
   const pixelPositionStyle = !isPreviewMode && vw > 0 && vh > 0 ? { left: anchor.x, top: anchor.y } : undefined;
 
-  const resetDragStyles = () => {
+  const resetDragStyles = useCallback(() => {
     cancelRaf();
     if (wrapperRef.current) {
       wrapperRef.current.style.transform = '';
@@ -143,7 +143,7 @@ export function useDragSnap({
       wrapperRef.current.style.left = '';
       wrapperRef.current.style.top = '';
     }
-  };
+  }, [wrapperRef]);
 
   const commitPositionAfterAnimation = useCallback(
     (nextCorner: WidgetPosition, wrapper: HTMLDivElement) => {
@@ -210,6 +210,7 @@ export function useDragSnap({
       onPositionCommit,
       pixelPositionStyle,
       position,
+      resetDragStyles,
       vw,
       vh,
       wrapperSize.w,
