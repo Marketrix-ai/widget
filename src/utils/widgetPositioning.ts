@@ -15,8 +15,7 @@
  * straight-line distance — proximity, never per-axis resolution.
  *
  * EDGE_OFFSET_PX is the one edge offset: launcher and panel both position through
- * `getPanelPositionStyle`, so there is no second declaration to drift from — it used to be pinned
- * against a Tailwind class string.
+ * `getPanelPositionStyle`, so there is no second declaration to drift from.
  */
 import type React from 'react';
 
