@@ -23,7 +23,7 @@
     "tag": "bash scripts/release.sh",
     "start": "vite",
     "build": "vite build",
-    "ci": "bun run code:check && bun run test && bun run build && bun run bundle:check",
+    "ci": "bun run code:check && bun run build && bun run test && bun run bundle:check",
     "lint": "eslint . --max-warnings 0 --fix",
     "type-check": "tsc --noEmit",
     "test": "bun test --isolate",

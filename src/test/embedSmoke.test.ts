@@ -21,6 +21,13 @@
  * hand-guessed envelope: the widget's real `RPCLink` decode only accepts bytes that serializer actually
  * produces, so a fabricated shape would either falsely pass or drift silently from the real wire format.
  *
+ * This test never spawns `bun run build` itself — `ci` now runs `build` BEFORE `test` (never after), so
+ * `dist/widget.mjs` is guaranteed fresh by the time this file runs. `beforeAll` only asserts it exists,
+ * with a clear message when someone runs `bun test` directly without building first — a spawned build
+ * from inside a test blew past `bun test`'s per-test timeout in CI (build takes longer than 5s) and
+ * inherited its `NODE_ENV=test`, flipping Vite's JSX transform to a dev runtime the externalized
+ * `react/jsx-runtime` doesn't export.
+ *
  * Pins: no host-page fetch before the deferred auto-init tick, and none at all without a `script[mtx-id]`
  * tag · a correctly-attributed tag drives exactly one `widgetPublicSearch` lookup to the documented
  * `mtx-api-host` (never a foreign origin, alongside the session's ordinary `chatCreate`/`widgetStream`
@@ -29,8 +36,7 @@
  * runtime-exported surface matches `src/index.tsx`'s value exports exactly · console stays silent on a
  * clean boot · `loader.js` forwards only `mtx-*` attributes onto the module script it injects.
  */
-import { spawnSync } from 'node:child_process';
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -113,17 +119,10 @@ const realConsoleWarn = console.warn;
 const realFetch = globalThis.fetch;
 
 beforeAll(() => {
-  // `bun test` sets `NODE_ENV=test` for this whole process; inheriting that into `vite build` flips its
-  // JSX transform to the dev runtime (`jsxDEV`), which the widget's externalized `react/jsx-runtime`
-  // doesn't export, so the built bundle throws on its first render. Force production explicitly.
-  const build = spawnSync('bun', ['run', 'build'], {
-    cwd: root,
-    stdio: 'inherit',
-    env: { ...process.env, NODE_ENV: 'production' },
-  });
-  if (build.status !== 0) throw new Error('bun run build failed — cannot smoke test a bundle that was never produced');
-  // `vite build` empties `dist/` before writing it, so the scratch dir must be (re)created AFTER the
-  // build above, never at module-eval time.
+  if (!existsSync(distPath))
+    throw new Error(`${distPath} is missing — run \`bun run build\` before \`bun test\` (ci runs build first)`);
+  // `vite build` empties `dist/` on every run, so the scratch dir must be (re)created here, never at
+  // module-eval time, in case a build ran between module load and this hook.
   mkdirSync(scratchDir, { recursive: true });
 });
 
