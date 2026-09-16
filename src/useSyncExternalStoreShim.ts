@@ -1,9 +1,10 @@
 /**
  * A local stand-in for both `use-sync-external-store/shim` and `use-sync-external-store/shim/with-selector`,
  * aliased onto this file in `vite.config.ts` so neither package is a runtime dependency of the bundle.
- * `@base-ui/react` (`useIsHydrating.js`, `useStore.js`) requires both subpaths directly, so the bare
- * `useSyncExternalStore` re-export below is load-bearing even though nothing in this repo's own source
- * imports it by name — a static unused-export scan cannot see the alias and will misflag it as dead.
+ * `@base-ui/react` (`useIsHydrating.js`, `useStore.js`) requires both subpaths directly, so both the bare
+ * `useSyncExternalStore` re-export and `useSyncExternalStoreWithSelector` below are load-bearing even
+ * though nothing in this repo's own source imports either by name — a static unused-export scan cannot
+ * see the alias and will misflag both as dead (a knip false positive, kept on rather than deleted).
  * `useSyncExternalStoreWithSelector` memoises the selection per snapshot identity and, when `isEqual`
  * says the slice did not change, returns the previous selection — which is what keeps a selector
  * returning a fresh object from re-rendering forever.
