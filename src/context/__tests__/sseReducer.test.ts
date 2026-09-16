@@ -1,7 +1,8 @@
 /**
  * Unit tests for `../sseReducer`, the pure chat state machine folding SSE `WidgetEvent`s and local actions
  * into `{messages, task}` plus the effects the caller performs. Fixtures: `agentMessage` (a thinking
- * placeholder), `runningState`/`idleState` around it, `toolCall` (`click_element` on index 1 by default).
+ * placeholder), `runningState`/`idleState` around it, `pendingReply` (an idle-task placeholder awaiting a
+ * `chat/response`/`chat/delta`/`chat/error` by request id), `toolCall` (`click_element` on index 1 by default).
  *
  * `task/status running` is inert because the first `tool/call` activates the task — the api mints no task
  * id, so the widget holds none. The three terminal statuses end the task and stamp done/failed/stopped,
@@ -42,6 +43,11 @@ const runningState = (overrides: Partial<ChatMessage> = {}): SseState => ({
 });
 
 const idleState = (): SseState => ({ ...runningState({ placeholderState: undefined }), task: { phase: 'idle' } });
+
+const pendingReply = (id = 'req-1'): SseState => ({
+  messages: [agentMessage({ id, content: '', parts: [] })],
+  task: { phase: 'idle' },
+});
 
 const toolCall = (overrides: Partial<Extract<WidgetEvent, { type: 'tool/call' }>> = {}): WidgetEvent => ({
   type: 'tool/call',
@@ -134,13 +140,16 @@ describe('reduceStaleReply', () => {
     expect(result.messages[0]!.content).toBe('This is taking longer than expected. Please try again.');
   });
 
-  it('settles a placeholder that has gone silent for the deadline even while its task is still running', () => {
-    const state: SseState = { messages: [agentMessage()], task: { phase: 'running' } };
-    const result = reduceStaleReply(state, 'agent-1', 'timeout text');
+  it.each(['running', 'idle'] as const)(
+    'settles a placeholder gone silent for the deadline whether its task is still %s or a reload left it behind',
+    phase => {
+      const state: SseState = { messages: [agentMessage()], task: { phase } };
+      const result = reduceStaleReply(state, 'agent-1', 'timeout text');
 
-    expect(result.messages[0]!.isPlaceholder).toBe(false);
-    expect(result.messages[0]!.content).toBe('Working on it\ntimeout text');
-  });
+      expect(result.messages[0]!.isPlaceholder).toBe(false);
+      expect(result.messages[0]!.content).toBe('Working on it\ntimeout text');
+    },
+  );
 
   it('never overwrites a running task paused on the visitor, even with no text yet', () => {
     const state: SseState = {
@@ -148,14 +157,6 @@ describe('reduceStaleReply', () => {
       task: { phase: 'running' },
     };
     expect(reduceStaleReply(state, 'agent-1', 'timeout text')).toBe(state);
-  });
-
-  it('releases a placeholder left behind by a reload, progress lines and all, once no task is running', () => {
-    const state: SseState = { messages: [agentMessage()], task: { phase: 'idle' } };
-    const result = reduceStaleReply(state, 'agent-1', 'timeout text');
-
-    expect(result.messages[0]!.isPlaceholder).toBe(false);
-    expect(result.messages[0]!.content).toBe('Working on it\ntimeout text');
   });
 
   it('never overwrites a message that already settled', () => {
@@ -224,10 +225,7 @@ describe('reduceSse — tool/call', () => {
 
 describe('reduceSse — chat/response', () => {
   it('resolves the matching placeholder', () => {
-    const state: SseState = {
-      messages: [agentMessage({ id: 'req-1', content: '', parts: [] })],
-      task: { phase: 'idle' },
-    };
+    const state: SseState = pendingReply();
     const event: WidgetEvent = { type: 'chat/response', request_id: 'req-1', text: 'Here you go' };
     const result = reduceSse(state, event, 'tell');
 
@@ -242,10 +240,7 @@ describe('reduceSse — chat/response', () => {
 
 describe('reduceSse — chat/delta', () => {
   it('accumulates fragments into one streaming part and clears the placeholder', () => {
-    const state: SseState = {
-      messages: [agentMessage({ id: 'req-1', content: '', parts: [] })],
-      task: { phase: 'idle' },
-    };
+    const state: SseState = pendingReply();
     const first = reduceSse(state, { type: 'chat/delta', request_id: 'req-1', text: 'Hel' }, 'tell');
     const second = reduceSse(first.state, { type: 'chat/delta', request_id: 'req-1', text: 'lo' }, 'tell');
 
@@ -257,10 +252,7 @@ describe('reduceSse — chat/delta', () => {
   });
 
   it('final chat/response replaces the streamed part (no duplication)', () => {
-    const state: SseState = {
-      messages: [agentMessage({ id: 'req-1', content: '', parts: [] })],
-      task: { phase: 'idle' },
-    };
+    const state: SseState = pendingReply();
     const streamed = reduceSse(state, { type: 'chat/delta', request_id: 'req-1', text: 'Hello wor' }, 'tell');
     const final = reduceSse(
       streamed.state,
@@ -275,10 +267,7 @@ describe('reduceSse — chat/delta', () => {
   });
 
   it('a retransmitted final response is dropped, not appended again', () => {
-    const state: SseState = {
-      messages: [agentMessage({ id: 'req-1', content: '', parts: [] })],
-      task: { phase: 'idle' },
-    };
+    const state: SseState = pendingReply();
     const once = reduceSse(state, { type: 'chat/response', request_id: 'req-1', text: 'Hello world' }, 'tell');
     const repeated = reduceSse(once.state, { type: 'chat/response', request_id: 'req-1', text: 'Hello world' }, 'tell');
 
