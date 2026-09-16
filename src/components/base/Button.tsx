@@ -14,7 +14,7 @@ type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'bare' | 'chip' | 'tab'
 type ButtonSize = 'sm' | 'md';
 type ButtonShape = 'default' | 'pill';
 
-export interface ButtonProps extends ComponentPropsWithRef<'button'> {
+interface ButtonProps extends ComponentPropsWithRef<'button'> {
   elevation?: ShadowToken;
   size?: ButtonSize;
   shape?: ButtonShape;

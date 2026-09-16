@@ -24,7 +24,7 @@ import { getElevationStyle, LAYER_TOKENS } from '../../design-system/component-t
 import { Button } from '../base/Button';
 import { Flex } from '../base/Flex';
 
-export interface WidgetDialogProps {
+interface WidgetDialogProps {
   open: boolean;
   onClose: () => void;
   title: string;

@@ -119,7 +119,7 @@ const NotificationList: React.FC = () => {
   });
 };
 
-export interface NotificationProviderProps {
+interface NotificationProviderProps {
   children?: React.ReactNode;
   container?: HTMLElement | null;
   offsetBottom?: number;
@@ -143,7 +143,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
   </Toast.Provider>
 );
 
-export interface WidgetNotificationsProps {
+interface WidgetNotificationsProps {
   error?: string | undefined;
   onClearError: () => void;
   onRetry?: (() => void) | undefined;

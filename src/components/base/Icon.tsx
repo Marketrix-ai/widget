@@ -15,7 +15,7 @@ import type { ComponentPropsWithRef } from 'react';
 import { type IconData, type IconName, icons } from './icons';
 import { withClass } from './layoutProps';
 
-export interface IconProps extends ComponentPropsWithRef<'svg'> {
+interface IconProps extends ComponentPropsWithRef<'svg'> {
   name: IconName;
   size?: number;
   className?: string;

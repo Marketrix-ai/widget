@@ -24,7 +24,7 @@ type TextSize = 'xxs' | 'xs' | 'sm' | 'lg';
 type TextWeight = 'normal' | 'medium' | 'semibold';
 type TextAlign = 'center' | 'right';
 
-export interface TextProps extends React.HTMLAttributes<HTMLElement> {
+interface TextProps extends React.HTMLAttributes<HTMLElement> {
   as?: ElementType;
   block?: boolean;
   inheritColor?: boolean;
