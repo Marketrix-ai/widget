@@ -30,6 +30,7 @@
   --secondary-foreground: oklch(0.205 0 0);
   --border: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
+  --ring-offset: oklch(1 0 0);
   --foreground-muted: rgba(31, 41, 55, 0.6);
   --foreground-faint: rgba(31, 41, 55, 0.4);
   --primary-hover: rgba(59, 130, 246, 0.85);
@@ -141,9 +142,12 @@
   border: 1px solid transparent;
 }
 
-.mtx-button:focus-visible {
-  outline: 2px solid var(--ring);
-  outline-offset: 2px;
+.mtx-button:focus-visible,
+.mtx-icon-button:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px var(--ring-offset),
+    0 0 0 4px var(--ring);
 }
 
 .mtx-button[data-size='sm'] {
