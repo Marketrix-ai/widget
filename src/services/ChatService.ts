@@ -7,9 +7,9 @@
  * That is why `StreamClient.ready` must resolve BEFORE the POST: registration is what gives the reply
  * somewhere to land.
  *
- * The `widget_question` activity-log row is no longer filed from here — `StreamClient` sends `user_id`
+ * `ChatService` never files the `widget_question` activity-log row itself: `StreamClient` sends `user_id`
  * once, at `widgetStream` registration, and the api derives the row from `chat_id`'s bound application on
- * every Tell/Show/Do command, so a per-message credential re-send is gone.
+ * every Tell/Show/Do command, so no per-message credential re-send is needed here.
  */
 import type { InstructionType, WidgetCommand } from '../sdk';
 import { chatSessionManager } from './ChatSessionManager';

@@ -13,7 +13,8 @@
  * unify both). Pointer state is tracked in a ref; movement under DRAG_THRESHOLD_PX stays a click, beyond
  * it the wrapper is translated on a rAF loop with velocity sampled into `velocityHistoryRef` so a flick
  * lands where it was heading — `projectFlickVelocity` (module-level, pure) turns that sample history into
- * a projected pixel delta. On release
+ * a projected pixel delta: zero with fewer than two samples, else the average px/ms over the sampled span
+ * projected forward in px/s. On release
  * `getNearestCornerByTranslation` picks the corner, the wrapper animates there for SNAP_DURATION_MS via
  * `left`/`top` transitions, and `commitPositionAfterAnimation` calls `onPositionCommit` on
  * `transitionend` (with a timeout fallback, since a hidden tab fires no transition events) — the
@@ -43,8 +44,6 @@ const SNAP_EASING = 'cubic-bezier(0.16, 1, 0.3, 1)';
 const VELOCITY_SAMPLE_INTERVAL_MS = 10;
 const VELOCITY_HISTORY_SIZE = 6;
 
-/** A flick's terminal velocity from its last few pointer samples: zero with fewer than two, else the
- * average px/ms over the sampled span, in px/s. Pure — takes the samples, returns the projection. */
 function projectFlickVelocity(
   history: Array<{ x: number; y: number; t: number }>,
   decel = 0.999,

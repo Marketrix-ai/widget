@@ -16,7 +16,10 @@
  * way back — fake timers keep the pending timer from firing, proving the second `widgetStream` call came from
  * `reconnectNow` itself); that it also redials a stream stuck mid-dial rather than no-op on a connection that will
  * never resolve; and that auth rejection is terminal, with the surfaced error naming "credentials were rejected"
- * rather than going silent the way an unmatched `chat/error` would.
+ * rather than going silent the way an unmatched `chat/error` would. An open-but-not-yet-registered stream
+ * still reads `canReconnect() === true`, matching a visitor hitting Retry before the handshake finished
+ * while the old dial's iterator is still live — abort doesn't synchronously stop an in-flight fetch's
+ * already-buffered chunks.
  *
  * `asMockedStream`/`emptyStream` cast a plain async iterable to `MockedStream`: oRPC's real `widgetStream`
  * resolves to its own private-field `AsyncIteratorClass`, which no plain async generator can structurally
@@ -285,9 +288,6 @@ describe('StreamClient fault injection', () => {
     const callbacks = { onMessage: (e: WidgetEvent) => received.push(e) };
     client.addCallbacks(callbacks);
 
-    // Still open, not yet registered — canReconnect is true, matching a visitor hitting Retry
-    // before the handshake finished, while the old dial's iterator is still live (abort doesn't
-    // synchronously stop an in-flight fetch's already-buffered chunks).
     const second = controlledStream();
     mockSdk.widgetStream.mockResolvedValueOnce(second.stream);
     expect(client.canReconnect()).toBe(true);

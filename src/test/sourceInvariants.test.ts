@@ -22,9 +22,12 @@
  * native `<button>`, or an explicitly-roled element with its own keyboard handling · `tsconfig.json` keeps
  * `strict` plus every measured strictness flag (`noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`,
  * `noImplicitOverride`, `noPropertyAccessFromIndexSignature`, `noFallthroughCasesInSwitch`,
- * `verbatimModuleSyntax`) on, so a later pass can't silently drop one back off · pass 31's three
- * narrowing casts stay replaced by their type guards (`disabledReason`'s `'disabled' in el`,
- * `stripLayoutProps`'s `isLayoutKey`, `MessengerShell`'s `isWidgetView`) rather than reverting to a cast.
+ * `verbatimModuleSyntax`) on, so a later pass can't silently drop one back off · the three narrowing
+ * casts a type guard replaced (`disabledReason`'s `'disabled' in el`, `stripLayoutProps`'s `isLayoutKey`,
+ * `MessengerShell`'s `isWidgetView`) never reappear. `expectNoOffendersExcept` asserts no file outside
+ * its `exemptPaths` (repo-root-relative) matches `pattern`. `useUnknownInCatchVariables` has no separate
+ * strictness-flag entry: `strict: true` already implies it and it is never overridden, so its absence
+ * from that list is not a gap.
  */
 import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
@@ -50,7 +53,6 @@ const nonTestSrcFiles = srcFiles.filter(f => !f.endsWith('.test.ts') && !f.endsW
 const contentsExcept = (files: string[], predicate: (f: string) => boolean): { file: string; text: string }[] =>
   files.filter(predicate).map(file => ({ file, text: readFileSync(file, 'utf8') }));
 
-/** Asserts no file outside `exemptPaths` (repo-root-relative) matches `pattern`. */
 const expectNoOffendersExcept = (pattern: RegExp, ...exemptPaths: string[]) => {
   const exempt = exemptPaths.map(p => resolve(src, p));
   const offenders = contentsExcept(nonTestSrcFiles, f => !exempt.includes(f) && pattern.test(readFileSync(f, 'utf8')));
@@ -110,8 +112,6 @@ describe('tsconfig.json strict flags', () => {
     ]) {
       expect(tsconfig.compilerOptions[flag]).toBe(true);
     }
-    // useUnknownInCatchVariables has no separate entry: `strict: true` already implies it and it is
-    // never overridden below, so its absence here is not a gap.
     expect(tsconfig.compilerOptions.useUnknownInCatchVariables).not.toBe(false);
   });
 });
@@ -320,7 +320,7 @@ describe('interactive elements', () => {
   });
 });
 
-describe('as-cast floor (pass 31)', () => {
+describe('as-cast floor', () => {
   it('never reintroduces the three narrowing casts a type guard replaced', () => {
     const banned = [
       /\(el as HTMLButtonElement\)\.disabled/,

@@ -3,8 +3,8 @@
  * `lastIndexWhere` (also used by `useScreenShare`), and `addProgressLine` / `markProgressLineComplete` /
  * `markProgressLineFailed`, which append or settle the open progress part for one `browserToolName` via
  * `openLineFor` and the shared `patchPart` copy-on-write. `createMessage` and its per-sender constructors are
- * the ONLY way a `ChatMessage` is built: ids are `<prefix>-<uuid>` since two messages minted in one millisecond
- * used to collide, and empty content yields no `text` part, the screen-share bubble rendering from `videoStream`
+ * the ONLY way a `ChatMessage` is built: ids are `<prefix>-<uuid>` since two messages minted in the same millisecond
+ * would otherwise collide, and empty content yields no `text` part, the screen-share bubble rendering from `videoStream`
  * alone and a placeholder having nothing to say yet. `SCREEN_ACCESS_PROMPT` is the one wording of the
  * screen-access ask, the transcript card and the toolbar dialog being two renderings of one question.
  *
