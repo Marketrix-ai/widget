@@ -17,6 +17,11 @@
  * give-up no id-bearing event is coming, and `reduceStaleReply` covers a HEALTHY stream whose one reply
  * never arrives and nothing else can see (a `waiting-for-user` pause is not stale). `reduceSse` switches:
  * `chat/delta` accumulates, `chat/response` replaces, `tool/call` ACTIVATES the task before `task/status`.
+ *
+ * `reduceText` drops an EXACT repeat of the last closed text part (same content, not mid-stream): a
+ * message can legitimately carry several text segments over its life — a status line, then the final
+ * answer — so a new segment always appends; only a byte-for-byte retransmission of the segment just
+ * closed is noise, which is what a duplicated `chat/response` looks like.
  */
 import type { WidgetEvent } from '../sdk';
 import { browserToolService, FINISH_TOOL } from '../services/BrowserToolService';
@@ -166,6 +171,7 @@ function reduceText(state: SseState, requestId: string, text: string, streaming:
     const parts = [...msg.parts];
     const last = parts[parts.length - 1];
     const isOpenStream = last?.type === 'text' && last.streaming === true;
+    if (last?.type === 'text' && !isOpenStream && last.content === text) return msg;
     const content = streaming && isOpenStream ? last.content + text : text;
     const part: MessagePart = { type: 'text', content, ...(streaming && { streaming: true }) };
     if (isOpenStream) parts[parts.length - 1] = part;

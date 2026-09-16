@@ -273,6 +273,18 @@ describe('reduceSse — chat/delta', () => {
     expect(msg.parts).toEqual([{ type: 'text', content: 'Hello world' }]);
     expect(final.effects).toEqual([]);
   });
+
+  it('a retransmitted final response is dropped, not appended again', () => {
+    const state: SseState = {
+      messages: [agentMessage({ id: 'req-1', content: '', parts: [] })],
+      task: { phase: 'idle' },
+    };
+    const once = reduceSse(state, { type: 'chat/response', request_id: 'req-1', text: 'Hello world' }, 'tell');
+    const repeated = reduceSse(once.state, { type: 'chat/response', request_id: 'req-1', text: 'Hello world' }, 'tell');
+
+    expect(repeated.state.messages[0]).toEqual(once.state.messages[0]);
+    expect(repeated.state.messages[0]!.parts).toEqual([{ type: 'text', content: 'Hello world' }]);
+  });
 });
 
 describe('reduceSse — chat/error', () => {
