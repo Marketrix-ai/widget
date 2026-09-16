@@ -25,6 +25,7 @@
  * that DID parse rather than discarding the whole context.
  */
 import type { ChatMessage, InstructionType, MarketrixConfig, ValidWidgetConfig } from '../types';
+import { logWarn } from '../utils/log';
 
 const STORAGE_KEY = 'marketrix_chat_context';
 const CONTEXT_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000;
@@ -67,7 +68,7 @@ export function readLocal(key: string): string | null {
   try {
     return typeof localStorage === 'undefined' ? null : localStorage.getItem(key);
   } catch (error) {
-    console.warn('[StorageService] localStorage is unreadable:', error);
+    logWarn('[StorageService] localStorage is unreadable:', error);
     return null;
   }
 }
@@ -76,7 +77,7 @@ export function writeLocal(key: string, value: string): void {
   try {
     if (typeof localStorage !== 'undefined') localStorage.setItem(key, value);
   } catch (error) {
-    console.warn('[StorageService] localStorage is unwritable:', error);
+    logWarn('[StorageService] localStorage is unwritable:', error);
   }
 }
 
@@ -119,7 +120,7 @@ function loadContext(key: string): MarketrixChatContext {
     const parsed = sanitizeStoredContext(JSON.parse(stored));
     if (Date.now() - parsed.timestamp <= CONTEXT_EXPIRY_MS) return parsed;
   } catch (error) {
-    console.warn('[StorageService] Failed to parse the stored context:', error);
+    logWarn('[StorageService] Failed to parse the stored context:', error);
   }
   return { ...DEFAULT_CONTEXT };
 }

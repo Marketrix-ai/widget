@@ -59,6 +59,7 @@ import type { MarketrixConfig, WidgetPosition, WidgetView } from '../../types';
 import { createUserMessage } from '../../utils/chat';
 import { backgroundGradient } from '../../utils/color';
 import { focusablesIn } from '../../utils/dom';
+import { logWarn } from '../../utils/log';
 import type { SuggestedActionItem } from '../../utils/suggestedActions';
 import { getCorner, getPanelPositionStyle, getResizeGrip } from '../../utils/widgetPositioning';
 import { Stack } from '../base/Flex';
@@ -175,7 +176,7 @@ function readStoredSize(storageKey: string): Size | null {
     const stored: unknown = JSON.parse(readLocal(storageKey) ?? 'null');
     return isSize(stored) ? clampSize(stored) : null;
   } catch (error) {
-    console.warn('[useResize] Ignoring an unparseable stored size:', error);
+    logWarn('[useResize] Ignoring an unparseable stored size:', error);
     return null;
   }
 }

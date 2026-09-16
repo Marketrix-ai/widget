@@ -230,7 +230,10 @@ local and shipped images cannot drift in their dependency set.
   terser drops `log`/`info`/`debug`, so such a line only ever reaches a developer running the dev server,
   and it reads in review like shipped telemetry. Severity follows the root `../CLAUDE.md` — a
   degraded-but-handled failure (a reconnect, unreadable `localStorage`, dropped telemetry) is `warn`, an
-  unexpected one is `error`, and each failure logs exactly one record.
+  unexpected one is `error`, and each failure logs exactly one record. **`utils/log.ts`'s `logWarn` is
+  the one door for the warn case** — it prints only the cause's message, never the raw `Error`, because
+  attaching a stacktrace is what promotes a record to `error`; call `console.error` directly (or
+  `logError`) where the whole object belongs.
 - **The widget has no dark mode** — no `.dark` block, no `dark:` variant. Theming is the per-tenant
   settings → CSS custom properties in `semantic-tokens.ts`, nothing else.
 - **Elevation is a `SHADOW.*` token** (`design-system/component-tokens.ts`), applied inline through `Surface`'s

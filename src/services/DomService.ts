@@ -18,6 +18,7 @@
  */
 
 import { disabledReason, isIndexable, WIDGET_SHADOW_HOST_CLASS } from '../utils/dom';
+import { logWarn } from '../utils/log';
 
 const IDENTITY_ATTRIBUTES = ['id', 'type', 'role', 'aria-label', 'name', 'href'] as const;
 
@@ -131,7 +132,7 @@ export class DomService {
       try {
         clone.querySelector(selector)?.setAttribute('data-id', index.toString());
       } catch (e) {
-        console.warn(`[DomService] Failed to tag index ${index}:`, e);
+        logWarn(`[DomService] Failed to tag index ${index}:`, e);
       }
     }
 

@@ -17,8 +17,10 @@
  * mount in practice — `uiActions` is a `useMemo([])` and `chatActions` bottoms out in `commit`
  * (`useCallback([])`), both stable for the component's lifetime, and `previewMode` is fixed by the
  * caller. `cancelled` drops the connect when a StrictMode double-invoke or an unmount cleans up before
- * the chat_id resolves. A failed connect is logged only, since `StreamClient` owns the backoff
- * reconnect; a failed init is logged AND surfaced through `uiActions.setError`.
+ * the chat_id resolves. `streamClient.connect` never rejects — it catches internally and owns its own
+ * backoff reconnect and warn-level log — so the call here is fire-and-forget; a failed INIT (the
+ * snapshot restore or `getOrCreateChatId`) is the one thing this bridge logs and surfaces through
+ * `uiActions.setError`.
  */
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
@@ -62,7 +64,7 @@ const InitBridge: React.FC<{ children: React.ReactNode; previewMode: boolean }> 
       const chatId = await chatSessionManager.getOrCreateChatId();
       if (cancelled) return;
 
-      streamClient.connect(chatId).catch((err: unknown) => console.error('Initial stream connection failed:', err));
+      void streamClient.connect(chatId);
     };
 
     void init().catch(error => {

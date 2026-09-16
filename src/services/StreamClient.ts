@@ -20,6 +20,7 @@
  */
 import { sdk, type WidgetCommand, type WidgetEvent } from '../sdk';
 import { errorMessage } from '../utils/errors';
+import { logWarn } from '../utils/log';
 import { storageService } from './StorageService';
 
 type StreamStatus = 'disconnected' | 'connecting' | 'open' | 'registered' | 'error';
@@ -75,7 +76,7 @@ export class StreamClient {
     this.clearReconnectTimer();
     this.resetBackoff();
     this.abortConnection();
-    this.connect(this.chatId).catch(console.error);
+    void this.connect(this.chatId);
   }
 
   async ready(chatId: string): Promise<void> {
@@ -131,7 +132,7 @@ export class StreamClient {
       this.consumeEvents(iterator, myConnectionId);
     } catch (error) {
       if (!signal.aborted) {
-        console.warn('[StreamClient] Connection failed, will retry:', error);
+        logWarn('[StreamClient] Connection failed, will retry:', error);
         this.status = 'error';
         this.notifyError(new Error('Stream connection failed'));
         this.scheduleReconnect();
@@ -153,7 +154,7 @@ export class StreamClient {
       if (this.connectionId !== connectionId) {
         stale = true;
       } else if (!this.reconnectSuppressed()) {
-        console.warn('[StreamClient] Stream error:', error);
+        logWarn('[StreamClient] Stream error:', error);
         this.status = 'error';
       }
     } finally {
@@ -244,7 +245,7 @@ export class StreamClient {
     const delay = Math.min(this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1), this.maxReconnectDelay);
     this.reconnectTimer = setTimeout(() => {
       if (!this.reconnectSuppressed() && this.chatId) {
-        this.connect(this.chatId).catch(console.error);
+        void this.connect(this.chatId);
       }
     }, delay);
   }
