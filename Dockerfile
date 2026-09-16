@@ -5,8 +5,8 @@
 # `dist/widget.mjs`) happens in `builder`, not in `bun run build`, because these are runtime-image
 # artifacts the npm tarball has no use for; `bun -e` runs it rather than `node -e` since bun implements
 # node:zlib/node:fs itself and no node binary exists in this stage. `runtime` copies an explicit
-# allowlist rather than all of `dist/`: the sourcemap embeds the entire widget source and the 77
-# `.d.ts` files are for tsc, so copying the directory would publish all of it into the served image — a
+# allowlist rather than all of `dist/`: the sourcemap embeds the entire widget source and the
+# `.d.ts` tree is for tsc, so copying the directory would publish all of it into the served image — a
 # new served artifact must be added to that COPY by hand.
 FROM oven/bun:1.4.2-alpine AS base
 WORKDIR /app
