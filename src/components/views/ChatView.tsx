@@ -59,6 +59,7 @@ import {
   lastIndexWhere,
   SCREEN_ACCESS_PROMPT,
 } from '../../utils/chat';
+import { logWarn } from '../../utils/log';
 import { ErrorBoundary } from '../base/ErrorBoundary';
 import { Stack } from '../base/Flex';
 import { Surface } from '../base/Surface';
@@ -182,7 +183,7 @@ export function useScreenShare({
       setScreenShareMessageId(screenshareMessage.id);
       onAddMessage(screenshareMessage);
     } catch (error) {
-      console.error('Failed to start screen sharing:', error);
+      logWarn('[ChatView] Screen share declined or unavailable:', error);
       applySharing(false);
       resolveAccessRequest('denied');
     }
