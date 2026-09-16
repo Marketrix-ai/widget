@@ -3,12 +3,13 @@
  * the resize grip. `MessengerShell` renders null while the store says closed; `WidgetRoot` is its only caller.
  *
  * Geometry comes from the tenant config, never from props. `useResize` owns the persisted size, keyed by
- * `useResize` keys its storage by `config`, via the shared `scopedKey`, so two tenants on one host page cannot share a stored size; `getPanelPositionStyle` pins
- * the panel to the configured corner and `getCorner` supplies the matching `transformOrigin`, so the entrance
- * animation scales out of the anchored corner instead of the panel's centre. Preview mode (the dashboard embed)
- * positions `absolute` rather than `fixed` and drops the 20px corner resize grip — a labelled `separator` with
- * `touchAction: none`, so a drag is not hijacked by scrolling — since it lives inside a page element. `useFocusTrap` closes on Escape and, on the chat view, lands focus in the composer
- * through `messageInputRef` — the same ref `ChatView` attaches to its textarea.
+ * `config` via the shared `scopedKey` so two tenants on one host page cannot share a stored size;
+ * `getPanelPositionStyle` pins the panel to the configured corner and `getCorner` supplies the matching
+ * `transformOrigin`, so the entrance animation scales out of the anchored corner instead of the panel's centre.
+ * Preview mode (the dashboard embed) positions `absolute` rather than `fixed` and drops the 20px corner resize
+ * grip — a labelled `separator` with `touchAction: none`, so a drag is not hijacked by scrolling — since it
+ * lives inside a page element. `useFocusTrap` closes on Escape and, on the chat view, lands focus in the
+ * composer through `messageInputRef` — the same ref `ChatView` attaches to its textarea.
  *
  * The screen-share control sits in the header, but its machinery lives in `ChatView`'s `useScreenShare`:
  * `chatViewToggleScreenShareRef` is what that hook's `useImperativeHandle` fills, and `onScreenSharingChange`
