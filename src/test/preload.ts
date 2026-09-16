@@ -1,60 +1,32 @@
 /**
  * `bunfig.toml` `[test] preload` entry — the sole DOM bootstrap for `bun test`, replacing vitest's
- * jsdom `environment` option (bun has none) plus this repo's old `src/test/setup.ts`.
+ * jsdom `environment` option (bun has none) plus the retired `src/test/setup.ts`. Uses jsdom, not
+ * happy-dom: React 19's event delegation needs real `MouseEvent`/`KeyboardEvent` construction and
+ * bubbling that happy-dom doesn't reproduce faithfully enough for `fireEvent`/`userEvent`.
  *
- * jsdom, not happy-dom: React 19's event delegation depends on real `MouseEvent`/`KeyboardEvent`
- * construction and bubbling semantics that happy-dom's lighter DOM does not reproduce faithfully
- * enough for `@testing-library/react`'s `fireEvent`/`userEvent` — jsdom is what CRA/RTL/vitest's own
- * default all standardize on, and this repo already carries it as a devDependency (`environment:
- * jsdom` in the retired `vitest.config.ts`).
+ * `globalThis.window = globalThis` makes `window` and `global` the same object, like a real browser's
+ * top frame: jsdom's `Window.prototype.location` is non-configurable and cannot be redefined on jsdom's
+ * OWN instance, yet tests stub navigation via `Object.defineProperty(window, 'location', ...)` — that
+ * only works on a plain, freely-reconfigurable object. Function-valued properties are copied BOUND to
+ * the real jsdom window (its WebIDL implementations brand-check `this`), which still lets
+ * `vi.spyOn`/`defineProperty` replace the copied slot with a mock.
  *
- * **`globalThis.window = globalThis`** (self-referential, exactly like a real browser's top frame and
- * exactly what vitest's own jsdom environment hands a test file — there, `window` and `global` are the
- * SAME vm-context object). This is not cosmetic: jsdom's `Window.prototype.location` accessor is
- * `configurable: false` by spec and cannot be redefined on jsdom's OWN `Window` instance at any
- * price, yet several tests stub navigation via `Object.defineProperty(window, 'location', ...)`. Doing
- * that only works when `location` (and `open`, `close`, …) are copied onto a fresh, ordinary object —
- * `globalThis` — as plain, freely-reconfigurable data properties, rather than living on jsdom's
- * locked-down instance; making `window` an alias for that same object is what lets product code's
- * `window.location.href = …` and a test's `Object.defineProperty(window, 'location', …)` agree on which
- * `location` they mean. Function-valued properties (`open`, `close`, `addEventListener`, …) are copied
- * bound to the real jsdom window, since jsdom's WebIDL implementations brand-check `this` and would
- * reject being called with `globalThis` as receiver otherwise; `bind` also does not stop `vi.spyOn` /
- * `Object.defineProperty` from replacing the copied slot with a mock, since that replaces the property,
- * not the function it currently holds.
+ * `require()`, not a static `import`, loads jest-dom/`@testing-library/dom` AFTER the DOM globals below
+ * are in place: a static import is hoisted before this file's own setup runs, and `@testing-library/dom`'s
+ * `screen` singleton binds to `document`/`document.body` at its own first module evaluation — whichever
+ * import reaches it first decides the binding for bun's single-process test run.
  *
- * `@testing-library/dom`'s `screen` singleton reads `document`/`document.body` once, at that MODULE's
- * own first evaluation — not per call — and `bun test` runs every file in one process, so whichever
- * import reaches that module first decides the binding for the entire run. `@testing-library/jest-dom`
- * (needed for the `expect` matchers below) transitively requires `@testing-library/dom` itself, and a
- * plain `import` of it — even textually below this comment — is hoisted by the ES module spec to
- * evaluate before any of this file's own imperative DOM setup, which is what poisoned `screen` for
- * every test. `require()`, run after the DOM globals below are in place, is the one synchronous,
- * textually-ordered way to load both jest-dom and `@testing-library/dom` after `document` is real.
+ * `localStorage`/`matchMedia`/`ResizeObserver` are filled because jsdom doesn't survive `localStorage`
+ * onto `globalThis` and ships neither of the other two, which `useDragSnap`/`useScrollLock`/
+ * `StorageService` need. `forceOverride` copies event constructors from jsdom even though Bun has its
+ * own natives, since `document.createElement`'s elements brand-check `dispatchEvent`'s argument against
+ * JSDOM's OWN `Event` class. `isNamespaceLike` copies a class or plain-function namespace (jsdom's
+ * `NodeFilter`) UNBOUND, since `bind` strips `.prototype` and own properties, which would break
+ * prototype patching and `NodeFilter`'s constants. The bulk-copy loop's `try/catch` swallows only an
+ * already-non-configurable accessor (e.g. `crypto`).
  *
- * `localStorage`/`matchMedia`/`ResizeObserver` fills are unchanged from the old `setup.ts`: jsdom
- * defines `localStorage` on a prototype that does not survive onto `globalThis` here either, jsdom has
- * no `matchMedia`, and no `ResizeObserver` — `useDragSnap` needs the observer, `useScrollLock` needs
- * `matchMedia`, and `StorageService` (the one door to storage in `src/`) needs a real `setItem`. Since
- * `window` now IS `globalThis`, a single fill on `globalThis` covers both spellings.
- *
- * `forceOverride` lists the event constructors that must be copied from jsdom even though Bun already
- * has its own native `Event`/`EventTarget`/`CustomEvent`/…: `document.createElement`'s elements
- * brand-check `dispatchEvent`'s argument against JSDOM's OWN `Event` class, so a `new Event(...)` built
- * from Bun's native class fails jsdom's internal `exports.is()` check — the rest of the loop leaves an
- * already-present global alone so Bun's `fetch`/`Request`/`Response`/etc. keep working.
- *
- * `isNamespaceLike` copies a `class` (or a plain-function namespace like jsdom's `NodeFilter`, which
- * carries `SHOW_ELEMENT`/`FILTER_ACCEPT`/… as own properties) UNBOUND: `Function.prototype.bind` strips
- * `.prototype` and any own properties off the result, which would silence prototype patching
- * (`Element.prototype.foo = …`, used by bun compat shims and this repo's own tests) and break
- * `NodeFilter`'s constants (making every `TreeWalker`'s `acceptNode` silently match nothing).
- *
- * The bulk-copy loop's `try/catch` swallows only the case where a window accessor (e.g. `crypto`) is
- * already non-configurable on `globalThis` and cannot be redefined; anything else copies cleanly.
- *
- * `resetDom` is the shared body-clearing helper for tests that mount outside Testing Library's render
- * tree, run automatically in `afterEach` here so every test file gets it for free.
+ * `resetDom` clears the body for tests that mount outside Testing Library's render tree, run
+ * automatically in `afterEach` here so every test file gets it for free.
  */
 import { afterEach, expect } from 'bun:test';
 import { JSDOM } from 'jsdom';
