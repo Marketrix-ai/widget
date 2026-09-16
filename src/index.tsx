@@ -54,6 +54,7 @@ import {
   widgetState,
 } from './utils/bootstrap';
 import { errorMessage } from './utils/errors';
+import { logWarn } from './utils/log';
 import { invalidSettingsMessage, isHTMLElement, parseWidgetSettings } from './utils/validation';
 
 let initPromise: Promise<void> | null = null;
@@ -133,7 +134,7 @@ export const initWidget = (config: MarketrixConfig, container?: HTMLElement): Pr
 
   if (window.__mtx?.state) return Promise.resolve();
   if (isWidgetInitialized()) {
-    console.warn('Marketrix Widget: already initialized');
+    logWarn('Marketrix Widget: already initialized');
     return Promise.resolve();
   }
 

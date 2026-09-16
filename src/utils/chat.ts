@@ -18,6 +18,7 @@
  * and error text — chatter from a torn-down run a visitor should never see.
  */
 import type { ChatMessage, InstructionType, MessagePart } from '../types';
+import { logWarn } from './log';
 
 const MODE_DISPLAY_NAMES: Record<InstructionType, string> = { show: 'Show', tell: 'Tell', do: 'Do' };
 
@@ -68,11 +69,9 @@ export function findMessageForProgress({
     if (message) return { index: start + index, message };
   }
 
-  console.warn('[MessageFinder] No message found for progress update', {
-    totalMessages: messages.length,
-    isTaskRunning,
-    currentMode,
-  });
+  logWarn(
+    `[MessageFinder] No message found for progress update: totalMessages=${messages.length} isTaskRunning=${isTaskRunning} currentMode=${currentMode}`,
+  );
   return null;
 }
 
