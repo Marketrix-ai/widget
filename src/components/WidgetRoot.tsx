@@ -16,13 +16,18 @@
  * carrying every tenant token as an inline style, which is why it, not the shadow root, is the portal container —
  * a portal landing outside it falls back to `index.css`'s hardcoded palette. `onRetry` is spread in only when
  * `StreamClient.canReconnect()`, so a terminal failure offers no Retry button rather than one that does nothing.
+ *
+ * `useScrollLock` (below) hides `overflow` on html and body while `state.isOpen`, but only under
+ * MOBILE_MAX_WIDTH, where the open panel covers the page; on desktop the host page keeps scrolling. It
+ * restores the exact previous values on release. Hand-rolled on purpose, alongside `MessengerShell`'s
+ * `useFocusTrap`: both serve a non-modal panel that is not a Dialog, and Base UI exposes no standalone
+ * scroll-lock — reaching one by making the panel a Dialog would inert the customer's page.
  */
 import React, { useEffect, useState } from 'react';
 
 import { PortalContainerContext } from '../context/WidgetProviders';
 import { LAYER_TOKENS } from '../design-system/component-tokens';
 import { createSemanticTokens, semanticTokensToCssCustomProperties } from '../design-system/semantic-tokens';
-import { useScrollLock } from '../hooks/useScrollLock';
 import { useWidget, WidgetConfigContext } from '../hooks/useWidget';
 import { readLocal, scopedKey, writeLocal } from '../services/StorageService';
 import { streamClient } from '../services/StreamClient';
@@ -34,6 +39,30 @@ import { Surface } from './base/Surface';
 import { NotificationProvider, WidgetNotifications } from './blocks/Notifications';
 import { WidgetFab } from './blocks/WidgetFab';
 import { MessengerShell } from './navigation/MessengerShell';
+
+const MOBILE_MAX_WIDTH = 767;
+
+function useScrollLock(enabled: boolean): void {
+  useEffect(() => {
+    if (!enabled) return;
+
+    const mql = window.matchMedia(`(max-width: ${MOBILE_MAX_WIDTH}px)`);
+    if (!mql.matches) return;
+
+    const doc = document.documentElement;
+    const body = document.body;
+    const prevDocOverflow = doc.style.overflow;
+    const prevBodyOverflow = body.style.overflow;
+
+    doc.style.overflow = 'hidden';
+    body.style.overflow = 'hidden';
+
+    return () => {
+      doc.style.overflow = prevDocOverflow;
+      body.style.overflow = prevBodyOverflow;
+    };
+  }, [enabled]);
+}
 
 interface WidgetRootProps {
   config: ValidWidgetConfig;

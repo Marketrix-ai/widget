@@ -88,7 +88,7 @@ export default [
           object: 'document',
           property: 'activeElement',
           message:
-            'reads the shadow HOST, not the focused widget element — use activeElementIn() from hooks/useFocusTrap',
+            'reads the shadow HOST, not the focused widget element — use activeElementIn() from components/navigation/MessengerShell',
         },
       ],
       '@typescript-eslint/no-unused-vars': 'off',
@@ -153,7 +153,7 @@ export default [
   },
   prettierConfig,
   {
-    files: ['src/hooks/useFocusTrap.ts', '**/*.test.ts', '**/*.test.tsx'],
+    files: ['src/components/navigation/MessengerShell.tsx', '**/*.test.ts', '**/*.test.tsx'],
     rules: {
       'no-restricted-properties': 'off',
     },
