@@ -93,15 +93,11 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigateToChat, onChipClic
           >
             {messages[messages.length - 1]?.content || 'Message'}
           </Text>
-          <Text
-            as='p'
-            size='xs'
-            variant='muted'
-            onClick={onNavigateToChat}
-            style={{ marginTop: '4px', cursor: 'pointer' }}
-          >
-            Continue conversation →
-          </Text>
+          <Button type='button' variant='bare' onClick={onNavigateToChat} style={{ marginTop: '4px' }}>
+            <Text as='span' size='xs' variant='muted'>
+              Continue conversation →
+            </Text>
+          </Button>
         </Surface>
       )}
     </Stack>
