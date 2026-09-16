@@ -2,12 +2,12 @@
 # Multi-stage build: `base` installs on bun (deps/build only — this image ships no node binary), `dev`
 # runs the Vite dev server for Tilt, `builder` produces the production bundle plus precompressed
 # variants, and `runtime` serves the result from nginx. Precompression (gzip + brotli of
-# `dist/widget.mjs`) happens in `builder`, not in `bun run build`, because these are runtime-image
-# artifacts the npm tarball has no use for; `bun -e` runs it rather than `node -e` since bun implements
-# node:zlib/node:fs itself and no node binary exists in this stage. `runtime` copies an explicit
-# allowlist rather than all of `dist/`: the sourcemap embeds the entire widget source and the
-# `.d.ts` tree is for tsc, so copying the directory would publish all of it into the served image — a
-# new served artifact must be added to that COPY by hand.
+# `dist/widget.mjs`, via `scripts/precompress.ts` — the one home for both params, also used by
+# `checkServed.ts`'s no-docker fallback) happens in `builder`, not in `bun run build`, because these
+# are runtime-image artifacts the npm tarball has no use for. `runtime` copies an explicit allowlist
+# rather than all of `dist/`: the sourcemap embeds the entire widget source and the `.d.ts` tree is for
+# tsc, so copying the directory would publish all of it into the served image — a new served artifact
+# must be added to that COPY by hand.
 FROM oven/bun:1.4.2-alpine AS base
 WORKDIR /app
 COPY package.json bun.lock ./
@@ -21,8 +21,7 @@ CMD ["bunx", "vite", "dev", "--host", "0.0.0.0", "--port", "9001"]
 
 FROM base AS builder
 ENV NODE_ENV=production
-RUN bun run build \
-    && bun -e "const z=require('zlib'),f=require('fs'),b=f.readFileSync('dist/widget.mjs');f.writeFileSync('dist/widget.mjs.gz',z.gzipSync(b,{level:9}));f.writeFileSync('dist/widget.mjs.br',z.brotliCompressSync(b,{params:{[z.constants.BROTLI_PARAM_QUALITY]:11,[z.constants.BROTLI_PARAM_SIZE_HINT]:b.length}}))"
+RUN bun run build && bun run scripts/precompress.ts dist/widget.mjs
 
 FROM nginx:1.31.5-alpine AS runtime
 COPY --from=builder /app/dist/widget.mjs /app/dist/widget.mjs.gz /app/dist/widget.mjs.br /app/dist/loader.js /usr/share/nginx/html/
