@@ -75,6 +75,17 @@ export const ToolCallRecordSchema = z
   })
   .strict();
 
+// `simulation.session_state` (Browserbase cookies + localStorage snapshot). Lives here rather than
+// models/columnSchemas.ts, which imports FROM contracts/foundationEntities.ts — a leaf-shaped schema
+// this file already is one, so contracts/foundationEntities.ts can type SimulationEntitySchema's own
+// `session_state` field with it (C8 in the data-truth audit) without cycling back through columnSchemas.ts.
+export const SessionStateSchema = z
+  .object({
+    cookies: z.array(z.record(z.string(), z.unknown())),
+    local_storage: z.array(z.object({ origin: z.string(), items: z.record(z.string(), z.string()) }).strict()),
+  })
+  .strict();
+
 export const SlackWebhookUrlSchema = z.url().refine(u => /^https:\/\/hooks\.slack\.com\//.test(u), {
   message: 'Slack webhook URL must start with https://hooks.slack.com/',
 });
