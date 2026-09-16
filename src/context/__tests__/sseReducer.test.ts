@@ -25,6 +25,7 @@ import type { WidgetEvent } from '@/sdk';
 import { FINISH_TOOL } from '@/services/BrowserToolService';
 import { agentMessage } from '@/test/fixtures';
 import { type ChatMessage, messageText } from '@/types';
+import { CHAT_FAILURE_TEXT } from '@/utils/chat';
 
 import {
   reduceDispatch,
@@ -282,14 +283,15 @@ describe('reduceSse — chat/delta', () => {
 });
 
 describe('reduceSse — chat/error', () => {
-  it('writes an error message into the matching placeholder', () => {
+  it('settles the matching placeholder with the human sentence, never the raw server error', () => {
     const state: SseState = {
       messages: [agentMessage({ id: 'req-2' })],
       task: { phase: 'idle' },
     };
-    const event: WidgetEvent = { type: 'chat/error', request_id: 'req-2', error: 'boom' };
+    const event: WidgetEvent = { type: 'chat/error', request_id: 'req-2', error: 'PG::ConnectionBad at line 42' };
     const result = reduceSse(state, event, 'tell');
-    expect(result.state.messages[0]!.content).toBe('Working on it\nError: boom');
+    expect(result.state.messages[0]!.content).toBe(`Working on it\n${CHAT_FAILURE_TEXT}`);
+    expect(result.state.messages[0]!.content).not.toContain('PG::ConnectionBad');
     expect(result.state.messages[0]!.isPlaceholder).toBe(false);
     expect(result.effects).toEqual([]);
   });

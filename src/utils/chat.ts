@@ -7,6 +7,10 @@
  * would otherwise collide, and empty content yields no `text` part, the screen-share bubble rendering from `videoStream`
  * alone and a placeholder having nothing to say yet. `SCREEN_ACCESS_PROMPT` is the one wording of the
  * screen-access ask, the transcript card and the toolbar dialog being two renderings of one question.
+ * `CHAT_FAILURE_TEXT` is the one human sentence for "the assistant could not process that turn" —
+ * `ChatContext`'s message-post catch and `sseReducer`'s `chat/error` case both settle a bubble with it
+ * rather than the raw POST failure or the raw server `error` string, which may carry request/response
+ * internals a visitor must never see.
  *
  * `findMessageForProgress` picks the agent reply a `tool/call` or progress event renders into, by ranked
  * predicates: the first rank matching anything wins, within a rank the newest message, and no match at all is a
@@ -142,6 +146,8 @@ export const createSystemMessage = (content: string, idPrefix: string): ChatMess
   createMessage(idPrefix, 'agent', content, { isSystemMessage: true });
 
 export const SCREEN_ACCESS_PROMPT = 'Can I take a look at your screen?';
+
+export const CHAT_FAILURE_TEXT = "I'm sorry, I encountered an error processing your request. Please try again.";
 
 export const createScreenAccessRequestMessage = (
   mode: InstructionType | undefined,

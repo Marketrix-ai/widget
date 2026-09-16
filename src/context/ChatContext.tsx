@@ -26,7 +26,8 @@ import { chatPost } from '../services/ChatService';
 import { storageService } from '../services/StorageService';
 import { streamClient, StreamGaveUpError } from '../services/StreamClient';
 import type { ChatMessage, InstructionType } from '../types';
-import { createAgentMessage, createPlaceholderMessage, createUserMessage } from '../utils/chat';
+import { CHAT_FAILURE_TEXT, createAgentMessage, createPlaceholderMessage, createUserMessage } from '../utils/chat';
+import { logWarn } from '../utils/log';
 import {
   isTerminalTaskStatus,
   reduceDispatch,
@@ -183,13 +184,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
         await chatPost(content, effectiveMode, placeholder.id);
       } catch (error) {
         console.error('Failed to send message:', error);
-        commit(s =>
-          reduceError(
-            s,
-            placeholder.id,
-            "I'm sorry, I encountered an error processing your request. Please try again.",
-          ),
-        );
+        commit(s => reduceError(s, placeholder.id, CHAT_FAILURE_TEXT));
       }
     },
     [previewMode, addMessage, commit],
@@ -238,6 +233,8 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
         }
       } else if (event.type === 'task/status' && isTerminalTaskStatus(event.status)) {
         processedToolCallIds.current.clear();
+      } else if (event.type === 'chat/error') {
+        logWarn('[Widget] Chat error from server:', event.error);
       }
 
       let effects: SseEffect[] = [];

@@ -17,9 +17,13 @@
  * read by a visitor on a customer's page, so they name the state and the way out rather than the counter, and
  * `giveUp` needs no console line of its own for the same reason. A dial or stream that will be retried warns;
  * only the rejected credential is an error, being the one failure nothing here recovers from.
+ *
+ * `send` never turns its own POST failure into a user-facing `onError` — the raw failure (network cause, a
+ * 4xx/5xx body) goes only to `logWarn`, since every caller already reports its own human sentence on the
+ * same catch (`ChatContext`'s message/tool-response/stop paths); notifying here too would have shown the
+ * caller's visitor a second, raw-text toast racing the first.
  */
 import { sdk, type WidgetCommand, type WidgetEvent } from '../sdk';
-import { errorMessage } from '../utils/errors';
 import { logWarn } from '../utils/log';
 import { storageService } from './StorageService';
 
@@ -185,8 +189,8 @@ export class StreamClient {
         command,
       })
       .then(() => {})
-      .catch(err => {
-        this.notifyError(new Error(`Failed to send message: ${errorMessage(err)}`));
+      .catch((err: unknown) => {
+        logWarn('[StreamClient] Failed to send message, letting the caller report it:', err);
         throw err;
       });
   }

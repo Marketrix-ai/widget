@@ -28,6 +28,7 @@ import { browserToolService, FINISH_TOOL } from '../services/BrowserToolService'
 import { type ChatMessage, type InstructionType, type MessagePart, messageText } from '../types';
 import {
   addProgressLine,
+  CHAT_FAILURE_TEXT,
   findMessageForProgress,
   markProgressLineComplete,
   markProgressLineFailed,
@@ -257,7 +258,7 @@ export function reduceSse(state: SseState, event: WidgetEvent, currentMode: Inst
       return { state: reduceText(state, event.request_id, event.text, false), effects: [] };
 
     case 'chat/error':
-      return { state: reduceError(state, event.request_id, `Error: ${event.error}`), effects: [] };
+      return { state: reduceError(state, event.request_id, CHAT_FAILURE_TEXT), effects: [] };
 
     default:
       return noChange(state);
