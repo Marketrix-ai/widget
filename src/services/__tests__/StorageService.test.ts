@@ -2,9 +2,10 @@
  * `StorageService` tests: `tenantScope` prefers the credential id, then the application id, then a
  * fixed default; `setConfig` never carries one tenant's `chat_id` into another's scope; a chat snapshot
  * round-trips, with an active screen share stored as an ended notice because a MediaStream cannot
- * survive a reload.
+ * survive a reload; `readLocal`/`writeLocal` degrade to a warn and keep working unpersisted when
+ * `localStorage` throws (private-mode Safari, a sandboxed iframe).
  */
-import { beforeEach, describe, expect, it } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 
 import { agentMessage } from '../../test/fixtures';
 import type { ChatMessage } from '../../types';
@@ -12,10 +13,12 @@ import { createScreenshareMessage } from '../../utils/chat';
 import {
   type CredentialedConfig,
   readChatSnapshot,
+  readLocal,
   scopedKey,
   storageService,
   tenantScope,
   writeChatSnapshot,
+  writeLocal,
 } from '../StorageService';
 
 describe('tenantScope', () => {
@@ -59,6 +62,29 @@ describe('setConfig scopes the chat context to the tenant', () => {
 
     storageService.setConfig(credentials('tenant-a'));
     expect(storageService.getChatId()).toBe('chat-a');
+  });
+});
+
+describe('private-mode localStorage', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('readLocal degrades to null instead of throwing when localStorage.getItem throws', () => {
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new Error('SecurityError: storage is disabled');
+    });
+
+    expect(() => readLocal('any-key')).not.toThrow();
+    expect(readLocal('any-key')).toBeNull();
+  });
+
+  it('writeLocal degrades silently instead of throwing when localStorage.setItem throws', () => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('QuotaExceededError');
+    });
+
+    expect(() => writeLocal('any-key', 'value')).not.toThrow();
   });
 });
 

@@ -1,21 +1,22 @@
 /**
  * `RrwebSessionRecorder` tests: a rejected flush caps the buffer without discarding the Meta and
- * FullSnapshot every later event replays against; stopping while metadata is in flight never begins
- * recording; and the metadata post waits until the stream has registered the chat.
+ * FullSnapshot every later event replays against, and retries on its own timer even when the host page
+ * goes idle and rrweb emits nothing new to piggyback the retry on; stopping while metadata is in flight
+ * never begins recording; and the metadata post waits until the stream has registered the chat.
  */
 import { record } from '@rrweb/record';
 import { EventType } from '@rrweb/types';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 
-import { sdk } from '../sdk';
-import { flushMicrotasks } from '../test/fixtures';
-import { advanceTimersByTimeAsync, mocked, mockSdkModule, restoreModuleAfterAll } from '../test/vi-compat';
-import { RrwebSessionRecorder } from './RrwebSessionRecorder';
-import { streamClient } from './StreamClient';
+import { sdk } from '../../sdk';
+import { flushMicrotasks } from '../../test/fixtures';
+import { advanceTimersByTimeAsync, mocked, mockSdkModule, restoreModuleAfterAll } from '../../test/vi-compat';
+import { RrwebSessionRecorder } from '../RrwebSessionRecorder';
+import { streamClient } from '../StreamClient';
 
 vi.mock('@rrweb/record', () => ({ record: vi.fn(() => vi.fn()) }));
-vi.mock('../sdk', () => mockSdkModule({ widgetMessagePost: vi.fn() }));
-restoreModuleAfterAll('../sdk', () => import('../sdk/index.ts?real'));
+vi.mock('../../sdk', () => mockSdkModule({ widgetMessagePost: vi.fn() }));
+restoreModuleAfterAll('../../sdk', () => import('../../sdk/index.ts?real'));
 
 const mockSdk = mocked(sdk);
 
@@ -41,10 +42,15 @@ const startRecorder = async (): Promise<{ recorder: RrwebSessionRecorder; emit: 
 };
 
 describe('a flush the api rejects', () => {
-  it('caps the buffer without discarding the Meta and FullSnapshot every later event is replayed against', async () => {
+  const startWithARejectedFlush = async () => {
     vi.useFakeTimers();
     const { emit } = await startRecorder();
     mockSdk.widgetMessagePost.mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce({ success: true });
+    return emit;
+  };
+
+  it('caps the buffer without discarding the Meta and FullSnapshot every later event is replayed against', async () => {
+    const emit = await startWithARejectedFlush();
 
     emit({ type: EventType.Meta, data: {}, timestamp: 0 });
     emit({ type: EventType.FullSnapshot, data: {}, timestamp: 1 });
@@ -60,6 +66,23 @@ describe('a flush the api rejects', () => {
     expect(posted.events).toHaveLength(20_001);
     expect(posted.events.slice(0, 2).map(event => event.type)).toEqual([EventType.Meta, EventType.FullSnapshot]);
     expect(posted.events[posted.events.length - 1]?.timestamp).toBe(99_999);
+    vi.useRealTimers();
+  });
+
+  it('retries on its own timer with no new events to piggyback on, and drops nothing', async () => {
+    const emit = await startWithARejectedFlush();
+
+    emit({ type: EventType.Meta, data: {}, timestamp: 0 });
+    await advanceTimersByTimeAsync(500);
+    expect(mockSdk.widgetMessagePost).toHaveBeenCalledTimes(2);
+
+    await advanceTimersByTimeAsync(500);
+
+    const posted = mockSdk.widgetMessagePost.mock.lastCall?.[0].command as {
+      events: Array<{ type: number; data: Record<string, never>; timestamp: number }>;
+    };
+    expect(mockSdk.widgetMessagePost).toHaveBeenCalledTimes(3);
+    expect(posted.events).toEqual([{ type: EventType.Meta, data: {}, timestamp: 0 }]);
     vi.useRealTimers();
   });
 });

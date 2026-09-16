@@ -4,11 +4,14 @@
  * reopen it), reuses a live stream, otherwise prompts `getDisplayMedia` preferring the current tab and
  * drops the reference when the visitor ends the share from the browser UI. `activeScreenStream` returns
  * the stream only while its video track is live; `stopScreenShare` and `isScreenSharing` are the
- * obvious pair.
+ * obvious pair. `pendingStart` shares one in-flight `getDisplayMedia` prompt across concurrent
+ * `startScreenShare` callers (a double-click on the launcher before the first prompt resolves), so
+ * `start` is idempotent for overlap the same way it already is for a live stream.
  */
 import { storageService } from './StorageService';
 
 let activeStream: MediaStream | null = null;
+let pendingStart: Promise<MediaStream> | null = null;
 
 export function activeScreenStream(): MediaStream | null {
   if (activeStream?.active && activeStream.getVideoTracks()[0]?.readyState === 'live') {
@@ -25,24 +28,30 @@ export async function startScreenShare(): Promise<MediaStream> {
 
   const liveStream = activeScreenStream();
   if (liveStream) return liveStream;
+  if (pendingStart) return pendingStart;
 
-  const stream = await navigator.mediaDevices.getDisplayMedia({
-    video: true,
-    audio: false,
-    preferCurrentTab: true,
-  } as DisplayMediaStreamOptions);
+  pendingStart = (async () => {
+    try {
+      const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: true,
+        audio: false,
+        preferCurrentTab: true,
+      } as DisplayMediaStreamOptions);
 
-  if (!stream || stream.getVideoTracks().length === 0) {
-    throw new Error('Screen sharing permission denied or no video track available');
-  }
+      if (!stream || stream.getVideoTracks().length === 0) {
+        throw new Error('Screen sharing permission denied or no video track available');
+      }
 
-  activeStream = stream;
-
-  stream.getVideoTracks()[0]?.addEventListener('ended', () => {
-    activeStream = null;
-  });
-
-  return stream;
+      activeStream = stream;
+      stream.getVideoTracks()[0]?.addEventListener('ended', () => {
+        activeStream = null;
+      });
+      return stream;
+    } finally {
+      pendingStart = null;
+    }
+  })();
+  return pendingStart;
 }
 
 export function stopScreenShare(): void {
