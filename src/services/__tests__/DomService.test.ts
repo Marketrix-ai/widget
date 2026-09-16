@@ -3,7 +3,9 @@
  * attribute) while an untouched one stays addressable; a `data-id` lands on the element the index really
  * points at; the widget's own shadow host is exempt from obstruction (it is what `elementFromPoint`
  * reports for any hit on the widget) while a host overlay still obscures; and a disabled or
- * aria-disabled control is refused at act time rather than hidden from the index.
+ * aria-disabled control is refused at act time rather than hidden from the index. Every `describe`
+ * below shares a fixed 10x10 `getBoundingClientRect` and no `elementFromPoint` occluder, so an indexed
+ * element reads as interactable unless a test overrides `elementFromPoint` itself.
  */
 import { beforeEach, describe, expect, it } from 'bun:test';
 
@@ -16,8 +18,6 @@ const interactable = (html: string): DomService => {
   return service;
 };
 
-// Shared by every describe below: a fixed 10x10 rect and no elementFromPoint occluder, so an
-// indexed element reads as interactable unless a test overrides elementFromPoint itself.
 beforeEach(() => {
   Element.prototype.getBoundingClientRect = () => ({ top: 0, left: 0, width: 10, height: 10 }) as DOMRect;
   document.elementFromPoint = () => null;

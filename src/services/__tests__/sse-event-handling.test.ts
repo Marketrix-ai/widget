@@ -8,8 +8,8 @@
  *
  * Suites pin: every discriminant still parses from its minimal fixture; a payload with no `type` or an
  * unrecognised `type` is rejected (no member acts as a catch-all) and every parsed fixture carries a non-empty
- * string `type` so `StreamClient` can always branch on it; `registered` requires only `chat_id` — it no longer
- * carries `application_id`, which `StreamClient` never read; `chat/response` requires both `request_id`
+ * string `type` so `StreamClient` can always branch on it; `registered` requires only `chat_id` and never
+ * carries `application_id`, which `StreamClient` never reads; `chat/response` requires both `request_id`
  * and `text`, matched back to its POST by `request_id`; `task/status` requires `status` and accepts the Wave 14
  * canonical wire vocabulary `running | completed | failed | stopped | has_question` (`has_question` is the
  * sim-only pause propagated to the widget) while REJECTING legacy `started` / `in_progress`, a deliberate breaking

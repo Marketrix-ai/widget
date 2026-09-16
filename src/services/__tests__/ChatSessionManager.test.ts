@@ -5,6 +5,10 @@
  * ever posts to. `sdk.chatCreate` is a controllable, delayed mock so the test can assert the lock is held
  * across the concurrent window, not just that the final id matches; `storageService.getChatId` is empty
  * throughout so every caller genuinely needs the in-flight promise rather than the stored fast path.
+ * `storageService`'s `context` is loaded once per tenant scope, not re-read from `localStorage` on every
+ * call, so each test uses a fresh tenant id (not just clearing `localStorage`) to reset it and calls
+ * `getChatId()` first so it starts null — otherwise the previous test's minted id would still sit in
+ * memory and short-circuit `getOrCreateChatId` before it ever reaches `sdk.chatCreate`.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 
@@ -18,10 +22,6 @@ restoreModuleAfterAll('../../sdk', () => import('../../sdk/index.ts?real'));
 
 const mockSdk = mocked(sdk);
 
-// storageService's `context` is loaded once per tenant scope, not re-read from localStorage per
-// call, so a fresh tenant id per test (not just clearing localStorage) is what guarantees
-// `getChatId()` starts null — otherwise the previous test's minted id would still be cached in
-// memory and short-circuit `getOrCreateChatId` before it ever reaches `sdk.chatCreate`.
 let tenant = 0;
 beforeEach(() => {
   tenant += 1;

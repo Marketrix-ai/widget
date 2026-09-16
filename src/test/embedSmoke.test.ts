@@ -36,6 +36,23 @@
  * (`LAYER_TOKENS.panel`, 2147483002) · the only global the bundle adds to `window` is `__mtx` · the
  * runtime-exported surface matches `src/index.tsx`'s value exports exactly · console stays silent on a
  * clean boot · `loader.js` forwards only `mtx-*` attributes onto the module script it injects.
+ *
+ * `importDist` gives each test its own byte-identical copy of the built file under `dist/.smoke/`
+ * (never the OS tmpdir, so its relative `node_modules` resolution for the externalized
+ * `react`/`react-dom` still walks up to this repo's own): Bun caches a plain `.mjs` import by PATH,
+ * ignoring the query string (unlike its own `.ts` transpiler loader), so a `?case=N` cache-buster would
+ * be a no-op and every "fresh boot" would reuse the same singleton (`window.__mtx`, `initPromise`,
+ * `widgetState.mount`). `beforeAll` (re)creates the scratch dir rather than at module-eval time, since
+ * `vite build` empties `dist/` on every run and a build may land between module load and the hook; each
+ * test's teardown does `delete window.__mtx` rather than assigning `undefined`, since an assignment would
+ * still CREATE the key and poison the next test's window-global baseline, and awaits one `tick()` after
+ * `importDist()` in the export-surface case to drain that instance's deferred auto-init no-op before it
+ * can fire mid-way through a later test.
+ *
+ * The mocked `fetch` in the z-index/leak case also answers `chatCreate` and `widgetStream` (both real,
+ * ordinary parts of the same boot this test pins, not the credentialed lookup itself) with an honest
+ * response rather than the search result every other procedure would choke decoding; `requests` reads
+ * empty right after `importDist()` because the deferred auto-init tick hasn't run yet.
  */
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -66,11 +83,6 @@ const documentedExportNames = namedExportsSnippet
 if (documentedExportNames.length === 0)
   throw new Error('README.md programmatic-API import snippet carries no named exports — update this test');
 
-// Bun caches a plain `.mjs` import by PATH, ignoring the query string (unlike its own `.ts` transpiler
-// loader) — a `?case=N` cache-buster is a no-op here and every "fresh boot" would reuse the same
-// singleton (`window.__mtx`, `initPromise`, `widgetState.mount`). Each test instead imports its own
-// byte-identical COPY of the built file, placed under `dist/` (not the OS tmpdir) so its relative
-// `node_modules` resolution for the externalized `react`/`react-dom` still walks up to this repo's own.
 const scratchDir = resolve(root, 'dist/.smoke');
 let caseCounter = 0;
 const importDist = () => {
@@ -131,8 +143,6 @@ const realFetch = globalThis.fetch;
 beforeAll(() => {
   if (!existsSync(distPath))
     throw new Error(`${distPath} is missing — run \`bun run build\` before \`bun test\` (ci runs build first)`);
-  // `vite build` empties `dist/` on every run, so the scratch dir must be (re)created here, never at
-  // module-eval time, in case a build ran between module load and this hook.
   mkdirSync(scratchDir, { recursive: true });
 });
 
@@ -143,7 +153,7 @@ afterAll(() => {
 afterEach(() => {
   document.head.replaceChildren();
   document.body.replaceChildren();
-  delete window.__mtx; // an assignment to `undefined` would still CREATE the key, poisoning every later test's window-global baseline
+  delete window.__mtx;
   globalThis.fetch = realFetch;
   console.error = realConsoleError;
   console.warn = realConsoleWarn;
@@ -221,7 +231,7 @@ describe("embed smoke: the built dist/widget.mjs boots the way a customer's page
 
   it('exports exactly the documented runtime surface', async () => {
     const mod = await importDist();
-    await tick(); // drains this instance's deferred auto-init no-op before it can fire mid-way through a later test
+    await tick();
 
     expect(Object.keys(mod).sort()).toEqual([...documentedExportNames, 'default'].sort());
   });
@@ -236,10 +246,6 @@ describe("embed smoke: the built dist/widget.mjs boots the way a customer's page
     globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
       const req = input instanceof Request ? input : new Request(input, init);
       requests.push(req);
-      // A resolved config also opens the widget<->api chat session (`chatCreate`) and event stream
-      // (`widgetStream`, an oRPC `eventIterator` decoded as SSE) — both real, ordinary parts of the same
-      // boot this test is pinning, not the credentialed lookup itself, so each gets an honest response
-      // rather than the search result every other procedure would choke decoding.
       if (req.url.endsWith('/widgetStream')) {
         return new Response(new ReadableStream({ start: controller => controller.close() }), {
           status: 200,
@@ -253,7 +259,7 @@ describe("embed smoke: the built dist/widget.mjs boots the way a customer's page
     const { roots, restore } = captureShadowRoots();
     try {
       await importDist();
-      expect(requests).toHaveLength(0); // the deferred auto-init tick hasn't run yet
+      expect(requests).toHaveLength(0);
 
       await tick();
       await tick();

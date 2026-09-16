@@ -1,7 +1,8 @@
 /**
  * `ShowModeService` tests: a second show action cancels the one it replaced and leaves the replacement
  * live; an action the page invalidates rejects with the one reason `DomService` gave, never a second
- * contradicting code.
+ * contradicting code; and the click listener detached on settle leaves a stray click on the (removed)
+ * target inert — it must not throw and must not resurrect a highlight or popup.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 
@@ -119,8 +120,6 @@ describe('a highlight settles exactly once', () => {
     expect(document.getElementById('marketrix-show-highlight')).toBeNull();
     expect(document.getElementById('marketrix-show-popup')).toBeNull();
 
-    // The click listener is detached on settle, so a stray click on the (removed) target's id
-    // must not throw and must not resurrect a highlight or popup.
     expect(() => document.getElementById('a')?.click()).not.toThrow();
     expect(document.getElementById('marketrix-show-highlight')).toBeNull();
   });

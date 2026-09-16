@@ -25,6 +25,27 @@
  * stays read-only and this script never fetches infra itself. It shells to `git archive` the tag into
  * a scratch dir and runs the real `vite build`, so the comparison is against what that tag's source
  * actually produces, not a second copy of the build config.
+ *
+ * `bootLocal` RETURNS its cleanup handles rather than mutating outer `let`s: a mutation made only inside
+ * a called (not inlined) function is invisible to this compiler's flow analysis at the call site, which
+ * then narrows the outer binding to `null` and flags any later `?.` access as dead code on `never` — a
+ * real TS6 strictness trap, not a runtime bug (closures still work at runtime either way), avoided here
+ * by threading the handles back through the return value instead. `BootResult.fallback`'s type is
+ * spelled out by hand because Bun's `Server<WebSocketData>` generic resolves to `never` under this
+ * tsconfig's strictness when annotated directly, so only the two members this script actually calls are
+ * named. Precompression runs host-side too inside `bootLocal` (not just inside the builder stage) since
+ * the row checks below compare served bytes against these files regardless of which boot path served
+ * them; the no-docker fallback re-derives nginx's own negotiation/header rules so it is held to the same
+ * bar rather than a looser one nobody notices drifting, and maps `.js`/`.mjs` to
+ * `application/javascript` by hand since nginx's mime.types has no charset param there while Bun sniffs
+ * `text/javascript;charset=utf-8`.
+ *
+ * `fetch` transparently decodes a `br`/`gzip` Content-Encoding (like a browser would), so the decoded
+ * body is compared against the plain artifact in every row — proving compression never corrupts content
+ * — while the on-disk COMPRESSED artifact's byte size is matched against `Content-Length` to prove which
+ * physical file nginx actually picked. `assertBytesEqual` checks length before `assert.deepEqual`:
+ * diffing two large, wildly-mismatched byte arrays is pathologically slow to print, so a real corruption
+ * must fail on the cheap length compare first.
  */
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
@@ -80,24 +101,15 @@ const targetUrl = process.env['TARGET_URL'];
 const hasDocker = !targetUrl && spawnSync('docker', ['info'], { stdio: 'ignore' }).status === 0;
 const IMAGE = 'widget-check-served:local';
 
-// `bootLocal` RETURNS its cleanup handles rather than mutating outer `let`s: a mutation made only
-// inside a called (not inlined) function is invisible to this compiler's flow analysis at the call
-// site, which then narrows the outer binding to `null` and flags any later `?.` access as dead code
-// on `never` — a real TS6 strictness trap, not a runtime bug (closures still work at runtime either
-// way), avoided here by threading the handles back through the return value instead.
 interface BootResult {
   base: string;
   container: string | null;
-  // Bun's `Server<WebSocketData>` generic resolves to `never` under this tsconfig's strictness when
-  // annotated directly, so only the two members this script actually calls are named here.
   fallback: { url: URL; stop: (closeActiveConnections?: boolean) => void } | null;
 }
 
 async function bootLocal(): Promise<BootResult> {
   if (!existsSync(join(ROOT, 'dist/widget.mjs')))
     throw new Error('dist/widget.mjs missing — run `bun run build` first');
-  // Precompressed host-side too (not just inside the builder stage): the row checks below compare
-  // served bytes against these files regardless of which boot path served them.
   precompress(join(ROOT, 'dist/widget.mjs'));
 
   if (hasDocker) {
@@ -117,8 +129,6 @@ async function bootLocal(): Promise<BootResult> {
     throw new Error('runtime container never answered /health');
   }
 
-  // No docker: serve dist/ directly, re-deriving nginx's own negotiation/header rules so this
-  // fallback is held to the same bar rather than a looser one nobody notices drifting.
   const fallback = Bun.serve({
     port: 0,
     fetch: async request => {
@@ -141,8 +151,6 @@ async function bootLocal(): Promise<BootResult> {
       }
       const file = Bun.file(join(ROOT, 'dist', url.pathname));
       if (!(await file.exists())) return withCors(new Response('404 Not Found', { status: 404 }), 'root');
-      // nginx's mime.types maps `.js` to `application/javascript` with no charset param; Bun sniffs
-      // it as `text/javascript;charset=utf-8`, so `.js`/`.mjs` are mapped by hand to match the image.
       const contentType = /\.m?js$/.test(url.pathname)
         ? 'application/javascript'
         : (file.type.split(';')[0] ?? file.type);
@@ -174,12 +182,6 @@ try {
   const noPoweredBy = (r: Response) =>
     assert.equal(r.headers.get('x-powered-by'), null, 'X-Powered-By leaks the stack');
 
-  // `fetch` transparently decodes a `br`/`gzip` Content-Encoding (like a browser would), so the
-  // decoded body is compared against the plain artifact in every row — proving compression never
-  // corrupts content — while the on-disk COMPRESSED artifact's byte size is matched against
-  // `Content-Length` to prove which physical file nginx actually picked. A fast length check runs
-  // before `assert.deepEqual`: diffing two large, wildly-mismatched byte arrays is pathologically
-  // slow to print, so a real corruption must fail on the cheap length compare first.
   const assertBytesEqual = (actual: Uint8Array, expected: Uint8Array, label: string) => {
     assert.equal(actual.length, expected.length, `${label}: ${actual.length} bytes, expected ${expected.length}`);
     assert.deepEqual(actual, expected, label);
