@@ -85,15 +85,18 @@ const openRequestMessage: ChatMessage = agentMessage({
   parts: [{ type: 'text', content: 'Can I take a look at your screen?' }],
 });
 
-const setup = (messages: ChatMessage[]) => {
-  const opts = {
+const makeScreenShareOpts = (messages: ChatMessage[]) =>
+  ({
     onAddMessage: vi.fn(),
     onUpdateMessage: vi.fn(),
     onRemoveMessage: vi.fn(),
     onSendMessage: vi.fn(),
     onScreenSharingChange: vi.fn(),
     messages,
-  } satisfies UseScreenShareOptions;
+  }) satisfies UseScreenShareOptions;
+
+const setup = (messages: ChatMessage[]) => {
+  const opts = makeScreenShareOpts(messages);
   const { result } = renderHook(() => useScreenShare(opts));
   return { result, opts };
 };
@@ -175,13 +178,7 @@ describe('useScreenShare', () => {
 
   it('survives an unmount/remount: a persisted open request still resolves and flushes', () => {
     const { result, unmount } = renderHook(props => useScreenShare(props), {
-      initialProps: {
-        onAddMessage: vi.fn(),
-        onUpdateMessage: vi.fn(),
-        onRemoveMessage: vi.fn(),
-        onSendMessage: vi.fn(),
-        messages: [openRequestMessage],
-      } satisfies UseScreenShareOptions,
+      initialProps: makeScreenShareOpts([openRequestMessage]),
     });
     expect(result.current.isAwaitingScreenAccess).toBe(true);
     unmount();
