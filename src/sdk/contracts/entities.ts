@@ -77,12 +77,16 @@ export type UserSummary = z.infer<typeof UserSummarySchema>;
 export type UserData = z.infer<typeof UserEntitySchema>;
 
 // package and ending_date come from the workspace_plan table (joined on fetch), NOT the workspace row.
+// days_remaining is derived from ending_date at read time (whole days, clamped at 0, null with no
+// ending_date) so every consumer gets one server-computed answer instead of re-deriving it from
+// Date.now() client-side.
 export const WorkspaceEntitySchema = BaseEntitySchema.extend({
   name: z.string().max(45),
   slug: z.string().max(100),
   status: EntityStatusSchema,
   package: WorkspacePackageSchema,
   ending_date: z.coerce.date().nullish(),
+  days_remaining: z.number().int().nullable(),
   external_workspace_id: z.string().max(255).nullish(),
   // Read-only flag derived from `slack_webhook_url`'s presence. The URL itself
   // is a secret and is never returned to clients — only this boolean is.
