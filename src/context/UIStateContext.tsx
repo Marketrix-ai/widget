@@ -1,18 +1,16 @@
 /**
  * `UIStateProvider` / `useUIStateContext` — the widget's view state: open/closed, active view, current
  * mode (tell/show/do) and the error banner. Actions are stable (memoised once) so consumers can depend
- * on them without re-rendering; `applyState` merges a partial for restore-from-storage.
+ * on them without re-rendering; `applyState` merges a partial for restore-from-storage. `UIState` is a
+ * `Pick` of the public `WidgetState` (`../types`) rather than its own duplicate shape, and stays
+ * unexported — it never needs to be named outside this file, and `applyState`'s declaration-file
+ * emission resolves through the already-exported `WidgetState` instead.
  */
 import React, { createContext, useContext, useMemo, useState } from 'react';
 
-import type { InstructionType, WidgetView } from '../types';
+import type { InstructionType, WidgetState, WidgetView } from '../types';
 
-export interface UIState {
-  isOpen: boolean;
-  activeView: WidgetView;
-  currentMode: InstructionType;
-  error?: string | undefined;
-}
+type UIState = Pick<WidgetState, 'isOpen' | 'activeView' | 'currentMode' | 'error'>;
 
 interface UIStateActions {
   setActiveView: (view: WidgetView) => void;
