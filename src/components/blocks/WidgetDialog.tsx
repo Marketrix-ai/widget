@@ -74,7 +74,6 @@ export const WidgetDialog: React.FC<WidgetDialogProps> = ({
             ).map(([variant, label, act]) => (
               <Button
                 key={variant}
-                type='button'
                 variant={variant}
                 size='sm'
                 shape='pill'

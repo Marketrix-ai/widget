@@ -24,7 +24,7 @@
  */
 import React, { useEffect, useRef, useState } from 'react';
 
-import { Flex } from '../base/Flex';
+import { Flex, Stack } from '../base/Flex';
 import { Icon } from '../base/Icon';
 import { LiveDot } from '../base/LiveDot';
 import { Spinner } from '../base/Spinner';
@@ -55,12 +55,12 @@ const Overlay: React.FC<{ label: string; children: React.ReactNode }> = ({ label
     justify='center'
     style={{ backgroundColor: OVERLAY_BG, borderRadius: OVERLAY_BORDER_RADIUS, zIndex: 10 }}
   >
-    <Flex direction='column' align='center' gap='md' style={{ textAlign: 'center', padding: '0 16px' }}>
+    <Stack align='center' gap='md' style={{ textAlign: 'center', padding: '0 16px' }}>
       {children}
       <Text as='span' size='xs' weight='medium' style={{ color: MUTED_TEXT_COLOR }}>
         {label}
       </Text>
-    </Flex>
+    </Stack>
   </Flex>
 );
 

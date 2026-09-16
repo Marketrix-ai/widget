@@ -374,7 +374,6 @@ export const WidgetFab: React.FC<WidgetFabProps> = ({ onPositionCommit }) => {
 
         {showStopControl && !isDragging && (
           <Button
-            type='button'
             variant='secondary'
             size='sm'
             className='mtx-fab-stop'
@@ -390,7 +389,6 @@ export const WidgetFab: React.FC<WidgetFabProps> = ({ onPositionCommit }) => {
         )}
 
         <Button
-          type='button'
           variant='bare'
           onClick={() => {
             if (Date.now() < suppressUntilRef.current) return;

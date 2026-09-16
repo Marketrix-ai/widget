@@ -193,10 +193,10 @@ const MessageItemComponent: React.FC<MessageItemProps> = ({
 
           {message.isScreenAccessRequest && !message.screenShareStatus && (
             <Flex align='center' gap='sm' style={{ marginTop: '6px' }}>
-              <Button type='button' variant='primary' size='sm' shape='pill' onClick={() => onScreenAccessAllow?.()}>
+              <Button variant='primary' size='sm' shape='pill' onClick={() => onScreenAccessAllow?.()}>
                 Yes
               </Button>
-              <Button type='button' variant='secondary' size='sm' shape='pill' onClick={() => onScreenAccessDeny?.()}>
+              <Button variant='secondary' size='sm' shape='pill' onClick={() => onScreenAccessDeny?.()}>
                 No
               </Button>
             </Flex>
