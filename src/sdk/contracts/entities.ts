@@ -1,6 +1,21 @@
 import { z } from 'zod';
 
+import { ActivityMetadataByType } from './activityLogMetadata';
+import {
+  type ActivityLogType,
+  ActivityLogTypeSchema,
+  type ApplicationType,
+  ApplicationTypeSchema,
+  type WidgetType,
+  WidgetTypeSchema,
+} from './activityLogVocabulary';
 import { BaseEntitySchema, EntityStatusSchema } from './common';
+
+// Re-exported so existing importers of this file see no change — the three now live in
+// `./activityLogVocabulary`, a dependency-free leaf `./activityLogMetadata` can import without cycling.
+export { ActivityLogTypeSchema, ApplicationTypeSchema, WidgetTypeSchema };
+export type { ActivityLogType, ApplicationType, WidgetType };
+
 export const WorkspacePackageSchema = z.enum(['free', 'startup', 'growth', 'enterprise']);
 export type PlanTier = z.infer<typeof WorkspacePackageSchema>;
 
@@ -11,14 +26,6 @@ export const AllowanceStatusSchema = z.enum(['known', 'unlimited', 'unknown']);
 export type AllowanceStatus = z.infer<typeof AllowanceStatusSchema>;
 export const RevenueStatusSchema = z.enum(['zero', 'known', 'unknown']);
 export type RevenueStatus = z.infer<typeof RevenueStatusSchema>;
-
-export const ApplicationTypeSchema = z.enum(['app', 'website']);
-
-export type ApplicationType = z.infer<typeof ApplicationTypeSchema>;
-
-export const WidgetTypeSchema = z.enum(['widget']);
-
-export type WidgetType = z.infer<typeof WidgetTypeSchema>;
 
 export const InstructionTypeSchema = z.enum(['tell', 'show', 'do']);
 
@@ -35,14 +42,17 @@ const AuthMethodSchema = z.enum(['password', 'oauth']);
 export const WorkspaceMemberRoleSchema = z.enum(['admin', 'member']);
 export type WorkspaceMemberRole = z.infer<typeof WorkspaceMemberRoleSchema>;
 
+// `onboarding_reminders_sent`/`onboarding_reminder_sent_at` are deliberately absent: they are internal
+// mail-worker bookkeeping columns (`models/user.ts`'s `UserInternalFields`), never read or written by
+// a client, so they never join the wire entity at all rather than being added and then omitted per tier.
 export const UserEntitySchema = BaseEntitySchema.extend({
   is_super: z.boolean(),
   status: EntityStatusSchema,
-  email: z.email(),
-  external_id: z.string().nullish(),
-  first_name: z.string().nullish(),
-  last_name: z.string().nullish(),
-  image_url: z.string().nullish(),
+  email: z.email().max(255),
+  external_id: z.string().max(255),
+  first_name: z.string().max(100).nullish(),
+  last_name: z.string().max(100).nullish(),
+  image_url: z.string().max(500).nullish(),
   last_login_at: z.coerce.date().nullish(),
   auth_method: AuthMethodSchema.nullish(),
   // Present only when the user was looked up THROUGH a workspace (`userSearch` with a workspace_id) —
@@ -68,8 +78,8 @@ export type UserData = z.infer<typeof UserEntitySchema>;
 
 // package and ending_date come from the workspace_plan table (joined on fetch), NOT the workspace row.
 export const WorkspaceEntitySchema = BaseEntitySchema.extend({
-  name: z.string(),
-  slug: z.string(),
+  name: z.string().max(45),
+  slug: z.string().max(100),
   status: EntityStatusSchema,
   package: WorkspacePackageSchema,
   ending_date: z.coerce.date().nullish(),
@@ -94,11 +104,11 @@ export type WorkspaceSummary = z.infer<typeof WorkspaceSummarySchema>;
 
 export const ApplicationEntitySchema = BaseEntitySchema.extend({
   workspace_id: z.number(),
-  name: z.string(),
-  slug: z.string(),
+  name: z.string().max(200),
+  slug: z.string().max(120),
   type: ApplicationTypeSchema,
-  url: z.string(),
-  username: z.string().nullable(),
+  url: z.string().max(200),
+  username: z.string().max(100).nullable(),
   password: z.string().nullable(),
   allowed_domains: z.array(z.string()),
 });
@@ -187,82 +197,32 @@ export const WidgetPublicSchema = WidgetEntitySchema.pick({
 
 export type WidgetPublicData = z.infer<typeof WidgetPublicSchema>;
 
-export const ActivityLogTypeSchema = z.enum([
-  'update_workspace',
-  'update_user',
-  'create_application',
-  'update_application',
-  'delete_application',
-  'create_widget',
-  'update_widget',
-  'delete_widget',
-  'create_knowledge',
-  'update_knowledge',
-  'delete_knowledge',
-  // Exactly two membership verbs: someone REQUESTS membership, an admin INVITES them — no approving;
-  // a request is answered with a WorkOS invitation or not at all, and it still must be accepted.
-  'request_membership',
-  'invite_user',
-  // Workspace + subscription lifecycle — the transparency record a customer reads in settings, so
-  // SYSTEM actions (Stripe webhooks) write these too with `user_id: null` rather than a fabricated admin.
-  'create_workspace',
-  'trial_started',
-  'trial_ending_soon',
-  'trial_ended',
-  'subscription_created',
-  'subscription_canceled',
-  'plan_changed',
-  'payment_succeeded',
-  'payment_failed',
-  'widget_question',
-  'start_simulation',
-  'create_workflow',
-  'update_workflow',
-  'delete_workflow',
-  'toggle_workflow',
-  'slack_command',
-  'publish_survey',
-  'unpublish_survey',
-  'delete_survey_response',
-]);
-
-export type ActivityLogType = z.infer<typeof ActivityLogTypeSchema>;
-
-// `ip_address`/`user_agent`/`created_by` are gone: `models/columnSchemas.ts`'s `ActivityMetadataByType`
-// registry is the actual write-time gate, and every one of its per-type shapes is `.strict()` — none of
-// them ever admits these three keys, so no stored row carries them and no migration is needed.
+// `ip_address`/`user_agent`/`created_by` are gone: `ActivityMetadataByType` (`./activityLogMetadata`)
+// is the actual write-time gate, and every one of its per-type shapes is `.strict()` — none of them
+// ever admits these three keys, so no stored row carries them and no migration is needed.
 //
-// This schema itself CANNOT be derived from that registry, and stays `.passthrough()` rather than
-// `.strict()`: `ActivityMetadataByType` lives in `models/columnSchemas.ts`, which already imports
-// `ActivityLogTypeSchema`/`ApplicationTypeSchema`/`WidgetTypeSchema` FROM this file, so importing it back
-// would cycle; moving the registry here instead would drag `contracts/slack.ts` (the `slack_command`
-// variant's `status` enum) into this file's import closure, which is mirrored byte-for-byte into the
-// widget/persona-os/internal SDKs (`tests/unit/syncConsumers.test.ts` pins each one's file list) — a
-// widget-facing change like that needs an npm republish and a `bun.lock` repin, not a side effect of a
-// typing pass. `target_user_id`/`target_user_email`/`reason`/`widget_type`/`reminder` are declared
-// because they carry PII or an internal enum a reader must never see; every other per-type field (a
-// widget's `chat_id`, a knowledge row's `file_name`, …) rides through the passthrough untouched, since
-// several ARE read (`support/widget/index.tsx` reads `widget_question`'s `question`) and this schema has
-// no closure-safe way to enumerate them precisely without restating the registry above.
-export const ActivityLogMetadataSchema = z
-  .object({
-    details: z.string().optional(),
-    id: z.number().optional(),
-    type: z.string().optional(),
-    name: z.string().optional(),
-    target_user_id: z.number().optional(),
-    target_user_email: z.string().optional(),
-    reason: z.string().optional(),
-    widget_type: WidgetTypeSchema.optional(),
-    reminder: z.literal(true).optional(),
-  })
-  .passthrough();
+// Derived from that same registry as a union of every per-type shape, now that it lives in its own
+// leaf file rather than `models/columnSchemas.ts` (which imports FROM this file, so importing the
+// registry back here would have cycled). A union rather than a `type`-keyed discriminated union
+// because the discriminant is the sibling `activity_log.type` COLUMN, not a field inside `metadata`
+// itself — Zod tries each branch in turn, which is looser than exact per-row typing but still a real
+// narrowing over every key actually stored (verified against both environments' live key sets).
+const activityMetadataVariants = Object.values(ActivityMetadataByType) as unknown as [
+  z.ZodTypeAny,
+  z.ZodTypeAny,
+  ...z.ZodTypeAny[],
+];
+export const ActivityLogMetadataSchema = z.union(activityMetadataVariants);
 
-export const ActivityLogEntitySchema = BaseEntitySchema.extend({
+// `activity_log` has no `updated_at` column — a row is never edited after it's written — so this
+// declares id/created_at inline rather than extending `BaseEntitySchema`, which also carries one.
+export const ActivityLogEntitySchema = z.object({
+  id: z.number(),
+  created_at: z.coerce.date(),
   workspace_id: z.number(),
   user_id: z.number().nullable(),
   type: ActivityLogTypeSchema,
-  metadata: ActivityLogMetadataSchema.optional(),
+  metadata: ActivityLogMetadataSchema.nullish(),
 });
 
 export type ActivityLogData = z.infer<typeof ActivityLogEntitySchema>;
