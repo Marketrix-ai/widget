@@ -8,9 +8,12 @@
  * picks — the same data-attribute variant convention every other component here uses. The two icon
  * layers carry only their own transform and opacity; the transition they share is `.mtx-fab-icon-layer`.
  *
- * `useDragSnap` (below) drags this launcher and snaps it to the nearest corner. Pointer events are
- * tracked in a ref; movement under DRAG_THRESHOLD_PX stays a click, beyond it the wrapper is translated
- * on a rAF loop with velocity sampled so a flick lands where it was heading. On release
+ * `useDragSnap` (below) drags this launcher and snaps it to the nearest corner over ONE Pointer Events
+ * path (`onPointerDown/Move/Up/Cancel` — no separate mouse/touch handlers, since Pointer Events already
+ * unify both). Pointer state is tracked in a ref; movement under DRAG_THRESHOLD_PX stays a click, beyond
+ * it the wrapper is translated on a rAF loop with velocity sampled into `velocityHistoryRef` so a flick
+ * lands where it was heading — `projectFlickVelocity` (module-level, pure) turns that sample history into
+ * a projected pixel delta. On release
  * `getNearestCornerByTranslation` picks the corner, the wrapper animates there for SNAP_DURATION_MS via
  * `left`/`top` transitions, and `commitPositionAfterAnimation` calls `onPositionCommit` on
  * `transitionend` (with a timeout fallback, since a hidden tab fires no transition events) — the
@@ -37,6 +40,24 @@ import { Surface } from '../base/Surface';
 const DRAG_THRESHOLD_PX = 5;
 const SNAP_DURATION_MS = 600;
 const SNAP_EASING = 'cubic-bezier(0.16, 1, 0.3, 1)';
+const VELOCITY_SAMPLE_INTERVAL_MS = 10;
+const VELOCITY_HISTORY_SIZE = 6;
+
+/** A flick's terminal velocity from its last few pointer samples: zero with fewer than two, else the
+ * average px/ms over the sampled span, in px/s. Pure — takes the samples, returns the projection. */
+function projectFlickVelocity(
+  history: Array<{ x: number; y: number; t: number }>,
+  decel = 0.999,
+): { x: number; y: number } {
+  if (history.length < 2) return { x: 0, y: 0 };
+  const first = history[0];
+  const last = history[history.length - 1];
+  if (!first || !last) return { x: 0, y: 0 };
+  const dt = last.t - first.t;
+  if (dt <= 0) return { x: 0, y: 0 };
+  const project = (d: number) => ((d / dt) * decel) / (1 - decel);
+  return { x: project(last.x - first.x), y: project(last.y - first.y) };
+}
 
 interface UseDragSnapOptions {
   position: WidgetPosition;
@@ -112,22 +133,6 @@ export function useDragSnap({
   const vh = typeof window !== 'undefined' ? window.innerHeight : 0;
   const anchor = getAnchorTopLeft(position, vw, vh, wrapperSize.w, wrapperSize.h);
   const pixelPositionStyle = !isPreviewMode && vw > 0 && vh > 0 ? { left: anchor.x, top: anchor.y } : undefined;
-
-  const projectVelocity = (v: number, decel = 0.999) => ((v / 1000) * decel) / (1 - decel);
-
-  const getVelocityFromHistory = (): { x: number; y: number } => {
-    const h = velocityHistoryRef.current;
-    if (h.length < 2) return { x: 0, y: 0 };
-    const first = h[0];
-    const last = h[h.length - 1];
-    if (!first || !last) return { x: 0, y: 0 };
-    const dt = last.t - first.t;
-    if (dt <= 0) return { x: 0, y: 0 };
-    return {
-      x: ((last.x - first.x) / dt) * 1000,
-      y: ((last.y - first.y) / dt) * 1000,
-    };
-  };
 
   const resetDragStyles = () => {
     cancelRaf();
@@ -256,10 +261,10 @@ export function useDragSnap({
     drag.lastY = dy;
 
     const now = Date.now();
-    if (now - lastVelocitySampleRef.current >= 10) {
+    if (now - lastVelocitySampleRef.current >= VELOCITY_SAMPLE_INTERVAL_MS) {
       lastVelocitySampleRef.current = now;
       velocityHistoryRef.current = [
-        ...velocityHistoryRef.current.slice(-5),
+        ...velocityHistoryRef.current.slice(-(VELOCITY_HISTORY_SIZE - 1)),
         { x: event.clientX, y: event.clientY, t: now },
       ];
     }
@@ -279,10 +284,8 @@ export function useDragSnap({
     const drag = dragRef.current;
     if (drag?.pointerId !== event.pointerId) return;
     if (drag.dragging) {
-      const v = getVelocityFromHistory();
-      const projX = projectVelocity(v.x);
-      const projY = projectVelocity(v.y);
-      const projected = { dx: drag.lastX + projX, dy: drag.lastY + projY };
+      const flick = projectFlickVelocity(velocityHistoryRef.current);
+      const projected = { dx: drag.lastX + flick.x, dy: drag.lastY + flick.y };
 
       const rect = wrapperRef.current?.getBoundingClientRect();
       const nextCorner = rect
