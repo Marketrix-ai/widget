@@ -1,35 +1,22 @@
 /**
- * The one home for the handful of `vitest` `vi.*` helpers bun's `vi` compat shim does not implement:
- * `mocked` (vitest's `vi.mocked` is a pure type-narrowing identity function at runtime — it exists so
- * TypeScript treats an already-mocked import as its `Mock` type, and does nothing else), `hoisted`
- * (vitest's `vi.hoisted` runs its factory before `vi.mock` calls are hoisted above imports; bun's own
- * `vi.mock`/`mock.module` already runs before the mocked specifier is imported without a separate
- * hoisting pass, so a plain function call in the test file, above the `vi.mock`, has the same effect),
- * `advanceTimersByTimeAsync` (bun's fake-timer shim has the synchronous `advanceTimersByTime` but
- * not the async variant — advancing then yielding one microtask tick lets a promise callback a fired
- * timer just resolved run before the next assertion, which is the only thing the async form adds), and
- * `restoreModuleAfterAll` (see its own doc comment — the one un-poisoning strategy for a `vi.mock` on a
- * module bun cannot instead `vi.spyOn` per export, e.g. an oRPC client Proxy whose own property
- * assignment traps ignore a spy).
+ * The one home for `vitest` `vi.*` helpers bun's `vi` compat shim does not implement.
  *
- * `mocked` widens its narrowing to bun's own `Mock` type: bun-types leaves `Mocked`/`MockedObject`
- * commented out, so a `vi.mock`-replaced import (a function, or an object of them like the `sdk`
- * client) needs its own mapped type here rather than vitest's identity-only `mocked`, or every
- * `.mockResolvedValueOnce`/`.mock.calls` read on it fails to type-check.
+ * `mocked` widens vitest's type-narrowing identity function to bun's own `Mock` type: bun-types leaves
+ * `Mocked`/`MockedObject` commented out, so a `vi.mock`-replaced import needs its own mapped type here or
+ * every `.mockResolvedValueOnce`/`.mock.calls` read on it fails to type-check. `hoisted` is a plain
+ * function call, since bun's `vi.mock`/`mock.module` already runs before the mocked specifier is
+ * imported without vitest's separate hoisting pass. `advanceTimersByTimeAsync` advances then yields one
+ * microtask tick, letting a promise callback a fired timer just resolved run before the next assertion —
+ * bun's shim only has the synchronous form. `waitFor` polls `check` on a real macrotask tick up to
+ * `timeout`ms, surfacing only the LAST assertion error after the deadline, matching vitest's contract.
  *
- * `waitFor` (`vi.waitFor` is unimplemented under bun): polls `check` on a real macrotask tick, up to
- * `timeout`ms, returning as soon as it stops throwing (or resolving falsy-never — it never rejects the
- * assertion error, only surfaces the LAST one after the deadline, matching vitest's own contract).
- *
- * `restoreModuleAfterAll(specifier, importReal)`: `vi.mock(specifier, factory)` replaces a module for
- * the whole `bun test` process by RESOLVED PATH, not just the file that called it — any other file
- * importing the same module (even via a different relative path or a `@/` alias) inherits whichever
- * factory registered last, for as long as that stays true. A `vi.spyOn` on the real module's namespace
- * object is the usual fix (it patches one property on the shared object rather than replacing the whole
- * module), but it doesn't work on an object whose OWN property-assignment traps ignore it — an oRPC
- * client `Proxy`, for one. For a module mock like that, this is the fallback: restore the real module in
- * `afterAll`, dynamically imported through a `?real`-suffixed specifier so the import bypasses this
- * exact mock and reaches the genuine file.
+ * `restoreModuleAfterAll(specifier, importReal)` is the fallback for a `vi.mock` that can't instead
+ * `vi.spyOn` per export: `vi.mock` replaces a module for the whole `bun test` process by RESOLVED PATH,
+ * so every importer (even via a different relative path or `@/` alias) inherits whichever factory
+ * registered last. `vi.spyOn` on the real module's namespace normally fixes this by patching one
+ * property on the shared object, but it doesn't work when that object's OWN property-assignment traps
+ * ignore it — an oRPC client `Proxy`, for one. This restores the real module in `afterAll`, dynamically
+ * imported through a `?real`-suffixed specifier so the import bypasses this exact mock.
  */
 import { afterAll, type Mock, vi } from 'bun:test';
 

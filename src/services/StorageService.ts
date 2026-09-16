@@ -1,31 +1,28 @@
 /**
- * Browser-local persistence for the widget: the one door to `localStorage`, and the per-tenant chat context
- * (chat_id, transcript, composer mode, open state, resolved config) behind the `storageService` singleton.
- * `tenantScope` is the scope suffix for every browser-local key — the credential id, else the application id, else
- * `default` — shared with the drag-position and resize keys so all of them partition the same way. `readLocal` /
- * `writeLocal` are the only `localStorage` access in `src/`; a host page can deny storage outright (third-party
- * cookies off, sandboxed iframe) where even reading throws, so both degrade to a warn and the widget keeps working
- * unpersisted. `loadContext` parses one key merged over `DEFAULT_CONTEXT`, so a payload from an older widget
- * version reads as incomplete rather than corrupt, and discards anything older than `CONTEXT_EXPIRY_MS` (7 days).
- * `StorageService`'s `getContext`, `updateContext` (merges, restamps `timestamp`, writes through), `getChatId` /
- * `setChatId`, `getCredentialedConfig` (null unless both `mtxId` and `mtxKey` are present, so callers cannot
- * dispatch half-credentialed) and `setConfig` sit behind the singleton; `readChatSnapshot` / `writeChatSnapshot`
- * are the UI-facing view of the context. `setConfig` re-keys storage to `${STORAGE_KEY}_${tenantScope}` and
- * reloads from that key, since without it two applications embedded on one origin would share a stored chat_id and
- * one tenant's transcript would leak into another's.
+ * Browser-local persistence for the widget: the one door to `localStorage`, and the per-tenant chat
+ * context (chat_id, transcript, composer mode, open state, resolved config) behind the `storageService`
+ * singleton. `tenantScope` (credential id, else application id, else `default`) is the scope suffix every
+ * browser-local key shares via `scopedKey`, so the chat-context, drag-position and resize keys all
+ * partition by tenant identically. `readLocal`/`writeLocal` are the only `localStorage` access in `src/`;
+ * a host page can deny storage outright (third-party cookies off, sandboxed iframe), so both degrade to
+ * a warn and the widget keeps working unpersisted.
  *
- * The snapshot is `{messages, currentMode, isOpen}` — chat_id, config and timestamp are deliberately excluded.
- * Reading revives `timestamp` to a `Date` and backfills a text part for messages stored before `parts` existed;
- * writing drops `videoStream` (unserializable, dead on reload), rewriting it as `Screen sharing ended`.
+ * `loadContext` merges one parsed key over `DEFAULT_CONTEXT`, so an older widget version's payload reads
+ * as incomplete rather than corrupt, and discards anything past `CONTEXT_EXPIRY_MS` (7 days).
+ * `getCredentialedConfig` is null unless both `mtxId` and `mtxKey` are present, so callers cannot
+ * dispatch half-credentialed. `setConfig` re-keys storage to `${STORAGE_KEY}_${tenantScope}` and reloads
+ * from it, since without that two applications on one origin would leak one tenant's transcript into
+ * another's.
  *
- * `scopedKey(name, config)` is the one place `<name>_<tenantScope>` is assembled — the position and resize-size
- * keys share it with the chat context key, so all three browser-local entries partition by tenant identically.
+ * The chat snapshot is `{messages, currentMode, isOpen}` — chat_id, config and timestamp are deliberately
+ * excluded. Reading revives `timestamp` to a `Date` and backfills a text part for messages stored before
+ * `parts` existed; writing drops `videoStream` (unserializable, dead on reload), rewriting it as "Screen
+ * sharing ended".
  *
- * `sanitizeStoredContext` is the boundary guard for the parsed JSON: hand-rolled (not zod) per the
- * package-level rule that a schema imported as a VALUE anywhere reachable from `src/index.tsx` pulls
- * zod's whole runtime into the bundle. Each field is checked against its own type and falls back to
- * `DEFAULT_CONTEXT`'s value individually, so a partially-corrupt payload (e.g. a bad `currentMode` from
- * an older widget version) keeps the fields that DID parse rather than discarding the whole context.
+ * `sanitizeStoredContext` is hand-rolled, not zod, per the package-level rule that a schema imported as a
+ * VALUE anywhere reachable from `src/index.tsx` pulls zod's whole runtime into the bundle. Each field
+ * falls back to `DEFAULT_CONTEXT`'s value individually, so a partially-corrupt payload keeps the fields
+ * that DID parse rather than discarding the whole context.
  */
 import type { ChatMessage, InstructionType, MarketrixConfig, ValidWidgetConfig } from '../types';
 

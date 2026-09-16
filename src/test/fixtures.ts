@@ -1,36 +1,20 @@
 /**
  * The shared widget-settings fixture the config-driven tests build from: `getMockWidgetConfig(overrides)`
- * returns a complete, schema-valid tenant config — every rendered setting plus the `mtxId`/`mtxKey` credential,
- * api host and preview flag a mounted widget needs — shallow-merged with `overrides`.
+ * returns a complete, schema-valid tenant config — every rendered setting plus the `mtxId`/`mtxKey`
+ * credential, api host and preview flag — shallow-merged with `overrides`. It's `MockWidgetConfig`, wider
+ * than `WidgetRenderedSettings`, since callers hand it straight to `WidgetSettingsDataSchema.parse()`,
+ * which demands the four render constants that schema omits.
  *
- * `MockWidgetConfig` widens `ValidWidgetConfig` with the four render constants (`widget_border_radius`,
- * `widget_font_size`, `widget_animation_duration`, `widget_fade_duration`). `ValidWidgetConfig` is built on
- * `WidgetRenderedSettings`, which omits them, but callers hand this fixture straight to
- * `WidgetSettingsDataSchema.parse()`, which demands the whole wire shape. It is `Valid`, not partial, so
- * `renderWidget` can hand it to `WidgetRoot` without a cast — the fixture really does set every field.
+ * `validSettings(overrides)` is the parsed form most call sites want, living here so the schema import
+ * stays confined to test-only files; `validation.test.ts` keeps its own inline parse since there the
+ * schema IS the thing under test. `mountTarget()` is a fresh detached `<div>` (a new one per call, so
+ * reuse across containers in one test is still correct); `flushMicrotasks` names the common
+ * one-microtask-tick wait explicitly.
  *
- * `validSettings(overrides)` is the parsed form most call sites actually want —
- * `WidgetSettingsDataSchema.parse(getMockWidgetConfig(overrides))` — and lives here rather than at each
- * call site so the schema import stays confined to test-only files even where it is used repeatedly.
- * `validation.test.ts` keeps its own inline parse: there the schema is the oracle under test, not fixture
- * noise.
- *
- * `mountTarget()` names the other repeated pattern, a fresh detached `<div>` to mount or render into —
- * every call yields an independent element, so using it more than once in one test for distinct
- * containers is still correct.
- *
- * `flushMicrotasks` names the common one-microtask-tick wait (`await Promise.resolve()`) explicitly, for
- * tests that need pending promise callbacks to settle before asserting.
- *
- * `agentMessage(overrides)` is the shared `ChatMessage` builder — an agent bubble with id `agent-1`, a
- * single text part echoing `content`, and a fixed `timestamp` — for every test that needs one message
- * without caring about its exact shape; a test asserting placeholder/mode semantics overrides those
- * fields explicitly.
- *
- * `credentialedConfig(overrides)` is `validSettings()` plus the `mtxId`/`mtxKey`/`mtxApp` triple and
- * `isPreviewMode: false` a resolved PRODUCTION config carries — the shape `WidgetService.loadWidgetConfig`
- * actually resolves to, so a mocked resolution stays a real `CredentialedConfig` rather than a narrower
- * stand-in that would hide a field `loadWidgetConfig` forgets to set.
+ * `agentMessage(overrides)` is the shared `ChatMessage` builder for tests that need one without caring
+ * about its exact shape. `credentialedConfig(overrides)` is `validSettings()` plus the
+ * `mtxId`/`mtxKey`/`mtxApp` triple and `isPreviewMode: false` a resolved PRODUCTION config carries — the
+ * real shape `WidgetService.loadWidgetConfig` resolves to, so a mock never hides a field it forgets to set.
  */
 import { WidgetSettingsDataSchema } from '../sdk';
 import type { CredentialedConfig } from '../services/StorageService';
