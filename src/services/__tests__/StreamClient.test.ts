@@ -25,10 +25,10 @@
 
 import { sdk, type WidgetEvent } from '../../sdk';
 import { flushMicrotasks } from '../../test/fixtures';
-import { mocked, restoreModuleAfterAll, waitFor } from '../../test/vi-compat';
+import { mocked, mockSdkModule, restoreModuleAfterAll, waitFor } from '../../test/vi-compat';
 import { type StreamClient, streamClient, StreamGaveUpError } from '../StreamClient';
 
-vi.mock('../../sdk', () => ({ sdk: { widgetStream: vi.fn(), widgetMessagePost: vi.fn() } }));
+vi.mock('../../sdk', () => mockSdkModule({ widgetStream: vi.fn(), widgetMessagePost: vi.fn() }));
 restoreModuleAfterAll('../../sdk', () => import('../../sdk/index.ts?real'));
 
 const mockSdk = mocked(sdk);
