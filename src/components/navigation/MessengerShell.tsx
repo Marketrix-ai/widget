@@ -38,8 +38,11 @@
  * mousedown, and `containerRef` for the element being sized. The opening size is this tenant's stored one if
  * there is one, else the dashboard's `widget_width`/`widget_height` — both through `clampSize`, so a setting
  * outside the drag range lands on the same bounds a drag has. `parsePx` accepts a bare px length only, since
- * `rem`/`em`/`%` can't be resolved without layout, and `readStoredSize` parses the tenant-scoped
- * `marketrix_widget_size_<scope>` entry (keyed through the shared `scopedKey`, like its two `readLocal`/
+ * `rem`/`em`/`%` can't be resolved without layout. A drag's `mousemove`/`mouseup` pair lives on `document`,
+ * not the grip, so a resize outlives the pointer leaving the handle; `endDragRef` holds the live `onUp` so
+ * an unmount mid-drag (the widget torn down while a visitor is resizing) still detaches both listeners and
+ * the cursor/`userSelect` override instead of leaving them on the host page forever. `readStoredSize` parses
+ * the tenant-scoped `marketrix_widget_size_<scope>` entry (keyed through the shared `scopedKey`, like its two `readLocal`/
  * `writeLocal` siblings), warning-then-defaulting on anything unparseable since corrupted host-page localStorage
  * must not leave the panel unsizable. `clampSize` bounds width to MIN_WIDTH..MAX_WIDTH, height to MIN_HEIGHT..85%
  * of the viewport, measured at call time so a resize re-clamps on the next drag. The grip is on the corner
@@ -209,6 +212,9 @@ export function useResize(
 
   const dimsRef = useRef<Size>(dimensions);
   dimsRef.current = dimensions;
+  const endDragRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => () => endDragRef.current?.(), []);
 
   const handleResizeStart = useCallback(
     (e: React.MouseEvent) => {
@@ -244,6 +250,7 @@ export function useResize(
         document.removeEventListener('mouseup', onUp);
         document.body.style.cursor = '';
         document.body.style.userSelect = '';
+        endDragRef.current = null;
 
         if (containerRef.current) {
           delete containerRef.current.dataset['resizing'];
@@ -257,6 +264,7 @@ export function useResize(
       document.body.style.userSelect = 'none';
       document.addEventListener('mousemove', onMove);
       document.addEventListener('mouseup', onUp);
+      endDragRef.current = onUp;
     },
     [isPreviewMode, storageKey, grip],
   );
