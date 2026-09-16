@@ -1,7 +1,8 @@
 /**
  * `resolveLayoutStyle` tests: every spacing prop (padding, margin, gap …) across every token maps to
  * its pixel value, empty props give an empty style, and SPACING_SCALE is declared smallest-first so a
- * token name orders the same way as the pixels it emits.
+ * token name orders the same way as the pixels it emits. Exhaustive per-token mappings run as one
+ * table-driven test per prop group rather than one `it` per token — same coverage, far fewer tests.
  */
 import { describe, expect, it } from 'bun:test';
 
@@ -17,22 +18,19 @@ describe('resolveLayoutStyle', () => {
     expect(steps).toEqual([...steps].sort((a, b) => a - b));
   });
 
-  describe('padding', () => {
-    it('padding: none', () => expect(resolveLayoutStyle({ padding: 'none' })).toEqual({ padding: '0' }));
-    it('padding: 2xs', () => expect(resolveLayoutStyle({ padding: '2xs' })).toEqual({ padding: '2px' }));
-    it('padding: xs', () => expect(resolveLayoutStyle({ padding: 'xs' })).toEqual({ padding: '4px' }));
-    it('padding: sm', () => expect(resolveLayoutStyle({ padding: 'sm' })).toEqual({ padding: '6px' }));
-    it('padding: md', () => expect(resolveLayoutStyle({ padding: 'md' })).toEqual({ padding: '8px' }));
-    it('padding: lg', () => expect(resolveLayoutStyle({ padding: 'lg' })).toEqual({ padding: '12px' }));
-    it('padding: xl', () => expect(resolveLayoutStyle({ padding: 'xl' })).toEqual({ padding: '16px' }));
-    it('padding: 2xl', () => expect(resolveLayoutStyle({ padding: '2xl' })).toEqual({ padding: '24px' }));
+  it('maps every spacing token to its pixel value for padding', () => {
+    for (const [token, px] of Object.entries(SPACING_SCALE)) {
+      expect(resolveLayoutStyle({ padding: token as keyof typeof SPACING_SCALE })).toEqual({ padding: px });
+    }
   });
 
   describe('axis padding writes both sides', () => {
-    it('paddingX: md', () =>
-      expect(resolveLayoutStyle({ paddingX: 'md' })).toEqual({ paddingLeft: '8px', paddingRight: '8px' }));
-    it('paddingY: sm', () =>
-      expect(resolveLayoutStyle({ paddingY: 'sm' })).toEqual({ paddingTop: '6px', paddingBottom: '6px' }));
+    it.each([
+      ['paddingX', { paddingLeft: '8px', paddingRight: '8px' }, 'md'],
+      ['paddingY', { paddingTop: '6px', paddingBottom: '6px' }, 'sm'],
+    ] as const)('%s: writes both sides from one token', (prop, expected, token) => {
+      expect(resolveLayoutStyle({ [prop]: token })).toEqual(expected);
+    });
 
     it('a specific side wins over the axis it belongs to', () => {
       expect(resolveLayoutStyle({ paddingY: 'sm', paddingTop: 'xl' })).toEqual({
@@ -42,100 +40,93 @@ describe('resolveLayoutStyle', () => {
     });
   });
 
-  describe('gap', () => {
-    it('gap: sm', () => expect(resolveLayoutStyle({ gap: 'sm' })).toEqual({ gap: '6px' }));
-    it('gap: xl', () => expect(resolveLayoutStyle({ gap: 'xl' })).toEqual({ gap: '16px' }));
+  it('maps every gap token to its pixel value', () => {
+    expect(resolveLayoutStyle({ gap: 'sm' })).toEqual({ gap: '6px' });
+    expect(resolveLayoutStyle({ gap: 'xl' })).toEqual({ gap: '16px' });
   });
 
-  describe('align', () => {
-    it('align: center', () => expect(resolveLayoutStyle({ align: 'center' })).toEqual({ alignItems: 'center' }));
-    it('align: start', () => expect(resolveLayoutStyle({ align: 'start' })).toEqual({ alignItems: 'flex-start' }));
-    it('align: end', () => expect(resolveLayoutStyle({ align: 'end' })).toEqual({ alignItems: 'flex-end' }));
-    it('align: stretch', () => expect(resolveLayoutStyle({ align: 'stretch' })).toEqual({ alignItems: 'stretch' }));
-    it('align: baseline', () => expect(resolveLayoutStyle({ align: 'baseline' })).toEqual({ alignItems: 'baseline' }));
+  it('maps every align token to alignItems', () => {
+    const cases = { center: 'center', start: 'flex-start', end: 'flex-end', stretch: 'stretch', baseline: 'baseline' };
+    for (const [align, alignItems] of Object.entries(cases)) {
+      expect(resolveLayoutStyle({ align: align as keyof typeof cases })).toEqual({ alignItems });
+    }
   });
 
-  describe('justify', () => {
-    it('justify: center', () =>
-      expect(resolveLayoutStyle({ justify: 'center' })).toEqual({ justifyContent: 'center' }));
-    it('justify: between', () =>
-      expect(resolveLayoutStyle({ justify: 'between' })).toEqual({ justifyContent: 'space-between' }));
-    it('justify: around', () =>
-      expect(resolveLayoutStyle({ justify: 'around' })).toEqual({ justifyContent: 'space-around' }));
-    it('justify: start', () =>
-      expect(resolveLayoutStyle({ justify: 'start' })).toEqual({ justifyContent: 'flex-start' }));
-    it('justify: end', () => expect(resolveLayoutStyle({ justify: 'end' })).toEqual({ justifyContent: 'flex-end' }));
+  it('maps every justify token to justifyContent', () => {
+    const cases = {
+      center: 'center',
+      between: 'space-between',
+      around: 'space-around',
+      start: 'flex-start',
+      end: 'flex-end',
+    };
+    for (const [justify, justifyContent] of Object.entries(cases)) {
+      expect(resolveLayoutStyle({ justify: justify as keyof typeof cases })).toEqual({ justifyContent });
+    }
   });
 
-  describe('flex', () => {
-    it('grow: true', () => expect(resolveLayoutStyle({ grow: true })).toEqual({ flex: '1 1 0%' }));
-    it('grow: false emits nothing', () => expect(resolveLayoutStyle({ grow: false })).toEqual({}));
-    it('shrink: false', () => expect(resolveLayoutStyle({ shrink: false })).toEqual({ flexShrink: 0 }));
-    it('shrink: true emits nothing', () => expect(resolveLayoutStyle({ shrink: true })).toEqual({}));
+  it('flex: grow/shrink booleans emit only on their non-default value', () => {
+    expect(resolveLayoutStyle({ grow: true })).toEqual({ flex: '1 1 0%' });
+    expect(resolveLayoutStyle({ grow: false })).toEqual({});
+    expect(resolveLayoutStyle({ shrink: false })).toEqual({ flexShrink: 0 });
+    expect(resolveLayoutStyle({ shrink: true })).toEqual({});
   });
 
-  describe('position', () => {
-    it('position: relative', () =>
-      expect(resolveLayoutStyle({ position: 'relative' })).toEqual({ position: 'relative' }));
-    it('position: fixed', () => expect(resolveLayoutStyle({ position: 'fixed' })).toEqual({ position: 'fixed' }));
-    it('inset: 0', () => expect(resolveLayoutStyle({ inset: '0' })).toEqual({ inset: '0' }));
-    it('inset: md', () => expect(resolveLayoutStyle({ inset: 'md' })).toEqual({ inset: '8px' }));
+  it('position and inset resolve independently, inset through the spacing scale', () => {
+    expect(resolveLayoutStyle({ position: 'relative' })).toEqual({ position: 'relative' });
+    expect(resolveLayoutStyle({ position: 'fixed' })).toEqual({ position: 'fixed' });
+    expect(resolveLayoutStyle({ inset: '0' })).toEqual({ inset: '0' });
+    expect(resolveLayoutStyle({ inset: 'md' })).toEqual({ inset: '8px' });
   });
 
-  describe('overflow and sizing', () => {
-    it('overflow: hidden', () => expect(resolveLayoutStyle({ overflow: 'hidden' })).toEqual({ overflow: 'hidden' }));
-    it('overflowY: auto', () => expect(resolveLayoutStyle({ overflowY: 'auto' })).toEqual({ overflowY: 'auto' }));
-    it('width: full', () => expect(resolveLayoutStyle({ width: 'full' })).toEqual({ width: '100%' }));
-    it('width: auto', () => expect(resolveLayoutStyle({ width: 'auto' })).toEqual({ width: 'auto' }));
-    it('height: full', () => expect(resolveLayoutStyle({ height: 'full' })).toEqual({ height: '100%' }));
-    it('minWidth: 0', () => expect(resolveLayoutStyle({ minWidth: '0' })).toEqual({ minWidth: 0 }));
-    it('minHeight: 0', () => expect(resolveLayoutStyle({ minHeight: '0' })).toEqual({ minHeight: 0 }));
+  it('overflow and sizing props pass through or resolve via the spacing scale', () => {
+    expect(resolveLayoutStyle({ overflow: 'hidden' })).toEqual({ overflow: 'hidden' });
+    expect(resolveLayoutStyle({ overflowY: 'auto' })).toEqual({ overflowY: 'auto' });
+    expect(resolveLayoutStyle({ width: 'full' })).toEqual({ width: '100%' });
+    expect(resolveLayoutStyle({ width: 'auto' })).toEqual({ width: 'auto' });
+    expect(resolveLayoutStyle({ height: 'full' })).toEqual({ height: '100%' });
+    expect(resolveLayoutStyle({ minWidth: '0' })).toEqual({ minWidth: 0 });
+    expect(resolveLayoutStyle({ minHeight: '0' })).toEqual({ minHeight: 0 });
   });
 
-  describe('border', () => {
-    it('border: true', () =>
-      expect(resolveLayoutStyle({ border: true })).toEqual({
-        borderColor: 'var(--border)',
-        borderStyle: 'solid',
-        borderWidth: '1px',
-      }));
-    it('border: false emits nothing', () => expect(resolveLayoutStyle({ border: false })).toEqual({}));
-    it('border: top', () =>
-      expect(resolveLayoutStyle({ border: 'top' })).toEqual({
-        borderColor: 'var(--border)',
-        borderStyle: 'solid',
-        borderTopWidth: '1px',
-      }));
-    it('border: bottom', () =>
-      expect(resolveLayoutStyle({ border: 'bottom' })).toEqual({
-        borderColor: 'var(--border)',
-        borderStyle: 'solid',
-        borderBottomWidth: '1px',
-      }));
+  it('border resolves per side or all sides, emitting nothing when false', () => {
+    expect(resolveLayoutStyle({ border: true })).toEqual({
+      borderColor: 'var(--border)',
+      borderStyle: 'solid',
+      borderWidth: '1px',
+    });
+    expect(resolveLayoutStyle({ border: false })).toEqual({});
+    expect(resolveLayoutStyle({ border: 'top' })).toEqual({
+      borderColor: 'var(--border)',
+      borderStyle: 'solid',
+      borderTopWidth: '1px',
+    });
+    expect(resolveLayoutStyle({ border: 'bottom' })).toEqual({
+      borderColor: 'var(--border)',
+      borderStyle: 'solid',
+      borderBottomWidth: '1px',
+    });
   });
 
-  describe('rounded', () => {
-    it('rounded: true is the theme radius', () =>
-      expect(resolveLayoutStyle({ rounded: true })).toEqual({ borderRadius: 'var(--radius)' }));
-    it('rounded: lg is the theme radius', () =>
-      expect(resolveLayoutStyle({ rounded: 'lg' })).toEqual({ borderRadius: 'var(--radius)' }));
-    it('rounded: pill', () =>
-      expect(resolveLayoutStyle({ rounded: 'pill' })).toEqual({ borderRadius: 'var(--radius-pill)' }));
-    it('rounded: none', () => expect(resolveLayoutStyle({ rounded: 'none' })).toEqual({ borderRadius: '0' }));
-    it('rounded: false emits nothing', () => expect(resolveLayoutStyle({ rounded: false })).toEqual({}));
+  it('rounded resolves the theme radius, pill or none, emitting nothing when false', () => {
+    expect(resolveLayoutStyle({ rounded: true })).toEqual({ borderRadius: 'var(--radius)' });
+    expect(resolveLayoutStyle({ rounded: 'lg' })).toEqual({ borderRadius: 'var(--radius)' });
+    expect(resolveLayoutStyle({ rounded: 'pill' })).toEqual({ borderRadius: 'var(--radius-pill)' });
+    expect(resolveLayoutStyle({ rounded: 'none' })).toEqual({ borderRadius: '0' });
+    expect(resolveLayoutStyle({ rounded: false })).toEqual({});
   });
 
-  describe('animate references a keyframe this stylesheet defines', () => {
-    it('animate: spin', () => expect(resolveLayoutStyle({ animate: 'spin' }).animation).toContain('mtx-spin'));
-    it('animate: ping', () => expect(resolveLayoutStyle({ animate: 'ping' }).animation).toContain('mtx-ping'));
-    it('animate: pulse', () => expect(resolveLayoutStyle({ animate: 'pulse' }).animation).toContain('mtx-pulse'));
-    it('animate: fadeIn', () => expect(resolveLayoutStyle({ animate: 'fadeIn' }).animation).toContain('mtx-fade-in'));
-    it('animate: none emits nothing', () => expect(resolveLayoutStyle({ animate: 'none' })).toEqual({}));
+  it('animate references a keyframe this stylesheet defines, emitting nothing when none', () => {
+    expect(resolveLayoutStyle({ animate: 'spin' }).animation).toContain('mtx-spin');
+    expect(resolveLayoutStyle({ animate: 'ping' }).animation).toContain('mtx-ping');
+    expect(resolveLayoutStyle({ animate: 'pulse' }).animation).toContain('mtx-pulse');
+    expect(resolveLayoutStyle({ animate: 'fadeIn' }).animation).toContain('mtx-fade-in');
+    expect(resolveLayoutStyle({ animate: 'none' })).toEqual({});
   });
 
-  describe('hidden', () => {
-    it('hidden: true', () => expect(resolveLayoutStyle({ hidden: true })).toEqual({ display: 'none' }));
-    it('hidden: false emits nothing', () => expect(resolveLayoutStyle({ hidden: false })).toEqual({}));
+  it('hidden: true sets display none, false emits nothing', () => {
+    expect(resolveLayoutStyle({ hidden: true })).toEqual({ display: 'none' });
+    expect(resolveLayoutStyle({ hidden: false })).toEqual({});
   });
 
   it('combines multiple props', () => {

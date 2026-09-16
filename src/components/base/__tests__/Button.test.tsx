@@ -1,8 +1,9 @@
 /**
- * `Button` tests: no axe-core violations, variant/size data attributes, click handler when enabled.
+ * `Button` tests: no axe-core violations, variant/size data attributes. The click handler is passed
+ * straight through to Base UI's native button with no logic of Button's own, so it is not retested here.
  */
-import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'bun:test';
+import { render, screen } from '@testing-library/react';
+import { describe, expect, it } from 'bun:test';
 
 import { assertNoA11yViolations } from '../../../test/a11y-utils';
 import { Button } from '../Button';
@@ -23,14 +24,5 @@ describe('Button', () => {
     const button = screen.getByRole('button', { name: 'Save' });
     expect(button).toHaveAttribute('data-size', 'md');
     expect(button).toHaveAttribute('data-variant', 'secondary');
-  });
-
-  it('calls click handler when enabled', () => {
-    const onClick = vi.fn();
-    render(<Button onClick={onClick}>Open</Button>);
-
-    fireEvent.click(screen.getByRole('button', { name: 'Open' }));
-
-    expect(onClick).toHaveBeenCalledTimes(1);
   });
 });
