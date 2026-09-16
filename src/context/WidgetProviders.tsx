@@ -13,10 +13,12 @@
  * mounted before the read, its first effect would overwrite the stored transcript on every remount.
  * `previewMode` skips init entirely: no chat session is minted, no stream opened, nothing persisted.
  *
- * The init effect's deps are empty on purpose — once per mount — and `cancelled` drops the connect when
- * a StrictMode double-invoke or an unmount cleans up before the chat_id resolves. A failed connect is
- * logged only, since `StreamClient` owns the backoff reconnect; a failed init is logged AND surfaced
- * through `uiActions.setError`.
+ * The init effect lists `previewMode`, `uiActions` and `chatActions` for the linter, but runs once per
+ * mount in practice — `uiActions` is a `useMemo([])` and `chatActions` bottoms out in `commit`
+ * (`useCallback([])`), both stable for the component's lifetime, and `previewMode` is fixed by the
+ * caller. `cancelled` drops the connect when a StrictMode double-invoke or an unmount cleans up before
+ * the chat_id resolves. A failed connect is logged only, since `StreamClient` owns the backoff
+ * reconnect; a failed init is logged AND surfaced through `uiActions.setError`.
  */
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
@@ -72,7 +74,7 @@ const InitBridge: React.FC<{ children: React.ReactNode; previewMode: boolean }> 
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [previewMode, uiActions, chatActions]);
 
   return (
     <>

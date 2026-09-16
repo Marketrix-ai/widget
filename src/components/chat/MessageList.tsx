@@ -75,7 +75,7 @@ export const MessageList = ({ messagesEndRef, onScreenAccessAllow, onScreenAcces
         !isPreviewMode && handleScroll();
       }
     });
-  }, [messages.length, isPreviewMode]);
+  }, [messages.length, isPreviewMode, messagesEndRef]);
 
   const lastContentLength = messages[messages.length - 1]?.content?.length ?? 0;
   useEffect(() => {

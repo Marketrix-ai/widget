@@ -20,7 +20,9 @@
  *
  * `useScreenShare` (this file's only other consumer) owns the screen-share lifecycle: the in-transcript
  * permission card, the browser picker, the live share message, and ending a share. `useLatest` keeps a
- * value readable from a callback that must not be re-created (the polling interval below, mounted once).
+ * value readable from a callback that must not be re-created (the polling interval below, mounted once);
+its refs are listed in that effect's deps for the linter, but since `useRef` identity never changes,
+listing them cannot re-arm the interval.
  * The hook returns `requestScreenAccess` — posting a request card carrying the queued turn, no-oping if
  * one is already open — plus that card's Allow/Deny handlers, the toolbar dialog's Allow/Dismiss
  * handlers, and `toggleScreenShareRef`, a toggle stopping a live share or opening that dialog.
@@ -147,7 +149,7 @@ export function useScreenShare({
     checkScreenSharing();
     const interval = setInterval(checkScreenSharing, 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [announceStoppedRef, onScreenSharingChangeRef, screenShareMessageIdRef, wasSharingRef]);
 
   const openRequest =
     messages[lastIndexWhere(messages, msg => !!msg.isScreenAccessRequest && !msg.screenShareStatus)] ?? null;
