@@ -6,15 +6,19 @@
  * registry that lived inside `models/columnSchemas.ts`, which itself imports from `entities.ts`,
  * would have cycled.
  *
- * `slack_command`'s `status` imports `contracts/slack.ts`'s `SlackCommandLogStatusSchema` — the one
- * home `tests/unit/contractEnumHomes.test.ts` requires for that value set — which pulls `slack.ts`
- * into `entities.ts`'s import closure for the first time. See the header this file's own header points
- * to for what that costs each consumer audience.
+ * `slack_command`'s `status` imports `SlackCommandLogStatusSchema` from `./activityLogVocabulary` —
+ * the one home `tests/unit/contractEnumHomes.test.ts` requires for that value set — a dependency-free
+ * leaf, so this registry (and everything importing it through `entities.ts`) never pulls in
+ * `contracts/slack.ts`'s `@orpc/contract` import.
  */
 import { z } from 'zod';
 
-import { type ActivityLogType, ApplicationTypeSchema, WidgetTypeSchema } from './activityLogVocabulary';
-import { SlackCommandLogStatusSchema } from './slack';
+import {
+  type ActivityLogType,
+  ApplicationTypeSchema,
+  SlackCommandLogStatusSchema,
+  WidgetTypeSchema,
+} from './activityLogVocabulary';
 
 const activity = <T extends z.ZodRawShape>(shape: T) => z.object(shape).strict();
 const details = { details: z.string() };
