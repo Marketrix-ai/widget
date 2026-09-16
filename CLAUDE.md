@@ -46,6 +46,12 @@ by sourceInvariants.test.ts); keep any new mock/spy scoped to its own file regar
 the flag to "speed up" a run. Filter a run with `bun test <pattern>`;
 a single file with `bun test path/to/file.test.ts`.
 
+**`src/test/embedSmoke.test.ts` is the only test that boots the BUILT `dist/widget.mjs`** (it runs
+`bun run build` itself in `beforeAll`, since `bun run ci` builds after test) in a jsdom host document via
+the documented `script[mtx-id]` attributes, pinning the closed-shadow mount, the FAB's z-index, the
+runtime export surface and that no request fires before the deferred auto-init tick or without a host
+script tag.
+
 **Pre-handoff gate** (matching the repository-local bun workflow): `bun run ci`. This public repo
 cannot call private infra workflows. Git hooks autofix but are not a substitute.
 
