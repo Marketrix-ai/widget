@@ -17,8 +17,17 @@
  * property on the shared object, but it doesn't work when that object's OWN property-assignment traps
  * ignore it — an oRPC client `Proxy`, for one. This restores the real module in `afterAll`, dynamically
  * imported through a `?real`-suffixed specifier so the import bypasses this exact mock.
+ *
+ * `mockSdkModule(procedures)` is the one home for a `vi.mock('.../sdk', ...)` factory: every caller of
+ * `sdk.<procedure>` stubs only the handful it calls, but the object literal is typed against the real
+ * `sdk` client, so a procedure renamed or re-signatured on the widget contract fails each stub at
+ * compile time instead of silently returning `undefined` at the call site.
  */
 import { afterAll, type Mock, vi } from 'bun:test';
+
+import type { sdk } from '../sdk';
+
+type RealSdk = typeof sdk;
 
 type Mocked<T> = T extends (...args: infer A) => infer R
   ? Mock<(...args: A) => R>
@@ -54,4 +63,8 @@ export function restoreModuleAfterAll(specifier: string, importReal: () => Promi
     const real = await importReal();
     vi.mock(specifier, () => real);
   });
+}
+
+export function mockSdkModule(procedures: Partial<RealSdk>): { sdk: Partial<RealSdk> } {
+  return { sdk: procedures };
 }
