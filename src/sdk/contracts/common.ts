@@ -1,3 +1,32 @@
+/**
+ * Cross-domain wire primitives shared by every audience — this file is mirrored WHOLE into the widget
+ * closure, so any shape it exports republishes the widget SDK regardless of which audience actually
+ * reads it.
+ * - `unionOfRecord` builds a plain (non-discriminated) union of every variant in a
+ *   `{ <discriminant value>: ZodType }` map — the shape `TriggerSourceConfigSchemas`/
+ *   `WorkflowActionTargetConfigSchemas` are declared in, and the registry (`models/columnSchemas.ts`)
+ *   keys by the same discriminant separately. Typed off the map's own value type rather than a bare
+ *   `z.ZodType`, whose inferred output is `unknown` and would erase every variant's real shape from the
+ *   union.
+ * - `ToolCallRecordSchema.params`/`.result` stay `z.record(z.string(), z.unknown())` ON PURPOSE —
+ *   `models/columnSchemas.ts`'s header lists a tool call's own arguments and result as one of the few
+ *   open boundaries kept opaque deliberately, since a tool's shape varies per tool name with no closed
+ *   vocabulary this file (or the widget/app readers of `simulation_step.tool_calls`) can type against.
+ * - `SessionStateSchema` is `simulation.session_state` (Browserbase cookies + localStorage snapshot).
+ *   Lives here rather than `models/columnSchemas.ts`, which imports FROM
+ *   `contracts/foundationEntities.ts` — a leaf-shaped schema this file already is one, so
+ *   `contracts/foundationEntities.ts` can type `SimulationEntitySchema`'s own `session_state` field
+ *   with it without cycling back through `columnSchemas.ts`. Its `cookies` field is the other
+ *   deliberately-open boundary from that same registry header: a browser cookie as the browser itself
+ *   reports it, no closed shape to narrow to.
+ * - `GraphNodeSummarySchema` is the whole-graph tier — `applicationGraphGet`/`simulationGraphGet` load
+ *   nodes with `readGraph`, which always resolves sections to `[]` for speed; a node's real sections
+ *   are a lazy drill-in fetched one at a time by `graphNodeSectionsGet` (its own
+ *   `GraphSectionSchema`-shaped output), so this tier never carries them. `sequence_ids` is DROPPED
+ *   (not just unselected) — the stored `graph.graph_nodes` column stays for the agent's own write-side
+ *   dedupe, but no app/widget graph or heatmap component ever read the wire field, and this file's
+ *   widget-closure membership means dropping it republishes the widget.
+ */
 import { z } from 'zod';
 
 export const EntityStatusSchema = z.enum(['created', 'active', 'suspended']);
@@ -55,11 +84,6 @@ export const listOf = <T extends z.ZodType>(schema: T) =>
     count: z.number(),
   });
 
-// A plain (non-discriminated) union of every variant in a `{ <discriminant value>: ZodType }` map — the
-// shape `TriggerSourceConfigSchemas`/`WorkflowActionTargetConfigSchemas` are declared in, and the
-// registry (`models/columnSchemas.ts`) keys by the same discriminant separately. Typed off the map's
-// own value type rather than a bare `z.ZodType`, whose inferred output is `unknown` and would erase
-// every variant's real shape from the union.
 export const unionOfRecord = <T extends Record<string, z.ZodType>>(
   schemas: T,
 ): z.ZodUnion<[T[keyof T], ...T[keyof T][]]> => z.union(Object.values(schemas) as [T[keyof T], ...T[keyof T][]]);
@@ -75,10 +99,6 @@ export const ToolCallRecordSchema = z
   })
   .strict();
 
-// `simulation.session_state` (Browserbase cookies + localStorage snapshot). Lives here rather than
-// models/columnSchemas.ts, which imports FROM contracts/foundationEntities.ts — a leaf-shaped schema
-// this file already is one, so contracts/foundationEntities.ts can type SimulationEntitySchema's own
-// `session_state` field with it (C8 in the data-truth audit) without cycling back through columnSchemas.ts.
 export const SessionStateSchema = z
   .object({
     cookies: z.array(z.record(z.string(), z.unknown())),
@@ -113,12 +133,6 @@ export const GraphSectionSchema = z
   })
   .strict();
 
-// The whole-graph tier — `applicationGraphGet`/`simulationGraphGet` load nodes with `readGraph`, which
-// always resolves sections to `[]` for speed; a node's real sections are a lazy drill-in fetched one at
-// a time by `graphNodeSectionsGet` (its own `GraphSectionSchema`-shaped output), so this tier never
-// carries them. `sequence_ids` is DROPPED (not just unselected) — the stored `graph.graph_nodes` column
-// stays for the agent's own write-side dedupe, but no app/widget graph or heatmap component ever read the
-// wire field, and `common.ts` is in the WIDGET audience closure, so this narrowing republishes the widget.
 export const GraphNodeSummarySchema = z
   .object({
     id: z.string(),
