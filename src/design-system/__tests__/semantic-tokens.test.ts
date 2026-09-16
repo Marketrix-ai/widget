@@ -26,6 +26,16 @@ describe('createSemanticTokens', () => {
     );
   });
 
+  it('pins the exact opacity of every derived muted/faint/hover variant', () => {
+    const css = semanticTokensToCssCustomProperties(createSemanticTokens(getMockWidgetConfig()));
+
+    expect(css['--foreground-muted']).toBe('rgba(249, 250, 251, 0.6)');
+    expect(css['--foreground-faint']).toBe('rgba(249, 250, 251, 0.4)');
+    expect(css['--primary-hover']).toBe('rgba(59, 130, 246, 0.85)');
+    expect(css['--secondary-bg']).toBe('rgba(107, 114, 128, 0.2)');
+    expect(css['--secondary-hover']).toBe('rgba(107, 114, 128, 0.3)');
+  });
+
   it('emits the fixed radius and durations', () => {
     const css = semanticTokensToCssCustomProperties(createSemanticTokens());
 

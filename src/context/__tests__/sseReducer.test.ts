@@ -348,6 +348,32 @@ describe('reduceToolProgress / reduceToolDone / reduceStop', () => {
     ]);
   });
 
+  it('does not touch placeholderState when the task is not actually running, even in Show/Do mode', () => {
+    const result = reduceToolProgress(idleState(), 'click_element', 'x', 'in_progress', 'show');
+    expect(result.messages[0]!.placeholderState).toBeUndefined();
+  });
+
+  it('only pauses on a waiting-for-user tool in Show mode, not simply because a tool is mid-progress', () => {
+    const result = reduceToolProgress(runningState({ mode: 'do' }), 'click_element', 'x', 'in_progress', 'do');
+    expect(result.messages[0]!.placeholderState).toBe('thinking');
+  });
+
+  it('shows waiting-for-user when Show mode pauses on a tool that needs the visitor', () => {
+    const result = reduceToolProgress(runningState({ mode: 'show' }), 'click_element', 'x', 'in_progress', 'show');
+    expect(result.messages[0]!.placeholderState).toBe('waiting-for-user');
+  });
+
+  it('judges progress by the mode the task actually started in, not whatever the composer shows now', () => {
+    const state: SseState = {
+      messages: [agentMessage({ mode: 'show', isPlaceholder: true })],
+      task: { phase: 'running', mode: 'show' },
+    };
+    // currentMode passed in is 'do' (visitor switched composer mid-run); the pause should still follow
+    // the run's own Show mode, so a waiting-for-user tool still parks on waiting-for-user.
+    const result = reduceToolProgress(state, 'click_element', 'x', 'in_progress', 'do');
+    expect(result.messages[0]!.placeholderState).toBe('waiting-for-user');
+  });
+
   it('reduceToolDone ends the task and marks the message done', () => {
     const result = reduceToolDone(runningState(), 'do');
     expect(result.task).toEqual({ phase: 'idle' });
