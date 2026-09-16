@@ -23,6 +23,7 @@ bun run test             # bun test (jsdom preload + Testing Library + axe-core)
 bun run test:watch       # bun test --watch
 bun run test:coverage    # bun test --coverage
 bun run bundle:check     # packaging gate (size, single chunk, no CSS file, React external)
+bun run check:served     # asserts what the nginx runtime image actually SENDS, over real HTTP
 bun run code:check       # tsc + eslint + prettier --check (one-shot)
 bun run ci               # every CI validation gate
 bun run tag <version>    # scripts/release.sh
@@ -83,9 +84,10 @@ are generated**, so after changing `rc:` you must re-run `lefthook install --for
 - `public/loader.js` → `dist/loader.js` is the classic script-tag bootstrap.
 - **The runtime image serves an allowlist, not `dist/`.** The Dockerfile names each served file, so
   the sourcemap (which embeds the whole source) and the `.d.ts` tree stay unpublished; a new served
-  artifact must be added there by hand. `widget.mjs.gz`/`.br` are precompressed in the builder stage,
-  and nginx has no brotli module — `gzip_static` covers gzip, a `try_files` on `Accept-Encoding`
-  covers brotli. Nothing is compressed per request.
+  artifact must be added there by hand. `widget.mjs.gz`/`.br` are precompressed in the builder stage
+  by `scripts/precompress.ts` (the one home for the gzip/brotli params, reused by `check:served`'s
+  no-docker fallback), and nginx has no brotli module — `gzip_static` covers gzip, a `try_files` on
+  `Accept-Encoding` covers brotli. Nothing is compressed per request.
 - **`bundle:check` budgets each bundled dependency, not just the total** — a total cap cannot see
   which dependency grew. Two are about half of it: `@base-ui/react` + `/utils` and `@rrweb/record`
   (a feature off by default), each named in `DEPENDENCY_BUDGETS` (pinned by sourceInvariants.test.ts);
@@ -212,6 +214,14 @@ Docker: one file, stages `base` → `dev` / `builder` → `runtime` (bun build �
 to serve `.mjs`; the `runtime` stage's nginx base carries no bun/node, only the built static assets).
 Tilt builds `dev`, CI builds `runtime`, both inheriting `base`'s `bun install --frozen-lockfile`, so
 local and shipped images cannot drift in their dependency set.
+
+**`check:served` boots that exact `runtime` image via docker when it's on `PATH`** (falling back to a
+`Bun.serve` static server re-deriving `nginx.conf`'s own header/negotiation rules when it isn't) and
+asserts headers, CORS, compression negotiation and a 404 over real HTTP — never a second hardcoded
+header table. `TARGET_URL=https://widget.marketrix.co bun run check:served` (or `.ai` for prod) runs
+the identical rows against a deployed host; adding `EXPECTED_TAG=<version>` to that also asserts
+`/widget.mjs` is byte-identical to a source build of that tag — read the tag from infra's Helm values
+or the `deploy.yml` dispatch inputs (this repo cannot reach the private infra repo to read it itself).
 
 ## Gotchas
 
