@@ -1,27 +1,21 @@
 /**
  * `Surface` is the canonical container primitive: a polymorphic `forwardRef` element (`as`, default
  * `div`) that composes the shared layout-token vocabulary with a `background` token, a `SHADOW`
- * `elevation` token and a `paddingPreset`, all emitted as inline style. `SurfaceBackground` and
- * `SurfacePadding` are those token unions, `backgroundStyles` and `paddingPresetStyles` their lookup
- * tables — the `default`/`none` entries are empty, so a bare `Surface` is a plain element — and
- * `SurfaceProps` the prop surface: `LayoutProps` plus the host element's HTML attributes.
+ * `elevation` token and a `paddingPreset`, all emitted as inline style — the `default`/`none` lookup
+ * entries are empty, so a bare `Surface` is a plain element. `className` is dropped from the host
+ * attributes and re-declared because it is INTERNAL to `blocks/`: layout props are the styling API
+ * everywhere else, and the only legitimate classes are the `index.css` hooks the block components key on.
  *
  * `floatingCard` is a `variant` shorthand for the card-background/border/card-elevation/card-padding/xl-
  * rounded/margin bundle both `HomeView`'s recent-conversation card and `ChatView`'s composer card use —
  * the margin lives in `variantStyles` since both call sites want it, while `ChatView`'s extra
  * `marginTop: 'auto'` stays an override on its own `style` prop rather than joining the preset.
  *
- * `className` is dropped from those attributes and re-declared because it is INTERNAL to `blocks/`:
- * layout props are the styling API everywhere else, and the only legitimate classes are the
- * `index.css` hooks the block components key on.
- *
- * Style order is fixed and load-bearing: background → padding preset → elevation → layout props →
- * the caller's own `style` last, so an inline style always wins. `Flex` depends on that tail
- * position, resolving `display` itself because `resolveLayoutStyle` is applied ahead of it.
- *
- * `resolveLayoutStyle` is handed the whole `props` (it reads only layout keys), while the DOM spread
- * goes through `stripLayoutProps` — a layout token left on the props bag reaches the element as an
- * unknown attribute.
+ * Style order is fixed and load-bearing: background → padding preset → elevation → layout props → the
+ * caller's own `style` last, so an inline style always wins; `Flex` depends on that tail position,
+ * resolving `display` itself because `resolveLayoutStyle` is applied ahead of it. `resolveLayoutStyle`
+ * is handed the whole `props` (it reads only layout keys), while the DOM spread goes through
+ * `stripLayoutProps` — a layout token left on the props bag reaches the element as an unknown attribute.
  */
 import { type CSSProperties, type ElementType, forwardRef } from 'react';
 
