@@ -21,6 +21,12 @@ function assertFailure<T>(result: ToolExecutionResult<T>): asserts result is Too
   if (result.success) throw new Error('expected failure, got success');
 }
 
+function expectFailure<T>(result: ToolExecutionResult<T>, error: string): void {
+  expect(result.success).toBe(false);
+  assertFailure(result);
+  expect(result.error).toBe(error);
+}
+
 const locationDescriptor = Object.getOwnPropertyDescriptor(window, 'location') as PropertyDescriptor;
 let navigations: string[] = [];
 
@@ -85,9 +91,7 @@ describe('navigate constrains its target to http(s)', () => {
   it('refuses a javascript: URL instead of running it in the host page', async () => {
     const result = await browserToolService.executeTool('navigate', { url: 'javascript:alert(document.cookie)' }, 'do');
 
-    expect(result.success).toBe(false);
-    assertFailure(result);
-    expect(result.error).toBe('An http(s) URL is required');
+    expectFailure(result, 'An http(s) URL is required');
     expect(navigations).toEqual([]);
   });
 
@@ -125,9 +129,7 @@ describe('navigate reports what the browser did with a new tab', () => {
       'do',
     );
 
-    expect(result.success).toBe(false);
-    assertFailure(result);
-    expect(result.error).toBe('The browser blocked opening a new tab');
+    expectFailure(result, 'The browser blocked opening a new tab');
   });
 });
 
@@ -159,9 +161,7 @@ describe('a tool nothing can perform is not offered at all', () => {
 
     const result = await browserToolService.executeTool('upload_file', { index: 0 }, 'show');
 
-    expect(result.success).toBe(false);
-    assertFailure(result);
-    expect(result.error).toBe('Unknown tool: upload_file');
+    expectFailure(result, 'Unknown tool: upload_file');
     expect(staged).not.toHaveBeenCalled();
     expect(browserToolService.getFriendlyToolName('upload_file')).toBe('upload_file');
     expect(browserToolService.isWaitForUserTool('upload_file')).toBe(false);
@@ -196,9 +196,7 @@ describe('a Do tool call against a missing index fails typed, never throws', () 
         'do',
       );
 
-      expect(result.success).toBe(false);
-      assertFailure(result);
-      expect(result.error).toBe('Element 999 not found');
+      expectFailure(result, 'Element 999 not found');
     },
   );
 
@@ -208,9 +206,7 @@ describe('a Do tool call against a missing index fails typed, never throws', () 
 
     const result = await browserToolService.executeTool('select_dropdown', { index: 0, option: 'x' }, 'do');
 
-    expect(result.success).toBe(false);
-    assertFailure(result);
-    expect(result.error).toBe('Element 0 is not a select element');
+    expectFailure(result, 'Element 0 is not a select element');
   });
 });
 

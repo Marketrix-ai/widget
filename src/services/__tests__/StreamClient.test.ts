@@ -74,6 +74,15 @@ function freshClient(): StreamClient {
   return streamClient;
 }
 
+function freshChatClient(status?: string): { client: StreamClient; inner: StreamClientInternals } {
+  const client = freshClient();
+  const inner = internals(client);
+  inner.chatId = 'chat-1';
+  inner.tornDown = false;
+  if (status !== undefined) inner.status = status;
+  return { client, inner };
+}
+
 interface ControlledStream {
   stream: MockedStream;
   push: (event: WidgetEvent) => void;
@@ -150,10 +159,7 @@ describe('StreamClient registration lifecycle', () => {
   });
 
   it('rejects a pending registration when reconnection gives up, rather than leaving it hanging', async () => {
-    const client = freshClient();
-    const inner = internals(client);
-    inner.chatId = 'chat-1';
-    inner.tornDown = false;
+    const { client, inner } = freshChatClient();
 
     const registration = client.waitUntilRegistered();
     inner.reconnectAttempts = inner.maxReconnectAttempts;
@@ -163,10 +169,7 @@ describe('StreamClient registration lifecycle', () => {
   });
 
   it('rejects a pending registration when the credentials are refused', async () => {
-    const client = freshClient();
-    const inner = internals(client);
-    inner.chatId = 'chat-1';
-    inner.tornDown = false;
+    const { client, inner } = freshChatClient();
 
     const registration = client.waitUntilRegistered();
     inner.handleMessage({ type: 'chat/error', request_id: 'auth', error: 'unauthorized' });
@@ -193,20 +196,13 @@ describe('StreamClient registration lifecycle', () => {
   });
 
   it('does not report a stream that has only reached open as connected', () => {
-    const client = freshClient();
-    const inner = internals(client);
-    inner.chatId = 'chat-1';
-    inner.status = 'open';
+    const { client } = freshChatClient('open');
 
     expect(client.isConnected()).toBe(false);
   });
 
   it('leaves an open-but-unregistered stream still pending, so a send cannot outrun registration', async () => {
-    const client = freshClient();
-    const inner = internals(client);
-    inner.chatId = 'chat-1';
-    inner.status = 'open';
-    inner.tornDown = false;
+    const { client, inner } = freshChatClient('open');
 
     let registered = false;
     const pending = client.waitUntilRegistered().then(() => {

@@ -18,6 +18,11 @@ import { streamClient } from './services/StreamClient';
 import * as WidgetService from './services/WidgetService';
 import { credentialedConfig, mountTarget, validSettings } from './test/fixtures';
 
+const expectNotMounted = (container: HTMLElement) => {
+  expect(container.querySelector('.marketrix-widget-container')).toBeNull();
+  expect(window.__mtx).toBeUndefined();
+};
+
 afterEach(() => {
   unmountWidget();
   vi.restoreAllMocks();
@@ -124,8 +129,7 @@ describe('public widget lifecycle', () => {
     await initWidget({ mtxId: 'no-host', mtxKey: 'key' }, container);
 
     expect(load).not.toHaveBeenCalled();
-    expect(container.querySelector('.marketrix-widget-container')).toBeNull();
-    expect(window.__mtx).toBeUndefined();
+    expectNotMounted(container);
   });
 
   it('stops short of mounting, connecting or recording when the resolved config is disabled', async () => {
@@ -138,8 +142,7 @@ describe('public widget lifecycle', () => {
     await initWidget({ mtxId: 'disabled', mtxKey: 'key', mtxApiHost: 'https://api.test' }, container);
 
     expect(load).toHaveBeenCalledTimes(1);
-    expect(container.querySelector('.marketrix-widget-container')).toBeNull();
-    expect(window.__mtx).toBeUndefined();
+    expectNotMounted(container);
   });
 
   it('cancels stale production initialization and shares one in-flight promise', async () => {

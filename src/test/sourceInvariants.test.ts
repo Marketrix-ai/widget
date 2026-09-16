@@ -50,6 +50,13 @@ const nonTestSrcFiles = srcFiles.filter(f => !f.endsWith('.test.ts') && !f.endsW
 const contentsExcept = (files: string[], predicate: (f: string) => boolean): { file: string; text: string }[] =>
   files.filter(predicate).map(file => ({ file, text: readFileSync(file, 'utf8') }));
 
+/** Asserts no file outside `exemptPaths` (repo-root-relative) matches `pattern`. */
+const expectNoOffendersExcept = (pattern: RegExp, ...exemptPaths: string[]) => {
+  const exempt = exemptPaths.map(p => resolve(src, p));
+  const offenders = contentsExcept(nonTestSrcFiles, f => !exempt.includes(f) && pattern.test(readFileSync(f, 'utf8')));
+  expect(offenders.map(o => o.file)).toEqual([]);
+};
+
 describe('package.json', () => {
   const pkg = JSON.parse(read('package.json'));
 
@@ -207,26 +214,17 @@ describe('Shadow DOM attachment', () => {
 
 describe('localStorage access', () => {
   it('is confined to StorageService.readLocal / writeLocal', () => {
-    const offenders = contentsExcept(
-      nonTestSrcFiles,
-      f => f !== resolve(src, 'services/StorageService.ts') && /\blocalStorage\./.test(readFileSync(f, 'utf8')),
-    );
-    expect(offenders.map(o => o.file)).toEqual([]);
+    expectNoOffendersExcept(/\blocalStorage\./, 'services/StorageService.ts');
   });
 });
 
 describe('console usage', () => {
   it('never calls console.log/info/debug in src/', () => {
-    const offenders = contentsExcept(nonTestSrcFiles, f => /console\.(log|info|debug)\(/.test(readFileSync(f, 'utf8')));
-    expect(offenders.map(o => o.file)).toEqual([]);
+    expectNoOffendersExcept(/console\.(log|info|debug)\(/);
   });
 
   it('routes every warn through utils/log.ts logWarn — no bare console.warn elsewhere', () => {
-    const offenders = contentsExcept(
-      nonTestSrcFiles,
-      f => f !== resolve(src, 'utils/log.ts') && /console\.warn\(/.test(readFileSync(f, 'utf8')),
-    );
-    expect(offenders.map(o => o.file)).toEqual([]);
+    expectNoOffendersExcept(/console\.warn\(/, 'utils/log.ts');
   });
 });
 
@@ -295,13 +293,7 @@ describe('document.activeElement retargeting', () => {
     if (!eslintConfig) throw new Error('no eslint.config.* at repo root — update this check');
     expect(read(eslintConfig)).toMatch(/no-restricted-properties/);
 
-    const offenders = contentsExcept(
-      nonTestSrcFiles,
-      f =>
-        f !== resolve(src, 'components/navigation/MessengerShell.tsx') &&
-        /document\.activeElement\b/.test(readFileSync(f, 'utf8')),
-    );
-    expect(offenders.map(o => o.file)).toEqual([]);
+    expectNoOffendersExcept(/document\.activeElement\b/, 'components/navigation/MessengerShell.tsx');
   });
 });
 
