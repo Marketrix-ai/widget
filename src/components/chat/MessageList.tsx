@@ -49,7 +49,7 @@ interface MessageListProps {
 export const MessageList = ({ messagesEndRef, onScreenAccessAllow, onScreenAccessDeny }: MessageListProps) => {
   const widgetConfig = useWidgetConfig();
   const { state, actions } = useWidget();
-  const { messages } = state;
+  const { messages, isTaskRunning } = state;
   const { isPreviewMode } = widgetConfig;
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [showScrollBottom, setShowScrollBottom] = useState(false);
@@ -110,9 +110,10 @@ export const MessageList = ({ messagesEndRef, onScreenAccessAllow, onScreenAcces
       >
         {allMessages.map((message: ChatMessage, index: number) => (
           <MessageItem
-            key={`message-${message.id}-${index}`}
+            key={message.id}
             message={message}
             isLastMessage={index === allMessages.length - 1}
+            isTaskRunning={isTaskRunning}
             onScreenAccessAllow={onScreenAccessAllow}
             onScreenAccessDeny={onScreenAccessDeny}
           />

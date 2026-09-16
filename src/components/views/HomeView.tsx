@@ -62,9 +62,9 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigateToChat, onChipClic
             Ask a question
           </Button>
 
-          {suggestedActions.map((action, chipIndex) => (
+          {suggestedActions.map(action => (
             <Button
-              key={`welcome-chip-${action.id}-${chipIndex}`}
+              key={action.id}
               elevation='card'
               size='sm'
               variant='chip'
