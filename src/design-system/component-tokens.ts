@@ -16,7 +16,7 @@
 import type { CSSProperties } from 'react';
 
 export type RadiusToken = 'none' | 'sm' | 'md' | 'lg' | 'xl' | 'pill';
-export type TextTone = 'default' | 'muted' | 'faint' | 'primary' | 'inherit';
+export type TextTone = 'default' | 'muted' | 'faint' | 'inherit';
 export type TextLeading = 'tight' | 'snug' | 'normal' | 'relaxed';
 export type NotificationTone = 'info' | 'error' | 'neutral';
 
@@ -33,7 +33,6 @@ export const TEXT_TONE: Record<TextTone, string> = {
   default: 'var(--foreground)',
   muted: 'var(--foreground-muted)',
   faint: 'var(--foreground-faint)',
-  primary: 'var(--primary)',
   inherit: 'inherit',
 };
 
