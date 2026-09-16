@@ -13,9 +13,10 @@
  * `bun run build` runs once in `beforeAll` so the dist under test is never stale: this repo's own `ci`
  * script builds AFTER test, so a pre-existing `dist/` can't be assumed here.
  *
- * `mtx-*` attribute NAMES come from parsing README's own script-tag snippet, not a hand-typed list, so a
- * renamed or added attribute breaks this file until the README (or the test) is fixed — never a silent
- * drift between what the docs promise and what boots.
+ * `mtx-*` attribute NAMES and the expected runtime EXPORT NAMES both come from parsing README's own
+ * script-tag snippet and `import { ... } from '@marketrix.ai/widget'` block, never a hand-typed list, so
+ * a renamed, added or removed attribute or export breaks this file until the README (or the test) is
+ * fixed — never a silent drift between what the docs promise and what boots.
  *
  * The mocked production response is encoded with oRPC's OWN `@orpc/client/standard` serializer, not a
  * hand-guessed envelope: the widget's real `RPCLink` decode only accepts bytes that serializer actually
@@ -55,6 +56,15 @@ if (!readmeSnippet) throw new Error('README.md script-tag install snippet not fo
 const mtxAttrNames = [...readmeSnippet.matchAll(/\s(mtx-[a-z-]+)="/g)].map(m => m[1]!);
 if (mtxAttrNames.length === 0)
   throw new Error('README.md script-tag snippet carries no mtx-* attributes — update this test');
+
+const namedExportsSnippet = readme.match(/```ts\nimport \{\n([\s\S]*?)\n\} from '@marketrix\.ai\/widget';\n```/)?.[1];
+if (!namedExportsSnippet) throw new Error('README.md programmatic-API import snippet not found — update this test');
+const documentedExportNames = namedExportsSnippet
+  .split(',')
+  .map(name => name.trim())
+  .filter(Boolean);
+if (documentedExportNames.length === 0)
+  throw new Error('README.md programmatic-API import snippet carries no named exports — update this test');
 
 // Bun caches a plain `.mjs` import by PATH, ignoring the query string (unlike its own `.ts` transpiler
 // loader) — a `?case=N` cache-buster is a no-op here and every "fresh boot" would reuse the same
@@ -213,17 +223,7 @@ describe("embed smoke: the built dist/widget.mjs boots the way a customer's page
     const mod = await importDist();
     await tick(); // drains this instance's deferred auto-init no-op before it can fire mid-way through a later test
 
-    expect(Object.keys(mod).sort()).toEqual(
-      [
-        'MarketrixWidgetPreview',
-        'default',
-        'getCurrentConfig',
-        'initWidget',
-        'mountWidget',
-        'unmountWidget',
-        'updateMarketrixConfig',
-      ].sort(),
-    );
+    expect(Object.keys(mod).sort()).toEqual([...documentedExportNames, 'default'].sort());
   });
 
   it('a documented script[mtx-id] tag drives the widgetPublicSearch lookup to mtx-api-host, mounts a closed-shadow FAB at the documented z-index, and leaks only __mtx onto window', async () => {
