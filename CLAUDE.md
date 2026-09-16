@@ -226,8 +226,7 @@ local and shipped images cannot drift in their dependency set.
   sourceInvariants.test.ts). Severity follows the root `../CLAUDE.md` — a degraded-but-handled failure
   (a reconnect, unreadable `localStorage`, dropped telemetry) is `warn`, an unexpected one is `error`;
   `logWarn` prints only the cause's message, never the raw `Error`, because attaching a stacktrace is
-  what promotes a record to `error` — call `console.error` directly (or `logError`) where the whole
-  object belongs.
+  what promotes a record to `error` — call `console.error` directly where the whole object belongs.
 - **The widget has no dark mode** — no `.dark` block, no `dark:` variant (pinned by
   sourceInvariants.test.ts). Theming is the per-tenant settings → CSS custom properties in
   `semantic-tokens.ts`, nothing else.
