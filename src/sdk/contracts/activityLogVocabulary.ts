@@ -1,11 +1,15 @@
 /**
- * The three closed vocabularies an activity-log row's shape is keyed on — `type` (what happened),
- * plus the two enums that ride INSIDE some per-type metadata shapes (`ApplicationTypeSchema`,
- * `WidgetTypeSchema`). Split out of `contracts/entities.ts` into this dependency-free leaf so
- * `contracts/activityLogMetadata.ts`'s per-type registry can import them without cycling back
+ * The four closed vocabularies an activity-log row's shape is keyed on — `type` (what happened),
+ * the two enums that ride INSIDE some per-type metadata shapes (`ApplicationTypeSchema`,
+ * `WidgetTypeSchema`), and `SlackCommandLogStatusSchema` (the `slack_command` metadata's `status`,
+ * and `contracts/slack.ts`'s command-log entity status — one home per `tests/unit/contractEnumHomes.test.ts`).
+ * Split out of `contracts/entities.ts` into this dependency-free leaf — no `@orpc/contract` import —
+ * so `contracts/activityLogMetadata.ts`'s per-type registry can import them without cycling back
  * through `entities.ts`, which needs the registry to type `ActivityLogEntitySchema.metadata`
- * precisely instead of `.passthrough()`. `entities.ts` re-exports all three so existing importers of
- * it are unaffected.
+ * precisely instead of `.passthrough()`, and so an audience that never touches oRPC contract routes
+ * (the internal/monitor mirror) doesn't pull `@orpc/contract` in through the metadata registry.
+ * `entities.ts` re-exports the first three (unchanged); `SlackCommandLogStatusSchema` is new here and
+ * has no `entities.ts` re-export since nothing imported it from there before.
  */
 import { z } from 'zod';
 
@@ -54,3 +58,6 @@ export const ActivityLogTypeSchema = z.enum([
   'delete_survey_response',
 ]);
 export type ActivityLogType = z.infer<typeof ActivityLogTypeSchema>;
+
+export const SlackCommandLogStatusSchema = z.enum(['received', 'classifying', 'dispatched', 'completed', 'failed']);
+export type SlackCommandLogStatus = z.infer<typeof SlackCommandLogStatusSchema>;
