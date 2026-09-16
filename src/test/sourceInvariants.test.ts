@@ -19,7 +19,10 @@
  * only the shared `useWidget` hook · `document.activeElement`/`shadowRoot.activeElement` are eslint-banned
  * and `activeElementIn` is their one reader · there is no `sdk/routes.ts` or `sdk/schema.ts` · no bare
  * `<div>`/`<span>` carries an `onClick` without a `role` — every clickable is a `Button`/`IconButton`, a
- * native `<button>`, or an explicitly-roled element with its own keyboard handling.
+ * native `<button>`, or an explicitly-roled element with its own keyboard handling · `tsconfig.json` keeps
+ * `strict` plus every measured strictness flag (`noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`,
+ * `noImplicitOverride`, `noPropertyAccessFromIndexSignature`, `noFallthroughCasesInSwitch`,
+ * `verbatimModuleSyntax`) on, so a later pass can't silently drop one back off.
  */
 import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
@@ -80,6 +83,27 @@ describe('tsconfig.build.json', () => {
   it('excludes src/test and test files from the published declarations', () => {
     expect(tsconfig.exclude).toContain('src/test');
     expect(tsconfig.exclude.some((p: string) => p.includes('*.test.'))).toBe(true);
+  });
+});
+
+describe('tsconfig.json strict flags', () => {
+  const tsconfig = JSON.parse(read('tsconfig.json'));
+
+  it('keeps every measured strictness flag on — a regression here is a silent type-safety loss', () => {
+    for (const flag of [
+      'strict',
+      'noUncheckedIndexedAccess',
+      'exactOptionalPropertyTypes',
+      'noImplicitOverride',
+      'noPropertyAccessFromIndexSignature',
+      'noFallthroughCasesInSwitch',
+      'verbatimModuleSyntax',
+    ]) {
+      expect(tsconfig.compilerOptions[flag]).toBe(true);
+    }
+    // useUnknownInCatchVariables has no separate entry: `strict: true` already implies it and it is
+    // never overridden below, so its absence here is not a gap.
+    expect(tsconfig.compilerOptions.useUnknownInCatchVariables).not.toBe(false);
   });
 });
 
