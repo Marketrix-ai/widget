@@ -26,7 +26,7 @@
 
 export const WIDGET_SHADOW_HOST_CLASS = 'marketrix-widget-container';
 
-export const TABBABLE_SELECTOR =
+const TABBABLE_SELECTOR =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 const INTERACTIVE_ROLES = new Set(['button', 'link', 'textbox', 'checkbox', 'radio', 'switch', 'tab', 'menuitem']);
