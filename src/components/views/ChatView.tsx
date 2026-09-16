@@ -189,10 +189,6 @@ export function useScreenShare({
     flushPendingMessage();
   };
 
-  // `MessageList` passes these two down to every `MessageItem`; each is rebuilt from the closures
-  // above on every render (`openRequest` and friends change with `messages`), which defeats
-  // `MessageItem`'s `React.memo` for every row, not just the streaming one. `useLatest` + a
-  // `useCallback` with an empty dep array keeps the identity stable while the body it runs stays current.
   const beginScreenShareRef = useLatest(beginScreenShare);
   const handleScreenAccessRequestAllow = useCallback(() => beginScreenShareRef.current(), [beginScreenShareRef]);
 

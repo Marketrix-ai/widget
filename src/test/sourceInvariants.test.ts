@@ -17,7 +17,9 @@
  * `src/` · no schema from `sdk` is imported as a VALUE outside `src/sdk/` and `src/test/` · no CSS framework
  * (`tailwind`/`classnames` deps, `cn(` calls) and no dark-mode selector in `index.css` · `src/hooks/` holds
  * only the shared `useWidget` hook · `document.activeElement`/`shadowRoot.activeElement` are eslint-banned
- * and `activeElementIn` is their one reader · there is no `sdk/routes.ts` or `sdk/schema.ts`.
+ * and `activeElementIn` is their one reader · there is no `sdk/routes.ts` or `sdk/schema.ts` · no bare
+ * `<div>`/`<span>` carries an `onClick` without a `role` — every clickable is a `Button`/`IconButton`, a
+ * native `<button>`, or an explicitly-roled element with its own keyboard handling.
  */
 import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
@@ -282,5 +284,20 @@ describe('sdk mirror shape', () => {
     const sdkFiles = walk(resolve(src, 'sdk')).map(f => f.split('/').pop());
     expect(sdkFiles).not.toContain('routes.ts');
     expect(sdkFiles).not.toContain('schema.ts');
+  });
+});
+
+describe('interactive elements', () => {
+  it('never puts onClick on an unroled div or span', () => {
+    const offenders: { file: string; tag: string }[] = [];
+    for (const file of nonTestSrcFiles) {
+      const text = readFileSync(file, 'utf8');
+      for (const match of text.matchAll(/<(div|span)\b[\s\S]*?>/g)) {
+        if (/onClick=/.test(match[0]) && !/\brole=/.test(match[0])) {
+          offenders.push({ file, tag: match[0].slice(0, 80).replace(/\s+/g, ' ') });
+        }
+      }
+    }
+    expect(offenders).toEqual([]);
   });
 });

@@ -52,7 +52,6 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigateToChat, onChipClic
             variant='primary'
             full
             onClick={onNavigateToChat}
-            aria-label='Ask a question'
             style={{
               paddingTop: '10px',
               paddingBottom: '10px',
