@@ -28,6 +28,7 @@ import { type ChatMessage, messageText } from '@/types';
 
 import {
   reduceDispatch,
+  type ReduceResult,
   reduceSse,
   reduceStaleReply,
   reduceStop,
@@ -36,6 +37,11 @@ import {
   reduceTransportFailure,
   type SseState,
 } from '../sseReducer';
+
+const expectNoOp = (result: ReduceResult, state: SseState) => {
+  expect(result.state).toBe(state);
+  expect(result.effects).toEqual([]);
+};
 
 const runningState = (overrides: Partial<ChatMessage> = {}): SseState => ({
   messages: [agentMessage(overrides)],
@@ -62,8 +68,7 @@ describe('reduceSse — task/status', () => {
   it('running is a no-op — the first tool/call is what activates the task', () => {
     const state = idleState();
     const result = reduceSse(state, { type: 'task/status', status: 'running' }, 'do');
-    expect(result.state).toBe(state);
-    expect(result.effects).toEqual([]);
+    expectNoOp(result, state);
   });
 
   it('completed ends the task and marks the active message done', () => {
@@ -295,8 +300,7 @@ describe('reduceSse — ignored events', () => {
     const state = runningState();
     const event = { type, chat_id: 'c1' } as unknown as WidgetEvent;
     const result = reduceSse(state, event, 'do');
-    expect(result.state).toBe(state);
-    expect(result.effects).toEqual([]);
+    expectNoOp(result, state);
   });
 });
 

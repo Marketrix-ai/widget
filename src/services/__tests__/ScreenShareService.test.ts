@@ -35,15 +35,17 @@ afterEach(() => {
 });
 
 describe('use_screenshare', () => {
-  it('denies the request instead of prompting when the tenant turned screen sharing off', async () => {
-    storageService.setConfig(credentialedConfig({ mtxId: 'id', mtxKey: 'key', use_screenshare: false }));
-
-    await expect(startScreenShare()).rejects.toThrow('Screen sharing is disabled for this widget');
-    expect(getDisplayMedia).not.toHaveBeenCalled();
-  });
-
-  it('denies on the switch alone — a stored config that lost its credentials must not reopen the picker', async () => {
-    storageService.updateContext({ config: { use_screenshare: false } });
+  it.each([
+    [
+      'the tenant turned screen sharing off',
+      () => storageService.setConfig(credentialedConfig({ mtxId: 'id', mtxKey: 'key', use_screenshare: false })),
+    ],
+    [
+      'the switch alone flips it — a stored config that lost its credentials must not reopen the picker',
+      () => storageService.updateContext({ config: { use_screenshare: false } }),
+    ],
+  ] as const)('denies the request instead of prompting when %s', async (_label, setup) => {
+    setup();
 
     await expect(startScreenShare()).rejects.toThrow('Screen sharing is disabled for this widget');
     expect(getDisplayMedia).not.toHaveBeenCalled();

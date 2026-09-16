@@ -54,7 +54,7 @@ export interface SseEffect {
   explanation: string;
 }
 
-interface ReduceResult {
+export interface ReduceResult {
   state: SseState;
   effects: SseEffect[];
 }
