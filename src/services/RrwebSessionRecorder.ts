@@ -16,7 +16,9 @@
  * defaults and un-block elements a customer blocks with .rr-block. A rejected flush is
  * degraded-but-handled rather than swallowed — logged, then requeued at the FRONT with the overflow
  * trimmed off the TAIL, because the head carries the Meta/FullSnapshot every later incremental event
- * replays against; the next timer retries.
+ * replays against. The catch itself re-arms `flushTimer` at the same `FLUSH_INTERVAL_MS`, so a failed
+ * batch retries on its own even when the host page goes idle and rrweb emits nothing new to piggyback
+ * the retry on — relying on the next `emit` alone left a failed batch stuck until the next DOM mutation.
  */
 import { record } from '@rrweb/record';
 import type { eventWithTime } from '@rrweb/types';
@@ -91,6 +93,7 @@ export class RrwebSessionRecorder {
       } catch (error) {
         this.events = events.concat(this.events).slice(0, MAX_REQUEUED_EVENTS);
         console.error('Failed to record session events:', error);
+        if (!this.stopped) this.flushTimer = setTimeout(() => void this.flush(), FLUSH_INTERVAL_MS);
       }
     });
     return this.flushPromise;

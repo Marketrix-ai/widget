@@ -11,12 +11,19 @@
  * caller config, since the application id is a consequence of valid credentials, never a host-supplied
  * input. `widgetPublicSearch`'s response is `WidgetPublicData` — status/application_id/settings only,
  * never the `marketrix_id`/`marketrix_key` pair this call authenticated with, nor the rendered embed
- * snippet. This runs on every page load of every host site, so it is ONE request.
+ * snippet.
  *
- * Every failure reports through `utils/errors`, so nothing here swallows the throw underneath it. The
- * probe strings matched on a failed `widgetPublicSearch` are the platform-specific texts browsers emit
- * for an unreachable host — matching them turns a dead api into "start the API server at <host>" instead
- * of a misleading "widget validation failed".
+ * `widgetLookupCache` memoizes the resolved (settings, applicationId) pair by `mtxId:mtxKey`, keyed on
+ * the in-flight promise so concurrent callers share one request. `updateMarketrixConfig` re-runs
+ * `initWidget` with the same credentials on every client-owned settings change (theme, position, …), so
+ * without this cache each such update re-issues the same credentialed search this call already made —
+ * this is the ONE request per page load the api sees for a given tenant. A rejected lookup is deleted
+ * from the cache before the throw propagates, so it is never memoized and the next call retries against
+ * the api instead of replaying a stale failure — nothing here swallows the throw underneath it.
+ *
+ * The probe strings matched on a failed `widgetPublicSearch` are the platform-specific texts browsers
+ * emit for an unreachable host — matching them turns a dead api into "start the API server at <host>"
+ * instead of a misleading "widget validation failed".
  */
 import { sdk, type WidgetPublicData } from '../sdk';
 import type { MarketrixConfig, ValidWidgetConfig } from '../types';
@@ -34,12 +41,14 @@ export function createConfigFromSettings(
   } as ValidWidgetConfig;
 }
 
-export async function loadWidgetConfig(config: MarketrixConfig): Promise<CredentialedConfig> {
-  const { mtxId, mtxKey } = config;
-  if (!mtxId || !mtxKey) {
-    throw new Error('Please provide mtxId + mtxKey');
-  }
+interface ResolvedWidget {
+  settings: WidgetRenderedSettings;
+  applicationId: number;
+}
 
+const widgetLookupCache = new Map<string, Promise<ResolvedWidget>>();
+
+async function resolveActiveWidget(mtxId: string, mtxKey: string, mtxApiHost?: string): Promise<ResolvedWidget> {
   let widgets: WidgetPublicData[];
   try {
     ({ items: widgets } = await sdk.widgetPublicSearch({ marketrix_id: mtxId, marketrix_key: mtxKey }));
@@ -50,7 +59,7 @@ export async function loadWidgetConfig(config: MarketrixConfig): Promise<Credent
     );
     throw withCause(
       unreachable
-        ? `Cannot connect to API server. Please ensure the API server is running at ${config.mtxApiHost || 'configured API server'}. Error: ${message}`
+        ? `Cannot connect to API server. Please ensure the API server is running at ${mtxApiHost || 'configured API server'}. Error: ${message}`
         : `Widget validation failed: ${message}`,
       error,
     );
@@ -77,11 +86,29 @@ export async function loadWidgetConfig(config: MarketrixConfig): Promise<Credent
     throw new Error(invalidSettingsMessage(parsedSettings.invalidFields));
   }
 
+  return { settings: parsedSettings.settings, applicationId: activeWidget.application_id };
+}
+
+export async function loadWidgetConfig(config: MarketrixConfig): Promise<CredentialedConfig> {
+  const { mtxId, mtxKey } = config;
+  if (!mtxId || !mtxKey) {
+    throw new Error('Please provide mtxId + mtxKey');
+  }
+
+  const cacheKey = `${mtxId}:${mtxKey}`;
+  let lookup = widgetLookupCache.get(cacheKey);
+  if (!lookup) {
+    lookup = resolveActiveWidget(mtxId, mtxKey, config.mtxApiHost);
+    widgetLookupCache.set(cacheKey, lookup);
+    lookup.catch(() => widgetLookupCache.delete(cacheKey));
+  }
+
+  const { settings, applicationId } = await lookup;
   return {
-    ...createConfigFromSettings(parsedSettings.settings, config),
+    ...createConfigFromSettings(settings, config),
     mtxId,
     mtxKey,
-    mtxApp: activeWidget.application_id,
+    mtxApp: applicationId,
     isPreviewMode: false,
   };
 }

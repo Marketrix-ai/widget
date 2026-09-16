@@ -1,6 +1,9 @@
 /**
  * `use_screenshare` tests: denied without a prompt when the tenant turned sharing off — on the switch
  * alone, so a stored config that lost its credentials cannot reopen the picker — and prompted when on.
+ * `startScreenShare` is idempotent both for an already-live stream and for two overlapping calls before
+ * the first `getDisplayMedia` prompt resolves; `stopScreenShare` releases every track and is a no-op
+ * when nothing is sharing.
  *
  * `startScreenShare`/`stopScreenShare` own module-level state (the active `MediaStream`) shared by the
  * whole `bun test` process (root `CLAUDE.md` has the general leak mechanism); the success case here
@@ -54,5 +57,41 @@ describe('use_screenshare', () => {
 
     await expect(startScreenShare()).resolves.toBe(stream);
     expect(getDisplayMedia).toHaveBeenCalledTimes(1);
+  });
+
+  it('shares one prompt between two overlapping calls before it resolves', async () => {
+    storageService.setConfig(credentialedConfig({ mtxId: 'id', mtxKey: 'key' }));
+    const stream = liveStream();
+    let resolvePrompt!: (stream: MediaStream) => void;
+    getDisplayMedia.mockReturnValue(
+      new Promise<MediaStream>(resolve => {
+        resolvePrompt = resolve;
+      }),
+    );
+
+    const first = startScreenShare();
+    const second = startScreenShare();
+    resolvePrompt(stream);
+
+    await expect(first).resolves.toBe(stream);
+    await expect(second).resolves.toBe(stream);
+    expect(getDisplayMedia).toHaveBeenCalledTimes(1);
+  });
+
+  it('releases every track on stop, and is a no-op when nothing is sharing', async () => {
+    storageService.setConfig(credentialedConfig({ mtxId: 'id', mtxKey: 'key' }));
+    const stopTrack = vi.fn();
+    const stream = {
+      active: true,
+      getVideoTracks: () => [{ readyState: 'live', addEventListener: vi.fn() }],
+      getTracks: () => [{ stop: stopTrack }, { stop: stopTrack }],
+    } as unknown as MediaStream;
+    getDisplayMedia.mockResolvedValue(stream);
+
+    await startScreenShare();
+    stopScreenShare();
+
+    expect(stopTrack).toHaveBeenCalledTimes(2);
+    expect(() => stopScreenShare()).not.toThrow();
   });
 });
