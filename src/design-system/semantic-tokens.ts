@@ -78,7 +78,7 @@ export function createSemanticTokens(settings: Partial<WidgetSettingsData> = {})
       primaryForeground: getContrastingColor(resolved.widget_accent_color),
       primaryHover: addOpacity(resolved.widget_accent_color, 0.85),
       secondary: resolved.widget_secondary_color,
-      secondaryForeground: '#ffffff',
+      secondaryForeground: getContrastingColor(resolved.widget_secondary_color),
       secondaryBg: addOpacity(resolved.widget_secondary_color, 0.2),
       secondaryHover: addOpacity(resolved.widget_secondary_color, 0.3),
     },

@@ -262,6 +262,7 @@ export type {
   ClientOwnedConfig,
   MarketrixConfig,
   MarketrixWidgetPreviewProps,
+  WidgetSettingsData,
   WidgetState,
 } from './types';
 
