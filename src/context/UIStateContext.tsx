@@ -54,7 +54,9 @@ export const UIStateProvider: React.FC<{ children: React.ReactNode }> = ({ child
     [],
   );
 
-  return <UIStateContext.Provider value={{ uiState, uiActions }}>{children}</UIStateContext.Provider>;
+  const contextValue = useMemo<UIStateContextType>(() => ({ uiState, uiActions }), [uiState, uiActions]);
+
+  return <UIStateContext.Provider value={contextValue}>{children}</UIStateContext.Provider>;
 };
 
 export const useUIStateContext = (): UIStateContextType => {

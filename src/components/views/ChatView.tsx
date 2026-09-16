@@ -21,8 +21,11 @@
  * `useScreenShare` (this file's only other consumer) owns the screen-share lifecycle: the in-transcript
  * permission card, the browser picker, the live share message, and ending a share. `useLatest` keeps a
  * value readable from a callback that must not be re-created (the polling interval below, mounted once);
-its refs are listed in that effect's deps for the linter, but since `useRef` identity never changes,
-listing them cannot re-arm the interval.
+ * its refs are listed in that effect's deps for the linter, but since `useRef` identity never changes,
+ * listing them cannot re-arm the interval. The same idiom stabilizes `handleScreenAccessRequestAllow`/
+ * `handleScreenAccessRequestDeny`: both are handed to every `MessageItem` through `MessageList`, and a
+ * fresh closure each render (the naive `beginScreenShare`/inline-arrow form) defeats `MessageItem`'s
+ * `React.memo` for the whole transcript on every SSE token, not just the streaming row.
  * The hook returns `requestScreenAccess` — posting a request card carrying the queued turn, no-oping if
  * one is already open — plus that card's Allow/Deny handlers, the toolbar dialog's Allow/Dismiss
  * handlers, and `toggleScreenShareRef`, a toggle stopping a live share or opening that dialog.
@@ -36,7 +39,7 @@ listing them cannot re-arm the interval.
  * the pending content (a cancel resolves `denied` like a real failure), leaving no queued turn stranded.
  * `useScreenShare` is exported so `ChatView.test.tsx`'s `renderHook` cases can drive it directly.
  */
-import React, { useEffect, useImperativeHandle, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 
 import { useWidget, useWidgetConfig } from '../../hooks/useWidget';
 import type { InstructionType } from '../../sdk';
@@ -186,12 +189,22 @@ export function useScreenShare({
     flushPendingMessage();
   };
 
-  const handleScreenAccessRequestAllow = beginScreenShare;
+  // `MessageList` passes these two down to every `MessageItem`; each is rebuilt from the closures
+  // above on every render (`openRequest` and friends change with `messages`), which defeats
+  // `MessageItem`'s `React.memo` for every row, not just the streaming one. `useLatest` + a
+  // `useCallback` with an empty dep array keeps the identity stable while the body it runs stays current.
+  const beginScreenShareRef = useLatest(beginScreenShare);
+  const handleScreenAccessRequestAllow = useCallback(() => beginScreenShareRef.current(), [beginScreenShareRef]);
 
-  const handleScreenAccessRequestDeny = () => {
+  const denyScreenAccessRequest = () => {
     resolveAccessRequest('denied');
     flushPendingMessage();
   };
+  const denyScreenAccessRequestRef = useLatest(denyScreenAccessRequest);
+  const handleScreenAccessRequestDeny = useCallback(
+    () => denyScreenAccessRequestRef.current(),
+    [denyScreenAccessRequestRef],
+  );
 
   const handleScreenAccessDialogAllow = async () => {
     setShowScreenAccessDialog(false);

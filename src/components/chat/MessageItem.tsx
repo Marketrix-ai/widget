@@ -5,6 +5,15 @@
  * the allow/deny controls of a screen-access request, and a done/failed/stopped glyph in the tenant
  * accent at a per-status opacity. The last message fades in.
  *
+ * **Memoized, and `isTaskRunning` arrives as a prop rather than through `useWidget()`.** `MessageList`
+ * commits a whole new `messages` array on every `chat/delta` token (`ChatContext`'s reducer keeps
+ * reference equality for every message except the one being streamed into), so a `useWidget()`/
+ * `useChatContext()` call anywhere inside a list row re-subscribes that row to the token stream directly
+ * and defeats `React.memo` regardless of props — measured at ~21 `MessageItem`/`MessageBody` renders per
+ * token in a 20-message transcript before this change (one per row), ~1 after (only the streaming row).
+ * `onScreenAccessAllow`/`onScreenAccessDeny` must stay referentially stable (`ChatView`'s `useScreenShare`
+ * wraps them for exactly this) or the memo comparison never bails.
+ *
  * `MessageBody` renders the message's `parts` — text and progress lines — and `Thinking` is the
  * spinner-and-caption row shown while a reply is pending, its caption switching to name the visitor's
  * action when the agent is blocked on them. Thinking shows while a placeholder carries no text yet, and
@@ -14,7 +23,7 @@
 import React from 'react';
 
 import MarketrixIcon from '../../assets/marketrix-icon.svg';
-import { useWidget, useWidgetConfig } from '../../hooks/useWidget';
+import { useWidgetConfig } from '../../hooks/useWidget';
 import type { ChatMessage } from '../../types';
 import { formatMessageTime } from '../../utils/chat';
 import { addOpacity } from '../../utils/color';
@@ -31,6 +40,7 @@ import { VideoStreamDisplay } from './VideoStreamDisplay';
 interface MessageItemProps {
   message: ChatMessage;
   isLastMessage: boolean;
+  isTaskRunning: boolean;
   onScreenAccessAllow?: () => void;
   onScreenAccessDeny?: () => void;
 }
@@ -50,8 +60,11 @@ const Thinking: React.FC<{ isWaitingForUser: boolean }> = ({ isWaitingForUser })
   </Flex>
 );
 
-const MessageBody: React.FC<{ message: ChatMessage; isLastMessage: boolean }> = ({ message, isLastMessage }) => {
-  const { isTaskRunning } = useWidget().state;
+const MessageBody: React.FC<{ message: ChatMessage; isLastMessage: boolean; isTaskRunning: boolean }> = ({
+  message,
+  isLastMessage,
+  isTaskRunning,
+}) => {
   const isWaitingForUser = message.placeholderState === 'waiting-for-user';
   const stillWorking = isTaskRunning && isLastMessage && (message.mode === 'show' || message.mode === 'do');
 
@@ -95,9 +108,10 @@ const MessageBody: React.FC<{ message: ChatMessage; isLastMessage: boolean }> = 
   );
 };
 
-export const MessageItem: React.FC<MessageItemProps> = ({
+const MessageItemComponent: React.FC<MessageItemProps> = ({
   message,
   isLastMessage,
+  isTaskRunning,
   onScreenAccessAllow,
   onScreenAccessDeny,
 }) => {
@@ -170,11 +184,11 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                   <Icon name={leadingIcon} size={13} />
                 </Flex>
                 <Stack grow>
-                  <MessageBody message={message} isLastMessage={isLastMessage} />
+                  <MessageBody message={message} isLastMessage={isLastMessage} isTaskRunning={isTaskRunning} />
                 </Stack>
               </Flex>
             ) : (
-              <MessageBody message={message} isLastMessage={isLastMessage} />
+              <MessageBody message={message} isLastMessage={isLastMessage} isTaskRunning={isTaskRunning} />
             ))}
 
           {message.isScreenAccessRequest && !message.screenShareStatus && (
@@ -215,3 +229,5 @@ export const MessageItem: React.FC<MessageItemProps> = ({
     </Stack>
   );
 };
+
+export const MessageItem = React.memo(MessageItemComponent);

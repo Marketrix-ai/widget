@@ -286,11 +286,12 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
 
   const taskActions = useMemo<TaskActions>(() => ({ resetTask, stopTask }), [resetTask, stopTask]);
 
-  return (
-    <ChatContext.Provider value={{ messages: state.messages, chatActions, taskState: state.task, taskActions }}>
-      {children}
-    </ChatContext.Provider>
+  const contextValue = useMemo<ChatContextType>(
+    () => ({ messages: state.messages, chatActions, taskState: state.task, taskActions }),
+    [state.messages, chatActions, state.task, taskActions],
   );
+
+  return <ChatContext.Provider value={contextValue}>{children}</ChatContext.Provider>;
 };
 
 export const useChatContext = (): ChatContextType => {
