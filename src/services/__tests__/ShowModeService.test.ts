@@ -99,3 +99,44 @@ describe('a show action the page invalidates', () => {
     expect(await rejection).toBe(obscured);
   });
 });
+
+describe('a highlight settles exactly once', () => {
+  let service: ShowModeService;
+
+  beforeEach(() => {
+    notInteractableReason.mockReturnValue(null);
+    Element.prototype.scrollIntoView = vi.fn();
+    document.body.innerHTML = '<button id="a"></button>';
+    service = new ShowModeService();
+  });
+
+  afterEach(() => {
+    service.cleanup();
+    resetDom();
+  });
+
+  it('a second click after the target already settled is inert, not a double resolve', async () => {
+    const settled = service
+      .showToolAction({
+        element: document.getElementById('a') as HTMLElement,
+        explanation: 'a',
+        browserToolName: 'click_element',
+        isClickAction: true,
+      })
+      .then(
+        () => 'resolved',
+        () => 'rejected',
+      );
+
+    document.getElementById('a')?.click();
+    expect(await settled).toBe('resolved');
+
+    expect(document.getElementById('marketrix-show-highlight')).toBeNull();
+    expect(document.getElementById('marketrix-show-popup')).toBeNull();
+
+    // The click listener is detached on settle, so a stray click on the (removed) target's id
+    // must not throw and must not resurrect a highlight or popup.
+    expect(() => document.getElementById('a')?.click()).not.toThrow();
+    expect(document.getElementById('marketrix-show-highlight')).toBeNull();
+  });
+});
