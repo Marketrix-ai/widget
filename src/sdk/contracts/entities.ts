@@ -207,10 +207,19 @@ export type WidgetPublicData = z.infer<typeof WidgetPublicSchema>;
 // because the discriminant is the sibling `activity_log.type` COLUMN, not a field inside `metadata`
 // itself — Zod tries each branch in turn, which is looser than exact per-row typing but still a real
 // narrowing over every key actually stored (verified against both environments' live key sets).
-const activityMetadataVariants = Object.values(ActivityMetadataByType) as unknown as [
-  z.ZodTypeAny,
-  z.ZodTypeAny,
-  ...z.ZodTypeAny[],
+//
+// `Object.values()` types as a plain `X[]`, which fails `z.union`'s `[a, b, ...rest]` tuple
+// constraint, so the cast below is unavoidable — but it asserts only the ARRAY SHAPE (2+ elements),
+// never the element type. Casting to `(typeof ActivityMetadataByType)[ActivityLogType]` (the real
+// union of every branch's specific schema type, since `ActivityMetadataByType` keeps its object
+// literal's own type under `satisfies` rather than widening to `Record<ActivityLogType, ZodType>`)
+// keeps `z.infer<typeof ActivityLogMetadataSchema>` a genuine per-type union. The previous cast to
+// `[ZodTypeAny, ZodTypeAny, ...ZodTypeAny[]]` erased every branch to `{}`, which is what forced
+// every consumer (app#1313) to re-`safeParse` a row by hand to narrow it.
+const activityMetadataVariants = Object.values(ActivityMetadataByType) as [
+  (typeof ActivityMetadataByType)[ActivityLogType],
+  (typeof ActivityMetadataByType)[ActivityLogType],
+  ...(typeof ActivityMetadataByType)[ActivityLogType][],
 ];
 export const ActivityLogMetadataSchema = z.union(activityMetadataVariants);
 
