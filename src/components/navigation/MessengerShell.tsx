@@ -47,7 +47,9 @@
  * whichever corner that is. During a drag the new size is written straight to the element's inline style and
  * held in `dimsRef` — React state commits once, on mouseup, so pointer motion never re-renders the tree.
  * `data-resizing` keys `index.css`'s CSS transition off. Preview mode has no grip — `onResizeStart` returns
- * before binding, so it never writes a visitor size.
+ * before binding, so it never writes a visitor size. The grip is also a focusable `role='separator'`
+ * (`tabIndex=0`): `onResizeKeyDown` steps width/height by `KEYBOARD_RESIZE_STEP_PX` per arrow key, through
+ * the same `clampSize`/`writeLocal` path as a drag, so a keyboard-only visitor can resize the panel too.
  */
 import { Tabs } from '@base-ui/react/tabs';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -147,6 +149,7 @@ const MIN_WIDTH = 280;
 const MAX_WIDTH = 600;
 const MIN_HEIGHT = 320;
 const DEFAULT_SIZE: Size = { width: 360, height: 450 };
+const KEYBOARD_RESIZE_STEP_PX = 16;
 
 function clampSize({ width, height }: Size): Size {
   return {
@@ -255,11 +258,35 @@ export function useResize(
     [isPreviewMode, storageKey, grip],
   );
 
+  const handleResizeKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (isPreviewMode) return;
+      const deltas: Record<string, Size> = {
+        ArrowLeft: { width: -KEYBOARD_RESIZE_STEP_PX, height: 0 },
+        ArrowRight: { width: KEYBOARD_RESIZE_STEP_PX, height: 0 },
+        ArrowUp: { width: 0, height: -KEYBOARD_RESIZE_STEP_PX },
+        ArrowDown: { width: 0, height: KEYBOARD_RESIZE_STEP_PX },
+      };
+      const delta = deltas[e.key];
+      if (!delta) return;
+      e.preventDefault();
+      const next = clampSize({
+        width: dimsRef.current.width + delta.width,
+        height: dimsRef.current.height + delta.height,
+      });
+      dimsRef.current = next;
+      setDimensions(next);
+      writeLocal(storageKey, JSON.stringify(next));
+    },
+    [isPreviewMode, storageKey],
+  );
+
   return {
     widthPx: `${dimensions.width}px`,
     heightPx: `${dimensions.height}px`,
     grip,
     onResizeStart: handleResizeStart,
+    onResizeKeyDown: handleResizeKeyDown,
     containerRef,
   };
 }
@@ -270,7 +297,7 @@ export const MessengerShell: React.FC = () => {
   const { isOpen, activeView } = state;
   const { isPreviewMode } = config;
 
-  const { widthPx, heightPx, grip, onResizeStart, containerRef } = useResize(
+  const { widthPx, heightPx, grip, onResizeStart, onResizeKeyDown, containerRef } = useResize(
     config.widget_width,
     config.widget_height,
     config.widget_position,
@@ -382,8 +409,9 @@ export const MessengerShell: React.FC = () => {
       {!isPreviewMode && (
         <div
           role='separator'
-          aria-label={`Resize widget from ${grip.vertical} ${grip.horizontal}`}
+          aria-label={`Resize widget from ${grip.vertical} ${grip.horizontal}. Use arrow keys to resize.`}
           title='Drag to resize'
+          tabIndex={0}
           style={{
             position: 'absolute',
             [grip.vertical]: 0,
@@ -399,6 +427,7 @@ export const MessengerShell: React.FC = () => {
             cursor: grip.cursor,
           }}
           onMouseDown={onResizeStart}
+          onKeyDown={onResizeKeyDown}
         />
       )}
     </Stack>

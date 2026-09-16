@@ -17,6 +17,10 @@
  * pill 20, banner 30 — and the banner is `pointerEvents: 'none'` so its full-bleed wrapper never
  * swallows clicks meant for the message. The pulsing dot in the Live pill is the shared `mtx-live-dot`,
  * the same one the header's screen-share button wears; it paints in `currentColor`.
+ *
+ * The video always sits on a dark scrim regardless of tenant theme, so the `VIDEO_*`/`LIVE_PILL_BG`/
+ * `CAPTION_BG` colors below stay literal rather than tenant `var(--*)` tokens — named once here instead
+ * of repeated inline per caller.
  */
 import React, { useEffect, useRef, useState } from 'react';
 
@@ -35,8 +39,6 @@ const TOP_RADIUS = '8px';
 const OVERLAY_BORDER_RADIUS = `${TOP_RADIUS} ${TOP_RADIUS} 0 0`;
 const OVERLAY_BG = 'var(--overlay-dark)';
 const MUTED_TEXT_COLOR = 'rgba(255,255,255,0.7)';
-// The video always sits on a dark scrim regardless of tenant theme, so these stay literal rather
-// than tenant `var(--*)` tokens — named once here instead of repeated inline per caller.
 const VIDEO_WHITE = '#ffffff';
 const VIDEO_SURFACE_BLACK = '#000000';
 const VIDEO_CARD_SHADOW = '0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)';
