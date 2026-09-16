@@ -21,11 +21,20 @@
  * `asMockedStream`/`emptyStream` cast a plain async iterable to `MockedStream`: oRPC's real `widgetStream`
  * resolves to its own private-field `AsyncIteratorClass`, which no plain async generator can structurally
  * satisfy, and the cast stands in for it — sufficient here since `StreamClient` only ever iterates the result.
+ *
+ * The fault-injection block drives the real reconnect machinery instead of reading source with regex:
+ * `controlledStream()` is a double whose `push`/`fail`/`end` control a paused async generator, standing
+ * in for a dropped/resumed SSE connection. It pins that a connection superseded by `reconnectNow` (the
+ * old iterator still draining when the new one opens) never delivers its stale, already-superseded
+ * events to `onMessage` — the guard a visitor relies on not to see an old turn replayed after a
+ * reconnect — that the documented 1000ms-doubling-to-30000ms-cap schedule is the actual delay before
+ * each of the 10 retries, not just source constants, and that give-up (either the attempt cap or the
+ * `auth` `chat/error`) schedules no further dial no matter how long fake time advances.
  */
 
 import { sdk, type WidgetEvent } from '../../sdk';
 import { flushMicrotasks } from '../../test/fixtures';
-import { mocked, mockSdkModule, restoreModuleAfterAll, waitFor } from '../../test/vi-compat';
+import { advanceTimersByTimeAsync, mocked, mockSdkModule, restoreModuleAfterAll, waitFor } from '../../test/vi-compat';
 import { type StreamClient, streamClient, StreamGaveUpError } from '../StreamClient';
 
 vi.mock('../../sdk', () => mockSdkModule({ widgetStream: vi.fn(), widgetMessagePost: vi.fn() }));
@@ -63,6 +72,54 @@ function emptyStream(): MockedStream {
 function freshClient(): StreamClient {
   streamClient.disconnect();
   return streamClient;
+}
+
+interface ControlledStream {
+  stream: MockedStream;
+  push: (event: WidgetEvent) => void;
+  fail: (error: Error) => void;
+  end: () => void;
+}
+
+function controlledStream(): ControlledStream {
+  const pending: { resolve: (v: IteratorResult<WidgetEvent>) => void; reject: (e: unknown) => void }[] = [];
+  const queue: WidgetEvent[] = [];
+  let closed: 'ended' | Error | null = null;
+
+  const settleNext = () => {
+    if (pending.length === 0) return;
+    if (queue.length > 0) pending.shift()!.resolve({ value: queue.shift()!, done: false });
+    else if (closed === 'ended') pending.shift()!.resolve({ value: undefined, done: true });
+    else if (closed) pending.shift()!.reject(closed);
+  };
+
+  const stream = asMockedStream({
+    [Symbol.asyncIterator]() {
+      return {
+        next: () =>
+          new Promise<IteratorResult<WidgetEvent>>((resolve, reject) => {
+            pending.push({ resolve, reject });
+            settleNext();
+          }),
+      };
+    },
+  });
+
+  return {
+    stream,
+    push: event => {
+      queue.push(event);
+      settleNext();
+    },
+    fail: error => {
+      closed = error;
+      settleNext();
+    },
+    end: () => {
+      closed = 'ended';
+      settleNext();
+    },
+  };
 }
 
 beforeEach(() => {
@@ -217,5 +274,93 @@ describe('StreamClient retry affordance', () => {
     expect(client.canReconnect()).toBe(false);
     client.removeCallbacks(callbacks);
     client.disconnect();
+  });
+});
+
+describe('StreamClient fault injection', () => {
+  it('drops events from a connection reconnectNow already superseded, never duplicating a rendered turn', async () => {
+    const client = freshClient();
+    const first = controlledStream();
+    mockSdk.widgetStream.mockResolvedValueOnce(first.stream);
+    await client.connect('chat-1');
+    await flushMicrotasks();
+
+    const received: WidgetEvent[] = [];
+    const callbacks = { onMessage: (e: WidgetEvent) => received.push(e) };
+    client.addCallbacks(callbacks);
+
+    // Still open, not yet registered — canReconnect is true, matching a visitor hitting Retry
+    // before the handshake finished, while the old dial's iterator is still live (abort doesn't
+    // synchronously stop an in-flight fetch's already-buffered chunks).
+    const second = controlledStream();
+    mockSdk.widgetStream.mockResolvedValueOnce(second.stream);
+    expect(client.canReconnect()).toBe(true);
+    client.reconnectNow();
+    await flushMicrotasks();
+
+    first.push({ type: 'chat/response', request_id: 'req-1', text: 'stale turn' });
+    await flushMicrotasks();
+    expect(received).toHaveLength(0);
+
+    second.push({ type: 'registered', chat_id: 'chat-1' });
+    await waitFor(() => expect(received).toHaveLength(1));
+
+    expect(received.some(e => e.type === 'chat/response')).toBe(false);
+    expect(received[0]).toEqual({ type: 'registered', chat_id: 'chat-1' });
+
+    client.removeCallbacks(callbacks);
+    client.disconnect();
+  });
+
+  it('redials on the documented 1000ms-doubling-to-30000ms-cap schedule, giving up after the 10th', async () => {
+    vi.useFakeTimers();
+    const client = freshClient();
+    const attempts = [1000, 2000, 4000, 8000, 16000, 30000, 30000, 30000, 30000, 30000];
+
+    mockSdk.widgetStream.mockRejectedValue(new Error('down'));
+    await client.connect('chat-1');
+    expect(mockSdk.widgetStream).toHaveBeenCalledTimes(1);
+
+    const errors: Error[] = [];
+    client.addCallbacks({ onError: e => errors.push(e) });
+
+    for (const [i, delay] of attempts.entries()) {
+      await advanceTimersByTimeAsync(delay - 1);
+      expect(mockSdk.widgetStream).toHaveBeenCalledTimes(i + 1);
+      await advanceTimersByTimeAsync(1);
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(mockSdk.widgetStream).toHaveBeenCalledTimes(i + 2);
+    }
+
+    await advanceTimersByTimeAsync(30000);
+    expect(mockSdk.widgetStream).toHaveBeenCalledTimes(attempts.length + 1);
+    expect(errors.some(e => e instanceof StreamGaveUpError)).toBe(true);
+
+    await advanceTimersByTimeAsync(120000);
+    expect(mockSdk.widgetStream).toHaveBeenCalledTimes(attempts.length + 1);
+
+    client.disconnect();
+    vi.useRealTimers();
+  });
+
+  it('an auth give-up is terminal — no reconnect follows however long time advances', async () => {
+    vi.useFakeTimers();
+    const client = freshClient();
+    const stream = controlledStream();
+    mockSdk.widgetStream.mockResolvedValueOnce(stream.stream);
+    await client.connect('chat-1');
+    expect(mockSdk.widgetStream).toHaveBeenCalledTimes(1);
+
+    stream.push({ type: 'chat/error', request_id: 'auth', error: 'unauthorized' });
+    await Promise.resolve();
+
+    expect(client.canReconnect()).toBe(false);
+    await advanceTimersByTimeAsync(10 * 30000);
+    expect(mockSdk.widgetStream).toHaveBeenCalledTimes(1);
+
+    client.disconnect();
+    vi.useRealTimers();
   });
 });
