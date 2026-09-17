@@ -128,7 +128,6 @@ function createMessage(
 ): ChatMessage {
   return {
     id: `${idPrefix}-${globalThis.crypto.randomUUID()}`,
-    content,
     sender,
     timestamp: new Date(),
     parts: content ? [{ type: 'text', content }] : [],

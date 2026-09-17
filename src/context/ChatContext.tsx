@@ -26,6 +26,7 @@
  */
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
+import { useLatest } from '../hooks/useLatest';
 import type { WidgetEvent } from '../sdk';
 import { browserToolService, FINISH_TOOL } from '../services/BrowserToolService';
 import { chatPost } from '../services/ChatService';
@@ -89,8 +90,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
 
   const stateRef = useRef<SseState>(state);
 
-  const currentModeRef = useRef(uiState.currentMode);
-  currentModeRef.current = uiState.currentMode;
+  const currentModeRef = useLatest(uiState.currentMode);
 
   const processedToolCallIds = useRef(new Set<string>());
 

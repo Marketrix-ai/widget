@@ -91,7 +91,6 @@ describe('private-mode localStorage', () => {
 describe('chat snapshot persistence', () => {
   const message = (overrides: Partial<ChatMessage> = {}): ChatMessage =>
     agentMessage({
-      content: 'hello',
       mode: undefined,
       isPlaceholder: undefined,
       placeholderState: undefined,
@@ -120,7 +119,6 @@ describe('chat snapshot persistence', () => {
     writeChatSnapshot(snapshot([createScreenshareMessage(mockMediaStream({ id: 'stream' }))]));
 
     expect(readChatSnapshot().messages[0]).toMatchObject({
-      content: 'Screen sharing ended',
       isSystemMessage: true,
       parts: [{ type: 'text', content: 'Screen sharing ended' }],
     });

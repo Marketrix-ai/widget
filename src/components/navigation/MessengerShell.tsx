@@ -34,23 +34,25 @@
  * object literal every render, so depending on the whole object would re-run (and re-focus) the trap on every
  * render instead of only when the callback or target actually changes.
  *
- * `useResize` returns `widthPx`/`heightPx`, the `grip` its handle renders from, `onResizeStart` for that handle's
- * mousedown, and `containerRef` for the element being sized. The opening size is this tenant's stored one if
- * there is one, else the dashboard's `widget_width`/`widget_height` — both through `clampSize`, so a setting
- * outside the drag range lands on the same bounds a drag has. `parsePx` accepts a bare px length only, since
- * `rem`/`em`/`%` can't be resolved without layout. A drag's `mousemove`/`mouseup` pair lives on `document`,
- * not the grip, so a resize outlives the pointer leaving the handle; `endDragRef` holds the live `onUp` so
- * an unmount mid-drag (the widget torn down while a visitor is resizing) still detaches both listeners and
- * the cursor/`userSelect` override instead of leaving them on the host page forever. `readStoredSize` parses
+ * `useResize` returns `widthPx`/`heightPx`, the `grip` its handle renders from, the pointer handlers for
+ * that handle (from the shared `usePointerTrack` — see its header for the idle/tracking/committing
+ * skeleton), and `containerRef` for the element being sized. The opening size is this tenant's stored one
+ * if there is one, else the dashboard's `widget_width`/`widget_height` — both through `clampSize`, so a
+ * setting outside the drag range lands on the same bounds a drag has. `parsePx` accepts a bare px length
+ * only, since `rem`/`em`/`%` can't be resolved without layout. `thresholdPx: 0` makes every pointerdown on
+ * the grip an immediate resize (`onTrackStart` stamps `data-resizing` and the drag cursor); pointer
+ * capture ties the gesture to the grip element itself, so a resize needs no unmount-cleanup of its own —
+ * capture releases automatically if the node is torn down mid-drag, unlike the `document`-level
+ * `mousemove`/`mouseup` pair this replaced, which needed hand-written removal. `readStoredSize` parses
  * the tenant-scoped `marketrix_widget_size_<scope>` entry (keyed through the shared `scopedKey`, like its two `readLocal`/
  * `writeLocal` siblings), warning-then-defaulting on anything unparseable since corrupted host-page localStorage
  * must not leave the panel unsizable. `clampSize` bounds width to MIN_WIDTH..MAX_WIDTH, height to MIN_HEIGHT..85%
  * of the viewport, measured at call time so a resize re-clamps on the next drag. The grip is on the corner
  * diagonally opposite the pinned one (`getResizeGrip`); `growX`/`growY` turn pointer delta into size delta for
  * whichever corner that is. During a drag the new size is written straight to the element's inline style and
- * held in `dimsRef` — React state commits once, on mouseup, so pointer motion never re-renders the tree.
- * `data-resizing` keys `index.css`'s CSS transition off. Preview mode has no grip — `onResizeStart` returns
- * before binding, so it never writes a visitor size. The grip is also a focusable `role='separator'`
+ * held in `dimsRef` (`useLatest`) — React state commits once, on release, so pointer motion never re-renders
+ * the tree. `data-resizing` keys `index.css`'s CSS transition off. Preview mode disables the track (`disabled`),
+ * so it never writes a visitor size. The grip is also a focusable `role='separator'`
  * (`tabIndex=0`): `onResizeKeyDown` steps width/height by `KEYBOARD_RESIZE_STEP_PX` per arrow key, through
  * the same `clampSize`/`writeLocal` path as a drag, so a keyboard-only visitor can resize the panel too.
  */
@@ -58,6 +60,8 @@ import { Tabs } from '@base-ui/react/tabs';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { SHADOW } from '../../design-system/component-tokens';
+import { useLatest } from '../../hooks/useLatest';
+import { usePointerTrack } from '../../hooks/usePointerTrack';
 import { useWidget, useWidgetConfig } from '../../hooks/useWidget';
 import { readLocal, scopedKey, writeLocal } from '../../services/StorageService';
 import type { MarketrixConfig, WidgetPosition, WidgetView } from '../../types';
@@ -210,64 +214,43 @@ export function useResize(
       }),
   );
 
-  const dimsRef = useRef<Size>(dimensions);
-  dimsRef.current = dimensions;
-  const endDragRef = useRef<(() => void) | null>(null);
+  const dimsRef = useLatest(dimensions);
+  const startSizeRef = useRef<Size>(dimensions);
 
-  useEffect(() => () => endDragRef.current?.(), []);
+  const clearResizeChrome = () => {
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+    if (containerRef.current) delete containerRef.current.dataset['resizing'];
+  };
 
-  const handleResizeStart = useCallback(
-    (e: React.MouseEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      if (isPreviewMode) return;
-
-      const startX = e.clientX;
-      const startY = e.clientY;
-      const startW = dimsRef.current.width;
-      const startH = dimsRef.current.height;
-      const { growX, growY, cursor } = grip;
-
-      if (containerRef.current) {
-        containerRef.current.dataset['resizing'] = 'true';
-      }
-
-      const onMove = (moveEvent: MouseEvent) => {
-        const next = clampSize({
-          width: startW + (moveEvent.clientX - startX) * growX,
-          height: startH + (moveEvent.clientY - startY) * growY,
-        });
-        dimsRef.current = next;
-
-        if (containerRef.current) {
-          containerRef.current.style.width = `${next.width}px`;
-          containerRef.current.style.height = `${next.height}px`;
-        }
-      };
-
-      const onUp = () => {
-        document.removeEventListener('mousemove', onMove);
-        document.removeEventListener('mouseup', onUp);
-        document.body.style.cursor = '';
-        document.body.style.userSelect = '';
-        endDragRef.current = null;
-
-        if (containerRef.current) {
-          delete containerRef.current.dataset['resizing'];
-        }
-
-        setDimensions({ ...dimsRef.current });
-        writeLocal(storageKey, JSON.stringify(dimsRef.current));
-      };
-
-      document.body.style.cursor = cursor;
+  const track = usePointerTrack({
+    disabled: isPreviewMode,
+    thresholdPx: 0,
+    onTrackStart: () => {
+      startSizeRef.current = dimsRef.current;
+      if (containerRef.current) containerRef.current.dataset['resizing'] = 'true';
+      document.body.style.cursor = grip.cursor;
       document.body.style.userSelect = 'none';
-      document.addEventListener('mousemove', onMove);
-      document.addEventListener('mouseup', onUp);
-      endDragRef.current = onUp;
     },
-    [isPreviewMode, storageKey, grip],
-  );
+    onTrack: (dx, dy) => {
+      const next = clampSize({
+        width: startSizeRef.current.width + dx * grip.growX,
+        height: startSizeRef.current.height + dy * grip.growY,
+      });
+      dimsRef.current = next;
+      if (containerRef.current) {
+        containerRef.current.style.width = `${next.width}px`;
+        containerRef.current.style.height = `${next.height}px`;
+      }
+    },
+    onRelease: (_dx, _dy, _event, commit) => {
+      clearResizeChrome();
+      setDimensions(dimsRef.current);
+      writeLocal(storageKey, JSON.stringify(dimsRef.current));
+      commit();
+    },
+    onCancel: clearResizeChrome,
+  });
 
   const handleResizeKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -289,14 +272,17 @@ export function useResize(
       setDimensions(next);
       writeLocal(storageKey, JSON.stringify(next));
     },
-    [isPreviewMode, storageKey],
+    [isPreviewMode, storageKey, dimsRef],
   );
 
   return {
     widthPx: `${dimensions.width}px`,
     heightPx: `${dimensions.height}px`,
     grip,
-    onResizeStart: handleResizeStart,
+    onPointerDown: track.onPointerDown,
+    onPointerMove: track.onPointerMove,
+    onPointerUp: track.onPointerUp,
+    onPointerCancel: track.onPointerCancel,
     onResizeKeyDown: handleResizeKeyDown,
     containerRef,
   };
@@ -308,13 +294,17 @@ export const MessengerShell: React.FC = () => {
   const { isOpen, activeView } = state;
   const { isPreviewMode } = config;
 
-  const { widthPx, heightPx, grip, onResizeStart, onResizeKeyDown, containerRef } = useResize(
-    config.widget_width,
-    config.widget_height,
-    config.widget_position,
-    config,
-    isPreviewMode,
-  );
+  const {
+    widthPx,
+    heightPx,
+    grip,
+    onPointerDown: onResizePointerDown,
+    onPointerMove: onResizePointerMove,
+    onPointerUp: onResizePointerUp,
+    onPointerCancel: onResizePointerCancel,
+    onResizeKeyDown,
+    containerRef,
+  } = useResize(config.widget_width, config.widget_height, config.widget_position, config, isPreviewMode);
 
   const messageInputRef = useRef<HTMLTextAreaElement | null>(null);
   const navDirection = activeView === 'chat' ? 'forward' : 'back';
@@ -439,7 +429,10 @@ export const MessengerShell: React.FC = () => {
             justifyContent: grip.horizontal === 'left' ? 'flex-start' : 'flex-end',
             cursor: grip.cursor,
           }}
-          onMouseDown={onResizeStart}
+          onPointerDown={onResizePointerDown}
+          onPointerMove={onResizePointerMove}
+          onPointerUp={onResizePointerUp}
+          onPointerCancel={onResizePointerCancel}
           onKeyDown={onResizeKeyDown}
         />
       )}

@@ -22,7 +22,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 import { SHADOW } from '../../design-system/component-tokens';
 import { useWidget, useWidgetConfig } from '../../hooks/useWidget';
-import type { ChatMessage } from '../../types';
+import { type ChatMessage, messageText } from '../../types';
 import { createAgentMessage } from '../../utils/chat';
 import { addOpacity, backgroundGradient } from '../../utils/color';
 import { Button } from '../base/Button';
@@ -77,7 +77,8 @@ export const MessageList = ({ messagesEndRef, onScreenAccessAllow, onScreenAcces
     });
   }, [messages.length, isPreviewMode, messagesEndRef]);
 
-  const lastContentLength = messages[messages.length - 1]?.content.length ?? 0;
+  const lastMessage = messages[messages.length - 1];
+  const lastContentLength = lastMessage ? messageText(lastMessage.parts).length : 0;
   useEffect(() => {
     const el = containerRef.current;
     if (!el || isPreviewMode) return;

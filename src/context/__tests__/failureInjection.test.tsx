@@ -20,6 +20,7 @@ import { type CredentialedConfig, storageService } from '../../services/StorageS
 import { streamClient } from '../../services/StreamClient';
 import { getMockWidgetConfig } from '../../test/fixtures';
 import { waitFor } from '../../test/vi-compat';
+import { messageText } from '../../types';
 import { CHAT_FAILURE_TEXT } from '../../utils/chat';
 import { ChatProvider, useChatContext } from '../ChatContext';
 import { UIStateProvider } from '../UIStateContext';
@@ -60,7 +61,7 @@ const Probe = () => {
     <div>
       <div data-testid='error'>{state.error ?? ''}</div>
       <div data-testid='awaiting'>{String(state.isAwaitingReply)}</div>
-      <div data-testid='transcript'>{messages.map(m => m.content).join('|')}</div>
+      <div data-testid='transcript'>{messages.map(m => messageText(m.parts)).join('|')}</div>
       <div data-testid='placeholder-id'>{messages.find(m => m.isPlaceholder)?.id ?? ''}</div>
       <button data-testid='send' onClick={() => void actions.messageDispatch('hi', 'tell', true)} />
       <button data-testid='stop' onClick={() => void actions.stopTask()} />

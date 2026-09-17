@@ -24,7 +24,7 @@ import React from 'react';
 
 import MarketrixIcon from '../../assets/marketrix-icon.svg';
 import { useWidgetConfig } from '../../hooks/useWidget';
-import type { ChatMessage } from '../../types';
+import { type ChatMessage, messageText } from '../../types';
 import { formatMessageTime } from '../../utils/chat';
 import { addOpacity } from '../../utils/color';
 import { Avatar } from '../base/Avatar';
@@ -121,7 +121,7 @@ const MessageItemComponent: React.FC<MessageItemProps> = ({
     return (
       <Flex justify='center' align='center'>
         <Text as='span' variant='faint' weight='normal' style={{ fontSize: '10px' }}>
-          {message.content}
+          {messageText(message.parts)}
         </Text>
       </Flex>
     );

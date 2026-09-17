@@ -281,9 +281,9 @@ describe('no CSS framework', () => {
 });
 
 describe('src/hooks/', () => {
-  it('holds only the shared useWidget hook', () => {
+  it('holds only hooks with 2+ consumers', () => {
     const files = readdirSync(resolve(src, 'hooks')).filter(f => !f.includes('__tests__'));
-    expect(files).toEqual(['useWidget.ts']);
+    expect(files.sort()).toEqual(['useLatest.ts', 'usePointerTrack.ts', 'useWidget.ts']);
   });
 });
 

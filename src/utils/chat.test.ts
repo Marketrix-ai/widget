@@ -8,7 +8,7 @@
 import { describe, expect, it } from 'bun:test';
 
 import { mockMediaStream } from '../test/fixtures';
-import type { ChatMessage } from '../types';
+import { type ChatMessage, messageText } from '../types';
 import {
   addProgressLine,
   CHAT_FAILURE_TEXT,
@@ -22,7 +22,6 @@ import {
 
 const agentReply = (overrides: Partial<ChatMessage> = {}): ChatMessage => ({
   id: 'agent-1',
-  content: '',
   sender: 'agent',
   timestamp: new Date(),
   parts: [],
@@ -94,7 +93,7 @@ describe('message construction', () => {
   });
 
   it('trims user-supplied content before storing it', () => {
-    expect(createUserMessage('  hello there  ').content).toBe('hello there');
+    expect(messageText(createUserMessage('  hello there  ').parts)).toBe('hello there');
   });
 
   it('sends a screenshare message from the user, not the agent', () => {

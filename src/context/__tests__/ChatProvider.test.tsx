@@ -22,6 +22,7 @@ import { type CredentialedConfig, storageService } from '../../services/StorageS
 import { streamClient } from '../../services/StreamClient';
 import { agentMessage, getMockWidgetConfig } from '../../test/fixtures';
 import { advanceTimersByTimeAsync, waitFor } from '../../test/vi-compat';
+import { messageText } from '../../types';
 import * as log from '../../utils/log';
 import { ChatProvider, useChatContext } from '../ChatContext';
 import { UIStateProvider } from '../UIStateContext';
@@ -45,7 +46,6 @@ const asStreamClientInternals = (): StreamClientTestHandle => streamClient as un
 
 const restoredPlaceholder = agentMessage({
   id: 'temp-restored',
-  content: '',
   mode: 'tell',
   parts: [],
 });
@@ -57,7 +57,11 @@ const Transcript = () => {
     chatActions.setMessages([restoredPlaceholder]);
   }, [chatActions]);
 
-  return <div data-testid='transcript'>{messages.map(msg => `${msg.id}:${msg.isPlaceholder}:${msg.content}`)}</div>;
+  return (
+    <div data-testid='transcript'>
+      {messages.map(msg => `${msg.id}:${msg.isPlaceholder}:${messageText(msg.parts)}`)}
+    </div>
+  );
 };
 
 beforeEach(() => {
@@ -104,11 +108,10 @@ const ChurningTranscript = () => {
         onClick={() =>
           chatActions.addMessage({
             id: `system-${messages.length}`,
-            content: 'Mode changed',
             sender: 'user',
             timestamp: new Date(),
             isSystemMessage: true,
-            parts: [],
+            parts: [{ type: 'text', content: 'Mode changed' }],
           })
         }
       />
@@ -259,25 +262,25 @@ describe('updateMessage / removeMessage act on the one message their id names', 
     renderCaptured();
     act(() => {
       captured!.chatActions.setMessages([
-        agentMessage({ id: 'keep', content: 'keep', mode: 'tell', parts: [] }),
-        agentMessage({ id: 'change', content: 'before', mode: 'tell', parts: [] }),
+        agentMessage({ id: 'keep', mode: 'tell', parts: [{ type: 'text', content: 'keep' }] }),
+        agentMessage({ id: 'change', mode: 'tell', parts: [{ type: 'text', content: 'before' }] }),
       ]);
     });
 
     act(() => {
-      captured!.chatActions.updateMessage('change', { content: 'after' });
+      captured!.chatActions.updateMessage('change', { parts: [{ type: 'text', content: 'after' }] });
     });
 
-    expect(captured!.messages.find(m => m.id === 'keep')?.content).toBe('keep');
-    expect(captured!.messages.find(m => m.id === 'change')?.content).toBe('after');
+    expect(messageText(captured!.messages.find(m => m.id === 'keep')?.parts ?? [])).toBe('keep');
+    expect(messageText(captured!.messages.find(m => m.id === 'change')?.parts ?? [])).toBe('after');
   });
 
   it('removeMessage drops only the matching id', () => {
     renderCaptured();
     act(() => {
       captured!.chatActions.setMessages([
-        agentMessage({ id: 'keep', content: 'keep', mode: 'tell', parts: [] }),
-        agentMessage({ id: 'drop', content: 'drop', mode: 'tell', parts: [] }),
+        agentMessage({ id: 'keep', mode: 'tell', parts: [{ type: 'text', content: 'keep' }] }),
+        agentMessage({ id: 'drop', mode: 'tell', parts: [{ type: 'text', content: 'drop' }] }),
       ]);
     });
 

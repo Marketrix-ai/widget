@@ -8,29 +8,29 @@
  * picks — the same data-attribute variant convention every other component here uses. The two icon
  * layers carry only their own transform and opacity; the transition they share is `.mtx-fab-icon-layer`.
  *
- * `useDragSnap` (below) drags this launcher and snaps it to the nearest corner over ONE Pointer Events
- * path (`onPointerDown/Move/Up/Cancel` — no separate mouse/touch handlers, since Pointer Events already
- * unify both). Pointer state is tracked in a ref; movement under DRAG_THRESHOLD_PX stays a click, beyond
- * it the wrapper is translated on a rAF loop with velocity sampled into `velocityHistoryRef` so a flick
- * lands where it was heading — `projectFlickVelocity` (module-level, pure) turns that sample history into
- * a projected pixel delta: zero with fewer than two samples, else the average px/ms over the sampled span
- * projected forward in px/s. On release
- * `getNearestCornerByTranslation` picks the corner, the wrapper animates there for SNAP_DURATION_MS via
- * `left`/`top` transitions, and `commitPositionAfterAnimation` calls `onPositionCommit` on
- * `transitionend` (with a timeout fallback, since a hidden tab fires no transition events) — the
- * committed corner is the one being animated TO, so two snaps in flight cannot commit the abandoned one
- * (`abandonSnapRef`), which the unmount effect also calls so a snap animating when the widget is torn
- * down does not leave its `transitionend` listener and fallback timer running past the component's life.
- * `suppressUntilRef` stamps a time after which a click may open the widget again,
- * so the pointer-up that ends a drag is not read as a tap. The wrapper is measured with a
- * ResizeObserver in a layout effect so the pixel position is right on the first paint; preview mode
- * disables everything. Exported so `WidgetFab.test.tsx`'s `renderHook` case can drive it directly.
+ * `useDragSnap` (below) layers flick-projected corner snapping on the shared `usePointerTrack` (see that
+ * hook's header for the idle/tracking/committing skeleton): `onTrackStart` arms the transform, `onTrack`
+ * mirrors the pointer into a `translate3d` and samples `velocityHistoryRef` so a flick lands where it was
+ * heading — `projectFlickVelocity` (module-level, pure) turns that sample history into a projected pixel
+ * delta: zero with fewer than two samples, else the average px/ms over the sampled span projected forward
+ * in px/s. `onRelease` picks the nearest corner via `getNearestCornerByTranslation` and animates the
+ * wrapper there for SNAP_DURATION_MS via `left`/`top` transitions; `commitPositionAfterAnimation` calls
+ * `onPositionCommit` and the hook's own `commit()` on `transitionend` (with a timeout fallback, since a
+ * hidden tab fires no transition events) — the committed corner is the one being animated TO, so two
+ * snaps in flight cannot commit the abandoned one (`abandonRef`, owned by `usePointerTrack` and threaded
+ * through as a parameter since it isn't available yet inside the very options object that creates it).
+ * `suppressUntilRef` stamps a time after which a click may open the widget again, so the pointer-up that
+ * ends a drag is not read as a tap. The wrapper is measured with a ResizeObserver in a layout effect so
+ * the pixel position is right on the first paint; preview mode disables the resize listener and viewport
+ * anchoring, though dragging itself stays live. Exported so `WidgetFab.test.tsx`'s `renderHook` case can
+ * drive it directly.
  */
 import React, { useCallback, useLayoutEffect, useRef, useState } from 'react';
 
 import MarketrixIcon from '../../assets/marketrix-icon.svg';
 import { SHADOW } from '../../design-system/component-tokens';
 import { WIDGET_RADIUS_PX } from '../../design-system/semantic-tokens';
+import { usePointerTrack } from '../../hooks/usePointerTrack';
 import { useWidget, useWidgetConfig } from '../../hooks/useWidget';
 import type { WidgetPosition } from '../../types';
 import { getAnchorTopLeft, getNearestCornerByTranslation, getPanelPositionStyle } from '../../utils/widgetPositioning';
@@ -83,36 +83,11 @@ export function useDragSnap({
   isPreviewMode = false,
   wrapperRef,
 }: UseDragSnapOptions): UseDragSnapResult {
-  const [isDragging, setIsDragging] = useState(false);
   const [wrapperSize, setWrapperSize] = useState({ w: 56, h: 56 });
   const [, setViewportTick] = useState(0);
-  const abandonSnapRef = useRef<(() => void) | null>(null);
-
-  const dragRef = useRef<{
-    pointerId: number;
-    startX: number;
-    startY: number;
-    dragging: boolean;
-    lastX: number;
-    lastY: number;
-  } | null>(null);
-  const rafRef = useRef<number | null>(null);
   const suppressUntilRef = useRef(0);
   const velocityHistoryRef = useRef<Array<{ x: number; y: number; t: number }>>([]);
   const lastVelocitySampleRef = useRef(0);
-
-  const cancelRaf = () => {
-    if (rafRef.current !== null) window.cancelAnimationFrame(rafRef.current);
-    rafRef.current = null;
-  };
-
-  React.useEffect(
-    () => () => {
-      cancelRaf();
-      abandonSnapRef.current?.();
-    },
-    [],
-  );
 
   React.useEffect(() => {
     if (isPreviewMode) return;
@@ -141,8 +116,7 @@ export function useDragSnap({
   const anchor = getAnchorTopLeft(position, vw, vh, wrapperSize.w, wrapperSize.h);
   const pixelPositionStyle = !isPreviewMode && vw > 0 && vh > 0 ? { left: anchor.x, top: anchor.y } : undefined;
 
-  const resetDragStyles = useCallback(() => {
-    cancelRaf();
+  const resetDragStyles = () => {
     if (wrapperRef.current) {
       wrapperRef.current.style.transform = '';
       wrapperRef.current.style.willChange = '';
@@ -150,151 +124,97 @@ export function useDragSnap({
       wrapperRef.current.style.left = '';
       wrapperRef.current.style.top = '';
     }
-  }, [wrapperRef]);
-
-  const commitPositionAfterAnimation = useCallback(
-    (nextCorner: WidgetPosition, wrapper: HTMLDivElement) => {
-      abandonSnapRef.current?.();
-      let finished = false;
-      const detach = () => {
-        finished = true;
-        window.clearTimeout(fallbackTimer);
-        wrapper.removeEventListener('transitionend', onEnd);
-        abandonSnapRef.current = null;
-      };
-      const done = () => {
-        if (finished) return;
-        detach();
-        wrapper.style.transition = 'none';
-        wrapper.style.willChange = '';
-        wrapper.style.left = '';
-        wrapper.style.top = '';
-        onPositionCommit(nextCorner);
-        setIsDragging(false);
-        requestAnimationFrame(() => {
-          if (wrapperRef.current) {
-            wrapperRef.current.style.transition = '';
-          }
-        });
-      };
-      const fallbackTimer = window.setTimeout(done, SNAP_DURATION_MS + 50);
-      const onEnd = (e: TransitionEvent) => {
-        if (e.target !== wrapper || e.propertyName !== 'left') return;
-        done();
-      };
-      wrapper.addEventListener('transitionend', onEnd);
-      abandonSnapRef.current = detach;
-    },
-    [onPositionCommit, wrapperRef],
-  );
-
-  const snapToCorner = useCallback(
-    (nextCorner: WidgetPosition, fromX: number, fromY: number) => {
-      if (!wrapperRef.current || !pixelPositionStyle) {
-        resetDragStyles();
-        onPositionCommit(nextCorner);
-        setIsDragging(false);
-        return;
-      }
-      cancelRaf();
-      const wrapper = wrapperRef.current;
-      const oldAnchor = getAnchorTopLeft(position, vw, vh, wrapperSize.w, wrapperSize.h);
-      const newAnchor = getAnchorTopLeft(nextCorner, vw, vh, wrapperSize.w, wrapperSize.h);
-      wrapper.style.transition = 'none';
-      wrapper.style.transform = 'none';
-      wrapper.style.willChange = 'left, top';
-      wrapper.style.left = `${oldAnchor.x + fromX}px`;
-      wrapper.style.top = `${oldAnchor.y + fromY}px`;
-      requestAnimationFrame(() => {
-        wrapper.style.transition = `left ${SNAP_DURATION_MS}ms ${SNAP_EASING}, top ${SNAP_DURATION_MS}ms ${SNAP_EASING}`;
-        wrapper.style.left = `${newAnchor.x}px`;
-        wrapper.style.top = `${newAnchor.y}px`;
-      });
-      commitPositionAfterAnimation(nextCorner, wrapper);
-    },
-    [
-      commitPositionAfterAnimation,
-      onPositionCommit,
-      pixelPositionStyle,
-      position,
-      resetDragStyles,
-      vw,
-      vh,
-      wrapperSize.w,
-      wrapperSize.h,
-      wrapperRef,
-    ],
-  );
-
-  const endDrag = (event: React.PointerEvent<HTMLButtonElement>) => {
-    resetDragStyles();
-    dragRef.current = null;
-    setIsDragging(false);
-    event.currentTarget.releasePointerCapture(event.pointerId);
   };
 
-  const onPointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
-    dragRef.current = {
-      pointerId: event.pointerId,
-      startX: event.clientX,
-      startY: event.clientY,
-      dragging: false,
-      lastX: 0,
-      lastY: 0,
+  const commitPositionAfterAnimation = (
+    nextCorner: WidgetPosition,
+    wrapper: HTMLDivElement,
+    commit: () => void,
+    abandonRef: React.RefObject<(() => void) | null>,
+  ) => {
+    abandonRef.current?.();
+    let finished = false;
+    const detach = () => {
+      finished = true;
+      window.clearTimeout(fallbackTimer);
+      wrapper.removeEventListener('transitionend', onEnd);
+      abandonRef.current = null;
     };
-    event.currentTarget.setPointerCapture(event.pointerId);
+    const done = () => {
+      if (finished) return;
+      detach();
+      wrapper.style.transition = 'none';
+      wrapper.style.willChange = '';
+      wrapper.style.left = '';
+      wrapper.style.top = '';
+      onPositionCommit(nextCorner);
+      requestAnimationFrame(() => {
+        if (wrapperRef.current) wrapperRef.current.style.transition = '';
+      });
+      commit();
+    };
+    const fallbackTimer = window.setTimeout(done, SNAP_DURATION_MS + 50);
+    const onEnd = (e: TransitionEvent) => {
+      if (e.target !== wrapper || e.propertyName !== 'left') return;
+      done();
+    };
+    wrapper.addEventListener('transitionend', onEnd);
+    abandonRef.current = detach;
   };
 
-  const onPointerMove = (event: React.PointerEvent<HTMLButtonElement>) => {
-    const drag = dragRef.current;
-    if (drag?.pointerId !== event.pointerId) return;
+  const snapToCorner = (
+    nextCorner: WidgetPosition,
+    fromX: number,
+    fromY: number,
+    commit: () => void,
+    abandonRef: React.RefObject<(() => void) | null>,
+  ) => {
+    if (!wrapperRef.current || !pixelPositionStyle) {
+      resetDragStyles();
+      onPositionCommit(nextCorner);
+      commit();
+      return;
+    }
+    const wrapper = wrapperRef.current;
+    const oldAnchor = getAnchorTopLeft(position, vw, vh, wrapperSize.w, wrapperSize.h);
+    const newAnchor = getAnchorTopLeft(nextCorner, vw, vh, wrapperSize.w, wrapperSize.h);
+    wrapper.style.transition = 'none';
+    wrapper.style.transform = 'none';
+    wrapper.style.willChange = 'left, top';
+    wrapper.style.left = `${oldAnchor.x + fromX}px`;
+    wrapper.style.top = `${oldAnchor.y + fromY}px`;
+    requestAnimationFrame(() => {
+      wrapper.style.transition = `left ${SNAP_DURATION_MS}ms ${SNAP_EASING}, top ${SNAP_DURATION_MS}ms ${SNAP_EASING}`;
+      wrapper.style.left = `${newAnchor.x}px`;
+      wrapper.style.top = `${newAnchor.y}px`;
+    });
+    commitPositionAfterAnimation(nextCorner, wrapper, commit, abandonRef);
+  };
 
-    const dx = event.clientX - drag.startX;
-    const dy = event.clientY - drag.startY;
-
-    if (!drag.dragging && Math.hypot(dx, dy) > DRAG_THRESHOLD_PX) {
-      drag.dragging = true;
-      setIsDragging(true);
+  const track = usePointerTrack({
+    thresholdPx: DRAG_THRESHOLD_PX,
+    onTrackStart: () => {
       velocityHistoryRef.current = [];
       lastVelocitySampleRef.current = 0;
       if (wrapperRef.current) {
         wrapperRef.current.style.willChange = 'transform';
         wrapperRef.current.style.transition = 'none';
       }
-    }
-
-    if (!drag.dragging) return;
-
-    drag.lastX = dx;
-    drag.lastY = dy;
-
-    const now = Date.now();
-    if (now - lastVelocitySampleRef.current >= VELOCITY_SAMPLE_INTERVAL_MS) {
-      lastVelocitySampleRef.current = now;
-      velocityHistoryRef.current = [
-        ...velocityHistoryRef.current.slice(-(VELOCITY_HISTORY_SIZE - 1)),
-        { x: event.clientX, y: event.clientY, t: now },
-      ];
-    }
-
-    if (rafRef.current === null) {
-      rafRef.current = window.requestAnimationFrame(() => {
-        rafRef.current = null;
-        const d = dragRef.current;
-        const wrapper = wrapperRef.current;
-        if (!wrapper || !d) return;
-        wrapper.style.transform = `translate3d(${d.lastX}px, ${d.lastY}px, 0)`;
-      });
-    }
-  };
-
-  const onPointerUp = (event: React.PointerEvent<HTMLButtonElement>) => {
-    const drag = dragRef.current;
-    if (drag?.pointerId !== event.pointerId) return;
-    if (drag.dragging) {
+    },
+    onTrack: (dx, dy, event) => {
+      const now = Date.now();
+      if (now - lastVelocitySampleRef.current >= VELOCITY_SAMPLE_INTERVAL_MS) {
+        lastVelocitySampleRef.current = now;
+        velocityHistoryRef.current = [
+          ...velocityHistoryRef.current.slice(-(VELOCITY_HISTORY_SIZE - 1)),
+          { x: event.clientX, y: event.clientY, t: now },
+        ];
+      }
+      if (wrapperRef.current) wrapperRef.current.style.transform = `translate3d(${dx}px, ${dy}px, 0)`;
+    },
+    onRelease: (dx, dy, _event, commit, abandonRef) => {
       const flick = projectFlickVelocity(velocityHistoryRef.current);
-      const projected = { dx: drag.lastX + flick.x, dy: drag.lastY + flick.y };
-
+      const projected = { dx: dx + flick.x, dy: dy + flick.y };
       const rect = wrapperRef.current?.getBoundingClientRect();
       const nextCorner = rect
         ? getNearestCornerByTranslation(
@@ -306,28 +226,19 @@ export function useDragSnap({
             rect.height,
           )
         : position;
-
-      snapToCorner(nextCorner, drag.lastX, drag.lastY);
       suppressUntilRef.current = Date.now() + 600;
-      dragRef.current = null;
-      event.currentTarget.releasePointerCapture(event.pointerId);
-      return;
-    }
-    endDrag(event);
-  };
-
-  const onPointerCancel = (event: React.PointerEvent<HTMLButtonElement>) => {
-    if (dragRef.current?.pointerId !== event.pointerId) return;
-    endDrag(event);
-  };
+      snapToCorner(nextCorner, dx, dy, commit, abandonRef);
+    },
+    onCancel: resetDragStyles,
+  });
 
   return {
-    isDragging,
+    isDragging: track.phase !== 'idle',
     pixelPositionStyle,
-    onPointerDown,
-    onPointerMove,
-    onPointerUp,
-    onPointerCancel,
+    onPointerDown: track.onPointerDown,
+    onPointerMove: track.onPointerMove,
+    onPointerUp: track.onPointerUp,
+    onPointerCancel: track.onPointerCancel,
     suppressUntilRef,
   };
 }
