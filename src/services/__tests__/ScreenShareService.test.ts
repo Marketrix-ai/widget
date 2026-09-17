@@ -14,16 +14,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 
 import { startScreenShare, stopScreenShare } from '@/services/ScreenShareService';
 import { storageService } from '@/services/StorageService';
-import { credentialedConfig } from '@/test/fixtures';
+import { credentialedConfig, mockMediaStream } from '@/test/fixtures';
 
 const getDisplayMedia = vi.fn();
 
 const liveStream = () =>
-  ({
-    active: true,
+  mockMediaStream({
     getVideoTracks: () => [{ readyState: 'live', addEventListener: vi.fn() }],
     getTracks: () => [{ stop: vi.fn() }],
-  }) as unknown as MediaStream;
+  });
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -36,15 +35,17 @@ afterEach(() => {
 });
 
 describe('use_screenshare', () => {
-  it('denies the request instead of prompting when the tenant turned screen sharing off', async () => {
-    storageService.setConfig(credentialedConfig({ mtxId: 'id', mtxKey: 'key', use_screenshare: false }));
-
-    await expect(startScreenShare()).rejects.toThrow('Screen sharing is disabled for this widget');
-    expect(getDisplayMedia).not.toHaveBeenCalled();
-  });
-
-  it('denies on the switch alone — a stored config that lost its credentials must not reopen the picker', async () => {
-    storageService.updateContext({ config: { use_screenshare: false } });
+  it.each([
+    [
+      'the tenant turned screen sharing off',
+      () => storageService.setConfig(credentialedConfig({ mtxId: 'id', mtxKey: 'key', use_screenshare: false })),
+    ],
+    [
+      'the switch alone flips it — a stored config that lost its credentials must not reopen the picker',
+      () => storageService.updateContext({ config: { use_screenshare: false } }),
+    ],
+  ] as const)('denies the request instead of prompting when %s', async (_label, setup) => {
+    setup();
 
     await expect(startScreenShare()).rejects.toThrow('Screen sharing is disabled for this widget');
     expect(getDisplayMedia).not.toHaveBeenCalled();
@@ -81,11 +82,10 @@ describe('use_screenshare', () => {
   it('releases every track on stop, and is a no-op when nothing is sharing', async () => {
     storageService.setConfig(credentialedConfig({ mtxId: 'id', mtxKey: 'key' }));
     const stopTrack = vi.fn();
-    const stream = {
-      active: true,
+    const stream = mockMediaStream({
       getVideoTracks: () => [{ readyState: 'live', addEventListener: vi.fn() }],
       getTracks: () => [{ stop: stopTrack }, { stop: stopTrack }],
-    } as unknown as MediaStream;
+    });
     getDisplayMedia.mockResolvedValue(stream);
 
     await startScreenShare();

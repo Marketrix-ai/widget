@@ -5,6 +5,7 @@
 import { describe, expect, it } from 'bun:test';
 
 import { getMockWidgetConfig } from '../../test/fixtures';
+import { contrastRatio } from '../../utils/color';
 import { createSemanticTokens, semanticTokensToCssCustomProperties } from '../semantic-tokens';
 
 describe('createSemanticTokens', () => {
@@ -31,5 +32,14 @@ describe('createSemanticTokens', () => {
     expect(css['--radius']).toBe('12px');
     expect(css['--duration-animation']).toBe('300ms');
     expect(css['--duration-fade']).toBe('200ms');
+  });
+
+  it('derives a focus ring that clears 3:1 against the background regardless of the tenant accent, for both readings', () => {
+    for (const widget_background_color of ['#ffffff', '#111827', '#f5f5f4', '#0a0a0a', '#fef3c7', '#1e293b']) {
+      const css = semanticTokensToCssCustomProperties(
+        createSemanticTokens({ widget_background_color, widget_accent_color: '#a855f7' }),
+      );
+      expect(contrastRatio(css['--ring']!, css['--ring-offset']!)).toBeGreaterThanOrEqual(3);
+    }
   });
 });

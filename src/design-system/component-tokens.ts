@@ -6,6 +6,11 @@
  * no two tokens are synonyms. Per-tenant values are NOT here: `semantic-tokens.ts` owns everything derived
  * from widget settings, and this file is only what no tenant can change.
  *
+ * Every `notificationToneStyles` colour is fixed (no tenant setting touches a toast), so each pair is
+ * measured once here against the WCAG threshold it actually needs — `closeColor` is a UI icon (3:1
+ * against `background`), `titleColor`/`bodyColor` are text (4.5:1) — and a test pins every ratio so a
+ * future palette edit can't silently regress below it.
+ *
  * `LAYER_TOKENS` is the z-index ladder (screen-edge glow < panel < dialog < toast), based just above the
  * 2^31-ish ceiling most host pages use so the widget sits over everything without the values overflowing a
  * 32-bit int. `showHighlight`/`showPopup` are a separate, much higher pair near the int32 ceiling: Show
@@ -83,7 +88,7 @@ export const notificationToneStyles: Record<
     border: '1px solid #bae6fd',
     titleColor: '#0c4a6e',
     bodyColor: '#0369a1',
-    closeColor: '#7dd3fc',
+    closeColor: '#0284c7',
     actionBackground: '#e0f2fe',
   },
   error: {
@@ -91,7 +96,7 @@ export const notificationToneStyles: Record<
     border: '1px solid #fecaca',
     titleColor: '#b91c1c',
     bodyColor: '#b91c1c',
-    closeColor: '#f87171',
+    closeColor: '#dc2626',
     actionBackground: '#fee2e2',
   },
   neutral: {

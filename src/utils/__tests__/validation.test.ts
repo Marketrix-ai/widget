@@ -31,6 +31,11 @@ import { invalidSettingsMessage, parseWidgetSettings } from '../validation';
 const valid = WidgetSettingsDataSchema.parse(getMockWidgetConfig());
 const FIELDS = Object.keys(valid) as (keyof typeof valid)[];
 
+const expectRejectedAndNamed = (broken: unknown, invalidFields: string[]) => {
+  expect(WidgetSettingsDataSchema.safeParse(broken).success).toBe(false);
+  expect(parseWidgetSettings(broken).invalidFields).toEqual(invalidFields);
+};
+
 describe('parseWidgetSettings agrees with the zod schema it replaced', () => {
   it('accepts a valid settings object', () => {
     const result = parseWidgetSettings(valid);
@@ -65,37 +70,35 @@ describe('parseWidgetSettings agrees with the zod schema it replaced', () => {
   });
 
   it.each(FIELDS)('rejects a wrong-typed %s, and names it', field => {
-    const broken = { ...valid, [field]: 12345 };
-
-    expect(WidgetSettingsDataSchema.safeParse(broken).success).toBe(false);
-    expect(parseWidgetSettings(broken).invalidFields).toEqual([field]);
+    expectRejectedAndNamed({ ...valid, [field]: 12345 }, [field]);
   });
 
   it.each(FIELDS)('rejects a missing %s', field => {
     const broken = { ...valid };
     delete broken[field];
-
-    expect(WidgetSettingsDataSchema.safeParse(broken).success).toBe(false);
-    expect(parseWidgetSettings(broken).invalidFields).toEqual([field]);
+    expectRejectedAndNamed(broken, [field]);
   });
 
   it.each([
     ['widget_appearance', 'compact'],
     ['widget_position', 'middle'],
   ] as const)('rejects %s outside its enum', (field, value) => {
-    const broken = { ...valid, [field]: value };
-    expect(WidgetSettingsDataSchema.safeParse(broken).success).toBe(false);
-    expect(parseWidgetSettings(broken).invalidFields).toEqual([field]);
+    expectRejectedAndNamed({ ...valid, [field]: value }, [field]);
   });
 
   it('rejects a malformed chip', () => {
-    const broken = { ...valid, widget_chips: [{ chip_mode: 'nope', chip_text: 'hi' }] };
-    expect(WidgetSettingsDataSchema.safeParse(broken).success).toBe(false);
-    expect(parseWidgetSettings(broken).invalidFields).toEqual(['widget_chips']);
+    expectRejectedAndNamed({ ...valid, widget_chips: [{ chip_mode: 'nope', chip_text: 'hi' }] }, ['widget_chips']);
   });
 
-  it.each([[null], [undefined], ['settings'], [42], [[]]])('rejects a non-object input (%s)', input => {
-    expect(parseWidgetSettings(input).invalidFields).toBeDefined();
+  it.each([[null], [undefined], ['settings'], [42]])(
+    'rejects a non-object input (%s), naming only "settings"',
+    input => {
+      expectRejectedAndNamed(input, ['settings']);
+    },
+  );
+
+  it('rejects an array input against every field, since it has none of them', () => {
+    expect(parseWidgetSettings([]).invalidFields).toEqual(FIELDS);
   });
 
   it('reports every invalid field, not just the first', () => {

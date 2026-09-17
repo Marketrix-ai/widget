@@ -85,13 +85,9 @@ describe('a placeholder that never receives an event', () => {
 const ChurningTranscript = () => {
   const { messages, chatActions } = useChatContext();
 
-  useEffect(() => {
-    chatActions.setMessages([restoredPlaceholder]);
-  }, [chatActions]);
-
   return (
     <>
-      <div data-testid='transcript'>{messages.map(msg => `${msg.id}:${msg.isPlaceholder}:${msg.content}`)}</div>
+      <Transcript />
       <button
         data-testid='churn'
         onClick={() =>

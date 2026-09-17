@@ -1,12 +1,15 @@
 /**
  * Colour tests: the text colour a background gets is readable on every spelling of white and black and
- * falls back to black (never white) for an unreadable value; the one parser reads shorthand hex, refuses
- * out-of-range channels, and `addOpacity` gets the same reach; `backgroundGradient` passes a gradient
- * setting through and expands a flat colour, so panel and transcript paint the same thing.
+ * falls back to black (never white) for an unreadable value; a scan across the whole luminance range
+ * pins the actual invariant — every synthesized foreground clears WCAG AA (4.5:1) — which a literal
+ * `luminance > 0.5` split silently fails for roughly a third of the range (the black/white contrast
+ * crossover sits at luminance ≈0.179); the one parser reads shorthand hex, refuses out-of-range channels,
+ * and `addOpacity` gets the same reach; `backgroundGradient` passes a gradient setting through and
+ * expands a flat colour, so panel and transcript paint the same thing.
  */
 import { describe, expect, it } from 'bun:test';
 
-import { addOpacity, backgroundGradient, getContrastingColor, toRgb } from './color';
+import { addOpacity, backgroundGradient, contrastRatio, getContrastingColor, toRgb } from './color';
 
 describe('the text colour a widget background gets', () => {
   it('is readable on every spelling of white, not only the six-digit one', () => {
@@ -25,6 +28,16 @@ describe('the text colour a widget background gets', () => {
     for (const unreadable of ['white', 'hsl(0 0% 100%)', 'var(--brand)', '', 'nonsense']) {
       expect(getContrastingColor(unreadable)).toBe('#000000');
     }
+  });
+
+  it('clears WCAG AA (4.5:1) against every background, including the luminance band a naive 0.5 split misreads', () => {
+    for (let gray = 0; gray <= 255; gray += 5) {
+      const bg = `rgb(${gray}, ${gray}, ${gray})`;
+      const fg = getContrastingColor(bg);
+      expect(contrastRatio(fg, bg)).toBeGreaterThanOrEqual(4.5);
+    }
+    // A representative tenant accent (mid-luminance blue) sits in the band the old split got wrong.
+    expect(contrastRatio(getContrastingColor('#3b82f6'), '#3b82f6')).toBeGreaterThanOrEqual(4.5);
   });
 });
 

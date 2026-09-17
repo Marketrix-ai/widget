@@ -1,7 +1,8 @@
 /**
  * `ShowModeService` tests: a second show action cancels the one it replaced and leaves the replacement
  * live; an action the page invalidates rejects with the one reason `DomService` gave, never a second
- * contradicting code.
+ * contradicting code; and the click listener detached on settle leaves a stray click on the (removed)
+ * target inert — it must not throw and must not resurrect a highlight or popup.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 
@@ -17,14 +18,26 @@ vi.mock('../DomService', () => ({
   domService: { getSequenceForElement: () => 0, notInteractableReason },
 }));
 
+const makeShowFixture = (html: string) => {
+  notInteractableReason.mockReturnValue(null);
+  Element.prototype.scrollIntoView = vi.fn();
+  document.body.innerHTML = html;
+  return new ShowModeService();
+};
+
+const show = (service: ShowModeService, id: string) =>
+  service.showToolAction({
+    element: document.getElementById(id) as HTMLElement,
+    explanation: id,
+    browserToolName: 'click_element',
+    isClickAction: true,
+  });
+
 describe('a second show action supersedes the first', () => {
   let service: ShowModeService;
 
   beforeEach(() => {
-    notInteractableReason.mockReturnValue(null);
-    Element.prototype.scrollIntoView = vi.fn();
-    document.body.innerHTML = '<button id="a"></button><button id="b"></button>';
-    service = new ShowModeService();
+    service = makeShowFixture('<button id="a"></button><button id="b"></button>');
   });
 
   afterEach(() => {
@@ -32,20 +45,12 @@ describe('a second show action supersedes the first', () => {
     resetDom();
   });
 
-  const show = (id: string) =>
-    service.showToolAction({
-      element: document.getElementById(id) as HTMLElement,
-      explanation: id,
-      browserToolName: 'click_element',
-      isClickAction: true,
-    });
-
   it('cancels the one it replaced and leaves the replacement live', async () => {
-    const first = show('a').then(
+    const first = show(service, 'a').then(
       () => 'resolved',
       () => 'rejected',
     );
-    const second = show('b').then(
+    const second = show(service, 'b').then(
       () => 'resolved',
       () => 'rejected',
     );
@@ -68,9 +73,7 @@ describe('a show action the page invalidates', () => {
 
   beforeEach(() => {
     vi.useFakeTimers();
-    Element.prototype.scrollIntoView = vi.fn();
-    document.body.innerHTML = '<button id="a"></button>';
-    service = new ShowModeService();
+    service = makeShowFixture('<button id="a"></button>');
   });
 
   afterEach(() => {
@@ -83,17 +86,10 @@ describe('a show action the page invalidates', () => {
     const obscured = 'ELEMENT_OBSCURED: Element 0 is covered by div.modal. Dismiss it first.';
     notInteractableReason.mockReturnValue(obscured);
 
-    const rejection = service
-      .showToolAction({
-        element: document.getElementById('a') as HTMLElement,
-        explanation: 'a',
-        browserToolName: 'click_element',
-        isClickAction: true,
-      })
-      .then(
-        () => 'resolved',
-        (error: Error) => error.message,
-      );
+    const rejection = show(service, 'a').then(
+      () => 'resolved',
+      (error: Error) => error.message,
+    );
     await advanceTimersByTimeAsync(200);
 
     expect(await rejection).toBe(obscured);
@@ -104,10 +100,7 @@ describe('a highlight settles exactly once', () => {
   let service: ShowModeService;
 
   beforeEach(() => {
-    notInteractableReason.mockReturnValue(null);
-    Element.prototype.scrollIntoView = vi.fn();
-    document.body.innerHTML = '<button id="a"></button>';
-    service = new ShowModeService();
+    service = makeShowFixture('<button id="a"></button>');
   });
 
   afterEach(() => {
@@ -116,17 +109,10 @@ describe('a highlight settles exactly once', () => {
   });
 
   it('a second click after the target already settled is inert, not a double resolve', async () => {
-    const settled = service
-      .showToolAction({
-        element: document.getElementById('a') as HTMLElement,
-        explanation: 'a',
-        browserToolName: 'click_element',
-        isClickAction: true,
-      })
-      .then(
-        () => 'resolved',
-        () => 'rejected',
-      );
+    const settled = show(service, 'a').then(
+      () => 'resolved',
+      () => 'rejected',
+    );
 
     document.getElementById('a')?.click();
     expect(await settled).toBe('resolved');
@@ -134,8 +120,6 @@ describe('a highlight settles exactly once', () => {
     expect(document.getElementById('marketrix-show-highlight')).toBeNull();
     expect(document.getElementById('marketrix-show-popup')).toBeNull();
 
-    // The click listener is detached on settle, so a stray click on the (removed) target's id
-    // must not throw and must not resurrect a highlight or popup.
     expect(() => document.getElementById('a')?.click()).not.toThrow();
     expect(document.getElementById('marketrix-show-highlight')).toBeNull();
   });

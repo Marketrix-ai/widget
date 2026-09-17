@@ -22,7 +22,12 @@
  * native `<button>`, or an explicitly-roled element with its own keyboard handling · `tsconfig.json` keeps
  * `strict` plus every measured strictness flag (`noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`,
  * `noImplicitOverride`, `noPropertyAccessFromIndexSignature`, `noFallthroughCasesInSwitch`,
- * `verbatimModuleSyntax`) on, so a later pass can't silently drop one back off.
+ * `verbatimModuleSyntax`) on, so a later pass can't silently drop one back off · the three narrowing
+ * casts a type guard replaced (`disabledReason`'s `'disabled' in el`, `stripLayoutProps`'s `isLayoutKey`,
+ * `MessengerShell`'s `isWidgetView`) never reappear. `expectNoOffendersExcept` asserts no file outside
+ * its `exemptPaths` (repo-root-relative) matches `pattern`. `useUnknownInCatchVariables` has no separate
+ * strictness-flag entry: `strict: true` already implies it and it is never overridden, so its absence
+ * from that list is not a gap.
  */
 import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
@@ -47,6 +52,12 @@ const srcFiles = walk(src).filter(f => /\.(ts|tsx)$/.test(f) && !f.includes('__t
 const nonTestSrcFiles = srcFiles.filter(f => !f.endsWith('.test.ts') && !f.endsWith('.test.tsx'));
 const contentsExcept = (files: string[], predicate: (f: string) => boolean): { file: string; text: string }[] =>
   files.filter(predicate).map(file => ({ file, text: readFileSync(file, 'utf8') }));
+
+const expectNoOffendersExcept = (pattern: RegExp, ...exemptPaths: string[]) => {
+  const exempt = exemptPaths.map(p => resolve(src, p));
+  const offenders = contentsExcept(nonTestSrcFiles, f => !exempt.includes(f) && pattern.test(readFileSync(f, 'utf8')));
+  expect(offenders.map(o => o.file)).toEqual([]);
+};
 
 describe('package.json', () => {
   const pkg = JSON.parse(read('package.json'));
@@ -101,8 +112,6 @@ describe('tsconfig.json strict flags', () => {
     ]) {
       expect(tsconfig.compilerOptions[flag]).toBe(true);
     }
-    // useUnknownInCatchVariables has no separate entry: `strict: true` already implies it and it is
-    // never overridden below, so its absence here is not a gap.
     expect(tsconfig.compilerOptions.useUnknownInCatchVariables).not.toBe(false);
   });
 });
@@ -205,26 +214,17 @@ describe('Shadow DOM attachment', () => {
 
 describe('localStorage access', () => {
   it('is confined to StorageService.readLocal / writeLocal', () => {
-    const offenders = contentsExcept(
-      nonTestSrcFiles,
-      f => f !== resolve(src, 'services/StorageService.ts') && /\blocalStorage\./.test(readFileSync(f, 'utf8')),
-    );
-    expect(offenders.map(o => o.file)).toEqual([]);
+    expectNoOffendersExcept(/\blocalStorage\./, 'services/StorageService.ts');
   });
 });
 
 describe('console usage', () => {
   it('never calls console.log/info/debug in src/', () => {
-    const offenders = contentsExcept(nonTestSrcFiles, f => /console\.(log|info|debug)\(/.test(readFileSync(f, 'utf8')));
-    expect(offenders.map(o => o.file)).toEqual([]);
+    expectNoOffendersExcept(/console\.(log|info|debug)\(/);
   });
 
   it('routes every warn through utils/log.ts logWarn — no bare console.warn elsewhere', () => {
-    const offenders = contentsExcept(
-      nonTestSrcFiles,
-      f => f !== resolve(src, 'utils/log.ts') && /console\.warn\(/.test(readFileSync(f, 'utf8')),
-    );
-    expect(offenders.map(o => o.file)).toEqual([]);
+    expectNoOffendersExcept(/console\.warn\(/, 'utils/log.ts');
   });
 });
 
@@ -293,13 +293,7 @@ describe('document.activeElement retargeting', () => {
     if (!eslintConfig) throw new Error('no eslint.config.* at repo root — update this check');
     expect(read(eslintConfig)).toMatch(/no-restricted-properties/);
 
-    const offenders = contentsExcept(
-      nonTestSrcFiles,
-      f =>
-        f !== resolve(src, 'components/navigation/MessengerShell.tsx') &&
-        /document\.activeElement\b/.test(readFileSync(f, 'utf8')),
-    );
-    expect(offenders.map(o => o.file)).toEqual([]);
+    expectNoOffendersExcept(/document\.activeElement\b/, 'components/navigation/MessengerShell.tsx');
   });
 });
 
@@ -323,5 +317,17 @@ describe('interactive elements', () => {
       }
     }
     expect(offenders).toEqual([]);
+  });
+});
+
+describe('as-cast floor', () => {
+  it('never reintroduces the three narrowing casts a type guard replaced', () => {
+    const banned = [
+      /\(el as HTMLButtonElement\)\.disabled/,
+      /LAYOUT_KEYS\.has\(key as keyof LayoutProps\)/,
+      /setActiveView\(value as WidgetView\)/,
+    ];
+    const offenders = contentsExcept(nonTestSrcFiles, f => banned.some(re => re.test(readFileSync(f, 'utf8'))));
+    expect(offenders.map(o => o.file)).toEqual([]);
   });
 });

@@ -16,7 +16,10 @@
  * way back — fake timers keep the pending timer from firing, proving the second `widgetStream` call came from
  * `reconnectNow` itself); that it also redials a stream stuck mid-dial rather than no-op on a connection that will
  * never resolve; and that auth rejection is terminal, with the surfaced error naming "credentials were rejected"
- * rather than going silent the way an unmatched `chat/error` would.
+ * rather than going silent the way an unmatched `chat/error` would. An open-but-not-yet-registered stream
+ * still reads `canReconnect() === true`, matching a visitor hitting Retry before the handshake finished
+ * while the old dial's iterator is still live — abort doesn't synchronously stop an in-flight fetch's
+ * already-buffered chunks.
  *
  * `asMockedStream`/`emptyStream` cast a plain async iterable to `MockedStream`: oRPC's real `widgetStream`
  * resolves to its own private-field `AsyncIteratorClass`, which no plain async generator can structurally
@@ -72,6 +75,15 @@ function emptyStream(): MockedStream {
 function freshClient(): StreamClient {
   streamClient.disconnect();
   return streamClient;
+}
+
+function freshChatClient(status?: string): { client: StreamClient; inner: StreamClientInternals } {
+  const client = freshClient();
+  const inner = internals(client);
+  inner.chatId = 'chat-1';
+  inner.tornDown = false;
+  if (status !== undefined) inner.status = status;
+  return { client, inner };
 }
 
 interface ControlledStream {
@@ -150,10 +162,7 @@ describe('StreamClient registration lifecycle', () => {
   });
 
   it('rejects a pending registration when reconnection gives up, rather than leaving it hanging', async () => {
-    const client = freshClient();
-    const inner = internals(client);
-    inner.chatId = 'chat-1';
-    inner.tornDown = false;
+    const { client, inner } = freshChatClient();
 
     const registration = client.waitUntilRegistered();
     inner.reconnectAttempts = inner.maxReconnectAttempts;
@@ -163,10 +172,7 @@ describe('StreamClient registration lifecycle', () => {
   });
 
   it('rejects a pending registration when the credentials are refused', async () => {
-    const client = freshClient();
-    const inner = internals(client);
-    inner.chatId = 'chat-1';
-    inner.tornDown = false;
+    const { client, inner } = freshChatClient();
 
     const registration = client.waitUntilRegistered();
     inner.handleMessage({ type: 'chat/error', request_id: 'auth', error: 'unauthorized' });
@@ -193,20 +199,13 @@ describe('StreamClient registration lifecycle', () => {
   });
 
   it('does not report a stream that has only reached open as connected', () => {
-    const client = freshClient();
-    const inner = internals(client);
-    inner.chatId = 'chat-1';
-    inner.status = 'open';
+    const { client } = freshChatClient('open');
 
     expect(client.isConnected()).toBe(false);
   });
 
   it('leaves an open-but-unregistered stream still pending, so a send cannot outrun registration', async () => {
-    const client = freshClient();
-    const inner = internals(client);
-    inner.chatId = 'chat-1';
-    inner.status = 'open';
-    inner.tornDown = false;
+    const { client, inner } = freshChatClient('open');
 
     let registered = false;
     const pending = client.waitUntilRegistered().then(() => {
@@ -289,9 +288,6 @@ describe('StreamClient fault injection', () => {
     const callbacks = { onMessage: (e: WidgetEvent) => received.push(e) };
     client.addCallbacks(callbacks);
 
-    // Still open, not yet registered — canReconnect is true, matching a visitor hitting Retry
-    // before the handshake finished, while the old dial's iterator is still live (abort doesn't
-    // synchronously stop an in-flight fetch's already-buffered chunks).
     const second = controlledStream();
     mockSdk.widgetStream.mockResolvedValueOnce(second.stream);
     expect(client.canReconnect()).toBe(true);

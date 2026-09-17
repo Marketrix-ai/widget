@@ -9,6 +9,8 @@
  * Unused imports and identifiers are owned by the unused-imports plugin and import ordering by
  * simple-import-sort, so `import/order` is off. `import/no-unresolved` is off because TypeScript
  * already resolves, and `prefer-nullish-coalescing` is off because it needs `strictNullChecks`.
+ * `Bun` is a global (not an import) for `scripts/*.ts`, which run under `bun run`, not the browser
+ * runtime the rest of `globals` describes.
  */
 
 import js from '@eslint/js';
@@ -36,6 +38,7 @@ export default [
       },
       globals: {
         console: 'readonly',
+        Bun: 'readonly',
         alert: 'readonly',
         confirm: 'readonly',
         window: 'readonly',

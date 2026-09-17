@@ -24,6 +24,7 @@ import { record } from '@rrweb/record';
 import type { eventWithTime } from '@rrweb/types';
 
 import { sdk } from '../sdk';
+import { logWarn } from '../utils/log';
 import { streamClient } from './StreamClient';
 
 const FLUSH_INTERVAL_MS = 500;
@@ -92,7 +93,7 @@ export class RrwebSessionRecorder {
         });
       } catch (error) {
         this.events = events.concat(this.events).slice(0, MAX_REQUEUED_EVENTS);
-        console.error('Failed to record session events:', error);
+        logWarn('[RrwebSessionRecorder] Failed to record session events, requeued for retry:', error);
         if (!this.stopped) this.flushTimer = setTimeout(() => void this.flush(), FLUSH_INTERVAL_MS);
       }
     });

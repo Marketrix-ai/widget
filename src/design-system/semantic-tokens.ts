@@ -10,6 +10,14 @@
  * settings object against those defaults and derives the muted/faint/hover/contrast variants;
  * `semanticTokensToCssCustomProperties`, the token → `--var` map.
  *
+ * `color.ring` is NOT the raw accent — a customer's `widget_accent_color` has no contrast guarantee
+ * against whatever it sits next to (WCAG 2.4.11/1.4.11 need the focus indicator ≥3:1 against the colours
+ * adjacent to it on both sides), so it is `getContrastingColor(widget_background_color)`, the same
+ * black/white pick `primaryForeground`/`secondaryForeground` use. `index.css` pairs it with
+ * `--ring-offset` (the background colour itself) as a two-tone ring: an inset halo matching the surface,
+ * then the ring outside it, so both sides of the ring measure against the one colour it is guaranteed to
+ * clear against, whatever the outlined control's own colour is.
+ *
  * Radius and both durations are fixed rather than per-tenant: every widget row in production holds these
  * values and no surface writes them. Settings are filtered for explicit `undefined` before merging —
  * a plain spread would let an `undefined` key shadow its default instead of falling back to it. The
@@ -33,6 +41,7 @@ type SemanticTokens = {
     secondaryForeground: string;
     secondaryBg: string;
     secondaryHover: string;
+    ring: string;
   };
   radius: string;
   motion: {
@@ -78,9 +87,10 @@ export function createSemanticTokens(settings: Partial<WidgetSettingsData> = {})
       primaryForeground: getContrastingColor(resolved.widget_accent_color),
       primaryHover: addOpacity(resolved.widget_accent_color, 0.85),
       secondary: resolved.widget_secondary_color,
-      secondaryForeground: '#ffffff',
+      secondaryForeground: getContrastingColor(resolved.widget_secondary_color),
       secondaryBg: addOpacity(resolved.widget_secondary_color, 0.2),
       secondaryHover: addOpacity(resolved.widget_secondary_color, 0.3),
+      ring: getContrastingColor(resolved.widget_background_color),
     },
     radius: `${WIDGET_RADIUS_PX}px`,
     motion: {
@@ -105,7 +115,8 @@ export function semanticTokensToCssCustomProperties(tokens: SemanticTokens): Rec
     '--secondary-bg': tokens.color.secondaryBg,
     '--secondary-hover': tokens.color.secondaryHover,
     '--border': tokens.color.border,
-    '--ring': tokens.color.primary,
+    '--ring': tokens.color.ring,
+    '--ring-offset': tokens.color.background,
     '--radius': tokens.radius,
     '--duration-animation': tokens.motion.durationAnimation,
     '--duration-fade': tokens.motion.durationFade,

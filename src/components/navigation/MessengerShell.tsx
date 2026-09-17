@@ -165,6 +165,9 @@ function parsePx(value: string | undefined, fallback: number): number {
 
 const STORAGE_KEY_NAME = 'marketrix_widget_size';
 
+const WIDGET_VIEWS: readonly WidgetView[] = ['home', 'chat'];
+const isWidgetView = (value: string): value is WidgetView => (WIDGET_VIEWS as readonly string[]).includes(value);
+
 function isSize(value: unknown): value is Size {
   return (
     typeof value === 'object' &&
@@ -377,7 +380,9 @@ export const MessengerShell: React.FC = () => {
 
       <Tabs.Root
         value={activeView}
-        onValueChange={value => actions.setActiveView(value as WidgetView)}
+        onValueChange={value => {
+          if (typeof value === 'string' && isWidgetView(value)) actions.setActiveView(value);
+        }}
         render={<Stack grow minHeight='0' />}
       >
         <Stack grow overflow='hidden' minHeight='0'>
