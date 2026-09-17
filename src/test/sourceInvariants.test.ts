@@ -283,7 +283,7 @@ describe('no CSS framework', () => {
 describe('src/hooks/', () => {
   it('holds only hooks with 2+ consumers', () => {
     const files = readdirSync(resolve(src, 'hooks')).filter(f => !f.includes('__tests__'));
-    expect(files.sort()).toEqual(['useLatest.ts', 'usePointerTrack.ts', 'useWidget.ts']);
+    expect(files.sort()).toEqual(['useLatest.ts', 'useWidget.ts']);
   });
 });
 

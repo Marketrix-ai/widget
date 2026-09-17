@@ -20,10 +20,9 @@
  * ceiling is 85% of `window.innerHeight`, pinning jsdom's viewport.
  *
  * `OUTWARD` is the pointer delta moving the grip away from the pinned corner — the grip sits diagonally
- * opposite, so the sign flips with the anchor and negating it gives the inward drag. `drag` drives the
- * hook's pointer handlers directly (down → move → up), mirroring `WidgetFab.test.tsx`'s own
- * `dragTo` convention for the shared `usePointerTrack`, and returns the panel's inline style: the drag
- * path writes width/height straight to the element (skipping a re-render per move), only the
+ * opposite, so the sign flips with the anchor and negating it gives the inward drag. `drag` runs a
+ * whole mousedown → mousemove → mouseup against a detached div and returns its inline style: the drag
+ * path writes width/height straight to the element (skipping a re-render per mousemove), only the
  * settled size reaching React state via `act`. Each `drag`/`resizeHook` mints a fresh `tenant-N` scope
  * (`dragCount`) since a settled drag or keyboard step persists to localStorage under
  * `marketrix_widget_size_<scope>`, and a stored size wins on the next mount — one shared scope would
@@ -166,34 +165,38 @@ const OUTWARD: Record<WidgetPosition, { dx: number; dy: number }> = {
 
 let dragCount = 0;
 
-const drag = async (position: WidgetPosition, dx: number, dy: number): Promise<CSSStyleDeclaration> => {
+const drag = (position: WidgetPosition, dx: number, dy: number): CSSStyleDeclaration => {
   const config: MarketrixConfig = { mtxId: `tenant-${(dragCount += 1)}` };
   const { result } = renderHook(() => useResize('400px', '500px', position, config, false));
   const panel = document.createElement('div');
   result.current.containerRef.current = panel;
 
-  const base = { pointerId: 1, currentTarget: { setPointerCapture: () => {}, releasePointerCapture: () => {} } };
-  act(() => result.current.onPointerDown({ ...base, clientX: 0, clientY: 0 } as never));
-  act(() => result.current.onPointerMove({ ...base, clientX: dx, clientY: dy } as never));
-  // `onTrack` is rAF-batched (usePointerTrack.ts), so the style write lands one real frame after the move.
-  await act(async () => {
-    await new Promise(resolve => window.requestAnimationFrame(resolve));
+  act(() =>
+    result.current.onResizeStart({
+      preventDefault: () => {},
+      stopPropagation: () => {},
+      clientX: 0,
+      clientY: 0,
+    } as React.MouseEvent),
+  );
+  act(() => {
+    document.dispatchEvent(new MouseEvent('mousemove', { clientX: dx, clientY: dy }));
+    document.dispatchEvent(new MouseEvent('mouseup'));
   });
-  act(() => result.current.onPointerUp({ ...base, clientX: dx, clientY: dy } as never));
   return panel.style;
 };
 
 describe('the one grip is on the corner the panel is free to move', () => {
-  it.each(Object.keys(OUTWARD) as WidgetPosition[])('grows when dragged outward from %s', async position => {
+  it.each(Object.keys(OUTWARD) as WidgetPosition[])('grows when dragged outward from %s', position => {
     const { dx, dy } = OUTWARD[position];
 
-    expect(await drag(position, dx, dy)).toMatchObject({ width: '440px', height: '540px' });
+    expect(drag(position, dx, dy)).toMatchObject({ width: '440px', height: '540px' });
   });
 
-  it.each(Object.keys(OUTWARD) as WidgetPosition[])('shrinks when dragged inward from %s', async position => {
+  it.each(Object.keys(OUTWARD) as WidgetPosition[])('shrinks when dragged inward from %s', position => {
     const { dx, dy } = OUTWARD[position];
 
-    expect(await drag(position, -dx, -dy)).toMatchObject({ width: '360px', height: '460px' });
+    expect(drag(position, -dx, -dy)).toMatchObject({ width: '360px', height: '460px' });
   });
 });
 
