@@ -1,7 +1,7 @@
 /**
  * Table-driven failure injection over `ChatContext`: every external interaction it drives (message POST,
  * tool/response POST, chat/stop POST, an unmatched `chat/error`, the auth give-up) is failed once via
- * `it.each`, asserting the SAME three invariants that stopped the leaks this pass fixed — the visible text
+ * `it.each`, asserting the SAME three invariants a raw-error leak must not violate — the visible text
  * (a transcript bubble or the `useWidget().state.error` banner) is drawn from the fixed human sentence in
  * the case table, never contains the case's injected raw marker (a stand-in for a stack, a status code or
  * a server internals string), and a following retry of the same action succeeds with no reducer left

@@ -1,6 +1,6 @@
 /**
- * Cleanup-completeness lens (pass 49): proves the widget leaves nothing behind on `unmountWidget()`/a
- * React-tree unmount, across the two teardown paths a customer's page actually exercises.
+ * Proves the widget leaves nothing behind on `unmountWidget()`/a React-tree unmount, across the two
+ * teardown paths a customer's page actually exercises.
  *
  * `installRegistry` tracks registrations only on `window` and `document` — the two `EventTarget`s that
  * outlive the widget's own removed subtree. A listener on a widget-local node (the FAB wrapper, the
@@ -11,8 +11,10 @@
  * `render()`/`unmount()` test, without ever leaking in a real page). `window`/`document` never go away,
  * so a registration there that survives teardown is the one shape of leak this lens cares about — which
  * is exactly where both fixes below live — except React's own `document`-level `selectionchange`
- * listener (`FRAMEWORK_OWNED_TYPES`), a one-time, never-removed, shared-across-every-root registration
- * identical in a real browser, not a per-mount leak this widget's code owns. `setInterval`/
+ * listener (`FRAMEWORK_OWNED_TYPES`): React attaches it the first time ANY root ever mounts
+ * (`react-dom-client.js`'s `listenToAllSupportedEvents`) and never removes it, by design, shared across
+ * every root a page ever creates and identical in a real browser — React's own standing registration,
+ * not a per-mount leak this widget's code owns. `setInterval`/
  * `clearInterval` and `setTimeout`/`clearTimeout` are tracked the same way, net outstanding once a
  * same-tick zero-delay timer (e.g. jsdom's own `storage`-event dispatch) has had a turn to fire — a
  * timer that FIRES is not a leak, only one still pending when checked is.
@@ -26,14 +28,14 @@
  * 1. `describe('component-tree unmount')` renders in production mode (the resize grip and FAB drag are
  *    both disabled in preview mode, so a preview-mode render couldn't reach either fixed leak) and
  *    interrupts a drag/resize mid-gesture — never waiting for the natural `mouseup`/`transitionend` —
- *    since that is the exact case a tenant page's `unmountWidget` call cannot control: pass 49 fixed a
- *    `WidgetFab` snap left mid-air (a stale fallback `setTimeout` surviving the wrapper, calling
- *    `onPositionCommit` and a state setter after unmount) and a `MessengerShell` resize left mid-drag (a
- *    stale `document` `mousemove`/`mouseup` pair) exactly this way.
+ *    since that is the exact case a tenant page's `unmountWidget` call cannot control, and pins two
+ *    fixed leaks exactly this way: a `WidgetFab` snap left mid-air (a stale fallback `setTimeout`
+ *    surviving the wrapper, calling `onPositionCommit` and a state setter after unmount) and a
+ *    `MessengerShell` resize left mid-drag (a stale `document` `mousemove`/`mouseup` pair).
  * 2. `describe('unmountWidget singleton teardown')` calls `showModeService.showToolAction` directly to
  *    put its host-page overlay (listeners on `document`, a `setInterval`, two nodes on `document.body`
- *    OUTSIDE the shadow root `active.instance.unmount()` cannot reach) into the exact state pass 49
- *    found leaking, then calls the real `unmountWidget` and asserts it is gone — the fix this file pins.
+ *    OUTSIDE the shadow root `active.instance.unmount()` cannot reach) into the exact leaking state,
+ *    then calls the real `unmountWidget` and asserts it is gone — the fix this file pins.
  *
  * A second mount/unmount cycle in each describe block proves idempotence: the screen-share
  * non-idempotency bug (`ScreenShareService.test.ts`'s header) is the precedent for why one cycle is not
@@ -56,11 +58,6 @@ interface Registry {
   restore: () => void;
 }
 
-// React attaches its own delegated `selectionchange` listener straight to `document` the first time
-// ANY root ever mounts in it (`react-dom-client.js`'s `listenToAllSupportedEvents`) and never removes
-// it — by design, shared across every root a page ever creates, identical in a real browser. It is
-// React's own standing registration, not a per-mount one this widget's own code is responsible for
-// releasing, so it is excluded here rather than producing a fix nothing can make green.
 const FRAMEWORK_OWNED_TYPES = new Set(['selectionchange']);
 
 function patchTarget(target: Window | Document, open: { type: string; listener: unknown }[]): () => void {

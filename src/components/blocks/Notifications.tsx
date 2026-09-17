@@ -1,7 +1,7 @@
 /**
  * The widget's one notification surface: a Base UI Toast provider, the toast renderer, and the effect
  * that drives toasts from widget state. Base UI owns the live region, the dismiss timers, hover-to-pause
- * and stacking; before this the widget announced nothing to a screen reader and ran its own setTimeout.
+ * and stacking.
  *
  * `NotificationList` renders every live toast and stays a component of its own because `useToastManager`
  * only resolves inside `Toast.Provider`; both text lines truncate through `Text`'s own prop, a toast

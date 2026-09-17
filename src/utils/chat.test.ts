@@ -1,9 +1,9 @@
 /**
- * Direct unit coverage for `utils/chat.ts`'s pure helpers — the invariants a mutation-testing pass
- * (pass 52) found unpinned by the scattered indirect coverage in `sseReducer`/`ChatProvider`/`ChatView`
- * tests: `findMessageForProgress`'s sender/mode gating, `filterCancellationText`'s trim, progress-line
- * lookup at index 0, the failed-progress-line message format, message id uniqueness, user-content
- * trimming, and the two fixed user-facing strings.
+ * Direct unit coverage for `utils/chat.ts`'s pure helpers — invariants the scattered indirect coverage
+ * in `sseReducer`/`ChatProvider`/`ChatView` tests leaves unpinned: `findMessageForProgress`'s
+ * sender/mode gating, `filterCancellationText`'s trim, progress-line lookup at index 0, the
+ * failed-progress-line message format, message id uniqueness, user-content trimming, and the two fixed
+ * user-facing strings.
  */
 import { describe, expect, it } from 'bun:test';
 
