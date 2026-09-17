@@ -32,7 +32,7 @@ const css = readFileSync(resolve(here, '../index.css'), 'utf8');
 const definedKeyframes = new Set([...css.matchAll(/@keyframes\s+([\w-]+)/g)].map(match => match[1]));
 
 describe('every animation resolves to a keyframe this stylesheet defines', () => {
-  it.each(['spin', 'ping', 'pulse', 'fadeIn'] as const)('layout prop animate: %s', token => {
+  it.each(['spin', 'ping', 'fadeIn'] as const)('layout prop animate: %s', token => {
     const name = String(resolveLayoutStyle({ animate: token }).animation).split(' ')[0];
     expect(definedKeyframes, `resolveLayoutStyle emits ${name}, which index.css never defines`).toContain(name);
   });

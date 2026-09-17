@@ -686,12 +686,6 @@
   }
 }
 
-@keyframes mtx-pulse {
-  50% {
-    opacity: 0.5;
-  }
-}
-
 @keyframes mtx-dialog-overlay-in {
   from {
     opacity: 0;
