@@ -9,8 +9,10 @@
  * preview dispatch returns before ever reading real chat config, whether or not it skips the echoed user
  * message; a `finish` tool call ends the task only when it did not fail; the `tool/response` payload
  * carries `data` only on a successful tool result; the processed-`tool_call_id` set is trimmed once it
- * passes its cap, and a terminal `task/status` clears it outright; and a `chat/error` event is logged
- * without disturbing the transcript.
+ * passes its cap, and a terminal `task/status` clears it outright; a `chat/error` event is logged
+ * without disturbing the transcript; and a transient stream-failure banner clears itself on the next
+ * `registered` — but never clobbers a different error already on screen when the stream happens to
+ * recover, proving the fix is scoped to the exact banner it put up.
  *
  * Every test calls `cleanup()` in `afterEach` — without it an earlier test's still-mounted `ChatProvider`
  * keeps its stream-message subscription live and double-handles a later test's broadcast `handleMessage`
@@ -554,5 +556,73 @@ describe('a chat/error event is logged, not surfaced as a transcript message', (
 
     expect(logWarn).toHaveBeenCalledWith('[Widget] Chat error from server:', 'upstream exploded');
     expect(captured!.messages).toEqual(messagesBefore);
+  });
+});
+
+const ErrorProbe = () => {
+  const { state, actions } = useWidget();
+  return (
+    <>
+      <div data-testid='error-banner'>{state.error ?? ''}</div>
+      <button data-testid='stop' onClick={() => void actions.stopTask()} />
+    </>
+  );
+};
+
+describe('a transient stream failure banner clears once the stream recovers', () => {
+  it('shows the failure, then the next registered event clears exactly that banner', async () => {
+    storageService.setConfig(getMockWidgetConfig({ mtxId: 'stream-recovers', mtxKey: 'key' }) as CredentialedConfig);
+
+    render(
+      <UIStateProvider>
+        <ChatProvider previewMode={false}>
+          <ErrorProbe />
+        </ChatProvider>
+      </UIStateProvider>,
+    );
+
+    expect(screen.getByTestId('error-banner')).toHaveTextContent('');
+
+    act(() => {
+      asStreamClientInternals().notifyError(new Error('Stream connection failed'));
+    });
+    expect(screen.getByTestId('error-banner')).toHaveTextContent('Stream connection failed');
+
+    act(() => {
+      asStreamClientInternals().handleMessage({ type: 'registered', chat_id: 'stream-recovers' });
+    });
+    expect(screen.getByTestId('error-banner')).toHaveTextContent('');
+  });
+
+  it('never clears a different error already on screen when the stream happens to recover', async () => {
+    storageService.setConfig(getMockWidgetConfig({ mtxId: 'stream-recovers-2', mtxKey: 'key' }) as CredentialedConfig);
+    vi.spyOn(streamClient, 'send').mockRejectedValue(new Error('boom'));
+
+    render(
+      <UIStateProvider>
+        <ChatProvider previewMode={false}>
+          <ErrorProbe />
+        </ChatProvider>
+      </UIStateProvider>,
+    );
+
+    act(() => {
+      asStreamClientInternals().notifyError(new Error('Stream connection failed'));
+    });
+    expect(screen.getByTestId('error-banner')).toHaveTextContent('Stream connection failed');
+
+    await act(async () => {
+      screen.getByTestId('stop').click();
+    });
+    expect(screen.getByTestId('error-banner')).toHaveTextContent(
+      'Could not stop the assistant — it may still be working.',
+    );
+
+    act(() => {
+      asStreamClientInternals().handleMessage({ type: 'registered', chat_id: 'stream-recovers-2' });
+    });
+    expect(screen.getByTestId('error-banner')).toHaveTextContent(
+      'Could not stop the assistant — it may still be working.',
+    );
   });
 });

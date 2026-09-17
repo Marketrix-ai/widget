@@ -18,6 +18,16 @@
  * as the console: an undelivered `tool/response` leaves the agent waiting on a reply that never comes, so
  * the run stalls with nothing on screen unless the visitor is told, and `do` mode may still be clicking.
  *
+ * `lastStreamErrorRef`/`currentErrorRef` close the loop `handleError` alone leaves open: `StreamClient`
+ * calls `onError` on every failed dial, not only a terminal give-up, so the visitor sees "Stream
+ * connection failed" while a transient blip is still auto-retrying, and nothing else ever un-shows it —
+ * without this pair, a single reconnect blip leaves a stale error banner on screen forever after the
+ * stream has already recovered. `registered` clears it, but ONLY when the error still on screen
+ * (`currentErrorRef`, a `useLatest` mirror of `uiState.error`) is byte-identical to the one this same
+ * effect set (`lastStreamErrorRef`): the visitor dismissing the banner themselves, or a later unrelated
+ * error (a tool failure, a stop failure) overwriting it, both change `currentErrorRef` away from that
+ * remembered string, so `registered` arriving later never clears a message it didn't put there.
+ *
  * `event.type === 'task/status' && isTerminalTaskStatus(event.status)` reads `event.status` on every
  * branch, but only the `task/status` variant of `WidgetEvent` carries a `status` field at all — on any
  * other event it is `undefined`, which `isTerminalTaskStatus` (an `in` check against the status map)
@@ -93,10 +103,12 @@ interface ChatProviderProps {
 function createStreamEffectHandlers(deps: {
   commit: (transition: (s: SseState) => SseState) => void;
   currentModeRef: React.RefObject<InstructionType>;
-  setError: (message: string) => void;
+  setError: (message: string | undefined) => void;
   processedToolCallIds: React.RefObject<Set<string>>;
+  currentErrorRef: React.RefObject<string | undefined>;
+  lastStreamErrorRef: React.RefObject<string | undefined>;
 }) {
-  const { commit, currentModeRef, setError, processedToolCallIds } = deps;
+  const { commit, currentModeRef, setError, processedToolCallIds, currentErrorRef, lastStreamErrorRef } = deps;
 
   const startToolCall = async (effect: Extract<SseEffect, { type: 'executeTool' }>) => {
     const { toolCallId, tool, args, mode, explanation } = effect;
@@ -140,6 +152,13 @@ function createStreamEffectHandlers(deps: {
       processedToolCallIds.current.clear();
     } else if (event.type === 'chat/error') {
       logWarn('[Widget] Chat error from server:', event.error);
+    } else if (
+      event.type === 'registered' &&
+      lastStreamErrorRef.current !== undefined &&
+      currentErrorRef.current === lastStreamErrorRef.current
+    ) {
+      lastStreamErrorRef.current = undefined;
+      setError(undefined);
     }
 
     let effects: SseEffect[] = [];
@@ -159,6 +178,7 @@ function createStreamEffectHandlers(deps: {
 
   const handleError = (error: Error) => {
     setError(error.message);
+    lastStreamErrorRef.current = error.message;
     if (error instanceof StreamGaveUpError) commit(s => reduceTransportFailure(s, error.message));
   };
 
@@ -174,6 +194,8 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
   const currentModeRef = useLatest(uiState.currentMode);
 
   const processedToolCallIds = useRef(new Set<string>());
+  const currentErrorRef = useLatest(uiState.error);
+  const lastStreamErrorRef = useRef<string | undefined>(undefined);
 
   const commit = useCallback((transition: (s: SseState) => SseState) => {
     const prev = stateRef.current;
@@ -285,6 +307,8 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
       currentModeRef,
       setError: uiActions.setError,
       processedToolCallIds,
+      currentErrorRef,
+      lastStreamErrorRef,
     });
     const callbacks = { onMessage: handleMessage, onError: handleError };
     streamClient.addCallbacks(callbacks);
