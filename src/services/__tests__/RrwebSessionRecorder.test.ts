@@ -2,7 +2,9 @@
  * `RrwebSessionRecorder` tests: a rejected flush caps the buffer without discarding the Meta and
  * FullSnapshot every later event replays against, and retries on its own timer even when the host page
  * goes idle and rrweb emits nothing new to piggyback the retry on; stopping while metadata is in flight
- * never begins recording; and the metadata post waits until the stream has registered the chat.
+ * never begins recording; the metadata post waits until the stream has registered the chat; and calling
+ * `start()` again while already recording is a no-op, never a second `record()` arming a duplicate
+ * rrweb instance.
  */
 import { record } from '@rrweb/record';
 import { EventType } from '@rrweb/types';
@@ -103,6 +105,19 @@ describe('RrwebSessionRecorder lifecycle', () => {
     await start;
 
     expect(record).not.toHaveBeenCalled();
+  });
+});
+
+describe('a recorder already recording', () => {
+  it('is a no-op on a second start(), never arming a duplicate rrweb instance', async () => {
+    const { recorder } = await startRecorder();
+    mocked(record).mockClear();
+    mockSdk.widgetMessagePost.mockClear();
+
+    await recorder.start();
+
+    expect(record).not.toHaveBeenCalled();
+    expect(mockSdk.widgetMessagePost).not.toHaveBeenCalled();
   });
 });
 

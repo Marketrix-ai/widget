@@ -3,7 +3,9 @@
  * alone, so a stored config that lost its credentials cannot reopen the picker — and prompted when on.
  * `startScreenShare` is idempotent both for an already-live stream and for two overlapping calls before
  * the first `getDisplayMedia` prompt resolves; `stopScreenShare` releases every track and is a no-op
- * when nothing is sharing.
+ * when nothing is sharing. `activeScreenStream`/`isScreenSharing` read the video track's OWN readyState,
+ * not just stream liveness, and `startScreenShare` rejects a prompt that resolves with zero video tracks
+ * instead of returning an unusable stream.
  *
  * `startScreenShare`/`stopScreenShare` own module-level state (the active `MediaStream`) shared by the
  * whole `bun test` process (root `CLAUDE.md` has the general leak mechanism); the success case here
@@ -12,7 +14,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 
-import { startScreenShare, stopScreenShare } from '@/services/ScreenShareService';
+import { activeScreenStream, isScreenSharing, startScreenShare, stopScreenShare } from '@/services/ScreenShareService';
 import { storageService } from '@/services/StorageService';
 import { credentialedConfig, mockMediaStream } from '@/test/fixtures';
 
@@ -77,6 +79,29 @@ describe('use_screenshare', () => {
     await expect(first).resolves.toBe(stream);
     await expect(second).resolves.toBe(stream);
     expect(getDisplayMedia).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports not sharing once the video track itself ends, even while the stream object is still active', async () => {
+    storageService.setConfig(credentialedConfig({ mtxId: 'id', mtxKey: 'key' }));
+    const track = { readyState: 'live', addEventListener: vi.fn() };
+    const stream = mockMediaStream({ getVideoTracks: () => [track], getTracks: () => [{ stop: vi.fn() }] });
+    getDisplayMedia.mockResolvedValue(stream);
+    await startScreenShare();
+
+    expect(isScreenSharing()).toBe(true);
+    expect(activeScreenStream()).toBe(stream);
+
+    track.readyState = 'ended';
+
+    expect(isScreenSharing()).toBe(false);
+    expect(activeScreenStream()).toBeNull();
+  });
+
+  it('rejects a prompt that resolves with no video track instead of returning it', async () => {
+    storageService.setConfig(credentialedConfig({ mtxId: 'id', mtxKey: 'key' }));
+    getDisplayMedia.mockResolvedValue(mockMediaStream({ getVideoTracks: () => [], getTracks: () => [] }));
+
+    await expect(startScreenShare()).rejects.toThrow('Screen sharing permission denied or no video track available');
   });
 
   it('releases every track on stop, and is a no-op when nothing is sharing', async () => {

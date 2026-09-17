@@ -20,6 +20,12 @@
  * `ACCENT_COLOR`/`TEXT_COLOR` are raw literals rather than design-system tokens: the highlight and popup
  * mount to `document.body` on the HOST page, outside the shadow root, so `index.css`'s `:host`-scoped
  * CSS custom properties never reach them.
+ *
+ * `trackElement`'s `!this.currentElement || !this.currentHighlight` and the click handler's
+ * `!this.currentElement || !this.resolvePromise` cannot observe a mixed state: `showToolAction` sets
+ * every one of these fields together and `cleanup` clears every one of them together, so within a
+ * single stage they are always all-null or all-set. The guards stay as defensive redundancy against a
+ * future edit that breaks that pairing, not because either can independently be null today.
  */
 
 import { LAYER_TOKENS } from '../design-system/component-tokens';

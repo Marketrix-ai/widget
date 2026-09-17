@@ -2,7 +2,11 @@
  * `ShowModeService` tests: a second show action cancels the one it replaced and leaves the replacement
  * live; an action the page invalidates rejects with the one reason `DomService` gave, never a second
  * contradicting code; and the click listener detached on settle leaves a stray click on the (removed)
- * target inert — it must not throw and must not resurrect a highlight or popup.
+ * target inert — it must not throw and must not resurrect a highlight or popup. A restage identical to
+ * the in-flight one (same element/explanation/tool) returns the SAME pending promise rather than
+ * cancelling and re-staging; `cleanup` detaches every handler it registered, not only the ones already
+ * null, so a superseded show action cannot leave a stray listener on `document`/`window`; and a non-click
+ * (Tell) action settles on the popup's Continue button, never on an element click.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 
@@ -68,6 +72,155 @@ describe('a second show action supersedes the first', () => {
   });
 });
 
+describe('a restage identical to the one already staged', () => {
+  let service: ShowModeService;
+
+  beforeEach(() => {
+    service = makeShowFixture('<button id="a"></button>');
+  });
+
+  afterEach(() => {
+    service.cleanup();
+    resetDom();
+  });
+
+  it('does not re-stage (re-run cleanup/createHighlight) for an identical restage while pending', async () => {
+    // showToolAction is `async`, so even the dedupe branch's `return this.currentPromise` comes back
+    // wrapped in a NEW promise per call — comparing the two calls' return values can never prove dedupe.
+    // `cleanup()` runs unconditionally past the dedupe check, so spying on it is the real signal.
+    const cleanupSpy = vi.spyOn(service, 'cleanup');
+    const first = show(service, 'a').then(
+      () => 'resolved',
+      () => 'rejected',
+    );
+    const second = show(service, 'a').then(
+      () => 'resolved',
+      () => 'rejected',
+    );
+    expect(cleanupSpy).toHaveBeenCalledTimes(1);
+
+    document.getElementById('a')?.click();
+    expect(await first).toBe('resolved');
+    expect(await second).toBe('resolved');
+  });
+});
+
+describe('cleanup detaches every handler it registered', () => {
+  it('removes the document click listener, the window reposition listeners and the visibility interval', async () => {
+    const service = makeShowFixture('<button id="a"></button>');
+    const removeDocListener = vi.spyOn(document, 'removeEventListener');
+    const removeWinListener = vi.spyOn(window, 'removeEventListener');
+    const clearIntervalSpy = vi.spyOn(globalThis, 'clearInterval');
+
+    const pending = show(service, 'a').catch(() => undefined);
+    // showToolAction's own internal cleanup() already fired once above, on a still-null interval — clear
+    // the spy so only the explicit cleanup() below (against the now-live interval) is being asserted.
+    clearIntervalSpy.mockClear();
+    service.cleanup();
+    await pending;
+
+    expect(removeDocListener).toHaveBeenCalledWith('click', expect.any(Function), { capture: true });
+    expect(removeWinListener).toHaveBeenCalledWith('scroll', expect.any(Function), { capture: true });
+    expect(clearIntervalSpy).toHaveBeenCalledTimes(1);
+
+    resetDom();
+  });
+});
+
+describe('a non-click action settles on Continue, not on an element click', () => {
+  it('resolves when the visitor presses the popup Continue button', async () => {
+    const service = makeShowFixture('<button id="a"></button>');
+
+    const settled = service
+      .showToolAction({
+        element: document.getElementById('a') as HTMLElement,
+        explanation: 'Read this step',
+        browserToolName: 'read_page',
+        isClickAction: false,
+      })
+      .then(
+        () => 'resolved',
+        () => 'rejected',
+      );
+
+    document.getElementById('a')?.click();
+    await new Promise(resolve => setTimeout(resolve, 20));
+    expect(document.getElementById('marketrix-show-highlight')).not.toBeNull();
+
+    document.getElementById('marketrix-show-continue')?.click();
+
+    expect(await settled).toBe('resolved');
+
+    service.cleanup();
+    resetDom();
+  });
+});
+
+describe('the popup fit check is inclusive at every edge', () => {
+  // Each case marginally satisfies (real code) or marginally fails (a `>`/`<` mutant of the `>=`/`<=`
+  // fit check) exactly one clause on the FIRST candidate position, with a later candidate crafted to be
+  // valid at a clearly different, distinguishable spot — proving which candidate actually won rather
+  // than reading a coincidental default (candidate 0 is also the loop's un-matched fallback value, so a
+  // scenario where every other candidate is invalid too cannot tell a passing check from a failing one).
+  let service: ShowModeService;
+  let innerWidthDescriptor: PropertyDescriptor;
+  let innerHeightDescriptor: PropertyDescriptor;
+
+  beforeEach(() => {
+    innerWidthDescriptor = Object.getOwnPropertyDescriptor(window, 'innerWidth') as PropertyDescriptor;
+    innerHeightDescriptor = Object.getOwnPropertyDescriptor(window, 'innerHeight') as PropertyDescriptor;
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1000 });
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: 1000 });
+    service = makeShowFixture('<button id="a"></button>');
+  });
+
+  const originalGetBoundingClientRect = Element.prototype.getBoundingClientRect;
+
+  afterEach(() => {
+    service.cleanup();
+    Element.prototype.getBoundingClientRect = originalGetBoundingClientRect;
+    Object.defineProperty(window, 'innerWidth', innerWidthDescriptor);
+    Object.defineProperty(window, 'innerHeight', innerHeightDescriptor);
+    resetDom();
+  });
+
+  it.each([
+    // [label, rect, expectedLeft, expectedTop]
+    [
+      'left >= padding (right-side candidate at its low edge)',
+      { left: -2000, right: -10, top: 560, bottom: 560, width: 4920, height: 0 },
+      10,
+      500,
+    ],
+    [
+      'top >= padding (right-side candidate at its low edge)',
+      { left: -2000, right: 480, top: 200, bottom: 300, width: 4920, height: -260 },
+      500,
+      10,
+    ],
+    [
+      'left + width <= innerWidth - padding (right-side candidate at its high edge)',
+      { left: -2000, right: 650, top: 560, bottom: 560, width: 4920, height: 0 },
+      670,
+      500,
+    ],
+    [
+      'top + height <= innerHeight - padding (right-side candidate at its high edge)',
+      { left: -2000, right: 480, top: 930, bottom: 930, width: 4920, height: 0 },
+      500,
+      870,
+    ],
+  ] as const)('%s', async (_label, rect, expectedLeft, expectedTop) => {
+    Element.prototype.getBoundingClientRect = () => rect as DOMRect;
+
+    show(service, 'a').catch(() => undefined);
+
+    const popup = document.getElementById('marketrix-show-popup') as HTMLElement;
+    expect(popup.style.left).toBe(`${expectedLeft}px`);
+    expect(popup.style.top).toBe(`${expectedTop}px`);
+  });
+});
+
 describe('a show action the page invalidates', () => {
   let service: ShowModeService;
 
@@ -76,8 +229,11 @@ describe('a show action the page invalidates', () => {
     service = makeShowFixture('<button id="a"></button>');
   });
 
+  const originalGetBoundingClientRect = Element.prototype.getBoundingClientRect;
+
   afterEach(() => {
     service.cleanup();
+    Element.prototype.getBoundingClientRect = originalGetBoundingClientRect;
     vi.useRealTimers();
     resetDom();
   });
@@ -93,6 +249,20 @@ describe('a show action the page invalidates', () => {
     await advanceTimersByTimeAsync(200);
 
     expect(await rejection).toBe(obscured);
+  });
+
+  it('stops at off-screen without also checking interactability on the same tick', async () => {
+    notInteractableReason.mockClear();
+    Element.prototype.getBoundingClientRect = () => ({ bottom: -10, top: -10, right: -10, left: -10 }) as DOMRect;
+
+    const rejection = show(service, 'a').then(
+      () => 'resolved',
+      (error: Error) => error.message,
+    );
+    await advanceTimersByTimeAsync(200);
+
+    expect(await rejection).toBe('ELEMENT_OFF_SCREEN: The highlighted element scrolled out of view');
+    expect(notInteractableReason).not.toHaveBeenCalled();
   });
 });
 

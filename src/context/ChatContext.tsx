@@ -17,6 +17,12 @@
  * which carries no task id. Every failure on the tool and stop paths reaches `uiActions.setError` as well
  * as the console: an undelivered `tool/response` leaves the agent waiting on a reply that never comes, so
  * the run stalls with nothing on screen unless the visitor is told, and `do` mode may still be clicking.
+ *
+ * `event.type === 'task/status' && isTerminalTaskStatus(event.status)` reads `event.status` on every
+ * branch, but only the `task/status` variant of `WidgetEvent` carries a `status` field at all — on any
+ * other event it is `undefined`, which `isTerminalTaskStatus` (an `in` check against the status map)
+ * always reports as non-terminal. The `&&` can never observably differ from an `||` here; it stays `&&`
+ * because that is what a reader expects a type-narrowing guard to say.
  */
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 

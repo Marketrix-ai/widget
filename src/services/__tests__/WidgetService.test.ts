@@ -3,7 +3,9 @@
  * read; an invalid settings response is rejected naming the schema field; the inactive-widget diagnostic is
  * preserved; a repeat call for the same credentials reuses the cached lookup instead of re-searching, and a
  * failed lookup is never cached so the next call retries against the api. Each case uses its own `mtxId` so
- * the module-level `widgetLookupCache` from one test cannot leak a cached result into another.
+ * the module-level `widgetLookupCache` from one test cannot leak a cached result into another. A missing
+ * `mtxId` OR `mtxKey` (either alone, not just both) is refused before any search, and an unreachable-api
+ * error names the configured host, falling back to a generic phrase only when none was configured.
  */
 import { beforeEach, describe, expect, it, vi } from 'bun:test';
 
@@ -34,6 +36,30 @@ beforeEach(() => {
 });
 
 describe('loadWidgetConfig', () => {
+  it.each([
+    ['mtxId', { mtxKey: 'test-key' }],
+    ['mtxKey', { mtxId: 'missing-the-other' }],
+  ])('refuses to search when %s alone is missing', async (_label, config) => {
+    await expect(loadWidgetConfig(config)).rejects.toThrow('Please provide mtxId + mtxKey');
+    expect(mockSdk.widgetPublicSearch).not.toHaveBeenCalled();
+  });
+
+  it('names the configured api host when the api is unreachable', async () => {
+    mockSdk.widgetPublicSearch.mockRejectedValue(new Error('Failed to fetch'));
+
+    await expect(
+      loadWidgetConfig({ mtxId: 'unreachable-with-host', mtxKey: 'test-key', mtxApiHost: 'https://api.test' }),
+    ).rejects.toThrow('Please ensure the API server is running at https://api.test');
+  });
+
+  it('falls back to a generic phrase when no api host was configured', async () => {
+    mockSdk.widgetPublicSearch.mockRejectedValue(new Error('Failed to fetch'));
+
+    await expect(loadWidgetConfig({ mtxId: 'unreachable-no-host', mtxKey: 'test-key' })).rejects.toThrow(
+      'Please ensure the API server is running at configured API server',
+    );
+  });
+
   it('loads the widget in one search and returns one schema-validated config', async () => {
     mockSdk.widgetPublicSearch.mockResolvedValue(searchResult('load-once'));
 
