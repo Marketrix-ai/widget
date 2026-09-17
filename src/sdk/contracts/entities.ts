@@ -106,6 +106,15 @@ export const WorkspaceSummarySchema = WorkspaceEntitySchema.omit({
 });
 export type WorkspaceSummary = z.infer<typeof WorkspaceSummarySchema>;
 
+// A skill_distill dispatch (`services/skillEvolutionService.ts`, one per completed simulation the agent
+// distills) is `pending` from the moment it is sent until the agent's terminal WorkUpdate lands; `failed`
+// carries that terminal event's message in `skill_distillation_error` until the next attempt starts or
+// succeeds. There is no separate "proposed skill" row — a distilled candidate is either accepted straight
+// into `skill` or dropped, so this pair is the whole durable trace of the LAST attempt, at application
+// granularity (the dispatch's own scope), never per-skill.
+export const ApplicationSkillDistillationStatusSchema = z.enum(['idle', 'pending', 'failed']);
+export type ApplicationSkillDistillationStatus = z.infer<typeof ApplicationSkillDistillationStatusSchema>;
+
 export const ApplicationEntitySchema = BaseEntitySchema.extend({
   workspace_id: z.number(),
   name: z.string().max(200),
@@ -115,6 +124,8 @@ export const ApplicationEntitySchema = BaseEntitySchema.extend({
   username: z.string().max(100).nullable(),
   password: z.string().nullable(),
   allowed_domains: z.array(z.string()),
+  skill_distillation_status: ApplicationSkillDistillationStatusSchema,
+  skill_distillation_error: z.string().nullable(),
 });
 
 export type ApplicationData = z.infer<typeof ApplicationEntitySchema>;
