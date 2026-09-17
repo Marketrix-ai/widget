@@ -76,7 +76,7 @@ function previewConfig(
 }
 
 function mount(config: ValidWidgetConfig, host: HTMLElement | undefined, previewMode = false): void {
-  const { container, mountEl } = createWidgetContainer(host);
+  const { container, mountEl } = createWidgetContainer(host, config.styleNonce);
   const instance = mountWidgetToContainer(mountEl, config, previewMode);
   widgetState.mount = { instance, config, container, host, previewMode };
 }
@@ -206,7 +206,7 @@ export const MarketrixWidgetPreview: React.FC<MarketrixWidgetPreviewProps> = ({ 
     const config = previewConfig(settings);
     if (!config) return;
 
-    const { container: widgetContainer, mountEl } = createWidgetContainer(parentContainer);
+    const { container: widgetContainer, mountEl } = createWidgetContainer(parentContainer, config.styleNonce);
 
     widgetContainerRef.current = widgetContainer;
 

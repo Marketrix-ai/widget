@@ -9,6 +9,12 @@
  *
  * The `widgetContract` re-export is type-only: the oRPC client builds each request from the proxied
  * property path, so the contract value itself never ships in the bundle.
+ *
+ * `credentials: 'omit'` on every request is explicit, not the browser's cross-origin default: this
+ * widget authenticates every call with `marketrix_id`/`marketrix_key` request fields, never a cookie,
+ * so no ambient credential should ever ride along regardless of what domain `mtxApiHost` resolves to
+ * (a future shared-cookie-scope edge case, a browser default change) — an embedded script on an
+ * arbitrary host page has no business asking the browser for cookies at all.
  */
 import { createORPCClient } from '@orpc/client';
 import { RPCLink } from '@orpc/client/fetch';
@@ -17,7 +23,12 @@ import type { ContractRouterClient } from '@orpc/contract';
 import type { widgetContract } from './contract';
 
 function createClient(apiUrl: string): ContractRouterClient<typeof widgetContract> {
-  return createORPCClient(new RPCLink({ url: apiUrl }));
+  return createORPCClient(
+    new RPCLink({
+      url: apiUrl,
+      fetch: (request, init) => globalThis.fetch(request, { ...init, credentials: 'omit' }),
+    }),
+  );
 }
 
 let currentApiUrl = '';

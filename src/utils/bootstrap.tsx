@@ -17,6 +17,11 @@
  * resolves requests against the HOST PAGE's origin, so omitting it silently posts widget traffic at the
  * customer's own site instead of failing. A widget already mounted stays silent there, since a later
  * misconfigured script tag must not log over a working one.
+ *
+ * `styleNonce`/`mtx-style-nonce` reaches `attachShadowMount`'s injected `<style>` element as its
+ * `nonce` property: a host page running a strict `style-src` CSP with no `'unsafe-inline'` blocks that
+ * element outright with no nonce, leaving the widget mounted but entirely unstyled — this is the
+ * documented escape hatch (README) for that case, applied only when the host supplies one.
  */
 import React from 'react';
 import { createRoot, type Root } from 'react-dom/client';
@@ -45,10 +50,12 @@ let noticeRoot: Root | null = null;
 const attachShadowMount = (
   container: HTMLElement,
   mountId: string,
+  styleNonce?: string,
 ): { shadowRoot: ShadowRoot; mountEl: HTMLElement } => {
   const shadowRoot = container.attachShadow({ mode: 'closed' });
 
   const styleEl = document.createElement('style');
+  if (styleNonce) styleEl.nonce = styleNonce;
   styleEl.textContent = shadowStyles;
   shadowRoot.appendChild(styleEl);
 
@@ -61,6 +68,7 @@ const attachShadowMount = (
 
 export const createWidgetContainer = (
   parentContainer?: HTMLElement,
+  styleNonce?: string,
 ): { container: HTMLElement; shadowRoot: ShadowRoot; mountEl: HTMLElement } => {
   const parent = parentContainer ?? document.body;
 
@@ -72,7 +80,7 @@ export const createWidgetContainer = (
   }
   parent.appendChild(container);
 
-  const { shadowRoot, mountEl } = attachShadowMount(container, 'marketrix-widget-root');
+  const { shadowRoot, mountEl } = attachShadowMount(container, 'marketrix-widget-root', styleNonce);
   Object.assign(mountEl.style, { pointerEvents: 'auto', width: '100%', height: '100%', position: 'relative' });
 
   return { container, shadowRoot, mountEl };
@@ -164,6 +172,8 @@ export const autoInitializeWidget = (initWidget: (config: MarketrixConfig) => Pr
 
   const config: MarketrixConfig = { mtxId, mtxKey, mtxApiHost };
   if (script.getAttribute('mtx-use-screenshare') === 'false') config.use_screenshare = false;
+  const styleNonce = script.getAttribute('mtx-style-nonce');
+  if (styleNonce) config.styleNonce = styleNonce;
 
   initWidget(config).catch(error => console.error('[AutoInit] Failed to initialize widget:', error));
 };

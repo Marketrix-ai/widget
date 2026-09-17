@@ -71,14 +71,15 @@ All modes also accept the common options below.
 
 These apply to every mode (script attribute → config key):
 
-| Config key                | Script attribute      | Type          | Description                                                                                                                                           |
-| ------------------------- | --------------------- | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `mtxApiHost`              | `mtx-api-host`        | string        | API server URL, e.g. `https://api.marketrix.ai`. The widget has no baked-in API host — you must supply it.                                            |
-| `container`               | —                     | `HTMLElement` | Element to mount inside (programmatic only). Defaults to a container appended to `<body>`.                                                            |
-| `userId`                  | —                     | number        | Associates widget activity with one of your users.                                                                                                    |
-| `widget_position_z_index` | —                     | number        | `z-index` floor for the launcher and panel. Raised to the widget's own layer token if you pass a lower value.                                         |
-| `show_widget`             | —                     | boolean       | When `false`, the widget initializes fully but its UI stays hidden. Default `true`.                                                                   |
-| `use_screenshare`         | `mtx-use-screenshare` | boolean       | When `false`, screen-share requests are auto-denied and the Share Screen button is hidden. Default `true`. Disable via `mtx-use-screenshare="false"`. |
+| Config key                | Script attribute      | Type          | Description                                                                                                                                                                                  |
+| ------------------------- | --------------------- | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `mtxApiHost`              | `mtx-api-host`        | string        | API server URL, e.g. `https://api.marketrix.ai`. The widget has no baked-in API host — you must supply it.                                                                                   |
+| `container`               | —                     | `HTMLElement` | Element to mount inside (programmatic only). Defaults to a container appended to `<body>`.                                                                                                   |
+| `userId`                  | —                     | number        | Associates widget activity with one of your users.                                                                                                                                           |
+| `widget_position_z_index` | —                     | number        | `z-index` floor for the launcher and panel. Raised to the widget's own layer token if you pass a lower value.                                                                                |
+| `show_widget`             | —                     | boolean       | When `false`, the widget initializes fully but its UI stays hidden. Default `true`.                                                                                                          |
+| `use_screenshare`         | `mtx-use-screenshare` | boolean       | When `false`, screen-share requests are auto-denied and the Share Screen button is hidden. Default `true`. Disable via `mtx-use-screenshare="false"`.                                        |
+| `styleNonce`              | `mtx-style-nonce`     | string        | A CSP nonce applied to the widget's injected `<style>` element. Required only if your `style-src` policy has no `'unsafe-inline'` — see [Content Security Policy](#content-security-policy). |
 
 Widget **appearance and behavior** (position, colors, sizing, border radius, animation, enabled Tell/Show/Do features, visibility, greeting toast, optional session recording, header/body/greeting text, and quick-action chips) are configured in the Marketrix dashboard and fetched from the API at init. A hidden widget stays visible in the dashboard preview.
 
@@ -216,7 +217,7 @@ TypeScript types are bundled with the package:
 
 - `MarketrixConfig` — full config for `initWidget` / `updateMarketrixConfig` (`mtxId`, `mtxKey`, `mtxApiHost`, `userId`, `show_widget`, `use_screenshare`, plus all widget appearance settings, optional).
 - `AddWidgetConfig` — discriminated config for `mountWidget` (production / preview variants + common options).
-- `ClientOwnedConfig` — the host-supplied options the API never sends (`mtxApiHost`, `userId`, `widget_position_z_index`, `show_widget`, `use_screenshare`).
+- `ClientOwnedConfig` — the host-supplied options the API never sends (`mtxApiHost`, `userId`, `widget_position_z_index`, `show_widget`, `use_screenshare`, `styleNonce`).
 - `MarketrixWidgetPreviewProps` — props for the `MarketrixWidgetPreview` component.
 - `ChatMessage`, `WidgetState`, `InstructionType` (`'tell' | 'show' | 'do'`).
 
@@ -227,6 +228,24 @@ TypeScript types are bundled with the package:
 - **React 19** (`react`/`react-dom` `^19.2.3`) on the host page — peer dependency, not bundled. The script-tag loader provides it via importmap; npm consumers supply it from their app.
 - A reachable Marketrix API host (`mtxApiHost` / `mtx-api-host`).
 - Valid credentials (`mtxId` + `mtxKey`) for production mode.
+
+---
+
+## Content Security Policy
+
+The widget mounts into a closed Shadow DOM and injects its own stylesheet as an inline `<style>`
+element inside it (there is no external stylesheet to point a `<link>` at). A host page enforcing a
+`style-src` policy with no `'unsafe-inline'` blocks that element, leaving the widget mounted but
+entirely unstyled. If your policy is that strict, either:
+
+- add `'unsafe-inline'` to `style-src` (simplest, and scoped to styles only), or
+- generate a per-request nonce, add it to your `style-src` policy (`style-src 'nonce-<value>'`), and
+  pass the same value as `styleNonce` (programmatic) or `mtx-style-nonce` (script tag) — the widget
+  applies it to its injected `<style>` element.
+
+The widget makes network requests only to the configured `mtxApiHost`, with credentials explicitly
+omitted on every request (it authenticates via `mtxId`/`mtxKey`, never a cookie) — no `connect-src`
+entry beyond your own API host is required, and no third-party origin is ever contacted.
 
 ---
 

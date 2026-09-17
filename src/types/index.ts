@@ -4,7 +4,9 @@
  *
  * `ClientOwnedConfig` holds host-supplied knobs the api never sends (`show_widget: false` still
  * initializes the widget fully and only hides its UI; `use_screenshare: false` auto-denies
- * screen-access requests and hides the Share Screen button; both default true). `MarketrixConfig` is
+ * screen-access requests and hides the Share Screen button; both default true; `styleNonce` reaches
+ * the injected shadow-root `<style>` element for a host running a strict `style-src` CSP with no
+ * `'unsafe-inline'`). `MarketrixConfig` is
  * deliberately FLAT so api settings spread straight in — `mtxId`+`mtxKey` is the credential, while
  * `mtxApp` is stamped internally after validation and never an input, since an application id is
  * guessable and authenticates nothing. `ValidWidgetConfig` is a `MarketrixConfig` run through
@@ -31,6 +33,7 @@ export interface ClientOwnedConfig {
   widget_position_z_index?: number;
   show_widget?: boolean;
   use_screenshare?: boolean;
+  styleNonce?: string;
 }
 
 export type MarketrixConfig = Partial<WidgetRenderedSettings> &
