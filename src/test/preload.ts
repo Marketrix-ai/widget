@@ -22,8 +22,10 @@
  * own natives, since `document.createElement`'s elements brand-check `dispatchEvent`'s argument against
  * JSDOM's OWN `Event` class. `isNamespaceLike` copies a class or plain-function namespace (jsdom's
  * `NodeFilter`) UNBOUND, since `bind` strips `.prototype` and own properties, which would break
- * prototype patching and `NodeFilter`'s constants. The bulk-copy loop's `try/catch` swallows only an
- * already-non-configurable accessor (e.g. `crypto`).
+ * prototype patching and `NodeFilter`'s constants. The bulk-copy loop's `try/catch` narrows on
+ * `TypeError` — the shape a non-configurable accessor (e.g. `crypto`) throws when reassigned — and
+ * escalates anything else via `console.error`, so a genuinely new copy failure surfaces instead of
+ * vanishing into the same silent path as the expected one.
  *
  * `resetDom` clears the body for tests that mount outside Testing Library's render tree, run
  * automatically in `afterEach` here so every test file gets it for free.
@@ -63,8 +65,8 @@ for (const key of Object.getOwnPropertyNames(window)) {
     // @ts-expect-error -- bulk-copying the jsdom window onto globalThis by design
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- `value` is genuinely untyped window surface
     globalThis[key] = typeof value === 'function' && !isNamespaceLike(value) ? value.bind(window) : value;
-  } catch {
-    /* empty */
+  } catch (error) {
+    if (!(error instanceof TypeError)) console.error(`[preload] Unexpected failure copying window.${key}:`, error);
   }
 }
 globalThis.window = globalThis as unknown as Window & typeof globalThis;
