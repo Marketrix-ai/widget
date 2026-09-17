@@ -3,13 +3,17 @@
  * and published through `WidgetConfigContext` — and the one place the root element is published through
  * `PortalContainerContext`. Renders `MessengerShell` (inside an `ErrorBoundary`, so a panel crash still leaves the
  * launcher and toasts alive), `WidgetFab`, `WidgetNotifications`, and a fixed screen-edge glow while a reply or
- * task is in flight; a mount-time effect restores the drag-pinned corner and a second arms the greeting toast.
+ * task is in flight; an effect arms the greeting toast.
  *
- * The position storage key is written ONLY by a drag — seeding it with `config.widget_position` would pin the
- * dashboard's setting at whatever it was on a visitor's first load — and preview mode neither reads nor writes it,
- * so the dashboard always shows the configured corner. Preview mode overrides the hidden check (`show_widget:
- * false` / `widget_appearance: 'hidden'` suppress the widget on a host page, but the dashboard preview must still
- * render) with its `null` return sitting below every hook so hook order stays stable either way.
+ * `widgetPosition`'s stored/drag-pinned corner is read in `useState`'s lazy initializer, not a mount effect —
+ * `index.tsx`'s `updateMarketrixConfig` re-mounts the whole tree on any config change (this file's header note
+ * above), so `WidgetRoot` never receives an updated `config` prop in place; a sync effect keyed on `config`
+ * could only ever re-run for a config this component was never given, which is to say never. The position
+ * storage key is written ONLY by a drag — seeding it with `config.widget_position` would pin the dashboard's
+ * setting at whatever it was on a visitor's first load — and preview mode neither reads nor writes it, so the
+ * dashboard always shows the configured corner. Preview mode overrides the hidden check (`show_widget: false` /
+ * `widget_appearance: 'hidden'` suppress the widget on a host page, but the dashboard preview must still render)
+ * with its `null` return sitting below every hook so hook order stays stable either way.
  *
  * The published z-index is `max(tenant value, LAYER_TOKENS.panel)` so a tenant's low setting cannot sink the
  * widget under the host page's own stacking context. The root `Surface` IS the `[data-marketrix-widget]` element
@@ -76,18 +80,12 @@ export const WidgetRoot: React.FC<WidgetRootProps> = ({ config }) => {
 
   useScrollLock(state.isOpen);
 
-  const [widgetPosition, setWidgetPosition] = useState<WidgetPosition>(config.widget_position ?? 'bottom_right');
-
   const positionStorageKey = scopedKey('marketrix_widget_position', config);
 
-  useEffect(() => {
+  const [widgetPosition, setWidgetPosition] = useState<WidgetPosition>(() => {
     const stored = isPreviewMode ? null : readLocal(positionStorageKey);
-    if (isWidgetPosition(stored)) {
-      setWidgetPosition(stored);
-      return;
-    }
-    setWidgetPosition(config.widget_position ?? 'bottom_right');
-  }, [isPreviewMode, positionStorageKey, config.widget_position]);
+    return isWidgetPosition(stored) ? stored : (config.widget_position ?? 'bottom_right');
+  });
 
   useEffect(() => {
     if (state.isOpen || isPreviewMode || !config.widget_greeting_toast) {
