@@ -25,9 +25,10 @@
  */
 import type { WidgetEvent } from '../sdk';
 import { browserToolService, FINISH_TOOL } from '../services/BrowserToolService';
-import { type ChatMessage, type InstructionType, type MessagePart, messageText } from '../types';
+import type { ChatMessage, InstructionType, MessagePart } from '../types';
 import {
   addProgressLine,
+  CHAT_FAILURE_TEXT,
   findMessageForProgress,
   markProgressLineComplete,
   markProgressLineFailed,
@@ -176,15 +177,15 @@ function reduceText(state: SseState, requestId: string, text: string, streaming:
     const part: MessagePart = { type: 'text', content, ...(streaming && { streaming: true }) };
     if (isOpenStream) parts[parts.length - 1] = part;
     else parts.push(part);
-    return { ...msg, content: messageText(parts), isPlaceholder: false, placeholderState: undefined, parts };
+    return { ...msg, isPlaceholder: false, placeholderState: undefined, parts };
   });
   return { ...state, messages };
 }
 
-const appendText = (msg: ChatMessage, text: string): ChatMessage => {
-  const parts = [...msg.parts, { type: 'text' as const, content: text }];
-  return { ...msg, content: messageText(parts), parts };
-};
+const appendText = (msg: ChatMessage, text: string): ChatMessage => ({
+  ...msg,
+  parts: [...msg.parts, { type: 'text' as const, content: text }],
+});
 
 const errorBubble = (msg: ChatMessage, text: string): ChatMessage => ({
   ...settled(appendText(msg, text)),
@@ -257,7 +258,7 @@ export function reduceSse(state: SseState, event: WidgetEvent, currentMode: Inst
       return { state: reduceText(state, event.request_id, event.text, false), effects: [] };
 
     case 'chat/error':
-      return { state: reduceError(state, event.request_id, `Error: ${event.error}`), effects: [] };
+      return { state: reduceError(state, event.request_id, CHAT_FAILURE_TEXT), effects: [] };
 
     default:
       return noChange(state);

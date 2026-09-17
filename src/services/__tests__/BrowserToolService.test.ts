@@ -3,6 +3,17 @@
  * navigation until its response has been sent, so the agent hears the result before the page is gone.
  * `navigate` refuses `javascript:` (it would run in the host page) and resolves relative URLs; opening a
  * new tab reports whether the popup really opened; `close_tab` fails on a tab the script did not open.
+ * `search_web` picks the engine URL by name and defaults to DuckDuckGo; `extract` truncates links only
+ * when asked, defaulting a link's empty text to the empty string rather than a falsy DOM read; `wait`,
+ * `goBack` and `selectDropdownOption`/`sendKeys` each exercise the required-argument and fallback-message
+ * branches a happy-path click/type test never reaches; a `domService`-supplied error message on a missing
+ * element wins over the generic one; and `executeTool`'s Show-mode default explanation only fires when the
+ * caller left it blank.
+ *
+ * jsdom has no layout engine: `innerText` is left unimplemented (reading it throws, so `extract`'s cases
+ * stub it from the DOM they just built), `isContentEditable` is never computed from the attribute (so
+ * `typeText`'s contentEditable case forces it directly via `Object.defineProperty`), and rich-text editing
+ * is absent (so `execCommand` isn't a spyable prototype method there and is assigned directly instead).
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 
@@ -253,5 +264,203 @@ describe("show mode's real visitor click reaches the element's handler exactly o
 
     result.afterResponseAttempt?.();
     expect(clicks).toBe(1);
+  });
+});
+
+describe('a missing element surfaces the reason domService gave', () => {
+  it('uses the specific reason instead of the generic not-found message', async () => {
+    vi.spyOn(domService, 'getValidatedElement').mockReturnValue({
+      element: null,
+      error: 'Element 0 is not currently visible',
+    });
+
+    const result = await browserToolService.executeTool('click_element', { index: 0 }, 'do');
+
+    expectFailure(result, 'Element 0 is not currently visible');
+  });
+});
+
+describe("show mode's default explanation only fills in a blank one", () => {
+  beforeEach(() => {
+    document.body.innerHTML = '<button style="position: fixed">Buy</button>';
+    Element.prototype.getBoundingClientRect = () => ({ top: 0, left: 0, width: 10, height: 10 }) as DOMRect;
+    document.elementFromPoint = () => null;
+    Element.prototype.scrollIntoView = () => {};
+    domService.reindexAndSnapshot();
+  });
+
+  afterEach(() => {
+    showModeService.cleanup();
+  });
+
+  it('passes the caller-supplied explanation through unchanged', async () => {
+    const staged = vi.spyOn(showModeService, 'showToolAction').mockResolvedValue();
+
+    await browserToolService.executeTool('click_element', { index: 0 }, 'show', 'Click the Buy button');
+
+    expect(staged).toHaveBeenCalledWith(expect.objectContaining({ explanation: 'Click the Buy button' }));
+  });
+
+  it('falls back to a generated explanation when the caller leaves it blank', async () => {
+    const staged = vi.spyOn(showModeService, 'showToolAction').mockResolvedValue();
+
+    await browserToolService.executeTool('click_element', { index: 0 }, 'show');
+
+    expect(staged).toHaveBeenCalledWith(expect.objectContaining({ explanation: 'Execute click_element' }));
+  });
+});
+
+describe('search_web picks the engine URL by name', () => {
+  it.each([
+    ['google', 'https://www.google.com/search?q=widgets'],
+    ['bing', 'https://www.bing.com/search?q=widgets'],
+    [undefined, 'https://duckduckgo.com/?q=widgets'],
+  ] as const)('engine %s', async (engine, expectedUrl) => {
+    const result = await browserToolService.executeTool('search_web', { query: 'widgets', engine }, 'do');
+
+    assertSuccess(result);
+    result.afterResponseAttempt?.();
+    expect(navigations).toEqual([expectedUrl]);
+  });
+});
+
+describe('typeText branches beyond input/textarea', () => {
+  beforeEach(() => {
+    domService.reindexAndSnapshot();
+  });
+
+  it('appends instead of replacing when clear is false', async () => {
+    document.body.innerHTML = '<input style="position: fixed" value="existing-" />';
+    const element = document.querySelector('input') as HTMLInputElement;
+    vi.spyOn(domService, 'getValidatedElement').mockReturnValue({ element });
+
+    const result = await browserToolService.executeTool('type_text', { index: 0, text: 'more', clear: false }, 'do');
+
+    expect(result.success).toBe(true);
+    expect(element.value).toBe('existing-more');
+  });
+
+  it('writes through execCommand on a contentEditable element', async () => {
+    document.body.innerHTML = '<div style="position: fixed"></div>';
+    const element = document.querySelector('div') as HTMLElement;
+    Object.defineProperty(element, 'isContentEditable', { value: true });
+    vi.spyOn(domService, 'getValidatedElement').mockReturnValue({ element });
+    const execCommand = vi.fn().mockReturnValue(true);
+    (document as unknown as { execCommand: typeof execCommand }).execCommand = execCommand;
+
+    const result = await browserToolService.executeTool('type_text', { index: 0, text: 'hello' }, 'do');
+
+    expect(result.success).toBe(true);
+    expect(execCommand).toHaveBeenCalledWith('insertText', false, 'hello');
+  });
+
+  it('sets .value directly on a non-text-field element that exposes one, like a select', async () => {
+    document.body.innerHTML = '<select style="position: fixed"><option value="x">x</option></select>';
+    const element = document.querySelector('select') as HTMLSelectElement;
+    vi.spyOn(domService, 'getValidatedElement').mockReturnValue({ element });
+
+    const result = await browserToolService.executeTool('type_text', { index: 0, text: 'x' }, 'do');
+
+    expect(result.success).toBe(true);
+    expect(element.value).toBe('x');
+  });
+});
+
+describe('extract', () => {
+  const stubInnerText = () =>
+    Object.defineProperty(document.body, 'innerText', { configurable: true, value: document.body.textContent });
+
+  it('includes link text, falling back to empty string rather than a falsy DOM read', async () => {
+    document.body.innerHTML = '<a href="/a"></a><a href="/b">Bought</a>';
+    stubInnerText();
+
+    const result = await browserToolService.executeTool('extract', {}, 'do');
+
+    assertSuccess(result);
+    const data = result.data as { links: Array<{ text: string; href: string | null }> };
+    expect(data.links).toEqual([
+      { text: '', href: '/a' },
+      { text: 'Bought', href: '/b' },
+    ]);
+  });
+
+  it('omits links entirely when extract_links is false', async () => {
+    document.body.innerHTML = '<a href="/a">A</a>';
+    stubInnerText();
+
+    const result = await browserToolService.executeTool('extract', { extract_links: false }, 'do');
+
+    assertSuccess(result);
+    expect((result.data as { links: unknown[] }).links).toEqual([]);
+  });
+});
+
+describe('goBack refuses when there is no history to go back to', () => {
+  it('fails with no history when history.length is 1', async () => {
+    const descriptor = Object.getOwnPropertyDescriptor(window.history, 'length');
+    Object.defineProperty(window.history, 'length', { configurable: true, get: () => 1 });
+
+    const result = await browserToolService.executeTool('go_back', {}, 'do');
+
+    expectFailure(result, 'No history');
+    if (descriptor) Object.defineProperty(window.history, 'length', descriptor);
+  });
+});
+
+describe('wait_seconds requires seconds', () => {
+  it('fails without seconds and succeeds with them', async () => {
+    const missing = await browserToolService.executeTool('wait_seconds', {}, 'do');
+    expectFailure(missing, 'Seconds required');
+
+    const succeeded = await browserToolService.executeTool('wait_seconds', { seconds: 0 }, 'do');
+    expect(succeeded.success).toBe(true);
+  });
+});
+
+describe('selectDropdownOption matches by value OR by visible text', () => {
+  beforeEach(() => {
+    document.body.innerHTML =
+      '<select style="position: fixed"><option value="v1">Text One</option><option value="v2">Text Two</option></select>';
+    vi.spyOn(domService, 'getValidatedElement').mockReturnValue({
+      element: document.querySelector('select') as HTMLSelectElement,
+    });
+  });
+
+  it('matches an option by its value', async () => {
+    const result = await browserToolService.executeTool('select_dropdown', { index: 0, option: 'v2' }, 'do');
+    expect(result.success).toBe(true);
+    expect((document.querySelector('select') as HTMLSelectElement).value).toBe('v2');
+  });
+
+  it('matches an option by its visible text when the value differs', async () => {
+    const result = await browserToolService.executeTool('select_dropdown', { index: 0, option: 'Text One' }, 'do');
+    expect(result.success).toBe(true);
+    expect((document.querySelector('select') as HTMLSelectElement).value).toBe('v1');
+  });
+});
+
+describe('sendKeys falls back to a generic message only when the key has no reported effect', () => {
+  it('reports the specific effect for a handled key', async () => {
+    document.body.innerHTML = '<input style="position: fixed" value="abc" />';
+    const element = document.querySelector('input') as HTMLInputElement;
+    element.focus();
+    element.setSelectionRange(0, 0);
+    vi.spyOn(domService, 'getValidatedElement').mockReturnValue({ element });
+
+    const result = await browserToolService.executeTool('send_keys', { index: 0, keys: 'End' }, 'do');
+
+    assertSuccess(result);
+    expect(result.data).toEqual({ text: 'End: moved cursor to end' });
+  });
+
+  it('falls back to the generic "Sent keys" message for a key with no reported effect', async () => {
+    document.body.innerHTML = '<div tabindex="0" style="position: fixed"></div>';
+    const element = document.querySelector('div') as HTMLElement;
+    vi.spyOn(domService, 'getValidatedElement').mockReturnValue({ element });
+
+    const result = await browserToolService.executeTool('send_keys', { index: 0, keys: 'F1' }, 'do');
+
+    assertSuccess(result);
+    expect(result.data).toEqual({ text: 'Sent keys F1' });
   });
 });

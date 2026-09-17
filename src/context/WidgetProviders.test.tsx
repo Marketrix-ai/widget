@@ -1,7 +1,10 @@
 /**
  * `WidgetProviders` initialization tests: no work after a StrictMode effect cleanup, the stored
  * transcript survives a second mount in the same page, no task is running on mount whatever a previous
- * page left on disk, and a chat initialization failure routes to the widget error state.
+ * page left on disk, and a chat initialization failure routes to the widget error state. The stored
+ * transcript fixture writes raw storage via `storageService.updateContext`, whose `StoredMessage` shape
+ * keeps a `content` field a live `ChatMessage` does not (see `StorageService.ts`'s header) — added
+ * alongside the `agentMessage()` spread rather than on it.
  */
 import { render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'bun:test';
@@ -57,12 +60,12 @@ describe('WidgetProviders initialization', () => {
       messages: [
         {
           ...agentMessage({
-            content: 'hello',
             mode: undefined,
             isPlaceholder: undefined,
             placeholderState: undefined,
             parts: [{ type: 'text', content: 'hello' }],
           }),
+          content: 'hello',
           timestamp: new Date('2026-01-01T00:00:00.000Z').toISOString(),
         },
       ],

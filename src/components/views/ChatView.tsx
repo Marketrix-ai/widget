@@ -41,6 +41,7 @@
  */
 import React, { useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 
+import { useLatest } from '../../hooks/useLatest';
 import { useWidget, useWidgetConfig } from '../../hooks/useWidget';
 import type { InstructionType } from '../../sdk';
 import {
@@ -79,12 +80,6 @@ const MODES: Array<{ id: InstructionType; icon: ChatInputMode['icon']; flag: key
   { id: 'show', icon: 'mousePointerClick', flag: 'widget_feature_show' },
   { id: 'do', icon: 'ticktick', flag: 'widget_feature_do' },
 ];
-
-function useLatest<T>(value: T): React.RefObject<T> {
-  const ref = useRef(value);
-  ref.current = value;
-  return ref;
-}
 
 export interface UseScreenShareOptions {
   onScreenSharingChange?: (isSharing: boolean) => void;
@@ -179,7 +174,7 @@ export function useScreenShare({
       applySharing(true);
       resolveAccessRequest('allowed');
       onAddMessage(createSystemMessage('Screen sharing started', 'started-screenshare'));
-      const screenshareMessage = createScreenshareMessage(stream, 'show');
+      const screenshareMessage = createScreenshareMessage(stream);
       setScreenShareMessageId(screenshareMessage.id);
       onAddMessage(screenshareMessage);
     } catch (error) {

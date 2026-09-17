@@ -15,22 +15,32 @@
  * another's.
  *
  * The chat snapshot is `{messages, currentMode, isOpen}` — chat_id, config and timestamp are deliberately
- * excluded. Reading revives `timestamp` to a `Date` and backfills a text part for messages stored before
- * `parts` existed; writing drops `videoStream` (unserializable, dead on reload), rewriting it as "Screen
- * sharing ended".
+ * excluded. `StoredMessage` is the ONE place `content` still exists as a field: a live `ChatMessage` has
+ * none (every reader derives `messageText(parts)` instead), but a transcript written before `parts`
+ * existed has only `content` on disk, so `readChatSnapshot` backfills a text part from it and
+ * `writeChatSnapshot` derives `content` back from `parts` on the way out, keeping the persisted shape
+ * readable by an older widget version without carrying the redundant field in memory. Reading also
+ * revives `timestamp` to a `Date`; writing drops `videoStream` (unserializable, dead on reload),
+ * rewriting it as "Screen sharing ended".
  *
  * `sanitizeStoredContext` is hand-rolled, not zod, per the package-level rule that a schema imported as a
  * VALUE anywhere reachable from `src/index.tsx` pulls zod's whole runtime into the bundle. Each field
  * falls back to `DEFAULT_CONTEXT`'s value individually, so a partially-corrupt payload keeps the fields
  * that DID parse rather than discarding the whole context.
  */
-import type { ChatMessage, InstructionType, MarketrixConfig, ValidWidgetConfig } from '../types';
+import {
+  type ChatMessage,
+  type InstructionType,
+  type MarketrixConfig,
+  messageText,
+  type ValidWidgetConfig,
+} from '../types';
 import { logWarn } from '../utils/log';
 
 const STORAGE_KEY = 'marketrix_chat_context';
 const CONTEXT_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000;
 
-type StoredMessage = Omit<ChatMessage, 'videoStream' | 'timestamp'> & { timestamp: string };
+type StoredMessage = Omit<ChatMessage, 'videoStream' | 'timestamp'> & { timestamp: string; content: string };
 
 export interface ChatSnapshot {
   messages: ChatMessage[];
@@ -164,9 +174,9 @@ export function readChatSnapshot(): ChatSnapshot {
   const { chat_id: _chatId, config: _config, timestamp: _timestamp, messages, ...rest } = storageService.getContext();
   return {
     ...rest,
-    messages: messages.map((msg): ChatMessage => {
+    messages: messages.map(({ content, ...msg }): ChatMessage => {
       const parts = [...msg.parts];
-      const text = msg.content.trim();
+      const text = content.trim();
       if (parts.length === 0 && text) parts.push({ type: 'text', content: text });
       return { ...msg, timestamp: new Date(msg.timestamp), parts };
     }),
@@ -178,7 +188,7 @@ export function writeChatSnapshot(snapshot: ChatSnapshot): void {
     ...snapshot,
     messages: snapshot.messages.map(({ videoStream, ...msg }): StoredMessage => {
       const timestamp = msg.timestamp.toISOString();
-      if (!videoStream) return { ...msg, timestamp };
+      if (!videoStream) return { ...msg, timestamp, content: messageText(msg.parts) };
       const content = 'Screen sharing ended';
       return { ...msg, timestamp, content, isSystemMessage: true, parts: [{ type: 'text', content }] };
     }),

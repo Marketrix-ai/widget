@@ -10,6 +10,7 @@
 import React from 'react';
 
 import { useWidget, useWidgetConfig } from '../../hooks/useWidget';
+import { messageText } from '../../types';
 import { getSuggestedActionsFromConfig, type SuggestedActionItem } from '../../utils/suggestedActions';
 import { Button } from '../base/Button';
 import { Stack } from '../base/Flex';
@@ -26,6 +27,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigateToChat, onChipClic
   const config = useWidgetConfig();
   const { messages } = useWidget().state;
   const suggestedActions = getSuggestedActionsFromConfig(config);
+  const lastMessagePreview = messageText(messages[messages.length - 1]?.parts ?? []) || 'Message';
 
   const handleActionClick = async (action: SuggestedActionItem, event: React.MouseEvent) => {
     event.preventDefault();
@@ -89,7 +91,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigateToChat, onChipClic
             variant='muted'
             style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
           >
-            {messages[messages.length - 1]?.content || 'Message'}
+            {lastMessagePreview}
           </Text>
           <Button variant='bare' onClick={onNavigateToChat} style={{ marginTop: '4px' }}>
             <Text as='span' size='xs' variant='muted'>

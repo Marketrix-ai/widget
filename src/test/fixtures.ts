@@ -31,7 +31,6 @@ export const mountTarget = (): HTMLDivElement => document.createElement('div');
 export function agentMessage(overrides: Partial<ChatMessage> = {}): ChatMessage {
   return {
     id: 'agent-1',
-    content: 'Working on it',
     sender: 'agent',
     timestamp: new Date('2026-01-01T00:00:00.000Z'),
     mode: 'do',

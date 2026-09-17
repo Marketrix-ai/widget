@@ -17,6 +17,10 @@
  * same failure. `httpUrl` admits only http(s) — `extract` feeds the model page-controlled hrefs, so a raw
  * target would let `javascript:` run in the HOST origin; its bare catch is the same verdict as a rejected
  * protocol, an unparseable string being exactly a value that is not a URL.
+ *
+ * `scrollToText`'s walker only ever yields a Text node from inside `document.body`'s tree, so
+ * `node.parentElement` is never null there — the optional-chained read is for TypeScript, not a runtime
+ * branch this loop can take.
  */
 
 import type { InstructionType } from '../types';
@@ -258,8 +262,8 @@ class BrowserToolService {
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
     let node: Node | null;
     while ((node = walker.nextNode())) {
-      if (node.textContent?.includes(args.text) && node.parentElement) {
-        node.parentElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      if (node.textContent?.includes(args.text)) {
+        node.parentElement?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         return ok(`Scrolled to "${args.text}"`);
       }
     }

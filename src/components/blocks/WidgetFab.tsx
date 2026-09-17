@@ -19,7 +19,9 @@
  * `left`/`top` transitions, and `commitPositionAfterAnimation` calls `onPositionCommit` on
  * `transitionend` (with a timeout fallback, since a hidden tab fires no transition events) — the
  * committed corner is the one being animated TO, so two snaps in flight cannot commit the abandoned one
- * (`abandonSnapRef`). `suppressUntilRef` stamps a time after which a click may open the widget again,
+ * (`abandonSnapRef`), which the unmount effect also calls so a snap animating when the widget is torn
+ * down does not leave its `transitionend` listener and fallback timer running past the component's life.
+ * `suppressUntilRef` stamps a time after which a click may open the widget again,
  * so the pointer-up that ends a drag is not read as a tap. The wrapper is measured with a
  * ResizeObserver in a layout effect so the pixel position is right on the first paint; preview mode
  * disables everything. Exported so `WidgetFab.test.tsx`'s `renderHook` case can drive it directly.
@@ -104,7 +106,13 @@ export function useDragSnap({
     rafRef.current = null;
   };
 
-  React.useEffect(() => cancelRaf, []);
+  React.useEffect(
+    () => () => {
+      cancelRaf();
+      abandonSnapRef.current?.();
+    },
+    [],
+  );
 
   React.useEffect(() => {
     if (isPreviewMode) return;

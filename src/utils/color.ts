@@ -6,18 +6,17 @@
  * `rgb()`/`rgba()` string into channels, and returns null for anything else. Only those two notations are
  * read: a named colour, `hsl()` or a `var(--…)` custom property is unreadable here by design, and a channel
  * above 255 is refused rather than clamped, so a malformed setting never silently becomes a valid colour.
- * `getContrastingColor` picks whichever of black or white has the higher WCAG contrast ratio against
- * that background — relative luminance is sRGB gamma-decoded per channel, weighted .2126/.7152/.0722,
- * and the ratio is `(lighter + 0.05) / (darker + 0.05)`. This is the single place a tenant colour without
- * its own paired foreground setting (a button's accent, a status pill) gets one synthesized: the higher
- * of the two ratios is never below ~4.6:1 (the black/white crossover sits at luminance ≈0.179, not 0.5 —
- * a literal `luminance > 0.5` split picks the wrong colour for roughly a third of the luminance range and
- * silently fails the AA 4.5:1 text threshold there), so every synthesized foreground clears AA by
- * construction. An unreadable background falls back to BLACK, never white: tenant surfaces skew light,
- * so black stays legible where white would vanish. `addOpacity` re-emits a colour as `rgba()` at the
- * given alpha and
- * passes an unreadable one through UNCHANGED — it stays a CSS value the browser can still resolve, where
- * an `rgba(NaN, …)` would render nothing.
+ * `contrastRatio` is the one home for the WCAG formula — relative luminance is sRGB gamma-decoded per
+ * channel, weighted .2126/.7152/.0722, and the ratio is `(lighter + 0.05) / (darker + 0.05)`.
+ * `getContrastingColor` picks whichever of black or white scores higher against it: this is the single
+ * place a tenant colour without its own paired foreground setting (a button's accent, a status pill)
+ * gets one synthesized, and comparing the two ratios directly (rather than a `luminance > 0.5` split,
+ * whose crossover sits at ≈0.179, not 0.5) means every synthesized foreground clears the AA 4.5:1
+ * threshold by construction — the higher of the two ratios is never below ~4.6:1. An unreadable
+ * background falls back to BLACK, never white: tenant surfaces skew light, so black stays legible where
+ * white would vanish. `addOpacity` re-emits a colour as `rgba()` at the given alpha and passes an
+ * unreadable one through UNCHANGED — it stays a CSS value the browser can still resolve, where an
+ * `rgba(NaN, …)` would render nothing.
  *
  * `backgroundGradient` is the one home for `widget_background_color` as a `backgroundImage`: the setting may
  * already be a gradient, which is legal only as `backgroundImage`, so a flat colour is emitted as a same-stop
@@ -71,10 +70,8 @@ export function contrastRatio(a: string, b: string): number | null {
 }
 
 export function getContrastingColor(color: string): string {
-  const rgb = toRgb(color);
-  if (!rgb) return '#000000';
-  const l = relativeLuminance(rgb);
-  return (l + 0.05) / 0.05 >= 1.05 / (l + 0.05) ? '#000000' : '#ffffff';
+  if (!toRgb(color)) return '#000000';
+  return (contrastRatio(color, '#000000') ?? 0) >= (contrastRatio(color, '#ffffff') ?? 0) ? '#000000' : '#ffffff';
 }
 
 export function addOpacity(color: string, opacity: number): string {

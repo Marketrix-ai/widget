@@ -17,16 +17,24 @@
  * which carries no task id. Every failure on the tool and stop paths reaches `uiActions.setError` as well
  * as the console: an undelivered `tool/response` leaves the agent waiting on a reply that never comes, so
  * the run stalls with nothing on screen unless the visitor is told, and `do` mode may still be clicking.
+ *
+ * `event.type === 'task/status' && isTerminalTaskStatus(event.status)` reads `event.status` on every
+ * branch, but only the `task/status` variant of `WidgetEvent` carries a `status` field at all — on any
+ * other event it is `undefined`, which `isTerminalTaskStatus` (an `in` check against the status map)
+ * always reports as non-terminal. The `&&` can never observably differ from an `||` here; it stays `&&`
+ * because that is what a reader expects a type-narrowing guard to say.
  */
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
+import { useLatest } from '../hooks/useLatest';
 import type { WidgetEvent } from '../sdk';
 import { browserToolService, FINISH_TOOL } from '../services/BrowserToolService';
 import { chatPost } from '../services/ChatService';
 import { storageService } from '../services/StorageService';
 import { streamClient, StreamGaveUpError } from '../services/StreamClient';
 import type { ChatMessage, InstructionType } from '../types';
-import { createAgentMessage, createPlaceholderMessage, createUserMessage } from '../utils/chat';
+import { CHAT_FAILURE_TEXT, createAgentMessage, createPlaceholderMessage, createUserMessage } from '../utils/chat';
+import { logWarn } from '../utils/log';
 import {
   isTerminalTaskStatus,
   reduceDispatch,
@@ -82,8 +90,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
 
   const stateRef = useRef<SseState>(state);
 
-  const currentModeRef = useRef(uiState.currentMode);
-  currentModeRef.current = uiState.currentMode;
+  const currentModeRef = useLatest(uiState.currentMode);
 
   const processedToolCallIds = useRef(new Set<string>());
 
@@ -183,13 +190,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
         await chatPost(content, effectiveMode, placeholder.id);
       } catch (error) {
         console.error('Failed to send message:', error);
-        commit(s =>
-          reduceError(
-            s,
-            placeholder.id,
-            "I'm sorry, I encountered an error processing your request. Please try again.",
-          ),
-        );
+        commit(s => reduceError(s, placeholder.id, CHAT_FAILURE_TEXT));
       }
     },
     [previewMode, addMessage, commit],
@@ -238,6 +239,8 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
         }
       } else if (event.type === 'task/status' && isTerminalTaskStatus(event.status)) {
         processedToolCallIds.current.clear();
+      } else if (event.type === 'chat/error') {
+        logWarn('[Widget] Chat error from server:', event.error);
       }
 
       let effects: SseEffect[] = [];

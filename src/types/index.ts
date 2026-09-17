@@ -15,8 +15,10 @@
  * `ChatMessage.pendingContent` queues a message behind an open screen-access request, sent once it
  * resolves. A `streaming` `MessagePart` accumulates `chat/delta` fragments until the final
  * `chat/response` replaces it. `taskStatus`/`MessagePart.status` are presentational only, not the wire
- * vocabulary (`task/status.status`). `messageText` joins text parts and IS the text; `content` is kept
- * equal to it by every writer.
+ * vocabulary (`task/status.status`). `messageText` joins text parts and IS the text — `ChatMessage` has
+ * no `content` field of its own; a render site calls `messageText(msg.parts)` directly. The one
+ * exception is `StorageService`'s persisted `StoredMessage`, which keeps its own `content` string to
+ * migrate a transcript stored before `parts` existed — see that file's header.
  */
 import type { InstructionType, WidgetSettingsData } from '../sdk';
 import type { WidgetRenderedSettings } from '../utils/validation';
@@ -44,7 +46,6 @@ export type ValidWidgetConfig = MarketrixConfig &
 
 export interface ChatMessage {
   id: string;
-  content: string;
   sender: 'user' | 'agent';
   timestamp: Date;
   mode?: InstructionType | undefined;

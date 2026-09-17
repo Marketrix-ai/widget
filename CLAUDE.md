@@ -271,8 +271,10 @@ or the `deploy.yml` dispatch inputs (this repo cannot reach the private infra re
   Button, Tabs (`ShellTabBar` + the view panels) and Toast (`Notifications.tsx`) come from the library.
   `useFocusTrap` and `useResize` (both in `MessengerShell.tsx`), `useScrollLock` (in `WidgetRoot.tsx`),
   `useDragSnap` (in `WidgetFab.tsx`) and `useScreenShare` (in `ChatView.tsx`) live beside their one
-  consumer rather than in `src/hooks/`, which holds only `useWidget` (pinned by
-  sourceInvariants.test.ts) — each hook file had exactly one caller, so rule 6/7 folds it in.
+  consumer rather than in `src/hooks/`, which holds `useWidget` and `useLatest` — each of those hook
+  files had exactly one caller (`useDragSnap`/`useResize` share a control-flow SHAPE, not code: a
+  shared pointer-tracking hook was tried and reverted — its arity/duplication costs outweighed the
+  lines it removed, per rule 4's "measurable ROI" bar), so rule 6/7 folds each in beside its caller.
   `useFocusTrap`/`useScrollLock` stay hand-rolled because they serve a **non-modal** panel that is not a
   Dialog: Base UI exposes no standalone focus-trap or scroll-lock, and making the panel a Dialog to
   reach them would inert the customer's page and mutate its `<html>`/`<body>` — the thing an embedded

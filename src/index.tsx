@@ -3,7 +3,8 @@
  * dashboard wrapper and the script-tag auto-init hook. `README.md` is the customer-facing surface these
  * exports make up, named and default alike. `initWidget` is the guarded, coalescing production entry over
  * `initWidgetInternal`; `mount` builds the shadow-DOM container; `unmountWidget` tears down stream,
- * recorder, screen share and tree;
+ * recorder, screen share, any in-flight show-mode overlay (which owns host-page listeners and DOM
+ * nodes outside the shadow root, so it does not go with `active.instance.unmount()`) and tree;
  * `updateMarketrixConfig` re-mounts with client settings merged in, on whichever path the current mount
  * came from; `mountWidget` dispatches on shape — `settings` → preview (no network), credentials → live.
  *
@@ -32,6 +33,7 @@ import { configureSdk } from './sdk';
 import { chatSessionManager } from './services/ChatSessionManager';
 import { RrwebSessionRecorder } from './services/RrwebSessionRecorder';
 import { stopScreenShare } from './services/ScreenShareService';
+import { showModeService } from './services/ShowModeService';
 import { type CredentialedConfig, storageService } from './services/StorageService';
 import { streamClient } from './services/StreamClient';
 import { createConfigFromSettings, loadWidgetConfig } from './services/WidgetService';
@@ -158,6 +160,7 @@ export const unmountWidget = (): void => {
   rrwebSessionRecorder?.stop();
   rrwebSessionRecorder = null;
   stopScreenShare();
+  showModeService.cleanup();
 
   const active = widgetState.mount;
   widgetState.mount = null;

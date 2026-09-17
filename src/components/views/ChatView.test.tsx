@@ -19,7 +19,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 import * as ScreenShareService from '../../services/ScreenShareService';
 import { agentMessage, mockMediaStream } from '../../test/fixtures';
 import { openChatTab, openWidget, renderWidget } from '../../test/renderWidget';
-import type { ChatMessage } from '../../types';
+import { type ChatMessage, messageText } from '../../types';
 import { useScreenShare, type UseScreenShareOptions } from './ChatView';
 
 const openChat = (mode?: 'Show') => {
@@ -77,7 +77,6 @@ const REQUEST_ID = 'screen-access-request-1';
 
 const openRequestMessage: ChatMessage = agentMessage({
   id: REQUEST_ID,
-  content: 'Can I take a look at your screen?',
   isPlaceholder: undefined,
   placeholderState: undefined,
   isScreenAccessRequest: true,
@@ -122,7 +121,10 @@ describe('useScreenShare', () => {
     await act(async () => await result.current.handleScreenAccessRequestAllow());
 
     expect(opts.onUpdateMessage).toHaveBeenCalledWith(REQUEST_ID, { screenShareStatus: 'allowed' });
-    expect(opts.onAddMessage.mock.calls.map(([m]) => m.content)).toEqual(['Screen sharing started', '']);
+    expect(opts.onAddMessage.mock.calls.map(call => messageText((call[0] as ChatMessage).parts))).toEqual([
+      'Screen sharing started',
+      '',
+    ]);
     expect(opts.onSendMessage).toHaveBeenCalledWith('do the thing', 'do', true);
     expect(result.current.isScreenSharing).toBe(true);
   });
@@ -164,7 +166,10 @@ describe('useScreenShare', () => {
     await act(async () => await result.current.handleScreenAccessDialogAllow());
 
     expect(result.current.showScreenAccessDialog).toBe(false);
-    expect(opts.onAddMessage.mock.calls.map(([m]) => m.content)).toEqual(['Screen sharing started', '']);
+    expect(opts.onAddMessage.mock.calls.map(call => messageText((call[0] as ChatMessage).parts))).toEqual([
+      'Screen sharing started',
+      '',
+    ]);
     expect(opts.onUpdateMessage).toHaveBeenCalledWith(REQUEST_ID, { screenShareStatus: 'allowed' });
     expect(opts.onSendMessage).toHaveBeenCalledWith('do the thing', 'do', true);
   });

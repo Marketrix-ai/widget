@@ -221,6 +221,52 @@ describe('StreamClient registration lifecycle', () => {
   });
 });
 
+describe('StreamClient guard conditions', () => {
+  it('reconnectNow is a no-op once already registered, rather than redialing regardless of canReconnect', () => {
+    const { client } = freshChatClient('registered');
+    client.reconnectNow();
+    expect(mockSdk.widgetStream).not.toHaveBeenCalled();
+  });
+
+  it('connect no-ops for a chat id already connecting, open or registered, rather than redialing it', async () => {
+    const { client } = freshChatClient('open');
+    await client.connect('chat-1');
+    expect(mockSdk.widgetStream).not.toHaveBeenCalled();
+    client.disconnect();
+  });
+
+  it('a chat/error that is not the auth one leaves credentials untouched and reconnection still possible', () => {
+    const { client, inner } = freshChatClient('open');
+    const errors: Error[] = [];
+    client.addCallbacks({ onError: e => errors.push(e) });
+
+    inner.handleMessage({ type: 'chat/error', request_id: 'req-123', error: 'boom' });
+
+    expect(inner.credentialRejected).toBe(false);
+    expect(errors).toHaveLength(0);
+    client.disconnect();
+  });
+
+  it('does not resume a scheduled reconnect once torn down before the timer fires', async () => {
+    // Set tornDown directly (not via disconnect(), which also clears chatId) so the pending timer's
+    // guard is the only thing standing between it and a stray dial on an abandoned client.
+    vi.useFakeTimers();
+    const client = freshClient();
+    mockSdk.widgetStream.mockRejectedValueOnce(new Error('down'));
+    await client.connect('chat-1');
+    expect(mockSdk.widgetStream).toHaveBeenCalledTimes(1);
+
+    internals(client).tornDown = true;
+    mockSdk.widgetStream.mockResolvedValue(emptyStream());
+    await advanceTimersByTimeAsync(1000);
+
+    expect(mockSdk.widgetStream).toHaveBeenCalledTimes(1);
+    internals(client).tornDown = false;
+    client.disconnect();
+    vi.useRealTimers();
+  });
+});
+
 describe('StreamClient retry affordance', () => {
   it('reconnectNow reopens the stream immediately, without waiting out the backoff', async () => {
     vi.useFakeTimers();

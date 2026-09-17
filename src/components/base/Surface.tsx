@@ -16,6 +16,12 @@
  * resolving `display` itself because `resolveLayoutStyle` is applied ahead of it. `resolveLayoutStyle`
  * is handed the whole `props` (it reads only layout keys), while the DOM spread goes through
  * `stripLayoutProps` — a layout token left on the props bag reaches the element as an unknown attribute.
+ *
+ * `forwardRef<HTMLElement, SurfaceProps>` is fixed, not generic per `as`: `forwardRef` cannot be made
+ * generic across call sites without its own internal cast, so a caller holding a `RefObject` typed to
+ * its specific element (`HTMLDivElement`, …) casts at the call site instead — `RefObject.current` is
+ * mutable and therefore invariant, so no subtyping relationship lets a `RefObject<HTMLDivElement>` stand
+ * in for `Ref<HTMLElement>` without one. `WidgetFab.tsx`, `MessageList.tsx` (×2) are the three sites.
  */
 import { type CSSProperties, type ElementType, forwardRef } from 'react';
 
