@@ -84,6 +84,87 @@ interface ChatProviderProps {
   previewMode?: boolean;
 }
 
+/**
+ * Builds the `StreamClient` callbacks that turn a `WidgetEvent` into reducer commits and, when the
+ * reducer emits an `executeTool` effect, run the browser tool and report `tool/response` back over the
+ * stream. Kept separate from `ChatProvider`'s state-CRUD callbacks because this is I/O orchestration
+ * (async tool execution, stream subscription) layered on top of them, not more state plumbing.
+ */
+function createStreamEffectHandlers(deps: {
+  commit: (transition: (s: SseState) => SseState) => void;
+  currentModeRef: React.RefObject<InstructionType>;
+  setError: (message: string) => void;
+  processedToolCallIds: React.RefObject<Set<string>>;
+}) {
+  const { commit, currentModeRef, setError, processedToolCallIds } = deps;
+
+  const startToolCall = async (effect: Extract<SseEffect, { type: 'executeTool' }>) => {
+    const { toolCallId, tool, args, mode, explanation } = effect;
+    const result = await browserToolService.executeTool(tool, args, mode, explanation);
+    const error = result.success ? undefined : result.error;
+
+    commit(s =>
+      reduceToolProgress(s, tool, explanation, error ? 'failed' : 'completed', currentModeRef.current, error),
+    );
+    if (!error && tool === FINISH_TOOL) {
+      commit(s => reduceToolDone(s, currentModeRef.current));
+    }
+
+    await streamClient
+      .send({
+        type: 'tool/response',
+        tool_call_id: toolCallId,
+        success: result.success,
+        ...(result.success && { data: JSON.stringify(result.data) }),
+        error,
+      })
+      .catch((err: unknown) => {
+        console.error('Failed to send tool response:', err);
+        setError('Could not report that step back to the assistant — it may stop responding.');
+      });
+
+    if (result.success) result.afterResponseAttempt?.();
+  };
+
+  const handleMessage = (event: WidgetEvent): void => {
+    if (event.type === 'tool/call') {
+      const toolCallId = event.tool_call_id;
+      if (processedToolCallIds.current.has(toolCallId)) return;
+      processedToolCallIds.current.add(toolCallId);
+      if (processedToolCallIds.current.size > MAX_PROCESSED_TOOL_CALL_IDS) {
+        processedToolCallIds.current = new Set(
+          [...processedToolCallIds.current].slice(-MAX_PROCESSED_TOOL_CALL_IDS / 2),
+        );
+      }
+    } else if (event.type === 'task/status' && isTerminalTaskStatus(event.status)) {
+      processedToolCallIds.current.clear();
+    } else if (event.type === 'chat/error') {
+      logWarn('[Widget] Chat error from server:', event.error);
+    }
+
+    let effects: SseEffect[] = [];
+    commit(state => {
+      const result = reduceSse(state, event, currentModeRef.current);
+      effects = result.effects;
+      return result.state;
+    });
+
+    for (const effect of effects) {
+      startToolCall(effect).catch((error: unknown) => {
+        console.error('[Widget] Tool call failed:', error);
+        setError('Something went wrong running that step. Please try again.');
+      });
+    }
+  };
+
+  const handleError = (error: Error) => {
+    setError(error.message);
+    if (error instanceof StreamGaveUpError) commit(s => reduceTransportFailure(s, error.message));
+  };
+
+  return { handleMessage, handleError };
+}
+
 export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMode = false }) => {
   const { uiState, uiActions } = useUIStateContext();
   const [state, setState] = useState<SseState>(() => ({ messages: [], task: { phase: 'idle' } }));
@@ -199,77 +280,19 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
   useEffect(() => {
     if (previewMode) return;
 
-    const startToolCall = async (effect: Extract<SseEffect, { type: 'executeTool' }>) => {
-      const { toolCallId, tool, args, mode, explanation } = effect;
-      const result = await browserToolService.executeTool(tool, args, mode, explanation);
-      const error = result.success ? undefined : result.error;
-
-      commit(s =>
-        reduceToolProgress(s, tool, explanation, error ? 'failed' : 'completed', currentModeRef.current, error),
-      );
-      if (!error && tool === FINISH_TOOL) {
-        commit(s => reduceToolDone(s, currentModeRef.current));
-      }
-
-      await streamClient
-        .send({
-          type: 'tool/response',
-          tool_call_id: toolCallId,
-          success: result.success,
-          ...(result.success && { data: JSON.stringify(result.data) }),
-          error,
-        })
-        .catch((err: unknown) => {
-          console.error('Failed to send tool response:', err);
-          uiActions.setError('Could not report that step back to the assistant — it may stop responding.');
-        });
-
-      if (result.success) result.afterResponseAttempt?.();
-    };
-
-    const handleMessage = (event: WidgetEvent): void => {
-      if (event.type === 'tool/call') {
-        const toolCallId = event.tool_call_id;
-        if (processedToolCallIds.current.has(toolCallId)) return;
-        processedToolCallIds.current.add(toolCallId);
-        if (processedToolCallIds.current.size > MAX_PROCESSED_TOOL_CALL_IDS) {
-          processedToolCallIds.current = new Set(
-            [...processedToolCallIds.current].slice(-MAX_PROCESSED_TOOL_CALL_IDS / 2),
-          );
-        }
-      } else if (event.type === 'task/status' && isTerminalTaskStatus(event.status)) {
-        processedToolCallIds.current.clear();
-      } else if (event.type === 'chat/error') {
-        logWarn('[Widget] Chat error from server:', event.error);
-      }
-
-      let effects: SseEffect[] = [];
-      commit(state => {
-        const result = reduceSse(state, event, currentModeRef.current);
-        effects = result.effects;
-        return result.state;
-      });
-
-      for (const effect of effects) {
-        startToolCall(effect).catch((error: unknown) => {
-          console.error('[Widget] Tool call failed:', error);
-          uiActions.setError('Something went wrong running that step. Please try again.');
-        });
-      }
-    };
-
-    const handleError = (error: Error) => {
-      uiActions.setError(error.message);
-      if (error instanceof StreamGaveUpError) commit(s => reduceTransportFailure(s, error.message));
-    };
-
+    const { handleMessage, handleError } = createStreamEffectHandlers({
+      commit,
+      currentModeRef,
+      setError: uiActions.setError,
+      processedToolCallIds,
+    });
     const callbacks = { onMessage: handleMessage, onError: handleError };
     streamClient.addCallbacks(callbacks);
 
     return () => {
       streamClient.removeCallbacks(callbacks);
     };
-  }, [previewMode, commit, uiActions]);
+  }, [previewMode, commit, uiActions, currentModeRef]);
 
   const stopTask = useCallback(async () => {
     commit(s => reduceStop(s, currentModeRef.current));
