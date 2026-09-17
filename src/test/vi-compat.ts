@@ -7,8 +7,14 @@
  * function call, since bun's `vi.mock`/`mock.module` already runs before the mocked specifier is
  * imported without vitest's separate hoisting pass. `advanceTimersByTimeAsync` advances then yields one
  * microtask tick, letting a promise callback a fired timer just resolved run before the next assertion —
- * bun's shim only has the synchronous form. `waitFor` polls `check` on a real macrotask tick up to
- * `timeout`ms, surfacing only the LAST assertion error after the deadline, matching vitest's contract.
+ * bun's shim only has the synchronous form. `waitFor` polls `check` up to `timeout`ms, surfacing only the
+ * LAST assertion error after the deadline, matching vitest's contract. `Date.now()` and a real
+ * `setTimeout` are BOTH neutralized once `vi.useFakeTimers()` is active — bun freezes `Date.now()` until
+ * `advanceTimersByTime` is called and a real timer never fires on its own — so a `check` that never
+ * passes would spin the deadline check forever instead of failing at `timeout`. `waitFor` branches on
+ * `vi.isFakeTimers()`: under fake timers it advances them itself each poll (so the deadline actually
+ * moves and any timer `check` depends on gets a chance to fire); under real timers it waits out a real
+ * delay as before.
  *
  * `restoreModuleAfterAll(specifier, importReal)` is the fallback for a `vi.mock` that can't instead
  * `vi.spyOn` per export: `vi.mock` replaces a module for the whole `bun test` process by RESOLVED PATH,
@@ -53,7 +59,8 @@ export async function waitFor<T>(check: () => T, timeout = 1000): Promise<T> {
       return check();
     } catch (error) {
       if (Date.now() >= deadline) throw error;
-      await new Promise(resolve => setTimeout(resolve, 10));
+      if (vi.isFakeTimers()) await advanceTimersByTimeAsync(10);
+      else await new Promise(resolve => setTimeout(resolve, 10));
     }
   }
 }

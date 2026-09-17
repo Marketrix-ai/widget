@@ -18,7 +18,16 @@
  * placeholder waiting-for-user WITHOUT touching its parts, so the watchdog's `pendingReplies` dependency
  * (id:partsLength) is unchanged and its ORIGINAL 120s timer (armed before the parking) is still the one
  * that fires; it then asserts reference equality on `captured!.messages` to prove `commit`'s no-change
- * branch actually skipped `setState`, not just that the text happens to match. The preview-dispatch test
+ * branch actually skipped `setState`, not just that the text happens to match. A second case in the same
+ * describe covers the finer-grained half of that branch a bare `next === prev` check cannot reach:
+ * `setMessages` handed its OWN current array back always returns a NEW top-level state object (the
+ * `{ ...s, messages }` spread), so only `next.messages === prev.messages && next.task === prev.task`
+ * catches it — `next === prev` alone would let this commit through and `setState` a distinct object.
+ * `contextValue`'s own `useMemo` (keyed on `state.messages`/`state.task`) then absorbs that wasted
+ * `setState` before it reaches `Capture`, so reading `captured!.messages` or counting `Capture`'s own
+ * renders cannot tell the two apart — `renderCaptured` wraps `ChatProvider` in a `Profiler` instead, and
+ * the assertion counts ITS `onRender` calls, which fire once per actual `setState` regardless of what a
+ * downstream memo later absorbs. The preview-dispatch test
  * asserts `getCredentialedConfig` was never called because if the early `return` after the preview reply
  * were dropped, execution would fall through into the real-chat branch and read config never set up for
  * that test; the real-dispatch skip/echo test counts the placeholder created for the real reply as the +1
@@ -28,7 +37,7 @@
  */
 import { act, cleanup, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
-import { useEffect } from 'react';
+import { Profiler, useEffect } from 'react';
 
 import { useWidget } from '../../hooks/useWidget';
 import type { WidgetEvent } from '../../sdk';
@@ -232,12 +241,17 @@ const Capture = () => {
   return null;
 };
 
+let providerCommitCount = 0;
+const countProviderCommit = () => providerCommitCount++;
+
 const renderCaptured = (previewMode = true) => {
   render(
     <UIStateProvider>
-      <ChatProvider previewMode={previewMode}>
-        <Capture />
-      </ChatProvider>
+      <Profiler id='provider' onRender={countProviderCommit}>
+        <ChatProvider previewMode={previewMode}>
+          <Capture />
+        </ChatProvider>
+      </Profiler>
     </UIStateProvider>,
   );
 };
@@ -264,6 +278,22 @@ describe('commit skips the render for a transition that reports no change', () =
 
     expect(captured!.messages).toBe(messagesBeforeWatchdog);
     expect(captured!.messages.find(m => m.id === placeholderId)?.placeholderState).toBe('waiting-for-user');
+  });
+
+  it('setMessages handed its own current array back is a no-op, even though it builds a new state object', () => {
+    renderCaptured();
+    act(() => {
+      captured!.chatActions.setMessages([agentMessage({ id: 'a', mode: 'tell', parts: [] })]);
+    });
+
+    const messagesBefore = captured!.messages;
+    const rendersBefore = providerCommitCount;
+    act(() => {
+      captured!.chatActions.setMessages(messagesBefore);
+    });
+
+    expect(providerCommitCount).toBe(rendersBefore);
+    expect(captured!.messages).toBe(messagesBefore);
   });
 });
 
