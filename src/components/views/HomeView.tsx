@@ -48,7 +48,6 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigateToChat, onChipClic
 
         <Stack gap='sm'>
           <Button
-            type='button'
             variant='primary'
             full
             onClick={onNavigateToChat}
@@ -92,7 +91,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigateToChat, onChipClic
           >
             {messages[messages.length - 1]?.content || 'Message'}
           </Text>
-          <Button type='button' variant='bare' onClick={onNavigateToChat} style={{ marginTop: '4px' }}>
+          <Button variant='bare' onClick={onNavigateToChat} style={{ marginTop: '4px' }}>
             <Text as='span' size='xs' variant='muted'>
               Continue conversation →
             </Text>

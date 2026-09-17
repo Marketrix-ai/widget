@@ -92,7 +92,6 @@ const NotificationList: React.FC = () => {
           <Toast.Action
             render={
               <Button
-                type='button'
                 variant='ghost'
                 shape='pill'
                 size='sm'
