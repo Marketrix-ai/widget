@@ -21,6 +21,11 @@
  * `scrollToText`'s walker only ever yields a Text node from inside `document.body`'s tree, so
  * `node.parentElement` is never null there — the optional-chained read is for TypeScript, not a runtime
  * branch this loop can take.
+ *
+ * The class itself is exported (only the `browserToolService` singleton is meant for production callers)
+ * so `test/fixtures.ts`'s `browserToolServiceMock` can type its stub as
+ * `Pick<BrowserToolService, 'executeTool' | 'getFriendlyToolName' | 'isWaitForUserTool'>` against the real
+ * public surface instead of a hand-written, driftable shape.
  */
 
 import type { InstructionType } from '../types';
@@ -95,7 +100,7 @@ interface WidgetToolDef {
   run: (args: ToolArgs) => ToolExecutionResult<unknown> | Promise<ToolExecutionResult<unknown>>;
 }
 
-class BrowserToolService {
+export class BrowserToolService {
   private readonly tools: Record<string, WidgetToolDef> = {
     navigate: { label: 'Navigating', run: args => this.navigate(args) },
     search_web: { label: 'Searching', run: args => this.search(args) },

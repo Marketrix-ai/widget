@@ -302,12 +302,14 @@ describe('reduceSse — chat/error', () => {
 });
 
 describe('reduceSse — ignored events', () => {
-  it.each(['registered', 'heartbeat'] as const)('%s is a no-op (same state, no effects)', type => {
-    const state = runningState();
-    const event = { type, chat_id: 'c1' } as unknown as WidgetEvent;
-    const result = reduceSse(state, event, 'do');
-    expectNoOp(result, state);
-  });
+  it.each([{ type: 'registered', chat_id: 'c1' }, { type: 'heartbeat' }] as const satisfies WidgetEvent[])(
+    '$type is a no-op (same state, no effects)',
+    event => {
+      const state = runningState();
+      const result = reduceSse(state, event, 'do');
+      expectNoOp(result, state);
+    },
+  );
 });
 
 describe('reduceToolProgress / reduceToolDone / reduceStop', () => {

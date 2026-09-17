@@ -22,16 +22,21 @@
  *
  * `asStreamClientInternals()` is the one cast for reaching `streamClient`'s private `handleMessage` to
  * simulate an incoming SSE event — `streamClient` is a class instance, so (unlike `mockSdkModule` in
- * `vi-compat.ts`) the mock below can't be typed against the real module without its own `as unknown as`
- * cast for the same reason `BrowserToolService`'s header documents. `browserToolServiceMock(executeTool)`
- * is the one home for that untyped `vi.mock('.../BrowserToolService', ...)` factory shape — it imports
- * the real `FINISH_TOOL` rather than re-literalling `'finish'`, which `sourceInvariants.test.ts` bans
+ * `vi-compat.ts`) the value itself can't be typed against the real module without an `as unknown as`
+ * cast past TypeScript's privacy check; `StreamClientTestHandle`'s one field is still typed as
+ * `StreamClient['handleMessage']`, not a hand-written signature, so a real parameter/return change on
+ * the method is a type error here too instead of a silently stale mock. `browserToolServiceMock(executeTool)`
+ * is the one home for the `vi.mock('.../BrowserToolService', ...)` factory shape, typed as
+ * `Pick<BrowserToolService, 'executeTool' | 'getFriendlyToolName' | 'isWaitForUserTool'>` — the class's
+ * unrelated private fields (`tools`, `element`, `selectElement`) don't block `Pick` over its public
+ * surface, so no `as unknown as` is needed here, unlike `StreamClient`'s handle above. It imports the
+ * real `FINISH_TOOL` rather than re-literalling `'finish'`, which `sourceInvariants.test.ts` bans
  * outside `BrowserToolService.ts` itself.
  */
-import { type WidgetEvent, WidgetSettingsDataSchema } from '../sdk';
-import { FINISH_TOOL } from '../services/BrowserToolService';
+import { WidgetSettingsDataSchema } from '../sdk';
+import { type BrowserToolService, FINISH_TOOL } from '../services/BrowserToolService';
 import type { CredentialedConfig } from '../services/StorageService';
-import { streamClient } from '../services/StreamClient';
+import { type StreamClient, streamClient } from '../services/StreamClient';
 import type { ChatMessage, ValidWidgetConfig, WidgetSettingsData } from '../types';
 
 export const flushMicrotasks = (): Promise<void> => Promise.resolve();
@@ -116,18 +121,18 @@ export function mockMediaStream(overrides: Record<string, unknown> = {}): MediaS
 }
 
 interface StreamClientTestHandle {
-  handleMessage: (event: WidgetEvent) => void;
+  handleMessage: StreamClient['handleMessage'];
 }
 
 export const asStreamClientInternals = (): StreamClientTestHandle => streamClient as unknown as StreamClientTestHandle;
 
-export function browserToolServiceMock(executeTool: (...args: never[]) => unknown) {
-  return {
-    browserToolService: {
-      executeTool,
-      getFriendlyToolName: (name: string) => name,
-      isWaitForUserTool: () => false,
-    },
-    FINISH_TOOL,
+type MockedBrowserToolService = Pick<BrowserToolService, 'executeTool' | 'getFriendlyToolName' | 'isWaitForUserTool'>;
+
+export function browserToolServiceMock(executeTool: BrowserToolService['executeTool']) {
+  const browserToolService: MockedBrowserToolService = {
+    executeTool,
+    getFriendlyToolName: name => name,
+    isWaitForUserTool: () => false,
   };
+  return { browserToolService, FINISH_TOOL };
 }

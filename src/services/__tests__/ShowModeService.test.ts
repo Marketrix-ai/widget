@@ -18,20 +18,28 @@
  * clause on the FIRST candidate position, with a later candidate valid at a clearly different,
  * distinguishable spot — candidate 0 is also the loop's un-matched fallback value, so a scenario where
  * every other candidate is invalid too could not otherwise tell a passing check from a failing one.
+ *
+ * The `../DomService` mock stubs only `getSequenceForElement`/`notInteractableReason` — the only two
+ * `domService` methods `ShowModeService` itself calls — typed against the real `DomService` class via
+ * `Pick<DomServiceClass, ...>` so a real signature change fails this mock at compile time.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 
 import { resetDom } from '../../test/preload';
 import { advanceTimersByTimeAsync, hoisted } from '../../test/vi-compat';
+import type { DomService as DomServiceClass } from '../DomService';
 import { ShowModeService } from '../ShowModeService';
 
 const { notInteractableReason } = hoisted(() => ({
   notInteractableReason: vi.fn<() => string | null>(() => null),
 }));
 
-vi.mock('../DomService', () => ({
-  domService: { getSequenceForElement: () => 0, notInteractableReason },
-}));
+vi.mock(
+  '../DomService',
+  (): { domService: Pick<DomServiceClass, 'getSequenceForElement' | 'notInteractableReason'> } => ({
+    domService: { getSequenceForElement: () => 0, notInteractableReason },
+  }),
+);
 
 const makeShowFixture = (html: string) => {
   notInteractableReason.mockReturnValue(null);
