@@ -176,7 +176,6 @@ export const WidgetSettingsWriteSchema = WidgetSettingsDataSchema.omit({
   widget_animation_duration: true,
   widget_fade_duration: true,
 });
-export type WidgetSettingsWriteData = z.infer<typeof WidgetSettingsWriteSchema>;
 
 export const WidgetEntitySchema = BaseEntitySchema.extend({
   application_id: z.number(),
