@@ -9,6 +9,11 @@
  * branches a happy-path click/type test never reaches; a `domService`-supplied error message on a missing
  * element wins over the generic one; and `executeTool`'s Show-mode default explanation only fires when the
  * caller left it blank.
+ *
+ * jsdom has no layout engine: `innerText` is left unimplemented (reading it throws, so `extract`'s cases
+ * stub it from the DOM they just built), `isContentEditable` is never computed from the attribute (so
+ * `typeText`'s contentEditable case forces it directly via `Object.defineProperty`), and rich-text editing
+ * is absent (so `execCommand` isn't a spyable prototype method there and is assigned directly instead).
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 
@@ -276,32 +281,32 @@ describe('a missing element surfaces the reason domService gave', () => {
 });
 
 describe("show mode's default explanation only fills in a blank one", () => {
-  it('passes the caller-supplied explanation through unchanged', async () => {
+  beforeEach(() => {
     document.body.innerHTML = '<button style="position: fixed">Buy</button>';
     Element.prototype.getBoundingClientRect = () => ({ top: 0, left: 0, width: 10, height: 10 }) as DOMRect;
     document.elementFromPoint = () => null;
     Element.prototype.scrollIntoView = () => {};
     domService.reindexAndSnapshot();
+  });
+
+  afterEach(() => {
+    showModeService.cleanup();
+  });
+
+  it('passes the caller-supplied explanation through unchanged', async () => {
     const staged = vi.spyOn(showModeService, 'showToolAction').mockResolvedValue();
 
     await browserToolService.executeTool('click_element', { index: 0 }, 'show', 'Click the Buy button');
 
     expect(staged).toHaveBeenCalledWith(expect.objectContaining({ explanation: 'Click the Buy button' }));
-    showModeService.cleanup();
   });
 
   it('falls back to a generated explanation when the caller leaves it blank', async () => {
-    document.body.innerHTML = '<button style="position: fixed">Buy</button>';
-    Element.prototype.getBoundingClientRect = () => ({ top: 0, left: 0, width: 10, height: 10 }) as DOMRect;
-    document.elementFromPoint = () => null;
-    Element.prototype.scrollIntoView = () => {};
-    domService.reindexAndSnapshot();
     const staged = vi.spyOn(showModeService, 'showToolAction').mockResolvedValue();
 
     await browserToolService.executeTool('click_element', { index: 0 }, 'show');
 
     expect(staged).toHaveBeenCalledWith(expect.objectContaining({ explanation: 'Execute click_element' }));
-    showModeService.cleanup();
   });
 });
 
@@ -338,10 +343,8 @@ describe('typeText branches beyond input/textarea', () => {
   it('writes through execCommand on a contentEditable element', async () => {
     document.body.innerHTML = '<div style="position: fixed"></div>';
     const element = document.querySelector('div') as HTMLElement;
-    // jsdom never computes `isContentEditable` from the attribute/layout, so it is forced directly.
     Object.defineProperty(element, 'isContentEditable', { value: true });
     vi.spyOn(domService, 'getValidatedElement').mockReturnValue({ element });
-    // jsdom implements no rich-text editing, so `execCommand` isn't a spyable prototype method here.
     const execCommand = vi.fn().mockReturnValue(true);
     (document as unknown as { execCommand: typeof execCommand }).execCommand = execCommand;
 
@@ -364,8 +367,6 @@ describe('typeText branches beyond input/textarea', () => {
 });
 
 describe('extract', () => {
-  // jsdom has no layout engine, so `innerText` is left unimplemented (reading it throws); each case
-  // stubs it from the DOM it just built.
   const stubInnerText = () =>
     Object.defineProperty(document.body, 'innerText', { configurable: true, value: document.body.textContent });
 

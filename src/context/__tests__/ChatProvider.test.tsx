@@ -11,6 +11,20 @@
  * carries `data` only on a successful tool result; the processed-`tool_call_id` set is trimmed once it
  * passes its cap, and a terminal `task/status` clears it outright; and a `chat/error` event is logged
  * without disturbing the transcript.
+ *
+ * Every test calls `cleanup()` in `afterEach` — without it an earlier test's still-mounted `ChatProvider`
+ * keeps its stream-message subscription live and double-handles a later test's broadcast `handleMessage`
+ * call. The stale-reply-watchdog test relies on `has_question` with no message text parking the
+ * placeholder waiting-for-user WITHOUT touching its parts, so the watchdog's `pendingReplies` dependency
+ * (id:partsLength) is unchanged and its ORIGINAL 120s timer (armed before the parking) is still the one
+ * that fires; it then asserts reference equality on `captured!.messages` to prove `commit`'s no-change
+ * branch actually skipped `setState`, not just that the text happens to match. The preview-dispatch test
+ * asserts `getCredentialedConfig` was never called because if the early `return` after the preview reply
+ * were dropped, execution would fall through into the real-chat branch and read config never set up for
+ * that test; the real-dispatch skip/echo test counts the placeholder created for the real reply as the +1
+ * present in both its expected counts. The 1000-id trim-boundary test re-delivers the earliest id after
+ * reaching exactly the cap: a `>` boundary read as `>=`, or the guard negated outright, would have trimmed
+ * the set already and evicted that id, turning the expected no-op dedupe into a fresh execution.
  */
 import { act, cleanup, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
@@ -72,8 +86,6 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  // Without this, an EARLIER test's still-mounted ChatProvider keeps its stream-message subscription
-  // live and double-handles every later test's broadcast `handleMessage` call.
   cleanup();
   vi.useRealTimers();
 });
@@ -240,9 +252,6 @@ describe('commit skips the render for a transition that reports no change', () =
     });
     const placeholderId = captured!.messages[captured!.messages.length - 1]?.id as string;
 
-    // `has_question` with no message text parks the placeholder waiting-for-user WITHOUT touching its
-    // parts, so the watchdog's `pendingReplies` dependency (id:partsLength) is unchanged and its ORIGINAL
-    // 120s timer — armed before the parking — is still the one that fires.
     act(() => {
       asStreamClientInternals().handleMessage({ type: 'task/status', status: 'has_question' });
     });
@@ -253,8 +262,6 @@ describe('commit skips the render for a transition that reports no change', () =
       vi.advanceTimersByTime(120_000);
     });
 
-    // Reference equality proves `commit`'s no-change branch actually skipped `setState`, not just that
-    // the text happens to match.
     expect(captured!.messages).toBe(messagesBeforeWatchdog);
     expect(captured!.messages.find(m => m.id === placeholderId)?.placeholderState).toBe('waiting-for-user');
   });
@@ -307,8 +314,6 @@ describe('a preview dispatch returns before reading real chat config', () => {
       await captured!.chatActions.messageDispatch('hello', 'tell', skipUserMessage);
     });
 
-    // If the early `return` after the preview reply were dropped, execution would fall through into the
-    // real-chat branch below it and read config that was never set up for this test.
     expect(getCredentialedConfig).not.toHaveBeenCalled();
     expect(captured!.messages).toHaveLength(expectedCount);
   });
@@ -328,7 +333,6 @@ describe('a real dispatch echoes the user message unless told to skip it', () =>
       await captured!.chatActions.messageDispatch('hello', 'tell', skipUserMessage);
     });
 
-    // The placeholder created for the real reply is the +1 present in both counts.
     expect(captured!.messages).toHaveLength(expectedCount);
   });
 });
@@ -471,8 +475,6 @@ describe('the processed tool-call id set is trimmed only once it EXCEEDS its cap
     });
     await waitFor(() => expect(mockExecuteTool).toHaveBeenCalledTimes(1000));
 
-    // A `>` boundary read as `>=`, or the guard negated outright, would have trimmed the set already and
-    // evicted this earliest id — this must still be a no-op dedupe, not a fresh execution.
     await act(async () => {
       asStreamClientInternals().handleMessage(makeCall('trim-0'));
       await advanceTimersByTimeAsync(0);

@@ -7,6 +7,17 @@
  * cancelling and re-staging; `cleanup` detaches every handler it registered, not only the ones already
  * null, so a superseded show action cannot leave a stray listener on `document`/`window`; and a non-click
  * (Tell) action settles on the popup's Continue button, never on an element click.
+ *
+ * The restage-dedupe assertion spies on `cleanup()` rather than comparing the two calls' return values:
+ * `showToolAction` is `async`, so even the dedupe branch's `return this.currentPromise` comes back
+ * wrapped in a NEW promise per call, but `cleanup()` runs unconditionally past the dedupe check, so it is
+ * the real signal. The handler-detach test clears the `clearInterval` spy after the first (still-null)
+ * interval fires inside `showToolAction`'s own internal `cleanup()`, so only the explicit `cleanup()`
+ * call against the now-live interval is being asserted. The popup fit-check table crafts each case to
+ * marginally satisfy (real code) or marginally fail (a `>`/`<` mutant of the `>=`/`<=` check) exactly one
+ * clause on the FIRST candidate position, with a later candidate valid at a clearly different,
+ * distinguishable spot — candidate 0 is also the loop's un-matched fallback value, so a scenario where
+ * every other candidate is invalid too could not otherwise tell a passing check from a failing one.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 
@@ -36,6 +47,11 @@ const show = (service: ShowModeService, id: string) =>
     browserToolName: 'click_element',
     isClickAction: true,
   });
+
+const originalGetBoundingClientRect = Element.prototype.getBoundingClientRect;
+const restoreGetBoundingClientRect = () => {
+  Element.prototype.getBoundingClientRect = originalGetBoundingClientRect;
+};
 
 describe('a second show action supersedes the first', () => {
   let service: ShowModeService;
@@ -85,9 +101,6 @@ describe('a restage identical to the one already staged', () => {
   });
 
   it('does not re-stage (re-run cleanup/createHighlight) for an identical restage while pending', async () => {
-    // showToolAction is `async`, so even the dedupe branch's `return this.currentPromise` comes back
-    // wrapped in a NEW promise per call — comparing the two calls' return values can never prove dedupe.
-    // `cleanup()` runs unconditionally past the dedupe check, so spying on it is the real signal.
     const cleanupSpy = vi.spyOn(service, 'cleanup');
     const first = show(service, 'a').then(
       () => 'resolved',
@@ -113,8 +126,6 @@ describe('cleanup detaches every handler it registered', () => {
     const clearIntervalSpy = vi.spyOn(globalThis, 'clearInterval');
 
     const pending = show(service, 'a').catch(() => undefined);
-    // showToolAction's own internal cleanup() already fired once above, on a still-null interval — clear
-    // the spy so only the explicit cleanup() below (against the now-live interval) is being asserted.
     clearIntervalSpy.mockClear();
     service.cleanup();
     await pending;
@@ -157,11 +168,6 @@ describe('a non-click action settles on Continue, not on an element click', () =
 });
 
 describe('the popup fit check is inclusive at every edge', () => {
-  // Each case marginally satisfies (real code) or marginally fails (a `>`/`<` mutant of the `>=`/`<=`
-  // fit check) exactly one clause on the FIRST candidate position, with a later candidate crafted to be
-  // valid at a clearly different, distinguishable spot — proving which candidate actually won rather
-  // than reading a coincidental default (candidate 0 is also the loop's un-matched fallback value, so a
-  // scenario where every other candidate is invalid too cannot tell a passing check from a failing one).
   let service: ShowModeService;
   let innerWidthDescriptor: PropertyDescriptor;
   let innerHeightDescriptor: PropertyDescriptor;
@@ -174,18 +180,15 @@ describe('the popup fit check is inclusive at every edge', () => {
     service = makeShowFixture('<button id="a"></button>');
   });
 
-  const originalGetBoundingClientRect = Element.prototype.getBoundingClientRect;
-
   afterEach(() => {
     service.cleanup();
-    Element.prototype.getBoundingClientRect = originalGetBoundingClientRect;
+    restoreGetBoundingClientRect();
     Object.defineProperty(window, 'innerWidth', innerWidthDescriptor);
     Object.defineProperty(window, 'innerHeight', innerHeightDescriptor);
     resetDom();
   });
 
   it.each([
-    // [label, rect, expectedLeft, expectedTop]
     [
       'left >= padding (right-side candidate at its low edge)',
       { left: -2000, right: -10, top: 560, bottom: 560, width: 4920, height: 0 },
@@ -229,11 +232,9 @@ describe('a show action the page invalidates', () => {
     service = makeShowFixture('<button id="a"></button>');
   });
 
-  const originalGetBoundingClientRect = Element.prototype.getBoundingClientRect;
-
   afterEach(() => {
     service.cleanup();
-    Element.prototype.getBoundingClientRect = originalGetBoundingClientRect;
+    restoreGetBoundingClientRect();
     vi.useRealTimers();
     resetDom();
   });

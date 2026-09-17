@@ -3,7 +3,9 @@
  * on a barely-moved drag, snaps by proximity rather than axis, and on an exact tie keeps the first
  * corner checked rather than the last; `getResizeGrip` grows away from the pinned corner on both axes
  * and picks the diagonal the grip cursor lies on; `isWidgetPosition` admits the four corners and rejects
- * inherited object property names.
+ * inherited object property names. The tie-break case uses the viewport center, which is equidistant
+ * from all four anchors, so a `<=` comparison instead of `<` would keep overwriting the winner and
+ * report the last corner checked, not the nearest.
  */
 import { describe, expect, it } from 'bun:test';
 
@@ -48,8 +50,6 @@ describe('getResizeGrip', () => {
 
 describe('getNearestCornerByTranslation', () => {
   it('breaks an exact four-way distance tie toward the first corner in iteration order', () => {
-    // The viewport center is equidistant from all four anchors, so a `<=` comparison instead of `<`
-    // would keep overwriting the winner and report the last corner checked, not the nearest.
     const start = getAnchorTopLeft('top_left', VW, VH, W, H);
     const center = { x: VW / 2 - W / 2, y: VH / 2 - H / 2 };
     const translation = { dx: center.x - start.x, dy: center.y - start.y };
