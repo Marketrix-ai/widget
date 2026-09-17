@@ -1,6 +1,8 @@
 /**
  * `ChatView` tests: a send waiting on screen access locks the composer so no later send overwrites the
- * queued message, and unlocks to deliver it once answered; a multi-line message keeps its line breaks.
+ * queued message, and unlocks to deliver it once answered; a multi-line message keeps its line breaks;
+ * a send that fails while the stream is down restores the composed text to the (cleared) composer
+ * rather than dropping it, unless the visitor already started a new message in the meantime.
  *
  * `useScreenShare` tests: allow resolves the request card, posts both messages and flushes the queued
  * message (also when the picker was cancelled, marking the card denied); deny flushes without sharing;
@@ -12,12 +14,25 @@
  * the same module and a module-scope patch would leak into it regardless of file order (root
  * `CLAUDE.md` has the general cross-file leak mechanism); per-test scoping confines the fake to this
  * file's own tests.
+ *
+ * The stream-down tests give each `renderWidget` its own `mtxId` AND its own explicit
+ * `storageService.setConfig(...)` call: `renderWidget`'s config prop alone doesn't scope
+ * `storageService`'s own module-singleton state, which `previewMode: false`'s `InitBridge` reads from —
+ * without a matching `setConfig`, a prior test's persisted `isOpen`/`currentMode` (any file, any mtxId)
+ * leaks in regardless of this file's own tenant id. They mock `streamClient.ready`, not just `connect`:
+ * `ChatService.chatPost` awaits `ready()`, which internally waits for `registered`, a status only a
+ * real SSE stream ever reaches — mocking `connect` alone leaves that await hanging forever with no
+ * error, silently swallowing the whole test (same fix `RrwebSessionRecorder.test.ts`/
+ * `rrweb-masking.test.ts` already use for the same reason).
  */
-import { act, fireEvent, renderHook, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, renderHook, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 
+import { chatSessionManager } from '../../services/ChatSessionManager';
 import * as ScreenShareService from '../../services/ScreenShareService';
-import { agentMessage, mockMediaStream } from '../../test/fixtures';
+import { type CredentialedConfig, storageService } from '../../services/StorageService';
+import { streamClient } from '../../services/StreamClient';
+import { agentMessage, getMockWidgetConfig, mockMediaStream } from '../../test/fixtures';
 import { openChatTab, openWidget, renderWidget } from '../../test/renderWidget';
 import { type ChatMessage, messageText } from '../../types';
 import { useScreenShare, type UseScreenShareOptions } from './ChatView';
@@ -58,6 +73,64 @@ describe('a send that is waiting on screen access', () => {
 
     expect(composer.disabled).toBe(false);
     expect(screen.getByText('No')).toBeInTheDocument();
+  });
+});
+
+describe('a send while the stream is down', () => {
+  beforeEach(() => {
+    cleanup();
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+  });
+
+  it('restores the composed text to the composer instead of dropping it, so a resend is one tap away', async () => {
+    storageService.setConfig(getMockWidgetConfig({ mtxId: 'chatview-stream-down-1' }) as CredentialedConfig);
+    vi.spyOn(chatSessionManager, 'getOrCreateChatId').mockResolvedValue('chat-1');
+    vi.spyOn(streamClient, 'connect').mockResolvedValue();
+    vi.spyOn(streamClient, 'ready').mockResolvedValue();
+    vi.spyOn(streamClient, 'send').mockRejectedValue(new Error('offline'));
+
+    renderWidget({ mtxId: 'chatview-stream-down-1' }, { previewMode: false });
+    await waitFor(() => expect(streamClient.connect).toHaveBeenCalled());
+    openWidget();
+    openChatTab();
+    const composer = screen.getByPlaceholderText('Ask anything') as HTMLTextAreaElement;
+
+    send(composer, 'are you still there?');
+    expect(composer.value).toBe('');
+
+    await waitFor(() => expect(composer.value).toBe('are you still there?'));
+  });
+
+  it('never overwrites text the visitor already started typing while the failed send was in flight', async () => {
+    storageService.setConfig(getMockWidgetConfig({ mtxId: 'chatview-stream-down-2' }) as CredentialedConfig);
+    vi.spyOn(chatSessionManager, 'getOrCreateChatId').mockResolvedValue('chat-1');
+    vi.spyOn(streamClient, 'connect').mockResolvedValue();
+    vi.spyOn(streamClient, 'ready').mockResolvedValue();
+    vi.spyOn(streamClient, 'send').mockRejectedValue(new Error('offline'));
+
+    renderWidget({ mtxId: 'chatview-stream-down-2' }, { previewMode: false });
+    await waitFor(() => expect(streamClient.connect).toHaveBeenCalled());
+    openWidget();
+    openChatTab();
+    const composer = screen.getByPlaceholderText('Ask anything') as HTMLTextAreaElement;
+
+    // `send` clears the composer and fires the async dispatch; typing the replacement text
+    // synchronously right after (before any microtask runs) beats the dispatch's own `.then`, which
+    // only settles once `chatPost`'s rejection has propagated back through it.
+    send(composer, 'first attempt');
+    fireEvent.change(composer, { target: { value: 'already typing something new' } });
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(composer.value).toBe('already typing something new');
   });
 });
 

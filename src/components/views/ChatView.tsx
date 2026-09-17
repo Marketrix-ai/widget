@@ -6,7 +6,11 @@
  * shell's toolbar button fills with a share toggle, and the composer textarea ref. `MODES` pairs the
  * mode chips' display order with the tenant setting enabling each, so the composer offers only what
  * the workspace turned on. `ChatView` owns the draft text; `handleSendMessage` posts the turn and
- * `handleModeChange` announces a mode switch in the transcript before flipping state.
+ * `handleModeChange` announces a mode switch in the transcript before flipping state. A POST failure
+ * restores the composed text to the (now-cleared) composer — `messageDispatch`'s resolved `false` —
+ * unless the visitor already started typing a new message in the meantime, so a resend is one tap on
+ * Send rather than a retype, and the failed turn's own bubble (added optimistically, unconditionally)
+ * still shows what was said either way.
  *
  * The composer is locked both while a reply is outstanding and while a screen-access request is open,
  * since a second turn queued behind an unanswered permission card has nowhere to land. `use_screenshare`
@@ -267,7 +271,9 @@ export const ChatView: React.FC<ChatViewProps> = ({ onScreenSharingChange, toggl
     if (config.use_screenshare !== false && (currentMode === 'show' || currentMode === 'do') && !isScreenSharing) {
       requestScreenAccess(currentMode, messageContent);
     } else {
-      void actions.messageDispatch(messageContent, currentMode, true);
+      void actions.messageDispatch(messageContent, currentMode, true).then(sent => {
+        if (!sent) setInputValue(current => current || messageContent);
+      });
     }
   };
 

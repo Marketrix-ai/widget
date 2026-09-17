@@ -8,15 +8,30 @@
  * defers updaters and loses the effects captured in them, so tool calls never execute. `messageDispatch`
  * POSTs fire-and-forget: the reply arrives over SSE, so only a POST failure resolves the placeholder
  * locally, and a stale-reply watchdog keyed on id AND part count re-arms on every progress line.
+ * `messageDispatch` resolves `false` on that same POST failure (`true` otherwise, including preview
+ * mode) so a caller holding the composed text — `ChatView`'s composer — can restore it instead of the
+ * visitor having to retype a message the widget already dropped from the input box.
  *
  * The stream effect subscribes to the `StreamClient` singleton: `handleMessage` does the bookkeeping the
- * pure reducer cannot hold (`tool_call_id` dedupe in a bounded set, cleared on a terminal status), then
- * each effect runs its browser tool, stamps progress, replies `tool/response` and only then fires
- * `afterResponseAttempt`. `handleError` converts only a `StreamGaveUpError` into a transport failure, as a
- * retriable blip settles when the reply lands on the reconnected stream. `stopTask` sends `chat/stop`,
- * which carries no task id. Every failure on the tool and stop paths reaches `uiActions.setError` as well
- * as the console: an undelivered `tool/response` leaves the agent waiting on a reply that never comes, so
- * the run stalls with nothing on screen unless the visitor is told, and `do` mode may still be clicking.
+ * pure reducer cannot hold (`tool_call_id` dedupe in a bounded set, cleared on a terminal status; the
+ * mirror-shaped `respondedRequestIds` below), then each effect runs its browser tool, stamps progress,
+ * replies `tool/response` and only then fires `afterResponseAttempt`. `handleError` converts only a
+ * `StreamGaveUpError` into a transport failure, as a retriable blip settles when the reply lands on the
+ * reconnected stream. `stopTask` sends `chat/stop`, which carries no task id. Every failure on the tool
+ * and stop paths reaches `uiActions.setError` as well as the console: an undelivered `tool/response`
+ * leaves the agent waiting on a reply that never comes, so the run stalls with nothing on screen unless
+ * the visitor is told, and `do` mode may still be clicking.
+ *
+ * `respondedRequestIds` closes the other half of the reconnect-replay contract `StreamClient.ts`
+ * documents (the api replays a chat_id's whole turn history, not just the tail a client missed):
+ * `reduceText`'s own exact-repeat guard (`sseReducer.ts`) only catches an identical FINAL
+ * `chat/response` replayed after the answer already closed, because it only ever compares against the
+ * message's LAST part. A replayed `chat/delta` fails that same-string check (it's a partial fragment,
+ * not the full closed text) and would otherwise be appended as a brand-new, visibly duplicated text
+ * segment ahead of the closing response that then only overwrites the one it just added — leaving two
+ * copies of the same answer on screen. Scoped by `request_id`, not globally, so an unrelated later
+ * turn's genuinely new `chat/delta`/`chat/response` is untouched; marked closed only once, on the
+ * request's own terminal `chat/response`, since a delta is by definition still open.
  *
  * `lastStreamErrorRef`/`currentErrorRef` close the loop `handleError` alone leaves open: `StreamClient`
  * calls `onError` on every failed dial, not only a terminal give-up, so the visitor sees "Stream
@@ -67,7 +82,7 @@ interface ChatActions {
   removeMessage: (messageId: string) => void;
   setMessages: (messages: ChatMessage[]) => void;
   clearMessages: () => void;
-  messageDispatch: (content: string, mode?: InstructionType, skipUserMessage?: boolean) => Promise<void>;
+  messageDispatch: (content: string, mode?: InstructionType, skipUserMessage?: boolean) => Promise<boolean>;
 }
 
 interface TaskActions {
@@ -85,6 +100,7 @@ interface ChatContextType {
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
 const MAX_PROCESSED_TOOL_CALL_IDS = 1000;
+const MAX_RESPONDED_REQUEST_IDS = 1000;
 
 const STALE_REPLY_TIMEOUT_MS = 120_000;
 const STALE_REPLY_TEXT = 'This is taking longer than expected. Please try again.';
@@ -105,10 +121,19 @@ function createStreamEffectHandlers(deps: {
   currentModeRef: React.RefObject<InstructionType>;
   setError: (message: string | undefined) => void;
   processedToolCallIds: React.RefObject<Set<string>>;
+  respondedRequestIds: React.RefObject<Set<string>>;
   currentErrorRef: React.RefObject<string | undefined>;
   lastStreamErrorRef: React.RefObject<string | undefined>;
 }) {
-  const { commit, currentModeRef, setError, processedToolCallIds, currentErrorRef, lastStreamErrorRef } = deps;
+  const {
+    commit,
+    currentModeRef,
+    setError,
+    processedToolCallIds,
+    respondedRequestIds,
+    currentErrorRef,
+    lastStreamErrorRef,
+  } = deps;
 
   const startToolCall = async (effect: Extract<SseEffect, { type: 'executeTool' }>) => {
     const { toolCallId, tool, args, mode, explanation } = effect;
@@ -139,7 +164,15 @@ function createStreamEffectHandlers(deps: {
   };
 
   const handleMessage = (event: WidgetEvent): void => {
-    if (event.type === 'tool/call') {
+    if (event.type === 'chat/delta' || event.type === 'chat/response') {
+      if (respondedRequestIds.current.has(event.request_id)) return;
+      if (event.type === 'chat/response') {
+        respondedRequestIds.current.add(event.request_id);
+        if (respondedRequestIds.current.size > MAX_RESPONDED_REQUEST_IDS) {
+          respondedRequestIds.current = new Set([...respondedRequestIds.current].slice(-MAX_RESPONDED_REQUEST_IDS / 2));
+        }
+      }
+    } else if (event.type === 'tool/call') {
       const toolCallId = event.tool_call_id;
       if (processedToolCallIds.current.has(toolCallId)) return;
       processedToolCallIds.current.add(toolCallId);
@@ -194,6 +227,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
   const currentModeRef = useLatest(uiState.currentMode);
 
   const processedToolCallIds = useRef(new Set<string>());
+  const respondedRequestIds = useRef(new Set<string>());
   const currentErrorRef = useLatest(uiState.error);
   const lastStreamErrorRef = useRef<string | undefined>(undefined);
 
@@ -261,7 +295,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
   }, [pendingReplies, commit]);
 
   const messageDispatch = useCallback(
-    async (content: string, mode?: InstructionType, skipUserMessage?: boolean) => {
+    async (content: string, mode?: InstructionType, skipUserMessage?: boolean): Promise<boolean> => {
       const effectiveMode = mode ?? currentModeRef.current;
 
       if (previewMode) {
@@ -269,7 +303,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
           addMessage(createUserMessage(content, effectiveMode));
         }
         addMessage(createAgentMessage("This is a preview. In production, I'll respond to your messages here."));
-        return;
+        return true;
       }
 
       const config = storageService.getCredentialedConfig();
@@ -279,7 +313,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
         addMessage(
           createAgentMessage('Configuration error: Missing API credentials. Please check your widget settings.'),
         );
-        return;
+        return false;
       }
 
       if (!skipUserMessage) {
@@ -291,9 +325,11 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
 
       try {
         await chatPost(content, effectiveMode, placeholder.id);
+        return true;
       } catch (error) {
         console.error('Failed to send message:', error);
         commit(s => reduceError(s, placeholder.id, CHAT_FAILURE_TEXT));
+        return false;
       }
     },
     [previewMode, addMessage, commit],
@@ -307,6 +343,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
       currentModeRef,
       setError: uiActions.setError,
       processedToolCallIds,
+      respondedRequestIds,
       currentErrorRef,
       lastStreamErrorRef,
     });

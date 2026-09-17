@@ -6,7 +6,10 @@
  *
  * `open` is the transport, `registered` is the chat: only the latter can carry a reply, so `isConnected` reads
  * `registered` and nothing waits on `open`. Backoff counters reset only on `registered` — resetting at `open` would
- * defeat the max-attempts cap if registration never lands and the stream flaps open→closed. Tabs share the
+ * defeat the max-attempts cap if registration never lands and the stream flaps open→closed. `scheduleReconnect`'s
+ * EQUAL JITTER (the doubling delay's own second half, chosen uniformly) keeps every dial within the documented
+ * schedule's bound while stopping every tab across every open customer page from redialing on the exact same
+ * clock tick after a shared outage — a thundering herd the deterministic schedule alone cannot prevent. Tabs share the
  * localStorage chat id, so the server keys SSE by (chat_id, tab_id) and `tabId` stops tabs evicting each other's
  * stream. Credentials are read at connect time, not captured at init, so a reconnect after `updateMarketrixConfig`
  * dials with the current ones.
@@ -247,11 +250,12 @@ export class StreamClient {
     this.clearReconnectTimer();
     this.reconnectAttempts++;
     const delay = Math.min(this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1), this.maxReconnectDelay);
+    const jittered = delay / 2 + Math.random() * (delay / 2);
     this.reconnectTimer = setTimeout(() => {
       if (!this.reconnectSuppressed() && this.chatId) {
         void this.connect(this.chatId);
       }
-    }, delay);
+    }, jittered);
   }
 
   private abortConnection(): void {

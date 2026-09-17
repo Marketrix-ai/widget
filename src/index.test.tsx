@@ -6,17 +6,32 @@
  * the host page), stops short of mounting/connecting/recording when the resolved config is disabled,
  * shares one in-flight promise and cancels a stale one; updates re-mount into the given container and a
  * preview stays a preview; and production stores the credentials it was initialized with.
+ *
+ * `updateMarketrixConfig` unmounts then re-`initWidget`s (this file's own header, above) — since that
+ * disconnects the stream and clears `StreamClient`'s in-memory `chatId`, the "preserves an in-flight
+ * chat" proof is at the `storageService`/`chatSessionManager` layer, not the DOM: the widget mounts into
+ * a CLOSED shadow root (`../CLAUDE.md`'s Init & isolation section), so no query here can see inside it
+ * regardless — every other test in this file already asserts only the `.marketrix-widget-container`
+ * wrapper's presence for the same reason. `getOrCreateChatId` is spied WITHOUT a mock implementation
+ * (real pass-through) so the proof is the real short-circuit: `storageService.getChatId()` already
+ * holding a value, minting no new chat via `sdk.chatCreate` on the re-mount.
  */
 import { act, render, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'bun:test';
 
 import { initWidget, MarketrixWidgetPreview, mountWidget, unmountWidget, updateMarketrixConfig } from './index';
 import type { WidgetSettingsData } from './sdk';
+import { chatSessionManager } from './services/ChatSessionManager';
 import * as ScreenShareService from './services/ScreenShareService';
-import { type CredentialedConfig, storageService } from './services/StorageService';
+import {
+  type CredentialedConfig,
+  readChatSnapshot,
+  storageService,
+  writeChatSnapshot,
+} from './services/StorageService';
 import { streamClient } from './services/StreamClient';
 import * as WidgetService from './services/WidgetService';
-import { credentialedConfig, mountTarget, validSettings } from './test/fixtures';
+import { agentMessage, credentialedConfig, mountTarget, validSettings } from './test/fixtures';
 
 const expectNotMounted = (container: HTMLElement) => {
   expect(container.querySelector('.marketrix-widget-container')).toBeNull();
@@ -253,5 +268,44 @@ describe('public widget lifecycle', () => {
 
     await waitFor(() => expect(ownDiv.querySelector('.marketrix-widget-container')).toBeTruthy());
     expect(renderedRoot.querySelectorAll(':scope > .marketrix-widget-container')).toHaveLength(0);
+  });
+});
+
+describe('a config-change re-mount preserves an in-flight chat', () => {
+  it('keeps the same chat_id and transcript across updateMarketrixConfig, minting no new chat', async () => {
+    vi.spyOn(WidgetService, 'loadWidgetConfig').mockImplementation(async config =>
+      credentialedConfig({ ...config, mtxId: 'reflow-1', mtxApp: 1 }),
+    );
+    vi.spyOn(streamClient, 'connect').mockResolvedValue();
+    const getOrCreateChatId = vi.spyOn(chatSessionManager, 'getOrCreateChatId');
+
+    // Seeds the persisted state as if a prior mount already opened a chat and exchanged a message —
+    // the exact shape `InitBridge` restores from on every mount, real or re-mount.
+    storageService.setConfig(credentialedConfig({ mtxId: 'reflow-1', mtxKey: 'key', mtxApp: 1 }));
+    storageService.setChatId('chat-inflight-1');
+    writeChatSnapshot({
+      messages: [agentMessage({ parts: [{ type: 'text', content: 'still here after the config change' }] })],
+      currentMode: 'tell',
+      isOpen: true,
+    });
+
+    const container = mountTarget();
+    document.body.appendChild(container);
+
+    await act(() => initWidget({ mtxId: 'reflow-1', mtxKey: 'key', mtxApiHost: 'https://api.test' }, container));
+    await waitFor(() => expect(getOrCreateChatId).toHaveBeenCalled());
+    expect(await getOrCreateChatId.mock.results[0]?.value).toBe('chat-inflight-1');
+    expect(storageService.getChatId()).toBe('chat-inflight-1');
+    const messageBefore = readChatSnapshot().messages[0];
+    expect(messageBefore).toBeDefined();
+
+    getOrCreateChatId.mockClear();
+
+    await act(() => updateMarketrixConfig({ userId: 42 }));
+
+    await waitFor(() => expect(getOrCreateChatId).toHaveBeenCalled());
+    expect(await getOrCreateChatId.mock.results[0]?.value).toBe('chat-inflight-1');
+    expect(storageService.getChatId()).toBe('chat-inflight-1');
+    expect(readChatSnapshot().messages).toEqual([messageBefore!]);
   });
 });
