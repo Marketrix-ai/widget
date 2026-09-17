@@ -18,6 +18,7 @@ import { useEffect } from 'react';
 
 import { useWidget } from '../../hooks/useWidget';
 import type { WidgetEvent } from '../../sdk';
+import type * as ChatServiceModule from '../../services/ChatService';
 import { type CredentialedConfig, storageService } from '../../services/StorageService';
 import { streamClient } from '../../services/StreamClient';
 import { agentMessage, getMockWidgetConfig } from '../../test/fixtures';
@@ -27,7 +28,9 @@ import * as log from '../../utils/log';
 import { ChatProvider, useChatContext } from '../ChatContext';
 import { UIStateProvider } from '../UIStateContext';
 
-vi.mock('../../services/ChatService', () => ({ chatPost: vi.fn().mockResolvedValue(undefined) }));
+vi.mock('../../services/ChatService', (): typeof ChatServiceModule => ({
+  chatPost: vi.fn().mockResolvedValue(undefined),
+}));
 
 const mockExecuteTool = vi.fn().mockResolvedValue({ success: true, data: {} });
 vi.mock('../../services/BrowserToolService', () => ({

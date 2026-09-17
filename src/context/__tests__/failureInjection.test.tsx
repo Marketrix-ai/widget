@@ -16,6 +16,7 @@ import { beforeEach, describe, expect, it, vi } from 'bun:test';
 
 import { useWidget } from '../../hooks/useWidget';
 import type { WidgetEvent } from '../../sdk';
+import type * as ChatServiceModule from '../../services/ChatService';
 import { type CredentialedConfig, storageService } from '../../services/StorageService';
 import { streamClient } from '../../services/StreamClient';
 import { getMockWidgetConfig } from '../../test/fixtures';
@@ -28,7 +29,9 @@ import { UIStateProvider } from '../UIStateContext';
 const RAW_MARKER = 'PG::ConnectionBad at db_pool.rb:42 — ECONNREFUSED 10.0.4.12:5432';
 
 const chatPostMock = vi.fn().mockResolvedValue(undefined);
-vi.mock('../../services/ChatService', () => ({ chatPost: (...args: unknown[]) => chatPostMock(...args) }));
+vi.mock('../../services/ChatService', (): typeof ChatServiceModule => ({
+  chatPost: (...args) => chatPostMock(...args),
+}));
 
 const mockExecuteTool = vi.fn().mockResolvedValue({ success: true, data: {} });
 vi.mock('../../services/BrowserToolService', () => ({
