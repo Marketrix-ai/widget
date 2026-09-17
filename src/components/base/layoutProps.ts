@@ -57,7 +57,6 @@ const JUSTIFY = {
 const ANIMATION = {
   spin: 'mtx-spin 1s linear infinite',
   ping: 'mtx-ping 1s cubic-bezier(0, 0, 0.2, 1) infinite',
-  pulse: 'mtx-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
   fadeIn: 'mtx-fade-in 0.5s ease-out',
 } as const;
 
@@ -94,7 +93,7 @@ export interface LayoutProps {
   border?: boolean | keyof typeof BORDER_SIDE;
   rounded?: boolean | RadiusToken | undefined;
 
-  animate?: 'spin' | 'ping' | 'pulse' | 'fadeIn' | 'none' | undefined;
+  animate?: 'spin' | 'ping' | 'fadeIn' | 'none' | undefined;
   hidden?: boolean | undefined;
 
   as?: ElementType;

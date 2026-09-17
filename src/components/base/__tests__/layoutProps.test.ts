@@ -119,7 +119,6 @@ describe('resolveLayoutStyle', () => {
   it('animate references a keyframe this stylesheet defines, emitting nothing when none', () => {
     expect(resolveLayoutStyle({ animate: 'spin' }).animation).toContain('mtx-spin');
     expect(resolveLayoutStyle({ animate: 'ping' }).animation).toContain('mtx-ping');
-    expect(resolveLayoutStyle({ animate: 'pulse' }).animation).toContain('mtx-pulse');
     expect(resolveLayoutStyle({ animate: 'fadeIn' }).animation).toContain('mtx-fade-in');
     expect(resolveLayoutStyle({ animate: 'none' })).toEqual({});
   });
