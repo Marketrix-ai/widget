@@ -14,8 +14,13 @@
  * from it, since without that two applications on one origin would leak one tenant's transcript into
  * another's.
  *
- * The chat snapshot is `{messages, currentMode, isOpen}` — chat_id, config and timestamp are deliberately
- * excluded. `StoredMessage` is the ONE place `content` still exists as a field: a live `ChatMessage` has
+ * `writeChatSnapshot`'s own parameter is `{messages, currentMode, isOpen}` — chat_id, config and
+ * timestamp are deliberately excluded from THAT function's input, though `config` (via `setConfig`)
+ * and `chat_id`/`timestamp` (via `updateContext`) are still part of the one persisted record on disk;
+ * `config` there is the tenant's own `mtxId`/`mtxKey`/`mtxApiHost`/`userId`/rendered settings — no
+ * broader PII, and `mtxId`/`mtxKey` are already fully public in the host page's own script-tag markup,
+ * not a secret this adds exposure to. `StoredMessage` is the ONE place `content` still exists as a
+ * field: a live `ChatMessage` has
  * none (every reader derives `messageText(parts)` instead), but a transcript written before `parts`
  * existed has only `content` on disk, so `readChatSnapshot` backfills a text part from it and
  * `writeChatSnapshot` derives `content` back from `parts` on the way out, keeping the persisted shape

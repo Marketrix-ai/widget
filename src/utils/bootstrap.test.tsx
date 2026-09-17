@@ -111,6 +111,7 @@ describe('widget public entry paths', () => {
       'mtx-key': 'widget-key',
       'mtx-api-host': 'https://api.test',
       'mtx-use-screenshare': 'false',
+      'mtx-style-nonce': 'csp-nonce-abc',
     });
     const init = await runAutoInit();
 
@@ -120,6 +121,7 @@ describe('widget public entry paths', () => {
       mtxKey: 'widget-key',
       mtxApiHost: 'https://api.test',
       use_screenshare: false,
+      styleNonce: 'csp-nonce-abc',
     });
   });
 
@@ -166,5 +168,15 @@ describe('widget public entry paths', () => {
     expect(styles).toHaveLength(1);
     expect(styles[0].textContent?.trim()).toBeTruthy();
     expect(document.head.querySelector('style')).toBeNull();
+  });
+
+  it('leaves the injected style element without a nonce by default, and applies one when given', async () => {
+    const { createWidgetContainer } = await importBootstrap();
+
+    const bare = createWidgetContainer();
+    expect(bare.shadowRoot.querySelector('style')?.nonce).toBe('');
+
+    const nonced = createWidgetContainer(undefined, 'csp-nonce-123');
+    expect(nonced.shadowRoot.querySelector('style')?.nonce).toBe('csp-nonce-123');
   });
 });

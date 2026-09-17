@@ -1,8 +1,9 @@
 /**
  * `StorageService` tests: `tenantScope` prefers the credential id, then the application id, then a
- * fixed default; `setConfig` never carries one tenant's `chat_id` into another's scope; a chat snapshot
- * round-trips, with an active screen share stored as an ended notice because a MediaStream cannot
- * survive a reload; `readLocal`/`writeLocal` degrade to a warn and keep working unpersisted when
+ * fixed default; `setConfig` never carries one tenant's `chat_id` into another's scope, and persists
+ * exactly the given config fields to the raw record — no field this repo didn't put there; a chat
+ * snapshot round-trips, with an active screen share stored as an ended notice because a MediaStream
+ * cannot survive a reload; `readLocal`/`writeLocal` degrade to a warn and keep working unpersisted when
  * `localStorage` throws (private-mode Safari, a sandboxed iframe).
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
@@ -62,6 +63,19 @@ describe('setConfig scopes the chat context to the tenant', () => {
 
     storageService.setConfig(credentials('tenant-a'));
     expect(storageService.getChatId()).toBe('chat-a');
+  });
+
+  it('persists exactly the given config fields — nothing beyond documented, no fabricated PII', () => {
+    const config = credentials('tenant-pii-scope');
+    (config as { userId?: number }).userId = 42;
+
+    storageService.setConfig(config);
+
+    const raw = JSON.parse(readLocal(scopedKey('marketrix_chat_context', config)) ?? '{}') as {
+      config: Record<string, unknown>;
+    };
+    expect(Object.keys(raw.config).sort()).toEqual(Object.keys(config).sort());
+    expect(raw.config).toEqual(config as unknown as Record<string, unknown>);
   });
 });
 
