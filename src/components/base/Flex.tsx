@@ -19,7 +19,7 @@ interface FlexProps extends SurfaceProps {
   children?: ReactNode;
 }
 
-export type StackProps = Omit<FlexProps, 'direction'>;
+type StackProps = Omit<FlexProps, 'direction'>;
 
 export const Flex = forwardRef<HTMLElement, FlexProps>(function Flex(props, ref) {
   const { direction, hidden, style, ...rest } = props;

@@ -36,7 +36,7 @@
  * the set already and evicted that id, turning the expected no-op dedupe into a fresh execution.
  */
 import { act, cleanup, render, screen } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from 'bun:test';
 import { Profiler, useEffect } from 'react';
 
 import { useWidget } from '../../hooks/useWidget';
@@ -44,7 +44,12 @@ import type { WidgetEvent } from '../../sdk';
 import type * as ChatServiceModule from '../../services/ChatService';
 import { type CredentialedConfig, storageService } from '../../services/StorageService';
 import { streamClient } from '../../services/StreamClient';
-import { agentMessage, getMockWidgetConfig } from '../../test/fixtures';
+import {
+  agentMessage,
+  asStreamClientInternals,
+  browserToolServiceMock,
+  getMockWidgetConfig,
+} from '../../test/fixtures';
 import { advanceTimersByTimeAsync, waitFor } from '../../test/vi-compat';
 import { messageText } from '../../types';
 import * as log from '../../utils/log';
@@ -56,19 +61,7 @@ vi.mock('../../services/ChatService', (): typeof ChatServiceModule => ({
 }));
 
 const mockExecuteTool = vi.fn().mockResolvedValue({ success: true, data: {} });
-vi.mock('../../services/BrowserToolService', () => ({
-  browserToolService: {
-    executeTool: mockExecuteTool,
-    getFriendlyToolName: (name: string) => name,
-    isWaitForUserTool: () => false,
-  },
-  FINISH_TOOL: 'finish',
-}));
-
-interface StreamClientTestHandle {
-  handleMessage: (event: WidgetEvent) => void;
-}
-const asStreamClientInternals = (): StreamClientTestHandle => streamClient as unknown as StreamClientTestHandle;
+vi.mock('../../services/BrowserToolService', () => browserToolServiceMock(mockExecuteTool));
 
 const restoredPlaceholder = agentMessage({
   id: 'temp-restored',
@@ -256,6 +249,39 @@ const renderCaptured = (previewMode = true) => {
   );
 };
 
+async function dispatchClickToolCall(toolCallId: string): Promise<void> {
+  await act(async () => {
+    asStreamClientInternals().handleMessage({
+      type: 'tool/call',
+      tool_call_id: toolCallId,
+      browser_tool: 'click_element',
+      args: { index: 0 },
+      mode: 'do',
+      explanation: 'Click it',
+    });
+    await advanceTimersByTimeAsync(0);
+  });
+}
+
+function setKeepAndSubject(subjectId: string, subjectContent: string): void {
+  act(() => {
+    captured!.chatActions.setMessages([
+      agentMessage({ id: 'keep', mode: 'tell', parts: [{ type: 'text', content: 'keep' }] }),
+      agentMessage({ id: subjectId, mode: 'tell', parts: [{ type: 'text', content: subjectContent }] }),
+    ]);
+  });
+}
+
+async function sentPayloadFor<T extends unknown[]>(
+  send: Mock<(...args: T) => Promise<void>>,
+  toolCallId: string,
+): Promise<Record<string, unknown>> {
+  await waitFor(() => expect(send).toHaveBeenCalled());
+  return send.mock.calls
+    .map(c => c[0])
+    .find(p => (p as { tool_call_id?: string }).tool_call_id === toolCallId) as Record<string, unknown>;
+}
+
 describe('commit skips the render for a transition that reports no change', () => {
   it('a stale-reply watchdog firing on a message parked waiting-for-user does not re-render', async () => {
     renderCaptured(false);
@@ -300,12 +326,7 @@ describe('commit skips the render for a transition that reports no change', () =
 describe('updateMessage / removeMessage act on the one message their id names', () => {
   it('updateMessage patches only the matching id', () => {
     renderCaptured();
-    act(() => {
-      captured!.chatActions.setMessages([
-        agentMessage({ id: 'keep', mode: 'tell', parts: [{ type: 'text', content: 'keep' }] }),
-        agentMessage({ id: 'change', mode: 'tell', parts: [{ type: 'text', content: 'before' }] }),
-      ]);
-    });
+    setKeepAndSubject('change', 'before');
 
     act(() => {
       captured!.chatActions.updateMessage('change', { parts: [{ type: 'text', content: 'after' }] });
@@ -317,12 +338,7 @@ describe('updateMessage / removeMessage act on the one message their id names', 
 
   it('removeMessage drops only the matching id', () => {
     renderCaptured();
-    act(() => {
-      captured!.chatActions.setMessages([
-        agentMessage({ id: 'keep', mode: 'tell', parts: [{ type: 'text', content: 'keep' }] }),
-        agentMessage({ id: 'drop', mode: 'tell', parts: [{ type: 'text', content: 'drop' }] }),
-      ]);
-    });
+    setKeepAndSubject('drop', 'drop');
 
     act(() => {
       captured!.chatActions.removeMessage('drop');
@@ -437,22 +453,9 @@ describe('tool/response carries data only when the tool call itself succeeded', 
     mockExecuteTool.mockReset().mockResolvedValue({ success: false, error: 'boom' });
     const send = vi.spyOn(streamClient, 'send').mockResolvedValue(undefined);
 
-    await act(async () => {
-      asStreamClientInternals().handleMessage({
-        type: 'tool/call',
-        tool_call_id: 'tc-fail',
-        browser_tool: 'click_element',
-        args: { index: 0 },
-        mode: 'do',
-        explanation: 'Click it',
-      });
-      await advanceTimersByTimeAsync(0);
-    });
+    await dispatchClickToolCall('tc-fail');
 
-    await waitFor(() => expect(send).toHaveBeenCalled());
-    const payload = send.mock.calls
-      .map(c => c[0])
-      .find(p => (p as { tool_call_id?: string }).tool_call_id === 'tc-fail') as Record<string, unknown>;
+    const payload = await sentPayloadFor(send, 'tc-fail');
     expect(payload).not.toHaveProperty('data');
     expect(payload['success']).toBe(false);
   });
@@ -463,22 +466,9 @@ describe('tool/response carries data only when the tool call itself succeeded', 
     mockExecuteTool.mockReset().mockResolvedValue({ success: true, data: { ok: true } });
     const send = vi.spyOn(streamClient, 'send').mockResolvedValue(undefined);
 
-    await act(async () => {
-      asStreamClientInternals().handleMessage({
-        type: 'tool/call',
-        tool_call_id: 'tc-ok',
-        browser_tool: 'click_element',
-        args: { index: 0 },
-        mode: 'do',
-        explanation: 'Click it',
-      });
-      await advanceTimersByTimeAsync(0);
-    });
+    await dispatchClickToolCall('tc-ok');
 
-    await waitFor(() => expect(send).toHaveBeenCalled());
-    const payload = send.mock.calls
-      .map(c => c[0])
-      .find(p => (p as { tool_call_id?: string }).tool_call_id === 'tc-ok') as Record<string, unknown>;
+    const payload = await sentPayloadFor(send, 'tc-ok');
     expect(payload['data']).toBe(JSON.stringify({ ok: true }));
   });
 });
