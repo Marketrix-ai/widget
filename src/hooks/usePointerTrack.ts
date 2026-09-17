@@ -1,50 +1,52 @@
 /**
- * The one pointer-drag skeleton `useDragSnap` (`WidgetFab.tsx`) and `useResize` (`MessengerShell.tsx`)
- * each re-implemented on a different event model: track delta in a ref, mutate the DOM directly per
- * move, commit on release. Here over ONE model — Pointer Events + rAF-batched moves, capture,
- * `pointercancel` — with each caller's own math (flick-snap, or clamped resize) layered on via
- * `onTrack`/`onRelease`.
+ * Shared pointer-drag skeleton for `useDragSnap` (`WidgetFab.tsx`) and `useResize`
+ * (`MessengerShell.tsx`): track a pointer's delta in a ref, mutate the DOM directly per move, commit on
+ * release. One event model for both — Pointer Events + rAF-batched moves, pointer capture, and
+ * `pointercancel` — so resize gains capture-based unmount safety it never had, and drag-snap's flick
+ * math and resize's clamp math each become just a `PointerGesture` reader.
  *
- * Three states in `phaseRef` (mirrored to `phase` state only so a consumer can re-render on it):
- * `idle` → `tracking` (past `thresholdPx`; 0 means every pointerdown already is one) → `committing`
- * (released; `onRelease` calls the `commit` it is handed synchronously for a resize, or later on
- * `transitionend` for a snap animation). An undragged pointerup never entered `tracking`, so a plain
- * click still reaches `onClick`; `onPointerCancel` always aborts to `idle` without `onRelease` — a
- * cancelled gesture never commits — calling `onCancel` first to undo whatever `onTrack` mutated. The
- * unmount effect runs whatever abort fn the in-flight `onRelease` last put on `abandonRef`, closing the
- * leak class pass 49 fixed once for `useDragSnap` alone. `phase` state exists only so a consumer can
- * re-render on it (e.g. a cursor); control flow reads `phaseRef` instead, since a handler snapshot from
- * one render (what `renderHook`-style tests and a real rapid-regrab both do) can still run after a later
- * render replaced `phase`. A fresh pointerdown always resets to `idle` (or `tracking` at threshold 0)
- * even mid-`committing` from a still-animating previous gesture — `abandonRef` is what reconciles that
- * overlap, not this hook holding the old one open.
+ * States: `idle` → `tracking` (past `thresholdPx`; 0 starts on the first move, matching a resize handle
+ * where every pointerdown already is one) → `committing` (`onEnd` fires once, `gesture.cancelled`
+ * telling a cancel from a real release, and calls `release.commit()` when the gesture is truly over —
+ * immediately for a synchronous commit, or later, e.g. on `transitionend`, for an animated one;
+ * `release.onAbandon` registers what to run if the widget unmounts, OR a new gesture completes, before
+ * that commit fires — closing the leak class pass 49 fixed once for `useDragSnap` alone, now generic to
+ * any consumer's animated commit. `phaseRef`, not the `isTracking` state it also sets, is what handlers
+ * read synchronously for control flow — React's own bailout skips the render `isTracking` would
+ * otherwise redundantly schedule while `idle`↔`tracking`↔`committing` moves without it changing.
  */
-import { type PointerEvent as ReactPointerEvent, type RefObject, useEffect, useRef, useState } from 'react';
+import { type PointerEvent as ReactPointerEvent, useEffect, useRef, useState } from 'react';
 
-export type PointerTrackPhase = 'idle' | 'tracking' | 'committing';
+export interface PointerGesture {
+  startX: number;
+  startY: number;
+  dx: number;
+  dy: number;
+  pointerType: string;
+  cancelled: boolean;
+}
+
+export interface ReleaseHandle {
+  commit: () => void;
+  onAbandon: (fn: () => void) => void;
+}
+
+type Phase = 'idle' | 'tracking' | 'committing';
 
 export interface UsePointerTrackOptions {
   disabled?: boolean;
   thresholdPx?: number;
   onTrackStart?: () => void;
-  onTrack: (dx: number, dy: number, event: ReactPointerEvent) => void;
-  onRelease: (
-    dx: number,
-    dy: number,
-    event: ReactPointerEvent,
-    commit: () => void,
-    abandonRef: RefObject<(() => void) | null>,
-  ) => void;
-  onCancel?: () => void;
+  onTrack: (gesture: PointerGesture) => void;
+  onEnd: (gesture: PointerGesture, release: ReleaseHandle) => void;
 }
 
 export interface UsePointerTrackResult {
-  phase: PointerTrackPhase;
+  isTracking: boolean;
   onPointerDown: (event: ReactPointerEvent) => void;
   onPointerMove: (event: ReactPointerEvent) => void;
   onPointerUp: (event: ReactPointerEvent) => void;
   onPointerCancel: (event: ReactPointerEvent) => void;
-  abandonRef: RefObject<(() => void) | null>;
 }
 
 export function usePointerTrack({
@@ -52,14 +54,13 @@ export function usePointerTrack({
   thresholdPx = 0,
   onTrackStart,
   onTrack,
-  onRelease,
-  onCancel,
+  onEnd,
 }: UsePointerTrackOptions): UsePointerTrackResult {
-  const [phase, setPhaseState] = useState<PointerTrackPhase>('idle');
-  const phaseRef = useRef<PointerTrackPhase>('idle');
-  const setPhase = (next: PointerTrackPhase) => {
+  const phaseRef = useRef<Phase>('idle');
+  const [isTracking, setIsTracking] = useState(false);
+  const setPhase = (next: Phase) => {
     phaseRef.current = next;
-    setPhaseState(next);
+    setIsTracking(next !== 'idle');
   };
 
   const dragRef = useRef<{ pointerId: number; startX: number; startY: number; dx: number; dy: number } | null>(null);
@@ -78,6 +79,43 @@ export function usePointerTrack({
     },
     [],
   );
+
+  const gestureFrom = (
+    drag: NonNullable<typeof dragRef.current>,
+    event: ReactPointerEvent,
+    cancelled: boolean,
+  ): PointerGesture => ({
+    startX: drag.startX,
+    startY: drag.startY,
+    dx: drag.dx,
+    dy: drag.dy,
+    pointerType: event.pointerType,
+    cancelled,
+  });
+
+  const end = (event: ReactPointerEvent, cancelled: boolean) => {
+    const drag = dragRef.current;
+    if (drag?.pointerId !== event.pointerId) return;
+    dragRef.current = null;
+    cancelRaf();
+    event.currentTarget.releasePointerCapture(event.pointerId);
+    if (phaseRef.current !== 'tracking') {
+      setPhase('idle');
+      return;
+    }
+    setPhase('committing');
+    abandonRef.current?.();
+    abandonRef.current = null;
+    onEnd(gestureFrom(drag, event, cancelled), {
+      commit: () => {
+        abandonRef.current = null;
+        setPhase('idle');
+      },
+      onAbandon: fn => {
+        abandonRef.current = fn;
+      },
+    });
+  };
 
   const onPointerDown = (event: ReactPointerEvent) => {
     if (disabled) return;
@@ -104,42 +142,16 @@ export function usePointerTrack({
       rafRef.current = window.requestAnimationFrame(() => {
         rafRef.current = null;
         const live = dragRef.current;
-        if (live) onTrack(live.dx, live.dy, event);
+        if (live) onTrack(gestureFrom(live, event, false));
       });
     }
   };
 
-  const onPointerUp = (event: ReactPointerEvent) => {
-    const drag = dragRef.current;
-    if (drag?.pointerId !== event.pointerId) return;
-    dragRef.current = null;
-    cancelRaf();
-    event.currentTarget.releasePointerCapture(event.pointerId);
-    if (phaseRef.current !== 'tracking') {
-      setPhase('idle');
-      return;
-    }
-    setPhase('committing');
-    onRelease(
-      drag.dx,
-      drag.dy,
-      event,
-      () => {
-        abandonRef.current = null;
-        setPhase('idle');
-      },
-      abandonRef,
-    );
+  return {
+    isTracking,
+    onPointerDown,
+    onPointerMove,
+    onPointerUp: event => end(event, false),
+    onPointerCancel: event => end(event, true),
   };
-
-  const onPointerCancel = (event: ReactPointerEvent) => {
-    if (dragRef.current?.pointerId !== event.pointerId) return;
-    dragRef.current = null;
-    cancelRaf();
-    event.currentTarget.releasePointerCapture(event.pointerId);
-    if (phaseRef.current === 'tracking') onCancel?.();
-    setPhase('idle');
-  };
-
-  return { phase, onPointerDown, onPointerMove, onPointerUp, onPointerCancel, abandonRef };
 }

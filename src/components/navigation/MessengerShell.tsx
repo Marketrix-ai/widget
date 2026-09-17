@@ -232,10 +232,10 @@ export function useResize(
       document.body.style.cursor = grip.cursor;
       document.body.style.userSelect = 'none';
     },
-    onTrack: (dx, dy) => {
+    onTrack: gesture => {
       const next = clampSize({
-        width: startSizeRef.current.width + dx * grip.growX,
-        height: startSizeRef.current.height + dy * grip.growY,
+        width: startSizeRef.current.width + gesture.dx * grip.growX,
+        height: startSizeRef.current.height + gesture.dy * grip.growY,
       });
       dimsRef.current = next;
       if (containerRef.current) {
@@ -243,13 +243,14 @@ export function useResize(
         containerRef.current.style.height = `${next.height}px`;
       }
     },
-    onRelease: (_dx, _dy, _event, commit) => {
+    onEnd: (gesture, release) => {
       clearResizeChrome();
-      setDimensions(dimsRef.current);
-      writeLocal(storageKey, JSON.stringify(dimsRef.current));
-      commit();
+      if (!gesture.cancelled) {
+        setDimensions(dimsRef.current);
+        writeLocal(storageKey, JSON.stringify(dimsRef.current));
+      }
+      release.commit();
     },
-    onCancel: clearResizeChrome,
   });
 
   const handleResizeKeyDown = useCallback(

@@ -13,13 +13,12 @@
  * mirrors the pointer into a `translate3d` and samples `velocityHistoryRef` so a flick lands where it was
  * heading — `projectFlickVelocity` (module-level, pure) turns that sample history into a projected pixel
  * delta: zero with fewer than two samples, else the average px/ms over the sampled span projected forward
- * in px/s. `onRelease` picks the nearest corner via `getNearestCornerByTranslation` and animates the
- * wrapper there for SNAP_DURATION_MS via `left`/`top` transitions; `commitPositionAfterAnimation` calls
- * `onPositionCommit` and the hook's own `commit()` on `transitionend` (with a timeout fallback, since a
- * hidden tab fires no transition events) — the committed corner is the one being animated TO, so two
- * snaps in flight cannot commit the abandoned one (`abandonRef`, owned by `usePointerTrack` and threaded
- * through as a parameter since it isn't available yet inside the very options object that creates it).
- * `suppressUntilRef` stamps a time after which a click may open the widget again, so the pointer-up that
+ * in px/s. `onEnd` (a cancelled gesture just resets styles and commits) picks the nearest corner via
+ * `getNearestCornerByTranslation` and animates the wrapper there for SNAP_DURATION_MS via `left`/`top`
+ * transitions; `commitPositionAfterAnimation` calls `onPositionCommit` and `release.commit()` on
+ * `transitionend` (with a timeout fallback, since a hidden tab fires no transition events), registering
+ * its cleanup on `release.onAbandon` so the hook can supersede it if a second snap starts before this
+ * one finishes. `suppressUntilRef` stamps a time after which a click may open the widget again, so the pointer-up that
  * ends a drag is not read as a tap. The wrapper is measured with a ResizeObserver in a layout effect so
  * the pixel position is right on the first paint; preview mode disables the resize listener and viewport
  * anchoring, though dragging itself stays live. Exported so `WidgetFab.test.tsx`'s `renderHook` case can
@@ -30,7 +29,7 @@ import React, { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import MarketrixIcon from '../../assets/marketrix-icon.svg';
 import { SHADOW } from '../../design-system/component-tokens';
 import { WIDGET_RADIUS_PX } from '../../design-system/semantic-tokens';
-import { usePointerTrack } from '../../hooks/usePointerTrack';
+import { type ReleaseHandle, usePointerTrack } from '../../hooks/usePointerTrack';
 import { useWidget, useWidgetConfig } from '../../hooks/useWidget';
 import type { WidgetPosition } from '../../types';
 import { getAnchorTopLeft, getNearestCornerByTranslation, getPanelPositionStyle } from '../../utils/widgetPositioning';
@@ -129,16 +128,13 @@ export function useDragSnap({
   const commitPositionAfterAnimation = (
     nextCorner: WidgetPosition,
     wrapper: HTMLDivElement,
-    commit: () => void,
-    abandonRef: React.RefObject<(() => void) | null>,
+    release: ReleaseHandle,
   ) => {
-    abandonRef.current?.();
     let finished = false;
     const detach = () => {
       finished = true;
       window.clearTimeout(fallbackTimer);
-      wrapper.removeEventListener('transitionend', onEnd);
-      abandonRef.current = null;
+      wrapper.removeEventListener('transitionend', onTransitionEnd);
     };
     const done = () => {
       if (finished) return;
@@ -151,28 +147,22 @@ export function useDragSnap({
       requestAnimationFrame(() => {
         if (wrapperRef.current) wrapperRef.current.style.transition = '';
       });
-      commit();
+      release.commit();
     };
     const fallbackTimer = window.setTimeout(done, SNAP_DURATION_MS + 50);
-    const onEnd = (e: TransitionEvent) => {
+    const onTransitionEnd = (e: TransitionEvent) => {
       if (e.target !== wrapper || e.propertyName !== 'left') return;
       done();
     };
-    wrapper.addEventListener('transitionend', onEnd);
-    abandonRef.current = detach;
+    wrapper.addEventListener('transitionend', onTransitionEnd);
+    release.onAbandon(detach);
   };
 
-  const snapToCorner = (
-    nextCorner: WidgetPosition,
-    fromX: number,
-    fromY: number,
-    commit: () => void,
-    abandonRef: React.RefObject<(() => void) | null>,
-  ) => {
+  const snapToCorner = (nextCorner: WidgetPosition, fromX: number, fromY: number, release: ReleaseHandle) => {
     if (!wrapperRef.current || !pixelPositionStyle) {
       resetDragStyles();
       onPositionCommit(nextCorner);
-      commit();
+      release.commit();
       return;
     }
     const wrapper = wrapperRef.current;
@@ -188,7 +178,7 @@ export function useDragSnap({
       wrapper.style.left = `${newAnchor.x}px`;
       wrapper.style.top = `${newAnchor.y}px`;
     });
-    commitPositionAfterAnimation(nextCorner, wrapper, commit, abandonRef);
+    commitPositionAfterAnimation(nextCorner, wrapper, release);
   };
 
   const track = usePointerTrack({
@@ -201,20 +191,25 @@ export function useDragSnap({
         wrapperRef.current.style.transition = 'none';
       }
     },
-    onTrack: (dx, dy, event) => {
+    onTrack: gesture => {
       const now = Date.now();
       if (now - lastVelocitySampleRef.current >= VELOCITY_SAMPLE_INTERVAL_MS) {
         lastVelocitySampleRef.current = now;
         velocityHistoryRef.current = [
           ...velocityHistoryRef.current.slice(-(VELOCITY_HISTORY_SIZE - 1)),
-          { x: event.clientX, y: event.clientY, t: now },
+          { x: gesture.startX + gesture.dx, y: gesture.startY + gesture.dy, t: now },
         ];
       }
-      if (wrapperRef.current) wrapperRef.current.style.transform = `translate3d(${dx}px, ${dy}px, 0)`;
+      if (wrapperRef.current) wrapperRef.current.style.transform = `translate3d(${gesture.dx}px, ${gesture.dy}px, 0)`;
     },
-    onRelease: (dx, dy, _event, commit, abandonRef) => {
+    onEnd: (gesture, release) => {
+      if (gesture.cancelled) {
+        resetDragStyles();
+        release.commit();
+        return;
+      }
       const flick = projectFlickVelocity(velocityHistoryRef.current);
-      const projected = { dx: dx + flick.x, dy: dy + flick.y };
+      const projected = { dx: gesture.dx + flick.x, dy: gesture.dy + flick.y };
       const rect = wrapperRef.current?.getBoundingClientRect();
       const nextCorner = rect
         ? getNearestCornerByTranslation(
@@ -227,13 +222,12 @@ export function useDragSnap({
           )
         : position;
       suppressUntilRef.current = Date.now() + 600;
-      snapToCorner(nextCorner, dx, dy, commit, abandonRef);
+      snapToCorner(nextCorner, gesture.dx, gesture.dy, release);
     },
-    onCancel: resetDragStyles,
   });
 
   return {
-    isDragging: track.phase !== 'idle',
+    isDragging: track.isTracking,
     pixelPositionStyle,
     onPointerDown: track.onPointerDown,
     onPointerMove: track.onPointerMove,
