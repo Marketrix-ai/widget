@@ -4,7 +4,8 @@
  * A PROSE-ONLY gotcha (release mechanics, npm-publish idempotence, a design rationale) has no assertable
  * artifact and stays prose in `CLAUDE.md` instead of a fake green check here.
  *
- * Pins: no vitest family in devDependencies · published `files` allowlist + no `.npmignore` · `bundle:check`
+ * Pins: no vitest family in devDependencies · `packageManager`'s bun version matches the Dockerfile
+ * `oven/bun` base image tag · published `files` allowlist + no `.npmignore` · `bundle:check`
  * budgets `@base-ui/react` and `@rrweb/record` by name · `tsconfig.build.json` excludes `src/test` and test
  * files · Vite's externals are exactly the four React entry points · the `WidgetEvent`/`WidgetCommand`
  * discriminated-union literals match the documented wire vocabulary · `StreamClient`'s backoff constants
@@ -76,6 +77,12 @@ describe('package.json', () => {
     for (const script of ['test', 'test:watch', 'test:coverage']) {
       expect(pkg.scripts[script]).toContain('--isolate');
     }
+  });
+
+  it('pins the same bun version as the Dockerfile base image — one drifts, CI and local diverge', () => {
+    const bunVersion = (pkg.packageManager as string).replace(/^bun@/, '');
+    const dockerfile = read('Dockerfile');
+    expect(dockerfile).toContain(`FROM oven/bun:${bunVersion}-alpine AS base`);
   });
 });
 
