@@ -4,7 +4,11 @@
  * drive the one singleton, which is why they share a file — split across two, each left the other's leaked
  * instance state behind. `freshClient()` disconnects the shared instance before handing it back for that reason;
  * `internals()` reaches the private fields a test has to stage, since there is no public way to park the client in
- * "open but never registered".
+ * "open but never registered" — `StreamClientInternals`' fields are each typed by indexed access into the real
+ * `StreamClient` (`StreamClient['handleMessage']` etc.), not a hand-written duplicate, so a real signature or
+ * `StreamStatus` union change is a compile error here instead of a silently stale mock; that typing is what
+ * caught `chat/error`'s hand-built fixture once carrying a `message` field the real schema has never had (`error`
+ * is the field), an invalid event `handleMessage` happened not to read on that branch but would have on any that did.
  *
  * Registration lifecycle pins that a caller parked on registration is always settled: disconnect rejects old
  * waiters without leaking into a remount, giving up reconnection or a refused credential rejects rather than
@@ -46,14 +50,14 @@ restoreModuleAfterAll('../../sdk', () => import('../../sdk/index.ts?real'));
 const mockSdk = mocked(sdk);
 
 interface StreamClientInternals {
-  chatId: string;
-  status: string;
-  tornDown: boolean;
-  credentialRejected: boolean;
-  reconnectAttempts: number;
-  maxReconnectAttempts: number;
-  scheduleReconnect: () => void;
-  handleMessage: (event: Record<string, unknown>) => void;
+  chatId: StreamClient['chatId'];
+  status: StreamClient['status'];
+  tornDown: StreamClient['tornDown'];
+  credentialRejected: StreamClient['credentialRejected'];
+  reconnectAttempts: StreamClient['reconnectAttempts'];
+  maxReconnectAttempts: StreamClient['maxReconnectAttempts'];
+  scheduleReconnect: StreamClient['scheduleReconnect'];
+  handleMessage: StreamClient['handleMessage'];
 }
 
 function internals(client: StreamClient): StreamClientInternals {
@@ -77,7 +81,7 @@ function freshClient(): StreamClient {
   return streamClient;
 }
 
-function freshChatClient(status?: string): { client: StreamClient; inner: StreamClientInternals } {
+function freshChatClient(status?: StreamClient['status']): { client: StreamClient; inner: StreamClientInternals } {
   const client = freshClient();
   const inner = internals(client);
   inner.chatId = 'chat-1';
@@ -188,7 +192,7 @@ describe('StreamClient registration lifecycle', () => {
     inner.tornDown = false;
     inner.credentialRejected = false;
 
-    inner.handleMessage({ type: 'chat/error', request_id: 'auth', message: 'rejected' });
+    inner.handleMessage({ type: 'chat/error', request_id: 'auth', error: 'rejected' });
     expect(inner.credentialRejected).toBe(true);
 
     await client.connect('chat-auth');

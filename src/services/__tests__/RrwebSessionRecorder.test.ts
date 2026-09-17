@@ -5,9 +5,14 @@
  * never begins recording; the metadata post waits until the stream has registered the chat; and calling
  * `start()` again while already recording is a no-op, never a second `record()` arming a duplicate
  * rrweb instance.
+ *
+ * `Emit`'s parameter is typed from `@rrweb/types`'s real `eventWithTime` (`type`/`timestamp`, the two
+ * fields this suite's buffering logic cares about) plus the real `emit`'s `isCheckout` second parameter,
+ * not a hand-rolled shape that could drift from the library's actual callback signature; `data` stays
+ * `unknown` since no test here reads it.
  */
 import { record } from '@rrweb/record';
-import { EventType } from '@rrweb/types';
+import { EventType, type eventWithTime } from '@rrweb/types';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 
 import { sdk } from '../../sdk';
@@ -31,7 +36,7 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-type Emit = (event: { type: number; data: Record<string, never>; timestamp: number }) => void;
+type Emit = (event: Pick<eventWithTime, 'type' | 'timestamp'> & { data: unknown }, isCheckout?: boolean) => void;
 
 const startRecorder = async (): Promise<{ recorder: RrwebSessionRecorder; emit: Emit }> => {
   mockSdk.widgetMessagePost.mockResolvedValueOnce({ success: true });
