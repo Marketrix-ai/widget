@@ -60,4 +60,3 @@ export const ActivityLogTypeSchema = z.enum([
 export type ActivityLogType = z.infer<typeof ActivityLogTypeSchema>;
 
 export const SlackCommandLogStatusSchema = z.enum(['received', 'classifying', 'dispatched', 'completed', 'failed']);
-export type SlackCommandLogStatus = z.infer<typeof SlackCommandLogStatusSchema>;
