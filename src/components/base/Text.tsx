@@ -12,8 +12,6 @@
  * cascade rather than being pinned to a default, and the caller's `style` spreads LAST so it wins
  * over every resolved token. `inheritColor` overrides `variant` and resolves to `TEXT_TONE.inherit`,
  * letting text inside an already-coloured container (button, badge) take that colour.
- *
- * `className` is an escape hatch for `blocks/` only — product code styles through the props above.
  */
 import type { CSSProperties, ElementType, Ref } from 'react';
 
@@ -35,7 +33,6 @@ interface TextProps extends React.HTMLAttributes<HTMLElement> {
   weight?: TextWeight;
   truncate?: boolean;
   align?: TextAlign;
-  className?: string;
   ref?: Ref<HTMLElement>;
 }
 
@@ -61,7 +58,6 @@ export function Text({
   weight,
   truncate,
   align,
-  className,
   ref,
   style,
   ...props
@@ -70,7 +66,6 @@ export function Text({
     <Component
       {...props}
       ref={ref}
-      className={className}
       style={{
         color: TEXT_TONE[inheritColor ? 'inherit' : variant],
         ...(size && { fontSize: SIZE[size] }),
