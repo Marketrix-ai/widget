@@ -1,5 +1,5 @@
 /**
- * Vitest suite over `simulateKeyAction` — the hand-rolled key behaviour the widget runs because a programmatic
+ * `bun test` suite over `simulateKeyAction` — the hand-rolled key behaviour the widget runs because a programmatic
  * KeyboardEvent is untrusted and fires no default action. Covers Tab/Shift+Tab focus movement and
  * Backspace/Delete text editing, the two key groups with real state to get wrong. `render` mounts three sibling
  * buttons, `input` mounts one `<input>` with a value and a caret or selection range, and `afterEach` empties the
