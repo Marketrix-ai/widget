@@ -19,7 +19,7 @@ import type { WidgetEvent } from '../../sdk';
 import type * as ChatServiceModule from '../../services/ChatService';
 import { type CredentialedConfig, storageService } from '../../services/StorageService';
 import { streamClient } from '../../services/StreamClient';
-import { getMockWidgetConfig } from '../../test/fixtures';
+import { asStreamClientInternals, browserToolServiceMock, getMockWidgetConfig } from '../../test/fixtures';
 import { waitFor } from '../../test/vi-compat';
 import { messageText } from '../../types';
 import { CHAT_FAILURE_TEXT } from '../../utils/chat';
@@ -34,19 +34,7 @@ vi.mock('../../services/ChatService', (): typeof ChatServiceModule => ({
 }));
 
 const mockExecuteTool = vi.fn().mockResolvedValue({ success: true, data: {} });
-vi.mock('../../services/BrowserToolService', () => ({
-  browserToolService: {
-    executeTool: (...args: unknown[]) => mockExecuteTool(...args),
-    getFriendlyToolName: (name: string) => name,
-    isWaitForUserTool: () => false,
-  },
-  FINISH_TOOL: 'finish',
-}));
-
-interface StreamClientTestHandle {
-  handleMessage: (event: WidgetEvent) => void;
-}
-const asStreamClientInternals = (): StreamClientTestHandle => streamClient as unknown as StreamClientTestHandle;
+vi.mock('../../services/BrowserToolService', () => browserToolServiceMock(mockExecuteTool));
 
 const TOOL_CALL: WidgetEvent = {
   type: 'tool/call',

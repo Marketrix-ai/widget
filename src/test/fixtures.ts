@@ -19,9 +19,19 @@
  * `mockMediaStream(overrides)` is the one home for the browser's un-mockable `MediaStream`: the DOM lib
  * type has no constructor a test can call, so every caller needs the same `as unknown as MediaStream`
  * bridge — centralizing it here means that bridge exists exactly once instead of once per test file.
+ *
+ * `asStreamClientInternals()` is the one cast for reaching `streamClient`'s private `handleMessage` to
+ * simulate an incoming SSE event — `streamClient` is a class instance, so (unlike `mockSdkModule` in
+ * `vi-compat.ts`) the mock below can't be typed against the real module without its own `as unknown as`
+ * cast for the same reason `BrowserToolService`'s header documents. `browserToolServiceMock(executeTool)`
+ * is the one home for that untyped `vi.mock('.../BrowserToolService', ...)` factory shape — it imports
+ * the real `FINISH_TOOL` rather than re-literalling `'finish'`, which `sourceInvariants.test.ts` bans
+ * outside `BrowserToolService.ts` itself.
  */
-import { WidgetSettingsDataSchema } from '../sdk';
+import { type WidgetEvent, WidgetSettingsDataSchema } from '../sdk';
+import { FINISH_TOOL } from '../services/BrowserToolService';
 import type { CredentialedConfig } from '../services/StorageService';
+import { streamClient } from '../services/StreamClient';
 import type { ChatMessage, ValidWidgetConfig, WidgetSettingsData } from '../types';
 
 export const flushMicrotasks = (): Promise<void> => Promise.resolve();
@@ -103,4 +113,21 @@ export function mockMediaStream(overrides: Record<string, unknown> = {}): MediaS
     getTracks: () => [],
     ...overrides,
   } as unknown as MediaStream;
+}
+
+interface StreamClientTestHandle {
+  handleMessage: (event: WidgetEvent) => void;
+}
+
+export const asStreamClientInternals = (): StreamClientTestHandle => streamClient as unknown as StreamClientTestHandle;
+
+export function browserToolServiceMock(executeTool: (...args: never[]) => unknown) {
+  return {
+    browserToolService: {
+      executeTool,
+      getFriendlyToolName: (name: string) => name,
+      isWaitForUserTool: () => false,
+    },
+    FINISH_TOOL,
+  };
 }
