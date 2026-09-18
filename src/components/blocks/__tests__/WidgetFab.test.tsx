@@ -7,14 +7,18 @@
  * `pixelPositionStyle` is computed from `window.innerWidth`/`innerHeight` at render time and the resize
  * listener only forces that re-render — there is no separate clamp step to duplicate. `renderDragSnap`
  * is the one hook-under-test setup every case below shares: a measured 56x56 wrapper (`wrapperFor`) at
- * the bottom-right corner, wired to whatever `onPositionCommit` a case needs.
+ * the bottom-right corner, wired to whatever `onPositionCommit` a case needs. The resting-anchor case
+ * renders the whole widget instead, to pin the actual CSS the launcher ends up with.
  */
-import { act, renderHook } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 import { createRef } from 'react';
 
+import { chatSessionManager } from '../../../services/ChatSessionManager';
 import { readLocal, scopedKey, writeLocal } from '../../../services/StorageService';
+import { streamClient } from '../../../services/StreamClient';
 import { resetDom } from '../../../test/preload';
+import { renderWidget } from '../../../test/renderWidget';
 import type { MarketrixConfig, WidgetPosition } from '../../../types';
 import { useDragSnap } from '../WidgetFab';
 
@@ -95,5 +99,22 @@ describe('a viewport resize re-derives the launcher anchor', () => {
 
     expect(result.current.pixelPositionStyle?.left).not.toBe(before?.left);
     addSpy.mockRestore();
+  });
+});
+
+describe('the resting launcher anchor', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it('pins two edges, never four', async () => {
+    vi.spyOn(chatSessionManager, 'getOrCreateChatId').mockResolvedValue('chat-1');
+    const connect = vi.spyOn(streamClient, 'connect').mockResolvedValue();
+
+    const { container } = renderWidget({}, { previewMode: false });
+    await waitFor(() => expect(connect).toHaveBeenCalled());
+
+    const anchor = container.querySelector<HTMLElement>('.mtx-fab-anchor');
+    expect(anchor).not.toBeNull();
+    const pinned = (['top', 'bottom', 'left', 'right'] as const).filter(edge => anchor?.style[edge] !== '');
+    expect(pinned.sort()).toEqual(['bottom', 'right']);
   });
 });
