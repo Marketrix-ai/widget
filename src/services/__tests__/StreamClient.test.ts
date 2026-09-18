@@ -1,43 +1,8 @@
 /**
- * The whole `StreamClient` suite: registration lifecycle and the Retry affordance, over an `sdk` module mock whose
- * `widgetStream` / `widgetMessagePost` are `vi.fn()`s (`mockSdk`), so no SSE transport is involved. Both halves
- * drive the one singleton, which is why they share a file — split across two, each left the other's leaked
- * instance state behind. `freshClient()` disconnects the shared instance before handing it back for that reason;
- * `internals()` reaches the private fields a test has to stage, since there is no public way to park the client in
- * "open but never registered" — `StreamClientInternals`' fields are each typed by indexed access into the real
- * `StreamClient` (`StreamClient['handleMessage']` etc.), not a hand-written duplicate, so a real signature or
- * `StreamStatus` union change is a compile error here instead of a silently stale mock; that typing is what
- * caught `chat/error`'s hand-built fixture once carrying a `message` field the real schema has never had (`error`
- * is the field), an invalid event `handleMessage` happened not to read on that branch but would have on any that did.
- *
- * Registration lifecycle pins that a caller parked on registration is always settled: disconnect rejects old
- * waiters without leaking into a remount, giving up reconnection or a refused credential rejects rather than
- * hanging, a refused credential outlives `connect`, and an open-but-unregistered stream is still pending — so a
- * send can never outrun registration.
- *
- * The retry cases pin that `reconnectNow` after a failed dial redials at once rather than after the backoff (only
- * `registered` ever resets the counters, so at the cap `scheduleReconnect` gives up for good and Retry is the only
- * way back — fake timers keep the pending timer from firing, proving the second `widgetStream` call came from
- * `reconnectNow` itself); that it also redials a stream stuck mid-dial rather than no-op on a connection that will
- * never resolve; and that auth rejection is terminal, with the surfaced error naming "credentials were rejected"
- * rather than going silent the way an unmatched `chat/error` would. An open-but-not-yet-registered stream
- * still reads `canReconnect() === true`, matching a visitor hitting Retry before the handshake finished
- * while the old dial's iterator is still live — abort doesn't synchronously stop an in-flight fetch's
- * already-buffered chunks.
- *
- * `asMockedStream`/`emptyStream` cast a plain async iterable to `MockedStream`: oRPC's real `widgetStream`
- * resolves to its own private-field `AsyncIteratorClass`, which no plain async generator can structurally
- * satisfy, and the cast stands in for it — sufficient here since `StreamClient` only ever iterates the result.
- *
- * The fault-injection block drives the real reconnect machinery instead of reading source with regex:
- * `controlledStream()` is a double whose `push`/`fail`/`end` control a paused async generator, standing
- * in for a dropped/resumed SSE connection. It pins that a connection superseded by `reconnectNow` (the
- * old iterator still draining when the new one opens) never delivers its stale, already-superseded
- * events to `onMessage` — the guard a visitor relies on not to see an old turn replayed after a
- * reconnect — that each of the 10 retries actually fires within the documented
- * 1000ms-doubling-to-30000ms-cap schedule's own equal-jitter window ([base/2, base]), not just source
- * constants, and that give-up (either the attempt cap or the
- * `auth` `chat/error`) schedules no further dial no matter how long fake time advances.
+ * Tests for `StreamClient`'s registration lifecycle and the Retry affordance, over a mocked `sdk` module
+ * so no real SSE transport is involved. Covers that a caller parked on registration is always settled
+ * (disconnect, give-up, refused credential), the exponential-backoff reconnect schedule and its jitter
+ * window, and that a superseded connection's stale events never reach a later turn.
  */
 
 import { sdk, type WidgetEvent } from '../../sdk';
@@ -253,8 +218,6 @@ describe('StreamClient guard conditions', () => {
   });
 
   it('does not resume a scheduled reconnect once torn down before the timer fires', async () => {
-    // Set tornDown directly (not via disconnect(), which also clears chatId) so the pending timer's
-    // guard is the only thing standing between it and a stray dial on an abandoned client.
     vi.useFakeTimers();
     const client = freshClient();
     mockSdk.widgetStream.mockRejectedValueOnce(new Error('down'));
@@ -372,9 +335,6 @@ describe('StreamClient fault injection', () => {
     client.addCallbacks({ onError: e => errors.push(e) });
 
     for (const [i, base] of baseDelays.entries()) {
-      // Equal jitter halves the base delay then adds a uniform random half: the dial can fire any time in
-      // [base/2, base], never earlier (a thundering-herd guard that still respects the schedule's own cap)
-      // and never later (the schedule's own upper bound still holds).
       await advanceTimersByTimeAsync(base / 2 - 1);
       expect(mockSdk.widgetStream).toHaveBeenCalledTimes(i + 1);
       await advanceTimersByTimeAsync(base / 2 + 1);

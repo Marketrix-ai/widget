@@ -1,27 +1,7 @@
 /**
- * `ShowModeService` tests: a second show action cancels the one it replaced and leaves the replacement
- * live; an action the page invalidates rejects with the one reason `DomService` gave, never a second
- * contradicting code; and the click listener detached on settle leaves a stray click on the (removed)
- * target inert — it must not throw and must not resurrect a highlight or popup. A restage identical to
- * the in-flight one (same element/explanation/tool) returns the SAME pending promise rather than
- * cancelling and re-staging; `cleanup` detaches every handler it registered, not only the ones already
- * null, so a superseded show action cannot leave a stray listener on `document`/`window`; and a non-click
- * (Tell) action settles on the popup's Continue button, never on an element click.
- *
- * The restage-dedupe assertion spies on `cleanup()` rather than comparing the two calls' return values:
- * `showToolAction` is `async`, so even the dedupe branch's `return this.currentPromise` comes back
- * wrapped in a NEW promise per call, but `cleanup()` runs unconditionally past the dedupe check, so it is
- * the real signal. The handler-detach test clears the `clearInterval` spy after the first (still-null)
- * interval fires inside `showToolAction`'s own internal `cleanup()`, so only the explicit `cleanup()`
- * call against the now-live interval is being asserted. The popup fit-check table crafts each case to
- * marginally satisfy (real code) or marginally fail (a `>`/`<` mutant of the `>=`/`<=` check) exactly one
- * clause on the FIRST candidate position, with a later candidate valid at a clearly different,
- * distinguishable spot — candidate 0 is also the loop's un-matched fallback value, so a scenario where
- * every other candidate is invalid too could not otherwise tell a passing check from a failing one.
- *
- * The `../DomService` mock stubs only `getSequenceForElement`/`notInteractableReason` — the only two
- * `domService` methods `ShowModeService` itself calls — typed against the real `DomService` class via
- * `Pick<DomServiceClass, ...>` so a real signature change fails this mock at compile time.
+ * Tests for `ShowModeService`: staging a show action highlights and pops up over the target, a second
+ * stage supersedes the first, an identical restage is deduped, cleanup detaches every listener, and a
+ * page-invalidated target rejects with the reason `DomService` gave.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 

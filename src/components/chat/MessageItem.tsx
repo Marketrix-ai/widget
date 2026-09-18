@@ -1,24 +1,13 @@
 /**
- * One transcript row and everything drawn inside it. `MessageItem` renders a system message centred and
- * faint, or a user/agent row with a leading glyph (a pointer for show/do requests, a check for a
- * screen-access request or a waiting-for-user placeholder), the sender label as an aria-label, the body,
- * the allow/deny controls of a screen-access request, and a done/failed/stopped glyph in the tenant
- * accent at a per-status opacity. The last message fades in.
+ * One transcript row and everything drawn inside it: a system message centred and faint, or a
+ * user/agent row with a leading glyph, sender label, body, screen-access allow/deny controls, and a
+ * done/failed/stopped status glyph.
  *
- * **Memoized, and `isTaskRunning` arrives as a prop rather than through `useWidget()`.** `MessageList`
- * commits a whole new `messages` array on every `chat/delta` token (`ChatContext`'s reducer keeps
- * reference equality for every message except the one being streamed into), so a `useWidget()`/
- * `useChatContext()` call anywhere inside a list row re-subscribes that row to the token stream directly
- * and defeats `React.memo` regardless of props — measured at ~21 `MessageItem`/`MessageBody` renders per
- * token in a 20-message transcript before this change (one per row), ~1 after (only the streaming row).
- * `onScreenAccessAllow`/`onScreenAccessDeny` must stay referentially stable (`ChatView`'s `useScreenShare`
- * wraps them for exactly this) or the memo comparison never bails.
- *
- * `MessageBody` renders the message's `parts` — text and progress lines — and `Thinking` is the
- * spinner-and-caption row shown while a reply is pending, its caption switching to name the visitor's
- * action when the agent is blocked on them. Thinking shows while a placeholder carries no text yet, and
- * also while the task is still running on the LAST show/do message, where text has already arrived but
- * more work is coming; a message with no parts at all falls back to a bare `Surface`.
+ * `MessageItem` is memoized and takes `isTaskRunning` as a prop rather than reading it from context,
+ * because a list row that subscribes to context directly re-renders on every streamed token regardless
+ * of memoization. `onScreenAccessAllow`/`onScreenAccessDeny` must stay referentially stable for the same
+ * reason. `MessageBody` renders a message's parts; `Thinking` is the spinner-and-caption row shown while
+ * a reply is pending or more work is still coming.
  */
 import React from 'react';
 

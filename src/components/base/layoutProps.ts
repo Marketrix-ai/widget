@@ -1,25 +1,13 @@
 /**
- * Layout vocabulary shared by the base components: the token props `LayoutProps` accepts,
- * `resolveLayoutStyle` which reduces them to a `CSSProperties` object, and `stripLayoutProps` which
- * removes them from a props bag so the remainder can be spread onto a DOM element. `SPACING_SCALE` is
- * the exported `SpacingToken`→pixel table, declared smallest-first so a token name orders the same way
- * as the pixels it emits.
+ * Layout vocabulary shared by the base components: the `LayoutProps` a component accepts,
+ * `resolveLayoutStyle` which turns them into a style object, and `stripLayoutProps` which removes them
+ * from a props bag before the rest is spread onto a DOM element. `SPACING_SCALE` is the exported
+ * spacing-token-to-pixel table.
  *
- * Layout props resolve to a style object rather than class names: as classes they were interpolated
- * (`p-${token}`), which no scanner could see, so a build-time safelist emitting the whole 8x7 matrix was
- * the only thing keeping them alive and a missing entry failed silently at runtime. `resolveLayoutStyle`
- * emits a property only for a prop set to a non-default value (`grow: false`, `shrink: true`, `border:
- * false`, `rounded: false` and `animate: 'none'` deliberately emit nothing), and its `ANIMATION` values
- * name `mtx-*` keyframes `index.css` must define.
- *
- * `LAYOUT_KEYS` must list every key of `LayoutProps`: `stripLayoutProps` filters by that set, so a
- * layout prop missing from it reaches the DOM as an unknown attribute. `as` and `style` are in it
- * because the consuming component (`Surface`) applies them itself rather than forwarding them.
- *
- * `withClass(base, extra)` appends an optional caller `className` to a component's fixed base class. It
- * is NOT the banned `cn()`: there is no variant list to merge or dedup, just a plain conditional concat
- * of one fixed string and one optional string — variants stay on `data-*` attributes per the styling
- * rule in `../../../CLAUDE.md`.
+ * Layout props resolve to inline style rather than class names, since a class-based version needed a
+ * build-time safelist that silently dropped anything missing from it. `LAYOUT_KEYS` must list every key
+ * of `LayoutProps`, or a prop missing from it leaks through to the DOM as an unknown attribute.
+ * `withClass` appends an optional caller class to a component's fixed base class.
  */
 import type { CSSProperties, ElementType } from 'react';
 

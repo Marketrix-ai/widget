@@ -1,33 +1,8 @@
 /**
- * `useFocusTrap` tests: Escape closes the widget when focus is inside the trapped container and is
- * declined when focus is on the host page — the key belongs to the widget only while it has focus. Tab
- * and Shift+Tab cycle within the container without ever handing focus back to the host page, and
- * deactivating the trap (panel close) returns focus to whatever the host page had focused before
- * activation (the FAB, in production). The trap's own `document`-level listener is removed on unmount —
- * asserted by diffing `addEventListener`/`removeEventListener` call counts, since a leaked listener here
- * would keep intercepting the host page's Tab/Escape after the widget panel is gone. jsdom does no
- * layout, so every element reports `offsetParent === null` and `focusablesIn`'s visibility filter would
- * drop the whole tab order — stubbed the same way `dom.test.ts`/`keySimulation.test.ts` do.
- *
- * `useResize` tests: how a dashboard width/height setting resolves to a starting size, how dragging the
- * one grip resizes the panel from each pinned corner, and how the keyboard-resize arm reaches that same
- * `clampSize` path and boundary as a drag.
- *
- * `sizeFor` renders the hook with only the two settings varying and returns its result: a `px` setting
- * is used verbatim; a length the hook can't convert to px (`rem`, `em` — it parses `<number>px` only)
- * falls back to the 360x450 default; a setting outside the drag range clamps to the same bounds a drag
- * clamps to (280/600 wide, 320 tall min). The over-max case asserts width only, since the height
- * ceiling is 85% of `window.innerHeight`, pinning jsdom's viewport.
- *
- * `OUTWARD` is the pointer delta moving the grip away from the pinned corner — the grip sits diagonally
- * opposite, so the sign flips with the anchor and negating it gives the inward drag. `drag` runs a
- * whole mousedown → mousemove → mouseup against a detached div and returns its inline style: the drag
- * path writes width/height straight to the element (skipping a re-render per mousemove), only the
- * settled size reaching React state via `act`. Each `drag`/`resizeHook` mints a fresh `tenant-N` scope
- * (`dragCount`) since a settled drag or keyboard step persists to localStorage under
- * `marketrix_widget_size_<scope>`, and a stored size wins on the next mount — one shared scope would
- * leak a case's result into the next. `isPreviewMode` is false: preview mode returns before binding
- * anything, so no drag, no write.
+ * Tests for `useFocusTrap` (Escape/Tab trapping scoped to the messenger panel, and focus restore to the
+ * host page on deactivation) and `useResize` (starting size from dashboard settings, drag-to-resize from
+ * each pinned corner, and the keyboard-resize arm reaching the same clamp bounds as a drag). jsdom does
+ * no layout, so `offsetParent` is stubbed to make `focusablesIn`'s visibility filter see a tab order.
  */
 import { act, render, renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'bun:test';

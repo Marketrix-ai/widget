@@ -1,25 +1,12 @@
 /**
- * Pure helpers for the chat message list — the mode label, the hh:mm timestamp, the newest-first
- * `lastIndexWhere` (also used by `useScreenShare`), and `addProgressLine` / `markProgressLineComplete` /
- * `markProgressLineFailed`, which append or settle the open progress part for one `browserToolName` via
- * `openLineFor` and the shared `patchPart` copy-on-write. `createMessage` and its per-sender constructors are
- * the ONLY way a `ChatMessage` is built: ids are `<prefix>-<uuid>` since two messages minted in the same millisecond
- * would otherwise collide, and empty content yields no `text` part, the screen-share bubble rendering from `videoStream`
- * alone and a placeholder having nothing to say yet. `SCREEN_ACCESS_PROMPT` is the one wording of the
- * screen-access ask, the transcript card and the toolbar dialog being two renderings of one question.
- * `CHAT_FAILURE_TEXT` is the one human sentence for "the assistant could not process that turn" —
- * `ChatContext`'s message-post catch and `sseReducer`'s `chat/error` case both settle a bubble with it
- * rather than the raw POST failure or the raw server `error` string, which may carry request/response
- * internals a visitor must never see.
+ * Pure helpers for the chat message list: formatting (mode label, timestamp), finding which message a
+ * progress or tool event belongs to, and building every kind of `ChatMessage`.
  *
- * `findMessageForProgress` picks the agent reply a `tool/call` or progress event renders into, by ranked
- * predicates: the first rank matching anything wins, within a rank the newest message, and no match at all is a
- * legitimate outcome, warned not thrown. Every rank is bounded to messages after the last agent message carrying
- * a `taskStatus`, since a terminal stamp means that run already ended — unbounded, a late event reaches back past
- * the stamp onto an already-settled reply and a late `completed` overwrites a `stopped` icon. Placeholders with
- * `mode` still undefined match leniently and a mode-agnostic rank is always appended, since a `tool/call` can
- * arrive before the mode is set. `filterCancellationText` strips "cancelled by cleanup" from progress content
- * and error text — chatter from a torn-down run a visitor should never see.
+ * `findMessageForProgress` picks the right open message for an incoming update by a ranked set of
+ * predicates, falling back to "no match" (logged, not thrown) rather than guessing wrong. `createMessage`
+ * and its per-sender constructors are the only way a `ChatMessage` is built, so ids and shape stay
+ * consistent. `CHAT_FAILURE_TEXT` and `SCREEN_ACCESS_PROMPT` are the one wording each site uses for
+ * those two situations, so the failure text never leaks raw server error details to a visitor.
  */
 import type { ChatMessage, InstructionType, MessagePart } from '../types';
 import { logWarn } from './log';

@@ -1,26 +1,11 @@
 /**
- * Widget-wide shared types: the config shapes a host supplies, the chat message/part model, the UI
- * store shape, and `messageText` — the one place a message's displayed text is derived.
+ * Widget-wide shared types: the config shapes a host supplies, the chat message/part model, and the UI
+ * store shape. `messageText` joins a message's text parts into the string a render site displays.
  *
- * `ClientOwnedConfig` holds host-supplied knobs the api never sends (`show_widget: false` still
- * initializes the widget fully and only hides its UI; `use_screenshare: false` auto-denies
- * screen-access requests and hides the Share Screen button; both default true; `styleNonce` reaches
- * the injected shadow-root `<style>` element for a host running a strict `style-src` CSP with no
- * `'unsafe-inline'`). `MarketrixConfig` is
- * deliberately FLAT so api settings spread straight in — `mtxId`+`mtxKey` is the credential, while
- * `mtxApp` is stamped internally after validation and never an input, since an application id is
- * guessable and authenticates nothing. `ValidWidgetConfig` is a `MarketrixConfig` run through
- * `parseWidgetSettings`, so every rendered setting is present. `ChatMessage`+`MessagePart` are the chat
- * model; `WidgetState` is the flattened read model `useWidget()` folds from `UIStateContext`+
- * `ChatContext`; `WidgetPosition` re-aliases `widget_position` as the drag-snap/resize corner
- * vocabulary; `AddWidgetConfig`'s union makes `settings` and `mtxId`/`mtxKey` mutually exclusive.
- * `ChatMessage.pendingContent` queues a message behind an open screen-access request, sent once it
- * resolves. A `streaming` `MessagePart` accumulates `chat/delta` fragments until the final
- * `chat/response` replaces it. `taskStatus`/`MessagePart.status` are presentational only, not the wire
- * vocabulary (`task/status.status`). `messageText` joins text parts and IS the text — `ChatMessage` has
- * no `content` field of its own; a render site calls `messageText(msg.parts)` directly. The one
- * exception is `StorageService`'s persisted `StoredMessage`, which keeps its own `content` string to
- * migrate a transcript stored before `parts` existed — see that file's header.
+ * `MarketrixConfig` is deliberately flat so api settings spread straight into it; `mtxApp` is stamped
+ * internally after validation rather than taken as input, since a bare application id is guessable and
+ * authenticates nothing. `ValidWidgetConfig` is a `MarketrixConfig` that has passed `parseWidgetSettings`.
+ * `taskStatus`/`MessagePart.status` are presentational labels only, not the `task/status` wire vocabulary.
  */
 import type { InstructionType, WidgetSettingsData } from '../sdk';
 import type { WidgetRenderedSettings } from '../utils/validation';

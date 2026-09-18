@@ -1,39 +1,10 @@
 /**
- * The shared widget-settings fixture the config-driven tests build from: `getMockWidgetConfig(overrides)`
- * returns a complete, schema-valid tenant config — every rendered setting plus the `mtxId`/`mtxKey`
- * credential, api host and preview flag — shallow-merged with `overrides`. It's `MockWidgetConfig`, wider
- * than `WidgetRenderedSettings`, since callers hand it straight to `WidgetSettingsDataSchema.parse()`,
- * which demands the four render constants that schema omits.
- *
- * `validSettings(overrides)` is the parsed form most call sites want, living here so the schema import
- * stays confined to test-only files; `validation.test.ts` keeps its own inline parse since there the
- * schema IS the thing under test. `mountTarget()` is a fresh detached `<div>` (a new one per call, so
- * reuse across containers in one test is still correct); `flushMicrotasks` names the common
- * one-microtask-tick wait explicitly.
- *
- * `agentMessage(overrides)` is the shared `ChatMessage` builder for tests that need one without caring
- * about its exact shape. `credentialedConfig(overrides)` is `validSettings()` plus the
- * `mtxId`/`mtxKey`/`mtxApp` triple and `isPreviewMode: false` a resolved PRODUCTION config carries — the
- * real shape `WidgetService.loadWidgetConfig` resolves to, so a mock never hides a field it forgets to set.
- *
- * `mockMediaStream(overrides)` is the one home for the browser's un-mockable `MediaStream`: the DOM lib
- * type has no constructor a test can call, so every caller needs the same `as unknown as MediaStream`
- * bridge — centralizing it here means that bridge exists exactly once instead of once per test file.
- *
- * `asStreamClientInternals()` is the one cast for reaching `streamClient`'s private `handleMessage`
- * (simulate an incoming SSE event) and `notifyError` (simulate a connect/stream failure reaching every
- * registered `onError` callback, the same path a real failed dial or dropped stream takes) —
- * `streamClient` is a class instance, so (unlike `mockSdkModule` in `vi-compat.ts`) the value itself
- * can't be typed against the real module without an `as unknown as` cast past TypeScript's privacy
- * check; each field is still typed as `StreamClient['handleMessage']`/`StreamClient['notifyError']`,
- * not a hand-written signature, so a real parameter/return change on either method is a type error here
- * too instead of a silently stale mock. `browserToolServiceMock(executeTool)`
- * is the one home for the `vi.mock('.../BrowserToolService', ...)` factory shape, typed as
- * `Pick<BrowserToolService, 'executeTool' | 'getFriendlyToolName' | 'isWaitForUserTool'>` — the class's
- * unrelated private fields (`tools`, `element`, `selectElement`) don't block `Pick` over its public
- * surface, so no `as unknown as` is needed here, unlike `StreamClient`'s handle above. It imports the
- * real `FINISH_TOOL` rather than re-literalling `'finish'`, which `sourceInvariants.test.ts` bans
- * outside `BrowserToolService.ts` itself.
+ * Shared test fixtures for widget tests. `getMockWidgetConfig`/`validSettings`/`credentialedConfig`
+ * build a complete, schema-valid tenant config (preview and resolved-production shapes); `agentMessage`
+ * builds a `ChatMessage`; `mockMediaStream` stubs the browser's un-mockable `MediaStream`;
+ * `asStreamClientInternals` reaches `streamClient`'s private `handleMessage`/`notifyError` for
+ * simulating SSE events and stream failures; `browserToolServiceMock` shapes the
+ * `vi.mock('.../BrowserToolService', ...)` factory.
  */
 import { WidgetSettingsDataSchema } from '../sdk';
 import { type BrowserToolService, FINISH_TOOL } from '../services/BrowserToolService';

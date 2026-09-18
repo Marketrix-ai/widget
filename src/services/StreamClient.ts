@@ -1,30 +1,14 @@
 /**
- * Singleton SSE transport between the widget and the api, exported as `streamClient` like every other service: it drains one `widgetStream`
- * iterator in the background, `send` posts via `widgetMessagePost`, `ready` connects then waits,
- * `waitUntilRegistered` parks a caller, `canReconnect`/`reconnectNow` back the Retry affordance, `disconnect`
- * tears down and rejects parked callers, and `StreamGaveUpError` marks a stream that has stopped retrying.
+ * Singleton SSE transport between the widget and the api, exported as `streamClient`.
  *
- * `open` is the transport, `registered` is the chat: only the latter can carry a reply, so `isConnected` reads
- * `registered` and nothing waits on `open`. Backoff counters reset only on `registered` — resetting at `open` would
- * defeat the max-attempts cap if registration never lands and the stream flaps open→closed. `scheduleReconnect`'s
- * EQUAL JITTER (the doubling delay's own second half, chosen uniformly) keeps every dial within the documented
- * schedule's bound while stopping every tab across every open customer page from redialing on the exact same
- * clock tick after a shared outage — a thundering herd the deterministic schedule alone cannot prevent. Tabs share the
- * localStorage chat id, so the server keys SSE by (chat_id, tab_id) and `tabId` stops tabs evicting each other's
- * stream. Credentials are read at connect time, not captured at init, so a reconnect after `updateMarketrixConfig`
- * dials with the current ones.
+ * Drains the `widgetStream` event iterator in the background, `send` posts a command via
+ * `widgetMessagePost`, `ready`/`waitUntilRegistered` let a caller wait for a live connection, and
+ * `canReconnect`/`reconnectNow` back the Retry affordance. `StreamGaveUpError` marks a stream that has
+ * exhausted its reconnect attempts.
  *
- * A `chat/error` whose `request_id === 'auth'` is non-retriable: `chat/error` otherwise settles the message whose
- * id is the request id, and no message is ever id `'auth'`, so without the explicit `giveUp` here the widget went
- * permanently silent — no toast, no bubble, and (console dropped by terser) no trace. Both give-up messages are
- * read by a visitor on a customer's page, so they name the state and the way out rather than the counter, and
- * `giveUp` needs no console line of its own for the same reason. A dial or stream that will be retried warns;
- * only the rejected credential is an error, being the one failure nothing here recovers from.
- *
- * `send` never turns its own POST failure into a user-facing `onError` — the raw failure (network cause, a
- * 4xx/5xx body) goes only to `logWarn`, since every caller already reports its own human sentence on the
- * same catch (`ChatContext`'s message/tool-response/stop paths); notifying here too would have shown the
- * caller's visitor a second, raw-text toast racing the first.
+ * Reconnects back off exponentially with jitter, so open tabs across a shared outage don't all redial
+ * on the same clock tick. Tabs on one host page share a stored chat id but each dials with its own tab
+ * id, so the api can key the SSE stream per tab. An auth rejection gives up rather than retrying.
  */
 import { sdk, type WidgetCommand, type WidgetEvent } from '../sdk';
 import { logWarn } from '../utils/log';

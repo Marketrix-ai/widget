@@ -1,42 +1,14 @@
 /**
- * Browser-local persistence for the widget: the one door to `localStorage`, and the per-tenant chat
- * context (chat_id, transcript, composer mode, open state, resolved config) behind the `storageService`
- * singleton. `tenantScope` (credential id, else application id, else `default`) is the scope suffix every
- * browser-local key shares via `scopedKey`, so the chat-context, drag-position and resize keys all
- * partition by tenant identically. `readLocal`/`writeLocal` are the only `localStorage` access in `src/`;
- * a host page can deny storage outright (third-party cookies off, sandboxed iframe), so both degrade to
- * memory and the widget keeps working unpersisted. `updateContext` calls `writeLocal` on every UI-state
- * change (a drag, a resize, every chat message), so without `warnOnce` a denied host page would spam one
- * console line per write for the visitor's whole session; a single warn on first denial says everything
- * a customer's console needs. `warnOnce` is keyed by read vs. write since `readLocal` also fires once on
- * its own (`loadContext` at module init, before any write) and both should still surface if a page
- * somehow denies one and not the other.
+ * Browser-local persistence for the widget: the one door to `localStorage`, behind the
+ * `storageService` singleton.
  *
- * `loadContext` merges one parsed key over `DEFAULT_CONTEXT`, so an older widget version's payload reads
- * as incomplete rather than corrupt, and discards anything past `CONTEXT_EXPIRY_MS` (7 days).
- * `getCredentialedConfig` is null unless both `mtxId` and `mtxKey` are present, so callers cannot
- * dispatch half-credentialed. `setConfig` re-keys storage to `${STORAGE_KEY}_${tenantScope}` and reloads
- * from it, since without that two applications on one origin would leak one tenant's transcript into
- * another's.
+ * `readLocal`/`writeLocal` read and write a key, falling back to memory when a host page denies
+ * storage. `scopedKey` suffixes a key by tenant so two tenants on one page never share state.
+ * `loadContext`/`setConfig`/`updateContext` manage the per-tenant chat context; `writeChatSnapshot`/
+ * `readChatSnapshot` persist and restore the transcript. `getCredentialedConfig` needs both credentials.
  *
- * `writeChatSnapshot`'s own parameter is `{messages, currentMode, isOpen}` — chat_id, config and
- * timestamp are deliberately excluded from THAT function's input, though `config` (via `setConfig`)
- * and `chat_id`/`timestamp` (via `updateContext`) are still part of the one persisted record on disk;
- * `config` there is the tenant's own `mtxId`/`mtxKey`/`mtxApiHost`/`userId`/rendered settings — no
- * broader PII, and `mtxId`/`mtxKey` are already fully public in the host page's own script-tag markup,
- * not a secret this adds exposure to. `StoredMessage` is the ONE place `content` still exists as a
- * field: a live `ChatMessage` has
- * none (every reader derives `messageText(parts)` instead), but a transcript written before `parts`
- * existed has only `content` on disk, so `readChatSnapshot` backfills a text part from it and
- * `writeChatSnapshot` derives `content` back from `parts` on the way out, keeping the persisted shape
- * readable by an older widget version without carrying the redundant field in memory. Reading also
- * revives `timestamp` to a `Date`; writing drops `videoStream` (unserializable, dead on reload),
- * rewriting it as "Screen sharing ended".
- *
- * `sanitizeStoredContext` is hand-rolled, not zod, per the package-level rule that a schema imported as a
- * VALUE anywhere reachable from `src/index.tsx` pulls zod's whole runtime into the bundle. Each field
- * falls back to `DEFAULT_CONTEXT`'s value individually, so a partially-corrupt payload keeps the fields
- * that DID parse rather than discarding the whole context.
+ * A transcript older than a week is discarded, and a corrupted stored context falls back
+ * field-by-field to defaults rather than being thrown away whole.
  */
 import {
   type ChatMessage,
@@ -92,9 +64,6 @@ function warnOnce(kind: 'read' | 'write', message: string, error: unknown): void
   logWarn(message, error);
 }
 
-/** Test-only: `warned` is module-level so a "denies storage, keeps working" proof isn't the last test in
- * the file to touch a denied `Storage.prototype`, and a later test in the same `bun test` process (one
- * process per file, not per test) would otherwise see zero warns instead of one. Never called from `src/`. */
 export function resetStorageWarningsForTests(): void {
   warned.read = false;
   warned.write = false;

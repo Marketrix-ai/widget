@@ -1,22 +1,6 @@
 /**
- * `bun test` suite over `simulateKeyAction` — the hand-rolled key behaviour the widget runs because a programmatic
- * KeyboardEvent is untrusted and fires no default action. Covers Tab/Shift+Tab focus movement and
- * Backspace/Delete text editing, the two key groups with real state to get wrong. `render` mounts three sibling
- * buttons, `input` mounts one `<input>` with a value and a caret or selection range, and `afterEach` empties the
- * body since tab order is resolved with a document-wide query and a leftover node would join the next test's
- * focus order. The prototype `offsetParent` override is load-bearing: jsdom does no layout, so every element
- * reports `offsetParent === null` and the visibility filter over `TABBABLE_SELECTOR` would drop the entire tab
- * order, leaving every Tab assertion trivially "no next focusable element".
- *
- * Tab/Shift+Tab: steps focus to the next/previous focusable, named by tag and id; refuses at either end of the
- * order and refuses an element not in the order at all, pinning the guard on `indexOf` === -1, without which -1 +
- * 1 indexes the FIRST element and silently wraps focus to the top of the page. Backspace/Delete: removes the
- * character on the correct side of the caret, or the whole selection when there is one; dispatches `input` then
- * `change` so a controlled input observes the edit; refuses at the start (Backspace) and at the end (Delete). The
- * Home case, and the "no explicit selection" case, pin that caret position 0 is a position, not a missing one —
- * `selectionStart`/`selectionEnd` are read with `??`, since a `||` fallback would treat 0 as absent; the fallback
- * value is `value.length`, i.e. an element that exposes no selection range (some browsers, some input types)
- * reads as having its caret at the END, not the start.
+ * Tests for `simulateKeyAction`, the hand-rolled keyboard behavior driving Tab/Shift+Tab focus
+ * movement and Backspace/Delete/Arrow text and selection editing.
  */
 
 import { afterEach, describe, expect, it } from 'bun:test';

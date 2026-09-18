@@ -1,26 +1,7 @@
 /**
- * Vitest suite for `utils/validation.ts` — `parseWidgetSettings` and `invalidSettingsMessage`.
- *
- * `parseWidgetSettings` replaced `WidgetSettingsDataSchema.safeParse` to keep zod's 91 kB runtime out
- * of every host page. zod is still a dependency of the generated mirror, so it is importable HERE,
- * making the schema the oracle these tests assert agreement against. `valid` is the mock config run
- * through the schema, `FIELDS` its key list driving the per-field cases.
- *
- * A valid object is accepted by both. Unknown keys are stripped exactly as zod did — load-bearing,
- * since a widget's settings carry render constants too and the result spreads into the widget config,
- * so a passed-through key would leak; the expectation is the schema's parse minus those constants. The
- * four render constants (`widget_border_radius`, `widget_font_size`, `widget_animation_duration`,
- * `widget_fade_duration`) are separately asserted absent — still guarded so a legacy stored value keeps
- * passing but is never picked, since the widget renders them from its own hard-coded values. Per field,
- * a wrong-typed and a missing value are both rejected and named, since `12345` is wrong for every field
- * — booleans, strings, enums, the chip array. Off-enum values (`widget_appearance: 'compact'`, retired
- * in db-V246, and `widget_position: 'middle'`) and a malformed chip name their own field; a non-object
- * input only asserts rejected, since an array returns the whole table rather than one name — the last
- * case pins every invalid field reported, in guard-table order.
- *
- * The non-object-input cases are each wrapped as a single-element array (`[[]]`, not a bare `[]`):
- * Bun's `it.each` spreads an array-shaped entry into positional arguments, so a bare `[]` entry passes
- * zero arguments and Bun mistakes the sole declared parameter for a `done` callback, hanging the case.
+ * Tests for `parseWidgetSettings`/`invalidSettingsMessage`, checked against the zod schema they
+ * replace: valid settings pass, unknown keys and render constants are stripped, and each invalid
+ * field is rejected and named.
  */
 import { describe, expect, it } from 'bun:test';
 

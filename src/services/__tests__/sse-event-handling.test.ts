@@ -1,26 +1,7 @@
 /**
- * Contract tests for `WidgetEventSchema`, the server → widget SSE discriminated union of the generated SDK mirror.
- * `StreamClient` consumes the typed iterator and branches on `event.type` without ever re-parsing a frame, so
- * these safeParse calls are the only place the union's shape is asserted; the mirror is regenerated from the api
- * and never hand-edited, so this file is what catches a regenerate that drops, renames or loosens a member.
- * `ALL_WIDGET_EVENT_TYPES` / `ExpectedEventType` are the seven `type` discriminants, and `MINIMAL_EVENT_FIXTURES`
- * the smallest payload that must parse for each.
- *
- * Suites pin: every discriminant still parses from its minimal fixture; a payload with no `type` or an
- * unrecognised `type` is rejected (no member acts as a catch-all) and every parsed fixture carries a non-empty
- * string `type` so `StreamClient` can always branch on it; `registered` requires only `chat_id` and never
- * carries `application_id`, which `StreamClient` never reads; `chat/response` requires both `request_id`
- * and `text`, matched back to its POST by `request_id`; `task/status` requires `status` and accepts the Wave 14
- * canonical wire vocabulary `running | completed | failed | stopped | has_question` (`has_question` is the
- * sim-only pause propagated to the widget) while REJECTING legacy `started` / `in_progress`, a deliberate breaking
- * change pinned here so neither creeps back; `tool/call` requires `tool_call_id` and accepts `mode` only as
- * `show` | `do`; `heartbeat` parses (StreamClient ignores it silently) and `chat/error` with `request_id ===
- * 'auth'` parses as an ordinary event, since treating it as the non-retriable stop-reconnecting case is
- * StreamClient's job, not the schema's.
- *
- * The "all event types" case annotates its callback parameter explicitly: Bun's `it.each` overload for
- * a flat array (rather than an array of tuples) infers it as `unknown`, so the annotation restores
- * `ExpectedEventType`.
+ * Contract tests for `WidgetEventSchema`, the SSE discriminated union: every event type parses from a
+ * minimal fixture, an unknown or missing `type` is rejected, and the legacy `task/status` values are
+ * rejected in favor of the current wire vocabulary.
  */
 import { describe, expect, it } from 'bun:test';
 

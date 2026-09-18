@@ -1,33 +1,9 @@
 /**
- * The one home for `vitest` `vi.*` helpers bun's `vi` compat shim does not implement.
- *
- * `mocked` widens vitest's type-narrowing identity function to bun's own `Mock` type: bun-types leaves
- * `Mocked`/`MockedObject` commented out, so a `vi.mock`-replaced import needs its own mapped type here or
- * every `.mockResolvedValueOnce`/`.mock.calls` read on it fails to type-check. `hoisted` is a plain
- * function call, since bun's `vi.mock`/`mock.module` already runs before the mocked specifier is
- * imported without vitest's separate hoisting pass. `advanceTimersByTimeAsync` advances then yields one
- * microtask tick, letting a promise callback a fired timer just resolved run before the next assertion —
- * bun's shim only has the synchronous form. `waitFor` polls `check` up to `timeout`ms, surfacing only the
- * LAST assertion error after the deadline, matching vitest's contract. `Date.now()` and a real
- * `setTimeout` are BOTH neutralized once `vi.useFakeTimers()` is active — bun freezes `Date.now()` until
- * `advanceTimersByTime` is called and a real timer never fires on its own — so a `check` that never
- * passes would spin the deadline check forever instead of failing at `timeout`. `waitFor` branches on
- * `vi.isFakeTimers()`: under fake timers it advances them itself each poll (so the deadline actually
- * moves and any timer `check` depends on gets a chance to fire); under real timers it waits out a real
- * delay as before.
- *
- * `restoreModuleAfterAll(specifier, importReal)` is the fallback for a `vi.mock` that can't instead
- * `vi.spyOn` per export: `vi.mock` replaces a module for the whole `bun test` process by RESOLVED PATH,
- * so every importer (even via a different relative path or `@/` alias) inherits whichever factory
- * registered last. `vi.spyOn` on the real module's namespace normally fixes this by patching one
- * property on the shared object, but it doesn't work when that object's OWN property-assignment traps
- * ignore it — an oRPC client `Proxy`, for one. This restores the real module in `afterAll`, dynamically
- * imported through a `?real`-suffixed specifier so the import bypasses this exact mock.
- *
- * `mockSdkModule(procedures)` is the one home for a `vi.mock('.../sdk', ...)` factory: every caller of
- * `sdk.<procedure>` stubs only the handful it calls, but the object literal is typed against the real
- * `sdk` client, so a procedure renamed or re-signatured on the widget contract fails each stub at
- * compile time instead of silently returning `undefined` at the call site.
+ * The one home for `vitest`-compat `vi.*` helpers bun's own `vi` shim doesn't implement: `mocked`/
+ * `hoisted` type and hoisting shims, `advanceTimersByTimeAsync`/`waitFor` for fake-timer-aware polling,
+ * `restoreModuleAfterAll` to un-mock a module after a suite (the fallback for when `vi.spyOn` can't patch
+ * a mocked namespace, e.g. an oRPC client `Proxy` whose own property-assignment traps ignore it), and
+ * `mockSdkModule` to type-check an `sdk` mock against the real client.
  */
 import { afterAll, type Mock, vi } from 'bun:test';
 

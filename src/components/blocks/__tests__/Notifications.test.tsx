@@ -1,17 +1,7 @@
 /**
- * Behavioural tests for `WidgetNotifications` — the render-nothing component that mirrors the widget's
- * `error` and `greeting` props into Base UI toasts — mounted inside a real `NotificationProvider`.
- *
- * Base UI keeps the VISIBLE toast `aria-hidden` and announces through a separate `role="alert"` live
- * region, so every text assertion here sees TWO copies and every role query passes `hidden: true`. The
- * old hand-rolled toast had no live region at all, so nothing was ever announced — that is what these
- * tests guard. Inside the hidden subtree an accessible name computes to `""`, so the close control
- * cannot be found by role or name and is queried by its `aria-label` attribute instead. `noop` is the
- * placeholder for callbacks a given case does not assert on. The cases cover: an error reaching both the
- * toast and the live region with its close control calling `onClearError` once; Retry appearing only
- * once `onRetry` is supplied, and firing once when clicked; the error toast's stable id surviving a
- * re-render with fresh inline callback identities without closing or restacking; and the greeting
- * rendering with its body.
+ * Tests for `WidgetNotifications`, which mirrors error and greeting props into Base UI toasts: an
+ * error is announced and dismissible, Retry appears only when offered, the toast survives a re-render,
+ * and a greeting renders with its body.
  */
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 

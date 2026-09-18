@@ -1,31 +1,14 @@
 /**
- * The widget's root component: the one place the raw config prop is touched — position and z-index layered onto it
- * and published through `WidgetConfigContext` — and the one place the root element is published through
- * `PortalContainerContext`. Renders `MessengerShell` (inside an `ErrorBoundary`, so a panel crash still leaves the
- * launcher and toasts alive), `WidgetFab`, `WidgetNotifications`, and a fixed screen-edge glow while a reply or
- * task is in flight; an effect arms the greeting toast.
+ * The widget's root component: the one place the raw config prop is touched and published through
+ * `WidgetConfigContext`, and the one place the mount's root element is published for portals.
  *
- * `widgetPosition`'s stored/drag-pinned corner is read in `useState`'s lazy initializer, not a mount effect —
- * `index.tsx`'s `updateMarketrixConfig` re-mounts the whole tree on any config change (this file's header note
- * above), so `WidgetRoot` never receives an updated `config` prop in place; a sync effect keyed on `config`
- * could only ever re-run for a config this component was never given, which is to say never. The position
- * storage key is written ONLY by a drag — seeding it with `config.widget_position` would pin the dashboard's
- * setting at whatever it was on a visitor's first load — and preview mode neither reads nor writes it, so the
- * dashboard always shows the configured corner. Preview mode overrides the hidden check (`show_widget: false` /
- * `widget_appearance: 'hidden'` suppress the widget on a host page, but the dashboard preview must still render)
- * with its `null` return sitting below every hook so hook order stays stable either way.
+ * Renders `MessengerShell`, `WidgetFab`, `WidgetNotifications` and a screen-edge glow while a reply or
+ * task is in flight, and arms the greeting toast. `useScrollLock` hides page scrolling on mobile while
+ * the panel is open, restoring it on close — hand-rolled, like `MessengerShell`'s `useFocusTrap`,
+ * because the panel is a non-modal surface and a real dialog primitive would also lock the host page.
  *
- * The published z-index is `max(tenant value, LAYER_TOKENS.panel)` so a tenant's low setting cannot sink the
- * widget under the host page's own stacking context. The root `Surface` IS the `[data-marketrix-widget]` element
- * carrying every tenant token as an inline style, which is why it, not the shadow root, is the portal container —
- * a portal landing outside it falls back to `index.css`'s hardcoded palette. `onRetry` is spread in only when
- * `StreamClient.canReconnect()`, so a terminal failure offers no Retry button rather than one that does nothing.
- *
- * `useScrollLock` (below) hides `overflow` on html and body while `state.isOpen`, but only under
- * MOBILE_MAX_WIDTH, where the open panel covers the page; on desktop the host page keeps scrolling. It
- * restores the exact previous values on release. Hand-rolled on purpose, alongside `MessengerShell`'s
- * `useFocusTrap`: both serve a non-modal panel that is not a Dialog, and Base UI exposes no standalone
- * scroll-lock — reaching one by making the panel a Dialog would inert the customer's page.
+ * A tenant's z-index setting can never sink the widget below the host page's own stacking context.
+ * Preview mode always renders, even when a setting would otherwise hide the widget.
  */
 import React, { useEffect, useState } from 'react';
 

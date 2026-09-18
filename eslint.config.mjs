@@ -1,16 +1,11 @@
 /**
  * The widget's ESLint config.
  *
- * The load-bearing rule is the ban on `document.activeElement`. Inside the CLOSED shadow root it
- * retargets to the HOST, so it never names an element of the widget's own tree — focus must be read
- * through `getRootNode()`. `useFocusTrap`'s `activeElementIn` is the one home for that retargeting and
- * is exempted, along with the jsdom tests that mount no shadow root.
- *
- * Unused imports and identifiers are owned by the unused-imports plugin and import ordering by
- * simple-import-sort, so `import/order` is off. `import/no-unresolved` is off because TypeScript
- * already resolves, and `prefer-nullish-coalescing` is off because it needs `strictNullChecks`.
- * `Bun` is a global (not an import) for `scripts/*.ts`, which run under `bun run`, not the browser
- * runtime the rest of `globals` describes.
+ * Bans bare `document.activeElement`, since inside the widget's closed shadow root it retargets to the
+ * host page rather than naming an element of the widget's own tree; `useFocusTrap`'s retargeting helper
+ * and the shadow-root-free jsdom tests are exempted. Unused imports and import ordering are delegated to
+ * dedicated plugins rather than ESLint's own rules, and `Bun` is declared as a global for the scripts
+ * that run under `bun run` rather than in a browser.
  */
 
 import js from '@eslint/js';

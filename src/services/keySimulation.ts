@@ -1,25 +1,13 @@
 /**
- * The default action a real keypress would have taken, run by hand on a HOST-page element. A programmatic
- * `KeyboardEvent` is untrusted, so dispatching one moves no focus, submits no form and edits no text —
- * `BrowserToolService.sendKeys` dispatches the event for any listener watching, then calls
- * `simulateKeyAction` for the behaviour the browser withheld. An unhandled key returns null, which the
- * caller reports as a plain dispatch, and every handled key returns the sentence the agent reads.
+ * Simulates the default action a real keypress would take on a host-page element. A programmatic
+ * `KeyboardEvent` is untrusted and moves no focus, submits no form and edits no text on its own, so
+ * `BrowserToolService.sendKeys` dispatches the event and then calls `simulateKeyAction` to carry out
+ * the behaviour the browser withheld.
  *
- * `setNativeValue` writes through the PROTOTYPE `value` setter rather than assigning the property, since
- * React and Vue install their own instance-level setter that an assignment through it is invisible to;
- * `setValueAndCaret` adds the `input`/`change` events a controlled input needs to observe the edit, then
- * restores the caret, which assigning `value` collapses to the end.
- *
- * Tab order comes from `utils/dom`'s shared `focusablesIn(document)`, the same filter `useFocusTrap` runs
- * over its own container, so the host page's tab order and the widget's own agree on what the browser
- * would actually focus next. An element not in that order reads as index -1 and refuses; without that
- * guard -1 + 1 indexes the FIRST element and silently wraps focus to the top of the page.
- *
- * `stepSelect`/`deleteAt` read `selectionStart`/`selectionEnd` with `??`, not `||`, falling back to
- * `value.length` (not 0): caret position 0 is a position, so a falsy fallback would misread it as absent,
- * and defaulting an unknown caret to the END matches what a real caret does when a field exposes no
- * selection range. A ranged selection always deletes the range regardless of direction; direction only
- * decides which single character goes when start === end.
+ * `setNativeValue` writes through the native `value` setter so React/Vue-controlled inputs still see
+ * the change. `setValueAndCaret` fires the events a controlled input needs and restores the caret.
+ * Tab order reuses the same `focusablesIn` filter as the widget's own focus trap, so an element's next
+ * focus target matches what the browser would actually pick.
  */
 import { focusablesIn } from '../utils/dom';
 

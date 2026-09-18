@@ -1,53 +1,14 @@
 /**
- * React context owning the widget's chat store and its live SSE wiring: one committed `{messages, task}`
- * state and the `ChatActions`/`TaskActions` mutators reached through `useChatContext`, which throws
- * outside `ChatProvider`. Messages and task share ONE object so they cannot tear across an await.
+ * React context owning the widget's chat store and its live SSE wiring, reached through
+ * `useChatContext` (throws outside `ChatProvider`).
  *
- * `commit` is the ONLY writer of the `stateRef` mirror — re-syncing from render could regress it between a
- * commit and its paint — and runs the transition synchronously, not inside a `setState` updater: React
- * defers updaters and loses the effects captured in them, so tool calls never execute. `messageDispatch`
- * POSTs fire-and-forget: the reply arrives over SSE, so only a POST failure resolves the placeholder
- * locally, and a stale-reply watchdog keyed on id AND part count re-arms on every progress line.
- * `messageDispatch` resolves `false` on that same POST failure (`true` otherwise, including preview
- * mode) so a caller holding the composed text — `ChatView`'s composer — can restore it instead of the
- * visitor having to retype a message the widget already dropped from the input box.
+ * `ChatProvider` holds the committed `{messages, task}` state and wires the `StreamClient` singleton
+ * to it. `messageDispatch` sends a chat turn and waits for the reply over SSE. `stopTask` cancels a
+ * running turn. The stream handlers dedupe replayed events, run browser tools the agent asks for and
+ * reply with their result, and clear a stale connection error once the stream recovers.
  *
- * The stream effect subscribes to the `StreamClient` singleton: `handleMessage` does the bookkeeping the
- * pure reducer cannot hold (`tool_call_id` dedupe in a bounded set, cleared on a terminal status; the
- * mirror-shaped `respondedRequestIds` below), then each effect runs its browser tool, stamps progress,
- * replies `tool/response` and only then fires `afterResponseAttempt`. `handleError` converts only a
- * `StreamGaveUpError` into a transport failure, as a retriable blip settles when the reply lands on the
- * reconnected stream. `stopTask` sends `chat/stop`, which carries no task id. Every failure on the tool
- * and stop paths reaches `uiActions.setError` as well as the console: an undelivered `tool/response`
- * leaves the agent waiting on a reply that never comes, so the run stalls with nothing on screen unless
- * the visitor is told, and `do` mode may still be clicking.
- *
- * `respondedRequestIds` closes the other half of the reconnect-replay contract `StreamClient.ts`
- * documents (the api replays a chat_id's whole turn history, not just the tail a client missed):
- * `reduceText`'s own exact-repeat guard (`sseReducer.ts`) only catches an identical FINAL
- * `chat/response` replayed after the answer already closed, because it only ever compares against the
- * message's LAST part. A replayed `chat/delta` fails that same-string check (it's a partial fragment,
- * not the full closed text) and would otherwise be appended as a brand-new, visibly duplicated text
- * segment ahead of the closing response that then only overwrites the one it just added — leaving two
- * copies of the same answer on screen. Scoped by `request_id`, not globally, so an unrelated later
- * turn's genuinely new `chat/delta`/`chat/response` is untouched; marked closed only once, on the
- * request's own terminal `chat/response`, since a delta is by definition still open.
- *
- * `lastStreamErrorRef`/`currentErrorRef` close the loop `handleError` alone leaves open: `StreamClient`
- * calls `onError` on every failed dial, not only a terminal give-up, so the visitor sees "Stream
- * connection failed" while a transient blip is still auto-retrying, and nothing else ever un-shows it —
- * without this pair, a single reconnect blip leaves a stale error banner on screen forever after the
- * stream has already recovered. `registered` clears it, but ONLY when the error still on screen
- * (`currentErrorRef`, a `useLatest` mirror of `uiState.error`) is byte-identical to the one this same
- * effect set (`lastStreamErrorRef`): the visitor dismissing the banner themselves, or a later unrelated
- * error (a tool failure, a stop failure) overwriting it, both change `currentErrorRef` away from that
- * remembered string, so `registered` arriving later never clears a message it didn't put there.
- *
- * `event.type === 'task/status' && isTerminalTaskStatus(event.status)` reads `event.status` on every
- * branch, but only the `task/status` variant of `WidgetEvent` carries a `status` field at all — on any
- * other event it is `undefined`, which `isTerminalTaskStatus` (an `in` check against the status map)
- * always reports as non-terminal. The `&&` can never observably differ from an `||` here; it stays `&&`
- * because that is what a reader expects a type-narrowing guard to say.
+ * On reconnect the api replays a chat_id's whole turn history, not just what the client missed, so the
+ * dedupe here has to recognise and drop a repeated `chat/delta`, not just a repeated final response.
  */
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -110,12 +71,6 @@ interface ChatProviderProps {
   previewMode?: boolean;
 }
 
-/**
- * Builds the `StreamClient` callbacks that turn a `WidgetEvent` into reducer commits and, when the
- * reducer emits an `executeTool` effect, run the browser tool and report `tool/response` back over the
- * stream. Kept separate from `ChatProvider`'s state-CRUD callbacks because this is I/O orchestration
- * (async tool execution, stream subscription) layered on top of them, not more state plumbing.
- */
 function createStreamEffectHandlers(deps: {
   commit: (transition: (s: SseState) => SseState) => void;
   currentModeRef: React.RefObject<InstructionType>;

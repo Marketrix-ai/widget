@@ -1,31 +1,14 @@
 /**
- * Every browser action the agent can ask the widget to take on the HOST page, as one name → handler
- * registry: `tools` holds label, wait-for-user flag and handler together so no parallel list can drift, and
- * `executeTool` in `show` mode highlights the target and waits for the visitor before running the handler.
+ * Every browser action the agent can ask the widget to take on the host page, as one name-to-handler
+ * registry.
  *
- * `typeText` trails a `blur` because some frameworks validate only on it. `extract` truncates at 10k while
- * `getHtml` is uncapped — the agent's parser indexes by `data-id`, and a trimmed tree loses elements the
- * loop then cannot click. `getScreenshot` reads the EXISTING share, since a fresh prompt bypasses an
- * earlier Deny. `FINISH_TOOL` is one named export so dispatch, progress lines and the settlement check read
- * one string. `sendKeys` dispatches the KeyboardEvent and delegates the default action the browser
- * withholds to `keySimulation`. `deferred` reports an action DISPATCHED, never completed: a click or
- * navigation can tear the page down before the report is read.
+ * `tools` lists each action's label, whether it waits for the visitor, and its handler: click, type,
+ * select, extract, screenshot, send keys, and finish. `executeTool` looks a call up, runs it through
+ * Show mode's highlight-and-wait step when needed, and returns the result.
  *
- * `element` / `selectElement` are the ONE way a handler reaches a host-page node: they resolve an index
- * through `domService` and THROW. `executeTool`'s catch is this file's ONLY error handler and no handler
- * may add a second — a throw already reaches the agent verbatim, so a local try/catch just rewrites the
- * same failure. `httpUrl` admits only http(s) — `extract` feeds the model page-controlled hrefs, so a raw
- * target would let `javascript:` run in the HOST origin; its bare catch is the same verdict as a rejected
- * protocol, an unparseable string being exactly a value that is not a URL.
- *
- * `scrollToText`'s walker only ever yields a Text node from inside `document.body`'s tree, so
- * `node.parentElement` is never null there — the optional-chained read is for TypeScript, not a runtime
- * branch this loop can take.
- *
- * The class itself is exported (only the `browserToolService` singleton is meant for production callers)
- * so `test/fixtures.ts`'s `browserToolServiceMock` can type its stub as
- * `Pick<BrowserToolService, 'executeTool' | 'getFriendlyToolName' | 'isWaitForUserTool'>` against the real
- * public surface instead of a hand-written, driftable shape.
+ * A handler throws rather than returning an error, since one place — `executeTool`'s catch — reports
+ * every failure back to the agent. A link is only followed if it is http(s), since an extracted href
+ * is page-controlled and could otherwise run script in the host page's own origin.
  */
 
 import type { InstructionType } from '../types';

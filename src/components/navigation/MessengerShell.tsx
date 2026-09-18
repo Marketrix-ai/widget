@@ -1,58 +1,14 @@
 /**
- * The open widget panel: the corner-pinned, resizable surface carrying the header bar, the Home/Chat tab views and
- * the resize grip. `MessengerShell` renders null while the store says closed; `WidgetRoot` is its only caller.
+ * The open widget panel: the corner-pinned, resizable surface holding the header bar, the Home and
+ * Chat tabs, and the resize grip. Renders nothing while the store says closed; `WidgetRoot` is its
+ * only caller.
  *
- * Geometry comes from the tenant config, never from props. `useResize` owns the persisted size, keyed by
- * `config` via the shared `scopedKey` so two tenants on one host page cannot share a stored size;
- * `getPanelPositionStyle` pins the panel to the configured corner and `getCorner` supplies the matching
- * `transformOrigin`, so the entrance animation scales out of the anchored corner instead of the panel's centre.
- * Preview mode (the dashboard embed) positions `absolute` rather than `fixed` and drops the 20px corner resize
- * grip — a labelled `separator` with `touchAction: none`, so a drag is not hijacked by scrolling — since it
- * lives inside a page element. `useFocusTrap` closes on Escape and, on the chat view, lands focus in the
- * composer through `messageInputRef` — the same ref `ChatView` attaches to its textarea.
+ * `useFocusTrap` traps keyboard focus inside the panel while it is open and restores it on close.
+ * `useResize` lets a visitor drag or arrow-key resize the panel and remembers the chosen size per
+ * tenant. `MessengerShell` renders the panel itself, including the header's screen-share control.
  *
- * The screen-share control sits in the header, but its machinery lives in `ChatView`'s `useScreenShare`:
- * `chatViewToggleScreenShareRef` is what that hook's `useImperativeHandle` fills, and `onScreenSharingChange`
- * mirrors sharing state back up for the button's label and live dot. That ref and `headerScreenSharing` are
- * declared ABOVE the closed-panel early return, since a hook below a conditional return changes hook order between
- * renders. `handleChipClick` treats a home-screen suggestion as a typed message, dispatching it under the chip's
- * mode; `navDirection` is what `index.css` reads off `data-direction` to slide the incoming view, since Base UI
- * unmounts a deselected `Tabs.Panel` and the selected one remounts and replays that slide on each switch.
- *
- * `useFocusTrap` (below) is hand-rolled on purpose: this panel is a NON-modal surface, not a Dialog, and Base UI
- * exposes no standalone focus-trap or scroll-lock — reaching either by making the panel a Dialog would inert the
- * customer's host page and mutate its `<html>`/`<body>`, which an embedded widget must not do. While `isActive`,
- * focus starts inside `containerRef`, Tab cycles within it, Escape calls `onEscape`, and on deactivation focus
- * returns to whatever held it before; the tabbable candidates come from `utils/dom`'s shared `focusablesIn`, the
- * same filter `keySimulation`'s Tab simulation uses, so the widget's own tab order and the host page's can't
- * re-diverge. Inside the widget's closed shadow root `document.activeElement` retargets to the HOST, never naming
- * an element of the widget's own tree; `activeElementIn` reads through `container.getRootNode()` instead and is
- * the ONE home for that retargeting — eslint's `no-restricted-properties` bans the bare read everywhere else.
- * Both key arms bail unless focus is currently inside the container, since the listener sits on `document` ahead
- * of host-page handlers and an unguarded Escape would close the widget mid-typing. The effect deliberately
- * depends on `options?.focusTargetRef`/`options?.onEscape`, not `options` itself: the caller passes a fresh
- * object literal every render, so depending on the whole object would re-run (and re-focus) the trap on every
- * render instead of only when the callback or target actually changes.
- *
- * `useResize` returns `widthPx`/`heightPx`, the `grip` its handle renders from, `onResizeStart` for that handle's
- * mousedown, and `containerRef` for the element being sized. The opening size is this tenant's stored one if
- * there is one, else the dashboard's `widget_width`/`widget_height` — both through `clampSize`, so a setting
- * outside the drag range lands on the same bounds a drag has. `parsePx` accepts a bare px length only, since
- * `rem`/`em`/`%` can't be resolved without layout. A drag's `mousemove`/`mouseup` pair lives on `document`,
- * not the grip, so a resize outlives the pointer leaving the handle; `endDragRef` holds the live `onUp` so
- * an unmount mid-drag (the widget torn down while a visitor is resizing) still detaches both listeners and
- * the cursor/`userSelect` override instead of leaving them on the host page forever. `readStoredSize` parses
- * the tenant-scoped `marketrix_widget_size_<scope>` entry (keyed through the shared `scopedKey`, like its two `readLocal`/
- * `writeLocal` siblings), warning-then-defaulting on anything unparseable since corrupted host-page localStorage
- * must not leave the panel unsizable. `clampSize` bounds width to MIN_WIDTH..MAX_WIDTH, height to MIN_HEIGHT..85%
- * of the viewport, measured at call time so a resize re-clamps on the next drag. The grip is on the corner
- * diagonally opposite the pinned one (`getResizeGrip`); `growX`/`growY` turn pointer delta into size delta for
- * whichever corner that is. During a drag the new size is written straight to the element's inline style and
- * held in `dimsRef` — React state commits once, on mouseup, so pointer motion never re-renders the tree.
- * `data-resizing` keys `index.css`'s CSS transition off. Preview mode has no grip — `onResizeStart` returns
- * before binding, so it never writes a visitor size. The grip is also a focusable `role='separator'`
- * (`tabIndex=0`): `onResizeKeyDown` steps width/height by `KEYBOARD_RESIZE_STEP_PX` per arrow key, through
- * the same `clampSize`/`writeLocal` path as a drag, so a keyboard-only visitor can resize the panel too.
+ * The panel is a non-modal surface, not a dialog, so focus trapping and resizing are hand-rolled here
+ * rather than reaching for a dialog primitive that would also lock the host page's own scrolling.
  */
 import { Tabs } from '@base-ui/react/tabs';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';

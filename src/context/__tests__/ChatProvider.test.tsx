@@ -1,41 +1,9 @@
 /**
- * ChatProvider tests around the reply placeholder: it gives up on its own even when no dispatch in this
- * page created it (a reload mid-reply), its stale-reply deadline is not pushed back by an unrelated
- * message the visitor adds while waiting, the processing signal both glows read outlives the
- * outbound POST — the visitor waits on the reply, not on the request — and a retransmitted `tool/call`
- * (same `tool_call_id`) runs the browser tool once, never twice. `commit` skips the render entirely when
- * a transition reports no change (a stale-reply watchdog firing after its message already settled);
- * `updateMessage`/`removeMessage` act on the one message their id names, leaving the rest untouched; a
- * preview dispatch returns before ever reading real chat config, whether or not it skips the echoed user
- * message; a `finish` tool call ends the task only when it did not fail; the `tool/response` payload
- * carries `data` only on a successful tool result; the processed-`tool_call_id` set is trimmed once it
- * passes its cap, and a terminal `task/status` clears it outright; a `chat/error` event is logged
- * without disturbing the transcript; and a transient stream-failure banner clears itself on the next
- * `registered` — but never clobbers a different error already on screen when the stream happens to
- * recover, proving the fix is scoped to the exact banner it put up.
- *
- * Every test calls `cleanup()` in `afterEach` — without it an earlier test's still-mounted `ChatProvider`
- * keeps its stream-message subscription live and double-handles a later test's broadcast `handleMessage`
- * call. The stale-reply-watchdog test relies on `has_question` with no message text parking the
- * placeholder waiting-for-user WITHOUT touching its parts, so the watchdog's `pendingReplies` dependency
- * (id:partsLength) is unchanged and its ORIGINAL 120s timer (armed before the parking) is still the one
- * that fires; it then asserts reference equality on `captured!.messages` to prove `commit`'s no-change
- * branch actually skipped `setState`, not just that the text happens to match. A second case in the same
- * describe covers the finer-grained half of that branch a bare `next === prev` check cannot reach:
- * `setMessages` handed its OWN current array back always returns a NEW top-level state object (the
- * `{ ...s, messages }` spread), so only `next.messages === prev.messages && next.task === prev.task`
- * catches it — `next === prev` alone would let this commit through and `setState` a distinct object.
- * `contextValue`'s own `useMemo` (keyed on `state.messages`/`state.task`) then absorbs that wasted
- * `setState` before it reaches `Capture`, so reading `captured!.messages` or counting `Capture`'s own
- * renders cannot tell the two apart — `renderCaptured` wraps `ChatProvider` in a `Profiler` instead, and
- * the assertion counts ITS `onRender` calls, which fire once per actual `setState` regardless of what a
- * downstream memo later absorbs. The preview-dispatch test
- * asserts `getCredentialedConfig` was never called because if the early `return` after the preview reply
- * were dropped, execution would fall through into the real-chat branch and read config never set up for
- * that test; the real-dispatch skip/echo test counts the placeholder created for the real reply as the +1
- * present in both its expected counts. The 1000-id trim-boundary test re-delivers the earliest id after
- * reaching exactly the cap: a `>` boundary read as `>=`, or the guard negated outright, would have trimmed
- * the set already and evicted that id, turning the expected no-op dedupe into a fresh execution.
+ * Tests for `ChatContext`'s reply placeholder lifecycle: the stale-reply watchdog, the processing signal
+ * spanning reply wait rather than just the outbound request, deduping a retransmitted `tool/call`,
+ * `tool/response` payload shape, and recovering/replaying turns across a stream reconnect. Every test
+ * calls `cleanup()` in `afterEach` — an earlier test's still-mounted `ChatProvider` otherwise keeps its
+ * stream-message subscription live and double-handles a later test's broadcast `handleMessage` call.
  */
 import { act, cleanup, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from 'bun:test';
@@ -661,13 +629,6 @@ describe('a chat_id the api replays turns for after an SSE reconnect', () => {
     expect(messageText(answered!.parts)).toBe('Sure, here you go.');
     expect(answered!.parts.filter(p => p.type === 'text')).toHaveLength(1);
 
-    // A reconnect mid-page-life replays the WHOLE turn (both deltas, then the closing response) rather
-    // than only the tail the client missed — `StreamClient.ts`'s header documents the api replaying by
-    // chat_id, not by cursor. Without request-id-scoped dedupe, `reduceText`'s own "exact repeat" guard
-    // only catches an identical FINAL `chat/response` (`sseReducer.ts`'s header) — a delta arriving after
-    // the message is already closed fails that exact-string check and gets appended as a brand-new,
-    // visibly duplicated text segment before the closing response papers back over only the LAST one,
-    // leaving two identical bubbles' worth of text behind.
     act(playTurn);
 
     const reAnswered = captured!.messages.find(msg => msg.id === 'req-replay-1');
@@ -690,7 +651,6 @@ describe('a chat_id the api replays turns for after an SSE reconnect', () => {
     });
     act(() => {
       asStreamClientInternals().handleMessage({ type: 'chat/response', request_id: 'req-replay-2a', text: 'first' });
-      // Replay of the same turn.
       asStreamClientInternals().handleMessage({ type: 'chat/response', request_id: 'req-replay-2a', text: 'first' });
     });
 

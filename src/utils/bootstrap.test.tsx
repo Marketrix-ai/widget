@@ -1,17 +1,7 @@
 /**
- * Entry-path tests: the classic loader preserves host React importmap entries and injects the module;
- * a direct module script auto-initializes once from its `mtx-*` attributes and refuses without
- * `mtx-api-host`; npm consumers get no auto-init; every widget a parent mounts is owned in this module
- * instance and the next; and the widget CSS lands, non-empty, inside the closed shadow root.
- *
- * `importBootstrap` re-imports `./bootstrap.tsx` with a bumped `?t=<n>` query per call to force a fresh
- * module evaluation: Bun has no `vi.resetModules`, an ES import is cached forever by resolved
- * specifier, and `./bootstrap`'s own auto-init guard is top-level module state, so only a different
- * specifier re-runs it.
- *
- * `document.currentScript` is a getter Bun's `spyOn` can't stub, so the classic-loader test shadows it
- * directly with an own, configurable property; `resetDocument`'s `replaceChildren()` doesn't touch it,
- * hence the explicit `delete` in `afterEach`.
+ * Tests for the widget's entry paths: the classic loader preserves a host page's importmap and
+ * injects the module script, a direct module script auto-initializes from its `mtx-*` attributes and
+ * requires an API host, and every mounted widget gets its CSS inside the closed shadow root.
  */
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';

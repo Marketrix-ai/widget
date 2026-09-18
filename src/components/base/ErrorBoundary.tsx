@@ -1,21 +1,13 @@
 /**
- * The widget's one React error boundary: a subtree that throws while rendering is contained here rather than
- * tearing down the widget's whole React root. It is a class because React exposes no hook equivalent.
+ * The widget's one React error boundary: a subtree that throws while rendering is contained here
+ * instead of tearing down the widget's whole React root. It is a class component because React has no
+ * hook equivalent for this.
  *
- * `ErrorBoundaryProps` are the wrapped `children`, a `label` naming the subtree in the console line, and an
- * optional `fallback` to show in its place. `getDerivedStateFromError` flips to the caught state,
- * `componentDidCatch` logs the error and the component stack, and `render` returns the fallback (or nothing)
- * once caught.
- *
- * - The widget runs inside arbitrary customer pages, so a crash must degrade to a missing widget and never a
- *   broken host page. Rendering `null` with no fallback is that degradation, not a swallowed exception —
- *   `componentDidCatch` has already surfaced the error with its stack.
- * - `console.error` specifically: terser's `drop_console` strips `log`/`info`/`debug` from the shipped
- *   bundle, so only `warn` and `error` reach a host page's console, and a contained render crash is the
- *   unexpected failure `error` is reserved for.
- * - Two call sites, each deliberate: `WidgetRoot` wraps `MessengerShell` with no fallback, so a panel crash
- *   leaves the launcher and toasts alive, while `ChatView` wraps only the transcript with a refresh prompt,
- *   so one unrenderable message cannot take the composer down with it.
+ * `children` is the wrapped subtree, `label` names it in the logged error, and `fallback` is optional
+ * UI to show once caught. `componentDidCatch` logs the error with its stack; `render` then shows the
+ * fallback, or nothing. `WidgetRoot` wraps the whole messenger shell with no fallback, so a crash there
+ * still leaves the launcher and toasts alive; `ChatView` wraps only the transcript, so one unrenderable
+ * message can't take the composer down with it.
  */
 import React from 'react';
 

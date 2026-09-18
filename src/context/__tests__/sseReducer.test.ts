@@ -1,25 +1,7 @@
 /**
- * Unit tests for `../sseReducer`, the pure chat state machine folding SSE `WidgetEvent`s and local actions
- * into `{messages, task}` plus the effects the caller performs. Fixtures: `agentMessage` (a thinking
- * placeholder), `runningState`/`idleState` around it, `pendingReply` (an idle-task placeholder awaiting a
- * `chat/response`/`chat/delta`/`chat/error` by request id), `toolCall` (`click_element` on index 1 by default).
- *
- * `task/status running` is inert because the first `tool/call` activates the task — the api mints no task
- * id, so the widget holds none. The three terminal statuses end the task and stamp done/failed/stopped,
- * rendering the closing message as an appended text part, read back through `messageText(parts)`, never a
- * separate `content` field (`ChatMessage` has none — see `types/index.ts`); `has_question` is a PAUSE,
- * flipping the spinner to `waiting-for-user` with `taskStatus` undefined so no terminal icon shows. All four
- * settle `isPlaceholder`, since they also end the task and would leave nothing able to re-enable the
- * composer. `reduceTransportFailure` settles every pending bubble, leaving a settled one untouched; the
- * `reduceStaleReply` watchdog settles one gone silent or stranded by a reload, never a `waiting-for-user`
- * pause, a settled message or an unknown id, and stamps failed so a late `completed` cannot re-target it.
- *
- * `tool/call` emits the effect, auto-activates an idle task, appends an in-progress line and takes the mode
- * off the event, announcing a DOM read as "Reading the page" — only screen sharing views the visitor's
- * screen. Deltas accumulate into one streaming part the final response REPLACES. Progress lines close by the
- * tool that finished, not the newest open one, and `FINISH_TOOL` carries none. A stop is the visitor
- * withdrawing their page, so only their next dispatch lifts it; `messageText` joins text parts, never
- * progress ones.
+ * Tests for `sseReducer`'s pure state machine folding SSE events and local actions into chat messages
+ * and task state — status transitions, tool-call progress lines, streaming replies, stale-reply and
+ * transport-failure recovery, and stop handling.
  */
 import { describe, expect, it } from 'bun:test';
 
@@ -374,8 +356,6 @@ describe('reduceToolProgress / reduceToolDone / reduceStop', () => {
       messages: [agentMessage({ mode: 'show', isPlaceholder: true })],
       task: { phase: 'running', mode: 'show' },
     };
-    // currentMode passed in is 'do' (visitor switched composer mid-run); the pause should still follow
-    // the run's own Show mode, so a waiting-for-user tool still parks on waiting-for-user.
     const result = reduceToolProgress(state, 'click_element', 'x', 'in_progress', 'do');
     expect(result.messages[0]!.placeholderState).toBe('waiting-for-user');
   });

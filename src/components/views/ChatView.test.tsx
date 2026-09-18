@@ -1,29 +1,9 @@
 /**
- * `ChatView` tests: a send waiting on screen access locks the composer so no later send overwrites the
- * queued message, and unlocks to deliver it once answered; a multi-line message keeps its line breaks;
- * a send that fails while the stream is down restores the composed text to the (cleared) composer
- * rather than dropping it, unless the visitor already started a new message in the meantime.
- *
- * `useScreenShare` tests: allow resolves the request card, posts both messages and flushes the queued
- * message (also when the picker was cancelled, marking the card denied); deny flushes without sharing;
- * dismissing the dialog leaves the separate request card unanswered; a persisted open request survives
- * remount; an already-resolved request is ignored so a new one can be raised.
- *
- * `ScreenShareService` is faked with `vi.spyOn`, created and restored inside `beforeEach`/`afterEach`
- * rather than `vi.mock` at module scope — `../../services/__tests__/ScreenShareService.test.ts` imports
- * the same module and a module-scope patch would leak into it regardless of file order (root
- * `CLAUDE.md` has the general cross-file leak mechanism); per-test scoping confines the fake to this
- * file's own tests.
- *
- * The stream-down tests give each `renderWidget` its own `mtxId` AND its own explicit
- * `storageService.setConfig(...)` call: `renderWidget`'s config prop alone doesn't scope
- * `storageService`'s own module-singleton state, which `previewMode: false`'s `InitBridge` reads from —
- * without a matching `setConfig`, a prior test's persisted `isOpen`/`currentMode` (any file, any mtxId)
- * leaks in regardless of this file's own tenant id. They mock `streamClient.ready`, not just `connect`:
- * `ChatService.chatPost` awaits `ready()`, which internally waits for `registered`, a status only a
- * real SSE stream ever reaches — mocking `connect` alone leaves that await hanging forever with no
- * error, silently swallowing the whole test (same fix `RrwebSessionRecorder.test.ts`/
- * `rrweb-masking.test.ts` already use for the same reason).
+ * Tests for `ChatView`'s composer lock while a screen-access request is pending, multi-line message
+ * rendering, resend-safe recovery when a send fails while the stream is down, and the `useScreenShare`
+ * hook's allow/deny/dismiss/remount flows. A send-while-down test must mock `streamClient.ready` and not
+ * just `connect` — `ChatService.chatPost` awaits `ready()`, which only resolves on `registered`, so
+ * mocking `connect` alone leaves that await hanging forever and silently swallows the whole test.
  */
 import { act, cleanup, fireEvent, renderHook, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
@@ -118,9 +98,6 @@ describe('a send while the stream is down', () => {
     openChatTab();
     const composer = screen.getByPlaceholderText('Ask anything') as HTMLTextAreaElement;
 
-    // `send` clears the composer and fires the async dispatch; typing the replacement text
-    // synchronously right after (before any microtask runs) beats the dispatch's own `.then`, which
-    // only settles once `chatPost`'s rejection has propagated back through it.
     send(composer, 'first attempt');
     fireEvent.change(composer, { target: { value: 'already typing something new' } });
 

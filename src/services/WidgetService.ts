@@ -1,29 +1,14 @@
 /**
- * Resolves a host page's `mtxId`/`mtxKey` into the fully-populated widget config the rest of the
- * runtime reads. `createConfigFromSettings` layers rendered settings over a partial `MarketrixConfig`;
- * it takes the already-validated, render-constants-dropped shape `parseWidgetSettings` returns — a
- * caller holding a raw `WidgetSettingsData` (the imperative preview's `settings` prop) parses it first.
+ * Resolves a host page's `mtxId`/`mtxKey` credentials into the fully-populated widget config the rest
+ * of the runtime reads.
  *
- * `loadWidgetConfig` is the credentialed lookup: `widgetPublicSearch` by id+key, then the first `active`
- * widget wins. An inactive-only result reports the statuses it did find, because "no such widget" and
- * "not activated in the dashboard" are the two failures a host integrator actually hits and the
- * credentials look identical in both. `mtxApp` comes from that widget's `application_id` and never from
- * caller config, since the application id is a consequence of valid credentials, never a host-supplied
- * input. `widgetPublicSearch`'s response is `WidgetPublicData` — status/application_id/settings only,
- * never the `marketrix_id`/`marketrix_key` pair this call authenticated with, nor the rendered embed
- * snippet.
+ * `loadWidgetConfig` looks the widget up by credentials and picks the first active result, reporting a
+ * more specific reason (no such widget vs. not activated) when none is active.
+ * `createConfigFromSettings` layers validated, rendered settings over a partial config.
+ * `widgetLookupCache` memoizes a resolution so a settings-only update skips repeating the lookup.
  *
- * `widgetLookupCache` memoizes the resolved (settings, applicationId) pair by `mtxId:mtxKey`, keyed on
- * the in-flight promise so concurrent callers share one request. `updateMarketrixConfig` re-runs
- * `initWidget` with the same credentials on every client-owned settings change (theme, position, …), so
- * without this cache each such update re-issues the same credentialed search this call already made —
- * this is the ONE request per page load the api sees for a given tenant. A rejected lookup is deleted
- * from the cache before the throw propagates, so it is never memoized and the next call retries against
- * the api instead of replaying a stale failure — nothing here swallows the throw underneath it.
- *
- * The probe strings matched on a failed `widgetPublicSearch` are the platform-specific texts browsers
- * emit for an unreachable host — matching them turns a dead api into "start the API server at <host>"
- * instead of a misleading "widget validation failed".
+ * A failed lookup recognises the browser's own "host unreachable" errors and reports them as a
+ * likely-offline api rather than a generic failure.
  */
 import { sdk, type WidgetPublicData } from '../sdk';
 import type { MarketrixConfig, ValidWidgetConfig } from '../types';

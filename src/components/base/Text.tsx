@@ -1,17 +1,11 @@
 /**
- * `Text` — the widget's typography primitive; every rendered string goes through it.
+ * `Text` is the widget's typography primitive; every rendered string goes through it.
  *
- * Contents: `TextProps` (prop surface, extending the rendered element's HTML attributes) · `Text`,
- * which renders `as` (default `span`) and folds tone, size, weight, align, leading, block, italic
- * and truncation into ONE inline style object · the `SIZE` / `WEIGHT` / `TRUNCATE` lookups it reads.
- *
- * Styling is inline only — the widget has no CSS framework and no `cn()`, so a variant is a style
- * value here, never a class name. Tone and leading come from `design-system/component-tokens`, the
- * shared home for those scales; the size, weight and truncate maps stay local because nothing but
- * text reads them. Every optional prop is spread only when set, so an unset one inherits from the
- * cascade rather than being pinned to a default, and the caller's `style` spreads LAST so it wins
- * over every resolved token. `inheritColor` overrides `variant` and resolves to `TEXT_TONE.inherit`,
- * letting text inside an already-coloured container (button, badge) take that colour.
+ * `Text` renders as any element (`span` by default) and folds tone, size, weight, align, leading,
+ * block, italic and truncation into one inline style object, using the local `SIZE`/`WEIGHT`/`TRUNCATE`
+ * lookups plus the shared tone/leading scales. Styling is inline only, since the widget has no CSS
+ * framework. An unset optional prop is left out of the style object so it inherits from the cascade,
+ * and the caller's own `style` is spread last so it always wins.
  */
 import type { CSSProperties, ElementType, Ref } from 'react';
 

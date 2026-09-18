@@ -1,22 +1,11 @@
 /**
- * Every fixed design token the widget's components read, in one home: the `RADIUS`, `TEXT_TONE`,
- * `TEXT_LEADING` and `SHADOW` scales, `TAB_BAR_HEIGHT`, `LAYER_TOKENS`, the `notificationToneStyles`
- * palette per notification tone, and `getElevationStyle`, which turns a `ShadowToken` into a `boxShadow`
- * (none → undefined so a caller can spread it). Each radius value has exactly one name — a test pins that
- * no two tokens are synonyms. Per-tenant values are NOT here: `semantic-tokens.ts` owns everything derived
- * from widget settings, and this file is only what no tenant can change.
+ * Every fixed design token the widget's components read: the `RADIUS`, `TEXT_TONE`, `TEXT_LEADING` and
+ * `SHADOW` scales, `TAB_BAR_HEIGHT`, the `LAYER_TOKENS` z-index ladder, the `notificationToneStyles`
+ * toast palette, and `getElevationStyle`, which turns a shadow token into a `boxShadow`.
  *
- * Every `notificationToneStyles` colour is fixed (no tenant setting touches a toast), so each pair is
- * measured once here against the WCAG threshold it actually needs — `closeColor` is a UI icon (3:1
- * against `background`), `titleColor`/`bodyColor` are text (4.5:1) — and a test pins every ratio so a
- * future palette edit can't silently regress below it.
- *
- * `LAYER_TOKENS` is the z-index ladder (screen-edge glow < panel < dialog < toast), based just above the
- * 2^31-ish ceiling most host pages use so the widget sits over everything without the values overflowing a
- * 32-bit int. `showHighlight`/`showPopup` are a separate, much higher pair near the int32 ceiling: Show
- * mode's coaching overlay (`ShowModeService`) mounts to the HOST page, outside the shadow root, to point at
- * the widget's OWN chrome — it must outrank every value in this ladder by a wide margin, not sit one step
- * above `toast`.
+ * Per-tenant values live in `semantic-tokens.ts` instead — this file is only what no tenant can change.
+ * `LAYER_TOKENS.showHighlight`/`showPopup` sit far above the rest of the ladder because Show mode's
+ * coaching overlay mounts on the host page, outside the shadow root, and must outrank everything there.
  */
 import type { CSSProperties } from 'react';
 

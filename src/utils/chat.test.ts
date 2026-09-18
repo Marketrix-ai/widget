@@ -36,9 +36,6 @@ describe('findMessageForProgress', () => {
   });
 
   it('only applies mode-specific ranking while the task is running, otherwise falls to the generic placeholder-first rank', () => {
-    // An older placeholder in a DIFFERENT mode, and a newer non-placeholder reply in the CURRENT mode.
-    // Mode-specific ranking (wrongly applied while not running) would prefer the newer mode-matching
-    // reply; the correct not-running behaviour picks the older placeholder via the generic rank instead.
     const placeholderOtherMode = agentReply({ id: 'placeholder-other-mode', isPlaceholder: true, mode: 'tell' });
     const replyMatchingMode = agentReply({ id: 'reply-matching-mode', mode: 'show' });
     const result = findMessageForProgress({

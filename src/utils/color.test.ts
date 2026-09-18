@@ -36,13 +36,10 @@ describe('the text colour a widget background gets', () => {
       const fg = getContrastingColor(bg);
       expect(contrastRatio(fg, bg)).toBeGreaterThanOrEqual(4.5);
     }
-    // A representative tenant accent (mid-luminance blue) sits in the band the old split got wrong.
     expect(contrastRatio(getContrastingColor('#3b82f6'), '#3b82f6')).toBeGreaterThanOrEqual(4.5);
   });
 
   it('computes the exact WCAG ratio in the low-luminance linear branch, pinning its divisor and offset', () => {
-    // gray 10 (10/255 ≈ 0.0392 < the 0.03928 linear-vs-gamma threshold) exercises the /12.92 divisor
-    // and the +0.05 offset on both sides of the ratio; a wrong constant on either shifts this value.
     expect(contrastRatio('rgb(10, 10, 10)', '#000000')).toBeCloseTo(1.0607053967097675, 10);
   });
 });

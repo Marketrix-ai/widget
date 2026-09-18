@@ -1,26 +1,14 @@
 /**
- * The widget's provider stack and the two bridges under it: `WidgetProviders` wraps children in
- * `UIStateProvider` → `ChatProvider` → `InitBridge`, so everything below reads UI state and the chat
- * store from context. Also home to `PortalContainerContext`/`usePortalContainer` — `WidgetRoot`
- * publishes its own root here, since a portal landing outside it escapes the element carrying the
- * tenant tokens and falls back to `index.css`'s hardcoded palette; the default is `document.body`.
+ * The widget's provider stack and the two bridges under it. `WidgetProviders` wraps children in
+ * `UIStateProvider` → `ChatProvider` → `InitBridge`. Also home to `PortalContainerContext` /
+ * `usePortalContainer`, which `WidgetRoot` uses to publish its own root so a portal lands somewhere
+ * carrying the tenant's theme tokens rather than falling back to `document.body`.
  *
- * `InitBridge` runs the one-shot mount init: read the stored snapshot, apply `{currentMode, isOpen}`
- * to UI state and the transcript to the chat store, then get-or-create the chat_id and open the stream.
- * Task state is deliberately not restored — a run never survives a reload. `PersistBridge` writes the
- * snapshot back on every message or UI-state change; it is its own component so subscribing to every
- * message change can't re-render the tree `InitBridge` wraps, and mounts only once `restored` is true —
- * mounted before the read, its first effect would overwrite the stored transcript on every remount.
- * `previewMode` skips init entirely: no chat session is minted, no stream opened, nothing persisted.
- *
- * The init effect lists `previewMode`, `uiActions` and `chatActions` for the linter, but runs once per
- * mount in practice — `uiActions` is a `useMemo([])` and `chatActions` bottoms out in `commit`
- * (`useCallback([])`), both stable for the component's lifetime, and `previewMode` is fixed by the
- * caller. `cancelled` drops the connect when a StrictMode double-invoke or an unmount cleans up before
- * the chat_id resolves. `streamClient.connect` never rejects — it catches internally and owns its own
- * backoff reconnect and warn-level log — so the call here is fire-and-forget; a failed INIT (the
- * snapshot restore or `getOrCreateChatId`) is the one thing this bridge logs and surfaces through
- * `uiActions.setError`.
+ * `InitBridge` runs the one-shot mount init: restore the stored snapshot into UI state and the chat
+ * store, then get-or-create the chat id and open the stream. Task state is deliberately not restored,
+ * since a run never survives a reload. `PersistBridge` writes the snapshot back on every change, kept
+ * as its own component so it doesn't re-render the tree `InitBridge` wraps. `previewMode` skips all of
+ * this — no chat session, no stream, nothing persisted.
  */
 import React, { createContext, useContext, useEffect, useState } from 'react';
 

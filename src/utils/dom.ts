@@ -1,27 +1,13 @@
 /**
- * Predicates the agent's element index runs against the HOST page's DOM — what counts as a control and
- * whether it is reachable. `TABBABLE_SELECTOR` is the one tab-order candidate query: `send_keys`'s Tab
- * simulation walks the host page with it and `useFocusTrap` the widget's own tree, and they must agree
- * on what the browser would focus next. `WIDGET_SHADOW_HOST_CLASS`, set by `bootstrap` on the shadow
- * host, lets `DomService` recognise its own overlay chrome instead of reporting it as obscuring the host
- * page.
+ * Predicates the agent's element index runs against the host page's DOM: what counts as a control, and
+ * whether it is reachable.
  *
- * `ancestry` walks element → `parentElement`, crossing each shadow boundary at its host, since a bare
- * `parentElement` walk stops dead at a `ShadowRoot` and a control inside a host-page web component would
- * read as top-level. `disabledReason` names why an element cannot be operated (disabled control,
- * `aria-disabled`, or an `inert` ancestor) as a sentence fragment completing `DomService`'s `Element
- * <n> …` message — reword both together. `isIndexable` is `DomService`'s geometry-aware fallback after
- * its cheap selector/handler checks; visibility there climbs both the `overflow: hidden|clip` chain
- * (that walk stops at `document.body`) and the shadow-host size, since either can hide an element
- * despite a non-zero rect. Its one `try` is deliberate — the host page owns this DOM and may have
- * patched anything on it, so a poisoned element is logged with the real error and skipped rather than
- * aborting the whole indexing pass.
- *
- * `focusablesIn` is the one home for "which `TABBABLE_SELECTOR` matches are actually reachable" —
- * `useFocusTrap` and `keySimulation`'s Tab simulation both call it so they can't re-diverge.
- * `isAriaHidden` walks ancestors, not just the element itself, since a hidden container hides everything
- * under it (per WAI-ARIA, `aria-hidden="true"` removes an element and its whole subtree from the
- * accessibility tree) even though none of those descendants carry the attribute.
+ * `ancestry` walks up through shadow boundaries so a control inside a host-page web component isn't
+ * mistaken for top-level. `disabledReason` explains why an element can't be operated. `isIndexable` is
+ * the geometry-aware check behind the agent's element index, tolerant of a host page that has patched
+ * its own DOM in unexpected ways. `focusablesIn` and `isAriaHidden` find which elements are actually
+ * reachable by keyboard, shared by the widget's own focus trap and its Tab-key simulation of the host
+ * page so the two can't disagree about tab order.
  */
 
 export const WIDGET_SHADOW_HOST_CLASS = 'marketrix-widget-container';

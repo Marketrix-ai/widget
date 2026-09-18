@@ -1,58 +1,8 @@
 /**
- * Boots the BUILT `dist/widget.mjs` — never the source — in a jsdom host document exactly the way a
- * customer's browser hands it off: `loader.js` forwards every `mtx-*` attribute from the host's own
- * `<script>` tag onto a `<script type="module" src=".../widget.mjs">` it injects, and the widget itself
- * auto-inits off `document.querySelectorAll('script[mtx-id]')` (`autoInitializeWidget`) rather than its
- * own `document.currentScript`, so dropping an equivalent tag into the document before importing the
- * built module is the same boot a real page gives it. jsdom here has no `runScripts: 'dangerously'`
- * (`src/test/preload.ts`), so `loader.js` itself can't be executed as a real `<script>`; its
- * attribute-forwarding contract is instead run directly as a function against a minimal fake `document`,
- * which is the honest substitute — everything downstream of that forwarding (the actual widget boot) IS
- * exercised against the real built artifact.
- *
- * `bun run build` runs once in `beforeAll` so the dist under test is never stale: this repo's own `ci`
- * script builds AFTER test, so a pre-existing `dist/` can't be assumed here.
- *
- * `mtx-*` attribute NAMES and the expected runtime EXPORT NAMES both come from parsing README's own
- * script-tag snippet and `import { ... } from '@marketrix.ai/widget'` block, never a hand-typed list, so
- * a renamed, added or removed attribute or export breaks this file until the README (or the test) is
- * fixed — never a silent drift between what the docs promise and what boots.
- *
- * The mocked production response is encoded with oRPC's OWN `@orpc/client/standard` serializer, not a
- * hand-guessed envelope: the widget's real `RPCLink` decode only accepts bytes that serializer actually
- * produces, so a fabricated shape would either falsely pass or drift silently from the real wire format.
- *
- * This test never spawns `bun run build` itself — `ci` now runs `build` BEFORE `test` (never after), so
- * `dist/widget.mjs` is guaranteed fresh by the time this file runs. `beforeAll` only asserts it exists,
- * with a clear message when someone runs `bun test` directly without building first — a spawned build
- * from inside a test blew past `bun test`'s per-test timeout in CI (build takes longer than 5s) and
- * inherited its `NODE_ENV=test`, flipping Vite's JSX transform to a dev runtime the externalized
- * `react/jsx-runtime` doesn't export.
- *
- * Pins: no host-page fetch before the deferred auto-init tick, and none at all without a `script[mtx-id]`
- * tag · a correctly-attributed tag drives exactly one `widgetPublicSearch` lookup to the documented
- * `mtx-api-host` (never a foreign origin, alongside the session's ordinary `chatCreate`/`widgetStream`
- * calls) · a resolved config mounts a `{ mode: 'closed' }` shadow root holding the FAB at the documented z-index
- * (`LAYER_TOKENS.panel`, 2147483002) · the only global the bundle adds to `window` is `__mtx` · the
- * runtime-exported surface matches `src/index.tsx`'s value exports exactly · console stays silent on a
- * clean boot · `loader.js` forwards only `mtx-*` attributes onto the module script it injects.
- *
- * `importDist` gives each test its own byte-identical copy of the built file under `dist/.smoke/`
- * (never the OS tmpdir, so its relative `node_modules` resolution for the externalized
- * `react`/`react-dom` still walks up to this repo's own): Bun caches a plain `.mjs` import by PATH,
- * ignoring the query string (unlike its own `.ts` transpiler loader), so a `?case=N` cache-buster would
- * be a no-op and every "fresh boot" would reuse the same singleton (`window.__mtx`, `initPromise`,
- * `widgetState.mount`). `beforeAll` (re)creates the scratch dir rather than at module-eval time, since
- * `vite build` empties `dist/` on every run and a build may land between module load and the hook; each
- * test's teardown does `delete window.__mtx` rather than assigning `undefined`, since an assignment would
- * still CREATE the key and poison the next test's window-global baseline, and awaits one `tick()` after
- * `importDist()` in the export-surface case to drain that instance's deferred auto-init no-op before it
- * can fire mid-way through a later test.
- *
- * The mocked `fetch` in the z-index/leak case also answers `chatCreate` and `widgetStream` (both real,
- * ordinary parts of the same boot this test pins, not the credentialed lookup itself) with an honest
- * response rather than the search result every other procedure would choke decoding; `requests` reads
- * empty right after `importDist()` because the deferred auto-init tick hasn't run yet.
+ * Boots the built `dist/widget.mjs` — never the source — in a jsdom host document the way a customer's
+ * page actually hands it off, via `loader.js`'s `script[mtx-id]` attribute forwarding and the widget's
+ * own auto-init. Covers the exported runtime surface, the closed-shadow FAB mount and z-index, and that
+ * no request fires before a host script tag triggers auto-init.
  */
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
