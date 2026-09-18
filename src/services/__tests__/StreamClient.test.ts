@@ -34,8 +34,9 @@
  * in for a dropped/resumed SSE connection. It pins that a connection superseded by `reconnectNow` (the
  * old iterator still draining when the new one opens) never delivers its stale, already-superseded
  * events to `onMessage` — the guard a visitor relies on not to see an old turn replayed after a
- * reconnect — that the documented 1000ms-doubling-to-30000ms-cap schedule is the actual delay before
- * each of the 10 retries, not just source constants, and that give-up (either the attempt cap or the
+ * reconnect — that each of the 10 retries actually fires within the documented
+ * 1000ms-doubling-to-30000ms-cap schedule's own equal-jitter window ([base/2, base]), not just source
+ * constants, and that give-up (either the attempt cap or the
  * `auth` `chat/error`) schedules no further dial no matter how long fake time advances.
  */
 
@@ -358,10 +359,10 @@ describe('StreamClient fault injection', () => {
     client.disconnect();
   });
 
-  it('redials on the documented 1000ms-doubling-to-30000ms-cap schedule, giving up after the 10th', async () => {
+  it('redials within the documented 1000ms-doubling-to-30000ms-cap schedule (equal jitter), giving up after the 10th', async () => {
     vi.useFakeTimers();
     const client = freshClient();
-    const attempts = [1000, 2000, 4000, 8000, 16000, 30000, 30000, 30000, 30000, 30000];
+    const baseDelays = [1000, 2000, 4000, 8000, 16000, 30000, 30000, 30000, 30000, 30000];
 
     mockSdk.widgetStream.mockRejectedValue(new Error('down'));
     await client.connect('chat-1');
@@ -370,10 +371,13 @@ describe('StreamClient fault injection', () => {
     const errors: Error[] = [];
     client.addCallbacks({ onError: e => errors.push(e) });
 
-    for (const [i, delay] of attempts.entries()) {
-      await advanceTimersByTimeAsync(delay - 1);
+    for (const [i, base] of baseDelays.entries()) {
+      // Equal jitter halves the base delay then adds a uniform random half: the dial can fire any time in
+      // [base/2, base], never earlier (a thundering-herd guard that still respects the schedule's own cap)
+      // and never later (the schedule's own upper bound still holds).
+      await advanceTimersByTimeAsync(base / 2 - 1);
       expect(mockSdk.widgetStream).toHaveBeenCalledTimes(i + 1);
-      await advanceTimersByTimeAsync(1);
+      await advanceTimersByTimeAsync(base / 2 + 1);
       await Promise.resolve();
       await Promise.resolve();
       await Promise.resolve();
@@ -381,11 +385,11 @@ describe('StreamClient fault injection', () => {
     }
 
     await advanceTimersByTimeAsync(30000);
-    expect(mockSdk.widgetStream).toHaveBeenCalledTimes(attempts.length + 1);
+    expect(mockSdk.widgetStream).toHaveBeenCalledTimes(baseDelays.length + 1);
     expect(errors.some(e => e instanceof StreamGaveUpError)).toBe(true);
 
     await advanceTimersByTimeAsync(120000);
-    expect(mockSdk.widgetStream).toHaveBeenCalledTimes(attempts.length + 1);
+    expect(mockSdk.widgetStream).toHaveBeenCalledTimes(baseDelays.length + 1);
 
     client.disconnect();
     vi.useRealTimers();

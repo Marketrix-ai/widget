@@ -5,7 +5,12 @@
  * browser-local key shares via `scopedKey`, so the chat-context, drag-position and resize keys all
  * partition by tenant identically. `readLocal`/`writeLocal` are the only `localStorage` access in `src/`;
  * a host page can deny storage outright (third-party cookies off, sandboxed iframe), so both degrade to
- * a warn and the widget keeps working unpersisted.
+ * memory and the widget keeps working unpersisted. `updateContext` calls `writeLocal` on every UI-state
+ * change (a drag, a resize, every chat message), so without `warnOnce` a denied host page would spam one
+ * console line per write for the visitor's whole session; a single warn on first denial says everything
+ * a customer's console needs. `warnOnce` is keyed by read vs. write since `readLocal` also fires once on
+ * its own (`loadContext` at module init, before any write) and both should still surface if a page
+ * somehow denies one and not the other.
  *
  * `loadContext` merges one parsed key over `DEFAULT_CONTEXT`, so an older widget version's payload reads
  * as incomplete rather than corrupt, and discards anything past `CONTEXT_EXPIRY_MS` (7 days).
@@ -79,11 +84,27 @@ const DEFAULT_CONTEXT: MarketrixChatContext = {
   timestamp: 0,
 };
 
+const warned = { read: false, write: false };
+
+function warnOnce(kind: 'read' | 'write', message: string, error: unknown): void {
+  if (warned[kind]) return;
+  warned[kind] = true;
+  logWarn(message, error);
+}
+
+/** Test-only: `warned` is module-level so a "denies storage, keeps working" proof isn't the last test in
+ * the file to touch a denied `Storage.prototype`, and a later test in the same `bun test` process (one
+ * process per file, not per test) would otherwise see zero warns instead of one. Never called from `src/`. */
+export function resetStorageWarningsForTests(): void {
+  warned.read = false;
+  warned.write = false;
+}
+
 export function readLocal(key: string): string | null {
   try {
     return typeof localStorage === 'undefined' ? null : localStorage.getItem(key);
   } catch (error) {
-    logWarn('[StorageService] localStorage is unreadable:', error);
+    warnOnce('read', '[StorageService] localStorage is unreadable, degrading to memory for this session:', error);
     return null;
   }
 }
@@ -92,7 +113,7 @@ export function writeLocal(key: string, value: string): void {
   try {
     if (typeof localStorage !== 'undefined') localStorage.setItem(key, value);
   } catch (error) {
-    logWarn('[StorageService] localStorage is unwritable:', error);
+    warnOnce('write', '[StorageService] localStorage is unwritable, degrading to memory for this session:', error);
   }
 }
 

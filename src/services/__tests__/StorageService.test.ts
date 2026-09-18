@@ -3,8 +3,10 @@
  * fixed default; `setConfig` never carries one tenant's `chat_id` into another's scope, and persists
  * exactly the given config fields to the raw record — no field this repo didn't put there; a chat
  * snapshot round-trips, with an active screen share stored as an ended notice because a MediaStream
- * cannot survive a reload; `readLocal`/`writeLocal` degrade to a warn and keep working unpersisted when
- * `localStorage` throws (private-mode Safari, a sandboxed iframe).
+ * cannot survive a reload; `readLocal`/`writeLocal` degrade to memory and keep working unpersisted
+ * when `localStorage` throws (private-mode Safari, a sandboxed iframe) -- each warns only ONCE per
+ * session (`warnOnce`/`resetStorageWarningsForTests`), proven against repeated denied writes rather
+ * than a single one, since a single call could never distinguish "warns once" from "warns every time".
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 
@@ -15,6 +17,7 @@ import {
   type CredentialedConfig,
   readChatSnapshot,
   readLocal,
+  resetStorageWarningsForTests,
   scopedKey,
   storageService,
   tenantScope,
@@ -80,8 +83,13 @@ describe('setConfig scopes the chat context to the tenant', () => {
 });
 
 describe('private-mode localStorage', () => {
+  beforeEach(() => {
+    resetStorageWarningsForTests();
+  });
+
   afterEach(() => {
     vi.restoreAllMocks();
+    resetStorageWarningsForTests();
   });
 
   it('readLocal degrades to null instead of throwing when localStorage.getItem throws', () => {
@@ -99,6 +107,36 @@ describe('private-mode localStorage', () => {
     });
 
     expect(() => writeLocal('any-key', 'value')).not.toThrow();
+  });
+
+  it('warns exactly once across many denied writes, not once per write', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('SecurityError: storage is disabled');
+    });
+
+    writeLocal('key-a', 'value-1');
+    writeLocal('key-b', 'value-2');
+    writeLocal('key-c', 'value-3');
+
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('warns exactly once across many denied reads, not once per read, independently of the write warning', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new Error('SecurityError: storage is disabled');
+    });
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('SecurityError: storage is disabled');
+    });
+
+    readLocal('key-a');
+    writeLocal('key-a', 'value');
+    readLocal('key-b');
+    readLocal('key-c');
+
+    expect(warnSpy).toHaveBeenCalledTimes(2);
   });
 });
 

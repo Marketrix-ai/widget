@@ -40,16 +40,36 @@
  * A second mount/unmount cycle in each describe block proves idempotence: the screen-share
  * non-idempotency bug (`ScreenShareService.test.ts`'s header) is the precedent for why one cycle is not
  * proof.
+ *
+ * 3. `describe('unmountWidget stops an active rrweb session recording')` drives the real `initWidget`
+ *    production path with `widget_recording` on, so the recording IIFE constructs a real
+ *    `RrwebSessionRecorder` and arms `@rrweb/record` (mocked, since real rrweb has nothing left to prove
+ *    here — `RrwebSessionRecorder.test.ts` already owns that fidelity) against `document`, then calls
+ *    `unmountWidget` mid-recording and asserts the mocked teardown function `record()` returned was
+ *    called — `RrwebSessionRecorder.stop()` is unit-tested for its OWN state (`RrwebSessionRecorder.test.ts`),
+ *    but nothing previously proved `unmountWidget` reaches a recorder constructed via the real singleton
+ *    init flow rather than one built directly in a test.
  */
-import { fireEvent, waitFor, within } from '@testing-library/react';
+import { record } from '@rrweb/record';
+import { act, fireEvent, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 
-import { unmountWidget } from '../index';
+import { initWidget, unmountWidget } from '../index';
 import { chatSessionManager } from '../services/ChatSessionManager';
 import { showModeService } from '../services/ShowModeService';
 import { writeChatSnapshot } from '../services/StorageService';
 import { streamClient } from '../services/StreamClient';
+import * as WidgetService from '../services/WidgetService';
+import { credentialedConfig } from '../test/fixtures';
 import { renderWidget } from '../test/renderWidget';
+import { mocked, mockSdkModule, restoreModuleAfterAll } from '../test/vi-compat';
+
+// File-wide: no test here needs real rrweb or a real network round-trip, and `vi.mock` replaces a
+// module for the whole `bun test` process by resolved path (`vi-compat.ts`'s header) — restored in
+// `afterAll` so it doesn't leak into a file later in discovery order.
+vi.mock('@rrweb/record', () => ({ record: vi.fn(() => vi.fn()) }));
+vi.mock('../sdk', () => mockSdkModule({ widgetMessagePost: vi.fn().mockResolvedValue({ success: true }) }));
+restoreModuleAfterAll('../sdk', () => import('../sdk/index.ts?real'));
 
 interface Registry {
   openListeners: number;
@@ -285,5 +305,37 @@ describe('unmountWidget releases the show-mode overlay it does not own via the R
     expect(second.openListeners).toBe(0);
     expect(second.openIntervals).toBe(0);
     second.restore();
+  });
+});
+
+describe('unmountWidget stops an active rrweb session recording started by the real init flow', () => {
+  afterEach(() => {
+    unmountWidget();
+    vi.restoreAllMocks();
+    document.body.replaceChildren();
+    window.__mtx = undefined;
+  });
+
+  it("calls the recorder's rrweb teardown function on a mid-stream unmount, not just its own internal flag", async () => {
+    vi.spyOn(WidgetService, 'loadWidgetConfig').mockResolvedValue(
+      credentialedConfig({ widget_recording: true, mtxApp: 1 }),
+    );
+    vi.spyOn(chatSessionManager, 'getOrCreateChatId').mockResolvedValue('chat-1');
+    vi.spyOn(streamClient, 'connect').mockResolvedValue();
+    vi.spyOn(streamClient, 'ready').mockResolvedValue();
+    const stopRecording = vi.fn();
+    mocked(record).mockReturnValue(stopRecording);
+
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+
+    await act(() => initWidget({ mtxId: 'rec-1', mtxKey: 'key', mtxApiHost: 'https://api.test' }, container));
+    // The recording IIFE (`index.tsx`) runs after `mount()` returns: `getOrCreateChatId` → `recorder.start()`
+    // → `streamClient.ready` → the metadata POST → `record()`, all resolved/mocked above but still async.
+    await waitFor(() => expect(record).toHaveBeenCalledTimes(1));
+
+    unmountWidget();
+
+    expect(stopRecording).toHaveBeenCalledTimes(1);
   });
 });

@@ -626,3 +626,90 @@ describe('a transient stream failure banner clears once the stream recovers', ()
     );
   });
 });
+
+describe('a chat_id the api replays turns for after an SSE reconnect', () => {
+  it('does not duplicate an already-answered request when its delta/response pair is replayed verbatim', async () => {
+    renderCaptured(false);
+    storageService.setConfig(getMockWidgetConfig({ mtxId: 'replay-1', mtxKey: 'key' }) as CredentialedConfig);
+
+    act(() => {
+      captured!.chatActions.addMessage({
+        id: 'req-replay-1',
+        sender: 'agent',
+        timestamp: new Date(),
+        isPlaceholder: true,
+        parts: [],
+      });
+    });
+
+    const playTurn = () => {
+      asStreamClientInternals().handleMessage({ type: 'chat/delta', request_id: 'req-replay-1', text: 'Sure, ' });
+      asStreamClientInternals().handleMessage({
+        type: 'chat/delta',
+        request_id: 'req-replay-1',
+        text: 'here you go.',
+      });
+      asStreamClientInternals().handleMessage({
+        type: 'chat/response',
+        request_id: 'req-replay-1',
+        text: 'Sure, here you go.',
+      });
+    };
+
+    act(playTurn);
+    const answered = captured!.messages.find(msg => msg.id === 'req-replay-1');
+    expect(messageText(answered!.parts)).toBe('Sure, here you go.');
+    expect(answered!.parts.filter(p => p.type === 'text')).toHaveLength(1);
+
+    // A reconnect mid-page-life replays the WHOLE turn (both deltas, then the closing response) rather
+    // than only the tail the client missed — `StreamClient.ts`'s header documents the api replaying by
+    // chat_id, not by cursor. Without request-id-scoped dedupe, `reduceText`'s own "exact repeat" guard
+    // only catches an identical FINAL `chat/response` (`sseReducer.ts`'s header) — a delta arriving after
+    // the message is already closed fails that exact-string check and gets appended as a brand-new,
+    // visibly duplicated text segment before the closing response papers back over only the LAST one,
+    // leaving two identical bubbles' worth of text behind.
+    act(playTurn);
+
+    const reAnswered = captured!.messages.find(msg => msg.id === 'req-replay-1');
+    expect(messageText(reAnswered!.parts)).toBe('Sure, here you go.');
+    expect(reAnswered!.parts.filter(p => p.type === 'text')).toHaveLength(1);
+  });
+
+  it('still lets a genuinely new request_id after the replayed one through untouched', async () => {
+    renderCaptured(false);
+    storageService.setConfig(getMockWidgetConfig({ mtxId: 'replay-2', mtxKey: 'key' }) as CredentialedConfig);
+
+    act(() => {
+      captured!.chatActions.addMessage({
+        id: 'req-replay-2a',
+        sender: 'agent',
+        timestamp: new Date(),
+        isPlaceholder: true,
+        parts: [],
+      });
+    });
+    act(() => {
+      asStreamClientInternals().handleMessage({ type: 'chat/response', request_id: 'req-replay-2a', text: 'first' });
+      // Replay of the same turn.
+      asStreamClientInternals().handleMessage({ type: 'chat/response', request_id: 'req-replay-2a', text: 'first' });
+    });
+
+    act(() => {
+      captured!.chatActions.addMessage({
+        id: 'req-replay-2b',
+        sender: 'agent',
+        timestamp: new Date(),
+        isPlaceholder: true,
+        parts: [],
+      });
+    });
+    act(() => {
+      asStreamClientInternals().handleMessage({ type: 'chat/response', request_id: 'req-replay-2b', text: 'second' });
+    });
+
+    const first = captured!.messages.find(msg => msg.id === 'req-replay-2a');
+    const second = captured!.messages.find(msg => msg.id === 'req-replay-2b');
+    expect(messageText(first!.parts)).toBe('first');
+    expect(messageText(second!.parts)).toBe('second');
+  });
+});
