@@ -1,15 +1,6 @@
 /**
- * Tests for `ShellTabBar`, the Home/Chat tab strip, rendered inside a controlled `Tabs.Root`.
- *
- * `renderTabs` mounts the bar at a given selected value with an optional `onValueChange` spy.
- *
- * The first test pins the selection attribute the styling depends on: Base UI emits NO `data-selected`,
- * and `Tabs.Tab` OVERWRITES any `data-active` of its own onto the element, so index.css hangs the active
- * tab's colour, weight and underline off `aria-selected`. Asserting both the true/false pair and the
- * absence of `data-selected` makes a Base UI change fail here instead of silently rendering every tab
- * inactive. The second pins that the underline element is rendered for BOTH tabs — CSS reveals only the
- * selected one — so a count of two is correct, not a leak. The third pins that a click reports the picked
- * tab through `onValueChange`.
+ * Tests for `ShellTabBar`'s Home/Chat tab strip: selection is exposed only via `aria-selected`, both
+ * tabs render their underline element, and clicking a tab reports the change.
  */
 import { Tabs } from '@base-ui/react/tabs';
 import { fireEvent, render, screen } from '@testing-library/react';

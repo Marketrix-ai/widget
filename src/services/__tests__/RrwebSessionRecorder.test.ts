@@ -1,15 +1,7 @@
 /**
- * `RrwebSessionRecorder` tests: a rejected flush caps the buffer without discarding the Meta and
- * FullSnapshot every later event replays against, and retries on its own timer even when the host page
- * goes idle and rrweb emits nothing new to piggyback the retry on; stopping while metadata is in flight
- * never begins recording; the metadata post waits until the stream has registered the chat; and calling
- * `start()` again while already recording is a no-op, never a second `record()` arming a duplicate
- * rrweb instance.
- *
- * `Emit`'s parameter is typed from `@rrweb/types`'s real `eventWithTime` (`type`/`timestamp`, the two
- * fields this suite's buffering logic cares about) plus the real `emit`'s `isCheckout` second parameter,
- * not a hand-rolled shape that could drift from the library's actual callback signature; `data` stays
- * `unknown` since no test here reads it.
+ * Tests for `RrwebSessionRecorder`: a rejected flush caps the buffer without dropping the Meta/
+ * FullSnapshot baseline, retries keep going even with no new events, and start/stop respect an
+ * in-flight metadata post and the stream's registration.
  */
 import { record } from '@rrweb/record';
 import { EventType, type eventWithTime } from '@rrweb/types';

@@ -1,22 +1,13 @@
 /**
- * Runtime validation of the widget's untrusted inputs: two DOM type guards (`isHTMLElement`, `isHTMLScriptElement`,
- * narrowing a possibly-null `Element` off a host-page lookup), and the one home for settings validation —
- * `parseWidgetSettings`, checking a value against the widget audience's `WidgetSettingsData` and returning either
- * the picked settings or the offending field names, via the per-field predicates behind `FIELD_GUARDS` /
- * `FIELD_NAMES`. `RENDER_CONSTANT_NAMES` / `RENDER_CONSTANT_SET` name the fields the widget renders from its own
- * constants; `WidgetRenderedSettings` is the wire shape minus those, `WidgetSettingsResult` the
- * settings-or-invalidFields union returned, and `invalidSettingsMessage` folds invalid field names into one message.
+ * Runtime validation of the widget's untrusted inputs: two DOM type guards (`isHTMLElement`,
+ * `isHTMLScriptElement`) and `parseWidgetSettings`, the one home for validating a host's settings
+ * against the widget audience's `WidgetSettingsData`. It returns either the picked settings or the
+ * offending field names; `invalidSettingsMessage` turns those into one message.
  *
- * Hand-written rather than a zod `safeParse` because importing a schema as a VALUE anywhere reachable from
- * `src/index.tsx` pulls zod's whole runtime into every host page: rolldown cannot prove `z.object(...)` pure, so
- * one value import retains the entire mirror's schema graph. `satisfies Record<keyof WidgetSettingsData, …>` keeps
- * the table honest — a field added api-side fails to compile here until guarded, one removed fails as an unknown
- * key — and `RENDER_CONSTANT_NAMES` mirrors api's `WIDGET_RENDER_CONSTANTS` by hand under the same check.
- *
- * `parseWidgetSettings` PICKS as well as validates: a widget's settings arrive carrying the render constants and the
- * result is spread into the widget config, so unknown keys passing through would leak them where a zod-parsed
- * object would drop them. Render constants stay guarded, since a legacy bundle's stored value must keep passing, but are dropped
- * from the picked result, since nothing renders them.
+ * Written by hand rather than with a zod schema, since importing a zod schema as a value anywhere
+ * reachable from `src/index.tsx` would pull zod's whole runtime into every host bundle. The per-field
+ * guard table is `satisfies`-checked against the real settings type so a contract change fails to
+ * compile here until the guard is updated.
  */
 
 import type { WidgetSettingsData } from '../sdk';

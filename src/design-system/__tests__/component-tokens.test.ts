@@ -23,7 +23,7 @@ describe('the radius scale', () => {
 describe('the fixed notification palette', () => {
   it('clears text at 4.5:1 and the close icon at 3:1 against each tone background', () => {
     for (const [tone, colors] of Object.entries(notificationToneStyles)) {
-      const bg = tone === 'neutral' ? '#ffffff' : colors.background; // neutral's bg carries alpha; approximate its lightest case
+      const bg = tone === 'neutral' ? '#ffffff' : colors.background;
       expect(contrastRatio(colors.titleColor, bg)).toBeGreaterThanOrEqual(4.5);
       expect(contrastRatio(colors.bodyColor, bg)).toBeGreaterThanOrEqual(4.5);
       expect(contrastRatio(colors.closeColor, bg)).toBeGreaterThanOrEqual(3);

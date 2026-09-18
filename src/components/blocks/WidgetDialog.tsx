@@ -1,20 +1,11 @@
 /**
- * The widget's one modal — a Base UI dialog with a title, optional description and a cancel/confirm
- * button pair, skinned by the `mtx-dialog-*` rules in `index.css`.
+ * The widget's one modal: a Base UI dialog with a title, optional description and a cancel/confirm
+ * button pair, skinned by `index.css`'s `mtx-dialog-*` rules.
  *
- * `WidgetDialogProps` carries `open`/`onClose`, the copy (`title`, `description`, `confirmLabel`,
- * `cancelLabel`), an optional `onConfirm`, and `finalFocusRef` naming where focus lands on close.
- * `WidgetDialog` renders the backdrop and popup into the portal container published by the widget root;
- * cancel and confirm are one button rendered twice from a (variant, label, action) table, since they
- * differ in nothing else. That portal target comes from `usePortalContainer()` rather than defaulting to
- * the shadow root: the widget root element carries every tenant token as an inline style, so anything
- * portaled beside it renders in `index.css`'s hardcoded fallback palette instead of the tenant's theme.
- *
- * `finalFocus` is named explicitly because Base UI's default focus restore is broken inside a closed
- * shadow root: it descends `element.shadowRoot.activeElement`, which is null for a CLOSED root, so it
- * records the shadow HOST and hands focus to a host-page element on close. Base UI also stamps
- * `reason === 'none'` on an open-state change it makes itself with no originating event (a popup whose
- * active trigger unmounted); `onOpenChange` skips those and reports only real closes.
+ * `WidgetDialog` renders into the portal container published by the widget root rather than the default
+ * target, so it picks up the tenant's theme tokens instead of falling back to the hardcoded palette.
+ * `finalFocusRef` is passed explicitly because Base UI's own focus restore breaks inside a closed shadow
+ * root and would otherwise hand focus back to the host page on close.
  */
 import { Dialog } from '@base-ui/react/dialog';
 import React from 'react';

@@ -1,27 +1,12 @@
 /**
- * Colour handling for tenant widget settings: the one home for reading a settings colour into channels,
- * picking text that reads over it, and re-emitting it with an alpha.
+ * Colour handling for tenant widget settings: reading a settings colour into channels, picking text
+ * that reads legibly over it, and re-emitting it with an alpha.
  *
- * `toRgb` parses a hex (3- or 6-digit, leading `#` optional — the dashboard accepts both spellings) or an
- * `rgb()`/`rgba()` string into channels, and returns null for anything else. Only those two notations are
- * read: a named colour, `hsl()` or a `var(--…)` custom property is unreadable here by design, and a channel
- * above 255 is refused rather than clamped, so a malformed setting never silently becomes a valid colour.
- * `contrastRatio` is the one home for the WCAG formula — relative luminance is sRGB gamma-decoded per
- * channel, weighted .2126/.7152/.0722, and the ratio is `(lighter + 0.05) / (darker + 0.05)`.
- * `getContrastingColor` picks whichever of black or white scores higher against it: this is the single
- * place a tenant colour without its own paired foreground setting (a button's accent, a status pill)
- * gets one synthesized, and comparing the two ratios directly (rather than a `luminance > 0.5` split,
- * whose crossover sits at ≈0.179, not 0.5) means every synthesized foreground clears the AA 4.5:1
- * threshold by construction — the higher of the two ratios is never below ~4.6:1. An unreadable
- * background falls back to BLACK, never white: tenant surfaces skew light, so black stays legible where
- * white would vanish. `addOpacity` re-emits a colour as `rgba()` at the given alpha and passes an
- * unreadable one through UNCHANGED — it stays a CSS value the browser can still resolve, where an
- * `rgba(NaN, …)` would render nothing.
- *
- * `backgroundGradient` is the one home for `widget_background_color` as a `backgroundImage`: the setting may
- * already be a gradient, which is legal only as `backgroundImage`, so a flat colour is emitted as a same-stop
- * gradient and one declaration covers both spellings. Panel and transcript both paint through it, so there is
- * no second expansion to drift from.
+ * `toRgb` parses a hex or `rgb()`/`rgba()` string into channels, or null for anything else — a named
+ * colour or `hsl()` setting is unreadable by design. `contrastRatio` computes the WCAG contrast
+ * formula; `getContrastingColor` picks whichever of black or white reads better against a colour.
+ * `addOpacity` re-emits a colour at a given alpha. `backgroundGradient` turns a tenant's background
+ * setting, which may already be a gradient, into a `backgroundImage` value either way.
  */
 
 type Rgb = { r: number; g: number; b: number };

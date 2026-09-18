@@ -54,6 +54,23 @@ without a host script tag. `bun run ci` runs `build` BEFORE `test` (never spawns
 test — that blew past `bun test`'s per-test timeout in CI); the test only asserts `dist/widget.mjs`
 exists and fails with a clear message under a standalone `bun test`.
 
+**Comment gate** — `scripts/check-comments.ts` (`bun run check:comments`, wired into `ci` before
+`build`) enforces Rule 0: zero inline comments outside the one top docstring, capped at 12 lines. It
+tokenizes with the real TypeScript scanner rather than a naive regex, so a `//`/`/*` inside a string,
+regex or template literal is never mistaken for a comment.
+
+**bun test has no `vi.resetModules`** — an ES import is cached forever by resolved specifier, so a
+test needing a fresh module evaluation (or one dodging a `vi.mock` left active by an earlier file)
+bumps the specifier itself: a `?t=<n>` query for a fresh eval, or the `?real`-suffixed import
+`restoreModuleAfterAll` uses to bypass a live mock. A `.mjs` import is cached by PATH ONLY, ignoring
+the query string (unlike bun's own `.ts` transpile loader) — a cache-buster only works on `.ts`/`.tsx`.
+jsdom does no layout: `offsetParent` is always null, `innerText` and `isContentEditable` are
+unimplemented, and `document.currentScript` is a non-configurable getter `spyOn` cannot stub (shadow
+it as an own property instead) — any focus-order, visibility or DOM-manipulation test must stub these
+directly rather than relying on jsdom to compute them. Bun's `it.each` mistakes a bare `[]` entry for
+zero arguments and hangs on the sole declared parameter (mistaken for a `done` callback) — wrap a
+no-argument case as `[[]]`.
+
 **Pre-handoff gate** (matching the repository-local bun workflow): `bun run ci`. This public repo
 cannot call private infra workflows. Git hooks autofix but are not a substitute.
 
@@ -125,7 +142,12 @@ async iterator in the background. Status machine `disconnected → connecting �
 `error` from any failed connect or stream — **`open` is the transport, `registered` is the chat**, so
 `isConnected()` reads `registered` and nothing waits on `open`. Exponential-backoff reconnect (1000ms
 ×2, cap 30000ms, **max 10 attempts**; counters reset only on `registered`) and the `chat/error`
-`request_id === 'auth'` give-up branch are pinned by sourceInvariants.test.ts.
+`request_id === 'auth'` give-up branch are pinned by sourceInvariants.test.ts. **The api replays a
+chat_id's whole turn history on reconnect**, not just the tail a client missed, and it accepts a
+command only into a chat whose stream has reached `registered` — the widget dedupes replayed
+`chat/delta`/`chat/response` by `request_id` and `tool/call` by `tool_call_id` rather than assuming an
+append-only stream. SSE is additionally keyed server-side by `(chat_id, tab_id)` so several tabs
+sharing one `chat_id` don't evict each other's stream.
 
 **Round-trip** — `ChatContext.messageDispatch(content, mode)` fire-and-forget POSTs
 `{type: 'chat/${mode}', request_id, content}` (an omitted mode takes the composer's current mode,
@@ -174,7 +196,11 @@ welcome toast and does not alter the greeting message in chat.
   query inside it.
 - **The runtime API host is not an env var** — it is supplied per-init as `mtxApiHost` (config) /
   `mtx-api-host` (script attr), and `configureSdk(apiUrl)` rebuilds the oRPC client. There is no
-  baked-in API URL.
+  baked-in API URL, and omitting `mtxApiHost` is not caught — an unconfigured SDK silently resolves
+  every request against the HOST PAGE's own origin instead of erroring.
+- **`widgetPublicSearch`'s response never carries a credential** — only `status`/`application_id`/
+  `settings`, never the `marketrix_id`/`marketrix_key` pair the call authenticated with, nor a rendered
+  embed snippet.
 
 ## SDK mirror (generated)
 

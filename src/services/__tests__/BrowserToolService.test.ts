@@ -1,19 +1,7 @@
 /**
- * Browser-tool tests. A tool that leaves the page (`navigate`, `search_web`, `go_back`) holds the
- * navigation until its response has been sent, so the agent hears the result before the page is gone.
- * `navigate` refuses `javascript:` (it would run in the host page) and resolves relative URLs; opening a
- * new tab reports whether the popup really opened; `close_tab` fails on a tab the script did not open.
- * `search_web` picks the engine URL by name and defaults to DuckDuckGo; `extract` truncates links only
- * when asked, defaulting a link's empty text to the empty string rather than a falsy DOM read; `wait`,
- * `goBack` and `selectDropdownOption`/`sendKeys` each exercise the required-argument and fallback-message
- * branches a happy-path click/type test never reaches; a `domService`-supplied error message on a missing
- * element wins over the generic one; and `executeTool`'s Show-mode default explanation only fires when the
- * caller left it blank.
- *
- * jsdom has no layout engine: `innerText` is left unimplemented (reading it throws, so `extract`'s cases
- * stub it from the DOM they just built), `isContentEditable` is never computed from the attribute (so
- * `typeText`'s contentEditable case forces it directly via `Object.defineProperty`), and rich-text editing
- * is absent (so `execCommand` isn't a spyable prototype method there and is assigned directly instead).
+ * Tests for `BrowserToolService`'s tool execution: navigation tools defer until their response is
+ * sent, inputs are validated and failures come back as typed results rather than thrown, and Show
+ * mode's default explanation and click-dedupe behavior.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 

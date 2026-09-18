@@ -1,31 +1,13 @@
 /**
- * Show mode's on-page coaching overlay: highlights one host-page element, explains the step beside it and
- * returns a promise that settles when the visitor acts, so `BrowserToolService` can await a `show`-mode tool
- * call before running the tool. `showToolAction` mounts highlight and popup and returns the pending promise,
- * or the in-flight one for an identical restage (a duplicate tool call); `cleanup` cancels and unwinds;
- * `showModeService` is the singleton every caller uses.
+ * Show mode's on-page coaching overlay: highlights one host-page element, explains the step beside it,
+ * and waits for the visitor to act before the tool actually runs.
  *
- * Exactly one settle: the element click, the Continue button and both watchdog branches race, so both
- * settlers are DETACHED before either fires and the off-screen branch returns rather than falling through.
- * The highlight is `pointer-events:none` so the visitor's click reaches the real element; click and
- * reposition handlers sit on `document` in the CAPTURE phase — the former tests `composedPath`, which sees
- * through Shadow DOM retargeting, and prevents default so navigation cannot precede the result; the latter
- * tracks a scrolling container, not just the window. `#marketrix-show-highlight` and `#marketrix-show-popup`
- * are load-bearing ids: `DomService.notInteractableReason` allowlists them so the overlay never reads as an
- * obscuring modal, and cleanup re-finds them because an interrupted node outlives its handle. The highlight's
- * cssText is one line because template-literal whitespace is not minified. `trackElement` is the one place the
- * highlight is sized and placed over its element, so the first paint and every reposition run through it;
- * placement takes the first of right/left/above/below that fits then clamps, its 120px height an assumption,
- * and the watchdog tests `document.body.contains` first, covering removal as well as occlusion.
- * `ACCENT_COLOR`/`TEXT_COLOR` are raw literals rather than design-system tokens: the highlight and popup
- * mount to `document.body` on the HOST page, outside the shadow root, so `index.css`'s `:host`-scoped
- * CSS custom properties never reach them.
+ * `showToolAction` mounts the highlight and popup and returns a promise that settles on a click, the
+ * Continue button, or a timeout if the element goes off-screen or disappears. `cleanup` removes them.
+ * `showModeService` is the singleton `BrowserToolService` awaits before running a `show`-mode tool call.
  *
- * `trackElement`'s `!this.currentElement || !this.currentHighlight` and the click handler's
- * `!this.currentElement || !this.resolvePromise` cannot observe a mixed state: `showToolAction` sets
- * every one of these fields together and `cleanup` clears every one of them together, so within a
- * single stage they are always all-null or all-set. The guards stay as defensive redundancy against a
- * future edit that breaks that pairing, not because either can independently be null today.
+ * The overlay mounts onto the host page itself, outside the widget's shadow root, so it uses its own
+ * plain colours rather than the widget's themed design tokens.
  */
 
 import { LAYER_TOKENS } from '../design-system/component-tokens';

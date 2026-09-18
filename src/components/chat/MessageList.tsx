@@ -1,22 +1,12 @@
 /**
- * The chat transcript pane: a scrolling `role='log'` list of `MessageItem`s with the "Clear conversation"
- * action beneath it and two floating scroll affordances layered over it.
+ * The chat transcript pane: a scrolling list of `MessageItem`s with a "Clear conversation" action and
+ * two floating scroll affordances (scroll-to-top, scroll-to-bottom) layered over it.
  *
- * `scrollButtonStyle` is the card-on-surface look shared by both affordances. `MessageListProps` carries
- * the end-of-list anchor ref owned by `ChatView` plus the screen-access answers, forwarded only to
- * `MessageItem`. `MessageList` prepends a greeting message built from `widget_body` through the shared
- * `createAgentMessage`, the one home for a `ChatMessage`; it never enters the store, which is why
- * "Clear conversation" is gated on `messages.length` rather than on the rendered list. `handleScroll` derives both affordances from container geometry — top once scrolled past
- * 200px, bottom while the list overflows and sits more than 50px off the end. The transcript paints
- * `widget_background_color` through `backgroundGradient`, the one home for that expansion, zeroing
- * `backgroundColor` for a gradient setting so the two declarations cannot fight.
- *
- * Every scroll is suppressed in preview mode: there the widget is embedded in the dashboard's modal, and
- * `scrollIntoView` would scroll that parent modal rather than this list. The scroll on a new message waits
- * a `requestAnimationFrame` so layout has settled before it fires. A streaming reply arrives as
- * `chat/delta` fragments that grow the last message in place without changing the message count, so a
- * second effect keys on that message's content length and re-pins to the bottom only while the reader is
- * already within 120px of it — a reader who scrolled away is left where they are.
+ * `MessageList` prepends a greeting message built from `widget_body`, which never enters the store —
+ * that's why "Clear conversation" is gated on the store's own message count. `handleScroll` shows each
+ * affordance based on scroll position. All scrolling is suppressed in preview mode, where the widget is
+ * embedded in the dashboard's own modal and scrolling would move that modal instead of this list. A
+ * streaming reply re-pins to the bottom only while the reader was already near it.
  */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 

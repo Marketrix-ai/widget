@@ -1,22 +1,12 @@
 /**
  * The widget's one notification surface: a Base UI Toast provider, the toast renderer, and the effect
- * that drives toasts from widget state. Base UI owns the live region, the dismiss timers, hover-to-pause
- * and stacking.
+ * that drives toasts from widget state. Base UI owns the live region, dismiss timers and stacking.
  *
- * `NotificationList` renders every live toast and stays a component of its own because `useToastManager`
- * only resolves inside `Toast.Provider`; both text lines truncate through `Text`'s own prop, a toast
- * carrying an action lets its title wrap instead, and a toast's `type` is a free string in Base UI, so it
- * is narrowed inline to the three tones `notificationToneStyles` understands, anything else falling back
- * to `neutral`. `NotificationProvider` wraps the provider, portal and viewport — `container` is the
- * widget's CLOSED shadow root, since portalling to `document.body` instead would leave the injected
- * styles behind, and `offsetBottom` raises the viewport above the launcher when the launcher also sits
- * at the bottom, so the two cannot overlap. `WidgetNotifications` calls Base UI's `Toast.useToastManager`
- * directly as the one door for adding and closing toasts.
- *
- * `WidgetNotifications` renders nothing; it mirrors the `error` and `greeting` props into toasts and
- * closes them when the prop clears. Both use a STABLE id, so `add` upserts and a re-render cannot stack
- * duplicates of the same condition. The error toast carries `timeout: 0` — it stays until acted on
- * (dismissed or retried); only the greeting is transient.
+ * `NotificationList` renders the live toasts, narrowing each one's free-form `type` down to the three
+ * tones the design tokens understand. `NotificationProvider` portals into the widget's own shadow root
+ * so the injected styles still apply, and raises the viewport above the launcher when both sit at the
+ * bottom. `WidgetNotifications` renders nothing itself — it mirrors the `error` and `greeting` props
+ * into toasts under a stable id, so a re-render upserts rather than stacking duplicates.
  */
 import { Toast } from '@base-ui/react/toast';
 import React, { useEffect } from 'react';

@@ -1,16 +1,7 @@
 /**
- * `use_screenshare` tests: denied without a prompt when the tenant turned sharing off — on the switch
- * alone, so a stored config that lost its credentials cannot reopen the picker — and prompted when on.
- * `startScreenShare` is idempotent both for an already-live stream and for two overlapping calls before
- * the first `getDisplayMedia` prompt resolves; `stopScreenShare` releases every track and is a no-op
- * when nothing is sharing. `activeScreenStream`/`isScreenSharing` read the video track's OWN readyState,
- * not just stream liveness, and `startScreenShare` rejects a prompt that resolves with zero video tracks
- * instead of returning an unusable stream.
- *
- * `startScreenShare`/`stopScreenShare` own module-level state (the active `MediaStream`) shared by the
- * whole `bun test` process (root `CLAUDE.md` has the general leak mechanism); the success case here
- * leaves it genuinely active, so `afterEach` calls `stopScreenShare()` to keep it from being read as
- * still sharing by `widget-smoke.test.tsx`/`ChatView.test.tsx`, mounted afterward.
+ * Tests for `startScreenShare`/`stopScreenShare`: denial when the tenant has screen sharing off,
+ * idempotent starts and a shared prompt across overlapping calls, and that sharing status tracks the
+ * video track's own readyState.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 

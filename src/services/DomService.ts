@@ -1,20 +1,13 @@
 /**
- * The numbered address space the agent drives the host page by: `reindexAndSnapshot` walks the live document and
- * returns a clone stamped with `data-id="<n>"` on every interactive element; `getSequenceForElement` is the reverse
- * lookup; `getValidatedElement` resolves an index back to a live element or a `ValidatedElementResult` error;
- * `notInteractableReason` phrases why an element cannot be acted on; `generateAnchoredSelector` and `indexElements`
- * build the walk and its body-anchored selectors. `domService` is the process-wide singleton.
+ * The numbered address space the agent drives the host page by. `reindexAndSnapshot` walks the live
+ * document and returns a clone with `data-id="<n>"` stamped on every interactive element;
+ * `getSequenceForElement` reverses that lookup; `getValidatedElement` resolves an index back to a live
+ * element or an error reason; `notInteractableReason` explains why an element can't be acted on.
+ * `domService` is the process-wide singleton.
  *
- * `data-id` is the whole contract with the agent, so the clone is tagged by re-querying each stored selector rather
- * than walking the two trees in step — a synced walk breaks on modals and fixed elements. Indices are addresses the
- * agent holds across turns: each entry snapshots IDENTITY_ATTRIBUTES so a changed element reads as DOM_CHANGED
- * rather than silently acting on a control the agent no longer means.
- *
- * The tree walker keeps an element with a null `offsetParent` when it or an ancestor is fixed/sticky, since the
- * browser reports no offsetParent for those even when visible. The obscured test ignores Marketrix's own chrome
- * (Show-mode highlight/popup, the widget's shadow host) since those legitimately sit over the element they point
- * at. `notInteractableReason`'s `document.body.contains` check must stay first: ShowModeService uses it as its
- * removal watchdog and keeps no identity snapshot of its own.
+ * Each indexed entry snapshots a few identity attributes, so an element that changed between turns is
+ * reported as changed rather than silently acted on. The obscured-element check ignores the widget's
+ * own chrome (Show-mode highlight/popup, its shadow host), since those legitimately sit on top.
  */
 
 import { disabledReason, isIndexable, WIDGET_SHADOW_HOST_CLASS } from '../utils/dom';

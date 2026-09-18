@@ -1,28 +1,14 @@
 /**
- * The one home for turning per-tenant widget settings into semantic design tokens and the CSS custom
- * properties inlined on the widget root — the widget's entire theming mechanism (no dark mode, no
- * class-based themes).
+ * Turns per-tenant widget settings into semantic design tokens and the CSS custom properties inlined
+ * on the widget root — the widget's entire theming mechanism (there is no dark mode).
  *
- * Contents: the `SemanticTokens` shape (color / radius / motion); `WIDGET_RADIUS_PX`, exported because
- * `WidgetFab` needs the raw number for its SVG `rx`/`ry`, not a CSS string; `DURATION_ANIMATION` and
- * `DURATION_FADE`; `WidgetStyleSettingsDefaults` and `WIDGET_STYLE_SETTINGS_DEFAULTS`, the five colour
- * settings this file consumes and their fallbacks; `createSemanticTokens`, which resolves a partial
- * settings object against those defaults and derives the muted/faint/hover/contrast variants;
- * `semanticTokensToCssCustomProperties`, the token → `--var` map.
+ * `createSemanticTokens` resolves a tenant's colour settings against fallback defaults and derives the
+ * muted/faint/hover/contrast variants. `semanticTokensToCssCustomProperties` turns those tokens into
+ * the `--var` map applied to the widget root. `WIDGET_RADIUS_PX` and the two duration constants are
+ * fixed, not per-tenant.
  *
- * `color.ring` is NOT the raw accent — a customer's `widget_accent_color` has no contrast guarantee
- * against whatever it sits next to (WCAG 2.4.11/1.4.11 need the focus indicator ≥3:1 against the colours
- * adjacent to it on both sides), so it is `getContrastingColor(widget_background_color)`, the same
- * black/white pick `primaryForeground`/`secondaryForeground` use. `index.css` pairs it with
- * `--ring-offset` (the background colour itself) as a two-tone ring: an inset halo matching the surface,
- * then the ring outside it, so both sides of the ring measure against the one colour it is guaranteed to
- * clear against, whatever the outlined control's own colour is.
- *
- * Radius and both durations are fixed rather than per-tenant: every widget row in production holds these
- * values and no surface writes them. Settings are filtered for explicit `undefined` before merging —
- * a plain spread would let an `undefined` key shadow its default instead of falling back to it. The
- * `--var` map must cover every variable `index.css` `:host` declares, or that hardcoded fallback palette
- * shows through on the widget root.
+ * The focus ring colour is synthesized as black or white against the tenant's background rather than
+ * using the tenant's accent colour, which has no guaranteed contrast against whatever sits next to it.
  */
 import type { WidgetSettingsData } from '../sdk';
 import { addOpacity, getContrastingColor } from '../utils/color';

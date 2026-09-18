@@ -1,30 +1,10 @@
 /**
- * `WidgetFab` — the launcher button: draggable via `useDragSnap`, positioned at the configured corner,
- * glowing while a reply or task is in flight, and showing the stop control while a task runs and the
- * panel is closed. Colours and z-index come from the tenant config; `pointerEvents: none` while open so
- * the panel beneath receives the clicks.
+ * `WidgetFab` — the launcher button: draggable, positioned at the configured corner, glowing while a
+ * reply or task is in flight, and showing a stop control while a task runs and the panel is closed.
  *
- * Glow and activity ring are ONE class each, red or green keyed on the `data-tone` the error state
- * picks — the same data-attribute variant convention every other component here uses. The two icon
- * layers carry only their own transform and opacity; the transition they share is `.mtx-fab-icon-layer`.
- *
- * `useDragSnap` (below) drags this launcher and snaps it to the nearest corner over ONE Pointer Events
- * path (`onPointerDown/Move/Up/Cancel` — no separate mouse/touch handlers, since Pointer Events already
- * unify both). Pointer state is tracked in a ref; movement under DRAG_THRESHOLD_PX stays a click, beyond
- * it the wrapper is translated on a rAF loop with velocity sampled into `velocityHistoryRef` so a flick
- * lands where it was heading — `projectFlickVelocity` (module-level, pure) turns that sample history into
- * a projected pixel delta: zero with fewer than two samples, else the average px/ms over the sampled span
- * projected forward in px/s. On release
- * `getNearestCornerByTranslation` picks the corner, the wrapper animates there for SNAP_DURATION_MS via
- * `left`/`top` transitions, and `commitPositionAfterAnimation` calls `onPositionCommit` on
- * `transitionend` (with a timeout fallback, since a hidden tab fires no transition events) — the
- * committed corner is the one being animated TO, so two snaps in flight cannot commit the abandoned one
- * (`abandonSnapRef`), which the unmount effect also calls so a snap animating when the widget is torn
- * down does not leave its `transitionend` listener and fallback timer running past the component's life.
- * `suppressUntilRef` stamps a time after which a click may open the widget again,
- * so the pointer-up that ends a drag is not read as a tap. The wrapper is measured with a
- * ResizeObserver in a layout effect so the pixel position is right on the first paint; preview mode
- * disables everything. Exported so `WidgetFab.test.tsx`'s `renderHook` case can drive it directly.
+ * `useDragSnap` lets a visitor drag the launcher and snaps it to whichever corner it's released nearest
+ * to, including a flick's projected momentum, then reports the committed corner back once the snap
+ * animation finishes. Preview mode disables dragging.
  */
 import React, { useCallback, useLayoutEffect, useRef, useState } from 'react';
 

@@ -1,27 +1,13 @@
 /**
- * Pure state machine behind `ChatContext`: folds SSE `WidgetEvent`s and local transitions into `{messages,
- * task}` (`SseState`; `TaskPhase`/`TaskState` carry the mode the run was dispatched in) and returns the tool
- * runs the caller must perform (`SseEffect`, `ReduceResult`). No I/O, no React.
+ * Pure state machine behind `ChatContext`: folds incoming SSE events and local transitions into
+ * `{messages, task}` and returns the tool runs the caller must perform. No I/O, no React.
  *
- * `reduceToolProgress` writes a tool's progress line and sets the bubble's spinner, judging by the mode the
- * run STARTED in, not what the composer shows now; `FINISH_TOOL` gets no line, only ending the run, though a
- * failed finish is still stamped failed, and a `show`-mode DOM-mutating tool parks on "waiting-for-user".
- * `reduceToolDone` stamps done and drops the progress parts, scaffolding for "still working" not answer.
- * `reduceStop` stamps stopped and a stopped task STAYS stopped, so late `tool/call`s are ignored until
- * `reduceDispatch` appends the next placeholder and returns to `idle`, reopening the task for the next turn.
- *
- * Terminal transitions clear `isPlaceholder` — the composer is disabled while any message is one, and
- * `has_question` would otherwise ask for an answer the visitor could not type. `isTerminalTaskStatus` reads
- * the very map that stamps the status, so a fourth reaches every caller at once. `reduceError` settles one
- * pending message as a failed bubble, `reduceTransportFailure` does it to every placeholder since after a
- * give-up no id-bearing event is coming, and `reduceStaleReply` covers a HEALTHY stream whose one reply
- * never arrives and nothing else can see (a `waiting-for-user` pause is not stale). `reduceSse` switches:
- * `chat/delta` accumulates, `chat/response` replaces, `tool/call` ACTIVATES the task before `task/status`.
- *
- * `reduceText` drops an EXACT repeat of the last closed text part (same content, not mid-stream): a
- * message can legitimately carry several text segments over its life — a status line, then the final
- * answer — so a new segment always appends; only a byte-for-byte retransmission of the segment just
- * closed is noise, which is what a duplicated `chat/response` looks like.
+ * Tool progress, completion and stop all patch the running message's parts and the task's phase;
+ * `reduceDispatch` appends the next placeholder and reopens the task for a new turn. Terminal
+ * transitions clear `isPlaceholder` so the composer re-enables. `reduceError`, `reduceTransportFailure`
+ * and `reduceStaleReply` each settle a stuck message as failed, covering a bad reply, a dead
+ * connection, and a healthy stream that simply never answers. `reduceText` drops an exact repeat of the
+ * last closed text segment, since a duplicated final reply looks exactly like that.
  */
 import type { WidgetEvent } from '../sdk';
 import { browserToolService, FINISH_TOOL } from '../services/BrowserToolService';

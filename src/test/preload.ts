@@ -1,34 +1,8 @@
 /**
- * `bunfig.toml` `[test] preload` entry — the sole DOM bootstrap for `bun test`, replacing vitest's
- * jsdom `environment` option (bun has none) plus the retired `src/test/setup.ts`. Uses jsdom, not
- * happy-dom: React 19's event delegation needs real `MouseEvent`/`KeyboardEvent` construction and
- * bubbling that happy-dom doesn't reproduce faithfully enough for `fireEvent`/`userEvent`.
- *
- * `globalThis.window = globalThis` makes `window` and `global` the same object, like a real browser's
- * top frame: jsdom's `Window.prototype.location` is non-configurable and cannot be redefined on jsdom's
- * OWN instance, yet tests stub navigation via `Object.defineProperty(window, 'location', ...)` — that
- * only works on a plain, freely-reconfigurable object. Function-valued properties are copied BOUND to
- * the real jsdom window (its WebIDL implementations brand-check `this`), which still lets
- * `vi.spyOn`/`defineProperty` replace the copied slot with a mock.
- *
- * `require()`, not a static `import`, loads jest-dom/`@testing-library/dom` AFTER the DOM globals below
- * are in place: a static import is hoisted before this file's own setup runs, and `@testing-library/dom`'s
- * `screen` singleton binds to `document`/`document.body` at its own first module evaluation — whichever
- * import reaches it first decides the binding for bun's single-process test run.
- *
- * `localStorage`/`matchMedia`/`ResizeObserver` are filled because jsdom doesn't survive `localStorage`
- * onto `globalThis` and ships neither of the other two, which `useDragSnap`/`useScrollLock`/
- * `StorageService` need. `forceOverride` copies event constructors from jsdom even though Bun has its
- * own natives, since `document.createElement`'s elements brand-check `dispatchEvent`'s argument against
- * JSDOM's OWN `Event` class. `isNamespaceLike` copies a class or plain-function namespace (jsdom's
- * `NodeFilter`) UNBOUND, since `bind` strips `.prototype` and own properties, which would break
- * prototype patching and `NodeFilter`'s constants. The bulk-copy loop's `try/catch` narrows on
- * `TypeError` — the shape a non-configurable accessor (e.g. `crypto`) throws when reassigned — and
- * escalates anything else via `console.error`, so a genuinely new copy failure surfaces instead of
- * vanishing into the same silent path as the expected one.
- *
- * `resetDom` clears the body for tests that mount outside Testing Library's render tree, run
- * automatically in `afterEach` here so every test file gets it for free.
+ * `bunfig.toml`'s `[test] preload` entry — the sole DOM bootstrap for `bun test`, replacing vitest's
+ * jsdom `environment` option. Builds a jsdom `Window` and copies it onto `globalThis` (self-referential,
+ * matching a real browser's top frame), fills in `localStorage`/`matchMedia`/`ResizeObserver`, and wires
+ * up jest-dom matchers. `resetDom` clears the document body after each test.
  */
 import { afterEach, expect } from 'bun:test';
 import { JSDOM } from 'jsdom';

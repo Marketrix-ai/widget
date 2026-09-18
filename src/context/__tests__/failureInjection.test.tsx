@@ -1,15 +1,7 @@
 /**
- * Table-driven failure injection over `ChatContext`: every external interaction it drives (message POST,
- * tool/response POST, chat/stop POST, an unmatched `chat/error`, the auth give-up) is failed once via
- * `it.each`, asserting the SAME three invariants a raw-error leak must not violate — the visible text
- * (a transcript bubble or the `useWidget().state.error` banner) is drawn from the fixed human sentence in
- * the case table, never contains the case's injected raw marker (a stand-in for a stack, a status code or
- * a server internals string), and a following retry of the same action succeeds with no reducer left
- * stuck mid-flight. `RAW_MARKER` is deliberately implausible prose so a `.toContain` false-negative (the
- * marker coincidentally appearing in a legitimate human sentence) cannot happen.
- *
- * Screen-share denial (`ChatView.test.tsx`) and a stuck `rrweb/events` flush (`RrwebSessionRecorder.test.ts`)
- * already pin the same invariant for their own transports and are not repeated here.
+ * Table-driven tests that every external `ChatContext` interaction (message post, tool response, stop,
+ * an unmatched error) fails into a human-readable message rather than a raw error, and recovers
+ * cleanly on retry.
  */
 import { act, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'bun:test';

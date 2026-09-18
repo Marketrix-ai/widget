@@ -1,27 +1,12 @@
 /**
- * `Surface` is the canonical container primitive: a polymorphic `forwardRef` element (`as`, default
- * `div`) that composes the shared layout-token vocabulary with a `background` token, a `SHADOW`
- * `elevation` token and a `paddingPreset`, all emitted as inline style — the `default`/`none` lookup
- * entries are empty, so a bare `Surface` is a plain element. `className` is dropped from the host
- * attributes and re-declared because it is INTERNAL to `blocks/`: layout props are the styling API
- * everywhere else, and the only legitimate classes are the `index.css` hooks the block components key on.
+ * `Surface` is the canonical container primitive: a polymorphic element (`div` by default) that composes
+ * the shared layout-token vocabulary with a background token, an elevation token and a padding preset,
+ * all emitted as inline style.
  *
- * `floatingCard` is a `variant` shorthand for the card-background/border/card-elevation/card-padding/xl-
- * rounded/margin bundle both `HomeView`'s recent-conversation card and `ChatView`'s composer card use —
- * the margin lives in `variantStyles` since both call sites want it, while `ChatView`'s extra
- * `marginTop: 'auto'` stays an override on its own `style` prop rather than joining the preset.
- *
- * Style order is fixed and load-bearing: background → padding preset → elevation → layout props → the
- * caller's own `style` last, so an inline style always wins; `Flex` depends on that tail position,
- * resolving `display` itself because `resolveLayoutStyle` is applied ahead of it. `resolveLayoutStyle`
- * is handed the whole `props` (it reads only layout keys), while the DOM spread goes through
- * `stripLayoutProps` — a layout token left on the props bag reaches the element as an unknown attribute.
- *
- * `forwardRef<HTMLElement, SurfaceProps>` is fixed, not generic per `as`: `forwardRef` cannot be made
- * generic across call sites without its own internal cast, so a caller holding a `RefObject` typed to
- * its specific element (`HTMLDivElement`, …) casts at the call site instead — `RefObject.current` is
- * mutable and therefore invariant, so no subtyping relationship lets a `RefObject<HTMLDivElement>` stand
- * in for `Ref<HTMLElement>` without one. `WidgetFab.tsx`, `MessageList.tsx` (×2) are the three sites.
+ * `floatingCard` is a `variant` shorthand for the card look both the home view's recent-conversation
+ * card and the chat view's composer card use. Style precedence is fixed: background, then padding, then
+ * elevation, then layout props, then the caller's own `style` last, so a caller override always wins.
+ * `className` is internal to `blocks/` — layout props are the styling API everywhere else.
  */
 import { type CSSProperties, type ElementType, forwardRef } from 'react';
 

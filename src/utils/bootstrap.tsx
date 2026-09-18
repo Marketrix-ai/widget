@@ -1,27 +1,14 @@
 /**
- * Widget mount plumbing: creating the closed-shadow host, rendering the React roots, holding the
- * single live-mount record, and the script-tag auto-init path.
+ * Widget mount plumbing: creating the closed-shadow host, rendering the React roots, tracking the one
+ * live mount, and the script-tag auto-init path.
  *
- * `WidgetMount`/`widgetState` are the module singleton describing the one live mount (React root,
- * validated config, shadow host, optional caller container, previewMode), read via
- * `isWidgetInitialized`/`getCurrentConfig`, written by `src/index.tsx`. `attachShadowMount` is the ONE
- * place a closed shadow root is opened and widget CSS injected into it; `createWidgetContainer` appends
- * a shadow host to `document.body`, or fills a caller's container edge-to-edge. `mountWidgetToContainer`
- * renders `WidgetRoot` under the providers, `previewMode` disabling network for integration previews.
- * `showHostPageNotice`/`hideHostPageNotice` mount and tear down a standalone toast in its own shadow
- * tree with its own `NotificationProvider`, mounted before the widget's providers exist. `autoInitializeWidget`
- * reads the last `script[mtx-id]`, hands its attributes to the init function (passed in to dodge a
- * circular dependency), and dedupes via `window.__mtx.state`, which survives ES-module re-execution.
+ * `attachShadowMount`/`createWidgetContainer` open the shadow root and attach it to the page or a
+ * caller-supplied container. `mountWidgetToContainer` renders `WidgetRoot` into it.
+ * `showHostPageNotice`/`hideHostPageNotice` show a standalone toast before the widget's own providers
+ * exist. `autoInitializeWidget` reads the host page's script tag and initializes from its attributes.
  *
- * `mtx-api-host` is as required as the credentials — there is no default, and an unconfigured SDK
- * resolves requests against the HOST PAGE's origin, so omitting it silently posts widget traffic at the
- * customer's own site instead of failing. A widget already mounted stays silent there, since a later
- * misconfigured script tag must not log over a working one.
- *
- * `styleNonce`/`mtx-style-nonce` reaches `attachShadowMount`'s injected `<style>` element as its
- * `nonce` property: a host page running a strict `style-src` CSP with no `'unsafe-inline'` blocks that
- * element outright with no nonce, leaving the widget mounted but entirely unstyled — this is the
- * documented escape hatch (README) for that case, applied only when the host supplies one.
+ * `mtx-api-host` has no default: leaving it unset would silently post widget traffic at the host
+ * page's own origin instead of failing loudly.
  */
 import React from 'react';
 import { createRoot, type Root } from 'react-dom/client';

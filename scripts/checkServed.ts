@@ -1,51 +1,14 @@
 /**
- * `bun run check:served` — asserts what the RUNTIME IMAGE actually sends a customer host, over real
- * HTTP, against no api: this is a static nginx bundle (`meet`/`personaos`'s `checkServed.ts` boot a
- * Next server instead — same shape, different host). Runs after `build` in `ci`.
+ * `bun run check:served` — checks what the runtime image actually sends a customer host over real
+ * HTTP, rather than trusting the build config to describe it. Runs after `build` in CI.
  *
- * Local mode (no `TARGET_URL`) builds the `runtime` Docker stage and boots it when `docker` is on
- * `PATH`, since that is the exact artifact `image.yml` ships. Without docker (e.g. a sandboxed dev
- * shell) it falls back to a `Bun.serve` static server that re-derives nginx's own negotiation and
- * header rules from `nginx.conf` — the SAME `expectedHeaders`/`brotliSuffix`/`acceptsGzip` this file
- * uses to assert against either boot, so the fallback can drift from real nginx behavior but never
- * from what this script checks. `TARGET_URL` (e.g. `TARGET_URL=https://widget.marketrix.co bun run
- * check:served`) points the identical row set at an already-running host instead, for deployed
- * parity — only the boot lifecycle changes.
+ * Boots the `runtime` Docker image when docker is available, or falls back to a small `Bun.serve`
+ * static server that mimics nginx's own header and compression rules when it isn't. `TARGET_URL`
+ * points the same checks at an already-deployed host instead of a local boot; adding `EXPECTED_TAG`
+ * also verifies the served bundle is byte-identical to a source build of that tag.
  *
- * Expected `Cache-Control`/`Access-Control-Allow-Origin` values are parsed out of `nginx.conf` itself
- * (`extractBlock` + `headerValue`) rather than a second hardcoded table, so a value changed there is
- * asserted here without anyone remembering to update a duplicate; both locations currently resolve to
- * the same values (no hashed/immutable filename exists to earn a longer TTL — `widget.mjs` and
- * `loader.js` are both served unhashed and revalidate every time), which is a fact about
- * `nginx.conf`'s content, not an assumption baked into this script.
- *
- * Byte-identity against a released tag (`byteIdentityRow`) only runs when both `TARGET_URL` and
- * `EXPECTED_TAG` are set: this repo cannot reach the private infra repo, so the deployed tag is read
- * by a human from infra's Helm values or the `deploy.yml` dispatch inputs and passed in — the check
- * stays read-only and this script never fetches infra itself. It shells to `git archive` the tag into
- * a scratch dir and runs the real `vite build`, so the comparison is against what that tag's source
- * actually produces, not a second copy of the build config.
- *
- * `bootLocal` RETURNS its cleanup handles rather than mutating outer `let`s: a mutation made only inside
- * a called (not inlined) function is invisible to this compiler's flow analysis at the call site, which
- * then narrows the outer binding to `null` and flags any later `?.` access as dead code on `never` — a
- * real TS6 strictness trap, not a runtime bug (closures still work at runtime either way), avoided here
- * by threading the handles back through the return value instead. `BootResult.fallback`'s type is
- * spelled out by hand because Bun's `Server<WebSocketData>` generic resolves to `never` under this
- * tsconfig's strictness when annotated directly, so only the two members this script actually calls are
- * named. Precompression runs host-side too inside `bootLocal` (not just inside the builder stage) since
- * the row checks below compare served bytes against these files regardless of which boot path served
- * them; the no-docker fallback re-derives nginx's own negotiation/header rules so it is held to the same
- * bar rather than a looser one nobody notices drifting, and maps `.js`/`.mjs` to
- * `application/javascript` by hand since nginx's mime.types has no charset param there while Bun sniffs
- * `text/javascript;charset=utf-8`.
- *
- * `fetch` transparently decodes a `br`/`gzip` Content-Encoding (like a browser would), so the decoded
- * body is compared against the plain artifact in every row — proving compression never corrupts content
- * — while the on-disk COMPRESSED artifact's byte size is matched against `Content-Length` to prove which
- * physical file nginx actually picked. `assertBytesEqual` checks length before `assert.deepEqual`:
- * diffing two large, wildly-mismatched byte arrays is pathologically slow to print, so a real corruption
- * must fail on the cheap length compare first.
+ * Expected cache/CORS headers are read out of `nginx.conf` itself rather than duplicated here, so a
+ * config change can't silently drift from what this script asserts.
  */
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';

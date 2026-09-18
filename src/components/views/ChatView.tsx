@@ -1,47 +1,13 @@
 /**
  * The messenger panel's chat view: the scrolling transcript, the composer, and the screen-access
- * dialog that gates Show/Do.
+ * dialog that gates Show and Do.
  *
- * `ChatViewProps` are the shell's three wires — a screen-sharing flag lifted to the header, a ref the
- * shell's toolbar button fills with a share toggle, and the composer textarea ref. `MODES` pairs the
- * mode chips' display order with the tenant setting enabling each, so the composer offers only what
- * the workspace turned on. `ChatView` owns the draft text; `handleSendMessage` posts the turn and
- * `handleModeChange` announces a mode switch in the transcript before flipping state. A POST failure
- * restores the composed text to the (now-cleared) composer — `messageDispatch`'s resolved `false` —
- * unless the visitor already started typing a new message in the meantime, so a resend is one tap on
- * Send rather than a retype, and the failed turn's own bubble (added optimistically, unconditionally)
- * still shows what was said either way.
+ * `ChatView` owns the draft text and sends each turn, restoring it to the composer if sending fails.
+ * `useScreenShare` runs the screen-share lifecycle: asking permission, starting and ending a share,
+ * and noticing when the visitor ends it from the browser's own UI instead of the widget's.
  *
- * The composer is locked both while a reply is outstanding and while a screen-access request is open,
- * since a second turn queued behind an unanswered permission card has nowhere to land. `use_screenshare`
- * absent means enabled; only an explicit `false` skips the ask — Show and Do request screen access first
- * unless a share is already live, and `useScreenShare` flushes the held turn on every outcome. This view
- * writes the user's bubble itself, so every dispatch from here is `skipUserMessage`. Stop tears down
- * `showModeService` before `stopTask`, since an in-flight highlight owns listeners, a watchdog and
- * injected nodes that outlive the task otherwise. `WidgetDialog` gets an explicit `finalFocusRef`
- * since Base UI's focus restore resolves to the host page inside a closed shadow root otherwise. The
- * transcript sits under its own `ErrorBoundary` so one unrenderable message can't take the composer down.
- *
- * `useScreenShare` (this file's only other consumer) owns the screen-share lifecycle: the in-transcript
- * permission card, the browser picker, the live share message, and ending a share. `useLatest` keeps a
- * value readable from a callback that must not be re-created (the polling interval below, mounted once);
- * its refs are listed in that effect's deps for the linter, but since `useRef` identity never changes,
- * listing them cannot re-arm the interval. The same idiom stabilizes `handleScreenAccessRequestAllow`/
- * `handleScreenAccessRequestDeny`: both are handed to every `MessageItem` through `MessageList`, and a
- * fresh closure each render (the naive `beginScreenShare`/inline-arrow form) defeats `MessageItem`'s
- * `React.memo` for the whole transcript on every SSE token, not just the streaming row.
- * The hook returns `requestScreenAccess` — posting a request card carrying the queued turn, no-oping if
- * one is already open — plus that card's Allow/Deny handlers, the toolbar dialog's Allow/Dismiss
- * handlers, and `toggleScreenShareRef`, a toggle stopping a live share or opening that dialog.
- * `beginScreenShare` opens the stream and posts the started/live messages; `stopScreenSharing`/
- * `announceStopped` tear it down (video message → a system line); `resolveAccessRequest` stamps
- * allowed/denied; `flushPendingMessage` sends the hold. The user can end the share from the browser's
- * own UI, which fires no subscribable event, so a 1s interval reconciles `isScreenSharingActive()`
- * against local state and announces the stop. `openRequest` is transcript-derived, not component state,
- * since the request card survives an unmount/remount because it is persisted — the resolving state must
- * be too, or the buttons stay live on a request neither Allow nor Deny can reach. Every outcome flushes
- * the pending content (a cancel resolves `denied` like a real failure), leaving no queued turn stranded.
- * `useScreenShare` is exported so `ChatView.test.tsx`'s `renderHook` cases can drive it directly.
+ * Show and Do ask for screen access before acting, unless a share is already live or the tenant has
+ * turned screen sharing off.
  */
 import React, { useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 

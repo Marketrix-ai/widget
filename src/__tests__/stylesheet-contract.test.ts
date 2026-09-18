@@ -1,22 +1,7 @@
 /**
- * `index.css` invariants that fail SILENTLY — the rule matches nothing, the animation resolves to no keyframe, the
- * class has no rule — so neither tsc, eslint, prettier nor a rendering test can see them. With Tailwind gone,
- * layout props resolve to a style object and there is no interpolated class for a scanner to miss, so what
- * remains is the animation contract: `resolveLayoutStyle` and the component classes name keyframes this file must
- * actually define. `definedKeyframes` parses the `@keyframes` set once and is shared by every suite below.
- *
- * "every animation resolves to a keyframe this stylesheet defines" walks the contract both ways: an `it.each` over
- * the four `animate` tokens asserts the first word of `resolveLayoutStyle`'s `animation` shorthand is a defined
- * keyframe, and a companion test asserts the same of every `animation:` named in a CSS rule. "scopes every
- * host-level rule to :host as well as :root" flags a selector list carrying `:root` without `:host`, since `:root`
- * matches nothing inside a closed shadow root while `:host` is what carries the tenant tokens (`:root` only covers
- * the non-shadow dev preview). "the component tree and the stylesheet name the same classes" walks `../components`
- * and asserts the `.mtx-*` rules and `mtx-*` string literals cover each other both ways — a class no rule matches
- * renders unstyled, a rule nothing references ships dead weight to every host page — filtering keyframe names
- * since an animation shorthand names a keyframe, not a class. "keeps the reset at zero specificity so component
- * classes always win" flags an unwrapped `[data-marketrix-widget] <tag>` reset selector: it scores (0,1,1) and
- * outranks `.mtx-button` (0,1,0) — that is how `font: inherit` once flattened every button to weight 400 and
- * `border-radius: 0` un-rounded the icon buttons. `:where()` drops the reset to zero, so this must stay green.
+ * Tests that `index.css` stays internally consistent: every animation names a real keyframe,
+ * host-level rules are scoped to `:host` as well as `:root`, every class a component uses has a
+ * matching rule and vice versa, and the reset selector never outranks component classes.
  */
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';

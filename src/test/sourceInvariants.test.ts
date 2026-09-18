@@ -1,34 +1,7 @@
 /**
- * Pins the MECHANICAL gotchas out of the root `CLAUDE.md` and this repo's `CLAUDE.md` that are cheap to
- * assert straight from source/config text — one small `it` per gotcha, fs + regex, no mocks, no rendering.
- * A PROSE-ONLY gotcha (release mechanics, npm-publish idempotence, a design rationale) has no assertable
- * artifact and stays prose in `CLAUDE.md` instead of a fake green check here.
- *
- * Pins: no vitest family in devDependencies · `packageManager`'s bun version matches the Dockerfile
- * `oven/bun` base image tag · published `files` allowlist + no `.npmignore` · `bundle:check`
- * budgets `@base-ui/react` and `@rrweb/record` by name · `tsconfig.build.json` excludes `src/test` and test
- * files · Vite's externals are exactly the four React entry points · the `WidgetEvent`/`WidgetCommand`
- * discriminated-union literals match the documented wire vocabulary · `StreamClient`'s backoff constants
- * (1000ms initial, 30000ms cap, 10 max attempts) and its `request_id === 'auth'` give-up branch · `FINISH_TOOL`
- * is defined once and every other reference imports the constant rather than re-literalling `'finish'` ·
- * `window.__mtx` only ever takes `'initializing'` / `'active'` · Shadow DOM is attached `{ mode: 'closed' }`
- * everywhere it's attached · `localStorage` is read/written only through `StorageService` · no
- * `console.log`/`info`/`debug` and no bare `console.warn` outside `utils/log.ts` · `LAYER_TOKENS` (not a raw
- * number) is what `ShowModeService` z-indexes with · the four db-V247-retired settings never reappear in
- * `src/` · no schema from `sdk` is imported as a VALUE outside `src/sdk/` and `src/test/` · no CSS framework
- * (`tailwind`/`classnames` deps, `cn(` calls) and no dark-mode selector in `index.css` · `src/hooks/` holds
- * only the shared `useWidget` hook · `document.activeElement`/`shadowRoot.activeElement` are eslint-banned
- * and `activeElementIn` is their one reader · there is no `sdk/routes.ts` or `sdk/schema.ts` · no bare
- * `<div>`/`<span>` carries an `onClick` without a `role` — every clickable is a `Button`/`IconButton`, a
- * native `<button>`, or an explicitly-roled element with its own keyboard handling · `tsconfig.json` keeps
- * `strict` plus every measured strictness flag (`noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`,
- * `noImplicitOverride`, `noPropertyAccessFromIndexSignature`, `noFallthroughCasesInSwitch`,
- * `verbatimModuleSyntax`) on, so a later pass can't silently drop one back off · the three narrowing
- * casts a type guard replaced (`disabledReason`'s `'disabled' in el`, `stripLayoutProps`'s `isLayoutKey`,
- * `MessengerShell`'s `isWidgetView`) never reappear. `expectNoOffendersExcept` asserts no file outside
- * its `exemptPaths` (repo-root-relative) matches `pattern`. `useUnknownInCatchVariables` has no separate
- * strictness-flag entry: `strict: true` already implies it and it is never overridden, so its absence
- * from that list is not a gap.
+ * Pins the mechanical gotchas documented in this repo's and the root `CLAUDE.md` that are cheap to
+ * assert straight from source/config text — fs + regex, no mocks, no rendering. A prose-only gotcha with
+ * no assertable artifact stays prose in `CLAUDE.md` instead of a fake green check here.
  */
 import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
@@ -83,6 +56,16 @@ describe('package.json', () => {
     const bunVersion = (pkg.packageManager as string).replace(/^bun@/, '');
     const dockerfile = read('Dockerfile');
     expect(dockerfile).toContain(`FROM oven/bun:${bunVersion}-alpine AS base`);
+  });
+
+  it('runs check:comments before build, and code:check before check:comments, in the ci script', () => {
+    const ci = pkg.scripts['ci'] ?? '';
+    const at = (needle: string) => ci.indexOf(needle);
+    expect(at('code:check')).toBeGreaterThanOrEqual(0);
+    expect(at('check:comments')).toBeGreaterThanOrEqual(0);
+    expect(at('build')).toBeGreaterThanOrEqual(0);
+    expect(at('code:check')).toBeLessThan(at('check:comments'));
+    expect(at('check:comments')).toBeLessThan(at('build'));
   });
 });
 

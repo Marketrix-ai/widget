@@ -1,20 +1,7 @@
 /**
- * Public lifecycle tests for the widget entry (`init` / `update` / `unmount` / preview): unmount
- * disconnects the stream and ends an in-flight screen share; a preview mounts without an API fetch and
- * can invalidate pending production init; a config the settings schema refuses names its failing
- * fields instead of mounting; production init refuses without an API host (it would otherwise POST at
- * the host page), stops short of mounting/connecting/recording when the resolved config is disabled,
- * shares one in-flight promise and cancels a stale one; updates re-mount into the given container and a
- * preview stays a preview; and production stores the credentials it was initialized with.
- *
- * `updateMarketrixConfig` unmounts then re-`initWidget`s (this file's own header, above) — since that
- * disconnects the stream and clears `StreamClient`'s in-memory `chatId`, the "preserves an in-flight
- * chat" proof is at the `storageService`/`chatSessionManager` layer, not the DOM: the widget mounts into
- * a CLOSED shadow root (`../CLAUDE.md`'s Init & isolation section), so no query here can see inside it
- * regardless — every other test in this file already asserts only the `.marketrix-widget-container`
- * wrapper's presence for the same reason. `getOrCreateChatId` is spied WITHOUT a mock implementation
- * (real pass-through) so the proof is the real short-circuit: `storageService.getChatId()` already
- * holding a value, minting no new chat via `sdk.chatCreate` on the re-mount.
+ * Tests for the widget's public lifecycle (`init`/`mount`/`update`/`unmount`/preview): mounting,
+ * disabled or misconfigured configs, concurrent and preview-vs-production initialization, and that a
+ * config update re-mounts without losing an in-flight chat.
  */
 import { act, render, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'bun:test';
@@ -279,8 +266,6 @@ describe('a config-change re-mount preserves an in-flight chat', () => {
     vi.spyOn(streamClient, 'connect').mockResolvedValue();
     const getOrCreateChatId = vi.spyOn(chatSessionManager, 'getOrCreateChatId');
 
-    // Seeds the persisted state as if a prior mount already opened a chat and exchanged a message —
-    // the exact shape `InitBridge` restores from on every mount, real or re-mount.
     storageService.setConfig(credentialedConfig({ mtxId: 'reflow-1', mtxKey: 'key', mtxApp: 1 }));
     storageService.setChatId('chat-inflight-1');
     writeChatSnapshot({
