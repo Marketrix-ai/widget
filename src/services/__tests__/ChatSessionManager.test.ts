@@ -1,14 +1,9 @@
 /**
- * `chatSessionManager` mints a `chat_id` exactly once even when several callers ask before the first
- * create resolves: `InitBridge`'s stream connect, the rrweb recorder and `chatPost` all race for it on
- * first load, and each one minting its own thread would leave the stream listening on a chat no message
- * ever posts to. `sdk.chatCreate` is a controllable, delayed mock so the test can assert the lock is held
- * across the concurrent window, not just that the final id matches; `storageService.getChatId` is empty
- * throughout so every caller genuinely needs the in-flight promise rather than the stored fast path.
- * `storageService`'s `context` is loaded once per tenant scope, not re-read from `localStorage` on every
- * call, so each test uses a fresh tenant id (not just clearing `localStorage`) to reset it and calls
- * `getChatId()` first so it starts null — otherwise the previous test's minted id would still sit in
- * memory and short-circuit `getOrCreateChatId` before it ever reaches `sdk.chatCreate`.
+ * Tests for `chatSessionManager`: the stored-id fast path, and that several callers racing before the
+ * first `chatCreate` resolves still mint exactly one chat id and all resolve to it.
+ *
+ * Each test uses a fresh tenant id, since `storageService`'s per-tenant context is cached in memory and
+ * a shared tenant would carry a previous test's minted id into the next one.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 
@@ -31,6 +26,15 @@ beforeEach(() => {
 afterEach(() => {
   vi.clearAllMocks();
   localStorage.clear();
+});
+
+describe('ChatSessionManager stored id', () => {
+  it('returns the id already in storage without minting a new one', async () => {
+    storageService.setChatId('chat-stored');
+
+    await expect(chatSessionManager.getOrCreateChatId()).resolves.toBe('chat-stored');
+    expect(mockSdk.chatCreate).not.toHaveBeenCalled();
+  });
 });
 
 describe('ChatSessionManager concurrent callers', () => {
