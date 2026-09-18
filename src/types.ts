@@ -7,10 +7,10 @@
  * authenticates nothing. `ValidWidgetConfig` is a `MarketrixConfig` that has passed `parseWidgetSettings`.
  * `taskStatus`/`MessagePart.status` are presentational labels only, not the `task/status` wire vocabulary.
  */
-import type { InstructionType, WidgetSettingsData } from '../sdk';
-import type { WidgetRenderedSettings } from '../utils/validation';
+import type { InstructionType, WidgetSettingsData } from './sdk';
+import type { WidgetRenderedSettings } from './utils/validation';
 
-export type { InstructionType, WidgetSettingsData } from '../sdk';
+export type { InstructionType, WidgetSettingsData } from './sdk';
 
 export interface ClientOwnedConfig {
   mtxApiHost?: string;
