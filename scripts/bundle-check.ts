@@ -1,22 +1,10 @@
 /**
- * Byte-budget and packaging gate on `dist/`, run as the last step of `npm run ci`.
+ * Packaging gate for the built widget, run last in `bun run ci`.
  *
- * BUDGETS sit ~15% above the current build so growth is actually noticed — they were once 5.1x/7.8x
- * the real artifacts, a guard that could never fire while the bundle quintupled silently. Raise a
- * limit deliberately when a feature justifies it, never to make CI pass.
- *
- * Size alone is not the packaging contract: `formats: ['es']` with no code splitting, no CSS file,
- * and the four React externals are what make this package embeddable — an extra chunk breaks the
- * single-file script-tag bootstrap, an emitted stylesheet never reaches the closed Shadow DOM, and a
- * bundled React gives the host page a second React, across which hooks throw. Each of those leaves
- * `dist/widget.mjs` present and under budget, so none was caught before this gate existed. The output
- * allowlist matches served files by NAME rather than extension, because rolldown names split chunks
- * `[name]-[hash].js` and matching only `.mjs` let a genuinely split build pass.
- *
- * `DEPENDENCY_BUDGETS` exists because half the bundle is a handful of dependencies and the total cap
- * can't see which; each budget is ~10% over bytes measured on 2026-09-01, and a package absent from
- * the table fails outright, making a new dependency a deliberate line. Per-package bytes come from
- * walking the sourcemap segments, the only view of what each source file contributed to the output.
+ * `bytesPerSource` attributes bundle bytes to their source files from the source map; the script then
+ * checks the artifacts exist, stay under their byte budgets, ship as one ES module with no CSS file and
+ * no bundled React, and that no dependency grew past its budget. Budgets sit about 15% above the
+ * current build so growth is noticed; raise one deliberately, never to make CI pass.
  */
 
 import { readdirSync, readFileSync, statSync } from 'node:fs';
@@ -76,7 +64,7 @@ try {
   errors.push('dist/widget.mjs is unreadable');
 }
 
-const DEPENDENCY_BUDGETS = {
+const DEPENDENCY_BUDGETS: Record<string, number> = {
   '@rrweb/record': 84_000,
   '@base-ui/react': 82_000,
   '@base-ui/utils': 13_000,
@@ -89,17 +77,17 @@ const DEPENDENCY_BUDGETS = {
 
 const B64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 
-function bytesPerSource(sourceMap, bundle) {
+function bytesPerSource(sourceMap: { mappings: string }, bundle: string): Map<number, number> {
   const lines = bundle.split('\n');
-  const bytes = new Map();
+  const bytes = new Map<number, number>();
   let source = 0;
-  sourceMap.mappings.split(';').forEach((row, lineIndex) => {
+  sourceMap.mappings.split(';').forEach((row: string, lineIndex: number) => {
     let column = 0;
-    const marks = [];
+    const marks: Array<[number, number]> = [];
     for (const segment of row.split(',').filter(Boolean)) {
       let shift = 0;
       let value = 0;
-      const fields = [];
+      const fields: number[] = [];
       for (const character of segment) {
         const digit = B64.indexOf(character);
         value += (digit & 31) << shift;
@@ -111,8 +99,8 @@ function bytesPerSource(sourceMap, bundle) {
         value = 0;
         shift = 0;
       }
-      column += fields[0];
-      if (fields.length >= 4) source += fields[1];
+      column += fields[0] ?? 0;
+      if (fields.length >= 4) source += fields[1] ?? 0;
       marks.push([column, fields.length >= 4 ? source : -1]);
     }
     const lineLength = (lines[lineIndex] ?? '').length + 1;
@@ -125,7 +113,11 @@ function bytesPerSource(sourceMap, bundle) {
 }
 
 try {
-  const sourceMap = JSON.parse(readFileSync('dist/widget.mjs.map', 'utf8'));
+  const sourceMap = JSON.parse(readFileSync('dist/widget.mjs.map', 'utf8')) as {
+    mappings: string;
+    sources?: string[];
+    sourcesContent?: string[];
+  };
   if (sourceMap.sourcesContent?.some(source => /\brequire\([^)]+\)/.test(source))) {
     errors.push('dist/widget.mjs.map contains a dynamic require');
   }
@@ -136,9 +128,9 @@ try {
     );
   }
 
-  const perPackage = new Map();
+  const perPackage = new Map<string, number>();
   for (const [index, size] of bytesPerSource(sourceMap, readFileSync('dist/widget.mjs', 'utf8'))) {
-    const name = /node_modules\/((?:@[^/]+\/)?[^/]+)/.exec(sourceMap.sources[index] ?? '')?.[1];
+    const name = /node_modules\/((?:@[^/]+\/)?[^/]+)/.exec(sourceMap.sources?.[index] ?? '')?.[1];
     if (name) perPackage.set(name, (perPackage.get(name) ?? 0) + size);
   }
   for (const [name, size] of [...perPackage].sort((a, b) => b[1] - a[1])) {
@@ -150,7 +142,7 @@ try {
     }
   }
 } catch (error) {
-  errors.push(`dist/widget.mjs.map is missing or invalid: ${error.message}`);
+  errors.push(`dist/widget.mjs.map is missing or invalid: ${error instanceof Error ? error.message : String(error)}`);
 }
 
 if (errors.length > 0) {

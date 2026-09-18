@@ -87,7 +87,7 @@ describe('package.json', () => {
 });
 
 describe('bundle:check dependency budgets', () => {
-  const script = read('scripts/bundle-check.mjs');
+  const script = read('scripts/bundle-check.ts');
 
   it('budgets the two dependencies that are half the bundle', () => {
     expect(script).toMatch(/'@base-ui\/react':\s*\d/);

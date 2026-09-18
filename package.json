@@ -29,7 +29,7 @@
     "test": "bun test --isolate",
     "test:watch": "bun test --watch --isolate",
     "test:coverage": "bun test --coverage --isolate",
-    "bundle:check": "bun scripts/bundle-check.mjs",
+    "bundle:check": "bun scripts/bundle-check.ts",
     "check:served": "bun run scripts/checkServed.ts",
     "code:fix": "eslint . --fix && prettier --write .",
     "code:check": "tsc --noEmit && eslint . --max-warnings 0 && prettier --check ."
