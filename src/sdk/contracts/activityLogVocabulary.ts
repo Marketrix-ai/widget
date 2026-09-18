@@ -1,15 +1,7 @@
 /**
- * The four closed vocabularies an activity-log row's shape is keyed on — `type` (what happened),
- * the two enums that ride INSIDE some per-type metadata shapes (`ApplicationTypeSchema`,
- * `WidgetTypeSchema`), and `SlackCommandLogStatusSchema` (the `slack_command` metadata's `status`,
- * and `contracts/slack.ts`'s command-log entity status — one home per `tests/unit/contractEnumHomes.test.ts`).
- * Split out of `contracts/entities.ts` into this dependency-free leaf — no `@orpc/contract` import —
- * so `contracts/activityLogMetadata.ts`'s per-type registry can import them without cycling back
- * through `entities.ts`, which needs the registry to type `ActivityLogEntitySchema.metadata`
- * precisely instead of `.passthrough()`, and so an audience that never touches oRPC contract routes
- * (the internal/monitor mirror) doesn't pull `@orpc/contract` in through the metadata registry.
- * `entities.ts` re-exports the first three (unchanged); `SlackCommandLogStatusSchema` is new here and
- * has no `entities.ts` re-export since nothing imported it from there before.
+ * Closed vocabularies used across activity log rows: application and widget types, every activity
+ * `type` value, and Slack command log status. Kept dependency-free so other contract files can use
+ * them without pulling in unrelated imports.
  */
 import { z } from 'zod';
 
@@ -31,12 +23,8 @@ export const ActivityLogTypeSchema = z.enum([
   'create_knowledge',
   'update_knowledge',
   'delete_knowledge',
-  // Exactly two membership verbs: someone REQUESTS membership, an admin INVITES them — no approving;
-  // a request is answered with a WorkOS invitation or not at all, and it still must be accepted.
   'request_membership',
   'invite_user',
-  // Workspace + subscription lifecycle — the transparency record a customer reads in settings, so
-  // SYSTEM actions (Stripe webhooks) write these too with `user_id: null` rather than a fabricated admin.
   'create_workspace',
   'trial_started',
   'trial_ending_soon',

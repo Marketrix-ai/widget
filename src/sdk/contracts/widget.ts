@@ -1,3 +1,12 @@
+/**
+ * The support widget: its settings, its public boot lookup, and the SSE event/command vocabulary that
+ * drives a live chat session.
+ *
+ * Exports the widget entity and create/update schemas, `WidgetEventSchema`/`WidgetCommandSchema`, and
+ * every widget CRUD and streaming procedure. `widgetPublicSearch` is the widget's own credentialed boot
+ * call and never returns the credentials that authenticated it.
+ */
+
 import { eventIterator, oc } from '@orpc/contract';
 import { z } from 'zod';
 
@@ -26,9 +35,7 @@ export const WidgetUpdateSchema = WidgetEntitySchema.omit({ id: true, created_at
   });
 export type WidgetUpdateData = z.infer<typeof WidgetUpdateSchema>;
 
-/** Server → Widget events. */
 export const WidgetEventSchema = z.discriminatedUnion('type', [
-  // `application_id` dropped: StreamClient only matches `chat_id` against its own to flip to `registered`.
   z.object({ type: z.literal('registered'), chat_id: z.string() }),
   z.object({ type: z.literal('heartbeat') }),
   z.object({
@@ -37,7 +44,6 @@ export const WidgetEventSchema = z.discriminatedUnion('type', [
     text: z.string(),
   }),
   z.object({
-    // One streamed text fragment; the widget appends fragments and the final chat/response (full text) replaces the accumulated stream.
     type: z.literal('chat/delta'),
     request_id: z.string(),
     text: z.string(),
@@ -49,7 +55,7 @@ export const WidgetEventSchema = z.discriminatedUnion('type', [
   }),
   z.object({
     type: z.literal('task/status'),
-    // Matches SimulationStatus on the agent side.
+
     status: z.enum(['running', 'completed', 'failed', 'stopped', 'has_question']),
     message: z.string().optional(),
   }),
@@ -64,7 +70,6 @@ export const WidgetEventSchema = z.discriminatedUnion('type', [
 ]);
 export type WidgetEvent = z.infer<typeof WidgetEventSchema>;
 
-/** Widget → Server commands. */
 export const WidgetCommandSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('chat/tell'), request_id: z.string(), content: z.string() }),
   z.object({ type: z.literal('chat/show'), request_id: z.string(), content: z.string() }),
@@ -128,9 +133,6 @@ export const widgetSearch = oc
   )
   .output(paginatedListOf(WidgetEntitySchema));
 
-// The widget's own boot call: session-less, credentialed by marketrix_id + marketrix_key. Output is
-// the minimal `WidgetPublicSchema` — every visitor's browser is the caller, so the credentials that
-// authenticated the call and the rendered embed snippet must never round-trip back.
 export const widgetPublicSearch = oc
   .route({
     method: 'GET',
@@ -197,19 +199,12 @@ export const widgetStream = oc
       tab_id: z.string().optional(),
       marketrix_id: z.string().optional(),
       marketrix_key: z.string().optional(),
-      // The embedding page's visitor identity, when supplied. Carried at registration time — not on
-      // widgetMessagePost — because it is what lets the server derive the `widget_question` activity-log
-      // row from `chat_id` alone, with no per-message credential re-send.
+
       user_id: z.coerce.number().optional(),
     }),
   )
   .output(eventIterator(WidgetEventSchema));
 
-// Fire-and-forget from the widget's own point of view: every soft-drop condition (no open stream, no
-// active dispatch to relay a tool response, an unhandled command type) is logged server-side and never
-// surfaced to the caller — neither `StreamClient.send` nor `RrwebSessionRecorder` branched on the old
-// `{ ok }` boolean, so the ack is the same unconditional `SuccessSchema` every other fire-and-forget
-// mutation returns.
 export const widgetMessagePost = oc
   .route({
     method: 'POST',
