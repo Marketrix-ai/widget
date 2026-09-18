@@ -38,7 +38,7 @@ export const ActivityMetadataByType = {
     file_name: z.string(),
     file_size: z.number(),
     file_type: z.string(),
-    file_url: z.string(),
+    path: z.string(),
     source_url: z.string().optional(),
   }),
   update_knowledge: activity({
