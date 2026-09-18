@@ -7,7 +7,7 @@
 import { describe, expect, it } from 'bun:test';
 
 import { contrastRatio } from '../../utils/color';
-import { notificationToneStyles, RADIUS } from '../component-tokens';
+import { getElevationStyle, notificationToneStyles, RADIUS } from '../component-tokens';
 
 describe('the radius scale', () => {
   it('gives each value exactly one name, so no two tokens are silent synonyms', () => {
@@ -17,6 +17,21 @@ describe('the radius scale', () => {
     }
     const synonyms = [...byValue.values()].filter(names => names.length > 1);
     expect(synonyms).toEqual([]);
+  });
+});
+
+describe('getElevationStyle', () => {
+  it('returns undefined for a "none" token, not a boxShadow: "none" style object', () => {
+    expect(getElevationStyle('none')).toBeUndefined();
+  });
+
+  it('returns undefined for no token at all', () => {
+    expect(getElevationStyle(undefined)).toBeUndefined();
+    expect(getElevationStyle(null)).toBeUndefined();
+  });
+
+  it('turns a real token into its boxShadow value', () => {
+    expect(getElevationStyle('card')).toEqual({ boxShadow: '0 1px 4px rgba(0,0,0,0.1)' });
   });
 });
 
