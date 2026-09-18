@@ -4,11 +4,11 @@
  *
  * `ChatProvider` holds the committed `{messages, task}` state and wires the `StreamClient` singleton
  * to it. `messageDispatch` sends a chat turn and waits for the reply over SSE. `stopTask` cancels a
- * running turn. The stream handlers dedupe replayed events, run browser tools the agent asks for and
- * reply with their result, and clear a stale connection error once the stream recovers.
+ * running turn. The stream handlers dedupe a resent `tool/call`, run browser tools the agent asks for
+ * and reply with their result, and clear a stale connection error once the stream recovers.
  *
- * On reconnect the api replays a chat_id's whole turn history, not just what the client missed, so the
- * dedupe here has to recognise and drop a repeated `chat/delta`, not just a repeated final response.
+ * A dropped connection always reconnects to a fresh, empty queue — the api never replays a chat_id's
+ * past events over SSE, so `chat/delta`/`chat/response` need no dedupe here.
  */
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -61,7 +61,6 @@ interface ChatContextType {
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
 const MAX_PROCESSED_TOOL_CALL_IDS = 1000;
-const MAX_RESPONDED_REQUEST_IDS = 1000;
 
 const STALE_REPLY_TIMEOUT_MS = 120_000;
 const STALE_REPLY_TEXT = 'This is taking longer than expected. Please try again.';
@@ -76,19 +75,10 @@ function createStreamEffectHandlers(deps: {
   currentModeRef: React.RefObject<InstructionType>;
   setError: (message: string | undefined) => void;
   processedToolCallIds: React.RefObject<Set<string>>;
-  respondedRequestIds: React.RefObject<Set<string>>;
   currentErrorRef: React.RefObject<string | undefined>;
   lastStreamErrorRef: React.RefObject<string | undefined>;
 }) {
-  const {
-    commit,
-    currentModeRef,
-    setError,
-    processedToolCallIds,
-    respondedRequestIds,
-    currentErrorRef,
-    lastStreamErrorRef,
-  } = deps;
+  const { commit, currentModeRef, setError, processedToolCallIds, currentErrorRef, lastStreamErrorRef } = deps;
 
   const startToolCall = async (effect: Extract<SseEffect, { type: 'executeTool' }>) => {
     const { toolCallId, tool, args, mode, explanation } = effect;
@@ -119,15 +109,7 @@ function createStreamEffectHandlers(deps: {
   };
 
   const handleMessage = (event: WidgetEvent): void => {
-    if (event.type === 'chat/delta' || event.type === 'chat/response') {
-      if (respondedRequestIds.current.has(event.request_id)) return;
-      if (event.type === 'chat/response') {
-        respondedRequestIds.current.add(event.request_id);
-        if (respondedRequestIds.current.size > MAX_RESPONDED_REQUEST_IDS) {
-          respondedRequestIds.current = new Set([...respondedRequestIds.current].slice(-MAX_RESPONDED_REQUEST_IDS / 2));
-        }
-      }
-    } else if (event.type === 'tool/call') {
+    if (event.type === 'tool/call') {
       const toolCallId = event.tool_call_id;
       if (processedToolCallIds.current.has(toolCallId)) return;
       processedToolCallIds.current.add(toolCallId);
@@ -182,7 +164,6 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
   const currentModeRef = useLatest(uiState.currentMode);
 
   const processedToolCallIds = useRef(new Set<string>());
-  const respondedRequestIds = useRef(new Set<string>());
   const currentErrorRef = useLatest(uiState.error);
   const lastStreamErrorRef = useRef<string | undefined>(undefined);
 
@@ -298,7 +279,6 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
       currentModeRef,
       setError: uiActions.setError,
       processedToolCallIds,
-      respondedRequestIds,
       currentErrorRef,
       lastStreamErrorRef,
     });

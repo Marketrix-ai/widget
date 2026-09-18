@@ -142,11 +142,14 @@ async iterator in the background. Status machine `disconnected → connecting �
 `error` from any failed connect or stream — **`open` is the transport, `registered` is the chat**, so
 `isConnected()` reads `registered` and nothing waits on `open`. Exponential-backoff reconnect (1000ms
 ×2, cap 30000ms, **max 10 attempts**; counters reset only on `registered`) and the `chat/error`
-`request_id === 'auth'` give-up branch are pinned by sourceInvariants.test.ts. **The api replays a
-chat_id's whole turn history on reconnect**, not just the tail a client missed, and it accepts a
-command only into a chat whose stream has reached `registered` — the widget dedupes replayed
-`chat/delta`/`chat/response` by `request_id` and `tool/call` by `tool_call_id` rather than assuming an
-append-only stream. SSE is additionally keyed server-side by `(chat_id, tab_id)` so several tabs
+`request_id === 'auth'` give-up branch are pinned by sourceInvariants.test.ts. **A reconnect gets a
+fresh, empty queue, never a replay** — the api keeps a chat_id's turn history only to fold back into the
+agent's prompt on the next dispatch (Tell/Show/Do stay one thread), so a dropped stream sees only the
+future events of a still-in-flight dispatch, never anything already delivered or missed; the widget
+still dedupes a resent `tool/call` by `tool_call_id` (the agent can genuinely resend one), but not
+`chat/delta`/`chat/response`, since the api never redelivers those. It accepts a command only into a
+chat whose stream has reached `registered`. SSE is additionally keyed server-side by `(chat_id, tab_id)`
+so several tabs
 sharing one `chat_id` don't evict each other's stream.
 
 **Round-trip** — `ChatContext.messageDispatch(content, mode)` fire-and-forget POSTs
