@@ -1,15 +1,8 @@
 /**
- * `ActivityMetadataByType` — the strict, per-`ActivityLogType` shape of `activity_log.metadata`, the
- * one write-time gate `models/columnSchemas.ts` registers against the column. Moved out of that file
- * so `contracts/entities.ts` can import it to type `ActivityLogEntitySchema.metadata` precisely
- * (a union of every branch) instead of the open `.passthrough()` it carried before — deriving from a
- * registry that lived inside `models/columnSchemas.ts`, which itself imports from `entities.ts`,
- * would have cycled.
+ * The strict shape of an activity log row's `metadata` column, one schema per activity type.
  *
- * `slack_command`'s `status` imports `SlackCommandLogStatusSchema` from `./activityLogVocabulary` —
- * the one home `tests/unit/contractEnumHomes.test.ts` requires for that value set — a dependency-free
- * leaf, so this registry (and everything importing it through `entities.ts`) never pulls in
- * `contracts/slack.ts`'s `@orpc/contract` import.
+ * `ActivityMetadataByType` maps each `ActivityLogType` to its metadata shape; `contracts/entities.ts`
+ * and `models/columnSchemas.ts` both read it, which is why it lives in its own file rather than either.
  */
 import { z } from 'zod';
 
