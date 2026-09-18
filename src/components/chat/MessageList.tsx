@@ -1,9 +1,9 @@
 /**
- * The chat transcript pane: a scrolling list of `MessageItem`s with a "Clear conversation" action and
+ * The chat transcript pane: a scrolling list of `MessageItem`s with a "Clear chat" action and
  * two floating scroll affordances (scroll-to-top, scroll-to-bottom) layered over it.
  *
  * `MessageList` prepends a greeting message built from `widget_body`, which never enters the store —
- * that's why "Clear conversation" is gated on the store's own message count. `handleScroll` shows each
+ * that's why "Clear chat" is gated on the store's own message count. `handleScroll` shows each
  * affordance based on scroll position. All scrolling is suppressed in preview mode, where the widget is
  * embedded in the dashboard's own modal and scrolling would move that modal instead of this list. A
  * streaming reply re-pins to the bottom only while the reader was already near it.
@@ -114,7 +114,7 @@ export const MessageList = ({ messagesEndRef, onScreenAccessAllow, onScreenAcces
           <Flex justify='center' style={{ marginTop: '12px', marginBottom: '4px' }}>
             <Button variant='bare' onClick={actions.clearChatHistory}>
               <Text size='xs' variant='muted' style={{ cursor: 'pointer' }}>
-                Clear conversation
+                Clear chat
               </Text>
             </Button>
           </Flex>
