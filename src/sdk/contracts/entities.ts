@@ -7,6 +7,8 @@
  * last skill-distillation attempt for that application, since a distilled skill is written directly with
  * no separate draft row. `ApplicationReadSchema` never returns `password`; `WidgetPublicSchema` never
  * returns the widget's own auth credentials, since an unauthenticated visitor's browser is the caller.
+ * `ApplicationEntitySchema` also IS the row schema: `models/application.ts`'s fields and `COLUMN_SCHEMAS`'s
+ * `application` enum entries are typed directly off it, so it can never drift from the table it describes.
  */
 import { z } from 'zod';
 
