@@ -122,6 +122,14 @@ describe('widget public entry paths', () => {
     expect(init).not.toHaveBeenCalled();
   });
 
+  it('never re-triggers init once the widget is already initializing or active', async () => {
+    appendModuleScript({ 'mtx-id': 'widget-id', 'mtx-key': 'widget-key', 'mtx-api-host': 'https://api.test' });
+    window.__mtx = { state: 'active' };
+    const init = await runAutoInit();
+
+    expect(init).not.toHaveBeenCalled();
+  });
+
   it('does nothing for npm consumers without an auto-init script', async () => {
     vi.useFakeTimers();
     const init = vi.fn().mockResolvedValue(undefined);
