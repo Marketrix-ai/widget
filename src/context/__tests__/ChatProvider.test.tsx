@@ -473,6 +473,40 @@ describe('the processed tool-call id set is trimmed only once it EXCEEDS its cap
   });
 });
 
+describe('the responded-request id set is trimmed only once it EXCEEDS its cap', () => {
+  it('still dedupes the earliest request id at exactly 1000 distinct ids, not before', async () => {
+    renderCaptured(false);
+    storageService.setConfig(
+      getMockWidgetConfig({ mtxId: 'responded-trim-boundary', mtxKey: 'key' }) as CredentialedConfig,
+    );
+
+    act(() => {
+      for (let i = 0; i < 1000; i++) {
+        captured!.chatActions.addMessage({
+          id: `resp-${i}`,
+          sender: 'agent',
+          timestamp: new Date(),
+          isPlaceholder: true,
+          parts: [],
+        });
+      }
+    });
+
+    act(() => {
+      for (let i = 0; i < 1000; i++) {
+        asStreamClientInternals().handleMessage({ type: 'chat/response', request_id: `resp-${i}`, text: `first-${i}` });
+      }
+    });
+
+    act(() => {
+      asStreamClientInternals().handleMessage({ type: 'chat/response', request_id: 'resp-0', text: 'second-0' });
+    });
+
+    const message = captured!.messages.find(msg => msg.id === 'resp-0');
+    expect(messageText(message!.parts)).toBe('first-0');
+  });
+});
+
 describe('a terminal task/status clears the processed tool-call id set', () => {
   it('lets a retransmitted tool_call_id from BEFORE the terminal status run again', async () => {
     renderCaptured(false);
