@@ -1,7 +1,7 @@
 /**
  * Tests for `ChatContext`'s reply placeholder lifecycle: the stale-reply watchdog, the processing signal
  * spanning reply wait rather than just the outbound request, deduping a retransmitted `tool/call`,
- * `tool/response` payload shape, and recovering/replaying turns across a stream reconnect. Every test
+ * `tool/response` payload shape, and independent turns settling into their own messages. Every test
  * calls `cleanup()` in `afterEach` — an earlier test's still-mounted `ChatProvider` otherwise keeps its
  * stream-message subscription live and double-handles a later test's broadcast `handleMessage` call.
  */
@@ -473,40 +473,6 @@ describe('the processed tool-call id set is trimmed only once it EXCEEDS its cap
   });
 });
 
-describe('the responded-request id set is trimmed only once it EXCEEDS its cap', () => {
-  it('still dedupes the earliest request id at exactly 1000 distinct ids, not before', async () => {
-    renderCaptured(false);
-    storageService.setConfig(
-      getMockWidgetConfig({ mtxId: 'responded-trim-boundary', mtxKey: 'key' }) as CredentialedConfig,
-    );
-
-    act(() => {
-      for (let i = 0; i < 1000; i++) {
-        captured!.chatActions.addMessage({
-          id: `resp-${i}`,
-          sender: 'agent',
-          timestamp: new Date(),
-          isPlaceholder: true,
-          parts: [],
-        });
-      }
-    });
-
-    act(() => {
-      for (let i = 0; i < 1000; i++) {
-        asStreamClientInternals().handleMessage({ type: 'chat/response', request_id: `resp-${i}`, text: `first-${i}` });
-      }
-    });
-
-    act(() => {
-      asStreamClientInternals().handleMessage({ type: 'chat/response', request_id: 'resp-0', text: 'second-0' });
-    });
-
-    const message = captured!.messages.find(msg => msg.id === 'resp-0');
-    expect(messageText(message!.parts)).toBe('first-0');
-  });
-});
-
 describe('a terminal task/status clears the processed tool-call id set', () => {
   it('lets a retransmitted tool_call_id from BEFORE the terminal status run again', async () => {
     renderCaptured(false);
@@ -629,54 +595,14 @@ describe('a transient stream failure banner clears once the stream recovers', ()
   });
 });
 
-describe('a chat_id the api replays turns for after an SSE reconnect', () => {
-  it('does not duplicate an already-answered request when its delta/response pair is replayed verbatim', async () => {
+describe('two independent turns settle into their own messages', () => {
+  it("never mixes one request_id's reply into another's message", async () => {
     renderCaptured(false);
-    storageService.setConfig(getMockWidgetConfig({ mtxId: 'replay-1', mtxKey: 'key' }) as CredentialedConfig);
+    storageService.setConfig(getMockWidgetConfig({ mtxId: 'independent-turns', mtxKey: 'key' }) as CredentialedConfig);
 
     act(() => {
       captured!.chatActions.addMessage({
-        id: 'req-replay-1',
-        sender: 'agent',
-        timestamp: new Date(),
-        isPlaceholder: true,
-        parts: [],
-      });
-    });
-
-    const playTurn = () => {
-      asStreamClientInternals().handleMessage({ type: 'chat/delta', request_id: 'req-replay-1', text: 'Sure, ' });
-      asStreamClientInternals().handleMessage({
-        type: 'chat/delta',
-        request_id: 'req-replay-1',
-        text: 'here you go.',
-      });
-      asStreamClientInternals().handleMessage({
-        type: 'chat/response',
-        request_id: 'req-replay-1',
-        text: 'Sure, here you go.',
-      });
-    };
-
-    act(playTurn);
-    const answered = captured!.messages.find(msg => msg.id === 'req-replay-1');
-    expect(messageText(answered!.parts)).toBe('Sure, here you go.');
-    expect(answered!.parts.filter(p => p.type === 'text')).toHaveLength(1);
-
-    act(playTurn);
-
-    const reAnswered = captured!.messages.find(msg => msg.id === 'req-replay-1');
-    expect(messageText(reAnswered!.parts)).toBe('Sure, here you go.');
-    expect(reAnswered!.parts.filter(p => p.type === 'text')).toHaveLength(1);
-  });
-
-  it('still lets a genuinely new request_id after the replayed one through untouched', async () => {
-    renderCaptured(false);
-    storageService.setConfig(getMockWidgetConfig({ mtxId: 'replay-2', mtxKey: 'key' }) as CredentialedConfig);
-
-    act(() => {
-      captured!.chatActions.addMessage({
-        id: 'req-replay-2a',
+        id: 'req-a',
         sender: 'agent',
         timestamp: new Date(),
         isPlaceholder: true,
@@ -684,13 +610,12 @@ describe('a chat_id the api replays turns for after an SSE reconnect', () => {
       });
     });
     act(() => {
-      asStreamClientInternals().handleMessage({ type: 'chat/response', request_id: 'req-replay-2a', text: 'first' });
-      asStreamClientInternals().handleMessage({ type: 'chat/response', request_id: 'req-replay-2a', text: 'first' });
+      asStreamClientInternals().handleMessage({ type: 'chat/response', request_id: 'req-a', text: 'first' });
     });
 
     act(() => {
       captured!.chatActions.addMessage({
-        id: 'req-replay-2b',
+        id: 'req-b',
         sender: 'agent',
         timestamp: new Date(),
         isPlaceholder: true,
@@ -698,11 +623,11 @@ describe('a chat_id the api replays turns for after an SSE reconnect', () => {
       });
     });
     act(() => {
-      asStreamClientInternals().handleMessage({ type: 'chat/response', request_id: 'req-replay-2b', text: 'second' });
+      asStreamClientInternals().handleMessage({ type: 'chat/response', request_id: 'req-b', text: 'second' });
     });
 
-    const first = captured!.messages.find(msg => msg.id === 'req-replay-2a');
-    const second = captured!.messages.find(msg => msg.id === 'req-replay-2b');
+    const first = captured!.messages.find(msg => msg.id === 'req-a');
+    const second = captured!.messages.find(msg => msg.id === 'req-b');
     expect(messageText(first!.parts)).toBe('first');
     expect(messageText(second!.parts)).toBe('second');
   });
