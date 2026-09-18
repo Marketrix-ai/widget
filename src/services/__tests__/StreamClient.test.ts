@@ -290,6 +290,37 @@ describe('StreamClient retry affordance', () => {
   });
 });
 
+describe('StreamClient.send', () => {
+  it('rejects immediately with no active chat, rather than sending without one', async () => {
+    const client = freshClient();
+    await expect(client.send({ type: 'chat/stop' })).rejects.toThrow('No active chat');
+    expect(mockSdk.widgetMessagePost).not.toHaveBeenCalled();
+  });
+
+  it('posts with the same chat id and tab id the stream connected with, so the api can key both to one tab', async () => {
+    mockSdk.widgetMessagePost.mockResolvedValueOnce({ success: true });
+    const client = freshClient();
+    await client.connect('chat-1');
+
+    await client.send({ type: 'chat/stop' });
+
+    const streamCall = mockSdk.widgetStream.mock.calls[0]?.[0] as { tab_id: string };
+    const sendCall = mockSdk.widgetMessagePost.mock.calls[0]?.[0] as { chat_id: string; tab_id: string };
+    expect(sendCall.chat_id).toBe('chat-1');
+    expect(sendCall.tab_id).toBe(streamCall.tab_id);
+    client.disconnect();
+  });
+
+  it('rethrows the sdk rejection rather than swallowing it after logging', async () => {
+    const client = freshClient();
+    await client.connect('chat-1');
+    mockSdk.widgetMessagePost.mockRejectedValueOnce(new Error('offline'));
+
+    await expect(client.send({ type: 'chat/stop' })).rejects.toThrow('offline');
+    client.disconnect();
+  });
+});
+
 describe('StreamClient fault injection', () => {
   it('drops events from a connection reconnectNow already superseded, never duplicating a rendered turn', async () => {
     const client = freshClient();

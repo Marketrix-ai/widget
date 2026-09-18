@@ -105,6 +105,23 @@ describe('RrwebSessionRecorder lifecycle', () => {
   });
 });
 
+describe('RrwebSessionRecorder.stop', () => {
+  it('flushes whatever is buffered instead of dropping it', async () => {
+    const { recorder, emit } = await startRecorder();
+    mockSdk.widgetMessagePost.mockClear();
+    mockSdk.widgetMessagePost.mockResolvedValueOnce({ success: true });
+    emit({ type: EventType.Meta, data: {}, timestamp: 0 });
+
+    recorder.stop();
+    await flushMicrotasks();
+
+    const posted = mockSdk.widgetMessagePost.mock.lastCall?.[0].command as {
+      events: Array<{ type: number; data: Record<string, never>; timestamp: number }>;
+    };
+    expect(posted.events).toEqual([{ type: EventType.Meta, data: {}, timestamp: 0 }]);
+  });
+});
+
 describe('a recorder already recording', () => {
   it('is a no-op on a second start(), never arming a duplicate rrweb instance', async () => {
     const { recorder } = await startRecorder();
