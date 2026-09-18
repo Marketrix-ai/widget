@@ -38,13 +38,11 @@ describe('Icon', () => {
     expect(container.firstChild).toBeNull();
   });
 
-  it('fills a plain path with currentColor when it sets no stroke', () => {
-    const { container } = render(<Icon name='close' />);
-    expect(container.querySelector('path')?.getAttribute('fill')).toBe('currentColor');
-  });
-
-  it('omits fill on a stroked path, leaving the outline to stroke alone', () => {
-    const { container } = render(<Icon name='home' />);
-    expect(container.querySelector('path')?.getAttribute('fill')).toBe('none');
+  it.each([
+    ['fills a plain path with currentColor when it sets no stroke', 'close', 'currentColor'],
+    ['omits fill on a stroked path, leaving the outline to stroke alone', 'home', 'none'],
+  ] as const)('%s', (_case, name, expectedFill) => {
+    const { container } = render(<Icon name={name} />);
+    expect(container.querySelector('path')?.getAttribute('fill')).toBe(expectedFill);
   });
 });

@@ -89,22 +89,26 @@ describe('the widget covering a target is not an obstacle the agent can clear', 
 });
 
 describe('a control the visitor could not operate is refused at act time, not hidden from the index', () => {
-  it('refuses a disabled button, whose click() would have fired no handler', () => {
-    const service = interactable('<button disabled style="position: fixed">Submit</button>');
+  it.each([
+    [
+      'a disabled button, whose click() would have fired no handler',
+      '<button disabled style="position: fixed">Submit</button>',
+      'is a disabled control',
+    ],
+    [
+      'an aria-disabled widget the same way as a native disabled one',
+      '<div role="button" aria-disabled="true" style="position: fixed">Submit</div>',
+      'is aria-disabled',
+    ],
+    [
+      'anything inside an inert subtree',
+      '<div inert style="position: fixed"><button>Submit</button></div>',
+      'is inside an inert subtree',
+    ],
+  ] as const)('refuses %s', (_case, html, expectedError) => {
+    const service = interactable(html);
 
-    expect(service.getValidatedElement(0).error).toContain('is a disabled control');
-  });
-
-  it('refuses an aria-disabled widget the same way as a native disabled one', () => {
-    const service = interactable('<div role="button" aria-disabled="true" style="position: fixed">Submit</div>');
-
-    expect(service.getValidatedElement(0).error).toContain('is aria-disabled');
-  });
-
-  it('refuses anything inside an inert subtree', () => {
-    const service = interactable('<div inert style="position: fixed"><button>Submit</button></div>');
-
-    expect(service.getValidatedElement(0).error).toContain('is inside an inert subtree');
+    expect(service.getValidatedElement(0).error).toContain(expectedError);
   });
 
   it('still indexes the disabled control, so the agent can see what it may not click', () => {

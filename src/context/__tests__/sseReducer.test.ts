@@ -56,22 +56,14 @@ describe('reduceSse — task/status', () => {
     expectNoOp(result, state);
   });
 
-  it('completed ends the task and marks the active message done', () => {
-    const result = reduceSse(runningState(), { type: 'task/status', status: 'completed' }, 'do');
-    expect(result.state.task).toEqual({ phase: 'idle' });
-    expect(result.state.messages[0]!.taskStatus).toBe('done');
-  });
-
-  it('failed ends the task and marks the active message failed', () => {
-    const result = reduceSse(runningState(), { type: 'task/status', status: 'failed' }, 'do');
+  it.each([
+    ['completed', 'done'],
+    ['failed', 'failed'],
+    ['stopped', 'stopped'],
+  ] as const)('%s ends the task and marks the active message %s', (status, taskStatus) => {
+    const result = reduceSse(runningState(), { type: 'task/status', status }, 'do');
     expect(result.state.task.phase).toBe('idle');
-    expect(result.state.messages[0]!.taskStatus).toBe('failed');
-  });
-
-  it('stopped ends the task and marks the active message stopped', () => {
-    const result = reduceSse(runningState(), { type: 'task/status', status: 'stopped' }, 'do');
-    expect(result.state.task.phase).toBe('idle');
-    expect(result.state.messages[0]!.taskStatus).toBe('stopped');
+    expect(result.state.messages[0]!.taskStatus).toBe(taskStatus);
   });
 
   it('terminal status renders its closing message as an appended text part', () => {
@@ -341,14 +333,12 @@ describe('reduceToolProgress / reduceToolDone / reduceStop', () => {
     expect(result.messages[0]!.placeholderState).toBeUndefined();
   });
 
-  it('only pauses on a waiting-for-user tool in Show mode, not simply because a tool is mid-progress', () => {
-    const result = reduceToolProgress(runningState({ mode: 'do' }), 'click_element', 'x', 'in_progress', 'do');
-    expect(result.messages[0]!.placeholderState).toBe('thinking');
-  });
-
-  it('shows waiting-for-user when Show mode pauses on a tool that needs the visitor', () => {
-    const result = reduceToolProgress(runningState({ mode: 'show' }), 'click_element', 'x', 'in_progress', 'show');
-    expect(result.messages[0]!.placeholderState).toBe('waiting-for-user');
+  it.each([
+    ['do', 'thinking'],
+    ['show', 'waiting-for-user'],
+  ] as const)('in %s mode a mid-progress tool sets placeholderState to %s', (mode, placeholderState) => {
+    const result = reduceToolProgress(runningState({ mode }), 'click_element', 'x', 'in_progress', mode);
+    expect(result.messages[0]!.placeholderState).toBe(placeholderState);
   });
 
   it('judges progress by the mode the task actually started in, not whatever the composer shows now', () => {

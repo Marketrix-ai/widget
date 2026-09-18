@@ -414,16 +414,13 @@ describe('selectDropdownOption matches by value OR by visible text', () => {
     });
   });
 
-  it('matches an option by its value', async () => {
-    const result = await browserToolService.executeTool('select_dropdown', { index: 0, option: 'v2' }, 'do');
+  it.each([
+    ['its value', 'v2', 'v2'],
+    ['its visible text when the value differs', 'Text One', 'v1'],
+  ] as const)('matches an option by %s', async (_case, option, expectedValue) => {
+    const result = await browserToolService.executeTool('select_dropdown', { index: 0, option }, 'do');
     expect(result.success).toBe(true);
-    expect((document.querySelector('select') as HTMLSelectElement).value).toBe('v2');
-  });
-
-  it('matches an option by its visible text when the value differs', async () => {
-    const result = await browserToolService.executeTool('select_dropdown', { index: 0, option: 'Text One' }, 'do');
-    expect(result.success).toBe(true);
-    expect((document.querySelector('select') as HTMLSelectElement).value).toBe('v1');
+    expect((document.querySelector('select') as HTMLSelectElement).value).toBe(expectedValue);
   });
 });
 
