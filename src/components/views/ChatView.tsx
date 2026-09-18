@@ -52,11 +52,11 @@ const MODES: Array<{ id: InstructionType; icon: ChatInputMode['icon']; flag: key
 ];
 
 export interface UseScreenShareOptions {
-  onScreenSharingChange?: (isSharing: boolean) => void;
+  onScreenSharingChange: (isSharing: boolean) => void;
   toggleScreenShareRef?: React.MutableRefObject<(() => void) | null>;
   onAddMessage: (message: ChatMessage) => void;
   onUpdateMessage: (messageId: string, updates: Partial<ChatMessage>) => void;
-  onRemoveMessage?: (messageId: string) => void;
+  onRemoveMessage: (messageId: string) => void;
   onSendMessage: (message: string, mode?: InstructionType, skipUserMessage?: boolean) => void;
   messages: ChatMessage[];
 }
@@ -91,11 +91,11 @@ export function useScreenShare({
 
   const applySharing = (sharing: boolean) => {
     setIsScreenSharing(sharing);
-    onScreenSharingChange?.(sharing);
+    onScreenSharingChange(sharing);
   };
 
   const announceStopped = (messageId: string | null) => {
-    if (messageId) onRemoveMessage?.(messageId);
+    if (messageId) onRemoveMessage(messageId);
     onAddMessage(createSystemMessage('Screen sharing stopped', 'stopped-sharing'));
     setScreenShareMessageId(null);
   };
@@ -109,7 +109,7 @@ export function useScreenShare({
       if (isSharing !== wasSharing) {
         wasSharingRef.current = isSharing;
         setIsScreenSharing(isSharing);
-        onScreenSharingChangeRef.current?.(isSharing);
+        onScreenSharingChangeRef.current(isSharing);
       }
       if (wasSharing && !isSharing && currentMessageId) {
         announceStoppedRef.current(currentMessageId);
