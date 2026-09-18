@@ -68,16 +68,21 @@ describe('progress-line text cleanup and lookup', () => {
     expect(second.parts[0]?.content).toBe('still clicking');
   });
 
-  it('appends the cleaned error in parentheses after the existing content, not in place of it', () => {
+  it.each([
+    [
+      'appends the cleaned error in parentheses after the existing content, not in place of it',
+      'timed out (cancelled by cleanup)',
+      'clicking the button (timed out)',
+    ],
+    [
+      'keeps the original content unchanged when the error is nothing but cancellation chatter',
+      '(cancelled by cleanup)',
+      'clicking the button',
+    ],
+  ] as const)('%s', (_case, error, expectedContent) => {
     const msg = addProgressLine(agentReply(), 'click', 'clicking the button');
-    const failed = markProgressLineFailed(msg, 'click', 'timed out (cancelled by cleanup)');
-    expect(failed.parts[0]?.content).toBe('clicking the button (timed out)');
-  });
-
-  it('keeps the original content unchanged when the error is nothing but cancellation chatter', () => {
-    const msg = addProgressLine(agentReply(), 'click', 'clicking the button');
-    const failed = markProgressLineFailed(msg, 'click', '(cancelled by cleanup)');
-    expect(failed.parts[0]?.content).toBe('clicking the button');
+    const failed = markProgressLineFailed(msg, 'click', error);
+    expect(failed.parts[0]?.content).toBe(expectedContent);
   });
 });
 

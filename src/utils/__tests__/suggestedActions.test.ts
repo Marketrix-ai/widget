@@ -30,19 +30,17 @@ describe('a suggested-action caption prefixes without editing the tenant text', 
 });
 
 describe('a suggested-action dispatch text matches its caption', () => {
-  it('carries the prefix into the value MessengerShell dispatches, not just the button label', () => {
-    const [action] = getSuggestedActionsFromConfig(
-      getMockWidgetConfig({ widget_chips: [{ chip_mode: 'show', chip_text: 'Walk me through checkout' }] }),
-    );
+  it.each([
+    [
+      'carries the prefix into the value MessengerShell dispatches, not just the button label',
+      'show',
+      'Walk me through checkout',
+      'Show me Walk me through checkout',
+    ],
+    ['leaves a tell chip untouched', 'tell', 'What does conversion rate mean?', 'What does conversion rate mean?'],
+  ] as const)('%s', (_case, chip_mode, chip_text, expectedText) => {
+    const [action] = getSuggestedActionsFromConfig(getMockWidgetConfig({ widget_chips: [{ chip_mode, chip_text }] }));
     if (!action) throw new Error('expected a suggested action');
-    expect(action.text).toBe('Show me Walk me through checkout');
-  });
-
-  it('leaves a tell chip untouched', () => {
-    const [action] = getSuggestedActionsFromConfig(
-      getMockWidgetConfig({ widget_chips: [{ chip_mode: 'tell', chip_text: 'What does conversion rate mean?' }] }),
-    );
-    if (!action) throw new Error('expected a suggested action');
-    expect(action.text).toBe('What does conversion rate mean?');
+    expect(action.text).toBe(expectedText);
   });
 });
