@@ -29,6 +29,6 @@
     "typeRoots": ["./node_modules/@types", "./node_modules"],
     "types": ["bun-types", "node"]
   },
-  "include": ["src", "vite.config.ts", "scripts/checkServed.ts", "scripts/precompress.ts"],
+  "include": ["src", "scripts", "vite.config.ts", "eslint.config.mjs"],
   "exclude": ["node_modules"]
 }
