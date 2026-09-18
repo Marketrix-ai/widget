@@ -71,6 +71,17 @@ describe('loadWidgetConfig', () => {
     expect(config).toMatchObject({ mtxId: 'load-once', mtxKey: 'test-key', mtxApp: 42, show_widget: false });
   });
 
+  it('sends only the credential pair to the boot call, never viewport or other host page data', async () => {
+    mockSdk.widgetPublicSearch.mockResolvedValue(searchResult());
+
+    await loadWidgetConfig({ mtxId: 'creds-only', mtxKey: 'test-key', mtxApiHost: 'https://api.test' });
+
+    expect(mockSdk.widgetPublicSearch).toHaveBeenCalledWith({
+      marketrix_id: 'creds-only',
+      marketrix_key: 'test-key',
+    });
+  });
+
   it('rejects an invalid merged settings response with the schema field', async () => {
     mockSdk.widgetPublicSearch.mockResolvedValue({
       items: [

@@ -40,8 +40,8 @@ function activeElementIn(container: HTMLElement): HTMLElement | null {
 export function useFocusTrap(
   containerRef: React.RefObject<HTMLElement | null>,
   isActive: boolean,
-  options?: {
-    onEscape?: () => void;
+  options: {
+    onEscape: () => void;
     focusTargetRef?: React.RefObject<HTMLElement | null> | undefined;
   },
 ) {
@@ -66,14 +66,14 @@ export function useFocusTrap(
     }
     previousActiveRef.current = true;
 
-    const target = options?.focusTargetRef?.current ?? focusablesIn(container)[0];
+    const target = options.focusTargetRef?.current ?? focusablesIn(container)[0];
     target?.focus({ preventScroll: true });
 
     const handleKeyDown = (e: KeyboardEvent) => {
       const current = activeElementIn(container);
       if (!current || !container.contains(current)) return;
       if (e.key === 'Escape') {
-        options?.onEscape?.();
+        options.onEscape();
         return;
       }
       if (e.key !== 'Tab') return;
@@ -96,7 +96,7 @@ export function useFocusTrap(
 
     document.addEventListener('keydown', handleKeyDown, true);
     return () => document.removeEventListener('keydown', handleKeyDown, true);
-  }, [isActive, containerRef, options?.focusTargetRef, options?.onEscape]);
+  }, [isActive, containerRef, options.focusTargetRef, options.onEscape]);
 }
 
 interface Size {
