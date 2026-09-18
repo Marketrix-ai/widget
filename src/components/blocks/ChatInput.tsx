@@ -2,7 +2,7 @@
  * The widget's chat input: an auto-growing textarea with send and stop.
  *
  * `MAX_TEXTAREA_HEIGHT` caps growth at three lines — 20px each plus 6px of padding — after which it
- * scrolls, so a long message cannot push the conversation off a small host page.
+ * scrolls, so a long message cannot push the chat off a small host page.
  *
  * `mergeRefs` combines the caller's ref with the internal one, since the component needs its own
  * handle to measure and resize.

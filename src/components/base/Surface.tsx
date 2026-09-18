@@ -3,7 +3,7 @@
  * the shared layout-token vocabulary with a background token, an elevation token and a padding preset,
  * all emitted as inline style.
  *
- * `floatingCard` is a `variant` shorthand for the card look both the home view's recent-conversation
+ * `floatingCard` is a `variant` shorthand for the card look both the home view's recent-chat
  * card and the chat view's composer card use. Style precedence is fixed: background, then padding, then
  * elevation, then layout props, then the caller's own `style` last, so a caller override always wins.
  * `className` is internal to `blocks/` — layout props are the styling API everywhere else.

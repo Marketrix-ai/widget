@@ -1,7 +1,7 @@
 /**
  * `HomeView` — the opening screen: tenant greeting and body, the Ask-a-question button that switches to
  * the chat view, the suggested-action chips (`getSuggestedActionsFromConfig`), which navigate and dispatch
- * in one click, and a card linking back into a conversation already in progress.
+ * in one click, and a card linking back into a chat already in progress.
  *
  * Chip captions render VERBATIM in the tenant text colour: a `show`/`do` caption doubles as the
  * instruction dispatched on click and is given its mode prefix in the config layer, so prefixing here
@@ -83,7 +83,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigateToChat, onChipClic
       {messages.length > 0 && (
         <Surface variant='floatingCard'>
           <Text as='p' size='xs' weight='semibold' style={{ marginBottom: '2px' }}>
-            Recent conversation
+            Recent chat
           </Text>
           <Text
             as='p'
@@ -95,7 +95,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigateToChat, onChipClic
           </Text>
           <Button variant='bare' onClick={onNavigateToChat} style={{ marginTop: '4px' }}>
             <Text as='span' size='xs' variant='muted'>
-              Continue conversation →
+              Continue chat →
             </Text>
           </Button>
         </Surface>
