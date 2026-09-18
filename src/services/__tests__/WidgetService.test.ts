@@ -9,7 +9,7 @@
  */
 import { beforeEach, describe, expect, it, vi } from 'bun:test';
 
-import { sdk } from '../../sdk';
+import { sdk, type WidgetPublicData } from '../../sdk';
 import { validSettings } from '../../test/fixtures';
 import { mocked, mockSdkModule, restoreModuleAfterAll } from '../../test/vi-compat';
 import { loadWidgetConfig } from '../WidgetService';
@@ -19,17 +19,19 @@ restoreModuleAfterAll('../../sdk', () => import('../../sdk/index.ts?real'));
 
 const mockSdk = mocked(sdk);
 const settings = validSettings();
-const activeWidget = (id: string) => ({
-  id: 7,
+
+const activeWidget = (overrides: Partial<WidgetPublicData> = {}): WidgetPublicData => ({
   application_id: 42,
   settings,
-  status: 'active' as const,
-  marketrix_id: id,
-  marketrix_key: 'test-key',
-  created_at: new Date(),
-  updated_at: new Date(),
+  status: 'active',
+  ...overrides,
 });
-const searchResult = (id: string) => ({ items: [activeWidget(id)], total: 1, limit: 20, offset: 0 });
+const searchResult = (overrides: Partial<WidgetPublicData> = {}) => ({
+  items: [activeWidget(overrides)],
+  total: 1,
+  limit: 20,
+  offset: 0,
+});
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -61,7 +63,7 @@ describe('loadWidgetConfig', () => {
   });
 
   it('loads the widget in one search and returns one schema-validated config', async () => {
-    mockSdk.widgetPublicSearch.mockResolvedValue(searchResult('load-once'));
+    mockSdk.widgetPublicSearch.mockResolvedValue(searchResult());
 
     const config = await loadWidgetConfig({ mtxId: 'load-once', mtxKey: 'test-key', show_widget: false });
 
@@ -73,7 +75,7 @@ describe('loadWidgetConfig', () => {
     mockSdk.widgetPublicSearch.mockResolvedValue({
       items: [
         {
-          ...activeWidget('invalid-settings'),
+          ...activeWidget(),
           settings: { ...settings, widget_position: 'somewhere' } as unknown as typeof settings,
         },
       ],
@@ -95,12 +97,7 @@ describe('loadWidgetConfig', () => {
   });
 
   it('preserves the inactive-widget diagnostic without reading the application', async () => {
-    mockSdk.widgetPublicSearch.mockResolvedValue({
-      items: [{ application_id: 42, settings, status: 'suspended' }],
-      total: 1,
-      limit: 20,
-      offset: 0,
-    });
+    mockSdk.widgetPublicSearch.mockResolvedValue(searchResult({ status: 'suspended' }));
 
     await expect(loadWidgetConfig({ mtxId: 'inactive', mtxKey: 'test-key' })).rejects.toThrow(
       'Found widget(s) but none are active',
@@ -108,7 +105,7 @@ describe('loadWidgetConfig', () => {
   });
 
   it('caches the credentialed lookup so a repeat call for the same mtx-id never re-searches', async () => {
-    mockSdk.widgetPublicSearch.mockResolvedValue(searchResult('cache-me'));
+    mockSdk.widgetPublicSearch.mockResolvedValue(searchResult());
 
     const first = await loadWidgetConfig({ mtxId: 'cache-me', mtxKey: 'test-key', show_widget: true });
     const second = await loadWidgetConfig({ mtxId: 'cache-me', mtxKey: 'test-key', show_widget: false });
@@ -128,7 +125,7 @@ describe('loadWidgetConfig', () => {
 
     const first = loadWidgetConfig({ mtxId: 'concurrent', mtxKey: 'test-key' });
     const second = loadWidgetConfig({ mtxId: 'concurrent', mtxKey: 'test-key' });
-    resolveSearch(searchResult('concurrent'));
+    resolveSearch(searchResult());
 
     await Promise.all([first, second]);
     expect(mockSdk.widgetPublicSearch).toHaveBeenCalledTimes(1);
@@ -138,7 +135,7 @@ describe('loadWidgetConfig', () => {
     mockSdk.widgetPublicSearch.mockRejectedValueOnce(new Error('offline'));
     await expect(loadWidgetConfig({ mtxId: 'retry-after-failure', mtxKey: 'test-key' })).rejects.toThrow('offline');
 
-    mockSdk.widgetPublicSearch.mockResolvedValueOnce(searchResult('retry-after-failure'));
+    mockSdk.widgetPublicSearch.mockResolvedValueOnce(searchResult());
     const config = await loadWidgetConfig({ mtxId: 'retry-after-failure', mtxKey: 'test-key' });
 
     expect(mockSdk.widgetPublicSearch).toHaveBeenCalledTimes(2);
