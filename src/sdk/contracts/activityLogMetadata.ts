@@ -34,7 +34,7 @@ export const ActivityMetadataByType = {
   update_widget: activity(widgetRef),
   delete_widget: activity(widgetRef),
   create_knowledge: activity({
-    application_id: z.number(),
+    application_id: z.number().nullable(),
     file_name: z.string(),
     file_size: z.number(),
     file_type: z.string(),
