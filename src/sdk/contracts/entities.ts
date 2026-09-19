@@ -82,6 +82,7 @@ export const WorkspaceEntitySchema = BaseEntitySchema.extend({
   external_workspace_id: z.string().max(255).nullish(),
   slack_webhook_configured: z.boolean(),
   notify_all_members_on_question: z.boolean(),
+  notification_recipient_user_id: z.number().nullable(),
 });
 
 export type WorkspaceData = z.infer<typeof WorkspaceEntitySchema>;
