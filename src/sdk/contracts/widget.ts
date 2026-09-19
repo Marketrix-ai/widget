@@ -1,38 +1,38 @@
 /**
  * The support widget: its settings, its public boot lookup, and the SSE event/command vocabulary that
- * drives a live chat session.
+ * drives a live chat session. Part F step 10 folded the widget into three columns on `application`
+ * (`widget_settings`, `marketrix_id`, `marketrix_key`) — there is no separate widget id any more, so
+ * every CRUD procedure below is keyed on `application_id`.
  *
- * Exports the widget entity and create/update schemas, `WidgetEventSchema`/`WidgetCommandSchema`, and
- * every widget CRUD and streaming procedure. `widgetPublicSearch` is the widget's own credentialed boot
- * call and never returns the credentials that authenticated it.
+ * Exports the widget create/update schemas, `WidgetEventSchema`/`WidgetCommandSchema`, and every widget
+ * CRUD and streaming procedure. `widgetPublicSearch` is the widget's own credentialed boot call and never
+ * returns the credentials that authenticated it.
  */
 
 import { eventIterator, oc } from '@orpc/contract';
 import { z } from 'zod';
 
-import { ByWidgetIdSchema, paginatedListOf, PaginationSchema, SuccessSchema } from './common';
+import { paginatedListOf, PaginationSchema, SuccessSchema } from './common';
 import {
-  WidgetEntitySchema,
-  WidgetPublicSchema,
+  ApplicationWidgetEntitySchema,
+  ApplicationWidgetPublicSchema,
   WidgetSettingsDataSchema,
   WidgetSettingsWriteSchema,
   WidgetTypeSchema,
 } from './entities';
 
-export const WidgetCreateSchema = WidgetEntitySchema.omit({ id: true, created_at: true, updated_at: true })
-  .partial()
-  .extend({
-    application_id: z.number().positive(),
-    type: WidgetTypeSchema,
-    settings: WidgetSettingsWriteSchema.optional(),
-  });
+export const WidgetCreateSchema = z.object({
+  application_id: z.number().positive(),
+  settings: WidgetSettingsWriteSchema.optional(),
+});
 export type WidgetCreateData = z.infer<typeof WidgetCreateSchema>;
 
-export const WidgetUpdateSchema = WidgetEntitySchema.omit({ id: true, created_at: true, updated_at: true })
-  .partial()
-  .extend({
-    settings: WidgetSettingsWriteSchema.optional(),
-  });
+export const WidgetUpdateSchema = z.object({
+  application_id: z.coerce.number(),
+  settings: WidgetSettingsWriteSchema.optional(),
+  marketrix_id: z.string().max(100).optional(),
+  marketrix_key: z.string().max(100).optional(),
+});
 export type WidgetUpdateData = z.infer<typeof WidgetUpdateSchema>;
 
 export const WidgetEventSchema = z.discriminatedUnion('type', [
@@ -110,10 +110,10 @@ export const widgetCreate = oc
     tags: ['Widget'],
     path: '/widgets',
     summary: 'Create a new widget',
-    description: 'Creates a new widget for an application and returns the created entity. Requires an application_id.',
+    description: 'Enables the widget for an application and returns the created entity. Requires an application_id.',
   })
   .input(WidgetCreateSchema)
-  .output(WidgetEntitySchema);
+  .output(ApplicationWidgetEntitySchema);
 
 export const widgetSearch = oc
   .route({
@@ -121,17 +121,16 @@ export const widgetSearch = oc
     tags: ['Widget'],
     path: '/widgets',
     summary: 'Search widgets for workspace',
-    description: 'Search the calling workspace’s widgets by type or application (dashboard-only; session-scoped)',
+    description: 'Search the calling workspace’s widgets by application (dashboard-only; session-scoped)',
   })
   .input(
     z
       .object({
-        type: WidgetTypeSchema.optional(),
         application_id: z.coerce.number().optional(),
       })
       .extend(PaginationSchema.shape),
   )
-  .output(paginatedListOf(WidgetEntitySchema));
+  .output(paginatedListOf(ApplicationWidgetEntitySchema));
 
 export const widgetPublicSearch = oc
   .route({
@@ -149,7 +148,7 @@ export const widgetPublicSearch = oc
       })
       .extend(PaginationSchema.shape),
   )
-  .output(paginatedListOf(WidgetPublicSchema));
+  .output(paginatedListOf(ApplicationWidgetPublicSchema));
 
 export const widgetDefaultGet = oc
   .route({
@@ -166,22 +165,22 @@ export const widgetUpdate = oc
   .route({
     method: 'PUT',
     tags: ['Widget'],
-    path: '/widgets/{widget_id}',
+    path: '/widgets/{application_id}',
     summary: 'Update widget',
     description: 'Updates widget settings and configuration',
   })
-  .input(WidgetUpdateSchema.extend({ widget_id: z.coerce.number() }))
-  .output(WidgetEntitySchema);
+  .input(WidgetUpdateSchema)
+  .output(ApplicationWidgetEntitySchema);
 
 export const widgetDelete = oc
   .route({
     method: 'DELETE',
     tags: ['Widget'],
-    path: '/widgets/{widget_id}',
+    path: '/widgets/{application_id}',
     summary: 'Delete widget',
-    description: 'Permanently deletes a widget from an application. This action cannot be undone.',
+    description: 'Permanently disables the widget for an application. This action cannot be undone.',
   })
-  .input(ByWidgetIdSchema)
+  .input(z.object({ application_id: z.coerce.number() }))
   .output(z.object({ success: z.literal(true) }));
 
 export const widgetStream = oc
