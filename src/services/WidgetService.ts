@@ -1,16 +1,12 @@
 /**
  * Resolves a host page's `mtxId`/`mtxKey` credentials into the fully-populated widget config the rest
- * of the runtime reads.
- *
- * `loadWidgetConfig` looks the widget up by credentials. The api's `widgetPublicSearch` matches on the
- * `(marketrix_id, marketrix_key)` pair alone, which is globally unique and only ever set on an
- * application with a live widget (`marketrix_id IS NOT NULL`), so a returned row is unconditionally
- * active — there is no separate `status` on the wire to check (Part F step 10 folded `widget` into
- * `application` and dropped `status` entirely, never carrying it forward).
- * `createConfigFromSettings` layers validated, rendered settings over a partial config.
+ * of the runtime reads. `loadWidgetConfig` looks the widget up by credentials and returns a merged
+ * config; `createConfigFromSettings` layers validated, rendered settings over a partial config;
  * `widgetLookupCache` memoizes a resolution so a settings-only update skips repeating the lookup.
  *
- * A failed lookup recognises the browser's own "host unreachable" errors and reports them as a
+ * `widgetPublicSearch` matches on `(marketrix_id, marketrix_key)` alone and returns a row only for a
+ * live widget, so a returned row is unconditionally active — there is no `status` field to check. A
+ * failed lookup recognises the browser's own "host unreachable" errors and reports them as a
  * likely-offline api rather than a generic failure.
  */
 import { type ApplicationWidgetPublicData, sdk } from '../sdk';

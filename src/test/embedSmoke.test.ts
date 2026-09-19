@@ -75,14 +75,8 @@ const orpcJsonResponse = (result: unknown): Response =>
 
 const settings = validSettings();
 const activeWidget = {
-  id: 7,
   application_id: 42,
-  settings,
-  status: 'active' as const,
-  marketrix_id: attrValues['mtx-id'],
-  marketrix_key: attrValues['mtx-key'],
-  created_at: new Date('2026-01-01T00:00:00.000Z'),
-  updated_at: new Date('2026-01-01T00:00:00.000Z'),
+  widget_settings: settings,
 };
 const searchResult = { items: [activeWidget], total: 1, limit: 20, offset: 0 };
 
