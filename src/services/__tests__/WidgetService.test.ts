@@ -1,15 +1,15 @@
 /**
  * `loadWidgetConfig` tests: one load is one search and returns one schema-validated config, never a defaults
- * read; an invalid settings response is rejected naming the schema field; the inactive-widget diagnostic is
- * preserved; a repeat call for the same credentials reuses the cached lookup instead of re-searching, and a
- * failed lookup is never cached so the next call retries against the api. Each case uses its own `mtxId` so
- * the module-level `widgetLookupCache` from one test cannot leak a cached result into another. A missing
- * `mtxId` OR `mtxKey` (either alone, not just both) is refused before any search, and an unreachable-api
- * error names the configured host, falling back to a generic phrase only when none was configured.
+ * read; an invalid settings response is rejected naming the schema field; a repeat call for the same
+ * credentials reuses the cached lookup instead of re-searching, and a failed lookup is never cached so the
+ * next call retries against the api. Each case uses its own `mtxId` so the module-level `widgetLookupCache`
+ * from one test cannot leak a cached result into another. A missing `mtxId` OR `mtxKey` (either alone, not
+ * just both) is refused before any search, and an unreachable-api error names the configured host, falling
+ * back to a generic phrase only when none was configured.
  */
 import { beforeEach, describe, expect, it, vi } from 'bun:test';
 
-import { sdk, type WidgetPublicData } from '../../sdk';
+import { type ApplicationWidgetPublicData, sdk } from '../../sdk';
 import { validSettings } from '../../test/fixtures';
 import { mocked, mockSdkModule, restoreModuleAfterAll } from '../../test/vi-compat';
 import { loadWidgetConfig } from '../WidgetService';
@@ -20,13 +20,12 @@ restoreModuleAfterAll('../../sdk', () => import('../../sdk/index.ts?real'));
 const mockSdk = mocked(sdk);
 const settings = validSettings();
 
-const activeWidget = (overrides: Partial<WidgetPublicData> = {}): WidgetPublicData => ({
+const activeWidget = (overrides: Partial<ApplicationWidgetPublicData> = {}): ApplicationWidgetPublicData => ({
   application_id: 42,
-  settings,
-  status: 'active',
+  widget_settings: settings,
   ...overrides,
 });
-const searchResult = (overrides: Partial<WidgetPublicData> = {}) => ({
+const searchResult = (overrides: Partial<ApplicationWidgetPublicData> = {}) => ({
   items: [activeWidget(overrides)],
   total: 1,
   limit: 20,
@@ -87,7 +86,7 @@ describe('loadWidgetConfig', () => {
       items: [
         {
           ...activeWidget(),
-          settings: { ...settings, widget_position: 'somewhere' } as unknown as typeof settings,
+          widget_settings: { ...settings, widget_position: 'somewhere' } as unknown as typeof settings,
         },
       ],
       total: 1,
@@ -105,14 +104,6 @@ describe('loadWidgetConfig', () => {
     mockSdk.widgetPublicSearch.mockRejectedValue(new Error('bad credentials'));
 
     await expect(loadWidgetConfig({ mtxId: 'failed-search', mtxKey: 'test-key' })).rejects.toThrow(/bad credentials/);
-  });
-
-  it('preserves the inactive-widget diagnostic without reading the application', async () => {
-    mockSdk.widgetPublicSearch.mockResolvedValue(searchResult({ status: 'suspended' }));
-
-    await expect(loadWidgetConfig({ mtxId: 'inactive', mtxKey: 'test-key' })).rejects.toThrow(
-      'Found widget(s) but none are active',
-    );
   });
 
   it('caches the credentialed lookup so a repeat call for the same mtx-id never re-searches', async () => {

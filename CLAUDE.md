@@ -201,9 +201,10 @@ welcome toast and does not alter the greeting message in chat.
   `mtx-api-host` (script attr), and `configureSdk(apiUrl)` rebuilds the oRPC client. There is no
   baked-in API URL, and omitting `mtxApiHost` is not caught — an unconfigured SDK silently resolves
   every request against the HOST PAGE's own origin instead of erroring.
-- **`widgetPublicSearch`'s response never carries a credential** — only `status`/`application_id`/
-  `settings`, never the `marketrix_id`/`marketrix_key` pair the call authenticated with, nor a rendered
-  embed snippet.
+- **`widgetPublicSearch`'s response never carries a credential** — only `application_id`/
+  `widget_settings`, never the `marketrix_id`/`marketrix_key` pair the call authenticated with, nor a
+  rendered embed snippet. There is no `status` field at all (api Part F step 10 dropped it entirely): the
+  api only ever returns a row for a live `marketrix_id`, so a returned widget is unconditionally active.
 
 ## SDK mirror (generated)
 

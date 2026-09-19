@@ -2,15 +2,18 @@
  * Resolves a host page's `mtxId`/`mtxKey` credentials into the fully-populated widget config the rest
  * of the runtime reads.
  *
- * `loadWidgetConfig` looks the widget up by credentials and picks the first active result, reporting a
- * more specific reason (no such widget vs. not activated) when none is active.
+ * `loadWidgetConfig` looks the widget up by credentials. The api's `widgetPublicSearch` matches on the
+ * `(marketrix_id, marketrix_key)` pair alone, which is globally unique and only ever set on an
+ * application with a live widget (`marketrix_id IS NOT NULL`), so a returned row is unconditionally
+ * active — there is no separate `status` on the wire to check (Part F step 10 folded `widget` into
+ * `application` and dropped `status` entirely, never carrying it forward).
  * `createConfigFromSettings` layers validated, rendered settings over a partial config.
  * `widgetLookupCache` memoizes a resolution so a settings-only update skips repeating the lookup.
  *
  * A failed lookup recognises the browser's own "host unreachable" errors and reports them as a
  * likely-offline api rather than a generic failure.
  */
-import { sdk, type WidgetPublicData } from '../sdk';
+import { type ApplicationWidgetPublicData, sdk } from '../sdk';
 import type { MarketrixConfig, ValidWidgetConfig } from '../types';
 import { errorMessage, withCause } from '../utils/errors';
 import { invalidSettingsMessage, parseWidgetSettings, type WidgetRenderedSettings } from '../utils/validation';
@@ -34,7 +37,7 @@ interface ResolvedWidget {
 const widgetLookupCache = new Map<string, Promise<ResolvedWidget>>();
 
 async function resolveActiveWidget(mtxId: string, mtxKey: string, mtxApiHost?: string): Promise<ResolvedWidget> {
-  let widgets: WidgetPublicData[];
+  let widgets: ApplicationWidgetPublicData[];
   try {
     ({ items: widgets } = await sdk.widgetPublicSearch({ marketrix_id: mtxId, marketrix_key: mtxKey }));
   } catch (error) {
@@ -50,23 +53,16 @@ async function resolveActiveWidget(mtxId: string, mtxKey: string, mtxApiHost?: s
     );
   }
 
-  if (!widgets.length) {
-    throw new Error('Widget not found or invalid credentials');
-  }
-
-  const activeWidget = widgets.find(widget => widget.status === 'active');
+  const activeWidget = widgets[0];
   if (!activeWidget) {
-    const statuses = widgets.map(widget => widget.status).join(', ');
-    throw new Error(
-      `Found widget(s) but none are active. Current status(es): ${statuses}. Please activate the widget in the dashboard.`,
-    );
+    throw new Error('Widget not found or invalid credentials');
   }
 
   if (!activeWidget.application_id) {
     throw new Error('Widget missing application_id');
   }
 
-  const parsedSettings = parseWidgetSettings(activeWidget.settings);
+  const parsedSettings = parseWidgetSettings(activeWidget.widget_settings);
   if (parsedSettings.invalidFields) {
     throw new Error(invalidSettingsMessage(parsedSettings.invalidFields));
   }
