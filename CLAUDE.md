@@ -167,8 +167,9 @@ that added attribute is the entire contract with the agent's HTML parser, which 
 keeps only selector, tag and a truncated label, so the markup itself never reaches a prompt. The
 snapshot is neither stripped nor size-capped, unlike `extract`, which truncates at 10k: the parser
 indexes by `data-id`, and a trimmed tree silently loses elements the loop then cannot click.
-The `finish` tool (`FINISH_TOOL`, labelled Done, defined once in `BrowserToolService.ts` — pinned by
-sourceInvariants.test.ts) ends the task. **The first `tool/call` is what activates the task**, not
+The `finish` tool (`FINISH_TOOL`, labelled Done, defined once in `BrowserToolService.ts` — eslint's
+`no-restricted-syntax` bans a second `FINISH_TOOL` declarator or a stray `'finish'` literal anywhere
+else) ends the task. **The first `tool/call` is what activates the task**, not
 `task/status running` — the api mints no task id, so the widget holds none and `chat/stop` carries none;
 the terminal three clear the task and the dedupe set.
 
@@ -193,11 +194,10 @@ welcome toast and does not alter the greeting message in chat.
 
 - `window.__mtx = { state: 'initializing' | 'active' }` is the singleton guard — it survives ES-module
   re-execution and dedupes init; the module-level `initPromise` coalesces concurrent `initWidget` calls
-  onto one in-flight init and is cleared when it settles. The union type is the only guard against a
-  third state value (tsc rejects an untyped literal at the assignment site); `embedSmoke.test.ts` covers
-  the real init/leak behavior.
-- **Closed Shadow DOM** (`attachShadow({ mode: 'closed' })`, exercised for real by `embedSmoke.test.ts`):
-  the host cannot reach into the widget DOM, intentionally — don't expect host scripts or CSS to style or
+  onto one in-flight init and is cleared when it settles. The state values are pinned by
+  sourceInvariants.test.ts.
+- **Closed Shadow DOM** (`attachShadow({ mode: 'closed' })`, pinned by sourceInvariants.test.ts): the
+  host cannot reach into the widget DOM, intentionally — don't expect host scripts or CSS to style or
   query inside it.
 - **The runtime API host is not an env var** — it is supplied per-init as `mtxApiHost` (config) /
   `mtx-api-host` (script attr), and `configureSdk(apiUrl)` rebuilds the oRPC client. There is no

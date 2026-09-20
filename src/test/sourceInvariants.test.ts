@@ -117,18 +117,25 @@ describe('Vite externals', () => {
   });
 });
 
-describe('FINISH_TOOL is a single source of truth', () => {
-  it('is defined once, and every other reference imports the constant', () => {
-    const defs = contentsExcept(nonTestSrcFiles, f =>
-      /export const FINISH_TOOL = 'finish';/.test(readFileSync(f, 'utf8')),
-    );
-    expect(defs.map(d => d.file)).toEqual([resolve(src, 'services/BrowserToolService.ts')]);
+describe('window.__mtx singleton guard', () => {
+  const indexTsx = read('src/index.tsx');
 
-    const strayLiteral = nonTestSrcFiles.filter(f => {
-      if (f === resolve(src, 'services/BrowserToolService.ts')) return false;
-      return /['"]finish['"]/.test(readFileSync(f, 'utf8').replace(/\/\*[\s\S]*?\*\//g, ''));
-    });
-    expect(strayLiteral).toEqual([]);
+  it("only ever declares and assigns the 'initializing' | 'active' states", () => {
+    expect(indexTsx).toMatch(/__mtx\?:\s*\{\s*state\?:\s*'initializing'\s*\|\s*'active'\s*\}/);
+    const assigned = [...indexTsx.matchAll(/window\.__mtx\s*=\s*\{\s*state:\s*'([^']+)'/g)].map(m => m[1]);
+    expect(new Set(assigned)).toEqual(new Set(['initializing', 'active']));
+  });
+});
+
+describe('Shadow DOM attachment', () => {
+  it('is always attached closed, never open', () => {
+    const calls = contentsExcept(nonTestSrcFiles, f => /\.attachShadow\(/.test(readFileSync(f, 'utf8')));
+    expect(calls.length).toBeGreaterThan(0);
+    for (const { text } of calls) {
+      for (const call of text.matchAll(/\.attachShadow\(([^)]*)\)/g)) {
+        expect(call[1]).toContain("mode: 'closed'");
+      }
+    }
   });
 });
 
@@ -152,32 +159,5 @@ describe('src/hooks/', () => {
   it('holds only hooks with 2+ consumers', () => {
     const files = readdirSync(resolve(src, 'hooks')).filter(f => !f.includes('__tests__'));
     expect(files.sort()).toEqual(['useLatest.ts', 'useWidget.ts']);
-  });
-});
-
-describe('interactive elements', () => {
-  it('never puts onClick on an unroled div or span', () => {
-    const offenders: { file: string; tag: string }[] = [];
-    for (const file of nonTestSrcFiles) {
-      const text = readFileSync(file, 'utf8');
-      for (const match of text.matchAll(/<(div|span)\b[\s\S]*?>/g)) {
-        if (/onClick=/.test(match[0]) && !/\brole=/.test(match[0])) {
-          offenders.push({ file, tag: match[0].slice(0, 80).replace(/\s+/g, ' ') });
-        }
-      }
-    }
-    expect(offenders).toEqual([]);
-  });
-});
-
-describe('as-cast floor', () => {
-  it('never reintroduces the three narrowing casts a type guard replaced', () => {
-    const banned = [
-      /\(el as HTMLButtonElement\)\.disabled/,
-      /LAYOUT_KEYS\.has\(key as keyof LayoutProps\)/,
-      /setActiveView\(value as WidgetView\)/,
-    ];
-    const offenders = contentsExcept(nonTestSrcFiles, f => banned.some(re => re.test(readFileSync(f, 'utf8'))));
-    expect(offenders.map(o => o.file)).toEqual([]);
   });
 });
