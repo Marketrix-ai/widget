@@ -1,19 +1,21 @@
 /**
  * The widget's ESLint config.
  *
- * Bans bare `document.activeElement` (retargets to the host page inside the closed shadow root;
- * `useFocusTrap` and jsdom tests are exempted), the bare `localStorage` global (confined to
- * `StorageService.ts`), a `cn()` helper call (no CSS framework), a value import of
- * `WidgetSettingsDataSchema` outside `src/sdk/`/`src/test/` (drags zod's runtime into the bundle), and
- * every `console.*` call except `error` everywhere and `warn` in `src/utils/log.ts` alone — each replaces
- * a former source-text-regex test with a lint rule enforced on every file. Unused imports and import
- * ordering are delegated to dedicated plugins, and `Bun` is a global for `bun run` scripts.
+ * Bans bare `document.activeElement` (`useFocusTrap`/jsdom tests exempted), the bare `localStorage`
+ * global (confined to `StorageService.ts`), a `cn()` helper call (no CSS framework), a value import of
+ * `WidgetSettingsDataSchema` outside `src/sdk/`/`src/test/` (drags zod's runtime into the bundle), a
+ * second `FINISH_TOOL` declarator or stray `'finish'` literal outside `BrowserToolService.ts`, and every
+ * `console.*` call except `error` everywhere and `warn` in `src/utils/log.ts` alone — each replaces a
+ * former source-text-regex test with a lint rule. `jsx-a11y`'s `no-static-element-interactions`/
+ * `click-events-have-key-events` cover interactive-div a11y. Unused imports/ordering are delegated to
+ * dedicated plugins, and `Bun` is a global for `bun run` scripts.
  */
 
 import js from '@eslint/js';
 import typescript from '@typescript-eslint/eslint-plugin';
 import typescriptParser from '@typescript-eslint/parser';
 import importPlugin from 'eslint-plugin-import-x';
+import jsxA11y from 'eslint-plugin-jsx-a11y';
 import simpleImportSort from 'eslint-plugin-simple-import-sort';
 import unusedImports from 'eslint-plugin-unused-imports';
 import prettierConfig from 'eslint-config-prettier';
@@ -78,6 +80,7 @@ export default [
     plugins: {
       '@typescript-eslint': typescript,
       import: importPlugin,
+      'jsx-a11y': jsxA11y,
       'simple-import-sort': simpleImportSort,
       'unused-imports': unusedImports,
     },
@@ -101,7 +104,17 @@ export default [
           selector: "CallExpression[callee.name='cn']",
           message: 'no CSS-framework cn() helper in this codebase — resolveLayoutStyle/inline styles only',
         },
+        {
+          selector: "VariableDeclarator[id.name='FINISH_TOOL']",
+          message: 'FINISH_TOOL is defined once, in services/BrowserToolService.ts — import the constant',
+        },
+        {
+          selector: "Literal[value='finish']",
+          message: "the 'finish' tool name is the FINISH_TOOL constant everywhere but its one definition",
+        },
       ],
+      'jsx-a11y/no-static-element-interactions': 'error',
+      'jsx-a11y/click-events-have-key-events': 'error',
       'no-restricted-imports': [
         'error',
         {
@@ -188,12 +201,31 @@ export default [
       'no-restricted-globals': 'off',
       'no-restricted-imports': 'off',
       'no-console': 'off',
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "CallExpression[callee.name='cn']",
+          message: 'no CSS-framework cn() helper in this codebase — resolveLayoutStyle/inline styles only',
+        },
+      ],
     },
   },
   {
     files: ['src/services/StorageService.ts'],
     rules: {
       'no-restricted-globals': 'off',
+    },
+  },
+  {
+    files: ['src/services/BrowserToolService.ts'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "CallExpression[callee.name='cn']",
+          message: 'no CSS-framework cn() helper in this codebase — resolveLayoutStyle/inline styles only',
+        },
+      ],
     },
   },
   {

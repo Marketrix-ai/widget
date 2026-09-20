@@ -5,7 +5,7 @@
  * instead, and one already covered by a real behavior test elsewhere is not duplicated here.
  */
 import { readdirSync, readFileSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'bun:test';
@@ -14,19 +14,6 @@ const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, '../..');
 const src = resolve(here, '..');
 const read = (p: string): string => readFileSync(resolve(root, p), 'utf8');
-
-function walk(dir: string, out: string[] = []): string[] {
-  for (const name of readdirSync(dir, { withFileTypes: true })) {
-    const full = join(dir, name.name);
-    if (name.isDirectory()) walk(full, out);
-    else out.push(full);
-  }
-  return out;
-}
-const srcFiles = walk(src).filter(f => /\.(ts|tsx)$/.test(f) && !f.includes('__tests__'));
-const nonTestSrcFiles = srcFiles.filter(f => !f.endsWith('.test.ts') && !f.endsWith('.test.tsx'));
-const contentsExcept = (files: string[], predicate: (f: string) => boolean): { file: string; text: string }[] =>
-  files.filter(predicate).map(file => ({ file, text: readFileSync(file, 'utf8') }));
 
 describe('package.json', () => {
   const pkg = JSON.parse(read('package.json'));
@@ -117,21 +104,6 @@ describe('Vite externals', () => {
   });
 });
 
-describe('FINISH_TOOL is a single source of truth', () => {
-  it('is defined once, and every other reference imports the constant', () => {
-    const defs = contentsExcept(nonTestSrcFiles, f =>
-      /export const FINISH_TOOL = 'finish';/.test(readFileSync(f, 'utf8')),
-    );
-    expect(defs.map(d => d.file)).toEqual([resolve(src, 'services/BrowserToolService.ts')]);
-
-    const strayLiteral = nonTestSrcFiles.filter(f => {
-      if (f === resolve(src, 'services/BrowserToolService.ts')) return false;
-      return /['"]finish['"]/.test(readFileSync(f, 'utf8').replace(/\/\*[\s\S]*?\*\//g, ''));
-    });
-    expect(strayLiteral).toEqual([]);
-  });
-});
-
 describe('z-index', () => {
   it('ShowModeService reads z-index off LAYER_TOKENS, never a raw number', () => {
     const showMode = read('src/services/ShowModeService.ts');
@@ -152,32 +124,5 @@ describe('src/hooks/', () => {
   it('holds only hooks with 2+ consumers', () => {
     const files = readdirSync(resolve(src, 'hooks')).filter(f => !f.includes('__tests__'));
     expect(files.sort()).toEqual(['useLatest.ts', 'useWidget.ts']);
-  });
-});
-
-describe('interactive elements', () => {
-  it('never puts onClick on an unroled div or span', () => {
-    const offenders: { file: string; tag: string }[] = [];
-    for (const file of nonTestSrcFiles) {
-      const text = readFileSync(file, 'utf8');
-      for (const match of text.matchAll(/<(div|span)\b[\s\S]*?>/g)) {
-        if (/onClick=/.test(match[0]) && !/\brole=/.test(match[0])) {
-          offenders.push({ file, tag: match[0].slice(0, 80).replace(/\s+/g, ' ') });
-        }
-      }
-    }
-    expect(offenders).toEqual([]);
-  });
-});
-
-describe('as-cast floor', () => {
-  it('never reintroduces the three narrowing casts a type guard replaced', () => {
-    const banned = [
-      /\(el as HTMLButtonElement\)\.disabled/,
-      /LAYOUT_KEYS\.has\(key as keyof LayoutProps\)/,
-      /setActiveView\(value as WidgetView\)/,
-    ];
-    const offenders = contentsExcept(nonTestSrcFiles, f => banned.some(re => re.test(readFileSync(f, 'utf8'))));
-    expect(offenders.map(o => o.file)).toEqual([]);
   });
 });

@@ -167,8 +167,9 @@ that added attribute is the entire contract with the agent's HTML parser, which 
 keeps only selector, tag and a truncated label, so the markup itself never reaches a prompt. The
 snapshot is neither stripped nor size-capped, unlike `extract`, which truncates at 10k: the parser
 indexes by `data-id`, and a trimmed tree silently loses elements the loop then cannot click.
-The `finish` tool (`FINISH_TOOL`, labelled Done, defined once in `BrowserToolService.ts` — pinned by
-sourceInvariants.test.ts) ends the task. **The first `tool/call` is what activates the task**, not
+The `finish` tool (`FINISH_TOOL`, labelled Done, defined once in `BrowserToolService.ts` — eslint's
+`no-restricted-syntax` bans a second `FINISH_TOOL` declarator or a stray `'finish'` literal anywhere
+else) ends the task. **The first `tool/call` is what activates the task**, not
 `task/status running` — the api mints no task id, so the widget holds none and `chat/stop` carries none;
 the terminal three clear the task and the dedupe set.
 
