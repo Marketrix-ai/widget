@@ -29,7 +29,7 @@ bun run ci               # every CI validation gate
 bun run tag <version>    # scripts/release.sh
 ```
 
-**Tests run on `bun test`, not vitest** (pinned by sourceInvariants.test.ts). `src/test/preload.ts` (the
+**Tests run on `bun test`, not vitest**. `src/test/preload.ts` (the
 `bunfig.toml` `[test] preload`) is the sole DOM bootstrap:
 a hand-installed jsdom `Window`, with `window` made self-referential to `globalThis` (matching a real
 browser's top frame and vitest's own jsdom environment) so tests that redefine `window.location` via
@@ -42,8 +42,7 @@ singleton state from one file can leak into another purely by file-discovery ord
 class behind three real cross-file pollution failures found porting this suite (a `vi.spyOn` leak, a
 `vi.mock('../sdk')` leak, and `ScreenShareService`'s own real module state outliving its test file),
 one of which reproduced ONLY on CI's Linux runner, never locally on macOS or in a `linux/amd64` Docker
-container. **`bun test` always runs with `--isolate`**, closing that class at the runner level (pinned
-by sourceInvariants.test.ts); keep any new mock/spy scoped to its own file regardless, and don't remove
+container. **`bun test` always runs with `--isolate`**, closing that class at the runner level; keep any new mock/spy scoped to its own file regardless, and don't remove
 the flag to "speed up" a run. Filter a run with `bun test <pattern>`;
 a single file with `bun test path/to/file.test.ts`.
 
@@ -88,15 +87,14 @@ are generated**, so after changing `rc:` you must re-run `lefthook install --for
 ## Packaging
 
 - `main`/`module` = `./dist/widget.mjs`, `types` = `./dist/src/index.d.ts`. The published `files`
-  allowlist and the absence of `.npmignore` are pinned by sourceInvariants.test.ts. The map is built but
+  allowlist and the absence of `.npmignore`. The map is built but
   never published; `sourcemap: 'hidden'` keeps the bundle from advertising one it does not ship.
 - Vite lib mode: `formats: ['es']`, no CSS splitting, target `esnext`, terser with `drop_console`.
   **`codeSplitting: false` belongs on `rolldownOptions.output`** — Vite never reads it from `build`,
   where it was a no-op that read like a guarantee.
 - **CSS is injected via JS** — no external stylesheet; it rides in the bundle and is mounted into the
   Shadow DOM from `index.css?inline`.
-- **Externals** (resolved via the host importmap) are the four React entry points (pinned by
-  sourceInvariants.test.ts).
+- **Externals** (resolved via the host importmap) are the four React entry points.
 - Declarations come from a custom `closeBundle` plugin running `tsc -p tsconfig.build.json`.
 - `public/loader.js` → `dist/loader.js` is the classic script-tag bootstrap.
 - **The runtime image serves an allowlist, not `dist/`.** The Dockerfile names each served file, so
@@ -107,14 +105,14 @@ are generated**, so after changing `rc:` you must re-run `lefthook install --for
   `Accept-Encoding` covers brotli. Nothing is compressed per request.
 - **`bundle:check` budgets each bundled dependency, not just the total** — a total cap cannot see
   which dependency grew. Two are about half of it: `@base-ui/react` + `/utils` and `@rrweb/record`
-  (a feature off by default), each named in `DEPENDENCY_BUDGETS` (pinned by sourceInvariants.test.ts);
+  (a feature off by default), each named in `DEPENDENCY_BUDGETS`;
   a package missing from it fails the gate, so a new import is a deliberate line.
 - **zod is a type-only dependency of the BUNDLE, and a real one of the package.** `parseWidgetSettings`
   in `utils/validation.ts` is the one home for settings validation, a `satisfies`-checked guard table
   that a contract change breaks at compile time. Importing `WidgetSettingsDataSchema` (or any schema)
   as a VALUE anywhere reachable from `src/index.tsx` pulls zod's whole runtime back into every host
   page: rolldown cannot prove `z.object(...)` pure, so one value import retains the entire mirror's
-  schema graph — no such import outside `src/sdk/`/`src/test/` is pinned by sourceInvariants.test.ts.
+  schema graph — no such import outside `src/sdk/`/`src/test/`.
   It stays in `dependencies` because the published `.d.ts` files still reference it, and it stays
   importable in tests — `utils/__tests__/validation.test.ts` uses the real schema as the oracle the
   guard is checked against.
@@ -132,8 +130,8 @@ Two typed oRPC procedures, both in `src/sdk/contracts/widget.ts`:
   event, as output.
 - **`widgetMessagePost`** — POST, widget → server.
 
-Both payloads are Zod **discriminated unions on `type`**, whose literal sets are pinned by
-sourceInvariants.test.ts: `WidgetEvent` — `registered`, `heartbeat`, `chat/response`, `chat/delta`,
+Both payloads are Zod **discriminated unions on `type`**, whose literal sets are exercised in
+`src/services/__tests__/sse-event-handling.test.ts`: `WidgetEvent` — `registered`, `heartbeat`, `chat/response`, `chat/delta`,
 `chat/error`, `task/status`, `tool/call`. `WidgetCommand` — `chat/tell`, `chat/show`, `chat/do`,
 `chat/stop`, `tool/response`, `rrweb/metadata`, `rrweb/events`.
 
@@ -142,7 +140,7 @@ async iterator in the background. Status machine `disconnected → connecting �
 `error` from any failed connect or stream — **`open` is the transport, `registered` is the chat**, so
 `isConnected()` reads `registered` and nothing waits on `open`. Exponential-backoff reconnect (1000ms
 ×2, cap 30000ms, **max 10 attempts**; counters reset only on `registered`) and the `chat/error`
-`request_id === 'auth'` give-up branch are pinned by sourceInvariants.test.ts. **A reconnect gets a
+`request_id === 'auth'` give-up branch. **A reconnect gets a
 fresh, empty queue, never a replay** — the api keeps a chat_id's turn history only to fold back into the
 agent's prompt on the next dispatch (Tell/Show/Do stay one thread), so a dropped stream sees only the
 future events of a still-in-flight dispatch, never anything already delivered or missed; the widget
@@ -166,8 +164,7 @@ that added attribute is the entire contract with the agent's HTML parser, which 
 keeps only selector, tag and a truncated label, so the markup itself never reaches a prompt. The
 snapshot is neither stripped nor size-capped, unlike `extract`, which truncates at 10k: the parser
 indexes by `data-id`, and a trimmed tree silently loses elements the loop then cannot click.
-The `finish` tool (`FINISH_TOOL`, labelled Done, defined once in `BrowserToolService.ts` — pinned by
-sourceInvariants.test.ts) ends the task. **The first `tool/call` is what activates the task**, not
+The `finish` tool (`FINISH_TOOL`, labelled Done, defined once in `BrowserToolService.ts`) ends the task. **The first `tool/call` is what activates the task**, not
 `task/status running` — the api mints no task id, so the widget holds none and `chat/stop` carries none;
 the terminal three clear the task and the dedupe set.
 
@@ -192,9 +189,8 @@ welcome toast and does not alter the greeting message in chat.
 
 - `window.__mtx = { state: 'initializing' | 'active' }` is the singleton guard — it survives ES-module
   re-execution and dedupes init; the module-level `initPromise` coalesces concurrent `initWidget` calls
-  onto one in-flight init and is cleared when it settles. The state values are pinned by
-  sourceInvariants.test.ts.
-- **Closed Shadow DOM** (`attachShadow({ mode: 'closed' })`, pinned by sourceInvariants.test.ts): the
+  onto one in-flight init and is cleared when it settles.
+- **Closed Shadow DOM** (`attachShadow({ mode: 'closed' })`): the
   host cannot reach into the widget DOM, intentionally — don't expect host scripts or CSS to style or
   query inside it.
 - **The runtime API host is not an env var** — it is supplied per-init as `mtxApiHost` (config) /
@@ -210,8 +206,8 @@ welcome toast and does not alter the greeting message in chat.
 
 `src/sdk/contract.ts` + `contracts/*` are a **generated scoped mirror** of the api's widget audience —
 **never hand-edit; regenerate from the api side.** `src/sdk/index.ts` is hand-written (the `sdk` proxy,
-`configureSdk`, runtime/type re-exports). There is **no `routes.ts` and no `schema.ts`** (pinned by
-sourceInvariants.test.ts).
+`configureSdk`, runtime/type re-exports). There is **no `routes.ts` and no `schema.ts`** (checked by
+`src/__tests__/sdk-mirror-invariants.test.ts`).
 
 Drift is enforced in **infra**, at the api tag this widget is pinned beside. **Widget gets a second
 check the other consumers don't need**: `app` bundles this package **from npm at whatever its own
@@ -227,7 +223,7 @@ layered on) through `WidgetConfigContext`, plus its own root element through `Po
 Everything below calls `useWidgetConfig()` for settings and `useWidget()` for the store; **never thread
 either down as props.** The widget is open or closed — there is no minimized panel.
 
-**`src/hooks/` holds only a hook with 2+ consumers** (pinned by sourceInvariants.test.ts). A
+**`src/hooks/` holds only a hook with 2+ consumers**. A
 single-consumer hook lives beside its one caller instead, exported for its `renderHook` tests — rule
 6/7's file-flattening applied to hooks.
 
@@ -260,8 +256,7 @@ or the `deploy.yml` dispatch inputs (this repo cannot reach the private infra re
 - **The loader always injects its `esm.sh` React importmap** — it neither reads nor merges an existing
   one. A host importmap placed before the loader keeps its entries because browsers never let a later
   import map override an earlier key, so the loader's map only fills what the host left out.
-- **Styling is `index.css` plus inline styles — there is no CSS framework and no `cn()`** (pinned by
-  sourceInvariants.test.ts). Layout props resolve to a style object (`resolveLayoutStyle`), never class
+- **Styling is `index.css` plus inline styles — there is no CSS framework and no `cn()`**. Layout props resolve to a style object (`resolveLayoutStyle`), never class
   names: as classes they were interpolated, so a build-time safelist was the only thing keeping them
   alive and a missing entry failed silently at runtime. Variants are CSS keyed on the `data-*`
   attributes the components emit (`data-variant`/`data-size`/`data-active`/`data-disabled`/`data-stacked`/`data-full`/`data-tone`),
@@ -269,19 +264,16 @@ or the `deploy.yml` dispatch inputs (this repo cannot reach the private infra re
   undo it. A new `animate` token needs a matching `@keyframes` — `stylesheet-contract.test.ts` pins that.
 - **The widget stays quiet on a customer's console** — no `console.log`/`info`/`debug` in `src/` (terser
   drops them, so such a line only ever reaches a developer running the dev server) and every warn routes
-  through **`utils/log.ts`'s `logWarn`**, never a bare `console.warn` (all pinned by
-  sourceInvariants.test.ts). Severity follows the root `../CLAUDE.md` — a degraded-but-handled failure
+  through **`utils/log.ts`'s `logWarn`**, never a bare `console.warn`. Severity follows the root `../CLAUDE.md` — a degraded-but-handled failure
   (a reconnect, unreadable `localStorage`, dropped telemetry) is `warn`, an unexpected one is `error`;
   `logWarn` prints only the cause's message, never the raw `Error`, because attaching a stacktrace is
   what promotes a record to `error` — call `console.error` directly where the whole object belongs.
-- **The widget has no dark mode** — no `.dark` block, no `dark:` variant (pinned by
-  sourceInvariants.test.ts). Theming is the per-tenant settings → CSS custom properties in
+- **The widget has no dark mode** — no `.dark` block, no `dark:` variant. Theming is the per-tenant settings → CSS custom properties in
   `semantic-tokens.ts`, nothing else.
 - **Elevation is a `SHADOW.*` token** (`design-system/component-tokens.ts`), applied inline through `Surface`'s
   `elevation` prop / `getElevationStyle` — **there is no settings-driven shadow**; the four
   settings that reached nothing here (`widget_device`, `widget_bounce_effect`, `widget_shadow`,
-  `widget_feature_human`) were dropped from the contract in db-V247 and never reappear (pinned by
-  sourceInvariants.test.ts). `widget_appearance` is `default | hidden` — `compact`/`full` were retired
+  `widget_feature_human`) were dropped from the contract in db-V247 and never reappear. `widget_appearance` is `default | hidden` — `compact`/`full` were retired
   in db-V246 because this widget rendered them identically to `default`.
 - **A portal must land inside `[data-marketrix-widget]`** — that element carries every tenant token as
   an inline style, so anything portaled to the shadow root instead falls back to `index.css`'s hardcoded
@@ -292,7 +284,7 @@ or the `deploy.yml` dispatch inputs (this repo cannot reach the private infra re
   matches nothing — read focus through `getRootNode()`, and scope host-level rules to `:host` or
   `[data-marketrix-widget]`. `activeElementIn`, a module-private helper next to `useFocusTrap` in
   `MessengerShell.tsx`, is the one home for the retargeting and eslint's `no-restricted-properties` bans
-  the bare read everywhere else (pinned by sourceInvariants.test.ts). **Base UI has the same bug and
+  the bare read everywhere else. **Base UI has the same bug and
   cannot see it**: its focus restore
   descends `element.shadowRoot.activeElement`, which is null for a closed root, so it records the host
   and hands focus to the host page on close — `WidgetDialog` passes an explicit `finalFocus` ref rather

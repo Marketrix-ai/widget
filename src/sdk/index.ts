@@ -50,7 +50,7 @@ export const sdk = new Proxy({} as ContractRouterClient<typeof widgetContract>, 
 });
 
 export { WidgetSettingsDataSchema } from './contracts/entities';
-export { WidgetEventSchema } from './contracts/widget';
+export { WidgetCommandSchema, WidgetEventSchema } from './contracts/widget';
 
 export type { ApplicationWidgetPublicData, InstructionType, WidgetSettingsData } from './contracts/entities';
 
