@@ -114,8 +114,8 @@ are generated**, so after changing `rc:` you must re-run `lefthook install --for
   that a contract change breaks at compile time. Importing `WidgetSettingsDataSchema` (or any schema)
   as a VALUE anywhere reachable from `src/index.tsx` pulls zod's whole runtime back into every host
   page: rolldown cannot prove `z.object(...)` pure, so one value import retains the entire mirror's
-  schema graph — no such import outside `src/sdk/`/`src/test/` is pinned by sourceInvariants.test.ts.
-  It stays in `dependencies` because the published `.d.ts` files still reference it, and it stays
+  schema graph — eslint's `no-restricted-imports` bans a value import of `WidgetSettingsDataSchema`
+  outside `src/sdk/`/`src/test/`, so this is a lint error, not a test. It stays in `dependencies` because the published `.d.ts` files still reference it, and it stays
   importable in tests — `utils/__tests__/validation.test.ts` uses the real schema as the oracle the
   guard is checked against.
 - **A single chunk means an import is unconditional** — a heavy dependency behind an off-by-default
@@ -132,8 +132,8 @@ Two typed oRPC procedures, both in `src/sdk/contracts/widget.ts`:
   event, as output.
 - **`widgetMessagePost`** — POST, widget → server.
 
-Both payloads are Zod **discriminated unions on `type`**, whose literal sets are pinned by
-sourceInvariants.test.ts: `WidgetEvent` — `registered`, `heartbeat`, `chat/response`, `chat/delta`,
+Both payloads are Zod **discriminated unions on `type`**, whose literal sets are exercised via real
+`safeParse` calls in `src/services/__tests__/sse-event-handling.test.ts`: `WidgetEvent` — `registered`, `heartbeat`, `chat/response`, `chat/delta`,
 `chat/error`, `task/status`, `tool/call`. `WidgetCommand` — `chat/tell`, `chat/show`, `chat/do`,
 `chat/stop`, `tool/response`, `rrweb/metadata`, `rrweb/events`.
 
@@ -142,7 +142,8 @@ async iterator in the background. Status machine `disconnected → connecting �
 `error` from any failed connect or stream — **`open` is the transport, `registered` is the chat**, so
 `isConnected()` reads `registered` and nothing waits on `open`. Exponential-backoff reconnect (1000ms
 ×2, cap 30000ms, **max 10 attempts**; counters reset only on `registered`) and the `chat/error`
-`request_id === 'auth'` give-up branch are pinned by sourceInvariants.test.ts. **A reconnect gets a
+`request_id === 'auth'` give-up branch are exercised with real fake-timer tests in
+`StreamClient.test.ts`, not a source-text pin. **A reconnect gets a
 fresh, empty queue, never a replay** — the api keeps a chat_id's turn history only to fold back into the
 agent's prompt on the next dispatch (Tell/Show/Do stay one thread), so a dropped stream sees only the
 future events of a still-in-flight dispatch, never anything already delivered or missed; the widget
@@ -192,10 +193,11 @@ welcome toast and does not alter the greeting message in chat.
 
 - `window.__mtx = { state: 'initializing' | 'active' }` is the singleton guard — it survives ES-module
   re-execution and dedupes init; the module-level `initPromise` coalesces concurrent `initWidget` calls
-  onto one in-flight init and is cleared when it settles. The state values are pinned by
-  sourceInvariants.test.ts.
-- **Closed Shadow DOM** (`attachShadow({ mode: 'closed' })`, pinned by sourceInvariants.test.ts): the
-  host cannot reach into the widget DOM, intentionally — don't expect host scripts or CSS to style or
+  onto one in-flight init and is cleared when it settles. The union type is the only guard against a
+  third state value (tsc rejects an untyped literal at the assignment site); `embedSmoke.test.ts` covers
+  the real init/leak behavior.
+- **Closed Shadow DOM** (`attachShadow({ mode: 'closed' })`, exercised for real by `embedSmoke.test.ts`):
+  the host cannot reach into the widget DOM, intentionally — don't expect host scripts or CSS to style or
   query inside it.
 - **The runtime API host is not an env var** — it is supplied per-init as `mtxApiHost` (config) /
   `mtx-api-host` (script attr), and `configureSdk(apiUrl)` rebuilds the oRPC client. There is no
@@ -210,8 +212,8 @@ welcome toast and does not alter the greeting message in chat.
 
 `src/sdk/contract.ts` + `contracts/*` are a **generated scoped mirror** of the api's widget audience —
 **never hand-edit; regenerate from the api side.** `src/sdk/index.ts` is hand-written (the `sdk` proxy,
-`configureSdk`, runtime/type re-exports). There is **no `routes.ts` and no `schema.ts`** (pinned by
-sourceInvariants.test.ts).
+`configureSdk`, runtime/type re-exports). There is **no `routes.ts` and no `schema.ts`** (checked by
+`src/__tests__/sdk-mirror-invariants.test.ts`).
 
 Drift is enforced in **infra**, at the api tag this widget is pinned beside. **Widget gets a second
 check the other consumers don't need**: `app` bundles this package **from npm at whatever its own
@@ -260,8 +262,8 @@ or the `deploy.yml` dispatch inputs (this repo cannot reach the private infra re
 - **The loader always injects its `esm.sh` React importmap** — it neither reads nor merges an existing
   one. A host importmap placed before the loader keeps its entries because browsers never let a later
   import map override an earlier key, so the loader's map only fills what the host left out.
-- **Styling is `index.css` plus inline styles — there is no CSS framework and no `cn()`** (pinned by
-  sourceInvariants.test.ts). Layout props resolve to a style object (`resolveLayoutStyle`), never class
+- **Styling is `index.css` plus inline styles — there is no CSS framework (pinned by
+  sourceInvariants.test.ts) and no `cn()` (eslint-banned via `no-restricted-syntax`)**. Layout props resolve to a style object (`resolveLayoutStyle`), never class
   names: as classes they were interpolated, so a build-time safelist was the only thing keeping them
   alive and a missing entry failed silently at runtime. Variants are CSS keyed on the `data-*`
   attributes the components emit (`data-variant`/`data-size`/`data-active`/`data-disabled`/`data-stacked`/`data-full`/`data-tone`),
@@ -269,8 +271,8 @@ or the `deploy.yml` dispatch inputs (this repo cannot reach the private infra re
   undo it. A new `animate` token needs a matching `@keyframes` — `stylesheet-contract.test.ts` pins that.
 - **The widget stays quiet on a customer's console** — no `console.log`/`info`/`debug` in `src/` (terser
   drops them, so such a line only ever reaches a developer running the dev server) and every warn routes
-  through **`utils/log.ts`'s `logWarn`**, never a bare `console.warn` (all pinned by
-  sourceInvariants.test.ts). Severity follows the root `../CLAUDE.md` — a degraded-but-handled failure
+  through **`utils/log.ts`'s `logWarn`**, never a bare `console.warn` (eslint's `no-console` allows only
+  `error` everywhere, plus `warn` in `log.ts` alone). Severity follows the root `../CLAUDE.md` — a degraded-but-handled failure
   (a reconnect, unreadable `localStorage`, dropped telemetry) is `warn`, an unexpected one is `error`;
   `logWarn` prints only the cause's message, never the raw `Error`, because attaching a stacktrace is
   what promotes a record to `error` — call `console.error` directly where the whole object belongs.
@@ -280,8 +282,9 @@ or the `deploy.yml` dispatch inputs (this repo cannot reach the private infra re
 - **Elevation is a `SHADOW.*` token** (`design-system/component-tokens.ts`), applied inline through `Surface`'s
   `elevation` prop / `getElevationStyle` — **there is no settings-driven shadow**; the four
   settings that reached nothing here (`widget_device`, `widget_bounce_effect`, `widget_shadow`,
-  `widget_feature_human`) were dropped from the contract in db-V247 and never reappear (pinned by
-  sourceInvariants.test.ts). `widget_appearance` is `default | hidden` — `compact`/`full` were retired
+  `widget_feature_human`) were dropped from the contract in db-V247 and never reappear — `WidgetSettingsData`
+  no longer has those fields, so tsc rejects any access on a real config object, not a source-text pin.
+  `widget_appearance` is `default | hidden` — `compact`/`full` were retired
   in db-V246 because this widget rendered them identically to `default`.
 - **A portal must land inside `[data-marketrix-widget]`** — that element carries every tenant token as
   an inline style, so anything portaled to the shadow root instead falls back to `index.css`'s hardcoded
@@ -292,7 +295,7 @@ or the `deploy.yml` dispatch inputs (this repo cannot reach the private infra re
   matches nothing — read focus through `getRootNode()`, and scope host-level rules to `:host` or
   `[data-marketrix-widget]`. `activeElementIn`, a module-private helper next to `useFocusTrap` in
   `MessengerShell.tsx`, is the one home for the retargeting and eslint's `no-restricted-properties` bans
-  the bare read everywhere else (pinned by sourceInvariants.test.ts). **Base UI has the same bug and
+  the bare read everywhere else (enforced by eslint, not a duplicate test). **Base UI has the same bug and
   cannot see it**: its focus restore
   descends `element.shadowRoot.activeElement`, which is null for a closed root, so it records the host
   and hands focus to the host page on close — `WidgetDialog` passes an explicit `finalFocus` ref rather
@@ -325,4 +328,6 @@ Standing gotchas folded in from session memory so they travel with the repo. Eve
 
 - **A green `publish` job never proves a publish** — the step is idempotent (`bun publish --tolerate-republish` exits 0 on an already-published version), and a skipped publish leaves npm behind the tag so app's `bun add @marketrix.ai/widget@<ver>` fails. Check `npm view @marketrix.ai/widget version` before pinning app. Publishing from a tag cut off stale local `main` ships `latest` without the fix and burns the version number.
 - Diff the BUILT artefact, not just source: the prod bundle drops `console.*` (terser), so a debug line that looks present in `src/` is gone at runtime — debug via api/agent logs instead.
+- **`localStorage` is eslint-banned (`no-restricted-globals`) everywhere except `StorageService.ts`** — a
+  bare `localStorage.getItem`/`setItem` elsewhere is a lint error, not a runtime surprise.
 - **The contract gate checks the widget version the app BUNDLES**, not the widget image — a types-only mirror change still needs: tag widget → wait for npm → `bun add @marketrix.ai/widget@<ver>` in app → commit `bun.lock` → tag app.

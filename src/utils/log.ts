@@ -4,8 +4,8 @@
  * which takes only a message plus an optional cause and prints the cause's MESSAGE text via
  * `errorMessage`, never the raw `Error` object, because a customer's console must never see a trace for
  * a condition the widget already recovers from. An unexpected failure — where the stacktrace rule
- * applies — calls `console.error` directly (sourceInvariants.test.ts sanctions the bare call; only
- * `console.warn` is pinned to route through here). `log`/`info`/`debug` have no equivalent here because
+ * applies — calls `console.error` directly (eslint's `no-console` allows `error` everywhere and `warn`
+ * only in this file). `log`/`info`/`debug` have no equivalent here because
  * terser's `drop_console` strips them from the shipped bundle (see `ErrorBoundary`'s header), so only
  * warn/error ever reach a host page.
  */

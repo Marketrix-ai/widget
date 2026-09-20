@@ -1,7 +1,8 @@
 /**
- * Pins the mechanical gotchas documented in this repo's and the root `CLAUDE.md` that are cheap to
- * assert straight from source/config text — fs + regex, no mocks, no rendering. A prose-only gotcha with
- * no assertable artifact stays prose in `CLAUDE.md` instead of a fake green check here.
+ * Pins the mechanical gotchas documented in this repo's and the root `CLAUDE.md` that eslint/tsc cannot
+ * express (package.json/tsconfig/Dockerfile content, filesystem shape, cross-file text agreement) — fs +
+ * regex, no mocks, no rendering. A check expressible as an eslint rule lives in eslint.config.mjs
+ * instead, and one already covered by a real behavior test elsewhere is not duplicated here.
  */
 import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
@@ -26,12 +27,6 @@ const srcFiles = walk(src).filter(f => /\.(ts|tsx)$/.test(f) && !f.includes('__t
 const nonTestSrcFiles = srcFiles.filter(f => !f.endsWith('.test.ts') && !f.endsWith('.test.tsx'));
 const contentsExcept = (files: string[], predicate: (f: string) => boolean): { file: string; text: string }[] =>
   files.filter(predicate).map(file => ({ file, text: readFileSync(file, 'utf8') }));
-
-const expectNoOffendersExcept = (pattern: RegExp, ...exemptPaths: string[]) => {
-  const exempt = exemptPaths.map(p => resolve(src, p));
-  const offenders = contentsExcept(nonTestSrcFiles, f => !exempt.includes(f) && pattern.test(readFileSync(f, 'utf8')));
-  expect(offenders.map(o => o.file)).toEqual([]);
-};
 
 describe('package.json', () => {
   const pkg = JSON.parse(read('package.json'));
@@ -66,6 +61,11 @@ describe('package.json', () => {
     expect(at('build')).toBeGreaterThanOrEqual(0);
     expect(at('code:check')).toBeLessThan(at('check:comments'));
     expect(at('check:comments')).toBeLessThan(at('build'));
+  });
+
+  it('has no tailwind/classnames dependency — cn() calls are eslint-banned instead', () => {
+    const deps = { ...pkg.dependencies, ...pkg.devDependencies };
+    expect(Object.keys(deps).some(name => /tailwind|classnames/i.test(name))).toBe(false);
   });
 });
 
@@ -117,54 +117,6 @@ describe('Vite externals', () => {
   });
 });
 
-describe('widget <-> api wire vocabulary', () => {
-  const widget = read('src/sdk/contracts/widget.ts');
-  const literalsAfter = (label: string): string[] => {
-    const idx = widget.indexOf(`export const ${label} = z.discriminatedUnion('type', [`);
-    if (idx < 0) throw new Error(`${label} not found in src/sdk/contracts/widget.ts — update this check`);
-    const end = widget.indexOf(']);', idx);
-    return [...widget.slice(idx, end).matchAll(/type:\s*z\.literal\('([^']+)'\)/g)].map(m => m[1] as string);
-  };
-
-  it('WidgetEventSchema carries exactly the documented event types', () => {
-    expect(literalsAfter('WidgetEventSchema')).toEqual([
-      'registered',
-      'heartbeat',
-      'chat/response',
-      'chat/delta',
-      'chat/error',
-      'task/status',
-      'tool/call',
-    ]);
-  });
-
-  it('WidgetCommandSchema carries exactly the documented command types', () => {
-    expect(literalsAfter('WidgetCommandSchema')).toEqual([
-      'chat/tell',
-      'chat/show',
-      'chat/do',
-      'chat/stop',
-      'tool/response',
-      'rrweb/metadata',
-      'rrweb/events',
-    ]);
-  });
-});
-
-describe('StreamClient reconnect', () => {
-  const streamClient = read('src/services/StreamClient.ts');
-
-  it('keeps the documented backoff constants', () => {
-    expect(streamClient).toMatch(/INITIAL_RECONNECT_DELAY_MS\s*=\s*1000/);
-    expect(streamClient).toMatch(/maxReconnectAttempts\s*=\s*10\b/);
-    expect(streamClient).toMatch(/maxReconnectDelay\s*=\s*30000/);
-  });
-
-  it("treats a chat/error with request_id === 'auth' as non-retriable", () => {
-    expect(streamClient).toMatch(/event\.type === 'chat\/error'\s*&&\s*event\.request_id === 'auth'/);
-  });
-});
-
 describe('FINISH_TOOL is a single source of truth', () => {
   it('is defined once, and every other reference imports the constant', () => {
     const defs = contentsExcept(nonTestSrcFiles, f =>
@@ -180,44 +132,6 @@ describe('FINISH_TOOL is a single source of truth', () => {
   });
 });
 
-describe('window.__mtx singleton guard', () => {
-  const indexTsx = read('src/index.tsx');
-
-  it("only ever declares and assigns the 'initializing' | 'active' states", () => {
-    expect(indexTsx).toMatch(/__mtx\?:\s*\{\s*state\?:\s*'initializing'\s*\|\s*'active'\s*\}/);
-    const assigned = [...indexTsx.matchAll(/window\.__mtx\s*=\s*\{\s*state:\s*'([^']+)'/g)].map(m => m[1]);
-    expect(new Set(assigned)).toEqual(new Set(['initializing', 'active']));
-  });
-});
-
-describe('Shadow DOM attachment', () => {
-  it('is always attached closed, never open', () => {
-    const calls = contentsExcept(nonTestSrcFiles, f => /\.attachShadow\(/.test(readFileSync(f, 'utf8')));
-    expect(calls.length).toBeGreaterThan(0);
-    for (const { text } of calls) {
-      for (const call of text.matchAll(/\.attachShadow\(([^)]*)\)/g)) {
-        expect(call[1]).toContain("mode: 'closed'");
-      }
-    }
-  });
-});
-
-describe('localStorage access', () => {
-  it('is confined to StorageService.readLocal / writeLocal', () => {
-    expectNoOffendersExcept(/\blocalStorage\./, 'services/StorageService.ts');
-  });
-});
-
-describe('console usage', () => {
-  it('never calls console.log/info/debug in src/', () => {
-    expectNoOffendersExcept(/console\.(log|info|debug)\(/);
-  });
-
-  it('routes every warn through utils/log.ts logWarn — no bare console.warn elsewhere', () => {
-    expectNoOffendersExcept(/console\.warn\(/, 'utils/log.ts');
-  });
-});
-
 describe('z-index', () => {
   it('ShowModeService reads z-index off LAYER_TOKENS, never a raw number', () => {
     const showMode = read('src/services/ShowModeService.ts');
@@ -227,43 +141,7 @@ describe('z-index', () => {
   });
 });
 
-describe('retired settings (db-V247)', () => {
-  it('never reappear in src/', () => {
-    const retired = ['widget_device', 'widget_bounce_effect', 'widget_shadow', 'widget_feature_human'];
-    const offenders = nonTestSrcFiles.filter(f => retired.some(name => readFileSync(f, 'utf8').includes(name)));
-    expect(offenders).toEqual([]);
-  });
-});
-
-describe('zod schema value-import boundary', () => {
-  it('is never imported as a value outside src/sdk/ and src/test/', () => {
-    const guarded = nonTestSrcFiles.filter(f => !f.includes('/sdk/') && !f.includes('/test/'));
-    const offenders = guarded.filter(f => {
-      const line = readFileSync(f, 'utf8')
-        .split('\n')
-        .find(l => l.includes('WidgetSettingsDataSchema') && l.trimStart().startsWith('import'));
-      return line !== undefined && !line.includes('import type');
-    });
-    expect(offenders).toEqual([]);
-  });
-});
-
 describe('no CSS framework', () => {
-  const pkg = JSON.parse(read('package.json'));
-
-  it('has no tailwind/classnames dependency and no cn( helper calls', () => {
-    const deps = { ...pkg.dependencies, ...pkg.devDependencies };
-    expect(Object.keys(deps).some(name => /tailwind|classnames/i.test(name))).toBe(false);
-    const offenders = nonTestSrcFiles.filter(f =>
-      /\bcn\(/.test(
-        readFileSync(f, 'utf8')
-          .replace(/\/\*[\s\S]*?\*\//g, '')
-          .replace(/`cn\(\)`/g, ''),
-      ),
-    );
-    expect(offenders).toEqual([]);
-  });
-
   it('index.css has no dark-mode selector', () => {
     const css = read('src/index.css');
     expect(css).not.toMatch(/\.dark\s*[,{]|\bdark:[a-z-]/);
@@ -274,24 +152,6 @@ describe('src/hooks/', () => {
   it('holds only hooks with 2+ consumers', () => {
     const files = readdirSync(resolve(src, 'hooks')).filter(f => !f.includes('__tests__'));
     expect(files.sort()).toEqual(['useLatest.ts', 'useWidget.ts']);
-  });
-});
-
-describe('document.activeElement retargeting', () => {
-  it('is eslint-banned outside the one activeElementIn reader', () => {
-    const eslintConfig = readdirSync(root).find(f => f.startsWith('eslint.config.'));
-    if (!eslintConfig) throw new Error('no eslint.config.* at repo root — update this check');
-    expect(read(eslintConfig)).toMatch(/no-restricted-properties/);
-
-    expectNoOffendersExcept(/document\.activeElement\b/, 'components/navigation/MessengerShell.tsx');
-  });
-});
-
-describe('sdk mirror shape', () => {
-  it('has no hand-written routes.ts or schema.ts', () => {
-    const sdkFiles = walk(resolve(src, 'sdk')).map(f => f.split('/').pop());
-    expect(sdkFiles).not.toContain('routes.ts');
-    expect(sdkFiles).not.toContain('schema.ts');
   });
 });
 

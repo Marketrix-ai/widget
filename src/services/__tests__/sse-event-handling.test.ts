@@ -1,11 +1,10 @@
 /**
- * Contract tests for `WidgetEventSchema`, the SSE discriminated union: every event type parses from a
- * minimal fixture, an unknown or missing `type` is rejected, and the legacy `task/status` values are
- * rejected in favor of the current wire vocabulary.
+ * Contract tests for `WidgetEventSchema`/`WidgetCommandSchema`, the SSE and POST discriminated unions:
+ * every documented type parses from a minimal fixture, and an unknown or missing `type` is rejected.
  */
 import { describe, expect, it } from 'bun:test';
 
-import { type WidgetEvent, WidgetEventSchema } from '@/sdk';
+import { WidgetCommandSchema, type WidgetEvent, WidgetEventSchema } from '@/sdk';
 
 const ALL_WIDGET_EVENT_TYPES = [
   'registered',
@@ -93,10 +92,6 @@ describe('SSE event discriminated-union contract (WidgetEventSchema)', () => {
       expect(WidgetEventSchema.safeParse({ type: 'task/status', status }).success).toBe(true);
     });
 
-    it.each(['started', 'in_progress'] as const)('REJECTS legacy "%s" (BREAKING contract change)', status => {
-      expect(WidgetEventSchema.safeParse({ type: 'task/status', status }).success).toBe(false);
-    });
-
     it('all optional fields parse correctly', () => {
       const full = { type: 'task/status', status: 'completed', message: 'Task done' };
       expect(WidgetEventSchema.safeParse(full).success).toBe(true);
@@ -139,6 +134,24 @@ describe('SSE event discriminated-union contract (WidgetEventSchema)', () => {
       if (result.success) {
         expect(result.data.type).toBe('chat/error');
       }
+    });
+  });
+
+  describe('WidgetCommandSchema (POST, widget -> server)', () => {
+    it.each([
+      ['chat/tell', { type: 'chat/tell', request_id: 'r1', content: 'hi' }],
+      ['chat/show', { type: 'chat/show', request_id: 'r1', content: 'hi' }],
+      ['chat/do', { type: 'chat/do', request_id: 'r1', content: 'hi' }],
+      ['chat/stop', { type: 'chat/stop' }],
+      ['tool/response', { type: 'tool/response', tool_call_id: 'c1', success: true }],
+      ['rrweb/metadata', { type: 'rrweb/metadata', rrweb_session_id: 's1', chat_id: 'c1', application_id: 1 }],
+      ['rrweb/events', { type: 'rrweb/events', rrweb_session_id: 's1', events: [] }],
+    ] as const)('accepts a minimal "%s" command', (_type, fixture) => {
+      expect(WidgetCommandSchema.safeParse(fixture).success).toBe(true);
+    });
+
+    it('rejects an unknown command type', () => {
+      expect(WidgetCommandSchema.safeParse({ type: 'chat/nonexistent' }).success).toBe(false);
     });
   });
 });

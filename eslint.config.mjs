@@ -1,11 +1,13 @@
 /**
  * The widget's ESLint config.
  *
- * Bans bare `document.activeElement`, since inside the widget's closed shadow root it retargets to the
- * host page rather than naming an element of the widget's own tree; `useFocusTrap`'s retargeting helper
- * and the shadow-root-free jsdom tests are exempted. Unused imports and import ordering are delegated to
- * dedicated plugins rather than ESLint's own rules, and `Bun` is declared as a global for the scripts
- * that run under `bun run` rather than in a browser.
+ * Bans bare `document.activeElement` (retargets to the host page inside the closed shadow root;
+ * `useFocusTrap` and jsdom tests are exempted), the bare `localStorage` global (confined to
+ * `StorageService.ts`), a `cn()` helper call (no CSS framework), a value import of
+ * `WidgetSettingsDataSchema` outside `src/sdk/`/`src/test/` (drags zod's runtime into the bundle), and
+ * every `console.*` call except `error` everywhere and `warn` in `src/utils/log.ts` alone — each replaces
+ * a former source-text-regex test with a lint rule enforced on every file. Unused imports and import
+ * ordering are delegated to dedicated plugins, and `Bun` is a global for `bun run` scripts.
  */
 
 import js from '@eslint/js';
@@ -89,6 +91,31 @@ export default [
             'reads the shadow HOST, not the focused widget element — use activeElementIn() from components/navigation/MessengerShell',
         },
       ],
+      'no-restricted-globals': [
+        'error',
+        { name: 'localStorage', message: 'use StorageService.readLocal/writeLocal instead of the bare global' },
+      ],
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "CallExpression[callee.name='cn']",
+          message: 'no CSS-framework cn() helper in this codebase — resolveLayoutStyle/inline styles only',
+        },
+      ],
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['**'],
+              importNames: ['WidgetSettingsDataSchema'],
+              message:
+                'a value import of any zod schema outside src/sdk/ or src/test/ pulls the whole zod runtime into every host page — import the WidgetSettingsData type instead',
+            },
+          ],
+        },
+      ],
+      'no-console': ['error', { allow: ['error'] }],
       '@typescript-eslint/no-unused-vars': 'off',
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/explicit-function-return-type': 'off',
@@ -128,7 +155,6 @@ export default [
         },
       ],
 
-      'no-console': 'off',
       'no-debugger': 'error',
       'no-duplicate-imports': 'error',
       'no-unused-vars': 'off',
@@ -154,6 +180,32 @@ export default [
     files: ['src/components/navigation/MessengerShell.tsx', '**/*.test.ts', '**/*.test.tsx'],
     rules: {
       'no-restricted-properties': 'off',
+    },
+  },
+  {
+    files: ['**/*.test.ts', '**/*.test.tsx', 'src/test/**'],
+    rules: {
+      'no-restricted-globals': 'off',
+      'no-restricted-imports': 'off',
+      'no-console': 'off',
+    },
+  },
+  {
+    files: ['src/services/StorageService.ts'],
+    rules: {
+      'no-restricted-globals': 'off',
+    },
+  },
+  {
+    files: ['src/utils/log.ts'],
+    rules: {
+      'no-console': ['error', { allow: ['warn'] }],
+    },
+  },
+  {
+    files: ['scripts/**', '*.config.ts'],
+    rules: {
+      'no-console': 'off',
     },
   },
   {
