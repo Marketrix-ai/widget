@@ -194,10 +194,11 @@ welcome toast and does not alter the greeting message in chat.
 
 - `window.__mtx = { state: 'initializing' | 'active' }` is the singleton guard — it survives ES-module
   re-execution and dedupes init; the module-level `initPromise` coalesces concurrent `initWidget` calls
-  onto one in-flight init and is cleared when it settles. The state values are pinned by
-  sourceInvariants.test.ts.
-- **Closed Shadow DOM** (`attachShadow({ mode: 'closed' })`, pinned by sourceInvariants.test.ts): the
-  host cannot reach into the widget DOM, intentionally — don't expect host scripts or CSS to style or
+  onto one in-flight init and is cleared when it settles. The union type is the only guard against a
+  third state value (tsc rejects an untyped literal at the assignment site); `embedSmoke.test.ts` covers
+  the real init/leak behavior.
+- **Closed Shadow DOM** (`attachShadow({ mode: 'closed' })`, exercised for real by `embedSmoke.test.ts`):
+  the host cannot reach into the widget DOM, intentionally — don't expect host scripts or CSS to style or
   query inside it.
 - **The runtime API host is not an env var** — it is supplied per-init as `mtxApiHost` (config) /
   `mtx-api-host` (script attr), and `configureSdk(apiUrl)` rebuilds the oRPC client. There is no

@@ -5,7 +5,7 @@
  * instead, and one already covered by a real behavior test elsewhere is not duplicated here.
  */
 import { readdirSync, readFileSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'bun:test';
@@ -14,19 +14,6 @@ const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, '../..');
 const src = resolve(here, '..');
 const read = (p: string): string => readFileSync(resolve(root, p), 'utf8');
-
-function walk(dir: string, out: string[] = []): string[] {
-  for (const name of readdirSync(dir, { withFileTypes: true })) {
-    const full = join(dir, name.name);
-    if (name.isDirectory()) walk(full, out);
-    else out.push(full);
-  }
-  return out;
-}
-const srcFiles = walk(src).filter(f => /\.(ts|tsx)$/.test(f) && !f.includes('__tests__'));
-const nonTestSrcFiles = srcFiles.filter(f => !f.endsWith('.test.ts') && !f.endsWith('.test.tsx'));
-const contentsExcept = (files: string[], predicate: (f: string) => boolean): { file: string; text: string }[] =>
-  files.filter(predicate).map(file => ({ file, text: readFileSync(file, 'utf8') }));
 
 describe('package.json', () => {
   const pkg = JSON.parse(read('package.json'));
@@ -114,28 +101,6 @@ describe('Vite externals', () => {
     if (!match?.[1]) throw new Error('vite.config.ts no longer declares a rollup `external` array — update this check');
     const externals = match[1].match(/'[^']+'/g)?.map(s => s.slice(1, -1)) ?? [];
     expect(new Set(externals)).toEqual(new Set(['react', 'react-dom', 'react-dom/client', 'react/jsx-runtime']));
-  });
-});
-
-describe('window.__mtx singleton guard', () => {
-  const indexTsx = read('src/index.tsx');
-
-  it("only ever declares and assigns the 'initializing' | 'active' states", () => {
-    expect(indexTsx).toMatch(/__mtx\?:\s*\{\s*state\?:\s*'initializing'\s*\|\s*'active'\s*\}/);
-    const assigned = [...indexTsx.matchAll(/window\.__mtx\s*=\s*\{\s*state:\s*'([^']+)'/g)].map(m => m[1]);
-    expect(new Set(assigned)).toEqual(new Set(['initializing', 'active']));
-  });
-});
-
-describe('Shadow DOM attachment', () => {
-  it('is always attached closed, never open', () => {
-    const calls = contentsExcept(nonTestSrcFiles, f => /\.attachShadow\(/.test(readFileSync(f, 'utf8')));
-    expect(calls.length).toBeGreaterThan(0);
-    for (const { text } of calls) {
-      for (const call of text.matchAll(/\.attachShadow\(([^)]*)\)/g)) {
-        expect(call[1]).toContain("mode: 'closed'");
-      }
-    }
   });
 });
 
