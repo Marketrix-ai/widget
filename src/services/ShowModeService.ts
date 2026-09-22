@@ -3,7 +3,8 @@
  * and waits for the visitor to act before the tool actually runs.
  *
  * `showToolAction` mounts the highlight and popup and returns a promise that settles on a click, the
- * Continue button, or a timeout if the element goes off-screen or disappears. `cleanup` removes them.
+ * Continue button, or a timeout if the element goes off-screen or disappears. `cleanup` removes them and
+ * rejects a pending step with `ShowModeCancelled`, which a caller reports without a failure reason.
  * `showModeService` is the singleton `BrowserToolService` awaits before running a `show`-mode tool call.
  *
  * The overlay mounts onto the host page itself, outside the widget's shadow root, so it uses its own
@@ -24,6 +25,8 @@ interface Position {
   left: number;
   top: number;
 }
+
+export class ShowModeCancelled extends Error {}
 
 const REPOSITION_EVENTS = ['scroll', 'resize', 'touchmove', 'wheel'] as const;
 
@@ -81,7 +84,7 @@ export class ShowModeService {
   }
 
   cleanup(): void {
-    this.takeSettlers().reject?.(new Error('Cancelled by cleanup'));
+    this.takeSettlers().reject?.(new ShowModeCancelled('Cancelled'));
 
     if (this.clickHandler) {
       document.removeEventListener('click', this.clickHandler, { capture: true });
@@ -101,8 +104,6 @@ export class ShowModeService {
 
     this.currentPopup?.remove();
     this.currentHighlight?.remove();
-    document.getElementById('marketrix-show-popup')?.remove();
-    document.getElementById('marketrix-show-highlight')?.remove();
 
     this.currentPopup = null;
     this.currentHighlight = null;

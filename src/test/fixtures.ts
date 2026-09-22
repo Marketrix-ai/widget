@@ -8,8 +8,8 @@
  */
 import { WidgetSettingsDataSchema } from '../sdk';
 import type { BrowserToolService } from '../services/BrowserToolService';
-import type { CredentialedConfig } from '../services/StorageService';
 import { type StreamClient, streamClient } from '../services/StreamClient';
+import type { CredentialedConfig } from '../services/WidgetService';
 import type { ChatMessage, ValidWidgetConfig, WidgetSettingsData } from '../types';
 
 export const flushMicrotasks = (): Promise<void> => Promise.resolve();
@@ -19,7 +19,7 @@ export const mountTarget = (): HTMLDivElement => document.createElement('div');
 export function agentMessage(overrides: Partial<ChatMessage> = {}): ChatMessage {
   return {
     id: 'agent-1',
-    sender: 'agent',
+    kind: 'agent',
     timestamp: new Date('2026-01-01T00:00:00.000Z'),
     mode: 'do',
     isPlaceholder: true,
@@ -85,7 +85,7 @@ export function credentialedConfig(overrides: Partial<CredentialedConfig> = {}):
     mtxApp: 1,
     isPreviewMode: false,
     ...overrides,
-  } as CredentialedConfig;
+  };
 }
 
 export function mockMediaStream(overrides: Record<string, unknown> = {}): MediaStream {

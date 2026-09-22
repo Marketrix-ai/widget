@@ -1,7 +1,7 @@
 /**
  * Direct unit coverage for `utils/chat.ts`'s pure helpers — invariants the scattered indirect coverage
- * in `sseReducer`/`ChatProvider`/`ChatView` tests leaves unpinned: `findMessageForProgress`'s
- * sender/mode gating, `filterCancellationText`'s trim, progress-line lookup at index 0, the
+ * in `chatReducer`/`ChatProvider`/`ChatView` tests leaves unpinned: `findMessageForProgress`'s
+ * kind/mode gating, progress-line lookup at index 0, the
  * failed-progress-line message format, message id uniqueness, user-content trimming, and the two fixed
  * user-facing strings.
  */
@@ -22,15 +22,15 @@ import {
 
 const agentReply = (overrides: Partial<ChatMessage> = {}): ChatMessage => ({
   id: 'agent-1',
-  sender: 'agent',
+  kind: 'agent',
   timestamp: new Date(),
   parts: [],
   ...overrides,
 });
 
 describe('findMessageForProgress', () => {
-  it('never matches a user message, even one with no other agent-only flag set', () => {
-    const userMsg: ChatMessage = { ...agentReply(), id: 'user-1', sender: 'user' };
+  it('never matches a user message', () => {
+    const userMsg: ChatMessage = { ...agentReply(), id: 'user-1', kind: 'user' };
     const result = findMessageForProgress({ messages: [userMsg], isTaskRunning: false, currentMode: 'tell' });
     expect(result).toBeNull();
   });
@@ -47,13 +47,7 @@ describe('findMessageForProgress', () => {
   });
 });
 
-describe('progress-line text cleanup and lookup', () => {
-  it('trims the cancellation-stripped text, not just replaces the marker', () => {
-    const msg = agentReply();
-    const withLine = addProgressLine(msg, 'click', '  clicked the button (cancelled by cleanup)  ');
-    expect(withLine.parts[0]?.content).toBe('clicked the button');
-  });
-
+describe('progress-line lookup and failure text', () => {
   it('finds and completes the open progress line even at part index 0', () => {
     const msg = addProgressLine(agentReply(), 'click', 'clicking');
     expect(msg.parts).toHaveLength(1);
@@ -70,15 +64,11 @@ describe('progress-line text cleanup and lookup', () => {
 
   it.each([
     [
-      'appends the cleaned error in parentheses after the existing content, not in place of it',
-      'timed out (cancelled by cleanup)',
+      'appends the error in parentheses after the existing content, not in place of it',
+      'timed out',
       'clicking the button (timed out)',
     ],
-    [
-      'keeps the original content unchanged when the error is nothing but cancellation chatter',
-      '(cancelled by cleanup)',
-      'clicking the button',
-    ],
+    ['keeps the original content unchanged when there is no error text', '', 'clicking the button'],
   ] as const)('%s', (_case, error, expectedContent) => {
     const msg = addProgressLine(agentReply(), 'click', 'clicking the button');
     const failed = markProgressLineFailed(msg, 'click', error);
@@ -88,18 +78,18 @@ describe('progress-line text cleanup and lookup', () => {
 
 describe('message construction', () => {
   it('mints a unique id per message rather than a bare prefix', () => {
-    const a = createUserMessage('hi');
-    const b = createUserMessage('hi');
+    const a = createUserMessage('hi', 'tell');
+    const b = createUserMessage('hi', 'tell');
     expect(a.id).not.toBe(b.id);
-    expect(a.id.startsWith('user-message-')).toBe(true);
+    expect(a.id.startsWith('user-')).toBe(true);
   });
 
   it('trims user-supplied content before storing it', () => {
-    expect(messageText(createUserMessage('  hello there  ').parts)).toBe('hello there');
+    expect(messageText(createUserMessage('  hello there  ', 'tell').parts)).toBe('hello there');
   });
 
-  it('sends a screenshare message from the user, not the agent', () => {
-    expect(createScreenshareMessage(mockMediaStream()).sender).toBe('user');
+  it('builds a screenshare message as its own kind', () => {
+    expect(createScreenshareMessage(mockMediaStream()).kind).toBe('screenshare');
   });
 });
 

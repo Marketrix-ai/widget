@@ -1,6 +1,6 @@
 /**
- * `ChatInput` tests: the auto-resize ref merges with a caller textarea ref, and the icon-only action
- * button is named in the words a visitor uses.
+ * `ChatInput` tests: the caller's textarea ref is the one the auto-resize measures, and the icon-only
+ * action button is named in the words a visitor uses.
  */
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'bun:test';
@@ -8,11 +8,23 @@ import { createRef } from 'react';
 
 import { ChatInput } from '../ChatInput';
 
-describe('ChatInput', () => {
-  it('merges its resizing ref with the caller textarea ref', () => {
-    const ref = createRef<HTMLTextAreaElement>();
+const props = () => ({
+  onChange: vi.fn(),
+  onSubmit: vi.fn(),
+  modes: [],
+  activeMode: 'tell' as const,
+  onModeChange: vi.fn(),
+  disabled: false,
+  taskRunning: false,
+  onStop: vi.fn(),
+  ref: createRef<HTMLTextAreaElement>(),
+});
 
-    render(<ChatInput ref={ref} value='Question' onChange={vi.fn()} onSubmit={vi.fn()} />);
+describe('ChatInput', () => {
+  it('resizes through the caller textarea ref', () => {
+    const { ref, ...rest } = props();
+
+    render(<ChatInput {...rest} ref={ref} value='Question' />);
 
     const textarea = screen.getByRole('textbox') as HTMLTextAreaElement;
     expect(ref.current).toBe(textarea);
@@ -21,11 +33,11 @@ describe('ChatInput', () => {
   });
 
   it('names the icon-only action button in the words a visitor uses', () => {
-    const { rerender } = render(<ChatInput value='Question' onChange={vi.fn()} onSubmit={vi.fn()} />);
+    const { rerender } = render(<ChatInput {...props()} value='Question' />);
 
     expect(screen.getByRole('button', { name: 'Send message' })).toBeInTheDocument();
 
-    rerender(<ChatInput value='Question' onChange={vi.fn()} onSubmit={vi.fn()} taskRunning onStop={vi.fn()} />);
+    rerender(<ChatInput {...props()} value='Question' taskRunning />);
 
     expect(screen.getByRole('button', { name: 'Stop the assistant' })).toBeInTheDocument();
   });

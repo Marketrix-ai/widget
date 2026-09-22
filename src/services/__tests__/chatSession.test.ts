@@ -1,5 +1,5 @@
 /**
- * Tests for `chatSessionManager`: the stored-id fast path, and that several callers racing before the
+ * Tests for `getOrCreateChatId`: the stored-id fast path, and that several callers racing before the
  * first `chatCreate` resolves still mint exactly one chat id and all resolve to it.
  *
  * Each test uses a fresh tenant id, since `storageService`'s per-tenant context is cached in memory and
@@ -9,8 +9,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 
 import { sdk } from '../../sdk';
 import { mocked, mockSdkModule, restoreModuleAfterAll } from '../../test/vi-compat';
-import { chatSessionManager } from '../ChatSessionManager';
-import { type CredentialedConfig, storageService } from '../StorageService';
+import { getOrCreateChatId } from '../chatSession';
+import { storageService } from '../StorageService';
 
 vi.mock('../../sdk', () => mockSdkModule({ chatCreate: vi.fn() }));
 restoreModuleAfterAll('../../sdk', () => import('../../sdk/index.ts?real'));
@@ -20,7 +20,7 @@ const mockSdk = mocked(sdk);
 let tenant = 0;
 beforeEach(() => {
   tenant += 1;
-  storageService.setConfig({ mtxId: `tenant-${tenant}`, mtxKey: 'key', mtxApp: 1 } as CredentialedConfig);
+  storageService.scopeTo({ mtxId: `tenant-${tenant}` });
 });
 
 afterEach(() => {
@@ -28,25 +28,21 @@ afterEach(() => {
   localStorage.clear();
 });
 
-describe('ChatSessionManager stored id', () => {
+describe('getOrCreateChatId stored id', () => {
   it('returns the id already in storage without minting a new one', async () => {
     storageService.setChatId('chat-stored');
 
-    await expect(chatSessionManager.getOrCreateChatId()).resolves.toBe('chat-stored');
+    await expect(getOrCreateChatId()).resolves.toBe('chat-stored');
     expect(mockSdk.chatCreate).not.toHaveBeenCalled();
   });
 });
 
-describe('ChatSessionManager concurrent callers', () => {
+describe('getOrCreateChatId concurrent callers', () => {
   it('mints exactly one chat id under concurrent callers, and all resolve to it', async () => {
     let resolveCreate!: (id: string) => void;
     mockSdk.chatCreate.mockReturnValue(new Promise<string>(resolve => (resolveCreate = resolve)));
 
-    const callers = [
-      chatSessionManager.getOrCreateChatId(),
-      chatSessionManager.getOrCreateChatId(),
-      chatSessionManager.getOrCreateChatId(),
-    ];
+    const callers = [getOrCreateChatId(), getOrCreateChatId(), getOrCreateChatId()];
 
     expect(mockSdk.chatCreate).toHaveBeenCalledTimes(1);
     resolveCreate('chat-minted-once');
@@ -60,10 +56,10 @@ describe('ChatSessionManager concurrent callers', () => {
 
   it('retries on the next call after a failed create, rather than caching the rejection', async () => {
     mockSdk.chatCreate.mockRejectedValueOnce(new Error('network down'));
-    await expect(chatSessionManager.getOrCreateChatId()).rejects.toThrow('network down');
+    await expect(getOrCreateChatId()).rejects.toThrow('network down');
 
     mockSdk.chatCreate.mockResolvedValueOnce('chat-retry');
-    await expect(chatSessionManager.getOrCreateChatId()).resolves.toBe('chat-retry');
+    await expect(getOrCreateChatId()).resolves.toBe('chat-retry');
     expect(mockSdk.chatCreate).toHaveBeenCalledTimes(2);
   });
 });

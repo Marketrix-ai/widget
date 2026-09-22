@@ -1,5 +1,5 @@
 /**
- * `Icon` tests: an SVG sized by `size` (default 16), className merged, null for an unknown name.
+ * `Icon` tests: an SVG sized by `size` (default 16), className merged.
  */
 import { render } from '@testing-library/react';
 import { describe, expect, it } from 'bun:test';
@@ -30,12 +30,6 @@ describe('Icon', () => {
     const { container } = render(<Icon name='close' />);
     const svg = container.querySelector('svg');
     expect(svg?.getAttribute('width')).toBe('16');
-  });
-
-  it('returns null for unknown icon name', () => {
-    // @ts-expect-error testing unknown name
-    const { container } = render(<Icon name='nonexistent' />);
-    expect(container.firstChild).toBeNull();
   });
 
   it.each([

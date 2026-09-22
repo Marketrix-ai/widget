@@ -17,7 +17,7 @@ import { errorMessage } from '../utils/errors';
 import { domService } from './DomService';
 import { isTextField, setNativeValue, simulateKeyAction } from './keySimulation';
 import { activeScreenStream } from './ScreenShareService';
-import { showModeService } from './ShowModeService';
+import { ShowModeCancelled, showModeService } from './ShowModeService';
 
 interface TextData {
   text: string;
@@ -34,7 +34,7 @@ interface DropdownOptionsData {
   options: Array<{ value: string; text: string }>;
 }
 
-type ToolFailure = { success: false; error: string };
+type ToolFailure = { success: false; error: string; cancelled?: true };
 
 export type ToolExecutionResult<T = TextData> =
   { success: true; data: T; afterResponseAttempt?: () => void } | ToolFailure;
@@ -142,7 +142,9 @@ export class BrowserToolService {
       }
       return await tool.run(args);
     } catch (error) {
-      return fail(errorMessage(error));
+      return error instanceof ShowModeCancelled
+        ? { ...fail(error.message), cancelled: true }
+        : fail(errorMessage(error));
     }
   }
 

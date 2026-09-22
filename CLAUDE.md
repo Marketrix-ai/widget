@@ -109,11 +109,9 @@ are generated**, so after changing `rc:` you must re-run `lefthook install --for
   which dependency grew. Two are about half of it: `@base-ui/react` + `/utils` and `@rrweb/record`
   (a feature off by default), each named in `DEPENDENCY_BUDGETS` (pinned by sourceInvariants.test.ts);
   a package missing from it fails the gate, so a new import is a deliberate line.
-- **zod is bundled to validate rrweb at capture.** `RrwebSessionRecorder` parses every recorder event
-  through the generated `RrwebEventSchema` before buffering it, so the payload posted to the api cannot
-  diverge from the exact wire contract. `parseWidgetSettings` in `utils/validation.ts` remains the one
-  home for settings validation; eslint still bans a value import of `WidgetSettingsDataSchema` outside
-  `src/sdk/`/`src/test/` so settings do not gain a second runtime parser.
+- **zod ships in the bundle, so untrusted input is parsed with the contract's own schemas** — rrweb
+  events via `RrwebEventSchema`, settings via `parseWidgetSettings` in `services/WidgetService.ts` —
+  never with a hand-written guard that re-spells a contract shape.
 - **A single chunk means an import is unconditional** — a heavy dependency behind an off-by-default
   flag still ships to every host page. Weigh that at the import, because the packaging contract has no
   later escape.
@@ -149,9 +147,9 @@ chat whose stream has reached `registered`. SSE is additionally keyed server-sid
 so several tabs
 sharing one `chat_id` don't evict each other's stream.
 
-**Round-trip** — `ChatContext.messageDispatch(content, mode)` fire-and-forget POSTs
-`{type: 'chat/${mode}', request_id, content}` (an omitted mode takes the composer's current mode,
-`tell` only until the visitor switches); the reply arrives over SSE as
+**Round-trip** — `ChatContext.sendTurn(content, mode)` is the one entry for a typed turn or a chip: Show
+and Do wait behind a screen-access request unless a share is live or `use_screenshare` is off, then it
+POSTs `{type: 'chat/${mode}', request_id, content}`; the reply arrives over SSE as
 `chat/delta` fragments that **accumulate**, then a final `chat/response` carrying the full text
 **replaces** them, matched by `request_id`.
 
@@ -219,11 +217,14 @@ bundles, i.e. the build a browser really loads.
 
 ## Structure
 
-**One config, one store, read from context.** `WidgetRoot` is the only component that touches the
-raw config prop — it persists it and publishes the resolved config (position and z-index
-layered on) through `WidgetConfigContext`, plus its own root element through `PortalContainerContext`.
-Everything below calls `useWidgetConfig()` for settings and `useWidget()` for the store; **never thread
-either down as props.** The widget is open or closed — there is no minimized panel.
+**One config, one store, read from context.** `mount.tsx` holds the one live config and hands it to
+`WidgetProviders`, which publishes it through `WidgetConfigContext`; `WidgetRoot` re-publishes it with
+the dragged position and z-index floor layered on, plus its own root element through
+`PortalContainerContext`. Everything below calls `useWidgetConfig()` for settings and `useWidget()` for the
+store; **never thread either down as props.** Config and credentials are never persisted — `StorageService`
+holds only the transcript, and the stream's credentials live on `streamClient`. The screen-share state is
+the `ScreenShareService` store, read with `useSyncExternalStore`, never mirrored into component state.
+The widget is open or closed — there is no minimized panel.
 
 **`src/hooks/` holds only a hook with 2+ consumers** (pinned by sourceInvariants.test.ts). A
 single-consumer hook lives beside its one caller instead, exported for its `renderHook` tests — rule
@@ -298,10 +299,9 @@ or the `deploy.yml` dispatch inputs (this repo cannot reach the private infra re
   than relying on the default.
 - **Base UI owns the interaction primitives; the remaining hand-rolled hooks are not a gap.** Dialog,
   Button, Tabs (`ShellTabBar` + the view panels) and Toast (`Notifications.tsx`) come from the library.
-  `useFocusTrap` and `useResize` (both in `MessengerShell.tsx`), `useScrollLock` (in `WidgetRoot.tsx`),
-  `useDragSnap` (in `WidgetFab.tsx`) and `useScreenShare` (in `ChatView.tsx`) live beside their one
-  consumer rather than in `src/hooks/`, which holds `useWidget` and `useLatest` — each of those hook
-  files had exactly one caller (`useDragSnap`/`useResize` share a control-flow SHAPE, not code: a
+  `useFocusTrap` and `useResize` (both in `MessengerShell.tsx`), `useScrollLock` (in `WidgetRoot.tsx`) and
+  `useDragSnap` (in `WidgetFab.tsx`) live beside their one consumer rather than in `src/hooks/`, which
+  holds only `useWidget` — each of those hook files had exactly one caller (`useDragSnap`/`useResize` share a control-flow SHAPE, not code: a
   shared pointer-tracking hook was tried and reverted — its arity/duplication costs outweighed the
   lines it removed, per rule 4's "measurable ROI" bar), so rule 6/7 folds each in beside its caller.
   `useFocusTrap`/`useScrollLock` stay hand-rolled because they serve a **non-modal** panel that is not a

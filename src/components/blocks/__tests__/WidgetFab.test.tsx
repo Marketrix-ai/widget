@@ -14,7 +14,7 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 import { createRef } from 'react';
 
-import { chatSessionManager } from '../../../services/ChatSessionManager';
+import * as chatSession from '../../../services/chatSession';
 import { readLocal, scopedKey, writeLocal } from '../../../services/StorageService';
 import { streamClient } from '../../../services/StreamClient';
 import { resetDom } from '../../../test/preload';
@@ -108,7 +108,7 @@ describe('the resting launcher anchor', () => {
   afterEach(() => vi.restoreAllMocks());
 
   it('pins two edges, never four', async () => {
-    vi.spyOn(chatSessionManager, 'getOrCreateChatId').mockResolvedValue('chat-1');
+    vi.spyOn(chatSession, 'getOrCreateChatId').mockResolvedValue('chat-1');
     const connect = vi.spyOn(streamClient, 'connect').mockResolvedValue();
 
     const { container } = renderWidget({}, { previewMode: false });

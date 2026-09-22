@@ -349,7 +349,7 @@ export const WidgetFab: React.FC<WidgetFabProps> = ({ onPositionCommit }) => {
 
   return (
     <Surface
-      ref={wrapperRef as React.Ref<HTMLElement>}
+      ref={wrapperRef}
       className='mtx-fab-anchor'
       data-animated={isDragging ? 'false' : 'true'}
       data-preview={isPreviewMode ? 'true' : 'false'}

@@ -30,8 +30,8 @@ interface MessageItemProps {
   message: ChatMessage;
   isLastMessage: boolean;
   isTaskRunning: boolean;
-  onScreenAccessAllow?: () => void;
-  onScreenAccessDeny?: () => void;
+  onScreenAccessAllow: () => Promise<void>;
+  onScreenAccessDeny: () => void;
 }
 
 const STATUS_ICONS: Record<NonNullable<ChatMessage['taskStatus']>, { name: IconName; opacity: number }> = {
@@ -106,7 +106,7 @@ const MessageItemComponent: React.FC<MessageItemProps> = ({
 }) => {
   const accentColor = useWidgetConfig().widget_accent_color;
 
-  if (message.isSystemMessage) {
+  if (message.kind === 'system') {
     return (
       <Flex justify='center' align='center'>
         <Text as='span' variant='faint' weight='normal' style={{ fontSize: '10px' }}>
@@ -116,12 +116,12 @@ const MessageItemComponent: React.FC<MessageItemProps> = ({
     );
   }
 
-  const isUser = message.sender === 'user';
+  const isUser = message.kind === 'user' || message.kind === 'screenshare';
   const leadingIcon = isUser
     ? message.mode === 'show' || message.mode === 'do'
       ? ('mousePointerClick' as const)
       : undefined
-    : message.isScreenAccessRequest || message.placeholderState === 'waiting-for-user'
+    : message.kind === 'screenAccess' || message.placeholderState === 'waiting-for-user'
       ? ('checkCircle' as const)
       : undefined;
   const status = !isUser && message.taskStatus ? STATUS_ICONS[message.taskStatus] : undefined;
@@ -180,18 +180,18 @@ const MessageItemComponent: React.FC<MessageItemProps> = ({
               <MessageBody message={message} isLastMessage={isLastMessage} isTaskRunning={isTaskRunning} />
             ))}
 
-          {message.isScreenAccessRequest && !message.screenShareStatus && (
+          {message.kind === 'screenAccess' && !message.screenShareStatus && (
             <Flex align='center' gap='sm' style={{ marginTop: '6px' }}>
-              <Button variant='primary' size='sm' shape='pill' onClick={() => onScreenAccessAllow?.()}>
+              <Button variant='primary' size='sm' shape='pill' onClick={() => void onScreenAccessAllow()}>
                 Yes
               </Button>
-              <Button variant='secondary' size='sm' shape='pill' onClick={() => onScreenAccessDeny?.()}>
+              <Button variant='secondary' size='sm' shape='pill' onClick={onScreenAccessDeny}>
                 No
               </Button>
             </Flex>
           )}
 
-          {message.isScreenAccessRequest && message.screenShareStatus && (
+          {message.kind === 'screenAccess' && message.screenShareStatus && (
             <Text as='div' variant='faint' size='xs' italic style={{ marginTop: '2px' }}>
               {message.screenShareStatus === 'allowed' ? 'Sure' : 'No'}
             </Text>

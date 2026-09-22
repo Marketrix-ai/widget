@@ -1,5 +1,5 @@
 /**
- * Tests for `sseReducer`'s pure state machine folding SSE events and local actions into chat messages
+ * Tests for `chatReducer`'s pure state machine folding SSE events and local actions into chat messages
  * and task state — status transitions, tool-call progress lines, streaming replies, stale-reply and
  * transport-failure recovery, and stop handling.
  */
@@ -20,7 +20,7 @@ import {
   reduceToolProgress,
   reduceTransportFailure,
   type SseState,
-} from '../sseReducer';
+} from '../chatReducer';
 
 const expectNoOp = (result: ReduceResult, state: SseState) => {
   expect(result.state).toBe(state);

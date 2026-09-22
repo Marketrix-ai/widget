@@ -16,12 +16,12 @@ import { Text } from '../Text';
 describe('base component refs', () => {
   it('resolve to their rendered host elements', () => {
     const button = createRef<HTMLButtonElement>();
-    const flex = createRef<HTMLElement>();
+    const flex = createRef<HTMLDivElement>();
     const icon = createRef<SVGSVGElement>();
     const iconButton = createRef<HTMLButtonElement>();
     const spinner = createRef<HTMLDivElement>();
     const stack = createRef<HTMLDivElement>();
-    const surface = createRef<HTMLElement>();
+    const surface = createRef<HTMLDivElement>();
     const text = createRef<HTMLElement>();
 
     render(

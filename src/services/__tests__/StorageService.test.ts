@@ -1,7 +1,6 @@
 /**
- * `StorageService` tests: `tenantScope` prefers the credential id, then the application id, then a
- * fixed default; `setConfig` never carries one tenant's `chat_id` into another's scope, and persists
- * exactly the given config fields to the raw record — no field this repo didn't put there; a chat
+ * `StorageService` tests: `scopeTo` never carries one tenant's `chat_id` into another's scope and never
+ * persists config or credentials, and a corrupted stored message is dropped alone; a chat
  * snapshot round-trips, with an active screen share stored as an ended notice because a MediaStream
  * cannot survive a reload; `readLocal`/`writeLocal` degrade to memory and keep working unpersisted
  * when `localStorage` throws (private-mode Safari, a sandboxed iframe) -- each warns only ONCE per
@@ -14,30 +13,14 @@ import { agentMessage, mockMediaStream } from '../../test/fixtures';
 import type { ChatMessage } from '../../types';
 import { createScreenshareMessage } from '../../utils/chat';
 import {
-  type CredentialedConfig,
   readChatSnapshot,
   readLocal,
   resetStorageWarningsForTests,
   scopedKey,
   storageService,
-  tenantScope,
   writeChatSnapshot,
   writeLocal,
 } from '../StorageService';
-
-describe('tenantScope', () => {
-  it('prefers the credential id over the application id', () => {
-    expect(tenantScope({ mtxId: 'cred-1', mtxApp: 7 })).toBe('cred-1');
-  });
-
-  it('falls back to the application id with no credential', () => {
-    expect(tenantScope({ mtxApp: 7 })).toBe('7');
-  });
-
-  it('falls back to a fixed default with neither', () => {
-    expect(tenantScope({})).toBe('default');
-  });
-});
 
 describe('scopedKey', () => {
   it('keeps the three tenant-scoped browser-local keys byte-identical', () => {
@@ -48,37 +31,39 @@ describe('scopedKey', () => {
   });
 });
 
-describe('setConfig scopes the chat context to the tenant', () => {
+describe('scopeTo scopes the chat context to the tenant', () => {
   beforeEach(() => {
     localStorage.clear();
   });
 
-  const credentials = (mtxId: string): CredentialedConfig =>
-    ({ mtxId, mtxKey: 'key', mtxApp: 1 }) as CredentialedConfig;
-
   it('does not carry one tenant’s chat_id into another’s scope', () => {
-    storageService.setConfig(credentials('tenant-a'));
+    storageService.scopeTo({ mtxId: 'tenant-a' });
     storageService.setChatId('chat-a');
     expect(storageService.getChatId()).toBe('chat-a');
 
-    storageService.setConfig(credentials('tenant-b'));
+    storageService.scopeTo({ mtxId: 'tenant-b' });
     expect(storageService.getChatId()).toBeNull();
 
-    storageService.setConfig(credentials('tenant-a'));
+    storageService.scopeTo({ mtxId: 'tenant-a' });
     expect(storageService.getChatId()).toBe('chat-a');
   });
 
-  it('persists exactly the given config fields — nothing beyond documented, no fabricated PII', () => {
-    const config = credentials('tenant-pii-scope');
-    (config as { userId?: number }).userId = 42;
+  it('never persists the config or its credentials', () => {
+    storageService.scopeTo({ mtxId: 'tenant-no-config', mtxKey: 'secret-key' });
+    storageService.setChatId('chat-1');
 
-    storageService.setConfig(config);
+    expect(readLocal(scopedKey('marketrix_chat_context', { mtxId: 'tenant-no-config' }))).not.toContain('secret-key');
+  });
 
-    const raw = JSON.parse(readLocal(scopedKey('marketrix_chat_context', config)) ?? '{}') as {
-      config: Record<string, unknown>;
-    };
-    expect(Object.keys(raw.config).sort()).toEqual(Object.keys(config).sort());
-    expect(raw.config).toEqual(config as unknown as Record<string, unknown>);
+  it('keeps every valid stored message and drops only a corrupted one', () => {
+    const key = scopedKey('marketrix_chat_context', { mtxId: 'tenant-corrupt' });
+    const valid = { id: 'm1', kind: 'agent', timestamp: new Date().toISOString(), parts: [] };
+    writeLocal(key, JSON.stringify({ chat_id: 7, messages: [valid, { id: 'broken' }], timestamp: Date.now() }));
+
+    storageService.scopeTo({ mtxId: 'tenant-corrupt' });
+
+    expect(storageService.getChatId()).toBeNull();
+    expect(storageService.getContext().messages.map(msg => msg.id)).toEqual(['m1']);
   });
 });
 
@@ -171,7 +156,7 @@ describe('chat snapshot persistence', () => {
     writeChatSnapshot(snapshot([createScreenshareMessage(mockMediaStream({ id: 'stream' }))]));
 
     expect(readChatSnapshot().messages[0]).toMatchObject({
-      isSystemMessage: true,
+      kind: 'system',
       parts: [{ type: 'text', content: 'Screen sharing ended' }],
     });
   });

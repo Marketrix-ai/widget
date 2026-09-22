@@ -1,23 +1,24 @@
 /**
- * Tests for `parseWidgetSettings`/`invalidSettingsMessage`, checked against the generated settings
- * schema: valid settings pass, wider internal configs are projected, render constants are omitted,
- * and each invalid field is rejected and named.
+ * Tests for `parseWidgetSettings`/`invalidSettingsMessage`: valid settings pass, unknown keys and render
+ * constants are dropped, and each invalid rendered field is rejected and named.
  */
 import { describe, expect, it } from 'bun:test';
 
 import { WidgetSettingsDataSchema } from '../../sdk';
+import { WIDGET_RENDER_CONSTANTS } from '../../sdk/contracts/entities';
 import { validSettings } from '../../test/fixtures';
-import { invalidSettingsMessage, parseWidgetSettings } from '../validation';
+import { invalidSettingsMessage, parseWidgetSettings } from '../WidgetService';
 
 const valid = validSettings();
-const FIELDS = Object.keys(valid) as (keyof typeof valid)[];
+const RENDER_CONSTANTS: readonly string[] = WIDGET_RENDER_CONSTANTS;
+const FIELDS = (Object.keys(valid) as (keyof typeof valid)[]).filter(field => !RENDER_CONSTANTS.includes(field));
 
 const expectRejectedAndNamed = (broken: unknown, invalidFields: string[]) => {
   expect(WidgetSettingsDataSchema.safeParse(broken).success).toBe(false);
   expect(parseWidgetSettings(broken).invalidFields).toEqual(invalidFields);
 };
 
-describe('parseWidgetSettings agrees with the zod schema it replaced', () => {
+describe('parseWidgetSettings', () => {
   it('accepts a valid settings object', () => {
     const result = parseWidgetSettings(valid);
     expect(result.invalidFields).toBeUndefined();
@@ -78,10 +79,6 @@ describe('parseWidgetSettings agrees with the zod schema it replaced', () => {
       expectRejectedAndNamed(input, ['settings']);
     },
   );
-
-  it('rejects an array input against every field, since it has none of them', () => {
-    expect(parseWidgetSettings([]).invalidFields).toEqual(FIELDS);
-  });
 
   it('reports every invalid field, not just the first', () => {
     const broken = { ...valid, widget_header: 1, widget_enabled: 'yes' };

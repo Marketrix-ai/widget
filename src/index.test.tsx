@@ -6,17 +6,20 @@
 import { act, render, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'bun:test';
 
-import { initWidget, MarketrixWidgetPreview, mountWidget, unmountWidget, updateMarketrixConfig } from './index';
-import type { WidgetSettingsData } from './sdk';
-import { chatSessionManager } from './services/ChatSessionManager';
-import * as ScreenShareService from './services/ScreenShareService';
 import {
-  type CredentialedConfig,
-  readChatSnapshot,
-  storageService,
-  writeChatSnapshot,
-} from './services/StorageService';
+  getCurrentConfig,
+  initWidget,
+  MarketrixWidgetPreview,
+  mountWidget,
+  unmountWidget,
+  updateMarketrixConfig,
+} from './index';
+import type { WidgetSettingsData } from './sdk';
+import * as chatSession from './services/chatSession';
+import * as ScreenShareService from './services/ScreenShareService';
+import { readChatSnapshot, storageService, writeChatSnapshot } from './services/StorageService';
 import { streamClient } from './services/StreamClient';
+import type { CredentialedConfig } from './services/WidgetService';
 import * as WidgetService from './services/WidgetService';
 import { agentMessage, credentialedConfig, mountTarget, validSettings } from './test/fixtures';
 
@@ -223,28 +226,32 @@ describe('public widget lifecycle', () => {
     expect(container.querySelectorAll('.marketrix-widget-container')).toHaveLength(1);
   });
 
-  it('stores the credentials production was initialized with', async () => {
+  it('authenticates the stream with the credentials production was initialized with', async () => {
     vi.spyOn(WidgetService, 'loadWidgetConfig').mockImplementation(async config =>
       credentialedConfig({ ...config, mtxId: 'prod-id', mtxKey: 'prod-key', mtxApp: 1 }),
     );
+    const setCredentials = vi.spyOn(streamClient, 'setCredentials');
     const container = mountTarget();
     document.body.appendChild(container);
 
     await act(() => initWidget({ mtxId: 'prod-id', mtxKey: 'prod-key', mtxApiHost: 'https://api.test' }, container));
 
-    expect(storageService.getCredentialedConfig()).toMatchObject({ mtxId: 'prod-id', mtxKey: 'prod-key' });
+    expect(setCredentials).toHaveBeenCalledWith({ marketrix_id: 'prod-id', marketrix_key: 'prod-key' });
   });
 
-  it('leaves the stored production credentials alone when a preview mounts beside it', async () => {
-    const settings = validSettings();
-    storageService.setConfig(credentialedConfig({ mtxId: 'prod-id', mtxKey: 'prod-key' }));
+  it('leaves the live widget alone when a preview component mounts beside it', async () => {
+    vi.spyOn(WidgetService, 'loadWidgetConfig').mockImplementation(async config =>
+      credentialedConfig({ ...config, mtxId: 'prod-id', mtxKey: 'prod-key', mtxApp: 1 }),
+    );
+    const live = mountTarget();
     const preview = mountTarget();
-    document.body.appendChild(preview);
+    document.body.append(live, preview);
+    await act(() => initWidget({ mtxId: 'prod-id', mtxKey: 'prod-key', mtxApiHost: 'https://api.test' }, live));
 
-    render(<MarketrixWidgetPreview settings={settings} container={preview} />);
+    render(<MarketrixWidgetPreview settings={validSettings()} container={preview} />);
     await waitFor(() => expect(preview.querySelector('.marketrix-widget-container')).toBeTruthy());
 
-    expect(storageService.getCredentialedConfig()).toMatchObject({ mtxId: 'prod-id', mtxKey: 'prod-key' });
+    expect(getCurrentConfig()).toMatchObject({ mtxId: 'prod-id', isPreviewMode: false });
   });
 
   it('with no container prop, mounts into its own rendered div rather than beside it', async () => {
@@ -264,9 +271,9 @@ describe('a config-change re-mount preserves an in-flight chat', () => {
       credentialedConfig({ ...config, mtxId: 'reflow-1', mtxApp: 1 }),
     );
     vi.spyOn(streamClient, 'connect').mockResolvedValue();
-    const getOrCreateChatId = vi.spyOn(chatSessionManager, 'getOrCreateChatId');
+    const getOrCreateChatId = vi.spyOn(chatSession, 'getOrCreateChatId');
 
-    storageService.setConfig(credentialedConfig({ mtxId: 'reflow-1', mtxKey: 'key', mtxApp: 1 }));
+    storageService.scopeTo({ mtxId: 'reflow-1' });
     storageService.setChatId('chat-inflight-1');
     writeChatSnapshot({
       messages: [agentMessage({ parts: [{ type: 'text', content: 'still here after the config change' }] })],

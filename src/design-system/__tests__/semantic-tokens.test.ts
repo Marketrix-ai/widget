@@ -37,7 +37,7 @@ describe('createSemanticTokens', () => {
   });
 
   it('emits the fixed radius and durations', () => {
-    const css = semanticTokensToCssCustomProperties(createSemanticTokens());
+    const css = semanticTokensToCssCustomProperties(createSemanticTokens(getMockWidgetConfig()));
 
     expect(css['--radius']).toBe('12px');
     expect(css['--duration-animation']).toBe('300ms');
@@ -47,7 +47,7 @@ describe('createSemanticTokens', () => {
   it('derives a focus ring that clears 3:1 against the background regardless of the tenant accent, for both readings', () => {
     for (const widget_background_color of ['#ffffff', '#111827', '#f5f5f4', '#0a0a0a', '#fef3c7', '#1e293b']) {
       const css = semanticTokensToCssCustomProperties(
-        createSemanticTokens({ widget_background_color, widget_accent_color: '#a855f7' }),
+        createSemanticTokens(getMockWidgetConfig({ widget_background_color, widget_accent_color: '#a855f7' })),
       );
       expect(contrastRatio(css['--ring']!, css['--ring-offset']!)).toBeGreaterThanOrEqual(3);
     }

@@ -10,7 +10,6 @@
  */
 import { record } from '@rrweb/record';
 
-import { sdk } from '../sdk';
 import { type RrwebEvent, RrwebEventSchema } from '../sdk/contracts/common';
 import { logWarn } from '../utils/log';
 import { streamClient } from './StreamClient';
@@ -35,9 +34,8 @@ export class RrwebSessionRecorder {
     if (this.stopRecording || this.stopped) return;
     await streamClient.ready(this.chatId);
     if (this.stopped) return;
-    await sdk.widgetMessagePost({
-      chat_id: this.chatId,
-      command: {
+    await streamClient.send(
+      {
         type: 'rrweb/metadata',
         rrweb_session_id: this.sessionId,
         chat_id: this.chatId,
@@ -46,7 +44,8 @@ export class RrwebSessionRecorder {
         timestamp: Date.now(),
         viewport: { width: window.innerWidth, height: window.innerHeight },
       },
-    });
+      this.chatId,
+    );
     if (this.stopped) return;
     this.stopRecording = record({
       emit: event => {
@@ -75,10 +74,7 @@ export class RrwebSessionRecorder {
       const events = this.events.splice(0);
       if (!events.length) return;
       try {
-        await sdk.widgetMessagePost({
-          chat_id: this.chatId,
-          command: { type: 'rrweb/events', rrweb_session_id: this.sessionId, events },
-        });
+        await streamClient.send({ type: 'rrweb/events', rrweb_session_id: this.sessionId, events }, this.chatId);
       } catch (error) {
         this.events = events.concat(this.events).slice(0, MAX_REQUEUED_EVENTS);
         logWarn('[RrwebSessionRecorder] Failed to record session events, requeued for retry:', error);

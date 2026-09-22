@@ -1,7 +1,6 @@
 /**
  * `Icon` — the widget's one SVG glyph primitive: resolves `name` in the `icons` registry and renders a
- * square `<svg>` of `size` (default 16), forwarding ref and any other svg prop. An unknown name renders
- * null, so a stale name degrades to a gap rather than a crash.
+ * square `<svg>` of `size` (default 16), forwarding ref and any other svg prop.
  *
  * Glyphs are decorative, so `aria-hidden` is fixed here and the accessible name belongs on the control
  * wrapping the icon. A path's fill defaults to `currentColor` — unless it sets a `stroke`, where the
@@ -22,8 +21,7 @@ interface IconProps extends ComponentPropsWithRef<'svg'> {
 }
 
 export function Icon({ name, size = 16, className, ref, ...props }: IconProps) {
-  const icon = icons[name] as IconData | undefined;
-  if (!icon) return null;
+  const icon: IconData = icons[name];
 
   return (
     <svg

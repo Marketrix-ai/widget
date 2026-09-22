@@ -5,10 +5,13 @@
  * `MarketrixConfig` is deliberately flat so api settings spread straight into it; `mtxApp` is stamped
  * internally after validation rather than taken as input, since a bare application id is guessable and
  * authenticates nothing. `ValidWidgetConfig` is a `MarketrixConfig` that has passed `parseWidgetSettings`.
- * `taskStatus`/`MessagePart.status` are presentational labels only, not the `task/status` wire vocabulary.
+ * `ChatMessage` is the stored message shape plus the two fields a reload cannot keep. `kind` is the one
+ * discriminant a render site branches on; `taskStatus`/`MessagePart.status` are presentational labels
+ * only, not the `task/status` wire vocabulary.
  */
 import type { InstructionType, WidgetSettingsData } from './sdk';
-import type { WidgetRenderedSettings } from './utils/validation';
+import type { StoredMessage } from './services/StorageService';
+import type { WidgetRenderedSettings } from './services/WidgetService';
 
 export type { InstructionType, WidgetSettingsData } from './sdk';
 
@@ -32,29 +35,9 @@ export type MarketrixConfig = Partial<WidgetRenderedSettings> &
 export type ValidWidgetConfig = MarketrixConfig &
   Required<Pick<MarketrixConfig, keyof WidgetRenderedSettings | 'isPreviewMode'>>;
 
-export interface ChatMessage {
-  id: string;
-  sender: 'user' | 'agent';
-  timestamp: Date;
-  mode?: InstructionType | undefined;
-  videoStream?: MediaStream;
-  isScreenAccessRequest?: boolean;
-  screenShareStatus?: 'allowed' | 'denied';
-  pendingContent?: string | undefined;
-  isSystemMessage?: boolean;
-  isPlaceholder?: boolean | undefined;
-  placeholderState?: 'thinking' | 'waiting-for-user' | undefined;
-  parts: MessagePart[];
-  taskStatus?: 'done' | 'failed' | 'stopped';
-}
+export type ChatMessage = Omit<StoredMessage, 'timestamp'> & { timestamp: Date; videoStream?: MediaStream };
 
-export interface MessagePart {
-  type: 'text' | 'progress';
-  content: string;
-  status?: 'in_progress' | 'completed' | 'failed';
-  browserToolName?: string;
-  streaming?: boolean;
-}
+export type MessagePart = ChatMessage['parts'][number];
 
 export const messageText = (parts: MessagePart[]): string =>
   parts

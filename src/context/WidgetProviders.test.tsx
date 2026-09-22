@@ -1,21 +1,20 @@
 /**
  * `WidgetProviders` initialization tests: no work after a StrictMode effect cleanup, the stored
  * transcript survives a second mount in the same page, no task is running on mount whatever a previous
- * page left on disk, and a chat initialization failure routes to the widget error state. The stored
- * transcript fixture writes raw storage via `storageService.updateContext`, whose `StoredMessage` shape
- * keeps a `content` field a live `ChatMessage` does not (see `StorageService.ts`'s header) — added
- * alongside the `agentMessage()` spread rather than on it.
+ * page left on disk, and a chat initialization failure routes to the widget error state.
  */
 import { render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'bun:test';
 import React from 'react';
 
 import { useWidget } from '../hooks/useWidget';
-import { chatSessionManager } from '../services/ChatSessionManager';
+import * as chatSession from '../services/chatSession';
 import * as StorageService from '../services/StorageService';
 import { type ChatSnapshot, storageService } from '../services/StorageService';
 import { streamClient } from '../services/StreamClient';
-import { agentMessage, flushMicrotasks } from '../test/fixtures';
+import { agentMessage, flushMicrotasks, getMockWidgetConfig } from '../test/fixtures';
+
+const LIVE = getMockWidgetConfig({ isPreviewMode: false });
 import { useUIStateContext } from './UIStateContext';
 import { WidgetProviders } from './WidgetProviders';
 
@@ -33,7 +32,7 @@ afterEach(() => {
 describe('WidgetProviders initialization', () => {
   it('does no initialization work when an async StrictMode effect has been cleaned up', async () => {
     let resolveChatId!: (chatId: string) => void;
-    vi.spyOn(chatSessionManager, 'getOrCreateChatId').mockReturnValue(
+    vi.spyOn(chatSession, 'getOrCreateChatId').mockReturnValue(
       new Promise(resolve => {
         resolveChatId = resolve;
       }),
@@ -42,7 +41,7 @@ describe('WidgetProviders initialization', () => {
 
     const view = render(
       <React.StrictMode>
-        <WidgetProviders>
+        <WidgetProviders config={LIVE}>
           <div />
         </WidgetProviders>
       </React.StrictMode>,
@@ -65,16 +64,15 @@ describe('WidgetProviders initialization', () => {
             placeholderState: undefined,
             parts: [{ type: 'text', content: 'hello' }],
           }),
-          content: 'hello',
           timestamp: new Date('2026-01-01T00:00:00.000Z').toISOString(),
         },
       ],
     });
-    vi.spyOn(chatSessionManager, 'getOrCreateChatId').mockResolvedValue('chat-1');
+    vi.spyOn(chatSession, 'getOrCreateChatId').mockResolvedValue('chat-1');
     const connect = vi.spyOn(streamClient, 'connect').mockResolvedValue();
 
     const first = render(
-      <WidgetProviders>
+      <WidgetProviders config={LIVE}>
         <div />
       </WidgetProviders>,
     );
@@ -82,7 +80,7 @@ describe('WidgetProviders initialization', () => {
     first.unmount();
 
     render(
-      <WidgetProviders>
+      <WidgetProviders config={LIVE}>
         <div />
       </WidgetProviders>,
     );
@@ -91,7 +89,7 @@ describe('WidgetProviders initialization', () => {
   });
 
   it('starts with no task running, whatever a previous page left on disk', async () => {
-    vi.spyOn(chatSessionManager, 'getOrCreateChatId').mockResolvedValue('chat-1');
+    vi.spyOn(chatSession, 'getOrCreateChatId').mockResolvedValue('chat-1');
     const connect = vi.spyOn(streamClient, 'connect').mockResolvedValue();
     vi.spyOn(StorageService, 'readChatSnapshot').mockReturnValue({
       messages: [],
@@ -101,7 +99,7 @@ describe('WidgetProviders initialization', () => {
     } as ChatSnapshot);
 
     render(
-      <WidgetProviders>
+      <WidgetProviders config={LIVE}>
         <TaskProbe />
       </WidgetProviders>,
     );
@@ -112,11 +110,11 @@ describe('WidgetProviders initialization', () => {
 
   it('routes chat initialization failures to the widget error state', async () => {
     const failure = new Error('chat unavailable');
-    vi.spyOn(chatSessionManager, 'getOrCreateChatId').mockRejectedValue(failure);
+    vi.spyOn(chatSession, 'getOrCreateChatId').mockRejectedValue(failure);
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
     render(
-      <WidgetProviders>
+      <WidgetProviders config={LIVE}>
         <ErrorProbe />
       </WidgetProviders>,
     );
