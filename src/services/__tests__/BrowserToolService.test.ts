@@ -161,19 +161,6 @@ describe('close_tab reports what the browser did', () => {
   });
 });
 
-describe('a tool no page script can perform fails without staging', () => {
-  it('upload_file fails, so show mode never asks the visitor to confirm it', async () => {
-    vi.spyOn(domService, 'getValidatedElement').mockReturnValue({ element: document.createElement('input') });
-    const staged = vi.spyOn(showModeService, 'showToolAction').mockResolvedValue();
-
-    const result = await browserToolService.executeTool('upload_file', { index: 0, path: '/tmp/a.pdf' }, 'show');
-
-    expectFailure(result, 'A web page cannot pick a file for the visitor; ask them to upload it themselves');
-    expect(staged).not.toHaveBeenCalled();
-    expect(browserToolService.isWaitForUserTool('upload_file')).toBe(false);
-  });
-});
-
 describe('a run the model ends is not a widget tool failure', () => {
   it('reports finish as executed when the agent sends only the closing message', async () => {
     const result = await browserToolService.executeTool(

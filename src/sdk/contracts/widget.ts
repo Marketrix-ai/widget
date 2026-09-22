@@ -22,7 +22,7 @@ export const WidgetCreateSchema = z.strictObject({
 export type WidgetCreateData = z.infer<typeof WidgetCreateSchema>;
 
 export const WidgetUpdateSchema = z.strictObject({
-  application_id: z.coerce.number(),
+  application_id: z.number(),
   settings: WidgetSettingsWriteSchema.optional(),
   marketrix_id: z.string().max(100).optional(),
   marketrix_key: z.string().max(100).optional(),
@@ -75,7 +75,6 @@ export const WidgetToolNameSchema = z.enum([
   'close_tab',
   'select_dropdown_option',
   'get_dropdown_options',
-  'upload_file',
   'wait',
   'search',
   'done',
@@ -95,7 +94,6 @@ const WidgetToolArgsSchemas = {
   close_tab: WidgetEmptyArgsSchema,
   select_dropdown_option: z.strictObject({ index: WidgetElementIndexSchema, option: z.string() }),
   get_dropdown_options: z.strictObject({ index: WidgetElementIndexSchema }),
-  upload_file: z.strictObject({ index: WidgetElementIndexSchema, path: z.string().min(1) }),
   wait: z.strictObject({ seconds: z.number().min(0.1).max(30) }),
   search: z.strictObject({ query: z.string(), engine: z.enum(['duckduckgo', 'google', 'bing']) }),
   done: z.strictObject({ message: z.string(), success: z.boolean() }),
@@ -118,7 +116,6 @@ export const WidgetToolCallEventSchema = z.discriminatedUnion('browser_tool', [
   widgetToolCall('close_tab', WidgetToolArgsSchemas.close_tab),
   widgetToolCall('select_dropdown_option', WidgetToolArgsSchemas.select_dropdown_option),
   widgetToolCall('get_dropdown_options', WidgetToolArgsSchemas.get_dropdown_options),
-  widgetToolCall('upload_file', WidgetToolArgsSchemas.upload_file),
   widgetToolCall('wait', WidgetToolArgsSchemas.wait),
   widgetToolCall('search', WidgetToolArgsSchemas.search),
   widgetToolCall('done', WidgetToolArgsSchemas.done),
@@ -144,7 +141,6 @@ export const WidgetEventSchema = z.union([
   }),
   z.strictObject({
     type: z.literal('task/status'),
-
     status: z.enum(['running', 'completed', 'failed', 'stopped', 'has_question']),
     message: z.string().optional(),
   }),
@@ -208,7 +204,7 @@ export const widgetSearch = oc
   .input(
     z
       .strictObject({
-        application_id: z.coerce.number().optional(),
+        application_id: z.number().optional(),
       })
       .extend(PaginationSchema.shape),
   )
@@ -262,7 +258,7 @@ export const widgetDelete = oc
     summary: 'Delete widget',
     description: 'Permanently disables the widget for an application. This action cannot be undone.',
   })
-  .input(z.strictObject({ application_id: z.coerce.number() }))
+  .input(z.strictObject({ application_id: z.number() }))
   .output(z.strictObject({ success: z.literal(true) }));
 
 export const widgetStream = oc
@@ -278,10 +274,9 @@ export const widgetStream = oc
     z.strictObject({
       chat_id: z.string(),
       tab_id: z.string().optional(),
-      marketrix_id: z.string().optional(),
-      marketrix_key: z.string().optional(),
-
-      user_id: z.coerce.number().optional(),
+      marketrix_id: z.string(),
+      marketrix_key: z.string(),
+      user_id: z.number().optional(),
     }),
   )
   .output(eventIterator(WidgetEventSchema));
