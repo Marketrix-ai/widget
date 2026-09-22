@@ -52,7 +52,7 @@ describe('checkComments', () => {
 
   it('never desyncs on a template literal with a substitution into a false comment', () => {
     const source =
-      '/**\n * A file.\n */\nconst url = `https://example.com/api/${route}?namespace=mtx-dev`;\nconst allowed = 1;\n';
+      '/**\n * A file.\n */\nconst url = `https://example.com/api/${route}?namespace=mtx-prod`;\nconst allowed = 1;\n';
     expect(checkComments('f.ts', source)).toEqual([]);
   });
 
