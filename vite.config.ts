@@ -16,7 +16,6 @@ import { defineConfig, type ViteDevServer } from 'vite';
 
 const BUNDLE_FILE = 'widget.mjs';
 const ENTRY_FILE = 'src/index.tsx';
-const SRC_ALIAS = { find: '@', replacement: resolve(cwd(), 'src') };
 
 export default defineConfig(({ command }) => {
   const isProduction = command === 'build';
@@ -26,7 +25,6 @@ export default defineConfig(({ command }) => {
       mode: 'production',
       resolve: {
         alias: [
-          SRC_ALIAS,
           {
             find: /^use-sync-external-store\/shim(?:\/with-selector)?$/,
             replacement: resolve(cwd(), 'src/useSyncExternalStoreShim.ts'),
@@ -96,7 +94,6 @@ export default defineConfig(({ command }) => {
   }
 
   return {
-    resolve: { alias: [SRC_ALIAS] },
     plugins: [
       react(),
       {

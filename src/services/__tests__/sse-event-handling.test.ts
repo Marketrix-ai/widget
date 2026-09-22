@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from 'bun:test';
 
-import { WidgetCommandSchema, type WidgetEvent, WidgetEventSchema } from '@/sdk';
+import { WidgetCommandSchema, type WidgetEvent, WidgetEventSchema } from '../../sdk';
 
 const ALL_WIDGET_EVENT_TYPES = [
   'registered',

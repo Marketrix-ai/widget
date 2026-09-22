@@ -5,9 +5,8 @@
  * `errorMessage`, never the raw `Error` object, because a customer's console must never see a trace for
  * a condition the widget already recovers from. An unexpected failure — where the stacktrace rule
  * applies — calls `console.error` directly (eslint's `no-console` allows `error` everywhere and `warn`
- * only in this file). `log`/`info`/`debug` have no equivalent here because
- * terser's `drop_console` strips them from the shipped bundle (see `ErrorBoundary`'s header), so only
- * warn/error ever reach a host page.
+ * only in this file). `log`/`info`/`debug` have no equivalent here because terser's `drop_console`
+ * strips them from the shipped bundle.
  */
 import { errorMessage } from './errors';
 

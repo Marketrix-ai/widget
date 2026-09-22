@@ -162,7 +162,7 @@ Destroys the widget, closes the stream connection, and cleans up all resources.
 
 ### `updateMarketrixConfig(partial): Promise<void>`
 
-Merges `partial` into the current config and re-initializes (unmount + `initWidget`). Use to switch API host, credentials, etc. at runtime.
+Merges `partial` (client options plus `mtxId`/`mtxKey`) into the current config and re-mounts: a preview stays a preview, a live widget re-runs `initWidget`. Use to switch API host, credentials, etc. at runtime.
 
 ### `getCurrentConfig(): MarketrixConfig | null`
 
@@ -215,7 +215,7 @@ Props: `settings` (required) and `container?`.
 
 TypeScript types are bundled with the package:
 
-- `MarketrixConfig` — full config for `initWidget` / `updateMarketrixConfig` (`mtxId`, `mtxKey`, `mtxApiHost`, `userId`, `show_widget`, `use_screenshare`, plus all widget appearance settings, optional).
+- `MarketrixConfig` — full config for `initWidget` (`mtxId`, `mtxKey`, `mtxApiHost`, `userId`, `show_widget`, `use_screenshare`, plus all widget appearance settings, optional). `updateMarketrixConfig` takes only `ClientOwnedConfig` plus `mtxId`/`mtxKey`.
 - `AddWidgetConfig` — discriminated config for `mountWidget` (production / preview variants + common options).
 - `ClientOwnedConfig` — the host-supplied options the API never sends (`mtxApiHost`, `userId`, `widget_position_z_index`, `show_widget`, `use_screenshare`, `styleNonce`).
 - `MarketrixWidgetPreviewProps` — props for the `MarketrixWidgetPreview` component.

@@ -5,11 +5,10 @@
  */
 import { describe, expect, it } from 'bun:test';
 
-import type { WidgetEvent } from '@/sdk';
-import { agentMessage } from '@/test/fixtures';
-import { type ChatMessage, messageText } from '@/types';
-import { CHAT_FAILURE_TEXT } from '@/utils/chat';
-
+import type { WidgetEvent } from '../../sdk';
+import { agentMessage } from '../../test/fixtures';
+import { type ChatMessage, messageText } from '../../types';
+import { CHAT_FAILURE_TEXT } from '../../utils/chat';
 import {
   reduceDispatch,
   type ReduceResult,

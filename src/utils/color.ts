@@ -15,27 +15,14 @@ const HEX = /^#?([a-f\d]{3}|[a-f\d]{6})$/i;
 const RGB = /^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i;
 
 export function toRgb(color: string): Rgb | null {
-  const hex = HEX.exec(color.trim());
-  const digits = hex?.[1];
+  const digits = HEX.exec(color.trim())?.[1];
   if (digits) {
-    const [p0, p1, p2] =
-      digits.length === 3
-        ? [
-            digits.charAt(0) + digits.charAt(0),
-            digits.charAt(1) + digits.charAt(1),
-            digits.charAt(2) + digits.charAt(2),
-          ]
-        : [digits.slice(0, 2), digits.slice(2, 4), digits.slice(4, 6)];
-    const r = parseInt(p0 ?? '', 16);
-    const g = parseInt(p1 ?? '', 16);
-    const b = parseInt(p2 ?? '', 16);
-    return { r, g, b };
+    const n = parseInt(digits.length === 3 ? [...digits].map(c => c + c).join('') : digits, 16);
+    return { r: n >> 16, g: (n >> 8) & 255, b: n & 255 };
   }
   const rgb = RGB.exec(color.trim());
   if (!rgb) return null;
-  const r = Number(rgb[1]);
-  const g = Number(rgb[2]);
-  const b = Number(rgb[3]);
+  const [r, g, b] = [Number(rgb[1]), Number(rgb[2]), Number(rgb[3])];
   return r > 255 || g > 255 || b > 255 ? null : { r, g, b };
 }
 
