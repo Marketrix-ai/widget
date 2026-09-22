@@ -1,29 +1,39 @@
 /**
- * Resolves a host page's `mtxId`/`mtxKey` credentials into the fully-populated widget config the rest
- * of the runtime reads. `loadWidgetConfig` looks the widget up by credentials and returns a merged
- * config; `createConfigFromSettings` layers validated, rendered settings over a partial config;
- * `widgetLookupCache` memoizes a resolution so a settings-only update skips repeating the lookup.
+ * Turns what a host page supplies into the fully-populated widget config the runtime reads.
+ * `parseWidgetSettings` validates settings against the contract's settings schema, returning the rendered
+ * settings or the offending field names; `invalidSettingsMessage` names them in one message.
+ * `loadWidgetConfig` looks a widget up by `mtxId`/`mtxKey` and merges its settings over the host's config,
+ * memoizing each resolution so a settings-only update skips repeating the lookup.
  *
- * `widgetPublicSearch` matches on `(marketrix_id, marketrix_key)` alone and returns a row only for a
- * live widget, so a returned row is unconditionally active — there is no `status` field to check. A
- * failed lookup recognises the browser's own "host unreachable" errors and reports them as a
- * likely-offline api rather than a generic failure.
+ * Unknown settings keys are ignored rather than rejected, since the api may ship a new setting before this
+ * published bundle knows it. `widgetPublicSearch` returns a row only for a live widget, so a returned row is
+ * unconditionally active. A failed lookup recognises the browser's own "host unreachable" errors and
+ * reports them as a likely-offline api rather than a generic failure.
  */
-import { type ApplicationWidgetPublicData, sdk } from '../sdk';
-import type { MarketrixConfig, ValidWidgetConfig } from '../types';
-import { errorMessage, withCause } from '../utils/errors';
-import { invalidSettingsMessage, parseWidgetSettings, type WidgetRenderedSettings } from '../utils/validation';
-import type { CredentialedConfig } from './StorageService';
+import { z } from 'zod';
 
-export function createConfigFromSettings(
-  widgetSettings: WidgetRenderedSettings,
-  baseConfig: Partial<MarketrixConfig> = {},
-): ValidWidgetConfig {
-  return {
-    ...baseConfig,
-    ...widgetSettings,
-  } as ValidWidgetConfig;
+import { type ApplicationWidgetPublicData, sdk } from '../sdk';
+import { WidgetSettingsWriteSchema } from '../sdk/contracts/entities';
+import type { MarketrixConfig, ValidWidgetConfig } from '../types';
+import { errorMessage } from '../utils/errors';
+
+const RenderedSettingsSchema = z.object(WidgetSettingsWriteSchema.shape);
+
+export type WidgetRenderedSettings = z.infer<typeof RenderedSettingsSchema>;
+
+export type CredentialedConfig = ValidWidgetConfig & { mtxId: string; mtxKey: string; mtxApp: number };
+
+type WidgetSettingsResult =
+  { settings: WidgetRenderedSettings; invalidFields?: undefined } | { settings?: undefined; invalidFields: string[] };
+
+export function parseWidgetSettings(value: unknown): WidgetSettingsResult {
+  const parsed = RenderedSettingsSchema.safeParse(value);
+  if (parsed.success) return { settings: parsed.data };
+  return { invalidFields: [...new Set(parsed.error.issues.map(issue => String(issue.path[0] ?? 'settings')))] };
 }
+
+export const invalidSettingsMessage = (invalidFields: string[]): string =>
+  `Widget settings are invalid: ${invalidFields.join(', ')}`;
 
 interface ResolvedWidget {
   settings: WidgetRenderedSettings;
@@ -41,11 +51,11 @@ async function resolveActiveWidget(mtxId: string, mtxKey: string, mtxApiHost?: s
     const unreachable = ['Failed to fetch', 'ERR_CONNECTION_REFUSED', 'NetworkError', 'Network request failed'].some(
       probe => message.includes(probe),
     );
-    throw withCause(
+    throw new Error(
       unreachable
         ? `Cannot connect to API server. Please ensure the API server is running at ${mtxApiHost || 'configured API server'}. Error: ${message}`
         : `Widget validation failed: ${message}`,
-      error,
+      { cause: error },
     );
   }
 
@@ -81,11 +91,5 @@ export async function loadWidgetConfig(config: MarketrixConfig): Promise<Credent
   }
 
   const { settings, applicationId } = await lookup;
-  return {
-    ...createConfigFromSettings(settings, config),
-    mtxId,
-    mtxKey,
-    mtxApp: applicationId,
-    isPreviewMode: false,
-  };
+  return { ...config, ...settings, mtxId, mtxKey, mtxApp: applicationId, isPreviewMode: false };
 }

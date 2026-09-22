@@ -1,10 +1,10 @@
 /**
  * Singleton SSE transport between the widget and the api, exported as `streamClient`.
  *
- * Drains the `widgetStream` event iterator in the background, `send` posts a command via
- * `widgetMessagePost`, `ready`/`waitUntilRegistered` let a caller wait for a live connection, and
- * `canReconnect`/`reconnectNow` back the Retry affordance. `StreamGaveUpError` marks a stream that has
- * exhausted its reconnect attempts.
+ * `setCredentials` holds the credentials the stream authenticates with; the `widgetStream` iterator drains
+ * in the background; `send` posts a command via `widgetMessagePost` to the live chat unless a caller names
+ * one; `ready`/`waitUntilRegistered` wait for a live connection; `canReconnect`/`reconnectNow` back Retry.
+ * `StreamGaveUpError` marks a stream that has exhausted its reconnect attempts.
  *
  * Reconnects back off exponentially with jitter, so open tabs across a shared outage don't all redial
  * on the same clock tick. Tabs on one host page share a stored chat id but each dials with its own tab
@@ -12,7 +12,6 @@
  */
 import { sdk, type WidgetCommand, type WidgetEvent } from '../sdk';
 import { logWarn } from '../utils/log';
-import { storageService } from './StorageService';
 
 type StreamStatus = 'disconnected' | 'connecting' | 'open' | 'registered' | 'error';
 
@@ -20,6 +19,12 @@ const INITIAL_RECONNECT_DELAY_MS = 1000;
 const CREDENTIALS_REJECTED = 'Chat is unavailable — the widget credentials were rejected.';
 
 export class StreamGaveUpError extends Error {}
+
+interface StreamCredentials {
+  marketrix_id: string;
+  marketrix_key: string;
+  user_id?: number;
+}
 
 interface StreamClientCallbacks {
   onMessage?: (event: WidgetEvent) => void;
@@ -29,6 +34,7 @@ interface StreamClientCallbacks {
 export class StreamClient {
   private abortController: AbortController | null = null;
   private chatId: string | null = null;
+  private credentials: StreamCredentials | null = null;
   private status: StreamStatus = 'disconnected';
   private callbacks: Set<StreamClientCallbacks> = new Set();
   private tornDown = false;
@@ -41,6 +47,10 @@ export class StreamClient {
   private connectionId = 0;
   private readonly tabId = globalThis.crypto.randomUUID();
   private registrationWaiters = new Set<{ resolve: () => void; reject: (error: Error) => void }>();
+
+  setCredentials(credentials: StreamCredentials): void {
+    this.credentials = credentials;
+  }
 
   addCallbacks(callbacks: StreamClientCallbacks): void {
     this.callbacks.add(callbacks);
@@ -104,19 +114,7 @@ export class StreamClient {
     const signal = this.abortController.signal;
 
     try {
-      const credentials = storageService.getCredentialedConfig();
-      const iterator = await sdk.widgetStream(
-        {
-          chat_id: chatId,
-          tab_id: this.tabId,
-          ...(credentials && {
-            marketrix_id: credentials.mtxId,
-            marketrix_key: credentials.mtxKey,
-            ...(credentials.userId ? { user_id: credentials.userId } : {}),
-          }),
-        },
-        { signal },
-      );
+      const iterator = await sdk.widgetStream({ chat_id: chatId, tab_id: this.tabId, ...this.credentials }, { signal });
 
       this.status = 'open';
 
@@ -165,21 +163,11 @@ export class StreamClient {
     this.settleWaiters(new Error('Stream disconnected before registration'));
   }
 
-  send(command: WidgetCommand): Promise<void> {
-    if (!this.chatId) {
+  send(command: WidgetCommand, chatId = this.chatId): Promise<void> {
+    if (!chatId) {
       return Promise.reject(new Error('No active chat'));
     }
-    return sdk
-      .widgetMessagePost({
-        chat_id: this.chatId,
-        tab_id: this.tabId,
-        command,
-      })
-      .then(() => {})
-      .catch((err: unknown) => {
-        logWarn('[StreamClient] Failed to send message, letting the caller report it:', err);
-        throw err;
-      });
+    return sdk.widgetMessagePost({ chat_id: chatId, tab_id: this.tabId, command }).then(() => {});
   }
 
   private resetBackoff(): void {

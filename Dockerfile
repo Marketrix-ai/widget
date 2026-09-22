@@ -15,7 +15,6 @@ RUN --mount=type=cache,target=/root/.bun/install/cache bun install --frozen-lock
 COPY . .
 
 FROM base AS dev
-ENV NODE_OPTIONS="--max-old-space-size=256"
 EXPOSE 9001
 CMD ["bunx", "vite", "dev", "--host", "0.0.0.0", "--port", "9001"]
 

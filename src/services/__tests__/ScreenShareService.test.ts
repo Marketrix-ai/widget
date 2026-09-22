@@ -1,13 +1,11 @@
 /**
- * Tests for `startScreenShare`/`stopScreenShare`: denial when the tenant has screen sharing off,
- * idempotent starts and a shared prompt across overlapping calls, and that sharing status tracks the
- * video track's own readyState.
+ * Tests for the screen-share store: a shared prompt across overlapping starts, sharing status tracking the
+ * video track's own readyState, and subscribers notified on start, stop and a browser-ended track.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 
-import { activeScreenStream, isScreenSharing, startScreenShare, stopScreenShare } from '@/services/ScreenShareService';
-import { storageService } from '@/services/StorageService';
-import { credentialedConfig, mockMediaStream } from '@/test/fixtures';
+import { mockMediaStream } from '../../test/fixtures';
+import { activeScreenStream, startScreenShare, stopScreenShare, subscribeScreenShare } from '../ScreenShareService';
 
 const getDisplayMedia = vi.fn();
 
@@ -27,25 +25,8 @@ afterEach(() => {
   stopScreenShare();
 });
 
-describe('use_screenshare', () => {
-  it.each([
-    [
-      'the tenant turned screen sharing off',
-      () => storageService.setConfig(credentialedConfig({ mtxId: 'id', mtxKey: 'key', use_screenshare: false })),
-    ],
-    [
-      'the switch alone flips it — a stored config that lost its credentials must not reopen the picker',
-      () => storageService.updateContext({ config: { use_screenshare: false } }),
-    ],
-  ] as const)('denies the request instead of prompting when %s', async (_label, setup) => {
-    setup();
-
-    await expect(startScreenShare()).rejects.toThrow('Screen sharing is disabled for this widget');
-    expect(getDisplayMedia).not.toHaveBeenCalled();
-  });
-
-  it('prompts when the tenant left screen sharing on', async () => {
-    storageService.setConfig(credentialedConfig({ mtxId: 'id', mtxKey: 'key' }));
+describe('the screen-share store', () => {
+  it('prompts once and returns the stream', async () => {
     const stream = liveStream();
     getDisplayMedia.mockResolvedValue(stream);
 
@@ -54,7 +35,6 @@ describe('use_screenshare', () => {
   });
 
   it('shares one prompt between two overlapping calls before it resolves', async () => {
-    storageService.setConfig(credentialedConfig({ mtxId: 'id', mtxKey: 'key' }));
     const stream = liveStream();
     let resolvePrompt!: (stream: MediaStream) => void;
     getDisplayMedia.mockReturnValue(
@@ -73,30 +53,25 @@ describe('use_screenshare', () => {
   });
 
   it('reports not sharing once the video track itself ends, even while the stream object is still active', async () => {
-    storageService.setConfig(credentialedConfig({ mtxId: 'id', mtxKey: 'key' }));
     const track = { readyState: 'live', addEventListener: vi.fn() };
     const stream = mockMediaStream({ getVideoTracks: () => [track], getTracks: () => [{ stop: vi.fn() }] });
     getDisplayMedia.mockResolvedValue(stream);
     await startScreenShare();
 
-    expect(isScreenSharing()).toBe(true);
     expect(activeScreenStream()).toBe(stream);
 
     track.readyState = 'ended';
 
-    expect(isScreenSharing()).toBe(false);
     expect(activeScreenStream()).toBeNull();
   });
 
   it('rejects a prompt that resolves with no video track instead of returning it', async () => {
-    storageService.setConfig(credentialedConfig({ mtxId: 'id', mtxKey: 'key' }));
     getDisplayMedia.mockResolvedValue(mockMediaStream({ getVideoTracks: () => [], getTracks: () => [] }));
 
     await expect(startScreenShare()).rejects.toThrow('Screen sharing permission denied or no video track available');
   });
 
   it('releases every track on stop, and is a no-op when nothing is sharing', async () => {
-    storageService.setConfig(credentialedConfig({ mtxId: 'id', mtxKey: 'key' }));
     const stopTrack = vi.fn();
     const stream = mockMediaStream({
       getVideoTracks: () => [{ readyState: 'live', addEventListener: vi.fn() }],
@@ -109,5 +84,22 @@ describe('use_screenshare', () => {
 
     expect(stopTrack).toHaveBeenCalledTimes(2);
     expect(() => stopScreenShare()).not.toThrow();
+  });
+
+  it('notifies subscribers on start, on stop, and when the browser ends the track', async () => {
+    let ended!: () => void;
+    const track = { readyState: 'live', addEventListener: (_: string, listener: () => void) => (ended = listener) };
+    const stream = mockMediaStream({ getVideoTracks: () => [track], getTracks: () => [{ stop: vi.fn() }] });
+    getDisplayMedia.mockResolvedValue(stream);
+    const listener = vi.fn();
+    const unsubscribe = subscribeScreenShare(listener);
+
+    await startScreenShare();
+    ended();
+    await startScreenShare();
+    stopScreenShare();
+    unsubscribe();
+
+    expect(listener).toHaveBeenCalledTimes(4);
   });
 });

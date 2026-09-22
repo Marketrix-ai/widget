@@ -7,15 +7,19 @@
  * transitions clear `isPlaceholder` so the composer re-enables. `reduceError`, `reduceTransportFailure`
  * and `reduceStaleReply` each settle a stuck message as failed, covering a bad reply, a dead
  * connection, and a healthy stream that simply never answers. `reduceText` drops an exact repeat of the
- * last closed text segment, since a duplicated final reply looks exactly like that.
+ * last closed text segment, since a duplicated final reply looks exactly like that. The screen-share
+ * transitions answer the open screen-access request and announce a share starting or ending.
  */
 import type { WidgetEvent } from '../sdk';
-import { browserToolService, FINISH_TOOL } from '../services/BrowserToolService';
+import { browserToolService, type WidgetToolCall, type WidgetToolName } from '../services/BrowserToolService';
 import type { ChatMessage, InstructionType, MessagePart } from '../types';
 import {
   addProgressLine,
   CHAT_FAILURE_TEXT,
+  createScreenshareMessage,
+  createSystemMessage,
   findMessageForProgress,
+  lastIndexWhere,
   markProgressLineComplete,
   markProgressLineFailed,
 } from '../utils/chat';
@@ -34,11 +38,8 @@ export interface SseState {
 
 export interface SseEffect {
   type: 'executeTool';
-  toolCallId: string;
-  tool: string;
-  args: Record<string, unknown>;
+  call: WidgetToolCall;
   mode: InstructionType;
-  explanation: string;
 }
 
 export interface ReduceResult {
@@ -54,7 +55,7 @@ function applyProgress(
   messages: ChatMessage[],
   isTaskRunning: boolean,
   currentMode: InstructionType,
-  browserToolName: string,
+  browserToolName: WidgetToolName,
   explanation: string,
   status: ProgressStatus,
   error?: string,
@@ -65,7 +66,7 @@ function applyProgress(
   let updatedMsg = found.message;
   if (status === 'failed') {
     updatedMsg = markProgressLineFailed(updatedMsg, browserToolName, error || '');
-  } else if (browserToolName !== FINISH_TOOL) {
+  } else if (browserToolName !== 'done') {
     updatedMsg =
       status === 'in_progress'
         ? addProgressLine(
@@ -92,7 +93,7 @@ const runningMode = (state: SseState, currentMode: InstructionType): Instruction
 
 export function reduceToolProgress(
   state: SseState,
-  browserToolName: string,
+  browserToolName: WidgetToolName,
   explanation: string,
   status: ProgressStatus,
   currentMode: InstructionType,
@@ -131,10 +132,10 @@ function stampProgressMessage(
   return { messages, task: ended(state.task) };
 }
 
-export function reduceToolDone(state: SseState, currentMode: InstructionType): SseState {
+export function reduceToolDone(state: SseState, currentMode: InstructionType, success: boolean): SseState {
   return stampProgressMessage(state, currentMode, msg => ({
     ...msg,
-    taskStatus: 'done',
+    taskStatus: success ? 'done' : 'failed',
     parts: msg.parts.filter(part => part.type !== 'progress'),
   }));
 }
@@ -143,6 +144,29 @@ export function reduceStop(state: SseState, currentMode: InstructionType): SseSt
   const stopped = stampProgressMessage(state, currentMode, msg => ({ ...msg, taskStatus: 'stopped' }));
   return { ...stopped, task: { phase: 'stopped' } };
 }
+
+export const reduceAppend = (state: SseState, ...messages: ChatMessage[]): SseState => ({
+  ...state,
+  messages: [...state.messages, ...messages],
+});
+
+export const openScreenAccessRequest = (messages: ChatMessage[]): ChatMessage | undefined =>
+  messages[lastIndexWhere(messages, msg => msg.kind === 'screenAccess' && !msg.screenShareStatus)];
+
+export function reduceScreenAccessResolved(state: SseState, screenShareStatus: 'allowed' | 'denied'): SseState {
+  const request = openScreenAccessRequest(state.messages);
+  if (!request) return state;
+  return { ...state, messages: state.messages.map(msg => (msg === request ? { ...msg, screenShareStatus } : msg)) };
+}
+
+export const reduceScreenShareStarted = (state: SseState, stream: MediaStream): SseState =>
+  reduceAppend(state, createSystemMessage('Screen sharing started'), createScreenshareMessage(stream));
+
+export const reduceScreenShareStopped = (state: SseState): SseState =>
+  reduceAppend(
+    { ...state, messages: state.messages.filter(msg => msg.kind !== 'screenshare') },
+    createSystemMessage('Screen sharing stopped'),
+  );
 
 export function reduceDispatch(state: SseState, placeholder: ChatMessage): SseState {
   return { messages: [...state.messages, placeholder], task: { phase: 'idle' } };
@@ -202,27 +226,17 @@ export function reduceSse(state: SseState, event: WidgetEvent, currentMode: Inst
       if (state.task.phase === 'stopped') return noChange(state);
       const task: TaskState =
         state.task.phase === 'running' ? state.task : { phase: 'running', mode: event.mode || currentMode };
-      const explanation = event.explanation || '';
       const messages = applyProgress(
         state.messages,
         true,
         task.mode ?? currentMode,
         event.browser_tool,
-        explanation,
+        event.explanation ?? '',
         'in_progress',
       );
       return {
         state: { messages, task },
-        effects: [
-          {
-            type: 'executeTool',
-            toolCallId: event.tool_call_id,
-            tool: event.browser_tool,
-            args: event.args,
-            mode: event.mode || currentMode,
-            explanation,
-          },
-        ],
+        effects: [{ type: 'executeTool', call: event, mode: event.mode ?? currentMode }],
       };
     }
 

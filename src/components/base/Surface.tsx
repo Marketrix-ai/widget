@@ -8,7 +8,7 @@
  * elevation, then layout props, then the caller's own `style` last, so a caller override always wins.
  * `className` is internal to `blocks/` — layout props are the styling API everywhere else.
  */
-import { type CSSProperties, type ElementType, forwardRef } from 'react';
+import type { CSSProperties, ElementType, Ref } from 'react';
 
 import { getElevationStyle, type ShadowToken } from '../../design-system/component-tokens';
 import { type LayoutProps, resolveLayoutStyle, stripLayoutProps } from './layoutProps';
@@ -25,6 +25,7 @@ export interface SurfaceProps extends LayoutProps, Omit<React.HTMLAttributes<HTM
   paddingPreset?: SurfacePadding;
   variant?: SurfaceVariant;
   className?: string;
+  ref?: Ref<HTMLDivElement>;
 }
 
 const backgroundStyles: Record<SurfaceBackground, CSSProperties> = {
@@ -49,8 +50,8 @@ const variantStyles: Record<SurfaceVariant, CSSProperties> = {
   floatingCard: { margin: '0 12px 12px 12px' },
 };
 
-export const Surface = forwardRef<HTMLElement, SurfaceProps>(function Surface(props, ref) {
-  const { as: Component = 'div', className, style, variant, ...withVariant } = props;
+export function Surface(props: SurfaceProps) {
+  const { as: Component = 'div', className, style, variant, ref, ...withVariant } = props;
   const merged = variant ? { ...variantProps[variant], ...withVariant } : withVariant;
   const { background = 'default', elevation, paddingPreset = 'none', ...rest } = merged;
   const domProps = stripLayoutProps(rest);
@@ -70,4 +71,4 @@ export const Surface = forwardRef<HTMLElement, SurfaceProps>(function Surface(pr
       }}
     />
   );
-});
+}

@@ -1,23 +1,25 @@
 /**
  * The open widget panel: the corner-pinned, resizable surface holding the header bar, the Home and
- * Chat tabs, and the resize grip. Renders nothing while the store says closed; `WidgetRoot` is its
- * only caller.
+ * Chat tabs, and the resize grip. Renders nothing while the store says closed.
  *
  * `useFocusTrap` traps keyboard focus inside the panel while it is open and restores it on close.
  * `useResize` lets a visitor drag or arrow-key resize the panel and remembers the chosen size per
- * tenant. `MessengerShell` renders the panel itself, including the header's screen-share control.
+ * tenant. `MessengerShell` renders the panel itself, including the header's screen-share control and the
+ * screen-access dialog it opens.
  *
  * The panel is a non-modal surface, not a dialog, so focus trapping and resizing are hand-rolled here
  * rather than reaching for a dialog primitive that would also lock the host page's own scrolling.
  */
 import { Tabs } from '@base-ui/react/tabs';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { z } from 'zod';
 
 import { SHADOW } from '../../design-system/component-tokens';
 import { useWidget, useWidgetConfig } from '../../hooks/useWidget';
+import { activeScreenStream, stopScreenShare, subscribeScreenShare } from '../../services/ScreenShareService';
 import { readLocal, scopedKey, writeLocal } from '../../services/StorageService';
-import type { MarketrixConfig, WidgetPosition, WidgetView } from '../../types';
-import { createUserMessage } from '../../utils/chat';
+import type { WidgetView } from '../../types';
+import { SCREEN_ACCESS_PROMPT } from '../../utils/chat';
 import { backgroundGradient } from '../../utils/color';
 import { focusablesIn } from '../../utils/dom';
 import { logWarn } from '../../utils/log';
@@ -28,6 +30,7 @@ import { Icon } from '../base/Icon';
 import { IconButton } from '../base/IconButton';
 import { LiveDot } from '../base/LiveDot';
 import { HeaderBar } from '../blocks/HeaderBar';
+import { WidgetDialog } from '../blocks/WidgetDialog';
 import { ChatView } from '../views/ChatView';
 import { HomeView } from '../views/HomeView';
 import { ShellTabBar } from './ShellTabBar';
@@ -45,6 +48,7 @@ export function useFocusTrap(
     focusTargetRef?: React.RefObject<HTMLElement | null> | undefined;
   },
 ) {
+  const { onEscape, focusTargetRef } = options;
   const previousActiveRef = useRef(false);
   const previouslyFocusedRef = useRef<HTMLElement | null>(null);
 
@@ -66,14 +70,14 @@ export function useFocusTrap(
     }
     previousActiveRef.current = true;
 
-    const target = options.focusTargetRef?.current ?? focusablesIn(container)[0];
+    const target = focusTargetRef?.current ?? focusablesIn(container)[0];
     target?.focus({ preventScroll: true });
 
     const handleKeyDown = (e: KeyboardEvent) => {
       const current = activeElementIn(container);
       if (!current || !container.contains(current)) return;
       if (e.key === 'Escape') {
-        options.onEscape();
+        onEscape();
         return;
       }
       if (e.key !== 'Tab') return;
@@ -96,13 +100,12 @@ export function useFocusTrap(
 
     document.addEventListener('keydown', handleKeyDown, true);
     return () => document.removeEventListener('keydown', handleKeyDown, true);
-  }, [isActive, containerRef, options.focusTargetRef, options.onEscape]);
+  }, [isActive, containerRef, focusTargetRef, onEscape]);
 }
 
-interface Size {
-  width: number;
-  height: number;
-}
+const SizeSchema = z.object({ width: z.number(), height: z.number() });
+
+type Size = z.infer<typeof SizeSchema>;
 
 const MIN_WIDTH = 280;
 const MAX_WIDTH = 600;
@@ -117,8 +120,8 @@ function clampSize({ width, height }: Size): Size {
   };
 }
 
-function parsePx(value: string | undefined, fallback: number): number {
-  const px = /^\s*(\d+(?:\.\d+)?)px\s*$/.exec(value ?? '');
+function parsePx(value: string, fallback: number): number {
+  const px = /^\s*(\d+(?:\.\d+)?)px\s*$/.exec(value);
   return px ? Number(px[1]) : fallback;
 }
 
@@ -127,32 +130,19 @@ const STORAGE_KEY_NAME = 'marketrix_widget_size';
 const WIDGET_VIEWS: readonly WidgetView[] = ['home', 'chat'];
 const isWidgetView = (value: string): value is WidgetView => (WIDGET_VIEWS as readonly string[]).includes(value);
 
-function isSize(value: unknown): value is Size {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    typeof (value as Record<string, unknown>)['width'] === 'number' &&
-    typeof (value as Record<string, unknown>)['height'] === 'number'
-  );
-}
-
 function readStoredSize(storageKey: string): Size | null {
   try {
-    const stored: unknown = JSON.parse(readLocal(storageKey) ?? 'null');
-    return isSize(stored) ? clampSize(stored) : null;
+    const stored = SizeSchema.safeParse(JSON.parse(readLocal(storageKey) ?? 'null'));
+    return stored.success ? clampSize(stored.data) : null;
   } catch (error) {
     logWarn('[useResize] Ignoring an unparseable stored size:', error);
     return null;
   }
 }
 
-export function useResize(
-  settingsWidth: string | undefined,
-  settingsHeight: string | undefined,
-  position: WidgetPosition,
-  config: MarketrixConfig,
-  isPreviewMode: boolean,
-) {
+export function useResize() {
+  const config = useWidgetConfig();
+  const { isPreviewMode, widget_position: position } = config;
   const storageKey = scopedKey(STORAGE_KEY_NAME, config);
   const containerRef = useRef<HTMLDivElement>(null);
   const grip = useMemo(() => getResizeGrip(position), [position]);
@@ -161,8 +151,8 @@ export function useResize(
     () =>
       readStoredSize(storageKey) ??
       clampSize({
-        width: parsePx(settingsWidth, DEFAULT_SIZE.width),
-        height: parsePx(settingsHeight, DEFAULT_SIZE.height),
+        width: parsePx(config.widget_width, DEFAULT_SIZE.width),
+        height: parsePx(config.widget_height, DEFAULT_SIZE.height),
       }),
   );
 
@@ -264,13 +254,7 @@ export const MessengerShell: React.FC = () => {
   const { isOpen, activeView } = state;
   const { isPreviewMode } = config;
 
-  const { widthPx, heightPx, grip, onResizeStart, onResizeKeyDown, containerRef } = useResize(
-    config.widget_width,
-    config.widget_height,
-    config.widget_position,
-    config,
-    isPreviewMode,
-  );
+  const { widthPx, heightPx, grip, onResizeStart, onResizeKeyDown, containerRef } = useResize();
 
   const messageInputRef = useRef<HTMLTextAreaElement | null>(null);
   const navDirection = activeView === 'chat' ? 'forward' : 'back';
@@ -282,8 +266,8 @@ export const MessengerShell: React.FC = () => {
 
   const panelPositionStyle = getPanelPositionStyle(config.widget_position);
 
-  const [headerScreenSharing, setHeaderScreenSharing] = useState(false);
-  const chatViewToggleScreenShareRef = useRef<(() => void) | null>(null);
+  const screenSharing = useSyncExternalStore(subscribeScreenShare, activeScreenStream) !== null;
+  const [showScreenAccessDialog, setShowScreenAccessDialog] = useState(false);
 
   if (!isOpen) return null;
 
@@ -292,14 +276,14 @@ export const MessengerShell: React.FC = () => {
   const { vertical, horizontal } = getCorner(config.widget_position);
 
   const handleChipClick = (action: SuggestedActionItem) => {
-    actions.addMessage(createUserMessage(action.text, action.type, 'chip-message'));
+    actions.setActiveView('chat');
     actions.setMode(action.type);
-    void actions.messageDispatch(action.text, action.type, true);
+    void actions.sendTurn(action.text, action.type);
   };
 
   const screenShareHandler =
     activeView === 'chat' && config.use_screenshare !== false
-      ? () => chatViewToggleScreenShareRef.current?.()
+      ? () => (screenSharing ? stopScreenShare() : setShowScreenAccessDialog(true))
       : undefined;
 
   return (
@@ -323,6 +307,21 @@ export const MessengerShell: React.FC = () => {
         boxShadow: SHADOW.panel,
       }}
     >
+      {showScreenAccessDialog && (
+        <WidgetDialog
+          onClose={() => setShowScreenAccessDialog(false)}
+          title={SCREEN_ACCESS_PROMPT}
+          description='By allowing screen access, Marketrix can understand your current context to guide you better and complete tasks on your behalf.'
+          onConfirm={() => {
+            setShowScreenAccessDialog(false);
+            void actions.allowScreenAccess();
+          }}
+          confirmLabel='Yes'
+          cancelLabel='No'
+          finalFocusRef={messageInputRef}
+        />
+      )}
+
       <HeaderBar
         title={config.widget_header}
         subtitle={config.widget_body}
@@ -332,10 +331,10 @@ export const MessengerShell: React.FC = () => {
             <IconButton
               variant='ghost'
               size='sm'
-              label={headerScreenSharing ? 'Stop screen sharing' : 'Start screen sharing'}
+              label={screenSharing ? 'Stop screen sharing' : 'Start screen sharing'}
               onClick={screenShareHandler}
             >
-              {headerScreenSharing && <LiveDot style={{ position: 'absolute', top: '2px', right: '2px' }} />}
+              {screenSharing && <LiveDot style={{ position: 'absolute', top: '2px', right: '2px' }} />}
               <Icon name='screenShare' size={16} />
             </IconButton>
           )
@@ -356,7 +355,7 @@ export const MessengerShell: React.FC = () => {
             data-direction={navDirection}
             style={{ width: '100%', height: '100%' }}
           >
-            <HomeView onNavigateToChat={() => actions.setActiveView('chat')} onChipClick={handleChipClick} />
+            <HomeView onChipClick={handleChipClick} />
           </Tabs.Panel>
           <Tabs.Panel
             value='chat'
@@ -364,11 +363,7 @@ export const MessengerShell: React.FC = () => {
             data-direction={navDirection}
             style={{ width: '100%', height: '100%' }}
           >
-            <ChatView
-              onScreenSharingChange={setHeaderScreenSharing}
-              toggleScreenShareRef={chatViewToggleScreenShareRef}
-              messageInputRef={messageInputRef}
-            />
+            <ChatView messageInputRef={messageInputRef} />
           </Tabs.Panel>
         </Stack>
 

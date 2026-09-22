@@ -4,8 +4,7 @@
  *
  * `ancestry` walks up through shadow boundaries so a control inside a host-page web component isn't
  * mistaken for top-level. `disabledReason` explains why an element can't be operated. `isIndexable` is
- * the geometry-aware check behind the agent's element index, tolerant of a host page that has patched
- * its own DOM in unexpected ways. `focusablesIn` and `isAriaHidden` find which elements are actually
+ * the one geometry-aware predicate deciding what enters the agent's element index. `focusablesIn` and `isAriaHidden` find which elements are actually
  * reachable by keyboard, shared by the widget's own focus trap and its Tab-key simulation of the host
  * page so the two can't disagree about tab order.
  */
@@ -48,49 +47,41 @@ export function disabledReason(el: Element): string | null {
   return null;
 }
 
-export function isIndexable(el: Element | null): boolean {
-  if (!(el instanceof Element)) return false;
+export function isIndexable(el: Element): boolean {
+  const tag = el.tagName.toLowerCase();
+  const interactive =
+    tag === 'button' ||
+    tag === 'input' ||
+    tag === 'textarea' ||
+    tag === 'select' ||
+    (tag === 'a' && el.hasAttribute('href')) ||
+    INTERACTIVE_ROLES.has(el.getAttribute('role') ?? '') ||
+    el.getAttribute('contenteditable') === 'true' ||
+    el.hasAttribute('onclick') ||
+    parseInt(el.getAttribute('tabindex') ?? '-1', 10) >= 0;
+  if (!interactive) return false;
 
-  try {
-    const tag = el.tagName.toLowerCase();
-    const interactive =
-      tag === 'button' ||
-      tag === 'input' ||
-      tag === 'textarea' ||
-      tag === 'select' ||
-      (tag === 'a' && el.hasAttribute('href')) ||
-      INTERACTIVE_ROLES.has(el.getAttribute('role') ?? '') ||
-      el.getAttribute('contenteditable') === 'true' ||
-      el.hasAttribute('onclick') ||
-      parseInt(el.getAttribute('tabindex') ?? '-1', 10) >= 0;
-    if (!interactive) return false;
+  const style = window.getComputedStyle(el);
+  if (style.display === 'none' || style.pointerEvents === 'none') return false;
 
-    const style = window.getComputedStyle(el);
-    if (style.display === 'none' || style.pointerEvents === 'none') return false;
+  const rect = el.getBoundingClientRect();
+  if (rect.width <= 0 || rect.height <= 0) return false;
 
-    const rect = el.getBoundingClientRect();
-    if (rect.width <= 0 || rect.height <= 0) return false;
-
-    for (const parent of ancestry(el)) {
-      if (parent !== el) {
-        const clip = window.getComputedStyle(parent).overflow;
-        if (clip === 'hidden' || clip === 'clip') {
-          const pr = parent.getBoundingClientRect();
-          if (rect.right < pr.left || rect.left > pr.right || rect.bottom < pr.top || rect.top > pr.bottom)
-            return false;
-        }
-        if (parent === document.body) break;
+  for (const parent of ancestry(el)) {
+    if (parent !== el) {
+      const clip = window.getComputedStyle(parent).overflow;
+      if (clip === 'hidden' || clip === 'clip') {
+        const pr = parent.getBoundingClientRect();
+        if (rect.right < pr.left || rect.left > pr.right || rect.bottom < pr.top || rect.top > pr.bottom) return false;
       }
+      if (parent === document.body) break;
     }
-
-    for (let root = el.getRootNode(); root instanceof ShadowRoot; root = root.host.getRootNode()) {
-      const hostRect = root.host.getBoundingClientRect();
-      if (hostRect.width <= 0 || hostRect.height <= 0) return false;
-    }
-
-    return true;
-  } catch (error) {
-    console.error('[isIndexable] Unexpected error:', error);
-    return false;
   }
+
+  for (let root = el.getRootNode(); root instanceof ShadowRoot; root = root.host.getRootNode()) {
+    const hostRect = root.host.getBoundingClientRect();
+    if (hostRect.width <= 0 || hostRect.height <= 0) return false;
+  }
+
+  return true;
 }

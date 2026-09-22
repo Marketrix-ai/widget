@@ -9,7 +9,7 @@ import { act, fireEvent, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 
 import { initWidget, unmountWidget } from '../index';
-import { chatSessionManager } from '../services/ChatSessionManager';
+import * as chatSession from '../services/chatSession';
 import { showModeService } from '../services/ShowModeService';
 import { writeChatSnapshot } from '../services/StorageService';
 import { streamClient } from '../services/StreamClient';
@@ -114,7 +114,7 @@ describe('component-tree unmount releases everything WidgetRoot registered on wi
 
   beforeEach(() => {
     localStorage.clear();
-    vi.spyOn(chatSessionManager, 'getOrCreateChatId').mockResolvedValue('chat-1');
+    vi.spyOn(chatSession, 'getOrCreateChatId').mockResolvedValue('chat-1');
     vi.spyOn(streamClient, 'connect').mockResolvedValue();
     vi.spyOn(streamClient, 'disconnect').mockImplementation(() => {});
     vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('network disabled in this test'));
@@ -247,7 +247,7 @@ describe('unmountWidget stops an active rrweb session recording started by the r
     vi.spyOn(WidgetService, 'loadWidgetConfig').mockResolvedValue(
       credentialedConfig({ widget_recording: true, mtxApp: 1 }),
     );
-    vi.spyOn(chatSessionManager, 'getOrCreateChatId').mockResolvedValue('chat-1');
+    vi.spyOn(chatSession, 'getOrCreateChatId').mockResolvedValue('chat-1');
     vi.spyOn(streamClient, 'connect').mockResolvedValue();
     vi.spyOn(streamClient, 'ready').mockResolvedValue();
     const stopRecording = vi.fn();

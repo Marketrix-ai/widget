@@ -1,51 +1,50 @@
 /**
- * Module-level screen-share state — one `MediaStream` at a time. `startScreenShare` refuses when the
- * tenant has `use_screenshare` off (before any picker, so a stored config that lost its credentials cannot
- * reopen it), reuses a live stream, otherwise prompts `getDisplayMedia` preferring the current tab and
- * drops the reference when the visitor ends the share from the browser UI. `activeScreenStream` returns
- * the stream only while its video track is live; `stopScreenShare` and `isScreenSharing` are the
- * obvious pair. `pendingStart` shares one in-flight `getDisplayMedia` prompt across concurrent
- * `startScreenShare` callers (a double-click on the launcher before the first prompt resolves), so
- * `start` is idempotent for overlap the same way it already is for a live stream.
+ * Module-level screen-share store — one `MediaStream` at a time, read by React through
+ * `useSyncExternalStore(subscribeScreenShare, activeScreenStream)`.
+ *
+ * `startScreenShare` reuses a live stream, otherwise prompts `getDisplayMedia` preferring the current tab;
+ * `stopScreenShare` releases every track. `activeScreenStream` returns the stream only while its video
+ * track is live. Every change, including the visitor ending the share from the browser's own UI, notifies
+ * subscribers. Concurrent `startScreenShare` callers share one in-flight prompt, so a double-click on the
+ * launcher before the first prompt resolves never opens a second picker.
  */
-import { storageService } from './StorageService';
 
 let activeStream: MediaStream | null = null;
 let pendingStart: Promise<MediaStream> | null = null;
+const listeners = new Set<() => void>();
+
+function setActiveStream(stream: MediaStream | null): void {
+  activeStream = stream;
+  listeners.forEach(listener => listener());
+}
+
+export function subscribeScreenShare(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+}
 
 export function activeScreenStream(): MediaStream | null {
-  if (activeStream?.active && activeStream.getVideoTracks()[0]?.readyState === 'live') {
-    return activeStream;
-  }
-  activeStream = null;
-  return null;
+  return activeStream?.active && activeStream.getVideoTracks()[0]?.readyState === 'live' ? activeStream : null;
 }
 
 export async function startScreenShare(): Promise<MediaStream> {
-  if (storageService.getContext().config?.use_screenshare === false) {
-    throw new Error('Screen sharing is disabled for this widget');
-  }
-
   const liveStream = activeScreenStream();
   if (liveStream) return liveStream;
-  if (pendingStart) return pendingStart;
 
-  pendingStart = (async () => {
+  pendingStart ??= (async () => {
     try {
       const stream = await navigator.mediaDevices.getDisplayMedia({
         video: true,
         audio: false,
         preferCurrentTab: true,
-      } as DisplayMediaStreamOptions);
-
-      if (!stream || stream.getVideoTracks().length === 0) {
-        throw new Error('Screen sharing permission denied or no video track available');
-      }
-
-      activeStream = stream;
-      stream.getVideoTracks()[0]?.addEventListener('ended', () => {
-        activeStream = null;
       });
+      const track = stream.getVideoTracks()[0];
+      if (!track) throw new Error('Screen sharing permission denied or no video track available');
+
+      track.addEventListener('ended', () => {
+        if (activeStream === stream) setActiveStream(null);
+      });
+      setActiveStream(stream);
       return stream;
     } finally {
       pendingStart = null;
@@ -55,12 +54,7 @@ export async function startScreenShare(): Promise<MediaStream> {
 }
 
 export function stopScreenShare(): void {
-  if (activeStream) {
-    activeStream.getTracks().forEach(track => track.stop());
-    activeStream = null;
-  }
-}
-
-export function isScreenSharing(): boolean {
-  return activeScreenStream() !== null;
+  if (!activeStream) return;
+  activeStream.getTracks().forEach(track => track.stop());
+  setActiveStream(null);
 }

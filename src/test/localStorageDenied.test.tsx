@@ -5,10 +5,9 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 
-import { chatSessionManager } from '../services/ChatSessionManager';
-import { type CredentialedConfig, storageService } from '../services/StorageService';
+import * as chatSession from '../services/chatSession';
+import { storageService } from '../services/StorageService';
 import { streamClient } from '../services/StreamClient';
-import { getMockWidgetConfig } from './fixtures';
 import { openChatTab, openWidget, renderWidget } from './renderWidget';
 
 describe('a host page that denies localStorage outright', () => {
@@ -22,7 +21,7 @@ describe('a host page that denies localStorage outright', () => {
       throw new Error('SecurityError: storage is disabled');
     });
     warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    vi.spyOn(chatSessionManager, 'getOrCreateChatId').mockResolvedValue('chat-1');
+    vi.spyOn(chatSession, 'getOrCreateChatId').mockResolvedValue('chat-1');
     vi.spyOn(streamClient, 'connect').mockResolvedValue();
     vi.spyOn(streamClient, 'ready').mockResolvedValue();
     vi.spyOn(streamClient, 'send').mockResolvedValue();
@@ -33,8 +32,7 @@ describe('a host page that denies localStorage outright', () => {
   });
 
   it('still opens, switches tabs, sends a chat message, and lets the visitor drag and resize — warning at most twice total', async () => {
-    const config = getMockWidgetConfig({ mtxId: 'storage-denied-1' }) as CredentialedConfig;
-    storageService.setConfig(config);
+    storageService.scopeTo({ mtxId: 'storage-denied-1' });
 
     const result = renderWidget({ mtxId: 'storage-denied-1' }, { previewMode: false });
     const scope = within(result.container);

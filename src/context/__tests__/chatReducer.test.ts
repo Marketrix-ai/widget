@@ -1,16 +1,14 @@
 /**
- * Tests for `sseReducer`'s pure state machine folding SSE events and local actions into chat messages
+ * Tests for `chatReducer`'s pure state machine folding SSE events and local actions into chat messages
  * and task state — status transitions, tool-call progress lines, streaming replies, stale-reply and
  * transport-failure recovery, and stop handling.
  */
 import { describe, expect, it } from 'bun:test';
 
-import type { WidgetEvent } from '@/sdk';
-import { FINISH_TOOL } from '@/services/BrowserToolService';
-import { agentMessage } from '@/test/fixtures';
-import { type ChatMessage, messageText } from '@/types';
-import { CHAT_FAILURE_TEXT } from '@/utils/chat';
-
+import type { WidgetEvent } from '../../sdk';
+import { agentMessage } from '../../test/fixtures';
+import { type ChatMessage, messageText } from '../../types';
+import { CHAT_FAILURE_TEXT } from '../../utils/chat';
 import {
   reduceDispatch,
   type ReduceResult,
@@ -21,7 +19,7 @@ import {
   reduceToolProgress,
   reduceTransportFailure,
   type SseState,
-} from '../sseReducer';
+} from '../chatReducer';
 
 const expectNoOp = (result: ReduceResult, state: SseState) => {
   expect(result.state).toBe(state);
@@ -172,16 +170,7 @@ describe('reduceStaleReply', () => {
 describe('reduceSse — tool/call', () => {
   it('emits an executeTool effect carrying the call details', () => {
     const result = reduceSse(runningState(), toolCall(), 'do');
-    expect(result.effects).toEqual([
-      {
-        type: 'executeTool',
-        toolCallId: 'call-1',
-        tool: 'click_element',
-        args: { index: 1 },
-        mode: 'do',
-        explanation: 'Clicking the submit button',
-      },
-    ]);
+    expect(result.effects).toEqual([{ type: 'executeTool', call: toolCall(), mode: 'do' }]);
   });
 
   it('auto-activates the task when a tool arrives before task/status running', () => {
@@ -347,9 +336,13 @@ describe('reduceToolProgress / reduceToolDone / reduceStop', () => {
   });
 
   it('reduceToolDone ends the task and marks the message done', () => {
-    const result = reduceToolDone(runningState(), 'do');
+    const result = reduceToolDone(runningState(), 'do', true);
     expect(result.task).toEqual({ phase: 'idle' });
     expect(result.messages[0]!.taskStatus).toBe('done');
+  });
+
+  it('reduceToolDone marks the message failed when the agent reports it did not succeed', () => {
+    expect(reduceToolDone(runningState(), 'do', false).messages[0]!.taskStatus).toBe('failed');
   });
 
   it('a duplicate completion does not fall back past the stamp onto an older settled reply', () => {
@@ -360,10 +353,10 @@ describe('reduceToolProgress / reduceToolDone / reduceStop', () => {
     });
     const state: SseState = { messages: [oldReply, agentMessage()], task: { phase: 'running' } };
 
-    const afterFirst = reduceToolDone(state, 'do');
+    const afterFirst = reduceToolDone(state, 'do', true);
     expect(afterFirst.messages[1]!.taskStatus).toBe('done');
 
-    const afterDuplicate = reduceToolDone(afterFirst, 'do');
+    const afterDuplicate = reduceToolDone(afterFirst, 'do', true);
 
     expect(afterDuplicate.messages[0]).toEqual(oldReply);
   });
@@ -387,14 +380,14 @@ describe('reduceToolProgress / reduceToolDone / reduceStop', () => {
       {
         type: 'tool/call',
         tool_call_id: 'c',
-        browser_tool: FINISH_TOOL,
+        browser_tool: 'done',
         args: { message: 'Wrapping up', success: true },
         explanation: 'Wrapping up',
       },
       'tell',
     ).state;
-    const succeeded = reduceToolProgress(called, FINISH_TOOL, 'Wrapping up', 'completed', 'tell');
-    const done = reduceToolDone(succeeded, 'tell');
+    const succeeded = reduceToolProgress(called, 'done', 'Wrapping up', 'completed', 'tell');
+    const done = reduceToolDone(succeeded, 'tell', true);
 
     const parts = done.messages[0]!.parts;
     expect(parts.some(p => p.type === 'progress')).toBe(false);

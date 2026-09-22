@@ -11,25 +11,14 @@ import { Profiler, useEffect } from 'react';
 
 import { useWidget } from '../../hooks/useWidget';
 import type { WidgetEvent } from '../../sdk';
-import { FINISH_TOOL } from '../../services/BrowserToolService';
-import type * as ChatServiceModule from '../../services/ChatService';
-import { type CredentialedConfig, storageService } from '../../services/StorageService';
+import * as chatSession from '../../services/chatSession';
 import { streamClient } from '../../services/StreamClient';
-import {
-  agentMessage,
-  asStreamClientInternals,
-  browserToolServiceMock,
-  getMockWidgetConfig,
-} from '../../test/fixtures';
+import { agentMessage, asStreamClientInternals, browserToolServiceMock } from '../../test/fixtures';
+import { ChatHarness } from '../../test/renderWidget';
 import { advanceTimersByTimeAsync, waitFor } from '../../test/vi-compat';
 import { messageText } from '../../types';
 import * as log from '../../utils/log';
-import { ChatProvider, useChatContext } from '../ChatContext';
-import { UIStateProvider } from '../UIStateContext';
-
-vi.mock('../../services/ChatService', (): typeof ChatServiceModule => ({
-  chatPost: vi.fn().mockResolvedValue(undefined),
-}));
+import { useChatContext } from '../ChatContext';
 
 const mockExecuteTool = vi.fn().mockResolvedValue({ success: true, data: {} });
 vi.mock('../../services/BrowserToolService', () => browserToolServiceMock(mockExecuteTool));
@@ -56,21 +45,23 @@ const Transcript = () => {
 
 beforeEach(() => {
   vi.useFakeTimers();
+  vi.spyOn(chatSession, 'getOrCreateChatId').mockResolvedValue('chat-1');
+  vi.spyOn(streamClient, 'ready').mockResolvedValue();
+  vi.spyOn(streamClient, 'send').mockResolvedValue();
 });
 
 afterEach(() => {
   cleanup();
   vi.useRealTimers();
+  vi.restoreAllMocks();
 });
 
 describe('a placeholder that never receives an event', () => {
   it('gives up on its own even when no dispatch in this page created it', () => {
     render(
-      <UIStateProvider>
-        <ChatProvider previewMode>
-          <Transcript />
-        </ChatProvider>
-      </UIStateProvider>,
+      <ChatHarness>
+        <Transcript />
+      </ChatHarness>,
     );
 
     expect(screen.getByTestId('transcript')).toHaveTextContent('temp-restored:true:');
@@ -96,9 +87,8 @@ const ChurningTranscript = () => {
         onClick={() =>
           chatActions.addMessage({
             id: `system-${messages.length}`,
-            sender: 'user',
+            kind: 'system',
             timestamp: new Date(),
-            isSystemMessage: true,
             parts: [{ type: 'text', content: 'Mode changed' }],
           })
         }
@@ -110,11 +100,9 @@ const ChurningTranscript = () => {
 describe('the stale-reply deadline belongs to the placeholder', () => {
   it('is not pushed back by an unrelated message the visitor adds while waiting', () => {
     render(
-      <UIStateProvider>
-        <ChatProvider previewMode>
-          <ChurningTranscript />
-        </ChatProvider>
-      </UIStateProvider>,
+      <ChatHarness>
+        <ChurningTranscript />
+      </ChatHarness>,
     );
 
     act(() => {
@@ -137,7 +125,7 @@ const ProcessingProbe = () => {
   const { state, actions } = useWidget();
 
   return (
-    <button data-testid='probe' onClick={() => void actions.messageDispatch('hi', 'tell', true)}>
+    <button data-testid='probe' onClick={() => void actions.sendTurn('hi', 'tell')}>
       {String(state.isAwaitingReply || state.isTaskRunning)}
     </button>
   );
@@ -145,14 +133,10 @@ const ProcessingProbe = () => {
 
 describe('the processing signal both glows read', () => {
   it('outlives the outbound post — the visitor waits on the reply, not on the request', async () => {
-    storageService.setConfig(getMockWidgetConfig({ mtxId: 'id', mtxKey: 'key' }) as CredentialedConfig);
-
     render(
-      <UIStateProvider>
-        <ChatProvider previewMode={false}>
-          <ProcessingProbe />
-        </ChatProvider>
-      </UIStateProvider>,
+      <ChatHarness previewMode={false}>
+        <ProcessingProbe />
+      </ChatHarness>,
     );
 
     expect(screen.getByTestId('probe')).toHaveTextContent('false');
@@ -167,16 +151,13 @@ describe('the processing signal both glows read', () => {
 
 describe('a retransmitted tool/call', () => {
   it('is deduped by tool_call_id — the browser tool runs once, not twice', async () => {
-    storageService.setConfig(getMockWidgetConfig({ mtxId: 'id2', mtxKey: 'key' }) as CredentialedConfig);
     vi.spyOn(streamClient, 'send').mockResolvedValue(undefined);
     mockExecuteTool.mockClear();
 
     render(
-      <UIStateProvider>
-        <ChatProvider previewMode={false}>
-          <div />
-        </ChatProvider>
-      </UIStateProvider>,
+      <ChatHarness previewMode={false}>
+        <div />
+      </ChatHarness>,
     );
 
     const event: WidgetEvent = {
@@ -210,13 +191,11 @@ const countProviderCommit = () => providerCommitCount++;
 
 const renderCaptured = (previewMode = true) => {
   render(
-    <UIStateProvider>
-      <Profiler id='provider' onRender={countProviderCommit}>
-        <ChatProvider previewMode={previewMode}>
-          <Capture />
-        </ChatProvider>
-      </Profiler>
-    </UIStateProvider>,
+    <Profiler id='provider' onRender={countProviderCommit}>
+      <ChatHarness previewMode={previewMode}>
+        <Capture />
+      </ChatHarness>
+    </Profiler>,
   );
 };
 
@@ -234,15 +213,6 @@ async function dispatchClickToolCall(toolCallId: string): Promise<void> {
   });
 }
 
-function setKeepAndSubject(subjectId: string, subjectContent: string): void {
-  act(() => {
-    captured!.chatActions.setMessages([
-      agentMessage({ id: 'keep', mode: 'tell', parts: [{ type: 'text', content: 'keep' }] }),
-      agentMessage({ id: subjectId, mode: 'tell', parts: [{ type: 'text', content: subjectContent }] }),
-    ]);
-  });
-}
-
 async function sentPayloadFor<T extends unknown[]>(
   send: Mock<(...args: T) => Promise<void>>,
   toolCallId: string,
@@ -256,10 +226,9 @@ async function sentPayloadFor<T extends unknown[]>(
 describe('commit skips the render for a transition that reports no change', () => {
   it('a stale-reply watchdog firing on a message parked waiting-for-user does not re-render', async () => {
     renderCaptured(false);
-    storageService.setConfig(getMockWidgetConfig({ mtxId: 'stale-parked', mtxKey: 'key' }) as CredentialedConfig);
 
     await act(async () => {
-      await captured!.chatActions.messageDispatch('do the thing', 'do');
+      await captured!.chatActions.sendTurn('do the thing', 'tell');
     });
     const placeholderId = captured!.messages[captured!.messages.length - 1]?.id as string;
 
@@ -294,78 +263,69 @@ describe('commit skips the render for a transition that reports no change', () =
   });
 });
 
-describe('updateMessage / removeMessage act on the one message their id names', () => {
-  it('updateMessage patches only the matching id', () => {
-    renderCaptured();
-    setKeepAndSubject('change', 'before');
-
-    act(() => {
-      captured!.chatActions.updateMessage('change', { parts: [{ type: 'text', content: 'after' }] });
-    });
-
-    expect(messageText(captured!.messages.find(m => m.id === 'keep')?.parts ?? [])).toBe('keep');
-    expect(messageText(captured!.messages.find(m => m.id === 'change')?.parts ?? [])).toBe('after');
-  });
-
-  it('removeMessage drops only the matching id', () => {
-    renderCaptured();
-    setKeepAndSubject('drop', 'drop');
-
-    act(() => {
-      captured!.chatActions.removeMessage('drop');
-    });
-
-    expect(captured!.messages.map(m => m.id)).toEqual(['keep']);
-  });
-});
-
-describe('a preview dispatch returns before reading real chat config', () => {
-  it.each([
-    ['echoing the user message', false, 2],
-    ['skipping the user message', true, 1],
-  ] as const)('%s', async (_label, skipUserMessage, expectedCount) => {
+describe('a turn in preview mode', () => {
+  it('echoes the user message and answers locally, without dialing the stream', async () => {
     renderCaptured(true);
-    const getCredentialedConfig = vi.spyOn(storageService, 'getCredentialedConfig');
+    const ready = vi.spyOn(streamClient, 'ready');
 
     await act(async () => {
-      await captured!.chatActions.messageDispatch('hello', 'tell', skipUserMessage);
+      await captured!.chatActions.sendTurn('hello', 'tell');
     });
 
-    expect(getCredentialedConfig).not.toHaveBeenCalled();
-    expect(captured!.messages).toHaveLength(expectedCount);
+    expect(ready).not.toHaveBeenCalled();
+    expect(captured!.messages.map(m => m.kind)).toEqual(['user', 'agent']);
   });
 });
 
-describe('a real dispatch echoes the user message unless told to skip it', () => {
-  it.each([
-    ['echoing the user message', false, 2],
-    ['skipping the user message', true, 1],
-  ] as const)('%s', async (_label, skipUserMessage, expectedCount) => {
+describe('a real turn', () => {
+  it('posts the mode-prefixed command under its placeholder id once the stream is ready', async () => {
     renderCaptured(false);
-    storageService.setConfig(
-      getMockWidgetConfig({ mtxId: `real-skip-${String(skipUserMessage)}`, mtxKey: 'key' }) as CredentialedConfig,
+    const order: string[] = [];
+    vi.spyOn(chatSession, 'getOrCreateChatId').mockResolvedValue('chat-1');
+    vi.spyOn(streamClient, 'ready').mockImplementation(async () => {
+      order.push('ready');
+    });
+    const send = vi.spyOn(streamClient, 'send').mockImplementation(async () => {
+      order.push('send');
+    });
+
+    await act(async () => {
+      await captured!.chatActions.sendTurn('hello', 'tell');
+    });
+
+    const placeholder = captured!.messages.find(m => m.isPlaceholder);
+    expect(order).toEqual(['ready', 'send']);
+    expect(send).toHaveBeenCalledWith({ type: 'chat/tell', request_id: placeholder!.id, content: 'hello' });
+  });
+});
+
+describe('a Show or Do turn without a live screen share', () => {
+  it('holds the turn behind a screen-access request, and a denial releases it', async () => {
+    renderCaptured(true);
+
+    await act(async () => {
+      await captured!.chatActions.sendTurn('show me', 'show');
+    });
+    expect(captured!.messages.map(m => m.kind)).toEqual(['user', 'screenAccess']);
+
+    act(() => captured!.chatActions.denyScreenAccess());
+
+    expect(captured!.messages[1]?.screenShareStatus).toBe('denied');
+    expect(captured!.messages.map(m => m.kind)).toEqual(['user', 'screenAccess', 'agent']);
+  });
+
+  it('asks nothing when the tenant turned screen sharing off', async () => {
+    render(
+      <ChatHarness overrides={{ use_screenshare: false }}>
+        <Capture />
+      </ChatHarness>,
     );
 
     await act(async () => {
-      await captured!.chatActions.messageDispatch('hello', 'tell', skipUserMessage);
+      await captured!.chatActions.sendTurn('do it', 'do');
     });
 
-    expect(captured!.messages).toHaveLength(expectedCount);
-  });
-});
-
-describe('a real dispatch without credentials reports the error and stops', () => {
-  it('never creates a reply placeholder or calls chatPost', async () => {
-    renderCaptured(false);
-    vi.spyOn(storageService, 'getCredentialedConfig').mockReturnValue(null);
-
-    await act(async () => {
-      await captured!.chatActions.messageDispatch('hello', 'tell');
-    });
-
-    expect(captured!.messages).toHaveLength(1);
-    expect(captured!.messages[0]?.isPlaceholder).toBeFalsy();
-    expect(captured!.taskState.phase).toBe('idle');
+    expect(captured!.messages.map(m => m.kind)).toEqual(['user', 'agent']);
   });
 });
 
@@ -376,14 +336,13 @@ describe('the finish tool ends the task only when it did not fail', () => {
 
   it('completes the task on a successful finish', async () => {
     renderCaptured(false);
-    storageService.setConfig(getMockWidgetConfig({ mtxId: 'finish-ok', mtxKey: 'key' }) as CredentialedConfig);
     mockExecuteTool.mockReset().mockResolvedValue({ success: true, data: { text: 'done' } });
 
     await act(async () => {
       asStreamClientInternals().handleMessage({
         type: 'tool/call',
         tool_call_id: 'tc-finish-ok',
-        browser_tool: FINISH_TOOL,
+        browser_tool: 'done',
         args: { message: 'Done', success: true },
         mode: 'do',
         explanation: 'Done',
@@ -397,14 +356,13 @@ describe('the finish tool ends the task only when it did not fail', () => {
 
   it('leaves the task running on a failed finish, rather than ending it', async () => {
     renderCaptured(false);
-    storageService.setConfig(getMockWidgetConfig({ mtxId: 'finish-failed', mtxKey: 'key' }) as CredentialedConfig);
     mockExecuteTool.mockReset().mockResolvedValue({ success: false, error: 'boom' });
 
     await act(async () => {
       asStreamClientInternals().handleMessage({
         type: 'tool/call',
         tool_call_id: 'tc-finish-failed',
-        browser_tool: FINISH_TOOL,
+        browser_tool: 'done',
         args: { message: 'Done', success: true },
         mode: 'do',
         explanation: 'Done',
@@ -420,7 +378,6 @@ describe('the finish tool ends the task only when it did not fail', () => {
 describe('tool/response carries data only when the tool call itself succeeded', () => {
   it('omits data on a failed tool call, instead of stringifying an undefined result', async () => {
     renderCaptured(false);
-    storageService.setConfig(getMockWidgetConfig({ mtxId: 'tool-failed-data', mtxKey: 'key' }) as CredentialedConfig);
     mockExecuteTool.mockReset().mockResolvedValue({ success: false, error: 'boom' });
     const send = vi.spyOn(streamClient, 'send').mockResolvedValue(undefined);
 
@@ -433,7 +390,6 @@ describe('tool/response carries data only when the tool call itself succeeded', 
 
   it('includes stringified data on a successful tool call', async () => {
     renderCaptured(false);
-    storageService.setConfig(getMockWidgetConfig({ mtxId: 'tool-ok-data', mtxKey: 'key' }) as CredentialedConfig);
     mockExecuteTool.mockReset().mockResolvedValue({ success: true, data: { ok: true } });
     const send = vi.spyOn(streamClient, 'send').mockResolvedValue(undefined);
 
@@ -447,7 +403,6 @@ describe('tool/response carries data only when the tool call itself succeeded', 
 describe('the processed tool-call id set is trimmed only once it EXCEEDS its cap', () => {
   it('still dedupes the earliest id at exactly 1000 distinct ids, not before', async () => {
     renderCaptured(false);
-    storageService.setConfig(getMockWidgetConfig({ mtxId: 'trim-boundary', mtxKey: 'key' }) as CredentialedConfig);
     vi.spyOn(streamClient, 'send').mockResolvedValue(undefined);
     mockExecuteTool.mockClear();
 
@@ -477,7 +432,6 @@ describe('the processed tool-call id set is trimmed only once it EXCEEDS its cap
 describe('a terminal task/status clears the processed tool-call id set', () => {
   it('lets a retransmitted tool_call_id from BEFORE the terminal status run again', async () => {
     renderCaptured(false);
-    storageService.setConfig(getMockWidgetConfig({ mtxId: 'terminal-clears', mtxKey: 'key' }) as CredentialedConfig);
     vi.spyOn(streamClient, 'send').mockResolvedValue(undefined);
     mockExecuteTool.mockClear();
 
@@ -512,7 +466,6 @@ describe('a chat/error event is logged, not surfaced as a transcript message', (
   it('logs the server error and leaves the transcript untouched', async () => {
     const logWarn = vi.spyOn(log, 'logWarn').mockImplementation(() => {});
     renderCaptured(false);
-    storageService.setConfig(getMockWidgetConfig({ mtxId: 'chat-error-log', mtxKey: 'key' }) as CredentialedConfig);
     const messagesBefore = captured!.messages;
 
     act(() => {
@@ -540,14 +493,10 @@ const ErrorProbe = () => {
 
 describe('a transient stream failure banner clears once the stream recovers', () => {
   it('shows the failure, then the next registered event clears exactly that banner', async () => {
-    storageService.setConfig(getMockWidgetConfig({ mtxId: 'stream-recovers', mtxKey: 'key' }) as CredentialedConfig);
-
     render(
-      <UIStateProvider>
-        <ChatProvider previewMode={false}>
-          <ErrorProbe />
-        </ChatProvider>
-      </UIStateProvider>,
+      <ChatHarness previewMode={false}>
+        <ErrorProbe />
+      </ChatHarness>,
     );
 
     expect(screen.getByTestId('error-banner')).toHaveTextContent('');
@@ -564,15 +513,12 @@ describe('a transient stream failure banner clears once the stream recovers', ()
   });
 
   it('never clears a different error already on screen when the stream happens to recover', async () => {
-    storageService.setConfig(getMockWidgetConfig({ mtxId: 'stream-recovers-2', mtxKey: 'key' }) as CredentialedConfig);
     vi.spyOn(streamClient, 'send').mockRejectedValue(new Error('boom'));
 
     render(
-      <UIStateProvider>
-        <ChatProvider previewMode={false}>
-          <ErrorProbe />
-        </ChatProvider>
-      </UIStateProvider>,
+      <ChatHarness previewMode={false}>
+        <ErrorProbe />
+      </ChatHarness>,
     );
 
     act(() => {
@@ -599,12 +545,11 @@ describe('a transient stream failure banner clears once the stream recovers', ()
 describe('two independent turns settle into their own messages', () => {
   it("never mixes one request_id's reply into another's message", async () => {
     renderCaptured(false);
-    storageService.setConfig(getMockWidgetConfig({ mtxId: 'independent-turns', mtxKey: 'key' }) as CredentialedConfig);
 
     act(() => {
       captured!.chatActions.addMessage({
         id: 'req-a',
-        sender: 'agent',
+        kind: 'agent',
         timestamp: new Date(),
         isPlaceholder: true,
         parts: [],
@@ -617,7 +562,7 @@ describe('two independent turns settle into their own messages', () => {
     act(() => {
       captured!.chatActions.addMessage({
         id: 'req-b',
-        sender: 'agent',
+        kind: 'agent',
         timestamp: new Date(),
         isPlaceholder: true,
         parts: [],

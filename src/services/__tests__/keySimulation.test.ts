@@ -1,5 +1,5 @@
 /**
- * Tests for `simulateKeyAction`, the hand-rolled keyboard behavior driving Tab/Shift+Tab focus
+ * Tests for `simulateKeyAction`, the hand-rolled keyboard behavior driving Tab focus
  * movement and Backspace/Delete/Arrow text and selection editing.
  */
 
@@ -23,26 +23,22 @@ afterEach(() => {
   resetDom();
 });
 
-describe('simulateKeyAction Tab/Shift+Tab', () => {
-  it('moves focus forward and backward', () => {
-    const [a, b, c] = render();
+describe('simulateKeyAction Tab', () => {
+  it('moves focus forward', () => {
+    const [, b, c] = render();
     expect(simulateKeyAction(b, 'Tab')).toBe('Tab: moved focus to button#c');
     expect(document.activeElement).toBe(c);
-    expect(simulateKeyAction(b, 'Shift+Tab')).toBe('Shift+Tab: moved focus to button#a');
-    expect(document.activeElement).toBe(a);
   });
 
-  it('refuses at each end', () => {
-    const [a, , c] = render();
+  it('refuses at the end', () => {
+    const [, , c] = render();
     expect(simulateKeyAction(c, 'Tab')).toBe('Tab: no next focusable element');
-    expect(simulateKeyAction(a, 'Shift+Tab')).toBe('Shift+Tab: no previous focusable element');
   });
 
   it('refuses an element outside the tab order — indexOf -1 must not wrap to the first element', () => {
     render();
     const detached = document.createElement('div');
     expect(simulateKeyAction(detached, 'Tab')).toBe('Tab: no next focusable element');
-    expect(simulateKeyAction(detached, 'Shift+Tab')).toBe('Shift+Tab: no previous focusable element');
     expect(document.activeElement).toBe(document.body);
   });
 });

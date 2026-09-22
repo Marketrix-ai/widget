@@ -30,13 +30,7 @@ const scrollButtonStyle: React.CSSProperties = {
   pointerEvents: 'auto',
 };
 
-interface MessageListProps {
-  messagesEndRef: React.RefObject<HTMLDivElement | null>;
-  onScreenAccessAllow: () => void;
-  onScreenAccessDeny: () => void;
-}
-
-export const MessageList = ({ messagesEndRef, onScreenAccessAllow, onScreenAccessDeny }: MessageListProps) => {
+export const MessageList = ({ messagesEndRef }: { messagesEndRef: React.RefObject<HTMLDivElement | null> }) => {
   const widgetConfig = useWidgetConfig();
   const { state, actions } = useWidget();
   const { messages, isTaskRunning } = state;
@@ -82,7 +76,7 @@ export const MessageList = ({ messagesEndRef, onScreenAccessAllow, onScreenAcces
     <Surface position='relative' height='full'>
       <Surface
         key='message-list-container'
-        ref={containerRef as React.RefObject<HTMLDivElement>}
+        ref={containerRef}
         onScroll={handleScroll}
         role='log'
         aria-relevant='additions'
@@ -91,9 +85,6 @@ export const MessageList = ({ messagesEndRef, onScreenAccessAllow, onScreenAcces
         paddingX='lg'
         paddingY='sm'
         style={{
-          backgroundColor: widgetConfig.widget_background_color.includes('gradient')
-            ? 'transparent'
-            : widgetConfig.widget_background_color,
           backgroundImage: backgroundGradient(widgetConfig.widget_background_color),
           scrollbarColor: `${addOpacity(widgetConfig.widget_border_color, 0.3)} ${addOpacity(widgetConfig.widget_border_color, 0.1)}`,
           scrollbarWidth: 'thin',
@@ -105,8 +96,8 @@ export const MessageList = ({ messagesEndRef, onScreenAccessAllow, onScreenAcces
             message={message}
             isLastMessage={index === allMessages.length - 1}
             isTaskRunning={isTaskRunning}
-            onScreenAccessAllow={onScreenAccessAllow}
-            onScreenAccessDeny={onScreenAccessDeny}
+            onScreenAccessAllow={actions.allowScreenAccess}
+            onScreenAccessDeny={actions.denyScreenAccess}
           />
         ))}
 
@@ -120,7 +111,7 @@ export const MessageList = ({ messagesEndRef, onScreenAccessAllow, onScreenAcces
           </Flex>
         )}
 
-        <Surface key='scroll-anchor' ref={messagesEndRef as React.RefObject<HTMLDivElement>} />
+        <Surface key='scroll-anchor' ref={messagesEndRef} />
       </Surface>
 
       {[

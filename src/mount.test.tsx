@@ -10,7 +10,7 @@ import { afterEach, describe, expect, it, vi } from 'bun:test';
 
 const loaderSource = readFileSync(resolve(process.cwd(), 'public/loader.js'), 'utf8');
 
-vi.mock('../index.css?inline', () => ({ default: '.marketrix-widget-container { display: block; }' }));
+vi.mock('./index.css?inline', () => ({ default: '.marketrix-widget-container { display: block; }' }));
 
 const appendModuleScript = (attributes: Record<string, string>) => {
   const script = document.createElement('script');
@@ -26,12 +26,12 @@ const resetDocument = () => {
   window.__mtx = undefined;
 };
 
-let bootstrapImportCount = 0;
-const importBootstrap = () => import(`./bootstrap.tsx?t=${bootstrapImportCount++}`);
+let mountImportCount = 0;
+const importMount = () => import(`./mount.tsx?t=${mountImportCount++}`);
 
 const runAutoInit = async () => {
   const init = vi.fn().mockResolvedValue(undefined);
-  const { autoInitializeWidget } = await importBootstrap();
+  const { autoInitializeWidget } = await importMount();
   autoInitializeWidget(init);
   return init;
 };
@@ -134,7 +134,7 @@ describe('widget public entry paths', () => {
     vi.useFakeTimers();
     const init = vi.fn().mockResolvedValue(undefined);
     const timer = vi.spyOn(globalThis, 'setTimeout');
-    const { autoInitializeWidget } = await importBootstrap();
+    const { autoInitializeWidget } = await importMount();
 
     autoInitializeWidget(init);
 
@@ -147,18 +147,18 @@ describe('widget public entry paths', () => {
     const parent = document.createElement('div');
     document.body.appendChild(parent);
 
-    const first = await importBootstrap();
+    const first = await importMount();
     first.createWidgetContainer(parent);
     first.createWidgetContainer(parent);
 
-    const reExecuted = await importBootstrap();
+    const reExecuted = await importMount();
     reExecuted.createWidgetContainer(parent);
 
     expect(parent.querySelectorAll('.marketrix-widget-container')).toHaveLength(3);
   });
 
   it('owns non-empty widget CSS inside the closed shadow root', async () => {
-    const { createWidgetContainer } = await importBootstrap();
+    const { createWidgetContainer } = await importMount();
 
     const { shadowRoot } = createWidgetContainer();
 
@@ -169,7 +169,7 @@ describe('widget public entry paths', () => {
   });
 
   it('leaves the injected style element without a nonce by default, and applies one when given', async () => {
-    const { createWidgetContainer } = await importBootstrap();
+    const { createWidgetContainer } = await importMount();
 
     const bare = createWidgetContainer();
     expect(bare.shadowRoot.querySelector('style')?.nonce).toBe('');

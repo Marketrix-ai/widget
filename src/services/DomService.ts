@@ -1,6 +1,6 @@
 /**
- * The numbered address space the agent drives the host page by. `reindexAndSnapshot` walks the live
- * document and returns a clone with `data-id="<n>"` stamped on every interactive element;
+ * The numbered address space the agent drives the host page by. `reindexAndSnapshot` indexes every
+ * element `isIndexable` accepts and returns a document clone with `data-id="<n>"` stamped on each;
  * `getSequenceForElement` reverses that lookup; `getValidatedElement` resolves an index back to a live
  * element or an error reason; `notInteractableReason` explains why an element can't be acted on.
  * `domService` is the process-wide singleton.
@@ -59,60 +59,16 @@ export class DomService {
     this.index.clear();
     this.elementToSequence = new WeakMap();
 
-    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_ELEMENT, {
-      acceptNode: (node: Node) => {
-        if (node instanceof HTMLElement) {
-          if (node.offsetParent === null && node.tagName !== 'BODY') {
-            const style = window.getComputedStyle(node);
-            const isFixedOrSticky = style.position === 'fixed' || style.position === 'sticky';
-            const isDisplayNone = style.display === 'none';
-
-            if (isDisplayNone) return NodeFilter.FILTER_REJECT;
-
-            if (!isFixedOrSticky) {
-              let parent = node.parentElement;
-              let insideFixedParent = false;
-
-              while (parent && parent !== document.body) {
-                const parentStyle = window.getComputedStyle(parent);
-                if (parentStyle.position === 'fixed' || parentStyle.position === 'sticky') {
-                  insideFixedParent = true;
-                  break;
-                }
-                parent = parent.parentElement;
-              }
-
-              if (!insideFixedParent) return NodeFilter.FILTER_REJECT;
-            }
-          }
-        }
-        return NodeFilter.FILTER_ACCEPT;
-      },
-    });
-
-    let node: Node | null = walker.nextNode();
     let sequenceNumber = 0;
-
-    while (node) {
-      const element = node instanceof HTMLElement ? node : null;
-      if (element) {
-        const semantic = element.matches('a[href], button, input, textarea, select, [role="button"]');
-        const visuallyClickable =
-          element.classList.contains('cursor-pointer') || element.classList.contains('clickable');
-        const hasClickHandler = typeof element.onclick === 'function';
-
-        if (semantic || visuallyClickable || hasClickHandler || isIndexable(element)) {
-          this.index.set(sequenceNumber, {
-            element,
-            selector: this.generateAnchoredSelector(element),
-            identity: IDENTITY_ATTRIBUTES.map(attribute => element.getAttribute(attribute)),
-          });
-          this.elementToSequence.set(element, sequenceNumber);
-          sequenceNumber++;
-        }
-      }
-
-      node = walker.nextNode();
+    for (const element of document.body.querySelectorAll<HTMLElement>('*')) {
+      if (!isIndexable(element)) continue;
+      this.index.set(sequenceNumber, {
+        element,
+        selector: this.generateAnchoredSelector(element),
+        identity: IDENTITY_ATTRIBUTES.map(attribute => element.getAttribute(attribute)),
+      });
+      this.elementToSequence.set(element, sequenceNumber);
+      sequenceNumber++;
     }
   }
 

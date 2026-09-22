@@ -10,23 +10,24 @@
  * focus target matches what the browser would actually pick.
  */
 import { focusablesIn } from '../utils/dom';
+import type { ToolArgs } from './BrowserToolService';
+
+type SendKey = ToolArgs<'send_keys'>['keys'];
 
 export const isTextField = (el: Element): el is HTMLInputElement | HTMLTextAreaElement =>
   el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement;
 
 const isButtonish = (el: Element): boolean => el instanceof HTMLButtonElement || el.getAttribute('role') === 'button';
 
-export function simulateKeyAction(element: HTMLElement, key: string): string | null {
+export function simulateKeyAction(element: HTMLElement, key: SendKey): string | null {
   switch (key) {
-    case 'Tab':
-    case 'Shift+Tab': {
-      const step = key === 'Tab' ? 1 : -1;
+    case 'Tab': {
       const focusables = focusablesIn(document);
       const currentIndex = focusables.indexOf(element);
-      const next = currentIndex === -1 ? undefined : focusables[currentIndex + step];
-      if (!next) return `${key}: no ${step > 0 ? 'next' : 'previous'} focusable element`;
+      const next = currentIndex === -1 ? undefined : focusables[currentIndex + 1];
+      if (!next) return 'Tab: no next focusable element';
       next.focus();
-      return `${key}: moved focus to ${next.tagName.toLowerCase()}${next.id ? `#${next.id}` : ''}`;
+      return `Tab: moved focus to ${next.tagName.toLowerCase()}${next.id ? `#${next.id}` : ''}`;
     }
 
     case 'Enter': {
@@ -60,7 +61,6 @@ export function simulateKeyAction(element: HTMLElement, key: string): string | n
       return 'Escape: blurred element and dispatched to document';
     }
 
-    case ' ':
     case 'Space': {
       if (element instanceof HTMLInputElement && (element.type === 'checkbox' || element.type === 'radio')) {
         element.click();

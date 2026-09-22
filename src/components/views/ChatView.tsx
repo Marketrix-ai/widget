@@ -1,269 +1,63 @@
 /**
- * The messenger panel's chat view: the scrolling transcript, the composer, and the screen-access
- * dialog that gates Show and Do.
+ * The messenger panel's chat view: the scrolling transcript and the composer.
  *
- * `ChatView` owns the draft text and sends each turn, restoring it to the composer if sending fails.
- * `useScreenShare` runs the screen-share lifecycle: asking permission, starting and ending a share,
- * and noticing when the visitor ends it from the browser's own UI instead of the widget's.
- *
- * Show and Do ask for screen access before acting, unless a share is already live or the tenant has
- * turned screen sharing off.
+ * `ChatView` owns the draft text and sends each turn through the store's `sendTurn`, restoring the draft
+ * to the composer if sending fails. The composer stays locked while a reply is pending or a screen-access
+ * request is waiting for an answer, so no later send can overwrite the held turn.
  */
-import React, { useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 
-import { useLatest } from '../../hooks/useLatest';
+import { openScreenAccessRequest } from '../../context/chatReducer';
 import { useWidget, useWidgetConfig } from '../../hooks/useWidget';
 import type { InstructionType } from '../../sdk';
-import {
-  isScreenSharing as isScreenSharingActive,
-  startScreenShare,
-  stopScreenShare,
-} from '../../services/ScreenShareService';
 import { showModeService } from '../../services/ShowModeService';
-import type { ChatMessage, MarketrixConfig } from '../../types';
-import {
-  createScreenAccessRequestMessage,
-  createScreenshareMessage,
-  createSystemMessage,
-  createUserMessage,
-  getModeDisplayName,
-  lastIndexWhere,
-  SCREEN_ACCESS_PROMPT,
-} from '../../utils/chat';
-import { logWarn } from '../../utils/log';
+import { createSystemMessage, MODE_LABELS } from '../../utils/chat';
 import { ErrorBoundary } from '../base/ErrorBoundary';
 import { Stack } from '../base/Flex';
 import { Surface } from '../base/Surface';
 import { Text } from '../base/Text';
 import { ChatInput, type ChatInputMode } from '../blocks/ChatInput';
-import { WidgetDialog } from '../blocks/WidgetDialog';
 import { MessageList } from '../chat/MessageList';
 
-interface ChatViewProps {
-  onScreenSharingChange: (isSharing: boolean) => void;
-  toggleScreenShareRef: React.MutableRefObject<(() => void) | null>;
-  messageInputRef: React.RefObject<HTMLTextAreaElement | null>;
-}
-
-const MODES: Array<{ id: InstructionType; icon: ChatInputMode['icon']; flag: keyof MarketrixConfig }> = [
+const MODES: Array<{
+  id: InstructionType;
+  icon: ChatInputMode['icon'];
+  flag: 'widget_feature_tell' | 'widget_feature_show' | 'widget_feature_do';
+}> = [
   { id: 'tell', icon: 'chatBubble', flag: 'widget_feature_tell' },
   { id: 'show', icon: 'mousePointerClick', flag: 'widget_feature_show' },
   { id: 'do', icon: 'ticktick', flag: 'widget_feature_do' },
 ];
 
-export interface UseScreenShareOptions {
-  onScreenSharingChange: (isSharing: boolean) => void;
-  toggleScreenShareRef?: React.MutableRefObject<(() => void) | null>;
-  onAddMessage: (message: ChatMessage) => void;
-  onUpdateMessage: (messageId: string, updates: Partial<ChatMessage>) => void;
-  onRemoveMessage: (messageId: string) => void;
-  onSendMessage: (message: string, mode?: InstructionType, skipUserMessage?: boolean) => void;
-  messages: ChatMessage[];
-}
-
-interface UseScreenShareReturn {
-  isScreenSharing: boolean;
-  isAwaitingScreenAccess: boolean;
-  showScreenAccessDialog: boolean;
-  handleScreenAccessDialogAllow: () => Promise<void>;
-  handleScreenAccessDialogDismiss: () => void;
-  handleScreenAccessRequestAllow: () => Promise<void>;
-  handleScreenAccessRequestDeny: () => void;
-  requestScreenAccess: (mode: InstructionType, content: string) => void;
-}
-
-export function useScreenShare({
-  onScreenSharingChange,
-  toggleScreenShareRef,
-  onAddMessage,
-  onUpdateMessage,
-  onRemoveMessage,
-  onSendMessage,
-  messages,
-}: UseScreenShareOptions): UseScreenShareReturn {
-  const [isScreenSharing, setIsScreenSharing] = useState(false);
-  const [screenShareMessageId, setScreenShareMessageId] = useState<string | null>(null);
-  const [showScreenAccessDialog, setShowScreenAccessDialog] = useState(false);
-
-  const wasSharingRef = useLatest(isScreenSharing);
-  const screenShareMessageIdRef = useLatest(screenShareMessageId);
-  const onScreenSharingChangeRef = useLatest(onScreenSharingChange);
-
-  const applySharing = (sharing: boolean) => {
-    setIsScreenSharing(sharing);
-    onScreenSharingChange(sharing);
-  };
-
-  const announceStopped = (messageId: string | null) => {
-    if (messageId) onRemoveMessage(messageId);
-    onAddMessage(createSystemMessage('Screen sharing stopped', 'stopped-sharing'));
-    setScreenShareMessageId(null);
-  };
-  const announceStoppedRef = useLatest(announceStopped);
-
-  useEffect(() => {
-    const checkScreenSharing = () => {
-      const isSharing = isScreenSharingActive();
-      const wasSharing = wasSharingRef.current;
-      const currentMessageId = screenShareMessageIdRef.current;
-      if (isSharing !== wasSharing) {
-        wasSharingRef.current = isSharing;
-        setIsScreenSharing(isSharing);
-        onScreenSharingChangeRef.current(isSharing);
-      }
-      if (wasSharing && !isSharing && currentMessageId) {
-        announceStoppedRef.current(currentMessageId);
-      }
-    };
-    checkScreenSharing();
-    const interval = setInterval(checkScreenSharing, 1000);
-    return () => clearInterval(interval);
-  }, [announceStoppedRef, onScreenSharingChangeRef, screenShareMessageIdRef, wasSharingRef]);
-
-  const openRequest =
-    messages[lastIndexWhere(messages, msg => !!msg.isScreenAccessRequest && !msg.screenShareStatus)] ?? null;
-
-  const requestScreenAccess = (mode: InstructionType, content: string) => {
-    if (openRequest) return;
-    onAddMessage(createScreenAccessRequestMessage(mode, content));
-  };
-
-  const flushPendingMessage = () => {
-    if (!openRequest?.pendingContent) return;
-    onSendMessage(openRequest.pendingContent, openRequest.mode, true);
-  };
-
-  const resolveAccessRequest = (screenShareStatus: 'allowed' | 'denied') => {
-    if (!openRequest) return;
-    onUpdateMessage(openRequest.id, { screenShareStatus });
-  };
-
-  const beginScreenShare = async () => {
-    try {
-      const stream = await startScreenShare();
-      applySharing(true);
-      resolveAccessRequest('allowed');
-      onAddMessage(createSystemMessage('Screen sharing started', 'started-screenshare'));
-      const screenshareMessage = createScreenshareMessage(stream);
-      setScreenShareMessageId(screenshareMessage.id);
-      onAddMessage(screenshareMessage);
-    } catch (error) {
-      logWarn('[ChatView] Screen share declined or unavailable:', error);
-      applySharing(false);
-      resolveAccessRequest('denied');
-    }
-    flushPendingMessage();
-  };
-
-  const beginScreenShareRef = useLatest(beginScreenShare);
-  const handleScreenAccessRequestAllow = useCallback(() => beginScreenShareRef.current(), [beginScreenShareRef]);
-
-  const denyScreenAccessRequest = () => {
-    resolveAccessRequest('denied');
-    flushPendingMessage();
-  };
-  const denyScreenAccessRequestRef = useLatest(denyScreenAccessRequest);
-  const handleScreenAccessRequestDeny = useCallback(
-    () => denyScreenAccessRequestRef.current(),
-    [denyScreenAccessRequestRef],
-  );
-
-  const handleScreenAccessDialogAllow = async () => {
-    setShowScreenAccessDialog(false);
-    await beginScreenShare();
-  };
-
-  const handleScreenAccessDialogDismiss = () => {
-    setShowScreenAccessDialog(false);
-  };
-
-  const stopScreenSharing = () => {
-    stopScreenShare();
-    applySharing(false);
-    announceStopped(screenShareMessageId);
-  };
-
-  useImperativeHandle(toggleScreenShareRef, () => () => {
-    if (isScreenSharing) stopScreenSharing();
-    else setShowScreenAccessDialog(true);
-  });
-
-  return {
-    isScreenSharing,
-    isAwaitingScreenAccess: openRequest !== null,
-    showScreenAccessDialog,
-    handleScreenAccessDialogAllow,
-    handleScreenAccessDialogDismiss,
-    handleScreenAccessRequestAllow,
-    handleScreenAccessRequestDeny,
-    requestScreenAccess,
-  };
-}
-
-export const ChatView: React.FC<ChatViewProps> = ({ onScreenSharingChange, toggleScreenShareRef, messageInputRef }) => {
+export const ChatView: React.FC<{ messageInputRef: React.RefObject<HTMLTextAreaElement | null> }> = ({
+  messageInputRef,
+}) => {
   const config = useWidgetConfig();
   const { state, actions } = useWidget();
-  const { currentMode, isTaskRunning, isAwaitingReply } = state;
+  const { currentMode, isTaskRunning, isAwaitingReply, messages } = state;
 
   const [inputValue, setInputValue] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const {
-    isScreenSharing,
-    isAwaitingScreenAccess,
-    showScreenAccessDialog,
-    handleScreenAccessDialogAllow,
-    handleScreenAccessDialogDismiss,
-    handleScreenAccessRequestAllow,
-    handleScreenAccessRequestDeny,
-    requestScreenAccess,
-  } = useScreenShare({
-    onScreenSharingChange,
-    toggleScreenShareRef,
-    onAddMessage: actions.addMessage,
-    onUpdateMessage: actions.updateMessage,
-    onRemoveMessage: actions.removeMessage,
-    onSendMessage: actions.messageDispatch,
-    messages: state.messages,
-  });
-
-  const composerLocked = isAwaitingScreenAccess || isAwaitingReply;
+  const composerLocked = !!openScreenAccessRequest(messages) || isAwaitingReply;
 
   const handleSendMessage = () => {
-    if (!inputValue.trim() || composerLocked) return;
     const messageContent = inputValue.trim();
+    if (!messageContent || composerLocked) return;
     setInputValue('');
-    actions.addMessage(createUserMessage(messageContent, currentMode));
-    if (config.use_screenshare !== false && (currentMode === 'show' || currentMode === 'do') && !isScreenSharing) {
-      requestScreenAccess(currentMode, messageContent);
-    } else {
-      void actions.messageDispatch(messageContent, currentMode, true).then(sent => {
-        if (!sent) setInputValue(current => current || messageContent);
-      });
-    }
+    void actions.sendTurn(messageContent, currentMode).then(sent => {
+      if (!sent) setInputValue(current => current || messageContent);
+    });
   };
 
   const handleModeChange = (mode: InstructionType) => {
     if (mode === currentMode) return;
-    actions.addMessage(createSystemMessage(`Switched to ${getModeDisplayName(mode)} mode`, 'mode-change'));
+    actions.addMessage(createSystemMessage(`Switched to ${MODE_LABELS[mode]} mode`));
     actions.setMode(mode);
   };
 
   return (
     <Stack height='full'>
-      {showScreenAccessDialog && (
-        <WidgetDialog
-          open={showScreenAccessDialog}
-          onClose={handleScreenAccessDialogDismiss}
-          title={SCREEN_ACCESS_PROMPT}
-          description='By allowing screen access, Marketrix can understand your current context to guide you better and complete tasks on your behalf.'
-          onConfirm={handleScreenAccessDialogAllow}
-          confirmLabel='Yes'
-          cancelLabel='No'
-          finalFocusRef={messageInputRef}
-        />
-      )}
-
       <Stack grow overflow='hidden' paddingY='2xs' minHeight='0'>
         <ErrorBoundary
           label='Chat'
@@ -273,11 +67,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ onScreenSharingChange, toggl
             </Text>
           }
         >
-          <MessageList
-            messagesEndRef={messagesEndRef}
-            onScreenAccessAllow={handleScreenAccessRequestAllow}
-            onScreenAccessDeny={handleScreenAccessRequestDeny}
-          />
+          <MessageList messagesEndRef={messagesEndRef} />
         </ErrorBoundary>
       </Stack>
 
@@ -287,11 +77,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ onScreenSharingChange, toggl
           value={inputValue}
           onChange={setInputValue}
           onSubmit={handleSendMessage}
-          modes={MODES.filter(({ flag }) => config[flag]).map(({ id, icon }) => ({
-            id,
-            icon,
-            label: getModeDisplayName(id),
-          }))}
+          modes={MODES.filter(({ flag }) => config[flag]).map(({ id, icon }) => ({ id, icon, label: MODE_LABELS[id] }))}
           activeMode={currentMode}
           onModeChange={handleModeChange}
           disabled={composerLocked}

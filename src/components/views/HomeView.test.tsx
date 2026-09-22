@@ -5,7 +5,7 @@
 import { screen } from '@testing-library/react';
 import { describe, expect, it } from 'bun:test';
 
-import { openWidget, renderWidget } from '@/test/renderWidget';
+import { openWidget, renderWidget } from '../../test/renderWidget';
 
 const openHome = (chips: Array<{ chip_text: string; chip_mode: 'tell' | 'show' | 'do' }>) => {
   renderWidget({ widget_chips: chips });

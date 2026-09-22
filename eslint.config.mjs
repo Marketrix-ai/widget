@@ -2,13 +2,10 @@
  * The widget's ESLint config.
  *
  * Bans bare `document.activeElement` (`useFocusTrap`/jsdom tests exempted), the bare `localStorage`
- * global (confined to `StorageService.ts`), a `cn()` helper call (no CSS framework), a value import of
- * `WidgetSettingsDataSchema` outside `src/sdk/`/`src/test/` (drags zod's runtime into the bundle), a
- * second `FINISH_TOOL` declarator or stray `'finish'` literal outside `BrowserToolService.ts`, and every
- * `console.*` call except `error` everywhere and `warn` in `src/utils/log.ts` alone — each replaces a
- * former source-text-regex test with a lint rule. `jsx-a11y`'s `no-static-element-interactions`/
- * `click-events-have-key-events` cover interactive-div a11y. Unused imports/ordering are delegated to
- * dedicated plugins, and `Bun` is a global for `bun run` scripts.
+ * global (confined to `StorageService.ts`), a `cn()` helper call (no CSS framework), and every
+ * `console.*` call except `error` everywhere and `warn` in `src/utils/log.ts` alone. `react-hooks`
+ * enforces the rules of hooks; `jsx-a11y` covers interactive-div a11y. `Bun` is a global for `bun run`
+ * scripts.
  */
 
 import js from '@eslint/js';
@@ -16,6 +13,7 @@ import typescript from '@typescript-eslint/eslint-plugin';
 import typescriptParser from '@typescript-eslint/parser';
 import importPlugin from 'eslint-plugin-import-x';
 import jsxA11y from 'eslint-plugin-jsx-a11y';
+import reactHooks from 'eslint-plugin-react-hooks';
 import simpleImportSort from 'eslint-plugin-simple-import-sort';
 import unusedImports from 'eslint-plugin-unused-imports';
 import prettierConfig from 'eslint-config-prettier';
@@ -81,6 +79,7 @@ export default [
       '@typescript-eslint': typescript,
       import: importPlugin,
       'jsx-a11y': jsxA11y,
+      'react-hooks': reactHooks,
       'simple-import-sort': simpleImportSort,
       'unused-imports': unusedImports,
     },
@@ -104,30 +103,11 @@ export default [
           selector: "CallExpression[callee.name='cn']",
           message: 'no CSS-framework cn() helper in this codebase — resolveLayoutStyle/inline styles only',
         },
-        {
-          selector: "VariableDeclarator[id.name='FINISH_TOOL']",
-          message: 'FINISH_TOOL is defined once, in services/BrowserToolService.ts — import the constant',
-        },
-        {
-          selector: "Literal[value='finish']",
-          message: "the 'finish' tool name is the FINISH_TOOL constant everywhere but its one definition",
-        },
       ],
+      'react-hooks/rules-of-hooks': 'error',
+      'react-hooks/exhaustive-deps': 'warn',
       'jsx-a11y/no-static-element-interactions': 'error',
       'jsx-a11y/click-events-have-key-events': 'error',
-      'no-restricted-imports': [
-        'error',
-        {
-          patterns: [
-            {
-              group: ['**'],
-              importNames: ['WidgetSettingsDataSchema'],
-              message:
-                'a value import of any zod schema outside src/sdk/ or src/test/ pulls the whole zod runtime into every host page — import the WidgetSettingsData type instead',
-            },
-          ],
-        },
-      ],
       'no-console': ['error', { allow: ['error'] }],
       '@typescript-eslint/no-unused-vars': 'off',
       '@typescript-eslint/no-explicit-any': 'error',
@@ -199,7 +179,6 @@ export default [
     files: ['**/*.test.ts', '**/*.test.tsx', 'src/test/**'],
     rules: {
       'no-restricted-globals': 'off',
-      'no-restricted-imports': 'off',
       'no-console': 'off',
       'no-restricted-syntax': [
         'error',
@@ -214,18 +193,6 @@ export default [
     files: ['src/services/StorageService.ts'],
     rules: {
       'no-restricted-globals': 'off',
-    },
-  },
-  {
-    files: ['src/services/BrowserToolService.ts'],
-    rules: {
-      'no-restricted-syntax': [
-        'error',
-        {
-          selector: "CallExpression[callee.name='cn']",
-          message: 'no CSS-framework cn() helper in this codebase — resolveLayoutStyle/inline styles only',
-        },
-      ],
     },
   },
   {

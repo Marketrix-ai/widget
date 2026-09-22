@@ -1,11 +1,10 @@
 /**
- * The widget's root component: the one place the raw config prop is touched and published through
- * `WidgetConfigContext`, and the one place the mount's root element is published for portals.
+ * The widget's root component: re-publishes the mounted config with the visitor's dragged position and the
+ * z-index floor layered on, and publishes the mount's root element for portals.
  *
- * Renders `MessengerShell`, `WidgetFab`, `WidgetNotifications` and a screen-edge glow while a reply or
- * task is in flight, and arms the greeting toast. `useScrollLock` hides page scrolling on mobile while
- * the panel is open, restoring it on close — hand-rolled, like `MessengerShell`'s `useFocusTrap`,
- * because the panel is a non-modal surface and a real dialog primitive would also lock the host page.
+ * Renders `MessengerShell`, `WidgetFab`, `WidgetNotifications` and a screen-edge glow while a reply or task
+ * is in flight, and arms the greeting toast. `useScrollLock` hides page scrolling on mobile while the panel
+ * is open — hand-rolled because the panel is non-modal and a dialog primitive would lock the host page.
  *
  * A tenant's z-index setting can never sink the widget below the host page's own stacking context.
  * Preview mode always renders, even when a setting would otherwise hide the widget.
@@ -15,10 +14,10 @@ import React, { useEffect, useState } from 'react';
 import { PortalContainerContext } from '../context/WidgetProviders';
 import { LAYER_TOKENS } from '../design-system/component-tokens';
 import { createSemanticTokens, semanticTokensToCssCustomProperties } from '../design-system/semantic-tokens';
-import { useWidget, WidgetConfigContext } from '../hooks/useWidget';
+import { useWidget, useWidgetConfig, WidgetConfigContext } from '../hooks/useWidget';
 import { readLocal, scopedKey, writeLocal } from '../services/StorageService';
 import { streamClient } from '../services/StreamClient';
-import type { ValidWidgetConfig, WidgetPosition } from '../types';
+import type { WidgetPosition } from '../types';
 import { addOpacity } from '../utils/color';
 import { getCorner, isWidgetPosition } from '../utils/widgetPositioning';
 import { ErrorBoundary } from './base/ErrorBoundary';
@@ -51,15 +50,12 @@ function useScrollLock(enabled: boolean): void {
   }, [enabled]);
 }
 
-interface WidgetRootProps {
-  config: ValidWidgetConfig;
-}
-
-export const WidgetRoot: React.FC<WidgetRootProps> = ({ config }) => {
+export const WidgetRoot: React.FC = () => {
+  const config = useWidgetConfig();
   const [showGreeting, setShowGreeting] = useState(false);
   const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null);
   const { state, actions } = useWidget();
-  const isPreviewMode = config.isPreviewMode ?? false;
+  const { isPreviewMode } = config;
 
   useScrollLock(state.isOpen);
 
@@ -67,7 +63,7 @@ export const WidgetRoot: React.FC<WidgetRootProps> = ({ config }) => {
 
   const [widgetPosition, setWidgetPosition] = useState<WidgetPosition>(() => {
     const stored = isPreviewMode ? null : readLocal(positionStorageKey);
-    return isWidgetPosition(stored) ? stored : (config.widget_position ?? 'bottom_right');
+    return isWidgetPosition(stored) ? stored : config.widget_position;
   });
 
   useEffect(() => {
@@ -95,7 +91,6 @@ export const WidgetRoot: React.FC<WidgetRootProps> = ({ config }) => {
     ...config,
     widget_position: widgetPosition,
     widget_position_z_index: effectiveWidgetZIndex,
-    isPreviewMode,
   };
 
   const showProcessingFeedback = state.isAwaitingReply || state.isTaskRunning;

@@ -2,8 +2,8 @@
  * Turns per-tenant widget settings into semantic design tokens and the CSS custom properties inlined
  * on the widget root — the widget's entire theming mechanism (there is no dark mode).
  *
- * `createSemanticTokens` resolves a tenant's colour settings against fallback defaults and derives the
- * muted/faint/hover/contrast variants. `semanticTokensToCssCustomProperties` turns those tokens into
+ * `createSemanticTokens` takes a tenant's colour settings and derives the muted/faint/hover/contrast
+ * variants. `semanticTokensToCssCustomProperties` turns those tokens into
  * the `--var` map applied to the widget root. `WIDGET_RADIUS_PX` and the two duration constants are
  * fixed, not per-tenant.
  *
@@ -40,7 +40,7 @@ export const WIDGET_RADIUS_PX = 12;
 const DURATION_ANIMATION = '300ms';
 const DURATION_FADE = '200ms';
 
-type WidgetStyleSettingsDefaults = Pick<
+type WidgetColorSettings = Pick<
   WidgetSettingsData,
   | 'widget_background_color'
   | 'widget_text_color'
@@ -49,19 +49,7 @@ type WidgetStyleSettingsDefaults = Pick<
   | 'widget_secondary_color'
 >;
 
-const WIDGET_STYLE_SETTINGS_DEFAULTS: WidgetStyleSettingsDefaults = {
-  widget_background_color: '#ffffff',
-  widget_text_color: '#1f2937',
-  widget_border_color: '#e5e7eb',
-  widget_accent_color: '#3b82f6',
-  widget_secondary_color: '#6b7280',
-};
-
-export function createSemanticTokens(settings: Partial<WidgetSettingsData> = {}): SemanticTokens {
-  const overrides = Object.fromEntries(
-    Object.entries(settings).filter(([, value]) => value !== undefined),
-  ) as Partial<WidgetStyleSettingsDefaults>;
-  const resolved = { ...WIDGET_STYLE_SETTINGS_DEFAULTS, ...overrides };
+export function createSemanticTokens(resolved: WidgetColorSettings): SemanticTokens {
   return {
     color: {
       background: resolved.widget_background_color,

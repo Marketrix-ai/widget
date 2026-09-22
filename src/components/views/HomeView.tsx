@@ -18,23 +18,13 @@ import { Icon } from '../base/Icon';
 import { Surface } from '../base/Surface';
 import { Text } from '../base/Text';
 
-interface HomeViewProps {
-  onNavigateToChat: () => void;
-  onChipClick: (action: SuggestedActionItem) => void;
-}
-
-export const HomeView: React.FC<HomeViewProps> = ({ onNavigateToChat, onChipClick }) => {
+export const HomeView: React.FC<{ onChipClick: (action: SuggestedActionItem) => void }> = ({ onChipClick }) => {
   const config = useWidgetConfig();
-  const { messages } = useWidget().state;
+  const { state, actions } = useWidget();
+  const { messages } = state;
   const suggestedActions = getSuggestedActionsFromConfig(config);
   const lastMessagePreview = messageText(messages[messages.length - 1]?.parts ?? []) || 'Message';
-
-  const handleActionClick = async (action: SuggestedActionItem, event: React.MouseEvent) => {
-    event.preventDefault();
-    event.stopPropagation();
-    onNavigateToChat();
-    onChipClick(action);
-  };
+  const onNavigateToChat = () => actions.setActiveView('chat');
 
   return (
     <Stack height='full' overflow='hidden'>
@@ -69,7 +59,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigateToChat, onChipClic
               size='sm'
               variant='chip'
               full
-              onClick={e => handleActionClick(action, e)}
+              onClick={() => onChipClick(action)}
               style={{ color: config.widget_text_color, paddingTop: '8px', paddingBottom: '8px' }}
             >
               <Text as='span' weight='normal' leading='tight'>

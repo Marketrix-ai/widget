@@ -14,7 +14,7 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 import { createRef } from 'react';
 
-import { chatSessionManager } from '../../../services/ChatSessionManager';
+import * as chatSession from '../../../services/chatSession';
 import { readLocal, scopedKey, writeLocal } from '../../../services/StorageService';
 import { streamClient } from '../../../services/StreamClient';
 import { resetDom } from '../../../test/preload';
@@ -40,7 +40,9 @@ const dragTo = (handlers: ReturnType<typeof useDragSnap>, x: number, y: number) 
 const renderDragSnap = (onPositionCommit: (position: WidgetPosition) => void) => {
   const wrapperRef = createRef<HTMLDivElement>() as React.RefObject<HTMLDivElement>;
   (wrapperRef as { current: HTMLDivElement }).current = wrapperFor();
-  return renderHook(() => useDragSnap({ position: 'bottom_right', onPositionCommit, wrapperRef }));
+  return renderHook(() =>
+    useDragSnap({ position: 'bottom_right', onPositionCommit, isPreviewMode: false, wrapperRef }),
+  );
 };
 
 describe('two snaps in flight', () => {
@@ -106,7 +108,7 @@ describe('the resting launcher anchor', () => {
   afterEach(() => vi.restoreAllMocks());
 
   it('pins two edges, never four', async () => {
-    vi.spyOn(chatSessionManager, 'getOrCreateChatId').mockResolvedValue('chat-1');
+    vi.spyOn(chatSession, 'getOrCreateChatId').mockResolvedValue('chat-1');
     const connect = vi.spyOn(streamClient, 'connect').mockResolvedValue();
 
     const { container } = renderWidget({}, { previewMode: false });

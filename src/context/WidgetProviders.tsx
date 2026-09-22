@@ -1,20 +1,20 @@
 /**
- * The widget's provider stack and the two bridges under it. `WidgetProviders` wraps children in
- * `UIStateProvider` → `ChatProvider` → `InitBridge`. Also home to `PortalContainerContext` /
- * `usePortalContainer`, which `WidgetRoot` uses to publish its own root so a portal lands somewhere
- * carrying the tenant's theme tokens rather than falling back to `document.body`.
+ * The widget's provider stack: `WidgetProviders` publishes the mounted config through `WidgetConfigContext`
+ * and wraps children in `UIStateProvider` → `ChatProvider` → `InitBridge`. Also home to
+ * `PortalContainerContext`/`usePortalContainer`, so a portal lands inside the tenant's theme tokens.
  *
- * `InitBridge` runs the one-shot mount init: restore the stored snapshot into UI state and the chat
- * store, then get-or-create the chat id and open the stream. Task state is deliberately not restored,
- * since a run never survives a reload. `PersistBridge` writes the snapshot back on every change, kept
- * as its own component so it doesn't re-render the tree `InitBridge` wraps. `previewMode` skips all of
- * this — no chat session, no stream, nothing persisted.
+ * `InitBridge` restores the stored snapshot into UI state and the chat store, then gets or creates the chat
+ * id and opens the stream. Task state is deliberately not restored, since a run never survives a reload.
+ * `PersistBridge` writes the snapshot back on every change, kept as its own component so it doesn't
+ * re-render the tree `InitBridge` wraps. Preview mode skips all of this.
  */
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
-import { chatSessionManager } from '../services/ChatSessionManager';
+import { useWidgetConfig, WidgetConfigContext } from '../hooks/useWidget';
+import { getOrCreateChatId } from '../services/chatSession';
 import { readChatSnapshot, writeChatSnapshot } from '../services/StorageService';
 import { streamClient } from '../services/StreamClient';
+import type { ValidWidgetConfig } from '../types';
 import { ChatProvider, useChatContext } from './ChatContext';
 import { UIStateProvider, useUIStateContext } from './UIStateContext';
 
@@ -34,13 +34,14 @@ const PersistBridge: React.FC = () => {
   return null;
 };
 
-const InitBridge: React.FC<{ children: React.ReactNode; previewMode: boolean }> = ({ children, previewMode }) => {
+const InitBridge: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { isPreviewMode } = useWidgetConfig();
   const { uiActions } = useUIStateContext();
   const { chatActions } = useChatContext();
   const [restored, setRestored] = useState(false);
 
   useEffect(() => {
-    if (previewMode) return;
+    if (isPreviewMode) return;
     let cancelled = false;
 
     const init = async () => {
@@ -49,7 +50,7 @@ const InitBridge: React.FC<{ children: React.ReactNode; previewMode: boolean }> 
       chatActions.setMessages(messages);
       setRestored(true);
 
-      const chatId = await chatSessionManager.getOrCreateChatId();
+      const chatId = await getOrCreateChatId();
       if (cancelled) return;
 
       void streamClient.connect(chatId);
@@ -64,7 +65,7 @@ const InitBridge: React.FC<{ children: React.ReactNode; previewMode: boolean }> 
     return () => {
       cancelled = true;
     };
-  }, [previewMode, uiActions, chatActions]);
+  }, [isPreviewMode, uiActions, chatActions]);
 
   return (
     <>
@@ -74,15 +75,15 @@ const InitBridge: React.FC<{ children: React.ReactNode; previewMode: boolean }> 
   );
 };
 
-interface WidgetProvidersProps {
-  children: React.ReactNode;
-  previewMode?: boolean;
-}
-
-export const WidgetProviders: React.FC<WidgetProvidersProps> = ({ children, previewMode = false }) => (
-  <UIStateProvider>
-    <ChatProvider previewMode={previewMode}>
-      <InitBridge previewMode={previewMode}>{children}</InitBridge>
-    </ChatProvider>
-  </UIStateProvider>
+export const WidgetProviders: React.FC<{ config: ValidWidgetConfig; children: React.ReactNode }> = ({
+  config,
+  children,
+}) => (
+  <WidgetConfigContext value={config}>
+    <UIStateProvider>
+      <ChatProvider>
+        <InitBridge>{children}</InitBridge>
+      </ChatProvider>
+    </UIStateProvider>
+  </WidgetConfigContext>
 );

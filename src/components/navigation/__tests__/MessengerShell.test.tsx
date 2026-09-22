@@ -8,8 +8,19 @@ import { act, render, renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'bun:test';
 import React, { useRef } from 'react';
 
-import type { MarketrixConfig, WidgetPosition } from '../../../types';
+import { WidgetConfigContext } from '../../../hooks/useWidget';
+import { getMockWidgetConfig } from '../../../test/fixtures';
+import type { WidgetPosition } from '../../../types';
 import { useFocusTrap, useResize } from '../MessengerShell';
+
+const renderResize = (overrides: Parameters<typeof getMockWidgetConfig>[0]) =>
+  renderHook(() => useResize(), {
+    wrapper: ({ children }: { children: React.ReactNode }) => (
+      <WidgetConfigContext value={getMockWidgetConfig({ isPreviewMode: false, ...overrides })}>
+        {children}
+      </WidgetConfigContext>
+    ),
+  });
 
 Object.defineProperty(HTMLElement.prototype, 'offsetParent', { configurable: true, get: () => document.body });
 
@@ -113,8 +124,8 @@ describe('the trap leaks no document listener across mount/unmount', () => {
   });
 });
 
-const sizeFor = (width: string | undefined, height: string | undefined) =>
-  renderHook(() => useResize(width, height, 'bottom_right', { mtxId: 'tenant' }, false)).result.current;
+const sizeFor = (widget_width: string, widget_height: string) =>
+  renderResize({ widget_width, widget_height, mtxId: 'tenant' }).result.current;
 
 describe('the panel size a dashboard setting produces', () => {
   it('uses a px setting as written', () => {
@@ -127,7 +138,7 @@ describe('the panel size a dashboard setting produces', () => {
 
   it('holds a setting outside the drag range to the same bounds a drag has', () => {
     expect(sizeFor('20px', '10px')).toMatchObject({ widthPx: '280px', heightPx: '320px' });
-    expect(sizeFor('900px', undefined)).toMatchObject({ widthPx: '600px' });
+    expect(sizeFor('900px', '')).toMatchObject({ widthPx: '600px' });
   });
 });
 
@@ -141,8 +152,12 @@ const OUTWARD: Record<WidgetPosition, { dx: number; dy: number }> = {
 let dragCount = 0;
 
 const drag = (position: WidgetPosition, dx: number, dy: number): CSSStyleDeclaration => {
-  const config: MarketrixConfig = { mtxId: `tenant-${(dragCount += 1)}` };
-  const { result } = renderHook(() => useResize('400px', '500px', position, config, false));
+  const { result } = renderResize({
+    widget_width: '400px',
+    widget_height: '500px',
+    widget_position: position,
+    mtxId: `tenant-${(dragCount += 1)}`,
+  });
   const panel = document.createElement('div');
   result.current.containerRef.current = panel;
 
@@ -175,8 +190,8 @@ describe('the one grip is on the corner the panel is free to move', () => {
   });
 });
 
-const keyResize = (key: string, times: number, config: MarketrixConfig) => {
-  const { result } = renderHook(() => useResize('400px', '500px', 'bottom_right', config, false));
+const keyResize = (key: string, times: number, config: { mtxId: string }) => {
+  const { result } = renderResize({ widget_width: '400px', widget_height: '500px', ...config });
   for (let i = 0; i < times; i += 1) {
     act(() => result.current.onResizeKeyDown({ key, preventDefault: () => {} } as unknown as React.KeyboardEvent));
   }

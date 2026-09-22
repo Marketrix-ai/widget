@@ -11,9 +11,7 @@
 import type { ChatMessage, InstructionType, MessagePart } from '../types';
 import { logWarn } from './log';
 
-const MODE_DISPLAY_NAMES: Record<InstructionType, string> = { show: 'Show', tell: 'Tell', do: 'Do' };
-
-export const getModeDisplayName = (mode: InstructionType): string => MODE_DISPLAY_NAMES[mode];
+export const MODE_LABELS: Record<InstructionType, string> = { show: 'Show', tell: 'Tell', do: 'Do' };
 
 export const formatMessageTime = (date: Date | undefined): string =>
   (date ?? new Date()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -37,8 +35,7 @@ export function findMessageForProgress({
   isTaskRunning,
   currentMode,
 }: FindMessageOptions): { index: number; message: ChatMessage } | null {
-  const isAgentReply = (msg: ChatMessage) =>
-    msg.sender === 'agent' && !msg.isSystemMessage && !msg.isScreenAccessRequest && !msg.taskStatus;
+  const isAgentReply = (msg: ChatMessage) => msg.kind === 'agent' && !msg.taskStatus;
   const modeMatches = (msg: ChatMessage) =>
     msg.isPlaceholder ? msg.mode === undefined || msg.mode === currentMode : msg.mode === currentMode;
 
@@ -51,7 +48,7 @@ export function findMessageForProgress({
   }
   ranked.push(msg => isAgentReply(msg) && !!msg.isPlaceholder, isAgentReply);
 
-  const start = lastIndexWhere(messages, msg => msg.sender === 'agent' && !!msg.taskStatus) + 1;
+  const start = lastIndexWhere(messages, msg => !!msg.taskStatus) + 1;
   const open = messages.slice(start);
 
   for (const matches of ranked) {
@@ -65,8 +62,6 @@ export function findMessageForProgress({
   );
   return null;
 }
-
-const filterCancellationText = (content: string): string => content.replace(/\(?cancelled by cleanup\)?/gi, '').trim();
 
 function patchPart(message: ChatMessage, index: number, patch: Partial<MessagePart>): ChatMessage {
   const current = index >= 0 ? message.parts[index] : undefined;
@@ -82,12 +77,11 @@ const openLineFor = (message: ChatMessage, browserToolName: string): number =>
   );
 
 export function addProgressLine(message: ChatMessage, browserToolName: string, explanation: string): ChatMessage {
-  const content = filterCancellationText(explanation);
   const open = openLineFor(message, browserToolName);
-  if (open >= 0) return patchPart(message, open, { content });
+  if (open >= 0) return patchPart(message, open, { content: explanation });
   return {
     ...message,
-    parts: [...message.parts, { type: 'progress', content, status: 'in_progress', browserToolName }],
+    parts: [...message.parts, { type: 'progress', content: explanation, status: 'in_progress', browserToolName }],
   };
 }
 
@@ -98,55 +92,38 @@ export function markProgressLineFailed(message: ChatMessage, browserToolName: st
   const index = openLineFor(message, browserToolName);
   const part = index >= 0 ? message.parts[index] : undefined;
   if (!part) return message;
-
-  const content = filterCancellationText(part.content);
-  const cleanedError = filterCancellationText(error);
   return patchPart(message, index, {
     status: 'failed',
-    content: cleanedError ? `${content} (${cleanedError})` : content,
+    content: error ? `${part.content} (${error})` : part.content,
   });
 }
 
-function createMessage(
-  idPrefix: string,
-  sender: 'user' | 'agent',
-  content: string,
-  extra: Partial<ChatMessage> = {},
-): ChatMessage {
+function createMessage(kind: ChatMessage['kind'], content: string, extra: Partial<ChatMessage> = {}): ChatMessage {
   return {
-    id: `${idPrefix}-${globalThis.crypto.randomUUID()}`,
-    sender,
+    id: `${kind}-${globalThis.crypto.randomUUID()}`,
+    kind,
     timestamp: new Date(),
     parts: content ? [{ type: 'text', content }] : [],
     ...extra,
   };
 }
 
-export const createUserMessage = (content: string, mode?: InstructionType, idPrefix = 'user-message'): ChatMessage =>
-  createMessage(idPrefix, 'user', content.trim(), { mode });
+export const createUserMessage = (content: string, mode: InstructionType): ChatMessage =>
+  createMessage('user', content.trim(), { mode });
 
-export const createAgentMessage = (content: string): ChatMessage =>
-  createMessage('agent-message', 'agent', content.trim());
+export const createAgentMessage = (content: string): ChatMessage => createMessage('agent', content.trim());
 
-export const createSystemMessage = (content: string, idPrefix: string): ChatMessage =>
-  createMessage(idPrefix, 'agent', content, { isSystemMessage: true });
+export const createSystemMessage = (content: string): ChatMessage => createMessage('system', content);
 
 export const SCREEN_ACCESS_PROMPT = 'Can I take a look at your screen?';
 
 export const CHAT_FAILURE_TEXT = "I'm sorry, I encountered an error processing your request. Please try again.";
 
-export const createScreenAccessRequestMessage = (
-  mode: InstructionType | undefined,
-  pendingContent?: string,
-): ChatMessage =>
-  createMessage('screen-access-request', 'agent', SCREEN_ACCESS_PROMPT, {
-    mode,
-    isScreenAccessRequest: true,
-    pendingContent,
-  });
+export const createScreenAccessRequestMessage = (mode: InstructionType, pendingContent: string): ChatMessage =>
+  createMessage('screenAccess', SCREEN_ACCESS_PROMPT, { mode, pendingContent });
 
 export const createScreenshareMessage = (stream: MediaStream): ChatMessage =>
-  createMessage('screenshare', 'user', '', { mode: 'show', videoStream: stream });
+  createMessage('screenshare', '', { mode: 'show', videoStream: stream });
 
 export const createPlaceholderMessage = (mode: InstructionType): ChatMessage =>
-  createMessage('temp', 'agent', '', { mode, isPlaceholder: true, placeholderState: 'thinking' });
+  createMessage('agent', '', { mode, isPlaceholder: true, placeholderState: 'thinking' });

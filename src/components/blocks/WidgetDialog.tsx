@@ -1,6 +1,6 @@
 /**
- * The widget's one modal: a Base UI dialog with a title, optional description and a cancel/confirm
- * button pair, skinned by `index.css`'s `mtx-dialog-*` rules.
+ * The widget's one modal: a Base UI dialog, open while rendered, with a title, description and a
+ * cancel/confirm button pair, skinned by `index.css`'s `mtx-dialog-*` rules.
  *
  * `WidgetDialog` renders into the portal container published by the widget root rather than the default
  * target, so it picks up the tenant's theme tokens instead of falling back to the hardcoded palette.
@@ -16,31 +16,29 @@ import { Button } from '../base/Button';
 import { Flex } from '../base/Flex';
 
 interface WidgetDialogProps {
-  open: boolean;
   onClose: () => void;
   title: string;
-  description?: string;
-  onConfirm?: () => void;
-  confirmLabel?: string;
-  cancelLabel?: string;
-  finalFocusRef?: React.RefObject<HTMLElement | null>;
+  description: string;
+  onConfirm: () => void;
+  confirmLabel: string;
+  cancelLabel: string;
+  finalFocusRef: React.RefObject<HTMLElement | null>;
 }
 
 export const WidgetDialog: React.FC<WidgetDialogProps> = ({
-  open,
   onClose,
   title,
   description,
   onConfirm,
-  confirmLabel = 'Confirm',
-  cancelLabel = 'Cancel',
+  confirmLabel,
+  cancelLabel,
   finalFocusRef,
 }) => {
   const portalContainer = usePortalContainer();
 
   return (
     <Dialog.Root
-      open={open}
+      open
       onOpenChange={(next, eventDetails) => {
         if (!next && eventDetails.reason !== 'none') onClose();
       }}
@@ -53,27 +51,15 @@ export const WidgetDialog: React.FC<WidgetDialogProps> = ({
           style={{ ...getElevationStyle('panel'), zIndex: LAYER_TOKENS.dialog }}
         >
           <Dialog.Title className='mtx-dialog-title'>{title}</Dialog.Title>
-          {description != null && (
-            <Dialog.Description className='mtx-dialog-description'>{description}</Dialog.Description>
-          )}
+          <Dialog.Description className='mtx-dialog-description'>{description}</Dialog.Description>
           <Flex gap='md' justify='end'>
             {(
               [
                 ['secondary', cancelLabel, onClose],
-                ['primary', confirmLabel, () => onConfirm?.()],
+                ['primary', confirmLabel, onConfirm],
               ] as const
             ).map(([variant, label, act]) => (
-              <Button
-                key={variant}
-                variant={variant}
-                size='sm'
-                shape='pill'
-                onClick={e => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  act();
-                }}
-              >
+              <Button key={variant} variant={variant} size='sm' shape='pill' onClick={act}>
                 {label}
               </Button>
             ))}

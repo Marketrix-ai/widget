@@ -1,22 +1,23 @@
 /**
- * Every browser action the agent can ask the widget to take on the host page, as one name-to-handler
- * registry.
+ * Every browser action the agent can ask the widget to take on the host page, as one registry keyed by
+ * the contract's tool names, so a tool the contract adds fails to compile until it has a handler.
  *
- * `tools` lists each action's label, whether it waits for the visitor, and its handler: click, type,
- * select, extract, screenshot, send keys, and finish. `executeTool` looks a call up, runs it through
- * Show mode's highlight-and-wait step when needed, and returns the result.
+ * `tools` lists each action's label, whether it waits for the visitor, and its handler. `executeTool`
+ * runs a call through Show mode's highlight-and-wait step when needed and returns the result.
  *
  * A handler throws rather than returning an error, since one place — `executeTool`'s catch — reports
  * every failure back to the agent. A link is only followed if it is http(s), since an extracted href
- * is page-controlled and could otherwise run script in the host page's own origin.
+ * is page-controlled and could otherwise run script in the host page's own origin. `upload_file` always
+ * fails: browsers never let a page script choose a file on the visitor's behalf.
  */
 
+import type { WidgetEvent } from '../sdk';
 import type { InstructionType } from '../types';
 import { errorMessage } from '../utils/errors';
 import { domService } from './DomService';
 import { isTextField, setNativeValue, simulateKeyAction } from './keySimulation';
 import { activeScreenStream } from './ScreenShareService';
-import { showModeService } from './ShowModeService';
+import { ShowModeCancelled, showModeService } from './ShowModeService';
 
 interface TextData {
   text: string;
@@ -33,26 +34,15 @@ interface DropdownOptionsData {
   options: Array<{ value: string; text: string }>;
 }
 
-type ToolFailure = { success: false; error: string };
+type ToolFailure = { success: false; error: string; cancelled?: true };
 
 export type ToolExecutionResult<T = TextData> =
   { success: true; data: T; afterResponseAttempt?: () => void } | ToolFailure;
 
-interface ToolArgs {
-  clear?: boolean;
-  direction?: 'up' | 'down' | 'left' | 'right';
-  engine?: 'duckduckgo' | 'google' | 'bing';
-  extract_links?: boolean;
-  index?: number;
-  keys?: string;
-  message?: string;
-  new_tab?: boolean;
-  option?: string;
-  query?: string;
-  seconds?: number;
-  text?: string;
-  url?: string;
-}
+export type WidgetToolCall = Extract<WidgetEvent, { type: 'tool/call' }>;
+export type WidgetToolName = WidgetToolCall['browser_tool'];
+type ToolArgMap = { [K in WidgetToolName]: Extract<WidgetToolCall, { browser_tool: K }>['args'] };
+export type ToolArgs<K extends WidgetToolName> = ToolArgMap[K];
 
 const ok = (text: string): ToolExecutionResult => ({ success: true, data: { text } });
 const okData = <T>(data: T): ToolExecutionResult<T> => ({ success: true, data });
@@ -63,8 +53,7 @@ const deferred = (text: string, action: () => void): ToolExecutionResult => ({
   afterResponseAttempt: action,
 });
 
-const httpUrl = (value: string | undefined): string | null => {
-  if (!value) return null;
+const httpUrl = (value: string): string | null => {
   try {
     const url = new URL(value, window.location.href);
     return url.protocol === 'http:' || url.protocol === 'https:' ? url.href : null;
@@ -75,16 +64,20 @@ const httpUrl = (value: string | undefined): string | null => {
 
 const SCREENSHOT_FRAME_TIMEOUT_MS = 5000;
 
-export const FINISH_TOOL = 'done';
+const SEARCH_URLS: Record<ToolArgs<'search'>['engine'], string> = {
+  duckduckgo: 'https://duckduckgo.com/?q=',
+  google: 'https://www.google.com/search?q=',
+  bing: 'https://www.bing.com/search?q=',
+};
 
-interface WidgetToolDef {
+interface WidgetToolDef<K extends WidgetToolName> {
   label: string;
   waitForUser?: boolean;
-  run: (args: ToolArgs) => ToolExecutionResult<unknown> | Promise<ToolExecutionResult<unknown>>;
+  run: (args: ToolArgMap[K]) => ToolExecutionResult<unknown> | Promise<ToolExecutionResult<unknown>>;
 }
 
 export class BrowserToolService {
-  private readonly tools: Record<string, WidgetToolDef> = {
+  private readonly tools: { [K in WidgetToolName]: WidgetToolDef<K> } = {
     navigate: { label: 'Navigating', run: args => this.navigate(args) },
     search: { label: 'Searching', run: args => this.search(args) },
     click_element: { label: 'Clicking element', waitForUser: true, run: args => this.clickElement(args) },
@@ -102,57 +95,60 @@ export class BrowserToolService {
     get_dropdown_options: { label: 'Reading dropdown options', run: args => this.getDropdownOptions(args) },
     send_keys: { label: 'Pressing key', waitForUser: true, run: args => this.sendKeys(args) },
     close_tab: { label: 'Closing tab', run: () => this.closeTab() },
-    [FINISH_TOOL]: { label: 'Done', run: args => this.done(args) },
-    get_html: { label: 'Reading the page', run: () => this.getHtml() },
+    upload_file: {
+      label: 'Uploading file',
+      run: () => fail('A web page cannot pick a file for the visitor; ask them to upload it themselves'),
+    },
+    done: { label: 'Done', run: args => ok(args.message) },
+    get_html: { label: 'Reading the page', run: () => ok(domService.reindexAndSnapshot()) },
     get_screenshot: { label: 'Taking screenshot', run: () => this.getScreenshot() },
   };
 
-  private element(index: number | undefined): HTMLElement {
-    if (index === undefined) throw new Error('Index required');
+  private element(index: number): HTMLElement {
     const { element, error } = domService.getValidatedElement(index);
     if (!element) throw new Error(error || `Element ${index} not found`);
     return element;
   }
 
-  private selectElement(index: number | undefined): HTMLSelectElement {
+  private selectElement(index: number): HTMLSelectElement {
     const element = this.element(index);
     if (!(element instanceof HTMLSelectElement)) throw new Error(`Element ${index} is not a select element`);
     return element;
   }
 
-  getFriendlyToolName(browserToolName: string): string {
-    return this.tools[browserToolName]?.label ?? browserToolName;
+  getFriendlyToolName(browserToolName: WidgetToolName): string {
+    return this.tools[browserToolName].label;
   }
 
-  isWaitForUserTool(browserToolName: string): boolean {
-    return !!this.tools[browserToolName]?.waitForUser;
+  isWaitForUserTool(browserToolName: WidgetToolName): boolean {
+    return !!this.tools[browserToolName].waitForUser;
   }
 
-  async executeTool(
-    browserToolName: string,
-    args: Record<string, unknown>,
+  async executeTool<K extends WidgetToolName>(
+    browserToolName: K,
+    args: ToolArgs<K>,
     mode: InstructionType,
     explanation = '',
   ): Promise<ToolExecutionResult<unknown>> {
-    const toolArgs = args as ToolArgs;
-    const tool = this.tools[browserToolName];
+    const tool: WidgetToolDef<K> = this.tools[browserToolName];
     try {
-      if (mode === 'show' && tool?.waitForUser && toolArgs.index !== undefined) {
+      if (mode === 'show' && tool.waitForUser && 'index' in args) {
         await showModeService.showToolAction({
-          element: this.element(toolArgs.index),
+          element: this.element(args.index),
           explanation: explanation || `Execute ${browserToolName}`,
           browserToolName,
           isClickAction: browserToolName === 'click_element',
         });
       }
-
-      return tool ? await tool.run(toolArgs) : fail(`Unknown tool: ${browserToolName}`);
+      return await tool.run(args);
     } catch (error) {
-      return fail(errorMessage(error));
+      return error instanceof ShowModeCancelled
+        ? { ...fail(error.message), cancelled: true }
+        : fail(errorMessage(error));
     }
   }
 
-  private navigate(args: ToolArgs): ToolExecutionResult {
+  private navigate(args: ToolArgs<'navigate'>): ToolExecutionResult {
     const url = httpUrl(args.url);
     if (!url) return fail('An http(s) URL is required');
 
@@ -166,22 +162,15 @@ export class BrowserToolService {
     });
   }
 
-  private search(args: ToolArgs): ToolExecutionResult {
-    if (!args.query) return fail('Query is required');
-
-    const engine = args.engine || 'duckduckgo';
-    const encoded = encodeURIComponent(args.query);
-    let url = `https://duckduckgo.com/?q=${encoded}`;
-
-    if (engine === 'google') url = `https://www.google.com/search?q=${encoded}`;
-    if (engine === 'bing') url = `https://www.bing.com/search?q=${encoded}`;
-
-    return deferred(`Searching for "${args.query}" on ${engine}`, () => {
+  private search({ query, engine }: ToolArgs<'search'>): ToolExecutionResult {
+    if (!query) return fail('Query is required');
+    const url = SEARCH_URLS[engine] + encodeURIComponent(query);
+    return deferred(`Searching for "${query}" on ${engine}`, () => {
       window.location.href = url;
     });
   }
 
-  private async clickElement(args: ToolArgs): Promise<ToolExecutionResult> {
+  private async clickElement(args: ToolArgs<'click_element'>): Promise<ToolExecutionResult> {
     const element = this.element(args.index);
 
     element.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -190,18 +179,15 @@ export class BrowserToolService {
     return deferred(`Clicking element ${args.index}`, () => element.click());
   }
 
-  private typeText(args: ToolArgs): ToolExecutionResult {
-    if (args.text === undefined) return fail('Text required');
-
-    const clear = args.clear !== false;
-    const element = this.element(args.index);
+  private typeText({ index, text, clear }: ToolArgs<'type_text'>): ToolExecutionResult {
+    const element = this.element(index);
 
     if (isTextField(element)) {
       element.focus();
-      setNativeValue(element, clear ? args.text : element.value + args.text);
+      setNativeValue(element, clear ? text : element.value + text);
 
       element.dispatchEvent(
-        new InputEvent('input', { bubbles: true, cancelable: true, inputType: 'insertText', data: args.text }),
+        new InputEvent('input', { bubbles: true, cancelable: true, inputType: 'insertText', data: text }),
       );
       element.dispatchEvent(new Event('change', { bubbles: true }));
       element.dispatchEvent(new Event('blur', { bubbles: true }));
@@ -211,73 +197,52 @@ export class BrowserToolService {
       if (clear) selection?.selectAllChildren(element);
       else selection?.collapse(element, element.childNodes.length);
 
-      if (!document.execCommand('insertText', false, args.text)) {
-        return fail(`Could not insert text into element ${args.index}`);
+      if (!document.execCommand('insertText', false, text)) {
+        return fail(`Could not insert text into element ${index}`);
       }
     } else if ('value' in element) {
-      (element as HTMLInputElement).value = args.text;
+      (element as HTMLInputElement).value = text;
       element.dispatchEvent(new Event('input', { bubbles: true }));
       element.dispatchEvent(new Event('change', { bubbles: true }));
     } else {
-      element.textContent = args.text;
+      element.textContent = text;
       element.dispatchEvent(new Event('input', { bubbles: true }));
     }
 
-    return ok(`Typed text into element ${args.index}`);
+    return ok(`Typed text into element ${index}`);
   }
 
-  private scroll(args: ToolArgs): ToolExecutionResult {
-    const amount = window.innerHeight * 0.8;
-
-    switch (args.direction) {
-      case 'down':
-        window.scrollBy({ top: amount, behavior: 'smooth' });
-        break;
-      case 'up':
-        window.scrollBy({ top: -amount, behavior: 'smooth' });
-        break;
-      case 'left':
-        window.scrollBy({ left: -amount, behavior: 'smooth' });
-        break;
-      case 'right':
-        window.scrollBy({ left: amount, behavior: 'smooth' });
-        break;
-      default:
-        return fail('Invalid direction');
-    }
-    return ok(`Scrolled ${args.direction}`);
+  private scroll({ direction, pages }: ToolArgs<'scroll'>): ToolExecutionResult {
+    const sign = direction === 'down' ? 1 : -1;
+    window.scrollBy({ top: sign * window.innerHeight * pages, behavior: 'smooth' });
+    return ok(`Scrolled ${direction} ${pages} page(s)`);
   }
 
-  private scrollToText(args: ToolArgs): ToolExecutionResult {
-    if (!args.text) return fail('Text required');
+  private scrollToText({ text }: ToolArgs<'scroll_to_text'>): ToolExecutionResult {
+    if (!text) return fail('Text required');
 
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
     let node: Node | null;
     while ((node = walker.nextNode())) {
-      if (node.textContent?.includes(args.text)) {
+      if (node.textContent?.includes(text)) {
         node.parentElement?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        return ok(`Scrolled to "${args.text}"`);
+        return ok(`Scrolled to "${text}"`);
       }
     }
-    return fail(`Text "${args.text}" not found`);
+    return fail(`Text "${text}" not found`);
   }
 
-  private extract(args: ToolArgs): ToolExecutionResult<ExtractData> {
-    const includeLinks = args.extract_links !== false;
-    const extractResult: ExtractData = {
+  private extract({ extract_links }: ToolArgs<'extract'>): ToolExecutionResult<ExtractData> {
+    return okData({
       title: document.title,
       url: window.location.href,
       text: document.body.innerText.slice(0, 10000),
-      links: includeLinks
+      links: extract_links
         ? Array.from(document.querySelectorAll('a[href]'))
             .slice(0, 100)
-            .map(a => ({
-              text: a.textContent?.trim() || '',
-              href: a.getAttribute('href'),
-            }))
+            .map(a => ({ text: a.textContent?.trim() || '', href: a.getAttribute('href') }))
         : [],
-    };
-    return okData(extractResult);
+    });
   }
 
   private goBack(): ToolExecutionResult {
@@ -285,54 +250,41 @@ export class BrowserToolService {
     return deferred('Going back', () => window.history.back());
   }
 
-  private async wait({ seconds }: ToolArgs): Promise<ToolExecutionResult> {
-    if (seconds === undefined) return fail('Seconds required');
+  private async wait({ seconds }: ToolArgs<'wait'>): Promise<ToolExecutionResult> {
     await new Promise(resolve => setTimeout(resolve, seconds * 1000));
     return ok(`Waited ${seconds}s`);
   }
 
-  private selectDropdownOption(args: ToolArgs): ToolExecutionResult {
-    if (!args.option) return fail('Option required');
+  private selectDropdownOption({ index, option }: ToolArgs<'select_dropdown_option'>): ToolExecutionResult {
+    if (!option) return fail('Option required');
 
-    const element = this.selectElement(args.index);
-    const opt = Array.from(element.options).find(o => o.value === args.option || o.text === args.option);
-    if (!opt) return fail(`Option ${args.option} not found`);
+    const element = this.selectElement(index);
+    const opt = Array.from(element.options).find(o => o.value === option || o.text === option);
+    if (!opt) return fail(`Option ${option} not found`);
 
     element.value = opt.value;
     element.dispatchEvent(new Event('change', { bubbles: true }));
 
-    return ok(`Selected ${args.option}`);
+    return ok(`Selected ${option}`);
   }
 
-  private getDropdownOptions(args: ToolArgs): ToolExecutionResult<DropdownOptionsData> {
-    const options = Array.from(this.selectElement(args.index).options).map(o => ({ value: o.value, text: o.text }));
+  private getDropdownOptions({ index }: ToolArgs<'get_dropdown_options'>): ToolExecutionResult<DropdownOptionsData> {
+    const options = Array.from(this.selectElement(index).options).map(o => ({ value: o.value, text: o.text }));
     return okData({ options });
   }
 
-  private sendKeys(args: ToolArgs): ToolExecutionResult {
-    if (!args.keys) return fail('Keys required');
-
-    const element = this.element(args.index);
+  private sendKeys({ index, keys }: ToolArgs<'send_keys'>): ToolExecutionResult {
+    const element = this.element(index);
     element.focus();
-    element.dispatchEvent(new KeyboardEvent('keydown', { key: args.keys, bubbles: true, cancelable: true }));
-    element.dispatchEvent(new KeyboardEvent('keyup', { key: args.keys, bubbles: true, cancelable: true }));
+    element.dispatchEvent(new KeyboardEvent('keydown', { key: keys, bubbles: true, cancelable: true }));
+    element.dispatchEvent(new KeyboardEvent('keyup', { key: keys, bubbles: true, cancelable: true }));
 
-    const actionResult = simulateKeyAction(element, args.keys);
-
-    return ok(actionResult || `Sent keys ${args.keys}`);
+    return ok(simulateKeyAction(element, keys) ?? `Sent keys ${keys}`);
   }
 
   private closeTab(): ToolExecutionResult {
     window.close();
     return window.closed ? ok('Tab closed') : fail('The browser refused to close a tab this script did not open');
-  }
-
-  private done(args: ToolArgs): ToolExecutionResult {
-    return ok(args.message || 'Task ended');
-  }
-
-  private getHtml(): ToolExecutionResult {
-    return ok(domService.reindexAndSnapshot());
   }
 
   private async getScreenshot(): Promise<ToolExecutionResult> {
