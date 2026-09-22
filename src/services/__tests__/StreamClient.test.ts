@@ -44,6 +44,7 @@ function emptyStream(): MockedStream {
 
 function freshClient(): StreamClient {
   streamClient.disconnect();
+  streamClient.setCredentials({ marketrix_id: 'mtx_1', marketrix_key: 'key_1' });
   return streamClient;
 }
 

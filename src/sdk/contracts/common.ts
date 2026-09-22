@@ -17,15 +17,15 @@ export const BaseEntitySchema = z.strictObject({
   updated_at: z.coerce.date(),
 });
 
-export const ByIdSchema = z.strictObject({ id: z.coerce.number() });
+export const ByIdSchema = z.strictObject({ id: z.number() });
 export const BySlugSchema = z.strictObject({ slug: z.string() });
-export const BySimulationIdSchema = z.strictObject({ simulation_id: z.coerce.number() });
-export const ByApplicationIdSchema = z.strictObject({ application_id: z.coerce.number() });
-export const ByUserIdSchema = z.strictObject({ user_id: z.coerce.number() });
+export const BySimulationIdSchema = z.strictObject({ simulation_id: z.number() });
+export const ByApplicationIdSchema = z.strictObject({ application_id: z.number() });
+export const ByUserIdSchema = z.strictObject({ user_id: z.number() });
 
 export const PaginationSchema = z.strictObject({
-  limit: z.coerce.number().optional().default(50),
-  offset: z.coerce.number().optional().default(0),
+  limit: z.number().int().optional().default(50),
+  offset: z.number().int().optional().default(0),
 });
 
 type StripDefault<T> = T extends z.ZodDefault<infer Inner> ? Inner : T;
@@ -44,11 +44,6 @@ export function partialPatch<Shape extends z.ZodRawShape>(
     [K in keyof Shape]: z.ZodOptional<StripDefault<Shape[K]>>;
   }>;
 }
-
-export const booleanQueryParam = z
-  .union([z.boolean(), z.string()])
-  .transform(val => (typeof val === 'boolean' ? val : val === 'true' ? true : val === 'false' ? false : undefined))
-  .optional();
 
 export const paginatedListOf = <T extends z.ZodType>(schema: T) =>
   z.strictObject({

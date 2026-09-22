@@ -7,8 +7,7 @@
  *
  * A handler throws rather than returning an error, since one place — `executeTool`'s catch — reports
  * every failure back to the agent. A link is only followed if it is http(s), since an extracted href
- * is page-controlled and could otherwise run script in the host page's own origin. `upload_file` always
- * fails: browsers never let a page script choose a file on the visitor's behalf.
+ * is page-controlled and could otherwise run script in the host page's own origin.
  */
 
 import type { WidgetEvent } from '../sdk';
@@ -95,10 +94,6 @@ export class BrowserToolService {
     get_dropdown_options: { label: 'Reading dropdown options', run: args => this.getDropdownOptions(args) },
     send_keys: { label: 'Pressing key', waitForUser: true, run: args => this.sendKeys(args) },
     close_tab: { label: 'Closing tab', run: () => this.closeTab() },
-    upload_file: {
-      label: 'Uploading file',
-      run: () => fail('A web page cannot pick a file for the visitor; ask them to upload it themselves'),
-    },
     done: { label: 'Done', run: args => ok(args.message) },
     get_html: { label: 'Reading the page', run: () => ok(domService.reindexAndSnapshot()) },
     get_screenshot: { label: 'Taking screenshot', run: () => this.getScreenshot() },

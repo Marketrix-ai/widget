@@ -1,8 +1,8 @@
 /**
- * Canonical user, workspace, Application, Widget and activity-log entity schemas.
- * They define full stored shapes plus narrower read and public projections.
- * Application credentials live separately, and public Widget projections never expose them.
- * User profile fields derive from WorkOS rather than database columns.
+ * The vocabularies and entities the widget shares with the dashboard: plan, allowance and member-role enums,
+ * Widget settings and entities, and activity-log entries, plus `allowanceConsistency`, the one rule tying
+ * allowance amounts to the allowance status. Public Widget projections never expose stored credentials.
+ * User, workspace and Application rows live in narrower files so the widget never mirrors them.
  */
 import { z } from 'zod';
 
@@ -15,7 +15,6 @@ import {
   type WidgetType,
   WidgetTypeSchema,
 } from './activityLogVocabulary';
-import { BaseEntitySchema, EntityStatusSchema } from './common';
 
 export { ActivityLogTypeSchema, ApplicationTypeSchema, WidgetTypeSchema };
 export type { ActivityLogType, ApplicationType, WidgetType };
@@ -27,6 +26,22 @@ export const PlanSnapshotSchema = z.enum([...WorkspacePackageSchema.options, 'le
 export type PlanSnapshot = z.infer<typeof PlanSnapshotSchema>;
 export const AllowanceStatusSchema = z.enum(['known', 'unlimited', 'unknown']);
 export type AllowanceStatus = z.infer<typeof AllowanceStatusSchema>;
+export const allowanceConsistency = (
+  cycle: {
+    allowance_status: AllowanceStatus;
+    allowance_credits: string | null;
+    remaining_credits?: string | null;
+    percent_left?: number | null;
+  },
+  ctx: z.RefinementCtx,
+): void => {
+  const known = cycle.allowance_status === 'known';
+  for (const field of ['allowance_credits', 'remaining_credits', 'percent_left'] as const) {
+    if (field in cycle && known !== (cycle[field] !== null)) {
+      ctx.addIssue({ code: 'custom', path: [field], message: 'must be known iff the allowance status is known' });
+    }
+  }
+};
 export const RevenueStatusSchema = z.enum(['zero', 'known', 'unknown']);
 export type RevenueStatus = z.infer<typeof RevenueStatusSchema>;
 
@@ -36,49 +51,6 @@ export type InstructionType = z.infer<typeof InstructionTypeSchema>;
 
 export const WorkspaceMemberRoleSchema = z.enum(['admin', 'member']);
 export type WorkspaceMemberRole = z.infer<typeof WorkspaceMemberRoleSchema>;
-
-export const UserEntitySchema = BaseEntitySchema.extend({
-  is_super: z.boolean(),
-  status: EntityStatusSchema,
-  email: z.email().max(255),
-  external_id: z.string().max(255),
-  first_name: z.string().max(100).nullish(),
-  last_name: z.string().max(100).nullish(),
-  image_url: z.string().max(500).nullish(),
-  workspace_role: WorkspaceMemberRoleSchema.nullish(),
-});
-
-export const UserSummarySchema = UserEntitySchema.omit({
-  image_url: true,
-  external_id: true,
-  created_at: true,
-  updated_at: true,
-});
-export type UserSummary = z.infer<typeof UserSummarySchema>;
-
-export type UserData = z.infer<typeof UserEntitySchema>;
-
-export const WorkspaceEntitySchema = BaseEntitySchema.extend({
-  name: z.string().max(45),
-  slug: z.string().max(100),
-  status: EntityStatusSchema,
-  package: WorkspacePackageSchema,
-  external_workspace_id: z.string().max(255).nullish(),
-  slack_webhook_configured: z.boolean(),
-  notify_all_members_on_question: z.boolean(),
-  notification_recipient_user_id: z.number().nullable(),
-});
-
-export type WorkspaceData = z.infer<typeof WorkspaceEntitySchema>;
-
-export const WorkspaceSummarySchema = WorkspaceEntitySchema.omit({
-  external_workspace_id: true,
-  status: true,
-});
-export type WorkspaceSummary = z.infer<typeof WorkspaceSummarySchema>;
-
-export const ApplicationSkillDistillationStatusSchema = z.enum(['idle', 'pending', 'failed']);
-export type ApplicationSkillDistillationStatus = z.infer<typeof ApplicationSkillDistillationStatusSchema>;
 
 export const WidgetChipSchema = z.strictObject({
   chip_mode: InstructionTypeSchema,
@@ -129,26 +101,6 @@ export const WidgetSettingsWriteSchema = WidgetSettingsDataSchema.omit({
   widget_fade_duration: true,
 });
 
-export const ApplicationEntitySchema = BaseEntitySchema.extend({
-  workspace_id: z.number(),
-  name: z.string().max(200),
-  slug: z.string().max(120),
-  type: ApplicationTypeSchema,
-  url: z.string().max(200),
-  allowed_domains: z.array(z.string()),
-  skill_distillation_status: ApplicationSkillDistillationStatusSchema,
-  skill_distillation_error: z.string().nullable(),
-  widget_settings: WidgetSettingsDataSchema.nullable(),
-  marketrix_id: z.string().max(100).nullable(),
-  marketrix_key: z.string().max(100).nullable(),
-});
-
-export type ApplicationData = z.infer<typeof ApplicationEntitySchema>;
-
-export const ApplicationReadSchema = ApplicationEntitySchema;
-
-export type ApplicationReadData = z.infer<typeof ApplicationReadSchema>;
-
 export const ApplicationWidgetEntitySchema = z.strictObject({
   application_id: z.number(),
   widget_settings: WidgetSettingsDataSchema,
@@ -185,16 +137,3 @@ export const ActivityLogEntitySchema = z.strictObject({
 });
 
 export type ActivityLogData = z.infer<typeof ActivityLogEntitySchema>;
-
-export const WidgetQuestionLogSchema = z.strictObject({
-  type: z.literal('widget_question'),
-  metadata: z.strictObject({
-    question: z.string(),
-    mode: InstructionTypeSchema,
-    chat_id: z.string(),
-    timestamp: z.string(),
-    marketrix_id: z.string(),
-    marketrix_key: z.string(),
-    user_id: z.number().int().positive().optional(),
-  }),
-});

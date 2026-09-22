@@ -104,6 +104,9 @@ export class StreamClient {
       return;
     }
 
+    const credentials = this.credentials;
+    if (!credentials) throw new Error('StreamClient.connect called before setCredentials');
+
     this.abortConnection();
 
     this.chatId = chatId;
@@ -114,7 +117,7 @@ export class StreamClient {
     const signal = this.abortController.signal;
 
     try {
-      const iterator = await sdk.widgetStream({ chat_id: chatId, tab_id: this.tabId, ...this.credentials }, { signal });
+      const iterator = await sdk.widgetStream({ chat_id: chatId, tab_id: this.tabId, ...credentials }, { signal });
 
       this.status = 'open';
 
