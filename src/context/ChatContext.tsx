@@ -276,7 +276,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
         return false;
       }
     },
-    [previewMode, addMessage, commit],
+    [previewMode, addMessage, commit, currentModeRef],
   );
 
   useEffect(() => {
@@ -296,7 +296,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
     return () => {
       streamClient.removeCallbacks(callbacks);
     };
-  }, [previewMode, commit, uiActions, currentModeRef]);
+  }, [previewMode, commit, uiActions, currentModeRef, currentErrorRef]);
 
   const stopTask = useCallback(async () => {
     commit(s => reduceStop(s, currentModeRef.current));
@@ -307,7 +307,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, previewMod
       console.error('Failed to stop task remotely:', err);
       uiActions.setError('Could not stop the assistant — it may still be working.');
     });
-  }, [previewMode, commit, uiActions]);
+  }, [previewMode, commit, uiActions, currentModeRef]);
 
   const chatActions = useMemo<ChatActions>(
     () => ({ addMessage, updateMessage, removeMessage, setMessages, clearMessages, messageDispatch }),

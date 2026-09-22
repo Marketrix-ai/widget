@@ -40,7 +40,9 @@ const dragTo = (handlers: ReturnType<typeof useDragSnap>, x: number, y: number) 
 const renderDragSnap = (onPositionCommit: (position: WidgetPosition) => void) => {
   const wrapperRef = createRef<HTMLDivElement>() as React.RefObject<HTMLDivElement>;
   (wrapperRef as { current: HTMLDivElement }).current = wrapperFor();
-  return renderHook(() => useDragSnap({ position: 'bottom_right', onPositionCommit, wrapperRef }));
+  return renderHook(() =>
+    useDragSnap({ position: 'bottom_right', onPositionCommit, isPreviewMode: false, wrapperRef }),
+  );
 };
 
 describe('two snaps in flight', () => {

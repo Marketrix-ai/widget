@@ -6,7 +6,7 @@
  * `WidgetSettingsDataSchema` outside `src/sdk/`/`src/test/` (drags zod's runtime into the bundle), a
  * second `FINISH_TOOL` declarator or stray `'finish'` literal outside `BrowserToolService.ts`, and every
  * `console.*` call except `error` everywhere and `warn` in `src/utils/log.ts` alone — each replaces a
- * former source-text-regex test with a lint rule. `jsx-a11y`'s `no-static-element-interactions`/
+ * former source-text-regex test with a lint rule. `react-hooks` enforces the rules of hooks; `jsx-a11y`'s `no-static-element-interactions`/
  * `click-events-have-key-events` cover interactive-div a11y. Unused imports/ordering are delegated to
  * dedicated plugins, and `Bun` is a global for `bun run` scripts.
  */
@@ -16,6 +16,7 @@ import typescript from '@typescript-eslint/eslint-plugin';
 import typescriptParser from '@typescript-eslint/parser';
 import importPlugin from 'eslint-plugin-import-x';
 import jsxA11y from 'eslint-plugin-jsx-a11y';
+import reactHooks from 'eslint-plugin-react-hooks';
 import simpleImportSort from 'eslint-plugin-simple-import-sort';
 import unusedImports from 'eslint-plugin-unused-imports';
 import prettierConfig from 'eslint-config-prettier';
@@ -81,6 +82,7 @@ export default [
       '@typescript-eslint': typescript,
       import: importPlugin,
       'jsx-a11y': jsxA11y,
+      'react-hooks': reactHooks,
       'simple-import-sort': simpleImportSort,
       'unused-imports': unusedImports,
     },
@@ -105,6 +107,8 @@ export default [
           message: 'no CSS-framework cn() helper in this codebase — resolveLayoutStyle/inline styles only',
         },
       ],
+      'react-hooks/rules-of-hooks': 'error',
+      'react-hooks/exhaustive-deps': 'warn',
       'jsx-a11y/no-static-element-interactions': 'error',
       'jsx-a11y/click-events-have-key-events': 'error',
       'no-restricted-imports': [

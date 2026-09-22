@@ -43,7 +43,7 @@ function projectFlickVelocity(
 interface UseDragSnapOptions {
   position: WidgetPosition;
   onPositionCommit: (position: WidgetPosition) => void;
-  isPreviewMode?: boolean;
+  isPreviewMode: boolean;
   wrapperRef: React.RefObject<HTMLDivElement | null>;
 }
 
@@ -60,7 +60,7 @@ interface UseDragSnapResult {
 export function useDragSnap({
   position,
   onPositionCommit,
-  isPreviewMode = false,
+  isPreviewMode,
   wrapperRef,
 }: UseDragSnapOptions): UseDragSnapResult {
   const [isDragging, setIsDragging] = useState(false);
@@ -102,7 +102,7 @@ export function useDragSnap({
   }, [isPreviewMode]);
 
   const measureWrapper = useCallback(() => {
-    if (!wrapperRef.current || typeof window === 'undefined') return;
+    if (!wrapperRef.current) return;
     const rect = wrapperRef.current.getBoundingClientRect();
     setWrapperSize(prev =>
       prev.w === rect.width && prev.h === rect.height ? prev : { w: rect.width, h: rect.height },
@@ -111,15 +111,17 @@ export function useDragSnap({
 
   useLayoutEffect(() => {
     measureWrapper();
-    const ro = typeof window !== 'undefined' && wrapperRef.current ? new ResizeObserver(measureWrapper) : null;
-    if (ro && wrapperRef.current) ro.observe(wrapperRef.current);
-    return () => ro?.disconnect();
+    if (!wrapperRef.current) return;
+    const ro = new ResizeObserver(measureWrapper);
+    ro.observe(wrapperRef.current);
+    return () => ro.disconnect();
   }, [measureWrapper, position, wrapperRef]);
 
-  const vw = typeof window !== 'undefined' ? window.innerWidth : 0;
-  const vh = typeof window !== 'undefined' ? window.innerHeight : 0;
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
   const anchor = getAnchorTopLeft(position, vw, vh, wrapperSize.w, wrapperSize.h);
-  const pixelPositionStyle = !isPreviewMode && vw > 0 && vh > 0 ? { left: anchor.x, top: anchor.y } : undefined;
+  const pixelPositioned = !isPreviewMode && vw > 0 && vh > 0;
+  const pixelPositionStyle = pixelPositioned ? { left: anchor.x, top: anchor.y } : undefined;
 
   const resetDragStyles = useCallback(() => {
     cancelRaf();
@@ -170,7 +172,7 @@ export function useDragSnap({
 
   const snapToCorner = useCallback(
     (nextCorner: WidgetPosition, fromX: number, fromY: number) => {
-      if (!wrapperRef.current || !pixelPositionStyle) {
+      if (!wrapperRef.current || !pixelPositioned) {
         resetDragStyles();
         onPositionCommit(nextCorner);
         setIsDragging(false);
@@ -195,7 +197,7 @@ export function useDragSnap({
     [
       commitPositionAfterAnimation,
       onPositionCommit,
-      pixelPositionStyle,
+      pixelPositioned,
       position,
       resetDragStyles,
       vw,
@@ -318,7 +320,7 @@ interface WidgetFabProps {
 
 export const WidgetFab: React.FC<WidgetFabProps> = ({ onPositionCommit }) => {
   const {
-    isPreviewMode = false,
+    isPreviewMode,
     widget_accent_color: accentColor,
     widget_background_color: backgroundColor,
     widget_position: position,
@@ -366,11 +368,7 @@ export const WidgetFab: React.FC<WidgetFabProps> = ({ onPositionCommit }) => {
             size='sm'
             className='mtx-fab-stop'
             data-side={position.includes('left') ? 'left' : 'right'}
-            onClick={e => {
-              e.preventDefault();
-              e.stopPropagation();
-              actions.stopTask();
-            }}
+            onClick={() => void actions.stopTask()}
           >
             Stop
           </Button>

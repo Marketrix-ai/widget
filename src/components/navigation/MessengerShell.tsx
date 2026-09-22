@@ -45,6 +45,7 @@ export function useFocusTrap(
     focusTargetRef?: React.RefObject<HTMLElement | null> | undefined;
   },
 ) {
+  const { onEscape, focusTargetRef } = options;
   const previousActiveRef = useRef(false);
   const previouslyFocusedRef = useRef<HTMLElement | null>(null);
 
@@ -66,14 +67,14 @@ export function useFocusTrap(
     }
     previousActiveRef.current = true;
 
-    const target = options.focusTargetRef?.current ?? focusablesIn(container)[0];
+    const target = focusTargetRef?.current ?? focusablesIn(container)[0];
     target?.focus({ preventScroll: true });
 
     const handleKeyDown = (e: KeyboardEvent) => {
       const current = activeElementIn(container);
       if (!current || !container.contains(current)) return;
       if (e.key === 'Escape') {
-        options.onEscape();
+        onEscape();
         return;
       }
       if (e.key !== 'Tab') return;
@@ -96,7 +97,7 @@ export function useFocusTrap(
 
     document.addEventListener('keydown', handleKeyDown, true);
     return () => document.removeEventListener('keydown', handleKeyDown, true);
-  }, [isActive, containerRef, options.focusTargetRef, options.onEscape]);
+  }, [isActive, containerRef, focusTargetRef, onEscape]);
 }
 
 interface Size {
