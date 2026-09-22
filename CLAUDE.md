@@ -247,7 +247,7 @@ local and shipped images cannot drift in their dependency set.
 **`check:served` boots that exact `runtime` image via docker when it's on `PATH`** (falling back to a
 `Bun.serve` static server re-deriving `nginx.conf`'s own header/negotiation rules when it isn't) and
 asserts headers, CORS, compression negotiation and a 404 over real HTTP — never a second hardcoded
-header table. `TARGET_URL=https://widget.marketrix.co bun run check:served` (or `.ai` for prod) runs
+header table. `TARGET_URL=https://widget.marketrix.ai bun run check:served` runs
 the identical rows against a deployed host; adding `EXPECTED_TAG=<version>` to that also asserts
 `/widget.mjs` is byte-identical to a source build of that tag — read the tag from infra's Helm values
 or the `deploy.yml` dispatch inputs (this repo cannot reach the private infra repo to read it itself).
