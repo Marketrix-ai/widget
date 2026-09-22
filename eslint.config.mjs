@@ -104,14 +104,6 @@ export default [
           selector: "CallExpression[callee.name='cn']",
           message: 'no CSS-framework cn() helper in this codebase — resolveLayoutStyle/inline styles only',
         },
-        {
-          selector: "VariableDeclarator[id.name='FINISH_TOOL']",
-          message: 'FINISH_TOOL is defined once, in services/BrowserToolService.ts — import the constant',
-        },
-        {
-          selector: "Literal[value='finish']",
-          message: "the 'finish' tool name is the FINISH_TOOL constant everywhere but its one definition",
-        },
       ],
       'jsx-a11y/no-static-element-interactions': 'error',
       'jsx-a11y/click-events-have-key-events': 'error',
@@ -214,18 +206,6 @@ export default [
     files: ['src/services/StorageService.ts'],
     rules: {
       'no-restricted-globals': 'off',
-    },
-  },
-  {
-    files: ['src/services/BrowserToolService.ts'],
-    rules: {
-      'no-restricted-syntax': [
-        'error',
-        {
-          selector: "CallExpression[callee.name='cn']",
-          message: 'no CSS-framework cn() helper in this codebase — resolveLayoutStyle/inline styles only',
-        },
-      ],
     },
   },
   {

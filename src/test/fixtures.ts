@@ -7,7 +7,7 @@
  * `vi.mock('.../BrowserToolService', ...)` factory.
  */
 import { WidgetSettingsDataSchema } from '../sdk';
-import { type BrowserToolService, FINISH_TOOL } from '../services/BrowserToolService';
+import type { BrowserToolService } from '../services/BrowserToolService';
 import type { CredentialedConfig } from '../services/StorageService';
 import { type StreamClient, streamClient } from '../services/StreamClient';
 import type { ChatMessage, ValidWidgetConfig, WidgetSettingsData } from '../types';
@@ -112,5 +112,5 @@ export function browserToolServiceMock(executeTool: BrowserToolService['executeT
     getFriendlyToolName: name => name,
     isWaitForUserTool: () => false,
   };
-  return { browserToolService, FINISH_TOOL };
+  return { browserToolService };
 }

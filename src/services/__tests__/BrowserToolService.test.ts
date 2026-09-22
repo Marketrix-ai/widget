@@ -5,7 +5,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 
-import { browserToolService, FINISH_TOOL, type ToolExecutionResult } from '../BrowserToolService';
+import { browserToolService, type ToolExecutionResult } from '../BrowserToolService';
 import { domService } from '../DomService';
 import { showModeService } from '../ShowModeService';
 
@@ -49,7 +49,11 @@ afterEach(() => {
 
 describe('a tool that leaves the page reports itself before it goes', () => {
   it('navigate holds the navigation until the response is sent', async () => {
-    const result = await browserToolService.executeTool('navigate', { url: 'https://host.test/next' }, 'do');
+    const result = await browserToolService.executeTool(
+      'navigate',
+      { url: 'https://host.test/next', new_tab: false },
+      'do',
+    );
 
     expect(result.success).toBe(true);
     assertSuccess(result);
@@ -61,7 +65,7 @@ describe('a tool that leaves the page reports itself before it goes', () => {
   });
 
   it('search holds the navigation until the response is sent', async () => {
-    const result = await browserToolService.executeTool('search', { query: 'widgets' }, 'do');
+    const result = await browserToolService.executeTool('search', { query: 'widgets', engine: 'duckduckgo' }, 'do');
 
     expect(navigations).toEqual([]);
     assertSuccess(result);
@@ -88,14 +92,18 @@ describe('a tool that leaves the page reports itself before it goes', () => {
 
 describe('navigate constrains its target to http(s)', () => {
   it('refuses a javascript: URL instead of running it in the host page', async () => {
-    const result = await browserToolService.executeTool('navigate', { url: 'javascript:alert(document.cookie)' }, 'do');
+    const result = await browserToolService.executeTool(
+      'navigate',
+      { url: 'javascript:alert(document.cookie)', new_tab: false },
+      'do',
+    );
 
     expectFailure(result, 'An http(s) URL is required');
     expect(navigations).toEqual([]);
   });
 
   it('resolves a relative URL against the current page', async () => {
-    const result = await browserToolService.executeTool('navigate', { url: '/next' }, 'do');
+    const result = await browserToolService.executeTool('navigate', { url: '/next', new_tab: false }, 'do');
 
     expect(result.success).toBe(true);
     assertSuccess(result);
@@ -153,16 +161,15 @@ describe('close_tab reports what the browser did', () => {
   });
 });
 
-describe('a tool nothing can perform is not offered at all', () => {
-  it('upload_file is unknown, so show mode never asks the visitor to confirm it', async () => {
+describe('a tool no page script can perform fails without staging', () => {
+  it('upload_file fails, so show mode never asks the visitor to confirm it', async () => {
     vi.spyOn(domService, 'getValidatedElement').mockReturnValue({ element: document.createElement('input') });
     const staged = vi.spyOn(showModeService, 'showToolAction').mockResolvedValue();
 
-    const result = await browserToolService.executeTool('upload_file', { index: 0 }, 'show');
+    const result = await browserToolService.executeTool('upload_file', { index: 0, path: '/tmp/a.pdf' }, 'show');
 
-    expectFailure(result, 'Unknown tool: upload_file');
+    expectFailure(result, 'A web page cannot pick a file for the visitor; ask them to upload it themselves');
     expect(staged).not.toHaveBeenCalled();
-    expect(browserToolService.getFriendlyToolName('upload_file')).toBe('upload_file');
     expect(browserToolService.isWaitForUserTool('upload_file')).toBe(false);
   });
 });
@@ -170,8 +177,8 @@ describe('a tool nothing can perform is not offered at all', () => {
 describe('a run the model ends is not a widget tool failure', () => {
   it('reports finish as executed when the agent sends only the closing message', async () => {
     const result = await browserToolService.executeTool(
-      FINISH_TOOL,
-      { message: 'Could not find the checkout button' },
+      'done',
+      { message: 'Could not find the checkout button', success: false },
       'do',
     );
 
@@ -217,7 +224,7 @@ describe('typeText writes through the same native setter for input and textarea'
     const seen: string[] = [];
     for (const type of ['input', 'change', 'blur']) element.addEventListener(type, e => seen.push(e.type));
 
-    const result = await browserToolService.executeTool('type_text', { index: 0, text: 'hello' }, 'do');
+    const result = await browserToolService.executeTool('type_text', { index: 0, text: 'hello', clear: true }, 'do');
 
     expect(result.success).toBe(true);
     expect(element.value).toBe('hello');
@@ -302,7 +309,7 @@ describe('search picks the engine URL by name', () => {
   it.each([
     ['google', 'https://www.google.com/search?q=widgets'],
     ['bing', 'https://www.bing.com/search?q=widgets'],
-    [undefined, 'https://duckduckgo.com/?q=widgets'],
+    ['duckduckgo', 'https://duckduckgo.com/?q=widgets'],
   ] as const)('engine %s', async (engine, expectedUrl) => {
     const result = await browserToolService.executeTool('search', { query: 'widgets', engine }, 'do');
 
@@ -336,7 +343,7 @@ describe('typeText branches beyond input/textarea', () => {
     const execCommand = vi.fn().mockReturnValue(true);
     (document as unknown as { execCommand: typeof execCommand }).execCommand = execCommand;
 
-    const result = await browserToolService.executeTool('type_text', { index: 0, text: 'hello' }, 'do');
+    const result = await browserToolService.executeTool('type_text', { index: 0, text: 'hello', clear: true }, 'do');
 
     expect(result.success).toBe(true);
     expect(execCommand).toHaveBeenCalledWith('insertText', false, 'hello');
@@ -347,7 +354,7 @@ describe('typeText branches beyond input/textarea', () => {
     const element = document.querySelector('select') as HTMLSelectElement;
     vi.spyOn(domService, 'getValidatedElement').mockReturnValue({ element });
 
-    const result = await browserToolService.executeTool('type_text', { index: 0, text: 'x' }, 'do');
+    const result = await browserToolService.executeTool('type_text', { index: 0, text: 'x', clear: true }, 'do');
 
     expect(result.success).toBe(true);
     expect(element.value).toBe('x');
@@ -362,7 +369,7 @@ describe('extract', () => {
     document.body.innerHTML = '<a href="/a"></a><a href="/b">Bought</a>';
     stubInnerText();
 
-    const result = await browserToolService.executeTool('extract', {}, 'do');
+    const result = await browserToolService.executeTool('extract', { query: '', extract_links: true }, 'do');
 
     assertSuccess(result);
     const data = result.data as { links: Array<{ text: string; href: string | null }> };
@@ -376,7 +383,7 @@ describe('extract', () => {
     document.body.innerHTML = '<a href="/a">A</a>';
     stubInnerText();
 
-    const result = await browserToolService.executeTool('extract', { extract_links: false }, 'do');
+    const result = await browserToolService.executeTool('extract', { query: '', extract_links: false }, 'do');
 
     assertSuccess(result);
     expect((result.data as { links: unknown[] }).links).toEqual([]);
@@ -395,13 +402,21 @@ describe('goBack refuses when there is no history to go back to', () => {
   });
 });
 
-describe('wait requires seconds', () => {
-  it('fails without seconds and succeeds with them', async () => {
-    const missing = await browserToolService.executeTool('wait', {}, 'do');
-    expectFailure(missing, 'Seconds required');
-
+describe('wait', () => {
+  it('waits the requested seconds', async () => {
     const succeeded = await browserToolService.executeTool('wait', { seconds: 0 }, 'do');
-    expect(succeeded.success).toBe(true);
+    expect(succeeded).toEqual({ success: true, data: { text: 'Waited 0s' } });
+  });
+});
+
+describe('scroll', () => {
+  it('scrolls the requested number of viewport pages in the requested direction', async () => {
+    const scrollBy = vi.fn();
+    window.scrollBy = scrollBy as unknown as typeof window.scrollBy;
+
+    await browserToolService.executeTool('scroll', { direction: 'up', pages: 2 }, 'do');
+
+    expect(scrollBy).toHaveBeenCalledWith({ top: -2 * window.innerHeight, behavior: 'smooth' });
   });
 });
 
@@ -443,9 +458,9 @@ describe('sendKeys falls back to a generic message only when the key has no repo
     const element = document.querySelector('div') as HTMLElement;
     vi.spyOn(domService, 'getValidatedElement').mockReturnValue({ element });
 
-    const result = await browserToolService.executeTool('send_keys', { index: 0, keys: 'F1' }, 'do');
+    const result = await browserToolService.executeTool('send_keys', { index: 0, keys: 'PageDown' }, 'do');
 
     assertSuccess(result);
-    expect(result.data).toEqual({ text: 'Sent keys F1' });
+    expect(result.data).toEqual({ text: 'Sent keys PageDown' });
   });
 });

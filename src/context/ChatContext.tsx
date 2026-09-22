@@ -14,7 +14,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useR
 
 import { useLatest } from '../hooks/useLatest';
 import type { WidgetEvent } from '../sdk';
-import { browserToolService, FINISH_TOOL } from '../services/BrowserToolService';
+import { browserToolService } from '../services/BrowserToolService';
 import { chatPost } from '../services/ChatService';
 import { storageService } from '../services/StorageService';
 import { streamClient, StreamGaveUpError } from '../services/StreamClient';
@@ -80,22 +80,30 @@ function createStreamEffectHandlers(deps: {
 }) {
   const { commit, currentModeRef, setError, processedToolCallIds, currentErrorRef, lastStreamErrorRef } = deps;
 
-  const startToolCall = async (effect: Extract<SseEffect, { type: 'executeTool' }>) => {
-    const { toolCallId, tool, args, mode, explanation } = effect;
-    const result = await browserToolService.executeTool(tool, args, mode, explanation);
+  const startToolCall = async ({ call, mode }: SseEffect) => {
+    const explanation = call.explanation ?? '';
+    const result = await browserToolService.executeTool(call.browser_tool, call.args, mode, explanation);
     const error = result.success ? undefined : result.error;
 
     commit(s =>
-      reduceToolProgress(s, tool, explanation, error ? 'failed' : 'completed', currentModeRef.current, error),
+      reduceToolProgress(
+        s,
+        call.browser_tool,
+        explanation,
+        error ? 'failed' : 'completed',
+        currentModeRef.current,
+        error,
+      ),
     );
-    if (!error && tool === FINISH_TOOL) {
-      commit(s => reduceToolDone(s, currentModeRef.current));
+    if (!error && call.browser_tool === 'done') {
+      const { success } = call.args;
+      commit(s => reduceToolDone(s, currentModeRef.current, success));
     }
 
     await streamClient
       .send({
         type: 'tool/response',
-        tool_call_id: toolCallId,
+        tool_call_id: call.tool_call_id,
         success: result.success,
         ...(result.success && { data: JSON.stringify(result.data) }),
         error,

@@ -10,7 +10,7 @@
  * last closed text segment, since a duplicated final reply looks exactly like that.
  */
 import type { WidgetEvent } from '../sdk';
-import { browserToolService, FINISH_TOOL } from '../services/BrowserToolService';
+import { browserToolService, type WidgetToolCall, type WidgetToolName } from '../services/BrowserToolService';
 import type { ChatMessage, InstructionType, MessagePart } from '../types';
 import {
   addProgressLine,
@@ -34,11 +34,8 @@ export interface SseState {
 
 export interface SseEffect {
   type: 'executeTool';
-  toolCallId: string;
-  tool: string;
-  args: Record<string, unknown>;
+  call: WidgetToolCall;
   mode: InstructionType;
-  explanation: string;
 }
 
 export interface ReduceResult {
@@ -54,7 +51,7 @@ function applyProgress(
   messages: ChatMessage[],
   isTaskRunning: boolean,
   currentMode: InstructionType,
-  browserToolName: string,
+  browserToolName: WidgetToolName,
   explanation: string,
   status: ProgressStatus,
   error?: string,
@@ -65,7 +62,7 @@ function applyProgress(
   let updatedMsg = found.message;
   if (status === 'failed') {
     updatedMsg = markProgressLineFailed(updatedMsg, browserToolName, error || '');
-  } else if (browserToolName !== FINISH_TOOL) {
+  } else if (browserToolName !== 'done') {
     updatedMsg =
       status === 'in_progress'
         ? addProgressLine(
@@ -92,7 +89,7 @@ const runningMode = (state: SseState, currentMode: InstructionType): Instruction
 
 export function reduceToolProgress(
   state: SseState,
-  browserToolName: string,
+  browserToolName: WidgetToolName,
   explanation: string,
   status: ProgressStatus,
   currentMode: InstructionType,
@@ -131,10 +128,10 @@ function stampProgressMessage(
   return { messages, task: ended(state.task) };
 }
 
-export function reduceToolDone(state: SseState, currentMode: InstructionType): SseState {
+export function reduceToolDone(state: SseState, currentMode: InstructionType, success: boolean): SseState {
   return stampProgressMessage(state, currentMode, msg => ({
     ...msg,
-    taskStatus: 'done',
+    taskStatus: success ? 'done' : 'failed',
     parts: msg.parts.filter(part => part.type !== 'progress'),
   }));
 }
@@ -202,27 +199,17 @@ export function reduceSse(state: SseState, event: WidgetEvent, currentMode: Inst
       if (state.task.phase === 'stopped') return noChange(state);
       const task: TaskState =
         state.task.phase === 'running' ? state.task : { phase: 'running', mode: event.mode || currentMode };
-      const explanation = event.explanation || '';
       const messages = applyProgress(
         state.messages,
         true,
         task.mode ?? currentMode,
         event.browser_tool,
-        explanation,
+        event.explanation ?? '',
         'in_progress',
       );
       return {
         state: { messages, task },
-        effects: [
-          {
-            type: 'executeTool',
-            toolCallId: event.tool_call_id,
-            tool: event.browser_tool,
-            args: event.args,
-            mode: event.mode || currentMode,
-            explanation,
-          },
-        ],
+        effects: [{ type: 'executeTool', call: event, mode: event.mode ?? currentMode }],
       };
     }
 

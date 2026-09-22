@@ -5,7 +5,6 @@
 import { describe, expect, it } from 'bun:test';
 
 import { WidgetCommandSchema, type WidgetEvent, WidgetEventSchema } from '@/sdk';
-import { FINISH_TOOL } from '@/services/BrowserToolService';
 
 const ALL_WIDGET_EVENT_TYPES = [
   'registered',
@@ -118,7 +117,7 @@ describe('SSE event discriminated-union contract (WidgetEventSchema)', () => {
         browser_tool: 'done',
         args: { message: 'Done', success: true },
       });
-      expect(event.type === 'tool/call' && event.browser_tool).toBe(FINISH_TOOL);
+      expect(event.type === 'tool/call' && event.browser_tool).toBe('done');
     });
 
     it('mode is optional and restricted to "show"|"do"', () => {
