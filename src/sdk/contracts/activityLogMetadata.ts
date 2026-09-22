@@ -13,7 +13,7 @@ import {
   WidgetTypeSchema,
 } from './activityLogVocabulary';
 
-const activity = <T extends z.ZodRawShape>(shape: T) => z.object(shape).strict();
+const activity = <T extends z.ZodRawShape>(shape: T) => z.strictObject(shape);
 const details = { details: z.string() };
 const billing = { ...details, plan: z.string().optional() };
 const applicationRef = { id: z.number(), name: z.string(), type: ApplicationTypeSchema };
@@ -77,18 +77,16 @@ export const ActivityMetadataByType = {
     slack_channel_id: z.string().nullable(),
     raw_text: z.string(),
     detected_intent: z.string(),
-    extracted_params: z
-      .object({
-        qaFlowId: z.number().optional(),
-        appId: z.number().optional(),
-        instructions: z.string().optional(),
-        query: z.string().optional(),
-        channel: z.string().optional(),
-        text: z.string().optional(),
-        name: z.string().optional(),
-        workflowName: z.string().optional(),
-      })
-      .strict(),
+    extracted_params: z.strictObject({
+      qaFlowId: z.number().optional(),
+      appId: z.number().optional(),
+      instructions: z.string().optional(),
+      query: z.string().optional(),
+      channel: z.string().optional(),
+      text: z.string().optional(),
+      name: z.string().optional(),
+      workflowName: z.string().optional(),
+    }),
     status: SlackCommandLogStatusSchema,
     response_text: z.string().nullable(),
     error_message: z.string().nullable(),

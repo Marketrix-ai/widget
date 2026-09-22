@@ -40,7 +40,9 @@ const pendingReply = (id = 'req-1'): SseState => ({
   task: { phase: 'idle' },
 });
 
-const toolCall = (overrides: Partial<Extract<WidgetEvent, { type: 'tool/call' }>> = {}): WidgetEvent => ({
+type ClickToolCallEvent = Extract<WidgetEvent, { type: 'tool/call'; browser_tool: 'click_element' }>;
+
+const toolCall = (overrides: Partial<ClickToolCallEvent> = {}): ClickToolCallEvent => ({
   type: 'tool/call',
   tool_call_id: 'call-1',
   browser_tool: 'click_element',
@@ -195,7 +197,11 @@ describe('reduceSse — tool/call', () => {
   });
 
   it('announces a DOM read as reading the page — nothing but screen sharing views the visitor screen', () => {
-    const result = reduceSse(runningState(), toolCall({ browser_tool: 'get_html', explanation: '' }), 'do');
+    const result = reduceSse(
+      runningState(),
+      { type: 'tool/call', tool_call_id: 'call-1', browser_tool: 'get_html', args: {}, explanation: '' },
+      'do',
+    );
     const line = (result.state.messages[0]!.parts ?? []).find(part => part.type === 'progress');
     expect(line?.content).toBe('Reading the page');
     expect(line?.content).not.toMatch(/screen/i);
@@ -288,22 +294,14 @@ describe('reduceSse — ignored events', () => {
 
 describe('reduceToolProgress / reduceToolDone / reduceStop', () => {
   it('completed marks the in-progress line complete', () => {
-    const inProgress = reduceSse(
-      runningState(),
-      toolCall({ tool_call_id: 'c', args: {}, explanation: 'x' }),
-      'do',
-    ).state;
+    const inProgress = reduceSse(runningState(), toolCall({ tool_call_id: 'c', explanation: 'x' }), 'do').state;
     const done = reduceToolProgress(inProgress, 'click_element', 'x', 'completed', 'do');
     const part = (done.messages[0]!.parts ?? []).find(p => p.type === 'progress');
     expect(part?.status).toBe('completed');
   });
 
   it('failed marks the line failed and surfaces the error text', () => {
-    const inProgress = reduceSse(
-      runningState(),
-      toolCall({ tool_call_id: 'c', args: {}, explanation: 'Clicking' }),
-      'do',
-    ).state;
+    const inProgress = reduceSse(runningState(), toolCall({ tool_call_id: 'c', explanation: 'Clicking' }), 'do').state;
     const failed = reduceToolProgress(inProgress, 'click_element', 'Clicking', 'failed', 'do', 'no element');
     const part = (failed.messages[0]!.parts ?? []).find(p => p.type === 'progress');
     expect(part?.status).toBe('failed');
@@ -311,11 +309,9 @@ describe('reduceToolProgress / reduceToolDone / reduceStop', () => {
   });
 
   it('closes the line of the tool that finished, not the newest open one', () => {
-    const call = (browser_tool: string, tool_call_id: string): WidgetEvent =>
-      toolCall({ tool_call_id, browser_tool, args: {}, explanation: browser_tool });
     const twoOpen = reduceSse(
-      reduceSse(runningState(), call('click_element', 'c1'), 'show').state,
-      call('get_html', 'c2'),
+      reduceSse(runningState(), toolCall({ tool_call_id: 'c1', explanation: 'click_element' }), 'show').state,
+      { type: 'tool/call', tool_call_id: 'c2', browser_tool: 'get_html', args: {}, explanation: 'get_html' },
       'show',
     ).state;
 
@@ -388,7 +384,13 @@ describe('reduceToolProgress / reduceToolDone / reduceStop', () => {
 
     const called = reduceSse(
       withTrajectory,
-      toolCall({ tool_call_id: 'c', browser_tool: FINISH_TOOL, args: {}, explanation: 'Wrapping up' }),
+      {
+        type: 'tool/call',
+        tool_call_id: 'c',
+        browser_tool: FINISH_TOOL,
+        args: { message: 'Wrapping up', success: true },
+        explanation: 'Wrapping up',
+      },
       'tell',
     ).state;
     const succeeded = reduceToolProgress(called, FINISH_TOOL, 'Wrapping up', 'completed', 'tell');

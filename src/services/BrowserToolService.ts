@@ -75,7 +75,7 @@ const httpUrl = (value: string | undefined): string | null => {
 
 const SCREENSHOT_FRAME_TIMEOUT_MS = 5000;
 
-export const FINISH_TOOL = 'finish';
+export const FINISH_TOOL = 'done';
 
 interface WidgetToolDef {
   label: string;
@@ -86,15 +86,19 @@ interface WidgetToolDef {
 export class BrowserToolService {
   private readonly tools: Record<string, WidgetToolDef> = {
     navigate: { label: 'Navigating', run: args => this.navigate(args) },
-    search_web: { label: 'Searching', run: args => this.search(args) },
+    search: { label: 'Searching', run: args => this.search(args) },
     click_element: { label: 'Clicking element', waitForUser: true, run: args => this.clickElement(args) },
     type_text: { label: 'Typing text', waitForUser: true, run: args => this.typeText(args) },
     scroll: { label: 'Scrolling', run: args => this.scroll(args) },
     scroll_to_text: { label: 'Scrolling to text', run: args => this.scrollToText(args) },
     extract: { label: 'Extracting content', run: args => this.extract(args) },
     go_back: { label: 'Going back', run: () => this.goBack() },
-    wait_seconds: { label: 'Waiting', run: args => this.wait(args) },
-    select_dropdown: { label: 'Selecting option', waitForUser: true, run: args => this.selectDropdownOption(args) },
+    wait: { label: 'Waiting', run: args => this.wait(args) },
+    select_dropdown_option: {
+      label: 'Selecting option',
+      waitForUser: true,
+      run: args => this.selectDropdownOption(args),
+    },
     get_dropdown_options: { label: 'Reading dropdown options', run: args => this.getDropdownOptions(args) },
     send_keys: { label: 'Pressing key', waitForUser: true, run: args => this.sendKeys(args) },
     close_tab: { label: 'Closing tab', run: () => this.closeTab() },

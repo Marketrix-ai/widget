@@ -5,6 +5,7 @@
 import { describe, expect, it } from 'bun:test';
 
 import { WidgetCommandSchema, type WidgetEvent, WidgetEventSchema } from '@/sdk';
+import { FINISH_TOOL } from '@/services/BrowserToolService';
 
 const ALL_WIDGET_EVENT_TYPES = [
   'registered',
@@ -29,7 +30,7 @@ const MINIMAL_EVENT_FIXTURES: Record<ExpectedEventType, object> = {
     type: 'tool/call',
     tool_call_id: 'call-1',
     browser_tool: 'click_element',
-    args: { selector: '#btn' },
+    args: { index: 1 },
   },
 };
 
@@ -104,14 +105,29 @@ describe('SSE event discriminated-union contract (WidgetEventSchema)', () => {
         type: 'tool/call',
         tool_call_id: 'c1',
         browser_tool: 'navigate',
-        args: { url: 'https://example.com' },
+        args: { url: 'https://example.com', new_tab: false },
       };
       expect(WidgetEventSchema.safeParse(base).success).toBe(true);
       expect(WidgetEventSchema.safeParse({ ...base, tool_call_id: undefined }).success).toBe(false);
     });
 
+    it('uses the generated done tool as the task-finishing primitive', () => {
+      const event = WidgetEventSchema.parse({
+        type: 'tool/call',
+        tool_call_id: 'c1',
+        browser_tool: 'done',
+        args: { message: 'Done', success: true },
+      });
+      expect(event.type === 'tool/call' && event.browser_tool).toBe(FINISH_TOOL);
+    });
+
     it('mode is optional and restricted to "show"|"do"', () => {
-      const base = { type: 'tool/call', tool_call_id: 'c1', browser_tool: 'navigate', args: {} };
+      const base = {
+        type: 'tool/call',
+        tool_call_id: 'c1',
+        browser_tool: 'navigate',
+        args: { url: 'https://example.com', new_tab: false },
+      };
       expect(WidgetEventSchema.safeParse({ ...base, mode: 'show' }).success).toBe(true);
       expect(WidgetEventSchema.safeParse({ ...base, mode: 'do' }).success).toBe(true);
       expect(WidgetEventSchema.safeParse({ ...base, mode: 'auto' }).success).toBe(false);

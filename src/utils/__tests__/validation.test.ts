@@ -1,15 +1,15 @@
 /**
- * Tests for `parseWidgetSettings`/`invalidSettingsMessage`, checked against the zod schema they
- * replace: valid settings pass, unknown keys and render constants are stripped, and each invalid
- * field is rejected and named.
+ * Tests for `parseWidgetSettings`/`invalidSettingsMessage`, checked against the generated settings
+ * schema: valid settings pass, wider internal configs are projected, render constants are omitted,
+ * and each invalid field is rejected and named.
  */
 import { describe, expect, it } from 'bun:test';
 
 import { WidgetSettingsDataSchema } from '../../sdk';
-import { getMockWidgetConfig } from '../../test/fixtures';
+import { validSettings } from '../../test/fixtures';
 import { invalidSettingsMessage, parseWidgetSettings } from '../validation';
 
-const valid = WidgetSettingsDataSchema.parse(getMockWidgetConfig());
+const valid = validSettings();
 const FIELDS = Object.keys(valid) as (keyof typeof valid)[];
 
 const expectRejectedAndNamed = (broken: unknown, invalidFields: string[]) => {
@@ -24,7 +24,7 @@ describe('parseWidgetSettings agrees with the zod schema it replaced', () => {
     expect(WidgetSettingsDataSchema.safeParse(valid).success).toBe(true);
   });
 
-  it('strips unknown keys exactly as zod did — settings carry render constants too', () => {
+  it('projects settings from a wider internal config while the wire schema rejects unknown keys', () => {
     const withExtras = { ...valid, widget_render_constant: 'x', another: 1 };
     const result = parseWidgetSettings(withExtras);
     const {
@@ -33,7 +33,8 @@ describe('parseWidgetSettings agrees with the zod schema it replaced', () => {
       widget_animation_duration: _animation,
       widget_fade_duration: _fade,
       ...rendered
-    } = WidgetSettingsDataSchema.parse(withExtras);
+    } = valid;
+    expect(WidgetSettingsDataSchema.safeParse(withExtras).success).toBe(false);
     expect(result.settings).toEqual(rendered);
     expect(result.settings).not.toHaveProperty('widget_render_constant');
   });

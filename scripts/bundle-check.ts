@@ -73,6 +73,7 @@ const DEPENDENCY_BUDGETS: Record<string, number> = {
   '@orpc/standard-server': 4_000,
   '@orpc/shared': 3_600,
   '@floating-ui/utils': 1_200,
+  zod: 116_000,
 };
 
 const B64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';

@@ -1,24 +1,8 @@
 /**
- * Entity schemas for users, workspaces, applications, widgets and activity log rows — the shapes most
- * other contracts build on.
- *
- * Exports the full entity schema and a narrower read/summary variant for each, plus the activity log's
- * per-type metadata union. `ApplicationEntitySchema`'s `skill_distillation_status`/`_error` track the
- * last skill-distillation attempt for that application, since a distilled skill is written directly with
- * no separate draft row. `ApplicationEntitySchema` carries no `username`/`password` (Part F step 10
- * folded the application's own default login into `application_credential` with `origin: null`) —
- * `ApplicationCreateSchema`/`ApplicationUpdateSchema` (`contracts/application.ts`) still accept them as
- * write-through-only input fields, routed to that credential row by `applicationService.ts`, never stored
- * on this entity or returned by it. `WidgetPublicSchema` never returns the widget's own auth credentials,
- * since an unauthenticated visitor's browser is the caller.
- * `ApplicationEntitySchema` also IS the row schema: `models/application.ts`'s fields and `COLUMN_SCHEMAS`'s
- * `application` enum entries are typed directly off it, so it can never drift from the table it describes.
- * `UserEntitySchema`'s `first_name`/`last_name`/`image_url` are DERIVED (Part F step 10 dropped the
- * columns -- WorkOS is the system of record): `userService.ts`'s members-list search batches
- * `workos.userManagement.listUsers({organizationId})` once per list, never per row, and `authMe`
- * (`handlers/auth.ts`) reads them out of the session instead of a column or a live WorkOS call, since the
- * login flow already resolves the WorkOS profile via `resolveUserByWorkosIdentity`. The global super-user
- * search does not enrich these fields at all -- there is no workspace to scope a batch call by.
+ * Canonical user, workspace, Application, Widget and activity-log entity schemas.
+ * They define full stored shapes plus narrower read and public projections.
+ * Application credentials live separately, and public Widget projections never expose them.
+ * User profile fields derive from WorkOS rather than database columns.
  */
 import { z } from 'zod';
 
@@ -96,14 +80,14 @@ export type WorkspaceSummary = z.infer<typeof WorkspaceSummarySchema>;
 export const ApplicationSkillDistillationStatusSchema = z.enum(['idle', 'pending', 'failed']);
 export type ApplicationSkillDistillationStatus = z.infer<typeof ApplicationSkillDistillationStatusSchema>;
 
-export const WidgetChipSchema = z.object({
+export const WidgetChipSchema = z.strictObject({
   chip_mode: InstructionTypeSchema,
   chip_text: z.string(),
 });
 
 export type WidgetChip = z.infer<typeof WidgetChipSchema>;
 
-export const WidgetSettingsDataSchema = z.object({
+export const WidgetSettingsDataSchema = z.strictObject({
   widget_enabled: z.boolean(),
   widget_appearance: z.enum(['default', 'hidden']),
   widget_position: z.enum(['bottom_left', 'bottom_right', 'top_left', 'top_right']),
@@ -165,14 +149,7 @@ export const ApplicationReadSchema = ApplicationEntitySchema;
 
 export type ApplicationReadData = z.infer<typeof ApplicationReadSchema>;
 
-// Widget (Part F step 10): folded into `application` as `widget_settings`/`marketrix_id`/`marketrix_key`
-// columns -- `type`/`status` are gone (the only writer created `type: 'widget'`; `status` had nowhere to
-// fold into, `application` never had a `status` column). `ApplicationWidgetEntitySchema` is the narrow
-// widget-only projection `widgetCreate`/`widgetUpdate`/`widgetSearch` return, keyed by `application_id`
-// now that there is no separate widget id; `snippet` is DERIVED (built from marketrix_id/key, never
-// stored). `ApplicationWidgetPublicSchema` is the widget's own session-less boot lookup — it must never
-// return the credential pair or the snippet back to the caller that just supplied them.
-export const ApplicationWidgetEntitySchema = z.object({
+export const ApplicationWidgetEntitySchema = z.strictObject({
   application_id: z.number(),
   widget_settings: WidgetSettingsDataSchema,
   marketrix_id: z.string().max(100),
@@ -198,7 +175,7 @@ const activityMetadataVariants = Object.values(ActivityMetadataByType) as [
 ];
 export const ActivityLogMetadataSchema = z.union(activityMetadataVariants);
 
-export const ActivityLogEntitySchema = z.object({
+export const ActivityLogEntitySchema = z.strictObject({
   id: z.number(),
   created_at: z.coerce.date(),
   workspace_id: z.number(),
@@ -209,19 +186,15 @@ export const ActivityLogEntitySchema = z.object({
 
 export type ActivityLogData = z.infer<typeof ActivityLogEntitySchema>;
 
-export const WidgetQuestionLogSchema = z
-  .object({
-    type: z.literal('widget_question'),
-    metadata: z
-      .object({
-        question: z.string(),
-        mode: InstructionTypeSchema,
-        chat_id: z.string(),
-        timestamp: z.string(),
-        marketrix_id: z.string(),
-        marketrix_key: z.string(),
-        user_id: z.number().int().positive().optional(),
-      })
-      .strict(),
-  })
-  .strict();
+export const WidgetQuestionLogSchema = z.strictObject({
+  type: z.literal('widget_question'),
+  metadata: z.strictObject({
+    question: z.string(),
+    mode: InstructionTypeSchema,
+    chat_id: z.string(),
+    timestamp: z.string(),
+    marketrix_id: z.string(),
+    marketrix_key: z.string(),
+    user_id: z.number().int().positive().optional(),
+  }),
+});

@@ -60,8 +60,8 @@ describe('a tool that leaves the page reports itself before it goes', () => {
     expect(navigations).toEqual(['https://host.test/next']);
   });
 
-  it('search_web holds the navigation until the response is sent', async () => {
-    const result = await browserToolService.executeTool('search_web', { query: 'widgets' }, 'do');
+  it('search holds the navigation until the response is sent', async () => {
+    const result = await browserToolService.executeTool('search', { query: 'widgets' }, 'do');
 
     expect(navigations).toEqual([]);
     assertSuccess(result);
@@ -186,7 +186,7 @@ describe('a Do tool call against a missing index fails typed, never throws', () 
     Element.prototype.scrollIntoView = () => {};
   });
 
-  it.each(['click_element', 'type_text', 'send_keys', 'select_dropdown', 'get_dropdown_options'])(
+  it.each(['click_element', 'type_text', 'send_keys', 'select_dropdown_option', 'get_dropdown_options'])(
     '%s reports element-not-found instead of throwing out of the loop',
     async toolName => {
       const result = await browserToolService.executeTool(
@@ -203,7 +203,7 @@ describe('a Do tool call against a missing index fails typed, never throws', () 
     document.body.innerHTML = '<input style="position: fixed" />';
     vi.spyOn(domService, 'getValidatedElement').mockReturnValue({ element: document.querySelector('input') });
 
-    const result = await browserToolService.executeTool('select_dropdown', { index: 0, option: 'x' }, 'do');
+    const result = await browserToolService.executeTool('select_dropdown_option', { index: 0, option: 'x' }, 'do');
 
     expectFailure(result, 'Element 0 is not a select element');
   });
@@ -298,13 +298,13 @@ describe("show mode's default explanation only fills in a blank one", () => {
   });
 });
 
-describe('search_web picks the engine URL by name', () => {
+describe('search picks the engine URL by name', () => {
   it.each([
     ['google', 'https://www.google.com/search?q=widgets'],
     ['bing', 'https://www.bing.com/search?q=widgets'],
     [undefined, 'https://duckduckgo.com/?q=widgets'],
   ] as const)('engine %s', async (engine, expectedUrl) => {
-    const result = await browserToolService.executeTool('search_web', { query: 'widgets', engine }, 'do');
+    const result = await browserToolService.executeTool('search', { query: 'widgets', engine }, 'do');
 
     assertSuccess(result);
     result.afterResponseAttempt?.();
@@ -395,12 +395,12 @@ describe('goBack refuses when there is no history to go back to', () => {
   });
 });
 
-describe('wait_seconds requires seconds', () => {
+describe('wait requires seconds', () => {
   it('fails without seconds and succeeds with them', async () => {
-    const missing = await browserToolService.executeTool('wait_seconds', {}, 'do');
+    const missing = await browserToolService.executeTool('wait', {}, 'do');
     expectFailure(missing, 'Seconds required');
 
-    const succeeded = await browserToolService.executeTool('wait_seconds', { seconds: 0 }, 'do');
+    const succeeded = await browserToolService.executeTool('wait', { seconds: 0 }, 'do');
     expect(succeeded.success).toBe(true);
   });
 });
@@ -418,7 +418,7 @@ describe('selectDropdownOption matches by value OR by visible text', () => {
     ['its value', 'v2', 'v2'],
     ['its visible text when the value differs', 'Text One', 'v1'],
   ] as const)('matches an option by %s', async (_case, option, expectedValue) => {
-    const result = await browserToolService.executeTool('select_dropdown', { index: 0, option }, 'do');
+    const result = await browserToolService.executeTool('select_dropdown_option', { index: 0, option }, 'do');
     expect(result.success).toBe(true);
     expect((document.querySelector('select') as HTMLSelectElement).value).toBe(expectedValue);
   });

@@ -11,6 +11,7 @@ import { Profiler, useEffect } from 'react';
 
 import { useWidget } from '../../hooks/useWidget';
 import type { WidgetEvent } from '../../sdk';
+import { FINISH_TOOL } from '../../services/BrowserToolService';
 import type * as ChatServiceModule from '../../services/ChatService';
 import { type CredentialedConfig, storageService } from '../../services/StorageService';
 import { streamClient } from '../../services/StreamClient';
@@ -382,8 +383,8 @@ describe('the finish tool ends the task only when it did not fail', () => {
       asStreamClientInternals().handleMessage({
         type: 'tool/call',
         tool_call_id: 'tc-finish-ok',
-        browser_tool: 'finish',
-        args: {},
+        browser_tool: FINISH_TOOL,
+        args: { message: 'Done', success: true },
         mode: 'do',
         explanation: 'Done',
       });
@@ -403,8 +404,8 @@ describe('the finish tool ends the task only when it did not fail', () => {
       asStreamClientInternals().handleMessage({
         type: 'tool/call',
         tool_call_id: 'tc-finish-failed',
-        browser_tool: 'finish',
-        args: {},
+        browser_tool: FINISH_TOOL,
+        args: { message: 'Done', success: true },
         mode: 'do',
         explanation: 'Done',
       });

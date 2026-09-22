@@ -109,15 +109,11 @@ are generated**, so after changing `rc:` you must re-run `lefthook install --for
   which dependency grew. Two are about half of it: `@base-ui/react` + `/utils` and `@rrweb/record`
   (a feature off by default), each named in `DEPENDENCY_BUDGETS` (pinned by sourceInvariants.test.ts);
   a package missing from it fails the gate, so a new import is a deliberate line.
-- **zod is a type-only dependency of the BUNDLE, and a real one of the package.** `parseWidgetSettings`
-  in `utils/validation.ts` is the one home for settings validation, a `satisfies`-checked guard table
-  that a contract change breaks at compile time. Importing `WidgetSettingsDataSchema` (or any schema)
-  as a VALUE anywhere reachable from `src/index.tsx` pulls zod's whole runtime back into every host
-  page: rolldown cannot prove `z.object(...)` pure, so one value import retains the entire mirror's
-  schema graph — eslint's `no-restricted-imports` bans a value import of `WidgetSettingsDataSchema`
-  outside `src/sdk/`/`src/test/`, so this is a lint error, not a test. It stays in `dependencies` because the published `.d.ts` files still reference it, and it stays
-  importable in tests — `utils/__tests__/validation.test.ts` uses the real schema as the oracle the
-  guard is checked against.
+- **zod is bundled to validate rrweb at capture.** `RrwebSessionRecorder` parses every recorder event
+  through the generated `RrwebEventSchema` before buffering it, so the payload posted to the api cannot
+  diverge from the exact wire contract. `parseWidgetSettings` in `utils/validation.ts` remains the one
+  home for settings validation; eslint still bans a value import of `WidgetSettingsDataSchema` outside
+  `src/sdk/`/`src/test/` so settings do not gain a second runtime parser.
 - **A single chunk means an import is unconditional** — a heavy dependency behind an off-by-default
   flag still ships to every host page. Weigh that at the import, because the packaging contract has no
   later escape.

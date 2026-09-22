@@ -9,9 +9,9 @@
  * rather than dropped, since a later batch replays against the first one's snapshot.
  */
 import { record } from '@rrweb/record';
-import type { eventWithTime } from '@rrweb/types';
 
 import { sdk } from '../sdk';
+import { type RrwebEvent, RrwebEventSchema } from '../sdk/contracts/common';
 import { logWarn } from '../utils/log';
 import { streamClient } from './StreamClient';
 
@@ -19,7 +19,7 @@ const FLUSH_INTERVAL_MS = 500;
 const MAX_REQUEUED_EVENTS = 20_000;
 
 export class RrwebSessionRecorder {
-  private events: eventWithTime[] = [];
+  private events: RrwebEvent[] = [];
   private readonly sessionId = globalThis.crypto.randomUUID();
   private stopRecording: ReturnType<typeof record> | null = null;
   private flushTimer: ReturnType<typeof setTimeout> | null = null;
@@ -50,7 +50,7 @@ export class RrwebSessionRecorder {
     if (this.stopped) return;
     this.stopRecording = record({
       emit: event => {
-        this.events.push(event as eventWithTime);
+        this.events.push(RrwebEventSchema.parse(event));
         if (!this.flushTimer) this.flushTimer = setTimeout(() => void this.flush(), FLUSH_INTERVAL_MS);
       },
       maskAllInputs: true,

@@ -8,6 +8,7 @@ import { EventType, type eventWithTime } from '@rrweb/types';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 
 import { sdk } from '../../sdk';
+import type { RrwebEvent } from '../../sdk/contracts/common';
 import { flushMicrotasks } from '../../test/fixtures';
 import { advanceTimersByTimeAsync, mocked, mockSdkModule, restoreModuleAfterAll } from '../../test/vi-compat';
 import { RrwebSessionRecorder } from '../RrwebSessionRecorder';
@@ -30,6 +31,22 @@ afterEach(() => {
 
 type Emit = (event: Pick<eventWithTime, 'type' | 'timestamp'> & { data: unknown }, isCheckout?: boolean) => void;
 
+const metaEvent = (timestamp: number): Extract<RrwebEvent, { type: 4 }> => ({
+  type: EventType.Meta,
+  data: { href: 'https://example.com', width: 1280, height: 720 },
+  timestamp,
+});
+const fullSnapshotEvent = (timestamp: number): Extract<RrwebEvent, { type: 2 }> => ({
+  type: EventType.FullSnapshot,
+  data: { node: { type: 0, id: 1, childNodes: [] }, initialOffset: { top: 0, left: 0 } },
+  timestamp,
+});
+const incrementalEvent = (timestamp: number): Extract<RrwebEvent, { type: 3 }> => ({
+  type: EventType.IncrementalSnapshot,
+  data: { source: 4, width: 1280, height: 720 },
+  timestamp,
+});
+
 const startRecorder = async (): Promise<{ recorder: RrwebSessionRecorder; emit: Emit }> => {
   mockSdk.widgetMessagePost.mockResolvedValueOnce({ success: true });
   const recorder = new RrwebSessionRecorder('chat-1', 1);
@@ -39,6 +56,15 @@ const startRecorder = async (): Promise<{ recorder: RrwebSessionRecorder; emit: 
   if (!options) throw new Error('expected @rrweb/record to have been called');
   return { recorder, emit: options.emit as unknown as Emit };
 };
+
+describe('rrweb event validation', () => {
+  it('rejects an event outside the generated wire schema before buffering it', async () => {
+    const { emit } = await startRecorder();
+
+    expect(() => emit({ type: EventType.DomContentLoaded, data: { extra: true }, timestamp: 0 })).toThrow();
+    expect(mockSdk.widgetMessagePost).toHaveBeenCalledTimes(1);
+  });
+});
 
 describe('a flush the api rejects', () => {
   const startWithARejectedFlush = async () => {
@@ -51,12 +77,12 @@ describe('a flush the api rejects', () => {
   it('caps the buffer without discarding the Meta and FullSnapshot every later event is replayed against', async () => {
     const emit = await startWithARejectedFlush();
 
-    emit({ type: EventType.Meta, data: {}, timestamp: 0 });
-    emit({ type: EventType.FullSnapshot, data: {}, timestamp: 1 });
-    for (let i = 2; i < 20_005; i++) emit({ type: EventType.IncrementalSnapshot, data: {}, timestamp: i });
+    emit(metaEvent(0));
+    emit(fullSnapshotEvent(1));
+    for (let i = 2; i < 20_005; i++) emit(incrementalEvent(i));
     await advanceTimersByTimeAsync(500);
 
-    emit({ type: EventType.IncrementalSnapshot, data: {}, timestamp: 99_999 });
+    emit(incrementalEvent(99_999));
     await advanceTimersByTimeAsync(500);
 
     const posted = mockSdk.widgetMessagePost.mock.lastCall?.[0].command as {
@@ -71,17 +97,17 @@ describe('a flush the api rejects', () => {
   it('retries on its own timer with no new events to piggyback on, and drops nothing', async () => {
     const emit = await startWithARejectedFlush();
 
-    emit({ type: EventType.Meta, data: {}, timestamp: 0 });
+    emit(metaEvent(0));
     await advanceTimersByTimeAsync(500);
     expect(mockSdk.widgetMessagePost).toHaveBeenCalledTimes(2);
 
     await advanceTimersByTimeAsync(500);
 
     const posted = mockSdk.widgetMessagePost.mock.lastCall?.[0].command as {
-      events: Array<{ type: number; data: Record<string, never>; timestamp: number }>;
+      events: RrwebEvent[];
     };
     expect(mockSdk.widgetMessagePost).toHaveBeenCalledTimes(3);
-    expect(posted.events).toEqual([{ type: EventType.Meta, data: {}, timestamp: 0 }]);
+    expect(posted.events).toEqual([metaEvent(0)]);
     vi.useRealTimers();
   });
 });
@@ -110,15 +136,15 @@ describe('RrwebSessionRecorder.stop', () => {
     const { recorder, emit } = await startRecorder();
     mockSdk.widgetMessagePost.mockClear();
     mockSdk.widgetMessagePost.mockResolvedValueOnce({ success: true });
-    emit({ type: EventType.Meta, data: {}, timestamp: 0 });
+    emit(metaEvent(0));
 
     recorder.stop();
     await flushMicrotasks();
 
     const posted = mockSdk.widgetMessagePost.mock.lastCall?.[0].command as {
-      events: Array<{ type: number; data: Record<string, never>; timestamp: number }>;
+      events: RrwebEvent[];
     };
-    expect(posted.events).toEqual([{ type: EventType.Meta, data: {}, timestamp: 0 }]);
+    expect(posted.events).toEqual([metaEvent(0)]);
   });
 });
 
