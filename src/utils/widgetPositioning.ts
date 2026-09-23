@@ -2,8 +2,8 @@
  * Corner geometry for the widget: the four pinnable corners, the offsets that place the launcher and
  * panel there, the resize grip each corner implies, and the drag-snap math.
  *
- * `getCorner` and `isWidgetPosition` map a `WidgetPosition` to its CSS sides and narrow a stored value
- * back to one. `getPanelPositionStyle` turns a corner into inline style. `getResizeGrip` describes the
+ * `getCorner` maps a `WidgetPosition` to its CSS sides and `EDGE_OFFSET_PX` is the gap from those edges.
+ * `getPanelPositionStyle` turns a corner into inline style. `getResizeGrip` describes the
  * handle on the opposite corner, since the panel grows away from its anchor. `getAnchorTopLeft` and
  * `getNearestCornerByTranslation` do the drag math, snapping a drag to whichever corner ends up nearest.
  */
@@ -12,7 +12,7 @@ import type React from 'react';
 import { WidgetSettingsDataSchema } from '../sdk/contracts/widgetSettings';
 import type { WidgetPosition } from '../types';
 
-const EDGE_OFFSET_PX = 20;
+export const EDGE_OFFSET_PX = 20;
 
 const CORNERS = {
   bottom_right: { vertical: 'bottom', horizontal: 'right' },
@@ -22,9 +22,6 @@ const CORNERS = {
 } as const;
 
 export const getCorner = (position: WidgetPosition) => CORNERS[position];
-
-export const isWidgetPosition = (value: unknown): value is WidgetPosition =>
-  typeof value === 'string' && Object.hasOwn(CORNERS, value);
 
 export const getPanelPositionStyle = (position: WidgetPosition): React.CSSProperties => {
   const { vertical, horizontal } = getCorner(position);

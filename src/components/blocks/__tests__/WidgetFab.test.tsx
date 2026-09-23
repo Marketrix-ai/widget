@@ -2,7 +2,7 @@
  * With two snaps in flight, `useDragSnap` commits the corner the widget is animating to, not the one
  * it left. `onPositionCommit` is the caller's door to persistence — in production `WidgetRoot` calls
  * `writeLocal` from it exactly once per drop, never per pointermove, and a later mount reads the same
- * key back through `StorageService`'s `readLocal`/`scopedKey`, so a stored corner round-trips. A window
+ * key back through `StorageService`'s `readLocalParsed`/`scopedKey`, so a stored corner round-trips. A window
  * resize re-derives the launcher's anchor (and therefore re-clamps it inside the new viewport) because
  * `pixelPositionStyle` is computed from `window.innerWidth`/`innerHeight` at render time and the resize
  * listener only forces that re-render — there is no separate clamp step to duplicate. `renderDragSnap`
@@ -15,10 +15,11 @@ import { act, fireEvent, renderHook, screen, waitFor } from '@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 import { createRef } from 'react';
 
+import { WidgetSettingsDataSchema } from '../../../sdk/contracts/widgetSettings';
 import * as chatSession from '../../../services/chatSession';
 import { domService } from '../../../services/DomService';
 import { ShowModeCancelled, showModeService } from '../../../services/ShowModeService';
-import { readLocal, scopedKey, writeLocal } from '../../../services/StorageService';
+import { readLocalParsed, scopedKey, writeLocal } from '../../../services/StorageService';
 import { streamClient } from '../../../services/StreamClient';
 import { asStreamClientInternals } from '../../../test/fixtures';
 import { resetDom } from '../../../test/preload';
@@ -86,7 +87,7 @@ describe('a drop writes the position key exactly once, and it round-trips', () =
     act(() => vi.advanceTimersByTime(2000));
 
     expect(setItemSpy.mock.calls.filter(([storedKey]) => storedKey === key)).toHaveLength(1);
-    expect(readLocal(key)).toBe('top_left');
+    expect(readLocalParsed(key, WidgetSettingsDataSchema.shape.widget_position)).toBe('top_left');
     setItemSpy.mockRestore();
   });
 });

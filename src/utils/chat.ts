@@ -7,6 +7,7 @@
  * constructors are the only way a `ChatMessage` is built, so ids and shape stay consistent. `CHAT_FAILURE_TEXT` and `SCREEN_ACCESS_PROMPT` are the one wording each site uses for
  * those two situations, so the failure text never leaks raw server error details to a visitor.
  */
+import type { WidgetToolName } from '../services/BrowserToolService';
 import type { AgentMessage, ChatMessage, InstructionType, MessagePart } from '../types';
 import { logWarn } from './log';
 
@@ -61,12 +62,16 @@ function patchPart(message: AgentMessage, index: number, patch: Partial<MessageP
   return { ...message, parts };
 }
 
-const openLineFor = (message: AgentMessage, browserToolName: string): number =>
+const openLineFor = (message: AgentMessage, browserToolName: WidgetToolName): number =>
   message.parts.findIndex(
     part => part.type === 'progress' && part.status === 'in_progress' && part.browserToolName === browserToolName,
   );
 
-export function addProgressLine(message: AgentMessage, browserToolName: string, explanation: string): AgentMessage {
+export function addProgressLine(
+  message: AgentMessage,
+  browserToolName: WidgetToolName,
+  explanation: string,
+): AgentMessage {
   const open = openLineFor(message, browserToolName);
   if (open >= 0) return patchPart(message, open, { content: explanation });
   return {
@@ -75,10 +80,14 @@ export function addProgressLine(message: AgentMessage, browserToolName: string, 
   };
 }
 
-export const markProgressLineComplete = (message: AgentMessage, browserToolName: string): AgentMessage =>
+export const markProgressLineComplete = (message: AgentMessage, browserToolName: WidgetToolName): AgentMessage =>
   patchPart(message, openLineFor(message, browserToolName), { status: 'completed' });
 
-export function markProgressLineFailed(message: AgentMessage, browserToolName: string, error: string): AgentMessage {
+export function markProgressLineFailed(
+  message: AgentMessage,
+  browserToolName: WidgetToolName,
+  error: string,
+): AgentMessage {
   const index = openLineFor(message, browserToolName);
   const part = message.parts[index];
   if (!part) return message;

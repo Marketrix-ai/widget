@@ -44,7 +44,9 @@ export const messageText = (parts: MessagePart[]): string =>
     .map(part => part.content)
     .join('\n');
 
-export type WidgetView = 'home' | 'chat';
+export const WIDGET_VIEWS = ['home', 'chat'] as const;
+
+export type WidgetView = (typeof WIDGET_VIEWS)[number];
 
 export interface WidgetState {
   isOpen: boolean;
