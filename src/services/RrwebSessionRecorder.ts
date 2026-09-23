@@ -10,7 +10,7 @@
  */
 import { record } from '@rrweb/record';
 
-import { type RrwebEvent, RrwebEventSchema } from '../sdk/contracts/common';
+import { type RrwebEvent, RrwebEventSchema } from '../sdk/contracts/rrweb';
 import { logWarn } from '../utils/log';
 import { streamClient } from './StreamClient';
 
