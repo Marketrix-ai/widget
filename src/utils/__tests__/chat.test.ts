@@ -7,8 +7,8 @@
  */
 import { describe, expect, it } from 'bun:test';
 
-import { mockMediaStream } from '../test/fixtures';
-import { type AgentMessage, type ChatMessage, messageText } from '../types';
+import { mockMediaStream } from '../../test/fixtures';
+import { type AgentMessage, type ChatMessage, messageText } from '../../types';
 import {
   addProgressLine,
   CHAT_FAILURE_TEXT,
@@ -18,7 +18,7 @@ import {
   markProgressLineComplete,
   markProgressLineFailed,
   SCREEN_ACCESS_PROMPT,
-} from './chat';
+} from '../chat';
 
 const agentReply = (overrides: Partial<AgentMessage> = {}): AgentMessage => ({
   id: 'agent-1',

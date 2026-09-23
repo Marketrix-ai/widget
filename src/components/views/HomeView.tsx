@@ -18,13 +18,18 @@ import { Icon } from '../base/Icon';
 import { Surface } from '../base/Surface';
 import { Text } from '../base/Text';
 
-export const HomeView: React.FC<{ onChipClick: (action: SuggestedActionItem) => void }> = ({ onChipClick }) => {
+export const HomeView: React.FC = () => {
   const config = useWidgetConfig();
   const { state, actions } = useWidget();
   const { messages } = state;
   const suggestedActions = getSuggestedActionsFromConfig(config);
   const lastMessagePreview = messageText(messages[messages.length - 1]?.parts ?? []) || 'Message';
   const onNavigateToChat = () => actions.setActiveView('chat');
+  const onChipClick = (action: SuggestedActionItem) => {
+    actions.setActiveView('chat');
+    actions.setMode(action.type);
+    void actions.sendTurn(action.text, action.type);
+  };
 
   return (
     <Stack height='full' overflow='hidden'>
@@ -71,7 +76,7 @@ export const HomeView: React.FC<{ onChipClick: (action: SuggestedActionItem) => 
       </Stack>
 
       {messages.length > 0 && (
-        <Surface variant='floatingCard'>
+        <Surface floatingCard>
           <Text as='p' size='xs' weight='semibold' style={{ marginBottom: '2px' }}>
             Recent chat
           </Text>

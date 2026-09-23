@@ -4,8 +4,8 @@
  * `BrowserToolService.sendKeys` dispatches the event and then calls `simulateKeyAction` to carry out
  * the behaviour the browser withheld.
  *
- * `setNativeValue` writes through the native `value` setter so React/Vue-controlled inputs still see
- * the change. `setValueAndCaret` fires the events a controlled input needs and restores the caret.
+ * `setFieldValue` writes through the native `value` setter and fires `input`/`change`, so React/Vue
+ * controlled inputs still see the change.
  * Tab order reuses the same `focusablesIn` filter as the widget's own focus trap, so an element's next
  * focus target matches what the browser would actually pick.
  */
@@ -141,22 +141,18 @@ function deleteAt(element: HTMLInputElement | HTMLTextAreaElement, direction: 'B
     return `${direction}: ${direction === 'Backspace' ? 'cursor at start' : 'cursor at end'}, nothing to delete`;
   }
 
-  setValueAndCaret(element, newValue, newCursorPos);
+  setFieldValue(element, newValue);
+  element.setSelectionRange(newCursorPos, newCursorPos);
   return `${direction}: deleted character, value is now "${newValue}"`;
 }
 
-export function setNativeValue(el: HTMLInputElement | HTMLTextAreaElement, value: string): void {
+export function setFieldValue(el: HTMLInputElement | HTMLTextAreaElement, value: string): void {
   const setter = Object.getOwnPropertyDescriptor(
     el instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype,
     'value',
   )?.set;
   if (setter) setter.call(el, value);
   else el.value = value;
-}
-
-function setValueAndCaret(el: HTMLInputElement | HTMLTextAreaElement, value: string, caret: number): void {
-  setNativeValue(el, value);
   el.dispatchEvent(new Event('input', { bubbles: true }));
   el.dispatchEvent(new Event('change', { bubbles: true }));
-  el.setSelectionRange(caret, caret);
 }

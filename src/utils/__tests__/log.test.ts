@@ -4,7 +4,7 @@
  */
 import { describe, expect, it, vi } from 'bun:test';
 
-import { logWarn } from './log';
+import { logWarn } from '../log';
 
 describe('logWarn', () => {
   it('prints the bare message when no cause is given', () => {

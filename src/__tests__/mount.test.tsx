@@ -8,11 +8,11 @@ import { resolve } from 'node:path';
 
 import { afterEach, describe, expect, it, vi } from 'bun:test';
 
-import * as WidgetService from './services/WidgetService';
+import * as WidgetService from '../services/WidgetService';
 
 const loaderSource = readFileSync(resolve(process.cwd(), 'public/loader.js'), 'utf8');
 
-vi.mock('./index.css?inline', () => ({ default: '.marketrix-widget-container { display: block; }' }));
+vi.mock('../index.css?inline', () => ({ default: '.marketrix-widget-container { display: block; }' }));
 
 const appendModuleScript = (attributes: Record<string, string>) => {
   const script = document.createElement('script');
@@ -29,7 +29,7 @@ const resetDocument = () => {
 };
 
 let mountImportCount = 0;
-const importMount = () => import(`./mount.tsx?t=${mountImportCount++}`);
+const importMount = () => import(`../mount.tsx?t=${mountImportCount++}`);
 
 const runAutoInit = async () => {
   const init = vi.spyOn(WidgetService, 'loadWidgetConfig').mockReturnValue(new Promise(() => {}));

@@ -1,16 +1,16 @@
 /**
- * `createSemanticTokens` tests: every colour var derives from the tenant settings, a radius or duration
+ * `themeCssProperties` tests: every colour var derives from the tenant settings, a radius or duration
  * left in a stored settings blob is ignored, and the fixed radius and durations are emitted.
  */
 import { describe, expect, it } from 'bun:test';
 
 import { getMockWidgetConfig } from '../../test/fixtures';
 import { contrastRatio } from '../../utils/color';
-import { createSemanticTokens, semanticTokensToCssCustomProperties } from '../semantic-tokens';
+import { themeCssProperties } from '../semantic-tokens';
 
-describe('createSemanticTokens', () => {
+describe('themeCssProperties', () => {
   it('derives every colour var from the tenant settings', () => {
-    const css = semanticTokensToCssCustomProperties(createSemanticTokens(getMockWidgetConfig()));
+    const css = themeCssProperties(getMockWidgetConfig());
 
     expect(css['--card']).toBe('#111827');
     expect(css['--foreground']).toBe('#f9fafb');
@@ -21,13 +21,11 @@ describe('createSemanticTokens', () => {
   it('ignores a radius or duration left in a stored settings blob', () => {
     const stale = { ...getMockWidgetConfig(), widget_border_radius: '99px', widget_fade_duration: '9s' };
 
-    expect(semanticTokensToCssCustomProperties(createSemanticTokens(stale))).toEqual(
-      semanticTokensToCssCustomProperties(createSemanticTokens(getMockWidgetConfig())),
-    );
+    expect(themeCssProperties(stale)).toEqual(themeCssProperties(getMockWidgetConfig()));
   });
 
   it('pins the exact opacity of every derived muted/faint/hover variant', () => {
-    const css = semanticTokensToCssCustomProperties(createSemanticTokens(getMockWidgetConfig()));
+    const css = themeCssProperties(getMockWidgetConfig());
 
     expect(css['--foreground-muted']).toBe('rgba(249, 250, 251, 0.6)');
     expect(css['--foreground-faint']).toBe('rgba(249, 250, 251, 0.4)');
@@ -37,7 +35,7 @@ describe('createSemanticTokens', () => {
   });
 
   it('emits the fixed radius and durations', () => {
-    const css = semanticTokensToCssCustomProperties(createSemanticTokens(getMockWidgetConfig()));
+    const css = themeCssProperties(getMockWidgetConfig());
 
     expect(css['--radius']).toBe('12px');
     expect(css['--duration-animation']).toBe('300ms');
@@ -46,9 +44,7 @@ describe('createSemanticTokens', () => {
 
   it('derives a focus ring that clears 3:1 against the background regardless of the tenant accent, for both readings', () => {
     for (const widget_background_color of ['#ffffff', '#111827', '#f5f5f4', '#0a0a0a', '#fef3c7', '#1e293b']) {
-      const css = semanticTokensToCssCustomProperties(
-        createSemanticTokens(getMockWidgetConfig({ widget_background_color, widget_accent_color: '#a855f7' })),
-      );
+      const css = themeCssProperties(getMockWidgetConfig({ widget_background_color, widget_accent_color: '#a855f7' }));
       expect(contrastRatio(css['--ring']!, css['--ring-offset']!)).toBeGreaterThanOrEqual(3);
     }
   });

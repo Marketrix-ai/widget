@@ -134,7 +134,7 @@ describe('a non-click action settles on Continue, not on an element click', () =
       .showToolAction({
         element: document.getElementById('a') as HTMLElement,
         explanation: 'Read this step',
-        browserToolName: 'read_page',
+        browserToolName: 'type_text',
         isClickAction: false,
       })
       .then(

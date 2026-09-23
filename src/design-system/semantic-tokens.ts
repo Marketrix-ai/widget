@@ -1,11 +1,9 @@
 /**
- * Turns per-tenant widget settings into semantic design tokens and the CSS custom properties inlined
- * on the widget root — the widget's entire theming mechanism (there is no dark mode).
+ * Turns per-tenant widget settings into the CSS custom properties inlined on the widget root — the
+ * widget's entire theming mechanism (there is no dark mode).
  *
- * `createSemanticTokens` takes a tenant's colour settings and derives the muted/faint/hover/contrast
- * variants. `semanticTokensToCssCustomProperties` turns those tokens into
- * the `--var` map applied to the widget root. `WIDGET_RADIUS_PX` and the two duration constants are
- * fixed, not per-tenant.
+ * `themeCssProperties` maps a tenant's colour settings, plus their muted/faint/hover/contrast variants,
+ * onto the `--var` map. `WIDGET_RADIUS_PX` and the two durations are fixed, not per-tenant.
  *
  * The focus ring colour is synthesized as black or white against the tenant's background rather than
  * using the tenant's accent colour, which has no guaranteed contrast against whatever sits next to it.
@@ -13,32 +11,7 @@
 import type { WidgetSettingsData } from '../sdk';
 import { addOpacity, getContrastingColor } from '../utils/color';
 
-type SemanticTokens = {
-  color: {
-    background: string;
-    foreground: string;
-    foregroundMuted: string;
-    foregroundFaint: string;
-    border: string;
-    primary: string;
-    primaryForeground: string;
-    primaryHover: string;
-    secondary: string;
-    secondaryForeground: string;
-    secondaryBg: string;
-    secondaryHover: string;
-    ring: string;
-  };
-  radius: string;
-  motion: {
-    durationAnimation: string;
-    durationFade: string;
-  };
-};
-
 export const WIDGET_RADIUS_PX = 12;
-const DURATION_ANIMATION = '300ms';
-const DURATION_FADE = '200ms';
 
 type WidgetColorSettings = Pick<
   WidgetSettingsData,
@@ -49,50 +22,27 @@ type WidgetColorSettings = Pick<
   | 'widget_secondary_color'
 >;
 
-export function createSemanticTokens(resolved: WidgetColorSettings): SemanticTokens {
+export function themeCssProperties(settings: WidgetColorSettings): Record<`--${string}`, string> {
+  const { widget_background_color: background, widget_text_color: text, widget_accent_color: accent } = settings;
+  const secondary = settings.widget_secondary_color;
   return {
-    color: {
-      background: resolved.widget_background_color,
-      foreground: resolved.widget_text_color,
-      foregroundMuted: addOpacity(resolved.widget_text_color, 0.6),
-      foregroundFaint: addOpacity(resolved.widget_text_color, 0.4),
-      border: resolved.widget_border_color,
-      primary: resolved.widget_accent_color,
-      primaryForeground: getContrastingColor(resolved.widget_accent_color),
-      primaryHover: addOpacity(resolved.widget_accent_color, 0.85),
-      secondary: resolved.widget_secondary_color,
-      secondaryForeground: getContrastingColor(resolved.widget_secondary_color),
-      secondaryBg: addOpacity(resolved.widget_secondary_color, 0.2),
-      secondaryHover: addOpacity(resolved.widget_secondary_color, 0.3),
-      ring: getContrastingColor(resolved.widget_background_color),
-    },
-    radius: `${WIDGET_RADIUS_PX}px`,
-    motion: {
-      durationAnimation: DURATION_ANIMATION,
-      durationFade: DURATION_FADE,
-    },
-  };
-}
-
-export function semanticTokensToCssCustomProperties(tokens: SemanticTokens): Record<string, string> {
-  return {
-    '--foreground': tokens.color.foreground,
-    '--card': tokens.color.background,
-    '--card-foreground': tokens.color.foreground,
-    '--primary': tokens.color.primary,
-    '--foreground-muted': tokens.color.foregroundMuted,
-    '--foreground-faint': tokens.color.foregroundFaint,
-    '--primary-foreground': tokens.color.primaryForeground,
-    '--primary-hover': tokens.color.primaryHover,
-    '--secondary': tokens.color.secondary,
-    '--secondary-foreground': tokens.color.secondaryForeground,
-    '--secondary-bg': tokens.color.secondaryBg,
-    '--secondary-hover': tokens.color.secondaryHover,
-    '--border': tokens.color.border,
-    '--ring': tokens.color.ring,
-    '--ring-offset': tokens.color.background,
-    '--radius': tokens.radius,
-    '--duration-animation': tokens.motion.durationAnimation,
-    '--duration-fade': tokens.motion.durationFade,
+    '--foreground': text,
+    '--card': background,
+    '--card-foreground': text,
+    '--primary': accent,
+    '--foreground-muted': addOpacity(text, 0.6),
+    '--foreground-faint': addOpacity(text, 0.4),
+    '--primary-foreground': getContrastingColor(accent),
+    '--primary-hover': addOpacity(accent, 0.85),
+    '--secondary': secondary,
+    '--secondary-foreground': getContrastingColor(secondary),
+    '--secondary-bg': addOpacity(secondary, 0.2),
+    '--secondary-hover': addOpacity(secondary, 0.3),
+    '--border': settings.widget_border_color,
+    '--ring': getContrastingColor(background),
+    '--ring-offset': background,
+    '--radius': `${WIDGET_RADIUS_PX}px`,
+    '--duration-animation': '300ms',
+    '--duration-fade': '200ms',
   };
 }

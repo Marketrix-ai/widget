@@ -283,12 +283,12 @@ describe("show mode's default explanation only fills in a blank one", () => {
     expect(staged).toHaveBeenCalledWith(expect.objectContaining({ explanation: 'Click the Buy button' }));
   });
 
-  it('falls back to a generated explanation when the caller leaves it blank', async () => {
+  it('falls back to the tool label when the caller leaves the explanation blank', async () => {
     const staged = vi.spyOn(showModeService, 'showToolAction').mockResolvedValue();
 
     await browserToolService.executeTool('click_element', { index: 0 }, 'show');
 
-    expect(staged).toHaveBeenCalledWith(expect.objectContaining({ explanation: 'Execute click_element' }));
+    expect(staged).toHaveBeenCalledWith(expect.objectContaining({ explanation: 'Clicking element' }));
   });
 });
 

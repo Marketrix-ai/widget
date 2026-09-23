@@ -7,15 +7,15 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'bun:test';
 import React from 'react';
 
-import { useWidget } from '../hooks/useWidget';
-import * as chatSession from '../services/chatSession';
-import * as StorageService from '../services/StorageService';
-import { streamClient } from '../services/StreamClient';
-import { agentMessage, flushMicrotasks, getMockWidgetConfig } from '../test/fixtures';
+import { useWidget } from '../../hooks/useWidget';
+import * as chatSession from '../../services/chatSession';
+import * as StorageService from '../../services/StorageService';
+import { streamClient } from '../../services/StreamClient';
+import { agentMessage, flushMicrotasks, getMockWidgetConfig } from '../../test/fixtures';
 
 const LIVE = getMockWidgetConfig({ isPreviewMode: false });
-import { useUIStateContext } from './UIStateContext';
-import { WidgetProviders } from './WidgetProviders';
+import { useUIStateContext } from '../UIStateContext';
+import { WidgetProviders } from '../WidgetProviders';
 
 const ErrorProbe = () => {
   const { uiState } = useUIStateContext();

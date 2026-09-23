@@ -8,14 +8,14 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 
-import { useChatContext } from '../../context/ChatContext';
-import * as chatSession from '../../services/chatSession';
-import * as ScreenShareService from '../../services/ScreenShareService';
-import { scopeStorageTo } from '../../services/StorageService';
-import { streamClient } from '../../services/StreamClient';
-import { mockMediaStream, ofKind } from '../../test/fixtures';
-import { ChatHarness, openChatTab, openWidget, renderWidget } from '../../test/renderWidget';
-import { messageText } from '../../types';
+import { useChatContext } from '../../../context/ChatContext';
+import * as chatSession from '../../../services/chatSession';
+import * as ScreenShareService from '../../../services/ScreenShareService';
+import { scopeStorageTo } from '../../../services/StorageService';
+import { streamClient } from '../../../services/StreamClient';
+import { mockMediaStream, ofKind } from '../../../test/fixtures';
+import { ChatHarness, openChatTab, openWidget, renderWidget } from '../../../test/renderWidget';
+import { messageText } from '../../../types';
 
 const openChat = (mode?: 'Show') => {
   renderWidget();

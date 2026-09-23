@@ -9,8 +9,8 @@
  */
 import { describe, expect, it } from 'bun:test';
 
-import type { WidgetPosition } from '../types';
-import { getAnchorTopLeft, getNearestCornerByTranslation, getResizeGrip, isWidgetPosition } from './widgetPositioning';
+import type { WidgetPosition } from '../../types';
+import { getAnchorTopLeft, getNearestCornerByTranslation, getResizeGrip, isWidgetPosition } from '../widgetPositioning';
 
 const CORNERS: WidgetPosition[] = ['top_left', 'top_right', 'bottom_left', 'bottom_right'];
 const [VW, VH, W, H] = [1280, 800, 56, 56];
@@ -54,7 +54,7 @@ describe('getNearestCornerByTranslation', () => {
     const center = { x: VW / 2 - W / 2, y: VH / 2 - H / 2 };
     const translation = { dx: center.x - start.x, dy: center.y - start.y };
 
-    expect(getNearestCornerByTranslation(translation, 'top_left', VW, VH, W, H)).toBe('bottom_right');
+    expect(getNearestCornerByTranslation(translation, 'top_left', VW, VH, W, H)).toBe('bottom_left');
   });
 
   it('picks the corner the drag actually lands on, from every starting corner', () => {

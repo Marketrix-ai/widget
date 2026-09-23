@@ -13,7 +13,7 @@ import React, { useEffect, useState } from 'react';
 
 import { PortalContainerContext } from '../context/WidgetProviders';
 import { LAYER_TOKENS } from '../design-system/component-tokens';
-import { createSemanticTokens, semanticTokensToCssCustomProperties } from '../design-system/semantic-tokens';
+import { themeCssProperties } from '../design-system/semantic-tokens';
 import { useWidget, useWidgetConfig, WidgetConfigContext } from '../hooks/useWidget';
 import { readLocal, scopedKey, writeLocal } from '../services/StorageService';
 import { streamClient } from '../services/StreamClient';
@@ -94,7 +94,7 @@ export const WidgetRoot: React.FC = () => {
   };
 
   const showProcessingFeedback = state.isAwaitingReply || state.isTaskRunning;
-  const customStyles = semanticTokensToCssCustomProperties(createSemanticTokens(config)) as React.CSSProperties;
+  const customStyles = themeCssProperties(config) as React.CSSProperties;
 
   return (
     <WidgetConfigContext value={effectiveConfig}>
