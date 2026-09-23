@@ -5,22 +5,23 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 
-import { browserToolService, type ToolExecutionResult } from '../BrowserToolService';
+import { browserToolService } from '../BrowserToolService';
 import { domService } from '../DomService';
 import { showModeService } from '../ShowModeService';
 
-type ToolSuccess<T> = Extract<ToolExecutionResult<T>, { success: true }>;
-type ToolFailure<T> = Extract<ToolExecutionResult<T>, { success: false }>;
+type ToolResult = Awaited<ReturnType<typeof browserToolService.executeTool>>;
+type ToolSuccess = Extract<ToolResult, { success: true }>;
+type ToolFailure = Extract<ToolResult, { success: false }>;
 
-function assertSuccess<T>(result: ToolExecutionResult<T>): asserts result is ToolSuccess<T> {
+function assertSuccess(result: ToolResult): asserts result is ToolSuccess {
   if (!result.success) throw new Error(`expected success, got failure: ${result.error}`);
 }
 
-function assertFailure<T>(result: ToolExecutionResult<T>): asserts result is ToolFailure<T> {
+function assertFailure(result: ToolResult): asserts result is ToolFailure {
   if (result.success) throw new Error('expected failure, got success');
 }
 
-function expectFailure<T>(result: ToolExecutionResult<T>, error: string): void {
+function expectFailure(result: ToolResult, error: string): void {
   expect(result.success).toBe(false);
   assertFailure(result);
   expect(result.error).toBe(error);

@@ -19,7 +19,7 @@ interface IndexedElement {
 
 type ValidatedElementResult = { element: HTMLElement; error?: undefined } | { element: null; error: string };
 
-export class DomService {
+class DomService {
   private index: Map<number, IndexedElement> = new Map();
 
   private generateAnchoredSelector(element: Element): string {

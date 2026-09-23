@@ -8,7 +8,9 @@
 import { sdk, type WidgetEvent } from '../../sdk';
 import { flushMicrotasks } from '../../test/fixtures';
 import { advanceTimersByTimeAsync, mocked, mockSdkModule, restoreModuleAfterAll, waitFor } from '../../test/vi-compat';
-import { type StreamClient, streamClient, StreamGaveUpError } from '../StreamClient';
+import { streamClient, StreamGaveUpError } from '../StreamClient';
+
+type StreamClient = typeof streamClient;
 
 vi.mock('../../sdk', () => mockSdkModule({ widgetStream: vi.fn(), widgetMessagePost: vi.fn() }));
 restoreModuleAfterAll('../../sdk', () => import('../../sdk/index.ts?real'));

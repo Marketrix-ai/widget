@@ -31,8 +31,7 @@ interface DropdownOptionsData {
 
 type ToolFailure = { success: false; error: string; cancelled?: true };
 
-export type ToolExecutionResult<T = TextData> =
-  { success: true; data: T; afterResponseAttempt?: () => void } | ToolFailure;
+type ToolExecutionResult<T = TextData> = { success: true; data: T; afterResponseAttempt?: () => void } | ToolFailure;
 
 export type WidgetToolCall = Extract<WidgetEvent, { type: 'tool/call' }>;
 export type WidgetToolName = WidgetToolCall['browser_tool'];
@@ -71,7 +70,7 @@ interface WidgetToolDef<K extends WidgetToolName> {
   run: (args: ToolArgMap[K]) => ToolExecutionResult<unknown> | Promise<ToolExecutionResult<unknown>>;
 }
 
-export class BrowserToolService {
+class BrowserToolService {
   private readonly tools: { [K in WidgetToolName]: WidgetToolDef<K> } = {
     navigate: { label: 'Navigating', run: args => this.navigate(args) },
     search: { label: 'Searching', run: args => this.search(args) },
