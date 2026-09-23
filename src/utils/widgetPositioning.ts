@@ -5,7 +5,8 @@
  * `getCorner` maps a `WidgetPosition` to its CSS sides and `EDGE_OFFSET_PX` is the gap from those edges.
  * `getPanelPositionStyle` turns a corner into inline style. `getResizeGrip` describes the
  * handle on the opposite corner, since the panel grows away from its anchor. `getAnchorTopLeft` and
- * `getNearestCornerByTranslation` do the drag math, snapping a drag to whichever corner ends up nearest.
+ * `getNearestCornerByTranslation` do the drag math, `getReleaseCorner` adds a flick's projected momentum
+ * to it, and `animateSnap` glides the launcher to the chosen corner and reports when it lands.
  */
 import type React from 'react';
 
@@ -80,4 +81,80 @@ export const getNearestCornerByTranslation = (
     }
   }
   return nearest;
+};
+
+export type PointerSample = { x: number; y: number; t: number };
+
+const SNAP_DURATION_MS = 600;
+const SNAP_EASING = 'cubic-bezier(0.16, 1, 0.3, 1)';
+
+const projectFlickVelocity = (history: PointerSample[], decel = 0.999): { x: number; y: number } => {
+  const first = history[0];
+  const last = history[history.length - 1];
+  const dt = first && last ? last.t - first.t : 0;
+  if (!first || !last || dt <= 0) return { x: 0, y: 0 };
+  const project = (d: number) => ((d / dt) * decel) / (1 - decel);
+  return { x: project(last.x - first.x), y: project(last.y - first.y) };
+};
+
+export const getReleaseCorner = (
+  history: PointerSample[],
+  translation: { dx: number; dy: number },
+  position: WidgetPosition,
+  vw: number,
+  vh: number,
+  w: number,
+  h: number,
+): WidgetPosition => {
+  const flick = projectFlickVelocity(history);
+  return getNearestCornerByTranslation(
+    { dx: translation.dx + flick.x, dy: translation.dy + flick.y },
+    position,
+    vw,
+    vh,
+    w,
+    h,
+  );
+};
+
+export const animateSnap = (
+  wrapper: HTMLElement,
+  from: { x: number; y: number },
+  to: { x: number; y: number },
+  onSettled: () => void,
+): (() => void) => {
+  let finished = false;
+  const detach = () => {
+    finished = true;
+    window.clearTimeout(fallbackTimer);
+    wrapper.removeEventListener('transitionend', onEnd);
+  };
+  const done = () => {
+    if (finished) return;
+    detach();
+    wrapper.style.transition = 'none';
+    wrapper.style.willChange = '';
+    wrapper.style.left = '';
+    wrapper.style.top = '';
+    onSettled();
+    requestAnimationFrame(() => {
+      wrapper.style.transition = '';
+    });
+  };
+  const onEnd = (e: TransitionEvent) => {
+    if (e.target === wrapper && e.propertyName === 'left') done();
+  };
+  const fallbackTimer = window.setTimeout(done, SNAP_DURATION_MS + 50);
+  wrapper.addEventListener('transitionend', onEnd);
+  wrapper.style.transition = 'none';
+  wrapper.style.transform = 'none';
+  wrapper.style.willChange = 'left, top';
+  wrapper.style.left = `${from.x}px`;
+  wrapper.style.top = `${from.y}px`;
+  requestAnimationFrame(() => {
+    wrapper.style.transition = `left ${SNAP_DURATION_MS}ms ${SNAP_EASING}, top ${SNAP_DURATION_MS}ms ${SNAP_EASING}`;
+    wrapper.style.left = `${to.x}px`;
+    wrapper.style.top = `${to.y}px`;
+  });
+  return detach;
 };
