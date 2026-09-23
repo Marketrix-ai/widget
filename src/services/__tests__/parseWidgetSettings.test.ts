@@ -4,18 +4,15 @@
  */
 import { describe, expect, it } from 'bun:test';
 
-import { WidgetSettingsDataSchema } from '../../sdk/contracts/widgetSettings';
+import { WidgetSettingsDataSchema, WidgetSettingsWriteSchema } from '../../sdk/contracts/widgetSettings';
 import { validSettings } from '../../test/fixtures';
 import { invalidSettingsMessage, parseWidgetSettings } from '../WidgetService';
 
 const valid = validSettings();
-const RENDER_CONSTANTS: readonly string[] = [
-  'widget_border_radius',
-  'widget_font_size',
-  'widget_animation_duration',
-  'widget_fade_duration',
-];
-const FIELDS = (Object.keys(valid) as (keyof typeof valid)[]).filter(field => !RENDER_CONSTANTS.includes(field));
+const FIELDS = Object.keys(WidgetSettingsWriteSchema.shape) as (keyof typeof WidgetSettingsWriteSchema.shape)[];
+const RENDER_CONSTANTS = Object.keys(WidgetSettingsDataSchema.shape).filter(
+  field => !(field in WidgetSettingsWriteSchema.shape),
+);
 
 const expectRejectedAndNamed = (broken: unknown, invalidFields: string[]) => {
   expect(WidgetSettingsDataSchema.safeParse(broken).success).toBe(false);
@@ -32,13 +29,7 @@ describe('parseWidgetSettings', () => {
   it('projects settings from a wider internal config while the wire schema rejects unknown keys', () => {
     const withExtras = { ...valid, widget_render_constant: 'x', another: 1 };
     const result = parseWidgetSettings(withExtras);
-    const {
-      widget_border_radius: _radius,
-      widget_font_size: _fontSize,
-      widget_animation_duration: _animation,
-      widget_fade_duration: _fade,
-      ...rendered
-    } = valid;
+    const rendered = WidgetSettingsWriteSchema.strip().parse(valid);
     expect(WidgetSettingsDataSchema.safeParse(withExtras).success).toBe(false);
     expect(result.settings).toEqual(rendered);
     expect(result.settings).not.toHaveProperty('widget_render_constant');
@@ -46,12 +37,8 @@ describe('parseWidgetSettings', () => {
 
   it('also drops the render constants the widget renders from its own hard-coded values', () => {
     const result = parseWidgetSettings(valid);
-    for (const field of [
-      'widget_border_radius',
-      'widget_font_size',
-      'widget_animation_duration',
-      'widget_fade_duration',
-    ]) {
+    expect(RENDER_CONSTANTS).not.toHaveLength(0);
+    for (const field of RENDER_CONSTANTS) {
       expect(result.settings).not.toHaveProperty(field);
     }
   });

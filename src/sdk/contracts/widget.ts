@@ -16,7 +16,7 @@ import {
   WidgetSettingsWriteSchema,
   WidgetTypeSchema,
 } from './widgetSettings';
-import type { WIDGET_TOOL_NAMES } from './widgetToolNames';
+import { WIDGET_TOOL_NAMES } from './widgetToolNames';
 
 const WidgetCreateSchema = z.strictObject({
   application_id: z.number().positive(),
@@ -31,16 +31,6 @@ const WidgetUpdateSchema = z.strictObject({
   marketrix_key: z.string().max(100).optional(),
 });
 export type WidgetUpdateData = z.infer<typeof WidgetUpdateSchema>;
-
-const widgetToolCall = <const Name extends string, Args extends z.ZodType>(browserTool: Name, args: Args) =>
-  z.strictObject({
-    type: z.literal('tool/call'),
-    tool_call_id: z.string(),
-    browser_tool: z.literal(browserTool),
-    args,
-    mode: InstructionTypeSchema.exclude(['tell']).optional(),
-    explanation: z.string().optional(),
-  });
 
 const WidgetElementIndexSchema = z.number().int().nonnegative();
 const WidgetEmptyArgsSchema = z.strictObject({});
@@ -81,26 +71,28 @@ const WidgetToolArgsSchemas = {
   wait: z.strictObject({ seconds: z.number().min(0.1).max(30) }),
   search: z.strictObject({ query: z.string(), engine: z.enum(['duckduckgo', 'google', 'bing']) }),
   done: z.strictObject({ message: z.string(), success: z.boolean() }),
-} as const satisfies Record<(typeof WIDGET_TOOL_NAMES)[number], z.ZodType>;
+} as const satisfies Record<WidgetToolName, z.ZodType>;
 
-export const WidgetToolCallEventSchema = z.discriminatedUnion('browser_tool', [
-  widgetToolCall('get_html', WidgetToolArgsSchemas.get_html),
-  widgetToolCall('get_screenshot', WidgetToolArgsSchemas.get_screenshot),
-  widgetToolCall('click_element', WidgetToolArgsSchemas.click_element),
-  widgetToolCall('navigate', WidgetToolArgsSchemas.navigate),
-  widgetToolCall('type_text', WidgetToolArgsSchemas.type_text),
-  widgetToolCall('scroll', WidgetToolArgsSchemas.scroll),
-  widgetToolCall('scroll_to_text', WidgetToolArgsSchemas.scroll_to_text),
-  widgetToolCall('extract', WidgetToolArgsSchemas.extract),
-  widgetToolCall('go_back', WidgetToolArgsSchemas.go_back),
-  widgetToolCall('send_keys', WidgetToolArgsSchemas.send_keys),
-  widgetToolCall('close_tab', WidgetToolArgsSchemas.close_tab),
-  widgetToolCall('select_dropdown_option', WidgetToolArgsSchemas.select_dropdown_option),
-  widgetToolCall('get_dropdown_options', WidgetToolArgsSchemas.get_dropdown_options),
-  widgetToolCall('wait', WidgetToolArgsSchemas.wait),
-  widgetToolCall('search', WidgetToolArgsSchemas.search),
-  widgetToolCall('done', WidgetToolArgsSchemas.done),
-]);
+type WidgetToolName = (typeof WIDGET_TOOL_NAMES)[number];
+
+const widgetToolCall = <Name extends WidgetToolName>(browserTool: Name) =>
+  z.strictObject({
+    type: z.literal('tool/call'),
+    tool_call_id: z.string(),
+    browser_tool: z.literal(browserTool),
+    args: WidgetToolArgsSchemas[browserTool],
+    mode: InstructionTypeSchema.exclude(['tell']).optional(),
+    explanation: z.string().optional(),
+  });
+
+type WidgetToolCalls<T extends readonly WidgetToolName[]> = {
+  -readonly [I in keyof T]: ReturnType<typeof widgetToolCall<T[I] & WidgetToolName>>;
+};
+
+export const WidgetToolCallEventSchema = z.discriminatedUnion(
+  'browser_tool',
+  WIDGET_TOOL_NAMES.map(widgetToolCall) as unknown as WidgetToolCalls<typeof WIDGET_TOOL_NAMES>,
+);
 
 export const WidgetEventSchema = z.union([
   z.strictObject({ type: z.literal('registered'), chat_id: z.string() }),
