@@ -1,14 +1,8 @@
 /**
- * `bun run check:served` — checks what the runtime image actually sends a customer host over real
- * HTTP, rather than trusting the build config to describe it. Runs after `build` in CI.
- *
- * Boots the `runtime` Docker image when docker is available, or falls back to a small `Bun.serve`
- * static server that mimics nginx's own header and compression rules when it isn't. `TARGET_URL`
- * points the same checks at an already-deployed host instead of a local boot; adding `EXPECTED_TAG`
- * also verifies the served bundle is byte-identical to a source build of that tag.
- *
- * Expected cache/CORS headers are read out of `nginx.conf` itself rather than duplicated here, so a
- * config change can't silently drift from what this script asserts.
+ * `bun run check:served` — checks what the runtime image actually sends a customer host over real HTTP.
+ * Boots the `runtime` Docker image, or a `Bun.serve` stand-in mimicking nginx when docker is absent;
+ * `TARGET_URL` points the checks at a deployed host and `EXPECTED_TAG` also asserts the served bundle
+ * matches a source build of that tag. Expected headers are read from `nginx.conf` so they cannot drift.
  */
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';

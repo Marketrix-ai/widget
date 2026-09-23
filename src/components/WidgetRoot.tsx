@@ -1,13 +1,8 @@
 /**
- * The widget's root component: re-publishes the mounted config with the visitor's dragged position and the
- * z-index floor layered on, and publishes the mount's root element for portals.
- *
- * Renders `MessengerShell`, `WidgetFab`, `WidgetNotifications` and a screen-edge glow while a reply or task
- * is in flight, and arms the greeting toast. `useScrollLock` hides page scrolling on mobile while the panel
- * is open — hand-rolled because the panel is non-modal and a dialog primitive would lock the host page.
- *
- * A tenant's z-index setting can never sink the widget below the host page's own stacking context.
- * Preview mode always renders, even when a setting would otherwise hide the widget.
+ * The widget's root component: re-publishes the config with the visitor's dragged position and the
+ * z-index floor, publishes the portal root, and renders the panel, launcher, notifications and busy glow.
+ * A tenant's z-index setting can never sink the widget below the host page's own stacking context, and
+ * preview mode always renders even when a setting would hide the widget.
  */
 import React, { useEffect, useState } from 'react';
 

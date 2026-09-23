@@ -1,14 +1,9 @@
 /**
  * Every browser action the agent can ask the widget to take on the host page, as one registry keyed by
- * the contract's tool names, so a tool the contract adds fails to compile until it has a handler.
- *
- * `tools` lists each action's label, whether it waits for the visitor, and its handler. `toolExplanation`
- * is the one line a step shows the visitor, the agent's explanation or else the tool's label. `executeTool`
- * runs a call through Show mode's highlight-and-wait step when needed and returns the result.
- *
- * A handler throws rather than returning an error, since one place — `executeTool`'s catch — reports
- * every failure back to the agent. A link is only followed if it is http(s), since an extracted href
- * is page-controlled and could otherwise run script in the host page's own origin.
+ * the contract's tool names.
+ * `tools` lists each action's label, visitor wait and handler; `toolExplanation` is the line a step shows the
+ * visitor; `executeTool` runs a call, through Show mode when needed, and reports any failure to the agent.
+ * A link is followed only if it is http(s), since a page-controlled href could run script in the host origin.
  */
 
 import type { WidgetEvent } from '../sdk';

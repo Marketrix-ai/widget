@@ -1,14 +1,8 @@
 /**
  * Pure state machine behind `ChatContext`: folds incoming stream events and local transitions into
  * `{messages, task}` and returns the tool runs the caller must perform. No I/O, no React.
- *
- * Tool progress, completion and stop all patch the running message's parts and the task's phase;
- * `reduceDispatch` appends the next placeholder and reopens the task for a new turn. Terminal
- * transitions clear `isPlaceholder` so the composer re-enables. `reduceError`, `reduceTransportFailure`
- * and `reduceStaleReply` each settle a stuck message as failed, covering a bad reply, a dead
- * connection, and a healthy stream that simply never answers. `reduceText` drops an exact repeat of the
- * last closed text segment, since a duplicated final reply looks exactly like that. The screen-share
- * transitions answer the open screen-access request and announce a share starting or ending.
+ * `reduceDispatch` opens a new turn; the tool, text, error, transport-failure, stale-reply and screen-share
+ * reducers each settle or patch the running message and task.
  */
 import type { WidgetEvent } from '../sdk';
 import { browserToolService, type WidgetToolCall, type WidgetToolName } from '../services/BrowserToolService';

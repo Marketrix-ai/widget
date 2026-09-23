@@ -1,14 +1,9 @@
 /**
  * React context owning the widget's chat store and its live wiring, reached through `useChatContext`.
- *
- * Every mutation is a `chatReducer` transition. `sendTurn` is the one way a visitor turn enters the chat,
- * typed or a chip: Show and Do first ask for screen access unless a share is live or the tenant turned it
- * off, and `allowScreenAccess`/`denyScreenAccess` release the held turn. `stopTask` cancels a running turn and
- * tears down any Show-mode overlay still waiting on the visitor, so a stopped task's step can never fire later.
- * The stream handlers dedupe a resent `tool/call`, run the browser tool and reply with its result, and clear
- * a stale connection error once the stream recovers. The screen-share store is mirrored into the transcript
- * as it starts and ends. Preview mode answers every turn locally. The api never replays a chat_id's past
- * events on reconnect, so `chat/delta`/`chat/response` need no dedupe here.
+ * `sendTurn` is the one entry for a typed turn or chip, asking for screen access first in Show and Do;
+ * `allowScreenAccess`/`denyScreenAccess` release the held turn; `stopTask` cancels a running turn and its
+ * Show overlay. The stream handlers run browser tools and reply with results; preview mode answers locally.
+ * The api never replays a chat's past events on reconnect, so only a resent `tool/call` needs dedupe.
  */
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 

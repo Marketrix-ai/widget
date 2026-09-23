@@ -1,13 +1,9 @@
 /**
- * The numbered address space the agent drives the host page by. `reindexAndSnapshot` indexes every element
- * `isIndexable` accepts and returns a document clone with `data-id="<n>"` stamped on each;
- * `getValidatedElement` resolves an index back to a live element or an error reason;
- * `notInteractableReason` explains why an element can't be acted on. `domService` is the process-wide
- * singleton.
- *
- * Each indexed entry snapshots a few identity attributes, so an element that changed between turns is
- * reported as changed rather than silently acted on. The obscured-element check ignores the widget's own
- * chrome (Show-mode highlight/popup, its shadow host), since those legitimately sit on top.
+ * The numbered address space the agent drives the host page by.
+ * `reindexAndSnapshot` stamps `data-id` on every indexable element of a document clone,
+ * `getValidatedElement` resolves an index back to a live element, `notInteractableReason` explains why an
+ * element can't be acted on, and `domService` is the singleton. An element that changed between turns is
+ * reported as changed rather than silently acted on.
  */
 
 import { disabledReason, isIndexable, WIDGET_SHADOW_HOST_CLASS } from '../utils/dom';

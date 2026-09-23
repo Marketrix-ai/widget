@@ -1,12 +1,7 @@
 /**
  * Shared accessibility assertion for the widget's component tests.
- *
- * `assertNoA11yViolations` runs axe over a rendered container and collapses every violation into one
- * thrown error naming the rule and its node count, so a failing test reports the blast radius instead
- * of dumping the whole axe result. The `color-contrast` rule is disabled because jsdom has no canvas
- * to measure contrast with. `vitest-axe` is dropped for bun (it exists only to wrap this exact
- * `axe-core#run` call in a promise, which axe-core's own API already returns) — this calls axe-core
- * directly rather than reintroducing a vitest-specific dependency.
+ * `assertNoA11yViolations` runs axe-core over a rendered container and throws one error naming each
+ * violated rule and its node count. `color-contrast` is disabled because jsdom has no canvas.
  */
 import axeCore from 'axe-core';
 

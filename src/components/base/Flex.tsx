@@ -1,14 +1,8 @@
 /**
- * The two flex containers over `Surface`. `Flex` is the primitive: `FlexProps` extends `SurfaceProps`
- * with `direction` (`row` default, `column` opt-in) and children, and spreads
- * the rest onto `Surface` so the whole layout-token vocabulary still applies. `Stack` (`StackProps`) is
- * that same component with `direction='column'` fixed — it lives here rather than in a file of its own
- * because it is three lines of `Flex` and shares its tests.
- *
- * `display` is resolved here rather than left to `resolveLayoutStyle`, which `Surface` applies BEFORE
- * the caller's `style`: a `display: flex` arriving later in that cascade would silently defeat
- * `hidden`, so this component reads `hidden` itself and emits `none` or `flex` from the one place that
- * wins.
+ * The two flex containers over `Surface`: `Flex` (`FlexProps`, `direction` defaulting to `row`) and
+ * `Stack`, which is `Flex` with `direction='column'`.
+ * `display` is resolved here from `hidden`, because `Surface` applies layout tokens before the caller's
+ * style and a later `display: flex` would silently defeat `hidden`.
  */
 import type { ReactNode } from 'react';
 

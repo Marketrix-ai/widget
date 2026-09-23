@@ -62,7 +62,7 @@ type RrwebSerializedNodeOutput =
       childNodes: RrwebSerializedNodeOutput[];
     });
 
-export const RrwebSerializedNodeSchema: z.ZodType<RrwebSerializedNodeOutput> = z.lazy(() =>
+const RrwebSerializedNodeSchema: z.ZodType<RrwebSerializedNodeOutput> = z.lazy(() =>
   rrwebSerializedNodeSchemaFor(RrwebSerializedNodeSchema),
 );
 export type RrwebSerializedNode = z.infer<typeof RrwebSerializedNodeSchema>;

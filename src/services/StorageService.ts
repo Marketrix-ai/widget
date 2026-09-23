@@ -1,14 +1,9 @@
 /**
  * Browser-local persistence for the widget: the one door to `localStorage`.
- * `readLocalParsed`/`writeLocal` read a key back through a schema and write one as JSON, falling back to
- * memory when a host page denies storage; an unreadable stored value reads as absent.
- * `scopedKey` suffixes a key by tenant so two tenants on one page never share state, and `scopeStorageTo`
- * points the chat context at one tenant. `getChatId`/`setChatId` hold the thread id and
- * `readChatSnapshot`/`writeChatSnapshot` the transcript. `MessageSchema` is the one definition of a chat
- * message, discriminated on `kind`. Nothing about the widget's config or credentials is ever persisted.
- *
- * A transcript older than a week is discarded, and a stored context is parsed field by field, so one
- * corrupted field falls back to its default rather than discarding the whole transcript.
+ * `readLocalParsed`/`writeLocal` read through a schema and write JSON, `scopedKey`/`scopeStorageTo` scope keys
+ * per tenant, `getChatId`/`setChatId` hold the thread id, `readChatSnapshot`/`writeChatSnapshot` the
+ * transcript, and `MessageSchema` defines a chat message. Config and credentials are never persisted, and
+ * a host page that denies storage falls back to memory.
  */
 import { z } from 'zod';
 

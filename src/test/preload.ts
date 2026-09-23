@@ -1,8 +1,7 @@
 /**
- * `bunfig.toml`'s `[test] preload` entry — the sole DOM bootstrap for `bun test`, replacing vitest's
- * jsdom `environment` option. Builds a jsdom `Window` and copies it onto `globalThis` (self-referential,
- * matching a real browser's top frame), fills in `localStorage`/`matchMedia`/`ResizeObserver`, and wires
- * up jest-dom matchers. `resetDom` clears the document body after each test.
+ * `bunfig.toml`'s `[test] preload` entry — the sole DOM bootstrap for `bun test`.
+ * Copies a jsdom `Window` onto `globalThis`, fills in `localStorage`/`matchMedia`/`ResizeObserver`, wires
+ * jest-dom matchers, and `resetDom` clears the body after each test.
  */
 import { afterEach, expect } from 'bun:test';
 import { JSDOM } from 'jsdom';

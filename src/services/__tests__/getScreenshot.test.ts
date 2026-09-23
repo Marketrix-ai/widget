@@ -1,14 +1,8 @@
 /**
- * `get_screenshot` tests: no active share fails instead of prompting a new one (which would bypass the
- * visitor's Deny), a stream that never delivers a frame fails instead of waiting forever and leaves no
- * video in the host page, a refused 2d canvas context reports failure rather than an all-black frame, and
- * — the success path a stubbed-`getContext` failure test alone would never exercise — a granted context
- * actually draws the video frame and returns the encoded data URI, not just a well-formed-looking result.
- *
- * `ScreenShareService` is faked with `vi.spyOn`, scoped per describe block to `beforeEach`/`afterEach`
- * rather than `vi.mock` — `../services/__tests__/ScreenShareService.test.ts` resolves the same module
- * via its own alias, so a module-scope mock here would leak into it by file-discovery order (root
- * `CLAUDE.md` has the general mechanism); each block's spy overrides only the one export it needs.
+ * Tests for `get_screenshot`: no active share fails rather than prompting, a frameless stream times out and
+ * cleans up, a refused canvas context fails, and a granted one returns the drawn frame as a data URI.
+ * `ScreenShareService` is faked with per-block `vi.spyOn` rather than `vi.mock`, because its own test file
+ * resolves the same module and a module-scope mock would leak into it.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 

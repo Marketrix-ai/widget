@@ -1,14 +1,9 @@
 /**
  * The open widget panel: the corner-pinned, resizable surface holding the header bar, the Home and
- * Chat tabs, and the resize grip. Renders nothing while the store says closed.
- *
- * `useFocusTrap` traps keyboard focus inside the panel while it is open and restores it on close.
- * `useResize` lets a visitor drag or arrow-key resize the panel and remembers the chosen size per
- * tenant. `MessengerShell` renders the panel itself, including the header's screen-share control and the
- * screen-access dialog it opens.
- *
- * The panel is a non-modal surface, not a dialog, so focus trapping and resizing are hand-rolled here
- * rather than reaching for a dialog primitive that would also lock the host page's own scrolling.
+ * Chat tabs, and the resize grip.
+ * `useFocusTrap` keeps focus inside the open panel, `useResize` drag- or key-resizes it and remembers the
+ * size per tenant, and `MessengerShell` renders it. The panel is non-modal, so these are hand-rolled rather
+ * than a dialog primitive that would lock the host page's scrolling.
  */
 import { Tabs } from '@base-ui/react/tabs';
 import React, { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';

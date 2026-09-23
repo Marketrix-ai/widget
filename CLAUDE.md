@@ -63,8 +63,9 @@ GUI clients; that path is baked in at install, so after changing `rc:` re-run `l
 
 ## Widget ↔ api
 
-Two oRPC procedures in `src/sdk/contracts/widget.ts`: `widgetStream` (SSE, server → widget) and
-`widgetMessagePost` (POST, widget → server), each a Zod union discriminated on `type`.
+Four oRPC procedures: `widgetPublicSearch` resolves the widget's settings, `chatCreate` mints a chat id,
+then `widgetStream` (SSE, server → widget) and `widgetMessagePost` (POST, widget → server) carry the chat,
+each a Zod union discriminated on `type`.
 
 - **`application_id` is deliberately NOT a stream input** — a guessable id as a credential let anyone
   drive any tenant's agent. It appears only on the `registered` event.

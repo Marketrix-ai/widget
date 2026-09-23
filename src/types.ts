@@ -1,13 +1,9 @@
 /**
- * Widget-wide shared types: the config shapes a host supplies, the chat message/part model, and the UI
- * store shape. `messageText` joins a message's text parts into the string a render site displays.
- *
- * `MarketrixConfig` is what a host passes: credentials, the api host and the client-owned options, never a
- * dashboard setting, since the api's settings always win. `ValidWidgetConfig` is the rendered config the runtime
- * reads; `mtxApp` is stamped only after the credentials resolve, since a bare application id is guessable.
- * `ChatMessage` is a stored message or a live screen share, which a reload cannot keep; `kind` is the one
- * discriminant. `taskStatus`/`MessagePart.status` are presentational labels only, not the `task/status`
- * wire vocabulary.
+ * Widget-wide shared types: the config a host supplies, the chat message/part model, and the UI store
+ * shape; `messageText` joins a message's text parts for display.
+ * `MarketrixConfig` never carries a dashboard setting, since the api's settings always win, and `mtxApp` is
+ * stamped only after credentials resolve, since a bare application id is guessable. `taskStatus` and
+ * `MessagePart.status` are UI labels, not the `task/status` wire vocabulary.
  */
 import type { InstructionType, WidgetSettingsData } from './sdk';
 import type { StoredMessage } from './services/StorageService';

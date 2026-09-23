@@ -1,14 +1,9 @@
 /**
- * The suggested-action chips the home view offers a visitor: one per tenant-configured `widget_chips`
- * entry. The built-in `PREVIEW_CHIPS` demo copy fills an empty list only in the settings preview, because a
- * live tenant must never be offered another product's demo actions. `SuggestedActionItem` is what a
- * chip renders and dispatches as; `getSuggestedActionsFromConfig` maps a config's chips onto it.
- *
- * A chip's caption doubles as the instruction dispatched on click, so a `show`/`do` caption missing its
- * mode prefix is given one. The strip patterns demand whitespace after the mode word so re-prefixing
- * cannot eat letters from a caption that merely begins with it ("Download…" stays "Do Download…", not
- * "Do wnload…"). `tell` captions are free text and take no prefix. The id carries the chip's index
- * because two chips may share a caption and the slug alone would collide.
+ * The suggested-action chips the home view offers a visitor, one per tenant-configured `widget_chips` entry.
+ * `SuggestedActionItem` is what a chip renders and dispatches as; `getSuggestedActionsFromConfig` maps a
+ * config's chips onto it, prefixing a `show`/`do` caption with its mode since the caption is the instruction.
+ * `PREVIEW_CHIPS` fills an empty list only in the settings preview: a live tenant must never be offered
+ * another product's demo actions.
  */
 
 import type { InstructionType, ValidWidgetConfig } from '../types';

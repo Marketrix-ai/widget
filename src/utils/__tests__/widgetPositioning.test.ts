@@ -1,15 +1,11 @@
 /**
- * `getNearestCornerByTranslation` picks the corner a drag lands on from every start, keeps the corner
- * on a barely-moved drag, snaps by proximity rather than axis, and on an exact tie keeps the first
- * corner checked rather than the last; `getResizeGrip` grows away from the pinned corner on both axes
- * and picks the diagonal the grip cursor lies on. The tie-break case uses the viewport center, which is equidistant
- * from all four anchors, so a `<=` comparison instead of `<` would keep overwriting the winner and
- * report the last corner checked, not the nearest.
+ * Tests for the corner geometry: `getResizeGrip` grows away from the pinned corner, and `getReleaseCorner`
+ * with no flick snaps a drag to the nearest corner, breaking an exact tie toward the first corner checked.
  */
 import { describe, expect, it } from 'bun:test';
 
 import type { WidgetPosition } from '../../types';
-import { getAnchorTopLeft, getNearestCornerByTranslation, getResizeGrip } from '../widgetPositioning';
+import { getAnchorTopLeft, getReleaseCorner, getResizeGrip } from '../widgetPositioning';
 
 const CORNERS: WidgetPosition[] = ['top_left', 'top_right', 'bottom_left', 'bottom_right'];
 const [VW, VH, W, H] = [1280, 800, 56, 56];
@@ -47,13 +43,13 @@ describe('getResizeGrip', () => {
   });
 });
 
-describe('getNearestCornerByTranslation', () => {
+describe('getReleaseCorner', () => {
   it('breaks an exact four-way distance tie toward the first corner in iteration order', () => {
     const start = getAnchorTopLeft('top_left', VW, VH, W, H);
     const center = { x: VW / 2 - W / 2, y: VH / 2 - H / 2 };
     const translation = { dx: center.x - start.x, dy: center.y - start.y };
 
-    expect(getNearestCornerByTranslation(translation, 'top_left', VW, VH, W, H)).toBe('bottom_left');
+    expect(getReleaseCorner([], translation, 'top_left', VW, VH, W, H)).toBe('bottom_left');
   });
 
   it('picks the corner the drag actually lands on, from every starting corner', () => {
@@ -62,20 +58,20 @@ describe('getNearestCornerByTranslation', () => {
       for (const to of CORNERS) {
         const target = getAnchorTopLeft(to, VW, VH, W, H);
         const translation = { dx: target.x - start.x, dy: target.y - start.y };
-        expect(getNearestCornerByTranslation(translation, from, VW, VH, W, H)).toBe(to);
+        expect(getReleaseCorner([], translation, from, VW, VH, W, H)).toBe(to);
       }
     }
   });
 
   it('keeps the current corner when the drag barely moves', () => {
     for (const from of CORNERS) {
-      expect(getNearestCornerByTranslation({ dx: 3, dy: -3 }, from, VW, VH, W, H)).toBe(from);
+      expect(getReleaseCorner([], { dx: 3, dy: -3 }, from, VW, VH, W, H)).toBe(from);
     }
   });
 
   it('snaps by proximity, not by axis', () => {
-    expect(getNearestCornerByTranslation({ dx: -900, dy: -600 }, 'bottom_right', VW, VH, W, H)).toBe('top_left');
-    expect(getNearestCornerByTranslation({ dx: 0, dy: -600 }, 'bottom_right', VW, VH, W, H)).toBe('top_right');
-    expect(getNearestCornerByTranslation({ dx: 900, dy: 0 }, 'bottom_left', VW, VH, W, H)).toBe('bottom_right');
+    expect(getReleaseCorner([], { dx: -900, dy: -600 }, 'bottom_right', VW, VH, W, H)).toBe('top_left');
+    expect(getReleaseCorner([], { dx: 0, dy: -600 }, 'bottom_right', VW, VH, W, H)).toBe('top_right');
+    expect(getReleaseCorner([], { dx: 900, dy: 0 }, 'bottom_left', VW, VH, W, H)).toBe('bottom_right');
   });
 });

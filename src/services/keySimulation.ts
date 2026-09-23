@@ -1,13 +1,8 @@
 /**
- * Simulates the default action a real keypress would take on a host-page element. A programmatic
- * `KeyboardEvent` is untrusted and moves no focus, submits no form and edits no text on its own, so
- * `BrowserToolService.sendKeys` dispatches the event and then calls `simulateKeyAction` to carry out
- * the behaviour the browser withheld.
- *
- * `setFieldValue` writes through the native `value` setter and fires `input`/`change`, so React/Vue
- * controlled inputs still see the change.
- * Tab order reuses the same `focusablesIn` filter as the widget's own focus trap, so an element's next
- * focus target matches what the browser would actually pick.
+ * Simulates the default action a real keypress would take on a host-page element.
+ * `simulateKeyAction` carries out what the browser withholds from a programmatic, untrusted `KeyboardEvent`
+ * (focus moves, form submits, text edits); `setFieldValue` writes through the native `value` setter and fires
+ * `input`/`change` so framework-controlled inputs see the change.
  */
 import { focusablesIn } from '../utils/dom';
 import type { ToolArgs } from './BrowserToolService';
