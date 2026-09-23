@@ -75,7 +75,6 @@ export function getMockWidgetConfig(overrides: Partial<MockWidgetConfig> = {}): 
     widget_position_z_index: 1230,
     mtxId: 'test-id',
     mtxKey: 'test-key',
-    mtxApiHost: 'https://api.test',
     isPreviewMode: true,
     ...overrides,
   };

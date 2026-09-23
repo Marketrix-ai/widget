@@ -140,7 +140,7 @@ async function initWidgetInternal(config: MarketrixConfig, host: HTMLElement | u
   showHostPageNotice('Loading widget settings...');
   let finalConfig: CredentialedConfig;
   try {
-    configureSdk(config.mtxApiHost ?? '');
+    configureSdk(config.mtxApiHost);
     finalConfig = await loadWidgetConfig(config);
   } catch (error) {
     if (generation !== lifecycleGeneration) return;
