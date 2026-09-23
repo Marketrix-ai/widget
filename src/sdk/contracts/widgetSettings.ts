@@ -14,15 +14,14 @@ export const InstructionTypeSchema = z.enum(['tell', 'show', 'do']);
 
 export type InstructionType = z.infer<typeof InstructionTypeSchema>;
 
-export const WidgetChipSchema = z.strictObject({
+const WidgetChipSchema = z.strictObject({
   chip_mode: InstructionTypeSchema,
   chip_text: z.string(),
 });
 
 export type WidgetChip = z.infer<typeof WidgetChipSchema>;
 
-export const WidgetPositionSchema = z.enum(['bottom_left', 'bottom_right', 'top_left', 'top_right']);
-export type WidgetPosition = z.infer<typeof WidgetPositionSchema>;
+const WidgetPositionSchema = z.enum(['bottom_left', 'bottom_right', 'top_left', 'top_right']);
 
 export const WidgetSettingsDataSchema = z.strictObject({
   widget_enabled: z.boolean(),
@@ -77,13 +76,6 @@ export const DEFAULT_WIDGET_SETTINGS: WidgetSettingsData = {
   widget_fade_duration: '200ms',
   widget_chips: [],
 };
-
-export const WIDGET_RENDER_CONSTANTS = [
-  'widget_border_radius',
-  'widget_font_size',
-  'widget_animation_duration',
-  'widget_fade_duration',
-] as const;
 
 export const WidgetSettingsWriteSchema = WidgetSettingsDataSchema.omit({
   widget_border_radius: true,

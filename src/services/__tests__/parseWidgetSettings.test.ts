@@ -4,12 +4,17 @@
  */
 import { describe, expect, it } from 'bun:test';
 
-import { WIDGET_RENDER_CONSTANTS, WidgetSettingsDataSchema } from '../../sdk/contracts/widgetSettings';
+import { WidgetSettingsDataSchema } from '../../sdk/contracts/widgetSettings';
 import { validSettings } from '../../test/fixtures';
 import { invalidSettingsMessage, parseWidgetSettings } from '../WidgetService';
 
 const valid = validSettings();
-const RENDER_CONSTANTS: readonly string[] = WIDGET_RENDER_CONSTANTS;
+const RENDER_CONSTANTS: readonly string[] = [
+  'widget_border_radius',
+  'widget_font_size',
+  'widget_animation_duration',
+  'widget_fade_duration',
+];
 const FIELDS = (Object.keys(valid) as (keyof typeof valid)[]).filter(field => !RENDER_CONSTANTS.includes(field));
 
 const expectRejectedAndNamed = (broken: unknown, invalidFields: string[]) => {

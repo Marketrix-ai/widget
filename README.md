@@ -222,6 +222,12 @@ TypeScript types are bundled with the package:
 
 ---
 
+## Upgrading to 5.x
+
+- **4.x widgets configured with `userId` no longer connect.** They send a `user_id` the api now refuses, so the chat stream is rejected. Upgrade to 5.x and drop `userId` from your config; 4.x widgets without `userId` are unaffected.
+
+---
+
 ## Upgrading to 5.0.1
 
 - **TypeScript now requires `mtxApiHost`** in `MarketrixConfig` and in the credentials form of `AddWidgetConfig`. The runtime already refused to start without it, so only type-checking changes; it is no longer part of `ClientOwnedConfig`.

@@ -131,7 +131,7 @@ Both payloads are Zod **discriminated unions on `type`**, whose literal sets are
 async iterator in the background. Status machine `disconnected → connecting → open → registered`, plus
 `error` from any failed connect or stream — **`open` is the transport, `registered` is the chat**, so
 `isConnected()` reads `registered` and nothing waits on `open`. Exponential-backoff reconnect (1000ms
-×2, cap 30000ms, **max 10 attempts**; counters reset only on `registered`) and the `chat/error`
+×2, cap 30000ms, **max 10 attempts**; counters reset on `registered` and on a manual `reconnectNow`) and the `chat/error`
 `request_id === 'auth'` give-up branch are exercised with real fake-timer tests in
 `StreamClient.test.ts`, not a source-text pin. **A reconnect gets a
 fresh, empty queue, never a replay** — the api keeps a chat_id's turn history only to fold back into the

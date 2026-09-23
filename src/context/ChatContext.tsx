@@ -58,7 +58,7 @@ interface ChatActions {
   sendTurn: (content: string, mode: InstructionType) => Promise<boolean>;
   allowScreenAccess: () => Promise<void>;
   denyScreenAccess: () => void;
-  stopTask: () => Promise<void>;
+  stopTask: () => void;
 }
 
 interface ChatContextType {
@@ -265,7 +265,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => streamClient.removeCallbacks(callbacks);
   }, [isPreviewMode, commit, uiActions, currentModeRef, currentErrorRef]);
 
-  const stopTask = useCallback(async () => {
+  const stopTask = useCallback(() => {
     showModeService.cleanup();
     commit(s => reduceStop(s, currentModeRef.current));
     if (isPreviewMode) return;
