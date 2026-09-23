@@ -2,10 +2,10 @@
  * Vite config for the widget package. The default export branches on `command`: `build` produces the
  * library-mode production bundle, anything else runs the dev server.
  *
- * The production build adds a `typescript-declarations` plugin that generates the `.d.ts` tree, aliases
- * out the legacy `use-sync-external-store/shim`, and keeps React external so the host page supplies it.
- * The dev build adds `widget-dev-routing`, so a page pointed at the production bundle URL also works
- * against the dev server.
+ * Both alias the legacy `use-sync-external-store/shim` to the local stand-in, so dev and the bundle run the
+ * same code. The production build adds a `typescript-declarations` plugin that generates the `.d.ts` tree
+ * and keeps React external so the host page supplies it. The dev build adds `widget-dev-routing`, so a
+ * page pointed at the production bundle URL also works against the dev server.
  */
 import { execSync } from 'node:child_process';
 import { resolve } from 'node:path';
@@ -16,6 +16,14 @@ import { defineConfig, type ViteDevServer } from 'vite';
 
 const BUNDLE_FILE = 'widget.mjs';
 const ENTRY_FILE = 'src/index.tsx';
+const SHIM_ALIAS = {
+  alias: [
+    {
+      find: /^use-sync-external-store\/shim(?:\/with-selector)?$/,
+      replacement: resolve(cwd(), 'src/useSyncExternalStoreShim.ts'),
+    },
+  ],
+};
 
 export default defineConfig(({ command }) => {
   const isProduction = command === 'build';
@@ -23,14 +31,7 @@ export default defineConfig(({ command }) => {
   if (isProduction) {
     return {
       mode: 'production',
-      resolve: {
-        alias: [
-          {
-            find: /^use-sync-external-store\/shim(?:\/with-selector)?$/,
-            replacement: resolve(cwd(), 'src/useSyncExternalStoreShim.ts'),
-          },
-        ],
-      },
+      resolve: SHIM_ALIAS,
       define: {
         'process.env.NODE_ENV': '"production"',
         'process.env': '{}',
@@ -94,6 +95,7 @@ export default defineConfig(({ command }) => {
   }
 
   return {
+    resolve: SHIM_ALIAS,
     plugins: [
       react(),
       {

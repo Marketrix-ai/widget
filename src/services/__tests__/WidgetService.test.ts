@@ -3,16 +3,14 @@
  * read; an invalid settings response is rejected naming the schema field; a repeat call for the same
  * credentials reuses the cached lookup instead of re-searching, and a failed lookup is never cached so the
  * next call retries against the api. Each case uses its own `mtxId` so the module-level `widgetLookupCache`
- * from one test cannot leak a cached result into another. A missing `mtxId` OR `mtxKey` (either alone, not
- * just both) is refused before any search, and an unreachable-api error names the configured host, falling
- * back to a generic phrase only when none was configured.
+ * from one test cannot leak a cached result into another. An unreachable-api error names the configured
+ * host.
  */
 import { beforeEach, describe, expect, it, vi } from 'bun:test';
 
 import { type ApplicationWidgetPublicData, sdk } from '../../sdk';
 import { validSettings } from '../../test/fixtures';
 import { mocked, mockSdkModule, restoreModuleAfterAll } from '../../test/vi-compat';
-import type { MarketrixConfig } from '../../types';
 import { loadWidgetConfig } from '../WidgetService';
 
 vi.mock('../../sdk', () => mockSdkModule({ widgetPublicSearch: vi.fn() }));
@@ -38,14 +36,6 @@ beforeEach(() => {
 });
 
 describe('loadWidgetConfig', () => {
-  it.each([
-    ['mtxId', { mtxKey: 'test-key' }],
-    ['mtxKey', { mtxId: 'missing-the-other' }],
-  ])('refuses to search when %s alone is missing', async (_label, config) => {
-    await expect(loadWidgetConfig(config as MarketrixConfig)).rejects.toThrow('Please provide mtxId + mtxKey');
-    expect(mockSdk.widgetPublicSearch).not.toHaveBeenCalled();
-  });
-
   it('names the configured api host when the api is unreachable', async () => {
     mockSdk.widgetPublicSearch.mockRejectedValue(new Error('Failed to fetch'));
 

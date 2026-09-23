@@ -74,10 +74,6 @@ async function resolveActiveWidget(mtxId: string, mtxKey: string, mtxApiHost: st
 
 export async function loadWidgetConfig(config: MarketrixConfig): Promise<CredentialedConfig> {
   const { mtxId, mtxKey } = config;
-  if (!mtxId || !mtxKey) {
-    throw new Error('Please provide mtxId + mtxKey');
-  }
-
   const cacheKey = `${mtxId}:${mtxKey}`;
   let lookup = widgetLookupCache.get(cacheKey);
   if (!lookup) {
