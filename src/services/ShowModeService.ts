@@ -17,9 +17,9 @@ import { domService } from './DomService';
 
 interface ShowModeOptions {
   element: HTMLElement;
+  index: number;
   explanation: string;
   browserToolName: WidgetToolName;
-  isClickAction?: boolean;
 }
 
 interface Position {
@@ -40,7 +40,6 @@ const POPUP_CHROME_CSS = `position: fixed; width: ${POPUP_WIDTH_PX}px; backgroun
 export class ShowModeService {
   private currentPopup: HTMLElement | null = null;
   private currentHighlight: HTMLElement | null = null;
-  private currentElement: HTMLElement | null = null;
   private currentOptions: ShowModeOptions | null = null;
   private currentPromise: Promise<void> | null = null;
   private resolvePromise: (() => void) | null = null;
@@ -50,7 +49,8 @@ export class ShowModeService {
   private visibilityCheckInterval: ReturnType<typeof setInterval> | null = null;
 
   async showToolAction(options: ShowModeOptions): Promise<void> {
-    const { element, explanation, isClickAction = false, browserToolName } = options;
+    const { element, explanation, browserToolName } = options;
+    const isClickAction = browserToolName === 'click_element';
 
     if (
       this.currentOptions?.element === element &&
@@ -63,7 +63,6 @@ export class ShowModeService {
 
     this.cleanup();
     this.currentOptions = options;
-    this.currentElement = element;
 
     element.scrollIntoView({ behavior: 'instant', block: 'center', inline: 'center' });
 
@@ -108,7 +107,6 @@ export class ShowModeService {
 
     this.currentPopup = null;
     this.currentHighlight = null;
-    this.currentElement = null;
     this.currentOptions = null;
     this.currentPromise = null;
   }
@@ -140,8 +138,8 @@ export class ShowModeService {
   }
 
   private trackElement(): void {
-    if (!this.currentElement || !this.currentHighlight) return;
-    const rect = this.currentElement.getBoundingClientRect();
+    if (!this.currentOptions || !this.currentHighlight) return;
+    const rect = this.currentOptions.element.getBoundingClientRect();
     Object.assign(this.currentHighlight.style, {
       top: `${rect.top}px`,
       left: `${rect.left}px`,
@@ -194,9 +192,9 @@ export class ShowModeService {
   }
 
   private updatePopupPosition(): void {
-    if (!this.currentPopup || !this.currentElement) return;
+    if (!this.currentPopup || !this.currentOptions) return;
 
-    const rect = this.currentElement.getBoundingClientRect();
+    const rect = this.currentOptions.element.getBoundingClientRect();
     const popupHeight = 120;
     const spacing = 20;
     const padding = 10;
@@ -230,10 +228,9 @@ export class ShowModeService {
 
   private setupClickHandler(): void {
     this.clickHandler = (e: MouseEvent) => {
-      if (!this.currentElement || !this.resolvePromise) return;
+      if (!this.currentOptions || !this.resolvePromise) return;
 
-      const path = e.composedPath();
-      const isClickOnElement = path.includes(this.currentElement);
+      const isClickOnElement = e.composedPath().includes(this.currentOptions.element);
 
       if (isClickOnElement) {
         e.preventDefault();
@@ -248,14 +245,13 @@ export class ShowModeService {
 
   private setupVisibilityMonitoring(): void {
     this.visibilityCheckInterval = setInterval(() => {
-      const element = this.currentElement;
-      if (!element) return;
+      if (!this.currentOptions) return;
+      const { element, index } = this.currentOptions;
       const rect = element.getBoundingClientRect();
       if (rect.bottom < 0 || rect.top > window.innerHeight || rect.right < 0 || rect.left > window.innerWidth) {
         this.settle('ELEMENT_OFF_SCREEN: The highlighted element scrolled out of view');
         return;
       }
-      const index = domService.getSequenceForElement(element) ?? -1;
       const reason = domService.notInteractableReason(element, index);
       if (reason) this.settle(reason);
     }, 200);

@@ -10,7 +10,6 @@ import React, { useState } from 'react';
 import { openScreenAccessRequest } from '../../context/chatReducer';
 import { useWidget, useWidgetConfig } from '../../hooks/useWidget';
 import type { InstructionType } from '../../sdk';
-import { showModeService } from '../../services/ShowModeService';
 import { MODE_LABELS } from '../../utils/chat';
 import { ErrorBoundary } from '../base/ErrorBoundary';
 import { Stack } from '../base/Flex';
@@ -81,10 +80,7 @@ export const ChatView: React.FC<{ messageInputRef: React.RefObject<HTMLTextAreaE
           onModeChange={handleModeChange}
           disabled={composerLocked}
           taskRunning={isTaskRunning}
-          onStop={() => {
-            showModeService.cleanup();
-            void actions.stopTask();
-          }}
+          onStop={() => void actions.stopTask()}
         />
       </Surface>
     </Stack>

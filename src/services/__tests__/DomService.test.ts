@@ -126,13 +126,13 @@ describe('re-scanning an unchanged page is idempotent', () => {
     const b = document.querySelector('a') as HTMLElement;
 
     service.reindexAndSnapshot();
-    const firstScan = [service.getSequenceForElement(a), service.getSequenceForElement(b)];
+    const firstScan = [service.getValidatedElement(0).element, service.getValidatedElement(1).element];
 
     service.reindexAndSnapshot();
-    const secondScan = [service.getSequenceForElement(a), service.getSequenceForElement(b)];
+    const secondScan = [service.getValidatedElement(0).element, service.getValidatedElement(1).element];
 
+    expect(firstScan).toEqual([a, b]);
     expect(secondScan).toEqual(firstScan);
-    expect(new Set(secondScan).size).toBe(2);
   });
 
   it('drops a stale index for a node removed before the re-scan', () => {
@@ -140,11 +140,11 @@ describe('re-scanning an unchanged page is idempotent', () => {
     const service = new DomService();
     const button = document.querySelector('button') as HTMLElement;
     service.reindexAndSnapshot();
-    expect(service.getSequenceForElement(button)).toBe(0);
+    expect(service.getValidatedElement(0).element).toBe(button);
 
     document.body.innerHTML = '<a href="/b" style="position: fixed">B</a>';
     service.reindexAndSnapshot();
 
-    expect(service.getSequenceForElement(button)).toBeUndefined();
+    expect(service.getValidatedElement(0).element).toBe(document.querySelector('a'));
   });
 });

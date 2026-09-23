@@ -112,12 +112,12 @@ interface StreamClientTestHandle {
 
 export const asStreamClientInternals = (): StreamClientTestHandle => streamClient as unknown as StreamClientTestHandle;
 
-type MockedBrowserToolService = Pick<BrowserToolService, 'executeTool' | 'getFriendlyToolName' | 'isWaitForUserTool'>;
+type MockedBrowserToolService = Pick<BrowserToolService, 'executeTool' | 'toolExplanation' | 'isWaitForUserTool'>;
 
 export function browserToolServiceMock(executeTool: BrowserToolService['executeTool']) {
   const browserToolService: MockedBrowserToolService = {
     executeTool,
-    getFriendlyToolName: name => name,
+    toolExplanation: (name, explanation) => explanation || name,
     isWaitForUserTool: () => false,
   };
   return { browserToolService };

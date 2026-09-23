@@ -7,16 +7,20 @@
  * `pixelPositionStyle` is computed from `window.innerWidth`/`innerHeight` at render time and the resize
  * listener only forces that re-render — there is no separate clamp step to duplicate. `renderDragSnap`
  * is the one hook-under-test setup every case below shares: a measured 56x56 wrapper (`wrapperFor`) at
- * the bottom-right corner, wired to whatever `onPositionCommit` a case needs. The resting-anchor case
- * renders the whole widget instead, to pin the actual CSS the launcher ends up with.
+ * the bottom-right corner, wired to whatever `onPositionCommit` a case needs. The resting-anchor and Stop
+ * cases render the whole widget instead; Stop on the closed launcher must cancel a Show step still
+ * waiting on the visitor, so a later click on the page neither runs the stopped tool nor answers it.
  */
-import { act, renderHook, waitFor } from '@testing-library/react';
+import { act, fireEvent, renderHook, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 import { createRef } from 'react';
 
 import * as chatSession from '../../../services/chatSession';
+import { domService } from '../../../services/DomService';
+import { ShowModeCancelled, showModeService } from '../../../services/ShowModeService';
 import { readLocal, scopedKey, writeLocal } from '../../../services/StorageService';
 import { streamClient } from '../../../services/StreamClient';
+import { asStreamClientInternals } from '../../../test/fixtures';
 import { resetDom } from '../../../test/preload';
 import { renderWidget } from '../../../test/renderWidget';
 import type { WidgetPosition } from '../../../types';
@@ -118,5 +122,54 @@ describe('the resting launcher anchor', () => {
     expect(anchor).not.toBeNull();
     const pinned = (['top', 'bottom', 'left', 'right'] as const).filter(edge => anchor?.style[edge] !== '');
     expect(pinned.sort()).toEqual(['bottom', 'right']);
+  });
+});
+
+describe('Stop on the closed launcher while a Show step waits on the visitor', () => {
+  afterEach(() => {
+    showModeService.cleanup();
+    vi.restoreAllMocks();
+    resetDom();
+  });
+
+  it('cancels the pending step, so a later page click neither runs the tool nor posts a tool/response', async () => {
+    Element.prototype.getBoundingClientRect = () => ({ top: 0, left: 0, width: 10, height: 10 }) as DOMRect;
+    Element.prototype.scrollIntoView = () => {};
+    document.elementFromPoint = () => null;
+    document.body.innerHTML = '<button style="position: fixed">Buy</button>';
+    const target = document.querySelector('button') as HTMLButtonElement;
+    let clicks = 0;
+    target.addEventListener('click', () => clicks++);
+    domService.reindexAndSnapshot();
+
+    vi.spyOn(chatSession, 'getOrCreateChatId').mockResolvedValue('chat-stop');
+    const connect = vi.spyOn(streamClient, 'connect').mockResolvedValue();
+    const send = vi.spyOn(streamClient, 'send').mockResolvedValue();
+    const staged = vi.spyOn(showModeService, 'showToolAction');
+    renderWidget({}, { previewMode: false });
+    await waitFor(() => expect(connect).toHaveBeenCalled());
+
+    act(() => {
+      asStreamClientInternals().handleMessage({
+        type: 'tool/call',
+        tool_call_id: 'tc-show',
+        browser_tool: 'click_element',
+        args: { index: 0 },
+        mode: 'show',
+        explanation: 'Click Buy',
+      });
+    });
+    await waitFor(() => expect(document.getElementById('marketrix-show-highlight')).not.toBeNull());
+
+    await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Stop' })));
+
+    await expect(staged.mock.results[0]?.value).rejects.toBeInstanceOf(ShowModeCancelled);
+    expect(document.getElementById('marketrix-show-highlight')).toBeNull();
+    target.click();
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 150));
+    });
+    expect(clicks).toBe(1);
+    expect(send.mock.calls.map(([command]) => command.type)).toEqual(['chat/stop']);
   });
 });

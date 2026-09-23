@@ -195,7 +195,9 @@ describe('a Do tool call against a missing index fails typed, never throws', () 
 
   it('selecting a dropdown on a non-select element is rejected as typed, not thrown', async () => {
     document.body.innerHTML = '<input style="position: fixed" />';
-    vi.spyOn(domService, 'getValidatedElement').mockReturnValue({ element: document.querySelector('input') });
+    vi.spyOn(domService, 'getValidatedElement').mockReturnValue({
+      element: document.querySelector('input') as HTMLInputElement,
+    });
 
     const result = await browserToolService.executeTool('select_dropdown_option', { index: 0, option: 'x' }, 'do');
 
