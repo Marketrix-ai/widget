@@ -222,6 +222,13 @@ TypeScript types are bundled with the package:
 
 ---
 
+## Upgrading to 5.0.1
+
+- **TypeScript now requires `mtxApiHost`** in `MarketrixConfig` and in the credentials form of `AddWidgetConfig`. The runtime already refused to start without it, so only type-checking changes; it is no longer part of `ClientOwnedConfig`.
+- **Saved widget positions and panel sizes reset once.** They are stored in a new format, so a visitor's dragged position and resized panel return to your dashboard defaults the first time 5.0.1 loads.
+
+---
+
 ## Upgrading to 5.0
 
 5.0 narrows the public API. Each removal and what to use instead:
