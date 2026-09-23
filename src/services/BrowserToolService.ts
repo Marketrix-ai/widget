@@ -2,7 +2,8 @@
  * Every browser action the agent can ask the widget to take on the host page, as one registry keyed by
  * the contract's tool names, so a tool the contract adds fails to compile until it has a handler.
  *
- * `tools` lists each action's label, whether it waits for the visitor, and its handler. `executeTool`
+ * `tools` lists each action's label, whether it waits for the visitor, and its handler. `toolExplanation`
+ * is the one line a step shows the visitor, the agent's explanation or else the tool's label. `executeTool`
  * runs a call through Show mode's highlight-and-wait step when needed and returns the result.
  *
  * A handler throws rather than returning an error, since one place — `executeTool`'s catch — reports
@@ -100,9 +101,9 @@ export class BrowserToolService {
   };
 
   private element(index: number): HTMLElement {
-    const { element, error } = domService.getValidatedElement(index);
-    if (!element) throw new Error(error || `Element ${index} not found`);
-    return element;
+    const validated = domService.getValidatedElement(index);
+    if (!validated.element) throw new Error(validated.error);
+    return validated.element;
   }
 
   private selectElement(index: number): HTMLSelectElement {
@@ -111,8 +112,8 @@ export class BrowserToolService {
     return element;
   }
 
-  getFriendlyToolName(browserToolName: WidgetToolName): string {
-    return this.tools[browserToolName].label;
+  toolExplanation(browserToolName: WidgetToolName, explanation: string | undefined): string {
+    return explanation || this.tools[browserToolName].label;
   }
 
   isWaitForUserTool(browserToolName: WidgetToolName): boolean {
@@ -130,9 +131,9 @@ export class BrowserToolService {
       if (mode === 'show' && tool.waitForUser && 'index' in args) {
         await showModeService.showToolAction({
           element: this.element(args.index),
-          explanation: explanation || tool.label,
+          index: args.index,
+          explanation: this.toolExplanation(browserToolName, explanation),
           browserToolName,
-          isClickAction: browserToolName === 'click_element',
         });
       }
       return await tool.run(args);

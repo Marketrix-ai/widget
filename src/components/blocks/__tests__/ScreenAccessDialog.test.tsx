@@ -7,7 +7,6 @@ import { describe, expect, it } from 'bun:test';
 import { useRef, useState } from 'react';
 
 import { PortalContainerContext, WidgetProviders } from '../../../context/WidgetProviders';
-import { createWidgetContainer } from '../../../mount';
 import { getMockWidgetConfig } from '../../../test/fixtures';
 import { SCREEN_ACCESS_PROMPT } from '../../../utils/chat';
 import { ScreenAccessDialog } from '../ScreenAccessDialog';
@@ -48,7 +47,9 @@ describe('ScreenAccessDialog', () => {
   });
 
   it('portals into the container it is given, never the host page', async () => {
-    const { container, shadowRoot, mountEl } = createWidgetContainer();
+    const container = document.body.appendChild(document.createElement('div'));
+    const shadowRoot = container.attachShadow({ mode: 'closed' });
+    const mountEl = shadowRoot.appendChild(document.createElement('div'));
     const widgetRoot = shadowRoot.appendChild(document.createElement('div'));
 
     render(

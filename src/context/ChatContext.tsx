@@ -3,7 +3,8 @@
  *
  * Every mutation is a `chatReducer` transition. `sendTurn` is the one way a visitor turn enters the chat,
  * typed or a chip: Show and Do first ask for screen access unless a share is live or the tenant turned it
- * off, and `allowScreenAccess`/`denyScreenAccess` release the held turn. `stopTask` cancels a running turn.
+ * off, and `allowScreenAccess`/`denyScreenAccess` release the held turn. `stopTask` cancels a running turn and
+ * tears down any Show-mode overlay still waiting on the visitor, so a stopped task's step can never fire later.
  * The stream handlers dedupe a resent `tool/call`, run the browser tool and reply with its result, and clear
  * a stale connection error once the stream recovers. The screen-share store is mirrored into the transcript
  * as it starts and ends. Preview mode answers every turn locally. The api never replays a chat_id's past
@@ -16,6 +17,7 @@ import type { WidgetEvent } from '../sdk';
 import { browserToolService } from '../services/BrowserToolService';
 import { getOrCreateChatId } from '../services/chatSession';
 import { activeScreenStream, startScreenShare, subscribeScreenShare } from '../services/ScreenShareService';
+import { showModeService } from '../services/ShowModeService';
 import { streamClient, StreamGaveUpError } from '../services/StreamClient';
 import type { ChatMessage, InstructionType } from '../types';
 import {
@@ -56,17 +58,13 @@ interface ChatActions {
   sendTurn: (content: string, mode: InstructionType) => Promise<boolean>;
   allowScreenAccess: () => Promise<void>;
   denyScreenAccess: () => void;
-}
-
-interface TaskActions {
   stopTask: () => Promise<void>;
 }
 
 interface ChatContextType {
   messages: ChatMessage[];
-  chatActions: ChatActions;
   taskState: TaskState;
-  taskActions: TaskActions;
+  chatActions: ChatActions;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -192,10 +190,9 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const startToolCall = async ({ call, mode }: ToolRun) => {
       const result = await browserToolService.executeTool(call.browser_tool, call.args, mode, call.explanation);
+      if (!result.success && result.cancelled) return;
       const error = result.success ? undefined : result.error;
-      const progress: ToolProgress = result.success
-        ? { status: 'completed' }
-        : { status: 'failed', error: result.cancelled ? undefined : result.error };
+      const progress: ToolProgress = result.success ? { status: 'completed' } : { status: 'failed', error };
 
       commit(s => reduceToolProgress(s, call.browser_tool, progress, currentModeRef.current));
       if (!error && call.browser_tool === 'done') {
@@ -269,6 +266,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [isPreviewMode, commit, uiActions, currentModeRef, currentErrorRef]);
 
   const stopTask = useCallback(async () => {
+    showModeService.cleanup();
     commit(s => reduceStop(s, currentModeRef.current));
     if (isPreviewMode) return;
     streamClient.send({ type: 'chat/stop' }).catch(err => {
@@ -278,15 +276,13 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [isPreviewMode, commit, uiActions, currentModeRef]);
 
   const chatActions = useMemo<ChatActions>(
-    () => ({ restoreMessages, addSystemMessage, clearChat, sendTurn, allowScreenAccess, denyScreenAccess }),
-    [restoreMessages, addSystemMessage, clearChat, sendTurn, allowScreenAccess, denyScreenAccess],
+    () => ({ restoreMessages, addSystemMessage, clearChat, sendTurn, allowScreenAccess, denyScreenAccess, stopTask }),
+    [restoreMessages, addSystemMessage, clearChat, sendTurn, allowScreenAccess, denyScreenAccess, stopTask],
   );
 
-  const taskActions = useMemo<TaskActions>(() => ({ stopTask }), [stopTask]);
-
   const contextValue = useMemo<ChatContextType>(
-    () => ({ messages: state.messages, chatActions, taskState: state.task, taskActions }),
-    [state.messages, chatActions, state.task, taskActions],
+    () => ({ messages: state.messages, taskState: state.task, chatActions }),
+    [state.messages, state.task, chatActions],
   );
 
   return (

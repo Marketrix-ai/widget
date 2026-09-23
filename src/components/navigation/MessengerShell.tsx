@@ -17,11 +17,10 @@ import { z } from 'zod';
 import { SHADOW } from '../../design-system/component-tokens';
 import { useWidget, useWidgetConfig } from '../../hooks/useWidget';
 import { activeScreenStream, stopScreenShare, subscribeScreenShare } from '../../services/ScreenShareService';
-import { readLocal, scopedKey, writeLocal } from '../../services/StorageService';
-import type { WidgetView } from '../../types';
+import { readLocalParsed, scopedKey, writeLocal } from '../../services/StorageService';
+import { WIDGET_VIEWS } from '../../types';
 import { backgroundGradient } from '../../utils/color';
 import { focusablesIn } from '../../utils/dom';
-import { logWarn } from '../../utils/log';
 import { getCorner, getPanelPositionStyle, getResizeGrip } from '../../utils/widgetPositioning';
 import { Stack } from '../base/Flex';
 import { Icon } from '../base/Icon';
@@ -125,18 +124,6 @@ function parsePx(value: string, fallback: number): number {
 
 const STORAGE_KEY_NAME = 'marketrix_widget_size';
 
-const WIDGET_VIEWS: readonly WidgetView[] = ['home', 'chat'];
-
-function readStoredSize(storageKey: string): Size | null {
-  try {
-    const stored = SizeSchema.safeParse(JSON.parse(readLocal(storageKey) ?? 'null'));
-    return stored.success ? clampSize(stored.data) : null;
-  } catch (error) {
-    logWarn('[useResize] Ignoring an unparseable stored size:', error);
-    return null;
-  }
-}
-
 export function useResize() {
   const config = useWidgetConfig();
   const { isPreviewMode, widget_position: position } = config;
@@ -144,13 +131,13 @@ export function useResize() {
   const containerRef = useRef<HTMLDivElement>(null);
   const grip = useMemo(() => getResizeGrip(position), [position]);
 
-  const [dimensions, setDimensions] = useState<Size>(
-    () =>
-      readStoredSize(storageKey) ??
-      clampSize({
+  const [dimensions, setDimensions] = useState<Size>(() =>
+    clampSize(
+      readLocalParsed(storageKey, SizeSchema) ?? {
         width: parsePx(config.widget_width, DEFAULT_SIZE.width),
         height: parsePx(config.widget_height, DEFAULT_SIZE.height),
-      }),
+      },
+    ),
   );
 
   const dimsRef = useRef<Size>(dimensions);
@@ -200,7 +187,7 @@ export function useResize() {
         }
 
         setDimensions({ ...dimsRef.current });
-        writeLocal(storageKey, JSON.stringify(dimsRef.current));
+        writeLocal(storageKey, dimsRef.current);
       };
 
       document.body.style.cursor = cursor;
@@ -230,7 +217,7 @@ export function useResize() {
       });
       dimsRef.current = next;
       setDimensions(next);
-      writeLocal(storageKey, JSON.stringify(next));
+      writeLocal(storageKey, next);
     },
     [isPreviewMode, storageKey],
   );

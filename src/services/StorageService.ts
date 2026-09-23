@@ -1,7 +1,7 @@
 /**
  * Browser-local persistence for the widget: the one door to `localStorage`.
- *
- * `readLocal`/`writeLocal` read and write a key, falling back to memory when a host page denies storage.
+ * `readLocalParsed`/`writeLocal` read a key back through a schema and write one as JSON, falling back to
+ * memory when a host page denies storage; an unreadable stored value reads as absent.
  * `scopedKey` suffixes a key by tenant so two tenants on one page never share state, and `scopeStorageTo`
  * points the chat context at one tenant. `getChatId`/`setChatId` hold the thread id and
  * `readChatSnapshot`/`writeChatSnapshot` the transcript. `MessageSchema` is the one definition of a chat
@@ -13,6 +13,7 @@
 import { z } from 'zod';
 
 import { InstructionTypeSchema } from '../sdk/contracts/widgetSettings';
+import { WIDGET_TOOL_NAMES } from '../sdk/contracts/widgetToolNames';
 import type { ChatMessage, InstructionType, ValidWidgetConfig } from '../types';
 import { logWarn } from '../utils/log';
 
@@ -23,7 +24,7 @@ const MessagePartSchema = z.object({
   type: z.enum(['text', 'progress']),
   content: z.string(),
   status: z.enum(['in_progress', 'completed', 'failed']).optional(),
-  browserToolName: z.string().optional(),
+  browserToolName: z.enum(WIDGET_TOOL_NAMES).optional(),
   streaming: z.boolean().optional(),
 });
 
@@ -82,34 +83,34 @@ function warnOnce(kind: 'read' | 'write', message: string, error: unknown): void
   logWarn(message, error);
 }
 
-export function readLocal(key: string): string | null {
+export function readLocalParsed<T>(key: string, schema: z.ZodType<T>): T | undefined {
+  let stored: string | null;
   try {
-    return localStorage.getItem(key);
+    stored = localStorage.getItem(key);
   } catch (error) {
     warnOnce('read', '[StorageService] localStorage is unreadable, degrading to memory for this session:', error);
-    return null;
+    return undefined;
+  }
+  if (stored === null) return undefined;
+  try {
+    return schema.parse(JSON.parse(stored));
+  } catch (error) {
+    logWarn(`[StorageService] Ignoring an unreadable stored ${key}:`, error);
+    return undefined;
   }
 }
 
-export function writeLocal(key: string, value: string): void {
+export function writeLocal(key: string, value: unknown): void {
   try {
-    localStorage.setItem(key, value);
+    localStorage.setItem(key, JSON.stringify(value));
   } catch (error) {
     warnOnce('write', '[StorageService] localStorage is unwritable, degrading to memory for this session:', error);
   }
 }
 
 function loadContext(key: string): ChatContext {
-  const empty = ChatContextSchema.parse({});
-  const stored = readLocal(key);
-  if (!stored) return empty;
-  try {
-    const parsed = ChatContextSchema.parse(JSON.parse(stored));
-    if (Date.now() - parsed.timestamp <= CONTEXT_EXPIRY_MS) return parsed;
-  } catch (error) {
-    logWarn('[StorageService] Failed to parse the stored context:', error);
-  }
-  return empty;
+  const stored = readLocalParsed(key, ChatContextSchema);
+  return stored && Date.now() - stored.timestamp <= CONTEXT_EXPIRY_MS ? stored : ChatContextSchema.parse({});
 }
 
 let contextKey = STORAGE_KEY;
@@ -117,7 +118,7 @@ let context = loadContext(contextKey);
 
 function updateContext(updates: Partial<ChatContext>): void {
   context = { ...context, ...updates, timestamp: Date.now() };
-  writeLocal(contextKey, JSON.stringify(context));
+  writeLocal(contextKey, context);
 }
 
 export function scopeStorageTo(config: Pick<ValidWidgetConfig, 'mtxId'>): void {

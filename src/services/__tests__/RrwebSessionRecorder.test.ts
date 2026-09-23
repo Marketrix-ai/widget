@@ -8,7 +8,7 @@ import { EventType, type eventWithTime } from '@rrweb/types';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 
 import { sdk } from '../../sdk';
-import type { RrwebEvent } from '../../sdk/contracts/common';
+import type { RrwebEvent } from '../../sdk/contracts/rrweb';
 import { flushMicrotasks } from '../../test/fixtures';
 import { advanceTimersByTimeAsync, mocked, mockSdkModule, restoreModuleAfterAll } from '../../test/vi-compat';
 import { RrwebSessionRecorder } from '../RrwebSessionRecorder';
