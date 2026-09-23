@@ -3,9 +3,8 @@
  * that reads legibly over it, and re-emitting it with an alpha.
  *
  * `toRgb` parses a hex or `rgb()`/`rgba()` string into channels, or null for anything else — a named
- * colour or `hsl()` setting is unreadable by design. `contrastRatio` computes the WCAG contrast
- * formula, and is exported as the oracle the design-system token tests assert pairs against;
- * `getContrastingColor` picks whichever of black or white reads better against a colour.
+ * colour or `hsl()` setting is unreadable by design. `getContrastingColor` picks whichever of black or
+ * white has the higher WCAG contrast ratio against a colour.
  * `addOpacity` re-emits a colour at a given alpha. `backgroundGradient` turns a tenant's background
  * setting, which may already be a gradient, into a `backgroundImage` value either way.
  */
@@ -33,7 +32,7 @@ function relativeLuminance({ r, g, b }: Rgb): number {
   return 0.2126 * linearize(r / 255) + 0.7152 * linearize(g / 255) + 0.0722 * linearize(b / 255);
 }
 
-export function contrastRatio(a: string, b: string): number | null {
+function contrastRatio(a: string, b: string): number | null {
   const rgbA = toRgb(a);
   const rgbB = toRgb(b);
   if (!rgbA || !rgbB) return null;

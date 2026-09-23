@@ -1,13 +1,14 @@
 /**
- * The two context hooks every widget component reads: `useWidgetConfig` for settings, `useWidget` for the store.
+ * The two context hooks every widget component reads: `useWidgetConfig` for settings, `useWidget` for the
+ * store.
  *
  * `WidgetConfigContext` publishes the resolved config — `WidgetProviders` publishes the mounted config and
  * `WidgetRoot` re-publishes it with the visitor's dragged position and the z-index floor layered on — and
- * `useWidgetConfig` reads it, throwing outside a provider rather than defaulting, so nothing below threads it
- * down as props. `useWidget` folds the two independent stores (`UIStateContext`, `ChatContext`) into one
- * memoized `{state, actions}`: `isTaskRunning` is the chat's own task phase, which a `tool/call` starts, and
- * `isAwaitingReply` the placeholder message held open while a reply streams. `clearChatHistory` resets messages, task and the UI error together — an error left standing
- * would outlive the chat it described.
+ * `useWidgetConfig` reads it, throwing outside a provider rather than defaulting, so nothing below threads
+ * it down as props. `useWidget` folds the two independent stores (`UIStateContext`, `ChatContext`) into one
+ * memoized `{state, actions}`: `isTaskRunning` is the chat's own task phase, which a `tool/call` starts,
+ * and `isAwaitingReply` the placeholder message held open while a reply streams. `clearChatHistory` resets
+ * messages, task and the UI error together — an error left standing would outlive the chat it described.
  */
 
 import { createContext, useContext, useMemo } from 'react';

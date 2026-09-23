@@ -1,9 +1,9 @@
 /**
- * Shared test fixtures for widget tests. `getMockWidgetConfig`/`validSettings`/`credentialedConfig`
- * build a complete, schema-valid tenant config (preview and resolved-production shapes); `agentMessage`
- * builds an agent `ChatMessage` and `ofKind` narrows one; `mockMediaStream` stubs the browser's un-mockable `MediaStream`;
- * `asStreamClientInternals` reaches `streamClient`'s private `handleMessage`/`notifyError` for
- * simulating SSE events and stream failures; `browserToolServiceMock` shapes the
+ * Shared test fixtures for widget tests. `getMockWidgetConfig`/`validSettings`/`credentialedConfig` build a
+ * complete, schema-valid tenant config (preview and resolved-production shapes); `agentMessage` builds an
+ * agent `ChatMessage` and `ofKind` narrows one; `mockMediaStream` stubs the browser's un-mockable
+ * `MediaStream`; `asStreamClientInternals` reaches `streamClient`'s private `handleMessage`/`notifyError`
+ * for simulating SSE events and stream failures; `browserToolServiceMock` shapes the
  * `vi.mock('.../BrowserToolService', ...)` factory.
  */
 import { WidgetSettingsDataSchema } from '../sdk/contracts/widgetSettings';

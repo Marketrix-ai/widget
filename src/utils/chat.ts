@@ -4,8 +4,9 @@
  *
  * `findMessageForProgress` picks the right open message for an incoming update by a ranked set of
  * predicates, falling back to "no match" (logged, not thrown) rather than guessing wrong. The per-kind
- * constructors are the only way a `ChatMessage` is built, so ids and shape stay consistent. `CHAT_FAILURE_TEXT` and `SCREEN_ACCESS_PROMPT` are the one wording each site uses for
- * those two situations, so the failure text never leaks raw server error details to a visitor.
+ * constructors are the only way a `ChatMessage` is built, so ids and shape stay consistent.
+ * `CHAT_FAILURE_TEXT` and `SCREEN_ACCESS_PROMPT` are the one wording each site uses for those two
+ * situations, so the failure text never leaks raw server error details to a visitor.
  */
 import type { WidgetToolName } from '../services/BrowserToolService';
 import type { AgentMessage, ChatMessage, InstructionType, MessagePart } from '../types';
