@@ -1,11 +1,12 @@
 /**
  * `themeCssProperties` tests: every colour var derives from the tenant settings, a radius or duration
- * left in a stored settings blob is ignored, and the fixed radius and durations are emitted.
+ * left in a stored settings blob is ignored, the fixed radius and durations are emitted, and the focus
+ * ring follows the background rather than the accent.
  */
 import { describe, expect, it } from 'bun:test';
 
 import { getMockWidgetConfig } from '../../test/fixtures';
-import { contrastRatio } from '../../utils/color';
+import { getContrastingColor } from '../../utils/color';
 import { themeCssProperties } from '../semantic-tokens';
 
 describe('themeCssProperties', () => {
@@ -42,10 +43,11 @@ describe('themeCssProperties', () => {
     expect(css['--duration-fade']).toBe('200ms');
   });
 
-  it('derives a focus ring that clears 3:1 against the background regardless of the tenant accent, for both readings', () => {
+  it('derives the focus ring from the background regardless of the tenant accent, for both readings', () => {
     for (const widget_background_color of ['#ffffff', '#111827', '#f5f5f4', '#0a0a0a', '#fef3c7', '#1e293b']) {
       const css = themeCssProperties(getMockWidgetConfig({ widget_background_color, widget_accent_color: '#a855f7' }));
-      expect(contrastRatio(css['--ring']!, css['--ring-offset']!)).toBeGreaterThanOrEqual(3);
+      expect(css['--ring-offset']).toBe(widget_background_color);
+      expect(css['--ring']).toBe(getContrastingColor(widget_background_color));
     }
   });
 });
