@@ -6,7 +6,7 @@
 import { eventIterator, oc } from '@orpc/contract';
 import { z } from 'zod';
 
-import { paginatedListOf, PaginationSchema, SuccessSchema } from './common';
+import { discriminatedUnionOfRecord, paginatedListOf, PaginationSchema, SuccessSchema } from './common';
 import { RrwebEventSchema } from './rrweb';
 import {
   ApplicationWidgetEntitySchema,
@@ -85,14 +85,11 @@ const widgetToolCall = <Name extends WidgetToolName>(browserTool: Name) =>
     explanation: z.string().optional(),
   });
 
-type WidgetToolCalls<T extends readonly WidgetToolName[]> = {
-  -readonly [I in keyof T]: ReturnType<typeof widgetToolCall<T[I] & WidgetToolName>>;
+const WidgetToolCallSchemas = Object.fromEntries(WIDGET_TOOL_NAMES.map(name => [name, widgetToolCall(name)])) as {
+  [Name in WidgetToolName]: ReturnType<typeof widgetToolCall<Name>>;
 };
 
-export const WidgetToolCallEventSchema = z.discriminatedUnion(
-  'browser_tool',
-  WIDGET_TOOL_NAMES.map(widgetToolCall) as unknown as WidgetToolCalls<typeof WIDGET_TOOL_NAMES>,
-);
+export const WidgetToolCallEventSchema = discriminatedUnionOfRecord('browser_tool', WidgetToolCallSchemas);
 
 export const WidgetEventSchema = z.union([
   z.strictObject({ type: z.literal('registered'), chat_id: z.string() }),

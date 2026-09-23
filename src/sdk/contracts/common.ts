@@ -1,7 +1,7 @@
 /**
  * Wire primitives shared across every domain: id and pagination shapes, list and patch helpers.
  *
- * Exports helpers like `paginatedListOf`/`unionOfRecord`, the id and pagination input schemas, `BaseEntitySchema`
+ * Exports helpers like `paginatedListOf`/`unionOfRecord`/`discriminatedUnionOfRecord`, the id and pagination input schemas, `BaseEntitySchema`
  * and `StoredDateSchema`, the one date that may arrive as the ISO string a JSONB document stores. This file
  * mirrors whole into the widget SDK, so only domain-free primitives belong here.
  */
@@ -61,6 +61,14 @@ export const listOf = <T extends z.ZodType>(schema: T) =>
 export const unionOfRecord = <T extends Record<string, z.ZodType>>(
   schemas: T,
 ): z.ZodUnion<[T[keyof T], ...T[keyof T][]]> => z.union(Object.values(schemas) as [T[keyof T], ...T[keyof T][]]);
+
+export const discriminatedUnionOfRecord = <
+  const K extends string,
+  T extends Record<string, z.core.$ZodTypeDiscriminable>,
+>(
+  key: K,
+  schemas: T,
+) => z.discriminatedUnion(key, Object.values(schemas) as [T[keyof T], ...T[keyof T][]]);
 
 export const SuccessSchema = z.strictObject({ success: z.literal(true) });
 export const SuccessWithMessageSchema = SuccessSchema.extend({ message: z.string() });
