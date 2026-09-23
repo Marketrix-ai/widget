@@ -1,14 +1,9 @@
 /**
  * Turns what a host page supplies into the fully-populated widget config the runtime reads.
- * `parseWidgetSettings` validates settings against the contract's settings schema, returning the rendered
- * settings or the offending field names; `invalidSettingsMessage` names them in one message.
- * `loadWidgetConfig` looks a widget up by `mtxId`/`mtxKey` and merges its settings over the host's config,
- * memoizing each resolution so a settings-only update skips repeating the lookup.
- *
- * Unknown settings keys are ignored rather than rejected, since the api may ship a new setting before this
- * published bundle knows it. `widgetPublicSearch` returns a row only for a live widget, so a returned row is
- * unconditionally active. A failed lookup recognises the browser's own "host unreachable" errors and
- * reports them as a likely-offline api rather than a generic failure.
+ * `parseWidgetSettings` validates settings against the contract schema, `invalidSettingsMessage` names the
+ * offending fields, and `loadWidgetConfig` looks a widget up by `mtxId`/`mtxKey` and merges its settings in.
+ * Unknown settings keys are ignored, since the api may ship a new setting before this published bundle
+ * knows it. `widgetPublicSearch` returns only live widgets, so a returned row is active.
  */
 import { z } from 'zod';
 

@@ -1,14 +1,9 @@
 /**
  * Singleton SSE transport between the widget and the api, exported as `streamClient`.
- *
- * `setCredentials` holds the credentials the stream authenticates with; the `widgetStream` iterator drains
- * in the background; `send` posts a command via `widgetMessagePost` to the live chat unless a caller names
- * one; `ready` connects and waits for registration; `canReconnect`/`reconnectNow` back Retry.
- * `StreamGaveUpError` marks a stream that has exhausted its reconnect attempts.
- *
- * Reconnects back off exponentially with jitter, so open tabs across a shared outage don't all redial
- * on the same clock tick. Tabs on one host page share a stored chat id but each dials with its own tab
- * id, so the api can key the SSE stream per tab. An auth rejection gives up rather than retrying.
+ * `setCredentials` holds the stream's credentials, `send` posts a command via `widgetMessagePost`, `ready`
+ * connects and waits for registration, and `canReconnect`/`reconnectNow` back Retry; `StreamGaveUpError`
+ * marks a stream that exhausted its reconnects. Each tab dials with its own tab id so the api keys the SSE
+ * stream per tab, and backoff is jittered so tabs across a shared outage don't redial together.
  */
 import { sdk, type WidgetCommand, type WidgetEvent } from '../sdk';
 import { logWarn } from '../utils/log';

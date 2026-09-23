@@ -1,13 +1,8 @@
 /**
- * `Icon` — the widget's one SVG glyph primitive: resolves `name` in the `icons` registry and renders a
- * square `<svg>` of `size` (default 16), forwarding ref and any other svg prop.
- *
- * Glyphs are decorative, so `aria-hidden` is fixed here and the accessible name belongs on the control
- * wrapping the icon. A path's fill defaults to `currentColor` — unless it sets a `stroke`, where the
- * default is `none`; that resolution is what lets `icons.ts`'s `stroked()` omit `fill` altogether.
- * `mtx-icon` (the layout rule in `index.css`) always applies and a caller `className` is appended to it,
- * never substituted — and `className` is for `blocks/` only: with no CSS framework here every class must
- * have a real `index.css` rule, and `WidgetFab`'s `mtx-fab-chevron` is the sole production caller.
+ * `Icon` — the widget's one SVG glyph primitive: renders `name` from the `icons` registry as a square
+ * `<svg>` of `size`, forwarding ref and svg props.
+ * Glyphs are decorative, so the accessible name belongs on the wrapping control. A caller `className` must
+ * have a real `index.css` rule, since there is no CSS framework.
  */
 import type { ComponentPropsWithRef } from 'react';
 

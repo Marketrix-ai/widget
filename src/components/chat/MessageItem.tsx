@@ -1,13 +1,8 @@
 /**
- * One transcript row and everything drawn inside it: a system message centred and faint, or a
- * user/agent row with a leading glyph, sender label, body, screen-access allow/deny controls, and a
- * done/failed/stopped status glyph.
- *
- * `MessageItem` is memoized and takes `isTaskRunning` as a prop rather than reading it from context,
- * because a list row that subscribes to context directly re-renders on every streamed token regardless
- * of memoization. `onScreenAccessAllow`/`onScreenAccessDeny` must stay referentially stable for the same
- * reason. `MessageBody` renders a message's parts; `Thinking` is the spinner-and-caption row shown while
- * a reply is pending or more work is still coming.
+ * One transcript row: a faint centred system message, or a user/agent row with glyph, label, body,
+ * screen-access controls and a status glyph; `MessageBody` renders its parts and `Thinking` the pending row.
+ * `MessageItem` takes `isTaskRunning` as a prop rather than from context, since a row subscribed to context
+ * re-renders on every streamed token.
  */
 import React from 'react';
 

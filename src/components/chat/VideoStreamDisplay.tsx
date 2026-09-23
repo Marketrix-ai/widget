@@ -1,12 +1,6 @@
 /**
  * Inline screen-share viewport for a chat message: a live MediaStream shown as a muted, auto-playing
- * video, with a loading overlay, a failure overlay, a "Live" pill and a persistent banner. `Overlay` is
- * the shared centred scrim used by both the loading and failure states.
- *
- * The video rebinds whenever `stream` changes, clearing the loaded/failed flags and nulling `srcObject`
- * on cleanup so a stopped stream isn't retained. A benign `play()` abort (a replacement racing the
- * previous play) is ignored; any other playback error surfaces as the failure overlay. The video stays
- * mounted at zero opacity while loading rather than being removed, so it can still fire its load event.
+ * video with loading and failure overlays, a "Live" pill and a banner; `Overlay` is their shared scrim.
  * The viewport always sits on a fixed dark background regardless of tenant theme.
  */
 import React, { useEffect, useRef, useState } from 'react';
