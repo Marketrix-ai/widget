@@ -1,13 +1,6 @@
 # syntax=docker/dockerfile:1.7
-# Multi-stage build: `base` installs on bun (deps/build only — this image ships no node binary), `dev`
-# runs the Vite dev server for Tilt, `builder` produces the production bundle plus precompressed
-# variants, and `runtime` serves the result from nginx. Precompression (gzip + brotli of
-# `dist/widget.mjs`, via `scripts/precompress.ts` — the one home for both params, also used by
-# `checkServed.ts`'s no-docker fallback) happens in `builder`, not in `bun run build`, because these
-# are runtime-image artifacts the npm tarball has no use for. `runtime` copies an explicit allowlist
-# rather than all of `dist/`: the sourcemap embeds the entire widget source and the `.d.ts` tree is for
-# tsc, so copying the directory would publish all of it into the served image — a new served artifact
-# must be added to that COPY by hand.
+# Widget image: `dev` runs Vite for Tilt, `builder` bundles and precompresses, `runtime` serves via nginx.
+# `runtime` copies an explicit allowlist, never all of `dist/`, so sourcemaps and `.d.ts` stay unpublished.
 FROM oven/bun:1.4.2-alpine AS base
 WORKDIR /app
 COPY package.json bun.lock ./

@@ -22,10 +22,7 @@ const CREDENTIALS_REJECTED = 'Chat is unavailable — the widget credentials wer
 
 export class StreamGaveUpError extends Error {}
 
-interface StreamCredentials {
-  marketrix_id: string;
-  marketrix_key: string;
-}
+type StreamCredentials = Pick<Parameters<typeof sdk.widgetStream>[0], 'marketrix_id' | 'marketrix_key'>;
 
 interface StreamClientCallbacks {
   onMessage?: (event: WidgetEvent) => void;
