@@ -7,14 +7,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 
 import { resetDom } from '../../test/preload';
 import { advanceTimersByTimeAsync, hoisted } from '../../test/vi-compat';
-import type { DomService as DomServiceClass } from '../DomService';
-import { ShowModeService } from '../ShowModeService';
+import type { domService } from '../DomService';
+import { showModeService } from '../ShowModeService';
+
+type ShowModeService = typeof showModeService;
 
 const { notInteractableReason } = hoisted(() => ({
   notInteractableReason: vi.fn<() => string | null>(() => null),
 }));
 
-vi.mock('../DomService', (): { domService: Pick<DomServiceClass, 'notInteractableReason'> } => ({
+vi.mock('../DomService', (): { domService: Pick<typeof domService, 'notInteractableReason'> } => ({
   domService: { notInteractableReason },
 }));
 
@@ -22,7 +24,8 @@ const makeShowFixture = (html: string) => {
   notInteractableReason.mockReturnValue(null);
   Element.prototype.scrollIntoView = vi.fn();
   document.body.innerHTML = html;
-  return new ShowModeService();
+  showModeService.cleanup();
+  return showModeService;
 };
 
 const show = (service: ShowModeService, id: string) =>

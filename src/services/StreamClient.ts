@@ -24,7 +24,7 @@ interface StreamClientCallbacks {
   onError?: (error: Error) => void;
 }
 
-export class StreamClient {
+class StreamClient {
   private abortController: AbortController | null = null;
   private chatId: string | null = null;
   private credentials: StreamCredentials | null = null;

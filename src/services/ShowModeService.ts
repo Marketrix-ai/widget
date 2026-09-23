@@ -32,7 +32,7 @@ const TEXT_COLOR = '#1f2937';
 const POPUP_CHROME_CSS = `position: fixed; width: ${POPUP_WIDTH_PX}px; background: white; border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); z-index: ${LAYER_TOKENS.showPopup}; padding: 16px;`;
 
-export class ShowModeService {
+class ShowModeService {
   private currentPopup: HTMLElement | null = null;
   private currentHighlight: HTMLElement | null = null;
   private currentOptions: ShowModeOptions | null = null;

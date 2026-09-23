@@ -9,13 +9,12 @@
  */
 import { beforeEach, describe, expect, it } from 'bun:test';
 
-import { DomService } from '../DomService';
+import { domService } from '../DomService';
 
-const interactable = (html: string): DomService => {
+const interactable = (html: string): typeof domService => {
   document.body.innerHTML = html;
-  const service = new DomService();
-  service.reindexAndSnapshot();
-  return service;
+  domService.reindexAndSnapshot();
+  return domService;
 };
 
 beforeEach(() => {
@@ -57,15 +56,14 @@ describe('a data-id lands on the element the index really points at', () => {
       '<div><div><a href="/buy">Buy</a></div></div>',
       '</div>',
     ].join('');
-    const service = new DomService();
 
-    const snapshot = new DOMParser().parseFromString(service.reindexAndSnapshot(), 'text/html');
+    const snapshot = new DOMParser().parseFromString(domService.reindexAndSnapshot(), 'text/html');
     const tagged = [...snapshot.querySelectorAll('[data-id]')];
 
     expect(tagged).toHaveLength(2);
     for (const element of tagged) {
       const index = Number(element.getAttribute('data-id'));
-      expect(service.getValidatedElement(index).element?.getAttribute('href')).toBe(element.getAttribute('href'));
+      expect(domService.getValidatedElement(index).element?.getAttribute('href')).toBe(element.getAttribute('href'));
     }
   });
 });
@@ -121,15 +119,14 @@ describe('a control the visitor could not operate is refused at act time, not hi
 describe('re-scanning an unchanged page is idempotent', () => {
   it('assigns the same node the same index across repeated scans, never two ids to one node', () => {
     document.body.innerHTML = '<button style="position: fixed">A</button><a href="/b" style="position: fixed">B</a>';
-    const service = new DomService();
     const a = document.querySelector('button') as HTMLElement;
     const b = document.querySelector('a') as HTMLElement;
 
-    service.reindexAndSnapshot();
-    const firstScan = [service.getValidatedElement(0).element, service.getValidatedElement(1).element];
+    domService.reindexAndSnapshot();
+    const firstScan = [domService.getValidatedElement(0).element, domService.getValidatedElement(1).element];
 
-    service.reindexAndSnapshot();
-    const secondScan = [service.getValidatedElement(0).element, service.getValidatedElement(1).element];
+    domService.reindexAndSnapshot();
+    const secondScan = [domService.getValidatedElement(0).element, domService.getValidatedElement(1).element];
 
     expect(firstScan).toEqual([a, b]);
     expect(secondScan).toEqual(firstScan);
@@ -137,14 +134,13 @@ describe('re-scanning an unchanged page is idempotent', () => {
 
   it('drops a stale index for a node removed before the re-scan', () => {
     document.body.innerHTML = '<button style="position: fixed">A</button>';
-    const service = new DomService();
     const button = document.querySelector('button') as HTMLElement;
-    service.reindexAndSnapshot();
-    expect(service.getValidatedElement(0).element).toBe(button);
+    domService.reindexAndSnapshot();
+    expect(domService.getValidatedElement(0).element).toBe(button);
 
     document.body.innerHTML = '<a href="/b" style="position: fixed">B</a>';
-    service.reindexAndSnapshot();
+    domService.reindexAndSnapshot();
 
-    expect(service.getValidatedElement(0).element).toBe(document.querySelector('a'));
+    expect(domService.getValidatedElement(0).element).toBe(document.querySelector('a'));
   });
 });

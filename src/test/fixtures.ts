@@ -7,8 +7,8 @@
  * `vi.mock('.../BrowserToolService', ...)` factory.
  */
 import { WidgetSettingsDataSchema } from '../sdk/contracts/widgetSettings';
-import type { BrowserToolService } from '../services/BrowserToolService';
-import { type StreamClient, streamClient } from '../services/StreamClient';
+import type { browserToolService as realBrowserToolService } from '../services/BrowserToolService';
+import { streamClient } from '../services/StreamClient';
 import type { CredentialedConfig } from '../services/WidgetService';
 import type { AgentMessage, ChatMessage, ValidWidgetConfig, WidgetSettingsData } from '../types';
 
@@ -105,15 +105,18 @@ export function mockMediaStream(overrides: Record<string, unknown> = {}): MediaS
 }
 
 interface StreamClientTestHandle {
-  handleMessage: StreamClient['handleMessage'];
-  notifyError: StreamClient['notifyError'];
+  handleMessage: (typeof streamClient)['handleMessage'];
+  notifyError: (typeof streamClient)['notifyError'];
 }
 
 export const asStreamClientInternals = (): StreamClientTestHandle => streamClient as unknown as StreamClientTestHandle;
 
-type MockedBrowserToolService = Pick<BrowserToolService, 'executeTool' | 'toolExplanation' | 'isWaitForUserTool'>;
+type MockedBrowserToolService = Pick<
+  typeof realBrowserToolService,
+  'executeTool' | 'toolExplanation' | 'isWaitForUserTool'
+>;
 
-export function browserToolServiceMock(executeTool: BrowserToolService['executeTool']) {
+export function browserToolServiceMock(executeTool: (typeof realBrowserToolService)['executeTool']) {
   const browserToolService: MockedBrowserToolService = {
     executeTool,
     toolExplanation: (name, explanation) => explanation || name,
