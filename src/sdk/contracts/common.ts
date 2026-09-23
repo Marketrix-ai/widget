@@ -2,8 +2,9 @@
  * Wire primitives shared across every domain: id/pagination shapes, tool call and browser session
  * state, and the application knowledge graph.
  *
- * Exports helpers like `paginatedListOf`/`unionOfRecord`, the id and pagination input schemas, and the
- * graph and session-state entity schemas. This file mirrors whole into the widget SDK, so any shape
+ * Exports helpers like `paginatedListOf`/`unionOfRecord`, the id and pagination input schemas, the graph and
+ * session-state entity schemas, and `StoredDateSchema`, the one date that may arrive as the ISO string a JSONB
+ * document stores. This file mirrors whole into the widget SDK, so any shape
  * added here reaches the widget even if nothing else changes.
  */
 import { z } from 'zod';
@@ -13,9 +14,14 @@ export type EntityStatus = z.infer<typeof EntityStatusSchema>;
 
 export const BaseEntitySchema = z.strictObject({
   id: z.number(),
-  created_at: z.coerce.date(),
-  updated_at: z.coerce.date(),
+  created_at: z.date(),
+  updated_at: z.date(),
 });
+
+export const StoredDateSchema = z.union([
+  z.date(),
+  z.iso.datetime({ offset: true }).transform(value => new Date(value)),
+]);
 
 export const ByIdSchema = z.strictObject({ id: z.number() });
 export const BySlugSchema = z.strictObject({ slug: z.string() });
