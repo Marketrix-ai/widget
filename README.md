@@ -75,7 +75,6 @@ These apply to every mode (script attribute → config key):
 | ------------------------- | --------------------- | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `mtxApiHost`              | `mtx-api-host`        | string        | API server URL, e.g. `https://api.marketrix.ai`. The widget has no baked-in API host — you must supply it.                                                                                   |
 | `container`               | —                     | `HTMLElement` | Element to mount inside (programmatic only). Defaults to a container appended to `<body>`.                                                                                                   |
-| `userId`                  | —                     | number        | Associates widget activity with one of your users.                                                                                                                                           |
 | `widget_position_z_index` | —                     | number        | `z-index` floor for the launcher and panel. Raised to the widget's own layer token if you pass a lower value.                                                                                |
 | `show_widget`             | —                     | boolean       | When `false`, the widget initializes fully but its UI stays hidden. Default `true`.                                                                                                          |
 | `use_screenshare`         | `mtx-use-screenshare` | boolean       | When `false`, screen-share requests are auto-denied and the Share Screen button is hidden. Default `true`. Disable via `mtx-use-screenshare="false"`.                                        |
@@ -215,9 +214,9 @@ Props: `settings` (required) and `container?`.
 
 TypeScript types are bundled with the package:
 
-- `MarketrixConfig` — full config for `initWidget` (`mtxId`, `mtxKey`, `mtxApiHost`, `userId`, `show_widget`, `use_screenshare`, plus all widget appearance settings, optional). `updateMarketrixConfig` takes only `ClientOwnedConfig` plus `mtxId`/`mtxKey`.
+- `MarketrixConfig` — full config for `initWidget` (`mtxId`, `mtxKey`, `mtxApiHost`, `show_widget`, `use_screenshare`, plus all widget appearance settings, optional). `updateMarketrixConfig` takes only `ClientOwnedConfig` plus `mtxId`/`mtxKey`.
 - `AddWidgetConfig` — discriminated config for `mountWidget` (production / preview variants + common options).
-- `ClientOwnedConfig` — the host-supplied options the API never sends (`mtxApiHost`, `userId`, `widget_position_z_index`, `show_widget`, `use_screenshare`, `styleNonce`).
+- `ClientOwnedConfig` — the host-supplied options the API never sends (`mtxApiHost`, `widget_position_z_index`, `show_widget`, `use_screenshare`, `styleNonce`).
 - `MarketrixWidgetPreviewProps` — props for the `MarketrixWidgetPreview` component.
 - `ChatMessage`, `WidgetState`, `InstructionType` (`'tell' | 'show' | 'do'`).
 

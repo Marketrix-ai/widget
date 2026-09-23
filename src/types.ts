@@ -17,7 +17,6 @@ export type { InstructionType, WidgetSettingsData } from './sdk';
 
 export interface ClientOwnedConfig {
   mtxApiHost?: string;
-  userId?: number;
   widget_position_z_index?: number;
   show_widget?: boolean;
   use_screenshare?: boolean;

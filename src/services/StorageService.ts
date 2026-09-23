@@ -12,7 +12,7 @@
  */
 import { z } from 'zod';
 
-import { InstructionTypeSchema } from '../sdk/contracts/entities';
+import { InstructionTypeSchema } from '../sdk/contracts/widget';
 import type { ChatMessage, InstructionType, MarketrixConfig } from '../types';
 import { logWarn } from '../utils/log';
 

@@ -157,11 +157,7 @@ async function initWidgetInternal(config: MarketrixConfig, host: HTMLElement | u
   }
 
   storageService.scopeTo(finalConfig);
-  streamClient.setCredentials({
-    marketrix_id: finalConfig.mtxId,
-    marketrix_key: finalConfig.mtxKey,
-    ...(finalConfig.userId !== undefined && { user_id: finalConfig.userId }),
-  });
+  streamClient.setCredentials({ marketrix_id: finalConfig.mtxId, marketrix_key: finalConfig.mtxKey });
   mountActive(finalConfig, host);
 
   if (finalConfig.widget_recording) {
