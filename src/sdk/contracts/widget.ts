@@ -11,19 +11,20 @@ import { RrwebEventSchema } from './rrweb';
 import {
   ApplicationWidgetEntitySchema,
   ApplicationWidgetPublicSchema,
+  InstructionTypeSchema,
   WidgetSettingsDataSchema,
   WidgetSettingsWriteSchema,
   WidgetTypeSchema,
 } from './widgetSettings';
-import { WIDGET_TOOL_NAMES } from './widgetToolNames';
+import type { WIDGET_TOOL_NAMES } from './widgetToolNames';
 
-export const WidgetCreateSchema = z.strictObject({
+const WidgetCreateSchema = z.strictObject({
   application_id: z.number().positive(),
   settings: WidgetSettingsWriteSchema.optional(),
 });
 export type WidgetCreateData = z.infer<typeof WidgetCreateSchema>;
 
-export const WidgetUpdateSchema = z.strictObject({
+const WidgetUpdateSchema = z.strictObject({
   application_id: z.number(),
   settings: WidgetSettingsWriteSchema.optional(),
   marketrix_id: z.string().max(100).optional(),
@@ -37,7 +38,7 @@ const widgetToolCall = <const Name extends string, Args extends z.ZodType>(brows
     tool_call_id: z.string(),
     browser_tool: z.literal(browserTool),
     args,
-    mode: z.enum(['show', 'do']).optional(),
+    mode: InstructionTypeSchema.exclude(['tell']).optional(),
     explanation: z.string().optional(),
   });
 
@@ -63,8 +64,6 @@ const WidgetSendKeysArgsSchema = z.strictObject({
   ]),
 });
 
-export const WidgetToolNameSchema = z.enum(WIDGET_TOOL_NAMES);
-
 const WidgetToolArgsSchemas = {
   get_html: WidgetEmptyArgsSchema,
   get_screenshot: WidgetEmptyArgsSchema,
@@ -82,10 +81,7 @@ const WidgetToolArgsSchemas = {
   wait: z.strictObject({ seconds: z.number().min(0.1).max(30) }),
   search: z.strictObject({ query: z.string(), engine: z.enum(['duckduckgo', 'google', 'bing']) }),
   done: z.strictObject({ message: z.string(), success: z.boolean() }),
-} as const;
-
-export const widgetToolInputSchema = (toolName: string) =>
-  z.strictObject({ args: WidgetToolArgsSchemas[WidgetToolNameSchema.parse(toolName)] });
+} as const satisfies Record<(typeof WIDGET_TOOL_NAMES)[number], z.ZodType>;
 
 export const WidgetToolCallEventSchema = z.discriminatedUnion('browser_tool', [
   widgetToolCall('get_html', WidgetToolArgsSchemas.get_html),

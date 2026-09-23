@@ -83,7 +83,7 @@ const RrwebMovementPositionSchema = z.strictObject({
   timeOffset: z.number(),
 });
 
-export const RrwebIncrementalDataSchema = z.union([
+const RrwebIncrementalDataSchema = z.union([
   z.strictObject({
     source: z.literal(0),
     texts: z.array(z.strictObject({ id: z.number(), value: z.string().nullable() })),
@@ -109,22 +109,11 @@ export const RrwebIncrementalDataSchema = z.union([
   ),
   z.strictObject({
     source: z.literal(2),
-    type: z.union([
-      z.literal(0),
-      z.literal(1),
-      z.literal(2),
-      z.literal(3),
-      z.literal(4),
-      z.literal(5),
-      z.literal(6),
-      z.literal(7),
-      z.literal(9),
-      z.literal(10),
-    ]),
+    type: z.literal([0, 1, 2, 3, 4, 5, 6, 7, 9, 10]),
     id: z.number(),
     x: z.number().optional(),
     y: z.number().optional(),
-    pointerType: z.union([z.literal(0), z.literal(1), z.literal(2)]).optional(),
+    pointerType: z.literal([0, 1, 2]).optional(),
   }),
   z.strictObject({ source: z.literal(3), id: z.number(), x: z.number(), y: z.number() }),
   z.strictObject({ source: z.literal(4), width: z.number(), height: z.number() }),
@@ -136,7 +125,7 @@ export const RrwebIncrementalDataSchema = z.union([
   }),
   z.strictObject({
     source: z.literal(7),
-    type: z.union([z.literal(0), z.literal(1), z.literal(2), z.literal(3), z.literal(4)]),
+    type: z.literal([0, 1, 2, 3, 4]),
     id: z.number(),
     currentTime: z.number().optional(),
     volume: z.number().optional(),
