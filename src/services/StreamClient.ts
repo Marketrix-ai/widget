@@ -23,7 +23,6 @@ export class StreamGaveUpError extends Error {}
 interface StreamCredentials {
   marketrix_id: string;
   marketrix_key: string;
-  user_id?: number;
 }
 
 interface StreamClientCallbacks {

@@ -220,7 +220,7 @@ describe('public widget lifecycle', () => {
     document.body.append(container);
 
     await act(() => mountWidget({ settings, container }));
-    await act(() => updateMarketrixConfig({ userId: 7 }));
+    await act(() => updateMarketrixConfig({ widget_position_z_index: 7 }));
 
     expect(loadConfig).not.toHaveBeenCalled();
     expect(container.querySelectorAll('.marketrix-widget-container')).toHaveLength(1);
@@ -293,7 +293,7 @@ describe('a config-change re-mount preserves an in-flight chat', () => {
 
     getOrCreateChatId.mockClear();
 
-    await act(() => updateMarketrixConfig({ userId: 42 }));
+    await act(() => updateMarketrixConfig({ widget_position_z_index: 42 }));
 
     await waitFor(() => expect(getOrCreateChatId).toHaveBeenCalled());
     expect(await getOrCreateChatId.mock.results[0]?.value).toBe('chat-inflight-1');

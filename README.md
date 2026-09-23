@@ -75,7 +75,6 @@ These apply to every mode (script attribute → config key):
 | ------------------------- | --------------------- | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `mtxApiHost`              | `mtx-api-host`        | string        | API server URL, e.g. `https://api.marketrix.ai`. The widget has no baked-in API host — you must supply it.                                                                                   |
 | `container`               | —                     | `HTMLElement` | Element to mount inside (programmatic only). Defaults to a container appended to `<body>`.                                                                                                   |
-| `userId`                  | —                     | number        | Associates widget activity with one of your users.                                                                                                                                           |
 | `widget_position_z_index` | —                     | number        | `z-index` floor for the launcher and panel. Raised to the widget's own layer token if you pass a lower value.                                                                                |
 | `show_widget`             | —                     | boolean       | When `false`, the widget initializes fully but its UI stays hidden. Default `true`.                                                                                                          |
 | `use_screenshare`         | `mtx-use-screenshare` | boolean       | When `false`, screen-share requests are auto-denied and the Share Screen button is hidden. Default `true`. Disable via `mtx-use-screenshare="false"`.                                        |
@@ -217,7 +216,7 @@ TypeScript types are bundled with the package:
 
 - `MarketrixConfig` — what `initWidget` takes: the required `mtxId` + `mtxKey` plus `ClientOwnedConfig`. Appearance comes only from the dashboard settings; `updateMarketrixConfig` takes a `Partial<MarketrixConfig>`.
 - `AddWidgetConfig` — discriminated config for `mountWidget` (production / preview variants + common options).
-- `ClientOwnedConfig` — the host-supplied options the API never sends (`mtxApiHost`, `userId`, `widget_position_z_index`, `show_widget`, `use_screenshare`, `styleNonce`).
+- `ClientOwnedConfig` — the host-supplied options the API never sends (`mtxApiHost`, `widget_position_z_index`, `show_widget`, `use_screenshare`, `styleNonce`).
 - `MarketrixWidgetPreviewProps` — props for the `MarketrixWidgetPreview` component.
 - `WidgetSettingsData` — the dashboard settings shape `MarketrixWidgetPreview` and preview-mode `mountWidget` take.
 - `InstructionType` (`'tell' | 'show' | 'do'`).
@@ -230,6 +229,7 @@ TypeScript types are bundled with the package:
 
 - **Dashboard settings are no longer accepted in `MarketrixConfig`.** The `widget_*` appearance and behaviour keys (`widget_accent_color`, `widget_background_color`, `widget_text_color`, `widget_position`, `widget_greeting`, `widget_chips` and the rest) were always overwritten by the dashboard settings. Set them in the dashboard; to render them before saving, pass them to `MarketrixWidgetPreview` or preview-mode `mountWidget` as `WidgetSettingsData`. `widget_position_z_index` stays, as a `ClientOwnedConfig` option.
 - **`mtxApp` and `isPreviewMode` are no longer config keys**, and `mtxId`/`mtxKey` are now required. The application resolves from your credentials; for a preview, use `MarketrixWidgetPreview` or preview-mode `mountWidget`.
+- **`userId` is no longer a config key.** The widget never sends a user id; drop it from your config.
 - **The default export is gone.** Import the named exports instead: `import { initWidget } from '@marketrix.ai/widget'`.
 - **The `WidgetState` and `ChatMessage` types are no longer exported.** Nothing in the public API produced or accepted them, so delete those imports.
 - **With no suggested actions configured, a live widget shows none.** Previously a live widget showed built-in example chips. Those examples now appear only in preview.

@@ -1,11 +1,9 @@
 /**
- * The widget's one door to the api: the oRPC client bound to `widgetContract`, plus the wire types the
- * widget reads. `configureSdk` points it at one api host and must run first, since one published bundle
- * serves every customer and carries no baked-in host; `sdk` proxies the current client so a caller can
- * hold one reference across reconfiguration.
- *
- * Every request omits credentials: the widget authenticates with `marketrix_id`/`marketrix_key` fields,
- * and a script embedded on an arbitrary host page has no business sending that page's cookies.
+ * The widget's one door to the api: `createClient` builds the oRPC client bound to `widgetContract`,
+ * `configureSdk` points it at an api host and `sdk` proxies the current client, plus the wire types
+ * the embedding page consumes.
+ * One published bundle loads on any customer's page, so the api host is set at runtime, and every request
+ * omits cookies because the widget authenticates with its `marketrix_id`/`marketrix_key` fields alone.
  */
 import { createORPCClient } from '@orpc/client';
 import { RPCLink } from '@orpc/client/fetch';
@@ -40,6 +38,6 @@ export const sdk = new Proxy({} as ContractRouterClient<typeof widgetContract>, 
   },
 });
 
-export type { ApplicationWidgetPublicData, InstructionType, WidgetSettingsData } from './contracts/entities';
+export type { ApplicationWidgetPublicData, InstructionType, WidgetSettingsData } from './contracts/widgetSettings';
 
 export type { WidgetCommand, WidgetEvent } from './contracts/widget';

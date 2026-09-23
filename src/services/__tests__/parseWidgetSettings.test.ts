@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from 'bun:test';
 
-import { WIDGET_RENDER_CONSTANTS, WidgetSettingsDataSchema } from '../../sdk/contracts/entities';
+import { WIDGET_RENDER_CONSTANTS, WidgetSettingsDataSchema } from '../../sdk/contracts/widgetSettings';
 import { validSettings } from '../../test/fixtures';
 import { invalidSettingsMessage, parseWidgetSettings } from '../WidgetService';
 

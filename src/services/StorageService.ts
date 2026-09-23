@@ -12,7 +12,7 @@
  */
 import { z } from 'zod';
 
-import { InstructionTypeSchema } from '../sdk/contracts/entities';
+import { InstructionTypeSchema } from '../sdk/contracts/widgetSettings';
 import type { ChatMessage, InstructionType, ValidWidgetConfig } from '../types';
 import { logWarn } from '../utils/log';
 

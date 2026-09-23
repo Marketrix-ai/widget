@@ -13,7 +13,7 @@
 import { z } from 'zod';
 
 import { type ApplicationWidgetPublicData, sdk } from '../sdk';
-import { WidgetSettingsWriteSchema } from '../sdk/contracts/entities';
+import { WidgetSettingsWriteSchema } from '../sdk/contracts/widgetSettings';
 import type { MarketrixConfig, ValidWidgetConfig } from '../types';
 import { errorMessage } from '../utils/errors';
 

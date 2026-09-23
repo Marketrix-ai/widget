@@ -356,7 +356,7 @@ describe('extract', () => {
     document.body.innerHTML = '<a href="/a"></a><a href="/b">Bought</a>';
     stubInnerText();
 
-    const result = await browserToolService.executeTool('extract', { query: '', extract_links: true }, 'do');
+    const result = await browserToolService.executeTool('extract', { extract_links: true }, 'do');
 
     assertSuccess(result);
     const data = result.data as { links: Array<{ text: string; href: string | null }> };
@@ -370,7 +370,7 @@ describe('extract', () => {
     document.body.innerHTML = '<a href="/a">A</a>';
     stubInnerText();
 
-    const result = await browserToolService.executeTool('extract', { query: '', extract_links: false }, 'do');
+    const result = await browserToolService.executeTool('extract', { extract_links: false }, 'do');
 
     assertSuccess(result);
     expect((result.data as { links: unknown[] }).links).toEqual([]);
