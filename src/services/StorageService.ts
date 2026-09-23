@@ -1,6 +1,5 @@
 /**
  * Browser-local persistence for the widget: the one door to `localStorage`.
- *
  * `readLocalParsed`/`writeLocal` read a key back through a schema and write one as JSON, falling back to
  * memory when a host page denies storage; an unreadable stored value reads as absent.
  * `scopedKey` suffixes a key by tenant so two tenants on one page never share state, and `scopeStorageTo`
@@ -13,7 +12,6 @@
  */
 import { z } from 'zod';
 
-import { WidgetToolNameSchema } from '../sdk/contracts/widget';
 import { InstructionTypeSchema } from '../sdk/contracts/widgetSettings';
 import type { ChatMessage, InstructionType, ValidWidgetConfig } from '../types';
 import { logWarn } from '../utils/log';
@@ -25,7 +23,7 @@ const MessagePartSchema = z.object({
   type: z.enum(['text', 'progress']),
   content: z.string(),
   status: z.enum(['in_progress', 'completed', 'failed']).optional(),
-  browserToolName: WidgetToolNameSchema.optional(),
+  browserToolName: z.string().optional(),
   streaming: z.boolean().optional(),
 });
 

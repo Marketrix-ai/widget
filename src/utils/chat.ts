@@ -13,8 +13,8 @@ import { logWarn } from './log';
 
 export const MODE_LABELS: Record<InstructionType, string> = { show: 'Show', tell: 'Tell', do: 'Do' };
 
-export const formatMessageTime = (date: Date | undefined): string =>
-  (date ?? new Date()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+export const formatMessageTime = (date: Date): string =>
+  date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
 interface FindMessageOptions {
   messages: ChatMessage[];

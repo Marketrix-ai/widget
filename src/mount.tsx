@@ -37,7 +37,7 @@ import { errorMessage } from './utils/errors';
 
 declare global {
   interface Window {
-    __mtx?: { state?: 'initializing' | 'active' } | undefined;
+    __mtx?: { state: 'initializing' | 'active' } | undefined;
   }
 }
 
@@ -165,7 +165,7 @@ async function initWidgetInternal(config: MarketrixConfig, host: HTMLElement | u
 
 export const initWidget = (config: MarketrixConfig, host?: HTMLElement): Promise<void> => {
   if (initPromise) return initPromise;
-  if (window.__mtx?.state) return Promise.resolve();
+  if (window.__mtx) return Promise.resolve();
 
   const generation = ++lifecycleGeneration;
   const pending = initWidgetInternal(config, host, generation).finally(() => {
@@ -233,7 +233,7 @@ function hideHostPageNotice(): void {
 }
 
 export const autoInitializeWidget = (): void => {
-  if (window.__mtx?.state) return;
+  if (window.__mtx) return;
 
   const scripts = document.querySelectorAll('script[mtx-id]');
   const script = scripts[scripts.length - 1];

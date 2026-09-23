@@ -1,15 +1,10 @@
 /**
- * With two snaps in flight, `useDragSnap` commits the corner the widget is animating to, not the one
- * it left. `onPositionCommit` is the caller's door to persistence — in production `WidgetRoot` calls
- * `writeLocal` from it exactly once per drop, never per pointermove, and a later mount reads the same
- * key back through `StorageService`'s `readLocalParsed`/`scopedKey`, so a stored corner round-trips. A window
- * resize re-derives the launcher's anchor (and therefore re-clamps it inside the new viewport) because
- * `pixelPositionStyle` is computed from `window.innerWidth`/`innerHeight` at render time and the resize
- * listener only forces that re-render — there is no separate clamp step to duplicate. `renderDragSnap`
- * is the one hook-under-test setup every case below shares: a measured 56x56 wrapper (`wrapperFor`) at
- * the bottom-right corner, wired to whatever `onPositionCommit` a case needs. The resting-anchor and Stop
- * cases render the whole widget instead; Stop on the closed launcher must cancel a Show step still
- * waiting on the visitor, so a later click on the page neither runs the stopped tool nor answers it.
+ * `useDragSnap` tests: with two snaps in flight it commits the corner the widget is animating to; a drop
+ * writes the position key once and a later mount reads the same corner back; a viewport resize
+ * re-derives the launcher anchor. `renderDragSnap` is the shared setup, a measured 56x56 wrapper at the
+ * bottom-right corner. The resting-anchor and Stop cases render the whole widget: Stop on the closed
+ * launcher must cancel a Show step still waiting on the visitor, so a later page click neither runs the
+ * stopped tool nor answers it.
  */
 import { act, fireEvent, renderHook, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
