@@ -1,6 +1,6 @@
 /**
  * `StorageService` tests: `scopeStorageTo` never carries one tenant's `chat_id` into another's scope and never
- * persists config or credentials, and a corrupted stored message is dropped alone; a chat
+ * persists config or credentials, and a corrupted stored message, or one naming an unknown tool, is dropped alone; a chat
  * snapshot round-trips, with an active screen share stored as an ended notice because a MediaStream
  * cannot survive a reload; a stored value that is not JSON or fails its schema reads as absent;
  * `readLocalParsed`/`writeLocal` degrade to memory and keep working unpersisted
@@ -72,6 +72,31 @@ describe('scopeTo scopes the chat context to the tenant', () => {
 
     expect(getChatId()).toBeNull();
     expect(readChatSnapshot().messages.map(msg => msg.id)).toEqual(['m1']);
+  });
+
+  it('drops a stored message whose progress line names a tool the widget does not run', () => {
+    const key = scopedKey('marketrix_chat_context', { mtxId: 'tenant-tools' });
+    const progress = (browserToolName: string) => ({
+      type: 'progress',
+      content: 'Clicking',
+      status: 'completed',
+      browserToolName,
+    });
+    const stored = (id: string, browserToolName: string) => ({
+      id,
+      kind: 'agent',
+      timestamp: new Date().toISOString(),
+      parts: [progress(browserToolName)],
+    });
+    writeLocal(key, {
+      chat_id: 'c1',
+      messages: [stored('known', 'click_element'), stored('unknown', 'rm_rf')],
+      timestamp: Date.now(),
+    });
+
+    scopeStorageTo({ mtxId: 'tenant-tools' });
+
+    expect(readChatSnapshot().messages.map(msg => msg.id)).toEqual(['known']);
   });
 });
 

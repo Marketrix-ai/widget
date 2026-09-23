@@ -13,6 +13,7 @@
 import { z } from 'zod';
 
 import { InstructionTypeSchema } from '../sdk/contracts/widgetSettings';
+import { WIDGET_TOOL_NAMES } from '../sdk/contracts/widgetToolNames';
 import type { ChatMessage, InstructionType, ValidWidgetConfig } from '../types';
 import { logWarn } from '../utils/log';
 
@@ -23,7 +24,7 @@ const MessagePartSchema = z.object({
   type: z.enum(['text', 'progress']),
   content: z.string(),
   status: z.enum(['in_progress', 'completed', 'failed']).optional(),
-  browserToolName: z.string().optional(),
+  browserToolName: z.enum(WIDGET_TOOL_NAMES).optional(),
   streaming: z.boolean().optional(),
 });
 

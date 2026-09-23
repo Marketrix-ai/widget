@@ -15,6 +15,7 @@ import {
   WidgetSettingsWriteSchema,
   WidgetTypeSchema,
 } from './widgetSettings';
+import { WIDGET_TOOL_NAMES } from './widgetToolNames';
 
 export const WidgetCreateSchema = z.strictObject({
   application_id: z.number().positive(),
@@ -62,24 +63,7 @@ const WidgetSendKeysArgsSchema = z.strictObject({
   ]),
 });
 
-export const WidgetToolNameSchema = z.enum([
-  'get_html',
-  'get_screenshot',
-  'click_element',
-  'navigate',
-  'type_text',
-  'scroll',
-  'scroll_to_text',
-  'extract',
-  'go_back',
-  'send_keys',
-  'close_tab',
-  'select_dropdown_option',
-  'get_dropdown_options',
-  'wait',
-  'search',
-  'done',
-]);
+export const WidgetToolNameSchema = z.enum(WIDGET_TOOL_NAMES);
 
 const WidgetToolArgsSchemas = {
   get_html: WidgetEmptyArgsSchema,
