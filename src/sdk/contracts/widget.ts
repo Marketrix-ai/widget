@@ -152,25 +152,9 @@ export const WidgetCommandSchema = z.discriminatedUnion('type', [
 ]);
 export type WidgetCommand = z.infer<typeof WidgetCommandSchema>;
 
-export const widgetCreate = oc
-  .route({
-    method: 'POST',
-    tags: ['Widget'],
-    path: '/widgets',
-    summary: 'Create a new widget',
-    description: 'Enables the widget for an application and returns the created entity. Requires an application_id.',
-  })
-  .input(WidgetCreateSchema)
-  .output(ApplicationWidgetEntitySchema);
+export const widgetCreate = oc.input(WidgetCreateSchema).output(ApplicationWidgetEntitySchema);
 
 export const widgetSearch = oc
-  .route({
-    method: 'GET',
-    tags: ['Widget'],
-    path: '/widgets',
-    summary: 'Search widgets for workspace',
-    description: 'Search the calling workspace’s widgets by application (dashboard-only; session-scoped)',
-  })
   .input(
     z
       .strictObject({
@@ -181,13 +165,6 @@ export const widgetSearch = oc
   .output(paginatedListOf(ApplicationWidgetEntitySchema));
 
 export const widgetPublicSearch = oc
-  .route({
-    method: 'GET',
-    tags: ['Widget'],
-    path: '/widgets/public',
-    summary: 'Resolve a widget by its embed credentials',
-    description: 'Session-less lookup by marketrix_id + marketrix_key, for the widget boot call',
-  })
   .input(
     z
       .strictObject({
@@ -198,48 +175,15 @@ export const widgetPublicSearch = oc
   )
   .output(paginatedListOf(ApplicationWidgetPublicSchema));
 
-export const widgetDefaultGet = oc
-  .route({
-    method: 'GET',
-    tags: ['Widget'],
-    path: '/widgets/defaults/{type}',
-    summary: 'Get default settings for widget type',
-    description: 'Returns default settings for the specified widget type',
-  })
-  .input(z.strictObject({ type: WidgetTypeSchema }))
-  .output(WidgetSettingsDataSchema);
+export const widgetDefaultGet = oc.input(z.strictObject({ type: WidgetTypeSchema })).output(WidgetSettingsDataSchema);
 
-export const widgetUpdate = oc
-  .route({
-    method: 'PUT',
-    tags: ['Widget'],
-    path: '/widgets/{application_id}',
-    summary: 'Update widget',
-    description: 'Updates widget settings and configuration',
-  })
-  .input(WidgetUpdateSchema)
-  .output(ApplicationWidgetEntitySchema);
+export const widgetUpdate = oc.input(WidgetUpdateSchema).output(ApplicationWidgetEntitySchema);
 
 export const widgetDelete = oc
-  .route({
-    method: 'DELETE',
-    tags: ['Widget'],
-    path: '/widgets/{application_id}',
-    summary: 'Delete widget',
-    description: 'Permanently disables the widget for an application. This action cannot be undone.',
-  })
   .input(z.strictObject({ application_id: z.number() }))
   .output(z.strictObject({ success: z.literal(true) }));
 
 export const widgetStream = oc
-  .route({
-    method: 'GET',
-    tags: ['Widget'],
-    path: '/widget/stream',
-    summary: 'SSE stream for real-time widget events',
-    description:
-      'Typed event stream delivering tool calls, task status updates, chat responses, and registration confirmation.',
-  })
   .input(
     z.strictObject({
       chat_id: z.string(),
@@ -251,13 +195,6 @@ export const widgetStream = oc
   .output(eventIterator(WidgetEventSchema));
 
 export const widgetMessagePost = oc
-  .route({
-    method: 'POST',
-    tags: ['Widget'],
-    path: '/widget/message',
-    summary: 'Send a typed command from widget to server',
-    description: 'Receives chat commands, tool responses, and keepalive pings from the widget.',
-  })
   .input(
     z.strictObject({
       chat_id: z.string(),
