@@ -4,7 +4,8 @@
  *
  * `toRgb` parses a hex or `rgb()`/`rgba()` string into channels, or null for anything else — a named
  * colour or `hsl()` setting is unreadable by design. `contrastRatio` computes the WCAG contrast
- * formula; `getContrastingColor` picks whichever of black or white reads better against a colour.
+ * formula, and is exported as the oracle the design-system token tests assert pairs against;
+ * `getContrastingColor` picks whichever of black or white reads better against a colour.
  * `addOpacity` re-emits a colour at a given alpha. `backgroundGradient` turns a tenant's background
  * setting, which may already be a gradient, into a `backgroundImage` value either way.
  */

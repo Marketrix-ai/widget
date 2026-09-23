@@ -1,7 +1,7 @@
 /**
  * The widget's one door to the api: `createClient` builds the oRPC client bound to `widgetContract`,
- * `configureSdk` points it at an api host and `sdk` proxies the current client, throwing until one is configured, plus the wire types
- * the embedding page consumes.
+ * `configureSdk` points it at an api host and `sdk` proxies the current client, throwing until one is
+ * configured, plus the wire types the embedding page consumes.
  * One published bundle loads on any customer's page, so the api host is set at runtime, and every request
  * omits cookies because the widget authenticates with its `marketrix_id`/`marketrix_key` fields alone.
  */
@@ -20,22 +20,17 @@ function createClient(apiUrl: string): ContractRouterClient<typeof widgetContrac
   );
 }
 
-let currentApiUrl = '';
-let client: ContractRouterClient<typeof widgetContract> | null = null;
+let current: { url: string; client: ContractRouterClient<typeof widgetContract> } | null = null;
 
 export const configureSdk = (apiUrl: string) => {
-  if (!apiUrl?.trim()) throw new Error('API URL is required for SDK configuration');
-
-  if (apiUrl !== currentApiUrl) {
-    currentApiUrl = apiUrl;
-    client = createClient(apiUrl);
-  }
+  if (!apiUrl.trim()) throw new Error('API URL is required for SDK configuration');
+  if (apiUrl !== current?.url) current = { url: apiUrl, client: createClient(apiUrl) };
 };
 
 export const sdk = new Proxy({} as ContractRouterClient<typeof widgetContract>, {
   get(_target, prop) {
-    if (!client) throw new Error('SDK used before configureSdk set the api host');
-    return client[prop as keyof typeof client];
+    if (!current) throw new Error('SDK used before configureSdk set the api host');
+    return current.client[prop as keyof typeof current.client];
   },
 });
 

@@ -222,12 +222,6 @@ TypeScript types are bundled with the package:
 
 ---
 
-## Upgrading to 5.x
-
-- **4.x widgets configured with `userId` no longer connect.** They send a `user_id` the api now refuses, so the chat stream is rejected. Upgrade to 5.x and drop `userId` from your config; 4.x widgets without `userId` are unaffected.
-
----
-
 ## Upgrading to 5.0.1
 
 - **TypeScript now requires `mtxApiHost`** in `MarketrixConfig` and in the credentials form of `AddWidgetConfig`. The runtime already refused to start without it, so only type-checking changes; it is no longer part of `ClientOwnedConfig`.
@@ -241,7 +235,7 @@ TypeScript types are bundled with the package:
 
 - **Dashboard settings are no longer accepted in `MarketrixConfig`.** The `widget_*` appearance and behaviour keys (`widget_accent_color`, `widget_background_color`, `widget_text_color`, `widget_position`, `widget_greeting`, `widget_chips` and the rest) were always overwritten by the dashboard settings. Set them in the dashboard; to render them before saving, pass them to `MarketrixWidgetPreview` or preview-mode `mountWidget` as `WidgetSettingsData`. `widget_position_z_index` stays, as a `ClientOwnedConfig` option.
 - **`mtxApp` and `isPreviewMode` are no longer config keys**, and `mtxId`/`mtxKey` are now required. The application resolves from your credentials; for a preview, use `MarketrixWidgetPreview` or preview-mode `mountWidget`.
-- **`userId` is no longer a config key.** The widget never sends a user id; drop it from your config.
+- **`userId` is no longer a config key.** The widget never sends a user id; drop it from your config. A 4.x widget still configured with `userId` no longer connects, because the api refuses the `user_id` it sends; 4.x widgets without `userId` are unaffected.
 - **The default export is gone.** Import the named exports instead: `import { initWidget } from '@marketrix.ai/widget'`.
 - **The `WidgetState` and `ChatMessage` types are no longer exported.** Nothing in the public API produced or accepted them, so delete those imports.
 - **With no suggested actions configured, a live widget shows none.** Previously a live widget showed built-in example chips. Those examples now appear only in preview.
