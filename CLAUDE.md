@@ -26,7 +26,7 @@ bun run bundle:check     # packaging gate (size, single chunk, no CSS file, Reac
 bun run check:served     # asserts what the nginx runtime image actually SENDS, over real HTTP
 bun run code:check       # tsc + eslint + prettier --check (one-shot)
 bun run ci               # every CI validation gate
-bun run tag <version>    # scripts/release.sh
+bun run tag <version>    # infra/scripts/release.sh
 ```
 
 **Tests run on `bun test`, not vitest** (pinned by sourceInvariants.test.ts). `src/test/preload.ts` (the
