@@ -11,7 +11,7 @@ import { openScreenAccessRequest } from '../../context/chatReducer';
 import { useWidget, useWidgetConfig } from '../../hooks/useWidget';
 import type { InstructionType } from '../../sdk';
 import { showModeService } from '../../services/ShowModeService';
-import { createSystemMessage, MODE_LABELS } from '../../utils/chat';
+import { MODE_LABELS } from '../../utils/chat';
 import { ErrorBoundary } from '../base/ErrorBoundary';
 import { Stack } from '../base/Flex';
 import { Surface } from '../base/Surface';
@@ -52,7 +52,7 @@ export const ChatView: React.FC<{ messageInputRef: React.RefObject<HTMLTextAreaE
 
   const handleModeChange = (mode: InstructionType) => {
     if (mode === currentMode) return;
-    actions.addMessage(createSystemMessage(`Switched to ${MODE_LABELS[mode]} mode`));
+    actions.addSystemMessage(`Switched to ${MODE_LABELS[mode]} mode`);
     actions.setMode(mode);
   };
 

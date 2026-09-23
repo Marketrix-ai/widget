@@ -2,7 +2,7 @@
  * Tests for `getOrCreateChatId`: the stored-id fast path, and that several callers racing before the
  * first `chatCreate` resolves still mint exactly one chat id and all resolve to it.
  *
- * Each test uses a fresh tenant id, since `storageService`'s per-tenant context is cached in memory and
+ * Each test uses a fresh tenant id, since `StorageService`'s per-tenant context is cached in memory and
  * a shared tenant would carry a previous test's minted id into the next one.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
@@ -10,7 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 import { sdk } from '../../sdk';
 import { mocked, mockSdkModule, restoreModuleAfterAll } from '../../test/vi-compat';
 import { getOrCreateChatId } from '../chatSession';
-import { storageService } from '../StorageService';
+import { getChatId, scopeStorageTo, setChatId } from '../StorageService';
 
 vi.mock('../../sdk', () => mockSdkModule({ chatCreate: vi.fn() }));
 restoreModuleAfterAll('../../sdk', () => import('../../sdk/index.ts?real'));
@@ -20,7 +20,7 @@ const mockSdk = mocked(sdk);
 let tenant = 0;
 beforeEach(() => {
   tenant += 1;
-  storageService.scopeTo({ mtxId: `tenant-${tenant}` });
+  scopeStorageTo({ mtxId: `tenant-${tenant}` });
 });
 
 afterEach(() => {
@@ -30,7 +30,7 @@ afterEach(() => {
 
 describe('getOrCreateChatId stored id', () => {
   it('returns the id already in storage without minting a new one', async () => {
-    storageService.setChatId('chat-stored');
+    setChatId('chat-stored');
 
     await expect(getOrCreateChatId()).resolves.toBe('chat-stored');
     expect(mockSdk.chatCreate).not.toHaveBeenCalled();
@@ -51,7 +51,7 @@ describe('getOrCreateChatId concurrent callers', () => {
 
     expect(ids).toEqual(['chat-minted-once', 'chat-minted-once', 'chat-minted-once']);
     expect(mockSdk.chatCreate).toHaveBeenCalledTimes(1);
-    expect(storageService.getChatId()).toBe('chat-minted-once');
+    expect(getChatId()).toBe('chat-minted-once');
   });
 
   it('retries on the next call after a failed create, rather than caching the rejection', async () => {

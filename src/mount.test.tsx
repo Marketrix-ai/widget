@@ -8,6 +8,8 @@ import { resolve } from 'node:path';
 
 import { afterEach, describe, expect, it, vi } from 'bun:test';
 
+import * as WidgetService from './services/WidgetService';
+
 const loaderSource = readFileSync(resolve(process.cwd(), 'public/loader.js'), 'utf8');
 
 vi.mock('./index.css?inline', () => ({ default: '.marketrix-widget-container { display: block; }' }));
@@ -30,9 +32,9 @@ let mountImportCount = 0;
 const importMount = () => import(`./mount.tsx?t=${mountImportCount++}`);
 
 const runAutoInit = async () => {
-  const init = vi.fn().mockResolvedValue(undefined);
+  const init = vi.spyOn(WidgetService, 'loadWidgetConfig').mockReturnValue(new Promise(() => {}));
   const { autoInitializeWidget } = await importMount();
-  autoInitializeWidget(init);
+  autoInitializeWidget();
   return init;
 };
 
@@ -132,11 +134,8 @@ describe('widget public entry paths', () => {
 
   it('does nothing for npm consumers without an auto-init script', async () => {
     vi.useFakeTimers();
-    const init = vi.fn().mockResolvedValue(undefined);
     const timer = vi.spyOn(globalThis, 'setTimeout');
-    const { autoInitializeWidget } = await importMount();
-
-    autoInitializeWidget(init);
+    const init = await runAutoInit();
 
     expect(init).not.toHaveBeenCalled();
     expect(timer).not.toHaveBeenCalled();

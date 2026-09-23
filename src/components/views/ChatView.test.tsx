@@ -11,9 +11,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 import { useChatContext } from '../../context/ChatContext';
 import * as chatSession from '../../services/chatSession';
 import * as ScreenShareService from '../../services/ScreenShareService';
-import { storageService } from '../../services/StorageService';
+import { scopeStorageTo } from '../../services/StorageService';
 import { streamClient } from '../../services/StreamClient';
-import { mockMediaStream } from '../../test/fixtures';
+import { mockMediaStream, ofKind } from '../../test/fixtures';
 import { ChatHarness, openChatTab, openWidget, renderWidget } from '../../test/renderWidget';
 import { messageText } from '../../types';
 
@@ -72,7 +72,7 @@ describe('a send while the stream is down', () => {
     vi.spyOn(streamClient, 'ready').mockResolvedValue();
     vi.spyOn(streamClient, 'send').mockRejectedValue(new Error('offline'));
 
-    storageService.scopeTo({ mtxId: 'chatview-stream-down-1' });
+    scopeStorageTo({ mtxId: 'chatview-stream-down-1' });
     renderWidget({ mtxId: 'chatview-stream-down-1' }, { previewMode: false });
     await waitFor(() => expect(streamClient.connect).toHaveBeenCalled());
     openWidget();
@@ -91,7 +91,7 @@ describe('a send while the stream is down', () => {
     vi.spyOn(streamClient, 'ready').mockResolvedValue();
     vi.spyOn(streamClient, 'send').mockRejectedValue(new Error('offline'));
 
-    storageService.scopeTo({ mtxId: 'chatview-stream-down-2' });
+    scopeStorageTo({ mtxId: 'chatview-stream-down-2' });
     renderWidget({ mtxId: 'chatview-stream-down-2' }, { previewMode: false });
     await waitFor(() => expect(streamClient.connect).toHaveBeenCalled());
     openWidget();
@@ -160,7 +160,7 @@ describe('answering a screen-access request', () => {
     await act(async () => await captured!.chatActions.allowScreenAccess());
 
     expect(captured!.messages.map(m => m.kind)).toEqual(['user', 'screenAccess', 'system', 'screenshare', 'agent']);
-    expect(captured!.messages[1]?.screenShareStatus).toBe('allowed');
+    expect(ofKind(captured!.messages[1], 'screenAccess').screenShareStatus).toBe('allowed');
   });
 
   it('allow, but the picker was cancelled: marks the card denied and still releases the turn', async () => {
@@ -169,7 +169,7 @@ describe('answering a screen-access request', () => {
 
     await act(async () => await captured!.chatActions.allowScreenAccess());
 
-    expect(captured!.messages[1]?.screenShareStatus).toBe('denied');
+    expect(ofKind(captured!.messages[1], 'screenAccess').screenShareStatus).toBe('denied');
     expect(captured!.messages.map(m => m.kind)).toEqual(['user', 'screenAccess', 'agent']);
   });
 

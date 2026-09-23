@@ -1,7 +1,7 @@
 /**
  * The suggested-action chips the home view offers a visitor: one per tenant-configured `widget_chips`
  * entry, or the built-in `DEFAULT_CHIPS` when the tenant configured none. `SuggestedActionItem` is what a
- * chip renders and dispatches as; `getSuggestedActionsFromConfig` maps a `MarketrixConfig`'s chips onto it.
+ * chip renders and dispatches as; `getSuggestedActionsFromConfig` maps a config's chips onto it.
  *
  * A chip's caption doubles as the instruction dispatched on click, so a `show`/`do` caption missing its
  * mode prefix is given one. The strip patterns demand whitespace after the mode word so re-prefixing
@@ -10,7 +10,7 @@
  * because two chips may share a caption and the slug alone would collide.
  */
 
-import type { InstructionType, MarketrixConfig } from '../types';
+import type { InstructionType, ValidWidgetConfig } from '../types';
 
 export interface SuggestedActionItem {
   id: string;
@@ -26,9 +26,9 @@ const DEFAULT_CHIPS: SuggestedActionItem[] = [
   { id: 'tell-conversion-rate', text: 'What does my conversion rate mean and how can I improve it?', type: 'tell' },
 ];
 
-export function getSuggestedActionsFromConfig(config: MarketrixConfig): SuggestedActionItem[] {
+export function getSuggestedActionsFromConfig(config: ValidWidgetConfig): SuggestedActionItem[] {
   const chips = config.widget_chips;
-  if (!chips?.length) return DEFAULT_CHIPS;
+  if (!chips.length) return DEFAULT_CHIPS;
 
   return chips.map((chip, index) => ({
     id: `chip-${chip.chip_text.replace(/\s+/g, '-').toLowerCase()}-${index}`,

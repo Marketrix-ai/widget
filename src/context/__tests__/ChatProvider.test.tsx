@@ -13,7 +13,7 @@ import { useWidget } from '../../hooks/useWidget';
 import type { WidgetEvent } from '../../sdk';
 import * as chatSession from '../../services/chatSession';
 import { streamClient } from '../../services/StreamClient';
-import { agentMessage, asStreamClientInternals, browserToolServiceMock } from '../../test/fixtures';
+import { agentMessage, asStreamClientInternals, browserToolServiceMock, ofKind } from '../../test/fixtures';
 import { ChatHarness } from '../../test/renderWidget';
 import { advanceTimersByTimeAsync, waitFor } from '../../test/vi-compat';
 import { messageText } from '../../types';
@@ -33,12 +33,12 @@ const Transcript = () => {
   const { messages, chatActions } = useChatContext();
 
   useEffect(() => {
-    chatActions.setMessages([restoredPlaceholder]);
+    chatActions.restoreMessages([restoredPlaceholder]);
   }, [chatActions]);
 
   return (
     <div data-testid='transcript'>
-      {messages.map(msg => `${msg.id}:${msg.isPlaceholder}:${messageText(msg.parts)}`)}
+      {messages.map(msg => `${msg.id}:${msg.kind === 'agent' && msg.isPlaceholder}:${messageText(msg.parts)}`)}
     </div>
   );
 };
@@ -77,22 +77,12 @@ describe('a placeholder that never receives an event', () => {
 });
 
 const ChurningTranscript = () => {
-  const { messages, chatActions } = useChatContext();
+  const { chatActions } = useChatContext();
 
   return (
     <>
       <Transcript />
-      <button
-        data-testid='churn'
-        onClick={() =>
-          chatActions.addMessage({
-            id: `system-${messages.length}`,
-            kind: 'system',
-            timestamp: new Date(),
-            parts: [{ type: 'text', content: 'Mode changed' }],
-          })
-        }
-      />
+      <button data-testid='churn' onClick={() => chatActions.addSystemMessage('Mode changed')} />
     </>
   );
 };
@@ -235,7 +225,12 @@ describe('commit skips the render for a transition that reports no change', () =
     act(() => {
       asStreamClientInternals().handleMessage({ type: 'task/status', status: 'has_question' });
     });
-    expect(captured!.messages.find(m => m.id === placeholderId)?.placeholderState).toBe('waiting-for-user');
+    expect(
+      ofKind(
+        captured!.messages.find(m => m.id === placeholderId),
+        'agent',
+      ).placeholderState,
+    ).toBe('waiting-for-user');
 
     const messagesBeforeWatchdog = captured!.messages;
     act(() => {
@@ -243,19 +238,24 @@ describe('commit skips the render for a transition that reports no change', () =
     });
 
     expect(captured!.messages).toBe(messagesBeforeWatchdog);
-    expect(captured!.messages.find(m => m.id === placeholderId)?.placeholderState).toBe('waiting-for-user');
+    expect(
+      ofKind(
+        captured!.messages.find(m => m.id === placeholderId),
+        'agent',
+      ).placeholderState,
+    ).toBe('waiting-for-user');
   });
 
   it('setMessages handed its own current array back is a no-op, even though it builds a new state object', () => {
     renderCaptured();
     act(() => {
-      captured!.chatActions.setMessages([agentMessage({ id: 'a', mode: 'tell', parts: [] })]);
+      captured!.chatActions.restoreMessages([agentMessage({ id: 'a', mode: 'tell', parts: [] })]);
     });
 
     const messagesBefore = captured!.messages;
     const rendersBefore = providerCommitCount;
     act(() => {
-      captured!.chatActions.setMessages(messagesBefore);
+      captured!.chatActions.restoreMessages(messagesBefore);
     });
 
     expect(providerCommitCount).toBe(rendersBefore);
@@ -293,7 +293,7 @@ describe('a real turn', () => {
       await captured!.chatActions.sendTurn('hello', 'tell');
     });
 
-    const placeholder = captured!.messages.find(m => m.isPlaceholder);
+    const placeholder = captured!.messages.find(m => m.kind === 'agent' && m.isPlaceholder);
     expect(order).toEqual(['ready', 'send']);
     expect(send).toHaveBeenCalledWith({ type: 'chat/tell', request_id: placeholder!.id, content: 'hello' });
   });
@@ -310,7 +310,7 @@ describe('a Show or Do turn without a live screen share', () => {
 
     act(() => captured!.chatActions.denyScreenAccess());
 
-    expect(captured!.messages[1]?.screenShareStatus).toBe('denied');
+    expect(ofKind(captured!.messages[1], 'screenAccess').screenShareStatus).toBe('denied');
     expect(captured!.messages.map(m => m.kind)).toEqual(['user', 'screenAccess', 'agent']);
   });
 
@@ -547,26 +547,14 @@ describe('two independent turns settle into their own messages', () => {
     renderCaptured(false);
 
     act(() => {
-      captured!.chatActions.addMessage({
-        id: 'req-a',
-        kind: 'agent',
-        timestamp: new Date(),
-        isPlaceholder: true,
-        parts: [],
-      });
+      captured!.chatActions.restoreMessages([agentMessage({ id: 'req-a', parts: [] })]);
     });
     act(() => {
       asStreamClientInternals().handleMessage({ type: 'chat/response', request_id: 'req-a', text: 'first' });
     });
 
     act(() => {
-      captured!.chatActions.addMessage({
-        id: 'req-b',
-        kind: 'agent',
-        timestamp: new Date(),
-        isPlaceholder: true,
-        parts: [],
-      });
+      captured!.chatActions.restoreMessages([...captured!.messages, agentMessage({ id: 'req-b', parts: [] })]);
     });
     act(() => {
       asStreamClientInternals().handleMessage({ type: 'chat/response', request_id: 'req-b', text: 'second' });

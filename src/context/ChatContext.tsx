@@ -23,41 +23,42 @@ import {
   createAgentMessage,
   createPlaceholderMessage,
   createScreenAccessRequestMessage,
+  createSystemMessage,
   createUserMessage,
 } from '../utils/chat';
 import { logWarn } from '../utils/log';
 import {
+  type ChatState,
   isTerminalTaskStatus,
   openScreenAccessRequest,
   reduceAppend,
   reduceDispatch,
   reduceError,
+  reduceEvent,
   reduceScreenAccessResolved,
   reduceScreenShareStarted,
   reduceScreenShareStopped,
-  reduceSse,
   reduceStaleReply,
   reduceStop,
   reduceToolDone,
   reduceToolProgress,
   reduceTransportFailure,
-  type SseEffect,
-  type SseState,
   type TaskState,
+  type ToolProgress,
+  type ToolRun,
 } from './chatReducer';
 import { useUIStateContext } from './UIStateContext';
 
 interface ChatActions {
-  addMessage: (message: ChatMessage) => void;
-  setMessages: (messages: ChatMessage[]) => void;
-  clearMessages: () => void;
+  restoreMessages: (messages: ChatMessage[]) => void;
+  addSystemMessage: (content: string) => void;
+  clearChat: () => void;
   sendTurn: (content: string, mode: InstructionType) => Promise<boolean>;
   allowScreenAccess: () => Promise<void>;
   denyScreenAccess: () => void;
 }
 
 interface TaskActions {
-  resetTask: () => void;
   stopTask: () => Promise<void>;
 }
 
@@ -76,12 +77,24 @@ const STALE_REPLY_TIMEOUT_MS = 120_000;
 const STALE_REPLY_TEXT = 'This is taking longer than expected. Please try again.';
 const PREVIEW_REPLY = "This is a preview. In production, I'll respond to your messages here.";
 
+const StaleReplyWatchdog: React.FC<{ id: string; progress: number; onStale: (id: string) => void }> = ({
+  id,
+  progress,
+  onStale,
+}) => {
+  useEffect(() => {
+    const timer = setTimeout(() => onStale(id), STALE_REPLY_TIMEOUT_MS);
+    return () => clearTimeout(timer);
+  }, [id, progress, onStale]);
+  return null;
+};
+
 export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isPreviewMode, use_screenshare } = useWidgetConfig();
   const { uiState, uiActions } = useUIStateContext();
-  const [state, setState] = useState<SseState>(() => ({ messages: [], task: { phase: 'idle' } }));
+  const [state, setState] = useState<ChatState>(() => ({ messages: [], task: { phase: 'idle' } }));
 
-  const stateRef = useRef<SseState>(state);
+  const stateRef = useRef<ChatState>(state);
   const currentModeRef = useRef(uiState.currentMode);
   currentModeRef.current = uiState.currentMode;
   const currentErrorRef = useRef(uiState.error);
@@ -89,7 +102,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const processedToolCallIds = useRef(new Set<string>());
   const lastStreamErrorRef = useRef<string | undefined>(undefined);
 
-  const commit = useCallback((transition: (s: SseState) => SseState) => {
+  const commit = useCallback((transition: (s: ChatState) => ChatState) => {
     const prev = stateRef.current;
     const next = transition(prev);
     if (next === prev || (next.messages === prev.messages && next.task === prev.task)) return;
@@ -97,24 +110,13 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setState(next);
   }, []);
 
-  const addMessage = useCallback((message: ChatMessage) => commit(s => reduceAppend(s, message)), [commit]);
-  const setMessages = useCallback((messages: ChatMessage[]) => commit(s => ({ ...s, messages })), [commit]);
-  const clearMessages = useCallback(() => commit(s => ({ ...s, messages: [] })), [commit]);
-  const resetTask = useCallback(() => commit(s => ({ ...s, task: { phase: 'idle' } })), [commit]);
-
-  const pendingReplies = state.messages
-    .filter(msg => msg.isPlaceholder)
-    .map(msg => `${msg.id}:${msg.parts.length}`)
-    .join(' ');
-
-  useEffect(() => {
-    const watchdogs = pendingReplies
-      .split(' ')
-      .filter(Boolean)
-      .map(entry => entry.slice(0, entry.lastIndexOf(':')))
-      .map(id => setTimeout(() => commit(s => reduceStaleReply(s, id, STALE_REPLY_TEXT)), STALE_REPLY_TIMEOUT_MS));
-    return () => watchdogs.forEach(clearTimeout);
-  }, [pendingReplies, commit]);
+  const restoreMessages = useCallback((messages: ChatMessage[]) => commit(s => ({ ...s, messages })), [commit]);
+  const addSystemMessage = useCallback(
+    (content: string) => commit(s => reduceAppend(s, createSystemMessage(content))),
+    [commit],
+  );
+  const clearChat = useCallback(() => commit(() => ({ messages: [], task: { phase: 'idle' } })), [commit]);
+  const expireReply = useCallback((id: string) => commit(s => reduceStaleReply(s, id, STALE_REPLY_TEXT)), [commit]);
 
   const dispatchTurn = useCallback(
     async (content: string, mode: InstructionType): Promise<boolean> => {
@@ -156,7 +158,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     (status: 'allowed' | 'denied') => {
       const request = openScreenAccessRequest(stateRef.current.messages);
       commit(s => reduceScreenAccessResolved(s, status));
-      if (request?.pendingContent && request.mode) void dispatchTurn(request.pendingContent, request.mode);
+      if (request) void dispatchTurn(request.pendingContent, request.mode);
     },
     [commit, dispatchTurn],
   );
@@ -188,22 +190,14 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (isPreviewMode) return;
     const setError = uiActions.setError;
 
-    const startToolCall = async ({ call, mode }: SseEffect) => {
-      const explanation = call.explanation ?? '';
-      const result = await browserToolService.executeTool(call.browser_tool, call.args, mode, explanation);
+    const startToolCall = async ({ call, mode }: ToolRun) => {
+      const result = await browserToolService.executeTool(call.browser_tool, call.args, mode, call.explanation);
       const error = result.success ? undefined : result.error;
-      const shownError = result.success || result.cancelled ? undefined : result.error;
+      const progress: ToolProgress = result.success
+        ? { status: 'completed' }
+        : { status: 'failed', error: result.cancelled ? undefined : result.error };
 
-      commit(s =>
-        reduceToolProgress(
-          s,
-          call.browser_tool,
-          explanation,
-          error ? 'failed' : 'completed',
-          currentModeRef.current,
-          shownError,
-        ),
-      );
+      commit(s => reduceToolProgress(s, call.browser_tool, progress, currentModeRef.current));
       if (!error && call.browser_tool === 'done') {
         const { success } = call.args;
         commit(s => reduceToolDone(s, currentModeRef.current, success));
@@ -248,15 +242,15 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setError(undefined);
       }
 
-      let effects: SseEffect[] = [];
+      let toolRuns: ToolRun[] = [];
       commit(s => {
-        const result = reduceSse(s, event, currentModeRef.current);
-        effects = result.effects;
+        const result = reduceEvent(s, event, currentModeRef.current);
+        toolRuns = result.toolRuns;
         return result.state;
       });
 
-      for (const effect of effects) {
-        startToolCall(effect).catch((error: unknown) => {
+      for (const run of toolRuns) {
+        startToolCall(run).catch((error: unknown) => {
           console.error('[Widget] Tool call failed:', error);
           setError('Something went wrong running that step. Please try again.');
         });
@@ -284,18 +278,29 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [isPreviewMode, commit, uiActions, currentModeRef]);
 
   const chatActions = useMemo<ChatActions>(
-    () => ({ addMessage, setMessages, clearMessages, sendTurn, allowScreenAccess, denyScreenAccess }),
-    [addMessage, setMessages, clearMessages, sendTurn, allowScreenAccess, denyScreenAccess],
+    () => ({ restoreMessages, addSystemMessage, clearChat, sendTurn, allowScreenAccess, denyScreenAccess }),
+    [restoreMessages, addSystemMessage, clearChat, sendTurn, allowScreenAccess, denyScreenAccess],
   );
 
-  const taskActions = useMemo<TaskActions>(() => ({ resetTask, stopTask }), [resetTask, stopTask]);
+  const taskActions = useMemo<TaskActions>(() => ({ stopTask }), [stopTask]);
 
   const contextValue = useMemo<ChatContextType>(
     () => ({ messages: state.messages, chatActions, taskState: state.task, taskActions }),
     [state.messages, chatActions, state.task, taskActions],
   );
 
-  return <ChatContext.Provider value={contextValue}>{children}</ChatContext.Provider>;
+  return (
+    <ChatContext.Provider value={contextValue}>
+      {state.messages.map(
+        msg =>
+          msg.kind === 'agent' &&
+          msg.isPlaceholder && (
+            <StaleReplyWatchdog key={msg.id} id={msg.id} progress={msg.parts.length} onStale={expireReply} />
+          ),
+      )}
+      {children}
+    </ChatContext.Provider>
+  );
 };
 
 export const useChatContext = (): ChatContextType => {

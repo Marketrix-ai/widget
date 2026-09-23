@@ -47,33 +47,16 @@ export const mountWidget = async (config: AddWidgetConfig): Promise<void> => {
 };
 
 if (typeof window !== 'undefined') {
-  setTimeout(() => {
-    try {
-      autoInitializeWidget(initWidget);
-    } catch (error) {
-      console.error('Marketrix Widget: Auto-init registration failed', error);
-    }
-  }, 0);
+  setTimeout(autoInitializeWidget, 0);
 }
 
 export { getCurrentConfig, initWidget, unmountWidget, updateMarketrixConfig };
 
-export type { InstructionType } from './sdk';
 export type {
   AddWidgetConfig,
-  ChatMessage,
   ClientOwnedConfig,
+  InstructionType,
   MarketrixConfig,
   MarketrixWidgetPreviewProps,
   WidgetSettingsData,
-  WidgetState,
 } from './types';
-
-export default {
-  MarketrixWidgetPreview,
-  mountWidget,
-  initWidget,
-  unmountWidget,
-  updateMarketrixConfig,
-  getCurrentConfig,
-};

@@ -8,7 +8,7 @@
 import { describe, expect, it } from 'bun:test';
 
 import { mockMediaStream } from '../test/fixtures';
-import { type ChatMessage, messageText } from '../types';
+import { type AgentMessage, type ChatMessage, messageText } from '../types';
 import {
   addProgressLine,
   CHAT_FAILURE_TEXT,
@@ -20,7 +20,7 @@ import {
   SCREEN_ACCESS_PROMPT,
 } from './chat';
 
-const agentReply = (overrides: Partial<ChatMessage> = {}): ChatMessage => ({
+const agentReply = (overrides: Partial<AgentMessage> = {}): AgentMessage => ({
   id: 'agent-1',
   kind: 'agent',
   timestamp: new Date(),
@@ -30,7 +30,7 @@ const agentReply = (overrides: Partial<ChatMessage> = {}): ChatMessage => ({
 
 describe('findMessageForProgress', () => {
   it('never matches a user message', () => {
-    const userMsg: ChatMessage = { ...agentReply(), id: 'user-1', kind: 'user' };
+    const userMsg: ChatMessage = { id: 'user-1', kind: 'user', mode: 'tell', timestamp: new Date(), parts: [] };
     const result = findMessageForProgress({ messages: [userMsg], isTaskRunning: false, currentMode: 'tell' });
     expect(result).toBeNull();
   });

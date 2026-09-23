@@ -1,22 +1,30 @@
 /**
  * Shared test fixtures for widget tests. `getMockWidgetConfig`/`validSettings`/`credentialedConfig`
  * build a complete, schema-valid tenant config (preview and resolved-production shapes); `agentMessage`
- * builds a `ChatMessage`; `mockMediaStream` stubs the browser's un-mockable `MediaStream`;
+ * builds an agent `ChatMessage` and `ofKind` narrows one; `mockMediaStream` stubs the browser's un-mockable `MediaStream`;
  * `asStreamClientInternals` reaches `streamClient`'s private `handleMessage`/`notifyError` for
  * simulating SSE events and stream failures; `browserToolServiceMock` shapes the
  * `vi.mock('.../BrowserToolService', ...)` factory.
  */
-import { WidgetSettingsDataSchema } from '../sdk';
+import { WidgetSettingsDataSchema } from '../sdk/contracts/entities';
 import type { BrowserToolService } from '../services/BrowserToolService';
 import { type StreamClient, streamClient } from '../services/StreamClient';
 import type { CredentialedConfig } from '../services/WidgetService';
-import type { ChatMessage, ValidWidgetConfig, WidgetSettingsData } from '../types';
+import type { AgentMessage, ChatMessage, ValidWidgetConfig, WidgetSettingsData } from '../types';
+
+export function ofKind<K extends ChatMessage['kind']>(
+  message: ChatMessage | undefined,
+  kind: K,
+): Extract<ChatMessage, { kind: K }> {
+  if (message?.kind !== kind) throw new Error(`expected a ${kind} message, got ${message?.kind}`);
+  return message as Extract<ChatMessage, { kind: K }>;
+}
 
 export const flushMicrotasks = (): Promise<void> => Promise.resolve();
 
 export const mountTarget = (): HTMLDivElement => document.createElement('div');
 
-export function agentMessage(overrides: Partial<ChatMessage> = {}): ChatMessage {
+export function agentMessage(overrides: Partial<AgentMessage> = {}): AgentMessage {
   return {
     id: 'agent-1',
     kind: 'agent',

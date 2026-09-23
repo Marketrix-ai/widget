@@ -123,7 +123,7 @@ The loader takes care of the React 19 importmap. If you manage your own importma
 
 ## Programmatic API
 
-All functions are named exports of `@marketrix.ai/widget` (also available on the default export).
+All functions are named exports of `@marketrix.ai/widget`.
 
 ```ts
 import {
@@ -162,11 +162,11 @@ Destroys the widget, closes the stream connection, and cleans up all resources.
 
 ### `updateMarketrixConfig(partial): Promise<void>`
 
-Merges `partial` (client options plus `mtxId`/`mtxKey`) into the current config and re-mounts: a preview stays a preview, a live widget re-runs `initWidget`. Use to switch API host, credentials, etc. at runtime.
+Merges `partial` (a `Partial<MarketrixConfig>`) into the current config and re-mounts: a preview stays a preview, a live widget re-runs `initWidget`. Use to switch API host, credentials, etc. at runtime.
 
-### `getCurrentConfig(): MarketrixConfig | null`
+### `getCurrentConfig()`
 
-Returns the active configuration, or `null` if the widget isn't initialized.
+Returns the active configuration — your options merged with the dashboard settings — or `null` if the widget isn't initialized.
 
 ### Settings
 
@@ -215,11 +215,12 @@ Props: `settings` (required) and `container?`.
 
 TypeScript types are bundled with the package:
 
-- `MarketrixConfig` — full config for `initWidget` (`mtxId`, `mtxKey`, `mtxApiHost`, `userId`, `show_widget`, `use_screenshare`, plus all widget appearance settings, optional). `updateMarketrixConfig` takes only `ClientOwnedConfig` plus `mtxId`/`mtxKey`.
+- `MarketrixConfig` — what `initWidget` takes: the required `mtxId` + `mtxKey` plus `ClientOwnedConfig`. Appearance comes only from the dashboard settings; `updateMarketrixConfig` takes a `Partial<MarketrixConfig>`.
 - `AddWidgetConfig` — discriminated config for `mountWidget` (production / preview variants + common options).
 - `ClientOwnedConfig` — the host-supplied options the API never sends (`mtxApiHost`, `userId`, `widget_position_z_index`, `show_widget`, `use_screenshare`, `styleNonce`).
 - `MarketrixWidgetPreviewProps` — props for the `MarketrixWidgetPreview` component.
-- `ChatMessage`, `WidgetState`, `InstructionType` (`'tell' | 'show' | 'do'`).
+- `WidgetSettingsData` — the dashboard settings shape `MarketrixWidgetPreview` and preview-mode `mountWidget` take.
+- `InstructionType` (`'tell' | 'show' | 'do'`).
 
 ---
 

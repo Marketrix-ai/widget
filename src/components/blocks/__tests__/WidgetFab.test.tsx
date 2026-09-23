@@ -19,7 +19,7 @@ import { readLocal, scopedKey, writeLocal } from '../../../services/StorageServi
 import { streamClient } from '../../../services/StreamClient';
 import { resetDom } from '../../../test/preload';
 import { renderWidget } from '../../../test/renderWidget';
-import type { MarketrixConfig, WidgetPosition } from '../../../types';
+import type { WidgetPosition } from '../../../types';
 import { useDragSnap } from '../WidgetFab';
 
 const wrapperFor = () => {
@@ -73,7 +73,7 @@ describe('a drop writes the position key exactly once, and it round-trips', () =
   });
 
   it('calls StorageService once per drop and reads the same corner back', () => {
-    const config: MarketrixConfig = { mtxId: 'drag-storage-test' };
+    const config = { mtxId: 'drag-storage-test' };
     const key = scopedKey('marketrix_widget_position', config);
     const setItemSpy = vi.spyOn(Storage.prototype, 'setItem');
     const { result } = renderDragSnap(corner => writeLocal(key, corner));

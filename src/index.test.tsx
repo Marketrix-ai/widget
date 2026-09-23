@@ -17,7 +17,7 @@ import {
 import type { WidgetSettingsData } from './sdk';
 import * as chatSession from './services/chatSession';
 import * as ScreenShareService from './services/ScreenShareService';
-import { readChatSnapshot, storageService, writeChatSnapshot } from './services/StorageService';
+import { getChatId, readChatSnapshot, scopeStorageTo, setChatId, writeChatSnapshot } from './services/StorageService';
 import { streamClient } from './services/StreamClient';
 import type { CredentialedConfig } from './services/WidgetService';
 import * as WidgetService from './services/WidgetService';
@@ -273,8 +273,8 @@ describe('a config-change re-mount preserves an in-flight chat', () => {
     vi.spyOn(streamClient, 'connect').mockResolvedValue();
     const getOrCreateChatId = vi.spyOn(chatSession, 'getOrCreateChatId');
 
-    storageService.scopeTo({ mtxId: 'reflow-1' });
-    storageService.setChatId('chat-inflight-1');
+    scopeStorageTo({ mtxId: 'reflow-1' });
+    setChatId('chat-inflight-1');
     writeChatSnapshot({
       messages: [agentMessage({ parts: [{ type: 'text', content: 'still here after the config change' }] })],
       currentMode: 'tell',
@@ -287,7 +287,7 @@ describe('a config-change re-mount preserves an in-flight chat', () => {
     await act(() => initWidget({ mtxId: 'reflow-1', mtxKey: 'key', mtxApiHost: 'https://api.test' }, container));
     await waitFor(() => expect(getOrCreateChatId).toHaveBeenCalled());
     expect(await getOrCreateChatId.mock.results[0]?.value).toBe('chat-inflight-1');
-    expect(storageService.getChatId()).toBe('chat-inflight-1');
+    expect(getChatId()).toBe('chat-inflight-1');
     const messageBefore = readChatSnapshot().messages[0];
     expect(messageBefore).toBeDefined();
 
@@ -297,7 +297,7 @@ describe('a config-change re-mount preserves an in-flight chat', () => {
 
     await waitFor(() => expect(getOrCreateChatId).toHaveBeenCalled());
     expect(await getOrCreateChatId.mock.results[0]?.value).toBe('chat-inflight-1');
-    expect(storageService.getChatId()).toBe('chat-inflight-1');
+    expect(getChatId()).toBe('chat-inflight-1');
     expect(readChatSnapshot().messages).toEqual([messageBefore!]);
   });
 });

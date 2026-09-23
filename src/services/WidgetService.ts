@@ -64,10 +64,6 @@ async function resolveActiveWidget(mtxId: string, mtxKey: string, mtxApiHost?: s
     throw new Error('Widget not found or invalid credentials');
   }
 
-  if (!activeWidget.application_id) {
-    throw new Error('Widget missing application_id');
-  }
-
   const parsedSettings = parseWidgetSettings(activeWidget.widget_settings);
   if (parsedSettings.invalidFields) {
     throw new Error(invalidSettingsMessage(parsedSettings.invalidFields));
