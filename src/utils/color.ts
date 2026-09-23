@@ -32,18 +32,11 @@ function relativeLuminance({ r, g, b }: Rgb): number {
   return 0.2126 * linearize(r / 255) + 0.7152 * linearize(g / 255) + 0.0722 * linearize(b / 255);
 }
 
-function contrastRatio(a: string, b: string): number | null {
-  const rgbA = toRgb(a);
-  const rgbB = toRgb(b);
-  if (!rgbA || !rgbB) return null;
-  const lumA = relativeLuminance(rgbA);
-  const lumB = relativeLuminance(rgbB);
-  return (Math.max(lumA, lumB) + 0.05) / (Math.min(lumA, lumB) + 0.05);
-}
-
 export function getContrastingColor(color: string): string {
-  if (!toRgb(color)) return '#000000';
-  return (contrastRatio(color, '#000000') ?? 0) >= (contrastRatio(color, '#ffffff') ?? 0) ? '#000000' : '#ffffff';
+  const rgb = toRgb(color);
+  if (!rgb) return '#000000';
+  const lum = relativeLuminance(rgb);
+  return (lum + 0.05) / 0.05 >= 1.05 / (lum + 0.05) ? '#000000' : '#ffffff';
 }
 
 export function addOpacity(color: string, opacity: number): string {

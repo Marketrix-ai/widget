@@ -1,12 +1,10 @@
 /**
- * `StorageService` tests: `scopeStorageTo` never carries one tenant's `chat_id` into another's scope and never
- * persists config or credentials, and a corrupted stored message, or one naming an unknown tool, is dropped alone; a chat
- * snapshot round-trips, with an active screen share stored as an ended notice because a MediaStream
- * cannot survive a reload; a stored value that is not JSON or fails its schema reads as absent;
- * `readLocalParsed`/`writeLocal` degrade to memory and keep working unpersisted
- * when `localStorage` throws (private-mode Safari, a sandboxed iframe) -- each warns only ONCE per
- * session (`warnOnce`, read through a fresh module import), proven against repeated denied writes rather
- * than a single one, since a single call could never distinguish "warns once" from "warns every time".
+ * `StorageService` tests: `scopeStorageTo` never carries one tenant's `chat_id` into another's scope and
+ * never persists config or credentials; a corrupted stored message, or one naming an unknown tool, is
+ * dropped alone; a chat snapshot round-trips, with an active screen share stored as an ended notice
+ * because a MediaStream cannot survive a reload; a stored value that is not JSON or fails its schema
+ * reads as absent; `readLocalParsed`/`writeLocal` degrade to memory when `localStorage` throws
+ * (private-mode Safari, a sandboxed iframe) and warn only once per session.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 import { z } from 'zod';

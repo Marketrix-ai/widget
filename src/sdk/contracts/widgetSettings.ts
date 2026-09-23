@@ -64,7 +64,7 @@ export const DEFAULT_WIDGET_SETTINGS: WidgetSettingsData = {
   widget_feature_show: true,
   widget_feature_do: true,
   widget_background_color: '#f5f5f5',
-  widget_text_color: '#787878',
+  widget_text_color: '#6B6B6B',
   widget_border_color: 'rgba(255, 255, 255, 0.3)',
   widget_accent_color: '#303030',
   widget_secondary_color: '#707070',
