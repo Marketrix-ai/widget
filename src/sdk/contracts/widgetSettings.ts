@@ -9,7 +9,6 @@
 import { z } from 'zod';
 
 export const WidgetTypeSchema = z.enum(['widget']);
-export type WidgetType = z.infer<typeof WidgetTypeSchema>;
 
 export const InstructionTypeSchema = z.enum(['tell', 'show', 'do']);
 
