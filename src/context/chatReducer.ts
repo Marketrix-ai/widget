@@ -23,12 +23,7 @@ import {
   markProgressLineFailed,
 } from '../utils/chat';
 
-type TaskPhase = 'idle' | 'running' | 'stopped';
-
-export interface TaskState {
-  phase: TaskPhase;
-  mode?: InstructionType;
-}
+export type TaskState = { phase: 'running'; mode: InstructionType } | { phase: 'idle' | 'stopped' };
 
 export interface ChatState {
   messages: ChatMessage[];
@@ -53,7 +48,7 @@ export type ToolProgress =
   | { status: 'failed'; error?: string | undefined };
 
 const runningMode = (state: ChatState, currentMode: InstructionType): InstructionType =>
-  state.task.phase === 'running' ? (state.task.mode ?? currentMode) : currentMode;
+  state.task.phase === 'running' ? state.task.mode : currentMode;
 
 export function reduceToolProgress(
   state: ChatState,
@@ -75,7 +70,7 @@ export function reduceToolProgress(
         ? addProgressLine(
             updatedMsg,
             browserToolName,
-            progress.explanation || browserToolService.getFriendlyToolName(browserToolName),
+            browserToolService.toolExplanation(browserToolName, progress.explanation),
           )
         : markProgressLineComplete(updatedMsg, browserToolName);
   }
@@ -215,15 +210,15 @@ export function reduceEvent(state: ChatState, event: WidgetEvent, currentMode: I
   switch (event.type) {
     case 'tool/call': {
       if (state.task.phase === 'stopped') return withoutToolRuns(state);
-      const task: TaskState =
-        state.task.phase === 'running' ? state.task : { phase: 'running', mode: event.mode ?? currentMode };
+      const task =
+        state.task.phase === 'running' ? state.task : { phase: 'running' as const, mode: event.mode ?? currentMode };
       const progressed = reduceToolProgress(
         { ...state, task },
         event.browser_tool,
         { status: 'in_progress', explanation: event.explanation },
         currentMode,
       );
-      return { state: progressed, toolRuns: [{ call: event, mode: task.mode ?? currentMode }] };
+      return { state: progressed, toolRuns: [{ call: event, mode: task.mode }] };
     }
 
     case 'task/status': {

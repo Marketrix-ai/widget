@@ -1,7 +1,5 @@
 # GUI/non-login git clients start hooks with a minimal PATH, so restore common install dirs — including
-# bun's own — before any hook command runs. Hook commands now run entirely through `bun`/`bunx`, not
-# npm/node, so there is no nvm sourcing here: nothing left in this repo's hooks needs a node binary on
-# PATH, only bun's.
+# bun's own — before any hook command runs.
 for dir in /opt/homebrew/bin /usr/local/bin "$HOME/.local/bin" "$HOME/.bun/bin"; do
   case ":$PATH:" in
     *":$dir:"*) ;;

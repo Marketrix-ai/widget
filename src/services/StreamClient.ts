@@ -16,6 +16,8 @@ import { logWarn } from '../utils/log';
 type StreamStatus = 'disconnected' | 'connecting' | 'open' | 'registered' | 'error';
 
 const INITIAL_RECONNECT_DELAY_MS = 1000;
+const MAX_RECONNECT_DELAY_MS = 30_000;
+const MAX_RECONNECT_ATTEMPTS = 10;
 const CREDENTIALS_REJECTED = 'Chat is unavailable — the widget credentials were rejected.';
 
 export class StreamGaveUpError extends Error {}
@@ -39,9 +41,6 @@ export class StreamClient {
   private tornDown = false;
   private credentialRejected = false;
   private reconnectAttempts = 0;
-  private readonly maxReconnectAttempts = 10;
-  private reconnectDelay = INITIAL_RECONNECT_DELAY_MS;
-  private readonly maxReconnectDelay = 30000;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private connectionId = 0;
   private readonly tabId = globalThis.crypto.randomUUID();
@@ -74,21 +73,15 @@ export class StreamClient {
   reconnectNow(): void {
     if (!this.canReconnect() || this.chatId === null) return;
     this.clearReconnectTimer();
-    this.resetBackoff();
+    this.reconnectAttempts = 0;
     this.abortConnection();
     void this.connect(this.chatId);
   }
 
   async ready(chatId: string): Promise<void> {
     await this.connect(chatId);
-    await this.waitUntilRegistered();
-  }
-
-  private async waitUntilRegistered(): Promise<void> {
     if (this.isConnected()) return;
-    if (this.credentialRejected) {
-      throw new StreamGaveUpError(CREDENTIALS_REJECTED);
-    }
+    if (this.credentialRejected) throw new StreamGaveUpError(CREDENTIALS_REJECTED);
     await new Promise<void>((resolve, reject) => this.registrationWaiters.add({ resolve, reject }));
   }
 
@@ -172,11 +165,6 @@ export class StreamClient {
     return sdk.widgetMessagePost({ chat_id: chatId, tab_id: this.tabId, command }).then(() => {});
   }
 
-  private resetBackoff(): void {
-    this.reconnectAttempts = 0;
-    this.reconnectDelay = INITIAL_RECONNECT_DELAY_MS;
-  }
-
   private notifyError(error: Error): void {
     this.callbacks.forEach(cb => cb.onError?.(error));
   }
@@ -202,7 +190,7 @@ export class StreamClient {
     if (event.type === 'registered') {
       if (event.chat_id === this.chatId) {
         this.status = 'registered';
-        this.resetBackoff();
+        this.reconnectAttempts = 0;
         this.settleWaiters();
       }
     }
@@ -217,13 +205,13 @@ export class StreamClient {
   }
 
   private scheduleReconnect(): void {
-    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+    if (this.reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
       this.giveUp('Could not reconnect to the assistant. Try again.');
       return;
     }
     this.clearReconnectTimer();
     this.reconnectAttempts++;
-    const delay = Math.min(this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1), this.maxReconnectDelay);
+    const delay = Math.min(INITIAL_RECONNECT_DELAY_MS * 2 ** (this.reconnectAttempts - 1), MAX_RECONNECT_DELAY_MS);
     const jittered = delay / 2 + Math.random() * (delay / 2);
     this.reconnectTimer = setTimeout(() => {
       if (!this.reconnectSuppressed() && this.chatId) {

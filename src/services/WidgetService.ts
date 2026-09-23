@@ -42,7 +42,7 @@ interface ResolvedWidget {
 
 const widgetLookupCache = new Map<string, Promise<ResolvedWidget>>();
 
-async function resolveActiveWidget(mtxId: string, mtxKey: string, mtxApiHost?: string): Promise<ResolvedWidget> {
+async function resolveActiveWidget(mtxId: string, mtxKey: string, mtxApiHost: string): Promise<ResolvedWidget> {
   let widgets: ApplicationWidgetPublicData[];
   try {
     ({ items: widgets } = await sdk.widgetPublicSearch({ marketrix_id: mtxId, marketrix_key: mtxKey }));
@@ -53,7 +53,7 @@ async function resolveActiveWidget(mtxId: string, mtxKey: string, mtxApiHost?: s
     );
     throw new Error(
       unreachable
-        ? `Cannot connect to API server. Please ensure the API server is running at ${mtxApiHost || 'configured API server'}. Error: ${message}`
+        ? `Cannot connect to API server. Please ensure the API server is running at ${mtxApiHost}. Error: ${message}`
         : `Widget validation failed: ${message}`,
       { cause: error },
     );
@@ -74,10 +74,6 @@ async function resolveActiveWidget(mtxId: string, mtxKey: string, mtxApiHost?: s
 
 export async function loadWidgetConfig(config: MarketrixConfig): Promise<CredentialedConfig> {
   const { mtxId, mtxKey } = config;
-  if (!mtxId || !mtxKey) {
-    throw new Error('Please provide mtxId + mtxKey');
-  }
-
   const cacheKey = `${mtxId}:${mtxKey}`;
   let lookup = widgetLookupCache.get(cacheKey);
   if (!lookup) {

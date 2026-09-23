@@ -27,7 +27,7 @@ export const useWidgetConfig = (): ValidWidgetConfig => {
 
 export const useWidget = () => {
   const { uiState, uiActions } = useUIStateContext();
-  const { messages, chatActions, taskState, taskActions } = useChatContext();
+  const { messages, taskState, chatActions } = useChatContext();
 
   const state = useMemo<WidgetState>(
     () => ({
@@ -42,14 +42,13 @@ export const useWidget = () => {
   const actions = useMemo(
     () => ({
       ...uiActions,
-      ...taskActions,
       ...chatActions,
       clearChatHistory: () => {
         chatActions.clearChat();
         uiActions.setError(undefined);
       },
     }),
-    [uiActions, taskActions, chatActions],
+    [uiActions, chatActions],
   );
 
   return { state, actions };

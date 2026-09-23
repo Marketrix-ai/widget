@@ -58,10 +58,10 @@ await mountWidget({
 
 The widget supports two modes, auto-detected from the credentials you provide.
 
-| Mode           | Credentials                      | Script attributes    | Network                                                         |
-| -------------- | -------------------------------- | -------------------- | --------------------------------------------------------------- |
-| **Production** | `mtxId` + `mtxKey`               | `mtx-id` + `mtx-key` | Fetches settings from the API, opens the live stream            |
-| **Preview**    | `settings` object passed in code | —                    | No network — renders appearance only from the supplied settings |
+| Mode           | Credentials                       | Script attributes                     | Network                                                         |
+| -------------- | --------------------------------- | ------------------------------------- | --------------------------------------------------------------- |
+| **Production** | `mtxId` + `mtxKey` + `mtxApiHost` | `mtx-id` + `mtx-key` + `mtx-api-host` | Fetches settings from the API, opens the live stream            |
+| **Preview**    | `settings` object passed in code  | —                                     | No network — renders appearance only from the supplied settings |
 
 All modes also accept the common options below.
 
@@ -73,7 +73,6 @@ These apply to every mode (script attribute → config key):
 
 | Config key                | Script attribute      | Type          | Description                                                                                                                                                                                  |
 | ------------------------- | --------------------- | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `mtxApiHost`              | `mtx-api-host`        | string        | API server URL, e.g. `https://api.marketrix.ai`. The widget has no baked-in API host — you must supply it.                                                                                   |
 | `container`               | —                     | `HTMLElement` | Element to mount inside (programmatic only). Defaults to a container appended to `<body>`.                                                                                                   |
 | `widget_position_z_index` | —                     | number        | `z-index` floor for the launcher and panel. Raised to the widget's own layer token if you pass a lower value.                                                                                |
 | `show_widget`             | —                     | boolean       | When `false`, the widget initializes fully but its UI stays hidden. Default `true`.                                                                                                          |
@@ -214,12 +213,19 @@ Props: `settings` (required) and `container?`.
 
 TypeScript types are bundled with the package:
 
-- `MarketrixConfig` — what `initWidget` takes: the required `mtxId` + `mtxKey` plus `ClientOwnedConfig`. Appearance comes only from the dashboard settings; `updateMarketrixConfig` takes a `Partial<MarketrixConfig>`.
+- `MarketrixConfig` — what `initWidget` takes: the required `mtxId` + `mtxKey` + `mtxApiHost` (the API server URL, e.g. `https://api.marketrix.ai`; there is no baked-in default) plus `ClientOwnedConfig`. Appearance comes only from the dashboard settings; `updateMarketrixConfig` takes a `Partial<MarketrixConfig>`.
 - `AddWidgetConfig` — discriminated config for `mountWidget` (production / preview variants + common options).
-- `ClientOwnedConfig` — the host-supplied options the API never sends (`mtxApiHost`, `widget_position_z_index`, `show_widget`, `use_screenshare`, `styleNonce`).
+- `ClientOwnedConfig` — the host-supplied options the API never sends (`widget_position_z_index`, `show_widget`, `use_screenshare`, `styleNonce`).
 - `MarketrixWidgetPreviewProps` — props for the `MarketrixWidgetPreview` component.
 - `WidgetSettingsData` — the dashboard settings shape `MarketrixWidgetPreview` and preview-mode `mountWidget` take.
 - `InstructionType` (`'tell' | 'show' | 'do'`).
+
+---
+
+## Upgrading to 5.0.1
+
+- **TypeScript now requires `mtxApiHost`** in `MarketrixConfig` and in the credentials form of `AddWidgetConfig`. The runtime already refused to start without it, so only type-checking changes; it is no longer part of `ClientOwnedConfig`.
+- **Saved widget positions and panel sizes reset once.** They are stored in a new format, so a visitor's dragged position and resized panel return to your dashboard defaults the first time 5.0.1 loads.
 
 ---
 

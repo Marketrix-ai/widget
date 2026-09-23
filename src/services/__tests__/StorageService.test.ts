@@ -2,12 +2,14 @@
  * `StorageService` tests: `scopeStorageTo` never carries one tenant's `chat_id` into another's scope and never
  * persists config or credentials, and a corrupted stored message is dropped alone; a chat
  * snapshot round-trips, with an active screen share stored as an ended notice because a MediaStream
- * cannot survive a reload; `readLocal`/`writeLocal` degrade to memory and keep working unpersisted
+ * cannot survive a reload; a stored value that is not JSON or fails its schema reads as absent;
+ * `readLocalParsed`/`writeLocal` degrade to memory and keep working unpersisted
  * when `localStorage` throws (private-mode Safari, a sandboxed iframe) -- each warns only ONCE per
  * session (`warnOnce`, read through a fresh module import), proven against repeated denied writes rather
  * than a single one, since a single call could never distinguish "warns once" from "warns every time".
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
+import { z } from 'zod';
 
 import { agentMessage, credentialedConfig, mockMediaStream } from '../../test/fixtures';
 import type { AgentMessage, ChatMessage } from '../../types';
@@ -15,7 +17,7 @@ import { createScreenshareMessage } from '../../utils/chat';
 import {
   getChatId,
   readChatSnapshot,
-  readLocal,
+  readLocalParsed,
   scopedKey,
   scopeStorageTo,
   setChatId,
@@ -56,13 +58,15 @@ describe('scopeTo scopes the chat context to the tenant', () => {
     scopeStorageTo(credentialedConfig({ mtxId: 'tenant-no-config', mtxKey: 'secret-key' }));
     setChatId('chat-1');
 
-    expect(readLocal(scopedKey('marketrix_chat_context', { mtxId: 'tenant-no-config' }))).not.toContain('secret-key');
+    expect(localStorage.getItem(scopedKey('marketrix_chat_context', { mtxId: 'tenant-no-config' }))).not.toContain(
+      'secret-key',
+    );
   });
 
   it('keeps every valid stored message and drops only a corrupted one', () => {
     const key = scopedKey('marketrix_chat_context', { mtxId: 'tenant-corrupt' });
     const valid = { id: 'm1', kind: 'agent', timestamp: new Date().toISOString(), parts: [] };
-    writeLocal(key, JSON.stringify({ chat_id: 7, messages: [valid, { id: 'broken' }], timestamp: Date.now() }));
+    writeLocal(key, { chat_id: 7, messages: [valid, { id: 'broken' }], timestamp: Date.now() });
 
     scopeStorageTo({ mtxId: 'tenant-corrupt' });
 
@@ -76,13 +80,21 @@ describe('private-mode localStorage', () => {
     vi.restoreAllMocks();
   });
 
-  it('readLocal degrades to null instead of throwing when localStorage.getItem throws', () => {
+  it('readLocalParsed degrades to absent instead of throwing when localStorage.getItem throws', () => {
     vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
       throw new Error('SecurityError: storage is disabled');
     });
 
-    expect(() => readLocal('any-key')).not.toThrow();
-    expect(readLocal('any-key')).toBeNull();
+    expect(readLocalParsed('any-key', z.string())).toBeUndefined();
+  });
+
+  it('readLocalParsed reads a value that is not JSON, or fails its schema, as absent', () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    localStorage.setItem('raw-key', 'top_left');
+    localStorage.setItem('typed-key', JSON.stringify('sideways'));
+
+    expect(readLocalParsed('raw-key', z.string())).toBeUndefined();
+    expect(readLocalParsed('typed-key', z.enum(['top_left']))).toBeUndefined();
   });
 
   it('writeLocal degrades silently instead of throwing when localStorage.setItem throws', () => {
@@ -108,7 +120,7 @@ describe('private-mode localStorage', () => {
   });
 
   it('warns exactly once across many denied reads, not once per read, independently of the write warning', async () => {
-    const { readLocal, writeLocal } = await freshStorage();
+    const { readLocalParsed, writeLocal } = await freshStorage();
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
       throw new Error('SecurityError: storage is disabled');
@@ -117,10 +129,10 @@ describe('private-mode localStorage', () => {
       throw new Error('SecurityError: storage is disabled');
     });
 
-    readLocal('key-a');
+    readLocalParsed('key-a', z.string());
     writeLocal('key-a', 'value');
-    readLocal('key-b');
-    readLocal('key-c');
+    readLocalParsed('key-b', z.string());
+    readLocalParsed('key-c', z.string());
 
     expect(warnSpy).toHaveBeenCalledTimes(2);
   });

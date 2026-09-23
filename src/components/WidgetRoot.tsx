@@ -15,11 +15,12 @@ import { PortalContainerContext } from '../context/WidgetProviders';
 import { LAYER_TOKENS } from '../design-system/component-tokens';
 import { themeCssProperties } from '../design-system/semantic-tokens';
 import { useWidget, useWidgetConfig, WidgetConfigContext } from '../hooks/useWidget';
-import { readLocal, scopedKey, writeLocal } from '../services/StorageService';
+import { WidgetSettingsDataSchema } from '../sdk/contracts/widgetSettings';
+import { readLocalParsed, scopedKey, writeLocal } from '../services/StorageService';
 import { streamClient } from '../services/StreamClient';
 import type { WidgetPosition } from '../types';
 import { addOpacity } from '../utils/color';
-import { getCorner, isWidgetPosition } from '../utils/widgetPositioning';
+import { EDGE_OFFSET_PX, getCorner } from '../utils/widgetPositioning';
 import { ErrorBoundary } from './base/ErrorBoundary';
 import { Surface } from './base/Surface';
 import { NotificationProvider, WidgetNotifications } from './blocks/Notifications';
@@ -61,10 +62,11 @@ export const WidgetRoot: React.FC = () => {
 
   const positionStorageKey = scopedKey('marketrix_widget_position', config);
 
-  const [widgetPosition, setWidgetPosition] = useState<WidgetPosition>(() => {
-    const stored = isPreviewMode ? null : readLocal(positionStorageKey);
-    return isWidgetPosition(stored) ? stored : config.widget_position;
-  });
+  const [widgetPosition, setWidgetPosition] = useState<WidgetPosition>(
+    () =>
+      (!isPreviewMode && readLocalParsed(positionStorageKey, WidgetSettingsDataSchema.shape.widget_position)) ||
+      config.widget_position,
+  );
 
   useEffect(() => {
     if (state.isOpen || isPreviewMode || !config.widget_greeting_toast) {
@@ -107,7 +109,7 @@ export const WidgetRoot: React.FC = () => {
         <PortalContainerContext value={portalContainer}>
           <NotificationProvider
             container={portalContainer}
-            offsetBottom={getCorner(widgetPosition).vertical === 'top' ? 20 : 90}
+            offsetBottom={getCorner(widgetPosition).vertical === 'top' ? EDGE_OFFSET_PX : 90}
           >
             {showProcessingFeedback && (
               <Surface

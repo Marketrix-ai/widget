@@ -38,16 +38,13 @@ non-configurable. `src/test/vi-compat.ts` is the one home for the handful of `vi
 `vitest`-compat shim doesn't implement (`mocked`, `hoisted`, `advanceTimersByTimeAsync`, `waitFor`,
 `restoreModuleAfterAll`) — reach for it before hand-rolling another one-off shim. Unlike vitest, plain
 `bun test` runs every file in ONE process/global object, so a `vi.mock`/`vi.spyOn`/module-level
-singleton state from one file can leak into another purely by file-discovery order — the exact bug
-class behind three real cross-file pollution failures found porting this suite (a `vi.spyOn` leak, a
-`vi.mock('../sdk')` leak, and `ScreenShareService`'s own real module state outliving its test file),
-one of which reproduced ONLY on CI's Linux runner, never locally on macOS or in a `linux/amd64` Docker
-container. **`bun test` always runs with `--isolate`**, closing that class at the runner level (pinned
+singleton state from one file can leak into another purely by file-discovery order, sometimes only on
+CI's Linux runner. **`bun test` always runs with `--isolate`**, closing that class at the runner level (pinned
 by sourceInvariants.test.ts); keep any new mock/spy scoped to its own file regardless, and don't remove
 the flag to "speed up" a run. Filter a run with `bun test <pattern>`;
 a single file with `bun test path/to/file.test.ts`.
 
-**`src/test/embedSmoke.test.ts` is the only test that boots the BUILT `dist/widget.mjs`** in a jsdom host
+**`src/__tests__/embedSmoke.test.ts` is the only test that boots the BUILT `dist/widget.mjs`** in a jsdom host
 document via the documented `script[mtx-id]` attributes, pinning the closed-shadow mount, the FAB's
 z-index, the runtime export surface and that no request fires before the deferred auto-init tick or
 without a host script tag. `bun run ci` runs `build` BEFORE `test` (never spawns a build from inside a
@@ -91,8 +88,7 @@ are generated**, so after changing `rc:` you must re-run `lefthook install --for
   allowlist and the absence of `.npmignore` are pinned by sourceInvariants.test.ts. The map is built but
   never published; `sourcemap: 'hidden'` keeps the bundle from advertising one it does not ship.
 - Vite lib mode: `formats: ['es']`, no CSS splitting, target `esnext`, terser with `drop_console`.
-  **`codeSplitting: false` belongs on `rolldownOptions.output`** — Vite never reads it from `build`,
-  where it was a no-op that read like a guarantee.
+  **`codeSplitting: false` belongs on `rolldownOptions.output`** — Vite never reads it from `build`.
 - **CSS is injected via JS** — no external stylesheet; it rides in the bundle and is mounted into the
   Shadow DOM from `index.css?inline`.
 - **Externals** (resolved via the host importmap) are the four React entry points (pinned by
@@ -147,6 +143,9 @@ chat whose stream has reached `registered`. SSE is additionally keyed server-sid
 so several tabs
 sharing one `chat_id` don't evict each other's stream.
 
+**Stop** — `ChatContext.stopTask` is the one stop path (composer and launcher): it cancels a Show step
+still waiting on the visitor, and a cancelled step posts no `tool/response`.
+
 **Round-trip** — `ChatContext.sendTurn(content, mode)` is the one entry for a typed turn or a chip: Show
 and Do wait behind a screen-access request unless a share is live or `use_screenshare` is off, then it
 POSTs `{type: 'chat/${mode}', request_id, content}`; the reply arrives over SSE as
@@ -193,20 +192,20 @@ welcome toast and does not alter the greeting message in chat.
 - **Closed Shadow DOM** (`attachShadow({ mode: 'closed' })`, exercised for real by `embedSmoke.test.ts`):
   the host cannot reach into the widget DOM, intentionally — don't expect host scripts or CSS to style or
   query inside it.
-- **The runtime API host is not an env var** — it is supplied per-init as `mtxApiHost` (config) /
-  `mtx-api-host` (script attr), and `configureSdk(apiUrl)` rebuilds the oRPC client. There is no
-  baked-in API URL, and omitting `mtxApiHost` is not caught — an unconfigured SDK silently resolves
-  every request against the HOST PAGE's own origin instead of erroring.
+- **The runtime API host is not an env var** — it is supplied per-init as the required `mtxApiHost`
+  (config) / `mtx-api-host` (script attr), and `configureSdk(apiUrl)` rebuilds the oRPC client. There is
+  no baked-in API URL: an init without one fails with a host-page notice rather than posting widget
+  traffic at the host page's own origin.
 - **`widgetPublicSearch`'s response never carries a credential** — only `application_id`/
   `widget_settings`, never the `marketrix_id`/`marketrix_key` pair the call authenticated with, nor a
-  rendered embed snippet. There is no `status` field at all (api Part F step 10 dropped it entirely): the
-  api only ever returns a row for a live `marketrix_id`, so a returned widget is unconditionally active.
+  rendered embed snippet, and no `status`: the api only ever returns a row for a live `marketrix_id`, so a
+  returned widget is unconditionally active.
 
 ## SDK mirror (generated)
 
 `src/sdk/contract.ts` + `contracts/*` are a **generated scoped mirror** of the api's widget audience —
 **never hand-edit; regenerate from the api side.** `src/sdk/index.ts` is hand-written (the `sdk` proxy,
-`configureSdk`, runtime/type re-exports). There is **no `routes.ts` and no `schema.ts`** (checked by
+`configureSdk`, wire-type re-exports). There is **no `routes.ts` and no `schema.ts`** (checked by
 `src/__tests__/sdk-mirror-invariants.test.ts`).
 
 Drift is enforced in **infra**, at the api tag this widget is pinned beside. **Widget gets a second
@@ -232,8 +231,8 @@ single-consumer hook lives beside its one caller instead, exported for its `rend
 
 ## Release & CI
 
-`bun run tag <version>` bumps `package.json`, refreshes `bun.lock`, builds, commits and
-creates the annotated tag. Pushing `v*` independently fires the repo-local `image.yml` →
+`bun run tag <version>` bumps `package.json`, proves `bun.lock` with `--frozen-lockfile`, builds, commits
+and creates the annotated tag. Pushing `v*` independently fires the repo-local `image.yml` →
 `marketrix.azurecr.io/widget:<version>` (**v-prefix stripped**) and `publish.yml` → npm. This public
 repo cannot call Infra's private reusable image workflow, so its local build stays equivalent;
 publication remains separate and skips an existing npm version. `ci.yml` runs only for pull requests
@@ -254,8 +253,8 @@ or the `deploy.yml` dispatch inputs (this repo cannot reach the private infra re
 
 ## Gotchas
 
-- **Lockfile discipline** — any version or dependency change must run `bun install` and commit
-  `bun.lock` alongside `package.json`. `bun run tag` does it for you.
+- **Lockfile discipline** — any dependency change must run `bun install` and commit `bun.lock` alongside
+  `package.json`; `bun run tag` refuses a stale lockfile rather than refreshing it.
 - **The loader always injects its `esm.sh` React importmap** — it neither reads nor merges an existing
   one. A host importmap placed before the loader keeps its entries because browsers never let a later
   import map override an earlier key, so the loader's map only fills what the host left out.
@@ -277,12 +276,8 @@ or the `deploy.yml` dispatch inputs (this repo cannot reach the private infra re
   sourceInvariants.test.ts). Theming is the per-tenant settings → CSS custom properties in
   `semantic-tokens.ts`, nothing else.
 - **Elevation is a `SHADOW.*` token** (`design-system/component-tokens.ts`), applied inline through `Surface`'s
-  `elevation` prop / `getElevationStyle` — **there is no settings-driven shadow**; the four
-  settings that reached nothing here (`widget_device`, `widget_bounce_effect`, `widget_shadow`,
-  `widget_feature_human`) were dropped from the contract in db-V247 and never reappear — `WidgetSettingsData`
-  no longer has those fields, so tsc rejects any access on a real config object, not a source-text pin.
-  `widget_appearance` is `default | hidden` — `compact`/`full` were retired
-  in db-V246 because this widget rendered them identically to `default`.
+  `elevation` prop / `getElevationStyle` — **there is no settings-driven shadow**; the
+  settings type has no shadow, device or bounce field, and `widget_appearance` is `default | hidden`.
 - **A portal must land inside `[data-marketrix-widget]`** — that element carries every tenant token as
   an inline style, so anything portaled to the shadow root instead falls back to `index.css`'s hardcoded
   palette. `WidgetRoot` publishes its own root through `PortalContainerContext` for exactly that.
@@ -301,9 +296,8 @@ or the `deploy.yml` dispatch inputs (this repo cannot reach the private infra re
   Button, Tabs (`ShellTabBar` + the view panels) and Toast (`Notifications.tsx`) come from the library.
   `useFocusTrap` and `useResize` (both in `MessengerShell.tsx`), `useScrollLock` (in `WidgetRoot.tsx`) and
   `useDragSnap` (in `WidgetFab.tsx`) live beside their one consumer rather than in `src/hooks/`, which
-  holds only `useWidget` — each of those hook files had exactly one caller (`useDragSnap`/`useResize` share a control-flow SHAPE, not code: a
-  shared pointer-tracking hook was tried and reverted — its arity/duplication costs outweighed the
-  lines it removed, per rule 4's "measurable ROI" bar), so rule 6/7 folds each in beside its caller.
+  holds only `useWidget`. `useDragSnap`/`useResize` share a control-flow shape, not code; a shared
+  pointer-tracking hook does not pay for its arity.
   `useFocusTrap`/`useScrollLock` stay hand-rolled because they serve a **non-modal** panel that is not a
   Dialog: Base UI exposes no standalone focus-trap or scroll-lock, and making the panel a Dialog to
   reach them would inert the customer's page and mutate its `<html>`/`<body>` — the thing an embedded
@@ -325,5 +319,6 @@ Standing gotchas folded in from session memory so they travel with the repo. Eve
 - **A green `publish` job never proves a publish** — the step is idempotent (`bun publish --tolerate-republish` exits 0 on an already-published version), and a skipped publish leaves npm behind the tag so app's `bun add @marketrix.ai/widget@<ver>` fails. Check `npm view @marketrix.ai/widget version` before pinning app. Publishing from a tag cut off stale local `main` ships `latest` without the fix and burns the version number.
 - Diff the BUILT artefact, not just source: the prod bundle drops `console.*` (terser), so a debug line that looks present in `src/` is gone at runtime — debug via api/agent logs instead.
 - **`localStorage` is eslint-banned (`no-restricted-globals`) everywhere except `StorageService.ts`** — a
-  bare `localStorage.getItem`/`setItem` elsewhere is a lint error, not a runtime surprise.
+  bare `localStorage.getItem`/`setItem` elsewhere is a lint error, and every stored value is JSON read
+  back through `readLocalParsed(key, schema)`.
 - **The contract gate checks the widget version the app BUNDLES**, not the widget image — a types-only mirror change still needs: tag widget → wait for npm → `bun add @marketrix.ai/widget@<ver>` in app → commit `bun.lock` → tag app.

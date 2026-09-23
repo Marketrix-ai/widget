@@ -1,9 +1,7 @@
-# Publishes the package to npm on a `v*` tag, independently of the image build. Auth is a classic npm
-# token (`secrets.NPM_TOKEN`), not OIDC/provenance, so `bun publish` reads it via `NPM_CONFIG_TOKEN` —
-# no `actions/setup-node`/registry-url dance needed. `--tolerate-republish` replaces the old manual
-# `npm view` idempotency check with bun's own equivalent: exit 0 (not a failed re-run) when the version
-# is already on the registry, so a green run still does NOT prove a NEW publish happened — check
-# `npm view @marketrix.ai/widget version` before pinning `app`'s lockfile to a version.
+# Publishes the package to npm on a `v*` tag, independently of the image build, authenticating with the
+# classic `NPM_TOKEN` secret. `--tolerate-republish` exits 0 when the version is already on the registry,
+# so a green run does not prove a new publish — check `npm view @marketrix.ai/widget version` before
+# pinning `app`'s lockfile to it.
 name: Publish
 on:
   push:
