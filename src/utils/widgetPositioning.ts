@@ -9,7 +9,7 @@
  */
 import type React from 'react';
 
-import { WidgetSettingsDataSchema } from '../sdk/contracts/entities';
+import { WidgetSettingsDataSchema } from '../sdk/contracts/widgetSettings';
 import type { WidgetPosition } from '../types';
 
 const EDGE_OFFSET_PX = 20;

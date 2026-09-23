@@ -6,7 +6,7 @@
  * simulating SSE events and stream failures; `browserToolServiceMock` shapes the
  * `vi.mock('.../BrowserToolService', ...)` factory.
  */
-import { WidgetSettingsDataSchema } from '../sdk/contracts/entities';
+import { WidgetSettingsDataSchema } from '../sdk/contracts/widgetSettings';
 import type { BrowserToolService } from '../services/BrowserToolService';
 import { type StreamClient, streamClient } from '../services/StreamClient';
 import type { CredentialedConfig } from '../services/WidgetService';
