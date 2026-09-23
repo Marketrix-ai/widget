@@ -1,20 +1,9 @@
 /**
- * The widget's one door to the api: the oRPC client bound to `widgetContract`, plus the schemas and types
+ * The widget's one door to the api: `createClient` builds the oRPC client bound to `widgetContract`,
+ * `configureSdk` points it at an api host and `sdk` proxies the current client, plus the wire types
  * the embedding page consumes.
- *
- * Contents: `createClient` builds an oRPC client for one api host; `configureSdk` points the SDK at that
- * host and MUST be called before any SDK operation, because one published bundle is loaded from any
- * customer's page and so carries no baked-in api host; `sdk` is a Proxy over the current client, so a
- * caller may hold one stable reference across reconfiguration.
- *
- * The `widgetContract` re-export is type-only: the oRPC client builds each request from the proxied
- * property path, so the contract value itself never ships in the bundle.
- *
- * `credentials: 'omit'` on every request is explicit, not the browser's cross-origin default: this
- * widget authenticates every call with `marketrix_id`/`marketrix_key` request fields, never a cookie,
- * so no ambient credential should ever ride along regardless of what domain `mtxApiHost` resolves to
- * (a future shared-cookie-scope edge case, a browser default change) — an embedded script on an
- * arbitrary host page has no business asking the browser for cookies at all.
+ * One published bundle loads on any customer's page, so the api host is set at runtime, and every request
+ * omits cookies because the widget authenticates with its `marketrix_id`/`marketrix_key` fields alone.
  */
 import { createORPCClient } from '@orpc/client';
 import { RPCLink } from '@orpc/client/fetch';
@@ -49,11 +38,6 @@ export const sdk = new Proxy({} as ContractRouterClient<typeof widgetContract>, 
   },
 });
 
-export { WidgetSettingsDataSchema } from './contracts/entities';
-export { WidgetCommandSchema, WidgetEventSchema } from './contracts/widget';
-
-export type { ApplicationWidgetPublicData, InstructionType, WidgetSettingsData } from './contracts/entities';
+export type { ApplicationWidgetPublicData, InstructionType, WidgetSettingsData } from './contracts/widgetSettings';
 
 export type { WidgetCommand, WidgetEvent } from './contracts/widget';
-
-export type { widgetContract } from './contract';

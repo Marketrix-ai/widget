@@ -2,9 +2,8 @@
  * Predicates the agent's element index runs against the host page's DOM: what counts as a control, and
  * whether it is reachable.
  *
- * `ancestry` walks up through shadow boundaries so a control inside a host-page web component isn't
- * mistaken for top-level. `disabledReason` explains why an element can't be operated. `isIndexable` is
- * the one geometry-aware predicate deciding what enters the agent's element index. `focusablesIn` and `isAriaHidden` find which elements are actually
+ * `disabledReason` explains why an element can't be operated. `isIndexable` is the one geometry-aware
+ * predicate deciding what enters the agent's element index. `focusablesIn` finds which elements are
  * reachable by keyboard, shared by the widget's own focus trap and its Tab-key simulation of the host
  * page so the two can't disagree about tab order.
  */
@@ -29,22 +28,10 @@ export function focusablesIn(root: ParentNode): HTMLElement[] {
   );
 }
 
-function* ancestry(el: Element): Generator<Element> {
-  let node: Element | null = el;
-  while (node) {
-    yield node;
-    const root = node.getRootNode();
-    node = node.parentElement ?? (root instanceof ShadowRoot ? root.host : null);
-  }
-}
-
 export function disabledReason(el: Element): string | null {
   if ('disabled' in el && el.disabled === true) return 'is a disabled control';
   if (el.getAttribute('aria-disabled') === 'true') return 'is aria-disabled';
-  for (const node of ancestry(el)) {
-    if (node.hasAttribute('inert')) return 'is inside an inert subtree';
-  }
-  return null;
+  return el.closest('[inert]') ? 'is inside an inert subtree' : null;
 }
 
 export function isIndexable(el: Element): boolean {
@@ -67,20 +54,12 @@ export function isIndexable(el: Element): boolean {
   const rect = el.getBoundingClientRect();
   if (rect.width <= 0 || rect.height <= 0) return false;
 
-  for (const parent of ancestry(el)) {
-    if (parent !== el) {
-      const clip = window.getComputedStyle(parent).overflow;
-      if (clip === 'hidden' || clip === 'clip') {
-        const pr = parent.getBoundingClientRect();
-        if (rect.right < pr.left || rect.left > pr.right || rect.bottom < pr.top || rect.top > pr.bottom) return false;
-      }
-      if (parent === document.body) break;
+  for (let parent = el.parentElement; parent && parent !== document.documentElement; parent = parent.parentElement) {
+    const clip = window.getComputedStyle(parent).overflow;
+    if (clip === 'hidden' || clip === 'clip') {
+      const pr = parent.getBoundingClientRect();
+      if (rect.right < pr.left || rect.left > pr.right || rect.bottom < pr.top || rect.top > pr.bottom) return false;
     }
-  }
-
-  for (let root = el.getRootNode(); root instanceof ShadowRoot; root = root.host.getRootNode()) {
-    const hostRect = root.host.getBoundingClientRect();
-    if (hostRect.width <= 0 || hostRect.height <= 0) return false;
   }
 
   return true;

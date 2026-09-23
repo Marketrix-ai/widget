@@ -9,7 +9,7 @@
  */
 import { describe, expect, it } from 'bun:test';
 
-import { addOpacity, backgroundGradient, contrastRatio, getContrastingColor, toRgb } from './color';
+import { addOpacity, backgroundGradient, contrastRatio, getContrastingColor } from '../color';
 
 describe('the text colour a widget background gets', () => {
   it('is readable on every spelling of white, not only the six-digit one', () => {
@@ -46,13 +46,13 @@ describe('the text colour a widget background gets', () => {
 
 describe('the one colour parser', () => {
   it('reads the shorthand hex the widget settings accept', () => {
-    expect(toRgb('#fff')).toEqual({ r: 255, g: 255, b: 255 });
-    expect(toRgb('#0a0')).toEqual({ r: 0, g: 170, b: 0 });
-    expect(toRgb('4287f5')).toEqual({ r: 66, g: 135, b: 245 });
+    expect(addOpacity('#fff', 1)).toBe('rgba(255, 255, 255, 1)');
+    expect(addOpacity('#0a0', 1)).toBe('rgba(0, 170, 0, 1)');
+    expect(addOpacity('4287f5', 1)).toBe('rgba(66, 135, 245, 1)');
   });
 
   it('refuses a channel outside the byte range rather than emitting it', () => {
-    expect(toRgb('rgb(300, 0, 0)')).toBeNull();
+    expect(addOpacity('rgb(300, 0, 0)', 0.5)).toBe('rgb(300, 0, 0)');
   });
 
   it('gives contrastRatio null if EITHER side is unreadable, not only if both are', () => {

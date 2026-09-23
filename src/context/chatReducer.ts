@@ -1,5 +1,5 @@
 /**
- * Pure state machine behind `ChatContext`: folds incoming SSE events and local transitions into
+ * Pure state machine behind `ChatContext`: folds incoming stream events and local transitions into
  * `{messages, task}` and returns the tool runs the caller must perform. No I/O, no React.
  *
  * Tool progress, completion and stop all patch the running message's parts and the task's phase;
@@ -12,14 +12,13 @@
  */
 import type { WidgetEvent } from '../sdk';
 import { browserToolService, type WidgetToolCall, type WidgetToolName } from '../services/BrowserToolService';
-import type { ChatMessage, InstructionType, MessagePart } from '../types';
+import type { AgentMessage, ChatMessage, InstructionType, MessagePart } from '../types';
 import {
   addProgressLine,
   CHAT_FAILURE_TEXT,
   createScreenshareMessage,
   createSystemMessage,
   findMessageForProgress,
-  lastIndexWhere,
   markProgressLineComplete,
   markProgressLineFailed,
 } from '../utils/chat';
@@ -31,97 +30,76 @@ export interface TaskState {
   mode?: InstructionType;
 }
 
-export interface SseState {
+export interface ChatState {
   messages: ChatMessage[];
   task: TaskState;
 }
 
-export interface SseEffect {
-  type: 'executeTool';
+export interface ToolRun {
   call: WidgetToolCall;
   mode: InstructionType;
 }
 
 export interface ReduceResult {
-  state: SseState;
-  effects: SseEffect[];
+  state: ChatState;
+  toolRuns: ToolRun[];
 }
 
-const noChange = (state: SseState): ReduceResult => ({ state, effects: [] });
+const withoutToolRuns = (state: ChatState): ReduceResult => ({ state, toolRuns: [] });
 
-type ProgressStatus = 'in_progress' | 'completed' | 'failed';
+export type ToolProgress =
+  | { status: 'in_progress'; explanation?: string | undefined }
+  | { status: 'completed' }
+  | { status: 'failed'; error?: string | undefined };
 
-function applyProgress(
-  messages: ChatMessage[],
-  isTaskRunning: boolean,
-  currentMode: InstructionType,
+const runningMode = (state: ChatState, currentMode: InstructionType): InstructionType =>
+  state.task.phase === 'running' ? (state.task.mode ?? currentMode) : currentMode;
+
+export function reduceToolProgress(
+  state: ChatState,
   browserToolName: WidgetToolName,
-  explanation: string,
-  status: ProgressStatus,
-  error?: string,
-): ChatMessage[] {
-  const found = findMessageForProgress({ messages, isTaskRunning, currentMode });
-  if (!found) return messages;
+  progress: ToolProgress,
+  currentMode: InstructionType,
+): ChatState {
+  const isTaskRunning = state.task.phase === 'running';
+  const mode = runningMode(state, currentMode);
+  const found = findMessageForProgress({ messages: state.messages, isTaskRunning, currentMode: mode });
+  if (!found) return state;
 
   let updatedMsg = found.message;
-  if (status === 'failed') {
-    updatedMsg = markProgressLineFailed(updatedMsg, browserToolName, error || '');
+  if (progress.status === 'failed') {
+    updatedMsg = markProgressLineFailed(updatedMsg, browserToolName, progress.error ?? '');
   } else if (browserToolName !== 'done') {
     updatedMsg =
-      status === 'in_progress'
+      progress.status === 'in_progress'
         ? addProgressLine(
             updatedMsg,
             browserToolName,
-            explanation || browserToolService.getFriendlyToolName(browserToolName),
+            progress.explanation || browserToolService.getFriendlyToolName(browserToolName),
           )
         : markProgressLineComplete(updatedMsg, browserToolName);
   }
 
-  if (isTaskRunning && (currentMode === 'show' || currentMode === 'do')) {
+  if (isTaskRunning && (mode === 'show' || mode === 'do')) {
     const waiting =
-      status === 'in_progress' && currentMode === 'show' && browserToolService.isWaitForUserTool(browserToolName);
+      progress.status === 'in_progress' && mode === 'show' && browserToolService.isWaitForUserTool(browserToolName);
     updatedMsg = { ...updatedMsg, placeholderState: waiting ? 'waiting-for-user' : 'thinking' };
   }
 
-  const next = [...messages];
-  next[found.index] = updatedMsg;
-  return next;
+  const messages = [...state.messages];
+  messages[found.index] = updatedMsg;
+  return { ...state, messages };
 }
 
-const runningMode = (state: SseState, currentMode: InstructionType): InstructionType =>
-  state.task.phase === 'running' ? (state.task.mode ?? currentMode) : currentMode;
-
-export function reduceToolProgress(
-  state: SseState,
-  browserToolName: WidgetToolName,
-  explanation: string,
-  status: ProgressStatus,
-  currentMode: InstructionType,
-  error?: string,
-): SseState {
-  return {
-    ...state,
-    messages: applyProgress(
-      state.messages,
-      state.task.phase === 'running',
-      runningMode(state, currentMode),
-      browserToolName,
-      explanation,
-      status,
-      error,
-    ),
-  };
-}
-
-const settled = (msg: ChatMessage): ChatMessage => ({ ...msg, isPlaceholder: false });
+const settled = (msg: AgentMessage): AgentMessage => ({ ...msg, isPlaceholder: false });
 
 const ended = (task: TaskState): TaskState => (task.phase === 'stopped' ? task : { phase: 'idle' });
 
 function stampProgressMessage(
-  state: SseState,
+  state: ChatState,
   currentMode: InstructionType,
-  stamp: (msg: ChatMessage) => ChatMessage,
-): SseState {
+  stamp: (msg: AgentMessage) => AgentMessage,
+): ChatState {
   const found = findMessageForProgress({
     messages: state.messages,
     isTaskRunning: state.task.phase === 'running',
@@ -132,7 +110,7 @@ function stampProgressMessage(
   return { messages, task: ended(state.task) };
 }
 
-export function reduceToolDone(state: SseState, currentMode: InstructionType, success: boolean): SseState {
+export function reduceToolDone(state: ChatState, currentMode: InstructionType, success: boolean): ChatState {
   return stampProgressMessage(state, currentMode, msg => ({
     ...msg,
     taskStatus: success ? 'done' : 'failed',
@@ -140,127 +118,135 @@ export function reduceToolDone(state: SseState, currentMode: InstructionType, su
   }));
 }
 
-export function reduceStop(state: SseState, currentMode: InstructionType): SseState {
+export function reduceStop(state: ChatState, currentMode: InstructionType): ChatState {
   const stopped = stampProgressMessage(state, currentMode, msg => ({ ...msg, taskStatus: 'stopped' }));
   return { ...stopped, task: { phase: 'stopped' } };
 }
 
-export const reduceAppend = (state: SseState, ...messages: ChatMessage[]): SseState => ({
+export const reduceAppend = (state: ChatState, ...messages: ChatMessage[]): ChatState => ({
   ...state,
   messages: [...state.messages, ...messages],
 });
 
-export const openScreenAccessRequest = (messages: ChatMessage[]): ChatMessage | undefined =>
-  messages[lastIndexWhere(messages, msg => msg.kind === 'screenAccess' && !msg.screenShareStatus)];
+type ScreenAccessMessage = Extract<ChatMessage, { kind: 'screenAccess' }>;
 
-export function reduceScreenAccessResolved(state: SseState, screenShareStatus: 'allowed' | 'denied'): SseState {
+export const openScreenAccessRequest = (messages: ChatMessage[]): ScreenAccessMessage | undefined =>
+  messages.findLast((msg): msg is ScreenAccessMessage => msg.kind === 'screenAccess' && !msg.screenShareStatus);
+
+export function reduceScreenAccessResolved(state: ChatState, screenShareStatus: 'allowed' | 'denied'): ChatState {
   const request = openScreenAccessRequest(state.messages);
   if (!request) return state;
-  return { ...state, messages: state.messages.map(msg => (msg === request ? { ...msg, screenShareStatus } : msg)) };
+  return { ...state, messages: state.messages.map(msg => (msg === request ? { ...request, screenShareStatus } : msg)) };
 }
 
-export const reduceScreenShareStarted = (state: SseState, stream: MediaStream): SseState =>
+export const reduceScreenShareStarted = (state: ChatState, stream: MediaStream): ChatState =>
   reduceAppend(state, createSystemMessage('Screen sharing started'), createScreenshareMessage(stream));
 
-export const reduceScreenShareStopped = (state: SseState): SseState =>
+export const reduceScreenShareStopped = (state: ChatState): ChatState =>
   reduceAppend(
     { ...state, messages: state.messages.filter(msg => msg.kind !== 'screenshare') },
     createSystemMessage('Screen sharing stopped'),
   );
 
-export function reduceDispatch(state: SseState, placeholder: ChatMessage): SseState {
+export function reduceDispatch(state: ChatState, placeholder: ChatMessage): ChatState {
   return { messages: [...state.messages, placeholder], task: { phase: 'idle' } };
 }
 
 const TASK_STATUS = { completed: 'done', failed: 'failed', stopped: 'stopped' } as const;
 
-export const isTerminalTaskStatus = (status: string): status is keyof typeof TASK_STATUS => status in TASK_STATUS;
+type TaskStatus = Extract<WidgetEvent, { type: 'task/status' }>['status'];
 
-function reduceText(state: SseState, requestId: string, text: string, streaming: boolean): SseState {
-  const messages = state.messages.map(msg => {
-    if (msg.id !== requestId) return msg;
-    const parts = [...msg.parts];
-    const last = parts[parts.length - 1];
-    const isOpenStream = last?.type === 'text' && last.streaming === true;
-    if (last?.type === 'text' && !isOpenStream && last.content === text) return msg;
-    const content = streaming && isOpenStream ? last.content + text : text;
-    const part: MessagePart = { type: 'text', content, ...(streaming && { streaming: true }) };
-    if (isOpenStream) parts[parts.length - 1] = part;
-    else parts.push(part);
-    return { ...msg, isPlaceholder: false, placeholderState: undefined, parts };
-  });
+export const isTerminalTaskStatus = (status: TaskStatus): status is keyof typeof TASK_STATUS => status in TASK_STATUS;
+
+const mapAgentMessage = (
+  state: ChatState,
+  matches: (msg: AgentMessage) => boolean,
+  update: (msg: AgentMessage) => AgentMessage,
+): ChatMessage[] => state.messages.map(msg => (msg.kind === 'agent' && matches(msg) ? update(msg) : msg));
+
+function reduceText(state: ChatState, requestId: string, text: string, streaming: boolean): ChatState {
+  const messages = mapAgentMessage(
+    state,
+    msg => msg.id === requestId,
+    msg => {
+      const parts = [...msg.parts];
+      const last = parts[parts.length - 1];
+      const isOpenStream = last?.type === 'text' && last.streaming === true;
+      if (last?.type === 'text' && !isOpenStream && last.content === text) return msg;
+      const content = streaming && isOpenStream ? last.content + text : text;
+      const part: MessagePart = { type: 'text', content, ...(streaming && { streaming: true }) };
+      if (isOpenStream) parts[parts.length - 1] = part;
+      else parts.push(part);
+      return { ...msg, isPlaceholder: false, placeholderState: undefined, parts };
+    },
+  );
   return { ...state, messages };
 }
 
-const appendText = (msg: ChatMessage, text: string): ChatMessage => ({
+const appendText = (msg: AgentMessage, text: string): AgentMessage => ({
   ...msg,
   parts: [...msg.parts, { type: 'text' as const, content: text }],
 });
 
-const errorBubble = (msg: ChatMessage, text: string): ChatMessage => ({
-  ...settled(appendText(msg, text)),
-  placeholderState: undefined,
-  taskStatus: 'failed',
-});
+const errorBubble =
+  (text: string) =>
+  (msg: AgentMessage): AgentMessage => ({
+    ...settled(appendText(msg, text)),
+    placeholderState: undefined,
+    taskStatus: 'failed',
+  });
 
-export function reduceError(state: SseState, messageId: string, text: string): SseState {
-  const messages = state.messages.map(msg => (msg.id === messageId ? errorBubble(msg, text) : msg));
-  return { ...state, messages };
+export function reduceError(state: ChatState, messageId: string, text: string): ChatState {
+  return { ...state, messages: mapAgentMessage(state, msg => msg.id === messageId, errorBubble(text)) };
 }
 
-export function reduceTransportFailure(state: SseState, text: string): SseState {
-  const messages = state.messages.map(msg => (msg.isPlaceholder ? errorBubble(msg, text) : msg));
-  return { messages, task: ended(state.task) };
+export function reduceTransportFailure(state: ChatState, text: string): ChatState {
+  return { messages: mapAgentMessage(state, msg => !!msg.isPlaceholder, errorBubble(text)), task: ended(state.task) };
 }
 
-export function reduceStaleReply(state: SseState, messageId: string, text: string): SseState {
+export function reduceStaleReply(state: ChatState, messageId: string, text: string): ChatState {
   const pending = state.messages.find(msg => msg.id === messageId);
-  return pending?.isPlaceholder && pending.placeholderState !== 'waiting-for-user'
+  return pending?.kind === 'agent' && pending.isPlaceholder && pending.placeholderState !== 'waiting-for-user'
     ? reduceError(state, messageId, text)
     : state;
 }
 
-export function reduceSse(state: SseState, event: WidgetEvent, currentMode: InstructionType): ReduceResult {
+export function reduceEvent(state: ChatState, event: WidgetEvent, currentMode: InstructionType): ReduceResult {
   switch (event.type) {
     case 'tool/call': {
-      if (state.task.phase === 'stopped') return noChange(state);
+      if (state.task.phase === 'stopped') return withoutToolRuns(state);
       const task: TaskState =
-        state.task.phase === 'running' ? state.task : { phase: 'running', mode: event.mode || currentMode };
-      const messages = applyProgress(
-        state.messages,
-        true,
-        task.mode ?? currentMode,
+        state.task.phase === 'running' ? state.task : { phase: 'running', mode: event.mode ?? currentMode };
+      const progressed = reduceToolProgress(
+        { ...state, task },
         event.browser_tool,
-        event.explanation ?? '',
-        'in_progress',
+        { status: 'in_progress', explanation: event.explanation },
+        currentMode,
       );
-      return {
-        state: { messages, task },
-        effects: [{ type: 'executeTool', call: event, mode: event.mode ?? currentMode }],
-      };
+      return { state: progressed, toolRuns: [{ call: event, mode: task.mode ?? currentMode }] };
     }
 
     case 'task/status': {
-      if (event.status === 'running') return noChange(state);
+      if (event.status === 'running') return withoutToolRuns(state);
       const status = event.status;
-      const withMessage = (msg: ChatMessage) => (event.message ? appendText(msg, event.message) : msg);
+      const withMessage = (msg: AgentMessage) => (event.message ? appendText(msg, event.message) : msg);
       const stamp =
         status === 'has_question'
-          ? (msg: ChatMessage) => ({ ...withMessage(msg), placeholderState: 'waiting-for-user' as const })
-          : (msg: ChatMessage) => ({ ...withMessage(msg), taskStatus: TASK_STATUS[status] });
-      return { state: stampProgressMessage(state, currentMode, stamp), effects: [] };
+          ? (msg: AgentMessage) => ({ ...withMessage(msg), placeholderState: 'waiting-for-user' as const })
+          : (msg: AgentMessage) => ({ ...withMessage(msg), taskStatus: TASK_STATUS[status] });
+      return withoutToolRuns(stampProgressMessage(state, currentMode, stamp));
     }
 
     case 'chat/delta':
-      return { state: reduceText(state, event.request_id, event.text, true), effects: [] };
+      return withoutToolRuns(reduceText(state, event.request_id, event.text, true));
 
     case 'chat/response':
-      return { state: reduceText(state, event.request_id, event.text, false), effects: [] };
+      return withoutToolRuns(reduceText(state, event.request_id, event.text, false));
 
     case 'chat/error':
-      return { state: reduceError(state, event.request_id, CHAT_FAILURE_TEXT), effects: [] };
+      return withoutToolRuns(reduceError(state, event.request_id, CHAT_FAILURE_TEXT));
 
     default:
-      return noChange(state);
+      return withoutToolRuns(state);
   }
 }

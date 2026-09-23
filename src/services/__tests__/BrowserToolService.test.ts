@@ -283,12 +283,12 @@ describe("show mode's default explanation only fills in a blank one", () => {
     expect(staged).toHaveBeenCalledWith(expect.objectContaining({ explanation: 'Click the Buy button' }));
   });
 
-  it('falls back to a generated explanation when the caller leaves it blank', async () => {
+  it('falls back to the tool label when the caller leaves the explanation blank', async () => {
     const staged = vi.spyOn(showModeService, 'showToolAction').mockResolvedValue();
 
     await browserToolService.executeTool('click_element', { index: 0 }, 'show');
 
-    expect(staged).toHaveBeenCalledWith(expect.objectContaining({ explanation: 'Execute click_element' }));
+    expect(staged).toHaveBeenCalledWith(expect.objectContaining({ explanation: 'Clicking element' }));
   });
 });
 
@@ -356,7 +356,7 @@ describe('extract', () => {
     document.body.innerHTML = '<a href="/a"></a><a href="/b">Bought</a>';
     stubInnerText();
 
-    const result = await browserToolService.executeTool('extract', { query: '', extract_links: true }, 'do');
+    const result = await browserToolService.executeTool('extract', { extract_links: true }, 'do');
 
     assertSuccess(result);
     const data = result.data as { links: Array<{ text: string; href: string | null }> };
@@ -370,7 +370,7 @@ describe('extract', () => {
     document.body.innerHTML = '<a href="/a">A</a>';
     stubInnerText();
 
-    const result = await browserToolService.executeTool('extract', { query: '', extract_links: false }, 'do');
+    const result = await browserToolService.executeTool('extract', { extract_links: false }, 'do');
 
     assertSuccess(result);
     expect((result.data as { links: unknown[] }).links).toEqual([]);

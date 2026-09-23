@@ -13,7 +13,7 @@ import React from 'react';
 
 import MarketrixIcon from '../../assets/marketrix-icon.svg';
 import { useWidgetConfig } from '../../hooks/useWidget';
-import { type ChatMessage, messageText } from '../../types';
+import { type AgentMessage, type ChatMessage, messageText } from '../../types';
 import { formatMessageTime } from '../../utils/chat';
 import { addOpacity } from '../../utils/color';
 import { Avatar } from '../base/Avatar';
@@ -34,7 +34,7 @@ interface MessageItemProps {
   onScreenAccessDeny: () => void;
 }
 
-const STATUS_ICONS: Record<NonNullable<ChatMessage['taskStatus']>, { name: IconName; opacity: number }> = {
+const STATUS_ICONS: Record<NonNullable<AgentMessage['taskStatus']>, { name: IconName; opacity: number }> = {
   done: { name: 'checkCircle', opacity: 1 },
   failed: { name: 'exclamationCircle', opacity: 0.75 },
   stopped: { name: 'circle', opacity: 0.5 },
@@ -54,11 +54,13 @@ const MessageBody: React.FC<{ message: ChatMessage; isLastMessage: boolean; isTa
   isLastMessage,
   isTaskRunning,
 }) => {
-  const isWaitingForUser = message.placeholderState === 'waiting-for-user';
-  const stillWorking = isTaskRunning && isLastMessage && (message.mode === 'show' || message.mode === 'do');
+  const isPlaceholder = message.kind === 'agent' && !!message.isPlaceholder;
+  const isWaitingForUser = message.kind === 'agent' && message.placeholderState === 'waiting-for-user';
+  const stillWorking =
+    isTaskRunning && isLastMessage && 'mode' in message && (message.mode === 'show' || message.mode === 'do');
 
   if (message.parts.length === 0) {
-    return message.isPlaceholder || stillWorking ? <Thinking isWaitingForUser={isWaitingForUser} /> : <Surface />;
+    return isPlaceholder || stillWorking ? <Thinking isWaitingForUser={isWaitingForUser} /> : <Surface />;
   }
 
   return (
@@ -90,7 +92,7 @@ const MessageBody: React.FC<{ message: ChatMessage; isLastMessage: boolean; isTa
         return null;
       })}
 
-      {((message.isPlaceholder && !message.parts.some(p => p.type === 'text')) || stillWorking) && (
+      {((isPlaceholder && !message.parts.some(p => p.type === 'text')) || stillWorking) && (
         <Thinking isWaitingForUser={isWaitingForUser} />
       )}
     </Stack>
@@ -117,14 +119,14 @@ const MessageItemComponent: React.FC<MessageItemProps> = ({
   }
 
   const isUser = message.kind === 'user' || message.kind === 'screenshare';
-  const leadingIcon = isUser
-    ? message.mode === 'show' || message.mode === 'do'
+  const agent = message.kind === 'agent' ? message : undefined;
+  const leadingIcon =
+    message.kind === 'user' && (message.mode === 'show' || message.mode === 'do')
       ? ('mousePointerClick' as const)
-      : undefined
-    : message.kind === 'screenAccess' || message.placeholderState === 'waiting-for-user'
-      ? ('checkCircle' as const)
-      : undefined;
-  const status = !isUser && message.taskStatus ? STATUS_ICONS[message.taskStatus] : undefined;
+      : message.kind === 'screenAccess' || agent?.placeholderState === 'waiting-for-user'
+        ? ('checkCircle' as const)
+        : undefined;
+  const status = agent?.taskStatus ? STATUS_ICONS[agent.taskStatus] : undefined;
 
   return (
     <Stack
@@ -159,26 +161,26 @@ const MessageItemComponent: React.FC<MessageItemProps> = ({
           rounded='lg'
           elevation='card'
           style={{
-            padding: message.videoStream ? '0' : '8px 10px',
+            padding: message.kind === 'screenshare' ? '0' : '8px 10px',
             border: '1px solid transparent',
             backgroundColor: isUser ? 'var(--primary)' : undefined,
             color: isUser ? 'var(--primary-foreground)' : 'var(--foreground)',
           }}
         >
-          {message.videoStream && <VideoStreamDisplay stream={message.videoStream} />}
-          {!message.videoStream &&
-            (leadingIcon ? (
-              <Flex align='start' gap='sm'>
-                <Flex shrink={false} style={{ marginTop: '3px' }}>
-                  <Icon name={leadingIcon} size={13} />
-                </Flex>
-                <Stack grow>
-                  <MessageBody message={message} isLastMessage={isLastMessage} isTaskRunning={isTaskRunning} />
-                </Stack>
+          {message.kind === 'screenshare' ? (
+            <VideoStreamDisplay stream={message.videoStream} />
+          ) : leadingIcon ? (
+            <Flex align='start' gap='sm'>
+              <Flex shrink={false} style={{ marginTop: '3px' }}>
+                <Icon name={leadingIcon} size={13} />
               </Flex>
-            ) : (
-              <MessageBody message={message} isLastMessage={isLastMessage} isTaskRunning={isTaskRunning} />
-            ))}
+              <Stack grow>
+                <MessageBody message={message} isLastMessage={isLastMessage} isTaskRunning={isTaskRunning} />
+              </Stack>
+            </Flex>
+          ) : (
+            <MessageBody message={message} isLastMessage={isLastMessage} isTaskRunning={isTaskRunning} />
+          )}
 
           {message.kind === 'screenAccess' && !message.screenShareStatus && (
             <Flex align='center' gap='sm' style={{ marginTop: '6px' }}>
@@ -210,7 +212,7 @@ const MessageItemComponent: React.FC<MessageItemProps> = ({
 
         <Flex shrink={false} style={{ width: '20px' }} />
       </Flex>
-      {!message.isPlaceholder && (
+      {!agent?.isPlaceholder && (
         <Text as='div' variant='faint' size='xxs' align='right' style={{ marginTop: '2px', marginRight: '26px' }}>
           {formatMessageTime(message.timestamp)}
         </Text>

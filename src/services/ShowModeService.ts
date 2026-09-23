@@ -12,12 +12,13 @@
  */
 
 import { LAYER_TOKENS } from '../design-system/component-tokens';
+import type { WidgetToolName } from './BrowserToolService';
 import { domService } from './DomService';
 
 interface ShowModeOptions {
   element: HTMLElement;
   explanation: string;
-  browserToolName: string;
+  browserToolName: WidgetToolName;
   isClickAction?: boolean;
 }
 
@@ -154,26 +155,32 @@ export class ShowModeService {
     const popup = document.createElement('div');
     popup.id = 'marketrix-show-popup';
 
-    const content = isClickAction
-      ? `<div style="font-weight: 500; color: ${TEXT_COLOR}; font-size: 12px;">${this.escapeHtml(explanation)}</div>`
-      : `<div style="margin-bottom:12px;font-weight:500;color:${TEXT_COLOR};font-size:12px;">${this.escapeHtml(explanation)}</div>` +
-        '<div style="display:flex;gap:8px;justify-content:flex-end;">' +
-        `<button id="marketrix-show-continue" style="background:${ACCENT_COLOR};color:white;border:none;` +
-        'border-radius:6px;padding:8px 16px;font-size:12px;font-weight:500;cursor:pointer;">Continue</button></div>';
-
-    popup.innerHTML = content;
     popup.style.cssText = POPUP_CHROME_CSS;
-    document.body.appendChild(popup);
-    this.currentPopup = popup;
+
+    const text = document.createElement('div');
+    text.textContent = explanation;
+    text.style.cssText = `font-weight:500;color:${TEXT_COLOR};font-size:12px;${isClickAction ? '' : 'margin-bottom:12px;'}`;
+    popup.append(text);
 
     if (!isClickAction) {
-      window.requestAnimationFrame(() => {
-        popup.querySelector('#marketrix-show-continue')?.addEventListener('click', e => {
-          e.stopPropagation();
-          this.settle();
-        });
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;gap:8px;justify-content:flex-end;';
+      const button = document.createElement('button');
+      button.id = 'marketrix-show-continue';
+      button.textContent = 'Continue';
+      button.style.cssText =
+        `background:${ACCENT_COLOR};color:white;border:none;border-radius:6px;padding:8px 16px;` +
+        'font-size:12px;font-weight:500;cursor:pointer;';
+      button.addEventListener('click', e => {
+        e.stopPropagation();
+        this.settle();
       });
+      row.append(button);
+      popup.append(row);
     }
+
+    document.body.appendChild(popup);
+    this.currentPopup = popup;
 
     this.updatePopupPosition();
   }
@@ -252,12 +259,6 @@ export class ShowModeService {
       const reason = domService.notInteractableReason(element, index);
       if (reason) this.settle(reason);
     }, 200);
-  }
-
-  private escapeHtml(text: string): string {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
   }
 }
 

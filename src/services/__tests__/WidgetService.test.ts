@@ -12,6 +12,7 @@ import { beforeEach, describe, expect, it, vi } from 'bun:test';
 import { type ApplicationWidgetPublicData, sdk } from '../../sdk';
 import { validSettings } from '../../test/fixtures';
 import { mocked, mockSdkModule, restoreModuleAfterAll } from '../../test/vi-compat';
+import type { MarketrixConfig } from '../../types';
 import { loadWidgetConfig } from '../WidgetService';
 
 vi.mock('../../sdk', () => mockSdkModule({ widgetPublicSearch: vi.fn() }));
@@ -41,7 +42,7 @@ describe('loadWidgetConfig', () => {
     ['mtxId', { mtxKey: 'test-key' }],
     ['mtxKey', { mtxId: 'missing-the-other' }],
   ])('refuses to search when %s alone is missing', async (_label, config) => {
-    await expect(loadWidgetConfig(config)).rejects.toThrow('Please provide mtxId + mtxKey');
+    await expect(loadWidgetConfig(config as MarketrixConfig)).rejects.toThrow('Please provide mtxId + mtxKey');
     expect(mockSdk.widgetPublicSearch).not.toHaveBeenCalled();
   });
 

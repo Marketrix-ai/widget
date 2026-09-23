@@ -3,7 +3,7 @@
  *
  * `setCredentials` holds the credentials the stream authenticates with; the `widgetStream` iterator drains
  * in the background; `send` posts a command via `widgetMessagePost` to the live chat unless a caller names
- * one; `ready`/`waitUntilRegistered` wait for a live connection; `canReconnect`/`reconnectNow` back Retry.
+ * one; `ready` connects and waits for registration; `canReconnect`/`reconnectNow` back Retry.
  * `StreamGaveUpError` marks a stream that has exhausted its reconnect attempts.
  *
  * Reconnects back off exponentially with jitter, so open tabs across a shared outage don't all redial
@@ -23,7 +23,6 @@ export class StreamGaveUpError extends Error {}
 interface StreamCredentials {
   marketrix_id: string;
   marketrix_key: string;
-  user_id?: number;
 }
 
 interface StreamClientCallbacks {
@@ -60,7 +59,7 @@ export class StreamClient {
     this.callbacks.delete(callbacks);
   }
 
-  isConnected(): boolean {
+  private isConnected(): boolean {
     return this.status === 'registered';
   }
 
@@ -85,7 +84,7 @@ export class StreamClient {
     await this.waitUntilRegistered();
   }
 
-  async waitUntilRegistered(): Promise<void> {
+  private async waitUntilRegistered(): Promise<void> {
     if (this.isConnected()) return;
     if (this.credentialRejected) {
       throw new StreamGaveUpError(CREDENTIALS_REJECTED);

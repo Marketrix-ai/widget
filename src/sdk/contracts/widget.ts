@@ -13,7 +13,7 @@ import {
   WidgetSettingsDataSchema,
   WidgetSettingsWriteSchema,
   WidgetTypeSchema,
-} from './entities';
+} from './widgetSettings';
 
 export const WidgetCreateSchema = z.strictObject({
   application_id: z.number().positive(),
@@ -88,7 +88,7 @@ const WidgetToolArgsSchemas = {
   type_text: z.strictObject({ index: WidgetElementIndexSchema, text: z.string(), clear: z.boolean() }),
   scroll: z.strictObject({ direction: z.enum(['up', 'down']), pages: z.number().positive() }),
   scroll_to_text: z.strictObject({ text: z.string() }),
-  extract: z.strictObject({ query: z.string(), extract_links: z.boolean() }),
+  extract: z.strictObject({ extract_links: z.boolean() }),
   go_back: WidgetEmptyArgsSchema,
   send_keys: WidgetSendKeysArgsSchema,
   close_tab: WidgetEmptyArgsSchema,
@@ -276,7 +276,6 @@ export const widgetStream = oc
       tab_id: z.string().optional(),
       marketrix_id: z.string(),
       marketrix_key: z.string(),
-      user_id: z.number().optional(),
     }),
   )
   .output(eventIterator(WidgetEventSchema));

@@ -13,7 +13,7 @@
 import { z } from 'zod';
 
 import { type ApplicationWidgetPublicData, sdk } from '../sdk';
-import { WidgetSettingsWriteSchema } from '../sdk/contracts/entities';
+import { WidgetSettingsWriteSchema } from '../sdk/contracts/widgetSettings';
 import type { MarketrixConfig, ValidWidgetConfig } from '../types';
 import { errorMessage } from '../utils/errors';
 
@@ -62,10 +62,6 @@ async function resolveActiveWidget(mtxId: string, mtxKey: string, mtxApiHost?: s
   const activeWidget = widgets[0];
   if (!activeWidget) {
     throw new Error('Widget not found or invalid credentials');
-  }
-
-  if (!activeWidget.application_id) {
-    throw new Error('Widget missing application_id');
   }
 
   const parsedSettings = parseWidgetSettings(activeWidget.widget_settings);

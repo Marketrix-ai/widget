@@ -1,26 +1,30 @@
 /**
- * `StorageService` tests: `scopeTo` never carries one tenant's `chat_id` into another's scope and never
+ * `StorageService` tests: `scopeStorageTo` never carries one tenant's `chat_id` into another's scope and never
  * persists config or credentials, and a corrupted stored message is dropped alone; a chat
  * snapshot round-trips, with an active screen share stored as an ended notice because a MediaStream
  * cannot survive a reload; `readLocal`/`writeLocal` degrade to memory and keep working unpersisted
  * when `localStorage` throws (private-mode Safari, a sandboxed iframe) -- each warns only ONCE per
- * session (`warnOnce`/`resetStorageWarningsForTests`), proven against repeated denied writes rather
+ * session (`warnOnce`, read through a fresh module import), proven against repeated denied writes rather
  * than a single one, since a single call could never distinguish "warns once" from "warns every time".
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 
-import { agentMessage, mockMediaStream } from '../../test/fixtures';
-import type { ChatMessage } from '../../types';
+import { agentMessage, credentialedConfig, mockMediaStream } from '../../test/fixtures';
+import type { AgentMessage, ChatMessage } from '../../types';
 import { createScreenshareMessage } from '../../utils/chat';
 import {
+  getChatId,
   readChatSnapshot,
   readLocal,
-  resetStorageWarningsForTests,
   scopedKey,
-  storageService,
+  scopeStorageTo,
+  setChatId,
   writeChatSnapshot,
   writeLocal,
 } from '../StorageService';
+
+let freshImports = 0;
+const freshStorage = () => import(`../StorageService.ts?t=${freshImports++}`);
 
 describe('scopedKey', () => {
   it('keeps the three tenant-scoped browser-local keys byte-identical', () => {
@@ -37,20 +41,20 @@ describe('scopeTo scopes the chat context to the tenant', () => {
   });
 
   it('does not carry one tenant’s chat_id into another’s scope', () => {
-    storageService.scopeTo({ mtxId: 'tenant-a' });
-    storageService.setChatId('chat-a');
-    expect(storageService.getChatId()).toBe('chat-a');
+    scopeStorageTo({ mtxId: 'tenant-a' });
+    setChatId('chat-a');
+    expect(getChatId()).toBe('chat-a');
 
-    storageService.scopeTo({ mtxId: 'tenant-b' });
-    expect(storageService.getChatId()).toBeNull();
+    scopeStorageTo({ mtxId: 'tenant-b' });
+    expect(getChatId()).toBeNull();
 
-    storageService.scopeTo({ mtxId: 'tenant-a' });
-    expect(storageService.getChatId()).toBe('chat-a');
+    scopeStorageTo({ mtxId: 'tenant-a' });
+    expect(getChatId()).toBe('chat-a');
   });
 
   it('never persists the config or its credentials', () => {
-    storageService.scopeTo({ mtxId: 'tenant-no-config', mtxKey: 'secret-key' });
-    storageService.setChatId('chat-1');
+    scopeStorageTo(credentialedConfig({ mtxId: 'tenant-no-config', mtxKey: 'secret-key' }));
+    setChatId('chat-1');
 
     expect(readLocal(scopedKey('marketrix_chat_context', { mtxId: 'tenant-no-config' }))).not.toContain('secret-key');
   });
@@ -60,21 +64,16 @@ describe('scopeTo scopes the chat context to the tenant', () => {
     const valid = { id: 'm1', kind: 'agent', timestamp: new Date().toISOString(), parts: [] };
     writeLocal(key, JSON.stringify({ chat_id: 7, messages: [valid, { id: 'broken' }], timestamp: Date.now() }));
 
-    storageService.scopeTo({ mtxId: 'tenant-corrupt' });
+    scopeStorageTo({ mtxId: 'tenant-corrupt' });
 
-    expect(storageService.getChatId()).toBeNull();
-    expect(storageService.getContext().messages.map(msg => msg.id)).toEqual(['m1']);
+    expect(getChatId()).toBeNull();
+    expect(readChatSnapshot().messages.map(msg => msg.id)).toEqual(['m1']);
   });
 });
 
 describe('private-mode localStorage', () => {
-  beforeEach(() => {
-    resetStorageWarningsForTests();
-  });
-
   afterEach(() => {
     vi.restoreAllMocks();
-    resetStorageWarningsForTests();
   });
 
   it('readLocal degrades to null instead of throwing when localStorage.getItem throws', () => {
@@ -94,7 +93,8 @@ describe('private-mode localStorage', () => {
     expect(() => writeLocal('any-key', 'value')).not.toThrow();
   });
 
-  it('warns exactly once across many denied writes, not once per write', () => {
+  it('warns exactly once across many denied writes, not once per write', async () => {
+    const { writeLocal } = await freshStorage();
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
       throw new Error('SecurityError: storage is disabled');
@@ -107,7 +107,8 @@ describe('private-mode localStorage', () => {
     expect(warnSpy).toHaveBeenCalledTimes(1);
   });
 
-  it('warns exactly once across many denied reads, not once per read, independently of the write warning', () => {
+  it('warns exactly once across many denied reads, not once per read, independently of the write warning', async () => {
+    const { readLocal, writeLocal } = await freshStorage();
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
       throw new Error('SecurityError: storage is disabled');
@@ -126,7 +127,7 @@ describe('private-mode localStorage', () => {
 });
 
 describe('chat snapshot persistence', () => {
-  const message = (overrides: Partial<ChatMessage> = {}): ChatMessage =>
+  const message = (overrides: Partial<AgentMessage> = {}): AgentMessage =>
     agentMessage({
       mode: undefined,
       isPlaceholder: undefined,
@@ -142,13 +143,13 @@ describe('chat snapshot persistence', () => {
   });
 
   beforeEach(() => {
-    storageService.updateContext({ chat_id: 'chat-1', messages: [], isOpen: false });
+    writeChatSnapshot({ messages: [], currentMode: 'tell', isOpen: false });
   });
 
   it('round-trips a snapshot', () => {
     writeChatSnapshot(snapshot([message()]));
 
-    expect(storageService.getContext().isOpen).toBe(true);
+    expect(readChatSnapshot().isOpen).toBe(true);
     expect(readChatSnapshot().messages).toEqual([message()]);
   });
 

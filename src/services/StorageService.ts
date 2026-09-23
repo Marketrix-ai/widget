@@ -1,53 +1,62 @@
 /**
- * Browser-local persistence for the widget: the one door to `localStorage`, behind the `storageService`
- * singleton.
+ * Browser-local persistence for the widget: the one door to `localStorage`.
  *
  * `readLocal`/`writeLocal` read and write a key, falling back to memory when a host page denies storage.
- * `scopedKey` suffixes a key by tenant so two tenants on one page never share state, and `scopeTo` points
- * the chat context at one tenant. `writeChatSnapshot`/`readChatSnapshot` persist and restore the
- * transcript. Nothing about the widget's config or credentials is ever persisted.
+ * `scopedKey` suffixes a key by tenant so two tenants on one page never share state, and `scopeStorageTo`
+ * points the chat context at one tenant. `getChatId`/`setChatId` hold the thread id and
+ * `readChatSnapshot`/`writeChatSnapshot` the transcript. `MessageSchema` is the one definition of a chat
+ * message, discriminated on `kind`. Nothing about the widget's config or credentials is ever persisted.
  *
  * A transcript older than a week is discarded, and a stored context is parsed field by field, so one
  * corrupted field falls back to its default rather than discarding the whole transcript.
  */
 import { z } from 'zod';
 
-import { InstructionTypeSchema } from '../sdk/contracts/entities';
-import type { ChatMessage, InstructionType, MarketrixConfig } from '../types';
+import { InstructionTypeSchema } from '../sdk/contracts/widgetSettings';
+import type { ChatMessage, InstructionType, ValidWidgetConfig } from '../types';
 import { logWarn } from '../utils/log';
 
 const STORAGE_KEY = 'marketrix_chat_context';
 const CONTEXT_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000;
 
-const StoredMessageSchema = z.object({
-  id: z.string(),
-  kind: z.enum(['user', 'agent', 'system', 'screenAccess', 'screenshare']),
-  timestamp: z.string(),
-  parts: z.array(
-    z.object({
-      type: z.enum(['text', 'progress']),
-      content: z.string(),
-      status: z.enum(['in_progress', 'completed', 'failed']).optional(),
-      browserToolName: z.string().optional(),
-      streaming: z.boolean().optional(),
-    }),
-  ),
-  mode: InstructionTypeSchema.optional(),
-  isPlaceholder: z.boolean().optional(),
-  placeholderState: z.enum(['thinking', 'waiting-for-user']).optional(),
-  taskStatus: z.enum(['done', 'failed', 'stopped']).optional(),
-  screenShareStatus: z.enum(['allowed', 'denied']).optional(),
-  pendingContent: z.string().optional(),
+const MessagePartSchema = z.object({
+  type: z.enum(['text', 'progress']),
+  content: z.string(),
+  status: z.enum(['in_progress', 'completed', 'failed']).optional(),
+  browserToolName: z.string().optional(),
+  streaming: z.boolean().optional(),
 });
 
-export type StoredMessage = z.infer<typeof StoredMessageSchema>;
+const MessageBase = { id: z.string(), timestamp: z.coerce.date(), parts: z.array(MessagePartSchema) };
+
+const MessageSchema = z.discriminatedUnion('kind', [
+  z.object({ ...MessageBase, kind: z.literal('user'), mode: InstructionTypeSchema }),
+  z.object({
+    ...MessageBase,
+    kind: z.literal('agent'),
+    mode: InstructionTypeSchema.optional(),
+    isPlaceholder: z.boolean().optional(),
+    placeholderState: z.enum(['thinking', 'waiting-for-user']).optional(),
+    taskStatus: z.enum(['done', 'failed', 'stopped']).optional(),
+  }),
+  z.object({ ...MessageBase, kind: z.literal('system') }),
+  z.object({
+    ...MessageBase,
+    kind: z.literal('screenAccess'),
+    mode: InstructionTypeSchema,
+    pendingContent: z.string(),
+    screenShareStatus: z.enum(['allowed', 'denied']).optional(),
+  }),
+]);
+
+export type StoredMessage = z.infer<typeof MessageSchema>;
 
 const ChatContextSchema = z.object({
   chat_id: z.string().nullable().catch(null),
   messages: z
     .array(z.unknown())
     .catch([])
-    .transform(items => items.flatMap(item => StoredMessageSchema.safeParse(item).data ?? [])),
+    .transform(items => items.flatMap(item => MessageSchema.safeParse(item).data ?? [])),
   currentMode: InstructionTypeSchema.catch('tell'),
   isOpen: z.boolean().catch(false),
   timestamp: z.number().catch(0),
@@ -61,8 +70,8 @@ export interface ChatSnapshot {
   isOpen: boolean;
 }
 
-export function scopedKey(name: string, config: MarketrixConfig): string {
-  return `${name}_${config.mtxId ?? 'default'}`;
+export function scopedKey(name: string, { mtxId }: Pick<ValidWidgetConfig, 'mtxId'>): string {
+  return `${name}_${mtxId ?? 'default'}`;
 }
 
 const warned = { read: false, write: false };
@@ -71,11 +80,6 @@ function warnOnce(kind: 'read' | 'write', message: string, error: unknown): void
   if (warned[kind]) return;
   warned[kind] = true;
   logWarn(message, error);
-}
-
-export function resetStorageWarningsForTests(): void {
-  warned.read = false;
-  warned.write = false;
 }
 
 export function readLocal(key: string): string | null {
@@ -108,47 +112,40 @@ function loadContext(key: string): ChatContext {
   return empty;
 }
 
-class StorageService {
-  private key = STORAGE_KEY;
-  private context = loadContext(this.key);
+let contextKey = STORAGE_KEY;
+let context = loadContext(contextKey);
 
-  getContext(): ChatContext {
-    return this.context;
-  }
-
-  updateContext(updates: Partial<ChatContext>): void {
-    this.context = { ...this.context, ...updates, timestamp: Date.now() };
-    writeLocal(this.key, JSON.stringify(this.context));
-  }
-
-  getChatId(): string | null {
-    return this.context.chat_id;
-  }
-
-  setChatId(chatId: string): void {
-    this.updateContext({ chat_id: chatId });
-  }
-
-  scopeTo(config: MarketrixConfig): void {
-    this.key = scopedKey(STORAGE_KEY, config);
-    this.context = loadContext(this.key);
-  }
+function updateContext(updates: Partial<ChatContext>): void {
+  context = { ...context, ...updates, timestamp: Date.now() };
+  writeLocal(contextKey, JSON.stringify(context));
 }
 
-export const storageService = new StorageService();
+export function scopeStorageTo(config: Pick<ValidWidgetConfig, 'mtxId'>): void {
+  contextKey = scopedKey(STORAGE_KEY, config);
+  context = loadContext(contextKey);
+}
+
+export const getChatId = (): string | null => context.chat_id;
+
+export const setChatId = (chatId: string): void => updateContext({ chat_id: chatId });
 
 export function readChatSnapshot(): ChatSnapshot {
-  const { messages, currentMode, isOpen } = storageService.getContext();
-  return { currentMode, isOpen, messages: messages.map(msg => ({ ...msg, timestamp: new Date(msg.timestamp) })) };
+  const { messages, currentMode, isOpen } = context;
+  return { messages, currentMode, isOpen };
 }
 
 export function writeChatSnapshot(snapshot: ChatSnapshot): void {
-  storageService.updateContext({
+  updateContext({
     ...snapshot,
-    messages: snapshot.messages.map(({ videoStream, ...msg }): StoredMessage => {
-      const timestamp = msg.timestamp.toISOString();
-      if (!videoStream) return { ...msg, timestamp };
-      return { ...msg, timestamp, kind: 'system', parts: [{ type: 'text', content: 'Screen sharing ended' }] };
-    }),
+    messages: snapshot.messages.map(msg =>
+      msg.kind === 'screenshare'
+        ? {
+            id: msg.id,
+            kind: 'system',
+            timestamp: msg.timestamp,
+            parts: [{ type: 'text', content: 'Screen sharing ended' }],
+          }
+        : msg,
+    ),
   });
 }

@@ -177,7 +177,7 @@ describe("embed smoke: the built dist/widget.mjs boots the way a customer's page
     const mod = await importDist();
     await tick();
 
-    expect(Object.keys(mod).sort()).toEqual([...documentedExportNames, 'default'].sort());
+    expect(Object.keys(mod).sort()).toEqual([...documentedExportNames].sort());
   });
 
   it('a documented script[mtx-id] tag drives the widgetPublicSearch lookup to mtx-api-host, mounts a closed-shadow FAB at the documented z-index, and leaks only __mtx onto window', async () => {

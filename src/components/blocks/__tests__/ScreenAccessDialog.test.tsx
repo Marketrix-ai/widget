@@ -1,5 +1,5 @@
 /**
- * Tests for `WidgetDialog`'s accessibility wiring and focus lifecycle on open/close, and that it
+ * Tests for `ScreenAccessDialog`'s accessibility wiring and focus lifecycle on open/close, and that it
  * portals into the container it is given rather than the host page.
  */
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
@@ -9,9 +9,10 @@ import { useRef, useState } from 'react';
 import { PortalContainerContext, WidgetProviders } from '../../../context/WidgetProviders';
 import { createWidgetContainer } from '../../../mount';
 import { getMockWidgetConfig } from '../../../test/fixtures';
-import { WidgetDialog } from '../WidgetDialog';
+import { SCREEN_ACCESS_PROMPT } from '../../../utils/chat';
+import { ScreenAccessDialog } from '../ScreenAccessDialog';
 
-describe('WidgetDialog', () => {
+describe('ScreenAccessDialog', () => {
   it('labels and focuses the modal, then closes and restores focus on Escape', async () => {
     function Example() {
       const [open, setOpen] = useState(false);
@@ -22,13 +23,9 @@ describe('WidgetDialog', () => {
             Share screen
           </button>
           {open && (
-            <WidgetDialog
+            <ScreenAccessDialog
               onClose={() => setOpen(false)}
-              title='Allow screen access?'
-              description='This lets Marketrix guide you.'
               onConfirm={() => setOpen(false)}
-              confirmLabel='Yes'
-              cancelLabel='No'
               finalFocusRef={triggerRef}
             />
           )}
@@ -41,8 +38,8 @@ describe('WidgetDialog', () => {
     trigger.focus();
     fireEvent.click(trigger);
 
-    const dialog = await screen.findByRole('dialog', { name: 'Allow screen access?' });
-    expect(dialog).toHaveAccessibleDescription('This lets Marketrix guide you.');
+    const dialog = await screen.findByRole('dialog', { name: SCREEN_ACCESS_PROMPT });
+    expect(dialog).toHaveAccessibleDescription(/By allowing screen access/);
     await waitFor(() => expect(screen.getByRole('button', { name: 'No' })).toHaveFocus());
 
     fireEvent.keyDown(document, { key: 'Escape' });
@@ -57,21 +54,13 @@ describe('WidgetDialog', () => {
     render(
       <WidgetProviders config={getMockWidgetConfig()}>
         <PortalContainerContext value={widgetRoot}>
-          <WidgetDialog
-            onClose={() => undefined}
-            title='Shadow dialog'
-            description='In the shadow root.'
-            onConfirm={() => undefined}
-            confirmLabel='Yes'
-            cancelLabel='No'
-            finalFocusRef={{ current: null }}
-          />
+          <ScreenAccessDialog onClose={() => undefined} onConfirm={() => undefined} finalFocusRef={{ current: null }} />
         </PortalContainerContext>
       </WidgetProviders>,
       { container: mountEl },
     );
 
-    expect(await within(widgetRoot).findByRole('dialog', { name: 'Shadow dialog' })).toBeTruthy();
+    expect(await within(widgetRoot).findByRole('dialog', { name: SCREEN_ACCESS_PROMPT })).toBeTruthy();
     expect(document.body.querySelector('[role="dialog"]')).toBeNull();
     container.remove();
   });

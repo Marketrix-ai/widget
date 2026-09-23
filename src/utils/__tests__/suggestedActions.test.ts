@@ -1,7 +1,8 @@
 /**
  * Suggested-action prefixing tests: the mode caption prefixes without editing the tenant text (never
  * eating letters from a word that merely begins with the mode word, collapsing a prefix already
- * written), the dispatched value carries the same prefix as the label, and a tell chip is untouched.
+ * written), the dispatched value carries the same prefix as the label, a tell chip is untouched, and the
+ * built-in demo chips appear only in the settings preview.
  */
 import { describe, expect, it } from 'bun:test';
 
@@ -42,5 +43,17 @@ describe('a suggested-action dispatch text matches its caption', () => {
     const [action] = getSuggestedActionsFromConfig(getMockWidgetConfig({ widget_chips: [{ chip_mode, chip_text }] }));
     if (!action) throw new Error('expected a suggested action');
     expect(action.text).toBe(expectedText);
+  });
+});
+
+describe('a tenant with no configured chips', () => {
+  it('sees none on a live page, never the built-in demo copy', () => {
+    expect(getSuggestedActionsFromConfig(getMockWidgetConfig({ isPreviewMode: false, widget_chips: [] }))).toEqual([]);
+  });
+
+  it('sees the demo chips only in the settings preview', () => {
+    expect(getSuggestedActionsFromConfig(getMockWidgetConfig({ isPreviewMode: true, widget_chips: [] })).length).toBe(
+      5,
+    );
   });
 });

@@ -30,7 +30,7 @@ const scrollButtonStyle: React.CSSProperties = {
   pointerEvents: 'auto',
 };
 
-export const MessageList = ({ messagesEndRef }: { messagesEndRef: React.RefObject<HTMLDivElement | null> }) => {
+export const MessageList = () => {
   const widgetConfig = useWidgetConfig();
   const { state, actions } = useWidget();
   const { messages, isTaskRunning } = state;
@@ -38,6 +38,7 @@ export const MessageList = ({ messagesEndRef }: { messagesEndRef: React.RefObjec
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [showScrollBottom, setShowScrollBottom] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const greetingMessage = useMemo(() => createAgentMessage(widgetConfig.widget_body), [widgetConfig.widget_body]);
   const allMessages = useMemo(() => [greetingMessage, ...messages], [greetingMessage, messages]);

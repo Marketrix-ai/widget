@@ -5,13 +5,13 @@
  * to the composer if sending fails. The composer stays locked while a reply is pending or a screen-access
  * request is waiting for an answer, so no later send can overwrite the held turn.
  */
-import React, { useRef, useState } from 'react';
+import React, { useState } from 'react';
 
 import { openScreenAccessRequest } from '../../context/chatReducer';
 import { useWidget, useWidgetConfig } from '../../hooks/useWidget';
 import type { InstructionType } from '../../sdk';
 import { showModeService } from '../../services/ShowModeService';
-import { createSystemMessage, MODE_LABELS } from '../../utils/chat';
+import { MODE_LABELS } from '../../utils/chat';
 import { ErrorBoundary } from '../base/ErrorBoundary';
 import { Stack } from '../base/Flex';
 import { Surface } from '../base/Surface';
@@ -37,7 +37,6 @@ export const ChatView: React.FC<{ messageInputRef: React.RefObject<HTMLTextAreaE
   const { currentMode, isTaskRunning, isAwaitingReply, messages } = state;
 
   const [inputValue, setInputValue] = useState('');
-  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const composerLocked = !!openScreenAccessRequest(messages) || isAwaitingReply;
 
@@ -52,7 +51,7 @@ export const ChatView: React.FC<{ messageInputRef: React.RefObject<HTMLTextAreaE
 
   const handleModeChange = (mode: InstructionType) => {
     if (mode === currentMode) return;
-    actions.addMessage(createSystemMessage(`Switched to ${MODE_LABELS[mode]} mode`));
+    actions.addSystemMessage(`Switched to ${MODE_LABELS[mode]} mode`);
     actions.setMode(mode);
   };
 
@@ -67,11 +66,11 @@ export const ChatView: React.FC<{ messageInputRef: React.RefObject<HTMLTextAreaE
             </Text>
           }
         >
-          <MessageList messagesEndRef={messagesEndRef} />
+          <MessageList />
         </ErrorBoundary>
       </Stack>
 
-      <Surface variant='floatingCard' style={{ marginTop: 'auto' }}>
+      <Surface floatingCard style={{ marginTop: 'auto' }}>
         <ChatInput
           ref={messageInputRef}
           value={inputValue}

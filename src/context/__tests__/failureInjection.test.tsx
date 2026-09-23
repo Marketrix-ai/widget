@@ -39,7 +39,7 @@ const Probe = () => {
       <div data-testid='error'>{state.error ?? ''}</div>
       <div data-testid='awaiting'>{String(state.isAwaitingReply)}</div>
       <div data-testid='transcript'>{messages.map(m => messageText(m.parts)).join('|')}</div>
-      <div data-testid='placeholder-id'>{messages.find(m => m.isPlaceholder)?.id ?? ''}</div>
+      <div data-testid='placeholder-id'>{messages.find(m => m.kind === 'agent' && m.isPlaceholder)?.id ?? ''}</div>
       <button data-testid='send' onClick={() => void actions.sendTurn('hi', 'tell')} />
       <button data-testid='stop' onClick={() => void actions.stopTask()} />
     </div>

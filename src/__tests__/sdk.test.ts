@@ -9,8 +9,8 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 
+import { configureSdk, sdk } from '../sdk';
 import { mocked } from '../test/vi-compat';
-import { configureSdk, sdk } from './index';
 
 describe('sdk transport', () => {
   beforeEach(() => {

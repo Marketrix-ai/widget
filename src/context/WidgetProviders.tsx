@@ -47,7 +47,7 @@ const InitBridge: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const init = async () => {
       const { messages, ...ui } = readChatSnapshot();
       uiActions.applyState(ui);
-      chatActions.setMessages(messages);
+      chatActions.restoreMessages(messages);
       setRestored(true);
 
       const chatId = await getOrCreateChatId();

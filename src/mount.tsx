@@ -23,7 +23,7 @@ import { getOrCreateChatId } from './services/chatSession';
 import { RrwebSessionRecorder } from './services/RrwebSessionRecorder';
 import { stopScreenShare } from './services/ScreenShareService';
 import { showModeService } from './services/ShowModeService';
-import { storageService } from './services/StorageService';
+import { scopeStorageTo } from './services/StorageService';
 import { streamClient } from './services/StreamClient';
 import {
   type CredentialedConfig,
@@ -43,6 +43,7 @@ declare global {
 
 interface ActiveWidget {
   config: ValidWidgetConfig;
+  input: MarketrixConfig | undefined;
   host: HTMLElement | undefined;
   unmount: () => void;
 }
@@ -99,14 +100,14 @@ export function renderWidget(config: ValidWidgetConfig, host?: HTMLElement): () 
   };
 }
 
-function mountActive(config: ValidWidgetConfig, host: HTMLElement | undefined): void {
-  active = { config, host, unmount: renderWidget(config, host) };
+function mountActive(config: ValidWidgetConfig, host: HTMLElement | undefined, input?: MarketrixConfig): void {
+  active = { config, input, host, unmount: renderWidget(config, host) };
   window.__mtx = { state: 'active' };
 }
 
 export function previewConfig(
   settings: WidgetSettingsData,
-  baseConfig: MarketrixConfig = {},
+  baseConfig: ClientOwnedConfig = {},
 ): ValidWidgetConfig | null {
   const parsed = parseWidgetSettings(settings);
   if (parsed.invalidFields) {
@@ -156,13 +157,9 @@ async function initWidgetInternal(config: MarketrixConfig, host: HTMLElement | u
     return;
   }
 
-  storageService.scopeTo(finalConfig);
-  streamClient.setCredentials({
-    marketrix_id: finalConfig.mtxId,
-    marketrix_key: finalConfig.mtxKey,
-    ...(finalConfig.userId !== undefined && { user_id: finalConfig.userId }),
-  });
-  mountActive(finalConfig, host);
+  scopeStorageTo(finalConfig);
+  streamClient.setCredentials({ marketrix_id: finalConfig.mtxId, marketrix_key: finalConfig.mtxKey });
+  mountActive(finalConfig, host, config);
 
   if (finalConfig.widget_recording) {
     startRecording(finalConfig, generation).catch((error: unknown) => {
@@ -199,20 +196,17 @@ export const unmountWidget = (): void => {
   hideHostPageNotice();
 };
 
-export const updateMarketrixConfig = async (
-  newConfig: ClientOwnedConfig & { mtxId?: string; mtxKey?: string },
-): Promise<void> => {
+export const updateMarketrixConfig = async (newConfig: Partial<MarketrixConfig>): Promise<void> => {
   if (!active) return;
-  const { config, host } = active;
-  const updatedConfig = { ...config, ...newConfig };
+  const { config, input, host } = active;
   unmountWidget();
-  if (config.isPreviewMode) mountActive(updatedConfig, host);
-  else await initWidget(updatedConfig, host);
+  if (input) await initWidget({ ...input, ...newConfig }, host);
+  else mountActive({ ...config, ...newConfig }, host);
 };
 
 export const getCurrentConfig = (): ValidWidgetConfig | null => active?.config ?? null;
 
-export const showHostPageNotice = (message: string, tone: NotificationTone = 'neutral'): void => {
+function showHostPageNotice(message: string, tone: NotificationTone = 'neutral'): void {
   hideHostPageNotice();
 
   const noticeContainer = document.createElement('div');
@@ -235,15 +229,15 @@ export const showHostPageNotice = (message: string, tone: NotificationTone = 'ne
       </NotificationProvider>
     </React.StrictMode>,
   );
-};
+}
 
-export const hideHostPageNotice = (): void => {
+function hideHostPageNotice(): void {
   noticeRoot?.unmount();
   noticeRoot = null;
   document.getElementById('marketrix-widget-notice-container')?.remove();
-};
+}
 
-export const autoInitializeWidget = (init: (config: MarketrixConfig) => Promise<void>): void => {
+export const autoInitializeWidget = (): void => {
   if (window.__mtx?.state) return;
 
   const scripts = document.querySelectorAll('script[mtx-id]');
@@ -269,5 +263,5 @@ export const autoInitializeWidget = (init: (config: MarketrixConfig) => Promise<
   const styleNonce = script.getAttribute('mtx-style-nonce');
   if (styleNonce) config.styleNonce = styleNonce;
 
-  init(config).catch(error => console.error('[AutoInit] Failed to initialize widget:', error));
+  initWidget(config).catch(error => console.error('[AutoInit] Failed to initialize widget:', error));
 };

@@ -24,6 +24,8 @@ interface StreamClientInternals {
   maxReconnectAttempts: StreamClient['maxReconnectAttempts'];
   scheduleReconnect: StreamClient['scheduleReconnect'];
   handleMessage: StreamClient['handleMessage'];
+  isConnected: StreamClient['isConnected'];
+  waitUntilRegistered: StreamClient['waitUntilRegistered'];
 }
 
 function internals(client: StreamClient): StreamClientInternals {
@@ -117,7 +119,7 @@ afterEach(() => {
 describe('StreamClient registration lifecycle', () => {
   it('rejects old registration waiters on disconnect without leaking into a remount', async () => {
     const client = freshClient();
-    const registration = client.waitUntilRegistered();
+    const registration = internals(client).waitUntilRegistered();
 
     client.disconnect();
 
@@ -126,7 +128,7 @@ describe('StreamClient registration lifecycle', () => {
     const inner = internals(client);
     inner.chatId = 'new-chat';
     inner.tornDown = false;
-    const remountRegistration = client.waitUntilRegistered();
+    const remountRegistration = internals(client).waitUntilRegistered();
     inner.handleMessage({ type: 'registered', chat_id: 'new-chat' });
 
     await expect(remountRegistration).resolves.toBeUndefined();
@@ -135,7 +137,7 @@ describe('StreamClient registration lifecycle', () => {
   it('rejects a pending registration when reconnection gives up, rather than leaving it hanging', async () => {
     const { client, inner } = freshChatClient();
 
-    const registration = client.waitUntilRegistered();
+    const registration = internals(client).waitUntilRegistered();
     inner.reconnectAttempts = inner.maxReconnectAttempts;
     inner.scheduleReconnect();
 
@@ -145,7 +147,7 @@ describe('StreamClient registration lifecycle', () => {
   it('rejects a pending registration when the credentials are refused', async () => {
     const { client, inner } = freshChatClient();
 
-    const registration = client.waitUntilRegistered();
+    const registration = internals(client).waitUntilRegistered();
     inner.handleMessage({ type: 'chat/error', request_id: 'auth', error: 'unauthorized' });
 
     await expect(registration).rejects.toBeInstanceOf(StreamGaveUpError);
@@ -166,22 +168,24 @@ describe('StreamClient registration lifecycle', () => {
     expect(inner.credentialRejected).toBe(true);
     expect(client.canReconnect()).toBe(false);
 
-    await expect(client.waitUntilRegistered()).rejects.toThrow('credentials were rejected');
+    await expect(internals(client).waitUntilRegistered()).rejects.toThrow('credentials were rejected');
   });
 
   it('does not report a stream that has only reached open as connected', () => {
     const { client } = freshChatClient('open');
 
-    expect(client.isConnected()).toBe(false);
+    expect(internals(client).isConnected()).toBe(false);
   });
 
   it('leaves an open-but-unregistered stream still pending, so a send cannot outrun registration', async () => {
     const { client, inner } = freshChatClient('open');
 
     let registered = false;
-    const pending = client.waitUntilRegistered().then(() => {
-      registered = true;
-    });
+    const pending = internals(client)
+      .waitUntilRegistered()
+      .then(() => {
+        registered = true;
+      });
 
     await flushMicrotasks();
     expect(registered).toBe(false);

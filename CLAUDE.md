@@ -26,7 +26,7 @@ bun run bundle:check     # packaging gate (size, single chunk, no CSS file, Reac
 bun run check:served     # asserts what the nginx runtime image actually SENDS, over real HTTP
 bun run code:check       # tsc + eslint + prettier --check (one-shot)
 bun run ci               # every CI validation gate
-bun run tag <version>    # scripts/release.sh
+bun run tag <version>    # infra/scripts/release.sh
 ```
 
 **Tests run on `bun test`, not vitest** (pinned by sourceInvariants.test.ts). `src/test/preload.ts` (the
@@ -295,7 +295,7 @@ or the `deploy.yml` dispatch inputs (this repo cannot reach the private infra re
   the bare read everywhere else (enforced by eslint, not a duplicate test). **Base UI has the same bug and
   cannot see it**: its focus restore
   descends `element.shadowRoot.activeElement`, which is null for a closed root, so it records the host
-  and hands focus to the host page on close — `WidgetDialog` passes an explicit `finalFocus` ref rather
+  and hands focus to the host page on close — `ScreenAccessDialog` passes an explicit `finalFocus` ref rather
   than relying on the default.
 - **Base UI owns the interaction primitives; the remaining hand-rolled hooks are not a gap.** Dialog,
   Button, Tabs (`ShellTabBar` + the view panels) and Toast (`Notifications.tsx`) come from the library.

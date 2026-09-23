@@ -1,26 +1,31 @@
 /**
  * `resolveLayoutStyle` tests: every spacing prop (padding, margin, gap …) across every token maps to
- * its pixel value, empty props give an empty style, and SPACING_SCALE is declared smallest-first so a
- * token name orders the same way as the pixels it emits. Exhaustive per-token mappings run as one
+ * its pixel value and empty props give an empty style. Exhaustive per-token mappings run as one
  * table-driven test per prop group rather than one `it` per token — same coverage, far fewer tests.
  */
 import { describe, expect, it } from 'bun:test';
 
-import { resolveLayoutStyle, SPACING_SCALE, stripLayoutProps } from '../layoutProps';
+import { resolveLayoutStyle, stripLayoutProps } from '../layoutProps';
+
+const SPACING_PX = {
+  none: '0',
+  '2xs': '2px',
+  xs: '4px',
+  sm: '6px',
+  md: '8px',
+  lg: '12px',
+  xl: '16px',
+  '2xl': '24px',
+} as const;
 
 describe('resolveLayoutStyle', () => {
   it('returns an empty style for empty props', () => {
     expect(resolveLayoutStyle({})).toEqual({});
   });
 
-  it('declares SPACING_SCALE smallest-first, so a token name orders the same way as the pixels it emits', () => {
-    const steps = Object.values(SPACING_SCALE).map(value => parseFloat(value));
-    expect(steps).toEqual([...steps].sort((a, b) => a - b));
-  });
-
   it('maps every spacing token to its pixel value for padding', () => {
-    for (const [token, px] of Object.entries(SPACING_SCALE)) {
-      expect(resolveLayoutStyle({ padding: token as keyof typeof SPACING_SCALE })).toEqual({ padding: px });
+    for (const [token, px] of Object.entries(SPACING_PX)) {
+      expect(resolveLayoutStyle({ padding: token as keyof typeof SPACING_PX })).toEqual({ padding: px });
     }
   });
 

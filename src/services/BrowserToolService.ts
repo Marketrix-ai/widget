@@ -14,7 +14,7 @@ import type { WidgetEvent } from '../sdk';
 import type { InstructionType } from '../types';
 import { errorMessage } from '../utils/errors';
 import { domService } from './DomService';
-import { isTextField, setNativeValue, simulateKeyAction } from './keySimulation';
+import { isTextField, setFieldValue, simulateKeyAction } from './keySimulation';
 import { activeScreenStream } from './ScreenShareService';
 import { ShowModeCancelled, showModeService } from './ShowModeService';
 
@@ -123,14 +123,14 @@ export class BrowserToolService {
     browserToolName: K,
     args: ToolArgs<K>,
     mode: InstructionType,
-    explanation = '',
+    explanation?: string,
   ): Promise<ToolExecutionResult<unknown>> {
     const tool: WidgetToolDef<K> = this.tools[browserToolName];
     try {
       if (mode === 'show' && tool.waitForUser && 'index' in args) {
         await showModeService.showToolAction({
           element: this.element(args.index),
-          explanation: explanation || `Execute ${browserToolName}`,
+          explanation: explanation || tool.label,
           browserToolName,
           isClickAction: browserToolName === 'click_element',
         });
@@ -179,12 +179,7 @@ export class BrowserToolService {
 
     if (isTextField(element)) {
       element.focus();
-      setNativeValue(element, clear ? text : element.value + text);
-
-      element.dispatchEvent(
-        new InputEvent('input', { bubbles: true, cancelable: true, inputType: 'insertText', data: text }),
-      );
-      element.dispatchEvent(new Event('change', { bubbles: true }));
+      setFieldValue(element, clear ? text : element.value + text);
       element.dispatchEvent(new Event('blur', { bubbles: true }));
     } else if (element.isContentEditable) {
       element.focus();

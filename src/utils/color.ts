@@ -14,7 +14,7 @@ type Rgb = { r: number; g: number; b: number };
 const HEX = /^#?([a-f\d]{3}|[a-f\d]{6})$/i;
 const RGB = /^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i;
 
-export function toRgb(color: string): Rgb | null {
+function toRgb(color: string): Rgb | null {
   const digits = HEX.exec(color.trim())?.[1];
   if (digits) {
     const n = parseInt(digits.length === 3 ? [...digits].map(c => c + c).join('') : digits, 16);

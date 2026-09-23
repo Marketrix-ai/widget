@@ -34,7 +34,7 @@ export const useWidget = () => {
       ...uiState,
       messages,
       isTaskRunning: taskState.phase === 'running',
-      isAwaitingReply: messages.some(msg => msg.isPlaceholder),
+      isAwaitingReply: messages.some(msg => msg.kind === 'agent' && msg.isPlaceholder),
     }),
     [uiState, messages, taskState],
   );
@@ -45,8 +45,7 @@ export const useWidget = () => {
       ...taskActions,
       ...chatActions,
       clearChatHistory: () => {
-        chatActions.clearMessages();
-        taskActions.resetTask();
+        chatActions.clearChat();
         uiActions.setError(undefined);
       },
     }),

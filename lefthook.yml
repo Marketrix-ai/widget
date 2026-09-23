@@ -1,20 +1,6 @@
-# Git hook definitions for lefthook (https://github.com/evilmartians/lefthook).
-#
-# `rc: ./.lefthookrc` restores bun onto PATH before any command runs, because GUI git clients start
-# hooks with a minimal environment. Changing it requires re-running `lefthook install`: the path is baked
-# into the generated shims, not read at run time. Keep the leading `./` — the shim sources this with the
-# POSIX `.` builtin, which searches $PATH for an operand containing no slash, and shells differ on whether
-# they then fall back to the current directory (macOS `/bin/sh` does, `dash` and `zsh` do not). The bare
-# name would work on most machines and fail on a minimal shell, though at least loudly: `.` is a special
-# builtin, so dash exits 2 and blocks the commit rather than leaving it silently unhooked.
-#
-# pre-commit APPLIES formatting rather than reporting it, which is what keeps `code:check`'s prettier arm
-# from failing in CI. A pre-push hook cannot do this job: git resolves the commits it will send before
-# running that hook, so anything it rewrites is not what gets pushed. `AGENTS.md` is excluded because it
-# is a symlink to `CLAUDE.md` and prettier EXITS 2 on a symlink passed explicitly rather than skipping it,
-# so without the exclusion every commit that stages it fails — and the tempting "fix" is to replace the
-# link with a real file. pre-push is the safety net for a `--no-verify` commit: formatting is already
-# applied by then, so it only reports what the auto-fix could not reach.
+# Git hooks: pre-commit formats and lint-fixes the staged files, because a pre-push hook cannot change what git has
+# already resolved to push; pre-push runs `code:check` and the tests. Prettier exits 2 on the AGENTS.md symlink.
+# `rc` restores bun onto PATH for GUI git clients; re-run `lefthook install` after changing it.
 rc: ./.lefthookrc
 
 pre-commit:
@@ -22,15 +8,13 @@ pre-commit:
   commands:
     format:
       glob: '*.{ts,tsx,js,mjs,cjs,json,md,yml,yaml,css}'
-      exclude:
-        - AGENTS.md
+      exclude: [AGENTS.md]
       run: bunx prettier --write {staged_files}
       stage_fixed: true
     lint:
-      run: bun run lint
+      glob: '*.{ts,tsx,js,mjs,cjs}'
+      run: bunx eslint --fix --no-warn-ignored --max-warnings 0 {staged_files}
       stage_fixed: true
-    check:
-      run: bun run type-check
 
 pre-push:
   parallel: false

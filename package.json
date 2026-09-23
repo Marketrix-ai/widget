@@ -20,7 +20,7 @@
     "!dist/**/*.map"
   ],
   "scripts": {
-    "tag": "bash scripts/release.sh",
+    "tag": "bash \"${MARKETRIX_HOME:-$HOME/code/marketrix}/infra/scripts/release.sh\"",
     "start": "vite",
     "build": "vite build",
     "ci": "bun run code:check && bun run check:comments && bun run build && bun run test && bun run bundle:check && bun run check:served",

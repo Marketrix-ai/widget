@@ -1,12 +1,10 @@
 /**
  * Layout vocabulary shared by the base components: the `LayoutProps` a component accepts,
  * `resolveLayoutStyle` which turns them into a style object, and `stripLayoutProps` which removes them
- * from a props bag before the rest is spread onto a DOM element. `SPACING_SCALE` is the exported
- * spacing-token-to-pixel table.
+ * from a props bag before the rest is spread onto a DOM element.
  *
  * Layout props resolve to inline style rather than class names, since a class-based version needed a
- * build-time safelist that silently dropped anything missing from it. `LAYOUT_KEYS` must list every key
- * of `LayoutProps`, or a prop missing from it leaks through to the DOM as an unknown attribute.
+ * build-time safelist that silently dropped anything missing from it.
  * `withClass` appends an optional caller class to a component's fixed base class.
  */
 import type { CSSProperties, ElementType } from 'react';
@@ -15,7 +13,7 @@ import { RADIUS, type RadiusToken } from '../../design-system/component-tokens';
 
 type SpacingToken = 'none' | '2xs' | 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
 
-export const SPACING_SCALE: Record<SpacingToken, string> = {
+const SPACING_SCALE: Record<SpacingToken, string> = {
   none: '0',
   '2xs': '2px',
   xs: '4px',
@@ -88,32 +86,32 @@ export interface LayoutProps {
   style?: CSSProperties | undefined;
 }
 
-const LAYOUT_KEYS = new Set<keyof LayoutProps>([
-  'padding',
-  'paddingX',
-  'paddingY',
-  'paddingTop',
-  'paddingBottom',
-  'gap',
-  'align',
-  'justify',
-  'grow',
-  'shrink',
-  'position',
-  'inset',
-  'overflow',
-  'overflowY',
-  'width',
-  'height',
-  'minWidth',
-  'minHeight',
-  'border',
-  'rounded',
-  'animate',
-  'hidden',
-  'as',
-  'style',
-]);
+const LAYOUT_KEYS = {
+  padding: true,
+  paddingX: true,
+  paddingY: true,
+  paddingTop: true,
+  paddingBottom: true,
+  gap: true,
+  align: true,
+  justify: true,
+  grow: true,
+  shrink: true,
+  position: true,
+  inset: true,
+  overflow: true,
+  overflowY: true,
+  width: true,
+  height: true,
+  minWidth: true,
+  minHeight: true,
+  border: true,
+  rounded: true,
+  animate: true,
+  hidden: true,
+  as: true,
+  style: true,
+} satisfies Record<keyof LayoutProps, true>;
 
 export function resolveLayoutStyle(props: LayoutProps): CSSProperties {
   const style: CSSProperties = {};
@@ -164,7 +162,7 @@ export function resolveLayoutStyle(props: LayoutProps): CSSProperties {
   return style;
 }
 
-const isLayoutKey = (key: string): key is keyof LayoutProps => (LAYOUT_KEYS as ReadonlySet<string>).has(key);
+const isLayoutKey = (key: string): key is keyof LayoutProps => key in LAYOUT_KEYS;
 
 export function stripLayoutProps<T extends LayoutProps>(props: T): Omit<T, keyof LayoutProps> {
   const result: Record<string, unknown> = {};

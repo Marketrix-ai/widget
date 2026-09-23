@@ -6,7 +6,7 @@ import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 
 import * as chatSession from '../services/chatSession';
-import { storageService } from '../services/StorageService';
+import { scopeStorageTo } from '../services/StorageService';
 import { streamClient } from '../services/StreamClient';
 import { openChatTab, openWidget, renderWidget } from './renderWidget';
 
@@ -32,7 +32,7 @@ describe('a host page that denies localStorage outright', () => {
   });
 
   it('still opens, switches tabs, sends a chat message, and lets the visitor drag and resize — warning at most twice total', async () => {
-    storageService.scopeTo({ mtxId: 'storage-denied-1' });
+    scopeStorageTo({ mtxId: 'storage-denied-1' });
 
     const result = renderWidget({ mtxId: 'storage-denied-1' }, { previewMode: false });
     const scope = within(result.container);

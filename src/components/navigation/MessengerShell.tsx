@@ -19,18 +19,16 @@ import { useWidget, useWidgetConfig } from '../../hooks/useWidget';
 import { activeScreenStream, stopScreenShare, subscribeScreenShare } from '../../services/ScreenShareService';
 import { readLocal, scopedKey, writeLocal } from '../../services/StorageService';
 import type { WidgetView } from '../../types';
-import { SCREEN_ACCESS_PROMPT } from '../../utils/chat';
 import { backgroundGradient } from '../../utils/color';
 import { focusablesIn } from '../../utils/dom';
 import { logWarn } from '../../utils/log';
-import type { SuggestedActionItem } from '../../utils/suggestedActions';
 import { getCorner, getPanelPositionStyle, getResizeGrip } from '../../utils/widgetPositioning';
 import { Stack } from '../base/Flex';
 import { Icon } from '../base/Icon';
 import { IconButton } from '../base/IconButton';
 import { LiveDot } from '../base/LiveDot';
 import { HeaderBar } from '../blocks/HeaderBar';
-import { WidgetDialog } from '../blocks/WidgetDialog';
+import { ScreenAccessDialog } from '../blocks/ScreenAccessDialog';
 import { ChatView } from '../views/ChatView';
 import { HomeView } from '../views/HomeView';
 import { ShellTabBar } from './ShellTabBar';
@@ -128,7 +126,6 @@ function parsePx(value: string, fallback: number): number {
 const STORAGE_KEY_NAME = 'marketrix_widget_size';
 
 const WIDGET_VIEWS: readonly WidgetView[] = ['home', 'chat'];
-const isWidgetView = (value: string): value is WidgetView => (WIDGET_VIEWS as readonly string[]).includes(value);
 
 function readStoredSize(storageKey: string): Size | null {
   try {
@@ -275,12 +272,6 @@ export const MessengerShell: React.FC = () => {
 
   const { vertical, horizontal } = getCorner(config.widget_position);
 
-  const handleChipClick = (action: SuggestedActionItem) => {
-    actions.setActiveView('chat');
-    actions.setMode(action.type);
-    void actions.sendTurn(action.text, action.type);
-  };
-
   const screenShareHandler =
     activeView === 'chat' && config.use_screenshare !== false
       ? () => (screenSharing ? stopScreenShare() : setShowScreenAccessDialog(true))
@@ -308,16 +299,12 @@ export const MessengerShell: React.FC = () => {
       }}
     >
       {showScreenAccessDialog && (
-        <WidgetDialog
+        <ScreenAccessDialog
           onClose={() => setShowScreenAccessDialog(false)}
-          title={SCREEN_ACCESS_PROMPT}
-          description='By allowing screen access, Marketrix can understand your current context to guide you better and complete tasks on your behalf.'
           onConfirm={() => {
             setShowScreenAccessDialog(false);
             void actions.allowScreenAccess();
           }}
-          confirmLabel='Yes'
-          cancelLabel='No'
           finalFocusRef={messageInputRef}
         />
       )}
@@ -344,7 +331,8 @@ export const MessengerShell: React.FC = () => {
       <Tabs.Root
         value={activeView}
         onValueChange={value => {
-          if (typeof value === 'string' && isWidgetView(value)) actions.setActiveView(value);
+          const view = WIDGET_VIEWS.find(candidate => candidate === value);
+          if (view) actions.setActiveView(view);
         }}
         render={<Stack grow minHeight='0' />}
       >
@@ -355,7 +343,7 @@ export const MessengerShell: React.FC = () => {
             data-direction={navDirection}
             style={{ width: '100%', height: '100%' }}
           >
-            <HomeView onChipClick={handleChipClick} />
+            <HomeView />
           </Tabs.Panel>
           <Tabs.Panel
             value='chat'

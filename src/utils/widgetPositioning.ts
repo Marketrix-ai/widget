@@ -9,6 +9,7 @@
  */
 import type React from 'react';
 
+import { WidgetSettingsDataSchema } from '../sdk/contracts/widgetSettings';
 import type { WidgetPosition } from '../types';
 
 const EDGE_OFFSET_PX = 20;
@@ -20,12 +21,10 @@ const CORNERS = {
   top_left: { vertical: 'top', horizontal: 'left' },
 } as const;
 
-const CORNER_NAMES = Object.keys(CORNERS) as WidgetPosition[];
-
 export const getCorner = (position: WidgetPosition) => CORNERS[position];
 
 export const isWidgetPosition = (value: unknown): value is WidgetPosition =>
-  CORNER_NAMES.includes(value as WidgetPosition);
+  typeof value === 'string' && Object.hasOwn(CORNERS, value);
 
 export const getPanelPositionStyle = (position: WidgetPosition): React.CSSProperties => {
   const { vertical, horizontal } = getCorner(position);
@@ -75,7 +74,7 @@ export const getNearestCornerByTranslation = (
 
   let nearest: WidgetPosition = position;
   let minDist = Infinity;
-  for (const candidate of CORNER_NAMES) {
+  for (const candidate of WidgetSettingsDataSchema.shape.widget_position.options) {
     const target = getAnchorTopLeft(candidate, vw, vh, w, h);
     const dist = Math.hypot(x - target.x, y - target.y);
     if (dist < minDist) {

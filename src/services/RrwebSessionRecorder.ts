@@ -1,6 +1,6 @@
 /**
  * Per-chat rrweb session recorder: captures the host page as an rrweb event stream and ships it to the
- * api as one `rrweb/metadata` command followed by `rrweb/events` batches. `index.tsx` constructs one
+ * api as one `rrweb/metadata` command followed by `rrweb/events` batches. `mount.tsx` constructs one
  * only when `widget_recording` is enabled, so this file is the whole recording feature.
  *
  * `start()` waits for the chat's stream to register (the api only accepts commands into a registered

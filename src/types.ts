@@ -2,12 +2,12 @@
  * Widget-wide shared types: the config shapes a host supplies, the chat message/part model, and the UI
  * store shape. `messageText` joins a message's text parts into the string a render site displays.
  *
- * `MarketrixConfig` is deliberately flat so api settings spread straight into it; `mtxApp` is stamped
- * internally after validation rather than taken as input, since a bare application id is guessable and
- * authenticates nothing. `ValidWidgetConfig` is a `MarketrixConfig` that has passed `parseWidgetSettings`.
- * `ChatMessage` is the stored message shape plus the two fields a reload cannot keep. `kind` is the one
- * discriminant a render site branches on; `taskStatus`/`MessagePart.status` are presentational labels
- * only, not the `task/status` wire vocabulary.
+ * `MarketrixConfig` is what a host passes: credentials plus the client-owned options, never a dashboard
+ * setting, since the api's settings always win. `ValidWidgetConfig` is the rendered config the runtime
+ * reads; `mtxApp` is stamped only after the credentials resolve, since a bare application id is guessable.
+ * `ChatMessage` is a stored message or a live screen share, which a reload cannot keep; `kind` is the one
+ * discriminant. `taskStatus`/`MessagePart.status` are presentational labels only, not the `task/status`
+ * wire vocabulary.
  */
 import type { InstructionType, WidgetSettingsData } from './sdk';
 import type { StoredMessage } from './services/StorageService';
@@ -17,25 +17,25 @@ export type { InstructionType, WidgetSettingsData } from './sdk';
 
 export interface ClientOwnedConfig {
   mtxApiHost?: string;
-  userId?: number;
   widget_position_z_index?: number;
   show_widget?: boolean;
   use_screenshare?: boolean;
   styleNonce?: string;
 }
 
-export type MarketrixConfig = Partial<WidgetRenderedSettings> &
-  ClientOwnedConfig & {
-    mtxId?: string;
-    mtxKey?: string;
-    mtxApp?: number;
-    isPreviewMode?: boolean;
-  };
+export type MarketrixConfig = ClientOwnedConfig & { mtxId: string; mtxKey: string };
 
-export type ValidWidgetConfig = MarketrixConfig &
-  Required<Pick<MarketrixConfig, keyof WidgetRenderedSettings | 'isPreviewMode'>>;
+export type ValidWidgetConfig = WidgetRenderedSettings &
+  ClientOwnedConfig & { mtxId?: string; mtxKey?: string; mtxApp?: number; isPreviewMode: boolean };
 
-export type ChatMessage = Omit<StoredMessage, 'timestamp'> & { timestamp: Date; videoStream?: MediaStream };
+type ScreenshareMessage = Omit<Extract<StoredMessage, { kind: 'system' }>, 'kind'> & {
+  kind: 'screenshare';
+  videoStream: MediaStream;
+};
+
+export type ChatMessage = StoredMessage | ScreenshareMessage;
+
+export type AgentMessage = Extract<ChatMessage, { kind: 'agent' }>;
 
 export type MessagePart = ChatMessage['parts'][number];
 

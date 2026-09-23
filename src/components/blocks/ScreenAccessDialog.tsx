@@ -1,8 +1,8 @@
 /**
- * The widget's one modal: a Base UI dialog, open while rendered, with a title, description and a
- * cancel/confirm button pair, skinned by `index.css`'s `mtx-dialog-*` rules.
+ * The widget's one modal: the Base UI dialog asking the visitor for screen access, open while rendered,
+ * skinned by `index.css`'s `mtx-dialog-*` rules.
  *
- * `WidgetDialog` renders into the portal container published by the widget root rather than the default
+ * `ScreenAccessDialog` renders into the portal container published by the widget root rather than the default
  * target, so it picks up the tenant's theme tokens instead of falling back to the hardcoded palette.
  * `finalFocusRef` is passed explicitly because Base UI's own focus restore breaks inside a closed shadow
  * root and would otherwise hand focus back to the host page on close.
@@ -12,28 +12,17 @@ import React from 'react';
 
 import { usePortalContainer } from '../../context/WidgetProviders';
 import { getElevationStyle, LAYER_TOKENS } from '../../design-system/component-tokens';
+import { SCREEN_ACCESS_PROMPT } from '../../utils/chat';
 import { Button } from '../base/Button';
 import { Flex } from '../base/Flex';
 
-interface WidgetDialogProps {
+interface ScreenAccessDialogProps {
   onClose: () => void;
-  title: string;
-  description: string;
   onConfirm: () => void;
-  confirmLabel: string;
-  cancelLabel: string;
   finalFocusRef: React.RefObject<HTMLElement | null>;
 }
 
-export const WidgetDialog: React.FC<WidgetDialogProps> = ({
-  onClose,
-  title,
-  description,
-  onConfirm,
-  confirmLabel,
-  cancelLabel,
-  finalFocusRef,
-}) => {
+export const ScreenAccessDialog: React.FC<ScreenAccessDialogProps> = ({ onClose, onConfirm, finalFocusRef }) => {
   const portalContainer = usePortalContainer();
 
   return (
@@ -50,19 +39,18 @@ export const WidgetDialog: React.FC<WidgetDialogProps> = ({
           finalFocus={finalFocusRef}
           style={{ ...getElevationStyle('panel'), zIndex: LAYER_TOKENS.dialog }}
         >
-          <Dialog.Title className='mtx-dialog-title'>{title}</Dialog.Title>
-          <Dialog.Description className='mtx-dialog-description'>{description}</Dialog.Description>
+          <Dialog.Title className='mtx-dialog-title'>{SCREEN_ACCESS_PROMPT}</Dialog.Title>
+          <Dialog.Description className='mtx-dialog-description'>
+            By allowing screen access, Marketrix can understand your current context to guide you better and complete
+            tasks on your behalf.
+          </Dialog.Description>
           <Flex gap='md' justify='end'>
-            {(
-              [
-                ['secondary', cancelLabel, onClose],
-                ['primary', confirmLabel, onConfirm],
-              ] as const
-            ).map(([variant, label, act]) => (
-              <Button key={variant} variant={variant} size='sm' shape='pill' onClick={act}>
-                {label}
-              </Button>
-            ))}
+            <Button variant='secondary' size='sm' shape='pill' onClick={onClose}>
+              No
+            </Button>
+            <Button variant='primary' size='sm' shape='pill' onClick={onConfirm}>
+              Yes
+            </Button>
           </Flex>
         </Dialog.Popup>
       </Dialog.Portal>

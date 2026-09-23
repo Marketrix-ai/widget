@@ -7,16 +7,15 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'bun:test';
 import React from 'react';
 
-import { useWidget } from '../hooks/useWidget';
-import * as chatSession from '../services/chatSession';
-import * as StorageService from '../services/StorageService';
-import { type ChatSnapshot, storageService } from '../services/StorageService';
-import { streamClient } from '../services/StreamClient';
-import { agentMessage, flushMicrotasks, getMockWidgetConfig } from '../test/fixtures';
+import { useWidget } from '../../hooks/useWidget';
+import * as chatSession from '../../services/chatSession';
+import * as StorageService from '../../services/StorageService';
+import { streamClient } from '../../services/StreamClient';
+import { agentMessage, flushMicrotasks, getMockWidgetConfig } from '../../test/fixtures';
 
 const LIVE = getMockWidgetConfig({ isPreviewMode: false });
-import { useUIStateContext } from './UIStateContext';
-import { WidgetProviders } from './WidgetProviders';
+import { useUIStateContext } from '../UIStateContext';
+import { WidgetProviders } from '../WidgetProviders';
 
 const ErrorProbe = () => {
   const { uiState } = useUIStateContext();
@@ -54,18 +53,17 @@ describe('WidgetProviders initialization', () => {
   });
 
   it('keeps the stored transcript when the widget is mounted a second time in the same page', async () => {
-    storageService.updateContext({
-      chat_id: 'chat-1',
+    StorageService.setChatId('chat-1');
+    StorageService.writeChatSnapshot({
+      currentMode: 'tell',
+      isOpen: false,
       messages: [
-        {
-          ...agentMessage({
-            mode: undefined,
-            isPlaceholder: undefined,
-            placeholderState: undefined,
-            parts: [{ type: 'text', content: 'hello' }],
-          }),
-          timestamp: new Date('2026-01-01T00:00:00.000Z').toISOString(),
-        },
+        agentMessage({
+          mode: undefined,
+          isPlaceholder: undefined,
+          placeholderState: undefined,
+          parts: [{ type: 'text', content: 'hello' }],
+        }),
       ],
     });
     vi.spyOn(chatSession, 'getOrCreateChatId').mockResolvedValue('chat-1');
@@ -85,7 +83,7 @@ describe('WidgetProviders initialization', () => {
       </WidgetProviders>,
     );
 
-    expect(storageService.getContext().messages.map(msg => msg.id)).toEqual(['agent-1']);
+    expect(StorageService.readChatSnapshot().messages.map(msg => msg.id)).toEqual(['agent-1']);
   });
 
   it('starts with no task running, whatever a previous page left on disk', async () => {
@@ -96,7 +94,7 @@ describe('WidgetProviders initialization', () => {
       currentMode: 'tell',
       isOpen: false,
       isTaskRunning: true,
-    } as ChatSnapshot);
+    } as StorageService.ChatSnapshot);
 
     render(
       <WidgetProviders config={LIVE}>
