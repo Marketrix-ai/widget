@@ -6,7 +6,8 @@
 import { eventIterator, oc } from '@orpc/contract';
 import { z } from 'zod';
 
-import { paginatedListOf, PaginationSchema, RrwebEventSchema, SuccessSchema } from './common';
+import { paginatedListOf, PaginationSchema, SuccessSchema } from './common';
+import { RrwebEventSchema } from './rrweb';
 import {
   ApplicationWidgetEntitySchema,
   ApplicationWidgetPublicSchema,

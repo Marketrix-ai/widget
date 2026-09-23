@@ -1,13 +1,14 @@
 /**
  * The Support Widget's settings and entity schemas, zod only, so the widget bundle and the dashboard read them
  * without pulling in the widget procedures: widget and instruction types, chips, positions, the settings
- * document with its render constants and writable subset, and the stored and public widget entities.
+ * document with its render constants, writable subset and `DEFAULT_WIDGET_SETTINGS`, and the stored and public
+ * widget entities. A stored settings value is merged over the defaults, so a setting added later reads its
+ * default rather than `undefined` in the bundle.
  * Public Widget projections never expose stored credentials.
  */
 import { z } from 'zod';
 
 export const WidgetTypeSchema = z.enum(['widget']);
-export type WidgetType = z.infer<typeof WidgetTypeSchema>;
 
 export const InstructionTypeSchema = z.enum(['tell', 'show', 'do']);
 
@@ -50,6 +51,32 @@ export const WidgetSettingsDataSchema = z.strictObject({
 });
 
 export type WidgetSettingsData = z.infer<typeof WidgetSettingsDataSchema>;
+
+export const DEFAULT_WIDGET_SETTINGS: WidgetSettingsData = {
+  widget_enabled: true,
+  widget_appearance: 'default',
+  widget_position: 'bottom_right',
+  widget_header: 'Marketrix AI',
+  widget_body: 'How can I help you today?',
+  widget_greeting: 'Hey There!',
+  widget_greeting_toast: true,
+  widget_recording: false,
+  widget_feature_tell: true,
+  widget_feature_show: true,
+  widget_feature_do: true,
+  widget_background_color: '#f5f5f5',
+  widget_text_color: '#787878',
+  widget_border_color: 'rgba(255, 255, 255, 0.3)',
+  widget_accent_color: '#303030',
+  widget_secondary_color: '#707070',
+  widget_border_radius: '12px',
+  widget_font_size: '14px',
+  widget_width: '360px',
+  widget_height: '450px',
+  widget_animation_duration: '300ms',
+  widget_fade_duration: '200ms',
+  widget_chips: [],
+};
 
 export const WIDGET_RENDER_CONSTANTS = [
   'widget_border_radius',
