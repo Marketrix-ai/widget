@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 import * as chatSession from '../services/chatSession';
 import { scopeStorageTo } from '../services/StorageService';
 import { streamClient } from '../services/StreamClient';
-import { openChatTab, openWidget, renderWidget } from './renderWidget';
+import { openChatTab, openWidget, renderWidget } from '../test/renderWidget';
 
 describe('a host page that denies localStorage outright', () => {
   let warnSpy: ReturnType<typeof vi.spyOn>;

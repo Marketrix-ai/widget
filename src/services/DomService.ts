@@ -1,8 +1,7 @@
 /**
  * The numbered address space the agent drives the host page by. `reindexAndSnapshot` indexes every
  * element `isIndexable` accepts and returns a document clone with `data-id="<n>"` stamped on each;
- * `getSequenceForElement` reverses that lookup; `getValidatedElement` resolves an index back to a live
- * element or an error reason; `notInteractableReason` explains why an element can't be acted on.
+ * `getValidatedElement` resolves an index back to a live element or an error reason; `notInteractableReason` explains why an element can't be acted on.
  * `domService` is the process-wide singleton.
  *
  * Each indexed entry snapshots a few identity attributes, so an element that changed between turns is
@@ -21,14 +20,10 @@ interface IndexedElement {
   identity: Array<string | null>;
 }
 
-interface ValidatedElementResult {
-  element: HTMLElement | null;
-  error?: string;
-}
+type ValidatedElementResult = { element: HTMLElement; error?: undefined } | { element: null; error: string };
 
 export class DomService {
   private index: Map<number, IndexedElement> = new Map();
-  private elementToSequence: WeakMap<Element, number> = new WeakMap();
 
   private generateAnchoredSelector(element: Element): string {
     const path: string[] = [];
@@ -57,7 +52,6 @@ export class DomService {
 
   private indexElements(): void {
     this.index.clear();
-    this.elementToSequence = new WeakMap();
 
     let sequenceNumber = 0;
     for (const element of document.body.querySelectorAll<HTMLElement>('*')) {
@@ -67,7 +61,6 @@ export class DomService {
         selector: this.generateAnchoredSelector(element),
         identity: IDENTITY_ATTRIBUTES.map(attribute => element.getAttribute(attribute)),
       });
-      this.elementToSequence.set(element, sequenceNumber);
       sequenceNumber++;
     }
   }
@@ -86,10 +79,6 @@ export class DomService {
     }
 
     return clone.outerHTML;
-  }
-
-  getSequenceForElement(element: Element): number | undefined {
-    return this.elementToSequence.get(element);
   }
 
   notInteractableReason(element: HTMLElement, index: number): string | null {

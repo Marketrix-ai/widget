@@ -2,7 +2,7 @@
  * The widget's mount lifecycle behind `index.tsx`: the closed-shadow host, the React root, the one live
  * widget, and the script-tag auto-init path.
  *
- * `createWidgetContainer` opens the shadow root; `renderWidget` renders one widget and returns its teardown.
+ * `renderWidget` renders one widget into its own closed shadow root and returns its teardown.
  * `initWidget` resolves credentials and mounts, coalescing concurrent calls; `mountPreview` mounts settings
  * with no api; `unmountWidget` tears everything down, including the show-mode overlay outside the shadow
  * root; `updateMarketrixConfig` re-mounts with new client options. `showHostPageNotice` toasts before the
@@ -37,7 +37,7 @@ import { errorMessage } from './utils/errors';
 
 declare global {
   interface Window {
-    __mtx?: { state?: 'initializing' | 'active' } | undefined;
+    __mtx?: { state: 'initializing' | 'active' } | undefined;
   }
 }
 
@@ -54,7 +54,7 @@ let lifecycleGeneration = 0;
 let rrwebSessionRecorder: RrwebSessionRecorder | null = null;
 let noticeRoot: Root | null = null;
 
-const attachShadowMount = (container: HTMLElement, mountId: string, styleNonce?: string) => {
+const attachShadowMount = (container: HTMLElement, mountId: string, styleNonce?: string | undefined) => {
   const shadowRoot = container.attachShadow({ mode: 'closed' });
 
   const styleEl = document.createElement('style');
@@ -69,23 +69,18 @@ const attachShadowMount = (container: HTMLElement, mountId: string, styleNonce?:
   return { shadowRoot, mountEl };
 };
 
-export const createWidgetContainer = (parentContainer?: HTMLElement, styleNonce?: string) => {
+export function renderWidget(config: ValidWidgetConfig, host?: HTMLElement): () => void {
   const container = document.createElement('div');
   container.className = WIDGET_SHADOW_HOST_CLASS;
   container.style.pointerEvents = 'auto';
-  if (parentContainer) {
+  if (host) {
     Object.assign(container.style, { width: '100%', height: '100%', position: 'relative', overflow: 'visible' });
   }
-  (parentContainer ?? document.body).appendChild(container);
+  (host ?? document.body).appendChild(container);
 
-  const { shadowRoot, mountEl } = attachShadowMount(container, 'marketrix-widget-root', styleNonce);
+  const { mountEl } = attachShadowMount(container, 'marketrix-widget-root', config.styleNonce);
   Object.assign(mountEl.style, { pointerEvents: 'auto', width: '100%', height: '100%', position: 'relative' });
 
-  return { container, shadowRoot, mountEl };
-};
-
-export function renderWidget(config: ValidWidgetConfig, host?: HTMLElement): () => void {
-  const { container, mountEl } = createWidgetContainer(host, config.styleNonce);
   const root = createRoot(mountEl);
   root.render(
     <React.StrictMode>
@@ -140,7 +135,7 @@ async function initWidgetInternal(config: MarketrixConfig, host: HTMLElement | u
   showHostPageNotice('Loading widget settings...');
   let finalConfig: CredentialedConfig;
   try {
-    configureSdk(config.mtxApiHost ?? '');
+    configureSdk(config.mtxApiHost);
     finalConfig = await loadWidgetConfig(config);
   } catch (error) {
     if (generation !== lifecycleGeneration) return;
@@ -170,7 +165,7 @@ async function initWidgetInternal(config: MarketrixConfig, host: HTMLElement | u
 
 export const initWidget = (config: MarketrixConfig, host?: HTMLElement): Promise<void> => {
   if (initPromise) return initPromise;
-  if (window.__mtx?.state) return Promise.resolve();
+  if (window.__mtx) return Promise.resolve();
 
   const generation = ++lifecycleGeneration;
   const pending = initWidgetInternal(config, host, generation).finally(() => {
@@ -238,7 +233,7 @@ function hideHostPageNotice(): void {
 }
 
 export const autoInitializeWidget = (): void => {
-  if (window.__mtx?.state) return;
+  if (window.__mtx) return;
 
   const scripts = document.querySelectorAll('script[mtx-id]');
   const script = scripts[scripts.length - 1];

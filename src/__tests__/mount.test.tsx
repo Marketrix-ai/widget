@@ -9,6 +9,7 @@ import { resolve } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'bun:test';
 
 import * as WidgetService from '../services/WidgetService';
+import { getMockWidgetConfig } from '../test/fixtures';
 
 const loaderSource = readFileSync(resolve(process.cwd(), 'public/loader.js'), 'utf8');
 
@@ -147,33 +148,38 @@ describe('widget public entry paths', () => {
     document.body.appendChild(parent);
 
     const first = await importMount();
-    first.createWidgetContainer(parent);
-    first.createWidgetContainer(parent);
+    first.renderWidget(getMockWidgetConfig(), parent);
+    first.renderWidget(getMockWidgetConfig(), parent);
 
     const reExecuted = await importMount();
-    reExecuted.createWidgetContainer(parent);
+    reExecuted.renderWidget(getMockWidgetConfig(), parent);
 
     expect(parent.querySelectorAll('.marketrix-widget-container')).toHaveLength(3);
   });
 
   it('owns non-empty widget CSS inside the closed shadow root', async () => {
-    const { createWidgetContainer } = await importMount();
+    const { renderWidget } = await importMount();
+    const attach = vi.spyOn(HTMLElement.prototype, 'attachShadow');
 
-    const { shadowRoot } = createWidgetContainer();
+    renderWidget(getMockWidgetConfig());
 
-    const styles = shadowRoot.querySelectorAll('style');
+    const styles = (attach.mock.results[0]?.value as ShadowRoot).querySelectorAll('style');
     expect(styles).toHaveLength(1);
-    expect(styles[0].textContent?.trim()).toBeTruthy();
+    expect(styles[0]?.textContent?.trim()).toBeTruthy();
     expect(document.head.querySelector('style')).toBeNull();
   });
 
   it('leaves the injected style element without a nonce by default, and applies one when given', async () => {
-    const { createWidgetContainer } = await importMount();
+    const { renderWidget } = await importMount();
+    const attach = vi.spyOn(HTMLElement.prototype, 'attachShadow');
 
-    const bare = createWidgetContainer();
-    expect(bare.shadowRoot.querySelector('style')?.nonce).toBe('');
+    renderWidget(getMockWidgetConfig());
+    renderWidget(getMockWidgetConfig({ styleNonce: 'csp-nonce-123' }));
 
-    const nonced = createWidgetContainer(undefined, 'csp-nonce-123');
-    expect(nonced.shadowRoot.querySelector('style')?.nonce).toBe('csp-nonce-123');
+    const [bare, nonced] = attach.mock.results.map(
+      result => (result.value as ShadowRoot).querySelector('style')?.nonce,
+    );
+    expect(bare).toBe('');
+    expect(nonced).toBe('csp-nonce-123');
   });
 });

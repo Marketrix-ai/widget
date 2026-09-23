@@ -22,6 +22,7 @@ import { streamClient } from '../services/StreamClient';
 import type { CredentialedConfig } from '../services/WidgetService';
 import * as WidgetService from '../services/WidgetService';
 import { agentMessage, credentialedConfig, mountTarget, validSettings } from '../test/fixtures';
+import type { MarketrixConfig } from '../types';
 
 const expectNotMounted = (container: HTMLElement) => {
   expect(container.querySelector('.marketrix-widget-container')).toBeNull();
@@ -131,7 +132,7 @@ describe('public widget lifecycle', () => {
     const container = mountTarget();
     document.body.append(container);
 
-    await initWidget({ mtxId: 'no-host', mtxKey: 'key' }, container);
+    await initWidget({ mtxId: 'no-host', mtxKey: 'key' } as MarketrixConfig, container);
 
     expect(load).not.toHaveBeenCalled();
     expectNotMounted(container);

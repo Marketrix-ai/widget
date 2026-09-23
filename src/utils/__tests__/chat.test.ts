@@ -49,15 +49,15 @@ describe('findMessageForProgress', () => {
 
 describe('progress-line lookup and failure text', () => {
   it('finds and completes the open progress line even at part index 0', () => {
-    const msg = addProgressLine(agentReply(), 'click', 'clicking');
+    const msg = addProgressLine(agentReply(), 'click_element', 'clicking');
     expect(msg.parts).toHaveLength(1);
-    const completed = markProgressLineComplete(msg, 'click');
+    const completed = markProgressLineComplete(msg, 'click_element');
     expect(completed.parts[0]?.status).toBe('completed');
   });
 
   it('patches the existing open line at index 0 in place, rather than appending a second one', () => {
-    const first = addProgressLine(agentReply(), 'click', 'clicking');
-    const second = addProgressLine(first, 'click', 'still clicking');
+    const first = addProgressLine(agentReply(), 'click_element', 'clicking');
+    const second = addProgressLine(first, 'click_element', 'still clicking');
     expect(second.parts).toHaveLength(1);
     expect(second.parts[0]?.content).toBe('still clicking');
   });
@@ -70,8 +70,8 @@ describe('progress-line lookup and failure text', () => {
     ],
     ['keeps the original content unchanged when there is no error text', '', 'clicking the button'],
   ] as const)('%s', (_case, error, expectedContent) => {
-    const msg = addProgressLine(agentReply(), 'click', 'clicking the button');
-    const failed = markProgressLineFailed(msg, 'click', error);
+    const msg = addProgressLine(agentReply(), 'click_element', 'clicking the button');
+    const failed = markProgressLineFailed(msg, 'click_element', error);
     expect(failed.parts[0]?.content).toBe(expectedContent);
   });
 });

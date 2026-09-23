@@ -11,7 +11,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { StandardRPCJsonSerializer, StandardRPCSerializer } from '@orpc/client/standard';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'bun:test';
 
-import { validSettings } from './fixtures';
+import { validSettings } from '../test/fixtures';
 
 const testDir = fileURLToPath(new URL('.', import.meta.url));
 const root = resolve(testDir, '../..');

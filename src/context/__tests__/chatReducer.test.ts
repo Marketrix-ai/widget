@@ -7,7 +7,7 @@ import { describe, expect, it } from 'bun:test';
 
 import type { WidgetEvent } from '../../sdk';
 import { agentMessage, ofKind } from '../../test/fixtures';
-import { type AgentMessage, messageText } from '../../types';
+import { type AgentMessage, type InstructionType, messageText } from '../../types';
 import { CHAT_FAILURE_TEXT } from '../../utils/chat';
 import {
   type ChatState,
@@ -26,9 +26,12 @@ const expectNoOp = (result: ReduceResult, state: ChatState) => {
   expect(result.toolRuns).toEqual([]);
 };
 
-const runningState = (overrides: Partial<AgentMessage> = {}): ChatState => ({
+const runningState = (
+  overrides: Partial<AgentMessage> = {},
+  mode: InstructionType = overrides.mode ?? 'do',
+): ChatState => ({
   messages: [agentMessage(overrides)],
-  task: { phase: 'running' },
+  task: { phase: 'running', mode },
 });
 
 const idleState = (): ChatState => ({ ...runningState({ placeholderState: undefined }), task: { phase: 'idle' } });
@@ -106,7 +109,7 @@ describe('reduceTransportFailure', () => {
   it('settles every pending bubble into an error and ends the task', () => {
     const state: ChatState = {
       messages: [agentMessage({ id: 'settled', isPlaceholder: false }), agentMessage({ id: 'pending' })],
-      task: { phase: 'running' },
+      task: { phase: 'running', mode: 'do' },
     };
     const result = reduceTransportFailure(state, 'Could not reconnect to the assistant. Try again.');
 
@@ -128,10 +131,10 @@ describe('reduceStaleReply', () => {
     expect(messageText(result.messages[0]!.parts)).toBe('This is taking longer than expected. Please try again.');
   });
 
-  it.each(['running', 'idle'] as const)(
-    'settles a placeholder gone silent for the deadline whether its task is still %s or a reload left it behind',
-    phase => {
-      const state: ChatState = { messages: [agentMessage()], task: { phase } };
+  it.each([{ phase: 'running', mode: 'do' } as const, { phase: 'idle' } as const])(
+    'settles a placeholder gone silent for the deadline whether its task is still $phase or a reload left it behind',
+    task => {
+      const state: ChatState = { messages: [agentMessage()], task };
       const result = reduceStaleReply(state, 'agent-1', 'timeout text');
 
       expect(ofKind(result.messages[0], 'agent').isPlaceholder).toBe(false);
@@ -142,7 +145,7 @@ describe('reduceStaleReply', () => {
   it('never overwrites a running task paused on the visitor, even with no text yet', () => {
     const state: ChatState = {
       messages: [agentMessage({ placeholderState: 'waiting-for-user', parts: [] })],
-      task: { phase: 'running' },
+      task: { phase: 'running', mode: 'do' },
     };
     expect(reduceStaleReply(state, 'agent-1', 'timeout text')).toBe(state);
   });
@@ -201,7 +204,7 @@ describe('reduceEvent — tool/call', () => {
   });
 
   it('falls back to event.mode then "do" when currentMode is absent on the call', () => {
-    const result = reduceEvent(runningState(), toolCall({ mode: 'show' }), 'show');
+    const result = reduceEvent(runningState({}, 'show'), toolCall({ mode: 'show' }), 'show');
     expect(result.toolRuns[0]!.mode).toBe('show');
   });
 });
@@ -311,7 +314,8 @@ describe('reduceToolProgress / reduceToolDone / reduceStop', () => {
 
   it('closes the line of the tool that finished, not the newest open one', () => {
     const twoOpen = reduceEvent(
-      reduceEvent(runningState(), toolCall({ tool_call_id: 'c1', explanation: 'click_element' }), 'show').state,
+      reduceEvent(runningState({}, 'show'), toolCall({ tool_call_id: 'c1', explanation: 'click_element' }), 'show')
+        .state,
       { type: 'tool/call', tool_call_id: 'c2', browser_tool: 'get_html', args: {}, explanation: 'get_html' },
       'show',
     ).state;
@@ -373,7 +377,7 @@ describe('reduceToolProgress / reduceToolDone / reduceStop', () => {
       isPlaceholder: false,
       parts: [{ type: 'text', content: 'Old answer' }],
     });
-    const state: ChatState = { messages: [oldReply, agentMessage()], task: { phase: 'running' } };
+    const state: ChatState = { messages: [oldReply, agentMessage()], task: { phase: 'running', mode: 'do' } };
 
     const afterFirst = reduceToolDone(state, 'do', true);
     expect(ofKind(afterFirst.messages[1], 'agent').taskStatus).toBe('done');
@@ -452,7 +456,7 @@ describe('a message reports the text it shows', () => {
   it('carries every text part, not only the last one written', () => {
     const state: ChatState = {
       messages: [agentMessage({ parts: [{ type: 'text', content: 'first' }] })],
-      task: { phase: 'running' },
+      task: { phase: 'running', mode: 'do' },
     };
 
     const event: WidgetEvent = { type: 'chat/response', request_id: 'agent-1', text: 'second' };

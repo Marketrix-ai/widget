@@ -13,7 +13,12 @@ import { SHADOW } from '../../design-system/component-tokens';
 import { WIDGET_RADIUS_PX } from '../../design-system/semantic-tokens';
 import { useWidget, useWidgetConfig } from '../../hooks/useWidget';
 import type { WidgetPosition } from '../../types';
-import { getAnchorTopLeft, getNearestCornerByTranslation, getPanelPositionStyle } from '../../utils/widgetPositioning';
+import {
+  getAnchorTopLeft,
+  getCorner,
+  getNearestCornerByTranslation,
+  getPanelPositionStyle,
+} from '../../utils/widgetPositioning';
 import { Avatar } from '../base/Avatar';
 import { Button } from '../base/Button';
 import { Flex } from '../base/Flex';
@@ -367,7 +372,7 @@ export const WidgetFab: React.FC<WidgetFabProps> = ({ onPositionCommit }) => {
             variant='secondary'
             size='sm'
             className='mtx-fab-stop'
-            data-side={position.includes('left') ? 'left' : 'right'}
+            data-side={getCorner(position).horizontal}
             onClick={() => void actions.stopTask()}
           >
             Stop

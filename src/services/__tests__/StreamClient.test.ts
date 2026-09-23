@@ -21,11 +21,9 @@ interface StreamClientInternals {
   tornDown: StreamClient['tornDown'];
   credentialRejected: StreamClient['credentialRejected'];
   reconnectAttempts: StreamClient['reconnectAttempts'];
-  maxReconnectAttempts: StreamClient['maxReconnectAttempts'];
   scheduleReconnect: StreamClient['scheduleReconnect'];
   handleMessage: StreamClient['handleMessage'];
   isConnected: StreamClient['isConnected'];
-  waitUntilRegistered: StreamClient['waitUntilRegistered'];
 }
 
 function internals(client: StreamClient): StreamClientInternals {
@@ -42,6 +40,14 @@ function emptyStream(): MockedStream {
   return asMockedStream({
     async *[Symbol.asyncIterator]() {},
   });
+}
+
+async function awaitingRegistration(client: StreamClient, chatId: string): Promise<{ registration: Promise<void> }> {
+  const connect = vi.spyOn(client, 'connect').mockResolvedValue();
+  const registration = client.ready(chatId);
+  connect.mockRestore();
+  await flushMicrotasks();
+  return { registration };
 }
 
 function freshClient(): StreamClient {
@@ -119,7 +125,7 @@ afterEach(() => {
 describe('StreamClient registration lifecycle', () => {
   it('rejects old registration waiters on disconnect without leaking into a remount', async () => {
     const client = freshClient();
-    const registration = internals(client).waitUntilRegistered();
+    const { registration } = await awaitingRegistration(client, 'old-chat');
 
     client.disconnect();
 
@@ -128,7 +134,7 @@ describe('StreamClient registration lifecycle', () => {
     const inner = internals(client);
     inner.chatId = 'new-chat';
     inner.tornDown = false;
-    const remountRegistration = internals(client).waitUntilRegistered();
+    const { registration: remountRegistration } = await awaitingRegistration(client, 'new-chat');
     inner.handleMessage({ type: 'registered', chat_id: 'new-chat' });
 
     await expect(remountRegistration).resolves.toBeUndefined();
@@ -137,8 +143,8 @@ describe('StreamClient registration lifecycle', () => {
   it('rejects a pending registration when reconnection gives up, rather than leaving it hanging', async () => {
     const { client, inner } = freshChatClient();
 
-    const registration = internals(client).waitUntilRegistered();
-    inner.reconnectAttempts = inner.maxReconnectAttempts;
+    const { registration } = await awaitingRegistration(client, 'chat-1');
+    inner.reconnectAttempts = 10;
     inner.scheduleReconnect();
 
     await expect(registration).rejects.toBeInstanceOf(StreamGaveUpError);
@@ -147,7 +153,7 @@ describe('StreamClient registration lifecycle', () => {
   it('rejects a pending registration when the credentials are refused', async () => {
     const { client, inner } = freshChatClient();
 
-    const registration = internals(client).waitUntilRegistered();
+    const { registration } = await awaitingRegistration(client, 'chat-1');
     inner.handleMessage({ type: 'chat/error', request_id: 'auth', error: 'unauthorized' });
 
     await expect(registration).rejects.toBeInstanceOf(StreamGaveUpError);
@@ -168,7 +174,7 @@ describe('StreamClient registration lifecycle', () => {
     expect(inner.credentialRejected).toBe(true);
     expect(client.canReconnect()).toBe(false);
 
-    await expect(internals(client).waitUntilRegistered()).rejects.toThrow('credentials were rejected');
+    await expect(client.ready('chat-auth')).rejects.toThrow('credentials were rejected');
   });
 
   it('does not report a stream that has only reached open as connected', () => {
@@ -181,11 +187,9 @@ describe('StreamClient registration lifecycle', () => {
     const { client, inner } = freshChatClient('open');
 
     let registered = false;
-    const pending = internals(client)
-      .waitUntilRegistered()
-      .then(() => {
-        registered = true;
-      });
+    const pending = (await awaitingRegistration(client, 'chat-1')).registration.then(() => {
+      registered = true;
+    });
 
     await flushMicrotasks();
     expect(registered).toBe(false);

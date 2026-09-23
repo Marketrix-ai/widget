@@ -196,9 +196,9 @@ describe('unmountWidget releases the show-mode overlay it does not own via the R
     showModeService
       .showToolAction({
         element: target,
+        index: 0,
         explanation: 'Click this to continue',
         browserToolName: 'click_element',
-        isClickAction: true,
       })
       .catch(() => {});
     return registry;

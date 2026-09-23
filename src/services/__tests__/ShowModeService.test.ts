@@ -14,12 +14,9 @@ const { notInteractableReason } = hoisted(() => ({
   notInteractableReason: vi.fn<() => string | null>(() => null),
 }));
 
-vi.mock(
-  '../DomService',
-  (): { domService: Pick<DomServiceClass, 'getSequenceForElement' | 'notInteractableReason'> } => ({
-    domService: { getSequenceForElement: () => 0, notInteractableReason },
-  }),
-);
+vi.mock('../DomService', (): { domService: Pick<DomServiceClass, 'notInteractableReason'> } => ({
+  domService: { notInteractableReason },
+}));
 
 const makeShowFixture = (html: string) => {
   notInteractableReason.mockReturnValue(null);
@@ -31,9 +28,9 @@ const makeShowFixture = (html: string) => {
 const show = (service: ShowModeService, id: string) =>
   service.showToolAction({
     element: document.getElementById(id) as HTMLElement,
+    index: 0,
     explanation: id,
     browserToolName: 'click_element',
-    isClickAction: true,
   });
 
 const originalGetBoundingClientRect = Element.prototype.getBoundingClientRect;
@@ -133,9 +130,9 @@ describe('a non-click action settles on Continue, not on an element click', () =
     const settled = service
       .showToolAction({
         element: document.getElementById('a') as HTMLElement,
+        index: 0,
         explanation: 'Read this step',
         browserToolName: 'type_text',
-        isClickAction: false,
       })
       .then(
         () => 'resolved',
