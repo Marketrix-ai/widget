@@ -17,7 +17,6 @@ export function getOrCreateChatId(): Promise<string> {
 
   creation ??= (async () => {
     const chatId = await sdk.chatCreate(undefined);
-    if (!chatId) throw new Error('API returned empty chat ID');
     setChatId(chatId);
     return chatId;
   })().finally(() => {
