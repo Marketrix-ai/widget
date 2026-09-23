@@ -191,8 +191,8 @@ export class BrowserToolService {
       if (!document.execCommand('insertText', false, text)) {
         return fail(`Could not insert text into element ${index}`);
       }
-    } else if ('value' in element) {
-      (element as HTMLInputElement).value = text;
+    } else if (element instanceof HTMLSelectElement) {
+      element.value = text;
       element.dispatchEvent(new Event('input', { bubbles: true }));
       element.dispatchEvent(new Event('change', { bubbles: true }));
     } else {

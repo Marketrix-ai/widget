@@ -67,12 +67,7 @@ export type AddWidgetConfig = (
       mtxKey?: never;
       mtxApiHost?: never;
     }
-  | {
-      settings?: never;
-      mtxId: string;
-      mtxKey: string;
-      mtxApiHost: string;
-    }
+  | ({ settings?: never } & Pick<MarketrixConfig, 'mtxId' | 'mtxKey' | 'mtxApiHost'>)
 ) &
   ClientOwnedConfig & { container?: HTMLElement };
 

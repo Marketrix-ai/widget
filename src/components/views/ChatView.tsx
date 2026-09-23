@@ -80,7 +80,7 @@ export const ChatView: React.FC<{ messageInputRef: React.RefObject<HTMLTextAreaE
           onModeChange={handleModeChange}
           disabled={composerLocked}
           taskRunning={isTaskRunning}
-          onStop={() => void actions.stopTask()}
+          onStop={actions.stopTask}
         />
       </Surface>
     </Stack>

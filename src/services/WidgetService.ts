@@ -73,15 +73,15 @@ async function resolveActiveWidget(mtxId: string, mtxKey: string, mtxApiHost: st
 }
 
 export async function loadWidgetConfig(config: MarketrixConfig): Promise<CredentialedConfig> {
-  const { mtxId, mtxKey } = config;
-  const cacheKey = `${mtxId}:${mtxKey}`;
+  const { mtxId, mtxKey, mtxApiHost } = config;
+  const cacheKey = `${mtxApiHost}:${mtxId}:${mtxKey}`;
   let lookup = widgetLookupCache.get(cacheKey);
   if (!lookup) {
-    lookup = resolveActiveWidget(mtxId, mtxKey, config.mtxApiHost);
+    lookup = resolveActiveWidget(mtxId, mtxKey, mtxApiHost);
     widgetLookupCache.set(cacheKey, lookup);
     lookup.catch(() => widgetLookupCache.delete(cacheKey));
   }
 
   const { settings, applicationId } = await lookup;
-  return { ...config, ...settings, mtxId, mtxKey, mtxApp: applicationId, isPreviewMode: false };
+  return { ...config, ...settings, mtxApp: applicationId, isPreviewMode: false };
 }

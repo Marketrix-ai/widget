@@ -34,7 +34,8 @@ import { ShellTabBar } from './ShellTabBar';
 
 function activeElementIn(container: HTMLElement): HTMLElement | null {
   const root = container.getRootNode();
-  return ((root instanceof ShadowRoot ? root.activeElement : document.activeElement) as HTMLElement) ?? null;
+  const active = root instanceof ShadowRoot ? root.activeElement : document.activeElement;
+  return active instanceof HTMLElement ? active : null;
 }
 
 export function useFocusTrap(

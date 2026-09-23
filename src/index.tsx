@@ -38,11 +38,11 @@ export const mountWidget = async (config: AddWidgetConfig): Promise<void> => {
     const { settings, container, ...clientConfig } = config;
     const previewed = previewConfig(settings, clientConfig);
     if (previewed) mountPreview(previewed, container);
-  } else if (config.mtxId !== undefined && config.mtxKey !== undefined) {
+  } else if (config.mtxId !== undefined && config.mtxKey !== undefined && config.mtxApiHost !== undefined) {
     const { container, ...clientConfig } = config;
     await initWidget(clientConfig, container);
   } else {
-    throw new Error('Invalid configuration: provide either settings (preview) or mtxId+mtxKey (production)');
+    throw new Error('Invalid configuration: provide either settings (preview) or mtxId+mtxKey+mtxApiHost (production)');
   }
 };
 

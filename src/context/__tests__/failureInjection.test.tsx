@@ -41,7 +41,7 @@ const Probe = () => {
       <div data-testid='transcript'>{messages.map(m => messageText(m.parts)).join('|')}</div>
       <div data-testid='placeholder-id'>{messages.find(m => m.kind === 'agent' && m.isPlaceholder)?.id ?? ''}</div>
       <button data-testid='send' onClick={() => void actions.sendTurn('hi', 'tell')} />
-      <button data-testid='stop' onClick={() => void actions.stopTask()} />
+      <button data-testid='stop' onClick={actions.stopTask} />
     </div>
   );
 };

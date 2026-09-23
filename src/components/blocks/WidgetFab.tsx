@@ -373,7 +373,7 @@ export const WidgetFab: React.FC<WidgetFabProps> = ({ onPositionCommit }) => {
             size='sm'
             className='mtx-fab-stop'
             data-side={getCorner(position).horizontal}
-            onClick={() => void actions.stopTask()}
+            onClick={actions.stopTask}
           >
             Stop
           </Button>

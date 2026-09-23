@@ -486,7 +486,7 @@ const ErrorProbe = () => {
   return (
     <>
       <div data-testid='error-banner'>{state.error ?? ''}</div>
-      <button data-testid='stop' onClick={() => void actions.stopTask()} />
+      <button data-testid='stop' onClick={actions.stopTask} />
     </>
   );
 };
