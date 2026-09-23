@@ -224,6 +224,18 @@ TypeScript types are bundled with the package:
 
 ---
 
+## Upgrading to 5.0
+
+5.0 narrows the public API. Each removal and what to use instead:
+
+- **Dashboard settings are no longer accepted in `MarketrixConfig`.** The `widget_*` appearance and behaviour keys (`widget_accent_color`, `widget_background_color`, `widget_text_color`, `widget_position`, `widget_greeting`, `widget_chips` and the rest) were always overwritten by the dashboard settings. Set them in the dashboard; to render them before saving, pass them to `MarketrixWidgetPreview` or preview-mode `mountWidget` as `WidgetSettingsData`. `widget_position_z_index` stays, as a `ClientOwnedConfig` option.
+- **`mtxApp` and `isPreviewMode` are no longer config keys**, and `mtxId`/`mtxKey` are now required. The application resolves from your credentials; for a preview, use `MarketrixWidgetPreview` or preview-mode `mountWidget`.
+- **The default export is gone.** Import the named exports instead: `import { initWidget } from '@marketrix.ai/widget'`.
+- **The `WidgetState` and `ChatMessage` types are no longer exported.** Nothing in the public API produced or accepted them, so delete those imports.
+- **With no suggested actions configured, a live widget shows none.** Previously a live widget showed built-in example chips. Those examples now appear only in preview.
+
+---
+
 ## Requirements
 
 - **React 19** (`react`/`react-dom` `^19.2.3`) on the host page — peer dependency, not bundled. The script-tag loader provides it via importmap; npm consumers supply it from their app.
