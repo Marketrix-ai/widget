@@ -194,7 +194,7 @@ export const updateMarketrixConfig = async (newConfig: Partial<MarketrixConfig>)
 
 export const getCurrentConfig = (): ValidWidgetConfig | null => active?.config ?? null;
 
-function showHostPageNotice(message: string, tone: NotificationTone = 'neutral'): void {
+function showHostPageNotice(message: string, tone: NotificationTone = 'info'): void {
   hideHostPageNotice();
 
   const noticeContainer = document.createElement('div');

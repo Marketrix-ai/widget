@@ -12,7 +12,7 @@ import type { CSSProperties } from 'react';
 export type RadiusToken = 'none' | 'sm' | 'md' | 'lg' | 'xl' | 'pill';
 export type TextTone = 'default' | 'muted' | 'faint' | 'inherit';
 export type TextLeading = 'tight' | 'snug' | 'normal' | 'relaxed';
-export type NotificationTone = 'info' | 'error' | 'neutral';
+export type NotificationTone = 'info' | 'error';
 
 export const RADIUS: Record<RadiusToken, string> = {
   none: '0',
@@ -87,14 +87,6 @@ export const notificationToneStyles: Record<
     bodyColor: '#b91c1c',
     closeColor: '#dc2626',
     actionBackground: '#fee2e2',
-  },
-  neutral: {
-    background: 'rgba(255, 255, 255, 0.95)',
-    border: '1px solid rgba(255, 255, 255, 0.2)',
-    titleColor: '#1f2937',
-    bodyColor: '#1f2937',
-    closeColor: '#6b7280',
-    actionBackground: 'transparent',
   },
 };
 
