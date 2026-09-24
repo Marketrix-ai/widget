@@ -13,6 +13,7 @@ import { useChatContext } from '../context/ChatContext';
 import { openScreenAccessRequest } from '../context/chatReducer';
 import { useUIStateContext } from '../context/UIStateContext';
 import type { ValidWidgetConfig, WidgetState } from '../types';
+import { isPending } from '../utils/chat';
 
 export const WidgetConfigContext = createContext<ValidWidgetConfig | null>(null);
 
@@ -27,7 +28,7 @@ export const useWidget = () => {
   const { messages, taskState, chatActions } = useChatContext();
 
   const state = useMemo<WidgetState>(() => {
-    const isAwaitingReply = messages.some(msg => msg.kind === 'agent' && msg.isPlaceholder);
+    const isAwaitingReply = messages.some(isPending);
     return {
       ...uiState,
       messages,

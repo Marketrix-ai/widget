@@ -13,7 +13,7 @@
  */
 import { InstructionTypeSchema } from '../sdk/contracts/widgetSettings';
 import type { WidgetToolName } from '../services/BrowserToolService';
-import type { AgentMessage, ChatMessage, InstructionType, MessagePart, WidgetSettingsData } from '../types';
+import type { AgentMessage, ChatMessage, InstructionType, ProgressPart, WidgetSettingsData } from '../types';
 import { logWarn } from './log';
 import { randomId } from './randomId';
 
@@ -32,6 +32,12 @@ export function effectiveMode(flags: ModeFlags, mode: InstructionType): Instruct
 export const formatMessageTime = (date: Date): string =>
   date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
+export const isPending = (msg: ChatMessage): boolean =>
+  msg.kind === 'agent' && (msg.status === 'thinking' || msg.status === 'waiting-for-user');
+
+export const taskEnded = (msg: ChatMessage): boolean =>
+  msg.kind === 'agent' && (msg.status === 'done' || msg.status === 'failed' || msg.status === 'stopped');
+
 interface FindMessageOptions {
   messages: ChatMessage[];
   isTaskRunning: boolean;
@@ -43,20 +49,17 @@ export function findMessageForProgress({
   isTaskRunning,
   currentMode,
 }: FindMessageOptions): { index: number; message: AgentMessage } | null {
-  const isAgentReply = (msg: ChatMessage): msg is AgentMessage => msg.kind === 'agent' && !msg.taskStatus;
+  const isAgentReply = (msg: ChatMessage): msg is AgentMessage => msg.kind === 'agent' && !taskEnded(msg);
   const modeMatches = (msg: AgentMessage) =>
-    msg.isPlaceholder ? msg.mode === undefined || msg.mode === currentMode : msg.mode === currentMode;
+    isPending(msg) ? msg.mode === undefined || msg.mode === currentMode : msg.mode === currentMode;
 
   const ranked: Array<(msg: AgentMessage) => boolean> = [];
   if (isTaskRunning && (currentMode === 'show' || currentMode === 'do')) {
-    ranked.push(msg => modeMatches(msg) && !!msg.isPlaceholder, modeMatches);
+    ranked.push(msg => modeMatches(msg) && isPending(msg), modeMatches);
   }
-  ranked.push(
-    msg => !!msg.isPlaceholder,
-    () => true,
-  );
+  ranked.push(isPending, () => true);
 
-  const start = messages.findLastIndex(msg => msg.kind === 'agent' && !!msg.taskStatus) + 1;
+  const start = messages.findLastIndex(taskEnded) + 1;
 
   for (const matches of ranked) {
     const index = messages.findLastIndex((msg, i) => i >= start && isAgentReply(msg) && matches(msg));
@@ -70,9 +73,9 @@ export function findMessageForProgress({
   return null;
 }
 
-function patchPart(message: AgentMessage, index: number, patch: Partial<MessagePart>): AgentMessage {
+function patchPart(message: AgentMessage, index: number, patch: Partial<ProgressPart>): AgentMessage {
   const current = message.parts[index];
-  if (!current) return message;
+  if (current?.type !== 'progress') return message;
   const parts = [...message.parts];
   parts[index] = { ...current, ...patch };
   return { ...message, parts };
@@ -106,7 +109,7 @@ export function markProgressLineFailed(
 ): AgentMessage {
   const index = openLineFor(message, browserToolName);
   const part = message.parts[index];
-  if (!part) return message;
+  if (part?.type !== 'progress') return message;
   return patchPart(message, index, {
     status: 'failed',
     content: error ? `${part.content} (${error})` : part.content,
@@ -163,6 +166,5 @@ export const createPlaceholderMessage = (mode: InstructionType): ChatMessage => 
   ...newMessage('agent', ''),
   kind: 'agent',
   mode,
-  isPlaceholder: true,
-  placeholderState: 'thinking',
+  status: 'thinking',
 });

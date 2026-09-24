@@ -24,13 +24,15 @@ const STARTED_TOOL_CALLS_KEY = 'marketrix_started_tool_calls';
 const MAX_STARTED_TOOL_CALLS = 200;
 const CONTEXT_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000;
 
-const MessagePartSchema = z.object({
-  type: z.enum(['text', 'progress']),
-  content: z.string(),
-  status: z.enum(['in_progress', 'completed', 'failed']).optional(),
-  browserToolName: z.enum(WIDGET_TOOL_NAMES).optional(),
-  streaming: z.boolean().optional(),
-});
+const MessagePartSchema = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('text'), content: z.string(), streaming: z.boolean().optional() }),
+  z.object({
+    type: z.literal('progress'),
+    content: z.string(),
+    status: z.enum(['in_progress', 'completed', 'failed']),
+    browserToolName: z.enum(WIDGET_TOOL_NAMES),
+  }),
+]);
 
 const MessageBase = { id: z.string(), timestamp: z.coerce.date(), parts: z.array(MessagePartSchema) };
 
@@ -40,9 +42,7 @@ const MessageSchema = z.discriminatedUnion('kind', [
     ...MessageBase,
     kind: z.literal('agent'),
     mode: InstructionTypeSchema.optional(),
-    isPlaceholder: z.boolean().optional(),
-    placeholderState: z.enum(['thinking', 'waiting-for-user']).optional(),
-    taskStatus: z.enum(['done', 'failed', 'stopped']).optional(),
+    status: z.enum(['thinking', 'waiting-for-user', 'question', 'done', 'failed', 'stopped']).optional(),
   }),
   z.object({ ...MessageBase, kind: z.literal('system') }),
   z.object({

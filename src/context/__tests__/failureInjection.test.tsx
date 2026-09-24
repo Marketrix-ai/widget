@@ -14,7 +14,7 @@ import { asStreamClientInternals, browserToolServiceMock } from '../../test/fixt
 import { ChatHarness } from '../../test/renderWidget';
 import { waitFor } from '../../test/vi-compat';
 import { messageText } from '../../types';
-import { CHAT_FAILURE_TEXT } from '../../utils/chat';
+import { CHAT_FAILURE_TEXT, isPending } from '../../utils/chat';
 import { useChatContext } from '../ChatContext';
 
 const RAW_MARKER = 'PG::ConnectionBad at db_pool.rb:42 — ECONNREFUSED 10.0.4.12:5432';
@@ -39,7 +39,7 @@ const Probe = () => {
       <div data-testid='error'>{state.error ?? ''}</div>
       <div data-testid='awaiting'>{String(state.isAwaitingReply)}</div>
       <div data-testid='transcript'>{messages.map(m => messageText(m.parts)).join('|')}</div>
-      <div data-testid='placeholder-id'>{messages.find(m => m.kind === 'agent' && m.isPlaceholder)?.id ?? ''}</div>
+      <div data-testid='placeholder-id'>{messages.find(isPending)?.id ?? ''}</div>
       <button data-testid='send' onClick={() => void actions.sendTurn('hi', 'tell')} />
       <button data-testid='stop' onClick={actions.stopTask} />
     </div>

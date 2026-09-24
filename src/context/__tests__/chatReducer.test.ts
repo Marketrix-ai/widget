@@ -8,7 +8,7 @@ import { describe, expect, it } from 'bun:test';
 import type { WidgetEvent } from '../../sdk';
 import { agentMessage, ofKind } from '../../test/fixtures';
 import { type AgentMessage, type InstructionType, messageText } from '../../types';
-import { CHAT_FAILURE_TEXT } from '../../utils/chat';
+import { CHAT_FAILURE_TEXT, isPending } from '../../utils/chat';
 import {
   type ChatState,
   reduceDispatch,
@@ -33,7 +33,7 @@ const runningState = (
   task: { phase: 'running', mode },
 });
 
-const idleState = (): ChatState => ({ ...runningState({ placeholderState: undefined }), task: { phase: 'idle' } });
+const idleState = (): ChatState => ({ ...runningState({ status: undefined }), task: { phase: 'idle' } });
 
 const pendingReply = (id = 'req-1'): ChatState => ({
   messages: [agentMessage({ id, parts: [] })],
@@ -62,58 +62,61 @@ describe('reduceEvent — task/status', () => {
     ['completed', 'done'],
     ['failed', 'failed'],
     ['stopped', 'stopped'],
-  ] as const)('%s ends the task and marks the active message %s', (status, taskStatus) => {
+  ] as const)('%s ends the task and marks the active message %s', (status, expected) => {
     const result = reduceEvent(runningState(), { type: 'task/status', status }, 'do');
     expect(result.state.task.phase).toBe('idle');
-    expect(ofKind(result.state.messages[0], 'agent').taskStatus).toBe(taskStatus);
+    expect(ofKind(result.state.messages[0], 'agent').status).toBe(expected);
   });
 
   it('terminal status renders its closing message as an appended text part', () => {
     const event: WidgetEvent = { type: 'task/status', status: 'completed', message: 'All done!' };
     const result = reduceEvent(
-      runningState({ parts: [{ type: 'progress', content: 'Clicking element' }] }),
+      runningState({
+        parts: [
+          { type: 'progress', content: 'Clicking element', status: 'completed', browserToolName: 'click_element' },
+        ],
+      }),
       event,
       'do',
     );
 
     expect(messageText(result.state.messages[0]!.parts)).toBe('All done!');
     expect(result.state.messages[0]!.parts).toEqual([
-      { type: 'progress', content: 'Clicking element' },
+      { type: 'progress', content: 'Clicking element', status: 'completed', browserToolName: 'click_element' },
       { type: 'text', content: 'All done!' },
     ]);
   });
 
-  it('has_question pauses (not terminal): flips the spinner to waiting-for-user, no taskStatus', () => {
+  it('has_question pauses (not terminal): the message asks the visitor and the task idles', () => {
     const before = runningState();
-    expect(ofKind(before.messages[0], 'agent').placeholderState).toBe('thinking');
+    expect(ofKind(before.messages[0], 'agent').status).toBe('thinking');
 
     const event: WidgetEvent = { type: 'task/status', status: 'has_question', message: 'Which account?' };
     const result = reduceEvent(before, event, 'do');
 
     const msg = ofKind(result.state.messages[0], 'agent');
-    expect(msg.placeholderState).toBe('waiting-for-user');
+    expect(msg.status).toBe('question');
     expect(messageText(msg.parts)).toContain('Which account?');
     expect(msg.parts[msg.parts.length - 1]).toEqual({ type: 'text', content: 'Which account?' });
-    expect(msg.taskStatus).toBeUndefined();
     expect(result.state.task).toEqual({ phase: 'idle' });
   });
 
   it.each(['completed', 'failed', 'stopped', 'has_question'] as const)('%s settles the placeholder', status => {
     const result = reduceEvent(runningState(), { type: 'task/status', status }, 'do');
-    expect(ofKind(result.state.messages[0], 'agent').isPlaceholder).toBe(false);
+    expect(isPending(result.state.messages[0]!)).toBe(false);
   });
 });
 
 describe('reduceTransportFailure', () => {
   it('settles every pending bubble into an error and ends the task', () => {
     const state: ChatState = {
-      messages: [agentMessage({ id: 'settled', isPlaceholder: false }), agentMessage({ id: 'pending' })],
+      messages: [agentMessage({ id: 'settled', status: undefined }), agentMessage({ id: 'pending' })],
       task: { phase: 'running', mode: 'do' },
     };
     const result = reduceTransportFailure(state, 'Could not reconnect to the assistant. Try again.');
 
     expect(result.messages[0]).toBe(state.messages[0]);
-    expect(ofKind(result.messages[1], 'agent').isPlaceholder).toBe(false);
+    expect(isPending(result.messages[1]!)).toBe(false);
     expect(messageText(result.messages[1]!.parts)).toBe(
       'Working on it\nCould not reconnect to the assistant. Try again.',
     );
@@ -126,7 +129,7 @@ describe('reduceStaleReply', () => {
     const state: ChatState = { messages: [agentMessage({ parts: [] })], task: { phase: 'idle' } };
     const result = reduceStaleReply(state, 'agent-1', 'This is taking longer than expected. Please try again.');
 
-    expect(ofKind(result.messages[0], 'agent').isPlaceholder).toBe(false);
+    expect(isPending(result.messages[0]!)).toBe(false);
     expect(messageText(result.messages[0]!.parts)).toBe('This is taking longer than expected. Please try again.');
   });
 
@@ -136,14 +139,14 @@ describe('reduceStaleReply', () => {
       const state: ChatState = { messages: [agentMessage()], task };
       const result = reduceStaleReply(state, 'agent-1', 'timeout text');
 
-      expect(ofKind(result.messages[0], 'agent').isPlaceholder).toBe(false);
+      expect(isPending(result.messages[0]!)).toBe(false);
       expect(messageText(result.messages[0]!.parts)).toBe('Working on it\ntimeout text');
     },
   );
 
   it('never overwrites a running task paused on the visitor, even with no text yet', () => {
     const state: ChatState = {
-      messages: [agentMessage({ placeholderState: 'waiting-for-user', parts: [] })],
+      messages: [agentMessage({ status: 'waiting-for-user', parts: [] })],
       task: { phase: 'running', mode: 'do' },
     };
     expect(reduceStaleReply(state, 'agent-1', 'timeout text')).toBe(state);
@@ -151,7 +154,7 @@ describe('reduceStaleReply', () => {
 
   it('never overwrites a message that already settled', () => {
     const state: ChatState = {
-      messages: [agentMessage({ isPlaceholder: false, parts: [{ type: 'text', content: 'All done' }] })],
+      messages: [agentMessage({ status: undefined, parts: [{ type: 'text', content: 'All done' }] })],
       task: { phase: 'idle' },
     };
     expect(reduceStaleReply(state, 'agent-1', 'timeout text')).toBe(state);
@@ -162,13 +165,13 @@ describe('reduceStaleReply', () => {
     expect(reduceStaleReply(state, 'missing', 'timeout text')).toBe(state);
   });
 
-  it('stamps taskStatus failed so a late completed status cannot re-target the watchdog bubble', () => {
+  it('stamps status failed so a late completed status cannot re-target the watchdog bubble', () => {
     const state: ChatState = { messages: [agentMessage({ parts: [] })], task: { phase: 'idle' } };
     const stale = reduceStaleReply(state, 'agent-1', 'This is taking longer than expected. Please try again.');
-    expect(ofKind(stale.messages[0], 'agent').taskStatus).toBe('failed');
+    expect(ofKind(stale.messages[0], 'agent').status).toBe('failed');
 
     const late = reduceEvent(stale, { type: 'task/status', status: 'completed' }, 'do');
-    expect(ofKind(late.state.messages[0], 'agent').taskStatus).toBe('failed');
+    expect(ofKind(late.state.messages[0], 'agent').status).toBe('failed');
     expect(messageText(late.state.messages[0]!.parts)).toBe('This is taking longer than expected. Please try again.');
   });
 });
@@ -216,8 +219,8 @@ describe('reduceEvent — chat/response', () => {
 
     const msg = ofKind(result.state.messages[0], 'agent');
     expect(messageText(msg.parts)).toBe('Here you go');
-    expect(msg.isPlaceholder).toBe(false);
-    expect(msg.placeholderState).toBeUndefined();
+    expect(isPending(msg)).toBe(false);
+    expect(msg.status).toBeUndefined();
     expect(msg.parts?.[msg.parts.length - 1]).toEqual({ type: 'text', content: 'Here you go' });
     expect(result.toolRuns).toEqual([]);
   });
@@ -231,7 +234,7 @@ describe('reduceEvent — chat/delta', () => {
 
     const msg = ofKind(second.state.messages[0], 'agent');
     expect(messageText(msg.parts)).toBe('Hello');
-    expect(msg.isPlaceholder).toBe(false);
+    expect(isPending(msg)).toBe(false);
     expect(msg.parts).toEqual([{ type: 'text', content: 'Hello', streaming: true }]);
     expect(second.toolRuns).toEqual([]);
   });
@@ -275,7 +278,7 @@ describe('reduceEvent — chat/error', () => {
     const result = reduceEvent(state, event, 'tell');
     expect(messageText(result.state.messages[0]!.parts)).toBe(`Working on it\n${CHAT_FAILURE_TEXT}`);
     expect(messageText(result.state.messages[0]!.parts)).not.toContain('PG::ConnectionBad');
-    expect(ofKind(result.state.messages[0], 'agent').isPlaceholder).toBe(false);
+    expect(isPending(result.state.messages[0]!)).toBe(false);
     expect(result.toolRuns).toEqual([]);
   });
 });
@@ -328,60 +331,60 @@ describe('reduceToolProgress / reduceToolDone / reduceStop', () => {
     ]);
   });
 
-  it('does not touch placeholderState when the task is not actually running, even in Show/Do mode', () => {
+  it('does not touch status when the task is not actually running, even in Show/Do mode', () => {
     const result = reduceToolProgress(
       idleState(),
       'click_element',
       { status: 'in_progress', explanation: 'x' },
       'show',
     );
-    expect(ofKind(result.messages[0], 'agent').placeholderState).toBeUndefined();
+    expect(ofKind(result.messages[0], 'agent').status).toBeUndefined();
   });
 
   it.each([
     ['do', 'thinking'],
     ['show', 'waiting-for-user'],
-  ] as const)('in %s mode a mid-progress tool sets placeholderState to %s', (mode, placeholderState) => {
+  ] as const)('in %s mode a mid-progress tool sets status to %s', (mode, status) => {
     const result = reduceToolProgress(
       runningState({ mode }),
       'click_element',
       { status: 'in_progress', explanation: 'x' },
       mode,
     );
-    expect(ofKind(result.messages[0], 'agent').placeholderState).toBe(placeholderState);
+    expect(ofKind(result.messages[0], 'agent').status).toBe(status);
   });
 
   it('judges progress by the mode the task actually started in, not whatever the composer shows now', () => {
     const state: ChatState = {
-      messages: [agentMessage({ mode: 'show', isPlaceholder: true })],
+      messages: [agentMessage({ mode: 'show', status: 'thinking' })],
       task: { phase: 'running', mode: 'show' },
     };
     const result = reduceToolProgress(state, 'click_element', { status: 'in_progress', explanation: 'x' }, 'do');
-    expect(ofKind(result.messages[0], 'agent').placeholderState).toBe('waiting-for-user');
+    expect(ofKind(result.messages[0], 'agent').status).toBe('waiting-for-user');
   });
 
   it('reduceToolDone ends the task and marks the message done', () => {
     const result = reduceToolDone(runningState(), 'do', { message: '', success: true });
     expect(result.task).toEqual({ phase: 'idle' });
-    expect(ofKind(result.messages[0], 'agent').taskStatus).toBe('done');
+    expect(ofKind(result.messages[0], 'agent').status).toBe('done');
   });
 
   it('reduceToolDone marks the message failed when the agent reports it did not succeed', () => {
     expect(
-      ofKind(reduceToolDone(runningState(), 'do', { message: '', success: false }).messages[0], 'agent').taskStatus,
+      ofKind(reduceToolDone(runningState(), 'do', { message: '', success: false }).messages[0], 'agent').status,
     ).toBe('failed');
   });
 
   it('a duplicate completion does not fall back past the stamp onto an older settled reply', () => {
     const oldReply = agentMessage({
       id: 'agent-0',
-      isPlaceholder: false,
+      status: undefined,
       parts: [{ type: 'text', content: 'Old answer' }],
     });
     const state: ChatState = { messages: [oldReply, agentMessage()], task: { phase: 'running', mode: 'do' } };
 
     const afterFirst = reduceToolDone(state, 'do', { message: '', success: true });
-    expect(ofKind(afterFirst.messages[1], 'agent').taskStatus).toBe('done');
+    expect(ofKind(afterFirst.messages[1], 'agent').status).toBe('done');
 
     const afterDuplicate = reduceToolDone(afterFirst, 'do', { message: '', success: true });
 
@@ -390,7 +393,7 @@ describe('reduceToolProgress / reduceToolDone / reduceStop', () => {
 
   it('reduceStop marks the active message stopped and ends the task', () => {
     const result = reduceStop(runningState(), 'do');
-    expect(ofKind(result.messages[0], 'agent').taskStatus).toBe('stopped');
+    expect(ofKind(result.messages[0], 'agent').status).toBe('stopped');
     expect(result.task).toEqual({ phase: 'stopped' });
   });
 
@@ -446,7 +449,7 @@ describe('a Show/Do task ends with its closing message', () => {
     ).state;
 
     const msg = ofKind(settled.messages[0], 'agent');
-    expect(msg.taskStatus).toBe('done');
+    expect(msg.status).toBe('done');
     expect(messageText(msg.parts)).toBe('Your plan is upgraded.');
     expect(settled.task).toEqual({ phase: 'idle' });
   });
@@ -469,7 +472,7 @@ describe('a Show/Do task ends with its closing message', () => {
     const errored = reduceEvent(failed, { type: 'chat/error', request_id: 'req-1', error: 'Agent failed' }, 'do').state;
 
     const msg = ofKind(errored.messages[0], 'agent');
-    expect(msg.taskStatus).toBe('failed');
+    expect(msg.status).toBe('failed');
     expect(messageText(msg.parts)).toBe('The checkout page would not load.');
   });
 
@@ -532,7 +535,7 @@ describe('a message reports the text it shows', () => {
   it('leaves a progress line out of the text, because a progress line is not the answer', () => {
     expect(
       messageText([
-        { type: 'progress', content: 'Reading the page' },
+        { type: 'progress', content: 'Reading the page', status: 'completed', browserToolName: 'get_html' },
         { type: 'text', content: 'Here you go' },
       ]),
     ).toBe('Here you go');

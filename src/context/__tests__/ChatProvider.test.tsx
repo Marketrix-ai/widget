@@ -18,6 +18,7 @@ import { agentMessage, asStreamClientInternals, browserToolServiceMock, ofKind }
 import { ChatHarness } from '../../test/renderWidget';
 import { advanceTimersByTimeAsync, waitFor } from '../../test/vi-compat';
 import { messageText } from '../../types';
+import { isPending } from '../../utils/chat';
 import * as log from '../../utils/log';
 import { useChatContext } from '../ChatContext';
 
@@ -38,9 +39,7 @@ const Transcript = () => {
   }, [chatActions]);
 
   return (
-    <div data-testid='transcript'>
-      {messages.map(msg => `${msg.id}:${msg.kind === 'agent' && msg.isPlaceholder}:${messageText(msg.parts)}`)}
-    </div>
+    <div data-testid='transcript'>{messages.map(msg => `${msg.id}:${isPending(msg)}:${messageText(msg.parts)}`)}</div>
   );
 };
 
@@ -230,8 +229,8 @@ describe('commit skips the render for a transition that reports no change', () =
       ofKind(
         captured!.messages.find(m => m.id === placeholderId),
         'agent',
-      ).placeholderState,
-    ).toBe('waiting-for-user');
+      ).status,
+    ).toBe('question');
 
     const messagesBeforeWatchdog = captured!.messages;
     act(() => {
@@ -243,8 +242,8 @@ describe('commit skips the render for a transition that reports no change', () =
       ofKind(
         captured!.messages.find(m => m.id === placeholderId),
         'agent',
-      ).placeholderState,
-    ).toBe('waiting-for-user');
+      ).status,
+    ).toBe('question');
   });
 
   it('setMessages handed its own current array back is a no-op, even though it builds a new state object', () => {
@@ -294,7 +293,7 @@ describe('a real turn', () => {
       await captured!.chatActions.sendTurn('hello', 'tell');
     });
 
-    const placeholder = captured!.messages.find(m => m.kind === 'agent' && m.isPlaceholder);
+    const placeholder = captured!.messages.find(isPending);
     expect(order).toEqual(['ready', 'send']);
     expect(send).toHaveBeenCalledWith({ type: 'chat/tell', request_id: placeholder!.id, content: 'hello' });
   });

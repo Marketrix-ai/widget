@@ -166,8 +166,7 @@ describe('chat snapshot persistence', () => {
   const message = (overrides: Partial<AgentMessage> = {}): AgentMessage =>
     agentMessage({
       mode: undefined,
-      isPlaceholder: undefined,
-      placeholderState: undefined,
+      status: undefined,
       parts: [{ type: 'text', content: 'hello' }],
       ...overrides,
     });

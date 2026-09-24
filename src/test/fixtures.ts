@@ -30,8 +30,7 @@ export function agentMessage(overrides: Partial<AgentMessage> = {}): AgentMessag
     kind: 'agent',
     timestamp: new Date('2026-01-01T00:00:00.000Z'),
     mode: 'do',
-    isPlaceholder: true,
-    placeholderState: 'thinking',
+    status: 'thinking',
     parts: [{ type: 'text', content: 'Working on it' }],
     ...overrides,
   };

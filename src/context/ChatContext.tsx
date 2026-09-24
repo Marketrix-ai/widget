@@ -29,6 +29,7 @@ import {
   createSystemMessage,
   createUserMessage,
   enabledModes,
+  isPending,
 } from '../utils/chat';
 import { logWarn } from '../utils/log';
 import {
@@ -284,7 +285,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const clearChat = useCallback(() => {
     const { task, messages } = stateRef.current;
-    if (task.phase === 'running' || messages.some(msg => msg.kind === 'agent' && msg.isPlaceholder)) stopTask();
+    if (task.phase === 'running' || messages.some(isPending)) stopTask();
     commit(() => ({ messages: [], task: { phase: 'idle' } }));
     if (isPreviewMode) return;
     forgetChatId();
@@ -308,13 +309,9 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   return (
     <ChatContext.Provider value={contextValue}>
-      {state.messages.map(
-        msg =>
-          msg.kind === 'agent' &&
-          msg.isPlaceholder && (
-            <StaleReplyWatchdog key={msg.id} id={msg.id} progress={msg.parts.length} onStale={expireReply} />
-          ),
-      )}
+      {state.messages.filter(isPending).map(msg => (
+        <StaleReplyWatchdog key={msg.id} id={msg.id} progress={msg.parts.length} onStale={expireReply} />
+      ))}
       {children}
     </ChatContext.Provider>
   );

@@ -38,7 +38,7 @@ describe('findMessageForProgress', () => {
   });
 
   it('only applies mode-specific ranking while the task is running, otherwise falls to the generic placeholder-first rank', () => {
-    const placeholderOtherMode = agentReply({ id: 'placeholder-other-mode', isPlaceholder: true, mode: 'tell' });
+    const placeholderOtherMode = agentReply({ id: 'placeholder-other-mode', status: 'thinking', mode: 'tell' });
     const replyMatchingMode = agentReply({ id: 'reply-matching-mode', mode: 'show' });
     const result = findMessageForProgress({
       messages: [placeholderOtherMode, replyMatchingMode],
@@ -54,7 +54,7 @@ describe('progress-line lookup and failure text', () => {
     const msg = addProgressLine(agentReply(), 'click_element', 'clicking');
     expect(msg.parts).toHaveLength(1);
     const completed = markProgressLineComplete(msg, 'click_element');
-    expect(completed.parts[0]?.status).toBe('completed');
+    expect(completed.parts[0]).toMatchObject({ status: 'completed' });
   });
 
   it('patches the existing open line at index 0 in place, rather than appending a second one', () => {

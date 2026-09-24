@@ -95,7 +95,8 @@ each a Zod union discriminated on `type`.
 - **`get_html` ships the whole document with `data-id` added to each indexed element**, never stripped or
   size-capped: the agent's parser indexes by `data-id`, and a trimmed tree loses clickable elements.
 - **Wire status** is `task/status.status ∈ {running, completed, failed, stopped, has_question}`.
-  `ChatMessage.taskStatus` and `MessagePart.status` are UI-only — never conflate or widen them.
+  An agent message's `status` (one enum: pending, question, or how its task ended) and a progress part's
+  `status` are UI-only — never conflate or widen them.
 - `widget_recording` (off by default) gates rrweb batching. `widget_appearance: 'hidden'` hides host-page
   UI but still initializes; `widget_greeting_toast` controls only the toast.
 - **`widgetPublicSearch` never returns a credential**, embed snippet or `status` — a returned row is live.

@@ -60,8 +60,7 @@ describe('WidgetProviders initialization', () => {
       messages: [
         agentMessage({
           mode: undefined,
-          isPlaceholder: undefined,
-          placeholderState: undefined,
+          status: undefined,
           parts: [{ type: 'text', content: 'hello' }],
         }),
       ],
