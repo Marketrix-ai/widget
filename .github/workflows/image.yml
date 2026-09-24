@@ -1,6 +1,7 @@
-# Builds and pushes the runtime image on a `v*` tag, delegating the build itself to ACR Tasks
-# (`acr-build.yaml`) rather than the runner. The image tag is the BARE semver — the leading `v` is
-# stripped — which is what infra's Helm values pin. The Trivy scan reports and never blocks.
+# Builds and pushes the runtime image on a `v*` tag, natively on an arm64 runner, the public-repo twin of infra's
+# `image-build` action. Images are arm64 because the one cluster node is Arm and an emulated arm64 build hangs Bun.
+# The image tag is the BARE semver — the leading `v` is stripped — which is what infra's Helm values pin. The Trivy
+# scan reports and never blocks.
 name: Image
 on:
   push:
@@ -10,7 +11,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@v7
       - name: Resolve image tag
@@ -24,11 +25,21 @@ jobs:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
       - name: Log in to ACR
         run: az acr login --name marketrix
-      - name: Build and push image in ACR
-        run: |
-          az acr run --registry marketrix --file acr-build.yaml \
-            --set tag=${{ steps.tag.outputs.image_tag }} \
-            --set commit=${{ github.sha }} .
+      - uses: docker/setup-buildx-action@v4
+      - name: Build and push image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: true
+          tags: marketrix.azurecr.io/widget:${{ steps.tag.outputs.image_tag }}
+          build-args: BUILD_COMMIT=${{ github.sha }}
+          labels: |
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.version=${{ steps.tag.outputs.image_tag }}
+          cache-from: type=gha,scope=widget
+          cache-to: type=gha,mode=max,scope=widget
+          provenance: false
       - name: Scan image with Trivy
         uses: aquasecurity/trivy-action@v0.36.0
         with:
