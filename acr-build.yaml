@@ -1,7 +1,8 @@
 # The widget's ACR build task, the public-repo twin of infra's `acr-build` action, which this repo cannot call.
+# Images are linux/arm64 because the one cluster node is Arm; the platform sits on the build step because `az acr run --platform` ignores it.
 version: v1.1.0
 steps:
-  - build: -t marketrix.azurecr.io/widget:{{.Values.tag}} --label org.opencontainers.image.revision={{.Values.commit}} --label org.opencontainers.image.source=https://github.com/Marketrix-ai/widget --label org.opencontainers.image.version={{.Values.tag}} -f Dockerfile .
+  - build: --platform linux/arm64 -t marketrix.azurecr.io/widget:{{.Values.tag}} --label org.opencontainers.image.revision={{.Values.commit}} --label org.opencontainers.image.source=https://github.com/Marketrix-ai/widget --label org.opencontainers.image.version={{.Values.tag}} -f Dockerfile .
     env:
       - DOCKER_BUILDKIT=1
   - push:
