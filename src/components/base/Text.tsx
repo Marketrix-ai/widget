@@ -1,15 +1,11 @@
 /**
- * `Text` is the widget's typography primitive; every rendered string goes through it.
- *
- * `Text` renders as any element (`span` by default) and folds tone, size, weight, align, leading,
- * block, italic and truncation into one inline style object, using the local `SIZE`/`WEIGHT`/`TRUNCATE`
- * lookups plus the shared tone/leading scales. Styling is inline only, since the widget has no CSS
- * framework. An unset optional prop is left out of the style object so it inherits from the cascade,
- * and the caller's own `style` is spread last so it always wins.
+ * `Text` is the widget's typography primitive; every rendered string goes through it. It renders as any
+ * element (`span` by default) and folds tone, size, weight, align, line height, block, italic and truncation
+ * into one inline style; an unset prop inherits from the cascade and the caller's `style` wins.
  */
 import type { CSSProperties, ElementType, Ref } from 'react';
 
-import { TEXT_LEADING, TEXT_TONE, type TextLeading } from '../../design-system/component-tokens';
+import { TEXT_TONE } from '../../design-system/component-tokens';
 
 type TextVariant = 'default' | 'muted' | 'faint';
 type TextSize = 'xxs' | 'xs' | 'sm' | 'lg';
@@ -21,7 +17,7 @@ interface TextProps extends React.HTMLAttributes<HTMLElement> {
   block?: boolean;
   inheritColor?: boolean;
   italic?: boolean;
-  leading?: TextLeading;
+  tight?: boolean;
   variant?: TextVariant;
   size?: TextSize;
   weight?: TextWeight;
@@ -46,7 +42,7 @@ export function Text({
   block = false,
   inheritColor = false,
   italic = false,
-  leading,
+  tight,
   variant = 'default',
   size,
   weight,
@@ -65,7 +61,7 @@ export function Text({
         ...(size && { fontSize: SIZE[size] }),
         ...(weight && { fontWeight: WEIGHT[weight] }),
         ...(align && { textAlign: align }),
-        ...(leading && { lineHeight: TEXT_LEADING[leading] }),
+        ...(tight && { lineHeight: 1.25 }),
         ...(block && { display: 'block' }),
         ...(italic && { fontStyle: 'italic' }),
         ...(truncate && TRUNCATE),

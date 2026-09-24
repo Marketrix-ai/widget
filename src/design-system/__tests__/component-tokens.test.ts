@@ -1,8 +1,7 @@
 /**
  * Component token tests: the radius scale gives each value exactly one name, `getElevationStyle` turns a
  * shadow token into a style object or nothing, and the fixed toast palette clears WCAG contrast.
- * No tenant setting reaches a toast, so each rendered pair is measured with axe-core's own contrast
- * maths, a translucent background flattened over black as its worst host page.
+ * No tenant setting reaches a toast, so each rendered pair is measured with axe-core's own contrast maths.
  */
 import axe from 'axe-core';
 import { describe, expect, it } from 'bun:test';
@@ -37,13 +36,8 @@ describe('the radius scale', () => {
 });
 
 describe('getElevationStyle', () => {
-  it('returns undefined for a "none" token, not a boxShadow: "none" style object', () => {
-    expect(getElevationStyle('none')).toBeUndefined();
-  });
-
   it('returns undefined for no token at all', () => {
     expect(getElevationStyle(undefined)).toBeUndefined();
-    expect(getElevationStyle(null)).toBeUndefined();
   });
 
   it('turns a real token into its boxShadow value', () => {

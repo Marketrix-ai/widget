@@ -68,7 +68,7 @@ export const HomeView: React.FC = () => {
               onClick={() => onChipClick(action)}
               style={{ color: config.widget_text_color, paddingTop: '8px', paddingBottom: '8px' }}
             >
-              <Text as='span' weight='normal' leading='tight'>
+              <Text as='span' weight='normal' tight>
                 {action.text}
               </Text>
             </Button>

@@ -30,9 +30,9 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({ title, subtitle, onClose, 
       elevation='section'
     >
       <Flex align='center' gap='md' minWidth='0' grow>
-        <Avatar src={MarketrixIcon} alt='' size='md' rounded='lg' elevation='card' />
+        <Avatar src={MarketrixIcon} alt='' rounded='lg' elevation='card' />
         <Stack minWidth='0'>
-          <Text size='sm' weight='semibold' truncate leading='tight'>
+          <Text size='sm' weight='semibold' truncate tight>
             {title}
           </Text>
           {subtitle != null && (
