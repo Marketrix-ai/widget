@@ -12,8 +12,8 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 import { SHADOW } from '../../design-system/component-tokens';
 import { useWidget, useWidgetConfig } from '../../hooks/useWidget';
-import { type ChatMessage, messageText } from '../../types';
-import { createAgentMessage } from '../../utils/chat';
+import type { ChatMessage } from '../../types';
+import { createAgentMessage, messageText } from '../../utils/chat';
 import { addOpacity, backgroundGradient } from '../../utils/color';
 import { Button } from '../base/Button';
 import { Flex } from '../base/Flex';

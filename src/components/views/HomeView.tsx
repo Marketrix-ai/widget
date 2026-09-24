@@ -10,7 +10,7 @@
 import React from 'react';
 
 import { useWidget, useWidgetConfig } from '../../hooks/useWidget';
-import { messageText } from '../../types';
+import { messageText } from '../../utils/chat';
 import { getSuggestedActionsFromConfig, type SuggestedActionItem } from '../../utils/suggestedActions';
 import { Button } from '../base/Button';
 import { Stack } from '../base/Flex';

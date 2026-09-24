@@ -14,7 +14,6 @@ import {
   unmountWidget,
   updateMarketrixConfig,
 } from '../index';
-import type { WidgetSettingsData } from '../sdk';
 import * as chatSession from '../services/chatSession';
 import * as ScreenShareService from '../services/ScreenShareService';
 import { getChatId, readChatSnapshot, scopeStorageTo, setChatId, writeChatSnapshot } from '../services/StorageService';
@@ -22,7 +21,7 @@ import { streamClient } from '../services/StreamClient';
 import type { CredentialedConfig } from '../services/WidgetService';
 import * as WidgetService from '../services/WidgetService';
 import { agentMessage, credentialedConfig, mountTarget, validSettings } from '../test/fixtures';
-import type { MarketrixConfig } from '../types';
+import type { MarketrixConfig, WidgetSettingsData } from '../types';
 
 const expectNotMounted = (container: HTMLElement) => {
   expect(container.querySelector('.marketrix-widget-container')).toBeNull();

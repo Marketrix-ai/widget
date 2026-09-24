@@ -7,8 +7,8 @@ import { describe, expect, it } from 'bun:test';
 
 import type { WidgetEvent } from '../../sdk';
 import { agentMessage, ofKind } from '../../test/fixtures';
-import { type AgentMessage, type InstructionType, messageText } from '../../types';
-import { CHAT_FAILURE_TEXT, isPending } from '../../utils/chat';
+import type { AgentMessage, InstructionType } from '../../types';
+import { CHAT_FAILURE_TEXT, isPending, messageText } from '../../utils/chat';
 import {
   type ChatState,
   reduceDispatch,

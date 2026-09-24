@@ -1,5 +1,5 @@
 /**
- * Pure helpers for the chat message list: formatting (mode label, timestamp), the tenant's enabled modes
+ * Pure helpers for the chat message list: formatting (mode label, timestamp, `messageText`), the tenant's enabled modes
  * (`enabledModes`, `effectiveMode`), each browser tool's progress label (`toolExplanation`) and whether Show
  * mode waits for the visitor on it (`waitsForUser`), finding which message a progress or tool event belongs
  * to, and building every kind of `ChatMessage`.
@@ -14,7 +14,14 @@
  */
 import { InstructionTypeSchema } from '../sdk/contracts/widgetSettings';
 import type { WidgetToolName } from '../services/browserTools';
-import type { AgentMessage, ChatMessage, InstructionType, ProgressPart, WidgetSettingsData } from '../types';
+import type {
+  AgentMessage,
+  ChatMessage,
+  InstructionType,
+  MessagePart,
+  ProgressPart,
+  WidgetSettingsData,
+} from '../types';
 import { logWarn } from './log';
 import { randomId } from './randomId';
 
@@ -60,6 +67,12 @@ export const toolExplanation = (browserToolName: WidgetToolName, explanation?: s
   explanation || TOOL_LABELS[browserToolName];
 
 export const waitsForUser = (browserToolName: WidgetToolName): boolean => WAITS_FOR_USER.has(browserToolName);
+
+export const messageText = (parts: MessagePart[]): string =>
+  parts
+    .filter(part => part.type === 'text')
+    .map(part => part.content)
+    .join('\n');
 
 export const formatMessageTime = (date: Date): string =>
   date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });

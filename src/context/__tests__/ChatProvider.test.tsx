@@ -18,8 +18,7 @@ import { streamClient } from '../../services/StreamClient';
 import { agentMessage, asStreamClientInternals, ofKind } from '../../test/fixtures';
 import { ChatHarness } from '../../test/renderWidget';
 import { advanceTimersByTimeAsync, waitFor } from '../../test/vi-compat';
-import { messageText } from '../../types';
-import { isPending } from '../../utils/chat';
+import { isPending, messageText } from '../../utils/chat';
 import * as log from '../../utils/log';
 import { useChatContext } from '../ChatContext';
 

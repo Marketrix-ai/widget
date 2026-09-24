@@ -14,8 +14,7 @@ import { streamClient } from '../../services/StreamClient';
 import { asStreamClientInternals } from '../../test/fixtures';
 import { ChatHarness } from '../../test/renderWidget';
 import { waitFor } from '../../test/vi-compat';
-import { messageText } from '../../types';
-import { CHAT_FAILURE_TEXT, isPending } from '../../utils/chat';
+import { CHAT_FAILURE_TEXT, isPending, messageText } from '../../utils/chat';
 import { useChatContext } from '../ChatContext';
 
 const RAW_MARKER = 'PG::ConnectionBad at db_pool.rb:42 — ECONNREFUSED 10.0.4.12:5432';

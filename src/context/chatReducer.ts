@@ -8,14 +8,7 @@
  */
 import type { WidgetEvent } from '../sdk';
 import type { WidgetToolCall, WidgetToolName } from '../services/browserTools';
-import {
-  type AgentMessage,
-  type ChatMessage,
-  type InstructionType,
-  type MessagePart,
-  messageText,
-  type ProgressPart,
-} from '../types';
+import type { AgentMessage, ChatMessage, InstructionType, MessagePart, ProgressPart } from '../types';
 import {
   addProgressLine,
   CHAT_FAILURE_TEXT,
@@ -25,6 +18,7 @@ import {
   isPending,
   markProgressLineComplete,
   markProgressLineFailed,
+  messageText,
   taskEnded,
   toolExplanation,
   waitsForUser,

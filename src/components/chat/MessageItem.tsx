@@ -8,8 +8,8 @@ import React from 'react';
 
 import MarketrixIcon from '../../assets/marketrix-icon.svg';
 import { useWidgetConfig } from '../../hooks/useWidget';
-import { type AgentStatus, type ChatMessage, messageText } from '../../types';
-import { formatMessageTime, isPending } from '../../utils/chat';
+import type { AgentStatus, ChatMessage } from '../../types';
+import { formatMessageTime, isPending, messageText } from '../../utils/chat';
 import { addOpacity } from '../../utils/color';
 import { Avatar } from '../base/Avatar';
 import { Button } from '../base/Button';

@@ -8,7 +8,7 @@
 import { describe, expect, it } from 'bun:test';
 
 import { mockMediaStream } from '../../test/fixtures';
-import { type AgentMessage, type ChatMessage, messageText } from '../../types';
+import type { AgentMessage, ChatMessage } from '../../types';
 import {
   addProgressLine,
   CHAT_FAILURE_TEXT,
@@ -18,6 +18,7 @@ import {
   findMessageForProgress,
   markProgressLineComplete,
   markProgressLineFailed,
+  messageText,
   SCREEN_ACCESS_DETAIL,
   SCREEN_ACCESS_PROMPT,
 } from '../chat';

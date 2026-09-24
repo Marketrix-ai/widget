@@ -8,7 +8,7 @@
 import React, { useState } from 'react';
 
 import { useWidget, useWidgetConfig } from '../../hooks/useWidget';
-import type { InstructionType } from '../../sdk';
+import type { InstructionType } from '../../types';
 import { enabledModes, MODE_LABELS } from '../../utils/chat';
 import { ErrorBoundary } from '../base/ErrorBoundary';
 import { Stack } from '../base/Flex';
