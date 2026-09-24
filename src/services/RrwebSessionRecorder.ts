@@ -3,13 +3,13 @@
  * api as one `rrweb/metadata` command followed by `rrweb/events` batches. `mount.tsx` constructs one
  * only when `widget_recording` is enabled, so this file is the whole recording feature.
  *
- * `start()` waits for the chat's stream to register (the api only accepts commands into a registered
- * chat) before posting metadata and arming rrweb, and a cleared chat's new thread gets a fresh recording
- * session starting from a full snapshot; `stop()` tears rrweb down and drains what's buffered;
- * `flush()` posts one batch at a time, in order. A flush that fails is logged and requeued at the front
- * rather than dropped, since a later batch replays against the first one's snapshot, and retried on a doubling
- * delay; once the stream gives up, retries wait for it to register again rather than polling a dead api. The
- * buffer is capped, keeping the oldest events, so a recording that cannot flush truncates instead of growing.
+ * `start()` posts metadata and arms rrweb once the chat's stream registers (the api only accepts commands
+ * into a registered chat), waiting for a later registration if the stream gave up first; a cleared chat's
+ * new thread gets a fresh recording session starting from a full snapshot; `stop()` tears rrweb down and
+ * drains what's buffered; `flush()` posts one batch at a time, in order. A failed flush is requeued at the
+ * front, since a later batch replays against the first one's snapshot, and retried on a doubling delay until
+ * the stream gives up, then on its next registration. The buffer is capped, keeping the oldest events, so a
+ * recording that cannot flush truncates instead of growing.
  */
 import { record } from '@rrweb/record';
 
@@ -40,9 +40,16 @@ export class RrwebSessionRecorder {
 
   async start(): Promise<void> {
     if (this.stopRecording || this.stopped) return;
-    await this.openSession();
-    if (this.stopped) return;
     streamClient.addCallbacks(this.callbacks);
+    try {
+      await this.openSession();
+    } catch (error) {
+      if (!(error instanceof StreamGaveUpError)) throw error;
+      logWarn('[RrwebSessionRecorder] Stream gave up before the chat registered; recording waits for a retry:', error);
+      this.streamGaveUp = true;
+      return;
+    }
+    if (this.stopped || this.stopRecording) return;
     this.stopRecording = record({
       emit: event => {
         const parsed = RrwebEventSchema.parse(event);
@@ -59,6 +66,15 @@ export class RrwebSessionRecorder {
   private readonly callbacks = {
     onMessage: (event: WidgetEvent) => {
       if (event.type !== 'registered' || this.stopped) return;
+      if (!this.stopRecording) {
+        if (!this.streamGaveUp) return;
+        this.streamGaveUp = false;
+        this.chatId = event.chat_id;
+        this.start().catch((error: unknown) => {
+          console.error('[RrwebSessionRecorder] Failed to start recording after the stream registered:', error);
+        });
+        return;
+      }
       if (event.chat_id === this.chatId) {
         if (this.streamGaveUp) {
           this.streamGaveUp = false;

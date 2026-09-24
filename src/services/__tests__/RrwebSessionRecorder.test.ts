@@ -14,7 +14,7 @@ import type { RrwebEvent } from '../../sdk/contracts/rrweb';
 import { flushMicrotasks } from '../../test/fixtures';
 import { advanceTimersByTimeAsync, mocked, mockSdkModule, restoreModuleAfterAll } from '../../test/vi-compat';
 import { RrwebSessionRecorder } from '../RrwebSessionRecorder';
-import { streamClient } from '../StreamClient';
+import { streamClient, StreamGaveUpError } from '../StreamClient';
 
 vi.mock('@rrweb/record', () => ({ record: vi.fn(() => vi.fn()) }));
 vi.mock('../../sdk', () => mockSdkModule({ widgetMessagePost: vi.fn() }));
@@ -197,6 +197,25 @@ describe('a recorder whose stream has given up', () => {
     expect(posted?.command).toMatchObject({ type: 'rrweb/events', events: [incrementalEvent(1)] });
     recorder.stop();
     vi.useRealTimers();
+  });
+});
+
+describe('a stream that gives up before the chat first registers', () => {
+  it('starts recording once a retry registers the chat', async () => {
+    const internals = streamClient as unknown as { handleMessage: (event: WidgetEvent) => void };
+    vi.spyOn(streamClient, 'ready')
+      .mockRejectedValueOnce(new StreamGaveUpError('Could not reconnect to the assistant. Try again.'))
+      .mockResolvedValue();
+    mockSdk.widgetMessagePost.mockResolvedValue({ success: true });
+    const recorder = new RrwebSessionRecorder('chat-1', 1);
+
+    await recorder.start();
+    expect(record).not.toHaveBeenCalled();
+
+    internals.handleMessage({ type: 'registered', chat_id: 'chat-1' });
+    await waitFor(() => expect(record).toHaveBeenCalledTimes(1));
+    expect(mockSdk.widgetMessagePost.mock.lastCall?.[0].command.type).toBe('rrweb/metadata');
+    recorder.stop();
   });
 });
 
