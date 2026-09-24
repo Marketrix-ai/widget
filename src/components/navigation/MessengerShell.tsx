@@ -282,7 +282,6 @@ export const MessengerShell: React.FC = () => {
         ...panelPositionStyle,
         pointerEvents: 'auto',
         scrollbarWidth: 'thin',
-        animation: `messenger-entrance ${DEFAULT_WIDGET_SETTINGS.widget_animation_duration} cubic-bezier(0, 1.2, 1, 1)`,
         boxShadow: SHADOW.panel,
       }}
     >
