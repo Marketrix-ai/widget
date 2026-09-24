@@ -131,7 +131,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } catch (error) {
         const refused = error instanceof ORPCError && error.code === 'FORBIDDEN';
         if (refused) logWarn(`[ChatContext] The api refused the turn: ${error.message}`);
-        else console.error('Failed to send message:', error);
+        else console.error('[Widget] Failed to send message:', error);
         commit(s => reduceError(s, placeholder.id, refused ? error.message : CHAT_FAILURE_TEXT));
         return false;
       }
@@ -212,7 +212,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
           route,
         )
         .catch((err: unknown) => {
-          console.error('Failed to send tool response:', err);
+          console.error('[Widget] Failed to send tool response:', err);
           setError('Could not report that step back to the assistant — it may stop responding.');
         });
 
@@ -231,7 +231,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
               success: true,
               data: JSON.stringify({ page_reloaded: true }),
             })
-            .catch((err: unknown) => console.error('Failed to report an interrupted step:', err));
+            .catch((err: unknown) => console.error('[Widget] Failed to report an interrupted step:', err));
           return;
         }
       } else if (event.type === 'chat/error') {
@@ -276,7 +276,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     commit(s => reduceStop(s, currentModeRef.current));
     if (isPreviewMode) return;
     streamClient.send({ type: 'chat/stop' }).catch(err => {
-      console.error('Failed to stop task remotely:', err);
+      console.error('[Widget] Failed to stop task remotely:', err);
       uiActions.setError('Could not stop the assistant — it may still be working.');
     });
   }, [isPreviewMode, commit, uiActions, currentModeRef]);
@@ -291,7 +291,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     getOrCreateChatId()
       .then(chatId => streamClient.connect(chatId))
       .catch((error: unknown) => {
-        console.error('Failed to start a new chat:', error);
+        console.error('[Widget] Failed to start a new chat:', error);
         uiActions.setError('Could not start a new chat. Please refresh the page.');
       });
   }, [isPreviewMode, commit, stopTask, uiActions]);

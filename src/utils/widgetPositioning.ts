@@ -13,6 +13,8 @@ import type { WidgetPosition } from '../types';
 
 export const EDGE_OFFSET_PX = 20;
 
+export const LAUNCHER_SIZE_PX = 56;
+
 const CORNERS = {
   bottom_right: { vertical: 'bottom', horizontal: 'right' },
   bottom_left: { vertical: 'bottom', horizontal: 'left' },

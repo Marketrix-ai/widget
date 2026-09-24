@@ -57,7 +57,7 @@ export const ChatView: React.FC<{ messageInputRef: React.RefObject<HTMLTextAreaE
           label='Chat'
           fallback={
             <Text as='div' size='xs' align='center' variant='muted' style={{ padding: '16px' }}>
-              Something went wrong displaying messages. Please refresh.
+              Something went wrong displaying messages. Please refresh the page.
             </Text>
           }
         >

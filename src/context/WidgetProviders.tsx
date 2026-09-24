@@ -58,8 +58,8 @@ const InitBridge: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
     void init().catch(error => {
       if (cancelled) return;
-      console.error('Widget initialization failed:', error);
-      uiActions.setError('Widget failed to initialize — please refresh the page.');
+      console.error('[Widget] Initialization failed:', error);
+      uiActions.setError('Widget failed to initialize. Please refresh the page.');
     });
 
     return () => {

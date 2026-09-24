@@ -5,8 +5,7 @@
  * `startScreenShare` reuses a live stream, otherwise prompts `getDisplayMedia` preferring the current tab;
  * `stopScreenShare` releases every track. `activeScreenStream` returns the stream only while its video
  * track is live. Every change, including the visitor ending the share from the browser's own UI, notifies
- * subscribers. Concurrent `startScreenShare` callers share one in-flight prompt, so a double-click on the
- * launcher before the first prompt resolves never opens a second picker.
+ * subscribers. Concurrent `startScreenShare` callers share one in-flight prompt, so a second picker never opens.
  */
 
 let activeStream: MediaStream | null = null;

@@ -21,13 +21,9 @@ const SPACING_SCALE: Record<SpacingToken, string> = {
 const ALIGN = {
   start: 'flex-start',
   center: 'center',
-  end: 'flex-end',
-  stretch: 'stretch',
-  baseline: 'baseline',
 } as const;
 
 const JUSTIFY = {
-  start: 'flex-start',
   center: 'center',
   end: 'flex-end',
   between: 'space-between',
@@ -37,8 +33,6 @@ const JUSTIFY = {
 const BORDER_SIDE = {
   top: 'borderTopWidth',
   bottom: 'borderBottomWidth',
-  left: 'borderLeftWidth',
-  right: 'borderRightWidth',
 } as const;
 
 export interface LayoutProps {
@@ -54,13 +48,13 @@ export interface LayoutProps {
   grow?: boolean;
   shrink?: boolean;
 
-  position?: 'relative' | 'absolute' | 'fixed' | 'sticky';
-  inset?: SpacingToken | '0';
+  position?: 'relative' | 'absolute' | 'fixed';
+  inset?: '0';
 
-  overflow?: 'hidden' | 'auto' | 'visible' | 'scroll';
-  overflowY?: 'hidden' | 'auto';
-  width?: 'full' | 'auto';
-  height?: 'full' | 'auto';
+  overflow?: 'hidden';
+  overflowY?: 'auto';
+  width?: 'full';
+  height?: 'full';
   minWidth?: '0';
   minHeight?: '0';
 
@@ -121,12 +115,12 @@ export function resolveLayoutStyle(props: LayoutProps): CSSProperties {
   if (props.shrink === false) style.flexShrink = 0;
 
   if (props.position !== undefined) style.position = props.position;
-  if (props.inset !== undefined) style.inset = props.inset === '0' ? '0' : SPACING_SCALE[props.inset];
+  if (props.inset !== undefined) style.inset = props.inset;
 
   if (props.overflow !== undefined) style.overflow = props.overflow;
   if (props.overflowY !== undefined) style.overflowY = props.overflowY;
-  if (props.width !== undefined) style.width = props.width === 'full' ? '100%' : 'auto';
-  if (props.height !== undefined) style.height = props.height === 'full' ? '100%' : 'auto';
+  if (props.width === 'full') style.width = '100%';
+  if (props.height === 'full') style.height = '100%';
   if (props.minWidth === '0') style.minWidth = 0;
   if (props.minHeight === '0') style.minHeight = 0;
 

@@ -1,12 +1,8 @@
 /**
- * `WidgetFab` — the launcher button: draggable, positioned at the configured corner, glowing while a
- * reply or task is in flight, and showing a stop control while a task runs and the panel is closed.
- *
- * `useDragSnap` tracks the launcher's size and the viewport to place it in pixels while dragging, wires the
- * pointer handlers, hands the release to `getReleaseCorner` and `animateSnap`, and reports the committed
- * corner once the snap lands. Preview mode disables dragging.
+ * `WidgetFab` — the launcher button: draggable to a corner (`useDragSnap`, off in preview mode), glowing
+ * while a reply or task is in flight, and showing a stop control while a task runs and the panel is closed.
  */
-import React, { useCallback, useLayoutEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 import MarketrixIcon from '../../assets/marketrix-icon.svg';
 import { SHADOW } from '../../design-system/component-tokens';
@@ -19,6 +15,7 @@ import {
   getCorner,
   getPanelPositionStyle,
   getReleaseCorner,
+  LAUNCHER_SIZE_PX,
   type PointerSample,
 } from '../../utils/widgetPositioning';
 import { Avatar } from '../base/Avatar';
@@ -56,7 +53,7 @@ function useDragSnap(
     rafRef.current = null;
   };
 
-  React.useEffect(
+  useEffect(
     () => () => {
       cancelRaf();
       abandonSnapRef.current?.();
@@ -64,10 +61,10 @@ function useDragSnap(
     [],
   );
 
-  const [wrapperSize, setWrapperSize] = useState({ w: 56, h: 56 });
+  const [wrapperSize, setWrapperSize] = useState({ w: LAUNCHER_SIZE_PX, h: LAUNCHER_SIZE_PX });
   const [, setViewportTick] = useState(0);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (isPreviewMode) return;
     const onResize = () => setViewportTick(t => t + 1);
     window.addEventListener('resize', onResize);
@@ -344,7 +341,6 @@ export const WidgetFab: React.FC<WidgetFabProps> = ({ onPositionCommit }) => {
                   alt=''
                   className='mtx-fab-avatar'
                   draggable={false}
-                  onDragStart={e => e.preventDefault()}
                   style={{
                     borderRadius: `${WIDGET_RADIUS_PX}px`,
                     border: 'none',

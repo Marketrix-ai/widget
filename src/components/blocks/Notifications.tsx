@@ -1,17 +1,15 @@
 /**
- * The widget's one notification surface: a Base UI Toast provider, the toast renderer, and the effect
- * that drives toasts from widget state. Base UI owns the live region, dismiss timers and stacking.
- *
- * `NotificationList` renders the live toasts in the error or info tone. `NotificationProvider` portals into
- * the widget's own shadow root so the injected styles still apply, and raises the viewport above the
- * launcher when both sit at the bottom. `WidgetNotifications` mirrors the `error` and `greeting` props into
- * toasts under a stable id, so a re-render upserts rather than stacking duplicates.
+ * The widget's one notification surface on Base UI Toast, which owns the live region, timers and stacking.
+ * `NotificationList` renders toasts in the error or info tone, `NotificationProvider` portals the viewport
+ * into the widget's shadow root at a given bottom offset, and `WidgetNotifications` mirrors the `error` and
+ * `greeting` props into toasts under a stable id, so a re-render upserts rather than duplicating.
  */
 import { Toast } from '@base-ui/react/toast';
 import React, { useEffect } from 'react';
 
 import MarketrixIcon from '../../assets/marketrix-icon.svg';
 import { LAYER_TOKENS, notificationToneStyles } from '../../design-system/component-tokens';
+import { EDGE_OFFSET_PX } from '../../utils/widgetPositioning';
 import { Avatar } from '../base/Avatar';
 import { Button } from '../base/Button';
 import { Flex, Stack } from '../base/Flex';
@@ -116,7 +114,7 @@ interface NotificationProviderProps {
 export const NotificationProvider: React.FC<NotificationProviderProps> = ({
   children,
   container,
-  offsetBottom = 20,
+  offsetBottom = EDGE_OFFSET_PX,
 }) => (
   <Toast.Provider>
     {children}

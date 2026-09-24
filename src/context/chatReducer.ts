@@ -19,6 +19,7 @@ import {
   markProgressLineComplete,
   markProgressLineFailed,
   messageText,
+  SCREEN_SHARE_STARTED_TEXT,
   SCREEN_SHARE_STOPPED_TEXT,
   taskEnded,
   toolExplanation,
@@ -142,7 +143,7 @@ export function reduceScreenAccessResolved(state: ChatState, screenShareStatus: 
 }
 
 export const reduceScreenShareStarted = (state: ChatState, stream: MediaStream): ChatState =>
-  reduceAppend(state, createSystemMessage('Screen sharing started'), createScreenshareMessage(stream));
+  reduceAppend(state, createSystemMessage(SCREEN_SHARE_STARTED_TEXT), createScreenshareMessage(stream));
 
 export const reduceScreenShareStopped = (state: ChatState): ChatState =>
   reduceAppend(

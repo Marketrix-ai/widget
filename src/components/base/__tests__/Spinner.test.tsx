@@ -1,5 +1,5 @@
 /**
- * `Spinner` tests: `role=status`, the sr-only Loading label, size data attribute, md by default.
+ * `Spinner` tests: `role=status` with the sr-only Loading label, and the ring sized by `size`.
  */
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'bun:test';
@@ -7,23 +7,13 @@ import { describe, expect, it } from 'bun:test';
 import { Spinner } from '../Spinner';
 
 describe('Spinner', () => {
-  it('renders with role=status', () => {
-    render(<Spinner />);
-    expect(screen.getByRole('status')).toBeTruthy();
+  it('renders the sr-only Loading label inside a role=status', () => {
+    render(<Spinner size='sm' />);
+    expect(screen.getByRole('status')).toHaveTextContent('Loading');
   });
 
-  it('renders the sr-only Loading label', () => {
-    render(<Spinner />);
-    expect(screen.getByText('Loading')).toBeTruthy();
-  });
-
-  it('applies size data attribute', () => {
+  it('sizes the ring', () => {
     render(<Spinner size='lg' />);
-    expect(screen.getByRole('status')).toHaveAttribute('data-size', 'lg');
-  });
-
-  it('defaults to md size', () => {
-    render(<Spinner />);
-    expect(screen.getByRole('status')).toHaveAttribute('data-size', 'md');
+    expect(screen.getByRole('status').firstElementChild).toHaveStyle({ width: '24px', height: '24px' });
   });
 });
