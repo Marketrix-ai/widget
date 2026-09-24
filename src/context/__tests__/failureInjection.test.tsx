@@ -1,8 +1,10 @@
 /**
  * Table-driven tests that every external `ChatContext` interaction (message post, tool response, stop,
- * an unmatched error) fails into a human-readable message rather than a raw error, and recovers
+ * an unmatched error, a tenant billing refusal) fails into a human-readable message rather than a raw
+ * error, and recovers
  * cleanly on retry.
  */
+import { ORPCError } from '@orpc/client';
 import { act, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'bun:test';
 
@@ -72,6 +74,17 @@ describe('external-interaction failures never reach the customer page raw, and e
       humanText: CHAT_FAILURE_TEXT,
       run: async () => {
         vi.spyOn(streamClient, 'send').mockRejectedValueOnce(new Error(RAW_MARKER));
+        await act(async () => screen.getByTestId('send').click());
+        return () => {};
+      },
+    },
+    {
+      name: 'a paid-plan refusal meant for the tenant never reaches the visitor',
+      humanText: CHAT_FAILURE_TEXT,
+      run: async () => {
+        vi.spyOn(streamClient, 'send').mockRejectedValueOnce(
+          new ORPCError('FORBIDDEN', { message: RAW_MARKER, data: { reason: 'paid_plan_required' } }),
+        );
         await act(async () => screen.getByTestId('send').click());
         return () => {};
       },

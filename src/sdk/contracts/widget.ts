@@ -18,13 +18,13 @@ import { WIDGET_TOOL_NAMES } from './widgetToolNames';
 
 const WidgetCreateSchema = z.strictObject({
   application_id: z.number().positive(),
-  settings: WidgetSettingsWriteSchema.optional(),
+  settings: WidgetSettingsWriteSchema.partial().optional(),
 });
 export type WidgetCreateData = z.infer<typeof WidgetCreateSchema>;
 
 const WidgetUpdateSchema = z.strictObject({
   application_id: z.number(),
-  settings: WidgetSettingsWriteSchema.optional(),
+  settings: WidgetSettingsWriteSchema.partial().optional(),
   marketrix_id: z.string().max(100).optional(),
   marketrix_key: z.string().max(100).optional(),
 });
