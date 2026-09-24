@@ -8,7 +8,8 @@
  * session starting from a full snapshot; `stop()` tears rrweb down and drains what's buffered;
  * `flush()` posts one batch at a time, in order. A flush that fails is logged and requeued at the front
  * rather than dropped, since a later batch replays against the first one's snapshot, and retried on a doubling
- * delay; once the stream gives up, retries wait for it to register again rather than polling a dead api.
+ * delay; once the stream gives up, retries wait for it to register again rather than polling a dead api. The
+ * buffer is capped, keeping the oldest events, so a recording that cannot flush truncates instead of growing.
  */
 import { record } from '@rrweb/record';
 
@@ -20,7 +21,7 @@ import { streamClient, StreamGaveUpError } from './StreamClient';
 
 const FLUSH_INTERVAL_MS = 500;
 const MAX_RETRY_DELAY_MS = 30_000;
-const MAX_REQUEUED_EVENTS = 20_000;
+const MAX_BUFFERED_EVENTS = 20_000;
 
 export class RrwebSessionRecorder {
   private events: RrwebEvent[] = [];
@@ -44,7 +45,9 @@ export class RrwebSessionRecorder {
     streamClient.addCallbacks(this.callbacks);
     this.stopRecording = record({
       emit: event => {
-        this.events.push(RrwebEventSchema.parse(event));
+        const parsed = RrwebEventSchema.parse(event);
+        if (this.events.length >= MAX_BUFFERED_EVENTS) return;
+        this.events.push(parsed);
         if (!this.flushTimer && !this.streamGaveUp) this.scheduleFlush(FLUSH_INTERVAL_MS);
       },
       maskAllInputs: true,
@@ -78,6 +81,8 @@ export class RrwebSessionRecorder {
   private async followChat(chatId: string): Promise<void> {
     await this.flush();
     this.events = [];
+    this.streamGaveUp = false;
+    this.failedFlushes = 0;
     this.chatId = chatId;
     this.sessionId = randomId();
     await this.openSession();
@@ -125,7 +130,7 @@ export class RrwebSessionRecorder {
         await streamClient.send({ type: 'rrweb/events', rrweb_session_id: this.sessionId, events }, this.chatId);
         this.failedFlushes = 0;
       } catch (error) {
-        this.events = events.concat(this.events).slice(0, MAX_REQUEUED_EVENTS);
+        this.events = events.concat(this.events).slice(0, MAX_BUFFERED_EVENTS);
         logWarn('[RrwebSessionRecorder] Failed to record session events, requeued for retry:', error);
         if (this.stopped || this.streamGaveUp) return;
         this.scheduleFlush(Math.min(FLUSH_INTERVAL_MS * 2 ** this.failedFlushes++, MAX_RETRY_DELAY_MS));
