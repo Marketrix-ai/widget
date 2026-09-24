@@ -3,10 +3,12 @@
  * `MarketrixWidgetPreview` dashboard component, `mountWidget`, and the script-tag auto-init hook.
  * `README.md` is the customer-facing surface these exports make up.
  *
- * `mountWidget` picks the preview or live path by whether settings or credentials were passed. Auto-init
+ * `mountWidget` picks the preview or live path by whether settings or credentials were passed, and like
+ * `initWidget` rejects when the widget cannot mount; `MarketrixWidgetPreview` throws invalid settings to the
+ * host's error boundary. Auto-init
  * runs on import, deferred a tick and guarded so the package stays importable during a server render.
  */
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 
 import {
   autoInitializeWidget,
@@ -23,11 +25,9 @@ import type { AddWidgetConfig, MarketrixWidgetPreviewProps } from './types';
 export const MarketrixWidgetPreview: React.FC<MarketrixWidgetPreviewProps> = ({ settings, container }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
 
-  useEffect(() => {
-    const config = previewConfig(settings);
-    if (!config) return;
-    return renderWidget(config, container ?? containerRef.current ?? document.body);
-  }, [settings, container]);
+  const config = useMemo(() => previewConfig(settings), [settings]);
+
+  useEffect(() => renderWidget(config, container ?? containerRef.current ?? document.body), [config, container]);
 
   if (container) return null;
   return <div ref={containerRef} style={{ width: '100%', height: '100%', position: 'relative' }} />;
@@ -36,8 +36,7 @@ export const MarketrixWidgetPreview: React.FC<MarketrixWidgetPreviewProps> = ({ 
 export const mountWidget = async (config: AddWidgetConfig): Promise<void> => {
   if (config.settings !== undefined) {
     const { settings, container, ...clientConfig } = config;
-    const previewed = previewConfig(settings, clientConfig);
-    if (previewed) mountPreview(previewed, container);
+    mountPreview(previewConfig(settings, clientConfig), container);
   } else if (config.mtxId !== undefined && config.mtxKey !== undefined && config.mtxApiHost !== undefined) {
     const { container, ...clientConfig } = config;
     await initWidget(clientConfig, container);

@@ -2,15 +2,14 @@
  * The messenger panel's chat view: the scrolling transcript and the composer.
  *
  * `ChatView` owns the draft text and sends each turn through the store's `sendTurn`, restoring the draft
- * to the composer if sending fails. The composer stays locked while a reply is pending or a screen-access
- * request is waiting for an answer, so no later send can overwrite the held turn.
+ * to the composer if sending fails. The composer stays locked while a reply is pending, a screen-access
+ * request is waiting for an answer, or the tenant enabled no mode at all.
  */
 import React, { useState } from 'react';
 
-import { openScreenAccessRequest } from '../../context/chatReducer';
 import { useWidget, useWidgetConfig } from '../../hooks/useWidget';
 import type { InstructionType } from '../../sdk';
-import { MODE_LABELS } from '../../utils/chat';
+import { enabledModes, MODE_LABELS } from '../../utils/chat';
 import { ErrorBoundary } from '../base/ErrorBoundary';
 import { Stack } from '../base/Flex';
 import { Surface } from '../base/Surface';
@@ -18,22 +17,23 @@ import { Text } from '../base/Text';
 import { ChatInput, type ChatInputMode } from '../blocks/ChatInput';
 import { MessageList } from '../chat/MessageList';
 
-const MODES: Array<{ id: InstructionType; icon: ChatInputMode['icon'] }> = [
-  { id: 'tell', icon: 'chatBubble' },
-  { id: 'show', icon: 'mousePointerClick' },
-  { id: 'do', icon: 'ticktick' },
-];
+const MODE_ICONS: Record<InstructionType, ChatInputMode['icon']> = {
+  tell: 'chatBubble',
+  show: 'mousePointerClick',
+  do: 'ticktick',
+};
 
 export const ChatView: React.FC<{ messageInputRef: React.RefObject<HTMLTextAreaElement | null> }> = ({
   messageInputRef,
 }) => {
   const config = useWidgetConfig();
   const { state, actions } = useWidget();
-  const { currentMode, isTaskRunning, isAwaitingReply, messages } = state;
+  const { currentMode, isTaskRunning, isComposerLocked } = state;
+  const modes = enabledModes(config);
 
   const [inputValue, setInputValue] = useState('');
 
-  const composerLocked = !!openScreenAccessRequest(messages) || isAwaitingReply;
+  const composerLocked = isComposerLocked || modes.length === 0;
 
   const handleSendMessage = () => {
     const messageContent = inputValue.trim();
@@ -71,11 +71,7 @@ export const ChatView: React.FC<{ messageInputRef: React.RefObject<HTMLTextAreaE
           value={inputValue}
           onChange={setInputValue}
           onSubmit={handleSendMessage}
-          modes={MODES.filter(({ id }) => config[`widget_feature_${id}`]).map(({ id, icon }) => ({
-            id,
-            icon,
-            label: MODE_LABELS[id],
-          }))}
+          modes={modes.map(id => ({ id, icon: MODE_ICONS[id], label: MODE_LABELS[id] }))}
           activeMode={currentMode}
           onModeChange={handleModeChange}
           disabled={composerLocked}

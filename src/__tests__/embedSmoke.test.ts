@@ -2,7 +2,8 @@
  * Boots the built `dist/widget.mjs` — never the source — in a jsdom host document the way a customer's
  * page actually hands it off, via `loader.js`'s `script[mtx-id]` attribute forwarding and the widget's
  * own auto-init. Covers the exported runtime surface, the closed-shadow FAB mount and z-index, and that
- * no request fires before a host script tag triggers auto-init.
+ * no request fires before a host script tag triggers auto-init, and that the loader adds no second import
+ * map over a host map that already supplies React.
  */
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -104,7 +105,7 @@ afterEach(() => {
 });
 
 describe('loader.js forwards only mtx-* attributes onto the widget.mjs it injects', () => {
-  it("copies the host script tag's mtx-* attributes and none else onto the module script", () => {
+  const runLoader = (hostImportMaps: string[] = []) => {
     const loaderSource = readFileSync(resolve(root, 'public/loader.js'), 'utf8');
     const appended: { type: string; textContent?: string; src?: string; attrs: Record<string, string> }[] = [];
     const currentScript = {
@@ -118,6 +119,7 @@ describe('loader.js forwards only mtx-* attributes onto the widget.mjs it inject
     };
     const fakeDocument = {
       currentScript,
+      querySelectorAll: () => hostImportMaps.map(textContent => ({ textContent })),
       head: { appendChild: (el: (typeof appended)[number]) => appended.push(el) },
       createElement: () => {
         const el: (typeof appended)[number] = { type: '', attrs: {} };
@@ -136,6 +138,11 @@ describe('loader.js forwards only mtx-* attributes onto the widget.mjs it inject
     };
 
     new Function('document', loaderSource)(fakeDocument);
+    return appended;
+  };
+
+  it("copies the host script tag's mtx-* attributes and none else onto the module script", () => {
+    const appended = runLoader();
 
     expect(appended).toHaveLength(2);
     expect(appended[0]?.type).toBe('importmap');
@@ -146,6 +153,26 @@ describe('loader.js forwards only mtx-* attributes onto the widget.mjs it inject
     expect(appended[1]?.attrs).toEqual(
       Object.fromEntries(mtxAttrNames.map(name => [name, attrValues[name] ?? `smoke-${name}`])),
     );
+  });
+
+  it('adds no second import map when the host map already supplies React, which Firefox would ignore', () => {
+    const hostMap = JSON.stringify({
+      imports: {
+        react: '/r.js',
+        'react-dom': '/rd.js',
+        'react-dom/client': '/rdc.js',
+        'react/jsx-runtime': '/jsx.js',
+      },
+    });
+
+    expect(runLoader([hostMap]).map(el => el.type)).toEqual(['module']);
+  });
+
+  it('still adds its map when the host map lacks React', () => {
+    expect(runLoader([JSON.stringify({ imports: { lodash: '/l.js' } })]).map(el => el.type)).toEqual([
+      'importmap',
+      'module',
+    ]);
   });
 });
 

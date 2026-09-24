@@ -1,10 +1,12 @@
 /**
  * Tests for `ChatView`'s composer lock while a screen-access request is pending, multi-line message
- * rendering, resend-safe recovery when a send fails while the stream is down, and the screen-access
- * allow flows. A send-while-down test must mock `streamClient.ready` and not just `connect` — a turn
+ * rendering, resend-safe recovery when a send fails while the stream is down, the screen-access
+ * allow flows, a disabled mode never being sent and a forbidden turn showing the api's reason, Clear chat starting a new thread, and the transcript
+ * scrolling itself rather than the host page. A send-while-down test must mock `streamClient.ready` and not just `connect` — a turn
  * awaits `ready()`, which only resolves on `registered`, so mocking `connect` alone leaves that await
  * hanging forever and silently swallows the whole test.
  */
+import { ORPCError } from '@orpc/client';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 
@@ -185,5 +187,117 @@ describe('answering a screen-access request', () => {
 
     expect(captured!.messages.some(m => m.kind === 'screenshare')).toBe(false);
     expect(messageText(captured!.messages.at(-1)!.parts)).toBe('Screen sharing stopped');
+  });
+});
+
+describe('a mode the tenant disabled', () => {
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+  });
+
+  const liveChat = async (mtxId: string, overrides: Parameters<typeof renderWidget>[0]) => {
+    vi.spyOn(chatSession, 'getOrCreateChatId').mockResolvedValue('chat-1');
+    vi.spyOn(streamClient, 'connect').mockResolvedValue();
+    vi.spyOn(streamClient, 'ready').mockResolvedValue();
+    vi.spyOn(streamClient, 'send').mockResolvedValue();
+    scopeStorageTo({ mtxId });
+    renderWidget({ mtxId, use_screenshare: false, ...overrides }, { previewMode: false });
+    await waitFor(() => expect(streamClient.connect).toHaveBeenCalled());
+    openWidget();
+    openChatTab();
+    return screen.getByPlaceholderText('Ask anything') as HTMLTextAreaElement;
+  };
+
+  it('is never sent: the composer falls back to the first enabled mode', async () => {
+    const composer = await liveChat('chatview-mode-1', { widget_feature_tell: false });
+
+    send(composer, 'walk me through it');
+
+    await waitFor(() => expect(streamClient.send).toHaveBeenCalledWith(expect.objectContaining({ type: 'chat/show' })));
+    expect(streamClient.send).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'chat/tell' }));
+  });
+
+  it('locks the composer when the tenant enabled no mode at all', async () => {
+    const composer = await liveChat('chatview-mode-2', {
+      widget_feature_tell: false,
+      widget_feature_show: false,
+      widget_feature_do: false,
+    });
+
+    expect(composer.disabled).toBe(true);
+  });
+});
+
+describe('clearing the chat', () => {
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+  });
+
+  it('stops the reply in flight and opens a new chat thread, so the agent forgets the cleared turns', async () => {
+    const chatIds = ['chat-1', 'chat-2'];
+    vi.spyOn(chatSession, 'getOrCreateChatId').mockImplementation(() => Promise.resolve(chatIds[0] ?? 'none'));
+    vi.spyOn(streamClient, 'connect').mockResolvedValue();
+    vi.spyOn(streamClient, 'ready').mockResolvedValue();
+    vi.spyOn(streamClient, 'send').mockResolvedValue();
+    scopeStorageTo({ mtxId: 'chatview-clear-1' });
+    renderWidget({ mtxId: 'chatview-clear-1' }, { previewMode: false });
+    await waitFor(() => expect(streamClient.connect).toHaveBeenCalledWith('chat-1'));
+    openWidget();
+    openChatTab();
+    send(screen.getByPlaceholderText('Ask anything') as HTMLTextAreaElement, 'hello?');
+    await waitFor(() => expect(streamClient.send).toHaveBeenCalledWith(expect.objectContaining({ type: 'chat/tell' })));
+
+    chatIds.shift();
+    fireEvent.click(screen.getByText('Clear chat'));
+
+    expect(streamClient.send).toHaveBeenCalledWith({ type: 'chat/stop' });
+    await waitFor(() => expect(streamClient.connect).toHaveBeenCalledWith('chat-2'));
+    expect(screen.queryByText('hello?', { ignore: 'textarea' })).toBeNull();
+  });
+});
+
+describe('following the conversation', () => {
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+  });
+
+  it('scrolls the transcript itself, never the page around the widget', async () => {
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+    const composer = openChat();
+
+    send(composer, 'a new message');
+    await act(() => new Promise(resolve => window.requestAnimationFrame(() => resolve(undefined))));
+
+    expect(scrollIntoView).not.toHaveBeenCalled();
+    expect(screen.getByRole('log').scrollTop).toBe(screen.getByRole('log').scrollHeight);
+  });
+});
+
+describe('a turn the api refuses as forbidden', () => {
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+  });
+
+  it("shows the api's reason instead of the generic failure text", async () => {
+    vi.spyOn(chatSession, 'getOrCreateChatId').mockResolvedValue('chat-1');
+    vi.spyOn(streamClient, 'connect').mockResolvedValue();
+    vi.spyOn(streamClient, 'ready').mockResolvedValue();
+    vi.spyOn(streamClient, 'send').mockRejectedValue(
+      new ORPCError('FORBIDDEN', { message: 'Tell is turned off for this widget' }),
+    );
+    scopeStorageTo({ mtxId: 'chatview-forbidden-1' });
+    renderWidget({ mtxId: 'chatview-forbidden-1' }, { previewMode: false });
+    await waitFor(() => expect(streamClient.connect).toHaveBeenCalled());
+    openWidget();
+    openChatTab();
+
+    send(screen.getByPlaceholderText('Ask anything') as HTMLTextAreaElement, 'hello?');
+
+    expect(await screen.findByText('Tell is turned off for this widget')).toBeInTheDocument();
   });
 });

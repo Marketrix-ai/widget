@@ -3,15 +3,18 @@
  * widget's entire theming mechanism (there is no dark mode).
  *
  * `themeCssProperties` maps a tenant's colour settings, plus their muted/faint/hover/contrast variants,
- * onto the `--var` map. `WIDGET_RADIUS_PX` and the two durations are fixed, not per-tenant.
+ * onto the `--var` map. `WIDGET_RADIUS_PX` and the two durations are the contract defaults, not per-tenant.
  *
  * The focus ring colour is synthesized as black or white against the tenant's background rather than
  * using the tenant's accent colour, which has no guaranteed contrast against whatever sits next to it.
  */
+import type { CSSProperties } from 'react';
+
 import type { WidgetSettingsData } from '../sdk';
+import { DEFAULT_WIDGET_SETTINGS } from '../sdk/contracts/widgetSettings';
 import { addOpacity, getContrastingColor } from '../utils/color';
 
-export const WIDGET_RADIUS_PX = 12;
+export const WIDGET_RADIUS_PX = Number.parseInt(DEFAULT_WIDGET_SETTINGS.widget_border_radius, 10);
 
 type WidgetColorSettings = Pick<
   WidgetSettingsData,
@@ -22,7 +25,7 @@ type WidgetColorSettings = Pick<
   | 'widget_secondary_color'
 >;
 
-export function themeCssProperties(settings: WidgetColorSettings): Record<`--${string}`, string> {
+export function themeCssProperties(settings: WidgetColorSettings): CSSProperties & Record<`--${string}`, string> {
   const { widget_background_color: background, widget_text_color: text, widget_accent_color: accent } = settings;
   const secondary = settings.widget_secondary_color;
   return {
@@ -42,7 +45,7 @@ export function themeCssProperties(settings: WidgetColorSettings): Record<`--${s
     '--ring': getContrastingColor(background),
     '--ring-offset': background,
     '--radius': `${WIDGET_RADIUS_PX}px`,
-    '--duration-animation': '300ms',
-    '--duration-fade': '200ms',
+    '--duration-animation': DEFAULT_WIDGET_SETTINGS.widget_animation_duration,
+    '--duration-fade': DEFAULT_WIDGET_SETTINGS.widget_fade_duration,
   };
 }

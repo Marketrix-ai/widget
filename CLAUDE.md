@@ -58,8 +58,9 @@ GUI clients; that path is baked in at install, so after changing `rc:` re-run `l
   at build by `scripts/precompress.ts`; nginx has no brotli module, so brotli rides a `try_files`.
 - **zod ships in the bundle, so untrusted input is parsed with the contract's own schemas** (rrweb events,
   `parseWidgetSettings`), never a hand-written guard re-spelling a contract shape.
-- `public/loader.js` is the script-tag bootstrap. **It always injects its `esm.sh` React importmap** without
-  reading an existing one; a host map placed earlier keeps its keys, since a later map never overrides one.
+- `public/loader.js` is the script-tag bootstrap. It injects its `esm.sh` React importmap **unless a host map
+  already maps all four React specifiers** — Firefox and older Chrome/Safari ignore a second map. The build
+  target (Safari 16.4 floor) is documented in README's Requirements.
 
 ## Widget ↔ api
 
@@ -68,13 +69,19 @@ then `widgetStream` (SSE, server → widget) and `widgetMessagePost` (POST, widg
 each a Zod union discriminated on `type`.
 
 - **`application_id` is deliberately NOT a stream input** — a guessable id as a credential let anyone
-  drive any tenant's agent. It appears only on the `registered` event.
+  drive any tenant's agent. The widget sends it only in `rrweb/metadata`, which the api checks against the
+  credentials' application.
 - **`open` is the transport, `registered` is the chat** — `isConnected()` reads `registered`, and a
   command is accepted only into a registered chat. Reconnect backs off exponentially, max 10 attempts, and
   gives up on a `chat/error` with `request_id === 'auth'`.
 - **A reconnect gets a fresh, empty queue, never a replay.** The widget dedupes a resent `tool/call` by
   `tool_call_id` (the agent can resend one) but not `chat/delta`/`chat/response`, which are never
   redelivered. SSE is keyed server-side by `(chat_id, tab_id)` so tabs sharing a chat don't evict each other.
+- **`tab_id` is stable per browser tab** (`claimTabId`, sessionStorage) across same-origin navigations, so a
+  Show/Do task's tool calls follow the visitor to the next page; the api holds them for a short grace window
+  while the tab reloads. A duplicated tab mints its own id.
+- **A mode the tenant disabled is never sent** — `sendTurn` refuses it, chips of that mode are dropped and
+  `UIStateContext` publishes only an enabled mode; the api refuses one too.
 - `ChatContext.sendTurn` is the one entry for a turn or chip; `chat/delta` fragments **accumulate**, then
   `chat/response` **replaces** them by `request_id`. `stopTask` is the one stop path; a cancelled Show step
   posts no `tool/response`.

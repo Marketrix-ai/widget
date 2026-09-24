@@ -1,6 +1,7 @@
 /**
  * The widget's root component: re-publishes the config with the visitor's dragged position and the
  * z-index floor, publishes the portal root, and renders the panel, launcher, notifications and busy glow.
+ * A panel that crashes while rendering is reported through the error toast rather than vanishing.
  * A tenant's z-index setting can never sink the widget below the host page's own stacking context, and
  * preview mode always renders even when a setting would hide the widget.
  */
@@ -23,6 +24,12 @@ import { WidgetFab } from './blocks/WidgetFab';
 import { MessengerShell } from './navigation/MessengerShell';
 
 const MOBILE_MAX_WIDTH = 767;
+const PANEL_FAILED = 'Something went wrong displaying the chat. Please refresh the page.';
+
+const PanelFailed: React.FC<{ onFail: (message: string) => void }> = ({ onFail }) => {
+  useEffect(() => onFail(PANEL_FAILED), [onFail]);
+  return null;
+};
 
 function useScrollLock(enabled: boolean): void {
   useEffect(() => {
@@ -91,7 +98,6 @@ export const WidgetRoot: React.FC = () => {
   };
 
   const showProcessingFeedback = state.isAwaitingReply || state.isTaskRunning;
-  const customStyles = themeCssProperties(config) as React.CSSProperties;
 
   return (
     <WidgetConfigContext value={effectiveConfig}>
@@ -99,7 +105,7 @@ export const WidgetRoot: React.FC = () => {
         ref={setPortalContainer}
         data-marketrix-widget
         position='relative'
-        style={{ ...customStyles, ...(isPreviewMode && { width: '100%', height: '100%' }) }}
+        style={{ ...themeCssProperties(config), ...(isPreviewMode && { width: '100%', height: '100%' }) }}
       >
         <PortalContainerContext value={portalContainer}>
           <NotificationProvider
@@ -119,7 +125,7 @@ export const WidgetRoot: React.FC = () => {
               />
             )}
 
-            <ErrorBoundary label='Widget'>
+            <ErrorBoundary label='Widget' fallback={<PanelFailed onFail={actions.setError} />}>
               <MessengerShell />
             </ErrorBoundary>
 
@@ -128,7 +134,7 @@ export const WidgetRoot: React.FC = () => {
             <WidgetNotifications
               error={state.error}
               onClearError={() => actions.setError(undefined)}
-              {...(streamClient.canReconnect() && {
+              {...(state.canRetry && {
                 onRetry: () => {
                   actions.setError(undefined);
                   streamClient.reconnectNow();

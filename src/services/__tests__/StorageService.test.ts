@@ -4,7 +4,8 @@
  * dropped alone; a chat snapshot round-trips, with an active screen share stored as an ended notice
  * because a MediaStream cannot survive a reload; a stored value that is not JSON or fails its schema
  * reads as absent; `readLocalParsed`/`writeLocal` degrade to memory when `localStorage` throws
- * (private-mode Safari, a sandboxed iframe) and warn only once per session.
+ * (private-mode Safari, a sandboxed iframe) and warn only once per session; `claimTabId` survives a page load
+ * in the same tab but not a duplicated one.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 import { z } from 'zod';
@@ -195,5 +196,30 @@ describe('chat snapshot persistence', () => {
       kind: 'system',
       parts: [{ type: 'text', content: 'Screen sharing ended' }],
     });
+  });
+});
+
+describe('claimTabId keeps one browser tab one identity across page loads', () => {
+  beforeEach(() => sessionStorage.clear());
+
+  it('hands the id to the next page load in the same tab once this page hides', async () => {
+    const listen = vi.spyOn(window, 'addEventListener');
+    const first = await freshStorage();
+    const tabId = first.claimTabId();
+    const onPageHide = listen.mock.calls.find(([type]) => type === 'pagehide')?.[1];
+    listen.mockRestore();
+    if (typeof onPageHide !== 'function') throw new Error('claimTabId registered no pagehide listener');
+    onPageHide(new Event('pagehide'));
+
+    const next = await freshStorage();
+    expect(next.claimTabId()).toBe(tabId);
+  });
+
+  it('gives a tab duplicated from a live page its own id', async () => {
+    const live = await freshStorage();
+    const tabId = live.claimTabId();
+
+    const duplicate = await freshStorage();
+    expect(duplicate.claimTabId()).not.toBe(tabId);
   });
 });

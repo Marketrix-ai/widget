@@ -2,7 +2,7 @@
  * `DomService` tests: an index expires when the element behind it changes (a rewritten href, a gained
  * attribute) while an untouched one stays addressable; a `data-id` lands on the element the index really
  * points at; the widget's own shadow host is exempt from obstruction (it is what `elementFromPoint`
- * reports for any hit on the widget) while a host overlay still obscures; and a disabled or
+ * reports for any hit on the widget) while a host overlay, SVG included, still obscures; and a disabled or
  * aria-disabled control is refused at act time rather than hidden from the index. Every `describe`
  * below shares a fixed 10x10 `getBoundingClientRect` and no `elementFromPoint` occluder, so an indexed
  * element reads as interactable unless a test overrides `elementFromPoint` itself.
@@ -68,6 +68,16 @@ describe('a data-id lands on the element the index really points at', () => {
   });
 });
 
+describe('elements sharing an id each get their own data-id', () => {
+  it('tags both links even though a duplicated id makes neither uniquely selectable', () => {
+    document.body.innerHTML = '<p><a id="dup" href="/one">One</a></p><p><a id="dup" href="/two">Two</a></p>';
+
+    const snapshot = new DOMParser().parseFromString(domService.reindexAndSnapshot(), 'text/html');
+
+    expect([...snapshot.querySelectorAll('[data-id]')].map(a => a.getAttribute('href'))).toEqual(['/one', '/two']);
+  });
+});
+
 describe('the widget covering a target is not an obstacle the agent can clear', () => {
   it('exempts the shadow host, which is what elementFromPoint reports for any hit on the widget', () => {
     const service = interactable(
@@ -83,6 +93,15 @@ describe('the widget covering a target is not an obstacle the agent can clear', 
     document.elementFromPoint = () => document.querySelector('.cookie-banner');
 
     expect(service.getValidatedElement(0).error).toContain('ELEMENT_OBSCURED');
+  });
+
+  it('names an SVG overlay by its class instead of throwing on its animated className', () => {
+    const service = interactable(
+      '<button style="position: fixed">Buy</button><svg class="scrim dim"><rect></rect></svg>',
+    );
+    document.elementFromPoint = () => document.querySelector('svg');
+
+    expect(service.getValidatedElement(0).error).toContain('covered by svg.scrim');
   });
 });
 

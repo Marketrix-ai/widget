@@ -1,7 +1,7 @@
 /**
  * `HomeView` — the opening screen: tenant greeting and body, the Ask-a-question button that switches to
  * the chat view, the suggested-action chips (`getSuggestedActionsFromConfig`), which navigate and dispatch
- * in one click, and a card linking back into a chat already in progress.
+ * in one click and are disabled while a new turn is held, and a card linking back into a chat in progress.
  *
  * Chip captions render VERBATIM in the tenant text colour: a `show`/`do` caption doubles as the
  * instruction dispatched on click and is given its mode prefix in the config layer, so prefixing here
@@ -21,7 +21,7 @@ import { Text } from '../base/Text';
 export const HomeView: React.FC = () => {
   const config = useWidgetConfig();
   const { state, actions } = useWidget();
-  const { messages } = state;
+  const { messages, isComposerLocked } = state;
   const suggestedActions = getSuggestedActionsFromConfig(config);
   const lastMessagePreview = messageText(messages[messages.length - 1]?.parts ?? []) || 'Message';
   const onNavigateToChat = () => actions.setActiveView('chat');
@@ -64,6 +64,7 @@ export const HomeView: React.FC = () => {
               size='sm'
               variant='chip'
               full
+              disabled={isComposerLocked}
               onClick={() => onChipClick(action)}
               style={{ color: config.widget_text_color, paddingTop: '8px', paddingBottom: '8px' }}
             >

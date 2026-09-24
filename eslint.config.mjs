@@ -1,8 +1,8 @@
 /**
  * The widget's ESLint config.
  *
- * Bans bare `document.activeElement` (`useFocusTrap`/jsdom tests exempted), the bare `localStorage`
- * global (confined to `StorageService.ts`), a `cn()` helper call (no CSS framework), and every
+ * Bans bare `document.activeElement` (`useFocusTrap`/jsdom tests exempted), the bare `localStorage` and
+ * `sessionStorage` globals (confined to `StorageService.ts`), a `cn()` helper call (no CSS framework), and every
  * `console.*` call except `error` everywhere and `warn` in `src/utils/log.ts` alone. `react-hooks`
  * enforces the rules of hooks; `jsx-a11y` covers interactive-div a11y. `Bun` is a global for `bun run`
  * scripts.
@@ -96,6 +96,7 @@ export default [
       'no-restricted-globals': [
         'error',
         { name: 'localStorage', message: 'use StorageService.readLocal/writeLocal instead of the bare global' },
+        { name: 'sessionStorage', message: 'browser storage lives in StorageService alone' },
       ],
       'no-restricted-syntax': [
         'error',

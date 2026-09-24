@@ -1,10 +1,13 @@
 /**
  * React context owning the widget's chat store and its live wiring, reached through `useChatContext`.
- * `sendTurn` is the one entry for a typed turn or chip, asking for screen access first in Show and Do;
- * `allowScreenAccess`/`denyScreenAccess` release the held turn; `stopTask` cancels a running turn and its
- * Show overlay. The stream handlers run browser tools and reply with results; preview mode answers locally.
- * The api never replays a chat's past events on reconnect, so only a resent `tool/call` needs dedupe.
+ * `sendTurn` is the one entry for a typed turn or chip, refusing a mode the tenant disabled or a turn while a
+ * screen-access request is open, and asking for screen access first in Show and Do; `allowScreenAccess`/
+ * `denyScreenAccess` release the held turn; `stopTask` cancels a running turn and its Show overlay; `clearChat`
+ * stops any running turn and starts a fresh chat thread, so the agent forgets the cleared history too. The stream handlers run browser tools and reply with results; preview mode answers locally.
+ * The api never replays a chat's past events on reconnect, so only a resent `tool/call` needs dedupe. A turn the
+ * api refuses as forbidden (a mode switched off since the page loaded) shows the api's own message.
  */
+import { ORPCError } from '@orpc/client';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useWidgetConfig } from '../hooks/useWidget';
@@ -13,6 +16,7 @@ import { browserToolService } from '../services/BrowserToolService';
 import { getOrCreateChatId } from '../services/chatSession';
 import { activeScreenStream, startScreenShare, subscribeScreenShare } from '../services/ScreenShareService';
 import { showModeService } from '../services/ShowModeService';
+import { forgetChatId } from '../services/StorageService';
 import { streamClient, StreamGaveUpError } from '../services/StreamClient';
 import type { ChatMessage, InstructionType } from '../types';
 import {
@@ -22,6 +26,7 @@ import {
   createScreenAccessRequestMessage,
   createSystemMessage,
   createUserMessage,
+  enabledModes,
 } from '../utils/chat';
 import { logWarn } from '../utils/log';
 import {
@@ -83,7 +88,8 @@ const StaleReplyWatchdog: React.FC<{ id: string; progress: number; onStale: (id:
 };
 
 export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isPreviewMode, use_screenshare } = useWidgetConfig();
+  const config = useWidgetConfig();
+  const { isPreviewMode, use_screenshare } = config;
   const { uiState, uiActions } = useUIStateContext();
   const [state, setState] = useState<ChatState>(() => ({ messages: [], task: { phase: 'idle' } }));
 
@@ -108,7 +114,6 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     (content: string) => commit(s => reduceAppend(s, createSystemMessage(content))),
     [commit],
   );
-  const clearChat = useCallback(() => commit(() => ({ messages: [], task: { phase: 'idle' } })), [commit]);
   const expireReply = useCallback((id: string) => commit(s => reduceStaleReply(s, id, STALE_REPLY_TEXT)), [commit]);
 
   const dispatchTurn = useCallback(
@@ -127,7 +132,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return true;
       } catch (error) {
         console.error('Failed to send message:', error);
-        commit(s => reduceError(s, placeholder.id, CHAT_FAILURE_TEXT));
+        const refusal = error instanceof ORPCError && error.code === 'FORBIDDEN' ? error.message : CHAT_FAILURE_TEXT;
+        commit(s => reduceError(s, placeholder.id, refusal));
         return false;
       }
     },
@@ -136,15 +142,14 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const sendTurn = useCallback(
     async (content: string, mode: InstructionType): Promise<boolean> => {
+      if (!enabledModes(config).includes(mode) || openScreenAccessRequest(stateRef.current.messages)) return false;
       commit(s => reduceAppend(s, createUserMessage(content, mode)));
       const needsScreenAccess = mode !== 'tell' && use_screenshare !== false && !activeScreenStream();
       if (!needsScreenAccess) return dispatchTurn(content, mode);
-      commit(s =>
-        openScreenAccessRequest(s.messages) ? s : reduceAppend(s, createScreenAccessRequestMessage(mode, content)),
-      );
+      commit(s => reduceAppend(s, createScreenAccessRequestMessage(mode, content)));
       return true;
     },
-    [use_screenshare, commit, dispatchTurn],
+    [config, use_screenshare, commit, dispatchTurn],
   );
 
   const resolveScreenAccess = useCallback(
@@ -250,7 +255,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     const onError = (error: Error) => {
-      setError(error.message);
+      setError(error.message, streamClient.canReconnect());
       lastStreamErrorRef.current = error.message;
       if (error instanceof StreamGaveUpError) commit(s => reduceTransportFailure(s, error.message));
     };
@@ -269,6 +274,20 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       uiActions.setError('Could not stop the assistant — it may still be working.');
     });
   }, [isPreviewMode, commit, uiActions, currentModeRef]);
+
+  const clearChat = useCallback(() => {
+    const { task, messages } = stateRef.current;
+    if (task.phase === 'running' || messages.some(msg => msg.kind === 'agent' && msg.isPlaceholder)) stopTask();
+    commit(() => ({ messages: [], task: { phase: 'idle' } }));
+    if (isPreviewMode) return;
+    forgetChatId();
+    getOrCreateChatId()
+      .then(chatId => streamClient.connect(chatId))
+      .catch((error: unknown) => {
+        console.error('Failed to start a new chat:', error);
+        uiActions.setError('Could not start a new chat. Please refresh the page.');
+      });
+  }, [isPreviewMode, commit, stopTask, uiActions]);
 
   const chatActions = useMemo<ChatActions>(
     () => ({ restoreMessages, addSystemMessage, clearChat, sendTurn, allowScreenAccess, denyScreenAccess, stopTask }),

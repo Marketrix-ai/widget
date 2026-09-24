@@ -1,9 +1,11 @@
 /**
- * Browser-local persistence for the widget: the one door to `localStorage`.
+ * Browser-local persistence for the widget: the one door to `localStorage` and `sessionStorage`.
  * `readLocalParsed`/`writeLocal` read through a schema and write JSON, `scopedKey`/`scopeStorageTo` scope keys
- * per tenant, `getChatId`/`setChatId` hold the thread id, `readChatSnapshot`/`writeChatSnapshot` the
- * transcript, and `MessageSchema` defines a chat message. Config and credentials are never persisted, and
- * a host page that denies storage falls back to memory.
+ * per tenant, `getChatId`/`setChatId`/`forgetChatId` hold the thread id, `readChatSnapshot`/`writeChatSnapshot`
+ * the transcript, `claimTabId` the browser tab's identity, and `MessageSchema` defines a chat message. Config
+ * and credentials are never persisted, and a host page that denies storage falls back to memory.
+ * The tab id survives same-origin navigations and reloads so the api keeps routing a Show/Do task's tool
+ * calls to this tab; a page takes it out of `sessionStorage` while alive, so a duplicated tab mints its own.
  */
 import { z } from 'zod';
 
@@ -11,8 +13,10 @@ import { InstructionTypeSchema } from '../sdk/contracts/widgetSettings';
 import { WIDGET_TOOL_NAMES } from '../sdk/contracts/widgetToolNames';
 import type { ChatMessage, InstructionType, ValidWidgetConfig } from '../types';
 import { logWarn } from '../utils/log';
+import { randomId } from '../utils/randomId';
 
 const STORAGE_KEY = 'marketrix_chat_context';
+const TAB_ID_KEY = 'marketrix_tab_id';
 const CONTEXT_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000;
 
 const MessagePartSchema = z.object({
@@ -124,6 +128,25 @@ export function scopeStorageTo(config: Pick<ValidWidgetConfig, 'mtxId'>): void {
 export const getChatId = (): string | null => context.chat_id;
 
 export const setChatId = (chatId: string): void => updateContext({ chat_id: chatId });
+
+export const forgetChatId = (): void => updateContext({ chat_id: null });
+
+function sessionStore(action: (storage: Storage) => string | null | void): string | null {
+  try {
+    return action(sessionStorage) ?? null;
+  } catch (error) {
+    warnOnce('write', '[StorageService] sessionStorage is unusable, degrading to memory for this session:', error);
+    return null;
+  }
+}
+
+export function claimTabId(): string {
+  const tabId = sessionStore(storage => storage.getItem(TAB_ID_KEY)) ?? randomId();
+  sessionStore(storage => storage.removeItem(TAB_ID_KEY));
+  window.addEventListener('pagehide', () => sessionStore(storage => storage.setItem(TAB_ID_KEY, tabId)));
+  window.addEventListener('pageshow', () => sessionStore(storage => storage.removeItem(TAB_ID_KEY)));
+  return tabId;
+}
 
 export function readChatSnapshot(): ChatSnapshot {
   const { messages, currentMode, isOpen } = context;
