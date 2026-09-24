@@ -4,9 +4,9 @@
  *
  * `MessageList` prepends a greeting message built from `widget_body`, which never enters the store —
  * that's why "Clear chat" is gated on the store's own message count. `handleScroll` shows each
- * affordance based on scroll position. All scrolling is suppressed in preview mode, where the widget is
- * embedded in the dashboard's own modal and scrolling would move that modal instead of this list. A
- * streaming reply re-pins to the bottom only while the reader was already near it.
+ * affordance based on scroll position. Scrolling moves only the list container, never the host page or
+ * the dashboard around a preview. A streaming reply re-pins to the bottom only while the reader was already
+ * near it.
  */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 
@@ -34,11 +34,14 @@ export const MessageList = () => {
   const widgetConfig = useWidgetConfig();
   const { state, actions } = useWidget();
   const { messages, isTaskRunning } = state;
-  const { isPreviewMode } = widgetConfig;
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [showScrollBottom, setShowScrollBottom] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    const el = containerRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  };
 
   const greetingMessage = useMemo(() => createAgentMessage(widgetConfig.widget_body), [widgetConfig.widget_body]);
   const allMessages = useMemo(() => [greetingMessage, ...messages], [greetingMessage, messages]);
@@ -55,23 +58,19 @@ export const MessageList = () => {
 
   useEffect(() => {
     window.requestAnimationFrame(() => {
-      if (messagesEndRef.current) {
-        !isPreviewMode && messagesEndRef.current.scrollIntoView({ behavior: 'auto' });
-        !isPreviewMode && handleScroll();
-      }
+      scrollToBottom();
+      handleScroll();
     });
-  }, [messages.length, isPreviewMode, messagesEndRef]);
+  }, [messages.length]);
 
   const lastMessage = messages[messages.length - 1];
   const lastContentLength = lastMessage ? messageText(lastMessage.parts).length : 0;
   useEffect(() => {
     const el = containerRef.current;
-    if (!el || isPreviewMode) return;
+    if (!el) return;
     const isAtBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 120;
-    if (isAtBottom) {
-      window.requestAnimationFrame(() => messagesEndRef.current?.scrollIntoView({ behavior: 'auto' }));
-    }
-  }, [lastContentLength, isPreviewMode, messagesEndRef]);
+    if (isAtBottom) window.requestAnimationFrame(() => scrollToBottom());
+  }, [lastContentLength]);
 
   return (
     <Surface position='relative' height='full'>
@@ -111,8 +110,6 @@ export const MessageList = () => {
             </Button>
           </Flex>
         )}
-
-        <Surface key='scroll-anchor' ref={messagesEndRef} />
       </Surface>
 
       {[
@@ -128,7 +125,7 @@ export const MessageList = () => {
           edge: { bottom: '8px' },
           label: 'Scroll to bottom',
           icon: 'arrowDown' as const,
-          onClick: () => !isPreviewMode && messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }),
+          onClick: () => containerRef.current?.scrollTo({ top: containerRef.current.scrollHeight, behavior: 'smooth' }),
         },
       ].map(
         ({ show, edge, label, icon, onClick }) =>

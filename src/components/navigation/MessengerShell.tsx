@@ -3,7 +3,8 @@
  * Chat tabs, and the resize grip.
  * `useFocusTrap` keeps focus inside the open panel, `useResize` drag- or key-resizes it and remembers the
  * size per tenant, and `MessengerShell` renders it. The panel is non-modal, so these are hand-rolled rather
- * than a dialog primitive that would lock the host page's scrolling.
+ * than a dialog primitive that would inert the host page; only `WidgetRoot` locks host scrolling, and only on a
+ * phone-width viewport.
  */
 import { Tabs } from '@base-ui/react/tabs';
 import React, { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
@@ -11,6 +12,7 @@ import { z } from 'zod';
 
 import { SHADOW } from '../../design-system/component-tokens';
 import { useWidget, useWidgetConfig } from '../../hooks/useWidget';
+import { DEFAULT_WIDGET_SETTINGS } from '../../sdk/contracts/widgetSettings';
 import { activeScreenStream, stopScreenShare, subscribeScreenShare } from '../../services/ScreenShareService';
 import { readLocalParsed, scopedKey, writeLocal } from '../../services/StorageService';
 import { WIDGET_VIEWS } from '../../types';
@@ -103,7 +105,10 @@ type Size = z.infer<typeof SizeSchema>;
 const MIN_WIDTH = 280;
 const MAX_WIDTH = 600;
 const MIN_HEIGHT = 320;
-const DEFAULT_SIZE: Size = { width: 360, height: 450 };
+const DEFAULT_SIZE: Size = {
+  width: Number.parseInt(DEFAULT_WIDGET_SETTINGS.widget_width, 10),
+  height: Number.parseInt(DEFAULT_WIDGET_SETTINGS.widget_height, 10),
+};
 const KEYBOARD_RESIZE_STEP_PX = 16;
 
 function clampSize({ width, height }: Size): Size {
@@ -273,11 +278,11 @@ export const MessengerShell: React.FC = () => {
         transformOrigin: `${vertical} ${horizontal}`,
         width: widthPx,
         height: heightPx,
-        fontSize: '14px',
+        fontSize: DEFAULT_WIDGET_SETTINGS.widget_font_size,
         ...panelPositionStyle,
         pointerEvents: 'auto',
         scrollbarWidth: 'thin',
-        animation: 'messenger-entrance 300ms cubic-bezier(0, 1.2, 1, 1)',
+        animation: `messenger-entrance ${DEFAULT_WIDGET_SETTINGS.widget_animation_duration} cubic-bezier(0, 1.2, 1, 1)`,
         boxShadow: SHADOW.panel,
       }}
     >

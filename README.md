@@ -27,7 +27,7 @@ Add one `<script>` to your page `<head>`, **before any `<script type="module">` 
 
 `loader.js`:
 
-1. Injects a React 19 importmap pointing at `esm.sh/react@19`. If your page already has an importmap before the loader, the browser keeps your entries — a later import map never overrides an earlier key — so a host that already ships React 19 keeps its own copy.
+1. Injects a React 19 importmap pointing at `esm.sh/react@19`, unless an import map already on your page maps `react`, `react-dom`, `react-dom/client` and `react/jsx-runtime`. If your page has an import map that lacks those entries, add them to it: Firefox, Chrome before 133 and Safari before 18.4 ignore every import map after the first, so the loader's map would not load React there. Where several maps are supported, an earlier map's keys win, so a host that already ships React 19 keeps its own copy.
 2. Injects `<script type="module" src=".../widget.mjs">` from the same origin as the loader.
 3. Forwards every `mtx-*` attribute from the loader tag to the widget.
 
@@ -136,7 +136,7 @@ import {
 
 ### `mountWidget(config): Promise<void>`
 
-Auto-detects the mode (preview / production) from `config` and initializes the widget, throwing if neither `settings` nor `mtxId` + `mtxKey` is present. The recommended entry point for programmatic use.
+Auto-detects the mode (preview / production) from `config` and initializes the widget, rejecting if neither `settings` nor `mtxId` + `mtxKey` is present, if preview `settings` are invalid, or if production init fails. The recommended entry point for programmatic use.
 
 ```ts
 // Production
@@ -148,7 +148,7 @@ await mountWidget({ settings: { widget_enabled: true, widget_position: 'bottom_r
 
 ### `initWidget(config, container?): Promise<void>`
 
-Lower-level production initializer. Validates credentials, fetches settings from the API, mounts into a closed Shadow DOM, and opens the event stream. Optionally mounts inside a specific `container`. Concurrent and duplicate calls are deduplicated; only one production widget runs per page.
+Lower-level production initializer. Validates credentials, fetches settings from the API, mounts into a closed Shadow DOM, and opens the event stream. Optionally mounts inside a specific `container`. Concurrent and duplicate calls are deduplicated; only one production widget runs per page. It rejects when the widget cannot load (a missing API host, rejected credentials, invalid settings), after showing the visitor a notice.
 
 ```ts
 await initWidget({ mtxId, mtxKey, mtxApiHost }, document.getElementById('my-container')!);
@@ -197,14 +197,17 @@ function Preview() {
 }
 ```
 
-Props: `settings` (required) and `container?`.
+Props: `settings` (required) and `container?`. Invalid `settings` throw during render, naming the invalid fields, so wrap the preview in your error boundary.
 
 ---
 
 ## Interaction modes
 
 - **Tell** — the agent explains concepts and answers questions in chat.
-- **Show** — the agent walks the user through a task step-by-step, highlighting the relevant elements on the page.
+- **Show** — the agent walks the user through a task step-by-step, highlighting the relevant elements on the page. A Show or Do task keeps running across same-origin page navigations in the same tab.
+
+A mode switched off in the dashboard is never sent: its chips are hidden and the composer uses the first enabled mode.
+
 - **Do** — the agent performs the actions in the browser on the user's behalf.
 
 ---
@@ -219,6 +222,14 @@ TypeScript types are bundled with the package:
 - `MarketrixWidgetPreviewProps` — props for the `MarketrixWidgetPreview` component.
 - `WidgetSettingsData` — the dashboard settings shape `MarketrixWidgetPreview` and preview-mode `mountWidget` take.
 - `InstructionType` (`'tell' | 'show' | 'do'`).
+
+---
+
+## Upgrading to 5.1
+
+- **`initWidget` and `mountWidget` now reject when the widget cannot load**, where they used to resolve after showing the visitor a notice. Add a `.catch` if you awaited them without one.
+- **`MarketrixWidgetPreview` and preview-mode `mountWidget` now throw on invalid `settings`**, where they used to log to the console and render nothing.
+- **Browsers below the floor in [Requirements](#requirements) are no longer supported.** The bundle used to target the newest syntax, with no declared floor.
 
 ---
 
@@ -244,6 +255,7 @@ TypeScript types are bundled with the package:
 
 ## Requirements
 
+- **A browser at or above Safari 16.4, Chrome/Edge 111 or Firefox 111** — the bundle's build target. Safari 16.4 is the first Safari with import maps, which the script-tag loader relies on.
 - **React 19** (`react`/`react-dom` `^19.2.3`) on the host page — peer dependency, not bundled. The script-tag loader provides it via importmap; npm consumers supply it from their app.
 - A reachable Marketrix API host (`mtxApiHost` / `mtx-api-host`).
 - Valid credentials (`mtxId` + `mtxKey`) for production mode.

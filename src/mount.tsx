@@ -1,14 +1,14 @@
 /**
  * The widget's mount lifecycle behind `index.tsx`: the closed-shadow host, the React root, the one live
  * widget, and the script-tag auto-init path.
- *
  * `renderWidget` renders one widget into its own closed shadow root and returns its teardown.
- * `initWidget` resolves credentials and mounts, coalescing concurrent calls; `mountPreview` mounts settings
- * with no api; `unmountWidget` tears everything down, including the show-mode overlay outside the shadow
- * root; `updateMarketrixConfig` re-mounts with new client options. `showHostPageNotice` toasts before the
- * widget exists. `window.__mtx` marks a live widget and survives the module executing twice.
- * `widget_enabled` false creates no chat id, stream or recording. `mtx-api-host` has no default, since an
- * unset host would silently post widget traffic at the host page's own origin.
+ * `initWidget` resolves credentials and mounts, coalescing concurrent calls and rejecting when the widget
+ * cannot load; `previewConfig` throws on invalid preview settings; `mountPreview` mounts them with no api;
+ * `unmountWidget` tears everything down, including the show-mode overlay outside the shadow root;
+ * `updateMarketrixConfig` re-mounts with new client options. `showHostPageNotice` toasts before the widget
+ * exists. `window.__mtx` marks a live widget and survives the module executing twice. `widget_enabled` false
+ * creates no chat id, stream or recording, and `mtx-api-host` has no default, since an unset host would
+ * silently post widget traffic at the host page's own origin.
  */
 import React from 'react';
 import { createRoot, type Root } from 'react-dom/client';
@@ -100,15 +100,9 @@ function mountActive(config: ValidWidgetConfig, host: HTMLElement | undefined, i
   window.__mtx = { state: 'active' };
 }
 
-export function previewConfig(
-  settings: WidgetSettingsData,
-  baseConfig: ClientOwnedConfig = {},
-): ValidWidgetConfig | null {
+export function previewConfig(settings: WidgetSettingsData, baseConfig: ClientOwnedConfig = {}): ValidWidgetConfig {
   const parsed = parseWidgetSettings(settings);
-  if (parsed.invalidFields) {
-    console.error(`Marketrix Widget: ${invalidSettingsMessage(parsed.invalidFields)}`);
-    return null;
-  }
+  if (parsed.invalidFields) throw new Error(`Marketrix Widget: ${invalidSettingsMessage(parsed.invalidFields)}`);
   return { ...baseConfig, ...parsed.settings, isPreviewMode: true };
 }
 
@@ -139,10 +133,9 @@ async function initWidgetInternal(config: MarketrixConfig, host: HTMLElement | u
     finalConfig = await loadWidgetConfig(config);
   } catch (error) {
     if (generation !== lifecycleGeneration) return;
-    console.error('Marketrix Widget initialization failed:', error);
     showHostPageNotice(errorMessage(error, 'Failed to initialize widget'), 'error');
     window.__mtx = undefined;
-    return;
+    throw error;
   }
   if (generation !== lifecycleGeneration) return;
   hideHostPageNotice();

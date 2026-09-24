@@ -88,8 +88,7 @@ describe('public widget lifecycle', () => {
     expect(unrelated).toBeInTheDocument();
   });
 
-  it('a config the settings schema refuses names the fields that failed instead of mounting silently', async () => {
-    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+  it('a config the settings schema refuses rejects naming the fields that failed instead of mounting silently', async () => {
     const container = mountTarget();
     document.body.append(container);
     const broken = {
@@ -97,10 +96,9 @@ describe('public widget lifecycle', () => {
       widget_position: 'middle',
     } as unknown as WidgetSettingsData;
 
-    await act(() => mountWidget({ settings: broken, container }));
+    await expect(mountWidget({ settings: broken, container })).rejects.toThrow('widget_position');
 
     expect(container.querySelector('.marketrix-widget-container')).toBeNull();
-    expect(consoleError).toHaveBeenCalledWith(expect.stringContaining('widget_position'));
   });
 
   it('lets a preview invalidate pending production initialization', async () => {
@@ -132,7 +130,7 @@ describe('public widget lifecycle', () => {
     const container = mountTarget();
     document.body.append(container);
 
-    await initWidget({ mtxId: 'no-host', mtxKey: 'key' } as MarketrixConfig, container);
+    await expect(initWidget({ mtxId: 'no-host', mtxKey: 'key' } as MarketrixConfig, container)).rejects.toThrow();
 
     expect(load).not.toHaveBeenCalled();
     expectNotMounted(container);
