@@ -5,8 +5,8 @@
  *
  * `mountWidget` picks the preview or live path by whether settings or credentials were passed, and like
  * `initWidget` rejects when the widget cannot mount; `MarketrixWidgetPreview` throws invalid settings to the
- * host's error boundary. Auto-init
- * runs on import, deferred a tick and guarded so the package stays importable during a server render.
+ * host's error boundary. Auto-init runs on import, deferred a tick and guarded so the package stays
+ * importable during a server render.
  */
 import React, { useEffect, useMemo, useRef } from 'react';
 

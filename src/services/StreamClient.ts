@@ -2,11 +2,8 @@
  * Singleton SSE transport between the widget and the api, exported as `streamClient`.
  * `setCredentials` holds the stream's credentials, `send` posts a command via `widgetMessagePost`, `ready`
  * connects and waits for registration, and `canReconnect`/`reconnectNow` back Retry; `StreamGaveUpError`
- * marks a stream that exhausted its reconnects. Each browser tab dials with its own tab id, kept across
- * page loads, so the api keys the SSE stream per tab and routes a running task's tool calls back to it; backoff
- * is jittered so tabs across a shared outage don't redial together. The api ends a registered stream cleanly only
- * when another page dialed with the same tab id, so the evicted page redials under a fresh one; `route` pins the
- * chat and tab a reply must answer on, since the api relays a tool response only from the tab it called.
+ * marks a stream that exhausted its reconnects. Backoff is jittered so tabs across a shared outage don't
+ * redial together, and a tab evicted by another page with its tab id redials under a fresh one.
  */
 import { sdk, type WidgetCommand, type WidgetEvent } from '../sdk';
 import { logWarn } from '../utils/log';
