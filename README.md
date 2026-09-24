@@ -168,7 +168,7 @@ Returns the active configuration — your options merged with the dashboard sett
 
 ### Settings
 
-Widget settings are managed in the dashboard. `widget_appearance: 'hidden'` keeps the widget initialized but suppresses its visible UI on the host page; previews remain visible. `widget_greeting_toast` controls the welcome toast, and `widget_recording` enables rrweb session recording. Recording is off by default.
+Widget settings are managed in the dashboard. `widget_appearance: 'hidden'` keeps the widget initialized but suppresses its visible UI on the host page; previews remain visible. `widget_greeting_toast` controls the welcome toast, and `widget_recording` enables Session recording. Recording is off by default.
 
 #### Session recording privacy
 

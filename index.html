@@ -10,7 +10,7 @@
       href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script src="https://unpkg.com/lucide@1.48.0/dist/umd/lucide.js"></script>
     <style>
       :root {
         --background: oklch(0.9911 0 0);
@@ -32,19 +32,6 @@
         --border: oklch(0.9037 0 0);
         --input: oklch(0.9731 0 0);
         --ring: oklch(0.8348 0.1302 160.908);
-        --chart-1: oklch(0.8348 0.1302 160.908);
-        --chart-2: oklch(0.6231 0.188 259.8145);
-        --chart-3: oklch(0.6056 0.2189 292.7172);
-        --chart-4: oklch(0.7686 0.1647 70.0804);
-        --chart-5: oklch(0.6959 0.1491 162.4796);
-        --sidebar: oklch(0.9911 0 0);
-        --sidebar-foreground: oklch(0.5452 0 0);
-        --sidebar-primary: oklch(0.8348 0.1302 160.908);
-        --sidebar-primary-foreground: oklch(0.2626 0.0147 166.4589);
-        --sidebar-accent: oklch(0.9461 0 0);
-        --sidebar-accent-foreground: oklch(0.2435 0 0);
-        --sidebar-border: oklch(0.9037 0 0);
-        --sidebar-ring: oklch(0.8348 0.1302 160.908);
         --font-sans: 'Outfit', sans-serif;
         --font-mono: ui-monospace, monospace;
         --radius: 0.5rem;
@@ -82,19 +69,6 @@
         --border: oklch(0.2809 0 0);
         --input: oklch(0.2603 0 0);
         --ring: oklch(0.8003 0.1821 151.711);
-        --chart-1: oklch(0.8003 0.1821 151.711);
-        --chart-2: oklch(0.7137 0.1434 254.624);
-        --chart-3: oklch(0.709 0.1592 293.5412);
-        --chart-4: oklch(0.8369 0.1644 84.4286);
-        --chart-5: oklch(0.7845 0.1325 181.912);
-        --sidebar: oklch(0.1822 0 0);
-        --sidebar-foreground: oklch(0.6301 0 0);
-        --sidebar-primary: oklch(0.4365 0.1044 156.7556);
-        --sidebar-primary-foreground: oklch(0.9213 0.0135 167.1556);
-        --sidebar-accent: oklch(0.3132 0 0);
-        --sidebar-accent-foreground: oklch(0.9851 0 0);
-        --sidebar-border: oklch(0.2809 0 0);
-        --sidebar-ring: oklch(0.8003 0.1821 151.711);
         --page-grid-line: oklch(0.5902 0.0816 171.1758 / 0.16);
         --page-glow-left: oklch(0.3605 0.0763 171.2714 / 0.24);
         --page-glow-right: oklch(0.3146 0.0473 217.1454 / 0.18);
@@ -1154,7 +1128,7 @@
         script.src = './loader.js';
         script.setAttribute('mtx-id', params.get('mtx-id') || '');
         script.setAttribute('mtx-key', params.get('mtx-key') || '');
-        script.setAttribute('mtx-api-host', params.get('mtx-api-host') || 'https://api.marketrix.ai');
+        script.setAttribute('mtx-api-host', params.get('mtx-api-host') || 'http://api.marketrix.localhost');
         document.head.appendChild(script);
       })();
     </script>

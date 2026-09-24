@@ -15,6 +15,8 @@ import { cwd } from 'node:process';
 import react from '@vitejs/plugin-react';
 import { defineConfig, type ViteDevServer } from 'vite';
 
+export const REACT_EXTERNALS = ['react', 'react-dom', 'react-dom/client', 'react/jsx-runtime'];
+
 const BUNDLE_FILE = 'widget.mjs';
 const ENTRY_FILE = 'src/index.tsx';
 const SHIM_ALIAS = {
@@ -53,7 +55,7 @@ export default defineConfig(({ command }) => {
           fileName: 'widget',
         },
         rolldownOptions: {
-          external: ['react', 'react-dom', 'react-dom/client', 'react/jsx-runtime'],
+          external: REACT_EXTERNALS,
           output: {
             entryFileNames: BUNDLE_FILE,
             format: 'es',
