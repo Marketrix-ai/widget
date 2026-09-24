@@ -4,8 +4,10 @@
  * screen-access request is open, and asking for screen access first in Show and Do; `allowScreenAccess`/
  * `denyScreenAccess` release the held turn; `stopTask` cancels a running turn and its Show overlay; `clearChat`
  * stops any running turn and starts a fresh chat thread, so the agent forgets the cleared history too. The stream handlers run browser tools and reply with results; preview mode answers locally.
- * The api never replays a chat's past events on reconnect, so only a resent `tool/call` needs dedupe.
+ * The api never replays a chat's past events on reconnect, so only a resent `tool/call` needs dedupe. A turn the
+ * api refuses as forbidden (a mode switched off since the page loaded) shows the api's own message.
  */
+import { ORPCError } from '@orpc/client';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useWidgetConfig } from '../hooks/useWidget';
@@ -130,7 +132,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return true;
       } catch (error) {
         console.error('Failed to send message:', error);
-        commit(s => reduceError(s, placeholder.id, CHAT_FAILURE_TEXT));
+        const refusal = error instanceof ORPCError && error.code === 'FORBIDDEN' ? error.message : CHAT_FAILURE_TEXT;
+        commit(s => reduceError(s, placeholder.id, refusal));
         return false;
       }
     },

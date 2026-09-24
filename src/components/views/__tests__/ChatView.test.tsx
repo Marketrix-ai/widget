@@ -1,11 +1,12 @@
 /**
  * Tests for `ChatView`'s composer lock while a screen-access request is pending, multi-line message
  * rendering, resend-safe recovery when a send fails while the stream is down, the screen-access
- * allow flows, a disabled mode never being sent, Clear chat starting a new thread, and the transcript
+ * allow flows, a disabled mode never being sent and a forbidden turn showing the api's reason, Clear chat starting a new thread, and the transcript
  * scrolling itself rather than the host page. A send-while-down test must mock `streamClient.ready` and not just `connect` — a turn
  * awaits `ready()`, which only resolves on `registered`, so mocking `connect` alone leaves that await
  * hanging forever and silently swallows the whole test.
  */
+import { ORPCError } from '@orpc/client';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 
@@ -273,5 +274,30 @@ describe('following the conversation', () => {
 
     expect(scrollIntoView).not.toHaveBeenCalled();
     expect(screen.getByRole('log').scrollTop).toBe(screen.getByRole('log').scrollHeight);
+  });
+});
+
+describe('a turn the api refuses as forbidden', () => {
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+  });
+
+  it("shows the api's reason instead of the generic failure text", async () => {
+    vi.spyOn(chatSession, 'getOrCreateChatId').mockResolvedValue('chat-1');
+    vi.spyOn(streamClient, 'connect').mockResolvedValue();
+    vi.spyOn(streamClient, 'ready').mockResolvedValue();
+    vi.spyOn(streamClient, 'send').mockRejectedValue(
+      new ORPCError('FORBIDDEN', { message: 'Tell is turned off for this widget' }),
+    );
+    scopeStorageTo({ mtxId: 'chatview-forbidden-1' });
+    renderWidget({ mtxId: 'chatview-forbidden-1' }, { previewMode: false });
+    await waitFor(() => expect(streamClient.connect).toHaveBeenCalled());
+    openWidget();
+    openChatTab();
+
+    send(screen.getByPlaceholderText('Ask anything') as HTMLTextAreaElement, 'hello?');
+
+    expect(await screen.findByText('Tell is turned off for this widget')).toBeInTheDocument();
   });
 });
