@@ -16,7 +16,7 @@ const RenderedSettingsSchema = z.object(WidgetSettingsWriteSchema.shape);
 
 export type WidgetRenderedSettings = z.infer<typeof RenderedSettingsSchema>;
 
-export type CredentialedConfig = ValidWidgetConfig & { mtxId: string; mtxKey: string; mtxApp: number };
+export type CredentialedConfig = ValidWidgetConfig & { mtxId: string; mtxKey: string };
 
 type WidgetSettingsResult =
   { settings: WidgetRenderedSettings; invalidFields?: undefined } | { settings?: undefined; invalidFields: string[] };
@@ -30,14 +30,9 @@ export function parseWidgetSettings(value: unknown): WidgetSettingsResult {
 export const invalidSettingsMessage = (invalidFields: string[]): string =>
   `Widget settings are invalid: ${invalidFields.join(', ')}`;
 
-interface ResolvedWidget {
-  settings: WidgetRenderedSettings;
-  applicationId: number;
-}
+const widgetLookupCache = new Map<string, Promise<WidgetRenderedSettings>>();
 
-const widgetLookupCache = new Map<string, Promise<ResolvedWidget>>();
-
-async function resolveActiveWidget(mtxId: string, mtxKey: string, mtxApiHost: string): Promise<ResolvedWidget> {
+async function resolveActiveWidget(mtxId: string, mtxKey: string, mtxApiHost: string): Promise<WidgetRenderedSettings> {
   let widgets: ApplicationWidgetPublicData[];
   try {
     ({ items: widgets } = await sdk.widgetPublicSearch({ marketrix_id: mtxId, marketrix_key: mtxKey }));
@@ -64,7 +59,7 @@ async function resolveActiveWidget(mtxId: string, mtxKey: string, mtxApiHost: st
     throw new Error(invalidSettingsMessage(parsedSettings.invalidFields));
   }
 
-  return { settings: parsedSettings.settings, applicationId: activeWidget.application_id };
+  return parsedSettings.settings;
 }
 
 export async function loadWidgetConfig(config: MarketrixConfig): Promise<CredentialedConfig> {
@@ -77,6 +72,5 @@ export async function loadWidgetConfig(config: MarketrixConfig): Promise<Credent
     lookup.catch(() => widgetLookupCache.delete(cacheKey));
   }
 
-  const { settings, applicationId } = await lookup;
-  return { ...config, ...settings, mtxApp: applicationId, isPreviewMode: false };
+  return { ...config, ...(await lookup), isPreviewMode: false };
 }

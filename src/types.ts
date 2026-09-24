@@ -1,8 +1,7 @@
 /**
  * Widget-wide shared types: the config a host supplies, the chat message/part model, and the UI store
  * shape. It is the one import path for the sdk types the widget publishes.
- * `MarketrixConfig` never carries a dashboard setting, since the api's settings always win, and `mtxApp` is
- * stamped only after credentials resolve, since a bare application id is guessable. An agent message's
+ * `MarketrixConfig` never carries a dashboard setting, since the api's settings always win. An agent message's
  * `status` (absent on a plain settled reply) and a progress part's `status` are UI labels, not the
  * `task/status` wire vocabulary.
  */
@@ -22,7 +21,7 @@ export interface ClientOwnedConfig {
 export type MarketrixConfig = ClientOwnedConfig & { mtxId: string; mtxKey: string; mtxApiHost: string };
 
 export type ValidWidgetConfig = WidgetRenderedSettings &
-  ClientOwnedConfig & { mtxId?: string; mtxKey?: string; mtxApp?: number; isPreviewMode: boolean };
+  ClientOwnedConfig & { mtxId?: string; mtxKey?: string; isPreviewMode: boolean };
 
 type ScreenshareMessage = Omit<Extract<StoredMessage, { kind: 'system' }>, 'kind'> & {
   kind: 'screenshare';

@@ -178,13 +178,13 @@ describe('public widget lifecycle', () => {
       { mtxId: 'second', mtxKey: 'second-key', mtxApiHost: 'https://api.test' },
       secondContainer,
     );
-    resolveFirst(credentialedConfig({ mtxId: 'first', mtxKey: 'first-key', mtxApp: 1 }));
+    resolveFirst(credentialedConfig({ mtxId: 'first', mtxKey: 'first-key' }));
     await first;
 
     expect(firstContainer.querySelector('.marketrix-widget-container')).toBeNull();
     expect(secondContainer.querySelector('.marketrix-widget-container')).toBeNull();
 
-    resolveSecond(credentialedConfig({ mtxId: 'second', mtxKey: 'second-key', mtxApp: 2 }));
+    resolveSecond(credentialedConfig({ mtxId: 'second', mtxKey: 'second-key' }));
     await second;
 
     expect(secondContainer.querySelector('.marketrix-widget-container')).toBeTruthy();
@@ -196,9 +196,7 @@ describe('public widget lifecycle', () => {
   });
 
   it('re-mounts an updated config into the container it was given, not the body', async () => {
-    vi.spyOn(WidgetService, 'loadWidgetConfig').mockImplementation(async config =>
-      credentialedConfig({ ...config, mtxApp: 1 }),
-    );
+    vi.spyOn(WidgetService, 'loadWidgetConfig').mockImplementation(async config => credentialedConfig({ ...config }));
     const container = mountTarget();
     document.body.append(container);
 
@@ -226,7 +224,7 @@ describe('public widget lifecycle', () => {
 
   it('authenticates the stream with the credentials production was initialized with', async () => {
     vi.spyOn(WidgetService, 'loadWidgetConfig').mockImplementation(async config =>
-      credentialedConfig({ ...config, mtxId: 'prod-id', mtxKey: 'prod-key', mtxApp: 1 }),
+      credentialedConfig({ ...config, mtxId: 'prod-id', mtxKey: 'prod-key' }),
     );
     const setCredentials = vi.spyOn(streamClient, 'setCredentials');
     const container = mountTarget();
@@ -239,7 +237,7 @@ describe('public widget lifecycle', () => {
 
   it('leaves the live widget alone when a preview component mounts beside it', async () => {
     vi.spyOn(WidgetService, 'loadWidgetConfig').mockImplementation(async config =>
-      credentialedConfig({ ...config, mtxId: 'prod-id', mtxKey: 'prod-key', mtxApp: 1 }),
+      credentialedConfig({ ...config, mtxId: 'prod-id', mtxKey: 'prod-key' }),
     );
     const live = mountTarget();
     const preview = mountTarget();
@@ -266,7 +264,7 @@ describe('public widget lifecycle', () => {
 describe('a config-change re-mount preserves an in-flight chat', () => {
   it('keeps the same chat_id and transcript across updateMarketrixConfig, minting no new chat', async () => {
     vi.spyOn(WidgetService, 'loadWidgetConfig').mockImplementation(async config =>
-      credentialedConfig({ ...config, mtxId: 'reflow-1', mtxApp: 1 }),
+      credentialedConfig({ ...config, mtxId: 'reflow-1' }),
     );
     vi.spyOn(streamClient, 'connect').mockResolvedValue();
     const getOrCreateChatId = vi.spyOn(chatThread, 'getOrCreateChatId');

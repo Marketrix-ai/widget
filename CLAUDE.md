@@ -68,9 +68,8 @@ Four oRPC procedures: `widgetPublicSearch` resolves the widget's settings, `chat
 then `widgetStream` (SSE, server → widget) and `widgetMessagePost` (POST, widget → server) carry the chat,
 each a Zod union discriminated on `type`.
 
-- **`application_id` is deliberately NOT a stream input** — a guessable id as a credential let anyone
-  drive any tenant's agent. The widget sends it only in `rrweb/metadata`, which the api checks against the
-  credentials' application.
+- **`application_id` is never a widget input; the api binds recordings and chats to the credentials'
+  application.**
 - **`open` is the transport, `registered` is the chat** — `isConnected()` reads `registered`, and a
   command is accepted only into a registered chat. Reconnect backs off exponentially, max 10 attempts, and
   gives up on a `chat/error` with `request_id === 'auth'`.
