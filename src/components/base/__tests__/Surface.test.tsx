@@ -5,13 +5,14 @@
 import { render } from '@testing-library/react';
 import { describe, expect, it } from 'bun:test';
 
+import { SHADOW } from '../../../design-system/component-tokens';
 import { Surface } from '../Surface';
 
 describe('Surface', () => {
   it('lets an explicit prop override the floatingCard default for that same prop', () => {
-    const { container } = render(<Surface floatingCard elevation='none' data-testid='surface' />);
+    const { container } = render(<Surface floatingCard elevation='panel' />);
     const el = container.firstElementChild as HTMLElement;
-    expect(el.style.boxShadow).toBeFalsy();
+    expect(el.style.boxShadow).toBe(SHADOW.panel);
   });
 
   it('applies the floatingCard defaults when nothing overrides them', () => {

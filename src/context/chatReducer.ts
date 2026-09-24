@@ -19,6 +19,7 @@ import {
   markProgressLineComplete,
   markProgressLineFailed,
   messageText,
+  SCREEN_SHARE_STOPPED_TEXT,
   taskEnded,
   toolExplanation,
   waitsForUser,
@@ -146,7 +147,7 @@ export const reduceScreenShareStarted = (state: ChatState, stream: MediaStream):
 export const reduceScreenShareStopped = (state: ChatState): ChatState =>
   reduceAppend(
     { ...state, messages: state.messages.filter(msg => msg.kind !== 'screenshare') },
-    createSystemMessage('Screen sharing stopped'),
+    createSystemMessage(SCREEN_SHARE_STOPPED_TEXT),
   );
 
 export function reduceDispatch(state: ChatState, placeholder: ChatMessage): ChatState {

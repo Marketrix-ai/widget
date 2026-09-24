@@ -1,16 +1,15 @@
 /**
  * Table-driven tests that every external `ChatContext` interaction (message post, tool response, stop,
- * an unmatched error, a tenant billing refusal) fails into a human-readable message rather than a raw
- * error, and recovers cleanly on retry.
+ * an unmatched error) fails into a human-readable message rather than a raw error, and recovers cleanly
+ * on retry.
  */
-import { ORPCError } from '@orpc/client';
 import { act, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'bun:test';
 
 import { useWidget } from '../../hooks/useWidget';
 import type { WidgetEvent } from '../../sdk';
 import type { executeTool } from '../../services/browserTools';
-import * as chatSession from '../../services/chatSession';
+import * as chatThread from '../../services/chatThread';
 import { streamClient } from '../../services/StreamClient';
 import { asStreamClientInternals } from '../../test/fixtures';
 import { ChatHarness } from '../../test/renderWidget';
@@ -60,7 +59,7 @@ function visibleText(): string {
 }
 
 beforeEach(() => {
-  vi.spyOn(chatSession, 'getOrCreateChatId').mockResolvedValue('chat-1');
+  vi.spyOn(chatThread, 'getOrCreateChatId').mockResolvedValue('chat-1');
   vi.spyOn(streamClient, 'ready').mockResolvedValue();
   mockExecuteTool.mockReset().mockResolvedValue({ success: true, data: {} });
   vi.spyOn(streamClient, 'send').mockResolvedValue(undefined);
@@ -73,17 +72,6 @@ describe('external-interaction failures never reach the customer page raw, and e
       humanText: CHAT_FAILURE_TEXT,
       run: async () => {
         vi.spyOn(streamClient, 'send').mockRejectedValueOnce(new Error(RAW_MARKER));
-        await act(async () => screen.getByTestId('send').click());
-        return () => {};
-      },
-    },
-    {
-      name: 'a paid-plan refusal meant for the tenant never reaches the visitor',
-      humanText: CHAT_FAILURE_TEXT,
-      run: async () => {
-        vi.spyOn(streamClient, 'send').mockRejectedValueOnce(
-          new ORPCError('FORBIDDEN', { message: RAW_MARKER, data: { details: { reason: 'paid_plan_required' } } }),
-        );
         await act(async () => screen.getByTestId('send').click());
         return () => {};
       },

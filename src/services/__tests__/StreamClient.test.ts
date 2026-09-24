@@ -2,7 +2,8 @@
  * Tests for `StreamClient`'s registration lifecycle and the Retry affordance, over a mocked `sdk` module
  * so no real SSE transport is involved. Covers that a caller parked on registration is always settled
  * (disconnect, give-up, refused credential), the exponential-backoff reconnect schedule and its jitter
- * window, that a superseded connection's stale events never reach a later turn, and that an evicted tab re-mints its id.
+ * window, that a superseded connection's stale events never reach a later turn, that a throwing subscriber leaves
+ * the stream up, and that an evicted tab re-mints its id.
  */
 
 import { sdk, type WidgetEvent } from '../../sdk';
@@ -418,6 +419,36 @@ describe('StreamClient fault injection', () => {
 
     client.disconnect();
     vi.useRealTimers();
+  });
+
+  it('keeps the stream when a subscriber throws, rather than redialing as if the transport failed', async () => {
+    const client = freshClient();
+    const stream = controlledStream();
+    mockSdk.widgetStream.mockResolvedValueOnce(stream.stream);
+    await client.connect('chat-1');
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const received: WidgetEvent[] = [];
+    const throwing = {
+      onMessage: () => {
+        throw new Error('subscriber bug');
+      },
+    };
+    const listening = { onMessage: (e: WidgetEvent) => received.push(e) };
+    client.addCallbacks(throwing);
+    client.addCallbacks(listening);
+
+    stream.push({ type: 'registered', chat_id: 'chat-1' });
+    stream.push({ type: 'chat/response', request_id: 'req-1', text: 'still here' });
+    await waitFor(() => expect(received).toHaveLength(2));
+
+    expect(internals(client).status).toBe('registered');
+    expect(mockSdk.widgetStream).toHaveBeenCalledTimes(1);
+    expect(consoleError).toHaveBeenCalledTimes(2);
+
+    consoleError.mockRestore();
+    client.removeCallbacks(throwing);
+    client.removeCallbacks(listening);
+    client.disconnect();
   });
 
   it('an auth give-up is terminal — no reconnect follows however long time advances', async () => {

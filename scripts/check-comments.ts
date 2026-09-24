@@ -1,9 +1,9 @@
 /**
- * The Rule 0 gate: every tracked source file under the working directory — JS/TS, SQL, shell, YAML, Dockerfile,
- * env example, proto, TOML, Terraform, Make, Tilt, CSS, nginx conf and ignore files — may carry one top docstring
- * of at most 12 lines and no other comment, except machine-read directives. Python is gated by the agent's checker.
- * `checkComments` reads JS/TS trivia through the parser, so a `//` inside a string, regex, template or JSX text
- * never counts, and lexes the other languages' `#`, `--`, `//` and `/*` comments outside quotes and heredocs.
+ * The one Rule 0 gate for every repo: every tracked source file — JS/TS, Python, SQL, shell, YAML and Helm
+ * templates, Dockerfile, env example, proto, TOML, Terraform, Make, Tilt, CSS, nginx conf, MDX, HTML and ignore
+ * files — may carry one top docstring of at most 12 lines and no other comment. `EXEMPT` is the constitution's
+ * directive list and its only implementation. `checkComments` reads JS/TS trivia through the parser, measures a
+ * Python module docstring, and lexes every other language's comments outside quotes and heredocs.
  * `findCodeFiles` lists what git tracks or would track, minus generated code and any path whose `.gitattributes`
  * sets `rule0=frozen`: a file whose bytes are digest-checked once applied, such as an applied SQL patch, cannot be
  * edited. The public widget carries a byte-identical copy, because it cannot fetch this private repo.
@@ -14,28 +14,49 @@ import { basename, extname, join } from 'node:path';
 
 import ts from 'typescript';
 
-const SKIP_DIRS = new Set(['.samples-check', '.work', '.worktrees', '.claude', 'gen']);
-const LINE_MARKERS: Record<string, string> = {
+const SKIP_DIRS = new Set(['.samples-check', '.work', '.worktrees', '.claude', 'gen', 'generated']);
+type Syntax = { line?: string; open?: RegExp; close?: RegExp; quotes: boolean };
+const C_BLOCK = { open: /^\/\*/, close: /\*\// };
+const HASH: Syntax = { line: '#', quotes: true };
+const SYNTAX: Record<string, Syntax> = {
+  '#': HASH,
+  helm: {
+    line: '#',
+    open: /^\{\{-?\s*\/\*/,
+    close: /\*\/\s*-?\}\}/,
+    quotes: true,
+  },
+  '--': { line: '--', quotes: true },
+  '//': { line: '//', ...C_BLOCK, quotes: true },
+  '/*': { ...C_BLOCK, quotes: true },
+  mdx: { open: /^\{\/\*/, close: /\*\/\}/, quotes: false },
+  html: { open: /^<!--/, close: /-->/, quotes: false },
+};
+const EXTENSIONS: Record<string, string> = {
   '.sh': '#',
   '.bash': '#',
-  '.yaml': '#',
-  '.yml': '#',
+  '.yaml': 'helm',
+  '.yml': 'helm',
+  '.tpl': 'helm',
   '.sql': '--',
   '.proto': '//',
   '.toml': '#',
   '.tf': '#',
   '.conf': '#',
   '.css': '/*',
+  '.mdx': 'mdx',
+  '.html': 'html',
+  '.py': 'py',
 };
 const EXEMPT =
-  /^(<reference|eslint-disable|prettier-ignore|@ts-|@type\s|ponytail:|!|shellcheck\s|noqa|type:\s*ignore|syntax=|escape=|yaml-language-server:)/;
+  /^(<reference|eslint-disable|prettier-ignore|@ts-|@type\s|ponytail:|!|noqa|type:\s*ignore|ty:\s*ignore|syntax=)/;
 const MAX_HEADER_LINES = 12;
 
-type Comment = { line: number; raw: string; alone: boolean };
+type Comment = { line: number; raw: string; alone: boolean; block?: boolean };
 
 export function commentMarker(file: string): string | undefined {
   const name = basename(file);
-  if (name.endsWith('.d.ts') || name.endsWith('.enc.yaml')) return undefined;
+  if (name.endsWith('.d.ts') || name.endsWith('.enc.yaml') || /_pb2(_grpc)?\.py$/.test(name)) return undefined;
   if (['.ts', '.tsx', '.mts', '.mjs', '.js'].includes(extname(name))) return 'ts';
   if (
     /^Dockerfile(\..+)?$|\.Dockerfile$|^\.env(\..+)?\.(example|sample)$|^(Makefile|Tiltfile|\.gitignore|\.dockerignore)$/.test(
@@ -43,7 +64,7 @@ export function commentMarker(file: string): string | undefined {
     )
   )
     return '#';
-  return LINE_MARKERS[extname(name)];
+  return EXTENSIONS[extname(name)];
 }
 
 export function findCodeFiles(dir: string): string[] {
@@ -86,7 +107,7 @@ function tsComments(file: string, text: string): Comment[] {
   return comments;
 }
 
-function lexComments(text: string, marker: string): { comments: Comment[]; firstCode: number } {
+function lexComments(text: string, syntax: Syntax): { comments: Comment[]; firstCode: number } {
   const comments: Comment[] = [];
   let firstCode = Infinity;
   let heredoc: string | undefined;
@@ -99,43 +120,99 @@ function lexComments(text: string, marker: string): { comments: Comment[]; first
     }
     let code = '';
     let quote: string | undefined;
-    for (let i = 0; i < line.length; i++) {
+    let i = 0;
+    if (block) {
+      const end = syntax.close?.exec(line);
+      block.raw += `\n${end ? line.slice(0, end.index + end[0].length) : line}`;
+      if (!end) return;
+      comments.push(block);
+      block = undefined;
+      i = end.index + end[0].length;
+    }
+    for (; i < line.length; i++) {
       const c = line[i];
-      if (block) {
-        if (!line.startsWith('*/', i)) continue;
-        block.raw += `\n${line.slice(0, i + 2)}`;
-        comments.push(block);
-        block = undefined;
-        i++;
-      } else if (quote) {
+      const open = !quote && syntax.open?.exec(line.slice(i));
+      if (quote) {
         code += c;
         if (c === '\\' && quote === '"') code += line[++i] ?? '';
         else if (c === quote) quote = undefined;
-      } else if ((c === '"' || c === "'") && !/\w/.test(line[i - 1] ?? '')) {
+      } else if (syntax.quotes && (c === '"' || c === "'") && !/\w/.test(line[i - 1] ?? '')) {
         code += c;
         quote = c;
-      } else if ((marker === '//' || marker === '/*') && line.startsWith('/*', i)) {
-        const end = line.indexOf('*/', i + 2);
-        const opened = { line: number, raw: line.slice(i, end < 0 ? undefined : end + 2), alone: code.trim() === '' };
-        if (end < 0) {
+      } else if (open) {
+        const end = syntax.close?.exec(line.slice(i + open[0].length));
+        const stop = end ? i + open[0].length + end.index + end[0].length : line.length;
+        const opened = {
+          line: number,
+          raw: line.slice(i, stop),
+          alone: code.trim() === '',
+          block: true,
+        };
+        if (!end) {
           block = opened;
           break;
         }
         comments.push(opened);
-        i = end + 1;
-      } else if (line.startsWith(marker, i) && (marker !== '#' || /\s/.test(line[i - 1] ?? ' '))) {
-        comments.push({ line: number, raw: line.slice(i), alone: code.trim() === '' });
+        i = stop - 1;
+      } else if (
+        syntax.line &&
+        line.startsWith(syntax.line, i) &&
+        (syntax.line !== '#' || /\s/.test(line[i - 1] ?? ' '))
+      ) {
+        comments.push({
+          line: number,
+          raw: line.slice(i),
+          alone: code.trim() === '',
+        });
         break;
       } else {
         code += c;
       }
     }
-    if (block && block.line !== number && !line.includes('*/')) block.raw += `\n${line}`;
     if (code.trim() !== '') firstCode = Math.min(firstCode, number);
-    const doc = marker === '#' && /<<-?\s*['"]?([A-Za-z_]\w*)['"]?/.exec(code);
+    const doc = syntax.line === '#' && /<<-?\s*['"]?([A-Za-z_]\w*)['"]?/.exec(code);
     if (doc) heredoc = doc[1];
   });
   return { comments, firstCode };
+}
+
+function pythonComments(text: string): {
+  comments: Comment[];
+  docstring: number;
+} {
+  const comments: Comment[] = [];
+  let docstring = 0;
+  let seenCode = false;
+  let lineStart = 0;
+  let line = 1;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (c === '\n') {
+      line++;
+      lineStart = i + 1;
+    } else if (c === '#') {
+      const end = text.indexOf('\n', i);
+      const raw = text.slice(i, end < 0 ? undefined : end);
+      comments.push({
+        line,
+        raw,
+        alone: text.slice(lineStart, i).trim() === '',
+      });
+      i += raw.length - 1;
+    } else if (c === '"' || c === "'") {
+      const delimiter = text.startsWith(c.repeat(3), i) ? c.repeat(3) : c;
+      let j = i + delimiter.length;
+      while (j < text.length && !text.startsWith(delimiter, j)) j += text[j] === '\\' ? 2 : 1;
+      const body = text.slice(i + delimiter.length, j);
+      if (!seenCode) docstring = body.trim().split('\n').length;
+      seenCode = true;
+      line += (body.match(/\n/g) ?? []).length;
+      i = j + delimiter.length - 1;
+    } else if (c && !/\s/.test(c)) {
+      seenCode = true;
+    }
+  }
+  return { comments, docstring };
 }
 
 export function checkComments(file: string, text: string): string[] {
@@ -143,22 +220,27 @@ export function checkComments(file: string, text: string): string[] {
   const directive = (c: Comment) => EXEMPT.test(c.raw.replace(/^(\/\/\/?|\/\*\*?|#|--)\s?/, '').trim());
   let judged: Comment[];
   let header: Comment[] = [];
+  let span = 0;
   if (marker === 'ts') {
     const all = tsComments(file, text);
     header = all[0]?.raw.startsWith('/**') ? [all[0]] : [];
     judged = all.filter(c => !directive(c));
+  } else if (marker === 'py') {
+    const { comments, docstring } = pythonComments(text);
+    judged = comments.filter(c => !directive(c));
+    span = docstring;
   } else {
-    const { comments, firstCode } = lexComments(text, marker);
+    const { comments, firstCode } = lexComments(text, SYNTAX[marker] ?? HASH);
     judged = comments.filter(c => !directive(c));
     for (const c of judged) {
       const previous = header.at(-1);
       const next = previous ? previous.line + previous.raw.split('\n').length : undefined;
-      if (c.line >= firstCode || !c.alone || (previous && (c.line !== next || c.raw.startsWith('/*')))) break;
+      if (c.line >= firstCode || !c.alone || (previous && (c.line !== next || c.block || previous.block))) break;
       header.push(c);
     }
   }
   const [first, last] = [header[0], header.at(-1)];
-  const span = first && last ? last.line + last.raw.split('\n').length - first.line : 0;
+  if (first && last) span = last.line + last.raw.split('\n').length - first.line;
   return [
     ...(span > MAX_HEADER_LINES ? [`${file}: top docstring is ${span} lines, max ${MAX_HEADER_LINES}`] : []),
     ...judged.filter(c => !header.includes(c)).map(c => `${file}:${c.line}: comment outside the top docstring`),

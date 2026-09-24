@@ -193,7 +193,7 @@ describe('chat snapshot persistence', () => {
 
     expect(readChatSnapshot().messages[0]).toMatchObject({
       kind: 'system',
-      parts: [{ type: 'text', content: 'Screen sharing ended' }],
+      parts: [{ type: 'text', content: 'Screen sharing stopped' }],
     });
   });
 });

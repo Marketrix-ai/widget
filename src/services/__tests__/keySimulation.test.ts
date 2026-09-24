@@ -1,6 +1,5 @@
 /**
- * Tests for `simulateKeyAction`, the hand-rolled keyboard behavior driving Tab focus
- * movement and Backspace/Delete/Arrow text and selection editing.
+ * Tests for `simulateKeyAction`, the default action each agent-sent key carries out on a host-page element.
  */
 
 import { afterEach, describe, expect, it } from 'bun:test';
@@ -126,5 +125,68 @@ describe('simulateKeyAction ArrowDown/ArrowUp on a select', () => {
     expect(simulateKeyAction(el, 'ArrowDown')).toBe('ArrowDown: already at last option');
     expect(simulateKeyAction(el, 'ArrowUp')).toBe('ArrowUp: selected "b"');
     expect(simulateKeyAction(select(['a'], 0), 'ArrowUp')).toBe('ArrowUp: already at first option');
+  });
+});
+
+describe('simulateKeyAction Enter', () => {
+  const inForm = (field: string) => {
+    document.body.innerHTML = `<form>${field}<button type="submit"></button></form>`;
+    const submits: string[] = [];
+    document.querySelector('button')!.addEventListener('click', () => submits.push('submit'));
+    document.querySelector('form')!.addEventListener('submit', e => e.preventDefault());
+    return submits;
+  };
+
+  it('inserts a line break in a textarea instead of submitting its form', () => {
+    const submits = inForm('<textarea></textarea>');
+    const el = document.querySelector('textarea')!;
+    el.value = 'ab';
+    el.setSelectionRange(1, 1);
+    expect(simulateKeyAction(el, 'Enter')).toBe('Enter: inserted a line break');
+    expect([el.value, el.selectionStart]).toEqual(['a\nb', 2]);
+    expect(submits).toEqual([]);
+  });
+
+  it('submits the form of an input', () => {
+    const submits = inForm('<input />');
+    expect(simulateKeyAction(document.querySelector('input')!, 'Enter')).toBe('Enter: clicked form submit button');
+    expect(submits).toEqual(['submit']);
+  });
+});
+
+describe('simulateKeyAction ArrowLeft/ArrowRight and PageUp/PageDown', () => {
+  it('moves the caret within a text field, clamped to its value', () => {
+    document.body.innerHTML = '<input />';
+    const el = document.querySelector('input')!;
+    el.value = 'ab';
+    el.setSelectionRange(1, 1);
+    expect(simulateKeyAction(el, 'ArrowLeft')).toBe('ArrowLeft: moved cursor to 0');
+    expect(simulateKeyAction(el, 'ArrowLeft')).toBe('ArrowLeft: moved cursor to 0');
+    el.setSelectionRange(2, 2);
+    expect(simulateKeyAction(el, 'ArrowRight')).toBe('ArrowRight: moved cursor to 2');
+  });
+
+  it('scrolls the page by one viewport', () => {
+    const scrolls: unknown[] = [];
+    const original = window.scrollBy;
+    window.scrollBy = ((options: ScrollToOptions) => scrolls.push(options.top)) as typeof window.scrollBy;
+    try {
+      expect(simulateKeyAction(document.body, 'PageDown')).toBe('PageDown: scrolled the page');
+      expect(simulateKeyAction(document.body, 'PageUp')).toBe('PageUp: scrolled the page');
+    } finally {
+      window.scrollBy = original;
+    }
+    expect(scrolls).toEqual([window.innerHeight, -window.innerHeight]);
+  });
+});
+
+describe('simulateKeyAction Escape', () => {
+  it('blurs without re-dispatching the keydown the caller already fired', () => {
+    const [a] = render();
+    a.focus();
+    const seen: string[] = [];
+    document.addEventListener('keydown', e => seen.push(e.key));
+    expect(simulateKeyAction(a, 'Escape')).toBe('Escape: blurred element');
+    expect([seen, document.activeElement]).toEqual([[], document.body]);
   });
 });

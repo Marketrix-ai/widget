@@ -29,8 +29,8 @@ export const ByApplicationIdSchema = z.strictObject({ application_id: z.number()
 export const ByUserIdSchema = z.strictObject({ user_id: z.number() });
 
 export const PaginationSchema = z.strictObject({
-  limit: z.number().int().optional().default(50),
-  offset: z.number().int().optional().default(0),
+  limit: z.number().int().min(1).max(200).optional().default(50),
+  offset: z.number().int().min(0).optional().default(0),
 });
 
 type StripDefault<T> = T extends z.ZodDefault<infer Inner> ? Inner : T;

@@ -14,7 +14,7 @@ import {
   unmountWidget,
   updateMarketrixConfig,
 } from '../index';
-import * as chatSession from '../services/chatSession';
+import * as chatThread from '../services/chatThread';
 import * as ScreenShareService from '../services/ScreenShareService';
 import { getChatId, readChatSnapshot, scopeStorageTo, setChatId, writeChatSnapshot } from '../services/StorageService';
 import { streamClient } from '../services/StreamClient';
@@ -269,7 +269,7 @@ describe('a config-change re-mount preserves an in-flight chat', () => {
       credentialedConfig({ ...config, mtxId: 'reflow-1', mtxApp: 1 }),
     );
     vi.spyOn(streamClient, 'connect').mockResolvedValue();
-    const getOrCreateChatId = vi.spyOn(chatSession, 'getOrCreateChatId');
+    const getOrCreateChatId = vi.spyOn(chatThread, 'getOrCreateChatId');
 
     scopeStorageTo({ mtxId: 'reflow-1' });
     setChatId('chat-inflight-1');

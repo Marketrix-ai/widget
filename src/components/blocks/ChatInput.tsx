@@ -76,6 +76,7 @@ export function ChatInput({
         onChange={e => onChange(e.target.value)}
         onKeyDown={handleKeyDown}
         placeholder='Ask anything'
+        aria-label='Message'
         disabled={disabled}
         rows={1}
         className='mtx-composer-input'
@@ -96,6 +97,7 @@ export function ChatInput({
                 type='button'
                 className='mtx-mode-chip'
                 data-active={isActive ? 'true' : 'false'}
+                aria-pressed={isActive}
                 onClick={() => onModeChange(mode.id)}
               >
                 <Icon name={mode.icon} size={12} />

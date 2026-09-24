@@ -5,7 +5,7 @@
  * A tenant's z-index setting can never sink the widget below the host page's own stacking context, and
  * preview mode always renders even when a setting would hide the widget.
  */
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { PortalContainerContext } from '../context/WidgetProviders';
 import { LAYER_TOKENS } from '../design-system/component-tokens';
@@ -79,6 +79,22 @@ export const WidgetRoot: React.FC = () => {
     return () => clearTimeout(timer);
   }, [state.isOpen, isPreviewMode, config.widget_greeting_toast]);
 
+  const effectiveConfig = useMemo(
+    () => ({
+      ...config,
+      widget_position: widgetPosition,
+      widget_position_z_index: Math.max(config.widget_position_z_index ?? 0, LAYER_TOKENS.panel),
+    }),
+    [config, widgetPosition],
+  );
+  const { setError } = actions;
+  const clearError = useCallback(() => setError(undefined), [setError]);
+  const retry = useCallback(() => {
+    setError(undefined);
+    streamClient.reconnectNow();
+  }, [setError]);
+  const dismissGreeting = useCallback(() => setShowGreeting(false), []);
+
   const handlePositionChange = (position: WidgetPosition) => {
     setWidgetPosition(position);
     if (!isPreviewMode) writeLocal(positionStorageKey, position);
@@ -88,14 +104,6 @@ export const WidgetRoot: React.FC = () => {
   if (!isPreviewMode && hiddenByConfig) {
     return null;
   }
-
-  const effectiveWidgetZIndex = Math.max(config.widget_position_z_index ?? 0, LAYER_TOKENS.panel);
-
-  const effectiveConfig = {
-    ...config,
-    widget_position: widgetPosition,
-    widget_position_z_index: effectiveWidgetZIndex,
-  };
 
   const showProcessingFeedback = state.isAwaitingReply || state.isTaskRunning;
 
@@ -133,16 +141,11 @@ export const WidgetRoot: React.FC = () => {
 
             <WidgetNotifications
               error={state.error}
-              onClearError={() => actions.setError(undefined)}
-              {...(state.canRetry && {
-                onRetry: () => {
-                  actions.setError(undefined);
-                  streamClient.reconnectNow();
-                },
-              })}
+              onClearError={clearError}
+              onRetry={state.canRetry ? retry : undefined}
               greeting={showGreeting && !state.error ? config.widget_greeting : undefined}
               greetingBody={config.widget_body}
-              onGreetingDismiss={() => setShowGreeting(false)}
+              onGreetingDismiss={dismissGreeting}
             />
           </NotificationProvider>
         </PortalContainerContext>

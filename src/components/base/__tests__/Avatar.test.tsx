@@ -1,5 +1,5 @@
 /**
- * `Avatar` tests: an `img` with src/alt, the md preset by default, numeric size as inline style, ref
+ * `Avatar` tests: an `img` with src/alt, 32px by default, numeric size as inline style, ref
  * forwarding, and its own class kept beside a caller className.
  */
 import { render } from '@testing-library/react';
@@ -21,18 +21,7 @@ describe('Avatar', () => {
     expect(img.alt).toBe('Jane Doe');
   });
 
-  it.each([
-    ['sm', '20px'],
-    ['md', '32px'],
-    ['lg', '48px'],
-  ] as const)('resolves preset size %s to %s', (size, px) => {
-    const { container } = render(<Avatar alt='x' size={size} src='/a.png' />);
-    const img = container.querySelector('img') as HTMLImageElement;
-    expect(img.style.width).toBe(px);
-    expect(img.style.height).toBe(px);
-  });
-
-  it('defaults to the md preset', () => {
+  it('defaults to 32px', () => {
     const { container } = render(<Avatar alt='x' src='/a.png' />);
     const img = container.querySelector('img') as HTMLImageElement;
     expect(img.style.width).toBe('32px');

@@ -1,6 +1,5 @@
 /**
- * `Flex` and `Stack` tests: display flex, className/style/as pass-through, `hidden` winning over its
- * own display, and Stack rendering a column.
+ * `Flex` and `Stack` tests: display flex, className/style/as pass-through, and Stack rendering a column.
  */
 import { render } from '@testing-library/react';
 import { describe, expect, it } from 'bun:test';
@@ -18,11 +17,6 @@ describe('Flex', () => {
   it('passes className through', () => {
     const { container } = render(<Flex className='mtx-fab-center'>content</Flex>);
     expect(container.firstElementChild?.classList.contains('mtx-fab-center')).toBe(true);
-  });
-
-  it('lets hidden win over its own display, which is applied last', () => {
-    const { container } = render(<Flex hidden>content</Flex>);
-    expect((container.firstElementChild as HTMLElement).style.display).toBe('none');
   });
 
   it('supports as prop', () => {

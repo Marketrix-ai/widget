@@ -1,13 +1,10 @@
 /**
- * Per-chat rrweb session recorder: captures the host page as an rrweb event stream and ships it to the
- * api as one `rrweb/metadata` command followed by `rrweb/events` batches. `mount.tsx` constructs one
- * only when `widget_recording` is enabled, so this file is the whole recording feature.
- * `start()` posts metadata and arms rrweb once the chat's stream registers (the api only accepts commands
- * into a registered chat), even a registration after the stream gave up; a cleared chat's new thread gets a
- * fresh session from a full snapshot; `stop()` tears rrweb down and drains the buffer; `flush()` posts one
- * batch at a time. A failed batch is requeued at the front, since later batches replay against its snapshot,
- * and retried on a doubling delay, or on the next registration once the stream gave up. The buffer is capped,
- * keeping the oldest events, so a recording that cannot flush truncates instead of growing.
+ * Per-chat rrweb session recorder: captures the host page as rrweb events and ships them to the api as one
+ * `rrweb/metadata` command followed by `rrweb/events` batches; `mount.tsx` builds one only when `widget_recording`
+ * is on. `start()` arms rrweb once the chat registers, `stop()` tears it down and drains the buffer, and a cleared
+ * chat's new thread gets a fresh session. A failed batch is retried at the front of the queue, since later batches
+ * replay against its snapshot, and the buffer is capped so an unflushable recording truncates instead of growing.
+ * `emit` runs on the host page inside rrweb, so an event outside the wire schema is dropped, never thrown.
  */
 import { record } from '@rrweb/record';
 
@@ -30,11 +27,9 @@ export class RrwebSessionRecorder {
   private stopped = false;
   private failedFlushes = 0;
   private streamGaveUp = false;
+  private warnedMalformed = false;
 
-  constructor(
-    private chatId: string,
-    private readonly applicationId: number,
-  ) {}
+  constructor(private chatId: string) {}
 
   async start(): Promise<void> {
     if (this.stopRecording || this.stopped) return;
@@ -50,9 +45,15 @@ export class RrwebSessionRecorder {
     if (this.stopped || this.stopRecording) return;
     this.stopRecording = record({
       emit: event => {
-        const parsed = RrwebEventSchema.parse(event);
+        const parsed = RrwebEventSchema.safeParse(event);
+        if (!parsed.success) {
+          if (!this.warnedMalformed)
+            logWarn('[RrwebSessionRecorder] Dropping an event outside the wire schema:', parsed.error);
+          this.warnedMalformed = true;
+          return;
+        }
         if (this.events.length >= MAX_BUFFERED_EVENTS) return;
-        this.events.push(parsed);
+        this.events.push(parsed.data);
         if (!this.flushTimer && !this.streamGaveUp) this.scheduleFlush(FLUSH_INTERVAL_MS);
       },
       maskAllInputs: true,
@@ -110,8 +111,6 @@ export class RrwebSessionRecorder {
       {
         type: 'rrweb/metadata',
         rrweb_session_id: this.sessionId,
-        chat_id: this.chatId,
-        application_id: this.applicationId,
         url: window.location.href,
         timestamp: Date.now(),
         viewport: { width: window.innerWidth, height: window.innerHeight },

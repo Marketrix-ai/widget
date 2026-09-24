@@ -16,17 +16,8 @@ interface VideoStreamDisplayProps {
   stream: MediaStream;
 }
 
-const TOP_RADIUS = '8px';
-const OVERLAY_BORDER_RADIUS = `${TOP_RADIUS} ${TOP_RADIUS} 0 0`;
-const OVERLAY_BG = 'var(--overlay-dark)';
-const MUTED_TEXT_COLOR = 'rgba(255,255,255,0.7)';
+const OVERLAY_BORDER_RADIUS = '8px 8px 0 0';
 const VIDEO_WHITE = '#ffffff';
-const VIDEO_SURFACE_BLACK = '#000000';
-const VIDEO_CARD_SHADOW = '0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)';
-const VIDEO_ERROR_ICON_COLOR = '#9ca3af';
-const LIVE_PILL_BG = 'rgba(55,65,81,0.9)';
-const CAPTION_BG = 'rgba(0,0,0,0.7)';
-const VIDEO_LOADING_GRADIENT_STOP = '#374151';
 
 const Overlay: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
   <Flex
@@ -34,11 +25,11 @@ const Overlay: React.FC<{ label: string; children: React.ReactNode }> = ({ label
     inset='0'
     align='center'
     justify='center'
-    style={{ backgroundColor: OVERLAY_BG, borderRadius: OVERLAY_BORDER_RADIUS, zIndex: 10 }}
+    style={{ backgroundColor: 'var(--overlay-dark)', borderRadius: OVERLAY_BORDER_RADIUS, zIndex: 10 }}
   >
     <Stack align='center' gap='md' style={{ textAlign: 'center', padding: '0 16px' }}>
       {children}
-      <Text as='span' size='xs' weight='medium' style={{ color: MUTED_TEXT_COLOR }}>
+      <Text as='span' size='xs' weight='medium' style={{ color: 'rgba(255,255,255,0.7)' }}>
         {label}
       </Text>
     </Stack>
@@ -90,12 +81,8 @@ export const VideoStreamDisplay: React.FC<VideoStreamDisplayProps> = ({ stream }
       width='full'
       overflow='hidden'
       position='relative'
-      style={{
-        marginBottom: '4px',
-        borderRadius: OVERLAY_BORDER_RADIUS,
-        backgroundColor: VIDEO_SURFACE_BLACK,
-        boxShadow: VIDEO_CARD_SHADOW,
-      }}
+      elevation='button'
+      style={{ marginBottom: '4px', borderRadius: OVERLAY_BORDER_RADIUS, backgroundColor: '#000000' }}
     >
       {!isLoaded && !hasError && (
         <Overlay label='Loading stream...'>
@@ -105,7 +92,7 @@ export const VideoStreamDisplay: React.FC<VideoStreamDisplayProps> = ({ stream }
 
       {hasError && (
         <Overlay label='Failed to load stream'>
-          <Icon name='alertCircle' size={32} style={{ color: VIDEO_ERROR_ICON_COLOR }} />
+          <Icon name='alertCircle' size={32} style={{ color: '#9ca3af' }} />
         </Overlay>
       )}
 
@@ -123,7 +110,7 @@ export const VideoStreamDisplay: React.FC<VideoStreamDisplayProps> = ({ stream }
           transition: 'opacity 500ms',
           opacity: isLoaded ? 1 : 0,
           minHeight: '120px',
-          background: `linear-gradient(135deg, var(--overlay-dark) 0%, ${VIDEO_LOADING_GRADIENT_STOP} 100%)`,
+          background: `linear-gradient(135deg, var(--overlay-dark) 0%, #374151 100%)`,
         }}
       />
 
@@ -133,15 +120,15 @@ export const VideoStreamDisplay: React.FC<VideoStreamDisplayProps> = ({ stream }
           align='center'
           gap='sm'
           animate='fadeIn'
+          elevation='section'
           style={{
             top: '8px',
             right: '8px',
             padding: '4px 8px',
             borderRadius: 'var(--radius-pill)',
-            backgroundColor: LIVE_PILL_BG,
+            backgroundColor: 'rgba(55,65,81,0.9)',
             backdropFilter: 'blur(4px)',
             zIndex: 20,
-            boxShadow: '0 2px 8px var(--foreground-faint)',
           }}
         >
           <LiveDot style={{ color: VIDEO_WHITE }} />
@@ -172,12 +159,12 @@ export const VideoStreamDisplay: React.FC<VideoStreamDisplayProps> = ({ stream }
           rounded='lg'
           style={{
             padding: '4px 12px',
-            backgroundColor: CAPTION_BG,
+            backgroundColor: 'rgba(0,0,0,0.7)',
             backdropFilter: 'blur(4px)',
           }}
         >
           <Text as='div' size='xs' weight='medium' style={{ color: VIDEO_WHITE }}>
-            Screen Sharing Active
+            Screen sharing active
           </Text>
         </Surface>
       </Flex>

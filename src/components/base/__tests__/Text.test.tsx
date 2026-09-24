@@ -1,6 +1,6 @@
 /**
  * `Text` tests: resolves the tone color from `variant`, `inheritColor` overrides `variant` for the
- * color only, and truncation/size/weight/align/leading/block/italic each fold into the style object.
+ * color only, and truncation/size/weight/align/line height/block/italic each fold into the style object.
  */
 import { render } from '@testing-library/react';
 import { describe, expect, it } from 'bun:test';

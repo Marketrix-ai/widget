@@ -1,8 +1,6 @@
 /**
  * The two flex containers over `Surface`: `Flex` (`FlexProps`, `direction` defaulting to `row`) and
  * `Stack`, which is `Flex` with `direction='column'`.
- * `display` is resolved here from `hidden`, because `Surface` applies layout tokens before the caller's
- * style and a later `display: flex` would silently defeat `hidden`.
  */
 import type { ReactNode } from 'react';
 
@@ -15,13 +13,12 @@ interface FlexProps extends SurfaceProps {
 
 type StackProps = Omit<FlexProps, 'direction'>;
 
-export function Flex({ direction, hidden, style, ...rest }: FlexProps) {
+export function Flex({ direction, style, ...rest }: FlexProps) {
   return (
     <Surface
       {...rest}
-      hidden={hidden}
       style={{
-        display: hidden === true ? 'none' : 'flex',
+        display: 'flex',
         ...(direction === 'column' && { flexDirection: 'column' }),
         ...style,
       }}

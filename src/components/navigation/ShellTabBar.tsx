@@ -1,12 +1,7 @@
 /**
  * The Home/Chat tab strip pinned to the bottom of `MessengerShell`. `TAB_DEFS` gives each view its icon
  * and label; `ShellTabBar` renders one `Tabs.Tab` per view, in `WIDGET_VIEWS` order, inside a `Tabs.List`
- * fixed at `TAB_BAR_HEIGHT`.
- *
- * It holds no state of its own: selection, roles, ids and arrow-key navigation all come from the
- * controlled `Tabs.Root` in `MessengerShell`, and the `.mtx-tab-underline` span is always rendered —
- * `index.css` reveals it off the selected tab's `aria-selected='true'`, so nothing here reads or
- * tracks which tab is active.
+ * fixed at `TAB_BAR_HEIGHT`. Selection lives in `MessengerShell`'s controlled `Tabs.Root`.
  */
 import { Tabs } from '@base-ui/react/tabs';
 import React from 'react';

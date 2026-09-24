@@ -100,12 +100,15 @@ function bytesPerSource(sourceMap: { mappings: string }, bundle: string): Map<nu
   return bytes;
 }
 
+type SourceMap = { mappings: string; sources?: string[]; sourcesContent?: string[] };
+let sourceMap: SourceMap | null = null;
 try {
-  const sourceMap = JSON.parse(readFileSync('dist/widget.mjs.map', 'utf8')) as {
-    mappings: string;
-    sources?: string[];
-    sourcesContent?: string[];
-  };
+  sourceMap = JSON.parse(readFileSync('dist/widget.mjs.map', 'utf8')) as SourceMap;
+} catch (error) {
+  errors.push(`dist/widget.mjs.map is missing or invalid: ${error instanceof Error ? error.message : String(error)}`);
+}
+
+if (sourceMap) {
   if (sourceMap.sourcesContent?.some(source => /\brequire\([^)]+\)/.test(source))) {
     errors.push('dist/widget.mjs.map contains a dynamic require');
   }
@@ -117,7 +120,7 @@ try {
   }
 
   const perPackage = new Map<string, number>();
-  for (const [index, size] of bytesPerSource(sourceMap, readFileSync('dist/widget.mjs', 'utf8'))) {
+  for (const [index, size] of bytesPerSource(sourceMap, bundle)) {
     const name = /node_modules\/((?:@[^/]+\/)?[^/]+)/.exec(sourceMap.sources?.[index] ?? '')?.[1];
     if (name) perPackage.set(name, (perPackage.get(name) ?? 0) + size);
   }
@@ -129,8 +132,6 @@ try {
       errors.push(`${name} (${size} bytes) exceeds its budget ${budget} bytes`);
     }
   }
-} catch (error) {
-  errors.push(`dist/widget.mjs.map is missing or invalid: ${error instanceof Error ? error.message : String(error)}`);
 }
 
 if (errors.length > 0) {

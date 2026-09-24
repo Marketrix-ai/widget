@@ -1,5 +1,5 @@
 /**
- * `Avatar` — an `<img>` sized by preset or number, with fit, radius (via `resolveLayoutStyle`) and
+ * `Avatar` — an `<img>` sized in pixels (32 by default), with fit, radius (via `resolveLayoutStyle`) and
  * elevation from the design tokens; keeps its own class beside a caller className.
  */
 import type { ComponentPropsWithRef } from 'react';
@@ -7,22 +7,17 @@ import type { ComponentPropsWithRef } from 'react';
 import { getElevationStyle, type RadiusToken, type ShadowToken } from '../../design-system/component-tokens';
 import { resolveLayoutStyle, withClass } from './layoutProps';
 
-type AvatarSize = 'sm' | 'md' | 'lg';
-
 interface AvatarProps extends Omit<ComponentPropsWithRef<'img'>, 'size'> {
   src: string;
   alt: string;
   elevation?: ShadowToken;
   fit?: 'contain' | 'cover';
-  size?: AvatarSize | number;
-  rounded?: boolean | RadiusToken;
+  size?: number;
+  rounded?: RadiusToken;
 }
 
-const SIZE: Record<AvatarSize, number> = { sm: 20, md: 32, lg: 48 };
-
 export function Avatar(props: AvatarProps) {
-  const { src, alt, elevation, fit = 'contain', size = 'md', rounded, className, style, ref, ...imgProps } = props;
-  const resolved = typeof size === 'string' ? SIZE[size] : size;
+  const { src, alt, elevation, fit = 'contain', size = 32, rounded, className, style, ref, ...imgProps } = props;
 
   return (
     <img
@@ -33,8 +28,8 @@ export function Avatar(props: AvatarProps) {
       src={src}
       style={{
         objectFit: fit,
-        width: resolved,
-        height: resolved,
+        width: size,
+        height: size,
         ...resolveLayoutStyle({ rounded }),
         ...getElevationStyle(elevation),
         ...style,

@@ -14,7 +14,7 @@ export const isTextField = (el: Element): el is HTMLInputElement | HTMLTextAreaE
 
 const isButtonish = (el: Element): boolean => el instanceof HTMLButtonElement || el.getAttribute('role') === 'button';
 
-export function simulateKeyAction(element: HTMLElement, key: SendKey): string | null {
+export function simulateKeyAction(element: HTMLElement, key: SendKey): string {
   switch (key) {
     case 'Tab': {
       const focusables = focusablesIn(document);
@@ -30,18 +30,22 @@ export function simulateKeyAction(element: HTMLElement, key: SendKey): string | 
         element.click();
         return 'Enter: clicked button';
       }
-      if (isTextField(element)) {
-        const form = element.closest('form');
-        if (form) {
-          const submitBtn = form.querySelector<HTMLButtonElement>('button[type="submit"], input[type="submit"]');
-          if (submitBtn) {
-            submitBtn.click();
-            return 'Enter: clicked form submit button';
-          } else {
-            form.requestSubmit();
-            return 'Enter: submitted form';
-          }
+      if (element instanceof HTMLTextAreaElement) {
+        const start = element.selectionStart;
+        const value = `${element.value.slice(0, start)}\n${element.value.slice(element.selectionEnd)}`;
+        setFieldValue(element, value);
+        element.setSelectionRange(start + 1, start + 1);
+        return 'Enter: inserted a line break';
+      }
+      const form = element instanceof HTMLInputElement ? element.closest('form') : null;
+      if (form) {
+        const submitBtn = form.querySelector<HTMLButtonElement>('button[type="submit"], input[type="submit"]');
+        if (submitBtn) {
+          submitBtn.click();
+          return 'Enter: clicked form submit button';
         }
+        form.requestSubmit();
+        return 'Enter: submitted form';
       }
       if (element instanceof HTMLAnchorElement) {
         element.click();
@@ -52,8 +56,7 @@ export function simulateKeyAction(element: HTMLElement, key: SendKey): string | 
 
     case 'Escape': {
       element.blur();
-      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
-      return 'Escape: blurred element and dispatched to document';
+      return 'Escape: blurred element';
     }
 
     case 'Space': {
@@ -74,6 +77,23 @@ export function simulateKeyAction(element: HTMLElement, key: SendKey): string | 
 
     case 'ArrowUp': {
       return element instanceof HTMLSelectElement ? stepSelect(element, -1) : 'ArrowUp: dispatched event';
+    }
+
+    case 'ArrowLeft':
+    case 'ArrowRight': {
+      if (!isTextField(element) || element.selectionStart === null) return `${key}: dispatched event`;
+      const caret = Math.max(
+        0,
+        Math.min(element.value.length, element.selectionStart + (key === 'ArrowLeft' ? -1 : 1)),
+      );
+      element.setSelectionRange(caret, caret);
+      return `${key}: moved cursor to ${caret}`;
+    }
+
+    case 'PageUp':
+    case 'PageDown': {
+      window.scrollBy({ top: (key === 'PageUp' ? -1 : 1) * window.innerHeight });
+      return `${key}: scrolled the page`;
     }
 
     case 'Home': {
@@ -98,9 +118,6 @@ export function simulateKeyAction(element: HTMLElement, key: SendKey): string | 
 
     case 'Delete':
       return isTextField(element) ? deleteAt(element, 'Delete') : 'Delete: dispatched event';
-
-    default:
-      return null;
   }
 }
 

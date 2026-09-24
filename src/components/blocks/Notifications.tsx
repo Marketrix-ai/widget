@@ -2,11 +2,10 @@
  * The widget's one notification surface: a Base UI Toast provider, the toast renderer, and the effect
  * that drives toasts from widget state. Base UI owns the live region, dismiss timers and stacking.
  *
- * `NotificationList` renders the live toasts, narrowing each one's free-form `type` down to the three
- * tones the design tokens understand. `NotificationProvider` portals into the widget's own shadow root
- * so the injected styles still apply, and raises the viewport above the launcher when both sit at the
- * bottom. `WidgetNotifications` renders nothing itself — it mirrors the `error` and `greeting` props
- * into toasts under a stable id, so a re-render upserts rather than stacking duplicates.
+ * `NotificationList` renders the live toasts in the error or info tone. `NotificationProvider` portals into
+ * the widget's own shadow root so the injected styles still apply, and raises the viewport above the
+ * launcher when both sit at the bottom. `WidgetNotifications` mirrors the `error` and `greeting` props into
+ * toasts under a stable id, so a re-render upserts rather than stacking duplicates.
  */
 import { Toast } from '@base-ui/react/toast';
 import React, { useEffect } from 'react';
@@ -26,7 +25,7 @@ const NotificationList: React.FC = () => {
   const { toasts } = Toast.useToastManager();
 
   return toasts.map(toast => {
-    const colors = notificationToneStyles[toast.type === 'error' || toast.type === 'info' ? toast.type : 'neutral'];
+    const colors = notificationToneStyles[toast.type === 'error' ? 'error' : 'info'];
 
     return (
       <Toast.Root

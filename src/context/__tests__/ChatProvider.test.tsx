@@ -12,7 +12,7 @@ import { Profiler, useEffect } from 'react';
 import { useWidget } from '../../hooks/useWidget';
 import type { WidgetEvent } from '../../sdk';
 import type { executeTool } from '../../services/browserTools';
-import * as chatSession from '../../services/chatSession';
+import * as chatThread from '../../services/chatThread';
 import { claimTabId, remintTabId } from '../../services/StorageService';
 import { streamClient } from '../../services/StreamClient';
 import { agentMessage, asStreamClientInternals, ofKind } from '../../test/fixtures';
@@ -45,7 +45,7 @@ const Transcript = () => {
 
 beforeEach(() => {
   vi.useFakeTimers();
-  vi.spyOn(chatSession, 'getOrCreateChatId').mockResolvedValue('chat-1');
+  vi.spyOn(chatThread, 'getOrCreateChatId').mockResolvedValue('chat-1');
   vi.spyOn(streamClient, 'ready').mockResolvedValue();
   vi.spyOn(streamClient, 'send').mockResolvedValue();
 });
@@ -281,7 +281,7 @@ describe('a real turn', () => {
   it('posts the mode-prefixed command under its placeholder id once the stream is ready', async () => {
     renderCaptured(false);
     const order: string[] = [];
-    vi.spyOn(chatSession, 'getOrCreateChatId').mockResolvedValue('chat-1');
+    vi.spyOn(chatThread, 'getOrCreateChatId').mockResolvedValue('chat-1');
     vi.spyOn(streamClient, 'ready').mockImplementation(async () => {
       order.push('ready');
     });

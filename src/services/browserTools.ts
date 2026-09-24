@@ -15,24 +15,10 @@ import { isTextField, setFieldValue, simulateKeyAction } from './keySimulation';
 import { activeScreenStream } from './ScreenShareService';
 import { ShowModeCancelled, showModeService } from './ShowModeService';
 
-interface TextData {
-  text: string;
-}
-
-interface ExtractData {
-  title: string;
-  url: string;
-  text: string;
-  links: Array<{ text: string; href: string | null }>;
-}
-
-interface DropdownOptionsData {
-  options: Array<{ value: string; text: string }>;
-}
-
 type ToolFailure = { success: false; error: string; cancelled?: true };
 
-type ToolExecutionResult<T = TextData> = { success: true; data: T; afterResponseAttempt?: () => void } | ToolFailure;
+type ToolExecutionResult<T = { text: string }> =
+  { success: true; data: T; afterResponseAttempt?: () => void } | ToolFailure;
 
 export type WidgetToolCall = Extract<WidgetEvent, { type: 'tool/call' }>;
 export type WidgetToolName = WidgetToolCall['browser_tool'];
@@ -154,7 +140,7 @@ function scrollToText({ text }: ToolArgs<'scroll_to_text'>): ToolExecutionResult
   return fail(`Text "${text}" not found`);
 }
 
-function extract({ extract_links }: ToolArgs<'extract'>): ToolExecutionResult<ExtractData> {
+function extract({ extract_links }: ToolArgs<'extract'>) {
   return okData({
     title: document.title,
     url: window.location.href,
@@ -190,7 +176,7 @@ function selectDropdownOption({ index, option }: ToolArgs<'select_dropdown_optio
   return ok(`Selected ${option}`);
 }
 
-function getDropdownOptions({ index }: ToolArgs<'get_dropdown_options'>): ToolExecutionResult<DropdownOptionsData> {
+function getDropdownOptions({ index }: ToolArgs<'get_dropdown_options'>) {
   const options = Array.from(selectAt(index).options).map(o => ({ value: o.value, text: o.text }));
   return okData({ options });
 }
@@ -201,7 +187,7 @@ function sendKeys({ index, keys }: ToolArgs<'send_keys'>): ToolExecutionResult {
   element.dispatchEvent(new KeyboardEvent('keydown', { key: keys, bubbles: true, cancelable: true }));
   element.dispatchEvent(new KeyboardEvent('keyup', { key: keys, bubbles: true, cancelable: true }));
 
-  return ok(simulateKeyAction(element, keys) ?? `Sent keys ${keys}`);
+  return ok(simulateKeyAction(element, keys));
 }
 
 function closeTab(): ToolExecutionResult {

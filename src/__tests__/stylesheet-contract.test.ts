@@ -28,7 +28,7 @@ function sourceFiles(dir: string, acc: string[] = []): string[] {
 const componentSources = sourceFiles(resolve(here, '../components')).map(file => readFileSync(file, 'utf8'));
 
 describe('every animation resolves to a keyframe this stylesheet defines', () => {
-  it.each(['spin', 'ping', 'fadeIn'] as const)('layout prop animate: %s', token => {
+  it.each(['fadeIn'] as const)('layout prop animate: %s', token => {
     const name = String(resolveLayoutStyle({ animate: token }).animation).split(' ')[0];
     expect(definedKeyframes, `resolveLayoutStyle emits ${name}, which index.css never defines`).toContain(name);
   });

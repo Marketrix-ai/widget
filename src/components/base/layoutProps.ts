@@ -1,27 +1,21 @@
 /**
  * Layout vocabulary shared by the base components: the `LayoutProps` a component accepts,
  * `resolveLayoutStyle` which turns them into a style object, and `stripLayoutProps` which removes them
- * from a props bag before the rest is spread onto a DOM element.
- *
- * Layout props resolve to inline style rather than class names, since a class-based version needed a
- * build-time safelist that silently dropped anything missing from it.
- * `withClass` appends an optional caller class to a component's fixed base class.
+ * from a props bag before the rest is spread onto a DOM element; `withClass` appends an optional caller class
+ * to a component's fixed base class.
  */
 import type { CSSProperties, ElementType } from 'react';
 
 import { RADIUS, type RadiusToken } from '../../design-system/component-tokens';
 
-type SpacingToken = 'none' | '2xs' | 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
+type SpacingToken = '2xs' | 'xs' | 'sm' | 'md' | 'lg';
 
 const SPACING_SCALE: Record<SpacingToken, string> = {
-  none: '0',
   '2xs': '2px',
   xs: '4px',
   sm: '6px',
   md: '8px',
   lg: '12px',
-  xl: '16px',
-  '2xl': '24px',
 };
 
 const ALIGN = {
@@ -38,12 +32,6 @@ const JUSTIFY = {
   end: 'flex-end',
   between: 'space-between',
   around: 'space-around',
-} as const;
-
-const ANIMATION = {
-  spin: 'mtx-spin 1s linear infinite',
-  ping: 'mtx-ping 1s cubic-bezier(0, 0, 0.2, 1) infinite',
-  fadeIn: 'mtx-fade-in 0.5s ease-out',
 } as const;
 
 const BORDER_SIDE = {
@@ -77,10 +65,9 @@ export interface LayoutProps {
   minHeight?: '0';
 
   border?: boolean | keyof typeof BORDER_SIDE;
-  rounded?: boolean | RadiusToken | undefined;
+  rounded?: RadiusToken | undefined;
 
-  animate?: 'spin' | 'ping' | 'fadeIn' | 'none' | undefined;
-  hidden?: boolean | undefined;
+  animate?: 'fadeIn' | undefined;
 
   as?: ElementType;
   style?: CSSProperties | undefined;
@@ -108,7 +95,6 @@ const LAYOUT_KEYS = {
   border: true,
   rounded: true,
   animate: true,
-  hidden: true,
   as: true,
   style: true,
 } satisfies Record<keyof LayoutProps, true>;
@@ -151,13 +137,8 @@ export function resolveLayoutStyle(props: LayoutProps): CSSProperties {
     else style[BORDER_SIDE[props.border]] = '1px';
   }
 
-  if (props.rounded !== undefined && props.rounded !== false) {
-    if (props.rounded === true) style.borderRadius = RADIUS.lg;
-    else style.borderRadius = RADIUS[props.rounded];
-  }
-
-  if (props.animate !== undefined && props.animate !== 'none') style.animation = ANIMATION[props.animate];
-  if (props.hidden === true) style.display = 'none';
+  if (props.rounded !== undefined) style.borderRadius = RADIUS[props.rounded];
+  if (props.animate === 'fadeIn') style.animation = 'mtx-fade-in 0.5s ease-out';
 
   return style;
 }

@@ -405,7 +405,7 @@ describe('selectDropdownOption matches by value OR by visible text', () => {
   });
 });
 
-describe('sendKeys falls back to a generic message only when the key has no reported effect', () => {
+describe('sendKeys reports the effect the key had', () => {
   it('reports the specific effect for a handled key', async () => {
     document.body.innerHTML = '<input style="position: fixed" value="abc" />';
     const element = document.querySelector('input') as HTMLInputElement;
@@ -419,14 +419,16 @@ describe('sendKeys falls back to a generic message only when the key has no repo
     expect(result.data).toEqual({ text: 'End: moved cursor to end' });
   });
 
-  it('falls back to the generic "Sent keys" message for a key with no reported effect', async () => {
+  it('scrolls the page for PageDown rather than reporting success without an effect', async () => {
     document.body.innerHTML = '<div tabindex="0" style="position: fixed"></div>';
     const element = document.querySelector('div') as HTMLElement;
     vi.spyOn(domService, 'getValidatedElement').mockReturnValue({ element });
+    const scrollBy = vi.spyOn(window, 'scrollBy').mockImplementation(() => {});
 
     const result = await executeTool('send_keys', { index: 0, keys: 'PageDown' }, 'do');
 
     assertSuccess(result);
-    expect(result.data).toEqual({ text: 'Sent keys PageDown' });
+    expect(result.data).toEqual({ text: 'PageDown: scrolled the page' });
+    expect(scrollBy).toHaveBeenLastCalledWith({ top: window.innerHeight });
   });
 });

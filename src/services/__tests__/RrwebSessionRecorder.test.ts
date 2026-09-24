@@ -51,7 +51,7 @@ const incrementalEvent = (timestamp: number): Extract<RrwebEvent, { type: 3 }> =
 
 const startRecorder = async (): Promise<{ recorder: RrwebSessionRecorder; emit: Emit }> => {
   mockSdk.widgetMessagePost.mockResolvedValueOnce({ success: true });
-  const recorder = new RrwebSessionRecorder('chat-1', 1);
+  const recorder = new RrwebSessionRecorder('chat-1');
   await recorder.start();
   const call = mocked(record).mock.calls[0];
   const options = call?.[0];
@@ -60,11 +60,18 @@ const startRecorder = async (): Promise<{ recorder: RrwebSessionRecorder; emit: 
 };
 
 describe('rrweb event validation', () => {
-  it('rejects an event outside the generated wire schema before buffering it', async () => {
-    const { emit } = await startRecorder();
+  it('drops an event outside the generated wire schema with one warning, never throwing into the host page', async () => {
+    const { recorder, emit } = await startRecorder();
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-    expect(() => emit({ type: EventType.DomContentLoaded, data: { extra: true }, timestamp: 0 })).toThrow();
+    for (let i = 0; i < 2; i++) {
+      expect(() => emit({ type: EventType.DomContentLoaded, data: { extra: true }, timestamp: 0 })).not.toThrow();
+    }
+    await recorder.stop();
+
+    expect(warn).toHaveBeenCalledTimes(1);
     expect(mockSdk.widgetMessagePost).toHaveBeenCalledTimes(1);
+    warn.mockRestore();
   });
 });
 
@@ -207,7 +214,7 @@ describe('a stream that gives up before the chat first registers', () => {
       .mockRejectedValueOnce(new StreamGaveUpError('Could not reconnect to the assistant. Try again.'))
       .mockResolvedValue();
     mockSdk.widgetMessagePost.mockResolvedValue({ success: true });
-    const recorder = new RrwebSessionRecorder('chat-1', 1);
+    const recorder = new RrwebSessionRecorder('chat-1');
 
     await recorder.start();
     expect(record).not.toHaveBeenCalled();
@@ -215,6 +222,8 @@ describe('a stream that gives up before the chat first registers', () => {
     internals.handleMessage({ type: 'registered', chat_id: 'chat-1' });
     await waitFor(() => expect(record).toHaveBeenCalledTimes(1));
     expect(mockSdk.widgetMessagePost.mock.lastCall?.[0].command.type).toBe('rrweb/metadata');
+    expect(mockSdk.widgetMessagePost.mock.lastCall?.[0].command).not.toHaveProperty('chat_id');
+    expect(mockSdk.widgetMessagePost.mock.lastCall?.[0].command).not.toHaveProperty('application_id');
     recorder.stop();
   });
 });
@@ -227,7 +236,7 @@ describe('RrwebSessionRecorder lifecycle', () => {
         resolveMetadata = () => resolve({ success: true });
       }),
     );
-    const recorder = new RrwebSessionRecorder('old-chat', 1);
+    const recorder = new RrwebSessionRecorder('old-chat');
 
     const start = recorder.start();
     recorder.stop();
@@ -278,7 +287,7 @@ describe('a recorder posting into a chat the api has not registered', () => {
     );
     mockSdk.widgetMessagePost.mockResolvedValueOnce({ success: true });
 
-    const start = new RrwebSessionRecorder('chat-1', 1).start();
+    const start = new RrwebSessionRecorder('chat-1').start();
     await flushMicrotasks();
 
     expect(ready).toHaveBeenCalledWith('chat-1');

@@ -21,12 +21,12 @@ describe('rrweb capture privacy', () => {
   });
 
   it('masks every input by default', async () => {
-    await new RrwebSessionRecorder('chat_1', 1).start();
+    await new RrwebSessionRecorder('chat_1').start();
     expect(recordMock.mock.calls[0]?.[0]).toMatchObject({ maskAllInputs: true });
   });
 
   it('honours both the mtx- and the native rr- privacy classes', async () => {
-    await new RrwebSessionRecorder('chat_1', 1).start();
+    await new RrwebSessionRecorder('chat_1').start();
     const opts = recordMock.mock.calls[0]?.[0] as { maskTextClass: RegExp; blockClass: RegExp };
 
     for (const cls of ['rr-mask', 'mtx-mask']) expect(opts.maskTextClass.test(cls)).toBe(true);

@@ -5,19 +5,15 @@
  * `denyScreenAccess` release the held turn; `stopTask` cancels a running turn and its Show overlay; `clearChat`
  * stops any running turn, clears the error and starts a fresh chat thread, so the agent forgets the cleared
  * history too. The stream handlers run browser tools and reply with results; preview mode answers locally.
- * The api resends an unanswered `tool/call` on every re-register, so a call already started in this tab never
- * runs twice: one an earlier page load started is answered `page_reloaded` so the agent re-observes the page.
- * A turn the api refuses as forbidden (a mode switched off since the page loaded) shows the api's own message,
- * except a paid-plan refusal: that copy is for the tenant, so the visitor sees the generic failure.
+ * A turn the api refuses as forbidden (a mode switched off since the page loaded) shows the api's own message.
  */
 import { ORPCError } from '@orpc/client';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { z } from 'zod';
 
 import { useWidgetConfig } from '../hooks/useWidget';
 import type { WidgetEvent } from '../sdk';
 import { executeTool } from '../services/browserTools';
-import { getOrCreateChatId } from '../services/chatSession';
+import { getOrCreateChatId } from '../services/chatThread';
 import { activeScreenStream, startScreenShare, subscribeScreenShare } from '../services/ScreenShareService';
 import { showModeService } from '../services/ShowModeService';
 import { claimToolCall, forgetChatId } from '../services/StorageService';
@@ -77,7 +73,6 @@ const STALE_REPLY_TIMEOUT_MS = 120_000;
 const STALE_REPLY_TEXT = 'This is taking longer than expected. Please try again.';
 const SCREEN_SHARE_FAILED_TEXT = 'Screen sharing could not start, so the assistant will continue without it.';
 const PREVIEW_REPLY = "This is a preview. In production, I'll respond to your messages here.";
-const RefusalDataSchema = z.object({ details: z.object({ reason: z.string() }) });
 
 const StaleReplyWatchdog: React.FC<{ id: string; progress: number; onStale: (id: string) => void }> = ({
   id,
@@ -135,11 +130,9 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return true;
       } catch (error) {
         const refused = error instanceof ORPCError && error.code === 'FORBIDDEN';
-        const tenantOnly =
-          refused && RefusalDataSchema.safeParse(error.data).data?.details.reason === 'paid_plan_required';
         if (refused) logWarn(`[ChatContext] The api refused the turn: ${error.message}`);
         else console.error('Failed to send message:', error);
-        commit(s => reduceError(s, placeholder.id, refused && !tenantOnly ? error.message : CHAT_FAILURE_TEXT));
+        commit(s => reduceError(s, placeholder.id, refused ? error.message : CHAT_FAILURE_TEXT));
         return false;
       }
     },

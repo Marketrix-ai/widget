@@ -1,10 +1,9 @@
 /**
- * The numbered address space the agent drives the host page by.
- * `reindexAndSnapshot` stamps `data-id` on every indexable element of a document clone in one pass, pairing
- * each live element with its clone by document order,
- * `getValidatedElement` resolves an index back to a live element, `notInteractableReason` explains why an
- * element can't be acted on, and `domService` is the singleton. An element that changed between turns is
- * reported as changed rather than silently acted on.
+ * The numbered address space the agent drives the host page by. `reindexAndSnapshot` stamps `data-id` on
+ * every indexable element of a document clone in one pass, pairing each live element with its clone by
+ * document order; `getValidatedElement` resolves an index back to a live element, `notInteractableReason`
+ * explains why an element can't be acted on, and `domService` is the singleton. An element that changed
+ * between turns is reported as changed rather than silently acted on.
  */
 
 import { disabledReason, isIndexable, WIDGET_SHADOW_HOST_CLASS } from '../utils/dom';

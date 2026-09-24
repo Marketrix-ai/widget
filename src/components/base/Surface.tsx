@@ -1,12 +1,8 @@
 /**
  * `Surface` is the canonical container primitive: a polymorphic element (`div` by default) that composes
  * the shared layout-token vocabulary with a background token, an elevation token and a padding preset,
- * all emitted as inline style.
- *
- * `floatingCard` is the shorthand for the card look both the home view's recent-chat card and the
- * chat view's composer card use. Style precedence is fixed: background, then padding, then
- * elevation, then layout props, then the caller's own `style` last, so a caller override always wins.
- * `className` is internal to `blocks/` — layout props are the styling API everywhere else.
+ * all emitted as inline style. `floatingCard` is the card look the recent-chat card and the composer share;
+ * the caller's own `style` always wins. `className` is internal to `blocks/`.
  */
 import type { CSSProperties, ElementType, Ref } from 'react';
 

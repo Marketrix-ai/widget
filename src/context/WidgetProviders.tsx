@@ -11,7 +11,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
 import { useWidgetConfig, WidgetConfigContext } from '../hooks/useWidget';
-import { getOrCreateChatId } from '../services/chatSession';
+import { getOrCreateChatId } from '../services/chatThread';
 import { readChatSnapshot, writeChatSnapshot } from '../services/StorageService';
 import { streamClient } from '../services/StreamClient';
 import type { ValidWidgetConfig } from '../types';
@@ -53,13 +53,13 @@ const InitBridge: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       const chatId = await getOrCreateChatId();
       if (cancelled) return;
 
-      void streamClient.connect(chatId);
+      await streamClient.connect(chatId);
     };
 
     void init().catch(error => {
       if (cancelled) return;
       console.error('Widget initialization failed:', error);
-      uiActions.setError('Widget failed to initialise — please refresh the page.');
+      uiActions.setError('Widget failed to initialize — please refresh the page.');
     });
 
     return () => {

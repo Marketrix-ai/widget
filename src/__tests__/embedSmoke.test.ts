@@ -255,7 +255,7 @@ describe("embed smoke: the built dist/widget.mjs boots the way a customer's page
       const anchor = shadow?.root.querySelector('.mtx-fab-anchor') as HTMLElement | null;
       expect(anchor).toBeTruthy();
       expect(anchor?.style.zIndex).toBe('2147483002');
-      expect(shadow?.root.querySelector('[aria-label="Open"]')).toBeTruthy();
+      expect(shadow?.root.querySelector('[aria-label="Open chat"]')).toBeTruthy();
 
       expect(errors).toEqual([]);
       expect(Object.keys(window).filter(k => !windowKeysBefore.has(k))).toEqual(['__mtx']);

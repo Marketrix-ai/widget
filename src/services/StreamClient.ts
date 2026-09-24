@@ -2,17 +2,14 @@
  * Singleton SSE transport between the widget and the api, exported as `streamClient`.
  * `setCredentials` holds the stream's credentials, `send` posts a command via `widgetMessagePost`, `ready`
  * connects and waits for registration, and `canReconnect`/`reconnectNow` back Retry; `StreamGaveUpError`
- * marks a stream that exhausted its reconnects. Each browser tab dials with its own tab id, kept across
- * page loads, so the api keys the SSE stream per tab and routes a running task's tool calls back to it; backoff
- * is jittered so tabs across a shared outage don't redial together. The api ends a registered stream cleanly only
- * when another page dialed with the same tab id, so the evicted page redials under a fresh one; `route` pins the
- * chat and tab a reply must answer on, since the api relays a tool response only from the tab it called.
+ * marks a stream that exhausted its reconnects. Backoff is jittered so tabs across a shared outage don't
+ * redial together, and a tab evicted by another page with its tab id redials under a fresh one.
  */
 import { sdk, type WidgetCommand, type WidgetEvent } from '../sdk';
 import { logWarn } from '../utils/log';
 import { claimTabId, remintTabId } from './StorageService';
 
-type StreamStatus = 'disconnected' | 'connecting' | 'open' | 'registered' | 'error';
+type StreamStatus = 'disconnected' | 'connecting' | 'open' | 'registered';
 
 const INITIAL_RECONNECT_DELAY_MS = 1000;
 const MAX_RECONNECT_DELAY_MS = 30_000;
@@ -117,7 +114,7 @@ class StreamClient {
     } catch (error) {
       if (!signal.aborted) {
         logWarn('[StreamClient] Connection failed, will retry:', error);
-        this.status = 'error';
+        this.status = 'disconnected';
         this.notifyError(new Error('Stream connection failed'));
         this.scheduleReconnect();
       }
@@ -141,7 +138,6 @@ class StreamClient {
         stale = true;
       } else if (!this.reconnectSuppressed()) {
         logWarn('[StreamClient] Stream error:', error);
-        this.status = 'error';
       }
     } finally {
       if (!stale && this.connectionId === connectionId && !this.reconnectSuppressed()) {
@@ -211,7 +207,13 @@ class StreamClient {
       this.giveUp(CREDENTIALS_REJECTED);
     }
 
-    this.callbacks.forEach(cb => cb.onMessage?.(event));
+    for (const cb of this.callbacks) {
+      try {
+        cb.onMessage?.(event);
+      } catch (error) {
+        console.error(`[StreamClient] A subscriber failed handling ${event.type}:`, error);
+      }
+    }
   }
 
   private scheduleReconnect(): void {

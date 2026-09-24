@@ -224,8 +224,7 @@ function useResize() {
   );
 
   return {
-    widthPx: `${dimensions.width}px`,
-    heightPx: `${dimensions.height}px`,
+    dimensions,
     grip,
     onResizeStart: handleResizeStart,
     onResizeKeyDown: handleResizeKeyDown,
@@ -239,7 +238,7 @@ export const MessengerShell: React.FC = () => {
   const { isOpen, activeView } = state;
   const { isPreviewMode } = config;
 
-  const { widthPx, heightPx, grip, onResizeStart, onResizeKeyDown, containerRef } = useResize();
+  const { dimensions, grip, onResizeStart, onResizeKeyDown, containerRef } = useResize();
 
   const messageInputRef = useRef<HTMLTextAreaElement | null>(null);
   const navDirection = activeView === 'chat' ? 'forward' : 'back';
@@ -276,8 +275,8 @@ export const MessengerShell: React.FC = () => {
         zIndex: config.widget_position_z_index,
         backgroundImage,
         transformOrigin: `${vertical} ${horizontal}`,
-        width: widthPx,
-        height: heightPx,
+        width: dimensions.width,
+        height: dimensions.height,
         fontSize: DEFAULT_WIDGET_SETTINGS.widget_font_size,
         ...panelPositionStyle,
         pointerEvents: 'auto',
@@ -349,6 +348,11 @@ export const MessengerShell: React.FC = () => {
         <div
           role='separator'
           aria-label={`Resize widget from ${grip.vertical} ${grip.horizontal}. Use arrow keys to resize.`}
+          aria-orientation='vertical'
+          aria-valuenow={dimensions.width}
+          aria-valuemin={MIN_WIDTH}
+          aria-valuemax={MAX_WIDTH}
+          aria-valuetext={`${dimensions.width} by ${dimensions.height} pixels`}
           title='Drag to resize'
           tabIndex={0}
           style={{

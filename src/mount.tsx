@@ -19,7 +19,7 @@ import { WidgetProviders } from './context/WidgetProviders';
 import type { NotificationTone } from './design-system/component-tokens';
 import shadowStyles from './index.css?inline';
 import { configureSdk } from './sdk';
-import { getOrCreateChatId } from './services/chatSession';
+import { getOrCreateChatId } from './services/chatThread';
 import { RrwebSessionRecorder } from './services/RrwebSessionRecorder';
 import { stopScreenShare } from './services/ScreenShareService';
 import { showModeService } from './services/ShowModeService';
@@ -111,10 +111,10 @@ export function mountPreview(config: ValidWidgetConfig, host: HTMLElement | unde
   mountActive(config, host);
 }
 
-async function startRecording(config: CredentialedConfig, generation: number): Promise<void> {
+async function startRecording(generation: number): Promise<void> {
   const chatId = await getOrCreateChatId();
   if (generation !== lifecycleGeneration) return;
-  const recorder = new RrwebSessionRecorder(chatId, config.mtxApp);
+  const recorder = new RrwebSessionRecorder(chatId);
   rrwebSessionRecorder = recorder;
   await recorder.start();
   if (generation !== lifecycleGeneration) {
@@ -150,7 +150,7 @@ async function initWidgetInternal(config: MarketrixConfig, host: HTMLElement | u
   mountActive(finalConfig, host, config);
 
   if (finalConfig.widget_recording) {
-    startRecording(finalConfig, generation).catch((error: unknown) => {
+    startRecording(generation).catch((error: unknown) => {
       if (generation === lifecycleGeneration) console.error('Failed to start session recording:', error);
     });
   }
@@ -194,7 +194,7 @@ export const updateMarketrixConfig = async (newConfig: Partial<MarketrixConfig>)
 
 export const getCurrentConfig = (): ValidWidgetConfig | null => active?.config ?? null;
 
-function showHostPageNotice(message: string, tone: NotificationTone = 'neutral'): void {
+function showHostPageNotice(message: string, tone: NotificationTone = 'info'): void {
   hideHostPageNotice();
 
   const noticeContainer = document.createElement('div');

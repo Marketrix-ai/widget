@@ -62,14 +62,65 @@ class ShowModeService {
 
     element.scrollIntoView({ behavior: 'instant', block: 'center', inline: 'center' });
 
-    this.createHighlight();
-    this.createPopup(explanation, isClickAction);
-    this.setupPositionUpdates();
-    this.setupVisibilityMonitoring();
+    const highlight = document.createElement('div');
+    highlight.id = 'marketrix-show-highlight';
+    highlight.style.cssText =
+      `position:fixed;border:3px solid ${ACCENT_COLOR};border-radius:4px;` +
+      `box-shadow:0 0 0 4px rgba(59,130,246,0.2),0 0 20px rgba(59,130,246,0.4);` +
+      `z-index:${LAYER_TOKENS.showHighlight};pointer-events:none;transition:none;`;
+
+    const popup = document.createElement('div');
+    popup.id = 'marketrix-show-popup';
+    popup.style.cssText = POPUP_CHROME_CSS;
+    const text = document.createElement('div');
+    text.textContent = explanation;
+    text.style.cssText = `font-weight:500;color:${TEXT_COLOR};font-size:12px;${isClickAction ? '' : 'margin-bottom:12px;'}`;
+    popup.append(text);
 
     if (isClickAction) {
-      this.setupClickHandler();
+      this.clickHandler = (e: MouseEvent) => {
+        if (!this.resolvePromise || !e.composedPath().includes(element)) return;
+        e.preventDefault();
+        e.stopPropagation();
+        this.settle();
+      };
+      document.addEventListener('click', this.clickHandler, { capture: true });
+    } else {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;gap:8px;justify-content:flex-end;';
+      const button = document.createElement('button');
+      button.id = 'marketrix-show-continue';
+      button.textContent = 'Continue';
+      button.style.cssText =
+        `background:${ACCENT_COLOR};color:white;border:none;border-radius:6px;padding:8px 16px;` +
+        'font-size:12px;font-weight:500;cursor:pointer;';
+      button.addEventListener('click', e => {
+        e.stopPropagation();
+        this.settle();
+      });
+      row.append(button);
+      popup.append(row);
     }
+
+    document.body.append(highlight, popup);
+    this.currentHighlight = highlight;
+    this.currentPopup = popup;
+    this.trackElement();
+
+    this.scrollHandler = () => this.trackElement();
+    for (const event of REPOSITION_EVENTS) {
+      window.addEventListener(event, this.scrollHandler, { capture: true, passive: true });
+    }
+
+    this.visibilityCheckInterval = setInterval(() => {
+      const rect = element.getBoundingClientRect();
+      if (rect.bottom < 0 || rect.top > window.innerHeight || rect.right < 0 || rect.left > window.innerWidth) {
+        this.settle('ELEMENT_OFF_SCREEN: The highlighted element scrolled out of view');
+        return;
+      }
+      const reason = domService.notInteractableReason(element, options.index);
+      if (reason) this.settle(reason);
+    }, 200);
 
     this.currentPromise = new Promise<void>((resolve, reject) => {
       this.resolvePromise = resolve;
@@ -121,20 +172,8 @@ class ShowModeService {
     return settlers;
   }
 
-  private createHighlight(): void {
-    const highlight = document.createElement('div');
-    highlight.id = 'marketrix-show-highlight';
-    highlight.style.cssText =
-      `position:fixed;border:3px solid ${ACCENT_COLOR};border-radius:4px;` +
-      `box-shadow:0 0 0 4px rgba(59,130,246,0.2),0 0 20px rgba(59,130,246,0.4);` +
-      `z-index:${LAYER_TOKENS.showHighlight};pointer-events:none;transition:none;`;
-    document.body.appendChild(highlight);
-    this.currentHighlight = highlight;
-    this.trackElement();
-  }
-
   private trackElement(): void {
-    if (!this.currentOptions || !this.currentHighlight) return;
+    if (!this.currentOptions || !this.currentHighlight || !this.currentPopup) return;
     const rect = this.currentOptions.element.getBoundingClientRect();
     Object.assign(this.currentHighlight.style, {
       top: `${rect.top}px`,
@@ -142,55 +181,7 @@ class ShowModeService {
       width: `${rect.width}px`,
       height: `${rect.height}px`,
     });
-    this.updatePopupPosition();
-  }
 
-  private createPopup(explanation: string, isClickAction: boolean): void {
-    const popup = document.createElement('div');
-    popup.id = 'marketrix-show-popup';
-
-    popup.style.cssText = POPUP_CHROME_CSS;
-
-    const text = document.createElement('div');
-    text.textContent = explanation;
-    text.style.cssText = `font-weight:500;color:${TEXT_COLOR};font-size:12px;${isClickAction ? '' : 'margin-bottom:12px;'}`;
-    popup.append(text);
-
-    if (!isClickAction) {
-      const row = document.createElement('div');
-      row.style.cssText = 'display:flex;gap:8px;justify-content:flex-end;';
-      const button = document.createElement('button');
-      button.id = 'marketrix-show-continue';
-      button.textContent = 'Continue';
-      button.style.cssText =
-        `background:${ACCENT_COLOR};color:white;border:none;border-radius:6px;padding:8px 16px;` +
-        'font-size:12px;font-weight:500;cursor:pointer;';
-      button.addEventListener('click', e => {
-        e.stopPropagation();
-        this.settle();
-      });
-      row.append(button);
-      popup.append(row);
-    }
-
-    document.body.appendChild(popup);
-    this.currentPopup = popup;
-
-    this.updatePopupPosition();
-  }
-
-  private setupPositionUpdates(): void {
-    this.scrollHandler = () => this.trackElement();
-
-    for (const event of REPOSITION_EVENTS) {
-      window.addEventListener(event, this.scrollHandler, { capture: true, passive: true });
-    }
-  }
-
-  private updatePopupPosition(): void {
-    if (!this.currentPopup || !this.currentOptions) return;
-
-    const rect = this.currentOptions.element.getBoundingClientRect();
     const popupHeight = 120;
     const spacing = 20;
     const padding = 10;
@@ -220,37 +211,6 @@ class ShowModeService {
 
     this.currentPopup.style.left = `${Math.max(padding, Math.min(bestPos.left, window.innerWidth - POPUP_WIDTH_PX - padding))}px`;
     this.currentPopup.style.top = `${Math.max(padding, Math.min(bestPos.top, window.innerHeight - popupHeight - padding))}px`;
-  }
-
-  private setupClickHandler(): void {
-    this.clickHandler = (e: MouseEvent) => {
-      if (!this.currentOptions || !this.resolvePromise) return;
-
-      const isClickOnElement = e.composedPath().includes(this.currentOptions.element);
-
-      if (isClickOnElement) {
-        e.preventDefault();
-        e.stopPropagation();
-
-        this.settle();
-      }
-    };
-
-    document.addEventListener('click', this.clickHandler, { capture: true });
-  }
-
-  private setupVisibilityMonitoring(): void {
-    this.visibilityCheckInterval = setInterval(() => {
-      if (!this.currentOptions) return;
-      const { element, index } = this.currentOptions;
-      const rect = element.getBoundingClientRect();
-      if (rect.bottom < 0 || rect.top > window.innerHeight || rect.right < 0 || rect.left > window.innerWidth) {
-        this.settle('ELEMENT_OFF_SCREEN: The highlighted element scrolled out of view');
-        return;
-      }
-      const reason = domService.notInteractableReason(element, index);
-      if (reason) this.settle(reason);
-    }, 200);
   }
 }
 

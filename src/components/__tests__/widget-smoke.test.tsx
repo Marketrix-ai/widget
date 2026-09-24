@@ -1,11 +1,16 @@
 /**
  * Widget smoke: it mounts with the launcher, uses semantic and layer tokens, portals the modal inside
- * the token-bearing widget root, paints it above the panel, and keeps a hidden widget visible in
- * preview mode.
+ * the token-bearing widget root, paints it above the panel, keeps a hidden widget visible in preview mode,
+ * and times the greeting out even while the root keeps re-rendering.
  */
-import { fireEvent, screen } from '@testing-library/react';
+import { act, fireEvent, screen } from '@testing-library/react';
 
+import { WidgetProviders } from '../../context/WidgetProviders';
+import * as chatThread from '../../services/chatThread';
+import { streamClient } from '../../services/StreamClient';
+import { getMockWidgetConfig } from '../../test/fixtures';
 import { openChatTab, openWidget, renderWidget } from '../../test/renderWidget';
+import { WidgetRoot } from '../WidgetRoot';
 
 describe('Widget smoke', () => {
   it('mounts and shows launcher button', () => {
@@ -48,5 +53,30 @@ describe('Widget smoke', () => {
   it('keeps a hidden widget visible in preview mode', () => {
     renderWidget({ widget_appearance: 'hidden' });
     expect(screen.getByRole('button', { name: /open/i })).toBeInTheDocument();
+  });
+
+  it('times the greeting out even while the root keeps re-rendering', async () => {
+    vi.spyOn(chatThread, 'getOrCreateChatId').mockResolvedValue('chat-greeting');
+    vi.spyOn(streamClient, 'connect').mockResolvedValue();
+    vi.useFakeTimers();
+    const config = getMockWidgetConfig({ isPreviewMode: false, widget_greeting: 'Hello there' });
+    const tree = () => (
+      <WidgetProviders config={config}>
+        <WidgetRoot />
+      </WidgetProviders>
+    );
+    const { rerender } = renderWidget({ isPreviewMode: false, widget_greeting: 'Hello there' });
+    rerender(tree());
+    await act(async () => vi.advanceTimersByTime(2000));
+    expect(screen.queryAllByText('Hello there')).not.toHaveLength(0);
+
+    for (let i = 0; i < 9; i++) {
+      rerender(tree());
+      await act(async () => vi.advanceTimersByTime(1000));
+    }
+
+    expect(screen.queryAllByText('Hello there')).toHaveLength(0);
+    vi.useRealTimers();
+    vi.restoreAllMocks();
   });
 });

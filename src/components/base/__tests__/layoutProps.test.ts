@@ -8,14 +8,11 @@ import { describe, expect, it } from 'bun:test';
 import { resolveLayoutStyle, stripLayoutProps } from '../layoutProps';
 
 const SPACING_PX = {
-  none: '0',
   '2xs': '2px',
   xs: '4px',
   sm: '6px',
   md: '8px',
   lg: '12px',
-  xl: '16px',
-  '2xl': '24px',
 } as const;
 
 describe('resolveLayoutStyle', () => {
@@ -38,8 +35,8 @@ describe('resolveLayoutStyle', () => {
     });
 
     it('a specific side wins over the axis it belongs to', () => {
-      expect(resolveLayoutStyle({ paddingY: 'sm', paddingTop: 'xl' })).toEqual({
-        paddingTop: '16px',
+      expect(resolveLayoutStyle({ paddingY: 'sm', paddingTop: 'lg' })).toEqual({
+        paddingTop: '12px',
         paddingBottom: '6px',
       });
     });
@@ -47,7 +44,7 @@ describe('resolveLayoutStyle', () => {
 
   it('maps every gap token to its pixel value', () => {
     expect(resolveLayoutStyle({ gap: 'sm' })).toEqual({ gap: '6px' });
-    expect(resolveLayoutStyle({ gap: 'xl' })).toEqual({ gap: '16px' });
+    expect(resolveLayoutStyle({ gap: 'lg' })).toEqual({ gap: '12px' });
   });
 
   it('maps every align token to alignItems', () => {
@@ -113,24 +110,13 @@ describe('resolveLayoutStyle', () => {
     });
   });
 
-  it('rounded resolves the theme radius, pill or none, emitting nothing when false', () => {
-    expect(resolveLayoutStyle({ rounded: true })).toEqual({ borderRadius: 'var(--radius)' });
+  it('rounded resolves the theme radius or pill', () => {
     expect(resolveLayoutStyle({ rounded: 'lg' })).toEqual({ borderRadius: 'var(--radius)' });
     expect(resolveLayoutStyle({ rounded: 'pill' })).toEqual({ borderRadius: 'var(--radius-pill)' });
-    expect(resolveLayoutStyle({ rounded: 'none' })).toEqual({ borderRadius: '0' });
-    expect(resolveLayoutStyle({ rounded: false })).toEqual({});
   });
 
-  it('animate references a keyframe this stylesheet defines, emitting nothing when none', () => {
-    expect(resolveLayoutStyle({ animate: 'spin' }).animation).toContain('mtx-spin');
-    expect(resolveLayoutStyle({ animate: 'ping' }).animation).toContain('mtx-ping');
+  it('animate references a keyframe this stylesheet defines', () => {
     expect(resolveLayoutStyle({ animate: 'fadeIn' }).animation).toContain('mtx-fade-in');
-    expect(resolveLayoutStyle({ animate: 'none' })).toEqual({});
-  });
-
-  it('hidden: true sets display none, false emits nothing', () => {
-    expect(resolveLayoutStyle({ hidden: true })).toEqual({ display: 'none' });
-    expect(resolveLayoutStyle({ hidden: false })).toEqual({});
   });
 
   it('combines multiple props', () => {
@@ -148,7 +134,7 @@ describe('stripLayoutProps', () => {
       padding: 'md' as const,
       paddingX: 'sm' as const,
       paddingY: 'lg' as const,
-      gap: 'none' as const,
+      gap: 'xs' as const,
       align: 'center' as const,
       justify: 'between' as const,
       grow: true,
@@ -163,8 +149,7 @@ describe('stripLayoutProps', () => {
       minHeight: '0' as const,
       border: true,
       rounded: 'lg' as const,
-      animate: 'spin' as const,
-      hidden: true,
+      animate: 'fadeIn' as const,
       as: 'div' as const,
       style: { color: 'red' },
     };

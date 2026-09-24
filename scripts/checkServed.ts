@@ -132,7 +132,7 @@ try {
     try {
       await run();
     } catch (error) {
-      mismatches.push(`${label}: ${(error as Error).message}`);
+      mismatches.push(`${label}: ${error instanceof Error ? error.message : String(error)}`);
     }
   };
 
