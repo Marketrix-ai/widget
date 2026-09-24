@@ -201,7 +201,7 @@ function sendKeys({ index, keys }: ToolArgs<'send_keys'>): ToolExecutionResult {
   element.dispatchEvent(new KeyboardEvent('keydown', { key: keys, bubbles: true, cancelable: true }));
   element.dispatchEvent(new KeyboardEvent('keyup', { key: keys, bubbles: true, cancelable: true }));
 
-  return ok(simulateKeyAction(element, keys) ?? `Sent keys ${keys}`);
+  return ok(simulateKeyAction(element, keys));
 }
 
 function closeTab(): ToolExecutionResult {
