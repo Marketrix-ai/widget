@@ -182,4 +182,15 @@ describe('widget public entry paths', () => {
     expect(bare).toBe('');
     expect(nonced).toBe('csp-nonce-123');
   });
+
+  it.each([
+    ['loading', { 'mtx-api-host': 'https://api.test' }],
+    ['missing-host', {}],
+  ])('applies the style nonce to the %s host-page notice', async (_case, attributes) => {
+    appendModuleScript({ 'mtx-id': 'widget-id', 'mtx-key': 'widget-key', 'mtx-style-nonce': 'csp-n', ...attributes });
+    const attach = vi.spyOn(HTMLElement.prototype, 'attachShadow');
+    await runAutoInit();
+
+    expect((attach.mock.results[0]?.value as ShadowRoot).querySelector('style')?.nonce).toBe('csp-n');
+  });
 });

@@ -126,14 +126,14 @@ async function startRecording(generation: number): Promise<void> {
 async function initWidgetInternal(config: MarketrixConfig, host: HTMLElement | undefined, generation: number) {
   window.__mtx = { state: 'initializing' };
 
-  showHostPageNotice('Loading widget settings...');
+  showHostPageNotice('Loading widget settings...', 'info', config.styleNonce);
   let finalConfig: CredentialedConfig;
   try {
     configureSdk(config.mtxApiHost);
     finalConfig = await loadWidgetConfig(config);
   } catch (error) {
     if (generation !== lifecycleGeneration) return;
-    showHostPageNotice(errorMessage(error, 'Failed to initialize widget'), 'error');
+    showHostPageNotice(errorMessage(error, 'Failed to initialize widget'), 'error', config.styleNonce);
     window.__mtx = undefined;
     throw error;
   }
@@ -151,7 +151,7 @@ async function initWidgetInternal(config: MarketrixConfig, host: HTMLElement | u
 
   if (finalConfig.widget_recording) {
     startRecording(generation).catch((error: unknown) => {
-      if (generation === lifecycleGeneration) console.error('Failed to start session recording:', error);
+      if (generation === lifecycleGeneration) console.error('[Widget] Failed to start session recording:', error);
     });
   }
 }
@@ -194,7 +194,7 @@ export const updateMarketrixConfig = async (newConfig: Partial<MarketrixConfig>)
 
 export const getCurrentConfig = (): ValidWidgetConfig | null => active?.config ?? null;
 
-function showHostPageNotice(message: string, tone: NotificationTone = 'info'): void {
+function showHostPageNotice(message: string, tone: NotificationTone, styleNonce: string | undefined): void {
   hideHostPageNotice();
 
   const noticeContainer = document.createElement('div');
@@ -202,7 +202,7 @@ function showHostPageNotice(message: string, tone: NotificationTone = 'info'): v
   noticeContainer.className = 'marketrix-widget-notice-container';
   document.body.appendChild(noticeContainer);
 
-  const { mountEl } = attachShadowMount(noticeContainer, 'marketrix-widget-notice-root');
+  const { mountEl } = attachShadowMount(noticeContainer, 'marketrix-widget-notice-root', styleNonce);
 
   noticeRoot = createRoot(mountEl);
   noticeRoot.render(
@@ -235,6 +235,7 @@ export const autoInitializeWidget = (): void => {
   const mtxId = script.getAttribute('mtx-id');
   const mtxKey = script.getAttribute('mtx-key');
   const mtxApiHost = script.getAttribute('mtx-api-host');
+  const styleNonce = script.getAttribute('mtx-style-nonce') ?? undefined;
 
   if (!mtxId || !mtxKey || !mtxApiHost) {
     console.error('[AutoInit] Missing required attributes:', {
@@ -242,13 +243,12 @@ export const autoInitializeWidget = (): void => {
       hasMtxKey: !!mtxKey,
       hasMtxApiHost: !!mtxApiHost,
     });
-    showHostPageNotice('Please configure mtx-id, mtx-key and mtx-api-host', 'error');
+    showHostPageNotice('Please configure mtx-id, mtx-key and mtx-api-host', 'error', styleNonce);
     return;
   }
 
   const config: MarketrixConfig = { mtxId, mtxKey, mtxApiHost };
   if (script.getAttribute('mtx-use-screenshare') === 'false') config.use_screenshare = false;
-  const styleNonce = script.getAttribute('mtx-style-nonce');
   if (styleNonce) config.styleNonce = styleNonce;
 
   initWidget(config).catch(error => console.error('[AutoInit] Failed to initialize widget:', error));

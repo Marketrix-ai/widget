@@ -62,11 +62,10 @@ export const VideoStreamDisplay: React.FC<VideoStreamDisplayProps> = ({ stream }
     video.addEventListener('loadedmetadata', handleLoadedMetadata);
     video.addEventListener('error', handleError);
 
-    video.play().catch(error => {
-      if (error instanceof Error && error.name !== 'AbortError') {
-        console.error('Error playing video stream:', error);
-        setHasError(true);
-      }
+    video.play().catch((error: unknown) => {
+      if (error instanceof Error && error.name === 'AbortError') return;
+      console.error('[Widget] Failed to play the screen-share stream:', error);
+      setHasError(true);
     });
 
     return () => {
@@ -134,9 +133,9 @@ export const VideoStreamDisplay: React.FC<VideoStreamDisplayProps> = ({ stream }
           <LiveDot style={{ color: VIDEO_WHITE }} />
           <Text
             as='span'
-            size='xs'
+            size='xxs'
             weight='semibold'
-            style={{ color: VIDEO_WHITE, textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: '10px' }}
+            style={{ color: VIDEO_WHITE, textTransform: 'uppercase', letterSpacing: '0.05em' }}
           >
             Live
           </Text>
@@ -150,7 +149,6 @@ export const VideoStreamDisplay: React.FC<VideoStreamDisplayProps> = ({ stream }
         justify='center'
         style={{
           borderRadius: OVERLAY_BORDER_RADIUS,
-          backgroundColor: 'transparent',
           zIndex: 30,
           pointerEvents: 'none',
         }}

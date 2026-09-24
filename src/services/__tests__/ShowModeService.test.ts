@@ -66,7 +66,7 @@ describe('a second show action supersedes the first', () => {
     expect(await first).toBe('rejected');
 
     expect(document.getElementById('marketrix-show-highlight')).not.toBeNull();
-    expect(document.getElementById('marketrix-show-popup')).not.toBeNull();
+    expect(document.getElementById('marketrix-show-popup')).toHaveAttribute('role', 'status');
 
     document.getElementById('b')?.click();
 

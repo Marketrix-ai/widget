@@ -148,10 +148,13 @@ function useResize() {
   useEffect(() => () => endDragRef.current?.(), []);
 
   const handleResizeStart = useCallback(
-    (e: React.MouseEvent) => {
+    (e: React.PointerEvent<HTMLElement>) => {
       e.preventDefault();
       e.stopPropagation();
       if (isPreviewMode) return;
+
+      const handle = e.currentTarget;
+      const { pointerId } = e;
 
       const startX = e.clientX;
       const startY = e.clientY;
@@ -163,7 +166,7 @@ function useResize() {
         containerRef.current.dataset['resizing'] = 'true';
       }
 
-      const onMove = (moveEvent: MouseEvent) => {
+      const onMove = (moveEvent: PointerEvent) => {
         const next = clampSize({
           width: startW + (moveEvent.clientX - startX) * growX,
           height: startH + (moveEvent.clientY - startY) * growY,
@@ -177,8 +180,10 @@ function useResize() {
       };
 
       const onUp = () => {
-        document.removeEventListener('mousemove', onMove);
-        document.removeEventListener('mouseup', onUp);
+        handle.removeEventListener('pointermove', onMove);
+        handle.removeEventListener('pointerup', onUp);
+        handle.removeEventListener('pointercancel', onUp);
+        if (handle.hasPointerCapture(pointerId)) handle.releasePointerCapture(pointerId);
         document.body.style.cursor = '';
         document.body.style.userSelect = '';
         endDragRef.current = null;
@@ -193,8 +198,10 @@ function useResize() {
 
       document.body.style.cursor = cursor;
       document.body.style.userSelect = 'none';
-      document.addEventListener('mousemove', onMove);
-      document.addEventListener('mouseup', onUp);
+      handle.setPointerCapture(pointerId);
+      handle.addEventListener('pointermove', onMove);
+      handle.addEventListener('pointerup', onUp);
+      handle.addEventListener('pointercancel', onUp);
       endDragRef.current = onUp;
     },
     [isPreviewMode, storageKey, grip],
@@ -204,10 +211,10 @@ function useResize() {
     (e: React.KeyboardEvent) => {
       if (isPreviewMode) return;
       const deltas: Record<string, Size> = {
-        ArrowLeft: { width: -KEYBOARD_RESIZE_STEP_PX, height: 0 },
-        ArrowRight: { width: KEYBOARD_RESIZE_STEP_PX, height: 0 },
-        ArrowUp: { width: 0, height: -KEYBOARD_RESIZE_STEP_PX },
-        ArrowDown: { width: 0, height: KEYBOARD_RESIZE_STEP_PX },
+        ArrowLeft: { width: -KEYBOARD_RESIZE_STEP_PX * grip.growX, height: 0 },
+        ArrowRight: { width: KEYBOARD_RESIZE_STEP_PX * grip.growX, height: 0 },
+        ArrowUp: { width: 0, height: -KEYBOARD_RESIZE_STEP_PX * grip.growY },
+        ArrowDown: { width: 0, height: KEYBOARD_RESIZE_STEP_PX * grip.growY },
       };
       const delta = deltas[e.key];
       if (!delta) return;
@@ -220,7 +227,7 @@ function useResize() {
       setDimensions(next);
       writeLocal(storageKey, next);
     },
-    [isPreviewMode, storageKey],
+    [isPreviewMode, storageKey, grip],
   );
 
   return {
@@ -369,7 +376,7 @@ export const MessengerShell: React.FC = () => {
             justifyContent: grip.horizontal === 'left' ? 'flex-start' : 'flex-end',
             cursor: grip.cursor,
           }}
-          onMouseDown={onResizeStart}
+          onPointerDown={onResizeStart}
           onKeyDown={onResizeKeyDown}
         />
       )}
