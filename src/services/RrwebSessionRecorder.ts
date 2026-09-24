@@ -2,14 +2,12 @@
  * Per-chat rrweb session recorder: captures the host page as an rrweb event stream and ships it to the
  * api as one `rrweb/metadata` command followed by `rrweb/events` batches. `mount.tsx` constructs one
  * only when `widget_recording` is enabled, so this file is the whole recording feature.
- *
  * `start()` posts metadata and arms rrweb once the chat's stream registers (the api only accepts commands
- * into a registered chat), waiting for a later registration if the stream gave up first; a cleared chat's
- * new thread gets a fresh recording session starting from a full snapshot; `stop()` tears rrweb down and
- * drains what's buffered; `flush()` posts one batch at a time, in order. A failed flush is requeued at the
- * front, since a later batch replays against the first one's snapshot, and retried on a doubling delay until
- * the stream gives up, then on its next registration. The buffer is capped, keeping the oldest events, so a
- * recording that cannot flush truncates instead of growing.
+ * into a registered chat), even a registration after the stream gave up; a cleared chat's new thread gets a
+ * fresh session from a full snapshot; `stop()` tears rrweb down and drains the buffer; `flush()` posts one
+ * batch at a time. A failed batch is requeued at the front, since later batches replay against its snapshot,
+ * and retried on a doubling delay, or on the next registration once the stream gave up. The buffer is capped,
+ * keeping the oldest events, so a recording that cannot flush truncates instead of growing.
  */
 import { record } from '@rrweb/record';
 
