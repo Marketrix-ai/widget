@@ -111,10 +111,10 @@ export function mountPreview(config: ValidWidgetConfig, host: HTMLElement | unde
   mountActive(config, host);
 }
 
-async function startRecording(config: CredentialedConfig, generation: number): Promise<void> {
+async function startRecording(generation: number): Promise<void> {
   const chatId = await getOrCreateChatId();
   if (generation !== lifecycleGeneration) return;
-  const recorder = new RrwebSessionRecorder(chatId, config.mtxApp);
+  const recorder = new RrwebSessionRecorder(chatId);
   rrwebSessionRecorder = recorder;
   await recorder.start();
   if (generation !== lifecycleGeneration) {
@@ -150,7 +150,7 @@ async function initWidgetInternal(config: MarketrixConfig, host: HTMLElement | u
   mountActive(finalConfig, host, config);
 
   if (finalConfig.widget_recording) {
-    startRecording(finalConfig, generation).catch((error: unknown) => {
+    startRecording(generation).catch((error: unknown) => {
       if (generation === lifecycleGeneration) console.error('Failed to start session recording:', error);
     });
   }

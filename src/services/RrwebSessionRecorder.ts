@@ -31,10 +31,7 @@ export class RrwebSessionRecorder {
   private failedFlushes = 0;
   private streamGaveUp = false;
 
-  constructor(
-    private chatId: string,
-    private readonly applicationId: number,
-  ) {}
+  constructor(private chatId: string) {}
 
   async start(): Promise<void> {
     if (this.stopRecording || this.stopped) return;
@@ -110,8 +107,6 @@ export class RrwebSessionRecorder {
       {
         type: 'rrweb/metadata',
         rrweb_session_id: this.sessionId,
-        chat_id: this.chatId,
-        application_id: this.applicationId,
         url: window.location.href,
         timestamp: Date.now(),
         viewport: { width: window.innerWidth, height: window.innerHeight },
