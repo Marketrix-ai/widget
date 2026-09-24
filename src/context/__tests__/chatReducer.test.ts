@@ -13,7 +13,6 @@ import {
   type ChatState,
   reduceDispatch,
   reduceEvent,
-  type ReduceResult,
   reduceStaleReply,
   reduceStop,
   reduceToolDone,
@@ -21,7 +20,7 @@ import {
   reduceTransportFailure,
 } from '../chatReducer';
 
-const expectNoOp = (result: ReduceResult, state: ChatState) => {
+const expectNoOp = (result: ReturnType<typeof reduceEvent>, state: ChatState) => {
   expect(result.state).toBe(state);
   expect(result.toolRuns).toEqual([]);
 };

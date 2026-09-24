@@ -69,7 +69,7 @@ const ChatContextSchema = z.object({
 
 type ChatContext = z.infer<typeof ChatContextSchema>;
 
-export interface ChatSnapshot {
+interface ChatSnapshot {
   messages: ChatMessage[];
   currentMode: InstructionType;
   isOpen: boolean;
@@ -165,7 +165,7 @@ export function remintTabId(): string {
 const StartedToolCallsSchema = z.array(z.string());
 const pageToolCalls = new Set<string>();
 
-export type ToolCallClaim = 'fresh' | 'seen' | 'interrupted';
+type ToolCallClaim = 'fresh' | 'seen' | 'interrupted';
 
 export function claimToolCall(toolCallId: string): ToolCallClaim {
   if (pageToolCalls.has(toolCallId)) return 'seen';

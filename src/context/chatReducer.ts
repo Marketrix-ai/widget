@@ -29,7 +29,7 @@ export interface ToolRun {
   mode: InstructionType;
 }
 
-export interface ReduceResult {
+interface ReduceResult {
   state: ChatState;
   toolRuns: ToolRun[];
 }
