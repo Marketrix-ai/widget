@@ -1,14 +1,15 @@
 /**
  * Tests for `RrwebSessionRecorder`: a rejected flush caps the buffer without dropping the Meta/
- * FullSnapshot baseline, retries keep going even with no new events, and start/stop respect an
- * in-flight metadata post and the stream's registration, and a cleared chat moves the recording to its new thread.
+ * FullSnapshot baseline, retries keep going even with no new events on a doubling delay that pauses while the
+ * stream has given up, start/stop respect an in-flight metadata post and the stream's registration, and a
+ * cleared chat moves the recording to its new thread.
  */
 import { record } from '@rrweb/record';
 import { EventType, type eventWithTime } from '@rrweb/types';
 import { waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 
-import { sdk } from '../../sdk';
+import { sdk, type WidgetEvent } from '../../sdk';
 import type { RrwebEvent } from '../../sdk/contracts/rrweb';
 import { flushMicrotasks } from '../../test/fixtures';
 import { advanceTimersByTimeAsync, mocked, mockSdkModule, restoreModuleAfterAll } from '../../test/vi-compat';
@@ -109,6 +110,52 @@ describe('a flush the api rejects', () => {
     };
     expect(mockSdk.widgetMessagePost).toHaveBeenCalledTimes(3);
     expect(posted.events).toEqual([metaEvent(0)]);
+    vi.useRealTimers();
+  });
+});
+
+describe('a flush that keeps failing', () => {
+  const internals = (client: typeof streamClient) =>
+    client as unknown as { handleMessage: (event: WidgetEvent) => void; giveUp: (message: string) => void };
+
+  it('backs off on a doubling delay instead of polling every 500ms', async () => {
+    vi.useFakeTimers();
+    const { recorder, emit } = await startRecorder();
+    mockSdk.widgetMessagePost.mockRejectedValue(new Error('offline'));
+
+    emit(metaEvent(0));
+    await advanceTimersByTimeAsync(500);
+    await advanceTimersByTimeAsync(500);
+    await advanceTimersByTimeAsync(1000);
+    expect(mockSdk.widgetMessagePost).toHaveBeenCalledTimes(4);
+
+    await advanceTimersByTimeAsync(1999);
+    expect(mockSdk.widgetMessagePost).toHaveBeenCalledTimes(4);
+    await advanceTimersByTimeAsync(1);
+    expect(mockSdk.widgetMessagePost).toHaveBeenCalledTimes(5);
+    recorder.stop();
+    vi.useRealTimers();
+  });
+
+  it('stops retrying once the stream gives up and resumes when it registers again', async () => {
+    vi.useFakeTimers();
+    const { recorder, emit } = await startRecorder();
+    mockSdk.widgetMessagePost.mockRejectedValueOnce(new Error('offline'));
+
+    emit(metaEvent(0));
+    await advanceTimersByTimeAsync(500);
+    internals(streamClient).giveUp('Could not reconnect to the assistant. Try again.');
+    emit(incrementalEvent(1));
+    await advanceTimersByTimeAsync(120_000);
+    expect(mockSdk.widgetMessagePost).toHaveBeenCalledTimes(2);
+
+    mockSdk.widgetMessagePost.mockResolvedValueOnce({ success: true });
+    internals(streamClient).handleMessage({ type: 'registered', chat_id: 'chat-1' });
+    await flushMicrotasks();
+    const posted = mockSdk.widgetMessagePost.mock.lastCall?.[0].command as { events: RrwebEvent[] };
+    expect(mockSdk.widgetMessagePost).toHaveBeenCalledTimes(3);
+    expect(posted.events).toEqual([metaEvent(0), incrementalEvent(1)]);
+    recorder.stop();
     vi.useRealTimers();
   });
 });

@@ -4,11 +4,12 @@
  * connects and waits for registration, and `canReconnect`/`reconnectNow` back Retry; `StreamGaveUpError`
  * marks a stream that exhausted its reconnects. Each browser tab dials with its own tab id, kept across
  * page loads, so the api keys the SSE stream per tab and routes a running task's tool calls back to it; backoff
- * is jittered so tabs across a shared outage don't redial together.
+ * is jittered so tabs across a shared outage don't redial together. The api ends a registered stream cleanly only
+ * when another page dialed with the same tab id, so the evicted page redials under a fresh one.
  */
 import { sdk, type WidgetCommand, type WidgetEvent } from '../sdk';
 import { logWarn } from '../utils/log';
-import { claimTabId } from './StorageService';
+import { claimTabId, remintTabId } from './StorageService';
 
 type StreamStatus = 'disconnected' | 'connecting' | 'open' | 'registered' | 'error';
 
@@ -37,7 +38,6 @@ class StreamClient {
   private reconnectAttempts = 0;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private connectionId = 0;
-  private tabId: string | null = null;
   private registrationWaiters = new Set<{ resolve: () => void; reject: (error: Error) => void }>();
 
   setCredentials(credentials: StreamCredentials): void {
@@ -103,7 +103,7 @@ class StreamClient {
     const signal = this.abortController.signal;
 
     try {
-      const iterator = await sdk.widgetStream({ chat_id: chatId, tab_id: this.tab(), ...credentials }, { signal });
+      const iterator = await sdk.widgetStream({ chat_id: chatId, tab_id: claimTabId(), ...credentials }, { signal });
 
       this.status = 'open';
 
@@ -120,6 +120,7 @@ class StreamClient {
 
   private async consumeEvents(iterator: AsyncIterable<WidgetEvent>, connectionId: number): Promise<void> {
     let stale = false;
+    let evicted = false;
     try {
       for await (const event of iterator) {
         if (this.connectionId !== connectionId) {
@@ -128,6 +129,7 @@ class StreamClient {
         }
         this.handleMessage(event);
       }
+      evicted = this.status === 'registered';
     } catch (error) {
       if (this.connectionId !== connectionId) {
         stale = true;
@@ -137,6 +139,7 @@ class StreamClient {
       }
     } finally {
       if (!stale && this.connectionId === connectionId && !this.reconnectSuppressed()) {
+        if (evicted) remintTabId();
         this.status = 'disconnected';
         this.scheduleReconnect();
       }
@@ -156,12 +159,7 @@ class StreamClient {
     if (!chatId) {
       return Promise.reject(new Error('No active chat'));
     }
-    return sdk.widgetMessagePost({ chat_id: chatId, tab_id: this.tab(), command }).then(() => {});
-  }
-
-  private tab(): string {
-    this.tabId ??= claimTabId();
-    return this.tabId;
+    return sdk.widgetMessagePost({ chat_id: chatId, tab_id: claimTabId(), command }).then(() => {});
   }
 
   private notifyError(error: Error): void {

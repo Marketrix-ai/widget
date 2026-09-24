@@ -3,14 +3,14 @@
  * page actually hands it off, via `loader.js`'s `script[mtx-id]` attribute forwarding and the widget's
  * own auto-init. Covers the exported runtime surface, the closed-shadow FAB mount and z-index, and that
  * no request fires before a host script tag triggers auto-init, and that the loader adds no second import
- * map over a host map that already supplies React.
+ * map over a host map that already supplies React, nor fails over one that is unparsable.
  */
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { StandardRPCJsonSerializer, StandardRPCSerializer } from '@orpc/client/standard';
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'bun:test';
+import { afterAll, afterEach, beforeAll, describe, expect, it, spyOn } from 'bun:test';
 
 import { validSettings } from '../test/fixtures';
 
@@ -166,6 +166,13 @@ describe('loader.js forwards only mtx-* attributes onto the widget.mjs it inject
     });
 
     expect(runLoader([hostMap]).map(el => el.type)).toEqual(['module']);
+  });
+
+  it('still loads, adding its own map, over a host import map that is not valid JSON', () => {
+    const warn = spyOn(console, 'warn').mockImplementation(() => {});
+    expect(runLoader(['{ not json', 'null']).map(el => el.type)).toEqual(['importmap', 'module']);
+    expect(warn).toHaveBeenCalledTimes(1);
+    warn.mockRestore();
   });
 
   it('still adds its map when the host map lacks React', () => {

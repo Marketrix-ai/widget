@@ -4,8 +4,9 @@
  * (esm.sh, React 19 — the bundle keeps React external and the host must supply it), then appends
  * `widget.mjs` as a module script next to itself, copying every `mtx-*` attribute from its own tag so
  * the widget auto-initializes with the host's settings. It runs unbundled, so it sticks to syntax every
- * module-capable browser already parses. A host whose own import map already maps all four React specifiers
- * gets no second map, since Firefox and browsers older than Chrome 133 or Safari 18.4 ignore a second map.
+ * module-capable browser parses. A host whose own import map already maps all four React specifiers
+ * gets no second map, since Firefox and browsers older than Chrome 133 or Safari 18.4 ignore a second map;
+ * an unparsable one counts as empty.
  */
 (function () {
   var imports = {
@@ -16,7 +17,11 @@
   };
   var hostMapped = {};
   document.querySelectorAll('script[type="importmap"]').forEach(function (existing) {
-    Object.assign(hostMapped, JSON.parse(existing.textContent || '{}').imports);
+    try {
+      Object.assign(hostMapped, Object(JSON.parse(existing.textContent || '{}')).imports);
+    } catch (e) {
+      console.warn('[marketrix] Bad host import map:', e);
+    }
   });
   var missing = Object.keys(imports).filter(function (key) {
     return !(key in hostMapped);

@@ -5,7 +5,8 @@
  * the transcript, `claimTabId` the browser tab's identity, and `MessageSchema` defines a chat message. Config
  * and credentials are never persisted, and a host page that denies storage falls back to memory.
  * The tab id survives same-origin navigations and reloads so the api keeps routing a Show/Do task's tool
- * calls to this tab; a page takes it out of `sessionStorage` while alive, so a duplicated tab mints its own.
+ * calls to this tab; a page takes it out of `sessionStorage` while alive, so a duplicated tab mints its own, and
+ * `remintTabId` gives a page a fresh one when a tab duplicated mid-navigation still copied the id.
  */
 import { z } from 'zod';
 
@@ -140,11 +141,20 @@ function sessionStore(action: (storage: Storage) => string | null | void): strin
   }
 }
 
+let tabId: string | null = null;
+
 export function claimTabId(): string {
-  const tabId = sessionStore(storage => storage.getItem(TAB_ID_KEY)) ?? randomId();
+  if (tabId !== null) return tabId;
+  tabId = sessionStore(storage => storage.getItem(TAB_ID_KEY)) ?? randomId();
   sessionStore(storage => storage.removeItem(TAB_ID_KEY));
-  window.addEventListener('pagehide', () => sessionStore(storage => storage.setItem(TAB_ID_KEY, tabId)));
+  window.addEventListener('pagehide', () => sessionStore(storage => storage.setItem(TAB_ID_KEY, claimTabId())));
   window.addEventListener('pageshow', () => sessionStore(storage => storage.removeItem(TAB_ID_KEY)));
+  return tabId;
+}
+
+export function remintTabId(): string {
+  claimTabId();
+  tabId = randomId();
   return tabId;
 }
 
