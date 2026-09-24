@@ -361,13 +361,15 @@ describe('reduceToolProgress / reduceToolDone / reduceStop', () => {
   });
 
   it('reduceToolDone ends the task and marks the message done', () => {
-    const result = reduceToolDone(runningState(), 'do', true);
+    const result = reduceToolDone(runningState(), 'do', { message: '', success: true });
     expect(result.task).toEqual({ phase: 'idle' });
     expect(ofKind(result.messages[0], 'agent').taskStatus).toBe('done');
   });
 
   it('reduceToolDone marks the message failed when the agent reports it did not succeed', () => {
-    expect(ofKind(reduceToolDone(runningState(), 'do', false).messages[0], 'agent').taskStatus).toBe('failed');
+    expect(
+      ofKind(reduceToolDone(runningState(), 'do', { message: '', success: false }).messages[0], 'agent').taskStatus,
+    ).toBe('failed');
   });
 
   it('a duplicate completion does not fall back past the stamp onto an older settled reply', () => {
@@ -378,10 +380,10 @@ describe('reduceToolProgress / reduceToolDone / reduceStop', () => {
     });
     const state: ChatState = { messages: [oldReply, agentMessage()], task: { phase: 'running', mode: 'do' } };
 
-    const afterFirst = reduceToolDone(state, 'do', true);
+    const afterFirst = reduceToolDone(state, 'do', { message: '', success: true });
     expect(ofKind(afterFirst.messages[1], 'agent').taskStatus).toBe('done');
 
-    const afterDuplicate = reduceToolDone(afterFirst, 'do', true);
+    const afterDuplicate = reduceToolDone(afterFirst, 'do', { message: '', success: true });
 
     expect(afterDuplicate.messages[0]).toEqual(oldReply);
   });
@@ -412,11 +414,73 @@ describe('reduceToolProgress / reduceToolDone / reduceStop', () => {
       'tell',
     ).state;
     const succeeded = reduceToolProgress(called, 'done', { status: 'completed' }, 'tell');
-    const done = reduceToolDone(succeeded, 'tell', true);
+    const done = reduceToolDone(succeeded, 'tell', { message: 'Wrapping up', success: true });
 
     const parts = done.messages[0]!.parts;
     expect(parts.some(p => p.type === 'progress')).toBe(false);
     expect(JSON.stringify(parts)).not.toContain('Unknown tool');
+  });
+});
+
+describe('a Show/Do task ends with its closing message', () => {
+  const doneCall = (success: boolean, message: string): WidgetEvent => ({
+    type: 'tool/call',
+    tool_call_id: 'call-done',
+    browser_tool: 'done',
+    args: { message, success },
+    explanation: 'Wrapping up',
+  });
+
+  const runDone = (success: boolean, message: string): ChatState => {
+    const called = reduceEvent(runningState({ parts: [] }, 'show'), doneCall(success, message), 'show').state;
+    const completed = reduceToolProgress(called, 'done', { status: 'completed' }, 'show');
+    return reduceToolDone(completed, 'show', { message, success });
+  };
+
+  it('shows the finish message once when task/status completed repeats it', () => {
+    const done = runDone(true, 'Your plan is upgraded.');
+    const settled = reduceEvent(
+      done,
+      { type: 'task/status', status: 'completed', message: 'Your plan is upgraded.' },
+      'show',
+    ).state;
+
+    const msg = ofKind(settled.messages[0], 'agent');
+    expect(msg.taskStatus).toBe('done');
+    expect(messageText(msg.parts)).toBe('Your plan is upgraded.');
+    expect(settled.task).toEqual({ phase: 'idle' });
+  });
+
+  it('fills an empty finish with the closing message task/status carries', () => {
+    const settled = reduceEvent(
+      runDone(true, ''),
+      { type: 'task/status', status: 'completed', message: 'Task completed' },
+      'show',
+    ).state;
+    expect(messageText(settled.messages[0]!.parts)).toBe('Task completed');
+  });
+
+  it('a failed run shows the agent message once, not the generic failure after it', () => {
+    const failed = reduceEvent(
+      { messages: [agentMessage({ id: 'req-1', parts: [] })], task: { phase: 'running', mode: 'do' } },
+      { type: 'task/status', status: 'failed', message: 'The checkout page would not load.' },
+      'do',
+    ).state;
+    const errored = reduceEvent(failed, { type: 'chat/error', request_id: 'req-1', error: 'Agent failed' }, 'do').state;
+
+    const msg = ofKind(errored.messages[0], 'agent');
+    expect(msg.taskStatus).toBe('failed');
+    expect(messageText(msg.parts)).toBe('The checkout page would not load.');
+  });
+
+  it('a failed run with no agent message still tells the visitor it failed', () => {
+    const failed = reduceEvent(
+      { messages: [agentMessage({ id: 'req-1', parts: [] })], task: { phase: 'running', mode: 'do' } },
+      { type: 'task/status', status: 'failed' },
+      'do',
+    ).state;
+    const errored = reduceEvent(failed, { type: 'chat/error', request_id: 'req-1', error: 'Agent failed' }, 'do').state;
+    expect(messageText(errored.messages[0]!.parts)).toBe(CHAT_FAILURE_TEXT);
   });
 });
 

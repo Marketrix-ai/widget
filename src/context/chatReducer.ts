@@ -3,10 +3,12 @@
  * `{messages, task}` and returns the tool runs the caller must perform. No I/O, no React.
  * `reduceDispatch` opens a new turn; the tool, text, error, transport-failure, stale-reply and screen-share
  * reducers each settle or patch the running message and task.
+ * The agent repeats its `done` message in the terminal `task/status`, and the api follows a failed status with
+ * `chat/error`, so a turn that already settled takes neither again.
  */
 import type { WidgetEvent } from '../sdk';
 import { browserToolService, type WidgetToolCall, type WidgetToolName } from '../services/BrowserToolService';
-import type { AgentMessage, ChatMessage, InstructionType, MessagePart } from '../types';
+import { type AgentMessage, type ChatMessage, type InstructionType, type MessagePart, messageText } from '../types';
 import {
   addProgressLine,
   CHAT_FAILURE_TEXT,
@@ -80,6 +82,11 @@ export function reduceToolProgress(
   return { ...state, messages };
 }
 
+const appendText = (msg: AgentMessage, text: string): AgentMessage => ({
+  ...msg,
+  parts: [...msg.parts, { type: 'text' as const, content: text }],
+});
+
 const settled = (msg: AgentMessage): AgentMessage => ({ ...msg, isPlaceholder: false });
 
 const ended = (task: TaskState): TaskState => (task.phase === 'stopped' ? task : { phase: 'idle' });
@@ -99,12 +106,18 @@ function stampProgressMessage(
   return { messages, task: ended(state.task) };
 }
 
-export function reduceToolDone(state: ChatState, currentMode: InstructionType, success: boolean): ChatState {
-  return stampProgressMessage(state, currentMode, msg => ({
-    ...msg,
-    taskStatus: success ? 'done' : 'failed',
-    parts: msg.parts.filter(part => part.type !== 'progress'),
-  }));
+export function reduceToolDone(
+  state: ChatState,
+  currentMode: InstructionType,
+  { message, success }: { message: string; success: boolean },
+): ChatState {
+  return stampProgressMessage(state, currentMode, msg => {
+    const finished = { ...msg, parts: msg.parts.filter(part => part.type !== 'progress') };
+    return {
+      ...(message.trim() ? appendText(finished, message.trim()) : finished),
+      taskStatus: success ? 'done' : 'failed',
+    };
+  });
 }
 
 export function reduceStop(state: ChatState, currentMode: InstructionType): ChatState {
@@ -168,11 +181,6 @@ function reduceText(state: ChatState, requestId: string, text: string, streaming
   return { ...state, messages };
 }
 
-const appendText = (msg: AgentMessage, text: string): AgentMessage => ({
-  ...msg,
-  parts: [...msg.parts, { type: 'text' as const, content: text }],
-});
-
 const errorBubble =
   (text: string) =>
   (msg: AgentMessage): AgentMessage => ({
@@ -182,7 +190,11 @@ const errorBubble =
   });
 
 export function reduceError(state: ChatState, messageId: string, text: string): ChatState {
-  return { ...state, messages: mapAgentMessage(state, msg => msg.id === messageId, errorBubble(text)) };
+  const alreadyExplained = (msg: AgentMessage) => msg.taskStatus === 'failed' && !!messageText(msg.parts);
+  return {
+    ...state,
+    messages: mapAgentMessage(state, msg => msg.id === messageId && !alreadyExplained(msg), errorBubble(text)),
+  };
 }
 
 export function reduceTransportFailure(state: ChatState, text: string): ChatState {
@@ -213,6 +225,15 @@ export function reduceEvent(state: ChatState, event: WidgetEvent, currentMode: I
 
     case 'task/status': {
       if (event.status === 'running') return withoutToolRuns(state);
+      const last = state.messages.findLast((msg): msg is AgentMessage => msg.kind === 'agent');
+      if (last?.taskStatus) {
+        const closing = event.message;
+        if (!closing || messageText(last.parts)) return withoutToolRuns(state);
+        return withoutToolRuns({
+          ...state,
+          messages: state.messages.map(msg => (msg === last ? appendText(last, closing) : msg)),
+        });
+      }
       const status = event.status;
       const withMessage = (msg: AgentMessage) => (event.message ? appendText(msg, event.message) : msg);
       const stamp =

@@ -198,8 +198,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       commit(s => reduceToolProgress(s, call.browser_tool, progress, currentModeRef.current));
       if (!error && call.browser_tool === 'done') {
-        const { success } = call.args;
-        commit(s => reduceToolDone(s, currentModeRef.current, success));
+        commit(s => reduceToolDone(s, currentModeRef.current, call.args));
       }
 
       await streamClient
