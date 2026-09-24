@@ -423,7 +423,7 @@ describe('a tool/response sent after the page reminted its tab id', () => {
 describe('a tool/call an earlier page load of this tab already started', () => {
   beforeEach(() => sessionStorage.clear());
 
-  it('is answered as interrupted, never run again', async () => {
+  it('is answered page_reloaded so the agent re-observes, never run again', async () => {
     sessionStorage.setItem('marketrix_started_tool_calls', JSON.stringify(['tc-before-reload']));
     renderCaptured(false);
     const send = vi.spyOn(streamClient, 'send').mockResolvedValue(undefined);
@@ -431,7 +431,12 @@ describe('a tool/call an earlier page load of this tab already started', () => {
 
     await dispatchClickToolCall('tc-before-reload');
 
-    expect(await sentPayloadFor(send, 'tc-before-reload')).toMatchObject({ type: 'tool/response', success: false });
+    expect(await sentPayloadFor(send, 'tc-before-reload')).toEqual({
+      type: 'tool/response',
+      tool_call_id: 'tc-before-reload',
+      success: true,
+      data: JSON.stringify({ page_reloaded: true }),
+    });
     expect(mockExecuteTool).not.toHaveBeenCalled();
   });
 });

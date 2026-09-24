@@ -8,7 +8,7 @@
  * calls to this tab; a page takes it out of `sessionStorage` while alive, so a duplicated tab mints its own, and
  * `remintTabId` gives a page a fresh one when a tab duplicated mid-navigation still copied the id.
  * `claimToolCall` records each started tool call per tab, so a call the api resends after a navigating step
- * reloaded the page is answered as interrupted rather than run twice.
+ * reloaded the page is answered `page_reloaded` rather than run twice.
  */
 import { z } from 'zod';
 

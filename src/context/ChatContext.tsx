@@ -3,9 +3,11 @@
  * `sendTurn` is the one entry for a typed turn or chip, refusing a mode the tenant disabled or a turn while a
  * screen-access request is open, and asking for screen access first in Show and Do; `allowScreenAccess`/
  * `denyScreenAccess` release the held turn; `stopTask` cancels a running turn and its Show overlay; `clearChat`
- * stops any running turn and starts a fresh chat thread, so the agent forgets the cleared history too. The stream handlers run browser tools and reply with results; preview mode answers locally.
- * The api resends an unanswered `tool/call` on every re-register, so a call already started in this tab is never run
- * twice: one started by an earlier page load is answered as interrupted instead. A turn the api refuses as forbidden (a mode switched off since the page loaded) shows the api's own message.
+ * stops any running turn and starts a fresh chat thread, so the agent forgets the cleared history too. The
+ * stream handlers run browser tools and reply with results; preview mode answers locally.
+ * The api resends an unanswered `tool/call` on every re-register, so a call already started in this tab never
+ * runs twice: one an earlier page load started is answered `page_reloaded` so the agent re-observes the page.
+ * A turn the api refuses as forbidden (a mode switched off since the page loaded) shows the api's own message.
  */
 import { ORPCError } from '@orpc/client';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
@@ -71,7 +73,6 @@ const ChatContext = createContext<ChatContextType | undefined>(undefined);
 const STALE_REPLY_TIMEOUT_MS = 120_000;
 const STALE_REPLY_TEXT = 'This is taking longer than expected. Please try again.';
 const SCREEN_SHARE_FAILED_TEXT = 'Screen sharing could not start, so the assistant will continue without it.';
-const INTERRUPTED_STEP_TEXT = 'The page reloaded while this step ran; check the page before retrying.';
 const PREVIEW_REPLY = "This is a preview. In production, I'll respond to your messages here.";
 
 const StaleReplyWatchdog: React.FC<{ id: string; progress: number; onStale: (id: string) => void }> = ({
@@ -229,8 +230,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
             .send({
               type: 'tool/response',
               tool_call_id: event.tool_call_id,
-              success: false,
-              error: INTERRUPTED_STEP_TEXT,
+              success: true,
+              data: JSON.stringify({ page_reloaded: true }),
             })
             .catch((err: unknown) => console.error('Failed to report an interrupted step:', err));
           return;

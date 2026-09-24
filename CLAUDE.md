@@ -77,8 +77,9 @@ each a Zod union discriminated on `type`.
 - **A re-register gets only what the tab missed.** The api resends an unanswered `tool/call` to its tab on
   every re-register, and hands a tab returning within the reconnect grace the task events buffered while no
   tab was connected. The widget runs each `tool_call_id` once per tab (`claimToolCall`, sessionStorage),
-  answering one an earlier page load started as interrupted, and posts a tool response on the tab its call
-  arrived on. SSE is keyed server-side by `(chat_id, tab_id)` so tabs sharing a chat don't evict each other.
+  answers one an earlier page load started with `{page_reloaded: true}`, and posts a tool response on the
+  tab its call arrived on. SSE is keyed server-side by `(chat_id, tab_id)` so tabs sharing a chat don't
+  evict each other.
 - **`tab_id` is stable per browser tab** (`claimTabId`, sessionStorage) across same-origin navigations, so a
   Show/Do task's tool calls follow the visitor to the next page; the api holds them for a short grace window
   while the tab reloads. A duplicated tab mints its own id.
