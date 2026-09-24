@@ -1,6 +1,6 @@
 /**
- * Tests that `index.css` stays internally consistent: every animation names a real keyframe,
- * host-level rules are scoped to `:host` as well as `:root`, every class a component uses has a
+ * Tests that `index.css` stays internally consistent: every animation, in a rule or set inline, names a
+ * real keyframe, host-level rules are scoped to `:host` as well as `:root`, every class a component uses has a
  * matching rule and vice versa, and the reset selector never outranks component classes.
  */
 import { readdirSync, readFileSync, statSync } from 'node:fs';
@@ -16,6 +16,17 @@ const css = readFileSync(resolve(here, '../index.css'), 'utf8');
 
 const definedKeyframes = new Set([...css.matchAll(/@keyframes\s+([\w-]+)/g)].map(match => match[1]));
 
+function sourceFiles(dir: string, acc: string[] = []): string[] {
+  for (const entry of readdirSync(dir)) {
+    const path = join(dir, entry);
+    if (statSync(path).isDirectory()) sourceFiles(path, acc);
+    else if (/\.tsx?$/.test(path) && !/__tests__|\.test\./.test(path)) acc.push(path);
+  }
+  return acc;
+}
+
+const componentSources = sourceFiles(resolve(here, '../components')).map(file => readFileSync(file, 'utf8'));
+
 describe('every animation resolves to a keyframe this stylesheet defines', () => {
   it.each(['spin', 'ping', 'fadeIn'] as const)('layout prop animate: %s', token => {
     const name = String(resolveLayoutStyle({ animate: token }).animation).split(' ')[0];
@@ -27,6 +38,13 @@ describe('every animation resolves to a keyframe this stylesheet defines', () =>
     const undefinedNames = [...new Set(used)].filter(name => !definedKeyframes.has(name));
     expect(undefinedNames, 'these animations name a keyframe that does not exist').toEqual([]);
   });
+
+  it('every animation a component sets inline is defined in the stylesheet', () => {
+    const used = componentSources.flatMap(source =>
+      [...source.matchAll(/animation:\s*['`]([A-Za-z][\w-]*)/g)].map(match => match[1]),
+    );
+    expect(used.filter(name => !definedKeyframes.has(name))).toEqual([]);
+  });
 });
 
 it('scopes every host-level rule to :host as well as :root', () => {
@@ -37,19 +55,10 @@ it('scopes every host-level rule to :host as well as :root', () => {
 });
 
 describe('the component tree and the stylesheet name the same classes', () => {
-  function sourceFiles(dir: string, acc: string[] = []): string[] {
-    for (const entry of readdirSync(dir)) {
-      const path = join(dir, entry);
-      if (statSync(path).isDirectory()) sourceFiles(path, acc);
-      else if (/\.tsx?$/.test(path) && !/__tests__|\.test\./.test(path)) acc.push(path);
-    }
-    return acc;
-  }
-
   const defined = new Set([...css.matchAll(/\.(mtx-[\w-]+)/g)].map(match => match[1]));
   const referenced = new Set(
-    sourceFiles(resolve(here, '../components'))
-      .flatMap(file => [...readFileSync(file, 'utf8').matchAll(/['`](mtx-[\w-]+)[\s'`]/g)].map(match => match[1]))
+    componentSources
+      .flatMap(source => [...source.matchAll(/['`](mtx-[\w-]+)[\s'`]/g)].map(match => match[1]))
       .filter(name => !definedKeyframes.has(name)),
   );
 

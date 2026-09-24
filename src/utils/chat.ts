@@ -1,17 +1,22 @@
 /**
- * Pure helpers for the chat message list: formatting (mode label, timestamp), the tenant's enabled modes
- * (`enabledModes`, `effectiveMode`), finding which message a progress or tool event belongs to, and building
- * every kind of `ChatMessage`.
- *
- * `findMessageForProgress` picks the right open message for an incoming update by a ranked set of
- * predicates, falling back to "no match" (logged, not thrown) rather than guessing wrong. The per-kind
- * constructors are the only way a `ChatMessage` is built, so ids and shape stay consistent.
- * `CHAT_FAILURE_TEXT` and `SCREEN_ACCESS_PROMPT` are the one wording each site uses for those two
- * situations, so the failure text never leaks raw server error details to a visitor.
+ * Pure helpers for the chat message list: formatting (mode label, timestamp, `messageText`), the tenant's
+ * enabled modes, each browser tool's progress label (`toolExplanation`) and Show-mode wait (`waitsForUser`),
+ * finding which message a progress event belongs to (`findMessageForProgress`, which logs rather than
+ * guesses on no match), and the per-kind constructors that are the only way a `ChatMessage` is built.
+ * `CHAT_FAILURE_TEXT` and the `SCREEN_ACCESS_*` pair are the one wording for those two situations, so a
+ * visitor never sees a raw server error. Show and Do read and act on the page through the DOM whatever the
+ * visitor answers, so declining screen access withholds only the view of their screen.
  */
 import { InstructionTypeSchema } from '../sdk/contracts/widgetSettings';
-import type { WidgetToolName } from '../services/BrowserToolService';
-import type { AgentMessage, ChatMessage, InstructionType, MessagePart, WidgetSettingsData } from '../types';
+import type { WidgetToolName } from '../services/browserTools';
+import type {
+  AgentMessage,
+  ChatMessage,
+  InstructionType,
+  MessagePart,
+  ProgressPart,
+  WidgetSettingsData,
+} from '../types';
 import { logWarn } from './log';
 import { randomId } from './randomId';
 
@@ -27,8 +32,51 @@ export function effectiveMode(flags: ModeFlags, mode: InstructionType): Instruct
   return modes.includes(mode) ? mode : (modes[0] ?? mode);
 }
 
+const TOOL_LABELS: Record<WidgetToolName, string> = {
+  navigate: 'Navigating',
+  search: 'Searching',
+  click_element: 'Clicking element',
+  type_text: 'Typing text',
+  scroll: 'Scrolling',
+  scroll_to_text: 'Scrolling to text',
+  extract: 'Extracting content',
+  go_back: 'Going back',
+  wait: 'Waiting',
+  select_dropdown_option: 'Selecting option',
+  get_dropdown_options: 'Reading dropdown options',
+  send_keys: 'Pressing key',
+  close_tab: 'Closing tab',
+  done: 'Done',
+  get_html: 'Reading the page',
+  get_screenshot: 'Taking screenshot',
+};
+
+const WAITS_FOR_USER: ReadonlySet<WidgetToolName> = new Set([
+  'click_element',
+  'type_text',
+  'select_dropdown_option',
+  'send_keys',
+]);
+
+export const toolExplanation = (browserToolName: WidgetToolName, explanation?: string): string =>
+  explanation || TOOL_LABELS[browserToolName];
+
+export const waitsForUser = (browserToolName: WidgetToolName): boolean => WAITS_FOR_USER.has(browserToolName);
+
+export const messageText = (parts: MessagePart[]): string =>
+  parts
+    .filter(part => part.type === 'text')
+    .map(part => part.content)
+    .join('\n');
+
 export const formatMessageTime = (date: Date): string =>
   date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+export const isPending = (msg: ChatMessage): boolean =>
+  msg.kind === 'agent' && (msg.status === 'thinking' || msg.status === 'waiting-for-user');
+
+export const taskEnded = (msg: ChatMessage): boolean =>
+  msg.kind === 'agent' && (msg.status === 'done' || msg.status === 'failed' || msg.status === 'stopped');
 
 interface FindMessageOptions {
   messages: ChatMessage[];
@@ -41,20 +89,17 @@ export function findMessageForProgress({
   isTaskRunning,
   currentMode,
 }: FindMessageOptions): { index: number; message: AgentMessage } | null {
-  const isAgentReply = (msg: ChatMessage): msg is AgentMessage => msg.kind === 'agent' && !msg.taskStatus;
+  const isAgentReply = (msg: ChatMessage): msg is AgentMessage => msg.kind === 'agent' && !taskEnded(msg);
   const modeMatches = (msg: AgentMessage) =>
-    msg.isPlaceholder ? msg.mode === undefined || msg.mode === currentMode : msg.mode === currentMode;
+    isPending(msg) ? msg.mode === undefined || msg.mode === currentMode : msg.mode === currentMode;
 
   const ranked: Array<(msg: AgentMessage) => boolean> = [];
   if (isTaskRunning && (currentMode === 'show' || currentMode === 'do')) {
-    ranked.push(msg => modeMatches(msg) && !!msg.isPlaceholder, modeMatches);
+    ranked.push(msg => modeMatches(msg) && isPending(msg), modeMatches);
   }
-  ranked.push(
-    msg => !!msg.isPlaceholder,
-    () => true,
-  );
+  ranked.push(isPending, () => true);
 
-  const start = messages.findLastIndex(msg => msg.kind === 'agent' && !!msg.taskStatus) + 1;
+  const start = messages.findLastIndex(taskEnded) + 1;
 
   for (const matches of ranked) {
     const index = messages.findLastIndex((msg, i) => i >= start && isAgentReply(msg) && matches(msg));
@@ -68,9 +113,9 @@ export function findMessageForProgress({
   return null;
 }
 
-function patchPart(message: AgentMessage, index: number, patch: Partial<MessagePart>): AgentMessage {
+function patchPart(message: AgentMessage, index: number, patch: Partial<ProgressPart>): AgentMessage {
   const current = message.parts[index];
-  if (!current) return message;
+  if (current?.type !== 'progress') return message;
   const parts = [...message.parts];
   parts[index] = { ...current, ...patch };
   return { ...message, parts };
@@ -104,7 +149,7 @@ export function markProgressLineFailed(
 ): AgentMessage {
   const index = openLineFor(message, browserToolName);
   const part = message.parts[index];
-  if (!part) return message;
+  if (part?.type !== 'progress') return message;
   return patchPart(message, index, {
     status: 'failed',
     content: error ? `${part.content} (${error})` : part.content,
@@ -135,10 +180,17 @@ export const createSystemMessage = (content: string): ChatMessage => ({
 
 export const SCREEN_ACCESS_PROMPT = 'Can I take a look at your screen?';
 
+export const SCREEN_ACCESS_DETAIL =
+  'Either way, the assistant reads this page and acts on it to help you. Saying no only keeps your screen private.';
+
 export const CHAT_FAILURE_TEXT = "I'm sorry, I encountered an error processing your request. Please try again.";
 
 export const createScreenAccessRequestMessage = (mode: InstructionType, pendingContent: string): ChatMessage => ({
-  ...newMessage('screenAccess', SCREEN_ACCESS_PROMPT),
+  ...newMessage('screenAccess', ''),
+  parts: [
+    { type: 'text', content: SCREEN_ACCESS_PROMPT },
+    { type: 'text', content: SCREEN_ACCESS_DETAIL },
+  ],
   kind: 'screenAccess',
   mode,
   pendingContent,
@@ -154,6 +206,5 @@ export const createPlaceholderMessage = (mode: InstructionType): ChatMessage => 
   ...newMessage('agent', ''),
   kind: 'agent',
   mode,
-  isPlaceholder: true,
-  placeholderState: 'thinking',
+  status: 'thinking',
 });

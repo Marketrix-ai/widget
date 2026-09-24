@@ -8,15 +8,18 @@
 import { describe, expect, it } from 'bun:test';
 
 import { mockMediaStream } from '../../test/fixtures';
-import { type AgentMessage, type ChatMessage, messageText } from '../../types';
+import type { AgentMessage, ChatMessage } from '../../types';
 import {
   addProgressLine,
   CHAT_FAILURE_TEXT,
+  createScreenAccessRequestMessage,
   createScreenshareMessage,
   createUserMessage,
   findMessageForProgress,
   markProgressLineComplete,
   markProgressLineFailed,
+  messageText,
+  SCREEN_ACCESS_DETAIL,
   SCREEN_ACCESS_PROMPT,
 } from '../chat';
 
@@ -36,7 +39,7 @@ describe('findMessageForProgress', () => {
   });
 
   it('only applies mode-specific ranking while the task is running, otherwise falls to the generic placeholder-first rank', () => {
-    const placeholderOtherMode = agentReply({ id: 'placeholder-other-mode', isPlaceholder: true, mode: 'tell' });
+    const placeholderOtherMode = agentReply({ id: 'placeholder-other-mode', status: 'thinking', mode: 'tell' });
     const replyMatchingMode = agentReply({ id: 'reply-matching-mode', mode: 'show' });
     const result = findMessageForProgress({
       messages: [placeholderOtherMode, replyMatchingMode],
@@ -52,7 +55,7 @@ describe('progress-line lookup and failure text', () => {
     const msg = addProgressLine(agentReply(), 'click_element', 'clicking');
     expect(msg.parts).toHaveLength(1);
     const completed = markProgressLineComplete(msg, 'click_element');
-    expect(completed.parts[0]?.status).toBe('completed');
+    expect(completed.parts[0]).toMatchObject({ status: 'completed' });
   });
 
   it('patches the existing open line at index 0 in place, rather than appending a second one', () => {
@@ -93,9 +96,17 @@ describe('message construction', () => {
   });
 });
 
+describe('screen-access consent', () => {
+  it('says declining withholds only the screen, since Show and Do still act on the page', () => {
+    const request = createScreenAccessRequestMessage('do', 'Upgrade my plan');
+    expect(request.parts.map(part => part.content)).toEqual([SCREEN_ACCESS_PROMPT, SCREEN_ACCESS_DETAIL]);
+  });
+});
+
 describe('fixed user-facing strings', () => {
   it('pins the exact screen-access prompt and chat-failure sentence', () => {
     expect(SCREEN_ACCESS_PROMPT).toBe('Can I take a look at your screen?');
+    expect(SCREEN_ACCESS_DETAIL).toContain('Saying no only keeps your screen private');
     expect(CHAT_FAILURE_TEXT).toBe("I'm sorry, I encountered an error processing your request. Please try again.");
   });
 });

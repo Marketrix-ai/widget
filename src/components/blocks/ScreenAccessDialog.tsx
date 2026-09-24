@@ -12,7 +12,7 @@ import React from 'react';
 
 import { usePortalContainer } from '../../context/WidgetProviders';
 import { getElevationStyle, LAYER_TOKENS } from '../../design-system/component-tokens';
-import { SCREEN_ACCESS_PROMPT } from '../../utils/chat';
+import { SCREEN_ACCESS_DETAIL, SCREEN_ACCESS_PROMPT } from '../../utils/chat';
 import { Button } from '../base/Button';
 import { Flex } from '../base/Flex';
 
@@ -40,10 +40,7 @@ export const ScreenAccessDialog: React.FC<ScreenAccessDialogProps> = ({ onClose,
           style={{ ...getElevationStyle('panel'), zIndex: LAYER_TOKENS.dialog }}
         >
           <Dialog.Title className='mtx-dialog-title'>{SCREEN_ACCESS_PROMPT}</Dialog.Title>
-          <Dialog.Description className='mtx-dialog-description'>
-            By allowing screen access, Marketrix can understand your current context to guide you better and complete
-            tasks on your behalf.
-          </Dialog.Description>
+          <Dialog.Description className='mtx-dialog-description'>{SCREEN_ACCESS_DETAIL}</Dialog.Description>
           <Flex gap='md' justify='end'>
             <Button variant='secondary' size='sm' shape='pill' onClick={onClose}>
               No

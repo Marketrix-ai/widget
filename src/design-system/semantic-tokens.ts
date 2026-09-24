@@ -10,8 +10,8 @@
  */
 import type { CSSProperties } from 'react';
 
-import type { WidgetSettingsData } from '../sdk';
 import { DEFAULT_WIDGET_SETTINGS } from '../sdk/contracts/widgetSettings';
+import type { WidgetSettingsData } from '../types';
 import { addOpacity, getContrastingColor } from '../utils/color';
 
 export const WIDGET_RADIUS_PX = Number.parseInt(DEFAULT_WIDGET_SETTINGS.widget_border_radius, 10);

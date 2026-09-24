@@ -1,9 +1,10 @@
 /**
  * Widget-wide shared types: the config a host supplies, the chat message/part model, and the UI store
- * shape; `messageText` joins a message's text parts for display.
+ * shape. It is the one import path for the sdk types the widget publishes.
  * `MarketrixConfig` never carries a dashboard setting, since the api's settings always win, and `mtxApp` is
- * stamped only after credentials resolve, since a bare application id is guessable. `taskStatus` and
- * `MessagePart.status` are UI labels, not the `task/status` wire vocabulary.
+ * stamped only after credentials resolve, since a bare application id is guessable. An agent message's
+ * `status` (absent on a plain settled reply) and a progress part's `status` are UI labels, not the
+ * `task/status` wire vocabulary.
  */
 import type { InstructionType, WidgetSettingsData } from './sdk';
 import type { StoredMessage } from './services/StorageService';
@@ -34,11 +35,9 @@ export type AgentMessage = Extract<ChatMessage, { kind: 'agent' }>;
 
 export type MessagePart = ChatMessage['parts'][number];
 
-export const messageText = (parts: MessagePart[]): string =>
-  parts
-    .filter(part => part.type === 'text')
-    .map(part => part.content)
-    .join('\n');
+export type ProgressPart = Extract<MessagePart, { type: 'progress' }>;
+
+export type AgentStatus = NonNullable<AgentMessage['status']>;
 
 export const WIDGET_VIEWS = ['home', 'chat'] as const;
 

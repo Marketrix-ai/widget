@@ -9,6 +9,8 @@
 
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 
+import { REACT_EXTERNALS } from '../vite.config';
+
 const requiredFiles = [
   { path: 'dist/widget.mjs', maxBytes: 455_000 },
   { path: 'dist/loader.js', maxBytes: 2_000 },
@@ -17,25 +19,14 @@ const requiredFiles = [
 const errors = [];
 
 for (const artifact of requiredFiles) {
-  try {
-    const stats = statSync(artifact.path);
-    if (!stats.isFile()) {
-      errors.push(`${artifact.path} is not a file`);
-      continue;
-    }
-    if (stats.size <= 0) {
-      errors.push(`${artifact.path} is empty`);
-      continue;
-    }
-    if (stats.size > artifact.maxBytes) {
-      errors.push(`${artifact.path} (${stats.size} bytes) exceeds limit ${artifact.maxBytes} bytes`);
-    }
-  } catch {
-    errors.push(`${artifact.path} is missing`);
+  const stats = statSync(artifact.path, { throwIfNoEntry: false });
+  if (!stats) errors.push(`${artifact.path} is missing`);
+  else if (!stats.isFile()) errors.push(`${artifact.path} is not a file`);
+  else if (stats.size <= 0) errors.push(`${artifact.path} is empty`);
+  else if (stats.size > artifact.maxBytes) {
+    errors.push(`${artifact.path} (${stats.size} bytes) exceeds limit ${artifact.maxBytes} bytes`);
   }
 }
-
-const EXTERNALS = ['react', 'react-dom', 'react-dom/client', 'react/jsx-runtime'];
 
 const emitted = readdirSync('dist');
 
@@ -52,16 +43,12 @@ if (stylesheets.length > 0) {
   );
 }
 
-try {
-  const bundle = readFileSync('dist/widget.mjs', 'utf8');
-  const notImported = EXTERNALS.filter(module => !new RegExp(`from\\s*["']${module}["']`).test(bundle));
-  if (notImported.length > 0) {
-    errors.push(
-      `dist/widget.mjs no longer imports ${notImported.join(', ')} as a bare specifier — the host's React must be the only React`,
-    );
-  }
-} catch {
-  errors.push('dist/widget.mjs is unreadable');
+const bundle = readFileSync('dist/widget.mjs', 'utf8');
+const notImported = REACT_EXTERNALS.filter(module => !new RegExp(`from\\s*["']${module}["']`).test(bundle));
+if (notImported.length > 0) {
+  errors.push(
+    `dist/widget.mjs no longer imports ${notImported.join(', ')} as a bare specifier — the host's React must be the only React`,
+  );
 }
 
 const DEPENDENCY_BUDGETS: Record<string, number> = {

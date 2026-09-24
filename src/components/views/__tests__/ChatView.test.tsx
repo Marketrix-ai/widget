@@ -17,7 +17,7 @@ import { scopeStorageTo } from '../../../services/StorageService';
 import { streamClient } from '../../../services/StreamClient';
 import { mockMediaStream, ofKind } from '../../../test/fixtures';
 import { ChatHarness, openChatTab, openWidget, renderWidget } from '../../../test/renderWidget';
-import { messageText } from '../../../types';
+import { messageText } from '../../../utils/chat';
 
 const openChat = (mode?: 'Show') => {
   renderWidget();

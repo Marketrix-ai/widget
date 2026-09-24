@@ -3,12 +3,12 @@
  * and waits for the visitor to act before the tool runs.
  * `showToolAction` mounts the overlay and settles on a click or Continue, failing once the element leaves view;
  * `cleanup` removes it and rejects a pending step with `ShowModeCancelled`; `showModeService` is the singleton
- * `BrowserToolService` awaits. The overlay mounts outside the widget's shadow root, so it uses plain colours,
+ * `browserTools` awaits. The overlay mounts outside the widget's shadow root, so it uses plain colours,
  * not theme tokens.
  */
 
 import { LAYER_TOKENS } from '../design-system/component-tokens';
-import type { WidgetToolName } from './BrowserToolService';
+import type { WidgetToolName } from './browserTools';
 import { domService } from './DomService';
 
 interface ShowModeOptions {

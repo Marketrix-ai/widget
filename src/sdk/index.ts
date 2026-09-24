@@ -1,7 +1,7 @@
 /**
  * The widget's one door to the api: `createClient` builds the oRPC client bound to `widgetContract`,
  * `configureSdk` points it at an api host and `sdk` proxies the current client, throwing until one is
- * configured, plus the wire types the embedding page consumes.
+ * configured, plus the wire types the widget's own code imports.
  * One published bundle loads on any customer's page, so the api host is set at runtime, and every request
  * omits cookies because the widget authenticates with its `marketrix_id`/`marketrix_key` fields alone.
  */

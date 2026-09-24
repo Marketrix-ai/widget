@@ -10,6 +10,8 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'bun:test';
 
+import { REACT_EXTERNALS } from '../../vite.config';
+
 const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, '../..');
 const src = resolve(here, '..');
@@ -93,14 +95,13 @@ describe('tsconfig.json strict flags', () => {
   });
 });
 
-describe('Vite externals', () => {
-  const config = read('vite.config.ts');
-
-  it('externalizes exactly the four React entry points', () => {
-    const match = config.match(/external:\s*\[([^\]]*)\]/);
-    if (!match?.[1]) throw new Error('vite.config.ts no longer declares a rollup `external` array — update this check');
-    const externals = match[1].match(/'[^']+'/g)?.map(s => s.slice(1, -1)) ?? [];
-    expect(new Set(externals)).toEqual(new Set(['react', 'react-dom', 'react-dom/client', 'react/jsx-runtime']));
+describe('React externals', () => {
+  it("the loader's import map supplies exactly the React specifiers the bundle leaves external", () => {
+    const loader = read('public/loader.js');
+    const block = loader.match(/var imports = \{([^}]*)\}/)?.[1];
+    if (!block) throw new Error('public/loader.js no longer declares `var imports = {…}` — update this check');
+    const mapped = [...block.matchAll(/^\s*'?([\w/-]+)'?:/gm)].map(match => match[1]);
+    expect(new Set(mapped)).toEqual(new Set(REACT_EXTERNALS));
   });
 });
 

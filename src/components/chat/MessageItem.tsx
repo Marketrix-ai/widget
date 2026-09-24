@@ -8,8 +8,8 @@ import React from 'react';
 
 import MarketrixIcon from '../../assets/marketrix-icon.svg';
 import { useWidgetConfig } from '../../hooks/useWidget';
-import { type AgentMessage, type ChatMessage, messageText } from '../../types';
-import { formatMessageTime } from '../../utils/chat';
+import type { AgentStatus, ChatMessage } from '../../types';
+import { formatMessageTime, isPending, messageText } from '../../utils/chat';
 import { addOpacity } from '../../utils/color';
 import { Avatar } from '../base/Avatar';
 import { Button } from '../base/Button';
@@ -29,11 +29,14 @@ interface MessageItemProps {
   onScreenAccessDeny: () => void;
 }
 
-const STATUS_ICONS: Record<NonNullable<AgentMessage['taskStatus']>, { name: IconName; opacity: number }> = {
+const STATUS_ICONS: Partial<Record<AgentStatus, { name: IconName; opacity: number }>> = {
   done: { name: 'checkCircle', opacity: 1 },
   failed: { name: 'exclamationCircle', opacity: 0.75 },
   stopped: { name: 'circle', opacity: 0.5 },
 };
+
+const waitsForVisitor = (message: ChatMessage): boolean =>
+  message.kind === 'agent' && (message.status === 'waiting-for-user' || message.status === 'question');
 
 const Thinking: React.FC<{ isWaitingForUser: boolean }> = ({ isWaitingForUser }) => (
   <Flex align='center' gap='sm' paddingY='2xs'>
@@ -49,13 +52,13 @@ const MessageBody: React.FC<{ message: ChatMessage; isLastMessage: boolean; isTa
   isLastMessage,
   isTaskRunning,
 }) => {
-  const isPlaceholder = message.kind === 'agent' && !!message.isPlaceholder;
-  const isWaitingForUser = message.kind === 'agent' && message.placeholderState === 'waiting-for-user';
+  const pending = isPending(message);
+  const isWaitingForUser = waitsForVisitor(message);
   const stillWorking =
     isTaskRunning && isLastMessage && 'mode' in message && (message.mode === 'show' || message.mode === 'do');
 
   if (message.parts.length === 0) {
-    return isPlaceholder || stillWorking ? <Thinking isWaitingForUser={isWaitingForUser} /> : <Surface />;
+    return pending || stillWorking ? <Thinking isWaitingForUser={isWaitingForUser} /> : <Surface />;
   }
 
   return (
@@ -75,19 +78,16 @@ const MessageBody: React.FC<{ message: ChatMessage; isLastMessage: boolean; isTa
             </Text>
           );
         }
-        if (part.type === 'progress') {
-          return (
-            <Flex key={`part-${index}`} align='start' gap='md'>
-              <Text as='span' size='xs' weight='medium' style={{ flex: 1, whiteSpace: 'pre-wrap' }}>
-                {part.content}
-              </Text>
-            </Flex>
-          );
-        }
-        return null;
+        return (
+          <Flex key={`part-${index}`} align='start' gap='md'>
+            <Text as='span' size='xs' weight='medium' style={{ flex: 1, whiteSpace: 'pre-wrap' }}>
+              {part.content}
+            </Text>
+          </Flex>
+        );
       })}
 
-      {((isPlaceholder && !message.parts.some(p => p.type === 'text')) || stillWorking) && (
+      {((pending && !message.parts.some(p => p.type === 'text')) || stillWorking) && (
         <Thinking isWaitingForUser={isWaitingForUser} />
       )}
     </Stack>
@@ -114,14 +114,13 @@ const MessageItemComponent: React.FC<MessageItemProps> = ({
   }
 
   const isUser = message.kind === 'user' || message.kind === 'screenshare';
-  const agent = message.kind === 'agent' ? message : undefined;
   const leadingIcon =
     message.kind === 'user' && (message.mode === 'show' || message.mode === 'do')
       ? ('mousePointerClick' as const)
-      : message.kind === 'screenAccess' || agent?.placeholderState === 'waiting-for-user'
+      : message.kind === 'screenAccess' || waitsForVisitor(message)
         ? ('checkCircle' as const)
         : undefined;
-  const status = agent?.taskStatus ? STATUS_ICONS[agent.taskStatus] : undefined;
+  const status = message.kind === 'agent' && message.status ? STATUS_ICONS[message.status] : undefined;
 
   return (
     <Stack
@@ -207,7 +206,7 @@ const MessageItemComponent: React.FC<MessageItemProps> = ({
 
         <Flex shrink={false} style={{ width: '20px' }} />
       </Flex>
-      {!agent?.isPlaceholder && (
+      {!isPending(message) && (
         <Text as='div' variant='faint' size='xxs' align='right' style={{ marginTop: '2px', marginRight: '26px' }}>
           {formatMessageTime(message.timestamp)}
         </Text>

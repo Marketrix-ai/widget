@@ -3,8 +3,8 @@
  * `sendTurn` is the one entry for a typed turn or chip, refusing a mode the tenant disabled or a turn while a
  * screen-access request is open, and asking for screen access first in Show and Do; `allowScreenAccess`/
  * `denyScreenAccess` release the held turn; `stopTask` cancels a running turn and its Show overlay; `clearChat`
- * stops any running turn and starts a fresh chat thread, so the agent forgets the cleared history too. The
- * stream handlers run browser tools and reply with results; preview mode answers locally.
+ * stops any running turn, clears the error and starts a fresh chat thread, so the agent forgets the cleared
+ * history too. The stream handlers run browser tools and reply with results; preview mode answers locally.
  * The api resends an unanswered `tool/call` on every re-register, so a call already started in this tab never
  * runs twice: one an earlier page load started is answered `page_reloaded` so the agent re-observes the page.
  * A turn the api refuses as forbidden (a mode switched off since the page loaded) shows the api's own message.
@@ -14,7 +14,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useR
 
 import { useWidgetConfig } from '../hooks/useWidget';
 import type { WidgetEvent } from '../sdk';
-import { browserToolService } from '../services/BrowserToolService';
+import { executeTool } from '../services/browserTools';
 import { getOrCreateChatId } from '../services/chatSession';
 import { activeScreenStream, startScreenShare, subscribeScreenShare } from '../services/ScreenShareService';
 import { showModeService } from '../services/ShowModeService';
@@ -29,6 +29,7 @@ import {
   createSystemMessage,
   createUserMessage,
   enabledModes,
+  isPending,
 } from '../utils/chat';
 import { logWarn } from '../utils/log';
 import {
@@ -191,15 +192,14 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const startToolCall = async ({ call, mode }: ToolRun) => {
       const route = streamClient.route();
-      const result = await browserToolService.executeTool(call.browser_tool, call.args, mode, call.explanation);
+      const result = await executeTool(call.browser_tool, call.args, mode, call.explanation);
       if (!result.success && result.cancelled) return;
       const error = result.success ? undefined : result.error;
       const progress: ToolProgress = result.success ? { status: 'completed' } : { status: 'failed', error };
 
       commit(s => reduceToolProgress(s, call.browser_tool, progress, currentModeRef.current));
       if (!error && call.browser_tool === 'done') {
-        const { success } = call.args;
-        commit(s => reduceToolDone(s, currentModeRef.current, success));
+        commit(s => reduceToolDone(s, currentModeRef.current, call.args));
       }
 
       await streamClient
@@ -285,8 +285,9 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const clearChat = useCallback(() => {
     const { task, messages } = stateRef.current;
-    if (task.phase === 'running' || messages.some(msg => msg.kind === 'agent' && msg.isPlaceholder)) stopTask();
+    if (task.phase === 'running' || messages.some(isPending)) stopTask();
     commit(() => ({ messages: [], task: { phase: 'idle' } }));
+    uiActions.setError(undefined);
     if (isPreviewMode) return;
     forgetChatId();
     getOrCreateChatId()
@@ -309,13 +310,9 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   return (
     <ChatContext.Provider value={contextValue}>
-      {state.messages.map(
-        msg =>
-          msg.kind === 'agent' &&
-          msg.isPlaceholder && (
-            <StaleReplyWatchdog key={msg.id} id={msg.id} progress={msg.parts.length} onStale={expireReply} />
-          ),
-      )}
+      {state.messages.filter(isPending).map(msg => (
+        <StaleReplyWatchdog key={msg.id} id={msg.id} progress={msg.parts.length} onStale={expireReply} />
+      ))}
       {children}
     </ChatContext.Provider>
   );

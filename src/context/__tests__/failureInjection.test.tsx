@@ -8,19 +8,19 @@ import { beforeEach, describe, expect, it, vi } from 'bun:test';
 
 import { useWidget } from '../../hooks/useWidget';
 import type { WidgetEvent } from '../../sdk';
+import type { executeTool } from '../../services/browserTools';
 import * as chatSession from '../../services/chatSession';
 import { streamClient } from '../../services/StreamClient';
-import { asStreamClientInternals, browserToolServiceMock } from '../../test/fixtures';
+import { asStreamClientInternals } from '../../test/fixtures';
 import { ChatHarness } from '../../test/renderWidget';
 import { waitFor } from '../../test/vi-compat';
-import { messageText } from '../../types';
-import { CHAT_FAILURE_TEXT } from '../../utils/chat';
+import { CHAT_FAILURE_TEXT, isPending, messageText } from '../../utils/chat';
 import { useChatContext } from '../ChatContext';
 
 const RAW_MARKER = 'PG::ConnectionBad at db_pool.rb:42 — ECONNREFUSED 10.0.4.12:5432';
 
-const mockExecuteTool = vi.fn().mockResolvedValue({ success: true, data: {} });
-vi.mock('../../services/BrowserToolService', () => browserToolServiceMock(mockExecuteTool));
+const mockExecuteTool = vi.fn<typeof executeTool>().mockResolvedValue({ success: true, data: {} });
+vi.mock('../../services/browserTools', () => ({ executeTool: mockExecuteTool }));
 
 const TOOL_CALL: WidgetEvent = {
   type: 'tool/call',
@@ -39,7 +39,7 @@ const Probe = () => {
       <div data-testid='error'>{state.error ?? ''}</div>
       <div data-testid='awaiting'>{String(state.isAwaitingReply)}</div>
       <div data-testid='transcript'>{messages.map(m => messageText(m.parts)).join('|')}</div>
-      <div data-testid='placeholder-id'>{messages.find(m => m.kind === 'agent' && m.isPlaceholder)?.id ?? ''}</div>
+      <div data-testid='placeholder-id'>{messages.find(isPending)?.id ?? ''}</div>
       <button data-testid='send' onClick={() => void actions.sendTurn('hi', 'tell')} />
       <button data-testid='stop' onClick={actions.stopTask} />
     </div>

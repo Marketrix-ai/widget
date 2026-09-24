@@ -90,12 +90,13 @@ each a Zod union discriminated on `type`.
   posts no `tool/response`.
 - **The first `tool/call` activates the task**, not `task/status running` — the api mints no task id, so
   `chat/stop` carries none. The `done` tool ends it, done or failed by its `success` arg.
-- The `tools` registry is typed from the contract's per-tool args, so a new contract tool fails tsc until
-  it has a handler — never re-type tool args by hand.
+- The `TOOLS` registry (`browserTools.ts`) is typed from the contract's per-tool args, so a new contract
+  tool fails tsc until it has a handler — never re-type tool args by hand.
 - **`get_html` ships the whole document with `data-id` added to each indexed element**, never stripped or
   size-capped: the agent's parser indexes by `data-id`, and a trimmed tree loses clickable elements.
 - **Wire status** is `task/status.status ∈ {running, completed, failed, stopped, has_question}`.
-  `ChatMessage.taskStatus` and `MessagePart.status` are UI-only — never conflate or widen them.
+  An agent message's `status` (one enum: pending, question, or how its task ended) and a progress part's
+  `status` are UI-only — never conflate or widen them.
 - `widget_recording` (off by default) gates rrweb batching. `widget_appearance: 'hidden'` hides host-page
   UI but still initializes; `widget_greeting_toast` controls only the toast.
 - **`widgetPublicSearch` never returns a credential**, embed snippet or `status` — a returned row is live.
@@ -118,7 +119,8 @@ each a Zod union discriminated on `type`.
 ## State and styling
 
 - **One config, one store, read from context** — `useWidgetConfig()` and `useWidget()`; never thread either
-  down as props. Config and credentials are never persisted; `StorageService` holds only the transcript.
+  down as props. Config and credentials are never persisted; `StorageService` holds the chat (id,
+  transcript, mode, open state), the tab id and started tool calls, and the dragged position and panel size.
 - **`localStorage` is eslint-banned outside `StorageService.ts`**; every value is read back through
   `readLocalParsed(key, schema)`.
 - **`src/hooks/` holds only a hook with 2+ consumers**; a single-consumer hook lives beside its caller.
