@@ -3,8 +3,6 @@
  * the `?inline` CSS import the Shadow DOM stylesheet is loaded through, and `.svg` asset imports.
  */
 interface DisplayMediaStreamOptions {
-  video?: boolean | MediaTrackConstraints;
-  audio?: boolean | MediaTrackConstraints;
   preferCurrentTab?: boolean;
 }
 
