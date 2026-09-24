@@ -119,7 +119,8 @@ each a Zod union discriminated on `type`.
 ## State and styling
 
 - **One config, one store, read from context** — `useWidgetConfig()` and `useWidget()`; never thread either
-  down as props. Config and credentials are never persisted; `StorageService` holds only the transcript.
+  down as props. Config and credentials are never persisted; `StorageService` holds the chat (id,
+  transcript, mode, open state), the tab id and started tool calls, and the dragged position and panel size.
 - **`localStorage` is eslint-banned outside `StorageService.ts`**; every value is read back through
   `readLocalParsed(key, schema)`.
 - **`src/hooks/` holds only a hook with 2+ consumers**; a single-consumer hook lives beside its caller.

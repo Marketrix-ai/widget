@@ -2,7 +2,7 @@
  * Browser-local persistence for the widget: the one door to `localStorage` and `sessionStorage`.
  * `readLocalParsed`/`writeLocal` read through a schema and write JSON, `scopedKey`/`scopeStorageTo` scope keys
  * per tenant, `getChatId`/`setChatId`/`forgetChatId` hold the thread id, `readChatSnapshot`/`writeChatSnapshot`
- * the transcript, `claimTabId` the browser tab's identity, and `MessageSchema` defines a chat message. Config
+ * the transcript, `claimTabId` the browser tab's identity, and `StoredMessage` types a chat message. Config
  * and credentials are never persisted, and a host page that denies storage falls back to memory.
  * The tab id survives same-origin navigations and reloads so the api keeps routing a Show/Do task's tool
  * calls to this tab; a page takes it out of `sessionStorage` while alive, so a duplicated tab mints its own, and
