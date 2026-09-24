@@ -7,7 +7,7 @@
  * `chat/error`, so a turn that already settled takes neither again.
  */
 import type { WidgetEvent } from '../sdk';
-import { browserToolService, type WidgetToolCall, type WidgetToolName } from '../services/BrowserToolService';
+import type { WidgetToolCall, WidgetToolName } from '../services/browserTools';
 import {
   type AgentMessage,
   type ChatMessage,
@@ -26,6 +26,8 @@ import {
   markProgressLineComplete,
   markProgressLineFailed,
   taskEnded,
+  toolExplanation,
+  waitsForUser,
 } from '../utils/chat';
 
 export type TaskState = { phase: 'running'; mode: InstructionType } | { phase: 'idle' | 'stopped' };
@@ -73,17 +75,12 @@ export function reduceToolProgress(
   } else if (browserToolName !== 'done') {
     updatedMsg =
       progress.status === 'in_progress'
-        ? addProgressLine(
-            updatedMsg,
-            browserToolName,
-            browserToolService.toolExplanation(browserToolName, progress.explanation),
-          )
+        ? addProgressLine(updatedMsg, browserToolName, toolExplanation(browserToolName, progress.explanation))
         : markProgressLineComplete(updatedMsg, browserToolName);
   }
 
   if (isTaskRunning && (mode === 'show' || mode === 'do') && isPending(updatedMsg)) {
-    const waiting =
-      progress.status === 'in_progress' && mode === 'show' && browserToolService.isWaitForUserTool(browserToolName);
+    const waiting = progress.status === 'in_progress' && mode === 'show' && waitsForUser(browserToolName);
     updatedMsg = { ...updatedMsg, status: waiting ? 'waiting-for-user' : 'thinking' };
   }
 

@@ -14,7 +14,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useR
 
 import { useWidgetConfig } from '../hooks/useWidget';
 import type { WidgetEvent } from '../sdk';
-import { browserToolService } from '../services/BrowserToolService';
+import { executeTool } from '../services/browserTools';
 import { getOrCreateChatId } from '../services/chatSession';
 import { activeScreenStream, startScreenShare, subscribeScreenShare } from '../services/ScreenShareService';
 import { showModeService } from '../services/ShowModeService';
@@ -192,7 +192,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const startToolCall = async ({ call, mode }: ToolRun) => {
       const route = streamClient.route();
-      const result = await browserToolService.executeTool(call.browser_tool, call.args, mode, call.explanation);
+      const result = await executeTool(call.browser_tool, call.args, mode, call.explanation);
       if (!result.success && result.cancelled) return;
       const error = result.success ? undefined : result.error;
       const progress: ToolProgress = result.success ? { status: 'completed' } : { status: 'failed', error };

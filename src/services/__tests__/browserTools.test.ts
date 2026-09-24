@@ -1,15 +1,15 @@
 /**
- * Tests for `BrowserToolService`'s tool execution: navigation tools defer until their response is
+ * Tests for `browserTools`' tool execution: navigation tools defer until their response is
  * sent, inputs are validated and failures come back as typed results rather than thrown, and Show
  * mode's default explanation and click-dedupe behavior.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 
-import { browserToolService } from '../BrowserToolService';
+import { executeTool } from '../browserTools';
 import { domService } from '../DomService';
 import { showModeService } from '../ShowModeService';
 
-type ToolResult = Awaited<ReturnType<typeof browserToolService.executeTool>>;
+type ToolResult = Awaited<ReturnType<typeof executeTool>>;
 type ToolSuccess = Extract<ToolResult, { success: true }>;
 type ToolFailure = Extract<ToolResult, { success: false }>;
 
@@ -50,11 +50,7 @@ afterEach(() => {
 
 describe('a tool that leaves the page reports itself before it goes', () => {
   it('navigate holds the navigation until the response is sent', async () => {
-    const result = await browserToolService.executeTool(
-      'navigate',
-      { url: 'https://host.test/next', new_tab: false },
-      'do',
-    );
+    const result = await executeTool('navigate', { url: 'https://host.test/next', new_tab: false }, 'do');
 
     expect(result.success).toBe(true);
     assertSuccess(result);
@@ -66,7 +62,7 @@ describe('a tool that leaves the page reports itself before it goes', () => {
   });
 
   it('search holds the navigation until the response is sent', async () => {
-    const result = await browserToolService.executeTool('search', { query: 'widgets', engine: 'duckduckgo' }, 'do');
+    const result = await executeTool('search', { query: 'widgets', engine: 'duckduckgo' }, 'do');
 
     expect(navigations).toEqual([]);
     assertSuccess(result);
@@ -80,7 +76,7 @@ describe('a tool that leaves the page reports itself before it goes', () => {
     window.history.pushState({}, '', '/second');
     const back = vi.spyOn(window.history, 'back').mockImplementation(() => {});
 
-    const result = await browserToolService.executeTool('go_back', {}, 'do');
+    const result = await executeTool('go_back', {}, 'do');
 
     expect(back).not.toHaveBeenCalled();
     assertSuccess(result);
@@ -93,18 +89,14 @@ describe('a tool that leaves the page reports itself before it goes', () => {
 
 describe('navigate constrains its target to http(s)', () => {
   it('refuses a javascript: URL instead of running it in the host page', async () => {
-    const result = await browserToolService.executeTool(
-      'navigate',
-      { url: 'javascript:alert(document.cookie)', new_tab: false },
-      'do',
-    );
+    const result = await executeTool('navigate', { url: 'javascript:alert(document.cookie)', new_tab: false }, 'do');
 
     expectFailure(result, 'An http(s) URL is required');
     expect(navigations).toEqual([]);
   });
 
   it('resolves a relative URL against the current page', async () => {
-    const result = await browserToolService.executeTool('navigate', { url: '/next', new_tab: false }, 'do');
+    const result = await executeTool('navigate', { url: '/next', new_tab: false }, 'do');
 
     expect(result.success).toBe(true);
     assertSuccess(result);
@@ -118,11 +110,7 @@ describe('navigate reports what the browser did with a new tab', () => {
   it('succeeds when the popup really opened', async () => {
     const open = vi.spyOn(window, 'open').mockReturnValue({} as Window);
 
-    const result = await browserToolService.executeTool(
-      'navigate',
-      { url: 'https://host.test/next', new_tab: true },
-      'do',
-    );
+    const result = await executeTool('navigate', { url: 'https://host.test/next', new_tab: true }, 'do');
 
     expect(open).toHaveBeenCalledWith('https://host.test/next', '_blank');
     expect(result.success).toBe(true);
@@ -131,11 +119,7 @@ describe('navigate reports what the browser did with a new tab', () => {
   it('fails when a popup blocker refuses it', async () => {
     vi.spyOn(window, 'open').mockReturnValue(null);
 
-    const result = await browserToolService.executeTool(
-      'navigate',
-      { url: 'https://host.test/next', new_tab: true },
-      'do',
-    );
+    const result = await executeTool('navigate', { url: 'https://host.test/next', new_tab: true }, 'do');
 
     expectFailure(result, 'The browser blocked opening a new tab');
   });
@@ -145,7 +129,7 @@ describe('close_tab reports what the browser did', () => {
   it('fails when the browser refuses to close a tab the script did not open', async () => {
     vi.spyOn(window, 'close').mockImplementation(() => {});
 
-    const result = await browserToolService.executeTool('close_tab', {}, 'do');
+    const result = await executeTool('close_tab', {}, 'do');
 
     expect(result.success).toBe(false);
   });
@@ -155,7 +139,7 @@ describe('close_tab reports what the browser did', () => {
       Object.defineProperty(window, 'closed', { configurable: true, value: true });
     });
 
-    const result = await browserToolService.executeTool('close_tab', {}, 'do');
+    const result = await executeTool('close_tab', {}, 'do');
 
     expect(result.success).toBe(true);
     Object.defineProperty(window, 'closed', { configurable: true, value: false });
@@ -164,11 +148,7 @@ describe('close_tab reports what the browser did', () => {
 
 describe('a run the model ends is not a widget tool failure', () => {
   it('reports finish as executed when the agent sends only the closing message', async () => {
-    const result = await browserToolService.executeTool(
-      'done',
-      { message: 'Could not find the checkout button', success: false },
-      'do',
-    );
+    const result = await executeTool('done', { message: 'Could not find the checkout button', success: false }, 'do');
 
     expect(result.success).toBe(true);
     assertSuccess(result);
@@ -184,11 +164,7 @@ describe('a Do tool call against a missing index fails typed, never throws', () 
   it.each(['click_element', 'type_text', 'send_keys', 'select_dropdown_option', 'get_dropdown_options'])(
     '%s reports element-not-found instead of throwing out of the loop',
     async toolName => {
-      const result = await browserToolService.executeTool(
-        toolName,
-        { index: 999, text: 'x', keys: 'Enter', option: 'x' },
-        'do',
-      );
+      const result = await executeTool(toolName, { index: 999, text: 'x', keys: 'Enter', option: 'x' }, 'do');
 
       expectFailure(result, 'Element 999 not found');
     },
@@ -200,7 +176,7 @@ describe('a Do tool call against a missing index fails typed, never throws', () 
       element: document.querySelector('input') as HTMLInputElement,
     });
 
-    const result = await browserToolService.executeTool('select_dropdown_option', { index: 0, option: 'x' }, 'do');
+    const result = await executeTool('select_dropdown_option', { index: 0, option: 'x' }, 'do');
 
     expectFailure(result, 'Element 0 is not a select element');
   });
@@ -214,7 +190,7 @@ describe('typeText writes through the same native setter for input and textarea'
     const seen: string[] = [];
     for (const type of ['input', 'change', 'blur']) element.addEventListener(type, e => seen.push(e.type));
 
-    const result = await browserToolService.executeTool('type_text', { index: 0, text: 'hello', clear: true }, 'do');
+    const result = await executeTool('type_text', { index: 0, text: 'hello', clear: true }, 'do');
 
     expect(result.success).toBe(true);
     expect(element.value).toBe('hello');
@@ -240,7 +216,7 @@ describe("show mode's real visitor click reaches the element's handler exactly o
     let clicks = 0;
     button.addEventListener('click', () => clicks++);
 
-    const pending = browserToolService.executeTool('click_element', { index: 0 }, 'show', 'Click Buy');
+    const pending = executeTool('click_element', { index: 0 }, 'show', 'Click Buy');
     button.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, composed: true }));
 
     const result = await pending;
@@ -259,7 +235,7 @@ describe('a missing element surfaces the reason domService gave', () => {
       error: 'Element 0 is not currently visible',
     });
 
-    const result = await browserToolService.executeTool('click_element', { index: 0 }, 'do');
+    const result = await executeTool('click_element', { index: 0 }, 'do');
 
     expectFailure(result, 'Element 0 is not currently visible');
   });
@@ -281,7 +257,7 @@ describe("show mode's default explanation only fills in a blank one", () => {
   it('passes the caller-supplied explanation through unchanged', async () => {
     const staged = vi.spyOn(showModeService, 'showToolAction').mockResolvedValue();
 
-    await browserToolService.executeTool('click_element', { index: 0 }, 'show', 'Click the Buy button');
+    await executeTool('click_element', { index: 0 }, 'show', 'Click the Buy button');
 
     expect(staged).toHaveBeenCalledWith(expect.objectContaining({ explanation: 'Click the Buy button' }));
   });
@@ -289,7 +265,7 @@ describe("show mode's default explanation only fills in a blank one", () => {
   it('falls back to the tool label when the caller leaves the explanation blank', async () => {
     const staged = vi.spyOn(showModeService, 'showToolAction').mockResolvedValue();
 
-    await browserToolService.executeTool('click_element', { index: 0 }, 'show');
+    await executeTool('click_element', { index: 0 }, 'show');
 
     expect(staged).toHaveBeenCalledWith(expect.objectContaining({ explanation: 'Clicking element' }));
   });
@@ -301,7 +277,7 @@ describe('search picks the engine URL by name', () => {
     ['bing', 'https://www.bing.com/search?q=widgets'],
     ['duckduckgo', 'https://duckduckgo.com/?q=widgets'],
   ] as const)('engine %s', async (engine, expectedUrl) => {
-    const result = await browserToolService.executeTool('search', { query: 'widgets', engine }, 'do');
+    const result = await executeTool('search', { query: 'widgets', engine }, 'do');
 
     assertSuccess(result);
     result.afterResponseAttempt?.();
@@ -319,7 +295,7 @@ describe('typeText branches beyond input/textarea', () => {
     const element = document.querySelector('input') as HTMLInputElement;
     vi.spyOn(domService, 'getValidatedElement').mockReturnValue({ element });
 
-    const result = await browserToolService.executeTool('type_text', { index: 0, text: 'more', clear: false }, 'do');
+    const result = await executeTool('type_text', { index: 0, text: 'more', clear: false }, 'do');
 
     expect(result.success).toBe(true);
     expect(element.value).toBe('existing-more');
@@ -333,7 +309,7 @@ describe('typeText branches beyond input/textarea', () => {
     const execCommand = vi.fn().mockReturnValue(true);
     (document as unknown as { execCommand: typeof execCommand }).execCommand = execCommand;
 
-    const result = await browserToolService.executeTool('type_text', { index: 0, text: 'hello', clear: true }, 'do');
+    const result = await executeTool('type_text', { index: 0, text: 'hello', clear: true }, 'do');
 
     expect(result.success).toBe(true);
     expect(execCommand).toHaveBeenCalledWith('insertText', false, 'hello');
@@ -344,7 +320,7 @@ describe('typeText branches beyond input/textarea', () => {
     const element = document.querySelector('select') as HTMLSelectElement;
     vi.spyOn(domService, 'getValidatedElement').mockReturnValue({ element });
 
-    const result = await browserToolService.executeTool('type_text', { index: 0, text: 'x', clear: true }, 'do');
+    const result = await executeTool('type_text', { index: 0, text: 'x', clear: true }, 'do');
 
     expect(result.success).toBe(true);
     expect(element.value).toBe('x');
@@ -359,7 +335,7 @@ describe('extract', () => {
     document.body.innerHTML = '<a href="/a"></a><a href="/b">Bought</a>';
     stubInnerText();
 
-    const result = await browserToolService.executeTool('extract', { extract_links: true }, 'do');
+    const result = await executeTool('extract', { extract_links: true }, 'do');
 
     assertSuccess(result);
     const data = result.data as { links: Array<{ text: string; href: string | null }> };
@@ -373,7 +349,7 @@ describe('extract', () => {
     document.body.innerHTML = '<a href="/a">A</a>';
     stubInnerText();
 
-    const result = await browserToolService.executeTool('extract', { extract_links: false }, 'do');
+    const result = await executeTool('extract', { extract_links: false }, 'do');
 
     assertSuccess(result);
     expect((result.data as { links: unknown[] }).links).toEqual([]);
@@ -385,7 +361,7 @@ describe('goBack refuses when there is no history to go back to', () => {
     const descriptor = Object.getOwnPropertyDescriptor(window.history, 'length');
     Object.defineProperty(window.history, 'length', { configurable: true, get: () => 1 });
 
-    const result = await browserToolService.executeTool('go_back', {}, 'do');
+    const result = await executeTool('go_back', {}, 'do');
 
     expectFailure(result, 'No history');
     if (descriptor) Object.defineProperty(window.history, 'length', descriptor);
@@ -394,7 +370,7 @@ describe('goBack refuses when there is no history to go back to', () => {
 
 describe('wait', () => {
   it('waits the requested seconds', async () => {
-    const succeeded = await browserToolService.executeTool('wait', { seconds: 0 }, 'do');
+    const succeeded = await executeTool('wait', { seconds: 0 }, 'do');
     expect(succeeded).toEqual({ success: true, data: { text: 'Waited 0s' } });
   });
 });
@@ -404,7 +380,7 @@ describe('scroll', () => {
     const scrollBy = vi.fn();
     window.scrollBy = scrollBy as unknown as typeof window.scrollBy;
 
-    await browserToolService.executeTool('scroll', { direction: 'up', pages: 2 }, 'do');
+    await executeTool('scroll', { direction: 'up', pages: 2 }, 'do');
 
     expect(scrollBy).toHaveBeenCalledWith({ top: -2 * window.innerHeight, behavior: 'smooth' });
   });
@@ -423,7 +399,7 @@ describe('selectDropdownOption matches by value OR by visible text', () => {
     ['its value', 'v2', 'v2'],
     ['its visible text when the value differs', 'Text One', 'v1'],
   ] as const)('matches an option by %s', async (_case, option, expectedValue) => {
-    const result = await browserToolService.executeTool('select_dropdown_option', { index: 0, option }, 'do');
+    const result = await executeTool('select_dropdown_option', { index: 0, option }, 'do');
     expect(result.success).toBe(true);
     expect((document.querySelector('select') as HTMLSelectElement).value).toBe(expectedValue);
   });
@@ -437,7 +413,7 @@ describe('sendKeys falls back to a generic message only when the key has no repo
     element.setSelectionRange(0, 0);
     vi.spyOn(domService, 'getValidatedElement').mockReturnValue({ element });
 
-    const result = await browserToolService.executeTool('send_keys', { index: 0, keys: 'End' }, 'do');
+    const result = await executeTool('send_keys', { index: 0, keys: 'End' }, 'do');
 
     assertSuccess(result);
     expect(result.data).toEqual({ text: 'End: moved cursor to end' });
@@ -448,7 +424,7 @@ describe('sendKeys falls back to a generic message only when the key has no repo
     const element = document.querySelector('div') as HTMLElement;
     vi.spyOn(domService, 'getValidatedElement').mockReturnValue({ element });
 
-    const result = await browserToolService.executeTool('send_keys', { index: 0, keys: 'PageDown' }, 'do');
+    const result = await executeTool('send_keys', { index: 0, keys: 'PageDown' }, 'do');
 
     assertSuccess(result);
     expect(result.data).toEqual({ text: 'Sent keys PageDown' });

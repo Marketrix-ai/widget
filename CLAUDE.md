@@ -90,8 +90,8 @@ each a Zod union discriminated on `type`.
   posts no `tool/response`.
 - **The first `tool/call` activates the task**, not `task/status running` — the api mints no task id, so
   `chat/stop` carries none. The `done` tool ends it, done or failed by its `success` arg.
-- The `tools` registry is typed from the contract's per-tool args, so a new contract tool fails tsc until
-  it has a handler — never re-type tool args by hand.
+- The `TOOLS` registry (`browserTools.ts`) is typed from the contract's per-tool args, so a new contract
+  tool fails tsc until it has a handler — never re-type tool args by hand.
 - **`get_html` ships the whole document with `data-id` added to each indexed element**, never stripped or
   size-capped: the agent's parser indexes by `data-id`, and a trimmed tree loses clickable elements.
 - **Wire status** is `task/status.status ∈ {running, completed, failed, stopped, has_question}`.

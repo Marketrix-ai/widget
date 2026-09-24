@@ -1,7 +1,8 @@
 /**
  * Pure helpers for the chat message list: formatting (mode label, timestamp), the tenant's enabled modes
- * (`enabledModes`, `effectiveMode`), finding which message a progress or tool event belongs to, and building
- * every kind of `ChatMessage`.
+ * (`enabledModes`, `effectiveMode`), each browser tool's progress label (`toolExplanation`) and whether Show
+ * mode waits for the visitor on it (`waitsForUser`), finding which message a progress or tool event belongs
+ * to, and building every kind of `ChatMessage`.
  *
  * `findMessageForProgress` picks the right open message for an incoming update by a ranked set of
  * predicates, falling back to "no match" (logged, not thrown) rather than guessing wrong. The per-kind
@@ -12,7 +13,7 @@
  * access withholds only the view of their screen.
  */
 import { InstructionTypeSchema } from '../sdk/contracts/widgetSettings';
-import type { WidgetToolName } from '../services/BrowserToolService';
+import type { WidgetToolName } from '../services/browserTools';
 import type { AgentMessage, ChatMessage, InstructionType, ProgressPart, WidgetSettingsData } from '../types';
 import { logWarn } from './log';
 import { randomId } from './randomId';
@@ -28,6 +29,37 @@ export function effectiveMode(flags: ModeFlags, mode: InstructionType): Instruct
   const modes = enabledModes(flags);
   return modes.includes(mode) ? mode : (modes[0] ?? mode);
 }
+
+const TOOL_LABELS: Record<WidgetToolName, string> = {
+  navigate: 'Navigating',
+  search: 'Searching',
+  click_element: 'Clicking element',
+  type_text: 'Typing text',
+  scroll: 'Scrolling',
+  scroll_to_text: 'Scrolling to text',
+  extract: 'Extracting content',
+  go_back: 'Going back',
+  wait: 'Waiting',
+  select_dropdown_option: 'Selecting option',
+  get_dropdown_options: 'Reading dropdown options',
+  send_keys: 'Pressing key',
+  close_tab: 'Closing tab',
+  done: 'Done',
+  get_html: 'Reading the page',
+  get_screenshot: 'Taking screenshot',
+};
+
+const WAITS_FOR_USER: ReadonlySet<WidgetToolName> = new Set([
+  'click_element',
+  'type_text',
+  'select_dropdown_option',
+  'send_keys',
+]);
+
+export const toolExplanation = (browserToolName: WidgetToolName, explanation?: string): string =>
+  explanation || TOOL_LABELS[browserToolName];
+
+export const waitsForUser = (browserToolName: WidgetToolName): boolean => WAITS_FOR_USER.has(browserToolName);
 
 export const formatMessageTime = (date: Date): string =>
   date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });

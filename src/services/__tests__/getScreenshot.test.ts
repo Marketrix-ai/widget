@@ -9,7 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 import { flushMicrotasks, mockMediaStream } from '../../test/fixtures';
 import { resetDom } from '../../test/preload';
 import { advanceTimersByTimeAsync } from '../../test/vi-compat';
-import { browserToolService } from '../BrowserToolService';
+import { executeTool } from '../browserTools';
 import * as ScreenShareService from '../ScreenShareService';
 
 describe('get_screenshot with no active screen share', () => {
@@ -22,7 +22,7 @@ describe('get_screenshot with no active screen share', () => {
   });
 
   it('fails instead of prompting a new share, which would bypass the visitor Deny', async () => {
-    const result = await browserToolService.executeTool('get_screenshot', {}, 'do');
+    const result = await executeTool('get_screenshot', {}, 'do');
     expect(result).toMatchObject({ success: false, error: expect.stringContaining('not sharing') });
     expect(document.querySelector('video')).toBeNull();
   });
@@ -41,7 +41,7 @@ describe('get_screenshot on a stream that never delivers a frame', () => {
   });
 
   it('fails instead of waiting forever, and leaves no video behind in the host page', async () => {
-    const result = browserToolService.executeTool('get_screenshot', {}, 'do');
+    const result = executeTool('get_screenshot', {}, 'do');
     await advanceTimersByTimeAsync(0);
     expect(document.querySelector('video')).not.toBeNull();
 
@@ -70,7 +70,7 @@ describe('get_screenshot when the browser refuses a 2d canvas context', () => {
   });
 
   it('reports a failure rather than a well-formed all-black frame', async () => {
-    const result = browserToolService.executeTool('get_screenshot', {}, 'do');
+    const result = executeTool('get_screenshot', {}, 'do');
     await flushMicrotasks();
     document.querySelector('video')?.dispatchEvent(new Event('loadeddata'));
 
@@ -103,7 +103,7 @@ describe('get_screenshot when the browser grants a 2d canvas context', () => {
   });
 
   it('draws the video frame and returns the encoded data URI, not just a well-formed failure', async () => {
-    const result = browserToolService.executeTool('get_screenshot', {}, 'do');
+    const result = executeTool('get_screenshot', {}, 'do');
     await flushMicrotasks();
     const video = document.querySelector('video');
     video?.dispatchEvent(new Event('loadeddata'));

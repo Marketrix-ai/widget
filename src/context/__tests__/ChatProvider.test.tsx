@@ -11,10 +11,11 @@ import { Profiler, useEffect } from 'react';
 
 import { useWidget } from '../../hooks/useWidget';
 import type { WidgetEvent } from '../../sdk';
+import type { executeTool } from '../../services/browserTools';
 import * as chatSession from '../../services/chatSession';
 import { claimTabId, remintTabId } from '../../services/StorageService';
 import { streamClient } from '../../services/StreamClient';
-import { agentMessage, asStreamClientInternals, browserToolServiceMock, ofKind } from '../../test/fixtures';
+import { agentMessage, asStreamClientInternals, ofKind } from '../../test/fixtures';
 import { ChatHarness } from '../../test/renderWidget';
 import { advanceTimersByTimeAsync, waitFor } from '../../test/vi-compat';
 import { messageText } from '../../types';
@@ -22,8 +23,8 @@ import { isPending } from '../../utils/chat';
 import * as log from '../../utils/log';
 import { useChatContext } from '../ChatContext';
 
-const mockExecuteTool = vi.fn().mockResolvedValue({ success: true, data: {} });
-vi.mock('../../services/BrowserToolService', () => browserToolServiceMock(mockExecuteTool));
+const mockExecuteTool = vi.fn<typeof executeTool>().mockResolvedValue({ success: true, data: {} });
+vi.mock('../../services/browserTools', () => ({ executeTool: mockExecuteTool }));
 
 const restoredPlaceholder = agentMessage({
   id: 'temp-restored',

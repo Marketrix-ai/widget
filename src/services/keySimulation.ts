@@ -5,7 +5,7 @@
  * `input`/`change` so framework-controlled inputs see the change.
  */
 import { focusablesIn } from '../utils/dom';
-import type { ToolArgs } from './BrowserToolService';
+import type { ToolArgs } from './browserTools';
 
 type SendKey = ToolArgs<'send_keys'>['keys'];
 

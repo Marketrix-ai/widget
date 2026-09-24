@@ -8,9 +8,10 @@ import { beforeEach, describe, expect, it, vi } from 'bun:test';
 
 import { useWidget } from '../../hooks/useWidget';
 import type { WidgetEvent } from '../../sdk';
+import type { executeTool } from '../../services/browserTools';
 import * as chatSession from '../../services/chatSession';
 import { streamClient } from '../../services/StreamClient';
-import { asStreamClientInternals, browserToolServiceMock } from '../../test/fixtures';
+import { asStreamClientInternals } from '../../test/fixtures';
 import { ChatHarness } from '../../test/renderWidget';
 import { waitFor } from '../../test/vi-compat';
 import { messageText } from '../../types';
@@ -19,8 +20,8 @@ import { useChatContext } from '../ChatContext';
 
 const RAW_MARKER = 'PG::ConnectionBad at db_pool.rb:42 — ECONNREFUSED 10.0.4.12:5432';
 
-const mockExecuteTool = vi.fn().mockResolvedValue({ success: true, data: {} });
-vi.mock('../../services/BrowserToolService', () => browserToolServiceMock(mockExecuteTool));
+const mockExecuteTool = vi.fn<typeof executeTool>().mockResolvedValue({ success: true, data: {} });
+vi.mock('../../services/browserTools', () => ({ executeTool: mockExecuteTool }));
 
 const TOOL_CALL: WidgetEvent = {
   type: 'tool/call',

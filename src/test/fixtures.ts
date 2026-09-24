@@ -3,11 +3,9 @@
  * complete, schema-valid tenant config (preview and resolved-production shapes); `agentMessage` builds an
  * agent `ChatMessage` and `ofKind` narrows one; `mockMediaStream` stubs the browser's un-mockable
  * `MediaStream`; `asStreamClientInternals` reaches `streamClient`'s private `handleMessage`/`notifyError`
- * for simulating SSE events and stream failures; `browserToolServiceMock` shapes the
- * `vi.mock('.../BrowserToolService', ...)` factory.
+ * for simulating SSE events and stream failures.
  */
 import { WidgetSettingsDataSchema } from '../sdk/contracts/widgetSettings';
-import type { browserToolService as realBrowserToolService } from '../services/BrowserToolService';
 import { streamClient } from '../services/StreamClient';
 import type { CredentialedConfig } from '../services/WidgetService';
 import type { AgentMessage, ChatMessage, ValidWidgetConfig, WidgetSettingsData } from '../types';
@@ -109,17 +107,3 @@ interface StreamClientTestHandle {
 }
 
 export const asStreamClientInternals = (): StreamClientTestHandle => streamClient as unknown as StreamClientTestHandle;
-
-type MockedBrowserToolService = Pick<
-  typeof realBrowserToolService,
-  'executeTool' | 'toolExplanation' | 'isWaitForUserTool'
->;
-
-export function browserToolServiceMock(executeTool: (typeof realBrowserToolService)['executeTool']) {
-  const browserToolService: MockedBrowserToolService = {
-    executeTool,
-    toolExplanation: (name, explanation) => explanation || name,
-    isWaitForUserTool: () => false,
-  };
-  return { browserToolService };
-}
