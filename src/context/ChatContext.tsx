@@ -4,8 +4,8 @@
  * screen-access request is open, and asking for screen access first in Show and Do; `allowScreenAccess`/
  * `denyScreenAccess` release the held turn; `stopTask` cancels a running turn and its Show overlay; `clearChat`
  * stops any running turn and starts a fresh chat thread, so the agent forgets the cleared history too. The stream handlers run browser tools and reply with results; preview mode answers locally.
- * The api never replays a chat's past events on reconnect, so only a resent `tool/call` needs dedupe. A turn the
- * api refuses as forbidden (a mode switched off since the page loaded) shows the api's own message.
+ * The api resends an unanswered `tool/call` on every re-register, so a call already started in this tab is never run
+ * twice: one started by an earlier page load is answered as interrupted instead. A turn the api refuses as forbidden (a mode switched off since the page loaded) shows the api's own message.
  */
 import { ORPCError } from '@orpc/client';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
@@ -16,7 +16,7 @@ import { browserToolService } from '../services/BrowserToolService';
 import { getOrCreateChatId } from '../services/chatSession';
 import { activeScreenStream, startScreenShare, subscribeScreenShare } from '../services/ScreenShareService';
 import { showModeService } from '../services/ShowModeService';
-import { forgetChatId } from '../services/StorageService';
+import { claimToolCall, forgetChatId } from '../services/StorageService';
 import { streamClient, StreamGaveUpError } from '../services/StreamClient';
 import type { ChatMessage, InstructionType } from '../types';
 import {
@@ -31,7 +31,6 @@ import {
 import { logWarn } from '../utils/log';
 import {
   type ChatState,
-  isTerminalTaskStatus,
   openScreenAccessRequest,
   reduceAppend,
   reduceDispatch,
@@ -69,10 +68,9 @@ interface ChatContextType {
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
-const MAX_PROCESSED_TOOL_CALL_IDS = 1000;
-
 const STALE_REPLY_TIMEOUT_MS = 120_000;
 const STALE_REPLY_TEXT = 'This is taking longer than expected. Please try again.';
+const INTERRUPTED_STEP_TEXT = 'The page reloaded while this step ran; check the page before retrying.';
 const PREVIEW_REPLY = "This is a preview. In production, I'll respond to your messages here.";
 
 const StaleReplyWatchdog: React.FC<{ id: string; progress: number; onStale: (id: string) => void }> = ({
@@ -98,7 +96,6 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   currentModeRef.current = uiState.currentMode;
   const currentErrorRef = useRef(uiState.error);
   currentErrorRef.current = uiState.error;
-  const processedToolCallIds = useRef(new Set<string>());
   const lastStreamErrorRef = useRef<string | undefined>(undefined);
 
   const commit = useCallback((transition: (s: ChatState) => ChatState) => {
@@ -218,16 +215,19 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const onMessage = (event: WidgetEvent): void => {
       if (event.type === 'tool/call') {
-        const toolCallId = event.tool_call_id;
-        if (processedToolCallIds.current.has(toolCallId)) return;
-        processedToolCallIds.current.add(toolCallId);
-        if (processedToolCallIds.current.size > MAX_PROCESSED_TOOL_CALL_IDS) {
-          processedToolCallIds.current = new Set(
-            [...processedToolCallIds.current].slice(-MAX_PROCESSED_TOOL_CALL_IDS / 2),
-          );
+        const claim = claimToolCall(event.tool_call_id);
+        if (claim === 'seen') return;
+        if (claim === 'interrupted') {
+          streamClient
+            .send({
+              type: 'tool/response',
+              tool_call_id: event.tool_call_id,
+              success: false,
+              error: INTERRUPTED_STEP_TEXT,
+            })
+            .catch((err: unknown) => console.error('Failed to report an interrupted step:', err));
+          return;
         }
-      } else if (event.type === 'task/status' && isTerminalTaskStatus(event.status)) {
-        processedToolCallIds.current.clear();
       } else if (event.type === 'chat/error') {
         logWarn('[Widget] Chat error from server:', event.error);
       } else if (

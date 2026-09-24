@@ -143,10 +143,6 @@ export function reduceDispatch(state: ChatState, placeholder: ChatMessage): Chat
 
 const TASK_STATUS = { completed: 'done', failed: 'failed', stopped: 'stopped' } as const;
 
-type TaskStatus = Extract<WidgetEvent, { type: 'task/status' }>['status'];
-
-export const isTerminalTaskStatus = (status: TaskStatus): status is keyof typeof TASK_STATUS => status in TASK_STATUS;
-
 const mapAgentMessage = (
   state: ChatState,
   matches: (msg: AgentMessage) => boolean,

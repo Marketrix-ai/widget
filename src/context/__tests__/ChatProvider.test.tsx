@@ -400,65 +400,19 @@ describe('tool/response carries data only when the tool call itself succeeded', 
   });
 });
 
-describe('the processed tool-call id set is trimmed only once it EXCEEDS its cap', () => {
-  it('still dedupes the earliest id at exactly 1000 distinct ids, not before', async () => {
+describe('a tool/call an earlier page load of this tab already started', () => {
+  beforeEach(() => sessionStorage.clear());
+
+  it('is answered as interrupted, never run again', async () => {
+    sessionStorage.setItem('marketrix_started_tool_calls', JSON.stringify(['tc-before-reload']));
     renderCaptured(false);
-    vi.spyOn(streamClient, 'send').mockResolvedValue(undefined);
+    const send = vi.spyOn(streamClient, 'send').mockResolvedValue(undefined);
     mockExecuteTool.mockClear();
 
-    const makeCall = (id: string): WidgetEvent => ({
-      type: 'tool/call',
-      tool_call_id: id,
-      browser_tool: 'click_element',
-      args: { index: 1 },
-      mode: 'do',
-      explanation: 'Click it',
-    });
+    await dispatchClickToolCall('tc-before-reload');
 
-    await act(async () => {
-      for (let i = 0; i < 1000; i++) asStreamClientInternals().handleMessage(makeCall(`trim-${i}`));
-      await advanceTimersByTimeAsync(0);
-    });
-    await waitFor(() => expect(mockExecuteTool).toHaveBeenCalledTimes(1000));
-
-    await act(async () => {
-      asStreamClientInternals().handleMessage(makeCall('trim-0'));
-      await advanceTimersByTimeAsync(0);
-    });
-    expect(mockExecuteTool).toHaveBeenCalledTimes(1000);
-  });
-});
-
-describe('a terminal task/status clears the processed tool-call id set', () => {
-  it('lets a retransmitted tool_call_id from BEFORE the terminal status run again', async () => {
-    renderCaptured(false);
-    vi.spyOn(streamClient, 'send').mockResolvedValue(undefined);
-    mockExecuteTool.mockClear();
-
-    const event: WidgetEvent = {
-      type: 'tool/call',
-      tool_call_id: 'tc-recur',
-      browser_tool: 'click_element',
-      args: { index: 1 },
-      mode: 'do',
-      explanation: 'Click it',
-    };
-
-    await act(async () => {
-      asStreamClientInternals().handleMessage(event);
-      await advanceTimersByTimeAsync(0);
-    });
-    await waitFor(() => expect(mockExecuteTool).toHaveBeenCalledTimes(1));
-
-    act(() => {
-      asStreamClientInternals().handleMessage({ type: 'task/status', status: 'completed' });
-    });
-
-    await act(async () => {
-      asStreamClientInternals().handleMessage(event);
-      await advanceTimersByTimeAsync(0);
-    });
-    await waitFor(() => expect(mockExecuteTool).toHaveBeenCalledTimes(2));
+    expect(await sentPayloadFor(send, 'tc-before-reload')).toMatchObject({ type: 'tool/response', success: false });
+    expect(mockExecuteTool).not.toHaveBeenCalled();
   });
 });
 
