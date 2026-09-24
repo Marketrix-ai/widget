@@ -118,7 +118,7 @@ export class RrwebSessionRecorder {
         timestamp: Date.now(),
         viewport: { width: window.innerWidth, height: window.innerHeight },
       },
-      this.chatId,
+      { chatId: this.chatId },
     );
   }
 
@@ -143,7 +143,10 @@ export class RrwebSessionRecorder {
       const events = this.events.splice(0);
       if (!events.length) return;
       try {
-        await streamClient.send({ type: 'rrweb/events', rrweb_session_id: this.sessionId, events }, this.chatId);
+        await streamClient.send(
+          { type: 'rrweb/events', rrweb_session_id: this.sessionId, events },
+          { chatId: this.chatId },
+        );
         this.failedFlushes = 0;
       } catch (error) {
         this.events = events.concat(this.events).slice(0, MAX_BUFFERED_EVENTS);

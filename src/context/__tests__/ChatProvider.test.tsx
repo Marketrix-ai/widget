@@ -12,6 +12,7 @@ import { Profiler, useEffect } from 'react';
 import { useWidget } from '../../hooks/useWidget';
 import type { WidgetEvent } from '../../sdk';
 import * as chatSession from '../../services/chatSession';
+import { claimTabId, remintTabId } from '../../services/StorageService';
 import { streamClient } from '../../services/StreamClient';
 import { agentMessage, asStreamClientInternals, browserToolServiceMock, ofKind } from '../../test/fixtures';
 import { ChatHarness } from '../../test/renderWidget';
@@ -397,6 +398,25 @@ describe('tool/response carries data only when the tool call itself succeeded', 
 
     const payload = await sentPayloadFor(send, 'tc-ok');
     expect(payload['data']).toBe(JSON.stringify({ ok: true }));
+  });
+});
+
+describe('a tool/response sent after the page reminted its tab id', () => {
+  it('answers on the tab the call arrived on, the only tab the api relays it from', async () => {
+    renderCaptured(false);
+    const send = vi.spyOn(streamClient, 'send').mockResolvedValue(undefined);
+    const tabAtCall = claimTabId();
+    mockExecuteTool.mockImplementationOnce(async () => {
+      remintTabId();
+      return { success: true, data: {} };
+    });
+
+    await dispatchClickToolCall('tc-remint');
+
+    await waitFor(() => expect(send).toHaveBeenCalled());
+    const [, route] = send.mock.calls.find(([command]) => command.type === 'tool/response') ?? [];
+    expect(route?.tabId).toBe(tabAtCall);
+    expect(claimTabId()).not.toBe(tabAtCall);
   });
 });
 

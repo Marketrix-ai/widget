@@ -186,6 +186,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const setError = uiActions.setError;
 
     const startToolCall = async ({ call, mode }: ToolRun) => {
+      const route = streamClient.route();
       const result = await browserToolService.executeTool(call.browser_tool, call.args, mode, call.explanation);
       if (!result.success && result.cancelled) return;
       const error = result.success ? undefined : result.error;
@@ -198,13 +199,16 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       await streamClient
-        .send({
-          type: 'tool/response',
-          tool_call_id: call.tool_call_id,
-          success: result.success,
-          ...(result.success && { data: JSON.stringify(result.data) }),
-          error,
-        })
+        .send(
+          {
+            type: 'tool/response',
+            tool_call_id: call.tool_call_id,
+            success: result.success,
+            ...(result.success && { data: JSON.stringify(result.data) }),
+            error,
+          },
+          route,
+        )
         .catch((err: unknown) => {
           console.error('Failed to send tool response:', err);
           setError('Could not report that step back to the assistant — it may stop responding.');
