@@ -1,7 +1,8 @@
 # Builds and pushes the runtime image on a `v*` tag, natively on an arm64 runner, the public-repo twin of infra's
 # `image-build` action. Images are arm64 because the one cluster node is Arm and an emulated arm64 build hangs Bun.
-# The image tag is the BARE semver — the leading `v` is stripped — which is what infra's Helm values pin.
-# It does not scan: infra's `image-scan.yml` scans every deployed image daily.
+# The image tag is the BARE semver — the leading `v` is stripped — which is what infra's Helm values pin. It logs in
+# to Azure over OIDC from the `image` environment, the subject the service principal trusts. It does not scan: infra's
+# `image-scan.yml` scans every deployed image daily.
 name: Image
 on:
   push:
@@ -11,6 +12,8 @@ concurrency:
   cancel-in-progress: true
 jobs:
   build:
+    environment: image
+    permissions: { contents: read, id-token: write }
     runs-on: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@v7
@@ -22,7 +25,9 @@ jobs:
       - name: Azure login
         uses: azure/login@v3
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          client-id: bb547db7-2849-4c43-9f43-48c4f3cf8cb2
+          tenant-id: 987c031c-364b-4944-95da-43314e1986cf
+          subscription-id: 793584b8-3b67-4dc2-aabb-77d08417ce88
       - name: Log in to ACR
         run: az acr login --name marketrix
       - uses: docker/setup-buildx-action@v4
