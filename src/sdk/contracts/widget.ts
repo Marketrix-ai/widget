@@ -12,9 +12,7 @@ import {
   ApplicationWidgetEntitySchema,
   ApplicationWidgetPublicSchema,
   InstructionTypeSchema,
-  WidgetSettingsDataSchema,
   WidgetSettingsWriteSchema,
-  WidgetTypeSchema,
 } from './widgetSettings';
 import { WIDGET_TOOL_NAMES } from './widgetToolNames';
 
@@ -175,8 +173,6 @@ export const widgetPublicSearch = oc
   )
   .output(paginatedListOf(ApplicationWidgetPublicSchema));
 
-export const widgetDefaultGet = oc.input(z.strictObject({ type: WidgetTypeSchema })).output(WidgetSettingsDataSchema);
-
 export const widgetUpdate = oc.input(WidgetUpdateSchema).output(ApplicationWidgetEntitySchema);
 
 export const widgetDelete = oc
@@ -208,7 +204,6 @@ export const widgetRoutes = {
   widgetCreate,
   widgetSearch,
   widgetPublicSearch,
-  widgetDefaultGet,
   widgetUpdate,
   widgetDelete,
   widgetStream,
