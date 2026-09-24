@@ -1,16 +1,11 @@
 /**
- * Pure helpers for the chat message list: formatting (mode label, timestamp, `messageText`), the tenant's enabled modes
- * (`enabledModes`, `effectiveMode`), each browser tool's progress label (`toolExplanation`) and whether Show
- * mode waits for the visitor on it (`waitsForUser`), finding which message a progress or tool event belongs
- * to, and building every kind of `ChatMessage`.
- *
- * `findMessageForProgress` picks the right open message for an incoming update by a ranked set of
- * predicates, falling back to "no match" (logged, not thrown) rather than guessing wrong. The per-kind
- * constructors are the only way a `ChatMessage` is built, so ids and shape stay consistent.
- * `CHAT_FAILURE_TEXT` and the `SCREEN_ACCESS_*` pair are the one wording each site uses for those two
- * situations, so the failure text never leaks raw server error details to a visitor.
- * Show and Do read and act on the page through the DOM whatever the visitor answers, so declining screen
- * access withholds only the view of their screen.
+ * Pure helpers for the chat message list: formatting (mode label, timestamp, `messageText`), the tenant's
+ * enabled modes, each browser tool's progress label (`toolExplanation`) and Show-mode wait (`waitsForUser`),
+ * finding which message a progress event belongs to (`findMessageForProgress`, which logs rather than
+ * guesses on no match), and the per-kind constructors that are the only way a `ChatMessage` is built.
+ * `CHAT_FAILURE_TEXT` and the `SCREEN_ACCESS_*` pair are the one wording for those two situations, so a
+ * visitor never sees a raw server error. Show and Do read and act on the page through the DOM whatever the
+ * visitor answers, so declining screen access withholds only the view of their screen.
  */
 import { InstructionTypeSchema } from '../sdk/contracts/widgetSettings';
 import type { WidgetToolName } from '../services/browserTools';
