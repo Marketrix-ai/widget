@@ -1,9 +1,10 @@
 /**
  * Show mode's on-page coaching overlay: highlights one host-page element, explains the step beside it,
  * and waits for the visitor to act before the tool runs.
- * `showToolAction` mounts the overlay and settles on a click, Continue or a timeout; `cleanup` removes it and
- * rejects a pending step with `ShowModeCancelled`; `showModeService` is the singleton `BrowserToolService`
- * awaits. The overlay mounts outside the widget's shadow root, so it uses plain colours, not theme tokens.
+ * `showToolAction` mounts the overlay and settles on a click or Continue, failing once the element leaves view;
+ * `cleanup` removes it and rejects a pending step with `ShowModeCancelled`; `showModeService` is the singleton
+ * `BrowserToolService` awaits. The overlay mounts outside the widget's shadow root, so it uses plain colours,
+ * not theme tokens.
  */
 
 import { LAYER_TOKENS } from '../design-system/component-tokens';

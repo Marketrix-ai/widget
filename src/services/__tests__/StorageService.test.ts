@@ -223,3 +223,18 @@ describe('claimTabId keeps one browser tab one identity across page loads', () =
     expect(duplicate.claimTabId()).not.toBe(tabId);
   });
 });
+
+describe('claimToolCall remembers the tool calls this tab started', () => {
+  beforeEach(() => sessionStorage.clear());
+
+  it('runs a call once per page and reports one started before a reload as interrupted', async () => {
+    const page = await freshStorage();
+    expect(page.claimToolCall('tc-1')).toBe('fresh');
+    expect(page.claimToolCall('tc-1')).toBe('seen');
+
+    const reloaded = await freshStorage();
+    expect(reloaded.claimToolCall('tc-1')).toBe('interrupted');
+    expect(reloaded.claimToolCall('tc-1')).toBe('seen');
+    expect(reloaded.claimToolCall('tc-2')).toBe('fresh');
+  });
+});

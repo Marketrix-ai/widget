@@ -12,6 +12,7 @@ import { Profiler, useEffect } from 'react';
 import { useWidget } from '../../hooks/useWidget';
 import type { WidgetEvent } from '../../sdk';
 import * as chatSession from '../../services/chatSession';
+import { claimTabId, remintTabId } from '../../services/StorageService';
 import { streamClient } from '../../services/StreamClient';
 import { agentMessage, asStreamClientInternals, browserToolServiceMock, ofKind } from '../../test/fixtures';
 import { ChatHarness } from '../../test/renderWidget';
@@ -400,65 +401,43 @@ describe('tool/response carries data only when the tool call itself succeeded', 
   });
 });
 
-describe('the processed tool-call id set is trimmed only once it EXCEEDS its cap', () => {
-  it('still dedupes the earliest id at exactly 1000 distinct ids, not before', async () => {
+describe('a tool/response sent after the page reminted its tab id', () => {
+  it('answers on the tab the call arrived on, the only tab the api relays it from', async () => {
     renderCaptured(false);
-    vi.spyOn(streamClient, 'send').mockResolvedValue(undefined);
-    mockExecuteTool.mockClear();
-
-    const makeCall = (id: string): WidgetEvent => ({
-      type: 'tool/call',
-      tool_call_id: id,
-      browser_tool: 'click_element',
-      args: { index: 1 },
-      mode: 'do',
-      explanation: 'Click it',
+    const send = vi.spyOn(streamClient, 'send').mockResolvedValue(undefined);
+    const tabAtCall = claimTabId();
+    mockExecuteTool.mockImplementationOnce(async () => {
+      remintTabId();
+      return { success: true, data: {} };
     });
 
-    await act(async () => {
-      for (let i = 0; i < 1000; i++) asStreamClientInternals().handleMessage(makeCall(`trim-${i}`));
-      await advanceTimersByTimeAsync(0);
-    });
-    await waitFor(() => expect(mockExecuteTool).toHaveBeenCalledTimes(1000));
+    await dispatchClickToolCall('tc-remint');
 
-    await act(async () => {
-      asStreamClientInternals().handleMessage(makeCall('trim-0'));
-      await advanceTimersByTimeAsync(0);
-    });
-    expect(mockExecuteTool).toHaveBeenCalledTimes(1000);
+    await waitFor(() => expect(send).toHaveBeenCalled());
+    const [, route] = send.mock.calls.find(([command]) => command.type === 'tool/response') ?? [];
+    expect(route?.tabId).toBe(tabAtCall);
+    expect(claimTabId()).not.toBe(tabAtCall);
   });
 });
 
-describe('a terminal task/status clears the processed tool-call id set', () => {
-  it('lets a retransmitted tool_call_id from BEFORE the terminal status run again', async () => {
+describe('a tool/call an earlier page load of this tab already started', () => {
+  beforeEach(() => sessionStorage.clear());
+
+  it('is answered page_reloaded so the agent re-observes, never run again', async () => {
+    sessionStorage.setItem('marketrix_started_tool_calls', JSON.stringify(['tc-before-reload']));
     renderCaptured(false);
-    vi.spyOn(streamClient, 'send').mockResolvedValue(undefined);
+    const send = vi.spyOn(streamClient, 'send').mockResolvedValue(undefined);
     mockExecuteTool.mockClear();
 
-    const event: WidgetEvent = {
-      type: 'tool/call',
-      tool_call_id: 'tc-recur',
-      browser_tool: 'click_element',
-      args: { index: 1 },
-      mode: 'do',
-      explanation: 'Click it',
-    };
+    await dispatchClickToolCall('tc-before-reload');
 
-    await act(async () => {
-      asStreamClientInternals().handleMessage(event);
-      await advanceTimersByTimeAsync(0);
+    expect(await sentPayloadFor(send, 'tc-before-reload')).toEqual({
+      type: 'tool/response',
+      tool_call_id: 'tc-before-reload',
+      success: true,
+      data: JSON.stringify({ page_reloaded: true }),
     });
-    await waitFor(() => expect(mockExecuteTool).toHaveBeenCalledTimes(1));
-
-    act(() => {
-      asStreamClientInternals().handleMessage({ type: 'task/status', status: 'completed' });
-    });
-
-    await act(async () => {
-      asStreamClientInternals().handleMessage(event);
-      await advanceTimersByTimeAsync(0);
-    });
-    await waitFor(() => expect(mockExecuteTool).toHaveBeenCalledTimes(2));
+    expect(mockExecuteTool).not.toHaveBeenCalled();
   });
 });
 

@@ -95,7 +95,7 @@ export default [
       ],
       'no-restricted-globals': [
         'error',
-        { name: 'localStorage', message: 'use StorageService.readLocal/writeLocal instead of the bare global' },
+        { name: 'localStorage', message: 'use StorageService.readLocalParsed/writeLocal instead of the bare global' },
         { name: 'sessionStorage', message: 'browser storage lives in StorageService alone' },
       ],
       'no-restricted-syntax': [
