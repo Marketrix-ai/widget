@@ -2,13 +2,15 @@
  * The two context hooks every widget component reads: `useWidgetConfig` for settings, `useWidget` for the
  * store.
  * `WidgetConfigContext` publishes the resolved config and `useWidgetConfig` reads it, throwing outside a
- * provider. `useWidget` folds `UIStateContext` and `ChatContext` into one memoized `{state, actions}`, and its
- * `clearChatHistory` resets messages, task and UI error together.
+ * provider. `useWidget` folds `UIStateContext` and `ChatContext` into one memoized `{state, actions}`, with
+ * `isComposerLocked` holding every new turn while a reply is pending or a screen-access request is open, and
+ * its `clearChatHistory` resets the chat and UI error together.
  */
 
 import { createContext, useContext, useMemo } from 'react';
 
 import { useChatContext } from '../context/ChatContext';
+import { openScreenAccessRequest } from '../context/chatReducer';
 import { useUIStateContext } from '../context/UIStateContext';
 import type { ValidWidgetConfig, WidgetState } from '../types';
 
@@ -24,15 +26,16 @@ export const useWidget = () => {
   const { uiState, uiActions } = useUIStateContext();
   const { messages, taskState, chatActions } = useChatContext();
 
-  const state = useMemo<WidgetState>(
-    () => ({
+  const state = useMemo<WidgetState>(() => {
+    const isAwaitingReply = messages.some(msg => msg.kind === 'agent' && msg.isPlaceholder);
+    return {
       ...uiState,
       messages,
       isTaskRunning: taskState.phase === 'running',
-      isAwaitingReply: messages.some(msg => msg.kind === 'agent' && msg.isPlaceholder),
-    }),
-    [uiState, messages, taskState],
-  );
+      isAwaitingReply,
+      isComposerLocked: isAwaitingReply || !!openScreenAccessRequest(messages),
+    };
+  }, [uiState, messages, taskState]);
 
   const actions = useMemo(
     () => ({

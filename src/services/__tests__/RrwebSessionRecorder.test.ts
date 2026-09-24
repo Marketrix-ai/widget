@@ -1,10 +1,11 @@
 /**
  * Tests for `RrwebSessionRecorder`: a rejected flush caps the buffer without dropping the Meta/
  * FullSnapshot baseline, retries keep going even with no new events, and start/stop respect an
- * in-flight metadata post and the stream's registration.
+ * in-flight metadata post and the stream's registration, and a cleared chat moves the recording to its new thread.
  */
 import { record } from '@rrweb/record';
 import { EventType, type eventWithTime } from '@rrweb/types';
+import { waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 
 import { sdk } from '../../sdk';
@@ -181,5 +182,30 @@ describe('a recorder posting into a chat the api has not registered', () => {
     await start;
 
     expect(mockSdk.widgetMessagePost).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('a cleared chat', () => {
+  it('moves the recording to the new thread as a fresh session starting from a full snapshot', async () => {
+    const takeFullSnapshot = vi.fn();
+    Object.assign(record, { takeFullSnapshot });
+    const listen = vi.spyOn(streamClient, 'addCallbacks');
+    const { recorder } = await startRecorder();
+    const onMessage = listen.mock.calls[0]?.[0].onMessage;
+    if (!onMessage) throw new Error('expected the recorder to listen to the stream');
+    mockSdk.widgetMessagePost.mockResolvedValue({ success: true });
+
+    onMessage({ type: 'registered', chat_id: 'chat-2' });
+    await waitFor(() => expect(takeFullSnapshot).toHaveBeenCalledTimes(1));
+
+    const metadata = mockSdk.widgetMessagePost.mock.calls
+      .map(([input]) => input)
+      .filter(input => input.command.type === 'rrweb/metadata');
+    expect(metadata.map(input => input.chat_id)).toEqual(['chat-1', 'chat-2']);
+    const [first, second] = metadata.map(
+      input => input.command.type === 'rrweb/metadata' && input.command.rrweb_session_id,
+    );
+    expect(second).not.toBe(first);
+    recorder.stop();
   });
 });

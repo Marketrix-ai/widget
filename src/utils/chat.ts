@@ -1,6 +1,7 @@
 /**
- * Pure helpers for the chat message list: formatting (mode label, timestamp), finding which message a
- * progress or tool event belongs to, and building every kind of `ChatMessage`.
+ * Pure helpers for the chat message list: formatting (mode label, timestamp), the tenant's enabled modes
+ * (`enabledModes`, `effectiveMode`), finding which message a progress or tool event belongs to, and building
+ * every kind of `ChatMessage`.
  *
  * `findMessageForProgress` picks the right open message for an incoming update by a ranked set of
  * predicates, falling back to "no match" (logged, not thrown) rather than guessing wrong. The per-kind
@@ -8,11 +9,23 @@
  * `CHAT_FAILURE_TEXT` and `SCREEN_ACCESS_PROMPT` are the one wording each site uses for those two
  * situations, so the failure text never leaks raw server error details to a visitor.
  */
+import { InstructionTypeSchema } from '../sdk/contracts/widgetSettings';
 import type { WidgetToolName } from '../services/BrowserToolService';
-import type { AgentMessage, ChatMessage, InstructionType, MessagePart } from '../types';
+import type { AgentMessage, ChatMessage, InstructionType, MessagePart, WidgetSettingsData } from '../types';
 import { logWarn } from './log';
+import { randomId } from './randomId';
 
 export const MODE_LABELS: Record<InstructionType, string> = { show: 'Show', tell: 'Tell', do: 'Do' };
+
+type ModeFlags = Pick<WidgetSettingsData, `widget_feature_${InstructionType}`>;
+
+export const enabledModes = (flags: ModeFlags): InstructionType[] =>
+  InstructionTypeSchema.options.filter(mode => flags[`widget_feature_${mode}`]);
+
+export function effectiveMode(flags: ModeFlags, mode: InstructionType): InstructionType {
+  const modes = enabledModes(flags);
+  return modes.includes(mode) ? mode : (modes[0] ?? mode);
+}
 
 export const formatMessageTime = (date: Date): string =>
   date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -99,7 +112,7 @@ export function markProgressLineFailed(
 }
 
 const newMessage = (kind: ChatMessage['kind'], content: string) => ({
-  id: `${kind}-${globalThis.crypto.randomUUID()}`,
+  id: `${kind}-${randomId()}`,
   timestamp: new Date(),
   parts: content ? [{ type: 'text' as const, content }] : [],
 });

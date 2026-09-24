@@ -2,11 +2,13 @@
  * Singleton SSE transport between the widget and the api, exported as `streamClient`.
  * `setCredentials` holds the stream's credentials, `send` posts a command via `widgetMessagePost`, `ready`
  * connects and waits for registration, and `canReconnect`/`reconnectNow` back Retry; `StreamGaveUpError`
- * marks a stream that exhausted its reconnects. Each tab dials with its own tab id so the api keys the SSE
- * stream per tab, and backoff is jittered so tabs across a shared outage don't redial together.
+ * marks a stream that exhausted its reconnects. Each browser tab dials with its own tab id, kept across
+ * page loads, so the api keys the SSE stream per tab and routes a running task's tool calls back to it; backoff
+ * is jittered so tabs across a shared outage don't redial together.
  */
 import { sdk, type WidgetCommand, type WidgetEvent } from '../sdk';
 import { logWarn } from '../utils/log';
+import { claimTabId } from './StorageService';
 
 type StreamStatus = 'disconnected' | 'connecting' | 'open' | 'registered' | 'error';
 
@@ -35,7 +37,7 @@ class StreamClient {
   private reconnectAttempts = 0;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private connectionId = 0;
-  private readonly tabId = globalThis.crypto.randomUUID();
+  private tabId: string | null = null;
   private registrationWaiters = new Set<{ resolve: () => void; reject: (error: Error) => void }>();
 
   setCredentials(credentials: StreamCredentials): void {
@@ -101,7 +103,7 @@ class StreamClient {
     const signal = this.abortController.signal;
 
     try {
-      const iterator = await sdk.widgetStream({ chat_id: chatId, tab_id: this.tabId, ...credentials }, { signal });
+      const iterator = await sdk.widgetStream({ chat_id: chatId, tab_id: this.tab(), ...credentials }, { signal });
 
       this.status = 'open';
 
@@ -154,7 +156,12 @@ class StreamClient {
     if (!chatId) {
       return Promise.reject(new Error('No active chat'));
     }
-    return sdk.widgetMessagePost({ chat_id: chatId, tab_id: this.tabId, command }).then(() => {});
+    return sdk.widgetMessagePost({ chat_id: chatId, tab_id: this.tab(), command }).then(() => {});
+  }
+
+  private tab(): string {
+    this.tabId ??= claimTabId();
+    return this.tabId;
   }
 
   private notifyError(error: Error): void {

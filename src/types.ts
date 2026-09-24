@@ -47,9 +47,11 @@ export type WidgetView = (typeof WIDGET_VIEWS)[number];
 export interface WidgetState {
   isOpen: boolean;
   isAwaitingReply: boolean;
+  isComposerLocked: boolean;
   messages: ChatMessage[];
   currentMode: InstructionType;
   error?: string | undefined;
+  canRetry: boolean;
   isTaskRunning: boolean;
   activeView: WidgetView;
 }
