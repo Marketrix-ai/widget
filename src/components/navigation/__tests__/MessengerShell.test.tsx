@@ -104,7 +104,7 @@ describe('closing the panel restores focus to what held it before', () => {
     vi.spyOn(chatSession, 'getOrCreateChatId').mockResolvedValue('chat-shell');
     vi.spyOn(streamClient, 'connect').mockResolvedValue();
     renderWidget({ mtxId: `tenant-${(tenantCount += 1)}` }, { previewMode: false });
-    const launcher = screen.getByRole('button', { name: 'Open' });
+    const launcher = screen.getByRole('button', { name: 'Open chat' });
     launcher.focus();
 
     openWidget();

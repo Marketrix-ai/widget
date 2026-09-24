@@ -2,10 +2,9 @@
  * `WidgetFab` — the launcher button: draggable, positioned at the configured corner, glowing while a
  * reply or task is in flight, and showing a stop control while a task runs and the panel is closed.
  *
- * `useLauncherAnchor` tracks the launcher's size and the viewport to place it in pixels while dragging.
- * `useDragSnap` wires the pointer handlers that let a visitor drag the launcher, hands the release to
- * `getReleaseCorner` and `animateSnap`, and reports the committed corner once the snap lands. Preview
- * mode disables dragging.
+ * `useDragSnap` tracks the launcher's size and the viewport to place it in pixels while dragging, wires the
+ * pointer handlers, hands the release to `getReleaseCorner` and `animateSnap`, and reports the committed
+ * corner once the snap lands. Preview mode disables dragging.
  */
 import React, { useCallback, useLayoutEffect, useRef, useState } from 'react';
 
@@ -32,28 +31,39 @@ const DRAG_THRESHOLD_PX = 5;
 const VELOCITY_SAMPLE_INTERVAL_MS = 10;
 const VELOCITY_HISTORY_SIZE = 6;
 
-interface UseDragSnapOptions {
-  position: WidgetPosition;
-  onPositionCommit: (position: WidgetPosition) => void;
-  isPreviewMode: boolean;
-  wrapperRef: React.RefObject<HTMLDivElement | null>;
-}
-
-interface UseDragSnapResult {
-  isDragging: boolean;
-  pixelPositionStyle: { left: number; top: number } | undefined;
-  onPointerDown: (event: React.PointerEvent<HTMLButtonElement>) => void;
-  onPointerMove: (event: React.PointerEvent<HTMLButtonElement>) => void;
-  onPointerUp: (event: React.PointerEvent<HTMLButtonElement>) => void;
-  onPointerCancel: (event: React.PointerEvent<HTMLButtonElement>) => void;
-  suppressUntilRef: React.RefObject<number>;
-}
-
-function useLauncherAnchor(
+function useDragSnap(
   position: WidgetPosition,
+  onPositionCommit: (position: WidgetPosition) => void,
   isPreviewMode: boolean,
   wrapperRef: React.RefObject<HTMLDivElement | null>,
 ) {
+  const [isDragging, setIsDragging] = useState(false);
+  const abandonSnapRef = useRef<(() => void) | null>(null);
+  const dragRef = useRef<{
+    pointerId: number;
+    startX: number;
+    startY: number;
+    dragging: boolean;
+    lastX: number;
+    lastY: number;
+    samples: PointerSample[];
+  } | null>(null);
+  const rafRef = useRef<number | null>(null);
+  const suppressUntilRef = useRef(0);
+
+  const cancelRaf = () => {
+    if (rafRef.current !== null) window.cancelAnimationFrame(rafRef.current);
+    rafRef.current = null;
+  };
+
+  React.useEffect(
+    () => () => {
+      cancelRaf();
+      abandonSnapRef.current?.();
+    },
+    [],
+  );
+
   const [wrapperSize, setWrapperSize] = useState({ w: 56, h: 56 });
   const [, setViewportTick] = useState(0);
 
@@ -82,41 +92,8 @@ function useLauncherAnchor(
 
   const vw = window.innerWidth;
   const vh = window.innerHeight;
-  return {
-    anchorOf: (corner: WidgetPosition) => getAnchorTopLeft(corner, vw, vh, wrapperSize.w, wrapperSize.h),
-    pixelPositioned: !isPreviewMode && vw > 0 && vh > 0,
-  };
-}
-
-function useDragSnap({ position, onPositionCommit, isPreviewMode, wrapperRef }: UseDragSnapOptions): UseDragSnapResult {
-  const [isDragging, setIsDragging] = useState(false);
-  const abandonSnapRef = useRef<(() => void) | null>(null);
-  const dragRef = useRef<{
-    pointerId: number;
-    startX: number;
-    startY: number;
-    dragging: boolean;
-    lastX: number;
-    lastY: number;
-    samples: PointerSample[];
-  } | null>(null);
-  const rafRef = useRef<number | null>(null);
-  const suppressUntilRef = useRef(0);
-
-  const cancelRaf = () => {
-    if (rafRef.current !== null) window.cancelAnimationFrame(rafRef.current);
-    rafRef.current = null;
-  };
-
-  React.useEffect(
-    () => () => {
-      cancelRaf();
-      abandonSnapRef.current?.();
-    },
-    [],
-  );
-
-  const { anchorOf, pixelPositioned } = useLauncherAnchor(position, isPreviewMode, wrapperRef);
+  const anchorOf = (corner: WidgetPosition) => getAnchorTopLeft(corner, vw, vh, wrapperSize.w, wrapperSize.h);
+  const pixelPositioned = !isPreviewMode && vw > 0 && vh > 0;
   const anchor = anchorOf(position);
   const pixelPositionStyle = pixelPositioned ? { left: anchor.x, top: anchor.y } : undefined;
 
@@ -144,6 +121,7 @@ function useDragSnap({ position, onPositionCommit, isPreviewMode, wrapperRef }: 
   };
 
   const onPointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
+    if (isPreviewMode) return;
     dragRef.current = {
       pointerId: event.pointerId,
       startX: event.clientX,
@@ -284,7 +262,7 @@ export const WidgetFab: React.FC<WidgetFabProps> = ({ onPositionCommit }) => {
     onPointerUp,
     onPointerCancel,
     suppressUntilRef,
-  } = useDragSnap({ position, onPositionCommit, isPreviewMode, wrapperRef });
+  } = useDragSnap(position, onPositionCommit, isPreviewMode, wrapperRef);
 
   return (
     <Surface
@@ -331,8 +309,8 @@ export const WidgetFab: React.FC<WidgetFabProps> = ({ onPositionCommit }) => {
             userSelect: 'none',
             WebkitUserSelect: 'none',
           }}
-          aria-label={open ? 'Close' : 'Open'}
-          aria-live='polite'
+          aria-label={open ? 'Close chat' : 'Open chat'}
+          aria-expanded={open}
         >
           <Flex className='mtx-fab-center'>
             <Surface

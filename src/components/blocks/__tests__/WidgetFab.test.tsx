@@ -1,7 +1,7 @@
 /**
  * Launcher drag tests, driven through the mounted widget: with two snaps in flight it commits the corner
  * the widget is animating to; a drop writes the position key once and a later mount reads the same
- * corner back; a viewport resize mid-drag re-derives the launcher anchor. `mountLauncher` is the shared
+ * corner back; a viewport resize mid-drag re-derives the launcher anchor; the dashboard preview never drags. `mountLauncher` is the shared
  * setup. The Stop case checks that Stop on the closed launcher cancels a Show step still waiting on the
  * visitor, so a later page click neither runs the stopped tool nor answers it.
  */
@@ -23,7 +23,7 @@ const mountLauncher = async (mtxId: string) => {
   const connect = vi.spyOn(streamClient, 'connect').mockResolvedValue();
   const { container } = renderWidget({ mtxId }, { previewMode: false });
   await waitFor(() => expect(connect).toHaveBeenCalled());
-  const trigger = screen.getByRole('button', { name: 'Open' });
+  const trigger = screen.getByRole('button', { name: 'Open chat' });
   trigger.setPointerCapture = () => {};
   trigger.releasePointerCapture = () => {};
   const anchor = container.querySelector<HTMLElement>('.mtx-fab-anchor');
@@ -92,6 +92,21 @@ describe('dragging the launcher', () => {
     act(() => resizeListeners.forEach(listener => (listener as () => void)()));
 
     expect(anchor.style.left).not.toBe(before);
+  });
+});
+
+describe('the dashboard preview launcher', () => {
+  afterEach(() => {
+    cleanup();
+    resetDom();
+  });
+
+  it('does not drag', () => {
+    const { container } = renderWidget();
+    const trigger = screen.getByRole('button', { name: 'Open chat' });
+    trigger.setPointerCapture = () => {};
+    dragStart(trigger, 40, 40);
+    expect(container.querySelector('.mtx-fab-anchor')?.getAttribute('data-animated')).toBe('true');
   });
 });
 
