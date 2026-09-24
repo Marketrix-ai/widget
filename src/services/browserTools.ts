@@ -235,7 +235,9 @@ async function getScreenshot(): Promise<ToolExecutionResult> {
 }
 
 const TOOLS: {
-  [K in WidgetToolName]: (args: ToolArgMap[K]) => ToolExecutionResult<WidgetToolResult> | Promise<ToolExecutionResult<WidgetToolResult>>;
+  [K in WidgetToolName]: (
+    args: ToolArgMap[K],
+  ) => ToolExecutionResult<WidgetToolResult> | Promise<ToolExecutionResult<WidgetToolResult>>;
 } = {
   navigate,
   search,
@@ -261,8 +263,9 @@ export async function executeTool<K extends WidgetToolName>(
   mode: InstructionType,
   explanation?: string,
 ): Promise<ToolExecutionResult<WidgetToolResult>> {
-  const run: (args: ToolArgs<K>) => ToolExecutionResult<WidgetToolResult> | Promise<ToolExecutionResult<WidgetToolResult>> =
-    TOOLS[browserToolName];
+  const run: (
+    args: ToolArgs<K>,
+  ) => ToolExecutionResult<WidgetToolResult> | Promise<ToolExecutionResult<WidgetToolResult>> = TOOLS[browserToolName];
   try {
     if (mode === 'show' && waitsForUser(browserToolName) && 'index' in args) {
       await showModeService.showToolAction({
