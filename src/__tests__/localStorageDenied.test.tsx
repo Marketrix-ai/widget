@@ -5,7 +5,7 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 
-import * as chatSession from '../services/chatSession';
+import * as chatThread from '../services/chatThread';
 import { scopeStorageTo } from '../services/StorageService';
 import { streamClient } from '../services/StreamClient';
 import { openChatTab, openWidget, renderWidget } from '../test/renderWidget';
@@ -21,7 +21,7 @@ describe('a host page that denies localStorage outright', () => {
       throw new Error('SecurityError: storage is disabled');
     });
     warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    vi.spyOn(chatSession, 'getOrCreateChatId').mockResolvedValue('chat-1');
+    vi.spyOn(chatThread, 'getOrCreateChatId').mockResolvedValue('chat-1');
     vi.spyOn(streamClient, 'connect').mockResolvedValue();
     vi.spyOn(streamClient, 'ready').mockResolvedValue();
     vi.spyOn(streamClient, 'send').mockResolvedValue();

@@ -9,7 +9,7 @@ import { act, cleanup, fireEvent, screen, waitFor } from '@testing-library/react
 import { afterEach, describe, expect, it, vi } from 'bun:test';
 
 import { WidgetSettingsDataSchema } from '../../../sdk/contracts/widgetSettings';
-import * as chatSession from '../../../services/chatSession';
+import * as chatThread from '../../../services/chatThread';
 import { domService } from '../../../services/DomService';
 import { ShowModeCancelled, showModeService } from '../../../services/ShowModeService';
 import { readLocalParsed, scopedKey } from '../../../services/StorageService';
@@ -19,7 +19,7 @@ import { resetDom } from '../../../test/preload';
 import { renderWidget } from '../../../test/renderWidget';
 
 const mountLauncher = async (mtxId: string) => {
-  vi.spyOn(chatSession, 'getOrCreateChatId').mockResolvedValue(`chat-${mtxId}`);
+  vi.spyOn(chatThread, 'getOrCreateChatId').mockResolvedValue(`chat-${mtxId}`);
   const connect = vi.spyOn(streamClient, 'connect').mockResolvedValue();
   const { container } = renderWidget({ mtxId }, { previewMode: false });
   await waitFor(() => expect(connect).toHaveBeenCalled());
@@ -136,7 +136,7 @@ describe('Stop on the closed launcher while a Show step waits on the visitor', (
     target.addEventListener('click', () => clicks++);
     domService.reindexAndSnapshot();
 
-    vi.spyOn(chatSession, 'getOrCreateChatId').mockResolvedValue('chat-stop');
+    vi.spyOn(chatThread, 'getOrCreateChatId').mockResolvedValue('chat-stop');
     const connect = vi.spyOn(streamClient, 'connect').mockResolvedValue();
     const send = vi.spyOn(streamClient, 'send').mockResolvedValue();
     const staged = vi.spyOn(showModeService, 'showToolAction');

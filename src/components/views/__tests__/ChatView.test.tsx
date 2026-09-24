@@ -11,7 +11,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-libra
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 
 import { useChatContext } from '../../../context/ChatContext';
-import * as chatSession from '../../../services/chatSession';
+import * as chatThread from '../../../services/chatThread';
 import * as ScreenShareService from '../../../services/ScreenShareService';
 import { scopeStorageTo } from '../../../services/StorageService';
 import { streamClient } from '../../../services/StreamClient';
@@ -69,7 +69,7 @@ describe('a send while the stream is down', () => {
   });
 
   it('restores the composed text to the composer instead of dropping it, so a resend is one tap away', async () => {
-    vi.spyOn(chatSession, 'getOrCreateChatId').mockResolvedValue('chat-1');
+    vi.spyOn(chatThread, 'getOrCreateChatId').mockResolvedValue('chat-1');
     vi.spyOn(streamClient, 'connect').mockResolvedValue();
     vi.spyOn(streamClient, 'ready').mockResolvedValue();
     vi.spyOn(streamClient, 'send').mockRejectedValue(new Error('offline'));
@@ -88,7 +88,7 @@ describe('a send while the stream is down', () => {
   });
 
   it('never overwrites text the visitor already started typing while the failed send was in flight', async () => {
-    vi.spyOn(chatSession, 'getOrCreateChatId').mockResolvedValue('chat-1');
+    vi.spyOn(chatThread, 'getOrCreateChatId').mockResolvedValue('chat-1');
     vi.spyOn(streamClient, 'connect').mockResolvedValue();
     vi.spyOn(streamClient, 'ready').mockResolvedValue();
     vi.spyOn(streamClient, 'send').mockRejectedValue(new Error('offline'));
@@ -200,7 +200,7 @@ describe('a mode the tenant disabled', () => {
   });
 
   const liveChat = async (mtxId: string, overrides: Parameters<typeof renderWidget>[0]) => {
-    vi.spyOn(chatSession, 'getOrCreateChatId').mockResolvedValue('chat-1');
+    vi.spyOn(chatThread, 'getOrCreateChatId').mockResolvedValue('chat-1');
     vi.spyOn(streamClient, 'connect').mockResolvedValue();
     vi.spyOn(streamClient, 'ready').mockResolvedValue();
     vi.spyOn(streamClient, 'send').mockResolvedValue();
@@ -240,7 +240,7 @@ describe('clearing the chat', () => {
 
   it('stops the reply in flight and opens a new chat thread, so the agent forgets the cleared turns', async () => {
     const chatIds = ['chat-1', 'chat-2'];
-    vi.spyOn(chatSession, 'getOrCreateChatId').mockImplementation(() => Promise.resolve(chatIds[0] ?? 'none'));
+    vi.spyOn(chatThread, 'getOrCreateChatId').mockImplementation(() => Promise.resolve(chatIds[0] ?? 'none'));
     vi.spyOn(streamClient, 'connect').mockResolvedValue();
     vi.spyOn(streamClient, 'ready').mockResolvedValue();
     vi.spyOn(streamClient, 'send').mockResolvedValue();
@@ -287,7 +287,7 @@ describe('a turn the api refuses as forbidden', () => {
   });
 
   it("shows the api's reason instead of the generic failure text", async () => {
-    vi.spyOn(chatSession, 'getOrCreateChatId').mockResolvedValue('chat-1');
+    vi.spyOn(chatThread, 'getOrCreateChatId').mockResolvedValue('chat-1');
     vi.spyOn(streamClient, 'connect').mockResolvedValue();
     vi.spyOn(streamClient, 'ready').mockResolvedValue();
     vi.spyOn(streamClient, 'send').mockRejectedValue(

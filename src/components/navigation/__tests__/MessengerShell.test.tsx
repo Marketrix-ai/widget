@@ -8,7 +8,7 @@
 import { act, cleanup, fireEvent, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'bun:test';
 
-import * as chatSession from '../../../services/chatSession';
+import * as chatThread from '../../../services/chatThread';
 import { readChatSnapshot, writeChatSnapshot } from '../../../services/StorageService';
 import { streamClient } from '../../../services/StreamClient';
 import type { getMockWidgetConfig } from '../../../test/fixtures';
@@ -22,7 +22,7 @@ Object.defineProperty(HTMLElement.prototype, 'offsetParent', { configurable: tru
 let tenantCount = 0;
 
 const openPanel = (overrides: Parameters<typeof getMockWidgetConfig>[0] = {}) => {
-  vi.spyOn(chatSession, 'getOrCreateChatId').mockResolvedValue('chat-shell');
+  vi.spyOn(chatThread, 'getOrCreateChatId').mockResolvedValue('chat-shell');
   vi.spyOn(streamClient, 'connect').mockResolvedValue();
   const view = renderWidget({ mtxId: `tenant-${(tenantCount += 1)}`, ...overrides }, { previewMode: false });
   openWidget();
@@ -101,7 +101,7 @@ describe('Tab cycles inside the open panel', () => {
 
 describe('closing the panel restores focus to what held it before', () => {
   it('returns focus to the launcher once the panel closes', () => {
-    vi.spyOn(chatSession, 'getOrCreateChatId').mockResolvedValue('chat-shell');
+    vi.spyOn(chatThread, 'getOrCreateChatId').mockResolvedValue('chat-shell');
     vi.spyOn(streamClient, 'connect').mockResolvedValue();
     renderWidget({ mtxId: `tenant-${(tenantCount += 1)}` }, { previewMode: false });
     const launcher = screen.getByRole('button', { name: 'Open chat' });

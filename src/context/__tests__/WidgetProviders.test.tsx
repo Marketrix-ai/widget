@@ -8,7 +8,7 @@ import { afterEach, describe, expect, it, vi } from 'bun:test';
 import React from 'react';
 
 import { useWidget } from '../../hooks/useWidget';
-import * as chatSession from '../../services/chatSession';
+import * as chatThread from '../../services/chatThread';
 import * as StorageService from '../../services/StorageService';
 import { streamClient } from '../../services/StreamClient';
 import { agentMessage, flushMicrotasks, getMockWidgetConfig } from '../../test/fixtures';
@@ -31,7 +31,7 @@ afterEach(() => {
 describe('WidgetProviders initialization', () => {
   it('does no initialization work when an async StrictMode effect has been cleaned up', async () => {
     let resolveChatId!: (chatId: string) => void;
-    vi.spyOn(chatSession, 'getOrCreateChatId').mockReturnValue(
+    vi.spyOn(chatThread, 'getOrCreateChatId').mockReturnValue(
       new Promise(resolve => {
         resolveChatId = resolve;
       }),
@@ -65,7 +65,7 @@ describe('WidgetProviders initialization', () => {
         }),
       ],
     });
-    vi.spyOn(chatSession, 'getOrCreateChatId').mockResolvedValue('chat-1');
+    vi.spyOn(chatThread, 'getOrCreateChatId').mockResolvedValue('chat-1');
     const connect = vi.spyOn(streamClient, 'connect').mockResolvedValue();
 
     const first = render(
@@ -86,7 +86,7 @@ describe('WidgetProviders initialization', () => {
   });
 
   it('starts with no task running, whatever a previous page left on disk', async () => {
-    vi.spyOn(chatSession, 'getOrCreateChatId').mockResolvedValue('chat-1');
+    vi.spyOn(chatThread, 'getOrCreateChatId').mockResolvedValue('chat-1');
     const connect = vi.spyOn(streamClient, 'connect').mockResolvedValue();
     vi.spyOn(StorageService, 'readChatSnapshot').mockReturnValue({
       messages: [],
@@ -106,11 +106,11 @@ describe('WidgetProviders initialization', () => {
   });
 
   it.each([
-    ['minting the chat id', () => vi.spyOn(chatSession, 'getOrCreateChatId').mockRejectedValue(new Error('down'))],
+    ['minting the chat id', () => vi.spyOn(chatThread, 'getOrCreateChatId').mockRejectedValue(new Error('down'))],
     [
       'dialing the stream without credentials',
       () => {
-        vi.spyOn(chatSession, 'getOrCreateChatId').mockResolvedValue('chat-1');
+        vi.spyOn(chatThread, 'getOrCreateChatId').mockResolvedValue('chat-1');
         vi.spyOn(streamClient, 'connect').mockRejectedValue(new Error('down'));
       },
     ],

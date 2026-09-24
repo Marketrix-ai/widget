@@ -19,7 +19,7 @@ import { WidgetProviders } from './context/WidgetProviders';
 import type { NotificationTone } from './design-system/component-tokens';
 import shadowStyles from './index.css?inline';
 import { configureSdk } from './sdk';
-import { getOrCreateChatId } from './services/chatSession';
+import { getOrCreateChatId } from './services/chatThread';
 import { RrwebSessionRecorder } from './services/RrwebSessionRecorder';
 import { stopScreenShare } from './services/ScreenShareService';
 import { showModeService } from './services/ShowModeService';

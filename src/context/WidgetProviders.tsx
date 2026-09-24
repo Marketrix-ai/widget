@@ -11,7 +11,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
 import { useWidgetConfig, WidgetConfigContext } from '../hooks/useWidget';
-import { getOrCreateChatId } from '../services/chatSession';
+import { getOrCreateChatId } from '../services/chatThread';
 import { readChatSnapshot, writeChatSnapshot } from '../services/StorageService';
 import { streamClient } from '../services/StreamClient';
 import type { ValidWidgetConfig } from '../types';

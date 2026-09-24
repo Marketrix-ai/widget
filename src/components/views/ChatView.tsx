@@ -20,7 +20,7 @@ import { MessageList } from '../chat/MessageList';
 const MODE_ICONS: Record<InstructionType, ChatInputMode['icon']> = {
   tell: 'chatBubble',
   show: 'mousePointerClick',
-  do: 'ticktick',
+  do: 'checkArc',
 };
 
 export const ChatView: React.FC<{ messageInputRef: React.RefObject<HTMLTextAreaElement | null> }> = ({

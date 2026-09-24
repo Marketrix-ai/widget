@@ -6,7 +6,7 @@
 import { act, fireEvent, screen } from '@testing-library/react';
 
 import { WidgetProviders } from '../../context/WidgetProviders';
-import * as chatSession from '../../services/chatSession';
+import * as chatThread from '../../services/chatThread';
 import { streamClient } from '../../services/StreamClient';
 import { getMockWidgetConfig } from '../../test/fixtures';
 import { openChatTab, openWidget, renderWidget } from '../../test/renderWidget';
@@ -56,7 +56,7 @@ describe('Widget smoke', () => {
   });
 
   it('times the greeting out even while the root keeps re-rendering', async () => {
-    vi.spyOn(chatSession, 'getOrCreateChatId').mockResolvedValue('chat-greeting');
+    vi.spyOn(chatThread, 'getOrCreateChatId').mockResolvedValue('chat-greeting');
     vi.spyOn(streamClient, 'connect').mockResolvedValue();
     vi.useFakeTimers();
     const config = getMockWidgetConfig({ isPreviewMode: false, widget_greeting: 'Hello there' });

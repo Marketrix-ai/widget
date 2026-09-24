@@ -13,7 +13,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useR
 import { useWidgetConfig } from '../hooks/useWidget';
 import type { WidgetEvent } from '../sdk';
 import { executeTool } from '../services/browserTools';
-import { getOrCreateChatId } from '../services/chatSession';
+import { getOrCreateChatId } from '../services/chatThread';
 import { activeScreenStream, startScreenShare, subscribeScreenShare } from '../services/ScreenShareService';
 import { showModeService } from '../services/ShowModeService';
 import { claimToolCall, forgetChatId } from '../services/StorageService';
