@@ -1,12 +1,15 @@
-# Repository-local CI for pull requests and pushes to `main`: bun, `bun install --frozen-lockfile`, then
-# `bun run ci`, which is the whole validation gate. This public repository cannot call the private infra
-# repository's reusable workflows, so the gate is duplicated here rather than shared.
+# Repository-local CI: bun, `bun install --frozen-lockfile`, then on a pull request `bun run ci`, the whole
+# validation gate, and on a push to `main` only `bun run build`, which is all the deploy gate reads. Markdown-only
+# changes skip it. This public repository cannot call the private infra repository's reusable workflows, so infra's
+# Node gate is mirrored here.
 name: CI
 on:
   push:
     branches: [main]
+    paths-ignore: ['**.md']
   pull_request:
     branches: [main]
+    paths-ignore: ['**.md']
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -22,5 +25,6 @@ jobs:
         with:
           path: ~/.bun/install/cache
           key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: ${{ runner.os }}-bun-
       - run: bun install --frozen-lockfile
-      - run: bun run ci
+      - run: bun run ${{ github.event_name == 'pull_request' && 'ci' || 'build' }}
