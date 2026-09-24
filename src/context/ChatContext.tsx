@@ -7,7 +7,8 @@
  * history too. The stream handlers run browser tools and reply with results; preview mode answers locally.
  * The api resends an unanswered `tool/call` on every re-register, so a call already started in this tab never
  * runs twice: one an earlier page load started is answered `page_reloaded` so the agent re-observes the page.
- * A turn the api refuses as forbidden (a mode switched off since the page loaded) shows the api's own message.
+ * A turn the api refuses as forbidden (a mode switched off since the page loaded) shows the api's own message,
+ * except a paid-plan refusal: that copy is for the tenant, so the visitor sees the generic failure.
  */
 import { ORPCError } from '@orpc/client';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
@@ -132,9 +133,10 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return true;
       } catch (error) {
         const refused = error instanceof ORPCError && error.code === 'FORBIDDEN';
+        const tenantOnly = refused && (error.data as { reason?: unknown } | undefined)?.reason === 'paid_plan_required';
         if (refused) logWarn(`[ChatContext] The api refused the turn: ${error.message}`);
         else console.error('Failed to send message:', error);
-        commit(s => reduceError(s, placeholder.id, refused ? error.message : CHAT_FAILURE_TEXT));
+        commit(s => reduceError(s, placeholder.id, refused && !tenantOnly ? error.message : CHAT_FAILURE_TEXT));
         return false;
       }
     },
