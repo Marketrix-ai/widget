@@ -2,7 +2,7 @@
  * Messenger panel tests, driven through the mounted widget: Escape and Tab are trapped inside the open
  * panel and focus returns to the host page when it closes; the panel's starting size follows the
  * dashboard settings; the grip drag-resizes from each pinned corner, and the keyboard arm reaches the
- * same clamp bounds as a drag. jsdom does no layout, so `offsetParent` is stubbed to make
+ * same clamp bounds as a drag while announcing its value. jsdom does no layout, so `offsetParent` is stubbed to make
  * `focusablesIn`'s visibility filter see a tab order.
  */
 import { act, cleanup, fireEvent, screen } from '@testing-library/react';
@@ -203,6 +203,14 @@ describe('the keyboard resize arm reaches the same clampSize path as a drag', ()
 
   it('clamps to the same MIN_WIDTH a drag clamps to', () => {
     expect(keyResize('ArrowLeft', 20).width).toBe('280px');
+  });
+
+  it('announces the width it resizes as the separator value', () => {
+    const { grip } = openPanel({ widget_width: '400px', widget_height: '500px' });
+    fireEvent.keyDown(grip, { key: 'ArrowRight' });
+    expect(grip).toHaveAttribute('aria-valuenow', '416');
+    expect(grip).toHaveAttribute('aria-valuetext', '416 by 500 pixels');
+    expect(grip).toHaveAttribute('aria-orientation', 'vertical');
   });
 
   it('ignores a key that is not one of the four resize arrows', () => {
