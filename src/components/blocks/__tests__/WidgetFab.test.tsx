@@ -1,106 +1,97 @@
 /**
- * `useDragSnap` tests: with two snaps in flight it commits the corner the widget is animating to; a drop
- * writes the position key once and a later mount reads the same corner back; a viewport resize
- * re-derives the launcher anchor. `renderDragSnap` is the shared setup, a measured 56x56 wrapper at the
- * bottom-right corner. The resting-anchor and Stop cases render the whole widget: Stop on the closed
- * launcher must cancel a Show step still waiting on the visitor, so a later page click neither runs the
- * stopped tool nor answers it.
+ * Launcher drag tests, driven through the mounted widget: with two snaps in flight it commits the corner
+ * the widget is animating to; a drop writes the position key once and a later mount reads the same
+ * corner back; a viewport resize mid-drag re-derives the launcher anchor. `mountLauncher` is the shared
+ * setup. The Stop case checks that Stop on the closed launcher cancels a Show step still waiting on the
+ * visitor, so a later page click neither runs the stopped tool nor answers it.
  */
-import { act, fireEvent, renderHook, screen, waitFor } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
-import { createRef } from 'react';
+import { act, cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'bun:test';
 
 import { WidgetSettingsDataSchema } from '../../../sdk/contracts/widgetSettings';
 import * as chatSession from '../../../services/chatSession';
 import { domService } from '../../../services/DomService';
 import { ShowModeCancelled, showModeService } from '../../../services/ShowModeService';
-import { readLocalParsed, scopedKey, writeLocal } from '../../../services/StorageService';
+import { readLocalParsed, scopedKey } from '../../../services/StorageService';
 import { streamClient } from '../../../services/StreamClient';
 import { asStreamClientInternals } from '../../../test/fixtures';
 import { resetDom } from '../../../test/preload';
 import { renderWidget } from '../../../test/renderWidget';
-import type { WidgetPosition } from '../../../types';
-import { useDragSnap } from '../WidgetFab';
 
-const wrapperFor = () => {
-  const el = document.createElement('div');
-  Object.defineProperty(el, 'offsetWidth', { value: 56, configurable: true });
-  Object.defineProperty(el, 'offsetHeight', { value: 56, configurable: true });
-  document.body.appendChild(el);
-  return el;
+const mountLauncher = async (mtxId: string) => {
+  vi.spyOn(chatSession, 'getOrCreateChatId').mockResolvedValue(`chat-${mtxId}`);
+  const connect = vi.spyOn(streamClient, 'connect').mockResolvedValue();
+  const { container } = renderWidget({ mtxId }, { previewMode: false });
+  await waitFor(() => expect(connect).toHaveBeenCalled());
+  const trigger = screen.getByRole('button', { name: 'Open' });
+  trigger.setPointerCapture = () => {};
+  trigger.releasePointerCapture = () => {};
+  const anchor = container.querySelector<HTMLElement>('.mtx-fab-anchor');
+  if (!anchor) throw new Error('launcher anchor not rendered');
+  return { trigger, anchor };
 };
 
-const dragTo = (handlers: ReturnType<typeof useDragSnap>, x: number, y: number) => {
-  const base = { pointerId: 1, currentTarget: { setPointerCapture: () => {}, releasePointerCapture: () => {} } };
-  act(() => handlers.onPointerDown({ ...base, clientX: 0, clientY: 0 } as never));
-  act(() => handlers.onPointerMove({ ...base, clientX: x, clientY: y } as never));
-  act(() => handlers.onPointerUp({ ...base, clientX: x, clientY: y } as never));
+const pinnedEdges = (anchor: HTMLElement) =>
+  (['top', 'bottom', 'left', 'right'] as const).filter(edge => anchor.style[edge] !== '').sort();
+
+const dragStart = (trigger: HTMLElement, x: number, y: number) => {
+  fireEvent.pointerDown(trigger, { pointerId: 1, clientX: 0, clientY: 0 });
+  fireEvent.pointerMove(trigger, { pointerId: 1, clientX: x, clientY: y });
 };
 
-const renderDragSnap = (onPositionCommit: (position: WidgetPosition) => void) => {
-  const wrapperRef = createRef<HTMLDivElement>() as React.RefObject<HTMLDivElement>;
-  (wrapperRef as { current: HTMLDivElement }).current = wrapperFor();
-  return renderHook(() =>
-    useDragSnap({ position: 'bottom_right', onPositionCommit, isPreviewMode: false, wrapperRef }),
-  );
+const dragTo = (trigger: HTMLElement, x: number, y: number) => {
+  dragStart(trigger, x, y);
+  fireEvent.pointerUp(trigger, { pointerId: 1, clientX: x, clientY: y });
 };
 
-describe('two snaps in flight', () => {
-  beforeEach(() => vi.useFakeTimers());
+describe('dragging the launcher', () => {
   afterEach(() => {
     vi.useRealTimers();
+    cleanup();
+    vi.restoreAllMocks();
     resetDom();
   });
 
-  it('commits the corner the widget is animating to, not the one it left', () => {
-    const committed: WidgetPosition[] = [];
-    const { result } = renderDragSnap(corner => committed.push(corner));
+  it('with two snaps in flight, commits the corner the widget is animating to, not the one it left', async () => {
+    const { trigger } = await mountLauncher('drag-two-snaps');
+    vi.useFakeTimers();
 
-    dragTo(result.current, -window.innerWidth, 0);
-    dragTo(result.current, 0, -window.innerHeight);
+    dragTo(trigger, -window.innerWidth, 0);
+    dragTo(trigger, 0, -window.innerHeight);
     act(() => vi.advanceTimersByTime(2000));
 
-    expect(committed.length).toBeGreaterThan(0);
-    expect(committed[committed.length - 1]).toBe('top_right');
-  });
-});
-
-describe('a drop writes the position key exactly once, and it round-trips', () => {
-  beforeEach(() => vi.useFakeTimers());
-  afterEach(() => {
-    vi.useRealTimers();
-    resetDom();
+    const key = scopedKey('marketrix_widget_position', { mtxId: 'drag-two-snaps' });
+    expect(readLocalParsed(key, WidgetSettingsDataSchema.shape.widget_position)).toBe('top_right');
   });
 
-  it('calls StorageService once per drop and reads the same corner back', () => {
-    const config = { mtxId: 'drag-storage-test' };
-    const key = scopedKey('marketrix_widget_position', config);
+  it('writes the position key once per drop, and a later mount reads the same corner back', async () => {
+    const key = scopedKey('marketrix_widget_position', { mtxId: 'drag-storage' });
     const setItemSpy = vi.spyOn(Storage.prototype, 'setItem');
-    const { result } = renderDragSnap(corner => writeLocal(key, corner));
+    const { trigger } = await mountLauncher('drag-storage');
+    vi.useFakeTimers();
 
-    dragTo(result.current, -window.innerWidth, -window.innerHeight);
+    dragTo(trigger, -window.innerWidth, -window.innerHeight);
     act(() => vi.advanceTimersByTime(2000));
+    vi.useRealTimers();
 
     expect(setItemSpy.mock.calls.filter(([storedKey]) => storedKey === key)).toHaveLength(1);
-    expect(readLocalParsed(key, WidgetSettingsDataSchema.shape.widget_position)).toBe('top_left');
-    setItemSpy.mockRestore();
+    cleanup();
+    const { anchor } = await mountLauncher('drag-storage');
+    expect(pinnedEdges(anchor)).toEqual(['left', 'top']);
   });
-});
 
-describe('a viewport resize re-derives the launcher anchor', () => {
-  afterEach(() => resetDom());
-
-  it('re-anchors to the new viewport instead of keeping the stale one', () => {
+  it('re-anchors to a resized viewport mid-drag instead of keeping the stale anchor', async () => {
     const addSpy = vi.spyOn(window, 'addEventListener');
-    const { result } = renderDragSnap(() => {});
-    const before = result.current.pixelPositionStyle;
-    const onResize = addSpy.mock.calls.find(([type]) => type === 'resize')?.[1] as () => void;
+    const { trigger, anchor } = await mountLauncher('drag-resize');
+    const resizeListeners = addSpy.mock.calls.filter(([type]) => type === 'resize').map(([, listener]) => listener);
+    dragStart(trigger, -40, -40);
+    const before = anchor.style.left;
+    expect(before).not.toBe('');
 
     Object.defineProperty(window, 'innerWidth', { value: window.innerWidth + 400, configurable: true });
-    act(() => onResize());
+    act(() => resizeListeners.forEach(listener => (listener as () => void)()));
 
-    expect(result.current.pixelPositionStyle?.left).not.toBe(before?.left);
-    addSpy.mockRestore();
+    expect(anchor.style.left).not.toBe(before);
   });
 });
 
@@ -108,16 +99,8 @@ describe('the resting launcher anchor', () => {
   afterEach(() => vi.restoreAllMocks());
 
   it('pins two edges, never four', async () => {
-    vi.spyOn(chatSession, 'getOrCreateChatId').mockResolvedValue('chat-1');
-    const connect = vi.spyOn(streamClient, 'connect').mockResolvedValue();
-
-    const { container } = renderWidget({}, { previewMode: false });
-    await waitFor(() => expect(connect).toHaveBeenCalled());
-
-    const anchor = container.querySelector<HTMLElement>('.mtx-fab-anchor');
-    expect(anchor).not.toBeNull();
-    const pinned = (['top', 'bottom', 'left', 'right'] as const).filter(edge => anchor?.style[edge] !== '');
-    expect(pinned.sort()).toEqual(['bottom', 'right']);
+    const { anchor } = await mountLauncher('resting');
+    expect(pinnedEdges(anchor)).toEqual(['bottom', 'right']);
   });
 });
 

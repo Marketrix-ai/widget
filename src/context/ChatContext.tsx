@@ -12,6 +12,7 @@
  */
 import { ORPCError } from '@orpc/client';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { z } from 'zod';
 
 import { useWidgetConfig } from '../hooks/useWidget';
 import type { WidgetEvent } from '../sdk';
@@ -76,6 +77,7 @@ const STALE_REPLY_TIMEOUT_MS = 120_000;
 const STALE_REPLY_TEXT = 'This is taking longer than expected. Please try again.';
 const SCREEN_SHARE_FAILED_TEXT = 'Screen sharing could not start, so the assistant will continue without it.';
 const PREVIEW_REPLY = "This is a preview. In production, I'll respond to your messages here.";
+const RefusalDataSchema = z.object({ details: z.object({ reason: z.string() }) });
 
 const StaleReplyWatchdog: React.FC<{ id: string; progress: number; onStale: (id: string) => void }> = ({
   id,
@@ -133,7 +135,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return true;
       } catch (error) {
         const refused = error instanceof ORPCError && error.code === 'FORBIDDEN';
-        const tenantOnly = refused && (error.data as { reason?: unknown } | undefined)?.reason === 'paid_plan_required';
+        const tenantOnly =
+          refused && RefusalDataSchema.safeParse(error.data).data?.details.reason === 'paid_plan_required';
         if (refused) logWarn(`[ChatContext] The api refused the turn: ${error.message}`);
         else console.error('Failed to send message:', error);
         commit(s => reduceError(s, placeholder.id, refused && !tenantOnly ? error.message : CHAT_FAILURE_TEXT));
