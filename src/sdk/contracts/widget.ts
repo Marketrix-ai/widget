@@ -25,8 +25,6 @@ export type WidgetCreateData = z.infer<typeof WidgetCreateSchema>;
 const WidgetUpdateSchema = z.strictObject({
   application_id: z.number(),
   settings: WidgetSettingsWriteSchema.partial().optional(),
-  marketrix_id: z.string().max(100).optional(),
-  marketrix_key: z.string().max(100).optional(),
 });
 export type WidgetUpdateData = z.infer<typeof WidgetUpdateSchema>;
 
