@@ -70,6 +70,7 @@ const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
 const STALE_REPLY_TIMEOUT_MS = 120_000;
 const STALE_REPLY_TEXT = 'This is taking longer than expected. Please try again.';
+const SCREEN_SHARE_FAILED_TEXT = 'Screen sharing could not start, so the assistant will continue without it.';
 const INTERRUPTED_STEP_TEXT = 'The page reloaded while this step ran; check the page before retrying.';
 const PREVIEW_REPLY = "This is a preview. In production, I'll respond to your messages here.";
 
@@ -128,9 +129,10 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         await streamClient.send({ type: `chat/${mode}`, request_id: placeholder.id, content });
         return true;
       } catch (error) {
-        console.error('Failed to send message:', error);
-        const refusal = error instanceof ORPCError && error.code === 'FORBIDDEN' ? error.message : CHAT_FAILURE_TEXT;
-        commit(s => reduceError(s, placeholder.id, refusal));
+        const refused = error instanceof ORPCError && error.code === 'FORBIDDEN';
+        if (refused) logWarn(`[ChatContext] The api refused the turn: ${error.message}`);
+        else console.error('Failed to send message:', error);
+        commit(s => reduceError(s, placeholder.id, refused ? error.message : CHAT_FAILURE_TEXT));
         return false;
       }
     },
@@ -165,9 +167,10 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       resolveScreenAccess('allowed');
     } catch (error) {
       logWarn('[ChatContext] Screen share declined or unavailable:', error);
+      commit(s => reduceAppend(s, createSystemMessage(SCREEN_SHARE_FAILED_TEXT)));
       resolveScreenAccess('denied');
     }
-  }, [use_screenshare, resolveScreenAccess]);
+  }, [use_screenshare, commit, resolveScreenAccess]);
 
   const denyScreenAccess = useCallback(() => resolveScreenAccess('denied'), [resolveScreenAccess]);
 

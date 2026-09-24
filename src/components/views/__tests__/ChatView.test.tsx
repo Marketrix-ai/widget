@@ -165,14 +165,17 @@ describe('answering a screen-access request', () => {
     expect(ofKind(captured!.messages[1], 'screenAccess').screenShareStatus).toBe('allowed');
   });
 
-  it('allow, but the picker was cancelled: marks the card denied and still releases the turn', async () => {
+  it('allow, but the picker was cancelled: says so, marks the card denied and still releases the turn', async () => {
     vi.spyOn(ScreenShareService, 'startScreenShare').mockRejectedValue(new Error('permission denied'));
     await requestAccess();
 
     await act(async () => await captured!.chatActions.allowScreenAccess());
 
     expect(ofKind(captured!.messages[1], 'screenAccess').screenShareStatus).toBe('denied');
-    expect(captured!.messages.map(m => m.kind)).toEqual(['user', 'screenAccess', 'agent']);
+    expect(captured!.messages.map(m => m.kind)).toEqual(['user', 'screenAccess', 'system', 'agent']);
+    expect(messageText(captured!.messages[2]!.parts)).toBe(
+      'Screen sharing could not start, so the assistant will continue without it.',
+    );
   });
 
   it('a share ending announces it and drops the live video bubble', async () => {
