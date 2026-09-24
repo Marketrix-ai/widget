@@ -1,7 +1,6 @@
 /**
- * `resolveLayoutStyle` tests: every spacing prop (padding, margin, gap …) across every token maps to
- * its pixel value and empty props give an empty style. Exhaustive per-token mappings run as one
- * table-driven test per prop group rather than one `it` per token — same coverage, far fewer tests.
+ * `resolveLayoutStyle` tests: every layout prop across every token maps to its style value and empty
+ * props give an empty style; `stripLayoutProps` removes exactly the layout keys.
  */
 import { describe, expect, it } from 'bun:test';
 
@@ -48,7 +47,7 @@ describe('resolveLayoutStyle', () => {
   });
 
   it('maps every align token to alignItems', () => {
-    const cases = { center: 'center', start: 'flex-start', end: 'flex-end', stretch: 'stretch', baseline: 'baseline' };
+    const cases = { center: 'center', start: 'flex-start' };
     for (const [align, alignItems] of Object.entries(cases)) {
       expect(resolveLayoutStyle({ align: align as keyof typeof cases })).toEqual({ alignItems });
     }
@@ -59,7 +58,6 @@ describe('resolveLayoutStyle', () => {
       center: 'center',
       between: 'space-between',
       around: 'space-around',
-      start: 'flex-start',
       end: 'flex-end',
     };
     for (const [justify, justifyContent] of Object.entries(cases)) {
@@ -74,18 +72,16 @@ describe('resolveLayoutStyle', () => {
     expect(resolveLayoutStyle({ shrink: true })).toEqual({});
   });
 
-  it('position and inset resolve independently, inset through the spacing scale', () => {
+  it('position and inset resolve independently', () => {
     expect(resolveLayoutStyle({ position: 'relative' })).toEqual({ position: 'relative' });
     expect(resolveLayoutStyle({ position: 'fixed' })).toEqual({ position: 'fixed' });
     expect(resolveLayoutStyle({ inset: '0' })).toEqual({ inset: '0' });
-    expect(resolveLayoutStyle({ inset: 'md' })).toEqual({ inset: '8px' });
   });
 
-  it('overflow and sizing props pass through or resolve via the spacing scale', () => {
+  it('overflow and sizing props pass through or resolve to their CSS value', () => {
     expect(resolveLayoutStyle({ overflow: 'hidden' })).toEqual({ overflow: 'hidden' });
     expect(resolveLayoutStyle({ overflowY: 'auto' })).toEqual({ overflowY: 'auto' });
     expect(resolveLayoutStyle({ width: 'full' })).toEqual({ width: '100%' });
-    expect(resolveLayoutStyle({ width: 'auto' })).toEqual({ width: 'auto' });
     expect(resolveLayoutStyle({ height: 'full' })).toEqual({ height: '100%' });
     expect(resolveLayoutStyle({ minWidth: '0' })).toEqual({ minWidth: 0 });
     expect(resolveLayoutStyle({ minHeight: '0' })).toEqual({ minHeight: 0 });
@@ -144,7 +140,7 @@ describe('stripLayoutProps', () => {
       overflow: 'hidden' as const,
       overflowY: 'auto' as const,
       width: 'full' as const,
-      height: 'auto' as const,
+      height: 'full' as const,
       minWidth: '0' as const,
       minHeight: '0' as const,
       border: true,

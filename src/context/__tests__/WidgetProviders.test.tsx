@@ -125,7 +125,7 @@ describe('WidgetProviders initialization', () => {
       </WidgetProviders>,
     );
 
-    expect(await screen.findByText('Widget failed to initialize — please refresh the page.')).toBeInTheDocument();
-    await waitFor(() => expect(consoleError).toHaveBeenCalledWith('Widget initialization failed:', failure));
+    expect(await screen.findByText('Widget failed to initialize. Please refresh the page.')).toBeInTheDocument();
+    await waitFor(() => expect(consoleError).toHaveBeenCalledWith('[Widget] Initialization failed:', failure));
   });
 });

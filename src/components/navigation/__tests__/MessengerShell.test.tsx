@@ -1,9 +1,9 @@
 /**
  * Messenger panel tests, driven through the mounted widget: Escape and Tab are trapped inside the open
  * panel and focus returns to the host page when it closes; the panel's starting size follows the
- * dashboard settings; the grip drag-resizes from each pinned corner, and the keyboard arm reaches the
- * same clamp bounds as a drag while announcing its value. jsdom does no layout, so `offsetParent` is stubbed to make
- * `focusablesIn`'s visibility filter see a tab order.
+ * dashboard settings; the grip pointer-resizes from each pinned corner, and the keyboard arm grows the way
+ * its grip faces, reaches the same clamp bounds as a drag and announces its value. jsdom does no layout, so
+ * `offsetParent` is stubbed to make `focusablesIn`'s visibility filter see a tab order.
  */
 import { act, cleanup, fireEvent, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'bun:test';
@@ -164,11 +164,12 @@ const OUTWARD: Record<WidgetPosition, { dx: number; dy: number }> = {
 
 const drag = (position: WidgetPosition, dx: number, dy: number): CSSStyleDeclaration => {
   const { panel, grip } = openPanel({ widget_width: '400px', widget_height: '500px', widget_position: position });
-  fireEvent.mouseDown(grip, { clientX: 0, clientY: 0 });
-  act(() => {
-    document.dispatchEvent(new MouseEvent('mousemove', { clientX: dx, clientY: dy }));
-    document.dispatchEvent(new MouseEvent('mouseup'));
-  });
+  grip.setPointerCapture = () => {};
+  grip.releasePointerCapture = () => {};
+  grip.hasPointerCapture = () => true;
+  fireEvent.pointerDown(grip, { pointerId: 1, pointerType: 'touch', clientX: 0, clientY: 0 });
+  fireEvent.pointerMove(grip, { pointerId: 1, clientX: dx, clientY: dy });
+  fireEvent.pointerUp(grip, { pointerId: 1 });
   return panel.style;
 };
 
@@ -186,8 +187,8 @@ describe('the one grip is on the corner the panel is free to move', () => {
   });
 });
 
-const keyResize = (key: string, times: number) => {
-  const { panel, grip } = openPanel({ widget_width: '400px', widget_height: '500px' });
+const keyResize = (key: string, times: number, widget_position: WidgetPosition = 'top_left') => {
+  const { panel, grip } = openPanel({ widget_width: '400px', widget_height: '500px', widget_position });
   for (let i = 0; i < times; i += 1) fireEvent.keyDown(grip, { key });
   return { width: panel.style.width, height: panel.style.height };
 };
@@ -206,11 +207,20 @@ describe('the keyboard resize arm reaches the same clampSize path as a drag', ()
   });
 
   it('announces the width it resizes as the separator value', () => {
-    const { grip } = openPanel({ widget_width: '400px', widget_height: '500px' });
+    const { grip } = openPanel({ widget_width: '400px', widget_height: '500px', widget_position: 'top_left' });
     fireEvent.keyDown(grip, { key: 'ArrowRight' });
     expect(grip).toHaveAttribute('aria-valuenow', '416');
     expect(grip).toHaveAttribute('aria-valuetext', '416 by 500 pixels');
     expect(grip).toHaveAttribute('aria-orientation', 'vertical');
+  });
+
+  it.each([
+    ['bottom_right', 'ArrowLeft', { width: '416px', height: '500px' }],
+    ['bottom_right', 'ArrowUp', { width: '400px', height: '516px' }],
+    ['top_left', 'ArrowRight', { width: '416px', height: '500px' }],
+    ['top_left', 'ArrowDown', { width: '400px', height: '516px' }],
+  ] as const)('grows from %s on %s, which moves its grip outward', (position, key, size) => {
+    expect(keyResize(key, 1, position)).toEqual(size);
   });
 
   it('ignores a key that is not one of the four resize arrows', () => {

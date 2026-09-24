@@ -22,7 +22,7 @@ import { isPending, messageText } from '../../utils/chat';
 import * as log from '../../utils/log';
 import { useChatContext } from '../ChatContext';
 
-const mockExecuteTool = vi.fn<typeof executeTool>().mockResolvedValue({ success: true, data: {} });
+const mockExecuteTool = vi.fn<typeof executeTool>().mockResolvedValue({ success: true, data: { text: 'ok' } });
 vi.mock('../../services/browserTools', () => ({ executeTool: mockExecuteTool }));
 
 const restoredPlaceholder = agentMessage({
@@ -384,19 +384,19 @@ describe('tool/response carries data only when the tool call itself succeeded', 
     await dispatchClickToolCall('tc-fail');
 
     const payload = await sentPayloadFor(send, 'tc-fail');
-    expect(payload).not.toHaveProperty('data');
+    expect(payload).not.toHaveProperty('result');
     expect(payload['success']).toBe(false);
   });
 
-  it('includes stringified data on a successful tool call', async () => {
+  it('includes the tool result object on a successful tool call', async () => {
     renderCaptured(false);
-    mockExecuteTool.mockReset().mockResolvedValue({ success: true, data: { ok: true } });
+    mockExecuteTool.mockReset().mockResolvedValue({ success: true, data: { options: [{ value: 'a', text: 'A' }] } });
     const send = vi.spyOn(streamClient, 'send').mockResolvedValue(undefined);
 
     await dispatchClickToolCall('tc-ok');
 
     const payload = await sentPayloadFor(send, 'tc-ok');
-    expect(payload['data']).toBe(JSON.stringify({ ok: true }));
+    expect(payload['result']).toEqual({ options: [{ value: 'a', text: 'A' }] });
   });
 });
 
@@ -407,7 +407,7 @@ describe('a tool/response sent after the page reminted its tab id', () => {
     const tabAtCall = claimTabId();
     mockExecuteTool.mockImplementationOnce(async () => {
       remintTabId();
-      return { success: true, data: {} };
+      return { success: true, data: { text: 'ok' } };
     });
 
     await dispatchClickToolCall('tc-remint');
@@ -434,7 +434,7 @@ describe('a tool/call an earlier page load of this tab already started', () => {
       type: 'tool/response',
       tool_call_id: 'tc-before-reload',
       success: true,
-      data: JSON.stringify({ page_reloaded: true }),
+      result: { page_reloaded: true },
     });
     expect(mockExecuteTool).not.toHaveBeenCalled();
   });

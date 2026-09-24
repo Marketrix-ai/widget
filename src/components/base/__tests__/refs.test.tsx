@@ -9,7 +9,6 @@ import { Button } from '../Button';
 import { Flex, Stack } from '../Flex';
 import { Icon } from '../Icon';
 import { IconButton } from '../IconButton';
-import { Spinner } from '../Spinner';
 import { Surface } from '../Surface';
 import { Text } from '../Text';
 
@@ -19,7 +18,6 @@ describe('base component refs', () => {
     const flex = createRef<HTMLDivElement>();
     const icon = createRef<SVGSVGElement>();
     const iconButton = createRef<HTMLButtonElement>();
-    const spinner = createRef<HTMLDivElement>();
     const stack = createRef<HTMLDivElement>();
     const surface = createRef<HTMLDivElement>();
     const text = createRef<HTMLElement>();
@@ -30,7 +28,6 @@ describe('base component refs', () => {
         <Flex ref={flex}>Flex</Flex>
         <Icon ref={icon} name='send' />
         <IconButton ref={iconButton} label='Icon button' />
-        <Spinner ref={spinner} />
         <Stack ref={stack}>Stack</Stack>
         <Surface ref={surface}>Surface</Surface>
         <Text ref={text}>Text</Text>
@@ -42,7 +39,6 @@ describe('base component refs', () => {
       [flex, 'DIV'],
       [icon, 'svg'],
       [iconButton, 'BUTTON'],
-      [spinner, 'DIV'],
       [stack, 'DIV'],
       [surface, 'DIV'],
       [text, 'SPAN'],

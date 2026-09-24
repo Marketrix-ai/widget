@@ -55,7 +55,7 @@ describe('loadWidgetConfig', () => {
     });
 
     expect(mockSdk.widgetPublicSearch).toHaveBeenCalledTimes(1);
-    expect(config).toMatchObject({ mtxId: 'load-once', mtxKey: 'test-key', mtxApp: 42, show_widget: false });
+    expect(config).toMatchObject({ mtxId: 'load-once', mtxKey: 'test-key', show_widget: false });
   });
 
   it('sends only the credential pair to the boot call, never viewport or other host page data', async () => {
@@ -113,8 +113,8 @@ describe('loadWidgetConfig', () => {
     });
 
     expect(mockSdk.widgetPublicSearch).toHaveBeenCalledTimes(1);
-    expect(first).toMatchObject({ mtxApp: 42, show_widget: true });
-    expect(second).toMatchObject({ mtxApp: 42, show_widget: false });
+    expect(first).toMatchObject({ show_widget: true });
+    expect(second).toMatchObject({ show_widget: false });
   });
 
   it('shares one in-flight lookup between concurrent callers for the same mtx-id', async () => {
@@ -147,6 +147,6 @@ describe('loadWidgetConfig', () => {
     });
 
     expect(mockSdk.widgetPublicSearch).toHaveBeenCalledTimes(2);
-    expect(config).toMatchObject({ mtxApp: 42 });
+    expect(config).toMatchObject({ mtxId: 'retry-after-failure', isPreviewMode: false });
   });
 });

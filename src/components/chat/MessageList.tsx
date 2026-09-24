@@ -75,7 +75,6 @@ export const MessageList = () => {
   return (
     <Surface position='relative' height='full'>
       <Surface
-        key='message-list-container'
         ref={containerRef}
         onScroll={handleScroll}
         role='log'

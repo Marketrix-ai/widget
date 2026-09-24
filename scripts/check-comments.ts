@@ -3,7 +3,8 @@
  * templates, Dockerfile, env example, proto, TOML, Terraform, Make, Tilt, CSS, nginx conf, MDX, HTML and ignore
  * files — may carry one top docstring of at most 12 lines and no other comment. `EXEMPT` is the constitution's
  * directive list and its only implementation. `checkComments` reads JS/TS trivia through the parser, measures a
- * Python module docstring, and lexes every other language's comments outside quotes and heredocs.
+ * Python module docstring and flags every later string statement (a function or class docstring), and lexes every
+ * other language's comments outside quotes and heredocs.
  * `findCodeFiles` lists what git tracks or would track, minus generated code and any path whose `.gitattributes`
  * sets `rule0=frozen`: a file whose bytes are digest-checked once applied, such as an applied SQL patch, cannot be
  * edited. The public widget carries a byte-identical copy, because it cannot fetch this private repo.
@@ -185,8 +186,11 @@ function pythonComments(text: string): {
   let seenCode = false;
   let lineStart = 0;
   let line = 1;
+  let depth = 0;
   for (let i = 0; i < text.length; i++) {
-    const c = text[i];
+    const c = text.charAt(i);
+    if ('([{'.includes(c)) depth++;
+    else if (')]}'.includes(c)) depth--;
     if (c === '\n') {
       line++;
       lineStart = i + 1;
@@ -204,7 +208,14 @@ function pythonComments(text: string): {
       let j = i + delimiter.length;
       while (j < text.length && !text.startsWith(delimiter, j)) j += text[j] === '\\' ? 2 : 1;
       const body = text.slice(i + delimiter.length, j);
+      const rest = text.slice(j + delimiter.length).split('\n', 1)[0] ?? '';
+      const statement =
+        depth === 0 &&
+        text.slice(lineStart, i).trim() === '' &&
+        text[lineStart - 2] !== '\\' &&
+        /^\s*(#.*)?$/.test(rest);
       if (!seenCode) docstring = body.trim().split('\n').length;
+      else if (statement) comments.push({ line, raw: text.slice(i, j + delimiter.length), alone: true, block: true });
       seenCode = true;
       line += (body.match(/\n/g) ?? []).length;
       i = j + delimiter.length - 1;

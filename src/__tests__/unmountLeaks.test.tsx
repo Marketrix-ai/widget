@@ -244,9 +244,7 @@ describe('unmountWidget stops an active rrweb session recording started by the r
   });
 
   it("calls the recorder's rrweb teardown function on a mid-stream unmount, not just its own internal flag", async () => {
-    vi.spyOn(WidgetService, 'loadWidgetConfig').mockResolvedValue(
-      credentialedConfig({ widget_recording: true, mtxApp: 1 }),
-    );
+    vi.spyOn(WidgetService, 'loadWidgetConfig').mockResolvedValue(credentialedConfig({ widget_recording: true }));
     vi.spyOn(chatThread, 'getOrCreateChatId').mockResolvedValue('chat-1');
     vi.spyOn(streamClient, 'connect').mockResolvedValue();
     vi.spyOn(streamClient, 'ready').mockResolvedValue();

@@ -79,7 +79,7 @@ These apply to every mode (script attribute → config key):
 | `use_screenshare`         | `mtx-use-screenshare` | boolean       | When `false`, the widget never asks to share the screen (Show and Do still work on the page) and the Share Screen button is hidden. Default `true`. Disable via `mtx-use-screenshare="false"`. |
 | `styleNonce`              | `mtx-style-nonce`     | string        | A CSP nonce applied to the widget's injected `<style>` element. Required only if your `style-src` policy has no `'unsafe-inline'` — see [Content Security Policy](#content-security-policy).   |
 
-Widget **appearance and behavior** (position, colors, sizing, border radius, animation, enabled Tell/Show/Do features, visibility, greeting toast, optional session recording, header/body/greeting text, and quick-action chips) are configured in the Marketrix dashboard and fetched from the API at init. A hidden widget stays visible in the dashboard preview.
+Widget **appearance and behavior** (position, colors, sizing, enabled Tell/Show/Do features, visibility, greeting toast, optional session recording, header/body/greeting text, and quick-action chips) are configured in the Marketrix dashboard and fetched from the API at init; border radius and animation timing are fixed defaults. A hidden widget stays visible in the dashboard preview.
 
 ### Full script-tag example
 

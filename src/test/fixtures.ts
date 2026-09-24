@@ -86,7 +86,6 @@ export function credentialedConfig(overrides: Partial<CredentialedConfig> = {}):
     ...validSettings(),
     mtxId: 'test-id',
     mtxKey: 'test-key',
-    mtxApp: 1,
     isPreviewMode: false,
     ...overrides,
   };

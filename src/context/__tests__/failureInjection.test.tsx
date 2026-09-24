@@ -19,7 +19,7 @@ import { useChatContext } from '../ChatContext';
 
 const RAW_MARKER = 'PG::ConnectionBad at db_pool.rb:42 — ECONNREFUSED 10.0.4.12:5432';
 
-const mockExecuteTool = vi.fn<typeof executeTool>().mockResolvedValue({ success: true, data: {} });
+const mockExecuteTool = vi.fn<typeof executeTool>().mockResolvedValue({ success: true, data: { text: 'ok' } });
 vi.mock('../../services/browserTools', () => ({ executeTool: mockExecuteTool }));
 
 const TOOL_CALL: WidgetEvent = {
@@ -61,7 +61,7 @@ function visibleText(): string {
 beforeEach(() => {
   vi.spyOn(chatThread, 'getOrCreateChatId').mockResolvedValue('chat-1');
   vi.spyOn(streamClient, 'ready').mockResolvedValue();
-  mockExecuteTool.mockReset().mockResolvedValue({ success: true, data: {} });
+  mockExecuteTool.mockReset().mockResolvedValue({ success: true, data: { text: 'ok' } });
   vi.spyOn(streamClient, 'send').mockResolvedValue(undefined);
 });
 

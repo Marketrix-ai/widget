@@ -183,6 +183,8 @@ export const SCREEN_ACCESS_PROMPT = 'Can I take a look at your screen?';
 export const SCREEN_ACCESS_DETAIL =
   'Either way, the assistant reads this page and acts on it to help you. Saying no only keeps your screen private.';
 
+export const SCREEN_SHARE_STARTED_TEXT = 'Screen sharing started';
+
 export const SCREEN_SHARE_STOPPED_TEXT = 'Screen sharing stopped';
 
 export const CHAT_FAILURE_TEXT = "I'm sorry, I encountered an error processing your request. Please try again.";

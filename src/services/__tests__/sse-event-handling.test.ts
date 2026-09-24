@@ -159,7 +159,7 @@ describe('SSE event discriminated-union contract (WidgetEventSchema)', () => {
       ['chat/do', { type: 'chat/do', request_id: 'r1', content: 'hi' }],
       ['chat/stop', { type: 'chat/stop' }],
       ['tool/response', { type: 'tool/response', tool_call_id: 'c1', success: true }],
-      ['rrweb/metadata', { type: 'rrweb/metadata', rrweb_session_id: 's1', chat_id: 'c1', application_id: 1 }],
+      ['rrweb/metadata', { type: 'rrweb/metadata', rrweb_session_id: 's1' }],
       ['rrweb/events', { type: 'rrweb/events', rrweb_session_id: 's1', events: [] }],
     ] as const)('accepts a minimal "%s" command', (_type, fixture) => {
       expect(WidgetCommandSchema.safeParse(fixture).success).toBe(true);
@@ -167,6 +167,11 @@ describe('SSE event discriminated-union contract (WidgetEventSchema)', () => {
 
     it('rejects an unknown command type', () => {
       expect(WidgetCommandSchema.safeParse({ type: 'chat/nonexistent' }).success).toBe(false);
+    });
+
+    it('rejects rrweb/metadata carrying an application_id', () => {
+      const metadata = { type: 'rrweb/metadata', rrweb_session_id: 's1', application_id: 1 };
+      expect(WidgetCommandSchema.safeParse(metadata).success).toBe(false);
     });
   });
 });

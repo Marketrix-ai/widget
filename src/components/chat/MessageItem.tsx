@@ -17,7 +17,6 @@ import { Flex, Stack } from '../base/Flex';
 import { Icon } from '../base/Icon';
 import type { IconName } from '../base/icons';
 import { Spinner } from '../base/Spinner';
-import { Surface } from '../base/Surface';
 import { Text } from '../base/Text';
 import { VideoStreamDisplay } from './VideoStreamDisplay';
 
@@ -58,7 +57,7 @@ const MessageBody: React.FC<{ message: ChatMessage; isLastMessage: boolean; isTa
     isTaskRunning && isLastMessage && 'mode' in message && (message.mode === 'show' || message.mode === 'do');
 
   if (message.parts.length === 0) {
-    return pending || stillWorking ? <Thinking isWaitingForUser={isWaitingForUser} /> : <Surface />;
+    return pending || stillWorking ? <Thinking isWaitingForUser={isWaitingForUser} /> : null;
   }
 
   return (
@@ -79,11 +78,9 @@ const MessageBody: React.FC<{ message: ChatMessage; isLastMessage: boolean; isTa
           );
         }
         return (
-          <Flex key={`part-${index}`} align='start' gap='md'>
-            <Text as='span' size='xs' weight='medium' style={{ flex: 1, whiteSpace: 'pre-wrap' }}>
-              {part.content}
-            </Text>
-          </Flex>
+          <Text as='div' key={`part-${index}`} size='xs' weight='medium' style={{ whiteSpace: 'pre-wrap' }}>
+            {part.content}
+          </Text>
         );
       })}
 
@@ -106,7 +103,7 @@ const MessageItemComponent: React.FC<MessageItemProps> = ({
   if (message.kind === 'system') {
     return (
       <Flex justify='center' align='center'>
-        <Text as='span' variant='faint' weight='normal' style={{ fontSize: '10px' }}>
+        <Text as='span' variant='faint' weight='normal' size='xxs'>
           {messageText(message.parts)}
         </Text>
       </Flex>
@@ -189,7 +186,7 @@ const MessageItemComponent: React.FC<MessageItemProps> = ({
 
           {message.kind === 'screenAccess' && message.screenShareStatus && (
             <Text as='div' variant='faint' size='xs' italic style={{ marginTop: '2px' }}>
-              {message.screenShareStatus === 'allowed' ? 'Sure' : 'No'}
+              {message.screenShareStatus === 'allowed' ? 'Yes' : 'No'}
             </Text>
           )}
 
