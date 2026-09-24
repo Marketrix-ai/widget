@@ -24,7 +24,7 @@ jobs:
       - uses: actions/cache@v6
         with:
           path: ~/.bun/install/cache
-          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
-          restore-keys: ${{ runner.os }}-bun-
+          key: bun-${{ runner.arch }}-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-${{ runner.arch }}-
       - run: bun install --frozen-lockfile
       - run: bun run ${{ github.event_name == 'pull_request' && 'ci' || 'build' }}
