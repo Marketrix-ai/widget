@@ -15,6 +15,7 @@ import { z } from 'zod';
 import { InstructionTypeSchema } from '../sdk/contracts/widgetSettings';
 import { WIDGET_TOOL_NAMES } from '../sdk/contracts/widgetToolNames';
 import type { ChatMessage, InstructionType, ValidWidgetConfig } from '../types';
+import { SCREEN_SHARE_STOPPED_TEXT } from '../utils/chat';
 import { logWarn } from '../utils/log';
 import { randomId } from '../utils/randomId';
 
@@ -197,7 +198,7 @@ export function writeChatSnapshot(snapshot: ChatSnapshot): void {
             id: msg.id,
             kind: 'system',
             timestamp: msg.timestamp,
-            parts: [{ type: 'text', content: 'Screen sharing ended' }],
+            parts: [{ type: 'text', content: SCREEN_SHARE_STOPPED_TEXT }],
           }
         : msg,
     ),
