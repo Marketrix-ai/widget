@@ -206,7 +206,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
             type: 'tool/response',
             tool_call_id: call.tool_call_id,
             success: result.success,
-            ...(result.success && { data: JSON.stringify(result.data) }),
+            ...(result.success && { result: result.data }),
             error,
           },
           route,
@@ -229,7 +229,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
               type: 'tool/response',
               tool_call_id: event.tool_call_id,
               success: true,
-              data: JSON.stringify({ page_reloaded: true }),
+              result: { page_reloaded: true },
             })
             .catch((err: unknown) => console.error('[Widget] Failed to report an interrupted step:', err));
           return;

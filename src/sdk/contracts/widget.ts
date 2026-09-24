@@ -114,6 +114,19 @@ export const WidgetEventSchema = z.union([
 ]);
 export type WidgetEvent = z.infer<typeof WidgetEventSchema>;
 
+export const WidgetToolResultSchema = z.union([
+  z.strictObject({ text: z.string() }),
+  z.strictObject({
+    title: z.string(),
+    url: z.string(),
+    text: z.string(),
+    links: z.array(z.strictObject({ text: z.string(), href: z.string().nullable() })),
+  }),
+  z.strictObject({ options: z.array(z.strictObject({ value: z.string(), text: z.string() })) }),
+  z.strictObject({ page_reloaded: z.literal(true) }),
+]);
+export type WidgetToolResult = z.infer<typeof WidgetToolResultSchema>;
+
 export const WidgetCommandSchema = z.discriminatedUnion('type', [
   z.strictObject({ type: z.literal('chat/tell'), request_id: z.string(), content: z.string() }),
   z.strictObject({ type: z.literal('chat/show'), request_id: z.string(), content: z.string() }),
@@ -123,7 +136,7 @@ export const WidgetCommandSchema = z.discriminatedUnion('type', [
     type: z.literal('tool/response'),
     tool_call_id: z.string(),
     success: z.boolean(),
-    data: z.string().optional(),
+    result: WidgetToolResultSchema.optional(),
     error: z.string().optional(),
   }),
   z.strictObject({

@@ -6,7 +6,7 @@
  * A link is followed only if it is http(s), since a page-controlled href could run script in the host origin.
  */
 
-import type { WidgetEvent } from '../sdk';
+import type { WidgetEvent, WidgetToolResult } from '../sdk';
 import type { InstructionType } from '../types';
 import { toolExplanation, waitsForUser } from '../utils/chat';
 import { errorMessage } from '../utils/errors';
@@ -17,7 +17,7 @@ import { ShowModeCancelled, showModeService } from './ShowModeService';
 
 type ToolFailure = { success: false; error: string; cancelled?: true };
 
-type ToolExecutionResult<T = { text: string }> =
+type ToolExecutionResult<T extends WidgetToolResult = { text: string }> =
   { success: true; data: T; afterResponseAttempt?: () => void } | ToolFailure;
 
 export type WidgetToolCall = Extract<WidgetEvent, { type: 'tool/call' }>;
@@ -26,7 +26,7 @@ type ToolArgMap = { [K in WidgetToolName]: Extract<WidgetToolCall, { browser_too
 export type ToolArgs<K extends WidgetToolName> = ToolArgMap[K];
 
 const ok = (text: string): ToolExecutionResult => ({ success: true, data: { text } });
-const okData = <T>(data: T): ToolExecutionResult<T> => ({ success: true, data });
+const okData = <T extends WidgetToolResult>(data: T): ToolExecutionResult<T> => ({ success: true, data });
 const fail = (error: string): ToolFailure => ({ success: false, error });
 const deferred = (text: string, action: () => void): ToolExecutionResult => ({
   success: true,
@@ -235,7 +235,7 @@ async function getScreenshot(): Promise<ToolExecutionResult> {
 }
 
 const TOOLS: {
-  [K in WidgetToolName]: (args: ToolArgMap[K]) => ToolExecutionResult<unknown> | Promise<ToolExecutionResult<unknown>>;
+  [K in WidgetToolName]: (args: ToolArgMap[K]) => ToolExecutionResult<WidgetToolResult> | Promise<ToolExecutionResult<WidgetToolResult>>;
 } = {
   navigate,
   search,
@@ -260,8 +260,8 @@ export async function executeTool<K extends WidgetToolName>(
   args: ToolArgs<K>,
   mode: InstructionType,
   explanation?: string,
-): Promise<ToolExecutionResult<unknown>> {
-  const run: (args: ToolArgs<K>) => ToolExecutionResult<unknown> | Promise<ToolExecutionResult<unknown>> =
+): Promise<ToolExecutionResult<WidgetToolResult>> {
+  const run: (args: ToolArgs<K>) => ToolExecutionResult<WidgetToolResult> | Promise<ToolExecutionResult<WidgetToolResult>> =
     TOOLS[browserToolName];
   try {
     if (mode === 'show' && waitsForUser(browserToolName) && 'index' in args) {
