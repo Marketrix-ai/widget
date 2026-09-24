@@ -88,12 +88,7 @@ function useLauncherAnchor(
   };
 }
 
-export function useDragSnap({
-  position,
-  onPositionCommit,
-  isPreviewMode,
-  wrapperRef,
-}: UseDragSnapOptions): UseDragSnapResult {
+function useDragSnap({ position, onPositionCommit, isPreviewMode, wrapperRef }: UseDragSnapOptions): UseDragSnapResult {
   const [isDragging, setIsDragging] = useState(false);
   const abandonSnapRef = useRef<(() => void) | null>(null);
   const dragRef = useRef<{

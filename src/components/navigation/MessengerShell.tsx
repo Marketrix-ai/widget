@@ -35,7 +35,7 @@ function activeElementIn(container: HTMLElement): HTMLElement | null {
   return active instanceof HTMLElement ? active : null;
 }
 
-export function useFocusTrap(
+function useFocusTrap(
   containerRef: React.RefObject<HTMLElement | null>,
   isActive: boolean,
   options: {
@@ -125,7 +125,7 @@ function parsePx(value: string, fallback: number): number {
 
 const STORAGE_KEY_NAME = 'marketrix_widget_size';
 
-export function useResize() {
+function useResize() {
   const config = useWidgetConfig();
   const { isPreviewMode, widget_position: position } = config;
   const storageKey = scopedKey(STORAGE_KEY_NAME, config);

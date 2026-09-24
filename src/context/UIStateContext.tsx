@@ -1,9 +1,10 @@
 /**
  * `UIStateProvider` / `useUIStateContext` — the widget's view state: open/closed, active view, current
- * mode (tell/show/do) and the error banner with whether its Retry can redial the stream. Actions are stable (memoised once) so consumers can depend
- * on them without re-rendering; `applyState` merges a partial for restore-from-storage. The published
- * mode is always one the tenant enabled, whatever was stored or picked before the settings changed. `UIState` is a
- * `Pick` of `WidgetState` (`../types`) rather than its own duplicate shape.
+ * mode (tell/show/do) and the error banner with whether its Retry can redial the stream. Actions are
+ * stable (memoised once) so consumers can depend on them without re-rendering; `applyState` merges a
+ * partial for restore-from-storage. The published mode is always one the tenant enabled, whatever was
+ * stored or picked before the settings changed. `UIState` is a `Pick` of `WidgetState` (`../types`)
+ * rather than its own duplicate shape.
  */
 import React, { createContext, useContext, useMemo, useState } from 'react';
 

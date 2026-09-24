@@ -1,144 +1,157 @@
 /**
- * Tests for `useFocusTrap` (Escape/Tab trapping scoped to the messenger panel, and focus restore to the
- * host page on deactivation) and `useResize` (starting size from dashboard settings, drag-to-resize from
- * each pinned corner, and the keyboard-resize arm reaching the same clamp bounds as a drag). jsdom does
- * no layout, so `offsetParent` is stubbed to make `focusablesIn`'s visibility filter see a tab order.
+ * Messenger panel tests, driven through the mounted widget: Escape and Tab are trapped inside the open
+ * panel and focus returns to the host page when it closes; the panel's starting size follows the
+ * dashboard settings; the grip drag-resizes from each pinned corner, and the keyboard arm reaches the
+ * same clamp bounds as a drag. jsdom does no layout, so `offsetParent` is stubbed to make
+ * `focusablesIn`'s visibility filter see a tab order.
  */
-import { act, render, renderHook } from '@testing-library/react';
-import { describe, expect, it, vi } from 'bun:test';
-import React, { useRef } from 'react';
+import { act, cleanup, fireEvent, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'bun:test';
 
-import { WidgetConfigContext } from '../../../hooks/useWidget';
-import { getMockWidgetConfig } from '../../../test/fixtures';
+import * as chatSession from '../../../services/chatSession';
+import { readChatSnapshot, writeChatSnapshot } from '../../../services/StorageService';
+import { streamClient } from '../../../services/StreamClient';
+import type { getMockWidgetConfig } from '../../../test/fixtures';
+import { resetDom } from '../../../test/preload';
+import { openWidget, renderWidget } from '../../../test/renderWidget';
 import type { WidgetPosition } from '../../../types';
-import { useFocusTrap, useResize } from '../MessengerShell';
-
-const renderResize = (overrides: Parameters<typeof getMockWidgetConfig>[0]) =>
-  renderHook(() => useResize(), {
-    wrapper: ({ children }: { children: React.ReactNode }) => (
-      <WidgetConfigContext value={getMockWidgetConfig({ isPreviewMode: false, ...overrides })}>
-        {children}
-      </WidgetConfigContext>
-    ),
-  });
+import { focusablesIn } from '../../../utils/dom';
 
 Object.defineProperty(HTMLElement.prototype, 'offsetParent', { configurable: true, get: () => document.body });
 
-const Harness: React.FC<{ isActive: boolean; onEscape: () => void }> = ({ isActive, onEscape }) => {
-  const ref = useRef<HTMLDivElement>(null);
-  useFocusTrap(ref, isActive, { onEscape });
-  return (
-    <div>
-      <button type='button' data-testid='host'>
-        host page control
-      </button>
-      <div ref={ref}>
-        <button type='button' data-testid='first'>
-          first widget control
-        </button>
-        <button type='button' data-testid='last'>
-          last widget control
-        </button>
-      </div>
-    </div>
-  );
+let tenantCount = 0;
+
+const openPanel = (overrides: Parameters<typeof getMockWidgetConfig>[0] = {}) => {
+  vi.spyOn(chatSession, 'getOrCreateChatId').mockResolvedValue('chat-shell');
+  vi.spyOn(streamClient, 'connect').mockResolvedValue();
+  const view = renderWidget({ mtxId: `tenant-${(tenantCount += 1)}`, ...overrides }, { previewMode: false });
+  openWidget();
+  const grip = screen.getByRole('separator');
+  const panel = grip.parentElement;
+  if (!panel) throw new Error('panel not rendered');
+  return { ...view, panel, grip };
 };
 
-const pressEscape = () => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+const isOpen = () => screen.queryByRole('separator') !== null;
+
+const pressEscape = () =>
+  act(() => {
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  });
 const pressTab = (shiftKey: boolean) =>
-  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', shiftKey, bubbles: true, cancelable: true }));
+  act(() => {
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', shiftKey, bubbles: true, cancelable: true }));
+  });
+
+const hostButton = () => {
+  const host = document.createElement('button');
+  host.textContent = 'host page control';
+  document.body.appendChild(host);
+  return host;
+};
+
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+  resetDom();
+  writeChatSnapshot({ ...readChatSnapshot(), isOpen: false });
+});
 
 describe('the widget escape key belongs to the widget, not to the host page', () => {
-  it('closes when focus is inside the trapped container', () => {
-    const onEscape = vi.fn();
-    const { getByTestId } = render(<Harness isActive onEscape={onEscape} />);
-    getByTestId('first').focus();
+  it('closes when focus is inside the panel', () => {
+    const { panel } = openPanel();
+    focusablesIn(panel)[0]?.focus();
 
     pressEscape();
 
-    expect(onEscape).toHaveBeenCalledTimes(1);
+    expect(isOpen()).toBe(false);
   });
 
   it('declines when focus is on the host page, as the Tab arm already does', () => {
-    const onEscape = vi.fn();
-    const { getByTestId } = render(<Harness isActive onEscape={onEscape} />);
-    getByTestId('host').focus();
+    openPanel();
+    hostButton().focus();
 
     pressEscape();
 
-    expect(onEscape).not.toHaveBeenCalled();
+    expect(isOpen()).toBe(true);
   });
 });
 
-describe('Tab cycles inside the trapped container', () => {
+describe('Tab cycles inside the open panel', () => {
   it('wraps from the last control back to the first', () => {
-    const { getByTestId } = render(<Harness isActive onEscape={vi.fn()} />);
-    getByTestId('last').focus();
+    const { panel } = openPanel();
+    const tabbable = focusablesIn(panel);
+    tabbable.at(-1)?.focus();
 
     pressTab(false);
 
-    expect(document.activeElement).toBe(getByTestId('first'));
+    expect(document.activeElement).toBe(tabbable[0] ?? null);
   });
 
   it('wraps from the first control back to the last on Shift+Tab', () => {
-    const { getByTestId } = render(<Harness isActive onEscape={vi.fn()} />);
-    getByTestId('first').focus();
+    const { panel } = openPanel();
+    const tabbable = focusablesIn(panel);
+    tabbable[0]?.focus();
 
     pressTab(true);
 
-    expect(document.activeElement).toBe(getByTestId('last'));
+    expect(document.activeElement).toBe(tabbable.at(-1) ?? null);
   });
 });
 
-describe('deactivating the trap restores focus to what held it before', () => {
-  it('returns focus to the FAB (or whatever was focused) once the panel closes', () => {
-    const fab = document.createElement('button');
-    fab.setAttribute('data-testid', 'fab');
-    document.body.appendChild(fab);
-    fab.focus();
+describe('closing the panel restores focus to what held it before', () => {
+  it('returns focus to the launcher once the panel closes', () => {
+    vi.spyOn(chatSession, 'getOrCreateChatId').mockResolvedValue('chat-shell');
+    vi.spyOn(streamClient, 'connect').mockResolvedValue();
+    renderWidget({ mtxId: `tenant-${(tenantCount += 1)}` }, { previewMode: false });
+    const launcher = screen.getByRole('button', { name: 'Open' });
+    launcher.focus();
 
-    const { rerender, getByTestId } = render(<Harness isActive={false} onEscape={vi.fn()} />);
-    rerender(<Harness isActive onEscape={vi.fn()} />);
-    expect(document.activeElement).toBe(getByTestId('first'));
+    openWidget();
+    const panel = screen.getByRole('separator').parentElement as HTMLElement;
+    expect(panel.contains(document.activeElement)).toBe(true);
+    pressEscape();
 
-    rerender(<Harness isActive={false} onEscape={vi.fn()} />);
-
-    expect(document.activeElement).toBe(fab);
+    expect(document.activeElement).toBe(launcher);
   });
 });
 
-describe('the trap leaks no document listener across mount/unmount', () => {
+describe('the widget leaks no document listener across mount/unmount', () => {
   it('removes exactly what it added', () => {
     const addSpy = vi.spyOn(document, 'addEventListener');
     const removeSpy = vi.spyOn(document, 'removeEventListener');
 
-    const { unmount } = render(<Harness isActive onEscape={vi.fn()} />);
+    const { unmount } = openPanel();
     const added = addSpy.mock.calls.filter(([type]) => type === 'keydown').length;
 
     unmount();
     const removed = removeSpy.mock.calls.filter(([type]) => type === 'keydown').length;
 
+    expect(added).toBeGreaterThan(0);
     expect(removed).toBe(added);
-    addSpy.mockRestore();
-    removeSpy.mockRestore();
   });
 });
 
-const sizeFor = (widget_width: string, widget_height: string) =>
-  renderResize({ widget_width, widget_height, mtxId: 'tenant' }).result.current;
+const sizeFor = (widget_width: string, widget_height: string) => {
+  const { panel } = openPanel({ widget_width, widget_height });
+  return { width: panel.style.width, height: panel.style.height };
+};
 
 describe('the panel size a dashboard setting produces', () => {
   it('uses a px setting as written', () => {
-    expect(sizeFor('400px', '500px')).toMatchObject({ widthPx: '400px', heightPx: '500px' });
+    expect(sizeFor('400px', '500px')).toEqual({ width: '400px', height: '500px' });
   });
 
   it('keeps the default for a length it cannot convert to px', () => {
-    expect(sizeFor('20rem', '30em')).toMatchObject({ widthPx: '360px', heightPx: '450px' });
+    expect(sizeFor('20rem', '30em')).toEqual({ width: '360px', height: '450px' });
   });
 
-  it('holds a setting outside the drag range to the same bounds a drag has', () => {
-    expect(sizeFor('20px', '10px')).toMatchObject({ widthPx: '280px', heightPx: '320px' });
-    expect(sizeFor('900px', '')).toMatchObject({ widthPx: '600px' });
+  it('holds a setting below the drag range to the minimum a drag has', () => {
+    expect(sizeFor('20px', '10px')).toEqual({ width: '280px', height: '320px' });
+  });
+
+  it('holds a setting above the drag range to the maximum a drag has', () => {
+    expect(sizeFor('900px', '').width).toBe('600px');
   });
 });
 
@@ -149,26 +162,9 @@ const OUTWARD: Record<WidgetPosition, { dx: number; dy: number }> = {
   top_left: { dx: 40, dy: 40 },
 };
 
-let dragCount = 0;
-
 const drag = (position: WidgetPosition, dx: number, dy: number): CSSStyleDeclaration => {
-  const { result } = renderResize({
-    widget_width: '400px',
-    widget_height: '500px',
-    widget_position: position,
-    mtxId: `tenant-${(dragCount += 1)}`,
-  });
-  const panel = document.createElement('div');
-  result.current.containerRef.current = panel;
-
-  act(() =>
-    result.current.onResizeStart({
-      preventDefault: () => {},
-      stopPropagation: () => {},
-      clientX: 0,
-      clientY: 0,
-    } as React.MouseEvent),
-  );
+  const { panel, grip } = openPanel({ widget_width: '400px', widget_height: '500px', widget_position: position });
+  fireEvent.mouseDown(grip, { clientX: 0, clientY: 0 });
   act(() => {
     document.dispatchEvent(new MouseEvent('mousemove', { clientX: dx, clientY: dy }));
     document.dispatchEvent(new MouseEvent('mouseup'));
@@ -190,37 +186,26 @@ describe('the one grip is on the corner the panel is free to move', () => {
   });
 });
 
-const keyResize = (key: string, times: number, config: { mtxId: string }) => {
-  const { result } = renderResize({ widget_width: '400px', widget_height: '500px', ...config });
-  for (let i = 0; i < times; i += 1) {
-    act(() => result.current.onResizeKeyDown({ key, preventDefault: () => {} } as unknown as React.KeyboardEvent));
-  }
-  return result.current;
+const keyResize = (key: string, times: number) => {
+  const { panel, grip } = openPanel({ widget_width: '400px', widget_height: '500px' });
+  for (let i = 0; i < times; i += 1) fireEvent.keyDown(grip, { key });
+  return { width: panel.style.width, height: panel.style.height };
 };
 
 describe('the keyboard resize arm reaches the same clampSize path as a drag', () => {
   it('steps width by one KEYBOARD_RESIZE_STEP_PX per ArrowRight', () => {
-    expect(keyResize('ArrowRight', 1, { mtxId: `tenant-${(dragCount += 1)}` })).toMatchObject({
-      widthPx: '416px',
-    });
+    expect(keyResize('ArrowRight', 1).width).toBe('416px');
   });
 
   it('clamps to the same MAX_WIDTH a drag clamps to', () => {
-    expect(keyResize('ArrowRight', 20, { mtxId: `tenant-${(dragCount += 1)}` })).toMatchObject({
-      widthPx: '600px',
-    });
+    expect(keyResize('ArrowRight', 20).width).toBe('600px');
   });
 
   it('clamps to the same MIN_WIDTH a drag clamps to', () => {
-    expect(keyResize('ArrowLeft', 20, { mtxId: `tenant-${(dragCount += 1)}` })).toMatchObject({
-      widthPx: '280px',
-    });
+    expect(keyResize('ArrowLeft', 20).width).toBe('280px');
   });
 
   it('ignores a key that is not one of the four resize arrows', () => {
-    expect(keyResize('Enter', 1, { mtxId: `tenant-${(dragCount += 1)}` })).toMatchObject({
-      widthPx: '400px',
-      heightPx: '500px',
-    });
+    expect(keyResize('Enter', 1)).toEqual({ width: '400px', height: '500px' });
   });
 });
