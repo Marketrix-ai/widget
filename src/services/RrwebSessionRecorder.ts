@@ -2,13 +2,12 @@
  * Per-chat rrweb session recorder: captures the host page as an rrweb event stream and ships it to the
  * api as one `rrweb/metadata` command followed by `rrweb/events` batches. `mount.tsx` constructs one
  * only when `widget_recording` is enabled, so this file is the whole recording feature.
- *
- * `start()` waits for the chat's stream to register (the api only accepts commands into a registered
- * chat) before posting metadata and arming rrweb, and a cleared chat's new thread gets a fresh recording
- * session starting from a full snapshot; `stop()` tears rrweb down and drains what's buffered;
- * `flush()` posts one batch at a time, in order. A flush that fails is logged and requeued at the front
- * rather than dropped, since a later batch replays against the first one's snapshot, and retried on a doubling
- * delay; once the stream gives up, retries wait for it to register again rather than polling a dead api.
+ * `start()` posts metadata and arms rrweb once the chat's stream registers (the api only accepts commands
+ * into a registered chat), even a registration after the stream gave up; a cleared chat's new thread gets a
+ * fresh session from a full snapshot; `stop()` tears rrweb down and drains the buffer; `flush()` posts one
+ * batch at a time. A failed batch is requeued at the front, since later batches replay against its snapshot,
+ * and retried on a doubling delay, or on the next registration once the stream gave up. The buffer is capped,
+ * keeping the oldest events, so a recording that cannot flush truncates instead of growing.
  */
 import { record } from '@rrweb/record';
 
@@ -20,7 +19,7 @@ import { streamClient, StreamGaveUpError } from './StreamClient';
 
 const FLUSH_INTERVAL_MS = 500;
 const MAX_RETRY_DELAY_MS = 30_000;
-const MAX_REQUEUED_EVENTS = 20_000;
+const MAX_BUFFERED_EVENTS = 20_000;
 
 export class RrwebSessionRecorder {
   private events: RrwebEvent[] = [];
@@ -39,12 +38,21 @@ export class RrwebSessionRecorder {
 
   async start(): Promise<void> {
     if (this.stopRecording || this.stopped) return;
-    await this.openSession();
-    if (this.stopped) return;
     streamClient.addCallbacks(this.callbacks);
+    try {
+      await this.openSession();
+    } catch (error) {
+      if (!(error instanceof StreamGaveUpError)) throw error;
+      logWarn('[RrwebSessionRecorder] Stream gave up before the chat registered; recording waits for a retry:', error);
+      this.streamGaveUp = true;
+      return;
+    }
+    if (this.stopped || this.stopRecording) return;
     this.stopRecording = record({
       emit: event => {
-        this.events.push(RrwebEventSchema.parse(event));
+        const parsed = RrwebEventSchema.parse(event);
+        if (this.events.length >= MAX_BUFFERED_EVENTS) return;
+        this.events.push(parsed);
         if (!this.flushTimer && !this.streamGaveUp) this.scheduleFlush(FLUSH_INTERVAL_MS);
       },
       maskAllInputs: true,
@@ -56,6 +64,15 @@ export class RrwebSessionRecorder {
   private readonly callbacks = {
     onMessage: (event: WidgetEvent) => {
       if (event.type !== 'registered' || this.stopped) return;
+      if (!this.stopRecording) {
+        if (!this.streamGaveUp) return;
+        this.streamGaveUp = false;
+        this.chatId = event.chat_id;
+        this.start().catch((error: unknown) => {
+          console.error('[RrwebSessionRecorder] Failed to start recording after the stream registered:', error);
+        });
+        return;
+      }
       if (event.chat_id === this.chatId) {
         if (this.streamGaveUp) {
           this.streamGaveUp = false;
@@ -78,6 +95,8 @@ export class RrwebSessionRecorder {
   private async followChat(chatId: string): Promise<void> {
     await this.flush();
     this.events = [];
+    this.streamGaveUp = false;
+    this.failedFlushes = 0;
     this.chatId = chatId;
     this.sessionId = randomId();
     await this.openSession();
@@ -97,7 +116,7 @@ export class RrwebSessionRecorder {
         timestamp: Date.now(),
         viewport: { width: window.innerWidth, height: window.innerHeight },
       },
-      this.chatId,
+      { chatId: this.chatId },
     );
   }
 
@@ -122,10 +141,13 @@ export class RrwebSessionRecorder {
       const events = this.events.splice(0);
       if (!events.length) return;
       try {
-        await streamClient.send({ type: 'rrweb/events', rrweb_session_id: this.sessionId, events }, this.chatId);
+        await streamClient.send(
+          { type: 'rrweb/events', rrweb_session_id: this.sessionId, events },
+          { chatId: this.chatId },
+        );
         this.failedFlushes = 0;
       } catch (error) {
-        this.events = events.concat(this.events).slice(0, MAX_REQUEUED_EVENTS);
+        this.events = events.concat(this.events).slice(0, MAX_BUFFERED_EVENTS);
         logWarn('[RrwebSessionRecorder] Failed to record session events, requeued for retry:', error);
         if (this.stopped || this.streamGaveUp) return;
         this.scheduleFlush(Math.min(FLUSH_INTERVAL_MS * 2 ** this.failedFlushes++, MAX_RETRY_DELAY_MS));

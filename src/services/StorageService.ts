@@ -7,6 +7,8 @@
  * The tab id survives same-origin navigations and reloads so the api keeps routing a Show/Do task's tool
  * calls to this tab; a page takes it out of `sessionStorage` while alive, so a duplicated tab mints its own, and
  * `remintTabId` gives a page a fresh one when a tab duplicated mid-navigation still copied the id.
+ * `claimToolCall` records each started tool call per tab, so a call the api resends after a navigating step
+ * reloaded the page is answered `page_reloaded` rather than run twice.
  */
 import { z } from 'zod';
 
@@ -18,6 +20,8 @@ import { randomId } from '../utils/randomId';
 
 const STORAGE_KEY = 'marketrix_chat_context';
 const TAB_ID_KEY = 'marketrix_tab_id';
+const STARTED_TOOL_CALLS_KEY = 'marketrix_started_tool_calls';
+const MAX_STARTED_TOOL_CALLS = 200;
 const CONTEXT_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000;
 
 const MessagePartSchema = z.object({
@@ -65,7 +69,7 @@ const ChatContextSchema = z.object({
 
 type ChatContext = z.infer<typeof ChatContextSchema>;
 
-export interface ChatSnapshot {
+interface ChatSnapshot {
   messages: ChatMessage[];
   currentMode: InstructionType;
   isOpen: boolean;
@@ -156,6 +160,27 @@ export function remintTabId(): string {
   claimTabId();
   tabId = randomId();
   return tabId;
+}
+
+const StartedToolCallsSchema = z.array(z.string());
+const pageToolCalls = new Set<string>();
+
+type ToolCallClaim = 'fresh' | 'seen' | 'interrupted';
+
+export function claimToolCall(toolCallId: string): ToolCallClaim {
+  if (pageToolCalls.has(toolCallId)) return 'seen';
+  pageToolCalls.add(toolCallId);
+  const stored = sessionStore(storage => storage.getItem(STARTED_TOOL_CALLS_KEY));
+  let started: string[] = [];
+  try {
+    started = stored === null ? [] : StartedToolCallsSchema.parse(JSON.parse(stored));
+  } catch (error) {
+    logWarn('[StorageService] Ignoring an unreadable started tool-call record:', error);
+  }
+  if (started.includes(toolCallId)) return 'interrupted';
+  const next = [...started, toolCallId].slice(-MAX_STARTED_TOOL_CALLS);
+  sessionStore(storage => storage.setItem(STARTED_TOOL_CALLS_KEY, JSON.stringify(next)));
+  return 'fresh';
 }
 
 export function readChatSnapshot(): ChatSnapshot {

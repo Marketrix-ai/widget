@@ -14,7 +14,7 @@ import type { RrwebEvent } from '../../sdk/contracts/rrweb';
 import { flushMicrotasks } from '../../test/fixtures';
 import { advanceTimersByTimeAsync, mocked, mockSdkModule, restoreModuleAfterAll } from '../../test/vi-compat';
 import { RrwebSessionRecorder } from '../RrwebSessionRecorder';
-import { streamClient } from '../StreamClient';
+import { streamClient, StreamGaveUpError } from '../StreamClient';
 
 vi.mock('@rrweb/record', () => ({ record: vi.fn(() => vi.fn()) }));
 vi.mock('../../sdk', () => mockSdkModule({ widgetMessagePost: vi.fn() }));
@@ -90,9 +90,9 @@ describe('a flush the api rejects', () => {
     const posted = mockSdk.widgetMessagePost.mock.lastCall?.[0].command as {
       events: Array<{ type: number; timestamp: number }>;
     };
-    expect(posted.events).toHaveLength(20_001);
+    expect(posted.events).toHaveLength(20_000);
     expect(posted.events.slice(0, 2).map(event => event.type)).toEqual([EventType.Meta, EventType.FullSnapshot]);
-    expect(posted.events[posted.events.length - 1]?.timestamp).toBe(99_999);
+    expect(posted.events[posted.events.length - 1]?.timestamp).toBe(19_999);
     vi.useRealTimers();
   });
 
@@ -157,6 +157,65 @@ describe('a flush that keeps failing', () => {
     expect(posted.events).toEqual([metaEvent(0), incrementalEvent(1)]);
     recorder.stop();
     vi.useRealTimers();
+  });
+});
+
+describe('a recorder whose stream has given up', () => {
+  const internals = (client: typeof streamClient) =>
+    client as unknown as { handleMessage: (event: WidgetEvent) => void; giveUp: (message: string) => void };
+
+  it('bounds the buffer while nothing flushes', async () => {
+    vi.useFakeTimers();
+    const { recorder, emit } = await startRecorder();
+    internals(streamClient).giveUp('Could not reconnect to the assistant. Try again.');
+
+    for (let i = 0; i < 20_010; i++) emit(incrementalEvent(i));
+    mockSdk.widgetMessagePost.mockResolvedValueOnce({ success: true });
+    internals(streamClient).handleMessage({ type: 'registered', chat_id: 'chat-1' });
+    await flushMicrotasks();
+
+    const posted = mockSdk.widgetMessagePost.mock.lastCall?.[0].command as { events: RrwebEvent[] };
+    expect(posted.events).toHaveLength(20_000);
+    recorder.stop();
+    vi.useRealTimers();
+  });
+
+  it('flushes again once a cleared chat registers its new thread', async () => {
+    vi.useFakeTimers();
+    Object.assign(record, { takeFullSnapshot: vi.fn() });
+    const { recorder, emit } = await startRecorder();
+    internals(streamClient).giveUp('Could not reconnect to the assistant. Try again.');
+    mockSdk.widgetMessagePost.mockResolvedValue({ success: true });
+
+    internals(streamClient).handleMessage({ type: 'registered', chat_id: 'chat-2' });
+    await waitFor(() => expect(mockSdk.widgetMessagePost.mock.lastCall?.[0].chat_id).toBe('chat-2'));
+    emit(incrementalEvent(1));
+    await advanceTimersByTimeAsync(500);
+
+    const posted = mockSdk.widgetMessagePost.mock.lastCall?.[0];
+    expect(posted?.chat_id).toBe('chat-2');
+    expect(posted?.command).toMatchObject({ type: 'rrweb/events', events: [incrementalEvent(1)] });
+    recorder.stop();
+    vi.useRealTimers();
+  });
+});
+
+describe('a stream that gives up before the chat first registers', () => {
+  it('starts recording once a retry registers the chat', async () => {
+    const internals = streamClient as unknown as { handleMessage: (event: WidgetEvent) => void };
+    vi.spyOn(streamClient, 'ready')
+      .mockRejectedValueOnce(new StreamGaveUpError('Could not reconnect to the assistant. Try again.'))
+      .mockResolvedValue();
+    mockSdk.widgetMessagePost.mockResolvedValue({ success: true });
+    const recorder = new RrwebSessionRecorder('chat-1', 1);
+
+    await recorder.start();
+    expect(record).not.toHaveBeenCalled();
+
+    internals.handleMessage({ type: 'registered', chat_id: 'chat-1' });
+    await waitFor(() => expect(record).toHaveBeenCalledTimes(1));
+    expect(mockSdk.widgetMessagePost.mock.lastCall?.[0].command.type).toBe('rrweb/metadata');
+    recorder.stop();
   });
 });
 

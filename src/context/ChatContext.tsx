@@ -3,9 +3,11 @@
  * `sendTurn` is the one entry for a typed turn or chip, refusing a mode the tenant disabled or a turn while a
  * screen-access request is open, and asking for screen access first in Show and Do; `allowScreenAccess`/
  * `denyScreenAccess` release the held turn; `stopTask` cancels a running turn and its Show overlay; `clearChat`
- * stops any running turn and starts a fresh chat thread, so the agent forgets the cleared history too. The stream handlers run browser tools and reply with results; preview mode answers locally.
- * The api never replays a chat's past events on reconnect, so only a resent `tool/call` needs dedupe. A turn the
- * api refuses as forbidden (a mode switched off since the page loaded) shows the api's own message.
+ * stops any running turn and starts a fresh chat thread, so the agent forgets the cleared history too. The
+ * stream handlers run browser tools and reply with results; preview mode answers locally.
+ * The api resends an unanswered `tool/call` on every re-register, so a call already started in this tab never
+ * runs twice: one an earlier page load started is answered `page_reloaded` so the agent re-observes the page.
+ * A turn the api refuses as forbidden (a mode switched off since the page loaded) shows the api's own message.
  */
 import { ORPCError } from '@orpc/client';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
@@ -16,7 +18,7 @@ import { browserToolService } from '../services/BrowserToolService';
 import { getOrCreateChatId } from '../services/chatSession';
 import { activeScreenStream, startScreenShare, subscribeScreenShare } from '../services/ScreenShareService';
 import { showModeService } from '../services/ShowModeService';
-import { forgetChatId } from '../services/StorageService';
+import { claimToolCall, forgetChatId } from '../services/StorageService';
 import { streamClient, StreamGaveUpError } from '../services/StreamClient';
 import type { ChatMessage, InstructionType } from '../types';
 import {
@@ -31,7 +33,6 @@ import {
 import { logWarn } from '../utils/log';
 import {
   type ChatState,
-  isTerminalTaskStatus,
   openScreenAccessRequest,
   reduceAppend,
   reduceDispatch,
@@ -69,10 +70,9 @@ interface ChatContextType {
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
-const MAX_PROCESSED_TOOL_CALL_IDS = 1000;
-
 const STALE_REPLY_TIMEOUT_MS = 120_000;
 const STALE_REPLY_TEXT = 'This is taking longer than expected. Please try again.';
+const SCREEN_SHARE_FAILED_TEXT = 'Screen sharing could not start, so the assistant will continue without it.';
 const PREVIEW_REPLY = "This is a preview. In production, I'll respond to your messages here.";
 
 const StaleReplyWatchdog: React.FC<{ id: string; progress: number; onStale: (id: string) => void }> = ({
@@ -98,7 +98,6 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   currentModeRef.current = uiState.currentMode;
   const currentErrorRef = useRef(uiState.error);
   currentErrorRef.current = uiState.error;
-  const processedToolCallIds = useRef(new Set<string>());
   const lastStreamErrorRef = useRef<string | undefined>(undefined);
 
   const commit = useCallback((transition: (s: ChatState) => ChatState) => {
@@ -131,9 +130,10 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         await streamClient.send({ type: `chat/${mode}`, request_id: placeholder.id, content });
         return true;
       } catch (error) {
-        console.error('Failed to send message:', error);
-        const refusal = error instanceof ORPCError && error.code === 'FORBIDDEN' ? error.message : CHAT_FAILURE_TEXT;
-        commit(s => reduceError(s, placeholder.id, refusal));
+        const refused = error instanceof ORPCError && error.code === 'FORBIDDEN';
+        if (refused) logWarn(`[ChatContext] The api refused the turn: ${error.message}`);
+        else console.error('Failed to send message:', error);
+        commit(s => reduceError(s, placeholder.id, refused ? error.message : CHAT_FAILURE_TEXT));
         return false;
       }
     },
@@ -168,9 +168,10 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       resolveScreenAccess('allowed');
     } catch (error) {
       logWarn('[ChatContext] Screen share declined or unavailable:', error);
+      commit(s => reduceAppend(s, createSystemMessage(SCREEN_SHARE_FAILED_TEXT)));
       resolveScreenAccess('denied');
     }
-  }, [use_screenshare, resolveScreenAccess]);
+  }, [use_screenshare, commit, resolveScreenAccess]);
 
   const denyScreenAccess = useCallback(() => resolveScreenAccess('denied'), [resolveScreenAccess]);
 
@@ -189,6 +190,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const setError = uiActions.setError;
 
     const startToolCall = async ({ call, mode }: ToolRun) => {
+      const route = streamClient.route();
       const result = await browserToolService.executeTool(call.browser_tool, call.args, mode, call.explanation);
       if (!result.success && result.cancelled) return;
       const error = result.success ? undefined : result.error;
@@ -201,13 +203,16 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       await streamClient
-        .send({
-          type: 'tool/response',
-          tool_call_id: call.tool_call_id,
-          success: result.success,
-          ...(result.success && { data: JSON.stringify(result.data) }),
-          error,
-        })
+        .send(
+          {
+            type: 'tool/response',
+            tool_call_id: call.tool_call_id,
+            success: result.success,
+            ...(result.success && { data: JSON.stringify(result.data) }),
+            error,
+          },
+          route,
+        )
         .catch((err: unknown) => {
           console.error('Failed to send tool response:', err);
           setError('Could not report that step back to the assistant — it may stop responding.');
@@ -218,16 +223,19 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const onMessage = (event: WidgetEvent): void => {
       if (event.type === 'tool/call') {
-        const toolCallId = event.tool_call_id;
-        if (processedToolCallIds.current.has(toolCallId)) return;
-        processedToolCallIds.current.add(toolCallId);
-        if (processedToolCallIds.current.size > MAX_PROCESSED_TOOL_CALL_IDS) {
-          processedToolCallIds.current = new Set(
-            [...processedToolCallIds.current].slice(-MAX_PROCESSED_TOOL_CALL_IDS / 2),
-          );
+        const claim = claimToolCall(event.tool_call_id);
+        if (claim === 'seen') return;
+        if (claim === 'interrupted') {
+          streamClient
+            .send({
+              type: 'tool/response',
+              tool_call_id: event.tool_call_id,
+              success: true,
+              data: JSON.stringify({ page_reloaded: true }),
+            })
+            .catch((err: unknown) => console.error('Failed to report an interrupted step:', err));
+          return;
         }
-      } else if (event.type === 'task/status' && isTerminalTaskStatus(event.status)) {
-        processedToolCallIds.current.clear();
       } else if (event.type === 'chat/error') {
         logWarn('[Widget] Chat error from server:', event.error);
       } else if (

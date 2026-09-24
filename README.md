@@ -136,7 +136,7 @@ import {
 
 ### `mountWidget(config): Promise<void>`
 
-Auto-detects the mode (preview / production) from `config` and initializes the widget, rejecting if neither `settings` nor `mtxId` + `mtxKey` is present, if preview `settings` are invalid, or if production init fails. The recommended entry point for programmatic use.
+Auto-detects the mode (preview / production) from `config` and initializes the widget, rejecting if neither `settings` nor `mtxId` + `mtxKey` + `mtxApiHost` is present, if preview `settings` are invalid, or if production init fails. The recommended entry point for programmatic use.
 
 ```ts
 // Production
@@ -204,11 +204,10 @@ Props: `settings` (required) and `container?`. Invalid `settings` throw during r
 ## Interaction modes
 
 - **Tell** — the agent explains concepts and answers questions in chat.
-- **Show** — the agent walks the user through a task step-by-step, highlighting the relevant elements on the page. A Show or Do task keeps running across same-origin page navigations in the same tab.
-
-A mode switched off in the dashboard is never sent: its chips are hidden and the composer uses the first enabled mode.
-
+- **Show** — the agent walks the user through a task step-by-step, highlighting the relevant elements on the page.
 - **Do** — the agent performs the actions in the browser on the user's behalf.
+
+A Show or Do task keeps running across same-origin page navigations in the same tab. A mode switched off in the dashboard is never sent: its chips are hidden and the composer uses the first enabled mode.
 
 ---
 
@@ -275,8 +274,10 @@ entirely unstyled. If your policy is that strict, either:
   applies it to its injected `<style>` element.
 
 The widget makes network requests only to the configured `mtxApiHost`, with credentials explicitly
-omitted on every request (it authenticates via `mtxId`/`mtxKey`, never a cookie) — no `connect-src`
-entry beyond your own API host is required, and no third-party origin is ever contacted.
+omitted on every request (it authenticates via `mtxId`/`mtxKey`, never a cookie), so `connect-src` needs
+only that host. The script-tag loader also imports React from `https://esm.sh` unless your page's import
+map already provides it, so a `script-src` policy must allow that origin or supply React itself; an npm
+install contacts no third-party origin.
 
 ---
 

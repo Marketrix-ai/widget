@@ -94,7 +94,7 @@ describe('WidgetProviders initialization', () => {
       currentMode: 'tell',
       isOpen: false,
       isTaskRunning: true,
-    } as StorageService.ChatSnapshot);
+    } as ReturnType<typeof StorageService.readChatSnapshot>);
 
     render(
       <WidgetProviders config={LIVE}>
