@@ -2,7 +2,7 @@
  * Tests for `StreamClient`'s registration lifecycle and the Retry affordance, over a mocked `sdk` module
  * so no real SSE transport is involved. Covers that a caller parked on registration is always settled
  * (disconnect, give-up, refused credential), the exponential-backoff reconnect schedule and its jitter
- * window, and that a superseded connection's stale events never reach a later turn.
+ * window, that a superseded connection's stale events never reach a later turn, and that an evicted tab re-mints its id.
  */
 
 import { sdk, type WidgetEvent } from '../../sdk';
@@ -392,6 +392,29 @@ describe('StreamClient fault injection', () => {
 
     await advanceTimersByTimeAsync(120000);
     expect(mockSdk.widgetStream).toHaveBeenCalledTimes(baseDelays.length + 1);
+
+    client.disconnect();
+    vi.useRealTimers();
+  });
+
+  it('redials under a fresh tab id when a page sharing its tab id evicts the registered stream', async () => {
+    vi.useFakeTimers();
+    const client = freshClient();
+    const evicted = controlledStream();
+    mockSdk.widgetStream.mockResolvedValueOnce(evicted.stream);
+    await client.connect('chat-1');
+    evicted.push({ type: 'registered', chat_id: 'chat-1' });
+    await flushMicrotasks();
+
+    const redial = controlledStream();
+    mockSdk.widgetStream.mockResolvedValueOnce(redial.stream);
+    evicted.end();
+    await flushMicrotasks();
+    await advanceTimersByTimeAsync(1000);
+
+    const [first, second] = mockSdk.widgetStream.mock.calls.map(([input]) => input.tab_id);
+    expect(mockSdk.widgetStream).toHaveBeenCalledTimes(2);
+    expect(second).not.toBe(first);
 
     client.disconnect();
     vi.useRealTimers();
