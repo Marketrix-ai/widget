@@ -4,9 +4,8 @@
  * Library result; `openWidget` clicks the launcher and `openChatTab` moves to the Chat view, the two
  * steps every panel test opens with. `ChatHarness` mounts just the chat store under a mock config.
  *
- * `previewMode` defaults true, since a mounted widget otherwise mints a chat id and dials the stream.
- * `WidgetFabAnchor` passes false deliberately: the launcher's pixel anchoring is what it asserts, and
- * preview mode is the branch that skips it.
+ * `previewMode` defaults true, since a mounted widget otherwise mints a chat id and dials the stream; a test
+ * of the launcher's pixel anchoring passes false, since preview mode is the branch that skips it.
  */
 import { fireEvent, render, screen } from '@testing-library/react';
 import type React from 'react';

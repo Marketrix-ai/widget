@@ -18,14 +18,10 @@ import { Text } from '../base/Text';
 import { ChatInput, type ChatInputMode } from '../blocks/ChatInput';
 import { MessageList } from '../chat/MessageList';
 
-const MODES: Array<{
-  id: InstructionType;
-  icon: ChatInputMode['icon'];
-  flag: 'widget_feature_tell' | 'widget_feature_show' | 'widget_feature_do';
-}> = [
-  { id: 'tell', icon: 'chatBubble', flag: 'widget_feature_tell' },
-  { id: 'show', icon: 'mousePointerClick', flag: 'widget_feature_show' },
-  { id: 'do', icon: 'ticktick', flag: 'widget_feature_do' },
+const MODES: Array<{ id: InstructionType; icon: ChatInputMode['icon'] }> = [
+  { id: 'tell', icon: 'chatBubble' },
+  { id: 'show', icon: 'mousePointerClick' },
+  { id: 'do', icon: 'ticktick' },
 ];
 
 export const ChatView: React.FC<{ messageInputRef: React.RefObject<HTMLTextAreaElement | null> }> = ({
@@ -75,7 +71,11 @@ export const ChatView: React.FC<{ messageInputRef: React.RefObject<HTMLTextAreaE
           value={inputValue}
           onChange={setInputValue}
           onSubmit={handleSendMessage}
-          modes={MODES.filter(({ flag }) => config[flag]).map(({ id, icon }) => ({ id, icon, label: MODE_LABELS[id] }))}
+          modes={MODES.filter(({ id }) => config[`widget_feature_${id}`]).map(({ id, icon }) => ({
+            id,
+            icon,
+            label: MODE_LABELS[id],
+          }))}
           activeMode={currentMode}
           onModeChange={handleModeChange}
           disabled={composerLocked}
