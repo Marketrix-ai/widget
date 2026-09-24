@@ -3,8 +3,7 @@
  * store.
  * `WidgetConfigContext` publishes the resolved config and `useWidgetConfig` reads it, throwing outside a
  * provider. `useWidget` folds `UIStateContext` and `ChatContext` into one memoized `{state, actions}`, with
- * `isComposerLocked` holding every new turn while a reply is pending or a screen-access request is open, and
- * its `clearChatHistory` resets the chat and UI error together.
+ * `isComposerLocked` holding every new turn while a reply is pending or a screen-access request is open.
  */
 
 import { createContext, useContext, useMemo } from 'react';
@@ -38,17 +37,7 @@ export const useWidget = () => {
     };
   }, [uiState, messages, taskState]);
 
-  const actions = useMemo(
-    () => ({
-      ...uiActions,
-      ...chatActions,
-      clearChatHistory: () => {
-        chatActions.clearChat();
-        uiActions.setError(undefined);
-      },
-    }),
-    [uiActions, chatActions],
-  );
+  const actions = useMemo(() => ({ ...uiActions, ...chatActions }), [uiActions, chatActions]);
 
   return { state, actions };
 };

@@ -3,8 +3,8 @@
  * `sendTurn` is the one entry for a typed turn or chip, refusing a mode the tenant disabled or a turn while a
  * screen-access request is open, and asking for screen access first in Show and Do; `allowScreenAccess`/
  * `denyScreenAccess` release the held turn; `stopTask` cancels a running turn and its Show overlay; `clearChat`
- * stops any running turn and starts a fresh chat thread, so the agent forgets the cleared history too. The
- * stream handlers run browser tools and reply with results; preview mode answers locally.
+ * stops any running turn, clears the error and starts a fresh chat thread, so the agent forgets the cleared
+ * history too. The stream handlers run browser tools and reply with results; preview mode answers locally.
  * The api resends an unanswered `tool/call` on every re-register, so a call already started in this tab never
  * runs twice: one an earlier page load started is answered `page_reloaded` so the agent re-observes the page.
  * A turn the api refuses as forbidden (a mode switched off since the page loaded) shows the api's own message.
@@ -287,6 +287,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { task, messages } = stateRef.current;
     if (task.phase === 'running' || messages.some(isPending)) stopTask();
     commit(() => ({ messages: [], task: { phase: 'idle' } }));
+    uiActions.setError(undefined);
     if (isPreviewMode) return;
     forgetChatId();
     getOrCreateChatId()

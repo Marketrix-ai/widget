@@ -52,13 +52,13 @@ const MessageBody: React.FC<{ message: ChatMessage; isLastMessage: boolean; isTa
   isLastMessage,
   isTaskRunning,
 }) => {
-  const isPlaceholder = isPending(message);
+  const pending = isPending(message);
   const isWaitingForUser = waitsForVisitor(message);
   const stillWorking =
     isTaskRunning && isLastMessage && 'mode' in message && (message.mode === 'show' || message.mode === 'do');
 
   if (message.parts.length === 0) {
-    return isPlaceholder || stillWorking ? <Thinking isWaitingForUser={isWaitingForUser} /> : <Surface />;
+    return pending || stillWorking ? <Thinking isWaitingForUser={isWaitingForUser} /> : <Surface />;
   }
 
   return (
@@ -87,7 +87,7 @@ const MessageBody: React.FC<{ message: ChatMessage; isLastMessage: boolean; isTa
         );
       })}
 
-      {((isPlaceholder && !message.parts.some(p => p.type === 'text')) || stillWorking) && (
+      {((pending && !message.parts.some(p => p.type === 'text')) || stillWorking) && (
         <Thinking isWaitingForUser={isWaitingForUser} />
       )}
     </Stack>
