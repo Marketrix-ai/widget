@@ -1,7 +1,7 @@
 # Builds and pushes the runtime image on a `v*` tag, natively on an arm64 runner, the public-repo twin of infra's
 # `image-build` action. Images are arm64 because the one cluster node is Arm and an emulated arm64 build hangs Bun.
-# The image tag is the BARE semver — the leading `v` is stripped — which is what infra's Helm values pin. The Trivy
-# scan reports and never blocks.
+# The image tag is the BARE semver — the leading `v` is stripped — which is what infra's Helm values pin.
+# It does not scan: infra's `image-scan.yml` scans every deployed image daily.
 name: Image
 on:
   push:
@@ -38,10 +38,3 @@ jobs:
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.version=${{ steps.tag.outputs.image_tag }}
           provenance: false
-      - name: Scan image with Trivy
-        uses: aquasecurity/trivy-action@v0.36.0
-        with:
-          image-ref: marketrix.azurecr.io/widget:${{ steps.tag.outputs.image_tag }}
-          format: table
-          severity: CRITICAL,HIGH
-        continue-on-error: true
