@@ -60,11 +60,18 @@ const startRecorder = async (): Promise<{ recorder: RrwebSessionRecorder; emit: 
 };
 
 describe('rrweb event validation', () => {
-  it('rejects an event outside the generated wire schema before buffering it', async () => {
-    const { emit } = await startRecorder();
+  it('drops an event outside the generated wire schema with one warning, never throwing into the host page', async () => {
+    const { recorder, emit } = await startRecorder();
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-    expect(() => emit({ type: EventType.DomContentLoaded, data: { extra: true }, timestamp: 0 })).toThrow();
+    for (let i = 0; i < 2; i++) {
+      expect(() => emit({ type: EventType.DomContentLoaded, data: { extra: true }, timestamp: 0 })).not.toThrow();
+    }
+    await recorder.stop();
+
+    expect(warn).toHaveBeenCalledTimes(1);
     expect(mockSdk.widgetMessagePost).toHaveBeenCalledTimes(1);
+    warn.mockRestore();
   });
 });
 
