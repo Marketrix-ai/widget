@@ -12,11 +12,13 @@ import { type AgentMessage, type ChatMessage, messageText } from '../../types';
 import {
   addProgressLine,
   CHAT_FAILURE_TEXT,
+  createScreenAccessRequestMessage,
   createScreenshareMessage,
   createUserMessage,
   findMessageForProgress,
   markProgressLineComplete,
   markProgressLineFailed,
+  SCREEN_ACCESS_DETAIL,
   SCREEN_ACCESS_PROMPT,
 } from '../chat';
 
@@ -93,9 +95,17 @@ describe('message construction', () => {
   });
 });
 
+describe('screen-access consent', () => {
+  it('says declining withholds only the screen, since Show and Do still act on the page', () => {
+    const request = createScreenAccessRequestMessage('do', 'Upgrade my plan');
+    expect(request.parts.map(part => part.content)).toEqual([SCREEN_ACCESS_PROMPT, SCREEN_ACCESS_DETAIL]);
+  });
+});
+
 describe('fixed user-facing strings', () => {
   it('pins the exact screen-access prompt and chat-failure sentence', () => {
     expect(SCREEN_ACCESS_PROMPT).toBe('Can I take a look at your screen?');
+    expect(SCREEN_ACCESS_DETAIL).toContain('Saying no only keeps your screen private');
     expect(CHAT_FAILURE_TEXT).toBe("I'm sorry, I encountered an error processing your request. Please try again.");
   });
 });

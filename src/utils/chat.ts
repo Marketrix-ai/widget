@@ -6,8 +6,10 @@
  * `findMessageForProgress` picks the right open message for an incoming update by a ranked set of
  * predicates, falling back to "no match" (logged, not thrown) rather than guessing wrong. The per-kind
  * constructors are the only way a `ChatMessage` is built, so ids and shape stay consistent.
- * `CHAT_FAILURE_TEXT` and `SCREEN_ACCESS_PROMPT` are the one wording each site uses for those two
+ * `CHAT_FAILURE_TEXT` and the `SCREEN_ACCESS_*` pair are the one wording each site uses for those two
  * situations, so the failure text never leaks raw server error details to a visitor.
+ * Show and Do read and act on the page through the DOM whatever the visitor answers, so declining screen
+ * access withholds only the view of their screen.
  */
 import { InstructionTypeSchema } from '../sdk/contracts/widgetSettings';
 import type { WidgetToolName } from '../services/BrowserToolService';
@@ -135,10 +137,17 @@ export const createSystemMessage = (content: string): ChatMessage => ({
 
 export const SCREEN_ACCESS_PROMPT = 'Can I take a look at your screen?';
 
+export const SCREEN_ACCESS_DETAIL =
+  'Either way, the assistant reads this page and acts on it to help you. Saying no only keeps your screen private.';
+
 export const CHAT_FAILURE_TEXT = "I'm sorry, I encountered an error processing your request. Please try again.";
 
 export const createScreenAccessRequestMessage = (mode: InstructionType, pendingContent: string): ChatMessage => ({
-  ...newMessage('screenAccess', SCREEN_ACCESS_PROMPT),
+  ...newMessage('screenAccess', ''),
+  parts: [
+    { type: 'text', content: SCREEN_ACCESS_PROMPT },
+    { type: 'text', content: SCREEN_ACCESS_DETAIL },
+  ],
   kind: 'screenAccess',
   mode,
   pendingContent,

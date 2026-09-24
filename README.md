@@ -71,13 +71,13 @@ All modes also accept the common options below.
 
 These apply to every mode (script attribute → config key):
 
-| Config key                | Script attribute      | Type          | Description                                                                                                                                                                                  |
-| ------------------------- | --------------------- | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `container`               | —                     | `HTMLElement` | Element to mount inside (programmatic only). Defaults to a container appended to `<body>`.                                                                                                   |
-| `widget_position_z_index` | —                     | number        | `z-index` floor for the launcher and panel. Raised to the widget's own layer token if you pass a lower value.                                                                                |
-| `show_widget`             | —                     | boolean       | When `false`, the widget initializes fully but its UI stays hidden. Default `true`.                                                                                                          |
-| `use_screenshare`         | `mtx-use-screenshare` | boolean       | When `false`, screen-share requests are auto-denied and the Share Screen button is hidden. Default `true`. Disable via `mtx-use-screenshare="false"`.                                        |
-| `styleNonce`              | `mtx-style-nonce`     | string        | A CSP nonce applied to the widget's injected `<style>` element. Required only if your `style-src` policy has no `'unsafe-inline'` — see [Content Security Policy](#content-security-policy). |
+| Config key                | Script attribute      | Type          | Description                                                                                                                                                                                    |
+| ------------------------- | --------------------- | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `container`               | —                     | `HTMLElement` | Element to mount inside (programmatic only). Defaults to a container appended to `<body>`.                                                                                                     |
+| `widget_position_z_index` | —                     | number        | `z-index` floor for the launcher and panel. Raised to the widget's own layer token if you pass a lower value.                                                                                  |
+| `show_widget`             | —                     | boolean       | When `false`, the widget initializes fully but its UI stays hidden. Default `true`.                                                                                                            |
+| `use_screenshare`         | `mtx-use-screenshare` | boolean       | When `false`, the widget never asks to share the screen (Show and Do still work on the page) and the Share Screen button is hidden. Default `true`. Disable via `mtx-use-screenshare="false"`. |
+| `styleNonce`              | `mtx-style-nonce`     | string        | A CSP nonce applied to the widget's injected `<style>` element. Required only if your `style-src` policy has no `'unsafe-inline'` — see [Content Security Policy](#content-security-policy).   |
 
 Widget **appearance and behavior** (position, colors, sizing, border radius, animation, enabled Tell/Show/Do features, visibility, greeting toast, optional session recording, header/body/greeting text, and quick-action chips) are configured in the Marketrix dashboard and fetched from the API at init. A hidden widget stays visible in the dashboard preview.
 

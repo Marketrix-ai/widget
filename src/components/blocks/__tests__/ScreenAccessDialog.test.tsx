@@ -8,7 +8,7 @@ import { useRef, useState } from 'react';
 
 import { PortalContainerContext, WidgetProviders } from '../../../context/WidgetProviders';
 import { getMockWidgetConfig } from '../../../test/fixtures';
-import { SCREEN_ACCESS_PROMPT } from '../../../utils/chat';
+import { SCREEN_ACCESS_DETAIL, SCREEN_ACCESS_PROMPT } from '../../../utils/chat';
 import { ScreenAccessDialog } from '../ScreenAccessDialog';
 
 describe('ScreenAccessDialog', () => {
@@ -38,7 +38,7 @@ describe('ScreenAccessDialog', () => {
     fireEvent.click(trigger);
 
     const dialog = await screen.findByRole('dialog', { name: SCREEN_ACCESS_PROMPT });
-    expect(dialog).toHaveAccessibleDescription(/By allowing screen access/);
+    expect(dialog).toHaveAccessibleDescription(SCREEN_ACCESS_DETAIL);
     await waitFor(() => expect(screen.getByRole('button', { name: 'No' })).toHaveFocus());
 
     fireEvent.keyDown(document, { key: 'Escape' });
