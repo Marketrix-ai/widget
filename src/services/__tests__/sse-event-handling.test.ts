@@ -164,7 +164,7 @@ describe('SSE event discriminated-union contract (WidgetEventSchema)', () => {
       ['chat/stop', { type: 'chat/stop' }],
       ['tool/response', { type: 'tool/response', tool_call_id: 'c1', success: true, result: { text: 'ok' } }],
       ['tool/response', { type: 'tool/response', tool_call_id: 'c1', success: false, error: 'boom' }],
-      ['rrweb/metadata', { type: 'rrweb/metadata', rrweb_session_id: 's1' }],
+      ['rrweb/metadata', { type: 'rrweb/metadata', rrweb_session_id: 's1', url: 'https://shop.test/' }],
       ['rrweb/events', { type: 'rrweb/events', rrweb_session_id: 's1', events: [] }],
     ] as const)('accepts a minimal "%s" command', (_type, fixture) => {
       expect(WidgetCommandSchema.safeParse(fixture).success).toBe(true);
@@ -182,7 +182,7 @@ describe('SSE event discriminated-union contract (WidgetEventSchema)', () => {
     });
 
     it('rejects rrweb/metadata carrying an application_id', () => {
-      const metadata = { type: 'rrweb/metadata', rrweb_session_id: 's1', application_id: 1 };
+      const metadata = { type: 'rrweb/metadata', rrweb_session_id: 's1', url: 'https://shop.test/', application_id: 1 };
       expect(WidgetCommandSchema.safeParse(metadata).success).toBe(false);
     });
   });
