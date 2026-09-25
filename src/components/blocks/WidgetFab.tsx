@@ -294,7 +294,6 @@ export const WidgetFab: React.FC<WidgetFabProps> = ({ onPositionCommit }) => {
             if (Date.now() < suppressUntilRef.current) return;
             actions.toggleWidget();
           }}
-          onDragStart={e => e.preventDefault()}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}

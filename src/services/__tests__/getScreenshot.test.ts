@@ -108,7 +108,7 @@ describe('get_screenshot when the browser grants a 2d canvas context', () => {
     const video = document.querySelector('video');
     video?.dispatchEvent(new Event('loadeddata'));
 
-    expect(await result).toMatchObject({ success: true, data: { text: 'data:image/jpeg;base64,fake-frame' } });
+    expect(await result).toMatchObject({ success: true, result: { text: 'data:image/jpeg;base64,fake-frame' } });
     expect(drawImage).toHaveBeenCalledWith(video, 0, 0);
     expect(mockToDataURL).toHaveBeenCalledWith('image/jpeg', 0.75);
     expect(document.querySelector('video')).toBeNull();

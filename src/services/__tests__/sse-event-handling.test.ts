@@ -158,11 +158,19 @@ describe('SSE event discriminated-union contract (WidgetEventSchema)', () => {
       ['chat/show', { type: 'chat/show', request_id: 'r1', content: 'hi' }],
       ['chat/do', { type: 'chat/do', request_id: 'r1', content: 'hi' }],
       ['chat/stop', { type: 'chat/stop' }],
-      ['tool/response', { type: 'tool/response', tool_call_id: 'c1', success: true }],
+      ['tool/response', { type: 'tool/response', tool_call_id: 'c1', success: true, result: { text: 'ok' } }],
+      ['tool/response', { type: 'tool/response', tool_call_id: 'c1', success: false, error: 'boom' }],
       ['rrweb/metadata', { type: 'rrweb/metadata', rrweb_session_id: 's1' }],
       ['rrweb/events', { type: 'rrweb/events', rrweb_session_id: 's1', events: [] }],
     ] as const)('accepts a minimal "%s" command', (_type, fixture) => {
       expect(WidgetCommandSchema.safeParse(fixture).success).toBe(true);
+    });
+
+    it.each([
+      ['a success without a result', { type: 'tool/response', tool_call_id: 'c1', success: true }],
+      ['a failure without an error', { type: 'tool/response', tool_call_id: 'c1', success: false }],
+    ])('rejects a tool/response that is %s', (_case, fixture) => {
+      expect(WidgetCommandSchema.safeParse(fixture).success).toBe(false);
     });
 
     it('rejects an unknown command type', () => {

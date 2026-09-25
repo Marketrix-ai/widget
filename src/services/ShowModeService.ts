@@ -74,7 +74,6 @@ class ShowModeService {
     popup.setAttribute('role', 'status');
     popup.style.cssText = POPUP_CHROME_CSS;
     const text = document.createElement('div');
-    text.textContent = explanation;
     text.style.cssText = `font-weight:500;color:${TEXT_COLOR};font-size:12px;${isClickAction ? '' : 'margin-bottom:12px;'}`;
     popup.append(text);
 
@@ -104,6 +103,7 @@ class ShowModeService {
     }
 
     document.body.append(highlight, popup);
+    text.textContent = explanation;
     this.currentHighlight = highlight;
     this.currentPopup = popup;
     this.trackElement();

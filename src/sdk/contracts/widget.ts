@@ -114,7 +114,7 @@ export const WidgetEventSchema = z.union([
 ]);
 export type WidgetEvent = z.infer<typeof WidgetEventSchema>;
 
-export const WidgetToolResultSchema = z.union([
+const WidgetToolResultSchema = z.union([
   z.strictObject({ text: z.string() }),
   z.strictObject({
     title: z.string(),
@@ -132,13 +132,20 @@ export const WidgetCommandSchema = z.discriminatedUnion('type', [
   z.strictObject({ type: z.literal('chat/show'), request_id: z.string(), content: z.string() }),
   z.strictObject({ type: z.literal('chat/do'), request_id: z.string(), content: z.string() }),
   z.strictObject({ type: z.literal('chat/stop') }),
-  z.strictObject({
-    type: z.literal('tool/response'),
-    tool_call_id: z.string(),
-    success: z.boolean(),
-    result: WidgetToolResultSchema.optional(),
-    error: z.string().optional(),
-  }),
+  z.discriminatedUnion('success', [
+    z.strictObject({
+      type: z.literal('tool/response'),
+      tool_call_id: z.string(),
+      success: z.literal(true),
+      result: WidgetToolResultSchema,
+    }),
+    z.strictObject({
+      type: z.literal('tool/response'),
+      tool_call_id: z.string(),
+      success: z.literal(false),
+      error: z.string(),
+    }),
+  ]),
   z.strictObject({
     type: z.literal('rrweb/metadata'),
     rrweb_session_id: z.string(),

@@ -152,7 +152,7 @@ describe('a run the model ends is not a widget tool failure', () => {
 
     expect(result.success).toBe(true);
     assertSuccess(result);
-    expect(result.data).toEqual({ text: 'Could not find the checkout button' });
+    expect(result.result).toEqual({ text: 'Could not find the checkout button' });
   });
 });
 
@@ -338,7 +338,7 @@ describe('extract', () => {
     const result = await executeTool('extract', { extract_links: true }, 'do');
 
     assertSuccess(result);
-    const data = result.data as { links: Array<{ text: string; href: string | null }> };
+    const data = result.result as { links: Array<{ text: string; href: string | null }> };
     expect(data.links).toEqual([
       { text: '', href: '/a' },
       { text: 'Bought', href: '/b' },
@@ -352,7 +352,7 @@ describe('extract', () => {
     const result = await executeTool('extract', { extract_links: false }, 'do');
 
     assertSuccess(result);
-    expect((result.data as { links: unknown[] }).links).toEqual([]);
+    expect((result.result as { links: unknown[] }).links).toEqual([]);
   });
 });
 
@@ -371,7 +371,7 @@ describe('goBack refuses when there is no history to go back to', () => {
 describe('wait', () => {
   it('waits the requested seconds', async () => {
     const succeeded = await executeTool('wait', { seconds: 0 }, 'do');
-    expect(succeeded).toEqual({ success: true, data: { text: 'Waited 0s' } });
+    expect(succeeded).toEqual({ success: true, result: { text: 'Waited 0s' } });
   });
 });
 
@@ -416,7 +416,7 @@ describe('sendKeys reports the effect the key had', () => {
     const result = await executeTool('send_keys', { index: 0, keys: 'End' }, 'do');
 
     assertSuccess(result);
-    expect(result.data).toEqual({ text: 'End: moved cursor to end' });
+    expect(result.result).toEqual({ text: 'End: moved cursor to end' });
   });
 
   it('scrolls the page for PageDown rather than reporting success without an effect', async () => {
@@ -428,7 +428,7 @@ describe('sendKeys reports the effect the key had', () => {
     const result = await executeTool('send_keys', { index: 0, keys: 'PageDown' }, 'do');
 
     assertSuccess(result);
-    expect(result.data).toEqual({ text: 'PageDown: scrolled the page' });
+    expect(result.result).toEqual({ text: 'PageDown: scrolled the page' });
     expect(scrollBy).toHaveBeenLastCalledWith({ top: window.innerHeight });
   });
 });

@@ -1,7 +1,8 @@
 /**
  * Tests for `ShowModeService`: staging a show action highlights and pops up over the target, a second
- * stage supersedes the first, an identical restage is deduped, cleanup detaches every listener, and a
- * page-invalidated target rejects with the reason `DomService` gave.
+ * stage supersedes the first, the status popup gets its text only once it is on the page, an identical
+ * restage is deduped, cleanup detaches every listener, and a page-invalidated target rejects with the
+ * reason `DomService` gave.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 
@@ -73,6 +74,30 @@ describe('a second show action supersedes the first', () => {
     expect(await second).toBe('resolved');
     expect(document.getElementById('marketrix-show-highlight')).toBeNull();
     expect(document.getElementById('marketrix-show-popup')).toBeNull();
+  });
+});
+
+describe('the status popup is announced', () => {
+  afterEach(() => {
+    showModeService.cleanup();
+    resetDom();
+  });
+
+  it('joins the page empty and only then receives its text, so screen readers announce the change', async () => {
+    const service = makeShowFixture('<button id="a"></button>');
+    const textAtAppend: Array<string | null> = [];
+    const append = document.body.append.bind(document.body);
+    const spy = vi.spyOn(document.body, 'append').mockImplementation((...nodes: Array<Node | string>) => {
+      for (const node of nodes)
+        if (node instanceof HTMLElement && node.id === 'marketrix-show-popup') textAtAppend.push(node.textContent);
+      append(...nodes);
+    });
+
+    void show(service, 'a').catch(() => undefined);
+    spy.mockRestore();
+
+    expect(textAtAppend).toEqual(['']);
+    expect(document.getElementById('marketrix-show-popup')?.textContent).toBe('a');
   });
 });
 
