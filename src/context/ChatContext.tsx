@@ -192,23 +192,21 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const route = streamClient.route();
       const result = await executeTool(call.browser_tool, call.args, mode, call.explanation);
       if (!result.success && result.cancelled) return;
-      const error = result.success ? undefined : result.error;
-      const progress: ToolProgress = result.success ? { status: 'completed' } : { status: 'failed', error };
+      const progress: ToolProgress = result.success
+        ? { status: 'completed' }
+        : { status: 'failed', error: result.error };
 
       commit(s => reduceToolProgress(s, call.browser_tool, progress, currentModeRef.current));
-      if (!error && call.browser_tool === 'done') {
+      if (result.success && call.browser_tool === 'done') {
         commit(s => reduceToolDone(s, currentModeRef.current, call.args));
       }
 
+      const tool_call_id = call.tool_call_id;
       await streamClient
         .send(
-          {
-            type: 'tool/response',
-            tool_call_id: call.tool_call_id,
-            success: result.success,
-            ...(result.success && { result: result.data }),
-            error,
-          },
+          result.success
+            ? { type: 'tool/response', tool_call_id, success: true, result: result.result }
+            : { type: 'tool/response', tool_call_id, success: false, error: result.error },
           route,
         )
         .catch((err: unknown) => {

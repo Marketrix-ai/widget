@@ -18,19 +18,19 @@ import { ShowModeCancelled, showModeService } from './ShowModeService';
 type ToolFailure = { success: false; error: string; cancelled?: true };
 
 type ToolExecutionResult<T extends WidgetToolResult = { text: string }> =
-  { success: true; data: T; afterResponseAttempt?: () => void } | ToolFailure;
+  { success: true; result: T; afterResponseAttempt?: () => void } | ToolFailure;
 
 export type WidgetToolCall = Extract<WidgetEvent, { type: 'tool/call' }>;
 export type WidgetToolName = WidgetToolCall['browser_tool'];
 type ToolArgMap = { [K in WidgetToolName]: Extract<WidgetToolCall, { browser_tool: K }>['args'] };
 export type ToolArgs<K extends WidgetToolName> = ToolArgMap[K];
 
-const ok = (text: string): ToolExecutionResult => ({ success: true, data: { text } });
-const okData = <T extends WidgetToolResult>(data: T): ToolExecutionResult<T> => ({ success: true, data });
+const ok = (text: string): ToolExecutionResult => ({ success: true, result: { text } });
+const okData = <T extends WidgetToolResult>(result: T): ToolExecutionResult<T> => ({ success: true, result });
 const fail = (error: string): ToolFailure => ({ success: false, error });
 const deferred = (text: string, action: () => void): ToolExecutionResult => ({
   success: true,
-  data: { text },
+  result: { text },
   afterResponseAttempt: action,
 });
 
