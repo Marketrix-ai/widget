@@ -71,9 +71,9 @@ class ShowModeService {
 
     const popup = document.createElement('div');
     popup.id = 'marketrix-show-popup';
-    popup.setAttribute('role', 'status');
     popup.style.cssText = POPUP_CHROME_CSS;
     const text = document.createElement('div');
+    text.setAttribute('role', 'status');
     text.style.cssText = `font-weight:500;color:${TEXT_COLOR};font-size:12px;${isClickAction ? '' : 'margin-bottom:12px;'}`;
     popup.append(text);
 

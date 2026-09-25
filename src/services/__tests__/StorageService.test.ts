@@ -160,6 +160,22 @@ describe('private-mode localStorage', () => {
 
     expect(warnSpy).toHaveBeenCalledTimes(2);
   });
+
+  it('warns about a denied sessionStorage independently of the localStorage write warning', async () => {
+    const { claimToolCall, writeLocal } = await freshStorage();
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new Error('SecurityError: storage is disabled');
+    });
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('SecurityError: storage is disabled');
+    });
+
+    claimToolCall('tc-1');
+    writeLocal('key-a', 'value');
+
+    expect(warnSpy).toHaveBeenCalledTimes(2);
+  });
 });
 
 describe('chat snapshot persistence', () => {

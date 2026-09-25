@@ -26,30 +26,23 @@ import {
   waitsForUser,
 } from '../utils/chat';
 
-export type TaskState = { phase: 'running'; mode: InstructionType } | { phase: 'idle' | 'stopped' };
+export type TaskState = { phase: 'running'; mode: WidgetToolCall['mode'] } | { phase: 'idle' | 'stopped' };
 
 export interface ChatState {
   messages: ChatMessage[];
   task: TaskState;
 }
 
-export interface ToolRun {
-  call: WidgetToolCall;
-  mode: InstructionType;
-}
-
 interface ReduceResult {
   state: ChatState;
-  toolRuns: ToolRun[];
+  toolRuns: WidgetToolCall[];
 }
 
 const withoutToolRuns = (state: ChatState): ReduceResult => ({ state, toolRuns: [] });
 
-export interface ToolProgress {
-  status: ProgressPart['status'];
-  explanation?: string | undefined;
-  error?: string | undefined;
-}
+export type ToolProgress =
+  | { status: Exclude<ProgressPart['status'], 'failed'>; explanation?: string | undefined }
+  | { status: 'failed'; error: string };
 
 const runningMode = (state: ChatState, currentMode: InstructionType): InstructionType =>
   state.task.phase === 'running' ? state.task.mode : currentMode;
@@ -67,7 +60,7 @@ export function reduceToolProgress(
 
   let updatedMsg = found.message;
   if (progress.status === 'failed') {
-    updatedMsg = markProgressLineFailed(updatedMsg, browserToolName, progress.error ?? '');
+    updatedMsg = markProgressLineFailed(updatedMsg, browserToolName, progress.error);
   } else if (browserToolName !== 'done') {
     updatedMsg =
       progress.status === 'in_progress'
@@ -214,7 +207,7 @@ export function reduceEvent(state: ChatState, event: WidgetEvent, currentMode: I
         { status: 'in_progress', explanation: event.explanation },
         currentMode,
       );
-      return { state: progressed, toolRuns: [{ call: event, mode: task.mode }] };
+      return { state: progressed, toolRuns: [event] };
     }
 
     case 'task/status': {

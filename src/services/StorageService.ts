@@ -80,9 +80,9 @@ export function scopedKey(name: string, { mtxId }: Pick<ValidWidgetConfig, 'mtxI
   return `${name}_${mtxId ?? 'default'}`;
 }
 
-const warned = { read: false, write: false };
+const warned = { read: false, write: false, session: false };
 
-function warnOnce(kind: 'read' | 'write', message: string, error: unknown): void {
+function warnOnce(kind: keyof typeof warned, message: string, error: unknown): void {
   if (warned[kind]) return;
   warned[kind] = true;
   logWarn(message, error);
@@ -141,7 +141,7 @@ function sessionStore(action: (storage: Storage) => string | null | void): strin
   try {
     return action(sessionStorage) ?? null;
   } catch (error) {
-    warnOnce('write', '[StorageService] sessionStorage is unusable, degrading to memory for this session:', error);
+    warnOnce('session', '[StorageService] sessionStorage is unusable, degrading to memory for this session:', error);
     return null;
   }
 }

@@ -135,6 +135,22 @@ describe('public widget lifecycle', () => {
     expectNotMounted(container);
   });
 
+  it.each([
+    ['a blank mtxId', { mtxId: '  ', mtxKey: 'key' }],
+    ['a blank mtxKey', { mtxId: 'id', mtxKey: '' }],
+  ])('refuses production mount with %s before asking the api', async (_case, credentials) => {
+    const load = vi.spyOn(WidgetService, 'loadWidgetConfig');
+    const container = mountTarget();
+    document.body.append(container);
+
+    await expect(mountWidget({ ...credentials, mtxApiHost: 'https://api.test', container })).rejects.toThrow(
+      'mtxId and mtxKey are required',
+    );
+
+    expect(load).not.toHaveBeenCalled();
+    expectNotMounted(container);
+  });
+
   it('stops short of mounting, connecting or recording when the resolved config is disabled', async () => {
     const load = vi
       .spyOn(WidgetService, 'loadWidgetConfig')
