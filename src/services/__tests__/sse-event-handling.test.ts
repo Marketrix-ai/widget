@@ -30,6 +30,7 @@ const MINIMAL_EVENT_FIXTURES: Record<ExpectedEventType, object> = {
     tool_call_id: 'call-1',
     browser_tool: 'click_element',
     args: { index: 1 },
+    mode: 'do',
   },
 };
 
@@ -105,6 +106,7 @@ describe('SSE event discriminated-union contract (WidgetEventSchema)', () => {
         tool_call_id: 'c1',
         browser_tool: 'navigate',
         args: { url: 'https://example.com', new_tab: false },
+        mode: 'do',
       };
       expect(WidgetEventSchema.safeParse(base).success).toBe(true);
       expect(WidgetEventSchema.safeParse({ ...base, tool_call_id: undefined }).success).toBe(false);
@@ -116,11 +118,12 @@ describe('SSE event discriminated-union contract (WidgetEventSchema)', () => {
         tool_call_id: 'c1',
         browser_tool: 'done',
         args: { message: 'Done', success: true },
+        mode: 'do',
       });
       expect(event.type === 'tool/call' && event.browser_tool).toBe('done');
     });
 
-    it('mode is optional and restricted to "show"|"do"', () => {
+    it('mode is required and restricted to "show"|"do"', () => {
       const base = {
         type: 'tool/call',
         tool_call_id: 'c1',
@@ -130,6 +133,7 @@ describe('SSE event discriminated-union contract (WidgetEventSchema)', () => {
       expect(WidgetEventSchema.safeParse({ ...base, mode: 'show' }).success).toBe(true);
       expect(WidgetEventSchema.safeParse({ ...base, mode: 'do' }).success).toBe(true);
       expect(WidgetEventSchema.safeParse({ ...base, mode: 'auto' }).success).toBe(false);
+      expect(WidgetEventSchema.safeParse(base).success).toBe(false);
     });
   });
 

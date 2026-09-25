@@ -47,6 +47,7 @@ const toolCall = (overrides: Partial<ClickToolCallEvent> = {}): ClickToolCallEve
   tool_call_id: 'call-1',
   browser_tool: 'click_element',
   args: { index: 1 },
+  mode: 'do',
   explanation: 'Clicking the submit button',
   ...overrides,
 });
@@ -197,7 +198,7 @@ describe('reduceEvent — tool/call', () => {
   it('announces a DOM read as reading the page — nothing but screen sharing views the visitor screen', () => {
     const result = reduceEvent(
       runningState(),
-      { type: 'tool/call', tool_call_id: 'call-1', browser_tool: 'get_html', args: {}, explanation: '' },
+      { type: 'tool/call', tool_call_id: 'call-1', browser_tool: 'get_html', args: {}, mode: 'do', explanation: '' },
       'do',
     );
     const line = (result.state.messages[0]!.parts ?? []).find(part => part.type === 'progress');
@@ -318,7 +319,14 @@ describe('reduceToolProgress / reduceToolDone / reduceStop', () => {
     const twoOpen = reduceEvent(
       reduceEvent(runningState({}, 'show'), toolCall({ tool_call_id: 'c1', explanation: 'click_element' }), 'show')
         .state,
-      { type: 'tool/call', tool_call_id: 'c2', browser_tool: 'get_html', args: {}, explanation: 'get_html' },
+      {
+        type: 'tool/call',
+        tool_call_id: 'c2',
+        browser_tool: 'get_html',
+        args: {},
+        mode: 'show',
+        explanation: 'get_html',
+      },
       'show',
     ).state;
 
@@ -412,6 +420,7 @@ describe('reduceToolProgress / reduceToolDone / reduceStop', () => {
         tool_call_id: 'c',
         browser_tool: 'done',
         args: { message: 'Wrapping up', success: true },
+        mode: 'do',
         explanation: 'Wrapping up',
       },
       'tell',
@@ -431,6 +440,7 @@ describe('a Show/Do task ends with its closing message', () => {
     tool_call_id: 'call-done',
     browser_tool: 'done',
     args: { message, success },
+    mode: 'do',
     explanation: 'Wrapping up',
   });
 
