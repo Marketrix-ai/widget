@@ -8,7 +8,7 @@
  */
 import type { WidgetEvent } from '../sdk';
 import type { WidgetToolCall, WidgetToolName } from '../services/browserTools';
-import type { AgentMessage, ChatMessage, InstructionType, MessagePart, ProgressPart } from '../types';
+import type { AgentMessage, ChatMessage, InstructionType, MessagePart } from '../types';
 import {
   addProgressLine,
   CHAT_FAILURE_TEXT,
@@ -41,7 +41,8 @@ interface ReduceResult {
 const withoutToolRuns = (state: ChatState): ReduceResult => ({ state, toolRuns: [] });
 
 export type ToolProgress =
-  | { status: Exclude<ProgressPart['status'], 'failed'>; explanation?: string | undefined }
+  | { status: 'in_progress'; mode: WidgetToolCall['mode']; explanation?: string | undefined }
+  | { status: 'completed' }
   | { status: 'failed'; error: string };
 
 const runningMode = (state: ChatState, currentMode: InstructionType): InstructionType =>
@@ -68,8 +69,8 @@ export function reduceToolProgress(
         : markProgressLineComplete(updatedMsg, browserToolName);
   }
 
-  if (isTaskRunning && (mode === 'show' || mode === 'do') && isPending(updatedMsg)) {
-    const waiting = progress.status === 'in_progress' && mode === 'show' && waitsForUser(browserToolName);
+  if (isTaskRunning && isPending(updatedMsg)) {
+    const waiting = progress.status === 'in_progress' && progress.mode === 'show' && waitsForUser(browserToolName);
     updatedMsg = { ...updatedMsg, status: waiting ? 'waiting-for-user' : 'thinking' };
   }
 
@@ -204,7 +205,7 @@ export function reduceEvent(state: ChatState, event: WidgetEvent, currentMode: I
       const progressed = reduceToolProgress(
         { ...state, task },
         event.browser_tool,
-        { status: 'in_progress', explanation: event.explanation },
+        { status: 'in_progress', mode: event.mode, explanation: event.explanation },
         currentMode,
       );
       return { state: progressed, toolRuns: [event] };

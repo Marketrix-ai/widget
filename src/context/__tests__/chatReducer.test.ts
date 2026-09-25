@@ -6,8 +6,9 @@
 import { describe, expect, it } from 'bun:test';
 
 import type { WidgetEvent } from '../../sdk';
+import type { WidgetToolCall } from '../../services/browserTools';
 import { agentMessage, ofKind } from '../../test/fixtures';
-import type { AgentMessage, InstructionType } from '../../types';
+import type { AgentMessage } from '../../types';
 import { CHAT_FAILURE_TEXT, isPending, messageText } from '../../utils/chat';
 import {
   type ChatState,
@@ -27,7 +28,7 @@ const expectNoOp = (result: ReturnType<typeof reduceEvent>, state: ChatState) =>
 
 const runningState = (
   overrides: Partial<AgentMessage> = {},
-  mode: Exclude<InstructionType, 'tell'> = overrides.mode === 'show' ? 'show' : 'do',
+  mode: WidgetToolCall['mode'] = overrides.mode === 'show' ? 'show' : 'do',
 ): ChatState => ({
   messages: [agentMessage(overrides)],
   task: { phase: 'running', mode },
@@ -343,7 +344,7 @@ describe('reduceToolProgress / reduceToolDone / reduceStop', () => {
     const result = reduceToolProgress(
       idleState(),
       'click_element',
-      { status: 'in_progress', explanation: 'x' },
+      { status: 'in_progress', mode: 'show', explanation: 'x' },
       'show',
     );
     expect(ofKind(result.messages[0], 'agent').status).toBeUndefined();
@@ -356,19 +357,27 @@ describe('reduceToolProgress / reduceToolDone / reduceStop', () => {
     const result = reduceToolProgress(
       runningState({ mode }),
       'click_element',
-      { status: 'in_progress', explanation: 'x' },
+      { status: 'in_progress', mode, explanation: 'x' },
       mode,
     );
     expect(ofKind(result.messages[0], 'agent').status).toBe(status);
   });
 
-  it('judges progress by the mode the task actually started in, not whatever the composer shows now', () => {
+  it.each([
+    ['do', 'show', 'waiting-for-user'],
+    ['show', 'do', 'thinking'],
+  ] as const)('a %s task running a %s call shows %s, by the call and not the task', (taskMode, callMode, status) => {
     const state: ChatState = {
-      messages: [agentMessage({ mode: 'show', status: 'thinking' })],
-      task: { phase: 'running', mode: 'show' },
+      messages: [agentMessage({ mode: taskMode, status: 'thinking' })],
+      task: { phase: 'running', mode: taskMode },
     };
-    const result = reduceToolProgress(state, 'click_element', { status: 'in_progress', explanation: 'x' }, 'do');
-    expect(ofKind(result.messages[0], 'agent').status).toBe('waiting-for-user');
+    const result = reduceToolProgress(
+      state,
+      'click_element',
+      { status: 'in_progress', mode: callMode, explanation: 'x' },
+      'tell',
+    );
+    expect(ofKind(result.messages[0], 'agent').status).toBe(status);
   });
 
   it('reduceToolDone ends the task and marks the message done', () => {
