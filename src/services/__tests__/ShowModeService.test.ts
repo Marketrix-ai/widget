@@ -1,8 +1,8 @@
 /**
  * Tests for `ShowModeService`: staging a show action highlights and pops up over the target, a second
- * stage supersedes the first, the popup's text-only status region gets its text only once it is on the page, an identical
- * restage is deduped, cleanup detaches every listener, and a page-invalidated target rejects with the
- * reason `DomService` gave.
+ * stage supersedes the first, the popup's text-only status region gets its text only once it is on the
+ * page, an identical restage is deduped, cleanup detaches every listener, and a page-invalidated target
+ * rejects with the reason `DomService` gave.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 

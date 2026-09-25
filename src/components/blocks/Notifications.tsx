@@ -49,7 +49,7 @@ const NotificationList: React.FC = () => {
               <Text
                 as='span'
                 block
-                inheritColor
+                tone='inherit'
                 truncate
                 weight='medium'
                 style={{
@@ -66,7 +66,7 @@ const NotificationList: React.FC = () => {
                 <Text
                   as='span'
                   block
-                  inheritColor
+                  tone='inherit'
                   truncate
                   style={{ fontSize: '12px', color: colors.bodyColor, opacity: 0.8 }}
                 />

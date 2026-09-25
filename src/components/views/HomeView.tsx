@@ -34,7 +34,7 @@ export const HomeView: React.FC = () => {
           <Text as='h2' size='lg' weight='semibold'>
             {config.widget_greeting}
           </Text>
-          <Text as='p' variant='muted' size='sm' style={{ marginTop: '2px' }}>
+          <Text as='p' tone='muted' size='sm' style={{ marginTop: '2px' }}>
             {config.widget_body}
           </Text>
         </Surface>
@@ -80,13 +80,13 @@ export const HomeView: React.FC = () => {
           <Text
             as='p'
             size='xs'
-            variant='muted'
+            tone='muted'
             style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
           >
             {lastMessagePreview}
           </Text>
           <Button variant='bare' onClick={onNavigateToChat} style={{ marginTop: '4px' }}>
-            <Text as='span' size='xs' variant='muted'>
+            <Text as='span' size='xs' tone='muted'>
               Continue chat →
             </Text>
           </Button>

@@ -27,10 +27,10 @@ export const ShellTabBar: React.FC = () => (
     {WIDGET_VIEWS.map(view => (
       <Tabs.Tab key={view} value={view} render={<Button stacked variant='tab' />}>
         <span className='mtx-tab-underline' />
-        <Text as='span' inheritColor aria-hidden='true'>
+        <Text as='span' tone='inherit' aria-hidden='true'>
           <Icon name={TAB_DEFS[view].icon} size={20} />
         </Text>
-        <Text as='span' size='xs' align='center' inheritColor truncate block>
+        <Text as='span' size='xs' align='center' tone='inherit' truncate block>
           {TAB_DEFS[view].label}
         </Text>
       </Tabs.Tab>

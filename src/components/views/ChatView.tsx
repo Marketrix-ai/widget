@@ -56,7 +56,7 @@ export const ChatView: React.FC<{ messageInputRef: React.RefObject<HTMLTextAreaE
         <ErrorBoundary
           label='Chat'
           fallback={
-            <Text as='div' size='xs' align='center' variant='muted' style={{ padding: '16px' }}>
+            <Text as='div' size='xs' align='center' tone='muted' style={{ padding: '16px' }}>
               Something went wrong displaying messages. Please refresh the page.
             </Text>
           }

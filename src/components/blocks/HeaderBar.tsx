@@ -36,7 +36,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({ title, subtitle, onClose, 
             {title}
           </Text>
           {subtitle != null && (
-            <Text as='p' size='xs' variant='muted' truncate>
+            <Text as='p' size='xs' tone='muted' truncate>
               {subtitle}
             </Text>
           )}

@@ -1,10 +1,8 @@
 /**
  * Tests for `ChatView`'s composer lock while a screen-access request is pending, multi-line message
  * rendering, resend-safe recovery when a send fails while the stream is down, the screen-access
- * allow flows, a disabled mode never being sent and a forbidden turn showing the api's reason, Clear chat starting a new thread, and the transcript
- * scrolling itself rather than the host page. A send-while-down test must mock `streamClient.ready` and not just `connect` — a turn
- * awaits `ready()`, which only resolves on `registered`, so mocking `connect` alone leaves that await
- * hanging forever and silently swallows the whole test.
+ * allow flows, a disabled mode never being sent and a forbidden turn showing the api's reason, Clear chat
+ * starting a new thread, and the transcript scrolling itself rather than the host page.
  */
 import { ORPCError } from '@orpc/client';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';

@@ -5,9 +5,8 @@
  */
 import type { CSSProperties, ElementType, Ref } from 'react';
 
-import { TEXT_TONE } from '../../design-system/component-tokens';
+import { TEXT_TONE, type TextTone } from '../../design-system/component-tokens';
 
-type TextVariant = 'default' | 'muted' | 'faint';
 type TextSize = 'xxs' | 'xs' | 'sm' | 'lg';
 type TextWeight = 'normal' | 'medium' | 'semibold';
 type TextAlign = 'center' | 'right';
@@ -15,10 +14,9 @@ type TextAlign = 'center' | 'right';
 interface TextProps extends React.HTMLAttributes<HTMLElement> {
   as?: ElementType;
   block?: boolean;
-  inheritColor?: boolean;
   italic?: boolean;
   tight?: boolean;
-  variant?: TextVariant;
+  tone?: TextTone;
   size?: TextSize;
   weight?: TextWeight;
   truncate?: boolean;
@@ -40,10 +38,9 @@ const TRUNCATE: CSSProperties = { overflow: 'hidden', textOverflow: 'ellipsis', 
 export function Text({
   as: Component = 'span',
   block = false,
-  inheritColor = false,
   italic = false,
   tight,
-  variant = 'default',
+  tone = 'default',
   size,
   weight,
   truncate,
@@ -57,7 +54,7 @@ export function Text({
       {...props}
       ref={ref}
       style={{
-        color: TEXT_TONE[inheritColor ? 'inherit' : variant],
+        color: TEXT_TONE[tone],
         ...(size && { fontSize: SIZE[size] }),
         ...(weight && { fontWeight: WEIGHT[weight] }),
         ...(align && { textAlign: align }),

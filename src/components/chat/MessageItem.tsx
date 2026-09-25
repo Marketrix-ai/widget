@@ -40,7 +40,7 @@ const waitsForVisitor = (message: ChatMessage): boolean =>
 const Thinking: React.FC<{ isWaitingForUser: boolean }> = ({ isWaitingForUser }) => (
   <Flex align='center' gap='sm' paddingY='2xs'>
     <Spinner size='sm' />
-    <Text as='span' size='xs' weight='normal' variant='faint'>
+    <Text as='span' size='xs' weight='normal' tone='faint'>
       {isWaitingForUser ? 'Waiting for you to complete the action' : 'Thinking'}
     </Text>
   </Flex>
@@ -103,7 +103,7 @@ const MessageItemComponent: React.FC<MessageItemProps> = ({
   if (message.kind === 'system') {
     return (
       <Flex justify='center' align='center'>
-        <Text as='span' variant='faint' weight='normal' size='xxs'>
+        <Text as='span' tone='faint' weight='normal' size='xxs'>
           {messageText(message.parts)}
         </Text>
       </Flex>
@@ -185,7 +185,7 @@ const MessageItemComponent: React.FC<MessageItemProps> = ({
           )}
 
           {message.kind === 'screenAccess' && message.screenShareStatus && (
-            <Text as='div' variant='faint' size='xs' italic style={{ marginTop: '2px' }}>
+            <Text as='div' tone='faint' size='xs' italic style={{ marginTop: '2px' }}>
               {message.screenShareStatus === 'allowed' ? 'Yes' : 'No'}
             </Text>
           )}
@@ -204,7 +204,7 @@ const MessageItemComponent: React.FC<MessageItemProps> = ({
         <Flex shrink={false} style={{ width: '20px' }} />
       </Flex>
       {!isPending(message) && (
-        <Text as='div' variant='faint' size='xxs' align='right' style={{ marginTop: '2px', marginRight: '26px' }}>
+        <Text as='div' tone='faint' size='xxs' align='right' style={{ marginTop: '2px', marginRight: '26px' }}>
           {formatMessageTime(message.timestamp)}
         </Text>
       )}
