@@ -57,7 +57,7 @@ type Comment = { line: number; raw: string; alone: boolean; block?: boolean };
 
 export function commentMarker(file: string): string | undefined {
   const name = basename(file);
-  if (name.endsWith('.d.ts') || name.endsWith('.enc.yaml') || /_pb2(_grpc)?\.py$/.test(name)) return undefined;
+  if (name.endsWith('.enc.yaml') || /_pb2(_grpc)?\.py$/.test(name)) return undefined;
   if (['.ts', '.tsx', '.mts', '.mjs', '.js'].includes(extname(name))) return 'ts';
   if (
     /^Dockerfile(\..+)?$|\.Dockerfile$|^\.env(\..+)?\.(example|sample)$|^(Makefile|Tiltfile|\.gitignore|\.dockerignore)$/.test(
@@ -78,8 +78,9 @@ export function findCodeFiles(dir: string): string[] {
   return files.filter(f => !frozen.has(f)).map(f => join(dir, f));
 }
 
-function tsComments(file: string, text: string): Comment[] {
+function tsComments(file: string, text: string): { comments: Comment[]; firstCode: number } {
   const source = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true);
+  const lineOf = (pos: number) => text.slice(0, pos).split('\n').length;
   const comments: Comment[] = [];
   const scanTrivia = (pos: number, end: number) => {
     const scanner = ts.createScanner(
@@ -94,7 +95,7 @@ function tsComments(file: string, text: string): Comment[] {
     for (let kind = scanner.scan(); kind !== ts.SyntaxKind.EndOfFileToken; kind = scanner.scan())
       if (kind === ts.SyntaxKind.SingleLineCommentTrivia || kind === ts.SyntaxKind.MultiLineCommentTrivia)
         comments.push({
-          line: text.slice(0, scanner.getTokenStart()).split('\n').length,
+          line: lineOf(scanner.getTokenStart()),
           raw: text.slice(scanner.getTokenStart(), scanner.getTokenEnd()),
           alone: false,
         });
@@ -105,7 +106,8 @@ function tsComments(file: string, text: string): Comment[] {
     else if (!ts.isJsxText(node)) scanTrivia(node.pos, node.getStart(source));
   };
   visit(source);
-  return comments;
+  const code = source.statements.find(s => !(ts.isExpressionStatement(s) && ts.isStringLiteral(s.expression)));
+  return { comments, firstCode: code ? lineOf(code.getStart(source)) : Infinity };
 }
 
 function lexComments(text: string, syntax: Syntax): { comments: Comment[]; firstCode: number } {
@@ -203,6 +205,8 @@ function pythonComments(text: string): {
         alone: text.slice(lineStart, i).trim() === '',
       });
       i += raw.length - 1;
+    } else if (/^[rRuUbBfF]{1,2}["']/.test(text.slice(i, i + 3)) && !/\w/.test(text[i - 1] ?? '')) {
+      i += /["']/.test(text.charAt(i + 1)) ? 0 : 1;
     } else if (c === '"' || c === "'") {
       const delimiter = text.startsWith(c.repeat(3), i) ? c.repeat(3) : c;
       let j = i + delimiter.length;
@@ -211,8 +215,8 @@ function pythonComments(text: string): {
       const rest = text.slice(j + delimiter.length).split('\n', 1)[0] ?? '';
       const statement =
         depth === 0 &&
-        text.slice(lineStart, i).trim() === '' &&
-        text[lineStart - 2] !== '\\' &&
+        /^[rRuUbBfF]{0,2}$/.test(text.slice(lineStart, i).trim()) &&
+        !/\\\r?\n$/.test(text.slice(Math.max(0, lineStart - 3), lineStart)) &&
         /^\s*(#.*)?$/.test(rest);
       if (!seenCode) docstring = body.trim().split('\n').length;
       else if (statement) comments.push({ line, raw: text.slice(i, j + delimiter.length), alone: true, block: true });
@@ -233,8 +237,8 @@ export function checkComments(file: string, text: string): string[] {
   let header: Comment[] = [];
   let span = 0;
   if (marker === 'ts') {
-    const all = tsComments(file, text);
-    header = all[0]?.raw.startsWith('/**') ? [all[0]] : [];
+    const { comments: all, firstCode } = tsComments(file, text);
+    header = all[0] && all[0].raw.startsWith('/**') && all[0].line < firstCode ? [all[0]] : [];
     judged = all.filter(c => !directive(c));
   } else if (marker === 'py') {
     const { comments, docstring } = pythonComments(text);
