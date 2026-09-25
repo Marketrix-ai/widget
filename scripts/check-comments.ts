@@ -102,7 +102,7 @@ function tsComments(file: string, text: string): { comments: Comment[]; firstCod
   };
   const visit = (node: ts.Node) => {
     const children = node.getChildren(source);
-    if (children.length > 0) children.forEach(visit);
+    if (children.length > 0 && node.kind !== ts.SyntaxKind.EndOfFileToken) children.forEach(visit);
     else if (!ts.isJsxText(node)) scanTrivia(node.pos, node.getStart(source));
   };
   visit(source);
@@ -238,8 +238,8 @@ export function checkComments(file: string, text: string): string[] {
   let span = 0;
   if (marker === 'ts') {
     const { comments: all, firstCode } = tsComments(file, text);
-    header = all[0] && all[0].raw.startsWith('/**') && all[0].line < firstCode ? [all[0]] : [];
     judged = all.filter(c => !directive(c));
+    header = judged[0] && judged[0].raw.startsWith('/**') && judged[0].line < firstCode ? [judged[0]] : [];
   } else if (marker === 'py') {
     const { comments, docstring } = pythonComments(text);
     judged = comments.filter(c => !directive(c));

@@ -26,7 +26,7 @@ type ToolArgMap = { [K in WidgetToolName]: Extract<WidgetToolCall, { browser_too
 export type ToolArgs<K extends WidgetToolName> = ToolArgMap[K];
 
 const ok = (text: string): ToolExecutionResult => ({ success: true, result: { text } });
-const okData = <T extends WidgetToolResult>(result: T): ToolExecutionResult<T> => ({ success: true, result });
+const okResult = <T extends WidgetToolResult>(result: T): ToolExecutionResult<T> => ({ success: true, result });
 const fail = (error: string): ToolFailure => ({ success: false, error });
 const deferred = (text: string, action: () => void): ToolExecutionResult => ({
   success: true,
@@ -141,7 +141,7 @@ function scrollToText({ text }: ToolArgs<'scroll_to_text'>): ToolExecutionResult
 }
 
 function extract({ extract_links }: ToolArgs<'extract'>) {
-  return okData({
+  return okResult({
     title: document.title,
     url: window.location.href,
     text: document.body.innerText.slice(0, 10000),
@@ -178,7 +178,7 @@ function selectDropdownOption({ index, option }: ToolArgs<'select_dropdown_optio
 
 function getDropdownOptions({ index }: ToolArgs<'get_dropdown_options'>) {
   const options = Array.from(selectAt(index).options).map(o => ({ value: o.value, text: o.text }));
-  return okData({ options });
+  return okResult({ options });
 }
 
 function sendKeys({ index, keys }: ToolArgs<'send_keys'>): ToolExecutionResult {

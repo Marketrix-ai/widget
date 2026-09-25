@@ -83,7 +83,7 @@ describe('the status popup is announced', () => {
     resetDom();
   });
 
-  it('joins the page empty and only then receives its text, so screen readers announce the change', async () => {
+  it('joins the page empty and receives its text on the next frame, so screen readers announce the change', async () => {
     const service = makeShowFixture('<button id="a"></button>');
     const textAtAppend: Array<string | null> = [];
     const append = document.body.append.bind(document.body);
@@ -97,6 +97,8 @@ describe('the status popup is announced', () => {
     spy.mockRestore();
 
     expect(textAtAppend).toEqual(['']);
+    expect(document.getElementById('marketrix-show-popup')?.textContent).toBe('');
+    await new Promise(resolve => requestAnimationFrame(resolve));
     expect(document.getElementById('marketrix-show-popup')?.textContent).toBe('a');
   });
 });

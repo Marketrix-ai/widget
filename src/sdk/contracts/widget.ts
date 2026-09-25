@@ -77,7 +77,7 @@ const widgetToolCall = <Name extends WidgetToolName>(browserTool: Name) =>
     tool_call_id: z.string(),
     browser_tool: z.literal(browserTool),
     args: WidgetToolArgsSchemas[browserTool],
-    mode: InstructionTypeSchema.exclude(['tell']).optional(),
+    mode: InstructionTypeSchema.exclude(['tell']),
     explanation: z.string().optional(),
   });
 
@@ -182,8 +182,8 @@ export const widgetPublicSearch = oc
   .input(
     z
       .strictObject({
-        marketrix_id: z.string(),
-        marketrix_key: z.string(),
+        marketrix_id: z.string().min(1),
+        marketrix_key: z.string().min(1),
       })
       .extend(PaginationSchema.shape),
   )
@@ -200,8 +200,8 @@ export const widgetStream = oc
     z.strictObject({
       chat_id: z.string(),
       tab_id: z.string().optional(),
-      marketrix_id: z.string(),
-      marketrix_key: z.string(),
+      marketrix_id: z.string().min(1),
+      marketrix_key: z.string().min(1),
     }),
   )
   .output(eventIterator(WidgetEventSchema));

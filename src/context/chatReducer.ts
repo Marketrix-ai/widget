@@ -207,8 +207,7 @@ export function reduceEvent(state: ChatState, event: WidgetEvent, currentMode: I
   switch (event.type) {
     case 'tool/call': {
       if (state.task.phase === 'stopped') return withoutToolRuns(state);
-      const task =
-        state.task.phase === 'running' ? state.task : { phase: 'running' as const, mode: event.mode ?? currentMode };
+      const task = state.task.phase === 'running' ? state.task : { phase: 'running' as const, mode: event.mode };
       const progressed = reduceToolProgress(
         { ...state, task },
         event.browser_tool,

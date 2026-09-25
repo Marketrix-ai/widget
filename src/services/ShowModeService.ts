@@ -103,7 +103,9 @@ class ShowModeService {
     }
 
     document.body.append(highlight, popup);
-    text.textContent = explanation;
+    requestAnimationFrame(() => {
+      if (this.currentPopup === popup) text.textContent = explanation;
+    });
     this.currentHighlight = highlight;
     this.currentPopup = popup;
     this.trackElement();
