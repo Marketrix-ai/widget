@@ -27,7 +27,7 @@ const expectNoOp = (result: ReturnType<typeof reduceEvent>, state: ChatState) =>
 
 const runningState = (
   overrides: Partial<AgentMessage> = {},
-  mode: InstructionType = overrides.mode ?? 'do',
+  mode: Exclude<InstructionType, 'tell'> = overrides.mode === 'show' ? 'show' : 'do',
 ): ChatState => ({
   messages: [agentMessage(overrides)],
   task: { phase: 'running', mode },
@@ -180,7 +180,7 @@ describe('reduceStaleReply', () => {
 describe('reduceEvent — tool/call', () => {
   it('emits an executeTool effect carrying the call details', () => {
     const result = reduceEvent(runningState(), toolCall(), 'do');
-    expect(result.toolRuns).toEqual([{ call: toolCall(), mode: 'do' }]);
+    expect(result.toolRuns).toEqual([toolCall()]);
   });
 
   it('auto-activates the task when a tool arrives before task/status running', () => {
@@ -206,9 +206,9 @@ describe('reduceEvent — tool/call', () => {
     expect(line?.content).not.toMatch(/screen/i);
   });
 
-  it('falls back to event.mode then "do" when currentMode is absent on the call', () => {
-    const result = reduceEvent(runningState({}, 'show'), toolCall({ mode: 'show' }), 'show');
-    expect(result.toolRuns[0]!.mode).toBe('show');
+  it('runs each call in its own wire mode, not the mode the task started in', () => {
+    const result = reduceEvent(runningState({}, 'show'), toolCall({ mode: 'do' }), 'show');
+    expect(result.toolRuns[0]!.mode).toBe('do');
   });
 });
 

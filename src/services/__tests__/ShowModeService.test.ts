@@ -1,6 +1,6 @@
 /**
  * Tests for `ShowModeService`: staging a show action highlights and pops up over the target, a second
- * stage supersedes the first, the status popup gets its text only once it is on the page, an identical
+ * stage supersedes the first, the popup's text-only status region gets its text only once it is on the page, an identical
  * restage is deduped, cleanup detaches every listener, and a page-invalidated target rejects with the
  * reason `DomService` gave.
  */
@@ -67,7 +67,7 @@ describe('a second show action supersedes the first', () => {
     expect(await first).toBe('rejected');
 
     expect(document.getElementById('marketrix-show-highlight')).not.toBeNull();
-    expect(document.getElementById('marketrix-show-popup')).toHaveAttribute('role', 'status');
+    expect(document.querySelector('#marketrix-show-popup [role="status"]')).not.toBeNull();
 
     document.getElementById('b')?.click();
 
@@ -100,6 +100,24 @@ describe('the status popup is announced', () => {
     expect(document.getElementById('marketrix-show-popup')?.textContent).toBe('');
     await new Promise(resolve => requestAnimationFrame(resolve));
     expect(document.getElementById('marketrix-show-popup')?.textContent).toBe('a');
+  });
+
+  it('keeps the Continue button of a non-click step outside the live region, which holds only the explanation', async () => {
+    const service = makeShowFixture('<button id="a"></button>');
+    void service
+      .showToolAction({
+        element: document.getElementById('a') as HTMLElement,
+        index: 0,
+        explanation: 'Type your name',
+        browserToolName: 'type_text',
+      })
+      .catch(() => undefined);
+
+    const region = document.querySelector('#marketrix-show-popup [role="status"]');
+    expect(region?.textContent).toBe('');
+    expect(region?.querySelector('button')).toBeNull();
+    await new Promise(resolve => requestAnimationFrame(resolve));
+    expect(region?.textContent).toBe('Type your name');
   });
 });
 

@@ -3,6 +3,8 @@
  * `window`/`document` listeners, timers, or DOM nodes, across component-tree teardown (FAB drag, resize
  * grip interrupted mid-gesture), singleton teardown (show-mode overlay, streamClient, screen share), and
  * an active rrweb session recording. Each case also proves idempotence across a second mount/unmount.
+ * Only intervals `ShowModeService` starts directly are counted, since jsdom's animation-frame clock and a
+ * previous test's teardown also start intervals that settle on their own.
  */
 import { record } from '@rrweb/record';
 import { act, fireEvent, waitFor, within } from '@testing-library/react';
@@ -24,7 +26,7 @@ restoreModuleAfterAll('../sdk', () => import('../sdk/index.ts?real'));
 
 interface Registry {
   openListeners: number;
-  openIntervals: number;
+  openShowModeIntervals: number;
   openTimeouts: number;
   restore: () => void;
 }
@@ -59,7 +61,7 @@ function installRegistry(): Registry {
   const liveIntervals = new Set<ReturnType<typeof setInterval>>();
   globalThis.setInterval = ((fn: TimerHandler, ms?: number, ...rest: unknown[]) => {
     const id = realSetInterval(fn as never, ms, ...rest);
-    liveIntervals.add(id);
+    if (new Error().stack?.split('\n')[2]?.includes('ShowModeService')) liveIntervals.add(id);
     return id;
   }) as unknown as typeof setInterval;
   globalThis.clearInterval = ((id?: Parameters<typeof clearInterval>[0]) => {
@@ -92,7 +94,7 @@ function installRegistry(): Registry {
     get openListeners() {
       return open.length;
     },
-    get openIntervals() {
+    get openShowModeIntervals() {
       return liveIntervals.size;
     },
     get openTimeouts() {
@@ -209,14 +211,14 @@ describe('unmountWidget releases the show-mode overlay it does not own via the R
     expect(document.getElementById('marketrix-show-popup')).not.toBeNull();
     expect(document.getElementById('marketrix-show-highlight')).not.toBeNull();
     expect(registry.openListeners).toBeGreaterThan(0);
-    expect(registry.openIntervals).toBeGreaterThan(0);
+    expect(registry.openShowModeIntervals).toBeGreaterThan(0);
 
     unmountWidget();
 
     expect(document.getElementById('marketrix-show-popup')).toBeNull();
     expect(document.getElementById('marketrix-show-highlight')).toBeNull();
     expect(registry.openListeners).toBe(0);
-    expect(registry.openIntervals).toBe(0);
+    expect(registry.openShowModeIntervals).toBe(0);
     registry.restore();
   });
 
@@ -224,13 +226,13 @@ describe('unmountWidget releases the show-mode overlay it does not own via the R
     const first = activateShowModeOverlay();
     unmountWidget();
     expect(first.openListeners).toBe(0);
-    expect(first.openIntervals).toBe(0);
+    expect(first.openShowModeIntervals).toBe(0);
     first.restore();
 
     const second = activateShowModeOverlay();
     unmountWidget();
     expect(second.openListeners).toBe(0);
-    expect(second.openIntervals).toBe(0);
+    expect(second.openShowModeIntervals).toBe(0);
     second.restore();
   });
 });

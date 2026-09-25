@@ -129,6 +129,7 @@ async function initWidgetInternal(config: MarketrixConfig, host: HTMLElement | u
   showHostPageNotice('Loading widget settings...', 'info', config.styleNonce);
   let finalConfig: CredentialedConfig;
   try {
+    if (!config.mtxId.trim() || !config.mtxKey.trim()) throw new Error('mtxId and mtxKey are required');
     configureSdk(config.mtxApiHost);
     finalConfig = await loadWidgetConfig(config);
   } catch (error) {

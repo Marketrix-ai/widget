@@ -7,7 +7,6 @@
  */
 
 import type { WidgetEvent, WidgetToolResult } from '../sdk';
-import type { InstructionType } from '../types';
 import { toolExplanation, waitsForUser } from '../utils/chat';
 import { errorMessage } from '../utils/errors';
 import { domService } from './DomService';
@@ -260,7 +259,7 @@ const TOOLS: {
 export async function executeTool<K extends WidgetToolName>(
   browserToolName: K,
   args: ToolArgs<K>,
-  mode: InstructionType,
+  mode: WidgetToolCall['mode'],
   explanation?: string,
 ): Promise<ToolExecutionResult<WidgetToolResult>> {
   const run: (

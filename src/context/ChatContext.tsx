@@ -12,7 +12,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useR
 
 import { useWidgetConfig } from '../hooks/useWidget';
 import type { WidgetEvent } from '../sdk';
-import { executeTool } from '../services/browserTools';
+import { executeTool, type WidgetToolCall } from '../services/browserTools';
 import { getOrCreateChatId } from '../services/chatThread';
 import { activeScreenStream, startScreenShare, subscribeScreenShare } from '../services/ScreenShareService';
 import { showModeService } from '../services/ShowModeService';
@@ -47,7 +47,6 @@ import {
   reduceTransportFailure,
   type TaskState,
   type ToolProgress,
-  type ToolRun,
 } from './chatReducer';
 import { useUIStateContext } from './UIStateContext';
 
@@ -188,9 +187,9 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (isPreviewMode) return;
     const setError = uiActions.setError;
 
-    const startToolCall = async ({ call, mode }: ToolRun) => {
+    const startToolCall = async (call: WidgetToolCall) => {
       const route = streamClient.route();
-      const outcome = await executeTool(call.browser_tool, call.args, mode, call.explanation);
+      const outcome = await executeTool(call.browser_tool, call.args, call.mode, call.explanation);
       if (!outcome.success && outcome.cancelled) return;
       const progress: ToolProgress = outcome.success
         ? { status: 'completed' }
@@ -243,7 +242,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setError(undefined);
       }
 
-      let toolRuns: ToolRun[] = [];
+      let toolRuns: WidgetToolCall[] = [];
       commit(s => {
         const result = reduceEvent(s, event, currentModeRef.current);
         toolRuns = result.toolRuns;
