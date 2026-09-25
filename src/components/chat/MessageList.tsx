@@ -103,7 +103,7 @@ export const MessageList = () => {
         {messages.length > 0 && (
           <Flex justify='center' style={{ marginTop: '12px', marginBottom: '4px' }}>
             <Button variant='bare' onClick={actions.clearChat}>
-              <Text size='xs' variant='muted' style={{ cursor: 'pointer' }}>
+              <Text size='xs' tone='muted' style={{ cursor: 'pointer' }}>
                 Clear chat
               </Text>
             </Button>

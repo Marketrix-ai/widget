@@ -149,7 +149,7 @@ export const WidgetCommandSchema = z.discriminatedUnion('type', [
   z.strictObject({
     type: z.literal('rrweb/metadata'),
     rrweb_session_id: z.string(),
-    url: z.string().optional(),
+    url: z.string().min(1),
     timestamp: z.number().optional(),
     viewport: z
       .strictObject({

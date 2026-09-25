@@ -94,7 +94,7 @@ export function findMessageForProgress({
     isPending(msg) ? msg.mode === undefined || msg.mode === currentMode : msg.mode === currentMode;
 
   const ranked: Array<(msg: AgentMessage) => boolean> = [];
-  if (isTaskRunning && (currentMode === 'show' || currentMode === 'do')) {
+  if (isTaskRunning) {
     ranked.push(msg => modeMatches(msg) && isPending(msg), modeMatches);
   }
   ranked.push(isPending, () => true);

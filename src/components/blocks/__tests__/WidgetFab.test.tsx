@@ -1,8 +1,8 @@
 /**
  * Launcher drag tests, driven through the mounted widget: with two snaps in flight it commits the corner
  * the widget is animating to; a drop writes the position key once and a later mount reads the same
- * corner back; a viewport resize mid-drag re-derives the launcher anchor; the dashboard preview never drags. `mountLauncher` is the shared
- * setup. The Stop case checks that Stop on the closed launcher cancels a Show step still waiting on the
+ * corner back; a viewport resize mid-drag re-derives the launcher anchor; the dashboard preview never
+ * drags. The Stop case checks that Stop on the closed launcher cancels a Show step still waiting on the
  * visitor, so a later page click neither runs the stopped tool nor answers it.
  */
 import { act, cleanup, fireEvent, screen, waitFor } from '@testing-library/react';

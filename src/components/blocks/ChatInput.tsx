@@ -101,7 +101,7 @@ export function ChatInput({
                 onClick={() => onModeChange(mode.id)}
               >
                 <Icon name={mode.icon} size={12} />
-                <Text as='span' inheritColor>
+                <Text as='span' tone='inherit'>
                   {mode.label}
                 </Text>
               </button>
