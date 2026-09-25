@@ -114,7 +114,7 @@ export const WidgetEventSchema = z.union([
 ]);
 export type WidgetEvent = z.infer<typeof WidgetEventSchema>;
 
-export const WidgetToolResultSchema = z.union([
+const WidgetToolResultSchema = z.union([
   z.strictObject({ text: z.string() }),
   z.strictObject({
     title: z.string(),
