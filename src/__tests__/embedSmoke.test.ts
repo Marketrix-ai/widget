@@ -3,9 +3,10 @@
  * page actually hands it off, via `loader.js`'s `script[mtx-id]` attribute forwarding and the widget's
  * own auto-init. Covers the exported runtime surface, the closed-shadow FAB mount and z-index, and that
  * no request fires before a host script tag triggers auto-init, and that the loader adds no second import
- * map over a host map that already supplies React, nor fails over one that is unparsable.
+ * map over a host map that already supplies React, nor fails over one that is unparsable. Each run copies the
+ * build into its own scratch directory under `dist/`, so parallel runs in one checkout never share one.
  */
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -34,7 +35,7 @@ const documentedExportNames = namedExportsSnippet
 if (documentedExportNames.length === 0)
   throw new Error('README.md programmatic-API import snippet carries no named exports — update this test');
 
-const scratchDir = resolve(root, 'dist/.smoke');
+let scratchDir = '';
 let caseCounter = 0;
 const importDist = () => {
   const file = resolve(scratchDir, `case-${++caseCounter}.mjs`);
@@ -88,7 +89,7 @@ const realFetch = globalThis.fetch;
 beforeAll(() => {
   if (!existsSync(distPath))
     throw new Error(`${distPath} is missing — run \`bun run build\` before \`bun test\` (ci runs build first)`);
-  mkdirSync(scratchDir, { recursive: true });
+  scratchDir = mkdtempSync(resolve(root, 'dist/.smoke-'));
 });
 
 afterAll(() => {

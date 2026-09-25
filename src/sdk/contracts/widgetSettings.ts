@@ -89,7 +89,7 @@ export const ApplicationWidgetEntitySchema = z.strictObject({
   widget_settings: WidgetSettingsDataSchema,
   marketrix_id: z.string().max(100),
   marketrix_key: z.string().max(100),
-  snippet: z.string().nullish(),
+  snippet: z.string(),
   created_at: z.date(),
   updated_at: z.date(),
 });
