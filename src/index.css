@@ -1,10 +1,9 @@
 /* The widget's entire style surface: it mounts into a closed shadow root, so nothing cascades in from
    the host page. Layout lives in inline styles; this file carries only what a style attribute cannot —
    pseudo-classes, pseudo-elements, keyframes and the `data-*` variant matrices. Tokens sit on
-   `:root, :host`. The reset wraps every element-targeting rule in `:where()` so it weighs zero and
+   `:host`. The reset wraps every element-targeting rule in `:where()` so it weighs zero and
    never outranks a component class. */
 
-:root,
 :host {
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
