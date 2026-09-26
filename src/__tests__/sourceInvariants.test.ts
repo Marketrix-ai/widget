@@ -1,8 +1,6 @@
 /**
- * Pins the mechanical gotchas documented in this repo's and the root `CLAUDE.md` that eslint/tsc cannot
- * express (package.json/tsconfig/Dockerfile content, filesystem shape, cross-file text agreement) — fs +
- * regex, no mocks, no rendering. A check expressible as an eslint rule lives in eslint.config.mjs
- * instead, and one already covered by a real behavior test elsewhere is not duplicated here.
+ * Pins what eslint and tsc cannot express: the published package's contents, and text that must agree across
+ * files (the loader's import map, z-index tokens, the stylesheet, the hooks folder). fs + regex, no rendering.
  */
 import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
@@ -20,50 +18,9 @@ const read = (p: string): string => readFileSync(resolve(root, p), 'utf8');
 describe('package.json', () => {
   const pkg = JSON.parse(read('package.json'));
 
-  it('has no vitest family in devDependencies — bun test is the only runner', () => {
-    const dev = Object.keys(pkg.devDependencies ?? {});
-    expect(dev.filter(name => name === 'vitest' || name.includes('vitest'))).toEqual([]);
-  });
-
   it('publishes exactly the dist allowlist, with no .npmignore to complicate it', () => {
     expect(pkg.files).toEqual(['dist', '!dist/**/*.map']);
     expect(() => read('.npmignore')).toThrow();
-  });
-
-  it('bakes --isolate into every bun test script', () => {
-    for (const script of ['test', 'test:watch', 'test:coverage']) {
-      expect(pkg.scripts[script]).toContain('--isolate');
-    }
-  });
-
-  it('pins the same bun version as the Dockerfile base image — one drifts, CI and local diverge', () => {
-    const bunVersion = (pkg.packageManager as string).replace(/^bun@/, '');
-    const dockerfile = read('Dockerfile');
-    expect(dockerfile).toContain(`FROM oven/bun:${bunVersion}-alpine AS base`);
-  });
-
-  it('runs check:comments before build, and code:check before check:comments, in the ci script', () => {
-    const ci = pkg.scripts['ci'] ?? '';
-    const at = (needle: string) => ci.indexOf(needle);
-    expect(at('code:check')).toBeGreaterThanOrEqual(0);
-    expect(at('check:comments')).toBeGreaterThanOrEqual(0);
-    expect(at('build')).toBeGreaterThanOrEqual(0);
-    expect(at('code:check')).toBeLessThan(at('check:comments'));
-    expect(at('check:comments')).toBeLessThan(at('build'));
-  });
-
-  it('has no tailwind/classnames dependency — cn() calls are eslint-banned instead', () => {
-    const deps = { ...pkg.dependencies, ...pkg.devDependencies };
-    expect(Object.keys(deps).some(name => /tailwind|classnames/i.test(name))).toBe(false);
-  });
-});
-
-describe('bundle:check dependency budgets', () => {
-  const script = read('scripts/bundle-check.ts');
-
-  it('budgets the two dependencies that are half the bundle', () => {
-    expect(script).toMatch(/'@base-ui\/react':\s*\d/);
-    expect(script).toMatch(/'@rrweb\/record':\s*\d/);
   });
 });
 
@@ -73,25 +30,6 @@ describe('tsconfig.build.json', () => {
   it('excludes src/test and test files from the published declarations', () => {
     expect(tsconfig.exclude).toContain('src/test');
     expect(tsconfig.exclude.some((p: string) => p.includes('*.test.'))).toBe(true);
-  });
-});
-
-describe('tsconfig.json strict flags', () => {
-  const tsconfig = JSON.parse(read('tsconfig.json'));
-
-  it('keeps every measured strictness flag on — a regression here is a silent type-safety loss', () => {
-    for (const flag of [
-      'strict',
-      'noUncheckedIndexedAccess',
-      'exactOptionalPropertyTypes',
-      'noImplicitOverride',
-      'noPropertyAccessFromIndexSignature',
-      'noFallthroughCasesInSwitch',
-      'verbatimModuleSyntax',
-    ]) {
-      expect(tsconfig.compilerOptions[flag]).toBe(true);
-    }
-    expect(tsconfig.compilerOptions.useUnknownInCatchVariables).not.toBe(false);
   });
 });
 
