@@ -1,8 +1,7 @@
 /**
  * `bun run check:served` — checks what the runtime image actually sends a customer host over real HTTP.
- * Boots the `runtime` Docker image, or a `Bun.serve` stand-in mimicking nginx when docker is absent;
- * `TARGET_URL` points the checks at a deployed host and `EXPECTED_TAG` also asserts the served bundle
- * matches a source build of that tag. Expected headers are read from `nginx.conf` so they cannot drift.
+ * Boots the `runtime` Docker image and fails without docker; `TARGET_URL` points the checks at a deployed
+ * host and `EXPECTED_TAG` also asserts the served bundle matches a source build of that tag. Expected headers are read from `nginx.conf` so they cannot drift.
  */
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
@@ -50,79 +49,38 @@ const expectedHeaders = {
   },
 };
 
-const acceptsToken = (acceptEncoding: string, token: string): boolean =>
-  new RegExp(`\\b${token}\\b(?!\\s*;\\s*q=0)`, 'i').test(acceptEncoding);
-const brotliSuffix = (acceptEncoding: string): '.br' | '' => (acceptsToken(acceptEncoding, 'br') ? '.br' : '');
-
 const targetUrl = process.env['TARGET_URL'];
-const hasDocker = !targetUrl && spawnSync('docker', ['info'], { stdio: 'ignore' }).status === 0;
 const IMAGE = 'widget-check-served:local';
 
-interface BootResult {
-  base: string;
-  container: string | null;
-  fallback: { url: URL; stop: (closeActiveConnections?: boolean) => void } | null;
-}
-
-async function bootLocal(): Promise<BootResult> {
+async function bootLocal(): Promise<{ base: string; container: string }> {
+  if (spawnSync('docker', ['info'], { stdio: 'ignore' }).status !== 0)
+    throw new Error('check:served needs a running docker daemon, or TARGET_URL pointing at a deployed host');
   if (!existsSync(join(ROOT, 'dist/widget.mjs')))
     throw new Error('dist/widget.mjs missing — run `bun run build` first');
   precompress(join(ROOT, 'dist/widget.mjs'));
 
-  if (hasDocker) {
-    execFileSync('docker', ['build', '--target', 'runtime', '-t', IMAGE, '.'], { cwd: ROOT, stdio: 'inherit' });
-    const container = execFileSync('docker', ['run', '-d', '-P', IMAGE]).toString().trim();
-    const port = execFileSync('docker', ['port', container, '9001/tcp'])
-      .toString()
-      .trim()
-      .split('\n')[0]
-      ?.split(':')
-      .pop();
-    const base = `http://localhost:${port}`;
-    for (let attempt = 0; attempt < 30; attempt += 1) {
-      if ((await fetch(`${base}/health`).catch(() => null))?.ok) return { base, container, fallback: null };
-      await Bun.sleep(200);
-    }
-    throw new Error('runtime container never answered /health');
+  execFileSync('docker', ['build', '--target', 'runtime', '-t', IMAGE, '.'], { cwd: ROOT, stdio: 'inherit' });
+  const container = execFileSync('docker', ['run', '-d', '-P', IMAGE]).toString().trim();
+  const port = execFileSync('docker', ['port', container, '9001/tcp'])
+    .toString()
+    .trim()
+    .split('\n')[0]
+    ?.split(':')
+    .pop();
+  const base = `http://localhost:${port}`;
+  for (let attempt = 0; attempt < 30; attempt += 1) {
+    if ((await fetch(`${base}/health`).catch(() => null))?.ok) return { base, container };
+    await Bun.sleep(200);
   }
-
-  const fallback = Bun.serve({
-    port: 0,
-    fetch: async request => {
-      const url = new URL(request.url);
-      const acceptEncoding = request.headers.get('accept-encoding') ?? '';
-      const withCors = (response: Response, target: 'widget' | 'root'): Response => {
-        response.headers.set('Access-Control-Allow-Origin', expectedHeaders[target].cors);
-        response.headers.set('Cache-Control', expectedHeaders[target].cacheControl);
-        return response;
-      };
-      if (url.pathname === '/health') return new Response('ok', { headers: { 'Content-Type': 'text/plain' } });
-      if (url.pathname === '/favicon.ico') return new Response(null, { status: 204 });
-      if (url.pathname === '/widget.mjs') {
-        const suffix = brotliSuffix(acceptEncoding);
-        const encoding = suffix === '.br' ? 'br' : acceptsToken(acceptEncoding, 'gzip') ? 'gzip' : '';
-        const file = Bun.file(join(ROOT, `dist/widget.mjs${encoding === 'gzip' ? '.gz' : suffix}`));
-        const headers: Record<string, string> = { 'Content-Type': 'application/javascript', Vary: 'Accept-Encoding' };
-        if (encoding) headers['Content-Encoding'] = encoding;
-        return withCors(new Response(await file.bytes(), { headers }), 'widget');
-      }
-      const file = Bun.file(join(ROOT, 'dist', url.pathname));
-      if (!(await file.exists())) return withCors(new Response('404 Not Found', { status: 404 }), 'root');
-      const contentType = /\.m?js$/.test(url.pathname)
-        ? 'application/javascript'
-        : (file.type.split(';')[0] ?? file.type);
-      return withCors(new Response(await file.bytes(), { headers: { 'Content-Type': contentType } }), 'root');
-    },
-  });
-  return { base: fallback.url.toString().replace(/\/$/, ''), container: null, fallback };
+  spawnSync('docker', ['rm', '-f', container]);
+  throw new Error('runtime container never answered /health');
 }
 
-let container: BootResult['container'] = null;
-let fallback: BootResult['fallback'] = null;
+let container: string | null = null;
 
 try {
   let base = targetUrl;
-  if (!base) ({ base, container, fallback } = await bootLocal());
+  if (!base) ({ base, container } = await bootLocal());
   let rows = 0;
   const mismatches: string[] = [];
   const needsInfra: string[] = [];
@@ -228,6 +186,5 @@ try {
     process.exitCode = 1;
   }
 } finally {
-  fallback?.stop(true);
   if (container) spawnSync('docker', ['rm', '-f', container]);
 }

@@ -16,7 +16,7 @@ bun start                # vite dev on :9001 (override PORT / VITE_PORT)
 bun run build            # dist/widget.mjs + declarations
 bun run test             # bun test; filter with `bun test <pattern>`
 bun run bundle:check     # packaging gate (size, per-dependency budgets, single chunk, React external)
-bun run check:served     # asserts what the nginx runtime image actually sends, over real HTTP
+bun run check:served     # asserts what the nginx runtime image sends over real HTTP (needs docker or TARGET_URL)
 bun run code:check       # tsc + eslint + prettier --check
 bun run ci               # every CI gate — the pre-handoff gate
 bun run tag <version>    # release: bump, prove bun.lock, build, commit, annotated tag
