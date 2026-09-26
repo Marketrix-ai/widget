@@ -51,7 +51,7 @@ export function simulateKeyAction(element: HTMLElement, key: SendKey): string {
         element.click();
         return 'Enter: clicked link';
       }
-      return 'Enter: dispatched event';
+      break;
     }
 
     case 'Escape': {
@@ -68,20 +68,17 @@ export function simulateKeyAction(element: HTMLElement, key: SendKey): string {
         element.click();
         return 'Space: clicked button';
       }
-      return 'Space: dispatched event';
+      break;
     }
 
-    case 'ArrowDown': {
-      return element instanceof HTMLSelectElement ? stepSelect(element, 1) : 'ArrowDown: dispatched event';
-    }
-
-    case 'ArrowUp': {
-      return element instanceof HTMLSelectElement ? stepSelect(element, -1) : 'ArrowUp: dispatched event';
-    }
+    case 'ArrowDown':
+    case 'ArrowUp':
+      if (element instanceof HTMLSelectElement) return stepSelect(element, key);
+      break;
 
     case 'ArrowLeft':
     case 'ArrowRight': {
-      if (!isTextField(element) || element.selectionStart === null) return `${key}: dispatched event`;
+      if (!isTextField(element) || element.selectionStart === null) break;
       const caret = Math.max(
         0,
         Math.min(element.value.length, element.selectionStart + (key === 'ArrowLeft' ? -1 : 1)),
@@ -96,33 +93,24 @@ export function simulateKeyAction(element: HTMLElement, key: SendKey): string {
       return `${key}: scrolled the page`;
     }
 
-    case 'Home': {
-      if (isTextField(element)) {
-        element.setSelectionRange(0, 0);
-        return 'Home: moved cursor to start';
-      }
-      return 'Home: dispatched event';
-    }
-
+    case 'Home':
     case 'End': {
-      if (isTextField(element)) {
-        const len = element.value.length;
-        element.setSelectionRange(len, len);
-        return 'End: moved cursor to end';
-      }
-      return 'End: dispatched event';
+      if (!isTextField(element)) break;
+      const caret = key === 'Home' ? 0 : element.value.length;
+      element.setSelectionRange(caret, caret);
+      return `${key}: moved cursor to ${key === 'Home' ? 'start' : 'end'}`;
     }
 
     case 'Backspace':
-      return isTextField(element) ? deleteAt(element, 'Backspace') : 'Backspace: dispatched event';
-
     case 'Delete':
-      return isTextField(element) ? deleteAt(element, 'Delete') : 'Delete: dispatched event';
+      if (isTextField(element)) return deleteAt(element, key);
+      break;
   }
+  return `${key}: dispatched event`;
 }
 
-function stepSelect(element: HTMLSelectElement, step: 1 | -1): string {
-  const key = step === 1 ? 'ArrowDown' : 'ArrowUp';
+function stepSelect(element: HTMLSelectElement, key: 'ArrowDown' | 'ArrowUp'): string {
+  const step = key === 'ArrowDown' ? 1 : -1;
   const next = element.selectedIndex + step;
   if (next < 0 || next >= element.options.length) {
     return `${key}: already at ${step === 1 ? 'last' : 'first'} option`;
