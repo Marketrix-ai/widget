@@ -8,15 +8,13 @@ export const SimulationStatusSchema = z.enum(['queued', 'running', 'has_question
 
 export type SimulationStatus = z.infer<typeof SimulationStatusSchema>;
 
-export const SIMULATION_TERMINAL_STATUSES = [
-  'completed',
-  'failed',
-  'stopped',
-] as const satisfies readonly SimulationStatus[];
+const SimulationTerminalStatusSchema = SimulationStatusSchema.extract(['completed', 'failed', 'stopped']);
+
+export const SIMULATION_TERMINAL_STATUSES = SimulationTerminalStatusSchema.options;
 
 export const SIMULATION_ACTIVE_STATUSES = SimulationStatusSchema.exclude(SIMULATION_TERMINAL_STATUSES).options;
 
-export type SimulationTerminalStatus = (typeof SIMULATION_TERMINAL_STATUSES)[number];
+export type SimulationTerminalStatus = z.infer<typeof SimulationTerminalStatusSchema>;
 
 export const isSimulationTerminal = (status: SimulationStatus): status is SimulationTerminalStatus =>
-  (SIMULATION_TERMINAL_STATUSES as readonly SimulationStatus[]).includes(status);
+  SimulationTerminalStatusSchema.safeParse(status).success;
