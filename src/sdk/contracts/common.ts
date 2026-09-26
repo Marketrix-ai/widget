@@ -3,8 +3,8 @@
  *
  * Exports `IdSchema` (every row id), helpers like `paginatedListOf`/`unionOfRecord`/`discriminatedUnionOfRecord`,
  * the id and pagination input schemas, `BaseEntitySchema` and `StoredDateSchema`, the one date that may arrive as
- * the ISO string a JSONB document stores. This file mirrors whole into the widget SDK, so only domain-free
- * primitives belong here.
+ * the ISO string a JSONB document stores, and `partialPatch`, whose patches never carry a field's create-time
+ * default. This file mirrors whole into the widget SDK, so only domain-free primitives belong here.
  */
 import { z } from 'zod';
 
@@ -35,14 +35,23 @@ export const PaginationSchema = z.strictObject({
   offset: z.number().int().min(0).default(0),
 });
 
-type StripDefault<T> = T extends z.ZodDefault<infer Inner> ? Inner : T;
+type StripDefault<T> =
+  T extends z.ZodDefault<infer Inner>
+    ? Inner
+    : T extends z.ZodPipe<z.ZodDefault<infer Inner>, infer Out>
+      ? z.ZodPipe<Inner, Out>
+      : T;
+
+const stripDefault = (field: z.core.$ZodType): z.core.$ZodType =>
+  field instanceof z.ZodDefault
+    ? field.removeDefault()
+    : field instanceof z.ZodPipe && field.in instanceof z.ZodDefault
+      ? z.pipe(field.in.removeDefault(), field.out)
+      : field;
 
 export function partialPatch<Shape extends z.ZodRawShape>(schema: z.ZodObject<Shape>) {
   const shape = Object.fromEntries(
-    Object.entries(schema.shape).map(([key, field]) => [
-      key,
-      z.optional(field instanceof z.ZodDefault ? field.removeDefault() : field),
-    ]),
+    Object.entries(schema.shape).map(([key, field]) => [key, z.optional(stripDefault(field))]),
   ) as { [K in keyof Shape]: z.ZodOptional<StripDefault<Shape[K]>> };
   return z.strictObject(shape);
 }
