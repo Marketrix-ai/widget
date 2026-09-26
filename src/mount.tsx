@@ -25,12 +25,7 @@ import { stopScreenShare } from './services/ScreenShareService';
 import { showModeService } from './services/ShowModeService';
 import { scopeStorageTo } from './services/StorageService';
 import { streamClient } from './services/StreamClient';
-import {
-  type CredentialedConfig,
-  invalidSettingsMessage,
-  loadWidgetConfig,
-  parseWidgetSettings,
-} from './services/WidgetService';
+import { type CredentialedConfig, loadWidgetConfig, parseWidgetSettingsOrThrow } from './services/WidgetService';
 import type { ClientOwnedConfig, MarketrixConfig, ValidWidgetConfig, WidgetSettingsData } from './types';
 import { WIDGET_SHADOW_HOST_CLASS } from './utils/dom';
 import { errorMessage } from './utils/errors';
@@ -101,9 +96,7 @@ function mountActive(config: ValidWidgetConfig, host: HTMLElement | undefined, i
 }
 
 export function previewConfig(settings: WidgetSettingsData, baseConfig: ClientOwnedConfig = {}): ValidWidgetConfig {
-  const parsed = parseWidgetSettings(settings);
-  if (parsed.invalidFields) throw new Error(`Marketrix Widget: ${invalidSettingsMessage(parsed.invalidFields)}`);
-  return { ...baseConfig, ...parsed.settings, isPreviewMode: true };
+  return { ...baseConfig, ...parseWidgetSettingsOrThrow(settings), isPreviewMode: true };
 }
 
 export function mountPreview(config: ValidWidgetConfig, host: HTMLElement | undefined): void {
@@ -239,11 +232,6 @@ export const autoInitializeWidget = (): void => {
   const styleNonce = script.getAttribute('mtx-style-nonce') ?? undefined;
 
   if (!mtxId || !mtxKey || !mtxApiHost) {
-    console.error('[AutoInit] Missing required attributes:', {
-      hasMtxId: !!mtxId,
-      hasMtxKey: !!mtxKey,
-      hasMtxApiHost: !!mtxApiHost,
-    });
     showHostPageNotice('Please configure mtx-id, mtx-key and mtx-api-host', 'error', styleNonce);
     return;
   }

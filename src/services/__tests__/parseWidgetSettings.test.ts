@@ -1,12 +1,12 @@
 /**
- * Tests for `parseWidgetSettings`/`invalidSettingsMessage`: valid settings pass, unknown keys and render
- * constants are dropped, and each invalid rendered field is rejected and named.
+ * Tests for `parseWidgetSettingsOrThrow`: valid settings pass, unknown keys and render constants are dropped,
+ * and each invalid rendered field is rejected and named.
  */
 import { describe, expect, it } from 'bun:test';
 
 import { WidgetSettingsDataSchema, WidgetSettingsWriteSchema } from '../../sdk/contracts/widgetSettings';
 import { validSettings } from '../../test/fixtures';
-import { invalidSettingsMessage, parseWidgetSettings } from '../WidgetService';
+import { parseWidgetSettingsOrThrow } from '../WidgetService';
 
 const valid = validSettings();
 const FIELDS = Object.keys(WidgetSettingsWriteSchema.shape) as (keyof typeof WidgetSettingsWriteSchema.shape)[];
@@ -16,30 +16,31 @@ const RENDER_CONSTANTS = Object.keys(WidgetSettingsDataSchema.shape).filter(
 
 const expectRejectedAndNamed = (broken: unknown, invalidFields: string[]) => {
   expect(WidgetSettingsDataSchema.safeParse(broken).success).toBe(false);
-  expect(parseWidgetSettings(broken).invalidFields).toEqual(invalidFields);
+  expect(() => parseWidgetSettingsOrThrow(broken)).toThrow(
+    new Error(`Widget settings are invalid: ${invalidFields.join(', ')}`),
+  );
 };
 
-describe('parseWidgetSettings', () => {
+describe('parseWidgetSettingsOrThrow', () => {
   it('accepts a valid settings object', () => {
-    const result = parseWidgetSettings(valid);
-    expect(result.invalidFields).toBeUndefined();
+    expect(() => parseWidgetSettingsOrThrow(valid)).not.toThrow();
     expect(WidgetSettingsDataSchema.safeParse(valid).success).toBe(true);
   });
 
   it('projects settings from a wider internal config while the wire schema rejects unknown keys', () => {
     const withExtras = { ...valid, widget_render_constant: 'x', another: 1 };
-    const result = parseWidgetSettings(withExtras);
+    const result = parseWidgetSettingsOrThrow(withExtras);
     const rendered = WidgetSettingsWriteSchema.strip().parse(valid);
     expect(WidgetSettingsDataSchema.safeParse(withExtras).success).toBe(false);
-    expect(result.settings).toEqual(rendered);
-    expect(result.settings).not.toHaveProperty('widget_render_constant');
+    expect(result).toEqual(rendered);
+    expect(result).not.toHaveProperty('widget_render_constant');
   });
 
   it('also drops the render constants the widget renders from its own hard-coded values', () => {
-    const result = parseWidgetSettings(valid);
+    const result = parseWidgetSettingsOrThrow(valid);
     expect(RENDER_CONSTANTS).not.toHaveLength(0);
     for (const field of RENDER_CONSTANTS) {
-      expect(result.settings).not.toHaveProperty(field);
+      expect(result).not.toHaveProperty(field);
     }
   });
 
@@ -73,14 +74,6 @@ describe('parseWidgetSettings', () => {
 
   it('reports every invalid field, not just the first', () => {
     const broken = { ...valid, widget_header: 1, widget_enabled: 'yes' };
-    expect(parseWidgetSettings(broken).invalidFields).toEqual(['widget_enabled', 'widget_header']);
-  });
-});
-
-describe('invalidSettingsMessage', () => {
-  it('lists the offending fields', () => {
-    expect(invalidSettingsMessage(['widget_header', 'widget_enabled'])).toBe(
-      'Widget settings are invalid: widget_header, widget_enabled',
-    );
+    expectRejectedAndNamed(broken, ['widget_enabled', 'widget_header']);
   });
 });

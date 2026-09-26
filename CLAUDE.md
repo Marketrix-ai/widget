@@ -57,7 +57,7 @@ GUI clients; that path is baked in at install, so after changing `rc:` re-run `l
   stay unpublished, and a new served file is added to the Dockerfile by hand. `.gz`/`.br` are precompressed
   at build by `scripts/precompress.ts`; nginx has no brotli module, so brotli rides a `try_files`.
 - **zod ships in the bundle, so untrusted input is parsed with the contract's own schemas** (rrweb events,
-  `parseWidgetSettings`), never a hand-written guard re-spelling a contract shape.
+  `parseWidgetSettingsOrThrow`), never a hand-written guard re-spelling a contract shape.
 - `public/loader.js` is the script-tag bootstrap. It injects its `esm.sh` React importmap **unless a host map
   already maps all four React specifiers** — Firefox and older Chrome/Safari ignore a second map. The build
   target (Safari 16.4 floor) is documented in README's Requirements.
