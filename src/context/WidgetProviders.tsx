@@ -1,12 +1,8 @@
 /**
- * The widget's provider stack: `WidgetProviders` publishes the mounted config through `WidgetConfigContext`
- * and wraps children in `UIStateProvider` → `ChatProvider` → `InitBridge`. Also home to
- * `PortalContainerContext`/`usePortalContainer`, so a portal lands inside the tenant's theme tokens.
- *
- * `InitBridge` restores the stored snapshot into UI state and the chat store, then gets or creates the chat
- * id and opens the stream. Task state is deliberately not restored, since a run never survives a reload.
- * `PersistBridge` writes the snapshot back on every change, kept as its own component so it doesn't
- * re-render the tree `InitBridge` wraps. Preview mode skips all of this.
+ * The widget's provider stack: `WidgetProviders` publishes the config and wraps `UIStateProvider` →
+ * `ChatProvider` → `InitBridge`, and `PortalContainerContext` lands portals inside the tenant tokens.
+ * `InitBridge` restores the stored snapshot and opens the stream, `PersistBridge` writes it back; task state is
+ * never restored, since a run never survives a reload. Preview mode skips both.
  */
 import React, { createContext, useContext, useEffect, useState } from 'react';
 

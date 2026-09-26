@@ -1,12 +1,7 @@
 /**
- * Turns per-tenant widget settings into the CSS custom properties inlined on the widget root — the
- * widget's entire theming mechanism (there is no dark mode).
- *
- * `themeCssProperties` maps a tenant's colour settings, plus their muted/faint/hover/contrast variants,
- * onto the `--var` map. `WIDGET_RADIUS_PX`, the two durations and the `SHADOW` tokens CSS reads are fixed.
- *
- * The focus ring colour is synthesized as black or white against the tenant's background rather than
- * using the tenant's accent colour, which has no guaranteed contrast against whatever sits next to it.
+ * Tenant settings to the CSS custom properties inlined on the widget root, the widget's whole theming
+ * mechanism: `themeCssProperties` plus the fixed `WIDGET_RADIUS_PX`. The focus ring is black or white against
+ * the background rather than the accent, which has no guaranteed contrast.
  */
 import type { CSSProperties } from 'react';
 

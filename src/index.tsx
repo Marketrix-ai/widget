@@ -1,11 +1,7 @@
 /**
- * Public entry point of `@marketrix.ai/widget`: the imperative lifecycle API from `mount.tsx`, the
- * `MarketrixWidgetPreview` dashboard component, `mountWidget`, and the script-tag auto-init hook.
- * `README.md` is the customer-facing surface these exports make up.
- *
- * `mountWidget` picks the preview or live path by whether settings or credentials were passed, and like
- * `initWidget` rejects when the widget cannot mount; `MarketrixWidgetPreview` throws invalid settings to the
- * host's error boundary. Auto-init runs on import, deferred a tick and guarded so the package stays
+ * Public entry point of `@marketrix.ai/widget` (README is its customer-facing surface): the lifecycle API from
+ * `mount.tsx`, `mountWidget` (preview or live by whether settings or credentials were passed) and the
+ * `MarketrixWidgetPreview` component. Auto-init runs on import, deferred a tick and guarded so the package stays
  * importable during a server render.
  */
 import React, { useEffect, useMemo, useRef } from 'react';

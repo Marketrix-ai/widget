@@ -1,14 +1,9 @@
 /**
- * The widget's mount lifecycle behind `index.tsx`: the closed-shadow host, the React root, the one live
- * widget, and the script-tag auto-init path.
- * `renderWidget` renders one widget into its own closed shadow root and returns its teardown.
- * `initWidget` resolves credentials and mounts, coalescing concurrent calls and rejecting when the widget
- * cannot load; `previewConfig` throws on invalid preview settings; `mountPreview` mounts them with no api;
- * `unmountWidget` tears everything down, including the show-mode overlay outside the shadow root;
- * `updateMarketrixConfig` re-mounts with new client options. `showHostPageNotice` toasts before the widget
- * exists. `window.__mtx` marks a live widget and survives the module executing twice. `widget_enabled` false
- * creates no chat id, stream or recording, and `mtx-api-host` has no default, since an unset host would
- * silently post widget traffic at the host page's own origin.
+ * The widget's mount lifecycle behind `index.tsx`: `renderWidget` mounts one widget in its own closed shadow
+ * root, `initWidget` resolves credentials and mounts (coalescing concurrent calls), `previewConfig`/`mountPreview`
+ * mount settings with no api, `unmountWidget`/`updateMarketrixConfig` tear down or re-mount, and
+ * `autoInitializeWidget` drives the script-tag path. `window.__mtx` survives the module executing twice, and
+ * `mtx-api-host` has no default because an unset host would post widget traffic at the host page's own origin.
  */
 import React from 'react';
 import { createRoot, type Root } from 'react-dom/client';
