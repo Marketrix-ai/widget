@@ -47,7 +47,7 @@ export const ChatView: React.FC<{ messageInputRef: React.RefObject<HTMLTextAreaE
   const handleModeChange = (mode: InstructionType) => {
     if (mode === currentMode) return;
     actions.addSystemMessage(`Switched to ${MODE_LABELS[mode]} mode`);
-    actions.setMode(mode);
+    actions.applyState({ currentMode: mode });
   };
 
   return (

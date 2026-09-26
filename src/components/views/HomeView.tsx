@@ -20,10 +20,9 @@ export const HomeView: React.FC = () => {
   const { messages, isComposerLocked } = state;
   const suggestedActions = getSuggestedActionsFromConfig(config);
   const lastMessagePreview = messageText(messages[messages.length - 1]?.parts ?? []) || 'Message';
-  const onNavigateToChat = () => actions.setActiveView('chat');
+  const onNavigateToChat = () => actions.applyState({ activeView: 'chat' });
   const onChipClick = (action: SuggestedActionItem) => {
-    actions.setActiveView('chat');
-    actions.setMode(action.type);
+    actions.applyState({ activeView: 'chat', currentMode: action.type });
     void actions.sendTurn(action.text, action.type);
   };
 

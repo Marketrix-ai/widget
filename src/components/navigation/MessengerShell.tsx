@@ -237,8 +237,10 @@ export const MessengerShell: React.FC = () => {
   const messageInputRef = useRef<HTMLTextAreaElement | null>(null);
   const navDirection = activeView === 'chat' ? 'forward' : 'back';
 
+  const closePanel = useCallback(() => actions.applyState({ isOpen: false }), [actions]);
+
   useFocusTrap(containerRef, isOpen, {
-    onEscape: actions.closeWidget,
+    onEscape: closePanel,
     focusTargetRef: activeView === 'chat' ? messageInputRef : undefined,
   });
 
@@ -292,7 +294,7 @@ export const MessengerShell: React.FC = () => {
       <HeaderBar
         title={config.widget_header}
         subtitle={config.widget_body}
-        onClose={actions.closeWidget}
+        onClose={closePanel}
         controls={
           screenShareHandler && (
             <IconButton
@@ -312,7 +314,7 @@ export const MessengerShell: React.FC = () => {
         value={activeView}
         onValueChange={value => {
           const view = WIDGET_VIEWS.find(candidate => candidate === value);
-          if (view) actions.setActiveView(view);
+          if (view) actions.applyState({ activeView: view });
         }}
         render={<Stack grow minHeight='0' />}
       >
