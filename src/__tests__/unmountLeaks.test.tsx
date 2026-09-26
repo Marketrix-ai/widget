@@ -259,7 +259,7 @@ describe('unmountWidget stops an active rrweb session recording started by the r
     await act(() => initWidget({ mtxId: 'rec-1', mtxKey: 'key', mtxApiHost: 'https://api.test' }, container));
     await waitFor(() => expect(record).toHaveBeenCalledTimes(1));
 
-    unmountWidget();
+    act(() => unmountWidget());
 
     expect(stopRecording).toHaveBeenCalledTimes(1);
   });

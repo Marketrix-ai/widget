@@ -29,7 +29,7 @@ const expectNotMounted = (container: HTMLElement) => {
 };
 
 afterEach(() => {
-  unmountWidget();
+  act(() => unmountWidget());
   vi.restoreAllMocks();
   document.head.replaceChildren();
   document.body.replaceChildren();
@@ -81,7 +81,7 @@ describe('public widget lifecycle', () => {
     expect(container.querySelector('.marketrix-widget-container')).toBeNull();
     expect(replacement.querySelector('.marketrix-widget-container')).toBeTruthy();
 
-    unmountWidget();
+    act(() => unmountWidget());
 
     expect(replacement.querySelector('.marketrix-widget-container')).toBeNull();
     expect(unrelated).toBeInTheDocument();
@@ -112,13 +112,16 @@ describe('public widget lifecycle', () => {
     const previewContainer = mountTarget();
     document.body.append(productionContainer, previewContainer);
 
-    const production = initWidget(
-      { mtxId: 'production', mtxKey: 'key', mtxApiHost: 'https://api.test' },
-      productionContainer,
-    );
+    let production!: Promise<void>;
+    act(() => {
+      production = initWidget(
+        { mtxId: 'production', mtxKey: 'key', mtxApiHost: 'https://api.test' },
+        productionContainer,
+      );
+    });
     await act(() => mountWidget({ settings, container: previewContainer }));
     resolveProduction(credentialedConfig({ mtxId: 'production', mtxKey: 'key' }));
-    await production;
+    await act(() => production);
 
     expect(productionContainer.querySelector('.marketrix-widget-container')).toBeNull();
     expect(previewContainer.querySelectorAll('.marketrix-widget-container')).toHaveLength(1);
@@ -129,7 +132,9 @@ describe('public widget lifecycle', () => {
     const container = mountTarget();
     document.body.append(container);
 
-    await expect(initWidget({ mtxId: 'no-host', mtxKey: 'key' } as MarketrixConfig, container)).rejects.toThrow();
+    await act(() =>
+      expect(initWidget({ mtxId: 'no-host', mtxKey: 'key' } as MarketrixConfig, container)).rejects.toThrow(),
+    );
 
     expect(load).not.toHaveBeenCalled();
     expectNotMounted(container);
@@ -143,8 +148,10 @@ describe('public widget lifecycle', () => {
     const container = mountTarget();
     document.body.append(container);
 
-    await expect(mountWidget({ ...credentials, mtxApiHost: 'https://api.test', container })).rejects.toThrow(
-      'mtxId and mtxKey are required',
+    await act(() =>
+      expect(mountWidget({ ...credentials, mtxApiHost: 'https://api.test', container })).rejects.toThrow(
+        'mtxId and mtxKey are required',
+      ),
     );
 
     expect(load).not.toHaveBeenCalled();
@@ -158,7 +165,7 @@ describe('public widget lifecycle', () => {
     const container = mountTarget();
     document.body.append(container);
 
-    await initWidget({ mtxId: 'disabled', mtxKey: 'key', mtxApiHost: 'https://api.test' }, container);
+    await act(() => initWidget({ mtxId: 'disabled', mtxKey: 'key', mtxApiHost: 'https://api.test' }, container));
 
     expect(load).toHaveBeenCalledTimes(1);
     expectNotMounted(container);
@@ -180,32 +187,36 @@ describe('public widget lifecycle', () => {
     unrelated.className = 'marketrix-widget-container';
     document.body.append(firstContainer, secondContainer, unrelated);
 
-    const first = initWidget({ mtxId: 'first', mtxKey: 'first-key', mtxApiHost: 'https://api.test' }, firstContainer);
-    const concurrent = initWidget(
-      { mtxId: 'ignored', mtxKey: 'ignored-key', mtxApiHost: 'https://api.test' },
-      secondContainer,
-    );
+    let first!: Promise<void>;
+    let concurrent!: Promise<void>;
+    act(() => {
+      first = initWidget({ mtxId: 'first', mtxKey: 'first-key', mtxApiHost: 'https://api.test' }, firstContainer);
+      concurrent = initWidget(
+        { mtxId: 'ignored', mtxKey: 'ignored-key', mtxApiHost: 'https://api.test' },
+        secondContainer,
+      );
+    });
 
     expect(concurrent).toBe(first);
     expect(WidgetService.loadWidgetConfig).toHaveBeenCalledTimes(1);
 
-    unmountWidget();
-    const second = initWidget(
-      { mtxId: 'second', mtxKey: 'second-key', mtxApiHost: 'https://api.test' },
-      secondContainer,
-    );
+    let second!: Promise<void>;
+    act(() => {
+      unmountWidget();
+      second = initWidget({ mtxId: 'second', mtxKey: 'second-key', mtxApiHost: 'https://api.test' }, secondContainer);
+    });
     resolveFirst(credentialedConfig({ mtxId: 'first', mtxKey: 'first-key' }));
-    await first;
+    await act(() => first);
 
     expect(firstContainer.querySelector('.marketrix-widget-container')).toBeNull();
     expect(secondContainer.querySelector('.marketrix-widget-container')).toBeNull();
 
     resolveSecond(credentialedConfig({ mtxId: 'second', mtxKey: 'second-key' }));
-    await second;
+    await act(() => second);
 
     expect(secondContainer.querySelector('.marketrix-widget-container')).toBeTruthy();
 
-    unmountWidget();
+    act(() => unmountWidget());
 
     expect(secondContainer.querySelector('.marketrix-widget-container')).toBeNull();
     expect(unrelated).toBeInTheDocument();
