@@ -1,11 +1,11 @@
 /**
- * `Avatar` — an `<img>` sized in pixels (32 by default), with fit, radius (via `resolveLayoutStyle`) and
+ * `Avatar` — an `<img>` sized in pixels (32 by default), with fit, radius and
  * elevation from the design tokens; keeps its own class beside a caller className.
  */
 import type { ComponentPropsWithRef } from 'react';
 
-import { getElevationStyle, type RadiusToken, type ShadowToken } from '../../design-system/component-tokens';
-import { resolveLayoutStyle, withClass } from './layoutProps';
+import { getElevationStyle, RADIUS, type RadiusToken, type ShadowToken } from '../../design-system/component-tokens';
+import { withClass } from './layoutProps';
 
 interface AvatarProps extends Omit<ComponentPropsWithRef<'img'>, 'size'> {
   src: string;
@@ -30,7 +30,7 @@ export function Avatar(props: AvatarProps) {
         objectFit: fit,
         width: size,
         height: size,
-        ...resolveLayoutStyle({ rounded }),
+        borderRadius: rounded && RADIUS[rounded],
         ...getElevationStyle(elevation),
         ...style,
       }}

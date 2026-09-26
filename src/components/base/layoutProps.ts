@@ -1,10 +1,9 @@
 /**
- * Layout vocabulary shared by the base components: the `LayoutProps` a component accepts,
- * `resolveLayoutStyle` which turns them into a style object, and `stripLayoutProps` which removes them
- * from a props bag before the rest is spread onto a DOM element; `withClass` appends an optional caller class
- * to a component's fixed base class.
+ * Layout vocabulary for the base components: the `LayoutProps` a component accepts, `splitLayout` which
+ * turns them into a style object and returns the remaining props for the DOM element, and `withClass` which
+ * appends an optional caller class to a component's fixed base class.
  */
-import type { CSSProperties, ElementType } from 'react';
+import type { CSSProperties } from 'react';
 
 import { RADIUS, type RadiusToken } from '../../design-system/component-tokens';
 
@@ -62,91 +61,74 @@ export interface LayoutProps {
   rounded?: RadiusToken | undefined;
 
   animate?: 'fadeIn' | undefined;
-
-  as?: ElementType;
-  style?: CSSProperties | undefined;
 }
 
-const LAYOUT_KEYS = {
-  padding: true,
-  paddingX: true,
-  paddingY: true,
-  paddingTop: true,
-  paddingBottom: true,
-  gap: true,
-  align: true,
-  justify: true,
-  grow: true,
-  shrink: true,
-  position: true,
-  inset: true,
-  overflow: true,
-  overflowY: true,
-  width: true,
-  height: true,
-  minWidth: true,
-  minHeight: true,
-  border: true,
-  rounded: true,
-  animate: true,
-  as: true,
-  style: true,
-} satisfies Record<keyof LayoutProps, true>;
-
-export function resolveLayoutStyle(props: LayoutProps): CSSProperties {
+export function splitLayout<T extends LayoutProps>(props: T): [CSSProperties, Omit<T, keyof LayoutProps>] {
+  const {
+    padding,
+    paddingX,
+    paddingY,
+    paddingTop,
+    paddingBottom,
+    gap,
+    align,
+    justify,
+    grow,
+    shrink,
+    position,
+    inset,
+    overflow,
+    overflowY,
+    width,
+    height,
+    minWidth,
+    minHeight,
+    border,
+    rounded,
+    animate,
+    ...rest
+  } = props;
   const style: CSSProperties = {};
 
-  if (props.padding !== undefined) style.padding = SPACING_SCALE[props.padding];
-  if (props.paddingX !== undefined) {
-    style.paddingLeft = SPACING_SCALE[props.paddingX];
-    style.paddingRight = SPACING_SCALE[props.paddingX];
+  if (padding !== undefined) style.padding = SPACING_SCALE[padding];
+  if (paddingX !== undefined) {
+    style.paddingLeft = SPACING_SCALE[paddingX];
+    style.paddingRight = SPACING_SCALE[paddingX];
   }
-  if (props.paddingY !== undefined) {
-    style.paddingTop = SPACING_SCALE[props.paddingY];
-    style.paddingBottom = SPACING_SCALE[props.paddingY];
+  if (paddingY !== undefined) {
+    style.paddingTop = SPACING_SCALE[paddingY];
+    style.paddingBottom = SPACING_SCALE[paddingY];
   }
-  if (props.paddingTop !== undefined) style.paddingTop = SPACING_SCALE[props.paddingTop];
-  if (props.paddingBottom !== undefined) style.paddingBottom = SPACING_SCALE[props.paddingBottom];
-  if (props.gap !== undefined) style.gap = SPACING_SCALE[props.gap];
+  if (paddingTop !== undefined) style.paddingTop = SPACING_SCALE[paddingTop];
+  if (paddingBottom !== undefined) style.paddingBottom = SPACING_SCALE[paddingBottom];
+  if (gap !== undefined) style.gap = SPACING_SCALE[gap];
 
-  if (props.align !== undefined) style.alignItems = ALIGN[props.align];
-  if (props.justify !== undefined) style.justifyContent = JUSTIFY[props.justify];
-  if (props.grow === true) style.flex = '1 1 0%';
-  if (props.shrink === false) style.flexShrink = 0;
+  if (align !== undefined) style.alignItems = ALIGN[align];
+  if (justify !== undefined) style.justifyContent = JUSTIFY[justify];
+  if (grow === true) style.flex = '1 1 0%';
+  if (shrink === false) style.flexShrink = 0;
 
-  if (props.position !== undefined) style.position = props.position;
-  if (props.inset !== undefined) style.inset = props.inset;
+  if (position !== undefined) style.position = position;
+  if (inset !== undefined) style.inset = inset;
 
-  if (props.overflow !== undefined) style.overflow = props.overflow;
-  if (props.overflowY !== undefined) style.overflowY = props.overflowY;
-  if (props.width === 'full') style.width = '100%';
-  if (props.height === 'full') style.height = '100%';
-  if (props.minWidth === '0') style.minWidth = 0;
-  if (props.minHeight === '0') style.minHeight = 0;
+  if (overflow !== undefined) style.overflow = overflow;
+  if (overflowY !== undefined) style.overflowY = overflowY;
+  if (width === 'full') style.width = '100%';
+  if (height === 'full') style.height = '100%';
+  if (minWidth === '0') style.minWidth = 0;
+  if (minHeight === '0') style.minHeight = 0;
 
-  if (props.border !== undefined && props.border !== false) {
+  if (border !== undefined && border !== false) {
     style.borderColor = 'var(--border)';
     style.borderStyle = 'solid';
-    if (props.border === true) style.borderWidth = '1px';
-    else style[BORDER_SIDE[props.border]] = '1px';
+    if (border === true) style.borderWidth = '1px';
+    else style[BORDER_SIDE[border]] = '1px';
   }
 
-  if (props.rounded !== undefined) style.borderRadius = RADIUS[props.rounded];
-  if (props.animate === 'fadeIn') style.animation = 'mtx-fade-in 0.5s ease-out';
+  if (rounded !== undefined) style.borderRadius = RADIUS[rounded];
+  if (animate === 'fadeIn') style.animation = 'mtx-fade-in 0.5s ease-out';
 
-  return style;
-}
-
-const isLayoutKey = (key: string): key is keyof LayoutProps => key in LAYOUT_KEYS;
-
-export function stripLayoutProps<T extends LayoutProps>(props: T): Omit<T, keyof LayoutProps> {
-  const result: Record<string, unknown> = {};
-  for (const key in props) {
-    if (!isLayoutKey(key)) {
-      result[key] = props[key];
-    }
-  }
-  return result as Omit<T, keyof LayoutProps>;
+  return [style, rest];
 }
 
 export const withClass = (base: string, extra?: string): string => (extra ? `${base} ${extra}` : base);

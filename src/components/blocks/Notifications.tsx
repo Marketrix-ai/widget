@@ -35,9 +35,8 @@ const NotificationList: React.FC = () => {
             align='center'
             gap='md'
             rounded='pill'
-            paddingPreset='toast'
             elevation='panel'
-            style={{ backgroundColor: colors.background, border: colors.border }}
+            style={{ backgroundColor: colors.background, border: colors.border, padding: '8px 12px 8px 8px' }}
           />
         }
       >

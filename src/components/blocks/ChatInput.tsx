@@ -12,6 +12,7 @@ import { Flex, Stack } from '../base/Flex';
 import { Icon } from '../base/Icon';
 import { IconButton } from '../base/IconButton';
 import type { IconName } from '../base/icons';
+import { CARD_COLORS } from '../base/Surface';
 import { Text } from '../base/Text';
 
 export interface ChatInputMode {
@@ -69,7 +70,7 @@ export function ChatInput({
   const canSend = Boolean(value.trim()) && !disabled;
 
   return (
-    <Stack background='card' rounded='xl' border overflow='hidden' className='mtx-composer'>
+    <Stack rounded='xl' border overflow='hidden' className='mtx-composer' style={CARD_COLORS}>
       <textarea
         ref={ref}
         value={value}

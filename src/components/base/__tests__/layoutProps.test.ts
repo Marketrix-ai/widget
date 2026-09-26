@@ -1,10 +1,12 @@
 /**
- * `resolveLayoutStyle` tests: every layout prop across every token maps to its style value and empty
- * props give an empty style; `stripLayoutProps` removes exactly the layout keys.
+ * `splitLayout` tests: every layout prop across every token maps to its style value, empty props give an
+ * empty style, and only the non-layout props are returned for the DOM element.
  */
 import { describe, expect, it } from 'bun:test';
 
-import { resolveLayoutStyle, stripLayoutProps } from '../layoutProps';
+import { type LayoutProps, splitLayout } from '../layoutProps';
+
+const layoutStyle = (props: LayoutProps) => splitLayout(props)[0];
 
 const SPACING_PX = {
   '2xs': '2px',
@@ -14,14 +16,14 @@ const SPACING_PX = {
   lg: '12px',
 } as const;
 
-describe('resolveLayoutStyle', () => {
+describe('splitLayout style', () => {
   it('returns an empty style for empty props', () => {
-    expect(resolveLayoutStyle({})).toEqual({});
+    expect(layoutStyle({})).toEqual({});
   });
 
   it('maps every spacing token to its pixel value for padding', () => {
     for (const [token, px] of Object.entries(SPACING_PX)) {
-      expect(resolveLayoutStyle({ padding: token as keyof typeof SPACING_PX })).toEqual({ padding: px });
+      expect(layoutStyle({ padding: token as keyof typeof SPACING_PX })).toEqual({ padding: px });
     }
   });
 
@@ -30,11 +32,11 @@ describe('resolveLayoutStyle', () => {
       ['paddingX', { paddingLeft: '8px', paddingRight: '8px' }, 'md'],
       ['paddingY', { paddingTop: '6px', paddingBottom: '6px' }, 'sm'],
     ] as const)('%s: writes both sides from one token', (prop, expected, token) => {
-      expect(resolveLayoutStyle({ [prop]: token })).toEqual(expected);
+      expect(layoutStyle({ [prop]: token })).toEqual(expected);
     });
 
     it('a specific side wins over the axis it belongs to', () => {
-      expect(resolveLayoutStyle({ paddingY: 'sm', paddingTop: 'lg' })).toEqual({
+      expect(layoutStyle({ paddingY: 'sm', paddingTop: 'lg' })).toEqual({
         paddingTop: '12px',
         paddingBottom: '6px',
       });
@@ -42,14 +44,14 @@ describe('resolveLayoutStyle', () => {
   });
 
   it('maps every gap token to its pixel value', () => {
-    expect(resolveLayoutStyle({ gap: 'sm' })).toEqual({ gap: '6px' });
-    expect(resolveLayoutStyle({ gap: 'lg' })).toEqual({ gap: '12px' });
+    expect(layoutStyle({ gap: 'sm' })).toEqual({ gap: '6px' });
+    expect(layoutStyle({ gap: 'lg' })).toEqual({ gap: '12px' });
   });
 
   it('maps every align token to alignItems', () => {
     const cases = { center: 'center', start: 'flex-start' };
     for (const [align, alignItems] of Object.entries(cases)) {
-      expect(resolveLayoutStyle({ align: align as keyof typeof cases })).toEqual({ alignItems });
+      expect(layoutStyle({ align: align as keyof typeof cases })).toEqual({ alignItems });
     }
   });
 
@@ -61,45 +63,45 @@ describe('resolveLayoutStyle', () => {
       end: 'flex-end',
     };
     for (const [justify, justifyContent] of Object.entries(cases)) {
-      expect(resolveLayoutStyle({ justify: justify as keyof typeof cases })).toEqual({ justifyContent });
+      expect(layoutStyle({ justify: justify as keyof typeof cases })).toEqual({ justifyContent });
     }
   });
 
   it('flex: grow/shrink booleans emit only on their non-default value', () => {
-    expect(resolveLayoutStyle({ grow: true })).toEqual({ flex: '1 1 0%' });
-    expect(resolveLayoutStyle({ grow: false })).toEqual({});
-    expect(resolveLayoutStyle({ shrink: false })).toEqual({ flexShrink: 0 });
-    expect(resolveLayoutStyle({ shrink: true })).toEqual({});
+    expect(layoutStyle({ grow: true })).toEqual({ flex: '1 1 0%' });
+    expect(layoutStyle({ grow: false })).toEqual({});
+    expect(layoutStyle({ shrink: false })).toEqual({ flexShrink: 0 });
+    expect(layoutStyle({ shrink: true })).toEqual({});
   });
 
   it('position and inset resolve independently', () => {
-    expect(resolveLayoutStyle({ position: 'relative' })).toEqual({ position: 'relative' });
-    expect(resolveLayoutStyle({ position: 'fixed' })).toEqual({ position: 'fixed' });
-    expect(resolveLayoutStyle({ inset: '0' })).toEqual({ inset: '0' });
+    expect(layoutStyle({ position: 'relative' })).toEqual({ position: 'relative' });
+    expect(layoutStyle({ position: 'fixed' })).toEqual({ position: 'fixed' });
+    expect(layoutStyle({ inset: '0' })).toEqual({ inset: '0' });
   });
 
   it('overflow and sizing props pass through or resolve to their CSS value', () => {
-    expect(resolveLayoutStyle({ overflow: 'hidden' })).toEqual({ overflow: 'hidden' });
-    expect(resolveLayoutStyle({ overflowY: 'auto' })).toEqual({ overflowY: 'auto' });
-    expect(resolveLayoutStyle({ width: 'full' })).toEqual({ width: '100%' });
-    expect(resolveLayoutStyle({ height: 'full' })).toEqual({ height: '100%' });
-    expect(resolveLayoutStyle({ minWidth: '0' })).toEqual({ minWidth: 0 });
-    expect(resolveLayoutStyle({ minHeight: '0' })).toEqual({ minHeight: 0 });
+    expect(layoutStyle({ overflow: 'hidden' })).toEqual({ overflow: 'hidden' });
+    expect(layoutStyle({ overflowY: 'auto' })).toEqual({ overflowY: 'auto' });
+    expect(layoutStyle({ width: 'full' })).toEqual({ width: '100%' });
+    expect(layoutStyle({ height: 'full' })).toEqual({ height: '100%' });
+    expect(layoutStyle({ minWidth: '0' })).toEqual({ minWidth: 0 });
+    expect(layoutStyle({ minHeight: '0' })).toEqual({ minHeight: 0 });
   });
 
   it('border resolves per side or all sides, emitting nothing when false', () => {
-    expect(resolveLayoutStyle({ border: true })).toEqual({
+    expect(layoutStyle({ border: true })).toEqual({
       borderColor: 'var(--border)',
       borderStyle: 'solid',
       borderWidth: '1px',
     });
-    expect(resolveLayoutStyle({ border: false })).toEqual({});
-    expect(resolveLayoutStyle({ border: 'top' })).toEqual({
+    expect(layoutStyle({ border: false })).toEqual({});
+    expect(layoutStyle({ border: 'top' })).toEqual({
       borderColor: 'var(--border)',
       borderStyle: 'solid',
       borderTopWidth: '1px',
     });
-    expect(resolveLayoutStyle({ border: 'bottom' })).toEqual({
+    expect(layoutStyle({ border: 'bottom' })).toEqual({
       borderColor: 'var(--border)',
       borderStyle: 'solid',
       borderBottomWidth: '1px',
@@ -107,16 +109,16 @@ describe('resolveLayoutStyle', () => {
   });
 
   it('rounded resolves the theme radius or pill', () => {
-    expect(resolveLayoutStyle({ rounded: 'lg' })).toEqual({ borderRadius: 'var(--radius)' });
-    expect(resolveLayoutStyle({ rounded: 'pill' })).toEqual({ borderRadius: 'var(--radius-pill)' });
+    expect(layoutStyle({ rounded: 'lg' })).toEqual({ borderRadius: 'var(--radius)' });
+    expect(layoutStyle({ rounded: 'pill' })).toEqual({ borderRadius: 'var(--radius-pill)' });
   });
 
   it('animate references a keyframe this stylesheet defines', () => {
-    expect(resolveLayoutStyle({ animate: 'fadeIn' }).animation).toContain('mtx-fade-in');
+    expect(layoutStyle({ animate: 'fadeIn' }).animation).toContain('mtx-fade-in');
   });
 
   it('combines multiple props', () => {
-    expect(resolveLayoutStyle({ padding: 'md', align: 'center', grow: true })).toEqual({
+    expect(layoutStyle({ padding: 'md', align: 'center', grow: true })).toEqual({
       padding: '8px',
       alignItems: 'center',
       flex: '1 1 0%',
@@ -124,53 +126,9 @@ describe('resolveLayoutStyle', () => {
   });
 });
 
-describe('stripLayoutProps', () => {
-  it('removes all layout keys', () => {
-    const input = {
-      padding: 'md' as const,
-      paddingX: 'sm' as const,
-      paddingY: 'lg' as const,
-      gap: 'xs' as const,
-      align: 'center' as const,
-      justify: 'between' as const,
-      grow: true,
-      shrink: false,
-      position: 'absolute' as const,
-      inset: '0' as const,
-      overflow: 'hidden' as const,
-      overflowY: 'auto' as const,
-      width: 'full' as const,
-      height: 'full' as const,
-      minWidth: '0' as const,
-      minHeight: '0' as const,
-      border: true,
-      rounded: 'lg' as const,
-      animate: 'fadeIn' as const,
-      as: 'div' as const,
-      style: { color: 'red' },
-    };
-    const result = stripLayoutProps(input);
-    expect(Object.keys(result)).toHaveLength(0);
-  });
-
-  it('keeps non-layout keys', () => {
-    const input = {
-      padding: 'md' as const,
-      className: 'my-class',
-      id: 'my-id',
-      'data-testid': 'test',
-    };
-    const result = stripLayoutProps(input);
-    expect(result).toEqual({ className: 'my-class', id: 'my-id', 'data-testid': 'test' });
-  });
-
-  it('does not mutate the original object', () => {
-    const input = { padding: 'md' as const, id: 'foo' };
-    stripLayoutProps(input);
-    expect(input).toEqual({ padding: 'md', id: 'foo' });
-  });
-
-  it('handles empty object', () => {
-    expect(stripLayoutProps({})).toEqual({});
+describe('splitLayout rest', () => {
+  it('returns only the non-layout props', () => {
+    const [, rest] = splitLayout({ padding: 'md', border: true, className: 'my-class', id: 'my-id' });
+    expect(rest).toEqual({ className: 'my-class', id: 'my-id' });
   });
 });
