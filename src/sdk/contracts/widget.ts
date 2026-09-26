@@ -8,6 +8,7 @@ import { z } from 'zod';
 
 import { discriminatedUnionOfRecord, paginatedListOf, PaginationSchema, SuccessSchema } from './common';
 import { RrwebEventSchema } from './rrweb';
+import { SimulationStatusSchema } from './simulationStatus';
 import {
   ApplicationWidgetEntitySchema,
   ApplicationWidgetPublicSchema,
@@ -107,7 +108,7 @@ export const WidgetEventSchema = z.union([
   }),
   z.strictObject({
     type: z.literal('task/status'),
-    status: z.enum(['running', 'completed', 'failed', 'stopped', 'has_question']),
+    status: SimulationStatusSchema.exclude(['queued']),
     message: z.string().optional(),
   }),
   WidgetToolCallEventSchema,
