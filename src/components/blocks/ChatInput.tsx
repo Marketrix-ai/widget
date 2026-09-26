@@ -8,24 +8,18 @@
 import React, { useCallback, useEffect } from 'react';
 
 import type { InstructionType } from '../../types';
+import { MODES } from '../../utils/chat';
 import { Flex, Stack } from '../base/Flex';
 import { Icon } from '../base/Icon';
 import { IconButton } from '../base/IconButton';
-import type { IconName } from '../base/icons';
 import { CARD_COLORS } from '../base/Surface';
 import { Text } from '../base/Text';
-
-export interface ChatInputMode {
-  id: InstructionType;
-  icon: IconName;
-  label: string;
-}
 
 interface ChatInputProps {
   value: string;
   onChange: (value: string) => void;
   onSubmit: () => void;
-  modes: ChatInputMode[];
+  modes: InstructionType[];
   activeMode: InstructionType;
   onModeChange: (mode: InstructionType) => void;
   disabled: boolean;
@@ -91,19 +85,19 @@ export function ChatInput({
       <Flex align='center' justify='between' paddingX='sm' paddingTop='xs' paddingBottom='sm'>
         <Flex align='center' gap='xs'>
           {modes.map(mode => {
-            const isActive = activeMode === mode.id;
+            const isActive = activeMode === mode;
             return (
               <button
-                key={mode.id}
+                key={mode}
                 type='button'
                 className='mtx-mode-chip'
                 data-active={isActive ? 'true' : 'false'}
                 aria-pressed={isActive}
-                onClick={() => onModeChange(mode.id)}
+                onClick={() => onModeChange(mode)}
               >
-                <Icon name={mode.icon} size={12} />
+                <Icon name={MODES[mode].icon} size={12} />
                 <Text as='span' tone='inherit'>
-                  {mode.label}
+                  {MODES[mode].label}
                 </Text>
               </button>
             );

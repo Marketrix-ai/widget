@@ -9,19 +9,13 @@ import React, { useState } from 'react';
 
 import { useWidget, useWidgetConfig } from '../../hooks/useWidget';
 import type { InstructionType } from '../../types';
-import { enabledModes, MODE_LABELS } from '../../utils/chat';
+import { enabledModes, MODES } from '../../utils/chat';
 import { ErrorBoundary } from '../base/ErrorBoundary';
 import { Stack } from '../base/Flex';
 import { Surface } from '../base/Surface';
 import { Text } from '../base/Text';
-import { ChatInput, type ChatInputMode } from '../blocks/ChatInput';
+import { ChatInput } from '../blocks/ChatInput';
 import { MessageList } from '../chat/MessageList';
-
-const MODE_ICONS: Record<InstructionType, ChatInputMode['icon']> = {
-  tell: 'chatBubble',
-  show: 'mousePointerClick',
-  do: 'checkArc',
-};
 
 export const ChatView: React.FC<{ messageInputRef: React.RefObject<HTMLTextAreaElement | null> }> = ({
   messageInputRef,
@@ -46,7 +40,7 @@ export const ChatView: React.FC<{ messageInputRef: React.RefObject<HTMLTextAreaE
 
   const handleModeChange = (mode: InstructionType) => {
     if (mode === currentMode) return;
-    actions.addSystemMessage(`Switched to ${MODE_LABELS[mode]} mode`);
+    actions.addSystemMessage(`Switched to ${MODES[mode].label} mode`);
     actions.applyState({ currentMode: mode });
   };
 
@@ -71,7 +65,7 @@ export const ChatView: React.FC<{ messageInputRef: React.RefObject<HTMLTextAreaE
           value={inputValue}
           onChange={setInputValue}
           onSubmit={handleSendMessage}
-          modes={modes.map(id => ({ id, icon: MODE_ICONS[id], label: MODE_LABELS[id] }))}
+          modes={modes}
           activeMode={currentMode}
           onModeChange={handleModeChange}
           disabled={composerLocked}

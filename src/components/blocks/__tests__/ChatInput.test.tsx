@@ -33,11 +33,7 @@ describe('ChatInput', () => {
   });
 
   it('names the textarea and marks the active mode chip pressed', () => {
-    const modes = [
-      { id: 'tell' as const, label: 'Tell', icon: 'chatBubble' as const },
-      { id: 'do' as const, label: 'Do', icon: 'checkArc' as const },
-    ];
-    render(<ChatInput {...props()} modes={modes} value='' />);
+    render(<ChatInput {...props()} modes={['tell', 'do']} value='' />);
 
     expect(screen.getByRole('textbox', { name: 'Message' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Tell' })).toHaveAttribute('aria-pressed', 'true');

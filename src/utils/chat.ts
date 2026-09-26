@@ -1,5 +1,5 @@
 /**
- * Pure helpers for the chat message list: formatting (mode label, timestamp, `messageText`), the tenant's
+ * Pure helpers for the chat message list: formatting (mode label and icon, timestamp, `messageText`), the tenant's
  * enabled modes, each browser tool's progress label (`toolExplanation`) and Show-mode wait (`waitsForUser`),
  * finding which message a progress event belongs to (`findMessageForProgress`, which logs rather than
  * guesses on no match), and the per-kind constructors that are the only way a `ChatMessage` is built.
@@ -7,6 +7,7 @@
  * visitor never sees a raw server error. Show and Do read and act on the page through the DOM whatever the
  * visitor answers, so declining screen access withholds only the view of their screen.
  */
+import type { IconName } from '../components/base/icons';
 import { InstructionTypeSchema } from '../sdk/contracts/widgetSettings';
 import type { WidgetToolName } from '../services/browserTools';
 import type {
@@ -20,7 +21,11 @@ import type {
 import { logWarn } from './log';
 import { randomId } from './randomId';
 
-export const MODE_LABELS: Record<InstructionType, string> = { show: 'Show', tell: 'Tell', do: 'Do' };
+export const MODES: Record<InstructionType, { label: string; icon: IconName }> = {
+  tell: { label: 'Tell', icon: 'chatBubble' },
+  show: { label: 'Show', icon: 'mousePointerClick' },
+  do: { label: 'Do', icon: 'checkArc' },
+};
 
 type ModeFlags = Pick<WidgetSettingsData, `widget_feature_${InstructionType}`>;
 
