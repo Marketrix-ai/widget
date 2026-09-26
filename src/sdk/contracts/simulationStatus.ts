@@ -18,5 +18,5 @@ export const SIMULATION_ACTIVE_STATUSES = SimulationStatusSchema.exclude(SIMULAT
 
 export type SimulationTerminalStatus = (typeof SIMULATION_TERMINAL_STATUSES)[number];
 
-export const isSimulationTerminal = (status: string): status is SimulationTerminalStatus =>
-  (SIMULATION_TERMINAL_STATUSES as readonly string[]).includes(status);
+export const isSimulationTerminal = (status: SimulationStatus): status is SimulationTerminalStatus =>
+  (SIMULATION_TERMINAL_STATUSES as readonly SimulationStatus[]).includes(status);
