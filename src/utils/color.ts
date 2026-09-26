@@ -1,12 +1,8 @@
 /**
- * Colour handling for tenant widget settings: reading a settings colour into channels, picking text
- * that reads legibly over it, and re-emitting it with an alpha.
- *
- * `toRgb` parses a hex or `rgb()`/`rgba()` string into channels, or null for anything else — a named
- * colour or `hsl()` setting is unreadable by design. `getContrastingColor` picks whichever of black or
- * white has the higher WCAG contrast ratio against a colour.
- * `addOpacity` re-emits a colour at a given alpha. `backgroundGradient` turns a tenant's background
- * setting, which may already be a gradient, into a `backgroundImage` value either way.
+ * Colour handling for tenant settings: `toRgb` reads hex or `rgb()`/`rgba()` (anything else is unreadable by
+ * design), `getContrastingColor` picks black or white by WCAG contrast, `addOpacity` re-emits a colour with an
+ * alpha, and `backgroundGradient` turns a background setting, possibly already a gradient, into a
+ * `backgroundImage`.
  */
 
 type Rgb = { r: number; g: number; b: number };
@@ -28,7 +24,7 @@ function toRgb(color: string): Rgb | null {
 
 function relativeLuminance({ r, g, b }: Rgb): number {
   const linearize = (channel: number): number =>
-    channel <= 0.03928 ? channel / 12.92 : Math.pow((channel + 0.055) / 1.055, 2.4);
+    channel <= 0.04045 ? channel / 12.92 : Math.pow((channel + 0.055) / 1.055, 2.4);
   return 0.2126 * linearize(r / 255) + 0.7152 * linearize(g / 255) + 0.0722 * linearize(b / 255);
 }
 
