@@ -7,15 +7,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 
 import { resetDom } from '../../test/preload';
-import { advanceTimersByTimeAsync, hoisted } from '../../test/vi-compat';
+import { advanceTimersByTimeAsync } from '../../test/vi-compat';
 import type { domService } from '../DomService';
 import { showModeService } from '../ShowModeService';
 
 type ShowModeService = typeof showModeService;
 
-const { notInteractableReason } = hoisted(() => ({
-  notInteractableReason: vi.fn<() => string | null>(() => null),
-}));
+const notInteractableReason = vi.fn<() => string | null>(() => null);
 
 vi.mock('../DomService', (): { domService: Pick<typeof domService, 'notInteractableReason'> } => ({
   domService: { notInteractableReason },

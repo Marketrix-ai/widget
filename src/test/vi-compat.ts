@@ -1,6 +1,6 @@
 /**
- * The one home for `vitest`-compat `vi.*` helpers bun's own `vi` shim doesn't implement: `mocked`/
- * `hoisted` type and hoisting shims, `advanceTimersByTimeAsync`/`waitFor` for fake-timer-aware polling,
+ * The one home for `vitest`-compat `vi.*` helpers bun's own `vi` shim doesn't implement: the `mocked` type
+ * shim, `advanceTimersByTimeAsync`/`waitFor` for fake-timer-aware polling,
  * `restoreModuleAfterAll` to un-mock a module after a suite (the fallback for when `vi.spyOn` can't patch
  * a mocked namespace, e.g. an oRPC client `Proxy` whose own property-assignment traps ignore it), and
  * `mockSdkModule` to type-check an `sdk` mock against the real client.
@@ -17,10 +17,6 @@ type Mocked<T> = T extends (...args: infer A) => infer R
 
 export function mocked<T>(item: T): Mocked<T> {
   return item as Mocked<T>;
-}
-
-export function hoisted<T>(factory: () => T): T {
-  return factory();
 }
 
 export async function advanceTimersByTimeAsync(ms: number): Promise<void> {
