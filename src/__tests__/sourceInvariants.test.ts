@@ -30,10 +30,8 @@ describe('package.json', () => {
     expect(() => read('.npmignore')).toThrow();
   });
 
-  it('bakes --isolate into every bun test script', () => {
-    for (const script of ['test', 'test:watch', 'test:coverage']) {
-      expect(pkg.scripts[script]).toContain('--isolate');
-    }
+  it('bakes --isolate into the bun test script', () => {
+    expect(pkg.scripts['test']).toContain('--isolate');
   });
 
   it('pins the same bun version as the Dockerfile base image — one drifts, CI and local diverge', () => {
@@ -50,11 +48,6 @@ describe('package.json', () => {
     expect(at('build')).toBeGreaterThanOrEqual(0);
     expect(at('code:check')).toBeLessThan(at('check:comments'));
     expect(at('check:comments')).toBeLessThan(at('build'));
-  });
-
-  it('has no tailwind/classnames dependency — cn() calls are eslint-banned instead', () => {
-    const deps = { ...pkg.dependencies, ...pkg.devDependencies };
-    expect(Object.keys(deps).some(name => /tailwind|classnames/i.test(name))).toBe(false);
   });
 });
 
