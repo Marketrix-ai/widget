@@ -1,12 +1,8 @@
 /**
- * Vite config for the widget package. The default export branches on `command`: `build` produces the
- * library-mode production bundle, anything else runs the dev server.
- *
- * Both alias the legacy `use-sync-external-store/shim` to the local stand-in, so dev and the bundle run the
- * same code. The production build adds a `typescript-declarations` plugin that generates the `.d.ts` tree
- * and keeps React external so the host page supplies it. The dev build adds `widget-dev-routing`, so a
- * page pointed at the production bundle URL also works against the dev server. The build target is the
- * supported-browser floor README documents, led by Safari 16.4, the first Safari with import maps.
+ * Vite config for the widget package: `build` produces the library-mode bundle with React external and a
+ * `typescript-declarations` plugin, anything else runs the dev server with `widget-dev-routing` so a page pointed
+ * at the production bundle URL also works. Both alias `use-sync-external-store/shim` to the local stand-in. The
+ * build target is the browser floor README documents, led by Safari 16.4, the first Safari with import maps.
  */
 import { execSync } from 'node:child_process';
 import { resolve } from 'node:path';
