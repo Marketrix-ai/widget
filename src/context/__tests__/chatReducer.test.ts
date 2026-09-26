@@ -274,6 +274,32 @@ describe('reduceEvent — ignored events', () => {
 });
 
 describe('reduceToolProgress / reduceToolDone / reduceStop', () => {
+  const clicking = (explanation: string) => ({ status: 'in_progress' as const, mode: 'do' as const, explanation });
+
+  it('patches the open line in place, even at part index 0, then completes it', () => {
+    const opened = reduceToolProgress(runningState({ parts: [] }), 'click_element', clicking('clicking'), 'do');
+    const patched = reduceToolProgress(opened, 'click_element', clicking('still clicking'), 'do');
+    expect(patched.messages[0]?.parts).toEqual([
+      { type: 'progress', content: 'still clicking', status: 'in_progress', browserToolName: 'click_element' },
+    ]);
+    const done = reduceToolProgress(patched, 'click_element', { status: 'completed' }, 'do');
+    expect(done.messages[0]?.parts[0]).toMatchObject({ status: 'completed' });
+  });
+
+  it.each([
+    ['appends the error in parentheses after the existing content', 'timed out', 'clicking the button (timed out)'],
+    ['keeps the original content unchanged when there is no error text', '', 'clicking the button'],
+  ] as const)('a failed line %s', (_case, error, expectedContent) => {
+    const opened = reduceToolProgress(
+      runningState({ parts: [] }),
+      'click_element',
+      clicking('clicking the button'),
+      'do',
+    );
+    const failed = reduceToolProgress(opened, 'click_element', { status: 'failed', error }, 'do');
+    expect(failed.messages[0]?.parts[0]?.content).toBe(expectedContent);
+  });
+
   it('completed marks the in-progress line complete', () => {
     const inProgress = reduceEvent(runningState(), toolCall({ tool_call_id: 'c', explanation: 'x' }), 'do');
     const done = reduceToolProgress(inProgress, 'click_element', { status: 'completed' }, 'do');

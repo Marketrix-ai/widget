@@ -10,14 +10,11 @@ import type { WidgetEvent } from '../sdk';
 import type { WidgetToolCall, WidgetToolName } from '../services/browserTools';
 import type { AgentMessage, ChatMessage, InstructionType, MessagePart } from '../types';
 import {
-  addProgressLine,
   CHAT_FAILURE_TEXT,
   createScreenshareMessage,
   createSystemMessage,
   findMessageForProgress,
   isPending,
-  markProgressLineComplete,
-  markProgressLineFailed,
   messageText,
   SCREEN_SHARE_STARTED_TEXT,
   SCREEN_SHARE_STOPPED_TEXT,
@@ -41,6 +38,30 @@ export type ToolProgress =
 const runningMode = (state: ChatState, currentMode: InstructionType): InstructionType =>
   state.task.phase === 'running' ? state.task.mode : currentMode;
 
+function applyToolProgress(msg: AgentMessage, tool: WidgetToolName, progress: ToolProgress): AgentMessage {
+  const index = msg.parts.findIndex(
+    part => part.type === 'progress' && part.status === 'in_progress' && part.browserToolName === tool,
+  );
+  const open = msg.parts[index];
+  const parts = [...msg.parts];
+  if (open?.type !== 'progress') {
+    if (progress.status !== 'in_progress') return msg;
+    const content = toolExplanation(tool, progress.explanation);
+    parts.push({ type: 'progress', content, status: 'in_progress', browserToolName: tool });
+  } else if (progress.status === 'in_progress') {
+    parts[index] = { ...open, content: toolExplanation(tool, progress.explanation) };
+  } else if (progress.status === 'completed') {
+    parts[index] = { ...open, status: 'completed' };
+  } else {
+    parts[index] = {
+      ...open,
+      status: 'failed',
+      content: progress.error ? `${open.content} (${progress.error})` : open.content,
+    };
+  }
+  return { ...msg, parts };
+}
+
 export function reduceToolProgress(
   state: ChatState,
   browserToolName: WidgetToolName,
@@ -53,13 +74,8 @@ export function reduceToolProgress(
   if (!found) return state;
 
   let updatedMsg = found.message;
-  if (progress.status === 'failed') {
-    updatedMsg = markProgressLineFailed(updatedMsg, browserToolName, progress.error);
-  } else if (browserToolName !== 'done') {
-    updatedMsg =
-      progress.status === 'in_progress'
-        ? addProgressLine(updatedMsg, browserToolName, toolExplanation(browserToolName, progress.explanation))
-        : markProgressLineComplete(updatedMsg, browserToolName);
+  if (progress.status === 'failed' || browserToolName !== 'done') {
+    updatedMsg = applyToolProgress(updatedMsg, browserToolName, progress);
   }
 
   if (isTaskRunning && isPending(updatedMsg)) {

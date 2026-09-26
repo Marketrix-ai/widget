@@ -1,23 +1,18 @@
 /**
  * Direct unit coverage for `utils/chat.ts`'s pure helpers — invariants the scattered indirect coverage
  * in `chatReducer`/`ChatProvider`/`ChatView` tests leaves unpinned: `findMessageForProgress`'s
- * kind/mode gating, progress-line lookup at index 0, the
- * failed-progress-line message format, message id uniqueness, user-content trimming, and the two fixed
- * user-facing strings.
+ * kind/mode gating, message id uniqueness, user-content trimming, and the two fixed user-facing strings.
  */
 import { describe, expect, it } from 'bun:test';
 
 import { mockMediaStream } from '../../test/fixtures';
 import type { AgentMessage, ChatMessage } from '../../types';
 import {
-  addProgressLine,
   CHAT_FAILURE_TEXT,
   createScreenAccessRequestMessage,
   createScreenshareMessage,
   createUserMessage,
   findMessageForProgress,
-  markProgressLineComplete,
-  markProgressLineFailed,
   messageText,
   SCREEN_ACCESS_DETAIL,
   SCREEN_ACCESS_PROMPT,
@@ -47,35 +42,6 @@ describe('findMessageForProgress', () => {
       currentMode: 'show',
     });
     expect(result?.message.id).toBe('placeholder-other-mode');
-  });
-});
-
-describe('progress-line lookup and failure text', () => {
-  it('finds and completes the open progress line even at part index 0', () => {
-    const msg = addProgressLine(agentReply(), 'click_element', 'clicking');
-    expect(msg.parts).toHaveLength(1);
-    const completed = markProgressLineComplete(msg, 'click_element');
-    expect(completed.parts[0]).toMatchObject({ status: 'completed' });
-  });
-
-  it('patches the existing open line at index 0 in place, rather than appending a second one', () => {
-    const first = addProgressLine(agentReply(), 'click_element', 'clicking');
-    const second = addProgressLine(first, 'click_element', 'still clicking');
-    expect(second.parts).toHaveLength(1);
-    expect(second.parts[0]?.content).toBe('still clicking');
-  });
-
-  it.each([
-    [
-      'appends the error in parentheses after the existing content, not in place of it',
-      'timed out',
-      'clicking the button (timed out)',
-    ],
-    ['keeps the original content unchanged when there is no error text', '', 'clicking the button'],
-  ] as const)('%s', (_case, error, expectedContent) => {
-    const msg = addProgressLine(agentReply(), 'click_element', 'clicking the button');
-    const failed = markProgressLineFailed(msg, 'click_element', error);
-    expect(failed.parts[0]?.content).toBe(expectedContent);
   });
 });
 

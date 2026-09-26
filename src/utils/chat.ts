@@ -9,14 +9,7 @@
  */
 import { InstructionTypeSchema } from '../sdk/contracts/widgetSettings';
 import type { WidgetToolName } from '../services/browserTools';
-import type {
-  AgentMessage,
-  ChatMessage,
-  InstructionType,
-  MessagePart,
-  ProgressPart,
-  WidgetSettingsData,
-} from '../types';
+import type { AgentMessage, ChatMessage, InstructionType, MessagePart, WidgetSettingsData } from '../types';
 import { logWarn } from './log';
 import { randomId } from './randomId';
 
@@ -111,49 +104,6 @@ export function findMessageForProgress({
     `[MessageFinder] No message found for progress update: totalMessages=${messages.length} isTaskRunning=${isTaskRunning} currentMode=${currentMode}`,
   );
   return null;
-}
-
-function patchPart(message: AgentMessage, index: number, patch: Partial<ProgressPart>): AgentMessage {
-  const current = message.parts[index];
-  if (current?.type !== 'progress') return message;
-  const parts = [...message.parts];
-  parts[index] = { ...current, ...patch };
-  return { ...message, parts };
-}
-
-const openLineFor = (message: AgentMessage, browserToolName: WidgetToolName): number =>
-  message.parts.findIndex(
-    part => part.type === 'progress' && part.status === 'in_progress' && part.browserToolName === browserToolName,
-  );
-
-export function addProgressLine(
-  message: AgentMessage,
-  browserToolName: WidgetToolName,
-  explanation: string,
-): AgentMessage {
-  const open = openLineFor(message, browserToolName);
-  if (open >= 0) return patchPart(message, open, { content: explanation });
-  return {
-    ...message,
-    parts: [...message.parts, { type: 'progress', content: explanation, status: 'in_progress', browserToolName }],
-  };
-}
-
-export const markProgressLineComplete = (message: AgentMessage, browserToolName: WidgetToolName): AgentMessage =>
-  patchPart(message, openLineFor(message, browserToolName), { status: 'completed' });
-
-export function markProgressLineFailed(
-  message: AgentMessage,
-  browserToolName: WidgetToolName,
-  error: string,
-): AgentMessage {
-  const index = openLineFor(message, browserToolName);
-  const part = message.parts[index];
-  if (part?.type !== 'progress') return message;
-  return patchPart(message, index, {
-    status: 'failed',
-    content: error ? `${part.content} (${error})` : part.content,
-  });
 }
 
 const newMessage = (kind: ChatMessage['kind'], content: string) => ({
