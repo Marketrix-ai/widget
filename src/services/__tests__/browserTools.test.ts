@@ -5,6 +5,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 
+import { $, stubRect } from '../../test/fixtures';
 import { executeTool } from '../browserTools';
 import { domService } from '../DomService';
 import { showModeService } from '../ShowModeService';
@@ -173,7 +174,7 @@ describe('a Do tool call against a missing index fails typed, never throws', () 
   it('selecting a dropdown on a non-select element is rejected as typed, not thrown', async () => {
     document.body.innerHTML = '<input style="position: fixed" />';
     vi.spyOn(domService, 'getValidatedElement').mockReturnValue({
-      element: document.querySelector('input') as HTMLInputElement,
+      element: $('input'),
     });
 
     const result = await executeTool('select_dropdown_option', { index: 0, option: 'x' }, 'do');
@@ -200,7 +201,7 @@ describe('typeText writes through the same native setter for input and textarea'
 
 describe("show mode's real visitor click reaches the element's handler exactly once", () => {
   beforeEach(() => {
-    Element.prototype.getBoundingClientRect = () => ({ top: 0, left: 0, width: 10, height: 10 }) as DOMRect;
+    stubRect();
     document.elementFromPoint = () => null;
     Element.prototype.scrollIntoView = () => {};
   });
@@ -211,7 +212,7 @@ describe("show mode's real visitor click reaches the element's handler exactly o
 
   it('fires the deferred click once, not once for the staging click and once for the confirm', async () => {
     document.body.innerHTML = '<button style="position: fixed">Buy</button>';
-    const button = document.querySelector('button') as HTMLButtonElement;
+    const button = $('button');
     domService.reindexAndSnapshot();
     let clicks = 0;
     button.addEventListener('click', () => clicks++);
@@ -244,7 +245,7 @@ describe('a missing element surfaces the reason domService gave', () => {
 describe("show mode's default explanation only fills in a blank one", () => {
   beforeEach(() => {
     document.body.innerHTML = '<button style="position: fixed">Buy</button>';
-    Element.prototype.getBoundingClientRect = () => ({ top: 0, left: 0, width: 10, height: 10 }) as DOMRect;
+    stubRect();
     document.elementFromPoint = () => null;
     Element.prototype.scrollIntoView = () => {};
     domService.reindexAndSnapshot();
@@ -292,7 +293,7 @@ describe('typeText branches beyond input/textarea', () => {
 
   it('appends instead of replacing when clear is false', async () => {
     document.body.innerHTML = '<input style="position: fixed" value="existing-" />';
-    const element = document.querySelector('input') as HTMLInputElement;
+    const element = $('input');
     vi.spyOn(domService, 'getValidatedElement').mockReturnValue({ element });
 
     const result = await executeTool('type_text', { index: 0, text: 'more', clear: false }, 'do');
@@ -303,7 +304,7 @@ describe('typeText branches beyond input/textarea', () => {
 
   it('writes through execCommand on a contentEditable element', async () => {
     document.body.innerHTML = '<div style="position: fixed"></div>';
-    const element = document.querySelector('div') as HTMLElement;
+    const element = $('div');
     Object.defineProperty(element, 'isContentEditable', { value: true });
     vi.spyOn(domService, 'getValidatedElement').mockReturnValue({ element });
     const execCommand = vi.fn().mockReturnValue(true);
@@ -317,7 +318,7 @@ describe('typeText branches beyond input/textarea', () => {
 
   it('sets .value directly on a non-text-field element that exposes one, like a select', async () => {
     document.body.innerHTML = '<select style="position: fixed"><option value="x">x</option></select>';
-    const element = document.querySelector('select') as HTMLSelectElement;
+    const element = $('select');
     vi.spyOn(domService, 'getValidatedElement').mockReturnValue({ element });
 
     const result = await executeTool('type_text', { index: 0, text: 'x', clear: true }, 'do');
@@ -391,7 +392,7 @@ describe('selectDropdownOption matches by value OR by visible text', () => {
     document.body.innerHTML =
       '<select style="position: fixed"><option value="v1">Text One</option><option value="v2">Text Two</option></select>';
     vi.spyOn(domService, 'getValidatedElement').mockReturnValue({
-      element: document.querySelector('select') as HTMLSelectElement,
+      element: $('select'),
     });
   });
 
@@ -401,14 +402,14 @@ describe('selectDropdownOption matches by value OR by visible text', () => {
   ] as const)('matches an option by %s', async (_case, option, expectedValue) => {
     const result = await executeTool('select_dropdown_option', { index: 0, option }, 'do');
     expect(result.success).toBe(true);
-    expect((document.querySelector('select') as HTMLSelectElement).value).toBe(expectedValue);
+    expect($('select').value).toBe(expectedValue);
   });
 });
 
 describe('sendKeys reports the effect the key had', () => {
   it('reports the specific effect for a handled key', async () => {
     document.body.innerHTML = '<input style="position: fixed" value="abc" />';
-    const element = document.querySelector('input') as HTMLInputElement;
+    const element = $('input');
     element.focus();
     element.setSelectionRange(0, 0);
     vi.spyOn(domService, 'getValidatedElement').mockReturnValue({ element });
@@ -421,7 +422,7 @@ describe('sendKeys reports the effect the key had', () => {
 
   it('scrolls the page for PageDown rather than reporting success without an effect', async () => {
     document.body.innerHTML = '<div tabindex="0" style="position: fixed"></div>';
-    const element = document.querySelector('div') as HTMLElement;
+    const element = $('div');
     vi.spyOn(domService, 'getValidatedElement').mockReturnValue({ element });
     const scrollBy = vi.spyOn(window, 'scrollBy').mockImplementation(() => {});
 

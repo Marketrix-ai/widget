@@ -14,7 +14,7 @@ import { domService } from '../../../services/DomService';
 import { ShowModeCancelled, showModeService } from '../../../services/ShowModeService';
 import { readLocalParsed, scopedKey } from '../../../services/StorageService';
 import { streamClient } from '../../../services/StreamClient';
-import { asStreamClientInternals } from '../../../test/fixtures';
+import { $, asStreamClientInternals, stubRect } from '../../../test/fixtures';
 import { resetDom } from '../../../test/preload';
 import { renderWidget } from '../../../test/renderWidget';
 
@@ -127,11 +127,11 @@ describe('Stop on the closed launcher while a Show step waits on the visitor', (
   });
 
   it('cancels the pending step, so a later page click neither runs the tool nor posts a tool/response', async () => {
-    Element.prototype.getBoundingClientRect = () => ({ top: 0, left: 0, width: 10, height: 10 }) as DOMRect;
+    stubRect();
     Element.prototype.scrollIntoView = () => {};
     document.elementFromPoint = () => null;
     document.body.innerHTML = '<button style="position: fixed">Buy</button>';
-    const target = document.querySelector('button') as HTMLButtonElement;
+    const target = $('button');
     let clicks = 0;
     target.addEventListener('click', () => clicks++);
     domService.reindexAndSnapshot();

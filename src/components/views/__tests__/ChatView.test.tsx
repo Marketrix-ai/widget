@@ -12,7 +12,7 @@ import * as chatThread from '../../../services/chatThread';
 import * as ScreenShareService from '../../../services/ScreenShareService';
 import { scopeStorageTo } from '../../../services/StorageService';
 import { streamClient } from '../../../services/StreamClient';
-import { mockMediaStream, ofKind } from '../../../test/fixtures';
+import { liveMediaStream, ofKind } from '../../../test/fixtures';
 import { openChatTab, openWidget, renderChatHarness, renderWidget } from '../../../test/renderWidget';
 import { messageText } from '../../../utils/chat';
 
@@ -116,12 +116,6 @@ describe('a message the visitor typed across several lines', () => {
   });
 });
 
-const liveStream = () =>
-  mockMediaStream({
-    getVideoTracks: () => [{ readyState: 'live', addEventListener: vi.fn() }],
-    getTracks: () => [{ stop: vi.fn() }],
-  });
-
 const requestAccess = async () => {
   const chat = renderChatHarness();
   await act(async () => {
@@ -138,7 +132,7 @@ describe('answering a screen-access request', () => {
 
   it('allow: starts the share, announces it, resolves the card and releases the held turn', async () => {
     Object.defineProperty(navigator, 'mediaDevices', {
-      value: { getDisplayMedia: vi.fn().mockResolvedValue(liveStream()) },
+      value: { getDisplayMedia: vi.fn().mockResolvedValue(liveMediaStream()) },
       configurable: true,
     });
     const chat = await requestAccess();
@@ -164,7 +158,7 @@ describe('answering a screen-access request', () => {
 
   it('a share ending announces it and drops the live video bubble', async () => {
     Object.defineProperty(navigator, 'mediaDevices', {
-      value: { getDisplayMedia: vi.fn().mockResolvedValue(liveStream()) },
+      value: { getDisplayMedia: vi.fn().mockResolvedValue(liveMediaStream()) },
       configurable: true,
     });
     const chat = await requestAccess();
