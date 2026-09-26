@@ -68,14 +68,9 @@ export default defineConfig(({ command }) => {
           compress: {
             drop_console: ['log', 'info', 'debug'],
             drop_debugger: true,
-            module: true,
-            toplevel: true,
             passes: 3,
           },
-          mangle: { toplevel: true },
-          format: {
-            comments: false,
-          },
+          format: { comments: false },
         },
       },
       plugins: [
@@ -83,14 +78,7 @@ export default defineConfig(({ command }) => {
         {
           name: 'typescript-declarations',
           closeBundle() {
-            try {
-              console.log('Generating TypeScript declarations...');
-              execSync('tsc -p tsconfig.build.json', { stdio: 'inherit', cwd: cwd() });
-              console.log('✓ TypeScript declarations generated');
-            } catch (error) {
-              console.error('TypeScript declaration generation failed');
-              throw error;
-            }
+            execSync('tsc -p tsconfig.build.json', { stdio: 'inherit', cwd: cwd() });
           },
         },
       ],
