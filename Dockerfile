@@ -15,7 +15,7 @@ FROM base AS builder
 ENV NODE_ENV=production
 RUN bun run build && bun run scripts/precompress.ts dist/widget.mjs
 
-FROM nginx:1.31.5-alpine AS runtime
+FROM nginx:1.31.6-alpine AS runtime
 COPY --from=builder /app/dist/widget.mjs /app/dist/widget.mjs.gz /app/dist/widget.mjs.br /app/dist/loader.js /usr/share/nginx/html/
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 RUN sed -i '/application\/javascript/s/;/ mjs;/' /etc/nginx/mime.types \
