@@ -1,12 +1,14 @@
 /**
  * Wire primitives shared across every domain: id and pagination shapes, list and patch helpers.
  *
- * Exports helpers like `paginatedListOf`/`unionOfRecord`/`discriminatedUnionOfRecord`, the id and pagination
- * input schemas, `BaseEntitySchema` and `StoredDateSchema`, the one date that may arrive as the ISO string a
- * JSONB document stores. This file mirrors whole into the widget SDK, so only domain-free primitives belong
- * here.
+ * Exports `IdSchema` (every row id), helpers like `paginatedListOf`/`unionOfRecord`/`discriminatedUnionOfRecord`,
+ * the id and pagination input schemas, `BaseEntitySchema` and `StoredDateSchema`, the one date that may arrive as
+ * the ISO string a JSONB document stores. This file mirrors whole into the widget SDK, so only domain-free
+ * primitives belong here.
  */
 import { z } from 'zod';
+
+export const IdSchema = z.number().int().positive();
 
 export const EntityStatusSchema = z.enum(['created', 'active', 'suspended']);
 export type EntityStatus = z.infer<typeof EntityStatusSchema>;
@@ -22,11 +24,11 @@ export const StoredDateSchema = z.union([
   z.iso.datetime({ offset: true }).transform(value => new Date(value)),
 ]);
 
-export const ByIdSchema = z.strictObject({ id: z.number() });
+export const ByIdSchema = z.strictObject({ id: IdSchema });
 export const BySlugSchema = z.strictObject({ slug: z.string() });
-export const BySimulationIdSchema = z.strictObject({ simulation_id: z.number() });
-export const ByApplicationIdSchema = z.strictObject({ application_id: z.number() });
-export const ByUserIdSchema = z.strictObject({ user_id: z.number() });
+export const BySimulationIdSchema = z.strictObject({ simulation_id: IdSchema });
+export const ByApplicationIdSchema = z.strictObject({ application_id: IdSchema });
+export const ByUserIdSchema = z.strictObject({ user_id: IdSchema });
 
 export const PaginationSchema = z.strictObject({
   limit: z.number().int().min(1).max(200).default(50),

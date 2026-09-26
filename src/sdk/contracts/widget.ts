@@ -6,8 +6,9 @@
 import { eventIterator, oc } from '@orpc/contract';
 import { z } from 'zod';
 
-import { discriminatedUnionOfRecord, paginatedListOf, PaginationSchema, SuccessSchema } from './common';
+import { discriminatedUnionOfRecord, IdSchema, paginatedListOf, PaginationSchema, SuccessSchema } from './common';
 import { RrwebEventSchema } from './rrweb';
+import { NonBlankStringSchema } from './schemaRules';
 import { SimulationStatusSchema } from './simulationStatus';
 import {
   ApplicationWidgetEntitySchema,
@@ -18,13 +19,13 @@ import {
 import { WIDGET_TOOL_NAMES } from './widgetToolNames';
 
 const WidgetCreateSchema = z.strictObject({
-  application_id: z.number().positive(),
+  application_id: IdSchema,
   settings: WidgetSettingsWriteSchema.partial().optional(),
 });
 export type WidgetCreateData = z.infer<typeof WidgetCreateSchema>;
 
 const WidgetUpdateSchema = z.strictObject({
-  application_id: z.number(),
+  application_id: IdSchema,
   settings: WidgetSettingsWriteSchema.partial().optional(),
 });
 export type WidgetUpdateData = z.infer<typeof WidgetUpdateSchema>;
@@ -150,7 +151,7 @@ export const WidgetCommandSchema = z.discriminatedUnion('type', [
   z.strictObject({
     type: z.literal('rrweb/metadata'),
     rrweb_session_id: z.string(),
-    url: z.string().min(1),
+    url: NonBlankStringSchema,
     timestamp: z.number().optional(),
     viewport: z
       .strictObject({
@@ -173,7 +174,7 @@ export const widgetSearch = oc
   .input(
     z
       .strictObject({
-        application_id: z.number().optional(),
+        application_id: IdSchema.optional(),
       })
       .extend(PaginationSchema.shape),
   )
@@ -183,8 +184,8 @@ export const widgetPublicSearch = oc
   .input(
     z
       .strictObject({
-        marketrix_id: z.string().min(1),
-        marketrix_key: z.string().min(1),
+        marketrix_id: NonBlankStringSchema,
+        marketrix_key: NonBlankStringSchema,
       })
       .extend(PaginationSchema.shape),
   )
@@ -193,7 +194,7 @@ export const widgetPublicSearch = oc
 export const widgetUpdate = oc.input(WidgetUpdateSchema).output(ApplicationWidgetEntitySchema);
 
 export const widgetDelete = oc
-  .input(z.strictObject({ application_id: z.number() }))
+  .input(z.strictObject({ application_id: IdSchema }))
   .output(z.strictObject({ success: z.literal(true) }));
 
 export const widgetStream = oc
@@ -201,8 +202,8 @@ export const widgetStream = oc
     z.strictObject({
       chat_id: z.string(),
       tab_id: z.string().optional(),
-      marketrix_id: z.string().min(1),
-      marketrix_key: z.string().min(1),
+      marketrix_id: NonBlankStringSchema,
+      marketrix_key: NonBlankStringSchema,
     }),
   )
   .output(eventIterator(WidgetEventSchema));
