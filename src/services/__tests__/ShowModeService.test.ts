@@ -133,17 +133,17 @@ describe('a restage identical to the one already staged', () => {
     resetDom();
   });
 
-  it('does not re-stage (re-run cleanup/createHighlight) for an identical restage while pending', async () => {
-    const cleanupSpy = vi.spyOn(service, 'cleanup');
+  it('does not re-stage (tear down and rebuild the highlight) for an identical restage while pending', async () => {
     const first = show(service, 'a').then(
       () => 'resolved',
       () => 'rejected',
     );
+    const highlight = document.getElementById('marketrix-show-highlight');
     const second = show(service, 'a').then(
       () => 'resolved',
       () => 'rejected',
     );
-    expect(cleanupSpy).toHaveBeenCalledTimes(1);
+    expect(document.getElementById('marketrix-show-highlight')).toBe(highlight);
 
     document.getElementById('a')?.click();
     expect(await first).toBe('resolved');
