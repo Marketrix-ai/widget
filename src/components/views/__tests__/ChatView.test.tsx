@@ -5,16 +5,15 @@
  * starting a new thread, and the transcript scrolling itself rather than the host page.
  */
 import { ORPCError } from '@orpc/client';
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 
-import { useChatContext } from '../../../context/ChatContext';
 import * as chatThread from '../../../services/chatThread';
 import * as ScreenShareService from '../../../services/ScreenShareService';
 import { scopeStorageTo } from '../../../services/StorageService';
 import { streamClient } from '../../../services/StreamClient';
 import { mockMediaStream, ofKind } from '../../../test/fixtures';
-import { ChatHarness, openChatTab, openWidget, renderWidget } from '../../../test/renderWidget';
+import { openChatTab, openWidget, renderChatHarness, renderWidget } from '../../../test/renderWidget';
 import { messageText } from '../../../utils/chat';
 
 const openChat = (mode?: 'Show') => {
@@ -117,12 +116,6 @@ describe('a message the visitor typed across several lines', () => {
   });
 });
 
-let captured: ReturnType<typeof useChatContext> | undefined;
-const Capture = () => {
-  captured = useChatContext();
-  return null;
-};
-
 const liveStream = () =>
   mockMediaStream({
     getVideoTracks: () => [{ readyState: 'live', addEventListener: vi.fn() }],
@@ -130,14 +123,11 @@ const liveStream = () =>
   });
 
 const requestAccess = async () => {
-  render(
-    <ChatHarness>
-      <Capture />
-    </ChatHarness>,
-  );
+  const chat = renderChatHarness();
   await act(async () => {
-    await captured!.chatActions.sendTurn('do the thing', 'do');
+    await chat().chatActions.sendTurn('do the thing', 'do');
   });
+  return chat;
 };
 
 describe('answering a screen-access request', () => {
@@ -151,23 +141,23 @@ describe('answering a screen-access request', () => {
       value: { getDisplayMedia: vi.fn().mockResolvedValue(liveStream()) },
       configurable: true,
     });
-    await requestAccess();
+    const chat = await requestAccess();
 
-    await act(async () => await captured!.chatActions.allowScreenAccess());
+    await act(async () => await chat().chatActions.allowScreenAccess());
 
-    expect(captured!.messages.map(m => m.kind)).toEqual(['user', 'screenAccess', 'system', 'screenshare', 'agent']);
-    expect(ofKind(captured!.messages[1], 'screenAccess').screenShareStatus).toBe('allowed');
+    expect(chat().messages.map(m => m.kind)).toEqual(['user', 'screenAccess', 'system', 'screenshare', 'agent']);
+    expect(ofKind(chat().messages[1], 'screenAccess').screenShareStatus).toBe('allowed');
   });
 
   it('allow, but the picker was cancelled: says so, marks the card denied and still releases the turn', async () => {
     vi.spyOn(ScreenShareService, 'startScreenShare').mockRejectedValue(new Error('permission denied'));
-    await requestAccess();
+    const chat = await requestAccess();
 
-    await act(async () => await captured!.chatActions.allowScreenAccess());
+    await act(async () => await chat().chatActions.allowScreenAccess());
 
-    expect(ofKind(captured!.messages[1], 'screenAccess').screenShareStatus).toBe('denied');
-    expect(captured!.messages.map(m => m.kind)).toEqual(['user', 'screenAccess', 'system', 'agent']);
-    expect(messageText(captured!.messages[2]!.parts)).toBe(
+    expect(ofKind(chat().messages[1], 'screenAccess').screenShareStatus).toBe('denied');
+    expect(chat().messages.map(m => m.kind)).toEqual(['user', 'screenAccess', 'system', 'agent']);
+    expect(messageText(chat().messages[2]!.parts)).toBe(
       'Screen sharing could not start, so the assistant will continue without it.',
     );
   });
@@ -177,13 +167,13 @@ describe('answering a screen-access request', () => {
       value: { getDisplayMedia: vi.fn().mockResolvedValue(liveStream()) },
       configurable: true,
     });
-    await requestAccess();
-    await act(async () => await captured!.chatActions.allowScreenAccess());
+    const chat = await requestAccess();
+    await act(async () => await chat().chatActions.allowScreenAccess());
 
     act(() => ScreenShareService.stopScreenShare());
 
-    expect(captured!.messages.some(m => m.kind === 'screenshare')).toBe(false);
-    expect(messageText(captured!.messages.at(-1)!.parts)).toBe('Screen sharing stopped');
+    expect(chat().messages.some(m => m.kind === 'screenshare')).toBe(false);
+    expect(messageText(chat().messages.at(-1)!.parts)).toBe('Screen sharing stopped');
   });
 });
 
