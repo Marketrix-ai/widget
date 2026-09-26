@@ -168,6 +168,30 @@ describe('a retransmitted tool/call', () => {
     await waitFor(() => expect(mockExecuteTool).toHaveBeenCalledTimes(1));
     expect(mockExecuteTool).toHaveBeenCalledTimes(1);
   });
+
+  it('never runs once the visitor stopped the task', async () => {
+    mockExecuteTool.mockClear();
+    render(
+      <ChatHarness previewMode={false}>
+        <ErrorProbe />
+      </ChatHarness>,
+    );
+
+    await act(async () => {
+      screen.getByTestId('stop').click();
+      asStreamClientInternals().handleMessage({
+        type: 'tool/call',
+        tool_call_id: 'tc-after-stop',
+        browser_tool: 'click_element',
+        args: { index: 1 },
+        mode: 'do',
+        explanation: 'Click it',
+      });
+      await advanceTimersByTimeAsync(0);
+    });
+
+    expect(mockExecuteTool).not.toHaveBeenCalled();
+  });
 });
 
 let captured: ReturnType<typeof useChatContext> | undefined;
