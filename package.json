@@ -1,6 +1,6 @@
 {
   "name": "@marketrix.ai/widget",
-  "version": "5.1.14",
+  "version": "5.1.15",
   "type": "module",
   "packageManager": "bun@1.4.2",
   "sideEffects": false,
