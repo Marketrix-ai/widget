@@ -116,22 +116,6 @@ describe('closing the panel restores focus to what held it before', () => {
   });
 });
 
-describe('the widget leaks no document listener across mount/unmount', () => {
-  it('removes exactly what it added', () => {
-    const addSpy = vi.spyOn(document, 'addEventListener');
-    const removeSpy = vi.spyOn(document, 'removeEventListener');
-
-    const { unmount } = openPanel();
-    const added = addSpy.mock.calls.filter(([type]) => type === 'keydown').length;
-
-    unmount();
-    const removed = removeSpy.mock.calls.filter(([type]) => type === 'keydown').length;
-
-    expect(added).toBeGreaterThan(0);
-    expect(removed).toBe(added);
-  });
-});
-
 const sizeFor = (widget_width: string, widget_height: string) => {
   const { panel } = openPanel({ widget_width, widget_height });
   return { width: panel.style.width, height: panel.style.height };

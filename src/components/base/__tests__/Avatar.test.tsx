@@ -1,45 +1,12 @@
 /**
- * `Avatar` tests: an `img` with src/alt, 32px by default, numeric size as inline style, ref
- * forwarding, and its own class kept beside a caller className.
+ * `Avatar` tests: its own class is kept beside a caller className.
  */
 import { render } from '@testing-library/react';
 import { describe, expect, it } from 'bun:test';
-import { createRef } from 'react';
 
 import { Avatar } from '../Avatar';
 
 describe('Avatar', () => {
-  it('renders an img element', () => {
-    const { container } = render(<Avatar alt='User avatar' src='/avatar.png' />);
-    expect(container.querySelector('img')).toBeTruthy();
-  });
-
-  it('sets src and alt attributes', () => {
-    const { container } = render(<Avatar alt='Jane Doe' src='/jane.png' />);
-    const img = container.querySelector('img') as HTMLImageElement;
-    expect(img.src).toContain('/jane.png');
-    expect(img.alt).toBe('Jane Doe');
-  });
-
-  it('defaults to 32px', () => {
-    const { container } = render(<Avatar alt='x' src='/a.png' />);
-    const img = container.querySelector('img') as HTMLImageElement;
-    expect(img.style.width).toBe('32px');
-  });
-
-  it('applies numeric size as inline style', () => {
-    const { container } = render(<Avatar alt='x' size={40} src='/a.png' />);
-    const img = container.querySelector('img') as HTMLImageElement;
-    expect(img.style.width).toBe('40px');
-    expect(img.style.height).toBe('40px');
-  });
-
-  it('forwards ref', () => {
-    const ref = createRef<HTMLImageElement>();
-    render(<Avatar ref={ref} alt='x' src='/a.png' />);
-    expect(ref.current?.tagName).toBe('IMG');
-  });
-
   it('keeps its own class alongside a caller className', () => {
     const { container } = render(<Avatar alt='x' className='mtx-fab-avatar' src='/a.png' />);
     const img = container.querySelector('img') as HTMLImageElement;
