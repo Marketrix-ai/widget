@@ -9,7 +9,14 @@
  */
 import { InstructionTypeSchema } from '../sdk/contracts/widgetSettings';
 import type { WidgetToolName } from '../services/browserTools';
-import type { AgentMessage, ChatMessage, InstructionType, MessagePart, WidgetSettingsData } from '../types';
+import type {
+  AgentMessage,
+  AgentStatus,
+  ChatMessage,
+  InstructionType,
+  MessagePart,
+  WidgetSettingsData,
+} from '../types';
 import { logWarn } from './log';
 import { randomId } from './randomId';
 
@@ -65,11 +72,18 @@ export const messageText = (parts: MessagePart[]): string =>
 export const formatMessageTime = (date: Date): string =>
   date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-export const isPending = (msg: ChatMessage): boolean =>
-  msg.kind === 'agent' && (msg.status === 'thinking' || msg.status === 'waiting-for-user');
+export const PENDING_STATUSES = ['thinking', 'waiting-for-user'] as const;
 
-export const taskEnded = (msg: ChatMessage): boolean =>
-  msg.kind === 'agent' && (msg.status === 'done' || msg.status === 'failed' || msg.status === 'stopped');
+export const ENDED_STATUSES = ['done', 'failed', 'stopped'] as const;
+
+const hasStatus =
+  (statuses: readonly AgentStatus[]) =>
+  (msg: ChatMessage): boolean =>
+    msg.kind === 'agent' && msg.status !== undefined && statuses.includes(msg.status);
+
+export const isPending = hasStatus(PENDING_STATUSES);
+
+export const taskEnded = hasStatus(ENDED_STATUSES);
 
 interface FindMessageOptions {
   messages: ChatMessage[];

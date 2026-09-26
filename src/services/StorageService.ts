@@ -15,7 +15,7 @@ import { z } from 'zod';
 import { InstructionTypeSchema } from '../sdk/contracts/widgetSettings';
 import { WIDGET_TOOL_NAMES } from '../sdk/contracts/widgetToolNames';
 import type { ChatMessage, InstructionType, ValidWidgetConfig } from '../types';
-import { SCREEN_SHARE_STOPPED_TEXT } from '../utils/chat';
+import { ENDED_STATUSES, PENDING_STATUSES, SCREEN_SHARE_STOPPED_TEXT } from '../utils/chat';
 import { logWarn } from '../utils/log';
 import { randomId } from '../utils/randomId';
 
@@ -43,7 +43,7 @@ const MessageSchema = z.discriminatedUnion('kind', [
     ...MessageBase,
     kind: z.literal('agent'),
     mode: InstructionTypeSchema.optional(),
-    status: z.enum(['thinking', 'waiting-for-user', 'question', 'done', 'failed', 'stopped']).optional(),
+    status: z.enum([...PENDING_STATUSES, 'question', ...ENDED_STATUSES]).optional(),
   }),
   z.object({ ...MessageBase, kind: z.literal('system') }),
   z.object({
