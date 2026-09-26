@@ -9,9 +9,9 @@ import { EventType, type eventWithTime } from '@rrweb/types';
 import { waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 
-import { sdk, type WidgetEvent } from '../../sdk';
+import { sdk } from '../../sdk';
 import type { RrwebEvent } from '../../sdk/contracts/rrweb';
-import { flushMicrotasks } from '../../test/fixtures';
+import { asStreamClientInternals, flushMicrotasks } from '../../test/fixtures';
 import { advanceTimersByTimeAsync, mocked, mockSdkModule, restoreModuleAfterAll } from '../../test/vi-compat';
 import { RrwebSessionRecorder } from '../RrwebSessionRecorder';
 import { streamClient, StreamGaveUpError } from '../StreamClient';
@@ -122,9 +122,6 @@ describe('a flush the api rejects', () => {
 });
 
 describe('a flush that keeps failing', () => {
-  const internals = (client: typeof streamClient) =>
-    client as unknown as { handleMessage: (event: WidgetEvent) => void; giveUp: (message: string) => void };
-
   it('backs off on a doubling delay instead of polling every 500ms', async () => {
     vi.useFakeTimers();
     const { recorder, emit } = await startRecorder();
@@ -151,13 +148,13 @@ describe('a flush that keeps failing', () => {
 
     emit(metaEvent(0));
     await advanceTimersByTimeAsync(500);
-    internals(streamClient).giveUp('Could not reconnect to the assistant. Try again.');
+    asStreamClientInternals().giveUp('Could not reconnect to the assistant. Try again.');
     emit(incrementalEvent(1));
     await advanceTimersByTimeAsync(120_000);
     expect(mockSdk.widgetMessagePost).toHaveBeenCalledTimes(2);
 
     mockSdk.widgetMessagePost.mockResolvedValueOnce({ success: true });
-    internals(streamClient).handleMessage({ type: 'registered', chat_id: 'chat-1' });
+    asStreamClientInternals().handleMessage({ type: 'registered', chat_id: 'chat-1' });
     await flushMicrotasks();
     const posted = mockSdk.widgetMessagePost.mock.lastCall?.[0].command as { events: RrwebEvent[] };
     expect(mockSdk.widgetMessagePost).toHaveBeenCalledTimes(3);
@@ -168,17 +165,14 @@ describe('a flush that keeps failing', () => {
 });
 
 describe('a recorder whose stream has given up', () => {
-  const internals = (client: typeof streamClient) =>
-    client as unknown as { handleMessage: (event: WidgetEvent) => void; giveUp: (message: string) => void };
-
   it('bounds the buffer while nothing flushes', async () => {
     vi.useFakeTimers();
     const { recorder, emit } = await startRecorder();
-    internals(streamClient).giveUp('Could not reconnect to the assistant. Try again.');
+    asStreamClientInternals().giveUp('Could not reconnect to the assistant. Try again.');
 
     for (let i = 0; i < 20_010; i++) emit(incrementalEvent(i));
     mockSdk.widgetMessagePost.mockResolvedValueOnce({ success: true });
-    internals(streamClient).handleMessage({ type: 'registered', chat_id: 'chat-1' });
+    asStreamClientInternals().handleMessage({ type: 'registered', chat_id: 'chat-1' });
     await flushMicrotasks();
 
     const posted = mockSdk.widgetMessagePost.mock.lastCall?.[0].command as { events: RrwebEvent[] };
@@ -191,10 +185,10 @@ describe('a recorder whose stream has given up', () => {
     vi.useFakeTimers();
     Object.assign(record, { takeFullSnapshot: vi.fn() });
     const { recorder, emit } = await startRecorder();
-    internals(streamClient).giveUp('Could not reconnect to the assistant. Try again.');
+    asStreamClientInternals().giveUp('Could not reconnect to the assistant. Try again.');
     mockSdk.widgetMessagePost.mockResolvedValue({ success: true });
 
-    internals(streamClient).handleMessage({ type: 'registered', chat_id: 'chat-2' });
+    asStreamClientInternals().handleMessage({ type: 'registered', chat_id: 'chat-2' });
     await waitFor(() => expect(mockSdk.widgetMessagePost.mock.lastCall?.[0].chat_id).toBe('chat-2'));
     emit(incrementalEvent(1));
     await advanceTimersByTimeAsync(500);
@@ -209,7 +203,6 @@ describe('a recorder whose stream has given up', () => {
 
 describe('a stream that gives up before the chat first registers', () => {
   it('starts recording once a retry registers the chat', async () => {
-    const internals = streamClient as unknown as { handleMessage: (event: WidgetEvent) => void };
     vi.spyOn(streamClient, 'ready')
       .mockRejectedValueOnce(new StreamGaveUpError('Could not reconnect to the assistant. Try again.'))
       .mockResolvedValue();
@@ -219,7 +212,7 @@ describe('a stream that gives up before the chat first registers', () => {
     await recorder.start();
     expect(record).not.toHaveBeenCalled();
 
-    internals.handleMessage({ type: 'registered', chat_id: 'chat-1' });
+    asStreamClientInternals().handleMessage({ type: 'registered', chat_id: 'chat-1' });
     await waitFor(() => expect(record).toHaveBeenCalledTimes(1));
     expect(mockSdk.widgetMessagePost.mock.lastCall?.[0].command.type).toBe('rrweb/metadata');
     expect(mockSdk.widgetMessagePost.mock.lastCall?.[0].command).not.toHaveProperty('chat_id');

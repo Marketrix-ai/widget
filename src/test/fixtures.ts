@@ -103,6 +103,7 @@ export function mockMediaStream(overrides: Record<string, unknown> = {}): MediaS
 interface StreamClientTestHandle {
   handleMessage: (typeof streamClient)['handleMessage'];
   notifyError: (typeof streamClient)['notifyError'];
+  giveUp: (message: string) => void;
 }
 
 export const asStreamClientInternals = (): StreamClientTestHandle => streamClient as unknown as StreamClientTestHandle;
