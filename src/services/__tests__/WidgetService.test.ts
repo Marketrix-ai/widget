@@ -8,7 +8,7 @@
  */
 import { beforeEach, describe, expect, it, vi } from 'bun:test';
 
-import { type ApplicationWidgetPublicData, sdk } from '../../sdk';
+import { type ApplicationWidgetPublicData, getSdk } from '../../sdk';
 import { validSettings } from '../../test/fixtures';
 import { mocked, mockSdkModule, restoreModuleAfterAll } from '../../test/vi-compat';
 import { loadWidgetConfig } from '../WidgetService';
@@ -16,7 +16,7 @@ import { loadWidgetConfig } from '../WidgetService';
 vi.mock('../../sdk', () => mockSdkModule({ widgetPublicSearch: vi.fn() }));
 restoreModuleAfterAll('../../sdk', () => import('../../sdk/index.ts?real'));
 
-const mockSdk = mocked(sdk);
+const mockSdk = mocked(getSdk());
 const settings = validSettings();
 
 const activeWidget = (overrides: Partial<ApplicationWidgetPublicData> = {}): ApplicationWidgetPublicData => ({

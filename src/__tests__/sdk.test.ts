@@ -9,7 +9,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 
-import { configureSdk, sdk } from '../sdk';
+import { configureSdk, getSdk } from '../sdk';
 import { mocked } from '../test/vi-compat';
 
 describe('sdk transport', () => {
@@ -24,7 +24,7 @@ describe('sdk transport', () => {
   it('omits credentials on every request, explicitly, not by relying on the cross-origin default', async () => {
     configureSdk('https://api.test');
 
-    await sdk.widgetMessagePost({ chat_id: 'c1', command: { type: 'chat/stop' } });
+    await getSdk().widgetMessagePost({ chat_id: 'c1', command: { type: 'chat/stop' } });
 
     const mockedFetch = mocked(globalThis.fetch);
     expect(mockedFetch).toHaveBeenCalledTimes(1);

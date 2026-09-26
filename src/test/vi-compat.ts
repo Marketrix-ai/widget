@@ -7,9 +7,7 @@
  */
 import { afterAll, type Mock, vi } from 'bun:test';
 
-import type { sdk } from '../sdk';
-
-type RealSdk = typeof sdk;
+import type { WidgetClient } from '../sdk';
 
 type Mocked<T> = T extends (...args: infer A) => infer R
   ? Mock<(...args: A) => R>
@@ -44,6 +42,6 @@ export function restoreModuleAfterAll(specifier: string, importReal: () => Promi
   });
 }
 
-export function mockSdkModule(procedures: Partial<RealSdk>): { sdk: Partial<RealSdk> } {
-  return { sdk: procedures };
+export function mockSdkModule(procedures: Partial<WidgetClient>): { getSdk: () => Partial<WidgetClient> } {
+  return { getSdk: () => procedures };
 }

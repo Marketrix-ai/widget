@@ -7,7 +7,7 @@
  */
 import { z } from 'zod';
 
-import { type ApplicationWidgetPublicData, sdk } from '../sdk';
+import { type ApplicationWidgetPublicData, getSdk } from '../sdk';
 import { WidgetSettingsWriteSchema } from '../sdk/contracts/widgetSettings';
 import type { MarketrixConfig, ValidWidgetConfig } from '../types';
 import { errorMessage } from '../utils/errors';
@@ -30,7 +30,7 @@ const widgetLookupCache = new Map<string, Promise<WidgetRenderedSettings>>();
 async function resolveActiveWidget(mtxId: string, mtxKey: string, mtxApiHost: string): Promise<WidgetRenderedSettings> {
   let widgets: ApplicationWidgetPublicData[];
   try {
-    ({ items: widgets } = await sdk.widgetPublicSearch({ marketrix_id: mtxId, marketrix_key: mtxKey }));
+    ({ items: widgets } = await getSdk().widgetPublicSearch({ marketrix_id: mtxId, marketrix_key: mtxKey }));
   } catch (error) {
     const message = errorMessage(error);
     const unreachable = ['Failed to fetch', 'ERR_CONNECTION_REFUSED', 'NetworkError', 'Network request failed'].some(

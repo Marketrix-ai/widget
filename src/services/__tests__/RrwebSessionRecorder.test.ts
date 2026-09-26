@@ -9,7 +9,7 @@ import { EventType, type eventWithTime } from '@rrweb/types';
 import { waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 
-import { sdk } from '../../sdk';
+import { getSdk } from '../../sdk';
 import type { RrwebEvent } from '../../sdk/contracts/rrweb';
 import { asStreamClientInternals, flushMicrotasks } from '../../test/fixtures';
 import { advanceTimersByTimeAsync, mocked, mockSdkModule, restoreModuleAfterAll } from '../../test/vi-compat';
@@ -20,7 +20,7 @@ vi.mock('@rrweb/record', () => ({ record: vi.fn(() => vi.fn()) }));
 vi.mock('../../sdk', () => mockSdkModule({ widgetMessagePost: vi.fn() }));
 restoreModuleAfterAll('../../sdk', () => import('../../sdk/index.ts?real'));
 
-const mockSdk = mocked(sdk);
+const mockSdk = mocked(getSdk());
 
 beforeEach(() => {
   vi.spyOn(streamClient, 'ready').mockResolvedValue();

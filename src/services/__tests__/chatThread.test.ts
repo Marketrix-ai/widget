@@ -7,7 +7,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 
-import { sdk } from '../../sdk';
+import { getSdk } from '../../sdk';
 import { mocked, mockSdkModule, restoreModuleAfterAll } from '../../test/vi-compat';
 import { getOrCreateChatId } from '../chatThread';
 import { getChatId, scopeStorageTo, setChatId } from '../StorageService';
@@ -15,7 +15,7 @@ import { getChatId, scopeStorageTo, setChatId } from '../StorageService';
 vi.mock('../../sdk', () => mockSdkModule({ chatCreate: vi.fn() }));
 restoreModuleAfterAll('../../sdk', () => import('../../sdk/index.ts?real'));
 
-const mockSdk = mocked(sdk);
+const mockSdk = mocked(getSdk());
 
 let tenant = 0;
 beforeEach(() => {
