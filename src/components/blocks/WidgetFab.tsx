@@ -96,13 +96,8 @@ function useDragSnap(
 
   const resetDragStyles = () => {
     cancelRaf();
-    if (wrapperRef.current) {
-      wrapperRef.current.style.transform = '';
-      wrapperRef.current.style.willChange = '';
-      wrapperRef.current.style.transition = '';
-      wrapperRef.current.style.left = '';
-      wrapperRef.current.style.top = '';
-    }
+    if (wrapperRef.current)
+      Object.assign(wrapperRef.current.style, { transform: '', willChange: '', transition: '', left: '', top: '' });
   };
 
   const commit = (nextCorner: WidgetPosition) => {
@@ -220,11 +215,8 @@ function useDragSnap(
   return {
     isDragging,
     pixelPositionStyle,
-    onPointerDown,
-    onPointerMove,
-    onPointerUp,
-    onPointerCancel,
     suppressUntilRef,
+    handlers: { onPointerDown, onPointerMove, onPointerUp, onPointerCancel },
   };
 }
 
@@ -251,15 +243,12 @@ export const WidgetFab: React.FC<WidgetFabProps> = ({ onPositionCommit }) => {
 
   const wrapperRef = useRef<HTMLDivElement | null>(null);
 
-  const {
-    isDragging,
-    pixelPositionStyle,
-    onPointerDown,
-    onPointerMove,
-    onPointerUp,
-    onPointerCancel,
-    suppressUntilRef,
-  } = useDragSnap(position, onPositionCommit, isPreviewMode, wrapperRef);
+  const { isDragging, pixelPositionStyle, suppressUntilRef, handlers } = useDragSnap(
+    position,
+    onPositionCommit,
+    isPreviewMode,
+    wrapperRef,
+  );
 
   return (
     <Surface
@@ -294,10 +283,7 @@ export const WidgetFab: React.FC<WidgetFabProps> = ({ onPositionCommit }) => {
             if (Date.now() < suppressUntilRef.current) return;
             actions.toggleWidget();
           }}
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={onPointerUp}
-          onPointerCancel={onPointerCancel}
+          {...handlers}
           className='mtx-fab-trigger'
           style={{
             touchAction: 'none',
@@ -330,34 +316,35 @@ export const WidgetFab: React.FC<WidgetFabProps> = ({ onPositionCommit }) => {
                 </svg>
               )}
 
-              <Flex
-                className='mtx-fab-icon-layer'
-                style={{ transform: open ? 'rotate(30deg) scale(0)' : 'rotate(0deg) scale(1)', opacity: open ? 0 : 1 }}
-                aria-hidden={open}
-              >
-                <Avatar
-                  src={MarketrixIcon}
-                  alt=''
-                  className='mtx-fab-avatar'
-                  draggable={false}
-                  style={{
-                    borderRadius: `${WIDGET_RADIUS_PX}px`,
-                    border: 'none',
-                    outline: 'none',
-                    backgroundColor: 'transparent',
-                    pointerEvents: 'none',
-                    userSelect: 'none',
-                  }}
-                />
-              </Flex>
-
-              <Flex
-                className='mtx-fab-icon-layer'
-                style={{ transform: open ? 'rotate(0deg) scale(1)' : 'rotate(-30deg) scale(0)', opacity: open ? 1 : 0 }}
-                aria-hidden={!open}
-              >
-                <Icon name='chevronDown' size={24} className='mtx-fab-chevron' />
-              </Flex>
+              {[
+                {
+                  shown: !open,
+                  hidden: 'rotate(30deg) scale(0)',
+                  icon: (
+                    <Avatar
+                      src={MarketrixIcon}
+                      alt=''
+                      className='mtx-fab-avatar'
+                      draggable={false}
+                      style={{ pointerEvents: 'none' }}
+                    />
+                  ),
+                },
+                {
+                  shown: open,
+                  hidden: 'rotate(-30deg) scale(0)',
+                  icon: <Icon name='chevronDown' size={24} className='mtx-fab-chevron' />,
+                },
+              ].map(({ shown, hidden, icon }) => (
+                <Flex
+                  key={hidden}
+                  className='mtx-fab-icon-layer'
+                  style={{ transform: shown ? 'rotate(0deg) scale(1)' : hidden, opacity: shown ? 1 : 0 }}
+                  aria-hidden={!shown}
+                >
+                  {icon}
+                </Flex>
+              ))}
             </Surface>
           </Flex>
         </Button>
