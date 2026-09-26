@@ -101,11 +101,7 @@ describe('a send while the stream is down', () => {
     send(composer, 'first attempt');
     fireEvent.change(composer, { target: { value: 'already typing something new' } });
 
-    await act(async () => {
-      await Promise.resolve();
-      await Promise.resolve();
-      await Promise.resolve();
-    });
+    await act(() => new Promise(resolve => setTimeout(resolve, 0)));
 
     expect(composer.value).toBe('already typing something new');
   });
@@ -146,7 +142,7 @@ const requestAccess = async () => {
 
 describe('answering a screen-access request', () => {
   afterEach(() => {
-    ScreenShareService.stopScreenShare();
+    act(() => ScreenShareService.stopScreenShare());
     vi.restoreAllMocks();
   });
 

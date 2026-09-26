@@ -1,7 +1,8 @@
 /**
  * `Text` is the widget's typography primitive; every rendered string goes through it. It renders as any
  * element (`span` by default) and folds tone, size, weight, align, line height, block, italic and truncation
- * into one inline style; an unset prop inherits from the cascade and the caller's `style` wins.
+ * into one inline style; tone defaults to `default`, any other unset prop inherits from the cascade, and the
+ * caller's `style` wins.
  */
 import type { CSSProperties, ElementType, Ref } from 'react';
 
