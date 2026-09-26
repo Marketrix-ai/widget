@@ -1,10 +1,8 @@
 /**
- * The open widget panel: the corner-pinned, resizable surface holding the header bar, the Home and
- * Chat tabs, and the resize grip.
- * `useFocusTrap` keeps focus inside the open panel, `useResize` drag- or key-resizes it and remembers the
- * size per tenant, and `MessengerShell` renders it. The panel is non-modal, so these are hand-rolled rather
- * than a dialog primitive that would inert the host page; only `WidgetRoot` locks host scrolling, and only on a
- * phone-width viewport.
+ * The open widget panel: the corner-pinned, resizable surface holding the header bar, the Home and Chat tabs,
+ * and the resize grip. `useFocusTrap` keeps focus inside it, `useResize` drag- or key-resizes it and remembers
+ * the size per tenant, and `MessengerShell` renders it. The panel is non-modal, so these are hand-rolled rather
+ * than a dialog primitive that would inert the host page.
  */
 import { Tabs } from '@base-ui/react/tabs';
 import React, { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
@@ -44,26 +42,19 @@ function useFocusTrap(
   },
 ) {
   const { onEscape, focusTargetRef } = options;
-  const previousActiveRef = useRef(false);
-  const previouslyFocusedRef = useRef<HTMLElement | null>(null);
+  const previouslyFocusedRef = useRef<HTMLElement | null | undefined>(undefined);
 
   useEffect(() => {
     if (!isActive) {
-      if (previousActiveRef.current) {
-        previouslyFocusedRef.current?.focus({ preventScroll: true });
-        previouslyFocusedRef.current = null;
-      }
-      previousActiveRef.current = false;
+      previouslyFocusedRef.current?.focus({ preventScroll: true });
+      previouslyFocusedRef.current = undefined;
       return;
     }
 
     const container = containerRef.current;
     if (!container) return;
 
-    if (!previousActiveRef.current) {
-      previouslyFocusedRef.current = activeElementIn(container);
-    }
-    previousActiveRef.current = true;
+    if (previouslyFocusedRef.current === undefined) previouslyFocusedRef.current = activeElementIn(container);
 
     const target = focusTargetRef?.current ?? focusablesIn(container)[0];
     target?.focus({ preventScroll: true });
@@ -79,18 +70,10 @@ function useFocusTrap(
       const focusables = focusablesIn(container);
       if (focusables.length === 0) return;
       const idx = focusables.indexOf(current);
-      if (idx === -1) return;
-      if (e.shiftKey) {
-        if (idx === 0) {
-          e.preventDefault();
-          focusables[focusables.length - 1]?.focus();
-        }
-      } else {
-        if (idx === focusables.length - 1) {
-          e.preventDefault();
-          focusables[0]?.focus();
-        }
-      }
+      const last = focusables.length - 1;
+      if (idx === -1 || idx !== (e.shiftKey ? 0 : last)) return;
+      e.preventDefault();
+      focusables[e.shiftKey ? last : 0]?.focus();
     };
 
     document.addEventListener('keydown', handleKeyDown, true);
@@ -147,6 +130,15 @@ function useResize() {
 
   useEffect(() => () => endDragRef.current?.(), []);
 
+  const commitSize = useCallback(
+    (next: Size) => {
+      dimsRef.current = next;
+      setDimensions(next);
+      writeLocal(storageKey, next);
+    },
+    [storageKey],
+  );
+
   const handleResizeStart = useCallback(
     (e: React.PointerEvent<HTMLElement>) => {
       e.preventDefault();
@@ -192,8 +184,7 @@ function useResize() {
           delete containerRef.current.dataset['resizing'];
         }
 
-        setDimensions({ ...dimsRef.current });
-        writeLocal(storageKey, dimsRef.current);
+        commitSize({ ...dimsRef.current });
       };
 
       document.body.style.cursor = cursor;
@@ -204,7 +195,7 @@ function useResize() {
       handle.addEventListener('pointercancel', onUp);
       endDragRef.current = onUp;
     },
-    [isPreviewMode, storageKey, grip],
+    [isPreviewMode, commitSize, grip],
   );
 
   const handleResizeKeyDown = useCallback(
@@ -219,15 +210,11 @@ function useResize() {
       const delta = deltas[e.key];
       if (!delta) return;
       e.preventDefault();
-      const next = clampSize({
-        width: dimsRef.current.width + delta.width,
-        height: dimsRef.current.height + delta.height,
-      });
-      dimsRef.current = next;
-      setDimensions(next);
-      writeLocal(storageKey, next);
+      commitSize(
+        clampSize({ width: dimsRef.current.width + delta.width, height: dimsRef.current.height + delta.height }),
+      );
     },
-    [isPreviewMode, storageKey, grip],
+    [isPreviewMode, commitSize, grip],
   );
 
   return {
@@ -330,22 +317,17 @@ export const MessengerShell: React.FC = () => {
         render={<Stack grow minHeight='0' />}
       >
         <Stack grow overflow='hidden' minHeight='0'>
-          <Tabs.Panel
-            value='home'
-            data-view-transition
-            data-direction={navDirection}
-            style={{ width: '100%', height: '100%' }}
-          >
-            <HomeView />
-          </Tabs.Panel>
-          <Tabs.Panel
-            value='chat'
-            data-view-transition
-            data-direction={navDirection}
-            style={{ width: '100%', height: '100%' }}
-          >
-            <ChatView messageInputRef={messageInputRef} />
-          </Tabs.Panel>
+          {WIDGET_VIEWS.map(view => (
+            <Tabs.Panel
+              key={view}
+              value={view}
+              data-view-transition
+              data-direction={navDirection}
+              style={{ width: '100%', height: '100%' }}
+            >
+              {view === 'home' ? <HomeView /> : <ChatView messageInputRef={messageInputRef} />}
+            </Tabs.Panel>
+          ))}
         </Stack>
 
         <ShellTabBar />
