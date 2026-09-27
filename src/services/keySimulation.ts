@@ -2,7 +2,8 @@
  * Simulates the default action a real keypress would take on a host-page element.
  * `simulateKeyAction` carries out what the browser withholds from a programmatic, untrusted `KeyboardEvent`
  * (focus moves, form submits, text edits); `setFieldValue` writes through the native `value` setter and fires
- * `input`/`change` so framework-controlled inputs see the change.
+ * `input`/`change` so framework-controlled inputs see the change. Email and number inputs expose no caret, so
+ * an edit there lands at the end of the value, where a user who just typed would have it.
  */
 import { focusablesIn } from '../utils/dom';
 import type { ToolArgs } from './browserTools';
@@ -11,6 +12,9 @@ type SendKey = ToolArgs<'send_keys'>['keys'];
 
 export const isTextField = (el: Element): el is HTMLInputElement | HTMLTextAreaElement =>
   el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement;
+
+const hasCaret = (el: Element): el is (HTMLInputElement | HTMLTextAreaElement) & { selectionStart: number } =>
+  isTextField(el) && el.selectionStart !== null;
 
 const isButtonish = (el: Element): boolean => el instanceof HTMLButtonElement || el.getAttribute('role') === 'button';
 
@@ -78,7 +82,7 @@ export function simulateKeyAction(element: HTMLElement, key: SendKey): string {
 
     case 'ArrowLeft':
     case 'ArrowRight': {
-      if (!isTextField(element) || element.selectionStart === null) break;
+      if (!hasCaret(element)) break;
       const caret = Math.max(
         0,
         Math.min(element.value.length, element.selectionStart + (key === 'ArrowLeft' ? -1 : 1)),
@@ -95,7 +99,7 @@ export function simulateKeyAction(element: HTMLElement, key: SendKey): string {
 
     case 'Home':
     case 'End': {
-      if (!isTextField(element)) break;
+      if (!hasCaret(element)) break;
       const caret = key === 'Home' ? 0 : element.value.length;
       element.setSelectionRange(caret, caret);
       return `${key}: moved cursor to ${key === 'Home' ? 'start' : 'end'}`;
@@ -142,7 +146,7 @@ function deleteAt(element: HTMLInputElement | HTMLTextAreaElement, direction: 'B
   }
 
   setFieldValue(element, newValue);
-  element.setSelectionRange(newCursorPos, newCursorPos);
+  if (hasCaret(element)) element.setSelectionRange(newCursorPos, newCursorPos);
   return `${direction}: deleted character, value is now "${newValue}"`;
 }
 

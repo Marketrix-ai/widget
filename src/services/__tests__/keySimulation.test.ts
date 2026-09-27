@@ -101,13 +101,19 @@ describe('simulateKeyAction Backspace/Delete', () => {
     expect(el.value).toBe('abcd');
   });
 
-  it('reads an unknown caret as being at the END of the value, not the start', () => {
-    const el = input('abcd', 4);
-    Object.defineProperty(el, 'selectionStart', { configurable: true, get: () => null });
-    Object.defineProperty(el, 'selectionEnd', { configurable: true, get: () => null });
-
-    expect(simulateKeyAction(el, 'Backspace')).toBe('Backspace: deleted character, value is now "abc"');
-    expect(el.value).toBe('abc');
+  it('edits email and number fields, which have no caret, at the end as a user would', () => {
+    for (const [type, value, typed] of [
+      ['email', 'a@b.co', 'a@b.c'],
+      ['number', '1234', '123'],
+    ] as const) {
+      document.body.innerHTML = `<input type="${type}" value="${value}">`;
+      const el = $('input');
+      expect(simulateKeyAction(el, 'Home')).toBe('Home: dispatched event');
+      expect(simulateKeyAction(el, 'ArrowLeft')).toBe('ArrowLeft: dispatched event');
+      expect(simulateKeyAction(el, 'Backspace')).toBe(`Backspace: deleted character, value is now "${typed}"`);
+      expect(el.value).toBe(typed);
+      expect(simulateKeyAction(el, 'Delete')).toBe('Delete: cursor at end, nothing to delete');
+    }
   });
 });
 

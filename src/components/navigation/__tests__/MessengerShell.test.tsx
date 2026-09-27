@@ -1,9 +1,9 @@
 /**
- * Messenger panel tests, driven through the mounted widget: Escape and Tab are trapped inside the open
- * panel and focus returns to the host page when it closes; the panel's starting size follows the
- * dashboard settings; the grip pointer-resizes from each pinned corner, and the keyboard arm grows the way
- * its grip faces, reaches the same clamp bounds as a drag and announces its value. jsdom does no layout, so
- * `offsetParent` is stubbed to make `focusablesIn`'s visibility filter see a tab order.
+ * Messenger panel tests, driven through the mounted widget: Escape and Tab are trapped inside the open panel and focus
+ * returns to the host page when it closes; the panel's starting size follows the stored resize, else the dashboard
+ * settings; the grip pointer-resizes from each pinned corner, and the keyboard arm grows the way its grip faces,
+ * reaches the same clamp bounds as a drag and announces its value. jsdom does no layout, so `offsetParent` is stubbed
+ * to make `focusablesIn`'s visibility filter see a tab order.
  */
 import { act, cleanup, fireEvent, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'bun:test';
@@ -209,5 +209,24 @@ describe('the keyboard resize arm reaches the same clampSize path as a drag', ()
 
   it('ignores a key that is not one of the four resize arrows', () => {
     expect(keyResize('Enter', 1)).toEqual({ width: '400px', height: '500px' });
+  });
+});
+
+describe('a resized panel keeps its size', () => {
+  it('reopens a remounted widget at the size the user resized it to', () => {
+    const tenant = {
+      mtxId: 'tenant-remembered-size',
+      widget_width: '400px',
+      widget_height: '500px',
+      widget_position: 'top_left' as const,
+    };
+    const { grip, unmount } = openPanel(tenant);
+    fireEvent.keyDown(grip, { key: 'ArrowDown' });
+    unmount();
+    writeChatSnapshot({ ...readChatSnapshot(), isOpen: false });
+
+    const { panel } = openPanel(tenant);
+
+    expect({ width: panel.style.width, height: panel.style.height }).toEqual({ width: '400px', height: '516px' });
   });
 });
