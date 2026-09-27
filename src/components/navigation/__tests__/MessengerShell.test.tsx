@@ -108,8 +108,7 @@ describe('closing the panel restores focus to what held it before', () => {
     launcher.focus();
 
     openWidget();
-    const panel = screen.getByRole('separator').parentElement as HTMLElement;
-    expect(panel.contains(document.activeElement)).toBe(true);
+    expect(screen.getByRole('separator').parentElement?.contains(document.activeElement)).toBe(true);
     pressEscape();
 
     expect(document.activeElement).toBe(launcher);

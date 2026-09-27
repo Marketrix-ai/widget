@@ -88,12 +88,8 @@ describe('WidgetProviders initialization', () => {
   it('starts with no task running, whatever a previous page left on disk', async () => {
     vi.spyOn(chatThread, 'getOrCreateChatId').mockResolvedValue('chat-1');
     const connect = vi.spyOn(streamClient, 'connect').mockResolvedValue();
-    vi.spyOn(StorageService, 'readChatSnapshot').mockReturnValue({
-      messages: [],
-      currentMode: 'tell',
-      isOpen: false,
-      isTaskRunning: true,
-    } as ReturnType<typeof StorageService.readChatSnapshot>);
+    const onDisk = { messages: [], currentMode: 'tell' as const, isOpen: false, isTaskRunning: true };
+    vi.spyOn(StorageService, 'readChatSnapshot').mockReturnValue(onDisk);
 
     render(
       <WidgetProviders config={LIVE}>

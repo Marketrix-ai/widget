@@ -83,13 +83,15 @@ describe('dragging the launcher', () => {
   it('re-anchors to a resized viewport mid-drag instead of keeping the stale anchor', async () => {
     const addSpy = vi.spyOn(window, 'addEventListener');
     const { trigger, anchor } = await mountLauncher('drag-resize');
-    const resizeListeners = addSpy.mock.calls.filter(([type]) => type === 'resize').map(([, listener]) => listener);
+    const resizeListeners = addSpy.mock.calls.flatMap(([type, listener]) =>
+      type === 'resize' && typeof listener === 'function' ? [listener] : [],
+    );
     dragStart(trigger, -40, -40);
     const before = anchor.style.left;
     expect(before).not.toBe('');
 
     Object.defineProperty(window, 'innerWidth', { value: window.innerWidth + 400, configurable: true });
-    act(() => resizeListeners.forEach(listener => (listener as () => void)()));
+    act(() => resizeListeners.forEach(listener => listener(new Event('resize'))));
 
     expect(anchor.style.left).not.toBe(before);
   });

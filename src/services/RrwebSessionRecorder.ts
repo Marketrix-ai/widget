@@ -124,8 +124,6 @@ export class RrwebSessionRecorder {
     streamClient.removeCallbacks(this.callbacks);
     this.stopRecording?.();
     this.stopRecording = null;
-    clearTimeout(this.flushTimer);
-    this.flushTimer = undefined;
     void this.flush();
   }
 

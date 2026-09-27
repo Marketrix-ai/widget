@@ -275,6 +275,26 @@ describe('reduceToolProgress / reduceToolDone / reduceStop', () => {
     expect(done.messages[0]?.parts[0]).toMatchObject({ status: 'completed' });
   });
 
+  it('never attaches progress to a user message', () => {
+    const state: ChatState = {
+      messages: [{ id: 'user-1', kind: 'user', mode: 'tell', timestamp: new Date(), parts: [] }],
+      task: { phase: 'idle' },
+    };
+    expectNoOp(reduceToolProgress(state, 'click_element', clicking('clicking'), 'tell'), state);
+  });
+
+  it('ranks by mode only while the task runs, otherwise the latest placeholder wins', () => {
+    const state: ChatState = {
+      messages: [
+        agentMessage({ id: 'placeholder-other-mode', status: 'thinking', mode: 'tell', parts: [] }),
+        agentMessage({ id: 'reply-matching-mode', status: undefined, mode: 'show', parts: [] }),
+      ],
+      task: { phase: 'idle' },
+    };
+    const result = reduceToolProgress(state, 'click_element', clicking('clicking'), 'show');
+    expect(result.messages.map(msg => msg.parts.length)).toEqual([1, 0]);
+  });
+
   it('runs on a Firefox 111 floor, which has no Array.prototype.with', () => {
     const withMethod = Object.getOwnPropertyDescriptor(Array.prototype, 'with');
     Reflect.deleteProperty(Array.prototype, 'with');

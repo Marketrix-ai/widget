@@ -1,49 +1,19 @@
 /**
- * Direct unit coverage for `utils/chat.ts`'s pure helpers — invariants the scattered indirect coverage
- * in `chatReducer`/`ChatProvider`/`ChatView` tests leaves unpinned: `findMessageForProgress`'s
- * kind/mode gating, message id uniqueness, user-content trimming, and the two fixed user-facing strings.
+ * Direct unit coverage for `utils/chat.ts`'s pure helpers: message id uniqueness, user-content trimming, and
+ * the fixed user-facing strings.
  */
 import { describe, expect, it } from 'bun:test';
 
 import { mockMediaStream } from '../../test/fixtures';
-import type { AgentMessage, ChatMessage } from '../../types';
 import {
   CHAT_FAILURE_TEXT,
   createScreenAccessRequestMessage,
   createScreenshareMessage,
   createUserMessage,
-  findMessageForProgress,
   messageText,
   SCREEN_ACCESS_DETAIL,
   SCREEN_ACCESS_PROMPT,
 } from '../chat';
-
-const agentReply = (overrides: Partial<AgentMessage> = {}): AgentMessage => ({
-  id: 'agent-1',
-  kind: 'agent',
-  timestamp: new Date(),
-  parts: [],
-  ...overrides,
-});
-
-describe('findMessageForProgress', () => {
-  it('never matches a user message', () => {
-    const userMsg: ChatMessage = { id: 'user-1', kind: 'user', mode: 'tell', timestamp: new Date(), parts: [] };
-    const result = findMessageForProgress({ messages: [userMsg], isTaskRunning: false, currentMode: 'tell' });
-    expect(result).toBeNull();
-  });
-
-  it('only applies mode-specific ranking while the task is running, otherwise falls to the generic placeholder-first rank', () => {
-    const placeholderOtherMode = agentReply({ id: 'placeholder-other-mode', status: 'thinking', mode: 'tell' });
-    const replyMatchingMode = agentReply({ id: 'reply-matching-mode', mode: 'show' });
-    const result = findMessageForProgress({
-      messages: [placeholderOtherMode, replyMatchingMode],
-      isTaskRunning: false,
-      currentMode: 'show',
-    });
-    expect(result?.message.id).toBe('placeholder-other-mode');
-  });
-});
 
 describe('message construction', () => {
   it('mints a unique id per message rather than a bare prefix', () => {

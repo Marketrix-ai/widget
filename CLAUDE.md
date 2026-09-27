@@ -6,8 +6,7 @@ runtime and bundle size are first-class concerns. ESM-only single bundle `dist/w
 a **closed Shadow DOM** with all CSS injected as JS; **React 19 is a peer dependency, external to the
 bundle — the host page supplies it.**
 
-**`README.md` is the public API surface** — customer-facing integration docs; keep it accurate. The root
-`../CLAUDE.md` owns cross-cutting rules (widget↔api contract, status vocabulary, contract sync, release).
+**`README.md` is the public API surface** — customer-facing integration docs; keep it accurate.
 
 ## Commands
 
@@ -134,11 +133,9 @@ each a Zod union discriminated on `type`.
 
 ## SDK mirror and release
 
-- `src/sdk/contract.ts` + `contracts/*` are a **generated** mirror — never hand-edit. `src/sdk/index.ts` is
-  hand-written.
-- **The contract gate checks the widget version `app` bundles from npm**, not the widget image. A mirror
-  change therefore needs: tag widget → confirm npm → `bun add @marketrix.ai/widget@<ver>` in app → commit
-  `bun.lock` → tag app.
+- `src/sdk/index.ts` is the one hand-written SDK file.
+- **The contract gate checks the widget version `app` bundles from npm**, not the widget image; the republish
+  sequence through app and docs lives in the `multi-repo-release` skill.
 - **A green `publish` job never proves a publish** — it tolerates a republish. Check
   `npm view @marketrix.ai/widget version` before pinning app. Tagging from stale local `main` ships
   `latest` without the fix and burns the version.

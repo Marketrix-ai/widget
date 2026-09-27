@@ -311,8 +311,8 @@ describe('a config-change re-mount preserves an in-flight chat', () => {
     await waitFor(() => expect(getOrCreateChatId).toHaveBeenCalled());
     expect(await getOrCreateChatId.mock.results[0]?.value).toBe('chat-inflight-1');
     expect(getChatId()).toBe('chat-inflight-1');
-    const messageBefore = readChatSnapshot().messages[0];
-    expect(messageBefore).toBeDefined();
+    const messagesBefore = readChatSnapshot().messages;
+    expect(messagesBefore).toHaveLength(1);
 
     getOrCreateChatId.mockClear();
 
@@ -321,6 +321,6 @@ describe('a config-change re-mount preserves an in-flight chat', () => {
     await waitFor(() => expect(getOrCreateChatId).toHaveBeenCalled());
     expect(await getOrCreateChatId.mock.results[0]?.value).toBe('chat-inflight-1');
     expect(getChatId()).toBe('chat-inflight-1');
-    expect(readChatSnapshot().messages).toEqual([messageBefore!]);
+    expect(readChatSnapshot().messages).toEqual(messagesBefore);
   });
 });

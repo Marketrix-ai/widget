@@ -25,7 +25,7 @@ export const ShellTabBar: React.FC = () => (
     style={{ height: TAB_BAR_HEIGHT }}
   >
     {WIDGET_VIEWS.map(view => (
-      <Tabs.Tab key={view} value={view} render={<Button stacked variant='tab' />}>
+      <Tabs.Tab key={view} value={view} render={<Button variant='tab' />}>
         <span className='mtx-tab-underline' />
         <Text as='span' tone='inherit' aria-hidden='true'>
           <Icon name={TAB_DEFS[view].icon} size={20} />

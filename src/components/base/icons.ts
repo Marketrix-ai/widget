@@ -2,18 +2,9 @@
  * Icon registry: `icons` maps each `IconName` to its `viewBox` and `IconPath`s, and `stroked()` builds an outline
  * path. Every entry ships to every host page in the single-chunk bundle, so a new icon is a deliberate size cost.
  */
+import type { SVGProps } from 'react';
 
-interface IconPath {
-  d: string;
-  fill?: string;
-  stroke?: string;
-  strokeWidth?: number | string;
-  strokeLinecap?: 'butt' | 'round' | 'square';
-  strokeLinejoin?: 'miter' | 'round' | 'bevel';
-  strokeMiterlimit?: number | string;
-  fillRule?: 'nonzero' | 'evenodd';
-  clipRule?: 'nonzero' | 'evenodd';
-}
+type IconPath = SVGProps<SVGPathElement> & { d: string };
 
 export interface IconData {
   viewBox: string;

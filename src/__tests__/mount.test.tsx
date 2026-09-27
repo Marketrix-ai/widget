@@ -1,8 +1,8 @@
 /**
- * Tests for the widget's entry paths: the classic loader adds its React import map only when the host's
- * lacks one and injects the module script with the `mtx-*` attributes, a direct module script auto-initializes from its `mtx-*` attributes and
- * requires an API host, every mounted widget gets its CSS inside the closed shadow root, and the host-page notice
- * carries every theme token that CSS reads.
+ * Tests for the widget's entry paths: the classic loader adds its React import map only when the host's lacks one and
+ * injects the module script with the `mtx-*` attributes, a direct module script auto-initializes from its `mtx-*`
+ * attributes and requires an API host, every mounted widget gets its CSS inside the closed shadow root, and the
+ * host-page notice carries every theme token that CSS reads.
  */
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';

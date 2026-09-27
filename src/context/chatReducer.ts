@@ -13,7 +13,6 @@ import {
   CHAT_FAILURE_TEXT,
   createScreenshareMessage,
   createSystemMessage,
-  findMessageForProgress,
   isPending,
   messageText,
   SCREEN_SHARE_STARTED_TEXT,
@@ -22,6 +21,7 @@ import {
   toolExplanation,
   waitsForUser,
 } from '../utils/chat';
+import { logWarn } from '../utils/log';
 
 export type TaskState = { phase: 'running'; mode: WidgetToolCall['mode'] } | { phase: 'idle' | 'stopped' };
 
@@ -35,12 +35,31 @@ export type ToolProgress =
   | { status: 'completed' }
   | { status: 'failed'; error: string };
 
-const progressTarget = (state: ChatState, currentMode: InstructionType) =>
-  findMessageForProgress({
-    messages: state.messages,
-    isTaskRunning: state.task.phase === 'running',
-    currentMode: state.task.phase === 'running' ? state.task.mode : currentMode,
-  });
+function findMessageForProgress(
+  { messages, task }: ChatState,
+  currentMode: InstructionType,
+): { index: number; message: AgentMessage } | null {
+  const mode = task.phase === 'running' ? task.mode : currentMode;
+  const isAgentReply = (msg: ChatMessage): msg is AgentMessage => msg.kind === 'agent' && !taskEnded(msg);
+  const modeMatches = (msg: AgentMessage) =>
+    isPending(msg) ? msg.mode === undefined || msg.mode === mode : msg.mode === mode;
+
+  const ranked: Array<(msg: AgentMessage) => boolean> = [];
+  if (task.phase === 'running') ranked.push(msg => modeMatches(msg) && isPending(msg), modeMatches);
+  ranked.push(isPending, () => true);
+
+  const start = messages.findLastIndex(taskEnded) + 1;
+  for (const matches of ranked) {
+    const index = messages.findLastIndex((msg, i) => i >= start && isAgentReply(msg) && matches(msg));
+    const message = messages[index];
+    if (message?.kind === 'agent') return { index, message };
+  }
+
+  logWarn(
+    `[MessageFinder] No message found for progress update: totalMessages=${messages.length} task=${task.phase} currentMode=${mode}`,
+  );
+  return null;
+}
 
 function applyToolProgress(msg: AgentMessage, tool: WidgetToolName, progress: ToolProgress): AgentMessage {
   const index = msg.parts.findIndex(
@@ -72,7 +91,7 @@ export function reduceToolProgress(
   progress: ToolProgress,
   currentMode: InstructionType,
 ): ChatState {
-  const found = progressTarget(state, currentMode);
+  const found = findMessageForProgress(state, currentMode);
   if (!found) return state;
 
   let updatedMsg = found.message;
@@ -100,7 +119,7 @@ function stampProgressMessage(
   currentMode: InstructionType,
   stamp: (msg: AgentMessage) => AgentMessage,
 ): ChatState {
-  const found = progressTarget(state, currentMode);
+  const found = findMessageForProgress(state, currentMode);
   const messages = found
     ? state.messages.map((msg, i) => (i === found.index ? stamp(found.message) : msg))
     : state.messages;

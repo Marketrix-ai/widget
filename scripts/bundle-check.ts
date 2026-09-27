@@ -1,7 +1,7 @@
 /**
  * Packaging gate for the built widget, run last in `bun run ci`.
  *
- * Checks the artifacts exist, stay under their byte budgets, ship as one ES module with no CSS file, no
+ * Checks the artifacts stay under their byte budgets, ship as one ES module with no CSS file, no
  * dynamic require and no bundled React, and that no dependency grew past its budget. Dependency sizes come
  * from the build's `module-sizes.json`, measured before minification; budgets sit about 15% above the
  * current build so growth is noticed; raise one deliberately, never to make CI pass.
@@ -20,20 +20,15 @@ const requiredFiles = [
 
 const errors = [];
 
-for (const artifact of requiredFiles) {
-  const stats = statSync(artifact.path, { throwIfNoEntry: false });
-  if (!stats) errors.push(`${artifact.path} is missing`);
-  else if (!stats.isFile()) errors.push(`${artifact.path} is not a file`);
-  else if (stats.size <= 0) errors.push(`${artifact.path} is empty`);
-  else if (stats.size > artifact.maxBytes) {
-    errors.push(`${artifact.path} (${stats.size} bytes) exceeds limit ${artifact.maxBytes} bytes`);
-  }
+for (const { path, maxBytes } of requiredFiles) {
+  const { size } = statSync(path);
+  if (size > maxBytes) errors.push(`${path} (${size} bytes) exceeds limit ${maxBytes} bytes`);
 }
 
 const emitted = readdirSync('dist');
 
-const SERVED_SCRIPTS = ['widget.mjs', 'loader.js'];
-const extraChunks = emitted.filter(name => /\.[cm]?js$/.test(name) && !SERVED_SCRIPTS.includes(name));
+const servedScripts = requiredFiles.map(({ path }) => path.replace('dist/', ''));
+const extraChunks = emitted.filter(name => /\.[cm]?js$/.test(name) && !servedScripts.includes(name));
 if (extraChunks.length > 0) {
   errors.push(`dist/ has code-split chunks beside widget.mjs: ${extraChunks.join(', ')}`);
 }

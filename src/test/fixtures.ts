@@ -1,10 +1,10 @@
 /**
- * Shared test fixtures for widget tests. `getMockWidgetConfig`/`validSettings`/`credentialedConfig` build a
- * complete, schema-valid tenant config (preview and resolved-production shapes); `agentMessage` builds an
- * agent `ChatMessage` and `ofKind` narrows one; `toolCall` builds a `tool/call` event (a click by default);
- * `mockMediaStream`/`liveMediaStream` stub the browser's un-mockable `MediaStream`, `stubRect` gives every
- * element a layout jsdom lacks, `$` finds an element by tag or selector or throws; `asStreamClientInternals` reaches `streamClient`'s
- * private state and handlers for simulating SSE events, stream failures and reconnects.
+ * Shared test fixtures for widget tests. `getMockWidgetConfig`/`validSettings`/`credentialedConfig` build a complete,
+ * schema-valid tenant config (preview and resolved-production shapes); `agentMessage` builds an agent `ChatMessage` and
+ * `ofKind` narrows one; `toolCall` builds a `tool/call` event (a click by default); `mockMediaStream`/`liveMediaStream`
+ * stub the browser's un-mockable `MediaStream`, `stubRect` gives every element a layout jsdom lacks, `$` finds an
+ * element by tag or selector or throws; `asStreamClientInternals` reaches `streamClient`'s private state and handlers
+ * for simulating SSE events, stream failures and reconnects.
  */
 import { vi } from 'bun:test';
 
