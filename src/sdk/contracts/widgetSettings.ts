@@ -1,14 +1,12 @@
 /**
  * The Support Widget's settings and entity schemas, zod only, so the widget bundle and the dashboard read them
- * without pulling in the widget procedures: widget and instruction types, chips, positions, the settings
+ * without pulling in the widget procedures: instruction types, chips, positions, the settings
  * document with its render constants, writable subset and `DEFAULT_WIDGET_SETTINGS`, and the stored and public
  * widget entities. A stored settings value is merged over the defaults, so a setting added later reads its
  * default rather than `undefined` in the bundle.
  * Public Widget projections never expose stored credentials.
  */
 import { z } from 'zod';
-
-export const WidgetTypeSchema = z.enum(['widget']);
 
 export const InstructionTypeSchema = z.enum(['tell', 'show', 'do']);
 

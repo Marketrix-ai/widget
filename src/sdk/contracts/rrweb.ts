@@ -83,6 +83,30 @@ const RrwebMovementPositionSchema = z.strictObject({
   timeOffset: z.number(),
 });
 
+const rrwebStyleSheetOps = <Target extends z.ZodRawShape>(target: Target) =>
+  [
+    z.strictObject({
+      source: z.literal(8),
+      ...target,
+      removes: z.array(z.strictObject({ index: RrwebStyleIndexSchema })),
+    }),
+    z.strictObject({ source: z.literal(8), ...target, adds: z.array(RrwebStyleAddRuleSchema) }),
+    z.strictObject({ source: z.literal(8), ...target, replace: z.string() }),
+    z.strictObject({ source: z.literal(8), ...target, replaceSync: z.string() }),
+    z.strictObject({
+      source: z.literal(13),
+      ...target,
+      index: z.array(z.number()),
+      set: z.strictObject({ property: z.string(), value: z.string().nullable(), priority: z.string().optional() }),
+    }),
+    z.strictObject({
+      source: z.literal(13),
+      ...target,
+      index: z.array(z.number()),
+      remove: z.strictObject({ property: z.string() }),
+    }),
+  ] as const;
+
 const RrwebIncrementalDataSchema = z.union([
   z.strictObject({
     source: z.literal(0),
@@ -133,50 +157,7 @@ const RrwebIncrementalDataSchema = z.union([
     loop: z.boolean().optional(),
     playbackRate: z.number().optional(),
   }),
-  z.union([
-    z.strictObject({
-      source: z.literal(8),
-      id: z.number(),
-      removes: z.array(z.strictObject({ index: RrwebStyleIndexSchema })),
-    }),
-    z.strictObject({ source: z.literal(8), id: z.number(), adds: z.array(RrwebStyleAddRuleSchema) }),
-    z.strictObject({ source: z.literal(8), id: z.number(), replace: z.string() }),
-    z.strictObject({ source: z.literal(8), id: z.number(), replaceSync: z.string() }),
-    z.strictObject({
-      source: z.literal(8),
-      styleId: z.number(),
-      removes: z.array(z.strictObject({ index: RrwebStyleIndexSchema })),
-    }),
-    z.strictObject({ source: z.literal(8), styleId: z.number(), adds: z.array(RrwebStyleAddRuleSchema) }),
-    z.strictObject({ source: z.literal(8), styleId: z.number(), replace: z.string() }),
-    z.strictObject({ source: z.literal(8), styleId: z.number(), replaceSync: z.string() }),
-  ]),
-  z.union([
-    z.strictObject({
-      source: z.literal(13),
-      id: z.number(),
-      index: z.array(z.number()),
-      set: z.strictObject({ property: z.string(), value: z.string().nullable(), priority: z.string().optional() }),
-    }),
-    z.strictObject({
-      source: z.literal(13),
-      id: z.number(),
-      index: z.array(z.number()),
-      remove: z.strictObject({ property: z.string() }),
-    }),
-    z.strictObject({
-      source: z.literal(13),
-      styleId: z.number(),
-      index: z.array(z.number()),
-      set: z.strictObject({ property: z.string(), value: z.string().nullable(), priority: z.string().optional() }),
-    }),
-    z.strictObject({
-      source: z.literal(13),
-      styleId: z.number(),
-      index: z.array(z.number()),
-      remove: z.strictObject({ property: z.string() }),
-    }),
-  ]),
+  z.union([...rrwebStyleSheetOps({ id: z.number() }), ...rrwebStyleSheetOps({ styleId: z.number() })]),
   z.strictObject({
     source: z.literal(14),
     ranges: z.array(
