@@ -55,10 +55,7 @@ const MessageBody: React.FC<{ message: ChatMessage; isLastMessage: boolean; isTa
   const isWaitingForUser = waitsForVisitor(message);
   const stillWorking =
     isTaskRunning && isLastMessage && 'mode' in message && (message.mode === 'show' || message.mode === 'do');
-
-  if (message.parts.length === 0) {
-    return pending || stillWorking ? <Thinking isWaitingForUser={isWaitingForUser} /> : null;
-  }
+  const showThinking = (pending && !message.parts.some(p => p.type === 'text')) || stillWorking;
 
   return (
     <Stack gap='sm'>
@@ -79,9 +76,7 @@ const MessageBody: React.FC<{ message: ChatMessage; isLastMessage: boolean; isTa
         ),
       )}
 
-      {((pending && !message.parts.some(p => p.type === 'text')) || stillWorking) && (
-        <Thinking isWaitingForUser={isWaitingForUser} />
-      )}
+      {showThinking && <Thinking isWaitingForUser={isWaitingForUser} />}
     </Stack>
   );
 };
