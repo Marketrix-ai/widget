@@ -3,7 +3,7 @@
  * complete, schema-valid tenant config (preview and resolved-production shapes); `agentMessage` builds an
  * agent `ChatMessage` and `ofKind` narrows one; `toolCall` builds a `tool/call` event (a click by default);
  * `mockMediaStream`/`liveMediaStream` stub the browser's un-mockable `MediaStream`, `stubRect` gives every
- * element a layout jsdom lacks, `$` finds a tag or throws; `asStreamClientInternals` reaches `streamClient`'s
+ * element a layout jsdom lacks, `$` finds an element by tag or selector or throws; `asStreamClientInternals` reaches `streamClient`'s
  * private state and handlers for simulating SSE events, stream failures and reconnects.
  */
 import { vi } from 'bun:test';
@@ -134,12 +134,11 @@ export function stubRect(rect: Partial<DOMRect> = { top: 0, left: 0, width: 10, 
   Element.prototype.getBoundingClientRect = () => rect as DOMRect;
 }
 
-export function $<K extends keyof HTMLElementTagNameMap>(
-  tag: K,
-  root: ParentNode = document,
-): HTMLElementTagNameMap[K] {
-  const element = root.querySelector(tag);
-  if (!element) throw new Error(`no <${tag}> under the given root`);
+type Found<S extends string> = S extends keyof HTMLElementTagNameMap ? HTMLElementTagNameMap[S] : HTMLElement;
+
+export function $<S extends string>(selector: S, root: ParentNode = document): Found<S> {
+  const element = root.querySelector<Found<S>>(selector);
+  if (!(element instanceof HTMLElement)) throw new Error(`no HTML element matches ${selector} under the given root`);
   return element;
 }
 

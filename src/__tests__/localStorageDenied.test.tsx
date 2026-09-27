@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 import * as chatThread from '../services/chatThread';
 import { scopeStorageTo } from '../services/StorageService';
 import { streamClient } from '../services/StreamClient';
-import { openChatTab, openWidget, renderWidget } from '../test/renderWidget';
+import { dragFabAndResize, openChatTab, openWidget, renderWidget } from '../test/renderWidget';
 
 describe('a host page that denies localStorage outright', () => {
   let warnSpy: ReturnType<typeof vi.spyOn>;
@@ -47,19 +47,10 @@ describe('a host page that denies localStorage outright', () => {
     await waitFor(() => expect(streamClient.send).toHaveBeenCalled());
     expect(scope.getByText('does this still work without storage?')).toBeInTheDocument();
 
-    const fab = result.container.querySelector('.mtx-fab-trigger') as HTMLElement;
-    fab.setPointerCapture = () => {};
-    fab.releasePointerCapture = () => {};
-    fireEvent.pointerDown(fab, { pointerId: 1, clientX: 0, clientY: 0 });
-    fireEvent.pointerMove(fab, { pointerId: 1, clientX: 30, clientY: 30 });
-    fireEvent.pointerUp(fab, { pointerId: 1, clientX: 30, clientY: 30 });
-
-    const grip = result.container.querySelector('[role="separator"]') as HTMLElement | null;
-    if (grip) {
-      fireEvent.mouseDown(grip, { clientX: 100, clientY: 100 });
-      fireEvent.mouseMove(document, { clientX: 130, clientY: 140 });
-      fireEvent.mouseUp(document, { clientX: 130, clientY: 140 });
-    }
+    const panel = scope.getByRole('separator').parentElement;
+    const sizeBefore = panel?.style.width;
+    dragFabAndResize(result.container, { releaseGrip: true });
+    expect(panel?.style.width).not.toBe(sizeBefore);
 
     expect(scope.getByRole('tab', { name: 'Chat' })).toBeInTheDocument();
 
